@@ -36,7 +36,7 @@ OBJ = ${SYSTEM}/basecode.o      \
       ${SYSTEM}/support.o       \
       ${SYSTEM}/waypoint.o      \
 
-CCOPT = -w -O3 -m32 -s -DNDEBUG=1 -fno-exceptions -fno-rtti -funroll-loops -fomit-frame-pointer -pipe -fvisibility-inlines-hidden -fvisibility=hidden
+CCOPT = -w -O3 -m32 -s -DNDEBUG=1 -ffast-math -fno-exceptions -fno-rtti -funroll-loops -fomit-frame-pointer -pipe -fvisibility-inlines-hidden -fvisibility=hidden
 CCDEBUG = -ggdb -w -DDEBUG=1 -fpermissive
 
 CFLAGS = $(CCOPT) -I../include/engine -I../include

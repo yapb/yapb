@@ -220,7 +220,6 @@
       <InterproceduralOptimization>SingleFile</InterproceduralOptimization>
       <FlushDenormalResultsToZero>true</FlushDenormalResultsToZero>
       <Parallelization>false</Parallelization>
-      <Optimization>MaxSpeedHighLevel</Optimization>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>

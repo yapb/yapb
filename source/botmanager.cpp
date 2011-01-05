@@ -442,13 +442,13 @@ void BotManager::FillServer (int selection, int personality, int skill, int numT
 
       if (skill >= 0 && skill <= 20)
          randomizedSkill = g_randGen.Long (0, 20);
-      else if (skill >= 20 && skill <= 40)
+      else if (skill > 20 && skill <= 40)
          randomizedSkill = g_randGen.Long (20, 40);
-      else if (skill >= 40 && skill <= 60)
+      else if (skill > 40 && skill <= 60)
          randomizedSkill = g_randGen.Long (40, 60);
-      else if (skill >= 60 && skill <= 80)
+      else if (skill > 60 && skill <= 80)
          randomizedSkill = g_randGen.Long (60, 80);
-      else if (skill >= 80 && skill <= 99)
+      else if (skill > 80 && skill <= 99)
          randomizedSkill = g_randGen.Long (80, 99);
       else if (skill == 100)
          randomizedSkill = skill;

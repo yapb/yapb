@@ -1015,9 +1015,6 @@ public:
    {
       T *entry = new T ();
 
-      if (entry == NULL)
-         return NULL;
-
       return Link (entry, next);
    }
 
@@ -1167,8 +1164,7 @@ public:
    //
    void Destory (void)
    {
-      if (m_elements != NULL)
-         delete [] m_elements;
+      delete [] m_elements;
 
       m_elements = NULL;
       m_itemSize = 0;
@@ -1215,9 +1211,6 @@ public:
          checkSize = newSize;
 
       T *buffer = new T[checkSize];
-
-      if (buffer == NULL)
-         return false;
 
       if (keepData && m_elements != NULL)
       {
@@ -1571,17 +1564,12 @@ public:
 
       T *buffer = new T[m_itemCount];
 
-      if (buffer == NULL)
-         return;
-
       if (m_elements != NULL)
       {
          for (int i = 0; i < m_itemCount; i++)
             buffer[i] = m_elements[i];
       }
-
-      if (m_elements != NULL)
-         delete [] m_elements;
+      delete [] m_elements;
 
       m_elements = buffer;
       m_itemSize = m_itemCount;
@@ -2491,21 +2479,6 @@ public:
    //  Pointer to constant buffer.
    //
    const char *GetBuffer (void) const
-   {
-      if (m_bufferPtr == NULL || *m_bufferPtr == 0x0)
-         return "";
-
-      return &m_bufferPtr[0];
-   }
-
-   //
-   // Function: ToString
-   //  Gets the string buffer.
-   //
-   // Returns:
-   //  Pointer to buffer.
-   //
-   const char *ToString (void)
    {
       if (m_bufferPtr == NULL || *m_bufferPtr == 0x0)
          return "";
@@ -3761,9 +3734,9 @@ public:
    // Returns:
    //  True if operation succeeded, false otherwise.
    //
-   bool Open (String fileName, String mode)
+   bool Open (const String &fileName, const String &mode)
    {
-      if ((m_handle = fopen (fileName, mode)) == NULL)
+      if ((m_handle = fopen (fileName.GetBuffer (), mode.GetBuffer ())) == NULL)
          return false;
 
       fseek (m_handle, 0L, SEEK_END);

@@ -1052,7 +1052,7 @@ int gfunctionKillsDistT (int currentIndex, int parentIndex)
       cost *= 2;
 
    if (parentIndex < 0 || parentIndex > g_numWaypoints || parentIndex == currentIndex)
-      return cost * ((yb_danger_factor.GetInt () * 20 / (2 * g_highestDamageT)));
+      return cost * (yb_danger_factor.GetInt () * 20 / (2 * g_highestDamageT));
 
    return g_waypoint->GetPathDistance (parentIndex, currentIndex) + (cost * 10 * yb_danger_factor.GetInt ());
 }
@@ -1079,7 +1079,7 @@ int gfunctionKillsDistCT (int currentIndex, int parentIndex)
       cost *= 2;
 
    if (parentIndex < 0 || parentIndex > g_numWaypoints || parentIndex == currentIndex)
-      return cost * ((yb_danger_factor.GetInt () * 20 / (2 * g_highestDamageCT)));
+      return cost * (yb_danger_factor.GetInt () * 20 / (2 * g_highestDamageCT));
 
    return g_waypoint->GetPathDistance (parentIndex, currentIndex) + (cost * 10 * yb_danger_factor.GetInt ());
 }
@@ -1091,7 +1091,7 @@ int gfunctionKillsDistCTWithHostage (int currentIndex, int parentIndex)
    Path *current = g_waypoint->GetPath (currentIndex);
 
    if (current->flags & FLAG_NOHOSTAGE)
-      return 65536;
+      return 65355;
 
    else if (current->flags & (FLAG_CROUCH | FLAG_LADDER))
       return gfunctionKillsDistCT (currentIndex, parentIndex) * 500;
@@ -1192,38 +1192,38 @@ int gfunctionPathDistWithHostage (int currentIndex, int parentIndex)
    return gfunctionPathDist (currentIndex, parentIndex);
 }
 
-int hfunctionSquareDist (int startIndex, int goalIndex)
+int hfunctionSquareDist (int index, int, int goalIndex)
 {
    // square distance heuristic
 
-   Path *start = g_waypoint->GetPath (startIndex);
+   Path *start = g_waypoint->GetPath (index);
    Path *goal = g_waypoint->GetPath (goalIndex);
 
-   float deltaX = fabsf (goal->origin.x - start->origin.x);
-   float deltaY = fabsf (goal->origin.y - start->origin.y);
-   float deltaZ = fabsf (goal->origin.z - start->origin.z);
+   float deltaX = fabsf (start->origin.x - goal->origin.x);
+   float deltaY = fabsf (start->origin.y - goal->origin.y);
+   float deltaZ = fabsf (start->origin.z - goal->origin.z);
 
    return static_cast <int> (deltaX + deltaY + deltaZ);
 }
 
-int hfunctionSquareDistWithHostage (int startIndex, int goalIndex)
+int hfunctionSquareDistWithHostage (int index, int startIndex, int goalIndex)
 {
    // square distance heuristic with hostages
 
    if (g_waypoint->GetPath (startIndex)->flags & FLAG_NOHOSTAGE)
       return 65536;
 
-   return hfunctionSquareDist (startIndex, goalIndex);
+   return hfunctionSquareDist (index, startIndex, goalIndex);
 }
 
-int hfunctionNone (int startIndex, int goalIndex)
+int hfunctionNone (int index, int startIndex, int goalIndex)
 {
-   return hfunctionSquareDist (startIndex, goalIndex) / (128 * 10);
+   return hfunctionSquareDist (index, startIndex, goalIndex) / (128 * 10);
 }
 
-int hfunctionNumberNodes (int startIndex, int goalIndex)
+int hfunctionNumberNodes (int index, int startIndex, int goalIndex)
 {
-   return hfunctionSquareDist (startIndex, goalIndex) / 128 * g_highestKills;
+   return hfunctionSquareDist (index, startIndex, goalIndex) / 128 * g_highestKills;
 }
 
 
@@ -1270,7 +1270,7 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
    }
 
    int (*gcalc) (int, int) = NULL;
-   int (*hcalc) (int, int) = NULL;
+   int (*hcalc) (int, int, int) = NULL;
 
    switch (pathType)
    {
@@ -1326,7 +1326,7 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
  
    // put start node into open list
    astar[srcIndex].g = gcalc (srcIndex, -1);
-   astar[srcIndex].f = astar[srcIndex].g + hcalc (srcIndex, destIndex);
+   astar[srcIndex].f = astar[srcIndex].g + hcalc (srcIndex, srcIndex, destIndex);
    astar[srcIndex].state = OPEN;
 
    openList.Insert (srcIndex, astar[srcIndex].g);
@@ -1374,7 +1374,7 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
 
          // calculate the F value as F = G + H
          int g = astar[currentIndex].g + gcalc (currentChild, currentIndex);
-         int h = hcalc (srcIndex, destIndex);
+         int h = hcalc (currentChild, srcIndex, destIndex);
          int f = g + h;
 
          if (astar[currentChild].state == NEW || astar[currentChild].f > f)
@@ -1989,7 +1989,7 @@ bool Bot::HeadTowardWaypoint (void)
             m_campButtons = 0;
 
             int waypoint = m_navNode->next->index;
-            int kills = 0;
+            float kills = 0;
 
             if (GetTeam (GetEntity ()) == TEAM_TF)
                kills = (g_experienceData + (waypoint * g_numWaypoints) + waypoint)->team0Damage / g_highestDamageT;
@@ -2010,7 +2010,7 @@ bool Bot::HeadTowardWaypoint (void)
                   break;
                }
 
-               if (m_baseAgressionLevel < static_cast <float> (kills) && GetTaskId () != TASK_MOVETOPOSITION && HasPrimaryWeapon ())
+               if (m_baseAgressionLevel < kills && GetTaskId () != TASK_MOVETOPOSITION && HasPrimaryWeapon ())
                {
                   StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + (m_fearLevel * (g_timeRoundMid - GetWorldTime ()) * 0.5), true); // push camp task on to stack
 
