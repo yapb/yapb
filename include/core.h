@@ -943,8 +943,8 @@ private:
    bool m_duckDefuse; // should or not bot duck to defuse bomb
    float m_duckDefuseCheckTime; // time to check for ducking for defuse
 
-   byte m_msecVal; // calculated msec value
-   float m_msecInterval; // used for leon hartwig's method for msec calculation
+   float m_msecVal; // calculated msec value
+   float m_msecDel;
 
    float m_frameInterval; // bot's frame interval
    float m_lastThinkTime; // time bot last thinked
@@ -1071,6 +1071,7 @@ private:
    int GetBestSecondaryWeaponCarried (void);
 
    void RunPlayerMovement (void);
+   void ThrottleMsec(void);
    void GetValidWaypoint (void);
    void ChangeWptIndex (int waypointIndex);
    bool IsDeadlyDrop (Vector targetOriginPos);

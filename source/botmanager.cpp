@@ -265,7 +265,9 @@ void BotManager::Think (void)
          }
 #else
          m_bots[i]->Think ();
+
 #endif
+         
       }
    }
 }
@@ -826,8 +828,6 @@ Bot::Bot (edict_t *bot, int skill, int personality, int team, int member)
 
    m_logotypeIndex = g_randGen.Long (0, 5);
 
-   // initialize msec value
-   m_msecInterval = GetWorldTime ();
    m_msecVal = static_cast <byte> (g_pGlobals->frametime * 1000.0);
 
    // assign how talkative this bot will be
@@ -838,7 +838,7 @@ Bot::Bot (edict_t *bot, int skill, int personality, int team, int member)
    m_skill = skill;
    m_weaponBurstMode = BM_OFF;
 
-   m_lastThinkTime = GetWorldTime ();
+   m_lastThinkTime = GetWorldTime () - 0.1f;
    m_frameInterval = GetWorldTime ();
 
    bot->v.idealpitch = bot->v.v_angle.x;

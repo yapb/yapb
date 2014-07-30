@@ -3031,9 +3031,11 @@ void Bot::Think (void)
    m_frameInterval = GetWorldTime () - m_lastThinkTime;
    m_lastThinkTime = GetWorldTime ();
 
+   // calculate msec value
+   ThrottleMsec ();
+
    // is bot movement enabled
    bool botMovement = false;
-
 
    if (m_notStarted) // if the bot hasn't selected stuff to start the game yet, go do that...
       StartGame (); // select team & class
@@ -6104,6 +6106,47 @@ void Bot::MoveToVector (Vector to)
    FindPath (m_currentWaypointIndex, g_waypoint->FindNearest (to), 0);
 }
 
+void Bot::ThrottleMsec (void)
+{
+   m_msecVal = static_cast <int> (m_frameInterval * 1000.0);
+
+   // count up difference that integer conversion caused
+   m_msecDel += m_frameInterval * 1000.0 - m_msecVal;
+
+   // remove effect of integer conversion and lost msecs on previous frames
+   if (m_msecDel > 1.625f)
+   {
+      float diff = 1.625f;
+
+      if (m_msecDel > 60.0f)
+         diff = 60.0f;
+      else if (m_msecDel > 30.0f)
+         diff = 30.0f;
+      else if (m_msecDel > 15.0f)
+         diff = 15.0f;
+      else if (m_msecDel > 7.5f)
+         diff = 7.5f;
+      else if (m_msecDel > 3.25f)
+         diff = 3.25f;
+
+      m_msecVal += diff - 0.5f;
+      m_msecDel -= diff - 0.5f;
+   }
+
+   if (m_msecVal < 1)    // don't allow msec to be less than 1...
+   {
+      // adjust msecdel so we can correct lost msecs on following frames
+      m_msecDel += m_msecVal - 1;
+      m_msecVal = 1;
+   }
+   else if (m_msecVal > 100)  // ...or greater than 100
+   {
+      // adjust msecdel so we can correct lost msecs on following frames
+      m_msecDel += m_msecVal - 100;
+      m_msecVal = 100;
+   }
+}
+
 void Bot::RunPlayerMovement (void)
 {
    // the purpose of this function is to compute, according to the specified computation
@@ -6119,16 +6162,6 @@ void Bot::RunPlayerMovement (void)
    // short in comparison with the frame's duration, the remaining time until the frame
    // elapses, that bot will behave like a ghost : no movement, but bullets and players can
    // pass through it. Then, when the next frame will begin, the stucking problem will arise !
-
-
-   m_msecVal = static_cast <byte> ((GetWorldTime () - m_msecInterval) * 1000.0f);
-
-   // update msec interval for last calculation method
-   m_msecInterval = GetWorldTime ();
-
-   // validate range of the msec value
-   if (m_msecVal > 2555)
-      m_msecVal = 255;
 
    (*g_engfuncs.pfnRunPlayerMove) (GetEntity (), m_moveAngles, m_moveSpeed, m_strafeSpeed, 0.0, pev->button, pev->impulse, m_msecVal);
 }
