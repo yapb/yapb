@@ -29,6 +29,7 @@ ConVar yb_autovacate ("yb_autovacate", "-1");
 ConVar yb_quota ("yb_quota", "0");
 ConVar yb_quota_match ("yb_quota_match", "0");
 ConVar yb_quota_match_max ("yb_quota_match_max", "0");
+ConVar yb_join_after_player ("yb_join_after_player", "0");
 
 ConVar yb_join_team ("yb_join_team", "any");
 ConVar yb_name_prefix ("yb_name_prefix", "");
@@ -126,7 +127,7 @@ int BotManager::CreateBot (String name, int skill, int personality, int team, in
       {
          bool nameFound = false;
 
-         for (int i = 0; i < 8; i++)
+         for (int i = 0; i < g_botNames.GetSize (); i++)
          {
             if (nameFound)
                break;
@@ -323,6 +324,12 @@ void BotManager::MaintainBotQuota (void)
    // this function keeps number of bots up to date, and don't allow to maintain bot creation
    // while creation process in process.
 
+   if (yb_join_after_player.GetInt () > 0 && GetHumansJoinedTeam () == 0)
+   {
+      RemoveAll (false);
+      return;
+   }
+
    if (!m_creationTab.IsEmpty () && m_maintainTime < GetWorldTime ())
    {
       CreateQueue last = m_creationTab.Pop ();
@@ -339,7 +346,7 @@ void BotManager::MaintainBotQuota (void)
          m_creationTab.RemoveAll (); // maximum players reached, so set quota to maximum players
          yb_quota.SetInt (GetBotsNum ());
       }
-      m_maintainTime = GetWorldTime () + 0.2;
+      m_maintainTime = GetWorldTime () + 0.15f;
    }
 
    // now keep bot number up to date
@@ -388,13 +395,13 @@ void BotManager::MaintainBotQuota (void)
       else if (yb_quota.GetInt () < 0)
          yb_quota.SetInt (0);
 
-      m_maintainTime = GetWorldTime () + 0.25;
+      m_maintainTime = GetWorldTime () + 0.15f;
    }
 }
 
 void BotManager::InitQuota (void)
 {
-   m_maintainTime = GetWorldTime () + 2.0;
+   m_maintainTime = GetWorldTime () + 1.5f;
    m_creationTab.RemoveAll ();
 }
 
@@ -453,11 +460,12 @@ void BotManager::FillServer (int selection, int personality, int skill, int numT
    CenterPrint ("Fill Server with %s bots...", &teamDesc[selection][0]);
 }
 
-void BotManager::RemoveAll (void)
+void BotManager::RemoveAll (bool zeroQuota)
 {
    // this function drops all bot clients from server (this function removes only yapb's)`q
 
-   CenterPrint ("Bots are removed from server.");
+   if (zeroQuota)
+      CenterPrint ("Bots are removed from server.");
 
    for (int i = 0; i < GetMaxClients (); i++)
    {
@@ -467,8 +475,11 @@ void BotManager::RemoveAll (void)
    m_creationTab.RemoveAll ();
 
    // reset cvars
-   yb_quota.SetInt (0);
-   yb_autovacate.SetInt (0);
+   if (zeroQuota)
+   {
+      yb_quota.SetInt (0);
+      yb_autovacate.SetInt (0);
+   }
 }
 
 void BotManager::RemoveFromTeam (Team team, bool removeAll)
@@ -661,20 +672,6 @@ int BotManager::GetBotsNum (void)
    for (int i = 0; i < GetMaxClients (); i++)
    {
       if (m_bots[i] != NULL)
-         count++;
-   }
-   return count;
-}
-
-int BotManager::GetHumansNum (void)
-{
-   // this function returns number of humans playing on the server
-
-   int count = 0;
-
-   for (int i = 0; i < GetMaxClients (); i++)
-   {
-      if ((g_clients[i].flags & CF_USED) && m_bots[i] == NULL)
          count++;
    }
    return count;
@@ -915,6 +912,22 @@ Bot::~Bot (void)
    ResetTasks ();
 }
 
+int BotManager::GetHumansNum (void)
+{
+   // this function returns number of humans playing on the server
+
+   int count = 0;
+
+   for (int i = 0; i < GetMaxClients (); i++)
+   {
+      Client *cl = &g_clients[i];
+
+      if ((cl->flags & CF_USED) && m_bots[i] == NULL && !(cl->ent->v.flags & FL_FAKECLIENT))
+         count++;
+   }
+   return count;
+}
+
 int BotManager::GetHumansAliveNum (void)
 {
    // this function returns number of humans playing on the server
@@ -923,7 +936,25 @@ int BotManager::GetHumansAliveNum (void)
 
    for (int i = 0; i < GetMaxClients (); i++)
    {
-      if ((g_clients[i].flags & (CF_USED | CF_ALIVE)) && m_bots[i] == NULL)
+      Client *cl = &g_clients[i];
+
+      if ((cl->flags & (CF_USED | CF_ALIVE)) && m_bots[i] == NULL && !(cl->ent->v.flags & FL_FAKECLIENT))
+         count++;
+   }
+   return count;
+}
+
+int BotManager::GetHumansJoinedTeam (void)
+{
+   // this function returns number of humans playing on the server
+
+   int count = 0;
+
+   for (int i = 0; i < GetMaxClients (); i++)
+   {
+      Client *cl = &g_clients[i];
+
+      if ((cl->flags & (CF_USED | CF_ALIVE)) && m_bots[i] == NULL && cl->team != TEAM_SPEC && !(cl->ent->v.flags & FL_FAKECLIENT))
          count++;
    }
    return count;

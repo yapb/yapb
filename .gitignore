@@ -34,3 +34,19 @@ Icon
 # Files that might appear on external disk
 .Spotlight-V100
 .Trashes
+
+*.pdb
+*.asm
+*.tlog
+*.obj
+*.log
+*.manifest
+*.map
+*.res
+*.lib
+*.exp
+*.ilk
+*.opensdf
+*.dll
+*.sdf
+*.suo

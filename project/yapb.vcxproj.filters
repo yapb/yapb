@@ -1,0 +1,107 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="source">
+      <UniqueIdentifier>{8d3352c3-bb0c-4e87-bb5d-044bb9ec5e13}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{e529241e-773e-4084-a737-060aa8396cba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="project">
+      <UniqueIdentifier>{fe17a93f-cd53-4c35-b79b-969c4967865e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\engine">
+      <UniqueIdentifier>{f98ff5ec-055a-46cd-b5b1-462ef4c1c73e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\compress.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\core.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\corelib.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\globals.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\resource.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\engine\archtypes.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\engine\const.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\engine\dllapi.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\engine\eiface.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\engine\enginecallback.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\engine\extdll.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\engine\meta_api.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\engine\mutil.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\engine\plinfo.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\engine\progdefs.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\engine\sdk_util.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\engine\util.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\source\basecode.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\botmanager.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\chatlib.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\combat.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\globals.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\interface.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\navigate.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\netmsg.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\support.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\waypoint.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="yapb.rc">
+      <Filter>project</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

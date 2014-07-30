@@ -454,6 +454,8 @@ void NetworkMsg::Execute (void *p)
                g_clients[playerIndex - 1].realTeam = TEAM_TF;
             else if (PTR_TO_INT (p) == 2)
                g_clients[playerIndex - 1].realTeam = TEAM_CF;
+            else
+               g_clients[playerIndex - 1].realTeam = TEAM_SPEC;
 
             if (yb_csdm_mode.GetInt () == 2)
                g_clients[playerIndex - 1].team = playerIndex;

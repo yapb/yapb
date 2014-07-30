@@ -3138,7 +3138,6 @@ void Bot::Think (void)
    if (secondThinkTimer < GetWorldTime ())
    {
       SecondThink ();
-
      
       // update timer to one second
       secondThinkTimer = GetWorldTime () + 1.05;

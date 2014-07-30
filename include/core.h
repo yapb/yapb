@@ -270,7 +270,8 @@ enum CollisionState
 enum Team
 {
    TEAM_TF = 0,
-   TEAM_CF
+   TEAM_CF,
+   TEAM_SPEC
 };
 
 // client flags
@@ -1312,6 +1313,7 @@ public:
 
    int GetHumansNum (void);
    int GetHumansAliveNum(void);
+   int GetHumansJoinedTeam (void);
    int GetBotsNum (void);
 
    void Think (void);
@@ -1324,7 +1326,7 @@ public:
    void AddBot (String name, String skill, String personality, String team, String member);
    void FillServer (int selection, int personality = PERSONALITY_NORMAL, int skill = -1, int numToAdd = -1);
 
-   void RemoveAll (void);
+   void RemoveAll (bool zeroQuota = true);
    void RemoveRandom (void);
    void RemoveFromTeam (Team team, bool removeAll = false);
    void RemoveMenu (edict_t *ent, int selection);
