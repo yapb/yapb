@@ -1097,10 +1097,7 @@ int Spawn (edict_t *ent)
       g_worldEdict = ent; // save the world entity for future use
    }
    else if (strcmp (STRING (ent->v.classname), "player_weaponstrip") == 0 && (STRING (ent->v.target))[0] == '0')
-   {
       ent->v.target = ent->v.targetname = ALLOC_STRING ("fake");
-      ent->v.targetname = ALLOC_STRING ("fake");
-   }
    else if (strcmp (STRING (ent->v.classname), "info_player_start") == 0)
    {
       SET_MODEL (ent, ENGINE_STR ("models/player/urban/urban.mdl"));
@@ -2219,22 +2216,6 @@ void ServerDeactivate (void)
    (*g_functionTable.pfnServerDeactivate) ();
 }
 
-void KeyValue (edict_t *ent, KeyValueData *data)
-{
-   // this function is called when the game requests a pointer to some entity's keyvalue data.
-   // The keyvalue data is held in each entity's infobuffer (basically a char buffer where each
-   // game DLL can put the stuff it wants) under - as it says - the form of a key/value pair. A
-   // common example of key/value pair is the "model", "(name of player model here)" one which
-   // is often used for client DLLs to display player characters with the right model (else they
-   // would all have the dull "models/player.mdl" one). The entity for which the keyvalue data
-   // pointer is requested is pentKeyvalue, the pointer to the keyvalue data structure pkvd.
-
-   if (g_isMetamod)
-      RETURN_META (MRES_IGNORED);
-
-   (*g_functionTable.pfnKeyValue) (ent, data);
-}
-
 void StartFrame (void)
 {
    // this function starts a video frame. It is called once per video frame by the engine. If
@@ -2958,7 +2939,6 @@ export int GetEntityAPI2 (gamefuncs_t *functionTable, int *interfaceVersion)
    functionTable->pfnClientCommand = ClientCommand;
    functionTable->pfnServerActivate = ServerActivate;
    functionTable->pfnServerDeactivate = ServerDeactivate;
-   functionTable->pfnKeyValue = KeyValue;
    functionTable->pfnStartFrame = StartFrame;
    functionTable->pfnUpdateClientData = UpdateClientData;
 
