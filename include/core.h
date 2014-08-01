@@ -978,6 +978,9 @@ private:
    float m_buttonPushTime; // time to push the button
    float m_liftUsageTime; // time to use lift
 
+   int m_pingOffset[2]; 
+   int m_ping[3]; // bots pings in scoreboard
+
    Vector m_liftTravelPos; // lift travel position
    Vector m_moveAngles; // bot move angles
    bool m_moveToGoal; // bot currently moving to goal??
@@ -1288,11 +1291,15 @@ class BotManager : public Singleton <BotManager>
 {
 private:
    Array <CreateQueue> m_creationTab; // bot creation tab
+
    Bot *m_bots[32]; // all available bots
    float m_maintainTime; // time to maintain bot creation quota
+
    int m_lastWinner; // the team who won previous round
    int m_roundCount; // rounds passed
+
    bool m_economicsGood[2]; // is team able to buy anything
+   bool m_deathMsgSent; // for fakeping
 
 protected:
    int CreateBot (String name, int skill, int personality, int team, int member);
@@ -1340,6 +1347,14 @@ public:
    void CheckTeamEconomics (int team);
 
    static void CallGameEntity (entvars_t *vars);
+
+   inline void SetDeathMsgState (bool sent) { m_deathMsgSent = sent; }
+   inline bool GetDeathMsgState (void) { return m_deathMsgSent; }
+
+public:
+   void CalculatePingOffsets (void);
+   void SendPingDataOffsets (edict_t *to);
+   void SendDeathMsgFix (void);
 };
 
 // texts localizer
@@ -1369,14 +1384,14 @@ public:
   ~NetworkMsg   (void) { };
 
    void Execute (void *p);
-   void Reset (void) { m_message = NETMSG_UNDEFINED; m_state = 0; m_bot = NULL; };
+   inline void Reset (void) { m_message = NETMSG_UNDEFINED; m_state = 0; m_bot = NULL; };
    void HandleMessageIfRequired (int messageType, int requiredType);
 
-   void SetMessage (int message) { m_message = message; }
-   void SetBot (Bot *bot) { m_bot = bot; }
+   inline void SetMessage (int message) { m_message = message; }
+   inline void SetBot (Bot *bot) { m_bot = bot; }
 
-   int GetId (int messageType) { return m_registerdMessages[messageType]; }
-   void SetId (int messageType, int messsageIdentifier) { m_registerdMessages[messageType] = messsageIdentifier; }
+   inline int GetId (int messageType) { return m_registerdMessages[messageType]; }
+   inline void SetId (int messageType, int messsageIdentifier) { m_registerdMessages[messageType] = messsageIdentifier; }
 };
 
 // waypoint operation class
@@ -1581,14 +1596,14 @@ public:
       return m_eptr->strval;
    }
 
-   inline const char *GetName(void)
+   inline const char *GetName (void)
    {
       return m_eptr->name;
    }
 
-   inline void SetFloat(float val)
+   inline void SetFloat (float val)
    {
-      g_engfuncs.pfnCVarSetFloat(m_eptr->name, val);
+      g_engfuncs.pfnCVarSetFloat (m_eptr->name, val);
    }
 
    inline void SetInt (int val)
@@ -1603,12 +1618,10 @@ public:
 };
 
 // prototypes of bot functions...
-extern int GetMaxClients (void);
 extern int GetWeaponReturn (bool isString, const char *weaponAlias, int weaponIndex = -1);
 extern int GetTeam (edict_t *ent);
 
 extern float GetShootingConeDeviation (edict_t *ent, Vector *position);
-extern float GetWorldTime (void);
 extern float GetWaveLength (const char *fileName);
 
 extern bool TryFileOpen (char *fileName);
@@ -1665,6 +1678,16 @@ static inline bool IsNullString (const char *input)
       return true;
 
    return *input == '\0';
+}
+
+static inline float GetWorldTime (void)
+{
+   return g_pGlobals->time;
+}
+
+static inline int GetMaxClients (void)
+{
+   return g_pGlobals->maxClients;
 }
 
 // very global convars

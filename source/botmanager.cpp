@@ -803,8 +803,8 @@ Bot::Bot (edict_t *bot, int skill, int personality, int team, int member)
    SET_CLIENT_KEYVALUE (clientIndex, buffer, "_ah", "0");
    SET_CLIENT_KEYVALUE (clientIndex, buffer, "_vgui_menus", "0");
 
-   if (g_gameVersion != CSV_OLD)
-      SET_CLIENT_KEYVALUE (clientIndex, buffer, "*bot", const_cast <char *> (yb_latency_display.GetBool () ? "1" : "0"));
+   if (g_gameVersion != CSV_OLD && yb_latency_display.GetInt () == 1)
+      SET_CLIENT_KEYVALUE (clientIndex, buffer, "*bot", "1");
 
    rejectReason[0] = 0; // reset the reject reason template string
    MDLL_ClientConnect (bot, "BOT", FormatBuffer ("127.0.0.%d", ENTINDEX (bot) + 100), rejectReason);
@@ -827,7 +827,6 @@ Bot::Bot (edict_t *bot, int skill, int personality, int team, int member)
    m_moneyAmount = 0;
 
    m_logotypeIndex = g_randGen.Long (0, 5);
-
    m_msecVal = static_cast <byte> (g_pGlobals->frametime * 1000.0);
 
    // assign how talkative this bot will be
@@ -1253,5 +1252,140 @@ void Bot::StartGame (void)
       // check for greeting other players, since we connected
       if (g_randGen.Long (0, 100) < 20)
          ChatMessage (CHAT_WELCOME);
+   }
+}
+
+void BotManager::CalculatePingOffsets (void)
+{
+   if (yb_latency_display.GetInt () != 2)
+      return;
+
+   int averagePing = 0;
+   int numHumans = 0;
+
+   for (int i = 0; i < GetMaxClients (); i++)
+   {
+      edict_t *ent = INDEXENT (i + 1);
+
+      if (!IsValidPlayer (ent))
+         continue;
+
+      numHumans++;
+
+      int ping, loss;
+      PLAYER_CNX_STATS (ent, &ping, &loss);
+
+      if (ping < 0 || ping > 100)
+         ping = g_randGen.Long (3, 15);
+
+      averagePing += ping;
+   }
+
+   if (numHumans > 0)
+      averagePing /= numHumans;
+   else
+      averagePing = g_randGen.Long (30, 40);
+
+   for (int i = 0; i < GetMaxClients (); i++)
+   {
+      Bot *bot = GetBot (i);
+
+      if (bot == NULL)
+         continue;
+
+      int botPing = g_randGen.Long (averagePing - averagePing * 0.2f, averagePing + averagePing * 0.2f) + g_randGen.Long (bot->m_skill / 100 * 0.5, bot->m_skill / 100);
+
+      if (botPing <= 5)
+         botPing = g_randGen.Long (10, 23);
+      else if (botPing > 100)
+         botPing = g_randGen.Long (30, 40);
+
+      for (int j = 0; j < 2; j++)
+      {
+         for (bot->m_pingOffset[j] = 0; bot->m_pingOffset[j] < 4; bot->m_pingOffset[j]++)
+         {
+            if ((botPing - bot->m_pingOffset[j]) % 4 == 0)
+            {
+               bot->m_ping[j] = (botPing - bot->m_pingOffset[j]) / 4;
+               break;
+            }
+         }
+      }
+      bot->m_ping[2] = botPing;
+   }
+}
+
+void BotManager::SendPingDataOffsets (edict_t *to)
+{
+   if (yb_latency_display.GetInt () != 2)
+      return;
+
+   if (!IsValidPlayer (to) || IsValidBot (to))
+      return;
+
+   if (!((to->v.button & IN_SCORE) || (to->v.oldbuttons & IN_SCORE)))
+      return;
+
+   static int sending;
+   sending = 0;
+
+   // missing from sdk
+   static const int SVC_PINGS = 17;
+
+   for (int i = 0; i < GetMaxClients (); i++)
+   {
+      Bot *bot = GetBot (i);
+
+      if (bot == NULL)
+         continue;
+
+      switch (sending)
+      {
+      case 0:
+         {
+            // start a new message
+            MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, SVC_PINGS, NULL, to);
+            WRITE_BYTE ((m_bots[i]->m_pingOffset[sending] * 64) + (1 + 2 * i));
+            WRITE_SHORT (m_bots[i]->m_ping[sending]);
+
+            sending++;
+         }
+      case 1:
+         {
+            // append additional data
+            WRITE_BYTE ((m_bots[i]->m_pingOffset[sending] * 128) + (2 + 4 * i));
+            WRITE_SHORT (m_bots[i]->m_ping[sending]);
+
+            sending++;
+         }
+      case 2:
+         {
+            // append additional data and end message
+            WRITE_BYTE (4 + 8 * i);
+            WRITE_SHORT (m_bots[i]->m_ping[sending]);
+            WRITE_BYTE (0);
+            MESSAGE_END ();
+
+            sending = 0;
+         }
+      }
+   }
+
+   // end message if not yet sent
+   if (sending)
+   {
+      WRITE_BYTE (0);
+      MESSAGE_END ();
+   }
+}
+
+void BotManager::SendDeathMsgFix (void)
+{
+   if (yb_latency_display.GetInt () == 2 && m_deathMsgSent)
+   {
+      m_deathMsgSent = false;
+
+      for (int i = 0; i < GetMaxClients (); i++)
+         SendPingDataOffsets (g_clients[i].ent);
    }
 }

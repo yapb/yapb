@@ -991,20 +991,6 @@ void ServerCommand (const char *format, ...)
    SERVER_COMMAND (FormatBuffer ("%s\n", string)); // execute command
 }
 
-float GetWorldTime (void)
-{
-   // this function returns engine current time on this server
-
-   return g_pGlobals->time;
-}
-
-int GetMaxClients (void)
-{
-   // this function returns current players on server
-
-   return g_pGlobals->maxClients;
-}
-
 const char *GetMapName (void)
 {
    // this function gets the map name and store it in the map_name global string variable.

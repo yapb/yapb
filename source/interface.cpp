@@ -1155,23 +1155,17 @@ int Spawn (edict_t *ent)
    return result;
 }
 
-void Touch (edict_t *pentTouched, edict_t *pentOther)
+void UpdateClientData (const struct edict_s *ent, int sendweapons, struct clientdata_s *cd)
 {
-   // this function is called when two entities' bounding boxes enter in collision. For example,
-   // when a player walks upon a gun, the player entity bounding box collides to the gun entity
-   // bounding box, and the result is that this function is called. It is used by the game for
-   // taking the appropriate action when such an event occurs (in our example, the player who
-   // is walking upon the gun will "pick it up"). Entities that "touch" others are usually
-   // entities having a velocity, as it is assumed that static entities (entities that don't
-   // move) will never touch anything. Hence, in our example, the pentTouched will be the gun
-   // (static entity), whereas the pentOther will be the player (as it is the one moving). When
-   // the two entities both have velocities, for example two players colliding, this function
-   // is called twice, once for each entity moving.
+   extern ConVar yb_latency_display;
+
+   if (yb_latency_display.GetInt () == 2)
+      g_botManager->SendPingDataOffsets (const_cast <edict_t *> (ent));
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
-   (*g_functionTable.pfnTouch) (pentTouched, pentOther);
+   (*g_functionTable.pfnUpdateClientData) (ent, sendweapons, cd);
 }
 
 void ClientPutInServer (edict_t *ent)
@@ -2295,6 +2289,7 @@ void StartFrame (void)
 
       CheckWelcomeMessage ();
    }
+   g_botManager->SetDeathMsgState (false);
 
    if (secondTimer < GetWorldTime ())
    {
@@ -2333,6 +2328,7 @@ void StartFrame (void)
             if (csdm_active != NULL && csdm_active->value > 0)
                yb_csdm_mode.SetInt (mp_freeforall != NULL && mp_freeforall->value > 0 ? 2 : 1);
          }
+         g_botManager->CalculatePingOffsets ();
       }
 
       extern ConVar yb_danger_factor;
@@ -2572,6 +2568,17 @@ void pfnMessageEnd (void)
       RETURN_META (MRES_IGNORED);
 
    MESSAGE_END ();
+
+   // send latency fix
+   g_botManager->SendDeathMsgFix ();
+}
+
+void pfnMessageEnd_Post (void)
+{
+   // send latency fix
+   g_botManager->SendDeathMsgFix ();
+
+   RETURN_META (MRES_IGNORED);
 }
 
 void pfnWriteByte (int value)
@@ -2953,7 +2960,7 @@ export int GetEntityAPI2 (gamefuncs_t *functionTable, int *interfaceVersion)
    functionTable->pfnServerDeactivate = ServerDeactivate;
    functionTable->pfnKeyValue = KeyValue;
    functionTable->pfnStartFrame = StartFrame;
-   functionTable->pfnTouch = Touch;
+   functionTable->pfnUpdateClientData = UpdateClientData;
 
    return TRUE;
 }
@@ -3027,6 +3034,15 @@ export int GetEngineFunctions (enginefuncs_t *functionTable, int *interfaceVersi
    functionTable->pfnAlertMessage = pfnAlertMessage;
    functionTable->pfnGetPlayerAuthId = pfnGetPlayerAuthId;
    functionTable->pfnGetPlayerWONId = pfnGetPlayerWONId;
+
+   return TRUE;
+}
+
+export int GetEngineFunctions_Post (enginefuncs_t *functionTable, int *interfaceVersion)
+{
+   memset (functionTable, 0, sizeof (enginefuncs_t));
+
+   functionTable->pfnMessageEnd = pfnMessageEnd_Post;
 
    return TRUE;
 }

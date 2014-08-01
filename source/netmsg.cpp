@@ -274,6 +274,8 @@ void NetworkMsg::Execute (void *p)
          break;
 
       case 2:
+         g_botManager->SetDeathMsgState (true);
+
          if (killerIndex != 0 && killerIndex != victimIndex)
          {
             edict_t *killer = INDEXENT (killerIndex);
