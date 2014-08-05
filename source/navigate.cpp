@@ -941,12 +941,13 @@ PriorityQueue::PriorityQueue (void)
 {
    m_size = 0;
    m_heapSize = MAX_WAYPOINTS * 4;
-   m_heap = new HeapNode_t[sizeof (HeapNode_t) * m_heapSize];
+   m_heap = (HeapNode_t *) malloc (sizeof (HeapNode_t) * m_heapSize);
 }
 
 PriorityQueue::~PriorityQueue (void)
 {
-   delete [] m_heap;
+   free (m_heap);
+
    m_heap = NULL;
 }
 
@@ -1149,12 +1150,46 @@ int gfunctionKillsCTWithHostage (int currentIndex, int parentIndex)
    Path *current = g_waypoint->GetPath (currentIndex);
 
    if (current->flags & FLAG_NOHOSTAGE)
-      return 65536;
+      return 65355;
 
    else if (current->flags & (FLAG_CROUCH | FLAG_LADDER))
       return gfunctionKillsDistCT (currentIndex, parentIndex) * 500;
 
    return gfunctionKillsCT (currentIndex, parentIndex);
+}
+
+int gfunctionPathDist (int currentIndex, int parentIndex)
+{
+   if (parentIndex == -1)
+      return 0;
+
+   Path *parent = g_waypoint->GetPath (parentIndex);
+   Path *current = g_waypoint->GetPath (currentIndex);
+
+   for (int i = 0; i < MAX_PATH_INDEX; i++)
+   {
+      if (parent->index[i] == currentIndex)
+      {
+         // we don't like ladder or crouch point
+         if (current->flags & (FLAG_CROUCH | FLAG_LADDER))
+            return parent->distances[i] * 1.5;
+
+         return parent->distances[i];
+      }
+   }
+   return 65355;
+}
+
+int gfunctionPathDistWithHostage (int currentIndex, int parentIndex)
+{
+   Path *current = g_waypoint->GetPath (currentIndex);
+
+   if (current->flags & FLAG_NOHOSTAGE)
+      return 65355;
+   else if (current->flags & (FLAG_CROUCH | FLAG_LADDER))
+      return gfunctionPathDist (currentIndex, parentIndex) * 500;
+
+   return gfunctionPathDist (currentIndex, parentIndex);
 }
 
 int hfunctionSquareDist (int startIndex, int goalIndex)
@@ -1185,6 +1220,12 @@ int hfunctionNone (int startIndex, int goalIndex)
 {
    return hfunctionSquareDist (startIndex, goalIndex) / (128 * 10);
 }
+
+int hfunctionNumberNodes (int startIndex, int goalIndex)
+{
+   return hfunctionSquareDist (startIndex, goalIndex) / 128 * g_highestKills;
+}
+
 
 void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
 {
@@ -1236,12 +1277,12 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
    case 0:
       if ((g_mapType & MAP_CS) && HasHostage ())
       {
-         gcalc = hfunctionNone;
+         gcalc = gfunctionPathDistWithHostage;
          hcalc = hfunctionSquareDistWithHostage;
       }
       else
       {
-         gcalc = hfunctionNone;
+         gcalc = gfunctionPathDist;
          hcalc = hfunctionSquareDist;
       }
       break;

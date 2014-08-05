@@ -1147,7 +1147,6 @@ void DetectCSVersion (void)
       ServerPrint (infoBuffer, "CZ (Steam)", sizeof (Bot));
       break;
    }
-   g_convarWrapper->PushRegisteredConVarsToEngine (true);
 }
 
 void PlaySound (edict_t *ent, const char *name)

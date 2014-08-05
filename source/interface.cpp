@@ -587,6 +587,8 @@ void InitConfig (void)
    // NAMING SYSTEM INITIALIZATION
    if (OpenConfig ("names.cfg", "Name configuration file not found.", &fp , true))
    {
+      g_botNames.RemoveAll ();
+
       while (fp.GetBuffer (line, 255))
       {
          SKIP_COMMENTS ();
@@ -1045,12 +1047,14 @@ void CommandHandler_NotMM (void)
 void GameDLLInit (void)
 {
    // this function is a one-time call, and appears to be the second function called in the
-   // DLL after FuncPointers_t() has been called. Its purpose is to tell the MOD DLL to
+   // DLL after GiveFntprsToDll() has been called. Its purpose is to tell the MOD DLL to
    // initialize the game before the engine actually hooks into it with its video frames and
    // clients connecting. Note that it is a different step than the *server* initialization.
    // This one is called once, and only once, when the game process boots up before the first
    // server is enabled. Here is a good place to do our own game session initialization, and
    // to register by the engine side the server commands we need to administrate our bots.
+
+   DetectCSVersion ();
 
    // register server command(s)
    RegisterCommand ("yapb", CommandHandler);   
@@ -1078,7 +1082,7 @@ int Spawn (edict_t *ent)
 
    if (strcmp (STRING (ent->v.classname), "worldspawn") == 0)
    {
-      DetectCSVersion ();
+      g_convarWrapper->PushRegisteredConVarsToEngine (true);
 
       PRECACHE_SOUND (ENGINE_STR ("weapons/xbow_hit1.wav"));      // waypoint add
       PRECACHE_SOUND (ENGINE_STR ("weapons/mine_activate.wav"));  // waypoint delete
