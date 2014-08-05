@@ -897,6 +897,9 @@ void Waypoint::InitExperienceTab (void)
 
    g_experienceData = new Experience[g_numWaypoints * g_numWaypoints];
 
+   g_highestDamageCT = 1;
+   g_highestDamageT = 1;
+
    // initialize table by hand to correct values, and NOT zero it out
    for (i = 0; i < g_numWaypoints; i++)
    {
@@ -934,6 +937,12 @@ void Waypoint::InitExperienceTab (void)
                   {
                      (g_experienceData + (i * g_numWaypoints) + j)->team0Damage = (unsigned short) ((experienceLoad + (i * g_numWaypoints) + j)->team0Damage);
                      (g_experienceData + (i * g_numWaypoints) + j)->team1Damage = (unsigned short) ((experienceLoad + (i * g_numWaypoints) + j)->team1Damage);
+
+                     if ((g_experienceData + (i * g_numWaypoints) + j)->team0Damage > g_highestDamageT)
+                        g_highestDamageT = (g_experienceData + (i * g_numWaypoints) + j)->team0Damage;
+       
+                     if ((g_experienceData + (i * g_numWaypoints) + j)->team1Damage > g_highestDamageCT)
+                        g_highestDamageCT = (g_experienceData + (i * g_numWaypoints) + j)->team1Damage;
                   }
                   else
                   {
@@ -1168,7 +1177,7 @@ bool Waypoint::Load (void)
    InitTypes ();
 
    g_waypointsChanged = false;
-   g_killHistory = 0;
+   g_highestKills = 1;
 
    m_pathDisplayTime = 0.0;
    m_arrowDisplayTime = 0.0;
@@ -1244,7 +1253,7 @@ bool Waypoint::Reachable (Bot *bot, int index)
 {
    // this function return wether bot able to reach index waypoint or not, depending on several factors.
 
-   if (index < 0 || index >= g_numWaypoints)
+   if (bot == NULL || index < 0 || index >= g_numWaypoints)
       return false;
 
    Vector src = bot->pev->origin;

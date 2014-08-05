@@ -637,7 +637,7 @@ void UpdateGlobalExperienceData (void)
    // this function called after each end of the round to update knowledge about most dangerous waypoints for each team.
 
    // no waypoints, no experience used or waypoints edited or being edited?
-   if ((g_numWaypoints < 1) || g_waypointsChanged)
+   if (g_numWaypoints < 1 || g_waypointsChanged)
       return; // no action
 
    unsigned short maxDamage; // maximum damage
@@ -726,16 +726,30 @@ void UpdateGlobalExperienceData (void)
          }
       }
    }
-   g_killHistory++;
+   g_highestKills++;
 
-   if (g_killHistory == MAX_KILL_HISTORY)
+   int clip = g_highestDamageT - static_cast <int> (MAX_DAMAGE_VALUE * 0.5);
+
+   if (clip < 1)
+      clip = 1;
+
+   g_highestDamageT = clip;
+
+   clip = (int) g_highestDamageCT - static_cast <int> (MAX_DAMAGE_VALUE * 0.5);
+
+   if (clip < 1)
+      clip = 1;
+
+   g_highestDamageCT = clip;
+
+   if (g_highestKills == MAX_KILL_HISTORY)
    {
       for (int i = 0; i < g_numWaypoints; i++)
       {
          (g_experienceData + (i * g_numWaypoints) + i)->team0Damage /= static_cast <unsigned short> (GetMaxClients () * 0.5);
          (g_experienceData + (i * g_numWaypoints) + i)->team1Damage /= static_cast <unsigned short> (GetMaxClients () * 0.5);
       }
-      g_killHistory = 1;
+      g_highestKills = 1;
    }
 }
 

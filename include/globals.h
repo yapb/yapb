@@ -55,7 +55,10 @@ extern int g_mapType;
 extern int g_numWaypoints;
 extern int g_gameVersion;
 extern int g_fakeArgc;
-extern int g_killHistory;
+
+extern int g_highestDamageCT;
+extern int g_highestDamageT;
+extern int g_highestKills;
 
 extern int g_normalWeaponPrefs[NUM_WEAPONS];
 extern int g_rusherWeaponPrefs[NUM_WEAPONS];

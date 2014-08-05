@@ -2982,7 +2982,7 @@ void Bot::ChooseAimDirection (void)
                TraceLine (pev->origin, dest, true, GetEntity (), &tr);
 
                if (tr.flFraction > 0.8 || tr.pHit != g_worldEdict)
-                  m_lookAt = dest;
+                  m_lookAt = dest + pev->view_ofs;
             }
          }
          else
@@ -2993,7 +2993,7 @@ void Bot::ChooseAimDirection (void)
                TraceLine (pev->origin, dest, true, GetEntity (), &tr);
 
                if (tr.flFraction > 0.8 || tr.pHit != g_worldEdict)
-                  m_lookAt = dest;
+                  m_lookAt = dest + pev->view_ofs;
             }
          }
       }
@@ -5656,6 +5656,7 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits)
          m_actualReactionTime = 0.0;
          m_seeEnemyTime = GetWorldTime();
          m_enemy = inflictor;
+
          m_lastEnemy = m_enemy;
          m_lastEnemyOrigin = m_enemy->v.origin;
          m_enemyOrigin = m_enemy->v.origin;
@@ -5691,7 +5692,9 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits)
             // FIXME - Bot doesn't necessary sees this enemy
             m_seeEnemyTime = GetWorldTime ();
          }
-         CollectExperienceData (inflictor, armor + damage);
+
+         if (yb_csdm_mode.GetInt () == 0)
+            CollectExperienceData (inflictor, armor + damage);
       }
    }
    else // hurt by unusual damage like drowning or gas
@@ -5801,7 +5804,7 @@ void Bot::CollectExperienceData (edict_t *attacker, int damage)
    int attackerTeam = GetTeam (attacker);
    int victimTeam = GetTeam (GetEntity ());
 
-   if (attackerTeam == victimTeam)
+   if (attackerTeam == victimTeam )
       return;
 
    // if these are bots also remember damage to rank destination of the bot
@@ -5841,6 +5844,9 @@ void Bot::CollectExperienceData (edict_t *attacker, int damage)
       if (value > MAX_DAMAGE_VALUE)
          value = MAX_DAMAGE_VALUE;
 
+      if (value > g_highestDamageT)
+         g_highestDamageT = value;
+
       (g_experienceData + (victimIndex * g_numWaypoints) + attackerIndex)->team0Damage = static_cast <unsigned short> (value);
    }
    else
@@ -5850,6 +5856,9 @@ void Bot::CollectExperienceData (edict_t *attacker, int damage)
 
       if (value > MAX_DAMAGE_VALUE)
          value = MAX_DAMAGE_VALUE;
+
+      if (value > g_highestDamageCT)
+         g_highestDamageCT = value;
 
       (g_experienceData + (victimIndex * g_numWaypoints) + attackerIndex)->team1Damage = static_cast <unsigned short> (value);
    }

@@ -57,7 +57,10 @@ int g_fakeArgc = 0;
 int g_gameVersion = CSV_STEAM;
 int g_numWaypoints = 0;
 int g_mapType = 0;
-int g_killHistory = 0;
+
+int g_highestDamageCT = 1;
+int g_highestDamageT = 1;
+int g_highestKills = 1;
 
 short g_modelIndexLaser = 0;
 short g_modelIndexArrow = 0;

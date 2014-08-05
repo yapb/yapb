@@ -953,7 +953,7 @@ int BotManager::GetHumansJoinedTeam (void)
    {
       Client *cl = &g_clients[i];
 
-      if ((cl->flags & (CF_USED | CF_ALIVE)) && m_bots[i] == NULL && cl->team != TEAM_SPEC && !(cl->ent->v.flags & FL_FAKECLIENT))
+      if ((cl->flags & (CF_USED | CF_ALIVE)) && m_bots[i] == NULL && cl->team != TEAM_SPEC && !(cl->ent->v.flags & FL_FAKECLIENT) && cl->ent->v.movetype != MOVETYPE_FLY)
          count++;
    }
    return count;

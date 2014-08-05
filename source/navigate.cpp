@@ -1029,131 +1029,161 @@ void PriorityQueue::HeapSiftUp (void)
    }
 }
 
-float gfunctionKillsDistT (int thisIndex, int parent, int skillOffset)
+
+int gfunctionKillsDistT (int currentIndex, int parentIndex)
 {
    // least kills and number of nodes to goal for a team
 
-   float cost = (g_experienceData + (thisIndex * g_numWaypoints) + thisIndex)->team0Damage + g_killHistory;
+   int cost = (g_experienceData + (currentIndex * g_numWaypoints) + currentIndex)->team0Damage + g_highestDamageT;
+
+   Path *current = g_waypoint->GetPath (currentIndex);
+   Path *parent = g_waypoint->GetPath (parentIndex);
 
    for (int i = 0; i < MAX_PATH_INDEX; i++)
    {
-      int neighbour = g_waypoint->GetPath (thisIndex)->index[i];
+      int neighbour = current->index[i];
 
       if (neighbour != -1)
-         cost += (g_experienceData + (neighbour * g_numWaypoints) + neighbour)->team0Damage;
+         cost += (g_experienceData + (neighbour * g_numWaypoints) + neighbour)->team0Damage * 0.3;
    }
-   float pathDistance = static_cast <float> (g_waypoint->GetPathDistance (parent, thisIndex));
 
-   if (g_waypoint->GetPath (thisIndex)->flags & FLAG_CROUCH)
-      cost += pathDistance * 2;
+   if (current->flags & FLAG_CROUCH)
+      cost *= 2;
 
-   return pathDistance + (cost * (yb_danger_factor.GetFloat () * 2 / skillOffset));
+   if (parentIndex < 0 || parentIndex > g_numWaypoints || parentIndex == currentIndex)
+      return cost * ((yb_danger_factor.GetInt () * 20 / (2 * g_highestDamageT)));
+
+   return g_waypoint->GetPathDistance (parentIndex, currentIndex) + (cost * 10 * yb_danger_factor.GetInt ());
 }
 
-float gfunctionKillsT (int thisIndex, int parent, int skillOffset)
-{
-   // least kills to goal for a team
 
-   float cost = (g_experienceData + (thisIndex * g_numWaypoints) + thisIndex)->team0Damage;
-
-   for (int i = 0; i < MAX_PATH_INDEX; i++)
-   {
-      int neighbour = g_waypoint->GetPath (thisIndex)->index[i];
-
-      if (neighbour != -1)
-         cost += (g_experienceData + (neighbour * g_numWaypoints) + neighbour)->team0Damage;
-   }
-   float pathDistance = static_cast <float> (g_waypoint->GetPathDistance (parent, thisIndex));
-
-   if (g_waypoint->GetPath (thisIndex)->flags & FLAG_CROUCH)
-      cost += pathDistance * 3;
-
-   return pathDistance + (cost * (yb_danger_factor.GetFloat () * 2 / skillOffset));
-}
-
-float gfunctionKillsDistCT (int thisIndex, int parent, int skillOffset)
+int gfunctionKillsDistCT (int currentIndex, int parentIndex)
 {
    // least kills and number of nodes to goal for a team
 
-   float cost = (g_experienceData + (thisIndex * g_numWaypoints) + thisIndex)->team1Damage + g_killHistory;
+   int cost = (g_experienceData + (currentIndex * g_numWaypoints) + currentIndex)->team1Damage + g_highestDamageCT;
+
+   Path *current = g_waypoint->GetPath (currentIndex);
+   Path *parent = g_waypoint->GetPath (parentIndex);
 
    for (int i = 0; i < MAX_PATH_INDEX; i++)
    {
-      int neighbour = g_waypoint->GetPath (thisIndex)->index[i];
+      int neighbour = current->index[i];
 
       if (neighbour != -1)
-         cost += (g_experienceData + (neighbour * g_numWaypoints) + neighbour)->team1Damage;
+         cost += static_cast <int> ((g_experienceData + (neighbour * g_numWaypoints) + neighbour)->team1Damage * 0.3);
    }
-   float pathDistance = static_cast <float> (g_waypoint->GetPathDistance (parent, thisIndex));
 
-   if (g_waypoint->GetPath (thisIndex)->flags & FLAG_CROUCH)
-      cost += pathDistance * 2;
+   if (current->flags & FLAG_CROUCH)
+      cost *= 2;
 
-   return pathDistance + (cost * (yb_danger_factor.GetFloat () * 2 / skillOffset));
+   if (parentIndex < 0 || parentIndex > g_numWaypoints || parentIndex == currentIndex)
+      return cost * ((yb_danger_factor.GetInt () * 20 / (2 * g_highestDamageCT)));
+
+   return g_waypoint->GetPathDistance (parentIndex, currentIndex) + (cost * 10 * yb_danger_factor.GetInt ());
 }
 
-float gfunctionKillsCT (int thisIndex, int parent, int skillOffset)
+int gfunctionKillsDistCTWithHostage (int currentIndex, int parentIndex)
+{
+   // least kills and number of nodes to goal for a team
+
+   Path *current = g_waypoint->GetPath (currentIndex);
+
+   if (current->flags & FLAG_NOHOSTAGE)
+      return 65536;
+
+   else if (current->flags & (FLAG_CROUCH | FLAG_LADDER))
+      return gfunctionKillsDistCT (currentIndex, parentIndex) * 500;
+
+   return gfunctionKillsDistCT (currentIndex, parentIndex);
+}
+
+int gfunctionKillsT (int currentIndex, int parentIndex)
 {
    // least kills to goal for a team
 
-   float cost = (g_experienceData + (thisIndex * g_numWaypoints) + thisIndex)->team1Damage;
+   int cost = (g_experienceData + (currentIndex * g_numWaypoints) + currentIndex)->team0Damage;
+
+   Path *current = g_waypoint->GetPath (currentIndex);
 
    for (int i = 0; i < MAX_PATH_INDEX; i++)
    {
-      int neighbour = g_waypoint->GetPath (thisIndex)->index[i];
+      int neighbour = current->index[i];
 
       if (neighbour != -1)
-         cost += (g_experienceData + (neighbour * g_numWaypoints) + neighbour)->team1Damage;
+         cost += (g_experienceData + (neighbour * g_numWaypoints) + neighbour)->team0Damage * 0.3;
    }
-   float pathDistance = static_cast <float> (g_waypoint->GetPathDistance (parent, thisIndex));
 
-   if (g_waypoint->GetPath (thisIndex)->flags & FLAG_CROUCH)
-      cost += pathDistance * 3;
+   if (current->flags & FLAG_CROUCH)
+      cost *= 2;
 
-   return pathDistance + (cost * (yb_danger_factor.GetFloat () * 2 / skillOffset));
+   return cost * 10 * yb_danger_factor.GetInt ();
 }
 
-float gfunctionKillsDistCTNoHostage (int thisIndex, int parent, int skillOffset)
+int gfunctionKillsCT (int currentIndex, int parentIndex)
 {
-   if (g_waypoint->GetPath (thisIndex)->flags & FLAG_NOHOSTAGE)
-      return 65355;
-   else if (g_waypoint->GetPath (thisIndex)->flags & (FLAG_CROUCH | FLAG_LADDER))
-      return gfunctionKillsDistCT (thisIndex, parent, skillOffset) * 500;
+   // least kills to goal for a team
 
-   return gfunctionKillsDistCT (thisIndex, parent, skillOffset);
+   int cost = (g_experienceData + (currentIndex * g_numWaypoints) + currentIndex)->team1Damage;
+
+   Path *current = g_waypoint->GetPath (currentIndex);
+
+   for (int i = 0; i < MAX_PATH_INDEX; i++)
+   {
+      int neighbour = current->index[i];
+
+      if (neighbour != -1)
+         cost += (g_experienceData + (neighbour * g_numWaypoints) + neighbour)->team1Damage * 0.3;
+   }
+
+   if (current->flags & FLAG_CROUCH)
+      cost *= 2;
+
+   return cost * 10 * yb_danger_factor.GetInt ();
 }
 
-float gfunctionKillsCTNoHostage (int thisIndex, int parent, int skillOffset)
+int gfunctionKillsCTWithHostage (int currentIndex, int parentIndex)
 {
-   if (g_waypoint->GetPath (thisIndex)->flags & FLAG_NOHOSTAGE)
-      return 65355;
-   else if (g_waypoint->GetPath (thisIndex)->flags & (FLAG_CROUCH | FLAG_LADDER))
-      return gfunctionKillsCT (thisIndex, parent, skillOffset) * 500;
+   // least kills to goal for a team
 
-   return gfunctionKillsCT (thisIndex, parent, skillOffset);
+   Path *current = g_waypoint->GetPath (currentIndex);
+
+   if (current->flags & FLAG_NOHOSTAGE)
+      return 65536;
+
+   else if (current->flags & (FLAG_CROUCH | FLAG_LADDER))
+      return gfunctionKillsDistCT (currentIndex, parentIndex) * 500;
+
+   return gfunctionKillsCT (currentIndex, parentIndex);
 }
 
-float hfunctionPathDist (int startIndex, int goalIndex, int)
+int hfunctionSquareDist (int startIndex, int goalIndex)
 {
-   // using square heuristic
-   Path *goal = g_waypoint->GetPath (goalIndex);
+   // square distance heuristic
+
    Path *start = g_waypoint->GetPath (startIndex);
+   Path *goal = g_waypoint->GetPath (goalIndex);
 
    float deltaX = fabsf (goal->origin.x - start->origin.x);
    float deltaY = fabsf (goal->origin.y - start->origin.y);
    float deltaZ = fabsf (goal->origin.z - start->origin.z);
 
-   return deltaX + deltaY + deltaZ;
+   return static_cast <int> (deltaX + deltaY + deltaZ);
 }
 
-float hfunctionNumberNodes (int startIndex, int goalIndex, int unused)
+int hfunctionSquareDistWithHostage (int startIndex, int goalIndex)
 {
-   return hfunctionPathDist (startIndex, goalIndex, unused) / 128 * g_killHistory;
+   // square distance heuristic with hostages
+
+   if (g_waypoint->GetPath (startIndex)->flags & FLAG_NOHOSTAGE)
+      return 65536;
+
+   return hfunctionSquareDist (startIndex, goalIndex);
 }
 
-float hfunctionNone (int startIndex, int goalIndex, int unused)
+int hfunctionNone (int startIndex, int goalIndex)
 {
-   return hfunctionPathDist (startIndex, goalIndex, unused) / (128 * 100);
+   return hfunctionSquareDist (startIndex, goalIndex) / (128 * 10);
 }
 
 void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
@@ -1182,10 +1212,9 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
 
    struct AStar_t
    {
-      double g;
-      double f;
+      int g;
+      int f;
       short parentIndex;
-
       AStarState_t state;
    } astar[MAX_WAYPOINTS];
 
@@ -1199,52 +1228,64 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
       astar[i].state = NEW;
    }
 
-   float (*gcalc) (int, int, int) = NULL;
-   float (*hcalc) (int, int, int) = NULL;
+   int (*gcalc) (int, int) = NULL;
+   int (*hcalc) (int, int) = NULL;
 
-   int skillOffset = 1;
-
-   if (pathType == 0)
+   switch (pathType)
    {
-      if (GetTeam (GetEntity ()) == TEAM_TF)
+   case 0:
+      if ((g_mapType & MAP_CS) && HasHostage ())
+      {
          gcalc = hfunctionNone;
-      else if (HasHostage ())
-         gcalc = hfunctionNone;
+         hcalc = hfunctionSquareDistWithHostage;
+      }
       else
+      {
          gcalc = hfunctionNone;
+         hcalc = hfunctionSquareDist;
+      }
+      break;
 
-      hcalc = hfunctionNumberNodes;
-      skillOffset = m_skill / 25;
-   }
-   else if (pathType == 1)
-   {
+   case 1:
       if (GetTeam (GetEntity ()) == TEAM_TF)
+      {
          gcalc = gfunctionKillsDistT;
-      else if (HasHostage ())
-         gcalc = gfunctionKillsDistCTNoHostage;
+         hcalc = hfunctionSquareDist;
+      }
+      else if ((g_mapType & MAP_CS) && HasHostage ())
+      {
+         gcalc = gfunctionKillsDistCTWithHostage;
+         hcalc = hfunctionSquareDistWithHostage;
+      }
       else
+      {
          gcalc = gfunctionKillsDistCT;
+         hcalc = hfunctionSquareDist;
+      }
+      break;
 
-      hcalc = hfunctionNumberNodes;
-      skillOffset = m_skill / 25;
-   }
-   else if (pathType == 2)
-   {
+   case 2:
       if (GetTeam (GetEntity ()) == TEAM_TF)
+      {
          gcalc = gfunctionKillsT;
-      else if (HasHostage ())
-         gcalc = gfunctionKillsCTNoHostage;
+         hcalc = hfunctionNone;
+      }
+      else if ((g_mapType & MAP_CS) && HasHostage ())
+      {
+         gcalc = gfunctionKillsDistCTWithHostage;
+         hcalc = hfunctionNone;
+      }
       else
+      {
          gcalc = gfunctionKillsCT;
-
-      hcalc = hfunctionNone;
-      skillOffset = m_skill / 20;
+         hcalc = hfunctionNone;
+      }
+      break;
    }
-
  
    // put start node into open list
-   astar[srcIndex].g = gcalc (srcIndex, -1, skillOffset);
-   astar[srcIndex].f = astar[srcIndex].g + hcalc (srcIndex, destIndex, skillOffset);
+   astar[srcIndex].g = gcalc (srcIndex, -1);
+   astar[srcIndex].f = astar[srcIndex].g + hcalc (srcIndex, destIndex);
    astar[srcIndex].state = OPEN;
 
    openList.Insert (srcIndex, astar[srcIndex].g);
@@ -1285,26 +1326,26 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
       // now expand the current node
       for (int i = 0; i < MAX_PATH_INDEX; i++)
       {
-         int iCurChild = g_waypoint->GetPath (currentIndex)->index[i];
+         int currentChild = g_waypoint->GetPath (currentIndex)->index[i];
 
-         if (iCurChild == -1)
+         if (currentChild == -1)
             continue;
 
          // calculate the F value as F = G + H
-         float g = astar[currentIndex].g + gcalc (iCurChild, currentIndex, skillOffset);
-         float h = hcalc (srcIndex, destIndex, skillOffset);
-         float f = g + h;
+         int g = astar[currentIndex].g + gcalc (currentChild, currentIndex);
+         int h = hcalc (srcIndex, destIndex);
+         int f = g + h;
 
-         if ((astar[iCurChild].state == NEW) || (astar[iCurChild].f > f))
+         if (astar[currentChild].state == NEW || astar[currentChild].f > f)
          {
             // put the current child into open list
-            astar[iCurChild].parentIndex = currentIndex;
-            astar[iCurChild].state = OPEN;
+            astar[currentChild].parentIndex = currentIndex;
+            astar[currentChild].state = OPEN;
 
-            astar[iCurChild].g = g;
-            astar[iCurChild].f = f;
+            astar[currentChild].g = g;
+            astar[currentChild].f = f;
 
-            openList.Insert (iCurChild, g);
+            openList.Insert (currentChild, g);
          }
       }
    }
@@ -1656,7 +1697,7 @@ int Bot::FindDefendWaypoint (Vector origin)
          else
             experience = exp->team1Damage;
 
-         experience = (experience * 100) / MAX_DAMAGE_VALUE;
+         experience = (experience * 100) / (GetTeam (GetEntity ()) == TEAM_TF ? g_highestDamageT : g_highestDamageCT);
          minDistance[i] = (experience * 100) / 8192;
          minDistance[i] += experience;
       }
@@ -1910,28 +1951,25 @@ bool Bot::HeadTowardWaypoint (void)
             int kills = 0;
 
             if (GetTeam (GetEntity ()) == TEAM_TF)
-               kills = (g_experienceData + (waypoint * g_numWaypoints) + waypoint)->team0Damage;
+               kills = (g_experienceData + (waypoint * g_numWaypoints) + waypoint)->team0Damage / g_highestDamageT;
             else
-               kills = (g_experienceData + (waypoint * g_numWaypoints) + waypoint)->team1Damage;
+               kills = (g_experienceData + (waypoint * g_numWaypoints) + waypoint)->team1Damage / g_highestDamageCT;
 
             // if damage done higher than one
-            if (kills > 1 && g_timeRoundMid > GetWorldTime () && g_killHistory > 0)
+            if (kills > 0.15f && g_timeRoundMid > GetWorldTime ())
             {
-               kills = (kills * 100) / g_killHistory;
-               kills /= 100;
-
                switch (m_personality)
                {
                case PERSONALITY_NORMAL:
-                  kills /= 2;
+                  kills *= 0.33f;
                   break;
 
                default:
-                  kills /= 1.2;
+                  kills *= 0.5f;
                   break;
                }
 
-               if (m_baseAgressionLevel < static_cast <float> (kills) && (m_skill < 98 || GetTeam (GetEntity ()) == TEAM_CF))
+               if (m_baseAgressionLevel < static_cast <float> (kills) && GetTaskId () != TASK_MOVETOPOSITION && HasPrimaryWeapon ())
                {
                   StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + (m_fearLevel * (g_timeRoundMid - GetWorldTime ()) * 0.5), true); // push camp task on to stack
 
