@@ -32,11 +32,11 @@ ConVar mp_friendlyfire ("mp_friendlyfire", NULL, VT_NOREGISTER);
 
 int Bot::GetNearbyFriendsNearPosition (Vector origin, int radius)
 {
-   int count = 0, team = GetTeam (GetEntity ());
+   int count = 0;
 
    for (int i = 0; i < GetMaxClients (); i++)
    {
-      if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != team || g_clients[i].ent == GetEntity ())
+      if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != m_team || g_clients[i].ent == GetEntity ())
          continue;
 
       if ((g_clients[i].origin - origin).GetLengthSquared () < static_cast <float> (radius * radius))
@@ -47,11 +47,11 @@ int Bot::GetNearbyFriendsNearPosition (Vector origin, int radius)
 
 int Bot::GetNearbyEnemiesNearPosition (Vector origin, int radius)
 {
-   int count = 0, team = GetTeam (GetEntity ());
+   int count = 0;
 
    for (int i = 0; i < GetMaxClients (); i++)
    {
-      if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team == team)
+      if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team == m_team)
          continue;
 
       if ((g_clients[i].origin - origin).GetLengthSquared () < static_cast <float> (radius * radius))
@@ -79,7 +79,7 @@ bool Bot::LookupEnemy (void)
    edict_t *player, *newEnemy = NULL;
 
    float nearestDistance = m_viewDistance;
-   int i, team = GetTeam (GetEntity ());
+   int i;
 
    // setup potentially visible set for this bot
    Vector potentialVisibility = EyePosition ();
@@ -111,7 +111,7 @@ bool Bot::LookupEnemy (void)
       // search the world for players...
       for (i = 0; i < GetMaxClients (); i++)
       {
-         if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || (g_clients[i].team == team) || (g_clients[i].ent == GetEntity ()))
+         if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || (g_clients[i].team == m_team) || (g_clients[i].ent == GetEntity ()))
             continue;
 
          player = g_clients[i].ent;
@@ -194,7 +194,7 @@ bool Bot::LookupEnemy (void)
          // now alarm all teammates who see this bot & don't have an actual enemy of the bots enemy should simulate human players seeing a teammate firing
          for (int j = 0; j < GetMaxClients (); j++)
          {
-            if (!(g_clients[j].flags & CF_USED) || !(g_clients[j].flags & CF_ALIVE) || g_clients[j].team != team || g_clients[j].ent == GetEntity ())
+            if (!(g_clients[j].flags & CF_USED) || !(g_clients[j].flags & CF_ALIVE) || g_clients[j].team != m_team || g_clients[j].ent == GetEntity ())
                continue;
 
             Bot *friendBot = g_botManager->GetBot (g_clients[j].ent);
@@ -416,14 +416,14 @@ bool Bot::IsFriendInLineOfFire (float distance)
       int playerIndex = ENTINDEX (tr.pHit) - 1;
 
       // check valid range
-      if (playerIndex >= 0 && playerIndex < GetMaxClients () && g_clients[playerIndex].team == GetTeam (GetEntity ()) && (g_clients[playerIndex].flags & CF_ALIVE))
+      if (playerIndex >= 0 && playerIndex < GetMaxClients () && g_clients[playerIndex].team == m_team && (g_clients[playerIndex].flags & CF_ALIVE))
          return true;
    }
 
    // search the world for players
    for (int i = 0; i < GetMaxClients (); i++)
    {
-      if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != GetTeam (GetEntity ()) || g_clients[i].ent == GetEntity ())
+      if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != m_team || g_clients[i].ent == GetEntity ())
          continue;
 
       edict_t *ent = g_clients[i].ent;
@@ -1329,7 +1329,7 @@ void Bot::AttachToUser (void)
    // search friends near us
    for (int i = 0; i < GetMaxClients (); i++)
    {
-      if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != GetTeam (GetEntity ()) || g_clients[i].ent == GetEntity ())
+      if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != m_team || g_clients[i].ent == GetEntity ())
          continue;
 
       if (EntityIsVisible (g_clients[i].origin) && !IsValidBot (g_clients[i].ent))
@@ -1357,7 +1357,7 @@ void Bot::CommandTeam (void)
    // search teammates seen by this bot
    for (int i = 0; i < GetMaxClients (); i++)
    {
-      if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != GetTeam (GetEntity ()) || g_clients[i].ent == GetEntity ())
+      if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != m_team || g_clients[i].ent == GetEntity ())
          continue;
 
       memberExists = true;
@@ -1397,7 +1397,7 @@ bool Bot::IsGroupOfEnemies (Vector location, int numEnemies, int radius)
       if ((g_clients[i].ent->v.origin - location).GetLength () < radius)
       {
          // don't target our teammates...
-         if (g_clients[i].team == GetTeam (GetEntity ()))
+         if (g_clients[i].team == m_team)
             return false;
 
          if (numPlayers++ > numEnemies)

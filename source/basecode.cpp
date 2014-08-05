@@ -78,7 +78,7 @@ void Bot::PushMessageQueue (int message)
 
          if (otherBot != NULL && otherBot->pev != pev)
          {
-            if (IsAlive (GetEntity ()) == IsAlive (otherBot->GetEntity ()))
+            if (m_notKilled == IsAlive (otherBot->GetEntity ()))
             {
                otherBot->m_sayTextBuffer.entityIndex = entityIndex;
                strcpy (otherBot->m_sayTextBuffer.sayText, m_tempStrings);
@@ -207,7 +207,7 @@ bool Bot::IsEnemyViewable (edict_t *player)
 
    bool forceTrueIfVisible = false;
 
-   if (IsValidPlayer (pev->dmg_inflictor) && GetTeam (pev->dmg_inflictor) != GetTeam (GetEntity ()) && ::IsInViewCone (EyePosition (), pev->dmg_inflictor))
+   if (IsValidPlayer (pev->dmg_inflictor) && GetTeam (pev->dmg_inflictor) != m_team && ::IsInViewCone (EyePosition (), pev->dmg_inflictor))
       forceTrueIfVisible = true;
 
    if (CheckVisibility (VARS (player), &m_enemyOrigin, &m_visibility) && (IsInViewCone (player->v.origin + Vector (0, 0, 14)) || forceTrueIfVisible))
@@ -303,7 +303,7 @@ void Bot::AvoidGrenades (void)
          if (!FNullEnt (m_avoidGrenade))
             return;
 
-         if (GetTeam (ent->v.owner) == GetTeam (GetEntity ()) && ent->v.owner != GetEntity ())
+         if (GetTeam (ent->v.owner) == m_team && ent->v.owner != GetEntity ())
             return;
 
          if ((ent->v.flags & FL_ONGROUND) == 0)
@@ -564,7 +564,7 @@ void Bot::FindItem (void)
             allowPickup = true;
             pickupType = PICKUP_SHIELD;
          }
-         else if (strncmp ("item_thighpack", STRING (ent->v.classname), 14) == 0 && GetTeam (GetEntity ()) == TEAM_CF && !m_hasDefuser)
+         else if (strncmp ("item_thighpack", STRING (ent->v.classname), 14) == 0 && m_team == TEAM_CF && !m_hasDefuser)
          {
             allowPickup = true;
             pickupType = PICKUP_DEFUSEKIT;
@@ -621,7 +621,7 @@ void Bot::FindItem (void)
                if ((pev->weapons & (1 << WEAPON_ELITE)) || HasShield () || m_isVIP || (HasPrimaryWeapon () && !RateGroundWeapon (ent)))
                   allowPickup = false;
             }
-            else if (GetTeam (GetEntity ()) == TEAM_TF) // terrorist team specific
+            else if (m_team == TEAM_TF) // terrorist team specific
             {
                if (pickupType == PICKUP_DROPPED_C4)
                {
@@ -686,7 +686,7 @@ void Bot::FindItem (void)
                   }
                }
             }
-            else if (GetTeam (GetEntity ()) == TEAM_CF)
+            else if (m_team == TEAM_CF)
             {
                if (pickupType == PICKUP_HOSTAGE)
                {
@@ -885,7 +885,7 @@ void Bot::SwitchChatterIcon (bool show)
    {
       edict_t *ent = INDEXENT (i);
 
-      if (!IsValidPlayer (ent) || IsValidBot (ent) || GetTeam (ent) != GetTeam (GetEntity ()))
+      if (!IsValidPlayer (ent) || IsValidBot (ent) || GetTeam (ent) != m_team)
          continue;
 
       MESSAGE_BEGIN (MSG_ONE, g_netMsg->GetId (NETMSG_BOTVOICE), NULL, ent); // begin message
@@ -902,7 +902,7 @@ void Bot::InstantChatterMessage (int type)
    if (yb_communication_type.GetInt () != 2 || g_chatterFactory[type].IsEmpty () || g_gameVersion == CSV_OLD || !g_sendAudioFinished)
       return;
 
-   if (IsAlive (GetEntity ()))
+   if (m_notKilled)
       SwitchChatterIcon (true);
 
    static float reportTime = GetWorldTime ();
@@ -923,7 +923,7 @@ void Bot::InstantChatterMessage (int type)
    {
       edict_t *ent = INDEXENT (i);
 
-      if (!IsValidPlayer (ent) || IsValidBot (ent) || GetTeam (ent) != GetTeam (GetEntity ()))
+      if (!IsValidPlayer (ent) || IsValidBot (ent) || GetTeam (ent) != m_team)
          continue;
 
       g_sendAudioFinished = false;
@@ -996,8 +996,6 @@ void Bot::CheckMessageQueue (void)
    if (currentQueueMessage == GSM_IDLE || (currentQueueMessage == GSM_RADIO && yb_csdm_mode.GetInt () == 2))
       return;
 
-   int team = GetTeam (GetEntity ());
-
    switch (currentQueueMessage)
    {
    case GSM_BUY_STUFF: // general buy message
@@ -1044,7 +1042,7 @@ void Bot::CheckMessageQueue (void)
       }
 
       // prevent terrorists from buying on es maps
-      if ((g_mapType & MAP_ES) && GetTeam (GetEntity ()) == TEAM_TF)
+      if ((g_mapType & MAP_ES) && m_team == TEAM_TF)
          m_buyState = 6;
 
       // prevent teams from buying on fun maps
@@ -1069,19 +1067,19 @@ void Bot::CheckMessageQueue (void)
 
    case GSM_RADIO: // general radio message issued
      // if last bot radio command (global) happened just a second ago, delay response
-      if (g_lastRadioTime[team] + 1.0 < GetWorldTime ())
+      if (g_lastRadioTime[m_team] + 1.0 < GetWorldTime ())
       {
          // if same message like previous just do a yes/no
          if (m_radioSelect != Radio_Affirmative && m_radioSelect != Radio_Negative)
          {
-            if (m_radioSelect == g_lastRadio[team] && g_lastRadioTime[team] + 1.5 > GetWorldTime ())
+            if (m_radioSelect == g_lastRadio[m_team] && g_lastRadioTime[m_team] + 1.5 > GetWorldTime ())
                m_radioSelect = -1;
             else
             {
                if (m_radioSelect != Radio_ReportingIn)
-                  g_lastRadio[team] = m_radioSelect;
+                  g_lastRadio[m_team] = m_radioSelect;
                else
-                  g_lastRadio[team] = -1;
+                  g_lastRadio[m_team] = -1;
 
                for (int i = 0; i < GetMaxClients (); i++)
                {
@@ -1089,7 +1087,7 @@ void Bot::CheckMessageQueue (void)
 
                   if (bot != NULL)
                   {
-                     if (pev != bot->pev && GetTeam (bot->GetEntity ()) == team)
+                     if (pev != bot->pev && GetTeam (bot->GetEntity ()) == m_team)
                      {
                         bot->m_radioOrder = m_radioSelect;
                         bot->m_radioEntity = GetEntity ();
@@ -1110,7 +1108,7 @@ void Bot::CheckMessageQueue (void)
 
                   if (path->flags & FLAG_GOAL)
                   {
-                     if ((g_mapType & MAP_DE) && GetTeam (GetEntity ()) == TEAM_TF && (pev->weapons & (1 << WEAPON_C4)))
+                     if ((g_mapType & MAP_DE) && m_team == TEAM_TF && (pev->weapons & (1 << WEAPON_C4)))
                         InstantChatterMessage (Chatter_GoingToPlantBomb);
                      else
                         InstantChatterMessage (Chatter_Nothing);
@@ -1134,9 +1132,9 @@ void Bot::CheckMessageQueue (void)
                if (g_randGen.Long (0, 100) < 40)
                {
 
-                  if (g_bombPlanted && GetTeam (GetEntity ()) == TEAM_TF)
+                  if (g_bombPlanted && m_team == TEAM_TF)
                      InstantChatterMessage (Chatter_GuardDroppedC4);
-                  else if (m_inVIPZone && GetTeam (GetEntity ()) == TEAM_TF)
+                  else if (m_inVIPZone && m_team == TEAM_TF)
                      InstantChatterMessage (Chatter_GuardingVipSafety);
                   else
                      InstantChatterMessage (Chatter_Camp);
@@ -1188,7 +1186,7 @@ void Bot::CheckMessageQueue (void)
             InstantChatterMessage (m_radioSelect);
 
          g_radioInsteadVoice = false; // reset radio to voice
-         g_lastRadioTime[team] = GetWorldTime (); // store last radio usage
+         g_lastRadioTime[m_team] = GetWorldTime (); // store last radio usage
       }
       else
          PushMessageQueue (GSM_RADIO);
@@ -1316,14 +1314,13 @@ void Bot::PerformWeaponPurchase (void)
 
    // select the priority tab for this personality
    int *ptr = g_weaponPrefs[m_personality] + NUM_WEAPONS;
-   int team = GetTeam (GetEntity ());
 
    bool isPistolMode = (g_weaponSelect[25].teamStandard == -1) && (g_weaponSelect[3].teamStandard == 2);
 
    switch (m_buyState)
    {
    case 0: // if no primary weapon and bot has some money, buy a primary weapon
-      if ((!HasShield () && !HasPrimaryWeapon ()) && (g_botManager->EconomicsValid (team) || IsMorePowerfulWeaponCanBeBought ()))
+      if ((!HasShield () && !HasPrimaryWeapon ()) && (g_botManager->EconomicsValid (m_team) || IsMorePowerfulWeaponCanBeBought ()))
       {
          do
          {
@@ -1341,7 +1338,7 @@ void Bot::PerformWeaponPurchase (void)
                continue;
 
             // weapon available for every team?
-            if ((g_mapType & MAP_AS) && selectedWeapon->teamAS != 2 && selectedWeapon->teamAS != team)
+            if ((g_mapType & MAP_AS) && selectedWeapon->teamAS != 2 && selectedWeapon->teamAS != m_team)
                continue;
 
             // ignore weapon if this weapon not supported by currently running cs version...
@@ -1349,7 +1346,7 @@ void Bot::PerformWeaponPurchase (void)
                continue;
 
             // ignore weapon if this weapon is not targeted to out team....
-            if (selectedWeapon->teamStandard != 2 && selectedWeapon->teamStandard != team)
+            if (selectedWeapon->teamStandard != 2 && selectedWeapon->teamStandard != m_team)
                continue;
 
             // ignore weapon if this weapon is restricted
@@ -1372,7 +1369,7 @@ void Bot::PerformWeaponPurchase (void)
                break;
             }
 
-            if (team == TEAM_CF)
+            if (m_team == TEAM_CF)
             {
                switch (selectedWeapon->id)
                {
@@ -1388,7 +1385,7 @@ void Bot::PerformWeaponPurchase (void)
                if (selectedWeapon->id == WEAPON_SHIELD && m_moneyAmount > g_botBuyEconomyTable[10])
                   ignoreWeapon = true;
             }
-            else if (team == TEAM_TF)
+            else if (m_team == TEAM_TF)
             {
                switch (selectedWeapon->id)
                {
@@ -1428,7 +1425,7 @@ void Bot::PerformWeaponPurchase (void)
 
             int moneySave = g_randGen.Long (900, 1100);
 
-            if (g_botManager->GetLastWinner () == team)
+            if (g_botManager->GetLastWinner () == m_team)
                moneySave = 0;
 
             if (selectedWeapon->price <= (m_moneyAmount - moneySave))
@@ -1460,7 +1457,7 @@ void Bot::PerformWeaponPurchase (void)
                FakeClientCommand(GetEntity (), "menuselect %d", selectedWeapon->buySelect);
             else // SteamCS buy menu is different from the old one
             {
-               if (GetTeam (GetEntity ()) == TEAM_TF)
+               if (m_team == TEAM_TF)
                   FakeClientCommand(GetEntity (), "menuselect %d", selectedWeapon->newBuySelectT);
                else
                   FakeClientCommand (GetEntity (), "menuselect %d", selectedWeapon->newBuySelectCT);
@@ -1479,7 +1476,7 @@ void Bot::PerformWeaponPurchase (void)
       }   
 
    case 1: // if armor is damaged and bot has some money, buy some armor
-      if (pev->armorvalue < g_randGen.Long (50, 80) && (isPistolMode || (g_botManager->EconomicsValid (team) && HasPrimaryWeapon ())))
+      if (pev->armorvalue < g_randGen.Long (50, 80) && (isPistolMode || (g_botManager->EconomicsValid (m_team) && HasPrimaryWeapon ())))
       {
          // if bot is rich, buy kevlar + helmet, else buy a single kevlar
          if (m_moneyAmount > 1500 && !IsRestricted (WEAPON_ARMORHELM))
@@ -1510,13 +1507,13 @@ void Bot::PerformWeaponPurchase (void)
                continue;
 
             // weapon available for every team?
-            if ((g_mapType & MAP_AS) && selectedWeapon->teamAS != 2 && selectedWeapon->teamAS != team)
+            if ((g_mapType & MAP_AS) && selectedWeapon->teamAS != 2 && selectedWeapon->teamAS != m_team)
                continue;
 
             if (g_gameVersion == CSV_OLD && selectedWeapon->buySelect == -1)
                continue;
 
-            if (selectedWeapon->teamStandard != 2 && selectedWeapon->teamStandard != team)
+            if (selectedWeapon->teamStandard != 2 && selectedWeapon->teamStandard != m_team)
                continue;
 
             if (selectedWeapon->price <= (m_moneyAmount - g_randGen.Long (100, 200)))
@@ -1566,14 +1563,14 @@ void Bot::PerformWeaponPurchase (void)
          FakeClientCommand (GetEntity (), "menuselect 4");
       }
 
-      if (g_randGen.Long (1, 100) < g_grenadeBuyPrecent[1] && m_moneyAmount >= 300 && g_botManager->EconomicsValid (team) && !IsRestricted (WEAPON_FLASHBANG))
+      if (g_randGen.Long (1, 100) < g_grenadeBuyPrecent[1] && m_moneyAmount >= 300 && g_botManager->EconomicsValid (m_team) && !IsRestricted (WEAPON_FLASHBANG))
       {
          // buy a concussion grenade, i.e., 'flashbang'
          FakeClientCommand (GetEntity (), "buyequip");
          FakeClientCommand (GetEntity (), "menuselect 3");
       }
 
-      if (g_randGen.Long (1, 100) < g_grenadeBuyPrecent[2] && m_moneyAmount >= 400 && g_botManager->EconomicsValid (team) && !IsRestricted (WEAPON_SMOKE))
+      if (g_randGen.Long (1, 100) < g_grenadeBuyPrecent[2] && m_moneyAmount >= 400 && g_botManager->EconomicsValid (m_team) && !IsRestricted (WEAPON_SMOKE))
       {
          // buy a smoke grenade
          FakeClientCommand (GetEntity (), "buyequip");
@@ -1582,7 +1579,7 @@ void Bot::PerformWeaponPurchase (void)
       break;
 
    case 4: // if bot is CT and we're on a bomb map, randomly buy the defuse kit
-      if ((g_mapType & MAP_DE) && GetTeam (GetEntity ()) == TEAM_CF && g_randGen.Long (1, 100) < 80 && m_moneyAmount > 200 && !IsRestricted (WEAPON_DEFUSER))
+      if ((g_mapType & MAP_DE) && m_team == TEAM_CF && g_randGen.Long (1, 100) < 80 && m_moneyAmount > 200 && !IsRestricted (WEAPON_DEFUSER))
       {
          if (g_gameVersion == CSV_OLD)
             FakeClientCommand (GetEntity (), "buyequip;menuselect 6");
@@ -1671,7 +1668,6 @@ void Bot::SetConditions (void)
    // this function carried out each frame. does all of the sensing, calculates emotions and finally sets the desired
    // action after applying all of the Filters
 
-   int team = GetTeam (GetEntity ());
    m_aimFlags = 0;
 
    // slowly increase/decrease dynamic emotions back to their base level
@@ -1714,7 +1710,7 @@ void Bot::SetConditions (void)
    // did bot just kill an enemy?
    if (!FNullEnt (m_lastVictim))
    {
-      if (GetTeam (m_lastVictim) != team)
+      if (GetTeam (m_lastVictim) != m_team)
       {
          // add some aggression because we just killed somebody
          m_agressionLevel += 0.1;
@@ -1761,7 +1757,7 @@ void Bot::SetConditions (void)
          }
 
          // if no more enemies found AND bomb planted, switch to knife to get to bombplace faster
-         if (GetTeam (GetEntity ()) == TEAM_CF && m_currentWeapon != WEAPON_KNIFE && GetNearbyEnemiesNearPosition (pev->origin, 9999) == 0 && g_bombPlanted)
+         if (m_team == TEAM_CF && m_currentWeapon != WEAPON_KNIFE && GetNearbyEnemiesNearPosition (pev->origin, 9999) == 0 && g_bombPlanted)
          {
             SelectWeaponByName ("weapon_knife");
             m_plantedBombWptIndex = FindPlantedBomb ();
@@ -2013,7 +2009,7 @@ void Bot::SetConditions (void)
       g_taskFilters[TASK_ATTACK].desire = 0;
 
    // calculate desires to seek cover or hunt
-   if (IsValidPlayer (m_lastEnemy) && m_lastEnemyOrigin != nullvec && !((g_mapType & MAP_DE) && g_bombPlanted) && !(pev->weapons & (1 << WEAPON_C4)) && (m_loosedBombWptIndex == -1 && GetTeam (GetEntity ()) == TEAM_TF))
+   if (IsValidPlayer (m_lastEnemy) && m_lastEnemyOrigin != nullvec && !((g_mapType & MAP_DE) && g_bombPlanted) && !(pev->weapons & (1 << WEAPON_C4)) && (m_loosedBombWptIndex == -1 && m_team == TEAM_TF))
    {
       float distance = (m_lastEnemyOrigin - pev->origin).GetLength ();
 
@@ -2171,7 +2167,7 @@ void Bot::StartTask (TaskId_t id, float desire, int data, float time, bool resum
    else
       m_chosenGoalIndex = GetTask ()->data;
 
-   if (g_randGen.Long (0, 100) < 80 && GetTaskId () == TASK_CAMP && GetTeam (GetEntity ()) == TEAM_TF && m_inVIPZone)
+   if (g_randGen.Long (0, 100) < 80 && GetTaskId () == TASK_CAMP && m_team == TEAM_TF && m_inVIPZone)
       ChatterMessage (Chatter_GoingToGuardVIPSafety);
 }
 
@@ -2536,7 +2532,7 @@ void Bot::CheckRadioCommands (void)
       break;
 
    case Radio_ShesGonnaBlow:
-      if (FNullEnt (m_enemy) && distance < 2048 && g_bombPlanted && GetTeam (GetEntity ()) == TEAM_TF)
+      if (FNullEnt (m_enemy) && distance < 2048 && g_bombPlanted && m_team == TEAM_TF)
       {
          RadioMessage (Radio_Affirmative);
 
@@ -2553,7 +2549,7 @@ void Bot::CheckRadioCommands (void)
 
    case Radio_RegroupTeam:
       // if no more enemies found AND bomb planted, switch to knife to get to bombplace faster
-      if ((GetTeam (GetEntity ()) == TEAM_CF) && m_currentWeapon != WEAPON_KNIFE && GetNearbyEnemiesNearPosition (pev->origin, 9999) == 0 && g_bombPlanted && GetTaskId () != TASK_DEFUSEBOMB)
+      if ((m_team == TEAM_CF) && m_currentWeapon != WEAPON_KNIFE && GetNearbyEnemiesNearPosition (pev->origin, 9999) == 0 && g_bombPlanted && GetTaskId () != TASK_DEFUSEBOMB)
       {
          SelectWeaponByName ("weapon_knife");
 
@@ -2624,13 +2620,12 @@ void Bot::CheckRadioCommands (void)
             // if bot has no enemy
             if (m_lastEnemyOrigin == nullvec)
             {
-               int team = GetTeam (GetEntity ());
                float nearestDistance = FLT_MAX;
 
                // take nearest enemy to ordering player
                for (int i = 0; i < GetMaxClients (); i++)
                {
-                  if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team == team)
+                  if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team == m_team)
                      continue;
 
                   edict_t *enemy = g_clients[i].ent;
@@ -2661,7 +2656,7 @@ void Bot::CheckRadioCommands (void)
          int bombPoint = -1;
 
          // check if it's a ct command
-         if (GetTeam (m_radioEntity) == TEAM_CF && GetTeam (GetEntity ()) == TEAM_CF && IsValidBot (m_radioEntity))
+         if (GetTeam (m_radioEntity) == TEAM_CF && m_team == TEAM_CF && IsValidBot (m_radioEntity))
          {
             if (g_timeNextBombUpdate < GetWorldTime ())
             {
@@ -2721,13 +2716,12 @@ void Bot::CheckRadioCommands (void)
             // If Bot has no enemy
             if (m_lastEnemyOrigin == nullvec)
             {
-               int team = GetTeam (GetEntity ());
                float nearestDistance = FLT_MAX;
 
                // Take nearest enemy to ordering Player
                for (int i = 0; i < GetMaxClients (); i++)
                {
-                  if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team == team)
+                  if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team == m_team)
                      continue;
 
                   edict_t *enemy = g_clients[i].ent;
@@ -2974,7 +2968,7 @@ void Bot::ChooseAimDirection (void)
          TraceResult tr;
          int index = m_currentWaypointIndex;
 
-         if (GetTeam (GetEntity ()) == TEAM_TF)
+         if (m_team == TEAM_TF)
          {
             if ((g_experienceData + (index * g_numWaypoints) + index)->team0DangerIndex != -1)
             {
@@ -3027,6 +3021,7 @@ void Bot::Think (void)
 
    m_canChooseAimDirection = true;
    m_notKilled = IsAlive (GetEntity ());
+   m_team = GetTeam (GetEntity ());
 
    m_frameInterval = GetWorldTime () - m_lastThinkTime;
    m_lastThinkTime = GetWorldTime ();
@@ -3159,15 +3154,13 @@ void Bot::SecondThink (void)
 {
    // this function is called from main think function every second (second not frame).
 
-   if (g_bombPlanted && GetTeam (GetEntity ()) == TEAM_CF && (pev->origin - g_waypoint->GetBombPosition ()).GetLength () < 700 && !IsBombDefusing (g_waypoint->GetBombPosition ()) && !m_hasProgressBar && GetTaskId () != TASK_ESCAPEFROMBOMB)
+   if (g_bombPlanted && m_team == TEAM_CF && (pev->origin - g_waypoint->GetBombPosition ()).GetLength () < 700 && !IsBombDefusing (g_waypoint->GetBombPosition ()) && !m_hasProgressBar && GetTaskId () != TASK_ESCAPEFROMBOMB)
       ResetTasks ();
 }
 
 void Bot::RunTask (void)
 {
    // this is core function that handle task execution
-
-   int team = GetTeam (GetEntity ());
    int destIndex, i;
 
    Vector src, destination;
@@ -3182,7 +3175,7 @@ void Bot::RunTask (void)
    case TASK_NORMAL:
       m_aimFlags |= AIM_NAVPOINT;
 
-      if ((g_mapType & MAP_DE) && team == TEAM_TF)
+      if ((g_mapType & MAP_DE) && m_team == TEAM_TF)
       {
          if (!g_bombPlanted)
          {
@@ -3237,7 +3230,7 @@ void Bot::RunTask (void)
          m_reloadState = RELOAD_PRIMARY;
 
       // if bomb planted and it's a CT calculate new path to bomb point if he's not already heading for
-      if (g_bombPlanted && team == TEAM_CF && GetTask ()->data != -1 && !(g_waypoint->GetPath (GetTask ()->data)->flags & FLAG_GOAL) && GetTaskId () != TASK_ESCAPEFROMBOMB)
+      if (g_bombPlanted && m_team == TEAM_CF && GetTask ()->data != -1 && !(g_waypoint->GetPath (GetTask ()->data)->flags & FLAG_GOAL) && GetTaskId () != TASK_ESCAPEFROMBOMB)
       {
          DeleteSearchNodes ();
          GetTask ()->data = -1;
@@ -3265,7 +3258,7 @@ void Bot::RunTask (void)
                bool campingAllowed = true;
 
                // Check if it's not allowed for this team to camp here
-               if (team == TEAM_TF)
+               if (m_team == TEAM_TF)
                {
                   if (m_currentPath->flags & FLAG_CF_ONLY)
                      campingAllowed = false;
@@ -3277,7 +3270,7 @@ void Bot::RunTask (void)
                }
 
                // don't allow vip on as_ maps to camp + don't allow terrorist carrying c4 to camp
-               if (((g_mapType & MAP_AS) && *(INFOKEY_VALUE (GET_INFOKEYBUFFER (GetEntity ()), "model")) == 'v') || ((g_mapType & MAP_DE) && GetTeam (GetEntity ()) == TEAM_TF && !g_bombPlanted && (pev->weapons & (1 << WEAPON_C4))))
+               if (((g_mapType & MAP_AS) && *(INFOKEY_VALUE (GET_INFOKEYBUFFER (GetEntity ()), "model")) == 'v') || ((g_mapType & MAP_DE) && m_team == TEAM_TF && !g_bombPlanted && (pev->weapons & (1 << WEAPON_C4))))
                   campingAllowed = false;
 
                // check if another bot is already camping here
@@ -3324,7 +3317,7 @@ void Bot::RunTask (void)
             if (g_mapType & MAP_CS)
             {
                // CT Bot has some hostages following?
-               if (HasHostage () && team == TEAM_CF)
+               if (HasHostage () && m_team == TEAM_CF)
                {
                   // and reached a Rescue Point?
                   if (m_currentPath->flags & FLAG_RESCUE)
@@ -3333,7 +3326,7 @@ void Bot::RunTask (void)
                         m_hostages[i] = NULL; // clear array of hostage pointers
                   }
                }
-               else if (team == TEAM_TF && g_randGen.Long (0, 100) < 80)
+               else if (m_team == TEAM_TF && g_randGen.Long (0, 100) < 80)
                {
                   int index = FindDefendWaypoint (m_currentPath->origin);
 
@@ -3365,7 +3358,7 @@ void Bot::RunTask (void)
                   else
                      StartTask (TASK_PLANTBOMB, TASKPRI_PLANTBOMB, -1, 0.0, false);
                }
-               else if (team == TEAM_CF)
+               else if (m_team == TEAM_CF)
                {
                   if (!g_bombPlanted && GetNearbyFriendsNearPosition (pev->origin, 120) <= 4 && g_randGen.Long (0, 100) < 65 && GetTaskId () == TASK_NORMAL && m_fearLevel > m_agressionLevel / 2)
                   {
@@ -3404,7 +3397,7 @@ void Bot::RunTask (void)
 
          // do pathfinding if it's not the current waypoint
          if (destIndex != m_currentWaypointIndex)
-            FindPath (m_currentWaypointIndex, destIndex, ((g_bombPlanted && team == TEAM_CF) || yb_debug_goal.GetInt () != -1) ? 0 : m_pathType);
+            FindPath (m_currentWaypointIndex, destIndex, ((g_bombPlanted && m_team == TEAM_CF) || yb_debug_goal.GetInt () != -1) ? 0 : m_pathType);
       }
       else
       {
@@ -3480,7 +3473,7 @@ void Bot::RunTask (void)
          m_lastEnemy = NULL;
          m_lastEnemyOrigin = nullvec;
       }
-      else if (GetTeam (m_lastEnemy) == team)
+      else if (GetTeam (m_lastEnemy) == m_team)
       {
          // don't hunt down our teammate...
          RemoveCertainTask (TASK_HUNTENEMY);
@@ -3695,7 +3688,7 @@ void Bot::RunTask (void)
       m_checkTerrain = false;
       m_moveToGoal = false;
 
-      if (g_bombPlanted && m_defendedBomb && !IsBombDefusing(g_waypoint->GetBombPosition()) && !OutOfBombTimer() && team == TEAM_CF)
+      if (g_bombPlanted && m_defendedBomb && !IsBombDefusing (g_waypoint->GetBombPosition ()) && !OutOfBombTimer () && m_team == TEAM_CF)
       {
          m_defendedBomb = false;
          TaskComplete();
@@ -4134,7 +4127,7 @@ void Bot::RunTask (void)
          MakeVectors (m_targetEntity->v.v_angle);
          TraceLine (m_targetEntity->v.origin + m_targetEntity->v.view_ofs, g_pGlobals->v_forward * 500, true, true, GetEntity (), &tr);
 
-         if (!FNullEnt (tr.pHit) && IsValidPlayer (tr.pHit) && GetTeam (tr.pHit) != team)
+         if (!FNullEnt (tr.pHit) && IsValidPlayer (tr.pHit) && GetTeam (tr.pHit) != m_team)
          {
             m_targetEntity = NULL;
             m_lastEnemy = tr.pHit;
@@ -4662,7 +4655,7 @@ void Bot::RunTask (void)
       case PICKUP_PLANTED_C4:
          m_aimFlags |= AIM_ENTITY;
 
-         if (team == TEAM_CF && itemDistance < 55)
+         if (m_team == TEAM_CF && itemDistance < 55)
          {
             ChatterMessage (Chatter_DefusingC4);
 
@@ -4776,8 +4769,6 @@ void Bot::BotAI (void)
    float movedDistance; // length of different vector (distance bot moved)
    TraceResult tr;
 
-   int team = GetTeam (GetEntity ());
-
    // switch to knife if time to do this
    if (m_checkKnifeSwitch && m_buyingFinished && m_spawnTime + g_randGen.Float (4.0, 6.5) < GetWorldTime ())
    {
@@ -4816,7 +4807,7 @@ void Bot::BotAI (void)
       }
 
       // select a leader bot for this team
-      SelectLeaderEachTeam (team);
+      SelectLeaderEachTeam (m_team);
       m_checkWeaponSwitch = false;
 
       if (m_isLeader && m_moveToC4)
@@ -4869,10 +4860,10 @@ void Bot::BotAI (void)
       if (g_randGen.Long (0, 100) < 45 && GetNearbyFriendsNearPosition (pev->origin, 512) == 0 && (m_enemy->v.weapons & (1 << WEAPON_C4)))
          ChatterMessage (Chatter_SpotTheBomber);
 
-      if (g_randGen.Long (0, 100) < 45 && GetTeam (GetEntity ()) == TEAM_TF && GetNearbyFriendsNearPosition (pev->origin, 512) == 0 && *g_engfuncs.pfnInfoKeyValue (g_engfuncs.pfnGetInfoKeyBuffer (m_enemy), "model") == 'v')
+      if (g_randGen.Long (0, 100) < 45 && m_team == TEAM_TF && GetNearbyFriendsNearPosition (pev->origin, 512) == 0 && *g_engfuncs.pfnInfoKeyValue (g_engfuncs.pfnGetInfoKeyBuffer (m_enemy), "model") == 'v')
          ChatterMessage (Chatter_VIPSpotted);
 
-      if (g_randGen.Long (0, 100) < 50 && GetNearbyFriendsNearPosition (pev->origin, 450) == 0 && GetTeam (m_enemy) != GetTeam (GetEntity ()) && IsGroupOfEnemies (m_enemy->v.origin, 2, 384))
+      if (g_randGen.Long (0, 100) < 50 && GetNearbyFriendsNearPosition (pev->origin, 450) == 0 && GetTeam (m_enemy) != m_team && IsGroupOfEnemies (m_enemy->v.origin, 2, 384))
          ChatterMessage (Chatter_ScaredEmotion);
 
       if (g_randGen.Long (0, 100) < 40 && GetNearbyFriendsNearPosition (pev->origin, 1024) == 0 && ((m_enemy->v.weapons & (1 << WEAPON_AWP)) || (m_enemy->v.weapons & (1 << WEAPON_SCOUT)) ||  (m_enemy->v.weapons & (1 << WEAPON_G3SG1)) || (m_enemy->v.weapons & (1 << WEAPON_SG550))))
@@ -5544,9 +5535,9 @@ void Bot::BotAI (void)
                   WRITE_SHORT (FixedSigned16 (-1, 1 << 13));
                   WRITE_SHORT (FixedSigned16 (0, 1 << 13));
                   WRITE_BYTE (0);
-                  WRITE_BYTE (GetTeam (GetEntity ()) == TEAM_CF ? 0 : 255);
+                  WRITE_BYTE (m_team == TEAM_CF ? 0 : 255);
                   WRITE_BYTE (100);
-                  WRITE_BYTE (GetTeam (GetEntity ()) != TEAM_CF ? 0 : 255);
+                  WRITE_BYTE (m_team != TEAM_CF ? 0 : 255);
                   WRITE_BYTE (0);
                   WRITE_BYTE (255);
                   WRITE_BYTE (255);
@@ -5644,13 +5635,11 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits)
    // other player.
 
    m_lastDamageType = bits;
-
-   int team = GetTeam (GetEntity ());
-   CollectGoalExperience (damage, team);
+   CollectGoalExperience (damage, m_team);
 
    if (IsValidPlayer (inflictor))
    {
-      if (GetTeam (inflictor) == team && yb_tkpunish.GetBool () && !g_botManager->GetBot (inflictor))
+      if (GetTeam (inflictor) == m_team && yb_tkpunish.GetBool () && !g_botManager->GetBot (inflictor))
       {
          // alright, die you teamkiller!!!
          m_actualReactionTime = 0.0;
@@ -5684,7 +5673,7 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits)
          }
          RemoveCertainTask (TASK_CAMP);
 
-         if (FNullEnt (m_enemy) && team != GetTeam (inflictor))
+         if (FNullEnt (m_enemy) && m_team != GetTeam (inflictor))
          {
             m_lastEnemy = inflictor;
             m_lastEnemyOrigin = inflictor->v.origin;
@@ -5802,7 +5791,7 @@ void Bot::CollectExperienceData (edict_t *attacker, int damage)
       return;
 
    int attackerTeam = GetTeam (attacker);
-   int victimTeam = GetTeam (GetEntity ());
+   int victimTeam = m_team;
 
    if (attackerTeam == victimTeam )
       return;
@@ -5868,7 +5857,7 @@ void Bot::HandleChatterMessage (const char *tempMessage)
 {
    // this function is added to prevent engine crashes with: 'Message XX started, before message XX ended', or something.
 
-   if (FStrEq (tempMessage, "#CTs_Win") && (GetTeam (GetEntity ()) == TEAM_CF))
+   if (FStrEq (tempMessage, "#CTs_Win") && (m_team == TEAM_CF))
    {
       if (g_timeRoundMid > GetWorldTime ())
          ChatterMessage (Chatter_QuicklyWonTheRound);
@@ -5876,7 +5865,7 @@ void Bot::HandleChatterMessage (const char *tempMessage)
          ChatterMessage (Chatter_WonTheRound);
    }
 
-   if (FStrEq (tempMessage, "#Terrorists_Win") && (GetTeam (GetEntity ()) == TEAM_TF))
+   if (FStrEq (tempMessage, "#Terrorists_Win") && (m_team == TEAM_TF))
    {
       if (g_timeRoundMid > GetWorldTime ())
          ChatterMessage (Chatter_QuicklyWonTheRound);
@@ -6273,7 +6262,7 @@ bool Bot::OutOfBombTimer (void)
    Vector bombOrigin = g_waypoint->GetBombPosition ();
 
    // for terrorist, if timer is lower than eleven seconds, return true
-   if (static_cast <int> (timeLeft) < 16 && GetTeam (GetEntity ()) == TEAM_TF && (bombOrigin - pev->origin).GetLength () < 1000)
+   if (static_cast <int> (timeLeft) < 16 && m_team == TEAM_TF && (bombOrigin - pev->origin).GetLength () < 1000)
       return true;
 
    bool hasTeammatesWithDefuserKit = false;
@@ -6342,7 +6331,7 @@ void Bot::ReactOnSound (void)
       else
          volume = 2.0 * hearingDistance * (1.0 - distance / hearingDistance) * (g_clients[i].timeSoundLasting - GetWorldTime ()) / g_clients[i].maxTimeSoundLasting;
 
-      if (g_clients[hearEnemyIndex].team == GetTeam (GetEntity ()) && yb_csdm_mode.GetInt () != 2)
+      if (g_clients[hearEnemyIndex].team == m_team && yb_csdm_mode.GetInt () != 2)
          volume = 0.3 * volume;
 
       // we will care about the most hearable sound instead of the closest one - KWo
@@ -6360,7 +6349,7 @@ void Bot::ReactOnSound (void)
 
    if (hearEnemyIndex >= 0)
    {
-      if (g_clients[hearEnemyIndex].team != GetTeam (GetEntity ()) && yb_csdm_mode.GetInt () != 2)
+      if (g_clients[hearEnemyIndex].team != m_team && yb_csdm_mode.GetInt () != 2)
          player = g_clients[hearEnemyIndex].ent;
    }
 
@@ -6477,7 +6466,7 @@ bool Bot::IsBombDefusing (Vector bombOrigin)
       if (bot == NULL || bot == this)
          continue; // skip invalid bots
 
-      if (GetTeam (GetEntity ()) != GetTeam (bot->GetEntity ()) || bot->GetTaskId () == TASK_ESCAPEFROMBOMB)
+      if (m_team != GetTeam (bot->GetEntity ()) || bot->GetTaskId () == TASK_ESCAPEFROMBOMB)
          continue; // skip other mess
 
       if ((bot->pev->origin - bombOrigin).GetLength () < 100 && (bot->GetTaskId () == TASK_DEFUSEBOMB || bot->m_hasProgressBar))
@@ -6487,7 +6476,7 @@ bool Bot::IsBombDefusing (Vector bombOrigin)
       }
 
       // take in account peoples too
-      if (defusingInProgress || !(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != GetTeam (GetEntity ()) || IsValidBot (g_clients[i].ent))
+      if (defusingInProgress || !(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != m_team || IsValidBot (g_clients[i].ent))
          continue;
 
       if ((g_clients[i].ent->v.origin - bombOrigin).GetLength () < 100)

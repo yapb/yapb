@@ -991,6 +991,7 @@ void Bot::NewRound (void)
    m_prevWptIndex[4] = -1;
 
    m_navTimeset = GetWorldTime ();
+   m_team = GetTeam (GetEntity ());
 
    switch (m_personality)
    {

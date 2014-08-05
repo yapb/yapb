@@ -1220,6 +1220,9 @@ public:
    int m_ammoInClip[MAX_WEAPONS]; // ammo in clip for each weapons
    int m_ammo[MAX_AMMO_SLOTS]; // total ammo amounts
 
+   // a little optimization
+   int m_team;
+
    Array <TaskItem> m_tasks;
 
    Bot (edict_t *bot, int skill, int personality, int team, int member);

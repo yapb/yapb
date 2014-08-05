@@ -48,9 +48,7 @@ ConVar yb_aim_target_anticipation_ratio ("yb_aim_target_anticipation_ratio", "3.
 int Bot::FindGoal (void)
 {
    // chooses a destination (goal) waypoint for a bot
-   int team = GetTeam (GetEntity ());
-
-   if (team == TEAM_TF && (g_mapType & MAP_DE))
+   if (m_team == TEAM_TF && (g_mapType & MAP_DE))
    {
       edict_t *pent = NULL;
 
@@ -82,7 +80,7 @@ int Bot::FindGoal (void)
    Array <int> offensiveWpts;
    Array <int> defensiveWpts;
 
-   switch (team)
+   switch (m_team)
    {
    case TEAM_TF:
       offensiveWpts = g_waypoint->m_ctPoints;
@@ -101,7 +99,7 @@ int Bot::FindGoal (void)
       tactic = 3;
       goto TacticChoosen;
    }
-   else if (HasHostage () && team == TEAM_CF)
+   else if (HasHostage () && m_team == TEAM_CF)
    {
       tactic = 2;
       offensiveWpts = g_waypoint->m_rescuePoints;
@@ -114,18 +112,18 @@ int Bot::FindGoal (void)
 
    if (g_mapType & (MAP_AS | MAP_CS))
    {
-      if (team == TEAM_TF)
+      if (m_team == TEAM_TF)
       {
          defensive += 25.0f;
          offensive -= 25.0f;
       }
-      else if (team == TEAM_CF)
+      else if (m_team == TEAM_CF)
       {
          defensive -= 25.0f;
          offensive += 25.0f;
       }
    }
-   else if ((g_mapType & MAP_DE) && team == TEAM_CF)
+   else if ((g_mapType & MAP_DE) && m_team == TEAM_CF)
    {
       if (g_bombPlanted && GetTaskId () != TASK_ESCAPEFROMBOMB && g_waypoint->GetBombPosition () != nullvec)
       {
@@ -139,7 +137,7 @@ int Bot::FindGoal (void)
       defensive += 40.0f;
       offensive -= 25.0f;
    }
-   else if ((g_mapType & MAP_DE) && team == TEAM_TF)
+   else if ((g_mapType & MAP_DE) && m_team == TEAM_TF)
    {
       // send some terrorists to guard planter bomb
       if (g_bombPlanted && GetTaskId () != TASK_ESCAPEFROMBOMB && GetBombTimeleft () >= 15.0)
@@ -251,7 +249,7 @@ TacticChoosen:
          if (testIndex < 0)
             break;
 
-         if (team == TEAM_TF)
+         if (m_team == TEAM_TF)
          {
             if ((g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + goalChoices[i])->team0Value < (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + goalChoices[i + 1])->team0Value)
             {
@@ -447,7 +445,7 @@ bool Bot::DoWaypointNav (void)
                if (bot == NULL || bot == this)
                   continue;
 
-               if (!IsAlive (bot->GetEntity ()) || GetTeam (bot->GetEntity ()) != GetTeam (GetEntity ()) || bot->m_targetEntity != GetEntity () || bot->GetTaskId () != TASK_FOLLOWUSER)
+               if (!IsAlive (bot->GetEntity ()) || GetTeam (bot->GetEntity ()) != m_team || bot->m_targetEntity != GetEntity () || bot->GetTaskId () != TASK_FOLLOWUSER)
                   continue;
 
                if (bot->pev->groundentity == m_liftEntity && bot->IsOnFloor ())
@@ -486,7 +484,7 @@ bool Bot::DoWaypointNav (void)
             if (bot == NULL)
                continue; // skip invalid bots
 
-            if (!IsAlive (bot->GetEntity ()) || GetTeam (bot->GetEntity ()) != GetTeam (GetEntity ()) || bot->m_targetEntity != GetEntity () || bot->GetTaskId () != TASK_FOLLOWUSER || bot->m_liftEntity != m_liftEntity)
+            if (!IsAlive (bot->GetEntity ()) || GetTeam (bot->GetEntity ()) != m_team || bot->m_targetEntity != GetEntity () || bot->GetTaskId () != TASK_FOLLOWUSER || bot->m_liftEntity != m_liftEntity)
                continue;
 
             if (bot->pev->groundentity == m_liftEntity || !bot->IsOnFloor ())
@@ -589,7 +587,7 @@ bool Bot::DoWaypointNav (void)
                // iterate though clients, and find if lift already used
                for (int i = 0; i < GetMaxClients (); i++)
                {
-                  if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != GetTeam (GetEntity ()) || g_clients[i].ent == GetEntity () || FNullEnt (g_clients[i].ent->v.groundentity))
+                  if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != m_team || g_clients[i].ent == GetEntity () || FNullEnt (g_clients[i].ent->v.groundentity))
                      continue;
 
                   if (g_clients[i].ent->v.groundentity == m_liftEntity)
@@ -750,7 +748,7 @@ bool Bot::DoWaypointNav (void)
 
          if (m_doorOpenAttempt > 2 && !FNullEnt (ent = FIND_ENTITY_IN_SPHERE (ent, pev->origin, 100)))
          {
-            if (IsValidPlayer (ent) && IsAlive (ent) && GetTeam (GetEntity ()) != GetTeam (ent) && IsWeaponShootingThroughWall (m_currentWeapon))
+            if (IsValidPlayer (ent) && IsAlive (ent) && m_team != GetTeam (ent) && IsWeaponShootingThroughWall (m_currentWeapon))
             {
                m_seeEnemyTime = GetWorldTime ();
 
@@ -762,7 +760,7 @@ bool Bot::DoWaypointNav (void)
                m_lastEnemyOrigin = ent->v.origin;
 
             }
-            else if (IsValidPlayer (ent) && IsAlive (ent) && GetTeam (GetEntity ()) == GetTeam (ent))
+            else if (IsValidPlayer (ent) && IsAlive (ent) && m_team == GetTeam (ent))
             {
                DeleteSearchNodes ();
                ResetTasks ();
@@ -818,7 +816,7 @@ bool Bot::DoWaypointNav (void)
             int startIndex = m_chosenGoalIndex;
             int goalIndex = m_currentWaypointIndex;
 
-            if (GetTeam (GetEntity ()) == TEAM_TF)
+            if (m_team == TEAM_TF)
             {
                waypointValue = (g_experienceData + (startIndex * g_numWaypoints) + goalIndex)->team0Value;
                waypointValue += static_cast <int> (pev->health * 0.5);
@@ -850,7 +848,7 @@ bool Bot::DoWaypointNav (void)
       else if (m_navNode == NULL)
          return false;
 
-      if ((g_mapType & MAP_DE) && g_bombPlanted && GetTeam (GetEntity ()) == TEAM_CF && GetTaskId () != TASK_ESCAPEFROMBOMB && GetTask ()->data != -1)
+      if ((g_mapType & MAP_DE) && g_bombPlanted && m_team == TEAM_CF && GetTaskId () != TASK_ESCAPEFROMBOMB && GetTask ()->data != -1)
       {
          Vector bombOrigin = CheckBombAudible ();
 
@@ -1288,7 +1286,7 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
       break;
 
    case 1:
-      if (GetTeam (GetEntity ()) == TEAM_TF)
+      if (m_team == TEAM_TF)
       {
          gcalc = gfunctionKillsDistT;
          hcalc = hfunctionSquareDist;
@@ -1306,7 +1304,7 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
       break;
 
    case 2:
-      if (GetTeam (GetEntity ()) == TEAM_TF)
+      if (m_team == TEAM_TF)
       {
          gcalc = gfunctionKillsT;
          hcalc = hfunctionNone;
@@ -1554,7 +1552,7 @@ void Bot::GetValidWaypoint (void)
    }
    else if ((m_navTimeset + GetEstimatedReachTime () < GetWorldTime ()) && FNullEnt (m_enemy))
    {
-      if (GetTeam (GetEntity ()) == TEAM_TF)
+      if (m_team == TEAM_TF)
       {
          int value = (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + m_currentWaypointIndex)->team0Damage;
          value += 100;
@@ -1733,12 +1731,12 @@ int Bot::FindDefendWaypoint (Vector origin)
          Experience *exp = (g_experienceData + (waypointIndex[i] * g_numWaypoints) + waypointIndex[i]);
          int experience = -1;
 
-         if (GetTeam (GetEntity ()) == TEAM_TF)
+         if (m_team == TEAM_TF)
             experience = exp->team0Damage;
          else
             experience = exp->team1Damage;
 
-         experience = (experience * 100) / (GetTeam (GetEntity ()) == TEAM_TF ? g_highestDamageT : g_highestDamageCT);
+         experience = (experience * 100) / (m_team == TEAM_TF ? g_highestDamageT : g_highestDamageCT);
          minDistance[i] = (experience * 100) / 8192;
          minDistance[i] += experience;
       }
@@ -1874,7 +1872,7 @@ int Bot::FindCoverWaypoint (float maxDistance)
          Experience *exp = (g_experienceData + (waypointIndex[i] * g_numWaypoints) + waypointIndex[i]);
          int experience = -1;
 
-         if (GetTeam (GetEntity ()) == TEAM_TF)
+         if (m_team == TEAM_TF)
             experience = exp->team0Damage;
          else
             experience = exp->team1Damage;
@@ -1991,7 +1989,7 @@ bool Bot::HeadTowardWaypoint (void)
             int waypoint = m_navNode->next->index;
             float kills = 0;
 
-            if (GetTeam (GetEntity ()) == TEAM_TF)
+            if (m_team == TEAM_TF)
                kills = (g_experienceData + (waypoint * g_numWaypoints) + waypoint)->team0Damage / g_highestDamageT;
             else
                kills = (g_experienceData + (waypoint * g_numWaypoints) + waypoint)->team1Damage / g_highestDamageCT;
@@ -2906,7 +2904,7 @@ int Bot::FindLoosedBomb (void)
 {
    // this function tries to find droped c4 on the defuse scenario map  and returns nearest to it waypoint
 
-   if ((GetTeam (GetEntity ()) != TEAM_TF) || !(g_mapType & MAP_DE))
+   if ((m_team != TEAM_TF) || !(g_mapType & MAP_DE))
       return -1; // don't search for bomb if the player is CT, or it's not defusing bomb
 
    edict_t *bombEntity = NULL; // temporaly pointer to bomb
@@ -2931,7 +2929,7 @@ int Bot::FindPlantedBomb (void)
 {
    // this function tries to find planted c4 on the defuse scenario map and returns nearest to it waypoint
 
-   if ((GetTeam (GetEntity ()) != TEAM_TF) || !(g_mapType & MAP_DE))
+   if ((m_team != TEAM_TF) || !(g_mapType & MAP_DE))
       return -1; // don't search for bomb if the player is CT, or it's not defusing bomb
 
    edict_t *bombEntity = NULL; // temporaly pointer to bomb
