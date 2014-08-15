@@ -3137,12 +3137,14 @@ void Bot::Think (void)
       SecondThink ();
      
       // update timer to one second
-      secondThinkTimer = GetWorldTime () + 1.05;
+      secondThinkTimer = GetWorldTime () + 0.99f;
    }
    CheckMessageQueue (); // check for pending messages
 
    if (pev->maxspeed < 10 && GetTaskId () != TASK_PLANTBOMB && GetTaskId () != TASK_DEFUSEBOMB)
       botMovement = false;
+
+   CheckSpawnTimeConditions ();
 
    if (m_notKilled && botMovement && !yb_freeze_bots.GetBool ())
       BotAI (); // execute main code
@@ -4762,15 +4764,12 @@ void Bot::RunTask (void)
    }
 }
 
-void Bot::BotAI (void)
+void Bot::CheckSpawnTimeConditions (void)
 {
-   // this function gets called each frame and is the core of all bot ai. from here all other subroutines are called
-
-   float movedDistance; // length of different vector (distance bot moved)
-   TraceResult tr;
+   // this function is called instead of BotAI when buying finished, but freezetime is not yet left.
 
    // switch to knife if time to do this
-   if (m_checkKnifeSwitch && m_buyingFinished && m_spawnTime + g_randGen.Float (4.0, 6.5) < GetWorldTime ())
+   if (m_checkKnifeSwitch && !m_checkWeaponSwitch && m_buyingFinished && m_spawnTime + g_randGen.Float (4.0, 6.5) < GetWorldTime ())
    {
       if (g_randGen.Long (1, 100) < 2 && yb_spraypaints.GetBool ())
          StartTask (TASK_SPRAY, TASKPRI_SPRAYLOGO, -1, GetWorldTime () + 1.0, false);
@@ -4809,14 +4808,15 @@ void Bot::BotAI (void)
       // select a leader bot for this team
       SelectLeaderEachTeam (m_team);
       m_checkWeaponSwitch = false;
-
-      if (m_isLeader && m_moveToC4)
-         InstantChatterMessage (Chatter_CoverMe);
-
-      if (IsBehindSmokeClouds (GetEntity ()))
-         InstantChatterMessage (Chatter_BehindSmoke);
    }
-   // warning: the following timers aren't frame independent so it varies on slower/faster computers
+}
+
+void Bot::BotAI (void)
+{
+   // this function gets called each frame and is the core of all bot ai. from here all other subroutines are called
+
+   float movedDistance; // length of different vector (distance bot moved)
+   TraceResult tr;
 
    // increase reaction time
    m_actualReactionTime += 0.3;
@@ -6219,7 +6219,7 @@ float Bot::GetBombTimeleft (void)
 
 float Bot::GetEstimatedReachTime (void)
 {
-   float estimatedTime = 5.0; // time to reach next waypoint
+   float estimatedTime = 4.0; // time to reach next waypoint
 
    // calculate 'real' time that we need to get from one waypoint to another
    if (m_currentWaypointIndex >= 0 && m_currentWaypointIndex < g_numWaypoints && m_prevWptIndex[0] >= 0 && m_prevWptIndex[0] < g_numWaypoints)
@@ -6228,9 +6228,9 @@ float Bot::GetEstimatedReachTime (void)
 
       // caclulate estimated time
       if (pev->maxspeed <= 0.0)
-         estimatedTime = 5.0 * distance / 240.0;
+         estimatedTime = 4.0 * distance / 240.0;
       else
-         estimatedTime = 5.0 * distance / pev->maxspeed;
+         estimatedTime = 4.0 * distance / pev->maxspeed;
 
       // check for special waypoints, that can slowdown our movement
       if ((m_currentPath->flags & FLAG_CROUCH) || (m_currentPath->flags & FLAG_LADDER) || (pev->button & IN_DUCK))

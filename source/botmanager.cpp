@@ -38,7 +38,7 @@ ConVar yb_minskill ("yb_minskill", "60");
 ConVar yb_maxskill ("yb_maxskill", "100");
 
 ConVar yb_skill_tags ("yb_skill_tags", "0");
-ConVar yb_latency_display ("yb_latency_display", "0");
+ConVar yb_latency_display ("yb_latency_display", "2");
 
 BotManager::BotManager (void)
 {

@@ -107,7 +107,6 @@ bool Bot::LookupEnemy (void)
    {
       m_enemyUpdateTime = GetWorldTime () + 0.25;
 
-
       // search the world for players...
       for (i = 0; i < GetMaxClients (); i++)
       {
@@ -126,7 +125,12 @@ bool Bot::LookupEnemy (void)
 
          // do some blind by smoke grenade
          if (IsBehindSmokeClouds (player) && m_blindRecognizeTime < GetWorldTime ())
+         {
             m_blindRecognizeTime = GetWorldTime () + g_randGen.Float (2.0, 3.0);
+
+            if (g_randGen.Long (0, 100) < 50)
+               ChatterMessage (Chatter_BehindSmoke);
+         }
 
          if (player->v.button & (IN_ATTACK | IN_ATTACK2))
             m_blindRecognizeTime = GetWorldTime () - 0.1;

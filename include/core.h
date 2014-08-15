@@ -997,6 +997,7 @@ private:
    void SwitchChatterIcon (bool show);
    void InstantChatterMessage (int type);
    void BotAI (void);
+   void CheckSpawnTimeConditions (void);
    bool IsMorePowerfulWeaponCanBeBought (void);
    void PerformWeaponPurchase (void);
 
