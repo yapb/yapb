@@ -1,25 +1,10 @@
 //
-// Copyright (c) 2014, by YaPB Development Team. All rights reserved.
+// Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
+// Copyright (c) YaPB Development Team.
 //
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the "Software"),
-// to deal in the Software without restriction, including without limitation
-// the rights to use, copy, modify, merge, publish, distribute, sublicense,
-// and/or sell copies of the Software, and to permit persons to whom the
-// Software is furnished to do so, subject to the following conditions:
-// 
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-//
-// Version: $Id:$
+// This software is licensed under the BSD-style license.
+// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
+//     http://yapb.jeefo.net/license
 //
 
 #include <core.h>
@@ -547,7 +532,7 @@ void Bot::FireWeapon (void)
       goto WeaponSelectEnd;
 
    // use knife if near and good skill (l33t dude!)
-   if (m_skill > 80 && !FNullEnt (enemy) && distance < 80 && pev->health > 80 && pev->health >= enemy->v.health && !IsGroupOfEnemies (pev->origin))
+   if (m_skill > 80 && pev->health > 80 && pev->health >= enemy->v.health && !FNullEnt (enemy) && distance < 100.0f && !IsGroupOfEnemies (pev->origin))
       goto WeaponSelectEnd;
 
    // loop through all the weapons until terminator is found...
@@ -851,15 +836,15 @@ void Bot::FocusEnemy (void)
 
    float distance = enemyOrigin.GetLength ();  // how far away is the enemy scum?
 
-   if (distance < 128)
+   if (distance < 128.0f)
    {
       if (m_currentWeapon == WEAPON_KNIFE)
       {
-         if (distance < 80.0)
+         if (distance <= 80.0f)
             m_wantsToFire = true;
       }
       else
-         m_wantsToFire = true;
+         m_wantsToFire = GetShootingConeDeviation (GetEntity (), &m_enemyOrigin) > 0.8f;
    }
    else
    {

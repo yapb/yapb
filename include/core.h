@@ -1,35 +1,13 @@
 //
-// Copyright (c) 2014, by YaPB Development Team. All rights reserved.
+// Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
+// Copyright (c) YaPB Development Team.
 //
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the "Software"),
-// to deal in the Software without restriction, including without limitation
-// the rights to use, copy, modify, merge, publish, distribute, sublicense,
-// and/or sell copies of the Software, and to permit persons to whom the
-// Software is furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-//
-// Thanks to:
-//  CountFloyd - Original author of PODBot 2.6.
-//  Whistler - Original author of YaPB.
-//  KWo - Current developer of POD-Bot MM.
-//  Evilspy - Author of Metamod-p, and jk-botti.
-//
-// Version: $Id:$
+// This software is licensed under the BSD-style license.
+// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
+//     http://yapb.jeefo.net/license
 //
 
-#ifndef YAPB_INCLUDED
-#define YAPB_INCLUDED
+#pragma once
 
 #include <extdll.h>
 #include <stdio.h>
@@ -1597,7 +1575,7 @@ public:
 
    inline const char *GetString (void)
    {
-      return m_eptr->strval;
+      return m_eptr->string;
    }
 
    inline const char *GetName (void)
@@ -1704,5 +1682,3 @@ extern ConVar yb_ignore_enemies;
 #include <globals.h>
 #include <compress.h>
 #include <resource.h>
-
-#endif // YAPB_INCLUDED

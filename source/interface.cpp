@@ -1,25 +1,10 @@
 //
-// Copyright (c) 2014, by YaPB Development Team. All rights reserved.
+// Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
+// Copyright (c) YaPB Development Team.
 //
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the "Software"),
-// to deal in the Software without restriction, including without limitation
-// the rights to use, copy, modify, merge, publish, distribute, sublicense,
-// and/or sell copies of the Software, and to permit persons to whom the
-// Software is furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-//
-// Version: $Id:$
+// This software is licensed under the BSD-style license.
+// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
+//     http://yapb.jeefo.net/license
 //
 
 #include <core.h>
@@ -182,11 +167,10 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          "Version: %s (Build: %u)\n"
          "Compiled by: %s\n"
          "Compiled: %s, %s +300 (GMT)\n"
-         "Optimization: %s\n"
          "Meta-Interface Version: %s\n"
          "------------------------------------------------";
 
-      ClientPrint (ent, print_console, versionData, PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_AUTHOR, __DATE__, __TIME__, PRODUCT_OPT_TYPE, META_INTERFACE_VERSION);
+      ClientPrint (ent, print_console, versionData, PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_AUTHOR, __DATE__, __TIME__, META_INTERFACE_VERSION);
    }
 
    // display some sort of help information
@@ -3283,7 +3267,7 @@ void ConVarWrapper::RegisterVariable (const char *variable, const char *value, V
    memset (&newVariable, 0, sizeof (VarPair));
 
    newVariable.reg.name = const_cast <char *> (variable);
-   newVariable.reg.strval = const_cast <char *> (value);
+   newVariable.reg.string = const_cast <char *> (value);
 
    int engineFlags = FCVAR_EXTDLL;
 
