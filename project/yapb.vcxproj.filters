@@ -68,12 +68,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\source\basecode.cpp">
-      <Filter>source</Filter>
-    </ClCompile>
-    <ClCompile Include="..\source\botmanager.cpp">
-      <Filter>source</Filter>
-    </ClCompile>
     <ClCompile Include="..\source\chatlib.cpp">
       <Filter>source</Filter>
     </ClCompile>
@@ -96,6 +90,12 @@
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="..\source\waypoint.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\manager.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\basecode.cpp">
       <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>

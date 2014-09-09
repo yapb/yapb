@@ -33,11 +33,7 @@
 struct cvar_t
 {
    char *name;
-#if defined (YAPB_INCLUDED)
-   char *strval; // (dz): changed since genclass.h library #define
-#else
    char *string;
-#endif
    int flags;
    float value;
    cvar_t *next;
@@ -76,12 +72,10 @@ typedef enum
    print_chat,
 } PRINT_TYPE;
 
-#if defined (YAPB_INCLUDED)
 typedef enum
 {
    print_withtag = print_console | 0x3ff,
 } PRINT_TYPE_EX; // (dz): added for bots needs
-#endif
 
 // For integrity checking of content on clients
 typedef enum
