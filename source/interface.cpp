@@ -122,7 +122,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       if (IsNullString (arg1))
          return 1;
 
-      edict_t *ent = INDEXENT (atoi (arg1) - 1);
+      edict_t *ent = EntityOfIndex (atoi (arg1) - 1);
 
       if (IsValidBot (ent))
       {
@@ -1066,6 +1066,8 @@ int Spawn (edict_t *ent)
 
    if (strcmp (STRING (ent->v.classname), "worldspawn") == 0)
    {
+      g_worldEdict = ent; // save the world entity for future use
+
       g_convarWrapper->PushRegisteredConVarsToEngine (true);
 
       PRECACHE_SOUND (ENGINE_STR ("weapons/xbow_hit1.wav"));      // waypoint add
@@ -1082,7 +1084,6 @@ int Spawn (edict_t *ent)
       RoundInit ();
 
       g_mapType = NULL; // reset map type as worldspawn is the first entity spawned
-      g_worldEdict = ent; // save the world entity for future use
    }
    else if (strcmp (STRING (ent->v.classname), "player_weaponstrip") == 0 && (STRING (ent->v.target))[0] == '0')
       ent->v.target = ent->v.targetname = ALLOC_STRING ("fake");
@@ -1214,15 +1215,22 @@ void ClientDisconnect (edict_t *ent)
    if (yb_autovacate.GetBool () && IsValidPlayer (ent) && !IsValidBot (ent) && yb_quota.GetInt () < GetMaxClients () - 1)
       yb_quota.SetInt (yb_quota.GetInt () + 1);
 
-   int i = ENTINDEX (ent) - 1;
+   int i = IndexOfEntity (ent) - 1;
 
    InternalAssert (i >= 0 && i < 32);
 
+   Bot *bot = g_botManager->GetBot (i);
+
    // check if its a bot
-   if (g_botManager->GetBot (i) != NULL)
+   if (bot != NULL)
    {
-      if (g_botManager->GetBot (i)->pev == &ent->v)
+      if (bot->pev == &ent->v)
+      {
+         bot->SwitchChatterIcon (false);
+         bot->ReleaseUsedName ();
+
          g_botManager->Free (i);
+      }
    }
 
    if (g_isMetamod)
@@ -1249,7 +1257,7 @@ void ClientUserInfoChanged (edict_t *ent, char *infobuffer)
       (*g_functionTable.pfnClientUserInfoChanged) (ent, infobuffer);
    }
 
-   int clientIndex = ENTINDEX (ent) - 1;
+   int clientIndex = IndexOfEntity (ent) - 1;
 
    if (strcmp (password, INFOKEY_VALUE (infobuffer, const_cast <char *> (passwordField))) == 0)
       g_clients[clientIndex].flags |= CF_ADMIN;
@@ -1283,7 +1291,7 @@ void ClientCommand (edict_t *ent)
    static int fillServerTeam = 5;
    static bool fillCommand = false;
 
-   if (!g_isFakeCommand && (ent == g_hostEntity || (g_clients[ENTINDEX (ent) - 1].flags & CF_ADMIN)))
+   if (!g_isFakeCommand && (ent == g_hostEntity || (g_clients[IndexOfEntity (ent) - 1].flags & CF_ADMIN)))
    {
       if (stricmp (command, "yapb") == 0 || stricmp (command, "yb") == 0)
       {
@@ -1308,9 +1316,9 @@ void ClientCommand (edict_t *ent)
 
          return;
       }
-      else if (stricmp (command, "menuselect") == 0 && !IsNullString (arg1) && g_clients[ENTINDEX (ent) - 1].menu != NULL)
+      else if (stricmp (command, "menuselect") == 0 && !IsNullString (arg1) && g_clients[IndexOfEntity (ent) - 1].menu != NULL)
       {
-         Client *client = &g_clients[ENTINDEX (ent) - 1];
+         Client *client = &g_clients[IndexOfEntity (ent) - 1];
          int selection = atoi (arg1);
 
          if (client->menu == &g_menus[12])
@@ -1673,7 +1681,7 @@ void ClientCommand (edict_t *ent)
             case 2:
                if (FindNearestPlayer (reinterpret_cast <void **> (&bot), client->ent, 4096.0, true, true, true))
                {
-                  if (!(bot->pev->weapons & (1 << WEAPON_C4)) && !bot->HasHostage () && (bot->GetTaskId () != TASK_PLANTBOMB) && (bot->GetTaskId () != TASK_DEFUSEBOMB))
+                  if (!bot->m_hasC4 && !bot->HasHostage () && (bot->GetTaskId () != TASK_PLANTBOMB) && (bot->GetTaskId () != TASK_DEFUSEBOMB))
                   {
                      if (selection == 1)
                      {
@@ -2098,7 +2106,7 @@ void ClientCommand (edict_t *ent)
 
          if (bot != NULL)
          {
-            bot->m_sayTextBuffer.entityIndex = ENTINDEX (ent);
+            bot->m_sayTextBuffer.entityIndex = IndexOfEntity (ent);
 
             if (IsNullString (CMD_ARGS ()))
                continue;
@@ -2108,7 +2116,7 @@ void ClientCommand (edict_t *ent)
          }
       }
    }
-   int clientIndex = ENTINDEX (ent) - 1;
+   int clientIndex = IndexOfEntity (ent) - 1;
 
    // check if this player alive, and issue something
    if ((g_clients[clientIndex].flags & CF_ALIVE) && g_radioSelect[clientIndex] != 0 && strncmp (command, "menuselect", 10) == 0)
@@ -2217,7 +2225,7 @@ void StartFrame (void)
    // record some stats of all players on the server
    for (int i = 0; i < GetMaxClients (); i++)
    {
-      edict_t *player = INDEXENT (i + 1);
+      edict_t *player = EntityOfIndex (i + 1);
 
       if (!FNullEnt (player) && (player->v.flags & FL_CLIENT))
       {
@@ -2264,7 +2272,7 @@ void StartFrame (void)
    {
       for (int i = 0; i < GetMaxClients (); i++)
       {
-         edict_t *player = INDEXENT (i + 1);
+         edict_t *player = EntityOfIndex (i + 1);
 
          // code below is executed only on dedicated server
          if (IsDedicatedServer () && !FNullEnt (player) && (player->v.flags & FL_CLIENT) && !(player->v.flags & FL_FAKECLIENT))

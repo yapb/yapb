@@ -129,14 +129,7 @@ static inline entvars_t *VARS (EOFFSET eoffset)
 {
    return VARS (ENT (eoffset));
 }
-static inline int ENTINDEX (edict_t *ent)
-{
-   return (*g_engfuncs.pfnIndexOfEdict) (ent);
-}
-static inline edict_t *INDEXENT (int iEdictNum)
-{
-   return (*g_engfuncs.pfnPEntityOfEntIndex) (iEdictNum);
-}
+
 static inline void MESSAGE_BEGIN (int msg_dest, int msg_type, const float *pOrigin, entvars_t *ent)
 {
    (*g_engfuncs.pfnMessageBegin) (msg_dest, msg_type, pOrigin, ENT (ent));

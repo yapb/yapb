@@ -243,6 +243,7 @@ void NetworkMsg::Execute (void *p)
             m_bot->m_inVIPZone = (enabled != 0);
          else if (strcmp (PTR_TO_STR (p), "c4") == 0)
             m_bot->m_inBombZone = (enabled == 2);
+
          break;
       }
       break;
@@ -263,8 +264,8 @@ void NetworkMsg::Execute (void *p)
 
          if (killerIndex != 0 && killerIndex != victimIndex)
          {
-            edict_t *killer = INDEXENT (killerIndex);
-            edict_t *victim = INDEXENT (victimIndex);
+            edict_t *killer = EntityOfIndex (killerIndex);
+            edict_t *victim = EntityOfIndex (victimIndex);
 
             if (FNullEnt (killer) || FNullEnt (victim))
                break;

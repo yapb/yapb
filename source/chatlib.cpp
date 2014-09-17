@@ -213,7 +213,7 @@ void Bot::PrepareChatMessage (char *text)
          // chat reply?
          else if (*pattern == 's')
          {
-            talkEntity = INDEXENT (m_sayTextBuffer.entityIndex);
+            talkEntity = EntityOfIndex (m_sayTextBuffer.entityIndex);
 
             if (!FNullEnt (talkEntity))
                strcat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))));

@@ -79,7 +79,7 @@ int Bot::FindGoal (void)
    }
 
    // terrorist carrying the C4?
-   if (pev->weapons & (1 << WEAPON_C4) || m_isVIP)
+   if (m_hasC4 || m_isVIP)
    {
       tactic = 3;
       goto TacticChoosen;
@@ -122,34 +122,20 @@ int Bot::FindGoal (void)
       defensive += 40.0f;
       offensive -= 25.0f;
    }
-   else if ((g_mapType & MAP_DE) && m_team == TEAM_TF)
+   else if ((g_mapType & MAP_DE) && m_team == TEAM_TF && g_timeRoundStart + 10.0f < GetWorldTime ())
    {
       // send some terrorists to guard planter bomb
       if (g_bombPlanted && GetTaskId () != TASK_ESCAPEFROMBOMB && GetBombTimeleft () >= 15.0)
          return m_chosenGoalIndex = FindDefendWaypoint (g_waypoint->GetBombPosition ());
-
-      float leastPathDistance = 0.0;
-      int goalIndex = -1;
-
-      IterateArray (g_waypoint->m_goalPoints, i)
-      {
-         float realPathDistance = g_waypoint->GetPathDistance (m_currentWaypointIndex,  g_waypoint->m_goalPoints[i]) + g_randGen.Float (0.0, 128.0);
-
-         if (leastPathDistance > realPathDistance)
-         {
-            goalIndex =  g_waypoint->m_goalPoints[i];
-            leastPathDistance = realPathDistance;
-         }
-      }
-
-      if (goalIndex != -1 && !g_bombPlanted && (pev->weapons & (1 << WEAPON_C4)))
-         return m_chosenGoalIndex = goalIndex;
    }
 
    goalDesire = g_randGen.Long (0, 100) + offensive;
    forwardDesire = g_randGen.Long (0, 100) + offensive;
-   campDesire = g_randGen.Long (0, 85) + defensive;
+   campDesire = g_randGen.Long (0, 100) + defensive;
    backoffDesire = g_randGen.Long (0, 100) + defensive;
+
+   if (!UsesCampGun ())
+      campDesire = 0;
 
    tacticChoice = backoffDesire;
    tactic = 0;
@@ -1967,7 +1953,7 @@ bool Bot::HeadTowardWaypoint (void)
          m_minSpeed = pev->maxspeed;
 
          // only if we in normal task and bomb is not planted
-         if (taskID == TASK_NORMAL && !g_bombPlanted && m_personality != PERSONALITY_RUSHER && !(pev->weapons & (1 << WEAPON_C4)) && !m_isVIP && (m_loosedBombWptIndex == -1) && !HasHostage ())
+         if (taskID == TASK_NORMAL && !g_bombPlanted && !m_inBombZone && !m_inBuyZone && m_personality != PERSONALITY_RUSHER && !m_hasC4 && !m_isVIP && (m_loosedBombWptIndex == -1) && !HasHostage () && m_fearLevel * 2 > m_agressionLevel)
          {
             m_campButtons = 0;
 
@@ -1980,7 +1966,7 @@ bool Bot::HeadTowardWaypoint (void)
                kills = (g_experienceData + (waypoint * g_numWaypoints) + waypoint)->team1Damage / g_highestDamageCT;
 
             // if damage done higher than one
-            if (kills > 0.15f && g_timeRoundMid > GetWorldTime ())
+            if (kills > 0.15f && g_timeRoundMid + 30.0f > GetWorldTime ())
             {
                switch (m_personality)
                {
@@ -2003,7 +1989,10 @@ bool Bot::HeadTowardWaypoint (void)
                      pev->button |= IN_DUCK;
                }
             }
-            else if (g_botsCanPause && !IsOnLadder () && !IsInWater () && !m_currentTravelFlags && IsOnFloor ())
+            else 
+
+            
+            if (g_botsCanPause && !IsOnLadder () && !IsInWater () && !m_currentTravelFlags && IsOnFloor ())
             {
                if (static_cast <float> (kills) == m_baseAgressionLevel)
                   m_campButtons |= IN_DUCK;

@@ -160,7 +160,7 @@ bool Bot::LookupEnemy (void)
       }
       else
       {
-         if (m_seeEnemyTime + 3.0 < GetWorldTime () && (pev->weapons & (1 << WEAPON_C4) || HasHostage () || !FNullEnt (m_targetEntity)))
+         if (m_seeEnemyTime + 3.0 < GetWorldTime () && (m_hasC4 || HasHostage () || !FNullEnt (m_targetEntity)))
             RadioMessage (Radio_EnemySpotted);
 
          m_targetEntity = NULL; // stop following when we see an enemy...
@@ -402,7 +402,7 @@ bool Bot::IsFriendInLineOfFire (float distance)
    // check if we hit something
    if (!FNullEnt (tr.pHit))
    {
-      int playerIndex = ENTINDEX (tr.pHit) - 1;
+      int playerIndex = IndexOfEntity (tr.pHit) - 1;
 
       // check valid range
       if (playerIndex >= 0 && playerIndex < GetMaxClients () && g_clients[playerIndex].team == m_team && (g_clients[playerIndex].flags & CF_ALIVE))
@@ -532,7 +532,7 @@ void Bot::FireWeapon (void)
       goto WeaponSelectEnd;
 
    // use knife if near and good skill (l33t dude!)
-   if (m_skill > 80 && pev->health > 80 && pev->health >= enemy->v.health && !FNullEnt (enemy) && distance < 100.0f && !IsGroupOfEnemies (pev->origin))
+   if (m_skill > 80 && pev->health > 80 && !FNullEnt (enemy) && pev->health >= enemy->v.health && distance < 100.0f && !IsGroupOfEnemies (pev->origin))
       goto WeaponSelectEnd;
 
    // loop through all the weapons until terminator is found...
@@ -918,7 +918,7 @@ void Bot::CombatFight (void)
          CheckGrenades();
          CheckThrow(EyePosition(),m_throw);
 
-         if (m_states & (STATE_SEEING_ENEMY) && !(pev->weapons & (1 << WEAPON_C4)))
+         if (m_states & (STATE_SEEING_ENEMY) && !m_hasC4)
             StartTask(TASK_SEEKCOVER, TASKPRI_SEEKCOVER,-1, g_randGen.Long (10, 20), true);
       }
        // If using sniper do not jump around !
@@ -1179,6 +1179,11 @@ bool Bot::UsesPistol (void)
       return true;
 
    return false;
+}
+
+bool Bot::UsesCampGun (void)
+{
+   return UsesSubmachineGun () || UsesRifle () || UsesSniper ();
 }
 
 bool Bot::UsesSubmachineGun (void)

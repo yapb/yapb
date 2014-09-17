@@ -972,7 +972,6 @@ private:
    float m_randomizeAnglesTime; // time last randomized location
    float m_playerTargetTime; // time last targeting
 
-   void SwitchChatterIcon (bool show);
    void InstantChatterMessage (int type);
    void BotAI (void);
    void CheckSpawnTimeConditions (void);
@@ -1136,6 +1135,7 @@ public:
    bool m_buyingFinished; // done with buying
    bool m_buyPending; // bot buy is pending
    bool m_hasDefuser; // does bot has defuser
+   bool m_hasC4; // does bot has c4 bomb
    bool m_hasProgressBar; // has progress bar on a HUD
    bool m_jumpReady; // is double jump ready
    bool m_canChooseAimDirection; // can choose aiming direction
@@ -1212,7 +1212,7 @@ public:
 
    inline edict_t *GetEntity (void) { return ENT (pev); };
    inline EOFFSET GetOffset (void) { return OFFSET (pev); };
-   inline int GetIndex (void) { return ENTINDEX (GetEntity ()); };
+   int GetIndex (void);
 
    inline Vector Center (void) { return (pev->absmax + pev->absmin) * 0.5; };
    inline Vector EyePosition (void) { return pev->origin + pev->view_ofs; };
@@ -1225,6 +1225,7 @@ public:
    bool FindWaypoint (void);
    bool EntityIsVisible (const Vector &dest, bool fromBody = false);
 
+   void SwitchChatterIcon (bool show);
    void DeleteSearchNodes (void);
 
    void RemoveCertainTask (TaskId_t id);
@@ -1260,6 +1261,7 @@ public:
    bool UsesSubmachineGun (void);
    bool UsesZoomableRifle (void);
    bool UsesBadPrimary (void);
+   bool UsesCampGun (void);
    bool HasPrimaryWeapon (void);
    bool HasSecondaryWeapon(void);
    bool HasShield (void);
@@ -1654,24 +1656,6 @@ extern void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex);
 extern void SoundAttachToThreat (edict_t *ent, const char *sample, float volume);
 extern void SoundSimulateUpdate (int playerIndex);
 
-static inline bool IsNullString (const char *input)
-{
-   if (input == NULL)
-      return true;
-
-   return *input == '\0';
-}
-
-static inline float GetWorldTime (void)
-{
-   return g_pGlobals->time;
-}
-
-static inline int GetMaxClients (void)
-{
-   return g_pGlobals->maxClients;
-}
-
 // very global convars
 extern ConVar yb_jasonmode;
 extern ConVar yb_communication_type;
@@ -1682,3 +1666,8 @@ extern ConVar yb_ignore_enemies;
 #include <globals.h>
 #include <compress.h>
 #include <resource.h>
+
+inline int Bot::GetIndex (void)
+{
+   return IndexOfEntity (GetEntity ());
+}

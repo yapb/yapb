@@ -1089,7 +1089,14 @@ bool Waypoint::Load (void)
                if (m_paths[i] == NULL)
                   TerminateOnMalloc ();
 
-               fp.Read (m_paths[i], sizeof (Path));
+               if (fp.Read (m_paths[i], sizeof (Path)) == 0)
+               {
+                  sprintf (m_infoBuffer, "%s.pwf - truncated waypoint file (count: %d, need: %d)", GetMapName (), i, g_numWaypoints);
+                  AddLogEntry (true, LL_ERROR, m_infoBuffer);
+
+                  fp.Close ();
+                  return false;
+               }
             }
             m_waypointPaths = true;
          }
@@ -2522,11 +2529,11 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
 #endif
 
    timeval timeout;
-   timeout.tv_sec = 2;
+   timeout.tv_sec = 5;
    timeout.tv_usec = 0;
 
-   setsockopt (socketHandle, SOL_SOCKET, SO_RCVTIMEO, (char *) &timeout, sizeof(timeout));
-   setsockopt (socketHandle, SOL_SOCKET, SO_SNDTIMEO, (char *) &timeout, sizeof(timeout));
+   setsockopt (socketHandle, SOL_SOCKET, SO_RCVTIMEO, (char *) &timeout, sizeof (timeout));
+   setsockopt (socketHandle, SOL_SOCKET, SO_SNDTIMEO, (char *) &timeout, sizeof (timeout));
 
    memset (&dest, 0, sizeof (dest));
    dest.sin_family = AF_INET;
@@ -2540,9 +2547,9 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
    }
 
    String request;
-   request.AssignFormat ("GET /wpdb/%s.pwf HTTP/1.0\r\nUser-Agent: YaPB/%s\r\nHost: %s\r\n\r\n", GetMapName (), PRODUCT_VERSION, yb_waypoint_autodl_host.GetString ());
+   request.AssignFormat ("GET /wpdb/%s.pwf HTTP/1.0\r\nAccept: */*\r\nUser-Agent: YaPB/%s\r\nHost: %s\r\n\r\n", GetMapName (), PRODUCT_VERSION, yb_waypoint_autodl_host.GetString ());
 
-   if (send (socketHandle, request.GetBuffer (), request.GetLength (), 0) < 1)
+   if (send (socketHandle, request.GetBuffer (), request.GetLength () + 1, 0) < 1)
    {
       FreeSocket (socketHandle);
       return WDE_SOCKET_ERROR;
@@ -2555,16 +2562,16 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
       FreeSocket (socketHandle);
       return WDE_SOCKET_ERROR;
    }
-   char buffer[4096];
+   char buffer[1024];
 
    bool finished = false;
    int recvPosition = 0;
    int symbolsInLine = 0;
 
    // scan for the end of the header
-   while (!finished && recvPosition < static_cast <int> (sizeof (buffer)))
+   while (!finished && recvPosition < sizeof (buffer))
    {
-      if (recv (socketHandle, &buffer[recvPosition], 1, 0) < 0)
+      if (recv (socketHandle, &buffer[recvPosition], 1, 0) == 0)
          finished = true;
 
       switch (buffer[recvPosition])
@@ -2583,9 +2590,9 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
          symbolsInLine++;
          break;
       }
-
       recvPosition++;
    }
+
    if (strstr (buffer, "HTTP/1.0 404") != NULL)
    {
       FreeSocket (socketHandle);
@@ -2596,7 +2603,7 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
    int size = 0;
 
    while ((size = recv (socketHandle, buffer, sizeof (buffer) -1, 0)) > 0)
-      fp.Write (buffer, 1, size);
+      fp.Write (buffer, size);
 
    fp.Close ();
 

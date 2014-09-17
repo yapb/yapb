@@ -155,7 +155,7 @@ void DisplayMenuToClient (edict_t *ent, MenuText *menu)
    if (!IsValidPlayer (ent))
       return;
 
-   int clientIndex = ENTINDEX (ent) - 1;
+   int clientIndex = IndexOfEntity (ent) - 1;
 
    if (menu != NULL)
    {
@@ -230,7 +230,7 @@ void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex)
    if (!FNullEnt (trace->pHit))
    {
       if (trace->pHit->v.solid == SOLID_BSP || trace->pHit->v.movetype == MOVETYPE_PUSHSTEP)
-         entityIndex = ENTINDEX (trace->pHit);
+         entityIndex = IndexOfEntity (trace->pHit);
       else
          return;
    }
@@ -260,11 +260,11 @@ void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex)
    {
       MESSAGE_BEGIN (MSG_BROADCAST, SVC_TEMPENTITY);
          WRITE_BYTE (TE_PLAYERDECAL);
-         WRITE_BYTE (ENTINDEX (ENT (pev)));
+         WRITE_BYTE (IndexOfEntity (ENT (pev)));
          WRITE_COORD (trace->vecEndPos.x);
          WRITE_COORD (trace->vecEndPos.y);
          WRITE_COORD (trace->vecEndPos.z);
-         WRITE_SHORT (static_cast <short> (ENTINDEX (trace->pHit)));
+         WRITE_SHORT (static_cast <short> (IndexOfEntity (trace->pHit)));
          WRITE_BYTE (decalIndex);
       MESSAGE_END ();
    }
@@ -794,7 +794,7 @@ bool IsWeaponShootingThroughWall (int id)
 
 int GetTeam (edict_t *ent)
 {
-   return g_clients[ENTINDEX (ent) - 1].team;
+   return g_clients[IndexOfEntity (ent) - 1].team;
 }
 
 bool IsValidPlayer (edict_t *ent)
@@ -1440,7 +1440,7 @@ void SoundAttachToThreat (edict_t *ent, const char *sample, float volume)
       return; // reliability check
 
    Vector origin = GetEntityOrigin (ent);
-   int index = ENTINDEX (ent) - 1;
+   int index = IndexOfEntity (ent) - 1;
 
    if (index < 0 || index >= GetMaxClients ())
    {

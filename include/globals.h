@@ -84,3 +84,31 @@ extern EntityAPI_t g_entityAPI;
 extern FuncPointers_t g_funcPointers;
 extern NewEntityAPI_t g_getNewEntityAPI;
 extern BlendAPI_t g_serverBlendingAPI;
+
+static inline bool IsNullString (const char *input)
+{
+   if (input == NULL)
+      return true;
+
+   return *input == '\0';
+}
+
+static inline float GetWorldTime (void)
+{
+   return g_pGlobals->time;
+}
+
+static inline int GetMaxClients (void)
+{
+   return g_pGlobals->maxClients;
+}
+
+static inline edict_t *EntityOfIndex (const int index)
+{
+   return static_cast <edict_t *> (g_worldEdict + index);
+};
+
+inline int IndexOfEntity (const edict_t *ent)
+{
+   return static_cast <int> (ent - g_worldEdict);
+};

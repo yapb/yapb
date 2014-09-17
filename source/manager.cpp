@@ -156,7 +156,7 @@ int BotManager::CreateBot (String name, int skill, int personality, int team, in
       return 2;
    }
 
-   int index = ENTINDEX (bot) - 1;
+   int index = IndexOfEntity (bot) - 1;
 
    InternalAssert (index >= 0 && index <= 32); // check index
    InternalAssert (m_bots[index] == NULL); // check bot slot
@@ -177,7 +177,7 @@ int BotManager::GetIndex (edict_t *ent)
    if (FNullEnt (ent))
       return -1;
 
-   int index = ENTINDEX (ent) - 1;
+   int index = IndexOfEntity (ent) - 1;
 
    if (index < 0 || index >= 32)
       return -1;
@@ -637,7 +637,7 @@ void BotManager::ListBots (void)
 
    for (int i = 0; i < GetMaxClients (); i++)
    {
-      edict_t *player = INDEXENT (i);
+      edict_t *player = EntityOfIndex (i);
 
       // is this player slot valid
       if (IsValidBot (player))
@@ -745,9 +745,6 @@ void BotManager::Free (int index)
 {
    // this function frees one bot selected by index (used on bot disconnect)
 
-   m_bots[index]->SwitchChatterIcon (false);
-   m_bots[index]->ReleaseUsedName ();
- 
    delete m_bots[index];
    m_bots[index] = NULL;
 }
@@ -758,7 +755,7 @@ Bot::Bot (edict_t *bot, int skill, int personality, int team, int member)
    // when bot setup completed, (this is a bot class constructor)
 
    char rejectReason[128];
-   int clientIndex = ENTINDEX (bot);
+   int clientIndex = IndexOfEntity (bot);
 
    memset (this, 0, sizeof (Bot));
 
@@ -792,7 +789,7 @@ Bot::Bot (edict_t *bot, int skill, int personality, int team, int member)
       SET_CLIENT_KEYVALUE (clientIndex, buffer, "*bot", "1");
 
    rejectReason[0] = 0; // reset the reject reason template string
-   MDLL_ClientConnect (bot, "BOT", FormatBuffer ("127.0.0.%d", ENTINDEX (bot) + 100), rejectReason);
+   MDLL_ClientConnect (bot, "BOT", FormatBuffer ("127.0.0.%d", IndexOfEntity (bot) + 100), rejectReason);
 
    if (!IsNullString (rejectReason))
    {
@@ -950,7 +947,6 @@ void Bot::NewRound (void)
    
    g_canSayBombPlanted = true;
    int i = 0;
-   
 
    // delete all allocated path nodes
    DeleteSearchNodes ();
@@ -1105,6 +1101,7 @@ void Bot::NewRound (void)
 
    m_buyPending = false;
    m_inBombZone = false;
+   m_hasC4 = false;
 
    m_shieldCheckTime = 0.0;
    m_zoomCheckTime = 0.0;
@@ -1251,7 +1248,7 @@ void BotManager::CalculatePingOffsets (void)
 
    for (int i = 0; i < GetMaxClients (); i++)
    {
-      edict_t *ent = INDEXENT (i + 1);
+      edict_t *ent = EntityOfIndex (i + 1);
 
       if (!IsValidPlayer (ent))
          continue;
