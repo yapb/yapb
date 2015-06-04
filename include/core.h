@@ -1216,9 +1216,8 @@ public:
    void DeleteSearchNodes (void);
 
    void RemoveCertainTask (TaskId_t id);
-   void StartTask_ (int, const char *f, TaskId_t id, float desire, int data, float time, bool canContinue);
+   void StartTask (TaskId_t id, float desire, int data, float time, bool canContinue);
 
-#define StartTask(i,d,a,t,c) StartTask_(__LINE__, __FUNCTION__,i,d,a,t,c)
    void ResetTasks (void);
    TaskItem *GetTask (void);
    inline TaskId_t GetTaskId (void) { return GetTask ()->id; };

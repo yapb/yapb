@@ -2130,15 +2130,8 @@ void Bot::ResetTasks (void)
    m_tasks.RemoveAll ();
 }
 
-void Bot::StartTask_ (int l, const char  *f, TaskId_t id, float desire, int data, float time, bool resume)
+void Bot::StartTask (TaskId_t id, float desire, int data, float time, bool resume)
 {
-
-	if (id == TASK_MOVETOPOSITION && m_team == TEAM_CF)
-	{
-		ServerPrint("%s pushed mtp(des:%.2f,dat:%d,tm:%.2f,res:%s) on %s:%d", STRING(pev->netname), desire, data, time, (resume?"t":"f"), f, l);
-//      __asm int 3
-	}
-
    if (!m_tasks.IsEmpty ())
    {
       TaskItem &item = m_tasks.Last ();
