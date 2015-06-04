@@ -30,7 +30,9 @@
     <ClInclude Include="..\include\resource.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\source\basecode.cpp" />
+    <ClCompile Include="..\source\basecode.cpp">
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">EnableAllWarnings</WarningLevel>
+    </ClCompile>
     <ClCompile Include="..\source\manager.cpp" />
     <ClCompile Include="..\source\chatlib.cpp" />
     <ClCompile Include="..\source\combat.cpp" />
@@ -152,6 +154,7 @@
       <ImportLibrary>.\debug\inf\yapb.lib</ImportLibrary>
       <TargetMachine>MachineX86</TargetMachine>
       <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -225,8 +228,8 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <GenerateMapFile>false</GenerateMapFile>
       <SubSystem>Windows</SubSystem>
-      <OptimizeReferences>true</OptimizeReferences>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>false</OptimizeReferences>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <SetChecksum>false</SetChecksum>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention />
@@ -236,7 +239,9 @@
       <MinimumRequiredVersion />
       <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <ImageHasSafeExceptionHandlers>true</ImageHasSafeExceptionHandlers>
+      <ImageHasSafeExceptionHandlers>
+      </ImageHasSafeExceptionHandlers>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
       <Command>
