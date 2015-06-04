@@ -1,4 +1,4 @@
-//
+﻿//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -9,10 +9,10 @@
 
 #include <core.h>
 
-ConVar yb_wptsubfolder ("yb_wptsubfolder", "");
+ConVar yb_wptsubfolder ("yb_wptsubfolder", "", VT_NOSERVER);
 
-ConVar yb_waypoint_autodl_host ("yb_waypoint_autodl_host", "yapb.jeefo.net");
-ConVar yb_waypoint_autodl_enable ("yb_waypoint_autodl_enable", "1");
+ConVar yb_waypoint_autodl_host ("yb_waypoint_autodl_host", "yapb.jeefo.net", VT_NOSERVER);
+ConVar yb_waypoint_autodl_enable ("yb_waypoint_autodl_enable", "1", VT_NOSERVER);
 
 void Waypoint::Init (void)
 {
@@ -104,7 +104,7 @@ int Waypoint::FindFarest (Vector origin, float maxDistance)
 
 int Waypoint::FindNearest (Vector origin, float minDistance, int flags)
 {
-   // find the nearest waypoint to that Origin and return the index
+   // find the nearest waypoint to that origin and return the index
 
    int index = -1;
 
@@ -156,7 +156,7 @@ void Waypoint::FindInRadius (Array <int> &queueID, float radius, Vector origin)
 
 void Waypoint::Add (int flags, const Vector &waypointOrigin)
 {
-   if (FNullEnt (g_hostEntity))
+   if (IsEntityNull (g_hostEntity))
       return;
 
    int index = -1, i;
@@ -234,7 +234,7 @@ void Waypoint::Add (int flags, const Vector &waypointOrigin)
             placeNew = false;
             path = m_paths[index];
 
-            int flags = 0;
+            flags = 0;
 
             for (i = 0; i < MAX_PATH_INDEX; i++)
                flags += path->connectionFlags[i];
@@ -581,11 +581,11 @@ int Waypoint::GetFacingIndex (void)
 
       // get the current view cone
       viewCone[0] = GetShootingConeDeviation (g_hostEntity, &m_paths[i]->origin);
-      Vector bound = m_paths[i]->origin - Vector (0, 0, m_paths[i]->flags & FLAG_CROUCH ? 8 : 15);
+      Vector bound = m_paths[i]->origin - Vector (0, 0, (m_paths[i]->flags & FLAG_CROUCH) ? 8 : 15);
 
       // get the current view cone
       viewCone[1] = GetShootingConeDeviation (g_hostEntity, &bound);
-      bound = m_paths[i]->origin + Vector (0, 0, m_paths[i]->flags & FLAG_CROUCH ? 8 : 15);
+      bound = m_paths[i]->origin + Vector (0, 0, (m_paths[i]->flags & FLAG_CROUCH) ? 8 : 15);
 
       // get the current view cone
       viewCone[2] = GetShootingConeDeviation (g_hostEntity, &bound);
@@ -1252,7 +1252,6 @@ bool Waypoint::Reachable (Bot *bot, int index)
    Vector dest = GetPath (index)->origin;
 
    float distance = (dest - src).GetLength ();
-   float distance2D = (dest - src).GetLength2D ();
 
    // check is destination is close to us enoguh
    if (distance >= 201) // Default: 201
@@ -1260,6 +1259,8 @@ bool Waypoint::Reachable (Bot *bot, int index)
 
    if (bot->pev->waterlevel == 2 || bot->pev->waterlevel == 3)
    {
+      float distance2D = (dest - src).GetLength2D ();
+
       // is destination waypoint higher that source (45 is max jump height), or destination waypoint higher that source
       if ((dest.z > src.z + 40.0 || dest.z < src.z - 75.0) && (!(GetPath (index)->flags & FLAG_LADDER) || distance2D >= 16.0))
          return false; // unable to reach this one
@@ -1289,7 +1290,7 @@ bool Waypoint::IsNodeReachable (Vector src, Vector destination)
    // check if we go through a func_illusionary, in which case return false
    TraceHull (src, destination, ignore_monsters, head_hull, g_hostEntity, &tr);
 
-   if (!FNullEnt (tr.pHit) && strcmp ("func_illusionary", STRING (tr.pHit->v.classname)) == 0)
+   if (!IsEntityNull (tr.pHit) && strcmp ("func_illusionary", STRING (tr.pHit->v.classname)) == 0)
       return false; // don't add pathwaypoints through func_illusionaries
 
    // check if this waypoint is "visible"...
@@ -1467,7 +1468,7 @@ char *Waypoint::GetWaypointInfo (int id)
    }
 
    static char messageBuffer[1024];
-   sprintf (messageBuffer, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s", (path->flags == 0 && !jumpPoint) ? " (none)" : "", path->flags & FLAG_LIFT ? " LIFT" : "", path->flags & FLAG_CROUCH ? " CROUCH" : "", path->flags & FLAG_CROSSING ? " CROSSING" : "", path->flags & FLAG_CAMP ? " CAMP" : "", path->flags & FLAG_TF_ONLY ? " TERRORIST" : "", path->flags & FLAG_CF_ONLY ? " CT" : "", path->flags & FLAG_SNIPER ? " SNIPER" : "", path->flags & FLAG_GOAL ? " GOAL" : "", path->flags & FLAG_LADDER ? " LADDER" : "", path->flags & FLAG_RESCUE ? " RESCUE" : "", path->flags & FLAG_DOUBLEJUMP ? " JUMPHELP" : "", path->flags & FLAG_NOHOSTAGE ? " NOHOSTAGE" : "", jumpPoint ? " JUMP" : "");
+   sprintf (messageBuffer, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s", (path->flags == 0 && !jumpPoint) ? " (none)" : "", (path->flags & FLAG_LIFT) ? " LIFT" : "", (path->flags & FLAG_CROUCH) ? " CROUCH" : "", (path->flags & FLAG_CROSSING) ? " CROSSING" : "", (path->flags & FLAG_CAMP) ? " CAMP" : "", (path->flags & FLAG_TF_ONLY) ? " TERRORIST" : "", (path->flags & FLAG_CF_ONLY) ? " CT" : "", (path->flags & FLAG_SNIPER) ? " SNIPER" : "", (path->flags & FLAG_GOAL) ? " GOAL" : "", (path->flags & FLAG_LADDER) ? " LADDER" : "", (path->flags & FLAG_RESCUE) ? " RESCUE" : "", (path->flags & FLAG_DOUBLEJUMP) ? " JUMPHELP" : "", (path->flags & FLAG_NOHOSTAGE) ? " NOHOSTAGE" : "", jumpPoint ? " JUMP" : "");
 
    // return the message buffer
    return messageBuffer;
@@ -1477,7 +1478,7 @@ void Waypoint::Think (void)
 {
    // this function executes frame of waypoint operation code.
 
-   if (FNullEnt (g_hostEntity))
+   if (IsEntityNull (g_hostEntity))
       return; // this function is only valid on listenserver, and in waypoint enabled mode.
 
    float nearestDistance = FLT_MAX;
@@ -1644,7 +1645,7 @@ void Waypoint::Think (void)
       // draw the camplines
       if (path->flags & FLAG_CAMP)
       {
-         Vector campSourceOrigin = campSourceOrigin = path->origin + Vector (0, 0, 36);
+         Vector campSourceOrigin = path->origin + Vector (0, 0, 36);
 
          // check if it's a source
          if (path->flags & FLAG_CROUCH)
@@ -1807,7 +1808,7 @@ bool Waypoint::NodesValid (void)
    {
       connections = 0;
 
-      for (int j = 0; j < MAX_PATH_INDEX; j++)
+      for (j = 0; j < MAX_PATH_INDEX; j++)
       {
          if (m_paths[i]->index[j] != -1)
          {
@@ -1987,15 +1988,15 @@ bool Waypoint::NodesValid (void)
 
       visited[current->index] = true;
 
-      IterateArray (outgoingPaths[current->index], j)
+      IterateArray (outgoingPaths[current->index], p)
       {
-         if (visited[outgoingPaths[current->index][j]])
+         if (visited[outgoingPaths[current->index][p]])
             continue; // skip this waypoint as it's already visited
 
          PathNode *pNewNode = new PathNode;
      
          pNewNode->next = stack;
-         pNewNode->index = outgoingPaths[current->index][j];
+         pNewNode->index = outgoingPaths[current->index][p];
          stack = pNewNode;
       }
       delete current;
@@ -2006,7 +2007,7 @@ bool Waypoint::NodesValid (void)
       if (!visited[i])
       {
          AddLogEntry (true, LL_WARNING, "Path broken from Waypoint #%d to Waypoint #0!", i);
-         (*g_engfuncs.pfnSetOrigin) (g_hostEntity, m_paths[i]->origin);
+         SET_ORIGIN (g_hostEntity, m_paths[i]->origin);
 
          g_waypointOn = true;
          g_editNoclip = true;
@@ -2180,7 +2181,7 @@ void Waypoint::CreateBasic (void)
    edict_t *ent = NULL;
 
    // first of all, if map contains ladder points, create it
-   while (!FNullEnt (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_ladder")))
+   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_ladder")))
    {
       Vector ladderLeft = ent->v.absmin;
       Vector ladderRight = ent->v.absmax;
@@ -2229,7 +2230,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // then terrortist spawnpoints
-   while (!FNullEnt (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_player_deathmatch")))
+   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_player_deathmatch")))
    {
       Vector origin = GetEntityOrigin (ent);
 
@@ -2238,7 +2239,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // then add ct spawnpoints
-   while (!FNullEnt (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_player_start")))
+   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_player_start")))
    {
       Vector origin = GetEntityOrigin (ent);
 
@@ -2247,7 +2248,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // then vip spawnpoint
-   while (!FNullEnt (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_vip_start")))
+   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_vip_start")))
    {
       Vector origin = GetEntityOrigin (ent);
 
@@ -2256,7 +2257,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // hostage rescue zone
-   while (!FNullEnt (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_hostage_rescue")))
+   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_hostage_rescue")))
    {
       Vector origin = GetEntityOrigin (ent);
 
@@ -2265,7 +2266,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // hostage rescue zone (same as above)
-   while (!FNullEnt (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_hostage_rescue")))
+   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_hostage_rescue")))
    {
       Vector origin = GetEntityOrigin (ent);
 
@@ -2274,7 +2275,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // bombspot zone
-   while (!FNullEnt (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_bomb_target")))
+   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_bomb_target")))
    {
       Vector origin = GetEntityOrigin (ent);
 
@@ -2283,7 +2284,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // bombspot zone (same as above)
-   while (!FNullEnt (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_bomb_target")))
+   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_bomb_target")))
    {
       Vector origin = GetEntityOrigin (ent);
 
@@ -2292,7 +2293,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // hostage entities
-   while (!FNullEnt (ent = FIND_ENTITY_BY_CLASSNAME (ent, "hostage_entity")))
+   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "hostage_entity")))
    {
       // if already saved || moving skip it
       if ((ent->v.effects & EF_NODRAW) && (ent->v.speed > 0))
@@ -2305,7 +2306,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // vip rescue (safety) zone
-   while (!FNullEnt (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_vip_safetyzone")))
+   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_vip_safetyzone")))
    {
       Vector origin = GetEntityOrigin (ent);
 
@@ -2314,7 +2315,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // terrorist escape zone
-   while (!FNullEnt (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_escapezone")))
+   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_escapezone")))
    {
       Vector origin = GetEntityOrigin (ent);
 
@@ -2323,7 +2324,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // weapons on the map ?
-   while (!FNullEnt (ent = FIND_ENTITY_BY_CLASSNAME (ent, "armoury_entity")))
+   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "armoury_entity")))
    {
       Vector origin = GetEntityOrigin (ent);
 
@@ -2382,7 +2383,7 @@ void Waypoint::SetBombPosition (bool shouldReset)
 
    edict_t *ent = NULL;
 
-   while (!FNullEnt (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
+   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
    {
       if (strcmp (STRING (ent->v.model) + 9, "c4.mdl") == 0)
       {

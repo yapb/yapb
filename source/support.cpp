@@ -1,4 +1,4 @@
-//
+﻿//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -9,7 +9,7 @@
 
 #include <core.h>
 
-ConVar yb_listenserver_welcome ("yb_listenserver_welcome", "1");
+ConVar yb_listenserver_welcome ("yb_listenserver_welcome", "1", VT_NOSERVER);
 
 ConVar mp_roundtime ("mp_roundtime", NULL, VT_NOREGISTER);
 ConVar mp_freezetime ("mp_freezetime", NULL, VT_NOREGISTER);
@@ -97,10 +97,10 @@ char *FormatBuffer (char *format, ...)
 
 bool IsAlive (edict_t *ent)
 {
-   if (FNullEnt (ent))
-      return false; // reliability check
+   if (IsEntityNull (ent))
+      return false;
 
-   return (ent->v.deadflag == DEAD_NO) && (ent->v.health > 0) && (ent->v.movetype != MOVETYPE_NOCLIP);
+   return ent->v.deadflag == DEAD_NO && ent->v.health > 0 && ent->v.movetype != MOVETYPE_NOCLIP;
 }
 
 float GetShootingConeDeviation (edict_t *ent, Vector *position)
@@ -124,7 +124,7 @@ bool IsInViewCone (Vector origin, edict_t *ent)
 
 bool IsVisible (const Vector &origin, edict_t *ent)
 {
-   if (FNullEnt (ent))
+   if (IsEntityNull (ent))
       return false;
 
    TraceResult tr;
@@ -141,7 +141,7 @@ Vector GetEntityOrigin (edict_t *ent)
    // this expanded function returns the vector origin of a bounded entity, assuming that any
    // entity that has a bounding box has its center at the center of the bounding box itself.
 
-   if (FNullEnt (ent))
+   if (IsEntityNull (ent))
       return nullvec;
 
    if (ent->v.origin == nullvec)
@@ -162,14 +162,14 @@ void DisplayMenuToClient (edict_t *ent, MenuText *menu)
       String tempText = String (menu->menuText);
       tempText.Replace ("\v", "\n");
 
-      char *text = g_localizer->TranslateInput (tempText.ToString ());
+      char *text = g_localizer->TranslateInput (tempText.GetBuffer ());
       tempText = String (text);
 
       // make menu looks best
       for (int i = 0; i <= 9; i++)
          tempText.Replace (FormatBuffer ("%d.", i), FormatBuffer ("\\r%d.\\w", i));
 
-      text = (char *) tempText.ToString ();
+      text = (char *) tempText.GetBuffer ();
 
       while (strlen (text) >= 64)
       {
@@ -219,7 +219,7 @@ void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex)
       logotypes = String ("{biohaz;{graf004;{graf005;{lambda06;{target;{hand1").Split (";");
 
    int entityIndex = -1, message = TE_DECAL;
-   int decalIndex = (*g_engfuncs.pfnDecalIndex) (logotypes[logotypeIndex].ToString ());
+   int decalIndex = (*g_engfuncs.pfnDecalIndex) (logotypes[logotypeIndex].GetBuffer ());
 
    if (decalIndex < 0)
       decalIndex = (*g_engfuncs.pfnDecalIndex) ("{lambda06");
@@ -227,7 +227,7 @@ void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex)
    if (trace->flFraction == 1.0)
       return;
 
-   if (!FNullEnt (trace->pHit))
+   if (!IsEntityNull (trace->pHit))
    {
       if (trace->pHit->v.solid == SOLID_BSP || trace->pHit->v.movetype == MOVETYPE_PUSHSTEP)
          entityIndex = IndexOfEntity (trace->pHit);
@@ -289,9 +289,7 @@ void FreeLibraryMemory (void)
    // this function free's all allocated memory
    g_waypoint->Init (); // frees waypoint data
 
-   if (g_experienceData != NULL)
-      delete [] g_experienceData;
-
+   delete [] g_experienceData;
    g_experienceData = NULL;
 }
 
@@ -305,9 +303,9 @@ void FakeClientCommand (edict_t *fakeClient, const char *format, ...)
 
    va_list ap;
    static char command[256];
-   int start, stop, i, index, stringIndex = 0;
+   int stop, i, stringIndex = 0;
 
-   if (FNullEnt (fakeClient))
+   if (IsEntityNull (fakeClient))
       return; // reliability check
 
    // concatenate all the arguments in one string
@@ -324,7 +322,7 @@ void FakeClientCommand (edict_t *fakeClient, const char *format, ...)
    // process all individual commands (separated by a semicolon) one each a time
    while (stringIndex < length)
    {
-      start = stringIndex; // save field start position (first character)
+      int start = stringIndex; // save field start position (first character)
 
       while (stringIndex < length && command[stringIndex] != ';')
          stringIndex++; // reach end of field
@@ -340,7 +338,7 @@ void FakeClientCommand (edict_t *fakeClient, const char *format, ...)
       g_fakeArgv[i - start] = 0; // terminate the string
       stringIndex++; // move the overall string index one step further to bypass the semicolon
 
-      index = 0;
+      int index = 0;
       g_fakeArgc = 0; // let's now parse that command and count the different arguments
 
       // count the number of arguments
@@ -764,6 +762,9 @@ void RoundInit (void)
    g_lastRadioTime[1] = 0.0;
    g_botsCanPause = false;
 
+   for (int i = 0; i < TASK_MAX; i++)
+      g_taskFilters[i].time = 0.0f;
+
    UpdateGlobalExperienceData (); // update experience data on round start
 
    // calculate the round mid/end in world time
@@ -772,7 +773,7 @@ void RoundInit (void)
    g_timeRoundEnd = g_timeRoundStart + mp_roundtime.GetFloat () * 60;
 }
 
-bool IsWeaponShootingThroughWall (int id)
+int GetWeaponPenetrationPower (int id)
 {
    // returns if weapon can pierce through a wall
 
@@ -781,15 +782,11 @@ bool IsWeaponShootingThroughWall (int id)
    while (g_weaponSelect[i].id)
    {
       if (g_weaponSelect[i].id == id)
-      {
-         if (g_weaponSelect[i].shootsThru)
-            return true;
+         return g_weaponSelect[i].penetratePower;
 
-         return false;
-      }
       i++;
    }
-   return false;
+   return 0;
 }
 
 int GetTeam (edict_t *ent)
@@ -799,7 +796,7 @@ int GetTeam (edict_t *ent)
 
 bool IsValidPlayer (edict_t *ent)
 {
-   if (FNullEnt (ent))
+   if (IsEntityNull (ent))
       return false;
 
    if (ent->v.flags & FL_PROXY)
@@ -813,7 +810,7 @@ bool IsValidPlayer (edict_t *ent)
 
 bool IsValidBot (edict_t *ent)
 {
-   if (g_botManager->GetBot (ent) != NULL || (!FNullEnt (ent) && (ent->v.flags & FL_FAKECLIENT)))
+   if (g_botManager->GetBot (ent) != NULL || (!IsEntityNull (ent) && (ent->v.flags & FL_FAKECLIENT)))
       return true;
 
    return false;
@@ -884,7 +881,7 @@ void ServerPrint (const char *format, ...)
    vsprintf (string, g_localizer->TranslateInput (format), ap);
    va_end (ap);
 
-   SERVER_PRINT (FormatBuffer ("[%s] %s\n", PRODUCT_LOGTAG, string));
+   SERVER_PRINT (FormatBuffer ("%s\n", string));
 }
 
 void ServerPrintNoTag (const char *format, ...)
@@ -952,7 +949,7 @@ void ClientPrint (edict_t *ent, int dest, const char *format, ...)
    vsprintf (string, g_localizer->TranslateInput (format), ap);
    va_end (ap);
 
-   if (FNullEnt (ent) || ent == g_hostEntity)
+   if (IsEntityNull (ent) || ent == g_hostEntity)
    {
       if (dest & 0x3ff)
          ServerPrint (string);
@@ -1079,9 +1076,9 @@ void CheckWelcomeMessage (void)
 
    if (receiveTime > 0.0 && receiveTime < GetWorldTime () && !isReceived && (g_numWaypoints > 0 ? g_isCommencing : true))
    {
-      ServerCommand ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().ToString ()));
+      ServerCommand ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));
 
-      ChartPrint ("----- YaPB v%s (Build: %u), {%s}, (c) 2014, by %s -----", PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_DATE, PRODUCT_AUTHOR);
+      ChartPrint ("----- YaPB v%s (Build: %u), {%s}, (c) 2015, by %s -----", PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_DATE, PRODUCT_AUTHOR);
       HudMessage (g_hostEntity, true, Vector (g_randGen.Long (33, 255), g_randGen.Long (33, 255), g_randGen.Long (33, 255)), "\nServer is running YaPB v%s (Build: %u)\nDeveloped by %s\n\n%s", PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_AUTHOR, g_waypoint->GetInfo ());
 
       receiveTime = 0.0;
@@ -1402,15 +1399,15 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
    edict_t *ent = NULL, *survive = NULL; // pointer to temporaly & survive entity
    float nearestPlayer = 4096.0; // nearest player
 
-   while (!FNullEnt (ent = FIND_ENTITY_IN_SPHERE (ent, to->v.origin, searchDistance)))
+   while (!IsEntityNull (ent = FIND_ENTITY_IN_SPHERE (ent, to->v.origin, searchDistance)))
    {
-      if (FNullEnt (ent) || !IsValidPlayer (ent) || to == ent)
+      if (IsEntityNull (ent) || !IsValidPlayer (ent) || to == ent)
          continue; // skip invalid players
 
       if ((sameTeam && GetTeam (ent) != GetTeam (to)) || (isAlive && !IsAlive (ent)) || (needBot && !IsValidBot (ent)) || (needDrawn && (ent->v.effects & EF_NODRAW)))
          continue; // filter players with parameters
 
-      float distance = (ent->v.origin - to->v.origin).GetLength ();
+      float distance = (ent->v.origin - to->v.origin).GetLengthSquared ();
 
       if (distance < nearestPlayer)
       {
@@ -1419,7 +1416,7 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
       }
    }
 
-   if (FNullEnt (survive))
+   if (IsEntityNull (survive))
       return false; // nothing found
 
    // fill the holder
@@ -1436,7 +1433,7 @@ void SoundAttachToThreat (edict_t *ent, const char *sample, float volume)
    // this function called by the sound hooking code (in emit_sound) enters the played sound into
    // the array associated with the entity
 
-   if (FNullEnt (ent) || IsNullString (sample))
+   if (IsEntityNull (ent) || IsNullString (sample))
       return; // reliability check
 
    Vector origin = GetEntityOrigin (ent);

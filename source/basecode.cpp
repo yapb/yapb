@@ -9,15 +9,14 @@
 
 #include <core.h>
 
-ConVar yb_debug ("yb_debug", "0");
-ConVar yb_debug_goal ("yb_debug_goal", "-1");
-ConVar yb_user_follow_percent ("yb_user_follow_percent", "20");
-ConVar yb_user_max_followers ("yb_user_max_followers", "2");
+ConVar yb_debug ("yb_debug", "0", VT_NOSERVER);
+ConVar yb_debug_goal ("yb_debug_goal", "-1", VT_NOSERVER);
+ConVar yb_user_follow_percent ("yb_user_follow_percent", "20", VT_NOSERVER);
+ConVar yb_user_max_followers ("yb_user_max_followers", "1", VT_NOSERVER);
 
 ConVar yb_jasonmode ("yb_jasonmode", "0");
 ConVar yb_communication_type ("yb_communication_type", "2");
 ConVar yb_economics_rounds ("yb_economics_rounds", "1");
-ConVar yb_hardcore_mode ("yb_hardcore_mode", "1");
 ConVar yb_walking_allowed ("yb_walking_allowed", "1");
 
 ConVar yb_tkpunish ("yb_tkpunish", "1");
@@ -25,11 +24,11 @@ ConVar yb_freeze_bots ("yb_freeze_bots", "0");
 ConVar yb_spraypaints ("yb_spraypaints", "1");
 ConVar yb_botbuy ("yb_botbuy", "1");
 
-ConVar yb_timersound ("yb_timersound", "0.5");
-ConVar yb_timerpickup ("yb_timerpickup", "0.5");
-ConVar yb_timergrenade ("yb_timergrenade", "0.5");
+ConVar yb_timersound ("yb_timersound", "0.5", VT_NOSERVER);
+ConVar yb_timerpickup ("yb_timerpickup", "0.5", VT_NOSERVER);
+ConVar yb_timergrenade ("yb_timergrenade", "0.5", VT_NOSERVER);
 
-ConVar yb_chatter_path ("yb_chatter_path", "sound/radio/bot");
+ConVar yb_chatter_path ("yb_chatter_path", "sound/radio/bot", VT_NOSERVER);
 ConVar yb_restricted_weapons ("yb_restricted_weapons", "ump45;p90;elite;tmp;mac10;m3;xm1014");
 
 // game console variables
@@ -187,7 +186,7 @@ bool Bot::CheckVisibility (entvars_t *targetEntity, Vector *origin, byte *bodyPa
 
 bool Bot::IsEnemyViewable (edict_t *player)
 {
-   if (FNullEnt (player))
+   if (IsEntityNull (player))
       return false;
 
    bool forceTrueIfVisible = false;
@@ -247,7 +246,7 @@ void Bot::AvoidGrenades (void)
    edict_t *ent = m_avoidGrenade;
 
   // check if old pointers to grenade is invalid
-   if (FNullEnt (ent))
+   if (IsEntityNull (ent))
    {
       m_avoidGrenade = NULL;
       m_needAvoidGrenade = 0;
@@ -260,32 +259,31 @@ void Bot::AvoidGrenades (void)
    ent = NULL;
 
    // find all grenades on the map
-   while (!FNullEnt (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
+   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
    {
       // if grenade is invisible don't care for it
       if (ent->v.effects & EF_NODRAW)
          continue;
 
       // check if visible to the bot
-      if (!EntityIsVisible (ent->v.origin) && InFieldOfView (ent->v.origin - EyePosition ()) > pev->fov / 3)
+      if (!EntityIsVisible (ent->v.origin) && InFieldOfView (ent->v.origin - EyePosition ()) > pev->fov / 2)
          continue;
 
       // TODO: should be done once for grenade, instead of checking several times
-      if (m_skill >= 70 && strcmp (STRING (ent->v.model) + 9, "flashbang.mdl") == 0)
+      if (m_difficulty == 4 && strcmp (STRING (ent->v.model) + 9, "flashbang.mdl") == 0)
       {
          Vector position = (GetEntityOrigin (ent) - EyePosition ()).ToAngles ();
 
          // don't look at flashbang
-         if (((ent->v.owner == GetEntity () || g_randGen.Long (0, 100) < 85) && !(m_states & STATE_SEEING_ENEMY)))
+         if (!(m_states & STATE_SEEING_ENEMY))
          {
             pev->v_angle.y = AngleNormalize (position.y + 180.0);
             m_canChooseAimDirection = false;
          }
       }
-      else 
-      if (strcmp (STRING (ent->v.model) + 9, "hegrenade.mdl") == 0)
+      else if (strcmp (STRING (ent->v.model) + 9, "hegrenade.mdl") == 0)
       {
-         if (!FNullEnt (m_avoidGrenade))
+         if (!IsEntityNull (m_avoidGrenade))
             return;
 
          if (GetTeam (ent->v.owner) == m_team && ent->v.owner != GetEntity ())
@@ -320,7 +318,7 @@ bool Bot::IsBehindSmokeClouds (edict_t *ent)
    edict_t *pentGrenade = NULL;
    Vector betweenUs = (ent->v.origin - pev->origin).Normalize ();
 
-   while (!FNullEnt (pentGrenade = FIND_ENTITY_BY_CLASSNAME (pentGrenade, "grenade")))
+   while (!IsEntityNull (pentGrenade = FIND_ENTITY_BY_CLASSNAME (pentGrenade, "grenade")))
    {
       // if grenade is invisible don't care for it
       if ((pentGrenade->v.effects & EF_NODRAW) || !(pentGrenade->v.flags & (FL_ONGROUND | FL_PARTIALGROUND)) || strcmp (STRING (pentGrenade->v.model) + 9, "smokegrenade.mdl"))
@@ -422,6 +420,7 @@ bool Bot::RateGroundWeapon (edict_t *ent)
 edict_t *Bot::FindBreakable (void)
 {
    // this function checks if bot is blocked by a shoot able breakable in his moving direction
+   // @todo@
 
    TraceResult tr;
    TraceLine (pev->origin, pev->origin + (m_destOrigin - pev->origin).Normalize () * 64, false, false, GetEntity (), &tr);
@@ -455,6 +454,45 @@ edict_t *Bot::FindBreakable (void)
    return NULL;
 }
 
+void Bot::SetIdealReactionTimes (bool actual)
+{
+   float min = 0.0f;
+   float max = 0.01f;
+
+   switch (m_difficulty)
+   {
+   case 0:
+      min = 0.8f; max = 1.0f;
+      break;
+
+   case 1:
+      min = 0.4f; max = 0.6f;
+      break;
+
+   case 2:
+      min = 0.2f; max = 0.4f;
+      break;
+
+   case 3:
+      min = 0.0f; max = 0.1f;
+      break;
+
+   case 4:
+   default:
+      min = 0.0f;max = 0.01f;
+      break;
+   }
+
+   if (actual)
+   {
+      m_idealReactionTime = min;
+      m_actualReactionTime = min;
+
+      return;
+   }
+   m_idealReactionTime = g_randGen.Float (min, max);
+}
+
 void Bot::FindItem (void)
 {
    // this function finds Items to collect or use in the near of a bot
@@ -471,16 +509,16 @@ void Bot::FindItem (void)
    edict_t *ent = NULL, *pickupItem = NULL;
    Bot *bot = NULL;
 
-   bool allowPickup= false;
+   bool allowPickup = false;
    float distance, minDistance = 341.0;
 
 
-   if (!FNullEnt (m_pickupItem))
+   if (!IsEntityNull (m_pickupItem))
    {
       bool itemExists = false;
       pickupItem = m_pickupItem;
 
-      while (!FNullEnt (ent = FIND_ENTITY_IN_SPHERE (ent, pev->origin, 340.0)))
+      while (!IsEntityNull (ent = FIND_ENTITY_IN_SPHERE (ent, pev->origin, 340.0)))
       {
          if ((ent->v.effects & EF_NODRAW) || IsValidPlayer (ent->v.owner))
             continue; // someone owns this weapon or it hasn't respawned yet
@@ -512,7 +550,7 @@ void Bot::FindItem (void)
    m_pickupItem = NULL;
    m_pickupType = PICKUP_NONE;
 
-   while (!FNullEnt (ent = FIND_ENTITY_IN_SPHERE (ent, pev->origin, 340.0)))
+   while (!IsEntityNull (ent = FIND_ENTITY_IN_SPHERE (ent, pev->origin, 340.0)))
    {
       allowPickup = false;  // assume can't use it until known otherwise
 
@@ -616,17 +654,19 @@ void Bot::FindItem (void)
                   m_itemIgnore = ent;
                   allowPickup = false;
 
-                  if (m_skill > 80 && g_randGen.Long (0, 100) < 50 && GetTaskId () != TASK_MOVETOPOSITION && GetTaskId () != TASK_CAMP)
+                  if (!m_defendHostage && m_difficulty >= 3 && g_randGen.Long (0, 100) < 30 && m_timeCamping + 15.0f < GetWorldTime ())
                   {
                      int index = FindDefendWaypoint (entityOrigin);
 
-                     StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + g_randGen.Float (60.0, 120.0), true); // push camp task on to stack
+                     StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + g_randGen.Float (30.0, 60.0), true); // push camp task on to stack
                      StartTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, GetWorldTime () + g_randGen.Float (3.0, 6.0), true); // push move command
 
                      if (g_waypoint->GetPath (index)->vis.crouch <= g_waypoint->GetPath (index)->vis.stand)
                         m_campButtons |= IN_DUCK;
                      else
                         m_campButtons &= ~IN_DUCK;
+
+                     m_defendHostage = true;
 
                      ChatterMessage (Chatter_GoingToGuardHostages); // play info about that
                      return;
@@ -670,7 +710,7 @@ void Bot::FindItem (void)
             {
                if (pickupType == PICKUP_HOSTAGE)
                {
-                  if (FNullEnt (ent) || (ent->v.health <= 0))
+                  if (IsEntityNull (ent) || (ent->v.health <= 0))
                      allowPickup = false; // never pickup dead hostage
                   else for (int i = 0; i < GetMaxClients (); i++)
                   {
@@ -729,17 +769,19 @@ void Bot::FindItem (void)
                   m_itemIgnore = ent;
                   allowPickup = false;
 
-                  if (m_skill > 80 && g_randGen.Long (0, 100) < 95)
+                  if (!m_defendedBomb && m_difficulty >= 2 && g_randGen.Long (0, 100) < 80)
                   {
                      int index = FindDefendWaypoint (entityOrigin);
 
-                     StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + g_randGen.Float (60.0, 120.0), true); // push camp task on to stack
+                     StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + g_randGen.Float (30.0, 70.0), true); // push camp task on to stack
                      StartTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, GetWorldTime () + g_randGen.Float (10.0, 30.0), true); // push move command
 
                      if (g_waypoint->GetPath (index)->vis.crouch <= g_waypoint->GetPath (index)->vis.stand)
                         m_campButtons |= IN_DUCK;
                      else
                         m_campButtons &= ~IN_DUCK;
+
+                     m_defendedBomb = true;
 
                      ChatterMessage (Chatter_GoingToGuardDoppedBomb); // play info about that
                      return;
@@ -762,7 +804,7 @@ void Bot::FindItem (void)
       }
    } // end of the while loop
 
-   if (!FNullEnt (pickupItem))
+   if (!IsEntityNull (pickupItem))
    {
       for (int i = 0; i < GetMaxClients (); i++)
       {
@@ -775,7 +817,7 @@ void Bot::FindItem (void)
          }
       }
 
-      if (pickupOrigin.z > EyePosition ().z + 3.0 || IsDeadlyDrop (pickupOrigin)) // check if item is too high to reach, check if getting the item would hurt bot
+      if (pickupOrigin.z > EyePosition ().z + (m_pickupType == PICKUP_HOSTAGE ? 40.0f : 15.0f)|| IsDeadlyDrop (pickupOrigin)) // check if item is too high to reach, check if getting the item would hurt bot
       {
          m_pickupItem = NULL;
          m_pickupType = PICKUP_NONE;
@@ -858,14 +900,14 @@ void Bot::SwitchChatterIcon (bool show)
 {
    // this function depending on show boolen, shows/remove chatter, icon, on the head of bot.
 
-   if (g_gameVersion == CSV_OLD || g_pGlobals == NULL)
+   if (g_gameVersion == CSV_OLD || yb_communication_type.GetInt () != 2)
       return;
 
-   for (int i = 0; i < 32; i++)
-   {
+   for (int i = 0; i < GetMaxClients (); i++)
+   { 
       edict_t *ent = EntityOfIndex (i);
 
-      if (!IsValidPlayer (ent) || IsValidBot (ent) || GetTeam (ent) != m_team)
+      if (!(ent->v.flags & FL_CLIENT) || (ent->v.flags & FL_FAKECLIENT) || GetTeam (ent) != m_team)
          continue;
 
       MESSAGE_BEGIN (MSG_ONE, g_netMsg->GetId (NETMSG_BOTVOICE), NULL, ent); // begin message
@@ -912,9 +954,9 @@ void Bot::InstantChatterMessage (int type)
          WRITE_BYTE (GetIndex ());
 
          if (pev->deadflag & DEAD_DYING)
-            WRITE_STRING (FormatBuffer ("%s/%s.wav", yb_chatter_path.GetString (), painSound.ToString ()));
+            WRITE_STRING (FormatBuffer ("%s/%s.wav", yb_chatter_path.GetString (), painSound.GetBuffer ()));
          else if (!(pev->deadflag & DEAD_DEAD))
-            WRITE_STRING (FormatBuffer ("%s/%s.wav", yb_chatter_path.GetString (), defaultSound.ToString ()));
+            WRITE_STRING (FormatBuffer ("%s/%s.wav", yb_chatter_path.GetString (), defaultSound.GetBuffer ()));
 
          WRITE_SHORT (m_voicePitch);
       MESSAGE_END ();
@@ -1011,14 +1053,11 @@ void Bot::CheckMessageQueue (void)
       }
 
       // prevent vip from buying
-      if (g_mapType & MAP_AS)
+      if ((g_mapType & MAP_AS) && *(INFOKEY_VALUE (GET_INFOKEYBUFFER (GetEntity ()), "model")) == 'v')
       {
-         if (*(INFOKEY_VALUE (GET_INFOKEYBUFFER (GetEntity ()), "model")) == 'v')
-         {
-            m_isVIP = true;
-            m_buyState = 6;
-            m_pathType = 0;
-         }
+         m_isVIP = true;
+         m_buyState = 6;
+         m_pathType = 0;
       }
 
       // prevent terrorists from buying on es maps
@@ -1212,12 +1251,11 @@ bool Bot::IsRestrictedAMX (int weaponIndex)
 {
    // this function checks restriction set by AMX Mod, this function code is courtesy of KWo.
 
-   const char *restrictedWeapons = CVAR_GET_STRING ("amx_restrweapons");
-   const char *restrictedEquipment = CVAR_GET_STRING ("amx_restrequipammo");
-
    // check for weapon restrictions
    if ((1 << weaponIndex) & (WEAPON_PRIMARY | WEAPON_SECONDARY | WEAPON_SHIELD))
    {
+      const char *restrictedWeapons = CVAR_GET_STRING ("amx_restrweapons");
+
       if (IsNullString (restrictedWeapons))
          return false;
 
@@ -1234,6 +1272,8 @@ bool Bot::IsRestrictedAMX (int weaponIndex)
    }
    else // check for equipment restrictions
    {
+      const char *restrictedEquipment = CVAR_GET_STRING ("amx_restrequipammo");
+
       if (IsNullString (restrictedEquipment))
          return false;
 
@@ -1256,20 +1296,19 @@ bool Bot::IsMorePowerfulWeaponCanBeBought (void)
    // enough money to buy more powerful weapon.
 
    // if bot is not rich enough or non-standard weapon mode enabled return false
-   if (g_weaponSelect[25].teamStandard != 1 || m_moneyAmount < 4000 || IsNullString (yb_restricted_weapons.GetString ()))
+   if (g_weaponSelect[25].teamStandard != 1 || m_moneyAmount < 4000)
       return false;
 
-   // also check if bot has really bad weapon, maybe it's time to change it
-   if (UsesBadPrimary ())
-      return true;
-
-   Array <String> bannedWeapons = String (yb_restricted_weapons.GetString ()).Split (';');
-
-   // check if its banned
-   IterateArray (bannedWeapons, i)
+   if (!IsNullString (yb_restricted_weapons.GetString ()))
    {
-      if (m_currentWeapon == GetWeaponReturn (false, bannedWeapons[i].ToString ()))
-         return true;
+      Array <String> bannedWeapons = String (yb_restricted_weapons.GetString ()).Split (';');
+
+      // check if its banned
+      IterateArray (bannedWeapons, i)
+      {
+         if (m_currentWeapon == GetWeaponReturn (false, bannedWeapons[i].GetBuffer ()))
+            return true;
+      }
    }
 
    if (m_currentWeapon == WEAPON_SCOUT && m_moneyAmount > 5000)
@@ -1289,18 +1328,19 @@ void Bot::PerformWeaponPurchase (void)
    WeaponSelect *selectedWeapon = NULL;
    m_nextBuyTime = GetWorldTime ();
 
-   int count = 0, foundWeapons = 0, economicsPrice = 0;
+   int count = 0, foundWeapons = 0;
    int choices[NUM_WEAPONS];
 
    // select the priority tab for this personality
    int *ptr = g_weaponPrefs[m_personality] + NUM_WEAPONS;
 
    bool isPistolMode = (g_weaponSelect[25].teamStandard == -1) && (g_weaponSelect[3].teamStandard == 2);
+   bool teamEcoValid = g_botManager->EconomicsValid (m_team);
 
    switch (m_buyState)
    {
    case 0: // if no primary weapon and bot has some money, buy a primary weapon
-      if ((!HasShield () && !HasPrimaryWeapon ()) && (g_botManager->EconomicsValid (m_team) || IsMorePowerfulWeaponCanBeBought ()))
+      if ((!HasShield () && !HasPrimaryWeapon () && teamEcoValid) || (teamEcoValid && IsMorePowerfulWeaponCanBeBought ()))
       {
          do
          {
@@ -1332,6 +1372,8 @@ void Bot::PerformWeaponPurchase (void)
             // ignore weapon if this weapon is restricted
             if (IsRestricted (selectedWeapon->id))
                continue;
+
+            int economicsPrice = 0;
 
             // filter out weapons with bot economics (thanks for idea to nicebot project)
             switch (m_personality)
@@ -1456,7 +1498,7 @@ void Bot::PerformWeaponPurchase (void)
       }   
 
    case 1: // if armor is damaged and bot has some money, buy some armor
-      if (pev->armorvalue < g_randGen.Long (50, 80) && (isPistolMode || (g_botManager->EconomicsValid (m_team) && HasPrimaryWeapon ())))
+      if (pev->armorvalue < g_randGen.Long (50, 80) && (isPistolMode || (teamEcoValid && HasPrimaryWeapon ())))
       {
          // if bot is rich, buy kevlar + helmet, else buy a single kevlar
          if (m_moneyAmount > 1500 && !IsRestricted (WEAPON_ARMORHELM))
@@ -1543,14 +1585,14 @@ void Bot::PerformWeaponPurchase (void)
          FakeClientCommand (GetEntity (), "menuselect 4");
       }
 
-      if (g_randGen.Long (1, 100) < g_grenadeBuyPrecent[1] && m_moneyAmount >= 300 && g_botManager->EconomicsValid (m_team) && !IsRestricted (WEAPON_FLASHBANG))
+      if (g_randGen.Long (1, 100) < g_grenadeBuyPrecent[1] && m_moneyAmount >= 300 && teamEcoValid && !IsRestricted (WEAPON_FLASHBANG))
       {
          // buy a concussion grenade, i.e., 'flashbang'
          FakeClientCommand (GetEntity (), "buyequip");
          FakeClientCommand (GetEntity (), "menuselect 3");
       }
 
-      if (g_randGen.Long (1, 100) < g_grenadeBuyPrecent[2] && m_moneyAmount >= 400 && g_botManager->EconomicsValid (m_team) && !IsRestricted (WEAPON_SMOKE))
+      if (g_randGen.Long (1, 100) < g_grenadeBuyPrecent[2] && m_moneyAmount >= 400 && teamEcoValid && !IsRestricted (WEAPON_SMOKE))
       {
          // buy a smoke grenade
          FakeClientCommand (GetEntity (), "buyequip");
@@ -1653,9 +1695,9 @@ void Bot::SetConditions (void)
    // slowly increase/decrease dynamic emotions back to their base level
    if (m_nextEmotionUpdate < GetWorldTime ())
    {
-      if (yb_hardcore_mode.GetBool ())
+      if (m_difficulty == 4)
       {
-         m_agressionLevel *= 3;
+         m_agressionLevel *= 2;
          m_fearLevel /= 2;
       }
 
@@ -1688,7 +1730,7 @@ void Bot::SetConditions (void)
    }
 
    // did bot just kill an enemy?
-   if (!FNullEnt (m_lastVictim))
+   if (!IsEntityNull (m_lastVictim))
    {
       if (GetTeam (m_lastVictim) != m_team)
       {
@@ -1742,7 +1784,7 @@ void Bot::SetConditions (void)
             SelectWeaponByName ("weapon_knife");
             m_plantedBombWptIndex = FindPlantedBomb ();
 
-            if (IsWaypointUsed (m_plantedBombWptIndex))
+            if (IsPointOccupied (m_plantedBombWptIndex))
                InstantChatterMessage (Chatter_BombSiteSecured);
              
          }
@@ -1756,7 +1798,7 @@ void Bot::SetConditions (void)
    }
 
    // check if our current enemy is still valid
-   if (!FNullEnt (m_lastEnemy))
+   if (!IsEntityNull (m_lastEnemy))
    {
       if (!IsAlive (m_lastEnemy) && m_shootAtDeadTime < GetWorldTime ())
       {
@@ -1779,7 +1821,7 @@ void Bot::SetConditions (void)
    else if (m_heardSoundTime < GetWorldTime ())
       m_states &= ~STATE_HEARING_ENEMY;
 
-   if (FNullEnt (m_enemy) && !FNullEnt (m_lastEnemy) && m_lastEnemyOrigin != nullvec)
+   if (IsEntityNull (m_enemy) && !IsEntityNull (m_lastEnemy) && m_lastEnemyOrigin != nullvec)
    {
       TraceResult tr;
       TraceLine (EyePosition (), m_lastEnemyOrigin, true, GetEntity (), &tr);
@@ -1794,7 +1836,7 @@ void Bot::SetConditions (void)
    }
 
    // check if throwing a grenade is a good thing to do...
-   if (!yb_ignore_enemies.GetBool () && !yb_jasonmode.GetBool () && m_grenadeCheckTime < GetWorldTime () && !m_isUsingGrenade && GetTaskId () != TASK_PLANTBOMB && GetTaskId () != TASK_DEFUSEBOMB && !m_isReloading && IsAlive (m_lastEnemy))
+   if (m_lastEnemy != NULL && !yb_ignore_enemies.GetBool() && !yb_jasonmode.GetBool() && m_grenadeCheckTime < GetWorldTime() && !m_isUsingGrenade && GetTaskId() != TASK_PLANTBOMB && GetTaskId() != TASK_DEFUSEBOMB && !m_isReloading && IsAlive(m_lastEnemy))
    {
       // check again in some seconds
       m_grenadeCheckTime = GetWorldTime () + yb_timergrenade.GetFloat ();
@@ -1890,7 +1932,7 @@ void Bot::SetConditions (void)
             {
                Path *path = g_waypoint->GetPath (i);
 
-               if (GetNearbyFriendsNearPosition (path->origin, 256) != 0 || !(yb_hardcore_mode.GetBool () && GetNearbyFriendsNearPosition (path->origin, 195) != 0))
+               if (GetNearbyFriendsNearPosition (path->origin, 256) != 0 || !(m_difficulty == 4 && GetNearbyFriendsNearPosition (path->origin, 256) != 0))
                   continue;
 
                m_throw = path->origin;
@@ -1929,7 +1971,7 @@ void Bot::SetConditions (void)
       m_states &= ~(STATE_THROW_HE | STATE_THROW_FB | STATE_THROW_SG);
 
    // check if there are items needing to be used/collected
-   if (m_itemCheckTime < GetWorldTime () || !FNullEnt (m_pickupItem))
+   if (m_itemCheckTime < GetWorldTime () || !IsEntityNull (m_pickupItem))
    {
       m_itemCheckTime = GetWorldTime () + yb_timerpickup.GetFloat ();
       FindItem ();
@@ -1958,7 +2000,7 @@ void Bot::SetConditions (void)
    GetTask ();
 
    // bot found some item to use?
-   if (!FNullEnt (m_pickupItem) && GetTaskId () != TASK_ESCAPEFROMBOMB)
+   if (!IsEntityNull (m_pickupItem) && GetTaskId () != TASK_ESCAPEFROMBOMB)
    {
       m_states |= STATE_PICKUP_ITEM;
 
@@ -1983,13 +2025,13 @@ void Bot::SetConditions (void)
    float desireLevel = 0.0;
 
    // calculate desire to attack
-   if ((m_states & STATE_SEEING_ENEMY) && ReactOnEnemy ())
+   if ((m_states & STATE_SEEING_ENEMY) && ReactOnEnemy () && g_taskFilters[TASK_MOVETOPOSITION].desire < TASKPRI_HIDE)
       g_taskFilters[TASK_ATTACK].desire = TASKPRI_ATTACK;
    else
       g_taskFilters[TASK_ATTACK].desire = 0;
 
    // calculate desires to seek cover or hunt
-   if (IsValidPlayer (m_lastEnemy) && m_lastEnemyOrigin != nullvec && !((g_mapType & MAP_DE) && g_bombPlanted) && !m_hasC4 && (m_loosedBombWptIndex == -1 && m_team == TEAM_TF))
+   if (IsValidPlayer (m_lastEnemy) && m_lastEnemyOrigin != nullvec)
    {
       float distance = (m_lastEnemyOrigin - pev->origin).GetLength ();
 
@@ -2020,7 +2062,7 @@ void Bot::SetConditions (void)
 
       // if half of the round is over, allow hunting
       // FIXME: it probably should be also team/map dependant
-      if (FNullEnt (m_enemy) && (g_timeRoundMid < GetWorldTime ()) && !m_isUsingGrenade && m_currentWaypointIndex != g_waypoint->FindNearest (m_lastEnemyOrigin) && m_personality != PERSONALITY_CAREFUL)
+      if (IsEntityNull (m_enemy) && (g_timeRoundMid < GetWorldTime ()) && !m_isUsingGrenade && m_currentWaypointIndex != g_waypoint->FindNearest (m_lastEnemyOrigin) && m_personality != PERSONALITY_CAREFUL)
       {
          desireLevel = 4096.0 - ((1.0 - tempAgression) * distance);
          desireLevel = (100 * desireLevel) / 4096.0;
@@ -2068,16 +2110,17 @@ void Bot::SetConditions (void)
    TaskItem *taskSurvive = ThresholdDesire (&g_taskFilters[TASK_SEEKCOVER], 40.0, 0.0);
    taskSurvive = SubsumeDesire (&g_taskFilters[TASK_HIDE], taskSurvive);
 
-   TaskItem *def = ThresholdDesire (&g_taskFilters[TASK_HUNTENEMY], 60.0, 0.0); // don't allow hunting if desire's 60<
+   TaskItem *def = ThresholdDesire (&g_taskFilters[TASK_HUNTENEMY], 41.0, 0.0); // don't allow hunting if desire's 60<
    taskOffensive = SubsumeDesire (taskOffensive, taskPickup); // if offensive task, don't allow picking up stuff
 
    TaskItem *taskSub = MaxDesire (taskOffensive, def); // default normal & careful tasks against offensive actions
    TaskItem *final = SubsumeDesire (&g_taskFilters[TASK_BLINDED], MaxDesire (taskSurvive, taskSub)); // reason about fleeing instead
 
    if (!m_tasks.IsEmpty ())
+   {
       final = MaxDesire (final, GetTask ());
-
-   StartTask (final->id, final->desire, final->data, final->time, final->resume); // push the final behaviour in our task stack to carry out
+      StartTask (final->id, final->desire, final->data, final->time, final->resume); // push the final behaviour in our task stack to carry out
+   }
 }
 
 void Bot::ResetTasks (void)
@@ -2087,8 +2130,15 @@ void Bot::ResetTasks (void)
    m_tasks.RemoveAll ();
 }
 
-void Bot::StartTask (TaskId_t id, float desire, int data, float time, bool resume)
+void Bot::StartTask_ (int l, const char  *f, TaskId_t id, float desire, int data, float time, bool resume)
 {
+
+	if (id == TASK_MOVETOPOSITION && m_team == TEAM_CF)
+	{
+		ServerPrint("%s pushed mtp(des:%.2f,dat:%d,tm:%.2f,res:%s) on %s:%d", STRING(pev->netname), desire, data, time, (resume?"t":"f"), f, l);
+//      __asm int 3
+	}
+
    if (!m_tasks.IsEmpty ())
    {
       TaskItem &item = m_tasks.Last ();
@@ -2211,7 +2261,7 @@ void Bot::TaskComplete (void)
 
 bool Bot::EnemyIsThreat (void)
 {
-   if (FNullEnt (m_enemy) || GetTaskId () == TASK_SEEKCOVER)
+   if (IsEntityNull (m_enemy) || GetTaskId () == TASK_SEEKCOVER)
       return false;
 
    float distance = (m_enemy->v.origin - pev->origin).GetLength ();
@@ -2262,7 +2312,7 @@ bool Bot::IsLastEnemyViewable (void)
 {
    // this function checks if line of sight established to last enemy
 
-   if (FNullEnt (m_lastEnemy) || m_lastEnemyOrigin == nullvec)
+   if (IsEntityNull (m_lastEnemy) || m_lastEnemyOrigin == nullvec)
    {
       m_lastEnemy = NULL;
       m_lastEnemyOrigin = nullvec;
@@ -2280,8 +2330,8 @@ bool Bot::IsLastEnemyViewable (void)
 
 bool Bot::LastEnemyShootable (void)
 {
-   // don't allow shooting through walls when pausing or camping
-   if (!(m_aimFlags & AIM_LAST_ENEMY) || FNullEnt (m_lastEnemy) || GetTaskId () == TASK_PAUSE || GetTaskId () == TASK_CAMP)
+   // don't allow shooting through walls
+   if (!(m_aimFlags & AIM_LAST_ENEMY) || IsEntityNull (m_lastEnemy) || GetTaskId () == TASK_PAUSE && m_lastEnemyOrigin != nullvec)
       return false;
 
    return GetShootingConeDeviation (GetEntity (), &m_lastEnemyOrigin) >= 0.90 && IsShootableThruObstacle (m_lastEnemy->v.origin);
@@ -2310,7 +2360,7 @@ void Bot::CheckRadioCommands (void)
       // check if line of sight to object is not blocked (i.e. visible)
       if ((EntityIsVisible (m_radioEntity->v.origin)) || (m_radioOrder == Radio_StickTogether))
       {
-         if (FNullEnt (m_targetEntity) && FNullEnt (m_enemy) && g_randGen.Long (0, 100) < (m_personality == PERSONALITY_CAREFUL ? 80 : 20))
+         if (IsEntityNull (m_targetEntity) && IsEntityNull (m_enemy) && g_randGen.Long (0, 100) < (m_personality == PERSONALITY_CAREFUL ? 80 : 20))
          {
             int numFollowers = 0;
 
@@ -2375,7 +2425,7 @@ void Bot::CheckRadioCommands (void)
       break;
 
    case Radio_HoldPosition:
-      if (!FNullEnt (m_targetEntity))
+      if (!IsEntityNull (m_targetEntity))
       {
          if (m_targetEntity == m_radioEntity)
          {
@@ -2394,9 +2444,9 @@ void Bot::CheckRadioCommands (void)
        break;
 
    case Radio_TakingFire:
-      if (FNullEnt (m_targetEntity))
+      if (IsEntityNull (m_targetEntity))
       {
-         if (FNullEnt (m_enemy))
+         if (IsEntityNull (m_enemy) && m_seeEnemyTime + 4.0 < GetWorldTime ())
          {
             // Decrease Fear Levels to lower probability of Bot seeking Cover again
             m_fearLevel -= 0.2;
@@ -2409,18 +2459,9 @@ void Bot::CheckRadioCommands (void)
             else if (m_radioOrder == Radio_NeedBackup && yb_communication_type.GetInt () != 2)
                RadioMessage (Radio_Affirmative);
 
-            // don't pause/camp anymore
-            TaskId_t taskID = GetTaskId ();
-
-            if (taskID == TASK_PAUSE || taskID == TASK_CAMP)
-               GetTask ()->time = GetWorldTime ();
-
-            m_position = m_radioEntity->v.origin;
-            DeleteSearchNodes ();
-
-            StartTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, -1, 0.0, true);
+            TryHeadTowardRadioEntity ();
          }
-         else if (g_randGen.Long (0, 100) < 80 && m_radioOrder == Radio_TakingFire)
+         else if (g_randGen.Long (0, 100) < 80)
             RadioMessage (Radio_Negative);
       }
       break;
@@ -2434,7 +2475,7 @@ void Bot::CheckRadioCommands (void)
    case Radio_NeedBackup:
    case Chatter_ScaredEmotion:
    case Chatter_Pinned_Down:
-      if ((FNullEnt (m_enemy) && EntityIsVisible (m_radioEntity->v.origin)) || distance < 2048 || !m_moveToC4)
+      if (((IsEntityNull (m_enemy) && EntityIsVisible (m_radioEntity->v.origin)) || distance < 2048 || !m_moveToC4) && g_randGen.Long (0, 100) > 50 && m_seeEnemyTime + 4.0 < GetWorldTime ())
       {
          m_fearLevel -= 0.1;
 
@@ -2446,19 +2487,7 @@ void Bot::CheckRadioCommands (void)
          else if (m_radioOrder == Radio_NeedBackup && yb_communication_type.GetInt () != 2)
             RadioMessage (Radio_Affirmative);
 
-         // don't pause/camp anymore
-         TaskId_t taskID = GetTaskId ();
-
-         if (taskID == TASK_PAUSE || taskID == TASK_CAMP)
-            GetTask ()->time = GetWorldTime ();
-
-         m_moveToC4 = true;
-         m_position = m_radioEntity->v.origin;
-
-         DeleteSearchNodes ();
-
-         // start move to position task
-         StartTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, -1, 0.0, true);
+         TryHeadTowardRadioEntity ();
       }
       else if (g_randGen.Long (0, 100) < 80 && m_radioOrder == Radio_NeedBackup)
          RadioMessage (Radio_Negative);
@@ -2478,7 +2507,7 @@ void Bot::CheckRadioCommands (void)
          if (m_fearLevel < 0.0)
             m_fearLevel = 0.0;
       }
-      else if ((FNullEnt (m_enemy) && EntityIsVisible (m_radioEntity->v.origin)) || distance < 2048)
+      else if ((IsEntityNull (m_enemy) && EntityIsVisible (m_radioEntity->v.origin)) || distance < 2048)
       {
          TaskId_t taskID = GetTaskId ();
 
@@ -2502,7 +2531,7 @@ void Bot::CheckRadioCommands (void)
             StartTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, -1, 0.0, true);
          }
       }
-      else if (!FNullEnt (m_doubleJumpEntity))
+      else if (!IsEntityNull (m_doubleJumpEntity))
       {
          RadioMessage (Radio_Affirmative);
          ResetDoubleJumpState ();
@@ -2512,7 +2541,7 @@ void Bot::CheckRadioCommands (void)
       break;
 
    case Radio_ShesGonnaBlow:
-      if (FNullEnt (m_enemy) && distance < 2048 && g_bombPlanted && m_team == TEAM_TF)
+      if (IsEntityNull (m_enemy) && distance < 2048 && g_bombPlanted && m_team == TEAM_TF)
       {
          RadioMessage (Radio_Affirmative);
 
@@ -2541,7 +2570,7 @@ void Bot::CheckRadioCommands (void)
       break;
 
    case Radio_StormTheFront:
-      if ((FNullEnt (m_enemy) && EntityIsVisible (m_radioEntity->v.origin)) || distance < 1024)
+      if (((IsEntityNull (m_enemy) && EntityIsVisible (m_radioEntity->v.origin)) || distance < 1024) && g_randGen.Long (0, 100) > 50)
       {
          RadioMessage (Radio_Affirmative);
 
@@ -2572,7 +2601,7 @@ void Bot::CheckRadioCommands (void)
       break;
 
    case Radio_Fallback:
-      if ((FNullEnt (m_enemy) && EntityIsVisible (m_radioEntity->v.origin)) || distance < 1024)
+      if ((IsEntityNull (m_enemy) && EntityIsVisible (m_radioEntity->v.origin)) || distance < 1024)
       {
          m_fearLevel += 0.5;
 
@@ -2609,11 +2638,11 @@ void Bot::CheckRadioCommands (void)
                      continue;
 
                   edict_t *enemy = g_clients[i].ent;
-                  float distance = (m_radioEntity->v.origin - enemy->v.origin).GetLengthSquared ();
+                  float curDist = (m_radioEntity->v.origin - enemy->v.origin).GetLengthSquared ();
 
-                  if (distance < nearestDistance)
+                  if (curDist < nearestDistance)
                   {
-                     nearestDistance = distance;
+                     nearestDistance = curDist;
                      m_lastEnemy = enemy;
                      m_lastEnemyOrigin = enemy->v.origin;
                   }
@@ -2676,7 +2705,7 @@ void Bot::CheckRadioCommands (void)
       break;
 
    case Radio_GetInPosition:
-      if ((FNullEnt (m_enemy) && EntityIsVisible (m_radioEntity->v.origin)) || distance < 1024)
+      if ((IsEntityNull (m_enemy) && EntityIsVisible (m_radioEntity->v.origin)) || distance < 1024)
       {
          RadioMessage (Radio_Affirmative);
 
@@ -2693,23 +2722,23 @@ void Bot::CheckRadioCommands (void)
             m_targetEntity = NULL;
             m_seeEnemyTime = GetWorldTime ();
 
-            // If Bot has no enemy
+            // if bot has no enemy
             if (m_lastEnemyOrigin == nullvec)
             {
                float nearestDistance = FLT_MAX;
 
-               // Take nearest enemy to ordering Player
+               // take nearest enemy to ordering player
                for (int i = 0; i < GetMaxClients (); i++)
                {
                   if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team == m_team)
                      continue;
 
                   edict_t *enemy = g_clients[i].ent;
-                  float distance = (m_radioEntity->v.origin - enemy->v.origin).GetLengthSquared ();
+                  float dist = (m_radioEntity->v.origin - enemy->v.origin).GetLengthSquared ();
 
-                  if (distance < nearestDistance)
+                  if (dist < nearestDistance)
                   {
-                     nearestDistance = distance;
+                     nearestDistance = dist;
                      m_lastEnemy = enemy;
                      m_lastEnemyOrigin = enemy->v.origin;
                   }
@@ -2733,6 +2762,26 @@ void Bot::CheckRadioCommands (void)
       break;
    }
    m_radioOrder = 0; // radio command has been handled, reset
+}
+
+void Bot::TryHeadTowardRadioEntity (void)
+{
+   TaskId_t taskID = GetTaskId ();
+
+   if (taskID == TASK_MOVETOPOSITION || m_headedTime + 15.0f < GetWorldTime () || !IsAlive (m_radioEntity) || m_hasC4)
+      return;
+
+   if ((IsValidBot (m_radioEntity) && g_randGen.Long (0, 100) < 25 && m_personality == PERSONALITY_NORMAL) || !(m_radioEntity->v.flags & FL_FAKECLIENT))
+   {
+      if (taskID == TASK_PAUSE || taskID == TASK_CAMP)
+         GetTask ()->time = GetWorldTime ();
+
+      m_headedTime = GetWorldTime ();
+      m_position = m_radioEntity->v.origin;
+      DeleteSearchNodes ();
+
+      StartTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, -1, 0.0, true);
+   }
 }
 
 void Bot::SelectLeaderEachTeam (int team)
@@ -2838,20 +2887,16 @@ void Bot::ChooseAimDirection (void)
    unsigned int flags = m_aimFlags;
 
    bool canChooseAimDirection = false;
-   bool currentPointValid = (m_currentWaypointIndex >= 0 && m_currentWaypointIndex < g_numWaypoints);
 
-   if (!currentPointValid)
-   {
-      currentPointValid = true;
+   if (!(m_currentWaypointIndex >= 0 && m_currentWaypointIndex < g_numWaypoints))
       GetValidWaypoint ();
-   }
 
    // check if last enemy vector valid
    if (m_lastEnemyOrigin != nullvec)
    {
       TraceLine (EyePosition (), m_lastEnemyOrigin, false, true, GetEntity (), &tr);
 
-      if ((pev->origin - m_lastEnemyOrigin).GetLength () >= 1600 && FNullEnt (m_enemy) && !UsesSniper () || (tr.flFraction <= 0.2 && tr.pHit == g_hostEntity) && m_seeEnemyTime + 7.0 < GetWorldTime ())
+      if ((pev->origin - m_lastEnemyOrigin).GetLength () >= 1600 && IsEntityNull (m_enemy) && !UsesSniper () || (tr.flFraction <= 0.2 && tr.pHit == g_hostEntity) && m_seeEnemyTime + 7.0 < GetWorldTime ())
       {
          if ((m_aimFlags & (AIM_LAST_ENEMY | AIM_PREDICT_ENEMY)) && m_wantsToFire)
             m_wantsToFire = false;
@@ -2911,7 +2956,7 @@ void Bot::ChooseAimDirection (void)
       {
          bool recalcPath = true;
 
-         if (!FNullEnt (m_lastEnemy) && m_trackingEdict == m_lastEnemy && m_timeNextTracking < GetWorldTime ())
+         if (!IsEntityNull (m_lastEnemy) && m_trackingEdict == m_lastEnemy && m_timeNextTracking < GetWorldTime ())
             recalcPath = false;
 
          if (recalcPath)
@@ -2945,7 +2990,6 @@ void Bot::ChooseAimDirection (void)
 
       if (canChooseAimDirection && m_currentWaypointIndex != -1 && !(m_currentPath->flags & FLAG_LADDER))
       {
-         TraceResult tr;
          int index = m_currentWaypointIndex;
 
          if (m_team == TEAM_TF)
@@ -3059,9 +3103,6 @@ void Bot::Think (void)
          MDLL_ClientKill (ENT (killer));
 
          HudMessage (ENT (killer), true, Vector (g_randGen.Long (33, 255), g_randGen.Long (33, 255), g_randGen.Long (33, 255)), "You was slayed, because of teamkilling a player. Please be careful.");
-
-         // very fun thing
-         (*g_engfuncs.pfnClientCommand) (ENT (killer), "cd eject\n");
       }
       else if (m_voteMap != 0) // host wants the bots to vote for a map?
       {
@@ -3112,15 +3153,13 @@ void Bot::Think (void)
    if (g_lastRadioTime[team] + g_randGen.Float (0.8, 2.1) < GetWorldTime ())
       SwitchChatterIcon (false); // hide icon
 
-   static float secondThinkTimer = 0.0;
-
    // check is it time to execute think (called once per second (not frame))
-   if (secondThinkTimer < GetWorldTime ())
+   if (m_timePeriodicUpdate < GetWorldTime ())
    {
       SecondThink ();
      
       // update timer to one second
-      secondThinkTimer = GetWorldTime () + 0.99f;
+      m_timePeriodicUpdate = GetWorldTime () + 0.99f;
    }
    CheckMessageQueue (); // check for pending messages
 
@@ -3160,24 +3199,6 @@ void Bot::RunTask (void)
    case TASK_NORMAL:
       m_aimFlags |= AIM_NAVPOINT;
 
-      if ((g_mapType & MAP_DE) && m_team == TEAM_TF)
-      {
-         if (!g_bombPlanted)
-         {
-            m_loosedBombWptIndex = FindLoosedBomb ();
-
-            if (m_loosedBombWptIndex != -1 && m_currentWaypointIndex != m_loosedBombWptIndex && g_randGen.Long (0, 100) < (GetNearbyFriendsNearPosition (g_waypoint->GetPath (m_loosedBombWptIndex)->origin, 650) >= 1 ? 40 : 90))
-               GetTask ()->data = m_loosedBombWptIndex;
-         }
-         else if (!m_defendedBomb)
-         {
-            int plantedBombWptIndex = g_waypoint->FindNearest (g_waypoint->GetBombPosition ());
-
-            if (plantedBombWptIndex != -1 && m_currentWaypointIndex != plantedBombWptIndex)
-               GetTask ()->data = plantedBombWptIndex;
-         }
-      }
-
       // user forced a waypoint as a goal?
       if (yb_debug_goal.GetInt () != -1)
       {
@@ -3201,7 +3222,7 @@ void Bot::RunTask (void)
       }
 
       // bots rushing with knife, when have no enemy (thanks for idea to nicebot project)
-      if (m_currentWeapon == WEAPON_KNIFE && (FNullEnt (m_lastEnemy) || !IsAlive (m_lastEnemy)) && FNullEnt (m_enemy) && m_knifeAttackTime < GetWorldTime () && !HasShield () && GetNearbyFriendsNearPosition (pev->origin, 96) == 0)
+      if (m_currentWeapon == WEAPON_KNIFE && (IsEntityNull (m_lastEnemy) || !IsAlive (m_lastEnemy)) && IsEntityNull (m_enemy) && m_knifeAttackTime < GetWorldTime () && !HasShield () && GetNearbyFriendsNearPosition (pev->origin, 96) == 0)
       {
          if (g_randGen.Long (0, 100) < 40)
             pev->button |= IN_ATTACK;
@@ -3259,7 +3280,7 @@ void Bot::RunTask (void)
                   campingAllowed = false;
 
                // check if another bot is already camping here
-               if (IsWaypointUsed (m_currentWaypointIndex))
+               if (IsPointOccupied (m_currentWaypointIndex))
                   campingAllowed = false;
 
                if (campingAllowed)
@@ -3277,7 +3298,7 @@ void Bot::RunTask (void)
 
                   MakeVectors (pev->v_angle);
 
-                  m_timeCamping = GetWorldTime () + g_randGen.Float (g_skillTab[m_skill / 20].campStartDelay, g_skillTab[m_skill / 20].campEndDelay);
+                  m_timeCamping = GetWorldTime () + g_randGen.Float (0.3f, 0.6f);
                   StartTask (TASK_CAMP, TASKPRI_CAMP, -1, m_timeCamping, true);
 
                   m_camp = Vector (m_currentPath->campStartX, m_currentPath->campStartY, 0.0f);
@@ -3376,6 +3397,7 @@ void Bot::RunTask (void)
             destIndex = FindGoal ();
 
          m_prevGoalIndex = destIndex;
+		 m_chosenGoalIndex = destIndex;
 
          // remember index
          GetTask ()->data = destIndex;
@@ -3390,7 +3412,7 @@ void Bot::RunTask (void)
             m_moveSpeed = m_minSpeed;
       }
 
-      if ((yb_walking_allowed.GetBool () && mp_footsteps.GetBool ()) && m_skill > 80 && !(m_aimFlags & AIM_ENEMY) && (m_heardSoundTime + 13.0 >= GetWorldTime () || (m_states & (STATE_HEARING_ENEMY | STATE_SUSPECT_ENEMY))) && GetNearbyEnemiesNearPosition (pev->origin, 1024) >= 1 && !(m_currentTravelFlags & PATHFLAG_JUMP) && !(pev->button & IN_DUCK) && !(pev->flags & FL_DUCKING) && !yb_jasonmode.GetBool () && !g_bombPlanted)
+      if ((yb_walking_allowed.GetBool () && mp_footsteps.GetBool ()) && m_difficulty >= 2 && !(m_aimFlags & AIM_ENEMY) && (m_heardSoundTime + 13.0 >= GetWorldTime () || (m_states & (STATE_HEARING_ENEMY | STATE_SUSPECT_ENEMY))) && GetNearbyEnemiesNearPosition (pev->origin, 1024) >= 1 && !(m_currentTravelFlags & PATHFLAG_JUMP) && !(pev->button & IN_DUCK) && !(pev->flags & FL_DUCKING) && !yb_jasonmode.GetBool () && !g_bombPlanted)
          m_moveSpeed = GetWalkSpeed ();
 
       // bot hasn't seen anything in a long time and is asking his teammates to report in
@@ -3449,7 +3471,7 @@ void Bot::RunTask (void)
       m_checkTerrain = true;
 
       // if we've got new enemy...
-      if (!FNullEnt (m_enemy) || FNullEnt (m_lastEnemy))
+      if (!IsEntityNull (m_enemy) || IsEntityNull (m_lastEnemy))
       {
          // forget about it...
          TaskComplete ();
@@ -3492,14 +3514,14 @@ void Bot::RunTask (void)
       }
 
       // bots skill higher than 60?
-      if ((yb_walking_allowed.GetBool () && mp_footsteps.GetBool ()) && m_skill > 60)
+      if (yb_walking_allowed.GetBool () && mp_footsteps.GetBool () && m_difficulty >= 1)
       {
          // then make him move slow if near enemy
          if (!(m_currentTravelFlags & PATHFLAG_JUMP))
          {
             if (m_currentWaypointIndex != -1)
             {
-               if (m_currentPath->radius < 32 && !IsOnLadder () && !IsInWater () && m_seeEnemyTime + 4.0 > GetWorldTime () && m_skill < 80)
+               if (m_currentPath->radius < 32 && !IsOnLadder () && !IsInWater () && m_seeEnemyTime + 4.0 > GetWorldTime () && m_difficulty == 0)
                   pev->button |= IN_DUCK;
             }
 
@@ -3513,7 +3535,7 @@ void Bot::RunTask (void)
    case TASK_SEEKCOVER:
       m_aimFlags |= AIM_NAVPOINT;
 
-      if (FNullEnt (m_lastEnemy) || !IsAlive (m_lastEnemy))
+      if (IsEntityNull (m_lastEnemy) || !IsAlive (m_lastEnemy))
       {
          TaskComplete ();
          m_prevGoalIndex = -1;
@@ -3599,7 +3621,7 @@ void Bot::RunTask (void)
       m_moveToGoal = false;
       m_checkTerrain = false;
 
-      if (!FNullEnt (m_enemy))
+      if (!IsEntityNull (m_enemy))
          CombatFight ();
       else
       {
@@ -3622,8 +3644,8 @@ void Bot::RunTask (void)
 
       m_aimFlags |= AIM_NAVPOINT;
 
-      // is bot blinded and above average skill?
-      if (m_viewDistance < 500.0 && m_skill > 60)
+      // is bot blinded and above average difficulty?
+      if (m_viewDistance < 500.0 && m_difficulty >= 2)
       {
          // go mad!
          m_moveSpeed = -fabsf ((m_viewDistance - 500.0) / 2.0);
@@ -3652,7 +3674,7 @@ void Bot::RunTask (void)
       m_navTimeset = GetWorldTime ();
 
       // if bot remembers last enemy position
-      if (m_skill > 70 && m_lastEnemyOrigin != nullvec && IsValidPlayer (m_lastEnemy) && !UsesSniper ())
+      if (m_difficulty >= 2 && m_lastEnemyOrigin != nullvec && IsValidPlayer (m_lastEnemy) && !UsesSniper ())
       {
          m_lookAt = m_lastEnemyOrigin; // face last enemy
          m_wantsToFire = true; // and shoot it
@@ -3680,8 +3702,11 @@ void Bot::RunTask (void)
       }
 
       // half the reaction time if camping because you're more aware of enemies if camping
-      m_idealReactionTime = (g_randGen.Float (g_skillTab[m_skill / 20].minSurpriseTime, g_skillTab[m_skill / 20].maxSurpriseTime)) / 2;
+      SetIdealReactionTimes ();
+      m_idealReactionTime /= 2;
+
       m_navTimeset = GetWorldTime ();
+	  m_timeCamping = GetWorldTime();
 
       m_moveSpeed = 0;
       m_strafeSpeed = 0.0;
@@ -3776,7 +3801,8 @@ void Bot::RunTask (void)
       m_moveToGoal = false;
 
       // half the reaction time if camping
-      m_idealReactionTime = (g_randGen.Float (g_skillTab[m_skill / 20].minSurpriseTime, g_skillTab[m_skill / 20].maxSurpriseTime)) / 2;
+      SetIdealReactionTimes ();
+      m_idealReactionTime /= 2;
 
       m_navTimeset = GetWorldTime ();
       m_moveSpeed = 0;
@@ -3802,7 +3828,7 @@ void Bot::RunTask (void)
             m_campButtons = 0;
             m_prevGoalIndex = -1;
 
-            if (!FNullEnt (m_enemy))
+            if (!IsEntityNull (m_enemy))
                CombatFight ();
 
             break;
@@ -4037,7 +4063,7 @@ void Bot::RunTask (void)
       // if defusing is not already started, maybe crouch before
       if (!m_hasProgressBar && m_duckDefuseCheckTime < GetWorldTime ())
       {
-         if (m_skill >= 80 && GetNearbyEnemiesNearPosition (pev->origin, 9999.0) != 0)
+         if (m_difficulty >= 2 && GetNearbyEnemiesNearPosition (pev->origin, 9999.0) != 0)
             m_duckDefuse = true;
 
          Vector botDuckOrigin, botStandOrigin;
@@ -4100,7 +4126,7 @@ void Bot::RunTask (void)
       
    // follow user behaviour
    case TASK_FOLLOWUSER:
-      if (FNullEnt (m_targetEntity) || !IsAlive (m_targetEntity))
+      if (IsEntityNull (m_targetEntity) || !IsAlive (m_targetEntity))
       {
          m_targetEntity = NULL;
          TaskComplete ();
@@ -4112,7 +4138,7 @@ void Bot::RunTask (void)
          MakeVectors (m_targetEntity->v.v_angle);
          TraceLine (m_targetEntity->v.origin + m_targetEntity->v.view_ofs, g_pGlobals->v_forward * 500, true, true, GetEntity (), &tr);
 
-         if (!FNullEnt (tr.pHit) && IsValidPlayer (tr.pHit) && GetTeam (tr.pHit) != m_team)
+         if (!IsEntityNull (tr.pHit) && IsValidPlayer (tr.pHit) && GetTeam (tr.pHit) != m_team)
          {
             m_targetEntity = NULL;
             m_lastEnemy = tr.pHit;
@@ -4176,7 +4202,7 @@ void Bot::RunTask (void)
             int newIndex = points.Pop ();
 
             // if waypoint not yet used, assign it as dest
-            if (!IsWaypointUsed (newIndex) && (newIndex != m_currentWaypointIndex))
+            if (!IsPointOccupied (newIndex) && (newIndex != m_currentWaypointIndex))
                destIndex = newIndex;
          }
 
@@ -4208,7 +4234,7 @@ void Bot::RunTask (void)
 
          m_moveToGoal = false;
       }
-      else if (!(m_states & STATE_SUSPECT_ENEMY) && !FNullEnt (m_enemy))
+      else if (!(m_states & STATE_SUSPECT_ENEMY) && !IsEntityNull (m_enemy))
          destination = m_enemy->v.origin + (m_enemy->v.velocity.SkipZ () * 0.5);
 
       m_isUsingGrenade = true;
@@ -4242,7 +4268,7 @@ void Bot::RunTask (void)
       {
          edict_t *ent = NULL;
 
-         while (!FNullEnt (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
+         while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
          {
             if (ent->v.owner == GetEntity () && strcmp (STRING (ent->v.model) + 9, "hegrenade.mdl") == 0)
             {
@@ -4259,7 +4285,7 @@ void Bot::RunTask (void)
             }
          }
 
-         if (FNullEnt (ent))
+         if (IsEntityNull (ent))
          {
             if (m_currentWeapon != WEAPON_EXPLOSIVE)
             {
@@ -4285,7 +4311,7 @@ void Bot::RunTask (void)
 
          m_moveToGoal = false;
       }
-      else if (!(m_states & STATE_SUSPECT_ENEMY) && !FNullEnt (m_enemy))
+      else if (!(m_states & STATE_SUSPECT_ENEMY) && !IsEntityNull (m_enemy))
          destination = m_enemy->v.origin + (m_enemy->v.velocity.SkipZ () * 0.5);
 
       m_isUsingGrenade = true;
@@ -4307,7 +4333,7 @@ void Bot::RunTask (void)
       else
       {
          edict_t *ent = NULL;
-         while (!FNullEnt (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
+         while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
          {
             if (ent->v.owner == GetEntity () && strcmp (STRING (ent->v.model) + 9, "flashbang.mdl") == 0)
             {
@@ -4323,7 +4349,7 @@ void Bot::RunTask (void)
             }
          }
 
-         if (FNullEnt (ent))
+         if (IsEntityNull (ent))
          {
             if (m_currentWeapon != WEAPON_FLASHBANG)
             {
@@ -4356,7 +4382,7 @@ void Bot::RunTask (void)
       src = m_lastEnemyOrigin - pev->velocity;
 
       // predict where the enemy is in 0.5 secs
-      if (!FNullEnt (m_enemy))
+      if (!IsEntityNull (m_enemy))
          src = src + m_enemy->v.velocity * 0.5;
 
       m_grenade = (src - EyePosition ()).Normalize ();
@@ -4386,7 +4412,7 @@ void Bot::RunTask (void)
 
    // bot helps human player (or other bot) to get somewhere
    case TASK_DOUBLEJUMP:
-      if (FNullEnt (m_doubleJumpEntity) || !IsAlive (m_doubleJumpEntity) || (m_aimFlags & AIM_ENEMY) || (m_travelStartIndex != -1 && GetTask ()->time + (g_waypoint->GetTravelTime (pev->maxspeed, g_waypoint->GetPath (m_travelStartIndex)->origin, m_doubleJumpOrigin) + 11.0) < GetWorldTime ()))
+      if (IsEntityNull (m_doubleJumpEntity) || !IsAlive (m_doubleJumpEntity) || (m_aimFlags & AIM_ENEMY) || (m_travelStartIndex != -1 && GetTask ()->time + (g_waypoint->GetTravelTime (pev->maxspeed, g_waypoint->GetPath (m_travelStartIndex)->origin, m_doubleJumpOrigin) + 11.0) < GetWorldTime ()))
       {
          ResetDoubleJumpState ();
          break;
@@ -4405,7 +4431,6 @@ void Bot::RunTask (void)
          if (m_duckForJump < GetWorldTime ())
             pev->button |= IN_DUCK;
 
-         TraceResult tr;
          MakeVectors (nullvec);
 
          Vector dest = EyePosition () + g_pGlobals->v_forward * 500;
@@ -4487,7 +4512,7 @@ void Bot::RunTask (void)
          int lastSelectedGoal = -1;
          float safeRadius = g_randGen.Float (1024.0, 2048.0), minPathDistance = 4096.0;
 
-         for (int i = 0; i < g_numWaypoints; i++)
+         for (i = 0; i < g_numWaypoints; i++)
          {
             if ((g_waypoint->GetPath (i)->origin - g_waypoint->GetBombPosition ()).GetLength () < safeRadius)
                continue;
@@ -4516,7 +4541,7 @@ void Bot::RunTask (void)
       m_aimFlags |= AIM_OVERRIDE;
 
       // Breakable destroyed?
-      if (FNullEnt (FindBreakable ()))
+      if (IsEntityNull (FindBreakable ()))
       {
          TaskComplete ();
          break;
@@ -4550,7 +4575,7 @@ void Bot::RunTask (void)
 
    // picking up items and stuff behaviour
    case TASK_PICKUPITEM:
-      if (FNullEnt (m_pickupItem))
+      if (IsEntityNull (m_pickupItem))
       {
          m_pickupItem = NULL;
          TaskComplete ();
@@ -4685,7 +4710,7 @@ void Bot::RunTask (void)
 
                for (i = 0; i < MAX_HOSTAGES; i++)
                {
-                  if (FNullEnt (m_hostages[i])) // store pointer to hostage so other bots don't steal from this one or bot tries to reuse it
+                  if (IsEntityNull (m_hostages[i])) // store pointer to hostage so other bots don't steal from this one or bot tries to reuse it
                   {
                      m_hostages[i] = m_pickupItem;
                      m_pickupItem = NULL;
@@ -4711,7 +4736,7 @@ void Bot::RunTask (void)
       case PICKUP_BUTTON:
          m_aimFlags |= AIM_ENTITY;
 
-         if (FNullEnt (m_pickupItem) || m_buttonPushTime < GetWorldTime ()) // it's safer...
+         if (IsEntityNull (m_pickupItem) || m_buttonPushTime < GetWorldTime ()) // it's safer...
          {
             TaskComplete ();
             m_pickupType = PICKUP_NONE;
@@ -4757,12 +4782,12 @@ void Bot::CheckSpawnTimeConditions (void)
       if (g_randGen.Long (1, 100) < 2 && yb_spraypaints.GetBool ())
          StartTask (TASK_SPRAY, TASKPRI_SPRAYLOGO, -1, GetWorldTime () + 1.0, false);
 
-      if (m_skill > 75 && g_randGen.Long (0, 100) < (m_personality == PERSONALITY_RUSHER ? 99 : 50) && !m_isReloading && (g_mapType & (MAP_CS | MAP_DE | MAP_ES | MAP_AS)))
+      if (m_difficulty >= 2 && g_randGen.Long (0, 100) < (m_personality == PERSONALITY_RUSHER ? 99 : 50) && !m_isReloading && (g_mapType & (MAP_CS | MAP_DE | MAP_ES | MAP_AS)))
          SelectWeaponByName ("weapon_knife");
 
       m_checkKnifeSwitch = false;
 
-      if (g_randGen.Long (0, 100) < yb_user_follow_percent.GetInt () && FNullEnt (m_targetEntity) && !m_isLeader && !m_hasC4)
+      if (g_randGen.Long (0, 100) < yb_user_follow_percent.GetInt () && IsEntityNull (m_targetEntity) && !m_isLeader && !m_hasC4)
          AttachToUser ();
    }
 
@@ -4838,7 +4863,7 @@ void Bot::BotAI (void)
    SetConditions ();
 
    // some stuff required by by chatter engine
-   if ((m_states & STATE_SEEING_ENEMY) && !FNullEnt (m_enemy))
+   if ((m_states & STATE_SEEING_ENEMY) && !IsEntityNull (m_enemy))
    {
       if (g_randGen.Long (0, 100) < 45 && GetNearbyFriendsNearPosition (pev->origin, 512) == 0 && (m_enemy->v.weapons & (1 << WEAPON_C4)))
          ChatterMessage (Chatter_SpotTheBomber);
@@ -4886,25 +4911,13 @@ void Bot::BotAI (void)
       CheckReload ();
 
    // set the reaction time (surprise momentum) different each frame according to skill
-   m_idealReactionTime = g_randGen.Float (g_skillTab[m_skill / 20].minSurpriseTime, g_skillTab[m_skill / 20].maxSurpriseTime);
-
-   // calculate 2 direction vectors, 1 without the up/down component
-   Vector directionOld = m_destOrigin - (pev->origin + pev->velocity * m_frameInterval);
-   Vector directionNormal = directionOld.Normalize ();
-
-   Vector direction = directionNormal;
-   directionNormal.z = 0.0;
-
-   m_moveAngles = directionOld.ToAngles ();
-
-   m_moveAngles.ClampAngles ();
-   m_moveAngles.x *= -1.0; // invert for engine
+   SetIdealReactionTimes ();
 
 #if 0
    if (yb_hardcore_mode && GetTaskId () == TASK_NORMAL && ((m_aimFlags & AIM_ENEMY) || (m_states & STATE_SEEING_ENEMY)) && !IsOnLadder ())
       CombatFight ();
 #else
-   if (yb_hardcore_mode.GetBool () && ((m_aimFlags & AIM_ENEMY) || (m_states & (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY)) || (GetTaskId () == TASK_SEEKCOVER && (m_isReloading || m_isVIP))) && !yb_jasonmode.GetBool () && GetTaskId () != TASK_CAMP && !IsOnLadder ())
+   if (m_difficulty == 4 && ((m_aimFlags & AIM_ENEMY) || (m_states & (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY)) || (GetTaskId () == TASK_SEEKCOVER && (m_isReloading || m_isVIP))) && !yb_jasonmode.GetBool () && GetTaskId () != TASK_CAMP && !IsOnLadder ())
    {
       m_moveToGoal = false; // don't move to goal
       m_navTimeset = GetWorldTime ();
@@ -4949,329 +4962,7 @@ void Bot::BotAI (void)
    }
 
    if (m_checkTerrain) // are we allowed to check blocking terrain (and react to it)?
-   {
-      m_isStuck = false;
-      edict_t *ent = NULL;
-
-      // Test if there's a shootable breakable in our way
-      if (!FNullEnt (ent = FindBreakable ()))
-      {
-         m_breakableEntity = ent;
-         m_campButtons = pev->button & IN_DUCK;
-
-         StartTask (TASK_SHOOTBREAKABLE, TASKPRI_SHOOTBREAKABLE, -1, 0.0, false);
-      }
-      else
-      {
-         ent = NULL;
-         edict_t *pentNearest = NULL;
-
-         if (FindNearestPlayer (reinterpret_cast <void **> (&pentNearest), GetEntity (), pev->maxspeed, true, false, true, true)) // found somebody?
-         {
-            MakeVectors (m_moveAngles); // use our movement angles
-
-            // try to predict where we should be next frame
-            Vector moved = pev->origin + g_pGlobals->v_forward * m_moveSpeed * m_frameInterval;
-            moved = moved + g_pGlobals->v_right * m_strafeSpeed * m_frameInterval;
-            moved = moved + pev->velocity * m_frameInterval;
-
-            float nearestDistance = (pentNearest->v.origin - pev->origin).GetLength2D ();
-            float movedDistance = (pentNearest->v.origin - moved).GetLength2D ();
-            float nextFrameDistance = ((pentNearest->v.origin + pentNearest->v.velocity * m_frameInterval) - pev->origin).GetLength2D ();
-
-            // is player that near now or in future that we need to steer away?
-            if (movedDistance <= 48.0 || (nearestDistance <= 56.0 && nextFrameDistance < nearestDistance))
-            {
-               // to start strafing, we have to first figure out if the target is on the left side or right side
-               Vector dirToPoint = (pev->origin - pentNearest->v.origin).SkipZ ();
-
-               if ((dirToPoint | g_pGlobals->v_right.SkipZ ()) > 0.0)
-                  SetStrafeSpeed (directionNormal, pev->maxspeed);
-               else
-                  SetStrafeSpeed (directionNormal, -pev->maxspeed);
-
-               ResetCollideState ();
-
-               if (nearestDistance < 56.0 && (dirToPoint | g_pGlobals->v_forward.SkipZ ()) < 0.0)
-                  m_moveSpeed = -pev->maxspeed;
-            }
-         }
-
-         // Standing still, no need to check?
-         // FIXME: doesn't care for ladder movement (handled separately) should be included in some way
-         if ((m_moveSpeed >= 10 || m_strafeSpeed >= 10) && m_lastCollTime < GetWorldTime ())
-         {
-            if (movedDistance < 2.0 && m_prevSpeed >= 1.0) // didn't we move enough previously?
-            {
-               // Then consider being stuck
-               m_prevTime = GetWorldTime ();
-               m_isStuck = true;
-
-               if (m_firstCollideTime == 0.0)
-                  m_firstCollideTime = GetWorldTime () + 0.2;
-            }
-            else // not stuck yet
-            {
-               // test if there's something ahead blocking the way
-               if (CantMoveForward (directionNormal, &tr) && !IsOnLadder ())
-               {
-                  if (m_firstCollideTime == 0.0)
-                     m_firstCollideTime = GetWorldTime () + 0.2;
-
-                  else if (m_firstCollideTime <= GetWorldTime ())
-                     m_isStuck = true;
-               }
-               else
-                  m_firstCollideTime = 0.0;
-            }
-
-            if (!m_isStuck) // not stuck?
-            {
-               if (m_probeTime + 0.5 < GetWorldTime ())
-                  ResetCollideState (); // reset collision memory if not being stuck for 0.5 secs
-               else
-               {
-                  // remember to keep pressing duck if it was necessary ago
-                  if (m_collideMoves[m_collStateIndex] == COLLISION_DUCK && IsOnFloor () || IsInWater ())
-                     pev->button |= IN_DUCK;
-               }
-            }
-            else // bot is stuck!
-            {
-               // not yet decided what to do?
-               if (m_collisionState == COLLISION_NOTDECICED)
-               {
-                  char bits = 0;
-
-                  if (IsOnLadder ())
-                     bits = PROBE_STRAFE;
-                  else if (IsInWater ())
-                     bits = (PROBE_JUMP | PROBE_STRAFE);
-                  else
-                     bits = ((g_randGen.Long (0, 10) > 7 ? PROBE_JUMP : 0) | PROBE_STRAFE | PROBE_DUCK);
-
-                  // collision check allowed if not flying through the air
-                  if (IsOnFloor () || IsOnLadder () || IsInWater ())
-                  {
-                     char state[8];
-                     int i = 0;
-
-                     // first 4 entries hold the possible collision states
-                     state[i++] = COLLISION_JUMP;
-                     state[i++] = COLLISION_DUCK;
-                     state[i++] = COLLISION_STRAFELEFT;
-                     state[i++] = COLLISION_STRAFERIGHT;
-
-                     // now weight all possible states
-                     if (bits & PROBE_JUMP)
-                     {
-                        state[i] = 0;
-
-                        if (CanJumpUp (directionNormal))
-                           state[i] += 10;
-
-                        if (m_destOrigin.z >= pev->origin.z + 18.0)
-                           state[i] += 5;
-
-                        if (EntityIsVisible (m_destOrigin))
-                        {
-                           MakeVectors (m_moveAngles);
-
-                           src = EyePosition ();
-                           src = src + (g_pGlobals->v_right * 15);
-
-                           TraceLine (src, m_destOrigin, true, true, GetEntity (), &tr);
-
-                           if (tr.flFraction >= 1.0)
-                           {
-                              src = EyePosition ();
-                              src = src - (g_pGlobals->v_right * 15);
-
-                              TraceLine (src, m_destOrigin, true, true, GetEntity (), &tr);
-
-                              if (tr.flFraction >= 1.0)
-                                 state[i] += 5;
-                           }
-                        }
-                        if (pev->flags & FL_DUCKING)
-                           src = pev->origin;
-                        else
-                           src = pev->origin + Vector (0, 0, -17);
-
-                        destination = src + directionNormal * 30;
-                        TraceLine (src, destination, true, true, GetEntity (), &tr);
-
-                        if (tr.flFraction != 1.0)
-                           state[i] += 10;
-                     }
-                     else
-                        state[i] = 0;
-                     i++;
-
-                     if (bits & PROBE_DUCK)
-                     {
-                        state[i] = 0;
-
-                        if (CanDuckUnder (directionNormal))
-                           state[i] += 10;
-
-                        if ((m_destOrigin.z + 36.0 <= pev->origin.z) && EntityIsVisible (m_destOrigin))
-                           state[i] += 5;
-                     }
-                     else
-                        state[i] = 0;
-                     i++;
-
-                     if (bits & PROBE_STRAFE)
-                     {
-                        state[i] = 0;
-                        state[i + 1] = 0;
-
-                        // to start strafing, we have to first figure out if the target is on the left side or right side
-                        MakeVectors (m_moveAngles);
-
-                        Vector dirToPoint = (pev->origin - m_destOrigin).Normalize2D ();
-                        Vector rightSide = g_pGlobals->v_right.Normalize2D ();
-
-                        bool dirRight = false;
-                        bool dirLeft = false;
-                        bool blockedLeft = false;
-                        bool blockedRight = false;
-
-                        if ((dirToPoint | rightSide) > 0)
-                           dirRight = true;
-                        else
-                           dirLeft = true;
-
-                        if (m_moveSpeed > 0)
-                           direction = g_pGlobals->v_forward;
-                        else
-                           direction = -g_pGlobals->v_forward;
-
-                        // now check which side is blocked
-                        src = pev->origin + (g_pGlobals->v_right * 32);
-                        destination = src + (direction * 32);
-
-                        TraceHull (src, destination, true, head_hull, GetEntity (), &tr);
-
-                        if (tr.flFraction != 1.0)
-                           blockedRight = true;
-
-                        src = pev->origin - (g_pGlobals->v_right * 32);
-                        destination = src + (direction * 32);
-
-                        TraceHull (src, destination, true, head_hull, GetEntity (), &tr);
-
-                        if (tr.flFraction != 1.0)
-                           blockedLeft = true;
-
-                        if (dirLeft)
-                           state[i] += 5;
-                        else
-                           state[i] -= 5;
-
-                        if (blockedLeft)
-                           state[i] -= 5;
-
-                        i++;
-
-                        if (dirRight)
-                           state[i] += 5;
-                        else
-                           state[i] -= 5;
-
-                        if (blockedRight)
-                           state[i] -= 5;
-                     }
-                     else
-                     {
-                        state[i] = 0;
-                        i++;
-
-                        state[i] = 0;
-                     }
-
-                     // weighted all possible moves, now sort them to start with most probable
-                     int temp = 0;
-                     bool isSorting = false;
-
-                     do
-                     {
-                        isSorting = false;
-                        for (i = 0; i < 3; i++)
-                        {
-                           if (state[i + 4] < state[i + 5])
-                           {
-                              temp = state[i];
-
-                              state[i] = state[i + 1];
-                              state[i + 1] = temp;
-
-                              temp = state[i + 4];
-
-                              state[i + 4] = state[i + 5];
-                              state[i + 5] = temp;
-
-                              isSorting = true;
-                           }
-                        }
-                     } while (isSorting);
-
-                     for (i = 0; i < 4; i++)
-                        m_collideMoves[i] = state[i];
-
-                     m_collideTime = GetWorldTime ();
-                     m_probeTime = GetWorldTime () + 0.5;
-                     m_collisionProbeBits = bits;
-                     m_collisionState = COLLISION_PROBING;
-                     m_collStateIndex = 0;
-                  }
-               }
-
-               if (m_collisionState == COLLISION_PROBING)
-               {
-                  if (m_probeTime < GetWorldTime ())
-                  {
-                     m_collStateIndex++;
-                     m_probeTime = GetWorldTime () + 0.5;
-
-                     if (m_collStateIndex > 4)
-                     {
-                        m_navTimeset = GetWorldTime () - 5.0;
-                        ResetCollideState ();
-                     }
-                  }
-                     
-                  if (m_collStateIndex <= 4)
-                  {
-                     switch (m_collideMoves[m_collStateIndex])
-                     {
-                     case COLLISION_JUMP:
-                        if (IsOnFloor () || IsInWater ())      
-                           pev->button |= IN_JUMP;
-                        break;
-
-                     case COLLISION_DUCK:
-                        if (IsOnFloor () || IsInWater ())
-                           pev->button |= IN_DUCK;
-                        break;
-
-                     case COLLISION_STRAFELEFT:
-                        pev->button |= IN_MOVELEFT;
-                        SetStrafeSpeed (directionNormal, -pev->maxspeed);
-                        break;
-
-                     case COLLISION_STRAFERIGHT:
-                        pev->button |= IN_MOVERIGHT;
-                        SetStrafeSpeed (directionNormal, pev->maxspeed);
-                        break;
-                     }
-                  }
-               }
-            }
-         }
-      }
-   }
+      CheckTerrain (movedDistance);
 
    // must avoid a grenade?
    if (m_needAvoidGrenade != 0)
@@ -5284,12 +4975,12 @@ void Bot::BotAI (void)
    }
 
    // time to reach waypoint
-   if (m_navTimeset + GetEstimatedReachTime () < GetWorldTime () && FNullEnt (m_enemy))
+   if (m_navTimeset + GetEstimatedReachTime () < GetWorldTime () && IsEntityNull (m_enemy))
    {
       GetValidWaypoint ();
 
       // clear these pointers, bot mingh be stuck getting to them
-      if (!FNullEnt (m_pickupItem) && !m_hasProgressBar)
+      if (!IsEntityNull (m_pickupItem) && !m_hasProgressBar)
          m_itemIgnore = m_pickupItem;
 
       m_pickupItem = NULL;
@@ -5298,7 +4989,7 @@ void Bot::BotAI (void)
       m_pickupType = PICKUP_NONE;
    }
 
-   if (m_duckTime > GetWorldTime ())
+   if (m_duckTime >= GetWorldTime ())
       pev->button |= IN_DUCK;
 
    if (pev->button & IN_JUMP)
@@ -5328,7 +5019,7 @@ void Bot::BotAI (void)
 
    static float timeDebugUpdate = 0.0;
 
-   if (!FNullEnt (g_hostEntity) && yb_debug.GetInt () >= 1)
+   if (!IsEntityNull (g_hostEntity) && yb_debug.GetInt () >= 1)
    {
       int specIndex = g_hostEntity->v.iuser2;
 
@@ -5436,9 +5127,9 @@ void Bot::BotAI (void)
 
                char enemyName[80], weaponName[80], aimFlags[32], botType[32];
 
-               if (!FNullEnt (m_enemy))
+               if (!IsEntityNull (m_enemy))
                   strcpy (enemyName, STRING (m_enemy->v.netname));
-               else if (!FNullEnt (m_lastEnemy))
+               else if (!IsEntityNull (m_lastEnemy))
                {
                   strcpy (enemyName, " (L)");
                   strcat (enemyName, STRING (m_lastEnemy->v.netname));
@@ -5449,7 +5140,7 @@ void Bot::BotAI (void)
                char pickupName[80];
                memset (pickupName, 0, sizeof (pickupName));
 
-               if (!FNullEnt (m_pickupItem))
+               if (!IsEntityNull (m_pickupItem))
                   strcpy (pickupName, STRING (m_pickupItem->v.classname));
                else
                   strcpy (pickupName, " (null)");
@@ -5552,13 +5243,13 @@ void Bot::BotAI (void)
 
             while (node != NULL)
             {
-               Vector src = g_waypoint->GetPath (node->index)->origin;
+               Vector srcPath = g_waypoint->GetPath (node->index)->origin;
                node = node->next;
 
                if (node != NULL)
                {
                   Vector dest = g_waypoint->GetPath (node->index)->origin;
-                  DrawArrow (g_hostEntity, src, dest, 15, 0, 255, 100, 55, 200, 5, 1);
+                  DrawArrow (g_hostEntity, srcPath, dest, 15, 0, 255, 100, 55, 200, 5, 1);
                }
             }
          }
@@ -5577,7 +5268,7 @@ bool Bot::HasHostage (void)
 {
    for (int i = 0; i < MAX_HOSTAGES; i++)
    {
-      if (!FNullEnt (m_hostages[i]))
+      if (!IsEntityNull (m_hostages[i]))
       {
          // don't care about dead hostages
          if (m_hostages[i]->v.health <= 0 || (pev->origin - m_hostages[i]->v.origin).GetLength () > 600)
@@ -5656,7 +5347,7 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits)
          }
          RemoveCertainTask (TASK_CAMP);
 
-         if (FNullEnt (m_enemy) && m_team != GetTeam (inflictor))
+         if (IsEntityNull (m_enemy) && m_team != GetTeam (inflictor))
          {
             m_lastEnemy = inflictor;
             m_lastEnemyOrigin = inflictor->v.origin;
@@ -5695,13 +5386,13 @@ void Bot::TakeBlinded (const Vector &fade, int alpha)
    m_maxViewDistance = g_randGen.Float (10, 20);
    m_blindTime = GetWorldTime () + static_cast <float> (alpha - 200) / 16;
 
-   if (m_skill <= 80)
+   if (m_difficulty <= 2)
    {
       m_blindMoveSpeed = 0.0;
       m_blindSidemoveSpeed = 0.0;
       m_blindButton = IN_DUCK;
    }
-   else if (m_skill < 99 || m_skill == 100)
+   else if (m_difficulty > 2)
    {
       m_blindMoveSpeed = -pev->maxspeed;
       m_blindSidemoveSpeed = 0.0;
@@ -6054,7 +5745,7 @@ Vector Bot::CheckBombAudible (void)
    if (!g_bombPlanted || (GetTaskId () == TASK_ESCAPEFROMBOMB))
       return nullvec; // reliability check
 
-   if (m_skill > 80)
+   if (m_difficulty >= 3)
       return g_waypoint->GetBombPosition();
 
    Vector bombOrigin = g_waypoint->GetBombPosition ();
@@ -6169,7 +5860,7 @@ void Bot::CheckBurstMode (float distance)
 
 void Bot::CheckSilencer (void)
 {
-   if (((m_currentWeapon == WEAPON_USP && m_skill <= 80) || m_currentWeapon == WEAPON_M4A1) && !HasShield())
+   if (((m_currentWeapon == WEAPON_USP && m_difficulty < 2) || m_currentWeapon == WEAPON_M4A1) && !HasShield())
    {
       int iRandomNum = (m_personality == PERSONALITY_RUSHER ? 35 : 65);
 
@@ -6202,7 +5893,7 @@ float Bot::GetBombTimeleft (void)
 
 float Bot::GetEstimatedReachTime (void)
 {
-   float estimatedTime = 2.5f; // time to reach next waypoint
+   float estimatedTime = 3.0f; // time to reach next waypoint
 
    // calculate 'real' time that we need to get from one waypoint to another
    if (m_currentWaypointIndex >= 0 && m_currentWaypointIndex < g_numWaypoints && m_prevWptIndex[0] >= 0 && m_prevWptIndex[0] < g_numWaypoints)
@@ -6220,12 +5911,12 @@ float Bot::GetEstimatedReachTime (void)
          estimatedTime *= 3.0;
 
       // check for too low values
-      if (estimatedTime < 3.0)
-         estimatedTime = 3.0;
+      if (estimatedTime < 1.0f)
+         estimatedTime = 1.0f;
 
       // check for too high values
-      if (estimatedTime > 8.0)
-         estimatedTime = 8.0;
+      if (estimatedTime > 8.0f)
+         estimatedTime = 8.0f;
    }
    return estimatedTime;
 }
@@ -6292,7 +5983,7 @@ void Bot::ReactOnSound (void)
    edict_t *player = NULL;
 
    float maxVolume = 0.0, volume = 0.0;
-   int hearEnemyIndex = -1, hearEnemyDistance = 0;
+   int hearEnemyIndex = -1;
 
    // loop through all enemy clients to check for hearable stuff
    for (int i = 0; i < GetMaxClients (); i++)
@@ -6327,7 +6018,6 @@ void Bot::ReactOnSound (void)
          continue;
 
       hearEnemyIndex = i;
-      hearEnemyDistance = distance;
    }
 
    if (hearEnemyIndex >= 0)
@@ -6337,7 +6027,7 @@ void Bot::ReactOnSound (void)
    }
 
    // did the bot hear someone ?
-   if (!FNullEnt (player))
+   if (!IsEntityNull (player))
    {
       // change to best weapon if heard something
       if (!(m_states & STATE_SEEING_ENEMY) && m_seeEnemyTime + 2.5 < GetWorldTime () && IsOnFloor () && m_currentWeapon != WEAPON_C4 && m_currentWeapon != WEAPON_EXPLOSIVE && m_currentWeapon != WEAPON_SMOKE && m_currentWeapon != WEAPON_FLASHBANG && !yb_jasonmode.GetBool ())
@@ -6346,10 +6036,10 @@ void Bot::ReactOnSound (void)
       m_heardSoundTime = GetWorldTime () + 5.0;
       m_states |= STATE_HEARING_ENEMY;
 
-      if ((g_randGen.Long (0, 100) < 25) && FNullEnt (m_enemy) && FNullEnt (m_lastEnemy) && m_seeEnemyTime + 7.0 < GetWorldTime ())
+      if ((g_randGen.Long (0, 100) < 25) && IsEntityNull (m_enemy) && IsEntityNull (m_lastEnemy) && m_seeEnemyTime + 7.0 < GetWorldTime ())
          ChatterMessage (Chatter_HeardEnemy);
 
-      m_aimFlags |= AIM_LAST_ENEMY; 
+      m_aimFlags |= AIM_LAST_ENEMY;
 
       // didn't bot already have an enemy ? take this one...
       if (m_lastEnemyOrigin == nullvec || m_lastEnemy == NULL)
@@ -6370,9 +6060,9 @@ void Bot::ReactOnSound (void)
          else
          {
             // if bot had an enemy but the heard one is nearer, take it instead
-            float distance = (m_lastEnemyOrigin - pev->origin).GetLength ();
+            float distance = (m_lastEnemyOrigin - pev->origin).GetLengthSquared ();
 
-            if (distance > (player->v.origin - pev->origin).GetLength () && m_seeEnemyTime + 2.0 < GetWorldTime ())
+            if (distance > (player->v.origin - pev->origin).GetLengthSquared () && m_seeEnemyTime + 2.0 < GetWorldTime ())
             {
                m_lastEnemy = player;
                m_lastEnemyOrigin = player->v.origin;
@@ -6381,6 +6071,9 @@ void Bot::ReactOnSound (void)
                return;
          }
       }
+
+      // useless?
+#if 0
       extern ConVar yb_shoots_thru_walls;
 
       // check if heard enemy can be seen
@@ -6393,7 +6086,7 @@ void Bot::ReactOnSound (void)
          m_states |= STATE_SEEING_ENEMY;
          m_seeEnemyTime = GetWorldTime ();
       }
-      else if (m_lastEnemy == player && m_seeEnemyTime + 1.0 > GetWorldTime () && yb_shoots_thru_walls.GetBool () && (g_randGen.Long (1, 100) < g_skillTab[m_skill / 20].heardShootThruProb) && IsShootableThruObstacle (player->v.origin))
+      else if (m_lastEnemy == player && m_seeEnemyTime + 1.0 > GetWorldTime () && yb_shoots_thru_walls.GetBool () && IsShootableThruObstacle (player->v.origin))
       {
          m_enemy = player;
          m_lastEnemy = player;
@@ -6402,6 +6095,7 @@ void Bot::ReactOnSound (void)
          m_states |= STATE_SEEING_ENEMY;
          m_seeEnemyTime = GetWorldTime ();
       }
+#endif
    }
 }
 
@@ -6415,23 +6109,21 @@ bool Bot::IsShootableBreakable (edict_t *ent)
    return false;
 }
 
-void Bot::EquipInBuyzone (int iBuyCount)
+void Bot::EquipInBuyzone (int buyCount)
 {
    // this function is gets called when bot enters a buyzone, to allow bot to buy some stuff
 
-   static float lastEquipTime = 0.0;
-
    // if bot is in buy zone, try to buy ammo for this weapon...
-   if (lastEquipTime + 15.0 < GetWorldTime () && m_inBuyZone && g_timeRoundStart + g_randGen.Float (10.0, 20.0) + mp_buytime.GetFloat () < GetWorldTime () && !g_bombPlanted && m_moneyAmount > g_botBuyEconomyTable[0])
+   if (m_lastEquipTime + 15.0 < GetWorldTime () && m_inBuyZone && g_timeRoundStart + g_randGen.Float (10.0, 20.0) + mp_buytime.GetFloat () < GetWorldTime () && !g_bombPlanted && m_moneyAmount > g_botBuyEconomyTable[0])
    {
       m_buyingFinished = false;
-      m_buyState = iBuyCount;
+      m_buyState = buyCount;
 
       // push buy message
       PushMessageQueue (GSM_BUY_STUFF);
 
       m_nextBuyTime = GetWorldTime ();
-      lastEquipTime = GetWorldTime ();
+      m_lastEquipTime = GetWorldTime ();
    }
 }
 
@@ -6452,7 +6144,7 @@ bool Bot::IsBombDefusing (Vector bombOrigin)
       if (m_team != GetTeam (bot->GetEntity ()) || bot->GetTaskId () == TASK_ESCAPEFROMBOMB)
          continue; // skip other mess
 
-      if ((bot->pev->origin - bombOrigin).GetLength () < 100 && (bot->GetTaskId () == TASK_DEFUSEBOMB || bot->m_hasProgressBar))
+      if ((bot->pev->origin - bombOrigin).GetLength () < 140.0f && (bot->GetTaskId () == TASK_DEFUSEBOMB || bot->m_hasProgressBar))
       {
          defusingInProgress = true;
          break;
@@ -6462,7 +6154,7 @@ bool Bot::IsBombDefusing (Vector bombOrigin)
       if (defusingInProgress || !(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != m_team || IsValidBot (g_clients[i].ent))
          continue;
 
-      if ((g_clients[i].ent->v.origin - bombOrigin).GetLength () < 100)
+      if ((g_clients[i].ent->v.origin - bombOrigin).GetLength () < 140.0f)
       {
          defusingInProgress = true;
          break;

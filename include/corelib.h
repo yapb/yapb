@@ -1,4 +1,4 @@
-//
+﻿//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -2404,8 +2404,7 @@ public:
 
    ~String (void)
    {
-      if (m_bufferPtr != NULL)
-         delete [] m_bufferPtr;
+      delete [] m_bufferPtr;
    }
 
    String (const char *bufferPtr)
@@ -2469,22 +2468,7 @@ public:
 
       return &m_bufferPtr[0];
    }
-
-   //
-   // Function: ToString
-   //  Gets the string buffer (constant).
-   //
-   // Returns:
-   //  Pointer to constant buffer.
-   //
-   const char *ToString (void) const
-   {
-      if (m_bufferPtr == NULL || *m_bufferPtr == 0x0)
-         return "";
-
-      return &m_bufferPtr[0];
-   }
-
+   
    //
    // Function: ToFloat
    //  Gets the string as float, if possible.
@@ -4034,7 +4018,7 @@ public:
       static String result;
 
       if (m_fileName != "(no)" && m_line != -1)
-         result.AssignFormat ("Exception: %s at %s:%i", m_exceptionText.ToString (), m_fileName.ToString (), m_line);
+         result.AssignFormat ("Exception: %s at %s:%i", m_exceptionText.GetBuffer (), m_fileName.GetBuffer (), m_line);
       else
          result = m_exceptionText;
 

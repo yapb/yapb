@@ -49,6 +49,8 @@ void StripTags (char *buffer)
    {
       strtrim (buffer); // if so, string is just a tag
 
+	  int tagLength = 0;
+
       // strip just the tag part...
       for (index = 0; index < ARRAYSIZE_HLSDK(tagOpen); index++)
       {
@@ -58,7 +60,7 @@ void StripTags (char *buffer)
          if (fieldStart >= 0 && fieldStart < 32)
          {
             fieldStop = fieldStart + strlen (tagOpen[index]); // set the tag stop
-            int tagLength = strlen (tagOpen[index]);
+            tagLength = strlen (tagOpen[index]);
 
             for (i = fieldStart; i < length - tagLength; i++)
                buffer[i] = buffer[i + tagLength]; // overwrite the buffer with the stripped string
@@ -71,7 +73,7 @@ void StripTags (char *buffer)
             if (fieldStart >= 0 && fieldStart < 32)
             {
                fieldStop = fieldStart + strlen (tagClose[index]); // set the tag  
-               int tagLength = strlen (tagClose[index]);
+               tagLength = strlen (tagClose[index]);
 
                for (i = fieldStart; i < length - tagLength; i++)
                   buffer[i] = buffer[i + tagLength]; // overwrite the buffer with the stripped string
@@ -198,7 +200,7 @@ void Bot::PrepareChatMessage (char *text)
             }
             talkEntity = g_clients[index].ent;
 
-            if (!FNullEnt (talkEntity))
+            if (!IsEntityNull (talkEntity))
                strcat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))));
          }
          // mapname?
@@ -215,7 +217,7 @@ void Bot::PrepareChatMessage (char *text)
          {
             talkEntity = EntityOfIndex (m_sayTextBuffer.entityIndex);
 
-            if (!FNullEnt (talkEntity))
+            if (!IsEntityNull (talkEntity))
                strcat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))));
          }
          // teammate alive?
@@ -233,12 +235,12 @@ void Bot::PrepareChatMessage (char *text)
 
             if (i < GetMaxClients ())
             {
-               if (!FNullEnt (pev->dmg_inflictor) && (m_team == GetTeam (pev->dmg_inflictor)))
+               if (!IsEntityNull (pev->dmg_inflictor) && (m_team == GetTeam (pev->dmg_inflictor)))
                   talkEntity = pev->dmg_inflictor;
                else
                   talkEntity = g_clients[i].ent;
 
-               if (!FNullEnt (talkEntity))
+               if (!IsEntityNull (talkEntity))
                   strcat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))));
             }
             else // no teammates alive...
@@ -255,7 +257,7 @@ void Bot::PrepareChatMessage (char *text)
                {
                   talkEntity = g_clients[i].ent;
 
-                  if (!FNullEnt (talkEntity))
+                  if (!IsEntityNull (talkEntity))
                      strcat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))));
                }
             }
@@ -275,7 +277,7 @@ void Bot::PrepareChatMessage (char *text)
             {
                talkEntity = g_clients[i].ent;
 
-               if (!FNullEnt (talkEntity))
+               if (!IsEntityNull (talkEntity))
                   strcat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))));
             }
             else // no teammates alive...
@@ -290,7 +292,7 @@ void Bot::PrepareChatMessage (char *text)
                {
                   talkEntity = g_clients[i].ent;
 
-                  if (!FNullEnt (talkEntity))
+                  if (!IsEntityNull (talkEntity))
                      strcat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))));
                }
             }
@@ -301,17 +303,13 @@ void Bot::PrepareChatMessage (char *text)
             {
                if (g_randGen.Long (1, 100) < 30)
                   strcat (m_tempStrings, "CZ");
-               else if (g_randGen.Long (1, 100) < 80)
-                  strcat (m_tempStrings, "KoHTpa K3");
                else
                   strcat (m_tempStrings, "Condition Zero");
             }
-            else if ((g_gameVersion == CSV_STEAM) || (g_gameVersion == CSV_OLD))
+            else if (g_gameVersion == CSV_STEAM || g_gameVersion == CSV_OLD)
             {
                if (g_randGen.Long (1, 100) < 30)
                   strcat (m_tempStrings, "CS");
-               else if (g_randGen.Long (1, 100) < 80)
-                  strcat (m_tempStrings, "KoHTpa");
                else
                   strcat (m_tempStrings, "Counter-Strike");
             }
@@ -320,7 +318,7 @@ void Bot::PrepareChatMessage (char *text)
          {
             talkEntity = m_lastVictim;
 
-            if (!FNullEnt (talkEntity))
+            if (!IsEntityNull (talkEntity))
                strcat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))));
          }
          pattern++;

@@ -33,6 +33,7 @@ extern float g_timeRoundEnd;
 extern float g_timeRoundMid;
 extern float g_timeNextBombUpdate;
 extern float g_timeRoundStart;
+extern float g_timePerSecondUpdate;
 extern float g_lastRadioTime[2];
 
 extern int g_mapType;
@@ -70,7 +71,6 @@ extern WeaponProperty g_weaponDefs[MAX_WEAPONS + 1];
 
 extern Client g_clients[32];
 extern MenuText g_menus[21];
-extern SkillDefinition g_skillTab[6];
 extern TaskItem g_taskFilters[];
 
 extern Experience *g_experienceData;
@@ -108,7 +108,17 @@ static inline edict_t *EntityOfIndex (const int index)
    return static_cast <edict_t *> (g_worldEdict + index);
 };
 
-inline int IndexOfEntity (const edict_t *ent)
+static inline int IndexOfEntity(const edict_t *ent)
 {
    return static_cast <int> (ent - g_worldEdict);
 };
+
+static inline int EntOffsetOfEntity(const edict_t *ent)
+{
+   return (char *) ent - (char *) g_worldEdict;
+}
+
+static inline bool IsEntityNull (const edict_t *ent)
+{
+   return !ent || !EntOffsetOfEntity (ent);
+}

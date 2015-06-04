@@ -1,4 +1,4 @@
-//
+﻿//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -11,7 +11,7 @@
 
 ConVar yb_shoots_thru_walls ("yb_shoots_thru_walls", "1");
 ConVar yb_ignore_enemies ("yb_ignore_enemies", "0");
-ConVar yb_csdm_mode ("yb_csdm_mode", "0");
+ConVar yb_csdm_mode ("yb_csdm_mode", "0", VT_NOSERVER);
 
 ConVar mp_friendlyfire ("mp_friendlyfire", NULL, VT_NOREGISTER);
 
@@ -56,16 +56,17 @@ bool Bot::LookupEnemy (void)
       return false;
 
    // do not check for new enemy too fast
-   if (!FNullEnt (m_enemy) && m_enemyUpdateTime > GetWorldTime () && !(m_states & STATE_SUSPECT_ENEMY))
+   if (!IsEntityNull (m_enemy) && m_enemyUpdateTime + 2.5f > GetWorldTime () && !(m_states & STATE_SUSPECT_ENEMY))
    {
       m_aimFlags |= AIM_ENEMY;
+      m_states |= STATE_SUSPECT_ENEMY;
+
       return true;
    }
    edict_t *player, *newEnemy = NULL;
 
    float nearestDistance = m_viewDistance;
-   int i;
-
+ 
    // setup potentially visible set for this bot
    Vector potentialVisibility = EyePosition ();
 
@@ -78,7 +79,7 @@ bool Bot::LookupEnemy (void)
    if (m_seeEnemyTime + 4.0 < GetWorldTime ())
       m_states &= ~STATE_SUSPECT_ENEMY;
 
-   if (!FNullEnt (m_enemy))
+   if (!IsEntityNull (m_enemy))
    {
       player = m_enemy;
 
@@ -88,12 +89,12 @@ bool Bot::LookupEnemy (void)
    }
 
    // the old enemy is no longer visible or
-   if (FNullEnt (newEnemy))
+   if (IsEntityNull (newEnemy))
    {
       m_enemyUpdateTime = GetWorldTime () + 0.25;
 
       // search the world for players...
-      for (i = 0; i < GetMaxClients (); i++)
+      for (int i = 0; i < GetMaxClients (); i++)
       {
          if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || (g_clients[i].team == m_team) || (g_clients[i].ent == GetEntity ()))
             continue;
@@ -109,9 +110,9 @@ bool Bot::LookupEnemy (void)
             continue;
 
          // do some blind by smoke grenade
-         if (IsBehindSmokeClouds (player) && m_blindRecognizeTime < GetWorldTime ())
+         if (m_blindRecognizeTime < GetWorldTime () && IsBehindSmokeClouds (player))
          {
-            m_blindRecognizeTime = GetWorldTime () + g_randGen.Float (2.0, 3.0);
+            m_blindRecognizeTime = GetWorldTime () + g_randGen.Float (1.0, 2.0);
 
             if (g_randGen.Long (0, 100) < 50)
                ChatterMessage (Chatter_BehindSmoke);
@@ -160,13 +161,13 @@ bool Bot::LookupEnemy (void)
       }
       else
       {
-         if (m_seeEnemyTime + 3.0 < GetWorldTime () && (m_hasC4 || HasHostage () || !FNullEnt (m_targetEntity)))
+         if (m_seeEnemyTime + 3.0 < GetWorldTime () && (m_hasC4 || HasHostage () || !IsEntityNull (m_targetEntity)))
             RadioMessage (Radio_EnemySpotted);
 
          m_targetEntity = NULL; // stop following when we see an enemy...
 
-         if (g_randGen.Long (0, 100) < m_skill)
-            m_enemySurpriseTime = GetWorldTime () + (m_actualReactionTime / 3);
+         if (g_randGen.Long (0, 100) < m_difficulty * 25)
+            m_enemySurpriseTime = GetWorldTime () + m_actualReactionTime / 3;
          else
             m_enemySurpriseTime = GetWorldTime () + m_actualReactionTime;
 
@@ -190,7 +191,7 @@ bool Bot::LookupEnemy (void)
 
             if (friendBot != NULL)
             {
-               if (friendBot->m_seeEnemyTime + 2.0 < GetWorldTime () || FNullEnt (friendBot->m_lastEnemy))
+               if (friendBot->m_seeEnemyTime + 2.0 < GetWorldTime () || IsEntityNull (friendBot->m_lastEnemy))
                {
                   if (IsVisible (pev->origin, ENT (friendBot->pev)))
                   {
@@ -204,7 +205,7 @@ bool Bot::LookupEnemy (void)
          return true;
       }
    }
-   else if (!FNullEnt (m_enemy))
+   else if (!IsEntityNull (m_enemy))
    {
       newEnemy = m_enemy;
       m_lastEnemy = newEnemy;
@@ -237,26 +238,23 @@ bool Bot::LookupEnemy (void)
       }
 
       // if no enemy visible check if last one shoot able through wall
-      if (yb_shoots_thru_walls.GetBool () && g_randGen.Long (1, 100) < g_skillTab[m_skill / 20].seenShootThruProb)
+      if (yb_shoots_thru_walls.GetBool () && m_difficulty >= 2 && IsShootableThruObstacle (newEnemy->v.origin))
       {
-         if (IsShootableThruObstacle (newEnemy->v.origin))
-         {
-            m_seeEnemyTime = GetWorldTime () - 0.35f;
+         m_seeEnemyTime = GetWorldTime () - 0.35f;
 
-            m_states |= STATE_SUSPECT_ENEMY;
-            m_aimFlags |= AIM_LAST_ENEMY;
+         m_states |= STATE_SUSPECT_ENEMY;
+         m_aimFlags |= AIM_LAST_ENEMY;
 
-            m_enemy = newEnemy;
-            m_lastEnemy = newEnemy;
-            m_lastEnemyOrigin = newEnemy->v.origin;
+         m_enemy = newEnemy;
+         m_lastEnemy = newEnemy;
+         m_lastEnemyOrigin = newEnemy->v.origin;
 
-            return true;
-         }
+         return true;
       }
    }
 
    // check if bots should reload...
-   if ((m_aimFlags <= AIM_PREDICT_ENEMY && m_seeEnemyTime + 3.0 < GetWorldTime () &&  !(m_states & (STATE_SEEING_ENEMY | STATE_HEARING_ENEMY)) && FNullEnt (m_lastEnemy) && FNullEnt (m_enemy) && GetTaskId () != TASK_SHOOTBREAKABLE && GetTaskId () != TASK_PLANTBOMB && GetTaskId () != TASK_DEFUSEBOMB) || g_roundEnded)
+   if ((m_aimFlags <= AIM_PREDICT_ENEMY && m_seeEnemyTime + 3.0 < GetWorldTime () &&  !(m_states & (STATE_SEEING_ENEMY | STATE_HEARING_ENEMY)) && IsEntityNull (m_lastEnemy) && IsEntityNull (m_enemy) && GetTaskId () != TASK_SHOOTBREAKABLE && GetTaskId () != TASK_PLANTBOMB && GetTaskId () != TASK_DEFUSEBOMB) || g_roundEnded)
    {
       if (!m_reloadState)
          m_reloadState = RELOAD_PRIMARY;
@@ -282,54 +280,60 @@ Vector Bot::GetAimPosition (void)
 
    // get enemy position initially
    Vector targetOrigin = m_enemy->v.origin;
+   Vector randomize = nullvec;
+
+   const Vector &adjust = Vector (g_randGen.Float (m_enemy->v.mins.x * 0.5f, m_enemy->v.maxs.x * 0.5f), g_randGen.Float (m_enemy->v.mins.y * 0.5f, m_enemy->v.maxs.y * 0.5f), g_randGen.Float (m_enemy->v.mins.z * 0.5f, m_enemy->v.maxs.z * 0.5f));
 
    // do not aim at head, at long distance (only if not using sniper weapon)
-   if ((m_visibility & VISIBLE_BODY) && !UsesSniper () && !UsesPistol () && (distance > (yb_hardcore_mode.GetBool () ? 3400.0 : 2600.0)))
+   if ((m_visibility & VISIBLE_BODY) && !UsesSniper () && !UsesPistol () && (distance > (m_difficulty == 4 ? 2400.0 : 1200.0)))
       m_visibility &= ~VISIBLE_HEAD;
 
    // if we only suspect an enemy behind a wall take the worst skill
    if ((m_states & STATE_SUSPECT_ENEMY) && !(m_states & STATE_SEEING_ENEMY))
-      targetOrigin = targetOrigin + Vector (g_randGen.Float (m_enemy->v.mins.x * 0.5f, m_enemy->v.maxs.x * 0.5f), g_randGen.Float (m_enemy->v.mins.y * 0.5f, m_enemy->v.maxs.y * 0.5f), g_randGen.Float (m_enemy->v.mins.z * 0.5f, m_enemy->v.maxs.z * 0.5f));
+      targetOrigin = targetOrigin + adjust;
    else
    {
       // now take in account different parts of enemy body
       if (m_visibility & (VISIBLE_HEAD | VISIBLE_BODY)) // visible head & body
       {
+         int headshotFreq[5] = { 20, 40, 60, 90, 100 };
+
          // now check is our skill match to aim at head, else aim at enemy body
-         if ((g_randGen.Long (1, 100) < g_skillTab[m_skill / 20].headshotFrequency) || UsesPistol ())
+         if ((g_randGen.Long (1, 100) < headshotFreq[m_difficulty]) || UsesPistol ())
             targetOrigin = targetOrigin + m_enemy->v.view_ofs + Vector (0.0f, 0.0f, GetZOffset (distance));
          else
-            targetOrigin = targetOrigin + Vector (0.0f, 0.0f, 3.52f);
+            targetOrigin = targetOrigin + Vector (0.0f, 0.0f, GetZOffset (distance));
       }
-      else if (m_visibility & VISIBLE_HEAD) // visible only head
-         targetOrigin = targetOrigin + m_enemy->v.view_ofs + Vector (0.0f, 0.0f, GetZOffset (distance));
       else if (m_visibility & VISIBLE_BODY) // visible only body
-         targetOrigin = targetOrigin + Vector (0.0f, 0.0f, 3.52f);
+         targetOrigin = targetOrigin + Vector (0.0f, 0.0f, GetZOffset (distance));
       else if (m_visibility & VISIBLE_OTHER) // random part of body is visible
          targetOrigin = m_enemyOrigin;
+      else if (m_visibility & VISIBLE_HEAD) // visible only head
+         targetOrigin = targetOrigin + m_enemy->v.view_ofs + Vector (0.0f, 0.0f, GetZOffset (distance));
       else // something goes wrong, use last enemy origin
+      {
          targetOrigin = m_lastEnemyOrigin;
-
+         
+         if (m_difficulty < 3)
+            randomize = adjust;
+      }
       m_lastEnemyOrigin = targetOrigin;
    }
+   const Vector &velocity = UsesSniper () ? nullvec :  (1.0f * m_frameInterval * m_enemy->v.velocity - 1.0 * m_frameInterval * pev->velocity).SkipZ ();
 
-   if (!yb_hardcore_mode.GetBool ())
+   if (m_difficulty < 3 && randomize != nullvec)
    {
-      float divOffs, distance = (m_enemyOrigin - pev->origin).GetLength ();
+      float divOffs = (m_enemyOrigin - pev->origin).GetLength ();
 
       if (pev->fov < 40)
-         divOffs = distance / 2000;
+         divOffs = divOffs / 2000;
       else if (pev->fov < 90)
-         divOffs = distance / 1000;
+         divOffs = divOffs / 1000;
       else
-         divOffs = distance / 500;
-
-      targetOrigin.x += divOffs * g_randGen.Float (-g_skillTab[m_skill / 20].aimOffs_X, g_skillTab[m_skill / 20].aimOffs_X);
-      targetOrigin.y += divOffs * g_randGen.Float (-g_skillTab[m_skill / 20].aimOffs_Y, g_skillTab[m_skill / 20].aimOffs_Y);
-      targetOrigin.z += divOffs * g_randGen.Float (-g_skillTab[m_skill / 20].aimOffs_Z, g_skillTab[m_skill / 20].aimOffs_Z);
+         divOffs = divOffs / 500;
 
       // randomize the target position
-      m_enemyOrigin = targetOrigin + ((pev->velocity - m_enemy->v.velocity).SkipZ () * m_frameInterval * 1.2);
+      m_enemyOrigin = divOffs * randomize + velocity;
    }
    else
       m_enemyOrigin = targetOrigin;
@@ -353,7 +357,7 @@ float Bot::GetZOffset (float distance)
    const float BurstDistance = 300.0f;
    const float DoubleBurstDistance = BurstDistance * 2;
 
-   float result = 3.0f;
+   float result = 3.5f;
 
    if (distance < 2800.0f && distance > DoubleBurstDistance)
    {
@@ -371,7 +375,7 @@ float Bot::GetZOffset (float distance)
       else if (zoomableRifle) result = 3.5f;
       else if (pistol) result = 6.5f;
       else if (submachine) result = 3.5f;
-      else if (rifle) result = 1.0f;
+      else if (rifle) result = 1.6f;
       else if (m249) result = -1.0f;
       else if (shotgun) result = 10.0f;
    }
@@ -400,7 +404,7 @@ bool Bot::IsFriendInLineOfFire (float distance)
    TraceLine (EyePosition (), EyePosition () + pev->v_angle.Normalize () * distance, false, false, GetEntity (), &tr);
 
    // check if we hit something
-   if (!FNullEnt (tr.pHit))
+   if (!IsEntityNull (tr.pHit))
    {
       int playerIndex = IndexOfEntity (tr.pHit) - 1;
 
@@ -428,41 +432,49 @@ bool Bot::IsFriendInLineOfFire (float distance)
 
 bool Bot::IsShootableThruObstacle (Vector dest)
 {
-   // this function returns if enemy can be shoot through some obstacle
+   // this function returns true if enemy can be shoot through some obstacle, false otherwise.
+   // credits goes to Immortal_BLG
 
-   if (m_skill <= 60 || !IsWeaponShootingThroughWall (m_currentWeapon))
+   if (m_difficulty < 2)
       return false;
 
-   Vector source = EyePosition ();
-   Vector direction = (dest - source).Normalize ();  // 1 unit long
-   Vector point = nullvec;
+   int penetratePower = GetWeaponPenetrationPower (m_currentWeapon);
 
-   int thikness = 0;
-   int numHits = 0;
+   if (penetratePower == 0)
+      return false;
+
+   // set conditions....
+   Vector source = EyePosition ();
+   const Vector &direction = (dest - source).Normalize () * 8.0f;	// 8 units long
 
    TraceResult tr;
-   TraceLine (source, dest, true, true, GetEntity (), &tr);
 
-   while (tr.flFraction != 1.0 && numHits < 3)
+   do
    {
-      numHits++;
-      thikness++;
+      // trace from the bot's eyes to destination...
+      TraceLine (source, dest, true, GetEntity (), &tr);
 
-      point = tr.vecEndPos + direction;
-
-      while (POINT_CONTENTS (point) == CONTENTS_SOLID && thikness < 98)
+      if (tr.fStartSolid)
       {
-         point = point + direction;
-         thikness++;
-      }
-      TraceLine (point, dest, true, true, GetEntity (), &tr);
-   }
+         if (tr.fAllSolid)
+            return false;
 
-   if (numHits < 3 && thikness < 98)
-   {
-      if ((dest - point).GetLengthSquared () < 13143)
-         return true;
-   }
+         // move 8 units closer to the destination....
+         source += direction;
+      }
+      else
+      {
+         // check if line hit anything
+         if (tr.flFraction == 1.0f)
+            return true;
+
+         --penetratePower;
+
+         // move 8 units closer to the destination....
+         source = tr.vecEndPos + direction;
+      }
+   } while (penetratePower > 0);
+
    return false;
 }
 
@@ -479,21 +491,35 @@ bool Bot::DoFirePause (float distance, FireDelay *fireDelay)
    if (m_firePause > GetWorldTime ())
       return true;
 
+   float offset = 0.0f;
+
+   const float BurstDistance = 300.0f;
+   const float DoubleBurstDistance = BurstDistance * 2;
+
+   if (distance < BurstDistance) // KWo - 09.04.2010
+      return false;
+   else if (distance < 2 * BurstDistance)
+      offset = 10.0;
+   else
+      offset = 5.0;
+
+   float angle = sqrtf ((fabsf (pev->punchangle.y) * Math::MATH_PI / 180.0) * (fabsf (pev->punchangle.y) * Math::MATH_PI / 180.0) + (fabsf (pev->punchangle.x) * Math::MATH_PI / 180.0) * (fabsf (pev->punchangle.x) * Math::MATH_PI / 180.0));
+
    // check if we need to compensate recoil
-   if (tanf ((fabsf (pev->punchangle.y) + fabsf (pev->punchangle.x)) * Math::MATH_PI / 360.0) * distance > 20 + m_skillOffset)
+   if (tanf (angle) * distance > offset + 30.0f + ((100 - (m_difficulty * 25)) / 100.f))
    {
-      if (m_firePause < GetWorldTime () - 0.4)
-         m_firePause = GetWorldTime () + g_randGen.Float (0.4, 0.4 + 1.2 * m_skillOffset);
+      if (m_firePause < GetWorldTime () - 0.4f)
+         m_firePause = GetWorldTime () + g_randGen.Float (0.4f, 0.4f + 0.3f * ((100 - (m_difficulty * 25)) / 100.f));
 
       return true;
    }
 
-   if (!yb_hardcore_mode.GetBool () && fireDelay->maxFireBullets + g_randGen.Long (0, 1) <= m_burstShotsFired)
+   if (m_difficulty < 3 && fireDelay->maxFireBullets + g_randGen.Long (0, 1) <= m_burstShotsFired)
    {
       float delayTime = 0.1 * distance / fireDelay->minBurstPauseFactor;
 
-      if (delayTime > (125.0 / (m_skill + 1)))
-         delayTime = 125.0 / (m_skill + 1);
+      if (delayTime > (125.0 / (m_difficulty * 25 + 1)))
+         delayTime = 125.0 / (m_difficulty * 25 + 1);
 
       m_firePause = GetWorldTime () + delayTime;
       m_burstShotsFired = 0;
@@ -516,7 +542,7 @@ void Bot::FireWeapon (void)
    }
 
    // or if friend in line of fire, stop this too but do not update shoot time
-   if (!FNullEnt (m_enemy) && IsFriendInLineOfFire (distance))
+   if (!IsEntityNull (m_enemy) && IsFriendInLineOfFire (distance))
       return;
 
    FireDelay *delay = &g_fireDelay[0];
@@ -531,8 +557,8 @@ void Bot::FireWeapon (void)
    if (yb_jasonmode.GetBool ())
       goto WeaponSelectEnd;
 
-   // use knife if near and good skill (l33t dude!)
-   if (m_skill > 80 && pev->health > 80 && !FNullEnt (enemy) && pev->health >= enemy->v.health && distance < 100.0f && !IsGroupOfEnemies (pev->origin))
+   // use knife if near and good difficulty (l33t dude!)
+   if (m_difficulty >= 3 && pev->health > 80 && !IsEntityNull (enemy) && pev->health >= enemy->v.health && distance < 100.0f && !IsGroupOfEnemies (pev->origin))
       goto WeaponSelectEnd;
 
    // loop through all the weapons until terminator is found...
@@ -585,7 +611,7 @@ void Bot::FireWeapon (void)
    if (IsEnemyProtectedByShield (m_enemy) && !(m_currentWeapon == WEAPON_KNIFE) && IsEnemyViewable (m_enemy))
    {        
       if (!g_bombPlanted && g_randGen.Float (0, 100) < 50)
-         StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + g_randGen.Float (10, 20), true);
+         StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + g_randGen.Float (5, 10), true);
 
    }
 
@@ -597,7 +623,7 @@ void Bot::FireWeapon (void)
       
       if (distance >= 750 || ((m_enemy->v.button & IN_ATTACK) && !IsShieldDrawn()))
       {
-         pev->button |= (IN_ATTACK2 | IN_DUCK); // draw the shield
+         pev->button |= IN_ATTACK2; // draw the shield
          pev->button &= ~IN_DUCK;
 
          if (IsGroupOfEnemies (pev->origin, 3, 550) || (GetNearbyEnemiesNearPosition (pev->origin, 550) >= 3 && IsShieldDrawn ()))
@@ -614,9 +640,10 @@ void Bot::FireWeapon (void)
             StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + g_randGen.Float (10, 20), true);
          }
       }
-      else if (IsShieldDrawn () || (!FNullEnt (m_enemy) && (m_enemy->v.button & IN_RELOAD) || !IsEnemyViewable (m_enemy)))
+      else if (IsShieldDrawn () || (!IsEntityNull (m_enemy) && (m_enemy->v.button & IN_RELOAD) || !IsEnemyViewable (m_enemy)))
       { 
          pev->button |= (IN_ATTACK2 | IN_DUCK); // draw out the shield
+
          if (!g_bombPlanted)
             StartTask (TASK_SEEKCOVER, TASKPRI_SEEKCOVER, -1, GetWorldTime () + g_randGen.Float (10, 25), true);
       }   
@@ -668,7 +695,7 @@ WeaponSelectEnd:
    {
       if ((distance >= 750) && !IsShieldDrawn ())
          pev->button |= IN_ATTACK2; // draw the shield
-      else if (IsShieldDrawn () || (!FNullEnt (m_enemy) && (m_enemy->v.button & IN_RELOAD) || !IsEnemyViewable(m_enemy)))
+      else if (IsShieldDrawn () || (!IsEntityNull (m_enemy) && (m_enemy->v.button & IN_RELOAD) || !IsEnemyViewable(m_enemy)))
          pev->button |= IN_ATTACK2; // draw out the shield
 
       m_shieldCheckTime = GetWorldTime () + 1.0;
@@ -687,14 +714,14 @@ WeaponSelectEnd:
 
       m_zoomCheckTime = GetWorldTime ();
 
-      if (!FNullEnt (m_enemy) && (pev->velocity.x != 0 || pev->velocity.y != 0 || pev->velocity.z != 0) && (pev->basevelocity.x != 0 || pev->basevelocity.y != 0 || pev->basevelocity.z != 0))
+      if (!IsEntityNull (m_enemy) && (pev->velocity.x != 0 || pev->velocity.y != 0 || pev->velocity.z != 0) && (pev->basevelocity.x != 0 || pev->basevelocity.y != 0 || pev->basevelocity.z != 0))
       {
          m_moveSpeed = 0.0;
          m_strafeSpeed = 0.0;
          m_navTimeset = GetWorldTime ();
       }
    }
-   else if (UsesZoomableRifle () && m_zoomCheckTime < GetWorldTime () && m_skill < 90) // else is the bot holding a zoomable rifle?
+   else if (UsesZoomableRifle () && m_zoomCheckTime < GetWorldTime () && m_difficulty < 3) // else is the bot holding a zoomable rifle?
    {
       if (distance > 800 && pev->fov >= 90) // should the bot switch to zoomed mode?
          pev->button |= IN_ATTACK2;
@@ -717,15 +744,16 @@ WeaponSelectEnd:
    }
 
    const float baseDelay = delay[chosenWeaponIndex].primaryBaseDelay;
-   const float minDelay = delay[chosenWeaponIndex].primaryMinDelay[abs ((m_skill / 20) - 5)];
-   const float maxDelay = delay[chosenWeaponIndex].primaryMaxDelay[abs ((m_skill / 20) - 5)];
+
+   const float minDelay = delay[chosenWeaponIndex].primaryMinDelay[abs (m_difficulty - 4)];
+   const float maxDelay = delay[chosenWeaponIndex].primaryMaxDelay[abs (m_difficulty - 4)];
 
    // need to care for burst fire?
    if (distance < 256.0 || m_blindTime > GetWorldTime ())
    {
       if (selectId == WEAPON_KNIFE)
       {
-         if (distance < 64.0)
+         if (distance < 102.0f)
          {
             if (g_randGen.Long (1, 100) < 30)
                pev->button |= IN_ATTACK; // use primary attack
@@ -790,7 +818,7 @@ WeaponSelectEnd:
          if (!IsEnemyProtectedByShield(m_lastEnemy))
          {  
             pev->button &= ~IN_ATTACK;
-            LookupEnemy();;
+            LookupEnemy();
          } 
 
          pev->button |= IN_ATTACK;
@@ -807,6 +835,9 @@ bool Bot::IsWeaponBadInDistance (int weaponIndex, float distance)
    // to attack our enemy, since current weapon is not very good in this situation.
 
    int weaponID = g_weaponSelect[weaponIndex].id;
+
+   if (weaponID == WEAPON_KNIFE)
+	   return false;
 
    // check is ammo available for secondary weapon
    if (m_ammoInClip[g_weaponSelect[GetBestSecondaryWeaponCarried ()].id] >= 1)
@@ -878,7 +909,7 @@ void Bot::FocusEnemy (void)
 void Bot::CombatFight (void)
 {
    // no enemy? no need to do strafing
-   if (FNullEnt (m_enemy))
+   if (IsEntityNull (m_enemy))
       return;
 
    Vector enemyOrigin = m_lookAt;
@@ -890,7 +921,7 @@ void Bot::CombatFight (void)
 
    float distance = enemyOrigin.GetLength ();  // how far away is the enemy scum?
 
-   if (m_timeWaypointMove + m_frameInterval < GetWorldTime ())
+   if (m_timeWaypointMove + m_frameInterval + 0.5f < GetWorldTime ())
    {
       if (m_currentWeapon == WEAPON_KNIFE)
          return;
@@ -916,17 +947,17 @@ void Bot::CombatFight (void)
          m_fearLevel += 0.5;
 
          CheckGrenades();
-         CheckThrow(EyePosition(),m_throw);
+         CheckThrow (EyePosition(), m_throw);
 
-         if (m_states & (STATE_SEEING_ENEMY) && !m_hasC4)
-            StartTask(TASK_SEEKCOVER, TASKPRI_SEEKCOVER,-1, g_randGen.Long (10, 20), true);
+         if ((m_states & STATE_SEEING_ENEMY) && !m_hasC4)
+            StartTask (TASK_SEEKCOVER, TASKPRI_SEEKCOVER, -1, g_randGen.Long (10, 20), true);
       }
        // If using sniper do not jump around !
        if (UsesSniper () && m_states & STATE_SEEING_ENEMY || IsEnemyViewable (m_enemy) && !m_isStuck)
          pev->button &= ~IN_JUMP;
 
       // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
-      if (approach < 30 && !g_bombPlanted && (::IsInViewCone (pev->origin, m_enemy) || m_isVIP))
+      if (approach < 30 && !g_bombPlanted && (IsInViewCone (m_enemy->v.origin) || m_isVIP))
       {
          m_moveSpeed = -pev->maxspeed;
 
@@ -978,7 +1009,7 @@ void Bot::CombatFight (void)
       {
          if (m_lastFightStyleCheck + 3.0 < GetWorldTime ())
          {
-            if (g_randGen.Long (0, 100) < 65)
+            if (g_randGen.Long (0, 100) < 50)
                m_fightStyle = 1;
             else
                m_fightStyle = 0;
@@ -987,7 +1018,7 @@ void Bot::CombatFight (void)
          }
       }
 
-      if ((m_skill > 50 && m_fightStyle == 0) || ((pev->button & IN_RELOAD) || m_isReloading) || (UsesPistol () && distance < 500.0))
+      if ((m_difficulty >= 1 && m_fightStyle == 0) || ((pev->button & IN_RELOAD) || m_isReloading) || (UsesPistol () && distance < 500.0))
       {
          if (m_strafeSetTime < GetWorldTime ())
          {
@@ -1005,23 +1036,23 @@ void Bot::CombatFight (void)
             if (g_randGen.Long (1, 100) < 30)
                m_combatStrafeDir ^= 1;
 
-            m_strafeSetTime = GetWorldTime () + g_randGen.Float (0.5, 2.5);
+            m_strafeSetTime = GetWorldTime () + g_randGen.Float (0.5, 3.0);
          }
 
          if (m_combatStrafeDir == 0)
          {
             if (!CheckWallOnLeft ())
-               m_strafeSpeed = -160.0;
+               m_strafeSpeed = -pev->maxspeed;
             else
             {
                m_combatStrafeDir ^= 1;
-               m_strafeSetTime = GetWorldTime () + 0.7;
+               m_strafeSetTime = GetWorldTime () + 1.0;
             }
          }
          else
          {
             if (!CheckWallOnRight ())
-               m_strafeSpeed = 160.0;
+               m_strafeSpeed = -pev->maxspeed;
             else
             {
                m_combatStrafeDir ^= 1;
@@ -1029,10 +1060,10 @@ void Bot::CombatFight (void)
             }
          }
 
-         if (m_skill > 80 && (m_jumpTime + 5.0 < GetWorldTime () && IsOnFloor () && g_randGen.Long (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.GetLength2D () > 150.0))
+         if (m_difficulty >= 3 && (m_jumpTime + 5.0 < GetWorldTime () && IsOnFloor () && g_randGen.Long (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.GetLength2D () > 150.0))
             pev->button |= IN_JUMP;
 
-         if (m_moveSpeed != 0.0 && distance > 150.0)
+         if (m_moveSpeed > 0.0 && distance > 150.0)
             m_moveSpeed = 0.0;
       }
       else if (m_fightStyle == 1)
@@ -1049,7 +1080,7 @@ void Bot::CombatFight (void)
          int nearestToEnemyPoint = g_waypoint->FindNearest (m_enemy->v.origin);
 
          if (shouldDuck && GetTaskId () != TASK_SEEKCOVER && GetTaskId () != TASK_HUNTENEMY && (m_visibility & VISIBLE_BODY) && !(m_visibility & VISIBLE_OTHER) && g_waypoint->IsDuckVisible (m_currentWaypointIndex, nearestToEnemyPoint))
-            m_duckTime = GetWorldTime () + (m_frameInterval * 3.5);
+            m_duckTime = GetWorldTime () + 1.0f;
 
          m_moveSpeed = 0.0;
          m_strafeSpeed = 0.0;
@@ -1063,16 +1094,16 @@ void Bot::CombatFight (void)
       m_strafeSpeed = 0.0;
    }
 
-   if (m_moveSpeed != 0.0)
+   if (m_moveSpeed > 0.0f)
       m_moveSpeed = GetWalkSpeed ();
 
    if (m_isReloading)
    {
       m_moveSpeed = -pev->maxspeed;
-      m_duckTime = GetWorldTime () - (m_frameInterval * 4.0);
+      m_duckTime = GetWorldTime () - 1.0f;
    }
 
-   if (!IsInWater () && !IsOnLadder () && (m_moveSpeed != 0 || m_strafeSpeed != 0.0f))
+   if (!IsInWater () && !IsOnLadder () && (m_moveSpeed > 0.0f || m_strafeSpeed >= 0.0f))
    {
       MakeVectors (pev->v_angle);
 
@@ -1121,7 +1152,7 @@ bool Bot::IsEnemyProtectedByShield (edict_t *enemy)
 {
    // this function returns true, if enemy protected by the shield
 
-   if (FNullEnt (enemy) || (HasShield () && IsShieldDrawn ()))
+   if (IsEntityNull (enemy) || (HasShield () && IsShieldDrawn ()))
       return false;
 
    // check if enemy has shield and this shield is drawn

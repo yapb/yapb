@@ -1,4 +1,4 @@
-//
+﻿//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -14,15 +14,13 @@ ConVar yb_autovacate ("yb_autovacate", "-1");
 ConVar yb_quota ("yb_quota", "0");
 ConVar yb_quota_match ("yb_quota_match", "0");
 ConVar yb_quota_match_max ("yb_quota_match_max", "0");
-ConVar yb_join_after_player ("yb_join_after_player", "0");
 
+ConVar yb_join_after_player ("yb_join_after_player", "0", VT_NOSERVER);
 ConVar yb_join_team ("yb_join_team", "any");
-ConVar yb_name_prefix ("yb_name_prefix", "");
 
-ConVar yb_minskill ("yb_minskill", "60");
-ConVar yb_maxskill ("yb_maxskill", "100");
+ConVar yb_name_prefix ("yb_name_prefix", "", VT_NOSERVER);
+ConVar yb_difficulty ("yb_difficulty", "4");
 
-ConVar yb_skill_tags ("yb_skill_tags", "0");
 ConVar yb_latency_display ("yb_latency_display", "2");
 
 BotManager::BotManager (void)
@@ -66,9 +64,9 @@ void BotManager::CallGameEntity (entvars_t *vars)
       (*playerFunction) (vars);
 }
 
-int BotManager::CreateBot (String name, int skill, int personality, int team, int member)
+int BotManager::CreateBot (String name, int difficulty, int personality, int team, int member)
 {
-   // this function completely prepares bot entity (edict) for creation, creates team, skill, sets name etc, and
+   // this function completely prepares bot entity (edict) for creation, creates team, difficulty, sets name etc, and
    // then sends result to bot constructor
 
    
@@ -86,11 +84,14 @@ int BotManager::CreateBot (String name, int skill, int personality, int team, in
       return 0;
    }
 
-   if (skill < 0 || skill > 100)
-      skill = g_randGen.Long (yb_minskill.GetInt (), yb_maxskill.GetInt ());
+   if (difficulty < 0 || difficulty > 4)
+      difficulty = yb_difficulty.GetInt ();
 
-   if (skill > 100 || skill < 0)
-      skill = g_randGen.Long (0, 100);
+   if (difficulty < 0 || difficulty > 4)
+   {
+      difficulty = g_randGen.Long (3, 4);
+      yb_difficulty.SetInt (difficulty);
+   }
 
    if (personality < 0 || personality > 2)
    {
@@ -117,13 +118,16 @@ int BotManager::CreateBot (String name, int skill, int personality, int team, in
             if (nameFound)
                break;
 
-            BotName *name = &g_botNames.GetRandomElement ();
+            BotName *pickedName = &g_botNames.GetRandomElement ();
 
-            if (name == NULL || (name != NULL && name->used))
+            if (pickedName == NULL)
                continue;
 
-            name->used = nameFound = true;
-            strcpy (outputName, name->name);
+            if (pickedName->used)
+               continue;
+
+            pickedName->used = nameFound = true;
+            strcpy (outputName, pickedName->name);
          }
       }
       else
@@ -132,25 +136,19 @@ int BotManager::CreateBot (String name, int skill, int personality, int team, in
    else
       strncpy (outputName, name, 21);
 
-   if (!IsNullString (yb_name_prefix.GetString ()) || yb_skill_tags.GetBool ())
+   if (!IsNullString (yb_name_prefix.GetString ()))
    {
       char prefixedName[33]; // temp buffer for storing modified name
 
       if (!IsNullString (yb_name_prefix.GetString ()))
          sprintf (prefixedName, "%s %s", yb_name_prefix.GetString (), outputName);
 
-      else if (yb_skill_tags.GetBool ())
-         sprintf  (prefixedName, "%s (%d)", outputName, skill);
-
-      else if (!IsNullString (yb_name_prefix.GetString ()) && yb_skill_tags.GetBool ())
-         sprintf (prefixedName, "%s %s (%d)", yb_name_prefix.GetString (), outputName, skill);
-
       // buffer has been modified, copy to real name
       if (!IsNullString (prefixedName))
          strcpy (outputName, prefixedName);
    }
 
-   if (FNullEnt ((bot = (*g_engfuncs.pfnCreateFakeClient) (outputName))))
+   if (IsEntityNull ((bot = (*g_engfuncs.pfnCreateFakeClient) (outputName))))
    {
       CenterPrint ("Maximum players reached (%d/%d). Unable to create Bot.", GetMaxClients (), GetMaxClients ());
       return 2;
@@ -161,12 +159,12 @@ int BotManager::CreateBot (String name, int skill, int personality, int team, in
    InternalAssert (index >= 0 && index <= 32); // check index
    InternalAssert (m_bots[index] == NULL); // check bot slot
 
-   m_bots[index] = new Bot (bot, skill, personality, team, member);
+   m_bots[index] = new Bot (bot, difficulty, personality, team, member);
 
    if (m_bots == NULL)
       TerminateOnMalloc ();
 
-   ServerPrint ("Connecting Bot... (Skill %d)", skill);
+   ServerPrint ("Connecting Bot...");
 
    return 1;
 }
@@ -174,7 +172,7 @@ int BotManager::CreateBot (String name, int skill, int personality, int team, in
 int BotManager::GetIndex (edict_t *ent)
 {
    // this function returns index of bot (using own bot array)
-   if (FNullEnt (ent))
+   if (IsEntityNull (ent))
       return -1;
 
    int index = IndexOfEntity (ent) - 1;
@@ -257,7 +255,7 @@ void BotManager::Think (void)
    }
 }
 
-void BotManager::AddBot (const String &name, int skill, int personality, int team, int member)
+void BotManager::AddBot (const String &name, int difficulty, int personality, int team, int member)
 {
    // this function putting bot creation process to queue to prevent engine crashes
 
@@ -265,7 +263,7 @@ void BotManager::AddBot (const String &name, int skill, int personality, int tea
 
    // fill the holder
    bot.name = name;
-   bot.skill = skill;
+   bot.difficulty = difficulty;
    bot.personality = personality;
    bot.team = team;
    bot.member = member;
@@ -278,18 +276,18 @@ void BotManager::AddBot (const String &name, int skill, int personality, int tea
       yb_quota.SetInt (GetBotsNum () + 1);
 }
 
-void BotManager::AddBot (String name, String skill, String personality, String team, String member)
+void BotManager::AddBot (String name, String difficulty, String personality, String team, String member)
 {
    // this function is same as the function above, but accept as parameters string instead of integers
 
    CreateQueue bot;
    const String &any = "*";
 
-   bot.name = (name.IsEmpty () || (name == any)) ? String ("\0") : name;
-   bot.skill = (skill.IsEmpty () || (skill == any)) ? -1 : skill.ToInt ();
-   bot.team = (team.IsEmpty () || (team == any)) ? -1 : team.ToInt ();
-   bot.member = (member.IsEmpty () || (member == any)) ? -1 : member.ToInt ();
-   bot.personality = (personality.IsEmpty () || (personality == any)) ? -1 : personality.ToInt ();
+   bot.name = (name.IsEmpty () || name == any) ? String ("\0") : name;
+   bot.difficulty = (difficulty.IsEmpty () || difficulty == any) ? -1 : difficulty.ToInt ();
+   bot.team = (team.IsEmpty () || team == any) ? -1 : team.ToInt ();
+   bot.member = (member.IsEmpty () || member == any) ? -1 : member.ToInt ();
+   bot.personality = (personality.IsEmpty () || personality == any) ? -1 : personality.ToInt ();
 
    m_creationTab.Push (bot);
 
@@ -320,12 +318,12 @@ void BotManager::MaintainBotQuota (void)
    if (!m_creationTab.IsEmpty () && m_maintainTime < GetWorldTime ())
    {
       CreateQueue last = m_creationTab.Pop ();
-      int resultOfCall = CreateBot (last.name, last.skill, last.personality, last.team, last.member);
+      int resultOfCall = CreateBot (last.name, last.difficulty, last.personality, last.team, last.member);
 
       // check the result of creation
       if (resultOfCall == 0)
       {
-         m_creationTab.RemoveAll (); // something worng with waypoints, reset tab of creation
+         m_creationTab.RemoveAll (); // something wrong with waypoints, reset tab of creation
          yb_quota.SetInt (0); // reset quota
       }
       else if (resultOfCall == 2)
@@ -392,7 +390,7 @@ void BotManager::InitQuota (void)
    m_creationTab.RemoveAll ();
 }
 
-void BotManager::FillServer (int selection, int personality, int skill, int numToAdd)
+void BotManager::FillServer (int selection, int personality, int difficulty, int numToAdd)
 {
    // this function fill server with bots, with specified team & personality
 
@@ -420,26 +418,7 @@ void BotManager::FillServer (int selection, int personality, int skill, int numT
    int toAdd = numToAdd == -1 ? GetMaxClients () - (GetHumansNum () + GetBotsNum ()) : numToAdd;
 
    for (int i = 0; i <= toAdd; i++)
-   {
-      // since we got constant skill from menu (since creation process call automatic), we need to manually
-      // randomize skill here, on given skill there.
-      int randomizedSkill = 0;
-
-      if (skill >= 0 && skill <= 20)
-         randomizedSkill = g_randGen.Long (0, 20);
-      else if (skill > 20 && skill <= 40)
-         randomizedSkill = g_randGen.Long (20, 40);
-      else if (skill > 40 && skill <= 60)
-         randomizedSkill = g_randGen.Long (40, 60);
-      else if (skill > 60 && skill <= 80)
-         randomizedSkill = g_randGen.Long (60, 80);
-      else if (skill > 80 && skill <= 99)
-         randomizedSkill = g_randGen.Long (80, 99);
-      else if (skill == 100)
-         randomizedSkill = skill;
-
-      AddBot ("", randomizedSkill, personality, selection, -1);
-   }
+      AddBot ("", difficulty, personality, selection, -1);
 
    yb_quota.SetInt (toAdd);
    yb_quota_match.SetInt (0);
@@ -503,16 +482,16 @@ void BotManager::RemoveMenu (edict_t *ent, int selection)
 
    for (int i = ((selection - 1) * 8); i < selection * 8; i++)
    {
-      if ((m_bots[i] != NULL) && !FNullEnt (m_bots[i]->GetEntity ()))
+      if ((m_bots[i] != NULL) && !IsEntityNull (m_bots[i]->GetEntity ()))
       {
          validSlots |= 1 << (i - ((selection - 1) * 8));
          sprintf (buffer, "%s %1.1d. %s%s\n", buffer, i - ((selection - 1) * 8) + 1, STRING (m_bots[i]->pev->netname), GetTeam (m_bots[i]->GetEntity ()) == TEAM_CF ? " \\y(CT)\\w" : " \\r(T)\\w");
       }
       else
-         sprintf (buffer, "%s\\d %1.1d. Not a YaPB\\w\n", buffer, i - ((selection - 1) * 8) + 1);
+         sprintf (buffer, "%s\\d %1.1d. Not a Bot\\w\n", buffer, i - ((selection - 1) * 8) + 1);
    }
 
-   sprintf (tempBuffer, "\\yYaPB Remove Menu (%d/4):\\w\n\n%s\n%s 0. Back", selection, buffer, (selection == 4) ? "" : " 9. More...\n");
+   sprintf (tempBuffer, "\\yBots Remove Menu (%d/4):\\w\n\n%s\n%s 0. Back", selection, buffer, (selection == 4) ? "" : " 9. More...\n");
 
    switch (selection)
    {
@@ -633,7 +612,7 @@ void BotManager::ListBots (void)
 {
    // this function list's bots currently playing on the server
 
-   ServerPrintNoTag ("%-3.5s %-9.13s %-17.18s %-3.4s %-3.4s %-3.4s", "index", "name", "personality", "team", "skill", "frags");
+   ServerPrintNoTag ("%-3.5s %-9.13s %-17.18s %-3.4s %-3.4s %-3.4s", "index", "name", "personality", "team", "difficulty", "frags");
 
    for (int i = 0; i < GetMaxClients (); i++)
    {
@@ -645,7 +624,7 @@ void BotManager::ListBots (void)
          Bot *bot = GetBot (player);
 
          if (bot != NULL)
-            ServerPrintNoTag ("[%-3.1d] %-9.13s %-17.18s %-3.4s %-3.1d %-3.1d", i, STRING (player->v.netname), bot->m_personality == PERSONALITY_RUSHER ? "rusher" : bot->m_personality == PERSONALITY_NORMAL ? "normal" : "careful", GetTeam (player) != 0 ? "CT" : "T", bot->m_skill, static_cast <int> (player->v.frags));
+            ServerPrintNoTag ("[%-3.1d] %-9.13s %-17.18s %-3.4s %-3.1d %-3.1d", i, STRING (player->v.netname), bot->m_personality == PERSONALITY_RUSHER ? "rusher" : bot->m_personality == PERSONALITY_NORMAL ? "normal" : "careful", GetTeam (player) != 0 ? "CT" : "T", bot->m_difficulty, static_cast <int> (player->v.frags));
       }
    }
 }
@@ -735,10 +714,7 @@ void BotManager::Free (void)
    // this function free all bots slots (used on server shutdown)
 
    for (int i = 0; i < 32; i++)
-   {
-      if (m_bots[i] != NULL)
-         Free (i);
-   }
+      Free (i);
 }
 
 void BotManager::Free (int index)
@@ -749,7 +725,7 @@ void BotManager::Free (int index)
    m_bots[index] = NULL;
 }
 
-Bot::Bot (edict_t *bot, int skill, int personality, int team, int member)
+Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member)
 {
    // this function does core operation of creating bot, it's called by CreateBot (),
    // when bot setup completed, (this is a bot class constructor)
@@ -759,7 +735,7 @@ Bot::Bot (edict_t *bot, int skill, int personality, int team, int member)
 
    memset (this, 0, sizeof (Bot));
 
-   pev = VARS (bot);
+   pev = &bot->v;
 
    if (bot->pvPrivateData != NULL)
       FREE_PRIVATE (bot);
@@ -771,18 +747,7 @@ Bot::Bot (edict_t *bot, int skill, int personality, int team, int member)
    BotManager::CallGameEntity (&bot->v);
 
    // set all info buffer keys for this bot
-   char *buffer = GET_INFOKEYBUFFER (bot);
-
-   SET_CLIENT_KEYVALUE (clientIndex, buffer, "model", "");
-   SET_CLIENT_KEYVALUE (clientIndex, buffer, "rate", "3500.000000");
-   SET_CLIENT_KEYVALUE (clientIndex, buffer, "cl_updaterate", "20");
-   SET_CLIENT_KEYVALUE (clientIndex, buffer, "cl_lw", "0");
-   SET_CLIENT_KEYVALUE (clientIndex, buffer, "cl_lc", "0");
-   SET_CLIENT_KEYVALUE (clientIndex, buffer, "tracker", "0");
-   SET_CLIENT_KEYVALUE (clientIndex, buffer, "cl_dlmax", "128");
-   SET_CLIENT_KEYVALUE (clientIndex, buffer, "friends", "0");
-   SET_CLIENT_KEYVALUE (clientIndex, buffer, "dm", "0");
-   SET_CLIENT_KEYVALUE (clientIndex, buffer, "_ah", "0");
+   char *buffer = GET_INFOKEYBUFFER (bot);;
    SET_CLIENT_KEYVALUE (clientIndex, buffer, "_vgui_menus", "0");
 
    if (g_gameVersion != CSV_OLD && yb_latency_display.GetInt () == 1)
@@ -790,6 +755,9 @@ Bot::Bot (edict_t *bot, int skill, int personality, int team, int member)
 
    rejectReason[0] = 0; // reset the reject reason template string
    MDLL_ClientConnect (bot, "BOT", FormatBuffer ("127.0.0.%d", IndexOfEntity (bot) + 100), rejectReason);
+
+   memset (&m_pingOffset, 0, sizeof (m_pingOffset));
+   memset (&m_ping, 0, sizeof (m_ping));
 
    if (!IsNullString (rejectReason))
    {
@@ -816,17 +784,24 @@ Bot::Bot (edict_t *bot, int skill, int personality, int team, int member)
    m_sayTextBuffer.chatProbability = g_randGen.Long (1, 100);
 
    m_notKilled = false;
-   m_skill = skill;
    m_weaponBurstMode = BM_OFF;
+   m_difficulty = difficulty;
+
+   if (difficulty < 0 || difficulty > 4)
+   {
+      difficulty = g_randGen.Long (3, 4);
+      yb_difficulty.SetInt (difficulty);
+   }
 
    m_lastThinkTime = GetWorldTime () - 0.1f;
    m_frameInterval = GetWorldTime ();
+   m_timePeriodicUpdate = 0.0f;
 
    bot->v.idealpitch = bot->v.v_angle.x;
    bot->v.ideal_yaw = bot->v.v_angle.y;
 
-   bot->v.yaw_speed = g_randGen.Float (g_skillTab[m_skill / 20].minTurnSpeed, g_skillTab[m_skill / 20].maxTurnSpeed);
-   bot->v.pitch_speed = g_randGen.Float (g_skillTab[m_skill / 20].minTurnSpeed, g_skillTab[m_skill / 20].maxTurnSpeed);
+   bot->v.yaw_speed = g_randGen.Float (m_difficulty * 40, m_difficulty * 45);
+   bot->v.pitch_speed = g_randGen.Float (m_difficulty * 40, m_difficulty * 45);
 
    switch (personality)
    {
@@ -1050,8 +1025,7 @@ void Bot::NewRound (void)
    m_position = nullvec;
    m_liftTravelPos = nullvec;
 
-   m_idealReactionTime = g_skillTab[m_skill / 20].minSurpriseTime;
-   m_actualReactionTime = g_skillTab[m_skill / 20].minSurpriseTime;
+   SetIdealReactionTimes (true);
 
    m_targetEntity = NULL;
    m_tasks = NULL;
@@ -1075,7 +1049,7 @@ void Bot::NewRound (void)
    m_grenadeCheckTime = 0.0;
    m_isUsingGrenade = false;
 
-   m_skillOffset = static_cast <float> ((100 - m_skill) / 100.0);
+   m_breakableCheckTime = 0.0f;
    m_blindButton = 0;
    m_blindTime = 0.0;
    m_jumpTime = 0.0;
@@ -1087,6 +1061,7 @@ void Bot::NewRound (void)
    m_sayTextBuffer.sayText[0] = 0x0;
 
    m_buyState = 0;
+   m_lastEquipTime = 0.0f;
 
    if (!m_notKilled) // if bot died, clear all weapon stuff and force buying again
    {
@@ -1117,6 +1092,8 @@ void Bot::NewRound (void)
    m_radioEntity = NULL;
    m_radioOrder = 0;
    m_defendedBomb = false;
+   m_defendHostage = false;
+   m_headedTime = 0.0f;
 
    m_timeLogoSpray = GetWorldTime () + g_randGen.Float (0.5, 2.0);
    m_spawnTime = GetWorldTime ();
@@ -1153,7 +1130,7 @@ void Bot::Kill (void)
 
    edict_t *hurtEntity = (*g_engfuncs.pfnCreateNamedEntity) (MAKE_STRING ("trigger_hurt"));
 
-   if (FNullEnt (hurtEntity))
+   if (IsEntityNull (hurtEntity))
       return;
 
    hurtEntity->v.classname = MAKE_STRING (g_weaponDefs[m_currentWeapon].className);
@@ -1199,10 +1176,12 @@ void Bot::StartGame (void)
    if (m_startAction == GSM_TEAM_SELECT)
    {
       m_startAction = GSM_IDLE;  // switch back to idle
+      
+      char teamJoin = yb_join_team.GetString ()[0];
 
-      if (yb_join_team.GetString ()[0] == 'C' || yb_join_team.GetString ()[0] == 'c')
+      if (teamJoin == 'C' || teamJoin == 'c')
          m_wantedTeam = 2;
-      else if (yb_join_team.GetString ()[0] == 'T' || yb_join_team.GetString ()[0] == 't')
+      else if (teamJoin == 'T' || teamJoin == 't')
          m_wantedTeam = 1;
 
       if (m_wantedTeam != 1 && m_wantedTeam != 2)
@@ -1276,7 +1255,7 @@ void BotManager::CalculatePingOffsets (void)
       if (bot == NULL)
          continue;
 
-      int botPing = g_randGen.Long (averagePing - averagePing * 0.2f, averagePing + averagePing * 0.2f) + g_randGen.Long (bot->m_skill / 100 * 0.5, bot->m_skill / 100);
+      int botPing = g_randGen.Long (averagePing - averagePing * 0.2f, averagePing + averagePing * 0.2f) + g_randGen.Long (bot->m_difficulty + 3, bot->m_difficulty + 6) + 10;
 
       if (botPing <= 5)
          botPing = g_randGen.Long (10, 23);
@@ -1303,14 +1282,13 @@ void BotManager::SendPingDataOffsets (edict_t *to)
    if (yb_latency_display.GetInt () != 2)
       return;
 
-   if (!IsValidPlayer (to) || IsValidBot (to))
+   if (IsEntityNull (to))
       return;
 
-   if (!((to->v.button & IN_SCORE) || (to->v.oldbuttons & IN_SCORE)))
+   if (!(to->v.flags & FL_CLIENT) && !(((to->v.button & IN_SCORE) || !(to->v.oldbuttons & IN_SCORE))))
       return;
 
    static int sending;
-   sending = 0;
 
    // missing from sdk
    static const int SVC_PINGS = 17;

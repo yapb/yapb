@@ -189,7 +189,8 @@ enum TaskId_t
    TASK_SHOOTBREAKABLE,
    TASK_HIDE,
    TASK_BLINDED,
-   TASK_SPRAY
+   TASK_SPRAY,
+   TASK_MAX
 };
 
 // supported cs's
@@ -541,7 +542,6 @@ enum WaypointFlag
 enum PathFlag
 {
    PATHFLAG_JUMP = (1 << 0), // must jump for this connection
-   PATHFLAG_DOUBLEJUMP = (1 << 1) // must use friend for this connection
 };
 
 // defines waypoint connection types
@@ -672,26 +672,8 @@ struct WeaponSelect
    int buySelect; // select item in buy menu (standard map)
    int newBuySelectT; // for counter-strike v1.6
    int newBuySelectCT; // for counter-strike v1.6
-   bool shootsThru; // can shoot thru walls
+   int penetratePower; // penetrate power
    bool primaryFireHold; // hold down primary fire button to use?
-};
-
-// skill definitions
-struct SkillDefinition
-{
-   float minSurpriseTime; // surprise delay (minimum)
-   float maxSurpriseTime; // surprise delay (maximum)
-   float campStartDelay; // delay befor start camping
-   float campEndDelay; // delay before end camping
-   float minTurnSpeed; // initial minimum turnspeed
-   float maxTurnSpeed; // initial maximum turnspeed
-   float aimOffs_X; // X/Y/Z maximum offsets
-   float aimOffs_Y; // X/Y/Z maximum offsets
-   float aimOffs_Z; // X/Y/Z maximum offsets
-   int headshotFrequency; // precent to aiming to player head
-   int heardShootThruProb; // precent to shooting throug wall when seen something
-   int seenShootThruProb; // precent to shooting throug wall when heard something
-   int recoilAmount; // amount of recoil when the bot should pause shooting
 };
 
 // fire delay definiton
@@ -753,7 +735,7 @@ struct ExperienceSave
 // bot creation tab
 struct CreateQueue
 {
-   int skill;
+   int difficulty;
    int team;
    int member;
    int personality;
@@ -846,6 +828,7 @@ private:
    int m_messageQueue[32]; // stack for messages
    char m_tempStrings[160]; // space for strings (say text...)
    int m_radioSelect; // radio entry
+   float m_headedTime; 
 
    float m_blindRecognizeTime; // time to recognize enemy
    float m_itemCheckTime; // time next search for items needs to be done
@@ -862,6 +845,7 @@ private:
    float m_timeLogoSpray; // time bot last spray logo
    float m_knifeAttackTime; // time to rush with knife (at the beginning of the round)
    bool m_defendedBomb; // defend action issued
+   bool m_defendHostage;
 
    float m_askCheckTime; // time to ask team
    float m_collideTime; // time last collision
@@ -886,7 +870,6 @@ private:
    int m_waypointFlags; // current waypoint flags
    int m_loosedBombWptIndex; // nearest to loosed bomb waypoint
    int m_plantedBombWptIndex;// nearest to planted bomb waypoint
-   float m_skillOffset; // offset to bots skill
 
    unsigned short m_currentTravelFlags; // connection flags like jumping
    bool m_jumpFinished; // has bot finished jumping
@@ -931,6 +914,7 @@ private:
    float m_zoomCheckTime; // time to check zoom again
    float m_shieldCheckTime; // time to check shiled drawing again
    float m_grenadeCheckTime; // time to check grenade usage
+   float m_lastEquipTime; // last time we equipped in buyzone
 
    bool m_checkKnifeSwitch; // is time to check switch to knife action
    bool m_checkWeaponSwitch; // is time to check weapon switch
@@ -1001,6 +985,7 @@ private:
    bool DoWaypointNav (void);
    bool EnemyIsThreat (void);
    void FacePosition (void);
+   void SetIdealReactionTimes (bool actual = false);
    bool IsRestricted (int weaponIndex);
    bool IsRestrictedAMX (int weaponIndex);
 
@@ -1015,6 +1000,7 @@ private:
    int FindDefendWaypoint (Vector origin);
    int FindGoal (void);
    void FindItem (void);
+   void CheckTerrain (float movedDistance);
 
    void GetCampDirection (Vector *dest);
    void CollectGoalExperience (int damage, int team);
@@ -1027,7 +1013,7 @@ private:
    bool IsBombDefusing (Vector bombOrigin);
    bool IsBlockedLeft (void);
    bool IsBlockedRight (void);
-   bool IsWaypointUsed (int index);
+   bool IsPointOccupied (int index);
    inline bool IsOnLadder (void) { return pev->movetype == MOVETYPE_FLY; }
    inline bool IsOnFloor (void) { return (pev->flags & (FL_ONGROUND | FL_PARTIALGROUND)) != 0; }
    inline bool IsInWater (void) { return pev->waterlevel >= 2; }
@@ -1106,12 +1092,13 @@ public:
    int m_wantedTeam; // player team bot wants select
    int m_wantedClass; // player model bot wants to select
 
-   int m_skill; ;// bots play skill
+   int m_difficulty;
    int m_moneyAmount; // amount of money in bot's bank
 
    Personality m_personality;
    float m_spawnTime; // time this bot spawned
    float m_timeTeamOrder; // time of last radio command
+   float m_timePeriodicUpdate; // time to per-second think
 
    bool m_isVIP; // bot is vip?
    bool m_bIsDefendingTeam; // bot in defending team on this map
@@ -1139,7 +1126,8 @@ public:
    bool m_hasProgressBar; // has progress bar on a HUD
    bool m_jumpReady; // is double jump ready
    bool m_canChooseAimDirection; // can choose aiming direction
-
+   
+   float m_breakableCheckTime;
    float m_blindTime; // time when bot is blinded
    float m_blindMoveSpeed; // mad speeds when bot is blind
    float m_blindSidemoveSpeed; // mad side move speeds when bot is blind
@@ -1204,14 +1192,13 @@ public:
 
    Array <TaskItem> m_tasks;
 
-   Bot (edict_t *bot, int skill, int personality, int team, int member);
+   Bot (edict_t *bot, int difficulty, int personality, int team, int member);
   ~Bot (void);
 
    int GetAmmo (void);
    inline int GetAmmoInClip (void) { return m_ammoInClip[m_currentWeapon]; }
 
-   inline edict_t *GetEntity (void) { return ENT (pev); };
-   inline EOFFSET GetOffset (void) { return OFFSET (pev); };
+   inline edict_t *GetEntity (void) { return pev->pContainingEntity; };
    int GetIndex (void);
 
    inline Vector Center (void) { return (pev->absmax + pev->absmin) * 0.5; };
@@ -1229,7 +1216,9 @@ public:
    void DeleteSearchNodes (void);
 
    void RemoveCertainTask (TaskId_t id);
-   void StartTask (TaskId_t id, float desire, int data, float time, bool canContinue);
+   void StartTask_ (int, const char *f, TaskId_t id, float desire, int data, float time, bool canContinue);
+
+#define StartTask(i,d,a,t,c) StartTask_(__LINE__, __FUNCTION__,i,d,a,t,c)
    void ResetTasks (void);
    TaskItem *GetTask (void);
    inline TaskId_t GetTaskId (void) { return GetTask ()->id; };
@@ -1246,13 +1235,13 @@ public:
    void RadioMessage (int message);
    void ChatterMessage (int message);
    void HandleChatterMessage (const char *sz);
+   void TryHeadTowardRadioEntity (void);
 
    void Kill (void);
    void Kick (void);
    void ResetDoubleJumpState (void);
    void MoveToVector (Vector to);
    int FindPlantedBomb(void);
-   int FindLoosedBomb (void);
 
    bool HasHostage (void);
    bool UsesRifle (void);
@@ -1286,7 +1275,7 @@ private:
    bool m_deathMsgSent; // for fakeping
 
 protected:
-   int CreateBot (String name, int skill, int personality, int team, int member);
+   int CreateBot (String name, int difficulty, int personality, int team, int member);
 
 public:
    BotManager (void);
@@ -1314,9 +1303,9 @@ public:
    void CheckAutoVacate (edict_t *ent);
 
    void AddRandom (void) { AddBot ("", -1, -1, -1, -1); }
-   void AddBot (const String &name, int skill, int personality, int team, int member);
-   void AddBot (String name, String skill, String personality, String team, String member);
-   void FillServer (int selection, int personality = PERSONALITY_NORMAL, int skill = -1, int numToAdd = -1);
+   void AddBot (const String &name, int difficulty, int personality, int team, int member);
+   void AddBot (String name, String difficulty, String personality, String team, String member);
+   void FillServer (int selection, int personality = PERSONALITY_NORMAL, int difficulty = -1, int numToAdd = -1);
 
    void RemoveAll (bool zeroQuota = true);
    void RemoveRandom (void);
@@ -1516,9 +1505,9 @@ enum VarType
    VT_NORMAL = 0,
    VT_READONLY,
    VT_PASSWORD,
+   VT_NOSERVER,
    VT_NOREGISTER
 };
-
 
 class ConVarWrapper : public Singleton <ConVarWrapper>
 {
@@ -1613,7 +1602,7 @@ extern bool IsDedicatedServer (void);
 extern bool IsVisible (const Vector &origin, edict_t *ent);
 extern bool IsAlive (edict_t *ent);
 extern bool IsInViewCone (Vector origin, edict_t *ent);
-extern bool IsWeaponShootingThroughWall (int id);
+extern int GetWeaponPenetrationPower (int id);
 extern bool IsValidBot (edict_t *ent);
 extern bool IsValidPlayer (edict_t *ent);
 extern bool OpenConfig (const char *fileName, char *errorIfNotExists, File *outFile, bool languageDependant = false);
@@ -1659,7 +1648,6 @@ extern void SoundSimulateUpdate (int playerIndex);
 // very global convars
 extern ConVar yb_jasonmode;
 extern ConVar yb_communication_type;
-extern ConVar yb_hardcore_mode;
 extern ConVar yb_csdm_mode;
 extern ConVar yb_ignore_enemies;
 

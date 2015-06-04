@@ -11,7 +11,7 @@
 
 // console vars
 ConVar yb_password ("yb_password", "", VT_PASSWORD);
-ConVar yb_password_key ("yb_password_key", "_ybwp");
+ConVar yb_password_key ("yb_password_key", "_ybwp", VT_NOSERVER);
 
 ConVar yb_language ("yb_language", "en");
 ConVar yb_version ("yb_version", PRODUCT_VERSION, VT_READONLY);
@@ -24,9 +24,9 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    if (stricmp (arg0, "addbot") == 0 || stricmp (arg0, "add") == 0)
       g_botManager->AddBot (arg4, arg1, arg2, arg3, arg5);
 
-   // adding one bot with high skill parameters to random team
+   // adding one bot with high difficuluty parameters to random team
    if (stricmp (arg0, "addbot_hs") == 0 || stricmp (arg0, "addhs") == 0)
-      g_botManager->AddBot (arg4, "100", "1", arg3, arg5);
+      g_botManager->AddBot (arg4, "4", "1", arg3, arg5);
 
    // adding one bot with random parameters to terrorist team
    else if (stricmp (arg0, "addbot_t") == 0 || stricmp (arg0, "add_t") == 0)
@@ -122,12 +122,12 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       if (IsNullString (arg1))
          return 1;
 
-      edict_t *ent = EntityOfIndex (atoi (arg1) - 1);
+      edict_t *target = EntityOfIndex (atoi (arg1) - 1);
 
-      if (IsValidBot (ent))
+      if (IsValidBot (target))
       {
-         FakeClientCommand (ent, arg2);
-         ClientPrint (ent, print_withtag, "Bot %s executing command %s", STRING (ent->v.netname), arg2);
+         FakeClientCommand (target, arg2);
+         ClientPrint (ent, print_withtag, "Bot %s executing command %s", STRING (target->v.netname), arg2);
       }
       else
          ClientPrint (ent, print_withtag, "Player is not BOT!");
@@ -280,7 +280,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    // waypoint manimupulation (really obsolete, can be edited through menu) (supported only on listen server)
    else if (stricmp (arg0, "waypoint") == 0 || stricmp (arg0, "wp") == 0 || stricmp (arg0, "wpt") == 0)
    {
-      if (IsDedicatedServer () || FNullEnt (g_hostEntity))
+      if (IsDedicatedServer () || IsEntityNull (g_hostEntity))
          return 2;
 
       // enables or disable waypoint displaying
@@ -325,11 +325,11 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
          if (stricmp (arg2, "on") == 0)
          {
-            while (!FNullEnt (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
+            while (!IsEntityNull (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
                spawnEntity->v.effects &= ~EF_NODRAW;
-            while (!FNullEnt (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_deathmatch")))
+            while (!IsEntityNull (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_deathmatch")))
                spawnEntity->v.effects &= ~EF_NODRAW;
-            while (!FNullEnt (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_vip_start")))
+            while (!IsEntityNull (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_vip_start")))
                spawnEntity->v.effects &= ~EF_NODRAW;
 
             ServerCommand ("mp_roundtime 9"); // reset round time to maximum
@@ -338,11 +338,11 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          }
          else if (stricmp (arg2, "off") == 0)
          {
-            while (!FNullEnt (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
+            while (!IsEntityNull (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
                spawnEntity->v.effects |= EF_NODRAW;
-            while (!FNullEnt (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_deathmatch")))
+            while (!IsEntityNull (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_deathmatch")))
                spawnEntity->v.effects |= EF_NODRAW;
-            while (!FNullEnt (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_vip_start")))
+            while (!IsEntityNull (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_vip_start")))
                spawnEntity->v.effects |= EF_NODRAW;
          }
       }
@@ -448,7 +448,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    // path waypoint editing system (supported only on listen server)
    else if (stricmp (arg0, "pathwaypoint") == 0 || stricmp (arg0, "path") == 0 || stricmp (arg0, "pwp") == 0)
    {
-      if (IsDedicatedServer () || FNullEnt (g_hostEntity))
+      if (IsDedicatedServer () || IsEntityNull (g_hostEntity))
          return 2;
 
       // opens path creation menu
@@ -479,7 +479,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    // automatic waypoint handling (supported only on listen server)
    else if (stricmp (arg0, "autowaypoint") == 0 || stricmp (arg0, "autowp") == 0)
    {
-      if (IsDedicatedServer () || FNullEnt (g_hostEntity))
+      if (IsDedicatedServer () || IsEntityNull (g_hostEntity))
          return 2;
 
       // enable autowaypointing
@@ -500,7 +500,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    // experience system handling (supported only on listen server)
    else if (stricmp (arg0, "experience") == 0 || stricmp (arg0, "exp") == 0)
    {
-      if (IsDedicatedServer () || FNullEnt (g_hostEntity))
+      if (IsDedicatedServer () || IsEntityNull (g_hostEntity))
          return 2;
 
       // write experience table (and visibility table) to hard disk
@@ -557,10 +557,9 @@ void ParseVoiceEvent (const String &base, int type, float timeToRepeat)
 void InitConfig (void)
 {
    File fp;
-   char command[80], line[256];
+   char line[256];
 
    KeywordFactory replyKey;
-   int chatType = -1;
 
    // fixes for crashing if configs couldn't be accessed
    g_chatFactory.SetSize (CHAT_TOTAL);
@@ -593,47 +592,50 @@ void InitConfig (void)
    // CHAT SYSTEM CONFIG INITIALIZATION
    if (OpenConfig ("chat.cfg", "Chat file not found.", &fp, true))
    {
+      char section[80];
+      int chatType = -1;
+
       while (fp.GetBuffer (line, 255))
       {
          SKIP_COMMENTS ();
-         strcpy (command, GetField (line, 0, 1));
+         strcpy (section, GetField (line, 0, 1));
 
-         if (strcmp (command, "[KILLED]") == 0)
+         if (strcmp (section, "[KILLED]") == 0)
          {
             chatType = 0;
             continue;
          }
-         else if (strcmp (command, "[BOMBPLANT]") == 0)
+         else if (strcmp (section, "[BOMBPLANT]") == 0)
          {
             chatType = 1;
             continue;
          }
-         else if (strcmp (command, "[DEADCHAT]") == 0)
+         else if (strcmp (section, "[DEADCHAT]") == 0)
          {
             chatType = 2;
             continue;
          }
-         else if (strcmp (command, "[REPLIES]") == 0)
+         else if (strcmp (section, "[REPLIES]") == 0)
          {
             chatType = 3;
             continue;
          }
-         else if (strcmp (command, "[UNKNOWN]") == 0)
+         else if (strcmp (section, "[UNKNOWN]") == 0)
          {
             chatType = 4;
             continue;
          }
-         else if (strcmp (command, "[TEAMATTACK]") == 0)
+         else if (strcmp (section, "[TEAMATTACK]") == 0)
          {
             chatType = 5;
             continue;
          }
-         else if (strcmp (command, "[WELCOME]") == 0)
+         else if (strcmp (section, "[WELCOME]") == 0)
          {
             chatType = 6;
             continue;
          }
-         else if (strcmp (command, "[TEAMKILL]") == 0)
+         else if (strcmp (section, "[TEAMKILL]") == 0)
          {
             chatType = 7;
             continue;
@@ -776,64 +778,6 @@ void InitConfig (void)
 
             for (int i = 0; i < NUM_WEAPONS; i++)
                g_carefulWeaponPrefs[i] = splitted[i].ToInt ();
-         }
-         else if (pair[0].Contains ("Skill"))
-         {
-            if (splitted.GetElementNumber () != 8)
-               AddLogEntry (true, LL_FATAL, "%s entry in general config is not valid.", pair[0].GetBuffer ());
-
-            int parserState = 0;
-
-            if (pair[0].Contains ("Stupid"))
-               parserState = 0;
-            else if (pair[0].Contains ("Newbie"))
-               parserState = 1;
-            else if (pair[0].Contains ("Average"))
-               parserState = 2;
-            else if (pair[0].Contains ("Advanced"))
-               parserState = 3;
-            else if (pair[0].Contains ("Professional"))
-               parserState = 4;
-            else if (pair[0].Contains ("Godlike"))
-               parserState = 5;
-
-            for (int i = 0; i < 8; i++)
-            {
-               switch (i)
-               {
-               case 0:
-                  g_skillTab[parserState].minSurpriseTime = splitted[i].ToFloat ();
-                  break;
-
-               case 1:
-                  g_skillTab[parserState].maxSurpriseTime = splitted[i].ToFloat ();
-                  break;
-
-               case 2:
-                  g_skillTab[parserState].minTurnSpeed = splitted[i].ToFloat ();
-                  break;
-
-               case 3:
-                  g_skillTab[parserState].maxTurnSpeed = splitted[i].ToFloat ();
-                  break;
-
-               case 4:
-                  g_skillTab[parserState].headshotFrequency = splitted[i].ToInt ();
-                  break;
-
-               case 5:
-                  g_skillTab[parserState].heardShootThruProb = splitted[i].ToInt ();
-                  break;
-
-               case 6:
-                  g_skillTab[parserState].seenShootThruProb = splitted[i].ToInt ();
-                  break;
-
-               case 7:
-                  g_skillTab[parserState].recoilAmount = splitted[i].ToInt ();
-                  break;
-               }
-            }
          }
       }
       fp.Close ();
@@ -1013,6 +957,8 @@ void InitConfig (void)
    g_weaponPrefs[PERSONALITY_NORMAL] = reinterpret_cast <int *> (&g_normalWeaponPrefs);
    g_weaponPrefs[PERSONALITY_RUSHER] = reinterpret_cast <int *> (&g_rusherWeaponPrefs);
    g_weaponPrefs[PERSONALITY_CAREFUL] = reinterpret_cast <int *> (&g_carefulWeaponPrefs);
+
+   g_timePerSecondUpdate = 0.0f;
 }
 
 void CommandHandler_NotMM (void)
@@ -1772,27 +1718,23 @@ void ClientCommand (edict_t *ent)
             switch (selection)
             {
             case 1:
-               g_storeAddbotVars[0] = g_randGen.Long (0, 20);
+               g_storeAddbotVars[0] = 0;
                break;
 
             case 2:
-               g_storeAddbotVars[0] = g_randGen.Long (20, 40);
+               g_storeAddbotVars[0] = 1;
                break;
 
             case 3:
-               g_storeAddbotVars[0] = g_randGen.Long (40, 60);
+               g_storeAddbotVars[0] = 2;
                break;
 
             case 4:
-               g_storeAddbotVars[0] = g_randGen.Long (60, 80);
+               g_storeAddbotVars[0] = 3;
                break;
 
             case 5:
-               g_storeAddbotVars[0] = g_randGen.Long (80, 99);
-               break;
-
-            case 6:
-               g_storeAddbotVars[0] = 100;
+               g_storeAddbotVars[0] = 4;
                break;
 
             case 10:
@@ -2102,17 +2044,17 @@ void ClientCommand (edict_t *ent)
          if (!(g_clients[i].flags & CF_USED) || (team != -1 && team != g_clients[i].team) || isAlive != IsAlive (g_clients[i].ent))
             continue;
 
-         Bot *bot = g_botManager->GetBot (i);
+         Bot *target = g_botManager->GetBot (i);
 
-         if (bot != NULL)
+         if (target != NULL)
          {
-            bot->m_sayTextBuffer.entityIndex = IndexOfEntity (ent);
+			 target->m_sayTextBuffer.entityIndex = IndexOfEntity (ent);
 
             if (IsNullString (CMD_ARGS ()))
                continue;
 
-            strcpy (bot->m_sayTextBuffer.sayText, CMD_ARGS ());
-            bot->m_sayTextBuffer.timeNextChat = GetWorldTime () + bot->m_sayTextBuffer.chatDelay;
+            strcpy (target->m_sayTextBuffer.sayText, CMD_ARGS ());
+			target->m_sayTextBuffer.timeNextChat = GetWorldTime () + target->m_sayTextBuffer.chatDelay;
          }
       }
    }
@@ -2227,7 +2169,7 @@ void StartFrame (void)
    {
       edict_t *player = EntityOfIndex (i + 1);
 
-      if (!FNullEnt (player) && (player->v.flags & FL_CLIENT))
+      if (!IsEntityNull (player) && (player->v.flags & FL_CLIENT))
       {
          g_clients[i].ent = player;
          g_clients[i].flags |= CF_USED;
@@ -2253,13 +2195,12 @@ void StartFrame (void)
          g_clients[i].ent = NULL;
       }
    }
-   static float secondTimer = 0.0;
 
    // **** AI EXECUTION STARTS ****
    g_botManager->Think ();
    // **** AI EXECUTION FINISH ****
 
-   if (!IsDedicatedServer () && !FNullEnt (g_hostEntity))
+   if (!IsDedicatedServer () && !IsEntityNull (g_hostEntity))
    {
       if (g_waypointOn)
          g_waypoint->Think ();
@@ -2268,14 +2209,16 @@ void StartFrame (void)
    }
    g_botManager->SetDeathMsgState (false);
 
-   if (secondTimer < GetWorldTime ())
+   if (g_timePerSecondUpdate <= GetWorldTime ())
    {
+      g_botManager->CalculatePingOffsets ();
+
       for (int i = 0; i < GetMaxClients (); i++)
       {
          edict_t *player = EntityOfIndex (i + 1);
 
          // code below is executed only on dedicated server
-         if (IsDedicatedServer () && !FNullEnt (player) && (player->v.flags & FL_CLIENT) && !(player->v.flags & FL_FAKECLIENT))
+         if (IsDedicatedServer () && !IsEntityNull (player) && (player->v.flags & FL_CLIENT) && !(player->v.flags & FL_FAKECLIENT))
          {
             if (g_clients[i].flags & CF_ADMIN)
             {
@@ -2305,15 +2248,13 @@ void StartFrame (void)
             if (csdm_active != NULL && csdm_active->value > 0)
                yb_csdm_mode.SetInt (mp_freeforall != NULL && mp_freeforall->value > 0 ? 2 : 1);
          }
-         g_botManager->CalculatePingOffsets ();
+         g_timePerSecondUpdate = GetWorldTime () + 1.0f;
       }
 
       extern ConVar yb_danger_factor;
 
       if (yb_danger_factor.GetFloat () >= 4096)
          yb_danger_factor.SetFloat (4096.0);
-
-      secondTimer = GetWorldTime () + 1.5;
 
       if (g_bombPlanted)
          g_waypoint->SetBombPosition ();
@@ -2486,7 +2427,7 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
 
    g_netMsg->HandleMessageIfRequired (msgType, NETMSG_WEAPONLIST);
 
-   if (!FNullEnt (ed))
+   if (!IsEntityNull (ed))
    {
       int index = g_botManager->GetIndex (ed);
 
@@ -2626,11 +2567,6 @@ void pfnWriteCoord (float value)
 
 void pfnWriteString (const char *sz)
 {
-   Bot *bot = g_botManager->FindOneValidAliveBot ();
-
-   if (bot != NULL && IsAlive (bot->GetEntity ()))
-      bot->HandleChatterMessage (sz);
-
    // if this message is for a bot, call the client message function...
    g_netMsg->Execute ((void *) sz);
 
@@ -2691,16 +2627,16 @@ const char *pfnCmd_Args (void)
       if (strncmp ("say ", g_fakeArgv, 4) == 0)
       {
          if (g_isMetamod)
-            RETURN_META_VALUE (MRES_SUPERCEDE, g_fakeArgv + 4);
+            RETURN_META_VALUE (MRES_SUPERCEDE, &g_fakeArgv[4]);
 
-         return g_fakeArgv + 4; // skip the "say" bot client command
+         return &g_fakeArgv[4]; // skip the "say" bot client command
       }
       else if (strncmp ("say_team ", g_fakeArgv, 9) == 0)
       {
          if (g_isMetamod)
-            RETURN_META_VALUE (MRES_SUPERCEDE, g_fakeArgv + 9);
+            RETURN_META_VALUE (MRES_SUPERCEDE, &g_fakeArgv[9]);
 
-         return g_fakeArgv + 9; // skip the "say_team" bot client command
+         return &g_fakeArgv[9]; // skip the "say_team" bot client command
       }
 
       if (g_isMetamod)
@@ -3172,7 +3108,6 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    g_convarWrapper->PushRegisteredConVarsToEngine ();
 
    ModSupport_t *knownMod = NULL;
-   char gameDLLName[256];
 
    for (int i = 0; s_supportedMods[i].name; i++)
    {
@@ -3200,6 +3135,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       if (g_isMetamod)
          return; // we should stop the attempt for loading the real gamedll, since metamod handle this for us
 
+      char gameDLLName[256];
       sprintf (gameDLLName, "%s/dlls/%s", knownMod->name,
 
 #if defined (PLATFORM_WIN32)

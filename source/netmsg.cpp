@@ -267,7 +267,7 @@ void NetworkMsg::Execute (void *p)
             edict_t *killer = EntityOfIndex (killerIndex);
             edict_t *victim = EntityOfIndex (victimIndex);
 
-            if (FNullEnt (killer) || FNullEnt (victim))
+            if (IsEntityNull (killer) || IsEntityNull (victim))
                break;
 
             // need to send congrats on well placed shot
@@ -291,7 +291,7 @@ void NetworkMsg::Execute (void *p)
             {
                Bot *bot = g_botManager->GetBot (i);
 
-               if (bot != NULL && IsAlive (bot->GetEntity ()) && GetTeam (bot->GetEntity ()) == GetTeam (victim) && IsVisible (killer->v.origin, bot->GetEntity ()) && FNullEnt (bot->m_enemy) && GetTeam (killer) != GetTeam (victim))
+               if (bot != NULL && IsAlive (bot->GetEntity ()) && GetTeam (bot->GetEntity ()) == GetTeam (victim) && IsVisible (killer->v.origin, bot->GetEntity ()) && IsEntityNull (bot->m_enemy) && GetTeam (killer) != GetTeam (victim))
                {
                   bot->m_actualReactionTime = 0.0;
                   bot->m_seeEnemyTime = GetWorldTime ();
@@ -309,14 +309,14 @@ void NetworkMsg::Execute (void *p)
 
             else // did a human kill a bot on his team?
             {
-               Bot *bot = g_botManager->GetBot (victim);
+               Bot *target = g_botManager->GetBot (victim);
 
-               if (bot != NULL)
+               if (target != NULL)
                {
                   if (GetTeam (killer) == GetTeam (victim))
-                     bot->m_voteKickIndex = killerIndex;
+					  target->m_voteKickIndex = killerIndex;
 
-                  bot->m_notKilled = false;
+				  target->m_notKilled = false;
                }
             }
          }
@@ -406,25 +406,36 @@ void NetworkMsg::Execute (void *p)
             g_bombPlanted = g_bombSayString = true;
             g_timeBombPlanted = GetWorldTime ();
 
-            for (int i = 0; i < GetMaxClients (); i++)
-            {
-               Bot *bot = g_botManager->GetBot (i);
+			if (yb_communication_type.GetInt() == 2)
+			{
+				for (int i = 0; i < GetMaxClients(); i++)
+				{
+					Bot *bot = g_botManager->GetBot(i);
 
-               if (bot != NULL && IsAlive (bot->GetEntity ()))
-               {
-                  bot->DeleteSearchNodes ();
-                  bot->ResetTasks ();
+					if (bot != NULL && IsAlive(bot->GetEntity()))
+					{
+						bot->DeleteSearchNodes();
+						bot->ResetTasks();
 
-                  if (g_randGen.Long (0, 100) < 85 && GetTeam (bot->GetEntity ()) == TEAM_CF)
-                     bot->ChatterMessage (Chatter_WhereIsTheBomb);
-               }
-            }
+						if (g_randGen.Long(0, 100) < 75 && GetTeam(bot->GetEntity()) == TEAM_CF)
+							bot->ChatterMessage(Chatter_WhereIsTheBomb);
+					}
+				}
+			}
             g_waypoint->SetBombPosition ();
          }
          else if (m_bot != NULL && FStrEq (PTR_TO_STR (p), "#Switch_To_BurstFire"))
             m_bot->m_weaponBurstMode = BM_ON;
          else if (m_bot != NULL && FStrEq (PTR_TO_STR (p), "#Switch_To_SemiAuto"))
             m_bot->m_weaponBurstMode = BM_OFF;
+
+		 if (yb_communication_type.GetInt() == 2)
+		 {
+			 Bot *bot = g_botManager->FindOneValidAliveBot();
+
+			 if (bot != NULL && IsAlive(bot->GetEntity()))
+				 bot->HandleChatterMessage(PTR_TO_STR(p));
+		 }
       }
       break;
 
