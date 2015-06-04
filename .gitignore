@@ -51,3 +51,6 @@ Icon
 *.sdf
 *.suo
 *.idb
+*.vspx
+project/yapb.vcxproj.user
+*.psess
