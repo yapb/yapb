@@ -165,12 +165,10 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          "------------------------------------------------\n"
          "Name: %s\n"
          "Version: %s (Build: %u)\n"
-         "Compiled by: %s\n"
          "Compiled: %s, %s +300 (GMT)\n"
-         "Meta-Interface Version: %s\n"
          "------------------------------------------------";
 
-      ClientPrint (ent, print_console, versionData, PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_AUTHOR, __DATE__, __TIME__, META_INTERFACE_VERSION);
+      ClientPrint (ent, print_console, versionData, PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), __DATE__, __TIME__);
    }
 
    // display some sort of help information
@@ -3074,7 +3072,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       { "csv15", "cs_i386.so", "cs.dylib", "mp.dll", "CS 1.5 for Steam", CSV_OLD },
       { "cs13", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike v1.3", CSV_OLD }, // assume cs13 = cs15
       { "retrocs", "rcs_i386.so", "cs.dylib", "rcs.dll", "Retro Counter-Strike", CSV_OLD },
-      {"", "", "", "", 0}
+      {"", "", "", "", 0},
    };
 
    // get the engine functions from the engine...

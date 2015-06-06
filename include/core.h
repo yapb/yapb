@@ -852,9 +852,10 @@ private:
    float m_firstCollideTime; // time of first collision
    float m_probeTime; // time of probing different moves
    float m_lastCollTime; // time until next collision check
-   char m_collisionProbeBits; // bits of possible collision moves
-   char m_collideMoves[4]; // sorted array of movements
-   char m_collStateIndex; // index into collide moves
+
+   unsigned int m_collisionProbeBits; // bits of possible collision moves
+   unsigned int m_collideMoves[4]; // sorted array of movements
+   unsigned int m_collStateIndex; // index into collide moves
    CollisionState m_collisionState; // collision State
 
    PathNode *m_navNode; // pointer to current node from path

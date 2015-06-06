@@ -1394,9 +1394,9 @@ void Bot::CommandTeam (void)
 
    if (memberNear) // has teammates ?
    {
-      if (m_personality == PERSONALITY_RUSHER && !(yb_communication_type.GetInt () == 2))
+      if (m_personality == PERSONALITY_RUSHER && yb_communication_type.GetInt () == 2)
          RadioMessage (Radio_StormTheFront);
-      else if (!m_personality == PERSONALITY_RUSHER && !(yb_communication_type.GetInt () == 2))
+      else if (m_personality != PERSONALITY_RUSHER && yb_communication_type.GetInt () == 2)
          RadioMessage (Radio_Fallback);
    }
    else if (memberExists && yb_communication_type.GetInt () == 1)

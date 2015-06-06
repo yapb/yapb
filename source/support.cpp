@@ -1243,7 +1243,7 @@ void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
 #if defined (PLATFORM_WIN32)
       MessageBoxA (GetActiveWindow (), buffer, "YaPB Error", MB_ICONSTOP);
 #else
-      printf (buffer);
+      printf ("%s", buffer);
 #endif
       FreeLibraryMemory ();
 
