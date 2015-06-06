@@ -8,3 +8,7 @@ AI opponent for Counter-Strike based on POD-Bot 2.6 which allows your to play go
 
 
 
+
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/jeefo/yapb/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
