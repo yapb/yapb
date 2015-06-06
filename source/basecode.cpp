@@ -3390,7 +3390,7 @@ void Bot::RunTask (void)
             destIndex = FindGoal ();
 
          m_prevGoalIndex = destIndex;
-		 m_chosenGoalIndex = destIndex;
+         m_chosenGoalIndex = destIndex;
 
          // remember index
          GetTask ()->data = destIndex;

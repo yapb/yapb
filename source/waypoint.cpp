@@ -110,10 +110,10 @@ int Waypoint::FindNearest (Vector origin, float minDistance, int flags)
 
    for (int i = 0; i < g_numWaypoints; i++)
    {
-      float distance = (m_paths[i]->origin - origin).GetLength ();
-
       if (flags != -1 && !(m_paths[i]->flags & flags))
          continue; // if flag not -1 and waypoint has no this flag, skip waypoint
+
+      float distance = (m_paths[i]->origin - origin).GetLength ();
 
       if (distance < minDistance)
       {

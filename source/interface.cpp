@@ -228,23 +228,6 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       }
    }
 
-   // sets health for all available bots
-   else if (stricmp (arg0, "sethealth") == 0 || stricmp (arg0, "health") == 0)
-   {
-      if (IsNullString (arg1))
-         ClientPrint (ent, print_withtag, "Please specify health");
-      else
-      {
-         ClientPrint (ent, print_withtag, "Bot health is set to %d%%", atoi (arg1));
-
-         for (int i = 0; i < GetMaxClients (); i++)
-         {
-            if (g_botManager->GetBot (i) != NULL)
-               g_botManager->GetBot (i)->pev->health = fabsf (atof (arg1));
-         }
-      }
-   }
-
    // displays main bot menu
    else if (stricmp (arg0, "botmenu") == 0 || stricmp (arg0, "menu") == 0)
       DisplayMenuToClient (ent, &g_menus[0]);
@@ -2227,7 +2210,7 @@ void StartFrame (void)
                else if (strcmp (yb_password.GetString (), INFOKEY_VALUE (GET_INFOKEYBUFFER (g_clients[i].ent), const_cast <char *> (yb_password_key.GetString ()))))
                {
                   g_clients[i].flags &= ~CF_ADMIN;
-                  ServerPrint ("Player %s had lost remote access to YaPB.", STRING (player->v.netname));
+                  ServerPrint ("Player %s had lost remote access to yapb.", STRING (player->v.netname));
                }
             }
             else if (IsNullString (yb_password_key.GetString ()) && IsNullString (yb_password.GetString ()))
@@ -2235,7 +2218,7 @@ void StartFrame (void)
                if (strcmp (yb_password.GetString (), INFOKEY_VALUE (GET_INFOKEYBUFFER (g_clients[i].ent), const_cast <char *> (yb_password_key.GetString ()))) == 0)
                {
                   g_clients[i].flags |= CF_ADMIN;
-                  ServerPrint ("Player %s had gained full remote access to YaPB.", STRING (player->v.netname));
+                  ServerPrint ("Player %s had gained full remote access to yapb.", STRING (player->v.netname));
                }
             }
          }
@@ -2250,12 +2233,6 @@ void StartFrame (void)
          }
          g_timePerSecondUpdate = GetWorldTime () + 1.0f;
       }
-
-      extern ConVar yb_danger_factor;
-
-      if (yb_danger_factor.GetFloat () >= 4096)
-         yb_danger_factor.SetFloat (4096.0);
-
       if (g_bombPlanted)
          g_waypoint->SetBombPosition ();
    }

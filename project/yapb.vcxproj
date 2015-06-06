@@ -54,12 +54,12 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v120_xp</PlatformToolset>
+    <PlatformToolset>v140_xp</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v120_xp</PlatformToolset>
+    <PlatformToolset>v140_xp</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -181,14 +181,14 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <OmitFramePointers>true</OmitFramePointers>
+      <OmitFramePointers>false</OmitFramePointers>
       <EnableFiberSafeOptimizations>false</EnableFiberSafeOptimizations>
       <AdditionalIncludeDirectories>..\mmgr;..\include\engine;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <StructMemberAlignment>8Bytes</StructMemberAlignment>
+      <StructMemberAlignment>Default</StructMemberAlignment>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <FunctionLevelLinking>false</FunctionLevelLinking>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
@@ -209,6 +209,7 @@
       <FlushDenormalResultsToZero>true</FlushDenormalResultsToZero>
       <Parallelization>false</Parallelization>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <Optimization>Full</Optimization>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -225,7 +226,7 @@
       <OutputFile>.\release\yapb.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DelayLoadDLLs>user32.dll;ws2_32.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>Debug</GenerateDebugInformation>
       <GenerateMapFile>false</GenerateMapFile>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>false</OptimizeReferences>

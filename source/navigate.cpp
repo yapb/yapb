@@ -9,8 +9,6 @@
 
 #include <core.h>
 
-ConVar yb_danger_factor ("yb_danger_factor", "900", VT_NOSERVER);
-
 ConVar yb_aim_method ("yb_aim_method", "3", VT_NOSERVER);
 
 ConVar yb_aim_damper_coefficient_x ("yb_aim_damper_coefficient_x", "0.22", VT_NOSERVER);
@@ -197,8 +195,40 @@ TacticChoosen:
    }
    else if (tactic == 3 && !g_waypoint->m_goalPoints.IsEmpty ()) // map goal waypoint
    {
+      // forcee bomber to select closest goal, if round-start goal was reset by something
       if (m_hasC4 && g_timeRoundStart + 20.0f < GetWorldTime ())
       {
+         float minDist = 1024.0f;
+         int count = 0;
+
+         for (int i = 0; i < g_numWaypoints; i++)
+         {
+            Path *path = g_waypoint->GetPath (i);
+
+            if (!(path->flags & FLAG_GOAL))
+               continue;
+
+            float distance = (path->origin - pev->origin).GetLength ();
+
+            if (distance < minDist)
+            {
+               if (count < 4)
+               {
+                  goalChoices[count] = i;
+                  count++;
+               }
+               minDist = distance;
+            }
+         }
+
+         for (int i = 0; i < 4; i++)
+         {
+            if (goalChoices[i] == -1)
+            {
+               goalChoices[i] = g_waypoint->m_goalPoints.GetRandomElement ();
+               InternalAssert (goalChoices[i] >= 0 && goalChoices[i] < g_numWaypoints);
+            }
+         }
       }
       else
       {
@@ -314,8 +344,6 @@ void Bot::CheckTerrain (float movedDistance)
 
    TraceResult tr;
 
-   // very cpu intensive
-#if 0
    ent = NULL;
    edict_t *pentNearest = NULL;
 
@@ -348,7 +376,6 @@ void Bot::CheckTerrain (float movedDistance)
             m_moveSpeed = -pev->maxspeed;
       }
    }
-#endif
 
    // Standing still, no need to check?
    // FIXME: doesn't care for ladder movement (handled separately) should be included in some way
@@ -1235,180 +1262,158 @@ void Bot::FindShortestPath (int srcIndex, int destIndex)
    }
 }
 
-// Priority queue class (smallest item out first)
+// priority queue class (smallest item out first, hlsdk)
 class PriorityQueue
 {
-public:
-   PriorityQueue (void);
-   ~PriorityQueue (void);
-
-   inline int  Empty (void) { return m_size == 0; }
-   inline int  Size (void) { return m_size; }
-   void Insert (int, float);
-   int Remove (void);
- 
 private:
-   struct HeapNode_t
+   struct Node
    {
-      int   id;
-      float priority;
-   } *m_heap;
+      int id;
+      float pri;
+   };
 
    int m_size;
    int m_heapSize;
+   Node *m_heap;
 
-   void HeapSiftDown (int);
-   void HeapSiftUp (void);
+public:
+
+   inline bool IsEmpty (void)
+   {
+      return m_size == 0;
+   }
+
+   inline PriorityQueue (int initialSize)
+   {
+      m_size = 0;
+      m_heapSize = initialSize;
+      m_heap = new Node[m_heapSize];
+   }
+
+   inline ~PriorityQueue (void)
+   {
+      delete[] m_heap;
+      m_heap = NULL;
+   }
+
+   // inserts a value into the priority queue
+   inline void Push (int value, float pri)
+   {
+      if (m_size >= m_heapSize)
+      {
+         m_heapSize += 100;
+         m_heap = (Node *) realloc (m_heap, sizeof (Node) * m_heapSize);
+
+         ServerPrint ("REALLOCATING");
+      }
+
+      m_heap[m_size].pri = pri;
+      m_heap[m_size].id = value;
+
+      int child = ++m_size - 1;
+
+      while (child)
+      {
+         int parent = (child - 1) / 2;
+
+         if (m_heap[parent].pri <= m_heap[child].pri)
+            break;
+
+         Node ref = m_heap[child];
+
+         m_heap[child] = m_heap[parent];
+         m_heap[parent] = ref;
+
+         child = parent;
+      }
+   }
+
+   // removes the smallest item from the priority queue
+   inline int Pop (void)
+   {
+      int result = m_heap[0].id;
+
+      m_size--;
+      m_heap[0] = m_heap[m_size];
+
+      int parent = 0;
+      int child = (2 * parent) + 1;
+
+      Node ref = m_heap[parent];
+
+      while (child < m_size)
+      {
+         int right = (2 * parent) + 2;
+
+         if (right < m_size && m_heap[right].pri < m_heap[child].pri)
+            child = right;
+
+         if (ref.pri <= m_heap[child].pri)
+            break;
+
+         m_heap[parent] = m_heap[child];
+
+         parent = child;
+         child = (2 * parent) + 1;
+      }
+      m_heap[parent] = ref;
+      return result;
+   }
 };
 
-PriorityQueue::PriorityQueue (void)
-{
-   m_size = 0;
-   m_heapSize = MAX_WAYPOINTS * 4;
-   m_heap = (HeapNode_t *) malloc (sizeof (HeapNode_t) * m_heapSize);
-}
 
-PriorityQueue::~PriorityQueue (void)
-{
-   free (m_heap);
-
-   m_heap = NULL;
-}
-
-// inserts a value into the priority queue
-void PriorityQueue::Insert (int value, float priority)
-{
-   if (m_size >= m_heapSize)
-   {
-      m_heapSize += 100;
-      m_heap = (HeapNode_t *)realloc (m_heap, sizeof (HeapNode_t) * m_heapSize);
-
-      if (m_heap == NULL)
-         TerminateOnMalloc ();
-   }
-
-   m_heap[m_size].priority = priority;
-   m_heap[m_size].id = value;
-
-   m_size++;
-   HeapSiftUp ();
-}
-
-// removes the smallest item from the priority queue
-int PriorityQueue::Remove (void)
-{
-   int retID = m_heap[0].id;
-
-   m_size--;
-   m_heap[0] = m_heap[m_size];
-
-   HeapSiftDown (0);
-   return retID;
-}
-
-void PriorityQueue::HeapSiftDown (int subRoot)
-{
-   int parent = subRoot;
-   int child = (2 * parent) + 1;
-
-   HeapNode_t ref = m_heap[parent];
-
-   while (child < m_size)
-   {
-      int rightChild = (2 * parent) + 2;
-
-      if (rightChild < m_size)
-      {
-         if (m_heap[rightChild].priority < m_heap[child].priority)
-            child = rightChild;
-      }
-      if (ref.priority <= m_heap[child].priority)
-         break;
-
-      m_heap[parent] = m_heap[child];
-
-      parent = child;
-      child = (2 * parent) + 1;
-   }
-   m_heap[parent] = ref;
-}
-
-
-void PriorityQueue::HeapSiftUp (void)
-{
-   int child = m_size - 1;
-
-   while (child)
-   {
-      int parent = (child - 1) / 2;
-
-      if (m_heap[parent].priority <= m_heap[child].priority)
-         break;
-
-      HeapNode_t temp = m_heap[child];
-
-      m_heap[child] = m_heap[parent];
-      m_heap[parent] = temp;
-
-      child = parent;
-   }
-}
-
-
-int gfunctionKillsDistT (int currentIndex, int parentIndex)
+float gfunctionKillsDistT (int currentIndex, int parentIndex)
 {
    // least kills and number of nodes to goal for a team
 
-   int cost = (g_experienceData + (currentIndex * g_numWaypoints) + currentIndex)->team0Damage + g_highestDamageT;
+   if (parentIndex == -1)
+      return 0;
+
+   float cost = (g_experienceData + (currentIndex * g_numWaypoints) + currentIndex)->team0Damage + g_highestDamageT;
 
    Path *current = g_waypoint->GetPath (currentIndex);
-   Path *parent = g_waypoint->GetPath (parentIndex);
 
    for (int i = 0; i < MAX_PATH_INDEX; i++)
    {
       int neighbour = current->index[i];
 
       if (neighbour != -1)
-         cost += (g_experienceData + (neighbour * g_numWaypoints) + neighbour)->team0Damage * 0.3;
+         cost += (g_experienceData + (neighbour * g_numWaypoints) + neighbour)->team0Damage;
    }
 
    if (current->flags & FLAG_CROUCH)
-      cost *= 2;
+      cost *= 1.5;
 
-   if (parentIndex < 0 || parentIndex > g_numWaypoints || parentIndex == currentIndex)
-      return cost * (yb_danger_factor.GetInt () * 20 / (2 * g_highestDamageT));
-
-   return g_waypoint->GetPathDistance (parentIndex, currentIndex) + (cost * 10 * yb_danger_factor.GetInt ());
+   return g_waypoint->GetPathDistance (parentIndex, currentIndex) + cost;
 }
 
 
-int gfunctionKillsDistCT (int currentIndex, int parentIndex)
+float gfunctionKillsDistCT (int currentIndex, int parentIndex)
 {
    // least kills and number of nodes to goal for a team
 
-   int cost = (g_experienceData + (currentIndex * g_numWaypoints) + currentIndex)->team1Damage + g_highestDamageCT;
+   if (parentIndex == -1)
+      return 0;
+
+   float cost = (g_experienceData + (currentIndex * g_numWaypoints) + currentIndex)->team1Damage + g_highestDamageCT;
 
    Path *current = g_waypoint->GetPath (currentIndex);
-   Path *parent = g_waypoint->GetPath (parentIndex);
 
    for (int i = 0; i < MAX_PATH_INDEX; i++)
    {
       int neighbour = current->index[i];
 
       if (neighbour != -1)
-         cost += static_cast <int> ((g_experienceData + (neighbour * g_numWaypoints) + neighbour)->team1Damage * 0.3);
+         cost += static_cast <int> ((g_experienceData + (neighbour * g_numWaypoints) + neighbour)->team1Damage);
    }
 
    if (current->flags & FLAG_CROUCH)
-      cost *= 2;
+      cost *= 1.5;
 
-   if (parentIndex < 0 || parentIndex > g_numWaypoints || parentIndex == currentIndex)
-      return cost * (yb_danger_factor.GetInt () * 20 / (2 * g_highestDamageCT));
-
-   return g_waypoint->GetPathDistance (parentIndex, currentIndex) + (cost * 10 * yb_danger_factor.GetInt ());
+   return g_waypoint->GetPathDistance (parentIndex, currentIndex) + cost;
 }
 
-int gfunctionKillsDistCTWithHostage (int currentIndex, int parentIndex)
+float gfunctionKillsDistCTWithHostage (int currentIndex, int parentIndex)
 {
    // least kills and number of nodes to goal for a team
 
@@ -1418,16 +1423,16 @@ int gfunctionKillsDistCTWithHostage (int currentIndex, int parentIndex)
       return 65355;
 
    else if (current->flags & (FLAG_CROUCH | FLAG_LADDER))
-      return gfunctionKillsDistCT (currentIndex, parentIndex) * 5000;
+      return gfunctionKillsDistCT (currentIndex, parentIndex) * 500;
 
    return gfunctionKillsDistCT (currentIndex, parentIndex);
 }
 
-int gfunctionKillsT (int currentIndex, int parentIndex)
+float gfunctionKillsT (int currentIndex, int parentIndex)
 {
    // least kills to goal for a team
 
-   int cost = (g_experienceData + (currentIndex * g_numWaypoints) + currentIndex)->team0Damage;
+   float cost = (g_experienceData + (currentIndex * g_numWaypoints) + currentIndex)->team0Damage;
 
    Path *current = g_waypoint->GetPath (currentIndex);
 
@@ -1436,20 +1441,23 @@ int gfunctionKillsT (int currentIndex, int parentIndex)
       int neighbour = current->index[i];
 
       if (neighbour != -1)
-         cost += (g_experienceData + (neighbour * g_numWaypoints) + neighbour)->team0Damage * 0.3;
+         cost += (g_experienceData + (neighbour * g_numWaypoints) + neighbour)->team0Damage;
    }
 
    if (current->flags & FLAG_CROUCH)
-      cost *= 2;
+      cost *= 1.5;
 
-   return cost * 10 * yb_danger_factor.GetInt ();
+   return cost;
 }
 
-int gfunctionKillsCT (int currentIndex, int parentIndex)
+float gfunctionKillsCT (int currentIndex, int parentIndex)
 {
    // least kills to goal for a team
 
-   int cost = (g_experienceData + (currentIndex * g_numWaypoints) + currentIndex)->team1Damage;
+   if (parentIndex == -1)
+      return 0;
+
+   float cost = (g_experienceData + (currentIndex * g_numWaypoints) + currentIndex)->team1Damage;
 
    Path *current = g_waypoint->GetPath (currentIndex);
 
@@ -1458,18 +1466,21 @@ int gfunctionKillsCT (int currentIndex, int parentIndex)
       int neighbour = current->index[i];
 
       if (neighbour != -1)
-         cost += (g_experienceData + (neighbour * g_numWaypoints) + neighbour)->team1Damage * 0.3;
+         cost += (g_experienceData + (neighbour * g_numWaypoints) + neighbour)->team1Damage;
    }
 
    if (current->flags & FLAG_CROUCH)
-      cost *= 2;
+      cost *= 1.5;
 
-   return cost * 10 * yb_danger_factor.GetInt ();
+   return cost + 0.5f;
 }
 
-int gfunctionKillsCTWithHostage (int currentIndex, int parentIndex)
+float gfunctionKillsCTWithHostage (int currentIndex, int parentIndex)
 {
    // least kills to goal for a team
+
+   if (parentIndex == -1)
+      return 0;
 
    Path *current = g_waypoint->GetPath (currentIndex);
 
@@ -1477,12 +1488,12 @@ int gfunctionKillsCTWithHostage (int currentIndex, int parentIndex)
       return 65355;
 
    else if (current->flags & (FLAG_CROUCH | FLAG_LADDER))
-      return gfunctionKillsDistCT (currentIndex, parentIndex) * 5000;
+      return gfunctionKillsDistCT (currentIndex, parentIndex) * 500;
 
    return gfunctionKillsCT (currentIndex, parentIndex);
 }
 
-int gfunctionPathDist (int currentIndex, int parentIndex)
+float gfunctionPathDist (int currentIndex, int parentIndex)
 {
    if (parentIndex == -1)
       return 0;
@@ -1504,19 +1515,20 @@ int gfunctionPathDist (int currentIndex, int parentIndex)
    return 65355;
 }
 
-int gfunctionPathDistWithHostage (int currentIndex, int parentIndex)
+float gfunctionPathDistWithHostage (int currentIndex, int parentIndex)
 {
    Path *current = g_waypoint->GetPath (currentIndex);
 
    if (current->flags & FLAG_NOHOSTAGE)
       return 65355;
+
    else if (current->flags & (FLAG_CROUCH | FLAG_LADDER))
-      return gfunctionPathDist (currentIndex, parentIndex) * 5000;
+      return gfunctionPathDist (currentIndex, parentIndex) * 500;
 
    return gfunctionPathDist (currentIndex, parentIndex);
 }
 
-int hfunctionSquareDist (int index, int, int goalIndex)
+float hfunctionSquareDist (int index, int, int goalIndex)
 {
    // square distance heuristic
 
@@ -1527,29 +1539,28 @@ int hfunctionSquareDist (int index, int, int goalIndex)
    float deltaY = fabsf (start->origin.y - goal->origin.y);
    float deltaZ = fabsf (start->origin.z - goal->origin.z);
 
-   return static_cast <int> (deltaX + deltaY + deltaZ);
+   return static_cast <unsigned int> (deltaX + deltaY + deltaZ);
 }
 
-int hfunctionSquareDistWithHostage (int index, int startIndex, int goalIndex)
+float hfunctionSquareDistWithHostage (int index, int startIndex, int goalIndex)
 {
    // square distance heuristic with hostages
 
    if (g_waypoint->GetPath (startIndex)->flags & FLAG_NOHOSTAGE)
-      return 65536;
+      return 65355;
 
    return hfunctionSquareDist (index, startIndex, goalIndex);
 }
 
-int hfunctionNone (int index, int startIndex, int goalIndex)
+float hfunctionNone (int index, int startIndex, int goalIndex)
 {
    return hfunctionSquareDist (index, startIndex, goalIndex) / (128 * 10);
 }
 
-int hfunctionNumberNodes (int index, int startIndex, int goalIndex)
+float hfunctionNumberNodes (int index, int startIndex, int goalIndex)
 {
    return hfunctionSquareDist (index, startIndex, goalIndex) / 128 * g_highestKills;
 }
-
 
 void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
 {
@@ -1573,17 +1584,17 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
    m_goalValue = 0.0;
 
    // A* Stuff
-   enum AStarState_t {OPEN, CLOSED, NEW};
+   enum AStarState {OPEN, CLOSED, NEW};
 
-   struct AStar_t
+   struct AStar
    {
-      int g;
-      int f;
+      float g;
+      float f;
       short parentIndex;
-      AStarState_t state;
+      AStarState state;
    } astar[MAX_WAYPOINTS];
 
-   PriorityQueue openList;
+   PriorityQueue openList (MAX_WAYPOINTS * 0.5);
 
    for (int i = 0; i < MAX_WAYPOINTS; i++)
    {
@@ -1593,8 +1604,8 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
       astar[i].state = NEW;
    }
 
-   int (*gcalc) (int, int) = NULL;
-   int (*hcalc) (int, int, int) = NULL;
+   float (*gcalc) (int, int) = NULL;
+   float (*hcalc) (int, int, int) = NULL;
 
    switch (pathType)
    {
@@ -1647,18 +1658,18 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
       }
       break;
    }
- 
+
    // put start node into open list
    astar[srcIndex].g = gcalc (srcIndex, -1);
    astar[srcIndex].f = astar[srcIndex].g + hcalc (srcIndex, srcIndex, destIndex);
    astar[srcIndex].state = OPEN;
 
-   openList.Insert (srcIndex, astar[srcIndex].g);
+   openList.Push (srcIndex, astar[srcIndex].g);
 
-   while (!openList.Empty ())
+   while (!openList.IsEmpty ())
    {
       // remove the first node from the open list
-      int currentIndex = openList.Remove ();
+      int currentIndex = openList.Pop ();
 
       // is the current node the goal node?
       if (currentIndex == destIndex)
@@ -1697,9 +1708,9 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
             continue;
 
          // calculate the F value as F = G + H
-         int g = astar[currentIndex].g + gcalc (currentChild, currentIndex);
-         int h = hcalc (currentChild, srcIndex, destIndex);
-         int f = g + h;
+         float g = astar[currentIndex].g + gcalc (currentChild, currentIndex);
+         float h = hcalc (currentChild, srcIndex, destIndex);
+         float f = g + h;
 
          if (astar[currentChild].state == NEW || astar[currentChild].f > f)
          {
@@ -1710,7 +1721,7 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
             astar[currentChild].g = g;
             astar[currentChild].f = f;
 
-            openList.Insert (currentChild, g);
+            openList.Push (currentChild, g);
          }
       }
    }

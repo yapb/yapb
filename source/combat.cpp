@@ -1080,7 +1080,7 @@ void Bot::CombatFight (void)
          int nearestToEnemyPoint = g_waypoint->FindNearest (m_enemy->v.origin);
 
          if (shouldDuck && GetTaskId () != TASK_SEEKCOVER && GetTaskId () != TASK_HUNTENEMY && (m_visibility & VISIBLE_BODY) && !(m_visibility & VISIBLE_OTHER) && g_waypoint->IsDuckVisible (m_currentWaypointIndex, nearestToEnemyPoint))
-            m_duckTime = GetWorldTime () + 1.0f;
+            m_duckTime = GetWorldTime () + 0.5f;
 
          m_moveSpeed = 0.0;
          m_strafeSpeed = 0.0;
