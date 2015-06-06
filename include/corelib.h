@@ -21,7 +21,9 @@
 #include <math.h>
 #include <assert.h>
 
+#if defined (PLATFORM_WIN32)
 #pragma warning (disable : 4100 4189 4239 4996 4244 383 473 981)
+#endif
 
 //
 // Title: Utility Classes Header

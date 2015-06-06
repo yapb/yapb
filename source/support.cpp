@@ -83,7 +83,7 @@ short FixedSigned16 (float value, float scale)
    return static_cast <short> (output);
 }
 
-char *FormatBuffer (char *format, ...)
+const char *FormatBuffer (const char *format, ...)
 {
    va_list ap;
    static char staticBuffer[3072];
@@ -823,7 +823,7 @@ bool IsDedicatedServer (void)
    return (IS_DEDICATED_SERVER () > 0); // ask engine for this
 }
 
-bool TryFileOpen (char *fileName)
+bool TryFileOpen (const char *fileName)
 {
    // this function tests if a file exists by attempting to open it
 
@@ -979,7 +979,7 @@ void ServerCommand (const char *format, ...)
    vsprintf (string, format, ap);
    va_end (ap);
 
-   SERVER_COMMAND (FormatBuffer ("%s\n", string)); // execute command
+   SERVER_COMMAND (const_cast <char *> (FormatBuffer ("%s\n", string))); // execute command
 }
 
 const char *GetMapName (void)
@@ -1004,7 +1004,7 @@ bool OpenConfig (const char *fileName, char *errorIfNotExists, File *outFile, bo
       if (strcmp (fileName, "lang.cfg") == 0 && strcmp (yb_language.GetString (), "en") == 0)
          return false;
 
-      char *languageDependantConfigFile = FormatBuffer ("%s/addons/yapb/config/language/%s_%s", GetModName (), yb_language.GetString (), fileName);
+      const char *languageDependantConfigFile = FormatBuffer ("%s/addons/yapb/config/language/%s_%s", GetModName (), yb_language.GetString (), fileName);
 
       // check is file is exists for this language
       if (TryFileOpen (languageDependantConfigFile))

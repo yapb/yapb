@@ -1858,7 +1858,7 @@ void Bot::SetConditions (void)
             float distance = (m_lastEnemy->v.origin - pev->origin).GetLength ();
 
             // is enemy to high to throw
-            if ((m_lastEnemy->v.origin.z > (pev->origin.z + 650.0)) || !(m_lastEnemy->v.flags & FL_ONGROUND | FL_DUCKING))
+            if ((m_lastEnemy->v.origin.z > (pev->origin.z + 650.0)) || !(m_lastEnemy->v.flags & (FL_ONGROUND | FL_DUCKING)))
                distance = FLT_MAX; // just some crazy value
 
             // enemy is within a good throwing distance ?               
@@ -3094,8 +3094,6 @@ void Bot::Think (void)
 
          killer->frags++;
          MDLL_ClientKill (ENT (killer));
-
-         HudMessage (ENT (killer), true, Vector (g_randGen.Long (33, 255), g_randGen.Long (33, 255), g_randGen.Long (33, 255)), "You was slayed, because of teamkilling a player. Please be careful.");
       }
       else if (m_voteMap != 0) // host wants the bots to vote for a map?
       {
@@ -4576,7 +4574,11 @@ void Bot::RunTask (void)
          break;
       }
 
-      destination = GetEntityOrigin (m_pickupItem);
+      if (m_pickupType == PICKUP_HOSTAGE)
+         destination = m_pickupItem->v.origin + pev->view_ofs;
+      else
+         destination = GetEntityOrigin (m_pickupItem);
+
       m_destOrigin = destination;
       m_entity = destination;
 
@@ -5580,15 +5582,11 @@ void Bot::DiscardWeaponForUser (edict_t *user, bool discardC4)
       {
          SelectWeaponByName ("weapon_c4");
          FakeClientCommand (GetEntity (), "drop");
-
-         SayText (FormatBuffer ("Here! %s, and now go and setup it!", STRING (user->v.netname)));
       }
       else
       {
          SelectBestWeapon ();
          FakeClientCommand (GetEntity (), "drop");
-
-         SayText (FormatBuffer ("Here the weapon! %s, feel free to use it ;)", STRING (user->v.netname)));
       }
 
       m_pickupItem = NULL;
@@ -5604,8 +5602,6 @@ void Bot::DiscardWeaponForUser (edict_t *user, bool discardC4)
          m_nextBuyTime = GetWorldTime ();
       }
    }
-   else
-      SayText (FormatBuffer ("Sorry %s, i don't want discard my %s to you!", STRING (user->v.netname), discardC4 ? "bomb" : "weapon"));
 }
 
 void Bot::ResetDoubleJumpState (void)
@@ -5954,7 +5950,7 @@ bool Bot::OutOfBombTimer (void)
    if ((timeLeft < reachTime + 6 && !m_hasDefuser && !hasTeammatesWithDefuserKit) || (timeLeft < reachTime + 2 && m_hasDefuser))
       return true;
 
-   if (m_hasProgressBar && IsOnFloor () && (m_hasDefuser ? 10.0 : 15.0 > GetBombTimeleft ()))
+   if (m_hasProgressBar && IsOnFloor () && ((m_hasDefuser ? 10.0 : 15.0) > GetBombTimeleft ()))
       return true;
 
    return false; // return false otherwise

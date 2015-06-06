@@ -75,7 +75,9 @@ typedef int BOOL;
 #endif
 
 // In case this ever changes
+#ifndef M_PI
 #define M_PI 3.1415926
+#endif
    
 //
 // Conversion among the three types of "entity", including identity-conversions.

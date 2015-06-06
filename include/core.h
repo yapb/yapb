@@ -1596,7 +1596,7 @@ extern int GetTeam (edict_t *ent);
 extern float GetShootingConeDeviation (edict_t *ent, Vector *position);
 extern float GetWaveLength (const char *fileName);
 
-extern bool TryFileOpen (char *fileName);
+extern bool TryFileOpen (const char *fileName);
 extern bool IsDedicatedServer (void);
 extern bool IsVisible (const Vector &origin, edict_t *ent);
 extern bool IsAlive (edict_t *ent);
@@ -1611,7 +1611,7 @@ extern const char *GetMapName (void);
 extern const char *GetWaypointDir (void);
 extern const char *GetModName (void);
 extern const char *GetField (const char *string, int fieldId, bool endLine = false);
-extern char *FormatBuffer (char *format, ...);
+extern const char *FormatBuffer (const char *format, ...);
 
 extern uint16 GenerateBuildNumber (void);
 extern Vector GetEntityOrigin (edict_t *ent);

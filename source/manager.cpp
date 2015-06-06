@@ -1145,7 +1145,7 @@ void Bot::Kill (void)
    KeyValueData kv;
    kv.szClassName = const_cast <char *> (g_weaponDefs[m_currentWeapon].className);
    kv.szKeyName = "damagetype";
-   kv.szValue = FormatBuffer ("%d", (1 << 4));
+   kv.szValue = const_cast <char *> (FormatBuffer ("%d", (1 << 4)));
    kv.fHandled = FALSE;
 
    MDLL_KeyValue (hurtEntity, &kv);

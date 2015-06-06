@@ -3135,7 +3135,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 
          if (buffer)
          {
-            CreatePath (FormatBuffer ("%s/dlls", GetModName ()));
+            CreatePath (const_cast <char *> (FormatBuffer ("%s/dlls", GetModName ())));
             File fp (gameDLLName, "wb");
 
             if (fp.IsValid ())

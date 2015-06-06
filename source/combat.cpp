@@ -492,9 +492,7 @@ bool Bot::DoFirePause (float distance, FireDelay *fireDelay)
       return true;
 
    float offset = 0.0f;
-
    const float BurstDistance = 300.0f;
-   const float DoubleBurstDistance = BurstDistance * 2;
 
    if (distance < BurstDistance) // KWo - 09.04.2010
       return false;

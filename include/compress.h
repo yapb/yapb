@@ -156,7 +156,7 @@ public:
       m_codeSize = 0;
    }
 
-   int InternalEncode (char *fileName, byte *header, int headerSize, byte *buffer, int bufferSize)
+   int InternalEncode (const char *fileName, byte *header, int headerSize, byte *buffer, int bufferSize)
    {
       int i, bit, length, node, strPtr, lastMatchLength, codeBufferPtr, bufferPtr = 0;
       byte codeBuffer[17], mask;
@@ -257,7 +257,7 @@ public:
       return m_codeSize;
    }
 
-   int InternalDecode (char *fileName, int headerSize, byte *buffer, int bufferSize)
+   int InternalDecode (const char *fileName, int headerSize, byte *buffer, int bufferSize)
    {
       int i, j, k, node, bit;
       unsigned int flags;
@@ -327,14 +327,14 @@ public:
    }
 
    // external decoder
-   static int Uncompress (char *fileName, int headerSize, byte *buffer, int bufferSize)
+   static int Uncompress (const char *fileName, int headerSize, byte *buffer, int bufferSize)
    {
       static Compressor compressor = Compressor ();
       return compressor.InternalDecode (fileName, headerSize, buffer, bufferSize);
    }
 
    // external encoder
-   static int Compress(char *fileName, byte *header, int headerSize, byte *buffer, int bufferSize)
+   static int Compress(const char *fileName, byte *header, int headerSize, byte *buffer, int bufferSize)
    {
       static Compressor compressor = Compressor ();
       return compressor.InternalEncode (fileName, header, headerSize, buffer, bufferSize);
