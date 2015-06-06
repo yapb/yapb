@@ -3071,8 +3071,6 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       { "czero", "cs.so", "cs.dylib", "mp.dll", "Counter-Strike: Condition Zero (Newer)", CSV_CZERO },
       { "csv15", "cs_i386.so", "cs.dylib", "mp.dll", "CS 1.5 for Steam", CSV_OLD },
       { "cs13", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike v1.3", CSV_OLD }, // assume cs13 = cs15
-      { "retrocs", "rcs_i386.so", "cs.dylib", "rcs.dll", "Retro Counter-Strike", CSV_OLD },
-      {"", "", "", "", 0},
    };
 
    // get the engine functions from the engine...
@@ -3084,7 +3082,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 
    ModSupport_t *knownMod = NULL;
 
-   for (int i = 0; s_supportedMods[i].name; i++)
+   for (int i = 0; i < ARRAYSIZE_HLSDK (s_supportedMods); i++)
    {
       ModSupport_t *mod = &s_supportedMods[i];
 

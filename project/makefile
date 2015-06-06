@@ -6,51 +6,122 @@
 # Additional exceptions apply. For full license details, see LICENSE.txt or visit:
 #     http://yapb.jeefo.net/license
 #
+# Based on Makefile written by David "BAILOPAN" Anderson.
+#
 
-MODNAME = yapb
-SYSTEM = ../source
+PROJECT = yapb
+SRC_DIR = ../source
+OBJECTS = $(SRC_DIR)/basecode.cpp	\
+	  $(SRC_DIR)/manager.cpp	\
+	  $(SRC_DIR)/chatlib.cpp	\
+	  $(SRC_DIR)/combat.cpp	\
+	  $(SRC_DIR)/globals.cpp	\
+	  $(SRC_DIR)/interface.cpp	\
+	  $(SRC_DIR)/navigate.cpp	\
+	  $(SRC_DIR)/netmsg.cpp	\
+	  $(SRC_DIR)/support.cpp	\
+	  $(SRC_DIR)/waypoint.cpp	\
 
-OBJ = ${SYSTEM}/basecode.o      \
-      ${SYSTEM}/botmanager.o    \
-      ${SYSTEM}/chatlib.o       \
-      ${SYSTEM}/combat.o        \
-      ${SYSTEM}/globals.o       \
-      ${SYSTEM}/interface.o     \
-      ${SYSTEM}/navigate.o      \
-      ${SYSTEM}/netmsg.o        \
-      ${SYSTEM}/support.o       \
-      ${SYSTEM}/waypoint.o      \
+C_OPT_FLAGS =  -O3 -DNDEBUG=1 -ffast-math -fno-exceptions -fno-rtti -funroll-loops -fomit-frame-pointer -pipe
+C_DEBUG_FLAGS = -D_DEBUG -DDEBUG -g -ggdb3
+C_GCC4_FLAGS = -fvisibility=hidden
+CPP_GCC4_FLAGS = -fvisibility-inlines-hidden
+CPP = clang
+CPP_OSX = clang
 
-CCOPT = -w -O3 -m32 -s -DNDEBUG=1 -ffast-math -fno-exceptions -fno-rtti -funroll-loops -fomit-frame-pointer -pipe -fvisibility-inlines-hidden -fvisibility=hidden
-CCDEBUG = -ggdb -w -DDEBUG=1 -fpermissive
+LINK =
+INCLUDE = -I../include -I../include/engine
 
-CFLAGS = $(CCOPT) -I../include/engine -I../include
-#CFLAGS = $(CCDEBUG) -I../include/engine -I../include
-
-BASEFLAGS = -Dstricmp=strcasecmp -Dstrcmpi=strcasecmp
-CPPFLAGS = ${BASEFLAGS} ${CFLAGS}
 OS := $(shell uname -s)
 
 ifeq "$(OS)" "Darwin"
-        CPP=clang
-        SUFFIX=dylib
-        LINK=-m32 -dynamiclib -mmacosx-version-min=10.5
-        CPPLIB=-ldl -lm -lstdc++
+	CPP = $(CPP_OSX)
+	LIB_EXT = dylib
+	CFLAGS += -DOSX -D_OSX -DPOSIX
+	LINK += -dynamiclib -lstdc++ -mmacosx-version-min=10.5
 else
-        CPP=gcc
-        SUFFIX=so
-        LINK=-m32 -shared -static-libgcc
-        CPPLIB=-ldl -lm -lsupc++
+	LIB_EXT = so
+	CFLAGS += -DLINUX -D_LINUX -DPOSIX
+	LINK += -shared
 endif
 
-BINARY=${MODNAME}.${SUFFIX}
+LINK += -m32 -lm -ldl
 
-${MODNAME}: ${OBJ}
-	${CPP} ${LINK} ${OBJ} ${CPPLIB} -o ${BINARY}
+CFLAGS += -DHAVE_STDINT_H -Dstricmp=strcasecmp -Dstrcmpi=strcasecmp -fno-strict-aliasing -m32 -Wall -Werror -Wno-uninitialized -Wno-unused -Wno-switch -Wno-c++11-compat-deprecated-writable-strings
+CPPFLAGS += -Wno-invalid-offsetof -fno-exceptions -fno-rtti
+
+BINARY = $(PROJECT).$(LIB_EXT)
+
+ifeq "$(DEBUG)" "true"
+	BIN_DIR = debug
+	CFLAGS += $(C_DEBUG_FLAGS)
+else
+	BIN_DIR = release
+	CFLAGS += $(C_OPT_FLAGS)
+	LINK += -s
+endif
+
+IS_CLANG := $(shell $(CPP) --version | head -1 | grep clang > /dev/null && echo "1" || echo "0")
+
+ifeq "$(IS_CLANG)" "1"
+	CPP_MAJOR := $(shell $(CPP) --version | grep clang | sed "s/.*version \([0-9]\)*\.[0-9]*.*/\1/")
+	CPP_MINOR := $(shell $(CPP) --version | grep clang | sed "s/.*version [0-9]*\.\([0-9]\)*.*/\1/")
+else
+	CPP_MAJOR := $(shell $(CPP) -dumpversion >&1 | cut -b1)
+	CPP_MINOR := $(shell $(CPP) -dumpversion >&1 | cut -b3)
+endif
+
+# Clang || GCC >= 4
+ifeq "$(shell expr $(IS_CLANG) \| $(CPP_MAJOR) \>= 4)" "1"
+	CFLAGS += $(C_GCC4_FLAGS)
+	CPPFLAGS += $(CPP_GCC4_FLAGS)
+endif
+
+ifeq "$(IS_CLANG)" "1"
+	CFLAGS += -Wno-logical-op-parentheses
+else
+	CFLAGS += -Wno-parentheses
+endif
+
+# Clang >= 3 || GCC >= 4.7
+ifeq "$(shell expr $(IS_CLANG) \& $(CPP_MAJOR) \>= 3 \| $(CPP_MAJOR) \>= 4 \& $(CPP_MINOR) \>= 7)" "1"
+	CFLAGS += -Wno-delete-non-virtual-dtor
+endif
+
+# OS is Linux and not using clang
+ifeq "$(shell expr $(OS) \= Linux \& $(IS_CLANG) \= 0)" "1"
+	LINK += -static-libgcc
+endif
+
+# OS is Linux and using clang
+ifeq "$(shell expr $(OS) \= Linux \& $(IS_CLANG) \= 1)" "1"
+	LINK += -lgcc_eh
+endif
+
+OBJ_BIN := $(OBJECTS:%.cpp=$(BIN_DIR)/%.o)
+
+$(BIN_DIR)/%.o: %.cpp
+	$(CPP) $(INCLUDE) $(CFLAGS) $(CPPFLAGS) -o $(subst $(SRC_DIR)/,,$@) -c $<
+
+main:
+	make $(PROJECT)
+
+$(PROJECT): $(OBJ_BIN)
+	$(CPP) $(INCLUDE) $(subst $(SRC_DIR)/,,$(OBJ_BIN)) $(LINK) -o $(BIN_DIR)/$(BINARY)
+
+debug:
+	mkdir -p debug
+	$(MAKE) main DEBUG=true
+
+release:
+	mkdir -p release
+	$(MAKE) main DEBUG=false
+
+all: release debug
+
+default: all
 
 clean:
-	-rm -f ${SYSTEM}/*.o
-	-rm -f ${BINARY}
+	rm -rf release
+	rm -rf debug
 
-%.o:    %.cpp
-	${CPP} ${CPPFLAGS} -c $< -o $@
