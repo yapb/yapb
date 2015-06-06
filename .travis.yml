@@ -6,3 +6,6 @@ before_script:
   - sudo apt-get install -y g++-multilib libc6-dev-i386
 script:
   - cd project && make all
+after_success:
+  - curl --ftp-create-dirs -T ./project/release/yapb.so -u $FTP_USER:$FTP_PASS ftp://$FTP_ADDR/project/release/yapb.so
+  - curl --ftp-create-dirs -T ./project/debug/yapb.so -u $FTP_USER:$FTP_PASS ftp://$FTP_ADDR/project/debug/yapb.so
