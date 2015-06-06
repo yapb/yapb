@@ -4,6 +4,10 @@ compiler:
 before_script:
   - sudo apt-get update -qq
   - sudo apt-get install -y g++-multilib libc6-dev-i386
+  - sudo wget http://yapb.jeefo.net/ci/osxcross/osxcross.tar.gz -O /tmp/osxcross.tgz
+  - sudo mkdir -p /tmp/osxcross/target
+  - sudo tar xzf /tmp/osxcross.tgz -C /tmp/osxcross/target/
+  - export PATH=$PATH:/tmp/osxcross/target/bin
 script:
   - cd project && make all
 after_success:
