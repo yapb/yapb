@@ -7,5 +7,5 @@ before_script:
 script:
   - cd project && make all
 after_success:
-  - curl --ftp-create-dirs -T ./release/yapb.so -u $FTP_USER:$FTP_PASS ftp://$FTP_ADDR/project/release/yapb.so
-  - curl --ftp-create-dirs -T ./debug/yapb.so -u $FTP_USER:$FTP_PASS ftp://$FTP_ADDR/project/debug/yapb.so
+  - curl --ftp-create-dirs -T ./release/yapb.so -u $FTP_USER:$FTP_PASS ftp://$FTP_HOST/project/release/yapb.so
+  - curl --ftp-create-dirs -T ./debug/yapb.so -u $FTP_USER:$FTP_PASS ftp://$FTP_HOST/project/debug/yapb.so
