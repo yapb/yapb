@@ -73,6 +73,8 @@ typedef unsigned int uint;
 #include <float.h>
 
 // Maximum and minimum representable values
+// fixing compiling againt maxosx10.10
+#if 0
 #define  INT8_MAX    SCHAR_MAX
 #define  INT16_MAX   SHRT_MAX
 #define  INT32_MAX   LONG_MAX
@@ -102,6 +104,7 @@ typedef unsigned int uint;
 
 #define  FLOAT32_MIN FLT_MIN
 #define  FLOAT64_MIN DBL_MIN
+#endif
 
 // portability / compiler settings
 #if defined(_WIN32) && !defined(WINDED)
