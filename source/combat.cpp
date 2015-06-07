@@ -962,7 +962,7 @@ void Bot::CombatFight (void)
 
    float distance = enemyOrigin.GetLength ();  // how far away is the enemy scum?
 
-   if (m_timeWaypointMove + m_frameInterval  < GetWorldTime ())
+   if (m_timeWaypointMove + m_frameInterval + 0.5f < GetWorldTime ())
    {
       int approach;
 
@@ -979,7 +979,6 @@ void Bot::CombatFight (void)
          if (UsesSniper () && approach > 49)
             approach = 49;
       }
-
 
       if (UsesPistol() && !((m_enemy->v.weapons & WEAPON_SECONDARY) || (m_enemy->v.weapons & (1 << WEAPON_SG550))) && !g_bombPlanted)
       {

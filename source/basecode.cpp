@@ -3290,7 +3290,7 @@ void Bot::RunTask (void)
 
                   MakeVectors (pev->v_angle);
 
-                  m_timeCamping = GetWorldTime () + g_randGen.Float (0.3f, 0.6f);
+                  m_timeCamping = GetWorldTime () + g_randGen.Float (10.0f, 30.0f);
                   StartTask (TASK_CAMP, TASKPRI_CAMP, -1, m_timeCamping, true);
 
                   m_camp = Vector (m_currentPath->campStartX, m_currentPath->campStartY, 0.0f);
@@ -4198,7 +4198,7 @@ void Bot::RunTask (void)
                destIndex = newIndex;
          }
 
-         if (destIndex >= 0 && destIndex < g_numWaypoints && destIndex != m_currentWaypointIndex)
+         if (destIndex >= 0 && destIndex < g_numWaypoints && destIndex != m_currentWaypointIndex && m_currentWaypointIndex >= 0 && m_currentWaypointIndex < g_numWaypoints)
          {
             m_prevGoalIndex = destIndex;
             GetTask ()->data = destIndex;
@@ -4921,10 +4921,6 @@ void Bot::BotAI (void)
    m_moveAngles.ClampAngles ();
    m_moveAngles.x *= -1.0; // invert for engine
 
-#if 0 // get rid of ugly hack
-   if (yb_hardcore_mode && GetTaskId () == TASK_NORMAL && ((m_aimFlags & AIM_ENEMY) || (m_states & STATE_SEEING_ENEMY)) && !IsOnLadder ())
-      CombatFight ();
-
    if (m_difficulty == 4 && ((m_aimFlags & AIM_ENEMY) || (m_states & (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY)) || (GetTaskId () == TASK_SEEKCOVER && (m_isReloading || m_isVIP))) && !yb_jasonmode.GetBool () && GetTaskId () != TASK_CAMP && !IsOnLadder ())
    {
       m_moveToGoal = false; // don't move to goal
@@ -4933,7 +4929,6 @@ void Bot::BotAI (void)
       if (IsValidPlayer (m_enemy))
          CombatFight ();
    }
-#endif
 
    // check if we need to escape from bomb
    if ((g_mapType & MAP_DE) && g_bombPlanted && m_notKilled && GetTaskId () != TASK_ESCAPEFROMBOMB && GetTaskId () != TASK_CAMP && OutOfBombTimer ())
@@ -6074,6 +6069,27 @@ void Bot::ReactOnSound (void)
             else
                return;
          }
+      }
+      extern ConVar yb_shoots_thru_walls;
+
+      // check if heard enemy can be seen
+      if (CheckVisibility (VARS (player), &m_lastEnemyOrigin, &m_visibility))
+      {
+         m_enemy = player;
+         m_lastEnemy = player;
+         m_enemyOrigin = m_lastEnemyOrigin;
+
+         m_states |= STATE_SEEING_ENEMY;
+         m_seeEnemyTime = GetWorldTime ();
+      }
+      else if (m_lastEnemy == player && m_seeEnemyTime + 1.0 > GetWorldTime () && yb_shoots_thru_walls.GetBool () && IsShootableThruObstacle (player->v.origin))
+      {
+         m_enemy = player;
+         m_lastEnemy = player;
+         m_lastEnemyOrigin = player->v.origin;
+
+         m_states |= STATE_SEEING_ENEMY;
+         m_seeEnemyTime = GetWorldTime ();
       }
    }
 }

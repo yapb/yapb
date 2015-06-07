@@ -1254,25 +1254,26 @@ bool Waypoint::Reachable (Bot *bot, int index)
    float distance = (dest - src).GetLength ();
 
    // check is destination is close to us enoguh
-   if (distance >= 201) // Default: 201
+   if (distance >= 150.0f)
       return false;
-
-   if (bot->pev->waterlevel == 2 || bot->pev->waterlevel == 3)
-   {
-      float distance2D = (dest - src).GetLength2D ();
-
-      // is destination waypoint higher that source (45 is max jump height), or destination waypoint higher that source
-      if ((dest.z > src.z + 40.0 || dest.z < src.z - 75.0) && (!(m_paths[index]->flags & FLAG_LADDER) || distance2D >= 16.0))
-         return false; // unable to reach this one
-   }
 
    TraceResult tr;
    TraceLine (src, dest, true, bot->GetEntity (), &tr);
 
    // if waypoint is visible from current position (even behind head)...
    if (tr.flFraction >= 1.0)
-      return true;
+   {
+      if (bot->pev->waterlevel == 2 || bot->pev->waterlevel == 3)
+         return true;
 
+      float distance2D = (dest - src).GetLength2D ();
+
+      // is destination waypoint higher that source (62 is max jump height), or destination waypoint higher that source
+      if (((dest.z > src.z + 62.0 || dest.z < src.z - 100.0f) && (!(m_paths[index]->flags & FLAG_LADDER))) || distance2D >= 120.0f)
+         return false; // unable to reach this one
+
+      return true;
+   }
    return false;
 }
 

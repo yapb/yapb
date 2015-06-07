@@ -1525,11 +1525,22 @@ float hfunctionSquareDist (int index, int, int goalIndex)
    Path *start = g_waypoint->GetPath (index);
    Path *goal = g_waypoint->GetPath (goalIndex);
 
+#if 0
    float deltaX = fabsf (start->origin.x - goal->origin.x);
    float deltaY = fabsf (start->origin.y - goal->origin.y);
    float deltaZ = fabsf (start->origin.z - goal->origin.z);
 
    return static_cast <unsigned int> (deltaX + deltaY + deltaZ);
+#else
+   float xDist = fabsf (start->origin.x - goal->origin.x);
+   float yDist = fabsf (start->origin.y - goal->origin.y);
+   float zDist = fabsf (start->origin.z - goal->origin.z);
+
+   if (xDist > yDist)
+      return 1.4 * yDist + (xDist - yDist) + zDist;
+
+   return 1.4 * xDist + (yDist - xDist) + zDist;
+#endif
 }
 
 float hfunctionSquareDistWithHostage (int index, int startIndex, int goalIndex)
@@ -1834,6 +1845,7 @@ bool Bot::FindWaypoint (void)
             reachDistances[j] = distance;
          }
       }
+      DebugMsg ("got some waypoints...");
    }
 
    // now pick random one from choosen
@@ -1856,10 +1868,31 @@ bool Bot::FindWaypoint (void)
       i = 0;
 
       Array <int> found;
-      g_waypoint->FindInRadius (found, 1024.0f, pev->origin);
+      g_waypoint->FindInRadius (found, 256.0f, pev->origin);
+
+      DebugMsg ("doing worst case");
 
       if (!found.IsEmpty ())
-         waypointIndeces[i] = found.GetRandomElement ();
+      {
+         bool gotId = false;
+         int random = found.GetRandomElement ();;
+
+         while (!found.IsEmpty ())
+         {
+            int index = found.Pop ();
+
+            if (!g_waypoint->Reachable (this, index))
+               continue;
+
+            waypointIndeces[i] = index;
+            gotId = true;
+
+            break;
+         }
+
+         if (!gotId)
+            waypointIndeces[i] = random;
+      }
       else
          waypointIndeces[i] = g_randGen.Long (0, g_numWaypoints - 1);
    }
@@ -3275,7 +3308,7 @@ bool Bot::IsPointOccupied (int index)
          continue;
 
       // check if this waypoint is already used
-      if (IsAlive (bot->GetEntity ()) && (bot->m_currentWaypointIndex == index || bot->GetTask ()->data == index || (g_waypoint->GetPath (index)->origin - bot->pev->origin).GetLength2D () < 180.0))
+      if (IsAlive (bot->GetEntity ()) && (bot->m_currentWaypointIndex == index || bot->GetTask ()->data == index || (g_waypoint->GetPath (index)->origin - bot->pev->origin).GetLength2D () < 120.0f))
          return true;
    }
    return false;
