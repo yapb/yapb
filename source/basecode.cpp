@@ -1139,8 +1139,9 @@ void Bot::CheckMessageQueue (void)
                   else
                      InstantChatterMessage (Chatter_HearSomething);
                }
-               else
+               else if (g_randGen.Long (0, 100) < 40)
                   InstantChatterMessage (Chatter_ReportingIn);
+
                break;
 
             case TASK_MOVETOPOSITION:
@@ -1828,7 +1829,7 @@ void Bot::SetConditions (void)
 
       if ((pev->origin - m_lastEnemyOrigin).GetLength () < 1600.0 && (tr.flFraction >= 0.2 || tr.pHit != g_worldEdict))
       {
-         m_aimFlags |= AIM_PREDICT_ENEMY;
+         m_aimFlags |= AIM_PREDICT_PATH;
 
          if (EntityIsVisible (m_lastEnemyOrigin))
             m_aimFlags |= AIM_LAST_ENEMY;
@@ -2025,7 +2026,7 @@ void Bot::SetConditions (void)
    float desireLevel = 0.0;
 
    // calculate desire to attack
-   if ((m_states & STATE_SEEING_ENEMY) && ReactOnEnemy () && g_taskFilters[TASK_MOVETOPOSITION].desire < TASKPRI_HIDE)
+   if ((m_states & STATE_SEEING_ENEMY) && ReactOnEnemy ())
       g_taskFilters[TASK_ATTACK].desire = TASKPRI_ATTACK;
    else
       g_taskFilters[TASK_ATTACK].desire = 0;
@@ -2324,7 +2325,7 @@ bool Bot::IsLastEnemyViewable (void)
 bool Bot::LastEnemyShootable (void)
 {
    // don't allow shooting through walls
-   if (!(m_aimFlags & AIM_LAST_ENEMY) || IsEntityNull (m_lastEnemy) || GetTaskId () == TASK_PAUSE && m_lastEnemyOrigin != nullvec)
+   if (!(m_aimFlags & AIM_LAST_ENEMY) || IsEntityNull (m_lastEnemy) || GetTaskId () == TASK_PAUSE || m_lastEnemyOrigin != nullvec)
       return false;
 
    return GetShootingConeDeviation (GetEntity (), &m_lastEnemyOrigin) >= 0.90 && IsShootableThruObstacle (m_lastEnemy->v.origin);
@@ -2647,7 +2648,7 @@ void Bot::CheckRadioCommands (void)
       break;
 
    case Radio_ReportTeam:
-      if (g_randGen.Long  (0, 100) < 85)
+      if (g_randGen.Long  (0, 100) < 30)
          RadioMessage ((GetNearbyEnemiesNearPosition (pev->origin, 400) == 0 && yb_communication_type.GetInt () != 2) ? Radio_SectorClear : Radio_ReportingIn);
       break;
 
@@ -2891,19 +2892,19 @@ void Bot::ChooseAimDirection (void)
 
       if ((pev->origin - m_lastEnemyOrigin).GetLength () >= 1600 && IsEntityNull (m_enemy) && !UsesSniper () || (tr.flFraction <= 0.2 && tr.pHit == g_hostEntity) && m_seeEnemyTime + 7.0 < GetWorldTime ())
       {
-         if ((m_aimFlags & (AIM_LAST_ENEMY | AIM_PREDICT_ENEMY)) && m_wantsToFire)
+         if ((m_aimFlags & (AIM_LAST_ENEMY | AIM_PREDICT_PATH)) && m_wantsToFire)
             m_wantsToFire = false;
 
          m_lastEnemyOrigin = nullvec;
-         m_aimFlags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_ENEMY);
+         m_aimFlags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
 
-         flags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_ENEMY);
+         flags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
       }
    }
    else
    {
-      m_aimFlags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_ENEMY);
-      flags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_ENEMY);
+      m_aimFlags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
+      flags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
    }
 
    // don't allow bot to look at danger positions under certain circumstances
@@ -2911,7 +2912,7 @@ void Bot::ChooseAimDirection (void)
    {
       if (IsOnLadder () || IsInWater () || (m_waypointFlags & FLAG_LADDER) || (m_currentTravelFlags & PATHFLAG_JUMP))
       {
-         flags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_ENEMY);
+         flags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
          canChooseAimDirection = false;
       }
    }
@@ -2943,7 +2944,7 @@ void Bot::ChooseAimDirection (void)
             m_lastEnemyOrigin = nullvec;
       }
    }
-   else if (flags & AIM_PREDICT_ENEMY)
+   else if (flags & AIM_PREDICT_PATH)
    {
       if (((pev->origin - m_lastEnemyOrigin).GetLength () < 1600 || UsesSniper ()) && (tr.flFraction >= 0.2 || tr.pHit != g_worldEdict))
       {
@@ -2969,7 +2970,7 @@ void Bot::ChooseAimDirection (void)
       }
       else // forget an enemy far away
       {
-         m_aimFlags &= ~AIM_PREDICT_ENEMY;
+         m_aimFlags &= ~AIM_PREDICT_PATH;
 
          if ((pev->origin - m_lastEnemyOrigin).GetLength () >= 1600.0)
             m_lastEnemyOrigin = nullvec;
@@ -2977,7 +2978,7 @@ void Bot::ChooseAimDirection (void)
    }
    else if (flags & AIM_CAMP)
       m_lookAt = m_camp;
-   else if ((flags & AIM_NAVPOINT) && !(flags & (AIM_ENTITY | AIM_ENEMY)))
+   else if (flags & AIM_NAVPOINT)
    {
       m_lookAt = m_destOrigin;
 
@@ -3505,7 +3506,7 @@ void Bot::RunTask (void)
       }
 
       // bots skill higher than 60?
-      if (yb_walking_allowed.GetBool () && mp_footsteps.GetBool () && m_difficulty >= 1)
+      if (yb_walking_allowed.GetBool () && mp_footsteps.GetBool () && m_difficulty >= 1 && !yb_jasonmode.GetBool ())
       {
          // then make him move slow if near enemy
          if (!(m_currentTravelFlags & PATHFLAG_JUMP))
@@ -3578,8 +3579,8 @@ void Bot::RunTask (void)
          if ((m_reloadState == RELOAD_NONE) && (GetAmmoInClip () < 8) && (GetAmmo () != 0))
             m_reloadState = RELOAD_PRIMARY;
 
-         m_moveSpeed = 0;
-         m_strafeSpeed = 0;
+         m_moveSpeed = 0.0f;
+         m_strafeSpeed = 0.0f;
 
          m_moveToGoal = false;
          m_checkTerrain = true;
@@ -4170,7 +4171,7 @@ void Bot::RunTask (void)
       }
       m_aimFlags |= AIM_NAVPOINT;
 
-      if (yb_walking_allowed.GetBool () && m_targetEntity->v.maxspeed < m_moveSpeed)
+      if (yb_walking_allowed.GetBool () && m_targetEntity->v.maxspeed < m_moveSpeed && !yb_jasonmode.GetBool ())
          m_moveSpeed = GetWalkSpeed ();
 
       if (IsShieldDrawn ())
@@ -4908,10 +4909,22 @@ void Bot::BotAI (void)
    // set the reaction time (surprise momentum) different each frame according to skill
    SetIdealReactionTimes ();
 
-#if 0
+   // calculate 2 direction vectors, 1 without the up/down component
+   Vector directionOld = m_destOrigin - (pev->origin + pev->velocity * m_frameInterval);
+   Vector directionNormal = directionOld.Normalize ();
+
+   Vector direction = directionNormal;
+   directionNormal.z = 0.0;
+
+   m_moveAngles = directionOld.ToAngles ();
+
+   m_moveAngles.ClampAngles ();
+   m_moveAngles.x *= -1.0; // invert for engine
+
+#if 0 // get rid of ugly hack
    if (yb_hardcore_mode && GetTaskId () == TASK_NORMAL && ((m_aimFlags & AIM_ENEMY) || (m_states & STATE_SEEING_ENEMY)) && !IsOnLadder ())
       CombatFight ();
-#else
+
    if (m_difficulty == 4 && ((m_aimFlags & AIM_ENEMY) || (m_states & (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY)) || (GetTaskId () == TASK_SEEKCOVER && (m_isReloading || m_isVIP))) && !yb_jasonmode.GetBool () && GetTaskId () != TASK_CAMP && !IsOnLadder ())
    {
       m_moveToGoal = false; // don't move to goal
@@ -4921,6 +4934,7 @@ void Bot::BotAI (void)
          CombatFight ();
    }
 #endif
+
    // check if we need to escape from bomb
    if ((g_mapType & MAP_DE) && g_bombPlanted && m_notKilled && GetTaskId () != TASK_ESCAPEFROMBOMB && GetTaskId () != TASK_CAMP && OutOfBombTimer ())
    {
@@ -4957,7 +4971,7 @@ void Bot::BotAI (void)
    }
 
    if (m_checkTerrain) // are we allowed to check blocking terrain (and react to it)?
-      CheckTerrain (movedDistance);
+      CheckTerrain (movedDistance, direction, directionNormal);
 
    // must avoid a grenade?
    if (m_needAvoidGrenade != 0)
@@ -5148,12 +5162,13 @@ void Bot::BotAI (void)
                   selectTab++;
                   weaponCount++;
                }
+               memset (aimFlags, 0, sizeof (aimFlags));
 
                // set the aim flags
                sprintf (aimFlags, "%s%s%s%s%s%s%s%s",
                   m_aimFlags & AIM_NAVPOINT ? " NavPoint" : "",
                   m_aimFlags & AIM_CAMP ? " CampPoint" : "",
-                  m_aimFlags & AIM_PREDICT_ENEMY ? " PredictEnemy" : "",
+                  m_aimFlags & AIM_PREDICT_PATH ? " predictPath" : "",
                   m_aimFlags & AIM_LAST_ENEMY ? " LastEnemy" : "",
                   m_aimFlags & AIM_ENTITY ? " Entity" : "",
                   m_aimFlags & AIM_ENEMY ? " Enemy" : "",
@@ -5171,19 +5186,19 @@ void Bot::BotAI (void)
                   switch (m_currentWeapon)
                   {
                   case WEAPON_EXPLOSIVE:
-                     sprintf (weaponName, "weapon_hegrenade");
+                     strcpy (weaponName, "weapon_hegrenade");
                      break;
 
                   case WEAPON_FLASHBANG:
-                     sprintf (weaponName, "weapon_flashbang");
+                     strcpy (weaponName, "weapon_flashbang");
                      break;
 
                   case WEAPON_SMOKE:
-                     sprintf (weaponName, "weapon_smokegrenade");
+                     strcpy (weaponName, "weapon_smokegrenade");
                      break;
 
                   case WEAPON_C4:
-                     sprintf (weaponName, "weapon_c4");
+                     strcpy (weaponName, "weapon_c4");
                      break;
 
                   default:
@@ -5400,7 +5415,7 @@ void Bot::TakeBlinded (const Vector &fade, int alpha)
          m_blindSidemoveSpeed = -walkSpeed;
 
       if (pev->health < 85)
-         m_blindMoveSpeed = -GetWalkSpeed ();
+         m_blindMoveSpeed = -walkSpeed;
       else if (m_personality == PERSONALITY_CAREFUL)
       {
          m_blindMoveSpeed = 0.0;
@@ -5819,7 +5834,7 @@ void Bot::RunPlayerMovement (void)
    // problems, such as bots getting stuck into each others. That's because the model's
    // bounding boxes, which are the boxes the engine uses to compute and detect all the
    // collisions of the model, only exist, and are only valid, while in the duration of the
-   // movement. That's why if you get a pfnRunPlayerMove for one bot that lasts a little too
+   // movement. That's why if you get a pfnRunPlayerMove for one boINFt that lasts a little too
    // short in comparison with the frame's duration, the remaining time until the frame
    // elapses, that bot will behave like a ghost : no movement, but bullets and players can
    // pass through it. Then, when the next frame will begin, the stucking problem will arise !
@@ -5882,7 +5897,7 @@ float Bot::GetBombTimeleft (void)
 
 float Bot::GetEstimatedReachTime (void)
 {
-   float estimatedTime = 3.0f; // time to reach next waypoint
+   float estimatedTime = 2.0f; // time to reach next waypoint
 
    // calculate 'real' time that we need to get from one waypoint to another
    if (m_currentWaypointIndex >= 0 && m_currentWaypointIndex < g_numWaypoints && m_prevWptIndex[0] >= 0 && m_prevWptIndex[0] < g_numWaypoints)
@@ -5897,15 +5912,15 @@ float Bot::GetEstimatedReachTime (void)
 
       // check for special waypoints, that can slowdown our movement
       if ((m_currentPath->flags & FLAG_CROUCH) || (m_currentPath->flags & FLAG_LADDER) || (pev->button & IN_DUCK))
-         estimatedTime *= 3.0;
+         estimatedTime *= 2.0;
 
       // check for too low values
       if (estimatedTime < 1.0f)
          estimatedTime = 1.0f;
 
       // check for too high values
-      if (estimatedTime > 8.0f)
-         estimatedTime = 8.0f;
+      if (estimatedTime > 5.0f)
+         estimatedTime = 5.0f;
    }
    return estimatedTime;
 }
@@ -6060,31 +6075,6 @@ void Bot::ReactOnSound (void)
                return;
          }
       }
-
-      // useless?
-#if 0
-      extern ConVar yb_shoots_thru_walls;
-
-      // check if heard enemy can be seen
-      if (CheckVisibility (VARS (player), &m_lastEnemyOrigin, &m_visibility))
-      {
-         m_enemy = player;
-         m_lastEnemy = player;
-         m_enemyOrigin = m_lastEnemyOrigin;
-
-         m_states |= STATE_SEEING_ENEMY;
-         m_seeEnemyTime = GetWorldTime ();
-      }
-      else if (m_lastEnemy == player && m_seeEnemyTime + 1.0 > GetWorldTime () && yb_shoots_thru_walls.GetBool () && IsShootableThruObstacle (player->v.origin))
-      {
-         m_enemy = player;
-         m_lastEnemy = player;
-         m_lastEnemyOrigin = player->v.origin;
-
-         m_states |= STATE_SEEING_ENEMY;
-         m_seeEnemyTime = GetWorldTime ();
-      }
-#endif
    }
 }
 

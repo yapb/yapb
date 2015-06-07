@@ -1249,7 +1249,7 @@ bool Waypoint::Reachable (Bot *bot, int index)
       return false;
 
    Vector src = bot->pev->origin;
-   Vector dest = GetPath (index)->origin;
+   Vector dest = m_paths[index]->origin;
 
    float distance = (dest - src).GetLength ();
 
@@ -1262,7 +1262,7 @@ bool Waypoint::Reachable (Bot *bot, int index)
       float distance2D = (dest - src).GetLength2D ();
 
       // is destination waypoint higher that source (45 is max jump height), or destination waypoint higher that source
-      if ((dest.z > src.z + 40.0 || dest.z < src.z - 75.0) && (!(GetPath (index)->flags & FLAG_LADDER) || distance2D >= 16.0))
+      if ((dest.z > src.z + 40.0 || dest.z < src.z - 75.0) && (!(m_paths[index]->flags & FLAG_LADDER) || distance2D >= 16.0))
          return false; // unable to reach this one
    }
 
@@ -1451,7 +1451,7 @@ char *Waypoint::GetWaypointInfo (int id)
 {
    // this function returns path information for waypoint pointed by id.
 
-   Path *path = GetPath (id);
+   Path *path = m_paths[id];
 
    // if this path is null, return
    if (path == NULL)

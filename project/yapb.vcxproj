@@ -33,9 +33,9 @@
     <ClCompile Include="..\source\basecode.cpp">
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Level4</WarningLevel>
     </ClCompile>
+    <ClCompile Include="..\source\combat.cpp" />
     <ClCompile Include="..\source\manager.cpp" />
     <ClCompile Include="..\source\chatlib.cpp" />
-    <ClCompile Include="..\source\combat.cpp" />
     <ClCompile Include="..\source\globals.cpp" />
     <ClCompile Include="..\source\interface.cpp" />
     <ClCompile Include="..\source\navigate.cpp" />

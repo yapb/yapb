@@ -309,7 +309,7 @@ bool Bot::GoalIsValid (void)
    return false;
 }
 
-void Bot::CheckTerrain (float movedDistance)
+void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &dirNormal)
 {
    edict_t *ent = NULL;
 
@@ -320,27 +320,17 @@ void Bot::CheckTerrain (float movedDistance)
       m_campButtons = pev->button & IN_DUCK;
 
       StartTask (TASK_SHOOTBREAKABLE, TASKPRI_SHOOTBREAKABLE, -1, 0.0, false);
-      m_breakableCheckTime = GetWorldTime () + 0.7f;
+      m_breakableCheckTime = GetWorldTime () + 1.0f;
 
       return;
    }
-
-   // calculate 2 direction vectors, 1 without the up/down component
-   Vector directionOld = m_destOrigin - (pev->origin + pev->velocity * m_frameInterval);
-   Vector directionNormal = directionOld.Normalize ();
-
-   Vector direction = directionNormal;
-   directionNormal.z = 0.0;
-
-   m_moveAngles = directionOld.ToAngles ();
-
-   m_moveAngles.ClampAngles ();
-   m_moveAngles.x *= -1.0; // invert for engine
-
    m_isStuck = false;
 
    Vector src = nullvec;
-   Vector destination = nullvec;
+   Vector dst = nullvec;
+
+   Vector direction = dir;
+   Vector directionNormal = dirNormal;
 
    TraceResult tr;
 
@@ -415,237 +405,237 @@ void Bot::CheckTerrain (float movedDistance)
             if (m_collideMoves[m_collStateIndex] == COLLISION_DUCK && IsOnFloor () || IsInWater ())
                pev->button |= IN_DUCK;
          }
+         return;
       }
-      else // bot is stuck!
+      // bot is stuck!
+      
+      // not yet decided what to do?
+      if (m_collisionState == COLLISION_NOTDECICED)
       {
-         // not yet decided what to do?
-         if (m_collisionState == COLLISION_NOTDECICED)
+         char bits = 0;
+
+         if (IsOnLadder ())
+            bits = PROBE_STRAFE;
+         else if (IsInWater ())
+            bits = (PROBE_JUMP | PROBE_STRAFE);
+         else
+            bits = ((g_randGen.Long (0, 10) > 7 ? PROBE_JUMP : 0) | PROBE_STRAFE | PROBE_DUCK);
+
+         // collision check allowed if not flying through the air
+         if (IsOnFloor () || IsOnLadder () || IsInWater ())
          {
-            char bits = 0;
+            char state[8];
+            int i = 0;
 
-            if (IsOnLadder ())
-               bits = PROBE_STRAFE;
-            else if (IsInWater ())
-               bits = (PROBE_JUMP | PROBE_STRAFE);
-            else
-               bits = ((g_randGen.Long (0, 10) > 7 ? PROBE_JUMP : 0) | PROBE_STRAFE | PROBE_DUCK);
+            // first 4 entries hold the possible collision states
+            state[i++] = COLLISION_JUMP;
+            state[i++] = COLLISION_DUCK;
+            state[i++] = COLLISION_STRAFELEFT;
+            state[i++] = COLLISION_STRAFERIGHT;
 
-            // collision check allowed if not flying through the air
-            if (IsOnFloor () || IsOnLadder () || IsInWater ())
+            // now weight all possible states
+            if (bits & PROBE_JUMP)
             {
-               char state[8];
-               int i = 0;
+               state[i] = 0;
 
-               // first 4 entries hold the possible collision states
-               state[i++] = COLLISION_JUMP;
-               state[i++] = COLLISION_DUCK;
-               state[i++] = COLLISION_STRAFELEFT;
-               state[i++] = COLLISION_STRAFERIGHT;
+               if (CanJumpUp (directionNormal))
+                  state[i] += 10;
 
-               // now weight all possible states
-               if (bits & PROBE_JUMP)
+               if (m_destOrigin.z >= pev->origin.z + 18.0)
+                  state[i] += 5;
+
+               if (EntityIsVisible (m_destOrigin))
                {
-                  state[i] = 0;
+                  MakeVectors (m_moveAngles);
 
-                  if (CanJumpUp (directionNormal))
-                     state[i] += 10;
+                  src = EyePosition ();
+                  src = src + (g_pGlobals->v_right * 15);
 
-                  if (m_destOrigin.z >= pev->origin.z + 18.0)
-                     state[i] += 5;
+                  TraceLine (src, m_destOrigin, true, true, GetEntity (), &tr);
 
-                  if (EntityIsVisible (m_destOrigin))
+                  if (tr.flFraction >= 1.0)
                   {
-                     MakeVectors (m_moveAngles);
-
                      src = EyePosition ();
-                     src = src + (g_pGlobals->v_right * 15);
+                     src = src - (g_pGlobals->v_right * 15);
 
                      TraceLine (src, m_destOrigin, true, true, GetEntity (), &tr);
 
                      if (tr.flFraction >= 1.0)
-                     {
-                        src = EyePosition ();
-                        src = src - (g_pGlobals->v_right * 15);
-
-                        TraceLine (src, m_destOrigin, true, true, GetEntity (), &tr);
-
-                        if (tr.flFraction >= 1.0)
-                           state[i] += 5;
-                     }
+                        state[i] += 5;
                   }
-                  if (pev->flags & FL_DUCKING)
-                     src = pev->origin;
-                  else
-                     src = pev->origin + Vector (0, 0, -17);
-
-                  destination = src + directionNormal * 30;
-                  TraceLine (src, destination, true, true, GetEntity (), &tr);
-
-                  if (tr.flFraction != 1.0)
-                     state[i] += 10;
                }
+               if (pev->flags & FL_DUCKING)
+                  src = pev->origin;
                else
-                  state[i] = 0;
+                  src = pev->origin + Vector (0, 0, -17);
+
+               dst = src + directionNormal * 30;
+               TraceLine (src, dst, true, true, GetEntity (), &tr);
+
+               if (tr.flFraction != 1.0)
+                  state[i] += 10;
+            }
+            else
+               state[i] = 0;
+            i++;
+
+            if (bits & PROBE_DUCK)
+            {
+               state[i] = 0;
+
+               if (CanDuckUnder (directionNormal))
+                  state[i] += 10;
+
+               if ((m_destOrigin.z + 36.0 <= pev->origin.z) && EntityIsVisible (m_destOrigin))
+                  state[i] += 5;
+            }
+            else
+               state[i] = 0;
+            i++;
+
+            if (bits & PROBE_STRAFE)
+            {
+               state[i] = 0;
+               state[i + 1] = 0;
+
+               // to start strafing, we have to first figure out if the target is on the left side or right side
+               MakeVectors (m_moveAngles);
+
+               Vector dirToPoint = (pev->origin - m_destOrigin).Normalize2D ();
+               Vector rightSide = g_pGlobals->v_right.Normalize2D ();
+
+               bool dirRight = false;
+               bool dirLeft = false;
+               bool blockedLeft = false;
+               bool blockedRight = false;
+
+               if ((dirToPoint | rightSide) > 0)
+                  dirRight = true;
+               else
+                  dirLeft = true;
+
+               if (m_moveSpeed > 0)
+                  direction = g_pGlobals->v_forward;
+               else
+                  direction = -g_pGlobals->v_forward;
+
+               // now check which side is blocked
+               src = pev->origin + (g_pGlobals->v_right * 32);
+               dst = src + (direction * 32);
+
+               TraceHull (src, dst, true, head_hull, GetEntity (), &tr);
+
+               if (tr.flFraction != 1.0)
+                  blockedRight = true;
+
+               src = pev->origin - (g_pGlobals->v_right * 32);
+               dst = src + (direction * 32);
+
+               TraceHull (src, dst, true, head_hull, GetEntity (), &tr);
+
+               if (tr.flFraction != 1.0)
+                  blockedLeft = true;
+
+               if (dirLeft)
+                  state[i] += 5;
+               else
+                  state[i] -= 5;
+
+               if (blockedLeft)
+                  state[i] -= 5;
+
                i++;
 
-               if (bits & PROBE_DUCK)
-               {
-                  state[i] = 0;
-
-                  if (CanDuckUnder (directionNormal))
-                     state[i] += 10;
-
-                  if ((m_destOrigin.z + 36.0 <= pev->origin.z) && EntityIsVisible (m_destOrigin))
-                     state[i] += 5;
-               }
+               if (dirRight)
+                  state[i] += 5;
                else
-                  state[i] = 0;
+                  state[i] -= 5;
+
+               if (blockedRight)
+                  state[i] -= 5;
+            }
+            else
+            {
+               state[i] = 0;
                i++;
 
-               if (bits & PROBE_STRAFE)
+               state[i] = 0;
+            }
+
+            // weighted all possible moves, now sort them to start with most probable
+            int temp = 0;
+            bool isSorting = false;
+
+            do
+            {
+               isSorting = false;
+               for (i = 0; i < 3; i++)
                {
-                  state[i] = 0;
-                  state[i + 1] = 0;
-
-                  // to start strafing, we have to first figure out if the target is on the left side or right side
-                  MakeVectors (m_moveAngles);
-
-                  Vector dirToPoint = (pev->origin - m_destOrigin).Normalize2D ();
-                  Vector rightSide = g_pGlobals->v_right.Normalize2D ();
-
-                  bool dirRight = false;
-                  bool dirLeft = false;
-                  bool blockedLeft = false;
-                  bool blockedRight = false;
-
-                  if ((dirToPoint | rightSide) > 0)
-                     dirRight = true;
-                  else
-                     dirLeft = true;
-
-                  if (m_moveSpeed > 0)
-                     direction = g_pGlobals->v_forward;
-                  else
-                     direction = -g_pGlobals->v_forward;
-
-                  // now check which side is blocked
-                  src = pev->origin + (g_pGlobals->v_right * 32);
-                  destination = src + (direction * 32);
-
-                  TraceHull (src, destination, true, head_hull, GetEntity (), &tr);
-
-                  if (tr.flFraction != 1.0)
-                     blockedRight = true;
-
-                  src = pev->origin - (g_pGlobals->v_right * 32);
-                  destination = src + (direction * 32);
-
-                  TraceHull (src, destination, true, head_hull, GetEntity (), &tr);
-
-                  if (tr.flFraction != 1.0)
-                     blockedLeft = true;
-
-                  if (dirLeft)
-                     state[i] += 5;
-                  else
-                     state[i] -= 5;
-
-                  if (blockedLeft)
-                     state[i] -= 5;
-
-                  i++;
-
-                  if (dirRight)
-                     state[i] += 5;
-                  else
-                     state[i] -= 5;
-
-                  if (blockedRight)
-                     state[i] -= 5;
-               }
-               else
-               {
-                  state[i] = 0;
-                  i++;
-
-                  state[i] = 0;
-               }
-
-               // weighted all possible moves, now sort them to start with most probable
-               int temp = 0;
-               bool isSorting = false;
-
-               do
-               {
-                  isSorting = false;
-                  for (i = 0; i < 3; i++)
+                  if (state[i + 4] < state[i + 5])
                   {
-                     if (state[i + 4] < state[i + 5])
-                     {
-                        temp = state[i];
+                     temp = state[i];
 
-                        state[i] = state[i + 1];
-                        state[i + 1] = temp;
+                     state[i] = state[i + 1];
+                     state[i + 1] = temp;
 
-                        temp = state[i + 4];
+                     temp = state[i + 4];
 
-                        state[i + 4] = state[i + 5];
-                        state[i + 5] = temp;
+                     state[i + 4] = state[i + 5];
+                     state[i + 5] = temp;
 
-                        isSorting = true;
-                     }
+                     isSorting = true;
                   }
-               } while (isSorting);
+               }
+            } while (isSorting);
 
-               for (i = 0; i < 4; i++)
-                  m_collideMoves[i] = state[i];
+            for (i = 0; i < 4; i++)
+               m_collideMoves[i] = state[i];
 
-               m_collideTime = GetWorldTime ();
-               m_probeTime = GetWorldTime () + 0.5;
-               m_collisionProbeBits = bits;
-               m_collisionState = COLLISION_PROBING;
-               m_collStateIndex = 0;
+            m_collideTime = GetWorldTime ();
+            m_probeTime = GetWorldTime () + 0.5;
+            m_collisionProbeBits = bits;
+            m_collisionState = COLLISION_PROBING;
+            m_collStateIndex = 0;
+         }
+      }
+
+      if (m_collisionState == COLLISION_PROBING)
+      {
+         if (m_probeTime < GetWorldTime ())
+         {
+            m_collStateIndex++;
+            m_probeTime = GetWorldTime () + 0.5;
+
+            if (m_collStateIndex > 4)
+            {
+               m_navTimeset = GetWorldTime () - 5.0;
+               ResetCollideState ();
             }
          }
 
-         if (m_collisionState == COLLISION_PROBING)
+         if (m_collStateIndex <= 4)
          {
-            if (m_probeTime < GetWorldTime ())
+            switch (m_collideMoves[m_collStateIndex])
             {
-               m_collStateIndex++;
-               m_probeTime = GetWorldTime () + 0.5;
+            case COLLISION_JUMP:
+               if (IsOnFloor () || IsInWater ())
+                  pev->button |= IN_JUMP;
+               break;
 
-               if (m_collStateIndex > 4)
-               {
-                  m_navTimeset = GetWorldTime () - 5.0;
-                  ResetCollideState ();
-               }
-            }
+            case COLLISION_DUCK:
+               if (IsOnFloor () || IsInWater ())
+                  pev->button |= IN_DUCK;
+               break;
 
-            if (m_collStateIndex <= 4)
-            {
-               switch (m_collideMoves[m_collStateIndex])
-               {
-               case COLLISION_JUMP:
-                  if (IsOnFloor () || IsInWater ())
-                     pev->button |= IN_JUMP;
-                  break;
+            case COLLISION_STRAFELEFT:
+               pev->button |= IN_MOVELEFT;
+               SetStrafeSpeed (directionNormal, -pev->maxspeed);
+               break;
 
-               case COLLISION_DUCK:
-                  if (IsOnFloor () || IsInWater ())
-                     pev->button |= IN_DUCK;
-                  break;
-
-               case COLLISION_STRAFELEFT:
-                  pev->button |= IN_MOVELEFT;
-                  SetStrafeSpeed (directionNormal, -pev->maxspeed);
-                  break;
-
-               case COLLISION_STRAFERIGHT:
-                  pev->button |= IN_MOVERIGHT;
-                  SetStrafeSpeed (directionNormal, pev->maxspeed);
-                  break;
-               }
+            case COLLISION_STRAFERIGHT:
+               pev->button |= IN_MOVERIGHT;
+               SetStrafeSpeed (directionNormal, pev->maxspeed);
+               break;
             }
          }
       }
@@ -690,7 +680,7 @@ bool Bot::DoWaypointNav (void)
          // pressing the jump button gives the illusion of the bot actual jmping.
          if (IsOnFloor () || IsOnLadder ())
          {
-            pev->velocity = m_desiredVelocity;
+            pev->velocity = m_desiredVelocity + m_desiredVelocity * 0.15; // cheating i know, but something changed in recent cs updates...
             pev->button |= IN_JUMP;
 
             m_jumpFinished = true;
@@ -1076,7 +1066,7 @@ bool Bot::DoWaypointNav (void)
       }
 
       // make sure we are always facing the door when going through it
-      m_aimFlags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_ENEMY);
+      m_aimFlags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
 
       edict_t *button = FindNearestButton (STRING (tr.pHit->v.targetname));
 
@@ -1818,6 +1808,9 @@ bool Bot::FindWaypoint (void)
       if (i == m_currentWaypointIndex || i == m_prevWptIndex[0] || i == m_prevWptIndex[1] || i == m_prevWptIndex[2] || i == m_prevWptIndex[3] || i == m_prevWptIndex[4])
          continue;
 
+      if ((g_mapType & MAP_CS) && HasHostage () && (g_waypoint->GetPath (i)->flags & FLAG_NOHOSTAGE))
+         continue;
+
       // ignore non-reacheable waypoints...
       if (!g_waypoint->Reachable (this, i))
          continue;
@@ -1854,21 +1847,25 @@ bool Bot::FindWaypoint (void)
       i = g_randGen.Long (0, 0);
 
    else if (coveredWaypoint != -1)
-      waypointIndeces[i = 0] = coveredWaypoint;
-
+   {
+      i = 0;
+      waypointIndeces[i] = coveredWaypoint;
+   }
    else
    {
+      i = 0;
+
       Array <int> found;
-      g_waypoint->FindInRadius (found, 256.0, pev->origin);
+      g_waypoint->FindInRadius (found, 1024.0f, pev->origin);
 
       if (!found.IsEmpty ())
-         waypointIndeces[i = 0] = found.GetRandomElement ();
+         waypointIndeces[i] = found.GetRandomElement ();
       else
-         waypointIndeces[i = 0] = g_randGen.Long (0, g_numWaypoints - 1);
+         waypointIndeces[i] = g_randGen.Long (0, g_numWaypoints - 1);
    }
 
    m_collideTime = GetWorldTime ();
-   ChangeWptIndex (waypointIndeces[0]);
+   ChangeWptIndex (waypointIndeces[i]);
 
    return true;
 }

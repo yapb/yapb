@@ -71,9 +71,6 @@
     <ClCompile Include="..\source\chatlib.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="..\source\combat.cpp">
-      <Filter>source</Filter>
-    </ClCompile>
     <ClCompile Include="..\source\globals.cpp">
       <Filter>source</Filter>
     </ClCompile>
@@ -96,6 +93,9 @@
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="..\source\basecode.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\combat.cpp">
       <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>

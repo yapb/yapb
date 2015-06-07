@@ -487,7 +487,7 @@ enum AimPosition
 {
    AIM_NAVPOINT = (1 << 0), // aim at nav point
    AIM_CAMP = (1 << 1), // aim at camp vector
-   AIM_PREDICT_ENEMY = (1 << 2), // aim at predicted path
+   AIM_PREDICT_PATH = (1 << 2), // aim at predicted path
    AIM_LAST_ENEMY = (1 << 3), // aim at last enemy
    AIM_ENTITY = (1 << 4), // aim at entity like buttons, hostages
    AIM_ENEMY = (1 << 5), // aim at enemy
@@ -1001,7 +1001,7 @@ private:
    int FindDefendWaypoint (Vector origin);
    int FindGoal (void);
    void FindItem (void);
-   void CheckTerrain (float movedDistance);
+   void CheckTerrain (float movedDistance, const Vector &dir, const Vector &dirNormal);
 
    void GetCampDirection (Vector *dest);
    void CollectGoalExperience (int damage, int team);
@@ -1015,9 +1015,11 @@ private:
    bool IsBlockedLeft (void);
    bool IsBlockedRight (void);
    bool IsPointOccupied (int index);
+
    inline bool IsOnLadder (void) { return pev->movetype == MOVETYPE_FLY; }
    inline bool IsOnFloor (void) { return (pev->flags & (FL_ONGROUND | FL_PARTIALGROUND)) != 0; }
    inline bool IsInWater (void) { return pev->waterlevel >= 2; }
+
    inline float GetWalkSpeed (void) { return static_cast <float> ((static_cast <int> (pev->maxspeed) / 2) + (static_cast <int> (pev->maxspeed) / 50)) - 18; }
    
    bool ItemIsVisible (const Vector &dest, char *itemName);
@@ -1067,7 +1069,10 @@ private:
    void SelectPistol (void);
    bool IsFriendInLineOfFire (float distance);
    bool IsGroupOfEnemies (Vector location, int numEnemies = 1, int radius = 256);
-   bool IsShootableThruObstacle (Vector dest);
+
+   bool IsShootableThruObstacle (const Vector &dest);
+   bool IsShootableThruObstacleEx (const Vector &dest);
+
    int GetNearbyEnemiesNearPosition (Vector origin, int radius);
    int GetNearbyFriendsNearPosition (Vector origin, int radius);
    void SelectWeaponByName (const char *name);
