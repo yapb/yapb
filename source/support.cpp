@@ -1396,15 +1396,17 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
    // team, live status, search distance etc. if needBot is true, then pvHolder, will
    // be filled with bot pointer, else with edict pointer(!).
 
-   edict_t *ent = NULL, *survive = NULL; // pointer to temporaly & survive entity
+   edict_t *survive = NULL; // pointer to temporaly & survive entity
    float nearestPlayer = 4096.0; // nearest player
 
-   while (!IsEntityNull (ent = FIND_ENTITY_IN_SPHERE (ent, to->v.origin, searchDistance)))
+   for (int i = 0; i < GetMaxClients (); i++)
    {
-      if (IsEntityNull (ent) || !IsValidPlayer (ent) || to == ent)
-         continue; // skip invalid players
+      edict_t *ent = g_clients[i].ent;
 
-      if ((sameTeam && GetTeam (ent) != GetTeam (to)) || (isAlive && !IsAlive (ent)) || (needBot && !IsValidBot (ent)) || (needDrawn && (ent->v.effects & EF_NODRAW)))
+      if (!(g_clients[i].flags & CF_USED) || ent == to)
+         continue;
+
+      if ((sameTeam && g_clients[i].team != GetTeam (to)) || (isAlive && !(g_clients[i].flags & CF_ALIVE)) || (needBot && !IsValidBot (ent)) || (needDrawn && (ent->v.effects & EF_NODRAW)))
          continue; // filter players with parameters
 
       float distance = (ent->v.origin - to->v.origin).GetLengthSquared ();

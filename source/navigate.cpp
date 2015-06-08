@@ -680,7 +680,9 @@ bool Bot::DoWaypointNav (void)
          // pressing the jump button gives the illusion of the bot actual jmping.
          if (IsOnFloor () || IsOnLadder ())
          {
-            pev->velocity = m_desiredVelocity + m_desiredVelocity * 0.15; // cheating i know, but something changed in recent cs updates...
+            if (m_desiredVelocity != nullvec)
+               pev->velocity = m_desiredVelocity + m_desiredVelocity * 0.15; // cheating i know, but something changed in recent cs updates...
+
             pev->button |= IN_JUMP;
 
             m_jumpFinished = true;
