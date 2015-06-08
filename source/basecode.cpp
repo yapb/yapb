@@ -2872,15 +2872,10 @@ void Bot::SelectLeaderEachTeam (int team)
 
 void Bot::ChooseAimDirection (void)
 {
-   if (!m_canChooseAimDirection)
-      return;
-
    TraceResult tr;
    memset (&tr, 0, sizeof (TraceResult));
 
    unsigned int flags = m_aimFlags;
-
-   bool canChooseAimDirection = false;
 
    if (!(m_currentWaypointIndex >= 0 && m_currentWaypointIndex < g_numWaypoints))
       GetValidWaypoint ();
@@ -2913,7 +2908,7 @@ void Bot::ChooseAimDirection (void)
       if (IsOnLadder () || IsInWater () || (m_waypointFlags & FLAG_LADDER) || (m_currentTravelFlags & PATHFLAG_JUMP))
       {
          flags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
-         canChooseAimDirection = false;
+         m_canChooseAimDirection = false;
       }
    }
 
@@ -2982,7 +2977,7 @@ void Bot::ChooseAimDirection (void)
    {
       m_lookAt = m_destOrigin;
 
-      if (canChooseAimDirection && m_currentWaypointIndex != -1 && !(m_currentPath->flags & FLAG_LADDER))
+      if (m_canChooseAimDirection && m_currentWaypointIndex != -1 && !(m_currentPath->flags & FLAG_LADDER))
       {
          int index = m_currentWaypointIndex;
 
@@ -3010,7 +3005,7 @@ void Bot::ChooseAimDirection (void)
          }
       }
 
-      if (canChooseAimDirection && m_prevWptIndex[0] >= 0 && m_prevWptIndex[0] < g_numWaypoints)
+      if (m_canChooseAimDirection && m_prevWptIndex[0] >= 0 && m_prevWptIndex[0] < g_numWaypoints)
       {
          Path *path = g_waypoint->GetPath (m_prevWptIndex[0]);
 

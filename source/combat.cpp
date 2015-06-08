@@ -1047,7 +1047,7 @@ void Bot::CombatFight (void)
       {
          if (m_lastFightStyleCheck + 3.0 < GetWorldTime ())
          {
-            if ( g_randGen.Long (0, 100) < 50)
+            if (g_randGen.Long (0, 100) < 50)
                m_fightStyle = 1;
             else
                m_fightStyle = 0;
@@ -1056,7 +1056,11 @@ void Bot::CombatFight (void)
          }
       }
 
-      if ((m_difficulty >= 1 && m_fightStyle == 0) || ((pev->button & IN_RELOAD) || m_isReloading) || (UsesPistol () && distance < 500.0))
+      // if there is a friend between us and enemy, do a strafe movement
+      if (m_lastFightStyleCheck + 2.5f < GetWorldTime () && IsFriendInLineOfFire (distance))
+         m_fightStyle = 0;
+
+      if ((m_difficulty >= 1 && m_fightStyle == 0) || ((pev->button & IN_RELOAD) || m_isReloading) || (UsesPistol () && distance < 400.0f))
       {
          if (m_strafeSetTime < GetWorldTime ())
          {

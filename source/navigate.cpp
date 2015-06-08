@@ -1847,7 +1847,6 @@ bool Bot::FindWaypoint (void)
             reachDistances[j] = distance;
          }
       }
-      DebugMsg ("got some waypoints...");
    }
 
    // now pick random one from choosen
@@ -1871,8 +1870,6 @@ bool Bot::FindWaypoint (void)
 
       Array <int> found;
       g_waypoint->FindInRadius (found, 256.0f, pev->origin);
-
-      DebugMsg ("doing worst case");
 
       if (!found.IsEmpty ())
       {
@@ -2340,18 +2337,17 @@ bool Bot::HeadTowardWaypoint (void)
    m_currentTravelFlags = 0; // reset travel flags (jumping etc)
 
    // we're not at the end of the list?
+   // we're not at the end of the list?
    if (m_navNode != NULL)
    {
       // if in between a route, postprocess the waypoint (find better alternatives)...
       if (m_navNode != m_navNodeStart && m_navNode->next != NULL)
       {
          GetBestNextWaypoint ();
-
-         int taskID = GetTaskId ();
          m_minSpeed = pev->maxspeed;
 
          // only if we in normal task and bomb is not planted
-         if (taskID == TASK_NORMAL && !g_bombPlanted && !m_inBombZone && !m_inBuyZone && m_personality != PERSONALITY_RUSHER && !m_hasC4 && !m_isVIP && (m_loosedBombWptIndex == -1) && !HasHostage () && m_fearLevel * 2 > m_agressionLevel)
+         if (m_currentPath->flags & (FLAG_GOAL | FLAG_SNIPER | FLAG_CAMP) && GetTaskId () == TASK_NORMAL && !g_bombPlanted && m_personality != PERSONALITY_RUSHER && !m_hasC4 && !m_isVIP && m_loosedBombWptIndex == -1 && !HasHostage ())
          {
             m_campButtons = 0;
 
@@ -2363,35 +2359,36 @@ bool Bot::HeadTowardWaypoint (void)
             else
                kills = (g_experienceData + (waypoint * g_numWaypoints) + waypoint)->team1Damage / g_highestDamageCT;
 
-			   switch (m_personality)
-			   {
-			   case PERSONALITY_NORMAL:
-				   kills *= 0.33f;
-				   break;
-
-			   default:
-				   kills *= 0.5f;
-				   break;
-			   }
-
             // if damage done higher than one
-            if (kills > 0.15f && g_timeRoundMid + 30.0f > GetWorldTime () && m_timeCamping + 10.0 < GetWorldTime())
+            if (kills > 0.15f && g_timeRoundMid > GetWorldTime ())
             {
+               switch (m_personality)
+               {
+               case PERSONALITY_NORMAL:
+                  kills *= 0.33f;
+                  break;
+
+               default:
+                  kills *= 0.5f;
+                  break;
+               }
+
                if (m_baseAgressionLevel < kills && GetTaskId () != TASK_MOVETOPOSITION && HasPrimaryWeapon ())
                {
+                  DebugMsg ("pushing camp on to stack");
                   StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + (m_fearLevel * (g_timeRoundMid - GetWorldTime ()) * 0.5), true); // push camp task on to stack
+
                   StartTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, FindDefendWaypoint (g_waypoint->GetPath (waypoint)->origin), 0.0, true);
 
-                  if (m_difficulty >= 2)
+                  if (m_difficulty >= 3)
                      pev->button |= IN_DUCK;
                }
             }
-
-            if (g_botsCanPause && !IsOnLadder () && !IsInWater () && !m_currentTravelFlags && IsOnFloor ())
+            else if (g_botsCanPause && !IsOnLadder () && !IsInWater () && !m_currentTravelFlags && IsOnFloor ())
             {
                if (static_cast <float> (kills) == m_baseAgressionLevel)
                   m_campButtons |= IN_DUCK;
-               else if (g_randGen.Long (1, 100) < m_difficulty * 25)
+               else if (g_randGen.Long (1, 100) > (m_difficulty * 25 + g_randGen.Long (1, 20)))
                   m_minSpeed = GetWalkSpeed ();
             }
          }
