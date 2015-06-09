@@ -1219,7 +1219,8 @@ public:
    bool EntityIsVisible (const Vector &dest, bool fromBody = false);
 
    void SwitchChatterIcon (bool show);
-   void DeleteSearchNodes (void);
+   void DeleteSearchNodes (void); 
+   void VerifyBreakable (edict_t *touch);
 
    void RemoveCertainTask (TaskId_t id);
    void StartTask (TaskId_t id, float desire, int data, float time, bool canContinue);

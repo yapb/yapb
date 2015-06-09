@@ -89,17 +89,17 @@ int BotManager::CreateBot (String name, int difficulty, int personality, int tea
 
    if (difficulty < 0 || difficulty > 4)
    {
-      difficulty = g_randGen.Long (3, 4);
+      difficulty = Random.Long (3, 4);
       yb_difficulty.SetInt (difficulty);
    }
 
    if (personality < 0 || personality > 2)
    {
-      if (g_randGen.Long (0, 100) < 50)
+      if (Random.Long (0, 100) < 50)
          personality = PERSONALITY_NORMAL;
       else
       {
-         if (g_randGen.Long (0, 100) > 50)
+         if (Random.Long (0, 100) > 50)
             personality = PERSONALITY_RUSHER;
          else
             personality = PERSONALITY_CAREFUL;
@@ -131,7 +131,7 @@ int BotManager::CreateBot (String name, int difficulty, int personality, int tea
          }
       }
       else
-         sprintf (outputName, "bot%i", g_randGen.Long (0, 100)); // just pick ugly random name
+         sprintf (outputName, "bot%i", Random.Long (0, 100)); // just pick ugly random name
    }
    else
       strncpy (outputName, name, 21);
@@ -776,12 +776,12 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member)
    m_startAction = GSM_IDLE;
    m_moneyAmount = 0;
 
-   m_logotypeIndex = g_randGen.Long (0, 5);
+   m_logotypeIndex = Random.Long (0, 5);
    m_msecVal = static_cast <byte> (g_pGlobals->frametime * 1000.0);
 
    // assign how talkative this bot will be
-   m_sayTextBuffer.chatDelay = g_randGen.Float (3.8, 10.0);
-   m_sayTextBuffer.chatProbability = g_randGen.Long (1, 100);
+   m_sayTextBuffer.chatDelay = Random.Float (3.8, 10.0);
+   m_sayTextBuffer.chatProbability = Random.Long (1, 100);
 
    m_notKilled = false;
    m_weaponBurstMode = BM_OFF;
@@ -789,7 +789,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member)
 
    if (difficulty < 0 || difficulty > 4)
    {
-      difficulty = g_randGen.Long (3, 4);
+      difficulty = Random.Long (3, 4);
       yb_difficulty.SetInt (difficulty);
    }
 
@@ -800,27 +800,27 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member)
    bot->v.idealpitch = bot->v.v_angle.x;
    bot->v.ideal_yaw = bot->v.v_angle.y;
 
-   bot->v.yaw_speed = g_randGen.Float (m_difficulty * 40, m_difficulty * 45);
-   bot->v.pitch_speed = g_randGen.Float (m_difficulty * 40, m_difficulty * 45);
+   bot->v.yaw_speed = Random.Float (m_difficulty * 40, m_difficulty * 45);
+   bot->v.pitch_speed = Random.Float (m_difficulty * 40, m_difficulty * 45);
 
    switch (personality)
    {
    case 1:
       m_personality = PERSONALITY_RUSHER;
-      m_baseAgressionLevel = g_randGen.Float (0.7, 1.0);
-      m_baseFearLevel = g_randGen.Float (0.0, 0.4);
+      m_baseAgressionLevel = Random.Float (0.7, 1.0);
+      m_baseFearLevel = Random.Float (0.0, 0.4);
       break;
 
    case 2:
       m_personality = PERSONALITY_CAREFUL;
-      m_baseAgressionLevel = g_randGen.Float (0.2, 0.5);
-      m_baseFearLevel = g_randGen.Float (0.7, 1.0);
+      m_baseAgressionLevel = Random.Float (0.2, 0.5);
+      m_baseFearLevel = Random.Float (0.7, 1.0);
       break;
 
    default:
       m_personality = PERSONALITY_NORMAL;
-      m_baseAgressionLevel = g_randGen.Float (0.4, 0.7);
-      m_baseFearLevel = g_randGen.Float (0.4, 0.7);
+      m_baseAgressionLevel = Random.Float (0.4, 0.7);
+      m_baseFearLevel = Random.Float (0.4, 0.7);
       break;
    }
 
@@ -828,7 +828,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member)
    memset (&m_ammo, 0, sizeof (m_ammo));
 
    m_currentWeapon = 0; // current weapon is not assigned at start
-   m_voicePitch = g_randGen.Long (166, 250) / 2; // assign voice pitch
+   m_voicePitch = Random.Long (166, 250) / 2; // assign voice pitch
 
    // copy them over to the temp level variables
    m_agressionLevel = m_baseAgressionLevel;
@@ -952,7 +952,7 @@ void Bot::NewRound (void)
    switch (m_personality)
    {
    case PERSONALITY_NORMAL:
-      m_pathType = g_randGen.Long (0, 100) > 50 ? 1 : 2;
+      m_pathType = Random.Long (0, 100) > 50 ? 1 : 2;
       break;
 
    case PERSONALITY_RUSHER:
@@ -1071,8 +1071,8 @@ void Bot::NewRound (void)
       m_currentWeapon = 0;
    }
 
-   m_knifeAttackTime = GetWorldTime () + g_randGen.Float (1.3, 2.6);
-   m_nextBuyTime = GetWorldTime () + g_randGen.Float (0.6, 1.2);
+   m_knifeAttackTime = GetWorldTime () + Random.Float (1.3, 2.6);
+   m_nextBuyTime = GetWorldTime () + Random.Float (0.6, 1.2);
 
    m_buyPending = false;
    m_inBombZone = false;
@@ -1095,7 +1095,7 @@ void Bot::NewRound (void)
    m_defendHostage = false;
    m_headedTime = 0.0f;
 
-   m_timeLogoSpray = GetWorldTime () + g_randGen.Float (0.5, 2.0);
+   m_timeLogoSpray = GetWorldTime () + Random.Float (0.5, 2.0);
    m_spawnTime = GetWorldTime ();
    m_lastChatTime = GetWorldTime ();
    pev->v_angle.y = pev->ideal_yaw;
@@ -1119,7 +1119,7 @@ void Bot::NewRound (void)
    PushMessageQueue (GSM_BUY_STUFF);
    StartTask (TASK_NORMAL, TASKPRI_NORMAL, -1, 0.0, true);
 
-   if (g_randGen.Long (0, 100) < 50)
+   if (Random.Long (0, 100) < 50)
       ChatterMessage (Chatter_NewRound);
 }
 
@@ -1197,12 +1197,12 @@ void Bot::StartGame (void)
       if (g_gameVersion == CSV_CZERO) // czero has spetsnaz and militia skins
       {
          if (m_wantedClass < 1 || m_wantedClass > 5)
-            m_wantedClass = g_randGen.Long (1, 5); //  use random if invalid
+            m_wantedClass = Random.Long (1, 5); //  use random if invalid
       }
       else
       {
          if (m_wantedClass < 1 || m_wantedClass > 4)
-            m_wantedClass = g_randGen.Long (1, 4); // use random if invalid
+            m_wantedClass = Random.Long (1, 4); // use random if invalid
       }
 
       // select the class the bot wishes to use...
@@ -1212,7 +1212,7 @@ void Bot::StartGame (void)
       m_notStarted = false;
 
       // check for greeting other players, since we connected
-      if (g_randGen.Long (0, 100) < 20)
+      if (Random.Long (0, 100) < 20)
          ChatMessage (CHAT_WELCOME);
    }
 }
@@ -1238,7 +1238,7 @@ void BotManager::CalculatePingOffsets (void)
       PLAYER_CNX_STATS (ent, &ping, &loss);
 
       if (ping < 0 || ping > 100)
-         ping = g_randGen.Long (3, 15);
+         ping = Random.Long (3, 15);
 
       averagePing += ping;
    }
@@ -1246,7 +1246,7 @@ void BotManager::CalculatePingOffsets (void)
    if (numHumans > 0)
       averagePing /= numHumans;
    else
-      averagePing = g_randGen.Long (30, 40);
+      averagePing = Random.Long (30, 40);
 
    for (int i = 0; i < GetMaxClients (); i++)
    {
@@ -1255,12 +1255,12 @@ void BotManager::CalculatePingOffsets (void)
       if (bot == NULL)
          continue;
 
-      int botPing = g_randGen.Long (averagePing - averagePing * 0.2f, averagePing + averagePing * 0.2f) + g_randGen.Long (bot->m_difficulty + 3, bot->m_difficulty + 6) + 10;
+      int botPing = Random.Long (averagePing - averagePing * 0.2f, averagePing + averagePing * 0.2f) + Random.Long (bot->m_difficulty + 3, bot->m_difficulty + 6) + 10;
 
       if (botPing <= 5)
-         botPing = g_randGen.Long (10, 23);
+         botPing = Random.Long (10, 23);
       else if (botPing > 100)
-         botPing = g_randGen.Long (30, 40);
+         botPing = Random.Long (30, 40);
 
       for (int j = 0; j < 2; j++)
       {

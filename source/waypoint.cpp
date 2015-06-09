@@ -2423,7 +2423,7 @@ int Waypoint::AddGoalScore (int index, int other[4])
    }
 
    if (left.IsEmpty ())
-      index = other[g_randGen.Long (0, 3)];
+      index = other[Random.Long (0, 3)];
    else
       index = left.GetRandomElement ();
 

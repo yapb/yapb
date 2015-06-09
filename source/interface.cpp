@@ -155,7 +155,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          " Website: " PRODUCT_URL "\n"
          "+---------------------------------------------------------------------------------+\n";
 
-      HudMessage (ent, true, Vector (g_randGen.Long (33, 255), g_randGen.Long (33, 255), g_randGen.Long (33, 255)), aboutData);
+      HudMessage (ent, true, Vector (Random.Long (33, 255), Random.Long (33, 255), Random.Long (33, 255)), aboutData);
    }
 
    // displays version information
@@ -249,7 +249,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       if (stricmp (arg0, "randgen") == 0)
       {
          for (int i = 0; i < 500; i++)
-            ServerPrintNoTag ("Result Range[0 - 100]: %d", g_randGen.Long (0, 100));
+            ServerPrintNoTag ("Result Range[0 - 100]: %d", Random.Long (0, 100));
       }
       #if defined (MMGR_H)
          // dump memory information
@@ -982,6 +982,30 @@ void GameDLLInit (void)
       RETURN_META (MRES_IGNORED);
 
    (*g_functionTable.pfnGameInit) ();
+}
+
+void Touch (edict_t *pentTouched, edict_t *pentOther)
+{
+   // this function is called when two entities' bounding boxes enter in collision. For example,
+   // when a player walks upon a gun, the player entity bounding box collides to the gun entity
+   // bounding box, and the result is that this function is called. It is used by the game for
+   // taking the appropriate action when such an event occurs (in our example, the player who
+   // is walking upon the gun will "pick it up"). Entities that "touch" others are usually
+   // entities having a velocity, as it is assumed that static entities (entities that don't
+   // move) will never touch anything. Hence, in our example, the pentTouched will be the gun
+   // (static entity), whereas the pentOther will be the player (as it is the one moving). When
+   // the two entities both have velocities, for example two players colliding, this function
+   // is called twice, once for each entity moving.
+
+   Bot *touched = g_botManager->GetBot (pentTouched);
+
+   if (touched != NULL)
+      touched->VerifyBreakable (pentOther);
+
+   if (g_isMetamod)
+      RETURN_META (MRES_IGNORED);
+
+   (*g_functionTable.pfnTouch) (pentTouched, pentOther);
 }
 
 int Spawn (edict_t *ent)
@@ -2839,6 +2863,7 @@ export int GetEntityAPI2 (gamefuncs_t *functionTable, int *interfaceVersion)
 
    functionTable->pfnGameInit = GameDLLInit;
    functionTable->pfnSpawn = Spawn;
+   functionTable->pfnTouch = Touch;
    functionTable->pfnClientConnect = ClientConnect;
    functionTable->pfnClientDisconnect = ClientDisconnect;
    functionTable->pfnClientPutInServer = ClientPutInServer;
@@ -3052,10 +3077,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    // such if necessary. Nothing really bot-related is done in this function. The actual bot
    // initialization stuff will be done later, when we'll be certain to have a multilayer game.
 
-   // initialize random number generator
-   g_randGen.Initialize (time (NULL));
-
-   static struct ModSupport_t
+   static struct ModSupport
    {
       char name[10];
       char linuxLib[12];
@@ -3080,11 +3102,11 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    // register our cvars
    g_convarWrapper->PushRegisteredConVarsToEngine ();
 
-   ModSupport_t *knownMod = NULL;
+   ModSupport *knownMod = NULL;
 
    for (int i = 0; i < ARRAYSIZE_HLSDK (s_supportedMods); i++)
    {
-      ModSupport_t *mod = &s_supportedMods[i];
+      ModSupport *mod = &s_supportedMods[i];
 
       if (strcmp (mod->name, GetModName ()) == 0 && TryFileOpen (FormatBuffer ("%s/dlls/%s", mod->name, 
 #if defined (PLATFORM_WIN32)

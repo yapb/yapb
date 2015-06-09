@@ -417,7 +417,7 @@ void NetworkMsg::Execute (void *p)
 						bot->DeleteSearchNodes();
 						bot->ResetTasks();
 
-						if (g_randGen.Long(0, 100) < 75 && GetTeam(bot->GetEntity()) == TEAM_CF)
+						if (Random.Long(0, 100) < 75 && GetTeam(bot->GetEntity()) == TEAM_CF)
 							bot->ChatterMessage(Chatter_WhereIsTheBomb);
 					}
 				}

@@ -56,7 +56,7 @@ Array <Array <String> > g_chatFactory;
 Array <Array <ChatterItem> > g_chatterFactory;
 Array <BotName> g_botNames;
 Array <KeywordFactory> g_replyFactory;
-RandGen g_randGen;
+RandomSequenceOfUnique Random;
 Library *g_gameLib = NULL;
 
 meta_globals_t *gpMetaGlobals = NULL;

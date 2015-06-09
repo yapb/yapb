@@ -128,10 +128,10 @@ int Bot::FindGoal (void)
          return m_chosenGoalIndex = FindDefendWaypoint (g_waypoint->GetBombPosition ());
    }
 
-   goalDesire = g_randGen.Long (0, 100 + (offensive * 0.5)) + offensive;
-   forwardDesire = g_randGen.Long (0, 100) + offensive;
-   campDesire = g_randGen.Long (0, 100) + defensive;
-   backoffDesire = g_randGen.Long (0, 100) + defensive;
+   goalDesire = Random.Long (0, 100 + (offensive * 0.5)) + offensive;
+   forwardDesire = Random.Long (0, 100) + offensive;
+   campDesire = Random.Long (0, 100) + defensive;
+   backoffDesire = Random.Long (0, 100) + defensive;
 
    if (!UsesCampGun ())
       campDesire = 0;
@@ -244,7 +244,7 @@ TacticChoosen:
       ChangeWptIndex (g_waypoint->FindNearest (pev->origin));
 
    if (goalChoices[0] == -1)
-	   return m_chosenGoalIndex = g_randGen.Long (0, g_numWaypoints - 1);
+	   return m_chosenGoalIndex = Random.Long (0, g_numWaypoints - 1);
 
    bool isSorting = false;
 
@@ -311,19 +311,6 @@ bool Bot::GoalIsValid (void)
 
 void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &dirNormal)
 {
-   edict_t *ent = NULL;
-
-   // Test if there's a shootable breakable in our way
-   if (m_breakableCheckTime < GetWorldTime () && !IsEntityNull (ent = FindBreakable ()))
-   {
-      m_breakableEntity = ent;
-      m_campButtons = pev->button & IN_DUCK;
-
-      StartTask (TASK_SHOOTBREAKABLE, TASKPRI_SHOOTBREAKABLE, -1, 0.0, false);
-      m_breakableCheckTime = GetWorldTime () + 1.0f;
-
-      return;
-   }
    m_isStuck = false;
 
    Vector src = nullvec;
@@ -333,11 +320,9 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
    Vector directionNormal = dirNormal;
 
    TraceResult tr;
+   edict_t *nearest = NULL;
 
-   ent = NULL;
-   edict_t *pentNearest = NULL;
-
-   if (FindNearestPlayer (reinterpret_cast <void **> (&pentNearest), GetEntity (), pev->maxspeed, true, false, true, true)) // found somebody?
+   if (FindNearestPlayer (reinterpret_cast <void **> (&nearest), GetEntity (), pev->maxspeed, true, false, true, true)) // found somebody?
    {
       MakeVectors (m_moveAngles); // use our movement angles
 
@@ -346,14 +331,14 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
       moved = moved + g_pGlobals->v_right * m_strafeSpeed * m_frameInterval;
       moved = moved + pev->velocity * m_frameInterval;
 
-      float nearestDistance = (pentNearest->v.origin - pev->origin).GetLength2D ();
-      float nextFrameDistance = ((pentNearest->v.origin + pentNearest->v.velocity * m_frameInterval) - pev->origin).GetLength2D ();
+      float nearestDistance = (nearest->v.origin - pev->origin).GetLength2D ();
+      float nextFrameDistance = ((nearest->v.origin + nearest->v.velocity * m_frameInterval) - pev->origin).GetLength2D ();
 
       // is player that near now or in future that we need to steer away?
-      if ((pentNearest->v.origin - moved).GetLength2D () <= 48.0 || (nearestDistance <= 56.0 && nextFrameDistance < nearestDistance))
+      if ((nearest->v.origin - moved).GetLength2D () <= 48.0 || (nearestDistance <= 56.0 && nextFrameDistance < nearestDistance))
       {
          // to start strafing, we have to first figure out if the target is on the left side or right side
-         Vector dirToPoint = (pev->origin - pentNearest->v.origin).SkipZ ();
+         Vector dirToPoint = (pev->origin - nearest->v.origin).SkipZ ();
 
          if ((dirToPoint | g_pGlobals->v_right.SkipZ ()) > 0.0)
             SetStrafeSpeed (directionNormal, pev->maxspeed);
@@ -419,7 +404,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
          else if (IsInWater ())
             bits = (PROBE_JUMP | PROBE_STRAFE);
          else
-            bits = ((g_randGen.Long (0, 10) > 7 ? PROBE_JUMP : 0) | PROBE_STRAFE | PROBE_DUCK);
+            bits = ((Random.Long (0, 10) > 7 ? PROBE_JUMP : 0) | PROBE_STRAFE | PROBE_DUCK);
 
          // collision check allowed if not flying through the air
          if (IsOnFloor () || IsOnLadder () || IsInWater ())
@@ -657,8 +642,8 @@ bool Bot::DoWaypointNav (void)
       // if wayzone radios non zero vary origin a bit depending on the body angles
       if (m_currentPath->radius > 0)
       {
-         MakeVectors (Vector (pev->angles.x, AngleNormalize (pev->angles.y + g_randGen.Float (-90, 90)), 0.0));
-         m_waypointOrigin = m_waypointOrigin + g_pGlobals->v_forward * g_randGen.Float (0, m_currentPath->radius);
+         MakeVectors (Vector (pev->angles.x, AngleNormalize (pev->angles.y + Random.Float (-90, 90)), 0.0));
+         m_waypointOrigin = m_waypointOrigin + g_pGlobals->v_forward * Random.Float (0, m_currentPath->radius);
       }
       m_navTimeset = GetWorldTime ();
    }
@@ -1063,7 +1048,7 @@ bool Bot::DoWaypointNav (void)
       {
          m_lastCollTime = GetWorldTime () + 0.5; // don't consider being stuck
 
-         if (g_randGen.Long (1, 100) < 50)
+         if (Random.Long (1, 100) < 50)
             MDLL_Use (tr.pHit, GetEntity ()); // also 'use' the door randomly
       }
 
@@ -1851,13 +1836,13 @@ bool Bot::FindWaypoint (void)
 
    // now pick random one from choosen
    if (waypointIndeces[2] != -1)
-      i = g_randGen.Long (0, 2);
+      i = Random.Long (0, 2);
 
    else if (waypointIndeces[1] != -1)
-      i = g_randGen.Long (0, 1);
+      i = Random.Long (0, 1);
 
    else if (waypointIndeces[0] != -1)
-      i = g_randGen.Long (0, 0);
+      i = Random.Long (0, 0);
 
    else if (coveredWaypoint != -1)
    {
@@ -1893,7 +1878,7 @@ bool Bot::FindWaypoint (void)
             waypointIndeces[i] = random;
       }
       else
-         waypointIndeces[i] = g_randGen.Long (0, g_numWaypoints - 1);
+         waypointIndeces[i] = Random.Long (0, g_numWaypoints - 1);
    }
 
    m_collideTime = GetWorldTime ();
@@ -2001,7 +1986,7 @@ int Bot::ChooseBombWaypoint (void)
    Array <int> &goals = g_waypoint->m_goalPoints;
 
    if (goals.IsEmpty ())
-      return g_randGen.Long (0, g_numWaypoints - 1); // reliability check
+      return Random.Long (0, g_numWaypoints - 1); // reliability check
 
    Vector bombOrigin = CheckBombAudible ();
 
@@ -2056,7 +2041,7 @@ int Bot::FindDefendWaypoint (Vector origin)
 
    // some of points not found, return random one
    if (srcIndex == -1 || posIndex == -1)
-      return g_randGen.Long (0, g_numWaypoints - 1);
+      return Random.Long (0, g_numWaypoints - 1);
 
    for (int i = 0; i < g_numWaypoints; i++) // find the best waypoint now
    {
@@ -2138,7 +2123,7 @@ int Bot::FindDefendWaypoint (Vector origin)
       g_waypoint->FindInRadius (found, 1024.0f, origin);
 
       if (found.IsEmpty ())
-         return g_randGen.Long (0, g_numWaypoints - 1); // most worst case, since there a evil error in waypoints
+         return Random.Long (0, g_numWaypoints - 1); // most worst case, since there a evil error in waypoints
 
       return found.GetRandomElement ();
    }
@@ -2149,7 +2134,7 @@ int Bot::FindDefendWaypoint (Vector origin)
       if (waypointIndex[index] == -1)
          break;
    }
-   return waypointIndex[g_randGen.Long (0, (index - 1) / 2)];
+   return waypointIndex[Random.Long (0, (index - 1) / 2)];
 }
 
 int Bot::FindCoverWaypoint (float maxDistance)
@@ -2388,7 +2373,7 @@ bool Bot::HeadTowardWaypoint (void)
             {
                if (static_cast <float> (kills) == m_baseAgressionLevel)
                   m_campButtons |= IN_DUCK;
-               else if (g_randGen.Long (1, 100) > (m_difficulty * 25 + g_randGen.Long (1, 20)))
+               else if (Random.Long (1, 100) > (m_difficulty * 25 + Random.Long (1, 20)))
                   m_minSpeed = GetWalkSpeed ();
             }
          }
@@ -2471,8 +2456,8 @@ bool Bot::HeadTowardWaypoint (void)
    // if wayzone radius non zero vary origin a bit depending on the body angles
    if (m_currentPath->radius > 0.0f)
    {
-      MakeVectors (Vector (pev->angles.x, AngleNormalize (pev->angles.y + g_randGen.Float (-90, 90)), 0.0));
-      m_waypointOrigin = m_waypointOrigin + g_pGlobals->v_forward * g_randGen.Float (0, m_currentPath->radius);
+      MakeVectors (Vector (pev->angles.x, AngleNormalize (pev->angles.y + Random.Float (-90, 90)), 0.0));
+      m_waypointOrigin = m_waypointOrigin + g_pGlobals->v_forward * Random.Float (0, m_currentPath->radius);
    }
 
    if (IsOnLadder ())
@@ -3083,9 +3068,9 @@ int Bot::GetAimingWaypoint (void)
    count--;
 
    if (count >= 0)
-      return indeces[g_randGen.Long (0, count)];
+      return indeces[Random.Long (0, count)];
 
-   return g_randGen.Long (0, g_numWaypoints - 1);
+   return Random.Long (0, g_numWaypoints - 1);
 }
 
 void Bot::FacePosition (void)
@@ -3193,10 +3178,10 @@ void Bot::FacePosition (void)
                randomize = randomization;
 
             // randomize targeted location a bit (slightly towards the ground)
-            m_randomizedIdealAngles = m_idealAngles + Vector (g_randGen.Float (-randomize.x * 0.5, randomize.x * 1.5), g_randGen.Float (-randomize.y, randomize.y), 0);
+            m_randomizedIdealAngles = m_idealAngles + Vector (Random.Float (-randomize.x * 0.5, randomize.x * 1.5), Random.Float (-randomize.y, randomize.y), 0);
 
             // set next time to do this
-            m_randomizeAnglesTime = GetWorldTime () + g_randGen.Float (0.4, yb_aim_offset_delay.GetFloat ());
+            m_randomizeAnglesTime = GetWorldTime () + Random.Float (0.4, yb_aim_offset_delay.GetFloat ());
          }
          float stiffnessMultiplier = yb_aim_notarget_slowdown_ratio.GetFloat ();
 

@@ -94,14 +94,14 @@ char *HumanizeName (char *name)
    strcpy (outputName, name); // copy name to new buffer
 
    // drop tag marks, 80 percent of time
-   if (g_randGen.Long (1, 100) < 80)
+   if (Random.Long (1, 100) < 80)
       StripTags (outputName);
    else
       strtrim (outputName);
 
    // sometimes switch name to lower characters
    // note: since we're using russian names written in english, we reduce this shit to 6 percent
-   if (g_randGen.Long (1, 100) <= 6)
+   if (Random.Long (1, 100) <= 6)
    {
       for (int i = 0; i < static_cast <int> (strlen (outputName)); i++)
          outputName[i] = tolower (outputName[i]); // to lower case
@@ -118,7 +118,7 @@ void HumanizeChat (char *buffer)
 
    // sometimes switch text to lowercase
    // note: since we're using russian chat written in english, we reduce this shit to 4 percent
-   if (g_randGen.Long (1, 100) <= 4)
+   if (Random.Long (1, 100) <= 4)
    {
       for (i = 0; i < length; i++)
          buffer[i] = tolower (buffer[i]); // switch to lowercase
@@ -127,9 +127,9 @@ void HumanizeChat (char *buffer)
    if (length > 15)
    {
       // "length / 2" percent of time drop a character
-      if (g_randGen.Long (1, 100) < (length / 2))
+      if (Random.Long (1, 100) < (length / 2))
       {
-         int pos = g_randGen.Long ((length / 8), length - (length / 8)); // chose random position in string
+         int pos = Random.Long ((length / 8), length - (length / 8)); // chose random position in string
 
          for (i = pos; i < length - 1; i++)
             buffer[i] = buffer[i + 1]; // overwrite the buffer with stripped string
@@ -139,9 +139,9 @@ void HumanizeChat (char *buffer)
       }
 
       // "length" / 4 precent of time swap character
-      if (g_randGen.Long (1, 100) < (length / 4))
+      if (Random.Long (1, 100) < (length / 4))
       {
-         int pos = g_randGen.Long ((length / 8), ((3 * length) / 8)); // choose random position in string
+         int pos = Random.Long ((length / 8), ((3 * length) / 8)); // choose random position in string
          char ch = buffer[pos]; // swap characters
 
          buffer[pos] = buffer[pos + 1];
@@ -301,14 +301,14 @@ void Bot::PrepareChatMessage (char *text)
          {
             if (g_gameVersion == CSV_CZERO)
             {
-               if (g_randGen.Long (1, 100) < 30)
+               if (Random.Long (1, 100) < 30)
                   strcat (m_tempStrings, "CZ");
                else
                   strcat (m_tempStrings, "Condition Zero");
             }
             else if (g_gameVersion == CSV_STEAM || g_gameVersion == CSV_OLD)
             {
-               if (g_randGen.Long (1, 100) < 30)
+               if (Random.Long (1, 100) < 30)
                   strcat (m_tempStrings, "CS");
                else
                   strcat (m_tempStrings, "Counter-Strike");
@@ -376,7 +376,7 @@ bool CheckKeywords (char *tempMessage, char *reply)
    }
 
    // didn't find a keyword? 70% of the time use some universal reply
-   if (g_randGen.Long (1, 100) < 70 && !g_chatFactory[CHAT_NOKW].IsEmpty ())
+   if (Random.Long (1, 100) < 70 && !g_chatFactory[CHAT_NOKW].IsEmpty ())
    {
       strcpy (reply, g_chatFactory[CHAT_NOKW].GetRandomElement ().GetBuffer ());
       return true;
@@ -409,7 +409,7 @@ bool Bot::RepliesToPlayer (void)
       // check is time to chat is good
       if (m_sayTextBuffer.timeNextChat < GetWorldTime ())
       {
-         if (g_randGen.Long (1, 100) < m_sayTextBuffer.chatProbability + g_randGen.Long (2, 10) && ParseChat (reinterpret_cast <char *> (&text)))
+         if (Random.Long (1, 100) < m_sayTextBuffer.chatProbability + Random.Long (2, 10) && ParseChat (reinterpret_cast <char *> (&text)))
          {
             PrepareChatMessage (text);
             PushMessageQueue (GSM_SAY);

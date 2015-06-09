@@ -236,71 +236,54 @@ namespace Math
 }
 
 //
-// Class: RandGen
+// Class: RandomSequenceOfUnique
 //  Random number generator used by the bot code.
+//  See: https://github.com/preshing/RandomSequence/
 //
-class RandGen 
+class RandomSequenceOfUnique
 {
 private:
-   enum GenerationConstants_t
-   { KK = 17, JJ = 10, R1 = 19, R2 = 27 };
-
-   int m_bufferIndex1;
-   int m_bufferIndex2;
-
-   union 
-   {
-      long double m_randomPtr;
-      uint32 m_randomBits[3];
-   };
-
-   uint32 m_historyBuffer[KK][2];
-   uint32 m_selfTestBuffer[KK * 2][2];
+   unsigned int m_index;
+   unsigned int m_intermediateOffset;
+   unsigned long long m_divider;
 
 private:
+   unsigned int PermuteQPR (unsigned int x)
+   {
+      static const unsigned int prime = 4294967291u;
 
-   //
-   // Function: Random
-   //  Generates random number.
-   //
-   long double Random (void);
+      if (x >= prime)
+         return x;
 
-   //
-   // Function: GetRandomBits
-   //  Generates random bits for random number generator.
-   //
-   uint32 GetRandomBits (void);
+      unsigned int residue = (static_cast <unsigned long long> (x)* x) % prime;
 
+      return (x <= prime / 2) ? residue : prime - residue;
+   }
+
+   unsigned int Random (void)
+   {
+      return PermuteQPR ((PermuteQPR (m_index++) + m_intermediateOffset) ^ 0x5bf03635);
+   }
 public:
+   RandomSequenceOfUnique (void)
+   {
+      unsigned int seedBase = time (NULL);
+      unsigned int seedOffset = seedBase + 1;
 
-   //
-   // Function: Initialize
-   //  Initializes random number generator using specified seed.
-   //
-   // Parameters:
-   //   seed - Seed for the random generator.
-   //
-   void Initialize (uint32 seed);
+      m_index = PermuteQPR (PermuteQPR (seedBase) + 0x682f0161);
+      m_intermediateOffset = PermuteQPR (PermuteQPR (seedOffset) + 0x46790905);
+      m_divider = (static_cast <unsigned long long> (1)) << 32;
+   }
 
-   //
-   // Function: Long
-   //  Generates random 32bit long random number between specified bounds.
-   //
-   // Parameters:
-   //  low - Lowest number.
-   //  high - Higher number.
-   //
-   int Long (int low, int high);
+   inline int Long (int low, int high)
+   {
+      return static_cast <int> (Random () * (static_cast <double> (high)-static_cast <double> (low)+1.0) / m_divider + static_cast <double> (low));
+   }
 
-   //
-   // Function: Float
-   //  Generates random 32bit float random number between specified bounds.
-   //
-   // Parameters:
-   //  low - Lowest number.
-   //  high - Higher number.
-   //
-   float Float (float low, float high);
+   inline float Float (float low, float high)
+   {
+      return static_cast <float> (Random () * (static_cast <double> (high)-static_cast <double> (low)) / (m_divider - 1) + static_cast <double> (low));
+   }
 };
 
 //
@@ -1633,9 +1616,9 @@ public:
    //
    T &GetRandomElement (void) const
    {
-      extern class RandGen g_randGen;
+      extern class RandomSequenceOfUnique Random;
 
-      return m_elements[g_randGen.Long (0, m_itemCount - 1)];
+      return m_elements[Random.Long (0, m_itemCount - 1)];
    }
 
    Array <T> &operator = (const Array <T> &other)

@@ -860,9 +860,9 @@ void HudMessage (edict_t *ent, bool toCenter, Vector rgb, char *format, ...)
       WRITE_BYTE (static_cast <int> (rgb.y));
       WRITE_BYTE (static_cast <int> (rgb.z));
       WRITE_BYTE (0);
-      WRITE_BYTE (g_randGen.Long (230, 255));
-      WRITE_BYTE (g_randGen.Long (230, 255));
-      WRITE_BYTE (g_randGen.Long (230, 255));
+      WRITE_BYTE (Random.Long (230, 255));
+      WRITE_BYTE (Random.Long (230, 255));
+      WRITE_BYTE (Random.Long (230, 255));
       WRITE_BYTE (200);
       WRITE_SHORT (FixedUnsigned16 (0.0078125, 1 << 8));
       WRITE_SHORT (FixedUnsigned16 (2, 1 << 8));
@@ -1079,7 +1079,7 @@ void CheckWelcomeMessage (void)
       ServerCommand ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));
 
       ChartPrint ("----- YaPB v%s (Build: %u), {%s}, (c) 2015, by %s -----", PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_DATE, PRODUCT_AUTHOR);
-      HudMessage (g_hostEntity, true, Vector (g_randGen.Long (33, 255), g_randGen.Long (33, 255), g_randGen.Long (33, 255)), "\nServer is running YaPB v%s (Build: %u)\nDeveloped by %s\n\n%s", PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_AUTHOR, g_waypoint->GetInfo ());
+      HudMessage (g_hostEntity, true, Vector (Random.Long (33, 255), Random.Long (33, 255), Random.Long (33, 255)), "\nServer is running YaPB v%s (Build: %u)\nDeveloped by %s\n\n%s", PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_AUTHOR, g_waypoint->GetInfo ());
 
       receiveTime = 0.0;
       isReceived = true;
@@ -1287,109 +1287,6 @@ char *Localizer::TranslateInput (const char *input)
    return const_cast <char *> (&input[0]); // nothing found
 }
 
-uint32 RandGen::GetRandomBits (void) 
-{
-   // generate next number
-   uint32 x = _lrotl (m_historyBuffer[m_bufferIndex1][0], R1) + m_historyBuffer[m_bufferIndex2][0];
-   uint32 y = _lrotl (m_historyBuffer[m_bufferIndex1][1], R2) + m_historyBuffer[m_bufferIndex2][1];
-
-   m_historyBuffer[m_bufferIndex1][0] = y; 
-   m_historyBuffer[m_bufferIndex1][1] = x;
-
-   // rotate list pointers
-   if (m_bufferIndex1-- < 0) 
-      m_bufferIndex1 = KK - 1;
-
-   if (m_bufferIndex2-- < 0) 
-      m_bufferIndex2 = KK - 1;
-
-   // perform self-test
-   if (m_historyBuffer[m_bufferIndex1][0] == m_selfTestBuffer[0][0] && memcmp (m_historyBuffer, m_selfTestBuffer[KK - m_bufferIndex1], 2 * KK * sizeof (uint32)) == 0) 
-   {
-      // self-test failed
-      if ((m_bufferIndex2 + KK - m_bufferIndex1) % KK != JJ)
-         AddLogEntry (false, LL_FATAL, "Random number generator could not be initialized.");
-      else
-         AddLogEntry (false, LL_FATAL, "Random number generator returned to initial state.");
-   }
-   m_randomBits[0] = y;
-   m_randomBits[1] = x;
-
-   return y;
-}
-
-long double RandGen::Random (void) 
-{
-   return static_cast <double> (GetRandomBits () * (1.0 / (static_cast <double> (static_cast <uint32> (-1L)) + 1.0)));
-}
-
-int RandGen::Long (int low, int high)
-{
-   // this function returns a random integer number between (and including) the starting and
-   // ending values passed by parameters from and to.
-
-   int interval = high - low + 1;
-
-   if (interval <= 0)
-      return low;
-
-   int truncate = static_cast <int> (interval * Random ());
-
-   if (truncate >= interval)
-      truncate = interval - 1.0;
-
-   return low + truncate;
-}
-
-float RandGen::Float (float low, float high)
-{
-   // this function returns a random floating-point number between (and including) the starting
-   // and ending values passed by parameters from and to.
-
-   float interval = high - low;
-
-   if (interval <= 0.0)
-      return low;
-
-   float truncate = static_cast <float> (interval * Random ());
-
-   if (truncate >= interval)
-      truncate = interval;
-
-   return low + truncate;
-}
-
-void RandGen::Initialize (uint32 seed)
-{
-   // this function initializes the random number generator.
-
-   // make random numbers and put them into the buffer
-   for (int i = 0; i < KK; i++) 
-   {
-      for (int j = 0; j < 2; j++) 
-      {
-         seed = seed * 2891336453UL + 1;
-         m_historyBuffer[i][j] = seed;
-      }
-   }
-
-   // set exponent of randp
-   m_randomBits[2] = 0; 
-   m_randomPtr = 1.0;
-
-   // initialize pointers to circular buffer
-   m_bufferIndex1 = 0;  
-   m_bufferIndex2 = JJ;
-
-   // store state for self-test
-   memcpy (m_selfTestBuffer, m_historyBuffer, 2 * KK * sizeof (uint32));
-   memcpy (m_selfTestBuffer[KK], m_historyBuffer, 2 * KK * sizeof (uint32));
-
-   // randomize some more
-   for (int i = 0; i < 128; i++) 
-      GetRandomBits ();
-}
-
 bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool sameTeam, bool needBot, bool isAlive, bool needDrawn)
 {
    // this function finds nearest to to, player with set of parameters, like his
@@ -1399,6 +1296,8 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
    edict_t *survive = NULL; // pointer to temporaly & survive entity
    float nearestPlayer = 4096.0; // nearest player
 
+   int toTeam = GetTeam (to);
+
    for (int i = 0; i < GetMaxClients (); i++)
    {
       edict_t *ent = g_clients[i].ent;
@@ -1406,7 +1305,7 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
       if (!(g_clients[i].flags & CF_USED) || ent == to)
          continue;
 
-      if ((sameTeam && g_clients[i].team != GetTeam (to)) || (isAlive && !(g_clients[i].flags & CF_ALIVE)) || (needBot && !IsValidBot (ent)) || (needDrawn && (ent->v.effects & EF_NODRAW)))
+      if ((sameTeam && g_clients[i].team != toTeam) || (isAlive && !(g_clients[i].flags & CF_ALIVE)) || (needBot && !IsValidBot (ent)) || (needDrawn && (ent->v.effects & EF_NODRAW)))
          continue; // filter players with parameters
 
       float distance = (ent->v.origin - to->v.origin).GetLengthSquared ();
