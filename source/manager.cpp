@@ -793,6 +793,11 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member)
 
    m_lastCommandTime = GetWorldTime () - 0.1f;
    m_frameInterval = GetWorldTime ();
+
+   m_msecDel = 0.0f;
+   m_msecVal = 0.0f;
+   m_msecNum = 0.0f;
+
    m_timePeriodicUpdate = 0.0f;
 
    bot->v.idealpitch = bot->v.v_angle.x;

@@ -5771,14 +5771,30 @@ void Bot::MoveToVector (Vector to)
    FindPath (m_currentWaypointIndex, g_waypoint->FindNearest (to), 0);
 }
 
-byte Bot::ThrottledMsec (float input)
+byte Bot::ThrottledMsec (void)
 {
    // estimate msec to use for this command based on time passed from the previous command
-   int newMsec = static_cast <int> (input * 1000);
+   if (m_msecDel + m_msecNum / 1000 < GetWorldTime () - 0.5f || m_msecDel > GetWorldTime ())
+   {
+      m_msecDel = GetWorldTime () - 0.05f;
+      m_msecNum = 0;
+   }
+
+   byte newMsec = (GetWorldTime () - m_msecDel) * 1000 - m_msecNum; // optimal msec value since start of 1 sec period
+   m_msecNum = (GetWorldTime () - m_msecDel) * 1000; // value we have to add to reach optimum
+
+   // do we have to start a new 1 sec period?
+   if (m_msecNum > 1000)
+   {
+      m_msecDel += m_msecNum / 1000;
+      m_msecNum = 0;
+   }
 
    // bots are going to be slower than they should if this happens.
    if (newMsec > 255)
       newMsec = 255;
+   else if (newMsec < 1)
+      newMsec = 1;
 
    return static_cast <byte> (newMsec);
 }
@@ -5801,7 +5817,7 @@ void Bot::RunPlayerMovement (void)
 
    m_frameInterval = GetWorldTime () - m_lastCommandTime;
 
-   byte msecVal = ThrottledMsec (m_frameInterval);
+   byte msecVal = ThrottledMsec ();
    m_lastCommandTime = GetWorldTime ();
 
    (*g_engfuncs.pfnRunPlayerMove) (pev->pContainingEntity, m_moveAngles, m_moveSpeed, m_strafeSpeed, 0.0, pev->button, pev->impulse, msecVal);
