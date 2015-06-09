@@ -5774,29 +5774,27 @@ void Bot::MoveToVector (Vector to)
 byte Bot::ThrottledMsec (void)
 {
    // estimate msec to use for this command based on time passed from the previous command
-   if (m_msecDel + m_msecNum / 1000 < GetWorldTime () - 0.5f || m_msecDel > GetWorldTime ())
-   {
-      m_msecDel = GetWorldTime () - 0.05f;
-      m_msecNum = 0;
-   }
+   float msecVal = (GetWorldTime () - m_lastCommandTime) * 1000.0f;
 
-   byte newMsec = (GetWorldTime () - m_msecDel) * 1000 - m_msecNum; // optimal msec value since start of 1 sec period
-   m_msecNum = (GetWorldTime () - m_msecDel) * 1000; // value we have to add to reach optimum
+   int msecRest = 0;
+   byte newMsec = static_cast <byte> (msecVal);
 
-   // do we have to start a new 1 sec period?
-   if (m_msecNum > 1000)
+   if (newMsec < 10)
    {
-      m_msecDel += m_msecNum / 1000;
-      m_msecNum = 0;
+      msecVal = msecVal - static_cast <float> (newMsec) + m_msecValRest;
+      msecRest = static_cast <int> (msecVal);
+
+      m_msecValRest = msecVal - static_cast <float> (msecRest);
    }
+   newMsec += msecRest;
 
    // bots are going to be slower than they should if this happens.
-   if (newMsec > 255)
-      newMsec = 255;
+   if (newMsec > 100)
+      newMsec = 100;
    else if (newMsec < 1)
       newMsec = 1;
 
-   return static_cast <byte> (newMsec);
+   return newMsec;
 }
 
 void Bot::RunPlayerMovement (void)
