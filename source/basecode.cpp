@@ -2678,7 +2678,7 @@ void Bot::CheckRadioCommands (void)
          {
             if (g_timeNextBombUpdate < GetWorldTime ())
             {
-               float minDistance = FLT_MAX;
+               float minDistance = 4096.0f;
 
                // find nearest bomb waypoint to player
                IterateArray (g_waypoint->m_goalPoints, i)
@@ -3202,25 +3202,10 @@ void Bot::RunTask (void)
       m_aimFlags |= AIM_NAVPOINT;
 
       // user forced a waypoint as a goal?
-      if (yb_debug_goal.GetInt () != -1)
+      if (yb_debug_goal.GetInt () != -1 && GetTask ()->data != yb_debug_goal.GetInt ())
       {
-         // check if we reached it
-         if (((m_currentPath->origin - pev->origin).SkipZ ()).GetLengthSquared () < 16 && GetTask ()->data == yb_debug_goal.GetInt ())
-         {
-            m_moveSpeed = 0.0;
-            m_strafeSpeed = 0.0;
-
-            m_checkTerrain = false;
-            m_moveToGoal = false;
-
-            return; // we can safely return here
-         }
-
-         if (GetTask ()->data != yb_debug_goal.GetInt ())
-         {
-            DeleteSearchNodes ();
-            GetTask ()->data = yb_debug_goal.GetInt ();
-         }
+         DeleteSearchNodes ();
+         GetTask ()->data = yb_debug_goal.GetInt ();
       }
 
       // bots rushing with knife, when have no enemy (thanks for idea to nicebot project)
@@ -3300,15 +3285,14 @@ void Bot::RunTask (void)
 
                   MakeVectors (pev->v_angle);
 
-                  m_timeCamping = GetWorldTime () + Random.Float (10.0f, 30.0f);
-                  StartTask (TASK_CAMP, TASKPRI_CAMP, -1, m_timeCamping, true);
+                  StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + Random.Float (20.0f, 40.0f), true);
 
                   m_camp = Vector (m_currentPath->campStartX, m_currentPath->campStartY, 0.0f);
                   m_aimFlags |= AIM_CAMP;
                   m_campDirection = 0;
 
                   // tell the world we're camping
-                  if (Random.Long (0, 100) < 95)
+                  if (Random.Long (0, 100) < 80)
                      RadioMessage (Radio_InPosition);
 
                   m_moveToGoal = false;
@@ -3349,8 +3333,7 @@ void Bot::RunTask (void)
                   ChatterMessage (Chatter_GoingToGuardVIPSafety); // play info about that
                }
             }
-
-            if ((g_mapType & MAP_DE) && ((m_currentPath->flags & FLAG_GOAL) || m_inBombZone) && m_seeEnemyTime + 3.0 < GetWorldTime ())
+            else if ((g_mapType & MAP_DE) && ((m_currentPath->flags & FLAG_GOAL) || m_inBombZone) && m_seeEnemyTime + 1.5f < GetWorldTime ())
             {
                // is it a terrorist carrying the bomb?
                if (m_hasC4)
@@ -3368,12 +3351,12 @@ void Bot::RunTask (void)
                }
                else if (m_team == TEAM_CF)
                {
-                  if (!g_bombPlanted && GetNearbyFriendsNearPosition (pev->origin, 360) < 3 && Random.Long (0, 100) < 85 && GetTaskId () == TASK_NORMAL && m_fearLevel > m_agressionLevel / 2)
+                  if (!g_bombPlanted && GetNearbyFriendsNearPosition (pev->origin, 360.0f) < 3 && Random.Long (0, 100) < 85 && m_personality != PERSONALITY_RUSHER)
                   {
                      int index = FindDefendWaypoint (m_currentPath->origin);
 
-                     StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + Random.Float (45.0, 60.0), true); // push camp task on to stack
-                     StartTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, GetWorldTime () + Random.Float (10.0, 15.0), true); // push move command
+                     StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + Random.Float (25.0, 40.0), true); // push camp task on to stack
+                     StartTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, GetWorldTime () + Random.Float (5.0f, 11.0f), true); // push move command
 
                      if (g_waypoint->GetPath (index)->vis.crouch <= g_waypoint->GetPath (index)->vis.stand)
                         m_campButtons |= IN_DUCK;
@@ -3715,7 +3698,7 @@ void Bot::RunTask (void)
       m_idealReactionTime /= 2;
 
       m_navTimeset = GetWorldTime ();
-	  m_timeCamping = GetWorldTime();
+      m_timeCamping = GetWorldTime();
 
       m_moveSpeed = 0;
       m_strafeSpeed = 0.0;
@@ -5180,7 +5163,7 @@ void Bot::BotAI (void)
                sprintf (aimFlags, "%s%s%s%s%s%s%s%s",
                   m_aimFlags & AIM_NAVPOINT ? " NavPoint" : "",
                   m_aimFlags & AIM_CAMP ? " CampPoint" : "",
-                  m_aimFlags & AIM_PREDICT_PATH ? " predictPath" : "",
+                  m_aimFlags & AIM_PREDICT_PATH ? " PredictPath" : "",
                   m_aimFlags & AIM_LAST_ENEMY ? " LastEnemy" : "",
                   m_aimFlags & AIM_ENTITY ? " Entity" : "",
                   m_aimFlags & AIM_ENEMY ? " Enemy" : "",
@@ -5443,7 +5426,7 @@ void Bot::CollectGoalExperience (int damage, int team)
    // gets called each time a bot gets damaged by some enemy. tries to achieve a statistic about most/less dangerous
    // waypoints for a destination goal used for pathfinding
 
-   if ((g_numWaypoints < 1) || g_waypointsChanged || (m_chosenGoalIndex < 0) || (m_prevGoalIndex < 0))
+   if (g_numWaypoints < 1 || g_waypointsChanged || m_chosenGoalIndex < 0 || m_prevGoalIndex < 0)
       return;
 
    // only rate goal waypoint if bot died because of the damage

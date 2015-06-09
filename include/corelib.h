@@ -1204,7 +1204,7 @@ public:
    // Returns:
    //  Number of allocated items.
    //
-   int GetSize (void)
+   int GetSize (void) const
    {
       return m_itemSize;
    }
@@ -1216,7 +1216,7 @@ public:
    // Returns:
    //  Number of elements.
    //
-   int GetElementNumber (void)
+   int GetElementNumber (void) const
    {
       return m_itemCount;
    }

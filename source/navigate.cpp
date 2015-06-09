@@ -50,16 +50,15 @@ int Bot::FindGoal (void)
    }
    int tactic;
 
-
    // path finding behaviour depending on map type
-   int offensive;
-   int defensive;
-   int goalDesire;
+   float offensive;
+   float defensive;
 
-   int forwardDesire;
-   int campDesire;
-   int backoffDesire;
-   int tacticChoice;
+   float goalDesire;
+   float forwardDesire;
+   float campDesire;
+   float backoffDesire;
+   float tacticChoice;
 
    Array <int> offensiveWpts;
    Array <int> defensiveWpts;
@@ -91,8 +90,8 @@ int Bot::FindGoal (void)
       goto TacticChoosen;
    }
 
-   offensive = static_cast <int> (m_agressionLevel * 100);
-   defensive = static_cast <int> (m_fearLevel * 100);
+   offensive = m_agressionLevel * 100;
+   defensive = m_fearLevel * 100;
 
    if (g_mapType & (MAP_AS | MAP_CS))
    {
@@ -103,8 +102,17 @@ int Bot::FindGoal (void)
       }
       else if (m_team == TEAM_CF)
       {
-         defensive -= 25.0f;
-         offensive += 25.0f;
+         // on hostage maps force more bots to save hostages
+         if (g_mapType & MAP_CS)
+         {
+            defensive -= 25.0f - m_difficulty * 0.5f;
+            offensive += 25.0f + m_difficulty * 5.0f;
+         }
+         else // on AS leave as is
+         {
+            defensive -= 25.0f;
+            offensive += 25.0f;
+         }
       }
    }
    else if ((g_mapType & MAP_DE) && m_team == TEAM_CF)
@@ -128,10 +136,10 @@ int Bot::FindGoal (void)
          return m_chosenGoalIndex = FindDefendWaypoint (g_waypoint->GetBombPosition ());
    }
 
-   goalDesire = Random.Long (0, 100 + (offensive * 0.5)) + offensive;
-   forwardDesire = Random.Long (0, 100) + offensive;
-   campDesire = Random.Long (0, 100) + defensive;
-   backoffDesire = Random.Long (0, 100) + defensive;
+   goalDesire = Random.Float (0.0f, 100.0f) + offensive;
+   forwardDesire = Random.Float (0.0f, 100.0f) + offensive;
+   campDesire = Random.Float (0.0f, 100.0f) + defensive;
+   backoffDesire = Random.Float (0.0f, 100.0f) + defensive;
 
    if (!UsesCampGun ())
       campDesire = 0;
@@ -158,41 +166,17 @@ TacticChoosen:
    int goalChoices[4] = {-1, -1, -1, -1};
 
    if (tactic == 0 && !defensiveWpts.IsEmpty ()) // careful goal
-   {
-      for (int i = 0; i < 4; i++)
-      {
-         goalChoices[i] = defensiveWpts.GetRandomElement ();
-         InternalAssert (goalChoices[i] >= 0 && goalChoices[i] < g_numWaypoints);
-      }
-   }
+      FilterGoals (defensiveWpts, goalChoices);
    else if (tactic == 1 && !g_waypoint->m_campPoints.IsEmpty ()) // camp waypoint goal
    {
       // pickup sniper points if possible for sniping bots
-      if (!g_waypoint->m_sniperPoints.IsEmpty () && ((pev->weapons & (1 << WEAPON_AWP)) || (pev->weapons & (1 << WEAPON_SCOUT)) || (pev->weapons & (1 << WEAPON_G3SG1)) || (pev->weapons & (1 << WEAPON_SG550))))
-      {
-         for (int i = 0; i < 4; i++)
-         {
-            goalChoices[i] = g_waypoint->m_sniperPoints.GetRandomElement ();
-            InternalAssert (goalChoices[i] >= 0 && goalChoices[i] < g_numWaypoints);
-         }
-      }
+      if (!g_waypoint->m_sniperPoints.IsEmpty () && UsesSniper ())
+         FilterGoals (g_waypoint->m_sniperPoints, goalChoices);
       else
-      {
-         for (int i = 0; i < 4; i++)
-         {
-            goalChoices[i] = g_waypoint->m_campPoints.GetRandomElement ();
-            InternalAssert (goalChoices[i] >= 0 && goalChoices[i] < g_numWaypoints);
-         }
-      }
+         FilterGoals (g_waypoint->m_campPoints, goalChoices);
    }
    else if (tactic == 2 && !offensiveWpts.IsEmpty ()) // offensive goal
-   {
-      for (int i = 0; i < 4; i++)
-      {
-         goalChoices[i] = offensiveWpts.GetRandomElement ();
-         InternalAssert (goalChoices[i] >= 0 && goalChoices[i] < g_numWaypoints);
-      }
-   }
+      FilterGoals (offensiveWpts, goalChoices);
    else if (tactic == 3 && !g_waypoint->m_goalPoints.IsEmpty ()) // map goal waypoint
    {
       // forcee bomber to select closest goal, if round-start goal was reset by something
@@ -231,13 +215,7 @@ TacticChoosen:
          }
       }
       else
-      {
-         for (int i = 0; i < 4; i++)
-         {
-            goalChoices[i] = g_waypoint->m_goalPoints.GetRandomElement ();
-            InternalAssert (goalChoices[i] >= 0 && goalChoices[i] < g_numWaypoints);
-         }
-      }
+         FilterGoals (g_waypoint->m_goalPoints, goalChoices);
    }
 
    if (m_currentWaypointIndex == -1 || m_currentWaypointIndex >= g_numWaypoints)
@@ -259,31 +237,42 @@ TacticChoosen:
          if (testIndex < 0)
             break;
 
-         if (m_team == TEAM_TF)
-         {
-            if ((g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + goalChoices[i])->team0Value < (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + goalChoices[i + 1])->team0Value)
-            {
-               goalChoices[i + 1] = goalChoices[i];
-               goalChoices[i] = testIndex;
+         int goal1 = m_team == TEAM_TF ? (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + goalChoices[i])->team0Value : (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + goalChoices[i])->team1Value;
+         int goal2 = m_team == TEAM_TF ? (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + goalChoices[i + 1])->team0Value : (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + goalChoices[i + 1])->team1Value;
 
-               isSorting = true;
-            }
-         }
-         else
+         if (goal1 < goal2)
          {
-            if ((g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + goalChoices[i])->team1Value < (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + goalChoices[i + 1])->team1Value)
-            {
-               goalChoices[i + 1] = goalChoices[i];
-               goalChoices[i] = testIndex;
+            goalChoices[i + 1] = goalChoices[i];
+            goalChoices[i] = testIndex;
 
-               isSorting = true;
-            }
+            isSorting = true;
          }
       }
    } while (isSorting);
 
-   // return and store goal
-   return m_chosenGoalIndex = goalChoices[0];
+   return m_chosenGoalIndex = goalChoices[0]; // return and store goal
+}
+
+void Bot::FilterGoals (const Array <int> &goals, int *result)
+{
+   // this function filters the goals, so new goal is not bot's old goal, and array of goals doesn't contains duplicate goals
+
+   int totalGoals = goals.GetElementNumber ();
+   int searchCount = 0;
+
+   for (int index = 0; index < 4; index++)
+   {
+      int rand = goals.GetRandomElement ();
+
+      if (searchCount <= 8 && (m_prevGoalIndex == rand || ((result[0] == rand || result[1] == rand || result[2] == rand || result[3] == rand) && totalGoals > 4)) && !IsPointOccupied (rand))
+      {
+         if (index > 0)
+            index--;
+
+         continue;
+      }
+      result[index] = rand;
+   }
 }
 
 bool Bot::GoalIsValid (void)
@@ -665,8 +654,8 @@ bool Bot::DoWaypointNav (void)
          // pressing the jump button gives the illusion of the bot actual jmping.
          if (IsOnFloor () || IsOnLadder ())
          {
-            if (m_desiredVelocity != nullvec)
-               pev->velocity = m_desiredVelocity + m_desiredVelocity * 0.15; // cheating i know, but something changed in recent cs updates...
+            if (m_desiredVelocity.x != 0.0f && m_desiredVelocity.y != 0.0f)
+               pev->velocity = m_desiredVelocity + m_desiredVelocity * 0.11f;
 
             pev->button |= IN_JUMP;
 
@@ -1126,13 +1115,8 @@ bool Bot::DoWaypointNav (void)
    }
 
    // needs precise placement - check if we get past the point
-   if (desiredDistance < 16.0 && waypointDistance < 30)
-   {
-      Vector nextFrameOrigin = pev->origin + (pev->velocity * m_frameInterval);
-
-      if ((nextFrameOrigin - m_waypointOrigin).GetLength () > waypointDistance)
-         desiredDistance = waypointDistance + 1.0;
-   }
+   if (desiredDistance < 16.0 && waypointDistance < 30 && (pev->origin + (pev->velocity * m_frameInterval) - m_waypointOrigin).GetLength () > waypointDistance)
+      desiredDistance = waypointDistance + 1.0;
 
    if (waypointDistance < desiredDistance)
    {
@@ -1279,9 +1263,7 @@ public:
       if (m_size >= m_heapSize)
       {
          m_heapSize += 100;
-         m_heap = (Node *) realloc (m_heap, sizeof (Node) * m_heapSize);
-
-         ServerPrint ("REALLOCATING");
+         m_heap = (Node *)realloc (m_heap, sizeof (Node) * m_heapSize);
       }
 
       m_heap[m_size].pri = pri;
@@ -1954,7 +1936,29 @@ void Bot::GetValidWaypoint (void)
          }
       }
       DeleteSearchNodes ();
-      FindWaypoint ();
+      
+      if (m_goalFailed > 1)
+      {
+         DebugMsg ("GOAL FAILED!");
+         int newGoal = FindGoal ();
+
+         m_prevGoalIndex = newGoal;
+         m_chosenGoalIndex = newGoal;
+
+         // remember index
+         GetTask ()->data = newGoal;
+
+         // do pathfinding if it's not the current waypoint
+         if (newGoal != m_currentWaypointIndex)
+            FindPath (m_currentWaypointIndex, newGoal, m_pathType);
+
+         m_goalFailed = 0;
+      }
+      else
+      {
+         FindWaypoint ();
+         m_goalFailed++;
+      }
 
       m_waypointOrigin = m_currentPath->origin;
    }
@@ -1962,6 +1966,9 @@ void Bot::GetValidWaypoint (void)
 
 void Bot::ChangeWptIndex (int waypointIndex)
 {
+   if (waypointIndex == -1)
+      return;
+
    m_prevWptIndex[4] = m_prevWptIndex[3];
    m_prevWptIndex[3] = m_prevWptIndex[2];
    m_prevWptIndex[2] = m_prevWptIndex[1];
@@ -1971,19 +1978,14 @@ void Bot::ChangeWptIndex (int waypointIndex)
    m_navTimeset = GetWorldTime ();
 
    m_currentPath = g_waypoint->GetPath (m_currentWaypointIndex);
-
-   // get the current waypoint flags
-   if (m_currentWaypointIndex != -1)
-      m_waypointFlags = m_currentPath->flags;
-   else
-      m_waypointFlags = 0;
+   m_waypointFlags = m_currentPath->flags;
 }
 
 int Bot::ChooseBombWaypoint (void)
 {
    // this function finds the best goal (bomb) waypoint for CTs when searching for a planted bomb.
 
-   Array <int> &goals = g_waypoint->m_goalPoints;
+   Array <int> goals = g_waypoint->m_goalPoints;
 
    if (goals.IsEmpty ())
       return Random.Long (0, g_numWaypoints - 1); // reliability check
@@ -2332,7 +2334,7 @@ bool Bot::HeadTowardWaypoint (void)
          m_minSpeed = pev->maxspeed;
 
          // only if we in normal task and bomb is not planted
-         if (m_currentPath->flags & (FLAG_GOAL | FLAG_SNIPER | FLAG_CAMP) && GetTaskId () == TASK_NORMAL && !g_bombPlanted && m_personality != PERSONALITY_RUSHER && !m_hasC4 && !m_isVIP && m_loosedBombWptIndex == -1 && !HasHostage ())
+         if (GetTaskId () == TASK_NORMAL && m_timeCamping + 30.0f < GetWorldTime () && !g_bombPlanted && m_personality != PERSONALITY_RUSHER && !m_hasC4 && !m_isVIP && m_loosedBombWptIndex == -1 && !HasHostage ())
          {
             m_campButtons = 0;
 
@@ -2358,22 +2360,17 @@ bool Bot::HeadTowardWaypoint (void)
                   break;
                }
 
-               if (m_baseAgressionLevel < kills && GetTaskId () != TASK_MOVETOPOSITION && HasPrimaryWeapon ())
+               if (m_baseAgressionLevel < kills && HasPrimaryWeapon ())
                {
-                  DebugMsg ("pushing camp on to stack");
-                  StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + (m_fearLevel * (g_timeRoundMid - GetWorldTime ()) * 0.5), true); // push camp task on to stack
-
-                  StartTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, FindDefendWaypoint (g_waypoint->GetPath (waypoint)->origin), 0.0, true);
-
-                  if (m_difficulty >= 3)
-                     pev->button |= IN_DUCK;
+                  StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + Random.Float (m_difficulty * 0.5, m_difficulty) * 5, true);
+                  StartTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, FindDefendWaypoint (g_waypoint->GetPath (waypoint)->origin), GetWorldTime () + Random.Float (3.0f, 10.0f), true);
                }
             }
             else if (g_botsCanPause && !IsOnLadder () && !IsInWater () && !m_currentTravelFlags && IsOnFloor ())
             {
                if (static_cast <float> (kills) == m_baseAgressionLevel)
                   m_campButtons |= IN_DUCK;
-               else if (Random.Long (1, 100) > (m_difficulty * 25 + Random.Long (1, 20)))
+               else if (Random.Long (1, 100) > m_difficulty * 25)
                   m_minSpeed = GetWalkSpeed ();
             }
          }
@@ -2429,7 +2426,6 @@ bool Bot::HeadTowardWaypoint (void)
             // is there a jump waypoint right ahead and do we need to draw out the light weapon ?
             if (willJump && m_currentWeapon != WEAPON_KNIFE && m_currentWeapon != WEAPON_SCOUT && !m_isReloading && !UsesPistol () && (jumpDistance > 210 || (destination.z + 32.0f > src.z && jumpDistance > 150.0f) || ((destination - src).GetLength2D () < 60 && jumpDistance > 60)) && IsEntityNull (m_enemy))
                SelectWeaponByName ("weapon_knife"); // draw out the knife if we needed
-
 
             // bot not already on ladder but will be soon?
             if ((g_waypoint->GetPath (destIndex)->flags & FLAG_LADDER) && !IsOnLadder ())
@@ -3292,8 +3288,11 @@ bool Bot::IsPointOccupied (int index)
          continue;
 
       // check if this waypoint is already used
-      if (IsAlive (bot->GetEntity ()) && (bot->m_currentWaypointIndex == index || bot->GetTask ()->data == index || (g_waypoint->GetPath (index)->origin - bot->pev->origin).GetLength2D () < 120.0f))
-         return true;
+      if (IsAlive (bot->GetEntity ()))
+      {
+         if ((GetShootingConeDeviation (bot->GetEntity (), &pev->origin) >= 0.7 ? bot->m_prevWptIndex[0] : m_currentWaypointIndex) == index || bot->GetTask ()->data == index || (g_waypoint->GetPath (index)->origin - bot->pev->origin).GetLength2D () < 96.0)
+            return true;
+      }
    }
    return false;
 }

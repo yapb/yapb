@@ -931,6 +931,7 @@ void Bot::NewRound (void)
    m_currentWaypointIndex = -1;
    m_currentPath = NULL;
    m_currentTravelFlags = 0;
+   m_goalFailed = 0;
    m_desiredVelocity = nullvec;
    m_prevGoalIndex = -1;
    m_chosenGoalIndex = -1;
@@ -940,11 +941,8 @@ void Bot::NewRound (void)
    m_duckDefuse = false;
    m_duckDefuseCheckTime = 0.0;
 
-   m_prevWptIndex[0] = -1;
-   m_prevWptIndex[1] = -1;
-   m_prevWptIndex[2] = -1;
-   m_prevWptIndex[3] = -1;
-   m_prevWptIndex[4] = -1;
+   for (int i = 0; i < 5; i++)
+      m_prevWptIndex[i] = -1;
 
    m_navTimeset = GetWorldTime ();
    m_team = GetTeam (GetEntity ());

@@ -704,9 +704,11 @@ struct Client
    edict_t *ent; // pointer to actual edict
    Vector origin; // position in the world
    Vector soundPosition; // position sound was played
+
    int team; // bot team
    int realTeam; // real bot team in free for all mode (csdm)
    int flags; // client flags
+
    float hearingDistance; // distance this sound is heared
    float timeSoundLasting; // time sound is played/heared
    float maxTimeSoundLasting; // max time sound is played/heared (to divide the difference between that above one and the current one)
@@ -1000,6 +1002,7 @@ private:
    int FindCoverWaypoint (float maxDistance);
    int FindDefendWaypoint (Vector origin);
    int FindGoal (void);
+   void FilterGoals (const Array <int> &goals, int *result);
    void FindItem (void);
    void CheckTerrain (float movedDistance, const Vector &dir, const Vector &dirNormal);
 
@@ -1153,6 +1156,7 @@ public:
    int m_actMessageIndex; // current processed message
    int m_pushMessageIndex; // offset for next pushed message
 
+   int m_goalFailed; // if bot can't reach several times in a row
    int m_prevGoalIndex; // holds destination goal waypoint
    int m_chosenGoalIndex; // used for experience, same as above
    float m_goalValue; // ranking value for this waypoint

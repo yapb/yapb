@@ -997,11 +997,13 @@ void Touch (edict_t *pentTouched, edict_t *pentOther)
    // the two entities both have velocities, for example two players colliding, this function
    // is called twice, once for each entity moving.
 
-   Bot *touched = g_botManager->GetBot (pentTouched);
+   if (!IsEntityNull (pentTouched) && (pentTouched->v.flags & FL_FAKECLIENT))
+   {
+      Bot *touched = g_botManager->GetBot (pentTouched);
 
-   if (touched != NULL)
-      touched->VerifyBreakable (pentOther);
-
+      if (touched != NULL)
+         touched->VerifyBreakable (pentOther);
+   }
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
