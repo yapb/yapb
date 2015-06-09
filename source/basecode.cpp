@@ -3054,12 +3054,6 @@ void Bot::Think (void)
    if (m_team == TEAM_TF)
       m_hasC4 = !!(pev->weapons & (1 << WEAPON_C4));
 
-   m_frameInterval = GetWorldTime () - m_lastThinkTime;
-   m_lastThinkTime = GetWorldTime ();
-
-   // calculate msec value
-   ThrottleMsec ();
-
    // is bot movement enabled
    bool botMovement = false;
 
@@ -5777,45 +5771,16 @@ void Bot::MoveToVector (Vector to)
    FindPath (m_currentWaypointIndex, g_waypoint->FindNearest (to), 0);
 }
 
-void Bot::ThrottleMsec (void)
+byte Bot::ThrottledMsec (float input)
 {
-   m_msecVal = static_cast <int> (m_frameInterval * 1000.0);
+   // estimate msec to use for this command based on time passed from the previous command
+   int newMsec = static_cast <int> (input * 1000);
 
-   // count up difference that integer conversion caused
-   m_msecDel += m_frameInterval * 1000.0 - m_msecVal;
+   // bots are going to be slower than they should if this happens.
+   if (newMsec > 255)
+      newMsec = 255;
 
-   // remove effect of integer conversion and lost msecs on previous frames
-   if (m_msecDel > 1.625f)
-   {
-      float diff = 1.625f;
-
-      if (m_msecDel > 60.0f)
-         diff = 60.0f;
-      else if (m_msecDel > 30.0f)
-         diff = 30.0f;
-      else if (m_msecDel > 15.0f)
-         diff = 15.0f;
-      else if (m_msecDel > 7.5f)
-         diff = 7.5f;
-      else if (m_msecDel > 3.25f)
-         diff = 3.25f;
-
-      m_msecVal += diff - 0.5f;
-      m_msecDel -= diff - 0.5f;
-   }
-
-   if (m_msecVal < 1)    // don't allow msec to be less than 1...
-   {
-      // adjust msecdel so we can correct lost msecs on following frames
-      m_msecDel += m_msecVal - 1;
-      m_msecVal = 1;
-   }
-   else if (m_msecVal > 100)  // ...or greater than 100
-   {
-      // adjust msecdel so we can correct lost msecs on following frames
-      m_msecDel += m_msecVal - 100;
-      m_msecVal = 100;
-   }
+   return static_cast <byte> (newMsec);
 }
 
 void Bot::RunPlayerMovement (void)
@@ -5834,7 +5799,12 @@ void Bot::RunPlayerMovement (void)
    // elapses, that bot will behave like a ghost : no movement, but bullets and players can
    // pass through it. Then, when the next frame will begin, the stucking problem will arise !
 
-   (*g_engfuncs.pfnRunPlayerMove) (pev->pContainingEntity, m_moveAngles, m_moveSpeed, m_strafeSpeed, 0.0, pev->button, pev->impulse, m_msecVal);
+   m_frameInterval = GetWorldTime () - m_lastCommandTime;
+
+   byte msecVal = ThrottledMsec (m_frameInterval);
+   m_lastCommandTime = GetWorldTime ();
+
+   (*g_engfuncs.pfnRunPlayerMove) (pev->pContainingEntity, m_moveAngles, m_moveSpeed, m_strafeSpeed, 0.0, pev->button, pev->impulse, msecVal);
 }
 
 void Bot::CheckBurstMode (float distance)

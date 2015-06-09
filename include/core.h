@@ -907,11 +907,8 @@ private:
    bool m_duckDefuse; // should or not bot duck to defuse bomb
    float m_duckDefuseCheckTime; // time to check for ducking for defuse
 
-   float m_msecVal; // calculated msec value
-   float m_msecDel;
-
    float m_frameInterval; // bot's frame interval
-   float m_lastThinkTime; // time bot last thinked
+   float m_lastCommandTime; // time bot last thinked
 
    float m_reloadCheckTime; // time to check reloading
    float m_zoomCheckTime; // time to check zoom again
@@ -1044,7 +1041,7 @@ private:
    int GetBestSecondaryWeaponCarried (void);
 
    void RunPlayerMovement (void);
-   void ThrottleMsec(void);
+   byte ThrottledMsec (float input);
    void GetValidWaypoint (void);
    void ChangeWptIndex (int waypointIndex);
    bool IsDeadlyDrop (Vector targetOriginPos);

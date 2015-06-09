@@ -775,9 +775,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member)
 
    m_startAction = GSM_IDLE;
    m_moneyAmount = 0;
-
    m_logotypeIndex = Random.Long (0, 5);
-   m_msecVal = static_cast <byte> (g_pGlobals->frametime * 1000.0);
 
    // assign how talkative this bot will be
    m_sayTextBuffer.chatDelay = Random.Float (3.8, 10.0);
@@ -793,7 +791,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member)
       yb_difficulty.SetInt (difficulty);
    }
 
-   m_lastThinkTime = GetWorldTime () - 0.1f;
+   m_lastCommandTime = GetWorldTime () - 0.1f;
    m_frameInterval = GetWorldTime ();
    m_timePeriodicUpdate = 0.0f;
 
