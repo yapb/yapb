@@ -5851,7 +5851,7 @@ void Bot::RunPlayerMovement (void)
    // elapses, that bot will behave like a ghost : no movement, but bullets and players can
    // pass through it. Then, when the next frame will begin, the stucking problem will arise !
 
-   (*g_engfuncs.pfnRunPlayerMove) (GetEntity (), m_moveAngles, m_moveSpeed, m_strafeSpeed, 0.0, pev->button, pev->impulse, m_msecVal);
+   (*g_engfuncs.pfnRunPlayerMove) (pev->pContainingEntity, m_moveAngles, m_moveSpeed, m_strafeSpeed, 0.0, pev->button, pev->impulse, m_msecVal);
 }
 
 void Bot::CheckBurstMode (float distance)
