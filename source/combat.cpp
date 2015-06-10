@@ -191,7 +191,7 @@ bool Bot::LookupEnemy (void)
 
             if (friendBot != NULL)
             {
-               if (friendBot->m_seeEnemyTime + 2.0 < GetWorldTime () || IsEntityNull (friendBot->m_lastEnemy))
+               if (friendBot->m_seeEnemyTime + 2.0f < GetWorldTime () || IsEntityNull (friendBot->m_lastEnemy))
                {
                   if (IsVisible (pev->origin, ENT (friendBot->pev)))
                   {
@@ -213,7 +213,7 @@ bool Bot::LookupEnemy (void)
       if (!IsAlive (newEnemy))
       {
          m_enemy = NULL;
-
+  
          // shoot at dying players if no new enemy to give some more human-like illusion
          if (m_seeEnemyTime + 0.1 > GetWorldTime ())
          {
@@ -646,49 +646,6 @@ void Bot::FireWeapon (void)
          selectIndex++;
       }
       selectId = WEAPON_KNIFE; // no available ammo, use knife!
-   }
-
-   // ignore enemies protected by shields
-   if (IsEnemyProtectedByShield (m_enemy) && !(m_currentWeapon == WEAPON_KNIFE) && IsEnemyViewable (m_enemy))
-   {        
-      if (!g_bombPlanted && Random.Float (0, 100) < 50)
-         StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + Random.Float (5, 10), true);
-
-   }
-
-   // check if bot has shield
-   if (HasShield () && m_shieldCheckTime < GetWorldTime () && GetTaskId () != TASK_CAMP && IsEnemyViewable (m_enemy))
-   {
-      if (IsGroupOfEnemies (pev->origin, 3, 750) && !IsShieldDrawn () && !g_bombPlanted) 
-         StartTask (TASK_SEEKCOVER, TASKPRI_SEEKCOVER, -1, GetWorldTime () + Random.Float (10, 20), true);
-      
-      if (distance >= 750 || ((m_enemy->v.button & IN_ATTACK) && !IsShieldDrawn()))
-      {
-         pev->button |= IN_ATTACK2; // draw the shield
-         pev->button &= ~IN_DUCK;
-
-         if (IsGroupOfEnemies (pev->origin, 3, 550) || (GetNearbyEnemiesNearPosition (pev->origin, 550) >= 3 && IsShieldDrawn ()))
-         {    
-            ChooseAimDirection();
-            FacePosition ();
-         }      
-         else if(!g_bombPlanted)
-            StartTask (TASK_CAMP, TASKPRI_PAUSE, -1, GetWorldTime () + Random.Float (10, 20), true);
-
-         if (IsEnemyProtectedByShield (m_lastEnemy) && !(m_currentWeapon == WEAPON_KNIFE) && IsEnemyViewable (m_lastEnemy))
-         {
-            pev->button &= ~IN_ATTACK;
-            StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + Random.Float (10, 20), true);
-         }
-      }
-      else if (IsShieldDrawn () || (!IsEntityNull (m_enemy) && (m_enemy->v.button & IN_RELOAD) || !IsEnemyViewable (m_enemy)))
-      { 
-         pev->button |= (IN_ATTACK2 | IN_DUCK); // draw out the shield
-
-         if (!g_bombPlanted)
-            StartTask (TASK_SEEKCOVER, TASKPRI_SEEKCOVER, -1, GetWorldTime () + Random.Float (10, 25), true);
-      }   
-      m_shieldCheckTime = GetWorldTime () + 0.5;
    }
 
 WeaponSelectEnd:

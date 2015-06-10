@@ -2896,11 +2896,11 @@ void Bot::ChooseAimDirection (void)
       GetValidWaypoint ();
 
    // check if last enemy vector valid
-   if (m_lastEnemyOrigin != nullvec)
+   if (m_seeEnemyTime + 7.0 < GetWorldTime () && m_lastEnemyOrigin != nullvec)
    {
       TraceLine (EyePosition (), m_lastEnemyOrigin, false, true, GetEntity (), &tr);
 
-      if ((pev->origin - m_lastEnemyOrigin).GetLength () >= 1600 && IsEntityNull (m_enemy) && !UsesSniper () || (tr.flFraction <= 0.2 && tr.pHit == g_hostEntity) && m_seeEnemyTime + 7.0 < GetWorldTime ())
+      if ((pev->origin - m_lastEnemyOrigin).GetLength () >= 1600 && IsEntityNull (m_enemy) && !UsesSniper () || (tr.flFraction <= 0.2 && tr.pHit == g_hostEntity))
       {
          if ((m_aimFlags & (AIM_LAST_ENEMY | AIM_PREDICT_PATH)) && m_wantsToFire)
             m_wantsToFire = false;
@@ -2909,12 +2909,13 @@ void Bot::ChooseAimDirection (void)
          m_aimFlags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
 
          flags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
+         flags = m_aimFlags;
       }
    }
    else
    {
       m_aimFlags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
-      flags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
+      flags = m_aimFlags;
    }
 
    // don't allow bot to look at danger positions under certain circumstances
@@ -4853,32 +4854,34 @@ void Bot::BotAI (void)
    SetConditions ();
 
    // some stuff required by by chatter engine
-   if ((m_states & STATE_SEEING_ENEMY) && !IsEntityNull (m_enemy))
+   if (yb_communication_type.GetInt () == 2)
    {
-      if (Random.Long (0, 100) < 45 && GetNearbyFriendsNearPosition (pev->origin, 512) == 0 && (m_enemy->v.weapons & (1 << WEAPON_C4)))
-         ChatterMessage (Chatter_SpotTheBomber);
+      if ((m_states & STATE_SEEING_ENEMY) && !IsEntityNull (m_enemy))
+      {
+         if (Random.Long (0, 100) < 45 && GetNearbyFriendsNearPosition (pev->origin, 512) == 0 && (m_enemy->v.weapons & (1 << WEAPON_C4)))
+            ChatterMessage (Chatter_SpotTheBomber);
 
-      if (Random.Long (0, 100) < 45 && m_team == TEAM_TF && GetNearbyFriendsNearPosition (pev->origin, 512) == 0 && *g_engfuncs.pfnInfoKeyValue (g_engfuncs.pfnGetInfoKeyBuffer (m_enemy), "model") == 'v')
-         ChatterMessage (Chatter_VIPSpotted);
+         if (Random.Long (0, 100) < 45 && m_team == TEAM_TF && GetNearbyFriendsNearPosition (pev->origin, 512) == 0 && *g_engfuncs.pfnInfoKeyValue (g_engfuncs.pfnGetInfoKeyBuffer (m_enemy), "model") == 'v')
+            ChatterMessage (Chatter_VIPSpotted);
 
-      if (Random.Long (0, 100) < 50 && GetNearbyFriendsNearPosition (pev->origin, 450) == 0 && GetTeam (m_enemy) != m_team && IsGroupOfEnemies (m_enemy->v.origin, 2, 384))
-         ChatterMessage (Chatter_ScaredEmotion);
+         if (Random.Long (0, 100) < 50 && GetNearbyFriendsNearPosition (pev->origin, 450) == 0 && GetTeam (m_enemy) != m_team && IsGroupOfEnemies (m_enemy->v.origin, 2, 384))
+            ChatterMessage (Chatter_ScaredEmotion);
 
-      if (Random.Long (0, 100) < 40 && GetNearbyFriendsNearPosition (pev->origin, 1024) == 0 && ((m_enemy->v.weapons & (1 << WEAPON_AWP)) || (m_enemy->v.weapons & (1 << WEAPON_SCOUT)) ||  (m_enemy->v.weapons & (1 << WEAPON_G3SG1)) || (m_enemy->v.weapons & (1 << WEAPON_SG550))))
-         ChatterMessage (Chatter_SniperWarning);
+         if (Random.Long (0, 100) < 40 && GetNearbyFriendsNearPosition (pev->origin, 1024) == 0 && ((m_enemy->v.weapons & (1 << WEAPON_AWP)) || (m_enemy->v.weapons & (1 << WEAPON_SCOUT)) || (m_enemy->v.weapons & (1 << WEAPON_G3SG1)) || (m_enemy->v.weapons & (1 << WEAPON_SG550))))
+            ChatterMessage (Chatter_SniperWarning);
+      }
+
+      // if bot is trapped under shield yell for help !
+      if (GetTaskId () == TASK_CAMP && HasShield () && IsShieldDrawn () && GetNearbyEnemiesNearPosition (pev->origin, 650) >= 2 && IsEnemyViewable (m_enemy))
+         InstantChatterMessage (Chatter_Pinned_Down);
+
+      // if bomb planted warn teammates !
+      if (g_canSayBombPlanted && g_bombPlanted && GetTeam (GetEntity ()) == TEAM_CF)
+      {
+         g_canSayBombPlanted = false;
+         ChatterMessage (Chatter_GottaFindTheBomb);
+      }
    }
-
-   // if bot is trapped under shield yell for help !
-   if (GetTaskId () == TASK_CAMP && HasShield() && IsShieldDrawn () && GetNearbyEnemiesNearPosition (pev->origin, 650) >= 2 && IsEnemyViewable(m_enemy))
-      InstantChatterMessage(Chatter_Pinned_Down);
-
-   // if bomb planted warn teammates !
-   if (g_canSayBombPlanted && g_bombPlanted && GetTeam (GetEntity()) == TEAM_CF)
-   {
-      g_canSayBombPlanted = false;
-      ChatterMessage (Chatter_GottaFindTheBomb);
-   }
-
    Vector src, destination;
 
    m_checkTerrain = true;
@@ -5781,7 +5784,7 @@ byte Bot::ThrottledMsec (void)
 
    if (newMsec < 10)
    {
-      msecVal = msecVal - static_cast <float> (newMsec) + m_msecValRest;
+      msecVal -= static_cast <float> (newMsec) + m_msecValRest;
       msecRest = static_cast <int> (msecVal);
 
       m_msecValRest = msecVal - static_cast <float> (msecRest);
