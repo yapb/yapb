@@ -104,7 +104,7 @@ bool Bot::CheckVisibility (entvars_t *targetEntity, Vector *origin, byte *bodyPa
 {
    // this function checks visibility of a bot target.
 
-   Vector botHead = EyePosition ();
+   const Vector &botHead = EyePosition ();
    TraceResult tr;
 
    *bodyPart = 0;
@@ -5766,7 +5766,7 @@ Vector Bot::CheckBombAudible (void)
    return nullvec;
 }
 
-void Bot::MoveToVector (Vector to)
+void Bot::MoveToVector (const Vector &to)
 {
    if (to == nullvec)
       return;
@@ -6109,7 +6109,7 @@ void Bot::EquipInBuyzone (int buyCount)
    }
 }
 
-bool Bot::IsBombDefusing (Vector bombOrigin)
+bool Bot::IsBombDefusing (const Vector &bombOrigin)
 {
    // this function finds if somebody currently defusing the bomb.
 

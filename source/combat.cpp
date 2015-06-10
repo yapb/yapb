@@ -15,7 +15,7 @@ ConVar yb_csdm_mode ("yb_csdm_mode", "0", VT_NOSERVER);
 
 ConVar mp_friendlyfire ("mp_friendlyfire", NULL, VT_NOREGISTER);
 
-int Bot::GetNearbyFriendsNearPosition (Vector origin, int radius)
+int Bot::GetNearbyFriendsNearPosition (const Vector &origin, int radius)
 {
    int count = 0;
 
@@ -30,7 +30,7 @@ int Bot::GetNearbyFriendsNearPosition (Vector origin, int radius)
    return count;
 }
 
-int Bot::GetNearbyEnemiesNearPosition (Vector origin, int radius)
+int Bot::GetNearbyEnemiesNearPosition (const Vector &origin, int radius)
 {
    int count = 0;
 
@@ -1406,7 +1406,7 @@ void Bot::CommandTeam (void)
    m_timeTeamOrder = GetWorldTime () + Random.Float (5.0, 30.0);
 }
 
-bool Bot::IsGroupOfEnemies (Vector location, int numEnemies, int radius)
+bool Bot::IsGroupOfEnemies (const Vector &location, int numEnemies, int radius)
 {
    int numPlayers = 0;
 

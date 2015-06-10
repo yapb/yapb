@@ -1715,7 +1715,7 @@ void Bot::DeleteSearchNodes (void)
    m_chosenGoalIndex = -1;
 }
 
-int Bot::GetAimingWaypoint (Vector targetOriginPos)
+int Bot::GetAimingWaypoint (const Vector &to)
 {
    // return the most distant waypoint which is seen from the Bot to the Target and is within count
 
@@ -1723,7 +1723,7 @@ int Bot::GetAimingWaypoint (Vector targetOriginPos)
       ChangeWptIndex (g_waypoint->FindNearest (pev->origin));
 
    int srcIndex = m_currentWaypointIndex;
-   int destIndex = g_waypoint->FindNearest (targetOriginPos);
+   int destIndex = g_waypoint->FindNearest (to);
    int bestIndex = srcIndex;
 
    PathNode *node = new PathNode;
@@ -2022,7 +2022,7 @@ int Bot::ChooseBombWaypoint (void)
    return goal;
 }
 
-int Bot::FindDefendWaypoint (Vector origin)
+int Bot::FindDefendWaypoint (const Vector &origin)
 {
    // this function tries to find a good position which has a line of sight to a position,
    // provides enough cover point, and is far away from the defending position
@@ -2887,17 +2887,17 @@ bool Bot::CheckWallOnRight (void)
    return false;
 }
 
-bool Bot::IsDeadlyDrop (Vector targetOriginPos)
+bool Bot::IsDeadlyDrop (const Vector &to)
 {
    // this function eturns if given location would hurt Bot with falling damage
 
    Vector botPos = pev->origin;
    TraceResult tr;
 
-   Vector move ((targetOriginPos - botPos).ToYaw (), 0, 0);
+   Vector move ((to - botPos).ToYaw (), 0, 0);
    MakeVectors (move);
 
-   Vector direction = (targetOriginPos - botPos).Normalize ();  // 1 unit long
+   Vector direction = (to - botPos).Normalize ();  // 1 unit long
    Vector check = botPos;
    Vector down = botPos;
 
@@ -2911,7 +2911,7 @@ bool Bot::IsDeadlyDrop (Vector targetOriginPos)
    float height;
    float lastHeight = tr.flFraction * 1000.0;  // height from ground
 
-   float distance = (targetOriginPos - check).GetLength ();  // distance from goal
+   float distance = (to - check).GetLength ();  // distance from goal
 
    while (distance > 16.0)
    {
@@ -2931,7 +2931,7 @@ bool Bot::IsDeadlyDrop (Vector targetOriginPos)
          return true;
 
       lastHeight = height;
-      distance = (targetOriginPos - check).GetLength ();  // distance from goal
+      distance = (to - check).GetLength ();  // distance from goal
    }
    return false;
 }
@@ -3236,11 +3236,11 @@ void Bot::FacePosition (void)
    pev->angles.z = pev->v_angle.z = 0.0; // ignore Z component
 }
 
-void Bot::SetStrafeSpeed (Vector moveDir, float strafeSpeed)
+void Bot::SetStrafeSpeed (const Vector &moveDir, float strafeSpeed)
 {
    MakeVectors (pev->angles);
 
-   Vector los = (moveDir - pev->origin).Normalize2D ();
+   const Vector &los = (moveDir - pev->origin).Normalize2D ();
    float dot = los | g_pGlobals->v_forward.SkipZ ();
 
    if (dot > 0 && !CheckWallOnRight ())

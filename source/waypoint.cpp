@@ -83,7 +83,7 @@ void Waypoint::AddPath (short int addIndex, short int pathIndex, float distance)
    }
 }
 
-int Waypoint::FindFarest (Vector origin, float maxDistance)
+int Waypoint::FindFarest (const Vector &origin, float maxDistance)
 {
    // find the farest waypoint to that Origin, and return the index to this waypoint
 
@@ -102,7 +102,7 @@ int Waypoint::FindFarest (Vector origin, float maxDistance)
    return index;
 }
 
-int Waypoint::FindNearest (Vector origin, float minDistance, int flags)
+int Waypoint::FindNearest (const Vector &origin, float minDistance, int flags)
 {
    // find the nearest waypoint to that origin and return the index
 
@@ -124,7 +124,7 @@ int Waypoint::FindNearest (Vector origin, float minDistance, int flags)
    return index;
 }
 
-void Waypoint::FindInRadius (Vector origin, float radius, int *holdTab, int *count)
+void Waypoint::FindInRadius (const Vector &origin, float radius, int *holdTab, int *count)
 {
    // returns all waypoints within radius from position
 
@@ -145,7 +145,7 @@ void Waypoint::FindInRadius (Vector origin, float radius, int *holdTab, int *cou
    *count -= 1;
 }
 
-void Waypoint::FindInRadius (Array <int> &queueID, float radius, Vector origin)
+void Waypoint::FindInRadius (Array <int> &queueID, float radius, const Vector &origin)
 {
    for (int i = 0; i < g_numWaypoints; i++)
    {
@@ -1234,7 +1234,7 @@ String Waypoint::CheckSubfolderFile (void)
    return FormatBuffer ("%s%s.pwf", GetWaypointDir (), GetMapName ());
 }
 
-float Waypoint::GetTravelTime (float maxSpeed, Vector src, Vector origin)
+float Waypoint::GetTravelTime (float maxSpeed, const Vector &src, const Vector &origin)
 {
    // this function returns 2D traveltime to a position
 
@@ -1277,7 +1277,7 @@ bool Waypoint::Reachable (Bot *bot, int index)
    return false;
 }
 
-bool Waypoint::IsNodeReachable (Vector src, Vector destination)
+bool Waypoint::IsNodeReachable (const Vector &src, const Vector &destination)
 {
    TraceResult tr;
 

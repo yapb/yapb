@@ -998,7 +998,7 @@ private:
    edict_t *FindNearestButton (const char *className);
    edict_t *FindBreakable (void);
    int FindCoverWaypoint (float maxDistance);
-   int FindDefendWaypoint (Vector origin);
+   int FindDefendWaypoint (const Vector &origin);
    int FindGoal (void);
    void FilterGoals (const Array <int> &goals, int *result);
    void FindItem (void);
@@ -1012,7 +1012,7 @@ private:
    bool HeadTowardWaypoint (void);
    int InFieldOfView (const Vector &dest);
 
-   bool IsBombDefusing (Vector bombOrigin);
+   bool IsBombDefusing (const Vector &bombOrigin);
    bool IsBlockedLeft (void);
    bool IsBlockedRight (void);
    bool IsPointOccupied (int index);
@@ -1034,7 +1034,7 @@ private:
    bool ReactOnEnemy (void);
    void ResetCollideState (void);
    void SetConditions (void);
-   void SetStrafeSpeed (Vector moveDir, float strafeSpeed);
+   void SetStrafeSpeed (const Vector &moveDir, float strafeSpeed);
    void StartGame (void);
    void TaskComplete (void);
    bool GetBestNextWaypoint (void);
@@ -1045,7 +1045,7 @@ private:
    byte ThrottledMsec (void);
    void GetValidWaypoint (void);
    void ChangeWptIndex (int waypointIndex);
-   bool IsDeadlyDrop (Vector targetOriginPos);
+   bool IsDeadlyDrop (const Vector &to);
    bool OutOfBombTimer (void);
    void SelectLeaderEachTeam (int team);
 
@@ -1069,13 +1069,14 @@ private:
    void SelectBestWeapon (void);
    void SelectPistol (void);
    bool IsFriendInLineOfFire (float distance);
-   bool IsGroupOfEnemies (Vector location, int numEnemies = 1, int radius = 256);
+   bool IsGroupOfEnemies (const Vector &location, int numEnemies = 1, int radius = 256);
 
    bool IsShootableThruObstacle (const Vector &dest);
    bool IsShootableThruObstacleEx (const Vector &dest);
 
-   int GetNearbyEnemiesNearPosition (Vector origin, int radius);
-   int GetNearbyFriendsNearPosition (Vector origin, int radius);
+   int GetNearbyEnemiesNearPosition (const Vector &origin, int radius);
+   int GetNearbyFriendsNearPosition (const Vector &origin, int radius);
+
    void SelectWeaponByName (const char *name);
    void SelectWeaponbyNumber (int num);
    int GetHighestWeapon (void);
@@ -1087,7 +1088,8 @@ private:
    float GetEstimatedReachTime (void);
 
    int GetAimingWaypoint (void);
-   int GetAimingWaypoint (Vector targetOriginPos);
+   int GetAimingWaypoint (const Vector &to);
+
    void FindShortestPath (int srcIndex, int destIndex);
    void FindPath (int srcIndex, int destIndex, unsigned char pathType = 0);
    void DebugMsg (const char *format, ...);
@@ -1248,7 +1250,7 @@ public:
    void Kill (void);
    void Kick (void);
    void ResetDoubleJumpState (void);
-   void MoveToVector (Vector to);
+   void MoveToVector (const Vector &to);
    int FindPlantedBomb(void);
 
    bool HasHostage (void);
@@ -1432,10 +1434,10 @@ public:
    void AddPath (short int addIndex,  short int pathIndex, float distance);
 
    int GetFacingIndex (void);
-   int FindFarest (Vector origin, float maxDistance = 32.0);
-   int FindNearest (Vector origin, float minDistance = 9999.0, int flags = -1);
-   void FindInRadius (Vector origin, float radius, int *holdTab, int *count);
-   void FindInRadius (Array <int> &queueID, float radius, Vector origin);
+   int FindFarest (const Vector &origin, float maxDistance = 32.0);
+   int FindNearest (const Vector &origin, float minDistance = 9999.0, int flags = -1);
+   void FindInRadius (const Vector &origin, float radius, int *holdTab, int *count);
+   void FindInRadius (Array <int> &queueID, float radius, const Vector &origin);
 
    void Add (int flags, const Vector &waypointOrigin = nullvec);
    void Delete (void);
@@ -1448,7 +1450,7 @@ public:
    void DeletePath (void);
    void CacheWaypoint (void);
 
-   float GetTravelTime (float maxSpeed, Vector src, Vector origin);
+   float GetTravelTime (float maxSpeed, const Vector &src, const Vector &origin);
    bool IsVisible (int srcIndex, int destIndex);
    bool IsStandVisible (int srcIndex, int destIndex);
    bool IsDuckVisible (int srcIndex, int destIndex);
@@ -1458,7 +1460,7 @@ public:
    void Save (void);
 
    bool Reachable (Bot *bot, int index);
-   bool IsNodeReachable (Vector src, Vector destination);
+   bool IsNodeReachable (const Vector &src, const Vector &destination);
    void Think (void);
    bool NodesValid (void);
    void SaveExperienceTab (void);
@@ -1483,7 +1485,11 @@ public:
    bool IsGoalVisited (int index);
    void SetGoalVisited (int index);
 
-   inline Vector GetBombPosition (void) { return m_foundBombOrigin; }
+   inline const Vector &GetBombPosition (void)
+   {
+      return m_foundBombOrigin;
+   }
+
    void SetBombPosition (bool shouldReset = false);
    String CheckSubfolderFile (void);
 };
