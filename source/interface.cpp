@@ -2216,7 +2216,7 @@ void StartFrame (void)
    }
    g_botManager->SetDeathMsgState (false);
 
-   if (g_timePerSecondUpdate <= GetWorldTime ())
+   if (g_timePerSecondUpdate < GetWorldTime ())
    {
       g_botManager->CalculatePingOffsets ();
 
@@ -2246,20 +2246,28 @@ void StartFrame (void)
                }
             }
          }
-
-         if (g_isMetamod)
-         {
-            cvar_t *csdm_active = CVAR_GET_POINTER ("csdm_active");
-            cvar_t *mp_freeforall = CVAR_GET_POINTER ("mp_freeforall");
-
-            if (csdm_active != NULL && csdm_active->value > 0)
-               yb_csdm_mode.SetInt (mp_freeforall != NULL && mp_freeforall->value > 0 ? 2 : 1);
-         }
-         g_timePerSecondUpdate = GetWorldTime () + 1.0f;
       }
       if (g_bombPlanted)
          g_waypoint->SetBombPosition ();
+
+      if (g_isMetamod)
+      {
+         static cvar_t *csdm_active;
+         static cvar_t *mp_freeforall;
+
+         if (csdm_active == NULL)
+            csdm_active = CVAR_GET_POINTER ("csdm_active");
+
+         if (mp_freeforall == NULL)
+            mp_freeforall = CVAR_GET_POINTER ("mp_freeforall");
+
+         if (csdm_active != NULL && csdm_active->value > 0)
+            yb_csdm_mode.SetInt (mp_freeforall != NULL && mp_freeforall->value > 0 ? 2 : 1);
+      }
+      g_timePerSecondUpdate = GetWorldTime () + 1.0f;
    }
+   else if (g_timePerSecondUpdate * 0.5f < GetWorldTime ())
+      g_botManager->UpdateActiveGrenades ();
 
    // keep bot number up to date
    g_botManager->MaintainBotQuota ();

@@ -243,6 +243,9 @@ void Bot::AvoidGrenades (void)
 {
    // checks if bot 'sees' a grenade, and avoid it
 
+   if (!g_botManager->HasActiveGrenades ())
+      return;
+
    edict_t *ent = m_avoidGrenade;
 
   // check if old pointers to grenade is invalid
@@ -272,12 +275,12 @@ void Bot::AvoidGrenades (void)
       // TODO: should be done once for grenade, instead of checking several times
       if (m_difficulty == 4 && strcmp (STRING (ent->v.model) + 9, "flashbang.mdl") == 0)
       {
-         Vector position = (GetEntityOrigin (ent) - EyePosition ()).ToAngles ();
+         const Vector &position = (GetEntityOrigin (ent) - EyePosition ()).ToAngles ();
 
          // don't look at flashbang
          if (!(m_states & STATE_SEEING_ENEMY))
          {
-            pev->v_angle.y = AngleNormalize (position.y + 180.0);
+            pev->v_angle.y = AngleNormalize (position.y + 180.0f);
             m_canChooseAimDirection = false;
          }
       }
@@ -315,6 +318,9 @@ void Bot::AvoidGrenades (void)
 
 bool Bot::IsBehindSmokeClouds (edict_t *ent)
 {
+   if (!g_botManager->HasActiveGrenades ())
+      return false;
+
    edict_t *pentGrenade = NULL;
    Vector betweenUs = (ent->v.origin - pev->origin).Normalize ();
 

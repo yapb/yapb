@@ -2324,7 +2324,6 @@ bool Bot::HeadTowardWaypoint (void)
    m_currentTravelFlags = 0; // reset travel flags (jumping etc)
 
    // we're not at the end of the list?
-   // we're not at the end of the list?
    if (m_navNode != NULL)
    {
       // if in between a route, postprocess the waypoint (find better alternatives)...
@@ -2347,7 +2346,7 @@ bool Bot::HeadTowardWaypoint (void)
                kills = (g_experienceData + (waypoint * g_numWaypoints) + waypoint)->team1Damage / g_highestDamageCT;
 
             // if damage done higher than one
-            if (kills > 0.15f && g_timeRoundMid > GetWorldTime ())
+            if (kills > 0.15f && g_timeRoundMid + 15.0f > GetWorldTime ())
             {
                switch (m_personality)
                {

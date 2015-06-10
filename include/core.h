@@ -1284,6 +1284,9 @@ private:
    bool m_economicsGood[2]; // is team able to buy anything
    bool m_deathMsgSent; // for fakeping
 
+   // holds currently active grenades in the map
+   Array <entity_t> m_activeGrenades;
+
 protected:
    int CreateBot (String name, int difficulty, int personality, int team, int member);
 
@@ -1330,9 +1333,23 @@ public:
    void CheckTeamEconomics (int team);
 
    static void CallGameEntity (entvars_t *vars);
+   inline void SetDeathMsgState (bool sent)
+   {
+      m_deathMsgSent = sent;
+   }
 
-   inline void SetDeathMsgState (bool sent) { m_deathMsgSent = sent; }
-   inline bool GetDeathMsgState (void) { return m_deathMsgSent; }
+   inline bool GetDeathMsgState (void)
+   {
+      return m_deathMsgSent;
+   }
+
+   // grenades
+   void UpdateActiveGrenades (void);
+   const Array <entity_t> GetActiveGrenades (void);
+   inline bool HasActiveGrenades (void)
+   {
+      return !m_activeGrenades.IsEmpty ();
+   }
 
 public:
    void CalculatePingOffsets (void);
