@@ -136,7 +136,7 @@ bool IsVisible (const Vector &origin, edict_t *ent)
    return true; // line of sight is valid.
 }
 
-Vector GetEntityOrigin (edict_t *ent)
+const Vector &GetEntityOrigin (edict_t *ent)
 {
    // this expanded function returns the vector origin of a bounded entity, assuming that any
    // entity that has a bounding box has its center at the center of the bounding box itself.
@@ -881,19 +881,8 @@ void ServerPrint (const char *format, ...)
    vsprintf (string, g_localizer->TranslateInput (format), ap);
    va_end (ap);
 
-   SERVER_PRINT (FormatBuffer ("%s\n", string));
-}
-
-void ServerPrintNoTag (const char *format, ...)
-{
-   va_list ap;
-   char string[3072];
-
-   va_start (ap, format);
-   vsprintf (string, g_localizer->TranslateInput (format), ap);
-   va_end (ap);
-
-   SERVER_PRINT (FormatBuffer ("%s\n", string));
+   SERVER_PRINT (string);
+   SERVER_PRINT ("\n");
 }
 
 void CenterPrint (const char *format, ...)
@@ -954,7 +943,7 @@ void ClientPrint (edict_t *ent, int dest, const char *format, ...)
       if (dest & 0x3ff)
          ServerPrint (string);
       else
-         ServerPrintNoTag (string);
+         ServerPrint (string);
 
       return;
    }
@@ -1206,7 +1195,7 @@ void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
    }
 
    if (outputToConsole)
-      ServerPrintNoTag ("%s%s", levelString, buffer);
+      ServerPrint ("%s%s", levelString, buffer);
 
    // now check if logging disabled
    if (!(logLevel & LL_IGNORE))

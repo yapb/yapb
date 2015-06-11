@@ -165,7 +165,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          "------------------------------------------------\n"
          "Name: %s\n"
          "Version: %s (Build: %u)\n"
-         "Compiled: %s, %s +300 (GMT)\n"
+         "Compiled: %s, %s tz: +3\n"
          "------------------------------------------------";
 
       ClientPrint (ent, print_console, versionData, PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), __DATE__, __TIME__);
@@ -201,27 +201,27 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
           if (!IsDedicatedServer ())
           {
-             ServerPrintNoTag ("yapb autowp            - toggle autowppointing.");
-             ServerPrintNoTag ("yapb wp                - toggle waypoint showing.");
-             ServerPrintNoTag ("yapb wp on noclip      - enable noclip cheat");
-             ServerPrintNoTag ("yapb wp save nocheck   - save waypoints without checking.");
-             ServerPrintNoTag ("yapb wp add            - open menu for waypoint creation.");
-             ServerPrintNoTag ("yapb wp menu           - open main waypoint menu.");
-             ServerPrintNoTag ("yapb wp addbasic       - creates basic waypoints on map.");
-             ServerPrintNoTag ("yapb wp find           - show direction to specified waypoint.");
-             ServerPrintNoTag ("yapb wp load           - wload the waypoint file from hard disk.");
-             ServerPrintNoTag ("yapb wp check          - checks if all waypoints connections are valid.");
-             ServerPrintNoTag ("yapb wp cache          - cache nearest waypoint.");
-             ServerPrintNoTag ("yapb wp teleport       - teleport hostile to specified waypoint.");
-             ServerPrintNoTag ("yapb wp setradius      - manually sets the wayzone radius for this waypoint.");
-             ServerPrintNoTag ("yapb path autodistance - opens menu for setting autopath maximum distance.");
-             ServerPrintNoTag ("yapb path cache        - remember the nearest to player waypoint.");
-             ServerPrintNoTag ("yapb path create       - opens menu for path creation.");
-             ServerPrintNoTag ("yapb path delete       - delete path from cached to nearest waypoint.");
-             ServerPrintNoTag ("yapb path create_in    - creating incoming path connection.");
-             ServerPrintNoTag ("yapb path create_out   - creating outgoing path connection.");
-             ServerPrintNoTag ("yapb path create_both  - creating both-ways path connection.");
-             ServerPrintNoTag ("yapb exp save          - save the experience data.");
+             ServerPrint ("yapb autowp            - toggle autowppointing.");
+             ServerPrint ("yapb wp                - toggle waypoint showing.");
+             ServerPrint ("yapb wp on noclip      - enable noclip cheat");
+             ServerPrint ("yapb wp save nocheck   - save waypoints without checking.");
+             ServerPrint ("yapb wp add            - open menu for waypoint creation.");
+             ServerPrint ("yapb wp menu           - open main waypoint menu.");
+             ServerPrint ("yapb wp addbasic       - creates basic waypoints on map.");
+             ServerPrint ("yapb wp find           - show direction to specified waypoint.");
+             ServerPrint ("yapb wp load           - wload the waypoint file from hard disk.");
+             ServerPrint ("yapb wp check          - checks if all waypoints connections are valid.");
+             ServerPrint ("yapb wp cache          - cache nearest waypoint.");
+             ServerPrint ("yapb wp teleport       - teleport hostile to specified waypoint.");
+             ServerPrint ("yapb wp setradius      - manually sets the wayzone radius for this waypoint.");
+             ServerPrint ("yapb path autodistance - opens menu for setting autopath maximum distance.");
+             ServerPrint ("yapb path cache        - remember the nearest to player waypoint.");
+             ServerPrint ("yapb path create       - opens menu for path creation.");
+             ServerPrint ("yapb path delete       - delete path from cached to nearest waypoint.");
+             ServerPrint ("yapb path create_in    - creating incoming path connection.");
+             ServerPrint ("yapb path create_out   - creating outgoing path connection.");
+             ServerPrint ("yapb path create_both  - creating both-ways path connection.");
+             ServerPrint ("yapb exp save          - save the experience data.");
           }
       }
    }
@@ -249,7 +249,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       if (stricmp (arg0, "randgen") == 0)
       {
          for (int i = 0; i < 500; i++)
-            ServerPrintNoTag ("Result Range[0 - 100]: %d", Random.Long (0, 100));
+            ServerPrint ("Result Range[0 - 100]: %d", Random.Long (0, 100));
       }
       #if defined (MMGR_H)
          // dump memory information
@@ -1440,7 +1440,7 @@ void ClientCommand (edict_t *ent)
                      if (path->flags & FLAG_NOHOSTAGE)
                         noHostagePoints++;
                   }
-                  ServerPrintNoTag ("Waypoints: %d - T Points: %d\n"
+                  ServerPrint ("Waypoints: %d - T Points: %d\n"
                                     "CT Points: %d - Goal Points: %d\n"
                                     "Rescue Points: %d - Camp Points: %d\n"
                                     "Block Hostage Points: %d - Sniper Points: %d\n", g_numWaypoints, terrPoints, ctPoints, goalPoints, rescuePoints, campPoints, noHostagePoints, sniperPoints);

@@ -246,27 +246,23 @@ void Bot::AvoidGrenades (void)
    if (!g_botManager->HasActiveGrenades ())
       return;
 
-   edict_t *ent = m_avoidGrenade;
-
   // check if old pointers to grenade is invalid
-   if (IsEntityNull (ent))
+   if (IsEntityNull (m_avoidGrenade))
    {
       m_avoidGrenade = NULL;
       m_needAvoidGrenade = 0;
    }
-   else if ((ent->v.flags & FL_ONGROUND) || (ent->v.effects & EF_NODRAW))
+   else if ((m_avoidGrenade->v.flags & FL_ONGROUND) || (m_avoidGrenade->v.effects & EF_NODRAW))
    {
       m_avoidGrenade = NULL;
       m_needAvoidGrenade = 0;
    }
-   ent = NULL;
+   Array <entity_t> activeGrenades = g_botManager->GetActiveGrenades ();
 
    // find all grenades on the map
-   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
+   IterateArray (activeGrenades, it)
    {
-      // if grenade is invisible don't care for it
-      if (ent->v.effects & EF_NODRAW)
-         continue;
+      edict_t *ent = activeGrenades[it];
 
       // check if visible to the bot
       if (!EntityIsVisible (ent->v.origin) && InFieldOfView (ent->v.origin - EyePosition ()) > pev->fov / 2)
@@ -277,7 +273,7 @@ void Bot::AvoidGrenades (void)
       {
          const Vector &position = (GetEntityOrigin (ent) - EyePosition ()).ToAngles ();
 
-         // don't look at flashbang
+         // don't look at flash bang
          if (!(m_states & STATE_SEEING_ENEMY))
          {
             pev->v_angle.y = AngleNormalize (position.y + 180.0f);
@@ -301,8 +297,8 @@ void Bot::AvoidGrenades (void)
             {
                MakeVectors (pev->v_angle);
 
-               Vector dirToPoint = (pev->origin - ent->v.origin).Normalize2D ();
-               Vector rightSide = g_pGlobals->v_right.Normalize2D ();
+               const Vector &dirToPoint = (pev->origin - ent->v.origin).Normalize2D ();
+               const Vector &rightSide = g_pGlobals->v_right.Normalize2D ();
 
                if ((dirToPoint | rightSide) > 0)
                   m_needAvoidGrenade = -1;
@@ -321,21 +317,25 @@ bool Bot::IsBehindSmokeClouds (edict_t *ent)
    if (!g_botManager->HasActiveGrenades ())
       return false;
 
-   edict_t *pentGrenade = NULL;
-   Vector betweenUs = (ent->v.origin - pev->origin).Normalize ();
+   const Vector &betweenUs = (ent->v.origin - pev->origin).Normalize ();
+   Array <entity_t> activeGrenades = g_botManager->GetActiveGrenades ();
 
-   while (!IsEntityNull (pentGrenade = FIND_ENTITY_BY_CLASSNAME (pentGrenade, "grenade")))
+   // find all grenades on the map
+   IterateArray (activeGrenades, it)
    {
+      edict_t *pentGrenade = activeGrenades[it];
+
       // if grenade is invisible don't care for it
-      if ((pentGrenade->v.effects & EF_NODRAW) || !(pentGrenade->v.flags & (FL_ONGROUND | FL_PARTIALGROUND)) || strcmp (STRING (pentGrenade->v.model) + 9, "smokegrenade.mdl"))
+      if (!(pentGrenade->v.flags & (FL_ONGROUND | FL_PARTIALGROUND)) || strcmp (STRING (pentGrenade->v.model) + 9, "smokegrenade.mdl"))
          continue;
 
       // check if visible to the bot
       if (!EntityIsVisible (ent->v.origin) && InFieldOfView (ent->v.origin - EyePosition ()) > pev->fov / 3)
          continue;
 
-      Vector betweenNade = (GetEntityOrigin (pentGrenade) - pev->origin).Normalize ();
-      Vector betweenResult = ((Vector (betweenNade.y, betweenNade.x, 0) * 150.0 + GetEntityOrigin (pentGrenade)) - pev->origin).Normalize ();
+      const Vector &entityOrigin = GetEntityOrigin (pentGrenade);
+      const Vector &betweenNade = (entityOrigin - pev->origin).Normalize ();
+      const Vector &betweenResult = ((Vector (betweenNade.y, betweenNade.x, 0) * 150.0 + entityOrigin) - pev->origin).Normalize ();
 
       if ((betweenNade | betweenUs) > (betweenNade | betweenResult))
          return true;
@@ -533,26 +533,29 @@ void Bot::FindItem (void)
    bool allowPickup = false;
    float distance, minDistance = 341.0;
 
+   const float searchRadius = 340.0f;
 
    if (!IsEntityNull (m_pickupItem))
    {
       bool itemExists = false;
       pickupItem = m_pickupItem;
 
-      while (!IsEntityNull (ent = FIND_ENTITY_IN_SPHERE (ent, pev->origin, 340.0)))
+      while (!IsEntityNull (ent = FIND_ENTITY_IN_SPHERE (ent, pev->origin, searchRadius)))
       {
          if ((ent->v.effects & EF_NODRAW) || IsValidPlayer (ent->v.owner))
-            continue; // someone owns this weapon or it hasn't respawned yet
+            continue; // someone owns this weapon or it hasn't re spawned yet
 
          if (ent == pickupItem)
          {
             if (ItemIsVisible (GetEntityOrigin (ent), const_cast <char *> (STRING (ent->v.classname))))
                itemExists = true;
+
             break;
          }
       }
       if (itemExists)
          return;
+
       else
       {
          m_pickupItem = NULL;
@@ -571,7 +574,7 @@ void Bot::FindItem (void)
    m_pickupItem = NULL;
    m_pickupType = PICKUP_NONE;
 
-   while (!IsEntityNull (ent = FIND_ENTITY_IN_SPHERE (ent, pev->origin, 340.0)))
+   while (!IsEntityNull (ent = FIND_ENTITY_IN_SPHERE (ent, pev->origin, searchRadius)))
    {
       allowPickup = false;  // assume can't use it until known otherwise
 
@@ -665,7 +668,7 @@ void Bot::FindItem (void)
                if (pickupType == PICKUP_DROPPED_C4)
                {
                   allowPickup = true;
-                  m_destOrigin = entityOrigin; // ensure we reached droped bomb
+                  m_destOrigin = entityOrigin; // ensure we reached dropped bomb
 
                   ChatterMessage (Chatter_FoundC4); // play info about that
                   DeleteSearchNodes ();
@@ -855,7 +858,7 @@ void Bot::GetCampDirection (Vector *dest)
    // mostly used for getting a good camping direction vector if not camping on a camp waypoint
 
    TraceResult tr;
-   Vector src = EyePosition ();
+   const Vector &src = EyePosition ();
 
    TraceLine (src, *dest, true, GetEntity (), &tr);
 
@@ -1897,7 +1900,7 @@ void Bot::SetConditions (void)
 
                   if (allowThrowing && m_seeEnemyTime + 2.0 < GetWorldTime ())
                   {
-                     Vector enemyPredict = ((m_lastEnemy->v.velocity * 0.5).SkipZ () + m_lastEnemy->v.origin);
+                     const Vector &enemyPredict = ((m_lastEnemy->v.velocity * 0.5).SkipZ () + m_lastEnemy->v.origin);
                      int searchTab[4], count = 4;
 
                      float searchRadius = m_lastEnemy->v.velocity.GetLength2D ();
@@ -3007,7 +3010,7 @@ void Bot::ChooseAimDirection (void)
          {
             if ((g_experienceData + (index * g_numWaypoints) + index)->team0DangerIndex != -1)
             {
-               Vector dest = g_waypoint->GetPath ((g_experienceData + (index * g_numWaypoints) + index)->team0DangerIndex)->origin;
+               const Vector &dest = g_waypoint->GetPath ((g_experienceData + (index * g_numWaypoints) + index)->team0DangerIndex)->origin;
                TraceLine (pev->origin, dest, true, GetEntity (), &tr);
 
                if (tr.flFraction > 0.8 || tr.pHit != g_worldEdict)
@@ -3018,7 +3021,7 @@ void Bot::ChooseAimDirection (void)
          {
             if ((g_experienceData + (index * g_numWaypoints) + index)->team1DangerIndex != -1)
             {
-               Vector dest = g_waypoint->GetPath ((g_experienceData + (index * g_numWaypoints) + index)->team1DangerIndex)->origin;
+               const Vector &dest = g_waypoint->GetPath ((g_experienceData + (index * g_numWaypoints) + index)->team1DangerIndex)->origin;
                TraceLine (pev->origin, dest, true, GetEntity (), &tr);
 
                if (tr.flFraction > 0.8 || tr.pHit != g_worldEdict)
@@ -3734,7 +3737,7 @@ void Bot::RunTask (void)
             int foundPoints[3];
             int distanceTab[3];
 
-            Vector dotA = (destination - pev->origin).Normalize2D ();
+            const Vector &dotA = (destination - pev->origin).Normalize2D ();
 
             for (i = 0; i < g_numWaypoints; i++)
             {
@@ -3742,7 +3745,7 @@ void Bot::RunTask (void)
                if (!g_waypoint->IsVisible (m_currentWaypointIndex, i) || (i == m_currentWaypointIndex))
                   continue;
 
-               Vector dotB = (g_waypoint->GetPath (i)->origin - pev->origin).Normalize2D ();
+               const Vector &dotB = (g_waypoint->GetPath (i)->origin - pev->origin).Normalize2D ();
 
                if ((dotA | dotB) > 0.9)
                {
@@ -4260,9 +4263,13 @@ void Bot::RunTask (void)
       else
       {
          edict_t *ent = NULL;
+         Array <entity_t> activeGrenades = g_botManager->GetActiveGrenades ();
 
-         while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
+         // find all grenades on the map
+         IterateArray (activeGrenades, it)
          {
+            ent = activeGrenades[it];
+
             if (ent->v.owner == GetEntity () && strcmp (STRING (ent->v.model) + 9, "hegrenade.mdl") == 0)
             {
                // set the correct velocity for the grenade
@@ -4326,8 +4333,13 @@ void Bot::RunTask (void)
       else
       {
          edict_t *ent = NULL;
-         while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
+         Array <entity_t> activeGrenades = g_botManager->GetActiveGrenades ();
+
+         // find all grenades on the map
+         IterateArray (activeGrenades, it)
          {
+            ent = activeGrenades[it];
+
             if (ent->v.owner == GetEntity () && strcmp (STRING (ent->v.model) + 9, "flashbang.mdl") == 0)
             {
                // set the correct velocity for the grenade
@@ -4913,10 +4925,10 @@ void Bot::BotAI (void)
    SetIdealReactionTimes ();
 
    // calculate 2 direction vectors, 1 without the up/down component
-   Vector directionOld = m_destOrigin - (pev->origin + pev->velocity * m_frameInterval);
+   const Vector &directionOld = m_destOrigin - (pev->origin + pev->velocity * m_frameInterval);
    Vector directionNormal = directionOld.Normalize ();
 
-   Vector direction = directionNormal;
+   const Vector &direction = directionNormal;
    directionNormal.z = 0.0;
 
    m_moveAngles = directionOld.ToAngles ();
@@ -5251,13 +5263,13 @@ void Bot::BotAI (void)
 
             while (node != NULL)
             {
-               Vector srcPath = g_waypoint->GetPath (node->index)->origin;
+               const Vector &srcPath = g_waypoint->GetPath (node->index)->origin;
                node = node->next;
 
                if (node != NULL)
                {
-                  Vector dest = g_waypoint->GetPath (node->index)->origin;
-                  DrawArrow (g_hostEntity, srcPath, dest, 15, 0, 255, 100, 55, 200, 5, 1);
+                  const Vector &dstPath = g_waypoint->GetPath (node->index)->origin;
+                  DrawArrow (g_hostEntity, srcPath, dstPath, 15, 0, 255, 100, 55, 200, 5, 1);
                }
             }
          }
@@ -5640,13 +5652,13 @@ void Bot::DebugMsg (const char *format, ...)
    vsprintf (buffer, format, ap);
    va_end (ap);
 
-   ServerPrintNoTag ("%s: %s", STRING (pev->netname), buffer);
+   ServerPrint ("%s: %s", STRING (pev->netname), buffer);
 
    if (yb_debug.GetInt () >= 3)
       AddLogEntry (false, LL_DEFAULT, "%s: %s", STRING (pev->netname), buffer);
 }
 
-Vector Bot::CheckToss (const Vector &start, Vector end)
+const Vector &Bot::CheckToss (const Vector &start, Vector end)
 {
    // this function returns the velocity at which an object should looped from start to land near end.
    // returns null vector if toss is not feasible.
@@ -5701,7 +5713,7 @@ Vector Bot::CheckToss (const Vector &start, Vector end)
    return nadeVelocity * 0.777;
 }
 
-Vector Bot::CheckThrow (const Vector &start, Vector end)
+const Vector &Bot::CheckThrow (const Vector &start, Vector end)
 {
    // this function returns the velocity vector at which an object should be thrown from start to hit end.
    // returns null vector if throw is not feasible.
@@ -5740,7 +5752,7 @@ Vector Bot::CheckThrow (const Vector &start, Vector end)
    return nadeVelocity * 0.7793;
 }
 
-Vector Bot::CheckBombAudible (void)
+const Vector &Bot::CheckBombAudible (void)
 {
    // this function checks if bomb is can be heard by the bot, calculations done by manual testing.
 
@@ -5750,7 +5762,7 @@ Vector Bot::CheckBombAudible (void)
    if (m_difficulty >= 3)
       return g_waypoint->GetBombPosition();
 
-   Vector bombOrigin = g_waypoint->GetBombPosition ();
+   const Vector &bombOrigin = g_waypoint->GetBombPosition ();
    
    float timeElapsed = ((GetWorldTime () - g_timeBombPlanted) / mp_c4timer.GetFloat ()) * 100;
    float desiredRadius = 768.0;
@@ -5925,7 +5937,7 @@ bool Bot::OutOfBombTimer (void)
    if (timeLeft > 16)
       return false;
 
-   Vector bombOrigin = g_waypoint->GetBombPosition ();
+   const Vector &bombOrigin = g_waypoint->GetBombPosition ();
 
    // for terrorist, if timer is lower than eleven seconds, return true
    if (static_cast <int> (timeLeft) < 16 && m_team == TEAM_TF && (bombOrigin - pev->origin).GetLength () < 1000)

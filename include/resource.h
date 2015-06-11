@@ -10,10 +10,10 @@
 #pragma once
 
 // general product information
-#define PRODUCT_NAME "YaPB"
+#define PRODUCT_NAME "Yet Another POD-Bot"
 #define PRODUCT_VERSION "2.7"
 #define PRODUCT_AUTHOR "YaPB Dev Team"
-#define PRODUCT_URL "http://yapb.jeefo.net/"
+#define PRODUCT_URL "http://yapb.ru/"
 #define PRODUCT_EMAIL "dmitry@jeefo.net"
 #define PRODUCT_LOGTAG "YAPB"
 #define PRODUCT_DESCRIPTION PRODUCT_NAME " v" PRODUCT_VERSION " - The Counter-Strike Bot"

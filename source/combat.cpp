@@ -271,7 +271,7 @@ bool Bot::LookupEnemy (void)
    return false;
 }
 
-Vector Bot::GetAimPosition (void) 
+const Vector &Bot::GetAimPosition (void)
 {
    // the purpose of this function, is to make bot aiming not so ideal. it's mutate m_enemyOrigin enemy vector
    // returned from visibility check function.

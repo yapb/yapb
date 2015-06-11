@@ -1049,10 +1049,10 @@ private:
    bool OutOfBombTimer (void);
    void SelectLeaderEachTeam (int team);
 
-   Vector CheckToss (const Vector &start, Vector end);
-   Vector CheckThrow (const Vector &start, Vector end);
-   Vector GetAimPosition (void);
-   Vector CheckBombAudible (void);
+   const Vector &CheckToss (const Vector &start, Vector end);
+   const Vector &CheckThrow (const Vector &start, Vector end);
+   const Vector &GetAimPosition (void);
+   const Vector &CheckBombAudible (void);
 
    float GetZOffset (float distance);
 
@@ -1345,7 +1345,8 @@ public:
 
    // grenades
    void UpdateActiveGrenades (void);
-   const Array <entity_t> GetActiveGrenades (void);
+   const Array <entity_t> &GetActiveGrenades (void);
+
    inline bool HasActiveGrenades (void)
    {
       return !m_activeGrenades.IsEmpty ();
@@ -1646,7 +1647,7 @@ extern const char *GetField (const char *string, int fieldId, bool endLine = fal
 extern const char *FormatBuffer (const char *format, ...);
 
 extern uint16 GenerateBuildNumber (void);
-extern Vector GetEntityOrigin (edict_t *ent);
+extern const Vector &GetEntityOrigin (edict_t *ent);
 
 extern void FreeLibraryMemory (void);
 extern void RoundInit (void);
@@ -1660,7 +1661,6 @@ extern void DetectCSVersion (void);
 extern void PlaySound (edict_t *ent, const char *soundName);
 extern void ServerPrint (const char *format, ...);
 extern void ChartPrint (const char *format, ...);
-extern void ServerPrintNoTag (const char *format, ...);
 extern void CenterPrint (const char *format, ...);
 extern void ClientPrint (edict_t *ent, int dest, const char *format, ...);
 extern void HudMessage (edict_t *ent, bool toCenter, Vector rgb, char *format, ...);
