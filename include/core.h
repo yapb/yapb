@@ -1049,10 +1049,11 @@ private:
    bool OutOfBombTimer (void);
    void SelectLeaderEachTeam (int team);
 
-   const Vector &CheckToss (const Vector &start, Vector end);
-   const Vector &CheckThrow (const Vector &start, Vector end);
+   Vector CheckToss (const Vector &start, Vector end);
+   Vector CheckThrow (const Vector &start, Vector end);
+   Vector CheckBombAudible (void);
+
    const Vector &GetAimPosition (void);
-   const Vector &CheckBombAudible (void);
 
    float GetZOffset (float distance);
 
