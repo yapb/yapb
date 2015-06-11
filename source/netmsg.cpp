@@ -427,21 +427,18 @@ void NetworkMsg::Execute (void *p)
          {
             g_bombPlanted = g_bombSayString = true;
             g_timeBombPlanted = GetWorldTime ();
-
-            if (yb_communication_type.GetInt () == 2)
+      
+            for (int i = 0; i < GetMaxClients (); i++)
             {
-               for (int i = 0; i < GetMaxClients (); i++)
+               Bot *bot = g_botManager->GetBot (i);
+
+               if (bot != NULL && IsAlive (bot->GetEntity ()))
                {
-                  Bot *bot = g_botManager->GetBot (i);
+                  bot->DeleteSearchNodes ();
+                  bot->ResetTasks ();
 
-                  if (bot != NULL && IsAlive (bot->GetEntity ()))
-                  {
-                     bot->DeleteSearchNodes ();
-                     bot->ResetTasks ();
-
-                     if (Random.Long (0, 100) < 75 && GetTeam (bot->GetEntity ()) == TEAM_CF)
-                        bot->ChatterMessage (Chatter_WhereIsTheBomb);
-                  }
+                  if (yb_communication_type.GetInt () == 2 && Random.Long (0, 100) < 75 && GetTeam (bot->GetEntity ()) == TEAM_CF)
+                     bot->ChatterMessage (Chatter_WhereIsTheBomb);
                }
             }
             g_waypoint->SetBombPosition ();

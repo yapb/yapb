@@ -130,15 +130,52 @@ bool Bot::CheckVisibility (edict_t *target, Vector *origin, byte *bodyPart)
    if (*bodyPart != 0)
       return true;
 
-   // worst case, choose random position in enemy body
-   for (int i = 0; i < 5; i++)
-   {
-      Vector pos = target->v.origin; // get the player origin
+   // thanks for this code goes to kwo
+   MakeVectors (target->v.angles);
 
-      // find the vector beetwen mins and maxs of the player body
-      pos.x += Random.Float (target->v.mins.x * 0.5f, target->v.maxs.x * 0.5f);
-      pos.y += Random.Float (target->v.mins.y * 0.5f, target->v.maxs.y * 0.5f);
-      pos.z += Random.Float (target->v.mins.z * 0.5f, target->v.maxs.z * 0.5f);
+   // worst case, choose random position in enemy body
+   for (int i = 0; i < 6; i++)
+   {
+      Vector pos = target->v.origin;
+
+      switch (i)
+      {
+      case 0: // left arm
+         pos.x -= 10.0f * g_pGlobals->v_right.x;
+         pos.y -= 10.0f * g_pGlobals->v_right.y;
+         pos.z += 8.0f;
+         break;
+
+      case 1: // right arm
+         pos.x += 10.0f * g_pGlobals->v_right.x;
+         pos.y += 10.0f * g_pGlobals->v_right.y;
+         pos.z += 8.0f;
+         break;
+
+      case 2: // left leg
+         pos.x -= 10.0f * g_pGlobals->v_right.x;
+         pos.y -= 10.0f * g_pGlobals->v_right.y;
+         pos.z -= 12.0f;
+         break;
+
+      case 3: // right leg
+         pos.x += 10.0f * g_pGlobals->v_right.x;
+         pos.y += 10.0f * g_pGlobals->v_right.y;
+         pos.z -= 12.0f;
+         break;
+
+      case 4: // left foot
+         pos.x -= 10.0f * g_pGlobals->v_right.x;
+         pos.y -= 10.0f * g_pGlobals->v_right.y;
+         pos.z -= 24.0f;
+         break;
+
+      case 5: // right foot
+         pos.x += 10.0f * g_pGlobals->v_right.x;
+         pos.y += 10.0f * g_pGlobals->v_right.y;
+         pos.z -= 24.0f;
+         break;
+      }
 
       // check direct line to random part of the player body
       TraceLine (botHead, pos, true, true, GetEntity (), &tr);
@@ -2882,6 +2919,8 @@ void Bot::ChooseAimDirection (void)
    if (!(m_currentWaypointIndex >= 0 && m_currentWaypointIndex < g_numWaypoints))
       GetValidWaypoint ();
 
+   bool tracelineIssued = false;
+
    // check if last enemy vector valid
    if (m_seeEnemyTime + 7.0 < GetWorldTime () && m_lastEnemyOrigin != nullvec && (pev->origin - m_lastEnemyOrigin).GetLength () >= 1600.0f && IsEntityNull (m_enemy) && !UsesSniper ())
    {
@@ -2895,6 +2934,7 @@ void Bot::ChooseAimDirection (void)
          m_lastEnemyOrigin = nullvec;
          m_aimFlags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
       }
+      tracelineIssued = true;
    }
    else if (m_lastEnemyOrigin == nullvec)
       m_aimFlags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
@@ -2940,7 +2980,7 @@ void Bot::ChooseAimDirection (void)
    }
    else if (flags & AIM_PREDICT_PATH)
    {
-      if (((pev->origin - m_lastEnemyOrigin).GetLength () < 1600 || UsesSniper ()) && (tr.flFraction >= 0.2 || tr.pHit != g_worldEdict))
+      if (((pev->origin - m_lastEnemyOrigin).GetLength () < 1600 || UsesSniper ()) && (((tr.flFraction >= 0.2 || tr.pHit != g_worldEdict) && tracelineIssued) || !tracelineIssued))
       {
          bool recalcPath = true;
 

@@ -18,13 +18,13 @@ ConVar yb_version ("yb_version", PRODUCT_VERSION, VT_READONLY);
 
 ConVar mp_startmoney ("mp_startmoney", NULL, VT_NOREGISTER);
 
-int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5)
+int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *self)
 {
    // adding one bot with random parameters to random team
    if (stricmp (arg0, "addbot") == 0 || stricmp (arg0, "add") == 0)
       g_botManager->AddBot (arg4, arg1, arg2, arg3, arg5);
 
-   // adding one bot with high difficuluty parameters to random team
+   // adding one bot with high difficulty parameters to random team
    if (stricmp (arg0, "addbot_hs") == 0 || stricmp (arg0, "addhs") == 0)
       g_botManager->AddBot (arg4, "4", "1", arg3, arg5);
 
@@ -118,53 +118,52 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    else if (stricmp (arg0, "?") == 0 || stricmp (arg0, "help") == 0)
    {
       ClientPrint (ent, print_console, "Bot Commands:");
-      ClientPrint (ent, print_console, "yapb version            - display version information.");
-      ClientPrint (ent, print_console, "yapb about              - show bot about information.");
-      ClientPrint (ent, print_console, "yapb add                - create a bot in current game.");
-      ClientPrint (ent, print_console, "yapb fill               - fill the server with random bots.");
-      ClientPrint (ent, print_console, "yapb kickall            - disconnects all bots from current game.");
-      ClientPrint (ent, print_console, "yapb killbots           - kills all bots in current game.");
-      ClientPrint (ent, print_console, "yapb kick               - disconnect one random bot from game.");
-      ClientPrint (ent, print_console, "yapb weaponmode         - select bot weapon mode.");
-      ClientPrint (ent, print_console, "yapb votemap            - allows dead bots to vote for specific map.");
-      ClientPrint (ent, print_console, "yapb cmenu              - displaying bots command menu.");
+      ClientPrint (ent, print_console, "%s version\t - display version information.", self);
+      ClientPrint (ent, print_console, "%s add\t - create a bot in current game.", self);
+      ClientPrint (ent, print_console, "%s fill\t - fill the server with random bots.", self);
+      ClientPrint (ent, print_console, "%s kickall\t - disconnects all bots from current game.", self);
+      ClientPrint (ent, print_console, "%s killbots\t - kills all bots in current game.", self);
+      ClientPrint (ent, print_console, "%s kick\t - disconnect one random bot from game.", self);
+      ClientPrint (ent, print_console, "%s weaponmode\t - select bot weapon mode.", self);
+      ClientPrint (ent, print_console, "%s votemap\t - allows dead bots to vote for specific map.", self);
+      ClientPrint (ent, print_console, "%s cmenu\t - displaying bots command menu.", self);
 
       if (stricmp (arg1, "full") == 0 || stricmp (arg1, "f") == 0 || stricmp (arg1, "?") == 0)
       {
-         ClientPrint (ent, print_console, "yapb add_t              - creates one random bot to terrorist team.");
-         ClientPrint (ent, print_console, "yapb add_ct             - creates one random bot to ct team.");
-         ClientPrint (ent, print_console, "yapb kick_t             - disconnect one random bot from terrorist team.");
-         ClientPrint (ent, print_console, "yapb kick_ct            - disconnect one random bot from ct team.");
-         ClientPrint (ent, print_console, "yapb kill_t             - kills all bots on terrorist team.");
-         ClientPrint (ent, print_console, "yapb kill_ct            - kills all bots on ct team.");
-         ClientPrint (ent, print_console, "yapb list               - display list of bots currently playing.");
-         ClientPrint (ent, print_console, "yapb order              - execute specific command on specified bot.");
-         ClientPrint (ent, print_console, "yapb time               - displays current time on server.");
-         ClientPrint (ent, print_console, "yapb deletewp           - erase waypoint file from hard disk (permanently).");
+         ClientPrint (ent, print_console, "%s add_t\t - creates one random bot to terrorist team.", self);
+         ClientPrint (ent, print_console, "%s add_ct\t - creates one random bot to ct team.", self);
+         ClientPrint (ent, print_console, "%s kick_t\t - disconnect one random bot from terrorist team.", self);
+         ClientPrint (ent, print_console, "%s kick_ct\t - disconnect one random bot from ct team.", self);
+         ClientPrint (ent, print_console, "%s kill_t\t - kills all bots on terrorist team.", self);
+         ClientPrint (ent, print_console, "%s kill_ct\t - kills all bots on ct team.", self);
+         ClientPrint (ent, print_console, "%s list\t - display list of bots currently playing.", self);
+         ClientPrint (ent, print_console, "%s order\t - execute specific command on specified bot.", self);
+         ClientPrint (ent, print_console, "%s time\t - displays current time on server.", self);
+         ClientPrint (ent, print_console, "%s deletewp\t - erase waypoint file from hard disk (permanently).", self);
 
           if (!IsDedicatedServer ())
           {
-             ServerPrint ("yapb autowp            - toggle autowaypointing.");
-             ServerPrint ("yapb wp                - toggle waypoint showing.");
-             ServerPrint ("yapb wp on noclip      - enable noclip cheat");
-             ServerPrint ("yapb wp save nocheck   - save waypoints without checking.");
-             ServerPrint ("yapb wp add            - open menu for waypoint creation.");
-             ServerPrint ("yapb wp menu           - open main waypoint menu.");
-             ServerPrint ("yapb wp addbasic       - creates basic waypoints on map.");
-             ServerPrint ("yapb wp find           - show direction to specified waypoint.");
-             ServerPrint ("yapb wp load           - load the waypoint file from hard disk.");
-             ServerPrint ("yapb wp check          - checks if all waypoints connections are valid.");
-             ServerPrint ("yapb wp cache          - cache nearest waypoint.");
-             ServerPrint ("yapb wp teleport       - teleport hostile to specified waypoint.");
-             ServerPrint ("yapb wp setradius      - manually sets the wayzone radius for this waypoint.");
-             ServerPrint ("yapb path autodistance - opens menu for setting autopath maximum distance.");
-             ServerPrint ("yapb path cache        - remember the nearest to player waypoint.");
-             ServerPrint ("yapb path create       - opens menu for path creation.");
-             ServerPrint ("yapb path delete       - delete path from cached to nearest waypoint.");
-             ServerPrint ("yapb path create_in    - creating incoming path connection.");
-             ServerPrint ("yapb path create_out   - creating outgoing path connection.");
-             ServerPrint ("yapb path create_both  - creating both-ways path connection.");
-             ServerPrint ("yapb exp save          - save the experience data.");
+             ServerPrint ("%s autowp\t - toggle autowaypointing.", self);
+             ServerPrint ("%s wp\t - toggle waypoint showing.", self);
+             ServerPrint ("%s wp on noclip\t - enable noclip cheat", self);
+             ServerPrint ("%s wp save nocheck\t - save waypoints without checking.", self);
+             ServerPrint ("%s wp add\t - open menu for waypoint creation.", self);
+             ServerPrint ("%s wp menu\t - open main waypoint menu.", self);
+             ServerPrint ("%s wp addbasic\t - creates basic waypoints on map.", self);
+             ServerPrint ("%s wp find\t - show direction to specified waypoint.", self);
+             ServerPrint ("%s wp load\t - load the waypoint file from hard disk.", self);
+             ServerPrint ("%s wp check\t - checks if all waypoints connections are valid.", self);
+             ServerPrint ("%s wp cache\t - cache nearest waypoint.", self);
+             ServerPrint ("%s wp teleport\t - teleport hostile to specified waypoint.", self);
+             ServerPrint ("%s wp setradius\t - manually sets the wayzone radius for this waypoint.", self);
+             ServerPrint ("%s path autodistance - opens menu for setting autopath maximum distance.", self);
+             ServerPrint ("%s path cache\t - remember the nearest to player waypoint.", self);
+             ServerPrint ("%s path create\t - opens menu for path creation.", self);
+             ServerPrint ("%s path delete\t - delete path from cached to nearest waypoint.", self);
+             ServerPrint ("%s path create_in\t - creating incoming path connection.", self);
+             ServerPrint ("%s path create_out\t - creating outgoing path connection.", self);
+             ServerPrint ("%s path create_both\t - creating both-ways path connection.", self);
+             ServerPrint ("%s exp save\t - save the experience data.", self);
           }
       }
    }
@@ -452,7 +451,7 @@ void CommandHandler (void)
    // the stdio command-line parsing in C when you write "long main (long argc, char **argv)".
 
    // check status for dedicated server command
-   if (BotCommandHandler (g_hostEntity, IsNullString (CMD_ARGV (1)) ? "help" : CMD_ARGV (1), CMD_ARGV (2), CMD_ARGV (3), CMD_ARGV (4), CMD_ARGV (5), CMD_ARGV (6)) == 0)
+   if (BotCommandHandler (g_hostEntity, IsNullString (CMD_ARGV (1)) ? "help" : CMD_ARGV (1), CMD_ARGV (2), CMD_ARGV (3), CMD_ARGV (4), CMD_ARGV (5), CMD_ARGV (6), CMD_ARGV (0)) == 0)
       ServerPrint ("Unknown command: %s", CMD_ARGV (1));
 }
 
@@ -1191,7 +1190,7 @@ void ClientCommand (edict_t *ent)
    {
       if (stricmp (command, "yapb") == 0 || stricmp (command, "yb") == 0)
       {
-         int state = BotCommandHandler (ent, IsNullString (CMD_ARGV (1)) ? "help" : CMD_ARGV (1), CMD_ARGV (2), CMD_ARGV (3), CMD_ARGV (4), CMD_ARGV (5), CMD_ARGV (6));
+         int state = BotCommandHandler (ent, IsNullString (CMD_ARGV (1)) ? "help" : CMD_ARGV (1), CMD_ARGV (2), CMD_ARGV (3), CMD_ARGV (4), CMD_ARGV (5), CMD_ARGV (6), CMD_ARGV (0));
 
          switch (state)
          {
