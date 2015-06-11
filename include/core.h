@@ -399,7 +399,7 @@ enum PickupType
 // reload state
 enum ReloadState
 {
-   RELOAD_NONE = 0, // no reload state currrently
+   RELOAD_NONE = 0, // no reload state currently
    RELOAD_PRIMARY = 1, // primary weapon reload state
    RELOAD_SECONDARY = 2  // secondary weapon reload state
 };
@@ -1648,7 +1648,7 @@ extern const char *GetField (const char *string, int fieldId, bool endLine = fal
 extern const char *FormatBuffer (const char *format, ...);
 
 extern uint16 GenerateBuildNumber (void);
-extern const Vector &GetEntityOrigin (edict_t *ent);
+extern Vector GetEntityOrigin (edict_t *ent);
 
 extern void FreeLibraryMemory (void);
 extern void RoundInit (void);

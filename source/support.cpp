@@ -136,7 +136,7 @@ bool IsVisible (const Vector &origin, edict_t *ent)
    return true; // line of sight is valid.
 }
 
-const Vector &GetEntityOrigin (edict_t *ent)
+Vector GetEntityOrigin (edict_t *ent)
 {
    // this expanded function returns the vector origin of a bounded entity, assuming that any
    // entity that has a bounding box has its center at the center of the bounding box itself.
@@ -145,7 +145,7 @@ const Vector &GetEntityOrigin (edict_t *ent)
       return nullvec;
 
    if (ent->v.origin == nullvec)
-      return ent->v.absmin + (ent->v.size * 0.5);
+      return ent->v.absmin + ent->v.size * 0.5;
 
    return ent->v.origin;
 }
