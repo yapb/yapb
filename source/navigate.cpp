@@ -2280,7 +2280,7 @@ int Bot::FindCoverWaypoint (float maxDistance)
 
 bool Bot::GetBestNextWaypoint (void)
 {
-   // this function does a realtime postprocessing of waypoints return from the
+   // this function does a realtime post processing of waypoints return from the
    // pathfinder, to vary paths and find the best waypoint on our way
 
    InternalAssert (m_navNode != NULL);
@@ -2300,7 +2300,9 @@ bool Bot::GetBestNextWaypoint (void)
 
          if (!IsPointOccupied (id))
          {
+            DebugMsg ("postprocess %d -> %d", m_navNode->index, id);
             m_navNode->index = id;
+            
             return true;
          }
       }
@@ -2333,7 +2335,7 @@ bool Bot::HeadTowardWaypoint (void)
          m_minSpeed = pev->maxspeed;
 
          // only if we in normal task and bomb is not planted
-         if (GetTaskId () == TASK_NORMAL && m_timeCamping + 30.0f < GetWorldTime () && !g_bombPlanted && m_personality != PERSONALITY_RUSHER && !m_hasC4 && !m_isVIP && m_loosedBombWptIndex == -1 && !HasHostage ())
+         if (GetTaskId () == TASK_NORMAL && g_timeRoundMid + 10.0f < GetWorldTime () && m_timeCamping + 30.0f < GetWorldTime () && !g_bombPlanted && m_personality != PERSONALITY_RUSHER && !m_hasC4 && !m_isVIP && m_loosedBombWptIndex == -1 && !HasHostage ())
          {
             m_campButtons = 0;
 
@@ -2346,7 +2348,7 @@ bool Bot::HeadTowardWaypoint (void)
                kills = (g_experienceData + (waypoint * g_numWaypoints) + waypoint)->team1Damage / g_highestDamageCT;
 
             // if damage done higher than one
-            if (kills > 0.15f && g_timeRoundMid + 15.0f > GetWorldTime ())
+            if (kills > 0.15f && g_timeRoundMid + 15.0f < GetWorldTime ())
             {
                switch (m_personality)
                {
@@ -3289,7 +3291,7 @@ bool Bot::IsPointOccupied (int index)
       // check if this waypoint is already used
       if (IsAlive (bot->GetEntity ()))
       {
-         if ((GetShootingConeDeviation (bot->GetEntity (), &pev->origin) >= 0.7 ? bot->m_prevWptIndex[0] : m_currentWaypointIndex) == index || bot->GetTask ()->data == index || (g_waypoint->GetPath (index)->origin - bot->pev->origin).GetLength2D () < 96.0)
+         if ((GetShootingConeDeviation (bot->GetEntity (), &pev->origin) >= 0.7 ? bot->m_prevWptIndex[0] : m_currentWaypointIndex) == index || bot->GetTask ()->data == index)
             return true;
       }
    }

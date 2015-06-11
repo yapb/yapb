@@ -975,6 +975,7 @@ private:
    void CheckRadioCommands (void);
    void CheckReload (void);
    void AvoidGrenades (void);
+   void CheckGrenadeThrow (void);
    void CheckBurstMode (float distance);
 
    void CheckSilencer (void);

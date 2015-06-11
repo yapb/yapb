@@ -769,7 +769,7 @@ void RoundInit (void)
 
    // calculate the round mid/end in world time
    g_timeRoundStart = GetWorldTime () + mp_freezetime.GetFloat ();
-   g_timeRoundMid = g_timeRoundStart + mp_roundtime.GetFloat () * 60 / 2;
+   g_timeRoundMid = g_timeRoundStart + mp_roundtime.GetFloat () * 60 * 0.5f;
    g_timeRoundEnd = g_timeRoundStart + mp_roundtime.GetFloat () * 60;
 }
 
