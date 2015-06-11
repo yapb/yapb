@@ -311,7 +311,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
    TraceResult tr;
    edict_t *nearest = NULL;
 
-   if (FindNearestPlayer (reinterpret_cast <void **> (&nearest), GetEntity (), pev->maxspeed, true, false, true, true)) // found somebody?
+   if (g_timeRoundStart + 10.0f < GetWorldTime () && FindNearestPlayer (reinterpret_cast <void **> (&nearest), GetEntity (), pev->maxspeed, true, false, true, true)) // found somebody?
    {
       MakeVectors (m_moveAngles); // use our movement angles
 
@@ -655,7 +655,7 @@ bool Bot::DoWaypointNav (void)
          if (IsOnFloor () || IsOnLadder ())
          {
             if (m_desiredVelocity.x != 0.0f && m_desiredVelocity.y != 0.0f)
-               pev->velocity = m_desiredVelocity + m_desiredVelocity * 0.11f;
+               pev->velocity = m_desiredVelocity + m_desiredVelocity * 0.076f;
 
             pev->button |= IN_JUMP;
 
@@ -1939,7 +1939,6 @@ void Bot::GetValidWaypoint (void)
       
       if (m_goalFailed > 1)
       {
-         DebugMsg ("GOAL FAILED!");
          int newGoal = FindGoal ();
 
          m_prevGoalIndex = newGoal;
@@ -1948,7 +1947,7 @@ void Bot::GetValidWaypoint (void)
          // remember index
          GetTask ()->data = newGoal;
 
-         // do pathfinding if it's not the current waypoint
+         // do path finding if it's not the current waypoint
          if (newGoal != m_currentWaypointIndex)
             FindPath (m_currentWaypointIndex, newGoal, m_pathType);
 
@@ -2300,9 +2299,7 @@ bool Bot::GetBestNextWaypoint (void)
 
          if (!IsPointOccupied (id))
          {
-            DebugMsg ("postprocess %d -> %d", m_navNode->index, id);
             m_navNode->index = id;
-            
             return true;
          }
       }

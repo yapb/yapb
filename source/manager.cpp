@@ -1358,12 +1358,7 @@ void BotManager::UpdateActiveGrenades (void)
 
    // search the map for any type of grenade
    while (!IsEntityNull (grenade = FIND_ENTITY_BY_CLASSNAME (grenade, "grenade")))
-   {
-      if (grenade->v.effects & EF_NODRAW)
-         continue;
-
       m_activeGrenades.Push (grenade);
-   }
 }
 
 const Array <entity_t> &BotManager::GetActiveGrenades (void)

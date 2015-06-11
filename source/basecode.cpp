@@ -100,7 +100,7 @@ bool Bot::IsInViewCone (const Vector &origin)
    return ::IsInViewCone (origin, GetEntity ());
 }
 
-bool Bot::CheckVisibility (entvars_t *targetEntity, Vector *origin, byte *bodyPart)
+bool Bot::CheckVisibility (edict_t *target, Vector *origin, byte *bodyPart)
 {
    // this function checks visibility of a bot target.
 
@@ -110,69 +110,41 @@ bool Bot::CheckVisibility (entvars_t *targetEntity, Vector *origin, byte *bodyPa
    *bodyPart = 0;
 
    // check for the body
-   TraceLine (botHead, targetEntity->origin, true, true, GetEntity (), &tr);
+   TraceLine (botHead, target->v.origin, true, true, GetEntity (), &tr);
 
-   if (tr.flFraction >= 1.0)
+   if (tr.flFraction >= 1.0f)
    {
       *bodyPart |= VISIBLE_BODY;
-      *origin = targetEntity->origin;
+      *origin = target->v.origin;
    }
 
    // check for the head
-   TraceLine (botHead, targetEntity->origin + targetEntity->view_ofs, true, true, GetEntity (), &tr);
+   TraceLine (botHead, target->v.origin + target->v.view_ofs, true, true, GetEntity (), &tr);
 
-   if (tr.flFraction >= 1.0)
+   if (tr.flFraction >= 1.0f)
    {
       *bodyPart |= VISIBLE_HEAD;
-      *origin = targetEntity->origin + targetEntity->view_ofs;
+      *origin = target->v.origin + target->v.view_ofs;
    }
 
    if (*bodyPart != 0)
       return true;
 
-#if 0
-   // dimension table
-   const int8 dimensionTab[8][3] =
-   {
-      {1,  1,  1}, { 1,  1, -1},
-      {1, -1,  1}, {-1,  1,  1},
-      {1, -1, -1}, {-1, -1,  1},
-      {-1, 1, -1}, {-1, -1, -1}
-   };
-
-   // check the box borders
-   for (int i = 7; i >= 0; i--)
-   {
-      Vector targetOrigin = petargetOrigin->origin + Vector (dimensionTab[i][0] * 24.0, dimensionTab[i][1] * 24.0, dimensionTab[i][2] * 24.0);
-
-      // check direct line to random part of the player body
-      TraceLine (botHead, targetOrigin, true, true, GetEntity (), &tr);
-
-      // check if we hit something
-      if (tr.flFraction >= 1.0)
-      {
-         *origin = tr.vecEndPos;
-         *bodyPart |= VISIBLE_OTHER;
-
-         return true;
-      }
-   }
-#else
    // worst case, choose random position in enemy body
    for (int i = 0; i < 5; i++)
    {
-      Vector targetOrigin = targetEntity->origin; // get the player origin
+      Vector pos = target->v.origin; // get the player origin
 
       // find the vector beetwen mins and maxs of the player body
-      targetOrigin.x += Random.Float (targetEntity->mins.x * 0.5, targetEntity->maxs.x * 0.5);
-      targetOrigin.y += Random.Float (targetEntity->mins.y * 0.5, targetEntity->maxs.y * 0.5);
-      targetOrigin.z += Random.Float (targetEntity->mins.z * 0.5, targetEntity->maxs.z * 0.5);
+      pos.x += Random.Float (target->v.mins.x * 0.5f, target->v.maxs.x * 0.5f);
+      pos.y += Random.Float (target->v.mins.y * 0.5f, target->v.maxs.y * 0.5f);
+      pos.z += Random.Float (target->v.mins.z * 0.5f, target->v.maxs.z * 0.5f);
 
       // check direct line to random part of the player body
-      TraceLine (botHead, targetOrigin, true, true, GetEntity (), &tr);
+      TraceLine (botHead, pos, true, true, GetEntity (), &tr);
 
       // check if we hit something
-      if (tr.flFraction >= 1.0)
+      if (tr.flFraction >= 1.0f)
       {
          *origin = tr.vecEndPos;
          *bodyPart |= VISIBLE_OTHER;
@@ -180,7 +152,6 @@ bool Bot::CheckVisibility (entvars_t *targetEntity, Vector *origin, byte *bodyPa
          return true;
       }
    }
-#endif
    return false;
 }
 
@@ -194,7 +165,7 @@ bool Bot::IsEnemyViewable (edict_t *player)
    if (IsValidPlayer (pev->dmg_inflictor) && GetTeam (pev->dmg_inflictor) != m_team && ::IsInViewCone (EyePosition (), pev->dmg_inflictor))
       forceTrueIfVisible = true;
 
-   if (CheckVisibility (VARS (player), &m_enemyOrigin, &m_visibility) && (IsInViewCone (player->v.origin + Vector (0, 0, 14)) || forceTrueIfVisible))
+   if (CheckVisibility (player, &m_enemyOrigin, &m_visibility) && (IsInViewCone (player->v.origin + Vector (0, 0, 14)) || forceTrueIfVisible))
    {
       m_seeEnemyTime = GetWorldTime ();
       m_lastEnemy = player;
@@ -241,7 +212,7 @@ bool Bot::EntityIsVisible (const Vector &dest, bool fromBody)
 void Bot::CheckGrenadeThrow (void)
 {
    // check if throwing a grenade is a good thing to do...
-   if (m_lastEnemy == NULL || yb_ignore_enemies.GetBool () || yb_jasonmode.GetBool () && m_grenadeCheckTime > GetWorldTime () || m_isUsingGrenade || GetTaskId () == TASK_PLANTBOMB || GetTaskId () == TASK_DEFUSEBOMB || m_isReloading || !IsAlive (m_lastEnemy))
+   if (m_lastEnemy == NULL || yb_ignore_enemies.GetBool () || yb_jasonmode.GetBool () || m_grenadeCheckTime > GetWorldTime () || m_isUsingGrenade || GetTaskId () == TASK_PLANTBOMB || GetTaskId () == TASK_DEFUSEBOMB || m_isReloading || !IsAlive (m_lastEnemy))
    {
       m_states &= ~(STATE_THROW_HE | STATE_THROW_FB | STATE_THROW_SG);
       return;
@@ -401,6 +372,9 @@ void Bot::AvoidGrenades (void)
    {
       edict_t *ent = activeGrenades[it];
 
+      if (ent->v.effects & EF_NODRAW)
+         continue;
+
       // check if visible to the bot
       if (!EntityIsVisible (ent->v.origin) && InFieldOfView (ent->v.origin - EyePosition ()) > pev->fov / 2)
          continue;
@@ -460,17 +434,20 @@ bool Bot::IsBehindSmokeClouds (edict_t *ent)
    // find all grenades on the map
    IterateArray (activeGrenades, it)
    {
-      edict_t *pentGrenade = activeGrenades[it];
+      edict_t *grenade = activeGrenades[it];
+
+      if (grenade->v.effects & EF_NODRAW)
+         continue;
 
       // if grenade is invisible don't care for it
-      if (!(pentGrenade->v.flags & (FL_ONGROUND | FL_PARTIALGROUND)) || strcmp (STRING (pentGrenade->v.model) + 9, "smokegrenade.mdl"))
+      if (!(grenade->v.flags & (FL_ONGROUND | FL_PARTIALGROUND)) || strcmp (STRING (grenade->v.model) + 9, "smokegrenade.mdl"))
          continue;
 
       // check if visible to the bot
       if (!EntityIsVisible (ent->v.origin) && InFieldOfView (ent->v.origin - EyePosition ()) > pev->fov / 3)
          continue;
 
-      const Vector &entityOrigin = GetEntityOrigin (pentGrenade);
+      const Vector &entityOrigin = GetEntityOrigin (grenade);
       const Vector &betweenNade = (entityOrigin - pev->origin).Normalize ();
       const Vector &betweenResult = ((Vector (betweenNade.y, betweenNade.x, 0) * 150.0 + entityOrigin) - pev->origin).Normalize ();
 
@@ -2469,7 +2446,7 @@ void Bot::CheckRadioCommands (void)
       {
          if (IsEntityNull (m_enemy) && m_seeEnemyTime + 4.0 < GetWorldTime ())
          {
-            // Decrease Fear Levels to lower probability of Bot seeking Cover again
+            // decrease fear levels to lower probability of bot seeking cover again
             m_fearLevel -= 0.2;
 
             if (m_fearLevel < 0.0)
@@ -2902,33 +2879,27 @@ void Bot::ChooseAimDirection (void)
    TraceResult tr;
    memset (&tr, 0, sizeof (TraceResult));
 
-   unsigned int flags = m_aimFlags;
-
    if (!(m_currentWaypointIndex >= 0 && m_currentWaypointIndex < g_numWaypoints))
       GetValidWaypoint ();
 
    // check if last enemy vector valid
-   if (m_seeEnemyTime + 7.0 < GetWorldTime () && m_lastEnemyOrigin != nullvec)
+   if (m_seeEnemyTime + 7.0 < GetWorldTime () && m_lastEnemyOrigin != nullvec && (pev->origin - m_lastEnemyOrigin).GetLength () >= 1600.0f && IsEntityNull (m_enemy) && !UsesSniper ())
    {
       TraceLine (EyePosition (), m_lastEnemyOrigin, false, true, GetEntity (), &tr);
 
-      if ((pev->origin - m_lastEnemyOrigin).GetLength () >= 1600 && IsEntityNull (m_enemy) && !UsesSniper () || (tr.flFraction <= 0.2 && tr.pHit == g_hostEntity))
+      if (tr.flFraction <= 0.2 && tr.pHit == g_hostEntity)
       {
          if ((m_aimFlags & (AIM_LAST_ENEMY | AIM_PREDICT_PATH)) && m_wantsToFire)
             m_wantsToFire = false;
 
          m_lastEnemyOrigin = nullvec;
          m_aimFlags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
-
-         flags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
-         flags = m_aimFlags;
       }
    }
-   else
-   {
+   else if (m_lastEnemyOrigin == nullvec)
       m_aimFlags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
-      flags = m_aimFlags;
-   }
+
+   unsigned int flags = m_aimFlags;
 
    // don't allow bot to look at danger positions under certain circumstances
    if (!(flags & (AIM_GRENADE | AIM_ENEMY | AIM_ENTITY)))
@@ -4266,13 +4237,9 @@ void Bot::RunTask (void)
       else
       {
          edict_t *ent = NULL;
-         Array <entity_t> activeGrenades = g_botManager->GetActiveGrenades ();
 
-         // find all grenades on the map
-         IterateArray (activeGrenades, it)
+         while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
          {
-            ent = activeGrenades[it];
-
             if (ent->v.owner == GetEntity () && strcmp (STRING (ent->v.model) + 9, "hegrenade.mdl") == 0)
             {
                // set the correct velocity for the grenade
@@ -4336,13 +4303,8 @@ void Bot::RunTask (void)
       else
       {
          edict_t *ent = NULL;
-         Array <entity_t> activeGrenades = g_botManager->GetActiveGrenades ();
-
-         // find all grenades on the map
-         IterateArray (activeGrenades, it)
+         while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
          {
-            ent = activeGrenades[it];
-
             if (ent->v.owner == GetEntity () && strcmp (STRING (ent->v.model) + 9, "flashbang.mdl") == 0)
             {
                // set the correct velocity for the grenade
@@ -6081,7 +6043,7 @@ void Bot::ReactOnSound (void)
       extern ConVar yb_shoots_thru_walls;
 
       // check if heard enemy can be seen
-      if (CheckVisibility (VARS (player), &m_lastEnemyOrigin, &m_visibility))
+      if (CheckVisibility (player, &m_lastEnemyOrigin, &m_visibility))
       {
          m_enemy = player;
          m_lastEnemy = player;

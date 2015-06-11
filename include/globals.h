@@ -122,3 +122,8 @@ static inline bool IsEntityNull (const edict_t *ent)
 {
    return !ent || !EntOffsetOfEntity (ent);
 }
+
+static inline int GetTeam (edict_t *ent)
+{
+   return g_clients[IndexOfEntity (ent) - 1].team;
+}

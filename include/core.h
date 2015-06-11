@@ -993,7 +993,7 @@ private:
 
    bool IsInViewCone (const Vector &origin);
    void ReactOnSound (void);
-   bool CheckVisibility (entvars_t *targetOrigin, Vector *origin, byte *bodyPart);
+   bool CheckVisibility (edict_t *target, Vector *origin, byte *bodyPart);
    bool IsEnemyViewable (edict_t *player);
 
    edict_t *FindNearestButton (const char *className);
@@ -1626,7 +1626,6 @@ public:
 
 // prototypes of bot functions...
 extern int GetWeaponReturn (bool isString, const char *weaponAlias, int weaponIndex = -1);
-extern int GetTeam (edict_t *ent);
 
 extern float GetShootingConeDeviation (edict_t *ent, Vector *position);
 extern float GetWaveLength (const char *fileName);

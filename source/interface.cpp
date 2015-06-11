@@ -72,21 +72,6 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    else if (stricmp (arg0, "fillserver") == 0 || stricmp (arg0, "fill") == 0)
       g_botManager->FillServer (atoi (arg1), IsNullString (arg2) ? -1 : atoi (arg2), IsNullString (arg3) ? -1 : atoi (arg3), IsNullString (arg4) ? -1 : atoi (arg4));
 
-   // swap counter-terrorist and terrorist teams
-   else if (stricmp (arg0, "swaptteams") == 0 || stricmp (arg0, "swap") == 0)
-   {
-      for (int i = 0; i < GetMaxClients (); i++)
-      {
-         if (!(g_clients[i].flags & CF_USED))
-            continue;
-
-         if (IsValidBot (g_clients[i].ent))
-            FakeClientCommand (g_clients[i].ent, "chooseteam; menuselect %d; menuselect 5", GetTeam (g_clients[i].ent) == TEAM_CF ? 1 : 2);
-         else
-            (*g_engfuncs.pfnClientCommand) (g_clients[i].ent, "chooseteam; menuselect %d", GetTeam (g_clients[i].ent) == TEAM_CF ? 1 : 2);
-      }
-   }
-
    // select the weapon mode for bots
    else if (stricmp (arg0, "weaponmode") == 0 || stricmp (arg0, "wmode") == 0)
    {
@@ -114,48 +99,6 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          }
          ClientPrint (ent, print_withtag, "All dead bots will vote for map #%d", nominatedMap);
       }
-   }
-
-   // force bots to execute client command
-   else if (stricmp (arg0, "sendcmd") == 0 || stricmp (arg0, "order") == 0)
-   {
-      if (IsNullString (arg1))
-         return 1;
-
-      edict_t *target = EntityOfIndex (atoi (arg1) - 1);
-
-      if (IsValidBot (target))
-      {
-         FakeClientCommand (target, arg2);
-         ClientPrint (ent, print_withtag, "Bot %s executing command %s", STRING (target->v.netname), arg2);
-      }
-      else
-         ClientPrint (ent, print_withtag, "Player is not BOT!");
-   }
-
-   // display current time on the server
-   else if (stricmp (arg0, "test") == 0)
-   {
-      ServerPrint ("mp_bt = %.2f", mp_startmoney.GetFloat ());
-   }
-
-   // displays bot about information
-   else if (stricmp (arg0, "about_bot") == 0 || stricmp (arg0, "about") == 0)
-   {
-      if (g_gameVersion == CSV_OLD)
-      {
-         ServerPrint ("Cannot do this on CS 1.5");
-         return 1;
-      }
-
-      char aboutData[] =
-         "+---------------------------------------------------------------------------------+\n"
-         " The YaPB for Counter-Strike Version " PRODUCT_SUPPORT_VERSION "\n"
-         " Created by " PRODUCT_AUTHOR ", Using PODBot Code\n"
-         " Website: " PRODUCT_URL "\n"
-         "+---------------------------------------------------------------------------------+\n";
-
-      HudMessage (ent, true, Vector (Random.Long (33, 255), Random.Long (33, 255), Random.Long (33, 255)), aboutData);
    }
 
    // displays version information
@@ -201,7 +144,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
           if (!IsDedicatedServer ())
           {
-             ServerPrint ("yapb autowp            - toggle autowppointing.");
+             ServerPrint ("yapb autowp            - toggle autowaypointing.");
              ServerPrint ("yapb wp                - toggle waypoint showing.");
              ServerPrint ("yapb wp on noclip      - enable noclip cheat");
              ServerPrint ("yapb wp save nocheck   - save waypoints without checking.");
@@ -209,7 +152,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
              ServerPrint ("yapb wp menu           - open main waypoint menu.");
              ServerPrint ("yapb wp addbasic       - creates basic waypoints on map.");
              ServerPrint ("yapb wp find           - show direction to specified waypoint.");
-             ServerPrint ("yapb wp load           - wload the waypoint file from hard disk.");
+             ServerPrint ("yapb wp load           - load the waypoint file from hard disk.");
              ServerPrint ("yapb wp check          - checks if all waypoints connections are valid.");
              ServerPrint ("yapb wp cache          - cache nearest waypoint.");
              ServerPrint ("yapb wp teleport       - teleport hostile to specified waypoint.");

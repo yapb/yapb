@@ -789,10 +789,6 @@ int GetWeaponPenetrationPower (int id)
    return 0;
 }
 
-int GetTeam (edict_t *ent)
-{
-   return g_clients[IndexOfEntity (ent) - 1].team;
-}
 
 bool IsValidPlayer (edict_t *ent)
 {

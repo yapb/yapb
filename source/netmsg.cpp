@@ -270,19 +270,22 @@ void NetworkMsg::Execute (void *p)
             if (IsEntityNull (killer) || IsEntityNull (victim))
                break;
 
-            // need to send congrats on well placed shot
-            for (int i = 0; i < GetMaxClients (); i++)
+            if (yb_communication_type.GetInt () == 2)
             {
-               Bot *bot = g_botManager->GetBot (i);
-
-               if (bot != NULL && IsAlive (bot->GetEntity ()) && killer != bot->GetEntity () && bot->EntityIsVisible (victim->v.origin) && GetTeam (killer) == GetTeam (bot->GetEntity ()) && GetTeam (killer) != GetTeam (victim))
+               // need to send congrats on well placed shot
+               for (int i = 0; i < GetMaxClients (); i++)
                {
-                  if (killer == g_hostEntity)
-                     bot->HandleChatterMessage ("#Bot_NiceShotCommander");
-                  else
-                     bot->HandleChatterMessage ("#Bot_NiceShotPall");
+                  Bot *bot = g_botManager->GetBot (i);
 
-                  break;
+                  if (bot != NULL && IsAlive (bot->GetEntity ()) && killer != bot->GetEntity () && bot->EntityIsVisible (victim->v.origin) && GetTeam (killer) == GetTeam (bot->GetEntity ()) && GetTeam (killer) != GetTeam (victim))
+                  {
+                     if (killer == g_hostEntity)
+                        bot->HandleChatterMessage ("#Bot_NiceShotCommander");
+                     else
+                        bot->HandleChatterMessage ("#Bot_NiceShotPall");
+
+                     break;
+                  }
                }
             }
 
@@ -394,11 +397,30 @@ void NetworkMsg::Execute (void *p)
                g_isCommencing = true;
 
             if (FStrEq (PTR_TO_STR (p), "#CTs_Win"))
+            {
                g_botManager->SetLastWinner (TEAM_CF); // update last winner for economics
 
+               if (yb_communication_type.GetInt () == 2)
+               {
+                  Bot *bot = g_botManager->FindOneValidAliveBot ();
+
+                  if (bot != NULL && IsAlive (bot->GetEntity ()))
+                     bot->HandleChatterMessage (PTR_TO_STR (p));
+               }
+            }
+
             if (FStrEq (PTR_TO_STR (p), "#Terrorists_Win"))
+            {
                g_botManager->SetLastWinner (TEAM_TF); // update last winner for economics
 
+               if (yb_communication_type.GetInt () == 2)
+               {
+                  Bot *bot = g_botManager->FindOneValidAliveBot ();
+
+                  if (bot != NULL && IsAlive (bot->GetEntity ()))
+                     bot->HandleChatterMessage (PTR_TO_STR (p));
+               }
+            }
             g_waypoint->SetBombPosition (true);
          }
          else if (!g_bombPlanted && FStrEq (PTR_TO_STR (p), "#Bomb_Planted"))
@@ -406,36 +428,28 @@ void NetworkMsg::Execute (void *p)
             g_bombPlanted = g_bombSayString = true;
             g_timeBombPlanted = GetWorldTime ();
 
-			if (yb_communication_type.GetInt() == 2)
-			{
-				for (int i = 0; i < GetMaxClients(); i++)
-				{
-					Bot *bot = g_botManager->GetBot(i);
+            if (yb_communication_type.GetInt () == 2)
+            {
+               for (int i = 0; i < GetMaxClients (); i++)
+               {
+                  Bot *bot = g_botManager->GetBot (i);
 
-					if (bot != NULL && IsAlive(bot->GetEntity()))
-					{
-						bot->DeleteSearchNodes();
-						bot->ResetTasks();
+                  if (bot != NULL && IsAlive (bot->GetEntity ()))
+                  {
+                     bot->DeleteSearchNodes ();
+                     bot->ResetTasks ();
 
-						if (Random.Long(0, 100) < 75 && GetTeam(bot->GetEntity()) == TEAM_CF)
-							bot->ChatterMessage(Chatter_WhereIsTheBomb);
-					}
-				}
-			}
+                     if (Random.Long (0, 100) < 75 && GetTeam (bot->GetEntity ()) == TEAM_CF)
+                        bot->ChatterMessage (Chatter_WhereIsTheBomb);
+                  }
+               }
+            }
             g_waypoint->SetBombPosition ();
          }
          else if (m_bot != NULL && FStrEq (PTR_TO_STR (p), "#Switch_To_BurstFire"))
             m_bot->m_weaponBurstMode = BM_ON;
          else if (m_bot != NULL && FStrEq (PTR_TO_STR (p), "#Switch_To_SemiAuto"))
             m_bot->m_weaponBurstMode = BM_OFF;
-
-		 if (yb_communication_type.GetInt() == 2)
-		 {
-			 Bot *bot = g_botManager->FindOneValidAliveBot();
-
-			 if (bot != NULL && IsAlive(bot->GetEntity()))
-				 bot->HandleChatterMessage(PTR_TO_STR(p));
-		 }
       }
       break;
 
