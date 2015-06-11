@@ -100,6 +100,8 @@ typedef struct
    int iHitgroup;                 // 0 == generic, non zero is specific body part
 } TraceResult;
 
+typedef edict_t *entity_t;
+
 typedef uint32 CRC32_t;
 
 // Engine hands this to DLLs for functionality callbacks

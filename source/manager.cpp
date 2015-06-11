@@ -244,7 +244,7 @@ void BotManager::Think (void)
             // error occurred. kick off all bots and then print a warning message
             RemoveAll ();
 
-            ServerPrintNoTag ("**** INTERNAL BOT ERROR! PLEASE SHUTDOWN AND RESTART YOUR SERVER! ****");
+            ServerPrint ("**** INTERNAL BOT ERROR! PLEASE SHUTDOWN AND RESTART YOUR SERVER! ****");
          }
 #else
          m_bots[i]->Think ();
@@ -612,7 +612,7 @@ void BotManager::ListBots (void)
 {
    // this function list's bots currently playing on the server
 
-   ServerPrintNoTag ("%-3.5s %-9.13s %-17.18s %-3.4s %-3.4s %-3.4s", "index", "name", "personality", "team", "difficulty", "frags");
+   ServerPrint ("%-3.5s %-9.13s %-17.18s %-3.4s %-3.4s %-3.4s", "index", "name", "personality", "team", "difficulty", "frags");
 
    for (int i = 0; i < GetMaxClients (); i++)
    {
@@ -624,7 +624,7 @@ void BotManager::ListBots (void)
          Bot *bot = GetBot (player);
 
          if (bot != NULL)
-            ServerPrintNoTag ("[%-3.1d] %-9.13s %-17.18s %-3.4s %-3.1d %-3.1d", i, STRING (player->v.netname), bot->m_personality == PERSONALITY_RUSHER ? "rusher" : bot->m_personality == PERSONALITY_NORMAL ? "normal" : "careful", GetTeam (player) != 0 ? "CT" : "T", bot->m_difficulty, static_cast <int> (player->v.frags));
+            ServerPrint ("[%-3.1d] %-9.13s %-17.18s %-3.4s %-3.1d %-3.1d", i, STRING (player->v.netname), bot->m_personality == PERSONALITY_RUSHER ? "rusher" : bot->m_personality == PERSONALITY_NORMAL ? "normal" : "careful", GetTeam (player) != 0 ? "CT" : "T", bot->m_difficulty, static_cast <int> (player->v.frags));
       }
    }
 }
@@ -1347,4 +1347,26 @@ void BotManager::SendDeathMsgFix (void)
       for (int i = 0; i < GetMaxClients (); i++)
          SendPingDataOffsets (g_clients[i].ent);
    }
+}
+
+void BotManager::UpdateActiveGrenades (void)
+{
+   edict_t *grenade = NULL;
+
+   // clear previously stored grenades
+   m_activeGrenades.RemoveAll ();
+
+   // search the map for any type of grenade
+   while (!IsEntityNull (grenade = FIND_ENTITY_BY_CLASSNAME (grenade, "grenade")))
+   {
+      if (grenade->v.effects & EF_NODRAW)
+         continue;
+
+      m_activeGrenades.Push (grenade);
+   }
+}
+
+const Array <entity_t> &BotManager::GetActiveGrenades (void)
+{
+   return m_activeGrenades;
 }

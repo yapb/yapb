@@ -238,32 +238,168 @@ bool Bot::EntityIsVisible (const Vector &dest, bool fromBody)
    return tr.flFraction >= 1.0;
 }
 
+void Bot::CheckGrenadeThrow (void)
+{
+   // check if throwing a grenade is a good thing to do...
+   if (m_lastEnemy == NULL || yb_ignore_enemies.GetBool () || yb_jasonmode.GetBool () && m_grenadeCheckTime > GetWorldTime () || m_isUsingGrenade || GetTaskId () == TASK_PLANTBOMB || GetTaskId () == TASK_DEFUSEBOMB || m_isReloading || !IsAlive (m_lastEnemy))
+   {
+      m_states &= ~(STATE_THROW_HE | STATE_THROW_FB | STATE_THROW_SG);
+      return;
+   }
+
+   // check again in some seconds
+   m_grenadeCheckTime = GetWorldTime () + yb_timergrenade.GetFloat ();
+
+   // check if we have grenades to throw
+   int grenadeToThrow = CheckGrenades ();
+
+   // if we don't have grenades no need to check it this round again
+   if (grenadeToThrow == -1)
+   {
+      m_grenadeCheckTime = GetWorldTime () + 15.0; // changed since, conzero can drop grens from dead players
+      m_states &= ~(STATE_THROW_HE | STATE_THROW_FB | STATE_THROW_SG);
+
+      return;
+   }
+   // care about different types of grenades
+   if ((grenadeToThrow == WEAPON_EXPLOSIVE || grenadeToThrow == WEAPON_SMOKE) && Random.Long (0, 100) < 45 && !(m_states & (STATE_SEEING_ENEMY | STATE_THROW_HE | STATE_THROW_FB | STATE_THROW_SG)))
+   {
+      float distance = (m_lastEnemy->v.origin - pev->origin).GetLength ();
+
+      // is enemy to high to throw
+      if ((m_lastEnemy->v.origin.z > (pev->origin.z + 650.0)) || !(m_lastEnemy->v.flags & (FL_ONGROUND | FL_DUCKING)))
+         distance = FLT_MAX; // just some crazy value
+
+      // enemy is within a good throwing distance ?               
+      if (distance > (grenadeToThrow == WEAPON_SMOKE ? 400 : 600) && distance <= 1000)
+      {
+         // care about different types of grenades
+         if (grenadeToThrow == WEAPON_EXPLOSIVE)
+         {
+            bool allowThrowing = true;
+
+            // check for teammates
+            if (GetNearbyFriendsNearPosition (m_lastEnemy->v.origin, 256) > 0)
+               allowThrowing = false;
+
+            if (allowThrowing && m_seeEnemyTime + 2.0 < GetWorldTime ())
+            {
+               const Vector &enemyPredict = ((m_lastEnemy->v.velocity * 0.5).SkipZ () + m_lastEnemy->v.origin);
+               int searchTab[4], count = 4;
+
+               float searchRadius = m_lastEnemy->v.velocity.GetLength2D ();
+
+               // check the search radius
+               if (searchRadius < 128.0)
+                  searchRadius = 128.0;
+
+               // search waypoints
+               g_waypoint->FindInRadius (enemyPredict, searchRadius, searchTab, &count);
+
+               while (count > 0)
+               {
+                  allowThrowing = true;
+
+                  // check the throwing
+                  m_throw = g_waypoint->GetPath (searchTab[count--])->origin;
+                  Vector src = CheckThrow (EyePosition (), m_throw);
+
+                  if (src.GetLengthSquared () < 100.0)
+                     src = CheckToss (EyePosition (), m_throw);
+
+                  if (src == nullvec)
+                     allowThrowing = false;
+                  else
+                     break;
+               }
+            }
+
+            // start explosive grenade throwing?
+            if (allowThrowing)
+               m_states |= STATE_THROW_HE;
+            else
+               m_states &= ~STATE_THROW_HE;
+         }
+         else if (grenadeToThrow == WEAPON_SMOKE)
+         {
+            // start smoke grenade throwing?
+            if ((m_states & STATE_SEEING_ENEMY) && GetShootingConeDeviation (m_enemy, &pev->origin) >= 0.70 && m_seeEnemyTime + 2.0 < GetWorldTime ())
+               m_states &= ~STATE_THROW_SG;
+            else
+               m_states |= STATE_THROW_SG;
+         }
+      }
+   }
+   else if (IsAlive (m_lastEnemy) && grenadeToThrow == WEAPON_FLASHBANG && (m_lastEnemy->v.origin - pev->origin).GetLength () < 800 && !(m_aimFlags & AIM_ENEMY) && Random.Long (0, 100) < 50)
+   {
+      bool allowThrowing = true;
+      Array <int> inRadius;
+
+      g_waypoint->FindInRadius (inRadius, 256, m_lastEnemy->v.origin + (m_lastEnemy->v.velocity * 0.5).SkipZ ());
+
+      IterateArray (inRadius, i)
+      {
+         Path *path = g_waypoint->GetPath (i);
+
+         if (GetNearbyFriendsNearPosition (path->origin, 256) != 0 || !(m_difficulty == 4 && GetNearbyFriendsNearPosition (path->origin, 256) != 0))
+            continue;
+
+         m_throw = path->origin;
+         Vector src = CheckThrow (EyePosition (), m_throw);
+
+         if (src.GetLengthSquared () < 100)
+            src = CheckToss (EyePosition (), m_throw);
+
+         if (src == nullvec)
+            continue;
+
+         allowThrowing = true;
+         break;
+      }
+
+      // start concussion grenade throwing?
+      if (allowThrowing  && m_seeEnemyTime + 2.0 < GetWorldTime ())
+         m_states |= STATE_THROW_FB;
+      else
+         m_states &= ~STATE_THROW_FB;
+   }
+
+   if (m_states & STATE_THROW_HE)
+      StartTask (TASK_THROWHEGRENADE, TASKPRI_THROWGRENADE, -1, GetWorldTime () + 3.0, false);
+   else if (m_states & STATE_THROW_FB)
+      StartTask (TASK_THROWFLASHBANG, TASKPRI_THROWGRENADE, -1, GetWorldTime () + 3.0, false);
+   else if (m_states & STATE_THROW_SG)
+      StartTask (TASK_THROWSMOKE, TASKPRI_THROWGRENADE, -1, GetWorldTime () + 3.0, false);
+
+   // delay next grenade throw
+   if (m_states & (STATE_THROW_HE | STATE_THROW_FB | STATE_THROW_SG))
+      m_grenadeCheckTime = GetWorldTime () + MAX_GRENADE_TIMER;
+}
 
 void Bot::AvoidGrenades (void)
 {
    // checks if bot 'sees' a grenade, and avoid it
 
-   edict_t *ent = m_avoidGrenade;
+   if (!g_botManager->HasActiveGrenades ())
+      return;
 
   // check if old pointers to grenade is invalid
-   if (IsEntityNull (ent))
+   if (IsEntityNull (m_avoidGrenade))
    {
       m_avoidGrenade = NULL;
       m_needAvoidGrenade = 0;
    }
-   else if ((ent->v.flags & FL_ONGROUND) || (ent->v.effects & EF_NODRAW))
+   else if ((m_avoidGrenade->v.flags & FL_ONGROUND) || (m_avoidGrenade->v.effects & EF_NODRAW))
    {
       m_avoidGrenade = NULL;
       m_needAvoidGrenade = 0;
    }
-   ent = NULL;
+   Array <entity_t> activeGrenades = g_botManager->GetActiveGrenades ();
 
    // find all grenades on the map
-   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
+   IterateArray (activeGrenades, it)
    {
-      // if grenade is invisible don't care for it
-      if (ent->v.effects & EF_NODRAW)
-         continue;
+      edict_t *ent = activeGrenades[it];
 
       // check if visible to the bot
       if (!EntityIsVisible (ent->v.origin) && InFieldOfView (ent->v.origin - EyePosition ()) > pev->fov / 2)
@@ -272,12 +408,12 @@ void Bot::AvoidGrenades (void)
       // TODO: should be done once for grenade, instead of checking several times
       if (m_difficulty == 4 && strcmp (STRING (ent->v.model) + 9, "flashbang.mdl") == 0)
       {
-         Vector position = (GetEntityOrigin (ent) - EyePosition ()).ToAngles ();
+         const Vector &position = (GetEntityOrigin (ent) - EyePosition ()).ToAngles ();
 
-         // don't look at flashbang
+         // don't look at flash bang
          if (!(m_states & STATE_SEEING_ENEMY))
          {
-            pev->v_angle.y = AngleNormalize (position.y + 180.0);
+            pev->v_angle.y = AngleNormalize (position.y + 180.0f);
             m_canChooseAimDirection = false;
          }
       }
@@ -298,8 +434,8 @@ void Bot::AvoidGrenades (void)
             {
                MakeVectors (pev->v_angle);
 
-               Vector dirToPoint = (pev->origin - ent->v.origin).Normalize2D ();
-               Vector rightSide = g_pGlobals->v_right.Normalize2D ();
+               const Vector &dirToPoint = (pev->origin - ent->v.origin).Normalize2D ();
+               const Vector &rightSide = g_pGlobals->v_right.Normalize2D ();
 
                if ((dirToPoint | rightSide) > 0)
                   m_needAvoidGrenade = -1;
@@ -315,21 +451,28 @@ void Bot::AvoidGrenades (void)
 
 bool Bot::IsBehindSmokeClouds (edict_t *ent)
 {
-   edict_t *pentGrenade = NULL;
-   Vector betweenUs = (ent->v.origin - pev->origin).Normalize ();
+   if (!g_botManager->HasActiveGrenades ())
+      return false;
 
-   while (!IsEntityNull (pentGrenade = FIND_ENTITY_BY_CLASSNAME (pentGrenade, "grenade")))
+   const Vector &betweenUs = (ent->v.origin - pev->origin).Normalize ();
+   Array <entity_t> activeGrenades = g_botManager->GetActiveGrenades ();
+
+   // find all grenades on the map
+   IterateArray (activeGrenades, it)
    {
+      edict_t *pentGrenade = activeGrenades[it];
+
       // if grenade is invisible don't care for it
-      if ((pentGrenade->v.effects & EF_NODRAW) || !(pentGrenade->v.flags & (FL_ONGROUND | FL_PARTIALGROUND)) || strcmp (STRING (pentGrenade->v.model) + 9, "smokegrenade.mdl"))
+      if (!(pentGrenade->v.flags & (FL_ONGROUND | FL_PARTIALGROUND)) || strcmp (STRING (pentGrenade->v.model) + 9, "smokegrenade.mdl"))
          continue;
 
       // check if visible to the bot
       if (!EntityIsVisible (ent->v.origin) && InFieldOfView (ent->v.origin - EyePosition ()) > pev->fov / 3)
          continue;
 
-      Vector betweenNade = (GetEntityOrigin (pentGrenade) - pev->origin).Normalize ();
-      Vector betweenResult = ((Vector (betweenNade.y, betweenNade.x, 0) * 150.0 + GetEntityOrigin (pentGrenade)) - pev->origin).Normalize ();
+      const Vector &entityOrigin = GetEntityOrigin (pentGrenade);
+      const Vector &betweenNade = (entityOrigin - pev->origin).Normalize ();
+      const Vector &betweenResult = ((Vector (betweenNade.y, betweenNade.x, 0) * 150.0 + entityOrigin) - pev->origin).Normalize ();
 
       if ((betweenNade | betweenUs) > (betweenNade | betweenResult))
          return true;
@@ -527,26 +670,29 @@ void Bot::FindItem (void)
    bool allowPickup = false;
    float distance, minDistance = 341.0;
 
+   const float searchRadius = 340.0f;
 
    if (!IsEntityNull (m_pickupItem))
    {
       bool itemExists = false;
       pickupItem = m_pickupItem;
 
-      while (!IsEntityNull (ent = FIND_ENTITY_IN_SPHERE (ent, pev->origin, 340.0)))
+      while (!IsEntityNull (ent = FIND_ENTITY_IN_SPHERE (ent, pev->origin, searchRadius)))
       {
          if ((ent->v.effects & EF_NODRAW) || IsValidPlayer (ent->v.owner))
-            continue; // someone owns this weapon or it hasn't respawned yet
+            continue; // someone owns this weapon or it hasn't re spawned yet
 
          if (ent == pickupItem)
          {
             if (ItemIsVisible (GetEntityOrigin (ent), const_cast <char *> (STRING (ent->v.classname))))
                itemExists = true;
+
             break;
          }
       }
       if (itemExists)
          return;
+
       else
       {
          m_pickupItem = NULL;
@@ -565,7 +711,7 @@ void Bot::FindItem (void)
    m_pickupItem = NULL;
    m_pickupType = PICKUP_NONE;
 
-   while (!IsEntityNull (ent = FIND_ENTITY_IN_SPHERE (ent, pev->origin, 340.0)))
+   while (!IsEntityNull (ent = FIND_ENTITY_IN_SPHERE (ent, pev->origin, searchRadius)))
    {
       allowPickup = false;  // assume can't use it until known otherwise
 
@@ -659,7 +805,7 @@ void Bot::FindItem (void)
                if (pickupType == PICKUP_DROPPED_C4)
                {
                   allowPickup = true;
-                  m_destOrigin = entityOrigin; // ensure we reached droped bomb
+                  m_destOrigin = entityOrigin; // ensure we reached dropped bomb
 
                   ChatterMessage (Chatter_FoundC4); // play info about that
                   DeleteSearchNodes ();
@@ -849,7 +995,7 @@ void Bot::GetCampDirection (Vector *dest)
    // mostly used for getting a good camping direction vector if not camping on a camp waypoint
 
    TraceResult tr;
-   Vector src = EyePosition ();
+   const Vector &src = EyePosition ();
 
    TraceLine (src, *dest, true, GetEntity (), &tr);
 
@@ -1850,141 +1996,7 @@ void Bot::SetConditions (void)
             m_aimFlags |= AIM_LAST_ENEMY;
       }
    }
-
-   // check if throwing a grenade is a good thing to do...
-   if (m_lastEnemy != NULL && !yb_ignore_enemies.GetBool() && !yb_jasonmode.GetBool() && m_grenadeCheckTime < GetWorldTime() && !m_isUsingGrenade && GetTaskId() != TASK_PLANTBOMB && GetTaskId() != TASK_DEFUSEBOMB && !m_isReloading && IsAlive(m_lastEnemy))
-   {
-      // check again in some seconds
-      m_grenadeCheckTime = GetWorldTime () + yb_timergrenade.GetFloat ();
-
-      // check if we have grenades to throw
-      int grenadeToThrow = CheckGrenades ();
-
-      // if we don't have grenades no need to check it this round again
-      if (grenadeToThrow == -1)
-      {
-         m_grenadeCheckTime = GetWorldTime () + 15.0; // changed since, conzero can drop grens from dead players
-         m_states &= ~(STATE_THROW_HE | STATE_THROW_FB | STATE_THROW_SG);
-      }
-      else
-      {
-         // care about different types of grenades
-         if ((grenadeToThrow == WEAPON_EXPLOSIVE || grenadeToThrow == WEAPON_SMOKE) && Random.Long (0, 100) < 45 && !(m_states & (STATE_SEEING_ENEMY | STATE_THROW_HE | STATE_THROW_FB | STATE_THROW_SG)))
-         {
-            float distance = (m_lastEnemy->v.origin - pev->origin).GetLength ();
-
-            // is enemy to high to throw
-            if ((m_lastEnemy->v.origin.z > (pev->origin.z + 650.0)) || !(m_lastEnemy->v.flags & (FL_ONGROUND | FL_DUCKING)))
-               distance = FLT_MAX; // just some crazy value
-
-            // enemy is within a good throwing distance ?               
-            if (distance > (grenadeToThrow == WEAPON_SMOKE ? 400 : 600) && distance <= 1000)
-            {
-               // care about different types of grenades
-               if (grenadeToThrow == WEAPON_EXPLOSIVE)
-               {
-                  bool allowThrowing = true;
-
-                  // check for teammates
-                  if (GetNearbyFriendsNearPosition (m_lastEnemy->v.origin, 256) > 0)
-                     allowThrowing = false;
-
-                  if (allowThrowing && m_seeEnemyTime + 2.0 < GetWorldTime ())
-                  {
-                     Vector enemyPredict = ((m_lastEnemy->v.velocity * 0.5).SkipZ () + m_lastEnemy->v.origin);
-                     int searchTab[4], count = 4;
-
-                     float searchRadius = m_lastEnemy->v.velocity.GetLength2D ();
-
-                     // check the search radius
-                     if (searchRadius < 128.0)
-                        searchRadius = 128.0;
-
-                     // search waypoints
-                     g_waypoint->FindInRadius (enemyPredict, searchRadius, searchTab, &count);
-
-                     while (count > 0)
-                     {
-                        allowThrowing = true;
-
-                        // check the throwing
-                        m_throw = g_waypoint->GetPath (searchTab[count--])->origin;
-                        Vector src = CheckThrow (EyePosition (), m_throw);
-
-                        if (src.GetLengthSquared () < 100.0)
-                           src = CheckToss (EyePosition (), m_throw);
-
-                        if (src == nullvec)
-                           allowThrowing = false;
-                        else
-                           break;
-                     }
-                  }
-
-                  // start explosive grenade throwing?
-                  if (allowThrowing)
-                     m_states |= STATE_THROW_HE;
-                  else
-                     m_states &= ~STATE_THROW_HE;
-               }
-               else if (grenadeToThrow == WEAPON_SMOKE)
-               {
-                  // start smoke grenade throwing?
-                  if ((m_states & STATE_SEEING_ENEMY) && GetShootingConeDeviation (m_enemy, &pev->origin) >= 0.70 && m_seeEnemyTime + 2.0 < GetWorldTime ())
-                     m_states &= ~STATE_THROW_SG;
-                  else
-                     m_states |= STATE_THROW_SG;
-               }
-            }
-         }
-         else if (IsAlive (m_lastEnemy) && grenadeToThrow == WEAPON_FLASHBANG && (m_lastEnemy->v.origin - pev->origin).GetLength () < 800 && !(m_aimFlags & AIM_ENEMY) && Random.Long (0, 100) < 50)
-         {
-            bool allowThrowing = true;
-            Array <int> inRadius;
-
-            g_waypoint->FindInRadius (inRadius, 256, m_lastEnemy->v.origin + (m_lastEnemy->v.velocity * 0.5).SkipZ ());
-
-            IterateArray (inRadius, i)
-            {
-               Path *path = g_waypoint->GetPath (i);
-
-               if (GetNearbyFriendsNearPosition (path->origin, 256) != 0 || !(m_difficulty == 4 && GetNearbyFriendsNearPosition (path->origin, 256) != 0))
-                  continue;
-
-               m_throw = path->origin;
-               Vector src = CheckThrow (EyePosition (), m_throw);
-
-               if (src.GetLengthSquared () < 100)
-                  src = CheckToss (EyePosition (), m_throw);
-
-               if (src == nullvec)
-                  continue;
-
-               allowThrowing = true;
-               break;
-            }
-
-            // start concussion grenade throwing?
-            if (allowThrowing  && m_seeEnemyTime + 2.0 < GetWorldTime ())
-               m_states |= STATE_THROW_FB;
-            else
-               m_states &= ~STATE_THROW_FB;
-         }
-
-         if (m_states & STATE_THROW_HE)
-            StartTask (TASK_THROWHEGRENADE, TASKPRI_THROWGRENADE, -1, GetWorldTime () + 3.0, false);
-         else if (m_states & STATE_THROW_FB)
-            StartTask (TASK_THROWFLASHBANG, TASKPRI_THROWGRENADE, -1, GetWorldTime () + 3.0, false);
-         else if (m_states & STATE_THROW_SG)
-            StartTask (TASK_THROWSMOKE, TASKPRI_THROWGRENADE, -1, GetWorldTime () + 3.0, false);
-
-         // delay next grenade throw
-         if (m_states & (STATE_THROW_HE | STATE_THROW_FB | STATE_THROW_SG))
-            m_grenadeCheckTime = GetWorldTime () + MAX_GRENADE_TIMER;
-      }
-   }
-   else
-      m_states &= ~(STATE_THROW_HE | STATE_THROW_FB | STATE_THROW_SG);
+   CheckGrenadeThrow ();
 
    // check if there are items needing to be used/collected
    if (m_itemCheckTime < GetWorldTime () || !IsEntityNull (m_pickupItem))
@@ -2078,7 +2090,7 @@ void Bot::SetConditions (void)
 
       // if half of the round is over, allow hunting
       // FIXME: it probably should be also team/map dependant
-      if (IsEntityNull (m_enemy) && (g_timeRoundMid < GetWorldTime ()) && !m_isUsingGrenade && m_currentWaypointIndex != g_waypoint->FindNearest (m_lastEnemyOrigin) && m_personality != PERSONALITY_CAREFUL)
+      if (IsEntityNull (m_enemy) && g_timeRoundMid < GetWorldTime () && !m_isUsingGrenade && m_currentWaypointIndex != g_waypoint->FindNearest (m_lastEnemyOrigin) && m_personality != PERSONALITY_CAREFUL)
       {
          desireLevel = 4096.0 - ((1.0 - tempAgression) * distance);
          desireLevel = (100 * desireLevel) / 4096.0;
@@ -2098,7 +2110,7 @@ void Bot::SetConditions (void)
       g_taskFilters[TASK_HUNTENEMY].desire = 0;
    }
 
-   // blinded behaviour
+   // blinded behavior
    if (m_blindTime > GetWorldTime ())
       g_taskFilters[TASK_BLINDED].desire = TASKPRI_BLINDED;
    else
@@ -2135,7 +2147,7 @@ void Bot::SetConditions (void)
    if (!m_tasks.IsEmpty ())
    {
       final = MaxDesire (final, GetTask ());
-      StartTask (final->id, final->desire, final->data, final->time, final->resume); // push the final behaviour in our task stack to carry out
+      StartTask (final->id, final->desire, final->data, final->time, final->resume); // push the final behavior in our task stack to carry out
    }
 }
 
@@ -3001,7 +3013,7 @@ void Bot::ChooseAimDirection (void)
          {
             if ((g_experienceData + (index * g_numWaypoints) + index)->team0DangerIndex != -1)
             {
-               Vector dest = g_waypoint->GetPath ((g_experienceData + (index * g_numWaypoints) + index)->team0DangerIndex)->origin;
+               const Vector &dest = g_waypoint->GetPath ((g_experienceData + (index * g_numWaypoints) + index)->team0DangerIndex)->origin;
                TraceLine (pev->origin, dest, true, GetEntity (), &tr);
 
                if (tr.flFraction > 0.8 || tr.pHit != g_worldEdict)
@@ -3012,7 +3024,7 @@ void Bot::ChooseAimDirection (void)
          {
             if ((g_experienceData + (index * g_numWaypoints) + index)->team1DangerIndex != -1)
             {
-               Vector dest = g_waypoint->GetPath ((g_experienceData + (index * g_numWaypoints) + index)->team1DangerIndex)->origin;
+               const Vector &dest = g_waypoint->GetPath ((g_experienceData + (index * g_numWaypoints) + index)->team1DangerIndex)->origin;
                TraceLine (pev->origin, dest, true, GetEntity (), &tr);
 
                if (tr.flFraction > 0.8 || tr.pHit != g_worldEdict)
@@ -3728,7 +3740,7 @@ void Bot::RunTask (void)
             int foundPoints[3];
             int distanceTab[3];
 
-            Vector dotA = (destination - pev->origin).Normalize2D ();
+            const Vector &dotA = (destination - pev->origin).Normalize2D ();
 
             for (i = 0; i < g_numWaypoints; i++)
             {
@@ -3736,7 +3748,7 @@ void Bot::RunTask (void)
                if (!g_waypoint->IsVisible (m_currentWaypointIndex, i) || (i == m_currentWaypointIndex))
                   continue;
 
-               Vector dotB = (g_waypoint->GetPath (i)->origin - pev->origin).Normalize2D ();
+               const Vector &dotB = (g_waypoint->GetPath (i)->origin - pev->origin).Normalize2D ();
 
                if ((dotA | dotB) > 0.9)
                {
@@ -4254,9 +4266,13 @@ void Bot::RunTask (void)
       else
       {
          edict_t *ent = NULL;
+         Array <entity_t> activeGrenades = g_botManager->GetActiveGrenades ();
 
-         while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
+         // find all grenades on the map
+         IterateArray (activeGrenades, it)
          {
+            ent = activeGrenades[it];
+
             if (ent->v.owner == GetEntity () && strcmp (STRING (ent->v.model) + 9, "hegrenade.mdl") == 0)
             {
                // set the correct velocity for the grenade
@@ -4320,8 +4336,13 @@ void Bot::RunTask (void)
       else
       {
          edict_t *ent = NULL;
-         while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
+         Array <entity_t> activeGrenades = g_botManager->GetActiveGrenades ();
+
+         // find all grenades on the map
+         IterateArray (activeGrenades, it)
          {
+            ent = activeGrenades[it];
+
             if (ent->v.owner == GetEntity () && strcmp (STRING (ent->v.model) + 9, "flashbang.mdl") == 0)
             {
                // set the correct velocity for the grenade
@@ -4907,10 +4928,10 @@ void Bot::BotAI (void)
    SetIdealReactionTimes ();
 
    // calculate 2 direction vectors, 1 without the up/down component
-   Vector directionOld = m_destOrigin - (pev->origin + pev->velocity * m_frameInterval);
+   const Vector &directionOld = m_destOrigin - (pev->origin + pev->velocity * m_frameInterval);
    Vector directionNormal = directionOld.Normalize ();
 
-   Vector direction = directionNormal;
+   const Vector &direction = directionNormal;
    directionNormal.z = 0.0;
 
    m_moveAngles = directionOld.ToAngles ();
@@ -5245,13 +5266,13 @@ void Bot::BotAI (void)
 
             while (node != NULL)
             {
-               Vector srcPath = g_waypoint->GetPath (node->index)->origin;
+               const Vector &srcPath = g_waypoint->GetPath (node->index)->origin;
                node = node->next;
 
                if (node != NULL)
                {
-                  Vector dest = g_waypoint->GetPath (node->index)->origin;
-                  DrawArrow (g_hostEntity, srcPath, dest, 15, 0, 255, 100, 55, 200, 5, 1);
+                  const Vector &dstPath = g_waypoint->GetPath (node->index)->origin;
+                  DrawArrow (g_hostEntity, srcPath, dstPath, 15, 0, 255, 100, 55, 200, 5, 1);
                }
             }
          }
@@ -5634,7 +5655,7 @@ void Bot::DebugMsg (const char *format, ...)
    vsprintf (buffer, format, ap);
    va_end (ap);
 
-   ServerPrintNoTag ("%s: %s", STRING (pev->netname), buffer);
+   ServerPrint ("%s: %s", STRING (pev->netname), buffer);
 
    if (yb_debug.GetInt () >= 3)
       AddLogEntry (false, LL_DEFAULT, "%s: %s", STRING (pev->netname), buffer);
@@ -5744,7 +5765,7 @@ Vector Bot::CheckBombAudible (void)
    if (m_difficulty >= 3)
       return g_waypoint->GetBombPosition();
 
-   Vector bombOrigin = g_waypoint->GetBombPosition ();
+   const Vector &bombOrigin = g_waypoint->GetBombPosition ();
    
    float timeElapsed = ((GetWorldTime () - g_timeBombPlanted) / mp_c4timer.GetFloat ()) * 100;
    float desiredRadius = 768.0;
@@ -5766,7 +5787,7 @@ Vector Bot::CheckBombAudible (void)
    return nullvec;
 }
 
-void Bot::MoveToVector (Vector to)
+void Bot::MoveToVector (const Vector &to)
 {
    if (to == nullvec)
       return;
@@ -5919,7 +5940,7 @@ bool Bot::OutOfBombTimer (void)
    if (timeLeft > 16)
       return false;
 
-   Vector bombOrigin = g_waypoint->GetBombPosition ();
+   const Vector &bombOrigin = g_waypoint->GetBombPosition ();
 
    // for terrorist, if timer is lower than eleven seconds, return true
    if (static_cast <int> (timeLeft) < 16 && m_team == TEAM_TF && (bombOrigin - pev->origin).GetLength () < 1000)
@@ -6109,7 +6130,7 @@ void Bot::EquipInBuyzone (int buyCount)
    }
 }
 
-bool Bot::IsBombDefusing (Vector bombOrigin)
+bool Bot::IsBombDefusing (const Vector &bombOrigin)
 {
    // this function finds if somebody currently defusing the bomb.
 

@@ -1715,7 +1715,7 @@ void Bot::DeleteSearchNodes (void)
    m_chosenGoalIndex = -1;
 }
 
-int Bot::GetAimingWaypoint (Vector targetOriginPos)
+int Bot::GetAimingWaypoint (const Vector &to)
 {
    // return the most distant waypoint which is seen from the Bot to the Target and is within count
 
@@ -1723,7 +1723,7 @@ int Bot::GetAimingWaypoint (Vector targetOriginPos)
       ChangeWptIndex (g_waypoint->FindNearest (pev->origin));
 
    int srcIndex = m_currentWaypointIndex;
-   int destIndex = g_waypoint->FindNearest (targetOriginPos);
+   int destIndex = g_waypoint->FindNearest (to);
    int bestIndex = srcIndex;
 
    PathNode *node = new PathNode;
@@ -2022,7 +2022,7 @@ int Bot::ChooseBombWaypoint (void)
    return goal;
 }
 
-int Bot::FindDefendWaypoint (Vector origin)
+int Bot::FindDefendWaypoint (const Vector &origin)
 {
    // this function tries to find a good position which has a line of sight to a position,
    // provides enough cover point, and is far away from the defending position
@@ -2280,7 +2280,7 @@ int Bot::FindCoverWaypoint (float maxDistance)
 
 bool Bot::GetBestNextWaypoint (void)
 {
-   // this function does a realtime postprocessing of waypoints return from the
+   // this function does a realtime post processing of waypoints return from the
    // pathfinder, to vary paths and find the best waypoint on our way
 
    InternalAssert (m_navNode != NULL);
@@ -2300,7 +2300,9 @@ bool Bot::GetBestNextWaypoint (void)
 
          if (!IsPointOccupied (id))
          {
+            DebugMsg ("postprocess %d -> %d", m_navNode->index, id);
             m_navNode->index = id;
+            
             return true;
          }
       }
@@ -2324,7 +2326,6 @@ bool Bot::HeadTowardWaypoint (void)
    m_currentTravelFlags = 0; // reset travel flags (jumping etc)
 
    // we're not at the end of the list?
-   // we're not at the end of the list?
    if (m_navNode != NULL)
    {
       // if in between a route, postprocess the waypoint (find better alternatives)...
@@ -2334,7 +2335,7 @@ bool Bot::HeadTowardWaypoint (void)
          m_minSpeed = pev->maxspeed;
 
          // only if we in normal task and bomb is not planted
-         if (GetTaskId () == TASK_NORMAL && m_timeCamping + 30.0f < GetWorldTime () && !g_bombPlanted && m_personality != PERSONALITY_RUSHER && !m_hasC4 && !m_isVIP && m_loosedBombWptIndex == -1 && !HasHostage ())
+         if (GetTaskId () == TASK_NORMAL && g_timeRoundMid + 10.0f < GetWorldTime () && m_timeCamping + 30.0f < GetWorldTime () && !g_bombPlanted && m_personality != PERSONALITY_RUSHER && !m_hasC4 && !m_isVIP && m_loosedBombWptIndex == -1 && !HasHostage ())
          {
             m_campButtons = 0;
 
@@ -2347,7 +2348,7 @@ bool Bot::HeadTowardWaypoint (void)
                kills = (g_experienceData + (waypoint * g_numWaypoints) + waypoint)->team1Damage / g_highestDamageCT;
 
             // if damage done higher than one
-            if (kills > 0.15f && g_timeRoundMid > GetWorldTime ())
+            if (kills > 0.15f && g_timeRoundMid + 15.0f < GetWorldTime ())
             {
                switch (m_personality)
                {
@@ -2887,17 +2888,17 @@ bool Bot::CheckWallOnRight (void)
    return false;
 }
 
-bool Bot::IsDeadlyDrop (Vector targetOriginPos)
+bool Bot::IsDeadlyDrop (const Vector &to)
 {
    // this function eturns if given location would hurt Bot with falling damage
 
    Vector botPos = pev->origin;
    TraceResult tr;
 
-   Vector move ((targetOriginPos - botPos).ToYaw (), 0, 0);
+   Vector move ((to - botPos).ToYaw (), 0, 0);
    MakeVectors (move);
 
-   Vector direction = (targetOriginPos - botPos).Normalize ();  // 1 unit long
+   Vector direction = (to - botPos).Normalize ();  // 1 unit long
    Vector check = botPos;
    Vector down = botPos;
 
@@ -2911,7 +2912,7 @@ bool Bot::IsDeadlyDrop (Vector targetOriginPos)
    float height;
    float lastHeight = tr.flFraction * 1000.0;  // height from ground
 
-   float distance = (targetOriginPos - check).GetLength ();  // distance from goal
+   float distance = (to - check).GetLength ();  // distance from goal
 
    while (distance > 16.0)
    {
@@ -2931,7 +2932,7 @@ bool Bot::IsDeadlyDrop (Vector targetOriginPos)
          return true;
 
       lastHeight = height;
-      distance = (targetOriginPos - check).GetLength ();  // distance from goal
+      distance = (to - check).GetLength ();  // distance from goal
    }
    return false;
 }
@@ -3236,11 +3237,11 @@ void Bot::FacePosition (void)
    pev->angles.z = pev->v_angle.z = 0.0; // ignore Z component
 }
 
-void Bot::SetStrafeSpeed (Vector moveDir, float strafeSpeed)
+void Bot::SetStrafeSpeed (const Vector &moveDir, float strafeSpeed)
 {
    MakeVectors (pev->angles);
 
-   Vector los = (moveDir - pev->origin).Normalize2D ();
+   const Vector &los = (moveDir - pev->origin).Normalize2D ();
    float dot = los | g_pGlobals->v_forward.SkipZ ();
 
    if (dot > 0 && !CheckWallOnRight ())
@@ -3290,7 +3291,7 @@ bool Bot::IsPointOccupied (int index)
       // check if this waypoint is already used
       if (IsAlive (bot->GetEntity ()))
       {
-         if ((GetShootingConeDeviation (bot->GetEntity (), &pev->origin) >= 0.7 ? bot->m_prevWptIndex[0] : m_currentWaypointIndex) == index || bot->GetTask ()->data == index || (g_waypoint->GetPath (index)->origin - bot->pev->origin).GetLength2D () < 96.0)
+         if ((GetShootingConeDeviation (bot->GetEntity (), &pev->origin) >= 0.7 ? bot->m_prevWptIndex[0] : m_currentWaypointIndex) == index || bot->GetTask ()->data == index)
             return true;
       }
    }

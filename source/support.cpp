@@ -145,7 +145,7 @@ Vector GetEntityOrigin (edict_t *ent)
       return nullvec;
 
    if (ent->v.origin == nullvec)
-      return ent->v.absmin + (ent->v.size * 0.5);
+      return ent->v.absmin + ent->v.size * 0.5;
 
    return ent->v.origin;
 }
@@ -769,7 +769,7 @@ void RoundInit (void)
 
    // calculate the round mid/end in world time
    g_timeRoundStart = GetWorldTime () + mp_freezetime.GetFloat ();
-   g_timeRoundMid = g_timeRoundStart + mp_roundtime.GetFloat () * 60 / 2;
+   g_timeRoundMid = g_timeRoundStart + mp_roundtime.GetFloat () * 60 * 0.5f;
    g_timeRoundEnd = g_timeRoundStart + mp_roundtime.GetFloat () * 60;
 }
 
@@ -881,19 +881,8 @@ void ServerPrint (const char *format, ...)
    vsprintf (string, g_localizer->TranslateInput (format), ap);
    va_end (ap);
 
-   SERVER_PRINT (FormatBuffer ("%s\n", string));
-}
-
-void ServerPrintNoTag (const char *format, ...)
-{
-   va_list ap;
-   char string[3072];
-
-   va_start (ap, format);
-   vsprintf (string, g_localizer->TranslateInput (format), ap);
-   va_end (ap);
-
-   SERVER_PRINT (FormatBuffer ("%s\n", string));
+   SERVER_PRINT (string);
+   SERVER_PRINT ("\n");
 }
 
 void CenterPrint (const char *format, ...)
@@ -954,7 +943,7 @@ void ClientPrint (edict_t *ent, int dest, const char *format, ...)
       if (dest & 0x3ff)
          ServerPrint (string);
       else
-         ServerPrintNoTag (string);
+         ServerPrint (string);
 
       return;
    }
@@ -1206,7 +1195,7 @@ void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
    }
 
    if (outputToConsole)
-      ServerPrintNoTag ("%s%s", levelString, buffer);
+      ServerPrint ("%s%s", levelString, buffer);
 
    // now check if logging disabled
    if (!(logLevel & LL_IGNORE))
