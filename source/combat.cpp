@@ -691,7 +691,7 @@ WeaponSelectEnd:
 
    if (HasShield () && m_shieldCheckTime < GetWorldTime () && GetTaskId () != TASK_CAMP) // better shield gun usage
    {
-      if ((distance >= 750) && !IsShieldDrawn ())
+      if (distance >= 750 && !IsShieldDrawn ())
          pev->button |= IN_ATTACK2; // draw the shield
       else if (IsShieldDrawn () || (!IsEntityNull (m_enemy) && (m_enemy->v.button & IN_RELOAD) || !IsEnemyViewable(m_enemy)))
          pev->button |= IN_ATTACK2; // draw out the shield
@@ -719,7 +719,7 @@ WeaponSelectEnd:
          m_navTimeset = GetWorldTime ();
       }
    }
-   else if (UsesZoomableRifle () && m_zoomCheckTime < GetWorldTime () && m_difficulty < 3) // else is the bot holding a zoomable rifle?
+   else if (UsesZoomableRifle () && m_zoomCheckTime < GetWorldTime () && m_difficulty <= 3) // else is the bot holding a zoomable rifle?
    {
       if (distance > 800 && pev->fov >= 90) // should the bot switch to zoomed mode?
          pev->button |= IN_ATTACK2;
@@ -751,9 +751,9 @@ WeaponSelectEnd:
    {
       if (selectId == WEAPON_KNIFE)
       {
-         if (distance < 102.0f)
+         if (distance < 99.0f)
          {
-            if (Random.Long (1, 100) < 30)
+            if (Random.Long (1, 100) < 15 || HasShield ())
                pev->button |= IN_ATTACK; // use primary attack
             else
                pev->button |= IN_ATTACK2; // use secondary attack
@@ -761,28 +761,14 @@ WeaponSelectEnd:
       }    
       else
       {
-        LookupEnemy();
+        LookupEnemy ();
         
          if (selectTab[chosenWeaponIndex].primaryFireHold && m_ammo[g_weaponDefs[selectTab[selectIndex].id].ammo1] >= selectTab[selectIndex].minPrimaryAmmo) // if automatic weapon, just press attack
-         {
-            if (!IsEnemyProtectedByShield(m_lastEnemy))
-            {
-               pev->button &= ~IN_ATTACK;
-               LookupEnemy();
-            }
             pev->button |= IN_ATTACK;
-         }
          else // if not, toggle buttons
          {       
-            if ((pev->oldbuttons & IN_ATTACK) == 0)
-            {
-               if (!IsEnemyProtectedByShield (m_lastEnemy))
-               {
-                  pev->button &= ~IN_ATTACK;
-                  LookupEnemy();         
-               }                 
+            if ((pev->oldbuttons & IN_ATTACK) == 0)      
                pev->button |= IN_ATTACK;
-            }
          }
       }
 
@@ -803,21 +789,10 @@ WeaponSelectEnd:
          m_shootTime = GetWorldTime ();
          m_zoomCheckTime = GetWorldTime ();
     
-       
-         if (!IsEnemyProtectedByShield(m_lastEnemy))
-         {
-            pev->button &= ~IN_ATTACK;
-            LookupEnemy();
-         }
          pev->button |= IN_ATTACK;  // use primary attack      
       }
       else
       {
-         if (!IsEnemyProtectedByShield(m_lastEnemy))
-         {  
-            pev->button &= ~IN_ATTACK;
-            LookupEnemy();
-         } 
          pev->button |= IN_ATTACK;
 
          m_shootTime = GetWorldTime () + baseDelay + Random.Float (minDelay, maxDelay);
@@ -869,7 +844,7 @@ void Bot::FocusEnemy (void)
    {
       if (m_currentWeapon == WEAPON_KNIFE)
       {
-         if (distance <= 80.0f)
+         if (distance <= 99.0f)
             m_wantsToFire = true;
       }
       else
