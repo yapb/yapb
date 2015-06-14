@@ -108,10 +108,12 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          "------------------------------------------------\n"
          "Name: %s\n"
          "Version: %s (Build: %u)\n"
-         "Compiled: %s, %s tz: +3\n"
+         "Compiled: %s, %s\n"
+         "Git Hash: %s\n"
+         "Git Commit Author: %s\n"
          "------------------------------------------------";
 
-      ClientPrint (ent, print_console, versionData, PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), __DATE__, __TIME__);
+      ClientPrint (ent, print_console, versionData, PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), __DATE__, __TIME__, PRODUCT_GIT_HASH, PRODUCT_GIT_COMMIT_AUTHOR);
    }
 
    // display some sort of help information

@@ -116,6 +116,9 @@ bool Bot::CheckVisibility (edict_t *target, Vector *origin, byte *bodyPart)
    {
       *bodyPart |= VISIBLE_BODY;
       *origin = target->v.origin;
+
+      if (m_difficulty == 4)
+         origin->z += 3.0f;
    }
 
    // check for the head
@@ -125,6 +128,9 @@ bool Bot::CheckVisibility (edict_t *target, Vector *origin, byte *bodyPart)
    {
       *bodyPart |= VISIBLE_HEAD;
       *origin = target->v.origin + target->v.view_ofs;
+
+      if (m_difficulty == 4)
+         origin->z += 1.0f;
    }
 
    if (*bodyPart != 0)
@@ -670,7 +676,7 @@ void Bot::FindItem (void)
    // this function finds Items to collect or use in the near of a bot
 
    // don't try to pickup anything while on ladder or trying to escape from bomb...
-   if (IsOnLadder () || GetTaskId () == TASK_ESCAPEFROMBOMB)
+   if (IsOnLadder () || GetTaskId () == TASK_ESCAPEFROMBOMB || yb_jasonmode.GetBool ())
    {
       m_pickupItem = NULL;
       m_pickupType = PICKUP_NONE;
@@ -2369,7 +2375,7 @@ bool Bot::LastEnemyShootable (void)
    if (!(m_aimFlags & AIM_LAST_ENEMY) || IsEntityNull (m_lastEnemy) || GetTaskId () == TASK_PAUSE || m_lastEnemyOrigin != nullvec)
       return false;
 
-   return GetShootingConeDeviation (GetEntity (), &m_lastEnemyOrigin) >= 0.90 && IsShootableThruObstacle (m_lastEnemy->v.origin);
+   return GetShootingConeDeviation (GetEntity (), &m_lastEnemyOrigin) >= 0.90 && IsShootableThruObstacle (m_lastEnemyOrigin);
 }
 
 void Bot::CheckRadioCommands (void)
@@ -4679,7 +4685,7 @@ void Bot::RunTask (void)
       case PICKUP_PLANTED_C4:
          m_aimFlags |= AIM_ENTITY;
 
-         if (m_team == TEAM_CF && itemDistance < 55)
+         if (m_team == TEAM_CF && itemDistance < 80.0f)
          {
             ChatterMessage (Chatter_DefusingC4);
 
@@ -4797,8 +4803,15 @@ void Bot::CheckSpawnTimeConditions (void)
          StartTask (TASK_SPRAY, TASKPRI_SPRAYLOGO, -1, GetWorldTime () + 1.0, false);
 
       if (m_difficulty >= 2 && Random.Long (0, 100) < (m_personality == PERSONALITY_RUSHER ? 99 : 50) && !m_isReloading && (g_mapType & (MAP_CS | MAP_DE | MAP_ES | MAP_AS)))
-         SelectWeaponByName ("weapon_knife");
-
+      {
+         if (yb_jasonmode.GetBool ())
+         {
+            SelectPistol ();
+            FakeClientCommand (GetEntity (), "drop");
+         }
+         else
+            SelectWeaponByName ("weapon_knife");
+      }
       m_checkKnifeSwitch = false;
 
       if (Random.Long (0, 100) < yb_user_follow_percent.GetInt () && IsEntityNull (m_targetEntity) && !m_isLeader && !m_hasC4)
@@ -6092,12 +6105,8 @@ void Bot::ReactOnSound (void)
          m_states |= STATE_SEEING_ENEMY;
          m_seeEnemyTime = GetWorldTime ();
       }
-      else if (m_lastEnemy == player && m_seeEnemyTime + 1.0 > GetWorldTime () && yb_shoots_thru_walls.GetBool () && IsShootableThruObstacle (player->v.origin))
+      else if (m_lastEnemyOrigin != nullvec && m_lastEnemy == player && m_seeEnemyTime + 1.0 > GetWorldTime () && yb_shoots_thru_walls.GetBool () && IsShootableThruObstacle (m_lastEnemyOrigin))
       {
-         m_enemy = player;
-         m_lastEnemy = player;
-         m_lastEnemyOrigin = player->v.origin;
-
          m_states |= STATE_SEEING_ENEMY;
          m_seeEnemyTime = GetWorldTime ();
       }

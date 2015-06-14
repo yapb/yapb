@@ -392,7 +392,7 @@ float Bot::GetZOffset (float distance)
    return result;
 }
 
-bool Bot::IsFriendInLineOfFire (float distance)
+bool Bot::IsFriendInLineOfFire (void)
 {
    // bot can't hurt teammates, if friendly fire is not enabled...
    if (!mp_friendlyfire.GetBool () || yb_csdm_mode.GetInt () > 0)
@@ -401,10 +401,10 @@ bool Bot::IsFriendInLineOfFire (float distance)
    MakeVectors (pev->v_angle);
 
    TraceResult tr;
-   TraceLine (EyePosition (), EyePosition () + pev->v_angle.Normalize () * distance, false, false, GetEntity (), &tr);
+   TraceLine (EyePosition (), EyePosition () + 10000.0f * pev->v_angle, false, false, GetEntity (), &tr);
 
    // check if we hit something
-   if (!IsEntityNull (tr.pHit))
+   if (!IsEntityNull (tr.pHit) && tr.pHit != g_worldEdict)
    {
       int playerIndex = IndexOfEntity (tr.pHit) - 1;
 
@@ -412,7 +412,9 @@ bool Bot::IsFriendInLineOfFire (float distance)
       if (playerIndex >= 0 && playerIndex < GetMaxClients () && g_clients[playerIndex].team == m_team && (g_clients[playerIndex].flags & CF_ALIVE))
          return true;
    }
+   return false;
 
+#if 0
    // search the world for players
    for (int i = 0; i < GetMaxClients (); i++)
    {
@@ -428,6 +430,7 @@ bool Bot::IsFriendInLineOfFire (float distance)
          return true;
    }
    return false;
+#endif
 }
 
 bool Bot::IsShootableThruObstacle (const Vector &dest)
@@ -537,7 +540,7 @@ bool Bot::DoFirePause (float distance, FireDelay *fireDelay)
    float offset = 0.0f;
    const float BurstDistance = 300.0f;
 
-   if (distance < BurstDistance) // KWo - 09.04.2010
+   if (distance < BurstDistance)
       return false;
    else if (distance < 2 * BurstDistance)
       offset = 10.0;
@@ -583,8 +586,16 @@ void Bot::FireWeapon (void)
    }
 
    // or if friend in line of fire, stop this too but do not update shoot time
-   if (!IsEntityNull (m_enemy) && IsFriendInLineOfFire (distance))
-      return;
+   if (!IsEntityNull (m_enemy))
+   {
+      if (IsFriendInLineOfFire ())
+      {
+         m_fightStyle = 1;
+         m_lastFightStyleCheck = GetWorldTime ();
+
+         return;
+      }
+   }
 
    FireDelay *delay = &g_fireDelay[0];
    WeaponSelect *selectTab = &g_weaponSelect[0];
@@ -751,7 +762,7 @@ WeaponSelectEnd:
    {
       if (selectId == WEAPON_KNIFE)
       {
-         if (distance < 99.0f)
+         if (distance < 64.0f)
          {
             if (Random.Long (1, 100) < 15 || HasShield ())
                pev->button |= IN_ATTACK; // use primary attack
@@ -798,7 +809,6 @@ WeaponSelectEnd:
          m_shootTime = GetWorldTime () + baseDelay + Random.Float (minDelay, maxDelay);
          m_zoomCheckTime = GetWorldTime ();
       }
-     
    }
 }
 
@@ -844,7 +854,7 @@ void Bot::FocusEnemy (void)
    {
       if (m_currentWeapon == WEAPON_KNIFE)
       {
-         if (distance <= 99.0f)
+         if (distance <= 80.0f)
             m_wantsToFire = true;
       }
       else
@@ -942,7 +952,7 @@ void Bot::CombatFight (void)
       else
          m_moveSpeed = pev->maxspeed;
 
-      if (distance < 96)
+      if (distance < 96 && m_currentWeapon != WEAPON_KNIFE)
          m_moveSpeed = -pev->maxspeed;
 
       if (UsesSniper ())
@@ -988,10 +998,6 @@ void Bot::CombatFight (void)
          }
       }
 
-      // if there is a friend between us and enemy, do a strafe movement
-      if (m_lastFightStyleCheck + 2.5f < GetWorldTime () && IsFriendInLineOfFire (distance))
-         m_fightStyle = 0;
-
       if ((m_difficulty >= 1 && m_fightStyle == 0) || ((pev->button & IN_RELOAD) || m_isReloading) || (UsesPistol () && distance < 400.0f))
       {
          if (m_strafeSetTime < GetWorldTime ())
@@ -999,8 +1005,8 @@ void Bot::CombatFight (void)
             // to start strafing, we have to first figure out if the target is on the left side or right side
             MakeVectors (m_enemy->v.v_angle);
 
-            Vector dirToPoint = (pev->origin - m_enemy->v.origin).Normalize2D ();
-            Vector rightSide = g_pGlobals->v_right.Normalize2D ();
+            const Vector &dirToPoint = (pev->origin - m_enemy->v.origin).Normalize2D ();
+            const Vector &rightSide = g_pGlobals->v_right.Normalize2D ();
 
             if ((dirToPoint | rightSide) < 0)
                m_combatStrafeDir = 1;
@@ -1039,6 +1045,9 @@ void Bot::CombatFight (void)
 
          if (m_moveSpeed > 0.0 && distance > 150.0 && m_currentWeapon != WEAPON_KNIFE)
             m_moveSpeed = 0.0;
+
+         if (m_currentWeapon == WEAPON_KNIFE)
+            m_strafeSpeed = 0.0f;
       }
       else if (m_fightStyle == 1)
       {

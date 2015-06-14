@@ -3288,7 +3288,7 @@ bool Bot::IsPointOccupied (int index)
       // check if this waypoint is already used
       if (IsAlive (bot->GetEntity ()))
       {
-         if ((GetShootingConeDeviation (bot->GetEntity (), &pev->origin) >= 0.7 ? bot->m_prevWptIndex[0] : m_currentWaypointIndex) == index || bot->GetTask ()->data == index)
+         if ((GetShootingConeDeviation (bot->GetEntity (), &pev->origin) >= 0.7f ? bot->m_prevWptIndex[0] : m_currentWaypointIndex) == index || bot->GetTask ()->data == index)
             return true;
       }
    }
@@ -3307,7 +3307,7 @@ edict_t *Bot::FindNearestButton (const char *targetName)
    edict_t *searchEntity = NULL, *foundEntity = NULL;
 
    // find the nearest button which can open our target
-   while (!IsEntityNull(searchEntity = FIND_ENTITY_BY_TARGET(searchEntity, targetName)))
+   while (!IsEntityNull(searchEntity = FIND_ENTITY_BY_TARGET (searchEntity, targetName)))
    {
       Vector entityOrign = GetEntityOrigin (searchEntity);
 

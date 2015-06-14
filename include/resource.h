@@ -25,4 +25,5 @@
 #define PRODUCT_SUPPORT_VERSION "1.0 - CZ"
 #define PRODUCT_COMMENTS "http://github.com/jeefo/yapb/"
 #define PRODUCT_DATE __DATE__
-
+#define PRODUCT_GIT_HASH "unspecified_hash"
+#define PRODUCT_GIT_COMMIT_AUTHOR "unspecified_author"

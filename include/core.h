@@ -1070,7 +1070,7 @@ private:
 
    void SelectBestWeapon (void);
    void SelectPistol (void);
-   bool IsFriendInLineOfFire (float distance);
+   bool IsFriendInLineOfFire (void);
    bool IsGroupOfEnemies (const Vector &location, int numEnemies = 1, int radius = 256);
 
    bool IsShootableThruObstacle (const Vector &dest);
