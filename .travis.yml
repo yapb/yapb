@@ -8,6 +8,7 @@ before_script:
   - sudo mkdir -p /tmp/osxcross/target
   - sudo tar xzf /tmp/osxcross.tgz -C /tmp/osxcross/target/
   - export PATH=$PATH:/tmp/osxcross/target/bin
+  - wget http://yapb.jeefo.net/ci/scripts/gitrev.sh && chmod +x ./gitrev.sh && ./gitrev.sh
 script:
   - cd project && make all
 after_success:
