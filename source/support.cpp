@@ -216,7 +216,7 @@ void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex)
    static Array <String> logotypes;
 
    if (logotypes.IsEmpty ())
-      logotypes = String ("{biohaz;{graf004;{graf005;{lambda06;{target;{hand1").Split (";");
+      logotypes = String ("{biohaz;{graf003;{graf004;{graf005;{lambda06;{target;{hand1;{spit2;{bloodhand6;{foot_l;{foot_r").Split (";");
 
    int entityIndex = -1, message = TE_DECAL;
    int decalIndex = (*g_engfuncs.pfnDecalIndex) (logotypes[logotypeIndex].GetBuffer ());
