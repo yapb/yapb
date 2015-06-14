@@ -290,7 +290,7 @@ MenuText g_menus[21] =
       "2. Average\v"
       "3. Normal\v"
       "4. Professional\v"
-      "4. Godlike\v"
+      "5. Godlike\v\v"
       "0. Exit"
    },
 
