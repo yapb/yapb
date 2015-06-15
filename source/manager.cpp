@@ -1217,7 +1217,7 @@ void Bot::StartGame (void)
 
 void BotManager::CalculatePingOffsets (void)
 {
-   if (yb_latency_display.GetInt () != 2)
+   if (g_gameVersion == CSV_OLD || yb_latency_display.GetInt () != 2)
       return;
 
    int averagePing = 0;
@@ -1277,7 +1277,7 @@ void BotManager::CalculatePingOffsets (void)
 
 void BotManager::SendPingDataOffsets (edict_t *to)
 {
-   if (yb_latency_display.GetInt () != 2)
+   if (g_gameVersion == CSV_OLD || yb_latency_display.GetInt () != 2)
       return;
 
    if (IsEntityNull (to))
