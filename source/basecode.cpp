@@ -29,7 +29,7 @@ ConVar yb_timerpickup ("yb_timerpickup", "0.5", VT_NOSERVER);
 ConVar yb_timergrenade ("yb_timergrenade", "0.5", VT_NOSERVER);
 
 ConVar yb_chatter_path ("yb_chatter_path", "sound/radio/bot", VT_NOSERVER);
-ConVar yb_restricted_weapons ("yb_restricted_weapons", "ump45;elite;tmp;mac10;m3;xm1014");
+ConVar yb_restricted_weapons ("yb_restricted_weapons", "");
 
 // game console variables
 ConVar mp_c4timer ("mp_c4timer", NULL, VT_NOREGISTER);

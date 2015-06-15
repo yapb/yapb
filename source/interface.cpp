@@ -482,7 +482,7 @@ void ParseVoiceEvent (const String &base, int type, float timeToRepeat)
 void InitConfig (void)
 {
    File fp;
-   char line[256];
+   char line[512];
 
    KeywordFactory replyKey;
 
@@ -812,7 +812,7 @@ void InitConfig (void)
             PARSE_VOICE_EVENT (Chatter_CoverMe, 3.5);
             PARSE_VOICE_EVENT (Chatter_BehindSmoke, 3.5);
             PARSE_VOICE_EVENT (Chatter_BombSiteSecured, 3.5);
-       }
+         }
       }
       fp.Close ();
    }
