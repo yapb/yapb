@@ -1164,7 +1164,7 @@ void Bot::ChatterMessage (int message)
 {
    // this function inserts the voice message into the message queue (mostly same as above)
 
-   if (yb_communication_type.GetInt () != 2 || g_chatterFactory[message].IsEmpty () || GetNearbyFriendsNearPosition (pev->origin, 9999) == 0)
+   if (g_gameVersion == CSV_OLD || yb_communication_type.GetInt () != 2 || g_chatterFactory[message].IsEmpty () || GetNearbyFriendsNearPosition (pev->origin, 9999) == 0)
       return;
 
    bool shouldExecute = false;
@@ -6127,8 +6127,13 @@ void Bot::EquipInBuyzone (int buyCount)
 {
    // this function is gets called when bot enters a buyzone, to allow bot to buy some stuff
 
+   bool checkBuyTime = false;
+
+   if (mp_buytime.m_eptr != NULL)
+      checkBuyTime = (g_timeRoundStart + Random.Float (10.0, 20.0) + mp_buytime.GetFloat () < GetWorldTime ());
+
    // if bot is in buy zone, try to buy ammo for this weapon...
-   if (m_lastEquipTime + 15.0 < GetWorldTime () && m_inBuyZone && g_timeRoundStart + Random.Float (10.0, 20.0) + mp_buytime.GetFloat () < GetWorldTime () && !g_bombPlanted && m_moneyAmount > g_botBuyEconomyTable[0])
+   if (m_lastEquipTime + 15.0 < GetWorldTime () && m_inBuyZone && checkBuyTime && !g_bombPlanted && m_moneyAmount > g_botBuyEconomyTable[0])
    {
       m_buyingFinished = false;
       m_buyState = buyCount;
