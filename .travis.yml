@@ -1,4 +1,7 @@
 language: cpp
+branches:
+  only:
+    - master
 compiler:
   - clang
 before_script:
