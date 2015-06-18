@@ -186,22 +186,6 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       }
    }
 
-   // some debug routines
-   else if (stricmp (arg0, "debug") == 0)
-   {
-      // test random number generator
-      if (stricmp (arg0, "randgen") == 0)
-      {
-         for (int i = 0; i < 500; i++)
-            ServerPrint ("Result Range[0 - 100]: %d", Random.Long (0, 100));
-      }
-      #if defined (MMGR_H)
-         // dump memory information
-         else if (stricmp (arg0, "memrep") == 0)
-            m_dumpMemoryReport ();
-      #endif
-   }
-
    // waypoint manimupulation (really obsolete, can be edited through menu) (supported only on listen server)
    else if (stricmp (arg0, "waypoint") == 0 || stricmp (arg0, "wp") == 0 || stricmp (arg0, "wpt") == 0)
    {

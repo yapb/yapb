@@ -9,7 +9,7 @@
 
 #include <core.h>
 
-ConVar yb_shoots_thru_walls ("yb_shoots_thru_walls", "1");
+ConVar yb_shoots_thru_walls ("yb_shoots_thru_walls", "2");
 ConVar yb_ignore_enemies ("yb_ignore_enemies", "0");
 ConVar yb_csdm_mode ("yb_csdm_mode", "0", VT_NOSERVER);
 
@@ -128,9 +128,6 @@ bool Bot::LookupEnemy (void)
 
             if (distance < nearestDistance)
             {
-               if (IsEnemyProtectedByShield (player))
-                  continue;
-
                nearestDistance = distance;
                newEnemy = player;
 
@@ -537,6 +534,12 @@ bool Bot::DoFirePause (float distance, FireDelay *fireDelay)
    if (m_firePause > GetWorldTime ())
       return true;
 
+   if ((m_aimFlags & AIM_ENEMY) && m_enemyOrigin != nullvec)
+   {
+      if (IsEnemyProtectedByShield (m_enemy) && GetShootingConeDeviation (GetEntity (), &m_enemyOrigin) > 0.92f)
+         return true;
+   }
+
    float offset = 0.0f;
    const float BurstDistance = 300.0f;
 
@@ -932,9 +935,6 @@ void Bot::CombatFight (void)
          if ((m_states & STATE_SEEING_ENEMY) && !m_hasC4)
             StartTask (TASK_SEEKCOVER, TASKPRI_SEEKCOVER, -1, Random.Long (10, 20), true);
       }
-       // If using sniper do not jump around !
-       if (UsesSniper () && m_states & STATE_SEEING_ENEMY || IsEnemyViewable (m_enemy) && !m_isStuck)
-         pev->button &= ~IN_JUMP;
 
       // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
       if (approach < 30 && !g_bombPlanted && (IsInViewCone (m_enemy->v.origin) || m_isVIP))
@@ -1040,10 +1040,10 @@ void Bot::CombatFight (void)
             }
          }
 
-         if (m_difficulty >= 3 && (m_jumpTime + 5.0 < GetWorldTime () && IsOnFloor () && Random.Long (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.GetLength2D () > 150.0))
+         if (m_difficulty >= 3 && (m_jumpTime + 5.0 < GetWorldTime () && IsOnFloor () && Random.Long (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.GetLength2D () > 150.0) && !UsesSniper ())
             pev->button |= IN_JUMP;
 
-         if (m_moveSpeed > 0.0 && distance > 150.0 && m_currentWeapon != WEAPON_KNIFE)
+         if (m_moveSpeed > 0.0 && distance > 100.0 && m_currentWeapon != WEAPON_KNIFE)
             m_moveSpeed = 0.0;
 
          if (m_currentWeapon == WEAPON_KNIFE)
@@ -1133,7 +1133,7 @@ bool Bot::IsEnemyProtectedByShield (edict_t *enemy)
 {
    // this function returns true, if enemy protected by the shield
 
-   if (IsEntityNull (enemy) || (HasShield () && IsShieldDrawn ()))
+   if (IsEntityNull (enemy) || IsShieldDrawn ())
       return false;
 
    // check if enemy has shield and this shield is drawn

@@ -277,12 +277,12 @@ public:
 
    inline int Long (int low, int high)
    {
-      return static_cast <int> (Random () * (static_cast <double> (high)-static_cast <double> (low)+1.0) / m_divider + static_cast <double> (low));
+      return static_cast <int> (Random () * (static_cast <double> (high) - static_cast <double> (low) + 1.0) / m_divider + static_cast <double> (low));
    }
 
    inline float Float (float low, float high)
    {
-      return static_cast <float> (Random () * (static_cast <double> (high)-static_cast <double> (low)) / (m_divider - 1) + static_cast <double> (low));
+      return static_cast <float> (Random () * (static_cast <double> (high) - static_cast <double> (low)) / (m_divider - 1) + static_cast <double> (low));
    }
 };
 
