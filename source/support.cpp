@@ -289,6 +289,14 @@ void FreeLibraryMemory (void)
    // this function free's all allocated memory
    g_waypoint->Init (); // frees waypoint data
 
+   IterateArray (g_localizer->m_langTab, it)
+   {
+      delete[] g_localizer->m_langTab[it].original;
+      delete[] g_localizer->m_langTab[it].translated;
+   }
+   g_localizer->m_langTab.RemoveAll ();
+
+
    delete [] g_experienceData;
    g_experienceData = NULL;
 }

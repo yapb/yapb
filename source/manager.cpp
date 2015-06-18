@@ -667,7 +667,7 @@ Bot *BotManager::GetHighestFragsBot (int team)
    return GetBot (bestIndex);
 }
 
-void BotManager::CheckTeamEconomics (int team)
+void BotManager::CheckTeamEconomics (int team, bool setTrue)
 {
    // this function decides is players on specified team is able to buy primary weapons by calculating players
    // that have not enough money to buy primary (with economics), and if this result higher 80%, player is can't
@@ -675,7 +675,7 @@ void BotManager::CheckTeamEconomics (int team)
 
    extern ConVar yb_economics_rounds;
 
-   if (!yb_economics_rounds.GetBool ())
+   if (!yb_economics_rounds.GetBool () || setTrue)
    {
       m_economicsGood[team] = true;
       return; // don't check economics while economics disable
@@ -1158,7 +1158,7 @@ void Bot::Kick (void)
 {
    // this function kick off one bot from the server.
 
-   ServerCommand ("kick #%d", GETPLAYERUSERID (GetEntity ()));
+   ServerCommand ("kick \"%s\"", STRING (pev->netname));
    CenterPrint ("Bot '%s' kicked", STRING (pev->netname));
 
    // balances quota

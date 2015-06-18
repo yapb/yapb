@@ -1332,7 +1332,7 @@ public:
 
    void ListBots (void);
    void SetWeaponMode (int selection);
-   void CheckTeamEconomics (int team);
+   void CheckTeamEconomics (int team, bool setTrue = false);
 
    static void CallGameEntity (entvars_t *vars);
    inline void SetDeathMsgState (bool sent)

@@ -490,7 +490,7 @@ void InitConfig (void)
    g_chatFactory.SetSize (CHAT_TOTAL);
    g_chatterFactory.SetSize (Chatter_Total);
 
-   #define SKIP_COMMENTS() if ((line[0] == '/') || (line[0] == '\r') || (line[0] == '\n') || (line[0] == 0) || (line[0] == ' ') || (line[0] == '\t')) continue;
+   #define SKIP_COMMENTS() if (line[0] == '/' || line[0] == '\r' || line[0] == '\n' || line[0] == 0 || line[0] == ' ' || line[0] == '\t' || line[0] == ';') continue
 
    // NAMING SYSTEM INITIALIZATION
    if (OpenConfig ("names.cfg", "Name configuration file not found.", &fp , true))
@@ -502,6 +502,7 @@ void InitConfig (void)
          SKIP_COMMENTS ();
 
          strtrim (line);
+         line[32] = 0;
 
          BotName item;
          memset (&item, 0, sizeof (item));
@@ -3031,6 +3032,13 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    // such if necessary. Nothing really bot-related is done in this function. The actual bot
    // initialization stuff will be done later, when we'll be certain to have a multilayer game.
 
+   // get the engine functions from the engine...
+   memcpy (&g_engfuncs, functionTable, sizeof (enginefuncs_t));
+   g_pGlobals = pGlobals;
+
+   // register our cvars
+   g_convarWrapper->PushRegisteredConVarsToEngine ();
+
    static struct ModSupport
    {
       char name[10];
@@ -3048,13 +3056,6 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       { "csv15", "cs_i386.so", "cs.dylib", "mp.dll", "CS 1.5 for Steam", CSV_OLD },
       { "cs13", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike v1.3", CSV_OLD }, // assume cs13 = cs15
    };
-
-   // get the engine functions from the engine...
-   memcpy (&g_engfuncs, functionTable, sizeof (enginefuncs_t));
-   g_pGlobals = pGlobals;
-
-   // register our cvars
-   g_convarWrapper->PushRegisteredConVarsToEngine ();
 
    ModSupport *knownMod = NULL;
 
@@ -3131,8 +3132,6 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 
    if (!g_funcPointers || !g_entityAPI)
       TerminateOnMalloc ();
-
-   GetEngineFunctions (functionTable, NULL);
    
    // give the engine functions to the other DLL...
    (*g_funcPointers) (functionTable, pGlobals);

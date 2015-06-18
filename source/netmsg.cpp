@@ -409,6 +409,12 @@ void NetworkMsg::Execute (void *p)
                }
             }
 
+            if (FStrEq (PTR_TO_STR (p), "#Game_will_restart_in"))
+            {
+               g_botManager->CheckTeamEconomics (TEAM_CF, true);
+               g_botManager->CheckTeamEconomics (TEAM_TF, true);
+            }
+
             if (FStrEq (PTR_TO_STR (p), "#Terrorists_Win"))
             {
                g_botManager->SetLastWinner (TEAM_TF); // update last winner for economics

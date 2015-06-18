@@ -2372,7 +2372,7 @@ bool Bot::IsLastEnemyViewable (void)
 bool Bot::LastEnemyShootable (void)
 {
    // don't allow shooting through walls
-   if (!(m_aimFlags & AIM_LAST_ENEMY) || IsEntityNull (m_lastEnemy) || GetTaskId () == TASK_PAUSE || m_lastEnemyOrigin != nullvec)
+   if (!(m_aimFlags & AIM_LAST_ENEMY) || m_lastEnemyOrigin == nullvec || IsEntityNull (m_lastEnemy))
       return false;
 
    return GetShootingConeDeviation (GetEntity (), &m_lastEnemyOrigin) >= 0.90 && IsShootableThruObstacle (m_lastEnemyOrigin);
@@ -2932,7 +2932,7 @@ void Bot::ChooseAimDirection (void)
    {
       TraceLine (EyePosition (), m_lastEnemyOrigin, false, true, GetEntity (), &tr);
 
-      if (tr.flFraction <= 0.2 && tr.pHit == g_hostEntity)
+      if (tr.flFraction <= 0.2 && tr.pHit == g_worldEdict)
       {
          if ((m_aimFlags & (AIM_LAST_ENEMY | AIM_PREDICT_PATH)) && m_wantsToFire)
             m_wantsToFire = false;
