@@ -21,7 +21,8 @@ ConVar yb_join_team ("yb_join_team", "any");
 ConVar yb_name_prefix ("yb_name_prefix", "", VT_NOSERVER);
 ConVar yb_difficulty ("yb_difficulty", "4");
 
-ConVar yb_latency_display ("yb_latency_display", "2");
+ConVar yb_latency_display ("yb_latency_display", "2", VT_NOSERVER);
+ConVar yb_avatar_display ("yb_avatar_display", "1", VT_NOSERVER);
 
 BotManager::BotManager (void)
 {
@@ -106,6 +107,8 @@ int BotManager::CreateBot (String name, int difficulty, int personality, int tea
       }
    }
 
+   String steamId = "";
+
    // setup name
    if (name.IsEmpty ())
    {
@@ -128,6 +131,8 @@ int BotManager::CreateBot (String name, int difficulty, int personality, int tea
 
             pickedName->used = nameFound = true;
             strcpy (outputName, pickedName->name);
+
+            steamId = pickedName->steamId;
          }
       }
       else
@@ -159,7 +164,7 @@ int BotManager::CreateBot (String name, int difficulty, int personality, int tea
    InternalAssert (index >= 0 && index <= 32); // check index
    InternalAssert (m_bots[index] == NULL); // check bot slot
 
-   m_bots[index] = new Bot (bot, difficulty, personality, team, member);
+   m_bots[index] = new Bot (bot, difficulty, personality, team, member, steamId);
 
    if (m_bots == NULL)
       TerminateOnMalloc ();
@@ -725,7 +730,7 @@ void BotManager::Free (int index)
    m_bots[index] = NULL;
 }
 
-Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member)
+Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, const String &steamId)
 {
    // this function does core operation of creating bot, it's called by CreateBot (),
    // when bot setup completed, (this is a bot class constructor)
@@ -747,11 +752,17 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member)
    BotManager::CallGameEntity (&bot->v);
 
    // set all info buffer keys for this bot
-   char *buffer = GET_INFOKEYBUFFER (bot);;
+   char *buffer = GET_INFOKEYBUFFER (bot);
    SET_CLIENT_KEYVALUE (clientIndex, buffer, "_vgui_menus", "0");
 
-   if (g_gameVersion != CSV_OLD && yb_latency_display.GetInt () == 1)
-      SET_CLIENT_KEYVALUE (clientIndex, buffer, "*bot", "1");
+   if (g_gameVersion != CSV_OLD)
+   {
+      if (yb_latency_display.GetInt () == 1)
+         SET_CLIENT_KEYVALUE (clientIndex, buffer, "*bot", "1");
+
+      if (yb_avatar_display.GetBool () && !steamId.IsEmpty ())
+         SET_CLIENT_KEYVALUE (clientIndex, buffer, "*sid", const_cast <char *> (steamId.GetBuffer ()));
+   }
 
    rejectReason[0] = 0; // reset the reject reason template string
    MDLL_ClientConnect (bot, "BOT", FormatBuffer ("127.0.0.%d", IndexOfEntity (bot) + 100), rejectReason);

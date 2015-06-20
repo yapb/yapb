@@ -641,6 +641,7 @@ struct WavHeader
 // botname structure definition
 struct BotName
 {
+   String steamId;
    String name;
    bool used;
 };
@@ -1204,7 +1205,7 @@ public:
 
    Array <TaskItem> m_tasks;
 
-   Bot (edict_t *bot, int difficulty, int personality, int team, int member);
+   Bot (edict_t *bot, int difficulty, int personality, int team, int member, const String &steamId);
   ~Bot (void);
 
    int GetAmmo (void);

@@ -485,6 +485,11 @@ void InitConfig (void)
       {
          SKIP_COMMENTS ();
 
+         Array <String> pair = String (line).Split ("\t\t");
+
+         if (pair.GetElementNumber () > 1)
+            strcpy (line, pair[0].Trim ().GetBuffer ());
+
          strtrim (line);
          line[32] = 0;
 
@@ -493,6 +498,9 @@ void InitConfig (void)
 
          item.name = line;
          item.used = false;
+
+         if (pair.GetElementNumber () > 1)
+            item.steamId = pair[1].Trim ();
 
          g_botNames.Push (item);
       }

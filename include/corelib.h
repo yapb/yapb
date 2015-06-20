@@ -2694,7 +2694,7 @@ public:
    // Returns:
    //  True if string is empty, false otherwise.
    //
-   bool IsEmpty (void)
+   bool IsEmpty (void) const
    {
       if (m_bufferPtr == NULL || m_stringLength == 0)
          return true;
