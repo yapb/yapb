@@ -1185,16 +1185,12 @@ void ClientCommand (edict_t *ent)
    {
       if (stricmp (command, "yapb") == 0 || stricmp (command, "yb") == 0)
       {
-         int state = BotCommandHandler (ent, IsNullString (CMD_ARGV (1)) ? "help" : CMD_ARGV (1), CMD_ARGV (2), CMD_ARGV (3), CMD_ARGV (4), CMD_ARGV (5), CMD_ARGV (6), CMD_ARGV (0));
+         int state = BotCommandHandler (ent, IsNullString (arg1) ? "help" : arg1, CMD_ARGV (2), CMD_ARGV (3), CMD_ARGV (4), CMD_ARGV (5), CMD_ARGV (6), CMD_ARGV (0));
 
          switch (state)
          {
          case 0:
             ClientPrint (ent, print_withtag, "Unknown command: %s", arg1);
-            break;
-
-         case 3:
-            ClientPrint (ent, print_withtag, "CVar yb_%s, can be only set via RCON access.", CMD_ARGV (2));
             break;
 
          case 2:

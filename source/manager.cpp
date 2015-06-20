@@ -755,17 +755,15 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    char *buffer = GET_INFOKEYBUFFER (bot);
    SET_CLIENT_KEYVALUE (clientIndex, buffer, "_vgui_menus", "0");
 
-   if (g_gameVersion != CSV_OLD)
-   {
-      if (yb_latency_display.GetInt () == 1)
-         SET_CLIENT_KEYVALUE (clientIndex, buffer, "*bot", "1");
-
-      if (yb_avatar_display.GetBool () && !steamId.IsEmpty ())
-         SET_CLIENT_KEYVALUE (clientIndex, buffer, "*sid", const_cast <char *> (steamId.GetBuffer ()));
-   }
+   if (g_gameVersion != CSV_OLD && yb_latency_display.GetInt () == 1)
+      SET_CLIENT_KEYVALUE (clientIndex, buffer, "*bot", "1");
 
    rejectReason[0] = 0; // reset the reject reason template string
    MDLL_ClientConnect (bot, "BOT", FormatBuffer ("127.0.0.%d", IndexOfEntity (bot) + 100), rejectReason);
+   
+   // should be set after client connect
+   if (yb_avatar_display.GetBool () && !steamId.IsEmpty ())
+      SET_CLIENT_KEYVALUE (clientIndex, buffer, "*sid", const_cast <char *> (steamId.GetBuffer ()));
 
    memset (&m_pingOffset, 0, sizeof (m_pingOffset));
    memset (&m_ping, 0, sizeof (m_ping));
