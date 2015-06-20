@@ -24,10 +24,6 @@ ConVar yb_freeze_bots ("yb_freeze_bots", "0");
 ConVar yb_spraypaints ("yb_spraypaints", "1");
 ConVar yb_botbuy ("yb_botbuy", "1");
 
-ConVar yb_timersound ("yb_timersound", "0.5", VT_NOSERVER);
-ConVar yb_timerpickup ("yb_timerpickup", "0.5", VT_NOSERVER);
-ConVar yb_timergrenade ("yb_timergrenade", "0.5", VT_NOSERVER);
-
 ConVar yb_chatter_path ("yb_chatter_path", "sound/radio/bot", VT_NOSERVER);
 ConVar yb_restricted_weapons ("yb_restricted_weapons", "");
 
@@ -205,10 +201,10 @@ bool Bot::IsEnemyViewable (edict_t *player)
 
    bool forceTrueIfVisible = false;
 
-   if (IsValidPlayer (pev->dmg_inflictor) && GetTeam (pev->dmg_inflictor) != m_team && ::IsInViewCone (EyePosition (), pev->dmg_inflictor))
+   if (IsValidPlayer (pev->dmg_inflictor) && GetTeam (pev->dmg_inflictor) != m_team)
       forceTrueIfVisible = true;
 
-   if (CheckVisibility (player, &m_enemyOrigin, &m_visibility) && (IsInViewCone (player->v.origin + Vector (0, 0, 14)) || forceTrueIfVisible))
+   if (CheckVisibility (player, &m_enemyOrigin, &m_visibility) && (IsInViewCone (player->v.origin + pev->view_ofs) || forceTrueIfVisible))
    {
       m_seeEnemyTime = GetWorldTime ();
       m_lastEnemy = player;
@@ -262,7 +258,7 @@ void Bot::CheckGrenadeThrow (void)
    }
 
    // check again in some seconds
-   m_grenadeCheckTime = GetWorldTime () + yb_timergrenade.GetFloat ();
+   m_grenadeCheckTime = GetWorldTime () + 0.5f;
 
    // check if we have grenades to throw
    int grenadeToThrow = CheckGrenades ();
@@ -998,8 +994,9 @@ void Bot::FindItem (void)
          }
       }
 
-      if (pickupOrigin.z > EyePosition ().z + (m_pickupType == PICKUP_HOSTAGE ? 40.0f : 15.0f)|| IsDeadlyDrop (pickupOrigin)) // check if item is too high to reach, check if getting the item would hurt bot
+      if (pickupOrigin.z > EyePosition ().z + (m_pickupType == PICKUP_HOSTAGE ? 40.0f : 15.0f) || IsDeadlyDrop (pickupOrigin)) // check if item is too high to reach, check if getting the item would hurt bot
       {
+         m_itemIgnore = m_pickupItem;
          m_pickupItem = NULL;
          m_pickupType = PICKUP_NONE;
 
@@ -1261,7 +1258,7 @@ void Bot::CheckMessageQueue (void)
       }
 
       PushMessageQueue (GSM_IDLE);
-      PerformWeaponPurchase ();
+      PurchaseWeapons ();
 
       break;
 
@@ -1503,7 +1500,7 @@ bool Bot::IsMorePowerfulWeaponCanBeBought (void)
    return false;
 }
 
-void Bot::PerformWeaponPurchase (void)
+void Bot::PurchaseWeapons (void)
 {
    // this function does all the work in selecting correct buy menus for most weapons/items
 
@@ -1998,7 +1995,7 @@ void Bot::SetConditions (void)
    if (!yb_ignore_enemies.GetBool () && m_soundUpdateTime <= GetWorldTime () && m_blindTime < GetWorldTime ())
    {
       ReactOnSound ();
-      m_soundUpdateTime = GetWorldTime () + yb_timersound.GetFloat ();
+      m_soundUpdateTime = GetWorldTime () + 0.25f;
    }
    else if (m_heardSoundTime < GetWorldTime ())
       m_states &= ~STATE_HEARING_ENEMY;
@@ -2021,7 +2018,7 @@ void Bot::SetConditions (void)
    // check if there are items needing to be used/collected
    if (m_itemCheckTime < GetWorldTime () || !IsEntityNull (m_pickupItem))
    {
-      m_itemCheckTime = GetWorldTime () + yb_timerpickup.GetFloat ();
+      m_itemCheckTime = GetWorldTime () + 0.4f;
       FindItem ();
    }
 
@@ -2103,7 +2100,7 @@ void Bot::SetConditions (void)
       if (g_bombPlanted || m_isStuck)
          ratio /= 3; // reduce the seek cover desire if bomb is planted
       else if (m_isVIP || m_isReloading)
-         ratio *= 2; // triple the seek cover desire if bot is VIP or reloading
+         ratio *= 3; // triple the seek cover desire if bot is VIP or reloading
 
       if (distance > 500.0)
          g_taskFilters[TASK_SEEKCOVER].desire = retreatLevel * ratio;
@@ -3632,9 +3629,11 @@ void Bot::RunTask (void)
 
       if (!IsEntityNull (m_enemy))
       {
+         m_lastCollTime = GetWorldTime () + 0.5f;
+
          if (IsOnLadder ())
          {
-            pev->button |= IN_DUCK;
+            pev->button |= IN_JUMP;
             DeleteSearchNodes ();
          }
          CombatFight ();
@@ -5660,7 +5659,7 @@ void Bot::ResetDoubleJumpState (void)
 
 void Bot::DebugMsg (const char *format, ...)
 {
-   if (yb_debug.GetInt () < 2)
+   if (yb_debug.GetInt () <= 2)
       return;
 
    va_list ap;
@@ -5670,9 +5669,10 @@ void Bot::DebugMsg (const char *format, ...)
    vsprintf (buffer, format, ap);
    va_end (ap);
 
-   ServerPrint ("%s: %s", STRING (pev->netname), buffer);
+   if (yb_debug.GetInt () == 3 && !IsEntityNull (g_hostEntity) && g_hostEntity->v.iuser2 == IndexOfEntity (GetEntity ()))
+      ServerPrint ("%s: %s", STRING (pev->netname), buffer);
 
-   if (yb_debug.GetInt () >= 3)
+   if (yb_debug.GetInt () > 3)
       AddLogEntry (false, LL_DEFAULT, "%s: %s", STRING (pev->netname), buffer);
 }
 

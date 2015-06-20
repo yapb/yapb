@@ -961,7 +961,7 @@ private:
    void BotAI (void);
    void CheckSpawnTimeConditions (void);
    bool IsMorePowerfulWeaponCanBeBought (void);
-   void PerformWeaponPurchase (void);
+   void PurchaseWeapons (void);
 
    bool CanDuckUnder (const Vector &normal);
    bool CanJumpUp (const Vector &normal);
@@ -1070,7 +1070,7 @@ private:
 
    void SelectBestWeapon (void);
    void SelectPistol (void);
-   bool IsFriendInLineOfFire (void);
+   bool IsFriendInLineOfFire (float distance);
    bool IsGroupOfEnemies (const Vector &location, int numEnemies = 1, int radius = 256);
 
    bool IsShootableThruObstacle (const Vector &dest);
