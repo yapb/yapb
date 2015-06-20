@@ -1380,11 +1380,11 @@ private:
    Bot *m_bot;
    int m_state;
    int m_message;
-   int m_registerdMessages[NETMSG_BOTVOICE + 1];
+   int m_registerdMessages[NETMSG_RESETHUD + 1];
 
 public:
    NetworkMsg (void);
-  ~NetworkMsg   (void) { };
+  ~NetworkMsg (void) { };
 
    void Execute (void *p);
    inline void Reset (void) { m_message = NETMSG_UNDEFINED; m_state = 0; m_bot = NULL; };

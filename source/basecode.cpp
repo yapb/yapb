@@ -3098,34 +3098,10 @@ void Bot::Think (void)
          if (yb_tkpunish.GetInt () != 2 || IsValidBot (EntityOfIndex (m_voteKickIndex)))
             return;
 
-         entvars_t *killer = VARS (EntityOfIndex (m_lastVoteKick));
+         edict_t *killer = EntityOfIndex (m_lastVoteKick);
 
-         MESSAGE_BEGIN (MSG_PAS, SVC_TEMPENTITY, killer->origin);
-            WRITE_BYTE (TE_TAREXPLOSION);
-            WRITE_COORD (killer->origin.x);
-            WRITE_COORD (killer->origin.y);
-            WRITE_COORD (killer->origin.z);
-         MESSAGE_END ();
-
-         MESSAGE_BEGIN (MSG_PVS, SVC_TEMPENTITY, killer->origin);
-            WRITE_BYTE (TE_LAVASPLASH);
-            WRITE_COORD (killer->origin.x);
-            WRITE_COORD (killer->origin.y);
-            WRITE_COORD (killer->origin.z);
-         MESSAGE_END ();
-
-         MESSAGE_BEGIN (MSG_ONE, g_netMsg->GetId (NETMSG_SCREENFADE), NULL, ENT (killer));
-            WRITE_SHORT (1 << 15);
-            WRITE_SHORT (1 << 10);
-            WRITE_SHORT (1 << 1);
-            WRITE_BYTE (100);
-            WRITE_BYTE (0);
-            WRITE_BYTE (0);
-            WRITE_BYTE (255);
-         MESSAGE_END ();
-
-         killer->frags++;
-         MDLL_ClientKill (ENT (killer));
+         killer->v.frags++;
+         MDLL_ClientKill (killer);
       }
       else if (m_voteMap != 0) // host wants the bots to vote for a map?
       {

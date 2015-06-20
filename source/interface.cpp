@@ -2702,7 +2702,7 @@ int pfnRegUserMsg (const char *name, int size)
    else if (strcmp (name, "BotVoice") == 0)
       g_netMsg->SetId (NETMSG_BOTVOICE, message);
    else if (strcmp (name, "ResetHUD") == 0)
-      g_netMsg->SetId (NETMSG_BOTVOICE, message);
+      g_netMsg->SetId (NETMSG_RESETHUD, message);
 
    return message;
 }
@@ -3116,6 +3116,8 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 
    if (!g_funcPointers || !g_entityAPI)
       TerminateOnMalloc ();
+
+   GetEngineFunctions (functionTable, NULL);
    
    // give the engine functions to the other DLL...
    (*g_funcPointers) (functionTable, pGlobals);
