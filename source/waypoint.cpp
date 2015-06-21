@@ -2502,7 +2502,7 @@ void WaypointDownloader::FreeSocket (int sock)
 WaypointDownloadError WaypointDownloader::DoDownload (void)
 {
 #if defined (PLATFORM_WIN32)
-   WORD requestedVersion = MAKEWORD (1, 1);
+   WORD requestedVersion = MAKEWORD (1, 3);
    WSADATA wsaData;
 
    WSAStartup (requestedVersion, &wsaData);
@@ -2521,14 +2521,6 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
       return WDE_SOCKET_ERROR;
    }
    sockaddr_in dest;
-
-#if defined (PLATFORM_WIN32)
-   unsigned long mode = 0;
-   ioctlsocket (socketHandle, FIONBIO, &mode);
-#else
-   int flags = fcntl (socketHandle, F_GETFL, 0) | O_NONBLOCK;
-   fcntl (socketHandle, F_SETFL, flags);
-#endif
 
    timeval timeout;
    timeout.tv_sec = 5;
@@ -2557,24 +2549,25 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
       return WDE_SOCKET_ERROR;
    }
 
-   File fp (g_waypoint->CheckSubfolderFile (), "wb");
-
-   if (!fp.IsValid ())
-   {
-      FreeSocket (socketHandle);
-      return WDE_SOCKET_ERROR;
-   }
-   char buffer[1024];
+   const int ChunkSize = 1024;
+   char buffer[ChunkSize] = { 0, };
 
    bool finished = false;
    int recvPosition = 0;
    int symbolsInLine = 0;
 
    // scan for the end of the header
-   while (!finished && recvPosition < sizeof (buffer))
+   while (!finished && recvPosition < ChunkSize)
    {
       if (recv (socketHandle, &buffer[recvPosition], 1, 0) == 0)
          finished = true;
+
+      // ugly, but whatever
+      if (buffer[recvPosition - 2] == '4' && buffer[recvPosition - 1] == '0' && buffer[recvPosition] == '4')
+      {
+         FreeSocket (socketHandle);
+         return WDE_NOTFOUND_ERROR;
+      }
 
       switch (buffer[recvPosition])
       {
@@ -2595,20 +2588,27 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
       recvPosition++;
    }
 
-   if (strstr (buffer, "HTTP/1.0 404") != NULL)
+   File fp (g_waypoint->CheckSubfolderFile (), "wb");
+
+   if (!fp.IsValid ())
    {
       FreeSocket (socketHandle);
-      return WDE_NOTFOUND_ERROR;
+      return WDE_SOCKET_ERROR;
    }
-   memset (buffer, 0, sizeof (buffer));
 
-   int size = 0;
+   int recvSize = 0;
 
-   while ((size = recv (socketHandle, buffer, sizeof (buffer) -1, 0)) > 0)
-      fp.Write (buffer, size);
+   do
+   {
+      recvSize = recv (socketHandle, buffer, ChunkSize, 0);
+
+      fp.Write (buffer, recvSize);
+      fp.Flush ();
+
+   } while (recvSize != 0);
 
    fp.Close ();
-
    FreeSocket (socketHandle);
+
    return WDE_NOERROR;
 }
