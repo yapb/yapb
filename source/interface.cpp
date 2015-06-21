@@ -2136,10 +2136,6 @@ void StartFrame (void)
       }
    }
 
-   // **** AI EXECUTION STARTS ****
-   g_botManager->Think ();
-   // **** AI EXECUTION FINISH ****
-
    if (!IsDedicatedServer () && !IsEntityNull (g_hostEntity))
    {
       if (g_waypointOn)
@@ -2209,6 +2205,25 @@ void StartFrame (void)
       RETURN_META (MRES_IGNORED);
 
    (*g_functionTable.pfnStartFrame) ();
+
+   // **** AI EXECUTION STARTS ****
+   g_botManager->Think ();
+   // **** AI EXECUTION FINISH ****
+}
+
+void StartFrame_Post (void)
+{
+   // this function starts a video frame. It is called once per video frame by the engine. If
+   // you run Half-Life at 90 fps, this function will then be called 90 times per second. By
+   // placing a hook on it, we have a good place to do things that should be done continuously
+   // during the game, for example making the bots think (yes, because no Think() function exists
+   // for the bots by the MOD side, remember).  Post version called only by metamod.
+
+   // **** AI EXECUTION STARTS ****
+   g_botManager->Think ();
+   // **** AI EXECUTION FINISH ****
+
+   RETURN_META (MRES_IGNORED);
 }
 
 int Spawn_Post (edict_t *ent)
@@ -2835,6 +2850,7 @@ export int GetEntityAPI2_Post (gamefuncs_t *functionTable, int *interfaceVersion
    memset (functionTable, 0, sizeof (gamefuncs_t));
 
    functionTable->pfnSpawn = Spawn_Post;
+   functionTable->pfnStartFrame = StartFrame_Post;
    functionTable->pfnServerActivate = ServerActivate_Post;
 
    return TRUE;
