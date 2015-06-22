@@ -837,7 +837,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    memset (&m_ammo, 0, sizeof (m_ammo));
 
    m_currentWeapon = 0; // current weapon is not assigned at start
-   m_voicePitch = Random.Long (166, 250) / 2; // assign voice pitch
+   m_voicePitch = Random.Long (166, 250) * 0.5; // assign voice pitch
 
    // copy them over to the temp level variables
    m_agressionLevel = m_baseAgressionLevel;

@@ -116,7 +116,7 @@ bool IsInViewCone (Vector origin, edict_t *ent)
 {
    MakeVectors (ent->v.v_angle);
 
-   if (((origin - (ent->v.origin + ent->v.view_ofs)).Normalize () | g_pGlobals->v_forward) >= cosf (((ent->v.fov > 0 ? ent->v.fov : 90.0) / 2) * Math::MATH_PI / 180.0))
+   if (((origin - (ent->v.origin + ent->v.view_ofs)).Normalize () | g_pGlobals->v_forward) >= cosf (((ent->v.fov > 0 ? ent->v.fov : 90.0) * 0.5) * Math::MATH_PI / 180.0))
       return true;
 
    return false;

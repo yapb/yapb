@@ -240,7 +240,7 @@ void Waypoint::Add (int flags, const Vector &waypointOrigin)
                flags += path->connectionFlags[i];
 
             if (flags == 0)
-               path->origin = (path->origin + g_hostEntity->v.origin) / 2;
+               path->origin = (path->origin + g_hostEntity->v.origin) * 0.5;
          }
       }
       break;

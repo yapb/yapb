@@ -415,7 +415,7 @@ void Bot::AvoidGrenades (void)
          continue;
 
       // check if visible to the bot
-      if (!EntityIsVisible (ent->v.origin) && InFieldOfView (ent->v.origin - EyePosition ()) > pev->fov / 2)
+      if (!EntityIsVisible (ent->v.origin) && InFieldOfView (ent->v.origin - EyePosition ()) > pev->fov * 0.5)
          continue;
 
       // TODO: should be done once for grenade, instead of checking several times
@@ -861,7 +861,7 @@ void Bot::FindItem (void)
                      Path *path = g_waypoint->GetPath (index);
 
                      float bombTimer = mp_c4timer.GetFloat ();
-                     float timeMidBlowup = g_timeBombPlanted + ((bombTimer / 2) + bombTimer / 4) - g_waypoint->GetTravelTime (pev->maxspeed, pev->origin, path->origin);
+                     float timeMidBlowup = g_timeBombPlanted + (bombTimer * 0.5 + bombTimer * 0.25) - g_waypoint->GetTravelTime (pev->maxspeed, pev->origin, path->origin);
 
                      if (timeMidBlowup > GetWorldTime ())
                      {
@@ -3639,7 +3639,7 @@ void Bot::RunTask (void)
       if (m_viewDistance < 500.0 && m_difficulty >= 2)
       {
          // go mad!
-         m_moveSpeed = -fabsf ((m_viewDistance - 500.0) / 2.0);
+         m_moveSpeed = -fabsf ((m_viewDistance - 500.0) * 0.5f);
 
          if (m_moveSpeed < -pev->maxspeed)
             m_moveSpeed = -pev->maxspeed;
@@ -3924,9 +3924,9 @@ void Bot::RunTask (void)
          float bombTimer = mp_c4timer.GetFloat ();
 
          // push camp task on to stack
-         StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + ((bombTimer / 2) + (bombTimer / 4)), true);
+         StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + (bombTimer * 0.5 + bombTimer * 0.25), true);
          // push move command
-         StartTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, GetWorldTime () + ((bombTimer / 2) + (bombTimer / 4)), true);
+         StartTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, GetWorldTime () + (bombTimer * 0.5 + bombTimer * 0.25), true);
 
          if (g_waypoint->GetPath (index)->vis.crouch <= g_waypoint->GetPath (index)->vis.stand)
             m_campButtons |= IN_DUCK;

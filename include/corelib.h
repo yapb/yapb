@@ -2322,7 +2322,7 @@ private:
       int delta = 4;
 
       if (m_allocatedSize > 64)
-         delta = m_allocatedSize / 2;
+         delta = m_allocatedSize * 0.5;
       else if (m_allocatedSize > 8)
          delta = 16;
 

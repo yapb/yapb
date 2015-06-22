@@ -2756,38 +2756,6 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...)
    (*g_engfuncs.pfnAlertMessage) (alertType, buffer);
 }
 
-const char *pfnGetPlayerAuthId (edict_t *e)
-{
-   if (IsValidBot (e))
-   {
-      if (g_isMetamod)
-         RETURN_META_VALUE (MRES_SUPERCEDE, "BOT");
-
-      return "BOT";
-   }
-
-   if (g_isMetamod)
-      RETURN_META_VALUE (MRES_IGNORED, 0);
-
-   return (*g_engfuncs.pfnGetPlayerAuthId) (e);
-}
-
-unsigned int pfnGetPlayerWONId (edict_t *e)
-{
-   if (IsValidBot (e))
-   {
-      if (g_isMetamod)
-         RETURN_META_VALUE (MRES_SUPERCEDE, 0);
-
-      return 0;
-   }
-
-   if (g_isMetamod)
-      RETURN_META_VALUE (MRES_IGNORED, 0);
-
-   return (*g_engfuncs.pfnGetPlayerWONId) (e);
-}
-
 gamedll_funcs_t gameDLLFunc;
 
 export int GetEntityAPI2 (gamefuncs_t *functionTable, int *interfaceVersion)
@@ -2903,8 +2871,6 @@ export int GetEngineFunctions (enginefuncs_t *functionTable, int *interfaceVersi
    functionTable->pfnCmd_Argc = pfnCmd_Argc;
    functionTable->pfnSetClientMaxspeed = pfnSetClientMaxspeed;
    functionTable->pfnAlertMessage = pfnAlertMessage;
-   functionTable->pfnGetPlayerAuthId = pfnGetPlayerAuthId;
-   functionTable->pfnGetPlayerWONId = pfnGetPlayerWONId;
 
    return TRUE;
 }

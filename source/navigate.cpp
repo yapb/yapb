@@ -1273,7 +1273,7 @@ public:
 
       while (child)
       {
-         int parent = (child - 1) / 2;
+         int parent = (child - 1) * 0.5;
 
          if (m_heap[parent].pri <= m_heap[child].pri)
             break;
@@ -2135,7 +2135,7 @@ int Bot::FindDefendWaypoint (const Vector &origin)
       if (waypointIndex[index] == -1)
          break;
    }
-   return waypointIndex[Random.Long (0, (index - 1) / 2)];
+   return waypointIndex[Random.Long (0, (index - 1) * 0.5)];
 }
 
 int Bot::FindCoverWaypoint (float maxDistance)
@@ -3069,7 +3069,6 @@ int Bot::GetAimingWaypoint (void)
 
 void Bot::FacePosition (void)
 {
-
    // adjust all body and view angles to face an absolute vector
    Vector direction = (m_lookAt - EyePosition ()).ToAngles ();
    direction = direction + pev->punchangle * (m_difficulty * 25) / 100.0;
