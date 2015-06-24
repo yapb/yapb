@@ -1051,8 +1051,8 @@ private:
    bool OutOfBombTimer (void);
    void SelectLeaderEachTeam (int team);
 
-   const Vector &CheckThrow (const Vector &start, const Vector &stop);
-   const Vector &CheckToss (const Vector &start, const Vector &stop);
+   Vector CheckThrow (const Vector &start, const Vector &stop);
+   Vector CheckToss (const Vector &start, const Vector &stop);
    Vector CheckBombAudible (void);
 
    const Vector &GetAimPosition (void);

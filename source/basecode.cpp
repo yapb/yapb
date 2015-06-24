@@ -5644,7 +5644,7 @@ void Bot::DebugMsg (const char *format, ...)
       AddLogEntry (false, LL_DEFAULT, "%s: %s", STRING (pev->netname), buffer);
 }
 
-const Vector &Bot::CheckToss (const Vector &start, const Vector &stop)
+Vector Bot::CheckToss(const Vector &start, const Vector &stop)
 {
    // this function returns the velocity at which an object should looped from start to land near end.
    // returns null vector if toss is not feasible.
@@ -5699,7 +5699,7 @@ const Vector &Bot::CheckToss (const Vector &start, const Vector &stop)
    return nadeVelocity * 0.777;
 }
 
-const Vector &Bot::CheckThrow (const Vector &start, const Vector &stop)
+Vector Bot::CheckThrow(const Vector &start, const Vector &stop)
 {
    // this function returns the velocity vector at which an object should be thrown from start to hit end.
    // returns null vector if throw is not feasible.
