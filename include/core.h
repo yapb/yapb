@@ -240,8 +240,7 @@ enum CollisionState
    COLLISION_JUMP,
    COLLISION_DUCK,
    COLLISION_STRAFELEFT,
-   COLLISION_STRAFERIGHT,
-   COLLISION_BACKOFF
+   COLLISION_STRAFERIGHT
 };
 
 // counter-strike team id's
@@ -408,8 +407,7 @@ enum CollisionProbe
 {
    PROBE_JUMP = (1 << 0), // probe jump when colliding
    PROBE_DUCK = (1 << 1), // probe duck when colliding
-   PROBE_STRAFE = (1 << 2), // probe strafing when colliding
-   PROBE_BACKOFF = (1 << 3) // probe going back when colliding
+   PROBE_STRAFE = (1 << 2) // probe strafing when colliding
 };
 
 // vgui menus (since latest steam updates is obsolete, but left for old cs)
@@ -594,6 +592,9 @@ const int NUM_WEAPONS = 26;
 // weapon masks
 const int WEAPON_PRIMARY = ((1 << WEAPON_XM1014) | (1 <<WEAPON_M3) | (1 << WEAPON_MAC10) | (1 << WEAPON_UMP45) | (1 << WEAPON_MP5) | (1 << WEAPON_TMP) | (1 << WEAPON_P90) | (1 << WEAPON_AUG) | (1 << WEAPON_M4A1) | (1 << WEAPON_SG552) | (1 << WEAPON_AK47) | (1 << WEAPON_SCOUT) | (1 << WEAPON_SG550) | (1 << WEAPON_AWP) | (1 << WEAPON_G3SG1) | (1 << WEAPON_M249) | (1 << WEAPON_FAMAS) | (1 << WEAPON_GALIL));
 const int WEAPON_SECONDARY = ((1 << WEAPON_P228) | (1 << WEAPON_ELITE) | (1 << WEAPON_USP) | (1 << WEAPON_GLOCK) | (1 << WEAPON_DEAGLE) | (1 << WEAPON_FIVESEVEN));
+
+// maximum collide moves
+const int MAX_COLLIDE_MOVES = 4;
 
 // this structure links waypoints returned from pathfinder
 struct PathNode
@@ -857,7 +858,7 @@ private:
    float m_lastCollTime; // time until next collision check
 
    unsigned int m_collisionProbeBits; // bits of possible collision moves
-   unsigned int m_collideMoves[5]; // sorted array of movements
+   unsigned int m_collideMoves[MAX_COLLIDE_MOVES]; // sorted array of movements
    unsigned int m_collStateIndex; // index into collide moves
    CollisionState m_collisionState; // collision State
 

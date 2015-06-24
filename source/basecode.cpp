@@ -3606,6 +3606,7 @@ void Bot::RunTask (void)
       if (!IsEntityNull (m_enemy))
       {
          ResetCollideState ();
+         m_lastCollTime = GetWorldTime () + 0.5f;
 
          if (IsOnLadder ())
          {
@@ -5287,19 +5288,6 @@ bool Bot::HasHostage (void)
    return false;
 }
 
-void Bot::ResetCollideState (void)
-{
-   m_collideTime = 0.0;
-   m_probeTime = 0.0;
-
-   m_collisionProbeBits = 0;
-   m_collisionState = COLLISION_NOTDECICED;
-   m_collStateIndex = 0;
-
-   for (int i = 0; i < 4; i++)
-      m_collideMoves[i] = 0;
-}
-
 int Bot::GetAmmo (void)
 {
    if (g_weaponDefs[m_currentWeapon].ammo1 == -1)
@@ -5627,7 +5615,9 @@ void Bot::ResetDoubleJumpState (void)
 
 void Bot::DebugMsg (const char *format, ...)
 {
-   if (yb_debug.GetInt () <= 2)
+   int level = yb_debug.GetInt ();
+
+   if (level <= 2)
       return;
 
    va_list ap;
@@ -5637,10 +5627,12 @@ void Bot::DebugMsg (const char *format, ...)
    vsprintf (buffer, format, ap);
    va_end (ap);
 
-   if (yb_debug.GetInt () == 3 && !IsEntityNull (g_hostEntity) && g_hostEntity->v.iuser2 == IndexOfEntity (GetEntity ()))
+   if (level == 3 && !IsEntityNull (g_hostEntity) && g_hostEntity->v.iuser2 == IndexOfEntity (GetEntity ()))
+      ServerPrint ("%s: %s", STRING (pev->netname), buffer);
+   else if (level != 3)
       ServerPrint ("%s: %s", STRING (pev->netname), buffer);
 
-   if (yb_debug.GetInt () > 3)
+   if (level > 3)
       AddLogEntry (false, LL_DEFAULT, "%s: %s", STRING (pev->netname), buffer);
 }
 

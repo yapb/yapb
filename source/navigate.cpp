@@ -304,6 +304,19 @@ bool Bot::GoalIsValid (void)
    return false;
 }
 
+void Bot::ResetCollideState (void)
+{
+   m_collideTime = 0.0;
+   m_probeTime = 0.0;
+
+   m_collisionProbeBits = 0;
+   m_collisionState = COLLISION_NOTDECICED;
+   m_collStateIndex = 0;
+
+   for (int i = 0; i < MAX_COLLIDE_MOVES; i++)
+      m_collideMoves[i] = 0;
+}
+
 void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &dirNormal)
 {
    m_isStuck = false;
@@ -317,7 +330,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
    TraceResult tr;
    edict_t *nearest = NULL;
 
-   if (g_timeRoundStart + 10.0f < GetWorldTime () && FindNearestPlayer (reinterpret_cast <void **> (&nearest), GetEntity (), pev->maxspeed, true, false, true, true) && nearest != NULL && !(nearest->v.flags & FL_FAKECLIENT)) // found somebody?
+   if (g_timeRoundStart + 10.0f < GetWorldTime () && FindNearestPlayer (reinterpret_cast <void **> (&nearest), GetEntity (), pev->maxspeed, true, false, true, true)) // found somebody?
    {
       MakeVectors (m_moveAngles); // use our movement angles
 
@@ -394,21 +407,19 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
       // not yet decided what to do?
       if (m_collisionState == COLLISION_NOTDECICED)
       {
-         char bits = 0;
+         int bits = 0;
 
          if (IsOnLadder ())
             bits = PROBE_STRAFE;
          else if (IsInWater ())
             bits = (PROBE_JUMP | PROBE_STRAFE);
-         else if (cantMoveForward)
-            bits = (PROBE_BACKOFF | PROBE_DUCK | PROBE_STRAFE);
          else
-            bits = ((Random.Long (0, 10) > 5 ? PROBE_JUMP : 0) | PROBE_STRAFE | PROBE_DUCK);
+            bits = ((Random.Long (0, 10) > (cantMoveForward ? 7 : 5) ? PROBE_JUMP : 0) | PROBE_STRAFE | PROBE_DUCK);
 
          // collision check allowed if not flying through the air
          if (IsOnFloor () || IsOnLadder () || IsInWater ())
          {
-            char state[10];
+            char state[MAX_COLLIDE_MOVES * 2];
             int i = 0;
 
             // first 4 entries hold the possible collision states
@@ -416,7 +427,6 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
             state[i++] = COLLISION_DUCK;
             state[i++] = COLLISION_STRAFELEFT;
             state[i++] = COLLISION_STRAFERIGHT;
-            state[i++] = COLLISION_BACKOFF;
 
             // now weight all possible states
             if (bits & PROBE_JUMP)
@@ -547,53 +557,33 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
                state[i] = 0;
             }
 
-            if (bits & PROBE_BACKOFF)
-            {
-               state[i] = 0;
-
-               MakeVectors (m_moveAngles);
-
-               src = pev->origin;
-               dst = src - g_pGlobals->v_forward * 32;
-
-               TraceLine (src, dst, true, true, GetEntity (), &tr);
-
-               if (tr.flFraction != 1.0 || IsDeadlyDrop (dst))
-                  state[i] -= 70;
-               else
-                  state[i] += 40;
-            }
-            else
-               state[i] = 0;
-            i++;
 
             // weighted all possible moves, now sort them to start with most probable
-            int temp = 0;
             bool isSorting = false;
 
             do
             {
                isSorting = false;
-               for (i = 0; i < 4; i++)
+               for (i = 0; i < 3; i++)
                {
-                  if (state[i + 5] < state[i + 6])
+                  if (state[i + MAX_COLLIDE_MOVES] < state[i + MAX_COLLIDE_MOVES + 1])
                   {
-                     temp = state[i];
+                     int temp = state[i];
 
                      state[i] = state[i + 1];
                      state[i + 1] = temp;
 
-                     temp = state[i + 5];
+                     temp = state[i + MAX_COLLIDE_MOVES];
 
-                     state[i + 5] = state[i + 6];
-                     state[i + 6] = temp;
+                     state[i + MAX_COLLIDE_MOVES] = state[i + MAX_COLLIDE_MOVES + 1];
+                     state[i + MAX_COLLIDE_MOVES + 1] = temp;
 
                      isSorting = true;
                   }
                }
             } while (isSorting);
 
-            for (i = 0; i < 5; i++)
+            for (i = 0; i < MAX_COLLIDE_MOVES; i++)
                m_collideMoves[i] = state[i];
 
             m_collideTime = GetWorldTime ();
@@ -618,7 +608,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
             }
          }
 
-         if (m_collStateIndex <= 5)
+         if (m_collStateIndex <= MAX_COLLIDE_MOVES)
          {
             switch (m_collideMoves[m_collStateIndex])
             {
@@ -640,11 +630,6 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
             case COLLISION_STRAFERIGHT:
                pev->button |= IN_MOVERIGHT;
                SetStrafeSpeed (directionNormal, pev->maxspeed);
-               break;
-
-            case COLLISION_BACKOFF:
-               pev->button |= IN_BACK;
-               m_moveSpeed = -pev->maxspeed;
                break;
             }
          }
