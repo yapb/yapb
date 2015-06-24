@@ -15,8 +15,8 @@ void StripTags (char *buffer)
 {
    // this function strips 'clan' tags specified below in given string buffer
 
-   char *tagOpen[] = {"-=", "-[", "-]", "-}", "-{", "<[", "<]", "[-", "]-", "{-", "}-", "[[", "[", "{", "]", "}", "<", ">", "-", "|", "=", "+"};
-   char *tagClose[] = {"=-", "]-", "[-", "{-", "}-", "]>", "[>", "-]", "-[", "-}", "-{", "]]", "]", "}", "[", "{", ">", "<", "-", "|", "=", "+"};
+   char *tagOpen[] = {"-=", "-[", "-]", "-}", "-{", "<[", "<]", "[-", "]-", "{-", "}-", "[[", "[", "{", "]", "}", "<", ">", "-", "|", "=", "+", "(", ")"};
+   char *tagClose[] = {"=-", "]-", "[-", "{-", "}-", "]>", "[>", "-]", "-[", "-}", "-{", "]]", "]", "}", "[", "{", ">", "<", "-", "|", "=", "+", ")", "("};
 
    int index, fieldStart, fieldStop, i;
    int length = strlen (buffer); // get length of string
@@ -59,7 +59,6 @@ void StripTags (char *buffer)
          // have we found a tag start?
          if (fieldStart >= 0 && fieldStart < 32)
          {
-            fieldStop = fieldStart + strlen (tagOpen[index]); // set the tag stop
             tagLength = strlen (tagOpen[index]);
 
             for (i = fieldStart; i < length - tagLength; i++)
@@ -72,7 +71,6 @@ void StripTags (char *buffer)
             // have we found a tag stop ?
             if (fieldStart >= 0 && fieldStart < 32)
             {
-               fieldStop = fieldStart + strlen (tagClose[index]); // set the tag  
                tagLength = strlen (tagClose[index]);
 
                for (i = fieldStart; i < length - tagLength; i++)

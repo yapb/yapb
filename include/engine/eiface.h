@@ -348,7 +348,7 @@ typedef struct
    void      (*pfnSetupVisibility) (struct edict_s *pViewEntity, struct edict_s *client, unsigned char **pvs, unsigned char **pas);
    void      (*pfnUpdateClientData) (const struct edict_s *ent, int sendweapons, struct clientdata_s *cd);
    int       (*pfnAddToFullPack) (struct entity_state_s *state, int e, edict_t *ent, edict_t *host, int hostflags, int player, unsigned char *pSet);
-   void      (*pfnCreateBaseline) (int player, int eindex, struct entity_state_s *baseline, struct edict_s *entity, int playermodelindex, vec3_t player_mins, vec3_t player_maxs);
+   void      (*pfnCreateBaseline) (int player, int eindex, struct entity_state_s *baseline, struct edict_s *entity, int playermodelindex, float* player_mins, float* player_maxs);
    void      (*pfnRegisterEncoders) (void);
    int       (*pfnGetWeaponData) (struct edict_s *player, struct weapon_data_s *info);
 

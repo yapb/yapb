@@ -1,4 +1,4 @@
-//
+﻿//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -211,7 +211,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
                g_hostEntity->v.movetype = MOVETYPE_NOCLIP;
                ServerPrint ("Noclip Cheat Enabled");
             }
-            g_editNoclip ^= true; // switch on/off (XOR it!)
+            g_editNoclip = !g_editNoclip; // switch on/off (XOR it!)
          }
          ServerCommand ("yapb wp mdl on");
       }
@@ -821,7 +821,7 @@ void InitConfig (void)
       if (IsDedicatedServer ())
          return; // dedicated server will use only english translation
 
-      enum Lang_t { Lang_Original, Lang_Translate, Lang_Default } langState = Lang_Default;
+      enum Lang { Lang_Original, Lang_Translate } langState = static_cast <Lang> (2);
 
       char buffer[1024];
       LanguageItem temp = {"", ""};
@@ -1567,7 +1567,7 @@ void ClientCommand (edict_t *ent)
             case 2:
                if (FindNearestPlayer (reinterpret_cast <void **> (&bot), client->ent, 4096.0, true, true, true))
                {
-                  if (!bot->m_hasC4 && !bot->HasHostage () && (bot->GetTaskId () != TASK_PLANTBOMB) && (bot->GetTaskId () != TASK_DEFUSEBOMB))
+                  if (!bot->m_hasC4 && !bot->HasHostage () )
                   {
                      if (selection == 1)
                      {

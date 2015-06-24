@@ -329,7 +329,7 @@ const Vector &Bot::GetAimPosition (void)
       }
       m_lastEnemyOrigin = targetOrigin;
    }
-   const Vector &velocity = UsesSniper () ? nullvec : ((1.0f * m_frameInterval * m_enemy->v.velocity - 1.0 * m_frameInterval * pev->velocity) * m_frameInterval).SkipZ ();
+   const Vector &velocity = UsesSniper () ? nullvec : ((1.0f * m_frameInterval * m_enemy->v.velocity - 1.0 * m_frameInterval * pev->velocity) * m_frameInterval).Get2D ();
 
    if (m_difficulty < 3 && randomize != nullvec)
    {
@@ -560,10 +560,11 @@ bool Bot::DoFirePause (float distance, FireDelay *fireDelay)
    else
       offset = 5.0;
 
-   float angle = sqrtf ((fabsf (pev->punchangle.y) * Math::MATH_PI / 180.0) * (fabsf (pev->punchangle.y) * Math::MATH_PI / 180.0) + (fabsf (pev->punchangle.x) * Math::MATH_PI / 180.0) * (fabsf (pev->punchangle.x) * Math::MATH_PI / 180.0));
+   const float xPunch = DegreeToRadian (pev->punchangle.x);
+   const float yPunch = DegreeToRadian (pev->punchangle.y);
 
    // check if we need to compensate recoil
-   if (tanf (angle) * distance > offset + 30.0f + ((100 - (m_difficulty * 25)) / 100.f))
+   if (tanf (sqrtf (fabsf (xPunch * xPunch) + fabsf (yPunch * yPunch))) * distance > offset + 30.0f + ((100 - (m_difficulty * 25)) / 100.f))
    {
       if (m_firePause < GetWorldTime () - 0.4f)
          m_firePause = GetWorldTime () + Random.Float (0.4f, 0.4f + 0.3f * ((100 - (m_difficulty * 25)) / 100.f));
@@ -603,7 +604,7 @@ void Bot::FireWeapon (void)
    {
       if (IsFriendInLineOfFire (distance))
       {
-         m_fightStyle = 1;
+         m_fightStyle = 0;
          m_lastFightStyleCheck = GetWorldTime ();
 
          return;
@@ -860,7 +861,7 @@ void Bot::FocusEnemy (void)
    if (m_enemySurpriseTime > GetWorldTime ())
       return;
 
-   enemyOrigin = (enemyOrigin - EyePosition ()).SkipZ ();
+   enemyOrigin = (enemyOrigin - EyePosition ()).Get2D ();
 
    float distance = enemyOrigin.GetLength ();  // how far away is the enemy scum?
 
@@ -910,7 +911,7 @@ void Bot::CombatFight (void)
    if (m_currentWeapon == WEAPON_KNIFE)
       m_destOrigin = m_enemy->v.origin;
 
-   enemyOrigin = (enemyOrigin - EyePosition ()).SkipZ (); // ignore z component (up & down)
+   enemyOrigin = (enemyOrigin - EyePosition ()).Get2D (); // ignore z component (up & down)
 
    float distance = enemyOrigin.GetLength ();  // how far away is the enemy scum?
 

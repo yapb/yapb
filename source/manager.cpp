@@ -29,6 +29,7 @@ BotManager::BotManager (void)
    // this is a bot manager class constructor
 
    m_lastWinner = -1;
+   m_deathMsgSent = false;
 
    m_economicsGood[TEAM_TF] = true;
    m_economicsGood[TEAM_CF] = true;
@@ -65,7 +66,7 @@ void BotManager::CallGameEntity (entvars_t *vars)
       (*playerFunction) (vars);
 }
 
-int BotManager::CreateBot (String name, int difficulty, int personality, int team, int member)
+int BotManager::CreateBot (const String &name, int difficulty, int personality, int team, int member)
 {
    // this function completely prepares bot entity (edict) for creation, creates team, difficulty, sets name etc, and
    // then sends result to bot constructor
@@ -281,7 +282,7 @@ void BotManager::AddBot (const String &name, int difficulty, int personality, in
       yb_quota.SetInt (GetBotsNum () + 1);
 }
 
-void BotManager::AddBot (String name, String difficulty, String personality, String team, String member)
+void BotManager::AddBot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member)
 {
    // this function is same as the function above, but accept as parameters string instead of integers
 
@@ -738,7 +739,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    char rejectReason[128];
    int clientIndex = IndexOfEntity (bot);
 
-   memset (this, 0, sizeof (Bot));
+   memset (this, 0, sizeof (*this));
 
    pev = &bot->v;
 

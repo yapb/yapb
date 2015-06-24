@@ -90,8 +90,6 @@ using namespace Math;
    #define DLL_RETENTRY return
    #define DLL_GIVEFNPTRSTODLL extern "C" void __attribute__((visibility("default")))
 
-   static inline uint32 _lrotl (uint32 x, int r) { return (x << r) | (x >> (sizeof (x) * 8 - r));}
-
    typedef int (*EntityAPI_t) (gamefuncs_t *, int);
    typedef int (*NewEntityAPI_t) (newgamefuncs_t *, int *);
    typedef int (*BlendAPI_t) (int, void **, void *, float (*)[3][4], float (*)[128][3][4]);
@@ -242,7 +240,8 @@ enum CollisionState
    COLLISION_JUMP,
    COLLISION_DUCK,
    COLLISION_STRAFELEFT,
-   COLLISION_STRAFERIGHT
+   COLLISION_STRAFERIGHT,
+   COLLISION_BACKOFF
 };
 
 // counter-strike team id's
@@ -409,7 +408,8 @@ enum CollisionProbe
 {
    PROBE_JUMP = (1 << 0), // probe jump when colliding
    PROBE_DUCK = (1 << 1), // probe duck when colliding
-   PROBE_STRAFE = (1 << 2) // probe strafing when colliding
+   PROBE_STRAFE = (1 << 2), // probe strafing when colliding
+   PROBE_BACKOFF = (1 << 3) // probe going back when colliding
 };
 
 // vgui menus (since latest steam updates is obsolete, but left for old cs)
@@ -857,7 +857,7 @@ private:
    float m_lastCollTime; // time until next collision check
 
    unsigned int m_collisionProbeBits; // bits of possible collision moves
-   unsigned int m_collideMoves[4]; // sorted array of movements
+   unsigned int m_collideMoves[5]; // sorted array of movements
    unsigned int m_collStateIndex; // index into collide moves
    CollisionState m_collisionState; // collision State
 
@@ -1051,8 +1051,8 @@ private:
    bool OutOfBombTimer (void);
    void SelectLeaderEachTeam (int team);
 
-   Vector CheckToss (const Vector &start, Vector end);
-   Vector CheckThrow (const Vector &start, Vector end);
+   const Vector &CheckThrow (const Vector &start, const Vector &stop);
+   const Vector &CheckToss (const Vector &start, const Vector &stop);
    Vector CheckBombAudible (void);
 
    const Vector &GetAimPosition (void);
@@ -1279,10 +1279,9 @@ private:
    Array <CreateQueue> m_creationTab; // bot creation tab
 
    Bot *m_bots[32]; // all available bots
-   float m_maintainTime; // time to maintain bot creation quota
 
+   float m_maintainTime; // time to maintain bot creation quota
    int m_lastWinner; // the team who won previous round
-   int m_roundCount; // rounds passed
 
    bool m_economicsGood[2]; // is team able to buy anything
    bool m_deathMsgSent; // for fakeping
@@ -1291,7 +1290,7 @@ private:
    Array <entity_t> m_activeGrenades;
 
 protected:
-   int CreateBot (String name, int difficulty, int personality, int team, int member);
+   int CreateBot (const String &name, int difficulty, int personality, int team, int member);
 
 public:
    BotManager (void);
@@ -1320,7 +1319,7 @@ public:
 
    void AddRandom (void) { AddBot ("", -1, -1, -1, -1); }
    void AddBot (const String &name, int difficulty, int personality, int team, int member);
-   void AddBot (String name, String difficulty, String personality, String team, String member);
+   void AddBot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member);
    void FillServer (int selection, int personality = PERSONALITY_NORMAL, int difficulty = -1, int numToAdd = -1);
 
    void RemoveAll (bool zeroQuota = true);
@@ -1635,7 +1634,7 @@ extern bool TryFileOpen (const char *fileName);
 extern bool IsDedicatedServer (void);
 extern bool IsVisible (const Vector &origin, edict_t *ent);
 extern bool IsAlive (edict_t *ent);
-extern bool IsInViewCone (Vector origin, edict_t *ent);
+extern bool IsInViewCone (const Vector &origin, edict_t *ent);
 extern int GetWeaponPenetrationPower (int id);
 extern bool IsValidBot (edict_t *ent);
 extern bool IsValidPlayer (edict_t *ent);
@@ -1665,7 +1664,6 @@ extern void ServerPrint (const char *format, ...);
 extern void ChartPrint (const char *format, ...);
 extern void CenterPrint (const char *format, ...);
 extern void ClientPrint (edict_t *ent, int dest, const char *format, ...);
-extern void HudMessage (edict_t *ent, bool toCenter, Vector rgb, char *format, ...);
 
 extern void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...);
 extern void TraceLine (const Vector &start, const Vector &end, bool ignoreMonsters, bool ignoreGlass, edict_t *ignoreEntity, TraceResult *ptr);

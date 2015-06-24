@@ -294,7 +294,7 @@ void Bot::CheckGrenadeThrow (void)
 
             if (allowThrowing && m_seeEnemyTime + 2.0 < GetWorldTime ())
             {
-               const Vector &enemyPredict = ((m_lastEnemy->v.velocity * 0.5).SkipZ () + m_lastEnemy->v.origin);
+               const Vector &enemyPredict = ((m_lastEnemy->v.velocity * 0.5).Get2D () + m_lastEnemy->v.origin);
                int searchTab[4], count = 4;
 
                float searchRadius = m_lastEnemy->v.velocity.GetLength2D ();
@@ -345,7 +345,7 @@ void Bot::CheckGrenadeThrow (void)
       bool allowThrowing = true;
       Array <int> inRadius;
 
-      g_waypoint->FindInRadius (inRadius, 256, m_lastEnemy->v.origin + (m_lastEnemy->v.velocity * 0.5).SkipZ ());
+      g_waypoint->FindInRadius (inRadius, 256, m_lastEnemy->v.origin + (m_lastEnemy->v.velocity * 0.5).Get2D ());
 
       IterateArray (inRadius, i)
       {
@@ -683,7 +683,6 @@ void Bot::FindItem (void)
    edict_t *ent = NULL, *pickupItem = NULL;
    Bot *bot = NULL;
 
-   bool allowPickup = false;
    float distance, minDistance = 341.0;
 
    const float searchRadius = 340.0f;
@@ -726,6 +725,8 @@ void Bot::FindItem (void)
 
    m_pickupItem = NULL;
    m_pickupType = PICKUP_NONE;
+
+   bool allowPickup = false;
 
    while (!IsEntityNull (ent = FIND_ENTITY_IN_SPHERE (ent, pev->origin, searchRadius)))
    {
@@ -1081,14 +1082,13 @@ void Bot::SwitchChatterIcon (bool show)
    if (g_gameVersion == CSV_OLD || yb_communication_type.GetInt () != 2)
       return;
 
-   for (int i = 0; i < GetMaxClients (); i++)
-   { 
-      edict_t *ent = EntityOfIndex (i);
 
-      if (!(ent->v.flags & FL_CLIENT) || (ent->v.flags & FL_FAKECLIENT) || GetTeam (ent) != m_team)
+   for (int i = 0; i < GetMaxClients (); i++)
+   {
+      if (!(g_clients[i].flags & CF_USED) || (g_clients[i].ent->v.flags & FL_FAKECLIENT) || g_clients[i].team != m_team)
          continue;
 
-      MESSAGE_BEGIN (MSG_ONE, g_netMsg->GetId (NETMSG_BOTVOICE), NULL, ent); // begin message
+      MESSAGE_BEGIN (MSG_ONE, g_netMsg->GetId (NETMSG_BOTVOICE), NULL, g_clients[i].ent); // begin message
          WRITE_BYTE (show); // switch on/off
          WRITE_BYTE (GetIndex ());
       MESSAGE_END ();
@@ -2067,8 +2067,6 @@ void Bot::SetConditions (void)
       g_taskFilters[TASK_PICKUPITEM].desire = 0.0;
    }
 
-   float desireLevel = 0.0;
-
    // calculate desire to attack
    if ((m_states & STATE_SEEING_ENEMY) && ReactOnEnemy ())
       g_taskFilters[TASK_ATTACK].desire = TASKPRI_ATTACK;
@@ -2109,7 +2107,8 @@ void Bot::SetConditions (void)
       // FIXME: it probably should be also team/map dependant
       if (IsEntityNull (m_enemy) && g_timeRoundMid < GetWorldTime () && !m_isUsingGrenade && m_currentWaypointIndex != g_waypoint->FindNearest (m_lastEnemyOrigin) && m_personality != PERSONALITY_CAREFUL)
       {
-         desireLevel = 4096.0 - ((1.0 - tempAgression) * distance);
+         float desireLevel = 4096.0 - ((1.0 - tempAgression) * distance);
+
          desireLevel = (100 * desireLevel) / 4096.0;
          desireLevel -= retreatLevel;
 
@@ -2727,10 +2726,11 @@ void Bot::CheckRadioCommands (void)
 
                g_timeNextBombUpdate = GetWorldTime () + 0.5;
             }
-            // Does this Bot want to defuse?
+
+            // does this bot want to defuse?
             if (GetTaskId () == TASK_NORMAL)
             {
-               // Is he approaching this goal?
+               // is he approaching this goal?
                if (GetTask ()->data == bombPoint)
                {
                   GetTask ()->data = -1;
@@ -3605,7 +3605,7 @@ void Bot::RunTask (void)
 
       if (!IsEntityNull (m_enemy))
       {
-         m_lastCollTime = GetWorldTime () + 0.5f;
+         ResetCollideState ();
 
          if (IsOnLadder ())
          {
@@ -3617,8 +3617,6 @@ void Bot::RunTask (void)
       else
       {
          TaskComplete ();
-         FindWaypoint ();
-
          m_destOrigin = m_lastEnemyOrigin;
       }
       m_navTimeset = GetWorldTime ();
@@ -4220,13 +4218,12 @@ void Bot::RunTask (void)
 
       if (!(m_states & STATE_SEEING_ENEMY))
       {
-         m_moveSpeed = 0.0;
-         m_strafeSpeed = 0.0;
-
+         m_strafeSpeed = 0.0f;
+         m_moveSpeed = 0.0f;
          m_moveToGoal = false;
       }
       else if (!(m_states & STATE_SUSPECT_ENEMY) && !IsEntityNull (m_enemy))
-         destination = m_enemy->v.origin + (m_enemy->v.velocity.SkipZ () * 0.5);
+         destination = m_enemy->v.origin + (m_enemy->v.velocity.Get2D () * 0.5);
 
       m_isUsingGrenade = true;
       m_checkTerrain = false;
@@ -4297,13 +4294,11 @@ void Bot::RunTask (void)
 
       if (!(m_states & STATE_SEEING_ENEMY))
       {
-         m_moveSpeed = 0.0;
-         m_strafeSpeed = 0.0;
-
-         m_moveToGoal = false;
+         m_strafeSpeed = 0.0f;
+         m_moveSpeed = 0.0f;
       }
       else if (!(m_states & STATE_SUSPECT_ENEMY) && !IsEntityNull (m_enemy))
-         destination = m_enemy->v.origin + (m_enemy->v.velocity.SkipZ () * 0.5);
+         destination = m_enemy->v.origin + (m_enemy->v.velocity.Get2D () * 0.5);
 
       m_isUsingGrenade = true;
       m_checkTerrain = false;
@@ -4361,10 +4356,8 @@ void Bot::RunTask (void)
 
       if (!(m_states & STATE_SEEING_ENEMY))
       {
-         m_moveSpeed = 0.0;
-         m_strafeSpeed = 0.0;
-
-         m_moveToGoal = false;
+         m_strafeSpeed = 0.0f;
+         m_moveSpeed = 0.0f;
       }
 
       m_checkTerrain = false;
@@ -5029,14 +5022,13 @@ void Bot::BotAI (void)
          pev->button |= IN_MOVELEFT;
    }
 
-   static float timeDebugUpdate = 0.0;
-
    if (!IsEntityNull (g_hostEntity) && yb_debug.GetInt () >= 1)
    {
       int specIndex = g_hostEntity->v.iuser2;
 
       if (specIndex == IndexOfEntity (GetEntity ()))
       {
+         static float timeDebugUpdate = 0.0;
          static int index, goal, taskID;
 
          if (!m_tasks.IsEmpty ())
@@ -5169,14 +5161,14 @@ void Bot::BotAI (void)
 
                // set the aim flags
                sprintf (aimFlags, "%s%s%s%s%s%s%s%s",
-                  m_aimFlags & AIM_NAVPOINT ? " NavPoint" : "",
-                  m_aimFlags & AIM_CAMP ? " CampPoint" : "",
-                  m_aimFlags & AIM_PREDICT_PATH ? " PredictPath" : "",
-                  m_aimFlags & AIM_LAST_ENEMY ? " LastEnemy" : "",
-                  m_aimFlags & AIM_ENTITY ? " Entity" : "",
-                  m_aimFlags & AIM_ENEMY ? " Enemy" : "",
-                  m_aimFlags & AIM_GRENADE ? " Grenade" : "",
-                  m_aimFlags & AIM_OVERRIDE ? " Override" : "");
+                  (m_aimFlags & AIM_NAVPOINT) ? " NavPoint" : "",
+                  (m_aimFlags & AIM_CAMP) ? " CampPoint" : "",
+                  (m_aimFlags & AIM_PREDICT_PATH) ? " PredictPath" : "",
+                  (m_aimFlags & AIM_LAST_ENEMY) ? " LastEnemy" : "",
+                  (m_aimFlags & AIM_ENTITY) ? " Entity" : "",
+                  (m_aimFlags & AIM_ENEMY) ? " Enemy" : "",
+                  (m_aimFlags & AIM_GRENADE) ? " Grenade" : "",
+                  (m_aimFlags & AIM_OVERRIDE) ? " Override" : "");
 
                // set the bot type
                sprintf (botType, "%s%s%s", m_personality == PERSONALITY_RUSHER ? " Rusher" : "",
@@ -5652,7 +5644,7 @@ void Bot::DebugMsg (const char *format, ...)
       AddLogEntry (false, LL_DEFAULT, "%s: %s", STRING (pev->netname), buffer);
 }
 
-Vector Bot::CheckToss (const Vector &start, Vector end)
+const Vector &Bot::CheckToss (const Vector &start, const Vector &stop)
 {
    // this function returns the velocity at which an object should looped from start to land near end.
    // returns null vector if toss is not feasible.
@@ -5660,7 +5652,7 @@ Vector Bot::CheckToss (const Vector &start, Vector end)
    TraceResult tr;
    float gravity = sv_gravity.GetFloat () * 0.55;
 
-   end = end - pev->velocity;
+   Vector end = stop - pev->velocity;
    end.z -= 15.0;
 
    if (fabsf (end.z - start.z) > 500.0)
@@ -5707,12 +5699,12 @@ Vector Bot::CheckToss (const Vector &start, Vector end)
    return nadeVelocity * 0.777;
 }
 
-Vector Bot::CheckThrow (const Vector &start, Vector end)
+const Vector &Bot::CheckThrow (const Vector &start, const Vector &stop)
 {
    // this function returns the velocity vector at which an object should be thrown from start to hit end.
    // returns null vector if throw is not feasible.
 
-   Vector nadeVelocity = (end - start);
+   Vector nadeVelocity = (stop - start);
    TraceResult tr;
 
    float gravity = sv_gravity.GetFloat () * 0.55;
@@ -5726,7 +5718,7 @@ Vector Bot::CheckThrow (const Vector &start, Vector end)
    nadeVelocity = nadeVelocity * (1.0 / time);
    nadeVelocity.z += gravity * time * 0.5;
 
-   Vector apex = start + (end - start) * 0.5;
+   Vector apex = start + (stop - start) * 0.5;
    apex.z += 0.5 * gravity * (time * 0.5) * (time * 0.5);
 
    TraceHull (start, apex, false, head_hull, GetEntity (), &tr);
@@ -5734,11 +5726,11 @@ Vector Bot::CheckThrow (const Vector &start, Vector end)
    if (tr.flFraction != 1.0)
       return nullvec;
 
-   TraceHull (end, apex, true, head_hull, GetEntity (), &tr);
+   TraceHull (stop, apex, true, head_hull, GetEntity (), &tr);
 
    if (tr.flFraction != 1.0 || tr.fAllSolid)
    {
-      float dot = -(tr.vecPlaneNormal | (apex - end).Normalize ());
+      float dot = -(tr.vecPlaneNormal | (apex - stop).Normalize ());
 
       if (dot > 0.7 || tr.flFraction < 0.8)
          return nullvec;

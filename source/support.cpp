@@ -112,11 +112,11 @@ float GetShootingConeDeviation (edict_t *ent, Vector *position)
    return g_pGlobals->v_forward | dir;
 }
 
-bool IsInViewCone (Vector origin, edict_t *ent)
+bool IsInViewCone (const Vector &origin, edict_t *ent)
 {
    MakeVectors (ent->v.v_angle);
 
-   if (((origin - (ent->v.origin + ent->v.view_ofs)).Normalize () | g_pGlobals->v_forward) >= cosf (((ent->v.fov > 0 ? ent->v.fov : 90.0) * 0.5) * Math::MATH_PI / 180.0))
+   if (((origin - (ent->v.origin + ent->v.view_ofs)).Normalize () | g_pGlobals->v_forward) >= cosf (((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f) * MATH_D2R))
       return true;
 
    return false;
@@ -842,40 +842,6 @@ bool TryFileOpen (const char *fileName)
    return false;
 }
 
-void HudMessage (edict_t *ent, bool toCenter, Vector rgb, char *format, ...)
-{
-   if (!IsValidPlayer (ent) || IsValidBot (ent))
-      return;
-
-   va_list ap;
-   char buffer[1024];
-
-   va_start (ap, format);
-   vsprintf (buffer, format, ap);
-   va_end (ap);
-
-   MESSAGE_BEGIN (MSG_ONE, SVC_TEMPENTITY, NULL, ent);
-      WRITE_BYTE (TE_TEXTMESSAGE);
-      WRITE_BYTE (1);
-      WRITE_SHORT (FixedSigned16 (-1, 1 << 13));
-      WRITE_SHORT (FixedSigned16 (toCenter ? -1 : 0, 1 << 13));
-      WRITE_BYTE (2);
-      WRITE_BYTE (static_cast <int> (rgb.x));
-      WRITE_BYTE (static_cast <int> (rgb.y));
-      WRITE_BYTE (static_cast <int> (rgb.z));
-      WRITE_BYTE (0);
-      WRITE_BYTE (Random.Long (230, 255));
-      WRITE_BYTE (Random.Long (230, 255));
-      WRITE_BYTE (Random.Long (230, 255));
-      WRITE_BYTE (200);
-      WRITE_SHORT (FixedUnsigned16 (0.0078125, 1 << 8));
-      WRITE_SHORT (FixedUnsigned16 (2, 1 << 8));
-      WRITE_SHORT (FixedUnsigned16 (6, 1 << 8));
-      WRITE_SHORT (FixedUnsigned16 (0.1, 1 << 8));
-      WRITE_STRING (const_cast <const char *> (&buffer[0]));
-   MESSAGE_END ();
-}
-
 void ServerPrint (const char *format, ...)
 {
    va_list ap;
@@ -944,19 +910,11 @@ void ClientPrint (edict_t *ent, int dest, const char *format, ...)
 
    if (IsEntityNull (ent) || ent == g_hostEntity)
    {
-      if (dest & 0x3ff)
-         ServerPrint (string);
-      else
-         ServerPrint (string);
-
+		ServerPrint (string);
       return;
    }
    strcat (string, "\n");
-
-   if (dest & 0x3ff)
-      (*g_engfuncs.pfnClientPrintf) (ent, static_cast <PRINT_TYPE> (dest &= ~0x3ff), FormatBuffer ("[YAPB] %s", string));
-   else
-      (*g_engfuncs.pfnClientPrintf) (ent, static_cast <PRINT_TYPE> (dest), string);
+   (*g_engfuncs.pfnClientPrintf) (ent, static_cast <PRINT_TYPE> (dest), string);
 
 }
 
@@ -1072,7 +1030,27 @@ void CheckWelcomeMessage (void)
       ServerCommand ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));
 
       ChartPrint ("----- YaPB v%s (Build: %u), {%s}, (c) 2015, by %s -----", PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_DATE, PRODUCT_AUTHOR);
-      HudMessage (g_hostEntity, true, Vector (Random.Long (33, 255), Random.Long (33, 255), Random.Long (33, 255)), "\nServer is running YaPB v%s (Build: %u)\nDeveloped by %s\n\n%s", PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_AUTHOR, g_waypoint->GetInfo ());
+      
+      MESSAGE_BEGIN (MSG_ONE, SVC_TEMPENTITY, NULL, g_hostEntity);
+      WRITE_BYTE (TE_TEXTMESSAGE);
+      WRITE_BYTE (1);
+      WRITE_SHORT (FixedSigned16 (-1, 1 << 13));
+      WRITE_SHORT (FixedSigned16 (-1, 1 << 13));
+      WRITE_BYTE (2);
+      WRITE_BYTE (Random.Long (33, 255));
+      WRITE_BYTE (Random.Long (33, 255));
+      WRITE_BYTE (Random.Long (33, 255));
+      WRITE_BYTE (0);
+      WRITE_BYTE (Random.Long (230, 255));
+      WRITE_BYTE (Random.Long (230, 255));
+      WRITE_BYTE (Random.Long (230, 255));
+      WRITE_BYTE (200);
+      WRITE_SHORT (FixedUnsigned16 (0.0078125, 1 << 8));
+      WRITE_SHORT (FixedUnsigned16 (2, 1 << 8));
+      WRITE_SHORT (FixedUnsigned16 (6, 1 << 8));
+      WRITE_SHORT (FixedUnsigned16 (0.1, 1 << 8));
+      WRITE_STRING (FormatBuffer ("\nServer is running YaPB v%s (Build: %u)\nDeveloped by %s\n\n%s", PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_AUTHOR, g_waypoint->GetInfo ()));
+      MESSAGE_END ();
 
       receiveTime = 0.0;
       isReceived = true;

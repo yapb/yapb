@@ -212,10 +212,10 @@ namespace Math
       {
          fld dword ptr[rad]
          fsincos
-         mov edx, dword ptr[cos]
-         mov eax, dword ptr[sin]
-         fstp dword ptr[edx]
-         fstp dword ptr[eax]
+         mov ebx, [cos]
+         fstp dword ptr[ebx]
+         mov ebx, [sin]
+         fstp dword ptr[ebx]
       }
 #elif defined (__linux__) || defined (GCC) || defined (__APPLE__)
       register double _cos, _sin;
@@ -369,15 +369,6 @@ public:
       return &x;
    }
 
-   inline float &operator [] (int index)
-   {
-      return (&x)[index];
-   }
-
-   inline const float &operator [] (int index) const
-   {
-      return (&x)[index];
-   }
 
    inline const Vector operator + (const Vector &right) const
    {
@@ -410,11 +401,13 @@ public:
       return Vector (inv * x, inv * y, inv * z);
    }
 
+   // cross product
    inline const Vector operator ^ (const Vector &right) const
    {
       return Vector (y * right.z - z * right.y, z * right.x - x * right.z, x * right.y - y * right.x);
    }
 
+   // dot product
    inline float operator | (const Vector &right) const
    {
       return x * right.x + y * right.y + z * right.z;
@@ -545,14 +538,14 @@ public:
    }
 
    //
-   // Function: SkipZ
+   // Function: Get2D
    //
    // Gets vector without Z axis.
    //
    // Returns:
    //   2D vector from 3D vector.
    //
-   inline Vector SkipZ (void) const
+   inline Vector Get2D (void) const
    {
       return Vector (x, y, 0.0f);
    }
@@ -708,7 +701,7 @@ public:
    {
       float sinePitch = 0.0f, cosinePitch = 0.0f, sineYaw = 0.0f, cosineYaw = 0.0f, sineRoll = 0.0f, cosineRoll = 0.0f;
 
-      Math::SineCosine (Math::DegreeToRadian (x), &sinePitch, &cosinePitch);      // compute the sine and cosine of the pitch component
+      Math::SineCosine (Math::DegreeToRadian (x), &sinePitch, &cosinePitch); // compute the sine and cosine of the pitch component
       Math::SineCosine (Math::DegreeToRadian (y), &sineYaw, &cosineYaw); // compute the sine and cosine of the yaw component
       Math::SineCosine (Math::DegreeToRadian (z), &sineRoll, &cosineRoll); // compute the sine and cosine of the roll component
 
@@ -2473,7 +2466,7 @@ public:
    // Returns:
    //  Integer value of string.
    //
-   int ToInt (void)
+   int ToInt (void) const
    {
       return atoi (m_bufferPtr);
    }

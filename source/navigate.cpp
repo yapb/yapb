@@ -11,6 +11,9 @@
 
 ConVar yb_aim_method ("yb_aim_method", "3", VT_NOSERVER);
 
+// any user ever altered this stuff? left this for debug-only builds
+#if !defined (NDEBUG)
+
 ConVar yb_aim_damper_coefficient_x ("yb_aim_damper_coefficient_x", "0.22", VT_NOSERVER);
 ConVar yb_aim_damper_coefficient_y ("yb_aim_damper_coefficient_y", "0.22", VT_NOSERVER);
 
@@ -27,6 +30,8 @@ ConVar yb_aim_spring_stiffness_x ("yb_aim_spring_stiffness_x", "15.0", VT_NOSERV
 ConVar yb_aim_spring_stiffness_y ("yb_aim_spring_stiffness_y", "14.0", VT_NOSERVER);
 
 ConVar yb_aim_target_anticipation_ratio ("yb_aim_target_anticipation_ratio", "5.0", VT_NOSERVER);
+
+#endif
 
 int Bot::FindGoal (void)
 {
@@ -269,6 +274,7 @@ void Bot::FilterGoals (const Array <int> &goals, int *result)
          if (index > 0)
             index--;
 
+         searchCount++;
          continue;
       }
       result[index] = rand;
@@ -311,7 +317,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
    TraceResult tr;
    edict_t *nearest = NULL;
 
-   if (g_timeRoundStart + 10.0f < GetWorldTime () && FindNearestPlayer (reinterpret_cast <void **> (&nearest), GetEntity (), pev->maxspeed, true, false, true, true)) // found somebody?
+   if (g_timeRoundStart + 10.0f < GetWorldTime () && FindNearestPlayer (reinterpret_cast <void **> (&nearest), GetEntity (), pev->maxspeed, true, false, true, true) && nearest != NULL && !(nearest->v.flags & FL_FAKECLIENT)) // found somebody?
    {
       MakeVectors (m_moveAngles); // use our movement angles
 
@@ -327,16 +333,16 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
       if ((nearest->v.origin - moved).GetLength2D () <= 48.0 || (nearestDistance <= 56.0 && nextFrameDistance < nearestDistance))
       {
          // to start strafing, we have to first figure out if the target is on the left side or right side
-         Vector dirToPoint = (pev->origin - nearest->v.origin).SkipZ ();
+         Vector dirToPoint = (pev->origin - nearest->v.origin).Get2D ();
 
-         if ((dirToPoint | g_pGlobals->v_right.SkipZ ()) > 0.0)
+         if ((dirToPoint | g_pGlobals->v_right.Get2D ()) > 0.0)
             SetStrafeSpeed (directionNormal, pev->maxspeed);
          else
             SetStrafeSpeed (directionNormal, -pev->maxspeed);
 
          ResetCollideState ();
 
-         if (nearestDistance < 56.0 && (dirToPoint | g_pGlobals->v_forward.SkipZ ()) < 0.0)
+         if (nearestDistance < 56.0 && (dirToPoint | g_pGlobals->v_forward.Get2D ()) < 0.0)
             m_moveSpeed = -pev->maxspeed;
       }
    }
@@ -345,6 +351,8 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
    // FIXME: doesn't care for ladder movement (handled separately) should be included in some way
    if ((m_moveSpeed >= 10 || m_strafeSpeed >= 10) && m_lastCollTime < GetWorldTime ())
    {
+      bool cantMoveForward = false;
+
       if (movedDistance < 2.0 && m_prevSpeed >= 1.0) // didn't we move enough previously?
       {
          // Then consider being stuck
@@ -357,7 +365,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
       else // not stuck yet
       {
          // test if there's something ahead blocking the way
-         if (CantMoveForward (directionNormal, &tr) && !IsOnLadder ())
+         if ((cantMoveForward = CantMoveForward (directionNormal, &tr)) && !IsOnLadder ())
          {
             if (m_firstCollideTime == 0.0)
                m_firstCollideTime = GetWorldTime () + 0.2;
@@ -376,7 +384,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
          else
          {
             // remember to keep pressing duck if it was necessary ago
-            if (m_collideMoves[m_collStateIndex] == COLLISION_DUCK && IsOnFloor () || IsInWater ())
+            if (m_collideMoves[m_collStateIndex] == COLLISION_DUCK && (IsOnFloor () || IsInWater ()))
                pev->button |= IN_DUCK;
          }
          return;
@@ -392,13 +400,15 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
             bits = PROBE_STRAFE;
          else if (IsInWater ())
             bits = (PROBE_JUMP | PROBE_STRAFE);
+         else if (cantMoveForward)
+            bits = (PROBE_BACKOFF | PROBE_DUCK | PROBE_STRAFE);
          else
-            bits = ((Random.Long (0, 10) > 7 ? PROBE_JUMP : 0) | PROBE_STRAFE | PROBE_DUCK);
+            bits = ((Random.Long (0, 10) > 5 ? PROBE_JUMP : 0) | PROBE_STRAFE | PROBE_DUCK);
 
          // collision check allowed if not flying through the air
          if (IsOnFloor () || IsOnLadder () || IsInWater ())
          {
-            char state[8];
+            char state[10];
             int i = 0;
 
             // first 4 entries hold the possible collision states
@@ -406,6 +416,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
             state[i++] = COLLISION_DUCK;
             state[i++] = COLLISION_STRAFELEFT;
             state[i++] = COLLISION_STRAFERIGHT;
+            state[i++] = COLLISION_BACKOFF;
 
             // now weight all possible states
             if (bits & PROBE_JUMP)
@@ -536,6 +547,26 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
                state[i] = 0;
             }
 
+            if (bits & PROBE_BACKOFF)
+            {
+               state[i] = 0;
+
+               MakeVectors (m_moveAngles);
+
+               src = pev->origin;
+               dst = src - g_pGlobals->v_forward * 32;
+
+               TraceLine (src, dst, true, true, GetEntity (), &tr);
+
+               if (tr.flFraction != 1.0 || IsDeadlyDrop (dst))
+                  state[i] -= 70;
+               else
+                  state[i] += 40;
+            }
+            else
+               state[i] = 0;
+            i++;
+
             // weighted all possible moves, now sort them to start with most probable
             int temp = 0;
             bool isSorting = false;
@@ -543,26 +574,26 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
             do
             {
                isSorting = false;
-               for (i = 0; i < 3; i++)
+               for (i = 0; i < 4; i++)
                {
-                  if (state[i + 4] < state[i + 5])
+                  if (state[i + 5] < state[i + 6])
                   {
                      temp = state[i];
 
                      state[i] = state[i + 1];
                      state[i + 1] = temp;
 
-                     temp = state[i + 4];
+                     temp = state[i + 5];
 
-                     state[i + 4] = state[i + 5];
-                     state[i + 5] = temp;
+                     state[i + 5] = state[i + 6];
+                     state[i + 6] = temp;
 
                      isSorting = true;
                   }
                }
             } while (isSorting);
 
-            for (i = 0; i < 4; i++)
+            for (i = 0; i < 5; i++)
                m_collideMoves[i] = state[i];
 
             m_collideTime = GetWorldTime ();
@@ -580,14 +611,14 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
             m_collStateIndex++;
             m_probeTime = GetWorldTime () + 0.5;
 
-            if (m_collStateIndex > 4)
+            if (m_collStateIndex > 5)
             {
                m_navTimeset = GetWorldTime () - 5.0;
                ResetCollideState ();
             }
          }
 
-         if (m_collStateIndex <= 4)
+         if (m_collStateIndex <= 5)
          {
             switch (m_collideMoves[m_collStateIndex])
             {
@@ -609,6 +640,11 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
             case COLLISION_STRAFERIGHT:
                pev->button |= IN_MOVERIGHT;
                SetStrafeSpeed (directionNormal, pev->maxspeed);
+               break;
+
+            case COLLISION_BACKOFF:
+               pev->button |= IN_BACK;
+               m_moveSpeed = -pev->maxspeed;
                break;
             }
          }
@@ -879,8 +915,6 @@ bool Bot::DoWaypointNav (void)
       // need to find a button outside the lift
       if (m_liftState == LIFT_LOOKING_BUTTON_OUTSIDE)
       {
-         // lift is already used ?
-         bool liftUsed = false;
 
          // button has been pressed, lift should come
          if (m_buttonPushTime + 8.0 >= GetWorldTime ())
@@ -899,6 +933,9 @@ bool Bot::DoWaypointNav (void)
          else
          {
             edict_t *button = FindNearestButton (STRING (m_liftEntity->v.targetname));
+
+            // lift is already used ?
+            bool liftUsed = false;
 
             // if we got a valid button entity
             if (!IsEntityNull (button))
@@ -1244,7 +1281,7 @@ public:
       return m_size == 0;
    }
 
-   inline PriorityQueue (int initialSize)
+   inline PriorityQueue (int initialSize = MAX_WAYPOINTS * 0.5)
    {
       m_size = 0;
       m_heapSize = initialSize;
@@ -1263,7 +1300,7 @@ public:
       if (m_size >= m_heapSize)
       {
          m_heapSize += 100;
-         m_heap = (Node *)realloc (m_heap, sizeof (Node) * m_heapSize);
+         m_heap = static_cast <Node *> (realloc (m_heap, sizeof (Node) * m_heapSize));
       }
 
       m_heap[m_size].pri = pri;
@@ -1506,9 +1543,9 @@ float hfunctionSquareDist (int index, int, int goalIndex)
    float zDist = fabsf (start->origin.z - goal->origin.z);
 
    if (xDist > yDist)
-      return 1.4 * yDist + (xDist - yDist) + zDist;
+      return 1.4f * yDist + (xDist - yDist) + zDist;
 
-   return 1.4 * xDist + (yDist - xDist) + zDist;
+   return 1.4f * xDist + (yDist - xDist) + zDist;
 #endif
 }
 
@@ -1564,7 +1601,7 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
       AStarState state;
    } astar[MAX_WAYPOINTS];
 
-   PriorityQueue openList (MAX_WAYPOINTS * 0.5);
+   PriorityQueue openList;
 
    for (int i = 0; i < MAX_WAYPOINTS; i++)
    {
@@ -2468,12 +2505,9 @@ bool Bot::HeadTowardWaypoint (void)
 
 bool Bot::CantMoveForward (const Vector &normal, TraceResult *tr)
 {
-   // Checks if bot is blocked in his movement direction (excluding doors)
+   // checks if bot is blocked in his movement direction (excluding doors)
 
    // use some TraceLines to determine if anything is blocking the current path of the bot.
-   Vector center = Vector (0, pev->angles.y, 0);
-
-   MakeVectors (center);
 
    // first do a trace from the bot's eyes forward...
    Vector src = EyePosition ();
@@ -2490,10 +2524,11 @@ bool Bot::CantMoveForward (const Vector &normal, TraceResult *tr)
 
       return true;  // bot's head will hit something
    }
+   MakeVectors (Vector (0, pev->angles.y, 0));
 
    // bot's head is clear, check at shoulder level...
    // trace from the bot's shoulder left diagonal forward to the right shoulder...
-   src = EyePosition () + Vector (0, 0, -16) - g_pGlobals->v_right * 16;
+   src = EyePosition () + Vector (0, 0, -16) - g_pGlobals->v_right * -16;
    forward = EyePosition () + Vector (0, 0, -16) + g_pGlobals->v_right * 16 + normal * 24;
 
    TraceLine (src, forward, true, GetEntity (), tr);
@@ -2505,7 +2540,7 @@ bool Bot::CantMoveForward (const Vector &normal, TraceResult *tr)
    // bot's head is clear, check at shoulder level...
    // trace from the bot's shoulder right diagonal forward to the left shoulder...
    src = EyePosition () + Vector (0, 0, -16) + g_pGlobals->v_right * 16;
-   forward = EyePosition () + Vector (0, 0, -16) - g_pGlobals->v_right * 16 + normal * 24;
+   forward = EyePosition () + Vector (0, 0, -16) - g_pGlobals->v_right * -16 + normal * 24;
 
    TraceLine (src, forward, true, GetEntity (), tr);
 
@@ -2537,7 +2572,7 @@ bool Bot::CantMoveForward (const Vector &normal, TraceResult *tr)
    else
    {
       // trace from the left waist to the right forward waist pos
-      src = pev->origin + Vector (0, 0, -17) - g_pGlobals->v_right * 16;
+      src = pev->origin + Vector (0, 0, -17) - g_pGlobals->v_right * -16;
       forward = pev->origin + Vector (0, 0, -17) + g_pGlobals->v_right * 16 + normal * 24;
 
       // trace from the bot's waist straight forward...
@@ -2549,7 +2584,7 @@ bool Bot::CantMoveForward (const Vector &normal, TraceResult *tr)
 
       // trace from the left waist to the right forward waist pos
       src = pev->origin + Vector (0, 0, -17) + g_pGlobals->v_right * 16;
-      forward = pev->origin + Vector (0, 0, -17) - g_pGlobals->v_right * 16 + normal * 24;
+      forward = pev->origin + Vector (0, 0, -17) - g_pGlobals->v_right * -16 + normal * 24;
 
       TraceLine (src, forward, true, GetEntity (), tr);
 
@@ -2906,7 +2941,6 @@ bool Bot::IsDeadlyDrop (const Vector &to)
    if (tr.flFraction > 0.036) // We're not on ground anymore?
       tr.flFraction = 0.036;
 
-   float height;
    float lastHeight = tr.flFraction * 1000.0;  // height from ground
 
    float distance = (to - check).GetLength ();  // distance from goal
@@ -2923,7 +2957,7 @@ bool Bot::IsDeadlyDrop (const Vector &to)
       if (tr.fStartSolid) // Wall blocking?
          return false;
 
-      height = tr.flFraction * 1000.0;  // height from ground
+      float height = tr.flFraction * 1000.0;  // height from ground
 
       if (lastHeight < height - 100) // Drops more than 100 Units?
          return true;
@@ -3113,15 +3147,31 @@ void Bot::FacePosition (void)
    }
    else if (aimMethod == 3)
    {
+#if defined (NDEBUG)
+      Vector springStiffness (15.0f, 15.0f, 0.0f);
+      Vector damperCoefficient (0.22f, 0.22f, 0.0f);
+
+      Vector influence (0.26f, 0.18f, 0.0f);
+      Vector randomization (2.0f, 0.18f, 0.0f);
+
+      const float noTargetRatio = 0.6f;
+      const float offsetDelay = 0.5f;
+      const float targetRatio = 5.0f;
+#else
       Vector springStiffness (yb_aim_spring_stiffness_x.GetFloat (), yb_aim_spring_stiffness_y.GetFloat (), 0);
       Vector damperCoefficient (yb_aim_damper_coefficient_x.GetFloat (), yb_aim_damper_coefficient_y.GetFloat (), 0);
       Vector influence (yb_aim_influence_x_on_y.GetFloat (), yb_aim_influence_y_on_x.GetFloat (), 0);
       Vector randomization (yb_aim_deviation_x.GetFloat (), yb_aim_deviation_y.GetFloat (), 0);
 
+      const float noTargetRatio = yb_aim_notarget_slowdown_ratio.GetFloat ();
+      const float offsetDelay = yb_aim_offset_delay.GetFloat ();
+      const float targetRatio = yb_aim_target_anticipation_ratio.GetFloat ();
+#endif
+
       Vector stiffness = nullvec;
       Vector randomize = nullvec;
 
-      m_idealAngles = direction.SkipZ ();
+      m_idealAngles = direction.Get2D ();
       m_targetOriginAngularSpeed.ClampAngles ();
       m_idealAngles.ClampAngles ();
 
@@ -3138,7 +3188,7 @@ void Bot::FacePosition (void)
 
          if (IsValidPlayer (m_enemy))
          {
-            m_targetOriginAngularSpeed = ((m_enemyOrigin - pev->origin + 1.5 * m_frameInterval * (1.0 * m_enemy->v.velocity) - 0.0 * g_pGlobals->frametime * pev->velocity).ToAngles () - (m_enemyOrigin - pev->origin).ToAngles ()) * 0.45 * yb_aim_target_anticipation_ratio.GetFloat () * static_cast <float> ((m_difficulty * 25) / 100);
+            m_targetOriginAngularSpeed = ((m_enemyOrigin - pev->origin + 1.5 * m_frameInterval * (1.0 * m_enemy->v.velocity) - 0.0 * g_pGlobals->frametime * pev->velocity).ToAngles () - (m_enemyOrigin - pev->origin).ToAngles ()) * 0.45f * targetRatio * static_cast <float> ((m_difficulty * 25) / 100);
 
             if (m_angularDeviation.GetLength () < 5.0)
                springStiffness = (5.0 - m_angularDeviation.GetLength ()) * 0.25 * static_cast <float> ((m_difficulty * 25) / 100) * springStiffness + springStiffness;
@@ -3174,12 +3224,12 @@ void Bot::FacePosition (void)
             m_randomizedIdealAngles = m_idealAngles + Vector (Random.Float (-randomize.x * 0.5, randomize.x * 1.5), Random.Float (-randomize.y, randomize.y), 0);
 
             // set next time to do this
-            m_randomizeAnglesTime = GetWorldTime () + Random.Float (0.4, yb_aim_offset_delay.GetFloat ());
+            m_randomizeAnglesTime = GetWorldTime () + Random.Float (0.4f, offsetDelay);
          }
-         float stiffnessMultiplier = yb_aim_notarget_slowdown_ratio.GetFloat ();
+         float stiffnessMultiplier = noTargetRatio;
 
          // take in account whether the bot was targeting someone in the last N seconds
-         if (GetWorldTime () - (m_playerTargetTime + yb_aim_offset_delay.GetFloat ()) < yb_aim_notarget_slowdown_ratio.GetFloat () * 10.0)
+         if (GetWorldTime () - (m_playerTargetTime + offsetDelay) < noTargetRatio * 10.0)
          {
             stiffnessMultiplier = 1.0 - (GetWorldTime () - m_timeLastFired) * 0.1;
 
@@ -3238,7 +3288,7 @@ void Bot::SetStrafeSpeed (const Vector &moveDir, float strafeSpeed)
    MakeVectors (pev->angles);
 
    const Vector &los = (moveDir - pev->origin).Normalize2D ();
-   float dot = los | g_pGlobals->v_forward.SkipZ ();
+   float dot = los | g_pGlobals->v_forward.Get2D ();
 
    if (dot > 0 && !CheckWallOnRight ())
       m_strafeSpeed = strafeSpeed;

@@ -18,6 +18,10 @@ void Waypoint::Init (void)
 {
    // this function initialize the waypoint structures..
 
+   m_learnVelocity = nullvec;
+   m_learnPosition = nullvec;
+   m_lastWaypoint = nullvec;
+
    // have any waypoint path nodes been allocated yet?
    if (m_waypointPaths)
    {
@@ -1281,7 +1285,6 @@ bool Waypoint::IsNodeReachable (const Vector &src, const Vector &destination)
 {
    TraceResult tr;
 
-   float height, lastHeight;
    float distance = (destination - src).GetLength ();
 
    // is the destination not close enough?
@@ -1335,7 +1338,7 @@ bool Waypoint::IsNodeReachable (const Vector &src, const Vector &destination)
 
       TraceLine (check, down, ignore_monsters, g_hostEntity, &tr);
 
-      lastHeight = tr.flFraction * 1000.0; // height from ground
+      float lastHeight = tr.flFraction * 1000.0; // height from ground
       distance = (destination - check).GetLength (); // distance from goal
 
       while (distance > 10.0)
@@ -1348,7 +1351,7 @@ bool Waypoint::IsNodeReachable (const Vector &src, const Vector &destination)
 
          TraceLine (check, down, ignore_monsters, g_hostEntity, &tr);
 
-         height = tr.flFraction * 1000.0; // height from ground
+         float height = tr.flFraction * 1000.0; // height from ground
 
          // is the current height greater than the step height?
          if (height < lastHeight - 18.0)
@@ -1802,12 +1805,11 @@ bool Waypoint::NodesValid (void)
    int ctPoints = 0;
    int goalPoints = 0;
    int rescuePoints = 0;
-   int connections;
    int i, j;
 
    for (i = 0; i < g_numWaypoints; i++)
    {
-      connections = 0;
+      int connections = 0;
 
       for (j = 0; j < MAX_PATH_INDEX; j++)
       {
@@ -1872,16 +1874,20 @@ bool Waypoint::NodesValid (void)
             else if (m_paths[i]->index[k] == i)
             {
                AddLogEntry (true, LL_WARNING, "Waypoint %d - Pathindex %d points to itself!", i, k);
-               (*g_engfuncs.pfnSetOrigin) (g_hostEntity, m_paths[i]->origin);
 
-               g_waypointOn = true;
-               g_editNoclip = true;
+               if (g_waypointOn && !IsDedicatedServer ())
+               {
+                  (*g_engfuncs.pfnSetOrigin) (g_hostEntity, m_paths[i]->origin);
 
+                  g_waypointOn = true;
+                  g_editNoclip = true;
+               }
                return false;
             }
          }
       }
    }
+
    if (g_mapType & MAP_CS)
    {
       if (rescuePoints == 0)
@@ -1951,11 +1957,14 @@ bool Waypoint::NodesValid (void)
       if (!visited[i])
       {
          AddLogEntry (true, LL_WARNING, "Path broken from Waypoint #0 to Waypoint #%d!", i);
-         (*g_engfuncs.pfnSetOrigin) (g_hostEntity, m_paths[i]->origin);
 
-         g_waypointOn = true;
-         g_editNoclip = true;
+         if (g_waypointOn && !IsDedicatedServer ())
+         {
+            (*g_engfuncs.pfnSetOrigin) (g_hostEntity, m_paths[i]->origin);
 
+            g_waypointOn = true;
+            g_editNoclip = true;
+         }
          return false;
       }
    }
@@ -2008,11 +2017,14 @@ bool Waypoint::NodesValid (void)
       if (!visited[i])
       {
          AddLogEntry (true, LL_WARNING, "Path broken from Waypoint #%d to Waypoint #0!", i);
-         SET_ORIGIN (g_hostEntity, m_paths[i]->origin);
 
-         g_waypointOn = true;
-         g_editNoclip = true;
+         if (g_waypointOn && !IsDedicatedServer ())
+         {
+            (*g_engfuncs.pfnSetOrigin) (g_hostEntity, m_paths[i]->origin);
 
+            g_waypointOn = true;
+            g_editNoclip = true;
+         }
          return false;
       }
    }
@@ -2452,14 +2464,11 @@ Waypoint::Waypoint (void)
    m_learnJumpWaypoint = false;
    m_timeJumpStarted = 0.0;
 
-   m_learnVelocity = nullvec;
-   m_learnPosition = nullvec;
    m_lastJumpWaypoint = -1;
    m_cacheWaypointIndex = -1;
    m_findWPIndex = -1;
    m_visibilityIndex = 0;
 
-   m_lastWaypoint = nullvec;
    m_isOnLadder = false;
 
    m_pathDisplayTime = 0.0;
