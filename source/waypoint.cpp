@@ -957,7 +957,7 @@ void Waypoint::SaveVisibilityTab (void)
       return;
 
    if (m_visLUT == NULL)
-      AddLogEntry (true, LL_FATAL, "Can't save visiblity tab. Bad data.");
+      AddLogEntry (true, LL_FATAL, "Can't save visibility tab. Bad data.");
 
    ExtensionHeader header;
 
@@ -972,7 +972,7 @@ void Waypoint::SaveVisibilityTab (void)
 
    if (!fp.IsValid ())
    {
-      AddLogEntry (true, LL_ERROR, "Failed to open visiblity table for writing");
+      AddLogEntry (true, LL_ERROR, "Failed to open visibility table for writing");
       return;
    }
    fp.Close ();

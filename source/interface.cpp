@@ -2989,38 +2989,38 @@ export void Meta_Init (void)
    g_isMetamod = true;
 }
 
-#include <io.h>
+extern "C" int access (const char *filename, int mode);
+
+struct DirectoryTransition
+{
+   String oldName;
+   String newName;
+
+   DirectoryTransition (void)
+   {
+   }
+
+   DirectoryTransition (const String &oldName, const String &newName)
+   {
+      String rootPath;
+      rootPath->AssignFormat ("%s/addons/yapb/", GetModName ());
+
+      this->oldName = rootPath + oldName;
+      this->newName = rootPath + newName;
+   }
+
+   void TryToRename (void)
+   {
+      if (access (oldName->GetBuffer (), 00) != -1)
+         rename (oldName->GetBuffer (), newName->GetBuffer ());
+   }
+};
 
 void FixDirectoryStructure (void)
 {
-   // temporary function for 2.7 directory structure changes, will be delete after final releases of the bot
+   // temporary function for 2.7 directory structure changes, will be deleted after final releases of the bot
 
-   struct DirectoryTransition
-   {
-      String oldName;
-      String newName;
-
-      DirectoryTransition (void)
-      {
-      }
-
-      DirectoryTransition (const String &oldName, const String &newName)
-      {
-         String rootPath;
-         rootPath->AssignFormat ("%s/addons/yapb/", GetModName ());
-
-         this->oldName = rootPath + oldName;
-         this->newName = rootPath + newName;
-      }
-
-      void TryToRename (void)
-      {
-         if (access (oldName->GetBuffer (), 00) != -1)
-            rename (oldName->GetBuffer (), newName->GetBuffer ());
-      }
-   };
-
-   Array <DirectoryTransition> directories;
+   static Array <DirectoryTransition> directories;
 
    directories.Push (DirectoryTransition ("wptdefault", "data"));
    directories.Push (DirectoryTransition ("data/data", "data/learned"));
