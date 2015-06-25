@@ -955,16 +955,16 @@ bool OpenConfig (const char *fileName, char *errorIfNotExists, File *outFile, bo
       if (strcmp (fileName, "lang.cfg") == 0 && strcmp (yb_language.GetString (), "en") == 0)
          return false;
 
-      const char *languageDependantConfigFile = FormatBuffer ("%s/addons/yapb/config/language/%s_%s", GetModName (), yb_language.GetString (), fileName);
+      const char *languageDependantConfigFile = FormatBuffer ("%s/addons/yapb/conf/lang/%s_%s", GetModName (), yb_language.GetString (), fileName);
 
       // check is file is exists for this language
       if (TryFileOpen (languageDependantConfigFile))
          outFile->Open (languageDependantConfigFile, "rt");
       else
-         outFile->Open (FormatBuffer ("%s/addons/yapb/config/language/en_%s", GetModName (), fileName), "rt");
+         outFile->Open (FormatBuffer ("%s/addons/yapb/conf/lang/en_%s", GetModName (), fileName), "rt");
    }
    else
-      outFile->Open (FormatBuffer ("%s/addons/yapb/config/%s", GetModName (), fileName), "rt");
+      outFile->Open (FormatBuffer ("%s/addons/yapb/conf/%s", GetModName (), fileName), "rt");
 
    if (!outFile->IsValid ())
    {
@@ -976,7 +976,7 @@ bool OpenConfig (const char *fileName, char *errorIfNotExists, File *outFile, bo
 
 const char *GetWaypointDir (void)
 {
-   return FormatBuffer ("%s/addons/yapb/wptdefault/", GetModName ());
+   return FormatBuffer ("%s/addons/yapb/data/", GetModName ());
 }
 
 void RegisterCommand (char *command, void funcPtr (void))
@@ -1059,42 +1059,20 @@ void CheckWelcomeMessage (void)
 
 void DetectCSVersion (void)
 {
-   byte *detection = NULL;
-   const char *const infoBuffer = "Game Registered: CS %s (0x%d)";
-
-   // switch version returned by dll loader
-   switch (g_gameVersion)
-   {
-   // counter-strike 1.x, WON ofcourse
-   case CSV_OLD:
-      ServerPrint (infoBuffer, "1.x (WON)", sizeof (Bot));
-      break;
+   if (g_gameVersion == CSV_OLD || g_gameVersion == CSV_CZERO)
+      return;
 
    // counter-strike 1.6 or higher (plus detects for non-steam versions of 1.5)
-   case CSV_STEAM:
-      detection = (*g_engfuncs.pfnLoadFileForMe) ("events/galil.sc", NULL);
+   byte *detection = (*g_engfuncs.pfnLoadFileForMe) ("events/galil.sc", NULL);
 
-      if (detection != NULL)
-      {
-         ServerPrint (infoBuffer, "1.6 (Steam)", sizeof (Bot));
-         g_gameVersion = CSV_STEAM; // just to be sure
-      }
-      else if (detection == NULL)
-      {
-         ServerPrint (infoBuffer, " <= 1.5 (WON)", sizeof (Bot));
-         g_gameVersion = CSV_OLD; // reset it to WON
-      }
+   if (detection != NULL)
+      g_gameVersion = CSV_STEAM; // just to be sure
+   else if (detection == NULL)
+      g_gameVersion = CSV_OLD; // reset it to WON
 
-      // if we have loaded the file free it
-      if (detection != NULL)
-         (*g_engfuncs.pfnFreeFile) (detection);
-      break;
-
-   // counter-strike cz
-   case CSV_CZERO:
-      ServerPrint (infoBuffer, "CZ (Steam)", sizeof (Bot));
-      break;
-   }
+   // if we have loaded the file free it
+   if (detection != NULL)
+      (*g_engfuncs.pfnFreeFile) (detection);
 }
 
 void PlaySound (edict_t *ent, const char *name)

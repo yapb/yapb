@@ -862,7 +862,7 @@ void Waypoint::SaveExperienceTab (void)
       }
    }
 
-   int result = Compressor::Compress (FormatBuffer ("%sdata/%s.exp", GetWaypointDir (), GetMapName ()), (unsigned char *)&header, sizeof (ExtensionHeader), (unsigned char *)experienceSave, g_numWaypoints * g_numWaypoints * sizeof (ExperienceSave));
+   int result = Compressor::Compress (FormatBuffer ("%slearned/%s.exp", GetWaypointDir (), GetMapName ()), (unsigned char *)&header, sizeof (ExtensionHeader), (unsigned char *)experienceSave, g_numWaypoints * g_numWaypoints * sizeof (ExperienceSave));
 
    delete [] experienceSave;
 
@@ -902,7 +902,7 @@ void Waypoint::InitExperienceTab (void)
          (g_experienceData + (i * g_numWaypoints) + j)->team1Value = 0;
       }
    }
-   File fp (FormatBuffer ("%sdata/%s.exp", GetWaypointDir (), GetMapName ()), "rb");
+   File fp (FormatBuffer ("%slearned/%s.exp", GetWaypointDir (), GetMapName ()), "rb");
 
    // if file exists, read the experience data from it
    if (fp.IsValid ())
@@ -916,7 +916,7 @@ void Waypoint::InitExperienceTab (void)
          {
             ExperienceSave *experienceLoad = new ExperienceSave[g_numWaypoints * g_numWaypoints];
 
-            Compressor::Uncompress (FormatBuffer ("%sdata/%s.exp", GetWaypointDir (), GetMapName ()), sizeof (ExtensionHeader), (unsigned char *)experienceLoad, g_numWaypoints * g_numWaypoints * sizeof (ExperienceSave));
+            Compressor::Uncompress (FormatBuffer ("%slearned/%s.exp", GetWaypointDir (), GetMapName ()), sizeof (ExtensionHeader), (unsigned char *)experienceLoad, g_numWaypoints * g_numWaypoints * sizeof (ExperienceSave));
 
             for (i = 0; i < g_numWaypoints; i++)
             {
@@ -968,7 +968,7 @@ void Waypoint::SaveVisibilityTab (void)
    header.fileVersion = FV_VISTABLE;
    header.pointNumber = g_numWaypoints;
 
-   File fp (FormatBuffer ("%sdata/%s.vis", GetWaypointDir (), GetMapName ()), "wb");
+   File fp (FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), GetMapName ()), "wb");
 
    if (!fp.IsValid ())
    {
@@ -977,7 +977,7 @@ void Waypoint::SaveVisibilityTab (void)
    }
    fp.Close ();
 
-   Compressor::Compress (FormatBuffer ("%sdata/%s.vis", GetWaypointDir (), GetMapName ()), (unsigned char *) &header, sizeof (ExtensionHeader), (unsigned char *) m_visLUT, MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (byte));
+   Compressor::Compress (FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), GetMapName ()), (unsigned char *) &header, sizeof (ExtensionHeader), (unsigned char *) m_visLUT, MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (byte));
 }
 
 void Waypoint::InitVisibilityTab (void)
@@ -987,7 +987,7 @@ void Waypoint::InitVisibilityTab (void)
 
    ExtensionHeader header;
 
-   File fp (FormatBuffer ("%sdata/%s.vis", GetWaypointDir (), GetMapName ()), "rb");
+   File fp (FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), GetMapName ()), "rb");
    m_redoneVisibility = false;
 
    if (!fp.IsValid ())
@@ -1012,7 +1012,7 @@ void Waypoint::InitVisibilityTab (void)
 
       return;
    }
-   int result = Compressor::Uncompress (FormatBuffer ("%sdata/%s.vis", GetWaypointDir (), GetMapName ()), sizeof (ExtensionHeader), (unsigned char *) m_visLUT, MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (byte));
+   int result = Compressor::Uncompress (FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), GetMapName ()), sizeof (ExtensionHeader), (unsigned char *) m_visLUT, MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (byte));
 
    if (result == -1)
    {
@@ -2092,7 +2092,7 @@ void Waypoint::InitPathMatrix (void)
 
 void Waypoint::SavePathMatrix (void)
 {
-   File fp (FormatBuffer ("%sdata/%s.pmt", GetWaypointDir (), GetMapName ()), "wb");
+   File fp (FormatBuffer ("%slearned/%s.pmt", GetWaypointDir (), GetMapName ()), "wb");
 
    // unable to open file
    if (!fp.IsValid ())
@@ -2114,7 +2114,7 @@ void Waypoint::SavePathMatrix (void)
 
 bool Waypoint::LoadPathMatrix (void)
 {
-   File fp (FormatBuffer ("%sdata/%s.pmt", GetWaypointDir (), GetMapName ()), "rb");
+   File fp (FormatBuffer ("%slearned/%s.pmt", GetWaypointDir (), GetMapName ()), "rb");
 
    // file doesn't exists return false
    if (!fp.IsValid ())
@@ -2364,10 +2364,10 @@ void Waypoint::EraseFromHardDisk (void)
 
    // if we're delete waypoint, delete all corresponding to it files
    deleteList[0] = FormatBuffer ("%s%s.pwf", GetWaypointDir (), GetMapName ()); // waypoint itself
-   deleteList[1] = FormatBuffer ("%sdata/%s.exp", GetWaypointDir (), GetMapName ()); // corresponding to waypoint experience
-   deleteList[3] = FormatBuffer ("%sdata/%s.vis", GetWaypointDir (), GetMapName ()); // corresponding to waypoint vistable
-   deleteList[3] = FormatBuffer ("%sdata/%s.pmt", GetWaypointDir (), GetMapName ()); // corresponding to waypoint path matrix
-   deleteList[4] = FormatBuffer ("%sdata/%s.xml", GetWaypointDir (), GetMapName ()); // corresponding to waypoint xml database
+   deleteList[1] = FormatBuffer ("%slearned/%s.exp", GetWaypointDir (), GetMapName ()); // corresponding to waypoint experience
+   deleteList[3] = FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), GetMapName ()); // corresponding to waypoint vistable
+   deleteList[3] = FormatBuffer ("%slearned/%s.pmt", GetWaypointDir (), GetMapName ()); // corresponding to waypoint path matrix
+   deleteList[4] = FormatBuffer ("%slearned/%s.xml", GetWaypointDir (), GetMapName ()); // corresponding to waypoint xml database
 
    for (int i = 0; i < 4; i++)
    {
