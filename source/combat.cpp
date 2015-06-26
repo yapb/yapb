@@ -1104,6 +1104,9 @@ void Bot::CombatFight (void)
          pev->button &= ~IN_JUMP;
       }
    }
+
+   m_isStuck = false;
+   m_lastCollTime = GetWorldTime () + 0.5f;
 }
 
 bool Bot::HasPrimaryWeapon (void)

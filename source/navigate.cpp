@@ -2140,16 +2140,6 @@ int Bot::FindDefendWaypoint (const Vector &origin)
       }
    } while (isOrderChanged);
 
-   if (waypointIndex[0] == -1)
-   {
-      Array <int> found;
-      g_waypoint->FindInRadius (found, 1024.0f, origin);
-
-      if (found.IsEmpty ())
-         return Random.Long (0, g_numWaypoints - 1); // most worst case, since there a evil error in waypoints
-
-      return found.GetRandomElement ();
-   }
    int index = 0;
 
    for (; index < MAX_PATH_INDEX; index++)
@@ -3320,9 +3310,11 @@ bool Bot::IsPointOccupied (int index)
          continue;
 
       // check if this waypoint is already used
-      if (IsAlive (bot->GetEntity ()))
+      if (!bot->m_notKilled)
       {
-         if ((GetShootingConeDeviation (bot->GetEntity (), &pev->origin) >= 0.7f ? bot->m_prevWptIndex[0] : m_currentWaypointIndex) == index || bot->GetTask ()->data == index)
+         int occupyId = GetShootingConeDeviation (bot->GetEntity (), &pev->origin) >= 0.7f ? bot->m_prevWptIndex[0] : m_currentWaypointIndex;
+
+         if (occupyId == index || bot->GetTask ()->data == index || (g_waypoint->GetPath (occupyId)->origin - g_waypoint->GetPath (index)->origin).GetLengthSquared () < 8100)
             return true;
       }
    }
