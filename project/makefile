@@ -52,7 +52,7 @@ endif
 
 LINK += -m32 -lm -ldl
 
-CFLAGS += -DHAVE_STDINT_H -D__extern_always_inline=inline -Dstricmp=strcasecmp -Dstrcmpi=strcasecmp -fno-strict-aliasing -m32 -Wall -Werror -Wno-uninitialized -Wno-unused -Wno-switch -Wno-c++11-compat-deprecated-writable-strings
+CFLAGS += -DHAVE_STDINT_H -D__extern_always_inline=inline -D_strdup=strdup -Dstricmp=strcasecmp -Dstrcmpi=strcasecmp -fno-strict-aliasing -m32 -Wall -Werror -Wno-uninitialized -Wno-unused -Wno-switch -Wno-c++11-compat-deprecated-writable-strings
 CPPFLAGS += -Wno-invalid-offsetof -fno-exceptions -fno-rtti
 
 BINARY = $(PROJECT).$(LIB_EXT)

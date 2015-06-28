@@ -52,36 +52,38 @@ bool Bot::IsEnemyHiddenByRendering (edict_t *enemy)
       return false;
 
    entvars_t &v = enemy->v;
-   bool enemyHasGun = (v.weapons & WEAPON_SECONDARY) || (v.weapons & WEAPON_SECONDARY);
 
-   if ((v.renderfx == kRenderFxExplode || (v.effects & EF_NODRAW)) && !(v.oldbuttons & IN_ATTACK) || !enemyHasGun)
+   bool enemyHasGun = (v.weapons & WEAPON_SECONDARY) || (v.weapons & WEAPON_SECONDARY);
+   bool enemyGunfire = (v.button & IN_ATTACK) || (v.oldbuttons & IN_ATTACK);
+
+   if ((v.renderfx == kRenderFxExplode || (v.effects & EF_NODRAW)) && (!enemyGunfire || !enemyHasGun))
       return true;
 
-   else if ((v.renderfx == kRenderFxExplode || (v.effects & EF_NODRAW)) && (v.oldbuttons & IN_ATTACK) && enemyHasGun)
+   if ((v.renderfx == kRenderFxExplode || (v.effects & EF_NODRAW)) && enemyGunfire && enemyHasGun)
       return false;
 
-   else if (v.renderfx != kRenderFxHologram && v.renderfx != kRenderFxExplode && v.rendermode != kRenderNormal)
+   if (v.renderfx != kRenderFxHologram && v.renderfx != kRenderFxExplode && v.rendermode != kRenderNormal)
    {
       if (v.renderfx == kRenderFxGlowShell)
       {
          if (v.renderamt <= 20.0f && v.rendercolor.x <= 20.0f && v.rendercolor.y <= 20.f && v.rendercolor.z <= 20.f)
          {
-            if (!(v.oldbuttons & IN_ATTACK) || !enemyHasGun)
+            if (!enemyGunfire || !enemyHasGun)
                return true;
 
             return false;
          }
-         else if (v.renderamt <= 60.0f && v.rendercolor.x <= 60.f && v.rendercolor.y <= 60.0f && v.rendercolor.z <= 60.0f)
+         else if (!enemyGunfire && v.renderamt <= 60.0f && v.rendercolor.x <= 60.f && v.rendercolor.y <= 60.0f && v.rendercolor.z <= 60.0f)
             return true;
       }
       else if (v.renderamt <= 20.0f)
       {
-         if (!(v.oldbuttons & IN_ATTACK) || !enemyHasGun)
+         if (!enemyGunfire || !enemyHasGun)
             return true;
 
          return false;
       }
-      else if (v.renderamt <= 60.0f)
+      else if (!enemyGunfire && v.renderamt <= 60.0f)
          return true;
    }
    return false;
