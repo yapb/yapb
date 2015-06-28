@@ -3933,14 +3933,6 @@ public:
 };
 
 //
-// Class: RandomGenerator
-//  Random number generator.
-//
-class RandomGenerator
-{
-
-};
-//
 // Type: StrVec
 //  Array of strings.
 //
@@ -4080,6 +4072,6 @@ public:
 // See Also:
 //  <Array>
 //
-#define IterateArray(arrayName, iteratorName) \
+#define FOR_EACH_AE(arrayName, iteratorName) \
    for (int iteratorName = 0; iteratorName != arrayName.GetElementNumber (); iteratorName++)
 

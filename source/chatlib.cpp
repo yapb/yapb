@@ -324,12 +324,15 @@ void Bot::PrepareChatMessage (char *text)
       }
    }
 
-   // let the bots make some mistakes...
-   char tempString[160];
-   strncpy (tempString, textStart, 159);
+   if (textStart != NULL)
+   {
+      // let the bots make some mistakes...
+      char tempString[160];
+      strncpy (tempString, textStart, 159);
 
-   HumanizeChat (tempString);
-   strcat (m_tempStrings, tempString);
+      HumanizeChat (tempString);
+      strcat (m_tempStrings, tempString);
+   }
 }
 
 bool CheckKeywords (char *tempMessage, char *reply)
@@ -339,9 +342,9 @@ bool CheckKeywords (char *tempMessage, char *reply)
    if (!yb_chat.GetBool () || IsNullString (tempMessage))
       return false;
 
-   IterateArray (g_replyFactory, i)
+   FOR_EACH_AE (g_replyFactory, i)
    {
-      IterateArray (g_replyFactory[i].keywords, j)
+      FOR_EACH_AE (g_replyFactory[i].keywords, j)
       {
          // check is keyword has occurred in message
          if (strstr (tempMessage, g_replyFactory[i].keywords[j].GetBuffer ()) != NULL)
@@ -355,7 +358,7 @@ bool CheckKeywords (char *tempMessage, char *reply)
             const char *generatedReply = g_replyFactory[i].replies.GetRandomElement ();
 
             // don't say this twice
-            IterateArray (replies, k)
+            FOR_EACH_AE (replies, k)
             {
                if (strstr (replies[k].GetBuffer (), generatedReply) != NULL)
                   replyUsed = true;

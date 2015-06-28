@@ -289,7 +289,7 @@ void FreeLibraryMemory (void)
    // this function free's all allocated memory
    g_waypoint->Init (); // frees waypoint data
 
-   IterateArray (g_localizer->m_langTab, it)
+   FOR_EACH_AE (g_localizer->m_langTab, it)
    {
       delete[] g_localizer->m_langTab[it].original;
       delete[] g_localizer->m_langTab[it].translated;
@@ -462,11 +462,7 @@ void strtrim (char *string)
 
    for (i = length - 1; i >= 0; i--)
    {
-#if defined (PLATFORM_WIN32)
-      if (!iswspace (string[i]))
-#else
       if (!isspace (string[i]))
-#endif
          break;
       else
       {
@@ -477,11 +473,7 @@ void strtrim (char *string)
 
    for (i = 0; i < length; i++)
    {
-#if defined (PLATFORM_WIN32)
-      if (iswspace (string[i]) && !toggleFlag) // win32 crash fx
-#else
       if (isspace (string[i]) && !toggleFlag)
-#endif
       {
          increment++;
 
@@ -812,6 +804,17 @@ bool IsValidPlayer (edict_t *ent)
    return false;
 }
 
+bool IsPlayerVIP (edict_t *ent)
+{
+   if (!(g_mapType & MAP_AS))
+      return false;
+
+   if (!IsValidPlayer (ent))
+      return false;
+
+   return *(INFOKEY_VALUE (GET_INFOKEYBUFFER (ent), "model")) == 'v';
+}
+
 bool IsValidBot (edict_t *ent)
 {
    if (g_botManager->GetBot (ent) != NULL || (!IsEntityNull (ent) && (ent->v.flags & FL_FAKECLIENT)))
@@ -943,7 +946,7 @@ const char *GetMapName (void)
    return &mapName[0]; // and return a pointer to it
 }
 
-bool OpenConfig (const char *fileName, char *errorIfNotExists, File *outFile, bool languageDependant)
+extern bool OpenConfig(const char *fileName, const char *errorIfNotExists, File *outFile, bool languageDependant /*= false*/)
 {
    if (outFile->IsValid ())
       outFile->Close ();
@@ -979,7 +982,7 @@ const char *GetWaypointDir (void)
    return FormatBuffer ("%s/addons/yapb/data/", GetModName ());
 }
 
-void RegisterCommand (char *command, void funcPtr (void))
+extern void RegisterCommand(const char *command, void funcPtr (void))
 {
    // this function tells the engine that a new server command is being declared, in addition
    // to the standard ones, whose name is command_name. The engine is thus supposed to be aware
@@ -989,7 +992,7 @@ void RegisterCommand (char *command, void funcPtr (void))
    if (IsNullString (command) || funcPtr == NULL)
       return; // reliability check
 
-   REG_SVR_COMMAND (command, funcPtr); // ask the engine to register this new command
+   REG_SVR_COMMAND (const_cast <char *> (command), funcPtr); // ask the engine to register this new command
 }
 
 void CheckWelcomeMessage (void)
@@ -1221,11 +1224,11 @@ char *Localizer::TranslateInput (const char *input)
    strncpy (string, input, 1024);
    strtrim (string);
 
-   IterateArray (m_langTab, i)
+   FOR_EACH_AE (m_langTab, i)
    {
       if (strcmp (string, m_langTab[i].original) == 0)
       {
-         strncpy (string, m_langTab[i].translated, 1024);
+         strncpy (string, m_langTab[i].translated, 1023);
 
          if (ptr != input)
             strncat (string, ptr, 1024 - 1 - strlen (string));
@@ -1257,9 +1260,9 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
       if ((sameTeam && g_clients[i].team != toTeam) || (isAlive && !(g_clients[i].flags & CF_ALIVE)) || (needBot && !IsValidBot (ent)) || (needDrawn && (ent->v.effects & EF_NODRAW)))
          continue; // filter players with parameters
 
-      float distance = (ent->v.origin - to->v.origin).GetLengthSquared ();
+      float distance = (ent->v.origin - to->v.origin).GetLength ();
 
-      if (distance < nearestPlayer)
+      if (distance < nearestPlayer && distance < searchDistance)
       {
          nearestPlayer = distance;
          survive = ent;
@@ -1286,7 +1289,7 @@ void SoundAttachToThreat (edict_t *ent, const char *sample, float volume)
    if (IsEntityNull (ent) || IsNullString (sample))
       return; // reliability check
 
-   Vector origin = GetEntityOrigin (ent);
+   const Vector &origin = GetEntityOrigin (ent);
    int index = IndexOfEntity (ent) - 1;
 
    if (index < 0 || index >= GetMaxClients ())

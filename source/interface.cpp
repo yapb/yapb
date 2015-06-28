@@ -25,7 +25,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       g_botManager->AddBot (arg4, arg1, arg2, arg3, arg5);
 
    // adding one bot with high difficulty parameters to random team
-   if (stricmp (arg0, "addbot_hs") == 0 || stricmp (arg0, "addhs") == 0)
+   else if (stricmp (arg0, "addbot_hs") == 0 || stricmp (arg0, "addhs") == 0)
       g_botManager->AddBot (arg4, "4", "1", arg3, arg5);
 
    // adding one bot with random parameters to terrorist team
@@ -448,7 +448,7 @@ void ParseVoiceEvent (const String &base, int type, float timeToRepeat)
    Array <String> temp = String (base).Split (',');
    ChatterItem chatterItem;
 
-   IterateArray (temp, i)
+   FOR_EACH_AE (temp, i)
    {
       temp[i].Trim ().TrimQuotes ();
 
@@ -590,7 +590,7 @@ void InitConfig (void)
                replyKey.keywords.RemoveAll ();
                replyKey.keywords = String (&line[4]).Split (',');
 
-               IterateArray (replyKey.keywords, i)
+               FOR_EACH_AE (replyKey.keywords, i)
                   replyKey.keywords[i].Trim ().TrimQuotes ();
             }
             else if (!replyKey.keywords.IsEmpty ())
@@ -721,7 +721,7 @@ void InitConfig (void)
             if (array.GetElementNumber () != 2)
                AddLogEntry (true, LL_FATAL, "Error in chatter config file syntax... Please correct all Errors.");
 
-            IterateArray (array, i)
+            FOR_EACH_AE (array, i)
                array[i].Trim ().Trim (); // double trim
 
             // just to be more unique :)
@@ -755,37 +755,37 @@ void InitConfig (void)
             PARSE_VOICE_EVENT (Radio_EnemyDown, FLT_MAX);
 
             // voice system
-            PARSE_VOICE_EVENT (Chatter_SpotTheBomber, 4.3);
-            PARSE_VOICE_EVENT (Chatter_VIPSpotted, 5.3);
-            PARSE_VOICE_EVENT (Chatter_FriendlyFire, 2.1);
+            PARSE_VOICE_EVENT (Chatter_SpotTheBomber, 4.3f);
+            PARSE_VOICE_EVENT (Chatter_VIPSpotted, 5.3f);
+            PARSE_VOICE_EVENT (Chatter_FriendlyFire, 2.1f);
             PARSE_VOICE_EVENT (Chatter_DiePain, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_GotBlinded, 5.0);
+            PARSE_VOICE_EVENT (Chatter_GotBlinded, 5.0f);
             PARSE_VOICE_EVENT (Chatter_GoingToPlantBomb, FLT_MAX);
             PARSE_VOICE_EVENT (Chatter_GoingToGuardVIPSafety, FLT_MAX);
             PARSE_VOICE_EVENT (Chatter_RescuingHostages, FLT_MAX);
             PARSE_VOICE_EVENT (Chatter_GoingToCamp, FLT_MAX);
             PARSE_VOICE_EVENT (Chatter_TeamKill, FLT_MAX);
             PARSE_VOICE_EVENT (Chatter_ReportingIn, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_GuardDroppedC4, 3.0);
+            PARSE_VOICE_EVENT (Chatter_GuardDroppedC4, 3.0f);
             PARSE_VOICE_EVENT (Chatter_Camp, FLT_MAX);
             PARSE_VOICE_EVENT (Chatter_GuardingVipSafety, FLT_MAX);
             PARSE_VOICE_EVENT (Chatter_PlantingC4, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_DefusingC4, 3.0);
+            PARSE_VOICE_EVENT (Chatter_DefusingC4, 3.0f);
             PARSE_VOICE_EVENT (Chatter_InCombat, FLT_MAX);
             PARSE_VOICE_EVENT (Chatter_SeeksEnemy, FLT_MAX);
             PARSE_VOICE_EVENT (Chatter_Nothing, FLT_MAX);
             PARSE_VOICE_EVENT (Chatter_EnemyDown, FLT_MAX);
             PARSE_VOICE_EVENT (Chatter_UseHostage, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_FoundC4, 5.5);
+            PARSE_VOICE_EVENT (Chatter_FoundC4, 5.5f);
             PARSE_VOICE_EVENT (Chatter_WonTheRound, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_ScaredEmotion, 6.1);
-            PARSE_VOICE_EVENT (Chatter_HeardEnemy, 12.2);
-            PARSE_VOICE_EVENT (Chatter_SniperWarning, 4.3);
-            PARSE_VOICE_EVENT (Chatter_SniperKilled, 2.1);
+            PARSE_VOICE_EVENT (Chatter_ScaredEmotion, 6.1f);
+            PARSE_VOICE_EVENT (Chatter_HeardEnemy, 12.2f);
+            PARSE_VOICE_EVENT (Chatter_SniperWarning, 4.3f);
+            PARSE_VOICE_EVENT (Chatter_SniperKilled, 2.1f);
             PARSE_VOICE_EVENT (Chatter_QuicklyWonTheRound, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_OneEnemyLeft, 2.5);
-            PARSE_VOICE_EVENT (Chatter_TwoEnemiesLeft, 2.5);
-            PARSE_VOICE_EVENT (Chatter_ThreeEnemiesLeft, 2.5);
+            PARSE_VOICE_EVENT (Chatter_OneEnemyLeft, 2.5f);
+            PARSE_VOICE_EVENT (Chatter_TwoEnemiesLeft, 2.5f);
+            PARSE_VOICE_EVENT (Chatter_ThreeEnemiesLeft, 2.5f);
             PARSE_VOICE_EVENT (Chatter_NoEnemiesLeft, FLT_MAX);
             PARSE_VOICE_EVENT (Chatter_FoundBombPlace, FLT_MAX);
             PARSE_VOICE_EVENT (Chatter_WhereIsTheBomb, FLT_MAX);
@@ -793,18 +793,18 @@ void InitConfig (void)
             PARSE_VOICE_EVENT (Chatter_BarelyDefused, FLT_MAX);
             PARSE_VOICE_EVENT (Chatter_NiceshotCommander, FLT_MAX);
             PARSE_VOICE_EVENT (Chatter_NiceshotPall, 2.0);
-            PARSE_VOICE_EVENT (Chatter_GoingToGuardHostages, 3.0);
-            PARSE_VOICE_EVENT (Chatter_GoingToGuardDoppedBomb, 3.0);
-            PARSE_VOICE_EVENT (Chatter_OnMyWay, 1.5);
-            PARSE_VOICE_EVENT (Chatter_LeadOnSir, 5.0);
-            PARSE_VOICE_EVENT (Chatter_Pinned_Down, 5.0);
-            PARSE_VOICE_EVENT (Chatter_GottaFindTheBomb, 3.0);
-            PARSE_VOICE_EVENT (Chatter_You_Heard_The_Man, 3.0);
-            PARSE_VOICE_EVENT (Chatter_Lost_The_Commander, 4.5);
-            PARSE_VOICE_EVENT (Chatter_NewRound, 3.5);
-            PARSE_VOICE_EVENT (Chatter_CoverMe, 3.5);
-            PARSE_VOICE_EVENT (Chatter_BehindSmoke, 3.5);
-            PARSE_VOICE_EVENT (Chatter_BombSiteSecured, 3.5);
+            PARSE_VOICE_EVENT (Chatter_GoingToGuardHostages, 3.0f);
+            PARSE_VOICE_EVENT (Chatter_GoingToGuardDoppedBomb, 3.0f);
+            PARSE_VOICE_EVENT (Chatter_OnMyWay, 1.5f);
+            PARSE_VOICE_EVENT (Chatter_LeadOnSir, 5.0f);
+            PARSE_VOICE_EVENT (Chatter_Pinned_Down, 5.0f);
+            PARSE_VOICE_EVENT (Chatter_GottaFindTheBomb, 3.0f);
+            PARSE_VOICE_EVENT (Chatter_You_Heard_The_Man, 3.0f);
+            PARSE_VOICE_EVENT (Chatter_Lost_The_Commander, 4.5f);
+            PARSE_VOICE_EVENT (Chatter_NewRound, 3.5f);
+            PARSE_VOICE_EVENT (Chatter_CoverMe, 3.5f);
+            PARSE_VOICE_EVENT (Chatter_BehindSmoke, 3.5f);
+            PARSE_VOICE_EVENT (Chatter_BombSiteSecured, 3.5f);
          }
       }
       fp.Close ();
@@ -835,7 +835,7 @@ void InitConfig (void)
             if (!IsNullString (buffer))
             {
                strtrim (buffer);
-               temp.translated = strdup (buffer);
+               temp.translated = _strdup (buffer);
                buffer[0] = 0x0;
             }
 
@@ -845,7 +845,7 @@ void InitConfig (void)
          else if (strncmp (line, "[TRANSLATED]", 12) == 0)
          {
             strtrim (buffer);
-            temp.original = strdup (buffer);
+            temp.original = _strdup (buffer);
             buffer[0] = 0x0;
 
             langState = Lang_Translate;
@@ -1046,7 +1046,7 @@ void UpdateClientData (const struct edict_s *ent, int sendweapons, struct client
 
 void ClientPutInServer (edict_t *ent)
 {
-   g_botManager->CheckAutoVacate (ent);
+   g_botManager->CheckAutoVacate ();
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -1565,7 +1565,7 @@ void ClientCommand (edict_t *ent)
             {
             case 1:
             case 2:
-               if (FindNearestPlayer (reinterpret_cast <void **> (&bot), client->ent, 4096.0, true, true, true))
+               if (FindNearestPlayer (reinterpret_cast <void **> (&bot), client->ent, 300.0f, true, true, true))
                {
                   if (!bot->m_hasC4 && !bot->HasHostage () )
                   {
@@ -1588,7 +1588,7 @@ void ClientCommand (edict_t *ent)
 
             case 3:
             case 4:
-               if (FindNearestPlayer (reinterpret_cast <void **> (&bot), ent, 300.0, true, true, true))
+               if (FindNearestPlayer (reinterpret_cast <void **> (&bot), ent, 300.0f, true, true, true))
                   bot->DiscardWeaponForUser (ent, selection == 4 ? false : true);
                break;
 
@@ -1967,7 +1967,7 @@ void ClientCommand (edict_t *ent)
 
       if (FStrEq (arg1, "dropme") || FStrEq (arg1, "dropc4"))
       {
-         if (FindNearestPlayer (reinterpret_cast <void **> (&bot), ent, 300.0, true, true, true))
+         if (FindNearestPlayer (reinterpret_cast <void **> (&bot), ent, 300.0f, true, true, true))
             bot->DiscardWeaponForUser (ent, IsNullString (strstr (arg1, "c4")) ? false : true);
 
          return;
@@ -2241,7 +2241,7 @@ int Spawn_Post (edict_t *ent)
    RETURN_META_VALUE (MRES_IGNORED, 0);
 }
 
-void ServerActivate_Post (edict_t *pentEdictList, int edictCount, int clientMax)
+void ServerActivate_Post (edict_t *, int, int)
 {
    // this function is called when the server has fully loaded and is about to manifest itself
    // on the network as such. Since a mapchange is actually a server shutdown followed by a
@@ -2758,7 +2758,7 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...)
 
 gamedll_funcs_t gameDLLFunc;
 
-export int GetEntityAPI2 (gamefuncs_t *functionTable, int *interfaceVersion)
+export int GetEntityAPI2 (gamefuncs_t *functionTable, int *)
 {
    // this function is called right after FuncPointers_t() by the engine in the game DLL (or
    // what it BELIEVES to be the game DLL), in order to copy the list of MOD functions that can
@@ -2803,7 +2803,7 @@ export int GetEntityAPI2 (gamefuncs_t *functionTable, int *interfaceVersion)
    return TRUE;
 }
 
-export int GetEntityAPI2_Post (gamefuncs_t *functionTable, int *interfaceVersion)
+export int GetEntityAPI2_Post (gamefuncs_t *functionTable, int *)
 {
    // this function is called right after FuncPointers_t() by the engine in the game DLL (or
    // what it BELIEVES to be the game DLL), in order to copy the list of MOD functions that can
@@ -2845,7 +2845,7 @@ export int GetNewDLLFunctions (newgamefuncs_t *functionTable, int *interfaceVers
    return TRUE;
 }
 
-export int GetEngineFunctions (enginefuncs_t *functionTable, int *interfaceVersion)
+export int GetEngineFunctions (enginefuncs_t *functionTable, int *)
 {
    if (g_isMetamod)
       memset (functionTable, 0, sizeof (enginefuncs_t));
@@ -2875,7 +2875,7 @@ export int GetEngineFunctions (enginefuncs_t *functionTable, int *interfaceVersi
    return TRUE;
 }
 
-export int GetEngineFunctions_Post (enginefuncs_t *functionTable, int *interfaceVersion)
+export int GetEngineFunctions_Post (enginefuncs_t *functionTable, int *)
 {
    memset (functionTable, 0, sizeof (enginefuncs_t));
 
@@ -3027,7 +3027,7 @@ void FixDirectoryStructure (void)
    directories.Push (DirectoryTransition ("config", "conf"));
    directories.Push (DirectoryTransition ("conf/language", "conf/lang"));
 
-   IterateArray (directories, it)
+   FOR_EACH_AE (directories, it)
       directories[it].TryToRename ();
 
    directories.RemoveAll ();
@@ -3227,7 +3227,7 @@ export void entityFunction (entvars_t *pev) \
    static EntityPtr_t funcPtr = NULL; \
    \
    if (funcPtr == NULL) \
-      funcPtr = (EntityPtr_t) g_gameLib->GetFunctionAddr (#entityFunction); \
+      funcPtr = reinterpret_cast <EntityPtr_t> (g_gameLib->GetFunctionAddr (#entityFunction)); \
    \
    if (funcPtr == NULL) \
       return; \
@@ -3236,199 +3236,199 @@ export void entityFunction (entvars_t *pev) \
 } \
 
 // entities in counter-strike...
-LINK_ENTITY (DelayedUse);
-LINK_ENTITY (ambient_generic);
-LINK_ENTITY (ammo_338magnum);
-LINK_ENTITY (ammo_357sig);
-LINK_ENTITY (ammo_45acp);
-LINK_ENTITY (ammo_50ae);
-LINK_ENTITY (ammo_556nato);
-LINK_ENTITY (ammo_556natobox);
-LINK_ENTITY (ammo_57mm);
-LINK_ENTITY (ammo_762nato);
-LINK_ENTITY (ammo_9mm);
-LINK_ENTITY (ammo_buckshot);
-LINK_ENTITY (armoury_entity);
-LINK_ENTITY (beam);
-LINK_ENTITY (bodyque);
-LINK_ENTITY (button_target);
-LINK_ENTITY (cycler);
-LINK_ENTITY (cycler_prdroid);
-LINK_ENTITY (cycler_sprite);
-LINK_ENTITY (cycler_weapon);
-LINK_ENTITY (cycler_wreckage);
-LINK_ENTITY (env_beam);
-LINK_ENTITY (env_beverage);
-LINK_ENTITY (env_blood);
-LINK_ENTITY (env_bombglow);
-LINK_ENTITY (env_bubbles);
-LINK_ENTITY (env_debris);
-LINK_ENTITY (env_explosion);
-LINK_ENTITY (env_fade);
-LINK_ENTITY (env_funnel);
-LINK_ENTITY (env_global);
-LINK_ENTITY (env_glow);
-LINK_ENTITY (env_laser);
-LINK_ENTITY (env_lightning);
-LINK_ENTITY (env_message);
-LINK_ENTITY (env_rain);
-LINK_ENTITY (env_render);
-LINK_ENTITY (env_shake);
-LINK_ENTITY (env_shooter);
-LINK_ENTITY (env_snow);
-LINK_ENTITY (env_sound);
-LINK_ENTITY (env_spark);
-LINK_ENTITY (env_sprite);
-LINK_ENTITY (fireanddie);
-LINK_ENTITY (func_bomb_target);
-LINK_ENTITY (func_breakable);
-LINK_ENTITY (func_button);
-LINK_ENTITY (func_buyzone);
-LINK_ENTITY (func_conveyor);
-LINK_ENTITY (func_door);
-LINK_ENTITY (func_door_rotating);
-LINK_ENTITY (func_escapezone);
-LINK_ENTITY (func_friction);
-LINK_ENTITY (func_grencatch);
-LINK_ENTITY (func_guntarget);
-LINK_ENTITY (func_healthcharger);
-LINK_ENTITY (func_hostage_rescue);
-LINK_ENTITY (func_illusionary);
-LINK_ENTITY (func_ladder);
-LINK_ENTITY (func_monsterclip);
-LINK_ENTITY (func_mortar_field);
-LINK_ENTITY (func_pendulum);
-LINK_ENTITY (func_plat);
-LINK_ENTITY (func_platrot);
-LINK_ENTITY (func_pushable);
-LINK_ENTITY (func_rain);
-LINK_ENTITY (func_recharge);
-LINK_ENTITY (func_rot_button);
-LINK_ENTITY (func_rotating);
-LINK_ENTITY (func_snow);
-LINK_ENTITY (func_tank);
-LINK_ENTITY (func_tankcontrols);
-LINK_ENTITY (func_tanklaser);
-LINK_ENTITY (func_tankmortar);
-LINK_ENTITY (func_tankrocket);
-LINK_ENTITY (func_trackautochange);
-LINK_ENTITY (func_trackchange);
-LINK_ENTITY (func_tracktrain);
-LINK_ENTITY (func_train);
-LINK_ENTITY (func_traincontrols);
-LINK_ENTITY (func_vehicle);
-LINK_ENTITY (func_vehiclecontrols);
-LINK_ENTITY (func_vip_safetyzone);
-LINK_ENTITY (func_wall);
-LINK_ENTITY (func_wall_toggle);
-LINK_ENTITY (func_water);
-LINK_ENTITY (func_weaponcheck);
-LINK_ENTITY (game_counter);
-LINK_ENTITY (game_counter_set);
-LINK_ENTITY (game_end);
-LINK_ENTITY (game_player_equip);
-LINK_ENTITY (game_player_hurt);
-LINK_ENTITY (game_player_team);
-LINK_ENTITY (game_score);
-LINK_ENTITY (game_team_master);
-LINK_ENTITY (game_team_set);
-LINK_ENTITY (game_text);
-LINK_ENTITY (game_zone_player);
-LINK_ENTITY (gibshooter);
-LINK_ENTITY (grenade);
-LINK_ENTITY (hostage_entity);
-LINK_ENTITY (info_bomb_target);
-LINK_ENTITY (info_hostage_rescue);
-LINK_ENTITY (info_intermission);
-LINK_ENTITY (info_landmark);
-LINK_ENTITY (info_map_parameters);
-LINK_ENTITY (info_null);
-LINK_ENTITY (info_player_deathmatch);
-LINK_ENTITY (info_player_start);
-LINK_ENTITY (info_target);
-LINK_ENTITY (info_teleport_destination);
-LINK_ENTITY (info_vip_start);
-LINK_ENTITY (infodecal);
-LINK_ENTITY (item_airtank);
-LINK_ENTITY (item_antidote);
-LINK_ENTITY (item_assaultsuit);
-LINK_ENTITY (item_battery);
-LINK_ENTITY (item_healthkit);
-LINK_ENTITY (item_kevlar);
-LINK_ENTITY (item_longjump);
-LINK_ENTITY (item_security);
-LINK_ENTITY (item_sodacan);
-LINK_ENTITY (item_suit);
-LINK_ENTITY (item_thighpack);
-LINK_ENTITY (light);
-LINK_ENTITY (light_environment);
-LINK_ENTITY (light_spot);
-LINK_ENTITY (momentary_door);
-LINK_ENTITY (momentary_rot_button);
-LINK_ENTITY (monster_hevsuit_dead);
-LINK_ENTITY (monster_mortar);
-LINK_ENTITY (monster_scientist);
-LINK_ENTITY (multi_manager);
-LINK_ENTITY (multisource);
-LINK_ENTITY (path_corner);
-LINK_ENTITY (path_track);
-LINK_ENTITY (player);
-LINK_ENTITY (player_loadsaved);
-LINK_ENTITY (player_weaponstrip);
-LINK_ENTITY (soundent);
-LINK_ENTITY (spark_shower);
-LINK_ENTITY (speaker);
-LINK_ENTITY (target_cdaudio);
-LINK_ENTITY (test_effect);
-LINK_ENTITY (trigger);
-LINK_ENTITY (trigger_auto);
-LINK_ENTITY (trigger_autosave);
-LINK_ENTITY (trigger_camera);
-LINK_ENTITY (trigger_cdaudio);
-LINK_ENTITY (trigger_changelevel);
-LINK_ENTITY (trigger_changetarget);
-LINK_ENTITY (trigger_counter);
-LINK_ENTITY (trigger_endsection);
-LINK_ENTITY (trigger_gravity);
-LINK_ENTITY (trigger_hurt);
-LINK_ENTITY (trigger_monsterjump);
-LINK_ENTITY (trigger_multiple);
-LINK_ENTITY (trigger_once);
-LINK_ENTITY (trigger_push);
-LINK_ENTITY (trigger_relay);
-LINK_ENTITY (trigger_teleport);
-LINK_ENTITY (trigger_transition);
-LINK_ENTITY (weapon_ak47);
-LINK_ENTITY (weapon_aug);
-LINK_ENTITY (weapon_awp);
-LINK_ENTITY (weapon_c4);
-LINK_ENTITY (weapon_deagle);
-LINK_ENTITY (weapon_elite);
-LINK_ENTITY (weapon_famas);
-LINK_ENTITY (weapon_fiveseven);
-LINK_ENTITY (weapon_flashbang);
-LINK_ENTITY (weapon_g3sg1);
-LINK_ENTITY (weapon_galil);
-LINK_ENTITY (weapon_glock18);
-LINK_ENTITY (weapon_hegrenade);
-LINK_ENTITY (weapon_knife);
-LINK_ENTITY (weapon_m249);
-LINK_ENTITY (weapon_m3);
-LINK_ENTITY (weapon_m4a1);
-LINK_ENTITY (weapon_mac10);
-LINK_ENTITY (weapon_mp5navy);
-LINK_ENTITY (weapon_p228);
-LINK_ENTITY (weapon_p90);
-LINK_ENTITY (weapon_scout);
-LINK_ENTITY (weapon_sg550);
-LINK_ENTITY (weapon_sg552);
-LINK_ENTITY (weapon_shield);
-LINK_ENTITY (weapon_shieldgun);
-LINK_ENTITY (weapon_smokegrenade);
-LINK_ENTITY (weapon_tmp);
-LINK_ENTITY (weapon_ump45);
-LINK_ENTITY (weapon_usp);
-LINK_ENTITY (weapon_xm1014);
-LINK_ENTITY (weaponbox);
-LINK_ENTITY (world_items);
-LINK_ENTITY (worldspawn);
+LINK_ENTITY (DelayedUse)
+LINK_ENTITY (ambient_generic)
+LINK_ENTITY (ammo_338magnum)
+LINK_ENTITY (ammo_357sig)
+LINK_ENTITY (ammo_45acp)
+LINK_ENTITY (ammo_50ae)
+LINK_ENTITY (ammo_556nato)
+LINK_ENTITY (ammo_556natobox)
+LINK_ENTITY (ammo_57mm)
+LINK_ENTITY (ammo_762nato)
+LINK_ENTITY (ammo_9mm)
+LINK_ENTITY (ammo_buckshot)
+LINK_ENTITY (armoury_entity)
+LINK_ENTITY (beam)
+LINK_ENTITY (bodyque)
+LINK_ENTITY (button_target)
+LINK_ENTITY (cycler)
+LINK_ENTITY (cycler_prdroid)
+LINK_ENTITY (cycler_sprite)
+LINK_ENTITY (cycler_weapon)
+LINK_ENTITY (cycler_wreckage)
+LINK_ENTITY (env_beam)
+LINK_ENTITY (env_beverage)
+LINK_ENTITY (env_blood)
+LINK_ENTITY (env_bombglow)
+LINK_ENTITY (env_bubbles)
+LINK_ENTITY (env_debris)
+LINK_ENTITY (env_explosion)
+LINK_ENTITY (env_fade)
+LINK_ENTITY (env_funnel)
+LINK_ENTITY (env_global)
+LINK_ENTITY (env_glow)
+LINK_ENTITY (env_laser)
+LINK_ENTITY (env_lightning)
+LINK_ENTITY (env_message)
+LINK_ENTITY (env_rain)
+LINK_ENTITY (env_render)
+LINK_ENTITY (env_shake)
+LINK_ENTITY (env_shooter)
+LINK_ENTITY (env_snow)
+LINK_ENTITY (env_sound)
+LINK_ENTITY (env_spark)
+LINK_ENTITY (env_sprite)
+LINK_ENTITY (fireanddie)
+LINK_ENTITY (func_bomb_target)
+LINK_ENTITY (func_breakable)
+LINK_ENTITY (func_button)
+LINK_ENTITY (func_buyzone)
+LINK_ENTITY (func_conveyor)
+LINK_ENTITY (func_door)
+LINK_ENTITY (func_door_rotating)
+LINK_ENTITY (func_escapezone)
+LINK_ENTITY (func_friction)
+LINK_ENTITY (func_grencatch)
+LINK_ENTITY (func_guntarget)
+LINK_ENTITY (func_healthcharger)
+LINK_ENTITY (func_hostage_rescue)
+LINK_ENTITY (func_illusionary)
+LINK_ENTITY (func_ladder)
+LINK_ENTITY (func_monsterclip)
+LINK_ENTITY (func_mortar_field)
+LINK_ENTITY (func_pendulum)
+LINK_ENTITY (func_plat)
+LINK_ENTITY (func_platrot)
+LINK_ENTITY (func_pushable)
+LINK_ENTITY (func_rain)
+LINK_ENTITY (func_recharge)
+LINK_ENTITY (func_rot_button)
+LINK_ENTITY (func_rotating)
+LINK_ENTITY (func_snow)
+LINK_ENTITY (func_tank)
+LINK_ENTITY (func_tankcontrols)
+LINK_ENTITY (func_tanklaser)
+LINK_ENTITY (func_tankmortar)
+LINK_ENTITY (func_tankrocket)
+LINK_ENTITY (func_trackautochange)
+LINK_ENTITY (func_trackchange)
+LINK_ENTITY (func_tracktrain)
+LINK_ENTITY (func_train)
+LINK_ENTITY (func_traincontrols)
+LINK_ENTITY (func_vehicle)
+LINK_ENTITY (func_vehiclecontrols)
+LINK_ENTITY (func_vip_safetyzone)
+LINK_ENTITY (func_wall)
+LINK_ENTITY (func_wall_toggle)
+LINK_ENTITY (func_water)
+LINK_ENTITY (func_weaponcheck)
+LINK_ENTITY (game_counter)
+LINK_ENTITY (game_counter_set)
+LINK_ENTITY (game_end)
+LINK_ENTITY (game_player_equip)
+LINK_ENTITY (game_player_hurt)
+LINK_ENTITY (game_player_team)
+LINK_ENTITY (game_score)
+LINK_ENTITY (game_team_master)
+LINK_ENTITY (game_team_set)
+LINK_ENTITY (game_text)
+LINK_ENTITY (game_zone_player)
+LINK_ENTITY (gibshooter)
+LINK_ENTITY (grenade)
+LINK_ENTITY (hostage_entity)
+LINK_ENTITY (info_bomb_target)
+LINK_ENTITY (info_hostage_rescue)
+LINK_ENTITY (info_intermission)
+LINK_ENTITY (info_landmark)
+LINK_ENTITY (info_map_parameters)
+LINK_ENTITY (info_null)
+LINK_ENTITY (info_player_deathmatch)
+LINK_ENTITY (info_player_start)
+LINK_ENTITY (info_target)
+LINK_ENTITY (info_teleport_destination)
+LINK_ENTITY (info_vip_start)
+LINK_ENTITY (infodecal)
+LINK_ENTITY (item_airtank)
+LINK_ENTITY (item_antidote)
+LINK_ENTITY (item_assaultsuit)
+LINK_ENTITY (item_battery)
+LINK_ENTITY (item_healthkit)
+LINK_ENTITY (item_kevlar)
+LINK_ENTITY (item_longjump)
+LINK_ENTITY (item_security)
+LINK_ENTITY (item_sodacan)
+LINK_ENTITY (item_suit)
+LINK_ENTITY (item_thighpack)
+LINK_ENTITY (light)
+LINK_ENTITY (light_environment)
+LINK_ENTITY (light_spot)
+LINK_ENTITY (momentary_door)
+LINK_ENTITY (momentary_rot_button)
+LINK_ENTITY (monster_hevsuit_dead)
+LINK_ENTITY (monster_mortar)
+LINK_ENTITY (monster_scientist)
+LINK_ENTITY (multi_manager)
+LINK_ENTITY (multisource)
+LINK_ENTITY (path_corner)
+LINK_ENTITY (path_track)
+LINK_ENTITY (player)
+LINK_ENTITY (player_loadsaved)
+LINK_ENTITY (player_weaponstrip)
+LINK_ENTITY (soundent)
+LINK_ENTITY (spark_shower)
+LINK_ENTITY (speaker)
+LINK_ENTITY (target_cdaudio)
+LINK_ENTITY (test_effect)
+LINK_ENTITY (trigger)
+LINK_ENTITY (trigger_auto)
+LINK_ENTITY (trigger_autosave)
+LINK_ENTITY (trigger_camera)
+LINK_ENTITY (trigger_cdaudio)
+LINK_ENTITY (trigger_changelevel)
+LINK_ENTITY (trigger_changetarget)
+LINK_ENTITY (trigger_counter)
+LINK_ENTITY (trigger_endsection)
+LINK_ENTITY (trigger_gravity)
+LINK_ENTITY (trigger_hurt)
+LINK_ENTITY (trigger_monsterjump)
+LINK_ENTITY (trigger_multiple)
+LINK_ENTITY (trigger_once)
+LINK_ENTITY (trigger_push)
+LINK_ENTITY (trigger_relay)
+LINK_ENTITY (trigger_teleport)
+LINK_ENTITY (trigger_transition)
+LINK_ENTITY (weapon_ak47)
+LINK_ENTITY (weapon_aug)
+LINK_ENTITY (weapon_awp)
+LINK_ENTITY (weapon_c4)
+LINK_ENTITY (weapon_deagle)
+LINK_ENTITY (weapon_elite)
+LINK_ENTITY (weapon_famas)
+LINK_ENTITY (weapon_fiveseven)
+LINK_ENTITY (weapon_flashbang)
+LINK_ENTITY (weapon_g3sg1)
+LINK_ENTITY (weapon_galil)
+LINK_ENTITY (weapon_glock18)
+LINK_ENTITY (weapon_hegrenade)
+LINK_ENTITY (weapon_knife)
+LINK_ENTITY (weapon_m249)
+LINK_ENTITY (weapon_m3)
+LINK_ENTITY (weapon_m4a1)
+LINK_ENTITY (weapon_mac10)
+LINK_ENTITY (weapon_mp5navy)
+LINK_ENTITY (weapon_p228)
+LINK_ENTITY (weapon_p90)
+LINK_ENTITY (weapon_scout)
+LINK_ENTITY (weapon_sg550)
+LINK_ENTITY (weapon_sg552)
+LINK_ENTITY (weapon_shield)
+LINK_ENTITY (weapon_shieldgun)
+LINK_ENTITY (weapon_smokegrenade)
+LINK_ENTITY (weapon_tmp)
+LINK_ENTITY (weapon_ump45)
+LINK_ENTITY (weapon_usp)
+LINK_ENTITY (weapon_xm1014)
+LINK_ENTITY (weaponbox)
+LINK_ENTITY (world_items)
+LINK_ENTITY (worldspawn)

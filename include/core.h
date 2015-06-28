@@ -48,7 +48,7 @@ using namespace Math;
 
    #include <direct.h>
 
-   #define DLL_ENTRYPOINT int STDCALL DllMain (HINSTANCE hModule, DWORD dwReason, LPVOID)
+   #define DLL_ENTRYPOINT int STDCALL DllMain (HINSTANCE, DWORD dwReason, LPVOID)
    #define DLL_DETACHING (dwReason == DLL_PROCESS_DETACH)
    #define DLL_RETENTRY return TRUE
 
@@ -657,15 +657,15 @@ struct ChatterItem
 // language config structure definition
 struct LanguageItem
 {
-   char *original; // original string
-   char *translated; // string to replace for
+   const char *original; // original string
+   const char *translated; // string to replace for
 };
 
 struct WeaponSelect
 {
    int id; // the weapon id value
-   char *weaponName; // name of the weapon when selecting it
-   char *modelName; // model name to separate cs weapons
+   const char *weaponName; // name of the weapon when selecting it
+   const char *modelName; // model name to separate cs weapons
    int price; // price when buying
    int minPrimaryAmmo; // minimum primary ammo
    int teamStandard; // used by team (number) (standard map)
@@ -696,7 +696,7 @@ struct FireDelay
 struct MenuText
 {
    int validSlots; // ored together bits for valid keys
-   char *menuText; // ptr to actual string
+   const char *menuText; // ptr to actual string
 };
 
 // array of clients struct
@@ -898,7 +898,6 @@ private:
 
    float m_followWaitTime; // wait to follow time
    edict_t *m_targetEntity; // the entity that the bot is trying to reach
-   edict_t *m_LeaderEntity; // the entity that the bot is picking as a leader
    edict_t *m_hostages[MAX_HOSTAGES]; // pointer to used hostage entities
 
    bool m_isStuck; // bot is stuck
@@ -967,12 +966,19 @@ private:
 
    bool CanDuckUnder (const Vector &normal);
    bool CanJumpUp (const Vector &normal);
-   bool CanStrafeLeft (TraceResult *tr);
-   bool CanStrafeRight (TraceResult *tr);
    bool CantMoveForward (const Vector &normal, TraceResult *tr);
+
+#ifdef DEAD_CODE
+   bool CanStrafeRight (TraceResult *tr);
+   bool CanStrafeLeft (TraceResult *tr);
+
+   bool IsBlockedLeft (void);
+   bool IsBlockedRight (void);
 
    void ChangePitch (float speed);
    void ChangeYaw (float speed);
+#endif
+
    void CheckMessageQueue (void);
    void CheckRadioCommands (void);
    void CheckReload (void);
@@ -1016,8 +1022,6 @@ private:
    int InFieldOfView (const Vector &dest);
 
    bool IsBombDefusing (const Vector &bombOrigin);
-   bool IsBlockedLeft (void);
-   bool IsBlockedRight (void);
    bool IsPointOccupied (int index);
 
    inline bool IsOnLadder (void) { return pev->movetype == MOVETYPE_FLY; }
@@ -1028,7 +1032,6 @@ private:
    
    bool ItemIsVisible (const Vector &dest, char *itemName);
    bool LastEnemyShootable (void);
-   bool IsLastEnemyViewable (void);
    bool IsBehindSmokeClouds (edict_t *ent);
    void RunTask (void);
 
@@ -1067,6 +1070,7 @@ private:
    bool IsWeaponBadInDistance (int weaponIndex, float distance);
    bool DoFirePause (float distance, FireDelay *fireDelay);
    bool LookupEnemy (void);
+   bool IsEnemyHiddenByRendering (edict_t *enemy);
    void FireWeapon (void);
    void FocusEnemy (void);
 
@@ -1316,7 +1320,7 @@ public:
    void Think (void);
    void Free (void);
    void Free (int index);
-   void CheckAutoVacate (edict_t *ent);
+   void CheckAutoVacate (void);
 
    void AddRandom (void) { AddBot ("", -1, -1, -1, -1); }
    void AddBot (const String &name, int difficulty, int personality, int team, int member);
@@ -1495,7 +1499,7 @@ public:
 
    int GetPathDistance (int srcIndex, int destIndex);
    Path *GetPath (int id);
-   char *GetWaypointInfo (int id);
+   const char *GetWaypointInfo (int id);
    char *GetInfo (void) { return m_infoBuffer; }
 
    int AddGoalScore (int index, int other[4]);
@@ -1639,7 +1643,8 @@ extern bool IsInViewCone (const Vector &origin, edict_t *ent);
 extern int GetWeaponPenetrationPower (int id);
 extern bool IsValidBot (edict_t *ent);
 extern bool IsValidPlayer (edict_t *ent);
-extern bool OpenConfig (const char *fileName, char *errorIfNotExists, File *outFile, bool languageDependant = false);
+extern bool IsPlayerVIP (edict_t *ent);
+extern bool OpenConfig (const char *fileName, const char *errorIfNotExists, File *outFile, bool languageDependant = false);
 extern bool FindNearestPlayer (void **holder, edict_t *to, float searchDistance = 4096.0, bool sameTeam = false, bool needBot = false, bool needAlive = false, bool needDrawn = false);
 
 extern const char *GetMapName (void);
@@ -1657,7 +1662,7 @@ extern void FakeClientCommand (edict_t *fakeClient, const char *format, ...);
 extern void strtrim (char *string);
 extern void CreatePath (char *path);
 extern void ServerCommand (const char *format, ...);
-extern void RegisterCommand (char *command, void funcPtr (void));
+extern void RegisterCommand (const char *command, void funcPtr (void));
 extern void CheckWelcomeMessage (void);
 extern void DetectCSVersion (void);
 extern void PlaySound (edict_t *ent, const char *soundName);

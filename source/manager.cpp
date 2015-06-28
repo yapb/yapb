@@ -302,7 +302,7 @@ void BotManager::AddBot (const String &name, const String &difficulty, const Str
       yb_quota.SetInt (GetBotsNum () + 1);
 }
 
-void BotManager::CheckAutoVacate (edict_t *ent)
+void BotManager::CheckAutoVacate(void)
 {
    // this function sets timer to kick one bot off.
 
@@ -858,7 +858,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
 
 void Bot::ReleaseUsedName (void)
 {
-   IterateArray (g_botNames, j)
+   FOR_EACH_AE (g_botNames, j)
    {
       BotName &name = g_botNames[j];
 
@@ -951,7 +951,7 @@ void Bot::NewRound (void)
    m_duckDefuse = false;
    m_duckDefuseCheckTime = 0.0;
 
-   for (int i = 0; i < 5; i++)
+   for (i = 0; i < 5; i++)
       m_prevWptIndex[i] = -1;
 
    m_navTimeset = GetWorldTime ();

@@ -100,6 +100,14 @@ bool Bot::CheckVisibility (edict_t *target, Vector *origin, byte *bodyPart)
 {
    // this function checks visibility of a bot target.
 
+   if (IsEnemyHiddenByRendering (target))
+   {
+      *bodyPart = 0;
+      *origin = nullvec;
+
+      return false;
+   }
+
    const Vector &botHead = EyePosition ();
    TraceResult tr;
 
@@ -347,7 +355,7 @@ void Bot::CheckGrenadeThrow (void)
 
       g_waypoint->FindInRadius (inRadius, 256, m_lastEnemy->v.origin + (m_lastEnemy->v.velocity * 0.5).Get2D ());
 
-      IterateArray (inRadius, i)
+      FOR_EACH_AE (inRadius, i)
       {
          Path *path = g_waypoint->GetPath (i);
 
@@ -407,7 +415,7 @@ void Bot::AvoidGrenades (void)
    Array <entity_t> activeGrenades = g_botManager->GetActiveGrenades ();
 
    // find all grenades on the map
-   IterateArray (activeGrenades, it)
+   FOR_EACH_AE (activeGrenades, it)
    {
       edict_t *ent = activeGrenades[it];
 
@@ -419,7 +427,7 @@ void Bot::AvoidGrenades (void)
          continue;
 
       // TODO: should be done once for grenade, instead of checking several times
-      if (m_difficulty == 4 && strcmp (STRING (ent->v.model) + 9, "flashbang.mdl") == 0)
+      if (m_personality == PERSONALITY_RUSHER && m_difficulty == 4 && strcmp (STRING (ent->v.model) + 9, "flashbang.mdl") == 0)
       {
          const Vector &position = (GetEntityOrigin (ent) - EyePosition ()).ToAngles ();
 
@@ -471,7 +479,7 @@ bool Bot::IsBehindSmokeClouds (edict_t *ent)
    Array <entity_t> activeGrenades = g_botManager->GetActiveGrenades ();
 
    // find all grenades on the map
-   IterateArray (activeGrenades, it)
+   FOR_EACH_AE (activeGrenades, it)
    {
       edict_t *grenade = activeGrenades[it];
 
@@ -488,7 +496,7 @@ bool Bot::IsBehindSmokeClouds (edict_t *ent)
 
       const Vector &entityOrigin = GetEntityOrigin (grenade);
       const Vector &betweenNade = (entityOrigin - pev->origin).Normalize ();
-      const Vector &betweenResult = ((Vector (betweenNade.y, betweenNade.x, 0) * 150.0 + entityOrigin) - pev->origin).Normalize ();
+      const Vector &betweenResult = ((betweenNade.Get2D () * 150.0f + entityOrigin) - pev->origin).Normalize ();
 
       if ((betweenNade | betweenUs) > (betweenNade | betweenResult))
          return true;
@@ -726,11 +734,9 @@ void Bot::FindItem (void)
    m_pickupItem = NULL;
    m_pickupType = PICKUP_NONE;
 
-   bool allowPickup = false;
-
    while (!IsEntityNull (ent = FIND_ENTITY_IN_SPHERE (ent, pev->origin, searchRadius)))
    {
-      allowPickup = false;  // assume can't use it until known otherwise
+      bool allowPickup = false;  // assume can't use it until known otherwise
 
       if ((ent->v.effects & EF_NODRAW) || ent == m_itemIgnore)
          continue; // someone owns this weapon or it hasn't respawned yet
@@ -1231,7 +1237,7 @@ void Bot::CheckMessageQueue (void)
       }
 
       // prevent vip from buying
-      if ((g_mapType & MAP_AS) && *(INFOKEY_VALUE (GET_INFOKEYBUFFER (GetEntity ()), "model")) == 'v')
+      if (IsPlayerVIP (GetEntity ()))
       {
          m_isVIP = true;
          m_buyState = 6;
@@ -1415,7 +1421,7 @@ bool Bot::IsRestricted (int weaponIndex)
 
    Array <String> bannedWeapons = String (yb_restricted_weapons.GetString ()).Split (';');
 
-   IterateArray (bannedWeapons, i)
+   FOR_EACH_AE (bannedWeapons, i)
    {
       const char *banned = STRING (GetWeaponReturn (true, NULL, weaponIndex));
 
@@ -1483,7 +1489,7 @@ bool Bot::IsMorePowerfulWeaponCanBeBought (void)
       Array <String> bannedWeapons = String (yb_restricted_weapons.GetString ()).Split (';');
 
       // check if its banned
-      IterateArray (bannedWeapons, i)
+      FOR_EACH_AE (bannedWeapons, i)
       {
          if (m_currentWeapon == GetWeaponReturn (false, bannedWeapons[i].GetBuffer ()))
             return true;
@@ -2105,7 +2111,7 @@ void Bot::SetConditions (void)
 
       // if half of the round is over, allow hunting
       // FIXME: it probably should be also team/map dependant
-      if (IsEntityNull (m_enemy) && g_timeRoundMid < GetWorldTime () && !m_isUsingGrenade && m_currentWaypointIndex != g_waypoint->FindNearest (m_lastEnemyOrigin) && m_personality != PERSONALITY_CAREFUL)
+      if (GetTaskId () != TASK_ESCAPEFROMBOMB && IsEntityNull (m_enemy) && g_timeRoundMid < GetWorldTime () && !m_isUsingGrenade && m_currentWaypointIndex != g_waypoint->FindNearest (m_lastEnemyOrigin) && m_personality != PERSONALITY_CAREFUL)
       {
          float desireLevel = 4096.0 - ((1.0 - tempAgression) * distance);
 
@@ -2272,7 +2278,7 @@ void Bot::RemoveCertainTask (TaskId_t id)
       return;
    }
 
-   IterateArray (m_tasks, i)
+   FOR_EACH_AE (m_tasks, i)
    {
       if (m_tasks[i].id == id)
          m_tasks.RemoveAt (i);
@@ -2343,26 +2349,6 @@ bool Bot::ReactOnEnemy (void)
       return true;
    }
    return false;
-}
-
-bool Bot::IsLastEnemyViewable (void)
-{
-   // this function checks if line of sight established to last enemy
-
-   if (IsEntityNull (m_lastEnemy) || m_lastEnemyOrigin == nullvec)
-   {
-      m_lastEnemy = NULL;
-      m_lastEnemyOrigin = nullvec;
-
-      return false;
-   }
-
-   // trace a line from bot's eyes to destination...
-   TraceResult tr;
-   TraceLine (EyePosition (), m_lastEnemyOrigin, true, GetEntity (), &tr);
-
-   // check if line of sight to object is not blocked (i.e. visible)
-   return tr.flFraction >= 1.0;
 }
 
 bool Bot::LastEnemyShootable (void)
@@ -2706,10 +2692,10 @@ void Bot::CheckRadioCommands (void)
          {
             if (g_timeNextBombUpdate < GetWorldTime ())
             {
-               float minDistance = 4096.0f;
+               float minDistance = FLT_MAX;
 
                // find nearest bomb waypoint to player
-               IterateArray (g_waypoint->m_goalPoints, i)
+               FOR_EACH_AE (g_waypoint->m_goalPoints, i)
                {
                   distance = (g_waypoint->GetPath (g_waypoint->m_goalPoints[i])->origin - m_radioEntity->v.origin).GetLengthSquared ();
 
@@ -2722,21 +2708,21 @@ void Bot::CheckRadioCommands (void)
 
                // mark this waypoint as restricted point
                if (bombPoint != -1 && !g_waypoint->IsGoalVisited (bombPoint))
-                  g_waypoint->SetGoalVisited (bombPoint);
-
-               g_timeNextBombUpdate = GetWorldTime () + 0.5;
-            }
-
-            // does this bot want to defuse?
-            if (GetTaskId () == TASK_NORMAL)
-            {
-               // is he approaching this goal?
-               if (GetTask ()->data == bombPoint)
                {
-                  GetTask ()->data = -1;
-                  RadioMessage (Radio_Affirmative);
-              
+                  // does this bot want to defuse?
+                  if (GetTaskId () == TASK_NORMAL)
+                  {
+                     // is he approaching this goal?
+                     if (GetTask ()->data == bombPoint)
+                     {
+                        GetTask ()->data = -1;
+                        RadioMessage (Radio_Affirmative);
+
+                     }
+                  }
+                  g_waypoint->SetGoalVisited (bombPoint);
                }
+               g_timeNextBombUpdate = GetWorldTime () + 0.5;
             }
          }
       }
@@ -2942,6 +2928,13 @@ void Bot::ChooseAimDirection (void)
    else if (m_lastEnemyOrigin == nullvec)
       m_aimFlags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
 
+   // if in battle, and enemy is behind something for short period of time, look at that origin!
+   if (m_seeEnemyTime + 2.0f < GetWorldTime () && (m_aimFlags & AIM_NAVPOINT) && !(m_aimFlags & AIM_ENEMY) && m_lastEnemyOrigin != nullvec && IsAlive (m_enemy))
+   {
+      m_aimFlags |= AIM_LAST_ENEMY;
+      m_canChooseAimDirection = false;
+   }
+
    unsigned int flags = m_aimFlags;
 
    // don't allow bot to look at danger positions under certain circumstances
@@ -3061,6 +3054,7 @@ void Bot::ChooseAimDirection (void)
          }
       }
    }
+
    if (m_lookAt == nullvec)
       m_lookAt = m_destOrigin;
 }
@@ -3122,7 +3116,7 @@ void Bot::Think (void)
             bool sayBufferExists = false;
 
             // search for last messages, sayed
-            IterateArray (m_sayTextBuffer.lastUsedSentences, i)
+            FOR_EACH_AE (m_sayTextBuffer.lastUsedSentences, i)
             {
                if (strncmp (m_sayTextBuffer.lastUsedSentences[i].GetBuffer (), pickedPhrase, m_sayTextBuffer.lastUsedSentences[i].GetLength ()) == 0)
                   sayBufferExists = true;
@@ -3260,7 +3254,7 @@ void Bot::RunTask (void)
                }
 
                // don't allow vip on as_ maps to camp + don't allow terrorist carrying c4 to camp
-               if (((g_mapType & MAP_AS) && *(INFOKEY_VALUE (GET_INFOKEYBUFFER (GetEntity ()), "model")) == 'v') || ((g_mapType & MAP_DE) && m_team == TEAM_TF && !g_bombPlanted && m_hasC4))
+               if (IsPlayerVIP (GetEntity ()) || ((g_mapType & MAP_DE) && m_team == TEAM_TF && !g_bombPlanted && m_hasC4))
                   campingAllowed = false;
 
                // check if another bot is already camping here
@@ -4866,7 +4860,7 @@ void Bot::BotAI (void)
          if (Random.Long (0, 100) < 45 && GetNearbyFriendsNearPosition (pev->origin, 512) == 0 && (m_enemy->v.weapons & (1 << WEAPON_C4)))
             ChatterMessage (Chatter_SpotTheBomber);
 
-         if (Random.Long (0, 100) < 45 && m_team == TEAM_TF && GetNearbyFriendsNearPosition (pev->origin, 512) == 0 && *g_engfuncs.pfnInfoKeyValue (g_engfuncs.pfnGetInfoKeyBuffer (m_enemy), "model") == 'v')
+         if (Random.Long (0, 100) < 45 && m_team == TEAM_TF && GetNearbyFriendsNearPosition (pev->origin, 512) == 0 && IsPlayerVIP (m_enemy))
             ChatterMessage (Chatter_VIPSpotted);
 
          if (Random.Long (0, 100) < 50 && GetNearbyFriendsNearPosition (pev->origin, 450) == 0 && GetTeam (m_enemy) != m_team && IsGroupOfEnemies (m_enemy->v.origin, 2, 384))
@@ -5304,12 +5298,12 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits)
    m_lastDamageType = bits;
    CollectGoalExperience (damage, m_team);
 
-   if (IsValidPlayer (inflictor))
+   if (m_seeEnemyTime + 4.0f < GetWorldTime () && IsValidPlayer (inflictor))
    {
       if (GetTeam (inflictor) == m_team && yb_tkpunish.GetBool () && !g_botManager->GetBot (inflictor))
       {
          // alright, die you teamkiller!!!
-         m_actualReactionTime = 0.0;
+         m_actualReactionTime = 0.0f;
          m_seeEnemyTime = GetWorldTime();
          m_enemy = inflictor;
 
@@ -6009,7 +6003,7 @@ void Bot::ReactOnSound (void)
    }
 
    // did the bot hear someone ?
-   if (!IsEntityNull (player))
+   if (IsValidPlayer (player))
    {
       // change to best weapon if heard something
       if (!(m_states & STATE_SEEING_ENEMY) && m_seeEnemyTime + 2.5 < GetWorldTime () && IsOnFloor () && m_currentWeapon != WEAPON_C4 && m_currentWeapon != WEAPON_EXPLOSIVE && m_currentWeapon != WEAPON_SMOKE && m_currentWeapon != WEAPON_FLASHBANG && !yb_jasonmode.GetBool ())

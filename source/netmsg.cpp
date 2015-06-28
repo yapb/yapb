@@ -209,7 +209,7 @@ void NetworkMsg::Execute (void *p)
       case 2:
          damageBits = PTR_TO_INT (p);
 
-         if (m_bot && damageArmor > 0 || damageTaken > 0)
+         if (m_bot != NULL && (damageArmor > 0 || damageTaken > 0))
             m_bot->TakeDamage (m_bot->pev->dmg_inflictor, damageTaken, damageArmor, damageBits);
          break;
       }

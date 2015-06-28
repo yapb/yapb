@@ -601,14 +601,14 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
             m_collStateIndex++;
             m_probeTime = GetWorldTime () + 0.5;
 
-            if (m_collStateIndex > 5)
+            if (m_collStateIndex > MAX_COLLIDE_MOVES)
             {
                m_navTimeset = GetWorldTime () - 5.0;
                ResetCollideState ();
             }
          }
 
-         if (m_collStateIndex <= MAX_COLLIDE_MOVES)
+         if (m_collStateIndex < MAX_COLLIDE_MOVES)
          {
             switch (m_collideMoves[m_collStateIndex])
             {
@@ -919,12 +919,12 @@ bool Bot::DoWaypointNav (void)
          {
             edict_t *button = FindNearestButton (STRING (m_liftEntity->v.targetname));
 
-            // lift is already used ?
-            bool liftUsed = false;
-
             // if we got a valid button entity
             if (!IsEntityNull (button))
             {
+               // lift is already used ?
+               bool liftUsed = false;
+
                // iterate though clients, and find if lift already used
                for (int i = 0; i < GetMaxClients (); i++)
                {
@@ -1282,10 +1282,20 @@ public:
    // inserts a value into the priority queue
    inline void Push (int value, float pri)
    {
+      if (m_heap == NULL)
+         return;
+
       if (m_size >= m_heapSize)
       {
          m_heapSize += 100;
-         m_heap = static_cast <Node *> (realloc (m_heap, sizeof (Node) * m_heapSize));
+
+         Node *newHeap = static_cast <Node *> (realloc (m_heap, sizeof (Node) * m_heapSize));
+
+         if (newHeap != NULL)
+         {
+            m_heap = newHeap;
+            free (newHeap);
+         }
       }
 
       m_heap[m_size].pri = pri;
@@ -1409,7 +1419,7 @@ float gfunctionKillsDistCTWithHostage (int currentIndex, int parentIndex)
    return gfunctionKillsDistCT (currentIndex, parentIndex);
 }
 
-float gfunctionKillsT (int currentIndex, int parentIndex)
+float gfunctionKillsT (int currentIndex, int)
 {
    // least kills to goal for a team
 
@@ -1633,6 +1643,7 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
       break;
 
    case 2:
+   default:
       if (m_team == TEAM_TF)
       {
          gcalc = gfunctionKillsT;
@@ -2021,7 +2032,7 @@ int Bot::ChooseBombWaypoint (void)
    float lastDistance = FLT_MAX;
 
    // find nearest goal waypoint either to bomb (if "heard" or player)
-   IterateArray (goals, i)
+   FOR_EACH_AE (goals, i)
    {
       float distance = (g_waypoint->GetPath (goals[i])->origin - bombOrigin).GetLengthSquared ();
 
@@ -2140,6 +2151,17 @@ int Bot::FindDefendWaypoint (const Vector &origin)
       }
    } while (isOrderChanged);
 
+   if (waypointIndex[0] == -1)
+   {
+      Array <int> found;
+      g_waypoint->FindInRadius (found, 1024.0f, origin);
+
+      if (found.IsEmpty ())
+         return Random.Long (0, g_numWaypoints - 1); // most worst case, since there a evil error in waypoints
+
+      return found.GetRandomElement ();
+   }
+
    int index = 0;
 
    for (; index < MAX_PATH_INDEX; index++)
@@ -2196,7 +2218,7 @@ int Bot::FindCoverWaypoint (float maxDistance)
 
       bool neighbourVisible = false;  // now check neighbour waypoints for visibility
 
-      IterateArray (enemyIndices, j)
+      FOR_EACH_AE (enemyIndices, j)
       {
          if (g_waypoint->IsVisible (enemyIndices[j], i))
          {
@@ -2570,6 +2592,7 @@ bool Bot::CantMoveForward (const Vector &normal, TraceResult *tr)
    return false;  // bot can move forward, return false
 }
 
+#ifdef DEAD_CODE
 bool Bot::CanStrafeLeft (TraceResult *tr)
 {
    // this function checks if bot can move sideways
@@ -2627,6 +2650,8 @@ bool Bot::CanStrafeRight (TraceResult * tr)
 
    return true;
 }
+
+#endif
 
 bool Bot::CanJumpUp (const Vector &normal)
 {
@@ -2826,6 +2851,8 @@ bool Bot::CanDuckUnder (const Vector &normal)
    return tr.flFraction > 1.0;
 }
 
+#ifdef DEAD_CODE
+
 bool Bot::IsBlockedLeft (void)
 {
    TraceResult tr;
@@ -2865,6 +2892,8 @@ bool Bot::IsBlockedRight (void)
 
    return false;
 }
+
+#endif
 
 bool Bot::CheckWallOnLeft (void)
 {
@@ -2942,6 +2971,8 @@ bool Bot::IsDeadlyDrop (const Vector &to)
    }
    return false;
 }
+
+#ifdef DEAD_CODE
 
 void Bot::ChangePitch (float speed)
 {
@@ -3022,6 +3053,8 @@ void Bot::ChangeYaw (float speed)
    pev->v_angle.y = AngleNormalize (curent + normalizePitch);
    pev->angles.y = pev->v_angle.y;
 }
+
+#endif
 
 int Bot::GetAimingWaypoint (void)
 {
@@ -3314,7 +3347,7 @@ bool Bot::IsPointOccupied (int index)
       {
          int occupyId = GetShootingConeDeviation (bot->GetEntity (), &pev->origin) >= 0.7f ? bot->m_prevWptIndex[0] : m_currentWaypointIndex;
 
-         if (occupyId == index || bot->GetTask ()->data == index || (g_waypoint->GetPath (occupyId)->origin - g_waypoint->GetPath (index)->origin).GetLengthSquared () < 8100)
+         if (occupyId == index || bot->GetTask ()->data == index || (g_waypoint->GetPath (occupyId)->origin - g_waypoint->GetPath (index)->origin).GetLengthSquared () < 4096.0f)
             return true;
       }
    }

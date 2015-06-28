@@ -12,6 +12,7 @@
 ConVar yb_shoots_thru_walls ("yb_shoots_thru_walls", "2");
 ConVar yb_ignore_enemies ("yb_ignore_enemies", "0");
 ConVar yb_csdm_mode ("yb_csdm_mode", "0", VT_NOSERVER);
+ConVar yb_check_enemy_rendering ("yb_check_enemy_rendering", "0", VT_NOSERVER);
 
 ConVar mp_friendlyfire ("mp_friendlyfire", NULL, VT_NOREGISTER);
 
@@ -43,6 +44,47 @@ int Bot::GetNearbyEnemiesNearPosition (const Vector &origin, int radius)
          count++;
    }
    return count;
+}
+
+bool Bot::IsEnemyHiddenByRendering (edict_t *enemy)
+{
+   if (IsEntityNull (enemy) || !yb_check_enemy_rendering.GetBool ())
+      return false;
+
+   entvars_t &v = enemy->v;
+   bool enemyHasGun = (v.weapons & WEAPON_SECONDARY) || (v.weapons & WEAPON_SECONDARY);
+
+   if ((v.renderfx == kRenderFxExplode || (v.effects & EF_NODRAW)) && !(v.oldbuttons & IN_ATTACK) || !enemyHasGun)
+      return true;
+
+   else if ((v.renderfx == kRenderFxExplode || (v.effects & EF_NODRAW)) && (v.oldbuttons & IN_ATTACK) && enemyHasGun)
+      return false;
+
+   else if (v.renderfx != kRenderFxHologram && v.renderfx != kRenderFxExplode && v.rendermode != kRenderNormal)
+   {
+      if (v.renderfx == kRenderFxGlowShell)
+      {
+         if (v.renderamt <= 20.0f && v.rendercolor.x <= 20.0f && v.rendercolor.y <= 20.f && v.rendercolor.z <= 20.f)
+         {
+            if (!(v.oldbuttons & IN_ATTACK) || !enemyHasGun)
+               return true;
+
+            return false;
+         }
+         else if (v.renderamt <= 60.0f && v.rendercolor.x <= 60.f && v.rendercolor.y <= 60.0f && v.rendercolor.z <= 60.0f)
+            return true;
+      }
+      else if (v.renderamt <= 20.0f)
+      {
+         if (!(v.oldbuttons & IN_ATTACK) || !enemyHasGun)
+            return true;
+
+         return false;
+      }
+      else if (v.renderamt <= 60.0f)
+         return true;
+   }
+   return false;
 }
 
 bool Bot::LookupEnemy (void)
@@ -140,7 +182,7 @@ bool Bot::LookupEnemy (void)
                newEnemy = player;
 
                // aim VIP first on AS maps...
-               if ((g_mapType & MAP_AS) && *(INFOKEY_VALUE (GET_INFOKEYBUFFER (player), "model")) == 'v')
+               if (IsPlayerVIP (newEnemy))
                   break;
             }
          }
@@ -842,11 +884,11 @@ bool Bot::IsWeaponBadInDistance (int weaponIndex, float distance)
       return false;
 
    // better use pistol in short range distances, when using sniper weapons
-   if ((weaponID == WEAPON_SCOUT || weaponID == WEAPON_AWP || weaponID == WEAPON_G3SG1 || weaponID == WEAPON_SG550) && distance < 300.0)
+   if ((weaponID == WEAPON_SCOUT || weaponID == WEAPON_AWP || weaponID == WEAPON_G3SG1 || weaponID == WEAPON_SG550) && distance < 500.0f)
       return true;
 
    // shotguns is too inaccurate at long distances, so weapon is bad
-   if ((weaponID == WEAPON_M3 || weaponID == WEAPON_XM1014) && distance > 750.0)
+   if ((weaponID == WEAPON_M3 || weaponID == WEAPON_XM1014) && distance > 750.0f)
       return true;
 
    return false;

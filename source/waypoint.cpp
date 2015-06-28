@@ -507,7 +507,7 @@ void Waypoint::Delete (void)
    delete m_paths[index];
    m_paths[index] = NULL;
 
-   // Rotate Path Array down
+   // rotate path array down
    for (i = index; i < g_numWaypoints - 1; i++)
       m_paths[i] = m_paths[i + 1];
 
@@ -1451,7 +1451,7 @@ bool Waypoint::IsStandVisible (int srcIndex, int destIndex)
    return !((res & 1) == 1);
 }
 
-char *Waypoint::GetWaypointInfo (int id)
+const char *Waypoint::GetWaypointInfo(int id)
 {
    // this function returns path information for waypoint pointed by id.
 
@@ -1998,7 +1998,7 @@ bool Waypoint::NodesValid (void)
 
       visited[current->index] = true;
 
-      IterateArray (outgoingPaths[current->index], p)
+      FOR_EACH_AE (outgoingPaths[current->index], p)
       {
          if (visited[outgoingPaths[current->index][p]])
             continue; // skip this waypoint as it's already visited
@@ -2179,7 +2179,7 @@ void Waypoint::SetGoalVisited (int index)
 
 bool Waypoint::IsGoalVisited (int index)
 {
-   IterateArray (m_visitedGoals, i)
+   FOR_EACH_AE (m_visitedGoals, i)
    {
       if (m_visitedGoals[i] == index)
          return true;
@@ -2511,10 +2511,13 @@ void WaypointDownloader::FreeSocket (int sock)
 WaypointDownloadError WaypointDownloader::DoDownload (void)
 {
 #if defined (PLATFORM_WIN32)
-   WORD requestedVersion = MAKEWORD (1, 3);
+   WORD requestedVersion = MAKEWORD (1, 1);
    WSADATA wsaData;
 
-   WSAStartup (requestedVersion, &wsaData);
+   int wsa = WSAStartup (requestedVersion, &wsaData);
+
+   if (wsa != 0)
+      return WDE_SOCKET_ERROR;
 #endif
 
    hostent *host = gethostbyname (yb_waypoint_autodl_host.GetString ());
