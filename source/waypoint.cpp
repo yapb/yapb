@@ -1088,7 +1088,7 @@ bool Waypoint::Load (void)
       {
          if (header.fileVersion != FV_WAYPOINT)
          {
-            sprintf (m_infoBuffer, "%s.pwf - incorrect waypoint file version (expected '%d' found '%d')", GetMapName (), FV_WAYPOINT, header.fileVersion);
+            sprintf (m_infoBuffer, "%s.pwf - incorrect waypoint file version (expected '%d' found '%ld')", GetMapName (), FV_WAYPOINT, header.fileVersion);
             AddLogEntry (true, LL_ERROR, m_infoBuffer);
 
             fp.Close ();
