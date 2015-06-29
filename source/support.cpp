@@ -1222,7 +1222,7 @@ char *Localizer::TranslateInput (const char *input)
    if (ptr != input)
       ptr++;
 
-   strncpy (string, input, ARRAYSIZE_HLSDK (string));
+   strncpy (string, input, SIZEOF_CHAR (string));
    strtrim (string);
 
    FOR_EACH_AE (m_langTab, i)

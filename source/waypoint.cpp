@@ -909,7 +909,7 @@ void Waypoint::InitExperienceTab (void)
       ExtensionHeader header;
       memset (&header, 0, sizeof (header));
 
-      if (fp.Read (&header, sizeof (ExtensionHeader)) == 0)
+      if (fp.Read (&header, sizeof (header)) == 0)
       {
          AddLogEntry (true, LL_ERROR, "Experience data damaged (unable to read header)");
 
@@ -1006,7 +1006,7 @@ void Waypoint::InitVisibilityTab (void)
    }
 
    // read the header of the file
-   if (fp.Read (&header, sizeof (ExtensionHeader)) == 0)
+   if (fp.Read (&header, sizeof (header)) == 0)
    {
       AddLogEntry (true, LL_ERROR, "Vistable damaged (unable to read header)");
 
@@ -1071,11 +1071,11 @@ bool Waypoint::Load (void)
    File fp (CheckSubfolderFile (), "rb");
 
    WaypointHeader header;
-   memset (&header, 0, sizeof (WaypointHeader));
+   memset (&header, 0, sizeof (header));
 
    if (fp.IsValid ())
    {
-      if (fp.Read (&header, sizeof (WaypointHeader)) == 0)
+      if (fp.Read (&header, sizeof (header)) == 0)
       {
          sprintf (m_infoBuffer, "%s.pwf - damaged waypoint file (unable to read header)", GetMapName ());
          AddLogEntry (true, LL_ERROR, m_infoBuffer);

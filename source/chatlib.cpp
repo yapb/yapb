@@ -209,7 +209,7 @@ void Bot::PrepareChatMessage (char *text)
          else if (*pattern == 'r')
          {
             int time = static_cast <int> (g_timeRoundEnd - GetWorldTime ());
-            strcat (m_tempStrings, FormatBuffer ("%02d:%02d", time / 60, time % 60));
+            strncat (m_tempStrings, FormatBuffer ("%02d:%02d", time / 60, time % 60), SIZEOF_CHAR (m_tempStrings));
          }
          // chat reply?
          else if (*pattern == 's')
@@ -322,7 +322,7 @@ void Bot::PrepareChatMessage (char *text)
       strncpy (tempString, textStart, SIZEOF_CHAR (tempString));
 
       HumanizeChat (tempString);
-      strcat (m_tempStrings, tempString);
+      strncat (m_tempStrings, tempString, SIZEOF_CHAR (m_tempStrings));
    }
 }
 
