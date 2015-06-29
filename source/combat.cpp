@@ -53,7 +53,7 @@ bool Bot::IsEnemyHiddenByRendering (edict_t *enemy)
 
    entvars_t &v = enemy->v;
 
-   bool enemyHasGun = (v.weapons & WEAPON_SECONDARY) || (v.weapons & WEAPON_SECONDARY);
+   bool enemyHasGun = (v.weapons & WEAPON_PRIMARY) || (v.weapons & WEAPON_SECONDARY);
    bool enemyGunfire = (v.button & IN_ATTACK) || (v.oldbuttons & IN_ATTACK);
 
    if ((v.renderfx == kRenderFxExplode || (v.effects & EF_NODRAW)) && (!enemyGunfire || !enemyHasGun))

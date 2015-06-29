@@ -89,7 +89,7 @@ char *HumanizeName (char *name)
    // this function humanize player name (i.e. trim clan and switch to lower case (sometimes))
 
    static char outputName[64]; // create return name buffer
-   strncpy (outputName, name, sizeof (outputName)); // copy name to new buffer
+   strncpy (outputName, name, SIZEOF_CHAR (outputName)); // copy name to new buffer
 
    // drop tag marks, 80 percent of time
    if (Random.Long (1, 100) < 80)
@@ -156,6 +156,8 @@ void Bot::PrepareChatMessage (char *text)
    if (!yb_chat.GetBool () || IsNullString (text))
       return;
 
+   #define ASSIGN_TALK_ENTITY() if (!IsEntityNull (talkEntity)) strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), SIZEOF_CHAR (m_tempStrings))
+
    memset (&m_tempStrings, 0, sizeof (m_tempStrings));
 
    char *textStart = text;
@@ -198,12 +200,11 @@ void Bot::PrepareChatMessage (char *text)
             }
             talkEntity = g_clients[index].ent;
 
-            if (!IsEntityNull (talkEntity))
-               strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), sizeof (m_tempStrings));
+            ASSIGN_TALK_ENTITY ();
          }
          // mapname?
          else if (*pattern == 'm')
-            strcat (m_tempStrings, GetMapName ());
+            strncat (m_tempStrings, GetMapName (), SIZEOF_CHAR (m_tempStrings));
          // roundtime?
          else if (*pattern == 'r')
          {
@@ -214,9 +215,7 @@ void Bot::PrepareChatMessage (char *text)
          else if (*pattern == 's')
          {
             talkEntity = EntityOfIndex (m_sayTextBuffer.entityIndex);
-
-            if (!IsEntityNull (talkEntity))
-               strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), sizeof (m_tempStrings));
+            ASSIGN_TALK_ENTITY ();
          }
          // teammate alive?
          else if (*pattern == 't')
@@ -238,8 +237,7 @@ void Bot::PrepareChatMessage (char *text)
                else
                   talkEntity = g_clients[i].ent;
 
-               if (!IsEntityNull (talkEntity))
-                  strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), sizeof (m_tempStrings));
+               ASSIGN_TALK_ENTITY ();
             }
             else // no teammates alive...
             {
@@ -255,8 +253,7 @@ void Bot::PrepareChatMessage (char *text)
                {
                   talkEntity = g_clients[i].ent;
 
-                  if (!IsEntityNull (talkEntity))
-                     strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), sizeof (m_tempStrings));
+                  ASSIGN_TALK_ENTITY ();
                }
             }
          }
@@ -274,9 +271,7 @@ void Bot::PrepareChatMessage (char *text)
             if (i < GetMaxClients ())
             {
                talkEntity = g_clients[i].ent;
-
-               if (!IsEntityNull (talkEntity))
-                  strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), sizeof (m_tempStrings));
+               ASSIGN_TALK_ENTITY ();
             }
             else // no teammates alive...
             {
@@ -289,9 +284,7 @@ void Bot::PrepareChatMessage (char *text)
                if (i < GetMaxClients ())
                {
                   talkEntity = g_clients[i].ent;
-
-                  if (!IsEntityNull (talkEntity))
-                     strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), sizeof (m_tempStrings));
+                  ASSIGN_TALK_ENTITY ();
                }
             }
          }
@@ -315,9 +308,7 @@ void Bot::PrepareChatMessage (char *text)
          else if (*pattern == 'v')
          {
             talkEntity = m_lastVictim;
-
-            if (!IsEntityNull (talkEntity))
-               strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), sizeof (m_tempStrings));
+            ASSIGN_TALK_ENTITY ();
          }
          pattern++;
          textStart = pattern;
@@ -328,7 +319,7 @@ void Bot::PrepareChatMessage (char *text)
    {
       // let the bots make some mistakes...
       char tempString[160];
-      strncpy (tempString, textStart, 159);
+      strncpy (tempString, textStart, SIZEOF_CHAR (tempString));
 
       HumanizeChat (tempString);
       strcat (m_tempStrings, tempString);

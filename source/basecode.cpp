@@ -5123,14 +5123,14 @@ void Bot::BotAI (void)
                   break;
                }
 
-               char enemyName[80], weaponName[80], aimFlags[32], botType[32];
+               char enemyName[80], weaponName[80], aimFlags[64], botType[32];
 
                if (!IsEntityNull (m_enemy))
-                  strcpy (enemyName, STRING (m_enemy->v.netname));
+                  strncpy (enemyName, STRING (m_enemy->v.netname), SIZEOF_CHAR (enemyName));
                else if (!IsEntityNull (m_lastEnemy))
                {
                   strcpy (enemyName, " (L)");
-                  strcat (enemyName, STRING (m_lastEnemy->v.netname));
+                  strncat (enemyName, STRING (m_lastEnemy->v.netname), SIZEOF_CHAR (enemyName));
                }
                else
                   strcpy (enemyName, " (null)");
@@ -5139,7 +5139,7 @@ void Bot::BotAI (void)
                memset (pickupName, 0, sizeof (pickupName));
 
                if (!IsEntityNull (m_pickupItem))
-                  strcpy (pickupName, STRING (m_pickupItem->v.classname));
+                  strncpy (pickupName, STRING (m_pickupItem->v.classname), SIZEOF_CHAR (pickupName));
                else
                   strcpy (pickupName, " (null)");
 
@@ -5195,7 +5195,7 @@ void Bot::BotAI (void)
                   }
                }
                else
-                  strncpy (weaponName, selectTab->weaponName, sizeof (weaponName));
+                  strncpy (weaponName, selectTab->weaponName, SIZEOF_CHAR (weaponName));
 
                char outputBuffer[512];
                memset (outputBuffer, 0, sizeof (outputBuffer));

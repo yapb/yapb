@@ -1075,13 +1075,20 @@ bool Waypoint::Load (void)
 
    if (fp.IsValid ())
    {
-      fp.Read (&header, sizeof (header));
+      if (fp.Read (&header, sizeof (WaypointHeader)) == 0)
+      {
+         sprintf (m_infoBuffer, "%s.pwf - damaged waypoint file (unable to read header)", GetMapName ());
+         AddLogEntry (true, LL_ERROR, m_infoBuffer);
+
+         fp.Close ();
+         return false;
+      }
 
       if (strncmp (header.header, FH_WAYPOINT, strlen (FH_WAYPOINT)) == 0)
       {
          if (header.fileVersion != FV_WAYPOINT)
          {
-            sprintf (m_infoBuffer, "%s.pwf - incorrect waypoint file version (expected '%d' found '%d')", GetMapName (), FV_WAYPOINT, static_cast <int> (header.fileVersion));
+            sprintf (m_infoBuffer, "%s.pwf - incorrect waypoint file version (expected '%d' found '%d')", GetMapName (), FV_WAYPOINT, header.fileVersion);
             AddLogEntry (true, LL_ERROR, m_infoBuffer);
 
             fp.Close ();
@@ -1097,7 +1104,7 @@ bool Waypoint::Load (void)
          }
          else
          {
-            if (header.pointNumber == 0 || header.pointNumber >= MAX_WAYPOINTS)
+            if (header.pointNumber == 0 || header.pointNumber > MAX_WAYPOINTS)
             {
                sprintf (m_infoBuffer, "%s.pwf - waypoint file contains illegal number of waypoints (mapname: '%s', header: '%s')", GetMapName (), GetMapName (), header.mapName);
                AddLogEntry (true, LL_ERROR, m_infoBuffer);
@@ -1221,8 +1228,8 @@ void Waypoint::Save (void)
    memset (header.header, 0, sizeof (header.header));
 
    strcpy (header.header, FH_WAYPOINT);
-   strncpy (header.author, STRING (g_hostEntity->v.netname), sizeof (header.author));
-   strncpy (header.mapName, GetMapName (), sizeof (header.mapName));
+   strncpy (header.author, STRING (g_hostEntity->v.netname), SIZEOF_CHAR (header.author));
+   strncpy (header.mapName, GetMapName (), SIZEOF_CHAR (header.mapName));
 
    header.mapName[31] = 0;
    header.fileVersion = FV_WAYPOINT;
@@ -2146,7 +2153,11 @@ bool Waypoint::LoadPathMatrix (void)
    int num = 0;
 
    // read number of waypoints
-   fp.Read (&num, sizeof (int));
+   if (fp.Read (&num, sizeof (int)) == 0)
+   {
+      fp.Close ();
+      return false;
+   }
 
    if (num != g_numWaypoints)
    {
@@ -2572,10 +2583,24 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
    timeout.tv_sec = 5;
    timeout.tv_usec = 0;
 
-   setsockopt (socketHandle, SOL_SOCKET, SO_RCVTIMEO, (char *) &timeout, sizeof (timeout));
-   setsockopt (socketHandle, SOL_SOCKET, SO_SNDTIMEO, (char *) &timeout, sizeof (timeout));
+   int result = 0;
 
+   result = setsockopt (socketHandle, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof (timeout));
+
+   if (result < 0)
+   {
+      FreeSocket (socketHandle);
+      return WDE_SOCKET_ERROR;
+   }
+   result = setsockopt (socketHandle, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof (timeout));
+
+   if (result < 0)
+   {
+      FreeSocket (socketHandle);
+      return WDE_SOCKET_ERROR;
+   }
    memset (&dest, 0, sizeof (dest));
+
    dest.sin_family = AF_INET;
    dest.sin_port = htons (80);
    dest.sin_addr.s_addr = inet_addr (inet_ntoa (*((struct in_addr *) host->h_addr)));

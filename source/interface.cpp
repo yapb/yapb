@@ -488,7 +488,7 @@ void InitConfig (void)
          Array <String> pair = String (line).Split ("\t\t");
 
          if (pair.GetElementNumber () > 1)
-            strcpy (line, pair[0].Trim ().GetBuffer ());
+            strncpy (line, pair[0].Trim ().GetBuffer (), SIZEOF_CHAR (line));
 
          strtrim (line);
          line[32] = 0;
@@ -516,7 +516,7 @@ void InitConfig (void)
       while (fp.GetBuffer (line, 255))
       {
          SKIP_COMMENTS ();
-         strncpy (section, GetField (line, 0, 1), sizeof (section));
+         strncpy (section, GetField (line, 0, 1), SIZEOF_CHAR (section));
 
          if (strcmp (section, "[KILLED]") == 0)
          {
@@ -1993,7 +1993,7 @@ void ClientCommand (edict_t *ent)
             if (IsNullString (CMD_ARGS ()))
                continue;
 
-            strncpy (target->m_sayTextBuffer.sayText, CMD_ARGS (), sizeof (target->m_sayTextBuffer.sayText));
+            strncpy (target->m_sayTextBuffer.sayText, CMD_ARGS (), SIZEOF_CHAR (target->m_sayTextBuffer.sayText));
             target->m_sayTextBuffer.timeNextChat = GetWorldTime () + target->m_sayTextBuffer.chatDelay;
          }
       }

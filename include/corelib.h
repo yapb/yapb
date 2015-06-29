@@ -4075,3 +4075,8 @@ public:
 #define FOR_EACH_AE(arrayName, iteratorName) \
    for (int iteratorName = 0; iteratorName != arrayName.GetElementNumber (); iteratorName++)
 
+
+//
+// Sizeof bounds
+//
+#define SIZEOF_CHAR(in) sizeof (in) - 1

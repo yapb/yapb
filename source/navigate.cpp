@@ -549,14 +549,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
                if (blockedRight)
                   state[i] -= 5;
             }
-            else
-            {
-               state[i] = 0;
-               i++;
-               state[i] = 0;
-            }
-
-
+ 
             // weighted all possible moves, now sort them to start with most probable
             bool isSorting = false;
 
@@ -1254,6 +1247,7 @@ private:
       float pri;
    };
 
+   int m_allocCount;
    int m_size;
    int m_heapSize;
    Node *m_heap;
@@ -1269,7 +1263,9 @@ public:
    {
       m_size = 0;
       m_heapSize = initialSize;
-      m_heap = new Node[m_heapSize];
+      m_allocCount = 0;
+
+      m_heap = static_cast <Node *> (malloc (sizeof (Node) * m_heapSize));
    }
 
    inline ~PriorityQueue (void)
@@ -1281,20 +1277,24 @@ public:
    // inserts a value into the priority queue
    inline void Push (int value, float pri)
    {
+      if (m_allocCount > 20)
+      {
+         AddLogEntry (false, LL_FATAL, "Tried to re-allocate heap too many times in pathfinder. This usually indicates corrupted waypoint file. Please obtain new copy of waypoint.");
+         return;
+      }
+
       if (m_heap == NULL)
          return;
 
       if (m_size >= m_heapSize)
       {
+         m_allocCount++;
          m_heapSize += 100;
 
          Node *newHeap = static_cast <Node *> (realloc (m_heap, sizeof (Node) * m_heapSize));
 
          if (newHeap != NULL)
-         {
             m_heap = newHeap;
-            free (newHeap);
-         }
       }
 
       m_heap[m_size].pri = pri;

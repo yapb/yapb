@@ -131,7 +131,7 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
                continue;
 
             pickedName->used = nameFound = true;
-            strncpy (outputName, pickedName->name, sizeof (outputName));
+            strncpy (outputName, pickedName->name, SIZEOF_CHAR (outputName));
 
             steamId = pickedName->steamId;
          }

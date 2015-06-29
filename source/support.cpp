@@ -941,7 +941,7 @@ const char *GetMapName (void)
    // this function gets the map name and store it in the map_name global string variable.
 
    static char mapName[256];
-   strncpy (mapName, const_cast <const char *> (g_pGlobals->pStringBase + static_cast <int> (g_pGlobals->mapname)), sizeof (mapName));
+   strncpy (mapName, const_cast <const char *> (g_pGlobals->pStringBase + static_cast <int> (g_pGlobals->mapname)), SIZEOF_CHAR (mapName));
 
    return &mapName[0]; // and return a pointer to it
 }
@@ -1222,7 +1222,7 @@ char *Localizer::TranslateInput (const char *input)
    if (ptr != input)
       ptr++;
 
-   strncpy (string, input, 1024);
+   strncpy (string, input, ARRAYSIZE_HLSDK (string));
    strtrim (string);
 
    FOR_EACH_AE (m_langTab, i)
