@@ -392,7 +392,7 @@ void BotManager::MaintainBotQuota (void)
 
 void BotManager::InitQuota (void)
 {
-   m_maintainTime = GetWorldTime () + 1.5f;
+   m_maintainTime = GetWorldTime () + 3.0f;
    m_creationTab.RemoveAll ();
 }
 
