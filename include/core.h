@@ -110,14 +110,12 @@ public:
 
    Library (const char *fileName)
    {
+      m_ptr = NULL;
+
       if (fileName == NULL)
          return;
 
-#ifdef PLATFORM_WIN32
-      m_ptr = LoadLibrary (fileName);
-#else
-      m_ptr = dlopen (fileName, RTLD_NOW);
-#endif
+      LoadLib (fileName);
    }
 
  ~Library (void)
@@ -133,6 +131,16 @@ public:
   }
 
 public:
+   inline void *LoadLib (const char *fileName)
+   {
+#ifdef PLATFORM_WIN32
+      m_ptr = LoadLibrary (fileName);
+#else
+      m_ptr = dlopen (fileName, RTLD_NOW);
+#endif
+
+      return m_ptr;
+   }
    void *GetFunctionAddr (const char *functionName)
    {
       if (!IsLoaded ())
@@ -1050,7 +1058,7 @@ private:
    void RunPlayerMovement (void);
    byte ThrottledMsec (void);
    void GetValidWaypoint (void);
-   void ChangeWptIndex (int waypointIndex);
+   int ChangeWptIndex (int waypointIndex);
    bool IsDeadlyDrop (const Vector &to);
    bool OutOfBombTimer (void);
    void SelectLeaderEachTeam (int team);
@@ -1580,6 +1588,8 @@ public:
 public:
    ConVar (const char *name, const char *initval, VarType type = VT_NORMAL)
    {
+      m_eptr = NULL;
+
       g_convarWrapper->RegisterVariable (name, initval, type, this);
    }
 

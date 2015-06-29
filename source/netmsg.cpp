@@ -95,7 +95,7 @@ void NetworkMsg::Execute (void *p)
       switch (m_state)
       {
       case 0:
-         strcpy (weaponProp.className, PTR_TO_STR (p));
+         strncpy (weaponProp.className, PTR_TO_STR (p), sizeof (weaponProp.className));
          break;
 
       case 1:

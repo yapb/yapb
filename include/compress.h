@@ -148,12 +148,18 @@ public:
    {
       m_textSize = 0;
       m_codeSize = 0;
+
+      m_matchPosition = 0;
+      m_matchLength = 0;
    }
 
    ~Compressor (void)
    {
       m_textSize = 0;
       m_codeSize = 0;
+
+      m_matchPosition = 0;
+      m_matchLength = 0;
    }
 
    int InternalEncode (const char *fileName, byte *header, int headerSize, byte *buffer, int bufferSize)

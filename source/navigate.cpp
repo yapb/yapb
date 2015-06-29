@@ -224,7 +224,7 @@ TacticChoosen:
    }
 
    if (m_currentWaypointIndex == -1 || m_currentWaypointIndex >= g_numWaypoints)
-      ChangeWptIndex (g_waypoint->FindNearest (pev->origin));
+      m_currentWaypointIndex = ChangeWptIndex (g_waypoint->FindNearest (pev->origin));
 
    if (goalChoices[0] == -1)
 	   return m_chosenGoalIndex = Random.Long (0, g_numWaypoints - 1);
@@ -410,11 +410,11 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
          int bits = 0;
 
          if (IsOnLadder ())
-            bits = PROBE_STRAFE;
+            bits |= PROBE_STRAFE;
          else if (IsInWater ())
-            bits = (PROBE_JUMP | PROBE_STRAFE);
+            bits |= (PROBE_JUMP | PROBE_STRAFE);
          else
-            bits = ((Random.Long (0, 10) > (cantMoveForward ? 7 : 5) ? PROBE_JUMP : 0) | PROBE_STRAFE | PROBE_DUCK);
+            bits |= ((Random.Long (0, 10) > (cantMoveForward ? 7 : 5) ? PROBE_JUMP : 0) | PROBE_STRAFE | PROBE_DUCK);
 
          // collision check allowed if not flying through the air
          if (IsOnFloor () || IsOnLadder () || IsInWater ())
@@ -553,7 +553,6 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
             {
                state[i] = 0;
                i++;
-
                state[i] = 0;
             }
 
@@ -1275,7 +1274,7 @@ public:
 
    inline ~PriorityQueue (void)
    {
-      delete[] m_heap;
+      free (m_heap);
       m_heap = NULL;
    }
 
@@ -1662,6 +1661,7 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
       break;
    }
 
+
    // put start node into open list
    astar[srcIndex].g = gcalc (srcIndex, -1);
    astar[srcIndex].f = astar[srcIndex].g + hcalc (srcIndex, srcIndex, destIndex);
@@ -1753,7 +1753,7 @@ int Bot::GetAimingWaypoint (const Vector &to)
    // return the most distant waypoint which is seen from the Bot to the Target and is within count
 
    if (m_currentWaypointIndex == -1)
-      ChangeWptIndex (g_waypoint->FindNearest (pev->origin));
+      m_currentWaypointIndex = ChangeWptIndex (g_waypoint->FindNearest (pev->origin));
 
    int srcIndex = m_currentWaypointIndex;
    int destIndex = g_waypoint->FindNearest (to);
@@ -1996,10 +1996,10 @@ void Bot::GetValidWaypoint (void)
    }
 }
 
-void Bot::ChangeWptIndex (int waypointIndex)
+int Bot::ChangeWptIndex(int waypointIndex)
 {
    if (waypointIndex == -1)
-      return;
+      return 0;
 
    m_prevWptIndex[4] = m_prevWptIndex[3];
    m_prevWptIndex[3] = m_prevWptIndex[2];
@@ -2011,6 +2011,8 @@ void Bot::ChangeWptIndex (int waypointIndex)
 
    m_currentPath = g_waypoint->GetPath (m_currentWaypointIndex);
    m_waypointFlags = m_currentPath->flags;
+
+   return m_currentWaypointIndex; // to satisfy static-code analyzers
 }
 
 int Bot::ChooseBombWaypoint (void)
@@ -3065,6 +3067,9 @@ int Bot::GetAimingWaypoint (void)
    uint16 visibility[3];
 
    int currentWaypoint = g_waypoint->FindNearest (pev->origin);
+
+   if (currentWaypoint == -1)
+      return Random.Long (0, g_numWaypoints - 1);
 
    for (int i = 0; i < g_numWaypoints; i++)
    {

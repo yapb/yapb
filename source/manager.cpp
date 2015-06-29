@@ -36,8 +36,8 @@ BotManager::BotManager (void)
 
    memset (m_bots, 0, sizeof (m_bots));
 
-   if (g_pGlobals != NULL)
-      InitQuota ();
+   m_maintainTime = 0.0f;
+   m_creationTab.RemoveAll ();
 }
 
 BotManager::~BotManager (void)
@@ -131,7 +131,7 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
                continue;
 
             pickedName->used = nameFound = true;
-            strcpy (outputName, pickedName->name);
+            strncpy (outputName, pickedName->name, sizeof (outputName));
 
             steamId = pickedName->steamId;
          }
@@ -167,7 +167,7 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
 
    m_bots[index] = new Bot (bot, difficulty, personality, team, member, steamId);
 
-   if (m_bots == NULL)
+   if (m_bots[index] == NULL)
       TerminateOnMalloc ();
 
    ServerPrint ("Connecting Bot...");

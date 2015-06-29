@@ -1406,7 +1406,6 @@ void Bot::CheckMessageQueue (void)
       TeamSayText (m_tempStrings);
       break;
 
-   case GSM_IDLE:
    default:
       return;
    }
@@ -5196,7 +5195,7 @@ void Bot::BotAI (void)
                   }
                }
                else
-                  strcpy (weaponName, selectTab->weaponName);
+                  strncpy (weaponName, selectTab->weaponName, sizeof (weaponName));
 
                char outputBuffer[512];
                memset (outputBuffer, 0, sizeof (outputBuffer));
@@ -5961,10 +5960,20 @@ void Bot::ReactOnSound (void)
    float maxVolume = 0.0, volume = 0.0;
    int hearEnemyIndex = -1;
 
+   Vector testHearing =  EyePosition ();
+
+   if (pev->flags & FL_DUCKING)
+      testHearing += VEC_HULL_MIN - VEC_DUCK_HULL_MIN;
+
+   unsigned char *pas = ENGINE_SET_PAS ((reinterpret_cast <float *> (&testHearing)));
+
    // loop through all enemy clients to check for hearable stuff
    for (int i = 0; i < GetMaxClients (); i++)
    {
       if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].ent == GetEntity () || g_clients[i].timeSoundLasting < GetWorldTime ())
+         continue;
+
+      if (!ENGINE_CHECK_VISIBILITY (g_clients[i].ent, pas))
          continue;
 
       float distance = (g_clients[i].soundPosition - pev->origin).GetLength ();
@@ -5981,7 +5990,7 @@ void Bot::ReactOnSound (void)
       else
          volume = 2.0 * hearingDistance * (1.0 - distance / hearingDistance) * (g_clients[i].timeSoundLasting - GetWorldTime ()) / g_clients[i].maxTimeSoundLasting;
 
-      if (g_clients[hearEnemyIndex].team == m_team && yb_csdm_mode.GetInt () != 2)
+      if (g_clients[i].team == m_team && yb_csdm_mode.GetInt () != 2)
          volume = 0.3 * volume;
 
       // we will care about the most hearable sound instead of the closest one - KWo

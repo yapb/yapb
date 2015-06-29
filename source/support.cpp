@@ -941,7 +941,7 @@ const char *GetMapName (void)
    // this function gets the map name and store it in the map_name global string variable.
 
    static char mapName[256];
-   strcpy (mapName, const_cast <const char *> (g_pGlobals->pStringBase + static_cast <int> (g_pGlobals->mapname)));
+   strncpy (mapName, const_cast <const char *> (g_pGlobals->pStringBase + static_cast <int> (g_pGlobals->mapname)), sizeof (mapName));
 
    return &mapName[0]; // and return a pointer to it
 }
@@ -1118,10 +1118,11 @@ float GetWaveLength (const char *fileName)
       return 0;
    }
 
+   // whoa, what a shit, is this working ?!
    char ch[32];
    sprintf (ch, "0.%u", static_cast <unsigned int> (waveHdr.dataChunkLength));
 
-   float secondLength = static_cast <float> (waveHdr.dataChunkLength / waveHdr.bytesPerSecond);
+   float secondLength = static_cast <float> (waveHdr.dataChunkLength) / static_cast <float> (waveHdr.bytesPerSecond);
    float milliSecondLength = atof (ch);
 
    return (secondLength == 0.0 ? milliSecondLength : secondLength);

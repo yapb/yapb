@@ -516,7 +516,7 @@ void InitConfig (void)
       while (fp.GetBuffer (line, 255))
       {
          SKIP_COMMENTS ();
-         strcpy (section, GetField (line, 0, 1));
+         strncpy (section, GetField (line, 0, 1), sizeof (section));
 
          if (strcmp (section, "[KILLED]") == 0)
          {
@@ -1988,13 +1988,13 @@ void ClientCommand (edict_t *ent)
 
          if (target != NULL)
          {
-			 target->m_sayTextBuffer.entityIndex = IndexOfEntity (ent);
+            target->m_sayTextBuffer.entityIndex = IndexOfEntity (ent);
 
             if (IsNullString (CMD_ARGS ()))
                continue;
 
-            strcpy (target->m_sayTextBuffer.sayText, CMD_ARGS ());
-			target->m_sayTextBuffer.timeNextChat = GetWorldTime () + target->m_sayTextBuffer.chatDelay;
+            strncpy (target->m_sayTextBuffer.sayText, CMD_ARGS (), sizeof (target->m_sayTextBuffer.sayText));
+            target->m_sayTextBuffer.timeNextChat = GetWorldTime () + target->m_sayTextBuffer.chatDelay;
          }
       }
    }
@@ -3114,7 +3114,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
          );
       g_gameLib = new Library (gameDLLName);
 
-      if (!g_gameLib->IsLoaded())
+      if (!g_gameLib->IsLoaded ())
       {
          // try to extract the game dll out of the steam cache
          AddLogEntry (true, LL_WARNING | LL_IGNORE, "Trying to extract dll '%s' out of the steam cache", gameDLLName);
@@ -3135,7 +3135,10 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
             }
             FREE_FILE (buffer);
          }
-         g_gameLib = new Library (gameDLLName);
+         g_gameLib->LoadLib (gameDLLName);
+
+         if (!g_gameLib->IsLoaded ())
+            AddLogEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gameDLLName, GetModName ());
       }
    }
    else

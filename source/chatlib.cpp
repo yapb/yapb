@@ -88,8 +88,8 @@ char *HumanizeName (char *name)
 {
    // this function humanize player name (i.e. trim clan and switch to lower case (sometimes))
 
-   static char outputName[256]; // create return name buffer
-   strcpy (outputName, name); // copy name to new buffer
+   static char outputName[64]; // create return name buffer
+   strncpy (outputName, name, sizeof (outputName)); // copy name to new buffer
 
    // drop tag marks, 80 percent of time
    if (Random.Long (1, 100) < 80)
@@ -199,7 +199,7 @@ void Bot::PrepareChatMessage (char *text)
             talkEntity = g_clients[index].ent;
 
             if (!IsEntityNull (talkEntity))
-               strcat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))));
+               strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), sizeof (m_tempStrings));
          }
          // mapname?
          else if (*pattern == 'm')
@@ -216,7 +216,7 @@ void Bot::PrepareChatMessage (char *text)
             talkEntity = EntityOfIndex (m_sayTextBuffer.entityIndex);
 
             if (!IsEntityNull (talkEntity))
-               strcat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))));
+               strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), sizeof (m_tempStrings));
          }
          // teammate alive?
          else if (*pattern == 't')
@@ -239,7 +239,7 @@ void Bot::PrepareChatMessage (char *text)
                   talkEntity = g_clients[i].ent;
 
                if (!IsEntityNull (talkEntity))
-                  strcat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))));
+                  strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), sizeof (m_tempStrings));
             }
             else // no teammates alive...
             {
@@ -256,7 +256,7 @@ void Bot::PrepareChatMessage (char *text)
                   talkEntity = g_clients[i].ent;
 
                   if (!IsEntityNull (talkEntity))
-                     strcat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))));
+                     strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), sizeof (m_tempStrings));
                }
             }
          }
@@ -276,7 +276,7 @@ void Bot::PrepareChatMessage (char *text)
                talkEntity = g_clients[i].ent;
 
                if (!IsEntityNull (talkEntity))
-                  strcat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))));
+                  strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), sizeof (m_tempStrings));
             }
             else // no teammates alive...
             {
@@ -291,7 +291,7 @@ void Bot::PrepareChatMessage (char *text)
                   talkEntity = g_clients[i].ent;
 
                   if (!IsEntityNull (talkEntity))
-                     strcat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))));
+                     strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), sizeof (m_tempStrings));
                }
             }
          }
@@ -317,7 +317,7 @@ void Bot::PrepareChatMessage (char *text)
             talkEntity = m_lastVictim;
 
             if (!IsEntityNull (talkEntity))
-               strcat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))));
+               strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), sizeof (m_tempStrings));
          }
          pattern++;
          textStart = pattern;

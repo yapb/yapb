@@ -875,7 +875,6 @@ void Waypoint::SaveExperienceTab (void)
 
 void Waypoint::InitExperienceTab (void)
 {
-   ExtensionHeader header;
    int i, j;
 
    delete [] g_experienceData;
@@ -907,7 +906,16 @@ void Waypoint::InitExperienceTab (void)
    // if file exists, read the experience data from it
    if (fp.IsValid ())
    {
-      fp.Read (&header, sizeof (ExtensionHeader));
+      ExtensionHeader header;
+      memset (&header, 0, sizeof (header));
+
+      if (fp.Read (&header, sizeof (ExtensionHeader)) == 0)
+      {
+         AddLogEntry (true, LL_ERROR, "Experience data damaged (unable to read header)");
+
+         fp.Close ();
+         return;
+      }
       fp.Close ();
 
       if (strncmp (header.header, FH_EXPERIENCE, strlen (FH_EXPERIENCE)) == 0)
@@ -956,10 +964,8 @@ void Waypoint::SaveVisibilityTab (void)
    if (g_numWaypoints == 0)
       return;
 
-   if (m_visLUT == NULL)
-      AddLogEntry (true, LL_FATAL, "Can't save visibility tab. Bad data.");
-
    ExtensionHeader header;
+   memset (&header, 0, sizeof (ExtensionHeader));
 
    // parse header
    memset (header.header, 0, sizeof (header.header));
@@ -1000,7 +1006,13 @@ void Waypoint::InitVisibilityTab (void)
    }
 
    // read the header of the file
-   fp.Read (&header, sizeof (ExtensionHeader));
+   if (fp.Read (&header, sizeof (ExtensionHeader)) == 0)
+   {
+      AddLogEntry (true, LL_ERROR, "Vistable damaged (unable to read header)");
+
+      fp.Close ();
+      return;
+   }
 
    if (strncmp (header.header, FH_VISTABLE, strlen (FH_VISTABLE)) != 0 || header.fileVersion != FV_VISTABLE || header.pointNumber != g_numWaypoints)
    {
@@ -1056,8 +1068,10 @@ void Waypoint::InitTypes (void)
 
 bool Waypoint::Load (void)
 {
-   WaypointHeader header;
    File fp (CheckSubfolderFile (), "rb");
+
+   WaypointHeader header;
+   memset (&header, 0, sizeof (WaypointHeader));
 
    if (fp.IsValid ())
    {
@@ -1067,7 +1081,7 @@ bool Waypoint::Load (void)
       {
          if (header.fileVersion != FV_WAYPOINT)
          {
-            sprintf (m_infoBuffer, "%s.pwf - incorrect waypoint file version (expected '%i' found '%i')", GetMapName (), FV_WAYPOINT, static_cast <int> (header.fileVersion));
+            sprintf (m_infoBuffer, "%s.pwf - incorrect waypoint file version (expected '%d' found '%d')", GetMapName (), FV_WAYPOINT, static_cast <int> (header.fileVersion));
             AddLogEntry (true, LL_ERROR, m_infoBuffer);
 
             fp.Close ();
@@ -1083,6 +1097,15 @@ bool Waypoint::Load (void)
          }
          else
          {
+            if (header.pointNumber == 0 || header.pointNumber >= MAX_WAYPOINTS)
+            {
+               sprintf (m_infoBuffer, "%s.pwf - waypoint file contains illegal number of waypoints (mapname: '%s', header: '%s')", GetMapName (), GetMapName (), header.mapName);
+               AddLogEntry (true, LL_ERROR, m_infoBuffer);
+
+               fp.Close ();
+               return false;
+            }
+
             Init ();
             g_numWaypoints = header.pointNumber;
 
@@ -1198,8 +1221,8 @@ void Waypoint::Save (void)
    memset (header.header, 0, sizeof (header.header));
 
    strcpy (header.header, FH_WAYPOINT);
-   strcpy (header.author, STRING (g_hostEntity->v.netname));
-   strncpy (header.mapName, GetMapName (), 31);
+   strncpy (header.author, STRING (g_hostEntity->v.netname), sizeof (header.author));
+   strncpy (header.mapName, GetMapName (), sizeof (header.mapName));
 
    header.mapName[31] = 0;
    header.fileVersion = FV_WAYPOINT;
@@ -2134,11 +2157,18 @@ bool Waypoint::LoadPathMatrix (void)
    }
 
    // read path & distance matrixes
-   fp.Read (m_pathMatrix, sizeof (int), g_numWaypoints * g_numWaypoints);
-   fp.Read (m_distMatrix, sizeof (int), g_numWaypoints * g_numWaypoints);
+   if (fp.Read (m_pathMatrix, sizeof (int), g_numWaypoints * g_numWaypoints) == 0)
+   {
+      fp.Close ();
+      return false;
+   }
 
-   // and close the file
-   fp.Close ();
+   if (fp.Read (m_distMatrix, sizeof (int), g_numWaypoints * g_numWaypoints) == 0)
+   {
+      fp.Close ();
+      return false;
+   }
+   fp.Close (); // and close the file
 
    return true;
 }
@@ -2467,6 +2497,7 @@ Waypoint::Waypoint (void)
    m_lastJumpWaypoint = -1;
    m_cacheWaypointIndex = -1;
    m_findWPIndex = -1;
+   m_facingAtIndex = -1;
    m_visibilityIndex = 0;
 
    m_isOnLadder = false;
@@ -2483,6 +2514,9 @@ Waypoint::Waypoint (void)
 
    m_distMatrix = NULL;
    m_pathMatrix = NULL;
+
+   for (int i = 0; i < MAX_WAYPOINTS; i++)
+      m_paths[i] = NULL;
 }
 
 Waypoint::~Waypoint (void)
@@ -2614,8 +2648,11 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
    {
       recvSize = recv (socketHandle, buffer, ChunkSize, 0);
 
-      fp.Write (buffer, recvSize);
-      fp.Flush ();
+      if (recvSize > 0)
+      {
+         fp.Write (buffer, recvSize);
+         fp.Flush ();
+      }
 
    } while (recvSize != 0);
 
