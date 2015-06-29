@@ -76,7 +76,7 @@ extern TaskItem g_taskFilters[];
 extern Experience *g_experienceData;
 
 extern edict_t *g_hostEntity; 
-extern edict_t *g_worldEdict;
+extern edict_t *g_worldEntity;
 extern Library *g_gameLib;
 
 extern gamefuncs_t g_functionTable;
@@ -105,17 +105,17 @@ static inline int GetMaxClients (void)
 
 static inline edict_t *EntityOfIndex (const int index)
 {
-   return static_cast <edict_t *> (g_worldEdict + index);
+   return static_cast <edict_t *> (g_worldEntity + index);
 };
 
 static inline int IndexOfEntity(const edict_t *ent)
 {
-   return static_cast <int> (ent - g_worldEdict);
+   return static_cast <int> (ent - g_worldEntity);
 };
 
 static inline int EntOffsetOfEntity(const edict_t *ent)
 {
-   return (char *) ent - (char *) g_worldEdict;
+   return (char *) ent - (char *) g_worldEntity;
 }
 
 static inline bool IsEntityNull (const edict_t *ent)

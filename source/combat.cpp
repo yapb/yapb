@@ -458,7 +458,7 @@ bool Bot::IsFriendInLineOfFire (float distance)
    TraceLine (EyePosition (), EyePosition () + 10000.0f * pev->v_angle, false, false, GetEntity (), &tr);
 
    // check if we hit something
-   if (!IsEntityNull (tr.pHit) && tr.pHit != g_worldEdict)
+   if (!IsEntityNull (tr.pHit) && tr.pHit != g_worldEntity)
    {
       int playerIndex = IndexOfEntity (tr.pHit) - 1;
 

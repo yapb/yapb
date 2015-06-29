@@ -73,7 +73,7 @@ enginefuncs_t g_engfuncs;
 Client g_clients[32];
 WeaponProperty g_weaponDefs[MAX_WEAPONS + 1];
 
-edict_t *g_worldEdict = NULL;
+edict_t *g_worldEntity = NULL;
 edict_t *g_hostEntity = NULL;
 globalvars_t *g_pGlobals = NULL;
 Experience *g_experienceData = NULL;

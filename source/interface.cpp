@@ -956,7 +956,7 @@ int Spawn (edict_t *ent)
 
    if (strcmp (STRING (ent->v.classname), "worldspawn") == 0)
    {
-      g_worldEdict = ent; // save the world entity for future use
+      g_worldEntity = ent; // save the world entity for future use
 
       g_convarWrapper->PushRegisteredConVarsToEngine (true);
 

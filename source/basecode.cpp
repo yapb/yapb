@@ -2022,7 +2022,7 @@ void Bot::SetConditions (void)
       TraceResult tr;
       TraceLine (EyePosition (), m_lastEnemyOrigin, true, GetEntity (), &tr);
 
-      if ((pev->origin - m_lastEnemyOrigin).GetLength () < 1600.0 && (tr.flFraction >= 0.2 || tr.pHit != g_worldEdict))
+      if ((pev->origin - m_lastEnemyOrigin).GetLength () < 1600.0 && (tr.flFraction >= 0.2 || tr.pHit != g_worldEntity))
       {
          m_aimFlags |= AIM_PREDICT_PATH;
 
@@ -2926,7 +2926,7 @@ void Bot::ChooseAimDirection (void)
    {
       TraceLine (EyePosition (), m_lastEnemyOrigin, false, true, GetEntity (), &tr);
 
-      if (tr.flFraction <= 0.2 && tr.pHit == g_worldEdict)
+      if (tr.flFraction <= 0.2 && tr.pHit == g_worldEntity)
       {
          if ((m_aimFlags & (AIM_LAST_ENEMY | AIM_PREDICT_PATH)) && m_wantsToFire)
             m_wantsToFire = false;
@@ -2987,7 +2987,7 @@ void Bot::ChooseAimDirection (void)
    }
    else if (flags & AIM_PREDICT_PATH)
    {
-      if (((pev->origin - m_lastEnemyOrigin).GetLength () < 1600 || UsesSniper ()) && (((tr.flFraction >= 0.2 || tr.pHit != g_worldEdict) && tracelineIssued) || !tracelineIssued))
+      if (((pev->origin - m_lastEnemyOrigin).GetLength () < 1600 || UsesSniper ()) && (((tr.flFraction >= 0.2 || tr.pHit != g_worldEntity) && tracelineIssued) || !tracelineIssued))
       {
          bool recalcPath = true;
 
@@ -3034,7 +3034,7 @@ void Bot::ChooseAimDirection (void)
                const Vector &dest = g_waypoint->GetPath ((g_experienceData + (index * g_numWaypoints) + index)->team0DangerIndex)->origin;
                TraceLine (pev->origin, dest, true, GetEntity (), &tr);
 
-               if (tr.flFraction > 0.8 || tr.pHit != g_worldEdict)
+               if (tr.flFraction > 0.8 || tr.pHit != g_worldEntity)
                   m_lookAt = dest + pev->view_ofs;
             }
          }
@@ -3045,7 +3045,7 @@ void Bot::ChooseAimDirection (void)
                const Vector &dest = g_waypoint->GetPath ((g_experienceData + (index * g_numWaypoints) + index)->team1DangerIndex)->origin;
                TraceLine (pev->origin, dest, true, GetEntity (), &tr);
 
-               if (tr.flFraction > 0.8 || tr.pHit != g_worldEdict)
+               if (tr.flFraction > 0.8 || tr.pHit != g_worldEntity)
                   m_lookAt = dest + pev->view_ofs;
             }
          }
@@ -3060,7 +3060,7 @@ void Bot::ChooseAimDirection (void)
             // trace forward
             TraceLine (m_destOrigin, m_destOrigin + ((m_destOrigin - path->origin).Normalize () * 96), true, GetEntity (), &tr);
 
-            if (tr.flFraction < 1.0 && tr.pHit == g_worldEdict)
+            if (tr.flFraction < 1.0 && tr.pHit == g_worldEntity)
                m_lookAt = path->origin + pev->view_ofs;
          }
       }
