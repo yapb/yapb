@@ -971,6 +971,7 @@ private:
    void CheckSpawnTimeConditions (void);
    bool IsMorePowerfulWeaponCanBeBought (void);
    void PurchaseWeapons (void);
+   int PickBestFromRandom (int *random, int count);
 
    bool CanDuckUnder (const Vector &normal);
    bool CanJumpUp (const Vector &normal);

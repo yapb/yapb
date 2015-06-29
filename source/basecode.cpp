@@ -1505,6 +1505,18 @@ bool Bot::IsMorePowerfulWeaponCanBeBought (void)
    return false;
 }
 
+int Bot::PickBestFromRandom (int *random, int count)
+{
+   // this function taken from gina bot, it's picks best available weapon from random choice
+
+   float buyFactor = (m_moneyAmount - 3000.0f) / (16000.0f - 3000.0f) * 3.0f;
+
+   if (buyFactor < 1.0f)
+      buyFactor = 1.0f;
+
+   return random[static_cast <int> (static_cast <float> (count - 1) * log10f (Random.Float (1, powf (10, buyFactor))) / buyFactor + 0.5f)];
+}
+
 void Bot::PurchaseWeapons (void)
 {
    // this function does all the work in selecting correct buy menus for most weapons/items
@@ -1518,7 +1530,7 @@ void Bot::PurchaseWeapons (void)
    // select the priority tab for this personality
    int *ptr = g_weaponPrefs[m_personality] + NUM_WEAPONS;
 
-   bool isPistolMode = (g_weaponSelect[25].teamStandard == -1) && (g_weaponSelect[3].teamStandard == 2);
+   bool isPistolMode = g_weaponSelect[25].teamStandard == -1 && g_weaponSelect[3].teamStandard == 2;
    bool teamEcoValid = g_botManager->EconomicsValid (m_team);
 
    switch (m_buyState)
@@ -1646,7 +1658,7 @@ void Bot::PurchaseWeapons (void)
 
             // choose randomly from the best ones...
             if (foundWeapons > 1)
-               chosenWeapon = choices[Random.Long (0, foundWeapons - 1)];
+               chosenWeapon = PickBestFromRandom (choices, foundWeapons);
             else
                chosenWeapon = choices[foundWeapons - 1];
 
@@ -1734,7 +1746,7 @@ void Bot::PurchaseWeapons (void)
 
             // choose randomly from the best ones...
             if (foundWeapons > 1)
-               chosenWeapon = choices[Random.Long (0, foundWeapons - 1)];
+               chosenWeapon = PickBestFromRandom (choices, foundWeapons);
             else
                chosenWeapon = choices[foundWeapons - 1];
 
@@ -1748,14 +1760,14 @@ void Bot::PurchaseWeapons (void)
             FakeClientCommand (GetEntity (), "buy;menuselect %d", selectedWeapon->buyGroup);
 
             if (g_gameVersion == CSV_OLD)
-               FakeClientCommand(GetEntity (), "menuselect %d", selectedWeapon->buySelect);
-         
+               FakeClientCommand (GetEntity (), "menuselect %d", selectedWeapon->buySelect);
+
             else // steam cs buy menu is different from old one
             {
-               if (GetTeam(GetEntity()) == TEAM_TF)
-                  FakeClientCommand(GetEntity(), "menuselect %d", selectedWeapon->newBuySelectT);
+               if (GetTeam (GetEntity ()) == TEAM_TF)
+                  FakeClientCommand (GetEntity (), "menuselect %d", selectedWeapon->newBuySelectT);
                else
-                  FakeClientCommand(GetEntity(), "menuselect %d", selectedWeapon->newBuySelectCT);
+                  FakeClientCommand (GetEntity (), "menuselect %d", selectedWeapon->newBuySelectCT);
             }
          }
       }
@@ -2928,7 +2940,7 @@ void Bot::ChooseAimDirection (void)
       m_aimFlags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
 
    // if in battle, and enemy is behind something for short period of time, look at that origin!
-   if (m_seeEnemyTime + 2.0f < GetWorldTime () && (m_aimFlags & AIM_NAVPOINT) && !(m_aimFlags & AIM_ENEMY) && m_lastEnemyOrigin != nullvec && IsAlive (m_enemy))
+   if (m_seeEnemyTime + 2.0f < GetWorldTime () &&  !(m_aimFlags & AIM_ENEMY) && m_lastEnemyOrigin != nullvec && IsAlive (m_lastEnemy))
    {
       m_aimFlags |= AIM_LAST_ENEMY;
       m_canChooseAimDirection = false;
@@ -5957,23 +5969,13 @@ void Bot::ReactOnSound (void)
 
    edict_t *player = NULL;
 
-   float maxVolume = 0.0, volume = 0.0;
+   float maxVolume = 0.0f, volume = 0.0f;
    int hearEnemyIndex = -1;
-
-   Vector testHearing =  EyePosition ();
-
-   if (pev->flags & FL_DUCKING)
-      testHearing += VEC_HULL_MIN - VEC_DUCK_HULL_MIN;
-
-   unsigned char *pas = ENGINE_SET_PAS ((reinterpret_cast <float *> (&testHearing)));
 
    // loop through all enemy clients to check for hearable stuff
    for (int i = 0; i < GetMaxClients (); i++)
    {
       if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].ent == GetEntity () || g_clients[i].timeSoundLasting < GetWorldTime ())
-         continue;
-
-      if (!ENGINE_CHECK_VISIBILITY (g_clients[i].ent, pas))
          continue;
 
       float distance = (g_clients[i].soundPosition - pev->origin).GetLength ();
