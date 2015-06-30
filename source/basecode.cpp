@@ -2019,13 +2019,10 @@ void Bot::SetConditions (void)
 
    if (IsEntityNull (m_enemy) && !IsEntityNull (m_lastEnemy) && m_lastEnemyOrigin != nullvec)
    {
-      if ((pev->origin - m_lastEnemyOrigin).GetLength () < 1600.0f)
-      {
-         m_aimFlags |= AIM_PREDICT_PATH;
+      m_aimFlags |= AIM_PREDICT_PATH;
 
-         if (EntityIsVisible (m_lastEnemyOrigin))
-            m_aimFlags |= AIM_LAST_ENEMY;
-      }
+      if (EntityIsVisible (m_lastEnemyOrigin))
+         m_aimFlags |= AIM_LAST_ENEMY;
    }
    CheckGrenadeThrow ();
 
