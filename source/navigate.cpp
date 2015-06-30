@@ -330,7 +330,7 @@ void Bot::CheckCloseAvoidance (const Vector &dirNormal)
    {
       Client *cl = &g_clients[i];
 
-      if (!(cl->flags & (CF_USED | CF_USED)) || cl->ent == GetEntity () || cl->team != m_team)
+      if (!(cl->flags & (CF_USED | CF_ALIVE)) || cl->ent == GetEntity () || cl->team != m_team)
          continue;
 
       float distance = (cl->ent->v.origin - pev->origin).GetLength ();
