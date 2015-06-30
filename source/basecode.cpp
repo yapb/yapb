@@ -2009,7 +2009,7 @@ void Bot::SetConditions (void)
    }
 
    // don't listen if seeing enemy, just checked for sounds or being blinded (because its inhuman)
-   if (!yb_ignore_enemies.GetBool () && m_soundUpdateTime <= GetWorldTime () && m_blindTime < GetWorldTime ())
+   if (!yb_ignore_enemies.GetBool () && m_soundUpdateTime < GetWorldTime () && m_blindTime < GetWorldTime () && m_seeEnemyTime + 1.0f < GetWorldTime ())
    {
       ReactOnSound ();
       m_soundUpdateTime = GetWorldTime () + 0.25f;
@@ -2019,10 +2019,7 @@ void Bot::SetConditions (void)
 
    if (IsEntityNull (m_enemy) && !IsEntityNull (m_lastEnemy) && m_lastEnemyOrigin != nullvec)
    {
-      TraceResult tr;
-      TraceLine (EyePosition (), m_lastEnemyOrigin, true, GetEntity (), &tr);
-
-      if ((pev->origin - m_lastEnemyOrigin).GetLength () < 1600.0 && (tr.flFraction >= 0.2 || tr.pHit != g_worldEntity))
+      if ((pev->origin - m_lastEnemyOrigin).GetLength () < 1600.0f)
       {
          m_aimFlags |= AIM_PREDICT_PATH;
 
@@ -2926,7 +2923,7 @@ void Bot::ChooseAimDirection (void)
    {
       TraceLine (EyePosition (), m_lastEnemyOrigin, false, true, GetEntity (), &tr);
 
-      if (tr.flFraction <= 0.2 && tr.pHit == g_worldEntity)
+      if (tr.flFraction <= 0.2)
       {
          if ((m_aimFlags & (AIM_LAST_ENEMY | AIM_PREDICT_PATH)) && m_wantsToFire)
             m_wantsToFire = false;
@@ -2940,7 +2937,7 @@ void Bot::ChooseAimDirection (void)
       m_aimFlags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
 
    // if in battle, and enemy is behind something for short period of time, look at that origin!
-   if (m_seeEnemyTime + 2.0f < GetWorldTime () &&  !(m_aimFlags & AIM_ENEMY) && m_lastEnemyOrigin != nullvec && IsAlive (m_lastEnemy))
+   if (m_difficulty < 4 && m_seeEnemyTime + 2.0f < GetWorldTime () &&  !(m_aimFlags & AIM_ENEMY) && m_lastEnemyOrigin != nullvec && IsAlive (m_lastEnemy))
    {
       m_aimFlags |= AIM_LAST_ENEMY;
       m_canChooseAimDirection = false;
@@ -3447,8 +3444,11 @@ void Bot::RunTask (void)
       m_checkTerrain = false;
 
       m_navTimeset = GetWorldTime ();
-      m_moveSpeed = 0;
-      m_strafeSpeed = 0.0;
+      m_moveSpeed = 0.0f;
+      m_strafeSpeed = 0.0f;
+
+      m_isStuck = false;
+      m_lastCollTime = GetWorldTime () + 0.5f;
 
       break;
 
@@ -4917,13 +4917,10 @@ void Bot::BotAI (void)
    SetIdealReactionTimes ();
 
    // calculate 2 direction vectors, 1 without the up/down component
-   const Vector &directionOld = m_destOrigin - (pev->origin + pev->velocity * m_frameInterval);
-   Vector directionNormal = directionOld.Normalize ();
+   const Vector &dirOld = m_destOrigin - (pev->origin + pev->velocity * m_frameInterval);
+   const Vector &dirNormal = dirOld.Normalize2D ();
 
-   const Vector &direction = directionNormal;
-   directionNormal.z = 0.0;
-
-   m_moveAngles = directionOld.ToAngles ();
+   m_moveAngles = dirOld.ToAngles ();
 
    m_moveAngles.ClampAngles ();
    m_moveAngles.x *= -1.0; // invert for engine
@@ -4973,7 +4970,7 @@ void Bot::BotAI (void)
    }
 
    if (m_checkTerrain) // are we allowed to check blocking terrain (and react to it)?
-      CheckTerrain (movedDistance, direction, directionNormal);
+      CheckTerrain (movedDistance, dirNormal);
 
    // must avoid a grenade?
    if (m_needAvoidGrenade != 0)
@@ -5975,7 +5972,7 @@ void Bot::ReactOnSound (void)
    // loop through all enemy clients to check for hearable stuff
    for (int i = 0; i < GetMaxClients (); i++)
    {
-      if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].ent == GetEntity () || g_clients[i].timeSoundLasting < GetWorldTime ())
+      if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].ent == GetEntity () || g_clients[i].team == m_team || g_clients[i].timeSoundLasting < GetWorldTime ())
          continue;
 
       float distance = (g_clients[i].soundPosition - pev->origin).GetLength ();
@@ -5991,9 +5988,6 @@ void Bot::ReactOnSound (void)
          volume = hearingDistance * (g_clients[i].timeSoundLasting - GetWorldTime ()) / g_clients[i].maxTimeSoundLasting;
       else
          volume = 2.0 * hearingDistance * (1.0 - distance / hearingDistance) * (g_clients[i].timeSoundLasting - GetWorldTime ()) / g_clients[i].maxTimeSoundLasting;
-
-      if (g_clients[i].team == m_team && yb_csdm_mode.GetInt () != 2)
-         volume = 0.3 * volume;
 
       // we will care about the most hearable sound instead of the closest one - KWo
       if (volume < maxVolume)
@@ -6017,7 +6011,7 @@ void Bot::ReactOnSound (void)
    if (IsValidPlayer (player))
    {
       // change to best weapon if heard something
-      if (!(m_states & STATE_SEEING_ENEMY) && m_seeEnemyTime + 2.5 < GetWorldTime () && IsOnFloor () && m_currentWeapon != WEAPON_C4 && m_currentWeapon != WEAPON_EXPLOSIVE && m_currentWeapon != WEAPON_SMOKE && m_currentWeapon != WEAPON_FLASHBANG && !yb_jasonmode.GetBool ())
+      if (m_shootTime + 2.5 < GetWorldTime () && IsOnFloor () && m_currentWeapon != WEAPON_C4 && m_currentWeapon != WEAPON_EXPLOSIVE && m_currentWeapon != WEAPON_SMOKE && m_currentWeapon != WEAPON_FLASHBANG && !yb_jasonmode.GetBool ())
          SelectBestWeapon ();
 
       m_heardSoundTime = GetWorldTime () + 5.0;

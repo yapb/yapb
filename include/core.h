@@ -1020,7 +1020,8 @@ private:
    int FindGoal (void);
    void FilterGoals (const Array <int> &goals, int *result);
    void FindItem (void);
-   void CheckTerrain (float movedDistance, const Vector &dir, const Vector &dirNormal);
+   void CheckTerrain (float movedDistance, const Vector &dirNormal);
+   void CheckCloseAvoidance (const Vector &dirNormal);
 
    void GetCampDirection (Vector *dest);
    void CollectGoalExperience (int damage, int team);

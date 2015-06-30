@@ -317,27 +317,41 @@ void Bot::ResetCollideState (void)
       m_collideMoves[i] = 0;
 }
 
-void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &dirNormal)
+void Bot::CheckCloseAvoidance (const Vector &dirNormal)
 {
-   m_isStuck = false;
+   if (m_seeEnemyTime + 1.0f > GetWorldTime ())
+      return;
 
-   Vector src = nullvec;
-   Vector dst = nullvec;
-
-   Vector direction = dir;
-   Vector directionNormal = dirNormal;
-
-   TraceResult tr;
    edict_t *nearest = NULL;
+   float nearestDist = 99999.0f;
+   int playerCount = 0;
 
-   if (g_timeRoundStart + 10.0f < GetWorldTime () && FindNearestPlayer (reinterpret_cast <void **> (&nearest), GetEntity (), pev->maxspeed, true, false, true, true)) // found somebody?
+   for (int i = 0; i < GetMaxClients (); i++)
+   {
+      Client *cl = &g_clients[i];
+
+      if (!(cl->flags & (CF_USED | CF_USED)) || cl->ent == GetEntity () || cl->team != m_team)
+         continue;
+
+      float distance = (cl->ent->v.origin - pev->origin).GetLength ();
+
+      if (distance < nearestDist && distance < pev->maxspeed)
+      {
+         nearestDist = distance;
+         nearest = cl->ent;
+
+         playerCount++;
+      }
+   }
+
+   if (playerCount < 3 && IsValidPlayer (nearest))
    {
       MakeVectors (m_moveAngles); // use our movement angles
 
       // try to predict where we should be next frame
       Vector moved = pev->origin + g_pGlobals->v_forward * m_moveSpeed * m_frameInterval;
-      moved = moved + g_pGlobals->v_right * m_strafeSpeed * m_frameInterval;
-      moved = moved + pev->velocity * m_frameInterval;
+      moved += g_pGlobals->v_right * m_strafeSpeed * m_frameInterval;
+      moved += pev->velocity * m_frameInterval;
 
       float nearestDistance = (nearest->v.origin - pev->origin).GetLength2D ();
       float nextFrameDistance = ((nearest->v.origin + nearest->v.velocity * m_frameInterval) - pev->origin).GetLength2D ();
@@ -349,9 +363,9 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
          Vector dirToPoint = (pev->origin - nearest->v.origin).Get2D ();
 
          if ((dirToPoint | g_pGlobals->v_right.Get2D ()) > 0.0)
-            SetStrafeSpeed (directionNormal, pev->maxspeed);
+            SetStrafeSpeed (dirNormal, pev->maxspeed);
          else
-            SetStrafeSpeed (directionNormal, -pev->maxspeed);
+            SetStrafeSpeed (dirNormal, -pev->maxspeed);
 
          ResetCollideState ();
 
@@ -359,6 +373,18 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
             m_moveSpeed = -pev->maxspeed;
       }
    }
+}
+
+void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
+{
+   m_isStuck = false;
+
+   Vector src = nullvec;
+   Vector dst = nullvec;
+
+   TraceResult tr;
+
+   CheckCloseAvoidance (dirNormal);
 
    // Standing still, no need to check?
    // FIXME: doesn't care for ladder movement (handled separately) should be included in some way
@@ -378,7 +404,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
       else // not stuck yet
       {
          // test if there's something ahead blocking the way
-         if ((cantMoveForward = CantMoveForward (directionNormal, &tr)) && !IsOnLadder ())
+         if ((cantMoveForward = CantMoveForward (dirNormal, &tr)) && !IsOnLadder ())
          {
             if (m_firstCollideTime == 0.0)
                m_firstCollideTime = GetWorldTime () + 0.2;
@@ -392,7 +418,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
 
       if (!m_isStuck) // not stuck?
       {
-         if (m_probeTime + 0.5 < GetWorldTime ())
+         if (m_probeTime + 0.5f < GetWorldTime ())
             ResetCollideState (); // reset collision memory if not being stuck for 0.5 secs
          else
          {
@@ -414,7 +440,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
          else if (IsInWater ())
             bits |= (PROBE_JUMP | PROBE_STRAFE);
          else
-            bits |= ((Random.Long (0, 10) > (cantMoveForward ? 7 : 5) ? PROBE_JUMP : 0) | PROBE_STRAFE | PROBE_DUCK);
+            bits |= ((Random.Long (0, 20) > (cantMoveForward ? 15 : 10) ? PROBE_JUMP : 0) | PROBE_STRAFE | PROBE_DUCK);
 
          // collision check allowed if not flying through the air
          if (IsOnFloor () || IsOnLadder () || IsInWater ())
@@ -433,7 +459,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
             {
                state[i] = 0;
 
-               if (CanJumpUp (directionNormal))
+               if (CanJumpUp (dirNormal))
                   state[i] += 10;
 
                if (m_destOrigin.z >= pev->origin.z + 18.0)
@@ -444,14 +470,14 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
                   MakeVectors (m_moveAngles);
 
                   src = EyePosition ();
-                  src = src + (g_pGlobals->v_right * 15);
+                  src = src + g_pGlobals->v_right * 15;
 
                   TraceLine (src, m_destOrigin, true, true, GetEntity (), &tr);
 
                   if (tr.flFraction >= 1.0)
                   {
                      src = EyePosition ();
-                     src = src - (g_pGlobals->v_right * 15);
+                     src = src - g_pGlobals->v_right * 15;
 
                      TraceLine (src, m_destOrigin, true, true, GetEntity (), &tr);
 
@@ -464,7 +490,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
                else
                   src = pev->origin + Vector (0, 0, -17);
 
-               dst = src + directionNormal * 30;
+               dst = src + dirNormal * 30;
                TraceLine (src, dst, true, true, GetEntity (), &tr);
 
                if (tr.flFraction != 1.0)
@@ -478,7 +504,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
             {
                state[i] = 0;
 
-               if (CanDuckUnder (directionNormal))
+               if (CanDuckUnder (dirNormal))
                   state[i] += 10;
 
                if ((m_destOrigin.z + 36.0 <= pev->origin.z) && EntityIsVisible (m_destOrigin))
@@ -509,14 +535,11 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
                else
                   dirLeft = true;
 
-               if (m_moveSpeed > 0)
-                  direction = g_pGlobals->v_forward;
-               else
-                  direction = -g_pGlobals->v_forward;
+               const Vector &testDir = m_moveSpeed > 0.0f ? g_pGlobals->v_forward : -g_pGlobals->v_forward;
 
                // now check which side is blocked
                src = pev->origin + (g_pGlobals->v_right * 32);
-               dst = src + (direction * 32);
+               dst = src + testDir * 32;
 
                TraceHull (src, dst, true, head_hull, GetEntity (), &tr);
 
@@ -524,7 +547,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
                   blockedRight = true;
 
                src = pev->origin - (g_pGlobals->v_right * 32);
-               dst = src + (direction * 32);
+               dst = src + testDir * 32;
 
                TraceHull (src, dst, true, head_hull, GetEntity (), &tr);
 
@@ -549,6 +572,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
                if (blockedRight)
                   state[i] -= 5;
             }
+
  
             // weighted all possible moves, now sort them to start with most probable
             bool isSorting = false;
@@ -616,12 +640,12 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dir, const Vector &di
 
             case COLLISION_STRAFELEFT:
                pev->button |= IN_MOVELEFT;
-               SetStrafeSpeed (directionNormal, -pev->maxspeed);
+               SetStrafeSpeed (dirNormal, -pev->maxspeed);
                break;
 
             case COLLISION_STRAFERIGHT:
                pev->button |= IN_MOVERIGHT;
-               SetStrafeSpeed (directionNormal, pev->maxspeed);
+               SetStrafeSpeed (dirNormal, pev->maxspeed);
                break;
             }
          }
@@ -2156,7 +2180,12 @@ int Bot::FindDefendWaypoint (const Vector &origin)
    if (waypointIndex[0] == -1)
    {
       Array <int> found;
-      g_waypoint->FindInRadius (found, 1024.0f, origin);
+
+      for (int i = 0; i < g_numWaypoints; i++)
+      {
+         if ((g_waypoint->GetPath (i)->origin - origin).GetLength () <= 1024.0f && !IsPointOccupied (i))
+            found.Push (i);
+      }
 
       if (found.IsEmpty ())
          return Random.Long (0, g_numWaypoints - 1); // most worst case, since there a evil error in waypoints
@@ -2512,6 +2541,8 @@ bool Bot::CantMoveForward (const Vector &normal, TraceResult *tr)
    Vector src = EyePosition ();
    Vector forward = src + normal * 24;
 
+   MakeVectors (Vector (0, pev->angles.y, 0));
+
    // trace from the bot's eyes straight forward...
    TraceLine (src, forward, true, GetEntity (), tr);
 
@@ -2523,7 +2554,6 @@ bool Bot::CantMoveForward (const Vector &normal, TraceResult *tr)
 
       return true;  // bot's head will hit something
    }
-   MakeVectors (Vector (0, pev->angles.y, 0));
 
    // bot's head is clear, check at shoulder level...
    // trace from the bot's shoulder left diagonal forward to the right shoulder...
