@@ -623,7 +623,6 @@ void InitConfig (void)
       yb_chat.SetInt (0);
    }
   
-
    // GENERAL DATA INITIALIZATION
    if (OpenConfig ("general.cfg", "General configuration file not found. Loading defaults", &fp))
    {
@@ -701,7 +700,7 @@ void InitConfig (void)
       fp.Close ();
    }
 
-   // RADIO/VOICE SYSTEM INITIALIZATION
+   // CHATTER SYSTEM INITIALIZATION
    if (OpenConfig ("chatter.cfg", "Couldn't open chatter system configuration", &fp) && g_gameVersion != CSV_OLD && yb_communication_type.GetInt () == 2)
    {
       Array <String> array;
