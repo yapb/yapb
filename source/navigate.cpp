@@ -319,7 +319,7 @@ void Bot::ResetCollideState (void)
 
 void Bot::CheckCloseAvoidance (const Vector &dirNormal)
 {
-   if (m_seeEnemyTime + 1.0f > GetWorldTime ())
+   if (m_seeEnemyTime + 1.0f < GetWorldTime () || g_timeRoundStart + 10.0f < GetWorldTime ())
       return;
 
    edict_t *nearest = NULL;
