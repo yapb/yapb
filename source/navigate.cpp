@@ -3378,7 +3378,7 @@ bool Bot::IsPointOccupied (int index)
          continue;
 
       // check if this waypoint is already used
-      if (!bot->m_notKilled)
+      if (bot->m_notKilled)
       {
          int occupyId = GetShootingConeDeviation (bot->GetEntity (), &pev->origin) >= 0.7f ? bot->m_prevWptIndex[0] : m_currentWaypointIndex;
 
