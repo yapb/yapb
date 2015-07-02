@@ -2113,7 +2113,7 @@ int Bot::FindDefendWaypoint (const Vector &origin)
       int distances = g_waypoint->GetPathDistance (srcIndex, i);
 
       // skip wayponts with distance more than 1024 units
-      if (distances > 1024.0f)
+      if (distances > 1248.0f)
          continue;
 
       TraceLine (g_waypoint->GetPath (i)->origin, g_waypoint->GetPath (posIndex)->origin, true, true, GetEntity (), &tr);
@@ -2183,7 +2183,7 @@ int Bot::FindDefendWaypoint (const Vector &origin)
 
       for (int i = 0; i < g_numWaypoints; i++)
       {
-         if ((g_waypoint->GetPath (i)->origin - origin).GetLength () <= 1024.0f && !IsPointOccupied (i))
+         if ((g_waypoint->GetPath (i)->origin - origin).GetLength () <= 1248.0f && !IsPointOccupied (i))
             found.Push (i);
       }
 
