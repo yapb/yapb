@@ -21,10 +21,6 @@
 #include <math.h>
 #include <assert.h>
 
-#if defined (PLATFORM_WIN32)
-#pragma warning (disable : 4100 4189 4239 4996 4244 383 473 981)
-#endif
-
 //
 // Title: Utility Classes Header
 //
@@ -1059,9 +1055,7 @@ template <typename T> class Array
 {
 private:
    T *m_elements;
-   T m_failed;
 
-private:
    int m_resizeStep;
    int m_itemSize;
    int m_itemCount;
@@ -1084,8 +1078,6 @@ public:
       m_itemSize = 0;
       m_itemCount = 0;
       m_resizeStep = resizeStep;
-
-      m_failed = T ();
    }
 
    //
@@ -1101,7 +1093,6 @@ public:
       m_itemSize = 0;
       m_itemCount = 0;
       m_resizeStep = 0;
-      m_failed = T ();
 
       AssignFrom (other);
    }
@@ -1277,11 +1268,6 @@ public:
    //
    T &GetAt (int index)
    {
-      if (index >= m_itemCount)
-      {
-         m_failed = T ();
-         return m_failed;
-      }
       return m_elements[index];
    }
 
@@ -1546,9 +1532,6 @@ public:
    //
    T Pop (void)
    {
-      if (m_itemCount <= 0)
-         return m_failed;
-
       T element = m_elements[m_itemCount - 1];
       RemoveAt (m_itemCount - 1);
 
@@ -1557,9 +1540,6 @@ public:
 
    T &Last (void)
    {
-      if (m_itemCount <= 0)
-         return m_failed;
-
       return m_elements[m_itemCount - 1];
    }
 
@@ -2738,11 +2718,6 @@ public:
    operator double (void)
    {
       return static_cast <double> (ToFloat ());
-   }
-
-   String *operator -> (void) const
-   {
-      return (String *const) this;
    }
 
    friend String operator + (const String &s1, const String &s2)

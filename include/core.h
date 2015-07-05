@@ -62,7 +62,6 @@ using namespace Math;
    #if defined (COMPILER_VISUALC) && (COMPILER_VISUALC > 1000)
       #pragma comment (linker, "/EXPORT:GiveFnptrsToDll=_GiveFnptrsToDll@8,@1")
       #pragma comment (linker, "/SECTION:.data,RW")
-      #pragma warning (disable : 4288)
    #endif
 
    typedef int (FAR *EntityAPI_t) (gamefuncs_t *, int);
@@ -173,7 +172,7 @@ public:
 #include <corelib.h>
 
 // defines bots tasks
-enum TaskId_t
+enum TaskID
 {
    TASK_NORMAL,
    TASK_PAUSE,
@@ -622,7 +621,7 @@ struct KeywordFactory
 // tasks definition
 struct TaskItem
 {
-   TaskId_t id; // major task/action carried out
+   TaskID id; // major task/action carried out
    float desire; // desire (filled in) for this task
    int data; // additional data (waypoint index)
    float time; // time task expires
@@ -1244,12 +1243,12 @@ public:
    void DeleteSearchNodes (void); 
    void VerifyBreakable (edict_t *touch);
 
-   void RemoveCertainTask (TaskId_t id);
-   void StartTask (TaskId_t id, float desire, int data, float time, bool canContinue);
+   void RemoveCertainTask (TaskID id);
+   void StartTask (TaskID id, float desire, int data, float time, bool canContinue);
 
    void ResetTasks (void);
    TaskItem *GetTask (void);
-   inline TaskId_t GetTaskId (void) { return GetTask ()->id; };
+   inline TaskID GetTaskId (void) { return GetTask ()->id; };
 
    void TakeDamage (edict_t *inflictor, int damage, int armor, int bits);
    void TakeBlinded (const Vector &fade, int alpha);

@@ -232,32 +232,12 @@ Bot *BotManager::FindOneValidAliveBot (void)
 
 void BotManager::Think (void)
 {
-   // this function calls think () function for all available at call moment bots, and
-   // try to catch internal error if such shit occurs
+   // this function calls think () function for all available at call moment bots
 
    for (int i = 0; i < GetMaxClients (); i++)
    {
       if (m_bots[i] != NULL)
-      {
-         // use these try-catch blocks to prevent server crashes when error occurs
-#if defined (NDEBUG) && !defined (PLATFORM_LINUX) && !defined (PLATFORM_OSX)
-         try
-         {
-            m_bots[i]->Think ();
-         }
-         catch (...)
-         {
-            // error occurred. kick off all bots and then print a warning message
-            RemoveAll ();
-
-            ServerPrint ("**** INTERNAL BOT ERROR! PLEASE SHUTDOWN AND RESTART YOUR SERVER! ****");
-         }
-#else
          m_bots[i]->Think ();
-
-#endif
-         
-      }
    }
 }
 

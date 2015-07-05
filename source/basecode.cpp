@@ -2185,7 +2185,7 @@ void Bot::ResetTasks (void)
    m_tasks.RemoveAll ();
 }
 
-void Bot::StartTask (TaskId_t id, float desire, int data, float time, bool resume)
+void Bot::StartTask (TaskID id, float desire, int data, float time, bool resume)
 {
    if (!m_tasks.IsEmpty ())
    {
@@ -2268,7 +2268,7 @@ TaskItem *Bot::GetTask (void)
    return &m_tasks.Last ();
 }
 
-void Bot::RemoveCertainTask (TaskId_t id)
+void Bot::RemoveCertainTask (TaskID id)
 {
    // this function removes one task from the bot task stack.
 
@@ -2418,7 +2418,7 @@ void Bot::CheckRadioCommands (void)
                m_targetEntity = m_radioEntity;
 
                // don't pause/camp/follow anymore
-               TaskId_t taskID = GetTaskId ();
+               TaskID taskID = GetTaskId ();
 
                if (taskID == TASK_PAUSE || taskID == TASK_CAMP)
                   GetTask ()->time = GetWorldTime ();
@@ -2537,7 +2537,7 @@ void Bot::CheckRadioCommands (void)
       }
       else if ((IsEntityNull (m_enemy) && EntityIsVisible (m_radioEntity->v.origin)) || distance < 2048)
       {
-         TaskId_t taskID = GetTaskId ();
+         TaskID taskID = GetTaskId ();
 
          if (taskID == TASK_PAUSE || taskID == TASK_CAMP)
          {
@@ -2603,7 +2603,7 @@ void Bot::CheckRadioCommands (void)
          RadioMessage (Radio_Affirmative);
 
          // don't pause/camp anymore
-         TaskId_t taskID = GetTaskId ();
+         TaskID taskID = GetTaskId ();
 
          if (taskID == TASK_PAUSE || taskID == TASK_CAMP)
             GetTask ()->time = GetWorldTime ();
@@ -2646,7 +2646,7 @@ void Bot::CheckRadioCommands (void)
          else
          {
             // don't pause/camp anymore
-            TaskId_t taskID = GetTaskId ();
+            TaskID taskID = GetTaskId ();
 
             if (taskID == TASK_PAUSE)
                GetTask ()->time = GetWorldTime ();
@@ -2743,7 +2743,7 @@ void Bot::CheckRadioCommands (void)
          else
          {
             // don't pause anymore
-            TaskId_t taskID = GetTaskId ();
+            TaskID taskID = GetTaskId ();
 
             if (taskID == TASK_PAUSE)
                GetTask ()->time = GetWorldTime ();
@@ -2795,7 +2795,7 @@ void Bot::CheckRadioCommands (void)
 
 void Bot::TryHeadTowardRadioEntity (void)
 {
-   TaskId_t taskID = GetTaskId ();
+   TaskID taskID = GetTaskId ();
 
    if (taskID == TASK_MOVETOPOSITION || m_headedTime + 15.0f < GetWorldTime () || !IsAlive (m_radioEntity) || m_hasC4)
       return;

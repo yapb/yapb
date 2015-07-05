@@ -3002,7 +3002,7 @@ struct DirectoryTransition
    DirectoryTransition (const String &oldName, const String &newName)
    {
       String rootPath;
-      rootPath->AssignFormat ("%s/addons/yapb/", GetModName ());
+      rootPath.AssignFormat ("%s/addons/yapb/", GetModName ());
 
       this->oldName = rootPath + oldName;
       this->newName = rootPath + newName;
@@ -3010,8 +3010,8 @@ struct DirectoryTransition
 
    void TryToRename (void)
    {
-      if (access (oldName->GetBuffer (), 00) != -1)
-         rename (oldName->GetBuffer (), newName->GetBuffer ());
+      if (access (oldName.GetBuffer (), 00) != -1)
+         rename (oldName.GetBuffer (), newName.GetBuffer ());
    }
 };
 
