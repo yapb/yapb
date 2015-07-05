@@ -1117,15 +1117,7 @@ float GetWaveLength (const char *fileName)
       AddLogEntry (true, LL_ERROR, "Wave File %s - has zero length!", fileName);
       return 0;
    }
-
-   // whoa, what a shit, is this working ?!
-   char ch[32];
-   sprintf (ch, "0.%u", static_cast <unsigned int> (waveHdr.dataChunkLength));
-
-   float secondLength = static_cast <float> (waveHdr.dataChunkLength) / static_cast <float> (waveHdr.bytesPerSecond);
-   float milliSecondLength = atof (ch);
-
-   return (secondLength == 0.0 ? milliSecondLength : secondLength);
+   return static_cast <float> (waveHdr.dataChunkLength) / static_cast <float> (waveHdr.bytesPerSecond);
 }
 
 void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
@@ -1473,6 +1465,11 @@ uint16 GenerateBuildNumber (void)
 {
    // this function generates build number from the compiler date macros
 
+   static uint16 buildNumber = 0;
+
+   if (buildNumber != 0)
+      return buildNumber;
+
    // get compiling date using compiler macros
    const char *date = __DATE__;
 
@@ -1486,7 +1483,7 @@ uint16 GenerateBuildNumber (void)
    int year = 0; // year
    int i = 0;
 
-   // go through all monthes, and calculate, days since year start
+   // go through all months, and calculate, days since year start
    for (i = 0; i < 11; i++)
    {
       if (strncmp (&date[0], months[i], 3) == 0)
@@ -1497,13 +1494,15 @@ uint16 GenerateBuildNumber (void)
    day += atoi (&date[4]) - 1; // finally calculate day
    year = atoi (&date[7]) - 2000; // get years since year 2000
 
-   uint16 buildNumber = day + static_cast <int> ((year - 1) * 365.25);
+   buildNumber = day + static_cast <int> ((year - 1) * 365.25);
 
    // if the year is a leap year?
    if ((year % 4) == 0 && i > 1)
       buildNumber += 1; // add one year more
 
-   return buildNumber - 1114;
+   buildNumber -= 1114;
+
+   return buildNumber;
 }
 
 int GetWeaponReturn (bool needString, const char *weaponAlias, int weaponIndex)
