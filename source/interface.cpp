@@ -2165,7 +2165,7 @@ void StartFrame (void)
                   ServerPrint ("Player %s had lost remote access to yapb.", STRING (player->v.netname));
                }
             }
-            else if (IsNullString (yb_password_key.GetString ()) && IsNullString (yb_password.GetString ()))
+            else if (!(g_clients[i].flags & CF_ADMIN) && !IsNullString (yb_password_key.GetString ()) && !IsNullString (yb_password.GetString ()))
             {
                if (strcmp (yb_password.GetString (), INFOKEY_VALUE (GET_INFOKEYBUFFER (g_clients[i].ent), const_cast <char *> (yb_password_key.GetString ()))) == 0)
                {
