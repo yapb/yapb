@@ -3905,6 +3905,19 @@ public:
    {
       return m_handle != NULL;
    }
+
+public:
+   static inline bool Accessible (const String &filename)
+   {
+      File fp;
+
+      if (fp.Open (filename, "rb"))
+      {
+         fp.Close ();
+         return true;
+      }
+      return false;
+   }
 };
 
 //

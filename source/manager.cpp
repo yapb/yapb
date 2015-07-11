@@ -818,7 +818,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    memset (&m_ammo, 0, sizeof (m_ammo));
 
    m_currentWeapon = 0; // current weapon is not assigned at start
-   m_voicePitch = Random.Long (166, 250) * 0.5; // assign voice pitch
+   m_voicePitch = Random.Long (80, 115); // assign voice pitch
 
    // copy them over to the temp level variables
    m_agressionLevel = m_baseAgressionLevel;
@@ -960,6 +960,7 @@ void Bot::NewRound (void)
    m_isLeader = false;
    m_hasProgressBar = false;
    m_canChooseAimDirection = true;
+   m_turnAwayFromFlashbang = 0.0f;
 
    m_timeTeamOrder = 0.0;
    m_askCheckTime = 0.0;
@@ -1059,8 +1060,8 @@ void Bot::NewRound (void)
       m_currentWeapon = 0;
    }
 
-   m_knifeAttackTime = GetWorldTime () + Random.Float (1.3, 2.6);
-   m_nextBuyTime = GetWorldTime () + Random.Float (0.6, 1.2);
+   m_knifeAttackTime = GetWorldTime () + Random.Float (1.3f, 2.6f);
+   m_nextBuyTime = GetWorldTime () + Random.Float (0.6f, 2.0f);
 
    m_buyPending = false;
    m_inBombZone = false;

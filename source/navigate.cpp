@@ -659,6 +659,15 @@ bool Bot::DoWaypointNav (void)
 
    TraceResult tr, tr2;
 
+   // check if we fallen from something
+   if (IsOnFloor () && m_jumpFinished && m_currentWaypointIndex > 0)
+   {
+      const Vector &wptOrg = m_currentPath->origin;
+
+      if ((pev->origin - wptOrg).GetLength2D () <= 100.0f && (wptOrg.z > pev->origin.z + 20.0f))
+         m_currentWaypointIndex = -1;
+   }
+
    // check if we need to find a waypoint...
    if (m_currentWaypointIndex == -1)
    {

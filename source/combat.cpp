@@ -585,6 +585,12 @@ bool Bot::DoFirePause (float distance, FireDelay *fireDelay)
       return false;
    }
 
+   if (UsesPistol () && distance > 450.0f)
+   {
+      m_shootTime = GetWorldTime () + Random.Float (0.15f, 0.4f);
+      return false;
+   }
+
    if (m_firePause > GetWorldTime ())
       return true;
 
@@ -612,6 +618,8 @@ bool Bot::DoFirePause (float distance, FireDelay *fireDelay)
    {
       if (m_firePause < GetWorldTime () - 0.4f)
          m_firePause = GetWorldTime () + Random.Float (0.4f, 0.4f + 0.3f * ((100 - (m_difficulty * 25)) / 100.f));
+
+      m_burstShotsFired = 0;
 
       return true;
    }
@@ -866,7 +874,7 @@ WeaponSelectEnd:
          pev->button |= IN_ATTACK;
 
          m_shootTime = GetWorldTime () + baseDelay + Random.Float (minDelay, maxDelay);
-         m_zoomCheckTime = GetWorldTime ();
+         m_zoomCheckTime = GetWorldTime () - 0.09f;
       }
    }
 }

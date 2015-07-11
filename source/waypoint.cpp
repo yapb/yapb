@@ -149,12 +149,12 @@ void Waypoint::FindInRadius (const Vector &origin, float radius, int *holdTab, i
    *count -= 1;
 }
 
-void Waypoint::FindInRadius (Array <int> &queueID, float radius, const Vector &origin)
+void Waypoint::FindInRadius (Array <int> &radiusHolder, float radius, const Vector &origin)
 {
    for (int i = 0; i < g_numWaypoints; i++)
    {
       if ((m_paths[i]->origin - origin).GetLength () <= radius)
-         queueID.Push (i);
+         radiusHolder.Push (i);
    }
 }
 
@@ -1262,7 +1262,7 @@ String Waypoint::CheckSubfolderFile (void)
 
    returnFile = FormatBuffer ("%s%s%s.pwf", GetWaypointDir (), returnFile.GetBuffer (), GetMapName ());
 
-   if (TryFileOpen (returnFile))
+   if (File::Accessible (returnFile))
       return returnFile;
 
    return FormatBuffer ("%s%s.pwf", GetWaypointDir (), GetMapName ());
@@ -2412,7 +2412,7 @@ void Waypoint::EraseFromHardDisk (void)
 
    for (int i = 0; i < 4; i++)
    {
-      if (TryFileOpen (const_cast <char *> (deleteList[i].GetBuffer ())))
+      if (File::Accessible (const_cast <char *> (deleteList[i].GetBuffer ())))
       {
          unlink (deleteList[i].GetBuffer ());
          AddLogEntry (true, LL_DEFAULT, "File %s, has been deleted from the hard disk", deleteList[i].GetBuffer ());

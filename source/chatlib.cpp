@@ -49,10 +49,10 @@ void StripTags (char *buffer)
    {
       strtrim (buffer); // if so, string is just a tag
 
-	  int tagLength = 0;
+      int tagLength = 0;
 
       // strip just the tag part...
-      for (index = 0; index < ARRAYSIZE_HLSDK(tagOpen); index++)
+      for (index = 0; index < ARRAYSIZE_HLSDK (tagOpen); index++)
       {
          fieldStart = strstr (buffer, tagOpen[index]) - buffer; // look for a tag start
 
@@ -75,7 +75,7 @@ void StripTags (char *buffer)
 
                for (i = fieldStart; i < length - tagLength; i++)
                   buffer[i] = buffer[i + tagLength]; // overwrite the buffer with the stripped string
-               
+
                buffer[i] = 0; // terminate the string
             }
          }

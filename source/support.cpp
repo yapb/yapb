@@ -830,21 +830,6 @@ bool IsDedicatedServer (void)
    return (IS_DEDICATED_SERVER () > 0); // ask engine for this
 }
 
-bool TryFileOpen (const char *fileName)
-{
-   // this function tests if a file exists by attempting to open it
-
-   File fp;
-
-   // check if got valid handle
-   if (fp.Open (fileName, "rb"))
-   {
-      fp.Close ();
-      return true;
-   }
-   return false;
-}
-
 void ServerPrint (const char *format, ...)
 {
    va_list ap;
@@ -961,7 +946,7 @@ extern bool OpenConfig(const char *fileName, const char *errorIfNotExists, File 
       const char *languageDependantConfigFile = FormatBuffer ("%s/addons/yapb/conf/lang/%s_%s", GetModName (), yb_language.GetString (), fileName);
 
       // check is file is exists for this language
-      if (TryFileOpen (languageDependantConfigFile))
+      if (File::Accessible (languageDependantConfigFile))
          outFile->Open (languageDependantConfigFile, "rt");
       else
          outFile->Open (FormatBuffer ("%s/addons/yapb/conf/lang/en_%s", GetModName (), fileName), "rt");

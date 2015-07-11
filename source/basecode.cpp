@@ -426,16 +426,15 @@ void Bot::AvoidGrenades (void)
       if (!EntityIsVisible (ent->v.origin) && InFieldOfView (ent->v.origin - EyePosition ()) > pev->fov * 0.5)
          continue;
 
-      // TODO: should be done once for grenade, instead of checking several times
-      if (m_personality == PERSONALITY_RUSHER && m_difficulty == 4 && strcmp (STRING (ent->v.model) + 9, "flashbang.mdl") == 0)
+      if (m_turnAwayFromFlashbang < GetWorldTime () && m_personality == PERSONALITY_RUSHER && m_difficulty == 4 && strcmp (STRING (ent->v.model) + 9, "flashbang.mdl") == 0)
       {
-         const Vector &position = (GetEntityOrigin (ent) - EyePosition ()).ToAngles ();
-
          // don't look at flash bang
          if (!(m_states & STATE_SEEING_ENEMY))
          {
-            pev->v_angle.y = AngleNormalize (position.y + 180.0f);
+            pev->v_angle.y = AngleNormalize ((GetEntityOrigin (ent) - EyePosition ()).ToAngles ().y + 180.0f);
+
             m_canChooseAimDirection = false;
+            m_turnAwayFromFlashbang = GetWorldTime () + Random.Float (1.0f, 2.0f);
          }
       }
       else if (strcmp (STRING (ent->v.model) + 9, "hegrenade.mdl") == 0)
@@ -1223,7 +1222,7 @@ void Bot::CheckMessageQueue (void)
       }
 
       m_buyPending = false;
-      m_nextBuyTime = GetWorldTime () + Random.Float (0.3, 0.8);
+      m_nextBuyTime = GetWorldTime () + Random.Float (0.5f, 1.3f);
 
       // if bot buying is off then no need to buy
       if (!yb_botbuy.GetBool ())
@@ -1416,7 +1415,7 @@ bool Bot::IsRestricted (int weaponIndex)
    // this function checks for weapon restrictions.
 
    if (IsNullString (yb_restricted_weapons.GetString ()))
-      return false; // no banned weapons
+      return IsRestrictedAMX (weaponIndex); // no banned weapons
 
    Array <String> bannedWeapons = String (yb_restricted_weapons.GetString ()).Split (';');
 
@@ -1522,7 +1521,7 @@ void Bot::PurchaseWeapons (void)
    // this function does all the work in selecting correct buy menus for most weapons/items
 
    WeaponSelect *selectedWeapon = NULL;
-   m_nextBuyTime = GetWorldTime ();
+   m_nextBuyTime = GetWorldTime () + Random.Float (0.3f, 0.5f);
 
    int count = 0, foundWeapons = 0;
    int choices[NUM_WEAPONS];

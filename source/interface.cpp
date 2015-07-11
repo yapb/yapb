@@ -2054,7 +2054,7 @@ void ServerActivate (edict_t *pentEdictList, int edictCount, int clientMax)
    // execute main config
    ServerCommand ("exec addons/yapb/conf/yapb.cfg");
 
-   if (TryFileOpen (FormatBuffer ("%s/maps/%s_yapb.cfg", GetModName (), GetMapName ())))
+   if (File::Accessible (FormatBuffer ("%s/maps/%s_yapb.cfg", GetModName (), GetMapName ())))
    {
       ServerCommand ("exec maps/%s_yapb.cfg", GetMapName ());
       ServerPrint ("Executing Map-Specific config file");
@@ -3078,7 +3078,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    {
       ModSupport *mod = &s_supportedMods[i];
 
-      if (strcmp (mod->name, GetModName ()) == 0 && TryFileOpen (FormatBuffer ("%s/dlls/%s", mod->name, 
+      if (strcmp (mod->name, GetModName ()) == 0 && File::Accessible (FormatBuffer ("%s/dlls/%s", mod->name, 
 #if defined (PLATFORM_WIN32)
          mod->winLib
 #elif defined (PLATFORM_LINUX)

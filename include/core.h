@@ -1152,6 +1152,7 @@ public:
    bool m_hasProgressBar; // has progress bar on a HUD
    bool m_jumpReady; // is double jump ready
    bool m_canChooseAimDirection; // can choose aiming direction
+   float m_turnAwayFromFlashbang; // bot turned away from flashbang
    
    float m_breakableCheckTime;
    float m_blindTime; // time when bot is blinded
@@ -1471,7 +1472,7 @@ public:
    int FindFarest (const Vector &origin, float maxDistance = 32.0);
    int FindNearest (const Vector &origin, float minDistance = 9999.0, int flags = -1);
    void FindInRadius (const Vector &origin, float radius, int *holdTab, int *count);
-   void FindInRadius (Array <int> &queueID, float radius, const Vector &origin);
+   void FindInRadius (Array <int> &radiusHolder, float radius, const Vector &origin);
 
    void Add (int flags, const Vector &waypointOrigin = nullvec);
    void Delete (void);
@@ -1646,7 +1647,6 @@ extern int GetWeaponReturn (bool isString, const char *weaponAlias, int weaponIn
 extern float GetShootingConeDeviation (edict_t *ent, Vector *position);
 extern float GetWaveLength (const char *fileName);
 
-extern bool TryFileOpen (const char *fileName);
 extern bool IsDedicatedServer (void);
 extern bool IsVisible (const Vector &origin, edict_t *ent);
 extern bool IsAlive (edict_t *ent);
