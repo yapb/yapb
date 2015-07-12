@@ -3392,7 +3392,7 @@ void Bot::RunTask (void)
             m_moveSpeed = m_minSpeed;
       }
 
-      if ((yb_walking_allowed.GetBool () && mp_footsteps.GetBool ()) && m_difficulty >= 2 && !(m_aimFlags & AIM_ENEMY) && (m_heardSoundTime + 13.0 >= GetWorldTime () || (m_states & (STATE_HEARING_ENEMY | STATE_SUSPECT_ENEMY))) && GetNearbyEnemiesNearPosition (pev->origin, 1024) >= 1 && !(m_currentTravelFlags & PATHFLAG_JUMP) && !(pev->button & IN_DUCK) && !(pev->flags & FL_DUCKING) && !yb_jasonmode.GetBool () && !g_bombPlanted)
+      if ((yb_walking_allowed.GetBool () && mp_footsteps.GetBool ()) && m_difficulty >= 2 && !(m_aimFlags & AIM_ENEMY) && (m_heardSoundTime + 13.0 >= GetWorldTime () || (m_states & (STATE_HEARING_ENEMY | STATE_SUSPECT_ENEMY))) && GetNearbyEnemiesNearPosition (pev->origin, 1024) >= 1 && !yb_jasonmode.GetBool () && !g_bombPlanted)
          m_moveSpeed = GetWalkSpeed ();
 
       // bot hasn't seen anything in a long time and is asking his teammates to report in
@@ -3508,7 +3508,7 @@ void Bot::RunTask (void)
                   pev->button |= IN_DUCK;
             }
 
-            if ((m_lastEnemyOrigin - pev->origin).GetLength () < 512.0 && !(pev->flags & FL_DUCKING))
+            if ((m_lastEnemyOrigin - pev->origin).GetLength () < 512.0)
                m_moveSpeed = GetWalkSpeed ();
          }
       }
@@ -6135,4 +6135,12 @@ bool Bot::IsBombDefusing (const Vector &bombOrigin)
       }
    }
    return defusingInProgress;
+}
+
+float Bot::GetWalkSpeed (void)
+{
+   if ((pev->flags & FL_DUCKING) || (pev->button & IN_DUCK) || (pev->oldbuttons & IN_DUCK) || (m_currentTravelFlags & PATHFLAG_JUMP) || (m_currentPath != NULL && m_currentPath->flags & FLAG_LADDER) || IsOnLadder () || IsInWater ())
+      return pev->maxspeed;
+
+   return static_cast <float> ((static_cast <int> (pev->maxspeed) * 0.5f) + (static_cast <int> (pev->maxspeed) / 50.0f)) - 18.0f;
 }

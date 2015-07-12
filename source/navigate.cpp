@@ -313,6 +313,8 @@ void Bot::ResetCollideState (void)
    m_collisionState = COLLISION_NOTDECICED;
    m_collStateIndex = 0;
 
+   m_isStuck = false;
+
    for (int i = 0; i < MAX_COLLIDE_MOVES; i++)
       m_collideMoves[i] = 0;
 }
@@ -732,6 +734,7 @@ bool Bot::DoWaypointNav (void)
    // special lift handling (code merged from podbotmm)
    if (m_currentPath->flags & FLAG_LIFT)
    {
+
       bool liftClosedDoorExists = false;
 
       // update waypoint time set
@@ -796,8 +799,13 @@ bool Bot::DoWaypointNav (void)
          // check if we enough to destination
          if ((pev->origin - m_destOrigin).GetLengthSquared () < 225)
          {
-            m_moveSpeed = 0.0;
-            m_strafeSpeed = 0.0;
+            m_moveSpeed = 0.0f;
+            m_strafeSpeed = 0.0f;
+
+            m_navTimeset = GetWorldTime ();
+            m_aimFlags |= AIM_NAVPOINT;
+
+            ResetCollideState ();
 
             // need to wait our following teammate ?
             bool needWaitForTeammate = false;
@@ -866,8 +874,13 @@ bool Bot::DoWaypointNav (void)
 
             if ((pev->origin - m_destOrigin).GetLengthSquared () < 225)
             {
-               m_moveSpeed = 0.0;
-               m_strafeSpeed = 0.0;
+               m_moveSpeed = 0.0f;
+               m_strafeSpeed = 0.0f;
+
+               m_navTimeset = GetWorldTime ();
+               m_aimFlags |= AIM_NAVPOINT;
+
+               ResetCollideState ();
             }
          }
 
@@ -904,8 +917,13 @@ bool Bot::DoWaypointNav (void)
 
             if ((pev->origin - m_destOrigin).GetLengthSquared () < 225)
             {
-               m_moveSpeed = 0.0;
-               m_strafeSpeed = 0.0;
+               m_moveSpeed = 0.0f;
+               m_strafeSpeed = 0.0f;
+
+               m_navTimeset = GetWorldTime ();
+               m_aimFlags |= AIM_NAVPOINT;
+
+               ResetCollideState ();
             }
          }
       }
@@ -917,8 +935,13 @@ bool Bot::DoWaypointNav (void)
 
          if ((pev->origin - m_destOrigin).GetLengthSquared () < 225)
          {
-            m_moveSpeed = 0.0;
-            m_strafeSpeed = 0.0;
+            m_moveSpeed = 0.0f;
+            m_strafeSpeed = 0.0f;
+
+            m_navTimeset = GetWorldTime ();
+            m_aimFlags |= AIM_NAVPOINT;
+
+            ResetCollideState ();
          }
       }
 
@@ -936,11 +959,16 @@ bool Bot::DoWaypointNav (void)
 
             if ((pev->origin - m_destOrigin).GetLengthSquared () < 225)
             {
-               m_moveSpeed = 0.0;
-               m_strafeSpeed = 0.0;
+               m_moveSpeed = 0.0f;
+               m_strafeSpeed = 0.0f;
+
+               m_navTimeset = GetWorldTime ();
+               m_aimFlags |= AIM_NAVPOINT;
+
+               ResetCollideState ();
             }
          }
-         else
+         else if (!IsEntityNull(m_liftEntity))
          {
             edict_t *button = FindNearestButton (STRING (m_liftEntity->v.targetname));
 
@@ -1008,8 +1036,13 @@ bool Bot::DoWaypointNav (void)
 
          if ((pev->origin - m_destOrigin).GetLengthSquared () < 100)
          {
-            m_moveSpeed = 0.0;
-            m_strafeSpeed = 0.0;
+            m_moveSpeed = 0.0f;
+            m_strafeSpeed = 0.0f;
+
+            m_navTimeset = GetWorldTime ();
+            m_aimFlags |= AIM_NAVPOINT;
+
+            ResetCollideState ();
          }
       }
 
@@ -1851,7 +1884,11 @@ bool Bot::FindWaypoint (void)
    for (i = 0; i < g_numWaypoints; i++)
    {
       // ignore current waypoint and previous recent waypoints...
+#if 0
       if (i == m_currentWaypointIndex || i == m_prevWptIndex[0] || i == m_prevWptIndex[1] || i == m_prevWptIndex[2] || i == m_prevWptIndex[3] || i == m_prevWptIndex[4])
+#else
+      if (i == m_currentWaypointIndex)
+#endif
          continue;
 
       if ((g_mapType & MAP_CS) && HasHostage () && (g_waypoint->GetPath (i)->flags & FLAG_NOHOSTAGE))

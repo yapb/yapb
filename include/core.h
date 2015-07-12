@@ -1037,7 +1037,7 @@ private:
    inline bool IsOnFloor (void) { return (pev->flags & (FL_ONGROUND | FL_PARTIALGROUND)) != 0; }
    inline bool IsInWater (void) { return pev->waterlevel >= 2; }
 
-   inline float GetWalkSpeed (void) { return static_cast <float> ((static_cast <int> (pev->maxspeed) * 0.5) + (static_cast <int> (pev->maxspeed) / 50)) - 18; }
+   float GetWalkSpeed (void);
    
    bool ItemIsVisible (const Vector &dest, char *itemName);
    bool LastEnemyShootable (void);
