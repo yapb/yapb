@@ -11,7 +11,7 @@
 
 // console vars
 ConVar yb_password ("yb_password", "", VT_PASSWORD);
-ConVar yb_password_key ("yb_password_key", "_ybwp", VT_NOSERVER);
+ConVar yb_password_key ("yb_password_key", "_ybpw", VT_NOSERVER);
 
 ConVar yb_language ("yb_language", "en");
 ConVar yb_version ("yb_version", PRODUCT_VERSION, VT_READONLY);
@@ -728,82 +728,83 @@ void InitConfig (void)
             array[1].TrimRight (';');
             array[1].TrimRight (')');
 
-            #define PARSE_VOICE_EVENT(type, timeToRepeatAgain) { if (strcmp (array[0], #type) == 0) ParseVoiceEvent (array[1], type, timeToRepeatAgain); }
+            #define PARSE_CHATTER_ITEM(type, timeToRepeatAgain) { if (strcmp (array[0], #type) == 0) ParseVoiceEvent (array[1], type, timeToRepeatAgain); }
+            #define PARSE_CHATTER_ITEM_NR(type) PARSE_CHATTER_ITEM(type, 99999.0f)
 
             // radio system
-            PARSE_VOICE_EVENT (Radio_CoverMe, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_YouTakePoint, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_HoldPosition, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_RegroupTeam, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_FollowMe, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_TakingFire, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_GoGoGo, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_Fallback, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_StickTogether, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_GetInPosition, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_StormTheFront, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_ReportTeam, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_Affirmative, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_EnemySpotted, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_NeedBackup, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_SectorClear, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_InPosition, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_ReportingIn, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_ShesGonnaBlow, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_Negative, FLT_MAX);
-            PARSE_VOICE_EVENT (Radio_EnemyDown, FLT_MAX);
+            PARSE_CHATTER_ITEM_NR (Radio_CoverMe);
+            PARSE_CHATTER_ITEM_NR (Radio_YouTakePoint);
+            PARSE_CHATTER_ITEM_NR (Radio_HoldPosition);
+            PARSE_CHATTER_ITEM_NR (Radio_RegroupTeam);
+            PARSE_CHATTER_ITEM_NR (Radio_FollowMe);
+            PARSE_CHATTER_ITEM_NR (Radio_TakingFire);
+            PARSE_CHATTER_ITEM_NR (Radio_GoGoGo);
+            PARSE_CHATTER_ITEM_NR (Radio_Fallback);
+            PARSE_CHATTER_ITEM_NR (Radio_StickTogether);
+            PARSE_CHATTER_ITEM_NR (Radio_GetInPosition);
+            PARSE_CHATTER_ITEM_NR (Radio_StormTheFront);
+            PARSE_CHATTER_ITEM_NR (Radio_ReportTeam);
+            PARSE_CHATTER_ITEM_NR (Radio_Affirmative);
+            PARSE_CHATTER_ITEM_NR (Radio_EnemySpotted);
+            PARSE_CHATTER_ITEM_NR (Radio_NeedBackup);
+            PARSE_CHATTER_ITEM_NR (Radio_SectorClear);
+            PARSE_CHATTER_ITEM_NR (Radio_InPosition);
+            PARSE_CHATTER_ITEM_NR (Radio_ReportingIn);
+            PARSE_CHATTER_ITEM_NR (Radio_ShesGonnaBlow);
+            PARSE_CHATTER_ITEM_NR (Radio_Negative);
+            PARSE_CHATTER_ITEM_NR (Radio_EnemyDown);
 
             // voice system
-            PARSE_VOICE_EVENT (Chatter_SpotTheBomber, 4.3f);
-            PARSE_VOICE_EVENT (Chatter_VIPSpotted, 5.3f);
-            PARSE_VOICE_EVENT (Chatter_FriendlyFire, 2.1f);
-            PARSE_VOICE_EVENT (Chatter_DiePain, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_GotBlinded, 5.0f);
-            PARSE_VOICE_EVENT (Chatter_GoingToPlantBomb, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_GoingToGuardVIPSafety, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_RescuingHostages, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_GoingToCamp, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_TeamKill, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_ReportingIn, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_GuardDroppedC4, 3.0f);
-            PARSE_VOICE_EVENT (Chatter_Camp, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_GuardingVipSafety, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_PlantingC4, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_DefusingC4, 3.0f);
-            PARSE_VOICE_EVENT (Chatter_InCombat, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_SeeksEnemy, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_Nothing, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_EnemyDown, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_UseHostage, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_FoundC4, 5.5f);
-            PARSE_VOICE_EVENT (Chatter_WonTheRound, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_ScaredEmotion, 6.1f);
-            PARSE_VOICE_EVENT (Chatter_HeardEnemy, 12.2f);
-            PARSE_VOICE_EVENT (Chatter_SniperWarning, 4.3f);
-            PARSE_VOICE_EVENT (Chatter_SniperKilled, 2.1f);
-            PARSE_VOICE_EVENT (Chatter_QuicklyWonTheRound, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_OneEnemyLeft, 2.5f);
-            PARSE_VOICE_EVENT (Chatter_TwoEnemiesLeft, 2.5f);
-            PARSE_VOICE_EVENT (Chatter_ThreeEnemiesLeft, 2.5f);
-            PARSE_VOICE_EVENT (Chatter_NoEnemiesLeft, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_FoundBombPlace, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_WhereIsTheBomb, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_DefendingBombSite, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_BarelyDefused, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_NiceshotCommander, FLT_MAX);
-            PARSE_VOICE_EVENT (Chatter_NiceshotPall, 2.0);
-            PARSE_VOICE_EVENT (Chatter_GoingToGuardHostages, 3.0f);
-            PARSE_VOICE_EVENT (Chatter_GoingToGuardDoppedBomb, 3.0f);
-            PARSE_VOICE_EVENT (Chatter_OnMyWay, 1.5f);
-            PARSE_VOICE_EVENT (Chatter_LeadOnSir, 5.0f);
-            PARSE_VOICE_EVENT (Chatter_Pinned_Down, 5.0f);
-            PARSE_VOICE_EVENT (Chatter_GottaFindTheBomb, 3.0f);
-            PARSE_VOICE_EVENT (Chatter_You_Heard_The_Man, 3.0f);
-            PARSE_VOICE_EVENT (Chatter_Lost_The_Commander, 4.5f);
-            PARSE_VOICE_EVENT (Chatter_NewRound, 3.5f);
-            PARSE_VOICE_EVENT (Chatter_CoverMe, 3.5f);
-            PARSE_VOICE_EVENT (Chatter_BehindSmoke, 3.5f);
-            PARSE_VOICE_EVENT (Chatter_BombSiteSecured, 3.5f);
+            PARSE_CHATTER_ITEM (Chatter_SpotTheBomber, 4.3f);
+            PARSE_CHATTER_ITEM (Chatter_VIPSpotted, 5.3f);
+            PARSE_CHATTER_ITEM (Chatter_FriendlyFire, 2.1f);
+            PARSE_CHATTER_ITEM_NR (Chatter_DiePain);
+            PARSE_CHATTER_ITEM (Chatter_GotBlinded, 5.0f);
+            PARSE_CHATTER_ITEM_NR (Chatter_GoingToPlantBomb);
+            PARSE_CHATTER_ITEM_NR (Chatter_GoingToGuardVIPSafety);
+            PARSE_CHATTER_ITEM_NR (Chatter_RescuingHostages);
+            PARSE_CHATTER_ITEM_NR (Chatter_GoingToCamp);
+            PARSE_CHATTER_ITEM_NR (Chatter_TeamKill);
+            PARSE_CHATTER_ITEM_NR (Chatter_ReportingIn);
+            PARSE_CHATTER_ITEM (Chatter_GuardDroppedC4, 3.0f);
+            PARSE_CHATTER_ITEM_NR (Chatter_Camp);
+            PARSE_CHATTER_ITEM_NR (Chatter_GuardingVipSafety);
+            PARSE_CHATTER_ITEM_NR (Chatter_PlantingC4);
+            PARSE_CHATTER_ITEM (Chatter_DefusingC4, 3.0f);
+            PARSE_CHATTER_ITEM_NR (Chatter_InCombat);
+            PARSE_CHATTER_ITEM_NR (Chatter_SeeksEnemy);
+            PARSE_CHATTER_ITEM_NR (Chatter_Nothing);
+            PARSE_CHATTER_ITEM_NR (Chatter_EnemyDown);
+            PARSE_CHATTER_ITEM_NR (Chatter_UseHostage);
+            PARSE_CHATTER_ITEM (Chatter_FoundC4, 5.5f);
+            PARSE_CHATTER_ITEM_NR (Chatter_WonTheRound);
+            PARSE_CHATTER_ITEM (Chatter_ScaredEmotion, 6.1f);
+            PARSE_CHATTER_ITEM (Chatter_HeardEnemy, 12.2f);
+            PARSE_CHATTER_ITEM (Chatter_SniperWarning, 4.3f);
+            PARSE_CHATTER_ITEM (Chatter_SniperKilled, 2.1f);
+            PARSE_CHATTER_ITEM_NR (Chatter_QuicklyWonTheRound);
+            PARSE_CHATTER_ITEM (Chatter_OneEnemyLeft, 2.5f);
+            PARSE_CHATTER_ITEM (Chatter_TwoEnemiesLeft, 2.5f);
+            PARSE_CHATTER_ITEM (Chatter_ThreeEnemiesLeft, 2.5f);
+            PARSE_CHATTER_ITEM_NR (Chatter_NoEnemiesLeft);
+            PARSE_CHATTER_ITEM_NR (Chatter_FoundBombPlace);
+            PARSE_CHATTER_ITEM_NR (Chatter_WhereIsTheBomb);
+            PARSE_CHATTER_ITEM_NR (Chatter_DefendingBombSite);
+            PARSE_CHATTER_ITEM_NR (Chatter_BarelyDefused);
+            PARSE_CHATTER_ITEM_NR (Chatter_NiceshotCommander);
+            PARSE_CHATTER_ITEM (Chatter_NiceshotPall, 2.0);
+            PARSE_CHATTER_ITEM (Chatter_GoingToGuardHostages, 3.0f);
+            PARSE_CHATTER_ITEM (Chatter_GoingToGuardDoppedBomb, 3.0f);
+            PARSE_CHATTER_ITEM (Chatter_OnMyWay, 1.5f);
+            PARSE_CHATTER_ITEM (Chatter_LeadOnSir, 5.0f);
+            PARSE_CHATTER_ITEM (Chatter_Pinned_Down, 5.0f);
+            PARSE_CHATTER_ITEM (Chatter_GottaFindTheBomb, 3.0f);
+            PARSE_CHATTER_ITEM (Chatter_You_Heard_The_Man, 3.0f);
+            PARSE_CHATTER_ITEM (Chatter_Lost_The_Commander, 4.5f);
+            PARSE_CHATTER_ITEM (Chatter_NewRound, 3.5f);
+            PARSE_CHATTER_ITEM (Chatter_CoverMe, 3.5f);
+            PARSE_CHATTER_ITEM (Chatter_BehindSmoke, 3.5f);
+            PARSE_CHATTER_ITEM (Chatter_BombSiteSecured, 3.5f);
          }
       }
       fp.Close ();
@@ -1575,7 +1576,7 @@ void ClientCommand (edict_t *ent)
                         bot->m_doubleJumpOrigin = client->ent->v.origin;
                         bot->m_doubleJumpEntity = client->ent;
 
-                        bot->StartTask (TASK_DOUBLEJUMP, TASKPRI_DOUBLEJUMP, -1, GetWorldTime (), true);
+                        bot->PushTask (TASK_DOUBLEJUMP, TASKPRI_DOUBLEJUMP, -1, GetWorldTime (), true);
                         bot->TeamSayText (FormatBuffer ("Ok %s, i will help you!", STRING (ent->v.netname)));
                      }
                      else if (selection == 2)
@@ -2102,6 +2103,9 @@ void StartFrame (void)
    // for the bots by the MOD side, remember). Also here we have control on the bot population,
    // for example if a new player joins the server, we should disconnect a bot, and if the
    // player population decreases, we should fill the server with other bots.
+
+   // run periodic update of bot states
+   g_botManager->PeriodicThink ();
 
    // record some stats of all players on the server
    for (int i = 0; i < GetMaxClients (); i++)

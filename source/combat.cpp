@@ -16,7 +16,7 @@ ConVar yb_check_enemy_rendering ("yb_check_enemy_rendering", "0", VT_NOSERVER);
 
 ConVar mp_friendlyfire ("mp_friendlyfire", NULL, VT_NOREGISTER);
 
-int Bot::GetNearbyFriendsNearPosition (const Vector &origin, int radius)
+int Bot::GetNearbyFriendsNearPosition(const Vector &origin, float radius)
 {
    int count = 0;
 
@@ -25,13 +25,13 @@ int Bot::GetNearbyFriendsNearPosition (const Vector &origin, int radius)
       if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != m_team || g_clients[i].ent == GetEntity ())
          continue;
 
-      if ((g_clients[i].origin - origin).GetLengthSquared () < static_cast <float> (radius * radius))
+      if ((g_clients[i].origin - origin).GetLengthSquared () < GET_SQUARE (radius))
          count++;
    }
    return count;
 }
 
-int Bot::GetNearbyEnemiesNearPosition (const Vector &origin, int radius)
+int Bot::GetNearbyEnemiesNearPosition(const Vector &origin, float radius)
 {
    int count = 0;
 
@@ -40,7 +40,7 @@ int Bot::GetNearbyEnemiesNearPosition (const Vector &origin, int radius)
       if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team == m_team)
          continue;
 
-      if ((g_clients[i].origin - origin).GetLengthSquared () < static_cast <float> (radius * radius))
+      if ((g_clients[i].origin - origin).GetLengthSquared () < GET_SQUARE (radius))
          count++;
    }
    return count;
@@ -89,6 +89,133 @@ bool Bot::IsEnemyHiddenByRendering (edict_t *enemy)
    return false;
 }
 
+bool Bot::CheckVisibility (edict_t *target, Vector *origin, byte *bodyPart)
+{
+   // this function checks visibility of a bot target.
+
+   if (IsEnemyHiddenByRendering (target))
+   {
+      *bodyPart = 0;
+      *origin = nullvec;
+
+      return false;
+   }
+
+   const Vector &botHead = EyePosition ();
+   TraceResult tr;
+
+   *bodyPart = 0;
+
+   // check for the body
+   TraceLine (botHead, target->v.origin, true, true, GetEntity (), &tr);
+
+   if (tr.flFraction >= 1.0f)
+   {
+      *bodyPart |= VISIBLE_BODY;
+      *origin = target->v.origin;
+
+      if (m_difficulty == 4)
+         origin->z += 3.0f;
+   }
+
+   // check for the head
+   TraceLine (botHead, target->v.origin + target->v.view_ofs, true, true, GetEntity (), &tr);
+
+   if (tr.flFraction >= 1.0f)
+   {
+      *bodyPart |= VISIBLE_HEAD;
+      *origin = target->v.origin + target->v.view_ofs;
+
+      if (m_difficulty == 4)
+         origin->z += 1.0f;
+   }
+
+   if (*bodyPart != 0)
+      return true;
+
+   // thanks for this code goes to kwo
+   MakeVectors (target->v.angles);
+
+   // worst case, choose random position in enemy body
+   for (int i = 0; i < 6; i++)
+   {
+      Vector pos = target->v.origin;
+
+      switch (i)
+      {
+      case 0: // left arm
+         pos.x -= 10.0f * g_pGlobals->v_right.x;
+         pos.y -= 10.0f * g_pGlobals->v_right.y;
+         pos.z += 8.0f;
+         break;
+
+      case 1: // right arm
+         pos.x += 10.0f * g_pGlobals->v_right.x;
+         pos.y += 10.0f * g_pGlobals->v_right.y;
+         pos.z += 8.0f;
+         break;
+
+      case 2: // left leg
+         pos.x -= 10.0f * g_pGlobals->v_right.x;
+         pos.y -= 10.0f * g_pGlobals->v_right.y;
+         pos.z -= 12.0f;
+         break;
+
+      case 3: // right leg
+         pos.x += 10.0f * g_pGlobals->v_right.x;
+         pos.y += 10.0f * g_pGlobals->v_right.y;
+         pos.z -= 12.0f;
+         break;
+
+      case 4: // left foot
+         pos.x -= 10.0f * g_pGlobals->v_right.x;
+         pos.y -= 10.0f * g_pGlobals->v_right.y;
+         pos.z -= 24.0f;
+         break;
+
+      case 5: // right foot
+         pos.x += 10.0f * g_pGlobals->v_right.x;
+         pos.y += 10.0f * g_pGlobals->v_right.y;
+         pos.z -= 24.0f;
+         break;
+      }
+
+      // check direct line to random part of the player body
+      TraceLine (botHead, pos, true, true, GetEntity (), &tr);
+
+      // check if we hit something
+      if (tr.flFraction >= 1.0f)
+      {
+         *origin = tr.vecEndPos;
+         *bodyPart |= VISIBLE_OTHER;
+
+         return true;
+      }
+   }
+   return false;
+}
+
+bool Bot::IsEnemyViewable (edict_t *player)
+{
+   if (IsEntityNull (player))
+      return false;
+
+   bool forceTrueIfVisible = false;
+
+   if (IsValidPlayer (pev->dmg_inflictor) && GetTeam (pev->dmg_inflictor) != m_team)
+      forceTrueIfVisible = true;
+
+   if ((IsInViewCone (player->v.origin + pev->view_ofs) || forceTrueIfVisible) && CheckVisibility (player, &m_enemyOrigin, &m_visibility))
+   {
+      m_seeEnemyTime = GetWorldTime ();
+      m_lastEnemy = player;
+      m_lastEnemyOrigin = player->v.origin;
+
+      return true;
+   }
+   return false;
+}
+
 bool Bot::LookupEnemy (void)
 {
    // this function tries to find the best suitable enemy for the bot
@@ -97,16 +224,6 @@ bool Bot::LookupEnemy (void)
    if (m_blindTime > GetWorldTime () || yb_ignore_enemies.GetBool ())
       return false;
 
-   // do not check for new enemy too fast
-#if 0
-   if (!IsEntityNull (m_enemy) && m_enemyUpdateTime + 2.5f > GetWorldTime () && !(m_states & STATE_SUSPECT_ENEMY))
-   {
-      m_aimFlags |= AIM_ENEMY;
-      m_states |= STATE_SUSPECT_ENEMY;
-
-      return true;
-   }
-#endif
    edict_t *player, *newEnemy = NULL;
 
    float nearestDistance = m_viewDistance;
@@ -500,38 +617,42 @@ bool Bot::IsShootableThruObstacle (const Vector &dest)
    if (penetratePower == 0)
       return false;
 
-   // set conditions....
-   Vector source = EyePosition ();
-   const Vector &direction = (dest - source).Normalize () * 8.0f;	// 8 units long
-
    TraceResult tr;
 
-   do
-   {
-      // trace from the bot's eyes to destination...
-      TraceLine (source, dest, true, GetEntity (), &tr);
+   float obstacleDistance = 0.0f;
+   TraceLine (EyePosition (), dest, true, GetEntity (), &tr);
 
-      if (tr.fStartSolid)
+   if (tr.fStartSolid)
+   {
+      const Vector &source = tr.vecEndPos;
+      TraceLine (dest, source, true, GetEntity (), &tr);
+
+      if (tr.flFraction != 1.0f)
       {
-         if (tr.fAllSolid)
+         if ((tr.vecEndPos - dest).GetLengthSquared () > GET_SQUARE (800.0f))
             return false;
 
-         // move 8 units closer to the destination....
-         source += direction;
+         if (tr.vecEndPos.z >= dest.z + 200.0f)
+            return false;
+
+         obstacleDistance = (tr.vecEndPos - source).GetLength ();
       }
-      else
+   }
+
+   if (obstacleDistance > 0.0f)
+   {
+      while (penetratePower > 0)
       {
-         // check if line hit anything
-         if (tr.flFraction == 1.0f)
-            return true;
+         if (obstacleDistance > 75.0f)
+         {
+            obstacleDistance -= 75.0f;
+            penetratePower--;
 
-         --penetratePower;
-
-         // move 8 units closer to the destination....
-         source = tr.vecEndPos + direction;
+            continue;
+         }
+         return true;
       }
-   } while (penetratePower > 0);
-
+   }
    return false;
 }
 
@@ -575,19 +696,13 @@ bool Bot::IsShootableThruObstacleEx (const Vector &dest)
    return false;
 }
 
-bool Bot::DoFirePause (float distance, FireDelay *fireDelay)
+bool Bot::DoFirePause (float distance)
 {
    // returns true if bot needs to pause between firing to compensate for punchangle & weapon spread
 
    if (UsesSniper ())
    {
       m_shootTime = GetWorldTime ();
-      return false;
-   }
-
-   if (UsesPistol () && distance > 450.0f)
-   {
-      m_shootTime = GetWorldTime () + Random.Float (0.15f, 0.4f);
       return false;
    }
 
@@ -619,21 +734,6 @@ bool Bot::DoFirePause (float distance, FireDelay *fireDelay)
       if (m_firePause < GetWorldTime () - 0.4f)
          m_firePause = GetWorldTime () + Random.Float (0.4f, 0.4f + 0.3f * ((100 - (m_difficulty * 25)) / 100.f));
 
-      m_burstShotsFired = 0;
-
-      return true;
-   }
-
-   if (m_difficulty < 3 && fireDelay->maxFireBullets + Random.Long (0, 1) <= m_burstShotsFired)
-   {
-      float delayTime = 0.1 * distance / fireDelay->minBurstPauseFactor;
-
-      if (delayTime > (125.0 / (m_difficulty * 25 + 1)))
-         delayTime = 125.0 / (m_difficulty * 25 + 1);
-
-      m_firePause = GetWorldTime () + delayTime;
-      m_burstShotsFired = 0;
-
       return true;
    }
    return false;
@@ -662,8 +762,6 @@ void Bot::FireWeapon (void)
          return;
       }
    }
-
-   FireDelay *delay = &g_fireDelay[0];
    WeaponSelect *selectTab = &g_weaponSelect[0];
 
    edict_t *enemy = m_enemy;
@@ -742,13 +840,9 @@ WeaponSelectEnd:
       // reset burst fire variables
       m_firePause = 0.0;
       m_timeLastFired = 0.0;
-      m_burstShotsFired = 0;
 
       return;
    }
-
-   if (delay[chosenWeaponIndex].weaponIndex != selectId)
-      return;
 
    if (selectTab[chosenWeaponIndex].id != selectId)
    {
@@ -818,10 +912,6 @@ WeaponSelectEnd:
 
       return;
    }
-   const float baseDelay = delay[chosenWeaponIndex].primaryBaseDelay;
-
-   const float minDelay = delay[chosenWeaponIndex].primaryMinDelay[abs (m_difficulty - 4)];
-   const float maxDelay = delay[chosenWeaponIndex].primaryMaxDelay[abs (m_difficulty - 4)];
 
    // need to care for burst fire?
    if (distance < 256.0 || m_blindTime > GetWorldTime ())
@@ -852,7 +942,7 @@ WeaponSelectEnd:
    }
    else
    {
-      if (DoFirePause (distance, &delay[chosenWeaponIndex]))
+      if (DoFirePause (distance))
          return;
 
       // don't attack with knife over long distance
@@ -873,7 +963,8 @@ WeaponSelectEnd:
       {
          pev->button |= IN_ATTACK;
 
-         m_shootTime = GetWorldTime () + baseDelay + Random.Float (minDelay, maxDelay);
+         // m_shootTime = GetWorldTime () + baseDelay + Random.Float (minDelay, maxDelay);
+         m_shootTime = GetWorldTime () + Random.Float (0.15f, 0.35f);
          m_zoomCheckTime = GetWorldTime () - 0.09f;
       }
    }
@@ -993,7 +1084,7 @@ void Bot::CombatFight (void)
          CheckThrow (EyePosition(), m_throw);
 
          if ((m_states & STATE_SEEING_ENEMY) && !m_hasC4)
-            StartTask (TASK_SEEKCOVER, TASKPRI_SEEKCOVER, -1, Random.Long (10, 20), true);
+            PushTask (TASK_SEEKCOVER, TASKPRI_SEEKCOVER, -1, Random.Long (10, 20), true);
       }
 
       // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
@@ -1392,7 +1483,7 @@ void Bot::SelectWeaponbyNumber (int num)
 
 void Bot::AttachToUser (void)
 {
-   // this function forces bot to join to user
+   // this function forces bot to follow user
    Array <edict_t *> foundUsers;
 
    // search friends near us
@@ -1411,7 +1502,7 @@ void Bot::AttachToUser (void)
    m_targetEntity = foundUsers.GetRandomElement ();
 
    ChatterMessage (Chatter_LeadOnSir);
-   StartTask (TASK_FOLLOWUSER, TASKPRI_FOLLOWUSER, -1, 0.0, true);
+   PushTask (TASK_FOLLOWUSER, TASKPRI_FOLLOWUSER, -1, 0.0, true);
 }
 
 void Bot::CommandTeam (void)
@@ -1463,7 +1554,7 @@ bool Bot::IsGroupOfEnemies (const Vector &location, int numEnemies, int radius)
       if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].ent == GetEntity ())
          continue;
 
-      if ((g_clients[i].ent->v.origin - location).GetLength () < radius)
+      if ((g_clients[i].ent->v.origin - location).GetLengthSquared () < GET_SQUARE (radius))
       {
          // don't target our teammates...
          if (g_clients[i].team == m_team)

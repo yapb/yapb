@@ -4068,3 +4068,8 @@ public:
 // Sizeof bounds
 //
 #define SIZEOF_CHAR(in) sizeof (in) - 1
+
+//
+// Squared Length
+//
+#define GET_SQUARE(in) (in * in)

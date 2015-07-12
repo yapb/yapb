@@ -65,7 +65,6 @@ extern Array <BotName> g_botNames;
 extern Array <KeywordFactory> g_replyFactory;
 extern RandomSequenceOfUnique Random;
 
-extern FireDelay g_fireDelay[NUM_WEAPONS + 1];
 extern WeaponSelect g_weaponSelect[NUM_WEAPONS + 1];
 extern WeaponProperty g_weaponDefs[MAX_WEAPONS + 1];
 

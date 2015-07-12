@@ -442,7 +442,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
          else if (IsInWater ())
             bits |= (PROBE_JUMP | PROBE_STRAFE);
          else
-            bits |= ((Random.Long (0, 20) > (cantMoveForward ? 15 : 10) ? PROBE_JUMP : 0) | PROBE_STRAFE | PROBE_DUCK);
+            bits |= ((Random.Long (0, 20) > (cantMoveForward ? 10 : 7) ? PROBE_JUMP : 0) | PROBE_STRAFE | PROBE_DUCK);
 
          // collision check allowed if not flying through the air
          if (IsOnFloor () || IsOnLadder () || IsInWater ())
@@ -1138,7 +1138,7 @@ bool Bot::DoWaypointNav (void)
       // if bot hits the door, then it opens, so wait a bit to let it open safely
       if (pev->velocity.GetLength2D () < 2 && m_timeDoorOpen < GetWorldTime ())
       {
-         StartTask (TASK_PAUSE, TASKPRI_PAUSE, -1, GetWorldTime () + 1, false);
+         PushTask (TASK_PAUSE, TASKPRI_PAUSE, -1, GetWorldTime () + 1, false);
 
          m_doorOpenAttempt++;
          m_timeDoorOpen = GetWorldTime () + 1.0; // retry in 1 sec until door is open
@@ -1816,7 +1816,7 @@ void Bot::DeleteSearchNodes (void)
 
 int Bot::GetAimingWaypoint (const Vector &to)
 {
-   // return the most distant waypoint which is seen from the Bot to the Target and is within count
+   // return the most distant waypoint which is seen from the bot to the target and is within count
 
    if (m_currentWaypointIndex == -1)
       m_currentWaypointIndex = ChangeWptIndex (g_waypoint->FindNearest (pev->origin));
@@ -1825,13 +1825,6 @@ int Bot::GetAimingWaypoint (const Vector &to)
    int destIndex = g_waypoint->FindNearest (to);
    int bestIndex = srcIndex;
 
-   PathNode *node = new PathNode;
-
-   node->index = destIndex;
-   node->next = NULL;
-
-   PathNode *startNode = node;
-
    while (destIndex != srcIndex)
    {
       destIndex = *(g_waypoint->m_pathMatrix + (destIndex * g_numWaypoints) + srcIndex);
@@ -1839,28 +1832,11 @@ int Bot::GetAimingWaypoint (const Vector &to)
       if (destIndex < 0)
          break;
 
-      node->next = new PathNode;
-      node = node->next;
-
-      if (node == NULL)
-         TerminateOnMalloc ();
-
-      node->index = destIndex;
-      node->next = NULL;
-
       if (g_waypoint->IsVisible (m_currentWaypointIndex, destIndex))
       {
          bestIndex = destIndex;
          break;
       }
-   }
-
-   while (startNode != NULL)
-   {
-      node = startNode->next;
-      delete startNode;
-
-      startNode = node;
    }
    return bestIndex;
 }
@@ -1887,7 +1863,7 @@ bool Bot::FindWaypoint (void)
 #if 0
       if (i == m_currentWaypointIndex || i == m_prevWptIndex[0] || i == m_prevWptIndex[1] || i == m_prevWptIndex[2] || i == m_prevWptIndex[3] || i == m_prevWptIndex[4])
 #else
-      if (i == m_currentWaypointIndex)
+      if (i == m_currentWaypointIndex || i == m_prevWptIndex[0])
 #endif
          continue;
 
@@ -2101,7 +2077,7 @@ int Bot::ChooseBombWaypoint (void)
       bombOrigin = pev->origin;
 
    int goal = 0, count = 0;
-   float lastDistance = FLT_MAX;
+   float lastDistance = 99999.0f;
 
    // find nearest goal waypoint either to bomb (if "heard" or player)
    FOR_EACH_AE (goals, i)
@@ -2471,8 +2447,8 @@ bool Bot::HeadTowardWaypoint (void)
 
                if (m_baseAgressionLevel < kills && HasPrimaryWeapon ())
                {
-                  StartTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + Random.Float (m_difficulty * 0.5, m_difficulty) * 5, true);
-                  StartTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, FindDefendWaypoint (g_waypoint->GetPath (waypoint)->origin), GetWorldTime () + Random.Float (3.0f, 10.0f), true);
+                  PushTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + Random.Float (m_difficulty * 0.5, m_difficulty) * 5, true);
+                  PushTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, FindDefendWaypoint (g_waypoint->GetPath (waypoint)->origin), GetWorldTime () + Random.Float (3.0f, 10.0f), true);
                }
             }
             else if (g_botsCanPause && !IsOnLadder () && !IsInWater () && !m_currentTravelFlags && IsOnFloor ())
@@ -2547,7 +2523,7 @@ bool Bot::HeadTowardWaypoint (void)
                   // if another bot uses this ladder, wait 3 secs
                   if (otherBot != NULL && otherBot != this && IsAlive (otherBot->GetEntity ()) && otherBot->m_currentWaypointIndex == m_navNode->index)
                   {
-                     StartTask (TASK_PAUSE, TASKPRI_PAUSE, -1, GetWorldTime () + 3.0, false);
+                     PushTask (TASK_PAUSE, TASKPRI_PAUSE, -1, GetWorldTime () + 3.0, false);
                      return true;
                   }
                }
@@ -3136,13 +3112,13 @@ void Bot::ChangeYaw (float speed)
 
 int Bot::GetAimingWaypoint (void)
 {
-   // Find a good WP to look at when camping
+   // find a good waypoint to look at when camping
 
    int count = 0, indeces[3];
    float distTab[3];
    uint16 visibility[3];
 
-   int currentWaypoint = g_waypoint->FindNearest (pev->origin);
+   int currentWaypoint = m_currentWaypointIndex;
 
    if (currentWaypoint == -1)
       return Random.Long (0, g_numWaypoints - 1);
@@ -3443,7 +3419,7 @@ edict_t *Bot::FindNearestButton (const char *targetName)
    if (IsNullString (targetName))
       return NULL;
 
-   float nearestDistance = FLT_MAX;
+   float nearestDistance = 99999.0f;
    edict_t *searchEntity = NULL, *foundEntity = NULL;
 
    // find the nearest button which can open our target

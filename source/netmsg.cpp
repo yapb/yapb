@@ -148,13 +148,8 @@ void NetworkMsg::Execute (void *p)
 
             // ammo amount decreased ? must have fired a bullet...
             if (id == m_bot->m_currentWeapon && m_bot->m_ammoInClip[id] > clip)
-            {
-               // time fired with in burst firing time ?
-               if (m_bot->m_timeLastFired + 1.0 > GetWorldTime ())
-                  m_bot->m_burstShotsFired++;
-
                m_bot->m_timeLastFired = GetWorldTime (); // remember the last bullet time
-            }
+
             m_bot->m_ammoInClip[id] = clip;
          }
          break;

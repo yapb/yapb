@@ -241,6 +241,17 @@ void BotManager::Think (void)
    }
 }
 
+void BotManager::PeriodicThink (void)
+{
+   // this function calls periodic SecondThink () function for all available at call moment bots
+
+   for (int i = 0; i < GetMaxClients (); i++)
+   {
+      if (m_bots[i] != NULL)
+         m_bots[i]->PeriodicThink ();
+   }
+}
+
 void BotManager::AddBot (const String &name, int difficulty, int personality, int team, int member)
 {
    // this function putting bot creation process to queue to prevent engine crashes
@@ -931,6 +942,9 @@ void Bot::NewRound (void)
    m_duckDefuse = false;
    m_duckDefuseCheckTime = 0.0;
 
+   m_numFriendsLeft = 0;
+   m_numEnemiesLeft = 0;
+
    for (i = 0; i < 5; i++)
       m_prevWptIndex[i] = -1;
 
@@ -1009,7 +1023,6 @@ void Bot::NewRound (void)
    m_doorOpenAttempt = 0;
    m_aimFlags = 0;
    m_liftState = 0;
-   m_burstShotsFired = 0;
 
    m_position = nullvec;
    m_liftTravelPos = nullvec;
@@ -1106,7 +1119,7 @@ void Bot::NewRound (void)
 
    // and put buying into its message queue
    PushMessageQueue (GSM_BUY_STUFF);
-   StartTask (TASK_NORMAL, TASKPRI_NORMAL, -1, 0.0, true);
+   PushTask (TASK_NORMAL, TASKPRI_NORMAL, -1, 0.0, true);
 
    if (Random.Long (0, 100) < 50)
       ChatterMessage (Chatter_NewRound);

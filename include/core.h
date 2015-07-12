@@ -685,20 +685,6 @@ struct WeaponSelect
    bool primaryFireHold; // hold down primary fire button to use?
 };
 
-// fire delay definiton
-struct FireDelay
-{
-   int weaponIndex;
-   int maxFireBullets;
-   float minBurstPauseFactor;
-   float primaryBaseDelay;
-   float primaryMinDelay[6];
-   float primaryMaxDelay[6];
-   float secondaryBaseDelay;
-   float secondaryMinDelay[5];
-   float secondaryMaxDelay[5];
-};
-
 // struct for menus
 struct MenuText
 {
@@ -1069,7 +1055,6 @@ private:
    Vector CheckBombAudible (void);
 
    const Vector &GetAimPosition (void);
-
    float GetZOffset (float distance);
 
    int CheckGrenades (void);
@@ -1077,7 +1062,7 @@ private:
    void AttachToUser (void);
    void CombatFight (void);
    bool IsWeaponBadInDistance (int weaponIndex, float distance);
-   bool DoFirePause (float distance, FireDelay *fireDelay);
+   bool DoFirePause (float distance);
    bool LookupEnemy (void);
    bool IsEnemyHiddenByRendering (edict_t *enemy);
    void FireWeapon (void);
@@ -1091,8 +1076,8 @@ private:
    bool IsShootableThruObstacle (const Vector &dest);
    bool IsShootableThruObstacleEx (const Vector &dest);
 
-   int GetNearbyEnemiesNearPosition (const Vector &origin, int radius);
-   int GetNearbyFriendsNearPosition (const Vector &origin, int radius);
+   int GetNearbyEnemiesNearPosition (const Vector &origin, float radius);
+   int GetNearbyFriendsNearPosition (const Vector &origin, float radius);
 
    void SelectWeaponByName (const char *name);
    void SelectWeaponbyNumber (int num);
@@ -1110,7 +1095,7 @@ private:
    void FindShortestPath (int srcIndex, int destIndex);
    void FindPath (int srcIndex, int destIndex, unsigned char pathType = 0);
    void DebugMsg (const char *format, ...);
-   void SecondThink (void);
+   void PeriodicThink (void);
 
 public:
    entvars_t *pev;
@@ -1127,7 +1112,9 @@ public:
    float m_timePeriodicUpdate; // time to per-second think
 
    bool m_isVIP; // bot is vip?
-   bool m_bIsDefendingTeam; // bot in defending team on this map
+
+   int m_numEnemiesLeft; // number of enemies alive left on map
+   int m_numFriendsLeft; // number of friend alive left on map
 
    int m_startAction; // team/class selection state
    bool m_notKilled; // has the player been killed or has he just respawned
@@ -1137,8 +1124,7 @@ public:
    int m_lastVoteKick; // last index
    int m_voteMap; // number of map to vote for
    int m_logotypeIndex; // index for logotype
-   int m_burstShotsFired; // number of bullets fired
-
+ 
    bool m_inBombZone; // bot in the bomb zone or not
    int m_buyState; // current Count in Buying
    float m_nextBuyTime; // next buy time
@@ -1245,7 +1231,7 @@ public:
    void VerifyBreakable (edict_t *touch);
 
    void RemoveCertainTask (TaskID id);
-   void StartTask (TaskID id, float desire, int data, float time, bool canContinue);
+   void PushTask (TaskID id, float desire, int data, float time, bool canContinue);
 
    void ResetTasks (void);
    TaskItem *GetTask (void);
@@ -1328,6 +1314,8 @@ public:
    int GetBotsNum (void);
 
    void Think (void);
+   void PeriodicThink (void);
+
    void Free (void);
    void Free (int index);
    void CheckAutoVacate (void);

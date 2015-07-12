@@ -153,11 +153,10 @@ void Waypoint::FindInRadius (Array <int> &radiusHolder, float radius, const Vect
 {
    for (int i = 0; i < g_numWaypoints; i++)
    {
-      if ((m_paths[i]->origin - origin).GetLength () <= radius)
+      if ((m_paths[i]->origin - origin).GetLength () < radius)
          radiusHolder.Push (i);
    }
 }
-
 void Waypoint::Add (int flags, const Vector &waypointOrigin)
 {
    if (IsEntityNull (g_hostEntity))
@@ -1515,7 +1514,7 @@ void Waypoint::Think (void)
    if (IsEntityNull (g_hostEntity))
       return; // this function is only valid on listenserver, and in waypoint enabled mode.
 
-   float nearestDistance = FLT_MAX;
+   float nearestDistance = 99999.0f;
    int nearestIndex = -1;
 
    // check if it's time to add jump waypoint
@@ -1573,7 +1572,7 @@ void Waypoint::Think (void)
    m_facingAtIndex = GetFacingIndex ();
 
    // reset the minimal distance changed before
-   nearestDistance = FLT_MAX;
+   nearestDistance = 99999.0f;
 
    // now iterate through all waypoints in a map, and draw required ones
    for (int i = 0; i < g_numWaypoints; i++)

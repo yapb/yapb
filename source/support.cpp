@@ -1272,7 +1272,7 @@ void SoundAttachToThreat (edict_t *ent, const char *sample, float volume)
 
    if (index < 0 || index >= GetMaxClients ())
    {
-      float nearestDistance = FLT_MAX;
+      float nearestDistance = 99999.0f;
 
       // loop through all players
       for (int i = 0; i < GetMaxClients (); i++)
@@ -1372,7 +1372,6 @@ void SoundSimulateUpdate (int playerIndex)
 
    edict_t *player = g_clients[playerIndex].ent;
 
-   float velocity = player->v.velocity.GetLength2D ();
    float hearDistance = 0.0;
    float timeSound = 0.0;
    float timeMaxSound = 0.5;
@@ -1411,7 +1410,7 @@ void SoundSimulateUpdate (int playerIndex)
       if (mp_footsteps.GetBool ())
       {
          // moves fast enough?
-         hearDistance = 1280.0 * (velocity / 240);
+         hearDistance = 1280.0 * (player->v.velocity.GetLength2D () / 240);
          timeSound = GetWorldTime () + 0.3;
          timeMaxSound = 0.3;
       }
