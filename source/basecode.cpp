@@ -2324,10 +2324,10 @@ void Bot::CheckRadioCommands (void)
                   }
                }
             }
-            else if (m_radioOrder != Chatter_GoingToPlantBomb)
+            else if (m_radioOrder != Chatter_GoingToPlantBomb && Random.Long (0, 100) < 65)
                RadioMessage (Radio_Negative);
          }
-         else if (m_radioOrder != Chatter_GoingToPlantBomb)
+         else if (m_radioOrder != Chatter_GoingToPlantBomb && Random.Long (0, 100) < 65)
             RadioMessage (Radio_Negative);
       }
       break;
@@ -4450,6 +4450,8 @@ void Bot::RunTask_PickupItem ()
    // find the distance to the item
    float itemDistance = (dest - pev->origin).GetLength ();
 
+   int id = 0;
+
    switch (m_pickupType)
    {
    case PICKUP_WEAPON:
@@ -4458,21 +4460,21 @@ void Bot::RunTask_PickupItem ()
       // near to weapon?
       if (itemDistance < 50)
       {
-         for (int i = 0; i < 7; i++)
+         for (id = 0; id < 7; id++)
          {
-            if (strcmp (g_weaponSelect[i].modelName, STRING (m_pickupItem->v.model) + 9) == 0)
+            if (strcmp (g_weaponSelect[id].modelName, STRING (m_pickupItem->v.model) + 9) == 0)
                break;
          }
 
-         if (i < 7)
+         if (id < 7)
          {
             // secondary weapon. i.e., pistol
             int weaponID = 0;
 
-            for (i = 0; i < 7; i++)
+            for (id = 0; id < 7; id++)
             {
-               if (pev->weapons & (1 << g_weaponSelect[i].id))
-                  weaponID = i;
+               if (pev->weapons & (1 << g_weaponSelect[id].id))
+                  weaponID = id;
             }
 
             if (weaponID > 0)
@@ -6063,7 +6065,7 @@ void Bot::EquipInBuyzone (int buyCount)
    bool checkBuyTime = false;
 
    if (mp_buytime.m_eptr != NULL)
-      checkBuyTime = (g_timeRoundStart + Random.Float (10.0, 20.0) + mp_buytime.GetFloat () < GetWorldTime ());
+      checkBuyTime = (g_timeRoundStart + Random.Float (10.0f, 20.0f) + mp_buytime.GetFloat () < GetWorldTime ());
 
    // if bot is in buy zone, try to buy ammo for this weapon...
    if (m_lastEquipTime + 15.0 < GetWorldTime () && m_inBuyZone && checkBuyTime && !g_bombPlanted && m_moneyAmount > g_botBuyEconomyTable[0])

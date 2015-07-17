@@ -71,7 +71,7 @@ namespace Math
    // Constant: MATH_PI
    // Mathematical PI value.
    //
-   const float MATH_PI = 3.1415926f;
+   const float MATH_PI = 3.141592653589793f;
 
    const float MATH_D2R = MATH_PI / 180.0f;
    const float MATH_R2D = 180.0f / MATH_PI;
