@@ -162,7 +162,7 @@ void DisplayMenuToClient (edict_t *ent, MenuText *menu)
       String tempText = String (menu->menuText);
       tempText.Replace ("\v", "\n");
 
-      char *text = g_localizer->TranslateInput (tempText.GetBuffer ());
+      char *text = locale->TranslateInput (tempText.GetBuffer ());
       tempText = String (text);
 
       // make menu looks best
@@ -173,7 +173,7 @@ void DisplayMenuToClient (edict_t *ent, MenuText *menu)
 
       while (strlen (text) >= 64)
       {
-         MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, g_netMsg->GetId (NETMSG_SHOWMENU), NULL, ent);
+         MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, netmsg->GetId (NETMSG_SHOWMENU), NULL, ent);
             WRITE_SHORT (menu->validSlots);
             WRITE_CHAR (-1);
             WRITE_BYTE (1);
@@ -186,7 +186,7 @@ void DisplayMenuToClient (edict_t *ent, MenuText *menu)
          text += 64;
       }
 
-      MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, g_netMsg->GetId (NETMSG_SHOWMENU), NULL, ent);
+      MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, netmsg->GetId (NETMSG_SHOWMENU), NULL, ent);
          WRITE_SHORT (menu->validSlots);
          WRITE_CHAR (-1);
          WRITE_BYTE (0);
@@ -197,7 +197,7 @@ void DisplayMenuToClient (edict_t *ent, MenuText *menu)
    }
    else
    {
-      MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, g_netMsg->GetId (NETMSG_SHOWMENU), NULL, ent);
+      MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, netmsg->GetId (NETMSG_SHOWMENU), NULL, ent);
          WRITE_SHORT (0);
          WRITE_CHAR (0);
          WRITE_BYTE (0);
@@ -287,14 +287,14 @@ void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex)
 void FreeLibraryMemory (void)
 {
    // this function free's all allocated memory
-   g_waypoint->Init (); // frees waypoint data
+   waypoint->Init (); // frees waypoint data
 
-   FOR_EACH_AE (g_localizer->m_langTab, it)
+   FOR_EACH_AE (locale->m_langTab, it)
    {
-      delete[] g_localizer->m_langTab[it].original;
-      delete[] g_localizer->m_langTab[it].translated;
+      delete[] locale->m_langTab[it].original;
+      delete[] locale->m_langTab[it].translated;
    }
-   g_localizer->m_langTab.RemoveAll ();
+   locale->m_langTab.RemoveAll ();
 
 
    delete [] g_experienceData;
@@ -738,18 +738,18 @@ void RoundInit (void)
    g_roundEnded = false;
 
    // check team economics
-   g_botManager->CheckTeamEconomics (TEAM_TF);
-   g_botManager->CheckTeamEconomics (TEAM_CF);
+   botMgr->CheckTeamEconomics (TEAM_TF);
+   botMgr->CheckTeamEconomics (TEAM_CF);
 
    for (int i = 0; i < GetMaxClients (); i++)
    {
-      if (g_botManager->GetBot (i))
-         g_botManager->GetBot (i)->NewRound ();
+      if (botMgr->GetBot (i))
+         botMgr->GetBot (i)->NewRound ();
 
       g_radioSelect[i] = 0;
    }
-   g_waypoint->SetBombPosition (true);
-   g_waypoint->ClearGoalScore ();
+   waypoint->SetBombPosition (true);
+   waypoint->ClearGoalScore ();
 
    g_bombSayString = false;
    g_timeBombPlanted = 0.0;
@@ -798,7 +798,7 @@ bool IsValidPlayer (edict_t *ent)
    if (ent->v.flags & FL_PROXY)
       return false;
 
-   if ((ent->v.flags & (FL_CLIENT | FL_FAKECLIENT)) || g_botManager->GetBot (ent) != NULL)
+   if ((ent->v.flags & (FL_CLIENT | FL_FAKECLIENT)) || botMgr->GetBot (ent) != NULL)
       return !IsNullString (STRING (ent->v.netname));
 
    return false;
@@ -817,7 +817,7 @@ bool IsPlayerVIP (edict_t *ent)
 
 bool IsValidBot (edict_t *ent)
 {
-   if (g_botManager->GetBot (ent) != NULL || (!IsEntityNull (ent) && (ent->v.flags & FL_FAKECLIENT)))
+   if (botMgr->GetBot (ent) != NULL || (!IsEntityNull (ent) && (ent->v.flags & FL_FAKECLIENT)))
       return true;
 
    return false;
@@ -836,7 +836,7 @@ void ServerPrint (const char *format, ...)
    char string[3072];
 
    va_start (ap, format);
-   vsprintf (string, g_localizer->TranslateInput (format), ap);
+   vsprintf (string, locale->TranslateInput (format), ap);
    va_end (ap);
 
    SERVER_PRINT (string);
@@ -849,7 +849,7 @@ void CenterPrint (const char *format, ...)
    char string[2048];
 
    va_start (ap, format);
-   vsprintf (string, g_localizer->TranslateInput (format), ap);
+   vsprintf (string, locale->TranslateInput (format), ap);
    va_end (ap);
 
    if (IsDedicatedServer ())
@@ -858,7 +858,7 @@ void CenterPrint (const char *format, ...)
       return;
    }
 
-   MESSAGE_BEGIN (MSG_BROADCAST, g_netMsg->GetId (NETMSG_TEXTMSG));
+   MESSAGE_BEGIN (MSG_BROADCAST, netmsg->GetId (NETMSG_TEXTMSG));
       WRITE_BYTE (HUD_PRINTCENTER);
       WRITE_STRING (FormatBuffer ("%s\n", string));
    MESSAGE_END ();
@@ -870,7 +870,7 @@ void ChartPrint (const char *format, ...)
    char string[2048];
 
    va_start (ap, format);
-   vsprintf (string, g_localizer->TranslateInput (format), ap);
+   vsprintf (string, locale->TranslateInput (format), ap);
    va_end (ap);
 
    if (IsDedicatedServer ())
@@ -880,7 +880,7 @@ void ChartPrint (const char *format, ...)
    }
    strcat (string, "\n");
 
-   MESSAGE_BEGIN (MSG_BROADCAST, g_netMsg->GetId (NETMSG_TEXTMSG));
+   MESSAGE_BEGIN (MSG_BROADCAST, netmsg->GetId (NETMSG_TEXTMSG));
       WRITE_BYTE (HUD_PRINTTALK);
       WRITE_STRING (string);
    MESSAGE_END ();
@@ -893,7 +893,7 @@ void ClientPrint (edict_t *ent, int dest, const char *format, ...)
    char string[2048];
 
    va_start (ap, format);
-   vsprintf (string, g_localizer->TranslateInput (format), ap);
+   vsprintf (string, locale->TranslateInput (format), ap);
    va_end (ap);
 
    if (IsEntityNull (ent) || ent == g_hostEntity)
@@ -1037,7 +1037,7 @@ void CheckWelcomeMessage (void)
       WRITE_SHORT (FixedUnsigned16 (2, 1 << 8));
       WRITE_SHORT (FixedUnsigned16 (6, 1 << 8));
       WRITE_SHORT (FixedUnsigned16 (0.1, 1 << 8));
-      WRITE_STRING (FormatBuffer ("\nServer is running YaPB v%s (Build: %u)\nDeveloped by %s\n\n%s", PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_AUTHOR, g_waypoint->GetInfo ()));
+      WRITE_STRING (FormatBuffer ("\nServer is running YaPB v%s (Build: %u)\nDeveloped by %s\n\n%s", PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_AUTHOR, waypoint->GetInfo ()));
       MESSAGE_END ();
 
       receiveTime = 0.0;
@@ -1113,7 +1113,7 @@ void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
    char buffer[512] = {0, }, levelString[32] = {0, }, logLine[1024] = {0, };
 
    va_start (ap, format);
-   vsprintf (buffer, g_localizer->TranslateInput (format), ap);
+   vsprintf (buffer, locale->TranslateInput (format), ap);
    va_end (ap);
 
    switch (logLevel)
@@ -1252,7 +1252,7 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
 
    // fill the holder
    if (needBot)
-      *pvHolder = reinterpret_cast <void *> (g_botManager->GetBot (survive));
+      *pvHolder = reinterpret_cast <void *> (botMgr->GetBot (survive));
    else
       *pvHolder = reinterpret_cast <void *> (survive);
 

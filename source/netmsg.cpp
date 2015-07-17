@@ -255,7 +255,7 @@ void NetworkMsg::Execute (void *p)
          break;
 
       case 2:
-         g_botManager->SetDeathMsgState (true);
+         botMgr->SetDeathMsgState (true);
 
          if (killerIndex != 0 && killerIndex != victimIndex)
          {
@@ -270,7 +270,7 @@ void NetworkMsg::Execute (void *p)
                // need to send congrats on well placed shot
                for (int i = 0; i < GetMaxClients (); i++)
                {
-                  Bot *bot = g_botManager->GetBot (i);
+                  Bot *bot = botMgr->GetBot (i);
 
                   if (bot != NULL && IsAlive (bot->GetEntity ()) && killer != bot->GetEntity () && bot->EntityIsVisible (victim->v.origin) && GetTeam (killer) == GetTeam (bot->GetEntity ()) && GetTeam (killer) != GetTeam (victim))
                   {
@@ -287,7 +287,7 @@ void NetworkMsg::Execute (void *p)
             // notice nearby to victim teammates, that attacker is near
             for (int i = 0; i < GetMaxClients (); i++)
             {
-               Bot *bot = g_botManager->GetBot (i);
+               Bot *bot = botMgr->GetBot (i);
 
                if (bot != NULL && IsAlive (bot->GetEntity ()) && GetTeam (bot->GetEntity ()) == GetTeam (victim) && IsVisible (killer->v.origin, bot->GetEntity ()) && IsEntityNull (bot->m_enemy) && GetTeam (killer) != GetTeam (victim))
                {
@@ -299,7 +299,7 @@ void NetworkMsg::Execute (void *p)
                }
             }
 
-            Bot *bot = g_botManager->GetBot (killer);
+            Bot *bot = botMgr->GetBot (killer);
 
             // is this message about a bot who killed somebody?
             if (bot != NULL)
@@ -307,7 +307,7 @@ void NetworkMsg::Execute (void *p)
 
             else // did a human kill a bot on his team?
             {
-               Bot *target = g_botManager->GetBot (victim);
+               Bot *target = botMgr->GetBot (victim);
 
                if (target != NULL)
                {
@@ -393,11 +393,11 @@ void NetworkMsg::Execute (void *p)
 
             if (FStrEq (PTR_TO_STR (p), "#CTs_Win"))
             {
-               g_botManager->SetLastWinner (TEAM_CF); // update last winner for economics
+               botMgr->SetLastWinner (TEAM_CF); // update last winner for economics
 
                if (yb_communication_type.GetInt () == 2)
                {
-                  Bot *bot = g_botManager->FindOneValidAliveBot ();
+                  Bot *bot = botMgr->FindOneValidAliveBot ();
 
                   if (bot != NULL && IsAlive (bot->GetEntity ()))
                      bot->HandleChatterMessage (PTR_TO_STR (p));
@@ -406,23 +406,23 @@ void NetworkMsg::Execute (void *p)
 
             if (FStrEq (PTR_TO_STR (p), "#Game_will_restart_in"))
             {
-               g_botManager->CheckTeamEconomics (TEAM_CF, true);
-               g_botManager->CheckTeamEconomics (TEAM_TF, true);
+               botMgr->CheckTeamEconomics (TEAM_CF, true);
+               botMgr->CheckTeamEconomics (TEAM_TF, true);
             }
 
             if (FStrEq (PTR_TO_STR (p), "#Terrorists_Win"))
             {
-               g_botManager->SetLastWinner (TEAM_TF); // update last winner for economics
+               botMgr->SetLastWinner (TEAM_TF); // update last winner for economics
 
                if (yb_communication_type.GetInt () == 2)
                {
-                  Bot *bot = g_botManager->FindOneValidAliveBot ();
+                  Bot *bot = botMgr->FindOneValidAliveBot ();
 
                   if (bot != NULL && IsAlive (bot->GetEntity ()))
                      bot->HandleChatterMessage (PTR_TO_STR (p));
                }
             }
-            g_waypoint->SetBombPosition (true);
+            waypoint->SetBombPosition (true);
          }
          else if (!g_bombPlanted && FStrEq (PTR_TO_STR (p), "#Bomb_Planted"))
          {
@@ -431,7 +431,7 @@ void NetworkMsg::Execute (void *p)
       
             for (int i = 0; i < GetMaxClients (); i++)
             {
-               Bot *bot = g_botManager->GetBot (i);
+               Bot *bot = botMgr->GetBot (i);
 
                if (bot != NULL && IsAlive (bot->GetEntity ()))
                {
@@ -442,7 +442,7 @@ void NetworkMsg::Execute (void *p)
                      bot->ChatterMessage (Chatter_WhereIsTheBomb);
                }
             }
-            g_waypoint->SetBombPosition ();
+            waypoint->SetBombPosition ();
          }
          else if (m_bot != NULL && FStrEq (PTR_TO_STR (p), "#Switch_To_BurstFire"))
             m_bot->m_weaponBurstMode = BM_ON;

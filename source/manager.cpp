@@ -650,7 +650,7 @@ Bot *BotManager::GetHighestFragsBot (int team)
    // search bots in this team
    for (int i = 0; i < GetMaxClients (); i++)
    {
-      highFragBot = g_botManager->GetBot (i);
+      highFragBot = botMgr->GetBot (i);
 
       if (highFragBot != NULL && IsAlive (highFragBot->GetEntity ()) && GetTeam (highFragBot->GetEntity ()) == team)
       {
@@ -1051,7 +1051,6 @@ void Bot::NewRound (void)
    m_grenadeCheckTime = 0.0;
    m_isUsingGrenade = false;
 
-   m_breakableCheckTime = 0.0f;
    m_blindButton = 0;
    m_blindTime = 0.0;
    m_jumpTime = 0.0;
@@ -1166,8 +1165,8 @@ void Bot::Kick (void)
    CenterPrint ("Bot '%s' kicked", STRING (pev->netname));
 
    // balances quota
-   if (g_botManager->GetBotsNum () - 1 < yb_quota.GetInt ())
-      yb_quota.SetInt (g_botManager->GetBotsNum () - 1);
+   if (botMgr->GetBotsNum () - 1 < yb_quota.GetInt ())
+      yb_quota.SetInt (botMgr->GetBotsNum () - 1);
 }
 
 void Bot::StartGame (void)

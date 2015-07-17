@@ -174,8 +174,8 @@ void Waypoint::Add (int flags, const Vector &waypointOrigin)
    if (waypointOrigin == nullvec)
       newOrigin = g_hostEntity->v.origin;
 
-   if (g_botManager->GetBotsNum () > 0)
-      g_botManager->RemoveAll ();
+   if (botMgr->GetBotsNum () > 0)
+      botMgr->RemoveAll ();
 
    g_waypointsChanged = true;
 
@@ -459,8 +459,8 @@ void Waypoint::Delete (void)
    if (g_numWaypoints < 1)
       return;
 
-   if (g_botManager->GetBotsNum () > 0)
-      g_botManager->RemoveAll ();
+   if (botMgr->GetBotsNum () > 0)
+      botMgr->RemoveAll ();
 
    int index = FindNearest (g_hostEntity->v.origin, 50.0);
 
@@ -1210,7 +1210,7 @@ bool Waypoint::Load (void)
    InitVisibilityTab ();
    InitExperienceTab ();
 
-   g_botManager->InitQuota ();
+   botMgr->InitQuota ();
 
    extern ConVar yb_debug_goal;
    yb_debug_goal.SetInt (-1);
@@ -2658,7 +2658,7 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
       recvPosition++;
    }
 
-   File fp (g_waypoint->CheckSubfolderFile (), "wb");
+   File fp (waypoint->CheckSubfolderFile (), "wb");
 
    if (!fp.IsValid ())
    {

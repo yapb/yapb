@@ -358,7 +358,7 @@ bool Bot::LookupEnemy (void)
             if (!(g_clients[j].flags & CF_USED) || !(g_clients[j].flags & CF_ALIVE) || g_clients[j].team != m_team || g_clients[j].ent == GetEntity ())
                continue;
 
-            Bot *friendBot = g_botManager->GetBot (g_clients[j].ent);
+            Bot *friendBot = botMgr->GetBot (g_clients[j].ent);
 
             if (friendBot != NULL)
             {
@@ -1211,7 +1211,7 @@ void Bot::CombatFight (void)
          if (!IsVisible (m_enemy->v.origin, GetEntity ()) && !IsVisible (m_enemy->v.origin + Vector (0, 0, -enemyHalfHeight), GetEntity ()))
             shouldDuck = false;
 
-         if (shouldDuck && GetTaskId () != TASK_SEEKCOVER && GetTaskId () != TASK_HUNTENEMY && (m_visibility & VISIBLE_BODY) && !(m_visibility & VISIBLE_OTHER) && g_waypoint->IsDuckVisible (m_currentWaypointIndex, g_waypoint->FindNearest (m_enemy->v.origin)))
+         if (shouldDuck && GetTaskId () != TASK_SEEKCOVER && GetTaskId () != TASK_HUNTENEMY && (m_visibility & VISIBLE_BODY) && !(m_visibility & VISIBLE_OTHER) && waypoint->IsDuckVisible (m_currentWaypointIndex, waypoint->FindNearest (m_enemy->v.origin)))
             m_duckTime = GetWorldTime () + 0.5f;
 
          m_moveSpeed = 0.0;
@@ -1576,7 +1576,7 @@ void Bot::CheckReload (void)
       return;
    }
 
-   m_isReloading = false;    // update reloading status
+   m_isReloading = false; // update reloading status
    m_reloadCheckTime = GetWorldTime () + 3.0;
 
    if (m_reloadState != RELOAD_NONE)

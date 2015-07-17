@@ -962,6 +962,28 @@ private:
    bool CanJumpUp (const Vector &normal);
    bool CantMoveForward (const Vector &normal, TraceResult *tr);
 
+   // split RunTask into RunTask_* functions
+   void RunTask_Normal (void);
+   void RunTask_Spray (void);
+   void RunTask_HuntEnemy (void);
+   void RunTask_SeekCover (void);
+   void RunTask_Attack (void);
+   void RunTask_Pause (void);
+   void RunTask_Blinded (void);
+   void RunTask_Camp (void);
+   void RunTask_Hide (void);
+   void RunTask_MoveToPos (void);
+   void RunTask_PlantBomb (void);
+   void RunTask_DefuseBomb (void);
+   void RunTask_FollowUser (void);
+   void RunTask_Throw_HE (void);
+   void RunTask_Throw_FL (void);
+   void RunTask_Throw_SG (void);
+   void RunTask_DoubleJump (void);
+   void RunTask_EscapeFromBomb (void);
+   void RunTask_PickupItem (void);
+   void RunTask_ShootBreakable (void);
+
 #ifdef DEAD_CODE
    bool CanStrafeRight (TraceResult *tr);
    bool CanStrafeLeft (TraceResult *tr);
@@ -1035,6 +1057,7 @@ private:
    bool ReactOnEnemy (void);
    void ResetCollideState (void);
    void SetConditions (void);
+   void UpdateEmotions (void);
    void SetStrafeSpeed (const Vector &moveDir, float strafeSpeed);
    void StartGame (void);
    void TaskComplete (void);
@@ -1140,7 +1163,6 @@ public:
    bool m_canChooseAimDirection; // can choose aiming direction
    float m_turnAwayFromFlashbang; // bot turned away from flashbang
    
-   float m_breakableCheckTime;
    float m_blindTime; // time when bot is blinded
    float m_blindMoveSpeed; // mad speeds when bot is blind
    float m_blindSidemoveSpeed; // mad side move speeds when bot is blind
@@ -1233,7 +1255,9 @@ public:
    void RemoveCertainTask (TaskID id);
    void PushTask (TaskID id, float desire, int data, float time, bool canContinue);
 
+   void ApplyTaskFilters (void);
    void ResetTasks (void);
+
    TaskItem *GetTask (void);
    inline TaskID GetTaskId (void) { return GetTask ()->id; };
 
@@ -1563,11 +1587,13 @@ public:
    void PushRegisteredConVarsToEngine (bool gameVars = false);
 };
 
-#define g_netMsg NetworkMsg::GetObject ()
-#define g_botManager BotManager::GetObject ()
-#define g_localizer Localizer::GetObject ()
-#define g_convarWrapper ConVarWrapper::GetObject ()
-#define g_waypoint Waypoint::GetObject ()
+
+// expose bot globals
+#define netmsg NetworkMsg::GetObject ()
+#define locale Localizer::GetObject ()
+#define convars ConVarWrapper::GetObject ()
+#define waypoint Waypoint::GetObject ()
+#define botMgr BotManager::GetObject ()
 
 // simplify access for console variables
 class ConVar
@@ -1580,7 +1606,7 @@ public:
    {
       m_eptr = NULL;
 
-      g_convarWrapper->RegisterVariable (name, initval, type, this);
+      convars->RegisterVariable (name, initval, type, this);
    }
 
    inline bool GetBool(void)
