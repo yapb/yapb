@@ -706,7 +706,6 @@ struct Client
 
    float hearingDistance; // distance this sound is heared
    float timeSoundLasting; // time sound is played/heared
-   float maxTimeSoundLasting; // max time sound is played/heared (to divide the difference between that above one and the current one)
 };
 
 // experience data hold in memory while playing
@@ -1010,7 +1009,7 @@ private:
 
    bool DoWaypointNav (void);
    bool EnemyIsThreat (void);
-   void FacePosition (void);
+   void UpdateLookAngles (void);
    void SetIdealReactionTimes (bool actual = false);
    bool IsRestricted (int weaponIndex);
    bool IsRestrictedAMX (int weaponIndex);
@@ -1178,6 +1177,7 @@ public:
    float m_agressionLevel; // dynamic aggression level (in game)
    float m_fearLevel; // dynamic fear level (in game)
    float m_nextEmotionUpdate; // next time to sanitize emotions
+   float m_thinkFps; // skip some frames in bot thinking
 
    int m_actMessageIndex; // current processed message
    int m_pushMessageIndex; // offset for next pushed message
@@ -1240,6 +1240,7 @@ public:
    inline Vector Center (void) { return (pev->absmax + pev->absmin) * 0.5; };
    inline Vector EyePosition (void) { return pev->origin + pev->view_ofs; };
 
+   void ThinkMain (void);
    void Think (void);
    void NewRound (void);
    void EquipInBuyzone (int buyCount);
@@ -1704,7 +1705,7 @@ extern void DrawLine (edict_t *ent, const Vector &start, const Vector &end, int 
 extern void DrawArrow (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, int red, int green, int blue, int brightness, int speed, int life);
 extern void DisplayMenuToClient (edict_t *ent, MenuText *menu);
 extern void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex);
-extern void SoundAttachToThreat (edict_t *ent, const char *sample, float volume);
+extern void SoundAttachToClients (edict_t *ent, const char *sample, float volume);
 extern void SoundSimulateUpdate (int playerIndex);
 
 // very global convars

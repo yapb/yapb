@@ -1259,7 +1259,7 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
    return true;
 }
 
-void SoundAttachToThreat (edict_t *ent, const char *sample, float volume)
+void SoundAttachToClients (edict_t *ent, const char *sample, float volume)
 {
    // this function called by the sound hooking code (in emit_sound) enters the played sound into
    // the array associated with the entity
@@ -1290,73 +1290,57 @@ void SoundAttachToThreat (edict_t *ent, const char *sample, float volume)
          }
       }
    }
+   Client *client = &g_clients[index];
 
    if (strncmp ("player/bhit_flesh", sample, 17) == 0 || strncmp ("player/headshot", sample, 15) == 0)
    {
       // hit/fall sound?
-      g_clients[index].hearingDistance = 768.0 * volume;
-      g_clients[index].timeSoundLasting = GetWorldTime () + 0.5;
-      g_clients[index].maxTimeSoundLasting = 0.5;
-      g_clients[index].soundPosition = origin;
+      client->hearingDistance = 768.0 * volume;
+      client->timeSoundLasting = GetWorldTime () + 0.5;
+      client->soundPosition = origin;
    }
    else if (strncmp ("items/gunpickup", sample, 15) == 0)
    {
       // weapon pickup?
-      g_clients[index].hearingDistance = 768.0 * volume;
-      g_clients[index].timeSoundLasting = GetWorldTime () + 0.5;
-      g_clients[index].maxTimeSoundLasting = 0.5;
-      g_clients[index].soundPosition = origin;
+      client->hearingDistance = 768.0 * volume;
+      client->timeSoundLasting = GetWorldTime () + 0.5;
+      client->soundPosition = origin;
    }
    else if (strncmp ("weapons/zoom", sample, 12) == 0)
    {
       // sniper zooming?
-      g_clients[index].hearingDistance = 512.0 * volume;
-      g_clients[index].timeSoundLasting = GetWorldTime () + 0.1;
-      g_clients[index].maxTimeSoundLasting = 0.1;
-      g_clients[index].soundPosition = origin;
+      client->hearingDistance = 512.0 * volume;
+      client->timeSoundLasting = GetWorldTime () + 0.1;
+      client->soundPosition = origin;
    }
    else if (strncmp ("items/9mmclip", sample, 13) == 0)
    {
       // ammo pickup?
-      g_clients[index].hearingDistance = 512.0 * volume;
-      g_clients[index].timeSoundLasting = GetWorldTime () + 0.1;
-      g_clients[index].maxTimeSoundLasting = 0.1;
-      g_clients[index].soundPosition = origin;
+      client->hearingDistance = 512.0 * volume;
+      client->timeSoundLasting = GetWorldTime () + 0.1;
+      client->soundPosition = origin;
    }
    else if (strncmp ("hostage/hos", sample, 11) == 0)
    {
       // CT used hostage?
-      g_clients[index].hearingDistance = 1024.0 * volume;
-      g_clients[index].timeSoundLasting = GetWorldTime () + 5.0;
-      g_clients[index].maxTimeSoundLasting = 0.5;
-      g_clients[index].soundPosition = origin;
+      client->hearingDistance = 1024.0 * volume;
+      client->timeSoundLasting = GetWorldTime () + 5.0;
+      client->soundPosition = origin;
    }
    else if (strncmp ("debris/bustmetal", sample, 16) == 0 || strncmp ("debris/bustglass", sample, 16) == 0)
    {
       // broke something?
-      g_clients[index].hearingDistance = 1024.0 * volume;
-      g_clients[index].timeSoundLasting = GetWorldTime () + 2.0;
-      g_clients[index].maxTimeSoundLasting = 2.0;
-      g_clients[index].soundPosition = origin;
+      client->hearingDistance = 1024.0 * volume;
+      client->timeSoundLasting = GetWorldTime () + 2.0;
+      client->soundPosition = origin;
    }
    else if (strncmp ("doors/doormove", sample, 14) == 0)
    {
       // someone opened a door
-      g_clients[index].hearingDistance = 1024.0 * volume;
-      g_clients[index].timeSoundLasting = GetWorldTime () + 3.0;
-      g_clients[index].maxTimeSoundLasting = 3.0;
-      g_clients[index].soundPosition = origin;
+      client->hearingDistance = 1024.0 * volume;
+      client->timeSoundLasting = GetWorldTime () + 3.0;
+      client->soundPosition = origin;
    }
-#if 0
-   else if (strncmp ("weapons/reload",  sample, 14) == 0)
-   {
-      // reloading ?
-      g_clients[index].hearingDistance = 512.0 * volume;
-      g_clients[index].timeSoundLasting = GetWorldTime () + 0.5;
-      g_clients[index].maxTimeSoundLasting = 0.5;
-      g_clients[index].soundPosition = origin;
-   }
-#endif
 }
 
 void SoundSimulateUpdate (int playerIndex)
@@ -1364,43 +1348,36 @@ void SoundSimulateUpdate (int playerIndex)
    // this function tries to simulate playing of sounds to let the bots hear sounds which aren't
    // captured through server sound hooking
 
-   InternalAssert (playerIndex >= 0);
-   InternalAssert (playerIndex < GetMaxClients ());
 
    if (playerIndex < 0 || playerIndex >= GetMaxClients ())
       return; // reliability check
 
-   edict_t *player = g_clients[playerIndex].ent;
+   Client *client = &g_clients[playerIndex];
 
-   float hearDistance = 0.0;
-   float timeSound = 0.0;
-   float timeMaxSound = 0.5;
+   float hearDistance = 0.0f;
+   float timeSound = 0.0f;
 
-   if (player->v.oldbuttons & IN_ATTACK) // pressed attack button?
+   if (client->ent->v.oldbuttons & IN_ATTACK) // pressed attack button?
    {
       hearDistance = 3072.0;
-      timeSound = GetWorldTime () + 0.3;
-      timeMaxSound = 0.3;
+      timeSound = GetWorldTime () + 0.3f;
    }
-   else if (player->v.oldbuttons & IN_USE) // pressed used button?
+   else if (client->ent->v.oldbuttons & IN_USE) // pressed used button?
    {
       hearDistance = 512.0;
-      timeSound = GetWorldTime () + 0.5;
-      timeMaxSound = 0.5;
+      timeSound = GetWorldTime () + 0.5f;
    }
-   else if (player->v.oldbuttons & IN_RELOAD) // pressed reload button?
+   else if (client->ent->v.oldbuttons & IN_RELOAD) // pressed reload button?
    {
       hearDistance = 512.0;
-      timeSound = GetWorldTime () + 0.5;
-      timeMaxSound = 0.5;
+      timeSound = GetWorldTime () + 0.5f;
    }
-   else if (player->v.movetype == MOVETYPE_FLY) // uses ladder?
+   else if (client->ent->v.movetype == MOVETYPE_FLY) // uses ladder?
    {
-      if (fabs (player->v.velocity.z) > 50.0)
+      if (fabsf (client->ent->v.velocity.z) > 50.0f)
       {
-         hearDistance = 1024.0;
-         timeSound = GetWorldTime () + 0.3;
-         timeMaxSound = 0.3;
+         hearDistance = 1024.0f;
+         timeSound = GetWorldTime () + 0.3f;
       }
    }
    else
@@ -1410,9 +1387,8 @@ void SoundSimulateUpdate (int playerIndex)
       if (mp_footsteps.GetBool ())
       {
          // moves fast enough?
-         hearDistance = 1280.0 * (player->v.velocity.GetLength2D () / 240);
-         timeSound = GetWorldTime () + 0.3;
-         timeMaxSound = 0.3;
+         hearDistance = 1280.0f * (client->ent->v.velocity.GetLength2D () / 260.0f);
+         timeSound = GetWorldTime () + 0.3f;
       }
    }
 
@@ -1420,28 +1396,22 @@ void SoundSimulateUpdate (int playerIndex)
       return; // didn't issue sound?
 
    // some sound already associated
-   if (g_clients[playerIndex].timeSoundLasting > GetWorldTime ())
+   if (client->timeSoundLasting > GetWorldTime ())
    {
-      // new sound louder (bigger range) than old one ?
-      if (g_clients[playerIndex].maxTimeSoundLasting <= 0.0)
-         g_clients[playerIndex].maxTimeSoundLasting = 0.5;
-
-      if (g_clients[playerIndex].hearingDistance * (g_clients[playerIndex].timeSoundLasting - GetWorldTime ()) / g_clients[playerIndex].maxTimeSoundLasting <= hearDistance)
+      if (client->hearingDistance <= hearDistance)
       {
          // override it with new
-         g_clients[playerIndex].hearingDistance = hearDistance;
-         g_clients[playerIndex].timeSoundLasting = timeSound;
-         g_clients[playerIndex].maxTimeSoundLasting = timeMaxSound;
-         g_clients[playerIndex].soundPosition = player->v.origin;
+         client->hearingDistance = hearDistance;
+         client->timeSoundLasting = timeSound;
+         client->soundPosition = client->ent->v.origin;
       }
    }
    else
    {
       // just remember it
-      g_clients[playerIndex].hearingDistance = hearDistance;
-      g_clients[playerIndex].timeSoundLasting = timeSound;
-      g_clients[playerIndex].maxTimeSoundLasting = timeMaxSound;
-      g_clients[playerIndex].soundPosition = player->v.origin;
+      client->hearingDistance = hearDistance;
+      client->timeSoundLasting = timeSound;
+      client->soundPosition = client->ent->v.origin;
    }
 }
 

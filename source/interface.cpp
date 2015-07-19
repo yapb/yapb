@@ -2304,7 +2304,7 @@ void pfnEmitSound (edict_t *entity, int channel, const char *sample, float volum
    // SoundAttachToThreat() to bring the sound to the ears of the bots. Since bots have no client DLL
    // to handle this for them, such a job has to be done manually.
 
-   SoundAttachToThreat (entity, sample, volume);
+   SoundAttachToClients (entity, sample, volume);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);

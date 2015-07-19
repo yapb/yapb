@@ -490,7 +490,7 @@ const Vector &Bot::GetAimPosition (void)
       }
       m_lastEnemyOrigin = targetOrigin;
    }
-   const Vector &velocity = UsesSniper () ? nullvec : ((1.0f * m_frameInterval * m_enemy->v.velocity - 1.0 * m_frameInterval * pev->velocity) * m_frameInterval).Get2D ();
+   const Vector &velocity = UsesSniper () ? nullvec : 1.0f * m_frameInterval * (m_enemy->v.velocity - pev->velocity);
 
    if (m_difficulty < 3 && randomize != nullvec)
    {
@@ -504,10 +504,13 @@ const Vector &Bot::GetAimPosition (void)
          divOffs = divOffs / 500;
 
       // randomize the target position
-      m_enemyOrigin = divOffs * randomize + velocity;
+      m_enemyOrigin = divOffs * randomize;
    }
    else
-      m_enemyOrigin = targetOrigin + velocity;
+      m_enemyOrigin = targetOrigin;
+
+   if (distance >= 256.0f)
+      m_enemyOrigin += velocity;
 
    return m_enemyOrigin;
 }
@@ -891,7 +894,7 @@ WeaponSelectEnd:
          m_navTimeset = GetWorldTime ();
       }
    }
-   else if (m_difficulty <= 3 && UsesZoomableRifle () && m_zoomCheckTime < GetWorldTime ()) // else is the bot holding a zoomable rifle?
+   else if (m_difficulty < 4 && UsesZoomableRifle () && m_zoomCheckTime < GetWorldTime ()) // else is the bot holding a zoomable rifle?
    {
       if (distance > 800 && pev->fov >= 90) // should the bot switch to zoomed mode?
          pev->button |= IN_ATTACK2;
@@ -963,7 +966,6 @@ WeaponSelectEnd:
       {
          pev->button |= IN_ATTACK;
 
-         // m_shootTime = GetWorldTime () + baseDelay + Random.Float (minDelay, maxDelay);
          m_shootTime = GetWorldTime () + Random.Float (0.15f, 0.35f);
          m_zoomCheckTime = GetWorldTime () - 0.09f;
       }
@@ -1149,7 +1151,7 @@ void Bot::CombatFight (void)
          }
       }
 
-      if ((m_difficulty >= 1 && m_fightStyle == 0) || ((pev->button & IN_RELOAD) || m_isReloading) || (UsesPistol () && distance < 400.0f))
+      if (m_fightStyle == 0 || ((pev->button & IN_RELOAD) || m_isReloading) || (UsesPistol () && distance < 400.0f))
       {
          if (m_strafeSetTime < GetWorldTime ())
          {

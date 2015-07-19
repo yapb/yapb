@@ -101,7 +101,7 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
          personality = PERSONALITY_NORMAL;
       else
       {
-         if (Random.Long (0, 100) > 50)
+         if (Random.Long (0, 100) < 65)
             personality = PERSONALITY_RUSHER;
          else
             personality = PERSONALITY_CAREFUL;
@@ -237,7 +237,7 @@ void BotManager::Think (void)
    for (int i = 0; i < GetMaxClients (); i++)
    {
       if (m_bots[i] != NULL)
-         m_bots[i]->Think ();
+         m_bots[i]->ThinkMain ();
    }
 }
 

@@ -1504,7 +1504,7 @@ float gfunctionKillsT (int currentIndex, int)
    }
 
    if (current->flags & FLAG_CROUCH)
-      cost *= 1.5;
+      cost *= 1.5f;
 
    return cost;
 }
@@ -1647,7 +1647,6 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
       AddLogEntry (true, LL_ERROR, "Pathfinder destination path index not valid (%d)", destIndex);
       return;
    }
-
    DeleteSearchNodes ();
 
    m_chosenGoalIndex = srcIndex;
@@ -3117,7 +3116,7 @@ int Bot::GetAimingWaypoint (void)
 {
    // find a good waypoint to look at when camping
 
-   int count = 0, indeces[3];
+   int count = 0, indices[3];
    float distTab[3];
    uint16 visibility[3];
 
@@ -3135,7 +3134,7 @@ int Bot::GetAimingWaypoint (void)
 
       if (count < 3)
       {
-         indeces[count] = i;
+         indices[count] = i;
 
          distTab[count] = (pev->origin - path->origin).GetLengthSquared ();
          visibility[count] = path->vis.crouch + path->vis.stand;
@@ -3151,7 +3150,7 @@ int Bot::GetAimingWaypoint (void)
          {
             if (visBits >= visibility[j] && distance > distTab[j])
             {
-               indeces[j] = i;
+               indices[j] = i;
 
                distTab[j] = distance;
                visibility[j] = visBits;
@@ -3164,17 +3163,17 @@ int Bot::GetAimingWaypoint (void)
    count--;
 
    if (count >= 0)
-      return indeces[Random.Long (0, count)];
+      return indices[Random.Long (0, count)];
 
    return Random.Long (0, g_numWaypoints - 1);
 }
 
-void Bot::FacePosition (void)
+void Bot::UpdateLookAngles (void)
 {
    // adjust all body and view angles to face an absolute vector
    Vector direction = (m_lookAt - EyePosition ()).ToAngles ();
    direction = direction + pev->punchangle * (m_difficulty * 25) / 100.0;
-   direction.x *= -1.0; // invert for engine
+   direction.x *= -1.0f; // invert for engine
 
    Vector deviation = (direction - pev->v_angle);
 
@@ -3216,15 +3215,15 @@ void Bot::FacePosition (void)
    else if (aimMethod == 3)
    {
 #if defined (NDEBUG)
-      Vector springStiffness (15.0f, 15.0f, 0.0f);
+      Vector springStiffness (13.0f, 13.0f, 0.0f);
       Vector damperCoefficient (0.22f, 0.22f, 0.0f);
 
-      Vector influence (0.26f, 0.18f, 0.0f);
+      Vector influence (0.25f, 0.17f, 0.0f);
       Vector randomization (2.0f, 0.18f, 0.0f);
 
-      const float noTargetRatio = 0.6f;
-      const float offsetDelay = 0.5f;
-      const float targetRatio = 5.0f;
+      const float noTargetRatio = 0.3f;
+      const float offsetDelay = 1.2f;
+      const float targetRatio = 0.8f;
 #else
       Vector springStiffness (yb_aim_spring_stiffness_x.GetFloat (), yb_aim_spring_stiffness_y.GetFloat (), 0);
       Vector damperCoefficient (yb_aim_damper_coefficient_x.GetFloat (), yb_aim_damper_coefficient_y.GetFloat (), 0);
@@ -3337,7 +3336,11 @@ void Bot::FacePosition (void)
       m_aimSpeed.y += m_aimSpeed.x * influence.x;
 
       // move the aim cursor
-      pev->v_angle = pev->v_angle + m_frameInterval * Vector (m_aimSpeed.x, m_aimSpeed.y, 0);
+      if (m_difficulty == 4 && (m_aimFlags & AIM_ENEMY) && (m_wantsToFire || UsesSniper ()))
+         pev->v_angle = direction;
+      else
+         pev->v_angle = pev->v_angle + m_frameInterval * Vector (m_aimSpeed.x, m_aimSpeed.y, 0.0f);
+
       pev->v_angle.ClampAngles ();
    }
 
@@ -3368,7 +3371,7 @@ int Bot::FindPlantedBomb (void)
 {
    // this function tries to find planted c4 on the defuse scenario map and returns nearest to it waypoint
 
-   if ((m_team != TEAM_TF) || !(g_mapType & MAP_DE))
+   if (m_team != TEAM_TF || !(g_mapType & MAP_DE))
       return -1; // don't search for bomb if the player is CT, or it's not defusing bomb
 
    edict_t *bombEntity = NULL; // temporaly pointer to bomb
@@ -3380,7 +3383,7 @@ int Bot::FindPlantedBomb (void)
       {
          int nearestIndex = waypoint->FindNearest (GetEntityOrigin (bombEntity));
 
-         if ((nearestIndex >= 0) && (nearestIndex < g_numWaypoints))
+         if (nearestIndex >= 0 && nearestIndex < g_numWaypoints)
             return nearestIndex;
 
          break;
