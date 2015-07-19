@@ -237,7 +237,7 @@ void BotManager::Think (void)
    for (int i = 0; i < GetMaxClients (); i++)
    {
       if (m_bots[i] != NULL)
-         m_bots[i]->ThinkMain ();
+         m_bots[i]->Think ();
    }
 }
 
@@ -1044,7 +1044,6 @@ void Bot::NewRound (void)
 
    m_reloadCheckTime = 0.0;
    m_shootTime = GetWorldTime ();
-   m_playerTargetTime = GetWorldTime ();
    m_firePause = 0.0;
    m_timeLastFired = 0.0;
 

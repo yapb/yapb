@@ -9,29 +9,7 @@
 
 #include <core.h>
 
-ConVar yb_aim_method ("yb_aim_method", "3", VT_NOSERVER);
-
-// any user ever altered this stuff? left this for debug-only builds
-#if !defined (NDEBUG)
-
-ConVar yb_aim_damper_coefficient_x ("yb_aim_damper_coefficient_x", "0.22", VT_NOSERVER);
-ConVar yb_aim_damper_coefficient_y ("yb_aim_damper_coefficient_y", "0.22", VT_NOSERVER);
-
-ConVar yb_aim_deviation_x ("yb_aim_deviation_x", "2.0", VT_NOSERVER);
-ConVar yb_aim_deviation_y ("yb_aim_deviation_y", "1.0", VT_NOSERVER);
-
-ConVar yb_aim_influence_x_on_y ("yb_aim_influence_x_on_y", "0.26", VT_NOSERVER);
-ConVar yb_aim_influence_y_on_x ("yb_aim_influence_y_on_x", "0.18", VT_NOSERVER);
-
-ConVar yb_aim_notarget_slowdown_ratio ("yb_aim_notarget_slowdown_ratio", "0.6", VT_NOSERVER);
-ConVar yb_aim_offset_delay ("yb_aim_offset_delay", "0.5", VT_NOSERVER);
-
-ConVar yb_aim_spring_stiffness_x ("yb_aim_spring_stiffness_x", "15.0", VT_NOSERVER);
-ConVar yb_aim_spring_stiffness_y ("yb_aim_spring_stiffness_y", "14.0", VT_NOSERVER);
-
-ConVar yb_aim_target_anticipation_ratio ("yb_aim_target_anticipation_ratio", "5.0", VT_NOSERVER);
-
-#endif
+ConVar yb_whose_your_daddy ("yb_whose_your_daddy", "1", VT_NOSERVER);
 
 int Bot::FindGoal (void)
 {
@@ -3168,191 +3146,80 @@ int Bot::GetAimingWaypoint (void)
    return Random.Long (0, g_numWaypoints - 1);
 }
 
+void Bot::UpdateBodyAngles (void)
+{
+   // set the body angles to point the gun correctly
+   pev->angles.x = -pev->v_angle.x * (1.0f / 3.0f);
+   pev->angles.y = pev->v_angle.y;
+
+   pev->angles.ClampAngles ();
+}
+
 void Bot::UpdateLookAngles (void)
 {
    // adjust all body and view angles to face an absolute vector
-   Vector direction = (m_lookAt - EyePosition ()).ToAngles ();
-   direction = direction + pev->punchangle * (m_difficulty * 25) / 100.0;
+   Vector direction = (m_lookAt - EyePosition ()).ToAngles () + pev->punchangle * (m_difficulty * 25) / 100.0;
    direction.x *= -1.0f; // invert for engine
 
-   Vector deviation = (direction - pev->v_angle);
-
    direction.ClampAngles ();
-   deviation.ClampAngles ();
 
-   int aimMethod = yb_aim_method.GetInt ();
-
-   if (aimMethod < 1 || aimMethod > 3)
-      aimMethod = 3;
-
-   if (aimMethod == 1)
+   // this is what makes bot almost godlike (got it from sypb)
+   if (m_difficulty == 4 && (m_aimFlags & AIM_ENEMY) && (m_wantsToFire || UsesSniper ()) && yb_whose_your_daddy.GetBool ())
+   {
       pev->v_angle = direction;
-   else if (aimMethod == 2)
-   {
-      float turnSkill = static_cast <float> (0.05 * (m_difficulty * 25)) + 0.5;
-      float aimSpeed = 0.17 + turnSkill * 0.06;
-      float frameCompensation = g_pGlobals->frametime * 1000 * 0.01;
+      UpdateBodyAngles ();
 
-      if ((m_aimFlags & AIM_ENEMY) && !(m_aimFlags & AIM_ENTITY))
-         aimSpeed *= 1.75;
-
-      float momentum = (1.0 - aimSpeed) * 0.5;
-
-      pev->pitch_speed = ((pev->pitch_speed * momentum) + aimSpeed * deviation.x * (1.0 - momentum)) * frameCompensation;
-      pev->yaw_speed = ((pev->yaw_speed * momentum) + aimSpeed * deviation.y * (1.0 - momentum)) * frameCompensation;
-
-      if (m_difficulty <= 2)
-      {
-         // influence of y movement on x axis, based on skill (less influence than x on y since it's
-         // easier and more natural for the bot to "move its mouse" horizontally than vertically)
-         pev->pitch_speed += pev->yaw_speed / (10.0 * turnSkill);
-         pev->yaw_speed += pev->pitch_speed / (10.0 * turnSkill);
-      }
-
-      pev->v_angle.x += pev->pitch_speed; // change pitch angles
-      pev->v_angle.y += pev->yaw_speed; // change yaw angles
+      return;
    }
-   else if (aimMethod == 3)
+   bool needPreciseAim = (m_aimFlags & (AIM_ENEMY | AIM_ENTITY | AIM_GRENADE | AIM_LAST_ENEMY | AIM_CAMP) || GetTaskId () == TASK_SHOOTBREAKABLE);
+
+   float accelerate = needPreciseAim ? 3600.0f : 3000.0f;
+   float stiffness = needPreciseAim ? 300.0f : 200.0f;
+   float damping = needPreciseAim ? 20.0f : 25.0f;
+
+   m_idealAngles = pev->v_angle;
+
+   float angleDiffYaw = AngleNormalize (direction.y - m_idealAngles.y);
+   float angleDiffPitch = AngleNormalize (direction.x - m_idealAngles.x);
+
+   if (angleDiffYaw < 1.0f && angleDiffYaw > -1.0f)
    {
-#if defined (NDEBUG)
-      Vector springStiffness (13.0f, 13.0f, 0.0f);
-      Vector damperCoefficient (0.22f, 0.22f, 0.0f);
-
-      Vector influence (0.25f, 0.17f, 0.0f);
-      Vector randomization (2.0f, 0.18f, 0.0f);
-
-      const float noTargetRatio = 0.3f;
-      const float offsetDelay = 1.2f;
-      const float targetRatio = 0.8f;
-#else
-      Vector springStiffness (yb_aim_spring_stiffness_x.GetFloat (), yb_aim_spring_stiffness_y.GetFloat (), 0);
-      Vector damperCoefficient (yb_aim_damper_coefficient_x.GetFloat (), yb_aim_damper_coefficient_y.GetFloat (), 0);
-      Vector influence (yb_aim_influence_x_on_y.GetFloat (), yb_aim_influence_y_on_x.GetFloat (), 0);
-      Vector randomization (yb_aim_deviation_x.GetFloat (), yb_aim_deviation_y.GetFloat (), 0);
-
-      const float noTargetRatio = yb_aim_notarget_slowdown_ratio.GetFloat ();
-      const float offsetDelay = yb_aim_offset_delay.GetFloat ();
-      const float targetRatio = yb_aim_target_anticipation_ratio.GetFloat ();
-#endif
-
-      Vector stiffness = nullvec;
-      Vector randomize = nullvec;
-
-      m_idealAngles = direction.Get2D ();
-      m_targetOriginAngularSpeed.ClampAngles ();
-      m_idealAngles.ClampAngles ();
-
-      if (m_difficulty == 4)
-      {
-         influence = influence * ((100 - (m_difficulty * 25)) / 100.f);
-         randomization = randomization * ((100 - (m_difficulty * 25)) / 100.f);
-      }
-
-      if (m_aimFlags & (AIM_ENEMY | AIM_ENTITY | AIM_GRENADE | AIM_LAST_ENEMY) || GetTaskId () == TASK_SHOOTBREAKABLE)
-      {
-         m_playerTargetTime = GetWorldTime ();
-         m_randomizedIdealAngles = m_idealAngles;
-
-         if (IsValidPlayer (m_enemy))
-         {
-            m_targetOriginAngularSpeed = ((m_enemyOrigin - pev->origin + 1.5 * m_frameInterval * (1.0 * m_enemy->v.velocity) - 0.0 * g_pGlobals->frametime * pev->velocity).ToAngles () - (m_enemyOrigin - pev->origin).ToAngles ()) * 0.45f * targetRatio * static_cast <float> ((m_difficulty * 25) / 100);
-
-            if (m_angularDeviation.GetLength () < 5.0)
-               springStiffness = (5.0 - m_angularDeviation.GetLength ()) * 0.25 * static_cast <float> ((m_difficulty * 25) / 100) * springStiffness + springStiffness;
-
-            m_targetOriginAngularSpeed.x = -m_targetOriginAngularSpeed.x;
-
-            if ((pev->fov < 90) && (m_angularDeviation.GetLength () >= 5.0))
-               springStiffness = springStiffness * 2;
-
-            m_targetOriginAngularSpeed.ClampAngles ();
-         }
-         else
-            m_targetOriginAngularSpeed = nullvec;
-
-
-         if (m_difficulty >= 3)
-            stiffness = springStiffness;
-         else
-            stiffness = springStiffness * (0.2 + (m_difficulty * 25) / 125.0);
-      }
-      else
-      {
-         // is it time for bot to randomize the aim direction again (more often where moving) ?
-         if (m_randomizeAnglesTime < GetWorldTime () && ((pev->velocity.GetLength () > 1.0 && m_angularDeviation.GetLength () < 5.0) || m_angularDeviation.GetLength () < 1.0))
-         {
-            // is the bot standing still ?
-            if (pev->velocity.GetLength () < 1.0)
-               randomize = randomization * 0.2; // randomize less
-            else
-               randomize = randomization;
-
-            // randomize targeted location a bit (slightly towards the ground)
-            m_randomizedIdealAngles = m_idealAngles + Vector (Random.Float (-randomize.x * 0.5, randomize.x * 1.5), Random.Float (-randomize.y, randomize.y), 0);
-
-            // set next time to do this
-            m_randomizeAnglesTime = GetWorldTime () + Random.Float (0.4f, offsetDelay);
-         }
-         float stiffnessMultiplier = noTargetRatio;
-
-         // take in account whether the bot was targeting someone in the last N seconds
-         if (GetWorldTime () - (m_playerTargetTime + offsetDelay) < noTargetRatio * 10.0)
-         {
-            stiffnessMultiplier = 1.0 - (GetWorldTime () - m_timeLastFired) * 0.1;
-
-            // don't allow that stiffness multiplier less than zero
-            if (stiffnessMultiplier < 0.0)
-               stiffnessMultiplier = 0.5;
-         }
-
-         // also take in account the remaining deviation (slow down the aiming in the last 10°)
-         if (m_difficulty < 3 && (m_angularDeviation.GetLength () < 10.0))
-            stiffnessMultiplier *= m_angularDeviation.GetLength () * 0.1;
-
-         // slow down even more if we are not moving
-         if (m_difficulty < 3 && pev->velocity.GetLength () < 1.0 && GetTaskId () != TASK_CAMP && GetTaskId () != TASK_ATTACK)
-            stiffnessMultiplier *= 0.5;
-
-         // but don't allow getting below a certain value
-         if (stiffnessMultiplier < 0.35)
-            stiffnessMultiplier = 0.35;
-
-         stiffness = springStiffness * stiffnessMultiplier; // increasingly slow aim
-
-         // no target means no angular speed to take in account
-         m_targetOriginAngularSpeed = nullvec;
-      }
-      // compute randomized angle deviation this time
-      m_angularDeviation = m_randomizedIdealAngles + m_targetOriginAngularSpeed - pev->v_angle;
-      m_angularDeviation.ClampAngles ();
-
-      // spring/damper model aiming
-      m_aimSpeed.x = (stiffness.x * m_angularDeviation.x) - (damperCoefficient.x * m_aimSpeed.x);
-      m_aimSpeed.y = (stiffness.y * m_angularDeviation.y) - (damperCoefficient.y * m_aimSpeed.y);
-
-      // influence of y movement on x axis and vice versa (less influence than x on y since it's
-      // easier and more natural for the bot to "move its mouse" horizontally than vertically)
-      m_aimSpeed.x += m_aimSpeed.y * influence.y;
-      m_aimSpeed.y += m_aimSpeed.x * influence.x;
-
-      // move the aim cursor
-      if (m_difficulty == 4 && (m_aimFlags & AIM_ENEMY) && (m_wantsToFire || UsesSniper ()))
-         pev->v_angle = direction;
-      else
-         pev->v_angle = pev->v_angle + m_frameInterval * Vector (m_aimSpeed.x, m_aimSpeed.y, 0.0f);
-
-      pev->v_angle.ClampAngles ();
+      m_lookYawVel = 0.0f;
+      m_idealAngles.y = direction.y;
    }
+   else
+   {
+      float accel = stiffness * angleDiffYaw - damping * m_lookYawVel;
 
-   // set the body angles to point the gun correctly
-   pev->angles.x = -pev->v_angle.x * (1.0 / 3.0);
-   pev->angles.y = pev->v_angle.y;
+      if (accel > accelerate)
+         accel = accelerate;
+      else if (accel < -accelerate)
+         accel = -accelerate;
 
+      m_lookYawVel += m_frameInterval * accel;
+      m_idealAngles.y += m_frameInterval * m_lookYawVel;
+   }
+   float accel = 2.0f * stiffness * angleDiffPitch - damping * m_lookPitchVel;
+
+   if (accel > accelerate)
+      accel = accelerate;
+   else if (accel < -accelerate)
+      accel = -accelerate;
+
+   m_lookPitchVel += m_frameInterval * accel;
+   m_idealAngles.x += m_frameInterval * m_lookPitchVel;
+
+   if (m_idealAngles.x < -89.0f)
+      m_idealAngles.x = -89.0f;
+   else if (m_idealAngles.x > 89.0f)
+      m_idealAngles.x = 89.0f;
+
+   pev->v_angle = m_idealAngles;
    pev->v_angle.ClampAngles ();
-   pev->angles.ClampAngles ();
 
-   pev->angles.z = pev->v_angle.z = 0.0; // ignore Z component
+   UpdateBodyAngles ();
 }
+
 
 void Bot::SetStrafeSpeed (const Vector &moveDir, float strafeSpeed)
 {

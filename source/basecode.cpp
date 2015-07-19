@@ -5292,9 +5292,8 @@ void Bot::TakeBlinded (const Vector &fade, int alpha)
    // this function gets called by network message handler, when screenfade message get's send
    // it's used to make bot blind froumd the grenade.
 
-   extern ConVar yb_aim_method;
 
-   if (fade.x != 255 || fade.y != 255 || fade.z != 255 || alpha <= 200 || yb_aim_method.GetInt () == 1)
+   if (fade.x != 255 || fade.y != 255 || fade.z != 255 || alpha <= 200)
       return;
 
    m_enemy = NULL;

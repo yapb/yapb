@@ -939,16 +939,12 @@ private:
 
    Vector m_liftTravelPos; // lift travel position
    Vector m_moveAngles; // bot move angles
-   bool m_moveToGoal; // bot currently moving to goal??
-
    Vector m_idealAngles; // angle wanted
-   Vector m_randomizedIdealAngles; // angle wanted with noise
-   Vector m_angularDeviation; // angular deviation from current to ideal angles
-   Vector m_aimSpeed; // aim speed calculated
-   Vector m_targetOriginAngularSpeed; // target/enemy angular speed
 
-   float m_randomizeAnglesTime; // time last randomized location
-   float m_playerTargetTime; // time last targeting
+   float m_lookYawVel; // look yaw velocity
+   float m_lookPitchVel; // look pitch velocity
+
+   bool m_moveToGoal; // bot currently moving to goal??
 
    void InstantChatterMessage (int type);
    void BotAI (void);
@@ -1010,6 +1006,7 @@ private:
    bool DoWaypointNav (void);
    bool EnemyIsThreat (void);
    void UpdateLookAngles (void);
+   void UpdateBodyAngles (void);
    void SetIdealReactionTimes (bool actual = false);
    bool IsRestricted (int weaponIndex);
    bool IsRestrictedAMX (int weaponIndex);
