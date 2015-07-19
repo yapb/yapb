@@ -2998,7 +2998,7 @@ void Bot::PeriodicThink (void)
    // clear enemy far away
    if (m_lastEnemyOrigin != nullvec && !IsEntityNull (m_lastEnemy) && (pev->origin - m_lastEnemyOrigin).GetLength () >= 1600.0)
    {
-      m_lastEnemy = nullptr;
+      m_lastEnemy = NULL;
       m_lastEnemyOrigin = nullvec;
    }
    m_timePeriodicUpdate = GetWorldTime () + 0.25f;
