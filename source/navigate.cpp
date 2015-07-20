@@ -428,7 +428,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
          else if (IsInWater ())
             bits |= (PROBE_JUMP | PROBE_STRAFE);
          else
-            bits |= (PROBE_STRAFE | (Random.Long (0, 20) > (cantMoveForward ? 8 : 5) ? PROBE_JUMP : 0) | Random.Long (0, 100) > (cantMoveForward ? 20 : 5) ? PROBE_DUCK : 0));
+            bits |= (PROBE_STRAFE | (Random.Long (0, 20) > (cantMoveForward ? 8 : 5) ? PROBE_JUMP : 0) | (Random.Long (0, 100) > (cantMoveForward ? 20 : 5) ? PROBE_DUCK : 0));
 
          // collision check allowed if not flying through the air
          if (IsOnFloor () || IsOnLadder () || IsInWater ())
