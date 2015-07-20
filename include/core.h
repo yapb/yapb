@@ -1052,6 +1052,7 @@ private:
    bool RateGroundWeapon (edict_t *ent);
    bool ReactOnEnemy (void);
    void ResetCollideState (void);
+   void IgnoreCollisionShortly (void);
    void SetConditions (void);
    void UpdateEmotions (void);
    void SetStrafeSpeed (const Vector &moveDir, float strafeSpeed);

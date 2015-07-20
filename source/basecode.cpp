@@ -2088,7 +2088,7 @@ void Bot::PushTask (TaskID id, float desire, int data, float time, bool resume)
    m_tasks.Push (item);
 
    DeleteSearchNodes ();
-   m_lastCollTime = GetWorldTime () + 0.5;
+   IgnoreCollisionShortly ();
 
    // leader bot?
    if (m_isLeader && GetTaskId () == TASK_SEEKCOVER)
@@ -2833,7 +2833,7 @@ void Bot::ChooseAimDirection (void)
 
       if (changePredictedEnemy)
       {
-         m_lookAt = waypoint->GetPath (GetAimingWaypoint (m_lastEnemyOrigin))->origin + pev->view_ofs;
+         m_lookAt = waypoint->GetPath (GetAimingWaypoint (m_lastEnemyOrigin))->origin;
          m_camp = m_lookAt;
 
          m_timeNextTracking = GetWorldTime () + 2.0f;
@@ -2855,12 +2855,12 @@ void Bot::ChooseAimDirection (void)
          if (m_team == TEAM_TF)
          {
             if ((g_experienceData + (index * g_numWaypoints) + index)->team0DangerIndex != -1)
-               m_lookAt = waypoint->GetPath ((g_experienceData + (index * g_numWaypoints) + index)->team0DangerIndex)->origin + pev->view_ofs;
+               m_lookAt = waypoint->GetPath ((g_experienceData + (index * g_numWaypoints) + index)->team0DangerIndex)->origin;
          }
          else
          {
             if ((g_experienceData + (index * g_numWaypoints) + index)->team1DangerIndex != -1)
-               m_lookAt = waypoint->GetPath ((g_experienceData + (index * g_numWaypoints) + index)->team1DangerIndex)->origin + pev->view_ofs;
+               m_lookAt = waypoint->GetPath ((g_experienceData + (index * g_numWaypoints) + index)->team1DangerIndex)->origin;
          }
       }
    }
@@ -3257,8 +3257,7 @@ void Bot::RunTask_Spray (void)
    m_moveSpeed = 0.0f;
    m_strafeSpeed = 0.0f;
 
-   m_isStuck = false;
-   m_lastCollTime = GetWorldTime () + 0.5f;
+   IgnoreCollisionShortly ();
 }
 
 void Bot::RunTask_HuntEnemy (void)
@@ -3423,8 +3422,7 @@ void Bot::RunTask_Attack (void)
 
    if (!IsEntityNull (m_enemy))
    {
-      ResetCollideState ();
-      m_lastCollTime = GetWorldTime () + 0.5f;
+      IgnoreCollisionShortly ();
 
       if (IsOnLadder ())
       {
@@ -4050,7 +4048,9 @@ void Bot::RunTask_Throw_HE (void)
    m_isUsingGrenade = true;
    m_checkTerrain = false;
 
-   if ((pev->origin - dest).GetLengthSquared () < 400 * 400)
+   IgnoreCollisionShortly ();
+
+   if ((pev->origin - dest).GetLengthSquared () < GET_SQUARE (400.0f))
    {
       // heck, I don't wanna blow up myself
       m_grenadeCheckTime = GetWorldTime () + MAX_GRENADE_TIMER;
@@ -4124,6 +4124,8 @@ void Bot::RunTask_Throw_FL (void)
    m_isUsingGrenade = true;
    m_checkTerrain = false;
 
+   IgnoreCollisionShortly ();
+
    m_grenade = CheckThrow (EyePosition (), dest);
 
    if (m_grenade.GetLengthSquared () < 100)
@@ -4182,6 +4184,8 @@ void Bot::RunTask_Throw_SG (void)
 
    m_checkTerrain = false;
    m_isUsingGrenade = true;
+
+   IgnoreCollisionShortly ();
 
    Vector src = m_lastEnemyOrigin - pev->velocity;
 
@@ -4525,7 +4529,7 @@ void Bot::RunTask_PickupItem ()
                }
             }
          }
-         m_lastCollTime = GetWorldTime () + 0.1; // also don't consider being stuck
+         IgnoreCollisionShortly (); // also don't consider being stuck
       }
       break;
 
@@ -5227,9 +5231,9 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits)
    m_lastDamageType = bits;
    CollectGoalExperience (damage, m_team);
 
-   if (m_seeEnemyTime + 4.0f < GetWorldTime () && IsValidPlayer (inflictor))
+   if (IsValidPlayer (inflictor))
    {
-      if (GetTeam (inflictor) == m_team && yb_tkpunish.GetBool () && !botMgr->GetBot (inflictor))
+      if (m_seeEnemyTime + 4.0f < GetWorldTime () && yb_tkpunish.GetBool () && GetTeam (inflictor) == m_team && !botMgr->GetBot (inflictor))
       {
          // alright, die you teamkiller!!!
          m_actualReactionTime = 0.0f;

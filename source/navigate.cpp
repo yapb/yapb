@@ -294,15 +294,22 @@ void Bot::ResetCollideState (void)
    m_collisionState = COLLISION_NOTDECICED;
    m_collStateIndex = 0;
 
-   m_isStuck = false;
-
    for (int i = 0; i < MAX_COLLIDE_MOVES; i++)
       m_collideMoves[i] = 0;
 }
 
+void Bot::IgnoreCollisionShortly (void)
+{
+   ResetCollideState ();
+
+   m_lastCollTime = GetWorldTime () + 0.35f;
+   m_isStuck = false;
+   m_checkTerrain = false;
+}
+
 void Bot::CheckCloseAvoidance (const Vector &dirNormal)
 {
-   if (m_seeEnemyTime + 1.0f < GetWorldTime () || g_timeRoundStart + 10.0f < GetWorldTime ())
+   if (m_seeEnemyTime + 1.5f < GetWorldTime ())
       return;
 
    edict_t *nearest = NULL;
@@ -327,7 +334,7 @@ void Bot::CheckCloseAvoidance (const Vector &dirNormal)
       }
    }
 
-   if (playerCount < 3 && IsValidPlayer (nearest))
+   if (playerCount < 4 && IsValidPlayer (nearest))
    {
       MakeVectors (m_moveAngles); // use our movement angles
 
@@ -343,16 +350,14 @@ void Bot::CheckCloseAvoidance (const Vector &dirNormal)
       if ((nearest->v.origin - moved).GetLength2D () <= 48.0 || (nearestDistance <= 56.0 && nextFrameDistance < nearestDistance))
       {
          // to start strafing, we have to first figure out if the target is on the left side or right side
-         Vector dirToPoint = (pev->origin - nearest->v.origin).Get2D ();
+         const Vector &dirToPoint = (pev->origin - nearest->v.origin).Get2D ();
 
-         if ((dirToPoint | g_pGlobals->v_right.Get2D ()) > 0.0)
+         if ((dirToPoint | g_pGlobals->v_right.Get2D ()) > 0.0f)
             SetStrafeSpeed (dirNormal, pev->maxspeed);
          else
             SetStrafeSpeed (dirNormal, -pev->maxspeed);
 
-         ResetCollideState ();
-
-         if (nearestDistance < 56.0 && (dirToPoint | g_pGlobals->v_forward.Get2D ()) < 0.0)
+         if (nearestDistance < 56.0 && (dirToPoint | g_pGlobals->v_forward.Get2D ()) < 0.0f)
             m_moveSpeed = -pev->maxspeed;
       }
    }
@@ -371,18 +376,18 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
 
    // Standing still, no need to check?
    // FIXME: doesn't care for ladder movement (handled separately) should be included in some way
-   if ((m_moveSpeed >= 10 || m_strafeSpeed >= 10) && m_lastCollTime < GetWorldTime ())
+   if ((m_moveSpeed >= 10 || m_strafeSpeed >= 10) && m_lastCollTime < GetWorldTime () && m_seeEnemyTime + 0.8f < GetWorldTime () && GetTaskId () != TASK_ATTACK)
    {
       bool cantMoveForward = false;
 
-      if (movedDistance < 2.0 && m_prevSpeed >= 1.0) // didn't we move enough previously?
+      if (movedDistance < 2.0f && m_prevSpeed >= 20.0f) // didn't we move enough previously?
       {
          // Then consider being stuck
          m_prevTime = GetWorldTime ();
          m_isStuck = true;
 
          if (m_firstCollideTime == 0.0)
-            m_firstCollideTime = GetWorldTime () + 0.2;
+            m_firstCollideTime = GetWorldTime () + 0.2f;
       }
       else // not stuck yet
       {
@@ -390,7 +395,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
          if ((cantMoveForward = CantMoveForward (dirNormal, &tr)) && !IsOnLadder ())
          {
             if (m_firstCollideTime == 0.0)
-               m_firstCollideTime = GetWorldTime () + 0.2;
+               m_firstCollideTime = GetWorldTime () + 0.2f;
 
             else if (m_firstCollideTime <= GetWorldTime ())
                m_isStuck = true;
@@ -423,7 +428,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
          else if (IsInWater ())
             bits |= (PROBE_JUMP | PROBE_STRAFE);
          else
-            bits |= ((Random.Long (0, 20) > (cantMoveForward ? 10 : 7) ? PROBE_JUMP : 0) | PROBE_STRAFE | PROBE_DUCK);
+            bits |= (PROBE_STRAFE | (Random.Long (0, 20) > (cantMoveForward ? 8 : 5) ? PROBE_JUMP : 0) | Random.Long (0, 100) > (cantMoveForward ? 20 : 5) ? PROBE_DUCK : 0));
 
          // collision check allowed if not flying through the air
          if (IsOnFloor () || IsOnLadder () || IsInWater ())
@@ -432,70 +437,10 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
             int i = 0;
 
             // first 4 entries hold the possible collision states
-            state[i++] = COLLISION_JUMP;
-            state[i++] = COLLISION_DUCK;
             state[i++] = COLLISION_STRAFELEFT;
             state[i++] = COLLISION_STRAFERIGHT;
-
-            // now weight all possible states
-            if (bits & PROBE_JUMP)
-            {
-               state[i] = 0;
-
-               if (CanJumpUp (dirNormal))
-                  state[i] += 10;
-
-               if (m_destOrigin.z >= pev->origin.z + 18.0)
-                  state[i] += 5;
-
-               if (EntityIsVisible (m_destOrigin))
-               {
-                  MakeVectors (m_moveAngles);
-
-                  src = EyePosition ();
-                  src = src + g_pGlobals->v_right * 15;
-
-                  TraceLine (src, m_destOrigin, true, true, GetEntity (), &tr);
-
-                  if (tr.flFraction >= 1.0)
-                  {
-                     src = EyePosition ();
-                     src = src - g_pGlobals->v_right * 15;
-
-                     TraceLine (src, m_destOrigin, true, true, GetEntity (), &tr);
-
-                     if (tr.flFraction >= 1.0)
-                        state[i] += 5;
-                  }
-               }
-               if (pev->flags & FL_DUCKING)
-                  src = pev->origin;
-               else
-                  src = pev->origin + Vector (0, 0, -17);
-
-               dst = src + dirNormal * 30;
-               TraceLine (src, dst, true, true, GetEntity (), &tr);
-
-               if (tr.flFraction != 1.0)
-                  state[i] += 10;
-            }
-            else
-               state[i] = 0;
-            i++;
-
-            if (bits & PROBE_DUCK)
-            {
-               state[i] = 0;
-
-               if (CanDuckUnder (dirNormal))
-                  state[i] += 10;
-
-               if ((m_destOrigin.z + 36.0 <= pev->origin.z) && EntityIsVisible (m_destOrigin))
-                  state[i] += 5;
-            }
-            else
-               state[i] = 0;
-            i++;
+            state[i++] = COLLISION_JUMP;
+            state[i++] = COLLISION_DUCK;
 
             if (bits & PROBE_STRAFE)
             {
@@ -556,6 +501,65 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
                   state[i] -= 5;
             }
 
+            // now weight all possible states
+            if (bits & PROBE_JUMP)
+            {
+               state[i] = 0;
+
+               if (CanJumpUp (dirNormal))
+                  state[i] += 10;
+
+               if (m_destOrigin.z >= pev->origin.z + 18.0)
+                  state[i] += 5;
+
+               if (EntityIsVisible (m_destOrigin))
+               {
+                  MakeVectors (m_moveAngles);
+
+                  src = EyePosition ();
+                  src = src + g_pGlobals->v_right * 15;
+
+                  TraceLine (src, m_destOrigin, true, true, GetEntity (), &tr);
+
+                  if (tr.flFraction >= 1.0)
+                  {
+                     src = EyePosition ();
+                     src = src - g_pGlobals->v_right * 15;
+
+                     TraceLine (src, m_destOrigin, true, true, GetEntity (), &tr);
+
+                     if (tr.flFraction >= 1.0)
+                        state[i] += 5;
+                  }
+               }
+               if (pev->flags & FL_DUCKING)
+                  src = pev->origin;
+               else
+                  src = pev->origin + Vector (0, 0, -17);
+
+               dst = src + dirNormal * 30;
+               TraceLine (src, dst, true, true, GetEntity (), &tr);
+
+               if (tr.flFraction != 1.0)
+                  state[i] += 10;
+            }
+            else
+               state[i] = 0;
+            i++;
+
+            if (bits & PROBE_DUCK)
+            {
+               state[i] = 0;
+
+               if (CanDuckUnder (dirNormal))
+                  state[i] += 10;
+
+               if ((m_destOrigin.z + 36.0 <= pev->origin.z) && EntityIsVisible (m_destOrigin))
+                  state[i] += 5;
+            }
+            else
+               state[i] = 0;
+            i++;
  
             // weighted all possible moves, now sort them to start with most probable
             bool isSorting = false;
@@ -1096,7 +1100,7 @@ bool Bot::DoWaypointNav (void)
       // if the door is near enough...
       if ((GetEntityOrigin (tr.pHit) - pev->origin).GetLengthSquared () < 2500)
       {
-         m_lastCollTime = GetWorldTime () + 0.5; // don't consider being stuck
+         IgnoreCollisionShortly (); // don't consider being stuck
 
          if (Random.Long (1, 100) < 50)
             MDLL_Use (tr.pHit, GetEntity ()); // also 'use' the door randomly
@@ -3277,7 +3281,10 @@ bool Bot::IsPointOccupied (int index)
       {
          int occupyId = GetShootingConeDeviation (bot->GetEntity (), &pev->origin) >= 0.7f ? bot->m_prevWptIndex[0] : m_currentWaypointIndex;
 
-         if (occupyId == index || bot->GetTask ()->data == index || (waypoint->GetPath (occupyId)->origin - waypoint->GetPath (index)->origin).GetLengthSquared () < 4096.0f)
+         // length check
+         float length = (waypoint->GetPath (occupyId)->origin - waypoint->GetPath (index)->origin).GetLength ();
+
+         if (occupyId == index || bot->GetTask ()->data == index || length < 96.0f || length < waypoint->GetPath (occupyId)->radius * 0.5f)
             return true;
       }
    }

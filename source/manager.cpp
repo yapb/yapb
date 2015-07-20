@@ -795,14 +795,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    m_lastCommandTime = GetWorldTime () - 0.1f;
    m_frameInterval = GetWorldTime ();
    m_msecValRest = 0.0f;
-
    m_timePeriodicUpdate = 0.0f;
-
-   bot->v.idealpitch = bot->v.v_angle.x;
-   bot->v.ideal_yaw = bot->v.v_angle.y;
-
-   bot->v.yaw_speed = Random.Float (m_difficulty * 40, m_difficulty * 45);
-   bot->v.pitch_speed = Random.Float (m_difficulty * 40, m_difficulty * 45);
 
    switch (personality)
    {
@@ -1098,7 +1091,6 @@ void Bot::NewRound (void)
    m_timeLogoSpray = GetWorldTime () + Random.Float (0.5, 2.0);
    m_spawnTime = GetWorldTime ();
    m_lastChatTime = GetWorldTime ();
-   pev->v_angle.y = pev->ideal_yaw;
 
    m_timeCamping = 0;
    m_campDirection = 0;

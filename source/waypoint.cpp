@@ -953,7 +953,7 @@ void Waypoint::InitExperienceTab (void)
             delete [] experienceLoad;
          }
          else
-            AddLogEntry (true, LL_ERROR, "Experience data damaged (wrong version, or not for this map)");
+            AddLogEntry (true, LL_WARNING, "Experience data damaged (wrong version, or not for this map)");
       }
    }
 }
@@ -1018,7 +1018,7 @@ void Waypoint::InitVisibilityTab (void)
       m_visibilityIndex = 0;
       m_redoneVisibility = true;
 
-      AddLogEntry (true, LL_WARNING, "Vistable damaged (wrong version, or not for this map), vistable will be rebuilded.");
+      AddLogEntry (true, LL_WARNING, "Visibility table damaged (wrong version, or not for this map), vistable will be rebuilded.");
       fp.Close ();
 
       return;
@@ -2160,7 +2160,7 @@ bool Waypoint::LoadPathMatrix (void)
 
    if (num != g_numWaypoints)
    {
-      AddLogEntry (true, LL_DEFAULT, "Wrong number of points (pmt:%d/cur:%d). Matrix will be rebuilded", num, g_numWaypoints);
+      AddLogEntry (true, LL_WARNING, "Pathmatrix damaged (wrong version, or not for this map). Pathmatrix will be rebuilt.");
       fp.Close ();
 
       return false;
