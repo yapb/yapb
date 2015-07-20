@@ -601,7 +601,7 @@ const int WEAPON_PRIMARY = ((1 << WEAPON_XM1014) | (1 <<WEAPON_M3) | (1 << WEAPO
 const int WEAPON_SECONDARY = ((1 << WEAPON_P228) | (1 << WEAPON_ELITE) | (1 << WEAPON_USP) | (1 << WEAPON_GLOCK) | (1 << WEAPON_DEAGLE) | (1 << WEAPON_FIVESEVEN));
 
 // maximum collide moves
-const int MAX_COLLIDE_MOVES = 4;
+const int MAX_COLLIDE_MOVES = 3;
 
 // this structure links waypoints returned from pathfinder
 struct PathNode

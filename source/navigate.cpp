@@ -428,7 +428,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
          else if (IsInWater ())
             bits |= (PROBE_JUMP | PROBE_STRAFE);
          else
-            bits |= (PROBE_STRAFE | (Random.Long (0, 20) > (cantMoveForward ? 8 : 5) ? PROBE_JUMP : 0) | (Random.Long (0, 100) > (cantMoveForward ? 20 : 5) ? PROBE_DUCK : 0));
+            bits |= (PROBE_STRAFE | (Random.Long (0, 20) > (cantMoveForward ? 10 : 5) ? PROBE_JUMP : 0));
 
          // collision check allowed if not flying through the air
          if (IsOnFloor () || IsOnLadder () || IsInWater ())
@@ -440,7 +440,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
             state[i++] = COLLISION_STRAFELEFT;
             state[i++] = COLLISION_STRAFERIGHT;
             state[i++] = COLLISION_JUMP;
-            state[i++] = COLLISION_DUCK;
+           // state[i++] = COLLISION_DUCK;
 
             if (bits & PROBE_STRAFE)
             {
@@ -3282,9 +3282,9 @@ bool Bot::IsPointOccupied (int index)
          int occupyId = GetShootingConeDeviation (bot->GetEntity (), &pev->origin) >= 0.7f ? bot->m_prevWptIndex[0] : m_currentWaypointIndex;
 
          // length check
-         float length = (waypoint->GetPath (occupyId)->origin - waypoint->GetPath (index)->origin).GetLength ();
+         float length = (waypoint->GetPath (occupyId)->origin - waypoint->GetPath (index)->origin).GetLengthSquared ();
 
-         if (occupyId == index || bot->GetTask ()->data == index || length < 96.0f || length < waypoint->GetPath (occupyId)->radius * 0.5f)
+         if (occupyId == index || bot->GetTask ()->data == index || length < GET_SQUARE (64.0f))
             return true;
       }
    }
