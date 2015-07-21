@@ -1185,7 +1185,7 @@ void Bot::CombatFight (void)
          else
          {
             if (!CheckWallOnRight ())
-               m_strafeSpeed = -pev->maxspeed;
+               m_strafeSpeed = pev->maxspeed;
             else
             {
                m_combatStrafeDir ^= 1;
