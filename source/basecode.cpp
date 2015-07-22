@@ -5814,22 +5814,22 @@ float Bot::GetEstimatedReachTime (void)
       float distance = (waypoint->GetPath (m_prevWptIndex[0])->origin - m_currentPath->origin).GetLength ();
 
       // caclulate estimated time
-      if (pev->maxspeed <= 0.0)
-         estimatedTime = 4.0 * distance / 240.0;
+      if (pev->maxspeed <= 0.0f)
+         estimatedTime = 4.0f * distance / 240.0f;
       else
-         estimatedTime = 4.0 * distance / pev->maxspeed;
+         estimatedTime = 4.0f * distance / pev->maxspeed;
 
       // check for special waypoints, that can slowdown our movement
       if ((m_currentPath->flags & FLAG_CROUCH) || (m_currentPath->flags & FLAG_LADDER) || (pev->button & IN_DUCK))
-         estimatedTime *= 2.0;
+         estimatedTime *= 3.0f;
 
       // check for too low values
       if (estimatedTime < 1.0f)
          estimatedTime = 1.0f;
 
       // check for too high values
-      if (estimatedTime > 5.0f)
-         estimatedTime = 5.0f;
+      if (estimatedTime > 8.0f)
+         estimatedTime = 8.0f;
    }
    return estimatedTime;
 }
