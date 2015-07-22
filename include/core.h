@@ -848,6 +848,7 @@ private:
    float m_firstCollideTime; // time of first collision
    float m_probeTime; // time of probing different moves
    float m_lastCollTime; // time until next collision check
+   float m_jumpStateTimer; // timer for jumping collision check
 
    unsigned int m_collisionProbeBits; // bits of possible collision moves
    unsigned int m_collideMoves[MAX_COLLIDE_MOVES]; // sorted array of movements
