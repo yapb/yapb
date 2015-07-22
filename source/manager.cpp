@@ -237,7 +237,7 @@ void BotManager::Think (void)
    for (int i = 0; i < GetMaxClients (); i++)
    {
       if (m_bots[i] != NULL)
-         m_bots[i]->Think ();
+         m_bots[i]->ThinkMain ();
    }
 }
 
