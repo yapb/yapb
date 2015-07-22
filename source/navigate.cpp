@@ -3189,6 +3189,8 @@ void Bot::UpdateLookAngles (void)
    float angleDiffYaw = AngleNormalize (direction.y - m_idealAngles.y);
    float angleDiffPitch = AngleNormalize (direction.x - m_idealAngles.x);
 
+   const float delta = m_frameInterval;
+
    if (angleDiffYaw < 1.0f && angleDiffYaw > -1.0f)
    {
       m_lookYawVel = 0.0f;
@@ -3203,8 +3205,8 @@ void Bot::UpdateLookAngles (void)
       else if (accel < -accelerate)
          accel = -accelerate;
 
-      m_lookYawVel += m_frameInterval * accel;
-      m_idealAngles.y += m_frameInterval * m_lookYawVel;
+      m_lookYawVel += delta * accel;
+      m_idealAngles.y += delta * m_lookYawVel;
    }
    float accel = 2.0f * stiffness * angleDiffPitch - damping * m_lookPitchVel;
 
@@ -3213,8 +3215,8 @@ void Bot::UpdateLookAngles (void)
    else if (accel < -accelerate)
       accel = -accelerate;
 
-   m_lookPitchVel += m_frameInterval * accel;
-   m_idealAngles.x += m_frameInterval * m_lookPitchVel;
+   m_lookPitchVel += delta * accel;
+   m_idealAngles.x += delta * m_lookPitchVel;
 
    if (m_idealAngles.x < -89.0f)
       m_idealAngles.x = -89.0f;

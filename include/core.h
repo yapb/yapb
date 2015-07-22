@@ -1177,6 +1177,7 @@ public:
    float m_fearLevel; // dynamic fear level (in game)
    float m_nextEmotionUpdate; // next time to sanitize emotions
    float m_thinkFps; // skip some frames in bot thinking
+   float m_thinkInterval; // interval between frames
 
    int m_actMessageIndex; // current processed message
    int m_pushMessageIndex; // offset for next pushed message
@@ -1239,8 +1240,15 @@ public:
    inline Vector Center (void) { return (pev->absmax + pev->absmin) * 0.5; };
    inline Vector EyePosition (void) { return pev->origin + pev->view_ofs; };
 
+   // things that should be executed every frame
+   void ThinkFrame (void);
+
+   // the main function that decides intervals of running bot ai
    void ThinkMain (void);
+
+   /// the things that can be executed while skipping frames
    void Think (void);
+
    void NewRound (void);
    void EquipInBuyzone (int buyCount);
    void PushMessageQueue (int message);

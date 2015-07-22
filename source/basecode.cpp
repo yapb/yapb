@@ -733,7 +733,7 @@ void Bot::FindItem (void)
                {
                   allowPickup = false;
 
-                  if (!m_defendedBomb && m_personality != PERSONALITY_RUSHER && Random.Long (0, 100) < 80)
+                  if (!m_defendedBomb)
                   {
                      m_defendedBomb = true;
 
@@ -2869,19 +2869,24 @@ void Bot::ChooseAimDirection (void)
       m_lookAt = m_destOrigin;
 }
 
-static float ThinkFps = 1.0f / 30.0f;
-
 void Bot::ThinkMain (void)
 {
-   if (m_thinkFps < GetWorldTime ())
+   if (m_thinkFps <= GetWorldTime ())
    {
+      // execute delayed think
       Think ();
 
       // skip some frames
-      m_thinkFps = GetWorldTime () + ThinkFps * Random.Float (0.95f, 1.05f);
+      m_thinkFps = GetWorldTime () + m_thinkInterval;
    }
    else
-      UpdateLookAngles ();
+      ThinkFrame ();
+}
+
+void Bot::ThinkFrame (void)
+{
+   UpdateLookAngles ();
+   RunPlayerMovement ();
 }
 
 void Bot::Think (void)
