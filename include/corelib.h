@@ -1609,7 +1609,6 @@ public:
    }
 };
 
-
 //
 // Class: Map
 //  Represents associative map container.

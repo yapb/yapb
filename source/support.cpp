@@ -287,7 +287,7 @@ void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex)
 void FreeLibraryMemory (void)
 {
    // this function free's all allocated memory
-   waypoint.Init (); // frees waypoint data
+   waypoints.Init (); // frees waypoint data
    locale.Destroy (); // clear language
 
    delete [] g_experienceData;
@@ -731,18 +731,18 @@ void RoundInit (void)
    g_roundEnded = false;
 
    // check team economics
-   botMgr.CheckTeamEconomics (TEAM_TF);
-   botMgr.CheckTeamEconomics (TEAM_CF);
+   bots.CheckTeamEconomics (TEAM_TF);
+   bots.CheckTeamEconomics (TEAM_CF);
 
    for (int i = 0; i < GetMaxClients (); i++)
    {
-      if (botMgr.GetBot (i))
-         botMgr.GetBot (i)->NewRound ();
+      if (bots.GetBot (i))
+         bots.GetBot (i)->NewRound ();
 
       g_radioSelect[i] = 0;
    }
-   waypoint.SetBombPosition (true);
-   waypoint.ClearGoalScore ();
+   waypoints.SetBombPosition (true);
+   waypoints.ClearGoalScore ();
 
    g_bombSayString = false;
    g_timeBombPlanted = 0.0;
@@ -791,7 +791,7 @@ bool IsValidPlayer (edict_t *ent)
    if (ent->v.flags & FL_PROXY)
       return false;
 
-   if ((ent->v.flags & (FL_CLIENT | FL_FAKECLIENT)) || botMgr.GetBot (ent) != NULL)
+   if ((ent->v.flags & (FL_CLIENT | FL_FAKECLIENT)) || bots.GetBot (ent) != NULL)
       return !IsNullString (STRING (ent->v.netname));
 
    return false;
@@ -810,7 +810,7 @@ bool IsPlayerVIP (edict_t *ent)
 
 bool IsValidBot (edict_t *ent)
 {
-   if (botMgr.GetBot (ent) != NULL || (!IsEntityNull (ent) && (ent->v.flags & FL_FAKECLIENT)))
+   if (bots.GetBot (ent) != NULL || (!IsEntityNull (ent) && (ent->v.flags & FL_FAKECLIENT)))
       return true;
 
    return false;
@@ -1030,7 +1030,7 @@ void CheckWelcomeMessage (void)
       WRITE_SHORT (FixedUnsigned16 (2, 1 << 8));
       WRITE_SHORT (FixedUnsigned16 (6, 1 << 8));
       WRITE_SHORT (FixedUnsigned16 (0.1, 1 << 8));
-      WRITE_STRING (FormatBuffer ("\nServer is running YaPB v%s (Build: %u)\nDeveloped by %s\n\n%s", PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_AUTHOR, waypoint.GetInfo ()));
+      WRITE_STRING (FormatBuffer ("\nServer is running YaPB v%s (Build: %u)\nDeveloped by %s\n\n%s", PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_AUTHOR, waypoints.GetInfo ()));
       MESSAGE_END ();
 
       receiveTime = 0.0;
@@ -1256,7 +1256,7 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
 
    // fill the holder
    if (needBot)
-      *pvHolder = reinterpret_cast <void *> (botMgr.GetBot (survive));
+      *pvHolder = reinterpret_cast <void *> (bots.GetBot (survive));
    else
       *pvHolder = reinterpret_cast <void *> (survive);
 

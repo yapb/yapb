@@ -358,7 +358,7 @@ bool Bot::LookupEnemy (void)
             if (!(g_clients[j].flags & CF_USED) || !(g_clients[j].flags & CF_ALIVE) || g_clients[j].team != m_team || g_clients[j].ent == GetEntity ())
                continue;
 
-            Bot *friendBot = botMgr.GetBot (g_clients[j].ent);
+            Bot *friendBot = bots.GetBot (g_clients[j].ent);
 
             if (friendBot != NULL)
             {
@@ -1213,7 +1213,7 @@ void Bot::CombatFight (void)
          if (!IsVisible (m_enemy->v.origin, GetEntity ()) && !IsVisible (m_enemy->v.origin + Vector (0, 0, -enemyHalfHeight), GetEntity ()))
             shouldDuck = false;
 
-         if (shouldDuck && GetTaskId () != TASK_SEEKCOVER && GetTaskId () != TASK_HUNTENEMY && (m_visibility & VISIBLE_BODY) && !(m_visibility & VISIBLE_OTHER) && waypoint.IsDuckVisible (m_currentWaypointIndex, waypoint.FindNearest (m_enemy->v.origin)))
+         if (shouldDuck && GetTaskId () != TASK_SEEKCOVER && GetTaskId () != TASK_HUNTENEMY && (m_visibility & VISIBLE_BODY) && !(m_visibility & VISIBLE_OTHER) && waypoints.IsDuckVisible (m_currentWaypointIndex, waypoints.FindNearest (m_enemy->v.origin)))
             m_duckTime = GetWorldTime () + 0.5f;
 
          m_moveSpeed = 0.0;

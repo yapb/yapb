@@ -1548,6 +1548,17 @@ public:
 
    void SetBombPosition (bool shouldReset = false);
    String CheckSubfolderFile (void);
+
+   // quick access
+   inline Path *operator [] (int index)
+   {
+      extern int g_numWaypoints;
+
+      if (index < 0 || index >= g_numWaypoints)
+         assert (0);
+
+      return GetPath (index);
+   }
 };
 
 // wayponit auto-downloader
@@ -1600,8 +1611,8 @@ public:
 #define netmsg NetworkMsg::GetReference ()
 #define locale Localizer::GetReference ()
 #define convars ConVarWrapper::GetReference ()
-#define waypoint Waypoint::GetReference ()
-#define botMgr BotManager::GetReference ()
+#define waypoints Waypoint::GetReference ()
+#define bots BotManager::GetReference ()
 
 // simplify access for console variables
 class ConVar
