@@ -22,55 +22,55 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 {
    // adding one bot with random parameters to random team
    if (stricmp (arg0, "addbot") == 0 || stricmp (arg0, "add") == 0)
-      botMgr->AddBot (arg4, arg1, arg2, arg3, arg5);
+      botMgr.AddBot (arg4, arg1, arg2, arg3, arg5);
 
    // adding one bot with high difficulty parameters to random team
    else if (stricmp (arg0, "addbot_hs") == 0 || stricmp (arg0, "addhs") == 0)
-      botMgr->AddBot (arg4, "4", "1", arg3, arg5);
+      botMgr.AddBot (arg4, "4", "1", arg3, arg5);
 
    // adding one bot with random parameters to terrorist team
    else if (stricmp (arg0, "addbot_t") == 0 || stricmp (arg0, "add_t") == 0)
-      botMgr->AddBot (arg4, arg1, arg2, "1", arg5);
+      botMgr.AddBot (arg4, arg1, arg2, "1", arg5);
 
    // adding one bot with random parameters to counter-terrorist team
    else if (stricmp (arg0, "addbot_ct") == 0 || stricmp (arg0, "add_ct") == 0)
-      botMgr->AddBot (arg4, arg1, arg2, "2", arg5);
+      botMgr.AddBot (arg4, arg1, arg2, "2", arg5);
          
    // kicking off one bot from the terrorist team
    else if (stricmp (arg0, "kickbot_t") == 0 || stricmp (arg0, "kick_t") == 0)
-      botMgr->RemoveFromTeam (TEAM_TF);
+      botMgr.RemoveFromTeam (TEAM_TF);
 
    // kicking off one bot from the counter-terrorist team
    else if (stricmp (arg0, "kickbot_ct") == 0 || stricmp (arg0, "kick_ct") == 0)
-      botMgr->RemoveFromTeam (TEAM_CF);
+      botMgr.RemoveFromTeam (TEAM_CF);
 
    // kills all bots on the terrorist team
    else if (stricmp (arg0, "killbots_t") == 0 || stricmp (arg0, "kill_t") == 0)
-      botMgr->KillAll (TEAM_TF);
+      botMgr.KillAll (TEAM_TF);
 
    // kills all bots on the counter-terrorist team
    else if (stricmp (arg0, "killbots_ct") == 0 || stricmp (arg0, "kill_ct") == 0)
-      botMgr->KillAll (TEAM_CF);
+      botMgr.KillAll (TEAM_CF);
 
    // list all bots playeing on the server
    else if (stricmp (arg0, "listbots") == 0 || stricmp (arg0, "list") == 0)
-      botMgr->ListBots ();
+      botMgr.ListBots ();
 
    // kick off all bots from the played server
    else if (stricmp (arg0, "kickbots") == 0 || stricmp (arg0, "kickall") == 0)
-      botMgr->RemoveAll ();
+      botMgr.RemoveAll ();
 
    // kill all bots on the played server
    else if (stricmp (arg0, "killbots") == 0 || stricmp (arg0, "killall") == 0)
-      botMgr->KillAll ();
+      botMgr.KillAll ();
 
    // kick off one random bot from the played server
    else if (stricmp (arg0, "kickone") == 0 || stricmp (arg0, "kick") == 0)
-      botMgr->RemoveRandom ();
+      botMgr.RemoveRandom ();
 
    // fill played server with bots
    else if (stricmp (arg0, "fillserver") == 0 || stricmp (arg0, "fill") == 0)
-      botMgr->FillServer (atoi (arg1), IsNullString (arg2) ? -1 : atoi (arg2), IsNullString (arg3) ? -1 : atoi (arg3), IsNullString (arg4) ? -1 : atoi (arg4));
+      botMgr.FillServer (atoi (arg1), IsNullString (arg2) ? -1 : atoi (arg2), IsNullString (arg3) ? -1 : atoi (arg3), IsNullString (arg4) ? -1 : atoi (arg4));
 
    // select the weapon mode for bots
    else if (stricmp (arg0, "weaponmode") == 0 || stricmp (arg0, "wmode") == 0)
@@ -79,7 +79,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
       // check is selected range valid
       if (selection >= 1 && selection <= 7)
-         botMgr->SetWeaponMode (selection);
+         botMgr.SetWeaponMode (selection);
       else
          ClientPrint (ent, print_withtag, "Choose weapon from 1 to 7 range");
    }
@@ -94,8 +94,8 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          // loop through all players
          for (int i = 0; i < GetMaxClients (); i++)
          {
-            if (botMgr->GetBot (i) != NULL)
-               botMgr->GetBot (i)->m_voteMap = nominatedMap;
+            if (botMgr.GetBot (i) != NULL)
+               botMgr.GetBot (i)->m_voteMap = nominatedMap;
          }
          ClientPrint (ent, print_withtag, "All dead bots will vote for map #%d", nominatedMap);
       }
@@ -258,7 +258,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
       // show direction to specified waypoint
       else if (stricmp (arg1, "find") == 0)
-         waypoint->SetFindIndex (atoi (arg2));
+         waypoint.SetFindIndex (atoi (arg2));
 
       // opens adding waypoint menu
       else if (stricmp (arg1, "add") == 0)
@@ -270,7 +270,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       // creates basic waypoints on the map (ladder/spawn points/goals)
       else if (stricmp (arg1, "addbasic") == 0)
       {
-         waypoint->CreateBasic ();
+         waypoint.CreateBasic ();
          CenterPrint ("Basic waypoints was Created");
       }
 
@@ -278,41 +278,41 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       else if (stricmp (arg1, "delete") == 0)
       {
          g_waypointOn = true; // turn waypoints on
-         waypoint->Delete ();
+         waypoint.Delete ();
       }
 
       // save waypoint data into file on hard disk
       else if (stricmp (arg1, "save") == 0)
       {
-         char *waypointSaveMessage = locale->TranslateInput ("Waypoints Saved");
+         char *waypointSaveMessage = locale.TranslateInput ("Waypoints Saved");
 
          if (FStrEq (arg2, "nocheck"))
          {
-            waypoint->Save ();
+            waypoint.Save ();
             ServerPrint (waypointSaveMessage);
          }
-         else if (waypoint->NodesValid ())
+         else if (waypoint.NodesValid ())
          {
-            waypoint->Save ();
+            waypoint.Save ();
             ServerPrint (waypointSaveMessage);
          }
       }
 
       // remove waypoint and all corresponding files from hard disk
       else if (stricmp (arg1, "erase") == 0)
-         waypoint->EraseFromHardDisk ();
+         waypoint.EraseFromHardDisk ();
 
       // load all waypoints again (overrides all changes, that wasn't saved)
       else if (stricmp (arg1, "load") == 0)
       {
-         if (waypoint->Load ())
+         if (waypoint.Load ())
             ServerPrint ("Waypoints loaded");
       }
 
       // check all nodes for validation
       else if (stricmp (arg1, "check") == 0)
       {
-         if (waypoint->NodesValid ())
+         if (waypoint.NodesValid ())
             CenterPrint ("Nodes work Fine");
       }
 
@@ -322,11 +322,11 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
       // setting waypoint radius
       else if (stricmp (arg1, "setradius") == 0)
-         waypoint->SetRadius (atoi (arg2));
+         waypoint.SetRadius (atoi (arg2));
 
       // remembers nearest waypoint
       else if (stricmp (arg1, "cache") == 0)
-         waypoint->CacheWaypoint ();
+         waypoint.CacheWaypoint ();
 
       // teleport player to specified waypoint
       else if (stricmp (arg1, "teleport") == 0)
@@ -335,7 +335,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
          if (teleportPoint < g_numWaypoints)
          {
-            Path *path = waypoint->GetPath (teleportPoint);
+            Path *path = waypoint.GetPath (teleportPoint);
 
             (*g_engfuncs.pfnSetOrigin) (g_hostEntity, path->origin);
             g_waypointOn = true;
@@ -366,19 +366,19 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
       // creates incoming path from the cached waypoint
       else if (stricmp (arg1, "create_in") == 0)
-         waypoint->CreatePath (CONNECTION_INCOMING);
+         waypoint.CreatePath (CONNECTION_INCOMING);
 
       // creates outgoing path from current waypoint
       else if (stricmp (arg1, "create_out") == 0)
-         waypoint->CreatePath (CONNECTION_OUTGOING);
+         waypoint.CreatePath (CONNECTION_OUTGOING);
 
       // creates bidirectional path from cahed to current waypoint
       else if (stricmp (arg1, "create_both") == 0)
-         waypoint->CreatePath (CONNECTION_BOTHWAYS);
+         waypoint.CreatePath (CONNECTION_BOTHWAYS);
 
       // delete special path
       else if (stricmp (arg1, "delete") == 0)
-         waypoint->DeletePath ();
+         waypoint.DeletePath ();
 
       // sets auto path maximum distance
       else if (stricmp (arg1, "autodistance") == 0)
@@ -415,8 +415,8 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       // write experience table (and visibility table) to hard disk
       if (stricmp (arg1, "save") == 0)
       {
-         waypoint->SaveExperienceTab ();
-         waypoint->SaveVisibilityTab ();
+         waypoint.SaveExperienceTab ();
+         waypoint.SaveVisibilityTab ();
 
          ServerPrint ("Experience tab saved");
       }
@@ -840,7 +840,7 @@ void InitConfig (void)
             }
 
             if (!IsNullString (temp.translated) && !IsNullString (temp.original))
-               locale->m_langTab.Push (temp);
+               locale.m_langTab.Push (temp);
          }
          else if (strncmp (line, "[TRANSLATED]", 12) == 0)
          {
@@ -936,7 +936,7 @@ void Touch (edict_t *pentTouched, edict_t *pentOther)
 
    if (!IsEntityNull (pentOther) && (pentOther->v.flags & FL_FAKECLIENT))
    {
-      Bot *bot = botMgr->GetBot (pentOther);
+      Bot *bot = botMgr.GetBot (pentOther);
 
       if (bot != NULL)
          bot->VerifyBreakable (pentTouched);
@@ -958,7 +958,7 @@ int Spawn (edict_t *ent)
    {
       g_worldEntity = ent; // save the world entity for future use
 
-      convars->PushRegisteredConVarsToEngine (true);
+      convars.PushRegisteredConVarsToEngine (true);
 
       PRECACHE_SOUND (ENGINE_STR ("weapons/xbow_hit1.wav"));      // waypoint add
       PRECACHE_SOUND (ENGINE_STR ("weapons/mine_activate.wav"));  // waypoint delete
@@ -1036,7 +1036,7 @@ void UpdateClientData (const struct edict_s *ent, int sendweapons, struct client
    extern ConVar yb_latency_display;
 
    if (yb_latency_display.GetInt () == 2)
-      botMgr->SendPingDataOffsets (const_cast <edict_t *> (ent));
+      botMgr.SendPingDataOffsets (const_cast <edict_t *> (ent));
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -1046,7 +1046,7 @@ void UpdateClientData (const struct edict_s *ent, int sendweapons, struct client
 
 void ClientPutInServer (edict_t *ent)
 {
-   botMgr->CheckAutoVacate ();
+   botMgr.CheckAutoVacate ();
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -1109,7 +1109,7 @@ void ClientDisconnect (edict_t *ent)
 
    InternalAssert (i >= 0 && i < 32);
 
-   Bot *bot = botMgr->GetBot (i);
+   Bot *bot = botMgr.GetBot (i);
 
    // check if its a bot
    if (bot != NULL)
@@ -1119,7 +1119,7 @@ void ClientDisconnect (edict_t *ent)
          bot->SwitchChatterIcon (false);
          bot->ReleaseUsedName ();
 
-         botMgr->Free (i);
+         botMgr.Free (i);
       }
    }
 
@@ -1220,15 +1220,15 @@ void ClientCommand (edict_t *ent)
             case 5:
             case 6:
             case 7:
-               waypoint->Add (selection - 1);
+               waypoint.Add (selection - 1);
                break;
 
             case 8:
-               waypoint->Add (100);
+               waypoint.Add (100);
                break;
 
             case 9:
-               waypoint->SetLearnJumpWaypoint ();
+               waypoint.SetLearnJumpWaypoint ();
                break;
 
             case 10:
@@ -1247,23 +1247,23 @@ void ClientCommand (edict_t *ent)
             switch (selection)
             {
             case 1:
-               waypoint->ToggleFlags (FLAG_NOHOSTAGE);
+               waypoint.ToggleFlags (FLAG_NOHOSTAGE);
                break;
 
             case 2:
-               waypoint->ToggleFlags (FLAG_TF_ONLY);
+               waypoint.ToggleFlags (FLAG_TF_ONLY);
                break;
 
             case 3:
-               waypoint->ToggleFlags (FLAG_CF_ONLY);
+               waypoint.ToggleFlags (FLAG_CF_ONLY);
                break;
 
             case 4:
-               waypoint->ToggleFlags (FLAG_LIFT);
+               waypoint.ToggleFlags (FLAG_LIFT);
                break;
 
             case 5:
-               waypoint->ToggleFlags (FLAG_SNIPER);
+               waypoint.ToggleFlags (FLAG_SNIPER);
                break;
             }
             if (g_isMetamod)
@@ -1286,7 +1286,7 @@ void ClientCommand (edict_t *ent)
 
             case 2:
                g_waypointOn = true;
-               waypoint->CacheWaypoint ();
+               waypoint.CacheWaypoint ();
                break;
 
             case 3:
@@ -1296,7 +1296,7 @@ void ClientCommand (edict_t *ent)
 
             case 4:
                g_waypointOn = true;
-               waypoint->DeletePath ();
+               waypoint.DeletePath ();
                break;
 
             case 5:
@@ -1306,7 +1306,7 @@ void ClientCommand (edict_t *ent)
 
             case 6:
                g_waypointOn = true;
-               waypoint->Delete ();
+               waypoint.Delete ();
                break;
 
             case 7:
@@ -1350,7 +1350,7 @@ void ClientCommand (edict_t *ent)
 
                   for (int i = 0; i < g_numWaypoints; i++)
                   {
-                     Path *path = waypoint->GetPath (i);
+                     Path *path = waypoint.GetPath (i);
 
                      if (path->flags & FLAG_TF_ONLY)
                         terrPoints++;
@@ -1394,22 +1394,22 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 4:
-               if (waypoint->NodesValid ())
-                  waypoint->Save ();
+               if (waypoint.NodesValid ())
+                  waypoint.Save ();
                else
                   CenterPrint ("Waypoint not saved\nThere are errors, see console");
                break;
 
             case 5:
-               waypoint->Save ();
+               waypoint.Save ();
                break;
 
             case 6:
-               waypoint->Load ();
+               waypoint.Load ();
                break;
 
             case 7:
-               if (waypoint->NodesValid ())
+               if (waypoint.NodesValid ())
                   CenterPrint ("Nodes work Find");
                else
                   CenterPrint ("There are errors, see console");
@@ -1437,7 +1437,7 @@ void ClientCommand (edict_t *ent)
             const int radiusValue[] = {0, 8, 16, 32, 48, 64, 80, 96, 128};
 
             if ((selection >= 1) && (selection <= 9))
-               waypoint->SetRadius (radiusValue[selection - 1]);
+               waypoint.SetRadius (radiusValue[selection - 1]);
 
             if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
@@ -1465,7 +1465,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 4:
-               botMgr->KillAll ();
+               botMgr.KillAll ();
                break;
 
             case 10:
@@ -1485,7 +1485,7 @@ void ClientCommand (edict_t *ent)
             switch (selection)
             {
             case 1:
-               botMgr->AddRandom ();
+               botMgr.AddRandom ();
                break;
 
             case 2:
@@ -1493,15 +1493,15 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 3:
-               botMgr->RemoveRandom ();
+               botMgr.RemoveRandom ();
                break;
 
             case 4:
-               botMgr->RemoveAll ();
+               botMgr.RemoveAll ();
                break;
 
             case 5:
-               botMgr->RemoveMenu (ent, 1);
+               botMgr.RemoveMenu (ent, 1);
                break;
 
             case 10:
@@ -1628,15 +1628,15 @@ void ClientCommand (edict_t *ent)
             switch (selection)
             {
             case 1:
-               waypoint->CreatePath (CONNECTION_OUTGOING);
+               waypoint.CreatePath (CONNECTION_OUTGOING);
                break;
 
             case 2:
-               waypoint->CreatePath (CONNECTION_INCOMING);
+               waypoint.CreatePath (CONNECTION_INCOMING);
                break;
 
             case 3:
-               waypoint->CreatePath (CONNECTION_BOTHWAYS);
+               waypoint.CreatePath (CONNECTION_BOTHWAYS);
                break;
 
             case 10:
@@ -1726,7 +1726,7 @@ void ClientCommand (edict_t *ent)
             case 2:
             case 3:
             case 4:
-               botMgr->FillServer (fillServerTeam, selection - 2, g_storeAddbotVars[0]);
+               botMgr.FillServer (fillServerTeam, selection - 2, g_storeAddbotVars[0]);
 
             case 10:
                DisplayMenuToClient (ent, NULL);
@@ -1750,7 +1750,7 @@ void ClientCommand (edict_t *ent)
                if (selection == 5)
                {
                   g_storeAddbotVars[2] = 5;
-                  botMgr->AddBot ("", g_storeAddbotVars[0], g_storeAddbotVars[3], g_storeAddbotVars[1], g_storeAddbotVars[2]);
+                  botMgr.AddBot ("", g_storeAddbotVars[0], g_storeAddbotVars[3], g_storeAddbotVars[1], g_storeAddbotVars[2]);
                }
                else
                {
@@ -1805,7 +1805,7 @@ void ClientCommand (edict_t *ent)
             case 4:
             case 5:
                g_storeAddbotVars[2] = selection;
-               botMgr->AddBot ("", g_storeAddbotVars[0], g_storeAddbotVars[3], g_storeAddbotVars[1], g_storeAddbotVars[2]);
+               botMgr.AddBot ("", g_storeAddbotVars[0], g_storeAddbotVars[3], g_storeAddbotVars[1], g_storeAddbotVars[2]);
                break;
 
             case 10:
@@ -1830,7 +1830,7 @@ void ClientCommand (edict_t *ent)
             case 5:
             case 6:
             case 7:
-               botMgr->SetWeaponMode (selection);
+               botMgr.SetWeaponMode (selection);
                break;
 
             case 10:
@@ -1856,11 +1856,11 @@ void ClientCommand (edict_t *ent)
             case 6:
             case 7:
             case 8:
-               botMgr->GetBot (selection - 1)->Kick ();
+               botMgr.GetBot (selection - 1)->Kick ();
                break;
 
             case 9:
-               botMgr->RemoveMenu (ent, 2);
+               botMgr.RemoveMenu (ent, 2);
                break;
 
             case 10:
@@ -1886,15 +1886,15 @@ void ClientCommand (edict_t *ent)
             case 6:
             case 7:
             case 8:
-               botMgr->GetBot (selection + 8 - 1)->Kick ();
+               botMgr.GetBot (selection + 8 - 1)->Kick ();
                break;
 
             case 9:
-               botMgr->RemoveMenu (ent, 3);
+               botMgr.RemoveMenu (ent, 3);
                break;
 
             case 10:
-               botMgr->RemoveMenu (ent, 1);
+               botMgr.RemoveMenu (ent, 1);
                break;
             }
             if (g_isMetamod)
@@ -1916,15 +1916,15 @@ void ClientCommand (edict_t *ent)
             case 6:
             case 7:
             case 8:
-               botMgr->GetBot (selection + 16 - 1)->Kick ();
+               botMgr.GetBot (selection + 16 - 1)->Kick ();
                break;
 
             case 9:
-               botMgr->RemoveMenu (ent, 4);
+               botMgr.RemoveMenu (ent, 4);
                break;
 
             case 10:
-               botMgr->RemoveMenu (ent, 2);
+               botMgr.RemoveMenu (ent, 2);
                break;
             }
             if (g_isMetamod)
@@ -1946,11 +1946,11 @@ void ClientCommand (edict_t *ent)
             case 6:
             case 7:
             case 8:
-               botMgr->GetBot (selection + 24 - 1)->Kick ();
+               botMgr.GetBot (selection + 24 - 1)->Kick ();
                break;
 
             case 10:
-               botMgr->RemoveMenu (ent, 3);
+               botMgr.RemoveMenu (ent, 3);
                break;
             }
             if (g_isMetamod)
@@ -1984,7 +1984,7 @@ void ClientCommand (edict_t *ent)
          if (!(g_clients[i].flags & CF_USED) || (team != -1 && team != g_clients[i].team) || isAlive != IsAlive (g_clients[i].ent))
             continue;
 
-         Bot *target = botMgr->GetBot (i);
+         Bot *target = botMgr.GetBot (i);
 
          if (target != NULL)
          {
@@ -2013,7 +2013,7 @@ void ClientCommand (edict_t *ent)
          {
             for (int i = 0; i < GetMaxClients (); i++)
             {
-               Bot *bot = botMgr->GetBot (i);
+               Bot *bot = botMgr.GetBot (i);
 
                // validate bot
                if (bot != NULL && GetTeam (bot->GetEntity ()) == g_clients[clientIndex].team && VARS (ent) != bot->pev && bot->m_radioOrder == 0)
@@ -2049,8 +2049,8 @@ void ServerActivate (edict_t *pentEdictList, int edictCount, int clientMax)
    InitConfig (); // initialize all config files
 
    // do level initialization stuff here...
-   waypoint->Init ();
-   waypoint->Load ();
+   waypoint.Init ();
+   waypoint.Load ();
 
    // execute main config
    ServerCommand ("exec addons/yapb/conf/yapb.cfg");
@@ -2060,14 +2060,14 @@ void ServerActivate (edict_t *pentEdictList, int edictCount, int clientMax)
       ServerCommand ("exec maps/%s_yapb.cfg", GetMapName ());
       ServerPrint ("Executing Map-Specific config file");
    }
-   botMgr->InitQuota ();
+   botMgr.InitQuota ();
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    (*g_functionTable.pfnServerActivate) (pentEdictList, edictCount, clientMax);
 
-   waypoint->InitializeVisibility ();
+   waypoint.InitializeVisibility ();
 }
 
 void ServerDeactivate (void)
@@ -2083,8 +2083,8 @@ void ServerDeactivate (void)
    // the loading of new bots and the new BSP data parsing there.
 
    // save collected experience on shutdown
-   waypoint->SaveExperienceTab ();
-   waypoint->SaveVisibilityTab ();
+   waypoint.SaveExperienceTab ();
+   waypoint.SaveVisibilityTab ();
 
    FreeLibraryMemory ();
 
@@ -2105,7 +2105,7 @@ void StartFrame (void)
    // player population decreases, we should fill the server with other bots.
 
    // run periodic update of bot states
-   botMgr->PeriodicThink ();
+   botMgr.PeriodicThink ();
 
    // record some stats of all players on the server
    for (int i = 0; i < GetMaxClients (); i++)
@@ -2142,15 +2142,15 @@ void StartFrame (void)
    if (!IsDedicatedServer () && !IsEntityNull (g_hostEntity))
    {
       if (g_waypointOn)
-         waypoint->Think ();
+         waypoint.Think ();
 
       CheckWelcomeMessage ();
    }
-   botMgr->SetDeathMsgState (false);
+   botMgr.SetDeathMsgState (false);
 
    if (g_timePerSecondUpdate < GetWorldTime ())
    {
-      botMgr->CalculatePingOffsets ();
+      botMgr.CalculatePingOffsets ();
 
       for (int i = 0; i < GetMaxClients (); i++)
       {
@@ -2180,7 +2180,7 @@ void StartFrame (void)
          }
       }
       if (g_bombPlanted)
-         waypoint->SetBombPosition ();
+         waypoint.SetBombPosition ();
 
       if (g_isMetamod)
       {
@@ -2199,10 +2199,10 @@ void StartFrame (void)
       g_timePerSecondUpdate = GetWorldTime () + 1.0f;
    }
    else if (g_timePerSecondUpdate * 0.5f < GetWorldTime ())
-      botMgr->UpdateActiveGrenades ();
+      botMgr.UpdateActiveGrenades ();
 
    // keep bot number up to date
-   botMgr->MaintainBotQuota ();
+   botMgr.MaintainBotQuota ();
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2210,7 +2210,7 @@ void StartFrame (void)
    (*g_functionTable.pfnStartFrame) ();
 
    // **** AI EXECUTION STARTS ****
-   botMgr->Think ();
+   botMgr.Think ();
    // **** AI EXECUTION FINISH ****
 }
 
@@ -2223,7 +2223,7 @@ void StartFrame_Post (void)
    // for the bots by the MOD side, remember).  Post version called only by metamod.
 
    // **** AI EXECUTION STARTS ****
-   botMgr->Think ();
+   botMgr.Think ();
    // **** AI EXECUTION FINISH ****
 
    RETURN_META (MRES_IGNORED);
@@ -2254,7 +2254,7 @@ void ServerActivate_Post (edict_t *, int, int)
    // Once this function has been called, the server can be considered as "running". Post version
    // called only by metamod.
 
-   waypoint->InitializeVisibility ();
+   waypoint.InitializeVisibility ();
 
    RETURN_META (MRES_IGNORED);
 }
@@ -2271,8 +2271,8 @@ void pfnChangeLevel (char *s1, char *s2)
    // spawn point named "tr_2lm".
 
    // save collected experience on map change
-   waypoint->SaveExperienceTab ();
-   waypoint->SaveVisibilityTab ();
+   waypoint.SaveExperienceTab ();
+   waypoint.SaveVisibilityTab ();
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2356,75 +2356,75 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
    // this function called each time a message is about to sent.
 
    // store the message type in our own variables, since the GET_USER_MSG_ID () will just do a lot of strcmp()'s...
-   if (g_isMetamod && netmsg->GetId (NETMSG_MONEY) == -1)
+   if (g_isMetamod && netmsg.GetId (NETMSG_MONEY) == -1)
    {
-      netmsg->SetId (NETMSG_VGUI, GET_USER_MSG_ID (PLID, "VGUIMenu", NULL));
-      netmsg->SetId (NETMSG_SHOWMENU, GET_USER_MSG_ID (PLID, "ShowMenu", NULL));
-      netmsg->SetId (NETMSG_WEAPONLIST, GET_USER_MSG_ID (PLID, "WeaponList", NULL));
-      netmsg->SetId (NETMSG_CURWEAPON, GET_USER_MSG_ID (PLID, "CurWeapon", NULL));
-      netmsg->SetId (NETMSG_AMMOX, GET_USER_MSG_ID (PLID, "AmmoX", NULL));
-      netmsg->SetId (NETMSG_AMMOPICKUP, GET_USER_MSG_ID (PLID, "AmmoPickup", NULL));
-      netmsg->SetId (NETMSG_DAMAGE, GET_USER_MSG_ID (PLID, "Damage", NULL));
-      netmsg->SetId (NETMSG_MONEY, GET_USER_MSG_ID (PLID, "Money", NULL));
-      netmsg->SetId (NETMSG_STATUSICON, GET_USER_MSG_ID (PLID, "StatusIcon", NULL));
-      netmsg->SetId (NETMSG_DEATH, GET_USER_MSG_ID (PLID, "DeathMsg", NULL));
-      netmsg->SetId (NETMSG_SCREENFADE, GET_USER_MSG_ID (PLID, "ScreenFade", NULL));
-      netmsg->SetId (NETMSG_HLTV, GET_USER_MSG_ID (PLID, "HLTV", NULL));
-      netmsg->SetId (NETMSG_TEXTMSG, GET_USER_MSG_ID (PLID, "TextMsg", NULL));
-      netmsg->SetId (NETMSG_SCOREINFO, GET_USER_MSG_ID (PLID, "ScoreInfo", NULL));
-      netmsg->SetId (NETMSG_BARTIME, GET_USER_MSG_ID (PLID, "BarTime", NULL));
-      netmsg->SetId (NETMSG_SENDAUDIO, GET_USER_MSG_ID (PLID, "SendAudio", NULL));
-      netmsg->SetId (NETMSG_SAYTEXT, GET_USER_MSG_ID (PLID, "SayText", NULL));
-      netmsg->SetId (NETMSG_RESETHUD, GET_USER_MSG_ID (PLID, "ResetHUD", NULL));
+      netmsg.SetId (NETMSG_VGUI, GET_USER_MSG_ID (PLID, "VGUIMenu", NULL));
+      netmsg.SetId (NETMSG_SHOWMENU, GET_USER_MSG_ID (PLID, "ShowMenu", NULL));
+      netmsg.SetId (NETMSG_WEAPONLIST, GET_USER_MSG_ID (PLID, "WeaponList", NULL));
+      netmsg.SetId (NETMSG_CURWEAPON, GET_USER_MSG_ID (PLID, "CurWeapon", NULL));
+      netmsg.SetId (NETMSG_AMMOX, GET_USER_MSG_ID (PLID, "AmmoX", NULL));
+      netmsg.SetId (NETMSG_AMMOPICKUP, GET_USER_MSG_ID (PLID, "AmmoPickup", NULL));
+      netmsg.SetId (NETMSG_DAMAGE, GET_USER_MSG_ID (PLID, "Damage", NULL));
+      netmsg.SetId (NETMSG_MONEY, GET_USER_MSG_ID (PLID, "Money", NULL));
+      netmsg.SetId (NETMSG_STATUSICON, GET_USER_MSG_ID (PLID, "StatusIcon", NULL));
+      netmsg.SetId (NETMSG_DEATH, GET_USER_MSG_ID (PLID, "DeathMsg", NULL));
+      netmsg.SetId (NETMSG_SCREENFADE, GET_USER_MSG_ID (PLID, "ScreenFade", NULL));
+      netmsg.SetId (NETMSG_HLTV, GET_USER_MSG_ID (PLID, "HLTV", NULL));
+      netmsg.SetId (NETMSG_TEXTMSG, GET_USER_MSG_ID (PLID, "TextMsg", NULL));
+      netmsg.SetId (NETMSG_SCOREINFO, GET_USER_MSG_ID (PLID, "ScoreInfo", NULL));
+      netmsg.SetId (NETMSG_BARTIME, GET_USER_MSG_ID (PLID, "BarTime", NULL));
+      netmsg.SetId (NETMSG_SENDAUDIO, GET_USER_MSG_ID (PLID, "SendAudio", NULL));
+      netmsg.SetId (NETMSG_SAYTEXT, GET_USER_MSG_ID (PLID, "SayText", NULL));
+      netmsg.SetId (NETMSG_RESETHUD, GET_USER_MSG_ID (PLID, "ResetHUD", NULL));
 
       if (g_gameVersion != CSV_OLD)
-         netmsg->SetId (NETMSG_BOTVOICE, GET_USER_MSG_ID (PLID, "BotVoice", NULL));
+         netmsg.SetId (NETMSG_BOTVOICE, GET_USER_MSG_ID (PLID, "BotVoice", NULL));
    }
-   netmsg->Reset ();
+   netmsg.Reset ();
 
-   if (msgDest == MSG_SPEC && msgType == netmsg->GetId (NETMSG_HLTV) && g_gameVersion != CSV_OLD)
-      netmsg->SetMessage (NETMSG_HLTV);
+   if (msgDest == MSG_SPEC && msgType == netmsg.GetId (NETMSG_HLTV) && g_gameVersion != CSV_OLD)
+      netmsg.SetMessage (NETMSG_HLTV);
 
-   netmsg->HandleMessageIfRequired (msgType, NETMSG_WEAPONLIST);
+   netmsg.HandleMessageIfRequired (msgType, NETMSG_WEAPONLIST);
 
    if (!IsEntityNull (ed))
    {
-      int index = botMgr->GetIndex (ed);
+      int index = botMgr.GetIndex (ed);
 
       // is this message for a bot?
-      if (index != -1 && !(ed->v.flags & FL_DORMANT) && botMgr->GetBot (index)->GetEntity () == ed)
+      if (index != -1 && !(ed->v.flags & FL_DORMANT) && botMgr.GetBot (index)->GetEntity () == ed)
       {
-         netmsg->Reset ();
-         netmsg->SetBot (botMgr->GetBot (index));
+         netmsg.Reset ();
+         netmsg.SetBot (botMgr.GetBot (index));
 
          // message handling is done in usermsg.cpp
-         netmsg->HandleMessageIfRequired (msgType, NETMSG_VGUI);
-         netmsg->HandleMessageIfRequired (msgType, NETMSG_CURWEAPON);
-         netmsg->HandleMessageIfRequired (msgType, NETMSG_AMMOX);
-         netmsg->HandleMessageIfRequired (msgType, NETMSG_AMMOPICKUP);
-         netmsg->HandleMessageIfRequired (msgType, NETMSG_DAMAGE);
-         netmsg->HandleMessageIfRequired (msgType, NETMSG_MONEY);
-         netmsg->HandleMessageIfRequired (msgType, NETMSG_STATUSICON);
-         netmsg->HandleMessageIfRequired (msgType, NETMSG_SCREENFADE);
-         netmsg->HandleMessageIfRequired (msgType, NETMSG_BARTIME);
-         netmsg->HandleMessageIfRequired (msgType, NETMSG_TEXTMSG);
-         netmsg->HandleMessageIfRequired (msgType, NETMSG_SHOWMENU);
-         netmsg->HandleMessageIfRequired (msgType, NETMSG_RESETHUD);
+         netmsg.HandleMessageIfRequired (msgType, NETMSG_VGUI);
+         netmsg.HandleMessageIfRequired (msgType, NETMSG_CURWEAPON);
+         netmsg.HandleMessageIfRequired (msgType, NETMSG_AMMOX);
+         netmsg.HandleMessageIfRequired (msgType, NETMSG_AMMOPICKUP);
+         netmsg.HandleMessageIfRequired (msgType, NETMSG_DAMAGE);
+         netmsg.HandleMessageIfRequired (msgType, NETMSG_MONEY);
+         netmsg.HandleMessageIfRequired (msgType, NETMSG_STATUSICON);
+         netmsg.HandleMessageIfRequired (msgType, NETMSG_SCREENFADE);
+         netmsg.HandleMessageIfRequired (msgType, NETMSG_BARTIME);
+         netmsg.HandleMessageIfRequired (msgType, NETMSG_TEXTMSG);
+         netmsg.HandleMessageIfRequired (msgType, NETMSG_SHOWMENU);
+         netmsg.HandleMessageIfRequired (msgType, NETMSG_RESETHUD);
       }
    }
    else if (msgDest == MSG_ALL)
    {
-      netmsg->Reset ();
+      netmsg.Reset ();
 
-      netmsg->HandleMessageIfRequired (msgType, NETMSG_SCOREINFO);
-      netmsg->HandleMessageIfRequired (msgType, NETMSG_DEATH);
-      netmsg->HandleMessageIfRequired (msgType, NETMSG_TEXTMSG);
+      netmsg.HandleMessageIfRequired (msgType, NETMSG_SCOREINFO);
+      netmsg.HandleMessageIfRequired (msgType, NETMSG_DEATH);
+      netmsg.HandleMessageIfRequired (msgType, NETMSG_TEXTMSG);
 
       if (msgType == SVC_INTERMISSION)
       {
          for (int i = 0; i < GetMaxClients (); i++)
          {
-            Bot *bot = botMgr->GetBot (i);
+            Bot *bot = botMgr.GetBot (i);
 
             if (bot != NULL)
                bot->m_notKilled = false;
@@ -2440,7 +2440,7 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
 
 void pfnMessageEnd (void)
 {
-   netmsg->Reset ();
+   netmsg.Reset ();
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2448,13 +2448,13 @@ void pfnMessageEnd (void)
    MESSAGE_END ();
 
    // send latency fix
-   botMgr->SendDeathMsgFix ();
+   botMgr.SendDeathMsgFix ();
 }
 
 void pfnMessageEnd_Post (void)
 {
    // send latency fix
-   botMgr->SendDeathMsgFix ();
+   botMgr.SendDeathMsgFix ();
 
    RETURN_META (MRES_IGNORED);
 }
@@ -2462,7 +2462,7 @@ void pfnMessageEnd_Post (void)
 void pfnWriteByte (int value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg->Execute ((void *) &value);
+   netmsg.Execute ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2473,7 +2473,7 @@ void pfnWriteByte (int value)
 void pfnWriteChar (int value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg->Execute ((void *) &value);
+   netmsg.Execute ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2484,7 +2484,7 @@ void pfnWriteChar (int value)
 void pfnWriteShort (int value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg->Execute ((void *) &value);
+   netmsg.Execute ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2495,7 +2495,7 @@ void pfnWriteShort (int value)
 void pfnWriteLong (int value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg->Execute ((void *) &value);
+   netmsg.Execute ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2506,7 +2506,7 @@ void pfnWriteLong (int value)
 void pfnWriteAngle (float value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg->Execute ((void *) &value);
+   netmsg.Execute ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2517,7 +2517,7 @@ void pfnWriteAngle (float value)
 void pfnWriteCoord (float value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg->Execute ((void *) &value);
+   netmsg.Execute ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2528,7 +2528,7 @@ void pfnWriteCoord (float value)
 void pfnWriteString (const char *sz)
 {
    // if this message is for a bot, call the client message function...
-   netmsg->Execute ((void *) sz);
+   netmsg.Execute ((void *) sz);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2539,7 +2539,7 @@ void pfnWriteString (const char *sz)
 void pfnWriteEntity (int value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg->Execute ((void *) &value);
+   netmsg.Execute ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2658,7 +2658,7 @@ void pfnClientPrintf (edict_t *ent, PRINT_TYPE printType, const char *message)
 
 void pfnSetClientMaxspeed (const edict_t *ent, float newMaxspeed)
 {
-   Bot *bot = botMgr->GetBot (const_cast <edict_t *> (ent));
+   Bot *bot = botMgr.GetBot (const_cast <edict_t *> (ent));
 
    // check wether it's not a bot
    if (bot != NULL)
@@ -2688,43 +2688,43 @@ int pfnRegUserMsg (const char *name, int size)
    int message = REG_USER_MSG (name, size);
 
    if (strcmp (name, "VGUIMenu") == 0)
-      netmsg->SetId (NETMSG_VGUI, message);
+      netmsg.SetId (NETMSG_VGUI, message);
    else if (strcmp (name, "ShowMenu") == 0)
-      netmsg->SetId (NETMSG_SHOWMENU, message);
+      netmsg.SetId (NETMSG_SHOWMENU, message);
    else if (strcmp (name, "WeaponList") == 0)
-      netmsg->SetId (NETMSG_WEAPONLIST, message);
+      netmsg.SetId (NETMSG_WEAPONLIST, message);
    else if (strcmp (name, "CurWeapon") == 0)
-      netmsg->SetId (NETMSG_CURWEAPON, message);
+      netmsg.SetId (NETMSG_CURWEAPON, message);
    else if (strcmp (name, "AmmoX") == 0)
-      netmsg->SetId (NETMSG_AMMOX, message);
+      netmsg.SetId (NETMSG_AMMOX, message);
    else if (strcmp (name, "AmmoPickup") == 0)
-      netmsg->SetId (NETMSG_AMMOPICKUP, message);
+      netmsg.SetId (NETMSG_AMMOPICKUP, message);
    else if (strcmp (name, "Damage") == 0)
-      netmsg->SetId (NETMSG_DAMAGE, message);
+      netmsg.SetId (NETMSG_DAMAGE, message);
    else if (strcmp (name, "Money") == 0)
-      netmsg->SetId (NETMSG_MONEY, message);
+      netmsg.SetId (NETMSG_MONEY, message);
    else if (strcmp (name, "StatusIcon") == 0)
-      netmsg->SetId (NETMSG_STATUSICON, message);
+      netmsg.SetId (NETMSG_STATUSICON, message);
    else if (strcmp (name, "DeathMsg") == 0)
-      netmsg->SetId (NETMSG_DEATH, message);
+      netmsg.SetId (NETMSG_DEATH, message);
    else if (strcmp (name, "ScreenFade") == 0)
-      netmsg->SetId (NETMSG_SCREENFADE, message);
+      netmsg.SetId (NETMSG_SCREENFADE, message);
    else if (strcmp (name, "HLTV") == 0)
-      netmsg->SetId (NETMSG_HLTV, message);
+      netmsg.SetId (NETMSG_HLTV, message);
    else if (strcmp (name, "TextMsg") == 0)
-      netmsg->SetId (NETMSG_TEXTMSG, message);
+      netmsg.SetId (NETMSG_TEXTMSG, message);
    else if (strcmp (name, "ScoreInfo") == 0)
-      netmsg->SetId (NETMSG_SCOREINFO, message);
+      netmsg.SetId (NETMSG_SCOREINFO, message);
    else if (strcmp (name, "BarTime") == 0)
-      netmsg->SetId (NETMSG_BARTIME, message);
+      netmsg.SetId (NETMSG_BARTIME, message);
    else if (strcmp (name, "SendAudio") == 0)
-      netmsg->SetId (NETMSG_SENDAUDIO, message);
+      netmsg.SetId (NETMSG_SENDAUDIO, message);
    else if (strcmp (name, "SayText") == 0)
-      netmsg->SetId (NETMSG_SAYTEXT, message);
+      netmsg.SetId (NETMSG_SAYTEXT, message);
    else if (strcmp (name, "BotVoice") == 0)
-      netmsg->SetId (NETMSG_BOTVOICE, message);
+      netmsg.SetId (NETMSG_BOTVOICE, message);
    else if (strcmp (name, "ResetHUD") == 0)
-      netmsg->SetId (NETMSG_RESETHUD, message);
+      netmsg.SetId (NETMSG_RESETHUD, message);
 
    return message;
 }
@@ -2743,12 +2743,12 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...)
       // notify all terrorists that CT is starting bomb defusing
       for (int i = 0; i < GetMaxClients (); i++)
       {
-         Bot *bot = botMgr->GetBot (i);
+         Bot *bot = botMgr.GetBot (i);
 
          if (bot != NULL && GetTeam (bot->GetEntity ()) == TEAM_TF && IsAlive (bot->GetEntity ()))
          {
             bot->ResetTasks ();
-            bot->MoveToVector (waypoint->GetBombPosition ());
+            bot->MoveToVector (waypoint.GetBombPosition ());
          }
       }
    }
@@ -2978,7 +2978,7 @@ export int Meta_Detach (PLUG_LOADTIME now, PL_UNLOAD_REASON reason)
       return FALSE; // returning false prevents metamod from unloading this plugin
    }
 
-   botMgr->RemoveAll (); // kick all bots off this server
+   botMgr.RemoveAll (); // kick all bots off this server
    FreeLibraryMemory ();
 
    return TRUE;
@@ -3010,7 +3010,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    g_pGlobals = pGlobals;
 
    // register our cvars
-   convars->PushRegisteredConVarsToEngine ();
+   convars.PushRegisteredConVarsToEngine ();
 
    static struct ModSupport
    {
@@ -3152,16 +3152,14 @@ void ConVarWrapper::RegisterVariable (const char *variable, const char *value, V
    newVariable.self = self;
    newVariable.type = varType;
 
-   memcpy (&m_regVars[m_regCount], &newVariable, sizeof (VarPair));
-   m_regCount++;
+   m_regs.Push (newVariable);
 }
-
 
 void ConVarWrapper::PushRegisteredConVarsToEngine (bool gameVars)
 {
-   for (int i = 0; i < m_regCount; i++)
+   FOR_EACH_AE (m_regs, i)
    {
-      VarPair *ptr = &m_regVars[i];
+      VarPair *ptr = &m_regs[i];
 
       if (ptr == NULL)
          break;
@@ -3184,15 +3182,15 @@ void ConVarWrapper::PushRegisteredConVarsToEngine (bool gameVars)
 #define LINK_ENTITY(entityFunction) \
 export void entityFunction (entvars_t *pev) \
 { \
-   static EntityPtr_t funcPtr = NULL; \
+   static EntityPtr_t entity_addr = NULL; \
    \
-   if (funcPtr == NULL) \
-      funcPtr = reinterpret_cast <EntityPtr_t> (g_gameLib->GetFunctionAddr (#entityFunction)); \
+   if (entity_addr == NULL) \
+      entity_addr = reinterpret_cast <EntityPtr_t> (g_gameLib->GetFunctionAddr (#entityFunction)); \
    \
-   if (funcPtr == NULL) \
+   if (entity_addr == NULL) \
       return; \
    \
-   (*funcPtr) (pev); \
+   (*entity_addr) (pev); \
 } \
 
 // entities in counter-strike...

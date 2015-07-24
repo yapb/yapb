@@ -54,7 +54,7 @@ void Bot::PushMessageQueue (int message)
 
       for (int i = 0; i < GetMaxClients (); i++)
       {
-         Bot *otherBot = botMgr->GetBot (i);
+         Bot *otherBot = botMgr.GetBot (i);
 
          if (otherBot != NULL && otherBot->pev != pev)
          {
@@ -185,14 +185,14 @@ void Bot::CheckGrenadeThrow (void)
                   searchRadius = 128.0;
 
                // search waypoints
-               waypoint->FindInRadius (enemyPredict, searchRadius, searchTab, &count);
+               waypoint.FindInRadius (enemyPredict, searchRadius, searchTab, &count);
 
                while (count > 0)
                {
                   allowThrowing = true;
 
                   // check the throwing
-                  m_throw = waypoint->GetPath (searchTab[count--])->origin;
+                  m_throw = waypoint.GetPath (searchTab[count--])->origin;
                   Vector src = CheckThrow (EyePosition (), m_throw);
 
                   if (src.GetLengthSquared () < 100.0)
@@ -226,11 +226,11 @@ void Bot::CheckGrenadeThrow (void)
       bool allowThrowing = true;
       Array <int> inRadius;
 
-      waypoint->FindInRadius (inRadius, 256, m_lastEnemy->v.origin + (m_lastEnemy->v.velocity * 0.5).Get2D ());
+      waypoint.FindInRadius (inRadius, 256, m_lastEnemy->v.origin + (m_lastEnemy->v.velocity * 0.5).Get2D ());
 
       FOR_EACH_AE (inRadius, i)
       {
-         Path *path = waypoint->GetPath (i);
+         Path *path = waypoint.GetPath (i);
 
          int friendCount = GetNearbyFriendsNearPosition (path->origin, 256.0f);
 
@@ -273,7 +273,7 @@ void Bot::AvoidGrenades (void)
 {
    // checks if bot 'sees' a grenade, and avoid it
 
-   if (!botMgr->HasActiveGrenades ())
+   if (!botMgr.HasActiveGrenades ())
       return;
 
   // check if old pointers to grenade is invalid
@@ -287,7 +287,7 @@ void Bot::AvoidGrenades (void)
       m_avoidGrenade = NULL;
       m_needAvoidGrenade = 0;
    }
-   Array <entity_t> activeGrenades = botMgr->GetActiveGrenades ();
+   Array <entity_t> activeGrenades = botMgr.GetActiveGrenades ();
 
    // find all grenades on the map
    FOR_EACH_AE (activeGrenades, it)
@@ -346,11 +346,11 @@ void Bot::AvoidGrenades (void)
 
 bool Bot::IsBehindSmokeClouds (edict_t *ent)
 {
-   if (!botMgr->HasActiveGrenades ())
+   if (!botMgr.HasActiveGrenades ())
       return false;
 
    const Vector &betweenUs = (ent->v.origin - pev->origin).Normalize ();
-   Array <entity_t> activeGrenades = botMgr->GetActiveGrenades ();
+   Array <entity_t> activeGrenades = botMgr.GetActiveGrenades ();
 
    // find all grenades on the map
    FOR_EACH_AE (activeGrenades, it)
@@ -718,7 +718,7 @@ void Bot::FindItem (void)
                      PushTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + Random.Float (30.0, 60.0), true); // push camp task on to stack
                      PushTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, GetWorldTime () + Random.Float (3.0, 6.0), true); // push move command
 
-                     if (waypoint->GetPath (index)->vis.crouch <= waypoint->GetPath (index)->vis.stand)
+                     if (waypoint.GetPath (index)->vis.crouch <= waypoint.GetPath (index)->vis.stand)
                         m_campButtons |= IN_DUCK;
                      else
                         m_campButtons &= ~IN_DUCK;
@@ -738,10 +738,10 @@ void Bot::FindItem (void)
                      m_defendedBomb = true;
 
                      int index = FindDefendWaypoint (entityOrigin);
-                     Path *path = waypoint->GetPath (index);
+                     Path *path = waypoint.GetPath (index);
 
                      float bombTimer = mp_c4timer.GetFloat ();
-                     float timeMidBlowup = g_timeBombPlanted + (bombTimer * 0.5 + bombTimer * 0.25) - waypoint->GetTravelTime (pev->maxspeed, pev->origin, path->origin);
+                     float timeMidBlowup = g_timeBombPlanted + (bombTimer * 0.5 + bombTimer * 0.25) - waypoint.GetTravelTime (pev->maxspeed, pev->origin, path->origin);
 
                      if (timeMidBlowup > GetWorldTime ())
                      {
@@ -771,7 +771,7 @@ void Bot::FindItem (void)
                      allowPickup = false; // never pickup dead hostage
                   else for (int i = 0; i < GetMaxClients (); i++)
                   {
-                     if ((bot = botMgr->GetBot (i)) != NULL && IsAlive (bot->GetEntity ()))
+                     if ((bot = botMgr.GetBot (i)) != NULL && IsAlive (bot->GetEntity ()))
                      {
                         for (int j = 0; j < MAX_HOSTAGES; j++)
                         {
@@ -795,7 +795,7 @@ void Bot::FindItem (void)
                   if (Random.Long (0, 100) < 90)
                      ChatterMessage (Chatter_FoundBombPlace);
 
-                  allowPickup = !IsBombDefusing (waypoint->GetBombPosition ()) || m_hasProgressBar;
+                  allowPickup = !IsBombDefusing (waypoint.GetBombPosition ()) || m_hasProgressBar;
                   pickupType = PICKUP_PLANTED_C4;
 
                   if (!m_defendedBomb && !allowPickup)
@@ -803,9 +803,9 @@ void Bot::FindItem (void)
                      m_defendedBomb = true;
 
                      int index = FindDefendWaypoint (entityOrigin);
-                     Path *path = waypoint->GetPath (index);
+                     Path *path = waypoint.GetPath (index);
 
-                     float timeToExplode = g_timeBombPlanted + mp_c4timer.GetFloat () - waypoint->GetTravelTime (pev->maxspeed, pev->origin, path->origin);
+                     float timeToExplode = g_timeBombPlanted + mp_c4timer.GetFloat () - waypoint.GetTravelTime (pev->maxspeed, pev->origin, path->origin);
         
                      RemoveCertainTask (TASK_MOVETOPOSITION); // remove any move tasks
 
@@ -833,7 +833,7 @@ void Bot::FindItem (void)
                      PushTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + Random.Float (30.0, 70.0), true); // push camp task on to stack
                      PushTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, GetWorldTime () + Random.Float (10.0, 30.0), true); // push move command
 
-                     if (waypoint->GetPath (index)->vis.crouch <= waypoint->GetPath (index)->vis.stand)
+                     if (waypoint.GetPath (index)->vis.crouch <= waypoint.GetPath (index)->vis.stand)
                         m_campButtons |= IN_DUCK;
                      else
                         m_campButtons &= ~IN_DUCK;
@@ -865,7 +865,7 @@ void Bot::FindItem (void)
    {
       for (int i = 0; i < GetMaxClients (); i++)
       {
-         if ((bot = botMgr->GetBot (i)) != NULL && IsAlive (bot->GetEntity ()) && bot->m_pickupItem == pickupItem)
+         if ((bot = botMgr.GetBot (i)) != NULL && IsAlive (bot->GetEntity ()) && bot->m_pickupItem == pickupItem)
          {
             m_pickupItem = NULL;
             m_pickupType = PICKUP_NONE;
@@ -912,14 +912,14 @@ void Bot::GetCampDirection (Vector *dest)
       // find nearest waypoint to bot and position
       for (int i = 0; i < g_numWaypoints; i++)
       {
-         float distance = (waypoint->GetPath (i)->origin - pev->origin).GetLengthSquared ();
+         float distance = (waypoint.GetPath (i)->origin - pev->origin).GetLengthSquared ();
 
          if (distance < minDistance)
          {
             minDistance = distance;
             tempIndex = i;
          }
-         distance = (waypoint->GetPath (i)->origin - *dest).GetLengthSquared ();
+         distance = (waypoint.GetPath (i)->origin - *dest).GetLengthSquared ();
 
          if (distance < maxDistance)
          {
@@ -934,14 +934,14 @@ void Bot::GetCampDirection (Vector *dest)
       minDistance = 99999.0f;
 
       int lookAtWaypoint = -1;
-      Path *path = waypoint->GetPath (tempIndex);
+      Path *path = waypoint.GetPath (tempIndex);
 
       for (int i = 0; i < MAX_PATH_INDEX; i++)
       {
          if (path->index[i] == -1)
             continue;
 
-         float distance = waypoint->GetPathDistance (path->index[i], enemyIndex);
+         float distance = waypoint.GetPathDistance (path->index[i], enemyIndex);
 
          if (distance < minDistance)
          {
@@ -950,7 +950,7 @@ void Bot::GetCampDirection (Vector *dest)
          }
       }
       if (lookAtWaypoint != -1 && lookAtWaypoint < g_numWaypoints)
-         *dest = waypoint->GetPath (lookAtWaypoint)->origin;
+         *dest = waypoint.GetPath (lookAtWaypoint)->origin;
    }
 }
 
@@ -966,7 +966,7 @@ void Bot::SwitchChatterIcon (bool show)
       if (!(g_clients[i].flags & CF_USED) || (g_clients[i].ent->v.flags & FL_FAKECLIENT) || g_clients[i].team != m_team)
          continue;
 
-      MESSAGE_BEGIN (MSG_ONE, netmsg->GetId (NETMSG_BOTVOICE), NULL, g_clients[i].ent); // begin message
+      MESSAGE_BEGIN (MSG_ONE, netmsg.GetId (NETMSG_BOTVOICE), NULL, g_clients[i].ent); // begin message
          WRITE_BYTE (show); // switch on/off
          WRITE_BYTE (GetIndex ());
       MESSAGE_END ();
@@ -1006,7 +1006,7 @@ void Bot::InstantChatterMessage (int type)
 
       g_sendAudioFinished = false;
 
-      MESSAGE_BEGIN (MSG_ONE, netmsg->GetId (NETMSG_SENDAUDIO), NULL, ent); // begin message
+      MESSAGE_BEGIN (MSG_ONE, netmsg.GetId (NETMSG_SENDAUDIO), NULL, ent); // begin message
          WRITE_BYTE (GetIndex ());
 
          if (pev->deadflag & DEAD_DYING)
@@ -1158,7 +1158,7 @@ void Bot::CheckMessageQueue (void)
 
                for (int i = 0; i < GetMaxClients (); i++)
                {
-                  Bot *bot = botMgr->GetBot (i);
+                  Bot *bot = botMgr.GetBot (i);
 
                   if (bot != NULL)
                   {
@@ -1179,7 +1179,7 @@ void Bot::CheckMessageQueue (void)
             case TASK_NORMAL:
                if (GetTask ()->data != -1 && Random.Long (0, 100) < 70)
                {
-                  Path *path = waypoint->GetPath (GetTask ()->data);
+                  Path *path = waypoint.GetPath (GetTask ()->data);
 
                   if (path->flags & FLAG_GOAL)
                   {
@@ -1403,7 +1403,7 @@ void Bot::PurchaseWeapons (void)
    int *ptr = g_weaponPrefs[m_personality] + NUM_WEAPONS;
 
    bool isPistolMode = g_weaponSelect[25].teamStandard == -1 && g_weaponSelect[3].teamStandard == 2;
-   bool teamEcoValid = botMgr->EconomicsValid (m_team);
+   bool teamEcoValid = botMgr.EconomicsValid (m_team);
 
    switch (m_buyState)
    {
@@ -1515,7 +1515,7 @@ void Bot::PurchaseWeapons (void)
 
             int moneySave = Random.Long (900, 1100);
 
-            if (botMgr->GetLastWinner () == m_team)
+            if (botMgr.GetLastWinner () == m_team)
                moneySave = 0;
 
             if (selectedWeapon->price <= (m_moneyAmount - moneySave))
@@ -1996,7 +1996,7 @@ void Bot::ApplyTaskFilters (void)
 
       // if half of the round is over, allow hunting
       // FIXME: it probably should be also team/map dependant
-      if (GetTaskId () != TASK_ESCAPEFROMBOMB && IsEntityNull (m_enemy) && g_timeRoundMid < GetWorldTime () && !m_isUsingGrenade && m_currentWaypointIndex != waypoint->FindNearest (m_lastEnemyOrigin) && m_personality != PERSONALITY_CAREFUL)
+      if (GetTaskId () != TASK_ESCAPEFROMBOMB && IsEntityNull (m_enemy) && g_timeRoundMid < GetWorldTime () && !m_isUsingGrenade && m_currentWaypointIndex != waypoint.FindNearest (m_lastEnemyOrigin) && m_personality != PERSONALITY_CAREFUL)
       {
          float desireLevel = 4096.0 - ((1.0 - tempAgression) * distance);
 
@@ -2214,11 +2214,11 @@ bool Bot::ReactOnEnemy (void)
 
    if (m_enemyReachableTimer < GetWorldTime ())
    {
-      int i = waypoint->FindNearest (pev->origin);
-      int enemyIndex = waypoint->FindNearest (m_enemy->v.origin);
+      int i = waypoint.FindNearest (pev->origin);
+      int enemyIndex = waypoint.FindNearest (m_enemy->v.origin);
       
       float lineDist = (m_enemy->v.origin - pev->origin).GetLength ();
-      float pathDist = waypoint->GetPathDistance (i, enemyIndex);
+      float pathDist = waypoint.GetPathDistance (i, enemyIndex);
 
       if (pathDist - lineDist > 112.0)
          m_isEnemyReachable = false;
@@ -2275,7 +2275,7 @@ void Bot::CheckRadioCommands (void)
             // Check if no more followers are allowed
             for (int i = 0; i < GetMaxClients (); i++)
             {
-               Bot *bot = botMgr->GetBot (i);
+               Bot *bot = botMgr.GetBot (i);
 
                if (bot != NULL)
                {
@@ -2309,7 +2309,7 @@ void Bot::CheckRadioCommands (void)
             {
                for (int i = 0; (i < GetMaxClients () && numFollowers > allowedFollowers) ; i++)
                {
-                  Bot *bot = botMgr->GetBot (i);
+                  Bot *bot = botMgr.GetBot (i);
 
                   if (bot != NULL)
                   {
@@ -2472,7 +2472,7 @@ void Bot::CheckRadioCommands (void)
          SelectWeaponByName ("weapon_knife");
 
          DeleteSearchNodes ();
-         MoveToVector (waypoint->GetBombPosition ());
+         MoveToVector (waypoint.GetBombPosition ());
 
          RadioMessage (Radio_Affirmative);
       }
@@ -2581,19 +2581,19 @@ void Bot::CheckRadioCommands (void)
                float minDistance = 99999.0f;
 
                // find nearest bomb waypoint to player
-               FOR_EACH_AE (waypoint->m_goalPoints, i)
+               FOR_EACH_AE (waypoint.m_goalPoints, i)
                {
-                  distance = (waypoint->GetPath (waypoint->m_goalPoints[i])->origin - m_radioEntity->v.origin).GetLengthSquared ();
+                  distance = (waypoint.GetPath (waypoint.m_goalPoints[i])->origin - m_radioEntity->v.origin).GetLengthSquared ();
 
                   if (distance < minDistance)
                   {
                      minDistance = distance;
-                     bombPoint = waypoint->m_goalPoints[i];
+                     bombPoint = waypoint.m_goalPoints[i];
                   }
                }
 
                // mark this waypoint as restricted point
-               if (bombPoint != -1 && !waypoint->IsGoalVisited (bombPoint))
+               if (bombPoint != -1 && !waypoint.IsGoalVisited (bombPoint))
                {
                   // does this bot want to defuse?
                   if (GetTaskId () == TASK_NORMAL)
@@ -2606,7 +2606,7 @@ void Bot::CheckRadioCommands (void)
 
                      }
                   }
-                  waypoint->SetGoalVisited (bombPoint);
+                  waypoint.SetGoalVisited (bombPoint);
                }
                g_timeNextBombUpdate = GetWorldTime () + 0.5;
             }
@@ -2663,7 +2663,7 @@ void Bot::CheckRadioCommands (void)
             // push move command
             PushTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, GetWorldTime () + Random.Float (30.0, 60.0), true);
 
-            if (waypoint->GetPath (index)->vis.crouch <= waypoint->GetPath (index)->vis.stand)
+            if (waypoint.GetPath (index)->vis.crouch <= waypoint.GetPath (index)->vis.stand)
                m_campButtons |= IN_DUCK;
             else
                m_campButtons &= ~IN_DUCK;
@@ -2712,7 +2712,7 @@ void Bot::SelectLeaderEachTeam (int team)
       }
       else if ((team == TEAM_TF) && !g_leaderChoosen[TEAM_TF])
       {
-         Bot *botLeader = botMgr->GetHighestFragsBot(team);
+         Bot *botLeader = botMgr.GetHighestFragsBot(team);
          
          if (botLeader != NULL && IsAlive (botLeader->GetEntity()))
          {
@@ -2748,7 +2748,7 @@ void Bot::SelectLeaderEachTeam (int team)
       }
       else if (!g_leaderChoosen[TEAM_CF])
       {
-         Bot *botLeader = botMgr->GetHighestFragsBot(team);
+         Bot *botLeader = botMgr.GetHighestFragsBot(team);
 
          if (botLeader != NULL)               
          {
@@ -2762,7 +2762,7 @@ void Bot::SelectLeaderEachTeam (int team)
    }
    else if (g_mapType & (MAP_ES | MAP_KA | MAP_FY))
    {
-      Bot *botLeader = botMgr->GetHighestFragsBot (team);
+      Bot *botLeader = botMgr.GetHighestFragsBot (team);
 
       if (botLeader != NULL)
       {
@@ -2774,7 +2774,7 @@ void Bot::SelectLeaderEachTeam (int team)
    }
    else  
    {
-      Bot *botLeader = botMgr->GetHighestFragsBot(team);
+      Bot *botLeader = botMgr.GetHighestFragsBot(team);
 
       if (botLeader != NULL)
       {
@@ -2833,7 +2833,7 @@ void Bot::ChooseAimDirection (void)
 
       if (changePredictedEnemy)
       {
-         m_lookAt = waypoint->GetPath (GetAimingWaypoint (m_lastEnemyOrigin))->origin;
+         m_lookAt = waypoint.GetPath (GetAimingWaypoint (m_lastEnemyOrigin))->origin;
          m_camp = m_lookAt;
 
          m_timeNextTracking = GetWorldTime () + 2.0f;
@@ -2855,12 +2855,12 @@ void Bot::ChooseAimDirection (void)
          if (m_team == TEAM_TF)
          {
             if ((g_experienceData + (index * g_numWaypoints) + index)->team0DangerIndex != -1)
-               m_lookAt = waypoint->GetPath ((g_experienceData + (index * g_numWaypoints) + index)->team0DangerIndex)->origin;
+               m_lookAt = waypoint.GetPath ((g_experienceData + (index * g_numWaypoints) + index)->team0DangerIndex)->origin;
          }
          else
          {
             if ((g_experienceData + (index * g_numWaypoints) + index)->team1DangerIndex != -1)
-               m_lookAt = waypoint->GetPath ((g_experienceData + (index * g_numWaypoints) + index)->team1DangerIndex)->origin;
+               m_lookAt = waypoint.GetPath ((g_experienceData + (index * g_numWaypoints) + index)->team1DangerIndex)->origin;
          }
       }
    }
@@ -2995,7 +2995,7 @@ void Bot::PeriodicThink (void)
    m_numFriendsLeft = GetNearbyFriendsNearPosition (pev->origin, 99999.0f);
    m_numEnemiesLeft = GetNearbyEnemiesNearPosition (pev->origin, 99999.0f);
 
-   if (g_bombPlanted && m_team == TEAM_CF && (pev->origin - waypoint->GetBombPosition ()).GetLength () < 700 && !IsBombDefusing (waypoint->GetBombPosition ()) && !m_hasProgressBar && GetTaskId () != TASK_ESCAPEFROMBOMB)
+   if (g_bombPlanted && m_team == TEAM_CF && (pev->origin - waypoint.GetBombPosition ()).GetLength () < 700 && !IsBombDefusing (waypoint.GetBombPosition ()) && !m_hasProgressBar && GetTaskId () != TASK_ESCAPEFROMBOMB)
       ResetTasks ();
 
    CheckSpawnTimeConditions ();
@@ -3035,7 +3035,7 @@ void Bot::RunTask_Normal (void)
       m_reloadState = RELOAD_PRIMARY;
 
    // if bomb planted and it's a CT calculate new path to bomb point if he's not already heading for
-   if (g_bombPlanted && m_team == TEAM_CF && GetTask ()->data != -1 && !(waypoint->GetPath (GetTask ()->data)->flags & FLAG_GOAL) && GetTaskId () != TASK_ESCAPEFROMBOMB)
+   if (g_bombPlanted && m_team == TEAM_CF && GetTask ()->data != -1 && !(waypoint.GetPath (GetTask ()->data)->flags & FLAG_GOAL) && GetTaskId () != TASK_ESCAPEFROMBOMB)
    {
       DeleteSearchNodes ();
       GetTask ()->data = -1;
@@ -3137,7 +3137,7 @@ void Bot::RunTask_Normal (void)
                PushTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + Random.Float (60.0, 120.0), true); // push camp task on to stack
                PushTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, GetWorldTime () + Random.Float (5.0, 10.0), true); // push move command
 
-               if (waypoint->GetPath (index)->vis.crouch <= waypoint->GetPath (index)->vis.stand)
+               if (waypoint.GetPath (index)->vis.crouch <= waypoint.GetPath (index)->vis.stand)
                   m_campButtons |= IN_DUCK;
                else
                   m_campButtons &= ~IN_DUCK;
@@ -3170,7 +3170,7 @@ void Bot::RunTask_Normal (void)
                   PushTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + Random.Float (25.0, 40.0), true); // push camp task on to stack
                   PushTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, GetWorldTime () + Random.Float (5.0f, 11.0f), true); // push move command
 
-                  if (waypoint->GetPath (index)->vis.crouch <= waypoint->GetPath (index)->vis.stand)
+                  if (waypoint.GetPath (index)->vis.crouch <= waypoint.GetPath (index)->vis.stand)
                      m_campButtons |= IN_DUCK;
                   else
                      m_campButtons &= ~IN_DUCK;
@@ -3305,7 +3305,7 @@ void Bot::RunTask_HuntEnemy (void)
       if (GetTask ()->data != -1 && GetTask ()->data < g_numWaypoints)
          destIndex = GetTask ()->data;
       else // no. we need to find a new one
-         destIndex = waypoint->FindNearest (m_lastEnemyOrigin);
+         destIndex = waypoint.FindNearest (m_lastEnemyOrigin);
 
       // remember index
       m_prevGoalIndex = destIndex;
@@ -3408,7 +3408,7 @@ void Bot::RunTask_SeekCover (void)
          destIndex = FindCoverWaypoint (1024.0f);
 
          if (destIndex == -1)
-            destIndex = waypoint->FindNearest (pev->origin, 512.0f);
+            destIndex = waypoint.FindNearest (pev->origin, 512.0f);
       }
       m_campDirection = 0;
 
@@ -3505,7 +3505,7 @@ void Bot::RunTask_Camp (void)
    m_checkTerrain = false;
    m_moveToGoal = false;
 
-   if (g_bombPlanted && m_defendedBomb && !IsBombDefusing (waypoint->GetBombPosition ()) && !OutOfBombTimer () && m_team == TEAM_CF)
+   if (g_bombPlanted && m_defendedBomb && !IsBombDefusing (waypoint.GetBombPosition ()) && !OutOfBombTimer () && m_team == TEAM_CF)
    {
       m_defendedBomb = false;
       TaskComplete ();
@@ -3558,14 +3558,14 @@ void Bot::RunTask_Camp (void)
          for (int i = 0; i < g_numWaypoints; i++)
          {
             // skip invisible waypoints or current waypoint
-            if (!waypoint->IsVisible (m_currentWaypointIndex, i) || (i == m_currentWaypointIndex))
+            if (!waypoint.IsVisible (m_currentWaypointIndex, i) || (i == m_currentWaypointIndex))
                continue;
 
-            const Vector &dotB = (waypoint->GetPath (i)->origin - pev->origin).Normalize2D ();
+            const Vector &dotB = (waypoint.GetPath (i)->origin - pev->origin).Normalize2D ();
 
             if ((dotA | dotB) > 0.9)
             {
-               int distance = static_cast <int> ((pev->origin - waypoint->GetPath (i)->origin).GetLength ());
+               int distance = static_cast <int> ((pev->origin - waypoint.GetPath (i)->origin).GetLength ());
 
                if (numFoundPoints >= 3)
                {
@@ -3591,12 +3591,12 @@ void Bot::RunTask_Camp (void)
          }
 
          if (--numFoundPoints >= 0)
-            m_camp = waypoint->GetPath (foundPoints[Random.Long (0, numFoundPoints)])->origin;
+            m_camp = waypoint.GetPath (foundPoints[Random.Long (0, numFoundPoints)])->origin;
          else
-            m_camp = waypoint->GetPath (GetAimingWaypoint ())->origin;
+            m_camp = waypoint.GetPath (GetAimingWaypoint ())->origin;
       }
       else
-         m_camp = waypoint->GetPath (GetAimingWaypoint ())->origin;
+         m_camp = waypoint.GetPath (GetAimingWaypoint ())->origin;
    }
    // press remembered crouch button
    pev->button |= m_campButtons;
@@ -3690,7 +3690,7 @@ void Bot::RunTask_MoveToPos (void)
       if (GetTask ()->data != -1 && GetTask ()->data < g_numWaypoints)
          destIndex = GetTask ()->data;
       else
-         destIndex = waypoint->FindNearest (m_position);
+         destIndex = waypoint.FindNearest (m_position);
 
       if (destIndex >= 0 && destIndex < g_numWaypoints)
       {
@@ -3747,7 +3747,7 @@ void Bot::RunTask_PlantBomb (void)
       // push move command
       PushTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, GetWorldTime () + (bombTimer * 0.5 + bombTimer * 0.25), true);
 
-      if (waypoint->GetPath (index)->vis.crouch <= waypoint->GetPath (index)->vis.stand)
+      if (waypoint.GetPath (index)->vis.crouch <= waypoint.GetPath (index)->vis.stand)
          m_campButtons |= IN_DUCK;
       else
          m_campButtons &= ~IN_DUCK;
@@ -3766,7 +3766,7 @@ void Bot::RunTask_DefuseBomb (void)
    bool defuseError = false;
 
    // exception: bomb has been defused
-   if (waypoint->GetBombPosition () == nullvec)
+   if (waypoint.GetBombPosition () == nullvec)
    {
       defuseError = true;
       g_bombPlanted = false;
@@ -3839,7 +3839,7 @@ void Bot::RunTask_DefuseBomb (void)
    m_strafeSpeed = 0.0;
 
    // bot is reloading and we close enough to start defusing
-   if (m_isReloading && (waypoint->GetBombPosition () - pev->origin).GetLength2D () < 80.0)
+   if (m_isReloading && (waypoint.GetBombPosition () - pev->origin).GetLength2D () < 80.0)
    {
       if (m_numEnemiesLeft == 0 || timeToBlowUp < fullDefuseTime + 7.0 || ((GetAmmoInClip () > 8 && m_reloadState == RELOAD_PRIMARY) || (GetAmmoInClip () > 5 && m_reloadState == RELOAD_SECONDARY)))
       {
@@ -3866,8 +3866,8 @@ void Bot::RunTask_DefuseBomb (void)
    // head to bomb and press use button
    m_aimFlags |= AIM_ENTITY;
 
-   m_destOrigin = waypoint->GetBombPosition ();
-   m_entity = waypoint->GetBombPosition ();
+   m_destOrigin = waypoint.GetBombPosition ();
+   m_entity = waypoint.GetBombPosition ();
 
    pev->button |= IN_USE;
 
@@ -4006,10 +4006,10 @@ void Bot::RunTask_FollowUser (void)
    {
       DeleteSearchNodes ();
 
-      int destIndex = waypoint->FindNearest (m_targetEntity->v.origin);
+      int destIndex = waypoint.FindNearest (m_targetEntity->v.origin);
 
       Array <int> points;
-      waypoint->FindInRadius (points, 200, m_targetEntity->v.origin);
+      waypoint.FindInRadius (points, 200, m_targetEntity->v.origin);
 
       while (!points.IsEmpty ())
       {
@@ -4225,7 +4225,7 @@ void Bot::RunTask_Throw_SG (void)
 
 void Bot::RunTask_DoubleJump (void)
 {
-   if (IsEntityNull (m_doubleJumpEntity) || !IsAlive (m_doubleJumpEntity) || (m_aimFlags & AIM_ENEMY) || (m_travelStartIndex != -1 && GetTask ()->time + (waypoint->GetTravelTime (pev->maxspeed, waypoint->GetPath (m_travelStartIndex)->origin, m_doubleJumpOrigin) + 11.0) < GetWorldTime ()))
+   if (IsEntityNull (m_doubleJumpEntity) || !IsAlive (m_doubleJumpEntity) || (m_aimFlags & AIM_ENEMY) || (m_travelStartIndex != -1 && GetTask ()->time + (waypoint.GetTravelTime (pev->maxspeed, waypoint.GetPath (m_travelStartIndex)->origin, m_doubleJumpOrigin) + 11.0) < GetWorldTime ()))
    {
       ResetDoubleJumpState ();
       return;
@@ -4276,7 +4276,7 @@ void Bot::RunTask_DoubleJump (void)
    {
       DeleteSearchNodes ();
 
-      int destIndex = waypoint->FindNearest (m_doubleJumpOrigin);
+      int destIndex = waypoint.FindNearest (m_doubleJumpOrigin);
 
       if (destIndex >= 0 && destIndex < g_numWaypoints)
       {
@@ -4328,10 +4328,10 @@ void Bot::RunTask_EscapeFromBomb (void)
 
       for (int i = 0; i < g_numWaypoints; i++)
       {
-         if ((waypoint->GetPath (i)->origin - waypoint->GetBombPosition ()).GetLength () < safeRadius || IsPointOccupied (i))
+         if ((waypoint.GetPath (i)->origin - waypoint.GetBombPosition ()).GetLength () < safeRadius || IsPointOccupied (i))
             continue;
 
-         float pathDistance = waypoint->GetPathDistance (m_currentWaypointIndex, i);
+         float pathDistance = waypoint.GetPathDistance (m_currentWaypointIndex, i);
 
          if (minPathDistance > pathDistance)
          {
@@ -4341,7 +4341,7 @@ void Bot::RunTask_EscapeFromBomb (void)
       }
 
       if (lastSelectedGoal < 0)
-         lastSelectedGoal = waypoint->FindFarest (pev->origin, safeRadius);
+         lastSelectedGoal = waypoint.FindFarest (pev->origin, safeRadius);
 
       m_prevGoalIndex = lastSelectedGoal;
       GetTask ()->data = lastSelectedGoal;
@@ -5181,12 +5181,12 @@ void Bot::BotAI (void)
 
             while (node != NULL)
             {
-               const Vector &srcPath = waypoint->GetPath (node->index)->origin;
+               const Vector &srcPath = waypoint.GetPath (node->index)->origin;
                node = node->next;
 
                if (node != NULL)
                {
-                  const Vector &dstPath = waypoint->GetPath (node->index)->origin;
+                  const Vector &dstPath = waypoint.GetPath (node->index)->origin;
                   DrawArrow (g_hostEntity, srcPath, dstPath, 15, 0, 255, 100, 55, 200, 5, 1);
                }
             }
@@ -5238,7 +5238,7 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits)
 
    if (IsValidPlayer (inflictor))
    {
-      if (m_seeEnemyTime + 4.0f < GetWorldTime () && yb_tkpunish.GetBool () && GetTeam (inflictor) == m_team && !botMgr->GetBot (inflictor))
+      if (m_seeEnemyTime + 4.0f < GetWorldTime () && yb_tkpunish.GetBool () && GetTeam (inflictor) == m_team && !botMgr.GetBot (inflictor))
       {
          // alright, die you teamkiller!!!
          m_actualReactionTime = 0.0f;
@@ -5288,7 +5288,7 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits)
    else // hurt by unusual damage like drowning or gas
    {
       // leave the camping/hiding position
-      if (!waypoint->Reachable (this, waypoint->FindNearest (m_destOrigin)))
+      if (!waypoint.Reachable (this, waypoint.FindNearest (m_destOrigin)))
       {
          DeleteSearchNodes ();
          FindWaypoint ();
@@ -5397,14 +5397,14 @@ void Bot::CollectExperienceData (edict_t *attacker, int damage)
    // if these are bots also remember damage to rank destination of the bot
    m_goalValue -= static_cast <float> (damage);
 
-   if (botMgr->GetBot (attacker) != NULL)
-      botMgr->GetBot (attacker)->m_goalValue += static_cast <float> (damage);
+   if (botMgr.GetBot (attacker) != NULL)
+      botMgr.GetBot (attacker)->m_goalValue += static_cast <float> (damage);
 
    if (damage < 20)
       return; // do not collect damage less than 20
 
-   int attackerIndex = waypoint->FindNearest (attacker->v.origin);
-   int victimIndex = waypoint->FindNearest (pev->origin);
+   int attackerIndex = waypoint.FindNearest (attacker->v.origin);
+   int victimIndex = waypoint.FindNearest (pev->origin);
 
    if (pev->health > 20)
    {
@@ -5669,9 +5669,9 @@ Vector Bot::CheckBombAudible (void)
       return nullvec; // reliability check
 
    if (m_difficulty >= 3)
-      return waypoint->GetBombPosition();
+      return waypoint.GetBombPosition();
 
-   const Vector &bombOrigin = waypoint->GetBombPosition ();
+   const Vector &bombOrigin = waypoint.GetBombPosition ();
    
    float timeElapsed = ((GetWorldTime () - g_timeBombPlanted) / mp_c4timer.GetFloat ()) * 100;
    float desiredRadius = 768.0;
@@ -5698,7 +5698,7 @@ void Bot::MoveToVector (const Vector &to)
    if (to == nullvec)
       return;
 
-   FindPath (m_currentWaypointIndex, waypoint->FindNearest (to), 0);
+   FindPath (m_currentWaypointIndex, waypoint.FindNearest (to), 0);
 }
 
 byte Bot::ThrottledMsec (void)
@@ -5811,7 +5811,7 @@ float Bot::GetEstimatedReachTime (void)
    // calculate 'real' time that we need to get from one waypoint to another
    if (m_currentWaypointIndex >= 0 && m_currentWaypointIndex < g_numWaypoints && m_prevWptIndex[0] >= 0 && m_prevWptIndex[0] < g_numWaypoints)
    {
-      float distance = (waypoint->GetPath (m_prevWptIndex[0])->origin - m_currentPath->origin).GetLength ();
+      float distance = (waypoint.GetPath (m_prevWptIndex[0])->origin - m_currentPath->origin).GetLength ();
 
       // caclulate estimated time
       if (pev->maxspeed <= 0.0f)
@@ -5846,7 +5846,7 @@ bool Bot::OutOfBombTimer (void)
    if (timeLeft > 16)
       return false;
 
-   const Vector &bombOrigin = waypoint->GetBombPosition ();
+   const Vector &bombOrigin = waypoint.GetBombPosition ();
 
    // for terrorist, if timer is lower than eleven seconds, return true
    if (static_cast <int> (timeLeft) < 16 && m_team == TEAM_TF && (bombOrigin - pev->origin).GetLength () < 1000)
@@ -5860,7 +5860,7 @@ bool Bot::OutOfBombTimer (void)
       Bot *bot = NULL; // temporaly pointer to bot
 
       // search players with defuse kit
-      if ((bot = botMgr->GetBot (i)) != NULL && GetTeam (bot->GetEntity ()) == TEAM_CF && bot->m_hasDefuser && (bombOrigin - bot->pev->origin).GetLength () < 500)
+      if ((bot = botMgr.GetBot (i)) != NULL && GetTeam (bot->GetEntity ()) == TEAM_CF && bot->m_hasDefuser && (bombOrigin - bot->pev->origin).GetLength () < 500)
       {
          hasTeammatesWithDefuserKit = true;
          break;
@@ -5868,7 +5868,7 @@ bool Bot::OutOfBombTimer (void)
    }
 
    // add reach time to left time
-   float reachTime = waypoint->GetTravelTime (pev->maxspeed, m_currentPath->origin, bombOrigin);
+   float reachTime = waypoint.GetTravelTime (pev->maxspeed, m_currentPath->origin, bombOrigin);
 
    // for counter-terrorist check alos is we have time to reach position plus average defuse time
    if ((timeLeft < reachTime + 6 && !m_hasDefuser && !hasTeammatesWithDefuserKit) || (timeLeft < reachTime + 2 && m_hasDefuser))
@@ -6026,7 +6026,7 @@ bool Bot::IsBombDefusing (const Vector &bombOrigin)
 
    for (int i = 0; i < GetMaxClients (); i++)
    {
-      Bot *bot = botMgr->GetBot (i);
+      Bot *bot = botMgr.GetBot (i);
 
       if (bot == NULL || bot == this)
          continue; // skip invalid bots

@@ -1406,6 +1406,7 @@ public:
   ~Localizer (void) { m_langTab.RemoveAll (); }
 
    char *TranslateInput (const char *input);
+   void Destroy (void);
 };
 
 // netmessage handler class
@@ -1586,9 +1587,8 @@ private:
       VarType type;
       cvar_t reg;
       class ConVar *self;
-   } m_regVars[101];
-   
-   int m_regCount;
+   };
+   Array <VarPair> m_regs;
 
 public:
    void RegisterVariable (const char *variable, const char *value, VarType varType, ConVar *self);
@@ -1597,11 +1597,11 @@ public:
 
 
 // expose bot globals
-#define netmsg NetworkMsg::GetObject ()
-#define locale Localizer::GetObject ()
-#define convars ConVarWrapper::GetObject ()
-#define waypoint Waypoint::GetObject ()
-#define botMgr BotManager::GetObject ()
+#define netmsg NetworkMsg::GetReference ()
+#define locale Localizer::GetReference ()
+#define convars ConVarWrapper::GetReference ()
+#define waypoint Waypoint::GetReference ()
+#define botMgr BotManager::GetReference ()
 
 // simplify access for console variables
 class ConVar
@@ -1614,7 +1614,7 @@ public:
    {
       m_eptr = NULL;
 
-      convars->RegisterVariable (name, initval, type, this);
+      convars.RegisterVariable (name, initval, type, this);
    }
 
    inline bool GetBool(void)
