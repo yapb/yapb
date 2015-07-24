@@ -2992,50 +2992,6 @@ export void Meta_Init (void)
    g_isMetamod = true;
 }
 
-extern "C" int access (const char *filename, int mode);
-
-struct DirectoryTransition
-{
-   String oldName;
-   String newName;
-
-   DirectoryTransition (void)
-   {
-   }
-
-   DirectoryTransition (const String &oldName, const String &newName)
-   {
-      String rootPath;
-      rootPath.AssignFormat ("%s/addons/yapb/", GetModName ());
-
-      this->oldName = rootPath + oldName;
-      this->newName = rootPath + newName;
-   }
-
-   void TryToRename (void)
-   {
-      if (access (oldName.GetBuffer (), 00) != -1)
-         rename (oldName.GetBuffer (), newName.GetBuffer ());
-   }
-};
-
-void FixDirectoryStructure (void)
-{
-   // temporary function for 2.7 directory structure changes, will be deleted after final releases of the bot
-
-   static Array <DirectoryTransition> directories;
-
-   directories.Push (DirectoryTransition ("wptdefault", "data"));
-   directories.Push (DirectoryTransition ("data/data", "data/learned"));
-   directories.Push (DirectoryTransition ("config", "conf"));
-   directories.Push (DirectoryTransition ("conf/language", "conf/lang"));
-
-   FOR_EACH_AE (directories, it)
-      directories[it].TryToRename ();
-
-   directories.RemoveAll ();
-}
-
 DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t *pGlobals)
 {
    // this is the very first function that is called in the game DLL by the engine. Its purpose
@@ -3052,8 +3008,6 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    // get the engine functions from the engine...
    memcpy (&g_engfuncs, functionTable, sizeof (enginefuncs_t));
    g_pGlobals = pGlobals;
-
-   FixDirectoryStructure ();
 
    // register our cvars
    convars->PushRegisteredConVarsToEngine ();
