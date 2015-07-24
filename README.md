@@ -1,7 +1,7 @@
 Yet Another Ping Of Death Bot
 =============
 
-AI opponent for Counter-Strike based on POD-Bot 2.6 which allows your to play good old Counter-Strike without connecting to any server, or fill your server with computer controller players.
+AI opponent for Counter-Strike based on POD-Bot 2.6 which allows your to play good old Counter-Strike without connecting to any server, or fill your server with computer controlled players.
 
 Build Status & Downloads:
 
