@@ -1824,7 +1824,7 @@ void Bot::SetConditions (void)
                ChatterMessage (Chatter_SniperKilled);
             else
             { 
-               switch (m_numEnemiesLeft)
+               switch (GetNearbyEnemiesNearPosition (pev->origin, 99999.0f))
                { 
                case 0:
                   if (Random.Long (0, 100) < 50)
@@ -3006,7 +3006,7 @@ void Bot::PeriodicThink (void)
       m_lastEnemy = NULL;
       m_lastEnemyOrigin = nullvec;
    }
-   m_timePeriodicUpdate = GetWorldTime () + 0.25f;
+   m_timePeriodicUpdate = GetWorldTime () + 0.5f;
 }
 
 void Bot::RunTask_Normal (void)
@@ -5455,7 +5455,7 @@ void Bot::HandleChatterMessage (const char *tempMessage)
 {
    // this function is added to prevent engine crashes with: 'Message XX started, before message XX ended', or something.
 
-   if (FStrEq (tempMessage, "#CTs_Win") && (m_team == TEAM_CF))
+   if (FStrEq (tempMessage, "#CTs_Win") && m_team == TEAM_CF)
    {
       if (g_timeRoundMid > GetWorldTime ())
          ChatterMessage (Chatter_QuicklyWonTheRound);
@@ -5463,7 +5463,7 @@ void Bot::HandleChatterMessage (const char *tempMessage)
          ChatterMessage (Chatter_WonTheRound);
    }
 
-   if (FStrEq (tempMessage, "#Terrorists_Win") && (m_team == TEAM_TF))
+   if (FStrEq (tempMessage, "#Terrorists_Win") && m_team == TEAM_TF)
    {
       if (g_timeRoundMid > GetWorldTime ())
          ChatterMessage (Chatter_QuicklyWonTheRound);

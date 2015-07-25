@@ -911,6 +911,9 @@ void GameDLLInit (void)
    // execute main config
    ServerCommand ("exec addons/yapb/conf/yapb.cfg");
 
+   // set correct version string
+   yb_version.SetString (FormatBuffer ("%s.0.%u", yb_version.GetString (), GenerateBuildNumber ()));
+
    // register fake metamod command handler if we not! under mm
    if (!g_isMetamod)
       RegisterCommand ("meta", CommandHandler_NotMM);

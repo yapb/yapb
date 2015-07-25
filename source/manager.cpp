@@ -220,7 +220,7 @@ Bot *BotManager::FindOneValidAliveBot (void)
 
    for (int i = 0; i < GetMaxClients (); i++)
    {
-      if (m_bots[i] != NULL && IsAlive (m_bots[i]->GetEntity ()))
+      if (m_bots[i] != NULL && IsAlive (m_bots[i]->GetEntity ()) && foundBots.GetSize () < 5)
          foundBots.Push (i);
    }
 
