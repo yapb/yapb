@@ -110,7 +110,7 @@ bool Bot::ItemIsVisible (const Vector &destination, char *itemName)
       if (strcmp (STRING (tr.pHit->v.classname), itemName) == 0)
          return true;
 
-      if (tr.flFraction > 0.98 && strncmp (STRING (tr.pHit->v.classname), "csdmw_", 6) == 0)
+      if (tr.flFraction > 0.98 && (yb_csdm_mode.GetBool () && strncmp (STRING (tr.pHit->v.classname), "csdmw_", 6) == 0))
          return true;
 
       return false;
@@ -680,7 +680,7 @@ void Bot::FindItem (void)
                }
                else if (m_isVIP || !RateGroundWeapon (ent))
                   allowPickup = false;
-               else if (strcmp (STRING (ent->v.model) + 9, "medkit.mdl") == 0 && (pev->health >= 100))
+               else if (strcmp (STRING (ent->v.model) + 9, "medkit.mdl") == 0 && pev->health >= 100)
                   allowPickup = false;
                else if ((strcmp (STRING (ent->v.model) + 9, "kevlar.mdl") == 0 || strcmp (STRING (ent->v.model) + 9, "battery.mdl") == 0) && pev->armorvalue >= 100) // armor vest
                   allowPickup = false;
