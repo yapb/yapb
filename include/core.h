@@ -1241,9 +1241,6 @@ public:
    inline Vector Center (void) { return (pev->absmax + pev->absmin) * 0.5; };
    inline Vector EyePosition (void) { return pev->origin + pev->view_ofs; };
 
-   // things that should be executed every frame
-   void ThinkFrame (void);
-
    // the main function that decides intervals of running bot ai
    void ThinkMain (void);
 

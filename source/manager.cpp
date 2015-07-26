@@ -1119,6 +1119,10 @@ void Bot::NewRound (void)
       ChatterMessage (Chatter_NewRound);
 
    m_thinkInterval = (1.0f / 30.0f) * Random.Float (0.95f, 1.05f);
+
+   // fixes bot looking at weird positions during buytime with think fps
+   m_aimFlags |= AIM_NAVPOINT;
+   ChooseAimDirection ();
 }
 
 void Bot::Kill (void)

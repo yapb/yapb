@@ -2880,13 +2880,7 @@ void Bot::ThinkMain (void)
       m_thinkFps = GetWorldTime () + m_thinkInterval;
    }
    else
-      ThinkFrame ();
-}
-
-void Bot::ThinkFrame (void)
-{
-   UpdateLookAngles ();
-   // RunPlayerMovement ();
+      UpdateLookAngles ();
 }
 
 void Bot::Think (void)
