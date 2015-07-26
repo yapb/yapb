@@ -3164,8 +3164,11 @@ void Bot::UpdateBodyAngles (void)
 
 void Bot::UpdateLookAngles (void)
 {
+   const float delta = GetWorldTime () - m_lookUpdateTime;
+   m_lookUpdateTime = GetWorldTime ();
+
    // adjust all body and view angles to face an absolute vector
-   Vector direction = (m_lookAt - EyePosition ()).ToAngles () + pev->punchangle * (m_difficulty * 25) / 100.0;
+   Vector direction = (m_lookAt - EyePosition ()).ToAngles ();
    direction.x *= -1.0f; // invert for engine
 
    direction.ClampAngles ();
@@ -3188,8 +3191,6 @@ void Bot::UpdateLookAngles (void)
 
    float angleDiffYaw = AngleNormalize (direction.y - m_idealAngles.y);
    float angleDiffPitch = AngleNormalize (direction.x - m_idealAngles.x);
-
-   const float delta = m_frameInterval;
 
    if (angleDiffYaw < 1.0f && angleDiffYaw > -1.0f)
    {

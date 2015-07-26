@@ -220,7 +220,10 @@ Bot *BotManager::FindOneValidAliveBot (void)
 
    for (int i = 0; i < GetMaxClients (); i++)
    {
-      if (m_bots[i] != NULL && IsAlive (m_bots[i]->GetEntity ()) && foundBots.GetSize () < 5)
+      if (foundBots.GetSize () > 4)
+         break;
+
+      if (m_bots[i] != NULL && IsAlive (m_bots[i]->GetEntity ()))
          foundBots.Push (i);
    }
 
@@ -976,6 +979,7 @@ void Bot::NewRound (void)
    m_prevOrigin = Vector (9999.0, 9999.0, 9999.0);
    m_prevTime = GetWorldTime ();
    m_blindRecognizeTime = GetWorldTime ();
+   m_lookUpdateTime = GetWorldTime ();
    
    m_viewDistance = 4096.0;
    m_maxViewDistance = 4096.0;

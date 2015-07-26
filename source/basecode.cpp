@@ -2886,7 +2886,7 @@ void Bot::ThinkMain (void)
 void Bot::ThinkFrame (void)
 {
    UpdateLookAngles ();
-   RunPlayerMovement ();
+   // RunPlayerMovement ();
 }
 
 void Bot::Think (void)

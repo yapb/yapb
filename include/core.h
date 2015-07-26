@@ -944,6 +944,7 @@ private:
 
    float m_lookYawVel; // look yaw velocity
    float m_lookPitchVel; // look pitch velocity
+   float m_lookUpdateTime; // lookangles update time
 
    bool m_moveToGoal; // bot currently moving to goal??
 
