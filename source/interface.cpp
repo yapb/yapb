@@ -2055,6 +2055,9 @@ void ServerActivate (edict_t *pentEdictList, int edictCount, int clientMax)
    waypoints.Init ();
    waypoints.Load ();
 
+   // create global killer entity
+   bots.CreateKillerEntity ();
+
    // execute main config
    ServerCommand ("exec addons/yapb/conf/yapb.cfg");
 
@@ -2088,6 +2091,9 @@ void ServerDeactivate (void)
    // save collected experience on shutdown
    waypoints.SaveExperienceTab ();
    waypoints.SaveVisibilityTab ();
+
+   // destroy global killer entity
+   bots.DestroyKillerEntity ();
 
    FreeLibraryMemory ();
 

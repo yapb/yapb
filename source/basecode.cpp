@@ -2869,12 +2869,12 @@ void Bot::ChooseAimDirection (void)
       m_lookAt = m_destOrigin;
 }
 
-void Bot::ThinkMain (void)
+void Bot::Think (void)
 {
    if (m_thinkFps <= GetWorldTime ())
    {
       // execute delayed think
-      Think ();
+      ThinkDelayed ();
 
       // skip some frames
       m_thinkFps = GetWorldTime () + m_thinkInterval;
@@ -2883,7 +2883,7 @@ void Bot::ThinkMain (void)
       UpdateLookAngles ();
 }
 
-void Bot::Think (void)
+void Bot::ThinkDelayed (void)
 {
    pev->button = 0;
    pev->flags |= FL_FAKECLIENT; // restore fake client bit, if it were removed by some evil action =)
@@ -2907,7 +2907,7 @@ void Bot::Think (void)
    else if (!m_notKilled)
    {
       // no movement allowed in
-      if (m_voteKickIndex != m_lastVoteKick && yb_tkpunish.GetBool ()) // We got a Teamkiller? Vote him away...
+      if (m_voteKickIndex != m_lastVoteKick && yb_tkpunish.GetBool ()) // we got a teamkiller? vote him away...
       {
          FakeClientCommand (GetEntity (), "vote %d", m_voteKickIndex);
          m_lastVoteKick = m_voteKickIndex;
@@ -2961,7 +2961,7 @@ void Bot::Think (void)
          }
       }
    }
-   else if (m_buyingFinished)
+   else if (m_notKilled && m_buyingFinished && !(pev->maxspeed < 10 && GetTaskId () != TASK_PLANTBOMB && GetTaskId () != TASK_DEFUSEBOMB) && !yb_freeze_bots.GetBool ())
       botMovement = true;
 
    CheckMessageQueue (); // check for pending messages
@@ -2970,10 +2970,7 @@ void Bot::Think (void)
    if (g_lastRadioTime[g_clients[IndexOfEntity (GetEntity ()) - 1].realTeam] + Random.Float (0.8f, 2.1f) < GetWorldTime ())
       SwitchChatterIcon (false); // hide icon
 
-   if (pev->maxspeed < 10 && GetTaskId () != TASK_PLANTBOMB && GetTaskId () != TASK_DEFUSEBOMB)
-      botMovement = false;
-
-   if (m_notKilled && botMovement && !yb_freeze_bots.GetBool ())
+   if (botMovement)
       BotAI (); // execute main code
 
    RunPlayerMovement ();  // run the player movement

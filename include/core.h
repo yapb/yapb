@@ -1242,10 +1242,10 @@ public:
    inline Vector EyePosition (void) { return pev->origin + pev->view_ofs; };
 
    // the main function that decides intervals of running bot ai
-   void ThinkMain (void);
+   void Think (void);
 
    /// the things that can be executed while skipping frames
-   void Think (void);
+   void ThinkDelayed (void);
 
    void NewRound (void);
    void EquipInBuyzone (int buyCount);
@@ -1319,6 +1319,7 @@ private:
 
    // holds currently active grenades in the map
    Array <entity_t> m_activeGrenades;
+   edict_t *m_killerEntity; // killer entity for bots
 
 protected:
    int CreateBot (const String &name, int difficulty, int personality, int team, int member);
@@ -1345,6 +1346,10 @@ public:
 
    void Think (void);
    void PeriodicThink (void);
+
+   void CreateKillerEntity (void);
+   void DestroyKillerEntity (void);
+   void TouchWithKillerEntity (Bot *bot);
 
    void Free (void);
    void Free (int index);

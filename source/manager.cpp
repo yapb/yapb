@@ -43,8 +43,48 @@ BotManager::BotManager (void)
 BotManager::~BotManager (void)
 {
    // this is a bot manager class destructor, do not use GetMaxClients () here !!
-
    Free ();
+}
+
+void BotManager::CreateKillerEntity (void)
+{
+   // this function creates single trigger_hurt for using in Bot::Kill, to reduce lags, when killing all the bots
+
+   m_killerEntity = g_engfuncs.pfnCreateNamedEntity (MAKE_STRING ("trigger_hurt"));
+
+   m_killerEntity->v.dmg = 9999.0f;
+   m_killerEntity->v.dmg_take = 1.0f;
+   m_killerEntity->v.dmgtime = 2.0f;
+   m_killerEntity->v.effects |= EF_NODRAW;
+
+   g_engfuncs.pfnSetOrigin (m_killerEntity, Vector (-99999.0f, -99999.0f, -99999.0f));
+   MDLL_Spawn (m_killerEntity);
+}
+
+void BotManager::DestroyKillerEntity (void)
+{
+   if (!IsEntityNull (m_killerEntity))
+      g_engfuncs.pfnRemoveEntity (m_killerEntity);
+}
+
+void BotManager::TouchWithKillerEntity (Bot *bot)
+{
+   if (IsEntityNull (m_killerEntity))
+   {
+      MDLL_ClientKill (bot->GetEntity ());
+      return;
+   }
+   m_killerEntity->v.classname = MAKE_STRING (g_weaponDefs[bot->m_currentWeapon].className);
+   m_killerEntity->v.dmg_inflictor = bot->GetEntity ();
+
+   KeyValueData kv;
+   kv.szClassName = const_cast <char *> (g_weaponDefs[bot->m_currentWeapon].className);
+   kv.szKeyName = "damagetype";
+   kv.szValue = const_cast <char *> (FormatBuffer ("%d", (1 << 4)));
+   kv.fHandled = FALSE;
+
+   MDLL_KeyValue (m_killerEntity, &kv);
+   MDLL_Touch (m_killerEntity, bot->GetEntity ());
 }
 
 void BotManager::CallGameEntity (entvars_t *vars)
@@ -240,7 +280,7 @@ void BotManager::Think (void)
    for (int i = 0; i < GetMaxClients (); i++)
    {
       if (m_bots[i] != NULL)
-         m_bots[i]->ThinkMain ();
+         m_bots[i]->Think ();
    }
 }
 
@@ -1130,32 +1170,7 @@ void Bot::Kill (void)
    // this function kills a bot (not just using ClientKill, but like the CSBot does)
    // base code courtesy of Lazy (from bots-united forums!)
 
-   edict_t *hurtEntity = (*g_engfuncs.pfnCreateNamedEntity) (MAKE_STRING ("trigger_hurt"));
-
-   if (IsEntityNull (hurtEntity))
-      return;
-
-   hurtEntity->v.classname = MAKE_STRING (g_weaponDefs[m_currentWeapon].className);
-   hurtEntity->v.dmg_inflictor = GetEntity ();
-   hurtEntity->v.dmg = 9999.0;
-   hurtEntity->v.dmg_take = 1.0;
-   hurtEntity->v.dmgtime = 2.0;
-   hurtEntity->v.effects |= EF_NODRAW;
-
-   (*g_engfuncs.pfnSetOrigin) (hurtEntity, Vector (-4000, -4000, -4000));
-
-   KeyValueData kv;
-   kv.szClassName = const_cast <char *> (g_weaponDefs[m_currentWeapon].className);
-   kv.szKeyName = "damagetype";
-   kv.szValue = const_cast <char *> (FormatBuffer ("%d", (1 << 4)));
-   kv.fHandled = FALSE;
-
-   MDLL_KeyValue (hurtEntity, &kv);
-
-   MDLL_Spawn (hurtEntity);
-   MDLL_Touch (hurtEntity, GetEntity ());
-
-   (*g_engfuncs.pfnRemoveEntity) (hurtEntity);
+   bots.TouchWithKillerEntity (this);
 }
 
 void Bot::Kick (void)
