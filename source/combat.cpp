@@ -126,7 +126,7 @@ bool Bot::CheckVisibility (edict_t *target, Vector *origin, byte *bodyPart)
       *bodyPart |= VISIBLE_HEAD;
       *origin = target->v.origin + target->v.view_ofs;
 
-      if (m_difficulty == 4)
+      if (m_difficulty > 3)
          origin->z += 1.0f;
    }
 
@@ -509,7 +509,7 @@ const Vector &Bot::GetAimPosition (void)
    else
       m_enemyOrigin = targetOrigin;
 
-   if (distance >= 256.0f)
+   if (distance >= 256.0f && m_difficulty < 4)
       m_enemyOrigin += velocity;
 
    return m_enemyOrigin;
@@ -517,7 +517,8 @@ const Vector &Bot::GetAimPosition (void)
 
 float Bot::GetZOffset (float distance)
 {
-   // got it from pbmm
+   if (m_difficulty < 3)
+      return 0.0f;
 
    bool sniper = UsesSniper ();
    bool pistol = UsesPistol ();
@@ -976,6 +977,9 @@ bool Bot::IsWeaponBadInDistance (int weaponIndex, float distance)
 {
    // this function checks, is it better to use pistol instead of current primary weapon
    // to attack our enemy, since current weapon is not very good in this situation.
+
+   if (m_difficulty < 2)
+      return false;
 
    int weaponID = g_weaponSelect[weaponIndex].id;
 

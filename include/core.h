@@ -893,8 +893,10 @@ private:
    edict_t *m_targetEntity; // the entity that the bot is trying to reach
    edict_t *m_hostages[MAX_HOSTAGES]; // pointer to used hostage entities
 
+   bool m_moveToGoal; // bot currently moving to goal??
    bool m_isStuck; // bot is stuck
    bool m_isReloading; // bot is reloading a gun
+
    int m_reloadState; // current reload state
    int m_voicePitch; // bot voice pitch
 
@@ -946,13 +948,19 @@ private:
    float m_lookPitchVel; // look pitch velocity
    float m_lookUpdateTime; // lookangles update time
 
-   bool m_moveToGoal; // bot currently moving to goal??
+   Vector m_randomizedIdealAngles; // angle wanted with noise
+   Vector m_angularDeviation; // angular deviation from current to ideal angles
+   Vector m_aimSpeed; // aim speed calculated
+
+   float m_randomizeAnglesTime; // time last randomized location
+   float m_playerTargetTime; // time last targeting
 
    void InstantChatterMessage (int type);
    void BotAI (void);
    void CheckSpawnTimeConditions (void);
-   bool IsMorePowerfulWeaponCanBeBought (void);
    void PurchaseWeapons (void);
+
+   bool IsMorePowerfulWeaponCanBeBought (void);
    int PickBestFromRandom (int *random, int count);
 
    bool CanDuckUnder (const Vector &normal);
@@ -1009,6 +1017,7 @@ private:
    bool EnemyIsThreat (void);
    void UpdateLookAngles (void);
    void UpdateBodyAngles (void);
+   void UpdateLookAnglesLowSkill (const Vector &direction, const float delta);
    void SetIdealReactionTimes (bool actual = false);
    bool IsRestricted (int weaponIndex);
    bool IsRestrictedAMX (int weaponIndex);

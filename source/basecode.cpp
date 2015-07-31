@@ -5229,7 +5229,7 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits)
 
    if (IsValidPlayer (inflictor))
    {
-      if (m_seeEnemyTime + 4.0f < GetWorldTime () && yb_tkpunish.GetBool () && GetTeam (inflictor) == m_team && !bots.GetBot (inflictor))
+      if (yb_tkpunish.GetBool () && GetTeam (inflictor) == m_team && !IsValidBot (inflictor))
       {
          // alright, die you teamkiller!!!
          m_actualReactionTime = 0.0f;

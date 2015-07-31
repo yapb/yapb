@@ -109,8 +109,8 @@ int Bot::FindGoal (void)
          }
          return m_chosenGoalIndex = ChooseBombWaypoint ();
       }
-      defensive += 25.0f;
-      offensive -= 25.0f;
+      defensive += 25.0f + m_difficulty * 2.0f;
+      offensive -= 25.0f - m_difficulty * 0.5f;
 
       if (m_personality != PERSONALITY_RUSHER)
          defensive += 10.0f;
@@ -648,15 +648,6 @@ bool Bot::DoWaypointNav (void)
    // this function is a main path navigation
 
    TraceResult tr, tr2;
-
-   // check if we fallen from something
-   if (IsOnFloor () && m_jumpFinished && m_currentWaypointIndex > 0)
-   {
-      const Vector &wptOrg = m_currentPath->origin;
-
-      if ((pev->origin - wptOrg).GetLength2D () <= 100.0f && (wptOrg.z > pev->origin.z + 20.0f))
-         m_currentWaypointIndex = -1;
-   }
 
    // check if we need to find a waypoint...
    if (m_currentWaypointIndex == -1)
@@ -3173,8 +3164,17 @@ void Bot::UpdateLookAngles (void)
 
    direction.ClampAngles ();
 
+   // lower skilled bot's have lower aiming
+   if (m_difficulty < 3)
+   {
+      UpdateLookAnglesLowSkill (direction, delta);
+      UpdateBodyAngles ();
+
+      return;
+   }
+
    // this is what makes bot almost godlike (got it from sypb)
-   if (m_difficulty == 4 && (m_aimFlags & AIM_ENEMY) && (m_wantsToFire || UsesSniper ()) && yb_whose_your_daddy.GetBool ())
+   if (m_difficulty > 3 && (m_aimFlags & AIM_ENEMY) && (m_wantsToFire || UsesSniper ()) && yb_whose_your_daddy.GetBool ())
    {
       pev->v_angle = direction;
       UpdateBodyAngles ();
@@ -3230,6 +3230,94 @@ void Bot::UpdateLookAngles (void)
    UpdateBodyAngles ();
 }
 
+void Bot::UpdateLookAnglesLowSkill (const Vector &direction, const float delta)
+{
+   Vector spring (13.0f, 13.0f, 0.0f);
+   Vector damperCoefficient (0.22f, 0.22f, 0.0f);
+
+   Vector influence = Vector (0.25f, 0.17f, 0.0f) * ((100 - (m_difficulty * 25)) / 100.f);
+   Vector randomization = Vector (2.0f, 0.18f, 0.0f)  * ((100 - (m_difficulty * 25)) / 100.f);
+
+   const float noTargetRatio = 0.3f;
+   const float offsetDelay = 1.2f;
+
+   Vector stiffness = nullvec;
+   Vector randomize = nullvec;
+
+   m_idealAngles = direction.Get2D ();
+   m_idealAngles.ClampAngles ();
+
+   if (m_aimFlags & (AIM_ENEMY | AIM_ENTITY | AIM_GRENADE | AIM_LAST_ENEMY) || GetTaskId () == TASK_SHOOTBREAKABLE)
+   {
+      m_playerTargetTime = GetWorldTime ();
+      m_randomizedIdealAngles = m_idealAngles;
+
+      stiffness = spring * (0.2 + (m_difficulty * 25) / 125.0);
+   }
+   else
+   {
+      // is it time for bot to randomize the aim direction again (more often where moving) ?
+      if (m_randomizeAnglesTime < GetWorldTime () && ((pev->velocity.GetLength () > 1.0 && m_angularDeviation.GetLength () < 5.0) || m_angularDeviation.GetLength () < 1.0))
+      {
+         // is the bot standing still ?
+         if (pev->velocity.GetLength () < 1.0)
+            randomize = randomization * 0.2; // randomize less
+         else
+            randomize = randomization;
+
+         // randomize targeted location a bit (slightly towards the ground)
+         m_randomizedIdealAngles = m_idealAngles + Vector (Random.Float (-randomize.x * 0.5, randomize.x * 1.5), Random.Float (-randomize.y, randomize.y), 0);
+
+         // set next time to do this
+         m_randomizeAnglesTime = GetWorldTime () + Random.Float (0.4f, offsetDelay);
+      }
+      float stiffnessMultiplier = noTargetRatio;
+
+      // take in account whether the bot was targeting someone in the last N seconds
+      if (GetWorldTime () - (m_playerTargetTime + offsetDelay) < noTargetRatio * 10.0)
+      {
+         stiffnessMultiplier = 1.0 - (GetWorldTime () - m_timeLastFired) * 0.1;
+
+         // don't allow that stiffness multiplier less than zero
+         if (stiffnessMultiplier < 0.0)
+            stiffnessMultiplier = 0.5;
+      }
+
+      // also take in account the remaining deviation (slow down the aiming in the last 10°)
+      if (m_difficulty < 3 && (m_angularDeviation.GetLength () < 10.0))
+         stiffnessMultiplier *= m_angularDeviation.GetLength () * 0.1;
+
+      // slow down even more if we are not moving
+      if (m_difficulty < 3 && pev->velocity.GetLength () < 1.0 && GetTaskId () != TASK_CAMP && GetTaskId () != TASK_ATTACK)
+         stiffnessMultiplier *= 0.5;
+
+      // but don't allow getting below a certain value
+      if (stiffnessMultiplier < 0.35)
+         stiffnessMultiplier = 0.35;
+
+      stiffness = spring * stiffnessMultiplier; // increasingly slow aim
+   }
+   // compute randomized angle deviation this time
+   m_angularDeviation = m_randomizedIdealAngles - pev->v_angle;
+   m_angularDeviation.ClampAngles ();
+
+   // spring/damper model aiming
+   m_aimSpeed.x = (stiffness.x * m_angularDeviation.x) - (damperCoefficient.x * m_aimSpeed.x);
+   m_aimSpeed.y = (stiffness.y * m_angularDeviation.y) - (damperCoefficient.y * m_aimSpeed.y);
+
+   // influence of y movement on x axis and vice versa (less influence than x on y since it's
+   // easier and more natural for the bot to "move its mouse" horizontally than vertically)
+   m_aimSpeed.x += m_aimSpeed.y * influence.y;
+   m_aimSpeed.y += m_aimSpeed.x * influence.x;
+
+   // move the aim cursor
+   if (m_difficulty == 4 && (m_aimFlags & AIM_ENEMY) && (m_wantsToFire || UsesSniper ()))
+      pev->v_angle = direction;
+   else
+      pev->v_angle = pev->v_angle + delta * Vector (m_aimSpeed.x, m_aimSpeed.y, 0.0f);
+
+   pev->v_angle.ClampAngles ();
+}
 
 void Bot::SetStrafeSpeed (const Vector &moveDir, float strafeSpeed)
 {
@@ -3290,7 +3378,7 @@ bool Bot::IsPointOccupied (int index)
          // length check
          float length = (waypoints.GetPath (occupyId)->origin - waypoints.GetPath (index)->origin).GetLengthSquared ();
 
-         if (occupyId == index || bot->GetTask ()->data == index || length < GET_SQUARE (64.0f))
+         if (occupyId == index || bot->GetTask ()->data == index || length < GET_SQUARE (75.0f))
             return true;
       }
    }
