@@ -243,14 +243,13 @@ void Bot::FilterGoals (const Array <int> &goals, int *result)
 {
    // this function filters the goals, so new goal is not bot's old goal, and array of goals doesn't contains duplicate goals
 
-   int totalGoals = goals.GetElementNumber ();
    int searchCount = 0;
 
    for (int index = 0; index < 4; index++)
    {
       int rand = goals.GetRandomElement ();
 
-      if (searchCount <= 8 && (m_prevGoalIndex == rand || ((result[0] == rand || result[1] == rand || result[2] == rand || result[3] == rand) && totalGoals > 4)) && !IsPointOccupied (rand))
+      if (searchCount <= 8 && (m_prevGoalIndex == rand || ((result[0] == rand || result[1] == rand || result[2] == rand || result[3] == rand) && goals.GetElementNumber () > 4)) && !IsPointOccupied (rand))
       {
          if (index > 0)
             index--;
@@ -1841,7 +1840,7 @@ bool Bot::FindWaypoint (void)
 #if 0
       if (i == m_currentWaypointIndex || i == m_prevWptIndex[0] || i == m_prevWptIndex[1] || i == m_prevWptIndex[2] || i == m_prevWptIndex[3] || i == m_prevWptIndex[4])
 #else
-      if (i == m_currentWaypointIndex || i == m_prevWptIndex[0])
+      if (i == m_currentWaypointIndex || i == m_prevWptIndex[0] || i == m_prevWptIndex[1] || i == m_prevWptIndex[2])
 #endif
          continue;
 
@@ -3157,6 +3156,10 @@ void Bot::UpdateLookAngles (void)
 {
    const float delta = GetWorldTime () - m_lookUpdateTime;
    m_lookUpdateTime = GetWorldTime ();
+
+   // in intermission, do not try to look at something, but update the timer above
+   if (g_timeRoundStart < GetWorldTime () || !m_buyingFinished)
+      return;
 
    // adjust all body and view angles to face an absolute vector
    Vector direction = (m_lookAt - EyePosition ()).ToAngles ();

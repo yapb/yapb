@@ -5293,7 +5293,7 @@ void Bot::TakeBlinded (const Vector &fade, int alpha)
    // it's used to make bot blind froumd the grenade.
 
 
-   if (fade.x != 255 || fade.y != 255 || fade.z != 255 || alpha <= 200)
+   if (fade.x != 255 || fade.y != 255 || fade.z != 255 || alpha <= 170)
       return;
 
    m_enemy = NULL;
@@ -5810,17 +5810,21 @@ float Bot::GetEstimatedReachTime (void)
       else
          estimatedTime = 4.0f * distance / pev->maxspeed;
 
+      bool longTermReachability = (m_currentPath->flags & FLAG_CROUCH) || (m_currentPath->flags & FLAG_LADDER) || (pev->button & IN_DUCK);
+
       // check for special waypoints, that can slowdown our movement
-      if ((m_currentPath->flags & FLAG_CROUCH) || (m_currentPath->flags & FLAG_LADDER) || (pev->button & IN_DUCK))
+      if (longTermReachability)
          estimatedTime *= 3.0f;
 
       // check for too low values
       if (estimatedTime < 1.0f)
          estimatedTime = 1.0f;
 
+      const float maxReachTime = longTermReachability ? 10.0f : 5.0f;
+
       // check for too high values
-      if (estimatedTime > 8.0f)
-         estimatedTime = 8.0f;
+      if (estimatedTime > maxReachTime)
+         estimatedTime = maxReachTime;
    }
    return estimatedTime;
 }
