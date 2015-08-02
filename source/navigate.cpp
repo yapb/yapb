@@ -168,7 +168,7 @@ TacticChoosen:
       // force bomber to select closest goal, if round-start goal was reset by something
       if (m_hasC4 && g_timeRoundStart + 20.0f < GetWorldTime ())
       {
-         float minDist = 999999.0f;
+         float minDist = 99999999.0f;
          int count = 0;
 
          for (int i = 0; i < g_numWaypoints; i++)
