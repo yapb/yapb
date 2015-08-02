@@ -165,10 +165,10 @@ TacticChoosen:
       FilterGoals (offensiveWpts, goalChoices);
    else if (tactic == 3 && !waypoints.m_goalPoints.IsEmpty ()) // map goal waypoint
    {
-      // forcee bomber to select closest goal, if round-start goal was reset by something
+      // force bomber to select closest goal, if round-start goal was reset by something
       if (m_hasC4 && g_timeRoundStart + 20.0f < GetWorldTime ())
       {
-         float minDist = 1024.0f;
+         float minDist = 999999.0f;
          int count = 0;
 
          for (int i = 0; i < g_numWaypoints; i++)
@@ -178,7 +178,7 @@ TacticChoosen:
             if (!(path->flags & FLAG_GOAL))
                continue;
 
-            float distance = (path->origin - pev->origin).GetLength ();
+            float distance = (path->origin - pev->origin).GetLengthSquared ();
 
             if (distance < minDist)
             {
@@ -3157,10 +3157,6 @@ void Bot::UpdateLookAngles (void)
    const float delta = GetWorldTime () - m_lookUpdateTime;
    m_lookUpdateTime = GetWorldTime ();
 
-   // in intermission, do not try to look at something, but update the timer above
-   if (g_timeRoundStart < GetWorldTime () || !m_buyingFinished)
-      return;
-
    // adjust all body and view angles to face an absolute vector
    Vector direction = (m_lookAt - EyePosition ()).ToAngles ();
    direction.x *= -1.0f; // invert for engine
@@ -3287,12 +3283,7 @@ void Bot::UpdateLookAnglesLowSkill (const Vector &direction, const float delta)
       }
 
       // also take in account the remaining deviation (slow down the aiming in the last 10°)
-      if (m_difficulty < 3 && (m_angularDeviation.GetLength () < 10.0))
-         stiffnessMultiplier *= m_angularDeviation.GetLength () * 0.1;
-
-      // slow down even more if we are not moving
-      if (m_difficulty < 3 && pev->velocity.GetLength () < 1.0 && GetTaskId () != TASK_CAMP && GetTaskId () != TASK_ATTACK)
-         stiffnessMultiplier *= 0.5;
+      stiffnessMultiplier *= m_angularDeviation.GetLength () * 0.1 * 0.5;
 
       // but don't allow getting below a certain value
       if (stiffnessMultiplier < 0.35)
@@ -3305,8 +3296,8 @@ void Bot::UpdateLookAnglesLowSkill (const Vector &direction, const float delta)
    m_angularDeviation.ClampAngles ();
 
    // spring/damper model aiming
-   m_aimSpeed.x = (stiffness.x * m_angularDeviation.x) - (damperCoefficient.x * m_aimSpeed.x);
-   m_aimSpeed.y = (stiffness.y * m_angularDeviation.y) - (damperCoefficient.y * m_aimSpeed.y);
+   m_aimSpeed.x = stiffness.x * m_angularDeviation.x - damperCoefficient.x * m_aimSpeed.x;
+   m_aimSpeed.y = stiffness.y * m_angularDeviation.y - damperCoefficient.y * m_aimSpeed.y;
 
    // influence of y movement on x axis and vice versa (less influence than x on y since it's
    // easier and more natural for the bot to "move its mouse" horizontally than vertically)
@@ -3314,11 +3305,7 @@ void Bot::UpdateLookAnglesLowSkill (const Vector &direction, const float delta)
    m_aimSpeed.y += m_aimSpeed.x * influence.x;
 
    // move the aim cursor
-   if (m_difficulty == 4 && (m_aimFlags & AIM_ENEMY) && (m_wantsToFire || UsesSniper ()))
-      pev->v_angle = direction;
-   else
-      pev->v_angle = pev->v_angle + delta * Vector (m_aimSpeed.x, m_aimSpeed.y, 0.0f);
-
+   pev->v_angle = pev->v_angle + delta * Vector (m_aimSpeed.x, m_aimSpeed.y, 0.0f);
    pev->v_angle.ClampAngles ();
 }
 

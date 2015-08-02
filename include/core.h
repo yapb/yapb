@@ -1504,8 +1504,7 @@ public:
    int GetFacingIndex (void);
    int FindFarest (const Vector &origin, float maxDistance = 32.0);
    int FindNearest (const Vector &origin, float minDistance = 9999.0, int flags = -1);
-   void FindInRadius (const Vector &origin, float radius, int *holdTab, int *count);
-   void FindInRadius (Array <int> &radiusHolder, float radius, const Vector &origin);
+   void FindInRadius (Array <int> &radiusHolder, float radius, const Vector &origin, int maxCount = -1);
 
    void Add (int flags, const Vector &waypointOrigin = nullvec);
    void Delete (void);

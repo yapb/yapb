@@ -117,9 +117,9 @@ int Waypoint::FindNearest (const Vector &origin, float minDistance, int flags)
       if (flags != -1 && !(m_paths[i]->flags & flags))
          continue; // if flag not -1 and waypoint has no this flag, skip waypoint
 
-      float distance = (m_paths[i]->origin - origin).GetLength ();
+      float distance = (m_paths[i]->origin - origin).GetLengthSquared ();
 
-      if (distance < minDistance)
+      if (distance < GET_SQUARE (minDistance))
       {
          index = i;
          minDistance = distance;
@@ -128,32 +128,16 @@ int Waypoint::FindNearest (const Vector &origin, float minDistance, int flags)
    return index;
 }
 
-void Waypoint::FindInRadius (const Vector &origin, float radius, int *holdTab, int *count)
+void Waypoint::FindInRadius (Array <int> &radiusHolder, float radius, const Vector &origin, int maxCount)
 {
    // returns all waypoints within radius from position
 
-   int maxCount = *count;
-   *count = 0;
-
    for (int i = 0; i < g_numWaypoints; i++)
    {
-      if ((m_paths[i]->origin - origin).GetLength () < radius)
-      {
-         *holdTab++ = i;
-         *count += 1;
+      if (maxCount != -1 && radiusHolder.GetElementNumber () > maxCount)
+         break;
 
-         if (*count >= maxCount)
-            break;
-      }
-   }
-   *count -= 1;
-}
-
-void Waypoint::FindInRadius (Array <int> &radiusHolder, float radius, const Vector &origin)
-{
-   for (int i = 0; i < g_numWaypoints; i++)
-   {
-      if ((m_paths[i]->origin - origin).GetLength () < radius)
+      if ((m_paths[i]->origin - origin).GetLengthSquared () < GET_SQUARE (radius))
          radiusHolder.Push (i);
    }
 }

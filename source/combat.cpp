@@ -778,7 +778,7 @@ void Bot::FireWeapon (void)
       goto WeaponSelectEnd;
 
    // use knife if near and good difficulty (l33t dude!)
-   if (m_difficulty >= 3 && pev->health > 80 && !IsEntityNull (enemy) && pev->health >= enemy->v.health && distance < 100.0f && !IsGroupOfEnemies (pev->origin))
+   if (m_difficulty >= 3 && pev->health > 80 && !IsEntityNull (enemy) && pev->health >= enemy->v.health && distance < 100.0f && !IsOnLadder () && !IsGroupOfEnemies (pev->origin))
       goto WeaponSelectEnd;
 
    // loop through all the weapons until terminator is found...

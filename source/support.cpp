@@ -977,10 +977,10 @@ void CheckWelcomeMessage (void)
 {
    // the purpose of this function, is  to send quick welcome message, to the listenserver entity.
 
-   static bool isReceived = false;
+   static bool alreadyReceived = !yb_listenserver_welcome.GetBool ();
    static float receiveTime = 0.0;
 
-   if (isReceived || !yb_listenserver_welcome.GetBool ())
+   if (alreadyReceived)
       return;
 
    Array <String> sentences;
@@ -1003,10 +1003,10 @@ void CheckWelcomeMessage (void)
    sentences.Push ("attention, expect experimental armed hostile presence");
    sentences.Push ("warning, medical attention required");
 
-   if (IsAlive (g_hostEntity) && !isReceived && receiveTime < 1.0 && (g_numWaypoints > 0 ? g_isCommencing : true))
+   if (IsAlive (g_hostEntity) && !alreadyReceived && receiveTime < 1.0 && (g_numWaypoints > 0 ? g_isCommencing : true))
       receiveTime = GetWorldTime () + 4.0; // receive welcome message in four seconds after game has commencing
 
-   if (receiveTime > 0.0 && receiveTime < GetWorldTime () && !isReceived && (g_numWaypoints > 0 ? g_isCommencing : true))
+   if (receiveTime > 0.0 && receiveTime < GetWorldTime () && !alreadyReceived && (g_numWaypoints > 0 ? g_isCommencing : true))
    {
       ServerCommand ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));
 
@@ -1034,7 +1034,7 @@ void CheckWelcomeMessage (void)
       MESSAGE_END ();
 
       receiveTime = 0.0;
-      isReceived = true;
+      alreadyReceived = true;
    }
 }
 

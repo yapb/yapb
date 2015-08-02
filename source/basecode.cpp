@@ -176,23 +176,23 @@ void Bot::CheckGrenadeThrow (void)
             if (allowThrowing && m_seeEnemyTime + 2.0 < GetWorldTime ())
             {
                const Vector &enemyPredict = ((m_lastEnemy->v.velocity * 0.5).Get2D () + m_lastEnemy->v.origin);
-               int searchTab[4], count = 4;
-
                float searchRadius = m_lastEnemy->v.velocity.GetLength2D ();
 
                // check the search radius
                if (searchRadius < 128.0)
                   searchRadius = 128.0;
 
-               // search waypoints
-               waypoints.FindInRadius (enemyPredict, searchRadius, searchTab, &count);
+               Array <int> predictedPoints;
 
-               while (count > 0)
+               // search waypoints
+               waypoints.FindInRadius (predictedPoints, searchRadius, enemyPredict, 4);
+
+               FOR_EACH_AE (predictedPoints, it)
                {
                   allowThrowing = true;
 
                   // check the throwing
-                  m_throw = waypoints.GetPath (searchTab[count--])->origin;
+                  m_throw = waypoints.GetPath (predictedPoints[it])->origin;
                   Vector src = CheckThrow (EyePosition (), m_throw);
 
                   if (src.GetLengthSquared () < 100.0)
@@ -4846,7 +4846,7 @@ void Bot::BotAI (void)
    m_moveAngles.ClampAngles ();
    m_moveAngles.x *= -1.0; // invert for engine
 
-   if (m_difficulty == 4 && ((m_aimFlags & AIM_ENEMY) || (m_states & (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY)) || (GetTaskId () == TASK_SEEKCOVER && (m_isReloading || m_isVIP))) && !yb_jasonmode.GetBool () && GetTaskId () != TASK_CAMP && !IsOnLadder ())
+   if (m_difficulty > 3 && ((m_aimFlags & AIM_ENEMY) || (m_states & (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY)) || (GetTaskId () == TASK_SEEKCOVER && (m_isReloading || m_isVIP))) && !yb_jasonmode.GetBool () && GetTaskId () != TASK_CAMP && !IsOnLadder ())
    {
       m_moveToGoal = false; // don't move to goal
       m_navTimeset = GetWorldTime ();
@@ -5695,6 +5695,7 @@ void Bot::MoveToVector (const Vector &to)
 byte Bot::ThrottledMsec (void)
 {
    // estimate msec to use for this command based on time passed from the previous command
+#if 0
    float msecVal = (GetWorldTime () - m_lastCommandTime) * 1000.0f;
 
    int msecRest = 0;
@@ -5714,8 +5715,14 @@ byte Bot::ThrottledMsec (void)
       newMsec = 100;
    else if (newMsec < 1)
       newMsec = 1;
+#endif
 
-   return newMsec;
+   byte adjustedMsec = static_cast <byte> ((GetWorldTime () - m_lastCommandTime) * 1000.0f);
+
+   if (adjustedMsec > 255)
+      adjustedMsec = 255;
+
+   return adjustedMsec;
 }
 
 void Bot::RunPlayerMovement (void)
