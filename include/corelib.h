@@ -225,9 +225,14 @@ namespace Math
 #endif
    }
 
-   inline float AngleDiff (float destAngle, float srcAngle)
+   static inline float AngleDiff (float destAngle, float srcAngle)
    {
       return AngleNormalize (destAngle - srcAngle);
+   }
+
+   template <typename Type> Type Clamp (Type x, Type a, Type b)
+   {
+         return x < a ? a : (x > b ? b : x);
    }
 }
 

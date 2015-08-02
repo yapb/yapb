@@ -1421,7 +1421,7 @@ void Bot::SelectBestWeapon (void)
          ammoLeft = true;
 
       // is no ammo required for this weapon OR enough ammo available to fire
-      if (g_weaponDefs[id].ammo1 < 0 || m_ammo[g_weaponDefs[id].ammo1] >= selectTab[selectIndex].minPrimaryAmmo)
+      if (g_weaponDefs[id].ammo1 < 0 || (g_weaponDefs[id].ammo1 < 32 && m_ammo[g_weaponDefs[id].ammo1] >= selectTab[selectIndex].minPrimaryAmmo))
          ammoLeft = true;
 
       if (ammoLeft)

@@ -3206,7 +3206,7 @@ void Bot::RunTask_Normal (void)
       m_moveSpeed = GetWalkSpeed ();
 
    // bot hasn't seen anything in a long time and is asking his teammates to report in
-   if (m_seeEnemyTime + Random.Float (30.0, 80.0) < GetWorldTime () && Random.Long (0, 100) < 70 && g_timeRoundStart + 20.0 < GetWorldTime () && m_askCheckTime + Random.Float (20.0, 30.0) < GetWorldTime ())
+   if (m_seeEnemyTime + Random.Float (45.0f, 80.0f) < GetWorldTime () && Random.Long (0, 100) < 30 && g_timeRoundStart + 20.0 < GetWorldTime () && m_askCheckTime + Random.Float (20.0, 30.0) < GetWorldTime ())
    {
       m_askCheckTime = GetWorldTime ();
       RadioMessage (Radio_ReportTeam);
@@ -5695,27 +5695,6 @@ void Bot::MoveToVector (const Vector &to)
 byte Bot::ThrottledMsec (void)
 {
    // estimate msec to use for this command based on time passed from the previous command
-#if 0
-   float msecVal = (GetWorldTime () - m_lastCommandTime) * 1000.0f;
-
-   int msecRest = 0;
-   byte newMsec = static_cast <byte> (msecVal);
-
-   if (newMsec < 10)
-   {
-      msecVal -= static_cast <float> (newMsec) + m_msecValRest;
-      msecRest = static_cast <int> (msecVal);
-
-      m_msecValRest = msecVal - static_cast <float> (msecRest);
-   }
-   newMsec += msecRest;
-
-   // bots are going to be slower than they should if this happens.
-   if (newMsec > 100)
-      newMsec = 100;
-   else if (newMsec < 1)
-      newMsec = 1;
-#endif
 
    byte adjustedMsec = static_cast <byte> ((GetWorldTime () - m_lastCommandTime) * 1000.0f);
 

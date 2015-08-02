@@ -3154,7 +3154,7 @@ void Bot::UpdateBodyAngles (void)
 
 void Bot::UpdateLookAngles (void)
 {
-   const float delta = GetWorldTime () - m_lookUpdateTime;
+   const float delta = Clamp <float> (GetWorldTime () - m_lookUpdateTime, MATH_EQEPSILON, 0.05f);
    m_lookUpdateTime = GetWorldTime ();
 
    // adjust all body and view angles to face an absolute vector
@@ -3188,8 +3188,8 @@ void Bot::UpdateLookAngles (void)
 
    m_idealAngles = pev->v_angle;
 
-   float angleDiffYaw = AngleNormalize (direction.y - m_idealAngles.y);
-   float angleDiffPitch = AngleNormalize (direction.x - m_idealAngles.x);
+   float angleDiffYaw = AngleDiff (direction.y, m_idealAngles.y);
+   float angleDiffPitch = AngleDiff (direction.x, m_idealAngles.x);
 
    if (angleDiffYaw < 1.0f && angleDiffYaw > -1.0f)
    {

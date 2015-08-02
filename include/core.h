@@ -905,7 +905,6 @@ private:
 
    float m_frameInterval; // bot's frame interval
    float m_lastCommandTime; // time bot last thinked
-   float m_msecValRest; // bot's msec value
 
    float m_reloadCheckTime; // time to check reloading
    float m_zoomCheckTime; // time to check zoom again

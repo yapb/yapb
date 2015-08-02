@@ -837,7 +837,6 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
 
    m_lastCommandTime = GetWorldTime () - 0.1f;
    m_frameInterval = GetWorldTime ();
-   m_msecValRest = 0.0f;
    m_timePeriodicUpdate = 0.0f;
 
    switch (personality)
@@ -1089,8 +1088,9 @@ void Bot::NewRound (void)
    m_isUsingGrenade = false;
 
    m_blindButton = 0;
-   m_blindTime = 0.0;
-   m_jumpTime = 0.0;
+   m_blindTime = 0.0f;
+   m_jumpTime = 0.0f;
+   m_jumpStateTimer = 0.0f;
    m_jumpFinished = false;
    m_isStuck = false;
 
