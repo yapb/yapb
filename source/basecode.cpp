@@ -5411,13 +5411,13 @@ void Bot::CollectExperienceData (edict_t *attacker, int damage)
          (g_experienceData + (victimIndex * g_numWaypoints) + victimIndex)->team1Damage = MAX_DAMAGE_VALUE;
    }
 
-   float fUpdate = IsValidBot (attacker) ? 10.0 : 7.0;
+   float updateDamage = IsValidBot (attacker) ? 10.0 : 7.0;
 
    // store away the damage done
    if (victimTeam == TEAM_TF)
    {
       int value = (g_experienceData + (victimIndex * g_numWaypoints) + attackerIndex)->team0Damage;
-      value += static_cast <int> (damage / fUpdate);
+      value += static_cast <int> (damage / updateDamage);
 
       if (value > MAX_DAMAGE_VALUE)
          value = MAX_DAMAGE_VALUE;
@@ -5430,7 +5430,7 @@ void Bot::CollectExperienceData (edict_t *attacker, int damage)
    else
    {
       int value = (g_experienceData + (victimIndex * g_numWaypoints) + attackerIndex)->team1Damage;
-      value += static_cast <int> (damage / fUpdate);
+      value += static_cast <int> (damage / updateDamage);
 
       if (value > MAX_DAMAGE_VALUE)
          value = MAX_DAMAGE_VALUE;

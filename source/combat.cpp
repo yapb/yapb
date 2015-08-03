@@ -1673,7 +1673,7 @@ void Bot::CheckReload (void)
          break;
       }
 
-      if (m_ammoInClip[weaponIndex] < (maxClip * 0.8) && m_ammo[g_weaponDefs[weaponIndex].ammo1] > 0)
+      if (m_ammoInClip[weaponIndex] < (maxClip * 0.8) && g_weaponDefs[m_currentWeapon].ammo1 != -1 && g_weaponDefs[m_currentWeapon].ammo1 < 32 && m_ammo[g_weaponDefs[weaponIndex].ammo1] > 0)
       {
          if (m_currentWeapon != weaponIndex)
             SelectWeaponByName (g_weaponDefs[weaponIndex].className);

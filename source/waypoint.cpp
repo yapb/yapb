@@ -2016,11 +2016,12 @@ bool Waypoint::NodesValid (void)
          if (visited[outgoingPaths[current->index][p]])
             continue; // skip this waypoint as it's already visited
 
-         PathNode *pNewNode = new PathNode;
+         PathNode *newNode = new PathNode;
      
-         pNewNode->next = stack;
-         pNewNode->index = outgoingPaths[current->index][p];
-         stack = pNewNode;
+         newNode->next = stack;
+         newNode->index = outgoingPaths[current->index][p];
+
+         stack = newNode;
       }
       delete current;
    }
@@ -2566,9 +2567,7 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
    timeout.tv_sec = 5;
    timeout.tv_usec = 0;
 
-   int result = 0;
-
-   result = setsockopt (socketHandle, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof (timeout));
+   int result = setsockopt (socketHandle, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof (timeout));
 
    if (result < 0)
    {
