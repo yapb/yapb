@@ -1673,10 +1673,11 @@ void Bot::CheckReload (void)
          break;
       }
 
-      if (m_ammoInClip[weaponIndex] < (maxClip * 0.8) && g_weaponDefs[m_currentWeapon].ammo1 != -1 && g_weaponDefs[m_currentWeapon].ammo1 < 32 && m_ammo[g_weaponDefs[weaponIndex].ammo1] > 0)
+      if (m_ammoInClip[weaponIndex] < maxClip * 0.8 && g_weaponDefs[weaponIndex].ammo1 != -1 && g_weaponDefs[weaponIndex].ammo1 < 32 && m_ammo[g_weaponDefs[weaponIndex].ammo1] > 0)
       {
          if (m_currentWeapon != weaponIndex)
             SelectWeaponByName (g_weaponDefs[weaponIndex].className);
+
           pev->button &= ~IN_ATTACK;
 
          if ((pev->oldbuttons & IN_RELOAD) == RELOAD_NONE)
@@ -1687,7 +1688,7 @@ void Bot::CheckReload (void)
       else
       {
          // if we have enemy don't reload next weapon
-         if ((m_states & (STATE_SEEING_ENEMY | STATE_HEARING_ENEMY)) || m_seeEnemyTime + 5.0 > GetWorldTime ())
+         if ((m_states & (STATE_SEEING_ENEMY | STATE_HEARING_ENEMY)) || m_seeEnemyTime + 5.0f > GetWorldTime ())
          {
             m_reloadState = RELOAD_NONE;
             return;

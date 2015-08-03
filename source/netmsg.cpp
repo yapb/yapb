@@ -119,10 +119,6 @@ void NetworkMsg::Execute (void *p)
          break;
 
       case 8:
-
-         if (weaponProp.ammo1 > 31)
-            weaponProp.ammo1 = -1;
-
          weaponProp.flags = PTR_TO_INT (p); // flags for weapon (WTF???)
          g_weaponDefs[weaponProp.id] = weaponProp; // store away this weapon with it's ammo information...
          break;
