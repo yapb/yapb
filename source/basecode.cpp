@@ -5213,7 +5213,7 @@ bool Bot::HasHostage (void)
 
 int Bot::GetAmmo (void)
 {
-   if (g_weaponDefs[m_currentWeapon].ammo1 == -1)
+   if (g_weaponDefs[m_currentWeapon].ammo1 == -1 || g_weaponDefs[m_currentWeapon].ammo1 > 31)
       return 0;
 
    return m_ammo[g_weaponDefs[m_currentWeapon].ammo1];
