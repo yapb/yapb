@@ -808,7 +808,7 @@ void Bot::FireWeapon (void)
          // is the bot carrying this weapon?
          if (weapons & (1 << id))
          {
-            if (g_weaponDefs[id].ammo1 != -1 && m_ammo[g_weaponDefs[id].ammo1] >= selectTab[selectIndex].minPrimaryAmmo)
+            if ( g_weaponDefs[id].ammo1 != -1 && g_weaponDefs[id].ammo1 < 32 && m_ammo[g_weaponDefs[id].ammo1] >= selectTab[selectIndex].minPrimaryAmmo)
             {
                // available ammo found, reload weapon
                if (m_reloadState == RELOAD_NONE || m_reloadCheckTime > GetWorldTime ())
