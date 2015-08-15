@@ -452,7 +452,7 @@ void ParseVoiceEvent (const String &base, int type, float timeToRepeat)
    {
       temp[i].Trim ().TrimQuotes ();
 
-      if (GetWaveLength (temp[i]) == 0.0)
+      if (GetWaveLength (temp[i]) == 0.0f)
          continue;
 
       chatterItem.name = temp[i];

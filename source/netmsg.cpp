@@ -291,7 +291,7 @@ void NetworkMsg::Execute (void *p)
 
                if (bot != NULL && IsAlive (bot->GetEntity ()) && GetTeam (bot->GetEntity ()) == GetTeam (victim) && IsVisible (killer->v.origin, bot->GetEntity ()) && IsEntityNull (bot->m_enemy) && GetTeam (killer) != GetTeam (victim))
                {
-                  bot->m_actualReactionTime = 0.0;
+                  bot->m_actualReactionTime = 0.0f;
                   bot->m_seeEnemyTime = GetWorldTime ();
                   bot->m_enemy = killer;
                   bot->m_lastEnemy = killer;

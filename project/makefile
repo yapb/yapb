@@ -22,7 +22,7 @@ OBJECTS = $(SRC_DIR)/basecode.cpp	\
 	  $(SRC_DIR)/support.cpp	\
 	  $(SRC_DIR)/waypoint.cpp	\
 
-C_OPT_FLAGS =  -O3 -DNDEBUG=1 -ffast-math -fno-exceptions -fno-rtti -funroll-loops -fomit-frame-pointer -pipe
+C_OPT_FLAGS =  -O3 -DNDEBUG=1 -fno-exceptions -fno-rtti -funroll-loops -fomit-frame-pointer -pipe
 C_DEBUG_FLAGS = -D_DEBUG -DDEBUG -g -ggdb3
 C_GCC4_FLAGS = -fvisibility=hidden
 CPP_GCC4_FLAGS = -fvisibility-inlines-hidden

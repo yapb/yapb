@@ -592,14 +592,14 @@ public:
    }
 
    //
-   // Function: IsNull
+   // Function: IsZero
    //
    // Checks whether vector is null.
    //
    // Returns:
    //   True if this vector is (0.0f, 0.0f, 0.0f) within tolerance, false otherwise.
    //
-   inline bool IsNull (void) const
+   inline bool IsZero (void) const
    {
       return Math::FltZero (x) && Math::FltZero (y) && Math::FltZero (z);
    }
@@ -612,10 +612,17 @@ public:
    // Returns:
    //   Nulled vector.
    //
-   inline static const Vector &GetNull (void)
+   inline static const Vector &GetZero (void)
    {
-      static const Vector &s_null = Vector (0.0, 0.0, 0.0f);
-      return s_null;
+      static const Vector &s_zero = Vector (0.0f, 0.0f, 0.0f);
+      return s_zero;
+   }
+
+   inline void Zero (void)
+   {
+      x = 0.0f;
+      y = 0.0f;
+      z = 0.0f;
    }
 
    //
@@ -728,9 +735,6 @@ public:
       }
    }
 };
-
-static const Vector &nullvec = Vector::GetNull ();
-
 
 //
 // Class: List

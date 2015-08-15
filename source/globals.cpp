@@ -26,15 +26,15 @@ bool g_autoWaypoint = false;
 bool g_bLearnJumpWaypoint = false;
 bool g_leaderChoosen[2] = {false, false};
 
-float g_lastChatTime = 0.0;
-float g_timeRoundStart = 0.0;
-float g_timeRoundEnd = 0.0;
-float g_timeRoundMid = 0.0;
-float g_timeNextBombUpdate = 0.0;
-float g_timeBombPlanted = 0.0;
-float g_timePerSecondUpdate = 0.0;
-float g_lastRadioTime[2] = {0.0, 0.0};
-float g_autoPathDistance = 250.0;
+float g_lastChatTime = 0.0f;
+float g_timeRoundStart = 0.0f;
+float g_timeRoundEnd = 0.0f;
+float g_timeRoundMid = 0.0f;
+float g_timeNextBombUpdate = 0.0f;
+float g_timeBombPlanted = 0.0f;
+float g_timePerSecondUpdate = 0.0f;
+float g_lastRadioTime[2] = {0.0f, 0.0f};
+float g_autoPathDistance = 250.0f;
 
 int g_lastRadio[2];
 int g_storeAddbotVars[4];
@@ -131,27 +131,27 @@ plugin_info_t Plugin_info =
 // table with all available actions for the bots (filtered in & out in Bot::SetConditions) some of them have subactions included
 TaskItem g_taskFilters[] =
 {
-   {TASK_NORMAL, 0, -1, 0.0, true},
-   {TASK_PAUSE, 0, -1, 0.0, false},
-   {TASK_MOVETOPOSITION, 0, -1, 0.0, true},
-   {TASK_FOLLOWUSER, 0, -1,0.0, true},
-   {TASK_WAITFORGO, 0, -1, 0.0, true},
-   {TASK_PICKUPITEM, 0, -1, 0.0, true},
-   {TASK_CAMP, 0, -1, 0.0, true},
-   {TASK_PLANTBOMB, 0, -1, 0.0, false},
-   {TASK_DEFUSEBOMB, 0, -1, 0.0, false},
-   {TASK_ATTACK, 0, -1, 0.0, false},
-   {TASK_HUNTENEMY, 0, -1, 0.0, false},
-   {TASK_SEEKCOVER, 0, -1, 0.0, false},
-   {TASK_THROWHEGRENADE, 0, -1, 0.0, false},
-   {TASK_THROWFLASHBANG, 0, -1, 0.0, false},
-   {TASK_THROWSMOKE, 0, -1, 0.0, false},
-   {TASK_DOUBLEJUMP, 0, -1, 0.0, false},
-   {TASK_ESCAPEFROMBOMB, 0, -1, 0.0, false},
-   {TASK_SHOOTBREAKABLE, 0, -1, 0.0, false},
-   {TASK_HIDE, 0, -1, 0.0, false},
-   {TASK_BLINDED, 0, -1, 0.0, false},
-   {TASK_SPRAY, 0, -1, 0.0, false}
+   {TASK_NORMAL, 0, -1, 0.0f, true},
+   {TASK_PAUSE, 0, -1, 0.0f, false},
+   {TASK_MOVETOPOSITION, 0, -1, 0.0f, true},
+   {TASK_FOLLOWUSER, 0, -1, 0.0f, true},
+   {TASK_WAITFORGO, 0, -1, 0.0f, true},
+   {TASK_PICKUPITEM, 0, -1, 0.0f, true},
+   {TASK_CAMP, 0, -1, 0.0f, true},
+   {TASK_PLANTBOMB, 0, -1, 0.0f, false},
+   {TASK_DEFUSEBOMB, 0, -1, 0.0f, false},
+   {TASK_ATTACK, 0, -1, 0.0f, false},
+   {TASK_HUNTENEMY, 0, -1, 0.0f, false},
+   {TASK_SEEKCOVER, 0, -1, 0.0f, false},
+   {TASK_THROWHEGRENADE, 0, -1, 0.0f, false},
+   {TASK_THROWFLASHBANG, 0, -1, 0.0f, false},
+   {TASK_THROWSMOKE, 0, -1, 0.0f, false},
+   {TASK_DOUBLEJUMP, 0, -1, 0.0f, false},
+   {TASK_ESCAPEFROMBOMB, 0, -1, 0.0f, false},
+   {TASK_SHOOTBREAKABLE, 0, -1, 0.0f, false},
+   {TASK_HIDE, 0, -1, 0.0f, false},
+   {TASK_BLINDED, 0, -1, 0.0f, false},
+   {TASK_SPRAY, 0, -1, 0.0f, false}
 };
 
 // weapons and their specifications

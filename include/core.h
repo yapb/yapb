@@ -567,41 +567,39 @@ const int FV_EXPERIENCE = 3;
 const int FV_VISTABLE = 1;
 
 // some hardcoded desire defines used to override calculated ones
-const float TASKPRI_NORMAL = 35.0;
-const float TASKPRI_PAUSE = 36.0;
-const float TASKPRI_CAMP  = 37.0;
-const float TASKPRI_SPRAYLOGO = 38.0;
-const float TASKPRI_FOLLOWUSER = 39.0;
-const float TASKPRI_MOVETOPOSITION = 50.0;
-const float TASKPRI_DEFUSEBOMB = 89.0;
-const float TASKPRI_PLANTBOMB = 89.0;
-const float TASKPRI_ATTACK = 90.0;
-const float TASKPRI_SEEKCOVER = 91.0;
-const float TASKPRI_HIDE = 92.0;
-const float TASKPRI_THROWGRENADE = 99.0;
-const float TASKPRI_DOUBLEJUMP = 99.0;
-const float TASKPRI_BLINDED = 100.0;
-const float TASKPRI_SHOOTBREAKABLE = 100.0;
-const float TASKPRI_ESCAPEFROMBOMB = 100.0;
+const float TASKPRI_NORMAL = 35.0f;
+const float TASKPRI_PAUSE = 36.0f;
+const float TASKPRI_CAMP  = 37.0f;
+const float TASKPRI_SPRAYLOGO = 38.0f;
+const float TASKPRI_FOLLOWUSER = 39.0f;
+const float TASKPRI_MOVETOPOSITION = 50.0f;
+const float TASKPRI_DEFUSEBOMB = 89.0f;
+const float TASKPRI_PLANTBOMB = 89.0f;
+const float TASKPRI_ATTACK = 90.0f;
+const float TASKPRI_SEEKCOVER = 91.0f;
+const float TASKPRI_HIDE = 92.0f;
+const float TASKPRI_THROWGRENADE = 99.0f;
+const float TASKPRI_DOUBLEJUMP = 99.0f;
+const float TASKPRI_BLINDED = 100.0f;
+const float TASKPRI_SHOOTBREAKABLE = 100.0f;
+const float TASKPRI_ESCAPEFROMBOMB = 100.0f;
 
 const float MAX_GRENADE_TIMER = 2.34f;
+const float TRACE_FRACTION_EQ = 0.999999f;
 
 const int MAX_HOSTAGES = 8;
 const int MAX_PATH_INDEX = 8;
 const int MAX_DAMAGE_VALUE = 2040;
 const int MAX_GOAL_VALUE = 2040;
 const int MAX_KILL_HISTORY = 16;
-const int MAX_REG_MESSAGES = 256;
 const int MAX_WAYPOINTS = 1024;
 const int MAX_WEAPONS = 32;
 const int NUM_WEAPONS = 26;
+const int MAX_COLLIDE_MOVES = 3;
 
 // weapon masks
 const int WEAPON_PRIMARY = ((1 << WEAPON_XM1014) | (1 <<WEAPON_M3) | (1 << WEAPON_MAC10) | (1 << WEAPON_UMP45) | (1 << WEAPON_MP5) | (1 << WEAPON_TMP) | (1 << WEAPON_P90) | (1 << WEAPON_AUG) | (1 << WEAPON_M4A1) | (1 << WEAPON_SG552) | (1 << WEAPON_AK47) | (1 << WEAPON_SCOUT) | (1 << WEAPON_SG550) | (1 << WEAPON_AWP) | (1 << WEAPON_G3SG1) | (1 << WEAPON_M249) | (1 << WEAPON_FAMAS) | (1 << WEAPON_GALIL));
 const int WEAPON_SECONDARY = ((1 << WEAPON_P228) | (1 << WEAPON_ELITE) | (1 << WEAPON_USP) | (1 << WEAPON_GLOCK) | (1 << WEAPON_DEAGLE) | (1 << WEAPON_FIVESEVEN));
-
-// maximum collide moves
-const int MAX_COLLIDE_MOVES = 3;
 
 // this structure links waypoints returned from pathfinder
 struct PathNode
@@ -930,7 +928,7 @@ private:
 
    float m_duckTime; // time to duck
    float m_jumpTime; // time last jump happened
-   float m_voiceTimers[Chatter_Total]; // voice command timers
+   float m_chatterTimes[Chatter_Total]; // voice command timers
    float m_soundUpdateTime; // time to update the sound
    float m_heardSoundTime; // last time noise is heard
    float m_buttonPushTime; // time to push the button
@@ -1505,7 +1503,7 @@ public:
    int FindNearest (const Vector &origin, float minDistance = 99999999.0f, int flags = -1);
    void FindInRadius (Array <int> &radiusHolder, float radius, const Vector &origin, int maxCount = -1);
 
-   void Add (int flags, const Vector &waypointOrigin = nullvec);
+   void Add (int flags, const Vector &waypointOrigin = Vector::GetZero ());
    void Delete (void);
    void ToggleFlags (int toggleFlag);
    void SetRadius (int radius);

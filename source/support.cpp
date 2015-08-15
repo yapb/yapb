@@ -130,10 +130,10 @@ bool IsVisible (const Vector &origin, edict_t *ent)
    TraceResult tr;
    TraceLine (ent->v.origin + ent->v.view_ofs, origin, true, true, ent, &tr);
 
-   if (tr.flFraction != 1.0)
-      return false; // line of sight is not established
+   if (tr.flFraction > TRACE_FRACTION_EQ)
+      return true;
 
-   return true; // line of sight is valid.
+   return false;
 }
 
 Vector GetEntityOrigin (edict_t *ent)
@@ -142,10 +142,10 @@ Vector GetEntityOrigin (edict_t *ent)
    // entity that has a bounding box has its center at the center of the bounding box itself.
 
    if (IsEntityNull (ent))
-      return nullvec;
+      return Vector::GetZero ();
 
-   if (ent->v.origin == nullvec)
-      return ent->v.absmin + ent->v.size * 0.5;
+   if (ent->v.origin.IsZero ())
+      return ent->v.absmin + ent->v.size * 0.5f;
 
    return ent->v.origin;
 }
@@ -224,7 +224,7 @@ void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex)
    if (decalIndex < 0)
       decalIndex = (*g_engfuncs.pfnDecalIndex) ("{lambda06");
 
-   if (trace->flFraction == 1.0)
+   if (trace->flFraction > TRACE_FRACTION_EQ)
       return;
 
    if (!IsEntityNull (trace->pHit))
@@ -745,14 +745,14 @@ void RoundInit (void)
    waypoints.ClearGoalScore ();
 
    g_bombSayString = false;
-   g_timeBombPlanted = 0.0;
-   g_timeNextBombUpdate = 0.0;
+   g_timeBombPlanted = 0.0f;
+   g_timeNextBombUpdate = 0.0f;
 
    g_leaderChoosen[TEAM_CF] = false;
    g_leaderChoosen[TEAM_TF] =  false;
 
-   g_lastRadioTime[0] = 0.0;
-   g_lastRadioTime[1] = 0.0;
+   g_lastRadioTime[0] = 0.0f;
+   g_lastRadioTime[1] = 0.0f;
    g_botsCanPause = false;
 
    for (int i = 0; i < TASK_MAX; i++)
@@ -762,8 +762,8 @@ void RoundInit (void)
 
    // calculate the round mid/end in world time
    g_timeRoundStart = GetWorldTime () + mp_freezetime.GetFloat ();
-   g_timeRoundMid = g_timeRoundStart + mp_roundtime.GetFloat () * 60 * 0.5f;
-   g_timeRoundEnd = g_timeRoundStart + mp_roundtime.GetFloat () * 60;
+   g_timeRoundMid = g_timeRoundStart + mp_roundtime.GetFloat () * 60.0f * 0.5f;
+   g_timeRoundEnd = g_timeRoundStart + mp_roundtime.GetFloat () * 60.0f;
 }
 
 int GetWeaponPenetrationPower (int id)
@@ -877,7 +877,6 @@ void ChartPrint (const char *format, ...)
       WRITE_BYTE (HUD_PRINTTALK);
       WRITE_STRING (string);
    MESSAGE_END ();
-
 }
 
 void ClientPrint (edict_t *ent, int dest, const char *format, ...)
@@ -978,7 +977,7 @@ void CheckWelcomeMessage (void)
    // the purpose of this function, is  to send quick welcome message, to the listenserver entity.
 
    static bool alreadyReceived = !yb_listenserver_welcome.GetBool ();
-   static float receiveTime = 0.0;
+   static float receiveTime = 0.0f;
 
    if (alreadyReceived)
       return;
@@ -1004,9 +1003,9 @@ void CheckWelcomeMessage (void)
    sentences.Push ("warning, medical attention required");
 
    if (IsAlive (g_hostEntity) && !alreadyReceived && receiveTime < 1.0 && (g_numWaypoints > 0 ? g_isCommencing : true))
-      receiveTime = GetWorldTime () + 4.0; // receive welcome message in four seconds after game has commencing
+      receiveTime = GetWorldTime () + 4.0f; // receive welcome message in four seconds after game has commencing
 
-   if (receiveTime > 0.0 && receiveTime < GetWorldTime () && !alreadyReceived && (g_numWaypoints > 0 ? g_isCommencing : true))
+   if (receiveTime > 0.0f && receiveTime < GetWorldTime () && !alreadyReceived && (g_numWaypoints > 0 ? g_isCommencing : true))
    {
       ServerCommand ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));
 
@@ -1026,10 +1025,10 @@ void CheckWelcomeMessage (void)
       WRITE_BYTE (Random.Long (230, 255));
       WRITE_BYTE (Random.Long (230, 255));
       WRITE_BYTE (200);
-      WRITE_SHORT (FixedUnsigned16 (0.0078125, 1 << 8));
-      WRITE_SHORT (FixedUnsigned16 (2, 1 << 8));
-      WRITE_SHORT (FixedUnsigned16 (6, 1 << 8));
-      WRITE_SHORT (FixedUnsigned16 (0.1, 1 << 8));
+      WRITE_SHORT (FixedUnsigned16 (0.0078125f, 1 << 8));
+      WRITE_SHORT (FixedUnsigned16 (2.0f, 1 << 8));
+      WRITE_SHORT (FixedUnsigned16 (6.0f, 1 << 8));
+      WRITE_SHORT (FixedUnsigned16 (0.1f, 1 << 8));
       WRITE_STRING (FormatBuffer ("\nServer is running YaPB v%s (Build: %u)\nDeveloped by %s\n\n%s", PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_AUTHOR, waypoints.GetInfo ()));
       MESSAGE_END ();
 
@@ -1059,7 +1058,7 @@ void DetectCSVersion (void)
 void PlaySound (edict_t *ent, const char *name)
 {
    // TODO: make this obsolete
-   EMIT_SOUND_DYN2 (ent, CHAN_WEAPON, name, 1.0, ATTN_NORM, 0, 100);
+   EMIT_SOUND_DYN2 (ent, CHAN_WEAPON, name, 1.0f, ATTN_NORM, 0, 100.0f);
 
    return;
 }
@@ -1163,12 +1162,16 @@ void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
 
    if (logLevel == LL_FATAL)
    {
+      bots.RemoveAll ();
+      FreeLibraryMemory ();
+
 #if defined (PLATFORM_WIN32)
+      DestroyWindow (GetForegroundWindow ());
       MessageBoxA (GetActiveWindow (), buffer, "YaPB Error", MB_ICONSTOP);
 #else
       printf ("%s", buffer);
 #endif
-      FreeLibraryMemory ();
+
 
 #if defined (PLATFORM_WIN32)
       _exit (1);
@@ -1228,7 +1231,7 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
    // be filled with bot pointer, else with edict pointer(!).
 
    edict_t *survive = NULL; // pointer to temporaly & survive entity
-   float nearestPlayer = 4096.0; // nearest player
+   float nearestPlayer = 4096.0f; // nearest player
 
    int toTeam = GetTeam (to);
 
@@ -1299,50 +1302,50 @@ void SoundAttachToClients (edict_t *ent, const char *sample, float volume)
    if (strncmp ("player/bhit_flesh", sample, 17) == 0 || strncmp ("player/headshot", sample, 15) == 0)
    {
       // hit/fall sound?
-      client->hearingDistance = 768.0 * volume;
-      client->timeSoundLasting = GetWorldTime () + 0.5;
+      client->hearingDistance = 768.0f * volume;
+      client->timeSoundLasting = GetWorldTime () + 0.5f;
       client->soundPosition = origin;
    }
    else if (strncmp ("items/gunpickup", sample, 15) == 0)
    {
       // weapon pickup?
-      client->hearingDistance = 768.0 * volume;
-      client->timeSoundLasting = GetWorldTime () + 0.5;
+      client->hearingDistance = 768.0f * volume;
+      client->timeSoundLasting = GetWorldTime () + 0.5f;
       client->soundPosition = origin;
    }
    else if (strncmp ("weapons/zoom", sample, 12) == 0)
    {
       // sniper zooming?
-      client->hearingDistance = 512.0 * volume;
-      client->timeSoundLasting = GetWorldTime () + 0.1;
+      client->hearingDistance = 512.0f * volume;
+      client->timeSoundLasting = GetWorldTime () + 0.1f;
       client->soundPosition = origin;
    }
    else if (strncmp ("items/9mmclip", sample, 13) == 0)
    {
       // ammo pickup?
-      client->hearingDistance = 512.0 * volume;
-      client->timeSoundLasting = GetWorldTime () + 0.1;
+      client->hearingDistance = 512.0f * volume;
+      client->timeSoundLasting = GetWorldTime () + 0.1f;
       client->soundPosition = origin;
    }
    else if (strncmp ("hostage/hos", sample, 11) == 0)
    {
       // CT used hostage?
-      client->hearingDistance = 1024.0 * volume;
-      client->timeSoundLasting = GetWorldTime () + 5.0;
+      client->hearingDistance = 1024.0f * volume;
+      client->timeSoundLasting = GetWorldTime () + 5.0f;
       client->soundPosition = origin;
    }
    else if (strncmp ("debris/bustmetal", sample, 16) == 0 || strncmp ("debris/bustglass", sample, 16) == 0)
    {
       // broke something?
-      client->hearingDistance = 1024.0 * volume;
-      client->timeSoundLasting = GetWorldTime () + 2.0;
+      client->hearingDistance = 1024.0f * volume;
+      client->timeSoundLasting = GetWorldTime () + 2.0f;
       client->soundPosition = origin;
    }
    else if (strncmp ("doors/doormove", sample, 14) == 0)
    {
       // someone opened a door
-      client->hearingDistance = 1024.0 * volume;
-      client->timeSoundLasting = GetWorldTime () + 3.0;
+      client->hearingDistance = 1024.0f * volume;
+      client->timeSoundLasting = GetWorldTime () + 3.0f;
       client->soundPosition = origin;
    }
 }

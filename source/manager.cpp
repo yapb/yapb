@@ -819,10 +819,10 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
 
    m_startAction = GSM_IDLE;
    m_moneyAmount = 0;
-   m_logotypeIndex = Random.Long (0, 5);
+   m_logotypeIndex = Random.Long (0, 9);
 
    // assign how talkative this bot will be
-   m_sayTextBuffer.chatDelay = Random.Float (3.8, 10.0);
+   m_sayTextBuffer.chatDelay = Random.Float (3.8f, 10.0f);
    m_sayTextBuffer.chatProbability = Random.Long (1, 100);
 
    m_notKilled = false;
@@ -843,20 +843,20 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    {
    case 1:
       m_personality = PERSONALITY_RUSHER;
-      m_baseAgressionLevel = Random.Float (0.7, 1.0);
-      m_baseFearLevel = Random.Float (0.0, 0.4);
+      m_baseAgressionLevel = Random.Float (0.7f, 1.0f);
+      m_baseFearLevel = Random.Float (0.0f, 0.4f);
       break;
 
    case 2:
       m_personality = PERSONALITY_CAREFUL;
-      m_baseAgressionLevel = Random.Float (0.2, 0.5);
-      m_baseFearLevel = Random.Float (0.7, 1.0);
+      m_baseAgressionLevel = Random.Float (0.2f, 0.5f);
+      m_baseFearLevel = Random.Float (0.7f, 1.0f);
       break;
 
    default:
       m_personality = PERSONALITY_NORMAL;
-      m_baseAgressionLevel = Random.Float (0.4, 0.7);
-      m_baseFearLevel = Random.Float (0.4, 0.7);
+      m_baseAgressionLevel = Random.Float (0.4f, 0.7f);
+      m_baseFearLevel = Random.Float (0.4f, 0.7f);
       break;
    }
 
@@ -869,7 +869,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    // copy them over to the temp level variables
    m_agressionLevel = m_baseAgressionLevel;
    m_fearLevel = m_baseFearLevel;
-   m_nextEmotionUpdate = GetWorldTime () + 0.5;
+   m_nextEmotionUpdate = GetWorldTime () + 0.5f;
 
    // just to be sure
    m_actMessageIndex = 0;
@@ -962,20 +962,20 @@ void Bot::NewRound (void)
    // delete all allocated path nodes
    DeleteSearchNodes ();
 
-   m_waypointOrigin = nullvec;
-   m_destOrigin = nullvec;
+   m_waypointOrigin.Zero ();
+   m_destOrigin.Zero ();
    m_currentWaypointIndex = -1;
    m_currentPath = NULL;
    m_currentTravelFlags = 0;
    m_goalFailed = 0;
-   m_desiredVelocity = nullvec;
+   m_desiredVelocity.Zero ();
    m_prevGoalIndex = -1;
    m_chosenGoalIndex = -1;
    m_loosedBombWptIndex = -1;
 
    m_moveToC4 = false;
    m_duckDefuse = false;
-   m_duckDefuseCheckTime = 0.0;
+   m_duckDefuseCheckTime = 0.0f;
 
    m_numFriendsLeft = 0;
    m_numEnemiesLeft = 0;
@@ -1011,26 +1011,26 @@ void Bot::NewRound (void)
    m_canChooseAimDirection = true;
    m_turnAwayFromFlashbang = 0.0f;
 
-   m_timeTeamOrder = 0.0;
-   m_askCheckTime = 0.0;
-   m_minSpeed = 260.0;
-   m_prevSpeed = 0.0;
-   m_prevOrigin = Vector (9999.0, 9999.0, 9999.0);
+   m_timeTeamOrder = 0.0f;
+   m_askCheckTime = 0.0f;
+   m_minSpeed = 260.0f;
+   m_prevSpeed = 0.0f;
+   m_prevOrigin = Vector (9999.0f, 9999.0f, 9999.0f);
    m_prevTime = GetWorldTime ();
    m_blindRecognizeTime = GetWorldTime ();
    m_lookUpdateTime = GetWorldTime ();
    
-   m_viewDistance = 4096.0;
-   m_maxViewDistance = 4096.0;
+   m_viewDistance = 4096.0f;
+   m_maxViewDistance = 4096.0f;
 
    m_liftEntity = NULL;
    m_pickupItem = NULL;
    m_itemIgnore = NULL;
-   m_itemCheckTime = 0.0;
+   m_itemCheckTime = 0.0f;
 
    m_breakableEntity = NULL;
-   m_breakable = nullvec;
-   m_timeDoorOpen = 0.0;
+   m_breakable.Zero ();
+   m_timeDoorOpen = 0.0f;
 
    ResetCollideState ();
    ResetDoubleJumpState ();
@@ -1038,16 +1038,16 @@ void Bot::NewRound (void)
    m_enemy = NULL;
    m_lastVictim = NULL;
    m_lastEnemy = NULL;
-   m_lastEnemyOrigin = nullvec;
+   m_lastEnemyOrigin.Zero ();
    m_trackingEdict = NULL;
-   m_timeNextTracking = 0.0;
+   m_timeNextTracking = 0.0f;
 
-   m_buttonPushTime = 0.0;
-   m_enemyUpdateTime = 0.0;
-   m_seeEnemyTime = 0.0;
-   m_shootAtDeadTime = 0.0;
-   m_oldCombatDesire = 0.0;
-   m_liftUsageTime = 0.0;
+   m_buttonPushTime = 0.0f;
+   m_enemyUpdateTime = 0.0f;
+   m_seeEnemyTime = 0.0f;
+   m_shootAtDeadTime = 0.0f;
+   m_oldCombatDesire = 0.0f;
+   m_liftUsageTime = 0.0f;
 
    m_avoidGrenade = NULL;
    m_needAvoidGrenade = 0;
@@ -1060,31 +1060,31 @@ void Bot::NewRound (void)
    m_aimFlags = 0;
    m_liftState = 0;
 
-   m_position = nullvec;
-   m_liftTravelPos = nullvec;
+   m_position.Zero ();
+   m_liftTravelPos.Zero ();
 
    SetIdealReactionTimes (true);
 
    m_targetEntity = NULL;
    m_tasks = NULL;
-   m_followWaitTime = 0.0;
+   m_followWaitTime = 0.0f;
 
    for (i = 0; i < MAX_HOSTAGES; i++)
       m_hostages[i] = NULL;
 
    for (i = 0; i < Chatter_Total; i++)
-      m_voiceTimers[i] = -1.0;
+      m_chatterTimes[i] = -1.0f;
 
    m_isReloading = false;
    m_reloadState = RELOAD_NONE;
 
-   m_reloadCheckTime = 0.0;
+   m_reloadCheckTime = 0.0f;
    m_shootTime = GetWorldTime ();
    m_playerTargetTime = GetWorldTime ();
-   m_firePause = 0.0;
-   m_timeLastFired = 0.0;
+   m_firePause = 0.0f;
+   m_timeLastFired = 0.0f;
 
-   m_grenadeCheckTime = 0.0;
+   m_grenadeCheckTime = 0.0f;
    m_isUsingGrenade = false;
 
    m_blindButton = 0;
@@ -1116,12 +1116,12 @@ void Bot::NewRound (void)
    m_inBombZone = false;
    m_hasC4 = false;
 
-   m_shieldCheckTime = 0.0;
-   m_zoomCheckTime = 0.0;
-   m_strafeSetTime = 0.0;
+   m_shieldCheckTime = 0.0f;
+   m_zoomCheckTime = 0.0f;
+   m_strafeSetTime = 0.0f;
    m_combatStrafeDir = 0;
    m_fightStyle = 0;
-   m_lastFightStyleCheck = 0.0;
+   m_lastFightStyleCheck = 0.0f;
 
    m_checkWeaponSwitch = true;
    m_checkKnifeSwitch = true;
@@ -1133,7 +1133,7 @@ void Bot::NewRound (void)
    m_defendHostage = false;
    m_headedTime = 0.0f;
 
-   m_timeLogoSpray = GetWorldTime () + Random.Float (0.5, 2.0);
+   m_timeLogoSpray = GetWorldTime () + Random.Float (0.5f, 2.0f);
    m_spawnTime = GetWorldTime ();
    m_lastChatTime = GetWorldTime ();
 
@@ -1142,7 +1142,7 @@ void Bot::NewRound (void)
    m_nextCampDirTime = 0;
    m_campButtons = 0;
 
-   m_soundUpdateTime = 0.0;
+   m_soundUpdateTime = 0.0f;
    m_heardSoundTime = GetWorldTime ();
 
    // clear its message queue
@@ -1154,7 +1154,7 @@ void Bot::NewRound (void)
 
    // and put buying into its message queue
    PushMessageQueue (GSM_BUY_STUFF);
-   PushTask (TASK_NORMAL, TASKPRI_NORMAL, -1, 0.0, true);
+   PushTask (TASK_NORMAL, TASKPRI_NORMAL, -1, 0.0f, true);
 
    if (Random.Long (0, 100) < 50)
       ChatterMessage (Chatter_NewRound);
