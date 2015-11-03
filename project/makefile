@@ -64,7 +64,7 @@ else
 	BIN_DIR = release
 	CFLAGS += $(C_OPT_FLAGS)
 
-	ifeq "$(OS)" "Linux"
+	ifneq "$(OS)" "Darwin"
 		LINK += -s
 	endif
 endif
