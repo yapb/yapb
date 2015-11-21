@@ -336,14 +336,6 @@ void BotManager::AddBot (const String &name, const String &difficulty, const Str
       yb_quota.SetInt (GetBotsNum () + 1);
 }
 
-void BotManager::CheckAutoVacate(void)
-{
-   // this function sets timer to kick one bot off.
-
-   if (yb_autovacate.GetBool ())
-      RemoveRandom ();
-}
-
 void BotManager::MaintainBotQuota (void)
 {
    // this function keeps number of bots up to date, and don't allow to maintain bot creation

@@ -1359,8 +1359,7 @@ public:
 
    void Free (void);
    void Free (int index);
-   void CheckAutoVacate (void);
-
+  
    void AddRandom (void) { AddBot ("", -1, -1, -1, -1); }
    void AddBot (const String &name, int difficulty, int personality, int team, int member);
    void AddBot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member);

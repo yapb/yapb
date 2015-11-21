@@ -1047,16 +1047,6 @@ void UpdateClientData (const struct edict_s *ent, int sendweapons, struct client
    (*g_functionTable.pfnUpdateClientData) (ent, sendweapons, cd);
 }
 
-void ClientPutInServer (edict_t *ent)
-{
-   bots.CheckAutoVacate ();
-
-   if (g_isMetamod)
-      RETURN_META (MRES_IGNORED);
-
-   (*g_functionTable.pfnClientPutInServer) (ent);
-}
-
 int ClientConnect (edict_t *ent, const char *name, const char *addr, char rejectReason[128])
 {
    // this function is called in order to tell the MOD DLL that a client attempts to connect the
@@ -2804,7 +2794,6 @@ export int GetEntityAPI2 (gamefuncs_t *functionTable, int *)
    functionTable->pfnTouch = Touch;
    functionTable->pfnClientConnect = ClientConnect;
    functionTable->pfnClientDisconnect = ClientDisconnect;
-   functionTable->pfnClientPutInServer = ClientPutInServer;
    functionTable->pfnClientUserInfoChanged = ClientUserInfoChanged;
    functionTable->pfnClientCommand = ClientCommand;
    functionTable->pfnServerActivate = ServerActivate;
