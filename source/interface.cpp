@@ -1073,6 +1073,12 @@ int ClientConnect (edict_t *ent, const char *name, const char *addr, char reject
    if (strcmp (addr, "loopback") == 0)
       g_hostEntity = ent; // save the edict of the listen server client...
 
+   extern ConVar yb_autovacate;
+   extern ConVar yb_quota;
+
+   if (yb_autovacate.GetBool () && !IsValidBot (ent))
+      bots.RemoveRandom ();
+
    if (g_isMetamod)
       RETURN_META_VALUE (MRES_IGNORED, 0);
 
@@ -1096,7 +1102,7 @@ void ClientDisconnect (edict_t *ent)
    extern ConVar yb_quota;
 
    if (yb_autovacate.GetBool () && IsValidPlayer (ent) && !IsValidBot (ent) && yb_quota.GetInt () < GetMaxClients () - 1)
-      yb_quota.SetInt (yb_quota.GetInt () + 1);
+      bots.AddRandom ();
 
    int i = IndexOfEntity (ent) - 1;
 
