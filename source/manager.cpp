@@ -1151,7 +1151,7 @@ void Bot::NewRound (void)
    if (Random.Long (0, 100) < 50)
       ChatterMessage (Chatter_NewRound);
 
-   m_thinkInterval = (1.0f / 30.0f) * Random.Float (0.95f, 1.05f);
+   m_thinkInterval = g_gameVersion == CSV_OLD ? 0.0f : (1.0f / 30.0f) * Random.Float (0.95f, 1.05f);
 }
 
 void Bot::Kill (void)

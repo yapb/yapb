@@ -1,4 +1,4 @@
-//
+﻿//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -3747,7 +3747,7 @@ void Bot::RunTask_PlantBomb (void)
 
 void Bot::RunTask_DefuseBomb (void)
 {
-   float fullDefuseTime = m_hasDefuser ? 6.0f : 11.0f;
+   float fullDefuseTime = m_hasDefuser ? 7.0f : 12.0f;
    float timeToBlowUp = GetBombTimeleft ();
    float defuseRemainingTime = fullDefuseTime;
 
@@ -3777,32 +3777,19 @@ void Bot::RunTask_DefuseBomb (void)
    }
    else if (defuseRemainingTime > timeToBlowUp) // exception: not time left for defusing
       defuseError = true;
-   else if (m_states & STATE_SEEING_ENEMY) // exception: saw/seeing enemy
+   else if (IsValidPlayer (m_enemy))
    {
-      if (GetNearbyFriendsNearPosition (pev->origin, 128.0f) == 0)
-      {
-         if (defuseRemainingTime > 0.75f)
-         {
-            if (GetNearbyFriendsNearPosition (pev->origin, 512.0f) > 0)
-               RadioMessage (Radio_NeedBackup);
+      int friends = GetNearbyFriendsNearPosition (pev->origin, 768.0f);
 
-            defuseError = true;
-         }
-      }
-      else if (timeToBlowUp > fullDefuseTime + 3.0f && defuseRemainingTime > 1.0f)
+      if (friends < 2 && defuseRemainingTime < timeToBlowUp)
+      {
          defuseError = true;
-   }
-   else if (m_states & STATE_SUSPECT_ENEMY) // exception: suspect enemy
-   {
-      if (GetNearbyFriendsNearPosition (pev->origin, 128.0f) == 0)
-      {
-         if (timeToBlowUp > fullDefuseTime + 10.0f)
-         {
-            if (GetNearbyFriendsNearPosition (pev->origin, 512.0f) > 0)
-               RadioMessage (Radio_NeedBackup);
 
-            defuseError = true;
-         }
+         if (defuseRemainingTime + 2.0f > timeToBlowUp)
+            defuseError = false;
+
+         if (m_numFriendsLeft > friends)
+            RadioMessage (Radio_NeedBackup);
       }
    }
 
@@ -5696,12 +5683,7 @@ byte Bot::ThrottledMsec (void)
 {
    // estimate msec to use for this command based on time passed from the previous command
 
-   byte adjustedMsec = static_cast <byte> ((GetWorldTime () - m_lastCommandTime) * 1000.0f);
-
-   if (adjustedMsec > 255)
-      adjustedMsec = 255;
-
-   return adjustedMsec;
+   return static_cast <byte> ((GetWorldTime () - m_lastCommandTime) * 1000.0f);
 }
 
 void Bot::RunPlayerMovement (void)
