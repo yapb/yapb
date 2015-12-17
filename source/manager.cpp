@@ -100,7 +100,7 @@ void BotManager::CallGameEntity (entvars_t *vars)
    static EntityPtr_t playerFunction = NULL;
 
    if (playerFunction == NULL)
-      playerFunction = (EntityPtr_t) g_gameLib->GetFunctionAddr ("player");
+      playerFunction = g_gameLib->GetFuncAddr <EntityPtr_t> ("player");
 
    if (playerFunction != NULL)
       (*playerFunction) (vars);

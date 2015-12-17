@@ -140,15 +140,16 @@ public:
 
       return m_ptr;
    }
-   void *GetFunctionAddr (const char *functionName)
+
+   template <typename R> R GetFuncAddr (const char *function)
    {
       if (!IsLoaded ())
          return NULL;
 
 #ifdef PLATFORM_WIN32
-      return GetProcAddress ((HMODULE) m_ptr, functionName);
+      return reinterpret_cast <R> (GetProcAddress (static_cast <HMODULE> (m_ptr), function));
 #else
-      return dlsym (m_ptr, functionName);
+      return reinterpret_cast <R> (dlsym (m_ptr, function));
 #endif
    }
 

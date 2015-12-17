@@ -3105,10 +3105,10 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    else
       AddLogEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", GetModName ());
       
-   g_funcPointers = (FuncPointers_t) g_gameLib->GetFunctionAddr ("GiveFnptrsToDll");
-   g_entityAPI = (EntityAPI_t) g_gameLib->GetFunctionAddr ("GetEntityAPI");
-   g_getNewEntityAPI = (NewEntityAPI_t) g_gameLib->GetFunctionAddr ("GetNewDLLFunctions");
-   g_serverBlendingAPI = (BlendAPI_t) g_gameLib->GetFunctionAddr ("Server_GetBlendingInterface");
+   g_funcPointers = g_gameLib->GetFuncAddr <FuncPointers_t> ("GiveFnptrsToDll");
+   g_entityAPI = g_gameLib->GetFuncAddr <EntityAPI_t> ("GetEntityAPI");
+   g_getNewEntityAPI = g_gameLib->GetFuncAddr <NewEntityAPI_t> ("GetNewDLLFunctions");
+   g_serverBlendingAPI = g_gameLib->GetFuncAddr <BlendAPI_t> ("Server_GetBlendingInterface");
 
    if (!g_funcPointers || !g_entityAPI)
       TerminateOnMalloc ();
@@ -3189,7 +3189,7 @@ export void entityFunction (entvars_t *pev) \
    static EntityPtr_t entity_addr = NULL; \
    \
    if (entity_addr == NULL) \
-      entity_addr = reinterpret_cast <EntityPtr_t> (g_gameLib->GetFunctionAddr (#entityFunction)); \
+      entity_addr = g_gameLib->GetFuncAddr <EntityPtr_t> (#entityFunction); \
    \
    if (entity_addr == NULL) \
       return; \
