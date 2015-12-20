@@ -375,7 +375,7 @@ void BotManager::MaintainBotQuota (void)
       if (botNumber > yb_quota.GetInt ())
          RemoveRandom ();
 
-      if (yb_quota_match.GetInt () > 0)
+      if (humanNumber > 0 && yb_quota_match.GetInt () > 0)
       {
          int num = yb_quota_match.GetInt () * humanNumber;
 
