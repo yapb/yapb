@@ -341,6 +341,9 @@ void BotManager::MaintainBotQuota (void)
    // this function keeps number of bots up to date, and don't allow to maintain bot creation
    // while creation process in process.
 
+   if (g_numWaypoints < 1 || g_waypointsChanged)
+      return;
+
    if (yb_join_after_player.GetInt () > 0 && GetHumansJoinedTeam () == 0)
    {
       RemoveAll (false);

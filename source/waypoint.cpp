@@ -984,7 +984,7 @@ void Waypoint::InitVisibilityTab (void)
       m_visibilityIndex = 0;
       m_redoneVisibility = true;
 
-      AddLogEntry (true, LL_DEFAULT, "Vistable, not exists, vistable will be rebuilded");
+      AddLogEntry (true, LL_DEFAULT, "Vistable doesn't, vistable will be rebuilded");
       return;
    }
 

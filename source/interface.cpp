@@ -1076,7 +1076,7 @@ int ClientConnect (edict_t *ent, const char *name, const char *addr, char reject
    extern ConVar yb_autovacate;
    extern ConVar yb_quota;
 
-   if (yb_autovacate.GetBool () && !IsValidBot (ent))
+   if (yb_autovacate.GetBool () && !IsValidBot (ent) && ent != g_hostEntity)
       bots.RemoveRandom ();
 
    if (g_isMetamod)
@@ -1101,7 +1101,7 @@ void ClientDisconnect (edict_t *ent)
    extern ConVar yb_autovacate;
    extern ConVar yb_quota;
 
-   if (yb_autovacate.GetBool () && IsValidPlayer (ent) && !IsValidBot (ent) && yb_quota.GetInt () < GetMaxClients () - 1)
+   if (yb_autovacate.GetBool () && IsValidPlayer (ent) && !IsValidBot (ent) && ent != g_hostEntity && yb_quota.GetInt () < GetMaxClients () - 1)
       bots.AddRandom ();
 
    int i = IndexOfEntity (ent) - 1;
@@ -3016,6 +3016,26 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    // register our cvars
    convars.PushRegisteredConVarsToEngine ();
 
+#ifdef PLATFORM_ANDROID
+   g_gameVersion = CSV_OLD; // temporary, until opensource client dll get BotVoice message
+
+   if (g_isMetamod)
+      return;  // we should stop the attempt for loading the real gamedll, since metamod handle this for us
+
+#ifdef LOAD_HARDFP
+   #define GAME_SERVER_DLL "libserver_hardfp.so"
+#else
+   #define GAME_SERVER_DLL "libserver.so"
+#endif
+
+   char gameDLLName[256];
+   snprintf (gameDLLName, sizeof (gameDLLName), "%s/%s", getenv ("XASH3D_GAMELIBDIR"), GAME_SERVER_DLL);
+
+   g_gameLib = new Library (gameDLLName);
+
+   if (!g_gameLib->IsLoaded ())
+      AddLogEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gameDLLName, GetModName ());
+#else
    static struct ModSupport
    {
       char name[10];
@@ -3076,34 +3096,11 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       g_gameLib = new Library (gameDLLName);
 
       if (!g_gameLib->IsLoaded ())
-      {
-         // try to extract the game dll out of the steam cache
-         AddLogEntry (true, LL_WARNING | LL_IGNORE, "Trying to extract dll '%s' out of the steam cache", gameDLLName);
-        
-         int size;
-         unsigned char *buffer = (*g_engfuncs.pfnLoadFileForMe) (gameDLLName, &size);
-
-         if (buffer)
-         {
-            CreatePath (const_cast <char *> (FormatBuffer ("%s/dlls", GetModName ())));
-            File fp (gameDLLName, "wb");
-
-            if (fp.IsValid ())
-            {
-               // dump the game dll file and then close it
-               fp.Write (buffer, size);
-               fp.Close ();
-            }
-            FREE_FILE (buffer);
-         }
-         g_gameLib->LoadLib (gameDLLName);
-
-         if (!g_gameLib->IsLoaded ())
-            AddLogEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gameDLLName, GetModName ());
-      }
+         AddLogEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gameDLLName, GetModName ());
    }
    else
       AddLogEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", GetModName ());
+#endif
       
    g_funcPointers = g_gameLib->GetFuncAddr <FuncPointers_t> ("GiveFnptrsToDll");
    g_entityAPI = g_gameLib->GetFuncAddr <EntityAPI_t> ("GetEntityAPI");

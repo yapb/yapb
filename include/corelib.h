@@ -201,27 +201,29 @@ namespace Math
    //  sin - Output for Sine.
    //  cos - Output for Cosine.
    //
-   static inline void SineCosine (float rad, float *sin, float *cos)
+   static inline void SineCosine (float rad, float *sine, float *cosine)
    {
 #if defined (_WIN32) && defined (_MSC_VER)
       __asm
       {
          fld dword ptr[rad]
          fsincos
-         mov ebx, [cos]
+         mov ebx, [cosine]
          fstp dword ptr[ebx]
-         mov ebx, [sin]
+         mov ebx, [sine]
          fstp dword ptr[ebx]
       }
-#elif defined (__linux__) || defined (GCC) || defined (__APPLE__)
+#elif defined (__ANDROID__)
+      *sine = sinf (rad);
+      *cosine = cosf (rad);
+#elif defined (__linux__) || defined (GCC) || defined (__APPLE__) 
       register double _cos, _sin;
       __asm __volatile__ ("fsincos" : "=t" (_cos), "=u" (_sin) : "0" (rad));
 
-      *cos = _cos;
-      *sin = _sin;
+      *cosine = _cos;
+      *sine = _sin;
 #else
-      *sin = sinf (rad);
-      *cos = cosf (rad);
+      #error "SineConsine not defined."
 #endif
    }
 

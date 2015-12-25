@@ -4933,11 +4933,23 @@ void Bot::BotAI (void)
          pev->button |= IN_MOVELEFT;
    }
 
+
    if (!IsEntityNull (g_hostEntity) && yb_debug.GetInt () >= 1)
    {
-      int specIndex = g_hostEntity->v.iuser2;
+      bool displayDebugOverlay = false;
 
-      if (specIndex == IndexOfEntity (GetEntity ()))
+      if (g_hostEntity->v.iuser2 == IndexOfEntity (GetEntity ()))
+         displayDebugOverlay = true;
+
+      if (!displayDebugOverlay && yb_debug.GetInt () >= 2)
+      {
+         Bot *nearest = NULL;
+
+         if (FindNearestPlayer (reinterpret_cast <void **> (&nearest), g_hostEntity, 128.0f, true, true, true, true) && nearest == this)
+            displayDebugOverlay = true;
+      }
+
+      if (displayDebugOverlay)
       {
          static float timeDebugUpdate = 0.0f;
          static int index, goal, taskID;

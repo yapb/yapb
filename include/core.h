@@ -84,10 +84,14 @@ using namespace Math;
    #include <netdb.h>
    #include <arpa/inet.h>
 
-   #define DLL_ENTRYPOINT void _fini (void)
+   #define DLL_ENTRYPOINT __attribute__((destructor))  void _fini (void)
    #define DLL_DETACHING TRUE
    #define DLL_RETENTRY return
    #define DLL_GIVEFNPTRSTODLL extern "C" void __attribute__((visibility("default")))
+
+   #if defined (__ANDROID__)
+      #define PLATFORM_ANDROID 1
+   #endif
 
    typedef int (*EntityAPI_t) (gamefuncs_t *, int);
    typedef int (*NewEntityAPI_t) (newgamefuncs_t *, int *);
