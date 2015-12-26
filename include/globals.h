@@ -124,5 +124,9 @@ static inline bool IsEntityNull (const edict_t *ent)
 
 static inline int GetTeam (edict_t *ent)
 {
+#ifndef XASH_CSDM
    return g_clients[IndexOfEntity (ent) - 1].team;
+#else
+   return g_clients[IndexOfEntity (ent) - 1].team = ent->v.team == 1 ? TEAM_TF : TEAM_CF;
+#endif
 }

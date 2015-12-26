@@ -431,14 +431,14 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
          // collision check allowed if not flying through the air
          if (IsOnFloor () || IsOnLadder () || IsInWater ())
          {
-            char state[MAX_COLLIDE_MOVES * 2];
+            char state[MAX_COLLIDE_MOVES * 2 + 1];
             int i = 0;
 
             // first 4 entries hold the possible collision states
             state[i++] = COLLISION_STRAFELEFT;
             state[i++] = COLLISION_STRAFERIGHT;
             state[i++] = COLLISION_JUMP;
-           // state[i++] = COLLISION_DUCK;
+            // state[i++] = COLLISION_DUCK;
 
             if (bits & PROBE_STRAFE)
             {

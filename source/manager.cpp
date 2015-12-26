@@ -38,6 +38,7 @@ BotManager::BotManager (void)
 
    m_maintainTime = 0.0f;
    m_creationTab.RemoveAll ();
+   m_killerEntity = NULL;
 }
 
 BotManager::~BotManager (void)
@@ -1180,6 +1181,29 @@ void Bot::Kick (void)
 void Bot::StartGame (void)
 {
    // this function handles the selection of teams & class
+
+#ifdef XASH_CSDM
+   m_wantedTeam = Random.Long (1, 2);
+   
+   FakeClientCommand (GetEntity (), "jointeam %d", m_wantedTeam);
+   
+   if (m_wantedTeam == 2)
+   {
+      SET_MODEL (GetEntity (), ENGINE_STR ("models/player/Counter-Terrorists/Counter-Terrorists.mdl"));
+      SET_CLIENT_KEYVALUE (GetIndex (), GET_INFOKEYBUFFER (GetEntity ()), "model", "Counter-Terrorists");
+   }
+   else
+   {
+      SET_MODEL (GetEntity (), ENGINE_STR ("models/player/Terrorists/Terrorists.mdl"));
+      SET_CLIENT_KEYVALUE (GetIndex (), GET_INFOKEYBUFFER (GetEntity ()), "model", "Terrorists");
+   }
+
+   if (Random.Long (0, 100) < 20)
+      ChatMessage (CHAT_WELCOME);
+   
+   m_notStarted = false;
+   return;
+#endif
 
    // handle counter-strike stuff here...
    if (m_startAction == GSM_TEAM_SELECT)

@@ -980,6 +980,7 @@ int Spawn (edict_t *ent)
    }
    else if (strcmp (STRING (ent->v.classname), "player_weaponstrip") == 0 && (STRING (ent->v.target))[0] == '0')
       ent->v.target = ent->v.targetname = ALLOC_STRING ("fake");
+#ifndef XASH_CSDM
    else if (strcmp (STRING (ent->v.classname), "info_player_start") == 0)
    {
       SET_MODEL (ent, ENGINE_STR ("models/player/urban/urban.mdl"));
@@ -1005,6 +1006,7 @@ int Spawn (edict_t *ent)
       ent->v.renderamt = 127; // set its transparency amount
       ent->v.effects |= EF_NODRAW;
    }
+#endif
    else if (strcmp (STRING (ent->v.classname), "func_vip_safetyzone") == 0 || strcmp (STRING (ent->v.classname), "info_vip_safetyzone") == 0)
       g_mapType |= MAP_AS; // assassination map
 
@@ -3029,7 +3031,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 #endif
 
    char gameDLLName[256];
-   snprintf (gameDLLName, sizeof (gameDLLName), "%s/%s", getenv ("XASH3D_GAMELIBDIR"), GAME_SERVER_DLL);
+   snprintf (gameDLLName, SIZEOF_CHAR (gameDLLName), "%s/%s", getenv ("XASH3D_GAMELIBDIR"), GAME_SERVER_DLL);
 
    g_gameLib = new Library (gameDLLName);
 
@@ -3051,6 +3053,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       { "czero", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike: Condition Zero", CSV_CZERO },
       { "czero", "cs.so", "cs.dylib", "mp.dll", "Counter-Strike: Condition Zero (Newer)", CSV_CZERO },
       { "csv15", "cs_i386.so", "cs.dylib", "mp.dll", "CS 1.5 for Steam", CSV_OLD },
+      { "csdm", "cs_i386.so", "cs.dylib", "mp.dll", "CSDM for Windows", CSV_OLD },
       { "cs13", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike v1.3", CSV_OLD }, // assume cs13 = cs15
    };
 

@@ -461,17 +461,21 @@ void NetworkMsg::Execute (void *p)
       case 4:
          if (playerIndex >= 0 && playerIndex <= GetMaxClients ())
          {
+#ifndef XASH_CSDM
+            Client &cl = g_clients[playerIndex - 1];
+
             if (PTR_TO_INT (p) == 1)
-               g_clients[playerIndex - 1].realTeam = TEAM_TF;
+               cl.realTeam = TEAM_TF;
             else if (PTR_TO_INT (p) == 2)
-               g_clients[playerIndex - 1].realTeam = TEAM_CF;
+               cl.realTeam = TEAM_CF;
             else
-               g_clients[playerIndex - 1].realTeam = TEAM_SPEC;
+               cl.realTeam = TEAM_SPEC;
 
             if (yb_csdm_mode.GetInt () == 2)
-               g_clients[playerIndex - 1].team = playerIndex;
+               cl.team = playerIndex;
             else
-               g_clients[playerIndex - 1].team = g_clients[playerIndex - 1].realTeam;
+               cl.team = g_clients[playerIndex - 1].realTeam;
+#endif
          }
          break;
       }

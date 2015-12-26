@@ -12,7 +12,12 @@
 ConVar yb_listenserver_welcome ("yb_listenserver_welcome", "1", VT_NOSERVER);
 
 ConVar mp_roundtime ("mp_roundtime", NULL, VT_NOREGISTER);
+
+#ifndef XASH_CSDM
 ConVar mp_freezetime ("mp_freezetime", NULL, VT_NOREGISTER);
+#else
+ConVar mp_freezetime ("mp_freezetime", "0", VT_NOSERVER);
+#endif
 
 void TraceLine (const Vector &start, const Vector &end, bool ignoreMonsters, bool ignoreGlass, edict_t *ignoreEntity, TraceResult *ptr)
 {
@@ -742,7 +747,6 @@ void RoundInit (void)
       g_radioSelect[i] = 0;
    }
    waypoints.SetBombPosition (true);
-   waypoints.ClearGoalScore ();
 
    g_bombSayString = false;
    g_timeBombPlanted = 0.0f;

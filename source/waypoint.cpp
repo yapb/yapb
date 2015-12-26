@@ -2446,41 +2446,6 @@ void Waypoint::SetFindIndex (int index)
       m_findWPIndex = -1;
 }
 
-int Waypoint::AddGoalScore (int index, int other[4])
-{
-   Array <int> left;
-
-   if (m_goalsScore[index] < 1024.0f)
-      left.Push (index);
-
-   for (int i = 0; i < 3; i++)
-   {
-      if (m_goalsScore[other[i]] < 1024.0f)
-         left.Push (other[i]);
-   }
-
-   if (left.IsEmpty ())
-      index = other[Random.Long (0, 3)];
-   else
-      index = left.GetRandomElement ();
-
-   if (m_paths[index]->flags & FLAG_GOAL)
-      m_goalsScore[index] += 384.0f;
-   else if (m_paths[index]->flags & (FLAG_CF_ONLY | FLAG_TF_ONLY))
-      m_goalsScore[index] += 768.0f;
-   else if (m_paths[index]->flags & FLAG_CAMP)
-      m_goalsScore[index] += 1024.0f;
-
-   return index;
-}
-
-void Waypoint::ClearGoalScore (void)
-{
-   // iterate though all waypoints
-   for (int i = 0; i < MAX_WAYPOINTS; i++)
-      m_goalsScore[i] = 0.0f;
-}
-
 Waypoint::Waypoint (void)
 {
    m_waypointPaths = false;
