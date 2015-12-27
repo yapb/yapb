@@ -1076,9 +1076,8 @@ int ClientConnect (edict_t *ent, const char *name, const char *addr, char reject
       g_hostEntity = ent; // save the edict of the listen server client...
 
    extern ConVar yb_autovacate;
-   extern ConVar yb_quota;
 
-   if (yb_autovacate.GetBool () && !IsValidBot (ent) && ent != g_hostEntity)
+   if (IsDedicatedServer () && yb_autovacate.GetBool () && !IsValidBot (ent) && ent != g_hostEntity)
       bots.RemoveRandom ();
 
    if (g_isMetamod)
