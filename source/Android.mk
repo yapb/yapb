@@ -29,7 +29,7 @@ LOCAL_SRC_FILES := \
 	support.cpp \
 	waypoint.cpp \
 
-LOCAL_CFLAGS += -O2 -DLINUX -DXASH_CSDM -D_LINUX -DPOSIX -DHAVE_STDINT_H -D__extern_always_inline=inline -D_strdup=strdup -Dstricmp=strcasecmp -Dstrcmpi=strcasecmp -fno-strict-aliasing -Wall -Werror -Wno-uninitialized -Wno-unused -Wno-switch -Wno-c++11-compat-deprecated-writable-strings
+LOCAL_CFLAGS += -O2 -DLINUX -D_LINUX -DPOSIX -DHAVE_STDINT_H -D__extern_always_inline=inline -D_strdup=strdup -Dstricmp=strcasecmp -Dstrcmpi=strcasecmp -fno-strict-aliasing -Wall -Werror -Wno-uninitialized -Wno-unused -Wno-switch -Wno-c++11-compat-deprecated-writable-strings
 
 LOCAL_CPPFLAGS += -w -Wno-invalid-offsetof -fno-exceptions -fno-rtti
 
