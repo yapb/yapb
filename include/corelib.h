@@ -3381,9 +3381,17 @@ public:
    // Returns:
    //  True if operation succeeded, false otherwise.
    //
-   bool Open (const String &fileName, const String &mode)
+   bool Open (const String& fileName, const String &mode)
    {
-      if ((m_handle = fopen (fileName.GetBuffer (), mode.GetBuffer ())) == NULL)
+      m_handle = fopen (fileName.GetBuffer (), mode.GetBuffer ());
+#ifdef __ANDROID__
+      // try open file from /data/data
+      char path[256];
+      snprintf( path, 256, "/data/data/in.celest.xash3d.csdm/files/%s", fileName.GetBuffer () );
+      if(m_handle == NULL)
+         m_handle = fopen (path, mode.GetBuffer ());
+#endif
+      if(m_handle == NULL)
          return false;
 
       fseek (m_handle, 0L, SEEK_END);
