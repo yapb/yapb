@@ -959,8 +959,8 @@ extern bool OpenConfig(const char *fileName, const char *errorIfNotExists, File 
 }
 
 const char *GetWaypointDir (void)
-{
-   return FormatBuffer ("%s/addons/yapb/data/", GetModName ());
+{	
+	return FormatBuffer ("%s/addons/yapb/data/", GetModName ());
 }
 
 extern void RegisterCommand(const char *command, void funcPtr (void))
