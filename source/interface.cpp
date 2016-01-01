@@ -3017,19 +3017,21 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    // register our cvars
    convars.PushRegisteredConVarsToEngine ();
 
-   // ensure data & learned directory are created (as we can download waypoints from the net)
-   const char *path = GetWaypointDir ();
-
-   // ensure data path exists
-   CreatePath (const_cast <char *> (path));
-
-   char learnedPath[256];
-   snprintf (learnedPath, SIZEOF_CHAR (learnedPath), "%s/learned", path);
-
-   // ensure data/learned path exists
-   CreatePath (learnedPath);
-
 #ifdef PLATFORM_ANDROID
+	// ensure data & learned directory are created (as we can download waypoints from the net), do this
+	// only under the android platform, in case user forget to install bot extras into the mod directory
+
+	const char *path = GetWaypointDir ();
+
+	// ensure data path exists
+	CreatePath (const_cast <char *> (path));
+
+	char learnedPath[256];
+	snprintf (learnedPath, SIZEOF_CHAR (learnedPath), "%s/learned", path);
+
+	// ensure data/learned path exists
+	CreatePath (learnedPath);
+
    g_gameVersion = CSV_OLD; // temporary, until opensource client dll get BotVoice message
 
    if (g_isMetamod)
