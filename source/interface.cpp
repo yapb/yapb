@@ -170,6 +170,21 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       }
    }
 
+   else if (stricmp (arg0, "bot_takedamage") == 0 && !IsNullString (arg1))
+   {
+      bool isOn = !!(atoi (arg1) == 1);
+
+      for (int i = 0; i < GetMaxClients (); i++)
+      {
+         Bot *bot = bots.GetBot (i);
+
+         if (bot != NULL)
+         {
+            bot->pev->takedamage = isOn ? 0.0f : 1.0f;
+         }
+      }
+   }
+
    // displays main bot menu
    else if (stricmp (arg0, "botmenu") == 0 || stricmp (arg0, "menu") == 0)
       DisplayMenuToClient (ent, &g_menus[0]);
@@ -1410,7 +1425,7 @@ void ClientCommand (edict_t *ent)
 
             case 7:
                if (waypoints.NodesValid ())
-                  CenterPrint ("Nodes work Find");
+                  CenterPrint ("Nodes works fine");
                else
                   CenterPrint ("There are errors, see console");
                break;
@@ -3018,20 +3033,6 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    convars.PushRegisteredConVarsToEngine ();
 
 #ifdef PLATFORM_ANDROID
-   // ensure data & learned directory are created (as we can download waypoints from the net), do this
-   // only under the android platform, in case user forget to install bot extras into the mod directory
-
-   const char *path = GetWaypointDir ();
-
-   // ensure data path exists
-   CreatePath (const_cast <char *> (path));
-
-   char learnedPath[256];
-   snprintf (learnedPath, SIZEOF_CHAR (learnedPath), "%s/learned", path);
-
-   // ensure data/learned path exists
-   CreatePath (learnedPath);
-
    g_gameVersion = CSV_OLD; // temporary, until opensource client dll get BotVoice message
 
    if (g_isMetamod)

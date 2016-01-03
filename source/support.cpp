@@ -959,7 +959,7 @@ extern bool OpenConfig(const char *fileName, const char *errorIfNotExists, File 
 }
 
 const char *GetWaypointDir (void)
-{	
+{
    return FormatBuffer ("%s/addons/yapb/data/", GetModName ());
 }
 

@@ -906,17 +906,6 @@ WeaponSelectEnd:
       m_zoomCheckTime = GetWorldTime ();
    }
 
-   if (selectId != WEAPON_KNIFE && HasPrimaryWeapon () && GetAmmoInClip () <= 0)
-   {
-      if (GetAmmo () <= 0 && !(m_states &= ~(STATE_THROW_HE | STATE_THROW_FB | STATE_THROW_SG)))
-         SelectPistol();
-
-      pev->button |= IN_RELOAD;
-      pev->button &= ~IN_ATTACK;
-
-      return;
-   }
-
    // need to care for burst fire?
    if (distance < 256.0f || m_blindTime > GetWorldTime ())
    {
@@ -934,7 +923,7 @@ WeaponSelectEnd:
       {
          LookupEnemy ();
 
-         if (selectTab[chosenWeaponIndex].primaryFireHold && m_ammo[g_weaponDefs[selectTab[selectIndex].id].ammo1] >= selectTab[selectIndex].minPrimaryAmmo) // if automatic weapon, just press attack
+         if (selectTab[chosenWeaponIndex].primaryFireHold && m_ammo[g_weaponDefs[selectTab[selectIndex].id].ammo1] > selectTab[selectIndex].minPrimaryAmmo) // if automatic weapon, just press attack
             pev->button |= IN_ATTACK;
          else // if not, toggle buttons
          {       

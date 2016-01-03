@@ -75,6 +75,7 @@ void BotManager::TouchWithKillerEntity (Bot *bot)
       MDLL_ClientKill (bot->GetEntity ());
       return;
    }
+
    m_killerEntity->v.classname = MAKE_STRING (g_weaponDefs[bot->m_currentWeapon].className);
    m_killerEntity->v.dmg_inflictor = bot->GetEntity ();
 

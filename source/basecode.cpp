@@ -18,6 +18,7 @@ ConVar yb_jasonmode ("yb_jasonmode", "0");
 ConVar yb_communication_type ("yb_communication_type", "2");
 ConVar yb_economics_rounds ("yb_economics_rounds", "1");
 ConVar yb_walking_allowed ("yb_walking_allowed", "1");
+ConVar yb_camping_allowed ("yb_camping_allowed", "1");
 
 ConVar yb_tkpunish ("yb_tkpunish", "1");
 ConVar yb_freeze_bots ("yb_freeze_bots", "0");
@@ -3051,7 +3052,7 @@ void Bot::RunTask_Normal (void)
          PushTask (TASK_SPRAY, TASKPRI_SPRAYLOGO, -1, GetWorldTime () + 1.0f, false);
 
       // reached waypoint is a camp waypoint
-      if ((m_currentPath->flags & FLAG_CAMP) && !yb_csdm_mode.GetBool ())
+      if ((m_currentPath->flags & FLAG_CAMP) && !yb_csdm_mode.GetBool () && yb_camping_allowed.GetBool ())
       {
          // check if bot has got a primary weapon and hasn't camped before
          if (HasPrimaryWeapon () && m_timeCamping + 10.0f < GetWorldTime () && !HasHostage ())
@@ -3497,11 +3498,17 @@ void Bot::RunTask_Blinded (void)
 
 void Bot::RunTask_Camp (void)
 {
+   if (!yb_camping_allowed.GetBool ())
+   {
+      TaskComplete ();
+      return;
+   }
+
    m_aimFlags |= AIM_CAMP;
    m_checkTerrain = false;
    m_moveToGoal = false;
 
-   if (g_bombPlanted && m_defendedBomb && !IsBombDefusing (waypoints.GetBombPosition ()) && !OutOfBombTimer () && m_team == TEAM_CF)
+   if (m_team == TEAM_CF && g_bombPlanted && m_defendedBomb && !IsBombDefusing (waypoints.GetBombPosition ()) && !OutOfBombTimer ())
    {
       m_defendedBomb = false;
       TaskComplete ();
