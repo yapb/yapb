@@ -998,7 +998,7 @@ int Spawn (edict_t *ent)
    }
    else if (strcmp (entityClassname, "player_weaponstrip") == 0)
    {
-      if (g_gameVersion == CSV_OLD)
+      if (g_gameVersion == CSV_OLD && (STRING (ent->v.target))[0] == '0')
          ent->v.target = ent->v.targetname = ALLOC_STRING ("fake");
       else
       {
