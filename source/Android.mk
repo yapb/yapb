@@ -8,10 +8,6 @@ LOCAL_MODULE := yapb
 
 LOCAL_CONLYFLAGS += -std=c99
 
-ifeq ($(TARGET_ARCH_ABI),armeabi-v7a-hard)
-LOCAL_MODULE_FILENAME = libyapb_hardfp
-endif
-
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/../include \
 		    $(LOCAL_PATH)/../include/engine
 
