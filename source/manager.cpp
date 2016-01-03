@@ -1188,16 +1188,7 @@ void Bot::StartGame (void)
    
    FakeClientCommand (GetEntity (), "jointeam %d", m_wantedTeam);
    
-   if (m_wantedTeam == 2)
-   {
-      SET_MODEL (GetEntity (), ENGINE_STR ("models/player/Counter-Terrorists/Counter-Terrorists.mdl"));
-      SET_CLIENT_KEYVALUE (GetIndex (), GET_INFOKEYBUFFER (GetEntity ()), "model", "Counter-Terrorists");
-   }
-   else
-   {
-      SET_MODEL (GetEntity (), ENGINE_STR ("models/player/Terrorists/Terrorists.mdl"));
-      SET_CLIENT_KEYVALUE (GetIndex (), GET_INFOKEYBUFFER (GetEntity ()), "model", "Terrorists");
-   }
+   SET_CLIENT_KEYVALUE (GetIndex (), GET_INFOKEYBUFFER (GetEntity ()), "model", m_wantedTeam == 2 ? "Counter-Terrorists" : "Terrorists");
 
    if (Random.Long (0, 100) < 20)
       ChatMessage (CHAT_WELCOME);

@@ -972,7 +972,10 @@ int Spawn (edict_t *ent)
    // Spawn() function is one of the functions any entity is supposed to have in the game DLL,
    // and any MOD is supposed to implement one for each of its entities.
 
-   if (strcmp (STRING (ent->v.classname), "worldspawn") == 0)
+   // for faster access
+   const char *entityClassname = STRING (ent->v.classname);
+
+   if (strcmp (entityClassname, "worldspawn") == 0)
    {
       g_worldEntity = ent; // save the world entity for future use
 
@@ -993,10 +996,22 @@ int Spawn (edict_t *ent)
 
       g_mapType = NULL; // reset map type as worldspawn is the first entity spawned
    }
-   else if (strcmp (STRING (ent->v.classname), "player_weaponstrip") == 0 && (STRING (ent->v.target))[0] == '0')
-      ent->v.target = ent->v.targetname = ALLOC_STRING ("fake");
+   else if (strcmp (entityClassname, "player_weaponstrip") == 0)
+   {
+      if (g_gameVersion == CSV_OLD)
+         ent->v.target = ent->v.targetname = ALLOC_STRING ("fake");
+      else
+      {
+         REMOVE_ENTITY (ent);
+
+         if (g_isMetamod)
+            RETURN_META_VALUE (MRES_SUPERCEDE, 0);
+
+         return 0;
+      }
+   }
 #ifndef XASH_CSDM
-   else if (strcmp (STRING (ent->v.classname), "info_player_start") == 0)
+   else if (strcmp (entityClassname, "info_player_start") == 0)
    {
       SET_MODEL (ent, ENGINE_STR ("models/player/urban/urban.mdl"));
 
@@ -1004,7 +1019,7 @@ int Spawn (edict_t *ent)
       ent->v.renderamt = 127; // set its transparency amount
       ent->v.effects |= EF_NODRAW;
    }
-   else if (strcmp (STRING (ent->v.classname), "info_player_deathmatch") == 0)
+   else if (strcmp (entityClassname, "info_player_deathmatch") == 0)
    {
       SET_MODEL (ent, ENGINE_STR ("models/player/terror/terror.mdl"));
 
@@ -1013,7 +1028,7 @@ int Spawn (edict_t *ent)
       ent->v.effects |= EF_NODRAW;
    }
 
-   else if (strcmp (STRING (ent->v.classname), "info_vip_start") == 0)
+   else if (strcmp (entityClassname, "info_vip_start") == 0)
    {
       SET_MODEL (ent, ENGINE_STR ("models/player/vip/vip.mdl"));
 
@@ -1022,16 +1037,16 @@ int Spawn (edict_t *ent)
       ent->v.effects |= EF_NODRAW;
    }
 #endif
-   else if (strcmp (STRING (ent->v.classname), "func_vip_safetyzone") == 0 || strcmp (STRING (ent->v.classname), "info_vip_safetyzone") == 0)
+   else if (strcmp (entityClassname, "func_vip_safetyzone") == 0 || strcmp (STRING (ent->v.classname), "info_vip_safetyzone") == 0)
       g_mapType |= MAP_AS; // assassination map
 
-   else if (strcmp (STRING (ent->v.classname), "hostage_entity") == 0)
+   else if (strcmp (entityClassname, "hostage_entity") == 0)
       g_mapType |= MAP_CS; // rescue map
 
-   else if (strcmp (STRING (ent->v.classname), "func_bomb_target") == 0 || strcmp (STRING (ent->v.classname), "info_bomb_target") == 0)
+   else if (strcmp (entityClassname, "func_bomb_target") == 0 || strcmp (STRING (ent->v.classname), "info_bomb_target") == 0)
       g_mapType |= MAP_DE; // defusion map
 
-   else if (strcmp (STRING (ent->v.classname), "func_escapezone") == 0)
+   else if (strcmp (entityClassname, "func_escapezone") == 0)
       g_mapType |= MAP_ES;
 
    // next maps doesn't have map-specific entities, so determine it by name
