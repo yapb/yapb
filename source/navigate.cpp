@@ -2622,7 +2622,7 @@ bool Bot::CanStrafeLeft (TraceResult *tr)
    TraceLine (src, left, true, GetEntity (), tr);
 
    // check if the trace hit something...
-   if (tr->flFraction <= TRACE_FRACTION_EQ)
+   if (tr->flFraction < 1.0f)
       return false;  // bot's body will hit something
 
    src = left;
@@ -2632,7 +2632,7 @@ bool Bot::CanStrafeLeft (TraceResult *tr)
    TraceLine (src, left, true, GetEntity (), tr);
 
    // check if the trace hit something...
-   if (tr->flFraction <= TRACE_FRACTION_EQ)
+   if (tr->flFraction < 1.0f)
       return false;  // bot's body will hit something
 
    return true;
@@ -2651,7 +2651,7 @@ bool Bot::CanStrafeRight (TraceResult * tr)
    TraceLine (src, right, true, GetEntity (), tr);
 
    // check if the trace hit something...
-   if (tr->flFraction <= TRACE_FRACTION_EQ)
+   if (tr->flFraction < 1.0f)
       return false;  // bot's body will hit something
 
    src = right;
@@ -2661,7 +2661,7 @@ bool Bot::CanStrafeRight (TraceResult * tr)
    TraceLine (src, right, true, GetEntity (), tr);
 
    // check if the trace hit something...
-   if (tr->flFraction <= TRACE_FRACTION_EQ)
+   if (tr->flFraction < 1.0f)
       return false;  // bot's body will hit something
 
    return true;
@@ -2950,7 +2950,7 @@ bool Bot::IsDeadlyDrop (const Vector &to)
 
    TraceHull (check, down, true, head_hull, GetEntity (), &tr);
 
-   if (tr.flFraction > 0.036f) // We're not on ground anymore?
+   if (tr.flFraction > 0.036f) // we're not on ground anymore?
       tr.flFraction = 0.036f;
 
    float lastHeight = tr.flFraction * 1000.0f;  // height from ground
