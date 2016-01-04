@@ -9,10 +9,10 @@
 
 #include <core.h>
 
-ConVar yb_wptsubfolder ("yb_wptsubfolder", "", VT_NOSERVER);
+ConVar yb_wptsubfolder ("yb_wptsubfolder", "");
 
-ConVar yb_waypoint_autodl_host ("yb_waypoint_autodl_host", "yapb.jeefo.net", VT_NOSERVER);
-ConVar yb_waypoint_autodl_enable ("yb_waypoint_autodl_enable", "1", VT_NOSERVER);
+ConVar yb_waypoint_autodl_host ("yb_waypoint_autodl_host", "yapb.jeefo.net");
+ConVar yb_waypoint_autodl_enable ("yb_waypoint_autodl_enable", "1");
 
 void Waypoint::Init (void)
 {

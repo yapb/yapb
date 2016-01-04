@@ -15,14 +15,14 @@ ConVar yb_quota ("yb_quota", "0");
 ConVar yb_quota_match ("yb_quota_match", "0");
 ConVar yb_quota_match_max ("yb_quota_match_max", "0");
 
-ConVar yb_join_after_player ("yb_join_after_player", "0", VT_NOSERVER);
+ConVar yb_join_after_player ("yb_join_after_player", "0");
 ConVar yb_join_team ("yb_join_team", "any");
 
-ConVar yb_name_prefix ("yb_name_prefix", "", VT_NOSERVER);
+ConVar yb_name_prefix ("yb_name_prefix", "");
 ConVar yb_difficulty ("yb_difficulty", "4");
 
-ConVar yb_latency_display ("yb_latency_display", "2", VT_NOSERVER);
-ConVar yb_avatar_display ("yb_avatar_display", "1", VT_NOSERVER);
+ConVar yb_latency_display ("yb_latency_display", "2");
+ConVar yb_avatar_display ("yb_avatar_display", "1");
 
 BotManager::BotManager (void)
 {

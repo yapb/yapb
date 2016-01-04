@@ -11,8 +11,8 @@
 
 ConVar yb_shoots_thru_walls ("yb_shoots_thru_walls", "2");
 ConVar yb_ignore_enemies ("yb_ignore_enemies", "0");
-ConVar yb_csdm_mode ("yb_csdm_mode", "0", VT_NOSERVER);
-ConVar yb_check_enemy_rendering ("yb_check_enemy_rendering", "0", VT_NOSERVER);
+ConVar yb_csdm_mode ("yb_csdm_mode", "0");
+ConVar yb_check_enemy_rendering ("yb_check_enemy_rendering", "0");
 
 ConVar mp_friendlyfire ("mp_friendlyfire", NULL, VT_NOREGISTER);
 

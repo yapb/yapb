@@ -9,7 +9,7 @@
 
 #include <core.h>
 
-ConVar yb_listenserver_welcome ("yb_listenserver_welcome", "1", VT_NOSERVER);
+ConVar yb_listenserver_welcome ("yb_listenserver_welcome", "1");
 
 ConVar mp_roundtime ("mp_roundtime", NULL, VT_NOREGISTER);
 

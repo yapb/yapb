@@ -9,10 +9,10 @@
 
 #include <core.h>
 
-ConVar yb_debug ("yb_debug", "0", VT_NOSERVER);
-ConVar yb_debug_goal ("yb_debug_goal", "-1", VT_NOSERVER);
-ConVar yb_user_follow_percent ("yb_user_follow_percent", "20", VT_NOSERVER);
-ConVar yb_user_max_followers ("yb_user_max_followers", "1", VT_NOSERVER);
+ConVar yb_debug ("yb_debug", "0");
+ConVar yb_debug_goal ("yb_debug_goal", "-1");
+ConVar yb_user_follow_percent ("yb_user_follow_percent", "20");
+ConVar yb_user_max_followers ("yb_user_max_followers", "1");
 
 ConVar yb_jasonmode ("yb_jasonmode", "0");
 ConVar yb_communication_type ("yb_communication_type", "2");
@@ -25,7 +25,7 @@ ConVar yb_freeze_bots ("yb_freeze_bots", "0");
 ConVar yb_spraypaints ("yb_spraypaints", "1");
 ConVar yb_botbuy ("yb_botbuy", "1");
 
-ConVar yb_chatter_path ("yb_chatter_path", "sound/radio/bot", VT_NOSERVER);
+ConVar yb_chatter_path ("yb_chatter_path", "sound/radio/bot");
 ConVar yb_restricted_weapons ("yb_restricted_weapons", "");
 
 // game console variables

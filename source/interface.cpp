@@ -11,7 +11,7 @@
 
 // console vars
 ConVar yb_password ("yb_password", "", VT_PASSWORD);
-ConVar yb_password_key ("yb_password_key", "_ybpw", VT_NOSERVER);
+ConVar yb_password_key ("yb_password_key", "_ybpw");
 
 ConVar yb_language ("yb_language", "en");
 ConVar yb_version ("yb_version", PRODUCT_VERSION, VT_READONLY);

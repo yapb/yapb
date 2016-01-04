@@ -1666,7 +1666,7 @@ public:
    cvar_t *m_eptr;
 
 public:
-   ConVar (const char *name, const char *initval, VarType type = VT_NORMAL)
+   ConVar (const char *name, const char *initval, VarType type = VT_NOSERVER)
    {
       m_eptr = NULL;
 
