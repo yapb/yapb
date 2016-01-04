@@ -2215,6 +2215,7 @@ void StartFrame (void)
             }
          }
       }
+
       if (g_bombPlanted)
          waypoints.SetBombPosition ();
 

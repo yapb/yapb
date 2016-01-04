@@ -135,7 +135,7 @@ bool IsVisible (const Vector &origin, edict_t *ent)
    TraceResult tr;
    TraceLine (ent->v.origin + ent->v.view_ofs, origin, true, true, ent, &tr);
 
-   if (tr.flFraction > TRACE_FRACTION_EQ)
+   if (tr.flFraction != 1.0f)
       return true;
 
    return false;
@@ -229,7 +229,7 @@ void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex)
    if (decalIndex < 0)
       decalIndex = (*g_engfuncs.pfnDecalIndex) ("{lambda06");
 
-   if (trace->flFraction > TRACE_FRACTION_EQ)
+   if (trace->flFraction == 1.0f)
       return;
 
    if (!IsEntityNull (trace->pHit))
@@ -1013,7 +1013,7 @@ void CheckWelcomeMessage (void)
    {
       ServerCommand ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));
 
-      ChartPrint ("----- YaPB v%s (Build: %u), {%s}, (c) 2015, by %s -----", PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_DATE, PRODUCT_AUTHOR);
+      ChartPrint ("----- %s v%s (Build: %u), {%s}, (c) 2016, by %s (%s)-----", PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_DATE, PRODUCT_AUTHOR, PRODUCT_URL);
       
       MESSAGE_BEGIN (MSG_ONE, SVC_TEMPENTITY, NULL, g_hostEntity);
       WRITE_BYTE (TE_TEXTMESSAGE);

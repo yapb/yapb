@@ -109,7 +109,7 @@ bool Bot::CheckVisibility (edict_t *target, Vector *origin, byte *bodyPart)
    // check for the body
    TraceLine (botHead, target->v.origin, true, true, GetEntity (), &tr);
 
-   if (tr.flFraction > TRACE_FRACTION_EQ)
+   if (tr.flFraction >= 1.0f)
    {
       *bodyPart |= VISIBLE_BODY;
       *origin = target->v.origin;
@@ -121,7 +121,7 @@ bool Bot::CheckVisibility (edict_t *target, Vector *origin, byte *bodyPart)
    // check for the head
    TraceLine (botHead, target->v.origin + target->v.view_ofs, true, true, GetEntity (), &tr);
 
-   if (tr.flFraction > TRACE_FRACTION_EQ)
+   if (tr.flFraction >= 1.0f)
    {
       *bodyPart |= VISIBLE_HEAD;
       *origin = target->v.origin + target->v.view_ofs;
@@ -184,7 +184,7 @@ bool Bot::CheckVisibility (edict_t *target, Vector *origin, byte *bodyPart)
       TraceLine (botHead, pos, true, true, GetEntity (), &tr);
 
       // check if we hit something
-      if (tr.flFraction > TRACE_FRACTION_EQ)
+      if (tr.flFraction >= 1.0f)
       {
          *origin = tr.vecEndPos;
          *bodyPart |= VISIBLE_OTHER;
@@ -631,7 +631,7 @@ bool Bot::IsShootableThruObstacle (const Vector &dest)
       const Vector &source = tr.vecEndPos;
       TraceLine (dest, source, true, GetEntity (), &tr);
 
-      if (tr.flFraction <= TRACE_FRACTION_EQ)
+      if (tr.flFraction != 1.0f)
       {
          if ((tr.vecEndPos - dest).GetLengthSquared () > GET_SQUARE (800.0f))
             return false;
@@ -677,7 +677,7 @@ bool Bot::IsShootableThruObstacleEx (const Vector &dest)
    TraceResult tr;
    TraceLine (source, dest, true, true, GetEntity (), &tr);
 
-   while (tr.flFraction <= TRACE_FRACTION_EQ && numHits < 3)
+   while (tr.flFraction != 1.0f && numHits < 3)
    {
       numHits++;
       thikness++;

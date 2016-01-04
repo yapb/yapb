@@ -117,8 +117,8 @@ int Bot::FindGoal (void)
    }
    else if ((g_mapType & MAP_DE) && m_team == TEAM_TF && g_timeRoundStart + 10.0f < GetWorldTime ())
    {
-      // send some terrorists to guard planter bomb
-      if (g_bombPlanted && GetTaskId () != TASK_ESCAPEFROMBOMB && GetBombTimeleft () >= 15.0)
+      // send some terrorists to guard planted bomb
+      if (!m_defendedBomb && g_bombPlanted && GetTaskId () != TASK_ESCAPEFROMBOMB && GetBombTimeleft () >= 15.0)
          return m_chosenGoalIndex = FindDefendWaypoint (waypoints.GetBombPosition ());
    }
 
@@ -469,7 +469,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
 
                TraceHull (src, dst, true, head_hull, GetEntity (), &tr);
 
-               if (tr.flFraction <= TRACE_FRACTION_EQ)
+               if (tr.flFraction != 1.0f)
                   blockedRight = true;
 
                src = pev->origin - g_pGlobals->v_right * 32.0f;
@@ -477,7 +477,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
 
                TraceHull (src, dst, true, head_hull, GetEntity (), &tr);
 
-               if (tr.flFraction <= TRACE_FRACTION_EQ)
+               if (tr.flFraction != 1.0f)
                   blockedLeft = true;
 
                if (dirLeft)
@@ -519,14 +519,14 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
 
                   TraceLine (src, m_destOrigin, true, true, GetEntity (), &tr);
 
-                  if (tr.flFraction > TRACE_FRACTION_EQ)
+                  if (tr.flFraction >= 1.0f)
                   {
                      src = EyePosition ();
                      src = src - g_pGlobals->v_right * 15.0f;
 
                      TraceLine (src, m_destOrigin, true, true, GetEntity (), &tr);
 
-                     if (tr.flFraction > TRACE_FRACTION_EQ)
+                     if (tr.flFraction >= 1.0f)
                         state[i] += 5;
                   }
                }
@@ -538,7 +538,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
                dst = src + dirNormal * 30.0f;
                TraceLine (src, dst, true, true, GetEntity (), &tr);
 
-               if (tr.flFraction <= TRACE_FRACTION_EQ)
+               if (tr.flFraction != 1.0f)
                   state[i] += 10;
             }
             else
@@ -719,7 +719,7 @@ bool Bot::DoWaypointNav (void)
       // trace line to door
       TraceLine (pev->origin, m_currentPath->origin, true, true, GetEntity (), &tr2);
 
-      if (tr2.flFraction <= TRACE_FRACTION_EQ && strcmp (STRING (tr2.pHit->v.classname), "func_door") == 0 && (m_liftState == LIFT_NO_NEARBY || m_liftState == LIFT_WAITING_FOR || m_liftState == LIFT_LOOKING_BUTTON_OUTSIDE) && pev->groundentity != tr2.pHit)
+      if (tr2.flFraction < 1.0f && strcmp (STRING (tr2.pHit->v.classname), "func_door") == 0 && (m_liftState == LIFT_NO_NEARBY || m_liftState == LIFT_WAITING_FOR || m_liftState == LIFT_LOOKING_BUTTON_OUTSIDE) && pev->groundentity != tr2.pHit)
       {
          if (m_liftState == LIFT_NO_NEARBY)
          {
@@ -1416,7 +1416,7 @@ float gfunctionKillsDistT (int currentIndex, int parentIndex)
    if (current->flags & FLAG_CROUCH)
       cost *= 1.5f;
 
-   return waypoints.GetPathDistance (parentIndex, currentIndex) + cost;
+   return static_cast <float> (waypoints.GetPathDistance (parentIndex, currentIndex)) + cost;
 }
 
 
@@ -1442,7 +1442,7 @@ float gfunctionKillsDistCT (int currentIndex, int parentIndex)
    if (current->flags & FLAG_CROUCH)
       cost *= 1.5f;
 
-   return waypoints.GetPathDistance (parentIndex, currentIndex) + cost;
+   return static_cast <float> (waypoints.GetPathDistance (parentIndex, currentIndex)) + cost;
 }
 
 float gfunctionKillsDistCTWithHostage (int currentIndex, int parentIndex)
@@ -2094,26 +2094,24 @@ int Bot::FindDefendWaypoint (const Vector &origin)
          continue;
 
       // use the 'real' pathfinding distances
-      int distances = waypoints.GetPathDistance (srcIndex, i);
+      int distance = waypoints.GetPathDistance (srcIndex, i);
 
-      // skip wayponts with distance more than 1536 units
-      if (distances > 1536.0f)
+      // skip wayponts with distance more than 512 units
+      if (distance > 512)
          continue;
 
       TraceLine (waypoints.GetPath (i)->origin, waypoints.GetPath (posIndex)->origin, true, true, GetEntity (), &tr);
 
       // check if line not hit anything
-      if (tr.flFraction <= TRACE_FRACTION_EQ)
+      if (tr.flFraction != 1.0f)
          continue;
 
       for (int j = 0; j < MAX_PATH_INDEX; j++)
       {
-         if (distances > minDistance[j])
+         if (distance > minDistance[j])
          {
             waypointIndex[j] = i;
-            minDistance[j] = distances;
-
-            break;
+            minDistance[j] = distance;
          }
       }
    }
@@ -2161,13 +2159,15 @@ int Bot::FindDefendWaypoint (const Vector &origin)
       }
    } while (isOrderChanged);
 
+   
+
    if (waypointIndex[0] == -1)
    {
       Array <int> found;
 
       for (int i = 0; i < g_numWaypoints; i++)
       {
-         if ((waypoints.GetPath (i)->origin - origin).GetLength () <= 1248.0f && !IsPointOccupied (i))
+         if ((waypoints.GetPath (i)->origin - origin).GetLength () <= 1248.0f && !waypoints.IsVisible (i, posIndex) && !IsPointOccupied (i))
             found.Push (i);
       }
 
@@ -2314,7 +2314,7 @@ int Bot::FindCoverWaypoint (float maxDistance)
       {
          TraceLine (m_lastEnemyOrigin + Vector (0.0f, 0.0f, 36.0f), waypoints.GetPath (waypointIndex[i])->origin, true, true, GetEntity (), &tr);
 
-         if (tr.flFraction <= TRACE_FRACTION_EQ)
+         if (tr.flFraction < 1.0f)
             return waypointIndex[i];
       }
    }
@@ -2507,7 +2507,7 @@ bool Bot::HeadTowardWaypoint (void)
    {
       TraceLine (Vector (pev->origin.x, pev->origin.y, pev->absmin.z), m_waypointOrigin, true, true, GetEntity (), &tr);
 
-      if (tr.flFraction <= TRACE_FRACTION_EQ)
+      if (tr.flFraction < 1.0f)
          m_waypointOrigin = m_waypointOrigin + (pev->origin - m_waypointOrigin) * 0.5f + Vector (0.0f, 0.0f, 32.0f);
    }
    m_navTimeset = GetWorldTime ();
@@ -2531,7 +2531,7 @@ bool Bot::CantMoveForward (const Vector &normal, TraceResult *tr)
    TraceLine (src, forward, true, GetEntity (), tr);
 
    // check if the trace hit something...
-   if (tr->flFraction <= TRACE_FRACTION_EQ)
+   if (tr->flFraction < 1.0f)
    {
       if (strncmp ("func_door", STRING (tr->pHit->v.classname), 9) == 0)
          return false;
@@ -2547,7 +2547,7 @@ bool Bot::CantMoveForward (const Vector &normal, TraceResult *tr)
    TraceLine (src, forward, true, GetEntity (), tr);
 
    // check if the trace hit something...
-   if (tr->flFraction <= TRACE_FRACTION_EQ && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) != 0)
+   if (tr->flFraction < 1.0f && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) != 0)
       return true;  // bot's body will hit something
 
    // bot's head is clear, check at shoulder level...
@@ -2558,7 +2558,7 @@ bool Bot::CantMoveForward (const Vector &normal, TraceResult *tr)
    TraceLine (src, forward, true, GetEntity (), tr);
 
    // check if the trace hit something...
-   if (tr->flFraction <= TRACE_FRACTION_EQ && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) != 0)
+   if (tr->flFraction < 1.0f && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) != 0)
       return true;  // bot's body will hit something
 
    // now check below waist
@@ -2570,7 +2570,7 @@ bool Bot::CantMoveForward (const Vector &normal, TraceResult *tr)
       TraceLine (src, forward, true, GetEntity (), tr);
 
       // check if the trace hit something...
-      if (tr->flFraction <= TRACE_FRACTION_EQ && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) != 0)
+      if (tr->flFraction < 1.0f && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) != 0)
          return true;  // bot's body will hit something
 
       src = pev->origin;
@@ -2579,7 +2579,7 @@ bool Bot::CantMoveForward (const Vector &normal, TraceResult *tr)
       TraceLine (src, forward, true, GetEntity (), tr);
 
       // check if the trace hit something...
-      if (tr->flFraction <= TRACE_FRACTION_EQ && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) != 0)
+      if (tr->flFraction < 1.0f && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) != 0)
          return true;  // bot's body will hit something
    }
    else
@@ -2592,7 +2592,7 @@ bool Bot::CantMoveForward (const Vector &normal, TraceResult *tr)
       TraceLine (src, forward, true, GetEntity (), tr);
 
       // check if the trace hit something...
-      if (tr->flFraction <= TRACE_FRACTION_EQ && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) != 0)
+      if (tr->flFraction < 1.0f && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) != 0)
          return true;  // bot's body will hit something
 
       // trace from the left waist to the right forward waist pos
@@ -2602,7 +2602,7 @@ bool Bot::CantMoveForward (const Vector &normal, TraceResult *tr)
       TraceLine (src, forward, true, GetEntity (), tr);
 
       // check if the trace hit something...
-      if (tr->flFraction <= TRACE_FRACTION_EQ && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) != 0)
+      if (tr->flFraction < 1.0f && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) != 0)
          return true;  // bot's body will hit something
    }
    return false;  // bot can move forward, return false
@@ -2689,7 +2689,7 @@ bool Bot::CanJumpUp (const Vector &normal)
    // trace a line forward at maximum jump height...
    TraceLine (src, dest, true, GetEntity (), &tr);
 
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction < 1.0f)
       goto CheckDuckJump;
    else
    {
@@ -2699,7 +2699,7 @@ bool Bot::CanJumpUp (const Vector &normal)
 
       TraceLine (src, dest, true, GetEntity (), &tr);
 
-      if (tr.flFraction <= TRACE_FRACTION_EQ)
+      if (tr.flFraction < 1.0f)
          return false;
    }
 
@@ -2711,7 +2711,7 @@ bool Bot::CanJumpUp (const Vector &normal)
    TraceLine (src, dest, true, GetEntity (), &tr);
 
    // if trace hit something, return false
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction < 1.0f)
       goto CheckDuckJump;
 
    // now trace from jump height upward to check for obstructions...
@@ -2721,7 +2721,7 @@ bool Bot::CanJumpUp (const Vector &normal)
    TraceLine (src, dest, true, GetEntity (), &tr);
 
    // if trace hit something, return false
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction < 1.0f)
       return false;
 
    // now check same height on the other side of the bot...
@@ -2732,7 +2732,7 @@ bool Bot::CanJumpUp (const Vector &normal)
    TraceLine (src, dest, true, GetEntity (), &tr);
 
    // if trace hit something, return false
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction < 1.0f)
       goto CheckDuckJump;
 
    // now trace from jump height upward to check for obstructions...
@@ -2742,7 +2742,7 @@ bool Bot::CanJumpUp (const Vector &normal)
    TraceLine (src, dest, true, GetEntity (), &tr);
 
    // if trace hit something, return false
-   return tr.flFraction > TRACE_FRACTION_EQ;
+   return tr.flFraction > 1.0f;
 
    // here we check if a duck jump would work...
 CheckDuckJump:
@@ -2754,7 +2754,7 @@ CheckDuckJump:
    // trace a line forward at maximum jump height...
    TraceLine (src, dest, true, GetEntity (), &tr);
 
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction < 1.0f)
       return false;
    else
    {
@@ -2765,7 +2765,7 @@ CheckDuckJump:
       TraceLine (src, dest, true, GetEntity (), &tr);
 
       // if trace hit something, check duckjump
-      if (tr.flFraction <= TRACE_FRACTION_EQ)
+      if (tr.flFraction < 1.0f)
          return false;
    }
 
@@ -2777,7 +2777,7 @@ CheckDuckJump:
    TraceLine (src, dest, true, GetEntity (), &tr);
 
    // if trace hit something, return false
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction < 1.0f)
       return false;
 
    // now trace from jump height upward to check for obstructions...
@@ -2787,7 +2787,7 @@ CheckDuckJump:
    TraceLine (src, dest, true, GetEntity (), &tr);
 
    // if trace hit something, return false
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction < 1.0f)
       return false;
 
    // now check same height on the other side of the bot...
@@ -2798,7 +2798,7 @@ CheckDuckJump:
    TraceLine (src, dest, true, GetEntity (), &tr);
 
    // if trace hit something, return false
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction < 1.0f)
       return false;
 
    // now trace from jump height upward to check for obstructions...
@@ -2808,7 +2808,7 @@ CheckDuckJump:
    TraceLine (src, dest, true, GetEntity (), &tr);
 
    // if trace hit something, return false
-   return tr.flFraction > TRACE_FRACTION_EQ;
+   return tr.flFraction > 1.0f;
 }
 
 bool Bot::CanDuckUnder (const Vector &normal)
@@ -2834,7 +2834,7 @@ bool Bot::CanDuckUnder (const Vector &normal)
    TraceLine (src, dest, true, GetEntity (), &tr);
 
    // if trace hit something, return false
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction < 1.0f)
       return false;
 
    // now check same height to one side of the bot...
@@ -2845,7 +2845,7 @@ bool Bot::CanDuckUnder (const Vector &normal)
    TraceLine (src, dest, true, GetEntity (), &tr);
 
    // if trace hit something, return false
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction < 1.0f)
       return false;
 
    // now check same height on the other side of the bot...
@@ -2856,7 +2856,7 @@ bool Bot::CanDuckUnder (const Vector &normal)
    TraceLine (src, dest, true, GetEntity (), &tr);
 
    // if trace hit something, return false
-   return tr.flFraction > TRACE_FRACTION_EQ;
+   return tr.flFraction > 1.0f;
 }
 
 #ifdef DEAD_CODE
@@ -2875,7 +2875,7 @@ bool Bot::IsBlockedLeft (void)
    TraceLine (pev->origin, g_pGlobals->v_forward * direction - g_pGlobals->v_right * 48.0f, true, GetEntity (), &tr);
 
    // check if the trace hit something...
-   if (tr.flFraction <= TRACE_FRACTION_EQ && strncmp ("func_door", STRING (tr.pHit->v.classname), 9) != 0)
+   if (tr.flFraction < 1.0f && strncmp ("func_door", STRING (tr.pHit->v.classname), 9) != 0)
       return true;  // bot's body will hit something
 
    return false;
@@ -2895,7 +2895,7 @@ bool Bot::IsBlockedRight (void)
    TraceLine (pev->origin, pev->origin + g_pGlobals->v_forward * direction + g_pGlobals->v_right * 48.0f, true, GetEntity (), &tr);
 
    // check if the trace hit something...
-   if (tr.flFraction <= TRACE_FRACTION_EQ && (strncmp ("func_door", STRING (tr.pHit->v.classname), 9) != 0))
+   if (tr.flFraction < 1.0f && (strncmp ("func_door", STRING (tr.pHit->v.classname), 9) != 0))
       return true; // bot's body will hit something
 
    return false;
@@ -2911,7 +2911,7 @@ bool Bot::CheckWallOnLeft (void)
    TraceLine (pev->origin, pev->origin - g_pGlobals->v_right * 40.0f, true, GetEntity (), &tr);
 
    // check if the trace hit something...
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction < 1.0f)
       return true;
 
    return false;
@@ -2926,7 +2926,7 @@ bool Bot::CheckWallOnRight (void)
    TraceLine (pev->origin, pev->origin + g_pGlobals->v_right * 40.0f, true, GetEntity (), &tr);
 
    // check if the trace hit something...
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction < 1.0f)
       return true;
 
    return false;
@@ -3320,6 +3320,8 @@ bool Bot::IsPointOccupied (int index)
          continue;
 
       // check if this waypoint is already used
+      // TODO: take in account real players
+
       if (bot->m_notKilled)
       {
          int occupyId = GetShootingConeDeviation (bot->GetEntity (), &pev->origin) >= 0.7f ? bot->m_prevWptIndex[0] : m_currentWaypointIndex;
@@ -3327,7 +3329,7 @@ bool Bot::IsPointOccupied (int index)
          // length check
          float length = (waypoints.GetPath (occupyId)->origin - waypoints.GetPath (index)->origin).GetLengthSquared ();
 
-         if (occupyId == index || bot->GetTask ()->data == index || length < GET_SQUARE (75.0f))
+         if (occupyId == index || bot->GetTask ()->data == index || length < GET_SQUARE (64.0f))
             return true;
       }
    }

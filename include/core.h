@@ -626,7 +626,6 @@ const float TASKPRI_SHOOTBREAKABLE = 100.0f;
 const float TASKPRI_ESCAPEFROMBOMB = 100.0f;
 
 const float MAX_GRENADE_TIMER = 2.34f;
-const float TRACE_FRACTION_EQ = 0.999999f;
 
 const int MAX_HOSTAGES = 8;
 const int MAX_PATH_INDEX = 8;
@@ -1539,7 +1538,7 @@ public:
 
    int GetFacingIndex (void);
    int FindFarest (const Vector &origin, float maxDistance = 32.0);
-   int FindNearest (const Vector &origin, float minDistance = 99999999.0f, int flags = -1);
+   int FindNearest (const Vector &origin, float minDistance = 9999.0f, int flags = -1);
    void FindInRadius (Array <int> &radiusHolder, float radius, const Vector &origin, int maxCount = -1);
 
    void Add (int flags, const Vector &waypointOrigin = Vector::GetZero ());

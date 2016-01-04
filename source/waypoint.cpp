@@ -116,9 +116,9 @@ int Waypoint::FindNearest (const Vector &origin, float minDistance, int flags)
       if (flags != -1 && !(m_paths[i]->flags & flags))
          continue; // if flag not -1 and waypoint has no this flag, skip waypoint
 
-      float distance = (m_paths[i]->origin - origin).GetLengthSquared ();
+      float distance = (m_paths[i]->origin - origin).GetLength ();
 
-      if (distance < GET_SQUARE (minDistance))
+      if (distance < minDistance)
       {
          index = i;
          minDistance = distance;
@@ -136,10 +136,11 @@ void Waypoint::FindInRadius (Array <int> &radiusHolder, float radius, const Vect
       if (maxCount != -1 && radiusHolder.GetElementNumber () > maxCount)
          break;
 
-      if ((m_paths[i]->origin - origin).GetLengthSquared () < GET_SQUARE (radius))
+      if ((m_paths[i]->origin - origin).GetLength () < radius)
          radiusHolder.Push (i);
    }
 }
+
 void Waypoint::Add (int flags, const Vector &waypointOrigin)
 {
    if (IsEntityNull (g_hostEntity))
@@ -367,7 +368,7 @@ void Waypoint::Add (int flags, const Vector &waypointOrigin)
             // check if the waypoint is reachable from the new one
             TraceLine (newOrigin, m_paths[i]->origin, true, g_hostEntity, &tr);
 
-            if (tr.flFraction > TRACE_FRACTION_EQ && fabs (newOrigin.x - m_paths[i]->origin.x) < 64.0f && fabs (newOrigin.y - m_paths[i]->origin.y) < 64.0f && fabs (newOrigin.z - m_paths[i]->origin.z) < g_autoPathDistance)
+            if (tr.flFraction == 1.0f && fabs (newOrigin.x - m_paths[i]->origin.x) < 64.0f && fabs (newOrigin.y - m_paths[i]->origin.y) < 64.0f && fabs (newOrigin.z - m_paths[i]->origin.z) < g_autoPathDistance)
             {
                distance = (m_paths[i]->origin - newOrigin).GetLength ();
 
@@ -756,7 +757,7 @@ void Waypoint::CalculateWayzone (int index)
 
          TraceHull (radiusStart, radiusEnd, true, head_hull, NULL, &tr);
 
-         if (tr.flFraction <= TRACE_FRACTION_EQ)
+         if (tr.flFraction < 1.0f)
          {
             TraceLine (radiusStart, radiusEnd, true, NULL, &tr);
 
@@ -779,7 +780,7 @@ void Waypoint::CalculateWayzone (int index)
 
          TraceHull (dropStart, dropEnd, true, head_hull, NULL, &tr);
 
-         if (tr.flFraction > TRACE_FRACTION_EQ)
+         if (tr.flFraction >= 1.0f)
          {
             wayBlocked = true;
             path->radius -= 16.0f;
@@ -791,7 +792,7 @@ void Waypoint::CalculateWayzone (int index)
 
          TraceHull (dropStart, dropEnd, true, head_hull, NULL, &tr);
 
-         if (tr.flFraction > TRACE_FRACTION_EQ)
+         if (tr.flFraction >= 1.0f)
          {
             wayBlocked = true;
             path->radius -= 16.0f;
@@ -801,7 +802,7 @@ void Waypoint::CalculateWayzone (int index)
          radiusEnd.z += 34.0f;
          TraceHull (radiusStart, radiusEnd, true, head_hull, NULL, &tr);
 
-         if (tr.flFraction <= TRACE_FRACTION_EQ)
+         if (tr.flFraction < 1.0f)
          {
             wayBlocked = true;
             path->radius -= 16.0f;
@@ -1278,7 +1279,7 @@ bool Waypoint::Reachable (Bot *bot, int index)
    TraceLine (src, dest, true, bot->GetEntity (), &tr);
 
    // if waypoint is visible from current position (even behind head)...
-   if (tr.flFraction > TRACE_FRACTION_EQ)
+   if (tr.flFraction >= 1.0f)
    {
       if (bot->pev->waterlevel == 2 || bot->pev->waterlevel == 3)
          return true;
@@ -1314,14 +1315,14 @@ bool Waypoint::IsNodeReachable (const Vector &src, const Vector &destination)
    TraceLine (src, destination, ignore_monsters, g_hostEntity, &tr);
 
    // if waypoint is visible from current position (even behind head)...
-   if (tr.flFraction > TRACE_FRACTION_EQ || strncmp ("func_door", STRING (tr.pHit->v.classname), 9) == 0)
+   if (tr.flFraction >= 1.0f || strncmp ("func_door", STRING (tr.pHit->v.classname), 9) == 0)
    {
       // if it's a door check if nothing blocks behind
       if (strncmp ("func_door", STRING (tr.pHit->v.classname), 9) == 0)
       {
          TraceLine (tr.vecEndPos, destination, ignore_monsters, tr.pHit, &tr);
 
-         if (tr.flFraction <= TRACE_FRACTION_EQ)
+         if (tr.flFraction < 1.0f)
             return false;
       }
 
@@ -1339,7 +1340,7 @@ bool Waypoint::IsNodeReachable (const Vector &src, const Vector &destination)
          TraceLine (sourceNew, destinationNew, ignore_monsters, g_hostEntity, &tr);
 
          // check if we didn't hit anything, if not then it's in mid-air
-         if (tr.flFraction > TRACE_FRACTION_EQ)
+         if (tr.flFraction >= 1.0)
             return false; // can't reach this one
       }
 
@@ -1380,7 +1381,7 @@ bool Waypoint::IsNodeReachable (const Vector &src, const Vector &destination)
 
 void Waypoint::InitializeVisibility (void)
 {
-   if (m_redoneVisibility == false)
+   if (!m_redoneVisibility)
       return;
 
    TraceResult tr;
@@ -1411,7 +1412,7 @@ void Waypoint::InitializeVisibility (void)
          TraceLine (sourceDuck, dest, true, NULL, &tr);
 
          // check if line of sight to object is not blocked (i.e. visible)
-         if (tr.flFraction <= TRACE_FRACTION_EQ || tr.fStartSolid)
+         if (tr.flFraction != 1.0f || tr.fStartSolid)
             res = 1;
          else
             res = 0;
@@ -1421,7 +1422,7 @@ void Waypoint::InitializeVisibility (void)
          TraceLine (sourceStand, dest, true, NULL, &tr);
 
          // check if line of sight to object is not blocked (i.e. visible)
-         if (tr.flFraction <= TRACE_FRACTION_EQ || tr.fStartSolid)
+         if (tr.flFraction != 1.0f || tr.fStartSolid)
             res |= 1;
 
          shift = (i % 4) << 1;
@@ -2239,7 +2240,7 @@ void Waypoint::CreateBasic (void)
 
       TraceHull (down, up, true, point_hull, NULL, &tr);
 
-      if (POINT_CONTENTS (up) == CONTENTS_SOLID || tr.flFraction <= TRACE_FRACTION_EQ)
+      if (POINT_CONTENTS (up) == CONTENTS_SOLID || tr.flFraction != 1.0f)
       {
          up = down = back;
          down.z = ent->v.absmax.z;

@@ -105,7 +105,7 @@ bool Bot::ItemIsVisible (const Vector &destination, char *itemName)
    TraceLine (EyePosition (), destination, true, GetEntity (), &tr);
 
    // check if line of sight to object is not blocked (i.e. visible)
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction != 1.0f)
    {
       // check for standard items
       if (strcmp (STRING (tr.pHit->v.classname), itemName) == 0)
@@ -127,7 +127,7 @@ bool Bot::EntityIsVisible (const Vector &dest, bool fromBody)
    TraceLine (fromBody ? pev->origin - Vector (0.0f, 0.0f, 1.0f) : EyePosition (), dest, true, true, GetEntity (), &tr);
 
    // check if line of sight to object is not blocked (i.e. visible)
-   return tr.flFraction > TRACE_FRACTION_EQ;
+   return tr.flFraction >= 1.0f;
 }
 
 void Bot::CheckGrenadeThrow (void)
@@ -481,7 +481,7 @@ edict_t *Bot::FindBreakable (void)
    TraceResult tr;
    TraceLine (pev->origin, pev->origin + (m_destOrigin - pev->origin).Normalize () * 64.0f, false, false, GetEntity (), &tr);
 
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction != 1.0f)
    {
       edict_t *ent = tr.pHit;
 
@@ -494,7 +494,7 @@ edict_t *Bot::FindBreakable (void)
    }
    TraceLine (EyePosition (), EyePosition () + (m_destOrigin - EyePosition ()).Normalize () * 64.0f, false, false, GetEntity (), &tr);
 
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction != 1.0f)
    {
       edict_t *ent = tr.pHit;
 
@@ -898,7 +898,7 @@ void Bot::GetCampDirection (Vector *dest)
    TraceLine (src, *dest, true, GetEntity (), &tr);
 
    // check if the trace hit something...
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction < 1.0f)
    {
       float length = (tr.vecEndPos - src).GetLengthSquared ();
 
@@ -942,7 +942,7 @@ void Bot::GetCampDirection (Vector *dest)
          if (path->index[i] == -1)
             continue;
 
-         float distance = waypoints.GetPathDistance (path->index[i], enemyIndex);
+         float distance = static_cast <float> (waypoints.GetPathDistance (path->index[i], enemyIndex));
 
          if (distance < minDistance)
          {
@@ -2219,7 +2219,7 @@ bool Bot::ReactOnEnemy (void)
       int enemyIndex = waypoints.FindNearest (m_enemy->v.origin);
       
       float lineDist = (m_enemy->v.origin - pev->origin).GetLength ();
-      float pathDist = waypoints.GetPathDistance (i, enemyIndex);
+      float pathDist = static_cast <float> (waypoints.GetPathDistance (i, enemyIndex));
 
       if (pathDist - lineDist > 112.0f)
          m_isEnemyReachable = false;
@@ -3233,8 +3233,8 @@ void Bot::RunTask_Spray (void)
       TraceLine (EyePosition (), sprayOrigin, true, GetEntity (), &tr);
 
       // no wall in front?
-      if (tr.flFraction > TRACE_FRACTION_EQ)
-         sprayOrigin.z -= 128.0;
+      if (tr.flFraction >= 1.0f)
+         sprayOrigin.z -= 128.0f;
 
       m_entity = sprayOrigin;
 
@@ -3743,12 +3743,12 @@ void Bot::RunTask_PlantBomb (void)
       DeleteSearchNodes ();
       int index = FindDefendWaypoint (pev->origin);
 
-      float bombTimer = mp_c4timer.GetFloat ();
+      float guardTime = mp_c4timer.GetFloat () * 0.5f + mp_c4timer.GetFloat () * 0.25f;
 
       // push camp task on to stack
-      PushTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + (bombTimer * 0.5f + bombTimer * 0.25f), true);
+      PushTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + guardTime, true);
       // push move command
-      PushTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, GetWorldTime () + (bombTimer * 0.5f + bombTimer * 0.25f), true);
+      PushTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, GetWorldTime () + guardTime, true);
 
       if (waypoints.GetPath (index)->vis.crouch <= waypoints.GetPath (index)->vis.stand)
          m_campButtons |= IN_DUCK;
@@ -4242,7 +4242,7 @@ void Bot::RunTask_DoubleJump (void)
       TraceResult tr;
       TraceLine (EyePosition (), dest, false, true, GetEntity (), &tr);
 
-      if (tr.flFraction <= TRACE_FRACTION_EQ && tr.pHit == m_doubleJumpEntity)
+      if (tr.flFraction < 1.0f && tr.pHit == m_doubleJumpEntity)
       {
          if (m_doubleJumpEntity->v.button & IN_JUMP)
          {
@@ -4313,15 +4313,15 @@ void Bot::RunTask_EscapeFromBomb (void)
    {
       DeleteSearchNodes ();
 
-      int lastSelectedGoal = -1;
-      float safeRadius = Random.Float (1248.0f, 2048.0f), minPathDistance = 99999.0f;
+      int lastSelectedGoal = -1, minPathDistance = 99999;
+      float safeRadius = Random.Float (1248.0f, 2048.0f);
 
       for (int i = 0; i < g_numWaypoints; i++)
       {
          if ((waypoints.GetPath (i)->origin - waypoints.GetBombPosition ()).GetLength () < safeRadius || IsPointOccupied (i))
             continue;
 
-         float pathDistance = waypoints.GetPathDistance (m_currentWaypointIndex, i);
+         int pathDistance = waypoints.GetPathDistance (m_currentWaypointIndex, i);
 
          if (minPathDistance > pathDistance)
          {
@@ -5586,7 +5586,7 @@ Vector Bot::CheckToss(const Vector &start, const Vector &stop)
    Vector midPoint = start + (end - start) * 0.5f;
    TraceHull (midPoint, midPoint + Vector (0.0f, 0.0f, 500.0f), true, head_hull, ENT (pev), &tr);
 
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction < 1.0f)
    {
       midPoint = tr.vecEndPos;
       midPoint.z = tr.pHit->v.absmin.z - 1.0f;
@@ -5609,12 +5609,12 @@ Vector Bot::CheckToss(const Vector &start, const Vector &stop)
 
    TraceHull (start, apex, false, head_hull, ENT (pev), &tr);
 
-   if (tr.flFraction <= TRACE_FRACTION_EQ || tr.fAllSolid)
+   if (tr.flFraction < 1.0f || tr.fAllSolid)
       return Vector::GetZero ();
 
    TraceHull (end, apex, true, head_hull, ENT (pev), &tr);
 
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction != 1.0f)
    {
       float dot = -(tr.vecPlaneNormal | (apex - end).Normalize ());
 
@@ -5648,12 +5648,12 @@ Vector Bot::CheckThrow(const Vector &start, const Vector &stop)
 
    TraceHull (start, apex, false, head_hull, GetEntity (), &tr);
 
-   if (tr.flFraction <= TRACE_FRACTION_EQ)
+   if (tr.flFraction != 1.0f)
       return Vector::GetZero ();
 
    TraceHull (stop, apex, true, head_hull, GetEntity (), &tr);
 
-   if (tr.flFraction <= TRACE_FRACTION_EQ || tr.fAllSolid)
+   if (tr.flFraction != 1.0 || tr.fAllSolid)
    {
       float dot = -(tr.vecPlaneNormal | (apex - stop).Normalize ());
 
