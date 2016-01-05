@@ -1166,23 +1166,21 @@ void ClientUserInfoChanged (edict_t *ent, char *infobuffer)
    // change their player model). But most commonly, this function is in charge of handling
    // team changes, recounting the teams population, etc...
 
-   const char *passwordField = yb_password_key.GetString ();
-   const char *password = yb_password.GetString ();
-
-   if (IsNullString (passwordField) || IsNullString (password) || IsValidBot (ent))
+   if (IsDedicatedServer () && !IsValidBot (ent))
    {
-      if (g_isMetamod)
-         RETURN_META (MRES_IGNORED);
+      const char *passwordField = yb_password_key.GetString ();
+      const char *password = yb_password.GetString ();
 
-      (*g_functionTable.pfnClientUserInfoChanged) (ent, infobuffer);
+      if (!IsNullString (passwordField) || !IsNullString (password))
+      {
+         int clientIndex = IndexOfEntity (ent) - 1;
+
+         if (strcmp (password, INFOKEY_VALUE (infobuffer, const_cast <char *> (passwordField))) == 0)
+            g_clients[clientIndex].flags |= CF_ADMIN;
+         else
+            g_clients[clientIndex].flags &= ~CF_ADMIN;
+      }
    }
-
-   int clientIndex = IndexOfEntity (ent) - 1;
-
-   if (strcmp (password, INFOKEY_VALUE (infobuffer, const_cast <char *> (passwordField))) == 0)
-      g_clients[clientIndex].flags |= CF_ADMIN;
-   else
-      g_clients[clientIndex].flags &= ~CF_ADMIN;
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -3209,7 +3207,12 @@ void ConVarWrapper::PushRegisteredConVarsToEngine (bool gameVars)
          }
       }
       else if (gameVars && ptr->type == VT_NOREGISTER)
+      {
          ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
+
+         // ensure game cvar exists
+         InternalAssert (ptr->self->m_eptr != NULL);
+      }
    }
 }
 

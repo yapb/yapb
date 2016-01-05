@@ -166,27 +166,27 @@ TacticChoosen:
    else if (tactic == 3 && !waypoints.m_goalPoints.IsEmpty ()) // map goal waypoint
    {
       // force bomber to select closest goal, if round-start goal was reset by something
-      if (m_hasC4 && g_timeRoundStart + 20.0f < GetWorldTime ())
+      if (m_hasC4 && g_timeRoundStart + 10.0f < GetWorldTime ())
       {
-         float minDist = 99999999.0f;
+         float minDist = 99999.0f;
          int count = 0;
 
-         for (int i = 0; i < g_numWaypoints; i++)
+         FOR_EACH_AE (waypoints.m_goalPoints, i)
          {
-            Path *path = waypoints.GetPath (i);
+            Path *path = waypoints.GetPath (waypoints.m_goalPoints[i]);
 
-            if (!(path->flags & FLAG_GOAL))
+            float distance = (path->origin - pev->origin).GetLength ();
+
+            if (distance > 1024.0f)
                continue;
-
-            float distance = (path->origin - pev->origin).GetLengthSquared ();
 
             if (distance < minDist)
             {
-               if (count < 4)
-               {
-                  goalChoices[count] = i;
-                  count++;
-               }
+               goalChoices[count] = i;
+
+               if (++count > 3)
+                  count = 0;
+
                minDist = distance;
             }
          }

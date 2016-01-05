@@ -1241,7 +1241,7 @@ void Bot::CheckMessageQueue (void)
             }
          }
 
-         if (m_radioSelect != Radio_ReportingIn || g_radioInsteadVoice || yb_communication_type.GetInt () != 2 || g_chatterFactory[m_radioSelect].IsEmpty () || g_gameVersion == CSV_OLD)
+         if (m_radioSelect != Radio_ReportingIn && g_radioInsteadVoice || yb_communication_type.GetInt () != 2 || g_chatterFactory[m_radioSelect].IsEmpty () || g_gameVersion == CSV_OLD)
          {
             if (m_radioSelect < Radio_GoGoGo)
                FakeClientCommand (GetEntity (), "radio1");

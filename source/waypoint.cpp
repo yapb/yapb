@@ -1557,15 +1557,15 @@ void Waypoint::Think (void)
    m_facingAtIndex = GetFacingIndex ();
 
    // reset the minimal distance changed before
-   nearestDistance = 99999.0f;
+   nearestDistance = 999999.0f;
 
    // now iterate through all waypoints in a map, and draw required ones
    for (int i = 0; i < g_numWaypoints; i++)
    {
-      float distance = (m_paths[i]->origin - g_hostEntity->v.origin).GetLengthSquared ();
+      float distance = (m_paths[i]->origin - g_hostEntity->v.origin).GetLength ();
 
       // check if waypoint is whitin a distance, and is visible
-      if (distance < GET_SQUARE (500.0f) && ((::IsVisible (m_paths[i]->origin, g_hostEntity) && IsInViewCone (m_paths[i]->origin, g_hostEntity)) || !IsAlive (g_hostEntity) || distance < 2500.0f))
+      if (distance < 1024.0f && ((::IsVisible (m_paths[i]->origin, g_hostEntity) && IsInViewCone (m_paths[i]->origin, g_hostEntity)) || !IsAlive (g_hostEntity) || distance < 512.0f))
       {
          // check the distance
          if (distance < nearestDistance)
@@ -1656,7 +1656,7 @@ void Waypoint::Think (void)
    Path *path = m_paths[nearestIndex];
 
    // draw a paths, camplines and danger directions for nearest waypoint
-   if (nearestDistance < 4096.0f && m_pathDisplayTime <= GetWorldTime ())
+   if (nearestDistance <= 56.0f && m_pathDisplayTime <= GetWorldTime ())
    {
       m_pathDisplayTime = GetWorldTime () + 1.0f;
 
