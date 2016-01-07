@@ -2182,25 +2182,13 @@ void Waypoint::SetGoalVisited (int index)
    if (index < 0 || index >= g_numWaypoints)
       return;
 
-   if (!IsGoalVisited (index) || !(m_paths[index]->flags & FLAG_GOAL))
-   {
-#if 0
-      int bombPoint = FindNearest (GetBombPosition ());
-
-      Array <int> markAsVisited;
-      FindInRadius (markAsVisited, 356.0f, GetPath (index)->origin);
-
-      IterateArray (markAsVisited, i)
-      {
-         // skip still valid bomb point
-         if (markAsVisited[i] == bombPoint)
-            continue;
-
-         m_visitedGoals.Push (markAsVisited[i]);
-      }
-#endif
+   if (!IsGoalVisited (index) && (m_paths[index]->flags & FLAG_GOAL))
       m_visitedGoals.Push (index);
-   }
+}
+
+void Waypoint::ClearVisitedGoals (void)
+{
+   m_visitedGoals.RemoveAll ();
 }
 
 bool Waypoint::IsGoalVisited (int index)

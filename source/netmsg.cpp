@@ -426,6 +426,8 @@ void NetworkMsg::Execute (void *p)
          }
          else if (!g_bombPlanted && FStrEq (PTR_TO_STR (p), "#Bomb_Planted"))
          {
+            waypoints.SetBombPosition ();
+
             g_bombPlanted = g_bombSayString = true;
             g_timeBombPlanted = GetWorldTime ();
       
@@ -442,7 +444,6 @@ void NetworkMsg::Execute (void *p)
                      bot->ChatterMessage (Chatter_WhereIsTheBomb);
                }
             }
-            waypoints.SetBombPosition ();
          }
          else if (m_bot != NULL && FStrEq (PTR_TO_STR (p), "#Switch_To_BurstFire"))
             m_bot->m_weaponBurstMode = BM_ON;

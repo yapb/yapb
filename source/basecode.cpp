@@ -587,6 +587,7 @@ void Bot::FindItem (void)
             break;
          }
       }
+
       if (itemExists)
          return;
 
@@ -787,7 +788,7 @@ void Bot::FindItem (void)
                }
                else if (pickupType == PICKUP_PLANTED_C4 && !OutOfBombTimer ())
                {
-                  if (m_states & (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY))
+                  if (IsValidPlayer (m_enemy))
                   {
                      allowPickup = false;
                      return;
@@ -5667,7 +5668,7 @@ Vector Bot::CheckBombAudible (void)
 {
    // this function checks if bomb is can be heard by the bot, calculations done by manual testing.
 
-   if (!g_bombPlanted || (GetTaskId () == TASK_ESCAPEFROMBOMB))
+   if (!g_bombPlanted || GetTaskId () == TASK_ESCAPEFROMBOMB)
       return Vector::GetZero (); // reliability check
 
    if (m_difficulty >= 3)

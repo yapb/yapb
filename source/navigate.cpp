@@ -1220,7 +1220,7 @@ bool Bot::DoWaypointNav (void)
 
       if ((g_mapType & MAP_DE) && g_bombPlanted && m_team == TEAM_CF && GetTaskId () != TASK_ESCAPEFROMBOMB && GetTask ()->data != -1)
       {
-         Vector bombOrigin = CheckBombAudible ();
+         const Vector &bombOrigin = CheckBombAudible ();
 
          // bot within 'hearable' bomb tick noises?
          if (!bombOrigin.IsZero ())
@@ -2039,7 +2039,7 @@ int Bot::ChooseBombWaypoint (void)
       bombOrigin = pev->origin;
 
    int goal = 0, count = 0;
-   float lastDistance = 99999.0f;
+   float lastDistance = 999999.0f;
 
    // find nearest goal waypoint either to bomb (if "heard" or player)
    FOR_EACH_AE (goals, i)

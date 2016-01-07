@@ -1584,6 +1584,7 @@ public:
 
    bool IsGoalVisited (int index);
    void SetGoalVisited (int index);
+   void ClearVisitedGoals (void);
 
    inline const Vector &GetBombPosition (void)
    {
