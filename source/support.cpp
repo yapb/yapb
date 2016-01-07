@@ -1536,32 +1536,3 @@ int GetWeaponReturn (bool needString, const char *weaponAlias, int weaponIndex)
    }
    return -1; // no weapon was found return -1
 }
-
-class ISkyBotIf
-{
-public:
-   virtual int GetVersion () = 0;
-};
-
-class IEntity : public ISkyBotIf
-{
-public:
-};
-
-class IPlayer : public IEntity
-{
-public:
-};
-
-class IWeapon : public ISkyBotIf
-{
-public:
-   virtual IPlayer *GetOwner () = 0;
-};
-
-class IGame : public ISkyBotIf
-{
-public:
-   virtual bool IsBombPlanted () = 0;
-   virtual const Vector &GetBombPlantedOrigin () = 0;
-};
