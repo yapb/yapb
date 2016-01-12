@@ -1111,6 +1111,25 @@ int ClientConnect (edict_t *ent, const char *name, const char *addr, char reject
    return (*g_functionTable.pfnClientConnect) (ent, name, addr, rejectReason);
 }
 
+void ClientPutInServer (edict_t *ent)
+{
+   // this function is called once a just connected client actually enters the game, after
+   // having downloaded and synchronized its resources with the of the server's. It's the
+   // perfect place to hook for client connecting, since a client can always try to connect
+   // passing the ClientConnect() step, and not be allowed by the server later (because of a
+   // latency timeout or whatever reason). We can here keep track of both bots and players
+   // counts on occurence, since bots connect the server just like the way normal client do,
+   // and their third party bot flag is already supposed to be set then. If it's a bot which
+   // is connecting, we also have to awake its brain(s) by reading them from the disk.
+
+   bots.AdjustQuota (true, ent);
+
+   if (g_isMetamod)
+      RETURN_META (MRES_IGNORED);
+
+   (*g_functionTable.pfnClientPutInServer) (ent);
+}
+
 void ClientDisconnect (edict_t *ent)
 {
    // this function is called whenever a client is VOLUNTARILY disconnected from the server,
@@ -1123,6 +1142,8 @@ void ClientDisconnect (edict_t *ent)
    // brain(s) up to disk. We also try to notice when a listenserver client disconnects, so as
    // to reset his entity pointer for safety. There are still a few server frames to go once a
    // listen server client disconnects, and we don't want to send him any sort of message then.
+
+   bots.AdjustQuota (false, ent);
 
    int i = IndexOfEntity (ent) - 1;
 
@@ -2819,6 +2840,7 @@ export int GetEntityAPI2 (gamefuncs_t *functionTable, int *)
    functionTable->pfnTouch = Touch;
    functionTable->pfnClientConnect = ClientConnect;
    functionTable->pfnClientDisconnect = ClientDisconnect;
+   functionTable->pfnClientPutInServer = ClientPutInServer;
    functionTable->pfnClientUserInfoChanged = ClientUserInfoChanged;
    functionTable->pfnClientCommand = ClientCommand;
    functionTable->pfnServerActivate = ServerActivate;

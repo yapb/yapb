@@ -203,6 +203,14 @@ enum TaskID
    TASK_MAX
 };
 
+// autovacate state
+enum QuotaOption
+{
+   QUOTA_NONE,
+   QUOTA_INCREMENT,
+   QUOTA_DECREMENT
+};
+
 // supported cs's
 enum CSVersion
 {
@@ -1367,6 +1375,8 @@ private:
    Array <entity_t> m_activeGrenades;
    edict_t *m_killerEntity; // killer entity for bots
 
+   int m_quotaOption;
+
 protected:
    int CreateBot (const String &name, int difficulty, int personality, int team, int member);
 
@@ -1411,6 +1421,7 @@ public:
    void RemoveMenu (edict_t *ent, int selection);
    void KillAll (int team = -1);
    void MaintainBotQuota (void);
+   void AdjustQuota (bool isPlayerConnection, edict_t *ent);
    void InitQuota (void);
 
    void ListBots (void);
