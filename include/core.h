@@ -1110,6 +1110,7 @@ private:
    void ResetCollideState (void);
    void IgnoreCollisionShortly (void);
    void SetConditions (void);
+   void SetConditionsOverride (void);
    void UpdateEmotions (void);
    void SetStrafeSpeed (const Vector &moveDir, float strafeSpeed);
    void StartGame (void);
@@ -1301,6 +1302,7 @@ public:
    /// the things that can be executed while skipping frames
    void ThinkDelayed (void);
 
+   void DisplayDebugOverlay (void);
    void NewRound (void);
    void EquipInBuyzone (int buyCount);
    void PushMessageQueue (int message);

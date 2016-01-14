@@ -1786,6 +1786,42 @@ void Bot::UpdateEmotions (void)
    m_nextEmotionUpdate = GetWorldTime () + 1.0f;
 }
 
+void Bot::SetConditionsOverride (void)
+{
+   if (m_currentWeapon != WEAPON_KNIFE && m_difficulty > 3 && ((m_aimFlags & AIM_ENEMY) || (m_states & (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY)) || (GetTaskId () == TASK_SEEKCOVER && (m_isReloading || m_isVIP))) && !yb_jasonmode.GetBool () && GetTaskId () != TASK_CAMP && !IsOnLadder ())
+   {
+      m_moveToGoal = false; // don't move to goal
+      m_navTimeset = GetWorldTime ();
+
+      if (IsValidPlayer (m_enemy))
+         CombatFight ();
+   }
+
+   // check if we need to escape from bomb
+   if ((g_mapType & MAP_DE) && g_bombPlanted && m_notKilled && GetTaskId () != TASK_ESCAPEFROMBOMB && GetTaskId () != TASK_CAMP && OutOfBombTimer ())
+   {
+      TaskComplete (); // complete current task
+
+      // then start escape from bomb immidiate
+      PushTask (TASK_ESCAPEFROMBOMB, TASKPRI_ESCAPEFROMBOMB, -1, 0.0f, true);
+   }
+
+   // special handling, if we have a knife in our hands
+   if (m_currentWeapon == WEAPON_KNIFE && IsValidPlayer (m_enemy) && (GetTaskId () != TASK_MOVETOPOSITION || GetTask ()->desire != TASKPRI_HIDE))
+   {
+      if ((pev->origin - m_enemy->v.origin).GetLength2D () > 100.0f && (m_states & STATE_SEEING_ENEMY))
+      {
+         int nearestToEnemyPoint = waypoints.FindNearest (m_enemy->v.origin);
+
+         if (nearestToEnemyPoint != -1 && nearestToEnemyPoint != m_currentWaypointIndex && fabsf (waypoints.GetPath (nearestToEnemyPoint)->origin.z - m_enemy->v.origin.z) < 16.0f)
+         {
+            PushTask (TASK_MOVETOPOSITION, TASKPRI_HIDE, nearestToEnemyPoint, GetWorldTime () + Random.Float (5.0f, 10.0f), true);
+            m_enemy = NULL;
+         }
+      }
+   }
+}
+
 void Bot::SetConditions (void)
 {
    // this function carried out each frame. does all of the sensing, calculates emotions and finally sets the desired
@@ -1988,7 +2024,7 @@ void Bot::ApplyTaskFilters (void)
          ratio = timeHeard * 0.1f;
       }
 
-      if (g_bombPlanted || m_isStuck)
+      if (g_bombPlanted || m_isStuck || m_currentWeapon == WEAPON_KNIFE)
          ratio /= 3.0f; // reduce the seek cover desire if bomb is planted
       else if (m_isVIP || m_isReloading)
          ratio *= 3.0f; // triple the seek cover desire if bot is VIP or reloading
@@ -2194,14 +2230,12 @@ bool Bot::EnemyIsThreat (void)
    if (IsEntityNull (m_enemy) || GetTaskId () == TASK_SEEKCOVER)
       return false;
 
-   float distance = (m_enemy->v.origin - pev->origin).GetLength ();
-
    // if bot is camping, he should be firing anyway and not leaving his position
    if (GetTaskId () == TASK_CAMP)
       return false;
 
    // if enemy is near or facing us directly
-   if (distance < 256.0f || IsInViewCone (m_enemy->v.origin))
+   if ((m_enemy->v.origin - pev->origin).GetLength () < 256.0f || IsInViewCone (m_enemy->v.origin))
       return true;
 
    return false;
@@ -2241,7 +2275,7 @@ bool Bot::ReactOnEnemy (void)
 bool Bot::LastEnemyShootable (void)
 {
    // don't allow shooting through walls
-   if (!(m_aimFlags & AIM_LAST_ENEMY) || !m_lastEnemyOrigin.IsZero () || IsEntityNull (m_lastEnemy))
+   if (!(m_aimFlags & AIM_LAST_ENEMY) || m_lastEnemyOrigin.IsZero () || IsEntityNull (m_lastEnemy))
       return false;
 
    return GetShootingConeDeviation (GetEntity (), &m_lastEnemyOrigin) >= 0.90f && IsShootableThruObstacle (m_lastEnemyOrigin);
@@ -2554,6 +2588,7 @@ void Bot::CheckRadioCommands (void)
                   if (curDist < nearestDistance)
                   {
                      nearestDistance = curDist;
+
                      m_lastEnemy = enemy;
                      m_lastEnemyOrigin = enemy->v.origin;
                   }
@@ -3049,8 +3084,11 @@ void Bot::RunTask_Normal (void)
       m_prevGoalIndex = -1;
 
       // spray logo sometimes if allowed to do so
-      if (m_timeLogoSpray < GetWorldTime () && yb_spraypaints.GetBool () && Random.Long (1, 100) < 60 && m_moveSpeed > GetWalkSpeed () && IsEntityNull (m_pickupItem))
-         PushTask (TASK_SPRAY, TASKPRI_SPRAYLOGO, -1, GetWorldTime () + 1.0f, false);
+      if (!g_bombPlanted && m_timeLogoSpray < GetWorldTime () && yb_spraypaints.GetBool () && Random.Long (1, 100) < 60 && m_moveSpeed > GetWalkSpeed () && IsEntityNull (m_pickupItem))
+      {
+         if (!((g_mapType & MAP_DE) && g_bombPlanted && m_team == TEAM_CF))
+            PushTask (TASK_SPRAY, TASKPRI_SPRAYLOGO, -1, GetWorldTime () + 1.0f, false);
+      }
 
       // reached waypoint is a camp waypoint
       if ((m_currentPath->flags & FLAG_CAMP) && !yb_csdm_mode.GetBool () && yb_camping_allowed.GetBool ())
@@ -3108,8 +3146,8 @@ void Bot::RunTask_Normal (void)
                m_moveToGoal = false;
                m_checkTerrain = false;
 
-               m_moveSpeed = 0;
-               m_strafeSpeed = 0;
+               m_moveSpeed = 0.0f;
+               m_strafeSpeed = 0.0f;
             }
          }
       }
@@ -3182,7 +3220,7 @@ void Bot::RunTask_Normal (void)
    // no more nodes to follow - search new ones (or we have a bomb)
    else if (!GoalIsValid ())
    {
-      m_moveSpeed = pev->maxspeed;
+      m_moveSpeed = 0.0f;
       DeleteSearchNodes ();
 
       int destIndex = -1;
@@ -3433,6 +3471,9 @@ void Bot::RunTask_Attack (void)
          DeleteSearchNodes ();
       }
       CombatFight ();
+
+      if (m_currentWeapon == WEAPON_KNIFE && !m_lastEnemyOrigin.IsZero ())
+         m_destOrigin = m_lastEnemyOrigin;
    }
    else
    {
@@ -3729,8 +3770,8 @@ void Bot::RunTask_PlantBomb (void)
          else
             pev->button |= IN_ATTACK;
 
-         m_moveSpeed = 0;
-         m_strafeSpeed = 0;
+         m_moveSpeed = 0.0f;
+         m_strafeSpeed = 0.0f;
       }
    }
    else // done with planting
@@ -4483,8 +4524,8 @@ void Bot::RunTask_PickupItem ()
          m_moveToGoal = false;
          m_checkTerrain = false;
 
-         m_moveSpeed = 0;
-         m_strafeSpeed = 0;
+         m_moveSpeed = 0.0f;
+         m_strafeSpeed = 0.0f;
 
          PushTask (TASK_DEFUSEBOMB, TASKPRI_DEFUSEBOMB, -1, 0.0f, false);
       }
@@ -4846,23 +4887,7 @@ void Bot::BotAI (void)
    m_moveAngles.ClampAngles ();
    m_moveAngles.x *= -1.0f; // invert for engine
 
-   if (m_difficulty > 3 && ((m_aimFlags & AIM_ENEMY) || (m_states & (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY)) || (GetTaskId () == TASK_SEEKCOVER && (m_isReloading || m_isVIP))) && !yb_jasonmode.GetBool () && GetTaskId () != TASK_CAMP && !IsOnLadder ())
-   {
-      m_moveToGoal = false; // don't move to goal
-      m_navTimeset = GetWorldTime ();
-
-      if (IsValidPlayer (m_enemy))
-         CombatFight ();
-   }
-
-   // check if we need to escape from bomb
-   if ((g_mapType & MAP_DE) && g_bombPlanted && m_notKilled && GetTaskId () != TASK_ESCAPEFROMBOMB && GetTaskId () != TASK_CAMP && OutOfBombTimer ())
-   {
-      TaskComplete (); // complete current task
-
-      // then start escape from bomb immidiate
-      PushTask (TASK_ESCAPEFROMBOMB, TASKPRI_ESCAPEFROMBOMB, -1, 0.0f, true);
-   }
+   SetConditionsOverride ();
 
    // allowed to move to a destination position?
    if (m_moveToGoal)
@@ -4946,263 +4971,266 @@ void Bot::BotAI (void)
          pev->button |= IN_MOVELEFT;
    }
 
-
+   // display some debugging thingy to host entity
    if (!IsEntityNull (g_hostEntity) && yb_debug.GetInt () >= 1)
-   {
-      bool displayDebugOverlay = false;
-
-      if (g_hostEntity->v.iuser2 == IndexOfEntity (GetEntity ()))
-         displayDebugOverlay = true;
-
-      if (!displayDebugOverlay && yb_debug.GetInt () >= 2)
-      {
-         Bot *nearest = NULL;
-
-         if (FindNearestPlayer (reinterpret_cast <void **> (&nearest), g_hostEntity, 128.0f, true, true, true, true) && nearest == this)
-            displayDebugOverlay = true;
-      }
-
-      if (displayDebugOverlay)
-      {
-         static float timeDebugUpdate = 0.0f;
-         static int index, goal, taskID;
-
-         if (!m_tasks.IsEmpty ())
-         {
-            if (taskID != GetTaskId () || index != m_currentWaypointIndex || goal != GetTask ()->data || timeDebugUpdate < GetWorldTime ())
-            {
-               taskID = GetTaskId ();
-               index = m_currentWaypointIndex;
-               goal = GetTask ()->data;
-
-               char taskName [80];
-               memset (taskName, 0, sizeof (taskName));
-
-               switch (taskID)
-               {
-               case TASK_NORMAL:
-                  sprintf (taskName, "Normal");
-                  break;
-
-               case TASK_PAUSE:
-                  sprintf (taskName, "Pause");
-                  break;
-
-               case TASK_MOVETOPOSITION:
-                  sprintf (taskName, "MoveToPosition");
-                  break;
-
-               case TASK_FOLLOWUSER:
-                  sprintf (taskName, "FollowUser");
-                  break;
-
-               case TASK_WAITFORGO:
-                  sprintf (taskName, "WaitForGo");
-                  break;
-
-               case TASK_PICKUPITEM:
-                  sprintf (taskName, "PickupItem");
-                  break;
-
-               case TASK_CAMP:
-                  sprintf (taskName, "Camp");
-                  break;
-
-               case TASK_PLANTBOMB:
-                  sprintf (taskName, "PlantBomb");
-                  break;
-
-               case TASK_DEFUSEBOMB:
-                  sprintf (taskName, "DefuseBomb");
-                  break;
-
-               case TASK_ATTACK:
-                  sprintf (taskName, "AttackEnemy");
-                  break;
-
-               case TASK_HUNTENEMY:
-                  sprintf (taskName, "HuntEnemy");
-                  break;
-
-               case TASK_SEEKCOVER:
-                  sprintf (taskName, "SeekCover");
-                  break;
-
-               case TASK_THROWHEGRENADE:
-                  sprintf (taskName, "ThrowExpGrenade");
-                  break;
-
-               case TASK_THROWFLASHBANG:
-                  sprintf (taskName, "ThrowFlashGrenade");
-                  break;
-
-               case TASK_THROWSMOKE:
-                  sprintf (taskName, "ThrowSmokeGrenade");
-                  break;
-
-               case TASK_DOUBLEJUMP:
-                  sprintf (taskName, "PerformDoubleJump");
-                  break;
-
-               case TASK_ESCAPEFROMBOMB:
-                  sprintf (taskName, "EscapeFromBomb");
-                  break;
-
-               case TASK_SHOOTBREAKABLE:
-                  sprintf (taskName, "ShootBreakable");
-                  break;
-
-               case TASK_HIDE:
-                  sprintf (taskName, "Hide");
-                  break;
-
-               case TASK_BLINDED:
-                  sprintf (taskName, "Blinded");
-                  break;
-
-               case TASK_SPRAY:
-                  sprintf (taskName, "SprayLogo");
-                  break;
-               }
-
-               char enemyName[80], weaponName[80], aimFlags[64], botType[32];
-
-               if (!IsEntityNull (m_enemy))
-                  strncpy (enemyName, STRING (m_enemy->v.netname), SIZEOF_CHAR (enemyName));
-               else if (!IsEntityNull (m_lastEnemy))
-               {
-                  strcpy (enemyName, " (L)");
-                  strncat (enemyName, STRING (m_lastEnemy->v.netname), SIZEOF_CHAR (enemyName));
-               }
-               else
-                  strcpy (enemyName, " (null)");
-
-               char pickupName[80];
-               memset (pickupName, 0, sizeof (pickupName));
-
-               if (!IsEntityNull (m_pickupItem))
-                  strncpy (pickupName, STRING (m_pickupItem->v.classname), SIZEOF_CHAR (pickupName));
-               else
-                  strcpy (pickupName, " (null)");
-
-               WeaponSelect *selectTab = &g_weaponSelect[0];
-               char weaponCount = 0;
-
-               while (m_currentWeapon != selectTab->id && weaponCount < NUM_WEAPONS)
-               {
-                  selectTab++;
-                  weaponCount++;
-               }
-               memset (aimFlags, 0, sizeof (aimFlags));
-
-               // set the aim flags
-               sprintf (aimFlags, "%s%s%s%s%s%s%s%s",
-                  (m_aimFlags & AIM_NAVPOINT) ? " NavPoint" : "",
-                  (m_aimFlags & AIM_CAMP) ? " CampPoint" : "",
-                  (m_aimFlags & AIM_PREDICT_PATH) ? " PredictPath" : "",
-                  (m_aimFlags & AIM_LAST_ENEMY) ? " LastEnemy" : "",
-                  (m_aimFlags & AIM_ENTITY) ? " Entity" : "",
-                  (m_aimFlags & AIM_ENEMY) ? " Enemy" : "",
-                  (m_aimFlags & AIM_GRENADE) ? " Grenade" : "",
-                  (m_aimFlags & AIM_OVERRIDE) ? " Override" : "");
-
-               // set the bot type
-               sprintf (botType, "%s%s%s", m_personality == PERSONALITY_RUSHER ? " Rusher" : "",
-                  m_personality == PERSONALITY_CAREFUL ? " Careful" : "",
-                  m_personality == PERSONALITY_NORMAL ? " Normal" : "");
-
-               if (weaponCount >= NUM_WEAPONS)
-               {
-                  // prevent printing unknown message from known weapons
-                  switch (m_currentWeapon)
-                  {
-                  case WEAPON_EXPLOSIVE:
-                     strcpy (weaponName, "weapon_hegrenade");
-                     break;
-
-                  case WEAPON_FLASHBANG:
-                     strcpy (weaponName, "weapon_flashbang");
-                     break;
-
-                  case WEAPON_SMOKE:
-                     strcpy (weaponName, "weapon_smokegrenade");
-                     break;
-
-                  case WEAPON_C4:
-                     strcpy (weaponName, "weapon_c4");
-                     break;
-
-                  default:
-                     sprintf (weaponName, "Unknown! (%d)", m_currentWeapon);
-                  }
-               }
-               else
-                  strncpy (weaponName, selectTab->weaponName, SIZEOF_CHAR (weaponName));
-
-               char outputBuffer[512];
-               memset (outputBuffer, 0, sizeof (outputBuffer));
-
-               sprintf (outputBuffer, "\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\nItem: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\nSP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\nEnemy=%s Pickup=%s Type=%s\n", STRING (pev->netname), pev->health, pev->armorvalue, taskID, taskName, GetTask ()->desire, &weaponName[7], GetAmmoInClip (), GetAmmo (), m_isReloading ? " (R)" : "", m_moneyAmount, aimFlags, m_moveSpeed, m_strafeSpeed, index, m_prevGoalIndex, goal, m_navTimeset - GetWorldTime (), pev->movetype, enemyName, pickupName, botType);
-
-               MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, NULL, g_hostEntity);
-                  WRITE_BYTE (TE_TEXTMESSAGE);
-                  WRITE_BYTE (1);
-                  WRITE_SHORT (FixedSigned16 (-1, 1 << 13));
-                  WRITE_SHORT (FixedSigned16 (0, 1 << 13));
-                  WRITE_BYTE (0);
-                  WRITE_BYTE (m_team == TEAM_CF ? 0 : 255);
-                  WRITE_BYTE (100);
-                  WRITE_BYTE (m_team != TEAM_CF ? 0 : 255);
-                  WRITE_BYTE (0);
-                  WRITE_BYTE (255);
-                  WRITE_BYTE (255);
-                  WRITE_BYTE (255);
-                  WRITE_BYTE (0);
-                  WRITE_SHORT (FixedUnsigned16 (0, 1 << 8));
-                  WRITE_SHORT (FixedUnsigned16 (0, 1 << 8));
-                  WRITE_SHORT (FixedUnsigned16 (1.0, 1 << 8));
-                  WRITE_STRING (const_cast <const char *> (&outputBuffer[0]));
-               MESSAGE_END ();
-
-               timeDebugUpdate = GetWorldTime () + 1.0;
-            }
-
-            // green = destination origin
-            // blue = ideal angles
-            // red = view angles
-
-            DrawArrow (g_hostEntity, EyePosition (), m_destOrigin, 10, 0, 0, 255, 0, 250, 5, 1);
-
-            MakeVectors (m_idealAngles);
-            DrawArrow (g_hostEntity, EyePosition (), EyePosition () + g_pGlobals->v_forward * 300.0f, 10, 0, 0, 0, 255, 250, 5, 1);
-
-            MakeVectors (pev->v_angle);
-            DrawArrow (g_hostEntity, EyePosition (), EyePosition () + g_pGlobals->v_forward * 300.0f, 10, 0, 255, 0, 0, 250, 5, 1);
-
-            // now draw line from source to destination
-            PathNode *node = &m_navNode[0];
-
-            while (node != NULL)
-            {
-               const Vector &srcPath = waypoints.GetPath (node->index)->origin;
-               node = node->next;
-
-               if (node != NULL)
-               {
-                  const Vector &dstPath = waypoints.GetPath (node->index)->origin;
-                  DrawArrow (g_hostEntity, srcPath, dstPath, 15, 0, 255, 100, 55, 200, 5, 1);
-               }
-            }
-         }
-      }
-   }
-
+      DisplayDebugOverlay ();
+   
    // save the previous speed (for checking if stuck)
    m_prevSpeed = fabsf (m_moveSpeed);
    m_lastDamageType = -1; // reset damage
 
    pev->angles.ClampAngles ();
    pev->v_angle.ClampAngles ();
+}
+
+void Bot::DisplayDebugOverlay (void)
+{
+   bool displayDebugOverlay = false;
+
+   if (g_hostEntity->v.iuser2 == IndexOfEntity (GetEntity ()))
+      displayDebugOverlay = true;
+
+   if (!displayDebugOverlay && yb_debug.GetInt () >= 2)
+   {
+      Bot *nearest = NULL;
+
+      if (FindNearestPlayer (reinterpret_cast <void **> (&nearest), g_hostEntity, 128.0f, true, true, true, true) && nearest == this)
+         displayDebugOverlay = true;
+   }
+
+   if (displayDebugOverlay)
+   {
+      static float timeDebugUpdate = 0.0f;
+      static int index, goal, taskID;
+
+      if (!m_tasks.IsEmpty ())
+      {
+         if (taskID != GetTaskId () || index != m_currentWaypointIndex || goal != GetTask ()->data || timeDebugUpdate < GetWorldTime ())
+         {
+            taskID = GetTaskId ();
+            index = m_currentWaypointIndex;
+            goal = GetTask ()->data;
+
+            char taskName[80];
+            memset (taskName, 0, sizeof (taskName));
+
+            switch (taskID)
+            {
+            case TASK_NORMAL:
+               sprintf (taskName, "Normal");
+               break;
+
+            case TASK_PAUSE:
+               sprintf (taskName, "Pause");
+               break;
+
+            case TASK_MOVETOPOSITION:
+               sprintf (taskName, "MoveToPosition");
+               break;
+
+            case TASK_FOLLOWUSER:
+               sprintf (taskName, "FollowUser");
+               break;
+
+            case TASK_WAITFORGO:
+               sprintf (taskName, "WaitForGo");
+               break;
+
+            case TASK_PICKUPITEM:
+               sprintf (taskName, "PickupItem");
+               break;
+
+            case TASK_CAMP:
+               sprintf (taskName, "Camp");
+               break;
+
+            case TASK_PLANTBOMB:
+               sprintf (taskName, "PlantBomb");
+               break;
+
+            case TASK_DEFUSEBOMB:
+               sprintf (taskName, "DefuseBomb");
+               break;
+
+            case TASK_ATTACK:
+               sprintf (taskName, "AttackEnemy");
+               break;
+
+            case TASK_HUNTENEMY:
+               sprintf (taskName, "HuntEnemy");
+               break;
+
+            case TASK_SEEKCOVER:
+               sprintf (taskName, "SeekCover");
+               break;
+
+            case TASK_THROWHEGRENADE:
+               sprintf (taskName, "ThrowExpGrenade");
+               break;
+
+            case TASK_THROWFLASHBANG:
+               sprintf (taskName, "ThrowFlashGrenade");
+               break;
+
+            case TASK_THROWSMOKE:
+               sprintf (taskName, "ThrowSmokeGrenade");
+               break;
+
+            case TASK_DOUBLEJUMP:
+               sprintf (taskName, "PerformDoubleJump");
+               break;
+
+            case TASK_ESCAPEFROMBOMB:
+               sprintf (taskName, "EscapeFromBomb");
+               break;
+
+            case TASK_SHOOTBREAKABLE:
+               sprintf (taskName, "ShootBreakable");
+               break;
+
+            case TASK_HIDE:
+               sprintf (taskName, "Hide");
+               break;
+
+            case TASK_BLINDED:
+               sprintf (taskName, "Blinded");
+               break;
+
+            case TASK_SPRAY:
+               sprintf (taskName, "SprayLogo");
+               break;
+            }
+
+            char enemyName[80], weaponName[80], aimFlags[64], botType[32];
+
+            if (!IsEntityNull (m_enemy))
+               strncpy (enemyName, STRING (m_enemy->v.netname), SIZEOF_CHAR (enemyName));
+            else if (!IsEntityNull (m_lastEnemy))
+            {
+               strcpy (enemyName, " (L)");
+               strncat (enemyName, STRING (m_lastEnemy->v.netname), SIZEOF_CHAR (enemyName));
+            }
+            else
+               strcpy (enemyName, " (null)");
+
+            char pickupName[80];
+            memset (pickupName, 0, sizeof (pickupName));
+
+            if (!IsEntityNull (m_pickupItem))
+               strncpy (pickupName, STRING (m_pickupItem->v.classname), SIZEOF_CHAR (pickupName));
+            else
+               strcpy (pickupName, " (null)");
+
+            WeaponSelect *selectTab = &g_weaponSelect[0];
+            char weaponCount = 0;
+
+            while (m_currentWeapon != selectTab->id && weaponCount < NUM_WEAPONS)
+            {
+               selectTab++;
+               weaponCount++;
+            }
+            memset (aimFlags, 0, sizeof (aimFlags));
+
+            // set the aim flags
+            sprintf (aimFlags, "%s%s%s%s%s%s%s%s",
+               (m_aimFlags & AIM_NAVPOINT) ? " NavPoint" : "",
+               (m_aimFlags & AIM_CAMP) ? " CampPoint" : "",
+               (m_aimFlags & AIM_PREDICT_PATH) ? " PredictPath" : "",
+               (m_aimFlags & AIM_LAST_ENEMY) ? " LastEnemy" : "",
+               (m_aimFlags & AIM_ENTITY) ? " Entity" : "",
+               (m_aimFlags & AIM_ENEMY) ? " Enemy" : "",
+               (m_aimFlags & AIM_GRENADE) ? " Grenade" : "",
+               (m_aimFlags & AIM_OVERRIDE) ? " Override" : "");
+
+            // set the bot type
+            sprintf (botType, "%s%s%s", m_personality == PERSONALITY_RUSHER ? " Rusher" : "",
+               m_personality == PERSONALITY_CAREFUL ? " Careful" : "",
+               m_personality == PERSONALITY_NORMAL ? " Normal" : "");
+
+            if (weaponCount >= NUM_WEAPONS)
+            {
+               // prevent printing unknown message from known weapons
+               switch (m_currentWeapon)
+               {
+               case WEAPON_EXPLOSIVE:
+                  strcpy (weaponName, "weapon_hegrenade");
+                  break;
+
+               case WEAPON_FLASHBANG:
+                  strcpy (weaponName, "weapon_flashbang");
+                  break;
+
+               case WEAPON_SMOKE:
+                  strcpy (weaponName, "weapon_smokegrenade");
+                  break;
+
+               case WEAPON_C4:
+                  strcpy (weaponName, "weapon_c4");
+                  break;
+
+               default:
+                  sprintf (weaponName, "Unknown! (%d)", m_currentWeapon);
+               }
+            }
+            else
+               strncpy (weaponName, selectTab->weaponName, SIZEOF_CHAR (weaponName));
+
+            char outputBuffer[512];
+            memset (outputBuffer, 0, sizeof (outputBuffer));
+
+            sprintf (outputBuffer, "\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\nItem: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\nSP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\nEnemy=%s Pickup=%s Type=%s\n", STRING (pev->netname), pev->health, pev->armorvalue, taskID, taskName, GetTask ()->desire, &weaponName[7], GetAmmoInClip (), GetAmmo (), m_isReloading ? " (R)" : "", m_moneyAmount, aimFlags, m_moveSpeed, m_strafeSpeed, index, m_prevGoalIndex, goal, m_navTimeset - GetWorldTime (), pev->movetype, enemyName, pickupName, botType);
+
+            MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, NULL, g_hostEntity);
+            WRITE_BYTE (TE_TEXTMESSAGE);
+            WRITE_BYTE (1);
+            WRITE_SHORT (FixedSigned16 (-1, 1 << 13));
+            WRITE_SHORT (FixedSigned16 (0, 1 << 13));
+            WRITE_BYTE (0);
+            WRITE_BYTE (m_team == TEAM_CF ? 0 : 255);
+            WRITE_BYTE (100);
+            WRITE_BYTE (m_team != TEAM_CF ? 0 : 255);
+            WRITE_BYTE (0);
+            WRITE_BYTE (255);
+            WRITE_BYTE (255);
+            WRITE_BYTE (255);
+            WRITE_BYTE (0);
+            WRITE_SHORT (FixedUnsigned16 (0, 1 << 8));
+            WRITE_SHORT (FixedUnsigned16 (0, 1 << 8));
+            WRITE_SHORT (FixedUnsigned16 (1.0, 1 << 8));
+            WRITE_STRING (const_cast <const char *> (&outputBuffer[0]));
+            MESSAGE_END ();
+
+            timeDebugUpdate = GetWorldTime () + 1.0;
+         }
+
+         // green = destination origin
+         // blue = ideal angles
+         // red = view angles
+
+         DrawArrow (g_hostEntity, EyePosition (), m_destOrigin, 10, 0, 0, 255, 0, 250, 5, 1);
+
+         MakeVectors (m_idealAngles);
+         DrawArrow (g_hostEntity, EyePosition () - Vector (0.0f, 0.0f, 16.0f), EyePosition () + g_pGlobals->v_forward * 300.0f, 10, 0, 0, 0, 255, 250, 5, 1);
+
+         MakeVectors (pev->v_angle);
+         DrawArrow (g_hostEntity, EyePosition () - Vector (0.0f, 0.0f, 32.0f), EyePosition () + g_pGlobals->v_forward * 300.0f, 10, 0, 255, 0, 0, 250, 5, 1);
+
+         // now draw line from source to destination
+         PathNode *node = &m_navNode[0];
+
+         while (node != NULL)
+         {
+            const Vector &srcPath = waypoints.GetPath (node->index)->origin;
+            node = node->next;
+
+            if (node != NULL)
+            {
+               const Vector &dstPath = waypoints.GetPath (node->index)->origin;
+               DrawArrow (g_hostEntity, srcPath, dstPath, 15, 0, 255, 100, 55, 200, 5, 1);
+            }
+         }
+      }
+   }
 }
 
 bool Bot::HasHostage (void)
