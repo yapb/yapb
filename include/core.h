@@ -203,14 +203,6 @@ enum TaskID
    TASK_MAX
 };
 
-// autovacate state
-enum QuotaOption
-{
-   QUOTA_NONE,
-   QUOTA_INCREMENT,
-   QUOTA_DECREMENT
-};
-
 // supported cs's
 enum CSVersion
 {
@@ -1367,17 +1359,17 @@ private:
 
    Bot *m_bots[32]; // all available bots
 
-   float m_maintainTime; // time to maintain bot creation quota
+   float m_maintainTime; // time to maintain bot creation 
+   float m_quotaMaintainTime; // time to maintain bot quota
    int m_lastWinner; // the team who won previous round
 
    bool m_economicsGood[2]; // is team able to buy anything
    bool m_deathMsgSent; // for fakeping
 
-   // holds currently active grenades in the map
-   Array <entity_t> m_activeGrenades;
-   edict_t *m_killerEntity; // killer entity for bots
+   Array <entity_t> m_activeGrenades; // holds currently active grenades in the map
+   Array <entity_t> m_trackedPlayers; // holds array of connected players, and waits the player joins team
 
-   int m_quotaOption;
+   edict_t *m_killerEntity; // killer entity for bots
 
 protected:
    int CreateBot (const String &name, int difficulty, int personality, int team, int member);
@@ -1425,6 +1417,9 @@ public:
    void MaintainBotQuota (void);
    void AdjustQuota (bool isPlayerConnection, edict_t *ent);
    void InitQuota (void);
+
+   void AddPlayerToCheckTeamQueue (edict_t *ent);
+   void VerifyPlayersHasJoinedTeam (int &desiredCount);
 
    void ListBots (void);
    void SetWeaponMode (int selection);

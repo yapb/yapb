@@ -10,6 +10,7 @@
 #include <core.h>
 
 ConVar yb_autovacate ("yb_autovacate", "0");
+ConVar yb_autovacate_smart_kick ("yb_autovacate_smart_kick", "1");
 
 ConVar yb_quota ("yb_quota", "0", VT_NORMAL);
 ConVar yb_quota_mode ("yb_quota_mode", "normal");
@@ -36,6 +37,8 @@ BotManager::BotManager (void)
    memset (m_bots, 0, sizeof (m_bots));
 
    m_maintainTime = 0.0f;
+   m_quotaMaintainTime = 0.0f;
+
    m_creationTab.RemoveAll ();
    m_killerEntity = NULL;
 }
@@ -336,7 +339,58 @@ void BotManager::AdjustQuota (bool isPlayerConnection, edict_t *ent)
    if (!IsDedicatedServer () || !yb_autovacate.GetBool () || GetBot (ent) != NULL)
       return;
 
-   m_quotaOption = isPlayerConnection ? QUOTA_DECREMENT : QUOTA_INCREMENT;
+   if (isPlayerConnection)
+   {
+      if (yb_autovacate_smart_kick.GetBool ())
+         AddPlayerToCheckTeamQueue (ent);
+      else
+         RemoveRandom ();
+   }
+   else
+      AddRandom ();
+}
+
+void BotManager::AddPlayerToCheckTeamQueue (edict_t *ent)
+{
+   // entity must be unique
+   bool hasFound = false;
+
+   FOR_EACH_AE (m_trackedPlayers, it)
+   {
+      if (m_trackedPlayers[it] == ent)
+      {
+         hasFound = true;
+         break;
+      }
+   }
+
+   if (!hasFound)
+      m_trackedPlayers.Push (ent);
+}
+
+void BotManager::VerifyPlayersHasJoinedTeam (int &desiredCount)
+{
+   if (!m_trackedPlayers.GetElementNumber ())
+      return;
+
+   for (int i = 0; i < GetMaxClients (); i++)
+   {
+      Client &cl = g_clients[i];
+
+      if ((cl.flags & CF_USED) && cl.team != TEAM_SPEC && !IsValidBot (cl.ent))
+      {
+         FOR_EACH_AE (m_trackedPlayers, it)
+         {
+            if (cl.ent != m_trackedPlayers[it])
+               continue;
+
+            desiredCount--;
+            m_trackedPlayers.RemoveAt (it);
+
+            break;
+         }
+      }
+   }
 }
 
 void BotManager::MaintainBotQuota (void)
@@ -368,7 +422,7 @@ void BotManager::MaintainBotQuota (void)
    }
 
    // now keep bot number up to date
-   if (m_maintainTime < GetWorldTime ())
+   if (m_quotaMaintainTime < GetWorldTime ())
    {
       // don't allow that quota is below zero
       if (yb_quota.GetInt () < 0)
@@ -394,30 +448,25 @@ void BotManager::MaintainBotQuota (void)
       else
          desiredCount = min (desiredCount, GetMaxClients () - numHumans);
 
-      if (m_quotaOption != QUOTA_NONE && numBots > 1 && desiredCount > 1)
-      {
-         if (m_quotaOption == QUOTA_INCREMENT)
-            desiredCount++;
-         else
-            desiredCount--;
-
-         m_quotaOption = QUOTA_NONE;
-      }
+      if (yb_autovacate_smart_kick.GetBool () && numBots > 1 && desiredCount > 1)
+         VerifyPlayersHasJoinedTeam (desiredCount);
 
       if (desiredCount > numBots)
          AddRandom ();
       else if (desiredCount < numBots)
          RemoveRandom ();
 
-      m_maintainTime = GetWorldTime () + 0.15f;
+      m_quotaMaintainTime = GetWorldTime () + 0.5f;
    }
 }
 
 void BotManager::InitQuota (void)
 {
    m_maintainTime = GetWorldTime () + 3.0f;
+   m_quotaMaintainTime = GetWorldTime () + 3.0f;
+
+   m_trackedPlayers.RemoveAll ();
    m_creationTab.RemoveAll ();
-   m_quotaOption = QUOTA_NONE;
 }
 
 void BotManager::FillServer (int selection, int personality, int difficulty, int numToAdd)
@@ -562,7 +611,7 @@ void BotManager::KillAll (int team)
    {
       if (m_bots[i] != NULL)
       {
-         if (team != -1 && team != GetTeam (m_bots[i]->GetEntity ()))
+         if (team != -1 && team != m_bots[i]->m_team)
             continue;
 
          m_bots[i]->Kill ();
@@ -575,6 +624,48 @@ void BotManager::RemoveRandom (void)
 {
    // this function removes random bot from server (only yapb's)
 
+   bool deadBotFound = false;
+
+
+   // first try to kick the bot that is currently dead
+   for (int i = 0; i < GetMaxClients (); i++)
+   {
+      if (m_bots[i] != NULL && !m_bots[i]->m_notKilled)  // is this slot used?
+      {
+         m_bots[i]->Kick ();
+         deadBotFound = true;
+
+         break;
+      }
+   }
+
+   if (deadBotFound)
+      return;
+
+   // if no dead bots found try to find one with lowest amount of frags
+   int index = 0;
+   float score = 9999.0f;
+
+   // search bots in this team
+   for (int i = 0; i < GetMaxClients (); i++)
+   {
+      Bot *bot = bots.GetBot (i);
+
+      if (bot != NULL && bot->pev->frags < score)
+      {
+         index = i;
+         score = bot->pev->frags;
+      }
+   }
+
+   // if found some bots
+   if (index != 0)
+   {
+      m_bots[index]->Kick ();
+      return;
+   }
+
+   // worst case, just kick some random bot
    for (int i = 0; i < GetMaxClients (); i++)
    {
       if (m_bots[i] != NULL)  // is this slot used?
@@ -674,22 +765,20 @@ int BotManager::GetBotsNum (void)
 
 Bot *BotManager::GetHighestFragsBot (int team)
 {
-   Bot *highFragBot = NULL;
-
    int bestIndex = 0;
    float bestScore = -1;
 
    // search bots in this team
    for (int i = 0; i < GetMaxClients (); i++)
    {
-      highFragBot = bots.GetBot (i);
+      Bot *bot = bots.GetBot (i);
 
-      if (highFragBot != NULL && IsAlive (highFragBot->GetEntity ()) && GetTeam (highFragBot->GetEntity ()) == team)
+      if (bot != NULL && IsAlive (bot->GetEntity ()) && GetTeam (bot->GetEntity ()) == team)
       {
-         if (highFragBot->pev->frags > bestScore)
+         if (bot->pev->frags > bestScore)
          {
             bestIndex = i;
-            bestScore = highFragBot->pev->frags;
+            bestScore = bot->pev->frags;
          }
       }
    }
@@ -1172,6 +1261,8 @@ void Bot::Kick (void)
    ServerCommand ("kick \"%s\"", STRING (pev->netname));
    CenterPrint ("Bot '%s' kicked", STRING (pev->netname));
 
+   pev->flags |= FL_KILLME;
+
    int newBotsNum = bots.GetBotsNum () - 1;
 
    // keep quota number up to date
@@ -1314,6 +1405,7 @@ void BotManager::SendPingDataOffsets (edict_t *to)
       return;
 
    static int sending;
+   sending = 0;
 
    // missing from sdk
    static const int SVC_PINGS = 17;
