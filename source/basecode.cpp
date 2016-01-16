@@ -3084,7 +3084,7 @@ void Bot::RunTask_Normal (void)
       m_prevGoalIndex = -1;
 
       // spray logo sometimes if allowed to do so
-      if (!g_bombPlanted && m_timeLogoSpray < GetWorldTime () && yb_spraypaints.GetBool () && Random.Long (1, 100) < 60 && m_moveSpeed > GetWalkSpeed () && IsEntityNull (m_pickupItem))
+      if (m_timeLogoSpray < GetWorldTime () && yb_spraypaints.GetBool () && Random.Long (1, 100) < 60 && m_moveSpeed > GetWalkSpeed () && IsEntityNull (m_pickupItem))
       {
          if (!((g_mapType & MAP_DE) && g_bombPlanted && m_team == TEAM_CF))
             PushTask (TASK_SPRAY, TASKPRI_SPRAYLOGO, -1, GetWorldTime () + 1.0f, false);

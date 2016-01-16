@@ -228,14 +228,6 @@ bool Bot::LookupEnemy (void)
 
    float nearestDistance = m_viewDistance;
 
-   // setup potentially visible set for this bot
-   Vector potentialVisibility = EyePosition ();
-
-   if (pev->flags & FL_DUCKING)
-      potentialVisibility = potentialVisibility + (VEC_HULL_MIN - VEC_DUCK_HULL_MIN);
-
-   byte *pvs = ENGINE_SET_PVS (reinterpret_cast <float *> (&potentialVisibility));
-
    // clear suspected flag
    if (m_seeEnemyTime + 3.0f < GetWorldTime ())
       m_states &= ~STATE_SUSPECT_ENEMY;
@@ -257,10 +249,18 @@ bool Bot::LookupEnemy (void)
       // ignore shielded enemies, while we have real one
       edict_t *shieldEnemy = NULL;
 
+      // setup potentially visible set for this bot
+      Vector potentialVisibility = EyePosition ();
+
+      if (pev->flags & FL_DUCKING)
+         potentialVisibility = potentialVisibility + (VEC_HULL_MIN - VEC_DUCK_HULL_MIN);
+
+      byte *pvs = ENGINE_SET_PVS (reinterpret_cast <float *> (&potentialVisibility));
+
       // search the world for players...
       for (int i = 0; i < GetMaxClients (); i++)
       {
-         if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || (g_clients[i].team == m_team) || (g_clients[i].ent == GetEntity ()))
+         if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team == m_team || g_clients[i].ent == GetEntity ())
             continue;
 
          player = g_clients[i].ent;

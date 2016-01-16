@@ -2177,8 +2177,6 @@ void StartFrame (void)
 
    if (g_timePerSecondUpdate < GetWorldTime ())
    {
-      bots.CalculatePingOffsets ();
-
       for (int i = 0; i < GetMaxClients (); i++)
       {
          edict_t *player = EntityOfIndex (i + 1);
@@ -2206,6 +2204,7 @@ void StartFrame (void)
             }
          }
       }
+      bots.CalculatePingOffsets ();
 
       if (g_bombPlanted)
          waypoints.SetBombPosition ();

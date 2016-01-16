@@ -9,7 +9,7 @@
 
 #include <core.h>
 
-ConVar yb_whose_your_daddy ("yb_whose_your_daddy", "1");
+ConVar yb_whose_your_daddy ("yb_whose_your_daddy", "0");
 
 int Bot::FindGoal (void)
 {
