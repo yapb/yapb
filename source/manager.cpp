@@ -9,11 +9,10 @@
 
 #include <core.h>
 
-ConVar yb_autovacate ("yb_autovacate", "-1");
+ConVar yb_autovacate ("yb_autovacate", "0");
 
-ConVar yb_quota ("yb_quota", "0");
-ConVar yb_quota_match ("yb_quota_match", "0");
-ConVar yb_quota_match_max ("yb_quota_match_max", "0");
+ConVar yb_quota ("yb_quota", "0", VT_NORMAL);
+ConVar yb_quota_mode ("yb_quota_mode", "normal");
 
 ConVar yb_join_after_player ("yb_join_after_player", "0");
 ConVar yb_join_team ("yb_join_team", "any");
@@ -312,10 +311,6 @@ void BotManager::AddBot (const String &name, int difficulty, int personality, in
 
    // put to queue
    m_creationTab.Push (bot);
-
-   // keep quota number up to date
-   if (GetBotsNum () + 1 > yb_quota.GetInt ())
-      yb_quota.SetInt (GetBotsNum () + 1);
 }
 
 void BotManager::AddBot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member)
@@ -332,10 +327,16 @@ void BotManager::AddBot (const String &name, const String &difficulty, const Str
    bot.personality = (personality.IsEmpty () || personality == any) ? -1 : personality.ToInt ();
 
    m_creationTab.Push (bot);
+}
 
-   // keep quota number up to date
-   if (GetBotsNum () + 1 > yb_quota.GetInt ())
-      yb_quota.SetInt (GetBotsNum () + 1);
+void BotManager::AdjustQuota (bool isPlayerConnection, edict_t *ent)
+{
+   // this function increases or decreases bot quota amount depending on autovacate variables
+
+   if (!IsDedicatedServer () || !yb_autovacate.GetBool () || GetBot (ent) != NULL)
+      return;
+
+   m_quotaOption = isPlayerConnection ? QUOTA_DECREMENT : QUOTA_INCREMENT;
 }
 
 void BotManager::MaintainBotQuota (void)
@@ -346,12 +347,7 @@ void BotManager::MaintainBotQuota (void)
    if (g_numWaypoints < 1 || g_waypointsChanged)
       return;
 
-   if (yb_join_after_player.GetInt () > 0 && GetHumansJoinedTeam () == 0)
-   {
-      RemoveAll (false);
-      return;
-   }
-
+   // bot's creation update
    if (!m_creationTab.IsEmpty () && m_maintainTime < GetWorldTime ())
    {
       CreateQueue last = m_creationTab.Pop ();
@@ -374,48 +370,44 @@ void BotManager::MaintainBotQuota (void)
    // now keep bot number up to date
    if (m_maintainTime < GetWorldTime ())
    {
-      int botNumber = GetBotsNum ();
-      int humanNumber = GetHumansNum ();
+      // don't allow that quota is below zero
+      if (yb_quota.GetInt () < 0)
+         yb_quota.SetInt (0);
 
-      if (botNumber > yb_quota.GetInt ())
-         RemoveRandom ();
+      int numBots = GetBotsNum ();
+      int numHumans = GetHumansJoinedTeam ();
+      int desiredCount = yb_quota.GetInt ();
 
-      if (humanNumber > 0 && yb_quota_match.GetInt () > 0)
-      {
-         int num = yb_quota_match.GetInt () * humanNumber;
+      if (yb_join_after_player.GetInt () > 0 && !numHumans)
+         desiredCount = 0;
 
-         if (num >= GetMaxClients () - humanNumber)
-            num = GetMaxClients () - humanNumber;
+      // quota mode
+      char mode = yb_quota_mode.GetString ()[0];
 
-         if (yb_quota_match_max.GetInt () > 0 && num > yb_quota_match_max.GetInt ())
-            num = yb_quota_match_max.GetInt ();
-
-         yb_quota.SetInt (num);
-         yb_autovacate.SetInt (0);
-      }
+      if (mode == 'f') // fill
+         desiredCount = max (0, desiredCount - numHumans);
+      else if (mode == 'm') // match
+         desiredCount = max (0, yb_quota.GetInt () * numHumans);
 
       if (yb_autovacate.GetBool ())
-      {
-         if (botNumber < yb_quota.GetInt () && botNumber < GetMaxClients () - 1)
-            AddRandom ();
-
-         if (humanNumber >= GetMaxClients ())
-            RemoveRandom ();
-      }
+         desiredCount = min (desiredCount, GetMaxClients () - (numHumans + 1));
       else
+         desiredCount = min (desiredCount, GetMaxClients () - numHumans);
+
+      if (m_quotaOption != QUOTA_NONE && numBots > 1 && desiredCount > 1)
       {
-         if (botNumber < yb_quota.GetInt () && botNumber < GetMaxClients ())
-            AddRandom ();
+         if (m_quotaOption == QUOTA_INCREMENT)
+            desiredCount++;
+         else
+            desiredCount--;
+
+         m_quotaOption = QUOTA_NONE;
       }
 
-      int botQuota = yb_autovacate.GetBool () ? (GetMaxClients () - 1 - (humanNumber + 1)) : GetMaxClients ();
-
-      // check valid range of quota
-      if (yb_quota.GetInt () > botQuota)
-         yb_quota.SetInt (botQuota);
-
-      else if (yb_quota.GetInt () < 0)
-         yb_quota.SetInt (0);
+      if (desiredCount > numBots)
+         AddRandom ();
+      else if (desiredCount < numBots)
+         RemoveRandom ();
 
       m_maintainTime = GetWorldTime () + 0.15f;
    }
@@ -425,6 +417,7 @@ void BotManager::InitQuota (void)
 {
    m_maintainTime = GetWorldTime () + 3.0f;
    m_creationTab.RemoveAll ();
+   m_quotaOption = QUOTA_NONE;
 }
 
 void BotManager::FillServer (int selection, int personality, int difficulty, int numToAdd)
@@ -458,7 +451,6 @@ void BotManager::FillServer (int selection, int personality, int difficulty, int
       AddBot ("", difficulty, personality, selection, -1);
 
    yb_quota.SetInt (toAdd);
-   yb_quota_match.SetInt (0);
 
    CenterPrint ("Fill Server with %s bots...", &teamDesc[selection][0]);
 }
@@ -876,6 +868,12 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    m_wantedTeam = team;
    m_wantedClass = member;
 
+   int newBotsNum = bots.GetBotsNum () + 1;
+
+   // keep quota number up to date
+   if (newBotsNum < GetMaxClients () && newBotsNum > yb_quota.GetInt ())
+      yb_quota.SetInt (newBotsNum);
+
    NewRound ();
 }
 
@@ -1174,9 +1172,11 @@ void Bot::Kick (void)
    ServerCommand ("kick \"%s\"", STRING (pev->netname));
    CenterPrint ("Bot '%s' kicked", STRING (pev->netname));
 
-   // balances quota
-   if (bots.GetBotsNum () - 1 < yb_quota.GetInt ())
-      yb_quota.SetInt (bots.GetBotsNum () - 1);
+   int newBotsNum = bots.GetBotsNum () - 1;
+
+   // keep quota number up to date
+   if (newBotsNum < GetMaxClients () && newBotsNum < yb_quota.GetInt ())
+      yb_quota.SetInt (newBotsNum);
 }
 
 void Bot::StartGame (void)

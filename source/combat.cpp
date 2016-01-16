@@ -913,7 +913,7 @@ WeaponSelectEnd:
       {
          if (distance < 64.0f)
          { 
-            if (Random.Long (1, 100) < 15 || HasShield ())
+            if (Random.Long (1, 100) < 30 || HasShield ())
                pev->button |= IN_ATTACK; // use primary attack
             else
                pev->button |= IN_ATTACK2; // use secondary attack
@@ -921,8 +921,6 @@ WeaponSelectEnd:
       }    
       else
       {
-         LookupEnemy ();
-
          if (selectTab[chosenWeaponIndex].primaryFireHold && m_ammo[g_weaponDefs[selectTab[selectIndex].id].ammo1] > selectTab[selectIndex].minPrimaryAmmo) // if automatic weapon, just press attack
             pev->button |= IN_ATTACK;
          else // if not, toggle buttons
@@ -993,15 +991,12 @@ bool Bot::IsWeaponBadInDistance (int weaponIndex, float distance)
 void Bot::FocusEnemy (void)
 {
    // aim for the head and/or body
-   Vector enemyOrigin = GetAimPosition ();
-   m_lookAt = enemyOrigin;
+   m_lookAt = GetAimPosition ();
 
    if (m_enemySurpriseTime > GetWorldTime ())
       return;
 
-   enemyOrigin = (enemyOrigin - EyePosition ()).Get2D ();
-
-   float distance = enemyOrigin.GetLength ();  // how far away is the enemy scum?
+   float distance = (m_lookAt - EyePosition ()).GetLength2D ();  // how far away is the enemy scum?
 
    if (distance < 128.0f)
    {
@@ -1044,42 +1039,24 @@ void Bot::CombatFight (void)
    if (IsEntityNull (m_enemy))
       return;
 
-   Vector enemyOrigin = m_lookAt;
+   float distance = (m_lookAt - EyePosition ()).GetLength2D ();  // how far away is the enemy scum?
 
-   if (m_currentWeapon == WEAPON_KNIFE)
-      m_destOrigin = m_enemy->v.origin;
-
-   enemyOrigin = (enemyOrigin - EyePosition ()).Get2D (); // ignore z component (up & down)
-
-   float distance = enemyOrigin.GetLength ();  // how far away is the enemy scum?
-
-   if (m_timeWaypointMove + m_frameInterval + 0.5f < GetWorldTime ())
+   if (m_timeWaypointMove < GetWorldTime ())
    {
       int approach;
 
+      if (m_currentWeapon == WEAPON_KNIFE) // knife?
+         approach = 100;
       if ((m_states & STATE_SUSPECT_ENEMY) && !(m_states & STATE_SEEING_ENEMY)) // if suspecting enemy stand still
          approach = 49;
       else if (m_isReloading || m_isVIP) // if reloading or vip back off
          approach = 29;
-      else if (m_currentWeapon == WEAPON_KNIFE) // knife?
-         approach = 100;
       else
       {
          approach = static_cast <int> (pev->health * m_agressionLevel);
 
          if (UsesSniper () && approach > 49)
             approach = 49;
-      }
-
-      if (UsesPistol() && !((m_enemy->v.weapons & WEAPON_SECONDARY) || (m_enemy->v.weapons & (1 << WEAPON_SG550))) && !g_bombPlanted)
-      {
-         m_fearLevel += 0.5f;
-
-         CheckGrenades();
-         CheckThrow (EyePosition(), m_throw);
-
-         if ((m_states & STATE_SEEING_ENEMY) && !m_hasC4)
-            PushTask (TASK_SEEKCOVER, TASKPRI_SEEKCOVER, -1, Random.Long (10, 20), true);
       }
 
       // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
@@ -1108,7 +1085,7 @@ void Bot::CombatFight (void)
       }
       else if (UsesRifle () || UsesSubmachineGun ())
       {
-         if (m_lastFightStyleCheck + 3.0 < GetWorldTime ())
+         if (m_lastFightStyleCheck + 3.0f < GetWorldTime ())
          {
             int rand = Random.Long (1, 100);
 

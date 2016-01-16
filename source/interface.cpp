@@ -1105,10 +1105,7 @@ int ClientConnect (edict_t *ent, const char *name, const char *addr, char reject
    if (strcmp (addr, "loopback") == 0)
       g_hostEntity = ent; // save the edict of the listen server client...
 
-   extern ConVar yb_autovacate;
-
-   if (IsDedicatedServer () && yb_autovacate.GetBool () && !IsValidBot (ent) && ent != g_hostEntity)
-      bots.RemoveRandom ();
+   bots.AdjustQuota (true, ent);
 
    if (g_isMetamod)
       RETURN_META_VALUE (MRES_IGNORED, 0);
@@ -1129,11 +1126,7 @@ void ClientDisconnect (edict_t *ent)
    // to reset his entity pointer for safety. There are still a few server frames to go once a
    // listen server client disconnects, and we don't want to send him any sort of message then.
 
-   extern ConVar yb_autovacate;
-   extern ConVar yb_quota;
-
-   if (yb_autovacate.GetBool () && IsValidPlayer (ent) && !IsValidBot (ent) && ent != g_hostEntity && yb_quota.GetInt () < GetMaxClients () - 1)
-      bots.AddRandom ();
+   bots.AdjustQuota (false, ent);
 
    int i = IndexOfEntity (ent) - 1;
 
@@ -2773,7 +2766,7 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...)
    vsprintf (buffer, format, ap);
    va_end (ap);
 
-   if (strstr (buffer, "_Defuse_") != NULL)
+   if ((g_mapType & MAP_DE) && g_bombPlanted && strstr (buffer, "_Defuse_") != NULL)
    {
       // notify all terrorists that CT is starting bomb defusing
       for (int i = 0; i < GetMaxClients (); i++)
