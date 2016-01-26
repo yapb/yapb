@@ -312,9 +312,9 @@ void NetworkMsg::Execute (void *p)
                if (target != NULL)
                {
                   if (GetTeam (killer) == GetTeam (victim))
-					  target->m_voteKickIndex = killerIndex;
+                     target->m_voteKickIndex = killerIndex;
 
-				  target->m_notKilled = false;
+                  target->m_notKilled = false;
                }
             }
          }

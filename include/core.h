@@ -1431,11 +1431,6 @@ public:
       m_deathMsgSent = sent;
    }
 
-   inline bool GetDeathMsgState (void)
-   {
-      return m_deathMsgSent;
-   }
-
    // grenades
    void UpdateActiveGrenades (void);
    const Array <entity_t> &GetActiveGrenades (void);

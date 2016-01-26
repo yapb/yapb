@@ -1423,16 +1423,16 @@ void BotManager::SendPingDataOffsets (edict_t *to)
          {
             // start a new message
             MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, SVC_PINGS, NULL, to);
-            WRITE_BYTE ((m_bots[i]->m_pingOffset[sending] * 64) + (1 + 2 * i));
-            WRITE_SHORT (m_bots[i]->m_ping[sending]);
+            WRITE_BYTE ((bot->m_pingOffset[sending] * 64) + (1 + 2 * i));
+            WRITE_SHORT (bot->m_ping[sending]);
 
             sending++;
          }
       case 1:
          {
             // append additional data
-            WRITE_BYTE ((m_bots[i]->m_pingOffset[sending] * 128) + (2 + 4 * i));
-            WRITE_SHORT (m_bots[i]->m_ping[sending]);
+            WRITE_BYTE ((bot->m_pingOffset[sending] * 128) + (2 + 4 * i));
+            WRITE_SHORT (bot->m_ping[sending]);
 
             sending++;
          }
@@ -1440,7 +1440,7 @@ void BotManager::SendPingDataOffsets (edict_t *to)
          {
             // append additional data and end message
             WRITE_BYTE (4 + 8 * i);
-            WRITE_SHORT (m_bots[i]->m_ping[sending]);
+            WRITE_SHORT (bot->m_ping[sending]);
             WRITE_BYTE (0);
             MESSAGE_END ();
 

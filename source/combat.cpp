@@ -1002,11 +1002,11 @@ void Bot::FocusEnemy (void)
    {
       if (m_currentWeapon == WEAPON_KNIFE)
       {
-         if (distance <= 80.0f)
+         if (distance < 80.0f)
             m_wantsToFire = true;
       }
       else
-         m_wantsToFire = GetShootingConeDeviation (GetEntity (), &m_enemyOrigin) > 0.8f;
+         m_wantsToFire = true;
    }
    else
    {
