@@ -987,6 +987,7 @@ void CheckWelcomeMessage (void)
    if (alreadyReceived)
       return;
 
+#ifndef PLATFORM_ANDROID
    Array <String> sentences;
 
    // add default messages
@@ -1006,14 +1007,16 @@ void CheckWelcomeMessage (void)
    sentences.Push ("high amigo, your administration has been great last day");
    sentences.Push ("attention, expect experimental armed hostile presence");
    sentences.Push ("warning, medical attention required");
+#endif
 
    if (IsAlive (g_hostEntity) && !alreadyReceived && receiveTime < 1.0 && (g_numWaypoints > 0 ? g_isCommencing : true))
       receiveTime = GetWorldTime () + 4.0f; // receive welcome message in four seconds after game has commencing
 
    if (receiveTime > 0.0f && receiveTime < GetWorldTime () && !alreadyReceived && (g_numWaypoints > 0 ? g_isCommencing : true))
    {
+#ifndef PLATFORM_ANDROID
       ServerCommand ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));
-
+#endif
       ChartPrint ("----- %s v%s (Build: %u), {%s}, (c) 2016, by %s (%s)-----", PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_DATE, PRODUCT_AUTHOR, PRODUCT_URL);
       
       MESSAGE_BEGIN (MSG_ONE, SVC_TEMPENTITY, NULL, g_hostEntity);
