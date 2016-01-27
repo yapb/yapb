@@ -203,7 +203,7 @@ namespace Math
    //
    static inline void SineCosine (float rad, float *sine, float *cosine)
    {
-#if defined (_WIN32) && defined (_MSC_VER)
+#if defined (_WIN32) && defined (_MSC_VER) && !defined (__clang__)
       __asm
       {
          fld dword ptr[rad]
@@ -223,7 +223,8 @@ namespace Math
       *cosine = _cos;
       *sine = _sin;
 #else
-      #error "SineConsine not defined."
+      *sine = sinf (rad);
+      *cosine = cosf (rad);
 #endif
    }
 
@@ -616,7 +617,7 @@ public:
    //
    inline static const Vector &GetZero (void)
    {
-      static const Vector &s_zero = Vector (0.0f, 0.0f, 0.0f);
+      static const Vector s_zero = Vector (0.0f, 0.0f, 0.0f);
       return s_zero;
    }
 
@@ -2755,21 +2756,6 @@ public:
    }
 
    //
-   // Function: CompareI
-   //  Compares string with other string without case check.
-   //
-   // Parameters:
-   //  string - String t compare with.
-   //
-   // Returns:
-   //  Zero if they are equal.
-   //
-   int CompareI (String &string) const
-   {
-      return strcmpi (m_bufferPtr, string.m_bufferPtr);
-   }
-
-   //
    // Function: Compare
    //  Compares string with other string.
    //
@@ -2782,21 +2768,6 @@ public:
    int Compare (const char *str) const
    {
       return strcmp (m_bufferPtr, str);
-   }
-
-   //
-   // Function: CompareI
-   //  Compares string with other string without case check.
-   //
-   // Parameters:
-   //  str - String to compare with.
-   //
-   // Returns:
-   //  Zero if they are equal.
-   //
-   int CompareI (const char *str) const
-   {
-      return stricmp (m_bufferPtr, str);
    }
 
    //

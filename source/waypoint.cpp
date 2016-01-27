@@ -1565,7 +1565,7 @@ void Waypoint::Think (void)
       float distance = (m_paths[i]->origin - g_hostEntity->v.origin).GetLength ();
 
       // check if waypoint is whitin a distance, and is visible
-      if (distance < 1024.0f && ((::IsVisible (m_paths[i]->origin, g_hostEntity) && IsInViewCone (m_paths[i]->origin, g_hostEntity)) || !IsAlive (g_hostEntity) || distance < 512.0f))
+      if (distance < 512.0f && ((::IsVisible (m_paths[i]->origin, g_hostEntity) && IsInViewCone (m_paths[i]->origin, g_hostEntity)) || !IsAlive (g_hostEntity) || distance < 128.0f))
       {
          // check the distance
          if (distance < nearestDistance)
@@ -1574,7 +1574,7 @@ void Waypoint::Think (void)
             nearestDistance = distance;
          }
 
-         if (m_waypointDisplayTime[i] + 1.0f < GetWorldTime ())
+         if (m_waypointDisplayTime[i] + 0.8f < GetWorldTime ())
          {
             float nodeHeight = 0.0f;
 

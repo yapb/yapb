@@ -1242,7 +1242,7 @@ void Bot::CheckMessageQueue (void)
             }
          }
 
-         if (m_radioSelect != Radio_ReportingIn && g_radioInsteadVoice || yb_communication_type.GetInt () != 2 || g_chatterFactory[m_radioSelect].IsEmpty () || g_gameVersion == CSV_OLD)
+         if ((m_radioSelect != Radio_ReportingIn && g_radioInsteadVoice) || yb_communication_type.GetInt () != 2 || g_chatterFactory[m_radioSelect].IsEmpty () || g_gameVersion == CSV_OLD)
          {
             if (m_radioSelect < Radio_GoGoGo)
                FakeClientCommand (GetEntity (), "radio1");
@@ -2128,29 +2128,25 @@ void Bot::PushTask (TaskID id, float desire, int data, float time, bool resume)
    DeleteSearchNodes ();
    IgnoreCollisionShortly ();
 
+   int taskId = GetTaskId ();
+
    // leader bot?
-   if (m_isLeader && GetTaskId () == TASK_SEEKCOVER)
+   if (m_isLeader && taskId == TASK_SEEKCOVER)
       CommandTeam (); // reorganize team if fleeing
 
-   if (GetTaskId () == TASK_CAMP)
+   if (taskId == TASK_CAMP)
       SelectBestWeapon ();
 
    // this is best place to handle some voice commands report team some info
    if (Random.Long (0, 100) < 95)
    {
-      switch (GetTaskId ())
-      {
-      case TASK_BLINDED:
+      if (taskId == TASK_BLINDED)
          InstantChatterMessage (Chatter_GotBlinded);
-         break;
-
-      case TASK_PLANTBOMB:
+      else if (taskId == TASK_PLANTBOMB)
          InstantChatterMessage (Chatter_PlantingC4);
-         break;
-      }
    }
 
-   if (Random.Long (0, 100) < 80 && GetTaskId () == TASK_CAMP)
+   if (Random.Long (0, 100) < 80 && taskId == TASK_CAMP)
    {
       if ((g_mapType & MAP_DE) && g_bombPlanted)
          ChatterMessage (Chatter_GuardDroppedC4);
@@ -4440,6 +4436,10 @@ void Bot::RunTask_PickupItem ()
 
    switch (m_pickupType)
    {
+   case PICKUP_DROPPED_C4:
+   case PICKUP_NONE:
+      break;
+
    case PICKUP_WEAPON:
       m_aimFlags |= AIM_NAVPOINT;
 

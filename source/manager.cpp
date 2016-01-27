@@ -91,6 +91,9 @@ void BotManager::TouchWithKillerEntity (Bot *bot)
    MDLL_Touch (m_killerEntity, bot->GetEntity ());
 }
 
+// it's already defined in interface.cpp
+extern "C" void player (entvars_t *pev);
+
 void BotManager::CallGameEntity (entvars_t *vars)
 {
    // this function calls gamedll player() function, in case to create player entity in game
@@ -100,14 +103,7 @@ void BotManager::CallGameEntity (entvars_t *vars)
       CALL_GAME_ENTITY (PLID, "player", vars);
       return;
    }
-
-   static EntityPtr_t playerFunction = NULL;
-
-   if (playerFunction == NULL)
-      playerFunction = g_gameLib->GetFuncAddr <EntityPtr_t> ("player");
-
-   if (playerFunction != NULL)
-      (*playerFunction) (vars);
+   player (vars);
 }
 
 int BotManager::CreateBot (const String &name, int difficulty, int personality, int team, int member)
@@ -851,7 +847,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    char rejectReason[128];
    int clientIndex = IndexOfEntity (bot);
 
-   memset (this, 0, sizeof (*this));
+   memset (reinterpret_cast <void *> (this), 0, sizeof (*this));
 
    pev = &bot->v;
 
@@ -1477,7 +1473,13 @@ void BotManager::UpdateActiveGrenades (void)
 
    // search the map for any type of grenade
    while (!IsEntityNull (grenade = FIND_ENTITY_BY_CLASSNAME (grenade, "grenade")))
+   {
+      // do not count c4 as a grenade
+      if (strcmp (STRING (grenade->v.model) + 9, "c4.mdl") == 0)
+         continue;
+
       m_activeGrenades.Push (grenade);
+   }
 }
 
 const Array <entity_t> &BotManager::GetActiveGrenades (void)

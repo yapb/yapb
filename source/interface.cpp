@@ -2206,9 +2206,6 @@ void StartFrame (void)
       }
       bots.CalculatePingOffsets ();
 
-      if (g_bombPlanted)
-         waypoints.SetBombPosition ();
-
       if (g_isMetamod)
       {
          static cvar_t *csdm_active;
@@ -3208,18 +3205,23 @@ void ConVarWrapper::PushRegisteredConVarsToEngine (bool gameVars)
    }
 }
 
-#define LINK_ENTITY(entityFunction) \
-export void entityFunction (entvars_t *pev) \
+static void LinkEntity_Helper (EntityPtr_t &entAddress, const char *name, entvars_t *pev)
+{
+   // here we're see an ugliest hack :)
+   if (entAddress == NULL || g_gameVersion == CSV_CZERO)
+      entAddress = g_gameLib->GetFuncAddr <EntityPtr_t > (name);
+
+   if (entAddress == NULL)
+      return;
+
+   entAddress (pev);
+}
+
+#define LINK_ENTITY(entityName) \
+export void entityName (entvars_t *pev) \
 { \
-   static EntityPtr_t entity_addr = NULL; \
-   \
-   if (entity_addr == NULL) \
-      entity_addr = g_gameLib->GetFuncAddr <EntityPtr_t> (#entityFunction); \
-   \
-   if (entity_addr == NULL) \
-      return; \
-   \
-   (*entity_addr) (pev); \
+   static EntityPtr_t addr = NULL; \
+   LinkEntity_Helper (addr, #entityName, pev); \
 } \
 
 // entities in counter-strike...

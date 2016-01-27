@@ -869,7 +869,7 @@ WeaponSelectEnd:
    {
       if (distance >= 750.0f && !IsShieldDrawn ())
          pev->button |= IN_ATTACK2; // draw the shield
-      else if (IsShieldDrawn () || (!IsEntityNull (m_enemy) && (m_enemy->v.button & IN_RELOAD) || !IsEnemyViewable(m_enemy)))
+      else if (IsShieldDrawn () || (!IsEntityNull (m_enemy) && ((m_enemy->v.button & IN_RELOAD) || !IsEnemyViewable(m_enemy))))
          pev->button |= IN_ATTACK2; // draw out the shield
 
       m_shieldCheckTime = GetWorldTime () + 1.0f;
