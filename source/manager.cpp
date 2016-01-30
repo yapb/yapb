@@ -340,9 +340,10 @@ void BotManager::AdjustQuota (bool isPlayerConnection, edict_t *ent)
       if (yb_autovacate_smart_kick.GetBool ())
          AddPlayerToCheckTeamQueue (ent);
       else
+      {
          RemoveRandom ();
-
-      m_balanceCount--;
+         m_balanceCount--;
+      }
    }
    else if (m_balanceCount <= 0)
    {
@@ -385,7 +386,9 @@ void BotManager::VerifyPlayersHasJoinedTeam (int &desiredCount)
             if (cl.ent != m_trackedPlayers[it])
                continue;
 
+            m_balanceCount--;
             desiredCount--;
+
             m_trackedPlayers.RemoveAt (it);
 
             break;
