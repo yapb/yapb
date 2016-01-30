@@ -1050,6 +1050,15 @@ void DetectCSVersion (void)
    if (g_gameVersion == CSV_OLD || g_gameVersion == CSV_CZERO)
       return;
 
+   // detect xash engine
+   if (g_engfuncs.pfnCVarGetPointer ("build") != NULL)
+   {
+      AddLogEntry (true, LL_DEFAULT, "Detected Xash3D Engine. Setting game version to old.");
+      g_gameVersion = CSV_OLD;
+
+      return;
+   }
+
    // counter-strike 1.6 or higher (plus detects for non-steam versions of 1.5)
    byte *detection = (*g_engfuncs.pfnLoadFileForMe) ("events/galil.sc", NULL);
 
