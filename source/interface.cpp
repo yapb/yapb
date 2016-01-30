@@ -38,19 +38,19 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          
    // kicking off one bot from the terrorist team
    else if (stricmp (arg0, "kickbot_t") == 0 || stricmp (arg0, "kick_t") == 0)
-      bots.RemoveFromTeam (TEAM_TF);
+      bots.RemoveFromTeam (TERRORIST);
 
    // kicking off one bot from the counter-terrorist team
    else if (stricmp (arg0, "kickbot_ct") == 0 || stricmp (arg0, "kick_ct") == 0)
-      bots.RemoveFromTeam (TEAM_CF);
+      bots.RemoveFromTeam (CT);
 
    // kills all bots on the terrorist team
    else if (stricmp (arg0, "killbots_t") == 0 || stricmp (arg0, "kill_t") == 0)
-      bots.KillAll (TEAM_TF);
+      bots.KillAll (TERRORIST);
 
    // kills all bots on the counter-terrorist team
    else if (stricmp (arg0, "killbots_ct") == 0 || stricmp (arg0, "kill_ct") == 0)
-      bots.KillAll (TEAM_CF);
+      bots.KillAll (CT);
 
    // list all bots playeing on the server
    else if (stricmp (arg0, "listbots") == 0 || stricmp (arg0, "list") == 0)
@@ -2206,9 +2206,6 @@ void StartFrame (void)
       }
       bots.CalculatePingOffsets ();
 
-      if (g_bombPlanted)
-         waypoints.SetBombPosition ();
-
       if (g_isMetamod)
       {
          static cvar_t *csdm_active;
@@ -2772,7 +2769,7 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...)
       {
          Bot *bot = bots.GetBot (i);
 
-         if (bot != NULL && GetTeam (bot->GetEntity ()) == TEAM_TF && IsAlive (bot->GetEntity ()))
+         if (bot != NULL && GetTeam (bot->GetEntity ()) == TERRORIST && IsAlive (bot->GetEntity ()))
          {
             bot->ResetTasks ();
             bot->MoveToVector (waypoints.GetBombPosition ());
@@ -3208,18 +3205,23 @@ void ConVarWrapper::PushRegisteredConVarsToEngine (bool gameVars)
    }
 }
 
-#define LINK_ENTITY(entityFunction) \
-export void entityFunction (entvars_t *pev) \
+static void LinkEntity_Helper (EntityPtr_t &entAddress, const char *name, entvars_t *pev)
+{
+   // here we're see an ugliest hack :)
+   if (entAddress == NULL || g_gameVersion == CSV_CZERO)
+      entAddress = g_gameLib->GetFuncAddr <EntityPtr_t > (name);
+
+   if (entAddress == NULL)
+      return;
+
+   entAddress (pev);
+}
+
+#define LINK_ENTITY(entityName) \
+export void entityName (entvars_t *pev) \
 { \
-   static EntityPtr_t entity_addr = NULL; \
-   \
-   if (entity_addr == NULL) \
-      entity_addr = g_gameLib->GetFuncAddr <EntityPtr_t> (#entityFunction); \
-   \
-   if (entity_addr == NULL) \
-      return; \
-   \
-   (*entity_addr) (pev); \
+   static EntityPtr_t addr = NULL; \
+   LinkEntity_Helper (addr, #entityName, pev); \
 } \
 
 // entities in counter-strike...

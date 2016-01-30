@@ -536,7 +536,7 @@ float Bot::GetZOffset (float distance)
 
    if (distance < 2800.0f && distance > DoubleBurstDistance)
    {
-      if (sniper) result = 3.5f;
+      if (sniper) result = 1.5f;
       else if (zoomableRifle) result = 4.5f;
       else if (pistol) result = 6.5f;
       else if (submachine) result = 5.5f;
@@ -546,7 +546,7 @@ float Bot::GetZOffset (float distance)
    }
    else if (distance > BurstDistance && distance <= DoubleBurstDistance)
    {
-      if (sniper) result = 3.5f;
+      if (sniper) result = 2.5f;
       else if (zoomableRifle) result = 3.5f;
       else if (pistol) result = 6.5f;
       else if (submachine) result = 3.5f;
@@ -869,7 +869,7 @@ WeaponSelectEnd:
    {
       if (distance >= 750.0f && !IsShieldDrawn ())
          pev->button |= IN_ATTACK2; // draw the shield
-      else if (IsShieldDrawn () || (!IsEntityNull (m_enemy) && (m_enemy->v.button & IN_RELOAD) || !IsEnemyViewable(m_enemy)))
+      else if (IsShieldDrawn () || (!IsEntityNull (m_enemy) && ((m_enemy->v.button & IN_RELOAD) || !IsEnemyViewable(m_enemy))))
          pev->button |= IN_ATTACK2; // draw out the shield
 
       m_shieldCheckTime = GetWorldTime () + 1.0f;

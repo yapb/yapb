@@ -27,12 +27,11 @@
     <ClInclude Include="..\include\engine\sdk_util.h" />
     <ClInclude Include="..\include\engine\util.h" />
     <ClInclude Include="..\include\globals.h" />
+    <ClInclude Include="..\include\platform.h" />
     <ClInclude Include="..\include\resource.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\source\basecode.cpp">
-      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Level4</WarningLevel>
-    </ClCompile>
+    <ClCompile Include="..\source\basecode.cpp" />
     <ClCompile Include="..\source\combat.cpp" />
     <ClCompile Include="..\source\manager.cpp" />
     <ClCompile Include="..\source\chatlib.cpp" />
@@ -180,23 +179,17 @@
     </Midl>
     <ClCompile>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <EnableFiberSafeOptimizations>false</EnableFiberSafeOptimizations>
       <AdditionalIncludeDirectories>..\mmgr;..\include\engine;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <StringPooling>true</StringPooling>
       <ExceptionHandling>false</ExceptionHandling>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
-      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
-      <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PrecompiledHeaderFile>core.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>.\release\inf\yapb.pch</PrecompiledHeaderOutputFile>
       <AssemblerListingLocation>.\release\asm\</AssemblerListingLocation>
-      <ObjectFileName>.\release\obj\</ObjectFileName>
       <ProgramDataBaseFileName>.\release\inf\</ProgramDataBaseFileName>
       <WarningLevel>Level4</WarningLevel>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -209,9 +202,11 @@
       <Optimization>Full</Optimization>
       <GenerateAlternateCodePaths>AVXI</GenerateAlternateCodePaths>
       <UseProcessorExtensions>AVXI</UseProcessorExtensions>
-      <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <ForceConformanceInForLoopScope>false</ForceConformanceInForLoopScope>
       <MinimalRebuild>false</MinimalRebuild>
+      <PrecompiledHeaderOutputFileDirectory />
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OmitFramePointers>true</OmitFramePointers>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -228,7 +223,7 @@
       <OutputFile>.\release\yapb.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DelayLoadDLLs>user32.dll;ws2_32.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>Debug</GenerateDebugInformation>
       <GenerateMapFile>false</GenerateMapFile>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>false</OptimizeReferences>
@@ -245,6 +240,7 @@
       <ImageHasSafeExceptionHandlers>
       </ImageHasSafeExceptionHandlers>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+      <FullProgramDatabaseFile>true</FullProgramDatabaseFile>
     </Link>
     <PostBuildEvent>
       <Command>

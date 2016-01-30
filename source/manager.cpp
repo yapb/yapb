@@ -31,8 +31,8 @@ BotManager::BotManager (void)
    m_lastWinner = -1;
    m_deathMsgSent = false;
 
-   m_economicsGood[TEAM_TF] = true;
-   m_economicsGood[TEAM_CF] = true;
+   m_economicsGood[TERRORIST] = true;
+   m_economicsGood[CT] = true;
 
    memset (m_bots, 0, sizeof (m_bots));
 
@@ -91,6 +91,9 @@ void BotManager::TouchWithKillerEntity (Bot *bot)
    MDLL_Touch (m_killerEntity, bot->GetEntity ());
 }
 
+// it's already defined in interface.cpp
+extern "C" void player (entvars_t *pev);
+
 void BotManager::CallGameEntity (entvars_t *vars)
 {
    // this function calls gamedll player() function, in case to create player entity in game
@@ -100,14 +103,7 @@ void BotManager::CallGameEntity (entvars_t *vars)
       CALL_GAME_ENTITY (PLID, "player", vars);
       return;
    }
-
-   static EntityPtr_t playerFunction = NULL;
-
-   if (playerFunction == NULL)
-      playerFunction = g_gameLib->GetFuncAddr <EntityPtr_t> ("player");
-
-   if (playerFunction != NULL)
-      (*playerFunction) (vars);
+   player (vars);
 }
 
 int BotManager::CreateBot (const String &name, int difficulty, int personality, int team, int member)
@@ -345,9 +341,14 @@ void BotManager::AdjustQuota (bool isPlayerConnection, edict_t *ent)
          AddPlayerToCheckTeamQueue (ent);
       else
          RemoveRandom ();
+
+      m_balanceCount--;
    }
-   else
+   else if (m_balanceCount <= 0)
+   {
       AddRandom ();
+      m_balanceCount++;
+   }
 }
 
 void BotManager::AddPlayerToCheckTeamQueue (edict_t *ent)
@@ -377,7 +378,7 @@ void BotManager::VerifyPlayersHasJoinedTeam (int &desiredCount)
    {
       Client &cl = g_clients[i];
 
-      if ((cl.flags & CF_USED) && cl.team != TEAM_SPEC && !IsValidBot (cl.ent))
+      if ((cl.flags & CF_USED) && cl.team != SPECTATOR && !IsValidBot (cl.ent))
       {
          FOR_EACH_AE (m_trackedPlayers, it)
          {
@@ -462,6 +463,8 @@ void BotManager::MaintainBotQuota (void)
 
 void BotManager::InitQuota (void)
 {
+   m_balanceCount = 0;
+
    m_maintainTime = GetWorldTime () + 3.0f;
    m_quotaMaintainTime = GetWorldTime () + 3.0f;
 
@@ -563,7 +566,7 @@ void BotManager::RemoveMenu (edict_t *ent, int selection)
       if ((m_bots[i] != NULL) && !IsEntityNull (m_bots[i]->GetEntity ()))
       {
          validSlots |= 1 << (i - ((selection - 1) * 8));
-         sprintf (buffer, "%s %1.1d. %s%s\n", buffer, i - ((selection - 1) * 8) + 1, STRING (m_bots[i]->pev->netname), GetTeam (m_bots[i]->GetEntity ()) == TEAM_CF ? " \\y(CT)\\w" : " \\r(T)\\w");
+         sprintf (buffer, "%s %1.1d. %s%s\n", buffer, i - ((selection - 1) * 8) + 1, STRING (m_bots[i]->pev->netname), GetTeam (m_bots[i]->GetEntity ()) == CT ? " \\y(CT)\\w" : " \\r(T)\\w");
       }
       else
          sprintf (buffer, "%s\\d %1.1d. Not a Bot\\w\n", buffer, i - ((selection - 1) * 8) + 1);
@@ -851,7 +854,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    char rejectReason[128];
    int clientIndex = IndexOfEntity (bot);
 
-   memset (this, 0, sizeof (*this));
+   memset (reinterpret_cast <void *> (this), 0, sizeof (*this));
 
    pev = &bot->v;
 
@@ -1030,7 +1033,7 @@ int BotManager::GetHumansJoinedTeam (void)
    {
       Client *cl = &g_clients[i];
 
-      if ((cl->flags & (CF_USED | CF_ALIVE)) && m_bots[i] == NULL && cl->team != TEAM_SPEC && !(cl->ent->v.flags & FL_FAKECLIENT) && cl->ent->v.movetype != MOVETYPE_FLY)
+      if ((cl->flags & (CF_USED | CF_ALIVE)) && m_bots[i] == NULL && cl->team != SPECTATOR && !(cl->ent->v.flags & FL_FAKECLIENT) && cl->ent->v.movetype != MOVETYPE_FLY)
          count++;
    }
    return count;
@@ -1477,7 +1480,13 @@ void BotManager::UpdateActiveGrenades (void)
 
    // search the map for any type of grenade
    while (!IsEntityNull (grenade = FIND_ENTITY_BY_CLASSNAME (grenade, "grenade")))
+   {
+      // do not count c4 as a grenade
+      if (strcmp (STRING (grenade->v.model) + 9, "c4.mdl") == 0)
+         continue;
+
       m_activeGrenades.Push (grenade);
+   }
 }
 
 const Array <entity_t> &BotManager::GetActiveGrenades (void)

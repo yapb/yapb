@@ -393,7 +393,7 @@ void NetworkMsg::Execute (void *p)
 
             if (FStrEq (PTR_TO_STR (p), "#CTs_Win"))
             {
-               bots.SetLastWinner (TEAM_CF); // update last winner for economics
+               bots.SetLastWinner (CT); // update last winner for economics
 
                if (yb_communication_type.GetInt () == 2)
                {
@@ -406,13 +406,13 @@ void NetworkMsg::Execute (void *p)
 
             if (FStrEq (PTR_TO_STR (p), "#Game_will_restart_in"))
             {
-               bots.CheckTeamEconomics (TEAM_CF, true);
-               bots.CheckTeamEconomics (TEAM_TF, true);
+               bots.CheckTeamEconomics (CT, true);
+               bots.CheckTeamEconomics (TERRORIST, true);
             }
 
             if (FStrEq (PTR_TO_STR (p), "#Terrorists_Win"))
             {
-               bots.SetLastWinner (TEAM_TF); // update last winner for economics
+               bots.SetLastWinner (TERRORIST); // update last winner for economics
 
                if (yb_communication_type.GetInt () == 2)
                {
@@ -440,7 +440,7 @@ void NetworkMsg::Execute (void *p)
                   bot->DeleteSearchNodes ();
                   bot->ResetTasks ();
 
-                  if (yb_communication_type.GetInt () == 2 && Random.Long (0, 100) < 75 && GetTeam (bot->GetEntity ()) == TEAM_CF)
+                  if (yb_communication_type.GetInt () == 2 && Random.Long (0, 100) < 75 && GetTeam (bot->GetEntity ()) == CT)
                      bot->ChatterMessage (Chatter_WhereIsTheBomb);
                }
             }
@@ -466,11 +466,11 @@ void NetworkMsg::Execute (void *p)
             Client &cl = g_clients[playerIndex - 1];
 
             if (PTR_TO_INT (p) == 1)
-               cl.realTeam = TEAM_TF;
+               cl.realTeam = TERRORIST;
             else if (PTR_TO_INT (p) == 2)
-               cl.realTeam = TEAM_CF;
+               cl.realTeam = CT;
             else
-               cl.realTeam = TEAM_SPEC;
+               cl.realTeam = SPECTATOR;
 
             if (yb_csdm_mode.GetInt () == 2)
                cl.team = playerIndex;

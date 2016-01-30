@@ -1565,7 +1565,7 @@ void Waypoint::Think (void)
       float distance = (m_paths[i]->origin - g_hostEntity->v.origin).GetLength ();
 
       // check if waypoint is whitin a distance, and is visible
-      if (distance < 1024.0f && ((::IsVisible (m_paths[i]->origin, g_hostEntity) && IsInViewCone (m_paths[i]->origin, g_hostEntity)) || !IsAlive (g_hostEntity) || distance < 512.0f))
+      if (distance < 512.0f && ((::IsVisible (m_paths[i]->origin, g_hostEntity) && IsInViewCone (m_paths[i]->origin, g_hostEntity)) || !IsAlive (g_hostEntity) || distance < 128.0f))
       {
          // check the distance
          if (distance < nearestDistance)
@@ -1574,7 +1574,7 @@ void Waypoint::Think (void)
             nearestDistance = distance;
          }
 
-         if (m_waypointDisplayTime[i] + 1.0f < GetWorldTime ())
+         if (m_waypointDisplayTime[i] + 0.8f < GetWorldTime ())
          {
             float nodeHeight = 0.0f;
 
@@ -1730,10 +1730,10 @@ void Waypoint::Think (void)
       // draw the danger directions
       if (!g_waypointsChanged)
       {
-         if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team0DangerIndex != -1 && GetTeam (g_hostEntity) == TEAM_TF)
+         if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team0DangerIndex != -1 && GetTeam (g_hostEntity) == TERRORIST)
             DrawArrow (g_hostEntity, path->origin, m_paths[(g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team0DangerIndex]->origin, 15, 0, 255, 0, 0, 200, 0, 10); // draw a red arrow to this index's danger point
 
-         if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team1DangerIndex != -1 && GetTeam (g_hostEntity) == TEAM_CF)
+         if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team1DangerIndex != -1 && GetTeam (g_hostEntity) == CT)
             DrawArrow (g_hostEntity, path->origin, m_paths[(g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team1DangerIndex]->origin, 15, 0, 0, 0, 255, 200, 0, 10); // draw a blue arrow to this index's danger point
       }
 

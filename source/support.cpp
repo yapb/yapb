@@ -736,8 +736,8 @@ void RoundInit (void)
    g_roundEnded = false;
 
    // check team economics
-   bots.CheckTeamEconomics (TEAM_TF);
-   bots.CheckTeamEconomics (TEAM_CF);
+   bots.CheckTeamEconomics (TERRORIST);
+   bots.CheckTeamEconomics (CT);
 
    for (int i = 0; i < GetMaxClients (); i++)
    {
@@ -753,8 +753,8 @@ void RoundInit (void)
    g_timeBombPlanted = 0.0f;
    g_timeNextBombUpdate = 0.0f;
 
-   g_leaderChoosen[TEAM_CF] = false;
-   g_leaderChoosen[TEAM_TF] =  false;
+   g_leaderChoosen[CT] = false;
+   g_leaderChoosen[TERRORIST] =  false;
 
    g_lastRadioTime[0] = 0.0f;
    g_lastRadioTime[1] = 0.0f;
@@ -987,6 +987,7 @@ void CheckWelcomeMessage (void)
    if (alreadyReceived)
       return;
 
+#ifndef PLATFORM_ANDROID
    Array <String> sentences;
 
    // add default messages
@@ -1006,14 +1007,16 @@ void CheckWelcomeMessage (void)
    sentences.Push ("high amigo, your administration has been great last day");
    sentences.Push ("attention, expect experimental armed hostile presence");
    sentences.Push ("warning, medical attention required");
+#endif
 
    if (IsAlive (g_hostEntity) && !alreadyReceived && receiveTime < 1.0 && (g_numWaypoints > 0 ? g_isCommencing : true))
       receiveTime = GetWorldTime () + 4.0f; // receive welcome message in four seconds after game has commencing
 
    if (receiveTime > 0.0f && receiveTime < GetWorldTime () && !alreadyReceived && (g_numWaypoints > 0 ? g_isCommencing : true))
    {
+#ifndef PLATFORM_ANDROID
       ServerCommand ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));
-
+#endif
       ChartPrint ("----- %s v%s (Build: %u), {%s}, (c) 2016, by %s (%s)-----", PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_DATE, PRODUCT_AUTHOR, PRODUCT_URL);
       
       MESSAGE_BEGIN (MSG_ONE, SVC_TEMPENTITY, NULL, g_hostEntity);
@@ -1303,6 +1306,9 @@ void SoundAttachToClients (edict_t *ent, const char *sample, float volume)
    }
    Client *client = &g_clients[index];
 
+   if (client == NULL)
+      return;
+
    if (strncmp ("player/bhit_flesh", sample, 17) == 0 || strncmp ("player/headshot", sample, 15) == 0)
    {
       // hit/fall sound?
@@ -1359,7 +1365,6 @@ void SoundSimulateUpdate (int playerIndex)
    // this function tries to simulate playing of sounds to let the bots hear sounds which aren't
    // captured through server sound hooking
 
-
    if (playerIndex < 0 || playerIndex >= GetMaxClients ())
       return; // reliability check
 
@@ -1370,17 +1375,17 @@ void SoundSimulateUpdate (int playerIndex)
 
    if (client->ent->v.oldbuttons & IN_ATTACK) // pressed attack button?
    {
-      hearDistance = 3072.0;
+      hearDistance = 2048.0f;
       timeSound = GetWorldTime () + 0.3f;
    }
    else if (client->ent->v.oldbuttons & IN_USE) // pressed used button?
    {
-      hearDistance = 512.0;
+      hearDistance = 512.0f;
       timeSound = GetWorldTime () + 0.5f;
    }
    else if (client->ent->v.oldbuttons & IN_RELOAD) // pressed reload button?
    {
-      hearDistance = 512.0;
+      hearDistance = 512.0f;
       timeSound = GetWorldTime () + 0.5f;
    }
    else if (client->ent->v.movetype == MOVETYPE_FLY) // uses ladder?
