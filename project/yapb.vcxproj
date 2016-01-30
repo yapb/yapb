@@ -207,6 +207,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <OmitFramePointers>true</OmitFramePointers>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -239,7 +240,7 @@
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <ImageHasSafeExceptionHandlers>
       </ImageHasSafeExceptionHandlers>
-      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <FullProgramDatabaseFile>true</FullProgramDatabaseFile>
     </Link>
     <PostBuildEvent>
