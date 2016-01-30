@@ -1730,10 +1730,10 @@ void Waypoint::Think (void)
       // draw the danger directions
       if (!g_waypointsChanged)
       {
-         if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team0DangerIndex != -1 && GetTeam (g_hostEntity) == TEAM_TF)
+         if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team0DangerIndex != -1 && GetTeam (g_hostEntity) == TERRORIST)
             DrawArrow (g_hostEntity, path->origin, m_paths[(g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team0DangerIndex]->origin, 15, 0, 255, 0, 0, 200, 0, 10); // draw a red arrow to this index's danger point
 
-         if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team1DangerIndex != -1 && GetTeam (g_hostEntity) == TEAM_CF)
+         if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team1DangerIndex != -1 && GetTeam (g_hostEntity) == CT)
             DrawArrow (g_hostEntity, path->origin, m_paths[(g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team1DangerIndex]->origin, 15, 0, 0, 0, 255, 200, 0, 10); // draw a blue arrow to this index's danger point
       }
 

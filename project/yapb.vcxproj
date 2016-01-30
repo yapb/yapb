@@ -27,6 +27,7 @@
     <ClInclude Include="..\include\engine\sdk_util.h" />
     <ClInclude Include="..\include\engine\util.h" />
     <ClInclude Include="..\include\globals.h" />
+    <ClInclude Include="..\include\platform.h" />
     <ClInclude Include="..\include\resource.h" />
   </ItemGroup>
   <ItemGroup>
