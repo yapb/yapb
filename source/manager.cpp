@@ -1267,8 +1267,6 @@ void Bot::Kick (void)
    ServerCommand ("kick \"%s\"", STRING (pev->netname));
    CenterPrint ("Bot '%s' kicked", STRING (pev->netname));
 
-   pev->flags |= FL_KILLME;
-
    int newBotsNum = bots.GetBotsNum () - 1;
 
    // keep quota number up to date
