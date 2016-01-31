@@ -2350,10 +2350,10 @@ void Bot::CheckRadioCommands (void)
                   }
                }
             }
-            else if (m_radioOrder != Chatter_GoingToPlantBomb && Random.Long (0, 100) < 65)
+            else if (m_radioOrder != Chatter_GoingToPlantBomb && Random.Long (0, 100) < 50)
                RadioMessage (Radio_Negative);
          }
-         else if (m_radioOrder != Chatter_GoingToPlantBomb && Random.Long (0, 100) < 65)
+         else if (m_radioOrder != Chatter_GoingToPlantBomb && Random.Long (0, 100) < 50)
             RadioMessage (Radio_Negative);
       }
       break;
@@ -2423,7 +2423,7 @@ void Bot::CheckRadioCommands (void)
 
          TryHeadTowardRadioEntity ();
       }
-      else if (Random.Long (0, 100) < 80 && m_radioOrder == Radio_NeedBackup)
+      else if (Random.Long (0, 100) < 60 && m_radioOrder == Radio_NeedBackup)
          RadioMessage (Radio_Negative);
       break;
 
@@ -2441,7 +2441,7 @@ void Bot::CheckRadioCommands (void)
          if (m_fearLevel < 0.0f)
             m_fearLevel = 0.0f;
       }
-      else if ((IsEntityNull (m_enemy) && EntityIsVisible (m_radioEntity->v.origin)) || distance < 2048)
+      else if ((IsEntityNull (m_enemy) && EntityIsVisible (m_radioEntity->v.origin)) || distance < 2048.0f)
       {
          TaskID taskID = GetTaskId ();
 
@@ -2493,7 +2493,7 @@ void Bot::CheckRadioCommands (void)
 
    case Radio_RegroupTeam:
       // if no more enemies found AND bomb planted, switch to knife to get to bombplace faster
-      if ((m_team == CT) && m_currentWeapon != WEAPON_KNIFE && m_numEnemiesLeft == 0 && g_bombPlanted && GetTaskId () != TASK_DEFUSEBOMB)
+      if (m_team == CT && m_currentWeapon != WEAPON_KNIFE && m_numEnemiesLeft == 0 && g_bombPlanted && GetTaskId () != TASK_DEFUSEBOMB)
       {
          SelectWeaponByName ("weapon_knife");
 
