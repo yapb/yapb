@@ -58,9 +58,11 @@ enum TaskID
 // supported cs's
 enum CSVersion
 {
-   CSV_STEAM = 1, // Counter-Strike 1.6 and Above
-   CSV_CZERO = 2, // Counter-Strike: Condition Zero
-   CSV_OLD = 3 // Counter-Strike 1.3-1.5 with/without Steam
+   CSVERSION_CSTRIKE16 = (1 << 0), // Counter-Strike 1.6 and Above
+   CSVERSION_XASH = (1 << 1), // Counter-Strike 1.6 under the xash engine (additional flag)
+   CSVERSION_CZERO = (1 << 2), // Counter-Strike: Condition Zero
+   CSVERSION_LEGACY = (1 << 3), // Counter-Strike 1.3-1.5 with/without Steam
+   CSVERSION_MOBILITY = (1 << 4) // additional flag that bot is running on android (additional flag)
 };
 
 // log levels
@@ -811,6 +813,7 @@ private:
    float m_lastFightStyleCheck; // time checked style
    float m_strafeSetTime; // time strafe direction was set
 
+   float m_maxThrowTimer; // time that completes the throw task
    float m_timeCamping; // time to camp
    int m_campDirection; // camp Facing direction
    float m_nextCampDirTime; // time next camp direction change

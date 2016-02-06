@@ -704,12 +704,6 @@ bool Bot::DoFirePause (float distance)
 {
    // returns true if bot needs to pause between firing to compensate for punchangle & weapon spread
 
-   if (UsesSniper ())
-   {
-      m_shootTime = GetWorldTime ();
-      return false;
-   }
-
    if (m_firePause > GetWorldTime ())
       return true;
 
@@ -875,7 +869,7 @@ WeaponSelectEnd:
       m_shieldCheckTime = GetWorldTime () + 1.0f;
    }
 
-   if (UsesSniper () && m_zoomCheckTime < GetWorldTime ()) // is the bot holding a sniper rifle?
+   if (UsesSniper () && m_zoomCheckTime + 1.0f < GetWorldTime ()) // is the bot holding a sniper rifle?
    {
       if (distance > 1500.0f && pev->fov >= 40.0f) // should the bot switch to the long-range zoom?
          pev->button |= IN_ATTACK2;
@@ -888,14 +882,14 @@ WeaponSelectEnd:
 
       m_zoomCheckTime = GetWorldTime ();
 
-      if (!IsEntityNull (m_enemy) && (pev->velocity.x != 0.0f || pev->velocity.y != 0.0f || pev->velocity.z != 0.0f) && (pev->basevelocity.x != 0.0f || pev->basevelocity.y != 0.0f || pev->basevelocity.z != 0.0f))
+      if (!IsEntityNull (m_enemy) && (m_states & STATE_SEEING_ENEMY))
       {
          m_moveSpeed = 0.0f;
          m_strafeSpeed = 0.0f;
          m_navTimeset = GetWorldTime ();
       }
    }
-   else if (m_difficulty < 4 && UsesZoomableRifle () && m_zoomCheckTime < GetWorldTime ()) // else is the bot holding a zoomable rifle?
+   else if (m_difficulty < 4 && UsesZoomableRifle ()) // else is the bot holding a zoomable rifle?
    {
       if (distance > 800.0f && pev->fov >= 90.0f) // should the bot switch to zoomed mode?
          pev->button |= IN_ATTACK2;

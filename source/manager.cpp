@@ -422,7 +422,7 @@ void BotManager::MaintainBotQuota (void)
          m_creationTab.RemoveAll (); // maximum players reached, so set quota to maximum players
          yb_quota.SetInt (GetBotsNum ());
       }
-      m_maintainTime = GetWorldTime () + 0.15f;
+      m_maintainTime = GetWorldTime () + 0.45f;
    }
 
    // now keep bot number up to date
@@ -460,7 +460,7 @@ void BotManager::MaintainBotQuota (void)
       else if (desiredCount < numBots)
          RemoveRandom ();
 
-      m_quotaMaintainTime = GetWorldTime () + 0.5f;
+      m_quotaMaintainTime = GetWorldTime () + 0.90f;
    }
 }
 
@@ -874,7 +874,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    char *buffer = GET_INFOKEYBUFFER (bot);
    SET_CLIENT_KEYVALUE (clientIndex, buffer, "_vgui_menus", "0");
 
-   if (g_gameVersion != CSV_OLD && yb_latency_display.GetInt () == 1)
+   if (!(g_gameVersion & CSVERSION_LEGACY) && yb_latency_display.GetInt () == 1)
       SET_CLIENT_KEYVALUE (clientIndex, buffer, "*bot", "1");
 
    rejectReason[0] = 0; // reset the reject reason template string
@@ -1101,6 +1101,7 @@ void Bot::NewRound (void)
    m_canChooseAimDirection = true;
    m_turnAwayFromFlashbang = 0.0f;
 
+   m_maxThrowTimer = 0.0f;
    m_timeTeamOrder = 0.0f;
    m_askCheckTime = 0.0f;
    m_minSpeed = 260.0f;
@@ -1249,7 +1250,18 @@ void Bot::NewRound (void)
    if (Random.Long (0, 100) < 50)
       ChatterMessage (Chatter_NewRound);
 
-   m_thinkInterval = g_gameVersion == CSV_OLD ? 0.0f : (1.0f / 30.0f) * Random.Float (0.95f, 1.05f);
+   const float interval = (1.0f / 30.0f) * Random.Float (0.95f, 1.05f);
+
+   if (g_gameVersion & CSVERSION_LEGACY)
+   {
+      m_thinkInterval = 0.0f;
+
+      // android xash engine allows frameskip
+      if ((g_gameVersion & CSVERSION_XASH) && (g_gameVersion & CSVERSION_MOBILITY))
+         m_thinkInterval = interval;
+   }
+   else
+      m_thinkInterval = interval;
 }
 
 void Bot::Kill (void)
@@ -1314,7 +1326,7 @@ void Bot::StartGame (void)
    {
       m_startAction = GSM_IDLE;  // switch back to idle
 
-      if (g_gameVersion == CSV_CZERO) // czero has spetsnaz and militia skins
+      if (g_gameVersion & CSVERSION_CZERO) // czero has spetsnaz and militia skins
       {
          if (m_wantedClass < 1 || m_wantedClass > 5)
             m_wantedClass = Random.Long (1, 5); //  use random if invalid
@@ -1339,7 +1351,7 @@ void Bot::StartGame (void)
 
 void BotManager::CalculatePingOffsets (void)
 {
-   if (g_gameVersion == CSV_OLD || yb_latency_display.GetInt () != 2)
+   if ((g_gameVersion & CSVERSION_LEGACY) || yb_latency_display.GetInt () != 2)
       return;
 
    int averagePing = 0;
@@ -1399,10 +1411,7 @@ void BotManager::CalculatePingOffsets (void)
 
 void BotManager::SendPingDataOffsets (edict_t *to)
 {
-   if (g_gameVersion == CSV_OLD || yb_latency_display.GetInt () != 2)
-      return;
-
-   if (IsEntityNull (to))
+   if ((g_gameVersion & CSVERSION_LEGACY) || yb_latency_display.GetInt () != 2 || IsEntityNull (to))
       return;
 
    if (!(to->v.flags & FL_CLIENT) && !(((to->v.button & IN_SCORE) || !(to->v.oldbuttons & IN_SCORE))))

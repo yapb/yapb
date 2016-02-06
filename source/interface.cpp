@@ -716,7 +716,7 @@ void InitConfig (void)
    }
 
    // CHATTER SYSTEM INITIALIZATION
-   if (OpenConfig ("chatter.cfg", "Couldn't open chatter system configuration", &fp) && g_gameVersion != CSV_OLD && yb_communication_type.GetInt () == 2)
+   if (OpenConfig ("chatter.cfg", "Couldn't open chatter system configuration", &fp) && !(g_gameVersion & CSVERSION_LEGACY) && yb_communication_type.GetInt () == 2)
    {
       Array <String> array;
 
@@ -831,7 +831,7 @@ void InitConfig (void)
    }
 
    // LOCALIZER INITITALIZATION
-   if (OpenConfig ("lang.cfg", "Specified language not found", &fp, true) && g_gameVersion != CSV_OLD)
+   if (OpenConfig ("lang.cfg", "Specified language not found", &fp, true) && !(g_gameVersion & CSVERSION_LEGACY))
    {
       if (IsDedicatedServer ())
          return; // dedicated server will use only english translation
@@ -881,7 +881,7 @@ void InitConfig (void)
       }
       fp.Close ();
    }
-   else if (g_gameVersion == CSV_OLD)
+   else if (g_gameVersion & CSVERSION_LEGACY)
       AddLogEntry (true, LL_DEFAULT, "Multilingual system disabled, due to your Counter-Strike Version!");
    else if (strcmp (yb_language.GetString (), "en") != 0)
       AddLogEntry (true, LL_ERROR, "Couldn't load language configuration");
@@ -918,6 +918,30 @@ void GameDLLInit (void)
    // to register by the engine side the server commands we need to administrate our bots.
 
    DetectCSVersion ();
+   {
+      // print game detection info
+      String gameVersionStr;
+
+      if (g_gameVersion & CSVERSION_LEGACY)
+         gameVersionStr.Assign ("Legacy");
+
+      else if (g_gameVersion & CSVERSION_CZERO)
+         gameVersionStr.Assign ("Condition Zero");
+
+      else if (g_gameVersion & CSVERSION_CSTRIKE16)
+         gameVersionStr.Assign ("v1.6");
+
+      if (g_gameVersion & CSVERSION_XASH)
+      {
+         gameVersionStr.Append (" @ Xash3D Engine");
+
+         if (g_gameVersion & CSVERSION_MOBILITY)
+            gameVersionStr.Append (" Mobile");
+
+         gameVersionStr.Replace ("Legacy", "1.6 Limited");
+      }
+      ServerPrint ("YaPB Bot has detect game version as Counter-Strike: %s", gameVersionStr.GetBuffer ());
+   }
 
    // register server command(s)
    RegisterCommand ("yapb", CommandHandler);   
@@ -998,7 +1022,7 @@ int Spawn (edict_t *ent)
    }
    else if (strcmp (entityClassname, "player_weaponstrip") == 0)
    {
-      if (g_gameVersion == CSV_OLD && (STRING (ent->v.target))[0] == '0')
+      if ((g_gameVersion & CSVERSION_LEGACY) && (STRING (ent->v.target))[0] == '0')
          ent->v.target = ent->v.targetname = ALLOC_STRING ("fake");
       else
       {
@@ -2401,12 +2425,12 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
       netmsg.SetId (NETMSG_SAYTEXT, GET_USER_MSG_ID (PLID, "SayText", NULL));
       netmsg.SetId (NETMSG_RESETHUD, GET_USER_MSG_ID (PLID, "ResetHUD", NULL));
 
-      if (g_gameVersion != CSV_OLD)
+      if (!(g_gameVersion & CSVERSION_LEGACY))
          netmsg.SetId (NETMSG_BOTVOICE, GET_USER_MSG_ID (PLID, "BotVoice", NULL));
    }
    netmsg.Reset ();
 
-   if (msgDest == MSG_SPEC && msgType == netmsg.GetId (NETMSG_HLTV) && g_gameVersion != CSV_OLD)
+   if (msgDest == MSG_SPEC && msgType == netmsg.GetId (NETMSG_HLTV) && !(g_gameVersion & CSVERSION_LEGACY))
       netmsg.SetMessage (NETMSG_HLTV);
 
    netmsg.HandleMessageIfRequired (msgType, NETMSG_WEAPONLIST);
@@ -3036,7 +3060,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    convars.PushRegisteredConVarsToEngine ();
 
 #ifdef PLATFORM_ANDROID
-   g_gameVersion = CSV_OLD; // temporary, until opensource client dll get BotVoice message
+   g_gameVersion |= (CSVERSION_LEGACY | CSVERSION_XASH | CSVERSION_MOBILITY);
 
    if (g_isMetamod)
       return;  // we should stop the attempt for loading the real gamedll, since metamod handle this for us
@@ -3065,13 +3089,13 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       int modType;
    } s_supportedMods[] =
    {
-      { "cstrike", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike v1.6", CSV_STEAM },
-      { "cstrike", "cs.so", "cs.dylib", "mp.dll", "Counter-Strike v1.6 (Newer)", CSV_STEAM },
-      { "czero", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike: Condition Zero", CSV_CZERO },
-      { "czero", "cs.so", "cs.dylib", "mp.dll", "Counter-Strike: Condition Zero (Newer)", CSV_CZERO },
-      { "csv15", "cs_i386.so", "cs.dylib", "mp.dll", "CS 1.5 for Steam", CSV_OLD },
-      { "csdm", "cs_i386.so", "cs.dylib", "mp.dll", "CSDM for Windows", CSV_OLD },
-      { "cs13", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike v1.3", CSV_OLD }, // assume cs13 = cs15
+      { "cstrike", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike v1.6", CSVERSION_CSTRIKE16 },
+      { "cstrike", "cs.so", "cs.dylib", "mp.dll", "Counter-Strike v1.6 (Newer)", CSVERSION_CSTRIKE16 },
+      { "czero", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike: Condition Zero", CSVERSION_CZERO },
+      { "czero", "cs.so", "cs.dylib", "mp.dll", "Counter-Strike: Condition Zero (Newer)", CSVERSION_CZERO },
+      { "csv15", "cs_i386.so", "cs.dylib", "mp.dll", "CS 1.5 for Steam", CSVERSION_LEGACY },
+      { "csdm", "cs_i386.so", "cs.dylib", "mp.dll", "CSDM for Windows", CSVERSION_LEGACY },
+      { "cs13", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike v1.3", CSVERSION_LEGACY }, // assume cs13 = cs15
    };
 
    ModSupport *knownMod = NULL;
@@ -3097,7 +3121,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 
    if (knownMod != NULL)
    {
-      g_gameVersion = knownMod->modType;
+      g_gameVersion |= knownMod->modType;
 
       if (g_isMetamod)
          return; // we should stop the attempt for loading the real gamedll, since metamod handle this for us
@@ -3208,7 +3232,7 @@ void ConVarWrapper::PushRegisteredConVarsToEngine (bool gameVars)
 static void LinkEntity_Helper (EntityPtr_t &entAddress, const char *name, entvars_t *pev)
 {
    // here we're see an ugliest hack :)
-   if (entAddress == NULL || g_gameVersion == CSV_CZERO)
+   if (entAddress == NULL || (g_gameVersion & CSVERSION_CZERO))
       entAddress = g_gameLib->GetFuncAddr <EntityPtr_t > (name);
 
    if (entAddress == NULL)

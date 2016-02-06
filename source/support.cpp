@@ -9,7 +9,7 @@
 
 #include <core.h>
 
-ConVar yb_listenserver_welcome ("yb_listenserver_welcome", "1");
+ConVar yb_display_menu_text ("yb_display_menu_text", "1");
 
 ConVar mp_roundtime ("mp_roundtime", NULL, VT_NOREGISTER);
 
@@ -174,7 +174,10 @@ void DisplayMenuToClient (edict_t *ent, MenuText *menu)
       for (int i = 0; i <= 9; i++)
          tempText.Replace (FormatBuffer ("%d.", i), FormatBuffer ("\\r%d.\\w", i));
 
-      text = (char *) tempText.GetBuffer ();
+      if ((g_gameVersion & CSVERSION_XASH | CSVERSION_MOBILITY) && !yb_display_menu_text.GetBool ())
+         text = " ";
+      else
+         text = (char *) tempText.GetBuffer ();
 
       while (strlen (text) >= 64)
       {
@@ -981,42 +984,43 @@ void CheckWelcomeMessage (void)
 {
    // the purpose of this function, is  to send quick welcome message, to the listenserver entity.
 
-   static bool alreadyReceived = !yb_listenserver_welcome.GetBool ();
+   static bool alreadyReceived = false;
    static float receiveTime = 0.0f;
 
    if (alreadyReceived)
       return;
 
-#ifndef PLATFORM_ANDROID
    Array <String> sentences;
 
-   // add default messages
-   sentences.Push ("hello user,communication is acquired");
-   sentences.Push ("your presence is acknowledged");
-   sentences.Push ("high man, your in command now");
-   sentences.Push ("blast your hostile for good");
-   sentences.Push ("high man, kill some idiot here");
-   sentences.Push ("is there a doctor in the area");
-   sentences.Push ("warning, experimental materials detected");
-   sentences.Push ("high amigo, shoot some but");
-   sentences.Push ("attention, hours of work software, detected");
-   sentences.Push ("time for some bad ass explosion");
-   sentences.Push ("bad ass son of a breach device activated");
-   sentences.Push ("high, do not question this great service");
-   sentences.Push ("engine is operative, hello and goodbye");
-   sentences.Push ("high amigo, your administration has been great last day");
-   sentences.Push ("attention, expect experimental armed hostile presence");
-   sentences.Push ("warning, medical attention required");
-#endif
+   if (!(g_gameVersion & (CSVERSION_MOBILITY | CSVERSION_XASH)))
+   {
+      // add default messages
+      sentences.Push ("hello user,communication is acquired");
+      sentences.Push ("your presence is acknowledged");
+      sentences.Push ("high man, your in command now");
+      sentences.Push ("blast your hostile for good");
+      sentences.Push ("high man, kill some idiot here");
+      sentences.Push ("is there a doctor in the area");
+      sentences.Push ("warning, experimental materials detected");
+      sentences.Push ("high amigo, shoot some but");
+      sentences.Push ("attention, hours of work software, detected");
+      sentences.Push ("time for some bad ass explosion");
+      sentences.Push ("bad ass son of a breach device activated");
+      sentences.Push ("high, do not question this great service");
+      sentences.Push ("engine is operative, hello and goodbye");
+      sentences.Push ("high amigo, your administration has been great last day");
+      sentences.Push ("attention, expect experimental armed hostile presence");
+      sentences.Push ("warning, medical attention required");
+   }
 
    if (IsAlive (g_hostEntity) && !alreadyReceived && receiveTime < 1.0 && (g_numWaypoints > 0 ? g_isCommencing : true))
       receiveTime = GetWorldTime () + 4.0f; // receive welcome message in four seconds after game has commencing
 
    if (receiveTime > 0.0f && receiveTime < GetWorldTime () && !alreadyReceived && (g_numWaypoints > 0 ? g_isCommencing : true))
    {
-#ifndef PLATFORM_ANDROID
-      ServerCommand ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));
-#endif
+      if (!(g_gameVersion & (CSVERSION_MOBILITY | CSVERSION_XASH)))
+         ServerCommand ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));
+
       ChartPrint ("----- %s v%s (Build: %u), {%s}, (c) 2016, by %s (%s)-----", PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_DATE, PRODUCT_AUTHOR, PRODUCT_URL);
       
       MESSAGE_BEGIN (MSG_ONE, SVC_TEMPENTITY, NULL, g_hostEntity);
@@ -1047,15 +1051,13 @@ void CheckWelcomeMessage (void)
 
 void DetectCSVersion (void)
 {
-   if (g_gameVersion == CSV_OLD || g_gameVersion == CSV_CZERO)
+   if (g_gameVersion & CSVERSION_CZERO)
       return;
 
    // detect xash engine
    if (g_engfuncs.pfnCVarGetPointer ("build") != NULL)
    {
-      AddLogEntry (true, LL_DEFAULT, "Detected Xash3D Engine. Setting game version to old.");
-      g_gameVersion = CSV_OLD;
-
+      g_gameVersion |= (CSVERSION_LEGACY | CSVERSION_XASH);
       return;
    }
 
@@ -1063,9 +1065,9 @@ void DetectCSVersion (void)
    byte *detection = (*g_engfuncs.pfnLoadFileForMe) ("events/galil.sc", NULL);
 
    if (detection != NULL)
-      g_gameVersion = CSV_STEAM; // just to be sure
+      g_gameVersion |= CSVERSION_CSTRIKE16; // just to be sure
    else if (detection == NULL)
-      g_gameVersion = CSV_OLD; // reset it to WON
+      g_gameVersion |= CSVERSION_LEGACY; // reset it to WON
 
    // if we have loaded the file free it
    if (detection != NULL)
