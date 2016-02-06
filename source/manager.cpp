@@ -1253,13 +1253,7 @@ void Bot::NewRound (void)
    const float interval = (1.0f / 30.0f) * Random.Float (0.95f, 1.05f);
 
    if (g_gameVersion & CSVERSION_LEGACY)
-   {
       m_thinkInterval = 0.0f;
-
-      // android xash engine allows frameskip
-      if ((g_gameVersion & CSVERSION_XASH) && (g_gameVersion & CSVERSION_MOBILITY))
-         m_thinkInterval = interval;
-   }
    else
       m_thinkInterval = interval;
 }
