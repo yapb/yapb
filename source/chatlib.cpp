@@ -290,14 +290,14 @@ void Bot::PrepareChatMessage (char *text)
          }
          else if (*pattern == 'd')
          {
-            if (g_gameVersion == CSV_CZERO)
+            if (g_gameVersion == CSVERSION_CZERO)
             {
                if (Random.Long (1, 100) < 30)
                   strcat (m_tempStrings, "CZ");
                else
                   strcat (m_tempStrings, "Condition Zero");
             }
-            else if (g_gameVersion == CSV_STEAM || g_gameVersion == CSV_OLD)
+            else if (g_gameVersion == CSVERSION_CSTRIKE16 || g_gameVersion == CSVERSION_LEGACY)
             {
                if (Random.Long (1, 100) < 30)
                   strcat (m_tempStrings, "CS");

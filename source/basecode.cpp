@@ -133,7 +133,7 @@ bool Bot::EntityIsVisible (const Vector &dest, bool fromBody)
 void Bot::CheckGrenadeThrow (void)
 {
    // check if throwing a grenade is a good thing to do...
-   if (m_lastEnemy == NULL || yb_ignore_enemies.GetBool () || yb_jasonmode.GetBool () || m_grenadeCheckTime > GetWorldTime () || m_isUsingGrenade || GetTaskId () == TASK_PLANTBOMB || GetTaskId () == TASK_DEFUSEBOMB || m_isReloading || !IsAlive (m_lastEnemy))
+   if (m_lastEnemy == NULL || yb_ignore_enemies.GetBool () || yb_jasonmode.GetBool () || m_grenadeCheckTime > GetWorldTime () && m_isUsingGrenade || GetTaskId () == TASK_PLANTBOMB || GetTaskId () == TASK_DEFUSEBOMB || m_isReloading || !IsAlive (m_lastEnemy))
    {
       m_states &= ~(STATE_THROW_HE | STATE_THROW_FB | STATE_THROW_SG);
       return;
@@ -267,7 +267,10 @@ void Bot::CheckGrenadeThrow (void)
 
    // delay next grenade throw
    if (m_states & (STATE_THROW_HE | STATE_THROW_FB | STATE_THROW_SG))
+   {
       m_grenadeCheckTime = GetWorldTime () + MAX_GRENADE_TIMER;
+      m_maxThrowTimer = GetWorldTime () + MAX_GRENADE_TIMER * 2.0f;
+   }
 }
 
 void Bot::AvoidGrenades (void)
@@ -960,7 +963,7 @@ void Bot::SwitchChatterIcon (bool show)
 {
    // this function depending on show boolen, shows/remove chatter, icon, on the head of bot.
 
-   if (g_gameVersion == CSV_OLD || yb_communication_type.GetInt () != 2)
+   if ((g_gameVersion & CSVERSION_LEGACY) || yb_communication_type.GetInt () != 2)
       return;
 
    for (int i = 0; i < GetMaxClients (); i++)
@@ -979,7 +982,7 @@ void Bot::InstantChatterMessage (int type)
 {
    // this function sends instant chatter messages.
 
-   if (yb_communication_type.GetInt () != 2 || g_chatterFactory[type].IsEmpty () || g_gameVersion == CSV_OLD || !g_sendAudioFinished)
+   if (yb_communication_type.GetInt () != 2 || g_chatterFactory[type].IsEmpty () || (g_gameVersion & CSVERSION_LEGACY) || !g_sendAudioFinished)
       return;
 
    if (m_notKilled)
@@ -1030,7 +1033,7 @@ void Bot::RadioMessage (int message)
    if (yb_communication_type.GetInt () == 0 || m_numFriendsLeft == 0)
       return;
 
-   if (g_chatterFactory[message].IsEmpty () || g_gameVersion == CSV_OLD || yb_communication_type.GetInt () != 2)
+   if (g_chatterFactory[message].IsEmpty () || (g_gameVersion & CSVERSION_LEGACY) || yb_communication_type.GetInt () != 2)
       g_radioInsteadVoice = true; // use radio instead voice
 
    m_radioSelect = message;
@@ -1041,7 +1044,7 @@ void Bot::ChatterMessage (int message)
 {
    // this function inserts the voice message into the message queue (mostly same as above)
 
-   if (g_gameVersion == CSV_OLD || yb_communication_type.GetInt () != 2 || g_chatterFactory[message].IsEmpty () || m_numFriendsLeft == 0)
+   if ((g_gameVersion & CSVERSION_LEGACY) || yb_communication_type.GetInt () != 2 || g_chatterFactory[message].IsEmpty () || m_numFriendsLeft == 0)
       return;
 
    bool shouldExecute = false;
@@ -1242,7 +1245,7 @@ void Bot::CheckMessageQueue (void)
             }
          }
 
-         if ((m_radioSelect != Radio_ReportingIn && g_radioInsteadVoice) || yb_communication_type.GetInt () != 2 || g_chatterFactory[m_radioSelect].IsEmpty () || g_gameVersion == CSV_OLD)
+         if ((m_radioSelect != Radio_ReportingIn && g_radioInsteadVoice) || yb_communication_type.GetInt () != 2 || g_chatterFactory[m_radioSelect].IsEmpty () || (g_gameVersion & CSVERSION_LEGACY))
          {
             if (m_radioSelect < Radio_GoGoGo)
                FakeClientCommand (GetEntity (), "radio1");
@@ -1407,6 +1410,10 @@ void Bot::PurchaseWeapons (void)
    bool isPistolMode = g_weaponSelect[25].teamStandard == -1 && g_weaponSelect[3].teamStandard == 2;
    bool teamEcoValid = bots.EconomicsValid (m_team);
 
+
+   // do this, because xash engine is not capable to run all the features goldsrc, but we have cs 1.6 on it, so buy table must be the same
+   bool isOldGame = (g_gameVersion & CSVERSION_LEGACY) && !(g_gameVersion & CSVERSION_XASH);
+
    switch (m_buyState)
    {
    case 0: // if no primary weapon and bot has some money, buy a primary weapon
@@ -1432,7 +1439,7 @@ void Bot::PurchaseWeapons (void)
                continue;
 
             // ignore weapon if this weapon not supported by currently running cs version...
-            if (g_gameVersion == CSV_OLD && selectedWeapon->buySelect == -1)
+            if (isOldGame && selectedWeapon->buySelect == -1)
                continue;
 
             // ignore weapon if this weapon is not targeted to out team....
@@ -1545,7 +1552,7 @@ void Bot::PurchaseWeapons (void)
          {
             FakeClientCommand (GetEntity (), "buy;menuselect %d", selectedWeapon->buyGroup);
 
-            if (g_gameVersion == CSV_OLD)
+            if (isOldGame)
                FakeClientCommand(GetEntity (), "menuselect %d", selectedWeapon->buySelect);
             else // SteamCS buy menu is different from the old one
             {
@@ -1602,7 +1609,7 @@ void Bot::PurchaseWeapons (void)
             if ((g_mapType & MAP_AS) && selectedWeapon->teamAS != 2 && selectedWeapon->teamAS != m_team)
                continue;
 
-            if (g_gameVersion == CSV_OLD && selectedWeapon->buySelect == -1)
+            if (isOldGame && selectedWeapon->buySelect == -1)
                continue;
 
             if (selectedWeapon->teamStandard != 2 && selectedWeapon->teamStandard != m_team)
@@ -1633,7 +1640,7 @@ void Bot::PurchaseWeapons (void)
          {
             FakeClientCommand (GetEntity (), "buy;menuselect %d", selectedWeapon->buyGroup);
 
-            if (g_gameVersion == CSV_OLD)
+            if (isOldGame)
                FakeClientCommand (GetEntity (), "menuselect %d", selectedWeapon->buySelect);
 
             else // steam cs buy menu is different from old one
@@ -1673,7 +1680,7 @@ void Bot::PurchaseWeapons (void)
    case 4: // if bot is CT and we're on a bomb map, randomly buy the defuse kit
       if ((g_mapType & MAP_DE) && m_team == CT && Random.Long (1, 100) < 80 && m_moneyAmount > 200 && !IsRestricted (WEAPON_DEFUSER))
       {
-         if (g_gameVersion == CSV_OLD)
+         if (isOldGame)
             FakeClientCommand (GetEntity (), "buyequip;menuselect 6");
          else
             FakeClientCommand (GetEntity (), "defuser"); // use alias in SteamCS
@@ -2350,10 +2357,10 @@ void Bot::CheckRadioCommands (void)
                   }
                }
             }
-            else if (m_radioOrder != Chatter_GoingToPlantBomb && Random.Long (0, 100) < 65)
+            else if (m_radioOrder != Chatter_GoingToPlantBomb && Random.Long (0, 100) < 50)
                RadioMessage (Radio_Negative);
          }
-         else if (m_radioOrder != Chatter_GoingToPlantBomb && Random.Long (0, 100) < 65)
+         else if (m_radioOrder != Chatter_GoingToPlantBomb && Random.Long (0, 100) < 50)
             RadioMessage (Radio_Negative);
       }
       break;
@@ -2423,7 +2430,7 @@ void Bot::CheckRadioCommands (void)
 
          TryHeadTowardRadioEntity ();
       }
-      else if (Random.Long (0, 100) < 80 && m_radioOrder == Radio_NeedBackup)
+      else if (Random.Long (0, 100) < 60 && m_radioOrder == Radio_NeedBackup)
          RadioMessage (Radio_Negative);
       break;
 
@@ -2441,7 +2448,7 @@ void Bot::CheckRadioCommands (void)
          if (m_fearLevel < 0.0f)
             m_fearLevel = 0.0f;
       }
-      else if ((IsEntityNull (m_enemy) && EntityIsVisible (m_radioEntity->v.origin)) || distance < 2048)
+      else if ((IsEntityNull (m_enemy) && EntityIsVisible (m_radioEntity->v.origin)) || distance < 2048.0f)
       {
          TaskID taskID = GetTaskId ();
 
@@ -2493,7 +2500,7 @@ void Bot::CheckRadioCommands (void)
 
    case Radio_RegroupTeam:
       // if no more enemies found AND bomb planted, switch to knife to get to bombplace faster
-      if ((m_team == CT) && m_currentWeapon != WEAPON_KNIFE && m_numEnemiesLeft == 0 && g_bombPlanted && GetTaskId () != TASK_DEFUSEBOMB)
+      if (m_team == CT && m_currentWeapon != WEAPON_KNIFE && m_numEnemiesLeft == 0 && g_bombPlanted && GetTaskId () != TASK_DEFUSEBOMB)
       {
          SelectWeaponByName ("weapon_knife");
 
@@ -4074,7 +4081,7 @@ void Bot::RunTask_Throw_HE (void)
 
    IgnoreCollisionShortly ();
 
-   if ((pev->origin - dest).GetLengthSquared () < GET_SQUARE (400.0f))
+   if (m_maxThrowTimer > GetWorldTime () || (pev->origin - dest).GetLengthSquared () < GET_SQUARE (400.0f))
    {
       // heck, I don't wanna blow up myself
       m_grenadeCheckTime = GetWorldTime () + MAX_GRENADE_TIMER;
@@ -4155,7 +4162,7 @@ void Bot::RunTask_Throw_FL (void)
    if (m_grenade.GetLengthSquared () < 100.0f)
       m_grenade = CheckToss (pev->origin, dest);
 
-   if (m_grenade.GetLengthSquared () <= 100.0f)
+   if (m_maxThrowTimer > GetWorldTime () || m_grenade.GetLengthSquared () <= 100.0f)
    {
       m_grenadeCheckTime = GetWorldTime () + MAX_GRENADE_TIMER;
       m_grenade = m_lookAt;
@@ -4219,7 +4226,7 @@ void Bot::RunTask_Throw_SG (void)
 
    m_grenade = (src - EyePosition ()).Normalize ();
 
-   if (GetTask ()->time < GetWorldTime () + 0.5f)
+   if (m_maxThrowTimer > GetWorldTime () || GetTask ()->time < GetWorldTime () + 0.5f)
    {
       m_aimFlags &= ~AIM_GRENADE;
       m_states &= ~STATE_THROW_SG;
@@ -5861,13 +5868,13 @@ bool Bot::OutOfBombTimer (void)
    float timeLeft = GetBombTimeleft ();
 
    // if time left greater than 13, no need to do other checks
-   if (timeLeft > 16.0f)
+   if (timeLeft > 13.0f)
       return false;
 
    const Vector &bombOrigin = waypoints.GetBombPosition ();
 
-   // for terrorist, if timer is lower than eleven seconds, return true
-   if (static_cast <int> (timeLeft) < 16 && m_team == TERRORIST && (bombOrigin - pev->origin).GetLength () < 1000.0f)
+   // for terrorist, if timer is lower than 13 seconds, return true
+   if (static_cast <int> (timeLeft) < 13 && m_team == TERRORIST && (bombOrigin - pev->origin).GetLength () < 1000.0f)
       return true;
 
    bool hasTeammatesWithDefuserKit = false;

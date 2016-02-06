@@ -1219,20 +1219,32 @@ bool Bot::DoWaypointNav (void)
       else if (m_navNode == NULL)
          return false;
 
-      if ((g_mapType & MAP_DE) && g_bombPlanted && m_team == CT && GetTaskId () != TASK_ESCAPEFROMBOMB && GetTask ()->data != -1)
+      int taskTarget = GetTask ()->data;
+
+      if ((g_mapType & MAP_DE) && g_bombPlanted && m_team == CT && GetTaskId () != TASK_ESCAPEFROMBOMB && taskTarget != -1)
       {
          const Vector &bombOrigin = CheckBombAudible ();
 
          // bot within 'hearable' bomb tick noises?
          if (!bombOrigin.IsZero ())
          {
-            float distance = (bombOrigin - waypoints.GetPath (GetTask ()->data)->origin).GetLength ();
+            float distance = (bombOrigin - waypoints.GetPath (taskTarget)->origin).GetLength ();
 
             if (distance > 512.0)
-               waypoints.SetGoalVisited (GetTask ()->data); // doesn't hear so not a good goal
+            {
+               if (Random.Long (0, 100) < 50 && !waypoints.IsGoalVisited (taskTarget))
+                  RadioMessage (Radio_SectorClear);
+
+               waypoints.SetGoalVisited (taskTarget); // doesn't hear so not a good goal
+            }
          }
          else
-            waypoints.SetGoalVisited (GetTask ()->data); // doesn't hear so not a good goal
+         {
+            if (Random.Long (0, 100) < 50 && !waypoints.IsGoalVisited (taskTarget))
+               RadioMessage (Radio_SectorClear);
+
+            waypoints.SetGoalVisited (taskTarget); // doesn't hear so not a good goal
+         }
       }
       HeadTowardWaypoint (); // do the actual movement checking
    }
