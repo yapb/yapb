@@ -174,7 +174,7 @@ void DisplayMenuToClient (edict_t *ent, MenuText *menu)
       for (int i = 0; i <= 9; i++)
          tempText.Replace (FormatBuffer ("%d.", i), FormatBuffer ("\\r%d.\\w", i));
 
-      if ((g_gameVersion & CSVERSION_XASH | CSVERSION_MOBILITY) && !yb_display_menu_text.GetBool ())
+      if ((g_gameVersion & (CSVERSION_XASH | CSVERSION_MOBILITY)) && !yb_display_menu_text.GetBool ())
          text = " ";
       else
          text = (char *) tempText.GetBuffer ();
