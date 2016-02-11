@@ -133,7 +133,7 @@ bool Bot::EntityIsVisible (const Vector &dest, bool fromBody)
 void Bot::CheckGrenadeThrow (void)
 {
    // check if throwing a grenade is a good thing to do...
-   if (m_lastEnemy == NULL || yb_ignore_enemies.GetBool () || yb_jasonmode.GetBool () || m_grenadeCheckTime > GetWorldTime () && m_isUsingGrenade || GetTaskId () == TASK_PLANTBOMB || GetTaskId () == TASK_DEFUSEBOMB || m_isReloading || !IsAlive (m_lastEnemy))
+   if (m_lastEnemy == NULL || yb_ignore_enemies.GetBool () || yb_jasonmode.GetBool () || m_grenadeCheckTime > GetWorldTime () || m_isUsingGrenade || GetTaskId () == TASK_PLANTBOMB || GetTaskId () == TASK_DEFUSEBOMB || m_isReloading || !IsAlive (m_lastEnemy))
    {
       m_states &= ~(STATE_THROW_HE | STATE_THROW_FB | STATE_THROW_SG);
       return;
@@ -2829,7 +2829,6 @@ void Bot::SelectLeaderEachTeam (int team)
 
 void Bot::ChooseAimDirection (void)
 {
-
    unsigned int flags = m_aimFlags;
 
    // don't allow bot to look at danger positions under certain circumstances
@@ -4094,7 +4093,7 @@ void Bot::RunTask_Throw_HE (void)
 
    IgnoreCollisionShortly ();
 
-   if (m_maxThrowTimer > GetWorldTime () || (pev->origin - dest).GetLengthSquared () < GET_SQUARE (400.0f))
+   if (m_maxThrowTimer < GetWorldTime () || (pev->origin - dest).GetLengthSquared () < GET_SQUARE (400.0f))
    {
       // heck, I don't wanna blow up myself
       m_grenadeCheckTime = GetWorldTime () + MAX_GRENADE_TIMER;
@@ -4175,7 +4174,7 @@ void Bot::RunTask_Throw_FL (void)
    if (m_grenade.GetLengthSquared () < 100.0f)
       m_grenade = CheckToss (pev->origin, dest);
 
-   if (m_maxThrowTimer > GetWorldTime () || m_grenade.GetLengthSquared () <= 100.0f)
+   if (m_maxThrowTimer < GetWorldTime () || m_grenade.GetLengthSquared () <= 100.0f)
    {
       m_grenadeCheckTime = GetWorldTime () + MAX_GRENADE_TIMER;
       m_grenade = m_lookAt;
@@ -4239,7 +4238,7 @@ void Bot::RunTask_Throw_SG (void)
 
    m_grenade = (src - EyePosition ()).Normalize ();
 
-   if (m_maxThrowTimer > GetWorldTime () || GetTask ()->time < GetWorldTime () + 0.5f)
+   if (m_maxThrowTimer < GetWorldTime () || GetTask ()->time < GetWorldTime () + 0.5f)
    {
       m_aimFlags &= ~AIM_GRENADE;
       m_states &= ~STATE_THROW_SG;
