@@ -56,13 +56,14 @@ enum TaskID
 };
 
 // supported cs's
-enum CSVersion
+enum GameFlags
 {
-   CSVERSION_CSTRIKE16 = (1 << 0), // Counter-Strike 1.6 and Above
-   CSVERSION_XASH = (1 << 1), // Counter-Strike 1.6 under the xash engine (additional flag)
-   CSVERSION_CZERO = (1 << 2), // Counter-Strike: Condition Zero
-   CSVERSION_LEGACY = (1 << 3), // Counter-Strike 1.3-1.5 with/without Steam
-   CSVERSION_MOBILITY = (1 << 4) // additional flag that bot is running on android (additional flag)
+   GAME_CSTRIKE16 = (1 << 0), // Counter-Strike 1.6 and Above
+   GAME_XASH = (1 << 1), // Counter-Strike 1.6 under the xash engine (additional flag)
+   GAME_CZERO = (1 << 2), // Counter-Strike: Condition Zero
+   GAME_LEGACY = (1 << 3), // Counter-Strike 1.3-1.5 with/without Steam
+   GAME_MOBILITY = (1 << 4), // additional flag that bot is running on android (additional flag)
+   GAME_OFFICIAL_CSBOT = (1 << 5) // additional flag that indicates offficial cs bots are ingame
 };
 
 // log levels
@@ -1104,7 +1105,8 @@ public:
 
    edict_t *m_enemy; // pointer to enemy entity
    float m_enemyUpdateTime; // time to check for new enemies
-   float m_enemyReachableTimer; // time to recheck if Enemy reachable
+   float m_enemyReachableTimer; // time to recheck if enemy reachable
+   float m_enemyIgnoreTimer; // ignore enemy for some time
    bool m_isEnemyReachable; // direct line to enemy
 
    float m_seeEnemyTime; // time bot sees enemy

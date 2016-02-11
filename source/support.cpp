@@ -136,9 +136,9 @@ bool IsVisible (const Vector &origin, edict_t *ent)
    TraceLine (ent->v.origin + ent->v.view_ofs, origin, true, true, ent, &tr);
 
    if (tr.flFraction != 1.0f)
-      return true;
+      return false;
 
-   return false;
+   return true;
 }
 
 Vector GetEntityOrigin (edict_t *ent)
@@ -174,7 +174,7 @@ void DisplayMenuToClient (edict_t *ent, MenuText *menu)
       for (int i = 0; i <= 9; i++)
          tempText.Replace (FormatBuffer ("%d.", i), FormatBuffer ("\\r%d.\\w", i));
 
-      if ((g_gameVersion & (CSVERSION_XASH | CSVERSION_MOBILITY)) && !yb_display_menu_text.GetBool ())
+      if ((g_gameFlags & (GAME_XASH | GAME_MOBILITY)) && !yb_display_menu_text.GetBool ())
          text = " ";
       else
          text = (char *) tempText.GetBuffer ();
@@ -992,7 +992,7 @@ void CheckWelcomeMessage (void)
 
    Array <String> sentences;
 
-   if (!(g_gameVersion & (CSVERSION_MOBILITY | CSVERSION_XASH)))
+   if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH)))
    {
       // add default messages
       sentences.Push ("hello user,communication is acquired");
@@ -1018,7 +1018,7 @@ void CheckWelcomeMessage (void)
 
    if (receiveTime > 0.0f && receiveTime < GetWorldTime () && !alreadyReceived && (g_numWaypoints > 0 ? g_isCommencing : true))
    {
-      if (!(g_gameVersion & (CSVERSION_MOBILITY | CSVERSION_XASH)))
+      if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH)))
          ServerCommand ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));
 
       ChartPrint ("----- %s v%s (Build: %u), {%s}, (c) 2016, by %s (%s)-----", PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_DATE, PRODUCT_AUTHOR, PRODUCT_URL);
@@ -1051,13 +1051,13 @@ void CheckWelcomeMessage (void)
 
 void DetectCSVersion (void)
 {
-   if (g_gameVersion & CSVERSION_CZERO)
+   if (g_gameFlags & GAME_CZERO)
       return;
 
    // detect xash engine
    if (g_engfuncs.pfnCVarGetPointer ("build") != NULL)
    {
-      g_gameVersion |= (CSVERSION_LEGACY | CSVERSION_XASH);
+      g_gameFlags |= (GAME_LEGACY | GAME_XASH);
       return;
    }
 
@@ -1065,9 +1065,9 @@ void DetectCSVersion (void)
    byte *detection = (*g_engfuncs.pfnLoadFileForMe) ("events/galil.sc", NULL);
 
    if (detection != NULL)
-      g_gameVersion |= CSVERSION_CSTRIKE16; // just to be sure
+      g_gameFlags |= GAME_CSTRIKE16; // just to be sure
    else if (detection == NULL)
-      g_gameVersion |= CSVERSION_LEGACY; // reset it to WON
+      g_gameFlags |= GAME_LEGACY; // reset it to WON
 
    // if we have loaded the file free it
    if (detection != NULL)

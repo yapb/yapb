@@ -38,7 +38,7 @@ extern float g_lastRadioTime[2];
 
 extern int g_mapType;
 extern int g_numWaypoints;
-extern int g_gameVersion;
+extern int g_gameFlags;
 extern int g_fakeArgc;
 
 extern int g_highestDamageCT;

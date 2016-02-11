@@ -716,7 +716,7 @@ void InitConfig (void)
    }
 
    // CHATTER SYSTEM INITIALIZATION
-   if (OpenConfig ("chatter.cfg", "Couldn't open chatter system configuration", &fp) && !(g_gameVersion & CSVERSION_LEGACY) && yb_communication_type.GetInt () == 2)
+   if (OpenConfig ("chatter.cfg", "Couldn't open chatter system configuration", &fp) && !(g_gameFlags & GAME_LEGACY) && yb_communication_type.GetInt () == 2)
    {
       Array <String> array;
 
@@ -831,7 +831,7 @@ void InitConfig (void)
    }
 
    // LOCALIZER INITITALIZATION
-   if (OpenConfig ("lang.cfg", "Specified language not found", &fp, true) && !(g_gameVersion & CSVERSION_LEGACY))
+   if (OpenConfig ("lang.cfg", "Specified language not found", &fp, true) && !(g_gameFlags & GAME_LEGACY))
    {
       if (IsDedicatedServer ())
          return; // dedicated server will use only english translation
@@ -881,7 +881,7 @@ void InitConfig (void)
       }
       fp.Close ();
    }
-   else if (g_gameVersion & CSVERSION_LEGACY)
+   else if (g_gameFlags & GAME_LEGACY)
       AddLogEntry (true, LL_DEFAULT, "Multilingual system disabled, due to your Counter-Strike Version!");
    else if (strcmp (yb_language.GetString (), "en") != 0)
       AddLogEntry (true, LL_ERROR, "Couldn't load language configuration");
@@ -922,20 +922,20 @@ void GameDLLInit (void)
       // print game detection info
       String gameVersionStr;
 
-      if (g_gameVersion & CSVERSION_LEGACY)
+      if (g_gameFlags & GAME_LEGACY)
          gameVersionStr.Assign ("Legacy");
 
-      else if (g_gameVersion & CSVERSION_CZERO)
+      else if (g_gameFlags & GAME_CZERO)
          gameVersionStr.Assign ("Condition Zero");
 
-      else if (g_gameVersion & CSVERSION_CSTRIKE16)
+      else if (g_gameFlags & GAME_CSTRIKE16)
          gameVersionStr.Assign ("v1.6");
 
-      if (g_gameVersion & CSVERSION_XASH)
+      if (g_gameFlags & GAME_XASH)
       {
          gameVersionStr.Append (" @ Xash3D Engine");
 
-         if (g_gameVersion & CSVERSION_MOBILITY)
+         if (g_gameFlags & GAME_MOBILITY)
             gameVersionStr.Append (" Mobile");
 
          gameVersionStr.Replace ("Legacy", "1.6 Limited");
@@ -1019,10 +1019,15 @@ int Spawn (edict_t *ent)
       RoundInit ();
 
       g_mapType = NULL; // reset map type as worldspawn is the first entity spawned
+
+
+      // detect official csbots here, as they causing crash in linkent code when active for some reason
+      if (!(g_gameFlags & GAME_LEGACY) && g_engfuncs.pfnCVarGetPointer ("bot_stop") != NULL)
+         g_gameFlags |= GAME_OFFICIAL_CSBOT;
    }
    else if (strcmp (entityClassname, "player_weaponstrip") == 0)
    {
-      if ((g_gameVersion & CSVERSION_LEGACY) && (STRING (ent->v.target))[0] == '0')
+      if ((g_gameFlags & GAME_LEGACY) && (STRING (ent->v.target))[0] == '0')
          ent->v.target = ent->v.targetname = ALLOC_STRING ("fake");
       else
       {
@@ -2425,12 +2430,12 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
       netmsg.SetId (NETMSG_SAYTEXT, GET_USER_MSG_ID (PLID, "SayText", NULL));
       netmsg.SetId (NETMSG_RESETHUD, GET_USER_MSG_ID (PLID, "ResetHUD", NULL));
 
-      if (!(g_gameVersion & CSVERSION_LEGACY))
+      if (!(g_gameFlags & GAME_LEGACY))
          netmsg.SetId (NETMSG_BOTVOICE, GET_USER_MSG_ID (PLID, "BotVoice", NULL));
    }
    netmsg.Reset ();
 
-   if (msgDest == MSG_SPEC && msgType == netmsg.GetId (NETMSG_HLTV) && !(g_gameVersion & CSVERSION_LEGACY))
+   if (msgDest == MSG_SPEC && msgType == netmsg.GetId (NETMSG_HLTV) && !(g_gameFlags & GAME_LEGACY))
       netmsg.SetMessage (NETMSG_HLTV);
 
    netmsg.HandleMessageIfRequired (msgType, NETMSG_WEAPONLIST);
@@ -3060,7 +3065,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    convars.PushRegisteredConVarsToEngine ();
 
 #ifdef PLATFORM_ANDROID
-   g_gameVersion |= (CSVERSION_LEGACY | CSVERSION_XASH | CSVERSION_MOBILITY);
+   g_gameFlags |= (GAME_LEGACY | GAME_XASH | GAME_MOBILITY);
 
    if (g_isMetamod)
       return;  // we should stop the attempt for loading the real gamedll, since metamod handle this for us
@@ -3089,13 +3094,13 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       int modType;
    } s_supportedMods[] =
    {
-      { "cstrike", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike v1.6", CSVERSION_CSTRIKE16 },
-      { "cstrike", "cs.so", "cs.dylib", "mp.dll", "Counter-Strike v1.6 (Newer)", CSVERSION_CSTRIKE16 },
-      { "czero", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike: Condition Zero", CSVERSION_CZERO },
-      { "czero", "cs.so", "cs.dylib", "mp.dll", "Counter-Strike: Condition Zero (Newer)", CSVERSION_CZERO },
-      { "csv15", "cs_i386.so", "cs.dylib", "mp.dll", "CS 1.5 for Steam", CSVERSION_LEGACY },
-      { "csdm", "cs_i386.so", "cs.dylib", "mp.dll", "CSDM for Windows", CSVERSION_LEGACY },
-      { "cs13", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike v1.3", CSVERSION_LEGACY }, // assume cs13 = cs15
+      { "cstrike", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike v1.6", GAME_CSTRIKE16 },
+      { "cstrike", "cs.so", "cs.dylib", "mp.dll", "Counter-Strike v1.6 (Newer)", GAME_CSTRIKE16 },
+      { "czero", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike: Condition Zero", GAME_CZERO },
+      { "czero", "cs.so", "cs.dylib", "mp.dll", "Counter-Strike: Condition Zero (Newer)", GAME_CZERO },
+      { "csv15", "cs_i386.so", "cs.dylib", "mp.dll", "CS 1.5 for Steam", GAME_LEGACY },
+      { "csdm", "cs_i386.so", "cs.dylib", "mp.dll", "CSDM for Windows", GAME_LEGACY },
+      { "cs13", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike v1.3", GAME_LEGACY }, // assume cs13 = cs15
    };
 
    ModSupport *knownMod = NULL;
@@ -3121,7 +3126,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 
    if (knownMod != NULL)
    {
-      g_gameVersion |= knownMod->modType;
+      g_gameFlags |= knownMod->modType;
 
       if (g_isMetamod)
          return; // we should stop the attempt for loading the real gamedll, since metamod handle this for us
@@ -3232,7 +3237,7 @@ void ConVarWrapper::PushRegisteredConVarsToEngine (bool gameVars)
 static void LinkEntity_Helper (EntityPtr_t &entAddress, const char *name, entvars_t *pev)
 {
    // here we're see an ugliest hack :)
-   if (entAddress == NULL || (g_gameVersion & CSVERSION_CZERO))
+   if (entAddress == NULL || (g_gameFlags & GAME_OFFICIAL_CSBOT))
       entAddress = g_gameLib->GetFuncAddr <EntityPtr_t > (name);
 
    if (entAddress == NULL)

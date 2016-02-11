@@ -96,7 +96,7 @@ bool Bot::CheckVisibility (edict_t *target, Vector *origin, byte *bodyPart)
    if (IsEnemyHiddenByRendering (target))
    {
       *bodyPart = 0;
-      origin->Zero();
+      origin->Zero ();
 
       return false;
    }
@@ -221,7 +221,7 @@ bool Bot::LookupEnemy (void)
    // this function tries to find the best suitable enemy for the bot
 
    // do not search for enemies while we're blinded, or shooting disabled by user
-   if (m_blindTime > GetWorldTime () || yb_ignore_enemies.GetBool ())
+   if (m_enemyIgnoreTimer > GetWorldTime () || m_blindTime > GetWorldTime () || yb_ignore_enemies.GetBool ())
       return false;
 
    edict_t *player, *newEnemy = NULL;
@@ -267,10 +267,6 @@ bool Bot::LookupEnemy (void)
 
          // let the engine check if this player is potentially visible
          if (!ENGINE_CHECK_VISIBILITY (player, pvs))
-            continue;
-
-         // skip glowed players, in free for all mode, we can't hit them
-         if (player->v.renderfx == kRenderFxGlowShell && yb_csdm_mode.GetInt () >= 1)
             continue;
 
          // do some blind by smoke grenade
@@ -1115,7 +1111,7 @@ void Bot::CombatFight (void)
          }
       }
 
-      if (m_fightStyle == 0 || ((pev->button & IN_RELOAD) || m_isReloading) || (UsesPistol () && distance < 400.0f))
+      if (m_fightStyle == 0 || ((pev->button & IN_RELOAD) || m_isReloading) || (UsesPistol () && distance < 400.0f) || m_currentWeapon == WEAPON_KNIFE)
       {
          if (m_strafeSetTime < GetWorldTime ())
          {

@@ -963,7 +963,7 @@ void Bot::SwitchChatterIcon (bool show)
 {
    // this function depending on show boolen, shows/remove chatter, icon, on the head of bot.
 
-   if ((g_gameVersion & CSVERSION_LEGACY) || yb_communication_type.GetInt () != 2)
+   if ((g_gameFlags & GAME_LEGACY) || yb_communication_type.GetInt () != 2)
       return;
 
    for (int i = 0; i < GetMaxClients (); i++)
@@ -982,7 +982,7 @@ void Bot::InstantChatterMessage (int type)
 {
    // this function sends instant chatter messages.
 
-   if (yb_communication_type.GetInt () != 2 || g_chatterFactory[type].IsEmpty () || (g_gameVersion & CSVERSION_LEGACY) || !g_sendAudioFinished)
+   if (yb_communication_type.GetInt () != 2 || g_chatterFactory[type].IsEmpty () || (g_gameFlags & GAME_LEGACY) || !g_sendAudioFinished)
       return;
 
    if (m_notKilled)
@@ -1033,7 +1033,7 @@ void Bot::RadioMessage (int message)
    if (yb_communication_type.GetInt () == 0 || m_numFriendsLeft == 0)
       return;
 
-   if (g_chatterFactory[message].IsEmpty () || (g_gameVersion & CSVERSION_LEGACY) || yb_communication_type.GetInt () != 2)
+   if (g_chatterFactory[message].IsEmpty () || (g_gameFlags & GAME_LEGACY) || yb_communication_type.GetInt () != 2)
       g_radioInsteadVoice = true; // use radio instead voice
 
    m_radioSelect = message;
@@ -1044,7 +1044,7 @@ void Bot::ChatterMessage (int message)
 {
    // this function inserts the voice message into the message queue (mostly same as above)
 
-   if ((g_gameVersion & CSVERSION_LEGACY) || yb_communication_type.GetInt () != 2 || g_chatterFactory[message].IsEmpty () || m_numFriendsLeft == 0)
+   if ((g_gameFlags & GAME_LEGACY) || yb_communication_type.GetInt () != 2 || g_chatterFactory[message].IsEmpty () || m_numFriendsLeft == 0)
       return;
 
    bool shouldExecute = false;
@@ -1245,7 +1245,7 @@ void Bot::CheckMessageQueue (void)
             }
          }
 
-         if ((m_radioSelect != Radio_ReportingIn && g_radioInsteadVoice) || yb_communication_type.GetInt () != 2 || g_chatterFactory[m_radioSelect].IsEmpty () || (g_gameVersion & CSVERSION_LEGACY))
+         if ((m_radioSelect != Radio_ReportingIn && g_radioInsteadVoice) || yb_communication_type.GetInt () != 2 || g_chatterFactory[m_radioSelect].IsEmpty () || (g_gameFlags & GAME_LEGACY))
          {
             if (m_radioSelect < Radio_GoGoGo)
                FakeClientCommand (GetEntity (), "radio1");
@@ -1412,7 +1412,7 @@ void Bot::PurchaseWeapons (void)
 
 
    // do this, because xash engine is not capable to run all the features goldsrc, but we have cs 1.6 on it, so buy table must be the same
-   bool isOldGame = (g_gameVersion & CSVERSION_LEGACY) && !(g_gameVersion & CSVERSION_XASH);
+   bool isOldGame = (g_gameFlags & GAME_LEGACY) && !(g_gameFlags & GAME_XASH);
 
    switch (m_buyState)
    {
@@ -1810,14 +1810,21 @@ void Bot::SetConditionsOverride (void)
    // special handling, if we have a knife in our hands
    if (m_currentWeapon == WEAPON_KNIFE && IsValidPlayer (m_enemy) && (GetTaskId () != TASK_MOVETOPOSITION || GetTask ()->desire != TASKPRI_HIDE))
    {
-      if ((pev->origin - m_enemy->v.origin).GetLength2D () > 100.0f && (m_states & STATE_SEEING_ENEMY))
+      float length = (pev->origin - m_enemy->v.origin).GetLength2D ();
+
+      // do waypoint movement if enemy is not reacheable with a knife
+      if (length > 100.0f && (m_states & STATE_SEEING_ENEMY))
       {
          int nearestToEnemyPoint = waypoints.FindNearest (m_enemy->v.origin);
 
          if (nearestToEnemyPoint != -1 && nearestToEnemyPoint != m_currentWaypointIndex && fabsf (waypoints.GetPath (nearestToEnemyPoint)->origin.z - m_enemy->v.origin.z) < 16.0f)
          {
             PushTask (TASK_MOVETOPOSITION, TASKPRI_HIDE, nearestToEnemyPoint, GetWorldTime () + Random.Float (5.0f, 10.0f), true);
+
+            m_isEnemyReachable = false;
             m_enemy = NULL;
+
+            m_enemyIgnoreTimer = GetWorldTime () + ((length / pev->maxspeed) * 0.5f);
          }
       }
    }
@@ -2004,7 +2011,7 @@ void Bot::ApplyTaskFilters (void)
       g_taskFilters[TASK_ATTACK].desire = 0.0f;
 
    // calculate desires to seek cover or hunt
-   if (IsValidPlayer (m_lastEnemy) && !m_lastEnemyOrigin.IsZero ())
+   if (IsValidPlayer (m_lastEnemy) && !m_lastEnemyOrigin.IsZero () && !m_hasC4)
    {
       float distance = (m_lastEnemyOrigin - pev->origin).GetLength ();
 
@@ -3196,9 +3203,15 @@ void Bot::RunTask_Normal (void)
             }
             else if (m_team == CT)
             {
-               if (!g_bombPlanted && GetNearbyFriendsNearPosition (pev->origin, 360.0f) < 4 && m_personality != PERSONALITY_RUSHER)
+               if (!g_bombPlanted && GetNearbyFriendsNearPosition (pev->origin, 210.0f) < 4)
                {
                   int index = FindDefendWaypoint (m_currentPath->origin);
+
+                  float campTime = Random.Float (25.0f, 40.f);
+
+                  // rusher bots don't like to camp too much
+                  if (m_personality == PERSONALITY_RUSHER)
+                     campTime *= 0.5f;
 
                   PushTask (TASK_CAMP, TASKPRI_CAMP, -1, GetWorldTime () + Random.Float (25.0, 40.0), true); // push camp task on to stack
                   PushTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, GetWorldTime () + Random.Float (5.0f, 11.0f), true); // push move command
@@ -6026,7 +6039,7 @@ void Bot::EquipInBuyzone (int buyCount)
       checkBuyTime = (g_timeRoundStart + Random.Float (10.0f, 20.0f) + mp_buytime.GetFloat () < GetWorldTime ());
 
    // if bot is in buy zone, try to buy ammo for this weapon...
-   if (m_lastEquipTime + 15.0f < GetWorldTime () && m_inBuyZone && checkBuyTime && !g_bombPlanted && m_moneyAmount > g_botBuyEconomyTable[0])
+   if (m_seeEnemyTime + 5.0f < GetWorldTime () && m_lastEquipTime + 15.0f < GetWorldTime () && m_inBuyZone && checkBuyTime && !g_bombPlanted && m_moneyAmount > g_botBuyEconomyTable[0])
    {
       m_buyingFinished = false;
       m_buyState = buyCount;

@@ -874,7 +874,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    char *buffer = GET_INFOKEYBUFFER (bot);
    SET_CLIENT_KEYVALUE (clientIndex, buffer, "_vgui_menus", "0");
 
-   if (!(g_gameVersion & CSVERSION_LEGACY) && yb_latency_display.GetInt () == 1)
+   if (!(g_gameFlags & GAME_LEGACY) && yb_latency_display.GetInt () == 1)
       SET_CLIENT_KEYVALUE (clientIndex, buffer, "*bot", "1");
 
    rejectReason[0] = 0; // reset the reject reason template string
@@ -1135,6 +1135,7 @@ void Bot::NewRound (void)
 
    m_buttonPushTime = 0.0f;
    m_enemyUpdateTime = 0.0f;
+   m_enemyIgnoreTimer = 0.0f;
    m_seeEnemyTime = 0.0f;
    m_shootAtDeadTime = 0.0f;
    m_oldCombatDesire = 0.0f;
@@ -1252,7 +1253,7 @@ void Bot::NewRound (void)
 
    const float interval = (1.0f / 30.0f) * Random.Float (0.95f, 1.05f);
 
-   if (g_gameVersion & CSVERSION_LEGACY)
+   if (g_gameFlags & GAME_LEGACY)
       m_thinkInterval = 0.0f;
    else
       m_thinkInterval = interval;
@@ -1320,7 +1321,7 @@ void Bot::StartGame (void)
    {
       m_startAction = GSM_IDLE;  // switch back to idle
 
-      if (g_gameVersion & CSVERSION_CZERO) // czero has spetsnaz and militia skins
+      if (g_gameFlags & GAME_CZERO) // czero has spetsnaz and militia skins
       {
          if (m_wantedClass < 1 || m_wantedClass > 5)
             m_wantedClass = Random.Long (1, 5); //  use random if invalid
@@ -1345,7 +1346,7 @@ void Bot::StartGame (void)
 
 void BotManager::CalculatePingOffsets (void)
 {
-   if ((g_gameVersion & CSVERSION_LEGACY) || yb_latency_display.GetInt () != 2)
+   if ((g_gameFlags & GAME_LEGACY) || yb_latency_display.GetInt () != 2)
       return;
 
    int averagePing = 0;
@@ -1405,7 +1406,7 @@ void BotManager::CalculatePingOffsets (void)
 
 void BotManager::SendPingDataOffsets (edict_t *to)
 {
-   if ((g_gameVersion & CSVERSION_LEGACY) || yb_latency_display.GetInt () != 2 || IsEntityNull (to))
+   if ((g_gameFlags & GAME_LEGACY) || yb_latency_display.GetInt () != 2 || IsEntityNull (to))
       return;
 
    if (!(to->v.flags & FL_CLIENT) && !(((to->v.button & IN_SCORE) || !(to->v.oldbuttons & IN_SCORE))))

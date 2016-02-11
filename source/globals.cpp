@@ -40,7 +40,7 @@ int g_lastRadio[2];
 int g_storeAddbotVars[4];
 int g_radioSelect[32];
 int g_fakeArgc = 0;
-int g_gameVersion = 0;
+int g_gameFlags = 0;
 int g_numWaypoints = 0;
 int g_mapType = 0;
 
