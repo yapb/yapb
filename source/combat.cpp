@@ -100,31 +100,33 @@ bool Bot::CheckVisibility (edict_t *target, Vector *origin, byte *bodyPart)
 
       return false;
    }
+   TraceResult result;
 
-   const Vector &botHead = EyePosition ();
-   TraceResult tr;
-
+   Vector eyes = EyePosition ();
+   Vector spot = target->v.origin;
+   
    *bodyPart = 0;
 
-   // check for the body
-   TraceLine (botHead, target->v.origin, true, true, GetEntity (), &tr);
+   TraceLine (eyes, spot, true, true, pev->pContainingEntity, &result);
 
-   if (tr.flFraction >= 1.0f)
+   if (result.flFraction >= 1.0f)
    {
       *bodyPart |= VISIBLE_BODY;
-      *origin = target->v.origin;
+      *origin = result.vecEndPos;
 
-      if (m_difficulty == 4)
+      if (m_difficulty > 3)
          origin->z += 3.0f;
    }
 
-   // check for the head
-   TraceLine (botHead, target->v.origin + target->v.view_ofs, true, true, GetEntity (), &tr);
+   // check top of head
+   spot = spot + Vector (0, 0, 25.0f);
 
-   if (tr.flFraction >= 1.0f)
+   TraceLine (eyes, spot, true, true, pev->pContainingEntity, &result);
+
+   if (result.flFraction >= 1.0f)
    {
       *bodyPart |= VISIBLE_HEAD;
-      *origin = target->v.origin + target->v.view_ofs;
+      *origin = result.vecEndPos;
 
       if (m_difficulty > 3)
          origin->z += 1.0f;
@@ -133,64 +135,49 @@ bool Bot::CheckVisibility (edict_t *target, Vector *origin, byte *bodyPart)
    if (*bodyPart != 0)
       return true;
 
-   // thanks for this code goes to kwo
-   MakeVectors (target->v.angles);
+   const float standFeet = 34.0f;
+   const float crouchFeet = 14.0f;
 
-   // worst case, choose random position in enemy body
-   for (int i = 0; i < 6; i++)
+   if (target->v.flags & FL_DUCKING)
+      spot.z = target->v.origin.z - crouchFeet;
+   else
+      spot.z = target->v.origin.z - standFeet;
+
+   TraceLine (eyes, spot, true, true, pev->pContainingEntity, &result);
+
+   if (result.flFraction >= 1.0f)
    {
-      Vector pos = target->v.origin;
+      *bodyPart |= VISIBLE_OTHER;
+      *origin = result.vecEndPos;
 
-      switch (i)
-      {
-      case 0: // left arm
-         pos.x -= 10.0f * g_pGlobals->v_right.x;
-         pos.y -= 10.0f * g_pGlobals->v_right.y;
-         pos.z += 8.0f;
-         break;
+      return true;
+   }
 
-      case 1: // right arm
-         pos.x += 10.0f * g_pGlobals->v_right.x;
-         pos.y += 10.0f * g_pGlobals->v_right.y;
-         pos.z += 8.0f;
-         break;
+   const float edgeOffset = 13.0f;
+   Vector dir = (target->v.origin - pev->origin).Normalize2D ();
 
-      case 2: // left leg
-         pos.x -= 10.0f * g_pGlobals->v_right.x;
-         pos.y -= 10.0f * g_pGlobals->v_right.y;
-         pos.z -= 12.0f;
-         break;
+   Vector perp (-dir.y, dir.x, 0.0f);
+   spot = target->v.origin + Vector (perp.x * edgeOffset, perp.y * edgeOffset, 0);
 
-      case 3: // right leg
-         pos.x += 10.0f * g_pGlobals->v_right.x;
-         pos.y += 10.0f * g_pGlobals->v_right.y;
-         pos.z -= 12.0f;
-         break;
+   TraceLine (eyes, spot, true, true, pev->pContainingEntity, &result);
 
-      case 4: // left foot
-         pos.x -= 10.0f * g_pGlobals->v_right.x;
-         pos.y -= 10.0f * g_pGlobals->v_right.y;
-         pos.z -= 24.0f;
-         break;
+   if (result.flFraction >= 1.0f)
+   {
+      *bodyPart |= VISIBLE_OTHER;
+      *origin = result.vecEndPos;
 
-      case 5: // right foot
-         pos.x += 10.0f * g_pGlobals->v_right.x;
-         pos.y += 10.0f * g_pGlobals->v_right.y;
-         pos.z -= 24.0f;
-         break;
-      }
+      return true;
+   }
+   spot = target->v.origin - Vector (perp.x * edgeOffset, perp.y * edgeOffset, 0);
 
-      // check direct line to random part of the player body
-      TraceLine (botHead, pos, true, true, GetEntity (), &tr);
+   TraceLine (eyes, spot, true, true, pev->pContainingEntity, &result);
 
-      // check if we hit something
-      if (tr.flFraction >= 1.0f)
-      {
-         *origin = tr.vecEndPos;
-         *bodyPart |= VISIBLE_OTHER;
+   if (result.flFraction >= 1.0f)
+   {
+      *bodyPart |= VISIBLE_OTHER;
+      *origin = result.vecEndPos;
 
-         return true;
-      }
+      return true;
    }
    return false;
 }
@@ -348,6 +335,9 @@ bool Bot::LookupEnemy (void)
          // keep track of when we last saw an enemy
          m_seeEnemyTime = GetWorldTime ();
 
+         if (!(pev->oldbuttons & IN_ATTACK))
+            return true;
+
          // now alarm all teammates who see this bot & don't have an actual enemy of the bots enemy should simulate human players seeing a teammate firing
          for (int j = 0; j < GetMaxClients (); j++)
          {
@@ -356,17 +346,13 @@ bool Bot::LookupEnemy (void)
 
             Bot *friendBot = bots.GetBot (g_clients[j].ent);
 
-            if (friendBot != NULL)
+            if (friendBot != NULL && friendBot->m_seeEnemyTime + 2.0f < GetWorldTime () && IsEntityNull (friendBot->m_lastEnemy) && IsVisible (pev->origin, ENT (friendBot->pev)) && friendBot->IsInViewCone (pev->origin))
             {
-               if (friendBot->m_seeEnemyTime + 2.0f < GetWorldTime () || IsEntityNull (friendBot->m_lastEnemy))
-               {
-                  if (IsVisible (pev->origin, ENT (friendBot->pev)))
-                  {
-                     friendBot->m_lastEnemy = newEnemy;
-                     friendBot->m_lastEnemyOrigin = m_lastEnemyOrigin;
-                     friendBot->m_seeEnemyTime = GetWorldTime ();
-                  }
-               }
+               friendBot->m_lastEnemy = newEnemy;
+               friendBot->m_lastEnemyOrigin = m_lastEnemyOrigin;
+               friendBot->m_seeEnemyTime = GetWorldTime ();
+               friendBot->m_states |= (STATE_SUSPECT_ENEMY | STATE_HEARING_ENEMY);
+               friendBot->m_aimFlags |= AIM_LAST_ENEMY;
             }
          }
          return true;
@@ -387,7 +373,7 @@ bool Bot::LookupEnemy (void)
             if (!UsesSniper ())
             {
                m_shootAtDeadTime = GetWorldTime () + 0.4f;
-               m_actualReactionTime = 0.0;
+               m_actualReactionTime = 0.0f;
                m_states |= STATE_SUSPECT_ENEMY;
 
                return true;
@@ -1164,16 +1150,7 @@ void Bot::CombatFight (void)
       }
       else if (m_fightStyle == 1)
       {
-         bool shouldDuck = true; // should duck
-
-         // check the enemy height
-         float enemyHalfHeight = ((m_enemy->v.flags & FL_DUCKING) == FL_DUCKING ? 36.0f : 72.0f) * 0.5f;
-
-         // check center/feet
-         if (!IsVisible (m_enemy->v.origin, GetEntity ()) && !IsVisible (m_enemy->v.origin + Vector (0.0f, 0.0f, -enemyHalfHeight), GetEntity ()))
-            shouldDuck = false;
-
-         if (shouldDuck && GetTaskId () != TASK_SEEKCOVER && GetTaskId () != TASK_HUNTENEMY && (m_visibility & VISIBLE_BODY) && !(m_visibility & VISIBLE_OTHER) && waypoints.IsDuckVisible (m_currentWaypointIndex, waypoints.FindNearest (m_enemy->v.origin)))
+         if (!(m_visibility & (VISIBLE_HEAD | VISIBLE_BODY)) && GetTaskId () != TASK_SEEKCOVER && GetTaskId () != TASK_HUNTENEMY && (m_visibility & VISIBLE_BODY) && !(m_visibility & VISIBLE_OTHER) && waypoints.IsDuckVisible (m_currentWaypointIndex, waypoints.FindNearest (m_enemy->v.origin)))
             m_duckTime = GetWorldTime () + 0.5f;
 
          m_moveSpeed = 0.0f;

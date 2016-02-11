@@ -6011,11 +6011,6 @@ void Bot::ReactOnSound (void)
          m_states |= STATE_SEEING_ENEMY;
          m_seeEnemyTime = GetWorldTime ();
       }
-      else if (!m_lastEnemyOrigin.IsZero () && m_lastEnemy == player && m_seeEnemyTime + 3.0f > GetWorldTime () && yb_shoots_thru_walls.GetBool () && IsShootableThruObstacle (m_lastEnemyOrigin))
-      {
-         m_states |= STATE_SEEING_ENEMY;
-         m_seeEnemyTime = GetWorldTime ();
-      }
    }
 }
 

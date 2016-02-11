@@ -289,7 +289,7 @@ void NetworkMsg::Execute (void *p)
             {
                Bot *bot = bots.GetBot (i);
 
-               if (bot != NULL && IsAlive (bot->GetEntity ()) && GetTeam (bot->GetEntity ()) == GetTeam (victim) && IsVisible (killer->v.origin, bot->GetEntity ()) && IsEntityNull (bot->m_enemy) && GetTeam (killer) != GetTeam (victim))
+               if (bot != NULL && bot->m_seeEnemyTime + 2.0f < GetWorldTime () && IsAlive (bot->GetEntity ()) && GetTeam (bot->GetEntity ()) == GetTeam (victim) && IsVisible (killer->v.origin, bot->GetEntity ()) && IsEntityNull (bot->m_enemy) && GetTeam (killer) != GetTeam (victim))
                {
                   bot->m_actualReactionTime = 0.0f;
                   bot->m_seeEnemyTime = GetWorldTime ();
