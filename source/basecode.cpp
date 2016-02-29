@@ -4999,9 +4999,6 @@ void Bot::BotAI (void)
    // save the previous speed (for checking if stuck)
    m_prevSpeed = fabsf (m_moveSpeed);
    m_lastDamageType = -1; // reset damage
-
-   pev->angles.ClampAngles ();
-   pev->v_angle.ClampAngles ();
 }
 
 void Bot::DisplayDebugOverlay (void)
