@@ -1382,11 +1382,11 @@ bool Bot::IsMorePowerfulWeaponCanBeBought (void)
    return false;
 }
 
-int Bot::PickBestFromRandom (int *random, int count)
+int Bot::PickBestFromRandom(int *random, int count, int moneySave)
 {
    // this function taken from gina bot, it's picks best available weapon from random choice
 
-   float buyFactor = (m_moneyAmount - 3000.0f) / (16000.0f - 3000.0f) * 3.0f;
+   float buyFactor = (m_moneyAmount - static_cast <float> (moneySave)) / (16000.0f - static_cast <float> (moneySave)) * 3.0f;
 
    if (buyFactor < 1.0f)
       buyFactor = 1.0f;
@@ -1418,6 +1418,8 @@ void Bot::PurchaseWeapons (void)
    case BUYSTATE_PRIMARY_WEAPON: // if no primary weapon and bot has some money, buy a primary weapon
       if ((!HasShield () && !HasPrimaryWeapon () && teamEcoValid) || (teamEcoValid && IsMorePowerfulWeaponCanBeBought ()))
       {
+         int moneySave = 0;
+
          do
          {
             bool ignoreWeapon = false;
@@ -1503,8 +1505,12 @@ void Bot::PurchaseWeapons (void)
             {
             case WEAPON_XM1014:
             case WEAPON_M3:
-               if (m_moneyAmount >= limit[ECO_SHOTGUN_GT] || m_moneyAmount <= limit[ECO_SHOTGUN_LT])
+               if (m_moneyAmount < limit[ECO_SHOTGUN_LT])
                   ignoreWeapon = true;
+
+               if (m_moneyAmount >= limit[ECO_SHOTGUN_GT])
+                  ignoreWeapon = false;
+
                break;
             }
 
@@ -1514,8 +1520,12 @@ void Bot::PurchaseWeapons (void)
             case WEAPON_G3SG1:
             case WEAPON_AWP:  
             case WEAPON_M249:
-               if (m_moneyAmount >= limit[ECO_HEAVY_GT] || m_moneyAmount <= limit[ECO_HEAVY_LT])
+               if (m_moneyAmount < limit[ECO_HEAVY_LT])
                   ignoreWeapon = true;
+
+               if (m_moneyAmount >= limit[ECO_HEAVY_GT])
+                  ignoreWeapon = false;
+
                break;
             }
 
@@ -1523,7 +1533,7 @@ void Bot::PurchaseWeapons (void)
                continue;
 
             // save money for grenade for example?
-            int moneySave = Random.Long (300, 600);
+            moneySave = Random.Long (300, 600);
 
             if (bots.GetLastWinner () == m_team)
                moneySave = 0;
@@ -1540,7 +1550,7 @@ void Bot::PurchaseWeapons (void)
 
             // choose randomly from the best ones...
             if (foundWeapons > 1)
-               chosenWeapon = PickBestFromRandom (choices, foundWeapons);
+               chosenWeapon = PickBestFromRandom (choices, foundWeapons, moneySave);
             else
                chosenWeapon = choices[foundWeapons - 1];
 
@@ -1628,7 +1638,7 @@ void Bot::PurchaseWeapons (void)
 
             // choose randomly from the best ones...
             if (foundWeapons > 1)
-               chosenWeapon = PickBestFromRandom (choices, foundWeapons);
+               chosenWeapon = PickBestFromRandom (choices, foundWeapons, Random.Long (100, 200));
             else
                chosenWeapon = choices[foundWeapons - 1];
 

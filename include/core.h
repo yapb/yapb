@@ -889,7 +889,7 @@ private:
    void PurchaseWeapons (void);
 
    bool IsMorePowerfulWeaponCanBeBought (void);
-   int PickBestFromRandom (int *random, int count);
+   int PickBestFromRandom (int *random, int count, int moneySave);
 
    bool CanDuckUnder (const Vector &normal);
    bool CanJumpUp (const Vector &normal);
