@@ -448,7 +448,7 @@ void Waypoint::Delete (void)
 
    int index = FindNearest (g_hostEntity->v.origin, 50.0f);
 
-   if (index == -1)
+   if (index < 0)
       return;
 
    Path *path = NULL;
@@ -1271,7 +1271,7 @@ bool Waypoint::Reachable (Bot *bot, int index)
 
    float distance = (dest - src).GetLength ();
 
-   // check is destination is close to us enoguh
+   // check is destination is close to us enough
    if (distance >= 150.0f)
       return false;
 
@@ -2570,7 +2570,7 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
          finished = true;
 
       // ugly, but whatever
-      if (buffer[recvPosition - 2] == '4' && buffer[recvPosition - 1] == '0' && buffer[recvPosition] == '4')
+      if (recvPosition > 2 && buffer[recvPosition - 2] == '4' && buffer[recvPosition - 1] == '0' && buffer[recvPosition] == '4')
       {
          FreeSocket (socketHandle);
          return WDE_NOTFOUND_ERROR;

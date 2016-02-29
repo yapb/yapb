@@ -472,6 +472,14 @@ enum PathFlag
    PATHFLAG_JUMP = (1 << 0), // must jump for this connection
 };
 
+// enum pathfind search type
+enum SearchPathType
+{
+   SEARCH_PATH_FASTEST = 0,
+   SEARCH_PATH_SAFEST_FASTER,
+   SEARCH_PATH_SAFEST
+};
+
 // defines waypoint connection types
 enum PathConnection
 {
@@ -779,7 +787,7 @@ private:
    PathNode *m_navNodeStart; // pointer to start of path finding nodes
    Path *m_currentPath; // pointer to the current path waypoint
 
-   unsigned char m_pathType; // which pathfinder to use
+   SearchPathType m_pathType; // which pathfinder to use
    unsigned char m_visibility; // visibility flags
 
    int m_currentWaypointIndex; // current waypoint index
@@ -1045,7 +1053,7 @@ private:
    int GetAimingWaypoint (const Vector &to);
 
    void FindShortestPath (int srcIndex, int destIndex);
-   void FindPath (int srcIndex, int destIndex, unsigned char pathType = 0);
+   void FindPath (int srcIndex, int destIndex, SearchPathType pathType = SEARCH_PATH_FASTEST);
    void DebugMsg (const char *format, ...);
    void PeriodicThink (void);
 

@@ -1118,7 +1118,7 @@ void Bot::CheckMessageQueue (void)
       {
          m_isVIP = true;
          m_buyState = BUYSTATE_FINISHED;
-         m_pathType = 0;
+         m_pathType = SEARCH_PATH_FASTEST;
       }
 
       // prevent terrorists from buying on es maps
@@ -3246,7 +3246,7 @@ void Bot::RunTask_Normal (void)
 
       // do pathfinding if it's not the current waypoint
       if (destIndex != m_currentWaypointIndex)
-         FindPath (m_currentWaypointIndex, destIndex, ((g_bombPlanted && m_team == CT) || yb_debug_goal.GetInt () != -1) ? 0 : m_pathType);
+         FindPath (m_currentWaypointIndex, destIndex, ((g_bombPlanted && m_team == CT) || yb_debug_goal.GetInt () != -1) ? SEARCH_PATH_FASTEST : m_pathType);
    }
    else
    {
@@ -3391,7 +3391,7 @@ void Bot::RunTask_SeekCover (void)
       TaskComplete ();
 
       m_prevGoalIndex = -1;
-      m_pathType = 0;
+      m_pathType = SEARCH_PATH_FASTEST;
 
       // start hide task
       PushTask (TASK_HIDE, TASKPRI_HIDE, -1, GetWorldTime () + Random.Float (5.0f, 15.0f), false);
@@ -3459,7 +3459,7 @@ void Bot::RunTask_SeekCover (void)
       GetTask ()->data = destIndex;
 
       if (destIndex != m_currentWaypointIndex)
-         FindPath (m_currentWaypointIndex, destIndex, 0);
+         FindPath (m_currentWaypointIndex, destIndex, SEARCH_PATH_FASTEST);
    }
 }
 
@@ -3786,7 +3786,7 @@ void Bot::RunTask_PlantBomb (void)
       TaskComplete ();
 
       // tell teammates to move over here...
-      if (GetNearbyFriendsNearPosition (pev->origin, 1200) != 0)
+      if (GetNearbyFriendsNearPosition (pev->origin, 1200.0f) != 0)
          RadioMessage (Radio_NeedBackup);
 
       DeleteSearchNodes ();
@@ -5751,7 +5751,7 @@ void Bot::MoveToVector (const Vector &to)
    if (to.IsZero ())
       return;
 
-   FindPath (m_currentWaypointIndex, waypoints.FindNearest (to), 0);
+   FindPath (m_currentWaypointIndex, waypoints.FindNearest (to), SEARCH_PATH_FASTEST);
 }
 
 byte Bot::ThrottledMsec (void)

@@ -1220,7 +1220,7 @@ char *Localizer::TranslateInput (const char *input)
    {
       if (strcmp (string, m_langTab[i].original) == 0)
       {
-         strncpy (string, m_langTab[i].translated, 1023);
+         strncpy (string, m_langTab[i].translated, SIZEOF_CHAR (string));
 
          if (ptr != input)
             strncat (string, ptr, 1024 - 1 - strlen (string));
