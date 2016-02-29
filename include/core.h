@@ -63,7 +63,7 @@ enum GameFlags
    GAME_CZERO = (1 << 2), // Counter-Strike: Condition Zero
    GAME_LEGACY = (1 << 3), // Counter-Strike 1.3-1.5 with/without Steam
    GAME_MOBILITY = (1 << 4), // additional flag that bot is running on android (additional flag)
-   GAME_OFFICIAL_CSBOT = (1 << 5) // additional flag that indicates offficial cs bots are ingame
+   GAME_OFFICIAL_CSBOT = (1 << 5) // additional flag that indicates official cs bots are in game
 };
 
 // log levels
@@ -74,7 +74,6 @@ enum LogLevel
    LL_ERROR = 3, // error log message
    LL_IGNORE = 4, // additional flag
    LL_FATAL = 5  // fatal error log message (terminate the game!)
-
 };
 
 // chat types id's
@@ -282,6 +281,34 @@ enum Weapon
    WEAPON_ARMORHELM = 32,
    WEAPON_DEFUSER = 33
 #endif
+};
+
+// buy counts
+enum BuyState
+{
+   BUYSTATE_PRIMARY_WEAPON = 0,
+   BUYSTATE_ARMOR_VESTHELM,
+   BUYSTATE_SECONDARY_WEAPON,
+   BUYSTATE_GRENADES,
+   BUYSTATE_DEFUSER,
+   BUYSTATE_AMMO,
+   BUYSTATE_FINISHED
+};
+
+// economics limits
+enum EconomyLimit
+{
+   ECO_PRIMARY_GT = 0,
+   ECO_SMG_GT_CT,
+   ECO_SMG_GT_TE,
+   ECO_SHOTGUN_GT,
+   ECO_SHOTGUN_LT,
+   ECO_HEAVY_GT,
+   ECO_HEAVY_LT,
+   ECO_PROSTOCK_NORMAL,
+   ECO_PROSTOCK_RUSHER,
+   ECO_PROSTOCK_CAREFUL,
+   ECO_SHIELDGUN_GT
 };
 
 // defines for pickup items
@@ -1153,7 +1180,7 @@ public:
 
    void DisplayDebugOverlay (void);
    void NewRound (void);
-   void EquipInBuyzone (int buyCount);
+   void EquipInBuyzone (int buyState);
    void PushMessageQueue (int message);
    void PrepareChatMessage (char *text);
    bool FindWaypoint (void);

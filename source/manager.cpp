@@ -1190,7 +1190,7 @@ void Bot::NewRound (void)
    m_sayTextBuffer.entityIndex = -1;
    m_sayTextBuffer.sayText[0] = 0x0;
 
-   m_buyState = 0;
+   m_buyState = BUYSTATE_PRIMARY_WEAPON;
    m_lastEquipTime = 0.0f;
 
    if (!m_notKilled) // if bot died, clear all weapon stuff and force buying again

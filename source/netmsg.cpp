@@ -232,7 +232,7 @@ void NetworkMsg::Execute (void *p)
             m_bot->m_inBuyZone = (enabled != 0);
 
             // try to equip in buyzone
-            m_bot->EquipInBuyzone (0);
+            m_bot->EquipInBuyzone (BUYSTATE_PRIMARY_WEAPON);
          }
          else if (strcmp (PTR_TO_STR (p), "vipsafety") == 0)
             m_bot->m_inVIPZone = (enabled != 0);
