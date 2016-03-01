@@ -1610,7 +1610,7 @@ float hfunctionNumberNodes (int index, int startIndex, int goalIndex)
    return hfunctionSquareDist (index, startIndex, goalIndex) / 128.0f * g_highestKills;
 }
 
-void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
+void Bot::FindPath(int srcIndex, int destIndex, SearchPathType pathType /*= SEARCH_PATH_FASTEST */)
 {
    // this function finds a path from srcIndex to destIndex
 
@@ -1656,7 +1656,7 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
 
    switch (pathType)
    {
-   case 0:
+   case SEARCH_PATH_FASTEST:
       if ((g_mapType & MAP_CS) && HasHostage ())
       {
          gcalc = gfunctionPathDistWithHostage;
@@ -1669,7 +1669,7 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
       }
       break;
 
-   case 1:
+   case SEARCH_PATH_SAFEST_FASTER:
       if (m_team == TERRORIST)
       {
          gcalc = gfunctionKillsDistT;
@@ -1687,7 +1687,7 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
       }
       break;
 
-   case 2:
+   case SEARCH_PATH_SAFEST:
    default:
       if (m_team == TERRORIST)
       {
@@ -1718,6 +1718,12 @@ void Bot::FindPath (int srcIndex, int destIndex, unsigned char pathType)
    {
       // remove the first node from the open list
       int currentIndex = openList.Pop ();
+
+      if (currentIndex < 0 || currentIndex > g_numWaypoints)
+      {
+         AddLogEntry (false, LL_FATAL, "openList.Pop () = %d. It's not possible to continue execution. Please obtain better waypoint.");
+         return;
+      }
 
       // is the current node the goal node?
       if (currentIndex == destIndex)

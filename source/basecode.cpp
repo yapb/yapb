@@ -1104,12 +1104,12 @@ void Bot::CheckMessageQueue (void)
 
       // if bot buying is off then no need to buy
       if (!yb_botbuy.GetBool ())
-         m_buyState = 6;
+         m_buyState = BUYSTATE_FINISHED;
 
       // if fun-mode no need to buy
       if (yb_jasonmode.GetBool ())
       {
-         m_buyState = 6;
+         m_buyState = BUYSTATE_FINISHED;
          SelectWeaponByName ("weapon_knife");
       }
 
@@ -1117,8 +1117,8 @@ void Bot::CheckMessageQueue (void)
       if (IsPlayerVIP (GetEntity ()))
       {
          m_isVIP = true;
-         m_buyState = 6;
-         m_pathType = 0;
+         m_buyState = BUYSTATE_FINISHED;
+         m_pathType = SEARCH_PATH_FASTEST;
       }
 
       // prevent terrorists from buying on es maps
@@ -1128,13 +1128,13 @@ void Bot::CheckMessageQueue (void)
       // prevent teams from buying on fun maps
       if (g_mapType & (MAP_KA | MAP_FY))
       {
-         m_buyState = 6;
+         m_buyState = BUYSTATE_FINISHED;
 
          if (g_mapType & MAP_KA)
             yb_jasonmode.SetInt (1);
       }
 
-      if (m_buyState > 5)
+      if (m_buyState > BUYSTATE_FINISHED - 1)
       {
          m_buyingFinished = true;
          return;
@@ -1382,11 +1382,11 @@ bool Bot::IsMorePowerfulWeaponCanBeBought (void)
    return false;
 }
 
-int Bot::PickBestFromRandom (int *random, int count)
+int Bot::PickBestFromRandom(int *random, int count, int moneySave)
 {
    // this function taken from gina bot, it's picks best available weapon from random choice
 
-   float buyFactor = (m_moneyAmount - 3000.0f) / (16000.0f - 3000.0f) * 3.0f;
+   float buyFactor = (m_moneyAmount - static_cast <float> (moneySave)) / (16000.0f - static_cast <float> (moneySave)) * 3.0f;
 
    if (buyFactor < 1.0f)
       buyFactor = 1.0f;
@@ -1410,15 +1410,16 @@ void Bot::PurchaseWeapons (void)
    bool isPistolMode = g_weaponSelect[25].teamStandard == -1 && g_weaponSelect[3].teamStandard == 2;
    bool teamEcoValid = bots.EconomicsValid (m_team);
 
-
    // do this, because xash engine is not capable to run all the features goldsrc, but we have cs 1.6 on it, so buy table must be the same
    bool isOldGame = (g_gameFlags & GAME_LEGACY) && !(g_gameFlags & GAME_XASH);
 
    switch (m_buyState)
    {
-   case 0: // if no primary weapon and bot has some money, buy a primary weapon
+   case BUYSTATE_PRIMARY_WEAPON: // if no primary weapon and bot has some money, buy a primary weapon
       if ((!HasShield () && !HasPrimaryWeapon () && teamEcoValid) || (teamEcoValid && IsMorePowerfulWeaponCanBeBought ()))
       {
+         int moneySave = 0;
+
          do
          {
             bool ignoreWeapon = false;
@@ -1450,21 +1451,22 @@ void Bot::PurchaseWeapons (void)
             if (IsRestricted (selectedWeapon->id))
                continue;
 
-            int economicsPrice = 0;
+            int *limit = g_botBuyEconomyTable;
+            int prostock = 0;
 
-            // filter out weapons with bot economics (thanks for idea to nicebot project)
+            // filter out weapons with bot economics
             switch (m_personality)
             {
             case PERSONALITY_RUSHER:
-               economicsPrice = g_botBuyEconomyTable[8];
+               prostock = limit[ECO_PROSTOCK_RUSHER];
                break;
 
             case PERSONALITY_CAREFUL:
-               economicsPrice = g_botBuyEconomyTable[7];
+               prostock = limit[ECO_PROSTOCK_CAREFUL];
                break;
 
             case PERSONALITY_NORMAL:
-               economicsPrice = g_botBuyEconomyTable[9];
+               prostock = limit[ECO_PROSTOCK_NORMAL];
                break;
             }
 
@@ -1476,12 +1478,12 @@ void Bot::PurchaseWeapons (void)
                case WEAPON_UMP45:
                case WEAPON_P90:
                case WEAPON_MP5:
-                  if (m_moneyAmount > g_botBuyEconomyTable[1] + economicsPrice)
+                  if (m_moneyAmount > limit[ECO_SMG_GT_CT] + prostock)
                      ignoreWeapon = true;
                   break;
                }
 
-               if (selectedWeapon->id == WEAPON_SHIELD && m_moneyAmount > g_botBuyEconomyTable[10])
+               if (selectedWeapon->id == WEAPON_SHIELD && m_moneyAmount > limit[ECO_SHIELDGUN_GT])
                   ignoreWeapon = true;
             }
             else if (m_team == TERRORIST)
@@ -1493,7 +1495,7 @@ void Bot::PurchaseWeapons (void)
                case WEAPON_P90:
                case WEAPON_MP5:
                case WEAPON_SCOUT:
-                  if (m_moneyAmount > g_botBuyEconomyTable[2] + economicsPrice)
+                  if (m_moneyAmount > limit[ECO_SMG_GT_TE] + prostock)
                      ignoreWeapon = true;
                   break;
                }
@@ -1503,8 +1505,12 @@ void Bot::PurchaseWeapons (void)
             {
             case WEAPON_XM1014:
             case WEAPON_M3:
-               if (m_moneyAmount < g_botBuyEconomyTable[3] || m_moneyAmount > g_botBuyEconomyTable[4])
+               if (m_moneyAmount < limit[ECO_SHOTGUN_LT])
                   ignoreWeapon = true;
+
+               if (m_moneyAmount >= limit[ECO_SHOTGUN_GT])
+                  ignoreWeapon = false;
+
                break;
             }
 
@@ -1514,15 +1520,20 @@ void Bot::PurchaseWeapons (void)
             case WEAPON_G3SG1:
             case WEAPON_AWP:  
             case WEAPON_M249:
-               if (m_moneyAmount < g_botBuyEconomyTable[5] || m_moneyAmount > g_botBuyEconomyTable[6])
+               if (m_moneyAmount < limit[ECO_HEAVY_LT])
                   ignoreWeapon = true;
+
+               if (m_moneyAmount >= limit[ECO_HEAVY_GT])
+                  ignoreWeapon = false;
+
                break;
             }
 
             if (ignoreWeapon && g_weaponSelect[25].teamStandard == 1 && yb_economics_rounds.GetBool ())
                continue;
 
-            int moneySave = Random.Long (900, 1100);
+            // save money for grenade for example?
+            moneySave = Random.Long (300, 600);
 
             if (bots.GetLastWinner () == m_team)
                moneySave = 0;
@@ -1539,7 +1550,7 @@ void Bot::PurchaseWeapons (void)
 
             // choose randomly from the best ones...
             if (foundWeapons > 1)
-               chosenWeapon = PickBestFromRandom (choices, foundWeapons);
+               chosenWeapon = PickBestFromRandom (choices, foundWeapons, moneySave);
             else
                chosenWeapon = choices[foundWeapons - 1];
 
@@ -1574,7 +1585,7 @@ void Bot::PurchaseWeapons (void)
          break;
       }   
 
-   case 1: // if armor is damaged and bot has some money, buy some armor
+   case BUYSTATE_ARMOR_VESTHELM: // if armor is damaged and bot has some money, buy some armor
       if (pev->armorvalue < Random.Long (50, 80) && (isPistolMode || (teamEcoValid && HasPrimaryWeapon ())))
       {
          // if bot is rich, buy kevlar + helmet, else buy a single kevlar
@@ -1585,7 +1596,7 @@ void Bot::PurchaseWeapons (void)
       }
       break;
 
-   case 2: // if bot has still some money, buy a better secondary weapon
+   case BUYSTATE_SECONDARY_WEAPON: // if bot has still some money, buy a better secondary weapon
       if (isPistolMode || (HasPrimaryWeapon () && (pev->weapons & ((1 << WEAPON_USP) | (1 << WEAPON_GLOCK))) && m_moneyAmount > Random.Long (7500, 9000)))
       {
          do
@@ -1627,7 +1638,7 @@ void Bot::PurchaseWeapons (void)
 
             // choose randomly from the best ones...
             if (foundWeapons > 1)
-               chosenWeapon = PickBestFromRandom (choices, foundWeapons);
+               chosenWeapon = PickBestFromRandom (choices, foundWeapons, Random.Long (100, 200));
             else
                chosenWeapon = choices[foundWeapons - 1];
 
@@ -1654,7 +1665,7 @@ void Bot::PurchaseWeapons (void)
       }
       break;
 
-   case 3: // if bot has still some money, choose if bot should buy a grenade or not
+   case BUYSTATE_GRENADES: // if bot has still some money, choose if bot should buy a grenade or not
       if (Random.Long (1, 100) < g_grenadeBuyPrecent[0] && m_moneyAmount >= 400 && !IsRestricted (WEAPON_EXPLOSIVE))
       {
          // buy a he grenade
@@ -1677,7 +1688,7 @@ void Bot::PurchaseWeapons (void)
       }
       break;
 
-   case 4: // if bot is CT and we're on a bomb map, randomly buy the defuse kit
+   case BUYSTATE_DEFUSER: // if bot is CT and we're on a bomb map, randomly buy the defuse kit
       if ((g_mapType & MAP_DE) && m_team == CT && Random.Long (1, 100) < 80 && m_moneyAmount > 200 && !IsRestricted (WEAPON_DEFUSER))
       {
          if (isOldGame)
@@ -1687,7 +1698,7 @@ void Bot::PurchaseWeapons (void)
       }
       break;
 
-   case 5: // buy enough primary & secondary ammo (do not check for money here)
+   case BUYSTATE_AMMO: // buy enough primary & secondary ammo (do not check for money here)
       for (int i = 0; i <= 5; i++)
          FakeClientCommand (GetEntity (), "buyammo%d", Random.Long (1, 2)); // simulate human
 
@@ -3245,7 +3256,7 @@ void Bot::RunTask_Normal (void)
 
       // do pathfinding if it's not the current waypoint
       if (destIndex != m_currentWaypointIndex)
-         FindPath (m_currentWaypointIndex, destIndex, ((g_bombPlanted && m_team == CT) || yb_debug_goal.GetInt () != -1) ? 0 : m_pathType);
+         FindPath (m_currentWaypointIndex, destIndex, ((g_bombPlanted && m_team == CT) || yb_debug_goal.GetInt () != -1) ? SEARCH_PATH_FASTEST : m_pathType);
    }
    else
    {
@@ -3390,7 +3401,7 @@ void Bot::RunTask_SeekCover (void)
       TaskComplete ();
 
       m_prevGoalIndex = -1;
-      m_pathType = 0;
+      m_pathType = SEARCH_PATH_FASTEST;
 
       // start hide task
       PushTask (TASK_HIDE, TASKPRI_HIDE, -1, GetWorldTime () + Random.Float (5.0f, 15.0f), false);
@@ -3458,7 +3469,7 @@ void Bot::RunTask_SeekCover (void)
       GetTask ()->data = destIndex;
 
       if (destIndex != m_currentWaypointIndex)
-         FindPath (m_currentWaypointIndex, destIndex, 0);
+         FindPath (m_currentWaypointIndex, destIndex, SEARCH_PATH_FASTEST);
    }
 }
 
@@ -3785,7 +3796,7 @@ void Bot::RunTask_PlantBomb (void)
       TaskComplete ();
 
       // tell teammates to move over here...
-      if (GetNearbyFriendsNearPosition (pev->origin, 1200) != 0)
+      if (GetNearbyFriendsNearPosition (pev->origin, 1200.0f) != 0)
          RadioMessage (Radio_NeedBackup);
 
       DeleteSearchNodes ();
@@ -4481,7 +4492,7 @@ void Bot::RunTask_PickupItem ()
                if (HasShield ()) // If we have the shield...
                   FakeClientCommand (GetEntity (), "drop"); // discard both shield and pistol
             }
-            EquipInBuyzone (0);
+            EquipInBuyzone (BUYSTATE_PRIMARY_WEAPON);
          }
          else
          {
@@ -4493,7 +4504,7 @@ void Bot::RunTask_PickupItem ()
                SelectWeaponbyNumber (weaponID);
                FakeClientCommand (GetEntity (), "drop");
             }
-            EquipInBuyzone (0);
+            EquipInBuyzone (BUYSTATE_PRIMARY_WEAPON);
          }
          CheckSilencer (); // check the silencer
       }
@@ -4988,9 +4999,6 @@ void Bot::BotAI (void)
    // save the previous speed (for checking if stuck)
    m_prevSpeed = fabsf (m_moveSpeed);
    m_lastDamageType = -1; // reset damage
-
-   pev->angles.ClampAngles ();
-   pev->v_angle.ClampAngles ();
 }
 
 void Bot::DisplayDebugOverlay (void)
@@ -5566,7 +5574,7 @@ void Bot::DiscardWeaponForUser (edict_t *user, bool discardC4)
       if (m_inBuyZone)
       {
          m_buyingFinished = false;
-         m_buyState = 0;
+         m_buyState = BUYSTATE_PRIMARY_WEAPON;
 
          PushMessageQueue (GSM_BUY_STUFF);
          m_nextBuyTime = GetWorldTime ();
@@ -5750,7 +5758,7 @@ void Bot::MoveToVector (const Vector &to)
    if (to.IsZero ())
       return;
 
-   FindPath (m_currentWaypointIndex, waypoints.FindNearest (to), 0);
+   FindPath (m_currentWaypointIndex, waypoints.FindNearest (to), SEARCH_PATH_FASTEST);
 }
 
 byte Bot::ThrottledMsec (void)
@@ -6023,7 +6031,7 @@ bool Bot::IsShootableBreakable (edict_t *ent)
    return false;
 }
 
-void Bot::EquipInBuyzone (int buyCount)
+void Bot::EquipInBuyzone (int buyState)
 {
    // this function is gets called when bot enters a buyzone, to allow bot to buy some stuff
 
@@ -6036,7 +6044,7 @@ void Bot::EquipInBuyzone (int buyCount)
    if (m_seeEnemyTime + 5.0f < GetWorldTime () && m_lastEquipTime + 15.0f < GetWorldTime () && m_inBuyZone && checkBuyTime && !g_bombPlanted && m_moneyAmount > g_botBuyEconomyTable[0])
    {
       m_buyingFinished = false;
-      m_buyState = buyCount;
+      m_buyState = buyState;
 
       // push buy message
       PushMessageQueue (GSM_BUY_STUFF);

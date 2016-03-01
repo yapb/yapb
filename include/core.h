@@ -63,7 +63,7 @@ enum GameFlags
    GAME_CZERO = (1 << 2), // Counter-Strike: Condition Zero
    GAME_LEGACY = (1 << 3), // Counter-Strike 1.3-1.5 with/without Steam
    GAME_MOBILITY = (1 << 4), // additional flag that bot is running on android (additional flag)
-   GAME_OFFICIAL_CSBOT = (1 << 5) // additional flag that indicates offficial cs bots are ingame
+   GAME_OFFICIAL_CSBOT = (1 << 5) // additional flag that indicates official cs bots are in game
 };
 
 // log levels
@@ -74,7 +74,6 @@ enum LogLevel
    LL_ERROR = 3, // error log message
    LL_IGNORE = 4, // additional flag
    LL_FATAL = 5  // fatal error log message (terminate the game!)
-
 };
 
 // chat types id's
@@ -284,6 +283,34 @@ enum Weapon
 #endif
 };
 
+// buy counts
+enum BuyState
+{
+   BUYSTATE_PRIMARY_WEAPON = 0,
+   BUYSTATE_ARMOR_VESTHELM,
+   BUYSTATE_SECONDARY_WEAPON,
+   BUYSTATE_GRENADES,
+   BUYSTATE_DEFUSER,
+   BUYSTATE_AMMO,
+   BUYSTATE_FINISHED
+};
+
+// economics limits
+enum EconomyLimit
+{
+   ECO_PRIMARY_GT = 0,
+   ECO_SMG_GT_CT,
+   ECO_SMG_GT_TE,
+   ECO_SHOTGUN_GT,
+   ECO_SHOTGUN_LT,
+   ECO_HEAVY_GT,
+   ECO_HEAVY_LT,
+   ECO_PROSTOCK_NORMAL,
+   ECO_PROSTOCK_RUSHER,
+   ECO_PROSTOCK_CAREFUL,
+   ECO_SHIELDGUN_GT
+};
+
 // defines for pickup items
 enum PickupType
 {
@@ -443,6 +470,14 @@ enum WaypointFlag
 enum PathFlag
 {
    PATHFLAG_JUMP = (1 << 0), // must jump for this connection
+};
+
+// enum pathfind search type
+enum SearchPathType
+{
+   SEARCH_PATH_FASTEST = 0,
+   SEARCH_PATH_SAFEST_FASTER,
+   SEARCH_PATH_SAFEST
 };
 
 // defines waypoint connection types
@@ -752,7 +787,7 @@ private:
    PathNode *m_navNodeStart; // pointer to start of path finding nodes
    Path *m_currentPath; // pointer to the current path waypoint
 
-   unsigned char m_pathType; // which pathfinder to use
+   SearchPathType m_pathType; // which pathfinder to use
    unsigned char m_visibility; // visibility flags
 
    int m_currentWaypointIndex; // current waypoint index
@@ -854,7 +889,7 @@ private:
    void PurchaseWeapons (void);
 
    bool IsMorePowerfulWeaponCanBeBought (void);
-   int PickBestFromRandom (int *random, int count);
+   int PickBestFromRandom (int *random, int count, int moneySave);
 
    bool CanDuckUnder (const Vector &normal);
    bool CanJumpUp (const Vector &normal);
@@ -1018,7 +1053,7 @@ private:
    int GetAimingWaypoint (const Vector &to);
 
    void FindShortestPath (int srcIndex, int destIndex);
-   void FindPath (int srcIndex, int destIndex, unsigned char pathType = 0);
+   void FindPath (int srcIndex, int destIndex, SearchPathType pathType = SEARCH_PATH_FASTEST);
    void DebugMsg (const char *format, ...);
    void PeriodicThink (void);
 
@@ -1153,7 +1188,7 @@ public:
 
    void DisplayDebugOverlay (void);
    void NewRound (void);
-   void EquipInBuyzone (int buyCount);
+   void EquipInBuyzone (int buyState);
    void PushMessageQueue (int message);
    void PrepareChatMessage (char *text);
    bool FindWaypoint (void);

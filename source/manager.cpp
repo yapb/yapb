@@ -199,7 +199,6 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
       CenterPrint ("Maximum players reached (%d/%d). Unable to create Bot.", GetMaxClients (), GetMaxClients ());
       return 2;
    }
-
    int index = IndexOfEntity (bot) - 1;
 
    InternalAssert (index >= 0 && index <= 32); // check index
@@ -1079,15 +1078,15 @@ void Bot::NewRound (void)
    switch (m_personality)
    {
    case PERSONALITY_NORMAL:
-      m_pathType = Random.Long (0, 100) > 50 ? 1 : 2;
+      m_pathType = Random.Long (0, 100) > 50 ? SEARCH_PATH_SAFEST_FASTER : SEARCH_PATH_SAFEST;
       break;
 
    case PERSONALITY_RUSHER:
-      m_pathType = 0;
+      m_pathType = SEARCH_PATH_FASTEST;
       break;
 
    case PERSONALITY_CAREFUL:
-      m_pathType = 2;
+      m_pathType = SEARCH_PATH_SAFEST;
       break;
    }
 
@@ -1190,7 +1189,7 @@ void Bot::NewRound (void)
    m_sayTextBuffer.entityIndex = -1;
    m_sayTextBuffer.sayText[0] = 0x0;
 
-   m_buyState = 0;
+   m_buyState = BUYSTATE_PRIMARY_WEAPON;
    m_lastEquipTime = 0.0f;
 
    if (!m_notKilled) // if bot died, clear all weapon stuff and force buying again
