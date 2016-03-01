@@ -11,10 +11,14 @@
 
 void Engine::Precache (void)
 {
-   // this function precaches needed models for DrawLine
+   // this function precaches needed models and initialize class variables
 
    m_drawModels[DRAW_SIMPLE] = PRECACHE_MODEL (ENGINE_STR ("sprites/laserbeam.spr"));
    m_drawModels[DRAW_ARROW] = PRECACHE_MODEL (ENGINE_STR ("sprites/arrow1.spr"));
+
+   m_isBotCommand = false;
+   m_argumentCount = 0;
+   m_arguments[0] = { 0, };
 }
 
 void Engine::Printf (const char *fmt, ...)
@@ -22,10 +26,10 @@ void Engine::Printf (const char *fmt, ...)
    // this function outputs string into server console
 
    va_list ap;
-   char string[1024];
+   static char string[1024];
 
    va_start (ap, fmt);
-   vsprintf (string, locale.TranslateInput (fmt), ap);
+   vsnprintf (string, SIZEOF_CHAR (string), locale.TranslateInput (fmt), ap);
    va_end (ap);
 
    g_engfuncs.pfnServerPrint (string);
@@ -35,10 +39,10 @@ void Engine::Printf (const char *fmt, ...)
 void Engine::ChatPrintf (const char *fmt, ...)
 {
    va_list ap;
-   char string[512];
+   static char string[1024];
 
    va_start (ap, fmt);
-   vsprintf (string, locale.TranslateInput (fmt), ap);
+   vsnprintf (string, SIZEOF_CHAR (string), locale.TranslateInput (fmt), ap);
    va_end (ap);
 
    if (IsDedicatedServer ())
@@ -57,10 +61,10 @@ void Engine::ChatPrintf (const char *fmt, ...)
 void Engine::CenterPrintf (const char *fmt, ...)
 {
    va_list ap;
-   char string[512];
+   static char string[1024];
 
    va_start (ap, fmt);
-   vsprintf (string, locale.TranslateInput (fmt), ap);
+   vsnprintf (string, SIZEOF_CHAR (string), locale.TranslateInput (fmt), ap);
    va_end (ap);
 
    if (IsDedicatedServer ())
@@ -79,13 +83,13 @@ void Engine::CenterPrintf (const char *fmt, ...)
 void Engine::ClientPrintf (edict_t *ent, const char *fmt, ...)
 {
    va_list ap;
-   char string[2048];
+   static char string[1024];
 
    va_start (ap, fmt);
-   vsprintf (string, locale.TranslateInput (fmt), ap);
+   vsnprintf (string, SIZEOF_CHAR (string), locale.TranslateInput (fmt), ap);
    va_end (ap);
 
-   if (IsEntityNull (ent) || ent == g_hostEntity)
+   if (IsNullEntity (ent) || ent == g_hostEntity)
    {
       engine.Printf (string);
       return;
@@ -167,7 +171,9 @@ void Engine::TestHull (const Vector &start, const Vector &end, int ignoreFlags, 
 float Engine::GetWaveLength (const char *fileName)
 {
    extern ConVar yb_chatter_path;
-   File fp (FormatBuffer ("%s/%s/%s.wav", GetModName (), yb_chatter_path.GetString (), fileName), "rb");
+   const char *filePath = FormatBuffer ("%s/%s/%s.wav", GetModName (), yb_chatter_path.GetString (), fileName);
+
+   File fp (filePath, "rb");
 
    // we're got valid handle?
    if (!fp.IsValid ())
@@ -177,7 +183,7 @@ float Engine::GetWaveLength (const char *fileName)
    if (g_engfuncs.pfnGetApproxWavePlayLen != NULL)
    {
       fp.Close ();
-      return g_engfuncs.pfnGetApproxWavePlayLen (fileName) / 1000.0f;
+      return g_engfuncs.pfnGetApproxWavePlayLen (filePath) / 1000.0f;
    }
 
    // else fuck with manual search
@@ -202,20 +208,20 @@ float Engine::GetWaveLength (const char *fileName)
 
    if (fp.Read (&waveHdr, sizeof (WavHeader)) == 0)
    {
-      AddLogEntry (true, LL_ERROR, "Wave File %s - has wrong or unsupported format", fileName);
+      AddLogEntry (true, LL_ERROR, "Wave File %s - has wrong or unsupported format", filePath);
       return 0.0f;
    }
 
    if (strncmp (waveHdr.chunkID, "WAVE", 4) != 0)
    {
-      AddLogEntry (true, LL_ERROR, "Wave File %s - has wrong wave chunk id", fileName);
+      AddLogEntry (true, LL_ERROR, "Wave File %s - has wrong wave chunk id", filePath);
       return 0.0f;
    }
    fp.Close ();
 
    if (waveHdr.dataChunkLength == 0)
    {
-      AddLogEntry (true, LL_ERROR, "Wave File %s - has zero length!", fileName);
+      AddLogEntry (true, LL_ERROR, "Wave File %s - has zero length!", filePath);
       return 0.0f;
    }
    return static_cast <float> (waveHdr.dataChunkLength) / static_cast <float> (waveHdr.bytesPerSecond);
@@ -261,7 +267,7 @@ Vector Engine::GetAbsOrigin (edict_t *ent)
    // this expanded function returns the vector origin of a bounded entity, assuming that any
    // entity that has a bounding box has its center at the center of the bounding box itself.
 
-   if (IsEntityNull (ent))
+   if (IsNullEntity (ent))
       return Vector::GetZero ();
 
    if (ent->v.origin.IsZero ())
@@ -285,6 +291,140 @@ void Engine::EmitSound (edict_t *ent, const char *sound)
    g_engfuncs.pfnEmitSound (ent, CHAN_WEAPON, sound, 1.0f, ATTN_NORM, 0, 100.0f);
 }
 
+void Engine::IssueBotCommand (edict_t *ent, const char *fmt, ...)
+{
+   // the purpose of this function is to provide fakeclients (bots) with the same client
+   // command-scripting advantages (putting multiple commands in one line between semicolons)
+   // as real players. It is an improved version of botman's FakeClientCommand, in which you
+   // supply directly the whole string as if you were typing it in the bot's "console". It
+   // is supposed to work exactly like the pfnClientCommand (server-sided client command).
+
+   if (IsNullEntity (ent))
+      return; 
+
+   va_list ap;
+   static char string[256];
+
+   va_start (ap, fmt);
+   vsnprintf (string, SIZEOF_CHAR (string), fmt, ap);
+   va_end (ap);
+
+   if (IsNullString (string))
+      return;
+
+   m_arguments[0] = { 0, };
+   m_argumentCount = 0;
+
+   m_isBotCommand = true;
+
+   int i, pos = 0;
+   int length = strlen (string);
+
+   while (pos < length)
+   {
+      int start = pos;
+      int stop = pos;
+
+      while (pos < length && string[pos] != ';')
+         pos++;
+
+      if (string[pos - 1] == '\n')
+         stop = pos - 2;
+      else
+         stop = pos - 1; 
+
+      for (i = start; i <= stop; i++)
+         m_arguments[i - start] = string[i];
+
+      m_arguments[i - start] = 0;
+      pos++;
+
+      int index = 0;
+      m_argumentCount = 0;
+
+      while (index < i - start)
+      {
+         while (index < i - start && m_arguments[index] == ' ')
+            index++;
+
+         if (m_arguments[index] == '"')
+         {
+            index++;
+
+            while (index < i - start && m_arguments[index] != '"')
+               index++;
+            index++;
+         }
+         else
+            while (index < i - start && m_arguments[index] != ' ')
+               index++;
+
+         m_argumentCount++;
+      }
+      MDLL_ClientCommand (ent);
+   }
+   m_isBotCommand = false;
+
+   m_arguments[0] = { 0, };
+   m_argumentCount = 0;
+}
+
+const char *Engine::ExtractSingleField (const char *string, int id, bool terminate)
+{
+   // this function gets and returns a particuliar field in a string where several strings are concatenated
+
+   static char field[256];
+   field[0] = { 0, };
+
+   int pos = 0, count = 0, start = 0, stop = 0;
+   int length = strlen (string);
+
+   while (pos < length && count <= id)
+   {
+      while (pos < length && (string[pos] == ' ' || string[pos] == '\t'))
+         pos++;
+
+      if (string[pos] == '"')
+      {
+         pos++;
+         start = pos;
+
+         while (pos < length && string[pos] != '"')
+            pos++;
+
+         stop = pos - 1;
+         pos++;
+      }
+      else
+      {
+         start = pos;
+
+         while (pos < length && string[pos] != ' ' && string[pos] != '\t')
+            pos++;
+
+         stop = pos - 1;
+      }
+
+      if (count == id)
+      {
+         int i = start;
+
+         for (; i <= stop; i++)
+            field[i - start] = string[i];
+
+         field[i - start] = 0;
+         break;
+      }
+      count++; // we have parsed one field more
+   }
+
+   if (terminate)
+      field[strlen (field) - 1] = 0;
+
+   String::TrimExternalBuffer (field);
+   return field;
+}
+
 void Engine::IssueCmd (const char *fmt, ...)
 {
    // this function asks the engine to execute a server command
@@ -294,15 +434,68 @@ void Engine::IssueCmd (const char *fmt, ...)
 
    // concatenate all the arguments in one string
    va_start (ap, fmt);
-   vsprintf (string, fmt, ap);
+   vsnprintf (string, SIZEOF_CHAR (string), fmt, ap);
    va_end (ap);
 
    strcat (string, "\n");
-
    g_engfuncs.pfnServerCommand (string);
-   g_engfuncs.pfnServerExecute ();
 }
 
+void ConVarWrapper::RegisterVariable (const char *variable, const char *value, VarType varType, ConVar *self)
+{
+   // this function adds globally defined variable to registration stack
 
-// expose singleton
-Engine engine;
+   VarPair newVariable;
+   memset (&newVariable, 0, sizeof (VarPair));
+
+   newVariable.reg.name = const_cast <char *> (variable);
+   newVariable.reg.string = const_cast <char *> (value);
+
+   int engineFlags = FCVAR_EXTDLL;
+
+   if (varType == VT_NORMAL)
+      engineFlags |= FCVAR_SERVER;
+   else if (varType == VT_READONLY)
+      engineFlags |= FCVAR_SERVER | FCVAR_SPONLY | FCVAR_PRINTABLEONLY;
+   else if (varType == VT_PASSWORD)
+      engineFlags |= FCVAR_PROTECTED;
+
+   newVariable.reg.flags = engineFlags;
+   newVariable.self = self;
+   newVariable.type = varType;
+
+   m_regs.Push (newVariable);
+}
+
+void ConVarWrapper::PushRegisteredConVarsToEngine (bool gameVars)
+{
+   // this function pushes all added global variables to engine registration
+
+   FOR_EACH_AE (m_regs, i)
+   {
+      VarPair *ptr = &m_regs[i];
+
+      if (ptr->type != VT_NOREGISTER)
+      {
+         ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
+
+         if (ptr->self->m_eptr == NULL)
+         {
+            g_engfuncs.pfnCVarRegister (&ptr->reg);
+            ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
+         }
+      }
+      else if (gameVars && ptr->type == VT_NOREGISTER)
+      {
+         ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
+
+         // ensure game cvar exists
+         InternalAssert (ptr->self->m_eptr != NULL);
+      }
+   }
+}
+
+ConVar::ConVar (const char *name, const char *initval, VarType type) : m_eptr (NULL)
+{
+   ConVarWrapper::GetReference ().RegisterVariable (name, initval, type, this);
+}

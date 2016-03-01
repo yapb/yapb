@@ -21,6 +21,10 @@
 #include <math.h>
 #include <assert.h>
 
+#ifdef _WIN32
+#include <direct.h>
+#endif
+
 //
 // Title: Utility Classes Header
 //
@@ -3296,6 +3300,56 @@ public:
 
       return Split (sep);
    }
+
+public:
+   //
+   // Function: TrimExternalBuffer
+   //  Trims string from both sides.
+   //
+   // Returns:
+   //  None
+   //
+   static inline void TrimExternalBuffer (char *string)
+   {
+      char *ptr = string;
+
+      int length = 0, toggleFlag = 0, increment = 0;
+      int i = 0;
+
+      while (*ptr++)
+         length++;
+
+      for (i = length - 1; i >= 0; i--)
+      {
+         if (!isspace (string[i]))
+            break;
+         else
+         {
+            string[i] = 0;
+            length--;
+         }
+      }
+
+      for (i = 0; i < length; i++)
+      {
+         if (isspace (string[i]) && !toggleFlag)
+         {
+            increment++;
+
+            if (increment + i < length)
+               string[i] = string[increment + i];
+         }
+         else
+         {
+            if (!toggleFlag)
+               toggleFlag = 1;
+
+            if (increment)
+               string[i] = string[increment + i];
+         }
+      }
+      string[length] = 0;
+   }
 };
 
 //
@@ -3614,6 +3668,29 @@ public:
          return true;
       }
       return false;
+   }
+
+   static inline void CreatePath (char *path)
+   {
+      for (char *ofs = path + 1; *ofs; ofs++)
+      {
+         if (*ofs == '/')
+         {
+            // create the directory
+            *ofs = 0;
+#ifdef _WIN32
+            _mkdir (path);
+#else
+            mkdir (path, 0777);
+#endif
+            *ofs = '/';
+         }
+      }
+#ifdef _WIN32
+      _mkdir (path);
+#else
+      mkdir (path, 0777);
+#endif
    }
 };
 

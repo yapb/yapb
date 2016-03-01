@@ -20,7 +20,6 @@ extern bool g_autoWaypoint;
 extern bool g_botsCanPause; 
 extern bool g_editNoclip;
 extern bool g_isMetamod;
-extern bool g_isFakeCommand;
 extern bool g_sendAudioFinished;
 extern bool g_isCommencing;
 extern bool g_leaderChoosen[2];
@@ -39,7 +38,6 @@ extern float g_lastRadioTime[2];
 extern int g_mapType;
 extern int g_numWaypoints;
 extern int g_gameFlags;
-extern int g_fakeArgc;
 
 extern int g_highestDamageCT;
 extern int g_highestDamageT;
@@ -54,8 +52,6 @@ extern int g_radioSelect[32];
 extern int g_lastRadio[2];
 extern int g_storeAddbotVars[4];
 extern int *g_weaponPrefs[];
-
-extern char g_fakeArgv[256];
 
 extern Array <Array <String> > g_chatFactory;
 extern Array <Array <ChatterItem> > g_chatterFactory;
@@ -105,7 +101,7 @@ static inline int EntOffsetOfEntity(const edict_t *ent)
    return (char *) ent - (char *) g_worldEntity;
 }
 
-static inline bool IsEntityNull (const edict_t *ent)
+static inline bool IsNullEntity (const edict_t *ent)
 {
    return !ent || !EntOffsetOfEntity (ent);
 }

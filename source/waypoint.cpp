@@ -143,7 +143,7 @@ void Waypoint::FindInRadius (Array <int> &radiusHolder, float radius, const Vect
 
 void Waypoint::Add (int flags, const Vector &waypointOrigin)
 {
-   if (IsEntityNull (g_hostEntity))
+   if (IsNullEntity (g_hostEntity))
       return;
 
    int index = -1, i;
@@ -846,7 +846,7 @@ void Waypoint::SaveExperienceTab (void)
       }
    }
 
-   int result = Compressor::Compress (FormatBuffer ("%slearned/%s.exp", GetWaypointDir (), engine.GetMapName ()), (unsigned char *)&header, sizeof (ExtensionHeader), (unsigned char *)experienceSave, g_numWaypoints * g_numWaypoints * sizeof (ExperienceSave));
+   int result = Compressor::Compress (FormatBuffer ("%slearned/%s.exp", GetDataDir (), engine.GetMapName ()), (unsigned char *)&header, sizeof (ExtensionHeader), (unsigned char *)experienceSave, g_numWaypoints * g_numWaypoints * sizeof (ExperienceSave));
 
    delete [] experienceSave;
 
@@ -885,7 +885,7 @@ void Waypoint::InitExperienceTab (void)
          (g_experienceData + (i * g_numWaypoints) + j)->team1Value = 0;
       }
    }
-   File fp (FormatBuffer ("%slearned/%s.exp", GetWaypointDir (), engine.GetMapName ()), "rb");
+   File fp (FormatBuffer ("%slearned/%s.exp", GetDataDir (), engine.GetMapName ()), "rb");
 
    // if file exists, read the experience data from it
    if (fp.IsValid ())
@@ -908,7 +908,7 @@ void Waypoint::InitExperienceTab (void)
          {
             ExperienceSave *experienceLoad = new ExperienceSave[g_numWaypoints * g_numWaypoints];
 
-            Compressor::Uncompress (FormatBuffer ("%slearned/%s.exp", GetWaypointDir (), engine.GetMapName ()), sizeof (ExtensionHeader), (unsigned char *)experienceLoad, g_numWaypoints * g_numWaypoints * sizeof (ExperienceSave));
+            Compressor::Uncompress (FormatBuffer ("%slearned/%s.exp", GetDataDir (), engine.GetMapName ()), sizeof (ExtensionHeader), (unsigned char *)experienceLoad, g_numWaypoints * g_numWaypoints * sizeof (ExperienceSave));
 
             for (i = 0; i < g_numWaypoints; i++)
             {
@@ -958,7 +958,7 @@ void Waypoint::SaveVisibilityTab (void)
    header.fileVersion = FV_VISTABLE;
    header.pointNumber = g_numWaypoints;
 
-   File fp (FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), engine.GetMapName ()), "wb");
+   File fp (FormatBuffer ("%slearned/%s.vis", GetDataDir (), engine.GetMapName ()), "wb");
 
    if (!fp.IsValid ())
    {
@@ -967,7 +967,7 @@ void Waypoint::SaveVisibilityTab (void)
    }
    fp.Close ();
 
-   Compressor::Compress (FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), engine.GetMapName ()), (unsigned char *) &header, sizeof (ExtensionHeader), (unsigned char *) m_visLUT, MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (byte));
+   Compressor::Compress (FormatBuffer ("%slearned/%s.vis", GetDataDir (), engine.GetMapName ()), (unsigned char *) &header, sizeof (ExtensionHeader), (unsigned char *) m_visLUT, MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (byte));
 }
 
 void Waypoint::InitVisibilityTab (void)
@@ -977,7 +977,7 @@ void Waypoint::InitVisibilityTab (void)
 
    ExtensionHeader header;
 
-   File fp (FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), engine.GetMapName ()), "rb");
+   File fp (FormatBuffer ("%slearned/%s.vis", GetDataDir (), engine.GetMapName ()), "rb");
    m_redoneVisibility = false;
 
    if (!fp.IsValid ())
@@ -1008,7 +1008,7 @@ void Waypoint::InitVisibilityTab (void)
 
       return;
    }
-   int result = Compressor::Uncompress (FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), engine.GetMapName ()), sizeof (ExtensionHeader), (unsigned char *) m_visLUT, MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (byte));
+   int result = Compressor::Uncompress (FormatBuffer ("%slearned/%s.vis", GetDataDir (), engine.GetMapName ()), sizeof (ExtensionHeader), (unsigned char *) m_visLUT, MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (byte));
 
    if (result == -1)
    {
@@ -1137,9 +1137,7 @@ bool Waypoint::Load (void)
       if (yb_waypoint_autodl_enable.GetBool ())
       {
          AddLogEntry (true, LL_DEFAULT, "%s.pwf does not exist, trying to download from waypoint database", map);
-
-         WaypointDownloader dl;
-         WaypointDownloadError status = dl.DoDownload ();
+         WaypointDownloadError status = RequestWaypoint ();
  
          if (status == WDE_SOCKET_ERROR)
          {
@@ -1247,12 +1245,12 @@ String Waypoint::CheckSubfolderFile (void)
    if (!IsNullString (yb_wptsubfolder.GetString ()))
       returnFile += (String (yb_wptsubfolder.GetString ()) + "/");
 
-   returnFile = FormatBuffer ("%s%s%s.pwf", GetWaypointDir (), returnFile.GetBuffer (), engine.GetMapName ());
+   returnFile = FormatBuffer ("%s%s%s.pwf", GetDataDir (), returnFile.GetBuffer (), engine.GetMapName ());
 
    if (File::Accessible (returnFile))
       return returnFile;
 
-   return FormatBuffer ("%s%s.pwf", GetWaypointDir (), engine.GetMapName ());
+   return FormatBuffer ("%s%s.pwf", GetDataDir (), engine.GetMapName ());
 }
 
 float Waypoint::GetTravelTime (float maxSpeed, const Vector &src, const Vector &origin)
@@ -1311,7 +1309,7 @@ bool Waypoint::IsNodeReachable (const Vector &src, const Vector &destination)
    // check if we go through a func_illusionary, in which case return false
    engine.TestHull (src, destination, TRACE_IGNORE_MONSTERS, head_hull, g_hostEntity, &tr);
 
-   if (!IsEntityNull (tr.pHit) && strcmp ("func_illusionary", STRING (tr.pHit->v.classname)) == 0)
+   if (!IsNullEntity (tr.pHit) && strcmp ("func_illusionary", STRING (tr.pHit->v.classname)) == 0)
       return false; // don't add pathwaypoints through func_illusionaries
 
    // check if this waypoint is "visible"...
@@ -1499,7 +1497,7 @@ void Waypoint::Think (void)
 {
    // this function executes frame of waypoint operation code.
 
-   if (IsEntityNull (g_hostEntity))
+   if (IsNullEntity (g_hostEntity))
       return; // this function is only valid on listenserver, and in waypoint enabled mode.
 
    float nearestDistance = 99999.0f;
@@ -2110,7 +2108,7 @@ void Waypoint::InitPathMatrix (void)
 
 void Waypoint::SavePathMatrix (void)
 {
-   File fp (FormatBuffer ("%slearned/%s.pmt", GetWaypointDir (), engine.GetMapName ()), "wb");
+   File fp (FormatBuffer ("%slearned/%s.pmt", GetDataDir (), engine.GetMapName ()), "wb");
 
    // unable to open file
    if (!fp.IsValid ())
@@ -2132,7 +2130,7 @@ void Waypoint::SavePathMatrix (void)
 
 bool Waypoint::LoadPathMatrix (void)
 {
-   File fp (FormatBuffer ("%slearned/%s.pmt", GetWaypointDir (), engine.GetMapName ()), "rb");
+   File fp (FormatBuffer ("%slearned/%s.pmt", GetDataDir (), engine.GetMapName ()), "rb");
 
    // file doesn't exists return false
    if (!fp.IsValid ())
@@ -2211,7 +2209,7 @@ void Waypoint::CreateBasic (void)
    edict_t *ent = NULL;
 
    // first of all, if map contains ladder points, create it
-   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_ladder")))
+   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_ladder")))
    {
       Vector ladderLeft = ent->v.absmin;
       Vector ladderRight = ent->v.absmax;
@@ -2260,7 +2258,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // then terrortist spawnpoints
-   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_player_deathmatch")))
+   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_player_deathmatch")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2269,7 +2267,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // then add ct spawnpoints
-   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_player_start")))
+   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_player_start")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2278,7 +2276,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // then vip spawnpoint
-   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_vip_start")))
+   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_vip_start")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2287,7 +2285,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // hostage rescue zone
-   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_hostage_rescue")))
+   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_hostage_rescue")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2296,7 +2294,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // hostage rescue zone (same as above)
-   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_hostage_rescue")))
+   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_hostage_rescue")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2305,7 +2303,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // bombspot zone
-   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_bomb_target")))
+   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_bomb_target")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2314,7 +2312,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // bombspot zone (same as above)
-   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_bomb_target")))
+   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_bomb_target")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2323,7 +2321,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // hostage entities
-   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "hostage_entity")))
+   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "hostage_entity")))
    {
       // if already saved || moving skip it
       if ((ent->v.effects & EF_NODRAW) && ent->v.speed > 0.0f)
@@ -2336,7 +2334,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // vip rescue (safety) zone
-   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_vip_safetyzone")))
+   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_vip_safetyzone")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2345,7 +2343,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // terrorist escape zone
-   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_escapezone")))
+   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_escapezone")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2354,7 +2352,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // weapons on the map ?
-   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "armoury_entity")))
+   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "armoury_entity")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2381,11 +2379,11 @@ void Waypoint::EraseFromHardDisk (void)
    const char *map = engine.GetMapName ();
 
    // if we're delete waypoint, delete all corresponding to it files
-   deleteList[0] = FormatBuffer ("%s%s.pwf", GetWaypointDir (), map); // waypoint itself
-   deleteList[1] = FormatBuffer ("%slearned/%s.exp", GetWaypointDir (), map); // corresponding to waypoint experience
-   deleteList[3] = FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), map); // corresponding to waypoint vistable
-   deleteList[3] = FormatBuffer ("%slearned/%s.pmt", GetWaypointDir (), map); // corresponding to waypoint path matrix
-   deleteList[4] = FormatBuffer ("%slearned/%s.xml", GetWaypointDir (), map); // corresponding to waypoint xml database
+   deleteList[0] = FormatBuffer ("%s%s.pwf", GetDataDir (), map); // waypoint itself
+   deleteList[1] = FormatBuffer ("%slearned/%s.exp", GetDataDir (), map); // corresponding to waypoint experience
+   deleteList[3] = FormatBuffer ("%slearned/%s.vis", GetDataDir (), map); // corresponding to waypoint vistable
+   deleteList[3] = FormatBuffer ("%slearned/%s.pmt", GetDataDir (), map); // corresponding to waypoint path matrix
+   deleteList[4] = FormatBuffer ("%slearned/%s.xml", GetDataDir (), map); // corresponding to waypoint xml database
 
    for (int i = 0; i < 4; i++)
    {
@@ -2398,6 +2396,11 @@ void Waypoint::EraseFromHardDisk (void)
          AddLogEntry (true, LL_ERROR, "Unable to open %s", deleteList[i].GetBuffer ());
    }
    Init (); // reintialize points
+}
+
+const char *Waypoint::GetDataDir (void)
+{
+   return FormatBuffer ("%s/addons/yapb/data/", engine.GetModName ());
 }
 
 void Waypoint::SetBombPosition (bool shouldReset)
@@ -2414,7 +2417,7 @@ void Waypoint::SetBombPosition (bool shouldReset)
 
    edict_t *ent = NULL;
 
-   while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
+   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
    {
       if (strcmp (STRING (ent->v.model) + 9, "c4.mdl") == 0)
       {
@@ -2481,7 +2484,7 @@ Waypoint::~Waypoint (void)
    m_pathMatrix = NULL;
 }
 
-void WaypointDownloader::FreeSocket (int sock)
+void Waypoint::CloseSocketHandle (int sock)
 {
 #if defined (PLATFORM_WIN32)
    if (sock != -1)
@@ -2495,7 +2498,7 @@ void WaypointDownloader::FreeSocket (int sock)
 }
 
 
-WaypointDownloadError WaypointDownloader::DoDownload (void)
+WaypointDownloadError Waypoint::RequestWaypoint (void)
 {
 #if defined (PLATFORM_WIN32)
    WORD requestedVersion = MAKEWORD (1, 1);
@@ -2516,7 +2519,7 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
 
    if (socketHandle < 0)
    {
-      FreeSocket (socketHandle);
+      CloseSocketHandle (socketHandle);
       return WDE_SOCKET_ERROR;
    }
    sockaddr_in dest;
@@ -2529,14 +2532,14 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
 
    if (result < 0)
    {
-      FreeSocket (socketHandle);
+      CloseSocketHandle (socketHandle);
       return WDE_SOCKET_ERROR;
    }
    result = setsockopt (socketHandle, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof (timeout));
 
    if (result < 0)
    {
-      FreeSocket (socketHandle);
+      CloseSocketHandle (socketHandle);
       return WDE_SOCKET_ERROR;
    }
    memset (&dest, 0, sizeof (dest));
@@ -2547,7 +2550,7 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
 
    if (connect (socketHandle, (struct sockaddr*) &dest, (int) sizeof (dest)) == -1)
    {
-      FreeSocket (socketHandle);
+      CloseSocketHandle (socketHandle);
       return WDE_CONNECT_ERROR;
    }
 
@@ -2556,7 +2559,7 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
 
    if (send (socketHandle, request.GetBuffer (), request.GetLength () + 1, 0) < 1)
    {
-      FreeSocket (socketHandle);
+      CloseSocketHandle (socketHandle);
       return WDE_SOCKET_ERROR;
    }
 
@@ -2576,7 +2579,7 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
       // ugly, but whatever
       if (recvPosition > 2 && buffer[recvPosition - 2] == '4' && buffer[recvPosition - 1] == '0' && buffer[recvPosition] == '4')
       {
-         FreeSocket (socketHandle);
+         CloseSocketHandle (socketHandle);
          return WDE_NOTFOUND_ERROR;
       }
 
@@ -2603,7 +2606,7 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
 
    if (!fp.IsValid ())
    {
-      FreeSocket (socketHandle);
+      CloseSocketHandle (socketHandle);
       return WDE_SOCKET_ERROR;
    }
 
@@ -2622,7 +2625,7 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
    } while (recvSize != 0);
 
    fp.Close ();
-   FreeSocket (socketHandle);
+   CloseSocketHandle (socketHandle);
 
    return WDE_NOERROR;
 }

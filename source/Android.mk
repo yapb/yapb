@@ -22,6 +22,7 @@ LOCAL_SRC_FILES := \
 	chatlib.cpp \
 	combat.cpp \
 	globals.cpp \
+	engine.cpp \
 	interface.cpp \
 	navigate.cpp \
 	netmsg.cpp \

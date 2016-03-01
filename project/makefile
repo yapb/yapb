@@ -16,6 +16,7 @@ OBJECTS = $(SRC_DIR)/basecode.cpp	\
 	  $(SRC_DIR)/chatlib.cpp	\
 	  $(SRC_DIR)/combat.cpp		\
 	  $(SRC_DIR)/globals.cpp	\
+	  $(SRC_DIR)/engine.cpp		\
 	  $(SRC_DIR)/interface.cpp	\
 	  $(SRC_DIR)/navigate.cpp	\
 	  $(SRC_DIR)/netmsg.cpp		\

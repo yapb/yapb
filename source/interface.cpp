@@ -205,7 +205,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    // waypoint manimupulation (really obsolete, can be edited through menu) (supported only on listen server)
    else if (stricmp (arg0, "waypoint") == 0 || stricmp (arg0, "wp") == 0 || stricmp (arg0, "wpt") == 0)
    {
-      if (engine.IsDedicatedServer () || IsEntityNull (g_hostEntity))
+      if (engine.IsDedicatedServer () || IsNullEntity (g_hostEntity))
          return 2;
 
       // enables or disable waypoint displaying
@@ -250,11 +250,11 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
          if (stricmp (arg2, "on") == 0)
          {
-            while (!IsEntityNull (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
+            while (!IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
                spawnEntity->v.effects &= ~EF_NODRAW;
-            while (!IsEntityNull (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_deathmatch")))
+            while (!IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_deathmatch")))
                spawnEntity->v.effects &= ~EF_NODRAW;
-            while (!IsEntityNull (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_vip_start")))
+            while (!IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_vip_start")))
                spawnEntity->v.effects &= ~EF_NODRAW;
 
             engine.IssueCmd ("mp_roundtime 9"); // reset round time to maximum
@@ -263,11 +263,11 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          }
          else if (stricmp (arg2, "off") == 0)
          {
-            while (!IsEntityNull (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
+            while (!IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
                spawnEntity->v.effects |= EF_NODRAW;
-            while (!IsEntityNull (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_deathmatch")))
+            while (!IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_deathmatch")))
                spawnEntity->v.effects |= EF_NODRAW;
-            while (!IsEntityNull (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_vip_start")))
+            while (!IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_vip_start")))
                spawnEntity->v.effects |= EF_NODRAW;
          }
       }
@@ -373,7 +373,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    // path waypoint editing system (supported only on listen server)
    else if (stricmp (arg0, "pathwaypoint") == 0 || stricmp (arg0, "path") == 0 || stricmp (arg0, "pwp") == 0)
    {
-      if (engine.IsDedicatedServer () || IsEntityNull (g_hostEntity))
+      if (engine.IsDedicatedServer () || IsNullEntity (g_hostEntity))
          return 2;
 
       // opens path creation menu
@@ -404,7 +404,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    // automatic waypoint handling (supported only on listen server)
    else if (stricmp (arg0, "autowaypoint") == 0 || stricmp (arg0, "autowp") == 0)
    {
-      if (engine.IsDedicatedServer () || IsEntityNull (g_hostEntity))
+      if (engine.IsDedicatedServer () || IsNullEntity (g_hostEntity))
          return 2;
 
       // enable autowaypointing
@@ -425,7 +425,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    // experience system handling (supported only on listen server)
    else if (stricmp (arg0, "experience") == 0 || stricmp (arg0, "exp") == 0)
    {
-      if (engine.IsDedicatedServer () || IsEntityNull (g_hostEntity))
+      if (engine.IsDedicatedServer () || IsNullEntity (g_hostEntity))
          return 2;
 
       // write experience table (and visibility table) to hard disk
@@ -506,7 +506,7 @@ void InitConfig (void)
          if (pair.GetElementNumber () > 1)
             strncpy (line, pair[0].Trim ().GetBuffer (), SIZEOF_CHAR (line));
 
-         strtrim (line);
+         String::TrimExternalBuffer (line);
          line[32] = 0;
 
          BotName item;
@@ -532,7 +532,7 @@ void InitConfig (void)
       while (fp.GetBuffer (line, 255))
       {
          SKIP_COMMENTS ();
-         strncpy (section, GetField (line, 0, 1), SIZEOF_CHAR (section));
+         strncpy (section, Engine::ExtractSingleField (line, 0, 1), SIZEOF_CHAR (section));
 
          if (strcmp (section, "[KILLED]") == 0)
          {
@@ -578,7 +578,7 @@ void InitConfig (void)
          if (chatType != 3)
             line[79] = 0;
 
-         strtrim (line);
+         String::TrimExternalBuffer (line);
 
          switch (chatType)
          {
@@ -850,7 +850,7 @@ void InitConfig (void)
 
             if (!IsNullString (buffer))
             {
-               strtrim (buffer);
+               String::TrimExternalBuffer (buffer);
                temp.translated = _strdup (buffer);
                buffer[0] = 0x0;
             }
@@ -860,7 +860,7 @@ void InitConfig (void)
          }
          else if (strncmp (line, "[TRANSLATED]", 12) == 0)
          {
-            strtrim (buffer);
+            String::TrimExternalBuffer (buffer);
             temp.original = _strdup (buffer);
             buffer[0] = 0x0;
 
@@ -977,7 +977,7 @@ void Touch (edict_t *pentTouched, edict_t *pentOther)
    // the two entities both have velocities, for example two players colliding, this function
    // is called twice, once for each entity moving.
 
-   if (!IsEntityNull (pentOther) && (pentOther->v.flags & FL_FAKECLIENT))
+   if (!IsNullEntity (pentOther) && (pentOther->v.flags & FL_FAKECLIENT))
    {
       Bot *bot = bots.GetBot (pentOther);
 
@@ -1002,9 +1002,10 @@ int Spawn (edict_t *ent)
 
    if (strcmp (entityClassname, "worldspawn") == 0)
    {
+      engine.Precache ();
       g_worldEntity = ent; // save the world entity for future use
 
-      convars.PushRegisteredConVarsToEngine (true);
+      ConVarWrapper::GetReference ().PushRegisteredConVarsToEngine (true);
 
       PRECACHE_SOUND (ENGINE_STR ("weapons/xbow_hit1.wav"));      // waypoint add
       PRECACHE_SOUND (ENGINE_STR ("weapons/mine_activate.wav"));  // waypoint delete
@@ -1013,13 +1014,10 @@ int Spawn (edict_t *ent)
       PRECACHE_SOUND (ENGINE_STR ("common/wpn_moveselect.wav"));  // path add/delete cancel
       PRECACHE_SOUND (ENGINE_STR ("common/wpn_denyselect.wav"));  // path add/delete error
 
-      engine.Precache ();
       g_roundEnded = true;
-
       RoundInit ();
 
       g_mapType = NULL; // reset map type as worldspawn is the first entity spawned
-
 
       // detect official csbots here, as they causing crash in linkent code when active for some reason
       if (!(g_gameFlags & GAME_LEGACY) && g_engfuncs.pfnCVarGetPointer ("bot_stop") != NULL)
@@ -1231,7 +1229,7 @@ void ClientCommand (edict_t *ent)
    static int fillServerTeam = 5;
    static bool fillCommand = false;
 
-   if (!g_isFakeCommand && (ent == g_hostEntity || (g_clients[IndexOfEntity (ent) - 1].flags & CF_ADMIN)))
+   if (!engine.IsBotCommand () && (ent == g_hostEntity || (g_clients[IndexOfEntity (ent) - 1].flags & CF_ADMIN)))
    {
       if (stricmp (command, "yapb") == 0 || stricmp (command, "yb") == 0)
       {
@@ -2011,7 +2009,7 @@ void ClientCommand (edict_t *ent)
       }
    }
 
-   if (!g_isFakeCommand && (stricmp (command, "say") == 0 || stricmp (command, "say_team") == 0))
+   if (!engine.IsBotCommand () && (stricmp (command, "say") == 0 || stricmp (command, "say_team") == 0))
    {
       Bot *bot = NULL;
 
@@ -2168,7 +2166,7 @@ void StartFrame (void)
    {
       edict_t *player = EntityOfIndex (i + 1);
 
-      if (!IsEntityNull (player) && (player->v.flags & FL_CLIENT))
+      if (!IsNullEntity (player) && (player->v.flags & FL_CLIENT))
       {
          g_clients[i].ent = player;
          g_clients[i].flags |= CF_USED;
@@ -2195,7 +2193,7 @@ void StartFrame (void)
       }
    }
 
-   if (!engine.IsDedicatedServer () && !IsEntityNull (g_hostEntity))
+   if (!engine.IsDedicatedServer () && !IsNullEntity (g_hostEntity))
    {
       if (g_waypointOn)
          waypoints.Think ();
@@ -2211,7 +2209,7 @@ void StartFrame (void)
          edict_t *player = EntityOfIndex (i + 1);
 
          // code below is executed only on dedicated server
-         if (engine.IsDedicatedServer () && !IsEntityNull (player) && (player->v.flags & FL_CLIENT) && !(player->v.flags & FL_FAKECLIENT))
+         if (engine.IsDedicatedServer () && !IsNullEntity (player) && (player->v.flags & FL_CLIENT) && !(player->v.flags & FL_FAKECLIENT))
          {
             if (g_clients[i].flags & CF_ADMIN)
             {
@@ -2379,8 +2377,7 @@ void pfnClientCommand (edict_t *ent, char *format, ...)
    // make the server crash. Since hordes of uncautious, not to say stupid, programmers don't
    // even imagine some players on their servers could be bots, this check is performed less than
    // sometimes actually by their side, that's why we strongly recommend to check it here too. In
-   // case it's a bot asking for a client command, we handle it like we do for bot commands, ie
-   // using FakeClientCommand().
+   // case it's a bot asking for a client command, we handle it like we do for bot commands
 
    va_list ap;
    char buffer[1024];
@@ -2440,7 +2437,7 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
 
    netmsg.HandleMessageIfRequired (msgType, NETMSG_WEAPONLIST);
 
-   if (!IsEntityNull (ed))
+   if (!IsNullEntity (ed))
    {
       int index = bots.GetIndex (ed);
 
@@ -2609,13 +2606,13 @@ int pfnCmd_Argc (void)
    // DLL for a command we are holding here. Of course, real clients commands are still retrieved
    // the normal way, by asking the engine.
 
-   // is this a bot issuing that client command ?
-   if (g_isFakeCommand)
+   // is this a bot issuing that client command?
+   if (engine.IsBotCommand ())
    {
       if (g_isMetamod)
-         RETURN_META_VALUE (MRES_SUPERCEDE, g_fakeArgc);
+         RETURN_META_VALUE (MRES_SUPERCEDE, engine.GetOverrideArgc ());
 
-      return g_fakeArgc; // if so, then return the argument count we know
+      return engine.GetOverrideArgc (); // if so, then return the argument count we know
    }
 
    if (g_isMetamod)
@@ -2634,28 +2631,12 @@ const char *pfnCmd_Args (void)
    // normal way, by asking the engine.
 
    // is this a bot issuing that client command?
-   if (g_isFakeCommand)
+   if (engine.IsBotCommand ())
    {
-      // is it a "say" or "say_team" client command?
-      if (strncmp ("say ", g_fakeArgv, 4) == 0)
-      {
-         if (g_isMetamod)
-            RETURN_META_VALUE (MRES_SUPERCEDE, &g_fakeArgv[4]);
-
-         return &g_fakeArgv[4]; // skip the "say" bot client command
-      }
-      else if (strncmp ("say_team ", g_fakeArgv, 9) == 0)
-      {
-         if (g_isMetamod)
-            RETURN_META_VALUE (MRES_SUPERCEDE, &g_fakeArgv[9]);
-
-         return &g_fakeArgv[9]; // skip the "say_team" bot client command
-      }
-
       if (g_isMetamod)
-         RETURN_META_VALUE (MRES_SUPERCEDE, g_fakeArgv);
+         RETURN_META_VALUE (MRES_SUPERCEDE, engine.GetOverrideArgs ());
 
-      return g_fakeArgv; // else return the whole bot client command string we know
+      return engine.GetOverrideArgs (); // else return the whole bot client command string we know
    }
 
    if (g_isMetamod)
@@ -2673,13 +2654,13 @@ const char *pfnCmd_Argv (int argc)
    // DLL for a command we are holding here. Of course, real clients commands are still retrieved
    // the normal way, by asking the engine.
 
-   // is this a bot issuing that client command ?
-   if (g_isFakeCommand)
+   // is this a bot issuing that client command?
+   if (engine.IsBotCommand ())
    {
       if (g_isMetamod)
-         RETURN_META_VALUE (MRES_SUPERCEDE, GetField (g_fakeArgv, argc));
+         RETURN_META_VALUE (MRES_SUPERCEDE, engine.GetOverrideArgv (argc));
 
-      return GetField (g_fakeArgv, argc); // if so, then return the wanted argument we know
+      return engine.GetOverrideArgv (argc); // if so, then return the wanted argument we know
    }
    if (g_isMetamod)
       RETURN_META_VALUE (MRES_IGNORED, NULL);
@@ -3062,7 +3043,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    g_pGlobals = pGlobals;
 
    // register our cvars
-   convars.PushRegisteredConVarsToEngine ();
+   ConVarWrapper::GetReference ().PushRegisteredConVarsToEngine ();
 
 #ifdef PLATFORM_ANDROID
    g_gameFlags |= (GAME_LEGACY | GAME_XASH | GAME_MOBILITY);
@@ -3179,59 +3160,6 @@ DLL_ENTRYPOINT
       delete g_gameLib; // if dynamic link library of mod is load, free it
    }
    DLL_RETENTRY; // the return data type is OS specific too
-}
-
-void ConVarWrapper::RegisterVariable (const char *variable, const char *value, VarType varType, ConVar *self)
-{
-   VarPair newVariable;
-   memset (&newVariable, 0, sizeof (VarPair));
-
-   newVariable.reg.name = const_cast <char *> (variable);
-   newVariable.reg.string = const_cast <char *> (value);
-
-   int engineFlags = FCVAR_EXTDLL;
-
-   if (varType == VT_NORMAL)
-      engineFlags |= FCVAR_SERVER;
-   else if (varType == VT_READONLY)
-      engineFlags |= FCVAR_SERVER | FCVAR_SPONLY | FCVAR_PRINTABLEONLY;
-   else if (varType == VT_PASSWORD)
-      engineFlags |= FCVAR_PROTECTED;
-
-   newVariable.reg.flags = engineFlags;
-   newVariable.self = self;
-   newVariable.type = varType;
-
-   m_regs.Push (newVariable);
-}
-
-void ConVarWrapper::PushRegisteredConVarsToEngine (bool gameVars)
-{
-   FOR_EACH_AE (m_regs, i)
-   {
-      VarPair *ptr = &m_regs[i];
-
-      if (ptr == NULL)
-         break;
-
-      if (ptr->type != VT_NOREGISTER)
-      {
-         ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
-
-         if (ptr->self->m_eptr == NULL)
-         {
-            g_engfuncs.pfnCVarRegister (&ptr->reg);
-            ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
-         }
-      }
-      else if (gameVars && ptr->type == VT_NOREGISTER)
-      {
-         ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
-
-         // ensure game cvar exists
-         InternalAssert (ptr->self->m_eptr != NULL);
-      }
-   }
 }
 
 static void LinkEntity_Helper (EntityPtr_t &entAddress, const char *name, entvars_t *pev)

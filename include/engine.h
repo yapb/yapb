@@ -28,11 +28,43 @@ enum TraceIgnore
    TRACE_IGNORE_EVERYTHING = TRACE_IGNORE_GLASS | TRACE_IGNORE_MONSTERS
 };
 
+// variable type
+enum VarType
+{
+   VT_NORMAL = 0,
+   VT_READONLY,
+   VT_PASSWORD,
+   VT_NOSERVER,
+   VT_NOREGISTER
+};
+
+// need since we don't want to use Singleton on engine class
+class ConVarWrapper : public Singleton <ConVarWrapper>
+{
+private:
+   struct VarPair
+   {
+      VarType type;
+      cvar_t reg;
+      class ConVar *self;
+   };
+   Array <VarPair> m_regs;
+
+public:
+   void RegisterVariable (const char *variable, const char *value, VarType varType, ConVar *self);
+   void PushRegisteredConVarsToEngine (bool gameVars = false);
+};
+
 // provides utility functions to not call original engine (less call-cost)
 class Engine
 {
 private:
    short m_drawModels[DRAW_NUM];
+
+   // bot client command
+   bool m_isBotCommand;
+   char m_arguments[256];
+   int m_argumentCount;
 
    // public functions
 public:
@@ -85,21 +117,72 @@ public:
    // play's sound to client
    void EmitSound (edict_t *ent, const char *sound);
 
+   // sends bot command
+   void IssueBotCommand (edict_t *ent, const char *fmt, ...);
+
    // public inlines
 public:
 
    // get the current time on server
-   static inline float Time (void)
+   inline float Time (void)
    {
       return g_pGlobals->time;
    }
 
    // get "maxplayers" limit on server
-   static inline int MaxClients (void)
+   inline int MaxClients (void)
    {
       return g_pGlobals->maxClients;
    }
+
+   // get the fakeclient command interface
+   inline bool IsBotCommand (void)
+   {
+      return m_isBotCommand;
+   }
+
+   // gets custom engine args for client command
+   inline const char *GetOverrideArgs (void)
+   {
+      if (strncmp ("say ", m_arguments, 4) == 0)
+         return &m_arguments[4];
+      else if (strncmp ("say_team ", m_arguments, 9) == 0)
+         return &m_arguments[9];
+
+      return m_arguments;
+   }
+
+   // gets custom engine argv for client command
+   inline const char *GetOverrideArgv (int num)
+   {
+      return ExtractSingleField (m_arguments, num, false);
+   }
+
+   // gets custom engine argc for client command
+   inline int GetOverrideArgc (void)
+   {
+      return m_argumentCount;
+   }
+
+   // static utility functions
+public:
+   static const char *ExtractSingleField (const char *string, int id, bool terminate);
 };
 
-// provides quick access to engine instance
-extern Engine engine;
+// simplify access for console variables
+class ConVar
+{
+public:
+   cvar_t *m_eptr;
+
+public:
+   ConVar (const char *name, const char *initval, VarType type = VT_NOSERVER);
+
+   inline bool GetBool (void) { return m_eptr->value > 0.0f; }
+   inline int GetInt (void) { return static_cast <int> (m_eptr->value); }
+   inline float GetFloat (void) { return m_eptr->value; }
+   inline const char *GetString (void) { return m_eptr->string; }
+   inline void SetFloat (float val) { m_eptr->value = val; }
+   inline void SetInt (int val) { SetFloat (static_cast <float> (val)); }
+   inline void SetString (const char *val) { g_engfuncs.pfnCVarSetString (m_eptr->name, val); }
+};

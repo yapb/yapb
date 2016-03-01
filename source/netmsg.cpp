@@ -15,7 +15,7 @@ NetworkMsg::NetworkMsg (void)
     m_state = 0;
     m_bot = NULL;
 
-    for (int i = 0; i < NETMSG_BOTVOICE; i++)
+    for (int i = 0; i < NETMSG_NUM; i++)
        m_registerdMessages[i] = -1;
 }
 
@@ -262,7 +262,7 @@ void NetworkMsg::Execute (void *p)
             edict_t *killer = EntityOfIndex (killerIndex);
             edict_t *victim = EntityOfIndex (victimIndex);
 
-            if (IsEntityNull (killer) || IsEntityNull (victim))
+            if (IsNullEntity (killer) || IsNullEntity (victim))
                break;
 
             if (yb_communication_type.GetInt () == 2)
@@ -289,7 +289,7 @@ void NetworkMsg::Execute (void *p)
             {
                Bot *bot = bots.GetBot (i);
 
-               if (bot != NULL && bot->m_seeEnemyTime + 2.0f < engine.Time () && IsAlive (bot->GetEntity ()) && GetTeam (bot->GetEntity ()) == GetTeam (victim) && IsVisible (killer->v.origin, bot->GetEntity ()) && IsEntityNull (bot->m_enemy) && GetTeam (killer) != GetTeam (victim))
+               if (bot != NULL && bot->m_seeEnemyTime + 2.0f < engine.Time () && IsAlive (bot->GetEntity ()) && GetTeam (bot->GetEntity ()) == GetTeam (victim) && IsVisible (killer->v.origin, bot->GetEntity ()) && IsNullEntity (bot->m_enemy) && GetTeam (killer) != GetTeam (victim))
                {
                   bot->m_actualReactionTime = 0.0f;
                   bot->m_seeEnemyTime = engine.Time ();

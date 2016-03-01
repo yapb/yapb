@@ -59,7 +59,7 @@ const char *FormatBuffer (const char *format, ...)
 
 bool IsAlive (edict_t *ent)
 {
-   if (IsEntityNull (ent))
+   if (IsNullEntity (ent))
       return false;
 
    return ent->v.deadflag == DEAD_NO && ent->v.health > 0 && ent->v.movetype != MOVETYPE_NOCLIP;
@@ -86,7 +86,7 @@ bool IsInViewCone (const Vector &origin, edict_t *ent)
 
 bool IsVisible (const Vector &origin, edict_t *ent)
 {
-   if (IsEntityNull (ent))
+   if (IsNullEntity (ent))
       return false;
 
    TraceResult tr;
@@ -178,7 +178,7 @@ void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex)
    if (trace->flFraction == 1.0f)
       return;
 
-   if (!IsEntityNull (trace->pHit))
+   if (!IsNullEntity (trace->pHit))
    {
       if (trace->pHit->v.solid == SOLID_BSP || trace->pHit->v.movetype == MOVETYPE_PUSHSTEP)
          entityIndex = IndexOfEntity (trace->pHit);
@@ -243,221 +243,6 @@ void FreeLibraryMemory (void)
 
    delete [] g_experienceData;
    g_experienceData = NULL;
-}
-
-void FakeClientCommand (edict_t *fakeClient, const char *format, ...)
-{
-   // the purpose of this function is to provide fakeclients (bots) with the same client
-   // command-scripting advantages (putting multiple commands in one line between semicolons)
-   // as real players. It is an improved version of botman's FakeClientCommand, in which you
-   // supply directly the whole string as if you were typing it in the bot's "console". It
-   // is supposed to work exactly like the pfnClientCommand (server-sided client command).
-
-   va_list ap;
-   static char command[256];
-   int stop, i, stringIndex = 0;
-
-   if (IsEntityNull (fakeClient))
-      return; // reliability check
-
-   // concatenate all the arguments in one string
-   va_start (ap, format);
-   _vsnprintf (command, sizeof (command), format, ap);
-   va_end (ap);
-
-   if (IsNullString (command))
-      return; // if nothing in the command buffer, return
-
-   g_isFakeCommand = true; // set the "fakeclient command" flag
-   int length = strlen (command); // get the total length of the command string
-
-   // process all individual commands (separated by a semicolon) one each a time
-   while (stringIndex < length)
-   {
-      int start = stringIndex; // save field start position (first character)
-
-      while (stringIndex < length && command[stringIndex] != ';')
-         stringIndex++; // reach end of field
-
-      if (command[stringIndex - 1] == '\n')
-         stop = stringIndex - 2; // discard any trailing '\n' if needed
-      else
-         stop = stringIndex - 1; // save field stop position (last character before semicolon or end)
-
-      for (i = start; i <= stop; i++)
-         g_fakeArgv[i - start] = command[i]; // store the field value in the g_fakeArgv global string
-
-      g_fakeArgv[i - start] = 0; // terminate the string
-      stringIndex++; // move the overall string index one step further to bypass the semicolon
-
-      int index = 0;
-      g_fakeArgc = 0; // let's now parse that command and count the different arguments
-
-      // count the number of arguments
-      while (index < i - start)
-      {
-         while (index < i - start && g_fakeArgv[index] == ' ')
-            index++; // ignore spaces
-
-         // is this field a group of words between quotes or a single word ?
-         if (g_fakeArgv[index] == '"')
-         {
-            index++; // move one step further to bypass the quote
-
-            while (index < i - start && g_fakeArgv[index] != '"')
-               index++; // reach end of field
-
-            index++; // move one step further to bypass the quote
-         }
-         else
-            while (index < i - start && g_fakeArgv[index] != ' ')
-               index++; // this is a single word, so reach the end of field
-
-         g_fakeArgc++; // we have processed one argument more
-      }
-
-      // tell now the MOD DLL to execute this ClientCommand...
-      MDLL_ClientCommand (fakeClient);
-   }
-
-   g_fakeArgv[0] = 0; // when it's done, reset the g_fakeArgv field
-   g_isFakeCommand = false; // reset the "fakeclient command" flag
-   g_fakeArgc = 0; // and the argument count
-}
-
-const char *GetField (const char *string, int fieldId, bool endLine)
-{
-   // This function gets and returns a particuliar field in a string where several szFields are
-   // concatenated. Fields can be words, or groups of words between quotes ; separators may be
-   // white space or tabs. A purpose of this function is to provide bots with the same Cmd_Argv
-   // convenience the engine provides to real clients. This way the handling of real client
-   // commands and bot client commands is exactly the same, just have a look in engine.cpp
-   // for the hooking of pfnCmd_Argc, pfnCmd_Args and pfnCmd_Argv, which redirects the call
-   // either to the actual engine functions (when the caller is a real client), either on
-   // our function here, which does the same thing, when the caller is a bot.
-
-   static char field[256];
-
-   // reset the string
-   memset (field, 0, sizeof (field));
-
-   int length, i, index = 0, fieldCount = 0, start, stop;
-
-   field[0] = 0; // reset field
-   length = strlen (string); // get length of string
-
-   // while we have not reached end of line
-   while (index < length && fieldCount <= fieldId)
-   {
-      while (index < length && (string[index] == ' ' || string[index] == '\t'))
-         index++; // ignore spaces or tabs
-
-      // is this field multi-word between quotes or single word ?
-      if (string[index] == '"')
-      {
-         index++; // move one step further to bypass the quote
-         start = index; // save field start position
-
-         while ((index < length) && (string[index] != '"'))
-            index++; // reach end of field
-
-         stop = index - 1; // save field stop position
-         index++; // move one step further to bypass the quote
-      }
-      else
-      {
-         start = index; // save field start position
-
-         while (index < length && (string[index] != ' ' && string[index] != '\t'))
-            index++; // reach end of field
-
-         stop = index - 1; // save field stop position
-      }
-
-      // is this field we just processed the wanted one ?
-      if (fieldCount == fieldId)
-      {
-         for (i = start; i <= stop; i++)
-            field[i - start] = string[i]; // store the field value in a string
-
-         field[i - start] = 0; // terminate the string
-         break; // and stop parsing
-      }
-      fieldCount++; // we have parsed one field more
-   }
-
-   if (endLine)
-      field[strlen (field) - 1] = 0;
-
-   strtrim (field);
-
-   return (&field[0]); // returns the wanted field
-}
-
-void strtrim (char *string)
-{
-   char *ptr = string;
-
-   int length = 0, toggleFlag = 0, increment = 0;
-   int i = 0;
-
-   while (*ptr++)
-      length++;
-
-   for (i = length - 1; i >= 0; i--)
-   {
-      if (!isspace (string[i]))
-         break;
-      else
-      {
-         string[i] = 0;
-         length--;
-      }
-   }
-
-   for (i = 0; i < length; i++)
-   {
-      if (isspace (string[i]) && !toggleFlag)
-      {
-         increment++;
-
-         if (increment + i < length)
-            string[i] = string[increment + i];
-      }
-      else
-      {
-         if (!toggleFlag)
-            toggleFlag = 1;
-
-         if (increment)
-            string[i] = string[increment + i];
-      }
-   }
-   string[length] = 0;
-}
-
-// Create a directory tree
-void CreatePath (char *path)
-{
-   for (char *ofs = path + 1 ; *ofs ; ofs++)
-   {
-      if (*ofs == '/')
-      {
-         // create the directory
-         *ofs = 0;
-#ifdef PLATFORM_WIN32
-         mkdir (path);
-#else
-         mkdir (path, 0777);
-#endif
-         *ofs = '/';
-      }
-   }
-#ifdef PLATFORM_WIN32
-   mkdir (path);
-#else
-   mkdir (path, 0777);
-#endif
 }
 
 void UpdateGlobalExperienceData (void)
@@ -642,7 +427,7 @@ int GetWeaponPenetrationPower (int id)
 
 bool IsValidPlayer (edict_t *ent)
 {
-   if (IsEntityNull (ent))
+   if (IsNullEntity (ent))
       return false;
 
    if (ent->v.flags & FL_PROXY)
@@ -667,7 +452,7 @@ bool IsPlayerVIP (edict_t *ent)
 
 bool IsValidBot (edict_t *ent)
 {
-   if (bots.GetBot (ent) != NULL || (!IsEntityNull (ent) && (ent->v.flags & FL_FAKECLIENT)))
+   if (bots.GetBot (ent) != NULL || (!IsNullEntity (ent) && (ent->v.flags & FL_FAKECLIENT)))
       return true;
 
    return false;
@@ -703,11 +488,6 @@ bool OpenConfig (const char *fileName, const char *errorIfNotExists, File *outFi
       return false;
    }
    return true;
-}
-
-const char *GetWaypointDir (void)
-{
-   return FormatBuffer ("%s/addons/yapb/data/", engine.GetModName ());
 }
 
 void CheckWelcomeMessage (void)
@@ -902,7 +682,7 @@ char *Localizer::TranslateInput (const char *input)
       ptr++;
 
    strncpy (string, input, SIZEOF_CHAR (string));
-   strtrim (string);
+   String::TrimExternalBuffer (string);
 
    FOR_EACH_AE (m_langTab, i)
    {
@@ -960,7 +740,7 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
       }
    }
 
-   if (IsEntityNull (survive))
+   if (IsNullEntity (survive))
       return false; // nothing found
 
    // fill the holder
@@ -977,7 +757,7 @@ void SoundAttachToClients (edict_t *ent, const char *sample, float volume)
    // this function called by the sound hooking code (in emit_sound) enters the played sound into
    // the array associated with the entity
 
-   if (IsEntityNull (ent) || IsNullString (sample))
+   if (IsNullEntity (ent) || IsNullString (sample))
       return; // reliability check
 
    const Vector &origin = engine.GetAbsOrigin (ent);
@@ -1130,11 +910,11 @@ void SoundSimulateUpdate (int playerIndex)
    }
 }
 
-uint16 GenerateBuildNumber (void)
+int GenerateBuildNumber (void)
 {
    // this function generates build number from the compiler date macros
 
-   static uint16 buildNumber = 0;
+   static int buildNumber = 0;
 
    if (buildNumber != 0)
       return buildNumber;

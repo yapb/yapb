@@ -47,7 +47,7 @@ void StripTags (char *buffer)
    // have we stripped too much (all the stuff)?
    if (buffer[0] != '\0')
    {
-      strtrim (buffer); // if so, string is just a tag
+      String::TrimExternalBuffer (buffer); // if so, string is just a tag
 
       int tagLength = 0;
 
@@ -81,7 +81,7 @@ void StripTags (char *buffer)
          }
       }
    }
-   strtrim (buffer); // to finish, strip eventual blanks after and before the tag marks
+   String::TrimExternalBuffer (buffer); // to finish, strip eventual blanks after and before the tag marks
 }
 
 char *HumanizeName (char *name)
@@ -95,7 +95,7 @@ char *HumanizeName (char *name)
    if (Random.Long (1, 100) < 80)
       StripTags (outputName);
    else
-      strtrim (outputName);
+      String::TrimExternalBuffer (outputName);
 
    // sometimes switch name to lower characters
    // note: since we're using russian names written in english, we reduce this shit to 6 percent
@@ -156,7 +156,7 @@ void Bot::PrepareChatMessage (char *text)
    if (!yb_chat.GetBool () || IsNullString (text))
       return;
 
-   #define ASSIGN_TALK_ENTITY() if (!IsEntityNull (talkEntity)) strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), SIZEOF_CHAR (m_tempStrings))
+   #define ASSIGN_TALK_ENTITY() if (!IsNullEntity (talkEntity)) strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), SIZEOF_CHAR (m_tempStrings))
 
    memset (&m_tempStrings, 0, sizeof (m_tempStrings));
 
@@ -232,7 +232,7 @@ void Bot::PrepareChatMessage (char *text)
 
             if (i < engine.MaxClients ())
             {
-               if (!IsEntityNull (pev->dmg_inflictor) && m_team == GetTeam (pev->dmg_inflictor))
+               if (!IsNullEntity (pev->dmg_inflictor) && m_team == GetTeam (pev->dmg_inflictor))
                   talkEntity = pev->dmg_inflictor;
                else
                   talkEntity = g_clients[i].ent;
@@ -426,7 +426,7 @@ void Bot::SayText (const char *text)
    if (IsNullString (text))
       return;
 
-   FakeClientCommand (GetEntity (), "say \"%s\"", text);
+   engine.IssueBotCommand (GetEntity (), "say \"%s\"", text);
 }
 
 void Bot::TeamSayText (const char *text)
@@ -436,5 +436,5 @@ void Bot::TeamSayText (const char *text)
    if (IsNullString (text))
       return;
 
-   FakeClientCommand (GetEntity (), "say_team \"%s\"", text);
+   engine.IssueBotCommand (GetEntity (), "say_team \"%s\"", text);
 }

@@ -18,7 +18,7 @@ int Bot::FindGoal (void)
    {
       edict_t *pent = NULL;
 
-      while (!IsEntityNull (pent = FIND_ENTITY_BY_STRING (pent, "classname", "weaponbox")))
+      while (!IsNullEntity (pent = FIND_ENTITY_BY_STRING (pent, "classname", "weaponbox")))
       {
          if (strcmp (STRING (pent->v.model), "models/w_backpack.mdl") == 0)
          {
@@ -734,7 +734,7 @@ bool Bot::DoWaypointNav (void)
       engine.TestLine (m_currentPath->origin, m_currentPath->origin + Vector (0.0f, 0.0f, -50.0f), TRACE_IGNORE_EVERYTHING, GetEntity (), &tr);
 
       // if trace result shows us that it is a lift
-      if (!IsEntityNull (tr.pHit) && m_navNode != NULL && (strcmp (STRING (tr.pHit->v.classname), "func_door") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_plat") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_train") == 0) && !liftClosedDoorExists)
+      if (!IsNullEntity (tr.pHit) && m_navNode != NULL && (strcmp (STRING (tr.pHit->v.classname), "func_door") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_plat") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_train") == 0) && !liftClosedDoorExists)
       {
          if ((m_liftState == LIFT_NO_NEARBY || m_liftState == LIFT_WAITING_FOR || m_liftState == LIFT_LOOKING_BUTTON_OUTSIDE) && tr.pHit->v.velocity.z == 0.0f)
          {
@@ -760,7 +760,7 @@ bool Bot::DoWaypointNav (void)
             {
                engine.TestLine (m_currentPath->origin, waypoints.GetPath (m_navNode->next->index)->origin, TRACE_IGNORE_EVERYTHING, GetEntity (), &tr);
 
-               if (!IsEntityNull (tr.pHit) && (strcmp (STRING (tr.pHit->v.classname), "func_door") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_plat") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_train") == 0))
+               if (!IsNullEntity (tr.pHit) && (strcmp (STRING (tr.pHit->v.classname), "func_door") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_plat") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_train") == 0))
                   m_liftEntity = tr.pHit;
             }
             m_liftState = LIFT_LOOKING_BUTTON_OUTSIDE;
@@ -875,7 +875,7 @@ bool Bot::DoWaypointNav (void)
          edict_t *button = FindNearestButton (STRING (m_liftEntity->v.targetname));
 
          // got a valid button entity ?
-         if (!IsEntityNull (button) && pev->groundentity == m_liftEntity && m_buttonPushTime + 1.0f < engine.Time () && m_liftEntity->v.velocity.z == 0.0f && IsOnFloor ())
+         if (!IsNullEntity (button) && pev->groundentity == m_liftEntity && m_buttonPushTime + 1.0f < engine.Time () && m_liftEntity->v.velocity.z == 0.0f && IsOnFloor ())
          {
             m_pickupItem = button;
             m_pickupType = PICKUP_BUTTON;
@@ -887,7 +887,7 @@ bool Bot::DoWaypointNav (void)
       // is lift activated and bot is standing on it and lift is moving ?
       if (m_liftState == LIFT_LOOKING_BUTTON_INSIDE || m_liftState == LIFT_ENTERING_IN || m_liftState == LIFT_WAIT_FOR_TEAMMATES || m_liftState == LIFT_WAITING_FOR)
       {
-         if (pev->groundentity == m_liftEntity && m_liftEntity->v.velocity.z != 0.0f && IsOnFloor () && ((waypoints.GetPath (m_prevWptIndex[0])->flags & FLAG_LIFT) || !IsEntityNull (m_targetEntity)))
+         if (pev->groundentity == m_liftEntity && m_liftEntity->v.velocity.z != 0.0f && IsOnFloor () && ((waypoints.GetPath (m_prevWptIndex[0])->flags & FLAG_LIFT) || !IsNullEntity (m_targetEntity)))
          {
             m_liftState = LIFT_TRAVELING_BY;
             m_liftUsageTime = engine.Time () + 14.0f;
@@ -945,12 +945,12 @@ bool Bot::DoWaypointNav (void)
                ResetCollideState ();
             }
          }
-         else if (!IsEntityNull(m_liftEntity))
+         else if (!IsNullEntity(m_liftEntity))
          {
             edict_t *button = FindNearestButton (STRING (m_liftEntity->v.targetname));
 
             // if we got a valid button entity
-            if (!IsEntityNull (button))
+            if (!IsNullEntity (button))
             {
                // lift is already used ?
                bool liftUsed = false;
@@ -958,7 +958,7 @@ bool Bot::DoWaypointNav (void)
                // iterate though clients, and find if lift already used
                for (int i = 0; i < engine.MaxClients (); i++)
                {
-                  if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != m_team || g_clients[i].ent == GetEntity () || IsEntityNull (g_clients[i].ent->v.groundentity))
+                  if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != m_team || g_clients[i].ent == GetEntity () || IsNullEntity (g_clients[i].ent->v.groundentity))
                      continue;
 
                   if (g_clients[i].ent->v.groundentity == m_liftEntity)
@@ -1047,7 +1047,7 @@ bool Bot::DoWaypointNav (void)
       }
    }
 
-   if (!IsEntityNull (m_liftEntity) && !(m_currentPath->flags & FLAG_LIFT))
+   if (!IsNullEntity (m_liftEntity) && !(m_currentPath->flags & FLAG_LIFT))
    {
       if (m_liftState == LIFT_TRAVELING_BY)
       {
@@ -1087,7 +1087,7 @@ bool Bot::DoWaypointNav (void)
    // check if we are going through a door...
    engine.TestLine (pev->origin, m_waypointOrigin, TRACE_IGNORE_MONSTERS, GetEntity (), &tr);
 
-   if (!IsEntityNull (tr.pHit) && IsEntityNull (m_liftEntity) && strncmp (STRING (tr.pHit->v.classname), "func_door", 9) == 0)
+   if (!IsNullEntity (tr.pHit) && IsNullEntity (m_liftEntity) && strncmp (STRING (tr.pHit->v.classname), "func_door", 9) == 0)
    {
       // if the door is near enough...
       if ((engine.GetAbsOrigin (tr.pHit) - pev->origin).GetLengthSquared () < 2500.0f)
@@ -1104,7 +1104,7 @@ bool Bot::DoWaypointNav (void)
       edict_t *button = FindNearestButton (STRING (tr.pHit->v.targetname));
 
       // check if we got valid button
-      if (!IsEntityNull (button))
+      if (!IsNullEntity (button))
       {
          m_pickupItem = button;
          m_pickupType = PICKUP_BUTTON;
@@ -1122,7 +1122,7 @@ bool Bot::DoWaypointNav (void)
 
          edict_t *ent = NULL;
 
-         if (m_doorOpenAttempt > 2 && !IsEntityNull (ent = FIND_ENTITY_IN_SPHERE (ent, pev->origin, 256.0f)))
+         if (m_doorOpenAttempt > 2 && !IsNullEntity (ent = FIND_ENTITY_IN_SPHERE (ent, pev->origin, 256.0f)))
          {
             if (IsValidPlayer (ent) && IsAlive (ent) && m_team != GetTeam (ent) && GetWeaponPenetrationPower (m_currentWeapon) > 0)
             {
@@ -1943,7 +1943,7 @@ void Bot::GetValidWaypoint (void)
 
       // FIXME: Do some error checks if we got a waypoint
    }
-   else if (m_navTimeset + GetEstimatedReachTime () < engine.Time () && IsEntityNull (m_enemy))
+   else if (m_navTimeset + GetEstimatedReachTime () < engine.Time () && IsNullEntity (m_enemy))
    {
       if (m_team == TERRORIST)
       {
@@ -2490,7 +2490,7 @@ bool Bot::HeadTowardWaypoint (void)
             }
 
             // is there a jump waypoint right ahead and do we need to draw out the light weapon ?
-            if (willJump && m_currentWeapon != WEAPON_KNIFE && m_currentWeapon != WEAPON_SCOUT && !m_isReloading && !UsesPistol () && (jumpDistance > 210.0f || (dst.z + 32.0f > src.z && jumpDistance > 150.0f) || ((dst - src).GetLength2D () < 60.0f && jumpDistance > 60.0f)) && IsEntityNull (m_enemy))
+            if (willJump && m_currentWeapon != WEAPON_KNIFE && m_currentWeapon != WEAPON_SCOUT && !m_isReloading && !UsesPistol () && (jumpDistance > 210.0f || (dst.z + 32.0f > src.z && jumpDistance > 150.0f) || ((dst - src).GetLength2D () < 60.0f && jumpDistance > 60.0f)) && IsNullEntity (m_enemy))
                SelectWeaponByName ("weapon_knife"); // draw out the knife if we needed
 
             // bot not already on ladder but will be soon?
@@ -3310,7 +3310,7 @@ int Bot::FindPlantedBomb (void)
    edict_t *bombEntity = NULL; // temporaly pointer to bomb
 
    // search the bomb on the map
-   while (!IsEntityNull (bombEntity = FIND_ENTITY_BY_CLASSNAME (bombEntity, "grenade")))
+   while (!IsNullEntity (bombEntity = FIND_ENTITY_BY_CLASSNAME (bombEntity, "grenade")))
    {
       if (strcmp (STRING (bombEntity->v.model) + 9, "c4.mdl") == 0)
       {
@@ -3341,7 +3341,7 @@ bool Bot::IsPointOccupied (int index)
       // check if this waypoint is already used
       // TODO: take in account real players
 
-      if (bot->m_notKilled)
+      if (bot->m_notKilled && m_currentWaypointIndex != -1 && bot->m_prevWptIndex[0] != -1)
       {
          int occupyId = GetShootingConeDeviation (bot->GetEntity (), &pev->origin) >= 0.7f ? bot->m_prevWptIndex[0] : m_currentWaypointIndex;
 
@@ -3367,7 +3367,7 @@ edict_t *Bot::FindNearestButton (const char *targetName)
    edict_t *searchEntity = NULL, *foundEntity = NULL;
 
    // find the nearest button which can open our target
-   while (!IsEntityNull(searchEntity = FIND_ENTITY_BY_TARGET (searchEntity, targetName)))
+   while (!IsNullEntity(searchEntity = FIND_ENTITY_BY_TARGET (searchEntity, targetName)))
    {
       Vector entityOrign = engine.GetAbsOrigin (searchEntity);
 

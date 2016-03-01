@@ -361,6 +361,15 @@ enum LiftState
    LIFT_LEAVING
 };
 
+// wayponit auto-downloader
+enum WaypointDownloadError
+{
+   WDE_SOCKET_ERROR,
+   WDE_CONNECT_ERROR,
+   WDE_NOTFOUND_ERROR,
+   WDE_NOERROR
+};
+
 // game start messages for counter-strike...
 enum GameStartMessage
 {
@@ -376,6 +385,7 @@ enum GameStartMessage
 // netmessage functions
 enum NetworkMessage
 {
+   NETMSG_UNDEFINED = 0,
    NETMSG_VGUI = 1,
    NETMSG_SHOWMENU = 2,
    NETMSG_WEAPONLIST = 3,
@@ -395,7 +405,7 @@ enum NetworkMessage
    NETMSG_SAYTEXT = 18,
    NETMSG_BOTVOICE = 19,
    NETMSG_RESETHUD = 20,
-   NETMSG_UNDEFINED = 0
+   NETMSG_NUM = 21
 };
 
 // sensing states
@@ -1226,7 +1236,7 @@ public:
 };
 
 // manager class
-class BotManager : public Singleton <BotManager>
+class BotManager
 {
 private:
    Array <CreateQueue> m_creationTab; // bot creation tab
@@ -1322,7 +1332,7 @@ public:
 };
 
 // texts localizer
-class Localizer : public Singleton <Localizer>
+class Localizer
 {
 public:
    Array <LanguageItem> m_langTab;
@@ -1336,13 +1346,13 @@ public:
 };
 
 // netmessage handler class
-class NetworkMsg : public Singleton <NetworkMsg>
+class NetworkMsg
 {
 private:
    Bot *m_bot;
    int m_state;
    int m_message;
-   int m_registerdMessages[NETMSG_RESETHUD + 1];
+   int m_registerdMessages[NETMSG_NUM];
 
 public:
    NetworkMsg (void);
@@ -1360,7 +1370,7 @@ public:
 };
 
 // waypoint operation class
-class Waypoint : public Singleton <Waypoint>
+class Waypoint
 {
    friend class Bot;
 
@@ -1468,6 +1478,7 @@ public:
    {
       return m_foundBombOrigin;
    }
+   const char *GetDataDir (void);
 
    void SetBombPosition (bool shouldReset = false);
    String CheckSubfolderFile (void);
@@ -1482,141 +1493,41 @@ public:
 
       return GetPath (index);
    }
-};
-
-// wayponit auto-downloader
-enum WaypointDownloadError
-{
-   WDE_SOCKET_ERROR,
-   WDE_CONNECT_ERROR,
-   WDE_NOTFOUND_ERROR,
-   WDE_NOERROR
-};
-
-class WaypointDownloader
-{
-public:
 
    // free's socket handle
-   void FreeSocket (int sock);
+   void CloseSocketHandle (int sock);
 
    // do actually downloading of waypoint file
-   WaypointDownloadError DoDownload (void);
+   WaypointDownloadError RequestWaypoint (void);
 };
 
-enum VarType
-{
-   VT_NORMAL = 0,
-   VT_READONLY,
-   VT_PASSWORD,
-   VT_NOSERVER,
-   VT_NOREGISTER
-};
+#include <engine.h>
 
-class ConVarWrapper : public Singleton <ConVarWrapper>
-{
-private:
-   struct VarPair
-   {
-      VarType type;
-      cvar_t reg;
-      class ConVar *self;
-   };
-   Array <VarPair> m_regs;
-
-public:
-   void RegisterVariable (const char *variable, const char *value, VarType varType, ConVar *self);
-   void PushRegisteredConVarsToEngine (bool gameVars = false);
-};
-
-
-// expose bot globals
-#define netmsg NetworkMsg::GetReference ()
-#define locale Localizer::GetReference ()
-#define convars ConVarWrapper::GetReference ()
-#define waypoints Waypoint::GetReference ()
-#define bots BotManager::GetReference ()
-
-// simplify access for console variables
-class ConVar
-{
-public:
-   cvar_t *m_eptr;
-
-public:
-   ConVar (const char *name, const char *initval, VarType type = VT_NOSERVER)
-   {
-      m_eptr = NULL;
-
-      convars.RegisterVariable (name, initval, type, this);
-   }
-
-   inline bool GetBool(void)
-   {
-      return m_eptr->value > 0.0f;
-   }
-
-   inline int GetInt (void)
-   {
-      return static_cast <int> (m_eptr->value);
-   }
-
-   inline int GetFlags (void)
-   {
-      return m_eptr->flags;
-   }
-
-   inline float GetFloat (void)
-   {
-      return m_eptr->value;
-   }
-
-   inline const char *GetString (void)
-   {
-      return m_eptr->string;
-   }
-
-   inline const char *GetName (void)
-   {
-      return m_eptr->name;
-   }
-
-   inline void SetFloat (float val)
-   {
-      g_engfuncs.pfnCVarSetFloat (m_eptr->name, val);
-   }
-
-   inline void SetInt (int val)
-   {
-      SetFloat (static_cast <float> (val));
-   }
-
-   inline void SetString (const char *val)
-   {
-      g_engfuncs.pfnCVarSetString (m_eptr->name, val);
-   }
-};
+// expose bot super-globals
+extern NetworkMsg netmsg;
+extern Localizer locale;
+extern Waypoint waypoints;
+extern BotManager bots;
+extern Engine engine;
 
 // prototypes of bot functions...
 extern int GetWeaponReturn (bool isString, const char *weaponAlias, int weaponIndex = -1);
+extern int GetWeaponPenetrationPower (int id);
+extern int GenerateBuildNumber (void);
 extern float GetShootingConeDeviation (edict_t *ent, Vector *position);
+
 extern bool IsVisible (const Vector &origin, edict_t *ent);
 extern bool IsAlive (edict_t *ent);
 extern bool IsInViewCone (const Vector &origin, edict_t *ent);
-extern int GetWeaponPenetrationPower (int id);
+
 extern bool IsValidBot (edict_t *ent);
 extern bool IsValidPlayer (edict_t *ent);
 extern bool IsPlayerVIP (edict_t *ent);
 extern bool OpenConfig (const char *fileName, const char *errorIfNotExists, File *outFile, bool languageDependant = false);
 extern bool FindNearestPlayer (void **holder, edict_t *to, float searchDistance = 4096.0, bool sameTeam = false, bool needBot = false, bool needAlive = false, bool needDrawn = false);
-extern const char *GetField (const char *string, int fieldId, bool endLine = false);
-extern const char *FormatBuffer (const char *format, ...);
-extern uint16 GenerateBuildNumber (void);
+
 extern void FreeLibraryMemory (void);
 extern void RoundInit (void);
-extern void FakeClientCommand (edict_t *fakeClient, const char *format, ...);
-extern void strtrim (char *string);
-extern void CreatePath (char *path);
 extern void CheckWelcomeMessage (void);
 extern void DetectCSVersion (void);
 extern void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...);
@@ -1624,7 +1535,8 @@ extern void DisplayMenuToClient (edict_t *ent, MenuText *menu);
 extern void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex);
 extern void SoundAttachToClients (edict_t *ent, const char *sample, float volume);
 extern void SoundSimulateUpdate (int playerIndex);
-extern const char *GetWaypointDir (void);
+
+extern const char *FormatBuffer (const char *format, ...);
 
 // very global convars
 extern ConVar yb_jasonmode;
@@ -1632,7 +1544,6 @@ extern ConVar yb_communication_type;
 extern ConVar yb_csdm_mode;
 extern ConVar yb_ignore_enemies;
 
-#include <engine.h>
 #include <globals.h>
 #include <compress.h>
 #include <resource.h>

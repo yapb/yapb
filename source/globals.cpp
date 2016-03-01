@@ -9,6 +9,13 @@
 
 #include <core.h>
 
+// forward for super-globals
+NetworkMsg netmsg;
+Localizer locale;
+Waypoint waypoints;
+BotManager bots;
+Engine engine;
+
 bool g_canSayBombPlanted = true;
 bool g_isMetamod = false;
 bool g_radioInsteadVoice = false;
@@ -19,7 +26,6 @@ bool g_bombPlanted = false;
 bool g_bombSayString = false;
 bool g_isCommencing = false;
 bool g_editNoclip = false;
-bool g_isFakeCommand = false;
 bool g_waypointOn = false;
 bool g_waypointsChanged = true;
 bool g_autoWaypoint = false;
@@ -39,7 +45,6 @@ float g_autoPathDistance = 250.0f;
 int g_lastRadio[2];
 int g_storeAddbotVars[4];
 int g_radioSelect[32];
-int g_fakeArgc = 0;
 int g_gameFlags = 0;
 int g_numWaypoints = 0;
 int g_mapType = 0;
@@ -48,7 +53,6 @@ int g_highestDamageCT = 1;
 int g_highestDamageT = 1;
 int g_highestKills = 1;
 
-char g_fakeArgv[256];
 
 Array <Array <String> > g_chatFactory;
 Array <Array <ChatterItem> > g_chatterFactory;

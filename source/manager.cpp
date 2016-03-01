@@ -66,13 +66,13 @@ void BotManager::CreateKillerEntity (void)
 
 void BotManager::DestroyKillerEntity (void)
 {
-   if (!IsEntityNull (m_killerEntity))
+   if (!IsNullEntity (m_killerEntity))
       g_engfuncs.pfnRemoveEntity (m_killerEntity);
 }
 
 void BotManager::TouchWithKillerEntity (Bot *bot)
 {
-   if (IsEntityNull (m_killerEntity))
+   if (IsNullEntity (m_killerEntity))
    {
       MDLL_ClientKill (bot->GetEntity ());
       return;
@@ -194,7 +194,7 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
          strcpy (outputName, prefixedName);
    }
 
-   if (IsEntityNull ((bot = (*g_engfuncs.pfnCreateFakeClient) (outputName))))
+   if (IsNullEntity ((bot = (*g_engfuncs.pfnCreateFakeClient) (outputName))))
    {
       engine.CenterPrintf ("Maximum players reached (%d/%d). Unable to create Bot.", engine.MaxClients (), engine.MaxClients ());
       return 2;
@@ -217,7 +217,7 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
 int BotManager::GetIndex (edict_t *ent)
 {
    // this function returns index of bot (using own bot array)
-   if (IsEntityNull (ent))
+   if (IsNullEntity (ent))
       return -1;
 
    int index = IndexOfEntity (ent) - 1;
@@ -421,7 +421,7 @@ void BotManager::MaintainBotQuota (void)
          m_creationTab.RemoveAll (); // maximum players reached, so set quota to maximum players
          yb_quota.SetInt (GetBotsNum ());
       }
-      m_maintainTime = engine.Time () + 0.45f;
+      m_maintainTime = engine.Time () + 0.20f;
    }
 
    // now keep bot number up to date
@@ -505,7 +505,6 @@ void BotManager::FillServer (int selection, int personality, int difficulty, int
       AddBot ("", difficulty, personality, selection, -1);
 
    yb_quota.SetInt (toAdd);
-
    engine.CenterPrintf ("Fill Server with %s bots...", &teamDesc[selection][0]);
 }
 
@@ -565,7 +564,7 @@ void BotManager::RemoveMenu (edict_t *ent, int selection)
 
    for (int i = ((selection - 1) * 8); i < selection * 8; i++)
    {
-      if ((m_bots[i] != NULL) && !IsEntityNull (m_bots[i]->GetEntity ()))
+      if ((m_bots[i] != NULL) && !IsNullEntity (m_bots[i]->GetEntity ()))
       {
          validSlots |= 1 << (i - ((selection - 1) * 8));
          sprintf (buffer, "%s %1.1d. %s%s\n", buffer, i - ((selection - 1) * 8) + 1, STRING (m_bots[i]->pev->netname), GetTeam (m_bots[i]->GetEntity ()) == CT ? " \\y(CT)\\w" : " \\r(T)\\w");
@@ -798,7 +797,7 @@ void BotManager::CheckTeamEconomics (int team, bool setTrue)
 
    extern ConVar yb_economics_rounds;
 
-   if (!yb_economics_rounds.GetBool () || setTrue)
+   if (setTrue || !yb_economics_rounds.GetBool ())
    {
       m_economicsGood[team] = true;
       return; // don't check economics while economics disable
@@ -1287,7 +1286,7 @@ void Bot::StartGame (void)
 #ifdef XASH_CSDM
    m_wantedTeam = Random.Long (1, 2);
    
-   FakeClientCommand (GetEntity (), "jointeam %d", m_wantedTeam);
+   engine.IssueBotCommand (GetEntity (), "jointeam %d", m_wantedTeam);
    
    SET_CLIENT_KEYVALUE (GetIndex (), GET_INFOKEYBUFFER (GetEntity ()), "model", m_wantedTeam == 2 ? "Counter-Terrorists" : "Terrorists");
 
@@ -1314,7 +1313,7 @@ void Bot::StartGame (void)
          m_wantedTeam = 5;
 
       // select the team the bot wishes to join...
-      FakeClientCommand (GetEntity (), "menuselect %d", m_wantedTeam);
+      engine.IssueBotCommand (GetEntity (), "menuselect %d", m_wantedTeam);
    }
    else if (m_startAction == GSM_CLASS_SELECT)
    {
@@ -1332,7 +1331,7 @@ void Bot::StartGame (void)
       }
 
       // select the class the bot wishes to use...
-      FakeClientCommand (GetEntity (), "menuselect %d", m_wantedClass);
+      engine.IssueBotCommand (GetEntity (), "menuselect %d", m_wantedClass);
 
       // bot has now joined the game (doesn't need to be started)
       m_notStarted = false;
@@ -1405,7 +1404,7 @@ void BotManager::CalculatePingOffsets (void)
 
 void BotManager::SendPingDataOffsets (edict_t *to)
 {
-   if ((g_gameFlags & GAME_LEGACY) || yb_latency_display.GetInt () != 2 || IsEntityNull (to))
+   if ((g_gameFlags & GAME_LEGACY) || yb_latency_display.GetInt () != 2 || IsNullEntity (to))
       return;
 
    if (!(to->v.flags & FL_CLIENT) && !(((to->v.button & IN_SCORE) || !(to->v.oldbuttons & IN_SCORE))))
@@ -1483,7 +1482,7 @@ void BotManager::UpdateActiveGrenades (void)
    m_activeGrenades.RemoveAll ();
 
    // search the map for any type of grenade
-   while (!IsEntityNull (grenade = FIND_ENTITY_BY_CLASSNAME (grenade, "grenade")))
+   while (!IsNullEntity (grenade = FIND_ENTITY_BY_CLASSNAME (grenade, "grenade")))
    {
       // do not count c4 as a grenade
       if (strcmp (STRING (grenade->v.model) + 9, "c4.mdl") == 0)
