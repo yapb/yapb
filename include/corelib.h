@@ -2595,7 +2595,7 @@ public:
          holder[j++] = m_bufferPtr[i];
 
       holder[j] = 0;
-      result.Assign(holder);
+      result.Assign (holder);
 
       delete [] holder;
       return result;

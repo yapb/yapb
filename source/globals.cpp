@@ -48,8 +48,6 @@ int g_highestDamageCT = 1;
 int g_highestDamageT = 1;
 int g_highestKills = 1;
 
-short g_modelIndexLaser = 0;
-short g_modelIndexArrow = 0;
 char g_fakeArgv[256];
 
 Array <Array <String> > g_chatFactory;

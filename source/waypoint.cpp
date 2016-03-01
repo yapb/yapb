@@ -174,7 +174,7 @@ void Waypoint::Add (int flags, const Vector &waypointOrigin)
 
          if (!(path->flags & FLAG_CAMP))
          {
-            CenterPrint ("This is not Camping Waypoint");
+            engine.CenterPrintf ("This is not Camping Waypoint");
             return;
          }
 
@@ -185,7 +185,7 @@ void Waypoint::Add (int flags, const Vector &waypointOrigin)
          path->campEndY = forward.y;
 
          // play "done" sound...
-         PlaySound (g_hostEntity, "common/wpn_hudon.wav");
+         engine.EmitSound (g_hostEntity, "common/wpn_hudon.wav");
       }
       return;
 
@@ -366,7 +366,7 @@ void Waypoint::Add (int flags, const Vector &waypointOrigin)
          if (m_paths[i]->flags & FLAG_LADDER)
          {
             // check if the waypoint is reachable from the new one
-            TraceLine (newOrigin, m_paths[i]->origin, true, g_hostEntity, &tr);
+            engine.TestLine (newOrigin, m_paths[i]->origin, TRACE_IGNORE_MONSTERS, g_hostEntity, &tr);
 
             if (tr.flFraction == 1.0f && fabs (newOrigin.x - m_paths[i]->origin.x) < 64.0f && fabs (newOrigin.y - m_paths[i]->origin.y) < 64.0f && fabs (newOrigin.z - m_paths[i]->origin.z) < g_autoPathDistance)
             {
@@ -432,7 +432,7 @@ void Waypoint::Add (int flags, const Vector &waypointOrigin)
          }
       }
    }
-   PlaySound (g_hostEntity, "weapons/xbow_hit1.wav");
+   engine.EmitSound (g_hostEntity, "weapons/xbow_hit1.wav");
    CalculateWayzone (index); // calculate the wayzone of this waypoint
 }
 
@@ -497,7 +497,7 @@ void Waypoint::Delete (void)
    g_numWaypoints--;
    m_waypointDisplayTime[index] = 0;
 
-   PlaySound (g_hostEntity, "weapons/mine_activate.wav");
+   engine.EmitSound (g_hostEntity, "weapons/mine_activate.wav");
 }
 
 void Waypoint::ToggleFlags (int toggleFlag)
@@ -522,7 +522,7 @@ void Waypoint::ToggleFlags (int toggleFlag)
       }
 
       // play "done" sound...
-      PlaySound (g_hostEntity, "common/wpn_hudon.wav");
+      engine.EmitSound (g_hostEntity, "common/wpn_hudon.wav");
    }
 }
 
@@ -537,7 +537,7 @@ void Waypoint::SetRadius (int radius)
       m_paths[index]->radius = static_cast <float> (radius);
 
       // play "done" sound...
-      PlaySound (g_hostEntity, "common/wpn_hudon.wav");
+      engine.EmitSound (g_hostEntity, "common/wpn_hudon.wav");
    }
 }
 
@@ -594,7 +594,7 @@ void Waypoint::CreatePath (char dir)
 
    if (nodeFrom == -1)
    {
-      CenterPrint ("Unable to find nearest waypoint in 50 units");
+      engine.CenterPrintf ("Unable to find nearest waypoint in 50 units");
       return;
    }
    int nodeTo = m_facingAtIndex;
@@ -605,14 +605,14 @@ void Waypoint::CreatePath (char dir)
          nodeTo = m_cacheWaypointIndex;
       else
       {
-         CenterPrint ("Unable to find destination waypoint");
+         engine.CenterPrintf ("Unable to find destination waypoint");
          return;
       }
    }
 
    if (nodeTo == nodeFrom)
    {
-      CenterPrint ("Unable to connect waypoint with itself");
+      engine.CenterPrintf ("Unable to connect waypoint with itself");
       return;
    }
 
@@ -628,7 +628,7 @@ void Waypoint::CreatePath (char dir)
       AddPath (nodeTo, nodeFrom, distance);
    }
 
-   PlaySound (g_hostEntity, "common/wpn_hudon.wav");
+   engine.EmitSound (g_hostEntity, "common/wpn_hudon.wav");
    g_waypointsChanged = true;
 }
 
@@ -642,7 +642,7 @@ void Waypoint::DeletePath (void)
 
    if (nodeFrom == -1)
    {
-      CenterPrint ("Unable to find nearest waypoint in 50 units");
+      engine.CenterPrintf ("Unable to find nearest waypoint in 50 units");
       return;
    }
    int nodeTo = m_facingAtIndex;
@@ -653,7 +653,7 @@ void Waypoint::DeletePath (void)
          nodeTo = m_cacheWaypointIndex;
       else
       {
-         CenterPrint ("Unable to find destination waypoint");
+         engine.CenterPrintf ("Unable to find destination waypoint");
          return;
       }
    }
@@ -669,7 +669,7 @@ void Waypoint::DeletePath (void)
          m_paths[nodeFrom]->connectionFlags[index] = 0;
          m_paths[nodeFrom]->connectionVelocity[index].Zero ();
 
-         PlaySound (g_hostEntity, "weapons/mine_activate.wav");
+         engine.EmitSound (g_hostEntity, "weapons/mine_activate.wav");
          return;
       }
    }
@@ -691,11 +691,11 @@ void Waypoint::DeletePath (void)
          m_paths[nodeFrom]->connectionFlags[index] = 0;
          m_paths[nodeFrom]->connectionVelocity[index].Zero ();
 
-         PlaySound (g_hostEntity, "weapons/mine_activate.wav");
+         engine.EmitSound (g_hostEntity, "weapons/mine_activate.wav");
          return;
       }
    }
-   CenterPrint ("There is already no path on this waypoint");
+   engine.CenterPrintf ("There is already no path on this waypoint");
 }
 
 void Waypoint::CacheWaypoint (void)
@@ -705,12 +705,12 @@ void Waypoint::CacheWaypoint (void)
    if (node == -1)
    {
       m_cacheWaypointIndex = -1;
-      CenterPrint ("Cached waypoint cleared (nearby point not found in 50 units range)");
+      engine.CenterPrintf ("Cached waypoint cleared (nearby point not found in 50 units range)");
 
       return;
    }
    m_cacheWaypointIndex = node;
-   CenterPrint ("Waypoint #%d has been put into memory", m_cacheWaypointIndex);
+   engine.CenterPrintf ("Waypoint #%d has been put into memory", m_cacheWaypointIndex);
 }
 
 void Waypoint::CalculateWayzone (int index)
@@ -755,11 +755,11 @@ void Waypoint::CalculateWayzone (int index)
          Vector radiusStart = start - g_pGlobals->v_forward * scanDistance;
          Vector radiusEnd = start + g_pGlobals->v_forward * scanDistance;
 
-         TraceHull (radiusStart, radiusEnd, true, head_hull, NULL, &tr);
+         engine.TestHull (radiusStart, radiusEnd, TRACE_IGNORE_MONSTERS, head_hull, NULL, &tr);
 
          if (tr.flFraction < 1.0f)
          {
-            TraceLine (radiusStart, radiusEnd, true, NULL, &tr);
+            engine.TestLine (radiusStart, radiusEnd, TRACE_IGNORE_MONSTERS, NULL, &tr);
 
             if (FClassnameIs (tr.pHit, "func_door") || FClassnameIs (tr.pHit, "func_door_rotating"))
             {
@@ -778,7 +778,7 @@ void Waypoint::CalculateWayzone (int index)
          Vector dropStart = start + g_pGlobals->v_forward * scanDistance;
          Vector dropEnd = dropStart - Vector (0.0f, 0.0f, scanDistance + 60.0f);
 
-         TraceHull (dropStart, dropEnd, true, head_hull, NULL, &tr);
+         engine.TestHull (dropStart, dropEnd, TRACE_IGNORE_MONSTERS, head_hull, NULL, &tr);
 
          if (tr.flFraction >= 1.0f)
          {
@@ -790,7 +790,7 @@ void Waypoint::CalculateWayzone (int index)
          dropStart = start - g_pGlobals->v_forward * scanDistance;
          dropEnd = dropStart - Vector (0.0f, 0.0f, scanDistance + 60.0f);
 
-         TraceHull (dropStart, dropEnd, true, head_hull, NULL, &tr);
+         engine.TestHull (dropStart, dropEnd, TRACE_IGNORE_MONSTERS, head_hull, NULL, &tr);
 
          if (tr.flFraction >= 1.0f)
          {
@@ -800,7 +800,7 @@ void Waypoint::CalculateWayzone (int index)
          }
 
          radiusEnd.z += 34.0f;
-         TraceHull (radiusStart, radiusEnd, true, head_hull, NULL, &tr);
+         engine.TestHull (radiusStart, radiusEnd, TRACE_IGNORE_MONSTERS, head_hull, NULL, &tr);
 
          if (tr.flFraction < 1.0f)
          {
@@ -846,7 +846,7 @@ void Waypoint::SaveExperienceTab (void)
       }
    }
 
-   int result = Compressor::Compress (FormatBuffer ("%slearned/%s.exp", GetWaypointDir (), GetMapName ()), (unsigned char *)&header, sizeof (ExtensionHeader), (unsigned char *)experienceSave, g_numWaypoints * g_numWaypoints * sizeof (ExperienceSave));
+   int result = Compressor::Compress (FormatBuffer ("%slearned/%s.exp", GetWaypointDir (), engine.GetMapName ()), (unsigned char *)&header, sizeof (ExtensionHeader), (unsigned char *)experienceSave, g_numWaypoints * g_numWaypoints * sizeof (ExperienceSave));
 
    delete [] experienceSave;
 
@@ -885,7 +885,7 @@ void Waypoint::InitExperienceTab (void)
          (g_experienceData + (i * g_numWaypoints) + j)->team1Value = 0;
       }
    }
-   File fp (FormatBuffer ("%slearned/%s.exp", GetWaypointDir (), GetMapName ()), "rb");
+   File fp (FormatBuffer ("%slearned/%s.exp", GetWaypointDir (), engine.GetMapName ()), "rb");
 
    // if file exists, read the experience data from it
    if (fp.IsValid ())
@@ -908,7 +908,7 @@ void Waypoint::InitExperienceTab (void)
          {
             ExperienceSave *experienceLoad = new ExperienceSave[g_numWaypoints * g_numWaypoints];
 
-            Compressor::Uncompress (FormatBuffer ("%slearned/%s.exp", GetWaypointDir (), GetMapName ()), sizeof (ExtensionHeader), (unsigned char *)experienceLoad, g_numWaypoints * g_numWaypoints * sizeof (ExperienceSave));
+            Compressor::Uncompress (FormatBuffer ("%slearned/%s.exp", GetWaypointDir (), engine.GetMapName ()), sizeof (ExtensionHeader), (unsigned char *)experienceLoad, g_numWaypoints * g_numWaypoints * sizeof (ExperienceSave));
 
             for (i = 0; i < g_numWaypoints; i++)
             {
@@ -958,7 +958,7 @@ void Waypoint::SaveVisibilityTab (void)
    header.fileVersion = FV_VISTABLE;
    header.pointNumber = g_numWaypoints;
 
-   File fp (FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), GetMapName ()), "wb");
+   File fp (FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), engine.GetMapName ()), "wb");
 
    if (!fp.IsValid ())
    {
@@ -967,7 +967,7 @@ void Waypoint::SaveVisibilityTab (void)
    }
    fp.Close ();
 
-   Compressor::Compress (FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), GetMapName ()), (unsigned char *) &header, sizeof (ExtensionHeader), (unsigned char *) m_visLUT, MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (byte));
+   Compressor::Compress (FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), engine.GetMapName ()), (unsigned char *) &header, sizeof (ExtensionHeader), (unsigned char *) m_visLUT, MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (byte));
 }
 
 void Waypoint::InitVisibilityTab (void)
@@ -977,7 +977,7 @@ void Waypoint::InitVisibilityTab (void)
 
    ExtensionHeader header;
 
-   File fp (FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), GetMapName ()), "rb");
+   File fp (FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), engine.GetMapName ()), "rb");
    m_redoneVisibility = false;
 
    if (!fp.IsValid ())
@@ -1008,7 +1008,7 @@ void Waypoint::InitVisibilityTab (void)
 
       return;
    }
-   int result = Compressor::Uncompress (FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), GetMapName ()), sizeof (ExtensionHeader), (unsigned char *) m_visLUT, MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (byte));
+   int result = Compressor::Uncompress (FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), engine.GetMapName ()), sizeof (ExtensionHeader), (unsigned char *) m_visLUT, MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (byte));
 
    if (result == -1)
    {
@@ -1057,11 +1057,14 @@ bool Waypoint::Load (void)
    WaypointHeader header;
    memset (&header, 0, sizeof (header));
 
+   // save for faster access
+   const char *map = engine.GetMapName ();
+
    if (fp.IsValid ())
    {
       if (fp.Read (&header, sizeof (header)) == 0)
       {
-         sprintf (m_infoBuffer, "%s.pwf - damaged waypoint file (unable to read header)", GetMapName ());
+         sprintf (m_infoBuffer, "%s.pwf - damaged waypoint file (unable to read header)", map);
          AddLogEntry (true, LL_ERROR, m_infoBuffer);
 
          fp.Close ();
@@ -1072,15 +1075,15 @@ bool Waypoint::Load (void)
       {
          if (header.fileVersion != FV_WAYPOINT)
          {
-            sprintf (m_infoBuffer, "%s.pwf - incorrect waypoint file version (expected '%d' found '%ld')", GetMapName (), FV_WAYPOINT, header.fileVersion);
+            sprintf (m_infoBuffer, "%s.pwf - incorrect waypoint file version (expected '%d' found '%ld')", map, FV_WAYPOINT, header.fileVersion);
             AddLogEntry (true, LL_ERROR, m_infoBuffer);
 
             fp.Close ();
             return false;
          }
-         else if (stricmp (header.mapName, GetMapName ()))
+         else if (stricmp (header.mapName, map))
          {
-            sprintf (m_infoBuffer, "%s.pwf - hacked waypoint file, file name doesn't match waypoint header information (mapname: '%s', header: '%s')", GetMapName (), GetMapName (), header.mapName);
+            sprintf (m_infoBuffer, "%s.pwf - hacked waypoint file, file name doesn't match waypoint header information (mapname: '%s', header: '%s')", map, map, header.mapName);
             AddLogEntry (true, LL_ERROR, m_infoBuffer);
 
             fp.Close ();
@@ -1090,7 +1093,7 @@ bool Waypoint::Load (void)
          {
             if (header.pointNumber == 0 || header.pointNumber > MAX_WAYPOINTS)
             {
-               sprintf (m_infoBuffer, "%s.pwf - waypoint file contains illegal number of waypoints (mapname: '%s', header: '%s')", GetMapName (), GetMapName (), header.mapName);
+               sprintf (m_infoBuffer, "%s.pwf - waypoint file contains illegal number of waypoints (mapname: '%s', header: '%s')", map, map, header.mapName);
                AddLogEntry (true, LL_ERROR, m_infoBuffer);
 
                fp.Close ();
@@ -1109,7 +1112,7 @@ bool Waypoint::Load (void)
 
                if (fp.Read (m_paths[i], sizeof (Path)) == 0)
                {
-                  sprintf (m_infoBuffer, "%s.pwf - truncated waypoint file (count: %d, need: %d)", GetMapName (), i, g_numWaypoints);
+                  sprintf (m_infoBuffer, "%s.pwf - truncated waypoint file (count: %d, need: %d)", map, i, g_numWaypoints);
                   AddLogEntry (true, LL_ERROR, m_infoBuffer);
 
                   fp.Close ();
@@ -1121,7 +1124,7 @@ bool Waypoint::Load (void)
       }
       else
       {
-         sprintf (m_infoBuffer, "%s.pwf is not a yapb waypoint file (header found '%s' needed '%s'", GetMapName (), header.header, FH_WAYPOINT);
+         sprintf (m_infoBuffer, "%s.pwf is not a yapb waypoint file (header found '%s' needed '%s'", map, header.header, FH_WAYPOINT);
          AddLogEntry (true, LL_ERROR, m_infoBuffer);
 
          fp.Close ();
@@ -1133,14 +1136,14 @@ bool Waypoint::Load (void)
    {
       if (yb_waypoint_autodl_enable.GetBool ())
       {
-         AddLogEntry (true, LL_DEFAULT, "%s.pwf does not exist, trying to download from waypoint database", GetMapName ());
+         AddLogEntry (true, LL_DEFAULT, "%s.pwf does not exist, trying to download from waypoint database", map);
 
          WaypointDownloader dl;
          WaypointDownloadError status = dl.DoDownload ();
  
          if (status == WDE_SOCKET_ERROR)
          {
-            sprintf (m_infoBuffer, "%s.pwf does not exist. Can't autodownload. Socket error.", GetMapName ());
+            sprintf (m_infoBuffer, "%s.pwf does not exist. Can't autodownload. Socket error.", map);
             AddLogEntry (true, LL_ERROR, m_infoBuffer);
 
             yb_waypoint_autodl_enable.SetInt (0);
@@ -1149,7 +1152,7 @@ bool Waypoint::Load (void)
          }
          else if (status == WDE_CONNECT_ERROR)
          {
-            sprintf (m_infoBuffer, "%s.pwf does not exist. Can't autodownload. Connection problems.", GetMapName ());
+            sprintf (m_infoBuffer, "%s.pwf does not exist. Can't autodownload. Connection problems.", map);
             AddLogEntry (true, LL_ERROR, m_infoBuffer);
 
             yb_waypoint_autodl_enable.SetInt (0);
@@ -1158,18 +1161,18 @@ bool Waypoint::Load (void)
          }
          else if (status == WDE_NOTFOUND_ERROR)
          {
-            sprintf (m_infoBuffer, "%s.pwf does not exist. Can't autodownload. Waypoint not available.", GetMapName ());
+            sprintf (m_infoBuffer, "%s.pwf does not exist. Can't autodownload. Waypoint not available.", map);
             AddLogEntry (true, LL_ERROR, m_infoBuffer);
 
             return false;
          }
          else
          {
-            AddLogEntry (true, LL_DEFAULT, "%s.pwf was downloaded from waypoint database. Trying to load...", GetMapName ());
+            AddLogEntry (true, LL_DEFAULT, "%s.pwf was downloaded from waypoint database. Trying to load...", map);
             return Load ();
          }
       }
-      sprintf (m_infoBuffer, "%s.pwf does not exist", GetMapName ());
+      sprintf (m_infoBuffer, "%s.pwf does not exist", map);
       AddLogEntry (true, LL_ERROR, m_infoBuffer);
 
       return false;
@@ -1213,7 +1216,7 @@ void Waypoint::Save (void)
 
    strcpy (header.header, FH_WAYPOINT);
    strncpy (header.author, STRING (g_hostEntity->v.netname), SIZEOF_CHAR (header.author));
-   strncpy (header.mapName, GetMapName (), SIZEOF_CHAR (header.mapName));
+   strncpy (header.mapName, engine.GetMapName (), SIZEOF_CHAR (header.mapName));
 
    header.mapName[31] = 0;
    header.fileVersion = FV_WAYPOINT;
@@ -1234,7 +1237,7 @@ void Waypoint::Save (void)
       fp.Close ();
    }
    else
-      AddLogEntry (true, LL_ERROR, "Error writing '%s.pwf' waypoint file", GetMapName ());
+      AddLogEntry (true, LL_ERROR, "Error writing '%s.pwf' waypoint file", engine.GetMapName ());
 }
 
 String Waypoint::CheckSubfolderFile (void)
@@ -1244,12 +1247,12 @@ String Waypoint::CheckSubfolderFile (void)
    if (!IsNullString (yb_wptsubfolder.GetString ()))
       returnFile += (String (yb_wptsubfolder.GetString ()) + "/");
 
-   returnFile = FormatBuffer ("%s%s%s.pwf", GetWaypointDir (), returnFile.GetBuffer (), GetMapName ());
+   returnFile = FormatBuffer ("%s%s%s.pwf", GetWaypointDir (), returnFile.GetBuffer (), engine.GetMapName ());
 
    if (File::Accessible (returnFile))
       return returnFile;
 
-   return FormatBuffer ("%s%s.pwf", GetWaypointDir (), GetMapName ());
+   return FormatBuffer ("%s%s.pwf", GetWaypointDir (), engine.GetMapName ());
 }
 
 float Waypoint::GetTravelTime (float maxSpeed, const Vector &src, const Vector &origin)
@@ -1276,7 +1279,7 @@ bool Waypoint::Reachable (Bot *bot, int index)
       return false;
 
    TraceResult tr;
-   TraceLine (src, dest, true, bot->GetEntity (), &tr);
+   engine.TestLine (src, dest, TRACE_IGNORE_MONSTERS, bot->GetEntity (), &tr);
 
    // if waypoint is visible from current position (even behind head)...
    if (tr.flFraction >= 1.0f)
@@ -1306,13 +1309,13 @@ bool Waypoint::IsNodeReachable (const Vector &src, const Vector &destination)
       return false;
 
    // check if we go through a func_illusionary, in which case return false
-   TraceHull (src, destination, ignore_monsters, head_hull, g_hostEntity, &tr);
+   engine.TestHull (src, destination, TRACE_IGNORE_MONSTERS, head_hull, g_hostEntity, &tr);
 
    if (!IsEntityNull (tr.pHit) && strcmp ("func_illusionary", STRING (tr.pHit->v.classname)) == 0)
       return false; // don't add pathwaypoints through func_illusionaries
 
    // check if this waypoint is "visible"...
-   TraceLine (src, destination, ignore_monsters, g_hostEntity, &tr);
+   engine.TestLine (src, destination, TRACE_IGNORE_MONSTERS, g_hostEntity, &tr);
 
    // if waypoint is visible from current position (even behind head)...
    if (tr.flFraction >= 1.0f || strncmp ("func_door", STRING (tr.pHit->v.classname), 9) == 0)
@@ -1320,7 +1323,7 @@ bool Waypoint::IsNodeReachable (const Vector &src, const Vector &destination)
       // if it's a door check if nothing blocks behind
       if (strncmp ("func_door", STRING (tr.pHit->v.classname), 9) == 0)
       {
-         TraceLine (tr.vecEndPos, destination, ignore_monsters, tr.pHit, &tr);
+         engine.TestLine (tr.vecEndPos, destination, TRACE_IGNORE_MONSTERS, tr.pHit, &tr);
 
          if (tr.flFraction < 1.0f)
             return false;
@@ -1337,7 +1340,7 @@ bool Waypoint::IsNodeReachable (const Vector &src, const Vector &destination)
          Vector destinationNew = destination;
          destinationNew.z = destinationNew.z - 50.0f; // straight down 50 units
 
-         TraceLine (sourceNew, destinationNew, ignore_monsters, g_hostEntity, &tr);
+         engine.TestLine (sourceNew, destinationNew, TRACE_IGNORE_MONSTERS, g_hostEntity, &tr);
 
          // check if we didn't hit anything, if not then it's in mid-air
          if (tr.flFraction >= 1.0)
@@ -1350,7 +1353,7 @@ bool Waypoint::IsNodeReachable (const Vector &src, const Vector &destination)
 
       down.z = down.z - 1000.0f; // straight down 1000 units
 
-      TraceLine (check, down, ignore_monsters, g_hostEntity, &tr);
+      engine.TestLine (check, down, TRACE_IGNORE_MONSTERS, g_hostEntity, &tr);
 
       float lastHeight = tr.flFraction * 1000.0f; // height from ground
       distance = (destination - check).GetLength (); // distance from goal
@@ -1363,7 +1366,7 @@ bool Waypoint::IsNodeReachable (const Vector &src, const Vector &destination)
          down = check;
          down.z = down.z - 1000.0f; // straight down 1000 units
 
-         TraceLine (check, down, ignore_monsters, g_hostEntity, &tr);
+         engine.TestLine (check, down, TRACE_IGNORE_MONSTERS, g_hostEntity, &tr);
 
          float height = tr.flFraction * 1000.0f; // height from ground
 
@@ -1409,7 +1412,7 @@ void Waypoint::InitializeVisibility (void)
          // first check ducked visibility
          Vector dest = m_paths[i]->origin;
 
-         TraceLine (sourceDuck, dest, true, NULL, &tr);
+         engine.TestLine (sourceDuck, dest, TRACE_IGNORE_MONSTERS, NULL, &tr);
 
          // check if line of sight to object is not blocked (i.e. visible)
          if (tr.flFraction != 1.0f || tr.fStartSolid)
@@ -1419,7 +1422,7 @@ void Waypoint::InitializeVisibility (void)
 
          res <<= 1;
 
-         TraceLine (sourceStand, dest, true, NULL, &tr);
+         engine.TestLine (sourceStand, dest, TRACE_IGNORE_MONSTERS, NULL, &tr);
 
          // check if line of sight to object is not blocked (i.e. visible)
          if (tr.flFraction != 1.0f || tr.fStartSolid)
@@ -1511,7 +1514,7 @@ void Waypoint::Think (void)
          {
             Add (9);
 
-            m_timeJumpStarted = GetWorldTime ();
+            m_timeJumpStarted = engine.Time ();
             m_endJumpPoint = true;
          }
          else
@@ -1520,7 +1523,7 @@ void Waypoint::Think (void)
             m_learnPosition = g_hostEntity->v.origin;
          }
       }
-      else if (((g_hostEntity->v.flags & FL_ONGROUND) || g_hostEntity->v.movetype == MOVETYPE_FLY) && m_timeJumpStarted + 0.1 < GetWorldTime () && m_endJumpPoint)
+      else if (((g_hostEntity->v.flags & FL_ONGROUND) || g_hostEntity->v.movetype == MOVETYPE_FLY) && m_timeJumpStarted + 0.1 < engine.Time () && m_endJumpPoint)
       {
          Add (10);
 
@@ -1574,7 +1577,7 @@ void Waypoint::Think (void)
             nearestDistance = distance;
          }
 
-         if (m_waypointDisplayTime[i] + 0.8f < GetWorldTime ())
+         if (m_waypointDisplayTime[i] + 0.8f < engine.Time ())
          {
             float nodeHeight = 0.0f;
 
@@ -1616,13 +1619,13 @@ void Waypoint::Think (void)
 
             // draw node without additional flags
             if (nodeFlagColor.x == -1)
-               DrawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight), m_paths[i]->origin + Vector (0, 0, nodeHalfHeight), 15, 0, static_cast <int> (nodeColor.x), static_cast <int> (nodeColor.y), static_cast <int> (nodeColor.z), 250, 0, 10);
+               engine.DrawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight), m_paths[i]->origin + Vector (0, 0, nodeHalfHeight), 15, 0, static_cast <int> (nodeColor.x), static_cast <int> (nodeColor.y), static_cast <int> (nodeColor.z), 250, 0, 10);
             else // draw node with flags
             {
-               DrawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight), m_paths[i]->origin - Vector (0, 0, nodeHalfHeight - nodeHeight * 0.75), 14, 0, static_cast <int> (nodeColor.x), static_cast <int> (nodeColor.y), static_cast <int> (nodeColor.z), 250, 0, 10); // draw basic path
-               DrawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight - nodeHeight * 0.75), m_paths[i]->origin + Vector (0, 0, nodeHalfHeight), 14, 0, static_cast <int> (nodeFlagColor.x), static_cast <int> (nodeFlagColor.y), static_cast <int> (nodeFlagColor.z), 250, 0, 10); // draw additional path
+               engine.DrawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight), m_paths[i]->origin - Vector (0, 0, nodeHalfHeight - nodeHeight * 0.75), 14, 0, static_cast <int> (nodeColor.x), static_cast <int> (nodeColor.y), static_cast <int> (nodeColor.z), 250, 0, 10); // draw basic path
+               engine.DrawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight - nodeHeight * 0.75), m_paths[i]->origin + Vector (0, 0, nodeHalfHeight), 14, 0, static_cast <int> (nodeFlagColor.x), static_cast <int> (nodeFlagColor.y), static_cast <int> (nodeFlagColor.z), 250, 0, 10); // draw additional path
             }
-            m_waypointDisplayTime[i] = GetWorldTime ();
+            m_waypointDisplayTime[i] = engine.Time ();
          }
       }
    }
@@ -1634,21 +1637,21 @@ void Waypoint::Think (void)
    if ((m_findWPIndex != -1 && m_findWPIndex < g_numWaypoints) || (m_cacheWaypointIndex != -1 && m_cacheWaypointIndex < g_numWaypoints) || (m_facingAtIndex != -1 && m_facingAtIndex < g_numWaypoints))
    {
       // check for drawing code
-      if (m_arrowDisplayTime + 0.5f < GetWorldTime ())
+      if (m_arrowDisplayTime + 0.5f < engine.Time ())
       {
          // finding waypoint - pink arrow
          if (m_findWPIndex != -1)
-            DrawArrow (g_hostEntity, g_hostEntity->v.origin, m_paths[m_findWPIndex]->origin, 10, 0, 128, 0, 128, 200, 0, 5);
+            engine.DrawLine (g_hostEntity, g_hostEntity->v.origin, m_paths[m_findWPIndex]->origin, 10, 0, 128, 0, 128, 200, 0, 5, DRAW_ARROW);
 
          // cached waypoint - yellow arrow
          if (m_cacheWaypointIndex != -1)
-            DrawArrow (g_hostEntity, g_hostEntity->v.origin, m_paths[m_cacheWaypointIndex]->origin, 10, 0, 255, 255, 0, 200, 0, 5);
+            engine.DrawLine (g_hostEntity, g_hostEntity->v.origin, m_paths[m_cacheWaypointIndex]->origin, 10, 0, 255, 255, 0, 200, 0, 5, DRAW_ARROW);
 
          // waypoint user facing at - white arrow
          if (m_facingAtIndex != -1)
-            DrawArrow (g_hostEntity, g_hostEntity->v.origin, m_paths[m_facingAtIndex]->origin, 10, 0, 255, 255, 255, 200, 0, 5);
+            engine.DrawLine (g_hostEntity, g_hostEntity->v.origin, m_paths[m_facingAtIndex]->origin, 10, 0, 255, 255, 255, 200, 0, 5, DRAW_ARROW);
 
-         m_arrowDisplayTime = GetWorldTime ();
+         m_arrowDisplayTime = engine.Time ();
       }
    }
 
@@ -1656,9 +1659,9 @@ void Waypoint::Think (void)
    Path *path = m_paths[nearestIndex];
 
    // draw a paths, camplines and danger directions for nearest waypoint
-   if (nearestDistance <= 56.0f && m_pathDisplayTime <= GetWorldTime ())
+   if (nearestDistance <= 56.0f && m_pathDisplayTime <= engine.Time ())
    {
-      m_pathDisplayTime = GetWorldTime () + 1.0f;
+      m_pathDisplayTime = engine.Time () + 1.0f;
 
       // draw the camplines
       if (path->flags & FLAG_CAMP)
@@ -1673,8 +1676,8 @@ void Waypoint::Think (void)
          Vector campEndOrigin =  Vector (path->campEndX, path->campEndY, campSourceOrigin.z); // camp end
 
          // draw it now
-         DrawLine (g_hostEntity, campSourceOrigin, campStartOrigin, 10, 0, 255, 0, 0, 200, 0, 10);
-         DrawLine (g_hostEntity, campSourceOrigin, campEndOrigin, 10, 0, 255, 0, 0, 200, 0, 10);
+         engine.DrawLine (g_hostEntity, campSourceOrigin, campStartOrigin, 10, 0, 255, 0, 0, 200, 0, 10);
+         engine.DrawLine (g_hostEntity, campSourceOrigin, campEndOrigin, 10, 0, 255, 0, 0, 200, 0, 10);
       }
 
       // draw the connections
@@ -1685,18 +1688,18 @@ void Waypoint::Think (void)
 
          // jump connection
          if (path->connectionFlags[i] & PATHFLAG_JUMP)
-            DrawLine (g_hostEntity, path->origin, m_paths[path->index[i]]->origin, 5, 0, 255, 0, 128, 200, 0, 10);
+            engine.DrawLine (g_hostEntity, path->origin, m_paths[path->index[i]]->origin, 5, 0, 255, 0, 128, 200, 0, 10);
          else if (IsConnected (path->index[i], nearestIndex)) // twoway connection
-            DrawLine (g_hostEntity, path->origin, m_paths[path->index[i]]->origin, 5, 0, 255, 255, 0, 200, 0, 10);
+            engine.DrawLine (g_hostEntity, path->origin, m_paths[path->index[i]]->origin, 5, 0, 255, 255, 0, 200, 0, 10);
          else // oneway connection
-            DrawLine (g_hostEntity, path->origin, m_paths[path->index[i]]->origin, 5, 0, 250, 250, 250, 200, 0, 10);
+            engine.DrawLine (g_hostEntity, path->origin, m_paths[path->index[i]]->origin, 5, 0, 250, 250, 250, 200, 0, 10);
       }
 
       // now look for oneway incoming connections
       for (int i = 0; i < g_numWaypoints; i++)
       {
          if (IsConnected (m_paths[i]->pathNumber, path->pathNumber) && !IsConnected (path->pathNumber, m_paths[i]->pathNumber))
-            DrawLine (g_hostEntity, path->origin, m_paths[i]->origin, 5, 0, 0, 192, 96, 200, 0, 10);
+            engine.DrawLine (g_hostEntity, path->origin, m_paths[i]->origin, 5, 0, 0, 192, 96, 200, 0, 10);
       }
 
       // draw the radius circle
@@ -1707,34 +1710,34 @@ void Waypoint::Think (void)
       {
          float squareRoot = sqrtf (path->radius * path->radius * 0.5f);
 
-         DrawLine (g_hostEntity, origin + Vector (path->radius, 0.0f, 0.0f), origin + Vector (squareRoot, -squareRoot, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
-         DrawLine (g_hostEntity, origin + Vector (squareRoot, -squareRoot, 0.0f), origin + Vector (0.0f, -path->radius, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
+         engine.DrawLine (g_hostEntity, origin + Vector (path->radius, 0.0f, 0.0f), origin + Vector (squareRoot, -squareRoot, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
+         engine.DrawLine (g_hostEntity, origin + Vector (squareRoot, -squareRoot, 0.0f), origin + Vector (0.0f, -path->radius, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
 
-         DrawLine (g_hostEntity, origin + Vector (0.0f, -path->radius, 0.0f), origin + Vector (-squareRoot, -squareRoot, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
-         DrawLine (g_hostEntity, origin + Vector (-squareRoot, -squareRoot, 0.0f), origin + Vector (-path->radius, 0.0f, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
+         engine.DrawLine (g_hostEntity, origin + Vector (0.0f, -path->radius, 0.0f), origin + Vector (-squareRoot, -squareRoot, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
+         engine.DrawLine (g_hostEntity, origin + Vector (-squareRoot, -squareRoot, 0.0f), origin + Vector (-path->radius, 0.0f, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
 
-         DrawLine (g_hostEntity, origin + Vector (-path->radius, 0.0f, 0.0f), origin + Vector (-squareRoot, squareRoot, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
-         DrawLine (g_hostEntity, origin + Vector (-squareRoot, squareRoot, 0.0f), origin + Vector (0.0f, path->radius, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
+         engine.DrawLine (g_hostEntity, origin + Vector (-path->radius, 0.0f, 0.0f), origin + Vector (-squareRoot, squareRoot, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
+         engine.DrawLine (g_hostEntity, origin + Vector (-squareRoot, squareRoot, 0.0f), origin + Vector (0.0f, path->radius, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
 
-         DrawLine (g_hostEntity, origin + Vector (0.0f, path->radius, 0.0f), origin + Vector (squareRoot, squareRoot, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
-         DrawLine (g_hostEntity, origin + Vector (squareRoot, squareRoot, 0.0f), origin + Vector (path->radius, 0.0f, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
+         engine.DrawLine (g_hostEntity, origin + Vector (0.0f, path->radius, 0.0f), origin + Vector (squareRoot, squareRoot, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
+         engine.DrawLine (g_hostEntity, origin + Vector (squareRoot, squareRoot, 0.0f), origin + Vector (path->radius, 0.0f, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
       }
       else
       {
          float squareRoot = sqrtf (32.0f);
 
-         DrawLine (g_hostEntity, origin + Vector (squareRoot, -squareRoot, 0.0f), origin + Vector (-squareRoot, squareRoot, 0.0f), 5, 0, 255, 0, 0, 200, 0, 10);
-         DrawLine (g_hostEntity, origin + Vector (-squareRoot, -squareRoot, 0.0f), origin + Vector (squareRoot, squareRoot, 0.0f), 5, 0, 255, 0, 0, 200, 0, 10);
+         engine.DrawLine (g_hostEntity, origin + Vector (squareRoot, -squareRoot, 0.0f), origin + Vector (-squareRoot, squareRoot, 0.0f), 5, 0, 255, 0, 0, 200, 0, 10);
+         engine.DrawLine (g_hostEntity, origin + Vector (-squareRoot, -squareRoot, 0.0f), origin + Vector (squareRoot, squareRoot, 0.0f), 5, 0, 255, 0, 0, 200, 0, 10);
       }
 
       // draw the danger directions
       if (!g_waypointsChanged)
       {
          if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team0DangerIndex != -1 && GetTeam (g_hostEntity) == TERRORIST)
-            DrawArrow (g_hostEntity, path->origin, m_paths[(g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team0DangerIndex]->origin, 15, 0, 255, 0, 0, 200, 0, 10); // draw a red arrow to this index's danger point
+            engine.DrawLine (g_hostEntity, path->origin, m_paths[(g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team0DangerIndex]->origin, 15, 0, 255, 0, 0, 200, 0, 10, DRAW_ARROW); // draw a red arrow to this index's danger point
 
          if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team1DangerIndex != -1 && GetTeam (g_hostEntity) == CT)
-            DrawArrow (g_hostEntity, path->origin, m_paths[(g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team1DangerIndex]->origin, 15, 0, 0, 0, 255, 200, 0, 10); // draw a blue arrow to this index's danger point
+            engine.DrawLine (g_hostEntity, path->origin, m_paths[(g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team1DangerIndex]->origin, 15, 0, 0, 0, 255, 200, 0, 10, DRAW_ARROW); // draw a blue arrow to this index's danger point
       }
 
       // display some information
@@ -1889,7 +1892,7 @@ bool Waypoint::NodesValid (void)
             {
                AddLogEntry (true, LL_WARNING, "Waypoint %d - Pathindex %d points to itself!", i, k);
 
-               if (g_waypointOn && !IsDedicatedServer ())
+               if (g_waypointOn && !engine.IsDedicatedServer ())
                {
                   (*g_engfuncs.pfnSetOrigin) (g_hostEntity, m_paths[i]->origin);
 
@@ -1972,7 +1975,7 @@ bool Waypoint::NodesValid (void)
       {
          AddLogEntry (true, LL_WARNING, "Path broken from Waypoint #0 to Waypoint #%d!", i);
 
-         if (g_waypointOn && !IsDedicatedServer ())
+         if (g_waypointOn && !engine.IsDedicatedServer ())
          {
             (*g_engfuncs.pfnSetOrigin) (g_hostEntity, m_paths[i]->origin);
 
@@ -2033,7 +2036,7 @@ bool Waypoint::NodesValid (void)
       {
          AddLogEntry (true, LL_WARNING, "Path broken from Waypoint #%d to Waypoint #0!", i);
 
-         if (g_waypointOn && !IsDedicatedServer ())
+         if (g_waypointOn && !engine.IsDedicatedServer ())
          {
             (*g_engfuncs.pfnSetOrigin) (g_hostEntity, m_paths[i]->origin);
 
@@ -2107,7 +2110,7 @@ void Waypoint::InitPathMatrix (void)
 
 void Waypoint::SavePathMatrix (void)
 {
-   File fp (FormatBuffer ("%slearned/%s.pmt", GetWaypointDir (), GetMapName ()), "wb");
+   File fp (FormatBuffer ("%slearned/%s.pmt", GetWaypointDir (), engine.GetMapName ()), "wb");
 
    // unable to open file
    if (!fp.IsValid ())
@@ -2129,7 +2132,7 @@ void Waypoint::SavePathMatrix (void)
 
 bool Waypoint::LoadPathMatrix (void)
 {
-   File fp (FormatBuffer ("%slearned/%s.pmt", GetWaypointDir (), GetMapName ()), "rb");
+   File fp (FormatBuffer ("%slearned/%s.pmt", GetWaypointDir (), engine.GetMapName ()), "rb");
 
    // file doesn't exists return false
    if (!fp.IsValid ())
@@ -2218,7 +2221,7 @@ void Waypoint::CreateBasic (void)
       Vector up, down, front, back;
 
       Vector diff = ((ladderLeft - ladderRight) ^ Vector (0.0f, 0.0f, 0.0f)).Normalize () * 15.0f;
-      front = back = GetEntityOrigin (ent);
+      front = back = engine.GetAbsOrigin (ent);
 
       front = front + diff; // front
       back = back - diff; // back
@@ -2226,7 +2229,7 @@ void Waypoint::CreateBasic (void)
       up = down = front;
       down.z = ent->v.absmax.z;
 
-      TraceHull (down, up, true, point_hull, NULL, &tr);
+      engine.TestHull (down, up, TRACE_IGNORE_MONSTERS, point_hull, NULL, &tr);
 
       if (POINT_CONTENTS (up) == CONTENTS_SOLID || tr.flFraction != 1.0f)
       {
@@ -2234,7 +2237,7 @@ void Waypoint::CreateBasic (void)
          down.z = ent->v.absmax.z;
       }
 
-      TraceHull (down, up - Vector (0.0f, 0.0f, 1000.0f), true, point_hull, NULL, &tr);
+      engine.TestHull (down, up - Vector (0.0f, 0.0f, 1000.0f), TRACE_IGNORE_MONSTERS, point_hull, NULL, &tr);
       up = tr.vecEndPos;
 
       Vector pointOrigin = up + Vector (0.0f, 0.0f, 39.0f);
@@ -2259,7 +2262,7 @@ void Waypoint::CreateBasic (void)
    // then terrortist spawnpoints
    while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_player_deathmatch")))
    {
-      Vector origin = GetEntityOrigin (ent);
+      Vector origin = engine.GetAbsOrigin (ent);
 
       if (FindNearest (origin, 50.0f) == -1)
          Add (0, origin);
@@ -2268,7 +2271,7 @@ void Waypoint::CreateBasic (void)
    // then add ct spawnpoints
    while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_player_start")))
    {
-      Vector origin = GetEntityOrigin (ent);
+      Vector origin = engine.GetAbsOrigin (ent);
 
       if (FindNearest (origin, 50.0f) == -1)
          Add (0, origin);
@@ -2277,7 +2280,7 @@ void Waypoint::CreateBasic (void)
    // then vip spawnpoint
    while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_vip_start")))
    {
-      Vector origin = GetEntityOrigin (ent);
+      Vector origin = engine.GetAbsOrigin (ent);
 
       if (FindNearest (origin, 50.0f) == -1)
          Add (0, origin);
@@ -2286,7 +2289,7 @@ void Waypoint::CreateBasic (void)
    // hostage rescue zone
    while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_hostage_rescue")))
    {
-      Vector origin = GetEntityOrigin (ent);
+      Vector origin = engine.GetAbsOrigin (ent);
 
       if (FindNearest (origin, 50.0f) == -1)
          Add (4, origin);
@@ -2295,7 +2298,7 @@ void Waypoint::CreateBasic (void)
    // hostage rescue zone (same as above)
    while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_hostage_rescue")))
    {
-      Vector origin = GetEntityOrigin (ent);
+      Vector origin = engine.GetAbsOrigin (ent);
 
       if (FindNearest (origin, 50.0f) == -1)
          Add (4, origin);
@@ -2304,7 +2307,7 @@ void Waypoint::CreateBasic (void)
    // bombspot zone
    while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_bomb_target")))
    {
-      Vector origin = GetEntityOrigin (ent);
+      Vector origin = engine.GetAbsOrigin (ent);
 
       if (FindNearest (origin, 50.0f) == -1)
          Add (100, origin);
@@ -2313,7 +2316,7 @@ void Waypoint::CreateBasic (void)
    // bombspot zone (same as above)
    while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_bomb_target")))
    {
-      Vector origin = GetEntityOrigin (ent);
+      Vector origin = engine.GetAbsOrigin (ent);
 
       if (FindNearest (origin, 50.0f) == -1)
          Add (100, origin);
@@ -2326,7 +2329,7 @@ void Waypoint::CreateBasic (void)
       if ((ent->v.effects & EF_NODRAW) && ent->v.speed > 0.0f)
          continue;
 
-      Vector origin = GetEntityOrigin (ent);
+      Vector origin = engine.GetAbsOrigin (ent);
 
       if (FindNearest (origin, 50) == -1)
          Add (100, origin);
@@ -2335,7 +2338,7 @@ void Waypoint::CreateBasic (void)
    // vip rescue (safety) zone
    while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_vip_safetyzone")))
    {
-      Vector origin = GetEntityOrigin (ent);
+      Vector origin = engine.GetAbsOrigin (ent);
 
       if (FindNearest (origin, 50.0f) == -1)
          Add (100, origin);
@@ -2344,7 +2347,7 @@ void Waypoint::CreateBasic (void)
    // terrorist escape zone
    while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_escapezone")))
    {
-      Vector origin = GetEntityOrigin (ent);
+      Vector origin = engine.GetAbsOrigin (ent);
 
       if (FindNearest (origin, 50.0f) == -1)
          Add (100, origin);
@@ -2353,7 +2356,7 @@ void Waypoint::CreateBasic (void)
    // weapons on the map ?
    while (!IsEntityNull (ent = FIND_ENTITY_BY_CLASSNAME (ent, "armoury_entity")))
    {
-      Vector origin = GetEntityOrigin (ent);
+      Vector origin = engine.GetAbsOrigin (ent);
 
       if (FindNearest (origin, 50.0f) == -1)
          Add (0, origin);
@@ -2375,13 +2378,14 @@ void Waypoint::EraseFromHardDisk (void)
    // this function removes waypoint file from the hard disk
 
    String deleteList[5];
+   const char *map = engine.GetMapName ();
 
    // if we're delete waypoint, delete all corresponding to it files
-   deleteList[0] = FormatBuffer ("%s%s.pwf", GetWaypointDir (), GetMapName ()); // waypoint itself
-   deleteList[1] = FormatBuffer ("%slearned/%s.exp", GetWaypointDir (), GetMapName ()); // corresponding to waypoint experience
-   deleteList[3] = FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), GetMapName ()); // corresponding to waypoint vistable
-   deleteList[3] = FormatBuffer ("%slearned/%s.pmt", GetWaypointDir (), GetMapName ()); // corresponding to waypoint path matrix
-   deleteList[4] = FormatBuffer ("%slearned/%s.xml", GetWaypointDir (), GetMapName ()); // corresponding to waypoint xml database
+   deleteList[0] = FormatBuffer ("%s%s.pwf", GetWaypointDir (), map); // waypoint itself
+   deleteList[1] = FormatBuffer ("%slearned/%s.exp", GetWaypointDir (), map); // corresponding to waypoint experience
+   deleteList[3] = FormatBuffer ("%slearned/%s.vis", GetWaypointDir (), map); // corresponding to waypoint vistable
+   deleteList[3] = FormatBuffer ("%slearned/%s.pmt", GetWaypointDir (), map); // corresponding to waypoint path matrix
+   deleteList[4] = FormatBuffer ("%slearned/%s.xml", GetWaypointDir (), map); // corresponding to waypoint xml database
 
    for (int i = 0; i < 4; i++)
    {
@@ -2414,7 +2418,7 @@ void Waypoint::SetBombPosition (bool shouldReset)
    {
       if (strcmp (STRING (ent->v.model) + 9, "c4.mdl") == 0)
       {
-         m_foundBombOrigin = GetEntityOrigin (ent);
+         m_foundBombOrigin = engine.GetAbsOrigin (ent);
          break;
       }
    }
@@ -2430,7 +2434,7 @@ void Waypoint::SetFindIndex (int index)
    m_findWPIndex = index;
 
    if (m_findWPIndex < g_numWaypoints)
-      ServerPrint ("Showing Direction to Waypoint #%d", m_findWPIndex);
+      engine.Printf ("Showing Direction to Waypoint #%d", m_findWPIndex);
    else
       m_findWPIndex = -1;
 }
@@ -2548,7 +2552,7 @@ WaypointDownloadError WaypointDownloader::DoDownload (void)
    }
 
    String request;
-   request.AssignFormat ("GET /wpdb/%s.pwf HTTP/1.0\r\nAccept: */*\r\nUser-Agent: YaPB/%s\r\nHost: %s\r\n\r\n", GetMapName (), PRODUCT_VERSION, yb_waypoint_autodl_host.GetString ());
+   request.AssignFormat ("GET /wpdb/%s.pwf HTTP/1.0\r\nAccept: */*\r\nUser-Agent: YaPB/%s\r\nHost: %s\r\n\r\n", engine.GetMapName (), PRODUCT_VERSION, yb_waypoint_autodl_host.GetString ());
 
    if (send (socketHandle, request.GetBuffer (), request.GetLength () + 1, 0) < 1)
    {

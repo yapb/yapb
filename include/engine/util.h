@@ -207,8 +207,6 @@ typedef struct hudtextparms_s
 } hudtextparms_t;
 
 
-extern Vector GetEntityOrigin (entvars_t *pevBModel);
-
 #define AMBIENT_SOUND_STATIC            0   // medium radius attenuation
 #define AMBIENT_SOUND_EVERYWHERE        1
 #define AMBIENT_SOUND_SMALLRADIUS       2

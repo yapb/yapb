@@ -148,7 +148,7 @@ void NetworkMsg::Execute (void *p)
 
             // ammo amount decreased ? must have fired a bullet...
             if (id == m_bot->m_currentWeapon && m_bot->m_ammoInClip[id] > clip)
-               m_bot->m_timeLastFired = GetWorldTime (); // remember the last bullet time
+               m_bot->m_timeLastFired = engine.Time (); // remember the last bullet time
 
             m_bot->m_ammoInClip[id] = clip;
          }
@@ -268,7 +268,7 @@ void NetworkMsg::Execute (void *p)
             if (yb_communication_type.GetInt () == 2)
             {
                // need to send congrats on well placed shot
-               for (int i = 0; i < GetMaxClients (); i++)
+               for (int i = 0; i < engine.MaxClients (); i++)
                {
                   Bot *bot = bots.GetBot (i);
 
@@ -285,14 +285,14 @@ void NetworkMsg::Execute (void *p)
             }
 
             // notice nearby to victim teammates, that attacker is near
-            for (int i = 0; i < GetMaxClients (); i++)
+            for (int i = 0; i < engine.MaxClients (); i++)
             {
                Bot *bot = bots.GetBot (i);
 
-               if (bot != NULL && bot->m_seeEnemyTime + 2.0f < GetWorldTime () && IsAlive (bot->GetEntity ()) && GetTeam (bot->GetEntity ()) == GetTeam (victim) && IsVisible (killer->v.origin, bot->GetEntity ()) && IsEntityNull (bot->m_enemy) && GetTeam (killer) != GetTeam (victim))
+               if (bot != NULL && bot->m_seeEnemyTime + 2.0f < engine.Time () && IsAlive (bot->GetEntity ()) && GetTeam (bot->GetEntity ()) == GetTeam (victim) && IsVisible (killer->v.origin, bot->GetEntity ()) && IsEntityNull (bot->m_enemy) && GetTeam (killer) != GetTeam (victim))
                {
                   bot->m_actualReactionTime = 0.0f;
-                  bot->m_seeEnemyTime = GetWorldTime ();
+                  bot->m_seeEnemyTime = engine.Time ();
                   bot->m_enemy = killer;
                   bot->m_lastEnemy = killer;
                   bot->m_lastEnemyOrigin = killer->v.origin;
@@ -429,9 +429,9 @@ void NetworkMsg::Execute (void *p)
             waypoints.SetBombPosition ();
 
             g_bombPlanted = g_bombSayString = true;
-            g_timeBombPlanted = GetWorldTime ();
+            g_timeBombPlanted = engine.Time ();
       
-            for (int i = 0; i < GetMaxClients (); i++)
+            for (int i = 0; i < engine.MaxClients (); i++)
             {
                Bot *bot = bots.GetBot (i);
 
@@ -460,7 +460,7 @@ void NetworkMsg::Execute (void *p)
          break;
 
       case 4:
-         if (playerIndex >= 0 && playerIndex <= GetMaxClients ())
+         if (playerIndex >= 0 && playerIndex <= engine.MaxClients ())
          {
 #ifndef XASH_CSDM
             Client &cl = g_clients[playerIndex - 1];

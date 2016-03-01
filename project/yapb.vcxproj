@@ -14,6 +14,7 @@
     <ClInclude Include="..\include\compress.h" />
     <ClInclude Include="..\include\core.h" />
     <ClInclude Include="..\include\corelib.h" />
+    <ClInclude Include="..\include\engine.h" />
     <ClInclude Include="..\include\engine\archtypes.h" />
     <ClInclude Include="..\include\engine\const.h" />
     <ClInclude Include="..\include\engine\dllapi.h" />
@@ -33,6 +34,7 @@
   <ItemGroup>
     <ClCompile Include="..\source\basecode.cpp" />
     <ClCompile Include="..\source\combat.cpp" />
+    <ClCompile Include="..\source\engine.cpp" />
     <ClCompile Include="..\source\manager.cpp" />
     <ClCompile Include="..\source\chatlib.cpp" />
     <ClCompile Include="..\source\globals.cpp" />

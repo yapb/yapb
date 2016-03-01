@@ -55,8 +55,6 @@ extern int g_lastRadio[2];
 extern int g_storeAddbotVars[4];
 extern int *g_weaponPrefs[];
 
-extern short g_modelIndexLaser;
-extern short g_modelIndexArrow;
 extern char g_fakeArgv[256];
 
 extern Array <Array <String> > g_chatFactory;
@@ -90,16 +88,6 @@ static inline bool IsNullString (const char *input)
       return true;
 
    return *input == '\0';
-}
-
-static inline float GetWorldTime (void)
-{
-   return g_pGlobals->time;
-}
-
-static inline int GetMaxClients (void)
-{
-   return g_pGlobals->maxClients;
 }
 
 static inline edict_t *EntityOfIndex (const int index)

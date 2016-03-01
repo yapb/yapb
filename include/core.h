@@ -556,24 +556,6 @@ struct TaskItem
    bool resume; // if task can be continued if interrupted
 };
 
-// wave structure
-struct WavHeader
-{
-   char riffChunkId[4];
-   unsigned long packageSize;
-   char chunkID[4];
-   char formatChunkId[4];
-   unsigned long formatChunkLength;
-   unsigned short dummy;
-   unsigned short channels;
-   unsigned long sampleRate;
-   unsigned long bytesPerSecond;
-   unsigned short bytesPerSample;
-   unsigned short bitsPerSample;
-   char dataChunkId[4];
-   unsigned long dataChunkLength;
-};
-
 // botname structure definition
 struct BotName
 {
@@ -1617,11 +1599,7 @@ public:
 
 // prototypes of bot functions...
 extern int GetWeaponReturn (bool isString, const char *weaponAlias, int weaponIndex = -1);
-
 extern float GetShootingConeDeviation (edict_t *ent, Vector *position);
-extern float GetWaveLength (const char *fileName);
-
-extern bool IsDedicatedServer (void);
 extern bool IsVisible (const Vector &origin, edict_t *ent);
 extern bool IsAlive (edict_t *ent);
 extern bool IsInViewCone (const Vector &origin, edict_t *ent);
@@ -1631,41 +1609,22 @@ extern bool IsValidPlayer (edict_t *ent);
 extern bool IsPlayerVIP (edict_t *ent);
 extern bool OpenConfig (const char *fileName, const char *errorIfNotExists, File *outFile, bool languageDependant = false);
 extern bool FindNearestPlayer (void **holder, edict_t *to, float searchDistance = 4096.0, bool sameTeam = false, bool needBot = false, bool needAlive = false, bool needDrawn = false);
-
-extern const char *GetMapName (void);
-extern const char *GetWaypointDir (void);
-extern const char *GetModName (void);
 extern const char *GetField (const char *string, int fieldId, bool endLine = false);
 extern const char *FormatBuffer (const char *format, ...);
-
 extern uint16 GenerateBuildNumber (void);
-extern Vector GetEntityOrigin (edict_t *ent);
-
 extern void FreeLibraryMemory (void);
 extern void RoundInit (void);
 extern void FakeClientCommand (edict_t *fakeClient, const char *format, ...);
 extern void strtrim (char *string);
 extern void CreatePath (char *path);
-extern void ServerCommand (const char *format, ...);
-extern void RegisterCommand (const char *command, void funcPtr (void));
 extern void CheckWelcomeMessage (void);
 extern void DetectCSVersion (void);
-extern void PlaySound (edict_t *ent, const char *soundName);
-extern void ServerPrint (const char *format, ...);
-extern void ChartPrint (const char *format, ...);
-extern void CenterPrint (const char *format, ...);
-extern void ClientPrint (edict_t *ent, int dest, const char *format, ...);
-
 extern void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...);
-extern void TraceLine (const Vector &start, const Vector &end, bool ignoreMonsters, bool ignoreGlass, edict_t *ignoreEntity, TraceResult *ptr);
-extern void TraceLine (const Vector &start, const Vector &end, bool ignoreMonsters, edict_t *ignoreEntity, TraceResult *ptr);
-extern void TraceHull (const Vector &start, const Vector &end, bool ignoreMonsters, int hullNumber, edict_t *ignoreEntity, TraceResult *ptr);
-extern void DrawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, int red, int green, int blue, int brightness, int speed, int life);
-extern void DrawArrow (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, int red, int green, int blue, int brightness, int speed, int life);
 extern void DisplayMenuToClient (edict_t *ent, MenuText *menu);
 extern void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex);
 extern void SoundAttachToClients (edict_t *ent, const char *sample, float volume);
 extern void SoundSimulateUpdate (int playerIndex);
+extern const char *GetWaypointDir (void);
 
 // very global convars
 extern ConVar yb_jasonmode;
@@ -1673,6 +1632,7 @@ extern ConVar yb_communication_type;
 extern ConVar yb_csdm_mode;
 extern ConVar yb_ignore_enemies;
 
+#include <engine.h>
 #include <globals.h>
 #include <compress.h>
 #include <resource.h>

@@ -185,7 +185,7 @@ void Bot::PrepareChatMessage (char *text)
             int highestFrags = -9000; // just pick some start value
             int index = 0;
 
-            for (int i = 0; i < GetMaxClients (); i++)
+            for (int i = 0; i < engine.MaxClients (); i++)
             {
                if (!(g_clients[i].flags & CF_USED) || g_clients[i].ent == GetEntity ())
                   continue;
@@ -204,11 +204,11 @@ void Bot::PrepareChatMessage (char *text)
          }
          // mapname?
          else if (*pattern == 'm')
-            strncat (m_tempStrings, GetMapName (), SIZEOF_CHAR (m_tempStrings));
+            strncat (m_tempStrings, engine.GetMapName (), SIZEOF_CHAR (m_tempStrings));
          // roundtime?
          else if (*pattern == 'r')
          {
-            int time = static_cast <int> (g_timeRoundEnd - GetWorldTime ());
+            int time = static_cast <int> (g_timeRoundEnd - engine.Time ());
             strncat (m_tempStrings, FormatBuffer ("%02d:%02d", time / 60, time % 60), SIZEOF_CHAR (m_tempStrings));
          }
          // chat reply?
@@ -222,7 +222,7 @@ void Bot::PrepareChatMessage (char *text)
          {
             int i;
 
-            for (i = 0; i < GetMaxClients (); i++)
+            for (i = 0; i < engine.MaxClients (); i++)
             {
                if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != m_team || g_clients[i].ent == GetEntity ())
                   continue;
@@ -230,7 +230,7 @@ void Bot::PrepareChatMessage (char *text)
                break;
             }
 
-            if (i < GetMaxClients ())
+            if (i < engine.MaxClients ())
             {
                if (!IsEntityNull (pev->dmg_inflictor) && m_team == GetTeam (pev->dmg_inflictor))
                   talkEntity = pev->dmg_inflictor;
@@ -241,7 +241,7 @@ void Bot::PrepareChatMessage (char *text)
             }
             else // no teammates alive...
             {
-               for (i = 0; i < GetMaxClients (); i++)
+               for (i = 0; i < engine.MaxClients (); i++)
                {
                   if (!(g_clients[i].flags & CF_USED) || g_clients[i].team != m_team || g_clients[i].ent == GetEntity ())
                      continue;
@@ -249,7 +249,7 @@ void Bot::PrepareChatMessage (char *text)
                   break;
                }
 
-               if (i < GetMaxClients ())
+               if (i < engine.MaxClients ())
                {
                   talkEntity = g_clients[i].ent;
 
@@ -261,27 +261,27 @@ void Bot::PrepareChatMessage (char *text)
          {
             int i;
 
-            for (i = 0; i < GetMaxClients (); i++)
+            for (i = 0; i < engine.MaxClients (); i++)
             {
                if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team == m_team || g_clients[i].ent == GetEntity ())
                   continue;
                break;
             }
 
-            if (i < GetMaxClients ())
+            if (i < engine.MaxClients ())
             {
                talkEntity = g_clients[i].ent;
                ASSIGN_TALK_ENTITY ();
             }
             else // no teammates alive...
             {
-               for (i = 0; i < GetMaxClients (); i++)
+               for (i = 0; i < engine.MaxClients (); i++)
                {
                   if (!(g_clients[i].flags & CF_USED) || g_clients[i].team == m_team || g_clients[i].ent == GetEntity ())
                      continue;
                   break;
                }
-               if (i < GetMaxClients ())
+               if (i < engine.MaxClients ())
                {
                   talkEntity = g_clients[i].ent;
                   ASSIGN_TALK_ENTITY ();
@@ -399,7 +399,7 @@ bool Bot::RepliesToPlayer (void)
       char text[256];
 
       // check is time to chat is good
-      if (m_sayTextBuffer.timeNextChat < GetWorldTime ())
+      if (m_sayTextBuffer.timeNextChat < engine.Time ())
       {
          if (Random.Long (1, 100) < m_sayTextBuffer.chatProbability + Random.Long (2, 10) && ParseChat (reinterpret_cast <char *> (&text)))
          {
@@ -408,7 +408,7 @@ bool Bot::RepliesToPlayer (void)
 
             m_sayTextBuffer.entityIndex = -1;
             m_sayTextBuffer.sayText[0] = 0x0;
-            m_sayTextBuffer.timeNextChat = GetWorldTime () + m_sayTextBuffer.chatDelay;
+            m_sayTextBuffer.timeNextChat = engine.Time () + m_sayTextBuffer.chatDelay;
 
             return true;
          }

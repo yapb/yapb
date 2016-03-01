@@ -19,49 +19,6 @@ ConVar mp_freezetime ("mp_freezetime", NULL, VT_NOREGISTER);
 ConVar mp_freezetime ("mp_freezetime", "0", VT_NOSERVER);
 #endif
 
-void TraceLine (const Vector &start, const Vector &end, bool ignoreMonsters, bool ignoreGlass, edict_t *ignoreEntity, TraceResult *ptr)
-{
-   // this function traces a line dot by dot, starting from vecStart in the direction of vecEnd,
-   // ignoring or not monsters (depending on the value of IGNORE_MONSTERS, true or false), and stops
-   // at the first obstacle encountered, returning the results of the trace in the TraceResult structure
-   // ptr. Such results are (amongst others) the distance traced, the hit surface, the hit plane
-   // vector normal, etc. See the TraceResult structure for details. This function allows to specify
-   // whether the trace starts "inside" an entity's polygonal model, and if so, to specify that entity
-   // in ignoreEntity in order to ignore it as a possible obstacle.
-   // this is an overloaded prototype to add IGNORE_GLASS in the same way as IGNORE_MONSTERS work.
-
-   (*g_engfuncs.pfnTraceLine) (start, end, (ignoreMonsters ? TRUE : FALSE) | (ignoreGlass ? 0x100 : 0), ignoreEntity, ptr);
-}
-
-void TraceLine (const Vector &start, const Vector &end, bool ignoreMonsters, edict_t *ignoreEntity, TraceResult *ptr)
-{
-   // this function traces a line dot by dot, starting from vecStart in the direction of vecEnd,
-   // ignoring or not monsters (depending on the value of IGNORE_MONSTERS, true or false), and stops
-   // at the first obstacle encountered, returning the results of the trace in the TraceResult structure
-   // ptr. Such results are (amongst others) the distance traced, the hit surface, the hit plane
-   // vector normal, etc. See the TraceResult structure for details. This function allows to specify
-   // whether the trace starts "inside" an entity's polygonal model, and if so, to specify that entity
-   // in ignoreEntity in order to ignore it as a possible obstacle.
-
-   (*g_engfuncs.pfnTraceLine) (start, end, ignoreMonsters ? TRUE : FALSE, ignoreEntity, ptr);
-}
-
-void TraceHull (const Vector &start, const Vector &end, bool ignoreMonsters, int hullNumber, edict_t *ignoreEntity, TraceResult *ptr)
-{
-   // this function traces a hull dot by dot, starting from vecStart in the direction of vecEnd,
-   // ignoring or not monsters (depending on the value of IGNORE_MONSTERS, true or
-   // false), and stops at the first obstacle encountered, returning the results
-   // of the trace in the TraceResult structure ptr, just like TraceLine. Hulls that can be traced
-   // (by parameter hull_type) are point_hull (a line), head_hull (size of a crouching player),
-   // human_hull (a normal body size) and large_hull (for monsters?). Not all the hulls in the
-   // game can be traced here, this function is just useful to give a relative idea of spatial
-   // reachability (i.e. can a hostage pass through that tiny hole ?) Also like TraceLine, this
-   // function allows to specify whether the trace starts "inside" an entity's polygonal model,
-   // and if so, to specify that entity in ignoreEntity in order to ignore it as an obstacle.
-
-   (*g_engfuncs.pfnTraceHull) (start, end, ignoreMonsters ? TRUE : FALSE, hullNumber, ignoreEntity, ptr);
-}
-
 uint16 FixedUnsigned16 (float value, float scale)
 {
    int output = (static_cast <int> (value * scale));
@@ -133,26 +90,12 @@ bool IsVisible (const Vector &origin, edict_t *ent)
       return false;
 
    TraceResult tr;
-   TraceLine (ent->v.origin + ent->v.view_ofs, origin, true, true, ent, &tr);
+   engine.TestLine (ent->v.origin + ent->v.view_ofs, origin, TRACE_IGNORE_EVERYTHING, ent, &tr);
 
    if (tr.flFraction != 1.0f)
       return false;
 
    return true;
-}
-
-Vector GetEntityOrigin (edict_t *ent)
-{
-   // this expanded function returns the vector origin of a bounded entity, assuming that any
-   // entity that has a bounding box has its center at the center of the bounding box itself.
-
-   if (IsEntityNull (ent))
-      return Vector::GetZero ();
-
-   if (ent->v.origin.IsZero ())
-      return ent->v.absmin + ent->v.size * 0.5f;
-
-   return ent->v.origin;
 }
 
 void DisplayMenuToClient (edict_t *ent, MenuText *menu)
@@ -493,34 +436,6 @@ void strtrim (char *string)
    string[length] = 0;
 }
 
-const char *GetModName (void)
-{
-   static char modName[256];
-
-   GET_GAME_DIR (modName); // ask the engine for the MOD directory path
-   int length = strlen (modName); // get the length of the returned string
-
-   // format the returned string to get the last directory name
-   int stop = length - 1;
-   while ((modName[stop] == '\\' || modName[stop] == '/') && stop > 0)
-      stop--; // shift back any trailing separator
-
-   int start = stop;
-   while (modName[start] != '\\' && modName[start] != '/' && start > 0)
-      start--; // shift back to the start of the last subdirectory name
-
-   if (modName[start] == '\\' || modName[start] == '/')
-      start++; // if we reached a separator, step over it
-
-   // now copy the formatted string back onto itself character per character
-   for (length = start; length <= stop; length++)
-      modName[length - start] = modName[length];
-
-   modName[length - start] = 0; // terminate the string
-
-   return &modName[0];
-}
-
 // Create a directory tree
 void CreatePath (char *path)
 {
@@ -543,72 +458,6 @@ void CreatePath (char *path)
 #else
    mkdir (path, 0777);
 #endif
-}
-
-void DrawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, int red, int green, int blue, int brightness, int speed, int life)
-{
-   // this function draws a line visible from the client side of the player whose player entity
-   // is pointed to by ent, from the vector location start to the vector location end,
-   // which is supposed to last life tenths seconds, and having the color defined by RGB.
-
-   if (!IsValidPlayer (ent))
-      return; // reliability check
-
-   MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, NULL, ent);
-      WRITE_BYTE (TE_BEAMPOINTS);
-      WRITE_COORD (start.x);
-      WRITE_COORD (start.y);
-      WRITE_COORD (start.z);
-      WRITE_COORD (end.x);
-      WRITE_COORD (end.y);
-      WRITE_COORD (end.z);
-      WRITE_SHORT (g_modelIndexLaser);
-      WRITE_BYTE (0); // framestart
-      WRITE_BYTE (10); // framerate
-      WRITE_BYTE (life); // life in 0.1's
-      WRITE_BYTE (width); // width
-      WRITE_BYTE (noise);  // noise
-
-      WRITE_BYTE (red);   // r, g, b
-      WRITE_BYTE (green);   // r, g, b
-      WRITE_BYTE (blue);   // r, g, b
-
-      WRITE_BYTE (brightness);   // brightness
-      WRITE_BYTE (speed);    // speed
-   MESSAGE_END ();
-}
-
-void DrawArrow (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, int red, int green, int blue, int brightness, int speed, int life)
-{
-   // this function draws a arrow visible from the client side of the player whose player entity
-   // is pointed to by ent, from the vector location start to the vector location end,
-   // which is supposed to last life tenths seconds, and having the color defined by RGB.
-
-   if (!IsValidPlayer (ent))
-      return; // reliability check
-
-   MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, NULL, ent);
-      WRITE_BYTE (TE_BEAMPOINTS);
-      WRITE_COORD (end.x);
-      WRITE_COORD (end.y);
-      WRITE_COORD (end.z);
-      WRITE_COORD (start.x);
-      WRITE_COORD (start.y);
-      WRITE_COORD (start.z);
-      WRITE_SHORT (g_modelIndexArrow);
-      WRITE_BYTE (0); // framestart
-      WRITE_BYTE (10); // framerate
-      WRITE_BYTE (life); // life in 0.1's
-      WRITE_BYTE (width); // width
-      WRITE_BYTE (noise);  // noise
-
-      WRITE_BYTE (red);   // r, g, b
-      WRITE_BYTE (green);   // r, g, b
-      WRITE_BYTE (blue);   // r, g, b
-
-      WRITE_BYTE (brightness);   // brightness
-      WRITE_BYTE (speed);    // speed
-   MESSAGE_END ();
 }
 
 void UpdateGlobalExperienceData (void)
@@ -725,8 +574,8 @@ void UpdateGlobalExperienceData (void)
    {
       for (int i = 0; i < g_numWaypoints; i++)
       {
-         (g_experienceData + (i * g_numWaypoints) + i)->team0Damage /= static_cast <unsigned short> (GetMaxClients () * 0.5);
-         (g_experienceData + (i * g_numWaypoints) + i)->team1Damage /= static_cast <unsigned short> (GetMaxClients () * 0.5);
+         (g_experienceData + (i * g_numWaypoints) + i)->team0Damage /= static_cast <unsigned short> (engine.MaxClients () * 0.5);
+         (g_experienceData + (i * g_numWaypoints) + i)->team1Damage /= static_cast <unsigned short> (engine.MaxClients () * 0.5);
       }
       g_highestKills = 1;
    }
@@ -742,7 +591,7 @@ void RoundInit (void)
    bots.CheckTeamEconomics (TERRORIST);
    bots.CheckTeamEconomics (CT);
 
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
       if (bots.GetBot (i))
          bots.GetBot (i)->NewRound ();
@@ -769,7 +618,7 @@ void RoundInit (void)
    UpdateGlobalExperienceData (); // update experience data on round start
 
    // calculate the round mid/end in world time
-   g_timeRoundStart = GetWorldTime () + mp_freezetime.GetFloat ();
+   g_timeRoundStart = engine.Time () + mp_freezetime.GetFloat ();
    g_timeRoundMid = g_timeRoundStart + mp_roundtime.GetFloat () * 60.0f * 0.5f;
    g_timeRoundEnd = g_timeRoundStart + mp_roundtime.GetFloat () * 60.0f;
 }
@@ -824,135 +673,29 @@ bool IsValidBot (edict_t *ent)
    return false;
 }
 
-bool IsDedicatedServer (void)
-{
-   // return true if server is dedicated server, false otherwise
-
-   return (IS_DEDICATED_SERVER () > 0); // ask engine for this
-}
-
-void ServerPrint (const char *format, ...)
-{
-   va_list ap;
-   char string[3072];
-
-   va_start (ap, format);
-   vsprintf (string, locale.TranslateInput (format), ap);
-   va_end (ap);
-
-   SERVER_PRINT (string);
-   SERVER_PRINT ("\n");
-}
-
-void CenterPrint (const char *format, ...)
-{
-   va_list ap;
-   char string[2048];
-
-   va_start (ap, format);
-   vsprintf (string, locale.TranslateInput (format), ap);
-   va_end (ap);
-
-   if (IsDedicatedServer ())
-   {
-      ServerPrint (string);
-      return;
-   }
-
-   MESSAGE_BEGIN (MSG_BROADCAST, netmsg.GetId (NETMSG_TEXTMSG));
-      WRITE_BYTE (HUD_PRINTCENTER);
-      WRITE_STRING (FormatBuffer ("%s\n", string));
-   MESSAGE_END ();
-}
-
-void ChartPrint (const char *format, ...)
-{
-   va_list ap;
-   char string[2048];
-
-   va_start (ap, format);
-   vsprintf (string, locale.TranslateInput (format), ap);
-   va_end (ap);
-
-   if (IsDedicatedServer ())
-   {
-      ServerPrint (string);
-      return;
-   }
-   strcat (string, "\n");
-
-   MESSAGE_BEGIN (MSG_BROADCAST, netmsg.GetId (NETMSG_TEXTMSG));
-      WRITE_BYTE (HUD_PRINTTALK);
-      WRITE_STRING (string);
-   MESSAGE_END ();
-}
-
-void ClientPrint (edict_t *ent, int dest, const char *format, ...)
-{
-   va_list ap;
-   char string[2048];
-
-   va_start (ap, format);
-   vsprintf (string, locale.TranslateInput (format), ap);
-   va_end (ap);
-
-   if (IsEntityNull (ent) || ent == g_hostEntity)
-   {
-		ServerPrint (string);
-      return;
-   }
-   strcat (string, "\n");
-   (*g_engfuncs.pfnClientPrintf) (ent, static_cast <PRINT_TYPE> (dest), string);
-
-}
-
-void ServerCommand (const char *format, ...)
-{
-   // this function asks the engine to execute a server command
-
-   va_list ap;
-   static char string[1024];
-
-   // concatenate all the arguments in one string
-   va_start (ap, format);
-   vsprintf (string, format, ap);
-   va_end (ap);
-
-   SERVER_COMMAND (const_cast <char *> (FormatBuffer ("%s\n", string))); // execute command
-}
-
-const char *GetMapName (void)
-{
-   // this function gets the map name and store it in the map_name global string variable.
-
-   static char mapName[256];
-   strncpy (mapName, const_cast <const char *> (g_pGlobals->pStringBase + static_cast <int> (g_pGlobals->mapname)), SIZEOF_CHAR (mapName));
-
-   return &mapName[0]; // and return a pointer to it
-}
-
-extern bool OpenConfig(const char *fileName, const char *errorIfNotExists, File *outFile, bool languageDependant /*= false*/)
+bool OpenConfig (const char *fileName, const char *errorIfNotExists, File *outFile, bool languageDependant /*= false*/)
 {
    if (outFile->IsValid ())
       outFile->Close ();
 
    if (languageDependant)
    {
+      const char *mod = engine.GetModName ();
       extern ConVar yb_language;
 
       if (strcmp (fileName, "lang.cfg") == 0 && strcmp (yb_language.GetString (), "en") == 0)
          return false;
 
-      const char *languageDependantConfigFile = FormatBuffer ("%s/addons/yapb/conf/lang/%s_%s", GetModName (), yb_language.GetString (), fileName);
+      const char *languageDependantConfigFile = FormatBuffer ("%s/addons/yapb/conf/lang/%s_%s", mod, yb_language.GetString (), fileName);
 
       // check is file is exists for this language
       if (File::Accessible (languageDependantConfigFile))
          outFile->Open (languageDependantConfigFile, "rt");
       else
-         outFile->Open (FormatBuffer ("%s/addons/yapb/conf/lang/en_%s", GetModName (), fileName), "rt");
+         outFile->Open (FormatBuffer ("%s/addons/yapb/conf/lang/en_%s", mod, fileName), "rt");
    }
    else
-      outFile->Open (FormatBuffer ("%s/addons/yapb/conf/%s", GetModName (), fileName), "rt");
+      outFile->Open (FormatBuffer ("%s/addons/yapb/conf/%s", engine.GetModName (), fileName), "rt");
 
    if (!outFile->IsValid ())
    {
@@ -964,20 +707,7 @@ extern bool OpenConfig(const char *fileName, const char *errorIfNotExists, File 
 
 const char *GetWaypointDir (void)
 {
-   return FormatBuffer ("%s/addons/yapb/data/", GetModName ());
-}
-
-extern void RegisterCommand(const char *command, void funcPtr (void))
-{
-   // this function tells the engine that a new server command is being declared, in addition
-   // to the standard ones, whose name is command_name. The engine is thus supposed to be aware
-   // that for every "command_name" server command it receives, it should call the function
-   // pointed to by "function" in order to handle it.
-
-   if (IsNullString (command) || funcPtr == NULL)
-      return; // reliability check
-
-   REG_SVR_COMMAND (const_cast <char *> (command), funcPtr); // ask the engine to register this new command
+   return FormatBuffer ("%s/addons/yapb/data/", engine.GetModName ());
 }
 
 void CheckWelcomeMessage (void)
@@ -1014,14 +744,14 @@ void CheckWelcomeMessage (void)
    }
 
    if (IsAlive (g_hostEntity) && !alreadyReceived && receiveTime < 1.0 && (g_numWaypoints > 0 ? g_isCommencing : true))
-      receiveTime = GetWorldTime () + 4.0f; // receive welcome message in four seconds after game has commencing
+      receiveTime = engine.Time () + 4.0f; // receive welcome message in four seconds after game has commencing
 
-   if (receiveTime > 0.0f && receiveTime < GetWorldTime () && !alreadyReceived && (g_numWaypoints > 0 ? g_isCommencing : true))
+   if (receiveTime > 0.0f && receiveTime < engine.Time () && !alreadyReceived && (g_numWaypoints > 0 ? g_isCommencing : true))
    {
       if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH)))
-         ServerCommand ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));
+         engine.IssueCmd ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));
 
-      ChartPrint ("----- %s v%s (Build: %u), {%s}, (c) 2016, by %s (%s)-----", PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_DATE, PRODUCT_AUTHOR, PRODUCT_URL);
+      engine.ChatPrintf ("----- %s v%s (Build: %u), {%s}, (c) 2016, by %s (%s)-----", PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_DATE, PRODUCT_AUTHOR, PRODUCT_URL);
       
       MESSAGE_BEGIN (MSG_ONE, SVC_TEMPENTITY, NULL, g_hostEntity);
       WRITE_BYTE (TE_TEXTMESSAGE);
@@ -1074,48 +804,6 @@ void DetectCSVersion (void)
       (*g_engfuncs.pfnFreeFile) (detection);
 }
 
-void PlaySound (edict_t *ent, const char *name)
-{
-   // TODO: make this obsolete
-   EMIT_SOUND_DYN2 (ent, CHAN_WEAPON, name, 1.0f, ATTN_NORM, 0, 100.0f);
-
-   return;
-}
-
-float GetWaveLength (const char *fileName)
-{
-   WavHeader waveHdr;
-   memset (&waveHdr, 0, sizeof (waveHdr));
-
-   extern ConVar yb_chatter_path;
-
-   File fp (FormatBuffer ("%s/%s/%s.wav", GetModName (), yb_chatter_path.GetString (), fileName), "rb");
-
-   // we're got valid handle?
-   if (!fp.IsValid ())
-      return 0;
-
-   if (fp.Read (&waveHdr, sizeof (WavHeader)) == 0)
-   {
-      AddLogEntry (true, LL_ERROR, "Wave File %s - has wrong or unsupported format", fileName);
-      return 0;
-   }
-
-   if (strncmp (waveHdr.chunkID, "WAVE", 4) != 0)
-   {
-      AddLogEntry (true, LL_ERROR, "Wave File %s - has wrong wave chunk id", fileName);
-      return 0;
-   }
-   fp.Close ();
-
-   if (waveHdr.dataChunkLength == 0)
-   {
-      AddLogEntry (true, LL_ERROR, "Wave File %s - has zero length!", fileName);
-      return 0;
-   }
-   return static_cast <float> (waveHdr.dataChunkLength) / static_cast <float> (waveHdr.bytesPerSecond);
-}
-
 void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
 {
    // this function logs a message to the message log file root directory.
@@ -1147,7 +835,7 @@ void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
    }
 
    if (outputToConsole)
-      ServerPrint ("%s%s", levelString, buffer);
+      engine.Printf ("%s%s", levelString, buffer);
 
    // now check if logging disabled
    if (!(logLevel & LL_IGNORE))
@@ -1201,7 +889,7 @@ void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
 
 char *Localizer::TranslateInput (const char *input)
 {
-   if (IsDedicatedServer ())
+   if (engine.IsDedicatedServer ())
       return const_cast <char *> (&input[0]);
 
    static char string[1024];
@@ -1253,7 +941,7 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
 
    int toTeam = GetTeam (to);
 
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
       edict_t *ent = g_clients[i].ent;
 
@@ -1292,15 +980,15 @@ void SoundAttachToClients (edict_t *ent, const char *sample, float volume)
    if (IsEntityNull (ent) || IsNullString (sample))
       return; // reliability check
 
-   const Vector &origin = GetEntityOrigin (ent);
+   const Vector &origin = engine.GetAbsOrigin (ent);
    int index = IndexOfEntity (ent) - 1;
 
-   if (index < 0 || index >= GetMaxClients ())
+   if (index < 0 || index >= engine.MaxClients ())
    {
       float nearestDistance = 99999.0f;
 
       // loop through all players
-      for (int i = 0; i < GetMaxClients (); i++)
+      for (int i = 0; i < engine.MaxClients (); i++)
       {
          if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE))
             continue;
@@ -1324,49 +1012,49 @@ void SoundAttachToClients (edict_t *ent, const char *sample, float volume)
    {
       // hit/fall sound?
       client->hearingDistance = 768.0f * volume;
-      client->timeSoundLasting = GetWorldTime () + 0.5f;
+      client->timeSoundLasting = engine.Time () + 0.5f;
       client->soundPosition = origin;
    }
    else if (strncmp ("items/gunpickup", sample, 15) == 0)
    {
       // weapon pickup?
       client->hearingDistance = 768.0f * volume;
-      client->timeSoundLasting = GetWorldTime () + 0.5f;
+      client->timeSoundLasting = engine.Time () + 0.5f;
       client->soundPosition = origin;
    }
    else if (strncmp ("weapons/zoom", sample, 12) == 0)
    {
       // sniper zooming?
       client->hearingDistance = 512.0f * volume;
-      client->timeSoundLasting = GetWorldTime () + 0.1f;
+      client->timeSoundLasting = engine.Time () + 0.1f;
       client->soundPosition = origin;
    }
    else if (strncmp ("items/9mmclip", sample, 13) == 0)
    {
       // ammo pickup?
       client->hearingDistance = 512.0f * volume;
-      client->timeSoundLasting = GetWorldTime () + 0.1f;
+      client->timeSoundLasting = engine.Time () + 0.1f;
       client->soundPosition = origin;
    }
    else if (strncmp ("hostage/hos", sample, 11) == 0)
    {
       // CT used hostage?
       client->hearingDistance = 1024.0f * volume;
-      client->timeSoundLasting = GetWorldTime () + 5.0f;
+      client->timeSoundLasting = engine.Time () + 5.0f;
       client->soundPosition = origin;
    }
    else if (strncmp ("debris/bustmetal", sample, 16) == 0 || strncmp ("debris/bustglass", sample, 16) == 0)
    {
       // broke something?
       client->hearingDistance = 1024.0f * volume;
-      client->timeSoundLasting = GetWorldTime () + 2.0f;
+      client->timeSoundLasting = engine.Time () + 2.0f;
       client->soundPosition = origin;
    }
    else if (strncmp ("doors/doormove", sample, 14) == 0)
    {
       // someone opened a door
       client->hearingDistance = 1024.0f * volume;
-      client->timeSoundLasting = GetWorldTime () + 3.0f;
+      client->timeSoundLasting = engine.Time () + 3.0f;
       client->soundPosition = origin;
    }
 }
@@ -1376,7 +1064,7 @@ void SoundSimulateUpdate (int playerIndex)
    // this function tries to simulate playing of sounds to let the bots hear sounds which aren't
    // captured through server sound hooking
 
-   if (playerIndex < 0 || playerIndex >= GetMaxClients ())
+   if (playerIndex < 0 || playerIndex >= engine.MaxClients ())
       return; // reliability check
 
    Client *client = &g_clients[playerIndex];
@@ -1387,24 +1075,24 @@ void SoundSimulateUpdate (int playerIndex)
    if (client->ent->v.oldbuttons & IN_ATTACK) // pressed attack button?
    {
       hearDistance = 2048.0f;
-      timeSound = GetWorldTime () + 0.3f;
+      timeSound = engine.Time () + 0.3f;
    }
    else if (client->ent->v.oldbuttons & IN_USE) // pressed used button?
    {
       hearDistance = 512.0f;
-      timeSound = GetWorldTime () + 0.5f;
+      timeSound = engine.Time () + 0.5f;
    }
    else if (client->ent->v.oldbuttons & IN_RELOAD) // pressed reload button?
    {
       hearDistance = 512.0f;
-      timeSound = GetWorldTime () + 0.5f;
+      timeSound = engine.Time () + 0.5f;
    }
    else if (client->ent->v.movetype == MOVETYPE_FLY) // uses ladder?
    {
       if (fabsf (client->ent->v.velocity.z) > 50.0f)
       {
          hearDistance = 1024.0f;
-         timeSound = GetWorldTime () + 0.3f;
+         timeSound = engine.Time () + 0.3f;
       }
    }
    else
@@ -1415,7 +1103,7 @@ void SoundSimulateUpdate (int playerIndex)
       {
          // moves fast enough?
          hearDistance = 1280.0f * (client->ent->v.velocity.GetLength2D () / 260.0f);
-         timeSound = GetWorldTime () + 0.3f;
+         timeSound = engine.Time () + 0.3f;
       }
    }
 
@@ -1423,7 +1111,7 @@ void SoundSimulateUpdate (int playerIndex)
       return; // didn't issue sound?
 
    // some sound already associated
-   if (client->timeSoundLasting > GetWorldTime ())
+   if (client->timeSoundLasting > engine.Time ())
    {
       if (client->hearingDistance <= hearDistance)
       {
