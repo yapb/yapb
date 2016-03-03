@@ -237,7 +237,7 @@ const char *Engine::GetModName (void)
 {
    // this function returns mod name without path
 
-   char engineModName[256];
+   static char engineModName[256];
    g_engfuncs.pfnGetGameDir (engineModName); // ask the engine for the MOD directory path
 
    String mod (engineModName);
