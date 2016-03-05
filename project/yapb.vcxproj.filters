@@ -72,9 +72,6 @@
     <ClInclude Include="..\include\engine.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\gamestate.h">
-      <Filter>include</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\chatlib.cpp">
@@ -87,9 +84,6 @@
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="..\source\navigate.cpp">
-      <Filter>source</Filter>
-    </ClCompile>
-    <ClCompile Include="..\source\netmsg.cpp">
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="..\source\support.cpp">
@@ -110,7 +104,7 @@
     <ClCompile Include="..\source\engine.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="..\source\gamestate.cpp">
+    <ClCompile Include="..\source\netmsg.cpp">
       <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>

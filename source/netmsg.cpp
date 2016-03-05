@@ -11,12 +11,12 @@
 
 NetworkMsg::NetworkMsg (void)
 {
-    m_message = NETMSG_UNDEFINED;
-    m_state = 0;
-    m_bot = NULL;
+   m_message = NETMSG_UNDEFINED;
+   m_state = 0;
+   m_bot = NULL;
 
-    for (int i = 0; i < NETMSG_NUM; i++)
-       m_registerdMessages[i] = -1;
+   for (int i = 0; i < NETMSG_NUM; i++)
+      m_registerdMessages[i] = -1;
 }
 
 void NetworkMsg::HandleMessageIfRequired (int messageType, int requiredType)
@@ -30,7 +30,7 @@ void NetworkMsg::Execute (void *p)
    if (m_message == NETMSG_UNDEFINED)
       return; // no message or not for bot, return
 
-   // some needed variables
+              // some needed variables
    static byte r, g, b;
    static byte enabled;
 
@@ -430,7 +430,7 @@ void NetworkMsg::Execute (void *p)
 
             g_bombPlanted = g_bombSayString = true;
             g_timeBombPlanted = engine.Time ();
-      
+
             for (int i = 0; i < engine.MaxClients (); i++)
             {
                Bot *bot = bots.GetBot (i);

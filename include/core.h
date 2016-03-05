@@ -1503,7 +1503,6 @@ public:
 };
 
 #include <engine.h>
-#include <gamestate.h>
 
 // expose bot super-globals
 extern NetworkMsg netmsg;
@@ -1511,7 +1510,6 @@ extern Localizer locale;
 extern Waypoint waypoints;
 extern BotManager bots;
 extern Engine engine;
-extern Game game;
 
 // prototypes of bot functions...
 extern int GetWeaponReturn (bool isString, const char *weaponAlias, int weaponIndex = -1);

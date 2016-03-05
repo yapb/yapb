@@ -11,7 +11,31 @@
 
 #pragma once
 
-//
+// netmessage handler class
+class NetworkMsg
+{
+private:
+   Bot *m_bot;
+   int m_state;
+   int m_message;
+   int m_registerdMessages[NETMSG_NUM];
+
+public:
+   NetworkMsg (void);
+   ~NetworkMsg (void) { };
+
+   void Execute (void *p);
+   inline void Reset (void) { m_message = NETMSG_UNDEFINED; m_state = 0; m_bot = NULL; };
+   void HandleMessageIfRequired (int messageType, int requiredType);
+
+   inline void SetMessage (int message) { m_message = message; }
+   inline void SetBot (Bot *bot) { m_bot = bot; }
+
+   inline int GetId (int messageType) { return m_registerdMessages[messageType]; }
+   inline void SetId (int messageType, int messsageIdentifier) { m_registerdMessages[messageType] = messsageIdentifier; }
+};
+
+// game events
 class IGameEvents
 {
 public:

@@ -457,14 +457,6 @@ void CommandHandler (void)
       engine.Printf ("Unknown command: %s", CMD_ARGV (1));
 }
 
-class GameEvents : public IGameEvents
-{
-   virtual void OnNewRound (void)
-   {
-      RoundInit ();
-   }
-} g_botEventListener;
-
 void ParseVoiceEvent (const String &base, int type, float timeToRepeat)
 {
    // this function does common work of parsing single line of voice chatter
@@ -926,9 +918,6 @@ void GameDLLInit (void)
    // server is enabled. Here is a good place to do our own game session initialization, and
    // to register by the engine side the server commands we need to administrate our bots.
 
-   // register bot event listner
-   game.RegisterEventListener (&g_botEventListener);
-
    DetectCSVersion ();
    {
       // print game detection info
@@ -1025,7 +1014,7 @@ int Spawn (edict_t *ent)
       PRECACHE_SOUND (ENGINE_STR ("common/wpn_moveselect.wav"));  // path add/delete cancel
       PRECACHE_SOUND (ENGINE_STR ("common/wpn_denyselect.wav"));  // path add/delete error
 
-      events->OnNewRound ();
+      RoundInit ();
       g_mapType = NULL; // reset map type as worldspawn is the first entity spawned
 
       // detect official csbots here, as they causing crash in linkent code when active for some reason
@@ -2344,7 +2333,7 @@ edict_t *pfnFindEntityByString (edict_t *edictStartSearchAfter, const char *fiel
 {
    // round starts in counter-strike 1.5
    if (strcmp (value, "info_map_parameters") == 0)
-      events->OnNewRound ();
+      RoundInit ();
 
    if (g_isMetamod)
       RETURN_META_VALUE (MRES_IGNORED, 0);
@@ -2947,39 +2936,9 @@ export int Meta_Query (char *ifvers, plugin_info_t **pPlugInfo, mutil_funcs_t *p
    // is for metamod to retrieve basic information about the plugin, such as its meta-interface
    // version, for ensuring compatibility with the current version of the running metamod.
 
-   // keep track of the pointers to metamod function tables metamod gives us
    gpMetaUtilFuncs = pMetaUtilFuncs;
    *pPlugInfo = &Plugin_info;
 
-   // check for interface version compatibility
-   if (strcmp (ifvers, Plugin_info.ifvers) != 0)
-   {
-      int metaMajor = 0, metaMinor = 0, pluginMajor = 0, pluginMinor = 0;
-
-      LOG_CONSOLE (PLID, "%s: meta-interface version mismatch (metamod: %s, %s: %s)", Plugin_info.name, ifvers, Plugin_info.name, Plugin_info.ifvers);
-      LOG_MESSAGE (PLID, "%s: meta-interface version mismatch (metamod: %s, %s: %s)", Plugin_info.name, ifvers, Plugin_info.name, Plugin_info.ifvers);
-
-      // if plugin has later interface version, it's incompatible (update metamod)
-      sscanf (ifvers, "%d:%d", &metaMajor, &metaMinor);
-      sscanf (META_INTERFACE_VERSION, "%d:%d", &pluginMajor, &pluginMinor);
-
-      if (pluginMajor > metaMajor || (pluginMajor == metaMajor && pluginMinor > metaMinor))
-      {
-         LOG_CONSOLE (PLID, "metamod version is too old for this plugin; update metamod");
-         LOG_MMERROR (PLID, "metamod version is too old for this plugin; update metamod");
-
-         return FALSE;
-      }
-
-      // if plugin has older major interface version, it's incompatible (update plugin)
-      else if (pluginMajor < metaMajor)
-      {
-         LOG_CONSOLE (PLID, "metamod version is incompatible with this plugin; please find a newer version of this plugin");
-         LOG_MMERROR (PLID, "metamod version is incompatible with this plugin; please find a newer version of this plugin");
-
-         return FALSE;
-      }
-   }
    return TRUE; // tell metamod this plugin looks safe
 }
 
@@ -2988,15 +2947,6 @@ export int Meta_Attach (PLUG_LOADTIME now, metamod_funcs_t *functionTable, meta_
    // this function is called when metamod attempts to load the plugin. Since it's the place
    // where we can tell if the plugin will be allowed to run or not, we wait until here to make
    // our initialization stuff, like registering CVARs and dedicated server commands.
-
-   // are we allowed to load this plugin now ?
-   if (now > Plugin_info.loadable)
-   {
-      LOG_CONSOLE (PLID, "%s: plugin NOT attaching (can't load plugin right now)", Plugin_info.name);
-      LOG_MMERROR (PLID, "%s: plugin NOT attaching (can't load plugin right now)", Plugin_info.name);
-
-      return FALSE; // returning false prevents metamod from attaching this plugin
-   }
 
    // keep track of the pointers to engine function tables metamod gives us
    gpMetaGlobals = pMGlobals;
