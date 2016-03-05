@@ -9,7 +9,7 @@
 
 #include <core.h>
 
-void Engine::Precache (void)
+void Engine::Precache (edict_t *startEntity)
 {
    // this function precaches needed models and initialize class variables
 
@@ -19,6 +19,9 @@ void Engine::Precache (void)
    m_isBotCommand = false;
    m_argumentCount = 0;
    m_arguments[0] = { 0, };
+
+   m_localEntity = NULL;
+   m_startEntity = startEntity;
 }
 
 void Engine::Printf (const char *fmt, ...)
@@ -89,7 +92,7 @@ void Engine::ClientPrintf (edict_t *ent, const char *fmt, ...)
    vsnprintf (string, SIZEOF_CHAR (string), locale.TranslateInput (fmt), ap);
    va_end (ap);
 
-   if (IsNullEntity (ent) || ent == g_hostEntity)
+   if (engine.IsNullEntity (ent) || ent == g_hostEntity)
    {
       engine.Printf (string);
       return;
@@ -267,7 +270,7 @@ Vector Engine::GetAbsOrigin (edict_t *ent)
    // this expanded function returns the vector origin of a bounded entity, assuming that any
    // entity that has a bounding box has its center at the center of the bounding box itself.
 
-   if (IsNullEntity (ent))
+   if (engine.IsNullEntity (ent))
       return Vector::GetZero ();
 
    if (ent->v.origin.IsZero ())
@@ -299,7 +302,7 @@ void Engine::IssueBotCommand (edict_t *ent, const char *fmt, ...)
    // supply directly the whole string as if you were typing it in the bot's "console". It
    // is supposed to work exactly like the pfnClientCommand (server-sided client command).
 
-   if (IsNullEntity (ent))
+   if (engine.IsNullEntity (ent))
       return; 
 
    va_list ap;

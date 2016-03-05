@@ -156,7 +156,7 @@ void Bot::PrepareChatMessage (char *text)
    if (!yb_chat.GetBool () || IsNullString (text))
       return;
 
-   #define ASSIGN_TALK_ENTITY() if (!IsNullEntity (talkEntity)) strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), SIZEOF_CHAR (m_tempStrings))
+   #define ASSIGN_TALK_ENTITY() if (!engine.IsNullEntity (talkEntity)) strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), SIZEOF_CHAR (m_tempStrings))
 
    memset (&m_tempStrings, 0, sizeof (m_tempStrings));
 
@@ -214,7 +214,7 @@ void Bot::PrepareChatMessage (char *text)
          // chat reply?
          else if (*pattern == 's')
          {
-            talkEntity = EntityOfIndex (m_sayTextBuffer.entityIndex);
+            talkEntity = engine.EntityOfIndex (m_sayTextBuffer.entityIndex);
             ASSIGN_TALK_ENTITY ();
          }
          // teammate alive?
@@ -232,7 +232,7 @@ void Bot::PrepareChatMessage (char *text)
 
             if (i < engine.MaxClients ())
             {
-               if (!IsNullEntity (pev->dmg_inflictor) && m_team == GetTeam (pev->dmg_inflictor))
+               if (!engine.IsNullEntity (pev->dmg_inflictor) && m_team == engine.GetTeam (pev->dmg_inflictor))
                   talkEntity = pev->dmg_inflictor;
                else
                   talkEntity = g_clients[i].ent;

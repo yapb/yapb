@@ -9,13 +9,6 @@
 
 #include <core.h>
 
-// forward for super-globals
-NetworkMsg netmsg;
-Localizer locale;
-Waypoint waypoints;
-BotManager bots;
-Engine engine;
-
 bool g_canSayBombPlanted = true;
 bool g_isMetamod = false;
 bool g_radioInsteadVoice = false;
@@ -75,7 +68,6 @@ enginefuncs_t g_engfuncs;
 Client g_clients[32];
 WeaponProperty g_weaponDefs[MAX_WEAPONS + 1];
 
-edict_t *g_worldEntity = NULL;
 edict_t *g_hostEntity = NULL;
 globalvars_t *g_pGlobals = NULL;
 Experience *g_experienceData = NULL;
@@ -432,3 +424,10 @@ MenuText g_menus[21] =
       "0. Exit"
    }
 };
+
+// forward for super-globals
+NetworkMsg netmsg;
+Localizer locale;
+Waypoint waypoints;
+BotManager bots;
+Engine engine;

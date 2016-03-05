@@ -143,7 +143,7 @@ void Waypoint::FindInRadius (Array <int> &radiusHolder, float radius, const Vect
 
 void Waypoint::Add (int flags, const Vector &waypointOrigin)
 {
-   if (IsNullEntity (g_hostEntity))
+   if (engine.IsNullEntity (g_hostEntity))
       return;
 
    int index = -1, i;
@@ -1309,7 +1309,7 @@ bool Waypoint::IsNodeReachable (const Vector &src, const Vector &destination)
    // check if we go through a func_illusionary, in which case return false
    engine.TestHull (src, destination, TRACE_IGNORE_MONSTERS, head_hull, g_hostEntity, &tr);
 
-   if (!IsNullEntity (tr.pHit) && strcmp ("func_illusionary", STRING (tr.pHit->v.classname)) == 0)
+   if (!engine.IsNullEntity (tr.pHit) && strcmp ("func_illusionary", STRING (tr.pHit->v.classname)) == 0)
       return false; // don't add pathwaypoints through func_illusionaries
 
    // check if this waypoint is "visible"...
@@ -1497,7 +1497,7 @@ void Waypoint::Think (void)
 {
    // this function executes frame of waypoint operation code.
 
-   if (IsNullEntity (g_hostEntity))
+   if (engine.IsNullEntity (g_hostEntity))
       return; // this function is only valid on listenserver, and in waypoint enabled mode.
 
    float nearestDistance = 99999.0f;
@@ -1731,10 +1731,10 @@ void Waypoint::Think (void)
       // draw the danger directions
       if (!g_waypointsChanged)
       {
-         if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team0DangerIndex != -1 && GetTeam (g_hostEntity) == TERRORIST)
+         if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team0DangerIndex != -1 && engine.GetTeam (g_hostEntity) == TERRORIST)
             engine.DrawLine (g_hostEntity, path->origin, m_paths[(g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team0DangerIndex]->origin, 15, 0, 255, 0, 0, 200, 0, 10, DRAW_ARROW); // draw a red arrow to this index's danger point
 
-         if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team1DangerIndex != -1 && GetTeam (g_hostEntity) == CT)
+         if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team1DangerIndex != -1 && engine.GetTeam (g_hostEntity) == CT)
             engine.DrawLine (g_hostEntity, path->origin, m_paths[(g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team1DangerIndex]->origin, 15, 0, 0, 0, 255, 200, 0, 10, DRAW_ARROW); // draw a blue arrow to this index's danger point
       }
 
@@ -2209,7 +2209,7 @@ void Waypoint::CreateBasic (void)
    edict_t *ent = NULL;
 
    // first of all, if map contains ladder points, create it
-   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_ladder")))
+   while (!engine.IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_ladder")))
    {
       Vector ladderLeft = ent->v.absmin;
       Vector ladderRight = ent->v.absmax;
@@ -2258,7 +2258,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // then terrortist spawnpoints
-   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_player_deathmatch")))
+   while (!engine.IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_player_deathmatch")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2267,7 +2267,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // then add ct spawnpoints
-   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_player_start")))
+   while (!engine.IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_player_start")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2276,7 +2276,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // then vip spawnpoint
-   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_vip_start")))
+   while (!engine.IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_vip_start")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2285,7 +2285,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // hostage rescue zone
-   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_hostage_rescue")))
+   while (!engine.IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_hostage_rescue")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2294,7 +2294,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // hostage rescue zone (same as above)
-   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_hostage_rescue")))
+   while (!engine.IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_hostage_rescue")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2303,7 +2303,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // bombspot zone
-   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_bomb_target")))
+   while (!engine.IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_bomb_target")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2312,7 +2312,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // bombspot zone (same as above)
-   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_bomb_target")))
+   while (!engine.IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "info_bomb_target")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2321,7 +2321,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // hostage entities
-   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "hostage_entity")))
+   while (!engine.IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "hostage_entity")))
    {
       // if already saved || moving skip it
       if ((ent->v.effects & EF_NODRAW) && ent->v.speed > 0.0f)
@@ -2334,7 +2334,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // vip rescue (safety) zone
-   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_vip_safetyzone")))
+   while (!engine.IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_vip_safetyzone")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2343,7 +2343,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // terrorist escape zone
-   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_escapezone")))
+   while (!engine.IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_escapezone")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2352,7 +2352,7 @@ void Waypoint::CreateBasic (void)
    }
 
    // weapons on the map ?
-   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "armoury_entity")))
+   while (!engine.IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "armoury_entity")))
    {
       Vector origin = engine.GetAbsOrigin (ent);
 
@@ -2417,7 +2417,7 @@ void Waypoint::SetBombPosition (bool shouldReset)
 
    edict_t *ent = NULL;
 
-   while (!IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
+   while (!engine.IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))
    {
       if (strcmp (STRING (ent->v.model) + 9, "c4.mdl") == 0)
       {

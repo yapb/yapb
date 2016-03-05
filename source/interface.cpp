@@ -205,7 +205,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    // waypoint manimupulation (really obsolete, can be edited through menu) (supported only on listen server)
    else if (stricmp (arg0, "waypoint") == 0 || stricmp (arg0, "wp") == 0 || stricmp (arg0, "wpt") == 0)
    {
-      if (engine.IsDedicatedServer () || IsNullEntity (g_hostEntity))
+      if (engine.IsDedicatedServer () || engine.IsNullEntity (g_hostEntity))
          return 2;
 
       // enables or disable waypoint displaying
@@ -250,11 +250,11 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
          if (stricmp (arg2, "on") == 0)
          {
-            while (!IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
+            while (!engine.IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
                spawnEntity->v.effects &= ~EF_NODRAW;
-            while (!IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_deathmatch")))
+            while (!engine.IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_deathmatch")))
                spawnEntity->v.effects &= ~EF_NODRAW;
-            while (!IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_vip_start")))
+            while (!engine.IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_vip_start")))
                spawnEntity->v.effects &= ~EF_NODRAW;
 
             engine.IssueCmd ("mp_roundtime 9"); // reset round time to maximum
@@ -263,11 +263,11 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          }
          else if (stricmp (arg2, "off") == 0)
          {
-            while (!IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
+            while (!engine.IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
                spawnEntity->v.effects |= EF_NODRAW;
-            while (!IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_deathmatch")))
+            while (!engine.IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_deathmatch")))
                spawnEntity->v.effects |= EF_NODRAW;
-            while (!IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_vip_start")))
+            while (!engine.IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_vip_start")))
                spawnEntity->v.effects |= EF_NODRAW;
          }
       }
@@ -373,7 +373,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    // path waypoint editing system (supported only on listen server)
    else if (stricmp (arg0, "pathwaypoint") == 0 || stricmp (arg0, "path") == 0 || stricmp (arg0, "pwp") == 0)
    {
-      if (engine.IsDedicatedServer () || IsNullEntity (g_hostEntity))
+      if (engine.IsDedicatedServer () || engine.IsNullEntity (g_hostEntity))
          return 2;
 
       // opens path creation menu
@@ -404,7 +404,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    // automatic waypoint handling (supported only on listen server)
    else if (stricmp (arg0, "autowaypoint") == 0 || stricmp (arg0, "autowp") == 0)
    {
-      if (engine.IsDedicatedServer () || IsNullEntity (g_hostEntity))
+      if (engine.IsDedicatedServer () || engine.IsNullEntity (g_hostEntity))
          return 2;
 
       // enable autowaypointing
@@ -425,7 +425,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    // experience system handling (supported only on listen server)
    else if (stricmp (arg0, "experience") == 0 || stricmp (arg0, "exp") == 0)
    {
-      if (engine.IsDedicatedServer () || IsNullEntity (g_hostEntity))
+      if (engine.IsDedicatedServer () || engine.IsNullEntity (g_hostEntity))
          return 2;
 
       // write experience table (and visibility table) to hard disk
@@ -977,7 +977,7 @@ void Touch (edict_t *pentTouched, edict_t *pentOther)
    // the two entities both have velocities, for example two players colliding, this function
    // is called twice, once for each entity moving.
 
-   if (!IsNullEntity (pentOther) && (pentOther->v.flags & FL_FAKECLIENT))
+   if (!engine.IsNullEntity (pentOther) && (pentOther->v.flags & FL_FAKECLIENT))
    {
       Bot *bot = bots.GetBot (pentOther);
 
@@ -1002,8 +1002,7 @@ int Spawn (edict_t *ent)
 
    if (strcmp (entityClassname, "worldspawn") == 0)
    {
-      engine.Precache ();
-      g_worldEntity = ent; // save the world entity for future use
+      engine.Precache (ent);
 
       ConVarWrapper::GetReference ().PushRegisteredConVarsToEngine (true);
 
@@ -1153,7 +1152,7 @@ void ClientDisconnect (edict_t *ent)
 
    bots.AdjustQuota (false, ent);
 
-   int i = IndexOfEntity (ent) - 1;
+   int i = engine.IndexOfEntity (ent) - 1;
 
    InternalAssert (i >= 0 && i < 32);
 
@@ -1191,7 +1190,7 @@ void ClientUserInfoChanged (edict_t *ent, char *infobuffer)
 
       if (!IsNullString (passwordField) || !IsNullString (password))
       {
-         int clientIndex = IndexOfEntity (ent) - 1;
+         int clientIndex = engine.IndexOfEntity (ent) - 1;
 
          if (strcmp (password, INFOKEY_VALUE (infobuffer, const_cast <char *> (passwordField))) == 0)
             g_clients[clientIndex].flags |= CF_ADMIN;
@@ -1227,7 +1226,7 @@ void ClientCommand (edict_t *ent)
    static int fillServerTeam = 5;
    static bool fillCommand = false;
 
-   if (!engine.IsBotCommand () && (ent == g_hostEntity || (g_clients[IndexOfEntity (ent) - 1].flags & CF_ADMIN)))
+   if (!engine.IsBotCommand () && (ent == g_hostEntity || (g_clients[engine.IndexOfEntity (ent) - 1].flags & CF_ADMIN)))
    {
       if (stricmp (command, "yapb") == 0 || stricmp (command, "yb") == 0)
       {
@@ -1248,9 +1247,9 @@ void ClientCommand (edict_t *ent)
 
          return;
       }
-      else if (stricmp (command, "menuselect") == 0 && !IsNullString (arg1) && g_clients[IndexOfEntity (ent) - 1].menu != NULL)
+      else if (stricmp (command, "menuselect") == 0 && !IsNullString (arg1) && g_clients[engine.IndexOfEntity (ent) - 1].menu != NULL)
       {
-         Client *client = &g_clients[IndexOfEntity (ent) - 1];
+         Client *client = &g_clients[engine.IndexOfEntity (ent) - 1];
          int selection = atoi (arg1);
 
          if (client->menu == &g_menus[12])
@@ -2023,7 +2022,7 @@ void ClientCommand (edict_t *ent)
       int team = -1;
 
       if (FStrEq (command, "say_team"))
-         team = GetTeam (ent);
+         team = engine.GetTeam (ent);
 
       for (int i = 0; i < engine.MaxClients (); i++)
       {
@@ -2034,7 +2033,7 @@ void ClientCommand (edict_t *ent)
 
          if (target != NULL)
          {
-            target->m_sayTextBuffer.entityIndex = IndexOfEntity (ent);
+            target->m_sayTextBuffer.entityIndex = engine.IndexOfEntity (ent);
 
             if (IsNullString (CMD_ARGS ()))
                continue;
@@ -2044,7 +2043,7 @@ void ClientCommand (edict_t *ent)
          }
       }
    }
-   int clientIndex = IndexOfEntity (ent) - 1;
+   int clientIndex = engine.IndexOfEntity (ent) - 1;
 
    // check if this player alive, and issue something
    if ((g_clients[clientIndex].flags & CF_ALIVE) && g_radioSelect[clientIndex] != 0 && strncmp (command, "menuselect", 10) == 0)
@@ -2062,7 +2061,7 @@ void ClientCommand (edict_t *ent)
                Bot *bot = bots.GetBot (i);
 
                // validate bot
-               if (bot != NULL && GetTeam (bot->GetEntity ()) == g_clients[clientIndex].team && VARS (ent) != bot->pev && bot->m_radioOrder == 0)
+               if (bot != NULL && bot->m_team == g_clients[clientIndex].team && VARS (ent) != bot->pev && bot->m_radioOrder == 0)
                {
                   bot->m_radioOrder = radioCommand;
                   bot->m_radioEntity = ent;
@@ -2162,9 +2161,9 @@ void StartFrame (void)
    // record some stats of all players on the server
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      edict_t *player = EntityOfIndex (i + 1);
+      edict_t *player = engine.EntityOfIndex (i + 1);
 
-      if (!IsNullEntity (player) && (player->v.flags & FL_CLIENT))
+      if (!engine.IsNullEntity (player) && (player->v.flags & FL_CLIENT))
       {
          g_clients[i].ent = player;
          g_clients[i].flags |= CF_USED;
@@ -2191,7 +2190,7 @@ void StartFrame (void)
       }
    }
 
-   if (!engine.IsDedicatedServer () && !IsNullEntity (g_hostEntity))
+   if (!engine.IsDedicatedServer () && !engine.IsNullEntity (g_hostEntity))
    {
       if (g_waypointOn)
          waypoints.Think ();
@@ -2204,10 +2203,10 @@ void StartFrame (void)
    {
       for (int i = 0; i < engine.MaxClients (); i++)
       {
-         edict_t *player = EntityOfIndex (i + 1);
+         edict_t *player = engine.EntityOfIndex (i + 1);
 
          // code below is executed only on dedicated server
-         if (engine.IsDedicatedServer () && !IsNullEntity (player) && (player->v.flags & FL_CLIENT) && !(player->v.flags & FL_FAKECLIENT))
+         if (engine.IsDedicatedServer () && !engine.IsNullEntity (player) && (player->v.flags & FL_CLIENT) && !(player->v.flags & FL_FAKECLIENT))
          {
             if (g_clients[i].flags & CF_ADMIN)
             {
@@ -2435,7 +2434,7 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
 
    netmsg.HandleMessageIfRequired (msgType, NETMSG_WEAPONLIST);
 
-   if (!IsNullEntity (ed))
+   if (!engine.IsNullEntity (ed))
    {
       int index = bots.GetIndex (ed);
 
@@ -2777,7 +2776,7 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...)
       {
          Bot *bot = bots.GetBot (i);
 
-         if (bot != NULL && GetTeam (bot->GetEntity ()) == TERRORIST && IsAlive (bot->GetEntity ()))
+         if (bot != NULL && bot->m_team == TERRORIST && bot->m_notKilled)
          {
             bot->ResetTasks ();
             bot->MoveToVector (waypoints.GetBombPosition ());
@@ -2960,15 +2959,6 @@ export int Meta_Detach (PLUG_LOADTIME now, PL_UNLOAD_REASON reason)
 {
    // this function is called when metamod unloads the plugin. A basic check is made in order
    // to prevent unloading the plugin if its processing should not be interrupted.
-
-   // is metamod allowed to unload the plugin?
-   if (now > Plugin_info.unloadable && reason != PNL_CMD_FORCED)
-   {
-      LOG_CONSOLE (PLID, "%s: plugin not detaching (can't unload plugin right now)", Plugin_info.name);
-      LOG_MMERROR (PLID, "%s: plugin not detaching (can't unload plugin right now)", Plugin_info.name);
-
-      return FALSE; // returning false prevents metamod from unloading this plugin
-   }
 
    bots.RemoveAll (); // kick all bots off this server
    FreeLibraryMemory ();

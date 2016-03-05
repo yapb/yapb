@@ -259,10 +259,10 @@ void NetworkMsg::Execute (void *p)
 
          if (killerIndex != 0 && killerIndex != victimIndex)
          {
-            edict_t *killer = EntityOfIndex (killerIndex);
-            edict_t *victim = EntityOfIndex (victimIndex);
+            edict_t *killer = engine.EntityOfIndex (killerIndex);
+            edict_t *victim = engine.EntityOfIndex (victimIndex);
 
-            if (IsNullEntity (killer) || IsNullEntity (victim))
+            if (engine.IsNullEntity (killer) || engine.IsNullEntity (victim))
                break;
 
             if (yb_communication_type.GetInt () == 2)
@@ -272,7 +272,7 @@ void NetworkMsg::Execute (void *p)
                {
                   Bot *bot = bots.GetBot (i);
 
-                  if (bot != NULL && IsAlive (bot->GetEntity ()) && killer != bot->GetEntity () && bot->EntityIsVisible (victim->v.origin) && GetTeam (killer) == GetTeam (bot->GetEntity ()) && GetTeam (killer) != GetTeam (victim))
+                  if (bot != NULL && bot->m_notKilled && killer != bot->GetEntity () && bot->EntityIsVisible (victim->v.origin) && engine.GetTeam (killer) == bot->m_team && engine.GetTeam (killer) != engine.GetTeam (victim))
                   {
                      if (killer == g_hostEntity)
                         bot->HandleChatterMessage ("#Bot_NiceShotCommander");
@@ -289,7 +289,7 @@ void NetworkMsg::Execute (void *p)
             {
                Bot *bot = bots.GetBot (i);
 
-               if (bot != NULL && bot->m_seeEnemyTime + 2.0f < engine.Time () && IsAlive (bot->GetEntity ()) && GetTeam (bot->GetEntity ()) == GetTeam (victim) && IsVisible (killer->v.origin, bot->GetEntity ()) && IsNullEntity (bot->m_enemy) && GetTeam (killer) != GetTeam (victim))
+               if (bot != NULL && bot->m_seeEnemyTime + 2.0f < engine.Time () && bot->m_notKilled && bot->m_team == engine.GetTeam (victim) && IsVisible (killer->v.origin, bot->GetEntity ()) && engine.IsNullEntity (bot->m_enemy) && engine.GetTeam (killer) != engine.GetTeam (victim))
                {
                   bot->m_actualReactionTime = 0.0f;
                   bot->m_seeEnemyTime = engine.Time ();
@@ -311,7 +311,7 @@ void NetworkMsg::Execute (void *p)
 
                if (target != NULL)
                {
-                  if (GetTeam (killer) == GetTeam (victim))
+                  if (engine.GetTeam (killer) == engine.GetTeam (victim))
                      target->m_voteKickIndex = killerIndex;
 
                   target->m_notKilled = false;
@@ -399,7 +399,7 @@ void NetworkMsg::Execute (void *p)
                {
                   Bot *bot = bots.FindOneValidAliveBot ();
 
-                  if (bot != NULL && IsAlive (bot->GetEntity ()))
+                  if (bot != NULL && bot->m_notKilled)
                      bot->HandleChatterMessage (PTR_TO_STR (p));
                }
             }
@@ -418,7 +418,7 @@ void NetworkMsg::Execute (void *p)
                {
                   Bot *bot = bots.FindOneValidAliveBot ();
 
-                  if (bot != NULL && IsAlive (bot->GetEntity ()))
+                  if (bot != NULL && bot->m_notKilled)
                      bot->HandleChatterMessage (PTR_TO_STR (p));
                }
             }
@@ -435,12 +435,12 @@ void NetworkMsg::Execute (void *p)
             {
                Bot *bot = bots.GetBot (i);
 
-               if (bot != NULL && IsAlive (bot->GetEntity ()))
+               if (bot != NULL && bot->m_notKilled)
                {
                   bot->DeleteSearchNodes ();
                   bot->ResetTasks ();
 
-                  if (yb_communication_type.GetInt () == 2 && Random.Long (0, 100) < 75 && GetTeam (bot->GetEntity ()) == CT)
+                  if (yb_communication_type.GetInt () == 2 && Random.Long (0, 100) < 75 && bot->m_team == CT)
                      bot->ChatterMessage (Chatter_WhereIsTheBomb);
                }
             }

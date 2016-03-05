@@ -59,7 +59,7 @@ const char *FormatBuffer (const char *format, ...)
 
 bool IsAlive (edict_t *ent)
 {
-   if (IsNullEntity (ent))
+   if (engine.IsNullEntity (ent))
       return false;
 
    return ent->v.deadflag == DEAD_NO && ent->v.health > 0 && ent->v.movetype != MOVETYPE_NOCLIP;
@@ -86,7 +86,7 @@ bool IsInViewCone (const Vector &origin, edict_t *ent)
 
 bool IsVisible (const Vector &origin, edict_t *ent)
 {
-   if (IsNullEntity (ent))
+   if (engine.IsNullEntity (ent))
       return false;
 
    TraceResult tr;
@@ -103,7 +103,7 @@ void DisplayMenuToClient (edict_t *ent, MenuText *menu)
    if (!IsValidPlayer (ent))
       return;
 
-   int clientIndex = IndexOfEntity (ent) - 1;
+   int clientIndex = engine.IndexOfEntity (ent) - 1;
 
    if (menu != NULL)
    {
@@ -178,10 +178,10 @@ void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex)
    if (trace->flFraction == 1.0f)
       return;
 
-   if (!IsNullEntity (trace->pHit))
+   if (!engine.IsNullEntity (trace->pHit))
    {
       if (trace->pHit->v.solid == SOLID_BSP || trace->pHit->v.movetype == MOVETYPE_PUSHSTEP)
-         entityIndex = IndexOfEntity (trace->pHit);
+         entityIndex = engine.IndexOfEntity (trace->pHit);
       else
          return;
    }
@@ -211,11 +211,11 @@ void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex)
    {
       MESSAGE_BEGIN (MSG_BROADCAST, SVC_TEMPENTITY);
          WRITE_BYTE (TE_PLAYERDECAL);
-         WRITE_BYTE (IndexOfEntity (ENT (pev)));
+         WRITE_BYTE (engine.IndexOfEntity (ENT (pev)));
          WRITE_COORD (trace->vecEndPos.x);
          WRITE_COORD (trace->vecEndPos.y);
          WRITE_COORD (trace->vecEndPos.z);
-         WRITE_SHORT (static_cast <short> (IndexOfEntity (trace->pHit)));
+         WRITE_SHORT (static_cast <short> (engine.IndexOfEntity (trace->pHit)));
          WRITE_BYTE (decalIndex);
       MESSAGE_END ();
    }
@@ -427,7 +427,7 @@ int GetWeaponPenetrationPower (int id)
 
 bool IsValidPlayer (edict_t *ent)
 {
-   if (IsNullEntity (ent))
+   if (engine.IsNullEntity (ent))
       return false;
 
    if (ent->v.flags & FL_PROXY)
@@ -452,7 +452,7 @@ bool IsPlayerVIP (edict_t *ent)
 
 bool IsValidBot (edict_t *ent)
 {
-   if (bots.GetBot (ent) != NULL || (!IsNullEntity (ent) && (ent->v.flags & FL_FAKECLIENT)))
+   if (bots.GetBot (ent) != NULL || (!engine.IsNullEntity (ent) && (ent->v.flags & FL_FAKECLIENT)))
       return true;
 
    return false;
@@ -719,7 +719,7 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
    edict_t *survive = NULL; // pointer to temporaly & survive entity
    float nearestPlayer = 4096.0f; // nearest player
 
-   int toTeam = GetTeam (to);
+   int toTeam = engine.GetTeam (to);
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
@@ -740,7 +740,7 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
       }
    }
 
-   if (IsNullEntity (survive))
+   if (engine.IsNullEntity (survive))
       return false; // nothing found
 
    // fill the holder
@@ -757,11 +757,11 @@ void SoundAttachToClients (edict_t *ent, const char *sample, float volume)
    // this function called by the sound hooking code (in emit_sound) enters the played sound into
    // the array associated with the entity
 
-   if (IsNullEntity (ent) || IsNullString (sample))
+   if (engine.IsNullEntity (ent) || IsNullString (sample))
       return; // reliability check
 
    const Vector &origin = engine.GetAbsOrigin (ent);
-   int index = IndexOfEntity (ent) - 1;
+   int index = engine.IndexOfEntity (ent) - 1;
 
    if (index < 0 || index >= engine.MaxClients ())
    {

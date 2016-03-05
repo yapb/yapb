@@ -66,13 +66,13 @@ void BotManager::CreateKillerEntity (void)
 
 void BotManager::DestroyKillerEntity (void)
 {
-   if (!IsNullEntity (m_killerEntity))
+   if (!engine.IsNullEntity (m_killerEntity))
       g_engfuncs.pfnRemoveEntity (m_killerEntity);
 }
 
 void BotManager::TouchWithKillerEntity (Bot *bot)
 {
-   if (IsNullEntity (m_killerEntity))
+   if (engine.IsNullEntity (m_killerEntity))
    {
       MDLL_ClientKill (bot->GetEntity ());
       return;
@@ -194,12 +194,12 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
          strcpy (outputName, prefixedName);
    }
 
-   if (IsNullEntity ((bot = (*g_engfuncs.pfnCreateFakeClient) (outputName))))
+   if (engine.IsNullEntity ((bot = (*g_engfuncs.pfnCreateFakeClient) (outputName))))
    {
       engine.CenterPrintf ("Maximum players reached (%d/%d). Unable to create Bot.", engine.MaxClients (), engine.MaxClients ());
       return 2;
    }
-   int index = IndexOfEntity (bot) - 1;
+   int index = engine.IndexOfEntity (bot) - 1;
 
    InternalAssert (index >= 0 && index <= 32); // check index
    InternalAssert (m_bots[index] == NULL); // check bot slot
@@ -217,10 +217,10 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
 int BotManager::GetIndex (edict_t *ent)
 {
    // this function returns index of bot (using own bot array)
-   if (IsNullEntity (ent))
+   if (engine.IsNullEntity (ent))
       return -1;
 
-   int index = IndexOfEntity (ent) - 1;
+   int index = engine.IndexOfEntity (ent) - 1;
 
    if (index < 0 || index >= 32)
       return -1;
@@ -536,7 +536,7 @@ void BotManager::RemoveFromTeam (Team team, bool removeAll)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (m_bots[i] != NULL && team == GetTeam (m_bots[i]->GetEntity ()))
+      if (m_bots[i] != NULL && team == engine.GetTeam (m_bots[i]->GetEntity ()))
       {
          m_bots[i]->Kick ();
 
@@ -563,10 +563,10 @@ void BotManager::RemoveMenu (edict_t *ent, int selection)
 
    for (int i = ((selection - 1) * 8); i < selection * 8; i++)
    {
-      if ((m_bots[i] != NULL) && !IsNullEntity (m_bots[i]->GetEntity ()))
+      if ((m_bots[i] != NULL) && !engine.IsNullEntity (m_bots[i]->GetEntity ()))
       {
          validSlots |= 1 << (i - ((selection - 1) * 8));
-         sprintf (buffer, "%s %1.1d. %s%s\n", buffer, i - ((selection - 1) * 8) + 1, STRING (m_bots[i]->pev->netname), GetTeam (m_bots[i]->GetEntity ()) == CT ? " \\y(CT)\\w" : " \\r(T)\\w");
+         sprintf (buffer, "%s %1.1d. %s%s\n", buffer, i - ((selection - 1) * 8) + 1, STRING (m_bots[i]->pev->netname), engine.GetTeam (m_bots[i]->GetEntity ()) == CT ? " \\y(CT)\\w" : " \\r(T)\\w");
       }
       else
          sprintf (buffer, "%s\\d %1.1d. Not a Bot\\w\n", buffer, i - ((selection - 1) * 8) + 1);
@@ -803,7 +803,7 @@ void BotManager::CheckTeamEconomics (int team, bool setTrue)
    // start calculating
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (m_bots[i] != NULL && GetTeam (m_bots[i]->GetEntity ()) == team)
+      if (m_bots[i] != NULL && engine.GetTeam (m_bots[i]->GetEntity ()) == team)
       {
          if (m_bots[i]->m_moneyAmount <= g_botBuyEconomyTable[0])
             numPoorPlayers++;
@@ -847,7 +847,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    // when bot setup completed, (this is a bot class constructor)
 
    char rejectReason[128];
-   int clientIndex = IndexOfEntity (bot);
+   int clientIndex = engine.IndexOfEntity (bot);
 
    memset (reinterpret_cast <void *> (this), 0, sizeof (*this));
 
@@ -870,7 +870,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
       SET_CLIENT_KEYVALUE (clientIndex, buffer, "*bot", "1");
 
    rejectReason[0] = 0; // reset the reject reason template string
-   MDLL_ClientConnect (bot, "BOT", FormatBuffer ("127.0.0.%d", IndexOfEntity (bot) + 100), rejectReason);
+   MDLL_ClientConnect (bot, "BOT", FormatBuffer ("127.0.0.%d", engine.IndexOfEntity (bot) + 100), rejectReason);
    
    // should be set after client connect
    if (yb_avatar_display.GetBool () && !steamId.IsEmpty ())
@@ -1066,7 +1066,7 @@ void Bot::NewRound (void)
       m_prevWptIndex[i] = -1;
 
    m_navTimeset = engine.Time ();
-   m_team = GetTeam (GetEntity ());
+   m_team = engine.GetTeam (GetEntity ());
 
    switch (m_personality)
    {
@@ -1347,7 +1347,7 @@ void BotManager::CalculatePingOffsets (void)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      edict_t *ent = EntityOfIndex (i + 1);
+      edict_t *ent = engine.EntityOfIndex (i + 1);
 
       if (!IsValidPlayer (ent))
          continue;
@@ -1399,7 +1399,7 @@ void BotManager::CalculatePingOffsets (void)
 
 void BotManager::SendPingDataOffsets (edict_t *to)
 {
-   if ((g_gameFlags & GAME_LEGACY) || yb_latency_display.GetInt () != 2 || IsNullEntity (to))
+   if ((g_gameFlags & GAME_LEGACY) || yb_latency_display.GetInt () != 2 || engine.IsNullEntity (to))
       return;
 
    if (!(to->v.flags & FL_CLIENT) && !(((to->v.button & IN_SCORE) || !(to->v.oldbuttons & IN_SCORE))))
@@ -1477,7 +1477,7 @@ void BotManager::UpdateActiveGrenades (void)
    m_activeGrenades.RemoveAll ();
 
    // search the map for any type of grenade
-   while (!IsNullEntity (grenade = FIND_ENTITY_BY_CLASSNAME (grenade, "grenade")))
+   while (!engine.IsNullEntity (grenade = FIND_ENTITY_BY_CLASSNAME (grenade, "grenade")))
    {
       // do not count c4 as a grenade
       if (strcmp (STRING (grenade->v.model) + 9, "c4.mdl") == 0)

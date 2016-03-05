@@ -48,7 +48,7 @@ int Bot::GetNearbyEnemiesNearPosition(const Vector &origin, float radius)
 
 bool Bot::IsEnemyHiddenByRendering (edict_t *enemy)
 {
-   if (IsNullEntity (enemy) || !yb_check_enemy_rendering.GetBool ())
+   if (engine.IsNullEntity (enemy) || !yb_check_enemy_rendering.GetBool ())
       return false;
 
    entvars_t &v = enemy->v;
@@ -183,12 +183,12 @@ bool Bot::CheckVisibility (edict_t *target, Vector *origin, byte *bodyPart)
 
 bool Bot::IsEnemyViewable (edict_t *player)
 {
-   if (IsNullEntity (player))
+   if (engine.IsNullEntity (player))
       return false;
 
    bool forceTrueIfVisible = false;
 
-   if (IsValidPlayer (pev->dmg_inflictor) && GetTeam (pev->dmg_inflictor) != m_team)
+   if (IsValidPlayer (pev->dmg_inflictor) && engine.GetTeam (pev->dmg_inflictor) != m_team)
       forceTrueIfVisible = true;
 
    if ((IsInViewCone (player->v.origin + pev->view_ofs) || forceTrueIfVisible) && CheckVisibility (player, &m_enemyOrigin, &m_visibility))
@@ -218,7 +218,7 @@ bool Bot::LookupEnemy (void)
    if (m_seeEnemyTime + 3.0f < engine.Time ())
       m_states &= ~STATE_SUSPECT_ENEMY;
 
-   if (!IsNullEntity (m_enemy) && m_enemyUpdateTime > engine.Time ())
+   if (!engine.IsNullEntity (m_enemy) && m_enemyUpdateTime > engine.Time ())
    {
       player = m_enemy;
 
@@ -228,7 +228,7 @@ bool Bot::LookupEnemy (void)
    }
 
    // the old enemy is no longer visible or
-   if (IsNullEntity (newEnemy))
+   if (engine.IsNullEntity (newEnemy))
    {
       m_enemyUpdateTime = engine.Time () + 0.5f;
 
@@ -289,7 +289,7 @@ bool Bot::LookupEnemy (void)
          }
       }
 
-      if (IsNullEntity (newEnemy) && !IsNullEntity (shieldEnemy))
+      if (engine.IsNullEntity (newEnemy) && !engine.IsNullEntity (shieldEnemy))
          newEnemy = shieldEnemy;
    }
 
@@ -314,7 +314,7 @@ bool Bot::LookupEnemy (void)
       }
       else
       {
-         if (m_seeEnemyTime + 3.0 < engine.Time () && (m_hasC4 || HasHostage () || !IsNullEntity (m_targetEntity)))
+         if (m_seeEnemyTime + 3.0 < engine.Time () && (m_hasC4 || HasHostage () || !engine.IsNullEntity (m_targetEntity)))
             RadioMessage (Radio_EnemySpotted);
 
          m_targetEntity = NULL; // stop following when we see an enemy...
@@ -345,7 +345,7 @@ bool Bot::LookupEnemy (void)
 
             Bot *friendBot = bots.GetBot (g_clients[j].ent);
 
-            if (friendBot != NULL && friendBot->m_seeEnemyTime + 2.0f < engine.Time () && IsNullEntity (friendBot->m_lastEnemy) && IsVisible (pev->origin, ENT (friendBot->pev)) && friendBot->IsInViewCone (pev->origin))
+            if (friendBot != NULL && friendBot->m_seeEnemyTime + 2.0f < engine.Time () && engine.IsNullEntity (friendBot->m_lastEnemy) && IsVisible (pev->origin, ENT (friendBot->pev)) && friendBot->IsInViewCone (pev->origin))
             {
                friendBot->m_lastEnemy = newEnemy;
                friendBot->m_lastEnemyOrigin = m_lastEnemyOrigin;
@@ -357,7 +357,7 @@ bool Bot::LookupEnemy (void)
          return true;
       }
    }
-   else if (!IsNullEntity (m_enemy))
+   else if (!engine.IsNullEntity (m_enemy))
    {
       newEnemy = m_enemy;
       m_lastEnemy = newEnemy;
@@ -406,7 +406,7 @@ bool Bot::LookupEnemy (void)
    }
 
    // check if bots should reload...
-   if ((m_aimFlags <= AIM_PREDICT_PATH && m_seeEnemyTime + 3.0f < engine.Time () &&  !(m_states & (STATE_SEEING_ENEMY | STATE_HEARING_ENEMY)) && IsNullEntity (m_lastEnemy) && IsNullEntity (m_enemy) && GetTaskId () != TASK_SHOOTBREAKABLE && GetTaskId () != TASK_PLANTBOMB && GetTaskId () != TASK_DEFUSEBOMB) || g_roundEnded)
+   if ((m_aimFlags <= AIM_PREDICT_PATH && m_seeEnemyTime + 3.0f < engine.Time () &&  !(m_states & (STATE_SEEING_ENEMY | STATE_HEARING_ENEMY)) && engine.IsNullEntity (m_lastEnemy) && engine.IsNullEntity (m_enemy) && GetTaskId () != TASK_SHOOTBREAKABLE && GetTaskId () != TASK_PLANTBOMB && GetTaskId () != TASK_DEFUSEBOMB) || g_roundEnded)
    {
       if (!m_reloadState)
          m_reloadState = RELOAD_PRIMARY;
@@ -560,9 +560,9 @@ bool Bot::IsFriendInLineOfFire (float distance)
    engine.TestLine (EyePosition (), EyePosition () + 10000.0f * pev->v_angle, TRACE_IGNORE_NONE, GetEntity (), &tr);
 
    // check if we hit something
-   if (!IsNullEntity (tr.pHit) && tr.pHit != g_worldEntity)
+   if (!engine.IsNullEntity (tr.pHit))
    {
-      int playerIndex = IndexOfEntity (tr.pHit) - 1;
+      int playerIndex = engine.IndexOfEntity (tr.pHit) - 1;
 
       // check valid range
       if (playerIndex >= 0 && playerIndex < engine.MaxClients () && g_clients[playerIndex].team == m_team && (g_clients[playerIndex].flags & CF_ALIVE))
@@ -731,7 +731,7 @@ void Bot::FireWeapon (void)
    }
 
    // or if friend in line of fire, stop this too but do not update shoot time
-   if (!IsNullEntity (m_enemy))
+   if (!engine.IsNullEntity (m_enemy))
    {
       if (IsFriendInLineOfFire (distance))
       {
@@ -753,7 +753,7 @@ void Bot::FireWeapon (void)
       goto WeaponSelectEnd;
 
    // use knife if near and good difficulty (l33t dude!)
-   if (m_difficulty >= 3 && pev->health > 80.0f && !IsNullEntity (enemy) && pev->health >= enemy->v.health && distance < 100.0f && !IsOnLadder () && !IsGroupOfEnemies (pev->origin))
+   if (m_difficulty >= 3 && pev->health > 80.0f && !engine.IsNullEntity (enemy) && pev->health >= enemy->v.health && distance < 100.0f && !IsOnLadder () && !IsGroupOfEnemies (pev->origin))
       goto WeaponSelectEnd;
 
    // loop through all the weapons until terminator is found...
@@ -844,7 +844,7 @@ WeaponSelectEnd:
    {
       if (distance >= 750.0f && !IsShieldDrawn ())
          pev->button |= IN_ATTACK2; // draw the shield
-      else if (IsShieldDrawn () || (!IsNullEntity (m_enemy) && ((m_enemy->v.button & IN_RELOAD) || !IsEnemyViewable(m_enemy))))
+      else if (IsShieldDrawn () || (!engine.IsNullEntity (m_enemy) && ((m_enemy->v.button & IN_RELOAD) || !IsEnemyViewable(m_enemy))))
          pev->button |= IN_ATTACK2; // draw out the shield
 
       m_shieldCheckTime = engine.Time () + 1.0f;
@@ -863,7 +863,7 @@ WeaponSelectEnd:
 
       m_zoomCheckTime = engine.Time ();
 
-      if (!IsNullEntity (m_enemy) && (m_states & STATE_SEEING_ENEMY))
+      if (!engine.IsNullEntity (m_enemy) && (m_states & STATE_SEEING_ENEMY))
       {
          m_moveSpeed = 0.0f;
          m_strafeSpeed = 0.0f;
@@ -1011,7 +1011,7 @@ void Bot::FocusEnemy (void)
 void Bot::CombatFight (void)
 {
    // no enemy? no need to do strafing
-   if (IsNullEntity (m_enemy))
+   if (engine.IsNullEntity (m_enemy))
       return;
 
    float distance = (m_lookAt - EyePosition ()).GetLength2D ();  // how far away is the enemy scum?
@@ -1223,7 +1223,7 @@ bool Bot::IsEnemyProtectedByShield (edict_t *enemy)
 {
    // this function returns true, if enemy protected by the shield
 
-   if (IsNullEntity (enemy) || IsShieldDrawn ())
+   if (engine.IsNullEntity (enemy) || IsShieldDrawn ())
       return false;
 
    // check if enemy has shield and this shield is drawn

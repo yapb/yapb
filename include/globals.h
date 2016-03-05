@@ -69,7 +69,6 @@ extern TaskItem g_taskFilters[];
 extern Experience *g_experienceData;
 
 extern edict_t *g_hostEntity; 
-extern edict_t *g_worldEntity;
 extern Library *g_gameLib;
 
 extern gamefuncs_t g_functionTable;
@@ -84,33 +83,4 @@ static inline bool IsNullString (const char *input)
       return true;
 
    return *input == '\0';
-}
-
-static inline edict_t *EntityOfIndex (const int index)
-{
-   return static_cast <edict_t *> (g_worldEntity + index);
-};
-
-static inline int IndexOfEntity(const edict_t *ent)
-{
-   return static_cast <int> (ent - g_worldEntity);
-};
-
-static inline int EntOffsetOfEntity(const edict_t *ent)
-{
-   return (char *) ent - (char *) g_worldEntity;
-}
-
-static inline bool IsNullEntity (const edict_t *ent)
-{
-   return !ent || !EntOffsetOfEntity (ent);
-}
-
-static inline int GetTeam (edict_t *ent)
-{
-#ifndef XASH_CSDM
-   return g_clients[IndexOfEntity (ent) - 1].team;
-#else
-   return g_clients[IndexOfEntity (ent) - 1].team = ent->v.team == 1 ? TERRORIST : CT;
-#endif
 }

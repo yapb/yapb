@@ -1551,5 +1551,5 @@ extern ConVar yb_ignore_enemies;
 
 inline int Bot::GetIndex (void)
 {
-   return IndexOfEntity (GetEntity ());
+   return engine.IndexOfEntity (GetEntity ());
 }

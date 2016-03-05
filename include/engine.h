@@ -66,11 +66,14 @@ private:
    char m_arguments[256];
    int m_argumentCount;
 
+   edict_t *m_startEntity;
+   edict_t *m_localEntity;
+
    // public functions
 public:
 
    // precaches internal stuff
-   void Precache (void);
+   void Precache (edict_t *startEntity);
 
    // prints data to servers console
    void Printf (const char *fmt, ...);
@@ -162,6 +165,32 @@ public:
    inline int GetOverrideArgc (void)
    {
       return m_argumentCount;
+   }
+
+   inline edict_t *EntityOfIndex (const int index)
+   {
+      return static_cast <edict_t *> (m_startEntity + index);
+   };
+
+   inline int IndexOfEntity (const edict_t *ent)
+   {
+      return static_cast <int> (ent - m_startEntity);
+   };
+
+   inline bool IsNullEntity (const edict_t *ent)
+   {
+      return !ent || !IndexOfEntity (ent);
+   }
+
+   inline int GetTeam (edict_t *ent)
+   {
+      extern Client g_clients[32];
+
+#ifndef XASH_CSDM
+      return g_clients[IndexOfEntity (ent) - 1].team;
+#else
+      return g_clients[IndexOfEntity (ent) - 1].team = ent->v.team == 1 ? TERRORIST : CT;
+#endif
    }
 
    // static utility functions
