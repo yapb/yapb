@@ -1,4 +1,4 @@
-﻿//
+//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -988,15 +988,13 @@ void Bot::InstantChatterMessage (int type)
    if (m_notKilled)
       SwitchChatterIcon (true);
 
-   static float reportTime = engine.Time ();
-
    // delay only reportteam
-   if (type == Radio_ReportTeam)
+   if (type == Radio_ReportTeam && m_timeRepotingInDelay < engine.Time ())
    {
-      if (reportTime >= engine.Time ())
+      if (m_timeRepotingInDelay < engine.Time ())
          return;
 
-      reportTime = engine.Time () + Random.Float (30.0f, 80.0f);
+      m_timeRepotingInDelay = engine.Time () + Random.Float (30.0f, 60.0f);
    }
 
    String defaultSound = g_chatterFactory[type].GetRandomElement ().name;
@@ -1718,18 +1716,6 @@ void Bot::PurchaseWeapons (void)
 
    m_buyState++;
    PushMessageQueue (GSM_BUY_STUFF);
-}
-
-TaskItem *ClampDesire (TaskItem *first, float min, float max)
-{
-   // this function iven some values min and max, clamp the inputs to be inside the [min, max] range.
-
-   if (first->desire < min)
-      first->desire = min;
-   else if (first->desire > max)
-      first->desire = max;
-
-   return first;
 }
 
 TaskItem *MaxDesire (TaskItem *first, TaskItem *second)
@@ -2626,42 +2612,39 @@ void Bot::CheckRadioCommands (void)
          int bombPoint = -1;
 
          // check if it's a ct command
-         if (GetTeam (m_radioEntity) == CT && m_team == CT && IsValidBot (m_radioEntity))
+         if (GetTeam (m_radioEntity) == CT && m_team == CT && IsValidBot (m_radioEntity) && g_timeNextBombUpdate < engine.Time ())
          {
-            if (g_timeNextBombUpdate < engine.Time ())
+            float minDistance = 99999.0f;
+
+            // find nearest bomb waypoint to player
+            FOR_EACH_AE (waypoints.m_goalPoints, i)
             {
-               float minDistance = 99999.0f;
+               distance = (waypoints.GetPath (waypoints.m_goalPoints[i])->origin - m_radioEntity->v.origin).GetLengthSquared ();
 
-               // find nearest bomb waypoint to player
-               FOR_EACH_AE (waypoints.m_goalPoints, i)
+               if (distance < minDistance)
                {
-                  distance = (waypoints.GetPath (waypoints.m_goalPoints[i])->origin - m_radioEntity->v.origin).GetLengthSquared ();
-
-                  if (distance < minDistance)
-                  {
-                     minDistance = distance;
-                     bombPoint = waypoints.m_goalPoints[i];
-                  }
+                  minDistance = distance;
+                  bombPoint = waypoints.m_goalPoints[i];
                }
-
-               // mark this waypoint as restricted point
-               if (bombPoint != -1 && !waypoints.IsGoalVisited (bombPoint))
-               {
-                  // does this bot want to defuse?
-                  if (GetTaskId () == TASK_NORMAL)
-                  {
-                     // is he approaching this goal?
-                     if (GetTask ()->data == bombPoint)
-                     {
-                        GetTask ()->data = -1;
-                        RadioMessage (Radio_Affirmative);
-
-                     }
-                  }
-                  waypoints.SetGoalVisited (bombPoint);
-               }
-               g_timeNextBombUpdate = engine.Time () + 0.5f;
             }
+
+            // mark this waypoint as restricted point
+            if (bombPoint != -1 && !waypoints.IsGoalVisited (bombPoint))
+            {
+               // does this bot want to defuse?
+               if (GetTaskId () == TASK_NORMAL)
+               {
+                  // is he approaching this goal?
+                  if (GetTask ()->data == bombPoint)
+                  {
+                     GetTask ()->data = -1;
+                     RadioMessage (Radio_Affirmative);
+
+                  }
+               }
+               waypoints.SetGoalVisited (bombPoint);
+            }
+            g_timeNextBombUpdate = engine.Time () + 0.5f;
          }
       }
       break;
@@ -3223,10 +3206,8 @@ void Bot::RunTask_Normal (void)
                   if (m_personality == PERSONALITY_RUSHER)
                      campTime *= 0.5f;
 
-                  PushTask (TASK_CAMP, TASKPRI_CAMP, -1, engine.Time () + Random.Float (25.0, 40.0), true); // push camp task on to stack
+                  PushTask (TASK_CAMP, TASKPRI_CAMP, -1, engine.Time () + campTime, true); // push camp task on to stack
                   PushTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, engine.Time () + Random.Float (5.0f, 11.0f), true); // push move command
-
-                  DebugMsg ("i'm ct and going to defend bomb!");
 
                   if (waypoints.GetPath (index)->vis.crouch <= waypoints.GetPath (index)->vis.stand)
                      m_campButtons |= IN_DUCK;
@@ -4274,7 +4255,7 @@ void Bot::RunTask_Throw_SG (void)
 
 void Bot::RunTask_DoubleJump (void)
 {
-   if (IsNullEntity (m_doubleJumpEntity) || !IsAlive (m_doubleJumpEntity) || (m_aimFlags & AIM_ENEMY) || (m_travelStartIndex != -1 && GetTask ()->time + (waypoints.GetTravelTime (pev->maxspeed, waypoints.GetPath (m_travelStartIndex)->origin, m_doubleJumpOrigin) + 11.0) < engine.Time ()))
+   if (!IsAlive (m_doubleJumpEntity) || (m_aimFlags & AIM_ENEMY) || (m_travelStartIndex != -1 && GetTask ()->time + (waypoints.GetTravelTime (pev->maxspeed, waypoints.GetPath (m_travelStartIndex)->origin, m_doubleJumpOrigin) + 11.0) < engine.Time ()))
    {
       ResetDoubleJumpState ();
       return;
@@ -4453,8 +4434,6 @@ void Bot::RunTask_PickupItem ()
    // find the distance to the item
    float itemDistance = (dest - pev->origin).GetLength ();
 
-   int id = 0;
-
    switch (m_pickupType)
    {
    case PICKUP_DROPPED_C4:
@@ -4467,6 +4446,8 @@ void Bot::RunTask_PickupItem ()
       // near to weapon?
       if (itemDistance < 50.0f)
       {
+         int id = 0;
+         
          for (id = 0; id < 7; id++)
          {
             if (strcmp (g_weaponSelect[id].modelName, STRING (m_pickupItem->v.model) + 9) == 0)
@@ -4805,8 +4786,7 @@ void Bot::BotAI (void)
 {
    // this function gets called each frame and is the core of all bot ai. from here all other subroutines are called
 
-   float movedDistance; // length of different vector (distance bot moved)
-   TraceResult tr;
+   float movedDistance = 2.0f; // length of different vector (distance bot moved)
 
    // increase reaction time
    m_actualReactionTime += 0.3f;
@@ -4834,8 +4814,6 @@ void Bot::BotAI (void)
       m_prevOrigin = pev->origin;
       m_prevTime = engine.Time () + 0.2f;
    }
-   else
-      movedDistance = 2.0f;
 
    // if there's some radio message to respond, check it
    if (m_radioOrder != 0)

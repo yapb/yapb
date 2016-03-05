@@ -27,6 +27,7 @@
     <ClInclude Include="..\include\engine\progdefs.h" />
     <ClInclude Include="..\include\engine\sdk_util.h" />
     <ClInclude Include="..\include\engine\util.h" />
+    <ClInclude Include="..\include\gamestate.h" />
     <ClInclude Include="..\include\globals.h" />
     <ClInclude Include="..\include\platform.h" />
     <ClInclude Include="..\include\resource.h" />
@@ -35,6 +36,7 @@
     <ClCompile Include="..\source\basecode.cpp" />
     <ClCompile Include="..\source\combat.cpp" />
     <ClCompile Include="..\source\engine.cpp" />
+    <ClCompile Include="..\source\gamestate.cpp" />
     <ClCompile Include="..\source\manager.cpp" />
     <ClCompile Include="..\source\chatlib.cpp" />
     <ClCompile Include="..\source\globals.cpp" />

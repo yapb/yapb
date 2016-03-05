@@ -15,6 +15,7 @@ Localizer locale;
 Waypoint waypoints;
 BotManager bots;
 Engine engine;
+Game game;
 
 bool g_canSayBombPlanted = true;
 bool g_isMetamod = false;

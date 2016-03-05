@@ -445,11 +445,11 @@ void ConVarWrapper::RegisterVariable (const char *variable, const char *value, V
 {
    // this function adds globally defined variable to registration stack
 
-   VarPair newVariable;
-   memset (&newVariable, 0, sizeof (VarPair));
+   VarPair pair;
+   memset (&pair, 0, sizeof (VarPair));
 
-   newVariable.reg.name = const_cast <char *> (variable);
-   newVariable.reg.string = const_cast <char *> (value);
+   pair.reg.name = const_cast <char *> (variable);
+   pair.reg.string = const_cast <char *> (value);
 
    int engineFlags = FCVAR_EXTDLL;
 
@@ -460,11 +460,11 @@ void ConVarWrapper::RegisterVariable (const char *variable, const char *value, V
    else if (varType == VT_PASSWORD)
       engineFlags |= FCVAR_PROTECTED;
 
-   newVariable.reg.flags = engineFlags;
-   newVariable.self = self;
-   newVariable.type = varType;
+   pair.reg.flags = engineFlags;
+   pair.self = self;
+   pair.type = varType;
 
-   m_regs.Push (newVariable);
+   m_regs.Push (pair);
 }
 
 void ConVarWrapper::PushRegisteredConVarsToEngine (bool gameVars)

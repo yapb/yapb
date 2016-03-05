@@ -1,4 +1,4 @@
-﻿//
+//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -329,7 +329,7 @@ void BotManager::AddBot (const String &name, const String &difficulty, const Str
 
 void BotManager::AdjustQuota (bool isPlayerConnection, edict_t *ent)
 {
-   // this function increases or decreases bot quota amount depending on autovacate variables
+   // this function increases or decreases bot quota amount depending on auto vacate variables
 
    if (!engine.IsDedicatedServer () || !yb_autovacate.GetBool () || GetBot (ent) != NULL)
       return;
@@ -550,7 +550,6 @@ void BotManager::RemoveMenu (edict_t *ent, int selection)
 {
    // this function displays remove bot menu to specified entity (this function show's only yapb's).
 
-
    if (selection > 4 || selection < 1)
       return;
 
@@ -740,16 +739,11 @@ void BotManager::ListBots (void)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      edict_t *player = EntityOfIndex (i);
+      Bot *bot = GetBot (i);
 
       // is this player slot valid
-      if (IsValidBot (player))
-      {
-         Bot *bot = GetBot (player);
-
-         if (bot != NULL)
-            engine.Printf ("[%-3.1d] %-9.13s %-17.18s %-3.4s %-3.1d %-3.1d", i, STRING (player->v.netname), bot->m_personality == PERSONALITY_RUSHER ? "rusher" : bot->m_personality == PERSONALITY_NORMAL ? "normal" : "careful", GetTeam (player) != 0 ? "CT" : "T", bot->m_difficulty, static_cast <int> (player->v.frags));
-      }
+      if (bot != NULL)
+         engine.Printf ("[%-3.1d] %-9.13s %-17.18s %-3.4s %-3.1d %-3.1d", i, STRING (bot->pev->netname), bot->m_personality == PERSONALITY_RUSHER ? "rusher" : bot->m_personality == PERSONALITY_NORMAL ? "normal" : "careful", bot->m_team == CT ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags));
    }
 }
 
@@ -777,7 +771,7 @@ Bot *BotManager::GetHighestFragsBot (int team)
    {
       Bot *bot = bots.GetBot (i);
 
-      if (bot != NULL && IsAlive (bot->GetEntity ()) && GetTeam (bot->GetEntity ()) == team)
+      if (bot != NULL && bot->m_notKilled && bot->m_team == team)
       {
          if (bot->pev->frags > bestScore)
          {
@@ -1101,6 +1095,7 @@ void Bot::NewRound (void)
 
    m_maxThrowTimer = 0.0f;
    m_timeTeamOrder = 0.0f;
+   m_timeRepotingInDelay = 0.0f;
    m_askCheckTime = 0.0f;
    m_minSpeed = 260.0f;
    m_prevSpeed = 0.0f;
@@ -1156,7 +1151,7 @@ void Bot::NewRound (void)
    SetIdealReactionTimes (true);
 
    m_targetEntity = NULL;
-   m_tasks = NULL;
+   m_tasks.RemoveAll ();
    m_followWaitTime = 0.0f;
 
    for (i = 0; i < MAX_HOSTAGES; i++)

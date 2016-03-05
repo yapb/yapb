@@ -1062,6 +1062,7 @@ public:
    float m_spawnTime; // time this bot spawned
    float m_timeTeamOrder; // time of last radio command
    float m_timePeriodicUpdate; // time to per-second think
+   float m_timeRepotingInDelay; // time to delay report-in
 
    bool m_isVIP; // bot is vip?
 
@@ -1502,6 +1503,7 @@ public:
 };
 
 #include <engine.h>
+#include <gamestate.h>
 
 // expose bot super-globals
 extern NetworkMsg netmsg;
@@ -1509,6 +1511,7 @@ extern Localizer locale;
 extern Waypoint waypoints;
 extern BotManager bots;
 extern Engine engine;
+extern Game game;
 
 // prototypes of bot functions...
 extern int GetWeaponReturn (bool isString, const char *weaponAlias, int weaponIndex = -1);

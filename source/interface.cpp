@@ -457,6 +457,14 @@ void CommandHandler (void)
       engine.Printf ("Unknown command: %s", CMD_ARGV (1));
 }
 
+class GameEvents : public IGameEvents
+{
+   virtual void OnNewRound (void)
+   {
+      RoundInit ();
+   }
+} g_botEventListener;
+
 void ParseVoiceEvent (const String &base, int type, float timeToRepeat)
 {
    // this function does common work of parsing single line of voice chatter
@@ -918,6 +926,9 @@ void GameDLLInit (void)
    // server is enabled. Here is a good place to do our own game session initialization, and
    // to register by the engine side the server commands we need to administrate our bots.
 
+   // register bot event listner
+   game.RegisterEventListener (&g_botEventListener);
+
    DetectCSVersion ();
    {
       // print game detection info
@@ -1014,9 +1025,7 @@ int Spawn (edict_t *ent)
       PRECACHE_SOUND (ENGINE_STR ("common/wpn_moveselect.wav"));  // path add/delete cancel
       PRECACHE_SOUND (ENGINE_STR ("common/wpn_denyselect.wav"));  // path add/delete error
 
-      g_roundEnded = true;
-      RoundInit ();
-
+      events->OnNewRound ();
       g_mapType = NULL; // reset map type as worldspawn is the first entity spawned
 
       // detect official csbots here, as they causing crash in linkent code when active for some reason
@@ -2335,7 +2344,7 @@ edict_t *pfnFindEntityByString (edict_t *edictStartSearchAfter, const char *fiel
 {
    // round starts in counter-strike 1.5
    if (strcmp (value, "info_map_parameters") == 0)
-      RoundInit ();
+      events->OnNewRound ();
 
    if (g_isMetamod)
       RETURN_META_VALUE (MRES_IGNORED, 0);

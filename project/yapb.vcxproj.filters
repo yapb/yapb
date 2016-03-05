@@ -72,6 +72,9 @@
     <ClInclude Include="..\include\engine.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\gamestate.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\chatlib.cpp">
@@ -105,6 +108,9 @@
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="..\source\engine.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\gamestate.cpp">
       <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
