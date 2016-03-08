@@ -46,12 +46,13 @@ private:
    {
       VarType type;
       cvar_t reg;
+      bool regMissing;
       class ConVar *self;
    };
    Array <VarPair> m_regs;
 
 public:
-   void RegisterVariable (const char *variable, const char *value, VarType varType, ConVar *self);
+   void RegisterVariable (const char *variable, const char *value, VarType varType, bool regMissing, ConVar *self);
    void PushRegisteredConVarsToEngine (bool gameVars = false);
 };
 
@@ -205,7 +206,7 @@ public:
    cvar_t *m_eptr;
 
 public:
-   ConVar (const char *name, const char *initval, VarType type = VT_NOSERVER);
+   ConVar (const char *name, const char *initval, VarType type = VT_NOSERVER, bool regMissing = false);
 
    inline bool GetBool (void) { return m_eptr->value > 0.0f; }
    inline int GetInt (void) { return static_cast <int> (m_eptr->value); }
@@ -213,5 +214,5 @@ public:
    inline const char *GetString (void) { return m_eptr->string; }
    inline void SetFloat (float val) { m_eptr->value = val; }
    inline void SetInt (int val) { SetFloat (static_cast <float> (val)); }
-   inline void SetString (const char *val) { g_engfuncs.pfnCVarSetString (m_eptr->name, val); }
+   inline void SetString (const char *val) { g_engfuncs.pfnCvar_DirectSet (m_eptr, const_cast <char *> (val)); }
 };

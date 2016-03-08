@@ -2284,7 +2284,7 @@ bool Bot::LastEnemyShootable (void)
 
 void Bot::CheckRadioCommands (void)
 {
-   // this function handling radio and reactings to it
+   // this function handling radio and reacting to it
 
    float distance = (m_radioEntity->v.origin - pev->origin).GetLength ();
 

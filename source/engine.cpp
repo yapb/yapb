@@ -453,7 +453,7 @@ void Engine::IssueCmd (const char *fmt, ...)
    g_engfuncs.pfnServerCommand (string);
 }
 
-void ConVarWrapper::RegisterVariable (const char *variable, const char *value, VarType varType, ConVar *self)
+void ConVarWrapper::RegisterVariable(const char *variable, const char *value, VarType varType, bool regMissing, ConVar *self)
 {
    // this function adds globally defined variable to registration stack
 
@@ -462,6 +462,7 @@ void ConVarWrapper::RegisterVariable (const char *variable, const char *value, V
 
    pair.reg.name = const_cast <char *> (variable);
    pair.reg.string = const_cast <char *> (value);
+   pair.regMissing = regMissing;
 
    int engineFlags = FCVAR_EXTDLL;
 
@@ -501,13 +502,17 @@ void ConVarWrapper::PushRegisteredConVarsToEngine (bool gameVars)
       {
          ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
 
-         // ensure game cvar exists
-         InternalAssert (ptr->self->m_eptr != NULL);
+         if (ptr->regMissing && ptr->self->m_eptr == NULL)
+         {
+            g_engfuncs.pfnCVarRegister (&ptr->reg);
+            ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
+         }
+         InternalAssert (ptr->self->m_eptr != NULL); // ensure game var exists
       }
    }
 }
 
-ConVar::ConVar (const char *name, const char *initval, VarType type) : m_eptr (NULL)
+ConVar::ConVar (const char *name, const char *initval, VarType type, bool regMissing) : m_eptr (NULL)
 {
-   ConVarWrapper::GetReference ().RegisterVariable (name, initval, type, this);
+   ConVarWrapper::GetReference ().RegisterVariable (name, initval, type, regMissing, this);
 }

@@ -12,12 +12,7 @@
 ConVar yb_display_menu_text ("yb_display_menu_text", "1");
 
 ConVar mp_roundtime ("mp_roundtime", NULL, VT_NOREGISTER);
-
-#ifndef XASH_CSDM
-ConVar mp_freezetime ("mp_freezetime", NULL, VT_NOREGISTER);
-#else
-ConVar mp_freezetime ("mp_freezetime", "0", VT_NOSERVER);
-#endif
+ConVar mp_freezetime ("mp_freezetime", NULL, VT_NOREGISTER, true);
 
 uint16 FixedUnsigned16 (float value, float scale)
 {
@@ -424,7 +419,6 @@ int GetWeaponPenetrationPower (int id)
    return 0;
 }
 
-
 bool IsValidPlayer (edict_t *ent)
 {
    if (engine.IsNullEntity (ent))
@@ -716,7 +710,7 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
    // team, live status, search distance etc. if needBot is true, then pvHolder, will
    // be filled with bot pointer, else with edict pointer(!).
 
-   edict_t *survive = NULL; // pointer to temporaly & survive entity
+   edict_t *survive = NULL; // pointer to temporally & survive entity
    float nearestPlayer = 4096.0f; // nearest player
 
    int toTeam = engine.GetTeam (to);
