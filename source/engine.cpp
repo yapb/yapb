@@ -241,18 +241,27 @@ const char *Engine::GetModName (void)
    // this function returns mod name without path
 
    static char engineModName[256];
-   g_engfuncs.pfnGetGameDir (engineModName); // ask the engine for the MOD directory path
 
-   String mod (engineModName);
-   int pos = mod.ReverseFind ('\\');
+   g_engfuncs.pfnGetGameDir (engineModName);
+   int length = strlen (engineModName);
 
-   if (pos == -1)
-      pos = mod.ReverseFind ('/');
+   int stop = length - 1;
+   while ((engineModName[stop] == '\\' || engineModName[stop] == '/') && stop > 0)
+      stop--;
 
-   if (pos == -1)
-      return &engineModName[0];
+   int start = stop;
+   while (engineModName[start] != '\\' && engineModName[start] != '/' && start > 0)
+      start--;
 
-   return mod.Mid (pos, -1).GetBuffer ();
+   if (engineModName[start] == '\\' || engineModName[start] == '/')
+      start++;
+
+   for (length = start; length <= stop; length++)
+      engineModName[length - start] = engineModName[length];
+
+   engineModName[length - start] = 0; // terminate the string
+
+   return &engineModName[0];
 }
 
 const char *Engine::GetMapName (void)
@@ -374,7 +383,7 @@ void Engine::IssueBotCommand (edict_t *ent, const char *fmt, ...)
 
 const char *Engine::ExtractSingleField (const char *string, int id, bool terminate)
 {
-   // this function gets and returns a particuliar field in a string where several strings are concatenated
+   // this function gets and returns a particular field in a string where several strings are concatenated
 
    static char field[256];
    field[0] = { 0, };
