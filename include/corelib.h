@@ -3489,23 +3489,6 @@ public:
    }
 
    //
-   // Function: GetBuffer
-   //  Gets the line from file stream, and stores it inside string class.
-   //
-   // Parameters:
-   //  buffer - String buffer, that should receive line.
-   //  count - Max. size of buffer.
-   //
-   // Returns:
-   //  True if operation succeeded, false otherwise.
-   //
-   bool GetBuffer (String &buffer, int count)
-   {
-      assert (m_handle != NULL);
-      return !String (fgets (buffer, count, m_handle)).IsEmpty ();
-   }
-
-   //
    // Function: Printf
    //  Puts formatted buffer, into stream.
    //
@@ -3834,7 +3817,10 @@ public:
          return NULL;
 
       int lineStartOffset = m_filePos;
-      int lineEndOffset = (m_fileSize - m_filePos > count - 1) ? (lineEndOffset = m_filePos + count - 1) : lineEndOffset = m_fileSize - 1;
+      int lineEndOffset = m_fileSize - 1;
+      
+      if (m_fileSize - m_filePos > count - 1)
+         lineEndOffset = m_filePos + count - 1;
 
       while (m_filePos < lineEndOffset)
       {
@@ -3864,22 +3850,6 @@ public:
       buffer[pos - lineStartOffset] = 0;
 
       return buffer;
-   }
-
-   //
-   // Function: GetBuffer
-   //  Gets the line from file stream, and stores it inside string class.
-   //
-   // Parameters:
-   //  buffer - String buffer, that should receive line.
-   //  count - Max. size of buffer.
-   //
-   // Returns:
-   //  True if operation succeeded, false otherwise.
-   //
-   bool GetBuffer (String &buffer, int count)
-   {
-      return !String (GetBuffer (buffer, count)).IsEmpty ();
    }
 
    //

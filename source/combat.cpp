@@ -1112,18 +1112,18 @@ void Bot::CombatFight (void)
                m_combatStrafeDir = STRAFE_DIR_RIGHT;
 
             if (Random.Long (1, 100) < 30)
-               m_combatStrafeDir == STRAFE_DIR_LEFT ? STRAFE_DIR_RIGHT : STRAFE_DIR_LEFT;
+               m_combatStrafeDir = (m_combatStrafeDir == STRAFE_DIR_LEFT ? STRAFE_DIR_RIGHT : STRAFE_DIR_LEFT);
 
-            m_strafeSetTime = engine.Time () + Random.Float (1.5f, 3.0f);
+            m_strafeSetTime = engine.Time () + Random.Float (0.5f, 3.0f);
          }
 
-         if (m_combatStrafeDir == STRAFE_DIR_LEFT)
+         if (m_combatStrafeDir == STRAFE_DIR_RIGHT)
          {
             if (!CheckWallOnLeft ())
                m_strafeSpeed = -pev->maxspeed;
             else
             {
-               m_combatStrafeDir == STRAFE_DIR_LEFT ? STRAFE_DIR_RIGHT : STRAFE_DIR_LEFT;
+               m_combatStrafeDir = STRAFE_DIR_LEFT;
                m_strafeSetTime = engine.Time () + 1.5f;
             }
          }
@@ -1133,7 +1133,7 @@ void Bot::CombatFight (void)
                m_strafeSpeed = pev->maxspeed;
             else
             {
-               m_combatStrafeDir == STRAFE_DIR_LEFT ? STRAFE_DIR_RIGHT : STRAFE_DIR_LEFT;
+               m_combatStrafeDir = STRAFE_DIR_RIGHT;
                m_strafeSetTime = engine.Time () + 1.5f;
             }
          }

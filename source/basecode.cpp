@@ -989,7 +989,7 @@ void Bot::InstantChatterMessage (int type)
       SwitchChatterIcon (true);
 
    // delay only reportteam
-   if (type == Radio_ReportTeam && m_timeRepotingInDelay < engine.Time ())
+   if (type == Radio_ReportTeam)
    {
       if (m_timeRepotingInDelay < engine.Time ())
          return;
@@ -2607,45 +2607,44 @@ void Bot::CheckRadioCommands (void)
 
    case Radio_SectorClear:
       // is bomb planted and it's a ct
-      if (g_bombPlanted)
+      if (!g_bombPlanted)
+         break;
+
+      // check if it's a ct command
+      if (engine.GetTeam (m_radioEntity) == CT && m_team == CT && IsValidBot (m_radioEntity) && g_timeNextBombUpdate < engine.Time ())
       {
+         float minDistance = 99999.0f;
          int bombPoint = -1;
 
-         // check if it's a ct command
-         if (engine.GetTeam (m_radioEntity) == CT && m_team == CT && IsValidBot (m_radioEntity) && g_timeNextBombUpdate < engine.Time ())
+         // find nearest bomb waypoint to player
+         FOR_EACH_AE (waypoints.m_goalPoints, i)
          {
-            float minDistance = 99999.0f;
+            distance = (waypoints.GetPath (waypoints.m_goalPoints[i])->origin - m_radioEntity->v.origin).GetLengthSquared ();
 
-            // find nearest bomb waypoint to player
-            FOR_EACH_AE (waypoints.m_goalPoints, i)
+            if (distance < minDistance)
             {
-               distance = (waypoints.GetPath (waypoints.m_goalPoints[i])->origin - m_radioEntity->v.origin).GetLengthSquared ();
-
-               if (distance < minDistance)
-               {
-                  minDistance = distance;
-                  bombPoint = waypoints.m_goalPoints[i];
-               }
+               minDistance = distance;
+               bombPoint = waypoints.m_goalPoints[i];
             }
-
-            // mark this waypoint as restricted point
-            if (bombPoint != -1 && !waypoints.IsGoalVisited (bombPoint))
-            {
-               // does this bot want to defuse?
-               if (GetTaskId () == TASK_NORMAL)
-               {
-                  // is he approaching this goal?
-                  if (GetTask ()->data == bombPoint)
-                  {
-                     GetTask ()->data = -1;
-                     RadioMessage (Radio_Affirmative);
-
-                  }
-               }
-               waypoints.SetGoalVisited (bombPoint);
-            }
-            g_timeNextBombUpdate = engine.Time () + 0.5f;
          }
+
+         // mark this waypoint as restricted point
+         if (bombPoint != -1 && !waypoints.IsGoalVisited (bombPoint))
+         {
+            // does this bot want to defuse?
+            if (GetTaskId () == TASK_NORMAL)
+            {
+               // is he approaching this goal?
+               if (GetTask ()->data == bombPoint)
+               {
+                  GetTask ()->data = -1;
+                  RadioMessage (Radio_Affirmative);
+
+               }
+            }
+            waypoints.SetGoalVisited (bombPoint);
+         }
+         g_timeNextBombUpdate = engine.Time () + 0.5f;
       }
       break;
 
@@ -3108,7 +3107,7 @@ void Bot::RunTask_Normal (void)
             }
 
             // don't allow vip on as_ maps to camp + don't allow terrorist carrying c4 to camp
-            if (campingAllowed && IsPlayerVIP (GetEntity ()) || ((g_mapType & MAP_DE) && m_team == TERRORIST && !g_bombPlanted && m_hasC4))
+            if (campingAllowed && (IsPlayerVIP (GetEntity ()) || ((g_mapType & MAP_DE) && m_team == TERRORIST && !g_bombPlanted && m_hasC4)))
                campingAllowed = false;
 
             // check if another bot is already camping here
@@ -5994,6 +5993,20 @@ void Bot::ReactOnSound (void)
 
          m_states |= STATE_SEEING_ENEMY;
          m_seeEnemyTime = engine.Time ();
+      }
+      else // check if heard enemy can be shoot through some obstacle
+      {
+         if (m_difficulty > 2 && m_lastEnemy == player && m_seeEnemyTime + 3.0 > engine.Time () && yb_shoots_thru_walls.GetBool () && IsShootableThruObstacle (player->v.origin + player->v.view_ofs))
+         {
+            m_enemy = player;
+            m_lastEnemy = player;
+            m_enemyOrigin = player->v.origin;
+            m_lastEnemyOrigin = player->v.origin;
+
+            m_states |= (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY);
+            m_seeEnemyTime = engine.Time ();
+
+         }
       }
    }
 }

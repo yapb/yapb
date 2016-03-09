@@ -41,6 +41,7 @@ BotManager::BotManager (void)
 
    m_creationTab.RemoveAll ();
    m_killerEntity = NULL;
+   m_balanceCount = 0;
 }
 
 BotManager::~BotManager (void)
@@ -1095,7 +1096,7 @@ void Bot::NewRound (void)
 
    m_maxThrowTimer = 0.0f;
    m_timeTeamOrder = 0.0f;
-   m_timeRepotingInDelay = 0.0f;
+   m_timeRepotingInDelay = Random.Float (40.0f, 240.0f);
    m_askCheckTime = 0.0f;
    m_minSpeed = 260.0f;
    m_prevSpeed = 0.0f;
@@ -1399,7 +1400,7 @@ void BotManager::CalculatePingOffsets (void)
 
 void BotManager::SendPingDataOffsets (edict_t *to)
 {
-   if ((g_gameFlags & GAME_LEGACY) || yb_latency_display.GetInt () != 2 || engine.IsNullEntity (to))
+   if ((g_gameFlags & GAME_LEGACY) || yb_latency_display.GetInt () != 2 || engine.IsNullEntity (to) || (to->v.flags & FL_FAKECLIENT))
       return;
 
    if (!(to->v.flags & FL_CLIENT) && !(((to->v.button & IN_SCORE) || !(to->v.oldbuttons & IN_SCORE))))
@@ -1413,7 +1414,7 @@ void BotManager::SendPingDataOffsets (edict_t *to)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      Bot *bot = GetBot (i);
+      Bot *bot = m_bots[i];
 
       if (bot == NULL)
          continue;

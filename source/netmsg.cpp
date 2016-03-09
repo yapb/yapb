@@ -475,7 +475,7 @@ void NetworkMsg::Execute (void *p)
             if (yb_csdm_mode.GetInt () == 2)
                cl.team = playerIndex;
             else
-               cl.team = g_clients[playerIndex - 1].realTeam;
+               cl.team = cl.realTeam;
 #endif
          }
          break;

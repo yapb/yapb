@@ -1,4 +1,4 @@
-﻿//
+//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -2939,7 +2939,7 @@ export int Server_GetBlendingInterface (int version, void **ppinterface, void *p
    return (*g_serverBlendingAPI) (version, ppinterface, pstudio, rotationmatrix, bonetransform);
 }
 
-export int Meta_Query (char *ifvers, plugin_info_t **pPlugInfo, mutil_funcs_t *pMetaUtilFuncs)
+export int Meta_Query (char *, plugin_info_t **pPlugInfo, mutil_funcs_t *pMetaUtilFuncs)
 {
    // this function is the first function ever called by metamod in the plugin DLL. Its purpose
    // is for metamod to retrieve basic information about the plugin, such as its meta-interface
@@ -2951,7 +2951,7 @@ export int Meta_Query (char *ifvers, plugin_info_t **pPlugInfo, mutil_funcs_t *p
    return TRUE; // tell metamod this plugin looks safe
 }
 
-export int Meta_Attach (PLUG_LOADTIME now, metamod_funcs_t *functionTable, meta_globals_t *pMGlobals, gamedll_funcs_t *pGamedllFuncs)
+export int Meta_Attach (PLUG_LOADTIME, metamod_funcs_t *functionTable, meta_globals_t *pMGlobals, gamedll_funcs_t *pGamedllFuncs)
 {
    // this function is called when metamod attempts to load the plugin. Since it's the place
    // where we can tell if the plugin will be allowed to run or not, we wait until here to make
@@ -2965,7 +2965,7 @@ export int Meta_Attach (PLUG_LOADTIME now, metamod_funcs_t *functionTable, meta_
    return TRUE; // returning true enables metamod to attach this plugin
 }
 
-export int Meta_Detach (PLUG_LOADTIME now, PL_UNLOAD_REASON reason)
+export int Meta_Detach (PLUG_LOADTIME, PL_UNLOAD_REASON)
 {
    // this function is called when metamod unloads the plugin. A basic check is made in order
    // to prevent unloading the plugin if its processing should not be interrupted.

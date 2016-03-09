@@ -1,4 +1,4 @@
-﻿//
+//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -374,8 +374,6 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
    // FIXME: doesn't care for ladder movement (handled separately) should be included in some way
    if ((m_moveSpeed >= 10.0f || m_strafeSpeed >= 10.0f) && m_lastCollTime < engine.Time () && m_seeEnemyTime + 0.8f < engine.Time () && GetTaskId () != TASK_ATTACK)
    {
-      bool cantMoveForward = false;
-
       if (movedDistance < 2.0f && m_prevSpeed >= 20.0f) // didn't we move enough previously?
       {
          // Then consider being stuck
@@ -388,7 +386,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
       else // not stuck yet
       {
          // test if there's something ahead blocking the way
-         if ((cantMoveForward = CantMoveForward (dirNormal, &tr)) && !IsOnLadder ())
+         if (CantMoveForward (dirNormal, &tr) && !IsOnLadder ())
          {
             if (m_firstCollideTime == 0.0f)
                m_firstCollideTime = engine.Time () + 0.2f;
