@@ -11,7 +11,7 @@
 
 // general product information
 #define PRODUCT_NAME "Yet Another POD-Bot"
-#define PRODUCT_VERSION "2.7.2"
+#define PRODUCT_VERSION "2.7.3"
 #define PRODUCT_AUTHOR "YaPB Dev Team"
 #define PRODUCT_URL "https://yapb.jeefo.net"
 #define PRODUCT_EMAIL "dmitry@jeefo.net"
@@ -21,7 +21,7 @@
 #define PRODUCT_LEGAL "Half-Life, Counter-Strike, Counter-Strike: Condition Zero, Steam, Valve is a trademark of Valve Corporation"
 #define PRODUCT_ORIGINAL_NAME "yapb.dll"
 #define PRODUCT_INTERNAL_NAME "skybot"
-#define PRODUCT_VERSION_DWORD_INTERNAL 2,7,2
+#define PRODUCT_VERSION_DWORD_INTERNAL 2,7,3
 #define PRODUCT_VERSION_DWORD PRODUCT_VERSION_DWORD_INTERNAL,0
 #define PRODUCT_SUPPORT_VERSION "1.0 - CZ"
 #define PRODUCT_COMMENTS "http://github.com/jeefo/yapb/"

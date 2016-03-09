@@ -779,9 +779,6 @@ void SoundAttachToClients (edict_t *ent, const char *sample, float volume)
    }
    Client *client = &g_clients[index];
 
-   if (client == NULL)
-      return;
-
    if (strncmp ("player/bhit_flesh", sample, 17) == 0 || strncmp ("player/headshot", sample, 15) == 0)
    {
       // hit/fall sound?

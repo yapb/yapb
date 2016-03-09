@@ -1,4 +1,4 @@
-//
+﻿//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -544,6 +544,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
                state[i] = 0;
             i++;
 
+#if 0
             if (bits & PROBE_DUCK)
             {
                state[i] = 0;
@@ -555,7 +556,8 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
                   state[i] += 5;
             }
             else
-               state[i] = 0;
+#endif
+            state[i] = 0;
             i++;
  
             // weighted all possible moves, now sort them to start with most probable

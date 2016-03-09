@@ -1022,7 +1022,7 @@ void Bot::CombatFight (void)
 
       if (m_currentWeapon == WEAPON_KNIFE) // knife?
          approach = 100;
-      if ((m_states & STATE_SUSPECT_ENEMY) && !(m_states & STATE_SEEING_ENEMY)) // if suspecting enemy stand still
+      else if ((m_states & STATE_SUSPECT_ENEMY) && !(m_states & STATE_SEEING_ENEMY)) // if suspecting enemy stand still
          approach = 49;
       else if (m_isReloading || m_isVIP) // if reloading or vip back off
          approach = 29;

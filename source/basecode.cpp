@@ -235,7 +235,7 @@ void Bot::CheckGrenadeThrow (void)
 
          int friendCount = GetNearbyFriendsNearPosition (path->origin, 256.0f);
 
-         if (friendCount != 0 || !(m_difficulty == 4 && friendCount != 0))
+         if (friendCount > 0 && m_difficulty < 4)
             continue;
 
          m_throw = path->origin;

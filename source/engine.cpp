@@ -18,7 +18,7 @@ void Engine::Precache (edict_t *startEntity)
 
    m_isBotCommand = false;
    m_argumentCount = 0;
-   m_arguments[0] = { 0, };
+   m_arguments[0] = 0x0;
 
    m_localEntity = NULL;
    m_startEntity = startEntity;
@@ -324,7 +324,7 @@ void Engine::IssueBotCommand (edict_t *ent, const char *fmt, ...)
    if (IsNullString (string))
       return;
 
-   m_arguments[0] = { 0, };
+   m_arguments[0] = 0x0;
    m_argumentCount = 0;
 
    m_isBotCommand = true;
@@ -377,7 +377,7 @@ void Engine::IssueBotCommand (edict_t *ent, const char *fmt, ...)
    }
    m_isBotCommand = false;
 
-   m_arguments[0] = { 0, };
+   m_arguments[0] = 0x0;
    m_argumentCount = 0;
 }
 
@@ -386,7 +386,7 @@ const char *Engine::ExtractSingleField (const char *string, int id, bool termina
    // this function gets and returns a particular field in a string where several strings are concatenated
 
    static char field[256];
-   field[0] = { 0, };
+   field[0] = 0x0;
 
    int pos = 0, count = 0, start = 0, stop = 0;
    int length = strlen (string);
