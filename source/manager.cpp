@@ -202,7 +202,7 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
    }
    int index = engine.IndexOfEntity (bot) - 1;
 
-   InternalAssert (index >= 0 && index <= 32); // check index
+   InternalAssert (index >= 0 && index <= MAX_ENGINE_PLAYERS); // check index
    InternalAssert (m_bots[index] == NULL); // check bot slot
 
    m_bots[index] = new Bot (bot, difficulty, personality, team, member, steamId);
@@ -223,7 +223,7 @@ int BotManager::GetIndex (edict_t *ent)
 
    int index = engine.IndexOfEntity (ent) - 1;
 
-   if (index < 0 || index >= 32)
+   if (index < 0 || index >= MAX_ENGINE_PLAYERS)
       return -1;
 
    if (m_bots[index] != NULL)
@@ -236,7 +236,7 @@ Bot *BotManager::GetBot (int index)
 {
    // this function finds a bot specified by index, and then returns pointer to it (using own bot array)
 
-   if (index < 0 || index >= 32)
+   if (index < 0 || index >= MAX_ENGINE_PLAYERS)
       return NULL;
 
    if (m_bots[index] != NULL)
@@ -830,7 +830,7 @@ void BotManager::Free (void)
 {
    // this function free all bots slots (used on server shutdown)
 
-   for (int i = 0; i < 32; i++)
+   for (int i = 0; i < MAX_ENGINE_PLAYERS; i++)
       Free (i);
 }
 

@@ -185,7 +185,7 @@ public:
 
    inline int GetTeam (edict_t *ent)
    {
-      extern Client g_clients[32];
+      extern Client g_clients[MAX_ENGINE_PLAYERS];
 
 #ifndef XASH_CSDM
       return g_clients[IndexOfEntity (ent) - 1].team;

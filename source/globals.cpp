@@ -37,7 +37,7 @@ float g_autoPathDistance = 250.0f;
 
 int g_lastRadio[2];
 int g_storeAddbotVars[4];
-int g_radioSelect[32];
+int g_radioSelect[MAX_ENGINE_PLAYERS];
 int g_gameFlags = 0;
 int g_numWaypoints = 0;
 int g_mapType = 0;
@@ -65,7 +65,7 @@ BlendAPI_t g_serverBlendingAPI = NULL;
 FuncPointers_t g_funcPointers = NULL;
 
 enginefuncs_t g_engfuncs;
-Client g_clients[32];
+Client g_clients[MAX_ENGINE_PLAYERS];
 WeaponProperty g_weaponDefs[MAX_WEAPONS + 1];
 
 edict_t *g_hostEntity = NULL;

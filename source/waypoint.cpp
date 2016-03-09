@@ -1052,7 +1052,7 @@ void Waypoint::InitTypes (void)
 
 bool Waypoint::Load (void)
 {
-   MemoryFile fp (CheckSubfolderFile ());
+   File fp (CheckSubfolderFile (), "rb");
 
    WaypointHeader header;
    memset (&header, 0, sizeof (header));
@@ -1113,6 +1113,16 @@ bool Waypoint::Load (void)
                if (fp.Read (m_paths[i], sizeof (Path)) == 0)
                {
                   sprintf (m_infoBuffer, "%s.pwf - truncated waypoint file (count: %d, need: %d)", map, i, g_numWaypoints);
+                  AddLogEntry (true, LL_ERROR, m_infoBuffer);
+
+                  fp.Close ();
+                  return false;
+               }
+
+               // more checks of waypoint quality
+               if (m_paths[i]->pathNumber < 0 || m_paths[i]->pathNumber > g_numWaypoints)
+               {
+                  sprintf (m_infoBuffer, "%s.pwf - bad waypoint file (path #%d index is out of bounds)", map, i);
                   AddLogEntry (true, LL_ERROR, m_infoBuffer);
 
                   fp.Close ();

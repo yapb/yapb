@@ -48,7 +48,7 @@ extern int g_rusherWeaponPrefs[NUM_WEAPONS];
 extern int g_carefulWeaponPrefs[NUM_WEAPONS];
 extern int g_grenadeBuyPrecent[NUM_WEAPONS - 23];
 extern int g_botBuyEconomyTable[NUM_WEAPONS - 15];
-extern int g_radioSelect[32];
+extern int g_radioSelect[MAX_ENGINE_PLAYERS];
 extern int g_lastRadio[2];
 extern int g_storeAddbotVars[4];
 extern int *g_weaponPrefs[];
@@ -62,7 +62,7 @@ extern RandomSequenceOfUnique Random;
 extern WeaponSelect g_weaponSelect[NUM_WEAPONS + 1];
 extern WeaponProperty g_weaponDefs[MAX_WEAPONS + 1];
 
-extern Client g_clients[32];
+extern Client g_clients[MAX_ENGINE_PLAYERS];
 extern MenuText g_menus[21];
 extern TaskItem g_taskFilters[];
 

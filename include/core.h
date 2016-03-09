@@ -552,6 +552,7 @@ const int MAX_WAYPOINTS = 1024;
 const int MAX_WEAPONS = 32;
 const int NUM_WEAPONS = 26;
 const int MAX_COLLIDE_MOVES = 3;
+const int MAX_ENGINE_PLAYERS = 32; // we can have 64 players with xash
 
 // weapon masks
 const int WEAPON_PRIMARY = ((1 << WEAPON_XM1014) | (1 <<WEAPON_M3) | (1 << WEAPON_MAC10) | (1 << WEAPON_UMP45) | (1 << WEAPON_MP5) | (1 << WEAPON_TMP) | (1 << WEAPON_P90) | (1 << WEAPON_AUG) | (1 << WEAPON_M4A1) | (1 << WEAPON_SG552) | (1 << WEAPON_AK47) | (1 << WEAPON_SCOUT) | (1 << WEAPON_SG550) | (1 << WEAPON_AWP) | (1 << WEAPON_G3SG1) | (1 << WEAPON_M249) | (1 << WEAPON_FAMAS) | (1 << WEAPON_GALIL));
@@ -1258,7 +1259,7 @@ class BotManager
 private:
    Array <CreateQueue> m_creationTab; // bot creation tab
 
-   Bot *m_bots[32]; // all available bots
+   Bot *m_bots[MAX_ENGINE_PLAYERS]; // all available bots
 
    float m_maintainTime; // time to maintain bot creation 
    float m_quotaMaintainTime; // time to maintain bot quota

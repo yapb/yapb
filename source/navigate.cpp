@@ -30,6 +30,10 @@ int Bot::FindGoal (void)
             break;
          }
       }
+
+      // forcing terrorist bot to not move to another bombspot
+      if (m_inBombZone && !m_hasProgressBar && m_hasC4)
+         return waypoints.FindNearest (pev->origin, 400.0f, FLAG_GOAL);
    }
    int tactic = 0;
 

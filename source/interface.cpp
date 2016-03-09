@@ -1,4 +1,4 @@
-//
+﻿//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -1164,7 +1164,7 @@ void ClientDisconnect (edict_t *ent)
 
    int i = engine.IndexOfEntity (ent) - 1;
 
-   InternalAssert (i >= 0 && i < 32);
+   InternalAssert (i >= 0 && i < MAX_ENGINE_PLAYERS);
 
    Bot *bot = bots.GetBot (i);
 
