@@ -479,9 +479,19 @@ void ParseVoiceEvent (const String &base, int type, float timeToRepeat)
    temp.RemoveAll ();
 }
 
+// forwards for MemoryFile
+MemoryFile::MF_Loader MemoryFile::Loader = NULL;
+MemoryFile::MF_Unloader MemoryFile::Unloader = NULL;
+
 void InitConfig (void)
 {
-   File fp;
+   // assign engine loaders to memoryfile handler
+   if (MemoryFile::Loader == NULL || MemoryFile::Unloader == NULL)
+   {
+      MemoryFile::Loader = reinterpret_cast <MemoryFile::MF_Loader> (g_engfuncs.pfnLoadFileForMe);
+      MemoryFile::Unloader = reinterpret_cast <MemoryFile::MF_Unloader> (g_engfuncs.pfnFreeFile);
+   }
+   MemoryFile fp;
    char line[512];
 
    KeywordFactory replyKey;
@@ -2994,6 +3004,15 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    // register our cvars
    ConVarWrapper::GetReference ().PushRegisteredConVarsToEngine ();
 
+   // ensure we're have all needed directories
+   {
+      const char *mod = engine.GetModName ();
+
+      // create the needed paths
+      File::CreatePath (const_cast <char *> (FormatBuffer ("%s/addons/yapb/conf/lang", mod)));
+      File::CreatePath (const_cast <char *> (FormatBuffer ("%s/addons/yapb/data/learned", mod)));
+   }
+
 #ifdef PLATFORM_ANDROID
    g_gameFlags |= (GAME_LEGACY | GAME_XASH | GAME_MOBILITY);
 
@@ -3001,13 +3020,13 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       return;  // we should stop the attempt for loading the real gamedll, since metamod handle this for us
 
 #ifdef LOAD_HARDFP
-   #define GAME_SERVER_DLL "libserver_hardfp.so"
+   const char *serverDLL = "libserver_hardfp.so";
 #else
-   #define GAME_SERVER_DLL "libserver.so"
+   const char *serverDLL = "libserver.so";
 #endif
 
    char gameDLLName[256];
-   snprintf (gameDLLName, SIZEOF_CHAR (gameDLLName), "%s/%s", getenv ("XASH3D_GAMELIBDIR"), GAME_SERVER_DLL);
+   snprintf (gameDLLName, SIZEOF_CHAR (gameDLLName), "%s/%s", getenv ("XASH3D_GAMELIBDIR"), serverDLL);
 
    g_gameLib = new Library (gameDLLName);
 

@@ -1052,7 +1052,7 @@ void Waypoint::InitTypes (void)
 
 bool Waypoint::Load (void)
 {
-   File fp (CheckSubfolderFile (), "rb");
+   MemoryFile fp (CheckSubfolderFile ());
 
    WaypointHeader header;
    memset (&header, 0, sizeof (header));

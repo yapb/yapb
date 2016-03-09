@@ -4457,17 +4457,17 @@ void Bot::RunTask_PickupItem ()
          if (id < 7)
          {
             // secondary weapon. i.e., pistol
-            int weaponID = 0;
+            int wid = 0;
 
             for (id = 0; id < 7; id++)
             {
                if (pev->weapons & (1 << g_weaponSelect[id].id))
-                  weaponID = id;
+                  wid = id;
             }
 
-            if (weaponID > 0)
+            if (wid > 0)
             {
-               SelectWeaponbyNumber (weaponID);
+               SelectWeaponbyNumber (wid);
                engine.IssueBotCommand (GetEntity (), "drop");
 
                if (HasShield ()) // If we have the shield...
@@ -4478,11 +4478,11 @@ void Bot::RunTask_PickupItem ()
          else
          {
             // primary weapon
-            int weaponID = GetHighestWeapon ();
+            int wid = GetHighestWeapon ();
 
-            if ((weaponID > 6) || HasShield ())
+            if (wid > 6 || HasShield ())
             {
-               SelectWeaponbyNumber (weaponID);
+               SelectWeaponbyNumber (wid);
                engine.IssueBotCommand (GetEntity (), "drop");
             }
             EquipInBuyzone (BUYSTATE_PRIMARY_WEAPON);
@@ -4502,11 +4502,11 @@ void Bot::RunTask_PickupItem ()
       else if (itemDistance < 50.0f) // near to shield?
       {
          // get current best weapon to check if it's a primary in need to be dropped
-         int weaponID = GetHighestWeapon ();
+         int wid = GetHighestWeapon ();
 
-         if (weaponID > 6)
+         if (wid > 6)
          {
-            SelectWeaponbyNumber (weaponID);
+            SelectWeaponbyNumber (wid);
             engine.IssueBotCommand (GetEntity (), "drop");
          }
       }
@@ -5117,12 +5117,12 @@ void Bot::DisplayDebugOverlay (void)
             else
                strcpy (pickupName, " (null)");
 
-            WeaponSelect *selectTab = &g_weaponSelect[0];
+            WeaponSelect *tab = &g_weaponSelect[0];
             char weaponCount = 0;
 
-            while (m_currentWeapon != selectTab->id && weaponCount < NUM_WEAPONS)
+            while (m_currentWeapon != tab->id && weaponCount < NUM_WEAPONS)
             {
-               selectTab++;
+               tab++;
                weaponCount++;
             }
             memset (aimFlags, 0, sizeof (aimFlags));
@@ -5169,7 +5169,7 @@ void Bot::DisplayDebugOverlay (void)
                }
             }
             else
-               strncpy (weaponName, selectTab->weaponName, SIZEOF_CHAR (weaponName));
+               strncpy (weaponName, tab->weaponName, SIZEOF_CHAR (weaponName));
 
             char outputBuffer[512];
             memset (outputBuffer, 0, sizeof (outputBuffer));
@@ -5326,8 +5326,7 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits)
 void Bot::TakeBlinded (const Vector &fade, int alpha)
 {
    // this function gets called by network message handler, when screenfade message get's send
-   // it's used to make bot blind froumd the grenade.
-
+   // it's used to make bot blind from the grenade.
 
    if (fade.x != 255.0f || fade.y != 255.0f || fade.z != 255.0f || alpha <= 170.0f)
       return;
@@ -5342,29 +5341,29 @@ void Bot::TakeBlinded (const Vector &fade, int alpha)
       m_blindMoveSpeed = 0.0f;
       m_blindSidemoveSpeed = 0.0f;
       m_blindButton = IN_DUCK;
+
+      return;
    }
-   else if (m_difficulty > 2)
+
+   m_blindMoveSpeed = -pev->maxspeed;
+   m_blindSidemoveSpeed = 0.0f;
+
+   float walkSpeed = GetWalkSpeed ();
+
+   if (Random.Long (0, 100) > 50)
+      m_blindSidemoveSpeed = walkSpeed;
+   else
+      m_blindSidemoveSpeed = -walkSpeed;
+
+   if (pev->health < 85.0f)
+      m_blindMoveSpeed = -walkSpeed;
+   else if (m_personality == PERSONALITY_CAREFUL)
    {
-      m_blindMoveSpeed = -pev->maxspeed;
-      m_blindSidemoveSpeed = 0.0f;
-
-      float walkSpeed = GetWalkSpeed ();
-
-      if (Random.Long (0, 100) > 50)
-         m_blindSidemoveSpeed = walkSpeed;
-      else
-         m_blindSidemoveSpeed = -walkSpeed;
-
-      if (pev->health < 85.0f)
-         m_blindMoveSpeed = -walkSpeed;
-      else if (m_personality == PERSONALITY_CAREFUL)
-      {
-         m_blindMoveSpeed = 0.0f;
-         m_blindButton = IN_DUCK;
-      }
-      else
-         m_blindMoveSpeed = walkSpeed;
+      m_blindMoveSpeed = 0.0f;
+      m_blindButton = IN_DUCK;
    }
+   else
+      m_blindMoveSpeed = walkSpeed;
 }
 
 void Bot::CollectGoalExperience (int damage, int team)

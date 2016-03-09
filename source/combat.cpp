@@ -735,13 +735,13 @@ void Bot::FireWeapon (void)
    {
       if (IsFriendInLineOfFire (distance))
       {
-         m_fightStyle = 0;
+         m_fightStyle = FIGHT_STRAFE;
          m_lastFightStyleCheck = engine.Time ();
 
          return;
       }
    }
-   WeaponSelect *selectTab = &g_weaponSelect[0];
+   WeaponSelect *tab = &g_weaponSelect[0];
 
    edict_t *enemy = m_enemy;
 
@@ -757,18 +757,18 @@ void Bot::FireWeapon (void)
       goto WeaponSelectEnd;
 
    // loop through all the weapons until terminator is found...
-   while (selectTab[selectIndex].id)
+   while (tab[selectIndex].id)
    {
       // is the bot carrying this weapon?
-      if (weapons & (1 << selectTab[selectIndex].id))
+      if (weapons & (1 << tab[selectIndex].id))
       {
          // is enough ammo available to fire AND check is better to use pistol in our current situation...
-         if (m_ammoInClip[selectTab[selectIndex].id] > 0 && !IsWeaponBadInDistance (selectIndex, distance))
+         if (m_ammoInClip[tab[selectIndex].id] > 0 && !IsWeaponBadInDistance (selectIndex, distance))
             chosenWeaponIndex = selectIndex;
       }
       selectIndex++;
    }
-   selectId = selectTab[chosenWeaponIndex].id;
+   selectId = tab[chosenWeaponIndex].id;
 
    // if no available weapon...
    if (chosenWeaponIndex == 0)
@@ -776,14 +776,14 @@ void Bot::FireWeapon (void)
       selectIndex = 0;
 
       // loop through all the weapons until terminator is found...
-      while (selectTab[selectIndex].id)
+      while (tab[selectIndex].id)
       {
-         int id = selectTab[selectIndex].id;
+         int id = tab[selectIndex].id;
 
          // is the bot carrying this weapon?
          if (weapons & (1 << id))
          {
-            if ( g_weaponDefs[id].ammo1 != -1 && g_weaponDefs[id].ammo1 < 32 && m_ammo[g_weaponDefs[id].ammo1] >= selectTab[selectIndex].minPrimaryAmmo)
+            if ( g_weaponDefs[id].ammo1 != -1 && g_weaponDefs[id].ammo1 < 32 && m_ammo[g_weaponDefs[id].ammo1] >= tab[selectIndex].minPrimaryAmmo)
             {
                // available ammo found, reload weapon
                if (m_reloadState == RELOAD_NONE || m_reloadCheckTime > engine.Time ())
@@ -823,14 +823,14 @@ WeaponSelectEnd:
       return;
    }
 
-   if (selectTab[chosenWeaponIndex].id != selectId)
+   if (tab[chosenWeaponIndex].id != selectId)
    {
       chosenWeaponIndex = 0;
 
       // loop through all the weapons until terminator is found...
-      while (selectTab[chosenWeaponIndex].id)
+      while (tab[chosenWeaponIndex].id)
       {
-         if (selectTab[chosenWeaponIndex].id == selectId)
+         if (tab[chosenWeaponIndex].id == selectId)
             break;
 
          chosenWeaponIndex++;
@@ -896,7 +896,7 @@ WeaponSelectEnd:
       }    
       else
       {
-         if (selectTab[chosenWeaponIndex].primaryFireHold && m_ammo[g_weaponDefs[selectTab[selectIndex].id].ammo1] > selectTab[selectIndex].minPrimaryAmmo) // if automatic weapon, just press attack
+         if (tab[chosenWeaponIndex].primaryFireHold && m_ammo[g_weaponDefs[tab[selectIndex].id].ammo1] > tab[selectIndex].minPrimaryAmmo) // if automatic weapon, just press attack
             pev->button |= IN_ATTACK;
          else // if not, toggle buttons
          {       
@@ -918,7 +918,7 @@ WeaponSelectEnd:
          return;
       }
 
-      if (selectTab[chosenWeaponIndex].primaryFireHold)
+      if (tab[chosenWeaponIndex].primaryFireHold)
       {
          m_shootTime = engine.Time ();
          m_zoomCheckTime = engine.Time ();
@@ -943,9 +943,9 @@ bool Bot::IsWeaponBadInDistance (int weaponIndex, float distance)
    if (m_difficulty < 2)
       return false;
 
-   int weaponID = g_weaponSelect[weaponIndex].id;
+   int wid = g_weaponSelect[weaponIndex].id;
 
-   if (weaponID == WEAPON_KNIFE)
+   if (wid == WEAPON_KNIFE)
 	   return false;
 
    // check is ammo available for secondary weapon
@@ -953,11 +953,11 @@ bool Bot::IsWeaponBadInDistance (int weaponIndex, float distance)
       return false;
 
    // better use pistol in short range distances, when using sniper weapons
-   if ((weaponID == WEAPON_SCOUT || weaponID == WEAPON_AWP || weaponID == WEAPON_G3SG1 || weaponID == WEAPON_SG550) && distance < 500.0f)
+   if ((wid == WEAPON_SCOUT || wid == WEAPON_AWP || wid == WEAPON_G3SG1 || wid == WEAPON_SG550) && distance < 500.0f)
       return true;
 
    // shotguns is too inaccurate at long distances, so weapon is bad
-   if ((weaponID == WEAPON_M3 || weaponID == WEAPON_XM1014) && distance > 750.0f)
+   if ((wid == WEAPON_M3 || wid == WEAPON_XM1014) && distance > 750.0f)
       return true;
 
    return false;
@@ -1055,7 +1055,7 @@ void Bot::CombatFight (void)
 
       if (UsesSniper ())
       {
-         m_fightStyle = 1;
+         m_fightStyle = FIGHT_STAY;
          m_lastFightStyleCheck = engine.Time ();
       }
       else if (UsesRifle () || UsesSubmachineGun ())
@@ -1065,20 +1065,20 @@ void Bot::CombatFight (void)
             int rand = Random.Long (1, 100);
 
             if (distance < 450.0f)
-               m_fightStyle = 0;
+               m_fightStyle = FIGHT_STRAFE;
             else if (distance < 1024.0f)
             {
                if (rand < (UsesSubmachineGun () ? 50 : 30))
-                  m_fightStyle = 0;
+                  m_fightStyle = FIGHT_STRAFE;
                else
-                  m_fightStyle = 1;
+                  m_fightStyle = FIGHT_STAY;
             }
             else
             {
                if (rand < (UsesSubmachineGun () ? 80 : 93))
-                  m_fightStyle = 1;
+                  m_fightStyle = FIGHT_STAY;
                else
-                  m_fightStyle = 0;
+                  m_fightStyle = FIGHT_STRAFE;
             }
             m_lastFightStyleCheck = engine.Time ();
          }
@@ -1088,15 +1088,15 @@ void Bot::CombatFight (void)
          if (m_lastFightStyleCheck + 3.0f < engine.Time ())
          {
             if (Random.Long (0, 100) < 50)
-               m_fightStyle = 1;
+               m_fightStyle = FIGHT_STRAFE;
             else
-               m_fightStyle = 0;
+               m_fightStyle = FIGHT_STAY;
 
             m_lastFightStyleCheck = engine.Time ();
          }
       }
 
-      if (m_fightStyle == 0 || ((pev->button & IN_RELOAD) || m_isReloading) || (UsesPistol () && distance < 400.0f) || m_currentWeapon == WEAPON_KNIFE)
+      if (m_fightStyle == FIGHT_STRAFE || ((pev->button & IN_RELOAD) || m_isReloading) || (UsesPistol () && distance < 400.0f) || m_currentWeapon == WEAPON_KNIFE)
       {
          if (m_strafeSetTime < engine.Time ())
          {
@@ -1107,24 +1107,24 @@ void Bot::CombatFight (void)
             const Vector &rightSide = g_pGlobals->v_right.Normalize2D ();
 
             if ((dirToPoint | rightSide) < 0)
-               m_combatStrafeDir = 1;
+               m_combatStrafeDir = STRAFE_DIR_LEFT;
             else
-               m_combatStrafeDir = 0;
+               m_combatStrafeDir = STRAFE_DIR_RIGHT;
 
             if (Random.Long (1, 100) < 30)
-               m_combatStrafeDir ^= 1;
+               m_combatStrafeDir == STRAFE_DIR_LEFT ? STRAFE_DIR_RIGHT : STRAFE_DIR_LEFT;
 
-            m_strafeSetTime = engine.Time () + Random.Float (0.5f, 3.0f);
+            m_strafeSetTime = engine.Time () + Random.Float (1.5f, 3.0f);
          }
 
-         if (m_combatStrafeDir == 0)
+         if (m_combatStrafeDir == STRAFE_DIR_LEFT)
          {
             if (!CheckWallOnLeft ())
                m_strafeSpeed = -pev->maxspeed;
             else
             {
-               m_combatStrafeDir ^= 1;
-               m_strafeSetTime = engine.Time () + 1.0f;
+               m_combatStrafeDir == STRAFE_DIR_LEFT ? STRAFE_DIR_RIGHT : STRAFE_DIR_LEFT;
+               m_strafeSetTime = engine.Time () + 1.5f;
             }
          }
          else
@@ -1133,8 +1133,8 @@ void Bot::CombatFight (void)
                m_strafeSpeed = pev->maxspeed;
             else
             {
-               m_combatStrafeDir ^= 1;
-               m_strafeSetTime = engine.Time () + 1.0f;
+               m_combatStrafeDir == STRAFE_DIR_LEFT ? STRAFE_DIR_RIGHT : STRAFE_DIR_LEFT;
+               m_strafeSetTime = engine.Time () + 1.5f;
             }
          }
 
@@ -1147,9 +1147,9 @@ void Bot::CombatFight (void)
          if (m_currentWeapon == WEAPON_KNIFE)
             m_strafeSpeed = 0.0f;
       }
-      else if (m_fightStyle == 1)
+      else if (m_fightStyle == FIGHT_STAY)
       {
-         if (!(m_visibility & (VISIBLE_HEAD | VISIBLE_BODY)) && GetTaskId () != TASK_SEEKCOVER && GetTaskId () != TASK_HUNTENEMY && (m_visibility & VISIBLE_BODY) && !(m_visibility & VISIBLE_OTHER) && waypoints.IsDuckVisible (m_currentWaypointIndex, waypoints.FindNearest (m_enemy->v.origin)))
+         if ((m_visibility & (VISIBLE_HEAD | VISIBLE_BODY)) && GetTaskId () != TASK_SEEKCOVER && GetTaskId () != TASK_HUNTENEMY && waypoints.IsDuckVisible (m_currentWaypointIndex, waypoints.FindNearest (m_enemy->v.origin)))
             m_duckTime = engine.Time () + 0.5f;
 
          m_moveSpeed = 0.0f;
@@ -1244,19 +1244,19 @@ bool Bot::UsesSniper (void)
 
 bool Bot::UsesRifle (void)
 {
-   WeaponSelect *selectTab = &g_weaponSelect[0];
+   WeaponSelect *tab = &g_weaponSelect[0];
    int count = 0;
 
-   while (selectTab->id)
+   while (tab->id)
    {
-      if (m_currentWeapon == selectTab->id)
+      if (m_currentWeapon == tab->id)
          break;
 
-      selectTab++;
+      tab++;
       count++;
    }
 
-   if (selectTab->id && count > 13)
+   if (tab->id && count > 13)
       return true;
 
    return false;
@@ -1264,20 +1264,20 @@ bool Bot::UsesRifle (void)
 
 bool Bot::UsesPistol (void)
 {
-   WeaponSelect *selectTab = &g_weaponSelect[0];
+   WeaponSelect *tab = &g_weaponSelect[0];
    int count = 0;
 
    // loop through all the weapons until terminator is found
-   while (selectTab->id)
+   while (tab->id)
    {
-      if (m_currentWeapon == selectTab->id)
+      if (m_currentWeapon == tab->id)
          break;
 
-      selectTab++;
+      tab++;
       count++;
    }
 
-   if (selectTab->id && count < 7)
+   if (tab->id && count < 7)
       return true;
 
    return false;
@@ -1330,30 +1330,30 @@ void Bot::SelectBestWeapon (void)
    if (m_isReloading)
       return;
 
-   WeaponSelect *selectTab = &g_weaponSelect[0];
+   WeaponSelect *tab = &g_weaponSelect[0];
 
    int selectIndex = 0;
    int chosenWeaponIndex = 0;
 
    // loop through all the weapons until terminator is found...
-   while (selectTab[selectIndex].id)
+   while (tab[selectIndex].id)
    {
       // is the bot NOT carrying this weapon?
-      if (!(pev->weapons & (1 << selectTab[selectIndex].id)))
+      if (!(pev->weapons & (1 << tab[selectIndex].id)))
       {
          selectIndex++;  // skip to next weapon
          continue;
       }
 
-      int id = selectTab[selectIndex].id;
+      int id = tab[selectIndex].id;
       bool ammoLeft = false;
 
       // is the bot already holding this weapon and there is still ammo in clip?
-      if (selectTab[selectIndex].id == m_currentWeapon && (GetAmmoInClip () < 0 || GetAmmoInClip () >= selectTab[selectIndex].minPrimaryAmmo))
+      if (tab[selectIndex].id == m_currentWeapon && (GetAmmoInClip () < 0 || GetAmmoInClip () >= tab[selectIndex].minPrimaryAmmo))
          ammoLeft = true;
 
       // is no ammo required for this weapon OR enough ammo available to fire
-      if (g_weaponDefs[id].ammo1 < 0 || (g_weaponDefs[id].ammo1 < 32 && m_ammo[g_weaponDefs[id].ammo1] >= selectTab[selectIndex].minPrimaryAmmo))
+      if (g_weaponDefs[id].ammo1 < 0 || (g_weaponDefs[id].ammo1 < 32 && m_ammo[g_weaponDefs[id].ammo1] >= tab[selectIndex].minPrimaryAmmo))
          ammoLeft = true;
 
       if (ammoLeft)
@@ -1365,11 +1365,11 @@ void Bot::SelectBestWeapon (void)
    chosenWeaponIndex %= NUM_WEAPONS + 1;
    selectIndex = chosenWeaponIndex;
 
-   int id = selectTab[selectIndex].id;
+   int id = tab[selectIndex].id;
 
    // select this weapon if it isn't already selected
    if (m_currentWeapon != id)
-      SelectWeaponByName (selectTab[selectIndex].weaponName);
+      SelectWeaponByName (tab[selectIndex].weaponName);
 
    m_isReloading = false;
    m_reloadState = RELOAD_NONE;
@@ -1387,21 +1387,21 @@ void Bot::SelectPistol (void)
 
 int Bot::GetHighestWeapon (void)
 {
-   WeaponSelect *selectTab = &g_weaponSelect[0];
+   WeaponSelect *tab = &g_weaponSelect[0];
 
    int weapons = pev->weapons;
    int num = 0;
    int i = 0;
 
    // loop through all the weapons until terminator is found...
-   while (selectTab->id)
+   while (tab->id)
    {
       // is the bot carrying this weapon?
-      if (weapons & (1 << selectTab->id))
+      if (weapons & (1 << tab->id))
          num = i;
 
       i++;
-      selectTab++;
+      tab++;
    }
    return num;
 }

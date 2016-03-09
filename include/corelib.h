@@ -3695,6 +3695,287 @@ public:
 };
 
 //
+// Class: MemoryFile
+//  Simple Memory file wrapper class. (RO)
+//
+class MemoryFile
+{
+public:
+   typedef unsigned char *(*MF_Loader) (const char *, int *);
+   typedef void (*MF_Unloader) (unsigned char *);
+
+public:
+   static MF_Loader Loader;
+   static MF_Unloader Unloader;
+
+protected:
+   String m_fileName;
+   int m_fileSize;
+   int m_filePos;
+   unsigned char *m_fileBuffer;
+
+   //
+   // Group: (Con/De)structors
+   //
+public:
+
+   //
+   // Function: File
+   //  Default file class, constructor.
+   //
+   MemoryFile (void)
+   {
+      m_fileSize = 0;
+      m_filePos = 0;
+
+      m_fileBuffer = NULL;
+      m_fileName.Empty ();
+   }
+
+   //
+   // Function: File
+   //  Default file class, constructor, with file opening.
+   //
+   MemoryFile (const String &fileName)
+   {
+      m_fileSize = 0;
+      m_filePos = 0;
+
+      m_fileBuffer = NULL;
+      m_fileName.Empty ();
+
+      Open (fileName);
+   }
+
+   //
+   // Function: ~File
+   //  Default file class, destructor.
+   //
+   ~MemoryFile (void)
+   {
+      Close ();
+   }
+
+   //
+   // Function: Open
+   //  Opens file and gets it's size.
+   //
+   // Parameters:
+   //  fileName - String containing file name.
+   //
+   // Returns:
+   //  True if operation succeeded, false otherwise.
+   //
+   bool Open (const String &fileName)
+   {
+      if (fileName.IsEmpty () || Loader == NULL)
+         return false;
+
+      m_fileSize = 0;
+      m_filePos = 0;
+      m_fileName = fileName;
+
+      m_fileBuffer = Loader (fileName.GetBuffer (), &m_fileSize);
+
+      if (m_fileBuffer == NULL || m_fileSize < 0)
+         return false;
+
+      return true;
+   }
+
+   //
+   // Function: Close
+   //  Closes file, and destroys STDIO file object.
+   //
+   void Close (void)
+   {
+      if (Unloader != NULL)
+         Unloader (m_fileBuffer);
+
+      m_fileSize = 0;
+      m_filePos = 0;
+
+      m_fileBuffer = NULL;
+      m_fileName.Empty ();
+   }
+
+   //
+   // Function: GetChar
+   //  Pops one character from the file stream.
+   //
+   // Returns:
+   //  Popped from stream character
+   //
+   int GetChar (void)
+   {
+      if (m_fileBuffer == NULL || m_filePos >= m_fileSize)
+         return -1;
+
+      int readCh = m_fileBuffer[m_filePos];
+      m_filePos++;
+
+      return readCh;
+   }
+
+   //
+   // Function: GetBuffer
+   //  Gets the single line, from the non-binary stream.
+   //
+   // Parameters:
+   //  buffer - Pointer to buffer, that should receive string.
+   //  count - Max. size of buffer.
+   //
+   // Returns:
+   //  Pointer to string containing popped line.
+   //
+   char *GetBuffer (char *buffer, int count)
+   {
+      if (m_fileBuffer == NULL || m_filePos >= m_fileSize)
+         return NULL;
+
+      int lineStartOffset = m_filePos;
+      int lineEndOffset = (m_fileSize - m_filePos > count - 1) ? (lineEndOffset = m_filePos + count - 1) : lineEndOffset = m_fileSize - 1;
+
+      while (m_filePos < lineEndOffset)
+      {
+         if (m_fileBuffer[m_filePos] == 0x0a)
+            lineEndOffset = m_filePos;
+
+         m_filePos++;
+      }
+
+      if (m_filePos == lineStartOffset)
+         return NULL;
+
+      int pos = lineStartOffset;
+
+      for (; pos <= lineEndOffset; pos++)
+         buffer[pos - lineStartOffset] = m_fileBuffer[pos];
+
+      if (buffer[pos - lineStartOffset - 2] == 0x0d)
+      {
+         buffer[pos - lineStartOffset - 2] = '\n';
+         pos--;
+      }
+
+      if (buffer[pos - lineStartOffset - 1] == 0x0d || buffer[pos - lineStartOffset - 1] == 0x0a)
+         buffer[pos - lineStartOffset - 1] = '\n';
+
+      buffer[pos - lineStartOffset] = 0;
+
+      return buffer;
+   }
+
+   //
+   // Function: GetBuffer
+   //  Gets the line from file stream, and stores it inside string class.
+   //
+   // Parameters:
+   //  buffer - String buffer, that should receive line.
+   //  count - Max. size of buffer.
+   //
+   // Returns:
+   //  True if operation succeeded, false otherwise.
+   //
+   bool GetBuffer (String &buffer, int count)
+   {
+      return !String (GetBuffer (buffer, count)).IsEmpty ();
+   }
+
+   //
+   // Function: Read
+   //  Reads buffer from file stream in binary format.
+   //
+   // Parameters:
+   //  buffer - Holder for read buffer.
+   //  size - Size of the buffer to read.
+   //  count - Number of buffer chunks to read.
+   //
+   // Returns:
+   //  Number of bytes red from file.
+   //
+   int Read (void *buffer, int size, int count = 1)
+   {
+      if (m_fileBuffer == NULL || m_filePos >= m_fileSize)
+         return 0;
+
+      if (buffer == NULL || size == 0 || count == 0 || m_fileBuffer == NULL)
+         return 0;
+
+      int blocksRead = min ((m_fileSize - m_filePos) / size, count);
+
+      memcpy (buffer, &m_fileBuffer[m_filePos], blocksRead * size);
+      m_filePos += blocksRead * size;
+
+      return blocksRead;
+   }
+
+   //
+   // Function: Seek
+   //  Seeks file stream with specified parameters.
+   //
+   // Parameters:
+   //  offset - Offset where cursor should be set.
+   //  origin - Type of offset set.
+   //
+   // Returns:
+   //  True if operation success, false otherwise.
+   //
+   bool Seek (long offset, int origin)
+   {
+      if (m_fileBuffer == NULL || m_filePos >= m_fileSize)
+         return false;
+
+      if (origin == SEEK_SET)
+      {
+         if (offset >= m_fileSize)
+            return false;
+
+         m_filePos = offset;
+      }
+      else if (origin == SEEK_END)
+      {
+         if (offset >= m_fileSize)
+            return false;
+
+         m_filePos = m_fileSize - offset;
+      }
+      else
+      {
+         if (m_filePos + offset >= m_fileSize)
+            return false;
+
+         m_filePos += offset;
+      }
+      return true;
+   }
+
+   //
+   // Function: GetSize
+   //  Gets the file size of opened file stream.
+   //
+   // Returns:
+   //  Number of bytes in file.
+   //
+   int GetSize (void)
+   {
+      return m_fileSize;
+   }
+
+   //
+   // Function: IsValid
+   //  Checks whether file stream is valid.
+   //
+   // Returns:
+   //  True if file stream valid, false otherwise.
+   //
+   bool IsValid (void)
+   {
+      return m_fileBuffer != NULL && m_fileSize > 0;
+   }
+};
+
+//
 // Type: StrVec
 //  Array of strings.
 //

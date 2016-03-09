@@ -1204,8 +1204,8 @@ void Bot::NewRound (void)
    m_shieldCheckTime = 0.0f;
    m_zoomCheckTime = 0.0f;
    m_strafeSetTime = 0.0f;
-   m_combatStrafeDir = 0;
-   m_fightStyle = 0;
+   m_combatStrafeDir = STRAFE_DIR_NONE;
+   m_fightStyle = FIGHT_NONE;
    m_lastFightStyleCheck = 0.0f;
 
    m_checkWeaponSwitch = true;

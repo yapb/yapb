@@ -452,7 +452,7 @@ bool IsValidBot (edict_t *ent)
    return false;
 }
 
-bool OpenConfig (const char *fileName, const char *errorIfNotExists, File *outFile, bool languageDependant /*= false*/)
+bool OpenConfig (const char *fileName, const char *errorIfNotExists, MemoryFile *outFile, bool languageDependant /*= false*/)
 {
    if (outFile->IsValid ())
       outFile->Close ();
@@ -469,12 +469,12 @@ bool OpenConfig (const char *fileName, const char *errorIfNotExists, File *outFi
 
       // check is file is exists for this language
       if (File::Accessible (languageDependantConfigFile))
-         outFile->Open (languageDependantConfigFile, "rt");
+         outFile->Open (languageDependantConfigFile);
       else
-         outFile->Open (FormatBuffer ("%s/addons/yapb/conf/lang/en_%s", mod, fileName), "rt");
+         outFile->Open (FormatBuffer ("%s/addons/yapb/conf/lang/en_%s", mod, fileName));
    }
    else
-      outFile->Open (FormatBuffer ("%s/addons/yapb/conf/%s", engine.GetModName (), fileName), "rt");
+      outFile->Open (FormatBuffer ("%s/addons/yapb/conf/%s", engine.GetModName (), fileName));
 
    if (!outFile->IsValid ())
    {

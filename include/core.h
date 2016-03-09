@@ -324,6 +324,22 @@ enum PickupType
    PICKUP_DEFUSEKIT
 };
 
+// fight style type
+enum FightStyle
+{
+   FIGHT_NONE,
+   FIGHT_STRAFE,
+   FIGHT_STAY
+};
+
+// dodge type
+enum StrafeDir
+{
+   STRAFE_DIR_NONE,
+   STRAFE_DIR_LEFT,
+   STRAFE_DIR_RIGHT
+};
+
 // reload state
 enum ReloadState
 {
@@ -836,8 +852,8 @@ private:
    bool m_checkWeaponSwitch; // is time to check weapon switch
    bool m_isUsingGrenade; // bot currently using grenade??
 
-   unsigned char m_combatStrafeDir; // direction to strafe
-   unsigned char m_fightStyle; // combat style to use
+   StrafeDir m_combatStrafeDir; // direction to strafe
+   FightStyle m_fightStyle; // combat style to use
    float m_lastFightStyleCheck; // time checked style
    float m_strafeSetTime; // time strafe direction was set
 
@@ -1524,7 +1540,7 @@ extern bool IsInViewCone (const Vector &origin, edict_t *ent);
 extern bool IsValidBot (edict_t *ent);
 extern bool IsValidPlayer (edict_t *ent);
 extern bool IsPlayerVIP (edict_t *ent);
-extern bool OpenConfig (const char *fileName, const char *errorIfNotExists, File *outFile, bool languageDependant = false);
+extern bool OpenConfig (const char *fileName, const char *errorIfNotExists, MemoryFile *outFile, bool languageDependant = false);
 extern bool FindNearestPlayer (void **holder, edict_t *to, float searchDistance = 4096.0, bool sameTeam = false, bool needBot = false, bool needAlive = false, bool needDrawn = false);
 
 extern void FreeLibraryMemory (void);
