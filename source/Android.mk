@@ -25,7 +25,6 @@ LOCAL_SRC_FILES := \
 	engine.cpp \
 	interface.cpp \
 	navigate.cpp \
-	netmsg.cpp \
 	support.cpp \
 	waypoint.cpp \
 

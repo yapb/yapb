@@ -1,4 +1,4 @@
-﻿//
+//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -300,7 +300,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       // save waypoint data into file on hard disk
       else if (stricmp (arg1, "save") == 0)
       {
-         char *waypointSaveMessage = locale.TranslateInput ("Waypoints Saved");
+         char *waypointSaveMessage = engine.TraslateMessage ("Waypoints Saved");
 
          if (FStrEq (arg2, "nocheck"))
          {
@@ -850,7 +850,7 @@ void InitConfig (void)
       enum Lang { Lang_Original, Lang_Translate } langState = static_cast <Lang> (2);
 
       char buffer[1024];
-      LanguageItem temp = {"", ""};
+      Engine::TranslatorPair temp = {"", ""};
 
       while (fp.GetBuffer (line, 255))
       {
@@ -866,7 +866,7 @@ void InitConfig (void)
             }
 
             if (!IsNullString (temp.translated) && !IsNullString (temp.original))
-               locale.m_langTab.Push (temp);
+               engine.PushTranslationPair (temp);
          }
          else if (strncmp (line, "[TRANSLATED]", 12) == 0)
          {
@@ -1013,8 +1013,7 @@ int Spawn (edict_t *ent)
    if (strcmp (entityClassname, "worldspawn") == 0)
    {
       engine.Precache (ent);
-
-      ConVarWrapper::GetReference ().PushRegisteredConVarsToEngine (true);
+      engine.PushRegisteredConVarsToEngine (true);
 
       PRECACHE_SOUND (ENGINE_STR ("weapons/xbow_hit1.wav"));      // waypoint add
       PRECACHE_SOUND (ENGINE_STR ("weapons/mine_activate.wav"));  // waypoint delete
@@ -1024,7 +1023,7 @@ int Spawn (edict_t *ent)
       PRECACHE_SOUND (ENGINE_STR ("common/wpn_denyselect.wav"));  // path add/delete error
 
       RoundInit ();
-      g_mapType = NULL; // reset map type as worldspawn is the first entity spawned
+      g_mapType = 0; // reset map type as worldspawn is the first entity spawned
 
       // detect official csbots here, as they causing crash in linkent code when active for some reason
       if (!(g_gameFlags & GAME_LEGACY) && g_engfuncs.pfnCVarGetPointer ("bot_stop") != NULL)
@@ -2071,7 +2070,7 @@ void ClientCommand (edict_t *ent)
                Bot *bot = bots.GetBot (i);
 
                // validate bot
-               if (bot != NULL && bot->m_team == g_clients[clientIndex].team && VARS (ent) != bot->pev && bot->m_radioOrder == 0)
+               if (bot != NULL && bot->m_team == g_clients[clientIndex].team && ent != bot->GetEntity () && bot->m_radioOrder == 0)
                {
                   bot->m_radioOrder = radioCommand;
                   bot->m_radioEntity = ent;
@@ -2370,7 +2369,7 @@ void pfnEmitSound (edict_t *entity, int channel, const char *sample, float volum
    (*g_engfuncs.pfnEmitSound) (entity, channel, sample, volume, attenuation, flags, pitch);
 }
 
-void pfnClientCommand (edict_t *ent, char *format, ...)
+void pfnClientCommand (edict_t *ent, char const *format, ...)
 {
    // this function forces the client whose player entity is ent to issue a client command.
    // How it works is that clients all have a g_xgv global string in their client DLL that
@@ -2413,69 +2412,67 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
    // this function called each time a message is about to sent.
 
    // store the message type in our own variables, since the GET_USER_MSG_ID () will just do a lot of strcmp()'s...
-   if (g_isMetamod && netmsg.GetId (NETMSG_MONEY) == -1)
+   if (g_isMetamod && engine.FindMessageId (NETMSG_MONEY) == -1)
    {
-      netmsg.SetId (NETMSG_VGUI, GET_USER_MSG_ID (PLID, "VGUIMenu", NULL));
-      netmsg.SetId (NETMSG_SHOWMENU, GET_USER_MSG_ID (PLID, "ShowMenu", NULL));
-      netmsg.SetId (NETMSG_WEAPONLIST, GET_USER_MSG_ID (PLID, "WeaponList", NULL));
-      netmsg.SetId (NETMSG_CURWEAPON, GET_USER_MSG_ID (PLID, "CurWeapon", NULL));
-      netmsg.SetId (NETMSG_AMMOX, GET_USER_MSG_ID (PLID, "AmmoX", NULL));
-      netmsg.SetId (NETMSG_AMMOPICKUP, GET_USER_MSG_ID (PLID, "AmmoPickup", NULL));
-      netmsg.SetId (NETMSG_DAMAGE, GET_USER_MSG_ID (PLID, "Damage", NULL));
-      netmsg.SetId (NETMSG_MONEY, GET_USER_MSG_ID (PLID, "Money", NULL));
-      netmsg.SetId (NETMSG_STATUSICON, GET_USER_MSG_ID (PLID, "StatusIcon", NULL));
-      netmsg.SetId (NETMSG_DEATH, GET_USER_MSG_ID (PLID, "DeathMsg", NULL));
-      netmsg.SetId (NETMSG_SCREENFADE, GET_USER_MSG_ID (PLID, "ScreenFade", NULL));
-      netmsg.SetId (NETMSG_HLTV, GET_USER_MSG_ID (PLID, "HLTV", NULL));
-      netmsg.SetId (NETMSG_TEXTMSG, GET_USER_MSG_ID (PLID, "TextMsg", NULL));
-      netmsg.SetId (NETMSG_SCOREINFO, GET_USER_MSG_ID (PLID, "ScoreInfo", NULL));
-      netmsg.SetId (NETMSG_BARTIME, GET_USER_MSG_ID (PLID, "BarTime", NULL));
-      netmsg.SetId (NETMSG_SENDAUDIO, GET_USER_MSG_ID (PLID, "SendAudio", NULL));
-      netmsg.SetId (NETMSG_SAYTEXT, GET_USER_MSG_ID (PLID, "SayText", NULL));
-      netmsg.SetId (NETMSG_RESETHUD, GET_USER_MSG_ID (PLID, "ResetHUD", NULL));
+      engine.AssignMessageId (NETMSG_VGUI, GET_USER_MSG_ID (PLID, "VGUIMenu", NULL));
+      engine.AssignMessageId (NETMSG_SHOWMENU, GET_USER_MSG_ID (PLID, "ShowMenu", NULL));
+      engine.AssignMessageId (NETMSG_WEAPONLIST, GET_USER_MSG_ID (PLID, "WeaponList", NULL));
+      engine.AssignMessageId (NETMSG_CURWEAPON, GET_USER_MSG_ID (PLID, "CurWeapon", NULL));
+      engine.AssignMessageId (NETMSG_AMMOX, GET_USER_MSG_ID (PLID, "AmmoX", NULL));
+      engine.AssignMessageId (NETMSG_AMMOPICKUP, GET_USER_MSG_ID (PLID, "AmmoPickup", NULL));
+      engine.AssignMessageId (NETMSG_DAMAGE, GET_USER_MSG_ID (PLID, "Damage", NULL));
+      engine.AssignMessageId (NETMSG_MONEY, GET_USER_MSG_ID (PLID, "Money", NULL));
+      engine.AssignMessageId (NETMSG_STATUSICON, GET_USER_MSG_ID (PLID, "StatusIcon", NULL));
+      engine.AssignMessageId (NETMSG_DEATH, GET_USER_MSG_ID (PLID, "DeathMsg", NULL));
+      engine.AssignMessageId (NETMSG_SCREENFADE, GET_USER_MSG_ID (PLID, "ScreenFade", NULL));
+      engine.AssignMessageId (NETMSG_HLTV, GET_USER_MSG_ID (PLID, "HLTV", NULL));
+      engine.AssignMessageId (NETMSG_TEXTMSG, GET_USER_MSG_ID (PLID, "TextMsg", NULL));
+      engine.AssignMessageId (NETMSG_SCOREINFO, GET_USER_MSG_ID (PLID, "ScoreInfo", NULL));
+      engine.AssignMessageId (NETMSG_BARTIME, GET_USER_MSG_ID (PLID, "BarTime", NULL));
+      engine.AssignMessageId (NETMSG_SENDAUDIO, GET_USER_MSG_ID (PLID, "SendAudio", NULL));
+      engine.AssignMessageId (NETMSG_SAYTEXT, GET_USER_MSG_ID (PLID, "SayText", NULL));
 
       if (!(g_gameFlags & GAME_LEGACY))
-         netmsg.SetId (NETMSG_BOTVOICE, GET_USER_MSG_ID (PLID, "BotVoice", NULL));
+         engine.AssignMessageId (NETMSG_BOTVOICE, GET_USER_MSG_ID (PLID, "BotVoice", NULL));
    }
-   netmsg.Reset ();
+   engine.ResetMessageCapture ();
 
-   if (msgDest == MSG_SPEC && msgType == netmsg.GetId (NETMSG_HLTV) && !(g_gameFlags & GAME_LEGACY))
-      netmsg.SetMessage (NETMSG_HLTV);
+   if ((!(g_gameFlags & GAME_LEGACY) || (g_gameFlags & GAME_XASH)) && msgDest == MSG_SPEC && msgType == engine.FindMessageId (NETMSG_HLTV))
+      engine.SetOngoingMessageId (NETMSG_HLTV);
 
-   netmsg.HandleMessageIfRequired (msgType, NETMSG_WEAPONLIST);
+   engine.TryCaptureMessage (msgType, NETMSG_WEAPONLIST);
 
    if (!engine.IsNullEntity (ed))
    {
       int index = bots.GetIndex (ed);
 
       // is this message for a bot?
-      if (index != -1 && !(ed->v.flags & FL_DORMANT) && bots.GetBot (index)->GetEntity () == ed)
+      if (index != -1 && !(ed->v.flags & FL_DORMANT))
       {
-         netmsg.Reset ();
-         netmsg.SetBot (bots.GetBot (index));
+         engine.ResetMessageCapture ();
+         engine.SetOngoingMessageReceiver (index);
 
          // message handling is done in usermsg.cpp
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_VGUI);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_CURWEAPON);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_AMMOX);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_AMMOPICKUP);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_DAMAGE);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_MONEY);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_STATUSICON);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_SCREENFADE);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_BARTIME);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_TEXTMSG);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_SHOWMENU);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_RESETHUD);
+         engine.TryCaptureMessage (msgType, NETMSG_VGUI);
+         engine.TryCaptureMessage (msgType, NETMSG_CURWEAPON);
+         engine.TryCaptureMessage (msgType, NETMSG_AMMOX);
+         engine.TryCaptureMessage (msgType, NETMSG_AMMOPICKUP);
+         engine.TryCaptureMessage (msgType, NETMSG_DAMAGE);
+         engine.TryCaptureMessage (msgType, NETMSG_MONEY);
+         engine.TryCaptureMessage (msgType, NETMSG_STATUSICON);
+         engine.TryCaptureMessage (msgType, NETMSG_SCREENFADE);
+         engine.TryCaptureMessage (msgType, NETMSG_BARTIME);
+         engine.TryCaptureMessage (msgType, NETMSG_TEXTMSG);
+         engine.TryCaptureMessage (msgType, NETMSG_SHOWMENU);
       }
    }
    else if (msgDest == MSG_ALL)
    {
-      netmsg.Reset ();
+      engine.ResetMessageCapture ();
 
-      netmsg.HandleMessageIfRequired (msgType, NETMSG_SCOREINFO);
-      netmsg.HandleMessageIfRequired (msgType, NETMSG_DEATH);
-      netmsg.HandleMessageIfRequired (msgType, NETMSG_TEXTMSG);
+      engine.TryCaptureMessage (msgType, NETMSG_SCOREINFO);
+      engine.TryCaptureMessage (msgType, NETMSG_DEATH);
+      engine.TryCaptureMessage (msgType, NETMSG_TEXTMSG);
 
       if (msgType == SVC_INTERMISSION)
       {
@@ -2497,7 +2494,7 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
 
 void pfnMessageEnd (void)
 {
-   netmsg.Reset ();
+   engine.ResetMessageCapture ();
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2519,7 +2516,7 @@ void pfnMessageEnd_Post (void)
 void pfnWriteByte (int value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg.Execute ((void *) &value);
+   engine.ProcessMesageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2530,7 +2527,7 @@ void pfnWriteByte (int value)
 void pfnWriteChar (int value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg.Execute ((void *) &value);
+   engine.ProcessMesageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2541,7 +2538,7 @@ void pfnWriteChar (int value)
 void pfnWriteShort (int value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg.Execute ((void *) &value);
+   engine.ProcessMesageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2552,7 +2549,7 @@ void pfnWriteShort (int value)
 void pfnWriteLong (int value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg.Execute ((void *) &value);
+   engine.ProcessMesageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2563,7 +2560,7 @@ void pfnWriteLong (int value)
 void pfnWriteAngle (float value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg.Execute ((void *) &value);
+   engine.ProcessMesageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2574,7 +2571,7 @@ void pfnWriteAngle (float value)
 void pfnWriteCoord (float value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg.Execute ((void *) &value);
+   engine.ProcessMesageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2585,7 +2582,7 @@ void pfnWriteCoord (float value)
 void pfnWriteString (const char *sz)
 {
    // if this message is for a bot, call the client message function...
-   netmsg.Execute ((void *) sz);
+   engine.ProcessMesageCapture ((void *) sz);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2596,7 +2593,7 @@ void pfnWriteString (const char *sz)
 void pfnWriteEntity (int value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg.Execute ((void *) &value);
+   engine.ProcessMesageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2729,43 +2726,41 @@ int pfnRegUserMsg (const char *name, int size)
    int message = REG_USER_MSG (name, size);
 
    if (strcmp (name, "VGUIMenu") == 0)
-      netmsg.SetId (NETMSG_VGUI, message);
+      engine.AssignMessageId (NETMSG_VGUI, message);
    else if (strcmp (name, "ShowMenu") == 0)
-      netmsg.SetId (NETMSG_SHOWMENU, message);
+      engine.AssignMessageId (NETMSG_SHOWMENU, message);
    else if (strcmp (name, "WeaponList") == 0)
-      netmsg.SetId (NETMSG_WEAPONLIST, message);
+      engine.AssignMessageId (NETMSG_WEAPONLIST, message);
    else if (strcmp (name, "CurWeapon") == 0)
-      netmsg.SetId (NETMSG_CURWEAPON, message);
+      engine.AssignMessageId (NETMSG_CURWEAPON, message);
    else if (strcmp (name, "AmmoX") == 0)
-      netmsg.SetId (NETMSG_AMMOX, message);
+      engine.AssignMessageId (NETMSG_AMMOX, message);
    else if (strcmp (name, "AmmoPickup") == 0)
-      netmsg.SetId (NETMSG_AMMOPICKUP, message);
+      engine.AssignMessageId (NETMSG_AMMOPICKUP, message);
    else if (strcmp (name, "Damage") == 0)
-      netmsg.SetId (NETMSG_DAMAGE, message);
+      engine.AssignMessageId (NETMSG_DAMAGE, message);
    else if (strcmp (name, "Money") == 0)
-      netmsg.SetId (NETMSG_MONEY, message);
+      engine.AssignMessageId (NETMSG_MONEY, message);
    else if (strcmp (name, "StatusIcon") == 0)
-      netmsg.SetId (NETMSG_STATUSICON, message);
+      engine.AssignMessageId (NETMSG_STATUSICON, message);
    else if (strcmp (name, "DeathMsg") == 0)
-      netmsg.SetId (NETMSG_DEATH, message);
+      engine.AssignMessageId (NETMSG_DEATH, message);
    else if (strcmp (name, "ScreenFade") == 0)
-      netmsg.SetId (NETMSG_SCREENFADE, message);
+      engine.AssignMessageId (NETMSG_SCREENFADE, message);
    else if (strcmp (name, "HLTV") == 0)
-      netmsg.SetId (NETMSG_HLTV, message);
+      engine.AssignMessageId (NETMSG_HLTV, message);
    else if (strcmp (name, "TextMsg") == 0)
-      netmsg.SetId (NETMSG_TEXTMSG, message);
+      engine.AssignMessageId (NETMSG_TEXTMSG, message);
    else if (strcmp (name, "ScoreInfo") == 0)
-      netmsg.SetId (NETMSG_SCOREINFO, message);
+      engine.AssignMessageId (NETMSG_SCOREINFO, message);
    else if (strcmp (name, "BarTime") == 0)
-      netmsg.SetId (NETMSG_BARTIME, message);
+      engine.AssignMessageId (NETMSG_BARTIME, message);
    else if (strcmp (name, "SendAudio") == 0)
-      netmsg.SetId (NETMSG_SENDAUDIO, message);
+      engine.AssignMessageId (NETMSG_SENDAUDIO, message);
    else if (strcmp (name, "SayText") == 0)
-      netmsg.SetId (NETMSG_SAYTEXT, message);
+      engine.AssignMessageId (NETMSG_SAYTEXT, message);
    else if (strcmp (name, "BotVoice") == 0)
-      netmsg.SetId (NETMSG_BOTVOICE, message);
-   else if (strcmp (name, "ResetHUD") == 0)
-      netmsg.SetId (NETMSG_RESETHUD, message);
+      engine.AssignMessageId (NETMSG_BOTVOICE, message);
 
    return message;
 }
@@ -2776,7 +2771,7 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...)
    char buffer[1024];
 
    va_start (ap, format);
-   vsprintf (buffer, format, ap);
+   vsnprintf (buffer, SIZEOF_CHAR (buffer), format, ap);
    va_end (ap);
 
    if ((g_mapType & MAP_DE) && g_bombPlanted && strstr (buffer, "_Defuse_") != NULL)
@@ -2802,7 +2797,7 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...)
 
 gamedll_funcs_t gameDLLFunc;
 
-export int GetEntityAPI2 (gamefuncs_t *functionTable, int *)
+SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *)
 {
    // this function is called right after FuncPointers_t() by the engine in the game DLL (or
    // what it BELIEVES to be the game DLL), in order to copy the list of MOD functions that can
@@ -2846,7 +2841,7 @@ export int GetEntityAPI2 (gamefuncs_t *functionTable, int *)
    return TRUE;
 }
 
-export int GetEntityAPI2_Post (gamefuncs_t *functionTable, int *)
+SHARED_LIBRARAY_EXPORT int GetEntityAPI2_Post (gamefuncs_t *functionTable, int *)
 {
    // this function is called right after FuncPointers_t() by the engine in the game DLL (or
    // what it BELIEVES to be the game DLL), in order to copy the list of MOD functions that can
@@ -2867,7 +2862,7 @@ export int GetEntityAPI2_Post (gamefuncs_t *functionTable, int *)
    return TRUE;
 }
 
-export int GetNewDLLFunctions (newgamefuncs_t *functionTable, int *interfaceVersion)
+SHARED_LIBRARAY_EXPORT int GetNewDLLFunctions (newgamefuncs_t *functionTable, int *interfaceVersion)
 {
    // it appears that an extra function table has been added in the engine to gamedll interface
    // since the date where the first enginefuncs table standard was frozen. These ones are
@@ -2888,7 +2883,7 @@ export int GetNewDLLFunctions (newgamefuncs_t *functionTable, int *interfaceVers
    return TRUE;
 }
 
-export int GetEngineFunctions (enginefuncs_t *functionTable, int *)
+SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *)
 {
    if (g_isMetamod)
       memset (functionTable, 0, sizeof (enginefuncs_t));
@@ -2918,7 +2913,7 @@ export int GetEngineFunctions (enginefuncs_t *functionTable, int *)
    return TRUE;
 }
 
-export int GetEngineFunctions_Post (enginefuncs_t *functionTable, int *)
+SHARED_LIBRARAY_EXPORT int GetEngineFunctions_Post (enginefuncs_t *functionTable, int *)
 {
    memset (functionTable, 0, sizeof (enginefuncs_t));
 
@@ -2927,7 +2922,7 @@ export int GetEngineFunctions_Post (enginefuncs_t *functionTable, int *)
    return TRUE;
 }
 
-export int Server_GetBlendingInterface (int version, void **ppinterface, void *pstudio, float (*rotationmatrix)[3][4], float (*bonetransform)[128][3][4])
+SHARED_LIBRARAY_EXPORT int Server_GetBlendingInterface (int version, void **ppinterface, void *pstudio, float (*rotationmatrix)[3][4], float (*bonetransform)[128][3][4])
 {
    // this function synchronizes the studio model animation blending interface (i.e, what parts
    // of the body move, which bones, which hitboxes and how) between the server and the game DLL.
@@ -2939,7 +2934,7 @@ export int Server_GetBlendingInterface (int version, void **ppinterface, void *p
    return (*g_serverBlendingAPI) (version, ppinterface, pstudio, rotationmatrix, bonetransform);
 }
 
-export int Meta_Query (char *, plugin_info_t **pPlugInfo, mutil_funcs_t *pMetaUtilFuncs)
+SHARED_LIBRARAY_EXPORT int Meta_Query (char *, plugin_info_t **pPlugInfo, mutil_funcs_t *pMetaUtilFuncs)
 {
    // this function is the first function ever called by metamod in the plugin DLL. Its purpose
    // is for metamod to retrieve basic information about the plugin, such as its meta-interface
@@ -2951,7 +2946,7 @@ export int Meta_Query (char *, plugin_info_t **pPlugInfo, mutil_funcs_t *pMetaUt
    return TRUE; // tell metamod this plugin looks safe
 }
 
-export int Meta_Attach (PLUG_LOADTIME, metamod_funcs_t *functionTable, meta_globals_t *pMGlobals, gamedll_funcs_t *pGamedllFuncs)
+SHARED_LIBRARAY_EXPORT int Meta_Attach (PLUG_LOADTIME, metamod_funcs_t *functionTable, meta_globals_t *pMGlobals, gamedll_funcs_t *pGamedllFuncs)
 {
    // this function is called when metamod attempts to load the plugin. Since it's the place
    // where we can tell if the plugin will be allowed to run or not, we wait until here to make
@@ -2965,7 +2960,7 @@ export int Meta_Attach (PLUG_LOADTIME, metamod_funcs_t *functionTable, meta_glob
    return TRUE; // returning true enables metamod to attach this plugin
 }
 
-export int Meta_Detach (PLUG_LOADTIME, PL_UNLOAD_REASON)
+SHARED_LIBRARAY_EXPORT int Meta_Detach (PLUG_LOADTIME, PL_UNLOAD_REASON)
 {
    // this function is called when metamod unloads the plugin. A basic check is made in order
    // to prevent unloading the plugin if its processing should not be interrupted.
@@ -2976,7 +2971,7 @@ export int Meta_Detach (PLUG_LOADTIME, PL_UNLOAD_REASON)
    return TRUE;
 }
 
-export void Meta_Init (void)
+SHARED_LIBRARAY_EXPORT void Meta_Init (void)
 {
    // this function is called by metamod, before any other interface functions. Purpose of this
    // function to give plugin a chance to determine is plugin running under metamod or not.
@@ -3002,7 +2997,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    g_pGlobals = pGlobals;
 
    // register our cvars
-   ConVarWrapper::GetReference ().PushRegisteredConVarsToEngine ();
+   engine.PushRegisteredConVarsToEngine ();
 
    // ensure we're have all needed directories
    {
@@ -3130,20 +3125,20 @@ DLL_ENTRYPOINT
    DLL_RETENTRY; // the return data type is OS specific too
 }
 
-static void LinkEntity_Helper (EntityPtr_t &entAddress, const char *name, entvars_t *pev)
+static void LinkEntity_Helper (EntityPtr_t &addr, const char *name, entvars_t *pev)
 {
    // here we're see an ugliest hack :)
-   if (entAddress == NULL || (g_gameFlags & GAME_OFFICIAL_CSBOT))
-      entAddress = g_gameLib->GetFuncAddr <EntityPtr_t > (name);
+   //if (addr == NULL  || (g_gameFlags & GAME_OFFICIAL_CSBOT))
+      addr = g_gameLib->GetFuncAddr <EntityPtr_t > (name);
 
-   if (entAddress == NULL)
+   if (addr == NULL)
       return;
 
-   entAddress (pev);
+   addr (pev);
 }
 
 #define LINK_ENTITY(entityName) \
-export void entityName (entvars_t *pev) \
+SHARED_LIBRARAY_EXPORT void entityName (entvars_t *pev) \
 { \
    static EntityPtr_t addr = NULL; \
    LinkEntity_Helper (addr, #entityName, pev); \

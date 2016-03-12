@@ -24,17 +24,21 @@ void Waypoint::Init (void)
 
    // have any waypoint path nodes been allocated yet?
    if (m_waypointPaths)
-   {
-      for (int i = 0; i < g_numWaypoints && m_paths[i] != NULL; i++)
-      {
-         delete m_paths[i];
-         m_paths[i] = NULL;
-      }
-   }
+      CleanupPathMemory ();
+
    g_numWaypoints = 0;
 }
 
-void Waypoint::AddPath (short int addIndex, short int pathIndex, float distance)
+void Waypoint::CleanupPathMemory (void)
+{
+   for (int i = 0; i < g_numWaypoints && m_paths[i] != NULL; i++)
+   {
+      delete m_paths[i];
+      m_paths[i] = NULL;
+   }
+}
+
+void Waypoint::AddPath (int addIndex, int pathIndex, float distance)
 {
    if (addIndex < 0 || addIndex >= g_numWaypoints || pathIndex < 0 || pathIndex >= g_numWaypoints || addIndex == pathIndex)
       return;
@@ -967,7 +971,7 @@ void Waypoint::SaveVisibilityTab (void)
    }
    fp.Close ();
 
-   Compressor::Compress (FormatBuffer ("%slearned/%s.vis", GetDataDir (), engine.GetMapName ()), (unsigned char *) &header, sizeof (ExtensionHeader), (unsigned char *) m_visLUT, MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (byte));
+   Compressor::Compress (FormatBuffer ("%slearned/%s.vis", GetDataDir (), engine.GetMapName ()), (unsigned char *) &header, sizeof (ExtensionHeader), (unsigned char *) m_visLUT, MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (unsigned char));
 }
 
 void Waypoint::InitVisibilityTab (void)
@@ -1008,7 +1012,7 @@ void Waypoint::InitVisibilityTab (void)
 
       return;
    }
-   int result = Compressor::Uncompress (FormatBuffer ("%slearned/%s.vis", GetDataDir (), engine.GetMapName ()), sizeof (ExtensionHeader), (unsigned char *) m_visLUT, MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (byte));
+   int result = Compressor::Uncompress (FormatBuffer ("%slearned/%s.vis", GetDataDir (), engine.GetMapName ()), sizeof (ExtensionHeader), (unsigned char *) m_visLUT, MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (unsigned char));
 
    if (result == -1)
    {
@@ -1496,7 +1500,7 @@ const char *Waypoint::GetWaypointInfo(int id)
          jumpPoint = true;
    }
 
-   static char messageBuffer[1024];
+   static char messageBuffer[MAX_PRINT_BUFFER];
    sprintf (messageBuffer, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s", (path->flags == 0 && !jumpPoint) ? " (none)" : "", (path->flags & FLAG_LIFT) ? " LIFT" : "", (path->flags & FLAG_CROUCH) ? " CROUCH" : "", (path->flags & FLAG_CROSSING) ? " CROSSING" : "", (path->flags & FLAG_CAMP) ? " CAMP" : "", (path->flags & FLAG_TF_ONLY) ? " TERRORIST" : "", (path->flags & FLAG_CF_ONLY) ? " CT" : "", (path->flags & FLAG_SNIPER) ? " SNIPER" : "", (path->flags & FLAG_GOAL) ? " GOAL" : "", (path->flags & FLAG_LADDER) ? " LADDER" : "", (path->flags & FLAG_RESCUE) ? " RESCUE" : "", (path->flags & FLAG_DOUBLEJUMP) ? " JUMPHELP" : "", (path->flags & FLAG_NOHOSTAGE) ? " NOHOSTAGE" : "", jumpPoint ? " JUMP" : "");
 
    // return the message buffer
@@ -2454,6 +2458,8 @@ void Waypoint::SetFindIndex (int index)
 
 Waypoint::Waypoint (void)
 {
+   CleanupPathMemory ();
+
    m_waypointPaths = false;
    m_endJumpPoint = false;
    m_redoneVisibility = false;
@@ -2480,13 +2486,12 @@ Waypoint::Waypoint (void)
 
    m_distMatrix = NULL;
    m_pathMatrix = NULL;
-
-   for (int i = 0; i < MAX_WAYPOINTS; i++)
-      m_paths[i] = NULL;
 }
 
 Waypoint::~Waypoint (void)
 {
+   CleanupPathMemory ();
+
    delete [] m_distMatrix;
    delete [] m_pathMatrix;
 
@@ -2573,7 +2578,7 @@ WaypointDownloadError Waypoint::RequestWaypoint (void)
       return WDE_SOCKET_ERROR;
    }
 
-   const int ChunkSize = 1024;
+   const int ChunkSize = MAX_PRINT_BUFFER;
    char buffer[ChunkSize] = { 0, };
 
    bool finished = false;

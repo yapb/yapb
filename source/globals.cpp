@@ -9,6 +9,13 @@
 
 #include <core.h>
 
+// forward for super-globals
+//NetworkMsg netmsg;
+//Localizer locale;
+//Waypoint waypoints;
+//BotManager bots;
+//Engine engine;
+
 bool g_canSayBombPlanted = true;
 bool g_isMetamod = false;
 bool g_radioInsteadVoice = false;
@@ -98,10 +105,10 @@ int *g_weaponPrefs[] =
 // metamod engine & dllapi function tables
 metamod_funcs_t gMetaFunctionTable =
 {
-   NULL, // pfnEntityAPI_t ()
-   NULL, // pfnEntityAPI_t_Post ()
-   GetEntityAPI2, // pfnEntityAPI_t2 ()
-   GetEntityAPI2_Post, // pfnEntityAPI_t2_Post ()
+   NULL, // pfnGetEntityAPI ()
+   NULL, // pfnGetEntityAPI_Post ()
+   GetEntityAPI2, // pfnGetEntityAPI2 ()
+   GetEntityAPI2_Post, // pfnGetEntityAPI2_Post ()
    NULL, // pfnGetNewDLLFunctions ()
    NULL, // pfnGetNewDLLFunctions_Post ()
    GetEngineFunctions, // pfnGetEngineFunctions ()
@@ -424,10 +431,3 @@ MenuText g_menus[21] =
       "0. Exit"
    }
 };
-
-// forward for super-globals
-NetworkMsg netmsg;
-Localizer locale;
-Waypoint waypoints;
-BotManager bots;
-Engine engine;

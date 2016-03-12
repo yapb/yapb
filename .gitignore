@@ -56,3 +56,5 @@ Icon
 project/yapb.vcxproj.user
 *.psess
 *.opendb
+*.aps
+*.db

@@ -59,7 +59,7 @@ void Bot::PushMessageQueue (int message)
 
          if (otherBot != NULL && otherBot->pev != pev)
          {
-            if (m_notKilled == IsAlive (otherBot->GetEntity ()))
+            if (m_notKilled == otherBot->m_notKilled)
             {
                otherBot->m_sayTextBuffer.entityIndex = entityIndex;
                strcpy (otherBot->m_sayTextBuffer.sayText, m_tempStrings);
@@ -482,7 +482,7 @@ edict_t *Bot::FindBreakable (void)
    // this function checks if bot is blocked by a shoot able breakable in his moving direction
 
    TraceResult tr;
-   engine.TestLine (pev->origin, pev->origin + (m_destOrigin - pev->origin).Normalize () * 64.0f, TRACE_IGNORE_NONE, GetEntity (), &tr);
+   engine.TestLine (pev->origin, pev->origin + (m_destOrigin - pev->origin).Normalize () * 72.0f, TRACE_IGNORE_NONE, GetEntity (), &tr);
 
    if (tr.flFraction != 1.0f)
    {
@@ -491,11 +491,11 @@ edict_t *Bot::FindBreakable (void)
       // check if this isn't a triggered (bomb) breakable and if it takes damage. if true, shoot the crap!
       if (IsShootableBreakable (ent))
       {
-         m_breakable = tr.vecEndPos;
+         m_breakableOrigin = engine.GetAbsOrigin (ent);
          return ent;
       }
    }
-   engine.TestLine (EyePosition (), EyePosition () + (m_destOrigin - EyePosition ()).Normalize () * 64.0f, TRACE_IGNORE_NONE, GetEntity (), &tr);
+   engine.TestLine (EyePosition (), EyePosition () + (m_destOrigin - EyePosition ()).Normalize () * 72.0f, TRACE_IGNORE_NONE, GetEntity (), &tr);
 
    if (tr.flFraction != 1.0f)
    {
@@ -503,12 +503,12 @@ edict_t *Bot::FindBreakable (void)
 
       if (IsShootableBreakable (ent))
       {
-         m_breakable = tr.vecEndPos;
+         m_breakableOrigin = engine.GetAbsOrigin (ent);
          return ent;
       }
    }
    m_breakableEntity = NULL;
-   m_breakable.Zero ();
+   m_breakableOrigin.Zero ();
 
    return NULL;
 }
@@ -971,7 +971,7 @@ void Bot::SwitchChatterIcon (bool show)
       if (!(g_clients[i].flags & CF_USED) || (g_clients[i].ent->v.flags & FL_FAKECLIENT) || g_clients[i].team != m_team)
          continue;
 
-      MESSAGE_BEGIN (MSG_ONE, netmsg.GetId (NETMSG_BOTVOICE), NULL, g_clients[i].ent); // begin message
+      MESSAGE_BEGIN (MSG_ONE, engine.FindMessageId (NETMSG_BOTVOICE), NULL, g_clients[i].ent); // begin message
          WRITE_BYTE (show); // switch on/off
          WRITE_BYTE (GetIndex ());
       MESSAGE_END ();
@@ -1009,7 +1009,7 @@ void Bot::InstantChatterMessage (int type)
 
       g_sendAudioFinished = false;
 
-      MESSAGE_BEGIN (MSG_ONE, netmsg.GetId (NETMSG_SENDAUDIO), NULL, ent); // begin message
+      MESSAGE_BEGIN (MSG_ONE, engine.FindMessageId (NETMSG_SENDAUDIO), NULL, ent); // begin message
          WRITE_BYTE (GetIndex ());
 
          if (pev->deadflag & DEAD_DYING)
@@ -1071,13 +1071,13 @@ void Bot::CheckMessageQueue (void)
       return;
 
    // get message from stack
-   int currentQueueMessage = GetMessageQueue ();
+   int state = GetMessageQueue ();
 
    // nothing to do?
-   if (currentQueueMessage == GSM_IDLE || (currentQueueMessage == GSM_RADIO && yb_csdm_mode.GetInt () == 2))
+   if (state == GSM_IDLE || (state == GSM_RADIO && yb_csdm_mode.GetInt () == 2))
       return;
 
-   switch (currentQueueMessage)
+   switch (state)
    {
    case GSM_BUY_STUFF: // general buy message
 
@@ -2907,7 +2907,7 @@ void Bot::Think (void)
    if (m_thinkFps <= engine.Time ())
    {
       // execute delayed think
-      ThinkDelayed ();
+      ThinkFrame ();
 
       // skip some frames
       m_thinkFps = engine.Time () + m_thinkInterval;
@@ -2916,7 +2916,7 @@ void Bot::Think (void)
       UpdateLookAngles ();
 }
 
-void Bot::ThinkDelayed (void)
+void Bot::ThinkFrame (void)
 {
    pev->button = 0;
    pev->flags |= FL_FAKECLIENT; // restore fake client bit, if it were removed by some evil action =)
@@ -4395,7 +4395,7 @@ void Bot::RunTask_ShootBreakable (void)
    m_moveToGoal = false;
    m_navTimeset = engine.Time ();
 
-   Vector src = m_breakable;
+   Vector src = m_breakableOrigin;
    m_camp = src;
 
    // is bot facing the breakable?
@@ -5322,18 +5322,18 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits)
    }
 }
 
-void Bot::TakeBlinded (const Vector &fade, int alpha)
+void Bot::TakeBlinded (int r, int g, int b, int alpha)
 {
    // this function gets called by network message handler, when screenfade message get's send
    // it's used to make bot blind from the grenade.
 
-   if (fade.x != 255.0f || fade.y != 255.0f || fade.z != 255.0f || alpha <= 170.0f)
+   if (r != 255 || g != 255 || b != 255 || alpha <= 170)
       return;
 
    m_enemy = NULL;
 
    m_maxViewDistance = Random.Float (10.0f, 20.0f);
-   m_blindTime = engine.Time () + static_cast <float> (alpha - 200.0f) / 16.0f;
+   m_blindTime = engine.Time () + static_cast <float> (alpha - 200) / 16.0f;
 
    if (m_difficulty <= 2)
    {
@@ -5577,13 +5577,13 @@ void Bot::DebugMsg (const char *format, ...)
       return;
 
    va_list ap;
-   char buffer[1024];
+   char buffer[MAX_PRINT_BUFFER];
 
    va_start (ap, format);
-   vsprintf (buffer, format, ap);
+   vsnprintf (buffer, SIZEOF_CHAR (buffer), format, ap);
    va_end (ap);
 
-   char printBuf[1024];
+   char printBuf[MAX_PRINT_BUFFER];
    sprintf (printBuf, "%s: %s", STRING (pev->netname), buffer);
 
    bool playMessage = false;
@@ -5618,7 +5618,7 @@ Vector Bot::CheckToss(const Vector &start, const Vector &stop)
       return Vector::GetZero ();
 
    Vector midPoint = start + (end - start) * 0.5f;
-   engine.TestHull (midPoint, midPoint + Vector (0.0f, 0.0f, 500.0f), TRACE_IGNORE_MONSTERS, head_hull, ENT (pev), &tr);
+   engine.TestHull (midPoint, midPoint + Vector (0.0f, 0.0f, 500.0f), TRACE_IGNORE_MONSTERS, head_hull, GetEntity (), &tr);
 
    if (tr.flFraction < 1.0f)
    {
@@ -5641,12 +5641,12 @@ Vector Bot::CheckToss(const Vector &start, const Vector &stop)
    Vector apex = start + nadeVelocity * timeOne;
    apex.z = midPoint.z;
 
-   engine.TestHull (start, apex, TRACE_IGNORE_NONE, head_hull, ENT (pev), &tr);
+   engine.TestHull (start, apex, TRACE_IGNORE_NONE, head_hull, GetEntity (), &tr);
 
    if (tr.flFraction < 1.0f || tr.fAllSolid)
       return Vector::GetZero ();
 
-   engine.TestHull (end, apex, TRACE_IGNORE_MONSTERS, head_hull, ENT (pev), &tr);
+   engine.TestHull (end, apex, TRACE_IGNORE_MONSTERS, head_hull, GetEntity (), &tr);
 
    if (tr.flFraction != 1.0f)
    {

@@ -19,7 +19,6 @@ OBJECTS = $(SRC_DIR)/basecode.cpp	\
 	  $(SRC_DIR)/engine.cpp		\
 	  $(SRC_DIR)/interface.cpp	\
 	  $(SRC_DIR)/navigate.cpp	\
-	  $(SRC_DIR)/netmsg.cpp		\
 	  $(SRC_DIR)/support.cpp	\
 	  $(SRC_DIR)/waypoint.cpp	\
 

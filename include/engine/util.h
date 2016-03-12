@@ -53,12 +53,6 @@ static inline edict_t *FIND_ENTITY_BY_TARGET (edict_t *entStart, const char *psz
 #define ClearBits(flBitVector, bits)   ((flBitVector) = (int)(flBitVector) & ~(bits))
 #define FBitSet(flBitVector, bit)      ((int)(flBitVector) & (bit))
 
-// Pointer operators
-#define PTR_TO_BYTE(in) *(byte *) (in)
-#define PTR_TO_FLT(in) *(float *) (in)
-#define PTR_TO_INT(in) *(int *) (in)
-#define PTR_TO_STR(in) (char *) (in)
-
 // Makes these more explicit, and easier to find
 #define FILE_GLOBAL static
 
@@ -82,6 +76,7 @@ typedef int BOOL;
 //
 // Conversion among the three types of "entity", including identity-conversions.
 //
+#if 0
 static inline edict_t *ENT (const entvars_t *pev)
 {
    return pev->pContainingEntity;
@@ -131,12 +126,14 @@ static inline entvars_t *VARS (EOFFSET eoffset)
 {
    return VARS (ENT (eoffset));
 }
+#endif
 
 static inline void MESSAGE_BEGIN (int msg_dest, int msg_type, const float *pOrigin, entvars_t *ent)
 {
-   (*g_engfuncs.pfnMessageBegin) (msg_dest, msg_type, pOrigin, ENT (ent));
+   (*g_engfuncs.pfnMessageBegin) (msg_dest, msg_type, pOrigin, ent->pContainingEntity);
 }
 
+#if 0
 // Testing the three types of "entity" for nullity
 #define eoNullEntity 0
 static inline BOOL FNullEnt (EOFFSET eoffset)
@@ -162,6 +159,7 @@ static inline BOOL FStringNull (int stingPtr)
 #define cchMapNameMost 32
 
 #define SAFE_FUNCTION_CALL(pfn,args) try { pfn args; } catch (...)  { }
+#endif
 
 // Dot products for view cone checking
 #define VIEW_FIELD_FULL         (float)-1.0   // +-180 degrees
@@ -176,7 +174,7 @@ static inline BOOL FStrEq (const char *sz1, const char *sz2)
 }
 static inline BOOL FClassnameIs (edict_t *pent, const char *szClassname)
 {
-   return FStrEq (STRING (VARS (pent)->classname), szClassname);
+   return FStrEq (STRING (pent->v.classname), szClassname);
 }
 static inline BOOL FClassnameIs (entvars_t *pev, const char *szClassname)
 {

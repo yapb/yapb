@@ -149,7 +149,7 @@ typedef struct enginefuncs_s
    void      (*pfnGetAimVector) (edict_t *ent, float speed, float *rgflReturn);
    void      (*pfnServerCommand) (char *str);
    void      (*pfnServerExecute) (void);
-   void      (*pfnClientCommand) (edict_t *ent, char *szFmt, ...);
+   void      (*pfnClientCommand) (edict_t *ent, char const *szFmt, ...);
    void      (*pfnParticleEffect) (const float *org, const float *dir, float color, float count);
    void      (*pfnLightStyle) (int style, char *val);
    int       (*pfnDecalIndex) (const char *name);
@@ -203,7 +203,7 @@ typedef struct enginefuncs_s
    void      (*pfnSetView) (const edict_t *client, const edict_t *pViewent);
    float     (*pfnTime) (void);
    void      (*pfnCrosshairAngle) (const edict_t *client, float pitch, float yaw);
-   byte      *(*pfnLoadFileForMe) (char *szFilename, int *pLength);
+   byte      *(*pfnLoadFileForMe) (char const *szFilename, int *pLength);
    void      (*pfnFreeFile) (void *buffer);
    void      (*pfnEndSection) (const char *pszSectionName);   // trigger_endsection
    int       (*pfnCompareFileTime) (char *filename1, char *filename2, int *compare);
@@ -215,9 +215,9 @@ typedef struct enginefuncs_s
    void      (*pfnRunPlayerMove) (edict_t *fakeclient, const float *viewangles, float forwardmove, float sidemove, float upmove, unsigned short buttons, byte impulse, byte msec);
    int       (*pfnNumberOfEntities) (void);
    char      *(*pfnGetInfoKeyBuffer) (edict_t *e);   // passing in NULL gets the serverinfo
-   char      *(*pfnInfoKeyValue) (char *infobuffer, char *key);
+   char      *(*pfnInfoKeyValue) (char *infobuffer, char const *key);
    void      (*pfnSetKeyValue) (char *infobuffer, char *key, char *value);
-   void      (*pfnSetClientKeyValue) (int clientIndex, char *infobuffer, char *key, char *value);
+   void      (*pfnSetClientKeyValue) (int clientIndex, char *infobuffer, char const *key, char const *value);
    int       (*pfnIsMapValid) (char *szFilename);
    void      (*pfnStaticDecal) (const float *origin, int decalIndex, int entityIndex, int modelIndex);
    int       (*pfnPrecacheGeneric) (char *s);
@@ -280,7 +280,7 @@ typedef struct enginefuncs_s
 typedef struct KeyValueData_s
 {
    char *szClassName; // in: entity classname
-   char *szKeyName;   // in: name of key
+   char const *szKeyName;   // in: name of key
    char *szValue;     // in: value of key
    int32 fHandled;    // out: DLL sets to true if key-value pair was understood
 } KeyValueData;

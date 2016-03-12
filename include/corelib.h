@@ -2303,7 +2303,7 @@ public:
       char buffer[1024];
 
       va_start (ap, fmt);
-      vsprintf (buffer, fmt, ap);
+      vsnprintf (buffer, sizeof (buffer) - 1, fmt, ap);
       va_end (ap);
 
       Append (buffer);
@@ -2374,7 +2374,7 @@ public:
       char buffer[1024];
 
       va_start (ap, fmt);
-      vsprintf (buffer, fmt, ap);
+      vsnprintf (buffer, sizeof (buffer) - 1, fmt, ap);
       va_end (ap);
 
       Assign (buffer);
@@ -3311,46 +3311,23 @@ public:
    // Returns:
    //  None
    //
-   static inline void TrimExternalBuffer (char *string)
+   static inline void TrimExternalBuffer (char *str)
    {
-      char *ptr = string;
+      int pos = 0;
+      char *dest = str;
 
-      int length = 0, toggleFlag = 0, increment = 0;
-      int i = 0;
+      while (str[pos] <= ' ' && str[pos] > 0)
+         pos++;
 
-      while (*ptr++)
-         length++;
-
-      for (i = length - 1; i >= 0; i--)
+      while (str[pos])
       {
-         if (!isspace (string[i]))
-            break;
-         else
-         {
-            string[i] = 0;
-            length--;
-         }
+         *(dest++) = str[pos];
+         pos++;
       }
+      *(dest--) = '\0';
 
-      for (i = 0; i < length; i++)
-      {
-         if (isspace (string[i]) && !toggleFlag)
-         {
-            increment++;
-
-            if (increment + i < length)
-               string[i] = string[increment + i];
-         }
-         else
-         {
-            if (!toggleFlag)
-               toggleFlag = 1;
-
-            if (increment)
-               string[i] = string[increment + i];
-         }
-      }
-      string[length] = 0;
+      while (dest >= str && *dest <= ' ' && *dest > 0)
+         *(dest--) = '\0';
    }
 };
 
@@ -3694,10 +3671,9 @@ public:
    static MF_Unloader Unloader;
 
 protected:
-   String m_fileName;
-   int m_fileSize;
-   int m_filePos;
-   unsigned char *m_fileBuffer;
+   int m_size;
+   int m_pos;
+   unsigned char *m_buffer;
 
    //
    // Group: (Con/De)structors
@@ -3710,11 +3686,10 @@ public:
    //
    MemoryFile (void)
    {
-      m_fileSize = 0;
-      m_filePos = 0;
+      m_size = 0;
+      m_pos = 0;
 
-      m_fileBuffer = NULL;
-      m_fileName.Empty ();
+      m_buffer = NULL;
    }
 
    //
@@ -3723,11 +3698,10 @@ public:
    //
    MemoryFile (const String &fileName)
    {
-      m_fileSize = 0;
-      m_filePos = 0;
+      m_size = 0;
+      m_pos = 0;
 
-      m_fileBuffer = NULL;
-      m_fileName.Empty ();
+      m_buffer = NULL;
 
       Open (fileName);
    }
@@ -3751,18 +3725,17 @@ public:
    // Returns:
    //  True if operation succeeded, false otherwise.
    //
-   bool Open (const String &fileName)
+   bool Open (const char *fileName)
    {
-      if (fileName.IsEmpty () || Loader == NULL)
+      if (!Loader)
          return false;
 
-      m_fileSize = 0;
-      m_filePos = 0;
-      m_fileName = fileName;
+      m_size = 0;
+      m_pos = 0;
 
-      m_fileBuffer = Loader (fileName.GetBuffer (), &m_fileSize);
+      m_buffer = Loader (fileName, &m_size);
 
-      if (m_fileBuffer == NULL || m_fileSize < 0)
+      if (m_buffer == NULL || m_size < 0)
          return false;
 
       return true;
@@ -3775,13 +3748,12 @@ public:
    void Close (void)
    {
       if (Unloader != NULL)
-         Unloader (m_fileBuffer);
+         Unloader (m_buffer);
 
-      m_fileSize = 0;
-      m_filePos = 0;
+      m_size = 0;
+      m_pos = 0;
 
-      m_fileBuffer = NULL;
-      m_fileName.Empty ();
+      m_buffer = NULL;
    }
 
    //
@@ -3793,11 +3765,11 @@ public:
    //
    int GetChar (void)
    {
-      if (m_fileBuffer == NULL || m_filePos >= m_fileSize)
+      if (m_buffer == NULL || m_pos >= m_size)
          return -1;
 
-      int readCh = m_fileBuffer[m_filePos];
-      m_filePos++;
+      int readCh = m_buffer[m_pos];
+      m_pos++;
 
       return readCh;
    }
@@ -3815,41 +3787,41 @@ public:
    //
    char *GetBuffer (char *buffer, int count)
    {
-      if (m_fileBuffer == NULL || m_filePos >= m_fileSize)
+      if (m_buffer == NULL || m_pos >= m_size)
          return NULL;
 
-      int lineStartOffset = m_filePos;
-      int lineEndOffset = m_fileSize - 1;
+      int start = m_pos;
+      int end = m_size - 1;
       
-      if (m_fileSize - m_filePos > count - 1)
-         lineEndOffset = m_filePos + count - 1;
+      if (m_size - m_pos > count - 1)
+         end = m_pos + count - 1;
 
-      while (m_filePos < lineEndOffset)
+      while (m_pos < end)
       {
-         if (m_fileBuffer[m_filePos] == 0x0a)
-            lineEndOffset = m_filePos;
+         if (m_buffer[m_pos] == 0x0a)
+            end = m_pos;
 
-         m_filePos++;
+         m_pos++;
       }
 
-      if (m_filePos == lineStartOffset)
+      if (m_pos == start)
          return NULL;
 
-      int pos = lineStartOffset;
+      int pos = start;
 
-      for (; pos <= lineEndOffset; pos++)
-         buffer[pos - lineStartOffset] = m_fileBuffer[pos];
+      for (; pos <= end; pos++)
+         buffer[pos - start] = m_buffer[pos];
 
-      if (buffer[pos - lineStartOffset - 2] == 0x0d)
+      if (buffer[pos - start - 2] == 0x0d)
       {
-         buffer[pos - lineStartOffset - 2] = '\n';
+         buffer[pos - start - 2] = '\n';
          pos--;
       }
 
-      if (buffer[pos - lineStartOffset - 1] == 0x0d || buffer[pos - lineStartOffset - 1] == 0x0a)
-         buffer[pos - lineStartOffset - 1] = '\n';
+      if (buffer[pos - start - 1] == 0x0d || buffer[pos - start - 1] == 0x0a)
+         buffer[pos - start - 1] = '\n';
 
-      buffer[pos - lineStartOffset] = 0;
+      buffer[pos - start] = 0;
 
       return buffer;
    }
@@ -3868,16 +3840,13 @@ public:
    //
    int Read (void *buffer, int size, int count = 1)
    {
-      if (m_fileBuffer == NULL || m_filePos >= m_fileSize)
+      if (!m_buffer|| m_pos >= m_size || buffer == NULL || !size || !count)
          return 0;
 
-      if (buffer == NULL || size == 0 || count == 0 || m_fileBuffer == NULL)
-         return 0;
+      int blocksRead = min ((m_size - m_pos) / size, count) * size;
 
-      int blocksRead = min ((m_fileSize - m_filePos) / size, count);
-
-      memcpy (buffer, &m_fileBuffer[m_filePos], blocksRead * size);
-      m_filePos += blocksRead * size;
+      memcpy (buffer, &m_buffer[m_pos], blocksRead);
+      m_pos += blocksRead;
 
       return blocksRead;
    }
@@ -3895,29 +3864,29 @@ public:
    //
    bool Seek (long offset, int origin)
    {
-      if (m_fileBuffer == NULL || m_filePos >= m_fileSize)
+      if (m_buffer == NULL || m_pos >= m_size)
          return false;
 
       if (origin == SEEK_SET)
       {
-         if (offset >= m_fileSize)
+         if (offset >= m_size)
             return false;
 
-         m_filePos = offset;
+         m_pos = offset;
       }
       else if (origin == SEEK_END)
       {
-         if (offset >= m_fileSize)
+         if (offset >= m_size)
             return false;
 
-         m_filePos = m_fileSize - offset;
+         m_pos = m_size - offset;
       }
       else
       {
-         if (m_filePos + offset >= m_fileSize)
+         if (m_pos + offset >= m_size)
             return false;
 
-         m_filePos += offset;
+         m_pos += offset;
       }
       return true;
    }
@@ -3931,7 +3900,7 @@ public:
    //
    int GetSize (void)
    {
-      return m_fileSize;
+      return m_size;
    }
 
    //
@@ -3943,7 +3912,7 @@ public:
    //
    bool IsValid (void)
    {
-      return m_fileBuffer != NULL && m_fileSize > 0;
+      return m_buffer != NULL && m_size > 0;
    }
 };
 
@@ -3953,63 +3922,9 @@ public:
 //
 typedef Array <const String &> StrVec;
 
-//
-// Class: Exception
-//  Simple exception raiser.
-//
-class Exception
-{
-private:
-   String m_exceptionText;
-   String m_fileName;
-   int m_line;
-
-//
-// Group: (Con/De)structors
-//
-public:
-
-   //
-   // Function: Exception
-   //  Default exception constructor.
-   //
-   // Parameters:
-   //  exceptionText - Text to throw.
-   //  fileName - Debug file name.
-   //  line - Debug line number.
-   //
-   Exception (String exceptionText, String fileName = "(no)", int line = -1) : m_exceptionText (exceptionText), m_fileName (fileName), m_line (line) { }
-   
-   //
-   // Function: ~Exception
-   //  Default exception destructor.
-   //
-   virtual ~Exception (void) { };
-
-//
-// Group: Functions
-//
-public:
-
-   //
-   // Function: GetDescription
-   //  Gets the description from throw object.
-   //
-   // Returns:
-   //  Exception text.
-   //
-   inline const String &GetDescription (void)
-   {
-      static String result;
-
-      if (m_fileName != "(no)" && m_line != -1)
-         result.AssignFormat ("Exception: %s at %s:%i", m_exceptionText.GetBuffer (), m_fileName.GetBuffer (), m_line);
-      else
-         result = m_exceptionText;
-
-      return result;
-   }
-};
+#ifndef FORCEINLINE
+#define FORCEINLINE inline
+#endif
 
 //
 // Class: Singleton
@@ -4034,6 +3949,10 @@ protected:
    //
    virtual ~Singleton (void) { }
 
+private:
+   Singleton (Singleton const &);
+   void operator = (Singleton const &);
+
 public:
 
    //
@@ -4044,7 +3963,7 @@ public:
    //  Object pointer.
    //  
    //
-   static inline T *GetObject (void)
+   static FORCEINLINE T *GetObject (void)
    {
       static T reference;
       return &reference;
@@ -4058,7 +3977,7 @@ public:
    //  Object reference.
    //  
    //
-   static inline T &GetReference (void)
+   static FORCEINLINE T &GetReference (void)
    {
       static T reference;
       return reference;

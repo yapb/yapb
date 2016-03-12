@@ -1,4 +1,4 @@
-﻿//
+//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -441,7 +441,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
             state[i++] = COLLISION_STRAFELEFT;
             state[i++] = COLLISION_STRAFERIGHT;
             state[i++] = COLLISION_JUMP;
-            // state[i++] = COLLISION_DUCK;
+            state[i++] = COLLISION_DUCK;
 
             if (bits & PROBE_STRAFE)
             {
@@ -1409,7 +1409,6 @@ public:
       return result;
    }
 };
-
 
 float gfunctionKillsDistT (int currentIndex, int parentIndex)
 {

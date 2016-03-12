@@ -38,10 +38,36 @@ enum VarType
    VT_NOREGISTER
 };
 
-// need since we don't want to use Singleton on engine class
-class ConVarWrapper : public Singleton <ConVarWrapper>
+// netmessage functions
+enum NetMsgId
 {
-private:
+   NETMSG_UNDEFINED = -1,
+   NETMSG_VGUI = 1,
+   NETMSG_SHOWMENU = 2,
+   NETMSG_WEAPONLIST = 3,
+   NETMSG_CURWEAPON = 4,
+   NETMSG_AMMOX = 5,
+   NETMSG_AMMOPICKUP = 6,
+   NETMSG_DAMAGE = 7,
+   NETMSG_MONEY = 8,
+   NETMSG_STATUSICON = 9,
+   NETMSG_DEATH = 10,
+   NETMSG_SCREENFADE = 11,
+   NETMSG_HLTV = 12,
+   NETMSG_TEXTMSG = 13,
+   NETMSG_SCOREINFO = 14,
+   NETMSG_BARTIME = 15,
+   NETMSG_SENDAUDIO = 17,
+   NETMSG_SAYTEXT = 18,
+   NETMSG_BOTVOICE = 19,
+   NETMSG_NUM = 21
+};
+
+// provides utility functions to not call original engine (less call-cost)
+class Engine : public Singleton <Engine>
+{
+public:
+   // variable reg pair
    struct VarPair
    {
       VarType type;
@@ -49,16 +75,23 @@ private:
       bool regMissing;
       class ConVar *self;
    };
-   Array <VarPair> m_regs;
 
-public:
-   void RegisterVariable (const char *variable, const char *value, VarType varType, bool regMissing, ConVar *self);
-   void PushRegisteredConVarsToEngine (bool gameVars = false);
-};
+   // translation pair
+   struct TranslatorPair
+   {
+      const char *original;
+      const char *translated;
+   };
 
-// provides utility functions to not call original engine (less call-cost)
-class Engine
-{
+   // network message block
+   struct MessageBlock
+   {
+      int bot;
+      int state;
+      int msg;
+      int regMsgs[NETMSG_NUM];
+   };
+
 private:
    short m_drawModels[DRAW_NUM];
 
@@ -69,6 +102,16 @@ private:
 
    edict_t *m_startEntity;
    edict_t *m_localEntity;
+
+   Array <VarPair> m_cvars;
+   Array <TranslatorPair> m_language;
+
+   MessageBlock m_msgBlock;
+
+public:
+   Engine (void);
+
+   ~Engine (void);
 
    // public functions
 public:
@@ -124,6 +167,21 @@ public:
    // sends bot command
    void IssueBotCommand (edict_t *ent, const char *fmt, ...);
 
+   // adds cvar to registration stack
+   void PushVariableToStack (const char *variable, const char *value, VarType varType, bool regMissing, ConVar *self);
+
+   // sends local registration stack for engine registration
+   void PushRegisteredConVarsToEngine (bool gameVars = false);
+
+   // translates bot message into needed language
+   char *TraslateMessage (const char *input);
+
+   // cleanup translator resources
+   void TerminateTranslator (void);
+
+   // do actual network message processing
+   void ProcessMesageCapture (void *ptr);
+
    // public inlines
 public:
 
@@ -168,21 +226,25 @@ public:
       return m_argumentCount;
    }
 
+   // gets edict pointer out of entity index
    inline edict_t *EntityOfIndex (const int index)
    {
       return static_cast <edict_t *> (m_startEntity + index);
    };
 
+   // gets edict index out of it's pointer
    inline int IndexOfEntity (const edict_t *ent)
    {
       return static_cast <int> (ent - m_startEntity);
    };
 
+   // verify entity isn't null
    inline bool IsNullEntity (const edict_t *ent)
    {
       return !ent || !IndexOfEntity (ent);
    }
 
+   // gets the player team
    inline int GetTeam (edict_t *ent)
    {
       extern Client g_clients[MAX_ENGINE_PLAYERS];
@@ -192,6 +254,51 @@ public:
 #else
       return g_clients[IndexOfEntity (ent) - 1].team = ent->v.team == 1 ? TERRORIST : CT;
 #endif
+   }
+
+   // adds translation pair from config
+   inline void PushTranslationPair (const TranslatorPair &lang)
+   {
+      m_language.Push (lang);
+   }
+
+   // resets the message capture mechanism
+   inline void ResetMessageCapture (void)
+   {
+      m_msgBlock.msg = NETMSG_UNDEFINED;
+      m_msgBlock.state = 0;
+      m_msgBlock.bot = 0;
+   };
+
+   // sets the currently executed message
+   inline void SetOngoingMessageId (int message)
+   {
+      m_msgBlock.msg = message;
+   }
+
+   // set the bot entity that receive this message
+   inline void SetOngoingMessageReceiver (int id)
+   {
+      m_msgBlock.bot = id;
+   }
+
+   // find registered message id
+   inline int FindMessageId (int type)
+   {
+      return m_msgBlock.regMsgs[type];
+   }
+
+   // assigns message id for message type
+   inline void AssignMessageId (int type, int id)
+   {
+      m_msgBlock.regMsgs[type] = id;
+   }
+
+   // tries to set needed message id
+   void TryCaptureMessage (int type, int msgId)
+   {
+      if (type == m_msgBlock.regMsgs[msgId])
+         SetOngoingMessageId (msgId);
    }
 
    // static utility functions

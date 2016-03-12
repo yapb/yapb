@@ -345,7 +345,7 @@ bool Bot::LookupEnemy (void)
 
             Bot *friendBot = bots.GetBot (g_clients[j].ent);
 
-            if (friendBot != NULL && friendBot->m_seeEnemyTime + 2.0f < engine.Time () && engine.IsNullEntity (friendBot->m_lastEnemy) && IsVisible (pev->origin, ENT (friendBot->pev)) && friendBot->IsInViewCone (pev->origin))
+            if (friendBot != NULL && friendBot->m_seeEnemyTime + 2.0f < engine.Time () && engine.IsNullEntity (friendBot->m_lastEnemy) && IsVisible (pev->origin, friendBot->GetEntity ()) && friendBot->IsInViewCone (pev->origin))
             {
                friendBot->m_lastEnemy = newEnemy;
                friendBot->m_lastEnemyOrigin = m_lastEnemyOrigin;

@@ -21,15 +21,15 @@
 // detects the compiler
 #if defined (_MSC_VER)
    #define COMPILER_VISUALC _MSC_VER
-#elif defined (__MINGW32__)
-   #define COMPILER_MINGW32 __MINGW32__
+#elif defined (__MINGW32_MAJOR_VERSION)
+   #define COMPILER_MINGW32 __MINGW32_MAJOR_VERSION
 #endif
 
 // configure export macros
 #if defined (COMPILER_VISUALC) || defined (COMPILER_MINGW32)
-   #define export extern "C" __declspec (dllexport)
+   #define SHARED_LIBRARAY_EXPORT extern "C" __declspec (dllexport)
 #elif defined (PLATFORM_LINUX) || defined (PLATFORM_OSX) 
-   #define export extern "C" __attribute__((visibility("default")))
+   #define SHARED_LIBRARAY_EXPORT extern "C" __attribute__((visibility("default")))
 #else
    #error "Can't configure export macros. Compiler unrecognized."
 #endif
@@ -38,6 +38,7 @@
 #ifdef PLATFORM_WIN32
 
    #include <direct.h>
+   #include <string.h>
 
    #define DLL_ENTRYPOINT int STDCALL DllMain (HINSTANCE, DWORD dwReason, LPVOID)
    #define DLL_DETACHING (dwReason == DLL_PROCESS_DETACH)
@@ -46,7 +47,7 @@
    #if defined (COMPILER_VISUALC)
       #define DLL_GIVEFNPTRSTODLL extern "C" void STDCALL
    #elif defined (COMPILER_MINGW32)
-      #define DLL_GIVEFNPTRSTODLL export void STDCALL
+      #define DLL_GIVEFNPTRSTODLL SHARED_LIBRARAY_EXPORT void STDCALL
    #endif
 
    // specify export parameter
@@ -138,11 +139,8 @@ public:
 
    template <typename R> R GetFuncAddr (const char *function)
    {
-      if (!IsLoaded ())
-         return NULL;
-
 #ifdef PLATFORM_WIN32
-      return reinterpret_cast <R> (GetProcAddress (static_cast <HMODULE> (m_ptr), function));
+      return reinterpret_cast <R> (GetProcAddress (GetHandle <HMODULE> (), function));
 #else
       return reinterpret_cast <R> (dlsym (m_ptr, function));
 #endif

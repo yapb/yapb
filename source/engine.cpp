@@ -9,6 +9,27 @@
 
 #include <core.h>
 
+Engine::Engine (void)
+{
+   m_startEntity = NULL;
+   m_localEntity = NULL;
+
+   m_language.RemoveAll ();
+   ResetMessageCapture ();
+
+   for (int i = 0; i < NETMSG_NUM; i++)
+      m_msgBlock.regMsgs[i] = NETMSG_UNDEFINED;
+}
+
+Engine::~Engine (void)
+{
+   TerminateTranslator ();
+   ResetMessageCapture ();
+
+   for (int i = 0; i < NETMSG_NUM; i++)
+      m_msgBlock.regMsgs[i] = NETMSG_UNDEFINED;
+}
+
 void Engine::Precache (edict_t *startEntity)
 {
    // this function precaches needed models and initialize class variables
@@ -29,10 +50,10 @@ void Engine::Printf (const char *fmt, ...)
    // this function outputs string into server console
 
    va_list ap;
-   static char string[1024];
+   char string[MAX_PRINT_BUFFER];
 
    va_start (ap, fmt);
-   vsnprintf (string, SIZEOF_CHAR (string), locale.TranslateInput (fmt), ap);
+   vsnprintf (string, SIZEOF_CHAR (string), TraslateMessage (fmt), ap);
    va_end (ap);
 
    g_engfuncs.pfnServerPrint (string);
@@ -42,20 +63,20 @@ void Engine::Printf (const char *fmt, ...)
 void Engine::ChatPrintf (const char *fmt, ...)
 {
    va_list ap;
-   static char string[1024];
+   char string[MAX_PRINT_BUFFER];
 
    va_start (ap, fmt);
-   vsnprintf (string, SIZEOF_CHAR (string), locale.TranslateInput (fmt), ap);
+   vsnprintf (string, SIZEOF_CHAR (string), TraslateMessage (fmt), ap);
    va_end (ap);
 
    if (IsDedicatedServer ())
    {
-      engine.Printf (string);
+      Printf (string);
       return;
    }
    strcat (string, "\n");
 
-   MESSAGE_BEGIN (MSG_BROADCAST, netmsg.GetId (NETMSG_TEXTMSG));
+   MESSAGE_BEGIN (MSG_BROADCAST, FindMessageId (NETMSG_TEXTMSG));
       WRITE_BYTE (HUD_PRINTTALK);
       WRITE_STRING (string);
    MESSAGE_END ();
@@ -64,20 +85,20 @@ void Engine::ChatPrintf (const char *fmt, ...)
 void Engine::CenterPrintf (const char *fmt, ...)
 {
    va_list ap;
-   static char string[1024];
+   char string[MAX_PRINT_BUFFER];
 
    va_start (ap, fmt);
-   vsnprintf (string, SIZEOF_CHAR (string), locale.TranslateInput (fmt), ap);
+   vsnprintf (string, SIZEOF_CHAR (string), TraslateMessage (fmt), ap);
    va_end (ap);
 
    if (IsDedicatedServer ())
    {
-      engine.Printf (string);
+      Printf (string);
       return;
    }
    strcat (string, "\n");
 
-   MESSAGE_BEGIN (MSG_BROADCAST, netmsg.GetId (NETMSG_TEXTMSG));
+   MESSAGE_BEGIN (MSG_BROADCAST, FindMessageId (NETMSG_TEXTMSG));
       WRITE_BYTE (HUD_PRINTCENTER);
       WRITE_STRING (string);
    MESSAGE_END ();
@@ -86,15 +107,15 @@ void Engine::CenterPrintf (const char *fmt, ...)
 void Engine::ClientPrintf (edict_t *ent, const char *fmt, ...)
 {
    va_list ap;
-   static char string[1024];
+   char string[MAX_PRINT_BUFFER];
 
    va_start (ap, fmt);
-   vsnprintf (string, SIZEOF_CHAR (string), locale.TranslateInput (fmt), ap);
+   vsnprintf (string, SIZEOF_CHAR (string), TraslateMessage (fmt), ap);
    va_end (ap);
 
-   if (engine.IsNullEntity (ent) || ent == g_hostEntity)
+   if (IsNullEntity (ent) || ent == g_hostEntity)
    {
-      engine.Printf (string);
+      Printf (string);
       return;
    }
    strcat (string, "\n");
@@ -279,7 +300,7 @@ Vector Engine::GetAbsOrigin (edict_t *ent)
    // this expanded function returns the vector origin of a bounded entity, assuming that any
    // entity that has a bounding box has its center at the center of the bounding box itself.
 
-   if (engine.IsNullEntity (ent))
+   if (IsNullEntity (ent))
       return Vector::GetZero ();
 
    if (ent->v.origin.IsZero ())
@@ -311,7 +332,7 @@ void Engine::IssueBotCommand (edict_t *ent, const char *fmt, ...)
    // supply directly the whole string as if you were typing it in the bot's "console". It
    // is supposed to work exactly like the pfnClientCommand (server-sided client command).
 
-   if (engine.IsNullEntity (ent))
+   if (IsNullEntity (ent))
       return; 
 
    va_list ap;
@@ -442,7 +463,7 @@ void Engine::IssueCmd (const char *fmt, ...)
    // this function asks the engine to execute a server command
 
    va_list ap;
-   static char string[1024];
+   char string[MAX_PRINT_BUFFER];
 
    // concatenate all the arguments in one string
    va_start (ap, fmt);
@@ -453,7 +474,7 @@ void Engine::IssueCmd (const char *fmt, ...)
    g_engfuncs.pfnServerCommand (string);
 }
 
-void ConVarWrapper::RegisterVariable(const char *variable, const char *value, VarType varType, bool regMissing, ConVar *self)
+void Engine::PushVariableToStack (const char *variable, const char *value, VarType varType, bool regMissing, ConVar *self)
 {
    // this function adds globally defined variable to registration stack
 
@@ -477,16 +498,16 @@ void ConVarWrapper::RegisterVariable(const char *variable, const char *value, Va
    pair.self = self;
    pair.type = varType;
 
-   m_regs.Push (pair);
+   m_cvars.Push (pair);
 }
 
-void ConVarWrapper::PushRegisteredConVarsToEngine (bool gameVars)
+void Engine::PushRegisteredConVarsToEngine (bool gameVars)
 {
    // this function pushes all added global variables to engine registration
 
-   FOR_EACH_AE (m_regs, i)
+   FOR_EACH_AE (m_cvars, i)
    {
-      VarPair *ptr = &m_regs[i];
+      VarPair *ptr = &m_cvars[i];
 
       if (ptr->type != VT_NOREGISTER)
       {
@@ -512,7 +533,526 @@ void ConVarWrapper::PushRegisteredConVarsToEngine (bool gameVars)
    }
 }
 
+char *Engine::TraslateMessage (const char *input)
+{
+   // this function translate input string into needed language
+
+   if (IsDedicatedServer ())
+      return const_cast <char *> (&input[0]);
+
+   static char string[MAX_PRINT_BUFFER];
+   const char *ptr = input + strlen (input) - 1;
+
+   while (ptr > input && *ptr == '\n')
+      ptr--;
+
+   if (ptr != input)
+      ptr++;
+
+   strncpy (string, input, SIZEOF_CHAR (string));
+   String::TrimExternalBuffer (string);
+
+   FOR_EACH_AE (m_language, i)
+   {
+      if (strcmp (string, m_language[i].original) == 0)
+      {
+         strncpy (string, m_language[i].translated, SIZEOF_CHAR (string));
+
+         if (ptr != input)
+            strncat (string, ptr, MAX_PRINT_BUFFER - 1 - strlen (string));
+
+         return &string[0];
+      }
+   }
+   return const_cast <char *> (&input[0]); // nothing found
+}
+
+void Engine::TerminateTranslator (void)
+{
+   // this function terminates language translator and frees all memory
+
+   FOR_EACH_AE (m_language, it)
+   {
+      delete[] m_language[it].original;
+      delete[] m_language[it].translated;
+   }
+   m_language.RemoveAll ();
+}
+
+void Engine::ProcessMesageCapture (void *ptr)
+{
+   if (m_msgBlock.msg == NETMSG_UNDEFINED)
+      return;
+
+   // some needed variables
+   static byte r, g, b;
+   static byte enabled;
+
+   static int damageArmor, damageTaken, damageBits;
+   static int killerIndex, victimIndex, playerIndex;
+   static int index, numPlayers;
+   static int state, id, clip;
+
+   static Vector damageOrigin;
+   static WeaponProperty weaponProp;
+
+   // some widely used stuff
+   Bot *bot = bots.GetBot (m_msgBlock.bot);
+
+   char *strVal = reinterpret_cast <char *> (ptr);
+   int intVal = *reinterpret_cast <int *> (ptr);
+   unsigned char byteVal = *reinterpret_cast <unsigned char *> (ptr);
+
+   // now starts of network message execution
+   switch (m_msgBlock.msg)
+   {
+   case NETMSG_VGUI:
+      // this message is sent when a VGUI menu is displayed.
+
+      if (m_msgBlock.state == 0)
+      {
+         switch (intVal)
+         {
+         case VMS_TEAM:
+            bot->m_startAction = GSM_TEAM_SELECT;
+            break;
+
+         case VMS_TF:
+         case VMS_CT:
+            bot->m_startAction = GSM_CLASS_SELECT;
+            break;
+         }
+      }
+      break;
+
+   case NETMSG_SHOWMENU:
+      // this message is sent when a text menu is displayed.
+
+      if (m_msgBlock.state < 3) // ignore first 3 fields of message
+         break;
+
+      if (strcmp (strVal, "#Team_Select") == 0) // team select menu?
+         bot->m_startAction = GSM_TEAM_SELECT;
+      else if (strcmp (strVal, "#Team_Select_Spect") == 0) // team select menu?
+         bot->m_startAction = GSM_TEAM_SELECT;
+      else if (strcmp (strVal, "#IG_Team_Select_Spect") == 0) // team select menu?
+         bot->m_startAction = GSM_TEAM_SELECT;
+      else if (strcmp (strVal, "#IG_Team_Select") == 0) // team select menu?
+         bot->m_startAction = GSM_TEAM_SELECT;
+      else if (strcmp (strVal, "#IG_VIP_Team_Select") == 0) // team select menu?
+         bot->m_startAction = GSM_TEAM_SELECT;
+      else if (strcmp (strVal, "#IG_VIP_Team_Select_Spect") == 0) // team select menu?
+         bot->m_startAction = GSM_TEAM_SELECT;
+      else if (strcmp (strVal, "#Terrorist_Select") == 0) // T model select?
+         bot->m_startAction = GSM_CLASS_SELECT;
+      else if (strcmp (strVal, "#CT_Select") == 0) // CT model select menu?
+         bot->m_startAction = GSM_CLASS_SELECT;
+
+      break;
+
+   case NETMSG_WEAPONLIST:
+      // this message is sent when a client joins the game. All of the weapons are sent with the weapon ID and information about what ammo is used.
+
+      switch (m_msgBlock.state)
+      {
+      case 0:
+         strncpy (weaponProp.className, strVal, SIZEOF_CHAR (weaponProp.className));
+         break;
+
+      case 1:
+         weaponProp.ammo1 = intVal; // ammo index 1
+         break;
+
+      case 2:
+         weaponProp.ammo1Max = intVal; // max ammo 1
+         break;
+
+      case 5:
+         weaponProp.slotID = intVal; // slot for this weapon
+         break;
+
+      case 6:
+         weaponProp.position = intVal; // position in slot
+         break;
+
+      case 7:
+         weaponProp.id = intVal; // weapon ID
+         break;
+
+      case 8:
+         weaponProp.flags = intVal; // flags for weapon (WTF???)
+         g_weaponDefs[weaponProp.id] = weaponProp; // store away this weapon with it's ammo information...
+         break;
+      }
+      break;
+
+   case NETMSG_CURWEAPON:
+      // this message is sent when a weapon is selected (either by the bot chosing a weapon or by the server auto assigning the bot a weapon). In CS it's also called when Ammo is increased/decreased
+
+      switch (m_msgBlock.state)
+      {
+      case 0:
+         state = intVal; // state of the current weapon (WTF???)
+         break;
+
+      case 1:
+         id = intVal; // weapon ID of current weapon
+         break;
+
+      case 2:
+         clip = intVal; // ammo currently in the clip for this weapon
+
+         if (id <= 31)
+         {
+            if (state != 0)
+               bot->m_currentWeapon = id;
+
+            // ammo amount decreased ? must have fired a bullet...
+            if (id == bot->m_currentWeapon && bot->m_ammoInClip[id] > clip)
+               bot->m_timeLastFired = Time (); // remember the last bullet time
+
+            bot->m_ammoInClip[id] = clip;
+         }
+         break;
+      }
+      break;
+
+   case NETMSG_AMMOX:
+      // this message is sent whenever ammo amounts are adjusted (up or down). NOTE: Logging reveals that CS uses it very unreliable!
+
+      switch (m_msgBlock.state)
+      {
+      case 0:
+         index = intVal; // ammo index (for type of ammo)
+         break;
+
+      case 1:
+         bot->m_ammo[index] = intVal; // store it away
+         break;
+      }
+      break;
+
+   case NETMSG_AMMOPICKUP:
+      // this message is sent when the bot picks up some ammo (AmmoX messages are also sent so this message is probably
+      // not really necessary except it allows the HUD to draw pictures of ammo that have been picked up.  The bots
+      // don't really need pictures since they don't have any eyes anyway.
+
+      switch (m_msgBlock.state)
+      {
+      case 0:
+         index = intVal;
+         break;
+
+      case 1:
+         bot->m_ammo[index] = intVal;
+         break;
+      }
+      break;
+
+   case NETMSG_DAMAGE:
+      // this message gets sent when the bots are getting damaged.
+
+      switch (m_msgBlock.state)
+      {
+      case 0:
+         damageArmor = intVal;
+         break;
+
+      case 1:
+         damageTaken = intVal;
+         break;
+
+      case 2:
+         damageBits = intVal;
+
+         if (bot != NULL && (damageArmor > 0 || damageTaken > 0))
+            bot->TakeDamage (bot->pev->dmg_inflictor, damageTaken, damageArmor, damageBits);
+         break;
+      }
+      break;
+
+   case NETMSG_MONEY:
+      // this message gets sent when the bots money amount changes
+
+      if (m_msgBlock.state == 0)
+         bot->m_moneyAmount = intVal; // amount of money
+      break;
+
+   case NETMSG_STATUSICON:
+      switch (m_msgBlock.state)
+      {
+      case 0:
+         enabled = byteVal;
+         break;
+
+      case 1:
+         if (strcmp (strVal, "defuser") == 0)
+            bot->m_hasDefuser = (enabled != 0);
+         else if (strcmp (strVal, "buyzone") == 0)
+         {
+            bot->m_inBuyZone = (enabled != 0);
+
+            // try to equip in buyzone
+            bot->EquipInBuyzone (BUYSTATE_PRIMARY_WEAPON);
+         }
+         else if (strcmp (strVal, "vipsafety") == 0)
+            bot->m_inVIPZone = (enabled != 0);
+         else if (strcmp (strVal, "c4") == 0)
+            bot->m_inBombZone = (enabled == 2);
+
+         break;
+      }
+      break;
+
+   case NETMSG_DEATH: // this message sends on death
+      switch (m_msgBlock.state)
+      {
+      case 0:
+         killerIndex = intVal;
+         break;
+
+      case 1:
+         victimIndex = intVal;
+         break;
+
+      case 2:
+         bots.SetDeathMsgState (true);
+
+         if (killerIndex != 0 && killerIndex != victimIndex)
+         {
+            edict_t *killer = EntityOfIndex (killerIndex);
+            edict_t *victim = EntityOfIndex (victimIndex);
+
+            if (IsNullEntity (killer) || IsNullEntity (victim))
+               break;
+
+            if (yb_communication_type.GetInt () == 2)
+            {
+               // need to send congrats on well placed shot
+               for (int i = 0; i < MaxClients (); i++)
+               {
+                  Bot *bot = bots.GetBot (i);
+
+                  if (bot != NULL && bot->m_notKilled && killer != bot->GetEntity () && bot->EntityIsVisible (victim->v.origin) && GetTeam (killer) == bot->m_team && GetTeam (killer) != GetTeam (victim))
+                  {
+                     if (killer == g_hostEntity)
+                        bot->HandleChatterMessage ("#Bot_NiceShotCommander");
+                     else
+                        bot->HandleChatterMessage ("#Bot_NiceShotPall");
+
+                     break;
+                  }
+               }
+            }
+
+            // notice nearby to victim teammates, that attacker is near
+            for (int i = 0; i < MaxClients (); i++)
+            {
+               Bot *bot = bots.GetBot (i);
+
+               if (bot != NULL && bot->m_seeEnemyTime + 2.0f < Time () && bot->m_notKilled && bot->m_team == GetTeam (victim) && IsVisible (killer->v.origin, bot->GetEntity ()) && IsNullEntity (bot->m_enemy) && GetTeam (killer) != GetTeam (victim))
+               {
+                  bot->m_actualReactionTime = 0.0f;
+                  bot->m_seeEnemyTime = Time ();
+                  bot->m_enemy = killer;
+                  bot->m_lastEnemy = killer;
+                  bot->m_lastEnemyOrigin = killer->v.origin;
+               }
+            }
+
+            Bot *bot = bots.GetBot (killer);
+
+            // is this message about a bot who killed somebody?
+            if (bot != NULL)
+               bot->m_lastVictim = victim;
+
+            else // did a human kill a bot on his team?
+            {
+               Bot *target = bots.GetBot (victim);
+
+               if (target != NULL)
+               {
+                  if (GetTeam (killer) == GetTeam (victim))
+                     target->m_voteKickIndex = killerIndex;
+
+                  target->m_notKilled = false;
+               }
+            }
+         }
+         break;
+      }
+      break;
+
+   case NETMSG_SCREENFADE: // this message gets sent when the screen fades (flashbang)
+      switch (m_msgBlock.state)
+      {
+      case 3:
+         r = byteVal;
+         break;
+
+      case 4:
+         g = byteVal;
+         break;
+
+      case 5:
+         b = byteVal;
+         break;
+
+      case 6:
+         bot->TakeBlinded (r, g, b, byteVal);
+         break;
+      }
+      break;
+
+   case NETMSG_HLTV: // round restart in steam cs
+      switch (m_msgBlock.state)
+      {
+      case 0:
+         numPlayers = intVal;
+         break;
+
+      case 1:
+         if (numPlayers == 0 && intVal == 0)
+            RoundInit ();
+         break;
+      }
+      break;
+
+
+   case NETMSG_TEXTMSG:
+      if (m_msgBlock.state == 1)
+      {
+         if (FStrEq (strVal, "#CTs_Win") ||
+            FStrEq (strVal, "#Bomb_Defused") ||
+            FStrEq (strVal, "#Terrorists_Win") ||
+            FStrEq (strVal, "#Round_Draw") ||
+            FStrEq (strVal, "#All_Hostages_Rescued") ||
+            FStrEq (strVal, "#Target_Saved") ||
+            FStrEq (strVal, "#Hostages_Not_Rescued") ||
+            FStrEq (strVal, "#Terrorists_Not_Escaped") ||
+            FStrEq (strVal, "#VIP_Not_Escaped") ||
+            FStrEq (strVal, "#Escaping_Terrorists_Neutralized") ||
+            FStrEq (strVal, "#VIP_Assassinated") ||
+            FStrEq (strVal, "#VIP_Escaped") ||
+            FStrEq (strVal, "#Terrorists_Escaped") ||
+            FStrEq (strVal, "#CTs_PreventEscape") ||
+            FStrEq (strVal, "#Target_Bombed") ||
+            FStrEq (strVal, "#Game_Commencing") ||
+            FStrEq (strVal, "#Game_will_restart_in"))
+         {
+            g_roundEnded = true;
+
+            if (FStrEq (strVal, "#Game_Commencing"))
+               g_isCommencing = true;
+
+            if (FStrEq (strVal, "#CTs_Win"))
+            {
+               bots.SetLastWinner (CT); // update last winner for economics
+
+               if (yb_communication_type.GetInt () == 2)
+               {
+                  Bot *bot = bots.FindOneValidAliveBot ();
+
+                  if (bot != NULL && bot->m_notKilled)
+                     bot->HandleChatterMessage (strVal);
+               }
+            }
+
+            if (FStrEq (strVal, "#Game_will_restart_in"))
+            {
+               bots.CheckTeamEconomics (CT, true);
+               bots.CheckTeamEconomics (TERRORIST, true);
+            }
+
+            if (FStrEq (strVal, "#Terrorists_Win"))
+            {
+               bots.SetLastWinner (TERRORIST); // update last winner for economics
+
+               if (yb_communication_type.GetInt () == 2)
+               {
+                  Bot *bot = bots.FindOneValidAliveBot ();
+
+                  if (bot != NULL && bot->m_notKilled)
+                     bot->HandleChatterMessage (strVal);
+               }
+            }
+            waypoints.SetBombPosition (true);
+         }
+         else if (!g_bombPlanted && FStrEq (strVal, "#Bomb_Planted"))
+         {
+            waypoints.SetBombPosition ();
+
+            g_bombPlanted = g_bombSayString = true;
+            g_timeBombPlanted = Time ();
+
+            for (int i = 0; i < MaxClients (); i++)
+            {
+               Bot *bot = bots.GetBot (i);
+
+               if (bot != NULL && bot->m_notKilled)
+               {
+                  bot->DeleteSearchNodes ();
+                  bot->ResetTasks ();
+
+                  if (yb_communication_type.GetInt () == 2 && Random.Long (0, 100) < 75 && bot->m_team == CT)
+                     bot->ChatterMessage (Chatter_WhereIsTheBomb);
+               }
+            }
+         }
+         else if (bot != NULL && FStrEq (strVal, "#Switch_To_BurstFire"))
+            bot->m_weaponBurstMode = BM_ON;
+         else if (bot != NULL && FStrEq (strVal, "#Switch_To_SemiAuto"))
+            bot->m_weaponBurstMode = BM_OFF;
+      }
+      break;
+
+   case NETMSG_SCOREINFO:
+      switch (m_msgBlock.state)
+      {
+      case 0:
+         playerIndex = intVal;
+         break;
+
+      case 4:
+         if (playerIndex >= 0 && playerIndex <= MaxClients ())
+         {
+#ifndef XASH_CSDM
+            Client &cl = g_clients[playerIndex - 1];
+
+            if (intVal == 1)
+               cl.realTeam = TERRORIST;
+            else if (intVal == 2)
+               cl.realTeam = CT;
+            else
+               cl.realTeam = SPECTATOR;
+
+            if (yb_csdm_mode.GetInt () == 2)
+               cl.team = playerIndex;
+            else
+               cl.team = cl.realTeam;
+#endif
+         }
+         break;
+      }
+      break;
+
+   case NETMSG_BARTIME:
+      if (m_msgBlock.state == 0)
+      {
+         if (intVal > 0)
+            bot->m_hasProgressBar = true; // the progress bar on a hud
+         else if (intVal == 0)
+            bot->m_hasProgressBar = false; // no progress bar or disappeared
+      }
+      break;
+
+   default:
+      AddLogEntry (true, LL_FATAL, "Network message handler error. Call to unrecognized message id (%d).\n", m_msgBlock.msg);
+   }
+   m_msgBlock.state++; // and finally update network message state
+}
+
 ConVar::ConVar (const char *name, const char *initval, VarType type, bool regMissing) : m_eptr (NULL)
 {
-   ConVarWrapper::GetReference ().RegisterVariable (name, initval, type, regMissing, this);
+   engine.PushVariableToStack (name, initval, type, regMissing, this);
 }

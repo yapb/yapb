@@ -37,13 +37,13 @@ typedef enum
 
 typedef struct
 {
-   char *ifvers;
-   char *name;
-   char *version;
-   char *date;
-   char *author;
-   char *url;
-   char *logtag;
+   char const *ifvers;
+   char const *name;
+   char const *version;
+   char const *date;
+   char const *author;
+   char const *url;
+   char const *logtag;
    PLUG_LOADTIME loadable;
    PLUG_LOADTIME unloadable;
 } plugin_info_t;

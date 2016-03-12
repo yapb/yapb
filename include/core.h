@@ -398,32 +398,6 @@ enum GameStartMessage
    GSM_SAY_TEAM = 10001
 };
 
-// netmessage functions
-enum NetworkMessage
-{
-   NETMSG_UNDEFINED = 0,
-   NETMSG_VGUI = 1,
-   NETMSG_SHOWMENU = 2,
-   NETMSG_WEAPONLIST = 3,
-   NETMSG_CURWEAPON = 4,
-   NETMSG_AMMOX = 5,
-   NETMSG_AMMOPICKUP = 6,
-   NETMSG_DAMAGE = 7,
-   NETMSG_MONEY = 8,
-   NETMSG_STATUSICON = 9,
-   NETMSG_DEATH = 10,
-   NETMSG_SCREENFADE = 11,
-   NETMSG_HLTV = 12,
-   NETMSG_TEXTMSG = 13,
-   NETMSG_SCOREINFO = 14,
-   NETMSG_BARTIME = 15,
-   NETMSG_SENDAUDIO = 17,
-   NETMSG_SAYTEXT = 18,
-   NETMSG_BOTVOICE = 19,
-   NETMSG_RESETHUD = 20,
-   NETMSG_NUM = 21
-};
-
 // sensing states
 enum SensingState
 {
@@ -553,6 +527,7 @@ const int MAX_WEAPONS = 32;
 const int NUM_WEAPONS = 26;
 const int MAX_COLLIDE_MOVES = 3;
 const int MAX_ENGINE_PLAYERS = 32; // we can have 64 players with xash
+const int MAX_PRINT_BUFFER = 1024;
 
 // weapon masks
 const int WEAPON_PRIMARY = ((1 << WEAPON_XM1014) | (1 <<WEAPON_M3) | (1 << WEAPON_MAC10) | (1 << WEAPON_UMP45) | (1 << WEAPON_MP5) | (1 << WEAPON_TMP) | (1 << WEAPON_P90) | (1 << WEAPON_AUG) | (1 << WEAPON_M4A1) | (1 << WEAPON_SG552) | (1 << WEAPON_AK47) | (1 << WEAPON_SCOUT) | (1 << WEAPON_SG550) | (1 << WEAPON_AWP) | (1 << WEAPON_G3SG1) | (1 << WEAPON_M249) | (1 << WEAPON_FAMAS) | (1 << WEAPON_GALIL));
@@ -596,13 +571,6 @@ struct ChatterItem
 {
    String name;
    float repeatTime;
-};
-
-// language config structure definition
-struct LanguageItem
-{
-   const char *original; // original string
-   const char *translated; // string to replace for
 };
 
 struct WeaponSelect
@@ -766,7 +734,7 @@ private:
    float m_blindRecognizeTime; // time to recognize enemy
    float m_itemCheckTime; // time next search for items needs to be done
    PickupType m_pickupType; // type of entity which needs to be used/picked up
-   Vector m_breakable; // origin of breakable
+   Vector m_breakableOrigin; // origin of breakable
 
    edict_t *m_pickupItem; // pointer to entity of item to use/pickup
    edict_t *m_itemIgnore; // pointer to entity to ignore for pickup
@@ -824,7 +792,7 @@ private:
    bool m_wantsToFire; // bot needs consider firing
    float m_shootAtDeadTime; // time to shoot at dying players
    edict_t *m_avoidGrenade; // pointer to grenade entity to avoid
-   char m_needAvoidGrenade; // which direction to strafe away
+   int m_needAvoidGrenade; // which direction to strafe away
 
    float m_followWaitTime; // wait to follow time
    edict_t *m_targetEntity; // the entity that the bot is trying to reach
@@ -1194,7 +1162,7 @@ public:
    void Think (void);
 
    /// the things that can be executed while skipping frames
-   void ThinkDelayed (void);
+   void ThinkFrame (void);
 
    void DisplayDebugOverlay (void);
    void NewRound (void);
@@ -1218,7 +1186,7 @@ public:
    inline TaskID GetTaskId (void) { return GetTask ()->id; };
 
    void TakeDamage (edict_t *inflictor, int damage, int armor, int bits);
-   void TakeBlinded (const Vector &fade, int alpha);
+   void TakeBlinded (int r, int g, int b, int alpha);
 
    void DiscardWeaponForUser (edict_t *user, bool discardC4);
 
@@ -1254,7 +1222,7 @@ public:
 };
 
 // manager class
-class BotManager
+class BotManager : public Singleton <BotManager>
 {
 private:
    Array <CreateQueue> m_creationTab; // bot creation tab
@@ -1349,46 +1317,9 @@ public:
    void SendDeathMsgFix (void);
 };
 
-// texts localizer
-class Localizer
-{
-public:
-   Array <LanguageItem> m_langTab;
-
-public:
-   Localizer (void) { m_langTab.RemoveAll (); }
-  ~Localizer (void) { m_langTab.RemoveAll (); }
-
-   char *TranslateInput (const char *input);
-   void Destroy (void);
-};
-
-// netmessage handler class
-class NetworkMsg
-{
-private:
-   Bot *m_bot;
-   int m_state;
-   int m_message;
-   int m_registerdMessages[NETMSG_NUM];
-
-public:
-   NetworkMsg (void);
-  ~NetworkMsg (void) { };
-
-   void Execute (void *p);
-   inline void Reset (void) { m_message = NETMSG_UNDEFINED; m_state = 0; m_bot = NULL; };
-   void HandleMessageIfRequired (int messageType, int requiredType);
-
-   inline void SetMessage (int message) { m_message = message; }
-   inline void SetBot (Bot *bot) { m_bot = bot; }
-
-   inline int GetId (int messageType) { return m_registerdMessages[messageType]; }
-   inline void SetId (int messageType, int messsageIdentifier) { m_registerdMessages[messageType] = messsageIdentifier; }
-};
 
 // waypoint operation class
-class Waypoint
+class Waypoint : public Singleton <Waypoint>
 {
    friend class Bot;
 
@@ -1409,7 +1340,7 @@ private:
    int m_lastJumpWaypoint;
    int m_visibilityIndex;
    Vector m_lastWaypoint;
-   byte m_visLUT[MAX_WAYPOINTS][MAX_WAYPOINTS / 4];
+   unsigned char m_visLUT[MAX_WAYPOINTS][MAX_WAYPOINTS / 4];
 
    float m_pathDisplayTime;
    float m_arrowDisplayTime;
@@ -1440,12 +1371,12 @@ public:
    void InitVisibilityTab (void);
 
    void InitTypes (void);
-   void AddPath (short int addIndex,  short int pathIndex, float distance);
+   void AddPath (int addIndex, int pathIndex, float distance);
 
    int GetFacingIndex (void);
    int FindFarest (const Vector &origin, float maxDistance = 32.0);
    int FindNearest (const Vector &origin, float minDistance = 9999.0f, int flags = -1);
-   void FindInRadius (Array <int> &radiusHolder, float radius, const Vector &origin, int maxCount = -1);
+   void FindInRadius (Array <int> &holder, float radius, const Vector &origin, int maxCount = -1);
 
    void Add (int flags, const Vector &waypointOrigin = Vector::GetZero ());
    void Delete (void);
@@ -1466,6 +1397,7 @@ public:
 
    bool Load (void);
    void Save (void);
+   void CleanupPathMemory (void);
 
    bool Reachable (Bot *bot, int index);
    bool IsNodeReachable (const Vector &src, const Vector &destination);
@@ -1492,25 +1424,11 @@ public:
    void SetGoalVisited (int index);
    void ClearVisitedGoals (void);
 
-   inline const Vector &GetBombPosition (void)
-   {
-      return m_foundBombOrigin;
-   }
    const char *GetDataDir (void);
-
-   void SetBombPosition (bool shouldReset = false);
    String CheckSubfolderFile (void);
 
-   // quick access
-   inline Path *operator [] (int index)
-   {
-      extern int g_numWaypoints;
-
-      if (index < 0 || index >= g_numWaypoints)
-         assert (0);
-
-      return GetPath (index);
-   }
+   void SetBombPosition (bool shouldReset = false);
+   inline const Vector &GetBombPosition (void) { return m_foundBombOrigin; }
 
    // free's socket handle
    void CloseSocketHandle (int sock);
@@ -1522,11 +1440,9 @@ public:
 #include <engine.h>
 
 // expose bot super-globals
-extern NetworkMsg netmsg;
-extern Localizer locale;
-extern Waypoint waypoints;
-extern BotManager bots;
-extern Engine engine;
+#define waypoints Waypoint::GetReference ()
+#define engine Engine::GetReference ()
+#define bots BotManager::GetReference ()
 
 // prototypes of bot functions...
 extern int GetWeaponReturn (bool isString, const char *weaponAlias, int weaponIndex = -1);

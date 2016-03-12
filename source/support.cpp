@@ -1,4 +1,4 @@
-﻿//
+//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -42,14 +42,20 @@ short FixedSigned16 (float value, float scale)
 
 const char *FormatBuffer (const char *format, ...)
 {
-   va_list ap;
-   static char staticBuffer[3072];
+   static char strBuffer[2][MAX_PRINT_BUFFER];
+   static int rotator = 0;
 
+   if (format == NULL)
+      return strBuffer[rotator];
+      
+   static char *ptr = strBuffer[rotator ^= 1];
+
+   va_list ap;
    va_start (ap, format);
-   vsprintf (staticBuffer, format, ap);
+   vsnprintf (ptr, MAX_PRINT_BUFFER - 1, format, ap);
    va_end (ap);
 
-   return &staticBuffer[0];
+   return ptr;
 }
 
 bool IsAlive (edict_t *ent)
@@ -105,7 +111,7 @@ void DisplayMenuToClient (edict_t *ent, MenuText *menu)
       String tempText = String (menu->menuText);
       tempText.Replace ("\v", "\n");
 
-      char *text = locale.TranslateInput (tempText.GetBuffer ());
+      const char *text = engine.TraslateMessage (tempText.GetBuffer ());
       tempText = String (text);
 
       // make menu looks best
@@ -115,11 +121,11 @@ void DisplayMenuToClient (edict_t *ent, MenuText *menu)
       if ((g_gameFlags & (GAME_XASH | GAME_MOBILITY)) && !yb_display_menu_text.GetBool ())
          text = " ";
       else
-         text = (char *) tempText.GetBuffer ();
+         text = tempText.GetBuffer ();
 
       while (strlen (text) >= 64)
       {
-         MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, netmsg.GetId (NETMSG_SHOWMENU), NULL, ent);
+         MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), NULL, ent);
             WRITE_SHORT (menu->validSlots);
             WRITE_CHAR (-1);
             WRITE_BYTE (1);
@@ -132,7 +138,7 @@ void DisplayMenuToClient (edict_t *ent, MenuText *menu)
          text += 64;
       }
 
-      MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, netmsg.GetId (NETMSG_SHOWMENU), NULL, ent);
+      MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), NULL, ent);
          WRITE_SHORT (menu->validSlots);
          WRITE_CHAR (-1);
          WRITE_BYTE (0);
@@ -143,7 +149,7 @@ void DisplayMenuToClient (edict_t *ent, MenuText *menu)
    }
    else
    {
-      MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, netmsg.GetId (NETMSG_SHOWMENU), NULL, ent);
+      MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), NULL, ent);
          WRITE_SHORT (0);
          WRITE_CHAR (0);
          WRITE_BYTE (0);
@@ -206,7 +212,7 @@ void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex)
    {
       MESSAGE_BEGIN (MSG_BROADCAST, SVC_TEMPENTITY);
          WRITE_BYTE (TE_PLAYERDECAL);
-         WRITE_BYTE (engine.IndexOfEntity (ENT (pev)));
+         WRITE_BYTE (engine.IndexOfEntity (pev->pContainingEntity));
          WRITE_COORD (trace->vecEndPos.x);
          WRITE_COORD (trace->vecEndPos.y);
          WRITE_COORD (trace->vecEndPos.z);
@@ -234,7 +240,6 @@ void FreeLibraryMemory (void)
 {
    // this function free's all allocated memory
    waypoints.Init (); // frees waypoint data
-   locale.Destroy (); // clear language
 
    delete [] g_experienceData;
    g_experienceData = NULL;
@@ -566,7 +571,7 @@ void DetectCSVersion (void)
    }
 
    // counter-strike 1.6 or higher (plus detects for non-steam versions of 1.5)
-   byte *detection = (*g_engfuncs.pfnLoadFileForMe) ("events/galil.sc", NULL);
+   byte *detection = g_engfuncs.pfnLoadFileForMe ("events/galil.sc", NULL);
 
    if (detection != NULL)
       g_gameFlags |= GAME_CSTRIKE16; // just to be sure
@@ -575,7 +580,7 @@ void DetectCSVersion (void)
 
    // if we have loaded the file free it
    if (detection != NULL)
-      (*g_engfuncs.pfnFreeFile) (detection);
+      g_engfuncs.pfnFreeFile (detection);
 }
 
 void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
@@ -583,28 +588,28 @@ void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
    // this function logs a message to the message log file root directory.
 
    va_list ap;
-   char buffer[512] = {0, }, levelString[32] = {0, }, logLine[1024] = {0, };
+   char buffer[MAX_PRINT_BUFFER] = {0, }, levelString[32] = {0, }, logLine[MAX_PRINT_BUFFER] = {0, };
 
    va_start (ap, format);
-   vsprintf (buffer, locale.TranslateInput (format), ap);
+   vsnprintf (buffer, SIZEOF_CHAR (buffer), format, ap);
    va_end (ap);
 
    switch (logLevel)
    {
    case LL_DEFAULT:
-      strcpy (levelString, "Log: ");
+      strcpy (levelString, "LOG: ");
       break;
 
    case LL_WARNING:
-      strcpy (levelString, "Warning: ");
+      strcpy (levelString, "WARN: ");
       break;
 
    case LL_ERROR:
-      strcpy (levelString, "Error: ");
+      strcpy (levelString, "ERROR: ");
       break;
 
    case LL_FATAL:
-      strcpy (levelString, "Critical: ");
+      strcpy (levelString, "FATAL: ");
       break;
    }
 
@@ -660,49 +665,6 @@ void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
 #endif
    }
 }
-
-char *Localizer::TranslateInput (const char *input)
-{
-   if (engine.IsDedicatedServer ())
-      return const_cast <char *> (&input[0]);
-
-   static char string[1024];
-   const char *ptr = input + strlen (input) - 1;
-
-   while (ptr > input && *ptr == '\n')
-      ptr--;
-
-   if (ptr != input)
-      ptr++;
-
-   strncpy (string, input, SIZEOF_CHAR (string));
-   String::TrimExternalBuffer (string);
-
-   FOR_EACH_AE (m_langTab, i)
-   {
-      if (strcmp (string, m_langTab[i].original) == 0)
-      {
-         strncpy (string, m_langTab[i].translated, SIZEOF_CHAR (string));
-
-         if (ptr != input)
-            strncat (string, ptr, 1024 - 1 - strlen (string));
-
-         return &string[0];
-      }
-   }
-   return const_cast <char *> (&input[0]); // nothing found
-}
-
-void Localizer::Destroy (void)
-{
-   FOR_EACH_AE (m_langTab, it)
-   {
-      delete[] m_langTab[it].original;
-      delete[] m_langTab[it].translated;
-   }
-   m_langTab.RemoveAll ();
-}
-
 
 bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool sameTeam, bool needBot, bool isAlive, bool needDrawn)
 {

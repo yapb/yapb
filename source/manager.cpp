@@ -1114,7 +1114,7 @@ void Bot::NewRound (void)
    m_itemCheckTime = 0.0f;
 
    m_breakableEntity = NULL;
-   m_breakable.Zero ();
+   m_breakableOrigin.Zero ();
    m_timeDoorOpen = 0.0f;
 
    ResetCollideState ();
