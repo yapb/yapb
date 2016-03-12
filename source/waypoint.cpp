@@ -2428,7 +2428,6 @@ void Waypoint::SetBombPosition (bool shouldReset)
 
       return;
    }
-
    edict_t *ent = NULL;
 
    while (!engine.IsNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade")))

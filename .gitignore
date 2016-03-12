@@ -58,3 +58,4 @@ project/yapb.vcxproj.user
 *.opendb
 *.aps
 *.db
+*.enc

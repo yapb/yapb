@@ -850,7 +850,7 @@ void InitConfig (void)
       enum Lang { Lang_Original, Lang_Translate } langState = static_cast <Lang> (2);
 
       char buffer[1024];
-      Engine::TranslatorPair temp = {"", ""};
+      TranslatorPair temp = {"", ""};
 
       while (fp.GetBuffer (line, 255))
       {
@@ -2217,21 +2217,23 @@ void StartFrame (void)
          // code below is executed only on dedicated server
          if (engine.IsDedicatedServer () && !engine.IsNullEntity (player) && (player->v.flags & FL_CLIENT) && !(player->v.flags & FL_FAKECLIENT))
          {
-            if (g_clients[i].flags & CF_ADMIN)
+            Client &client = g_clients[i];
+
+            if (client.flags & CF_ADMIN)
             {
                if (IsNullString (yb_password_key.GetString ()) && IsNullString (yb_password.GetString ()))
-                  g_clients[i].flags &= ~CF_ADMIN;
-               else if (strcmp (yb_password.GetString (), INFOKEY_VALUE (GET_INFOKEYBUFFER (g_clients[i].ent), const_cast <char *> (yb_password_key.GetString ()))))
+                  client.flags &= ~CF_ADMIN;
+               else if (strcmp (yb_password.GetString (), INFOKEY_VALUE (GET_INFOKEYBUFFER (client.ent), const_cast <char *> (yb_password_key.GetString ()))))
                {
-                  g_clients[i].flags &= ~CF_ADMIN;
+                  client.flags &= ~CF_ADMIN;
                   engine.Printf ("Player %s had lost remote access to yapb.", STRING (player->v.netname));
                }
             }
-            else if (!(g_clients[i].flags & CF_ADMIN) && !IsNullString (yb_password_key.GetString ()) && !IsNullString (yb_password.GetString ()))
+            else if (!(client.flags & CF_ADMIN) && !IsNullString (yb_password_key.GetString ()) && !IsNullString (yb_password.GetString ()))
             {
-               if (strcmp (yb_password.GetString (), INFOKEY_VALUE (GET_INFOKEYBUFFER (g_clients[i].ent), const_cast <char *> (yb_password_key.GetString ()))) == 0)
+               if (strcmp (yb_password.GetString (), INFOKEY_VALUE (GET_INFOKEYBUFFER (client.ent), const_cast <char *> (yb_password_key.GetString ()))) == 0)
                {
-                  g_clients[i].flags |= CF_ADMIN;
+                  client.flags |= CF_ADMIN;
                   engine.Printf ("Player %s had gained full remote access to yapb.", STRING (player->v.netname));
                }
             }
@@ -2386,14 +2388,14 @@ void pfnClientCommand (edict_t *ent, char const *format, ...)
    // case it's a bot asking for a client command, we handle it like we do for bot commands
 
    va_list ap;
-   char buffer[1024];
+   char buffer[MAX_PRINT_BUFFER];
 
    va_start (ap, format);
-   _vsnprintf (buffer, sizeof (buffer), format, ap);
+   _vsnprintf (buffer, SIZEOF_CHAR (buffer), format, ap);
    va_end (ap);
 
    // is the target entity an official bot, or a third party bot ?
-   if (IsValidBot (ent) || (ent->v.flags & FL_DORMANT))
+   if (ent->v.flags & FL_FAKECLIENT)
    {
       if (g_isMetamod)
          RETURN_META (MRES_SUPERCEDE); // prevent bots to be forced to issue client commands
@@ -2887,7 +2889,7 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
 {
    if (g_isMetamod)
       memset (functionTable, 0, sizeof (enginefuncs_t));
-
+  
    functionTable->pfnChangeLevel = pfnChangeLevel;
    functionTable->pfnFindEntityByString = pfnFindEntityByString;
    functionTable->pfnEmitSound = pfnEmitSound;
@@ -2909,7 +2911,7 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
    functionTable->pfnCmd_Argc = pfnCmd_Argc;
    functionTable->pfnSetClientMaxspeed = pfnSetClientMaxspeed;
    functionTable->pfnAlertMessage = pfnAlertMessage;
-
+   
    return TRUE;
 }
 
@@ -3095,10 +3097,10 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       AddLogEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", engine.GetModName ());
 #endif
       
-   g_funcPointers = g_gameLib->GetFuncAddr <FuncPointers_t> ("GiveFnptrsToDll");
-   g_entityAPI = g_gameLib->GetFuncAddr <EntityAPI_t> ("GetEntityAPI");
-   g_getNewEntityAPI = g_gameLib->GetFuncAddr <NewEntityAPI_t> ("GetNewDLLFunctions");
-   g_serverBlendingAPI = g_gameLib->GetFuncAddr <BlendAPI_t> ("Server_GetBlendingInterface");
+   g_funcPointers = static_cast <FuncPointers_t> (g_gameLib->GetFuncAddr ("GiveFnptrsToDll"));
+   g_entityAPI = static_cast <EntityAPI_t> (g_gameLib->GetFuncAddr ("GetEntityAPI"));
+   g_getNewEntityAPI = static_cast <NewEntityAPI_t> (g_gameLib->GetFuncAddr ("GetNewDLLFunctions"));
+   g_serverBlendingAPI = static_cast <BlendAPI_t> (g_gameLib->GetFuncAddr ("Server_GetBlendingInterface"));
 
    if (!g_funcPointers || !g_entityAPI)
       TerminateOnMalloc ();
@@ -3119,29 +3121,27 @@ DLL_ENTRYPOINT
    if (DLL_DETACHING)
    {
       FreeLibraryMemory (); // free everything that's freeable
-      
       delete g_gameLib; // if dynamic link library of mod is load, free it
    }
    DLL_RETENTRY; // the return data type is OS specific too
 }
 
-static void LinkEntity_Helper (EntityPtr_t &addr, const char *name, entvars_t *pev)
+void LinkEntity_Helper (EntityPtr_t *addr, const char *name, entvars_t *pev)
 {
-   // here we're see an ugliest hack :)
-   //if (addr == NULL  || (g_gameFlags & GAME_OFFICIAL_CSBOT))
-      addr = g_gameLib->GetFuncAddr <EntityPtr_t > (name);
+   if (*addr == NULL)
+      *addr = static_cast <EntityPtr_t> (g_gameLib->GetFuncAddr (name));
 
-   if (addr == NULL)
+   if (*addr == NULL)
       return;
 
-   addr (pev);
+   (*addr) (pev);
 }
 
 #define LINK_ENTITY(entityName) \
 SHARED_LIBRARAY_EXPORT void entityName (entvars_t *pev) \
 { \
-   static EntityPtr_t addr = NULL; \
-   LinkEntity_Helper (addr, #entityName, pev); \
+   static EntityPtr_t addr; \
+   LinkEntity_Helper (&addr, #entityName, pev); \
 } \
 
 // entities in counter-strike...

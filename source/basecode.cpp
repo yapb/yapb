@@ -291,7 +291,7 @@ void Bot::AvoidGrenades (void)
       m_avoidGrenade = NULL;
       m_needAvoidGrenade = 0;
    }
-   Array <entity_t> activeGrenades = bots.GetActiveGrenades ();
+   Array <edict_t *> activeGrenades = bots.GetActiveGrenades ();
 
    // find all grenades on the map
    FOR_EACH_AE (activeGrenades, it)
@@ -354,7 +354,7 @@ bool Bot::IsBehindSmokeClouds (edict_t *ent)
       return false;
 
    const Vector &betweenUs = (ent->v.origin - pev->origin).Normalize ();
-   Array <entity_t> activeGrenades = bots.GetActiveGrenades ();
+   Array <edict_t *> activeGrenades = bots.GetActiveGrenades ();
 
    // find all grenades on the map
    FOR_EACH_AE (activeGrenades, it)
@@ -2861,7 +2861,7 @@ void Bot::ChooseAimDirection (void)
       if (m_trackingEdict == m_lastEnemy)
       {
          if (m_timeNextTracking < engine.Time ())
-            changePredictedEnemy = IsAlive (m_lastEnemy);
+            changePredictedEnemy = false;
       }
 
       if (changePredictedEnemy)
@@ -2869,7 +2869,7 @@ void Bot::ChooseAimDirection (void)
          m_lookAt = waypoints.GetPath (GetAimingWaypoint (m_lastEnemyOrigin))->origin;
          m_camp = m_lookAt;
 
-         m_timeNextTracking = engine.Time () + 2.0f;
+         m_timeNextTracking = engine.Time () + 1.25f;
          m_trackingEdict = m_lastEnemy;
       }
       else
@@ -3005,7 +3005,7 @@ void Bot::ThinkFrame (void)
    CheckMessageQueue (); // check for pending messages
 
    // remove voice icon
-   if (g_lastRadioTime[g_clients[engine.IndexOfEntity (GetEntity ()) - 1].realTeam] + Random.Float (0.8f, 2.1f) < engine.Time ())
+   if (g_lastRadioTime[g_clients[engine.IndexOfEntity (GetEntity ()) - 1].team2] + Random.Float (0.8f, 2.1f) < engine.Time ())
       SwitchChatterIcon (false); // hide icon
 
    if (botMovement)
@@ -6047,6 +6047,9 @@ void Bot::EquipInBuyzone (int buyState)
 bool Bot::IsBombDefusing (const Vector &bombOrigin)
 {
    // this function finds if somebody currently defusing the bomb.
+
+   if (!g_bombPlanted)
+      return false;
 
    bool defusingInProgress = false;
 

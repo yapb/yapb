@@ -1488,7 +1488,7 @@ void BotManager::UpdateActiveGrenades (void)
    }
 }
 
-const Array <entity_t> &BotManager::GetActiveGrenades (void)
+const Array <edict_t *> &BotManager::GetActiveGrenades (void)
 {
    return m_activeGrenades;
 }

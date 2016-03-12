@@ -137,18 +137,18 @@ public:
       return m_ptr;
    }
 
-   template <typename R> R GetFuncAddr (const char *function)
+   inline void *GetFuncAddr (const char *function)
    {
 #ifdef PLATFORM_WIN32
-      return reinterpret_cast <R> (GetProcAddress (GetHandle <HMODULE> (), function));
+      return reinterpret_cast <void *> (GetProcAddress (static_cast <HMODULE> (m_ptr), function));
 #else
-      return reinterpret_cast <R> (dlsym (m_ptr, function));
+      return reinterpret_cast <void *> (dlsym (m_ptr, function));
 #endif
    }
 
-   template <typename R> R GetHandle (void)
+   inline void *GetHandle (void)
    {
-      return (R) m_ptr;
+      return m_ptr;
    }
 
    inline bool IsLoaded (void) const

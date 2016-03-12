@@ -606,7 +606,7 @@ struct Client
    Vector soundPosition; // position sound was played
 
    int team; // bot team
-   int realTeam; // real bot team in free for all mode (csdm)
+   int team2; // real bot team in free for all mode (csdm)
    int flags; // client flags
 
    float hearingDistance; // distance this sound is heared
@@ -1237,8 +1237,8 @@ private:
    bool m_economicsGood[2]; // is team able to buy anything
    bool m_deathMsgSent; // for fakeping
 
-   Array <entity_t> m_activeGrenades; // holds currently active grenades in the map
-   Array <entity_t> m_trackedPlayers; // holds array of connected players, and waits the player joins team
+   Array <edict_t *> m_activeGrenades; // holds currently active grenades in the map
+   Array <edict_t *> m_trackedPlayers; // holds array of connected players, and waits the player joins team
 
    edict_t *m_killerEntity; // killer entity for bots
 
@@ -1304,7 +1304,7 @@ public:
 
    // grenades
    void UpdateActiveGrenades (void);
-   const Array <entity_t> &GetActiveGrenades (void);
+   const Array <edict_t *> &GetActiveGrenades (void);
 
    inline bool HasActiveGrenades (void)
    {

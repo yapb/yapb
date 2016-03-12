@@ -19,6 +19,13 @@ Engine::Engine (void)
 
    for (int i = 0; i < NETMSG_NUM; i++)
       m_msgBlock.regMsgs[i] = NETMSG_UNDEFINED;
+
+   m_isBotCommand = false;
+   m_argumentCount = 0;
+   memset (m_arguments, 0, sizeof (m_arguments));
+
+   m_cvars.RemoveAll ();
+   m_language.RemoveAll ();
 }
 
 Engine::~Engine (void)
@@ -36,10 +43,6 @@ void Engine::Precache (edict_t *startEntity)
 
    m_drawModels[DRAW_SIMPLE] = PRECACHE_MODEL (ENGINE_STR ("sprites/laserbeam.spr"));
    m_drawModels[DRAW_ARROW] = PRECACHE_MODEL (ENGINE_STR ("sprites/arrow1.spr"));
-
-   m_isBotCommand = false;
-   m_argumentCount = 0;
-   m_arguments[0] = 0x0;
 
    m_localEntity = NULL;
    m_startEntity = startEntity;
@@ -254,7 +257,9 @@ float Engine::GetWaveLength (const char *fileName)
 bool Engine::IsDedicatedServer (void)
 {
    // return true if server is dedicated server, false otherwise
-   return g_engfuncs.pfnIsDedicatedServer () > 0;
+   static bool dedicated = g_engfuncs.pfnIsDedicatedServer () > 0;
+
+   return dedicated;
 }
 
 const char *Engine::GetModName (void)
@@ -980,8 +985,6 @@ void Engine::ProcessMesageCapture (void *ptr)
          }
          else if (!g_bombPlanted && FStrEq (strVal, "#Bomb_Planted"))
          {
-            waypoints.SetBombPosition ();
-
             g_bombPlanted = g_bombSayString = true;
             g_timeBombPlanted = Time ();
 
@@ -998,6 +1001,7 @@ void Engine::ProcessMesageCapture (void *ptr)
                      bot->ChatterMessage (Chatter_WhereIsTheBomb);
                }
             }
+            waypoints.SetBombPosition ();
          }
          else if (bot != NULL && FStrEq (strVal, "#Switch_To_BurstFire"))
             bot->m_weaponBurstMode = BM_ON;
@@ -1017,19 +1021,19 @@ void Engine::ProcessMesageCapture (void *ptr)
          if (playerIndex >= 0 && playerIndex <= MaxClients ())
          {
 #ifndef XASH_CSDM
-            Client &cl = g_clients[playerIndex - 1];
+            Client &client = g_clients[playerIndex - 1];
 
             if (intVal == 1)
-               cl.realTeam = TERRORIST;
+               client.team2 = TERRORIST;
             else if (intVal == 2)
-               cl.realTeam = CT;
+               client.team2 = CT;
             else
-               cl.realTeam = SPECTATOR;
+               client.team2 = SPECTATOR;
 
             if (yb_csdm_mode.GetInt () == 2)
-               cl.team = playerIndex;
+               client.team = playerIndex;
             else
-               cl.team = cl.realTeam;
+               client.team = client.team2;
 #endif
          }
          break;

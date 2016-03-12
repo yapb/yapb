@@ -63,35 +63,34 @@ enum NetMsgId
    NETMSG_NUM = 21
 };
 
+// variable reg pair
+struct VarPair
+{
+   VarType type;
+   cvar_t reg;
+   bool regMissing;
+   class ConVar *self;
+};
+
+// translation pair
+struct TranslatorPair
+{
+   const char *original;
+   const char *translated;
+};
+
+// network message block
+struct MessageBlock
+{
+   int bot;
+   int state;
+   int msg;
+   int regMsgs[NETMSG_NUM];
+};
+
 // provides utility functions to not call original engine (less call-cost)
 class Engine : public Singleton <Engine>
 {
-public:
-   // variable reg pair
-   struct VarPair
-   {
-      VarType type;
-      cvar_t reg;
-      bool regMissing;
-      class ConVar *self;
-   };
-
-   // translation pair
-   struct TranslatorPair
-   {
-      const char *original;
-      const char *translated;
-   };
-
-   // network message block
-   struct MessageBlock
-   {
-      int bot;
-      int state;
-      int msg;
-      int regMsgs[NETMSG_NUM];
-   };
-
 private:
    short m_drawModels[DRAW_NUM];
 
@@ -186,13 +185,13 @@ public:
 public:
 
    // get the current time on server
-   inline float Time (void)
+   FORCEINLINE float Time (void)
    {
       return g_pGlobals->time;
    }
 
    // get "maxplayers" limit on server
-   inline int MaxClients (void)
+   FORCEINLINE int MaxClients (void)
    {
       return g_pGlobals->maxClients;
    }
@@ -227,19 +226,19 @@ public:
    }
 
    // gets edict pointer out of entity index
-   inline edict_t *EntityOfIndex (const int index)
+   FORCEINLINE edict_t *EntityOfIndex (const int index)
    {
       return static_cast <edict_t *> (m_startEntity + index);
    };
 
    // gets edict index out of it's pointer
-   inline int IndexOfEntity (const edict_t *ent)
+   FORCEINLINE int IndexOfEntity (const edict_t *ent)
    {
       return static_cast <int> (ent - m_startEntity);
    };
 
    // verify entity isn't null
-   inline bool IsNullEntity (const edict_t *ent)
+   FORCEINLINE bool IsNullEntity (const edict_t *ent)
    {
       return !ent || !IndexOfEntity (ent);
    }
@@ -295,7 +294,7 @@ public:
    }
 
    // tries to set needed message id
-   void TryCaptureMessage (int type, int msgId)
+   FORCEINLINE void TryCaptureMessage (int type, int msgId)
    {
       if (type == m_msgBlock.regMsgs[msgId])
          SetOngoingMessageId (msgId);
@@ -315,11 +314,11 @@ public:
 public:
    ConVar (const char *name, const char *initval, VarType type = VT_NOSERVER, bool regMissing = false);
 
-   inline bool GetBool (void) { return m_eptr->value > 0.0f; }
-   inline int GetInt (void) { return static_cast <int> (m_eptr->value); }
-   inline float GetFloat (void) { return m_eptr->value; }
-   inline const char *GetString (void) { return m_eptr->string; }
-   inline void SetFloat (float val) { m_eptr->value = val; }
-   inline void SetInt (int val) { SetFloat (static_cast <float> (val)); }
-   inline void SetString (const char *val) { g_engfuncs.pfnCvar_DirectSet (m_eptr, const_cast <char *> (val)); }
+   FORCEINLINE bool GetBool (void) { return m_eptr->value > 0.0f; }
+   FORCEINLINE int GetInt (void) { return static_cast <int> (m_eptr->value); }
+   FORCEINLINE float GetFloat (void) { return m_eptr->value; }
+   FORCEINLINE const char *GetString (void) { return m_eptr->string; }
+   FORCEINLINE void SetFloat (float val) { m_eptr->value = val; }
+   FORCEINLINE void SetInt (int val) { SetFloat (static_cast <float> (val)); }
+   FORCEINLINE void SetString (const char *val) { g_engfuncs.pfnCvar_DirectSet (m_eptr, const_cast <char *> (val)); }
 };

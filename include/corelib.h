@@ -704,10 +704,10 @@ public:
    //
    // Function: BuildVectors
    // 
-   //   Builds a 3D referential from a view angle, that is to say, the relative "forward", "right" and "upward" direction 
-   // that a player would have if he were facing this view angle. World angles are stored in Vector structs too, the 
-   // "x" component corresponding to the X angle (horizontal angle), and the "y" component corresponding to the Y angle 
-   // (vertical angle).
+   //  Builds a 3D referential from a view angle, that is to say, the relative "forward", "right" and "upward" direction 
+   //  that a player would have if he were facing this view angle. World angles are stored in Vector structs too, the 
+   //  "x" component corresponding to the X angle (horizontal angle), and the "y" component corresponding to the Y angle 
+   //  (vertical angle).
    //
    // Parameters:
    //   forward - Forward referential vector.
@@ -3965,8 +3965,7 @@ public:
    //
    static FORCEINLINE T *GetObject (void)
    {
-      static T reference;
-      return &reference;
+      return &GetReference ();
    }
 
    //
