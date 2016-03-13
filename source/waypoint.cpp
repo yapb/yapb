@@ -1059,7 +1059,7 @@ bool Waypoint::Load (void)
 {
    if (m_loadTries++ > 3)
    {
-      sprintf (m_infoBuffer, "Giving up loading waypoint file. Something went wrong.", engine.GetMapName ());
+      sprintf (m_infoBuffer, "Giving up loading waypoint file (%s). Something went wrong.", engine.GetMapName ());
       AddLogEntry (true, LL_ERROR, m_infoBuffer);
 
       return false;
