@@ -116,7 +116,7 @@ void Engine::ClientPrintf (edict_t *ent, const char *fmt, ...)
    vsnprintf (string, SIZEOF_CHAR (string), TraslateMessage (fmt), ap);
    va_end (ap);
 
-   if (IsNullEntity (ent) || ent == g_hostEntity)
+   if (IsDedicatedServer () || IsNullEntity (ent) || ent == g_hostEntity)
    {
       Printf (string);
       return;

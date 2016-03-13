@@ -1425,8 +1425,8 @@ public:
    void SetGoalVisited (int index);
    void ClearVisitedGoals (void);
 
-   const char *GetDataDir (void);
-   String CheckSubfolderFile (void);
+   const char *GetDataDir (bool isMemoryFile = false);
+   const char *GetFileName (bool isMemoryFile = false);
 
    void SetBombPosition (bool shouldReset = false);
    inline const Vector &GetBombPosition (void) { return m_foundBombOrigin; }
