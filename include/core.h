@@ -324,6 +324,22 @@ enum PickupType
    PICKUP_DEFUSEKIT
 };
 
+// fight style type
+enum FightStyle
+{
+   FIGHT_NONE,
+   FIGHT_STRAFE,
+   FIGHT_STAY
+};
+
+// dodge type
+enum StrafeDir
+{
+   STRAFE_DIR_NONE,
+   STRAFE_DIR_LEFT,
+   STRAFE_DIR_RIGHT
+};
+
 // reload state
 enum ReloadState
 {
@@ -361,6 +377,15 @@ enum LiftState
    LIFT_LEAVING
 };
 
+// wayponit auto-downloader
+enum WaypointDownloadError
+{
+   WDE_SOCKET_ERROR,
+   WDE_CONNECT_ERROR,
+   WDE_NOTFOUND_ERROR,
+   WDE_NOERROR
+};
+
 // game start messages for counter-strike...
 enum GameStartMessage
 {
@@ -371,31 +396,6 @@ enum GameStartMessage
    GSM_RADIO = 200,
    GSM_SAY = 10000,
    GSM_SAY_TEAM = 10001
-};
-
-// netmessage functions
-enum NetworkMessage
-{
-   NETMSG_VGUI = 1,
-   NETMSG_SHOWMENU = 2,
-   NETMSG_WEAPONLIST = 3,
-   NETMSG_CURWEAPON = 4,
-   NETMSG_AMMOX = 5,
-   NETMSG_AMMOPICKUP = 6,
-   NETMSG_DAMAGE = 7,
-   NETMSG_MONEY = 8,
-   NETMSG_STATUSICON = 9,
-   NETMSG_DEATH = 10,
-   NETMSG_SCREENFADE = 11,
-   NETMSG_HLTV = 12,
-   NETMSG_TEXTMSG = 13,
-   NETMSG_SCOREINFO = 14,
-   NETMSG_BARTIME = 15,
-   NETMSG_SENDAUDIO = 17,
-   NETMSG_SAYTEXT = 18,
-   NETMSG_BOTVOICE = 19,
-   NETMSG_RESETHUD = 20,
-   NETMSG_UNDEFINED = 0
 };
 
 // sensing states
@@ -469,7 +469,7 @@ enum WaypointFlag
 // defines for waypoint connection flags field (16 bits are available)
 enum PathFlag
 {
-   PATHFLAG_JUMP = (1 << 0), // must jump for this connection
+   PATHFLAG_JUMP = (1 << 0) // must jump for this connection
 };
 
 // enum pathfind search type
@@ -526,6 +526,8 @@ const int MAX_WAYPOINTS = 1024;
 const int MAX_WEAPONS = 32;
 const int NUM_WEAPONS = 26;
 const int MAX_COLLIDE_MOVES = 3;
+const int MAX_ENGINE_PLAYERS = 32; // we can have 64 players with xash
+const int MAX_PRINT_BUFFER = 1024;
 
 // weapon masks
 const int WEAPON_PRIMARY = ((1 << WEAPON_XM1014) | (1 <<WEAPON_M3) | (1 << WEAPON_MAC10) | (1 << WEAPON_UMP45) | (1 << WEAPON_MP5) | (1 << WEAPON_TMP) | (1 << WEAPON_P90) | (1 << WEAPON_AUG) | (1 << WEAPON_M4A1) | (1 << WEAPON_SG552) | (1 << WEAPON_AK47) | (1 << WEAPON_SCOUT) | (1 << WEAPON_SG550) | (1 << WEAPON_AWP) | (1 << WEAPON_G3SG1) | (1 << WEAPON_M249) | (1 << WEAPON_FAMAS) | (1 << WEAPON_GALIL));
@@ -556,24 +558,6 @@ struct TaskItem
    bool resume; // if task can be continued if interrupted
 };
 
-// wave structure
-struct WavHeader
-{
-   char riffChunkId[4];
-   unsigned long packageSize;
-   char chunkID[4];
-   char formatChunkId[4];
-   unsigned long formatChunkLength;
-   unsigned short dummy;
-   unsigned short channels;
-   unsigned long sampleRate;
-   unsigned long bytesPerSecond;
-   unsigned short bytesPerSample;
-   unsigned short bitsPerSample;
-   char dataChunkId[4];
-   unsigned long dataChunkLength;
-};
-
 // botname structure definition
 struct BotName
 {
@@ -587,13 +571,6 @@ struct ChatterItem
 {
    String name;
    float repeatTime;
-};
-
-// language config structure definition
-struct LanguageItem
-{
-   const char *original; // original string
-   const char *translated; // string to replace for
 };
 
 struct WeaponSelect
@@ -629,7 +606,7 @@ struct Client
    Vector soundPosition; // position sound was played
 
    int team; // bot team
-   int realTeam; // real bot team in free for all mode (csdm)
+   int team2; // real bot team in free for all mode (csdm)
    int flags; // client flags
 
    float hearingDistance; // distance this sound is heared
@@ -757,7 +734,7 @@ private:
    float m_blindRecognizeTime; // time to recognize enemy
    float m_itemCheckTime; // time next search for items needs to be done
    PickupType m_pickupType; // type of entity which needs to be used/picked up
-   Vector m_breakable; // origin of breakable
+   Vector m_breakableOrigin; // origin of breakable
 
    edict_t *m_pickupItem; // pointer to entity of item to use/pickup
    edict_t *m_itemIgnore; // pointer to entity to ignore for pickup
@@ -815,7 +792,7 @@ private:
    bool m_wantsToFire; // bot needs consider firing
    float m_shootAtDeadTime; // time to shoot at dying players
    edict_t *m_avoidGrenade; // pointer to grenade entity to avoid
-   char m_needAvoidGrenade; // which direction to strafe away
+   int m_needAvoidGrenade; // which direction to strafe away
 
    float m_followWaitTime; // wait to follow time
    edict_t *m_targetEntity; // the entity that the bot is trying to reach
@@ -844,8 +821,8 @@ private:
    bool m_checkWeaponSwitch; // is time to check weapon switch
    bool m_isUsingGrenade; // bot currently using grenade??
 
-   unsigned char m_combatStrafeDir; // direction to strafe
-   unsigned char m_fightStyle; // combat style to use
+   StrafeDir m_combatStrafeDir; // direction to strafe
+   FightStyle m_fightStyle; // combat style to use
    float m_lastFightStyleCheck; // time checked style
    float m_strafeSetTime; // time strafe direction was set
 
@@ -1070,6 +1047,7 @@ public:
    float m_spawnTime; // time this bot spawned
    float m_timeTeamOrder; // time of last radio command
    float m_timePeriodicUpdate; // time to per-second think
+   float m_timeRepotingInDelay; // time to delay report-in
 
    bool m_isVIP; // bot is vip?
 
@@ -1184,7 +1162,7 @@ public:
    void Think (void);
 
    /// the things that can be executed while skipping frames
-   void ThinkDelayed (void);
+   void ThinkFrame (void);
 
    void DisplayDebugOverlay (void);
    void NewRound (void);
@@ -1208,7 +1186,7 @@ public:
    inline TaskID GetTaskId (void) { return GetTask ()->id; };
 
    void TakeDamage (edict_t *inflictor, int damage, int armor, int bits);
-   void TakeBlinded (const Vector &fade, int alpha);
+   void TakeBlinded (int r, int g, int b, int alpha);
 
    void DiscardWeaponForUser (edict_t *user, bool discardC4);
 
@@ -1249,7 +1227,7 @@ class BotManager : public Singleton <BotManager>
 private:
    Array <CreateQueue> m_creationTab; // bot creation tab
 
-   Bot *m_bots[32]; // all available bots
+   Bot *m_bots[MAX_ENGINE_PLAYERS]; // all available bots
 
    float m_maintainTime; // time to maintain bot creation 
    float m_quotaMaintainTime; // time to maintain bot quota
@@ -1259,8 +1237,8 @@ private:
    bool m_economicsGood[2]; // is team able to buy anything
    bool m_deathMsgSent; // for fakeping
 
-   Array <entity_t> m_activeGrenades; // holds currently active grenades in the map
-   Array <entity_t> m_trackedPlayers; // holds array of connected players, and waits the player joins team
+   Array <edict_t *> m_activeGrenades; // holds currently active grenades in the map
+   Array <edict_t *> m_trackedPlayers; // holds array of connected players, and waits the player joins team
 
    edict_t *m_killerEntity; // killer entity for bots
 
@@ -1326,7 +1304,7 @@ public:
 
    // grenades
    void UpdateActiveGrenades (void);
-   const Array <entity_t> &GetActiveGrenades (void);
+   const Array <edict_t *> &GetActiveGrenades (void);
 
    inline bool HasActiveGrenades (void)
    {
@@ -1339,43 +1317,6 @@ public:
    void SendDeathMsgFix (void);
 };
 
-// texts localizer
-class Localizer : public Singleton <Localizer>
-{
-public:
-   Array <LanguageItem> m_langTab;
-
-public:
-   Localizer (void) { m_langTab.RemoveAll (); }
-  ~Localizer (void) { m_langTab.RemoveAll (); }
-
-   char *TranslateInput (const char *input);
-   void Destroy (void);
-};
-
-// netmessage handler class
-class NetworkMsg : public Singleton <NetworkMsg>
-{
-private:
-   Bot *m_bot;
-   int m_state;
-   int m_message;
-   int m_registerdMessages[NETMSG_RESETHUD + 1];
-
-public:
-   NetworkMsg (void);
-  ~NetworkMsg (void) { };
-
-   void Execute (void *p);
-   inline void Reset (void) { m_message = NETMSG_UNDEFINED; m_state = 0; m_bot = NULL; };
-   void HandleMessageIfRequired (int messageType, int requiredType);
-
-   inline void SetMessage (int message) { m_message = message; }
-   inline void SetBot (Bot *bot) { m_bot = bot; }
-
-   inline int GetId (int messageType) { return m_registerdMessages[messageType]; }
-   inline void SetId (int messageType, int messsageIdentifier) { m_registerdMessages[messageType] = messsageIdentifier; }
-};
 
 // waypoint operation class
 class Waypoint : public Singleton <Waypoint>
@@ -1395,11 +1336,12 @@ private:
    Vector m_learnPosition;
    Vector m_foundBombOrigin;
 
+   int m_loadTries;
    int m_cacheWaypointIndex;
    int m_lastJumpWaypoint;
    int m_visibilityIndex;
    Vector m_lastWaypoint;
-   byte m_visLUT[MAX_WAYPOINTS][MAX_WAYPOINTS / 4];
+   unsigned char m_visLUT[MAX_WAYPOINTS][MAX_WAYPOINTS / 4];
 
    float m_pathDisplayTime;
    float m_arrowDisplayTime;
@@ -1430,12 +1372,12 @@ public:
    void InitVisibilityTab (void);
 
    void InitTypes (void);
-   void AddPath (short int addIndex,  short int pathIndex, float distance);
+   void AddPath (int addIndex, int pathIndex, float distance);
 
    int GetFacingIndex (void);
    int FindFarest (const Vector &origin, float maxDistance = 32.0);
    int FindNearest (const Vector &origin, float minDistance = 9999.0f, int flags = -1);
-   void FindInRadius (Array <int> &radiusHolder, float radius, const Vector &origin, int maxCount = -1);
+   void FindInRadius (Array <int> &holder, float radius, const Vector &origin, int maxCount = -1);
 
    void Add (int flags, const Vector &waypointOrigin = Vector::GetZero ());
    void Delete (void);
@@ -1456,6 +1398,7 @@ public:
 
    bool Load (void);
    void Save (void);
+   void CleanupPathMemory (void);
 
    bool Reachable (Bot *bot, int index);
    bool IsNodeReachable (const Vector &src, const Vector &destination);
@@ -1482,190 +1425,53 @@ public:
    void SetGoalVisited (int index);
    void ClearVisitedGoals (void);
 
-   inline const Vector &GetBombPosition (void)
-   {
-      return m_foundBombOrigin;
-   }
-
-   void SetBombPosition (bool shouldReset = false);
+   const char *GetDataDir (void);
    String CheckSubfolderFile (void);
 
-   // quick access
-   inline Path *operator [] (int index)
-   {
-      extern int g_numWaypoints;
-
-      if (index < 0 || index >= g_numWaypoints)
-         assert (0);
-
-      return GetPath (index);
-   }
-};
-
-// wayponit auto-downloader
-enum WaypointDownloadError
-{
-   WDE_SOCKET_ERROR,
-   WDE_CONNECT_ERROR,
-   WDE_NOTFOUND_ERROR,
-   WDE_NOERROR
-};
-
-class WaypointDownloader
-{
-public:
+   void SetBombPosition (bool shouldReset = false);
+   inline const Vector &GetBombPosition (void) { return m_foundBombOrigin; }
 
    // free's socket handle
-   void FreeSocket (int sock);
+   void CloseSocketHandle (int sock);
 
    // do actually downloading of waypoint file
-   WaypointDownloadError DoDownload (void);
+   WaypointDownloadError RequestWaypoint (void);
 };
 
-enum VarType
-{
-   VT_NORMAL = 0,
-   VT_READONLY,
-   VT_PASSWORD,
-   VT_NOSERVER,
-   VT_NOREGISTER
-};
+#include <engine.h>
 
-class ConVarWrapper : public Singleton <ConVarWrapper>
-{
-private:
-   struct VarPair
-   {
-      VarType type;
-      cvar_t reg;
-      class ConVar *self;
-   };
-   Array <VarPair> m_regs;
-
-public:
-   void RegisterVariable (const char *variable, const char *value, VarType varType, ConVar *self);
-   void PushRegisteredConVarsToEngine (bool gameVars = false);
-};
-
-
-// expose bot globals
-#define netmsg NetworkMsg::GetReference ()
-#define locale Localizer::GetReference ()
-#define convars ConVarWrapper::GetReference ()
+// expose bot super-globals
 #define waypoints Waypoint::GetReference ()
+#define engine Engine::GetReference ()
 #define bots BotManager::GetReference ()
-
-// simplify access for console variables
-class ConVar
-{
-public:
-   cvar_t *m_eptr;
-
-public:
-   ConVar (const char *name, const char *initval, VarType type = VT_NOSERVER)
-   {
-      m_eptr = NULL;
-
-      convars.RegisterVariable (name, initval, type, this);
-   }
-
-   inline bool GetBool(void)
-   {
-      return m_eptr->value > 0.0f;
-   }
-
-   inline int GetInt (void)
-   {
-      return static_cast <int> (m_eptr->value);
-   }
-
-   inline int GetFlags (void)
-   {
-      return m_eptr->flags;
-   }
-
-   inline float GetFloat (void)
-   {
-      return m_eptr->value;
-   }
-
-   inline const char *GetString (void)
-   {
-      return m_eptr->string;
-   }
-
-   inline const char *GetName (void)
-   {
-      return m_eptr->name;
-   }
-
-   inline void SetFloat (float val)
-   {
-      g_engfuncs.pfnCVarSetFloat (m_eptr->name, val);
-   }
-
-   inline void SetInt (int val)
-   {
-      SetFloat (static_cast <float> (val));
-   }
-
-   inline void SetString (const char *val)
-   {
-      g_engfuncs.pfnCVarSetString (m_eptr->name, val);
-   }
-};
 
 // prototypes of bot functions...
 extern int GetWeaponReturn (bool isString, const char *weaponAlias, int weaponIndex = -1);
-
+extern int GetWeaponPenetrationPower (int id);
+extern int GenerateBuildNumber (void);
 extern float GetShootingConeDeviation (edict_t *ent, Vector *position);
-extern float GetWaveLength (const char *fileName);
 
-extern bool IsDedicatedServer (void);
 extern bool IsVisible (const Vector &origin, edict_t *ent);
 extern bool IsAlive (edict_t *ent);
 extern bool IsInViewCone (const Vector &origin, edict_t *ent);
-extern int GetWeaponPenetrationPower (int id);
+
 extern bool IsValidBot (edict_t *ent);
 extern bool IsValidPlayer (edict_t *ent);
 extern bool IsPlayerVIP (edict_t *ent);
-extern bool OpenConfig (const char *fileName, const char *errorIfNotExists, File *outFile, bool languageDependant = false);
+extern bool OpenConfig (const char *fileName, const char *errorIfNotExists, MemoryFile *outFile, bool languageDependant = false);
 extern bool FindNearestPlayer (void **holder, edict_t *to, float searchDistance = 4096.0, bool sameTeam = false, bool needBot = false, bool needAlive = false, bool needDrawn = false);
-
-extern const char *GetMapName (void);
-extern const char *GetWaypointDir (void);
-extern const char *GetModName (void);
-extern const char *GetField (const char *string, int fieldId, bool endLine = false);
-extern const char *FormatBuffer (const char *format, ...);
-
-extern uint16 GenerateBuildNumber (void);
-extern Vector GetEntityOrigin (edict_t *ent);
 
 extern void FreeLibraryMemory (void);
 extern void RoundInit (void);
-extern void FakeClientCommand (edict_t *fakeClient, const char *format, ...);
-extern void strtrim (char *string);
-extern void CreatePath (char *path);
-extern void ServerCommand (const char *format, ...);
-extern void RegisterCommand (const char *command, void funcPtr (void));
 extern void CheckWelcomeMessage (void);
 extern void DetectCSVersion (void);
-extern void PlaySound (edict_t *ent, const char *soundName);
-extern void ServerPrint (const char *format, ...);
-extern void ChartPrint (const char *format, ...);
-extern void CenterPrint (const char *format, ...);
-extern void ClientPrint (edict_t *ent, int dest, const char *format, ...);
-
 extern void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...);
-extern void TraceLine (const Vector &start, const Vector &end, bool ignoreMonsters, bool ignoreGlass, edict_t *ignoreEntity, TraceResult *ptr);
-extern void TraceLine (const Vector &start, const Vector &end, bool ignoreMonsters, edict_t *ignoreEntity, TraceResult *ptr);
-extern void TraceHull (const Vector &start, const Vector &end, bool ignoreMonsters, int hullNumber, edict_t *ignoreEntity, TraceResult *ptr);
-extern void DrawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, int red, int green, int blue, int brightness, int speed, int life);
-extern void DrawArrow (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, int red, int green, int blue, int brightness, int speed, int life);
 extern void DisplayMenuToClient (edict_t *ent, MenuText *menu);
 extern void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex);
 extern void SoundAttachToClients (edict_t *ent, const char *sample, float volume);
 extern void SoundSimulateUpdate (int playerIndex);
+
+extern const char *FormatBuffer (const char *format, ...);
 
 // very global convars
 extern ConVar yb_jasonmode;
@@ -1679,5 +1485,5 @@ extern ConVar yb_ignore_enemies;
 
 inline int Bot::GetIndex (void)
 {
-   return IndexOfEntity (GetEntity ());
+   return engine.IndexOfEntity (GetEntity ());
 }

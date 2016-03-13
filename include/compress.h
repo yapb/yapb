@@ -154,7 +154,7 @@ public:
 
       memset (m_textBuffer, 0, sizeof (m_textBuffer));
       memset (m_right, 0, sizeof (m_right));
-      memset (m_left, 0, sizeof (m_right));
+      memset (m_left, 0, sizeof (m_left));
       memset (m_parent, 0, sizeof (m_parent));
    }
 

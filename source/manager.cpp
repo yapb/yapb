@@ -1,4 +1,4 @@
-﻿//
+//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -41,11 +41,12 @@ BotManager::BotManager (void)
 
    m_creationTab.RemoveAll ();
    m_killerEntity = NULL;
+   m_balanceCount = 0;
 }
 
 BotManager::~BotManager (void)
 {
-   // this is a bot manager class destructor, do not use GetMaxClients () here !!
+   // this is a bot manager class destructor, do not use engine.MaxClients () here !!
    Free ();
 }
 
@@ -66,13 +67,13 @@ void BotManager::CreateKillerEntity (void)
 
 void BotManager::DestroyKillerEntity (void)
 {
-   if (!IsEntityNull (m_killerEntity))
+   if (!engine.IsNullEntity (m_killerEntity))
       g_engfuncs.pfnRemoveEntity (m_killerEntity);
 }
 
 void BotManager::TouchWithKillerEntity (Bot *bot)
 {
-   if (IsEntityNull (m_killerEntity))
+   if (engine.IsNullEntity (m_killerEntity))
    {
       MDLL_ClientKill (bot->GetEntity ());
       return;
@@ -117,12 +118,12 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
 
    if (g_numWaypoints < 1) // don't allow creating bots with no waypoints loaded
    {
-      CenterPrint ("Map is not waypointed. Cannot create bot");
+      engine.CenterPrintf ("Map is not waypointed. Cannot create bot");
       return 0;
    }
    else if (g_waypointsChanged) // don't allow creating bots with changed waypoints (distance tables are messed up)
    {
-      CenterPrint ("Waypoints have been changed. Load waypoints again...");
+      engine.CenterPrintf ("Waypoints have been changed. Load waypoints again...");
       return 0;
    }
 
@@ -194,14 +195,14 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
          strcpy (outputName, prefixedName);
    }
 
-   if (IsEntityNull ((bot = (*g_engfuncs.pfnCreateFakeClient) (outputName))))
+   if (engine.IsNullEntity ((bot = (*g_engfuncs.pfnCreateFakeClient) (outputName))))
    {
-      CenterPrint ("Maximum players reached (%d/%d). Unable to create Bot.", GetMaxClients (), GetMaxClients ());
+      engine.CenterPrintf ("Maximum players reached (%d/%d). Unable to create Bot.", engine.MaxClients (), engine.MaxClients ());
       return 2;
    }
-   int index = IndexOfEntity (bot) - 1;
+   int index = engine.IndexOfEntity (bot) - 1;
 
-   InternalAssert (index >= 0 && index <= 32); // check index
+   InternalAssert (index >= 0 && index <= MAX_ENGINE_PLAYERS); // check index
    InternalAssert (m_bots[index] == NULL); // check bot slot
 
    m_bots[index] = new Bot (bot, difficulty, personality, team, member, steamId);
@@ -209,7 +210,7 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
    if (m_bots[index] == NULL)
       TerminateOnMalloc ();
 
-   ServerPrint ("Connecting Bot...");
+   engine.Printf ("Connecting Bot...");
 
    return 1;
 }
@@ -217,12 +218,12 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
 int BotManager::GetIndex (edict_t *ent)
 {
    // this function returns index of bot (using own bot array)
-   if (IsEntityNull (ent))
+   if (engine.IsNullEntity (ent))
       return -1;
 
-   int index = IndexOfEntity (ent) - 1;
+   int index = engine.IndexOfEntity (ent) - 1;
 
-   if (index < 0 || index >= 32)
+   if (index < 0 || index >= MAX_ENGINE_PLAYERS)
       return -1;
 
    if (m_bots[index] != NULL)
@@ -235,7 +236,7 @@ Bot *BotManager::GetBot (int index)
 {
    // this function finds a bot specified by index, and then returns pointer to it (using own bot array)
 
-   if (index < 0 || index >= 32)
+   if (index < 0 || index >= MAX_ENGINE_PLAYERS)
       return NULL;
 
    if (m_bots[index] != NULL)
@@ -257,7 +258,7 @@ Bot *BotManager::FindOneValidAliveBot (void)
 
    Array <int> foundBots;
 
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
       if (foundBots.GetSize () > 4)
          break;
@@ -276,7 +277,7 @@ void BotManager::Think (void)
 {
    // this function calls think () function for all available at call moment bots
 
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
       if (m_bots[i] != NULL)
          m_bots[i]->Think ();
@@ -287,7 +288,7 @@ void BotManager::PeriodicThink (void)
 {
    // this function calls periodic SecondThink () function for all available at call moment bots
 
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
       if (m_bots[i] != NULL)
          m_bots[i]->PeriodicThink ();
@@ -329,9 +330,9 @@ void BotManager::AddBot (const String &name, const String &difficulty, const Str
 
 void BotManager::AdjustQuota (bool isPlayerConnection, edict_t *ent)
 {
-   // this function increases or decreases bot quota amount depending on autovacate variables
+   // this function increases or decreases bot quota amount depending on auto vacate variables
 
-   if (!IsDedicatedServer () || !yb_autovacate.GetBool () || GetBot (ent) != NULL)
+   if (!engine.IsDedicatedServer () || !yb_autovacate.GetBool () || GetBot (ent) != NULL)
       return;
 
    if (isPlayerConnection)
@@ -374,7 +375,7 @@ void BotManager::VerifyPlayersHasJoinedTeam (int &desiredCount)
    if (!m_trackedPlayers.GetElementNumber ())
       return;
 
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
       Client &cl = g_clients[i];
 
@@ -405,7 +406,7 @@ void BotManager::MaintainBotQuota (void)
       return;
 
    // bot's creation update
-   if (!m_creationTab.IsEmpty () && m_maintainTime < GetWorldTime ())
+   if (!m_creationTab.IsEmpty () && m_maintainTime < engine.Time ())
    {
       CreateQueue last = m_creationTab.Pop ();
       int resultOfCall = CreateBot (last.name, last.difficulty, last.personality, last.team, last.member);
@@ -421,11 +422,11 @@ void BotManager::MaintainBotQuota (void)
          m_creationTab.RemoveAll (); // maximum players reached, so set quota to maximum players
          yb_quota.SetInt (GetBotsNum ());
       }
-      m_maintainTime = GetWorldTime () + 0.45f;
+      m_maintainTime = engine.Time () + 0.20f;
    }
 
    // now keep bot number up to date
-   if (m_quotaMaintainTime < GetWorldTime ())
+   if (m_quotaMaintainTime < engine.Time ())
    {
       // don't allow that quota is below zero
       if (yb_quota.GetInt () < 0)
@@ -447,9 +448,9 @@ void BotManager::MaintainBotQuota (void)
          desiredCount = max (0, yb_quota.GetInt () * numHumans);
 
       if (yb_autovacate.GetBool ())
-         desiredCount = min (desiredCount, GetMaxClients () - (numHumans + 1));
+         desiredCount = min (desiredCount, engine.MaxClients () - (numHumans + 1));
       else
-         desiredCount = min (desiredCount, GetMaxClients () - numHumans);
+         desiredCount = min (desiredCount, engine.MaxClients () - numHumans);
 
       if (yb_autovacate_smart_kick.GetBool () && numBots > 1 && desiredCount > 1)
          VerifyPlayersHasJoinedTeam (desiredCount);
@@ -459,7 +460,7 @@ void BotManager::MaintainBotQuota (void)
       else if (desiredCount < numBots)
          RemoveRandom ();
 
-      m_quotaMaintainTime = GetWorldTime () + 0.90f;
+      m_quotaMaintainTime = engine.Time () + 0.90f;
    }
 }
 
@@ -467,8 +468,8 @@ void BotManager::InitQuota (void)
 {
    m_balanceCount = 0;
 
-   m_maintainTime = GetWorldTime () + 3.0f;
-   m_quotaMaintainTime = GetWorldTime () + 3.0f;
+   m_maintainTime = engine.Time () + 3.0f;
+   m_quotaMaintainTime = engine.Time () + 3.0f;
 
    m_trackedPlayers.RemoveAll ();
    m_creationTab.RemoveAll ();
@@ -478,7 +479,7 @@ void BotManager::FillServer (int selection, int personality, int difficulty, int
 {
    // this function fill server with bots, with specified team & personality
 
-   if (GetBotsNum () >= GetMaxClients () - GetHumansNum ())
+   if (GetBotsNum () >= engine.MaxClients () - GetHumansNum ())
       return;
 
    if (selection == 1 || selection == 2)
@@ -499,14 +500,13 @@ void BotManager::FillServer (int selection, int personality, int difficulty, int
       {"Random"},
    };
 
-   int toAdd = numToAdd == -1 ? GetMaxClients () - (GetHumansNum () + GetBotsNum ()) : numToAdd;
+   int toAdd = numToAdd == -1 ? engine.MaxClients () - (GetHumansNum () + GetBotsNum ()) : numToAdd;
 
    for (int i = 0; i <= toAdd; i++)
       AddBot ("", difficulty, personality, selection, -1);
 
    yb_quota.SetInt (toAdd);
-
-   CenterPrint ("Fill Server with %s bots...", &teamDesc[selection][0]);
+   engine.CenterPrintf ("Fill Server with %s bots...", &teamDesc[selection][0]);
 }
 
 void BotManager::RemoveAll (bool zeroQuota)
@@ -514,9 +514,9 @@ void BotManager::RemoveAll (bool zeroQuota)
    // this function drops all bot clients from server (this function removes only yapb's)`q
 
    if (zeroQuota)
-      CenterPrint ("Bots are removed from server.");
+      engine.CenterPrintf ("Bots are removed from server.");
 
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
       if (m_bots[i] != NULL)  // is this slot used?
          m_bots[i]->Kick ();
@@ -535,9 +535,9 @@ void BotManager::RemoveFromTeam (Team team, bool removeAll)
 {
    // this function remove random bot from specified team (if removeAll value = 1 then removes all players from team)
 
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (m_bots[i] != NULL && team == GetTeam (m_bots[i]->GetEntity ()))
+      if (m_bots[i] != NULL && team == engine.GetTeam (m_bots[i]->GetEntity ()))
       {
          m_bots[i]->Kick ();
 
@@ -550,7 +550,6 @@ void BotManager::RemoveFromTeam (Team team, bool removeAll)
 void BotManager::RemoveMenu (edict_t *ent, int selection)
 {
    // this function displays remove bot menu to specified entity (this function show's only yapb's).
-
 
    if (selection > 4 || selection < 1)
       return;
@@ -565,10 +564,10 @@ void BotManager::RemoveMenu (edict_t *ent, int selection)
 
    for (int i = ((selection - 1) * 8); i < selection * 8; i++)
    {
-      if ((m_bots[i] != NULL) && !IsEntityNull (m_bots[i]->GetEntity ()))
+      if ((m_bots[i] != NULL) && !engine.IsNullEntity (m_bots[i]->GetEntity ()))
       {
          validSlots |= 1 << (i - ((selection - 1) * 8));
-         sprintf (buffer, "%s %1.1d. %s%s\n", buffer, i - ((selection - 1) * 8) + 1, STRING (m_bots[i]->pev->netname), GetTeam (m_bots[i]->GetEntity ()) == CT ? " \\y(CT)\\w" : " \\r(T)\\w");
+         sprintf (buffer, "%s %1.1d. %s%s\n", buffer, i - ((selection - 1) * 8) + 1, STRING (m_bots[i]->pev->netname), engine.GetTeam (m_bots[i]->GetEntity ()) == CT ? " \\y(CT)\\w" : " \\r(T)\\w");
       }
       else
          sprintf (buffer, "%s\\d %1.1d. Not a Bot\\w\n", buffer, i - ((selection - 1) * 8) + 1);
@@ -612,7 +611,7 @@ void BotManager::KillAll (int team)
 {
    // this function kills all bots on server (only this dll controlled bots)
 
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
       if (m_bots[i] != NULL)
       {
@@ -622,7 +621,7 @@ void BotManager::KillAll (int team)
          m_bots[i]->Kill ();
       }
    }
-   CenterPrint ("All Bots died !");
+   engine.CenterPrintf ("All Bots died !");
 }
 
 void BotManager::RemoveRandom (void)
@@ -633,7 +632,7 @@ void BotManager::RemoveRandom (void)
 
 
    // first try to kick the bot that is currently dead
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
       if (m_bots[i] != NULL && !m_bots[i]->m_notKilled)  // is this slot used?
       {
@@ -652,7 +651,7 @@ void BotManager::RemoveRandom (void)
    float score = 9999.0f;
 
    // search bots in this team
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
       Bot *bot = bots.GetBot (i);
 
@@ -671,7 +670,7 @@ void BotManager::RemoveRandom (void)
    }
 
    // worst case, just kick some random bot
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
       if (m_bots[i] != NULL)  // is this slot used?
       {
@@ -730,27 +729,22 @@ void BotManager::SetWeaponMode (int selection)
    else
       yb_jasonmode.SetInt (0);
 
-   CenterPrint ("%s weapon mode selected", &modeName[selection][0]);
+   engine.CenterPrintf ("%s weapon mode selected", &modeName[selection][0]);
 }
 
 void BotManager::ListBots (void)
 {
    // this function list's bots currently playing on the server
 
-   ServerPrint ("%-3.5s %-9.13s %-17.18s %-3.4s %-3.4s %-3.4s", "index", "name", "personality", "team", "difficulty", "frags");
+   engine.Printf ("%-3.5s %-9.13s %-17.18s %-3.4s %-3.4s %-3.4s", "index", "name", "personality", "team", "difficulty", "frags");
 
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
-      edict_t *player = EntityOfIndex (i);
+      Bot *bot = GetBot (i);
 
       // is this player slot valid
-      if (IsValidBot (player))
-      {
-         Bot *bot = GetBot (player);
-
-         if (bot != NULL)
-            ServerPrint ("[%-3.1d] %-9.13s %-17.18s %-3.4s %-3.1d %-3.1d", i, STRING (player->v.netname), bot->m_personality == PERSONALITY_RUSHER ? "rusher" : bot->m_personality == PERSONALITY_NORMAL ? "normal" : "careful", GetTeam (player) != 0 ? "CT" : "T", bot->m_difficulty, static_cast <int> (player->v.frags));
-      }
+      if (bot != NULL)
+         engine.Printf ("[%-3.1d] %-9.13s %-17.18s %-3.4s %-3.1d %-3.1d", i, STRING (bot->pev->netname), bot->m_personality == PERSONALITY_RUSHER ? "rusher" : bot->m_personality == PERSONALITY_NORMAL ? "normal" : "careful", bot->m_team == CT ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags));
    }
 }
 
@@ -760,7 +754,7 @@ int BotManager::GetBotsNum (void)
 
    int count = 0;
 
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
       if (m_bots[i] != NULL)
          count++;
@@ -774,11 +768,11 @@ Bot *BotManager::GetHighestFragsBot (int team)
    float bestScore = -1;
 
    // search bots in this team
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
       Bot *bot = bots.GetBot (i);
 
-      if (bot != NULL && IsAlive (bot->GetEntity ()) && GetTeam (bot->GetEntity ()) == team)
+      if (bot != NULL && bot->m_notKilled && bot->m_team == team)
       {
          if (bot->pev->frags > bestScore)
          {
@@ -798,7 +792,7 @@ void BotManager::CheckTeamEconomics (int team, bool setTrue)
 
    extern ConVar yb_economics_rounds;
 
-   if (!yb_economics_rounds.GetBool () || setTrue)
+   if (setTrue || !yb_economics_rounds.GetBool ())
    {
       m_economicsGood[team] = true;
       return; // don't check economics while economics disable
@@ -808,9 +802,9 @@ void BotManager::CheckTeamEconomics (int team, bool setTrue)
    int numTeamPlayers = 0;
 
    // start calculating
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (m_bots[i] != NULL && GetTeam (m_bots[i]->GetEntity ()) == team)
+      if (m_bots[i] != NULL && engine.GetTeam (m_bots[i]->GetEntity ()) == team)
       {
          if (m_bots[i]->m_moneyAmount <= g_botBuyEconomyTable[0])
             numPoorPlayers++;
@@ -836,7 +830,7 @@ void BotManager::Free (void)
 {
    // this function free all bots slots (used on server shutdown)
 
-   for (int i = 0; i < 32; i++)
+   for (int i = 0; i < MAX_ENGINE_PLAYERS; i++)
       Free (i);
 }
 
@@ -854,7 +848,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    // when bot setup completed, (this is a bot class constructor)
 
    char rejectReason[128];
-   int clientIndex = IndexOfEntity (bot);
+   int clientIndex = engine.IndexOfEntity (bot);
 
    memset (reinterpret_cast <void *> (this), 0, sizeof (*this));
 
@@ -877,7 +871,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
       SET_CLIENT_KEYVALUE (clientIndex, buffer, "*bot", "1");
 
    rejectReason[0] = 0; // reset the reject reason template string
-   MDLL_ClientConnect (bot, "BOT", FormatBuffer ("127.0.0.%d", IndexOfEntity (bot) + 100), rejectReason);
+   MDLL_ClientConnect (bot, "BOT", FormatBuffer ("127.0.0.%d", engine.IndexOfEntity (bot) + 100), rejectReason);
    
    // should be set after client connect
    if (yb_avatar_display.GetBool () && !steamId.IsEmpty ())
@@ -889,7 +883,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    if (!IsNullString (rejectReason))
    {
       AddLogEntry (true, LL_WARNING, "Server refused '%s' connection (%s)", STRING (bot->v.netname), rejectReason);
-      ServerCommand ("kick \"%s\"", STRING (bot->v.netname)); // kick the bot player if the server refused it
+      engine.IssueCmd ("kick \"%s\"", STRING (bot->v.netname)); // kick the bot player if the server refused it
 
       bot->v.flags |= FL_KILLME;
    }
@@ -918,8 +912,8 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
       yb_difficulty.SetInt (difficulty);
    }
 
-   m_lastCommandTime = GetWorldTime () - 0.1f;
-   m_frameInterval = GetWorldTime ();
+   m_lastCommandTime = engine.Time () - 0.1f;
+   m_frameInterval = engine.Time ();
    m_timePeriodicUpdate = 0.0f;
 
    switch (personality)
@@ -952,7 +946,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    // copy them over to the temp level variables
    m_agressionLevel = m_baseAgressionLevel;
    m_fearLevel = m_baseFearLevel;
-   m_nextEmotionUpdate = GetWorldTime () + 0.5f;
+   m_nextEmotionUpdate = engine.Time () + 0.5f;
 
    // just to be sure
    m_actMessageIndex = 0;
@@ -965,7 +959,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    int newBotsNum = bots.GetBotsNum () + 1;
 
    // keep quota number up to date
-   if (newBotsNum < GetMaxClients () && newBotsNum > yb_quota.GetInt ())
+   if (newBotsNum < engine.MaxClients () && newBotsNum > yb_quota.GetInt ())
       yb_quota.SetInt (newBotsNum);
 
    NewRound ();
@@ -999,7 +993,7 @@ int BotManager::GetHumansNum (void)
 
    int count = 0;
 
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
       Client *cl = &g_clients[i];
 
@@ -1015,7 +1009,7 @@ int BotManager::GetHumansAliveNum (void)
 
    int count = 0;
 
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
       Client *cl = &g_clients[i];
 
@@ -1031,7 +1025,7 @@ int BotManager::GetHumansJoinedTeam (void)
 
    int count = 0;
 
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
       Client *cl = &g_clients[i];
 
@@ -1072,8 +1066,8 @@ void Bot::NewRound (void)
    for (i = 0; i < 5; i++)
       m_prevWptIndex[i] = -1;
 
-   m_navTimeset = GetWorldTime ();
-   m_team = GetTeam (GetEntity ());
+   m_navTimeset = engine.Time ();
+   m_team = engine.GetTeam (GetEntity ());
 
    switch (m_personality)
    {
@@ -1102,13 +1096,14 @@ void Bot::NewRound (void)
 
    m_maxThrowTimer = 0.0f;
    m_timeTeamOrder = 0.0f;
+   m_timeRepotingInDelay = Random.Float (40.0f, 240.0f);
    m_askCheckTime = 0.0f;
    m_minSpeed = 260.0f;
    m_prevSpeed = 0.0f;
    m_prevOrigin = Vector (9999.0f, 9999.0f, 9999.0f);
-   m_prevTime = GetWorldTime ();
-   m_blindRecognizeTime = GetWorldTime ();
-   m_lookUpdateTime = GetWorldTime ();
+   m_prevTime = engine.Time ();
+   m_blindRecognizeTime = engine.Time ();
+   m_lookUpdateTime = engine.Time ();
    
    m_viewDistance = 4096.0f;
    m_maxViewDistance = 4096.0f;
@@ -1119,7 +1114,7 @@ void Bot::NewRound (void)
    m_itemCheckTime = 0.0f;
 
    m_breakableEntity = NULL;
-   m_breakable.Zero ();
+   m_breakableOrigin.Zero ();
    m_timeDoorOpen = 0.0f;
 
    ResetCollideState ();
@@ -1157,7 +1152,7 @@ void Bot::NewRound (void)
    SetIdealReactionTimes (true);
 
    m_targetEntity = NULL;
-   m_tasks = NULL;
+   m_tasks.RemoveAll ();
    m_followWaitTime = 0.0f;
 
    for (i = 0; i < MAX_HOSTAGES; i++)
@@ -1170,8 +1165,8 @@ void Bot::NewRound (void)
    m_reloadState = RELOAD_NONE;
 
    m_reloadCheckTime = 0.0f;
-   m_shootTime = GetWorldTime ();
-   m_playerTargetTime = GetWorldTime ();
+   m_shootTime = engine.Time ();
+   m_playerTargetTime = engine.Time ();
    m_firePause = 0.0f;
    m_timeLastFired = 0.0f;
 
@@ -1185,7 +1180,7 @@ void Bot::NewRound (void)
    m_jumpFinished = false;
    m_isStuck = false;
 
-   m_sayTextBuffer.timeNextChat = GetWorldTime ();
+   m_sayTextBuffer.timeNextChat = engine.Time ();
    m_sayTextBuffer.entityIndex = -1;
    m_sayTextBuffer.sayText[0] = 0x0;
 
@@ -1200,8 +1195,8 @@ void Bot::NewRound (void)
       m_currentWeapon = 0;
    }
 
-   m_knifeAttackTime = GetWorldTime () + Random.Float (1.3f, 2.6f);
-   m_nextBuyTime = GetWorldTime () + Random.Float (0.6f, 2.0f);
+   m_knifeAttackTime = engine.Time () + Random.Float (1.3f, 2.6f);
+   m_nextBuyTime = engine.Time () + Random.Float (0.6f, 2.0f);
 
    m_buyPending = false;
    m_inBombZone = false;
@@ -1210,8 +1205,8 @@ void Bot::NewRound (void)
    m_shieldCheckTime = 0.0f;
    m_zoomCheckTime = 0.0f;
    m_strafeSetTime = 0.0f;
-   m_combatStrafeDir = 0;
-   m_fightStyle = 0;
+   m_combatStrafeDir = STRAFE_DIR_NONE;
+   m_fightStyle = FIGHT_NONE;
    m_lastFightStyleCheck = 0.0f;
 
    m_checkWeaponSwitch = true;
@@ -1224,9 +1219,9 @@ void Bot::NewRound (void)
    m_defendHostage = false;
    m_headedTime = 0.0f;
 
-   m_timeLogoSpray = GetWorldTime () + Random.Float (0.5f, 2.0f);
-   m_spawnTime = GetWorldTime ();
-   m_lastChatTime = GetWorldTime ();
+   m_timeLogoSpray = engine.Time () + Random.Float (0.5f, 2.0f);
+   m_spawnTime = engine.Time ();
+   m_lastChatTime = engine.Time ();
 
    m_timeCamping = 0;
    m_campDirection = 0;
@@ -1234,7 +1229,7 @@ void Bot::NewRound (void)
    m_campButtons = 0;
 
    m_soundUpdateTime = 0.0f;
-   m_heardSoundTime = GetWorldTime ();
+   m_heardSoundTime = engine.Time ();
 
    // clear its message queue
    for (i = 0; i < 32; i++)
@@ -1270,13 +1265,13 @@ void Bot::Kick (void)
 {
    // this function kick off one bot from the server.
 
-   ServerCommand ("kick \"%s\"", STRING (pev->netname));
-   CenterPrint ("Bot '%s' kicked", STRING (pev->netname));
+   engine.IssueCmd ("kick \"%s\"", STRING (pev->netname));
+   engine.CenterPrintf ("Bot '%s' kicked", STRING (pev->netname));
 
    int newBotsNum = bots.GetBotsNum () - 1;
 
    // keep quota number up to date
-   if (newBotsNum < GetMaxClients () && newBotsNum < yb_quota.GetInt ())
+   if (newBotsNum < engine.MaxClients () && newBotsNum < yb_quota.GetInt ())
       yb_quota.SetInt (newBotsNum);
 }
 
@@ -1287,7 +1282,7 @@ void Bot::StartGame (void)
 #ifdef XASH_CSDM
    m_wantedTeam = Random.Long (1, 2);
    
-   FakeClientCommand (GetEntity (), "jointeam %d", m_wantedTeam);
+   engine.IssueBotCommand (GetEntity (), "jointeam %d", m_wantedTeam);
    
    SET_CLIENT_KEYVALUE (GetIndex (), GET_INFOKEYBUFFER (GetEntity ()), "model", m_wantedTeam == 2 ? "Counter-Terrorists" : "Terrorists");
 
@@ -1314,7 +1309,7 @@ void Bot::StartGame (void)
          m_wantedTeam = 5;
 
       // select the team the bot wishes to join...
-      FakeClientCommand (GetEntity (), "menuselect %d", m_wantedTeam);
+      engine.IssueBotCommand (GetEntity (), "menuselect %d", m_wantedTeam);
    }
    else if (m_startAction == GSM_CLASS_SELECT)
    {
@@ -1332,7 +1327,7 @@ void Bot::StartGame (void)
       }
 
       // select the class the bot wishes to use...
-      FakeClientCommand (GetEntity (), "menuselect %d", m_wantedClass);
+      engine.IssueBotCommand (GetEntity (), "menuselect %d", m_wantedClass);
 
       // bot has now joined the game (doesn't need to be started)
       m_notStarted = false;
@@ -1351,9 +1346,9 @@ void BotManager::CalculatePingOffsets (void)
    int averagePing = 0;
    int numHumans = 0;
 
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
-      edict_t *ent = EntityOfIndex (i + 1);
+      edict_t *ent = engine.EntityOfIndex (i + 1);
 
       if (!IsValidPlayer (ent))
          continue;
@@ -1374,7 +1369,7 @@ void BotManager::CalculatePingOffsets (void)
    else
       averagePing = Random.Long (30, 40);
 
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
       Bot *bot = GetBot (i);
 
@@ -1405,7 +1400,7 @@ void BotManager::CalculatePingOffsets (void)
 
 void BotManager::SendPingDataOffsets (edict_t *to)
 {
-   if ((g_gameFlags & GAME_LEGACY) || yb_latency_display.GetInt () != 2 || IsEntityNull (to))
+   if ((g_gameFlags & GAME_LEGACY) || yb_latency_display.GetInt () != 2 || engine.IsNullEntity (to) || (to->v.flags & FL_FAKECLIENT))
       return;
 
    if (!(to->v.flags & FL_CLIENT) && !(((to->v.button & IN_SCORE) || !(to->v.oldbuttons & IN_SCORE))))
@@ -1417,9 +1412,9 @@ void BotManager::SendPingDataOffsets (edict_t *to)
    // missing from sdk
    static const int SVC_PINGS = 17;
 
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
-      Bot *bot = GetBot (i);
+      Bot *bot = m_bots[i];
 
       if (bot == NULL)
          continue;
@@ -1470,7 +1465,7 @@ void BotManager::SendDeathMsgFix (void)
    {
       m_deathMsgSent = false;
 
-      for (int i = 0; i < GetMaxClients (); i++)
+      for (int i = 0; i < engine.MaxClients (); i++)
          SendPingDataOffsets (g_clients[i].ent);
    }
 }
@@ -1483,7 +1478,7 @@ void BotManager::UpdateActiveGrenades (void)
    m_activeGrenades.RemoveAll ();
 
    // search the map for any type of grenade
-   while (!IsEntityNull (grenade = FIND_ENTITY_BY_CLASSNAME (grenade, "grenade")))
+   while (!engine.IsNullEntity (grenade = FIND_ENTITY_BY_CLASSNAME (grenade, "grenade")))
    {
       // do not count c4 as a grenade
       if (strcmp (STRING (grenade->v.model) + 9, "c4.mdl") == 0)
@@ -1493,7 +1488,7 @@ void BotManager::UpdateActiveGrenades (void)
    }
 }
 
-const Array <entity_t> &BotManager::GetActiveGrenades (void)
+const Array <edict_t *> &BotManager::GetActiveGrenades (void)
 {
    return m_activeGrenades;
 }

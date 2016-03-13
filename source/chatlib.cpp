@@ -47,7 +47,7 @@ void StripTags (char *buffer)
    // have we stripped too much (all the stuff)?
    if (buffer[0] != '\0')
    {
-      strtrim (buffer); // if so, string is just a tag
+      String::TrimExternalBuffer (buffer); // if so, string is just a tag
 
       int tagLength = 0;
 
@@ -81,7 +81,7 @@ void StripTags (char *buffer)
          }
       }
    }
-   strtrim (buffer); // to finish, strip eventual blanks after and before the tag marks
+   String::TrimExternalBuffer (buffer); // to finish, strip eventual blanks after and before the tag marks
 }
 
 char *HumanizeName (char *name)
@@ -95,7 +95,7 @@ char *HumanizeName (char *name)
    if (Random.Long (1, 100) < 80)
       StripTags (outputName);
    else
-      strtrim (outputName);
+      String::TrimExternalBuffer (outputName);
 
    // sometimes switch name to lower characters
    // note: since we're using russian names written in english, we reduce this shit to 6 percent
@@ -156,7 +156,7 @@ void Bot::PrepareChatMessage (char *text)
    if (!yb_chat.GetBool () || IsNullString (text))
       return;
 
-   #define ASSIGN_TALK_ENTITY() if (!IsEntityNull (talkEntity)) strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), SIZEOF_CHAR (m_tempStrings))
+   #define ASSIGN_TALK_ENTITY() if (!engine.IsNullEntity (talkEntity)) strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), SIZEOF_CHAR (m_tempStrings))
 
    memset (&m_tempStrings, 0, sizeof (m_tempStrings));
 
@@ -185,7 +185,7 @@ void Bot::PrepareChatMessage (char *text)
             int highestFrags = -9000; // just pick some start value
             int index = 0;
 
-            for (int i = 0; i < GetMaxClients (); i++)
+            for (int i = 0; i < engine.MaxClients (); i++)
             {
                if (!(g_clients[i].flags & CF_USED) || g_clients[i].ent == GetEntity ())
                   continue;
@@ -204,17 +204,17 @@ void Bot::PrepareChatMessage (char *text)
          }
          // mapname?
          else if (*pattern == 'm')
-            strncat (m_tempStrings, GetMapName (), SIZEOF_CHAR (m_tempStrings));
+            strncat (m_tempStrings, engine.GetMapName (), SIZEOF_CHAR (m_tempStrings));
          // roundtime?
          else if (*pattern == 'r')
          {
-            int time = static_cast <int> (g_timeRoundEnd - GetWorldTime ());
+            int time = static_cast <int> (g_timeRoundEnd - engine.Time ());
             strncat (m_tempStrings, FormatBuffer ("%02d:%02d", time / 60, time % 60), SIZEOF_CHAR (m_tempStrings));
          }
          // chat reply?
          else if (*pattern == 's')
          {
-            talkEntity = EntityOfIndex (m_sayTextBuffer.entityIndex);
+            talkEntity = engine.EntityOfIndex (m_sayTextBuffer.entityIndex);
             ASSIGN_TALK_ENTITY ();
          }
          // teammate alive?
@@ -222,7 +222,7 @@ void Bot::PrepareChatMessage (char *text)
          {
             int i;
 
-            for (i = 0; i < GetMaxClients (); i++)
+            for (i = 0; i < engine.MaxClients (); i++)
             {
                if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != m_team || g_clients[i].ent == GetEntity ())
                   continue;
@@ -230,9 +230,9 @@ void Bot::PrepareChatMessage (char *text)
                break;
             }
 
-            if (i < GetMaxClients ())
+            if (i < engine.MaxClients ())
             {
-               if (!IsEntityNull (pev->dmg_inflictor) && m_team == GetTeam (pev->dmg_inflictor))
+               if (!engine.IsNullEntity (pev->dmg_inflictor) && m_team == engine.GetTeam (pev->dmg_inflictor))
                   talkEntity = pev->dmg_inflictor;
                else
                   talkEntity = g_clients[i].ent;
@@ -241,7 +241,7 @@ void Bot::PrepareChatMessage (char *text)
             }
             else // no teammates alive...
             {
-               for (i = 0; i < GetMaxClients (); i++)
+               for (i = 0; i < engine.MaxClients (); i++)
                {
                   if (!(g_clients[i].flags & CF_USED) || g_clients[i].team != m_team || g_clients[i].ent == GetEntity ())
                      continue;
@@ -249,7 +249,7 @@ void Bot::PrepareChatMessage (char *text)
                   break;
                }
 
-               if (i < GetMaxClients ())
+               if (i < engine.MaxClients ())
                {
                   talkEntity = g_clients[i].ent;
 
@@ -261,27 +261,27 @@ void Bot::PrepareChatMessage (char *text)
          {
             int i;
 
-            for (i = 0; i < GetMaxClients (); i++)
+            for (i = 0; i < engine.MaxClients (); i++)
             {
                if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team == m_team || g_clients[i].ent == GetEntity ())
                   continue;
                break;
             }
 
-            if (i < GetMaxClients ())
+            if (i < engine.MaxClients ())
             {
                talkEntity = g_clients[i].ent;
                ASSIGN_TALK_ENTITY ();
             }
             else // no teammates alive...
             {
-               for (i = 0; i < GetMaxClients (); i++)
+               for (i = 0; i < engine.MaxClients (); i++)
                {
                   if (!(g_clients[i].flags & CF_USED) || g_clients[i].team == m_team || g_clients[i].ent == GetEntity ())
                      continue;
                   break;
                }
-               if (i < GetMaxClients ())
+               if (i < engine.MaxClients ())
                {
                   talkEntity = g_clients[i].ent;
                   ASSIGN_TALK_ENTITY ();
@@ -290,14 +290,14 @@ void Bot::PrepareChatMessage (char *text)
          }
          else if (*pattern == 'd')
          {
-            if (g_gameFlags == GAME_CZERO)
+            if (g_gameFlags & GAME_CZERO)
             {
                if (Random.Long (1, 100) < 30)
                   strcat (m_tempStrings, "CZ");
                else
                   strcat (m_tempStrings, "Condition Zero");
             }
-            else if (g_gameFlags == GAME_CSTRIKE16 || g_gameFlags == GAME_LEGACY)
+            else if ((g_gameFlags & GAME_CSTRIKE16) || (g_gameFlags & GAME_LEGACY))
             {
                if (Random.Long (1, 100) < 30)
                   strcat (m_tempStrings, "CS");
@@ -399,7 +399,7 @@ bool Bot::RepliesToPlayer (void)
       char text[256];
 
       // check is time to chat is good
-      if (m_sayTextBuffer.timeNextChat < GetWorldTime ())
+      if (m_sayTextBuffer.timeNextChat < engine.Time ())
       {
          if (Random.Long (1, 100) < m_sayTextBuffer.chatProbability + Random.Long (2, 10) && ParseChat (reinterpret_cast <char *> (&text)))
          {
@@ -408,7 +408,7 @@ bool Bot::RepliesToPlayer (void)
 
             m_sayTextBuffer.entityIndex = -1;
             m_sayTextBuffer.sayText[0] = 0x0;
-            m_sayTextBuffer.timeNextChat = GetWorldTime () + m_sayTextBuffer.chatDelay;
+            m_sayTextBuffer.timeNextChat = engine.Time () + m_sayTextBuffer.chatDelay;
 
             return true;
          }
@@ -426,7 +426,7 @@ void Bot::SayText (const char *text)
    if (IsNullString (text))
       return;
 
-   FakeClientCommand (GetEntity (), "say \"%s\"", text);
+   engine.IssueBotCommand (GetEntity (), "say \"%s\"", text);
 }
 
 void Bot::TeamSayText (const char *text)
@@ -436,5 +436,5 @@ void Bot::TeamSayText (const char *text)
    if (IsNullString (text))
       return;
 
-   FakeClientCommand (GetEntity (), "say_team \"%s\"", text);
+   engine.IssueBotCommand (GetEntity (), "say_team \"%s\"", text);
 }

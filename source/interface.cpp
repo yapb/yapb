@@ -1,4 +1,4 @@
-﻿//
+//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -81,7 +81,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       if (selection >= 1 && selection <= 7)
          bots.SetWeaponMode (selection);
       else
-         ClientPrint (ent, print_withtag, "Choose weapon from 1 to 7 range");
+         engine.ClientPrintf (ent, "Choose weapon from 1 to 7 range");
    }
 
    // force all bots to vote to specified map
@@ -92,12 +92,14 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          int nominatedMap = atoi (arg1);
 
          // loop through all players
-         for (int i = 0; i < GetMaxClients (); i++)
+         for (int i = 0; i < engine.MaxClients (); i++)
          {
-            if (bots.GetBot (i) != NULL)
-               bots.GetBot (i)->m_voteMap = nominatedMap;
+            Bot *bot = bots.GetBot (i);
+
+            if (bot != NULL)
+               bot->m_voteMap = nominatedMap;
          }
-         ClientPrint (ent, print_withtag, "All dead bots will vote for map #%d", nominatedMap);
+         engine.ClientPrintf (ent, "All dead bots will vote for map #%d", nominatedMap);
       }
    }
 
@@ -113,68 +115,67 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          "Git Commit Author: %s\n"
          "------------------------------------------------";
 
-      ClientPrint (ent, print_console, versionData, PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), __DATE__, __TIME__, PRODUCT_GIT_HASH, PRODUCT_GIT_COMMIT_AUTHOR);
+      engine.ClientPrintf (ent, versionData, PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), __DATE__, __TIME__, PRODUCT_GIT_HASH, PRODUCT_GIT_COMMIT_AUTHOR);
    }
 
    // display some sort of help information
    else if (stricmp (arg0, "?") == 0 || stricmp (arg0, "help") == 0)
    {
-      ClientPrint (ent, print_console, "Bot Commands:");
-      ClientPrint (ent, print_console, "%s version\t - display version information.", self);
-      ClientPrint (ent, print_console, "%s add\t - create a bot in current game.", self);
-      ClientPrint (ent, print_console, "%s fill\t - fill the server with random bots.", self);
-      ClientPrint (ent, print_console, "%s kickall\t - disconnects all bots from current game.", self);
-      ClientPrint (ent, print_console, "%s killbots\t - kills all bots in current game.", self);
-      ClientPrint (ent, print_console, "%s kick\t - disconnect one random bot from game.", self);
-      ClientPrint (ent, print_console, "%s weaponmode\t - select bot weapon mode.", self);
-      ClientPrint (ent, print_console, "%s votemap\t - allows dead bots to vote for specific map.", self);
-      ClientPrint (ent, print_console, "%s cmenu\t - displaying bots command menu.", self);
+      engine.ClientPrintf (ent, "Bot Commands:");
+      engine.ClientPrintf (ent, "%s version\t - display version information.", self);
+      engine.ClientPrintf (ent, "%s add\t - create a bot in current game.", self);
+      engine.ClientPrintf (ent, "%s fill\t - fill the server with random bots.", self);
+      engine.ClientPrintf (ent, "%s kickall\t - disconnects all bots from current game.", self);
+      engine.ClientPrintf (ent, "%s killbots\t - kills all bots in current game.", self);
+      engine.ClientPrintf (ent, "%s kick\t - disconnect one random bot from game.", self);
+      engine.ClientPrintf (ent, "%s weaponmode\t - select bot weapon mode.", self);
+      engine.ClientPrintf (ent, "%s votemap\t - allows dead bots to vote for specific map.", self);
+      engine.ClientPrintf (ent, "%s cmenu\t - displaying bots command menu.", self);
 
       if (stricmp (arg1, "full") == 0 || stricmp (arg1, "f") == 0 || stricmp (arg1, "?") == 0)
       {
-         ClientPrint (ent, print_console, "%s add_t\t - creates one random bot to terrorist team.", self);
-         ClientPrint (ent, print_console, "%s add_ct\t - creates one random bot to ct team.", self);
-         ClientPrint (ent, print_console, "%s kick_t\t - disconnect one random bot from terrorist team.", self);
-         ClientPrint (ent, print_console, "%s kick_ct\t - disconnect one random bot from ct team.", self);
-         ClientPrint (ent, print_console, "%s kill_t\t - kills all bots on terrorist team.", self);
-         ClientPrint (ent, print_console, "%s kill_ct\t - kills all bots on ct team.", self);
-         ClientPrint (ent, print_console, "%s list\t - display list of bots currently playing.", self);
-         ClientPrint (ent, print_console, "%s order\t - execute specific command on specified bot.", self);
-         ClientPrint (ent, print_console, "%s time\t - displays current time on server.", self);
-         ClientPrint (ent, print_console, "%s deletewp\t - erase waypoint file from hard disk (permanently).", self);
+         engine.ClientPrintf (ent, "%s add_t\t - creates one random bot to terrorist team.", self);
+         engine.ClientPrintf (ent, "%s add_ct\t - creates one random bot to ct team.", self);
+         engine.ClientPrintf (ent, "%s kick_t\t - disconnect one random bot from terrorist team.", self);
+         engine.ClientPrintf (ent, "%s kick_ct\t - disconnect one random bot from ct team.", self);
+         engine.ClientPrintf (ent, "%s kill_t\t - kills all bots on terrorist team.", self);
+         engine.ClientPrintf (ent, "%s kill_ct\t - kills all bots on ct team.", self);
+         engine.ClientPrintf (ent, "%s list\t - display list of bots currently playing.", self);
+         engine.ClientPrintf (ent, "%s order\t - execute specific command on specified bot.", self);
+         engine.ClientPrintf (ent, "%s time\t - displays current time on server.", self);
+         engine.ClientPrintf (ent, "%s deletewp\t - erase waypoint file from hard disk (permanently).", self);
 
-          if (!IsDedicatedServer ())
+          if (!engine.IsDedicatedServer ())
           {
-             ServerPrint ("%s autowp\t - toggle autowaypointing.", self);
-             ServerPrint ("%s wp\t - toggle waypoint showing.", self);
-             ServerPrint ("%s wp on noclip\t - enable noclip cheat", self);
-             ServerPrint ("%s wp save nocheck\t - save waypoints without checking.", self);
-             ServerPrint ("%s wp add\t - open menu for waypoint creation.", self);
-             ServerPrint ("%s wp menu\t - open main waypoint menu.", self);
-             ServerPrint ("%s wp addbasic\t - creates basic waypoints on map.", self);
-             ServerPrint ("%s wp find\t - show direction to specified waypoint.", self);
-             ServerPrint ("%s wp load\t - load the waypoint file from hard disk.", self);
-             ServerPrint ("%s wp check\t - checks if all waypoints connections are valid.", self);
-             ServerPrint ("%s wp cache\t - cache nearest waypoint.", self);
-             ServerPrint ("%s wp teleport\t - teleport hostile to specified waypoint.", self);
-             ServerPrint ("%s wp setradius\t - manually sets the wayzone radius for this waypoint.", self);
-             ServerPrint ("%s path autodistance - opens menu for setting autopath maximum distance.", self);
-             ServerPrint ("%s path cache\t - remember the nearest to player waypoint.", self);
-             ServerPrint ("%s path create\t - opens menu for path creation.", self);
-             ServerPrint ("%s path delete\t - delete path from cached to nearest waypoint.", self);
-             ServerPrint ("%s path create_in\t - creating incoming path connection.", self);
-             ServerPrint ("%s path create_out\t - creating outgoing path connection.", self);
-             ServerPrint ("%s path create_both\t - creating both-ways path connection.", self);
-             ServerPrint ("%s exp save\t - save the experience data.", self);
+             engine.Printf ("%s autowp\t - toggle autowaypointing.", self);
+             engine.Printf ("%s wp\t - toggle waypoint showing.", self);
+             engine.Printf ("%s wp on noclip\t - enable noclip cheat", self);
+             engine.Printf ("%s wp save nocheck\t - save waypoints without checking.", self);
+             engine.Printf ("%s wp add\t - open menu for waypoint creation.", self);
+             engine.Printf ("%s wp menu\t - open main waypoint menu.", self);
+             engine.Printf ("%s wp addbasic\t - creates basic waypoints on map.", self);
+             engine.Printf ("%s wp find\t - show direction to specified waypoint.", self);
+             engine.Printf ("%s wp load\t - load the waypoint file from hard disk.", self);
+             engine.Printf ("%s wp check\t - checks if all waypoints connections are valid.", self);
+             engine.Printf ("%s wp cache\t - cache nearest waypoint.", self);
+             engine.Printf ("%s wp teleport\t - teleport hostile to specified waypoint.", self);
+             engine.Printf ("%s wp setradius\t - manually sets the wayzone radius for this waypoint.", self);
+             engine.Printf ("%s path autodistance - opens menu for setting autopath maximum distance.", self);
+             engine.Printf ("%s path cache\t - remember the nearest to player waypoint.", self);
+             engine.Printf ("%s path create\t - opens menu for path creation.", self);
+             engine.Printf ("%s path delete\t - delete path from cached to nearest waypoint.", self);
+             engine.Printf ("%s path create_in\t - creating incoming path connection.", self);
+             engine.Printf ("%s path create_out\t - creating outgoing path connection.", self);
+             engine.Printf ("%s path create_both\t - creating both-ways path connection.", self);
+             engine.Printf ("%s exp save\t - save the experience data.", self);
           }
       }
    }
-
    else if (stricmp (arg0, "bot_takedamage") == 0 && !IsNullString (arg1))
    {
       bool isOn = !!(atoi (arg1) == 1);
 
-      for (int i = 0; i < GetMaxClients (); i++)
+      for (int i = 0; i < engine.MaxClients (); i++)
       {
          Bot *bot = bots.GetBot (i);
 
@@ -197,21 +198,21 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       else
       {
          DisplayMenuToClient (ent, NULL); // reset menu display
-         CenterPrint ("You're dead, and have no access to this menu");
+         engine.CenterPrintf ("You're dead, and have no access to this menu");
       }
    }
 
    // waypoint manimupulation (really obsolete, can be edited through menu) (supported only on listen server)
    else if (stricmp (arg0, "waypoint") == 0 || stricmp (arg0, "wp") == 0 || stricmp (arg0, "wpt") == 0)
    {
-      if (IsDedicatedServer () || IsEntityNull (g_hostEntity))
+      if (engine.IsDedicatedServer () || engine.IsNullEntity (g_hostEntity))
          return 2;
 
       // enables or disable waypoint displaying
       if (stricmp (arg1, "on") == 0)
       {
          g_waypointOn = true;
-         ServerPrint ("Waypoint Editing Enabled");
+         engine.Printf ("Waypoint Editing Enabled");
 
          // enables noclip cheat
          if (stricmp (arg2, "noclip") == 0)
@@ -219,16 +220,16 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
             if (g_editNoclip)
             {
                g_hostEntity->v.movetype = MOVETYPE_WALK;
-               ServerPrint ("Noclip Cheat Disabled");
+               engine.Printf ("Noclip Cheat Disabled");
             }
             else
             {
                g_hostEntity->v.movetype = MOVETYPE_NOCLIP;
-               ServerPrint ("Noclip Cheat Enabled");
+               engine.Printf ("Noclip Cheat Enabled");
             }
             g_editNoclip = !g_editNoclip; // switch on/off (XOR it!)
          }
-         ServerCommand ("yapb wp mdl on");
+         engine.IssueCmd ("yapb wp mdl on");
       }
 
       // switching waypoint editing off
@@ -238,8 +239,8 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          g_editNoclip = false;
          g_hostEntity->v.movetype = MOVETYPE_WALK;
 
-         ServerPrint ("Waypoint Editing Disabled");
-         ServerCommand ("yapb wp mdl off");
+         engine.Printf ("Waypoint Editing Disabled");
+         engine.IssueCmd ("yapb wp mdl off");
       }
 
       // toggles displaying player models on spawn spots
@@ -249,24 +250,24 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
          if (stricmp (arg2, "on") == 0)
          {
-            while (!IsEntityNull (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
+            while (!engine.IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
                spawnEntity->v.effects &= ~EF_NODRAW;
-            while (!IsEntityNull (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_deathmatch")))
+            while (!engine.IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_deathmatch")))
                spawnEntity->v.effects &= ~EF_NODRAW;
-            while (!IsEntityNull (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_vip_start")))
+            while (!engine.IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_vip_start")))
                spawnEntity->v.effects &= ~EF_NODRAW;
 
-            ServerCommand ("mp_roundtime 9"); // reset round time to maximum
-            ServerCommand ("mp_timelimit 0"); // disable the time limit
-            ServerCommand ("mp_freezetime 0"); // disable freezetime
+            engine.IssueCmd ("mp_roundtime 9"); // reset round time to maximum
+            engine.IssueCmd ("mp_timelimit 0"); // disable the time limit
+            engine.IssueCmd ("mp_freezetime 0"); // disable freezetime
          }
          else if (stricmp (arg2, "off") == 0)
          {
-            while (!IsEntityNull (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
+            while (!engine.IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
                spawnEntity->v.effects |= EF_NODRAW;
-            while (!IsEntityNull (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_deathmatch")))
+            while (!engine.IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_deathmatch")))
                spawnEntity->v.effects |= EF_NODRAW;
-            while (!IsEntityNull (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_vip_start")))
+            while (!engine.IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_vip_start")))
                spawnEntity->v.effects |= EF_NODRAW;
          }
       }
@@ -286,7 +287,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       else if (stricmp (arg1, "addbasic") == 0)
       {
          waypoints.CreateBasic ();
-         CenterPrint ("Basic waypoints was Created");
+         engine.CenterPrintf ("Basic waypoints was Created");
       }
 
       // delete nearest to host edict waypoint
@@ -299,17 +300,17 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       // save waypoint data into file on hard disk
       else if (stricmp (arg1, "save") == 0)
       {
-         char *waypointSaveMessage = locale.TranslateInput ("Waypoints Saved");
+         char *waypointSaveMessage = engine.TraslateMessage ("Waypoints Saved");
 
          if (FStrEq (arg2, "nocheck"))
          {
             waypoints.Save ();
-            ServerPrint (waypointSaveMessage);
+            engine.Printf (waypointSaveMessage);
          }
          else if (waypoints.NodesValid ())
          {
             waypoints.Save ();
-            ServerPrint (waypointSaveMessage);
+            engine.Printf (waypointSaveMessage);
          }
       }
 
@@ -321,14 +322,14 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       else if (stricmp (arg1, "load") == 0)
       {
          if (waypoints.Load ())
-            ServerPrint ("Waypoints loaded");
+            engine.Printf ("Waypoints loaded");
       }
 
       // check all nodes for validation
       else if (stricmp (arg1, "check") == 0)
       {
          if (waypoints.NodesValid ())
-            CenterPrint ("Nodes work Fine");
+            engine.CenterPrintf ("Nodes work Fine");
       }
 
       // opens menu for setting (removing) waypoint flags
@@ -355,7 +356,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
             (*g_engfuncs.pfnSetOrigin) (g_hostEntity, path->origin);
             g_waypointOn = true;
 
-            ServerPrint ("Player '%s' teleported to waypoint #%d (x:%.1f, y:%.1f, z:%.1f)", STRING (g_hostEntity->v.netname), teleportPoint, path->origin.x, path->origin.y, path->origin.z); //-V807
+            engine.Printf ("Player '%s' teleported to waypoint #%d (x:%.1f, y:%.1f, z:%.1f)", STRING (g_hostEntity->v.netname), teleportPoint, path->origin.x, path->origin.y, path->origin.z); //-V807
             g_editNoclip = true;
          }
       }
@@ -366,13 +367,13 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
       // otherwise display waypoint current status
       else
-         ServerPrint ("Waypoints are %s", g_waypointOn == true ? "Enabled" : "Disabled");
+         engine.Printf ("Waypoints are %s", g_waypointOn == true ? "Enabled" : "Disabled");
    }
 
    // path waypoint editing system (supported only on listen server)
    else if (stricmp (arg0, "pathwaypoint") == 0 || stricmp (arg0, "path") == 0 || stricmp (arg0, "pwp") == 0)
    {
-      if (IsDedicatedServer () || IsEntityNull (g_hostEntity))
+      if (engine.IsDedicatedServer () || engine.IsNullEntity (g_hostEntity))
          return 2;
 
       // opens path creation menu
@@ -403,7 +404,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    // automatic waypoint handling (supported only on listen server)
    else if (stricmp (arg0, "autowaypoint") == 0 || stricmp (arg0, "autowp") == 0)
    {
-      if (IsDedicatedServer () || IsEntityNull (g_hostEntity))
+      if (engine.IsDedicatedServer () || engine.IsNullEntity (g_hostEntity))
          return 2;
 
       // enable autowaypointing
@@ -418,13 +419,13 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          g_autoWaypoint = false;
 
       // display status
-      ServerPrint ("Auto-Waypoint %s", g_autoWaypoint ? "Enabled" : "Disabled");
+      engine.Printf ("Auto-Waypoint %s", g_autoWaypoint ? "Enabled" : "Disabled");
    }
 
    // experience system handling (supported only on listen server)
    else if (stricmp (arg0, "experience") == 0 || stricmp (arg0, "exp") == 0)
    {
-      if (IsDedicatedServer () || IsEntityNull (g_hostEntity))
+      if (engine.IsDedicatedServer () || engine.IsNullEntity (g_hostEntity))
          return 2;
 
       // write experience table (and visibility table) to hard disk
@@ -433,7 +434,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          waypoints.SaveExperienceTab ();
          waypoints.SaveVisibilityTab ();
 
-         ServerPrint ("Experience tab saved");
+         engine.Printf ("Experience tab saved");
       }
    }
    else
@@ -453,7 +454,7 @@ void CommandHandler (void)
 
    // check status for dedicated server command
    if (BotCommandHandler (g_hostEntity, IsNullString (CMD_ARGV (1)) ? "help" : CMD_ARGV (1), CMD_ARGV (2), CMD_ARGV (3), CMD_ARGV (4), CMD_ARGV (5), CMD_ARGV (6), CMD_ARGV (0)) == 0)
-      ServerPrint ("Unknown command: %s", CMD_ARGV (1));
+      engine.Printf ("Unknown command: %s", CMD_ARGV (1));
 }
 
 void ParseVoiceEvent (const String &base, int type, float timeToRepeat)
@@ -467,7 +468,7 @@ void ParseVoiceEvent (const String &base, int type, float timeToRepeat)
    {
       temp[i].Trim ().TrimQuotes ();
 
-      if (GetWaveLength (temp[i]) == 0.0f)
+      if (engine.GetWaveLength (temp[i]) <= 0.0f)
          continue;
 
       chatterItem.name = temp[i];
@@ -478,9 +479,19 @@ void ParseVoiceEvent (const String &base, int type, float timeToRepeat)
    temp.RemoveAll ();
 }
 
+// forwards for MemoryFile
+MemoryFile::MF_Loader MemoryFile::Loader = NULL;
+MemoryFile::MF_Unloader MemoryFile::Unloader = NULL;
+
 void InitConfig (void)
 {
-   File fp;
+   if (!MemoryFile::Loader && !MemoryFile::Unloader)
+   {
+      MemoryFile::Loader = reinterpret_cast <MemoryFile::MF_Loader> (g_engfuncs.pfnLoadFileForMe);
+      MemoryFile::Unloader = reinterpret_cast <MemoryFile::MF_Unloader> (g_engfuncs.pfnFreeFile);
+   }
+
+   MemoryFile fp;
    char line[512];
 
    KeywordFactory replyKey;
@@ -505,7 +516,7 @@ void InitConfig (void)
          if (pair.GetElementNumber () > 1)
             strncpy (line, pair[0].Trim ().GetBuffer (), SIZEOF_CHAR (line));
 
-         strtrim (line);
+         String::TrimExternalBuffer (line);
          line[32] = 0;
 
          BotName item;
@@ -531,7 +542,7 @@ void InitConfig (void)
       while (fp.GetBuffer (line, 255))
       {
          SKIP_COMMENTS ();
-         strncpy (section, GetField (line, 0, 1), SIZEOF_CHAR (section));
+         strncpy (section, Engine::ExtractSingleField (line, 0, 1), SIZEOF_CHAR (section));
 
          if (strcmp (section, "[KILLED]") == 0)
          {
@@ -577,7 +588,7 @@ void InitConfig (void)
          if (chatType != 3)
             line[79] = 0;
 
-         strtrim (line);
+         String::TrimExternalBuffer (line);
 
          switch (chatType)
          {
@@ -833,13 +844,13 @@ void InitConfig (void)
    // LOCALIZER INITITALIZATION
    if (OpenConfig ("lang.cfg", "Specified language not found", &fp, true) && !(g_gameFlags & GAME_LEGACY))
    {
-      if (IsDedicatedServer ())
+      if (engine.IsDedicatedServer ())
          return; // dedicated server will use only english translation
 
       enum Lang { Lang_Original, Lang_Translate } langState = static_cast <Lang> (2);
 
       char buffer[1024];
-      LanguageItem temp = {"", ""};
+      TranslatorPair temp = {"", ""};
 
       while (fp.GetBuffer (line, 255))
       {
@@ -849,17 +860,17 @@ void InitConfig (void)
 
             if (!IsNullString (buffer))
             {
-               strtrim (buffer);
+               String::TrimExternalBuffer (buffer);
                temp.translated = _strdup (buffer);
                buffer[0] = 0x0;
             }
 
             if (!IsNullString (temp.translated) && !IsNullString (temp.original))
-               locale.m_langTab.Push (temp);
+               engine.PushTranslationPair (temp);
          }
          else if (strncmp (line, "[TRANSLATED]", 12) == 0)
          {
-            strtrim (buffer);
+            String::TrimExternalBuffer (buffer);
             temp.original = _strdup (buffer);
             buffer[0] = 0x0;
 
@@ -904,7 +915,7 @@ void CommandHandler_NotMM (void)
    // the stdio command-line parsing in C when you write "long main (long argc, char **argv)".
    // this function is handler for non-metamod launch of yapb, it's just print error message.
 
-   ServerPrint ("You're launched standalone version of yapb. Metamod is not installed or not enabled!");
+   engine.Printf ("You're launched standalone version of yapb. Metamod is not installed or not enabled!");
 }
 
 void GameDLLInit (void)
@@ -940,22 +951,22 @@ void GameDLLInit (void)
 
          gameVersionStr.Replace ("Legacy", "1.6 Limited");
       }
-      ServerPrint ("YaPB Bot has detect game version as Counter-Strike: %s", gameVersionStr.GetBuffer ());
+      engine.Printf ("YaPB Bot has detect game version as Counter-Strike: %s", gameVersionStr.GetBuffer ());
    }
 
    // register server command(s)
-   RegisterCommand ("yapb", CommandHandler);   
-   RegisterCommand ("yb", CommandHandler);
+   engine.RegisterCmd ("yapb", CommandHandler);   
+   engine.RegisterCmd ("yb", CommandHandler);
 
    // execute main config
-   ServerCommand ("exec addons/yapb/conf/yapb.cfg");
+   engine.IssueCmd ("exec addons/yapb/conf/yapb.cfg");
 
    // set correct version string
    yb_version.SetString (FormatBuffer ("%d.%d.%d.%u", PRODUCT_VERSION_DWORD_INTERNAL, GenerateBuildNumber ()));
 
    // register fake metamod command handler if we not! under mm
    if (!g_isMetamod)
-      RegisterCommand ("meta", CommandHandler_NotMM);
+      engine.RegisterCmd ("meta", CommandHandler_NotMM);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -976,7 +987,7 @@ void Touch (edict_t *pentTouched, edict_t *pentOther)
    // the two entities both have velocities, for example two players colliding, this function
    // is called twice, once for each entity moving.
 
-   if (!IsEntityNull (pentOther) && (pentOther->v.flags & FL_FAKECLIENT))
+   if (!engine.IsNullEntity (pentOther) && (pentOther->v.flags & FL_FAKECLIENT))
    {
       Bot *bot = bots.GetBot (pentOther);
 
@@ -1001,9 +1012,8 @@ int Spawn (edict_t *ent)
 
    if (strcmp (entityClassname, "worldspawn") == 0)
    {
-      g_worldEntity = ent; // save the world entity for future use
-
-      convars.PushRegisteredConVarsToEngine (true);
+      engine.Precache (ent);
+      engine.PushRegisteredConVarsToEngine (true);
 
       PRECACHE_SOUND (ENGINE_STR ("weapons/xbow_hit1.wav"));      // waypoint add
       PRECACHE_SOUND (ENGINE_STR ("weapons/mine_activate.wav"));  // waypoint delete
@@ -1012,14 +1022,8 @@ int Spawn (edict_t *ent)
       PRECACHE_SOUND (ENGINE_STR ("common/wpn_moveselect.wav"));  // path add/delete cancel
       PRECACHE_SOUND (ENGINE_STR ("common/wpn_denyselect.wav"));  // path add/delete error
 
-      g_modelIndexLaser = PRECACHE_MODEL (ENGINE_STR ("sprites/laserbeam.spr"));
-      g_modelIndexArrow = PRECACHE_MODEL (ENGINE_STR ("sprites/arrow1.spr"));
-      g_roundEnded = true;
-
       RoundInit ();
-
-      g_mapType = NULL; // reset map type as worldspawn is the first entity spawned
-
+      g_mapType = 0; // reset map type as worldspawn is the first entity spawned
 
       // detect official csbots here, as they causing crash in linkent code when active for some reason
       if (!(g_gameFlags & GAME_LEGACY) && g_engfuncs.pfnCVarGetPointer ("bot_stop") != NULL)
@@ -1079,9 +1083,9 @@ int Spawn (edict_t *ent)
       g_mapType |= MAP_ES;
 
    // next maps doesn't have map-specific entities, so determine it by name
-   else if (strncmp (GetMapName (), "fy_", 3) == 0) // fun map
+   else if (strncmp (engine.GetMapName (), "fy_", 3) == 0) // fun map
       g_mapType |= MAP_FY;
-   else if (strncmp (GetMapName (), "ka_", 3) == 0) // knife arena map
+   else if (strncmp (engine.GetMapName (), "ka_", 3) == 0) // knife arena map
       g_mapType |= MAP_KA;
 
    if (g_isMetamod)
@@ -1157,9 +1161,9 @@ void ClientDisconnect (edict_t *ent)
 
    bots.AdjustQuota (false, ent);
 
-   int i = IndexOfEntity (ent) - 1;
+   int i = engine.IndexOfEntity (ent) - 1;
 
-   InternalAssert (i >= 0 && i < 32);
+   InternalAssert (i >= 0 && i < MAX_ENGINE_PLAYERS);
 
    Bot *bot = bots.GetBot (i);
 
@@ -1188,14 +1192,14 @@ void ClientUserInfoChanged (edict_t *ent, char *infobuffer)
    // change their player model). But most commonly, this function is in charge of handling
    // team changes, recounting the teams population, etc...
 
-   if (IsDedicatedServer () && !IsValidBot (ent))
+   if (engine.IsDedicatedServer () && !IsValidBot (ent))
    {
       const char *passwordField = yb_password_key.GetString ();
       const char *password = yb_password.GetString ();
 
       if (!IsNullString (passwordField) || !IsNullString (password))
       {
-         int clientIndex = IndexOfEntity (ent) - 1;
+         int clientIndex = engine.IndexOfEntity (ent) - 1;
 
          if (strcmp (password, INFOKEY_VALUE (infobuffer, const_cast <char *> (passwordField))) == 0)
             g_clients[clientIndex].flags |= CF_ADMIN;
@@ -1231,7 +1235,7 @@ void ClientCommand (edict_t *ent)
    static int fillServerTeam = 5;
    static bool fillCommand = false;
 
-   if (!g_isFakeCommand && (ent == g_hostEntity || (g_clients[IndexOfEntity (ent) - 1].flags & CF_ADMIN)))
+   if (!engine.IsBotCommand () && (ent == g_hostEntity || (g_clients[engine.IndexOfEntity (ent) - 1].flags & CF_ADMIN)))
    {
       if (stricmp (command, "yapb") == 0 || stricmp (command, "yb") == 0)
       {
@@ -1240,11 +1244,11 @@ void ClientCommand (edict_t *ent)
          switch (state)
          {
          case 0:
-            ClientPrint (ent, print_withtag, "Unknown command: %s", arg1);
+            engine.ClientPrintf (ent, "Unknown command: %s", arg1);
             break;
 
          case 2:
-            ClientPrint (ent, print_withtag, "Command %s, can only be executed from server console.", arg1);
+            engine.ClientPrintf (ent, "Command %s, can only be executed from server console.", arg1);
             break;
          }
          if (g_isMetamod)
@@ -1252,9 +1256,9 @@ void ClientCommand (edict_t *ent)
 
          return;
       }
-      else if (stricmp (command, "menuselect") == 0 && !IsNullString (arg1) && g_clients[IndexOfEntity (ent) - 1].menu != NULL)
+      else if (stricmp (command, "menuselect") == 0 && !IsNullString (arg1) && g_clients[engine.IndexOfEntity (ent) - 1].menu != NULL)
       {
-         Client *client = &g_clients[IndexOfEntity (ent) - 1];
+         Client *client = &g_clients[engine.IndexOfEntity (ent) - 1];
          int selection = atoi (arg1);
 
          if (client->menu == &g_menus[12])
@@ -1329,9 +1333,9 @@ void ClientCommand (edict_t *ent)
             {
             case 1:
                if (g_waypointOn)
-                  ServerCommand ("yapb waypoint off");
+                  engine.IssueCmd ("yapb waypoint off");
                else
-                  ServerCommand ("yapb waypoint on");
+                  engine.IssueCmd ("yapb waypoint on");
                break;
 
             case 2:
@@ -1423,7 +1427,7 @@ void ClientCommand (edict_t *ent)
                      if (path->flags & FLAG_NOHOSTAGE)
                         noHostagePoints++;
                   }
-                  ServerPrint ("Waypoints: %d - T Points: %d\n"
+                  engine.Printf ("Waypoints: %d - T Points: %d\n"
                                     "CT Points: %d - Goal Points: %d\n"
                                     "Rescue Points: %d - Camp Points: %d\n"
                                     "Block Hostage Points: %d - Sniper Points: %d\n", g_numWaypoints, terrPoints, ctPoints, goalPoints, rescuePoints, campPoints, noHostagePoints, sniperPoints);
@@ -1435,7 +1439,7 @@ void ClientCommand (edict_t *ent)
                g_autoWaypoint &= 1;
                g_autoWaypoint ^= 1;
 
-               CenterPrint ("Auto-Waypoint %s", g_autoWaypoint ? "Enabled" : "Disabled");
+               engine.CenterPrintf ("Auto-Waypoint %s", g_autoWaypoint ? "Enabled" : "Disabled");
                break;
 
             case 3:
@@ -1447,7 +1451,7 @@ void ClientCommand (edict_t *ent)
                if (waypoints.NodesValid ())
                   waypoints.Save ();
                else
-                  CenterPrint ("Waypoint not saved\nThere are errors, see console");
+                  engine.CenterPrintf ("Waypoint not saved\nThere are errors, see console");
                break;
 
             case 5:
@@ -1460,13 +1464,13 @@ void ClientCommand (edict_t *ent)
 
             case 7:
                if (waypoints.NodesValid ())
-                  CenterPrint ("Nodes works fine");
+                  engine.CenterPrintf ("Nodes works fine");
                else
-                  CenterPrint ("There are errors, see console");
+                  engine.CenterPrintf ("There are errors, see console");
                break;
 
             case 8:
-               ServerCommand ("yapb wp on noclip");
+               engine.IssueCmd ("yapb wp on noclip");
                break;
 
             case 9:
@@ -1593,7 +1597,7 @@ void ClientCommand (edict_t *ent)
                else
                {
                   DisplayMenuToClient (ent, NULL); // reset menu display
-                  CenterPrint ("You're dead, and have no access to this menu");
+                  engine.CenterPrintf ("You're dead, and have no access to this menu");
                }
                break;
 
@@ -1626,7 +1630,7 @@ void ClientCommand (edict_t *ent)
                         bot->m_doubleJumpOrigin = client->ent->v.origin;
                         bot->m_doubleJumpEntity = client->ent;
 
-                        bot->PushTask (TASK_DOUBLEJUMP, TASKPRI_DOUBLEJUMP, -1, GetWorldTime (), true);
+                        bot->PushTask (TASK_DOUBLEJUMP, TASKPRI_DOUBLEJUMP, -1, engine.Time (), true);
                         bot->TeamSayText (FormatBuffer ("Ok %s, i will help you!", STRING (ent->v.netname)));
                      }
                      else if (selection == 2)
@@ -1662,9 +1666,9 @@ void ClientCommand (edict_t *ent)
                g_autoPathDistance = autoDistanceValue[selection - 1];
 
             if (g_autoPathDistance == 0)
-               CenterPrint ("AutoPath disabled");
+               engine.CenterPrintf ("AutoPath disabled");
             else
-               CenterPrint ("AutoPath maximum distance set to %f", g_autoPathDistance);
+               engine.CenterPrintf ("AutoPath maximum distance set to %f", g_autoPathDistance);
 
             if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
@@ -2011,7 +2015,7 @@ void ClientCommand (edict_t *ent)
       }
    }
 
-   if (!g_isFakeCommand && (stricmp (command, "say") == 0 || stricmp (command, "say_team") == 0))
+   if (!engine.IsBotCommand () && (stricmp (command, "say") == 0 || stricmp (command, "say_team") == 0))
    {
       Bot *bot = NULL;
 
@@ -2027,9 +2031,9 @@ void ClientCommand (edict_t *ent)
       int team = -1;
 
       if (FStrEq (command, "say_team"))
-         team = GetTeam (ent);
+         team = engine.GetTeam (ent);
 
-      for (int i = 0; i < GetMaxClients (); i++)
+      for (int i = 0; i < engine.MaxClients (); i++)
       {
          if (!(g_clients[i].flags & CF_USED) || (team != -1 && team != g_clients[i].team) || isAlive != IsAlive (g_clients[i].ent))
             continue;
@@ -2038,17 +2042,17 @@ void ClientCommand (edict_t *ent)
 
          if (target != NULL)
          {
-            target->m_sayTextBuffer.entityIndex = IndexOfEntity (ent);
+            target->m_sayTextBuffer.entityIndex = engine.IndexOfEntity (ent);
 
             if (IsNullString (CMD_ARGS ()))
                continue;
 
             strncpy (target->m_sayTextBuffer.sayText, CMD_ARGS (), SIZEOF_CHAR (target->m_sayTextBuffer.sayText));
-            target->m_sayTextBuffer.timeNextChat = GetWorldTime () + target->m_sayTextBuffer.chatDelay;
+            target->m_sayTextBuffer.timeNextChat = engine.Time () + target->m_sayTextBuffer.chatDelay;
          }
       }
    }
-   int clientIndex = IndexOfEntity (ent) - 1;
+   int clientIndex = engine.IndexOfEntity (ent) - 1;
 
    // check if this player alive, and issue something
    if ((g_clients[clientIndex].flags & CF_ALIVE) && g_radioSelect[clientIndex] != 0 && strncmp (command, "menuselect", 10) == 0)
@@ -2061,19 +2065,19 @@ void ClientCommand (edict_t *ent)
 
          if (radioCommand != Radio_Affirmative && radioCommand != Radio_Negative && radioCommand != Radio_ReportingIn)
          {
-            for (int i = 0; i < GetMaxClients (); i++)
+            for (int i = 0; i < engine.MaxClients (); i++)
             {
                Bot *bot = bots.GetBot (i);
 
                // validate bot
-               if (bot != NULL && GetTeam (bot->GetEntity ()) == g_clients[clientIndex].team && VARS (ent) != bot->pev && bot->m_radioOrder == 0)
+               if (bot != NULL && bot->m_team == g_clients[clientIndex].team && ent != bot->GetEntity () && bot->m_radioOrder == 0)
                {
                   bot->m_radioOrder = radioCommand;
                   bot->m_radioEntity = ent;
                }
             }
          }
-         g_lastRadioTime[g_clients[clientIndex].team] = GetWorldTime ();
+         g_lastRadioTime[g_clients[clientIndex].team] = engine.Time ();
       }
       g_radioSelect[clientIndex] = 0;
    }
@@ -2106,12 +2110,12 @@ void ServerActivate (edict_t *pentEdictList, int edictCount, int clientMax)
    bots.CreateKillerEntity ();
 
    // execute main config
-   ServerCommand ("exec addons/yapb/conf/yapb.cfg");
+   engine.IssueCmd ("exec addons/yapb/conf/yapb.cfg");
 
-   if (File::Accessible (FormatBuffer ("%s/maps/%s_yapb.cfg", GetModName (), GetMapName ())))
+   if (File::Accessible (FormatBuffer ("%s/maps/%s_yapb.cfg", engine.GetModName (), engine.GetMapName ())))
    {
-      ServerCommand ("exec maps/%s_yapb.cfg", GetMapName ());
-      ServerPrint ("Executing Map-Specific config file");
+      engine.IssueCmd ("exec maps/%s_yapb.cfg", engine.GetMapName ());
+      engine.Printf ("Executing Map-Specific config file");
    }
    bots.InitQuota ();
 
@@ -2164,11 +2168,11 @@ void StartFrame (void)
    bots.PeriodicThink ();
 
    // record some stats of all players on the server
-   for (int i = 0; i < GetMaxClients (); i++)
+   for (int i = 0; i < engine.MaxClients (); i++)
    {
-      edict_t *player = EntityOfIndex (i + 1);
+      edict_t *player = engine.EntityOfIndex (i + 1);
 
-      if (!IsEntityNull (player) && (player->v.flags & FL_CLIENT))
+      if (!engine.IsNullEntity (player) && (player->v.flags & FL_CLIENT))
       {
          g_clients[i].ent = player;
          g_clients[i].flags |= CF_USED;
@@ -2195,7 +2199,7 @@ void StartFrame (void)
       }
    }
 
-   if (!IsDedicatedServer () && !IsEntityNull (g_hostEntity))
+   if (!engine.IsDedicatedServer () && !engine.IsNullEntity (g_hostEntity))
    {
       if (g_waypointOn)
          waypoints.Think ();
@@ -2204,31 +2208,33 @@ void StartFrame (void)
    }
    bots.SetDeathMsgState (false);
 
-   if (g_timePerSecondUpdate < GetWorldTime ())
+   if (g_timePerSecondUpdate < engine.Time ())
    {
-      for (int i = 0; i < GetMaxClients (); i++)
+      for (int i = 0; i < engine.MaxClients (); i++)
       {
-         edict_t *player = EntityOfIndex (i + 1);
+         edict_t *player = engine.EntityOfIndex (i + 1);
 
          // code below is executed only on dedicated server
-         if (IsDedicatedServer () && !IsEntityNull (player) && (player->v.flags & FL_CLIENT) && !(player->v.flags & FL_FAKECLIENT))
+         if (engine.IsDedicatedServer () && !engine.IsNullEntity (player) && (player->v.flags & FL_CLIENT) && !(player->v.flags & FL_FAKECLIENT))
          {
-            if (g_clients[i].flags & CF_ADMIN)
+            Client &client = g_clients[i];
+
+            if (client.flags & CF_ADMIN)
             {
                if (IsNullString (yb_password_key.GetString ()) && IsNullString (yb_password.GetString ()))
-                  g_clients[i].flags &= ~CF_ADMIN;
-               else if (strcmp (yb_password.GetString (), INFOKEY_VALUE (GET_INFOKEYBUFFER (g_clients[i].ent), const_cast <char *> (yb_password_key.GetString ()))))
+                  client.flags &= ~CF_ADMIN;
+               else if (strcmp (yb_password.GetString (), INFOKEY_VALUE (GET_INFOKEYBUFFER (client.ent), const_cast <char *> (yb_password_key.GetString ()))))
                {
-                  g_clients[i].flags &= ~CF_ADMIN;
-                  ServerPrint ("Player %s had lost remote access to yapb.", STRING (player->v.netname));
+                  client.flags &= ~CF_ADMIN;
+                  engine.Printf ("Player %s had lost remote access to yapb.", STRING (player->v.netname));
                }
             }
-            else if (!(g_clients[i].flags & CF_ADMIN) && !IsNullString (yb_password_key.GetString ()) && !IsNullString (yb_password.GetString ()))
+            else if (!(client.flags & CF_ADMIN) && !IsNullString (yb_password_key.GetString ()) && !IsNullString (yb_password.GetString ()))
             {
-               if (strcmp (yb_password.GetString (), INFOKEY_VALUE (GET_INFOKEYBUFFER (g_clients[i].ent), const_cast <char *> (yb_password_key.GetString ()))) == 0)
+               if (strcmp (yb_password.GetString (), INFOKEY_VALUE (GET_INFOKEYBUFFER (client.ent), const_cast <char *> (yb_password_key.GetString ()))) == 0)
                {
-                  g_clients[i].flags |= CF_ADMIN;
-                  ServerPrint ("Player %s had gained full remote access to yapb.", STRING (player->v.netname));
+                  client.flags |= CF_ADMIN;
+                  engine.Printf ("Player %s had gained full remote access to yapb.", STRING (player->v.netname));
                }
             }
          }
@@ -2249,9 +2255,9 @@ void StartFrame (void)
          if (csdm_active != NULL && csdm_active->value > 0)
             yb_csdm_mode.SetInt (mp_freeforall != NULL && mp_freeforall->value > 0 ? 2 : 1);
       }
-      g_timePerSecondUpdate = GetWorldTime () + 1.0f;
+      g_timePerSecondUpdate = engine.Time () + 1.0f;
    }
-   else if (g_timePerSecondUpdate * 0.5f < GetWorldTime ())
+   else if (g_timePerSecondUpdate * 0.5f < engine.Time ())
       bots.UpdateActiveGrenades ();
 
    // keep bot number up to date
@@ -2365,7 +2371,7 @@ void pfnEmitSound (edict_t *entity, int channel, const char *sample, float volum
    (*g_engfuncs.pfnEmitSound) (entity, channel, sample, volume, attenuation, flags, pitch);
 }
 
-void pfnClientCommand (edict_t *ent, char *format, ...)
+void pfnClientCommand (edict_t *ent, char const *format, ...)
 {
    // this function forces the client whose player entity is ent to issue a client command.
    // How it works is that clients all have a g_xgv global string in their client DLL that
@@ -2379,18 +2385,17 @@ void pfnClientCommand (edict_t *ent, char *format, ...)
    // make the server crash. Since hordes of uncautious, not to say stupid, programmers don't
    // even imagine some players on their servers could be bots, this check is performed less than
    // sometimes actually by their side, that's why we strongly recommend to check it here too. In
-   // case it's a bot asking for a client command, we handle it like we do for bot commands, ie
-   // using FakeClientCommand().
+   // case it's a bot asking for a client command, we handle it like we do for bot commands
 
    va_list ap;
-   char buffer[1024];
+   char buffer[MAX_PRINT_BUFFER];
 
    va_start (ap, format);
-   _vsnprintf (buffer, sizeof (buffer), format, ap);
+   _vsnprintf (buffer, SIZEOF_CHAR (buffer), format, ap);
    va_end (ap);
 
    // is the target entity an official bot, or a third party bot ?
-   if (IsValidBot (ent) || (ent->v.flags & FL_DORMANT))
+   if (ent->v.flags & FL_FAKECLIENT)
    {
       if (g_isMetamod)
          RETURN_META (MRES_SUPERCEDE); // prevent bots to be forced to issue client commands
@@ -2409,73 +2414,71 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
    // this function called each time a message is about to sent.
 
    // store the message type in our own variables, since the GET_USER_MSG_ID () will just do a lot of strcmp()'s...
-   if (g_isMetamod && netmsg.GetId (NETMSG_MONEY) == -1)
+   if (g_isMetamod && engine.FindMessageId (NETMSG_MONEY) == -1)
    {
-      netmsg.SetId (NETMSG_VGUI, GET_USER_MSG_ID (PLID, "VGUIMenu", NULL));
-      netmsg.SetId (NETMSG_SHOWMENU, GET_USER_MSG_ID (PLID, "ShowMenu", NULL));
-      netmsg.SetId (NETMSG_WEAPONLIST, GET_USER_MSG_ID (PLID, "WeaponList", NULL));
-      netmsg.SetId (NETMSG_CURWEAPON, GET_USER_MSG_ID (PLID, "CurWeapon", NULL));
-      netmsg.SetId (NETMSG_AMMOX, GET_USER_MSG_ID (PLID, "AmmoX", NULL));
-      netmsg.SetId (NETMSG_AMMOPICKUP, GET_USER_MSG_ID (PLID, "AmmoPickup", NULL));
-      netmsg.SetId (NETMSG_DAMAGE, GET_USER_MSG_ID (PLID, "Damage", NULL));
-      netmsg.SetId (NETMSG_MONEY, GET_USER_MSG_ID (PLID, "Money", NULL));
-      netmsg.SetId (NETMSG_STATUSICON, GET_USER_MSG_ID (PLID, "StatusIcon", NULL));
-      netmsg.SetId (NETMSG_DEATH, GET_USER_MSG_ID (PLID, "DeathMsg", NULL));
-      netmsg.SetId (NETMSG_SCREENFADE, GET_USER_MSG_ID (PLID, "ScreenFade", NULL));
-      netmsg.SetId (NETMSG_HLTV, GET_USER_MSG_ID (PLID, "HLTV", NULL));
-      netmsg.SetId (NETMSG_TEXTMSG, GET_USER_MSG_ID (PLID, "TextMsg", NULL));
-      netmsg.SetId (NETMSG_SCOREINFO, GET_USER_MSG_ID (PLID, "ScoreInfo", NULL));
-      netmsg.SetId (NETMSG_BARTIME, GET_USER_MSG_ID (PLID, "BarTime", NULL));
-      netmsg.SetId (NETMSG_SENDAUDIO, GET_USER_MSG_ID (PLID, "SendAudio", NULL));
-      netmsg.SetId (NETMSG_SAYTEXT, GET_USER_MSG_ID (PLID, "SayText", NULL));
-      netmsg.SetId (NETMSG_RESETHUD, GET_USER_MSG_ID (PLID, "ResetHUD", NULL));
+      engine.AssignMessageId (NETMSG_VGUI, GET_USER_MSG_ID (PLID, "VGUIMenu", NULL));
+      engine.AssignMessageId (NETMSG_SHOWMENU, GET_USER_MSG_ID (PLID, "ShowMenu", NULL));
+      engine.AssignMessageId (NETMSG_WEAPONLIST, GET_USER_MSG_ID (PLID, "WeaponList", NULL));
+      engine.AssignMessageId (NETMSG_CURWEAPON, GET_USER_MSG_ID (PLID, "CurWeapon", NULL));
+      engine.AssignMessageId (NETMSG_AMMOX, GET_USER_MSG_ID (PLID, "AmmoX", NULL));
+      engine.AssignMessageId (NETMSG_AMMOPICKUP, GET_USER_MSG_ID (PLID, "AmmoPickup", NULL));
+      engine.AssignMessageId (NETMSG_DAMAGE, GET_USER_MSG_ID (PLID, "Damage", NULL));
+      engine.AssignMessageId (NETMSG_MONEY, GET_USER_MSG_ID (PLID, "Money", NULL));
+      engine.AssignMessageId (NETMSG_STATUSICON, GET_USER_MSG_ID (PLID, "StatusIcon", NULL));
+      engine.AssignMessageId (NETMSG_DEATH, GET_USER_MSG_ID (PLID, "DeathMsg", NULL));
+      engine.AssignMessageId (NETMSG_SCREENFADE, GET_USER_MSG_ID (PLID, "ScreenFade", NULL));
+      engine.AssignMessageId (NETMSG_HLTV, GET_USER_MSG_ID (PLID, "HLTV", NULL));
+      engine.AssignMessageId (NETMSG_TEXTMSG, GET_USER_MSG_ID (PLID, "TextMsg", NULL));
+      engine.AssignMessageId (NETMSG_SCOREINFO, GET_USER_MSG_ID (PLID, "ScoreInfo", NULL));
+      engine.AssignMessageId (NETMSG_BARTIME, GET_USER_MSG_ID (PLID, "BarTime", NULL));
+      engine.AssignMessageId (NETMSG_SENDAUDIO, GET_USER_MSG_ID (PLID, "SendAudio", NULL));
+      engine.AssignMessageId (NETMSG_SAYTEXT, GET_USER_MSG_ID (PLID, "SayText", NULL));
 
       if (!(g_gameFlags & GAME_LEGACY))
-         netmsg.SetId (NETMSG_BOTVOICE, GET_USER_MSG_ID (PLID, "BotVoice", NULL));
+         engine.AssignMessageId (NETMSG_BOTVOICE, GET_USER_MSG_ID (PLID, "BotVoice", NULL));
    }
-   netmsg.Reset ();
+   engine.ResetMessageCapture ();
 
-   if (msgDest == MSG_SPEC && msgType == netmsg.GetId (NETMSG_HLTV) && !(g_gameFlags & GAME_LEGACY))
-      netmsg.SetMessage (NETMSG_HLTV);
+   if ((!(g_gameFlags & GAME_LEGACY) || (g_gameFlags & GAME_XASH)) && msgDest == MSG_SPEC && msgType == engine.FindMessageId (NETMSG_HLTV))
+      engine.SetOngoingMessageId (NETMSG_HLTV);
 
-   netmsg.HandleMessageIfRequired (msgType, NETMSG_WEAPONLIST);
+   engine.TryCaptureMessage (msgType, NETMSG_WEAPONLIST);
 
-   if (!IsEntityNull (ed))
+   if (!engine.IsNullEntity (ed))
    {
       int index = bots.GetIndex (ed);
 
       // is this message for a bot?
-      if (index != -1 && !(ed->v.flags & FL_DORMANT) && bots.GetBot (index)->GetEntity () == ed)
+      if (index != -1 && !(ed->v.flags & FL_DORMANT))
       {
-         netmsg.Reset ();
-         netmsg.SetBot (bots.GetBot (index));
+         engine.ResetMessageCapture ();
+         engine.SetOngoingMessageReceiver (index);
 
          // message handling is done in usermsg.cpp
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_VGUI);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_CURWEAPON);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_AMMOX);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_AMMOPICKUP);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_DAMAGE);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_MONEY);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_STATUSICON);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_SCREENFADE);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_BARTIME);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_TEXTMSG);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_SHOWMENU);
-         netmsg.HandleMessageIfRequired (msgType, NETMSG_RESETHUD);
+         engine.TryCaptureMessage (msgType, NETMSG_VGUI);
+         engine.TryCaptureMessage (msgType, NETMSG_CURWEAPON);
+         engine.TryCaptureMessage (msgType, NETMSG_AMMOX);
+         engine.TryCaptureMessage (msgType, NETMSG_AMMOPICKUP);
+         engine.TryCaptureMessage (msgType, NETMSG_DAMAGE);
+         engine.TryCaptureMessage (msgType, NETMSG_MONEY);
+         engine.TryCaptureMessage (msgType, NETMSG_STATUSICON);
+         engine.TryCaptureMessage (msgType, NETMSG_SCREENFADE);
+         engine.TryCaptureMessage (msgType, NETMSG_BARTIME);
+         engine.TryCaptureMessage (msgType, NETMSG_TEXTMSG);
+         engine.TryCaptureMessage (msgType, NETMSG_SHOWMENU);
       }
    }
    else if (msgDest == MSG_ALL)
    {
-      netmsg.Reset ();
+      engine.ResetMessageCapture ();
 
-      netmsg.HandleMessageIfRequired (msgType, NETMSG_SCOREINFO);
-      netmsg.HandleMessageIfRequired (msgType, NETMSG_DEATH);
-      netmsg.HandleMessageIfRequired (msgType, NETMSG_TEXTMSG);
+      engine.TryCaptureMessage (msgType, NETMSG_SCOREINFO);
+      engine.TryCaptureMessage (msgType, NETMSG_DEATH);
+      engine.TryCaptureMessage (msgType, NETMSG_TEXTMSG);
 
       if (msgType == SVC_INTERMISSION)
       {
-         for (int i = 0; i < GetMaxClients (); i++)
+         for (int i = 0; i < engine.MaxClients (); i++)
          {
             Bot *bot = bots.GetBot (i);
 
@@ -2493,7 +2496,7 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
 
 void pfnMessageEnd (void)
 {
-   netmsg.Reset ();
+   engine.ResetMessageCapture ();
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2515,7 +2518,7 @@ void pfnMessageEnd_Post (void)
 void pfnWriteByte (int value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg.Execute ((void *) &value);
+   engine.ProcessMessageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2526,7 +2529,7 @@ void pfnWriteByte (int value)
 void pfnWriteChar (int value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg.Execute ((void *) &value);
+   engine.ProcessMessageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2537,7 +2540,7 @@ void pfnWriteChar (int value)
 void pfnWriteShort (int value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg.Execute ((void *) &value);
+   engine.ProcessMessageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2548,7 +2551,7 @@ void pfnWriteShort (int value)
 void pfnWriteLong (int value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg.Execute ((void *) &value);
+   engine.ProcessMessageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2559,7 +2562,7 @@ void pfnWriteLong (int value)
 void pfnWriteAngle (float value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg.Execute ((void *) &value);
+   engine.ProcessMessageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2570,7 +2573,7 @@ void pfnWriteAngle (float value)
 void pfnWriteCoord (float value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg.Execute ((void *) &value);
+   engine.ProcessMessageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2581,7 +2584,7 @@ void pfnWriteCoord (float value)
 void pfnWriteString (const char *sz)
 {
    // if this message is for a bot, call the client message function...
-   netmsg.Execute ((void *) sz);
+   engine.ProcessMessageCapture ((void *) sz);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2592,7 +2595,7 @@ void pfnWriteString (const char *sz)
 void pfnWriteEntity (int value)
 {
    // if this message is for a bot, call the client message function...
-   netmsg.Execute ((void *) &value);
+   engine.ProcessMessageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2609,13 +2612,13 @@ int pfnCmd_Argc (void)
    // DLL for a command we are holding here. Of course, real clients commands are still retrieved
    // the normal way, by asking the engine.
 
-   // is this a bot issuing that client command ?
-   if (g_isFakeCommand)
+   // is this a bot issuing that client command?
+   if (engine.IsBotCommand ())
    {
       if (g_isMetamod)
-         RETURN_META_VALUE (MRES_SUPERCEDE, g_fakeArgc);
+         RETURN_META_VALUE (MRES_SUPERCEDE, engine.GetOverrideArgc ());
 
-      return g_fakeArgc; // if so, then return the argument count we know
+      return engine.GetOverrideArgc (); // if so, then return the argument count we know
    }
 
    if (g_isMetamod)
@@ -2634,28 +2637,12 @@ const char *pfnCmd_Args (void)
    // normal way, by asking the engine.
 
    // is this a bot issuing that client command?
-   if (g_isFakeCommand)
+   if (engine.IsBotCommand ())
    {
-      // is it a "say" or "say_team" client command?
-      if (strncmp ("say ", g_fakeArgv, 4) == 0)
-      {
-         if (g_isMetamod)
-            RETURN_META_VALUE (MRES_SUPERCEDE, &g_fakeArgv[4]);
-
-         return &g_fakeArgv[4]; // skip the "say" bot client command
-      }
-      else if (strncmp ("say_team ", g_fakeArgv, 9) == 0)
-      {
-         if (g_isMetamod)
-            RETURN_META_VALUE (MRES_SUPERCEDE, &g_fakeArgv[9]);
-
-         return &g_fakeArgv[9]; // skip the "say_team" bot client command
-      }
-
       if (g_isMetamod)
-         RETURN_META_VALUE (MRES_SUPERCEDE, g_fakeArgv);
+         RETURN_META_VALUE (MRES_SUPERCEDE, engine.GetOverrideArgs ());
 
-      return g_fakeArgv; // else return the whole bot client command string we know
+      return engine.GetOverrideArgs (); // else return the whole bot client command string we know
    }
 
    if (g_isMetamod)
@@ -2673,13 +2660,13 @@ const char *pfnCmd_Argv (int argc)
    // DLL for a command we are holding here. Of course, real clients commands are still retrieved
    // the normal way, by asking the engine.
 
-   // is this a bot issuing that client command ?
-   if (g_isFakeCommand)
+   // is this a bot issuing that client command?
+   if (engine.IsBotCommand ())
    {
       if (g_isMetamod)
-         RETURN_META_VALUE (MRES_SUPERCEDE, GetField (g_fakeArgv, argc));
+         RETURN_META_VALUE (MRES_SUPERCEDE, engine.GetOverrideArgv (argc));
 
-      return GetField (g_fakeArgv, argc); // if so, then return the wanted argument we know
+      return engine.GetOverrideArgv (argc); // if so, then return the wanted argument we know
    }
    if (g_isMetamod)
       RETURN_META_VALUE (MRES_IGNORED, NULL);
@@ -2741,43 +2728,41 @@ int pfnRegUserMsg (const char *name, int size)
    int message = REG_USER_MSG (name, size);
 
    if (strcmp (name, "VGUIMenu") == 0)
-      netmsg.SetId (NETMSG_VGUI, message);
+      engine.AssignMessageId (NETMSG_VGUI, message);
    else if (strcmp (name, "ShowMenu") == 0)
-      netmsg.SetId (NETMSG_SHOWMENU, message);
+      engine.AssignMessageId (NETMSG_SHOWMENU, message);
    else if (strcmp (name, "WeaponList") == 0)
-      netmsg.SetId (NETMSG_WEAPONLIST, message);
+      engine.AssignMessageId (NETMSG_WEAPONLIST, message);
    else if (strcmp (name, "CurWeapon") == 0)
-      netmsg.SetId (NETMSG_CURWEAPON, message);
+      engine.AssignMessageId (NETMSG_CURWEAPON, message);
    else if (strcmp (name, "AmmoX") == 0)
-      netmsg.SetId (NETMSG_AMMOX, message);
+      engine.AssignMessageId (NETMSG_AMMOX, message);
    else if (strcmp (name, "AmmoPickup") == 0)
-      netmsg.SetId (NETMSG_AMMOPICKUP, message);
+      engine.AssignMessageId (NETMSG_AMMOPICKUP, message);
    else if (strcmp (name, "Damage") == 0)
-      netmsg.SetId (NETMSG_DAMAGE, message);
+      engine.AssignMessageId (NETMSG_DAMAGE, message);
    else if (strcmp (name, "Money") == 0)
-      netmsg.SetId (NETMSG_MONEY, message);
+      engine.AssignMessageId (NETMSG_MONEY, message);
    else if (strcmp (name, "StatusIcon") == 0)
-      netmsg.SetId (NETMSG_STATUSICON, message);
+      engine.AssignMessageId (NETMSG_STATUSICON, message);
    else if (strcmp (name, "DeathMsg") == 0)
-      netmsg.SetId (NETMSG_DEATH, message);
+      engine.AssignMessageId (NETMSG_DEATH, message);
    else if (strcmp (name, "ScreenFade") == 0)
-      netmsg.SetId (NETMSG_SCREENFADE, message);
+      engine.AssignMessageId (NETMSG_SCREENFADE, message);
    else if (strcmp (name, "HLTV") == 0)
-      netmsg.SetId (NETMSG_HLTV, message);
+      engine.AssignMessageId (NETMSG_HLTV, message);
    else if (strcmp (name, "TextMsg") == 0)
-      netmsg.SetId (NETMSG_TEXTMSG, message);
+      engine.AssignMessageId (NETMSG_TEXTMSG, message);
    else if (strcmp (name, "ScoreInfo") == 0)
-      netmsg.SetId (NETMSG_SCOREINFO, message);
+      engine.AssignMessageId (NETMSG_SCOREINFO, message);
    else if (strcmp (name, "BarTime") == 0)
-      netmsg.SetId (NETMSG_BARTIME, message);
+      engine.AssignMessageId (NETMSG_BARTIME, message);
    else if (strcmp (name, "SendAudio") == 0)
-      netmsg.SetId (NETMSG_SENDAUDIO, message);
+      engine.AssignMessageId (NETMSG_SENDAUDIO, message);
    else if (strcmp (name, "SayText") == 0)
-      netmsg.SetId (NETMSG_SAYTEXT, message);
+      engine.AssignMessageId (NETMSG_SAYTEXT, message);
    else if (strcmp (name, "BotVoice") == 0)
-      netmsg.SetId (NETMSG_BOTVOICE, message);
-   else if (strcmp (name, "ResetHUD") == 0)
-      netmsg.SetId (NETMSG_RESETHUD, message);
+      engine.AssignMessageId (NETMSG_BOTVOICE, message);
 
    return message;
 }
@@ -2788,17 +2773,17 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...)
    char buffer[1024];
 
    va_start (ap, format);
-   vsprintf (buffer, format, ap);
+   vsnprintf (buffer, SIZEOF_CHAR (buffer), format, ap);
    va_end (ap);
 
    if ((g_mapType & MAP_DE) && g_bombPlanted && strstr (buffer, "_Defuse_") != NULL)
    {
       // notify all terrorists that CT is starting bomb defusing
-      for (int i = 0; i < GetMaxClients (); i++)
+      for (int i = 0; i < engine.MaxClients (); i++)
       {
          Bot *bot = bots.GetBot (i);
 
-         if (bot != NULL && GetTeam (bot->GetEntity ()) == TERRORIST && IsAlive (bot->GetEntity ()))
+         if (bot != NULL && bot->m_team == TERRORIST && bot->m_notKilled)
          {
             bot->ResetTasks ();
             bot->MoveToVector (waypoints.GetBombPosition ());
@@ -2814,7 +2799,7 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...)
 
 gamedll_funcs_t gameDLLFunc;
 
-export int GetEntityAPI2 (gamefuncs_t *functionTable, int *)
+SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *)
 {
    // this function is called right after FuncPointers_t() by the engine in the game DLL (or
    // what it BELIEVES to be the game DLL), in order to copy the list of MOD functions that can
@@ -2858,7 +2843,7 @@ export int GetEntityAPI2 (gamefuncs_t *functionTable, int *)
    return TRUE;
 }
 
-export int GetEntityAPI2_Post (gamefuncs_t *functionTable, int *)
+SHARED_LIBRARAY_EXPORT int GetEntityAPI2_Post (gamefuncs_t *functionTable, int *)
 {
    // this function is called right after FuncPointers_t() by the engine in the game DLL (or
    // what it BELIEVES to be the game DLL), in order to copy the list of MOD functions that can
@@ -2879,7 +2864,7 @@ export int GetEntityAPI2_Post (gamefuncs_t *functionTable, int *)
    return TRUE;
 }
 
-export int GetNewDLLFunctions (newgamefuncs_t *functionTable, int *interfaceVersion)
+SHARED_LIBRARAY_EXPORT int GetNewDLLFunctions (newgamefuncs_t *functionTable, int *interfaceVersion)
 {
    // it appears that an extra function table has been added in the engine to gamedll interface
    // since the date where the first enginefuncs table standard was frozen. These ones are
@@ -2900,11 +2885,11 @@ export int GetNewDLLFunctions (newgamefuncs_t *functionTable, int *interfaceVers
    return TRUE;
 }
 
-export int GetEngineFunctions (enginefuncs_t *functionTable, int *)
+SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *)
 {
    if (g_isMetamod)
       memset (functionTable, 0, sizeof (enginefuncs_t));
-
+  
    functionTable->pfnChangeLevel = pfnChangeLevel;
    functionTable->pfnFindEntityByString = pfnFindEntityByString;
    functionTable->pfnEmitSound = pfnEmitSound;
@@ -2926,11 +2911,11 @@ export int GetEngineFunctions (enginefuncs_t *functionTable, int *)
    functionTable->pfnCmd_Argc = pfnCmd_Argc;
    functionTable->pfnSetClientMaxspeed = pfnSetClientMaxspeed;
    functionTable->pfnAlertMessage = pfnAlertMessage;
-
+   
    return TRUE;
 }
 
-export int GetEngineFunctions_Post (enginefuncs_t *functionTable, int *)
+SHARED_LIBRARAY_EXPORT int GetEngineFunctions_Post (enginefuncs_t *functionTable, int *)
 {
    memset (functionTable, 0, sizeof (enginefuncs_t));
 
@@ -2939,7 +2924,7 @@ export int GetEngineFunctions_Post (enginefuncs_t *functionTable, int *)
    return TRUE;
 }
 
-export int Server_GetBlendingInterface (int version, void **ppinterface, void *pstudio, float (*rotationmatrix)[3][4], float (*bonetransform)[128][3][4])
+SHARED_LIBRARAY_EXPORT int Server_GetBlendingInterface (int version, void **ppinterface, void *pstudio, float (*rotationmatrix)[3][4], float (*bonetransform)[128][3][4])
 {
    // this function synchronizes the studio model animation blending interface (i.e, what parts
    // of the body move, which bones, which hitboxes and how) between the server and the game DLL.
@@ -2951,62 +2936,23 @@ export int Server_GetBlendingInterface (int version, void **ppinterface, void *p
    return (*g_serverBlendingAPI) (version, ppinterface, pstudio, rotationmatrix, bonetransform);
 }
 
-export int Meta_Query (char *ifvers, plugin_info_t **pPlugInfo, mutil_funcs_t *pMetaUtilFuncs)
+SHARED_LIBRARAY_EXPORT int Meta_Query (char *, plugin_info_t **pPlugInfo, mutil_funcs_t *pMetaUtilFuncs)
 {
    // this function is the first function ever called by metamod in the plugin DLL. Its purpose
    // is for metamod to retrieve basic information about the plugin, such as its meta-interface
    // version, for ensuring compatibility with the current version of the running metamod.
 
-   // keep track of the pointers to metamod function tables metamod gives us
    gpMetaUtilFuncs = pMetaUtilFuncs;
    *pPlugInfo = &Plugin_info;
 
-   // check for interface version compatibility
-   if (strcmp (ifvers, Plugin_info.ifvers) != 0)
-   {
-      int metaMajor = 0, metaMinor = 0, pluginMajor = 0, pluginMinor = 0;
-
-      LOG_CONSOLE (PLID, "%s: meta-interface version mismatch (metamod: %s, %s: %s)", Plugin_info.name, ifvers, Plugin_info.name, Plugin_info.ifvers);
-      LOG_MESSAGE (PLID, "%s: meta-interface version mismatch (metamod: %s, %s: %s)", Plugin_info.name, ifvers, Plugin_info.name, Plugin_info.ifvers);
-
-      // if plugin has later interface version, it's incompatible (update metamod)
-      sscanf (ifvers, "%d:%d", &metaMajor, &metaMinor);
-      sscanf (META_INTERFACE_VERSION, "%d:%d", &pluginMajor, &pluginMinor);
-
-      if (pluginMajor > metaMajor || (pluginMajor == metaMajor && pluginMinor > metaMinor))
-      {
-         LOG_CONSOLE (PLID, "metamod version is too old for this plugin; update metamod");
-         LOG_MMERROR (PLID, "metamod version is too old for this plugin; update metamod");
-
-         return FALSE;
-      }
-
-      // if plugin has older major interface version, it's incompatible (update plugin)
-      else if (pluginMajor < metaMajor)
-      {
-         LOG_CONSOLE (PLID, "metamod version is incompatible with this plugin; please find a newer version of this plugin");
-         LOG_MMERROR (PLID, "metamod version is incompatible with this plugin; please find a newer version of this plugin");
-
-         return FALSE;
-      }
-   }
    return TRUE; // tell metamod this plugin looks safe
 }
 
-export int Meta_Attach (PLUG_LOADTIME now, metamod_funcs_t *functionTable, meta_globals_t *pMGlobals, gamedll_funcs_t *pGamedllFuncs)
+SHARED_LIBRARAY_EXPORT int Meta_Attach (PLUG_LOADTIME, metamod_funcs_t *functionTable, meta_globals_t *pMGlobals, gamedll_funcs_t *pGamedllFuncs)
 {
    // this function is called when metamod attempts to load the plugin. Since it's the place
    // where we can tell if the plugin will be allowed to run or not, we wait until here to make
    // our initialization stuff, like registering CVARs and dedicated server commands.
-
-   // are we allowed to load this plugin now ?
-   if (now > Plugin_info.loadable)
-   {
-      LOG_CONSOLE (PLID, "%s: plugin NOT attaching (can't load plugin right now)", Plugin_info.name);
-      LOG_MMERROR (PLID, "%s: plugin NOT attaching (can't load plugin right now)", Plugin_info.name);
-
-      return FALSE; // returning false prevents metamod from attaching this plugin
-   }
 
    // keep track of the pointers to engine function tables metamod gives us
    gpMetaGlobals = pMGlobals;
@@ -3016,19 +2962,10 @@ export int Meta_Attach (PLUG_LOADTIME now, metamod_funcs_t *functionTable, meta_
    return TRUE; // returning true enables metamod to attach this plugin
 }
 
-export int Meta_Detach (PLUG_LOADTIME now, PL_UNLOAD_REASON reason)
+SHARED_LIBRARAY_EXPORT int Meta_Detach (PLUG_LOADTIME, PL_UNLOAD_REASON)
 {
    // this function is called when metamod unloads the plugin. A basic check is made in order
    // to prevent unloading the plugin if its processing should not be interrupted.
-
-   // is metamod allowed to unload the plugin?
-   if (now > Plugin_info.unloadable && reason != PNL_CMD_FORCED)
-   {
-      LOG_CONSOLE (PLID, "%s: plugin not detaching (can't unload plugin right now)", Plugin_info.name);
-      LOG_MMERROR (PLID, "%s: plugin not detaching (can't unload plugin right now)", Plugin_info.name);
-
-      return FALSE; // returning false prevents metamod from unloading this plugin
-   }
 
    bots.RemoveAll (); // kick all bots off this server
    FreeLibraryMemory ();
@@ -3036,7 +2973,7 @@ export int Meta_Detach (PLUG_LOADTIME now, PL_UNLOAD_REASON reason)
    return TRUE;
 }
 
-export void Meta_Init (void)
+SHARED_LIBRARAY_EXPORT void Meta_Init (void)
 {
    // this function is called by metamod, before any other interface functions. Purpose of this
    // function to give plugin a chance to determine is plugin running under metamod or not.
@@ -3062,7 +2999,16 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    g_pGlobals = pGlobals;
 
    // register our cvars
-   convars.PushRegisteredConVarsToEngine ();
+   engine.PushRegisteredConVarsToEngine ();
+
+   // ensure we're have all needed directories
+   {
+      const char *mod = engine.GetModName ();
+
+      // create the needed paths
+      File::CreatePath (const_cast <char *> (FormatBuffer ("%s/addons/yapb/conf/lang", mod)));
+      File::CreatePath (const_cast <char *> (FormatBuffer ("%s/addons/yapb/data/learned", mod)));
+   }
 
 #ifdef PLATFORM_ANDROID
    g_gameFlags |= (GAME_LEGACY | GAME_XASH | GAME_MOBILITY);
@@ -3071,13 +3017,13 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       return;  // we should stop the attempt for loading the real gamedll, since metamod handle this for us
 
 #ifdef LOAD_HARDFP
-   #define GAME_SERVER_DLL "libserver_hardfp.so"
+   const char *serverDLL = "libserver_hardfp.so";
 #else
-   #define GAME_SERVER_DLL "libserver.so"
+   const char *serverDLL = "libserver.so";
 #endif
 
    char gameDLLName[256];
-   snprintf (gameDLLName, SIZEOF_CHAR (gameDLLName), "%s/%s", getenv ("XASH3D_GAMELIBDIR"), GAME_SERVER_DLL);
+   snprintf (gameDLLName, SIZEOF_CHAR (gameDLLName), "%s/%s", getenv ("XASH3D_GAMELIBDIR"), serverDLL);
 
    g_gameLib = new Library (gameDLLName);
 
@@ -3109,7 +3055,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    {
       ModSupport *mod = &s_supportedMods[i];
 
-      if (strcmp (mod->name, GetModName ()) == 0 && File::Accessible (FormatBuffer ("%s/dlls/%s", mod->name, 
+      if (strcmp (mod->name, engine.GetModName ()) == 0 && File::Accessible (FormatBuffer ("%s/dlls/%s", mod->name,
 #if defined (PLATFORM_WIN32)
          mod->winLib
 #elif defined (PLATFORM_LINUX)
@@ -3145,10 +3091,10 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       g_gameLib = new Library (gameDLLName);
 
       if (!g_gameLib->IsLoaded ())
-         AddLogEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gameDLLName, GetModName ());
+         AddLogEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gameDLLName, engine.GetModName ());
    }
    else
-      AddLogEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", GetModName ());
+      AddLogEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", engine.GetModName ());
 #endif
       
    g_funcPointers = g_gameLib->GetFuncAddr <FuncPointers_t> ("GiveFnptrsToDll");
@@ -3175,81 +3121,26 @@ DLL_ENTRYPOINT
    if (DLL_DETACHING)
    {
       FreeLibraryMemory (); // free everything that's freeable
-      
       delete g_gameLib; // if dynamic link library of mod is load, free it
    }
    DLL_RETENTRY; // the return data type is OS specific too
 }
 
-void ConVarWrapper::RegisterVariable (const char *variable, const char *value, VarType varType, ConVar *self)
+void LinkEntity_Helper (EntityPtr_t &addr, const char *name, entvars_t *pev)
 {
-   VarPair newVariable;
-   memset (&newVariable, 0, sizeof (VarPair));
+   if (addr == NULL)
+      addr = g_gameLib->GetFuncAddr <EntityPtr_t > (name);
 
-   newVariable.reg.name = const_cast <char *> (variable);
-   newVariable.reg.string = const_cast <char *> (value);
-
-   int engineFlags = FCVAR_EXTDLL;
-
-   if (varType == VT_NORMAL)
-      engineFlags |= FCVAR_SERVER;
-   else if (varType == VT_READONLY)
-      engineFlags |= FCVAR_SERVER | FCVAR_SPONLY | FCVAR_PRINTABLEONLY;
-   else if (varType == VT_PASSWORD)
-      engineFlags |= FCVAR_PROTECTED;
-
-   newVariable.reg.flags = engineFlags;
-   newVariable.self = self;
-   newVariable.type = varType;
-
-   m_regs.Push (newVariable);
-}
-
-void ConVarWrapper::PushRegisteredConVarsToEngine (bool gameVars)
-{
-   FOR_EACH_AE (m_regs, i)
-   {
-      VarPair *ptr = &m_regs[i];
-
-      if (ptr == NULL)
-         break;
-
-      if (ptr->type != VT_NOREGISTER)
-      {
-         ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
-
-         if (ptr->self->m_eptr == NULL)
-         {
-            g_engfuncs.pfnCVarRegister (&ptr->reg);
-            ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
-         }
-      }
-      else if (gameVars && ptr->type == VT_NOREGISTER)
-      {
-         ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
-
-         // ensure game cvar exists
-         InternalAssert (ptr->self->m_eptr != NULL);
-      }
-   }
-}
-
-static void LinkEntity_Helper (EntityPtr_t &entAddress, const char *name, entvars_t *pev)
-{
-   // here we're see an ugliest hack :)
-   if (entAddress == NULL || (g_gameFlags & GAME_OFFICIAL_CSBOT))
-      entAddress = g_gameLib->GetFuncAddr <EntityPtr_t > (name);
-
-   if (entAddress == NULL)
+   if (addr == NULL)
       return;
 
-   entAddress (pev);
+   addr (pev);
 }
 
 #define LINK_ENTITY(entityName) \
-export void entityName (entvars_t *pev) \
+SHARED_LIBRARAY_EXPORT void entityName (entvars_t *pev) \
 { \
-   static EntityPtr_t addr = NULL; \
+   static EntityPtr_t addr; \
    LinkEntity_Helper (addr, #entityName, pev); \
 } \
 

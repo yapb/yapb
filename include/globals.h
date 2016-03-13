@@ -20,7 +20,6 @@ extern bool g_autoWaypoint;
 extern bool g_botsCanPause; 
 extern bool g_editNoclip;
 extern bool g_isMetamod;
-extern bool g_isFakeCommand;
 extern bool g_sendAudioFinished;
 extern bool g_isCommencing;
 extern bool g_leaderChoosen[2];
@@ -39,7 +38,6 @@ extern float g_lastRadioTime[2];
 extern int g_mapType;
 extern int g_numWaypoints;
 extern int g_gameFlags;
-extern int g_fakeArgc;
 
 extern int g_highestDamageCT;
 extern int g_highestDamageT;
@@ -50,14 +48,10 @@ extern int g_rusherWeaponPrefs[NUM_WEAPONS];
 extern int g_carefulWeaponPrefs[NUM_WEAPONS];
 extern int g_grenadeBuyPrecent[NUM_WEAPONS - 23];
 extern int g_botBuyEconomyTable[NUM_WEAPONS - 15];
-extern int g_radioSelect[32];
+extern int g_radioSelect[MAX_ENGINE_PLAYERS];
 extern int g_lastRadio[2];
 extern int g_storeAddbotVars[4];
 extern int *g_weaponPrefs[];
-
-extern short g_modelIndexLaser;
-extern short g_modelIndexArrow;
-extern char g_fakeArgv[256];
 
 extern Array <Array <String> > g_chatFactory;
 extern Array <Array <ChatterItem> > g_chatterFactory;
@@ -68,14 +62,13 @@ extern RandomSequenceOfUnique Random;
 extern WeaponSelect g_weaponSelect[NUM_WEAPONS + 1];
 extern WeaponProperty g_weaponDefs[MAX_WEAPONS + 1];
 
-extern Client g_clients[32];
+extern Client g_clients[MAX_ENGINE_PLAYERS];
 extern MenuText g_menus[21];
 extern TaskItem g_taskFilters[];
 
 extern Experience *g_experienceData;
 
 extern edict_t *g_hostEntity; 
-extern edict_t *g_worldEntity;
 extern Library *g_gameLib;
 
 extern gamefuncs_t g_functionTable;
@@ -90,43 +83,4 @@ static inline bool IsNullString (const char *input)
       return true;
 
    return *input == '\0';
-}
-
-static inline float GetWorldTime (void)
-{
-   return g_pGlobals->time;
-}
-
-static inline int GetMaxClients (void)
-{
-   return g_pGlobals->maxClients;
-}
-
-static inline edict_t *EntityOfIndex (const int index)
-{
-   return static_cast <edict_t *> (g_worldEntity + index);
-};
-
-static inline int IndexOfEntity(const edict_t *ent)
-{
-   return static_cast <int> (ent - g_worldEntity);
-};
-
-static inline int EntOffsetOfEntity(const edict_t *ent)
-{
-   return (char *) ent - (char *) g_worldEntity;
-}
-
-static inline bool IsEntityNull (const edict_t *ent)
-{
-   return !ent || !EntOffsetOfEntity (ent);
-}
-
-static inline int GetTeam (edict_t *ent)
-{
-#ifndef XASH_CSDM
-   return g_clients[IndexOfEntity (ent) - 1].team;
-#else
-   return g_clients[IndexOfEntity (ent) - 1].team = ent->v.team == 1 ? TERRORIST : CT;
-#endif
 }

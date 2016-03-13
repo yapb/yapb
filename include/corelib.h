@@ -1,4 +1,4 @@
-﻿//
+//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -20,6 +20,12 @@
 #include <time.h>
 #include <math.h>
 #include <assert.h>
+
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <sys/stat.h>
+#endif
 
 //
 // Title: Utility Classes Header
@@ -698,10 +704,10 @@ public:
    //
    // Function: BuildVectors
    // 
-   //   Builds a 3D referential from a view angle, that is to say, the relative "forward", "right" and "upward" direction 
-   // that a player would have if he were facing this view angle. World angles are stored in Vector structs too, the 
-   // "x" component corresponding to the X angle (horizontal angle), and the "y" component corresponding to the Y angle 
-   // (vertical angle).
+   //  Builds a 3D referential from a view angle, that is to say, the relative "forward", "right" and "upward" direction 
+   //  that a player would have if he were facing this view angle. World angles are stored in Vector structs too, the 
+   //  "x" component corresponding to the X angle (horizontal angle), and the "y" component corresponding to the Y angle 
+   //  (vertical angle).
    //
    // Parameters:
    //   forward - Forward referential vector.
@@ -2297,7 +2303,7 @@ public:
       char buffer[1024];
 
       va_start (ap, fmt);
-      vsprintf (buffer, fmt, ap);
+      vsnprintf (buffer, sizeof (buffer) - 1, fmt, ap);
       va_end (ap);
 
       Append (buffer);
@@ -2368,7 +2374,7 @@ public:
       char buffer[1024];
 
       va_start (ap, fmt);
-      vsprintf (buffer, fmt, ap);
+      vsnprintf (buffer, sizeof (buffer) - 1, fmt, ap);
       va_end (ap);
 
       Assign (buffer);
@@ -2595,7 +2601,7 @@ public:
          holder[j++] = m_bufferPtr[i];
 
       holder[j] = 0;
-      result.Assign(holder);
+      result.Assign (holder);
 
       delete [] holder;
       return result;
@@ -3296,6 +3302,33 @@ public:
 
       return Split (sep);
    }
+
+public:
+   //
+   // Function: TrimExternalBuffer
+   //  Trims string from both sides.
+   //
+   // Returns:
+   //  None
+   //
+   static inline void TrimExternalBuffer (char *str)
+   {
+      int pos = 0;
+      char *dest = str;
+
+      while (str[pos] <= ' ' && str[pos] > 0)
+         pos++;
+
+      while (str[pos])
+      {
+         *(dest++) = str[pos];
+         pos++;
+      }
+      *(dest--) = '\0';
+
+      while (dest >= str && *dest <= ' ' && *dest > 0)
+         *(dest--) = '\0';
+   }
 };
 
 //
@@ -3432,23 +3465,6 @@ public:
    {
       assert (m_handle != NULL);
       return fgets (buffer, count, m_handle);
-   }
-
-   //
-   // Function: GetBuffer
-   //  Gets the line from file stream, and stores it inside string class.
-   //
-   // Parameters:
-   //  buffer - String buffer, that should receive line.
-   //  count - Max. size of buffer.
-   //
-   // Returns:
-   //  True if operation succeeded, false otherwise.
-   //
-   bool GetBuffer (String &buffer, int count)
-   {
-      assert (m_handle != NULL);
-      return !String (fgets (buffer, count, m_handle)).IsEmpty ();
    }
 
    //
@@ -3615,6 +3631,289 @@ public:
       }
       return false;
    }
+
+   static inline void CreatePath (char *path)
+   {
+      for (char *ofs = path + 1; *ofs; ofs++)
+      {
+         if (*ofs == '/')
+         {
+            // create the directory
+            *ofs = 0;
+#ifdef _WIN32
+            _mkdir (path);
+#else
+            mkdir (path, 0777);
+#endif
+            *ofs = '/';
+         }
+      }
+#ifdef _WIN32
+      _mkdir (path);
+#else
+      mkdir (path, 0777);
+#endif
+   }
+};
+
+//
+// Class: MemoryFile
+//  Simple Memory file wrapper class. (RO)
+//
+class MemoryFile
+{
+public:
+   typedef unsigned char *(*MF_Loader) (const char *, int *);
+   typedef void (*MF_Unloader) (unsigned char *);
+
+public:
+   static MF_Loader Loader;
+   static MF_Unloader Unloader;
+
+protected:
+   int m_size;
+   int m_pos;
+   unsigned char *m_buffer;
+
+   //
+   // Group: (Con/De)structors
+   //
+public:
+
+   //
+   // Function: File
+   //  Default file class, constructor.
+   //
+   MemoryFile (void)
+   {
+      m_size = 0;
+      m_pos = 0;
+
+      m_buffer = NULL;
+   }
+
+   //
+   // Function: File
+   //  Default file class, constructor, with file opening.
+   //
+   MemoryFile (const String &fileName)
+   {
+      m_size = 0;
+      m_pos = 0;
+
+      m_buffer = NULL;
+
+      Open (fileName);
+   }
+
+   //
+   // Function: ~File
+   //  Default file class, destructor.
+   //
+   ~MemoryFile (void)
+   {
+      Close ();
+   }
+
+   //
+   // Function: Open
+   //  Opens file and gets it's size.
+   //
+   // Parameters:
+   //  fileName - String containing file name.
+   //
+   // Returns:
+   //  True if operation succeeded, false otherwise.
+   //
+   bool Open (const char *fileName)
+   {
+      if (!Loader)
+         return false;
+
+      m_size = 0;
+      m_pos = 0;
+
+      m_buffer = Loader (fileName, &m_size);
+
+      if (m_buffer == NULL || m_size < 0)
+         return false;
+
+      return true;
+   }
+
+   //
+   // Function: Close
+   //  Closes file, and destroys STDIO file object.
+   //
+   void Close (void)
+   {
+      if (Unloader != NULL)
+         Unloader (m_buffer);
+
+      m_size = 0;
+      m_pos = 0;
+
+      m_buffer = NULL;
+   }
+
+   //
+   // Function: GetChar
+   //  Pops one character from the file stream.
+   //
+   // Returns:
+   //  Popped from stream character
+   //
+   int GetChar (void)
+   {
+      if (m_buffer == NULL || m_pos >= m_size)
+         return -1;
+
+      int readCh = m_buffer[m_pos];
+      m_pos++;
+
+      return readCh;
+   }
+
+   //
+   // Function: GetBuffer
+   //  Gets the single line, from the non-binary stream.
+   //
+   // Parameters:
+   //  buffer - Pointer to buffer, that should receive string.
+   //  count - Max. size of buffer.
+   //
+   // Returns:
+   //  Pointer to string containing popped line.
+   //
+   char *GetBuffer (char *buffer, int count)
+   {
+      if (m_buffer == NULL || m_pos >= m_size)
+         return NULL;
+
+      int start = m_pos;
+      int end = m_size - 1;
+      
+      if (m_size - m_pos > count - 1)
+         end = m_pos + count - 1;
+
+      while (m_pos < end)
+      {
+         if (m_buffer[m_pos] == 0x0a)
+            end = m_pos;
+
+         m_pos++;
+      }
+
+      if (m_pos == start)
+         return NULL;
+
+      int pos = start;
+
+      for (; pos <= end; pos++)
+         buffer[pos - start] = m_buffer[pos];
+
+      if (buffer[pos - start - 2] == 0x0d)
+      {
+         buffer[pos - start - 2] = '\n';
+         pos--;
+      }
+
+      if (buffer[pos - start - 1] == 0x0d || buffer[pos - start - 1] == 0x0a)
+         buffer[pos - start - 1] = '\n';
+
+      buffer[pos - start] = 0;
+
+      return buffer;
+   }
+
+   //
+   // Function: Read
+   //  Reads buffer from file stream in binary format.
+   //
+   // Parameters:
+   //  buffer - Holder for read buffer.
+   //  size - Size of the buffer to read.
+   //  count - Number of buffer chunks to read.
+   //
+   // Returns:
+   //  Number of bytes red from file.
+   //
+   int Read (void *buffer, int size, int count = 1)
+   {
+      if (!m_buffer|| m_pos >= m_size || buffer == NULL || !size || !count)
+         return 0;
+
+      int blocksRead = min ((m_size - m_pos) / size, count) * size;
+
+      memcpy (buffer, &m_buffer[m_pos], blocksRead);
+      m_pos += blocksRead;
+
+      return blocksRead;
+   }
+
+   //
+   // Function: Seek
+   //  Seeks file stream with specified parameters.
+   //
+   // Parameters:
+   //  offset - Offset where cursor should be set.
+   //  origin - Type of offset set.
+   //
+   // Returns:
+   //  True if operation success, false otherwise.
+   //
+   bool Seek (long offset, int origin)
+   {
+      if (m_buffer == NULL || m_pos >= m_size)
+         return false;
+
+      if (origin == SEEK_SET)
+      {
+         if (offset >= m_size)
+            return false;
+
+         m_pos = offset;
+      }
+      else if (origin == SEEK_END)
+      {
+         if (offset >= m_size)
+            return false;
+
+         m_pos = m_size - offset;
+      }
+      else
+      {
+         if (m_pos + offset >= m_size)
+            return false;
+
+         m_pos += offset;
+      }
+      return true;
+   }
+
+   //
+   // Function: GetSize
+   //  Gets the file size of opened file stream.
+   //
+   // Returns:
+   //  Number of bytes in file.
+   //
+   int GetSize (void)
+   {
+      return m_size;
+   }
+
+   //
+   // Function: IsValid
+   //  Checks whether file stream is valid.
+   //
+   // Returns:
+   //  True if file stream valid, false otherwise.
+   //
+   bool IsValid (void)
+   {
+      return m_buffer != NULL && m_size > 0;
+   }
 };
 
 //
@@ -3623,63 +3922,9 @@ public:
 //
 typedef Array <const String &> StrVec;
 
-//
-// Class: Exception
-//  Simple exception raiser.
-//
-class Exception
-{
-private:
-   String m_exceptionText;
-   String m_fileName;
-   int m_line;
-
-//
-// Group: (Con/De)structors
-//
-public:
-
-   //
-   // Function: Exception
-   //  Default exception constructor.
-   //
-   // Parameters:
-   //  exceptionText - Text to throw.
-   //  fileName - Debug file name.
-   //  line - Debug line number.
-   //
-   Exception (String exceptionText, String fileName = "(no)", int line = -1) : m_exceptionText (exceptionText), m_fileName (fileName), m_line (line) { }
-   
-   //
-   // Function: ~Exception
-   //  Default exception destructor.
-   //
-   virtual ~Exception (void) { };
-
-//
-// Group: Functions
-//
-public:
-
-   //
-   // Function: GetDescription
-   //  Gets the description from throw object.
-   //
-   // Returns:
-   //  Exception text.
-   //
-   inline const String &GetDescription (void)
-   {
-      static String result;
-
-      if (m_fileName != "(no)" && m_line != -1)
-         result.AssignFormat ("Exception: %s at %s:%i", m_exceptionText.GetBuffer (), m_fileName.GetBuffer (), m_line);
-      else
-         result = m_exceptionText;
-
-      return result;
-   }
-};
+#ifndef FORCEINLINE
+#define FORCEINLINE inline
+#endif
 
 //
 // Class: Singleton
@@ -3704,6 +3949,10 @@ protected:
    //
    virtual ~Singleton (void) { }
 
+private:
+   Singleton (Singleton const &);
+   void operator = (Singleton const &);
+
 public:
 
    //
@@ -3714,10 +3963,9 @@ public:
    //  Object pointer.
    //  
    //
-   static inline T *GetObject (void)
+   static FORCEINLINE T *GetObject (void)
    {
-      static T reference;
-      return &reference;
+      return &GetReference ();
    }
 
    //
@@ -3728,7 +3976,7 @@ public:
    //  Object reference.
    //  
    //
-   static inline T &GetReference (void)
+   static FORCEINLINE T &GetReference (void)
    {
       static T reference;
       return reference;

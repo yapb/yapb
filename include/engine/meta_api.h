@@ -31,19 +31,19 @@ typedef enum
    PT_STARTUP,
    PT_CHANGELEVEL,
    PT_ANYTIME,
-   PT_ANYPAUSE,
+   PT_ANYPAUSE
 } PLUG_LOADTIME;
 
 
 typedef struct
 {
-   char *ifvers;
-   char *name;
-   char *version;
-   char *date;
-   char *author;
-   char *url;
-   char *logtag;
+   char const *ifvers;
+   char const *name;
+   char const *version;
+   char const *date;
+   char const *author;
+   char const *url;
+   char const *logtag;
    PLUG_LOADTIME loadable;
    PLUG_LOADTIME unloadable;
 } plugin_info_t;
@@ -64,7 +64,7 @@ typedef enum
    PNL_DELAYED,
    PNL_PLUGIN,
    PNL_PLG_FORCED,
-   PNL_RELOAD,
+   PNL_RELOAD
 } PL_UNLOAD_REASON;
 
 typedef enum
@@ -73,7 +73,7 @@ typedef enum
    MRES_IGNORED,
    MRES_HANDLED,
    MRES_OVERRIDE,
-   MRES_SUPERCEDE,
+   MRES_SUPERCEDE
 } META_RES;
 
 typedef struct meta_globals_s
@@ -121,7 +121,7 @@ typedef enum
    GINFO_GAMEDIR,
    GINFO_DLL_FULLPATH,
    GINFO_DLL_FILENAME,
-   GINFO_REALDLL_FULLPATH,
+   GINFO_REALDLL_FULLPATH
 } ginfo_t;
 
 // Meta Utility Function table type.

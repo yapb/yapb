@@ -39,9 +39,6 @@
     <ClInclude Include="..\include\engine\eiface.h">
       <Filter>include\engine</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\engine\enginecallback.h">
-      <Filter>include\engine</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\engine\extdll.h">
       <Filter>include\engine</Filter>
     </ClInclude>
@@ -69,6 +66,12 @@
     <ClInclude Include="..\include\platform.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\engine.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\engine\enginecallback.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\chatlib.cpp">
@@ -81,9 +84,6 @@
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="..\source\navigate.cpp">
-      <Filter>source</Filter>
-    </ClCompile>
-    <ClCompile Include="..\source\netmsg.cpp">
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="..\source\support.cpp">
@@ -99,6 +99,9 @@
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="..\source\combat.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\engine.cpp">
       <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
