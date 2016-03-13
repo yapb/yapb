@@ -47,10 +47,10 @@ ifeq "$(OS)" "Darwin"
 else
 	LIB_EXT = so
 	CFLAGS += -DLINUX -D_LINUX -DPOSIX
-	LINK += -shared
+	LINK += -shared -lsupc++
 endif
 
-LINK += -m32 -lm -ldl -lsupc++
+LINK += -m32 -lm -ldl
 
 CFLAGS += -DHAVE_STDINT_H -D__extern_always_inline=inline -D_strdup=strdup -Dstricmp=strcasecmp -Dstrcmpi=strcasecmp -fno-strict-aliasing -m32 -Wall -Werror -Wextra
 CPPFLAGS += -fno-exceptions -fno-rtti -fno-builtin
