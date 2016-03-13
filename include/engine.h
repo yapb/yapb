@@ -179,7 +179,7 @@ public:
    void TerminateTranslator (void);
 
    // do actual network message processing
-   void ProcessMesageCapture (void *ptr);
+   void ProcessMessageCapture (void *ptr);
 
    // public inlines
 public:
@@ -244,7 +244,7 @@ public:
    }
 
    // gets the player team
-   inline int GetTeam (edict_t *ent)
+   FORCEINLINE int GetTeam (edict_t *ent)
    {
       extern Client g_clients[MAX_ENGINE_PLAYERS];
 
@@ -282,7 +282,7 @@ public:
    }
 
    // find registered message id
-   inline int FindMessageId (int type)
+   FORCEINLINE int FindMessageId (int type)
    {
       return m_msgBlock.regMsgs[type];
    }

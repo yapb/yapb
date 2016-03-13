@@ -584,7 +584,7 @@ void Engine::TerminateTranslator (void)
    m_language.RemoveAll ();
 }
 
-void Engine::ProcessMesageCapture (void *ptr)
+void Engine::ProcessMessageCapture (void *ptr)
 {
    if (m_msgBlock.msg == NETMSG_UNDEFINED)
       return;

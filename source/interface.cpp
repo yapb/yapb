@@ -2518,7 +2518,7 @@ void pfnMessageEnd_Post (void)
 void pfnWriteByte (int value)
 {
    // if this message is for a bot, call the client message function...
-   engine.ProcessMesageCapture ((void *) &value);
+   engine.ProcessMessageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2529,7 +2529,7 @@ void pfnWriteByte (int value)
 void pfnWriteChar (int value)
 {
    // if this message is for a bot, call the client message function...
-   engine.ProcessMesageCapture ((void *) &value);
+   engine.ProcessMessageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2540,7 +2540,7 @@ void pfnWriteChar (int value)
 void pfnWriteShort (int value)
 {
    // if this message is for a bot, call the client message function...
-   engine.ProcessMesageCapture ((void *) &value);
+   engine.ProcessMessageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2551,7 +2551,7 @@ void pfnWriteShort (int value)
 void pfnWriteLong (int value)
 {
    // if this message is for a bot, call the client message function...
-   engine.ProcessMesageCapture ((void *) &value);
+   engine.ProcessMessageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2562,7 +2562,7 @@ void pfnWriteLong (int value)
 void pfnWriteAngle (float value)
 {
    // if this message is for a bot, call the client message function...
-   engine.ProcessMesageCapture ((void *) &value);
+   engine.ProcessMessageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2573,7 +2573,7 @@ void pfnWriteAngle (float value)
 void pfnWriteCoord (float value)
 {
    // if this message is for a bot, call the client message function...
-   engine.ProcessMesageCapture ((void *) &value);
+   engine.ProcessMessageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2584,7 +2584,7 @@ void pfnWriteCoord (float value)
 void pfnWriteString (const char *sz)
 {
    // if this message is for a bot, call the client message function...
-   engine.ProcessMesageCapture ((void *) sz);
+   engine.ProcessMessageCapture ((void *) sz);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -2595,7 +2595,7 @@ void pfnWriteString (const char *sz)
 void pfnWriteEntity (int value)
 {
    // if this message is for a bot, call the client message function...
-   engine.ProcessMesageCapture ((void *) &value);
+   engine.ProcessMessageCapture ((void *) &value);
 
    if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
@@ -3097,10 +3097,10 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       AddLogEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", engine.GetModName ());
 #endif
       
-   g_funcPointers = static_cast <FuncPointers_t> (g_gameLib->GetFuncAddr ("GiveFnptrsToDll"));
-   g_entityAPI = static_cast <EntityAPI_t> (g_gameLib->GetFuncAddr ("GetEntityAPI"));
-   g_getNewEntityAPI = static_cast <NewEntityAPI_t> (g_gameLib->GetFuncAddr ("GetNewDLLFunctions"));
-   g_serverBlendingAPI = static_cast <BlendAPI_t> (g_gameLib->GetFuncAddr ("Server_GetBlendingInterface"));
+   g_funcPointers = g_gameLib->GetFuncAddr <FuncPointers_t> ("GiveFnptrsToDll");
+   g_entityAPI = g_gameLib->GetFuncAddr <EntityAPI_t> ("GetEntityAPI");
+   g_getNewEntityAPI = g_gameLib->GetFuncAddr <NewEntityAPI_t> ("GetNewDLLFunctions");
+   g_serverBlendingAPI = g_gameLib->GetFuncAddr <BlendAPI_t> ("Server_GetBlendingInterface");
 
    if (!g_funcPointers || !g_entityAPI)
       TerminateOnMalloc ();
@@ -3126,22 +3126,22 @@ DLL_ENTRYPOINT
    DLL_RETENTRY; // the return data type is OS specific too
 }
 
-void LinkEntity_Helper (EntityPtr_t *addr, const char *name, entvars_t *pev)
+void LinkEntity_Helper (EntityPtr_t &addr, const char *name, entvars_t *pev)
 {
-   if (*addr == NULL)
-      *addr = static_cast <EntityPtr_t> (g_gameLib->GetFuncAddr (name));
+   if (addr == NULL)
+      addr = g_gameLib->GetFuncAddr <EntityPtr_t > (name);
 
-   if (*addr == NULL)
+   if (addr == NULL)
       return;
 
-   (*addr) (pev);
+   addr (pev);
 }
 
 #define LINK_ENTITY(entityName) \
 SHARED_LIBRARAY_EXPORT void entityName (entvars_t *pev) \
 { \
    static EntityPtr_t addr; \
-   LinkEntity_Helper (&addr, #entityName, pev); \
+   LinkEntity_Helper (addr, #entityName, pev); \
 } \
 
 // entities in counter-strike...
