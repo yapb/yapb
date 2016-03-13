@@ -59,8 +59,8 @@ void Engine::Printf (const char *fmt, ...)
    vsnprintf (string, SIZEOF_CHAR (string), TraslateMessage (fmt), ap);
    va_end (ap);
 
+   strcat (string, "\n");
    g_engfuncs.pfnServerPrint (string);
-   g_engfuncs.pfnServerPrint ("\n");
 }
 
 void Engine::ChatPrintf (const char *fmt, ...)

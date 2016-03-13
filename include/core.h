@@ -469,7 +469,7 @@ enum WaypointFlag
 // defines for waypoint connection flags field (16 bits are available)
 enum PathFlag
 {
-   PATHFLAG_JUMP = (1 << 0), // must jump for this connection
+   PATHFLAG_JUMP = (1 << 0) // must jump for this connection
 };
 
 // enum pathfind search type

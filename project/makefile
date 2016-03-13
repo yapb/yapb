@@ -22,7 +22,7 @@ OBJECTS = $(SRC_DIR)/basecode.cpp	\
 	  $(SRC_DIR)/support.cpp	\
 	  $(SRC_DIR)/waypoint.cpp	\
 
-C_OPT_FLAGS =  -O3 -DNDEBUG=1 -fno-exceptions -fno-rtti -funroll-loops -fomit-frame-pointer -pipe
+C_OPT_FLAGS =  -O3 -DNDEBUG=1 -fno-exceptions -fno-rtti -funroll-loops -fomit-frame-pointer -pipe -mtune=native
 C_DEBUG_FLAGS = -D_DEBUG -DDEBUG -g -ggdb3
 C_GCC4_FLAGS = -fvisibility=hidden
 CPP_GCC4_FLAGS = -fvisibility-inlines-hidden
@@ -50,10 +50,10 @@ else
 	LINK += -shared
 endif
 
-LINK += -m32 -lm -ldl
+LINK += -m32 -lm -ldl -lsupc++
 
-CFLAGS += -DHAVE_STDINT_H -D__extern_always_inline=inline -D_strdup=strdup -Dstricmp=strcasecmp -Dstrcmpi=strcasecmp -fno-strict-aliasing -m32 -Wall -Werror -Wno-uninitialized -Wno-unused -Wno-switch -Wno-c++11-compat-deprecated-writable-strings
-CPPFLAGS += -Wno-invalid-offsetof -fno-exceptions -fno-rtti
+CFLAGS += -DHAVE_STDINT_H -D__extern_always_inline=inline -D_strdup=strdup -Dstricmp=strcasecmp -Dstrcmpi=strcasecmp -fno-strict-aliasing -m32 -Wall -Werror -Wextra -pedantic -Wno-c++11-long-long
+CPPFLAGS += -fno-exceptions -fno-rtti -fno-builtin
 
 BINARY = $(PROJECT).$(LIB_EXT)
 
@@ -72,28 +72,8 @@ endif
 IS_CLANG := $(shell $(CPP) --version | head -1 | grep clang > /dev/null && echo "1" || echo "0")
 
 ifeq "$(IS_CLANG)" "1"
-	CPP_MAJOR := $(shell $(CPP) --version | grep clang | sed "s/.*version \([0-9]\)*\.[0-9]*.*/\1/")
-	CPP_MINOR := $(shell $(CPP) --version | grep clang | sed "s/.*version [0-9]*\.\([0-9]\)*.*/\1/")
-else
-	CPP_MAJOR := $(shell $(CPP) -dumpversion >&1 | cut -b1)
-	CPP_MINOR := $(shell $(CPP) -dumpversion >&1 | cut -b3)
-endif
-
-# Clang || GCC >= 4
-ifeq "$(shell expr $(IS_CLANG) \| $(CPP_MAJOR) \>= 4)" "1"
 	CFLAGS += $(C_GCC4_FLAGS)
 	CPPFLAGS += $(CPP_GCC4_FLAGS)
-endif
-
-ifeq "$(IS_CLANG)" "1"
-	CFLAGS += -Wno-logical-op-parentheses
-else
-	CFLAGS += -Wno-parentheses
-endif
-
-# Clang >= 3 || GCC >= 4.7
-ifeq "$(shell expr $(IS_CLANG) \& $(CPP_MAJOR) \>= 3 \| $(CPP_MAJOR) \>= 4 \& $(CPP_MINOR) \>= 7)" "1"
-	CFLAGS += -Wno-delete-non-virtual-dtor
 endif
 
 # OS is Linux and not using clang
@@ -142,3 +122,4 @@ default: all
 clean:
 	rm -rf release
 	rm -rf debug
+

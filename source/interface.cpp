@@ -485,12 +485,12 @@ MemoryFile::MF_Unloader MemoryFile::Unloader = NULL;
 
 void InitConfig (void)
 {
-   // assign engine loaders to memoryfile handler
-   if (MemoryFile::Loader == NULL || MemoryFile::Unloader == NULL)
+   if (!MemoryFile::Loader && !MemoryFile::Unloader)
    {
       MemoryFile::Loader = reinterpret_cast <MemoryFile::MF_Loader> (g_engfuncs.pfnLoadFileForMe);
       MemoryFile::Unloader = reinterpret_cast <MemoryFile::MF_Unloader> (g_engfuncs.pfnFreeFile);
    }
+
    MemoryFile fp;
    char line[512];
 
