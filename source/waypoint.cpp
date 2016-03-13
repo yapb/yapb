@@ -17,6 +17,7 @@ ConVar yb_waypoint_autodl_enable ("yb_waypoint_autodl_enable", "1");
 void Waypoint::Init (void)
 {
    // this function initialize the waypoint structures..
+   m_loadTries = 0;
 
    m_learnVelocity.Zero ();
    m_learnPosition.Zero ();
@@ -1056,6 +1057,13 @@ void Waypoint::InitTypes (void)
 
 bool Waypoint::Load (void)
 {
+   if (m_loadTries++ > 3)
+   {
+      sprintf (m_infoBuffer, "Giving up loading waypoint file. Something went wrong.", engine.GetMapName ());
+      AddLogEntry (true, LL_ERROR, m_infoBuffer);
+
+      return false;
+   }
    MemoryFile fp (CheckSubfolderFile ());
 
    WaypointHeader header;
@@ -2470,6 +2478,7 @@ Waypoint::Waypoint (void)
    m_findWPIndex = -1;
    m_facingAtIndex = -1;
    m_visibilityIndex = 0;
+   m_loadTries = 0;
 
    m_isOnLadder = false;
 

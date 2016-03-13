@@ -1336,6 +1336,7 @@ private:
    Vector m_learnPosition;
    Vector m_foundBombOrigin;
 
+   int m_loadTries;
    int m_cacheWaypointIndex;
    int m_lastJumpWaypoint;
    int m_visibilityIndex;
