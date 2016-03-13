@@ -1064,7 +1064,7 @@ bool Waypoint::Load (void)
 
       return false;
    }
-   MemoryFile fp (CheckSubfolderFile ());
+   MemoryFile fp (GetFileName (true));
 
    WaypointHeader header;
    memset (&header, 0, sizeof (header));
@@ -1242,7 +1242,7 @@ void Waypoint::Save (void)
    header.fileVersion = FV_WAYPOINT;
    header.pointNumber = g_numWaypoints;
 
-   File fp (CheckSubfolderFile (), "wb");
+   File fp (GetFileName (), "wb");
 
    // file was opened
    if (fp.IsValid ())
@@ -1260,19 +1260,19 @@ void Waypoint::Save (void)
       AddLogEntry (true, LL_ERROR, "Error writing '%s.pwf' waypoint file", engine.GetMapName ());
 }
 
-String Waypoint::CheckSubfolderFile (void)
+const char *Waypoint::GetFileName (bool isMemoryFile)
 {
    String returnFile = "";
 
    if (!IsNullString (yb_wptsubfolder.GetString ()))
       returnFile += (String (yb_wptsubfolder.GetString ()) + "/");
 
-   returnFile = FormatBuffer ("%s%s%s.pwf", GetDataDir (), returnFile.GetBuffer (), engine.GetMapName ());
+   returnFile = FormatBuffer ("%s%s%s.pwf", GetDataDir (isMemoryFile), returnFile.GetBuffer (), engine.GetMapName ());
 
    if (File::Accessible (returnFile))
-      return returnFile;
+      return returnFile.GetBuffer ();
 
-   return FormatBuffer ("%s%s.pwf", GetDataDir (), engine.GetMapName ());
+   return FormatBuffer ("%s%s.pwf", GetDataDir (isMemoryFile), engine.GetMapName ());
 }
 
 float Waypoint::GetTravelTime (float maxSpeed, const Vector &src, const Vector &origin)
@@ -2420,9 +2420,16 @@ void Waypoint::EraseFromHardDisk (void)
    Init (); // reintialize points
 }
 
-const char *Waypoint::GetDataDir (void)
+const char *Waypoint::GetDataDir (bool isMemoryFile)
 {
-   return FormatBuffer ("%s/addons/yapb/data/", engine.GetModName ());
+   static char buffer[256];
+   
+   if (isMemoryFile)
+      sprintf (buffer, "addons/yapb/data/");
+   else
+      sprintf (buffer, "%s/addons/yapb/data/", engine.GetModName ());
+
+   return &buffer[0];
 }
 
 void Waypoint::SetBombPosition (bool shouldReset)
@@ -2625,7 +2632,7 @@ WaypointDownloadError Waypoint::RequestWaypoint (void)
       recvPosition++;
    }
 
-   File fp (waypoints.CheckSubfolderFile (), "wb");
+   File fp (waypoints.GetFileName (), "wb");
 
    if (!fp.IsValid ())
    {

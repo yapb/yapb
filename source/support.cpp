@@ -462,24 +462,35 @@ bool OpenConfig (const char *fileName, const char *errorIfNotExists, MemoryFile 
    if (outFile->IsValid ())
       outFile->Close ();
 
+   // save config dir
+   const char *configDir = "addons/yapb/conf";
+
    if (languageDependant)
    {
-      const char *mod = engine.GetModName ();
       extern ConVar yb_language;
 
       if (strcmp (fileName, "lang.cfg") == 0 && strcmp (yb_language.GetString (), "en") == 0)
          return false;
 
-      const char *languageDependantConfigFile = FormatBuffer ("%s/addons/yapb/conf/lang/%s_%s", mod, yb_language.GetString (), fileName);
+      const char *langConfig = FormatBuffer ("%s/lang/%s_%s", configDir, yb_language.GetString (), fileName);
+
+      // check file existence
+      int size = 0;
+      unsigned char *buffer = NULL;
 
       // check is file is exists for this language
-      if (File::Accessible (languageDependantConfigFile))
-         outFile->Open (languageDependantConfigFile);
+      if ((buffer = MemoryFile::Loader (langConfig, &size)) != NULL)
+      {
+         MemoryFile::Unloader (buffer);
+
+         // unload and reopen file using MemoryFile
+         outFile->Open (langConfig);
+      }
       else
-         outFile->Open (FormatBuffer ("%s/addons/yapb/conf/lang/en_%s", mod, fileName));
+         outFile->Open (FormatBuffer ("%s/lang/en_%s", configDir, fileName));
    }
    else
-      outFile->Open (FormatBuffer ("%s/addons/yapb/conf/%s", engine.GetModName (), fileName));
+      outFile->Open (FormatBuffer ("%s/%s", configDir, fileName));
 
    if (!outFile->IsValid ())
    {
