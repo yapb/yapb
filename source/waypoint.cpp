@@ -911,7 +911,7 @@ void Waypoint::InitExperienceTab (void)
       {
          if (header.fileVersion == FV_EXPERIENCE && header.pointNumber == g_numWaypoints)
          {
-            ExperienceSave *experienceLoad = new ExperienceSave[g_numWaypoints * g_numWaypoints];
+            ExperienceSave *experienceLoad = new ExperienceSave[g_numWaypoints * g_numWaypoints * sizeof (ExperienceSave)];
 
             Compressor::Uncompress (FormatBuffer ("%slearned/%s.exp", GetDataDir (), engine.GetMapName ()), sizeof (ExtensionHeader), (unsigned char *)experienceLoad, g_numWaypoints * g_numWaypoints * sizeof (ExperienceSave));
 
