@@ -836,14 +836,14 @@ void Engine::ProcessMessageCapture (void *ptr)
                // need to send congrats on well placed shot
                for (int i = 0; i < MaxClients (); i++)
                {
-                  Bot *bot = bots.GetBot (i);
+                  Bot *notify = bots.GetBot (i);
 
-                  if (bot != NULL && bot->m_notKilled && killer != bot->GetEntity () && bot->EntityIsVisible (victim->v.origin) && GetTeam (killer) == bot->m_team && GetTeam (killer) != GetTeam (victim))
+                  if (notify != NULL && notify->m_notKilled && killer != notify->GetEntity () && notify->EntityIsVisible (victim->v.origin) && GetTeam (killer) == notify->m_team && GetTeam (killer) != GetTeam (victim))
                   {
                      if (killer == g_hostEntity)
-                        bot->HandleChatterMessage ("#Bot_NiceShotCommander");
+                        notify->HandleChatterMessage ("#Bot_NiceShotCommander");
                      else
-                        bot->HandleChatterMessage ("#Bot_NiceShotPall");
+                        notify->HandleChatterMessage ("#Bot_NiceShotPall");
 
                      break;
                   }
@@ -853,23 +853,23 @@ void Engine::ProcessMessageCapture (void *ptr)
             // notice nearby to victim teammates, that attacker is near
             for (int i = 0; i < MaxClients (); i++)
             {
-               Bot *bot = bots.GetBot (i);
+               Bot *notify = bots.GetBot (i);
 
-               if (bot != NULL && bot->m_seeEnemyTime + 2.0f < Time () && bot->m_notKilled && bot->m_team == GetTeam (victim) && IsVisible (killer->v.origin, bot->GetEntity ()) && IsNullEntity (bot->m_enemy) && GetTeam (killer) != GetTeam (victim))
+               if (notify != NULL && notify->m_seeEnemyTime + 2.0f < Time () && notify->m_notKilled && notify->m_team == GetTeam (victim) && IsVisible (killer->v.origin, notify->GetEntity ()) && IsNullEntity (notify->m_enemy) && GetTeam (killer) != GetTeam (victim))
                {
-                  bot->m_actualReactionTime = 0.0f;
-                  bot->m_seeEnemyTime = Time ();
-                  bot->m_enemy = killer;
-                  bot->m_lastEnemy = killer;
-                  bot->m_lastEnemyOrigin = killer->v.origin;
+                  notify->m_actualReactionTime = 0.0f;
+                  notify->m_seeEnemyTime = Time ();
+                  notify->m_enemy = killer;
+                  notify->m_lastEnemy = killer;
+                  notify->m_lastEnemyOrigin = killer->v.origin;
                }
             }
 
-            Bot *bot = bots.GetBot (killer);
+            Bot *notify = bots.GetBot (killer);
 
             // is this message about a bot who killed somebody?
-            if (bot != NULL)
-               bot->m_lastVictim = victim;
+            if (notify != NULL)
+               notify->m_lastVictim = victim;
 
             else // did a human kill a bot on his team?
             {
@@ -956,10 +956,10 @@ void Engine::ProcessMessageCapture (void *ptr)
 
                if (yb_communication_type.GetInt () == 2)
                {
-                  Bot *bot = bots.FindOneValidAliveBot ();
+                  Bot *notify = bots.FindOneValidAliveBot ();
 
-                  if (bot != NULL && bot->m_notKilled)
-                     bot->HandleChatterMessage (strVal);
+                  if (notify != NULL && notify->m_notKilled)
+                     notify->HandleChatterMessage (strVal);
                }
             }
 
@@ -975,10 +975,10 @@ void Engine::ProcessMessageCapture (void *ptr)
 
                if (yb_communication_type.GetInt () == 2)
                {
-                  Bot *bot = bots.FindOneValidAliveBot ();
+                  Bot *notify = bots.FindOneValidAliveBot ();
 
-                  if (bot != NULL && bot->m_notKilled)
-                     bot->HandleChatterMessage (strVal);
+                  if (notify != NULL && notify->m_notKilled)
+                     notify->HandleChatterMessage (strVal);
                }
             }
             waypoints.SetBombPosition (true);
@@ -990,15 +990,15 @@ void Engine::ProcessMessageCapture (void *ptr)
 
             for (int i = 0; i < MaxClients (); i++)
             {
-               Bot *bot = bots.GetBot (i);
+               Bot *notify = bots.GetBot (i);
 
-               if (bot != NULL && bot->m_notKilled)
+               if (notify != NULL && notify->m_notKilled)
                {
-                  bot->DeleteSearchNodes ();
-                  bot->ResetTasks ();
+                  notify->DeleteSearchNodes ();
+                  notify->ResetTasks ();
 
-                  if (yb_communication_type.GetInt () == 2 && Random.Long (0, 100) < 75 && bot->m_team == CT)
-                     bot->ChatterMessage (Chatter_WhereIsTheBomb);
+                  if (yb_communication_type.GetInt () == 2 && Random.Long (0, 100) < 75 && notify->m_team == CT)
+                     notify->ChatterMessage (Chatter_WhereIsTheBomb);
                }
             }
             waypoints.SetBombPosition ();

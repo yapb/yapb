@@ -38,6 +38,7 @@ BotManager::BotManager (void)
 
    m_maintainTime = 0.0f;
    m_quotaMaintainTime = 0.0f;
+   m_grenadeUpdateTime = 0.0f;
 
    m_creationTab.RemoveAll ();
    m_killerEntity = NULL;
@@ -1472,6 +1473,9 @@ void BotManager::SendDeathMsgFix (void)
 
 void BotManager::UpdateActiveGrenades (void)
 {
+   if (m_grenadeUpdateTime > engine.Time ())
+      return;
+
    edict_t *grenade = NULL;
 
    // clear previously stored grenades
@@ -1486,6 +1490,7 @@ void BotManager::UpdateActiveGrenades (void)
 
       m_activeGrenades.Push (grenade);
    }
+   m_grenadeUpdateTime = 0.213f + engine.Time ();
 }
 
 const Array <edict_t *> &BotManager::GetActiveGrenades (void)

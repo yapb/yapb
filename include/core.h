@@ -1231,6 +1231,8 @@ private:
 
    float m_maintainTime; // time to maintain bot creation 
    float m_quotaMaintainTime; // time to maintain bot quota
+   float m_grenadeUpdateTime; // time to update active grenades
+
    int m_lastWinner; // the team who won previous round
    int m_balanceCount; // limit of bots to add
 

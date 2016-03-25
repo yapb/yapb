@@ -2257,8 +2257,9 @@ void StartFrame (void)
       }
       g_timePerSecondUpdate = engine.Time () + 1.0f;
    }
-   else if (g_timePerSecondUpdate * 0.5f < engine.Time ())
-      bots.UpdateActiveGrenades ();
+
+   // keep track of grenades on map
+   bots.UpdateActiveGrenades ();
 
    // keep bot number up to date
    bots.MaintainBotQuota ();

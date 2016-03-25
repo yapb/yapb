@@ -5910,7 +5910,7 @@ void Bot::ReactOnSound (void)
    if (pev->flags & FL_DUCKING)
       pasOrg = pasOrg + (VEC_HULL_MIN - VEC_DUCK_HULL_MIN);
 
-   byte *pas = ENGINE_SET_PVS (reinterpret_cast <float *> (&pasOrg));
+   byte *pas = ENGINE_SET_PAS (reinterpret_cast <float *> (&pasOrg));
 
    float minDistance = 99999.0f;
 
