@@ -968,8 +968,18 @@ void Bot::SwitchChatterIcon (bool show)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (!(g_clients[i].flags & CF_USED) || (g_clients[i].ent->v.flags & FL_FAKECLIENT) || g_clients[i].team != m_team)
+      Client &client = g_clients[i];
+
+      if ((show && !(client.flags & CF_CHATTER)) || (!show && (client.flags & CF_CHATTER)))
          continue;
+
+      if (!(client.flags & CF_USED) || (client.ent->v.flags & FL_FAKECLIENT) || client.team != m_team)
+         continue;
+
+      if (show)
+         client.flags |= CF_CHATTER;
+      else
+         client.flags &= ~CF_CHATTER;
 
       MESSAGE_BEGIN (MSG_ONE, engine.FindMessageId (NETMSG_BOTVOICE), NULL, g_clients[i].ent); // begin message
          WRITE_BYTE (show); // switch on/off

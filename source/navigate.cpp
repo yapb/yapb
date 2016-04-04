@@ -31,13 +31,13 @@ int Bot::FindGoal (void)
          }
       }
 
-      // forcing terrorist bot to not move to another bombspot
+      // forcing terrorist bot to not move to another bomb spot
       if (m_inBombZone && !m_hasProgressBar && m_hasC4)
          return waypoints.FindNearest (pev->origin, 400.0f, FLAG_GOAL);
    }
    int tactic = 0;
 
-   // path finding behaviour depending on map type
+   // path finding behavior depending on map type
    float offensive = 0.0f;
    float defensive = 0.0f;
 
@@ -68,14 +68,14 @@ int Bot::FindGoal (void)
    if (m_hasC4 || m_isVIP)
    {
       tactic = 3;
-      goto TacticChoosen;
+      return FinishFindGoal (tactic, defensiveWpts, offensiveWpts);
    }
    else if (m_team == CT && HasHostage ())
    {
       tactic = 2;
       offensiveWpts = &waypoints.m_rescuePoints;
 
-      goto TacticChoosen;
+      return FinishFindGoal (tactic, defensiveWpts, offensiveWpts);
    }
 
    offensive = m_agressionLevel * 100.0f;
@@ -153,11 +153,15 @@ int Bot::FindGoal (void)
    if (goalDesire > tacticChoice)
       tactic = 3;
 
-TacticChoosen:
-   int goalChoices[4] = {-1, -1, -1, -1};
+   return FinishFindGoal (tactic, defensiveWpts, offensiveWpts);
+}
 
-   if (tactic == 0 && !(*defensiveWpts).IsEmpty ()) // careful goal
-      FilterGoals (*defensiveWpts, goalChoices);
+int Bot::FinishFindGoal (int tactic, Array <int> *defensive, Array <int> *offsensive)
+{
+   int goalChoices[4] = { -1, -1, -1, -1 };
+
+   if (tactic == 0 && !(*defensive).IsEmpty ()) // careful goal
+      FilterGoals (*defensive, goalChoices);
    else if (tactic == 1 && !waypoints.m_campPoints.IsEmpty ()) // camp waypoint goal
    {
       // pickup sniper points if possible for sniping bots
@@ -166,8 +170,8 @@ TacticChoosen:
       else
          FilterGoals (waypoints.m_campPoints, goalChoices);
    }
-   else if (tactic == 2 && !(*offensiveWpts).IsEmpty ()) // offensive goal
-      FilterGoals (*offensiveWpts, goalChoices);
+   else if (tactic == 2 && !(*offsensive).IsEmpty ()) // offensive goal
+      FilterGoals (*offsensive, goalChoices);
    else if (tactic == 3 && !waypoints.m_goalPoints.IsEmpty ()) // map goal waypoint
    {
       // force bomber to select closest goal, if round-start goal was reset by something
@@ -213,7 +217,7 @@ TacticChoosen:
       m_currentWaypointIndex = ChangeWptIndex (waypoints.FindNearest (pev->origin));
 
    if (goalChoices[0] == -1)
-	   return m_chosenGoalIndex = Random.Long (0, g_numWaypoints - 1);
+      return m_chosenGoalIndex = Random.Long (0, g_numWaypoints - 1);
 
    bool isSorting = false;
 
@@ -2712,7 +2716,7 @@ bool Bot::CanJumpUp (const Vector &normal)
    engine.TestLine (src, dest, TRACE_IGNORE_MONSTERS, GetEntity (), &tr);
 
    if (tr.flFraction < 1.0f)
-      goto CheckDuckJump;
+      return FinishCanJumpUp (normal);
    else
    {
       // now trace from jump height upward to check for obstructions...
@@ -2734,7 +2738,7 @@ bool Bot::CanJumpUp (const Vector &normal)
 
    // if trace hit something, return false
    if (tr.flFraction < 1.0f)
-      goto CheckDuckJump;
+      return FinishCanJumpUp (normal);
 
    // now trace from jump height upward to check for obstructions...
    src = dest;
@@ -2755,7 +2759,7 @@ bool Bot::CanJumpUp (const Vector &normal)
 
    // if trace hit something, return false
    if (tr.flFraction < 1.0f)
-      goto CheckDuckJump;
+      return FinishCanJumpUp (normal);
 
    // now trace from jump height upward to check for obstructions...
    src = dest;
@@ -2765,13 +2769,15 @@ bool Bot::CanJumpUp (const Vector &normal)
 
    // if trace hit something, return false
    return tr.flFraction > 1.0f;
+}
 
-   // here we check if a duck jump would work...
-CheckDuckJump:
-
+bool Bot::FinishCanJumpUp (const Vector &normal)
+{
    // use center of the body first... maximum duck jump height is 62, so check one unit above that (63)
-   src = pev->origin + Vector (0.0f, 0.0f, -36.0f + 63.0f);
-   dest = src + normal * 32.0f;
+   Vector src = pev->origin + Vector (0.0f, 0.0f, -36.0f + 63.0f);
+   Vector dest = src + normal * 32.0f;
+
+   TraceResult tr;
 
    // trace a line forward at maximum jump height...
    engine.TestLine (src, dest, TRACE_IGNORE_MONSTERS, GetEntity (), &tr);

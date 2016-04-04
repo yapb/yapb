@@ -122,7 +122,8 @@ enum ClientFlags
 {
    CF_USED  = (1 << 0),
    CF_ALIVE = (1 << 1),
-   CF_ADMIN = (1 << 2)
+   CF_ADMIN = (1 << 2),
+   CF_CHATTER = (1 << 3)
 };
 
 // radio messages
@@ -870,6 +871,7 @@ private:
 
    bool CanDuckUnder (const Vector &normal);
    bool CanJumpUp (const Vector &normal);
+   bool FinishCanJumpUp (const Vector &normal);
    bool CantMoveForward (const Vector &normal, TraceResult *tr);
 
    // split RunTask into RunTask_* functions
@@ -937,6 +939,7 @@ private:
    int FindCoverWaypoint (float maxDistance);
    int FindDefendWaypoint (const Vector &origin);
    int FindGoal (void);
+   int FinishFindGoal (int tactic, Array <int> *defensive, Array <int> *offsensive);
    void FilterGoals (const Array <int> &goals, int *result);
    void FindItem (void);
    void CheckTerrain (float movedDistance, const Vector &dirNormal);
@@ -1003,6 +1006,7 @@ private:
    bool LookupEnemy (void);
    bool IsEnemyHiddenByRendering (edict_t *enemy);
    void FireWeapon (void);
+   void FinishWeaponSelection (float distance, int index, int id, int choosen);
    void FocusEnemy (void);
 
    void SelectBestWeapon (void);

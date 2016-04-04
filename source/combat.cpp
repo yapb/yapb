@@ -48,7 +48,7 @@ int Bot::GetNearbyEnemiesNearPosition(const Vector &origin, float radius)
 
 bool Bot::IsEnemyHiddenByRendering (edict_t *enemy)
 {
-   if (engine.IsNullEntity (enemy) || !yb_check_enemy_rendering.GetBool ())
+   if (!yb_check_enemy_rendering.GetBool () || engine.IsNullEntity (enemy))
       return false;
 
    entvars_t &v = enemy->v;
@@ -718,91 +718,9 @@ bool Bot::DoFirePause (float distance)
    return false;
 }
 
-void Bot::FireWeapon (void)
+void Bot::FinishWeaponSelection (float distance, int index, int id, int choosen)
 {
-   // this function will return true if weapon was fired, false otherwise
-   float distance = (m_lookAt - EyePosition ()).GetLength (); // how far away is the enemy?
-
-   // if using grenade stop this
-   if (m_isUsingGrenade)
-   {
-      m_shootTime = engine.Time () + 0.1f;
-      return;
-   }
-
-   // or if friend in line of fire, stop this too but do not update shoot time
-   if (!engine.IsNullEntity (m_enemy))
-   {
-      if (IsFriendInLineOfFire (distance))
-      {
-         m_fightStyle = FIGHT_STRAFE;
-         m_lastFightStyleCheck = engine.Time ();
-
-         return;
-      }
-   }
    WeaponSelect *tab = &g_weaponSelect[0];
-
-   edict_t *enemy = m_enemy;
-
-   int selectId = WEAPON_KNIFE, selectIndex = 0, chosenWeaponIndex = 0;
-   int weapons = pev->weapons;
-
-   // if jason mode use knife only
-   if (yb_jasonmode.GetBool ())
-      goto WeaponSelectEnd;
-
-   // use knife if near and good difficulty (l33t dude!)
-   if (m_difficulty >= 3 && pev->health > 80.0f && !engine.IsNullEntity (enemy) && pev->health >= enemy->v.health && distance < 100.0f && !IsOnLadder () && !IsGroupOfEnemies (pev->origin))
-      goto WeaponSelectEnd;
-
-   // loop through all the weapons until terminator is found...
-   while (tab[selectIndex].id)
-   {
-      // is the bot carrying this weapon?
-      if (weapons & (1 << tab[selectIndex].id))
-      {
-         // is enough ammo available to fire AND check is better to use pistol in our current situation...
-         if (m_ammoInClip[tab[selectIndex].id] > 0 && !IsWeaponBadInDistance (selectIndex, distance))
-            chosenWeaponIndex = selectIndex;
-      }
-      selectIndex++;
-   }
-   selectId = tab[chosenWeaponIndex].id;
-
-   // if no available weapon...
-   if (chosenWeaponIndex == 0)
-   {
-      selectIndex = 0;
-
-      // loop through all the weapons until terminator is found...
-      while (tab[selectIndex].id)
-      {
-         int id = tab[selectIndex].id;
-
-         // is the bot carrying this weapon?
-         if (weapons & (1 << id))
-         {
-            if ( g_weaponDefs[id].ammo1 != -1 && g_weaponDefs[id].ammo1 < 32 && m_ammo[g_weaponDefs[id].ammo1] >= tab[selectIndex].minPrimaryAmmo)
-            {
-               // available ammo found, reload weapon
-               if (m_reloadState == RELOAD_NONE || m_reloadCheckTime > engine.Time ())
-               {
-                  m_isReloading = true;
-                  m_reloadState = RELOAD_PRIMARY;
-                  m_reloadCheckTime = engine.Time ();
-
-                  RadioMessage (Radio_NeedBackup);
-               }
-               return;
-            }
-         }
-         selectIndex++;
-      }
-      selectId = WEAPON_KNIFE; // no available ammo, use knife!
-   }
-
-WeaponSelectEnd:
 
    // we want to fire weapon, don't reload now
    if (!m_isReloading)
@@ -812,9 +730,9 @@ WeaponSelectEnd:
    }
 
    // select this weapon if it isn't already selected
-   if (m_currentWeapon != selectId)
+   if (m_currentWeapon != id)
    {
-      SelectWeaponByName (g_weaponDefs[selectId].className);
+      SelectWeaponByName (g_weaponDefs[id].className);
 
       // reset burst fire variables
       m_firePause = 0.0f;
@@ -823,17 +741,17 @@ WeaponSelectEnd:
       return;
    }
 
-   if (tab[chosenWeaponIndex].id != selectId)
+   if (tab[choosen].id != id)
    {
-      chosenWeaponIndex = 0;
+      choosen = 0;
 
       // loop through all the weapons until terminator is found...
-      while (tab[chosenWeaponIndex].id)
+      while (tab[choosen].id)
       {
-         if (tab[chosenWeaponIndex].id == selectId)
+         if (tab[choosen].id == id)
             break;
 
-         chosenWeaponIndex++;
+         choosen++;
       }
    }
 
@@ -844,7 +762,7 @@ WeaponSelectEnd:
    {
       if (distance >= 750.0f && !IsShieldDrawn ())
          pev->button |= IN_ATTACK2; // draw the shield
-      else if (IsShieldDrawn () || (!engine.IsNullEntity (m_enemy) && ((m_enemy->v.button & IN_RELOAD) || !IsEnemyViewable(m_enemy))))
+      else if (IsShieldDrawn () || (!engine.IsNullEntity (m_enemy) && ((m_enemy->v.button & IN_RELOAD) || !IsEnemyViewable (m_enemy))))
          pev->button |= IN_ATTACK2; // draw out the shield
 
       m_shieldCheckTime = engine.Time () + 1.0f;
@@ -884,23 +802,23 @@ WeaponSelectEnd:
    // need to care for burst fire?
    if (distance < 256.0f || m_blindTime > engine.Time ())
    {
-      if (selectId == WEAPON_KNIFE)
+      if (id == WEAPON_KNIFE)
       {
          if (distance < 64.0f)
-         { 
+         {
             if (Random.Long (1, 100) < 30 || HasShield ())
                pev->button |= IN_ATTACK; // use primary attack
             else
                pev->button |= IN_ATTACK2; // use secondary attack
          }
-      }    
+      }
       else
       {
-         if (tab[chosenWeaponIndex].primaryFireHold && m_ammo[g_weaponDefs[tab[selectIndex].id].ammo1] > tab[selectIndex].minPrimaryAmmo) // if automatic weapon, just press attack
+         if (tab[choosen].primaryFireHold && m_ammo[g_weaponDefs[tab[index].id].ammo1] > tab[index].minPrimaryAmmo) // if automatic weapon, just press attack
             pev->button |= IN_ATTACK;
          else // if not, toggle buttons
-         {       
-            if ((pev->oldbuttons & IN_ATTACK) == 0)      
+         {
+            if ((pev->oldbuttons & IN_ATTACK) == 0)
                pev->button |= IN_ATTACK;
          }
       }
@@ -912,17 +830,17 @@ WeaponSelectEnd:
          return;
 
       // don't attack with knife over long distance
-      if (selectId == WEAPON_KNIFE)
+      if (id == WEAPON_KNIFE)
       {
          m_shootTime = engine.Time ();
          return;
       }
 
-      if (tab[chosenWeaponIndex].primaryFireHold)
+      if (tab[choosen].primaryFireHold)
       {
          m_shootTime = engine.Time ();
          m_zoomCheckTime = engine.Time ();
-    
+
          pev->button |= IN_ATTACK;  // use primary attack      
       }
       else
@@ -933,6 +851,98 @@ WeaponSelectEnd:
          m_zoomCheckTime = engine.Time () - 0.09f;
       }
    }
+}
+
+void Bot::FireWeapon (void)
+{
+   // this function will return true if weapon was fired, false otherwise
+   float distance = (m_lookAt - EyePosition ()).GetLength (); // how far away is the enemy?
+
+   // if using grenade stop this
+   if (m_isUsingGrenade)
+   {
+      m_shootTime = engine.Time () + 0.1f;
+      return;
+   }
+
+   // or if friend in line of fire, stop this too but do not update shoot time
+   if (!engine.IsNullEntity (m_enemy))
+   {
+      if (IsFriendInLineOfFire (distance))
+      {
+         m_fightStyle = FIGHT_STRAFE;
+         m_lastFightStyleCheck = engine.Time ();
+
+         return;
+      }
+   }
+   WeaponSelect *tab = &g_weaponSelect[0];
+
+   edict_t *enemy = m_enemy;
+
+   int selectId = WEAPON_KNIFE, selectIndex = 0, choosenWeapon = 0;
+   int weapons = pev->weapons;
+
+   // if jason mode use knife only
+   if (yb_jasonmode.GetBool ())
+   {
+      FinishWeaponSelection (distance, selectIndex, selectId, choosenWeapon);
+      return;
+   }
+
+   // use knife if near and good difficulty (l33t dude!)
+   if (m_difficulty >= 3 && pev->health > 80.0f && !engine.IsNullEntity (enemy) && pev->health >= enemy->v.health && distance < 100.0f && !IsOnLadder () && !IsGroupOfEnemies (pev->origin))
+   {
+      FinishWeaponSelection (distance, selectIndex, selectId, choosenWeapon);
+      return;
+   }
+
+   // loop through all the weapons until terminator is found...
+   while (tab[selectIndex].id)
+   {
+      // is the bot carrying this weapon?
+      if (weapons & (1 << tab[selectIndex].id))
+      {
+         // is enough ammo available to fire AND check is better to use pistol in our current situation...
+         if (m_ammoInClip[tab[selectIndex].id] > 0 && !IsWeaponBadInDistance (selectIndex, distance))
+            choosenWeapon = selectIndex;
+      }
+      selectIndex++;
+   }
+   selectId = tab[choosenWeapon].id;
+
+   // if no available weapon...
+   if (choosenWeapon == 0)
+   {
+      selectIndex = 0;
+
+      // loop through all the weapons until terminator is found...
+      while (tab[selectIndex].id)
+      {
+         int id = tab[selectIndex].id;
+
+         // is the bot carrying this weapon?
+         if (weapons & (1 << id))
+         {
+            if ( g_weaponDefs[id].ammo1 != -1 && g_weaponDefs[id].ammo1 < 32 && m_ammo[g_weaponDefs[id].ammo1] >= tab[selectIndex].minPrimaryAmmo)
+            {
+               // available ammo found, reload weapon
+               if (m_reloadState == RELOAD_NONE || m_reloadCheckTime > engine.Time ())
+               {
+                  m_isReloading = true;
+                  m_reloadState = RELOAD_PRIMARY;
+                  m_reloadCheckTime = engine.Time ();
+
+                  RadioMessage (Radio_NeedBackup);
+               }
+               return;
+            }
+         }
+         selectIndex++;
+      }
+      selectId = WEAPON_KNIFE; // no available ammo, use knife!
+   }
+   FinishWeaponSelection (distance, selectIndex, selectId, choosenWeapon);
 }
 
 bool Bot::IsWeaponBadInDistance (int weaponIndex, float distance)
