@@ -122,8 +122,7 @@ enum ClientFlags
 {
    CF_USED  = (1 << 0),
    CF_ALIVE = (1 << 1),
-   CF_ADMIN = (1 << 2),
-   CF_CHATTER = (1 << 3)
+   CF_ADMIN = (1 << 2)
 };
 
 // radio messages
