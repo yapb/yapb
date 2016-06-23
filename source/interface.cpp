@@ -1103,7 +1103,7 @@ void UpdateClientData (const struct edict_s *ent, int sendweapons, struct client
 {
    extern ConVar yb_latency_display;
 
-   if (yb_latency_display.GetInt () == 2)
+   if (!(g_gameFlags & GAME_LEGACY) && yb_latency_display.GetInt () == 2)
       bots.SendPingDataOffsets (const_cast <edict_t *> (ent));
 
    if (g_isMetamod)
@@ -2452,7 +2452,6 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
       // is this message for a bot?
       if (index != -1 && !(ed->v.flags & FL_DORMANT))
       {
-         engine.ResetMessageCapture ();
          engine.SetOngoingMessageReceiver (index);
 
          // message handling is done in usermsg.cpp
@@ -2471,8 +2470,6 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
    }
    else if (msgDest == MSG_ALL)
    {
-      engine.ResetMessageCapture ();
-
       engine.TryCaptureMessage (msgType, NETMSG_SCOREINFO);
       engine.TryCaptureMessage (msgType, NETMSG_DEATH);
       engine.TryCaptureMessage (msgType, NETMSG_TEXTMSG);
@@ -2786,8 +2783,10 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...)
 
          if (bot != NULL && bot->m_team == TERRORIST && bot->m_notKilled)
          {
-            bot->ResetTasks ();
-            bot->MoveToVector (waypoints.GetBombPosition ());
+            bot->DeleteSearchNodes ();
+
+            bot->m_position = waypoints.GetBombPosition ();
+            bot->PushTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, -1, 0.0f, true);
          }
       }
    }

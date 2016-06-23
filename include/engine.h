@@ -318,7 +318,7 @@ public:
    FORCEINLINE int GetInt (void) { return static_cast <int> (m_eptr->value); }
    FORCEINLINE float GetFloat (void) { return m_eptr->value; }
    FORCEINLINE const char *GetString (void) { return m_eptr->string; }
-   FORCEINLINE void SetFloat (float val) { m_eptr->value = val; }
+   FORCEINLINE void SetFloat (float val) { g_engfuncs.pfnCVarSetFloat (m_eptr->name, val); }
    FORCEINLINE void SetInt (int val) { SetFloat (static_cast <float> (val)); }
    FORCEINLINE void SetString (const char *val) { g_engfuncs.pfnCvar_DirectSet (m_eptr, const_cast <char *> (val)); }
 };
