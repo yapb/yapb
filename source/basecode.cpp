@@ -1593,7 +1593,7 @@ void Bot::PurchaseWeapons (void)
       break;
 
    case BUYSTATE_SECONDARY_WEAPON: // if bot has still some money, buy a better secondary weapon
-      if (false || isPistolMode || (HasPrimaryWeapon () && (pev->weapons & ((1 << WEAPON_USP) | (1 << WEAPON_GLOCK))) && m_moneyAmount > Random.Long (7500, 9000)))
+      if (isPistolMode || (HasPrimaryWeapon () && (pev->weapons & ((1 << WEAPON_USP) | (1 << WEAPON_GLOCK))) && m_moneyAmount > Random.Long (7500, 9000)))
       {
          do
          {
