@@ -45,7 +45,6 @@ int g_highestDamageCT = 1;
 int g_highestDamageT = 1;
 int g_highestKills = 1;
 
-
 Array <Array <String> > g_chatFactory;
 Array <Array <ChatterItem> > g_chatterFactory;
 Array <BotName> g_botNames;

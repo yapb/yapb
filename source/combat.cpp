@@ -66,7 +66,7 @@ bool Bot::IsEnemyHiddenByRendering (edict_t *enemy)
    {
       if (v.renderfx == kRenderFxGlowShell)
       {
-         if (v.renderamt <= 20.0f && v.rendercolor.x <= 20.0f && v.rendercolor.y <= 20.f && v.rendercolor.z <= 20.f)
+         if (v.renderamt <= 20.0f && v.rendercolor.x <= 20.0f && v.rendercolor.y <= 20.0f && v.rendercolor.z <= 20.0f)
          {
             if (!enemyGunfire || !enemyHasGun)
                return true;

@@ -569,30 +569,6 @@ void CheckWelcomeMessage (void)
    }
 }
 
-void DetectCSVersion (void)
-{
-   if (g_gameFlags & GAME_CZERO)
-      return;
-
-   // detect xash engine
-   if (g_engfuncs.pfnCVarGetPointer ("build") != NULL)
-   {
-      g_gameFlags |= (GAME_LEGACY | GAME_XASH);
-      return;
-   }
-
-   // counter-strike 1.6 or higher (plus detects for non-steam versions of 1.5)
-   byte *detection = g_engfuncs.pfnLoadFileForMe ("events/galil.sc", NULL);
-
-   if (detection != NULL)
-      g_gameFlags |= GAME_CSTRIKE16; // just to be sure
-   else if (detection == NULL)
-      g_gameFlags |= GAME_LEGACY; // reset it to WON
-
-   // if we have loaded the file free it
-   if (detection != NULL)
-      g_engfuncs.pfnFreeFile (detection);
-}
 
 void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
 {

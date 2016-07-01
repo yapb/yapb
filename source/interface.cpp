@@ -928,31 +928,7 @@ void GameDLLInit (void)
    // server is enabled. Here is a good place to do our own game session initialization, and
    // to register by the engine side the server commands we need to administrate our bots.
 
-   DetectCSVersion ();
-   {
-      // print game detection info
-      String gameVersionStr;
 
-      if (g_gameFlags & GAME_LEGACY)
-         gameVersionStr.Assign ("Legacy");
-
-      else if (g_gameFlags & GAME_CZERO)
-         gameVersionStr.Assign ("Condition Zero");
-
-      else if (g_gameFlags & GAME_CSTRIKE16)
-         gameVersionStr.Assign ("v1.6");
-
-      if (g_gameFlags & GAME_XASH)
-      {
-         gameVersionStr.Append (" @ Xash3D Engine");
-
-         if (g_gameFlags & GAME_MOBILITY)
-            gameVersionStr.Append (" Mobile");
-
-         gameVersionStr.Replace ("Legacy", "1.6 Limited");
-      }
-      engine.Printf ("YaPB Bot has detect game version as Counter-Strike: %s", gameVersionStr.GetBuffer ());
-   }
 
    // register server command(s)
    engine.RegisterCmd ("yapb", CommandHandler);   
@@ -2981,6 +2957,84 @@ SHARED_LIBRARAY_EXPORT void Meta_Init (void)
    g_isMetamod = true;
 }
 
+Library *LoadCSBinary (void)
+{
+   const char *modname = engine.GetModName ();
+
+   if (!modname)
+      return nullptr;
+
+#if defined (PLATFORM_WIN32)
+   const char *libs[] = { "mp.dll", "cs.dll" };
+#elif defined (PLATFORM_LINUX)
+   const char *libs[] = { "cs.so", "cs_i386.so" };
+#elif defined (PLATFORM_OSX)
+   const char *libs[] = { "cs.dylib" };
+#endif
+
+   // search the libraries inside game dlls directory
+   for (int i = 0; i < ARRAYSIZE_HLSDK (libs); i++)
+   {
+      char path[256];
+      sprintf (path, "%s/dlls/%s", modname, libs[i]);
+
+      // if we can't read file, skip it
+      if (!File::Accessible (path))
+         continue;
+
+      // special case, czero is always detected first, as it's has custom directory
+      if (strcmp (modname, "czero") == 0)
+      {
+         g_gameFlags |= GAME_CZERO;
+
+         if (g_isMetamod)
+            return nullptr;
+
+         return new Library (path);
+      }
+      else
+      {
+         Library *game = new Library (path);
+
+         // try to load gamedll
+         if (!game->IsLoaded ())
+         {
+            AddLogEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", libs[i], modname);
+            return nullptr;
+         }
+
+         // detect xash engine
+         if (g_engfuncs.pfnCVarGetPointer ("build") != NULL)
+         {
+            g_gameFlags |= (GAME_LEGACY | GAME_XASH);
+
+            if (g_isMetamod)
+            {
+               delete game;
+               return nullptr;
+            }
+            return game;
+         }
+
+         // detect if we're running modern game
+         auto entity = game->GetFuncAddr <EntityPtr_t> ("weapon_famas");
+
+         if (entity != nullptr)
+            g_gameFlags |= GAME_CSTRIKE16;
+         else
+            g_gameFlags |= GAME_LEGACY;
+
+         if (g_isMetamod)
+         {
+            delete game;
+            return nullptr;
+         }
+         return game;
+      }
+   }
+   return nullptr;
+}
+
 DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t *pGlobals)
 {
    // this is the very first function that is called in the game DLL by the engine. Its purpose
@@ -3030,73 +3084,42 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    if (!g_gameLib->IsLoaded ())
       AddLogEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gameDLLName, engine.GetModName ());
 #else
-   static struct ModSupport
+   g_gameLib = LoadCSBinary ();
    {
-      char name[10];
-      char linuxLib[12];
-      char osxLib[9];
-      char winLib[8];
-      char desc[39];
-      int modType;
-   } s_supportedMods[] =
-   {
-      { "cstrike", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike v1.6", GAME_CSTRIKE16 },
-      { "cstrike", "cs.so", "cs.dylib", "mp.dll", "Counter-Strike v1.6 (Newer)", GAME_CSTRIKE16 },
-      { "czero", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike: Condition Zero", GAME_CZERO },
-      { "czero", "cs.so", "cs.dylib", "mp.dll", "Counter-Strike: Condition Zero (Newer)", GAME_CZERO },
-      { "csv15", "cs_i386.so", "cs.dylib", "mp.dll", "CS 1.5 for Steam", GAME_LEGACY },
-      { "csdm", "cs_i386.so", "cs.dylib", "mp.dll", "CSDM for Windows", GAME_LEGACY },
-      { "cs13", "cs_i386.so", "cs.dylib", "mp.dll", "Counter-Strike v1.3", GAME_LEGACY }, // assume cs13 = cs15
-   };
-
-   ModSupport *knownMod = NULL;
-
-   for (int i = 0; i < ARRAYSIZE_HLSDK (s_supportedMods); i++)
-   {
-      ModSupport *mod = &s_supportedMods[i];
-
-      if (strcmp (mod->name, engine.GetModName ()) == 0 && File::Accessible (FormatBuffer ("%s/dlls/%s", mod->name,
-#if defined (PLATFORM_WIN32)
-         mod->winLib
-#elif defined (PLATFORM_LINUX)
-         mod->linuxLib
-#elif defined (PLATFORM_OSX)
-         mod->osxLib
-#endif
-         )))
+      if (g_gameLib == nullptr && !g_isMetamod)
       {
-         knownMod = mod;
-         break;
+         AddLogEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", engine.GetModName ());
+         return;
       }
-   }
 
-   if (knownMod != NULL)
-   {
-      g_gameFlags |= knownMod->modType;
+      // print game detection info
+      String gameVersionStr;
+
+      if (g_gameFlags & GAME_LEGACY)
+         gameVersionStr.Assign ("Legacy");
+
+      else if (g_gameFlags & GAME_CZERO)
+         gameVersionStr.Assign ("Condition Zero");
+
+      else if (g_gameFlags & GAME_CSTRIKE16)
+         gameVersionStr.Assign ("v1.6");
+
+      if (g_gameFlags & GAME_XASH)
+      {
+         gameVersionStr.Append (" @ Xash3D Engine");
+
+         if (g_gameFlags & GAME_MOBILITY)
+            gameVersionStr.Append (" Mobile");
+
+         gameVersionStr.Replace ("Legacy", "1.6 Limited");
+      }
+      engine.Printf ("YaPB Bot has detect game version as Counter-Strike: %s", gameVersionStr.GetBuffer ());
 
       if (g_isMetamod)
-         return; // we should stop the attempt for loading the real gamedll, since metamod handle this for us
-
-      char gameDLLName[256];
-      sprintf (gameDLLName, "%s/dlls/%s", knownMod->name,
-
-#if defined (PLATFORM_WIN32)
-         knownMod->winLib
-#elif defined (PLATFORM_LINUX)
-         knownMod->linuxLib
-#elif defined (PLATFORM_OSX)
-         knownMod->osxLib
-#endif
-         );
-      g_gameLib = new Library (gameDLLName);
-
-      if (!g_gameLib->IsLoaded ())
-         AddLogEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gameDLLName, engine.GetModName ());
+         return;
    }
-   else
-      AddLogEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", engine.GetModName ());
 #endif
-      
+
    g_funcPointers = g_gameLib->GetFuncAddr <FuncPointers_t> ("GiveFnptrsToDll");
    g_entityAPI = g_gameLib->GetFuncAddr <EntityAPI_t> ("GetEntityAPI");
    g_getNewEntityAPI = g_gameLib->GetFuncAddr <NewEntityAPI_t> ("GetNewDLLFunctions");
