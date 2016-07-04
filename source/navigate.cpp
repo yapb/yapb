@@ -1264,6 +1264,18 @@ void Bot::FindShortestPath (int srcIndex, int destIndex)
 {
    // this function finds the shortest path from source index to destination index
 
+   if (srcIndex > g_numWaypoints - 1 || srcIndex < 0)
+   {
+      AddLogEntry (true, LL_ERROR, "Pathfinder source path index not valid (%d)", srcIndex);
+      return;
+   }
+
+   if (destIndex > g_numWaypoints - 1 || destIndex < 0)
+   {
+      AddLogEntry (true, LL_ERROR, "Pathfinder destination path index not valid (%d)", destIndex);
+      return;
+   }
+
    DeleteSearchNodes ();
 
    m_chosenGoalIndex = srcIndex;

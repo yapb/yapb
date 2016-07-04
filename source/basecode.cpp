@@ -984,7 +984,7 @@ void Bot::InstantChatterMessage (int type)
 {
    // this function sends instant chatter messages.
 
-   if (yb_communication_type.GetInt () != 2 || g_chatterFactory[type].IsEmpty () || (g_gameFlags & GAME_LEGACY) || !g_sendAudioFinished)
+   if (yb_communication_type.GetInt () != 2 || g_chatterFactory[type].IsEmpty () || (g_gameFlags & GAME_LEGACY))
       return;
 
    if (m_notKilled)
@@ -1009,8 +1009,6 @@ void Bot::InstantChatterMessage (int type)
       if (!IsValidPlayer (ent) || IsValidBot (ent) || engine.GetTeam (ent) != m_team)
          continue;
 
-      g_sendAudioFinished = false;
-
       MESSAGE_BEGIN (MSG_ONE, engine.FindMessageId (NETMSG_SENDAUDIO), NULL, ent); // begin message
          WRITE_BYTE (GetIndex ());
 
@@ -1021,8 +1019,6 @@ void Bot::InstantChatterMessage (int type)
 
          WRITE_SHORT (m_voicePitch);
       MESSAGE_END ();
-
-      g_sendAudioFinished = true;
    }
 }
 
@@ -2511,7 +2507,9 @@ void Bot::CheckRadioCommands (void)
          SelectWeaponByName ("weapon_knife");
 
          DeleteSearchNodes ();
-         MoveToVector (waypoints.GetBombPosition ());
+
+         m_position = waypoints.GetBombPosition ();
+         PushTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, -1, 0.0f, true);
 
          RadioMessage (Radio_Affirmative);
       }
@@ -2961,40 +2959,6 @@ void Bot::ThinkFrame (void)
          engine.IssueBotCommand (GetEntity (), "votemap %d", m_voteMap);
          m_voteMap = 0;
       }
-      extern ConVar yb_chat;
-
-      if (yb_chat.GetBool () && !RepliesToPlayer () && m_lastChatTime + 10.0 < engine.Time () && g_lastChatTime + 5.0f < engine.Time ()) // bot chatting turned on?
-      {
-         // say a text every now and then
-         if (Random.Long (1, 1500) < 2)
-         {
-            m_lastChatTime = engine.Time ();
-            g_lastChatTime = engine.Time ();
-
-            char *pickedPhrase = const_cast <char *> (g_chatFactory[CHAT_DEAD].GetRandomElement ().GetBuffer ());
-            bool sayBufferExists = false;
-
-            // search for last messages, sayed
-            FOR_EACH_AE (m_sayTextBuffer.lastUsedSentences, i)
-            {
-               if (strncmp (m_sayTextBuffer.lastUsedSentences[i].GetBuffer (), pickedPhrase, m_sayTextBuffer.lastUsedSentences[i].GetLength ()) == 0)
-                  sayBufferExists = true;
-            }
-
-            if (!sayBufferExists)
-            {
-               PrepareChatMessage (pickedPhrase);
-               PushMessageQueue (GSM_SAY);
-
-               // add to ignore list
-               m_sayTextBuffer.lastUsedSentences.Push (pickedPhrase);
-            }
-
-            // clear the used line buffer every now and then
-            if (m_sayTextBuffer.lastUsedSentences.GetElementNumber () > Random.Long (4, 6))
-               m_sayTextBuffer.lastUsedSentences.RemoveAll ();
-         }
-      }
    }
    else if (m_notKilled && m_buyingFinished && !(pev->maxspeed < 10.0f && GetTaskId () != TASK_PLANTBOMB && GetTaskId () != TASK_DEFUSEBOMB) && !yb_freeze_bots.GetBool ())
       botMovement = true;
@@ -3007,7 +2971,7 @@ void Bot::ThinkFrame (void)
    CheckMessageQueue (); // check for pending messages
 
    // remove voice icon
-   if (g_lastRadioTime[g_clients[engine.IndexOfEntity (GetEntity ()) - 1].team2] + Random.Float (0.8f, 2.1f) < engine.Time ())
+   if (!(g_gameFlags & GAME_LEGACY) && g_lastRadioTime[g_clients[GetIndex () - 1].team2] + Random.Float (0.8f, 2.1f) < engine.Time ())
       SwitchChatterIcon (false); // hide icon
 
    if (botMovement)
@@ -3030,6 +2994,41 @@ void Bot::PeriodicThink (void)
       ResetTasks ();
 
    CheckSpawnTimeConditions ();
+
+   extern ConVar yb_chat;
+
+   if (m_notKilled && yb_chat.GetBool () && m_lastChatTime + 10.0 < engine.Time () && g_lastChatTime + 5.0f < engine.Time () && !RepliesToPlayer ()) // bot chatting turned on?
+   {
+      // say a text every now and then
+      if (Random.Long (1, 1500) < 2)
+      {
+         m_lastChatTime = engine.Time ();
+         g_lastChatTime = engine.Time ();
+
+         char *pickedPhrase = const_cast <char *> (g_chatFactory[CHAT_DEAD].GetRandomElement ().GetBuffer ());
+         bool sayBufferExists = false;
+
+         // search for last messages, sayed
+         FOR_EACH_AE (m_sayTextBuffer.lastUsedSentences, i)
+         {
+            if (strncmp (m_sayTextBuffer.lastUsedSentences[i].GetBuffer (), pickedPhrase, m_sayTextBuffer.lastUsedSentences[i].GetLength ()) == 0)
+               sayBufferExists = true;
+         }
+
+         if (!sayBufferExists)
+         {
+            PrepareChatMessage (pickedPhrase);
+            PushMessageQueue (GSM_SAY);
+
+            // add to ignore list
+            m_sayTextBuffer.lastUsedSentences.Push (pickedPhrase);
+         }
+
+         // clear the used line buffer every now and then
+         if (m_sayTextBuffer.lastUsedSentences.GetElementNumber () > Random.Long (4, 6))
+            m_sayTextBuffer.lastUsedSentences.RemoveAll ();
+      }
+   }
 
    // clear enemy far away
    if (!m_lastEnemyOrigin.IsZero () && !engine.IsNullEntity (m_lastEnemy) && (pev->origin - m_lastEnemyOrigin).GetLength () >= 1600.0f)
@@ -4374,6 +4373,15 @@ void Bot::RunTask_EscapeFromBomb (void)
       if (lastSelectedGoal < 0)
          lastSelectedGoal = waypoints.FindFarest (pev->origin, safeRadius);
 
+      // still no luck?
+      if (lastSelectedGoal < 0)
+      {
+         TaskComplete (); // we're done
+
+         // we have no destination point, so just sit down and camp
+         PushTask (TASK_CAMP, TASKPRI_CAMP, -1, engine.Time () + 10.0f, true);
+         return;
+      }
       m_prevGoalIndex = lastSelectedGoal;
       GetTask ()->data = lastSelectedGoal;
 
@@ -4984,7 +4992,7 @@ void Bot::DisplayDebugOverlay (void)
 {
    bool displayDebugOverlay = false;
 
-   if (g_hostEntity->v.iuser2 == engine.IndexOfEntity (GetEntity ()))
+   if (g_hostEntity->v.iuser2 == GetIndex ())
       displayDebugOverlay = true;
 
    if (!displayDebugOverlay && yb_debug.GetInt () >= 2)
@@ -5590,7 +5598,7 @@ void Bot::DebugMsg (const char *format, ...)
 
    bool playMessage = false;
 
-   if (level == 3 && !engine.IsNullEntity (g_hostEntity) && g_hostEntity->v.iuser2 == engine.IndexOfEntity (GetEntity ()))
+   if (level == 3 && !engine.IsNullEntity (g_hostEntity) && g_hostEntity->v.iuser2 == GetIndex ())
       playMessage = true;
    else if (level != 3)
       playMessage = true;
@@ -5729,14 +5737,6 @@ Vector Bot::CheckBombAudible (void)
       return bombOrigin;
 
    return Vector::GetZero ();
-}
-
-void Bot::MoveToVector (const Vector &to)
-{
-   if (to.IsZero ())
-      return;
-
-   FindPath (m_currentWaypointIndex, waypoints.FindNearest (to), SEARCH_PATH_FASTEST);
 }
 
 byte Bot::ThrottledMsec (void)

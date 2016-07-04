@@ -20,7 +20,6 @@ extern bool g_autoWaypoint;
 extern bool g_botsCanPause; 
 extern bool g_editNoclip;
 extern bool g_isMetamod;
-extern bool g_sendAudioFinished;
 extern bool g_isCommencing;
 extern bool g_leaderChoosen[2];
 

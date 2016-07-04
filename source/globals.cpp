@@ -9,19 +9,11 @@
 
 #include <core.h>
 
-// forward for super-globals
-//NetworkMsg netmsg;
-//Localizer locale;
-//Waypoint waypoints;
-//BotManager bots;
-//Engine engine;
-
 bool g_canSayBombPlanted = true;
 bool g_isMetamod = false;
 bool g_radioInsteadVoice = false;
 bool g_roundEnded = true;
 bool g_botsCanPause = false;
-bool g_sendAudioFinished = true;
 bool g_bombPlanted = false;
 bool g_bombSayString = false;
 bool g_isCommencing = false;
@@ -52,7 +44,6 @@ int g_mapType = 0;
 int g_highestDamageCT = 1;
 int g_highestDamageT = 1;
 int g_highestKills = 1;
-
 
 Array <Array <String> > g_chatFactory;
 Array <Array <ChatterItem> > g_chatterFactory;

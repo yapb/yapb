@@ -636,6 +636,7 @@ struct ExperienceSave
 // bot creation tab
 struct CreateQueue
 {
+   bool console;
    int difficulty;
    int team;
    int member;
@@ -1203,9 +1204,8 @@ public:
    void TryHeadTowardRadioEntity (void);
 
    void Kill (void);
-   void Kick (void);
+   void Kick (bool keepQuota = false);
    void ResetDoubleJumpState (void);
-   void MoveToVector (const Vector &to);
    int FindPlantedBomb(void);
 
    bool HasHostage (void);
@@ -1248,7 +1248,7 @@ private:
    edict_t *m_killerEntity; // killer entity for bots
 
 protected:
-   int CreateBot (const String &name, int difficulty, int personality, int team, int member);
+   int CreateBot (const String &name, int difficulty, int personality, int team, int member, bool isConsoleCmd);
 
 public:
    BotManager (void);
@@ -1280,13 +1280,13 @@ public:
    void Free (void);
    void Free (int index);
   
-   void AddRandom (void) { AddBot ("", -1, -1, -1, -1); }
-   void AddBot (const String &name, int difficulty, int personality, int team, int member);
-   void AddBot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member);
+   void AddRandom (bool isConsoleCmd = true) { AddBot ("", -1, -1, -1, -1, isConsoleCmd); }
+   void AddBot (const String &name, int difficulty, int personality, int team, int member, bool isConsoleCmd = true);
+   void AddBot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member, bool isConsoleCmd = true);
    void FillServer (int selection, int personality = PERSONALITY_NORMAL, int difficulty = -1, int numToAdd = -1);
 
-   void RemoveAll (bool zeroQuota = true);
-   void RemoveRandom (void);
+   void RemoveAll (void);
+   void RemoveRandom (bool keepQuota = false);
    void RemoveFromTeam (Team team, bool removeAll = false);
    void RemoveMenu (edict_t *ent, int selection);
    void KillAll (int team = -1);
@@ -1469,7 +1469,6 @@ extern bool FindNearestPlayer (void **holder, edict_t *to, float searchDistance 
 extern void FreeLibraryMemory (void);
 extern void RoundInit (void);
 extern void CheckWelcomeMessage (void);
-extern void DetectCSVersion (void);
 extern void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...);
 extern void DisplayMenuToClient (edict_t *ent, MenuText *menu);
 extern void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex);

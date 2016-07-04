@@ -10,7 +10,7 @@
 #include <core.h>
 
 ConVar yb_autovacate ("yb_autovacate", "0");
-ConVar yb_autovacate_smart_kick ("yb_autovacate_smart_kick", "1");
+ConVar yb_autovacate_smart_kick ("yb_autovacate_smart_kick", "0");
 
 ConVar yb_quota ("yb_quota", "0", VT_NORMAL);
 ConVar yb_quota_mode ("yb_quota_mode", "normal");
@@ -108,11 +108,10 @@ void BotManager::CallGameEntity (entvars_t *vars)
    player (vars);
 }
 
-int BotManager::CreateBot (const String &name, int difficulty, int personality, int team, int member)
+int BotManager::CreateBot (const String &name, int difficulty, int personality, int team, int member, bool isConsoleCmd)
 {
    // this function completely prepares bot entity (edict) for creation, creates team, difficulty, sets name etc, and
    // then sends result to bot constructor
-
    
    edict_t *bot = NULL;
    char outputName[33];
@@ -195,8 +194,9 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
       if (!IsNullString (prefixedName))
          strcpy (outputName, prefixedName);
    }
+   bot = g_engfuncs.pfnCreateFakeClient (outputName);
 
-   if (engine.IsNullEntity ((bot = (*g_engfuncs.pfnCreateFakeClient) (outputName))))
+   if (engine.IsNullEntity (bot))
    {
       engine.CenterPrintf ("Maximum players reached (%d/%d). Unable to create Bot.", engine.MaxClients (), engine.MaxClients ());
       return 2;
@@ -212,6 +212,9 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
       TerminateOnMalloc ();
 
    engine.Printf ("Connecting Bot...");
+
+   if (isConsoleCmd)
+      yb_quota.SetInt (yb_quota.GetInt () + 1);
 
    return 1;
 }
@@ -296,7 +299,7 @@ void BotManager::PeriodicThink (void)
    }
 }
 
-void BotManager::AddBot (const String &name, int difficulty, int personality, int team, int member)
+void BotManager::AddBot (const String &name, int difficulty, int personality, int team, int member, bool isConsoleCmd)
 {
    // this function putting bot creation process to queue to prevent engine crashes
 
@@ -308,12 +311,13 @@ void BotManager::AddBot (const String &name, int difficulty, int personality, in
    bot.personality = personality;
    bot.team = team;
    bot.member = member;
+   bot.console = isConsoleCmd;
 
    // put to queue
    m_creationTab.Push (bot);
 }
 
-void BotManager::AddBot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member)
+void BotManager::AddBot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member, bool isConsoleCmd)
 {
    // this function is same as the function above, but accept as parameters string instead of integers
 
@@ -325,6 +329,7 @@ void BotManager::AddBot (const String &name, const String &difficulty, const Str
    bot.team = (team.IsEmpty () || team == any) ? -1 : team.ToInt ();
    bot.member = (member.IsEmpty () || member == any) ? -1 : member.ToInt ();
    bot.personality = (personality.IsEmpty () || personality == any) ? -1 : personality.ToInt ();
+   bot.console = isConsoleCmd;
 
    m_creationTab.Push (bot);
 }
@@ -380,20 +385,20 @@ void BotManager::VerifyPlayersHasJoinedTeam (int &desiredCount)
    {
       Client &cl = g_clients[i];
 
-      if ((cl.flags & CF_USED) && cl.team != SPECTATOR && !IsValidBot (cl.ent))
+      if (!(cl.flags & CF_USED) || cl.team == SPECTATOR || IsValidBot (cl.ent))
+         continue;
+      
+      FOR_EACH_AE (m_trackedPlayers, it)
       {
-         FOR_EACH_AE (m_trackedPlayers, it)
-         {
-            if (cl.ent != m_trackedPlayers[it])
-               continue;
+         if (cl.ent != m_trackedPlayers[it])
+            continue;
 
-            m_balanceCount--;
-            desiredCount--;
+         m_balanceCount--;
+         desiredCount--;
 
-            m_trackedPlayers.RemoveAt (it);
+         m_trackedPlayers.RemoveAt (it);
 
-            break;
-         }
+         break;
       }
    }
 }
@@ -410,7 +415,7 @@ void BotManager::MaintainBotQuota (void)
    if (!m_creationTab.IsEmpty () && m_maintainTime < engine.Time ())
    {
       CreateQueue last = m_creationTab.Pop ();
-      int resultOfCall = CreateBot (last.name, last.difficulty, last.personality, last.team, last.member);
+      int resultOfCall = CreateBot (last.name, last.difficulty, last.personality, last.team, last.member, last.console);
 
       // check the result of creation
       if (resultOfCall == 0)
@@ -429,15 +434,20 @@ void BotManager::MaintainBotQuota (void)
    // now keep bot number up to date
    if (m_quotaMaintainTime < engine.Time ())
    {
-      // don't allow that quota is below zero
-      if (yb_quota.GetInt () < 0)
-         yb_quota.SetInt (0);
+      // keep the quota number in valid ranges
+      {
+         if (yb_quota.GetInt () < 0)
+            yb_quota.SetInt (0);
+
+         if (yb_quota.GetInt () > engine.MaxClients ())
+            yb_quota.SetInt (engine.MaxClients ());
+      }
 
       int numBots = GetBotsNum ();
-      int numHumans = GetHumansJoinedTeam ();
+      int numHumans = yb_autovacate_smart_kick.GetBool () ? GetHumansNum () : GetHumansJoinedTeam ();
       int desiredCount = yb_quota.GetInt ();
 
-      if (yb_join_after_player.GetInt () > 0 && !numHumans)
+      if (yb_join_after_player.GetBool () && !numHumans)
          desiredCount = 0;
 
       // quota mode
@@ -448,20 +458,17 @@ void BotManager::MaintainBotQuota (void)
       else if (mode == 'm') // match
          desiredCount = max (0, yb_quota.GetInt () * numHumans);
 
-      if (yb_autovacate.GetBool ())
-         desiredCount = min (desiredCount, engine.MaxClients () - (numHumans + 1));
-      else
-         desiredCount = min (desiredCount, engine.MaxClients () - numHumans);
-
+      desiredCount = min (desiredCount, engine.MaxClients () - (numHumans + (yb_autovacate.GetBool () ? 1 : 0)));
+ 
       if (yb_autovacate_smart_kick.GetBool () && numBots > 1 && desiredCount > 1)
          VerifyPlayersHasJoinedTeam (desiredCount);
 
       if (desiredCount > numBots)
-         AddRandom ();
+         AddRandom (false);
       else if (desiredCount < numBots)
-         RemoveRandom ();
+         RemoveRandom (true);
 
-      m_quotaMaintainTime = engine.Time () + 0.90f;
+      m_quotaMaintainTime = engine.Time () + 0.40f;
    }
 }
 
@@ -506,30 +513,17 @@ void BotManager::FillServer (int selection, int personality, int difficulty, int
    for (int i = 0; i <= toAdd; i++)
       AddBot ("", difficulty, personality, selection, -1);
 
-   yb_quota.SetInt (toAdd);
    engine.CenterPrintf ("Fill Server with %s bots...", &teamDesc[selection][0]);
 }
 
-void BotManager::RemoveAll (bool zeroQuota)
+void BotManager::RemoveAll (void)
 {
    // this function drops all bot clients from server (this function removes only yapb's)`q
 
-   if (zeroQuota)
-      engine.CenterPrintf ("Bots are removed from server.");
+   engine.CenterPrintf ("Bots are removed from server.");
 
-   for (int i = 0; i < engine.MaxClients (); i++)
-   {
-      if (m_bots[i] != NULL)  // is this slot used?
-         m_bots[i]->Kick ();
-   }
    m_creationTab.RemoveAll ();
-
-   // reset cvars
-   if (zeroQuota)
-   {
-      yb_quota.SetInt (0);
-      yb_autovacate.SetInt (0);
-   }
+   yb_quota.SetInt (0);
 }
 
 void BotManager::RemoveFromTeam (Team team, bool removeAll)
@@ -625,19 +619,18 @@ void BotManager::KillAll (int team)
    engine.CenterPrintf ("All Bots died !");
 }
 
-void BotManager::RemoveRandom (void)
+void BotManager::RemoveRandom (bool keepQuota)
 {
    // this function removes random bot from server (only yapb's)
 
    bool deadBotFound = false;
-
 
    // first try to kick the bot that is currently dead
    for (int i = 0; i < engine.MaxClients (); i++)
    {
       if (m_bots[i] != NULL && !m_bots[i]->m_notKilled)  // is this slot used?
       {
-         m_bots[i]->Kick ();
+         m_bots[i]->Kick (keepQuota);
          deadBotFound = true;
 
          break;
@@ -666,7 +659,7 @@ void BotManager::RemoveRandom (void)
    // if found some bots
    if (index != 0)
    {
-      m_bots[index]->Kick ();
+      m_bots[index]->Kick (keepQuota);
       return;
    }
 
@@ -675,7 +668,7 @@ void BotManager::RemoveRandom (void)
    {
       if (m_bots[i] != NULL)  // is this slot used?
       {
-         m_bots[i]->Kick ();
+         m_bots[i]->Kick (keepQuota);
          break;
       }
    }
@@ -887,6 +880,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
       engine.IssueCmd ("kick \"%s\"", STRING (bot->v.netname)); // kick the bot player if the server refused it
 
       bot->v.flags |= FL_KILLME;
+      return;
    }
 
    MDLL_ClientPutInServer (bot);
@@ -956,12 +950,6 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    // assign team and class
    m_wantedTeam = team;
    m_wantedClass = member;
-
-   int newBotsNum = bots.GetBotsNum () + 1;
-
-   // keep quota number up to date
-   if (newBotsNum < engine.MaxClients () && newBotsNum > yb_quota.GetInt ())
-      yb_quota.SetInt (newBotsNum);
 
    NewRound ();
 }
@@ -1246,12 +1234,7 @@ void Bot::NewRound (void)
    if (Random.Long (0, 100) < 50)
       ChatterMessage (Chatter_NewRound);
 
-   const float interval = (1.0f / 30.0f) * Random.Float (0.95f, 1.05f);
-
-   if (g_gameFlags & GAME_LEGACY)
-      m_thinkInterval = 0.0f;
-   else
-      m_thinkInterval = interval;
+   m_thinkInterval = (g_gameFlags & GAME_LEGACY) ? 0.0f : (1.0f / 30.0f) * Random.Float (0.95f, 1.05f);
 }
 
 void Bot::Kill (void)
@@ -1262,18 +1245,16 @@ void Bot::Kill (void)
    bots.TouchWithKillerEntity (this);
 }
 
-void Bot::Kick (void)
+void Bot::Kick (bool keepQuota)
 {
    // this function kick off one bot from the server.
 
    engine.IssueCmd ("kick \"%s\"", STRING (pev->netname));
    engine.CenterPrintf ("Bot '%s' kicked", STRING (pev->netname));
 
-   int newBotsNum = bots.GetBotsNum () - 1;
-
    // keep quota number up to date
-   if (newBotsNum < engine.MaxClients () && newBotsNum < yb_quota.GetInt ())
-      yb_quota.SetInt (newBotsNum);
+   if (!keepQuota)
+      yb_quota.SetInt (Clamp <int> (yb_quota.GetInt () - 1, 0, yb_quota.GetInt ()));
 }
 
 void Bot::StartGame (void)
