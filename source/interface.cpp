@@ -2962,7 +2962,7 @@ Library *LoadCSBinary (void)
    const char *modname = engine.GetModName ();
 
    if (!modname)
-      return nullptr;
+      return NULL;
 
 #if defined (PLATFORM_WIN32)
    const char *libs[] = { "mp.dll", "cs.dll" };
@@ -2988,7 +2988,7 @@ Library *LoadCSBinary (void)
          g_gameFlags |= GAME_CZERO;
 
          if (g_isMetamod)
-            return nullptr;
+            return NULL;
 
          return new Library (path);
       }
@@ -3000,7 +3000,7 @@ Library *LoadCSBinary (void)
          if (!game->IsLoaded ())
          {
             AddLogEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", libs[i], modname);
-            return nullptr;
+            return NULL;
          }
 
          // detect xash engine
@@ -3011,15 +3011,15 @@ Library *LoadCSBinary (void)
             if (g_isMetamod)
             {
                delete game;
-               return nullptr;
+               return NULL;
             }
             return game;
          }
 
          // detect if we're running modern game
-         auto entity = game->GetFuncAddr <EntityPtr_t> ("weapon_famas");
+         EntityPtr_t entity = game->GetFuncAddr <EntityPtr_t> ("weapon_famas");
 
-         if (entity != nullptr)
+         if (entity != NULL)
             g_gameFlags |= GAME_CSTRIKE16;
          else
             g_gameFlags |= GAME_LEGACY;
@@ -3027,12 +3027,12 @@ Library *LoadCSBinary (void)
          if (g_isMetamod)
          {
             delete game;
-            return nullptr;
+            return NULL;
          }
          return game;
       }
    }
-   return nullptr;
+   return NULL;
 }
 
 DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t *pGlobals)
@@ -3086,7 +3086,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 #else
    g_gameLib = LoadCSBinary ();
    {
-      if (g_gameLib == nullptr && !g_isMetamod)
+      if (g_gameLib == NULL && !g_isMetamod)
       {
          AddLogEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", engine.GetModName ());
          return;
