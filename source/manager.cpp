@@ -329,6 +329,7 @@ void BotManager::AddBot (const String &name, const String &difficulty, const Str
    bot.team = (team.IsEmpty () || team == any) ? -1 : team.ToInt ();
    bot.member = (member.IsEmpty () || member == any) ? -1 : member.ToInt ();
    bot.personality = (personality.IsEmpty () || personality == any) ? -1 : personality.ToInt ();
+   bot.console = isConsoleCmd;
 
    m_creationTab.Push (bot);
 }
