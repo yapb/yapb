@@ -4,7 +4,7 @@
 //
 // This software is licensed under the BSD-style license.
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     http://yapb.jeefo.net/license
+//     https://yapb.ru/license
 //
 
 #include <core.h>
@@ -968,7 +968,7 @@ void Bot::SwitchChatterIcon (bool show)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      Client &client = g_clients[i];
+      const Client &client = g_clients[i];
 
       if (!(client.flags & CF_USED) || (client.ent->v.flags & FL_FAKECLIENT) || client.team != m_team)
          continue;
@@ -1030,7 +1030,9 @@ void Bot::RadioMessage (int message)
       return;
 
    if (g_chatterFactory[message].IsEmpty () || (g_gameFlags & GAME_LEGACY) || yb_communication_type.GetInt () != 2)
-      g_radioInsteadVoice = true; // use radio instead voice
+      m_forceRadio = true; // use radio instead voice
+   else
+      m_forceRadio = false;
 
    m_radioSelect = message;
    PushMessageQueue (GSM_RADIO);
@@ -1241,7 +1243,7 @@ void Bot::CheckMessageQueue (void)
             }
          }
 
-         if ((m_radioSelect != Radio_ReportingIn && g_radioInsteadVoice) || yb_communication_type.GetInt () != 2 || g_chatterFactory[m_radioSelect].IsEmpty () || (g_gameFlags & GAME_LEGACY))
+         if ((m_radioSelect != Radio_ReportingIn && m_forceRadio) || yb_communication_type.GetInt () != 2 || g_chatterFactory[m_radioSelect].IsEmpty () || (g_gameFlags & GAME_LEGACY))
          {
             if (m_radioSelect < Radio_GoGoGo)
                engine.IssueBotCommand (GetEntity (), "radio1");
@@ -1262,7 +1264,7 @@ void Bot::CheckMessageQueue (void)
          else if (m_radioSelect != -1 && m_radioSelect != Radio_ReportingIn)
             InstantChatterMessage (m_radioSelect);
 
-         g_radioInsteadVoice = false; // reset radio to voice
+         m_forceRadio = false; // reset radio to voice
          g_lastRadioTime[m_team] = engine.Time (); // store last radio usage
       }
       else
@@ -1404,7 +1406,7 @@ void Bot::PurchaseWeapons (void)
    int *ptr = g_weaponPrefs[m_personality] + NUM_WEAPONS;
 
    bool isPistolMode = g_weaponSelect[25].teamStandard == -1 && g_weaponSelect[3].teamStandard == 2;
-   bool teamEcoValid = bots.EconomicsValid (m_team);
+   bool teamEcoValid = bots.IsEcoValid (m_team);
 
    // do this, because xash engine is not capable to run all the features goldsrc, but we have cs 1.6 on it, so buy table must be the same
    bool isOldGame = (g_gameFlags & GAME_LEGACY) && !(g_gameFlags & GAME_XASH);
@@ -2580,10 +2582,12 @@ void Bot::CheckRadioCommands (void)
                // take nearest enemy to ordering player
                for (int i = 0; i < engine.MaxClients (); i++)
                {
-                  if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team == m_team)
+                  const Client &client = g_clients[i];
+
+                  if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team == m_team)
                      continue;
 
-                  edict_t *enemy = g_clients[i].ent;
+                  edict_t *enemy = client.ent;
                   float curDist = (m_radioEntity->v.origin - enemy->v.origin).GetLengthSquared ();
 
                   if (curDist < nearestDistance)
@@ -2674,10 +2678,12 @@ void Bot::CheckRadioCommands (void)
                // take nearest enemy to ordering player
                for (int i = 0; i < engine.MaxClients (); i++)
                {
-                  if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team == m_team)
+                  const Client &client = g_clients[i];
+
+                  if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team == m_team)
                      continue;
 
-                  edict_t *enemy = g_clients[i].ent;
+                  edict_t *enemy = client.ent;
                   float dist = (m_radioEntity->v.origin - enemy->v.origin).GetLengthSquared ();
 
                   if (dist < nearestDistance)
@@ -2725,98 +2731,6 @@ void Bot::TryHeadTowardRadioEntity (void)
       DeleteSearchNodes ();
 
       PushTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, -1, 0.0f, true);
-   }
-}
-
-void Bot::SelectLeaderEachTeam (int team)
-{
-   if (g_mapType & MAP_AS)
-   {
-      if (m_isVIP && !g_leaderChoosen[CT])
-      {
-         // vip bot is the leader
-         m_isLeader = true;
-                               
-         if (Random.Long (1, 100) < 50)
-         {
-            RadioMessage (Radio_FollowMe);
-            m_campButtons = 0;
-         }
-         g_leaderChoosen[CT] = true;
-      }
-      else if (team == TERRORIST && !g_leaderChoosen[TERRORIST])
-      {
-         Bot *botLeader = bots.GetHighestFragsBot(team);
-         
-         if (botLeader != NULL && botLeader->m_notKilled)
-         {
-            botLeader->m_isLeader = true;
-
-            if (Random.Long (1, 100) < 45)
-               botLeader->RadioMessage (Radio_FollowMe);
-         }
-         g_leaderChoosen[TERRORIST] = true;
-      }
-   }
-   else if (g_mapType & MAP_DE)
-   {
-      if (team == TERRORIST && !g_leaderChoosen[TERRORIST])
-      {
-         if (m_hasC4)
-         {
-            // bot carrying the bomb is the leader
-            m_isLeader = true;
-
-            // terrorist carrying a bomb needs to have some company
-            if (Random.Long (1, 100) < 80)
-            {
-               if (yb_communication_type.GetInt () == 2)
-                  ChatterMessage (Chatter_GoingToPlantBomb);
-               else
-                  ChatterMessage (Radio_FollowMe);
-
-               m_campButtons = 0;
-            }
-            g_leaderChoosen[TERRORIST] = true;
-         }
-      }
-      else if (!g_leaderChoosen[CT])
-      {
-         Bot *botLeader = bots.GetHighestFragsBot(team);
-
-         if (botLeader != NULL)               
-         {
-            botLeader->m_isLeader = true;
-
-            if (Random.Long (1, 100) < 30)
-               botLeader->RadioMessage (Radio_FollowMe);
-         }     
-         g_leaderChoosen[CT] = true;
-      }
-   }
-   else if (g_mapType & (MAP_ES | MAP_KA | MAP_FY))
-   {
-      Bot *botLeader = bots.GetHighestFragsBot (team);
-
-      if (botLeader != NULL)
-      {
-         botLeader->m_isLeader = true;
-
-         if (Random.Long (1, 100) < 30)
-            botLeader->RadioMessage (Radio_FollowMe);
-      }
-   }
-   else  
-   {
-      Bot *botLeader = bots.GetHighestFragsBot(team);
-
-      if (botLeader != NULL)
-      {
-         botLeader->m_isLeader = true;
-
-         if (Random.Long (1, 100) < (team == TERRORIST ? 30 : 40))
-            botLeader->RadioMessage (Radio_FollowMe);
-      }
    }
 }
 
@@ -4784,9 +4698,6 @@ void Bot::CheckSpawnTimeConditions (void)
             break;
          }
       }
-
-      // select a leader bot for this team
-      SelectLeaderEachTeam (m_team);
       m_checkWeaponSwitch = false;
    }
 }
@@ -5380,7 +5291,7 @@ void Bot::CollectGoalExperience (int damage, int team)
    // gets called each time a bot gets damaged by some enemy. tries to achieve a statistic about most/less dangerous
    // waypoints for a destination goal used for pathfinding
 
-   if (g_numWaypoints < 1 || g_waypointsChanged || m_chosenGoalIndex < 0 || m_prevGoalIndex < 0)
+   if (g_numWaypoints < 1 || waypoints.HasChanged () || m_chosenGoalIndex < 0 || m_prevGoalIndex < 0)
       return;
 
    // only rate goal waypoint if bot died because of the damage
@@ -5919,15 +5830,17 @@ void Bot::ReactOnSound (void)
    // loop through all enemy clients to check for hearable stuff
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].ent == GetEntity () || g_clients[i].team == m_team || g_clients[i].timeSoundLasting < engine.Time ())
+      const Client &client = g_clients[i];
+
+      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.ent == GetEntity () || client.team == m_team || client.timeSoundLasting < engine.Time ())
          continue;
 
-      float distance = (g_clients[i].soundPosition - pev->origin).GetLength ();
+      float distance = (client.soundPosition - pev->origin).GetLength ();
      
-      if (distance > g_clients[i].hearingDistance)
+      if (distance > client.hearingDistance)
          continue;
 
-      if (!ENGINE_CHECK_VISIBILITY (g_clients[i].ent, pas))
+      if (!ENGINE_CHECK_VISIBILITY (client.ent, pas))
          continue;
 
       if (distance < minDistance)
@@ -6070,13 +5983,13 @@ bool Bot::IsBombDefusing (const Vector &bombOrigin)
          defusingInProgress = true;
          break;
       }
-      Client *client = &g_clients[i];
+      const Client &client = g_clients[i];
 
       // take in account peoples too
-      if (defusingInProgress || !(client->flags & CF_USED) || !(client->flags & CF_ALIVE) || client->team != m_team || IsValidBot (g_clients[i].ent))
+      if (defusingInProgress || !(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || IsValidBot (client.ent))
          continue;
 
-      if ((client->ent->v.origin - bombOrigin).GetLength () < 140.0f && ((client->ent->v.button | client->ent->v.oldbuttons) & IN_USE))
+      if ((client.ent->v.origin - bombOrigin).GetLength () < 140.0f && ((client.ent->v.button | client.ent->v.oldbuttons) & IN_USE))
       {
          defusingInProgress = true;
          break;

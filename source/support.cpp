@@ -250,7 +250,7 @@ void UpdateGlobalExperienceData (void)
    // this function called after each end of the round to update knowledge about most dangerous waypoints for each team.
 
    // no waypoints, no experience used or waypoints edited or being edited?
-   if (g_numWaypoints < 1 || g_waypointsChanged)
+   if (g_numWaypoints < 1 || waypoints.HasChanged ())
       return; // no action
 
    unsigned short maxDamage; // maximum damage
@@ -371,10 +371,14 @@ void RoundInit (void)
    // this is called at the start of each round
 
    g_roundEnded = false;
+   g_canSayBombPlanted = true;
 
    // check team economics
-   bots.CheckTeamEconomics (TERRORIST);
-   bots.CheckTeamEconomics (CT);
+   for (int team = TERRORIST; team < SPECTATOR; team++)
+   {
+      bots.CheckTeamEconomics (team);
+      bots.SelectLeaderEachTeam (team, true);
+   }
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
@@ -389,9 +393,6 @@ void RoundInit (void)
    g_bombSayString = false;
    g_timeBombPlanted = 0.0f;
    g_timeNextBombUpdate = 0.0f;
-
-   g_leaderChoosen[CT] = false;
-   g_leaderChoosen[TERRORIST] =  false;
 
    g_lastRadioTime[0] = 0.0f;
    g_lastRadioTime[1] = 0.0f;
