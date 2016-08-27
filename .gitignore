@@ -61,3 +61,5 @@ project/yapb.vcxproj.user
 *.enc
 *.xml
 /project/#Verone/incremental_index
+*.vsp
+*.lastcodeanalysissucceeded
