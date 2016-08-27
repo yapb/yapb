@@ -4018,9 +4018,3 @@ public:
 // Squared Length
 //
 #define GET_SQUARE(in) (in * in)
-
-
-//
-// Wrapper for singleton access
-//
-#define SA(obj) obj::GetReference ()

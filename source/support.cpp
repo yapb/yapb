@@ -501,6 +501,75 @@ bool OpenConfig (const char *fileName, const char *errorIfNotExists, MemoryFile 
    return true;
 }
 
+void CheckWelcomeMessage (void)
+{
+   // the purpose of this function, is  to send quick welcome message, to the listenserver entity.
+
+   static bool alreadyReceived = false;
+   static float receiveTime = 0.0f;
+
+   if (alreadyReceived)
+      return;
+
+   Array <String> sentences;
+
+   if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH)))
+   {
+      // add default messages
+      sentences.Push ("hello user,communication is acquired");
+      sentences.Push ("your presence is acknowledged");
+      sentences.Push ("high man, your in command now");
+      sentences.Push ("blast your hostile for good");
+      sentences.Push ("high man, kill some idiot here");
+      sentences.Push ("is there a doctor in the area");
+      sentences.Push ("warning, experimental materials detected");
+      sentences.Push ("high amigo, shoot some but");
+      sentences.Push ("attention, hours of work software, detected");
+      sentences.Push ("time for some bad ass explosion");
+      sentences.Push ("bad ass son of a breach device activated");
+      sentences.Push ("high, do not question this great service");
+      sentences.Push ("engine is operative, hello and goodbye");
+      sentences.Push ("high amigo, your administration has been great last day");
+      sentences.Push ("attention, expect experimental armed hostile presence");
+      sentences.Push ("warning, medical attention required");
+   }
+
+   if (IsAlive (g_hostEntity) && !alreadyReceived && receiveTime < 1.0 && (g_numWaypoints > 0 ? g_isCommencing : true))
+      receiveTime = engine.Time () + 4.0f; // receive welcome message in four seconds after game has commencing
+
+   if (receiveTime > 0.0f && receiveTime < engine.Time () && !alreadyReceived && (g_numWaypoints > 0 ? g_isCommencing : true))
+   {
+      if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH)))
+         engine.IssueCmd ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));
+
+      engine.ChatPrintf ("----- %s v%s (Build: %u), {%s}, (c) 2016, by %s (%s)-----", PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_DATE, PRODUCT_AUTHOR, PRODUCT_URL);
+      
+      MESSAGE_BEGIN (MSG_ONE, SVC_TEMPENTITY, NULL, g_hostEntity);
+      WRITE_BYTE (TE_TEXTMESSAGE);
+      WRITE_BYTE (1);
+      WRITE_SHORT (FixedSigned16 (-1, 1 << 13));
+      WRITE_SHORT (FixedSigned16 (-1, 1 << 13));
+      WRITE_BYTE (2);
+      WRITE_BYTE (Random.Long (33, 255));
+      WRITE_BYTE (Random.Long (33, 255));
+      WRITE_BYTE (Random.Long (33, 255));
+      WRITE_BYTE (0);
+      WRITE_BYTE (Random.Long (230, 255));
+      WRITE_BYTE (Random.Long (230, 255));
+      WRITE_BYTE (Random.Long (230, 255));
+      WRITE_BYTE (200);
+      WRITE_SHORT (FixedUnsigned16 (0.0078125f, 1 << 8));
+      WRITE_SHORT (FixedUnsigned16 (2.0f, 1 << 8));
+      WRITE_SHORT (FixedUnsigned16 (6.0f, 1 << 8));
+      WRITE_SHORT (FixedUnsigned16 (0.1f, 1 << 8));
+      WRITE_STRING (FormatBuffer ("\nServer is running YaPB v%s (Build: %u)\nDeveloped by %s\n\n%s", PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_AUTHOR, waypoints.GetInfo ()));
+      MESSAGE_END ();
+
+      receiveTime = 0.0;
+      alreadyReceived = true;
+   }
+}
+
 
 void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
 {

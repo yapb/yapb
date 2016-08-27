@@ -17,6 +17,7 @@ extern bool g_waypointOn;
 extern bool g_autoWaypoint;
 extern bool g_botsCanPause; 
 extern bool g_editNoclip;
+extern bool g_isCommencing;
 
 extern float g_autoPathDistance;
 extern float g_timeBombPlanted;
@@ -72,36 +73,4 @@ static inline bool IsNullString (const char *input)
       return true;
 
    return *input == '\0';
-}
-
-//
-// simple class to handle welcome messages
-//
-class WelcomeMessage : public Singleton <WelcomeMessage>
-{
-private:
-   bool m_gameCommenced;
-   bool m_msgReceived;
-
-   float m_receiveTimer;
-
-public:
-   WelcomeMessage (void) : m_gameCommenced (false), m_msgReceived (false), m_receiveTimer (0.0f) { }
-
-public:
-   void SetGameCommenceFlag (bool isCommenced);
-   void VerifyMessageSent (void);
-};
-]=.
-
-
-inline void WelcomeMessage::SetGameCommenceFlag (bool isCommenced)
-{
-   m_gameCommenced = isCommenced;
-
-   if (!isCommenced)
-   {
-      m_receiveTimer = 0.0f;
-      m_msgReceived = false;
-   }
 }

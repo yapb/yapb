@@ -947,8 +947,8 @@ void Engine::ProcessMessageCapture (void *ptr)
          {
             g_roundEnded = true;
 
-            if (strcmp (strVal, "#Game_Commencing") == 0)
-               SA (WelcomeMessage).SetGameCommenceFlag (true);
+            if (FStrEq (strVal, "#Game_Commencing"))
+               g_isCommencing = true;
 
             if (FStrEq (strVal, "#CTs_Win"))
             {
