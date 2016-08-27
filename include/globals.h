@@ -13,11 +13,15 @@ extern bool g_canSayBombPlanted;
 extern bool g_bombPlanted;
 extern bool g_bombSayString; 
 extern bool g_roundEnded;
+extern bool g_radioInsteadVoice;
 extern bool g_waypointOn;
+extern bool g_waypointsChanged;
 extern bool g_autoWaypoint;
 extern bool g_botsCanPause; 
 extern bool g_editNoclip;
+extern bool g_isMetamod;
 extern bool g_isCommencing;
+extern bool g_leaderChoosen[2];
 
 extern float g_autoPathDistance;
 extern float g_timeBombPlanted;
@@ -25,6 +29,7 @@ extern float g_timeNextBombUpdate;
 extern float g_lastChatTime;
 extern float g_timeRoundEnd;
 extern float g_timeRoundMid;
+extern float g_timeNextBombUpdate;
 extern float g_timeRoundStart;
 extern float g_timePerSecondUpdate;
 extern float g_lastRadioTime[2];
@@ -66,6 +71,10 @@ extern edict_t *g_hostEntity;
 extern Library *g_gameLib;
 
 extern gamefuncs_t g_functionTable;
+extern EntityAPI_t g_entityAPI;
+extern FuncPointers_t g_funcPointers;
+extern NewEntityAPI_t g_getNewEntityAPI;
+extern BlendAPI_t g_serverBlendingAPI;
 
 static inline bool IsNullString (const char *input)
 {

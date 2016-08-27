@@ -166,7 +166,7 @@ void Waypoint::Add (int flags, const Vector &waypointOrigin)
    if (bots.GetBotsNum () > 0)
       bots.RemoveAll ();
 
-   m_waypointsChanged = true;
+   g_waypointsChanged = true;
 
    switch (flags)
    {
@@ -443,7 +443,7 @@ void Waypoint::Add (int flags, const Vector &waypointOrigin)
 
 void Waypoint::Delete (void)
 {
-   m_waypointsChanged = true;
+   g_waypointsChanged = true;
 
    if (g_numWaypoints < 1)
       return;
@@ -634,8 +634,9 @@ void Waypoint::CreatePath (char dir)
    }
 
    engine.EmitSound (g_hostEntity, "common/wpn_hudon.wav");
-   m_waypointsChanged = true;
+   g_waypointsChanged = true;
 }
+
 
 void Waypoint::DeletePath (void)
 {
@@ -666,7 +667,7 @@ void Waypoint::DeletePath (void)
    {
       if (m_paths[nodeFrom]->index[index] == nodeTo)
       {
-         m_waypointsChanged = true;
+         g_waypointsChanged = true;
 
          m_paths[nodeFrom]->index[index] = -1; // unassigns this path
          m_paths[nodeFrom]->distances[index] = 0;
@@ -687,7 +688,7 @@ void Waypoint::DeletePath (void)
    {
       if (m_paths[nodeFrom]->index[index] == nodeTo)
       {
-         m_waypointsChanged = true;
+         g_waypointsChanged = true;
 
          m_paths[nodeFrom]->index[index] = -1; // unassign this path
          m_paths[nodeFrom]->distances[index] = 0;
@@ -828,7 +829,7 @@ void Waypoint::SaveExperienceTab (void)
 {
    ExtensionHeader header;
 
-   if (g_numWaypoints < 1 || m_waypointsChanged)
+   if ((g_numWaypoints <= 0) || g_waypointsChanged)
       return;
 
    memset (header.header, 0, sizeof (header.header));
@@ -1208,7 +1209,7 @@ bool Waypoint::Load (void)
    InitPathMatrix ();
    InitTypes ();
 
-   m_waypointsChanged = false;
+   g_waypointsChanged = false;
    g_highestKills = 1;
 
    m_pathDisplayTime = 0.0f;
@@ -1750,7 +1751,7 @@ void Waypoint::Think (void)
       }
 
       // draw the danger directions
-      if (!m_waypointsChanged)
+      if (!g_waypointsChanged)
       {
          if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team0DangerIndex != -1 && engine.GetTeam (g_hostEntity) == TERRORIST)
             engine.DrawLine (g_hostEntity, path->origin, m_paths[(g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team0DangerIndex]->origin, 15, 0, 255, 0, 0, 200, 0, 10, DRAW_ARROW); // draw a red arrow to this index's danger point
@@ -1769,7 +1770,7 @@ void Waypoint::Think (void)
 
 
       // if waypoint is not changed display experience also
-      if (!m_waypointsChanged)
+      if (!g_waypointsChanged)
       {
          int dangerIndexCT = (g_experienceData + nearestIndex * g_numWaypoints + nearestIndex)->team1DangerIndex;
          int dangerIndexT = (g_experienceData + nearestIndex * g_numWaypoints + nearestIndex)->team0DangerIndex;
@@ -2477,7 +2478,6 @@ Waypoint::Waypoint (void)
    m_endJumpPoint = false;
    m_redoneVisibility = false;
    m_learnJumpWaypoint = false;
-   m_waypointsChanged = false;
    m_timeJumpStarted = 0.0f;
 
    m_lastJumpWaypoint = -1;

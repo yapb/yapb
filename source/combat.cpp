@@ -22,12 +22,10 @@ int Bot::GetNearbyFriendsNearPosition(const Vector &origin, float radius)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      const Client &client = g_clients[i];
-
-      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == GetEntity ())
+      if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != m_team || g_clients[i].ent == GetEntity ())
          continue;
 
-      if ((client.origin - origin).GetLengthSquared () < GET_SQUARE (radius))
+      if ((g_clients[i].origin - origin).GetLengthSquared () < GET_SQUARE (radius))
          count++;
    }
    return count;
@@ -39,12 +37,10 @@ int Bot::GetNearbyEnemiesNearPosition(const Vector &origin, float radius)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      const Client &client = g_clients[i];
-
-      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team == m_team)
+      if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team == m_team)
          continue;
 
-      if ((client.origin - origin).GetLengthSquared () < GET_SQUARE (radius))
+      if ((g_clients[i].origin - origin).GetLengthSquared () < GET_SQUARE (radius))
          count++;
    }
    return count;
@@ -250,12 +246,10 @@ bool Bot::LookupEnemy (void)
       // search the world for players...
       for (int i = 0; i < engine.MaxClients (); i++)
       {
-         const Client &client = g_clients[i];
-
-         if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team == m_team || client.ent == GetEntity ())
+         if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team == m_team || g_clients[i].ent == GetEntity ())
             continue;
 
-         player = client.ent;
+         player = g_clients[i].ent;
 
          // let the engine check if this player is potentially visible
          if (!ENGINE_CHECK_VISIBILITY (player, pvs))
@@ -346,20 +340,18 @@ bool Bot::LookupEnemy (void)
          // now alarm all teammates who see this bot & don't have an actual enemy of the bots enemy should simulate human players seeing a teammate firing
          for (int j = 0; j < engine.MaxClients (); j++)
          {
-            const Client &client = g_clients[j];
-
-            if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == GetEntity ())
+            if (!(g_clients[j].flags & CF_USED) || !(g_clients[j].flags & CF_ALIVE) || g_clients[j].team != m_team || g_clients[j].ent == GetEntity ())
                continue;
 
-            Bot *other = bots.GetBot (client.ent);
+            Bot *friendBot = bots.GetBot (g_clients[j].ent);
 
-            if (other != NULL && other->m_seeEnemyTime + 2.0f < engine.Time () && engine.IsNullEntity (other->m_lastEnemy) && IsVisible (pev->origin, other->GetEntity ()) && other->IsInViewCone (pev->origin))
+            if (friendBot != NULL && friendBot->m_seeEnemyTime + 2.0f < engine.Time () && engine.IsNullEntity (friendBot->m_lastEnemy) && IsVisible (pev->origin, friendBot->GetEntity ()) && friendBot->IsInViewCone (pev->origin))
             {
-               other->m_lastEnemy = newEnemy;
-               other->m_lastEnemyOrigin = m_lastEnemyOrigin;
-               other->m_seeEnemyTime = engine.Time ();
-               other->m_states |= (STATE_SUSPECT_ENEMY | STATE_HEARING_ENEMY);
-               other->m_aimFlags |= AIM_LAST_ENEMY;
+               friendBot->m_lastEnemy = newEnemy;
+               friendBot->m_lastEnemyOrigin = m_lastEnemyOrigin;
+               friendBot->m_seeEnemyTime = engine.Time ();
+               friendBot->m_states |= (STATE_SUSPECT_ENEMY | STATE_HEARING_ENEMY);
+               friendBot->m_aimFlags |= AIM_LAST_ENEMY;
             }
          }
          return true;
@@ -1437,24 +1429,22 @@ void Bot::SelectWeaponbyNumber (int num)
 void Bot::AttachToUser (void)
 {
    // this function forces bot to follow user
-   Array <edict_t *> users;
+   Array <edict_t *> foundUsers;
 
    // search friends near us
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      const Client &client = g_clients[i];
-
-      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == GetEntity ())
+      if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != m_team || g_clients[i].ent == GetEntity ())
          continue;
 
-      if (EntityIsVisible (client.origin) && !IsValidBot (client.ent))
-         users.Push (client.ent);
+      if (EntityIsVisible (g_clients[i].origin) && !IsValidBot (g_clients[i].ent))
+         foundUsers.Push (g_clients[i].ent);
    }
 
-   if (users.IsEmpty ())
+   if (foundUsers.IsEmpty ())
       return;
 
-   m_targetEntity = users.GetRandomElement ();
+   m_targetEntity = foundUsers.GetRandomElement ();
 
    ChatterMessage (Chatter_LeadOnSir);
    PushTask (TASK_FOLLOWUSER, TASKPRI_FOLLOWUSER, -1, 0.0f, true);

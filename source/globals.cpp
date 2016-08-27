@@ -9,41 +9,20 @@
 
 #include <core.h>
 
-class Chat
-{
-public:
-};
-
-class Globals
-{
-public:
-};
-
-class Practice
-{
-public:
-};
-
-class GameState
-{
-public:
-};
-
-class MenuManager
-{
-public:
-};
-
 bool g_canSayBombPlanted = true;
+bool g_isMetamod = false;
+bool g_radioInsteadVoice = false;
 bool g_roundEnded = true;
 bool g_botsCanPause = false;
 bool g_bombPlanted = false;
 bool g_bombSayString = false;
 bool g_isCommencing = false;
-
 bool g_editNoclip = false;
 bool g_waypointOn = false;
+bool g_waypointsChanged = true;
 bool g_autoWaypoint = false;
+bool g_bLearnJumpWaypoint = false;
+bool g_leaderChoosen[2] = {false, false};
 
 float g_lastChatTime = 0.0f;
 float g_timeRoundStart = 0.0f;
@@ -78,6 +57,10 @@ gamedll_funcs_t *gpGamedllFuncs = NULL;
 mutil_funcs_t *gpMetaUtilFuncs = NULL;
 
 gamefuncs_t g_functionTable;
+EntityAPI_t g_entityAPI = NULL;
+NewEntityAPI_t g_getNewEntityAPI = NULL;
+BlendAPI_t g_serverBlendingAPI = NULL;
+FuncPointers_t g_funcPointers = NULL;
 
 enginefuncs_t g_engfuncs;
 Client g_clients[MAX_ENGINE_PLAYERS];

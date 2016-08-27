@@ -63,8 +63,7 @@ enum GameFlags
    GAME_CZERO = (1 << 2), // Counter-Strike: Condition Zero
    GAME_LEGACY = (1 << 3), // Counter-Strike 1.3-1.5 with/without Steam
    GAME_MOBILITY = (1 << 4), // additional flag that bot is running on android (additional flag)
-   GAME_OFFICIAL_CSBOT = (1 << 5), // additional flag that indicates official cs bots are in game
-   GAME_METAMOD = (1 << 6)
+   GAME_OFFICIAL_CSBOT = (1 << 5) // additional flag that indicates official cs bots are in game
 };
 
 // log levels
@@ -124,14 +123,6 @@ enum ClientFlags
    CF_USED  = (1 << 0),
    CF_ALIVE = (1 << 1),
    CF_ADMIN = (1 << 2)
-};
-
-// bot create status
-enum BotCreationResult
-{
-   BOT_RESULT_CREATED,
-   BOT_RESULT_MAX_PLAYERS_REACHED,
-   BOT_RESULT_NAV_ERROR
 };
 
 // radio messages
@@ -811,7 +802,6 @@ private:
    bool m_moveToGoal; // bot currently moving to goal??
    bool m_isStuck; // bot is stuck
    bool m_isReloading; // bot is reloading a gun
-   bool m_forceRadio; // should bot use radio anyway?
 
    int m_reloadState; // current reload state
    int m_voicePitch; // bot voice pitch
@@ -998,6 +988,7 @@ private:
    int ChangeWptIndex (int waypointIndex);
    bool IsDeadlyDrop (const Vector &to);
    bool OutOfBombTimer (void);
+   void SelectLeaderEachTeam (int team);
 
    Vector CheckThrow (const Vector &start, const Vector &stop);
    Vector CheckToss (const Vector &start, const Vector &stop);
@@ -1248,9 +1239,8 @@ private:
    int m_lastWinner; // the team who won previous round
    int m_balanceCount; // limit of bots to add
 
-   bool m_leaderChoosen[SPECTATOR]; // is team leader choose theese round
-   bool m_economicsGood[SPECTATOR]; // is team able to buy anything
-   bool m_deathMsgSent; // for fake ping
+   bool m_economicsGood[2]; // is team able to buy anything
+   bool m_deathMsgSent; // for fakeping
 
    Array <edict_t *> m_activeGrenades; // holds currently active grenades in the map
    Array <edict_t *> m_trackedPlayers; // holds array of connected players, and waits the player joins team
@@ -1258,13 +1248,13 @@ private:
    edict_t *m_killerEntity; // killer entity for bots
 
 protected:
-   BotCreationResult CreateBot (const String &name, int difficulty, int personality, int team, int member, bool isConsoleCmd);
+   int CreateBot (const String &name, int difficulty, int personality, int team, int member, bool isConsoleCmd);
 
 public:
    BotManager (void);
   ~BotManager (void);
 
-   bool IsEcoValid (int team) { return m_economicsGood[team]; }
+   bool EconomicsValid (int team) { return m_economicsGood[team]; }
 
    int GetLastWinner (void) const { return m_lastWinner; }
    void SetLastWinner (int winner) { m_lastWinner = winner; }
@@ -1306,7 +1296,6 @@ public:
 
    void AddPlayerToCheckTeamQueue (edict_t *ent);
    void VerifyPlayersHasJoinedTeam (int &desiredCount);
-   void SelectLeaderEachTeam (int team, bool reset);
 
    void ListBots (void);
    void SetWeaponMode (int selection);
@@ -1333,6 +1322,7 @@ public:
    void SendDeathMsgFix (void);
 };
 
+
 // waypoint operation class
 class Waypoint : public Singleton <Waypoint>
 {
@@ -1345,7 +1335,6 @@ private:
    bool m_isOnLadder;
    bool m_endJumpPoint;
    bool m_learnJumpWaypoint;
-   bool m_waypointsChanged;
    float m_timeJumpStarted;
 
    Vector m_learnVelocity;
@@ -1432,9 +1421,7 @@ public:
    int GetPathDistance (int srcIndex, int destIndex);
    Path *GetPath (int id);
    const char *GetWaypointInfo (int id);
-
    char *GetInfo (void) { return m_infoBuffer; }
-   bool HasChanged (void) { return m_waypointsChanged;  }
 
    void SetFindIndex (int index);
    void SetLearnJumpWaypoint (void);

@@ -915,7 +915,7 @@ void CommandHandler_NotMM (void)
    // the stdio command-line parsing in C when you write "long main (long argc, char **argv)".
    // this function is handler for non-metamod launch of yapb, it's just print error message.
 
-   
+   engine.Printf ("You're launched standalone version of yapb. Metamod is not installed or not enabled!");
 }
 
 void GameDLLInit (void)
@@ -928,6 +928,8 @@ void GameDLLInit (void)
    // server is enabled. Here is a good place to do our own game session initialization, and
    // to register by the engine side the server commands we need to administrate our bots.
 
+
+
    // register server command(s)
    engine.RegisterCmd ("yapb", CommandHandler);   
    engine.RegisterCmd ("yb", CommandHandler);
@@ -939,15 +941,10 @@ void GameDLLInit (void)
    yb_version.SetString (FormatBuffer ("%d.%d.%d.%u", PRODUCT_VERSION_DWORD_INTERNAL, GenerateBuildNumber ()));
 
    // register fake metamod command handler if we not! under mm
-   if (!(g_gameFlags & GAME_METAMOD))
-   {
-      engine.RegisterCmd ("meta", [] (void)
-      {
-         engine.Printf ("You're launched standalone version of yapb. Metamod is not installed or not enabled!");
-      });
-   }
+   if (!g_isMetamod)
+      engine.RegisterCmd ("meta", CommandHandler_NotMM);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    (*g_functionTable.pfnGameInit) ();
@@ -973,7 +970,7 @@ void Touch (edict_t *pentTouched, edict_t *pentOther)
       if (bot != NULL)
          bot->VerifyBreakable (pentTouched);
    }
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    (*g_functionTable.pfnTouch) (pentTouched, pentOther);
@@ -1016,7 +1013,7 @@ int Spawn (edict_t *ent)
       {
          REMOVE_ENTITY (ent);
 
-         if (g_gameFlags & GAME_METAMOD)
+         if (g_isMetamod)
             RETURN_META_VALUE (MRES_SUPERCEDE, 0);
 
          return 0;
@@ -1067,7 +1064,7 @@ int Spawn (edict_t *ent)
    else if (strncmp (engine.GetMapName (), "ka_", 3) == 0) // knife arena map
       g_mapType |= MAP_KA;
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META_VALUE (MRES_IGNORED, 0);
 
    int result = (*g_functionTable.pfnSpawn) (ent); // get result
@@ -1085,7 +1082,7 @@ void UpdateClientData (const struct edict_s *ent, int sendweapons, struct client
    if (!(g_gameFlags & GAME_LEGACY) && yb_latency_display.GetInt () == 2)
       bots.SendPingDataOffsets (const_cast <edict_t *> (ent));
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    (*g_functionTable.pfnUpdateClientData) (ent, sendweapons, cd);
@@ -1119,7 +1116,7 @@ int ClientConnect (edict_t *ent, const char *name, const char *addr, char reject
 
    bots.AdjustQuota (true, ent);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META_VALUE (MRES_IGNORED, 0);
 
    return (*g_functionTable.pfnClientConnect) (ent, name, addr, rejectReason);
@@ -1158,7 +1155,7 @@ void ClientDisconnect (edict_t *ent)
       }
    }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    (*g_functionTable.pfnClientDisconnect) (ent);
@@ -1187,7 +1184,7 @@ void ClientUserInfoChanged (edict_t *ent, char *infobuffer)
       }
    }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    (*g_functionTable.pfnClientUserInfoChanged) (ent, infobuffer);
@@ -1230,7 +1227,7 @@ void ClientCommand (edict_t *ent)
             engine.ClientPrintf (ent, "Command %s, can only be executed from server console.", arg1);
             break;
          }
-         if (g_gameFlags & GAME_METAMOD)
+         if (g_isMetamod)
             RETURN_META (MRES_SUPERCEDE);
 
          return;
@@ -1268,7 +1265,7 @@ void ClientCommand (edict_t *ent)
                DisplayMenuToClient (ent, NULL);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1299,7 +1296,7 @@ void ClientCommand (edict_t *ent)
                waypoints.ToggleFlags (FLAG_SNIPER);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1360,7 +1357,7 @@ void ClientCommand (edict_t *ent)
                DisplayMenuToClient (ent, NULL);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1456,7 +1453,7 @@ void ClientCommand (edict_t *ent)
                DisplayMenuToClient (ent, &g_menus[9]);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1472,7 +1469,7 @@ void ClientCommand (edict_t *ent)
             if ((selection >= 1) && (selection <= 9))
                waypoints.SetRadius (radiusValue[selection - 1]);
 
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1506,7 +1503,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             }
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1541,7 +1538,7 @@ void ClientCommand (edict_t *ent)
                DisplayMenuToClient (ent, NULL);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1584,7 +1581,7 @@ void ClientCommand (edict_t *ent)
                DisplayMenuToClient (ent, NULL);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1630,7 +1627,7 @@ void ClientCommand (edict_t *ent)
                break;
             }
 
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1649,7 +1646,7 @@ void ClientCommand (edict_t *ent)
             else
                engine.CenterPrintf ("AutoPath maximum distance set to %f", g_autoPathDistance);
 
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1677,7 +1674,7 @@ void ClientCommand (edict_t *ent)
                break;
             }
 
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1718,7 +1715,7 @@ void ClientCommand (edict_t *ent)
             if (client->menu == &g_menus[4])
                DisplayMenuToClient (ent, &g_menus[4]);
 
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1744,7 +1741,7 @@ void ClientCommand (edict_t *ent)
                DisplayMenuToClient (ent, NULL);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1765,7 +1762,7 @@ void ClientCommand (edict_t *ent)
                DisplayMenuToClient (ent, NULL);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1798,7 +1795,7 @@ void ClientCommand (edict_t *ent)
                DisplayMenuToClient (ent, NULL);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1821,7 +1818,7 @@ void ClientCommand (edict_t *ent)
                DisplayMenuToClient (ent, NULL);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1845,7 +1842,7 @@ void ClientCommand (edict_t *ent)
                DisplayMenuToClient (ent, NULL);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1870,7 +1867,7 @@ void ClientCommand (edict_t *ent)
                DisplayMenuToClient (ent, NULL);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1900,7 +1897,7 @@ void ClientCommand (edict_t *ent)
                DisplayMenuToClient (ent, &g_menus[2]);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1930,7 +1927,7 @@ void ClientCommand (edict_t *ent)
                bots.RemoveMenu (ent, 1);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1960,7 +1957,7 @@ void ClientCommand (edict_t *ent)
                bots.RemoveMenu (ent, 2);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -1986,7 +1983,7 @@ void ClientCommand (edict_t *ent)
                bots.RemoveMenu (ent, 3);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
@@ -2063,7 +2060,7 @@ void ClientCommand (edict_t *ent)
    else if (strncmp (command, "radio", 5) == 0)
       g_radioSelect[clientIndex] = atoi (&command[5]);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    (*g_functionTable.pfnClientCommand) (ent);
@@ -2098,7 +2095,7 @@ void ServerActivate (edict_t *pentEdictList, int edictCount, int clientMax)
    }
    bots.InitQuota ();
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    (*g_functionTable.pfnServerActivate) (pentEdictList, edictCount, clientMax);
@@ -2127,7 +2124,7 @@ void ServerDeactivate (void)
 
    FreeLibraryMemory ();
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    (*g_functionTable.pfnServerDeactivate) ();
@@ -2220,11 +2217,7 @@ void StartFrame (void)
       }
       bots.CalculatePingOffsets ();
 
-      // select the leader each team
-      for (int team = TERRORIST; team < SPECTATOR; team++)
-         bots.SelectLeaderEachTeam (team, false);
-
-      if (g_gameFlags & GAME_METAMOD)
+      if (g_isMetamod)
       {
          static cvar_t *csdm_active;
          static cvar_t *mp_freeforall;
@@ -2247,7 +2240,7 @@ void StartFrame (void)
    // keep bot number up to date
    bots.MaintainBotQuota ();
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    (*g_functionTable.pfnStartFrame) ();
@@ -2317,7 +2310,7 @@ void pfnChangeLevel (char *s1, char *s2)
    waypoints.SaveExperienceTab ();
    waypoints.SaveVisibilityTab ();
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    CHANGE_LEVEL (s1, s2);
@@ -2329,7 +2322,7 @@ edict_t *pfnFindEntityByString (edict_t *edictStartSearchAfter, const char *fiel
    if (strcmp (value, "info_map_parameters") == 0)
       RoundInit ();
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META_VALUE (MRES_IGNORED, 0);
 
    return FIND_ENTITY_BY_STRING (edictStartSearchAfter, field, value);
@@ -2349,7 +2342,7 @@ void pfnEmitSound (edict_t *entity, int channel, const char *sample, float volum
 
    SoundAttachToClients (entity, sample, volume);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    (*g_engfuncs.pfnEmitSound) (entity, channel, sample, volume, attenuation, flags, pitch);
@@ -2381,13 +2374,13 @@ void pfnClientCommand (edict_t *ent, char const *format, ...)
    // is the target entity an official bot, or a third party bot ?
    if (ent->v.flags & FL_FAKECLIENT)
    {
-      if (g_gameFlags & GAME_METAMOD)
+      if (g_isMetamod)
          RETURN_META (MRES_SUPERCEDE); // prevent bots to be forced to issue client commands
 
       return;
    }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    CLIENT_COMMAND (ent, buffer);
@@ -2398,7 +2391,7 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
    // this function called each time a message is about to sent.
 
    // store the message type in our own variables, since the GET_USER_MSG_ID () will just do a lot of strcmp()'s...
-   if ((g_gameFlags & GAME_METAMOD) && engine.FindMessageId (NETMSG_MONEY) == -1)
+   if (g_isMetamod && engine.FindMessageId (NETMSG_MONEY) == -1)
    {
       engine.AssignMessageId (NETMSG_VGUI, GET_USER_MSG_ID (PLID, "VGUIMenu", NULL));
       engine.AssignMessageId (NETMSG_SHOWMENU, GET_USER_MSG_ID (PLID, "ShowMenu", NULL));
@@ -2469,7 +2462,7 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
       }
    }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    MESSAGE_BEGIN (msgDest, msgType, origin, ed);
@@ -2479,7 +2472,7 @@ void pfnMessageEnd (void)
 {
    engine.ResetMessageCapture ();
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    MESSAGE_END ();
@@ -2501,7 +2494,7 @@ void pfnWriteByte (int value)
    // if this message is for a bot, call the client message function...
    engine.ProcessMessageCapture ((void *) &value);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    WRITE_BYTE (value);
@@ -2512,7 +2505,7 @@ void pfnWriteChar (int value)
    // if this message is for a bot, call the client message function...
    engine.ProcessMessageCapture ((void *) &value);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    WRITE_CHAR (value);
@@ -2523,7 +2516,7 @@ void pfnWriteShort (int value)
    // if this message is for a bot, call the client message function...
    engine.ProcessMessageCapture ((void *) &value);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    WRITE_SHORT (value);
@@ -2534,7 +2527,7 @@ void pfnWriteLong (int value)
    // if this message is for a bot, call the client message function...
    engine.ProcessMessageCapture ((void *) &value);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    WRITE_LONG (value);
@@ -2545,7 +2538,7 @@ void pfnWriteAngle (float value)
    // if this message is for a bot, call the client message function...
    engine.ProcessMessageCapture ((void *) &value);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    WRITE_ANGLE (value);
@@ -2556,7 +2549,7 @@ void pfnWriteCoord (float value)
    // if this message is for a bot, call the client message function...
    engine.ProcessMessageCapture ((void *) &value);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    WRITE_COORD (value);
@@ -2567,7 +2560,7 @@ void pfnWriteString (const char *sz)
    // if this message is for a bot, call the client message function...
    engine.ProcessMessageCapture ((void *) sz);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    WRITE_STRING (sz);
@@ -2578,7 +2571,7 @@ void pfnWriteEntity (int value)
    // if this message is for a bot, call the client message function...
    engine.ProcessMessageCapture ((void *) &value);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    WRITE_ENTITY (value);
@@ -2596,13 +2589,13 @@ int pfnCmd_Argc (void)
    // is this a bot issuing that client command?
    if (engine.IsBotCommand ())
    {
-      if (g_gameFlags & GAME_METAMOD)
+      if (g_isMetamod)
          RETURN_META_VALUE (MRES_SUPERCEDE, engine.GetOverrideArgc ());
 
       return engine.GetOverrideArgc (); // if so, then return the argument count we know
    }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META_VALUE (MRES_IGNORED, 0);
 
    return CMD_ARGC (); // ask the engine how many arguments there are
@@ -2620,13 +2613,13 @@ const char *pfnCmd_Args (void)
    // is this a bot issuing that client command?
    if (engine.IsBotCommand ())
    {
-      if (g_gameFlags & GAME_METAMOD)
+      if (g_isMetamod)
          RETURN_META_VALUE (MRES_SUPERCEDE, engine.GetOverrideArgs ());
 
       return engine.GetOverrideArgs (); // else return the whole bot client command string we know
    }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META_VALUE (MRES_IGNORED, NULL);
 
    return CMD_ARGS (); // ask the client command string to the engine
@@ -2644,12 +2637,12 @@ const char *pfnCmd_Argv (int argc)
    // is this a bot issuing that client command?
    if (engine.IsBotCommand ())
    {
-      if (g_gameFlags & GAME_METAMOD)
+      if (g_isMetamod)
          RETURN_META_VALUE (MRES_SUPERCEDE, engine.GetOverrideArgv (argc));
 
       return engine.GetOverrideArgv (argc); // if so, then return the wanted argument we know
    }
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META_VALUE (MRES_IGNORED, NULL);
 
    return CMD_ARGV (argc); // ask the argument number "argc" to the engine
@@ -2665,13 +2658,13 @@ void pfnClientPrintf (edict_t *ent, PRINT_TYPE printType, const char *message)
 
    if (IsValidBot (ent))
    {
-      if (g_gameFlags & GAME_METAMOD)
+      if (g_isMetamod)
          RETURN_META (MRES_SUPERCEDE);
 
       return;
    }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    CLIENT_PRINTF (ent, printType, message);
@@ -2685,7 +2678,7 @@ void pfnSetClientMaxspeed (const edict_t *ent, float newMaxspeed)
    if (bot != NULL)
       bot->pev->maxspeed = newMaxspeed;
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    (*g_engfuncs.pfnSetClientMaxspeed) (ent, newMaxspeed);
@@ -2703,7 +2696,7 @@ int pfnRegUserMsg (const char *name, int size)
    // using pfnMessageBegin (), it will know what message ID number to send, and the engine will
    // know what to do, only for non-metamod version
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META_VALUE (MRES_IGNORED, 0);
 
    int message = REG_USER_MSG (name, size);
@@ -2774,7 +2767,7 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...)
       }
    }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       RETURN_META (MRES_IGNORED);
 
    (*g_engfuncs.pfnAlertMessage) (alertType, buffer);
@@ -2796,16 +2789,14 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *)
 
    memset (functionTable, 0, sizeof (gamefuncs_t));
 
-   if (!(g_gameFlags & GAME_METAMOD))
+   if (!g_isMetamod)
    {
-      auto api_GetEntityAPI = g_gameLib->GetFuncAddr <EntityAPI_t> ("GetEntityAPI");
-
       // pass other DLLs engine callbacks to function table...
-      if (api_GetEntityAPI (&g_functionTable, INTERFACE_VERSION) == 0)
-      {
-         AddLogEntry (true, LL_FATAL, "GetEntityAPI2: ERROR - Not Initialized.");
-         return FALSE;  // error initializing function table!!!
-      }
+     if ((*g_entityAPI) (&g_functionTable, INTERFACE_VERSION) == 0)
+     {
+       AddLogEntry (true, LL_FATAL, "GetEntityAPI2: ERROR - Not Initialized.");
+       return FALSE;  // error initializing function table!!!
+     }
 
       gameDLLFunc.dllapi_table = &g_functionTable;
       gpGamedllFuncs = &gameDLLFunc;
@@ -2857,12 +2848,10 @@ SHARED_LIBRARAY_EXPORT int GetNewDLLFunctions (newgamefuncs_t *functionTable, in
    // pass them too, else the DLL interfacing wouldn't be complete and the game possibly wouldn't
    // run properly.
 
-   auto api_GetNewDLLFunctions = g_gameLib->GetFuncAddr <NewEntityAPI_t> ("GetNewDLLFunctions");
-
-   if (api_GetNewDLLFunctions == NULL)
+   if (g_getNewEntityAPI == NULL)
       return FALSE;
 
-   if (!api_GetNewDLLFunctions (functionTable, interfaceVersion))
+   if (!(*g_getNewEntityAPI) (functionTable, interfaceVersion))
    {
       AddLogEntry (true, LL_FATAL, "GetNewDLLFunctions: ERROR - Not Initialized.");
       return FALSE;
@@ -2874,7 +2863,7 @@ SHARED_LIBRARAY_EXPORT int GetNewDLLFunctions (newgamefuncs_t *functionTable, in
 
 SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *)
 {
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       memset (functionTable, 0, sizeof (enginefuncs_t));
   
    functionTable->pfnChangeLevel = pfnChangeLevel;
@@ -2917,12 +2906,10 @@ SHARED_LIBRARAY_EXPORT int Server_GetBlendingInterface (int version, void **ppin
    // of the body move, which bones, which hitboxes and how) between the server and the game DLL.
    // some MODs can be using a different hitbox scheme than the standard one.
 
-   auto api_GetBlendingInterface = g_gameLib->GetFuncAddr <BlendAPI_t> ("Server_GetBlendingInterface");
-
-   if (api_GetBlendingInterface == NULL)
+   if (g_serverBlendingAPI == NULL)
       return FALSE;
 
-   return api_GetBlendingInterface (version, ppinterface, pstudio, rotationmatrix, bonetransform);
+   return (*g_serverBlendingAPI) (version, ppinterface, pstudio, rotationmatrix, bonetransform);
 }
 
 SHARED_LIBRARAY_EXPORT int Meta_Query (char *, plugin_info_t **pPlugInfo, mutil_funcs_t *pMetaUtilFuncs)
@@ -2967,7 +2954,7 @@ SHARED_LIBRARAY_EXPORT void Meta_Init (void)
    // this function is called by metamod, before any other interface functions. Purpose of this
    // function to give plugin a chance to determine is plugin running under metamod or not.
 
-   g_gameFlags |= GAME_METAMOD;
+   g_isMetamod = true;
 }
 
 Library *LoadCSBinary (void)
@@ -3000,7 +2987,7 @@ Library *LoadCSBinary (void)
       {
          g_gameFlags |= GAME_CZERO;
 
-         if (g_gameFlags & GAME_METAMOD)
+         if (g_isMetamod)
             return NULL;
 
          return new Library (path);
@@ -3021,7 +3008,7 @@ Library *LoadCSBinary (void)
          {
             g_gameFlags |= (GAME_LEGACY | GAME_XASH);
 
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_isMetamod)
             {
                delete game;
                return NULL;
@@ -3037,7 +3024,7 @@ Library *LoadCSBinary (void)
          else
             g_gameFlags |= GAME_LEGACY;
 
-         if (g_gameFlags & GAME_METAMOD)
+         if (g_isMetamod)
          {
             delete game;
             return NULL;
@@ -3080,7 +3067,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 #ifdef PLATFORM_ANDROID
    g_gameFlags |= (GAME_LEGACY | GAME_XASH | GAME_MOBILITY);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_isMetamod)
       return;  // we should stop the attempt for loading the real gamedll, since metamod handle this for us
 
 #ifdef LOAD_HARDFP
@@ -3099,7 +3086,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 #else
    g_gameLib = LoadCSBinary ();
    {
-      if (g_gameLib == NULL && !(g_gameFlags & GAME_METAMOD))
+      if (g_gameLib == NULL && !g_isMetamod)
       {
          AddLogEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", engine.GetModName ());
          return;
@@ -3128,20 +3115,23 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       }
       engine.Printf ("YaPB Bot has detect game version as Counter-Strike: %s", gameVersionStr.GetBuffer ());
 
-      if (g_gameFlags & GAME_METAMOD)
+      if (g_isMetamod)
          return;
    }
 #endif
 
-   auto api_GiveFnptrsToDll = g_gameLib->GetFuncAddr <FuncPointers_t> ("GiveFnptrsToDll");
+   g_funcPointers = g_gameLib->GetFuncAddr <FuncPointers_t> ("GiveFnptrsToDll");
+   g_entityAPI = g_gameLib->GetFuncAddr <EntityAPI_t> ("GetEntityAPI");
+   g_getNewEntityAPI = g_gameLib->GetFuncAddr <NewEntityAPI_t> ("GetNewDLLFunctions");
+   g_serverBlendingAPI = g_gameLib->GetFuncAddr <BlendAPI_t> ("Server_GetBlendingInterface");
 
-   if (!api_GiveFnptrsToDll)
+   if (!g_funcPointers || !g_entityAPI)
       TerminateOnMalloc ();
 
    GetEngineFunctions (functionTable, NULL);
    
    // give the engine functions to the other DLL...
-   api_GiveFnptrsToDll (functionTable, pGlobals);
+   (*g_funcPointers) (functionTable, pGlobals);
 }
 
 DLL_ENTRYPOINT
