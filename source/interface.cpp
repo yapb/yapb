@@ -2183,7 +2183,7 @@ void StartFrame (void)
       if (g_waypointOn)
          waypoints.Think ();
 
-      CheckWelcomeMessage ();
+      SA (WelcomeMessage).VerifyMessageSent ();
    }
    bots.SetDeathMsgState (false);
 
@@ -2316,6 +2316,9 @@ void pfnChangeLevel (char *s1, char *s2)
    // save collected experience on map change
    waypoints.SaveExperienceTab ();
    waypoints.SaveVisibilityTab ();
+
+   // reset welcome message strate
+   SA (WelcomeMessage).SetGameCommenceFlag (false);
 
    if (g_gameFlags & GAME_METAMOD)
       RETURN_META (MRES_IGNORED);

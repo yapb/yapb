@@ -1481,7 +1481,6 @@ extern bool FindNearestPlayer (void **holder, edict_t *to, float searchDistance 
 
 extern void FreeLibraryMemory (void);
 extern void RoundInit (void);
-extern void CheckWelcomeMessage (void);
 extern void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...);
 extern void DisplayMenuToClient (edict_t *ent, MenuText *menu);
 extern void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex);
