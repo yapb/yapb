@@ -187,10 +187,12 @@ void Bot::PrepareChatMessage (char *text)
 
             for (int i = 0; i < engine.MaxClients (); i++)
             {
-               if (!(g_clients[i].flags & CF_USED) || g_clients[i].ent == GetEntity ())
+               const Client &client = g_clients[i];
+
+               if (!(client.flags & CF_USED) || client.ent == GetEntity ())
                   continue;
 
-               int frags = static_cast <int> (g_clients[i].ent->v.frags);
+               int frags = static_cast <int> (client.ent->v.frags);
 
                if (frags > highestFrags)
                {
@@ -224,7 +226,9 @@ void Bot::PrepareChatMessage (char *text)
 
             for (i = 0; i < engine.MaxClients (); i++)
             {
-               if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != m_team || g_clients[i].ent == GetEntity ())
+               const Client &client = g_clients[i];
+
+               if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == GetEntity ())
                   continue;
 
                break;
@@ -243,7 +247,9 @@ void Bot::PrepareChatMessage (char *text)
             {
                for (i = 0; i < engine.MaxClients (); i++)
                {
-                  if (!(g_clients[i].flags & CF_USED) || g_clients[i].team != m_team || g_clients[i].ent == GetEntity ())
+                  const Client &client = g_clients[i];
+
+                  if (!(client.flags & CF_USED) || client.team != m_team || client.ent == GetEntity ())
                      continue;
 
                   break;
@@ -263,8 +269,11 @@ void Bot::PrepareChatMessage (char *text)
 
             for (i = 0; i < engine.MaxClients (); i++)
             {
-               if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team == m_team || g_clients[i].ent == GetEntity ())
+               const Client &client = g_clients[i];
+
+               if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team == m_team || client.ent == GetEntity ())
                   continue;
+
                break;
             }
 
@@ -277,8 +286,11 @@ void Bot::PrepareChatMessage (char *text)
             {
                for (i = 0; i < engine.MaxClients (); i++)
                {
-                  if (!(g_clients[i].flags & CF_USED) || g_clients[i].team == m_team || g_clients[i].ent == GetEntity ())
+                  const Client &client = g_clients[i];
+
+                  if (!(client.flags & CF_USED) || client.team == m_team || client.ent == GetEntity ())
                      continue;
+
                   break;
                }
                if (i < engine.MaxClients ())

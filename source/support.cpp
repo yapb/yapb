@@ -250,7 +250,7 @@ void UpdateGlobalExperienceData (void)
    // this function called after each end of the round to update knowledge about most dangerous waypoints for each team.
 
    // no waypoints, no experience used or waypoints edited or being edited?
-   if (g_numWaypoints < 1 || g_waypointsChanged)
+   if (g_numWaypoints < 1 || waypoints.HasChanged ())
       return; // no action
 
    unsigned short maxDamage; // maximum damage
@@ -371,10 +371,14 @@ void RoundInit (void)
    // this is called at the start of each round
 
    g_roundEnded = false;
+   g_canSayBombPlanted = true;
 
    // check team economics
-   bots.CheckTeamEconomics (TERRORIST);
-   bots.CheckTeamEconomics (CT);
+   for (int team = TERRORIST; team < SPECTATOR; team++)
+   {
+      bots.CheckTeamEconomics (team);
+      bots.SelectLeaderEachTeam (team, true);
+   }
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
@@ -389,9 +393,6 @@ void RoundInit (void)
    g_bombSayString = false;
    g_timeBombPlanted = 0.0f;
    g_timeNextBombUpdate = 0.0f;
-
-   g_leaderChoosen[CT] = false;
-   g_leaderChoosen[TERRORIST] =  false;
 
    g_lastRadioTime[0] = 0.0f;
    g_lastRadioTime[1] = 0.0f;
@@ -666,20 +667,20 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      edict_t *ent = g_clients[i].ent;
+      const Client &client = g_clients[i];
 
-      if (!(g_clients[i].flags & CF_USED) || ent == to)
+      if (!(client.flags & CF_USED) || client.ent == to)
          continue;
 
-      if ((sameTeam && g_clients[i].team != toTeam) || (isAlive && !(g_clients[i].flags & CF_ALIVE)) || (needBot && !IsValidBot (ent)) || (needDrawn && (ent->v.effects & EF_NODRAW)))
+      if ((sameTeam && client.team != toTeam) || (isAlive && !(client.flags & CF_ALIVE)) || (needBot && !IsValidBot (client.ent)) || (needDrawn && (client.ent->v.effects & EF_NODRAW)))
          continue; // filter players with parameters
 
-      float distance = (ent->v.origin - to->v.origin).GetLength ();
+      float distance = (client.ent->v.origin - to->v.origin).GetLength ();
 
       if (distance < nearestPlayer && distance < searchDistance)
       {
          nearestPlayer = distance;
-         survive = ent;
+         survive = client.ent;
       }
    }
 
@@ -713,10 +714,12 @@ void SoundAttachToClients (edict_t *ent, const char *sample, float volume)
       // loop through all players
       for (int i = 0; i < engine.MaxClients (); i++)
       {
-         if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE))
+         const Client &client = g_clients[i];
+
+         if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE))
             continue;
 
-         float distance = (g_clients[i].origin - origin).GetLength ();
+         float distance = (client.origin - origin).GetLength ();
 
          // now find nearest player
          if (distance < nearestDistance)

@@ -326,17 +326,17 @@ void Bot::CheckCloseAvoidance (const Vector &dirNormal)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      Client *cl = &g_clients[i];
+      const Client &client = g_clients[i];
 
-      if (!(cl->flags & (CF_USED | CF_ALIVE)) || cl->ent == GetEntity () || cl->team != m_team)
+      if (!(client.flags & (CF_USED | CF_ALIVE)) || client.ent == GetEntity () || client.team != m_team)
          continue;
 
-      float distance = (cl->ent->v.origin - pev->origin).GetLength ();
+      float distance = (client.ent->v.origin - pev->origin).GetLength ();
 
       if (distance < nearestDist && distance < pev->maxspeed)
       {
          nearestDist = distance;
-         nearest = cl->ent;
+         nearest = client.ent;
 
          playerCount++;
       }
@@ -966,10 +966,12 @@ bool Bot::DoWaypointNav (void)
                // iterate though clients, and find if lift already used
                for (int i = 0; i < engine.MaxClients (); i++)
                {
-                  if (!(g_clients[i].flags & CF_USED) || !(g_clients[i].flags & CF_ALIVE) || g_clients[i].team != m_team || g_clients[i].ent == GetEntity () || engine.IsNullEntity (g_clients[i].ent->v.groundentity))
+                  const Client &client = g_clients[i];
+
+                  if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == GetEntity () || engine.IsNullEntity (client.ent->v.groundentity))
                      continue;
 
-                  if (g_clients[i].ent->v.groundentity == m_liftEntity)
+                  if (client.ent->v.groundentity == m_liftEntity)
                   {
                      liftUsed = true;
                      break;

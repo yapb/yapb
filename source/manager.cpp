@@ -100,7 +100,7 @@ void BotManager::CallGameEntity (entvars_t *vars)
 {
    // this function calls gamedll player() function, in case to create player entity in game
 
-   if (g_isMetamod)
+   if (g_gameFlags & GAME_METAMOD)
    {
       CALL_GAME_ENTITY (PLID, "player", vars);
       return;
@@ -108,7 +108,7 @@ void BotManager::CallGameEntity (entvars_t *vars)
    player (vars);
 }
 
-int BotManager::CreateBot (const String &name, int difficulty, int personality, int team, int member, bool isConsoleCmd)
+BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int personality, int team, int member, bool isConsoleCmd)
 {
    // this function completely prepares bot entity (edict) for creation, creates team, difficulty, sets name etc, and
    // then sends result to bot constructor
@@ -119,12 +119,12 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
    if (g_numWaypoints < 1) // don't allow creating bots with no waypoints loaded
    {
       engine.CenterPrintf ("Map is not waypointed. Cannot create bot");
-      return 0;
+      return BOT_RESULT_NAV_ERROR;
    }
-   else if (g_waypointsChanged) // don't allow creating bots with changed waypoints (distance tables are messed up)
+   else if (waypoints.HasChanged ()) // don't allow creating bots with changed waypoints (distance tables are messed up)
    {
       engine.CenterPrintf ("Waypoints have been changed. Load waypoints again...");
-      return 0;
+      return BOT_RESULT_NAV_ERROR;
    }
 
    if (difficulty < 0 || difficulty > 4)
@@ -199,7 +199,7 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
    if (engine.IsNullEntity (bot))
    {
       engine.CenterPrintf ("Maximum players reached (%d/%d). Unable to create Bot.", engine.MaxClients (), engine.MaxClients ());
-      return 2;
+      return BOT_RESULT_MAX_PLAYERS_REACHED;
    }
    int index = engine.IndexOfEntity (bot) - 1;
 
@@ -216,7 +216,7 @@ int BotManager::CreateBot (const String &name, int difficulty, int personality, 
    if (isConsoleCmd)
       yb_quota.SetInt (yb_quota.GetInt () + 1);
 
-   return 1;
+   return BOT_RESULT_CREATED;
 }
 
 int BotManager::GetIndex (edict_t *ent)
@@ -260,19 +260,19 @@ Bot *BotManager::FindOneValidAliveBot (void)
 {
    // this function finds one bot, alive bot :)
 
-   Array <int> foundBots;
+   Array <int> result;
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (foundBots.GetSize () > 4)
+      if (result.GetSize () > 4)
          break;
 
       if (m_bots[i] != NULL && IsAlive (m_bots[i]->GetEntity ()))
-         foundBots.Push (i);
+         result.Push (i);
    }
 
-   if (!foundBots.IsEmpty ())
-      return m_bots[foundBots.GetRandomElement ()];
+   if (!result.IsEmpty ())
+      return m_bots[result.GetRandomElement ()];
 
    return NULL;
 }
@@ -383,14 +383,14 @@ void BotManager::VerifyPlayersHasJoinedTeam (int &desiredCount)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      Client &cl = g_clients[i];
+      const Client &client = g_clients[i];
 
-      if (!(cl.flags & CF_USED) || cl.team == SPECTATOR || IsValidBot (cl.ent))
+      if (!(client.flags & CF_USED) || client.team == SPECTATOR || IsValidBot (client.ent))
          continue;
       
       FOR_EACH_AE (m_trackedPlayers, it)
       {
-         if (cl.ent != m_trackedPlayers[it])
+         if (client.ent != m_trackedPlayers[it])
             continue;
 
          m_balanceCount--;
@@ -408,22 +408,22 @@ void BotManager::MaintainBotQuota (void)
    // this function keeps number of bots up to date, and don't allow to maintain bot creation
    // while creation process in process.
 
-   if (g_numWaypoints < 1 || g_waypointsChanged)
+   if (g_numWaypoints < 1 || waypoints.HasChanged ())
       return;
 
    // bot's creation update
    if (!m_creationTab.IsEmpty () && m_maintainTime < engine.Time ())
    {
-      CreateQueue last = m_creationTab.Pop ();
-      int resultOfCall = CreateBot (last.name, last.difficulty, last.personality, last.team, last.member, last.console);
+      const CreateQueue &last = m_creationTab.Pop ();
+      const BotCreationResult callResult = CreateBot (last.name, last.difficulty, last.personality, last.team, last.member, last.console);
 
       // check the result of creation
-      if (resultOfCall == 0)
+      if (callResult == BOT_RESULT_NAV_ERROR)
       {
          m_creationTab.RemoveAll (); // something wrong with waypoints, reset tab of creation
          yb_quota.SetInt (0); // reset quota
       }
-      else if (resultOfCall == 2)
+      else if (callResult == BOT_RESULT_MAX_PLAYERS_REACHED)
       {
          m_creationTab.RemoveAll (); // maximum players reached, so set quota to maximum players
          yb_quota.SetInt (GetBotsNum ());
@@ -888,6 +888,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
 
    // initialize all the variables for this bot...
    m_notStarted = true;  // hasn't joined game yet
+   m_forceRadio = false;
 
    m_startAction = GSM_IDLE;
    m_moneyAmount = 0;
@@ -984,9 +985,9 @@ int BotManager::GetHumansNum (void)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      Client *cl = &g_clients[i];
+      const Client &client = g_clients[i];
 
-      if ((cl->flags & CF_USED) && m_bots[i] == NULL && !(cl->ent->v.flags & FL_FAKECLIENT))
+      if ((client.flags & CF_USED) && m_bots[i] == NULL && !(client.ent->v.flags & FL_FAKECLIENT))
          count++;
    }
    return count;
@@ -1000,9 +1001,9 @@ int BotManager::GetHumansAliveNum (void)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      Client *cl = &g_clients[i];
+      const Client &client = g_clients[i];
 
-      if ((cl->flags & (CF_USED | CF_ALIVE)) && m_bots[i] == NULL && !(cl->ent->v.flags & FL_FAKECLIENT))
+      if ((client.flags & (CF_USED | CF_ALIVE)) && m_bots[i] == NULL && !(client.ent->v.flags & FL_FAKECLIENT))
          count++;
    }
    return count;
@@ -1016,9 +1017,9 @@ int BotManager::GetHumansJoinedTeam (void)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      Client *cl = &g_clients[i];
+      const Client &client = g_clients[i];
 
-      if ((cl->flags & (CF_USED | CF_ALIVE)) && m_bots[i] == NULL && cl->team != SPECTATOR && !(cl->ent->v.flags & FL_FAKECLIENT) && cl->ent->v.movetype != MOVETYPE_FLY)
+      if ((client.flags & (CF_USED | CF_ALIVE)) && m_bots[i] == NULL && client.team != SPECTATOR && !(client.ent->v.flags & FL_FAKECLIENT) && client.ent->v.movetype != MOVETYPE_FLY)
          count++;
    }
    return count;
@@ -1028,7 +1029,6 @@ void Bot::NewRound (void)
 {     
    // this function initializes a bot after creation & at the start of each round
    
-   g_canSayBombPlanted = true;
    int i = 0;
 
    // delete all allocated path nodes
@@ -1477,4 +1477,109 @@ void BotManager::UpdateActiveGrenades (void)
 const Array <edict_t *> &BotManager::GetActiveGrenades (void)
 {
    return m_activeGrenades;
+}
+
+void BotManager::SelectLeaderEachTeam (int team, bool reset)
+{
+   if (reset)
+   {
+      m_leaderChoosen[team] = false;
+      return;
+   }
+
+   if (g_mapType & MAP_AS)
+   {
+      if (team == CT && !m_leaderChoosen[CT])
+      {
+         for (int i = 0; i < engine.MaxClients (); i++)
+         {
+            auto bot = m_bots[i];
+
+            if (bot != NULL && bot->m_isVIP)
+            {
+               // vip bot is the leader
+               bot->m_isLeader = true;
+
+               if (Random.Long (1, 100) < 50)
+               {
+                  bot->RadioMessage (Radio_FollowMe);
+                  bot->m_campButtons = 0;
+               }
+            }
+         }
+         m_leaderChoosen[CT] = true;
+      }
+      else if (team == TERRORIST && !m_leaderChoosen[TERRORIST])
+      {
+         auto bot = bots.GetHighestFragsBot (team);
+
+         if (bot != NULL && bot->m_notKilled)
+         {
+            bot->m_isLeader = true;
+
+            if (Random.Long (1, 100) < 45)
+               bot->RadioMessage (Radio_FollowMe);
+         }
+         m_leaderChoosen[TERRORIST] = true;
+      }
+   }
+   else if (g_mapType & MAP_DE)
+   {
+      if (team == TERRORIST && !m_leaderChoosen[TERRORIST])
+      {
+         for (int i = 0; i < engine.MaxClients (); i++)
+         {
+            auto bot = m_bots[i];
+
+            if (bot != NULL && bot->m_hasC4)
+            {
+               // bot carrying the bomb is the leader
+               bot->m_isLeader = true;
+
+               // terrorist carrying a bomb needs to have some company
+               if (Random.Long (1, 100) < 80)
+               {
+                  if (yb_communication_type.GetInt () == 2)
+                     bot->ChatterMessage (Chatter_GoingToPlantBomb);
+                  else
+                     bot->ChatterMessage (Radio_FollowMe);
+
+                  bot->m_campButtons = 0;
+               }
+            }
+            m_leaderChoosen[TERRORIST] = true;
+         }
+      }
+      else if (!m_leaderChoosen[CT])
+      {
+         if (auto bot = bots.GetHighestFragsBot (team))
+         {
+            bot->m_isLeader = true;
+
+            if (Random.Long (1, 100) < 30)
+               bot->RadioMessage (Radio_FollowMe);
+         }
+         m_leaderChoosen[CT] = true;
+      }
+   }
+   else if (g_mapType & (MAP_ES | MAP_KA | MAP_FY))
+   {
+      if (auto bot = bots.GetHighestFragsBot (team))
+      {
+         bot->m_isLeader = true;
+
+         if (Random.Long (1, 100) < 30)
+            bot->RadioMessage (Radio_FollowMe);
+      }
+   }
+   else
+   {
+      if (auto bot = bots.GetHighestFragsBot (team))
+      {
+         bot->m_isLeader = true;
+
+         if (Random.Long (1, 100) < (team == TERRORIST ? 30 : 40))
+            bot->RadioMessage (Radio_FollowMe);
+      }
+   }
 }
