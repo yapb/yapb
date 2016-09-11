@@ -87,7 +87,7 @@ void BotManager::TouchWithKillerEntity (Bot *bot)
    kv.szClassName = const_cast <char *> (g_weaponDefs[bot->m_currentWeapon].className);
    kv.szKeyName = "damagetype";
    kv.szValue = const_cast <char *> (FormatBuffer ("%d", (1 << 4)));
-   kv.fHandled = FALSE;
+   kv.fHandled = 0;
 
    MDLL_KeyValue (m_killerEntity, &kv);
    MDLL_Touch (m_killerEntity, bot->GetEntity ());
