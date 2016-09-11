@@ -1588,18 +1588,6 @@ void Bot::PurchaseWeapons (void)
             else
                chosenWeapon = choices[foundWeapons - 1];
 
-            char select_wpns[2222] = { 0, };
-            for (int j = 0; j < foundWeapons; j++)
-            {
-               strcat (select_wpns, g_weaponSelect[choices[j]].weaponName);
-               strcat (select_wpns, " ");
-            }
-
-            char buf[3333] = { 0, };
-            sprintf (buf, "got choice from %sand choosen %s", select_wpns, g_weaponSelect[chosenWeapon].weaponName);
-
-            engine.Printf ("%s -> (primary) %s", STRING (pev->netname), buf);
-
             selectedWeapon = &g_weaponSelect[chosenWeapon];
          }
          else
@@ -1687,19 +1675,6 @@ void Bot::PurchaseWeapons (void)
                chosenWeapon = PickBestFromRandom (choices, foundWeapons, Random.Int (100, 200));
             else
                chosenWeapon = choices[foundWeapons - 1];
-
-            char select_wpns[2222] = { 0, };
-            for (int j = 0; j < foundWeapons; j++)
-            {
-               strcat (select_wpns, g_weaponSelect[choices[j]].weaponName);
-               strcat (select_wpns, " ");
-            }
-
-            char buf[3333] = { 0, };
-            sprintf (buf, "got choice from %sand choosen %s", select_wpns, g_weaponSelect[chosenWeapon].weaponName);
-
-            engine.Printf ("%s -> (sec) %s", STRING (pev->netname), buf);
-
 
             selectedWeapon = &g_weaponSelect[chosenWeapon];
          }
