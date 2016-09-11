@@ -32,7 +32,8 @@
 #include "windows.h"
 #include "winsock2.h"
 #else   // _WIN32
-
+#define FALSE 0
+#define TRUE (!FALSE)
 #define MAX_PATH PATH_MAX
 #include <limits.h>
 #include <stdarg.h>
