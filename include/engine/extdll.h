@@ -32,11 +32,6 @@
 #include "windows.h"
 #include "winsock2.h"
 #else   // _WIN32
-#define FALSE 0
-#define TRUE (!FALSE)
-typedef unsigned long ULONG;
-typedef uint8 BYTE;
-typedef int BOOL;
 
 #define MAX_PATH PATH_MAX
 #include <limits.h>

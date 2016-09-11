@@ -300,15 +300,24 @@ public:
       {
          if (((flags >>= 1) & 256) == 0)
          {
-            if ((bit = static_cast <uint8> (fp.GetChar ())) == EOF)
+            int read = fp.GetChar ();
+
+            if (read == EOF)
                break;
+
+            bit = static_cast <uint8> (read);
+
             flags = bit | 0xff00;
          } 
 
          if (flags & 1)
          {
-            if ((bit = static_cast <uint8> (fp.GetChar ())) == EOF)
+            int read = fp.GetChar ();
+
+            if (read == EOF)
                break;
+
+            bit = static_cast <uint8> (read);
             buffer[bufferPtr++] = bit;
 
             if (bufferPtr > bufferSize)
