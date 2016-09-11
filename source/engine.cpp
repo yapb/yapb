@@ -4,15 +4,15 @@
 //
 // This software is licensed under the BSD-style license.
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     http://yapb.jeefo.net/license
+//     https://yapb.jeefo.net/license
 //
 
 #include <core.h>
 
 Engine::Engine (void)
 {
-   m_startEntity = NULL;
-   m_localEntity = NULL;
+   m_startEntity = nullptr;
+   m_localEntity = nullptr;
 
    m_language.RemoveAll ();
    ResetMessageCapture ();
@@ -44,7 +44,7 @@ void Engine::Precache (edict_t *startEntity)
    m_drawModels[DRAW_SIMPLE] = PRECACHE_MODEL (ENGINE_STR ("sprites/laserbeam.spr"));
    m_drawModels[DRAW_ARROW] = PRECACHE_MODEL (ENGINE_STR ("sprites/arrow1.spr"));
 
-   m_localEntity = NULL;
+   m_localEntity = nullptr;
    m_startEntity = startEntity;
 }
 
@@ -134,7 +134,7 @@ void Engine::DrawLine (edict_t * ent, const Vector &start, const Vector &end, in
    if (!IsValidPlayer (ent))
       return; // reliability check
 
-   MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, NULL, ent);
+   MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, nullptr, ent);
       WRITE_BYTE (TE_BEAMPOINTS);
       WRITE_COORD (end.x);
       WRITE_COORD (end.y);
@@ -207,7 +207,7 @@ float Engine::GetWaveLength (const char *fileName)
       return 0.0f;
 
    // check if we have engine function for this
-   if (g_engfuncs.pfnGetApproxWavePlayLen != NULL)
+   if (g_engfuncs.pfnGetApproxWavePlayLen != nullptr)
    {
       fp.Close ();
       return g_engfuncs.pfnGetApproxWavePlayLen (filePath) / 1000.0f;
@@ -221,12 +221,12 @@ float Engine::GetWaveLength (const char *fileName)
       char chunkID[4];
       char formatChunkId[4];
       unsigned long formatChunkLength;
-      unsigned short dummy;
-      unsigned short channels;
+      uint16 dummy;
+      uint16 channels;
       unsigned long sampleRate;
       unsigned long bytesPerSecond;
-      unsigned short bytesPerSample;
-      unsigned short bitsPerSample;
+      uint16 bytesPerSample;
+      uint16 bitsPerSample;
       char dataChunkId[4];
       unsigned long dataChunkLength;
    } waveHdr;
@@ -326,7 +326,7 @@ void Engine::RegisterCmd (const char * command, void func (void))
 
 void Engine::EmitSound (edict_t *ent, const char *sound)
 {
-   g_engfuncs.pfnEmitSound (ent, CHAN_WEAPON, sound, 1.0f, ATTN_NORM, 0, 100.0f);
+   g_engfuncs.pfnEmitSound (ent, CHAN_WEAPON, sound, 1.0f, ATTN_NORM, 0, 100);
 }
 
 void Engine::IssueBotCommand (edict_t *ent, const char *fmt, ...)
@@ -518,7 +518,7 @@ void Engine::PushRegisteredConVarsToEngine (bool gameVars)
       {
          ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
 
-         if (ptr->self->m_eptr == NULL)
+         if (ptr->self->m_eptr == nullptr)
          {
             g_engfuncs.pfnCVarRegister (&ptr->reg);
             ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
@@ -528,12 +528,12 @@ void Engine::PushRegisteredConVarsToEngine (bool gameVars)
       {
          ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
 
-         if (ptr->regMissing && ptr->self->m_eptr == NULL)
+         if (ptr->regMissing && ptr->self->m_eptr == nullptr)
          {
             g_engfuncs.pfnCVarRegister (&ptr->reg);
             ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
          }
-         InternalAssert (ptr->self->m_eptr != NULL); // ensure game var exists
+         InternalAssert (ptr->self->m_eptr != nullptr); // ensure game var exists
       }
    }
 }
@@ -590,8 +590,8 @@ void Engine::ProcessMessageCapture (void *ptr)
       return;
 
    // some needed variables
-   static byte r, g, b;
-   static byte enabled;
+   static uint8 r, g, b;
+   static uint8 enabled;
 
    static int damageArmor, damageTaken, damageBits;
    static int killerIndex, victimIndex, playerIndex;
@@ -606,7 +606,7 @@ void Engine::ProcessMessageCapture (void *ptr)
 
    char *strVal = reinterpret_cast <char *> (ptr);
    int intVal = *reinterpret_cast <int *> (ptr);
-   unsigned char byteVal = *reinterpret_cast <unsigned char *> (ptr);
+   uint8 byteVal = *reinterpret_cast <uint8 *> (ptr);
 
    // now starts of network message execution
    switch (m_msgBlock.msg)
@@ -770,7 +770,7 @@ void Engine::ProcessMessageCapture (void *ptr)
       case 2:
          damageBits = intVal;
 
-         if (bot != NULL && (damageArmor > 0 || damageTaken > 0))
+         if (bot != nullptr && (damageArmor > 0 || damageTaken > 0))
             bot->TakeDamage (bot->pev->dmg_inflictor, damageTaken, damageArmor, damageBits);
          break;
       }
@@ -838,7 +838,7 @@ void Engine::ProcessMessageCapture (void *ptr)
                {
                   Bot *notify = bots.GetBot (i);
 
-                  if (notify != NULL && notify->m_notKilled && killer != notify->GetEntity () && notify->EntityIsVisible (victim->v.origin) && GetTeam (killer) == notify->m_team && GetTeam (killer) != GetTeam (victim))
+                  if (notify != nullptr && notify->m_notKilled && killer != notify->GetEntity () && notify->EntityIsVisible (victim->v.origin) && GetTeam (killer) == notify->m_team && GetTeam (killer) != GetTeam (victim))
                   {
                      if (killer == g_hostEntity)
                         notify->HandleChatterMessage ("#Bot_NiceShotCommander");
@@ -855,7 +855,7 @@ void Engine::ProcessMessageCapture (void *ptr)
             {
                Bot *notify = bots.GetBot (i);
 
-               if (notify != NULL && notify->m_seeEnemyTime + 2.0f < Time () && notify->m_notKilled && notify->m_team == GetTeam (victim) && IsVisible (killer->v.origin, notify->GetEntity ()) && IsNullEntity (notify->m_enemy) && GetTeam (killer) != GetTeam (victim))
+               if (notify != nullptr && notify->m_seeEnemyTime + 2.0f < Time () && notify->m_notKilled && notify->m_team == GetTeam (victim) && IsVisible (killer->v.origin, notify->GetEntity ()) && IsNullEntity (notify->m_enemy) && GetTeam (killer) != GetTeam (victim))
                {
                   notify->m_actualReactionTime = 0.0f;
                   notify->m_seeEnemyTime = Time ();
@@ -868,14 +868,14 @@ void Engine::ProcessMessageCapture (void *ptr)
             Bot *notify = bots.GetBot (killer);
 
             // is this message about a bot who killed somebody?
-            if (notify != NULL)
+            if (notify != nullptr)
                notify->m_lastVictim = victim;
 
             else // did a human kill a bot on his team?
             {
                Bot *target = bots.GetBot (victim);
 
-               if (target != NULL)
+               if (target != nullptr)
                {
                   if (GetTeam (killer) == GetTeam (victim))
                      target->m_voteKickIndex = killerIndex;
@@ -958,7 +958,7 @@ void Engine::ProcessMessageCapture (void *ptr)
                {
                   Bot *notify = bots.FindOneValidAliveBot ();
 
-                  if (notify != NULL && notify->m_notKilled)
+                  if (notify != nullptr && notify->m_notKilled)
                      notify->HandleChatterMessage (strVal);
                }
             }
@@ -977,7 +977,7 @@ void Engine::ProcessMessageCapture (void *ptr)
                {
                   Bot *notify = bots.FindOneValidAliveBot ();
 
-                  if (notify != NULL && notify->m_notKilled)
+                  if (notify != nullptr && notify->m_notKilled)
                      notify->HandleChatterMessage (strVal);
                }
             }
@@ -992,20 +992,20 @@ void Engine::ProcessMessageCapture (void *ptr)
             {
                Bot *notify = bots.GetBot (i);
 
-               if (notify != NULL && notify->m_notKilled)
+               if (notify != nullptr && notify->m_notKilled)
                {
                   notify->DeleteSearchNodes ();
                   notify->ResetTasks ();
 
-                  if (yb_communication_type.GetInt () == 2 && Random.Long (0, 100) < 75 && notify->m_team == CT)
+                  if (yb_communication_type.GetInt () == 2 && Random.Int (0, 100) < 75 && notify->m_team == CT)
                      notify->ChatterMessage (Chatter_WhereIsTheBomb);
                }
             }
             waypoints.SetBombPosition ();
          }
-         else if (bot != NULL && FStrEq (strVal, "#Switch_To_BurstFire"))
+         else if (bot != nullptr && FStrEq (strVal, "#Switch_To_BurstFire"))
             bot->m_weaponBurstMode = BM_ON;
-         else if (bot != NULL && FStrEq (strVal, "#Switch_To_SemiAuto"))
+         else if (bot != nullptr && FStrEq (strVal, "#Switch_To_SemiAuto"))
             bot->m_weaponBurstMode = BM_OFF;
       }
       break;
@@ -1056,7 +1056,7 @@ void Engine::ProcessMessageCapture (void *ptr)
    m_msgBlock.state++; // and finally update network message state
 }
 
-ConVar::ConVar (const char *name, const char *initval, VarType type, bool regMissing) : m_eptr (NULL)
+ConVar::ConVar (const char *name, const char *initval, VarType type, bool regMissing) : m_eptr (nullptr)
 {
    engine.PushVariableToStack (name, initval, type, regMissing, this);
 }

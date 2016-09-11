@@ -4,7 +4,7 @@
 //
 // This software is licensed under the BSD-style license.
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     http://yapb.jeefo.net/license
+//     https://yapb.jeefo.net/license
 //
 
 #pragma once
@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <memory.h>
 
-#include <dllapi.h>
 #include <meta_api.h>
 
 using namespace Math;
@@ -625,21 +624,21 @@ struct Client
 // experience data hold in memory while playing
 struct Experience
 {
-   unsigned short team0Damage;
-   unsigned short team1Damage;
-   signed short team0DangerIndex;
-   signed short team1DangerIndex;
-   signed short team0Value;
-   signed short team1Value;
+   uint16 team0Damage;
+   uint16 team1Damage;
+   int16 team0DangerIndex;
+   int16 team1DangerIndex;
+   int16 team0Value;
+   int16 team1Value;
 };
 
 // experience data when saving/loading
 struct ExperienceSave
 {
-   unsigned char team0Damage;
-   unsigned char team1Damage;
-   signed char team0Value;
-   signed char team1Value;
+   uint8 team0Damage;
+   uint8 team1Damage;
+   int8 team0Value;
+   int8 team1Value;
 };
 
 // bot creation tab
@@ -668,7 +667,7 @@ struct WeaponProperty
 // define chatting collection structure
 struct ChatCollection
 {
-   char chatProbability;
+   int chatProbability;
    float chatDelay;
    float timeNextChat;
    int entityIndex;
@@ -775,7 +774,7 @@ private:
    Path *m_currentPath; // pointer to the current path waypoint
 
    SearchPathType m_pathType; // which pathfinder to use
-   unsigned char m_visibility; // visibility flags
+   uint8 m_visibility; // visibility flags
 
    int m_currentWaypointIndex; // current waypoint index
    int m_travelStartIndex; // travel start index to double jump action
@@ -784,7 +783,7 @@ private:
    int m_loosedBombWptIndex; // nearest to loosed bomb waypoint
    int m_plantedBombWptIndex;// nearest to planted bomb waypoint
 
-   unsigned short m_currentTravelFlags; // connection flags like jumping
+   uint16 m_currentTravelFlags; // connection flags like jumping
    bool m_jumpFinished; // has bot finished jumping
    Vector m_desiredVelocity; // desired velocity for jump waypoints
    float m_navTimeset; // time waypoint chosen by Bot
@@ -941,7 +940,7 @@ private:
 
    bool IsInViewCone (const Vector &origin);
    void ReactOnSound (void);
-   bool CheckVisibility (edict_t *target, Vector *origin, byte *bodyPart);
+   bool CheckVisibility (edict_t *target, Vector *origin, uint8 *bodyPart);
    bool IsEnemyViewable (edict_t *player);
 
    edict_t *FindNearestButton (const char *className);
@@ -972,7 +971,7 @@ private:
 
    float GetWalkSpeed (void);
    
-   bool ItemIsVisible (const Vector &dest, char *itemName);
+   bool ItemIsVisible (const Vector &dest, const char *itemName);
    bool LastEnemyShootable (void);
    bool IsBehindSmokeClouds (edict_t *ent);
    void RunTask (void);
@@ -993,7 +992,7 @@ private:
    int GetBestSecondaryWeaponCarried (void);
 
    void RunPlayerMovement (void);
-   byte ThrottledMsec (void);
+   uint8 ThrottledMsec (void);
    void GetValidWaypoint (void);
    int ChangeWptIndex (int waypointIndex);
    bool IsDeadlyDrop (const Vector &to);
@@ -1357,7 +1356,7 @@ private:
    int m_lastJumpWaypoint;
    int m_visibilityIndex;
    Vector m_lastWaypoint;
-   unsigned char m_visLUT[MAX_WAYPOINTS][MAX_WAYPOINTS / 4];
+   uint8 m_visLUT[MAX_WAYPOINTS][MAX_WAYPOINTS / 4];
 
    float m_pathDisplayTime;
    float m_arrowDisplayTime;

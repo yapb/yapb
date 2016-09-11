@@ -4,7 +4,7 @@
 //
 // This software is licensed under the BSD-style license.
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     http://yapb.jeefo.net/license
+//     https://yapb.jeefo.net/license
 //
 
 #pragma once
@@ -26,6 +26,20 @@
 #else
 #include <sys/stat.h>
 #endif
+
+//
+// Basic Types
+//
+typedef signed char int8;
+typedef signed short int16;
+typedef signed long int32;
+typedef unsigned char uint8;
+typedef unsigned short uint16;
+typedef unsigned long uint32;
+
+// Own min/max implementation
+template <typename T> inline T A_min (T a, T b) { return a < b ? a : b; }
+template <typename T> inline T A_max (T a, T b) { return a > b ? a : b; }
 
 //
 // Title: Utility Classes Header
@@ -223,7 +237,7 @@ namespace Math
       *sine = sinf (rad);
       *cosine = cosf (rad);
 #elif defined (__linux__) || defined (GCC) || defined (__APPLE__) 
-      register double _cos, _sin;
+      double _cos, _sin;
       __asm __volatile__ ("fsincos" : "=t" (_cos), "=u" (_sin) : "0" (rad));
 
       *cosine = _cos;
@@ -277,7 +291,7 @@ private:
 public:
    RandomSequenceOfUnique (void)
    {
-      unsigned int seedBase = time (NULL);
+      unsigned int seedBase = static_cast <unsigned int> (time (NULL));
       unsigned int seedOffset = seedBase + 1;
 
       m_index = PermuteQPR (PermuteQPR (seedBase) + 0x682f0161);
@@ -285,7 +299,7 @@ public:
       m_divider = (static_cast <unsigned long long> (1)) << 32;
    }
 
-   inline int Long (int low, int high)
+   inline int Int (int low, int high)
    {
       return static_cast <int> (Random () * (static_cast <double> (high) - static_cast <double> (low) + 1.0) / m_divider + static_cast <double> (low));
    }
@@ -1609,7 +1623,7 @@ public:
    {
       extern class RandomSequenceOfUnique Random;
 
-      return m_elements[Random.Long (0, m_itemCount - 1)];
+      return m_elements[Random.Int (0, m_itemCount - 1)];
    }
 
    Array <T> &operator = (const Array <T> &other)
@@ -2028,7 +2042,7 @@ private:
       int delta = 4;
 
       if (m_allocatedSize > 64)
-         delta = m_allocatedSize * 0.5;
+         delta = static_cast <int> (m_allocatedSize * 0.5);
       else if (m_allocatedSize > 8)
          delta = 16;
 
@@ -2667,7 +2681,7 @@ public:
       String result;
 
       for (int i = 0; i < GetLength (); i++)
-         result += toupper (m_bufferPtr[i]);
+         result += static_cast <char> (toupper (static_cast <int> (m_bufferPtr[i])));
 
       return result;
    }
@@ -2684,7 +2698,7 @@ public:
       String result;
 
       for (int i = 0; i < GetLength (); i++)
-         result += tolower (m_bufferPtr[i]);
+         result += static_cast <char> (tolower (static_cast <int> (m_bufferPtr[i])));
 
       return result;
    }
@@ -3663,8 +3677,8 @@ public:
 class MemoryFile
 {
 public:
-   typedef unsigned char *(*MF_Loader) (const char *, int *);
-   typedef void (*MF_Unloader) (unsigned char *);
+   typedef uint8 *(*MF_Loader) (const char *, int *);
+   typedef void (*MF_Unloader) (uint8 *);
 
 public:
    static MF_Loader Loader;
@@ -3673,7 +3687,7 @@ public:
 protected:
    int m_size;
    int m_pos;
-   unsigned char *m_buffer;
+   uint8 *m_buffer;
 
    //
    // Group: (Con/De)structors
@@ -3843,7 +3857,7 @@ public:
       if (!m_buffer|| m_pos >= m_size || buffer == NULL || !size || !count)
          return 0;
 
-      int blocksRead = min ((m_size - m_pos) / size, count) * size;
+      int blocksRead = A_min ((m_size - m_pos) / size, count) * size;
 
       memcpy (buffer, &m_buffer[m_pos], blocksRead);
       m_pos += blocksRead;

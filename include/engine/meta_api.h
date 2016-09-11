@@ -8,6 +8,7 @@
 #ifndef META_API_H
 #define META_API_H
 
+
 typedef int (*GameAPI_t) (gamefuncs_t *, int);
 typedef int (*GameAPI2_t) (gamefuncs_t *, int *);
 typedef int (*NewAPI2_t) (gamefuncs_t *, int *);
@@ -18,9 +19,6 @@ typedef int (*GETENTITYAPI2_FN) (gamefuncs_t *pFunctionTable, int *interfaceVers
 typedef int (*GETNEWDLLFUNCTIONS_FN) (newgamefuncs_t *pFunctionTable, int *interfaceVersion);
 typedef int (*GET_ENGINE_FUNCTIONS_FN) (enginefuncs_t *pengfuncsFromEngine, int *interfaceVersion);
 
-C_DLLEXPORT int GetEntityAPI (gamefuncs_t *pFunctionTable, int interfaceVersion);
-C_DLLEXPORT int GetEntityAPI2 (gamefuncs_t *pFunctionTable, int *interfaceVersion);
-C_DLLEXPORT int GetNewDLLFunctions (newgamefuncs_t *pNewFunctionTable, int *interfaceVersion);
 
 #define META_INTERFACE_VERSION "5:13"
 
@@ -158,26 +156,6 @@ extern gamedll_funcs_t *gpGamedllFuncs;
 extern mutil_funcs_t *gpMetaUtilFuncs;
 extern meta_globals_t *gpMetaGlobals;
 extern metamod_funcs_t gMetaFunctionTable;
-
-C_DLLEXPORT void Meta_Init (void);
-typedef void (*META_INIT_FN) (void);
-
-C_DLLEXPORT int Meta_Query (char *interfaceVersion, plugin_info_t **plinfo, mutil_funcs_t *pMetaUtilFuncs);
-typedef int (*META_QUERY_FN) (char *interfaceVersion, plugin_info_t **plinfo, mutil_funcs_t *pMetaUtilFuncs);
-
-C_DLLEXPORT int Meta_Attach (PLUG_LOADTIME now, metamod_funcs_t *pFunctionTable, meta_globals_t *pMGlobals, gamedll_funcs_t *pGamedllFuncs);
-typedef int (*META_ATTACH_FN) (PLUG_LOADTIME now, metamod_funcs_t *pFunctionTable, meta_globals_t *pMGlobals, gamedll_funcs_t *pGamedllFuncs);
-
-C_DLLEXPORT int Meta_Detach (PLUG_LOADTIME now, PL_UNLOAD_REASON reason);
-typedef int (*META_DETACH_FN) (PLUG_LOADTIME now, PL_UNLOAD_REASON reason);
-
-C_DLLEXPORT int GetEntityAPI_Post (gamefuncs_t *pFunctionTable, int interfaceVersion);
-C_DLLEXPORT int GetEntityAPI2_Post (gamefuncs_t *pFunctionTable, int *interfaceVersion);
-
-C_DLLEXPORT int GetNewDLLFunctions_Post (newgamefuncs_t *pNewFunctionTable, int *interfaceVersion);
-C_DLLEXPORT int GetEngineFunctions (enginefuncs_t *pengfuncsFromEngine, int *interfaceVersion);
-C_DLLEXPORT int GetEngineFunctions_Post (enginefuncs_t *pengfuncsFromEngine, int *interfaceVersion);
-
 
 
 #define MDLL_FUNC   gpGamedllFuncs->dllapi_table

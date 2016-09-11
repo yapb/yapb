@@ -73,93 +73,13 @@ typedef int BOOL;
 #define M_PI 3.1415926
 #endif
    
-//
-// Conversion among the three types of "entity", including identity-conversions.
-//
-#if 0
-static inline edict_t *ENT (const entvars_t *pev)
-{
-   return pev->pContainingEntity;
-}
-static inline edict_t *ENT (edict_t *pent)
-{
-   return pent;
-}
-static inline edict_t *ENT (EOFFSET eoffset)
-{
-   return (*g_engfuncs.pfnPEntityOfEntOffset) (eoffset);
-}
-static inline EOFFSET OFFSET (EOFFSET eoffset)
-{
-   return eoffset;
-}
-static inline EOFFSET OFFSET (const edict_t *pent)
-{
-#if _DEBUG
-   if (!pent)
-      ALERT (at_error, "Bad ent in OFFSET()\n");
-#endif
-   return (*g_engfuncs.pfnEntOffsetOfPEntity) (pent);
-}
-static inline EOFFSET OFFSET (entvars_t *pev)
-{
-#if _DEBUG
-   if (!pev)
-      ALERT (at_error, "Bad pev in OFFSET()\n");
-#endif
-   return OFFSET (ENT (pev));
-}
-static inline entvars_t *VARS (entvars_t *pev)
-{
-   return pev;
-}
-
-static inline entvars_t *VARS (edict_t *pent)
-{
-   if (!pent)
-      return NULL;
-
-   return &pent->v;
-}
-
-static inline entvars_t *VARS (EOFFSET eoffset)
-{
-   return VARS (ENT (eoffset));
-}
-#endif
+short FixedSigned16 (float value, float scale);
+uint16 FixedUnsigned16 (float value, float scale);
 
 static inline void MESSAGE_BEGIN (int msg_dest, int msg_type, const float *pOrigin, entvars_t *ent)
 {
    (*g_engfuncs.pfnMessageBegin) (msg_dest, msg_type, pOrigin, ent->pContainingEntity);
 }
-
-#if 0
-// Testing the three types of "entity" for nullity
-#define eoNullEntity 0
-static inline BOOL FNullEnt (EOFFSET eoffset)
-{
-   return eoffset == 0;
-}
-static inline BOOL FNullEnt (entvars_t *pev)
-{
-   return pev == NULL || FNullEnt (OFFSET (pev));
-}
-static inline int FNullEnt (const edict_t *pent)
-{
-   return !pent || !(*g_engfuncs.pfnEntOffsetOfPEntity) (pent);
-}
-
-// Testing strings for nullity
-#define iStringNull 0
-static inline BOOL FStringNull (int stingPtr)
-{
-   return stingPtr == iStringNull;
-}
-
-#define cchMapNameMost 32
-
-#define SAFE_FUNCTION_CALL(pfn,args) try { pfn args; } catch (...)  { }
-#endif
 
 // Dot products for view cone checking
 #define VIEW_FIELD_FULL         (float)-1.0   // +-180 degrees
@@ -195,8 +115,8 @@ typedef struct hudtextparms_s
    float x;
    float y;
    int effect;
-   byte r1, g1, b1, a1;
-   byte r2, g2, b2, a2;
+   uint8 r1, g1, b1, a1;
+   uint8 r2, g2, b2, a2;
    float fadeinTime;
    float fadeoutTime;
    float holdTime;

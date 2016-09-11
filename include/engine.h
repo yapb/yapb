@@ -4,7 +4,7 @@
 //
 // This software is licensed under the BSD-style license.
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     http://yapb.jeefo.net/license
+//     https://yapb.jeefo.net/license
 //
 // Purpose: Engine & Game interfaces.
 //
@@ -92,7 +92,7 @@ struct MessageBlock
 class Engine : public Singleton <Engine>
 {
 private:
-   short m_drawModels[DRAW_NUM];
+   int m_drawModels[DRAW_NUM];
 
    // bot client command
    bool m_isBotCommand;

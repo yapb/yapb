@@ -4,7 +4,7 @@
 //
 // This software is licensed under the BSD-style license.
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     http://yapb.jeefo.net/license
+//     https://yapb.jeefo.net/license
 //
 
 #pragma once
@@ -69,7 +69,7 @@ extern gamefuncs_t g_functionTable;
 
 static inline bool IsNullString (const char *input)
 {
-   if (input == NULL)
+   if (input == nullptr)
       return true;
 
    return *input == '\0';

@@ -4,7 +4,7 @@
 //
 // This software is licensed under the BSD-style license.
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     http://yapb.jeefo.net/license
+//     https://yapb.jeefo.net/license
 //
 
 #pragma once
@@ -40,14 +40,14 @@
    #include <direct.h>
    #include <string.h>
 
-   #define DLL_ENTRYPOINT int STDCALL DllMain (HINSTANCE, DWORD dwReason, LPVOID)
+   #define DLL_ENTRYPOINT int __stdcall DllMain (HINSTANCE, DWORD dwReason, LPVOID)
    #define DLL_DETACHING (dwReason == DLL_PROCESS_DETACH)
    #define DLL_RETENTRY return TRUE
 
    #if defined (COMPILER_VISUALC)
-      #define DLL_GIVEFNPTRSTODLL extern "C" void STDCALL
+      #define DLL_GIVEFNPTRSTODLL extern "C" void __stdcall
    #elif defined (COMPILER_MINGW32)
-      #define DLL_GIVEFNPTRSTODLL SHARED_LIBRARAY_EXPORT void STDCALL
+      #define DLL_GIVEFNPTRSTODLL SHARED_LIBRARAY_EXPORT void __stdcall
    #endif
 
    // specify export parameter
@@ -59,7 +59,7 @@
    typedef int (FAR *EntityAPI_t) (gamefuncs_t *, int);
    typedef int (FAR *NewEntityAPI_t) (newgamefuncs_t *, int *);
    typedef int (FAR *BlendAPI_t) (int, void **, void *, float (*)[3][4], float (*)[128][3][4]);
-   typedef void (STDCALL *FuncPointers_t) (enginefuncs_t *, globalvars_t *);
+   typedef void (__stdcall *FuncPointers_t) (enginefuncs_t *, globalvars_t *);
    typedef void (FAR *EntityPtr_t) (entvars_t *);
 
 #elif defined (PLATFORM_LINUX) || defined (PLATFORM_OSX)
@@ -105,9 +105,9 @@ public:
 
    Library (const char *fileName)
    {
-      m_ptr = NULL;
+      m_ptr = nullptr;
 
-      if (fileName == NULL)
+      if (fileName == nullptr)
          return;
 
       LoadLib (fileName);
@@ -140,7 +140,7 @@ public:
    template <typename R> R GetFuncAddr (const char *function)
    {
       if (!IsLoaded ())
-         return NULL;
+         return nullptr;
 
 #ifdef PLATFORM_WIN32
       return reinterpret_cast <R> (GetProcAddress (static_cast <HMODULE> (m_ptr), function));
@@ -156,6 +156,6 @@ public:
 
    inline bool IsLoaded (void) const
    {
-      return m_ptr != NULL;
+      return m_ptr != nullptr;
    }
 };

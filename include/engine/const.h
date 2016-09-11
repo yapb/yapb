@@ -602,10 +602,10 @@
 #define CHAN_NETWORKVOICE_END  500   // network voice data reserves slots (CHAN_NETWORKVOICE_BASE through CHAN_NETWORKVOICE_END).
 
 // attenuation values
-#define ATTN_NONE        0
-#define ATTN_NORM       (float)0.8
-#define ATTN_IDLE       (float)2
-#define ATTN_STATIC     (float)1.25
+#define ATTN_NONE       0.0f
+#define ATTN_NORM       0.8f
+#define ATTN_IDLE       2f
+#define ATTN_STATIC     1.25f
 
 // pitch values
 #define PITCH_NORM       100     // non-pitch shifted
@@ -710,42 +710,6 @@ enum
 typedef int func_t;
 typedef int string_t;
 
-typedef unsigned char byte;
-typedef unsigned short word;
-
-#define _DEF_BYTE_
-
-#undef true
-#undef false
-
-#ifndef __cplusplus
-typedef enum
-{ false, true } int;
-#else
-#endif
-
-typedef struct
-{
-   byte r, g, b;
-} color24;
-
-typedef struct
-{
-   unsigned r, g, b, a;
-} colorVec;
-
-#ifdef _WIN32
-#pragma pack(push,2)
-#endif
-
-typedef struct
-{
-   unsigned short r, g, b, a;
-} PackedColorVec;
-
-#ifdef _WIN32
-#pragma pack(pop)
-#endif
 typedef struct link_s
 {
    struct link_s *prev, *next;

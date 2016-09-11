@@ -33,9 +33,6 @@
     <ClInclude Include="..\include\engine\const.h">
       <Filter>include\engine</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\engine\dllapi.h">
-      <Filter>include\engine</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\engine\eiface.h">
       <Filter>include\engine</Filter>
     </ClInclude>
@@ -45,22 +42,10 @@
     <ClInclude Include="..\include\engine\meta_api.h">
       <Filter>include\engine</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\engine\mutil.h">
-      <Filter>include\engine</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\engine\plinfo.h">
-      <Filter>include\engine</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\engine\progdefs.h">
       <Filter>include\engine</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\engine\sdk_util.h">
-      <Filter>include\engine</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\engine\util.h">
-      <Filter>include\engine</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\engine\archtypes.h">
       <Filter>include\engine</Filter>
     </ClInclude>
     <ClInclude Include="..\include\platform.h">

@@ -4,7 +4,7 @@
 //
 // This software is licensed under the BSD-style license.
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     http://yapb.jeefo.net/license
+//     https://yapb.jeefo.net/license
 //
 
 #pragma once
@@ -17,7 +17,7 @@ protected:
    unsigned long int m_textSize;
    unsigned long int m_codeSize;
 
-   byte m_textBuffer[N + F - 1];
+   uint8 m_textBuffer[N + F - 1];
    int m_matchPosition;
    int m_matchLength;
 
@@ -41,7 +41,7 @@ private:
 
       int compare = 1;
 
-      byte *key = &m_textBuffer[node];
+      uint8 *key = &m_textBuffer[node];
       int temp = N + 1 + key[0];
 
       m_right[node] = m_left[node] = NIL;
@@ -172,15 +172,17 @@ public:
       memset (m_parent, 0, sizeof (m_parent));
    }
 
-   int InternalEncode (const char *fileName, byte *header, int headerSize, byte *buffer, int bufferSize)
+   int InternalEncode (const char *fileName, uint8 *header, int headerSize, uint8 *buffer, int bufferSize)
    {
-      int i, bit, length, node, strPtr, lastMatchLength, codeBufferPtr, bufferPtr = 0;
-      byte codeBuffer[17], mask;
+      int i, length, node, strPtr, lastMatchLength, codeBufferPtr, bufferPtr = 0;
+      uint8 codeBuffer[17], mask;
 
       File fp (fileName, "wb");
 
       if (!fp.IsValid ())
          return -1;
+
+      uint8 bit;
 
       fp.Write (header, headerSize, 1);
       InitTree ();
@@ -219,8 +221,8 @@ public:
          }
          else
          {
-            codeBuffer[codeBufferPtr++] = (unsigned char) m_matchPosition;
-            codeBuffer[codeBufferPtr++] = (unsigned char) (((m_matchPosition >> 4) & 0xf0) | (m_matchLength - (THRESHOLD + 1)));
+            codeBuffer[codeBufferPtr++] = (uint8) m_matchPosition;
+            codeBuffer[codeBufferPtr++] = (uint8) (((m_matchPosition >> 4) & 0xf0) | (m_matchLength - (THRESHOLD + 1)));
          }
 
          if ((mask  <<= 1) == 0)
@@ -273,11 +275,13 @@ public:
       return m_codeSize;
    }
 
-   int InternalDecode (const char *fileName, int headerSize, byte *buffer, int bufferSize)
+   int InternalDecode (const char *fileName, int headerSize, uint8 *buffer, int bufferSize)
    {
-      int i, j, k, node, bit;
+      int i, j, k, node;
       unsigned int flags;
       int bufferPtr = 0;
+
+      uint8 bit;
 
       File fp (fileName, "rb");
 
@@ -296,14 +300,14 @@ public:
       {
          if (((flags >>= 1) & 256) == 0)
          {
-            if ((bit = fp.GetChar ()) == EOF)
+            if ((bit = static_cast <uint8> (fp.GetChar ())) == EOF)
                break;
             flags = bit | 0xff00;
          } 
 
          if (flags & 1)
          {
-            if ((bit = fp.GetChar ()) == EOF)
+            if ((bit = static_cast <uint8> (fp.GetChar ())) == EOF)
                break;
             buffer[bufferPtr++] = bit;
 
@@ -343,14 +347,14 @@ public:
    }
 
    // external decoder
-   static int Uncompress (const char *fileName, int headerSize, byte *buffer, int bufferSize)
+   static int Uncompress (const char *fileName, int headerSize, uint8 *buffer, int bufferSize)
    {
       static Compressor compressor = Compressor ();
       return compressor.InternalDecode (fileName, headerSize, buffer, bufferSize);
    }
 
    // external encoder
-   static int Compress(const char *fileName, byte *header, int headerSize, byte *buffer, int bufferSize)
+   static int Compress(const char *fileName, uint8 *header, int headerSize, uint8 *buffer, int bufferSize)
    {
       static Compressor compressor = Compressor ();
       return compressor.InternalEncode (fileName, header, headerSize, buffer, bufferSize);

@@ -18,7 +18,6 @@
 #define INTERFACE_VERSION 140
 
 #include <stdio.h>
-#include "archtypes.h"
 
 #define FCVAR_ARCHIVE      (1 << 0)   // set to cause it to be saved to vars.rc
 #define FCVAR_USERINFO     (1 << 1)   // changes the client's info string
@@ -189,14 +188,14 @@ typedef struct enginefuncs_s
    void      (*pfnGetAttachment) (const edict_t *ent, int iAttachment, float *rgflOrigin, float *rgflAngles);
    void      (*pfnCRC32_Init) (CRC32_t *pulCRC);
    void      (*pfnCRC32_ProcessBuffer) (CRC32_t *pulCRC, void *p, int len);
-   void      (*pfnCRC32_ProcessByte) (CRC32_t *pulCRC, unsigned char ch);
+   void      (*pfnCRC32_ProcessByte) (CRC32_t *pulCRC, uint8 ch);
    CRC32_t   (*pfnCRC32_Final) (CRC32_t pulCRC);
    int32     (*pfnRandomLong) (int32 lLow, int32 lHigh);
    float     (*pfnRandomFloat) (float flLow, float flHigh);
    void      (*pfnSetView) (const edict_t *client, const edict_t *pViewent);
    float     (*pfnTime) (void);
    void      (*pfnCrosshairAngle) (const edict_t *client, float pitch, float yaw);
-   byte      *(*pfnLoadFileForMe) (char const *szFilename, int *pLength);
+   uint8      *(*pfnLoadFileForMe) (char const *szFilename, int *pLength);
    void      (*pfnFreeFile) (void *buffer);
    void      (*pfnEndSection) (const char *pszSectionName);   // trigger_endsection
    int       (*pfnCompareFileTime) (char *filename1, char *filename2, int *compare);
@@ -204,10 +203,10 @@ typedef struct enginefuncs_s
    void      (*pfnCvar_RegisterVariable) (cvar_t *variable);
    void      (*pfnFadeClientVolume) (const edict_t *ent, int fadePercent, int fadeOutSeconds, int holdTime, int fadeInSeconds);
    void      (*pfnSetClientMaxspeed) (const edict_t *ent, float fNewMaxspeed);
-   edict_t   *(*pfnCreateFakeClient) (const char *netname);   // returns NULL if fake client can't be created
-   void      (*pfnRunPlayerMove) (edict_t *fakeclient, const float *viewangles, float forwardmove, float sidemove, float upmove, unsigned short buttons, byte impulse, byte msec);
+   edict_t   *(*pfnCreateFakeClient) (const char *netname);   // returns nullptr if fake client can't be created
+   void      (*pfnRunPlayerMove) (edict_t *fakeclient, const float *viewangles, float forwardmove, float sidemove, float upmove, uint16 buttons, uint8 impulse, uint8 msec);
    int       (*pfnNumberOfEntities) (void);
-   char      *(*pfnGetInfoKeyBuffer) (edict_t *e);   // passing in NULL gets the serverinfo
+   char      *(*pfnGetInfoKeyBuffer) (edict_t *e);   // passing in nullptr gets the serverinfo
    char      *(*pfnInfoKeyValue) (char *infobuffer, char const *key);
    void      (*pfnSetKeyValue) (char *infobuffer, char *key, char *value);
    void      (*pfnSetClientKeyValue) (int clientIndex, char *infobuffer, char const *key, char const *value);
@@ -224,14 +223,14 @@ typedef struct enginefuncs_s
    const char *(*pfnGetPhysicsKeyValue) (const edict_t *client, const char *key);
    void      (*pfnSetPhysicsKeyValue) (const edict_t *client, const char *key, const char *value);
    const char *(*pfnGetPhysicsInfoString) (const edict_t *client);
-   unsigned short (*pfnPrecacheEvent) (int type, const char *psz);
-   void (*pfnPlaybackEvent) (int flags, const edict_t *pInvoker, unsigned short evIndexOfEntity, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2);
-   unsigned char *(*pfnSetFatPVS) (float *org);
-   unsigned char *(*pfnSetFatPAS) (float *org);
-   int       (*pfnCheckVisibility) (const edict_t *entity, unsigned char *pset);
+   uint16 (*pfnPrecacheEvent) (int type, const char *psz);
+   void (*pfnPlaybackEvent) (int flags, const edict_t *pInvoker, uint16 evIndexOfEntity, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2);
+   uint8 *(*pfnSetFatPVS) (float *org);
+   uint8 *(*pfnSetFatPAS) (float *org);
+   int       (*pfnCheckVisibility) (const edict_t *entity, uint8 *pset);
    void      (*pfnDeltaSetField) (struct delta_s *pFields, const char *fieldname);
    void      (*pfnDeltaUnsetField) (struct delta_s *pFields, const char *fieldname);
-   void      (*pfnDeltaAddEncoder) (char *name, void (*conditionalencode) (struct delta_s *pFields, const unsigned char *from, const unsigned char *to));
+   void      (*pfnDeltaAddEncoder) (char *name, void (*conditionalencode) (struct delta_s *pFields, const uint8 *from, const uint8 *to));
    int       (*pfnGetCurrentPlayer) (void);
    int       (*pfnCanSkipPlayer) (const edict_t *player);
    int       (*pfnDeltaFindField) (struct delta_s *pFields, const char *fieldname);
@@ -338,9 +337,9 @@ typedef struct
    void      (*pfnPM_Move) (struct playermove_s *ppmove, int server);
    void      (*pfnPM_Init) (struct playermove_s *ppmove);
    char      (*pfnPM_FindTextureType) (char *name);
-   void      (*pfnSetupVisibility) (struct edict_s *pViewEntity, struct edict_s *client, unsigned char **pvs, unsigned char **pas);
+   void      (*pfnSetupVisibility) (struct edict_s *pViewEntity, struct edict_s *client, uint8 **pvs, uint8 **pas);
    void      (*pfnUpdateClientData) (const struct edict_s *ent, int sendweapons, struct clientdata_s *cd);
-   int       (*pfnAddToFullPack) (struct entity_state_s *state, int e, edict_t *ent, edict_t *host, int hostflags, int player, unsigned char *pSet);
+   int       (*pfnAddToFullPack) (struct entity_state_s *state, int e, edict_t *ent, edict_t *host, int hostflags, int player, uint8 *pSet);
    void      (*pfnCreateBaseline) (int player, int eindex, struct entity_state_s *baseline, struct edict_s *entity, int playermodelindex, float* player_mins, float* player_maxs);
    void      (*pfnRegisterEncoders) (void);
    int       (*pfnGetWeaponData) (struct edict_s *player, struct weapon_data_s *info);

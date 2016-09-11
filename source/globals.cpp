@@ -4,7 +4,7 @@
 //
 // This software is licensed under the BSD-style license.
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     http://yapb.jeefo.net/license
+//     https://yapb.jeefo.net/license
 //
 
 #include <core.h>
@@ -71,11 +71,11 @@ Array <Array <ChatterItem> > g_chatterFactory;
 Array <BotName> g_botNames;
 Array <KeywordFactory> g_replyFactory;
 RandomSequenceOfUnique Random;
-Library *g_gameLib = NULL;
+Library *g_gameLib = nullptr;
 
-meta_globals_t *gpMetaGlobals = NULL;
-gamedll_funcs_t *gpGamedllFuncs = NULL;
-mutil_funcs_t *gpMetaUtilFuncs = NULL;
+meta_globals_t *gpMetaGlobals = nullptr;
+gamedll_funcs_t *gpGamedllFuncs = nullptr;
+mutil_funcs_t *gpMetaUtilFuncs = nullptr;
 
 gamefuncs_t g_functionTable;
 
@@ -83,9 +83,9 @@ enginefuncs_t g_engfuncs;
 Client g_clients[MAX_ENGINE_PLAYERS];
 WeaponProperty g_weaponDefs[MAX_WEAPONS + 1];
 
-edict_t *g_hostEntity = NULL;
-globalvars_t *g_pGlobals = NULL;
-Experience *g_experienceData = NULL;
+edict_t *g_hostEntity = nullptr;
+globalvars_t *g_pGlobals = nullptr;
+Experience *g_experienceData = nullptr;
 
 // default tables for personality weapon preferences, overridden by weapons.cfg
 int g_normalWeaponPrefs[NUM_WEAPONS] =
@@ -108,19 +108,6 @@ int *g_weaponPrefs[] =
    g_normalWeaponPrefs,
    g_rusherWeaponPrefs,
    g_carefulWeaponPrefs
-};
-
-// metamod engine & dllapi function tables
-metamod_funcs_t gMetaFunctionTable =
-{
-   NULL, // pfnGetEntityAPI ()
-   NULL, // pfnGetEntityAPI_Post ()
-   GetEntityAPI2, // pfnGetEntityAPI2 ()
-   GetEntityAPI2_Post, // pfnGetEntityAPI2_Post ()
-   NULL, // pfnGetNewDLLFunctions ()
-   NULL, // pfnGetNewDLLFunctions_Post ()
-   GetEngineFunctions, // pfnGetEngineFunctions ()
-   GetEngineFunctions_Post, // pfnGetEngineFunctions_Post ()
 };
 
 // metamod plugin information
@@ -383,25 +370,25 @@ MenuText g_menus[21] =
    // kickmenu #1
    {
       0x0,
-      NULL,
+      nullptr,
    },
 
    // kickmenu #2
    {
       0x0,
-      NULL,
+      nullptr,
    },
 
    // kickmenu #3
    {
       0x0,
-      NULL,
+      nullptr,
    },
 
    // kickmenu #4
    {
       0x0,
-      NULL,
+      nullptr,
    },
 
    // command menu

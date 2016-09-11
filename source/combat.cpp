@@ -4,7 +4,7 @@
 //
 // This software is licensed under the BSD-style license.
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     http://yapb.jeefo.net/license
+//     https://yapb.jeefo.net/license
 //
 
 #include <core.h>
@@ -14,7 +14,7 @@ ConVar yb_ignore_enemies ("yb_ignore_enemies", "0");
 ConVar yb_csdm_mode ("yb_csdm_mode", "0");
 ConVar yb_check_enemy_rendering ("yb_check_enemy_rendering", "0");
 
-ConVar mp_friendlyfire ("mp_friendlyfire", NULL, VT_NOREGISTER);
+ConVar mp_friendlyfire ("mp_friendlyfire", nullptr, VT_NOREGISTER);
 
 int Bot::GetNearbyFriendsNearPosition(const Vector &origin, float radius)
 {
@@ -93,7 +93,7 @@ bool Bot::IsEnemyHiddenByRendering (edict_t *enemy)
    return false;
 }
 
-bool Bot::CheckVisibility (edict_t *target, Vector *origin, byte *bodyPart)
+bool Bot::CheckVisibility (edict_t *target, Vector *origin, uint8 *bodyPart)
 {
    // this function checks visibility of a bot target.
 
@@ -214,7 +214,7 @@ bool Bot::LookupEnemy (void)
    if (m_enemyIgnoreTimer > engine.Time () || m_blindTime > engine.Time () || yb_ignore_enemies.GetBool ())
       return false;
 
-   edict_t *player, *newEnemy = NULL;
+   edict_t *player, *newEnemy = nullptr;
 
    float nearestDistance = m_viewDistance;
 
@@ -237,7 +237,7 @@ bool Bot::LookupEnemy (void)
       m_enemyUpdateTime = engine.Time () + 0.5f;
 
       // ignore shielded enemies, while we have real one
-      edict_t *shieldEnemy = NULL;
+      edict_t *shieldEnemy = nullptr;
 
       // setup potentially visible set for this bot
       Vector potentialVisibility = EyePosition ();
@@ -245,7 +245,7 @@ bool Bot::LookupEnemy (void)
       if (pev->flags & FL_DUCKING)
          potentialVisibility = potentialVisibility + (VEC_HULL_MIN - VEC_DUCK_HULL_MIN);
 
-      byte *pvs = ENGINE_SET_PVS (reinterpret_cast <float *> (&potentialVisibility));
+      uint8 *pvs = ENGINE_SET_PVS (reinterpret_cast <float *> (&potentialVisibility));
 
       // search the world for players...
       for (int i = 0; i < engine.MaxClients (); i++)
@@ -266,7 +266,7 @@ bool Bot::LookupEnemy (void)
          {
             m_blindRecognizeTime = engine.Time () + Random.Float (1.0f, 2.0f);
 
-            if (Random.Long (0, 100) < 50)
+            if (Random.Int (0, 100) < 50)
                ChatterMessage (Chatter_BehindSmoke);
          }
 
@@ -323,9 +323,9 @@ bool Bot::LookupEnemy (void)
          if (m_seeEnemyTime + 3.0 < engine.Time () && (m_hasC4 || HasHostage () || !engine.IsNullEntity (m_targetEntity)))
             RadioMessage (Radio_EnemySpotted);
 
-         m_targetEntity = NULL; // stop following when we see an enemy...
+         m_targetEntity = nullptr; // stop following when we see an enemy...
 
-         if (Random.Long (0, 100) < m_difficulty * 25)
+         if (Random.Int (0, 100) < m_difficulty * 25)
             m_enemySurpriseTime = engine.Time () + m_actualReactionTime * 0.5f;
          else
             m_enemySurpriseTime = engine.Time () + m_actualReactionTime;
@@ -353,7 +353,7 @@ bool Bot::LookupEnemy (void)
 
             Bot *other = bots.GetBot (client.ent);
 
-            if (other != NULL && other->m_seeEnemyTime + 2.0f < engine.Time () && engine.IsNullEntity (other->m_lastEnemy) && IsVisible (pev->origin, other->GetEntity ()) && other->IsInViewCone (pev->origin))
+            if (other != nullptr && other->m_seeEnemyTime + 2.0f < engine.Time () && engine.IsNullEntity (other->m_lastEnemy) && IsVisible (pev->origin, other->GetEntity ()) && other->IsInViewCone (pev->origin))
             {
                other->m_lastEnemy = newEnemy;
                other->m_lastEnemyOrigin = m_lastEnemyOrigin;
@@ -372,7 +372,7 @@ bool Bot::LookupEnemy (void)
 
       if (!IsAlive (newEnemy))
       {
-         m_enemy = NULL;
+         m_enemy = nullptr;
   
          // shoot at dying players if no new enemy to give some more human-like illusion
          if (m_seeEnemyTime + 0.1f > engine.Time ())
@@ -459,7 +459,7 @@ const Vector &Bot::GetAimPosition (void)
          int headshotFreq[5] = { 20, 40, 60, 80, 100 };
 
          // now check is our skill match to aim at head, else aim at enemy body
-         if ((Random.Long (1, 100) < headshotFreq[m_difficulty]) || UsesPistol ())
+         if ((Random.Int (1, 100) < headshotFreq[m_difficulty]) || UsesPistol ())
             targetOrigin = targetOrigin + m_enemy->v.view_ofs + Vector (0.0f, 0.0f, GetZOffset (distance));
          else
             targetOrigin = targetOrigin + Vector (0.0f, 0.0f, GetZOffset (distance));
@@ -816,7 +816,7 @@ void Bot::FinishWeaponSelection (float distance, int index, int id, int choosen)
       {
          if (distance < 64.0f)
          {
-            if (Random.Long (1, 100) < 30 || HasShield ())
+            if (Random.Int (1, 100) < 30 || HasShield ())
                pev->button |= IN_ATTACK; // use primary attack
             else
                pev->button |= IN_ATTACK2; // use secondary attack
@@ -1082,7 +1082,7 @@ void Bot::CombatFight (void)
       {
          if (m_lastFightStyleCheck + 3.0f < engine.Time ())
          {
-            int rand = Random.Long (1, 100);
+            int rand = Random.Int (1, 100);
 
             if (distance < 450.0f)
                m_fightStyle = FIGHT_STRAFE;
@@ -1107,7 +1107,7 @@ void Bot::CombatFight (void)
       {
          if (m_lastFightStyleCheck + 3.0f < engine.Time ())
          {
-            if (Random.Long (0, 100) < 50)
+            if (Random.Int (0, 100) < 50)
                m_fightStyle = FIGHT_STRAFE;
             else
                m_fightStyle = FIGHT_STAY;
@@ -1131,7 +1131,7 @@ void Bot::CombatFight (void)
             else
                m_combatStrafeDir = STRAFE_DIR_RIGHT;
 
-            if (Random.Long (1, 100) < 30)
+            if (Random.Int (1, 100) < 30)
                m_combatStrafeDir = (m_combatStrafeDir == STRAFE_DIR_LEFT ? STRAFE_DIR_RIGHT : STRAFE_DIR_LEFT);
 
             m_strafeSetTime = engine.Time () + Random.Float (0.5f, 3.0f);
@@ -1158,7 +1158,7 @@ void Bot::CombatFight (void)
             }
          }
 
-         if (m_difficulty >= 3 && (m_jumpTime + 5.0f < engine.Time () && IsOnFloor () && Random.Long (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.GetLength2D () > 150.0f) && !UsesSniper ())
+         if (m_difficulty >= 3 && (m_jumpTime + 5.0f < engine.Time () && IsOnFloor () && Random.Int (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.GetLength2D () > 150.0f) && !UsesSniper ())
             pev->button |= IN_JUMP;
 
          if (m_moveSpeed > 0.0f && distance > 100.0f && m_currentWeapon != WEAPON_KNIFE)

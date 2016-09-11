@@ -4,15 +4,15 @@
 //
 // This software is licensed under the BSD-style license.
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     http://yapb.jeefo.net/license
+//     https://yapb.jeefo.net/license
 //
 
 #include <core.h>
 
 ConVar yb_display_menu_text ("yb_display_menu_text", "1");
 
-ConVar mp_roundtime ("mp_roundtime", NULL, VT_NOREGISTER);
-ConVar mp_freezetime ("mp_freezetime", NULL, VT_NOREGISTER, true);
+ConVar mp_roundtime ("mp_roundtime", nullptr, VT_NOREGISTER);
+ConVar mp_freezetime ("mp_freezetime", nullptr, VT_NOREGISTER, true);
 
 uint16 FixedUnsigned16 (float value, float scale)
 {
@@ -45,7 +45,7 @@ const char *FormatBuffer (const char *format, ...)
    static char strBuffer[2][MAX_PRINT_BUFFER];
    static int rotator = 0;
 
-   if (format == NULL)
+   if (format == nullptr)
       return strBuffer[rotator];
       
    static char *ptr = strBuffer[rotator ^= 1];
@@ -106,7 +106,7 @@ void DisplayMenuToClient (edict_t *ent, MenuText *menu)
 
    int clientIndex = engine.IndexOfEntity (ent) - 1;
 
-   if (menu != NULL)
+   if (menu != nullptr)
    {
       String tempText = String (menu->menuText);
       tempText.Replace ("\v", "\n");
@@ -125,7 +125,7 @@ void DisplayMenuToClient (edict_t *ent, MenuText *menu)
 
       while (strlen (text) >= 64)
       {
-         MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), NULL, ent);
+         MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), nullptr, ent);
             WRITE_SHORT (menu->validSlots);
             WRITE_CHAR (-1);
             WRITE_BYTE (1);
@@ -138,7 +138,7 @@ void DisplayMenuToClient (edict_t *ent, MenuText *menu)
          text += 64;
       }
 
-      MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), NULL, ent);
+      MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), nullptr, ent);
          WRITE_SHORT (menu->validSlots);
          WRITE_CHAR (-1);
          WRITE_BYTE (0);
@@ -149,14 +149,14 @@ void DisplayMenuToClient (edict_t *ent, MenuText *menu)
    }
    else
    {
-      MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), NULL, ent);
+      MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), nullptr, ent);
          WRITE_SHORT (0);
          WRITE_CHAR (0);
          WRITE_BYTE (0);
          WRITE_STRING ("");
       MESSAGE_END();
 
-     g_clients[clientIndex].menu = NULL;
+     g_clients[clientIndex].menu = nullptr;
    }
    CLIENT_COMMAND (ent, "speak \"player/geiger1\"\n"); // Stops others from hearing menu sounds..
 }
@@ -242,7 +242,7 @@ void FreeLibraryMemory (void)
    waypoints.Init (); // frees waypoint data
 
    delete [] g_experienceData;
-   g_experienceData = NULL;
+   g_experienceData = nullptr;
 }
 
 void UpdateGlobalExperienceData (void)
@@ -253,8 +253,8 @@ void UpdateGlobalExperienceData (void)
    if (g_numWaypoints < 1 || waypoints.HasChanged ())
       return; // no action
 
-   unsigned short maxDamage; // maximum damage
-   unsigned short actDamage; // actual damage
+   uint16 maxDamage; // maximum damage
+   uint16 actDamage; // actual damage
 
    int bestIndex; // best index to store
    bool recalcKills = false;
@@ -327,7 +327,7 @@ void UpdateGlobalExperienceData (void)
             if (clip < 0)
                clip = 0;
 
-            (g_experienceData + (i * g_numWaypoints) + j)->team0Damage = static_cast <unsigned short> (clip);
+            (g_experienceData + (i * g_numWaypoints) + j)->team0Damage = static_cast <uint16> (clip);
 
             clip = (g_experienceData + (i * g_numWaypoints) + j)->team1Damage;
             clip -= static_cast <int> (MAX_DAMAGE_VALUE * 0.5);
@@ -335,7 +335,7 @@ void UpdateGlobalExperienceData (void)
             if (clip < 0)
                clip = 0;
 
-            (g_experienceData + (i * g_numWaypoints) + j)->team1Damage = static_cast <unsigned short> (clip);
+            (g_experienceData + (i * g_numWaypoints) + j)->team1Damage = static_cast <uint16> (clip);
          }
       }
    }
@@ -359,8 +359,8 @@ void UpdateGlobalExperienceData (void)
    {
       for (int i = 0; i < g_numWaypoints; i++)
       {
-         (g_experienceData + (i * g_numWaypoints) + i)->team0Damage /= static_cast <unsigned short> (engine.MaxClients () * 0.5);
-         (g_experienceData + (i * g_numWaypoints) + i)->team1Damage /= static_cast <unsigned short> (engine.MaxClients () * 0.5);
+         (g_experienceData + (i * g_numWaypoints) + i)->team0Damage /= static_cast <uint16> (engine.MaxClients () * 0.5);
+         (g_experienceData + (i * g_numWaypoints) + i)->team1Damage /= static_cast <uint16> (engine.MaxClients () * 0.5);
       }
       g_highestKills = 1;
    }
@@ -433,7 +433,7 @@ bool IsValidPlayer (edict_t *ent)
    if (ent->v.flags & FL_PROXY)
       return false;
 
-   if ((ent->v.flags & (FL_CLIENT | FL_FAKECLIENT)) || bots.GetBot (ent) != NULL)
+   if ((ent->v.flags & (FL_CLIENT | FL_FAKECLIENT)) || bots.GetBot (ent) != nullptr)
       return !IsNullString (STRING (ent->v.netname));
 
    return false;
@@ -452,7 +452,7 @@ bool IsPlayerVIP (edict_t *ent)
 
 bool IsValidBot (edict_t *ent)
 {
-   if (bots.GetBot (ent) != NULL || (!engine.IsNullEntity (ent) && (ent->v.flags & FL_FAKECLIENT)))
+   if (bots.GetBot (ent) != nullptr || (!engine.IsNullEntity (ent) && (ent->v.flags & FL_FAKECLIENT)))
       return true;
 
    return false;
@@ -477,10 +477,10 @@ bool OpenConfig (const char *fileName, const char *errorIfNotExists, MemoryFile 
 
       // check file existence
       int size = 0;
-      unsigned char *buffer = NULL;
+      uint8 *buffer = nullptr;
 
       // check is file is exists for this language
-      if ((buffer = MemoryFile::Loader (langConfig, &size)) != NULL)
+      if ((buffer = MemoryFile::Loader (langConfig, &size)) != nullptr)
       {
          MemoryFile::Unloader (buffer);
 
@@ -544,19 +544,19 @@ void CheckWelcomeMessage (void)
 
       engine.ChatPrintf ("----- %s v%s (Build: %u), {%s}, (c) 2016, by %s (%s)-----", PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_DATE, PRODUCT_AUTHOR, PRODUCT_URL);
       
-      MESSAGE_BEGIN (MSG_ONE, SVC_TEMPENTITY, NULL, g_hostEntity);
+      MESSAGE_BEGIN (MSG_ONE, SVC_TEMPENTITY, nullptr, g_hostEntity);
       WRITE_BYTE (TE_TEXTMESSAGE);
       WRITE_BYTE (1);
       WRITE_SHORT (FixedSigned16 (-1, 1 << 13));
       WRITE_SHORT (FixedSigned16 (-1, 1 << 13));
       WRITE_BYTE (2);
-      WRITE_BYTE (Random.Long (33, 255));
-      WRITE_BYTE (Random.Long (33, 255));
-      WRITE_BYTE (Random.Long (33, 255));
+      WRITE_BYTE (Random.Int (33, 255));
+      WRITE_BYTE (Random.Int (33, 255));
+      WRITE_BYTE (Random.Int (33, 255));
       WRITE_BYTE (0);
-      WRITE_BYTE (Random.Long (230, 255));
-      WRITE_BYTE (Random.Long (230, 255));
-      WRITE_BYTE (Random.Long (230, 255));
+      WRITE_BYTE (Random.Int (230, 255));
+      WRITE_BYTE (Random.Int (230, 255));
+      WRITE_BYTE (Random.Int (230, 255));
       WRITE_BYTE (200);
       WRITE_SHORT (FixedUnsigned16 (0.0078125f, 1 << 8));
       WRITE_SHORT (FixedUnsigned16 (2.0f, 1 << 8));
@@ -660,7 +660,7 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
    // team, live status, search distance etc. if needBot is true, then pvHolder, will
    // be filled with bot pointer, else with edict pointer(!).
 
-   edict_t *survive = NULL; // pointer to temporally & survive entity
+   edict_t *survive = nullptr; // pointer to temporally & survive entity
    float nearestPlayer = 4096.0f; // nearest player
 
    int toTeam = engine.GetTeam (to);
@@ -874,7 +874,7 @@ int GenerateBuildNumber (void)
    const char *months[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
    // array of the month days
-   byte monthDays[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+   uint8 monthDays[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
    int day = 0; // day of the year
    int year = 0; // year

@@ -15,17 +15,12 @@
     <ClInclude Include="..\include\core.h" />
     <ClInclude Include="..\include\corelib.h" />
     <ClInclude Include="..\include\engine.h" />
-    <ClInclude Include="..\include\engine\archtypes.h" />
     <ClInclude Include="..\include\engine\const.h" />
-    <ClInclude Include="..\include\engine\dllapi.h" />
     <ClInclude Include="..\include\engine\eiface.h" />
     <ClInclude Include="..\include\engine\enginecallback.h" />
     <ClInclude Include="..\include\engine\extdll.h" />
     <ClInclude Include="..\include\engine\meta_api.h" />
-    <ClInclude Include="..\include\engine\mutil.h" />
-    <ClInclude Include="..\include\engine\plinfo.h" />
     <ClInclude Include="..\include\engine\progdefs.h" />
-    <ClInclude Include="..\include\engine\sdk_util.h" />
     <ClInclude Include="..\include\engine\util.h" />
     <ClInclude Include="..\include\globals.h" />
     <ClInclude Include="..\include\platform.h" />

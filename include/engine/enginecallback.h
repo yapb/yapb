@@ -72,7 +72,7 @@ extern enginefuncs_t g_engfuncs;
 #define RANDOM_LONG       (*g_engfuncs.pfnRandomLong)
 #define RANDOM_FLOAT      (*g_engfuncs.pfnRandomFloat)
 #define GETPLAYERAUTHID   (*g_engfuncs.pfnGetPlayerAuthId)
-static inline void MESSAGE_BEGIN (int msg_dest, int msg_type, const float *pOrigin = NULL, edict_t *ed = NULL)
+static inline void MESSAGE_BEGIN (int msg_dest, int msg_type, const float *pOrigin = nullptr, edict_t *ed = nullptr)
 {
    (*g_engfuncs.pfnMessageBegin) (msg_dest, msg_type, pOrigin, ed);
 }
@@ -95,7 +95,7 @@ static inline void MESSAGE_BEGIN (int msg_dest, int msg_type, const float *pOrig
 #define ALERT           (*g_engfuncs.pfnAlertMessage)
 #define ENGINE_FPRINTF  (*g_engfuncs.pfnEngineFprintf)
 #define ALLOC_PRIVATE   (*g_engfuncs.pfnPvAllocEntPrivateData)
-#define GET_PRIVATE(pent)  (pent ? (pent->pvPrivateData) : NULL);
+#define GET_PRIVATE(pent)  (pent ? (pent->pvPrivateData) : nullptr);
 #define FREE_PRIVATE   (*g_engfuncs.pfnFreeEntPrivateData)
 #define ALLOC_STRING   (*g_engfuncs.pfnAllostring)
 #define FIND_ENTITY_BY_STRING   (*g_engfuncs.pfnFindEntityByString)

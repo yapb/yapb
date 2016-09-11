@@ -4,7 +4,7 @@
 //
 // This software is licensed under the BSD-style license.
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     http://yapb.jeefo.net/license
+//     https://yapb.jeefo.net/license
 //
 
 #include <core.h>
@@ -92,17 +92,17 @@ char *HumanizeName (char *name)
    strncpy (outputName, name, SIZEOF_CHAR (outputName)); // copy name to new buffer
 
    // drop tag marks, 80 percent of time
-   if (Random.Long (1, 100) < 80)
+   if (Random.Int (1, 100) < 80)
       StripTags (outputName);
    else
       String::TrimExternalBuffer (outputName);
 
    // sometimes switch name to lower characters
    // note: since we're using russian names written in english, we reduce this shit to 6 percent
-   if (Random.Long (1, 100) <= 6)
+   if (Random.Int (1, 100) <= 6)
    {
       for (int i = 0; i < static_cast <int> (strlen (outputName)); i++)
-         outputName[i] = tolower (outputName[i]); // to lower case
+         outputName[i] = static_cast <char> (tolower (static_cast <int> (outputName[i]))); // to lower case
    }
    return &outputName[0]; // return terminated string
 }
@@ -116,18 +116,18 @@ void HumanizeChat (char *buffer)
 
    // sometimes switch text to lowercase
    // note: since we're using russian chat written in english, we reduce this shit to 4 percent
-   if (Random.Long (1, 100) <= 4)
+   if (Random.Int (1, 100) <= 4)
    {
       for (i = 0; i < length; i++)
-         buffer[i] = tolower (buffer[i]); // switch to lowercase
+         buffer[i] = static_cast <char> (tolower (static_cast <int> (buffer[i])));; // switch to lowercase
    }
 
    if (length > 15)
    {
       // "length / 2" percent of time drop a character
-      if (Random.Long (1, 100) < (length / 2))
+      if (Random.Int (1, 100) < (length / 2))
       {
-         int pos = Random.Long ((length / 8), length - (length / 8)); // chose random position in string
+         int pos = Random.Int ((length / 8), length - (length / 8)); // chose random position in string
 
          for (i = pos; i < length - 1; i++)
             buffer[i] = buffer[i + 1]; // overwrite the buffer with stripped string
@@ -137,9 +137,9 @@ void HumanizeChat (char *buffer)
       }
 
       // "length" / 4 precent of time swap character
-      if (Random.Long (1, 100) < (length / 4))
+      if (Random.Int (1, 100) < (length / 4))
       {
-         int pos = Random.Long ((length / 8), ((3 * length) / 8)); // choose random position in string
+         int pos = Random.Int ((length / 8), ((3 * length) / 8)); // choose random position in string
          char ch = buffer[pos]; // swap characters
 
          buffer[pos] = buffer[pos + 1];
@@ -163,14 +163,14 @@ void Bot::PrepareChatMessage (char *text)
    char *textStart = text;
    char *pattern = text;
 
-   edict_t *talkEntity = NULL;
+   edict_t *talkEntity = nullptr;
 
-   while (pattern != NULL)
+   while (pattern != nullptr)
    {
       // all replacement placeholders start with a %
       pattern = strstr (textStart, "%");
 
-      if (pattern != NULL)
+      if (pattern != nullptr)
       {
          int length = pattern - textStart;
 
@@ -304,14 +304,14 @@ void Bot::PrepareChatMessage (char *text)
          {
             if (g_gameFlags & GAME_CZERO)
             {
-               if (Random.Long (1, 100) < 30)
+               if (Random.Int (1, 100) < 30)
                   strcat (m_tempStrings, "CZ");
                else
                   strcat (m_tempStrings, "Condition Zero");
             }
             else if ((g_gameFlags & GAME_CSTRIKE16) || (g_gameFlags & GAME_LEGACY))
             {
-               if (Random.Long (1, 100) < 30)
+               if (Random.Int (1, 100) < 30)
                   strcat (m_tempStrings, "CS");
                else
                   strcat (m_tempStrings, "Counter-Strike");
@@ -327,7 +327,7 @@ void Bot::PrepareChatMessage (char *text)
       }
    }
 
-   if (textStart != NULL)
+   if (textStart != nullptr)
    {
       // let the bots make some mistakes...
       char tempString[160];
@@ -350,7 +350,7 @@ bool CheckKeywords (char *tempMessage, char *reply)
       FOR_EACH_AE (g_replyFactory[i].keywords, j)
       {
          // check is keyword has occurred in message
-         if (strstr (tempMessage, g_replyFactory[i].keywords[j].GetBuffer ()) != NULL)
+         if (strstr (tempMessage, g_replyFactory[i].keywords[j].GetBuffer ()) != nullptr)
          {
             Array <String> &replies = g_replyFactory[i].usedReplies;
 
@@ -363,7 +363,7 @@ bool CheckKeywords (char *tempMessage, char *reply)
             // don't say this twice
             FOR_EACH_AE (replies, k)
             {
-               if (strstr (replies[k].GetBuffer (), generatedReply) != NULL)
+               if (strstr (replies[k].GetBuffer (), generatedReply) != nullptr)
                   replyUsed = true;
             }
 
@@ -380,7 +380,7 @@ bool CheckKeywords (char *tempMessage, char *reply)
    }
 
    // didn't find a keyword? 70% of the time use some universal reply
-   if (Random.Long (1, 100) < 70 && !g_chatFactory[CHAT_NOKW].IsEmpty ())
+   if (Random.Int (1, 100) < 70 && !g_chatFactory[CHAT_NOKW].IsEmpty ())
    {
       strcpy (reply, g_chatFactory[CHAT_NOKW].GetRandomElement ().GetBuffer ());
       return true;
@@ -397,7 +397,7 @@ bool Bot::ParseChat (char *reply)
 
    // text to uppercase for keyword parsing
    for (int i = 0; i < static_cast <int> (strlen (tempMessage)); i++)
-      tempMessage[i] = toupper (tempMessage[i]);
+      tempMessage[i] = static_cast <char> (tolower (static_cast <int> (tempMessage[i])));
 
    return CheckKeywords (tempMessage, reply);
 }
@@ -413,7 +413,7 @@ bool Bot::RepliesToPlayer (void)
       // check is time to chat is good
       if (m_sayTextBuffer.timeNextChat < engine.Time ())
       {
-         if (Random.Long (1, 100) < m_sayTextBuffer.chatProbability + Random.Long (2, 10) && ParseChat (reinterpret_cast <char *> (&text)))
+         if (Random.Int (1, 100) < m_sayTextBuffer.chatProbability + Random.Int (2, 10) && ParseChat (reinterpret_cast <char *> (&text)))
          {
             PrepareChatMessage (text);
             PushMessageQueue (GSM_SAY);

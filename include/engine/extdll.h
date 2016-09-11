@@ -16,21 +16,7 @@
 #ifndef EXTDLL_H
 #define EXTDLL_H
 
-#ifdef DLL_DEBUG
-#define DEBUG 1
-#endif
-
 #ifdef _MSC_VER
-   #pragma warning (disable : 4244) // int or float down-conversion
-   #pragma warning (disable : 4305) // int or float data truncation
-   #pragma warning (disable : 4201) // nameless struct/union
-   #pragma warning (disable : 4514) // unreferenced inline function removed
-   #pragma warning (disable : 4100) // unreferenced formal parameter
-   #pragma warning (disable : 4715) // not all control paths return a value
-   #pragma warning (disable : 4996) // function was declared deprecated
-   #pragma warning (disable : 4702) // unreachable code
-   #pragma warning (disable : 4706) // assignment within conditional expression
-
    /* disable deprecation warnings concerning unsafe CRT functions */
    #if !defined _CRT_SECURE_NO_DEPRECATE
       #define _CRT_SECURE_NO_DEPRECATE
@@ -49,7 +35,7 @@
 #define FALSE 0
 #define TRUE (!FALSE)
 typedef unsigned long ULONG;
-typedef unsigned char BYTE;
+typedef uint8 BYTE;
 typedef int BOOL;
 
 #define MAX_PATH PATH_MAX
@@ -67,8 +53,6 @@ typedef int BOOL;
 #include "stdio.h"
 #include "stdlib.h"
 #include "math.h"
-
-#include <archtypes.h>
 
 typedef int func_t;              //
 typedef int string_t;           // from engine's pr_comp.h;

@@ -4,7 +4,7 @@
 //
 // This software is licensed under the BSD-style license.
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     http://yapb.jeefo.net/license
+//     https://yapb.jeefo.net/license
 //
 
 #include <core.h>
@@ -41,7 +41,7 @@ BotManager::BotManager (void)
    m_grenadeUpdateTime = 0.0f;
 
    m_creationTab.RemoveAll ();
-   m_killerEntity = NULL;
+   m_killerEntity = nullptr;
    m_balanceCount = 0;
 }
 
@@ -113,7 +113,7 @@ BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int
    // this function completely prepares bot entity (edict) for creation, creates team, difficulty, sets name etc, and
    // then sends result to bot constructor
    
-   edict_t *bot = NULL;
+   edict_t *bot = nullptr;
    char outputName[33];
 
    if (g_numWaypoints < 1) // don't allow creating bots with no waypoints loaded
@@ -132,17 +132,17 @@ BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int
 
    if (difficulty < 0 || difficulty > 4)
    {
-      difficulty = Random.Long (3, 4);
+      difficulty = Random.Int (3, 4);
       yb_difficulty.SetInt (difficulty);
    }
 
    if (personality < 0 || personality > 2)
    {
-      if (Random.Long (0, 100) < 50)
+      if (Random.Int (0, 100) < 50)
          personality = PERSONALITY_NORMAL;
       else
       {
-         if (Random.Long (0, 100) < 65)
+         if (Random.Int (0, 100) < 65)
             personality = PERSONALITY_RUSHER;
          else
             personality = PERSONALITY_CAREFUL;
@@ -165,7 +165,7 @@ BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int
 
             BotName *pickedName = &g_botNames.GetRandomElement ();
 
-            if (pickedName == NULL)
+            if (pickedName == nullptr)
                continue;
 
             if (pickedName->used)
@@ -178,7 +178,7 @@ BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int
          }
       }
       else
-         sprintf (outputName, "bot%i", Random.Long (0, 100)); // just pick ugly random name
+         sprintf (outputName, "bot%i", Random.Int (0, 100)); // just pick ugly random name
    }
    else
       strncpy (outputName, name, 21);
@@ -204,11 +204,11 @@ BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int
    int index = engine.IndexOfEntity (bot) - 1;
 
    InternalAssert (index >= 0 && index <= MAX_ENGINE_PLAYERS); // check index
-   InternalAssert (m_bots[index] == NULL); // check bot slot
+   InternalAssert (m_bots[index] == nullptr); // check bot slot
 
    m_bots[index] = new Bot (bot, difficulty, personality, team, member, steamId);
 
-   if (m_bots[index] == NULL)
+   if (m_bots[index] == nullptr)
       TerminateOnMalloc ();
 
    engine.Printf ("Connecting Bot...");
@@ -230,7 +230,7 @@ int BotManager::GetIndex (edict_t *ent)
    if (index < 0 || index >= MAX_ENGINE_PLAYERS)
       return -1;
 
-   if (m_bots[index] != NULL)
+   if (m_bots[index] != nullptr)
       return index;
 
    return -1; // if no edict, return -1;
@@ -241,12 +241,12 @@ Bot *BotManager::GetBot (int index)
    // this function finds a bot specified by index, and then returns pointer to it (using own bot array)
 
    if (index < 0 || index >= MAX_ENGINE_PLAYERS)
-      return NULL;
+      return nullptr;
 
-   if (m_bots[index] != NULL)
+   if (m_bots[index] != nullptr)
       return m_bots[index];
 
-   return NULL; // no bot
+   return nullptr; // no bot
 }
 
 Bot *BotManager::GetBot (edict_t *ent)
@@ -267,14 +267,14 @@ Bot *BotManager::FindOneValidAliveBot (void)
       if (result.GetSize () > 4)
          break;
 
-      if (m_bots[i] != NULL && IsAlive (m_bots[i]->GetEntity ()))
+      if (m_bots[i] != nullptr && IsAlive (m_bots[i]->GetEntity ()))
          result.Push (i);
    }
 
    if (!result.IsEmpty ())
       return m_bots[result.GetRandomElement ()];
 
-   return NULL;
+   return nullptr;
 }
 
 void BotManager::Think (void)
@@ -283,7 +283,7 @@ void BotManager::Think (void)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (m_bots[i] != NULL)
+      if (m_bots[i] != nullptr)
          m_bots[i]->Think ();
    }
 }
@@ -294,7 +294,7 @@ void BotManager::PeriodicThink (void)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (m_bots[i] != NULL)
+      if (m_bots[i] != nullptr)
          m_bots[i]->PeriodicThink ();
    }
 }
@@ -338,7 +338,7 @@ void BotManager::AdjustQuota (bool isPlayerConnection, edict_t *ent)
 {
    // this function increases or decreases bot quota amount depending on auto vacate variables
 
-   if (!engine.IsDedicatedServer () || !yb_autovacate.GetBool () || GetBot (ent) != NULL)
+   if (!engine.IsDedicatedServer () || !yb_autovacate.GetBool () || GetBot (ent) != nullptr)
       return;
 
    if (isPlayerConnection)
@@ -454,11 +454,11 @@ void BotManager::MaintainBotQuota (void)
       char mode = yb_quota_mode.GetString ()[0];
 
       if (mode == 'f') // fill
-         desiredCount = max (0, desiredCount - numHumans);
+         desiredCount = A_max (0, desiredCount - numHumans);
       else if (mode == 'm') // match
-         desiredCount = max (0, yb_quota.GetInt () * numHumans);
+         desiredCount = A_max (0, yb_quota.GetInt () * numHumans);
 
-      desiredCount = min (desiredCount, engine.MaxClients () - (numHumans + (yb_autovacate.GetBool () ? 1 : 0)));
+      desiredCount = A_min (desiredCount, engine.MaxClients () - (numHumans + (yb_autovacate.GetBool () ? 1 : 0)));
  
       if (yb_autovacate_smart_kick.GetBool () && numBots > 1 && desiredCount > 1)
          VerifyPlayersHasJoinedTeam (desiredCount);
@@ -532,7 +532,7 @@ void BotManager::RemoveFromTeam (Team team, bool removeAll)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (m_bots[i] != NULL && team == engine.GetTeam (m_bots[i]->GetEntity ()))
+      if (m_bots[i] != nullptr && team == engine.GetTeam (m_bots[i]->GetEntity ()))
       {
          m_bots[i]->Kick ();
 
@@ -559,7 +559,7 @@ void BotManager::RemoveMenu (edict_t *ent, int selection)
 
    for (int i = ((selection - 1) * 8); i < selection * 8; i++)
    {
-      if ((m_bots[i] != NULL) && !engine.IsNullEntity (m_bots[i]->GetEntity ()))
+      if (m_bots[i] != nullptr && !engine.IsNullEntity (m_bots[i]->GetEntity ()))
       {
          validSlots |= 1 << (i - ((selection - 1) * 8));
          sprintf (buffer, "%s %1.1d. %s%s\n", buffer, i - ((selection - 1) * 8) + 1, STRING (m_bots[i]->pev->netname), engine.GetTeam (m_bots[i]->GetEntity ()) == CT ? " \\y(CT)\\w" : " \\r(T)\\w");
@@ -608,7 +608,7 @@ void BotManager::KillAll (int team)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (m_bots[i] != NULL)
+      if (m_bots[i] != nullptr)
       {
          if (team != -1 && team != m_bots[i]->m_team)
             continue;
@@ -628,7 +628,7 @@ void BotManager::RemoveRandom (bool keepQuota)
    // first try to kick the bot that is currently dead
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (m_bots[i] != NULL && !m_bots[i]->m_notKilled)  // is this slot used?
+      if (m_bots[i] != nullptr && !m_bots[i]->m_notKilled)  // is this slot used?
       {
          m_bots[i]->Kick (keepQuota);
          deadBotFound = true;
@@ -649,7 +649,7 @@ void BotManager::RemoveRandom (bool keepQuota)
    {
       Bot *bot = bots.GetBot (i);
 
-      if (bot != NULL && bot->pev->frags < score)
+      if (bot != nullptr && bot->pev->frags < score)
       {
          index = i;
          score = bot->pev->frags;
@@ -666,7 +666,7 @@ void BotManager::RemoveRandom (bool keepQuota)
    // worst case, just kick some random bot
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (m_bots[i] != NULL)  // is this slot used?
+      if (m_bots[i] != nullptr)  // is this slot used?
       {
          m_bots[i]->Kick (keepQuota);
          break;
@@ -737,7 +737,7 @@ void BotManager::ListBots (void)
       Bot *bot = GetBot (i);
 
       // is this player slot valid
-      if (bot != NULL)
+      if (bot != nullptr)
          engine.Printf ("[%-3.1d] %-9.13s %-17.18s %-3.4s %-3.1d %-3.1d", i, STRING (bot->pev->netname), bot->m_personality == PERSONALITY_RUSHER ? "rusher" : bot->m_personality == PERSONALITY_NORMAL ? "normal" : "careful", bot->m_team == CT ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags));
    }
 }
@@ -750,7 +750,7 @@ int BotManager::GetBotsNum (void)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (m_bots[i] != NULL)
+      if (m_bots[i] != nullptr)
          count++;
    }
    return count;
@@ -766,7 +766,7 @@ Bot *BotManager::GetHighestFragsBot (int team)
    {
       Bot *bot = bots.GetBot (i);
 
-      if (bot != NULL && bot->m_notKilled && bot->m_team == team)
+      if (bot != nullptr && bot->m_notKilled && bot->m_team == team)
       {
          if (bot->pev->frags > bestScore)
          {
@@ -798,7 +798,7 @@ void BotManager::CheckTeamEconomics (int team, bool setTrue)
    // start calculating
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (m_bots[i] != NULL && engine.GetTeam (m_bots[i]->GetEntity ()) == team)
+      if (m_bots[i] != nullptr && engine.GetTeam (m_bots[i]->GetEntity ()) == team)
       {
          if (m_bots[i]->m_moneyAmount <= g_botBuyEconomyTable[0])
             numPoorPlayers++;
@@ -833,7 +833,7 @@ void BotManager::Free (int index)
    // this function frees one bot selected by index (used on bot disconnect)
 
    delete m_bots[index];
-   m_bots[index] = NULL;
+   m_bots[index] = nullptr;
 }
 
 Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, const String &steamId)
@@ -848,10 +848,10 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
 
    pev = &bot->v;
 
-   if (bot->pvPrivateData != NULL)
+   if (bot->pvPrivateData != nullptr)
       FREE_PRIVATE (bot);
 
-   bot->pvPrivateData = NULL;
+   bot->pvPrivateData = nullptr;
    bot->v.frags = 0;
 
    // create the player entity by calling MOD's player function
@@ -892,11 +892,11 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
 
    m_startAction = GSM_IDLE;
    m_moneyAmount = 0;
-   m_logotypeIndex = Random.Long (0, 9);
+   m_logotypeIndex = Random.Int (0, 9);
 
    // assign how talkative this bot will be
    m_sayTextBuffer.chatDelay = Random.Float (3.8f, 10.0f);
-   m_sayTextBuffer.chatProbability = Random.Long (1, 100);
+   m_sayTextBuffer.chatProbability = Random.Int (1, 100);
 
    m_notKilled = false;
    m_weaponBurstMode = BM_OFF;
@@ -904,7 +904,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
 
    if (difficulty < 0 || difficulty > 4)
    {
-      difficulty = Random.Long (3, 4);
+      difficulty = Random.Int (3, 4);
       yb_difficulty.SetInt (difficulty);
    }
 
@@ -937,7 +937,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    memset (&m_ammo, 0, sizeof (m_ammo));
 
    m_currentWeapon = 0; // current weapon is not assigned at start
-   m_voicePitch = Random.Long (80, 115); // assign voice pitch
+   m_voicePitch = Random.Int (80, 115); // assign voice pitch
 
    // copy them over to the temp level variables
    m_agressionLevel = m_baseAgressionLevel;
@@ -987,7 +987,7 @@ int BotManager::GetHumansNum (void)
    {
       const Client &client = g_clients[i];
 
-      if ((client.flags & CF_USED) && m_bots[i] == NULL && !(client.ent->v.flags & FL_FAKECLIENT))
+      if ((client.flags & CF_USED) && m_bots[i] == nullptr && !(client.ent->v.flags & FL_FAKECLIENT))
          count++;
    }
    return count;
@@ -1003,7 +1003,7 @@ int BotManager::GetHumansAliveNum (void)
    {
       const Client &client = g_clients[i];
 
-      if ((client.flags & (CF_USED | CF_ALIVE)) && m_bots[i] == NULL && !(client.ent->v.flags & FL_FAKECLIENT))
+      if ((client.flags & (CF_USED | CF_ALIVE)) && m_bots[i] == nullptr && !(client.ent->v.flags & FL_FAKECLIENT))
          count++;
    }
    return count;
@@ -1019,7 +1019,7 @@ int BotManager::GetHumansJoinedTeam (void)
    {
       const Client &client = g_clients[i];
 
-      if ((client.flags & (CF_USED | CF_ALIVE)) && m_bots[i] == NULL && client.team != SPECTATOR && !(client.ent->v.flags & FL_FAKECLIENT) && client.ent->v.movetype != MOVETYPE_FLY)
+      if ((client.flags & (CF_USED | CF_ALIVE)) && m_bots[i] == nullptr && client.team != SPECTATOR && !(client.ent->v.flags & FL_FAKECLIENT) && client.ent->v.movetype != MOVETYPE_FLY)
          count++;
    }
    return count;
@@ -1037,7 +1037,7 @@ void Bot::NewRound (void)
    m_waypointOrigin.Zero ();
    m_destOrigin.Zero ();
    m_currentWaypointIndex = -1;
-   m_currentPath = NULL;
+   m_currentPath = nullptr;
    m_currentTravelFlags = 0;
    m_goalFailed = 0;
    m_desiredVelocity.Zero ();
@@ -1061,7 +1061,7 @@ void Bot::NewRound (void)
    switch (m_personality)
    {
    case PERSONALITY_NORMAL:
-      m_pathType = Random.Long (0, 100) > 50 ? SEARCH_PATH_SAFEST_FASTER : SEARCH_PATH_SAFEST;
+      m_pathType = Random.Int (0, 100) > 50 ? SEARCH_PATH_SAFEST_FASTER : SEARCH_PATH_SAFEST;
       break;
 
    case PERSONALITY_RUSHER:
@@ -1097,23 +1097,23 @@ void Bot::NewRound (void)
    m_viewDistance = 4096.0f;
    m_maxViewDistance = 4096.0f;
 
-   m_liftEntity = NULL;
-   m_pickupItem = NULL;
-   m_itemIgnore = NULL;
+   m_liftEntity = nullptr;
+   m_pickupItem = nullptr;
+   m_itemIgnore = nullptr;
    m_itemCheckTime = 0.0f;
 
-   m_breakableEntity = NULL;
+   m_breakableEntity = nullptr;
    m_breakableOrigin.Zero ();
    m_timeDoorOpen = 0.0f;
 
    ResetCollideState ();
    ResetDoubleJumpState ();
 
-   m_enemy = NULL;
-   m_lastVictim = NULL;
-   m_lastEnemy = NULL;
+   m_enemy = nullptr;
+   m_lastVictim = nullptr;
+   m_lastEnemy = nullptr;
    m_lastEnemyOrigin.Zero ();
-   m_trackingEdict = NULL;
+   m_trackingEdict = nullptr;
    m_timeNextTracking = 0.0f;
 
    m_buttonPushTime = 0.0f;
@@ -1124,7 +1124,7 @@ void Bot::NewRound (void)
    m_oldCombatDesire = 0.0f;
    m_liftUsageTime = 0.0f;
 
-   m_avoidGrenade = NULL;
+   m_avoidGrenade = nullptr;
    m_needAvoidGrenade = 0;
 
    m_lastDamageType = -1;
@@ -1140,12 +1140,12 @@ void Bot::NewRound (void)
 
    SetIdealReactionTimes (true);
 
-   m_targetEntity = NULL;
+   m_targetEntity = nullptr;
    m_tasks.RemoveAll ();
    m_followWaitTime = 0.0f;
 
    for (i = 0; i < MAX_HOSTAGES; i++)
-      m_hostages[i] = NULL;
+      m_hostages[i] = nullptr;
 
    for (i = 0; i < Chatter_Total; i++)
       m_chatterTimes[i] = -1.0f;
@@ -1202,7 +1202,7 @@ void Bot::NewRound (void)
    m_checkKnifeSwitch = true;
    m_buyingFinished = false;
 
-   m_radioEntity = NULL;
+   m_radioEntity = nullptr;
    m_radioOrder = 0;
    m_defendedBomb = false;
    m_defendHostage = false;
@@ -1231,7 +1231,7 @@ void Bot::NewRound (void)
    PushMessageQueue (GSM_BUY_STUFF);
    PushTask (TASK_NORMAL, TASKPRI_NORMAL, -1, 0.0f, true);
 
-   if (Random.Long (0, 100) < 50)
+   if (Random.Int (0, 100) < 50)
       ChatterMessage (Chatter_NewRound);
 
    m_thinkInterval = (g_gameFlags & GAME_LEGACY) ? 0.0f : (1.0f / 30.0f) * Random.Float (0.95f, 1.05f);
@@ -1262,13 +1262,13 @@ void Bot::StartGame (void)
    // this function handles the selection of teams & class
 
 #ifdef XASH_CSDM
-   m_wantedTeam = Random.Long (1, 2);
+   m_wantedTeam = Random.Int (1, 2);
    
    engine.IssueBotCommand (GetEntity (), "jointeam %d", m_wantedTeam);
    
    SET_CLIENT_KEYVALUE (GetIndex (), GET_INFOKEYBUFFER (GetEntity ()), "model", m_wantedTeam == 2 ? "Counter-Terrorists" : "Terrorists");
 
-   if (Random.Long (0, 100) < 20)
+   if (Random.Int (0, 100) < 20)
       ChatMessage (CHAT_WELCOME);
    
    m_notStarted = false;
@@ -1300,12 +1300,12 @@ void Bot::StartGame (void)
       if (g_gameFlags & GAME_CZERO) // czero has spetsnaz and militia skins
       {
          if (m_wantedClass < 1 || m_wantedClass > 5)
-            m_wantedClass = Random.Long (1, 5); //  use random if invalid
+            m_wantedClass = Random.Int (1, 5); //  use random if invalid
       }
       else
       {
          if (m_wantedClass < 1 || m_wantedClass > 4)
-            m_wantedClass = Random.Long (1, 4); // use random if invalid
+            m_wantedClass = Random.Int (1, 4); // use random if invalid
       }
 
       // select the class the bot wishes to use...
@@ -1315,7 +1315,7 @@ void Bot::StartGame (void)
       m_notStarted = false;
 
       // check for greeting other players, since we connected
-      if (Random.Long (0, 100) < 20)
+      if (Random.Int (0, 100) < 20)
          ChatMessage (CHAT_WELCOME);
    }
 }
@@ -1341,7 +1341,7 @@ void BotManager::CalculatePingOffsets (void)
       PLAYER_CNX_STATS (ent, &ping, &loss);
 
       if (ping < 0 || ping > 100)
-         ping = Random.Long (3, 15);
+         ping = Random.Int (3, 15);
 
       averagePing += ping;
    }
@@ -1349,21 +1349,22 @@ void BotManager::CalculatePingOffsets (void)
    if (numHumans > 0)
       averagePing /= numHumans;
    else
-      averagePing = Random.Long (30, 40);
+      averagePing = Random.Int (30, 40);
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
       Bot *bot = GetBot (i);
 
-      if (bot == NULL)
+      if (bot == nullptr)
          continue;
 
-      int botPing = Random.Long (averagePing - averagePing * 0.2f, averagePing + averagePing * 0.2f) + Random.Long (bot->m_difficulty + 3, bot->m_difficulty + 6) + 10;
+      int part = static_cast <int> (averagePing * 0.2f);
+      int botPing = Random.Int (averagePing - part, averagePing + part) + Random.Int (bot->m_difficulty + 3, bot->m_difficulty + 6) + 10;
 
       if (botPing <= 5)
-         botPing = Random.Long (10, 23);
+         botPing = Random.Int (10, 23);
       else if (botPing > 100)
-         botPing = Random.Long (30, 40);
+         botPing = Random.Int (30, 40);
 
       for (int j = 0; j < 2; j++)
       {
@@ -1398,7 +1399,7 @@ void BotManager::SendPingDataOffsets (edict_t *to)
    {
       Bot *bot = m_bots[i];
 
-      if (bot == NULL)
+      if (bot == nullptr)
          continue;
 
       switch (sending)
@@ -1406,7 +1407,7 @@ void BotManager::SendPingDataOffsets (edict_t *to)
       case 0:
          {
             // start a new message
-            MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, SVC_PINGS, NULL, to);
+            MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, SVC_PINGS, nullptr, to);
             WRITE_BYTE ((bot->m_pingOffset[sending] * 64) + (1 + 2 * i));
             WRITE_SHORT (bot->m_ping[sending]);
 
@@ -1457,7 +1458,7 @@ void BotManager::UpdateActiveGrenades (void)
    if (m_grenadeUpdateTime > engine.Time ())
       return;
 
-   edict_t *grenade = NULL;
+   edict_t *grenade = nullptr;
 
    // clear previously stored grenades
    m_activeGrenades.RemoveAll ();
@@ -1495,12 +1496,12 @@ void BotManager::SelectLeaderEachTeam (int team, bool reset)
          {
             auto bot = m_bots[i];
 
-            if (bot != NULL && bot->m_isVIP)
+            if (bot != nullptr && bot->m_isVIP)
             {
                // vip bot is the leader
                bot->m_isLeader = true;
 
-               if (Random.Long (1, 100) < 50)
+               if (Random.Int (1, 100) < 50)
                {
                   bot->RadioMessage (Radio_FollowMe);
                   bot->m_campButtons = 0;
@@ -1513,11 +1514,11 @@ void BotManager::SelectLeaderEachTeam (int team, bool reset)
       {
          auto bot = bots.GetHighestFragsBot (team);
 
-         if (bot != NULL && bot->m_notKilled)
+         if (bot != nullptr && bot->m_notKilled)
          {
             bot->m_isLeader = true;
 
-            if (Random.Long (1, 100) < 45)
+            if (Random.Int (1, 100) < 45)
                bot->RadioMessage (Radio_FollowMe);
          }
          m_leaderChoosen[TERRORIST] = true;
@@ -1531,13 +1532,13 @@ void BotManager::SelectLeaderEachTeam (int team, bool reset)
          {
             auto bot = m_bots[i];
 
-            if (bot != NULL && bot->m_hasC4)
+            if (bot != nullptr && bot->m_hasC4)
             {
                // bot carrying the bomb is the leader
                bot->m_isLeader = true;
 
                // terrorist carrying a bomb needs to have some company
-               if (Random.Long (1, 100) < 80)
+               if (Random.Int (1, 100) < 80)
                {
                   if (yb_communication_type.GetInt () == 2)
                      bot->ChatterMessage (Chatter_GoingToPlantBomb);
@@ -1556,7 +1557,7 @@ void BotManager::SelectLeaderEachTeam (int team, bool reset)
          {
             bot->m_isLeader = true;
 
-            if (Random.Long (1, 100) < 30)
+            if (Random.Int (1, 100) < 30)
                bot->RadioMessage (Radio_FollowMe);
          }
          m_leaderChoosen[CT] = true;
@@ -1568,7 +1569,7 @@ void BotManager::SelectLeaderEachTeam (int team, bool reset)
       {
          bot->m_isLeader = true;
 
-         if (Random.Long (1, 100) < 30)
+         if (Random.Int (1, 100) < 30)
             bot->RadioMessage (Radio_FollowMe);
       }
    }
@@ -1578,7 +1579,7 @@ void BotManager::SelectLeaderEachTeam (int team, bool reset)
       {
          bot->m_isLeader = true;
 
-         if (Random.Long (1, 100) < (team == TERRORIST ? 30 : 40))
+         if (Random.Int (1, 100) < (team == TERRORIST ? 30 : 40))
             bot->RadioMessage (Radio_FollowMe);
       }
    }
