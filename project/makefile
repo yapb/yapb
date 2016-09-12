@@ -26,7 +26,7 @@ C_OPT_FLAGS =  -O3 -DNDEBUG=1 -fno-exceptions -fno-rtti -funroll-loops -fomit-fr
 C_DEBUG_FLAGS = -D_DEBUG -DDEBUG -g -ggdb3
 C_GCC4_FLAGS = -fvisibility=hidden
 CPP_GCC4_FLAGS = -fvisibility-inlines-hidden
-CPP = clang
+CPP = clang-3.7
 CPP_OSX = clang
 
 LINK =
