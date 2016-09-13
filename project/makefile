@@ -109,25 +109,20 @@ release:
 	mkdir -p release
 	$(MAKE) main DEBUG=false
 
-release_mac:
-	$(MAKE) main MAC=true DEBUG=false
+release_osx:
+	mkdir -p release
+	$(MAKE) main OSX=true DEBUG=false
 
-debug_mac:
-	$(MAKE) main MAC=true DEBUG=true
+debug_osx:
+	mkdir -p debug
+	$(MAKE) main OSX=true DEBUG=true
 
-all_linux:
-	release debug
+all_linux: release debug
+all_osx: release_osx debug_osx
+all: all_linux all_osx
 
-all_mac:
-	release_mac debug_mac
-
-all:
-	all_linux all_mac
-
-default:
-	all_linux
+default: all
 
 clean:
 	rm -rf release
 	rm -rf debug
-

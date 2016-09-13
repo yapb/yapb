@@ -41,6 +41,9 @@
   <ItemGroup>
     <ResourceCompile Include="yapb.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="makefile" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C232645A-3B99-48F4-A1F3-F20CF0A9568B}</ProjectGuid>
     <RootNamespace>yapb</RootNamespace>

@@ -95,4 +95,9 @@
       <Filter>project</Filter>
     </ResourceCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="makefile">
+      <Filter>project</Filter>
+    </None>
+  </ItemGroup>
 </Project>
