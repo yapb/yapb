@@ -149,7 +149,7 @@ void DisplayMenuToClient (edict_t *ent, MenuId menu)
          break;
       }
    }
-   char *displayText = (g_gameFlags & (GAME_XASH | GAME_MOBILITY)) && !yb_display_menu_text.GetBool () ? " " : menuPtr->text.GetBuffer ();
+   const char *displayText = ((g_gameFlags & (GAME_XASH | GAME_MOBILITY)) && !yb_display_menu_text.GetBool ()) ? " " : menuPtr->text.GetBuffer ();
 
    while (strlen (displayText) >= 64)
    {
@@ -584,7 +584,6 @@ void CheckWelcomeMessage (void)
       alreadyReceived = true;
    }
 }
-
 
 void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
 {
