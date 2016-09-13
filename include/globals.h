@@ -17,7 +17,7 @@ extern bool g_waypointOn;
 extern bool g_autoWaypoint;
 extern bool g_botsCanPause; 
 extern bool g_editNoclip;
-extern bool g_isCommencing;
+extern bool g_gameWelcomeSent;
 
 extern float g_autoPathDistance;
 extern float g_timeBombPlanted;
@@ -57,7 +57,7 @@ extern WeaponSelect g_weaponSelect[NUM_WEAPONS + 1];
 extern WeaponProperty g_weaponDefs[MAX_WEAPONS + 1];
 
 extern Client g_clients[MAX_ENGINE_PLAYERS];
-extern MenuText g_menus[21];
+extern MenuText g_menus[BOT_MENU_TOTAL_MENUS];
 extern TaskItem g_taskFilters[];
 
 extern Experience *g_experienceData;

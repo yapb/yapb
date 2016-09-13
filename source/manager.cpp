@@ -9,7 +9,7 @@
 
 #include <core.h>
 
-ConVar yb_autovacate ("yb_autovacate", "0");
+ConVar yb_autovacate ("yb_autovacate", "1");
 ConVar yb_autovacate_smart_kick ("yb_autovacate_smart_kick", "0");
 
 ConVar yb_quota ("yb_quota", "0", VT_NORMAL);
@@ -439,8 +439,11 @@ void BotManager::MaintainBotQuota (void)
          if (yb_quota.GetInt () < 0)
             yb_quota.SetInt (0);
 
-         if (yb_quota.GetInt () > engine.MaxClients ())
-            yb_quota.SetInt (engine.MaxClients ());
+         // always keep one slot
+         int maxClients = yb_autovacate.GetBool () ? engine.MaxClients () - 1 - GetHumansNum () : engine.MaxClients ();
+
+         if (yb_quota.GetInt () > maxClients)
+            yb_quota.SetInt (maxClients);
       }
 
       int numBots = GetBotsNum ();
@@ -487,7 +490,10 @@ void BotManager::FillServer (int selection, int personality, int difficulty, int
 {
    // this function fill server with bots, with specified team & personality
 
-   if (GetBotsNum () >= engine.MaxClients () - GetHumansNum ())
+   // always keep one slot
+   int maxClients = yb_autovacate.GetBool () ? engine.MaxClients () - 1 - GetHumansNum () : engine.MaxClients ();
+
+   if (GetBotsNum () >= maxClients - GetHumansNum ())
       return;
 
    if (selection == 1 || selection == 2)
@@ -498,7 +504,7 @@ void BotManager::FillServer (int selection, int personality, int difficulty, int
    else
       selection = 5;
 
-   char teamDesc[6][12] =
+   char teams[6][12] =
    {
       "",
       {"Terrorists"},
@@ -508,12 +514,12 @@ void BotManager::FillServer (int selection, int personality, int difficulty, int
       {"Random"},
    };
 
-   int toAdd = numToAdd == -1 ? engine.MaxClients () - (GetHumansNum () + GetBotsNum ()) : numToAdd;
+   int toAdd = numToAdd == -1 ? maxClients - (GetHumansNum () + GetBotsNum ()) : numToAdd;
 
    for (int i = 0; i <= toAdd; i++)
       AddBot ("", difficulty, personality, selection, -1);
 
-   engine.CenterPrintf ("Fill Server with %s bots...", &teamDesc[selection][0]);
+   engine.CenterPrintf ("Fill Server with %s bots...", &teams[selection][0]);
 }
 
 void BotManager::RemoveAll (void)
@@ -573,31 +579,31 @@ void BotManager::RemoveMenu (edict_t *ent, int selection)
    switch (selection)
    {
    case 1:
-      g_menus[14].validSlots = validSlots & static_cast <unsigned int> (-1);
-      g_menus[14].menuText = tempBuffer;
+      g_menus[BOT_MENU_KICK_PAGE_1].slots = validSlots & static_cast <unsigned int> (-1);
+      g_menus[14].text = tempBuffer;
 
-      DisplayMenuToClient (ent, &g_menus[14]);
+      DisplayMenuToClient (ent, BOT_MENU_KICK_PAGE_1);
       break;
 
    case 2:
-      g_menus[15].validSlots = validSlots & static_cast <unsigned int> (-1);
-      g_menus[15].menuText = tempBuffer;
+      g_menus[BOT_MENU_KICK_PAGE_2].slots = validSlots & static_cast <unsigned int> (-1);
+      g_menus[BOT_MENU_KICK_PAGE_2].text = tempBuffer;
 
-      DisplayMenuToClient (ent, &g_menus[15]);
+      DisplayMenuToClient (ent, BOT_MENU_KICK_PAGE_2);
       break;
 
     case 3:
-      g_menus[16].validSlots = validSlots & static_cast <unsigned int> (-1);
-      g_menus[16].menuText = tempBuffer;
+      g_menus[BOT_MENU_KICK_PAGE_3].slots = validSlots & static_cast <unsigned int> (-1);
+      g_menus[BOT_MENU_KICK_PAGE_3].text = tempBuffer;
 
-      DisplayMenuToClient (ent, &g_menus[16]);
+      DisplayMenuToClient (ent, BOT_MENU_KICK_PAGE_3);
       break;
 
    case 4:
-      g_menus[17].validSlots = validSlots & static_cast <unsigned int> (-1);
-      g_menus[17].menuText = tempBuffer;
+      g_menus[BOT_MENU_KICK_PAGE_4].slots = validSlots & static_cast <unsigned int> (-1);
+      g_menus[BOT_MENU_KICK_PAGE_4].text = tempBuffer;
 
-      DisplayMenuToClient (ent, &g_menus[17]);
+      DisplayMenuToClient (ent, BOT_MENU_KICK_PAGE_4);
       break;
    }
 }

@@ -9,37 +9,12 @@
 
 #include <core.h>
 
-class Chat
-{
-public:
-};
-
-class Globals
-{
-public:
-};
-
-class Practice
-{
-public:
-};
-
-class GameState
-{
-public:
-};
-
-class MenuManager
-{
-public:
-};
-
 bool g_canSayBombPlanted = true;
 bool g_roundEnded = true;
 bool g_botsCanPause = false;
 bool g_bombPlanted = false;
 bool g_bombSayString = false;
-bool g_isCommencing = false;
+bool g_gameWelcomeSent = false;
 
 bool g_editNoclip = false;
 bool g_waypointOn = false;
@@ -183,10 +158,11 @@ WeaponSelect g_weaponSelect[NUM_WEAPONS + 1] =
 };
 
 // bot menus
-MenuText g_menus[21] =
+MenuText g_menus[BOT_MENU_TOTAL_MENUS] =
 {
    // main menu
    {
+      BOT_MENU_MAIN,
       0x2ff,
       "\\yMain Menu\\w\v\v"
       "1. Control Bots\v"
@@ -198,6 +174,7 @@ MenuText g_menus[21] =
 
    // bot features menu
    {
+      BOT_MENU_FEATURES,
       0x25f,
       "\\yBots Features\\w\v\v"
       "1. Weapon Mode Menu\v"
@@ -210,6 +187,7 @@ MenuText g_menus[21] =
 
    // bot control menu
    {
+      BOT_MENU_CONTROL,
       0x2ff,
       "\\yBots Control Menu\\w\v\v"
       "1. Add a Bot, Quick\v"
@@ -222,6 +200,7 @@ MenuText g_menus[21] =
 
    // weapon mode select menu
    {
+      BOT_MENU_WEAPON_MODE,
       0x27f,
       "\\yBots Weapon Mode\\w\v\v"
       "1. Knives only\v"
@@ -236,6 +215,7 @@ MenuText g_menus[21] =
 
    // personality select menu
    {
+      BOT_MENU_PERSONALITY,
       0x20f,
       "\\yBots Personality\\w\v\v"
       "1. Random\v"
@@ -247,6 +227,7 @@ MenuText g_menus[21] =
 
    // difficulty select menu
    {
+      BOT_MENU_DIFFICULTY,
       0x23f,
       "\\yBots Difficulty Level\\w\v\v"
       "1. Newbie\v"
@@ -259,6 +240,7 @@ MenuText g_menus[21] =
 
    // team select menu
    {
+      BOT_MENU_TEAM_SELECT,
       0x213,
       "\\ySelect a team\\w\v\v"
       "1. Terrorist Force\v"
@@ -269,6 +251,7 @@ MenuText g_menus[21] =
 
    // terrorist model select menu
    {
+      BOT_MENU_TERRORIST_SELECT,
       0x21f,
       "\\ySelect an appearance\\w\v\v"
       "1. Phoenix Connexion\v"
@@ -279,8 +262,9 @@ MenuText g_menus[21] =
       "0. Exit"
    },
 
-   // counter-terrirust model select menu
+   // counter-terrorist model select menu
    {
+      BOT_MENU_CT_SELECT,
       0x21f,
       "\\ySelect an appearance\\w\v\v"
       "1. Seal Team 6 (DEVGRU)\v"
@@ -291,8 +275,21 @@ MenuText g_menus[21] =
       "0. Exit"
    },
 
+   // command menu
+   {
+      BOT_MENU_COMMANDS,
+      0x23f,
+      "\\yBot Command Menu\\w\v\v"
+      "1. Make Double Jump\v"
+      "2. Finish Double Jump\v\v"
+      "3. Drop the C4 Bomb\v"
+      "4. Drop the Weapon\v\v"
+      "0. Exit"
+   },
+
    // main waypoint menu
    {
+      BOT_MENU_WAYPOINT_MAIN_PAGE1,
       0x3ff,
       "\\yWaypoint Operations (Page 1)\\w\v\v"
       "1. Show/Hide waypoints\v"
@@ -309,6 +306,7 @@ MenuText g_menus[21] =
 
    // main waypoint menu (page 2)
    {
+      BOT_MENU_WAYPOINT_MAIN_PAGE2,
       0x3ff,
       "\\yWaypoint Operations (Page 2)\\w\v\v"
       "1. Waypoint stats\v"
@@ -325,6 +323,7 @@ MenuText g_menus[21] =
 
    // select waypoint radius menu
    {
+      BOT_MENU_WAYPOINT_RADIUS,
       0x3ff,
       "\\yWaypoint Radius\\w\v\v"
       "1. SetRadius 0\v"
@@ -341,6 +340,7 @@ MenuText g_menus[21] =
 
    // waypoint add menu
    {
+      BOT_MENU_WAYPOINT_TYPE,
       0x3ff,
       "\\yWaypoint Type\\w\v\v"
       "1. Normal\v"
@@ -357,6 +357,7 @@ MenuText g_menus[21] =
 
    // set waypoint flag menu
    {
+      BOT_MENU_WAYPOINT_FLAG,
       0x2ff,
       "\\yToggle Waypoint Flags\\w\v\v"
       "1. Block with Hostage\v"
@@ -367,43 +368,9 @@ MenuText g_menus[21] =
       "0. Exit"
    },
 
-   // kickmenu #1
-   {
-      0x0,
-      nullptr,
-   },
-
-   // kickmenu #2
-   {
-      0x0,
-      nullptr,
-   },
-
-   // kickmenu #3
-   {
-      0x0,
-      nullptr,
-   },
-
-   // kickmenu #4
-   {
-      0x0,
-      nullptr,
-   },
-
-   // command menu
-   {
-      0x23f,
-      "\\yBot Command Menu\\w\v\v"
-      "1. Make Double Jump\v"
-      "2. Finish Double Jump\v\v"
-      "3. Drop the C4 Bomb\v"
-      "4. Drop the Weapon\v\v"
-      "0. Exit"
-   },
-
    // auto-path max distance
    {
+      BOT_MENU_WAYPOINT_AUTOPATH,
       0x27f,
       "\\yAutoPath Distance\\w\v\v"
       "1. Distance 0\v"
@@ -418,11 +385,40 @@ MenuText g_menus[21] =
 
    // path connections
    {
+      BOT_MENU_WAYPOINT_PATH,
       0x207,
       "\\yCreate Path (Choose Direction)\\w\v\v"
       "1. Outgoing Path\v"
       "2. Incoming Path\v"
       "3. Bidirectional (Both Ways)\v\v"
       "0. Exit"
+   },
+
+   // kickmenu #1
+   {
+      BOT_MENU_KICK_PAGE_1,
+      0x0,
+      nullptr,
+   },
+
+   // kickmenu #2
+   {
+      BOT_MENU_KICK_PAGE_2,
+      0x0,
+      nullptr,
+   },
+
+   // kickmenu #3
+   {
+      BOT_MENU_KICK_PAGE_3,
+      0x0,
+      nullptr,
+   },
+
+   // kickmenu #4
+   {
+      BOT_MENU_KICK_PAGE_4,
+      0x0,
+      nullptr,
    }
 };

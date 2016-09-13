@@ -948,7 +948,7 @@ void Engine::ProcessMessageCapture (void *ptr)
             g_roundEnded = true;
 
             if (FStrEq (strVal, "#Game_Commencing"))
-               g_isCommencing = true;
+               g_gameWelcomeSent = true;
 
             if (FStrEq (strVal, "#CTs_Win"))
             {

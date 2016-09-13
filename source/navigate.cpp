@@ -1105,7 +1105,13 @@ bool Bot::DoWaypointNav (void)
          IgnoreCollisionShortly (); // don't consider being stuck
 
          if (Random.Int (1, 100) < 50)
-            MDLL_Use (tr.pHit, GetEntity ()); // also 'use' the door randomly
+         {
+            // do not use door directrly under xash, or we will get failed assert in gamedll code
+            if (g_gameFlags & GAME_XASH)
+               pev->button |= IN_USE;
+            else
+               MDLL_Use (tr.pHit, GetEntity ()); // also 'use' the door randomly
+         }
       }
 
       // make sure we are always facing the door when going through it

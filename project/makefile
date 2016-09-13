@@ -52,7 +52,7 @@ endif
 
 LINK += -m32 -lm -ldl
 
-CFLAGS += -std=c++11 -DHAVE_STDINT_H -D__extern_always_inline=inline -D_strdup=strdup -Dstricmp=strcasecmp -Dstrcmpi=strcasecmp -fno-strict-aliasing -m32 -Wall -Werror -Wextra
+CFLAGS += -msse2 -std=c++11 -DHAVE_STDINT_H -D__extern_always_inline=inline -D_strdup=strdup -Dstricmp=strcasecmp -Dstrcmpi=strcasecmp -fno-strict-aliasing -m32 -Wall -Werror -Wextra
 CPPFLAGS += -fno-exceptions -fno-rtti -fno-builtin
 
 BINARY = $(PROJECT).$(LIB_EXT)

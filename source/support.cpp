@@ -99,65 +99,80 @@ bool IsVisible (const Vector &origin, edict_t *ent)
    return true;
 }
 
-void DisplayMenuToClient (edict_t *ent, MenuText *menu)
+void DisplayMenuToClient (edict_t *ent, MenuId menu)
 {
+   static bool s_menusParsed = false;
+
+   // make menus looks like we need only once
+   if (!s_menusParsed)
+   {
+      for (int i = 0; i < ARRAYSIZE_HLSDK (g_menus); i++)
+      {
+         auto parsed = &g_menus[i];
+
+         // translate all the things
+         parsed->text.Replace ("\v", "\n");
+         parsed->text.Assign (engine.TraslateMessage (parsed->text.GetBuffer ()));
+
+         // make menu looks best
+         for (int j = 0; j < 10; j++)
+            parsed->text.Replace (FormatBuffer ("%d.", j), FormatBuffer ("\\r%d.\\w", j));
+      }
+      s_menusParsed = true;
+   }
+
    if (!IsValidPlayer (ent))
       return;
 
-   int clientIndex = engine.IndexOfEntity (ent) - 1;
+   Client &client = g_clients[engine.IndexOfEntity (ent) - 1];
 
-   if (menu != nullptr)
-   {
-      String tempText = String (menu->menuText);
-      tempText.Replace ("\v", "\n");
-
-      const char *text = engine.TraslateMessage (tempText.GetBuffer ());
-      tempText = String (text);
-
-      // make menu looks best
-      for (int i = 0; i <= 9; i++)
-         tempText.Replace (FormatBuffer ("%d.", i), FormatBuffer ("\\r%d.\\w", i));
-
-      if ((g_gameFlags & (GAME_XASH | GAME_MOBILITY)) && !yb_display_menu_text.GetBool ())
-         text = " ";
-      else
-         text = tempText.GetBuffer ();
-
-      while (strlen (text) >= 64)
-      {
-         MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), nullptr, ent);
-            WRITE_SHORT (menu->validSlots);
-            WRITE_CHAR (-1);
-            WRITE_BYTE (1);
-
-         for (int i = 0; i <= 63; i++)
-            WRITE_CHAR (text[i]);
-
-         MESSAGE_END ();
-
-         text += 64;
-      }
-
-      MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), nullptr, ent);
-         WRITE_SHORT (menu->validSlots);
-         WRITE_CHAR (-1);
-         WRITE_BYTE (0);
-         WRITE_STRING (text);
-      MESSAGE_END();
-
-      g_clients[clientIndex].menu = menu;
-   }
-   else
+   if (menu == BOT_MENU_IVALID)
    {
       MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), nullptr, ent);
          WRITE_SHORT (0);
          WRITE_CHAR (0);
          WRITE_BYTE (0);
          WRITE_STRING ("");
-      MESSAGE_END();
+      MESSAGE_END ();
 
-     g_clients[clientIndex].menu = nullptr;
+      client.menu = BOT_MENU_IVALID;
+      return;
    }
+
+   MenuText *menuPtr = nullptr;
+
+   for (int i = 0; i < ARRAYSIZE_HLSDK (g_menus); i++)
+   {
+      if (g_menus[i].id == menu)
+      {
+         menuPtr = &g_menus[i];
+         break;
+      }
+   }
+   char *displayText = (g_gameFlags & (GAME_XASH | GAME_MOBILITY)) && !yb_display_menu_text.GetBool () ? " " : menuPtr->text.GetBuffer ();
+
+   while (strlen (displayText) >= 64)
+   {
+      MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), nullptr, ent);
+         WRITE_SHORT (menuPtr->slots);
+         WRITE_CHAR (-1);
+         WRITE_BYTE (1);
+
+      for (int i = 0; i <= 63; i++)
+         WRITE_CHAR (displayText[i]);
+
+      MESSAGE_END ();
+      displayText += 64;
+   }
+
+   MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), nullptr, ent);
+      WRITE_SHORT (menuPtr->slots);
+      WRITE_CHAR (-1);
+      WRITE_BYTE (0);
+      WRITE_STRING (displayText);
+   MESSAGE_END();
+
+   client.menu = menu;
    CLIENT_COMMAND (ent, "speak \"player/geiger1\"\n"); // Stops others from hearing menu sounds..
 }
 
@@ -534,10 +549,10 @@ void CheckWelcomeMessage (void)
       sentences.Push ("warning, medical attention required");
    }
 
-   if (IsAlive (g_hostEntity) && !alreadyReceived && receiveTime < 1.0 && (g_numWaypoints > 0 ? g_isCommencing : true))
+   if (IsAlive (g_hostEntity) && !alreadyReceived && receiveTime < 1.0 && (g_numWaypoints > 0 ? g_gameWelcomeSent : true))
       receiveTime = engine.Time () + 4.0f; // receive welcome message in four seconds after game has commencing
 
-   if (receiveTime > 0.0f && receiveTime < engine.Time () && !alreadyReceived && (g_numWaypoints > 0 ? g_isCommencing : true))
+   if (receiveTime > 0.0f && receiveTime < engine.Time () && !alreadyReceived && (g_numWaypoints > 0 ? g_gameWelcomeSent : true))
    {
       if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH)))
          engine.IssueCmd ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));

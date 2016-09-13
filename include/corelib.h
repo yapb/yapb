@@ -2429,7 +2429,7 @@ public:
    // Returns:
    //  Length of string, 0 in case of error.
    //
-   int GetLength (void)
+   int GetLength (void) const
    {
       if (m_bufferPtr == NULL)
          return 0;

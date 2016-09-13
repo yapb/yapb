@@ -188,16 +188,16 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
    // displays main bot menu
    else if (stricmp (arg0, "botmenu") == 0 || stricmp (arg0, "menu") == 0)
-      DisplayMenuToClient (ent, &g_menus[0]);
+      DisplayMenuToClient (ent, BOT_MENU_MAIN);
 
    // display command menu
    else if (stricmp (arg0, "cmdmenu") == 0 || stricmp (arg0, "cmenu") == 0)
    {
       if (IsAlive (ent))
-         DisplayMenuToClient (ent, &g_menus[18]);
+         DisplayMenuToClient (ent, BOT_MENU_COMMANDS);
       else
       {
-         DisplayMenuToClient (ent, nullptr); // reset menu display
+         DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
          engine.CenterPrintf ("You're dead, and have no access to this menu");
       }
    }
@@ -280,7 +280,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       else if (stricmp (arg1, "add") == 0)
       {
          g_waypointOn = true;  // turn waypoints on
-         DisplayMenuToClient (g_hostEntity, &g_menus[12]);
+         DisplayMenuToClient (g_hostEntity, BOT_MENU_WAYPOINT_TYPE);
       }
 
       // creates basic waypoints on the map (ladder/spawn points/goals)
@@ -334,7 +334,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
       // opens menu for setting (removing) waypoint flags
       else if (stricmp (arg1, "flags") == 0)
-         DisplayMenuToClient (g_hostEntity, &g_menus[13]);
+         DisplayMenuToClient (g_hostEntity, BOT_MENU_WAYPOINT_FLAG);
 
       // setting waypoint radius
       else if (stricmp (arg1, "setradius") == 0)
@@ -363,7 +363,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
       // displays waypoint menu
       else if (stricmp (arg1, "menu") == 0)
-         DisplayMenuToClient (g_hostEntity, &g_menus[9]);
+         DisplayMenuToClient (g_hostEntity, BOT_MENU_WAYPOINT_MAIN_PAGE1);
 
       // otherwise display waypoint current status
       else
@@ -378,7 +378,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
       // opens path creation menu
       if (stricmp (arg1, "create") == 0)
-         DisplayMenuToClient (g_hostEntity, &g_menus[20]);
+         DisplayMenuToClient (g_hostEntity, BOT_MENU_WAYPOINT_PATH);
 
       // creates incoming path from the cached waypoint
       else if (stricmp (arg1, "create_in") == 0)
@@ -398,7 +398,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
       // sets auto path maximum distance
       else if (stricmp (arg1, "autodistance") == 0)
-         DisplayMenuToClient (g_hostEntity, &g_menus[19]);
+         DisplayMenuToClient (g_hostEntity, BOT_MENU_WAYPOINT_AUTOPATH);
    }
 
    // automatic waypoint handling (supported only on listen server)
@@ -905,19 +905,6 @@ void InitConfig (void)
    g_timePerSecondUpdate = 0.0f;
 }
 
-void CommandHandler_NotMM (void)
-{
-   // this function is the dedicated server command handler for the new yapb server command we
-   // registered at game start. It will be called by the engine each time a server command that
-   // starts with "meta" is entered in the server console. It works exactly the same way as
-   // ClientCommand() does, using the CmdArgc() and CmdArgv() facilities of the engine. Argv(0)
-   // is the server command itself (here "meta") and the next ones are its arguments. Just like
-   // the stdio command-line parsing in C when you write "long main (long argc, char **argv)".
-   // this function is handler for non-metamod launch of yapb, it's just print error message.
-
-   
-}
-
 void GameDLLInit (void)
 {
    // this function is a one-time call, and appears to be the second function called in the
@@ -1151,7 +1138,7 @@ void ClientDisconnect (edict_t *ent)
    {
       if (bot->pev == &ent->v)
       {
-         bot->SwitchChatterIcon (false);
+         bot->EnableChatterIcon (false);
          bot->ReleaseUsedName ();
 
          bots.Free (i);
@@ -1237,14 +1224,14 @@ void ClientCommand (edict_t *ent)
 
          return;
       }
-      else if (stricmp (command, "menuselect") == 0 && !IsNullString (arg1) && g_clients[issuerPlayerIndex].menu != nullptr)
+      else if (stricmp (command, "menuselect") == 0 && !IsNullString (arg1) && g_clients[issuerPlayerIndex].menu != BOT_MENU_IVALID)
       {
          Client *client = &g_clients[issuerPlayerIndex];
          int selection = atoi (arg1);
 
-         if (client->menu == &g_menus[12])
+         if (client->menu == BOT_MENU_WAYPOINT_TYPE)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             switch (selection)
             {
@@ -1267,7 +1254,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, nullptr);
+               DisplayMenuToClient (ent, BOT_MENU_IVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1275,9 +1262,9 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[13])
+         else if (client->menu == BOT_MENU_WAYPOINT_FLAG)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             switch (selection)
             {
@@ -1306,9 +1293,9 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[9])
+         else if (client->menu == BOT_MENU_WAYPOINT_MAIN_PAGE1)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             switch (selection)
             {
@@ -1326,7 +1313,7 @@ void ClientCommand (edict_t *ent)
 
             case 3:
                g_waypointOn = true;
-               DisplayMenuToClient (ent, &g_menus[20]);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_PATH);
                break;
 
             case 4:
@@ -1336,7 +1323,7 @@ void ClientCommand (edict_t *ent)
 
             case 5:
                g_waypointOn = true;
-               DisplayMenuToClient (ent, &g_menus[12]);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_TYPE);
                break;
 
             case 6:
@@ -1346,20 +1333,20 @@ void ClientCommand (edict_t *ent)
 
             case 7:
                g_waypointOn = true;
-               DisplayMenuToClient (ent, &g_menus[19]);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_AUTOPATH);
                break;
 
             case 8:
                g_waypointOn = true;
-               DisplayMenuToClient (ent, &g_menus[11]);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_RADIUS);
                break;
 
             case 9:
-               DisplayMenuToClient (ent, &g_menus[10]);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_MAIN_PAGE2);
                break;
 
             case 10:
-               DisplayMenuToClient (ent, nullptr);
+               DisplayMenuToClient (ent, BOT_MENU_IVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1367,9 +1354,9 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[10])
+         else if (client->menu == BOT_MENU_WAYPOINT_MAIN_PAGE2)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             switch (selection)
             {
@@ -1425,7 +1412,7 @@ void ClientCommand (edict_t *ent)
 
             case 3:
                g_waypointOn = true;
-               DisplayMenuToClient (ent, &g_menus[13]);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_FLAG);
                break;
 
             case 4:
@@ -1455,7 +1442,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 9:
-               DisplayMenuToClient (ent, &g_menus[9]);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_MAIN_PAGE1);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1463,9 +1450,9 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[11])
+         else if (client->menu == BOT_MENU_WAYPOINT_RADIUS)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             g_waypointOn = true;  // turn waypoints on in case
 
@@ -1479,24 +1466,24 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[0])
+         else if (client->menu == BOT_MENU_MAIN)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             switch (selection)
             {
             case 1:
                fillCommand = false;
-               DisplayMenuToClient (ent, &g_menus[2]);
+               DisplayMenuToClient (ent, BOT_MENU_CONTROL);
                break;
 
             case 2:
-               DisplayMenuToClient (ent, &g_menus[1]);
+               DisplayMenuToClient (ent, BOT_MENU_FEATURES);
                break;
 
             case 3:
                fillCommand = true;
-               DisplayMenuToClient (ent, &g_menus[6]);
+               DisplayMenuToClient (ent, BOT_MENU_TEAM_SELECT);
                break;
 
             case 4:
@@ -1504,7 +1491,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, nullptr);
+               DisplayMenuToClient (ent, BOT_MENU_IVALID);
                break;
 
             }
@@ -1513,9 +1500,9 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[2])
+         else if (client->menu == BOT_MENU_CONTROL)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             switch (selection)
             {
@@ -1524,7 +1511,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 2:
-               DisplayMenuToClient (ent, &g_menus[5]);
+               DisplayMenuToClient (ent, BOT_MENU_DIFFICULTY);
                break;
 
             case 3:
@@ -1540,7 +1527,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, nullptr);
+               DisplayMenuToClient (ent, BOT_MENU_IVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1548,22 +1535,22 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[1])
+         else if (client->menu == BOT_MENU_FEATURES)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             switch (selection)
             {
             case 1:
-               DisplayMenuToClient (ent, &g_menus[3]);
+               DisplayMenuToClient (ent, BOT_MENU_WEAPON_MODE);
                break;
 
             case 2:
-               DisplayMenuToClient (ent, &g_menus[9]);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_MAIN_PAGE1);
                break;
 
             case 3:
-               DisplayMenuToClient (ent, &g_menus[4]);
+               DisplayMenuToClient (ent, BOT_MENU_PERSONALITY);
                break;
 
             case 4:
@@ -1574,16 +1561,16 @@ void ClientCommand (edict_t *ent)
 
             case 5:
                if (IsAlive (ent))
-                  DisplayMenuToClient (ent, &g_menus[18]);
+                  DisplayMenuToClient (ent, BOT_MENU_COMMANDS);
                else
                {
-                  DisplayMenuToClient (ent, nullptr); // reset menu display
+                  DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
                   engine.CenterPrintf ("You're dead, and have no access to this menu");
                }
                break;
 
             case 10:
-               DisplayMenuToClient (ent, nullptr);
+               DisplayMenuToClient (ent, BOT_MENU_IVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1591,9 +1578,9 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[18])
+         else if (client->menu == BOT_MENU_COMMANDS)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
             Bot *bot = nullptr;
 
             switch (selection)
@@ -1616,6 +1603,7 @@ void ClientCommand (edict_t *ent)
                      }
                      else if (selection == 2)
                         bot->ResetDoubleJumpState ();
+
                      break;
                   }
                }
@@ -1628,7 +1616,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, nullptr);
+               DisplayMenuToClient (ent, BOT_MENU_IVALID);
                break;
             }
 
@@ -1637,9 +1625,9 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[19])
+         else if (client->menu ==BOT_MENU_WAYPOINT_AUTOPATH)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             const float autoDistanceValue[] = {0.0f, 100.0f, 130.0f, 160.0f, 190.0f, 220.0f, 250.0f };
 
@@ -1656,9 +1644,9 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[20])
+         else if (client->menu == BOT_MENU_WAYPOINT_PATH)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             switch (selection)
             {
@@ -1675,7 +1663,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, nullptr);
+               DisplayMenuToClient (ent, BOT_MENU_IVALID);
                break;
             }
 
@@ -1684,11 +1672,11 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[5])
+         else if (client->menu == BOT_MENU_DIFFICULTY)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
-            client->menu = &g_menus[4];
+            client->menu = BOT_MENU_PERSONALITY;
 
             switch (selection)
             {
@@ -1713,21 +1701,21 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, nullptr);
+               DisplayMenuToClient (ent, BOT_MENU_IVALID);
                break;
             }
 
-            if (client->menu == &g_menus[4])
-               DisplayMenuToClient (ent, &g_menus[4]);
+            if (client->menu == BOT_MENU_PERSONALITY)
+               DisplayMenuToClient (ent, BOT_MENU_PERSONALITY);
 
             if (g_gameFlags & GAME_METAMOD)
                RETURN_META (MRES_SUPERCEDE);
 
             return;
          }
-         else if (client->menu == &g_menus[6] && fillCommand)
+         else if (client->menu == BOT_MENU_TEAM_SELECT && fillCommand)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             switch (selection)
             {
@@ -1739,11 +1727,11 @@ void ClientCommand (edict_t *ent)
 
             case 5:
                fillServerTeam = selection;
-               DisplayMenuToClient (ent, &g_menus[5]);
+               DisplayMenuToClient (ent, BOT_MENU_DIFFICULTY);
                break;
 
             case 10:
-               DisplayMenuToClient (ent, nullptr);
+               DisplayMenuToClient (ent, BOT_MENU_IVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1751,9 +1739,9 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[4] && fillCommand)
+         else if (client->menu == BOT_MENU_PERSONALITY && fillCommand)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             switch (selection)
             {
@@ -1764,7 +1752,7 @@ void ClientCommand (edict_t *ent)
                bots.FillServer (fillServerTeam, selection - 2, g_storeAddbotVars[0]);
 
             case 10:
-               DisplayMenuToClient (ent, nullptr);
+               DisplayMenuToClient (ent, BOT_MENU_IVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1772,9 +1760,9 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[6])
+         else if (client->menu == BOT_MENU_TEAM_SELECT)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             switch (selection)
             {
@@ -1790,14 +1778,14 @@ void ClientCommand (edict_t *ent)
                else
                {
                   if (selection == 1)
-                     DisplayMenuToClient (ent, &g_menus[7]);
+                     DisplayMenuToClient (ent, BOT_MENU_TERRORIST_SELECT);
                   else
-                     DisplayMenuToClient (ent, &g_menus[8]);
+                     DisplayMenuToClient (ent, BOT_MENU_CT_SELECT);
                }
                break;
 
             case 10:
-               DisplayMenuToClient (ent, nullptr);
+               DisplayMenuToClient (ent, BOT_MENU_IVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1805,9 +1793,9 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[4])
+         else if (client->menu == BOT_MENU_PERSONALITY)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             switch (selection)
             {
@@ -1816,11 +1804,11 @@ void ClientCommand (edict_t *ent)
             case 3:
             case 4:
                g_storeAddbotVars[3] = selection - 2;
-               DisplayMenuToClient (ent, &g_menus[6]);
+               DisplayMenuToClient (ent, BOT_MENU_TEAM_SELECT);
                break;
 
             case 10:
-               DisplayMenuToClient (ent, nullptr);
+               DisplayMenuToClient (ent, BOT_MENU_IVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1828,9 +1816,9 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[7] || client->menu == &g_menus[8])
+         else if (client->menu == BOT_MENU_TERRORIST_SELECT || client->menu == BOT_MENU_CT_SELECT)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             switch (selection)
             {
@@ -1844,7 +1832,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, nullptr);
+               DisplayMenuToClient (ent, BOT_MENU_IVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1852,9 +1840,9 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[3])
+         else if (client->menu == BOT_MENU_WEAPON_MODE)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             switch (selection)
             {
@@ -1869,7 +1857,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, nullptr);
+               DisplayMenuToClient (ent, BOT_MENU_IVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1877,9 +1865,9 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[14])
+         else if (client->menu == BOT_MENU_KICK_PAGE_1)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             switch (selection)
             {
@@ -1899,7 +1887,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, &g_menus[2]);
+               DisplayMenuToClient (ent, BOT_MENU_CONTROL);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1907,9 +1895,9 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[15])
+         else if (client->menu == BOT_MENU_KICK_PAGE_2)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             switch (selection)
             {
@@ -1937,9 +1925,9 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[16])
+         else if (client->menu == BOT_MENU_KICK_PAGE_3)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             switch (selection)
             {
@@ -1967,9 +1955,9 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu == &g_menus[17])
+         else if (client->menu == BOT_MENU_KICK_PAGE_4)
          {
-            DisplayMenuToClient (ent, nullptr); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
 
             switch (selection)
             {

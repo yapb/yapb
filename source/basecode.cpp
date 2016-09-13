@@ -963,7 +963,7 @@ void Bot::GetCampDirection (Vector *dest)
    }
 }
 
-void Bot::SwitchChatterIcon (bool show)
+void Bot::EnableChatterIcon (bool show)
 {
    // this function depending on show boolen, shows/remove chatter, icon, on the head of bot.
 
@@ -988,11 +988,11 @@ void Bot::InstantChatterMessage (int type)
 {
    // this function sends instant chatter messages.
 
-   if (yb_communication_type.GetInt () != 2 || g_chatterFactory[type].IsEmpty () || (g_gameFlags & GAME_LEGACY))
+   if ((g_gameFlags & GAME_LEGACY) || yb_communication_type.GetInt () != 2 || g_chatterFactory[type].IsEmpty ())
       return;
 
    if (m_notKilled)
-      SwitchChatterIcon (true);
+      EnableChatterIcon (true);
 
    // delay only reportteam
    if (type == Radio_ReportTeam)
@@ -1003,17 +1003,17 @@ void Bot::InstantChatterMessage (int type)
       m_timeRepotingInDelay = engine.Time () + Random.Float (30.0f, 60.0f);
    }
 
-   String defaultSound = g_chatterFactory[type].GetRandomElement ().name;
-   String painSound = g_chatterFactory[Chatter_DiePain].GetRandomElement ().name;
+   const String &defaultSound = g_chatterFactory[type].GetRandomElement ().name;
+   const String &painSound = g_chatterFactory[Chatter_DiePain].GetRandomElement ().name;
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      edict_t *ent = engine.EntityOfIndex (i);
+      const Client &client = g_clients[i];
 
-      if (!IsValidPlayer (ent) || IsValidBot (ent) || engine.GetTeam (ent) != m_team)
+      if (!(client.flags & CF_USED) || (client.ent->v.flags & FL_FAKECLIENT) || client.team != m_team)
          continue;
 
-      MESSAGE_BEGIN (MSG_ONE, engine.FindMessageId (NETMSG_SENDAUDIO), nullptr, ent); // begin message
+      MESSAGE_BEGIN (MSG_ONE, engine.FindMessageId (NETMSG_SENDAUDIO), nullptr, client.ent); // begin message
          WRITE_BYTE (GetIndex ());
 
          if (pev->deadflag & DEAD_DYING)
@@ -1033,7 +1033,7 @@ void Bot::RadioMessage (int message)
    if (yb_communication_type.GetInt () == 0 || m_numFriendsLeft == 0)
       return;
 
-   if (g_chatterFactory[message].IsEmpty () || (g_gameFlags & GAME_LEGACY) || yb_communication_type.GetInt () != 2)
+   if ((g_gameFlags & GAME_LEGACY) || g_chatterFactory[message].IsEmpty () || yb_communication_type.GetInt () != 2)
       m_forceRadio = true; // use radio instead voice
    else
       m_forceRadio = false;
@@ -2922,7 +2922,7 @@ void Bot::ThinkFrame (void)
 
    // remove voice icon
    if (!(g_gameFlags & GAME_LEGACY) && g_lastRadioTime[g_clients[GetIndex () - 1].team2] + Random.Float (0.8f, 2.1f) < engine.Time ())
-      SwitchChatterIcon (false); // hide icon
+      EnableChatterIcon (false); // hide icon
 
    if (botMovement)
       BotAI (); // execute main code
@@ -5980,7 +5980,7 @@ void Bot::EquipInBuyzone (int buyState)
 
    if (mp_buytime.m_eptr != nullptr)
       checkBuyTime = (g_timeRoundStart + Random.Float (10.0f, 20.0f) + mp_buytime.GetFloat () < engine.Time ());
-
+   
    // if bot is in buy zone, try to buy ammo for this weapon...
    if (m_seeEnemyTime + 5.0f < engine.Time () && m_lastEquipTime + 15.0f < engine.Time () && m_inBuyZone && checkBuyTime && !g_bombPlanted && m_moneyAmount > g_botBuyEconomyTable[0])
    {

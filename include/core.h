@@ -66,6 +66,34 @@ enum GameFlags
    GAME_METAMOD = (1 << 6)
 };
 
+// bot menu ids
+enum MenuId
+{
+   BOT_MENU_IVALID = -1,
+   BOT_MENU_MAIN,
+   BOT_MENU_FEATURES,
+   BOT_MENU_CONTROL,
+   BOT_MENU_WEAPON_MODE,
+   BOT_MENU_PERSONALITY,
+   BOT_MENU_DIFFICULTY,
+   BOT_MENU_TEAM_SELECT,
+   BOT_MENU_TERRORIST_SELECT,
+   BOT_MENU_CT_SELECT,
+   BOT_MENU_COMMANDS,
+   BOT_MENU_WAYPOINT_MAIN_PAGE1,
+   BOT_MENU_WAYPOINT_MAIN_PAGE2,
+   BOT_MENU_WAYPOINT_RADIUS,
+   BOT_MENU_WAYPOINT_TYPE,
+   BOT_MENU_WAYPOINT_FLAG,
+   BOT_MENU_WAYPOINT_AUTOPATH,
+   BOT_MENU_WAYPOINT_PATH,
+   BOT_MENU_KICK_PAGE_1,
+   BOT_MENU_KICK_PAGE_2,
+   BOT_MENU_KICK_PAGE_3,
+   BOT_MENU_KICK_PAGE_4,
+   BOT_MENU_TOTAL_MENUS
+};
+
 // log levels
 enum LogLevel
 {
@@ -601,14 +629,15 @@ struct WeaponSelect
 // struct for menus
 struct MenuText
 {
-   int validSlots; // ored together bits for valid keys
-   const char *menuText; // ptr to actual string
+   MenuId id; // actual menu id
+   int slots; //  together bits for valid keys
+   String text; // ptr to actual string
 };
 
 // array of clients struct
 struct Client
 {
-   MenuText *menu; // pointer to opened bot menu
+   MenuId menu; // id to opened bot menu
    edict_t *ent; // pointer to actual edict
    Vector origin; // position in the world
    Vector soundPosition; // position sound was played
@@ -619,6 +648,8 @@ struct Client
 
    float hearingDistance; // distance this sound is heared
    float timeSoundLasting; // time sound is played/heared
+
+   Client (void) : menu (BOT_MENU_IVALID) { }
 };
 
 // experience data hold in memory while playing
@@ -1184,7 +1215,7 @@ public:
    bool FindWaypoint (void);
    bool EntityIsVisible (const Vector &dest, bool fromBody = false);
 
-   void SwitchChatterIcon (bool show);
+   void EnableChatterIcon (bool show);
    void DeleteSearchNodes (void); 
    void VerifyBreakable (edict_t *touch);
 
@@ -1455,6 +1486,11 @@ public:
    WaypointDownloadError RequestWaypoint (void);
 };
 
+class BotMenu
+{
+
+};
+
 #include <engine.h>
 
 // expose bot super-globals
@@ -1482,7 +1518,7 @@ extern void FreeLibraryMemory (void);
 extern void RoundInit (void);
 extern void CheckWelcomeMessage (void);
 extern void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...);
-extern void DisplayMenuToClient (edict_t *ent, MenuText *menu);
+extern void DisplayMenuToClient (edict_t *ent, MenuId menu);
 extern void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex);
 extern void SoundAttachToClients (edict_t *ent, const char *sample, float volume);
 extern void SoundSimulateUpdate (int playerIndex);
