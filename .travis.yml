@@ -1,3 +1,16 @@
+addons:
+  apt:
+    packages:
+    - clang-3.7
+    - lib32stdc++6
+    - lib32z1-dev
+    - libc6-dev-i386
+    - linux-libc-dev
+    - gcc-multilib
+    - g++-multilib
+    sources:
+    - llvm-toolchain-precise-3.7
+    - ubuntu-toolchain-r-test
 language: cpp
 branches:
   only:
@@ -5,13 +18,9 @@ branches:
 compiler:
   - clang
 before_script:
-  - sudo apt-get update -qq
-  - sudo apt-get install -y g++-multilib libc6-dev-i386 clang-3.4 llvm-dev
-  - sudo wget $OSX_CROSS_TOOL -O /tmp/osxcross.tgz
-  - sudo mkdir -p /tmp/osxcross/target
-  - sudo tar xzf /tmp/osxcross.tgz -C /tmp/osxcross/target/
+  - sudo wget $OSX_CROSS_TOOL -O /tmp/osxcross.tgz && mkdir -p /tmp/osxcross/target && tar xzf /tmp/osxcross.tgz -C /tmp/osxcross/target/
   - export PATH=$PATH:/tmp/osxcross/target/bin
-  - wget https://yapb.jeefo.net/ci/scripts/gitrev.sh && chmod +x ./gitrev.sh && ./gitrev.sh
+  - wget https://yapb.jeefo.net/ci/scripts/gitrev.sh && chmod a+x ./gitrev.sh && ./gitrev.sh
 script:
   - cd project && make all
 after_success:
