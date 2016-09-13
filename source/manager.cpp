@@ -440,7 +440,7 @@ void BotManager::MaintainBotQuota (void)
             yb_quota.SetInt (0);
 
          // always keep one slot
-         int maxClients = yb_autovacate.GetBool () ? engine.MaxClients () - 1 - GetHumansNum () : engine.MaxClients ();
+         int maxClients = yb_autovacate.GetBool () ? engine.MaxClients () - 1 - (engine.IsDedicatedServer () ? 0 : GetHumansNum ()) : engine.MaxClients ();
 
          if (yb_quota.GetInt () > maxClients)
             yb_quota.SetInt (maxClients);
@@ -491,7 +491,7 @@ void BotManager::FillServer (int selection, int personality, int difficulty, int
    // this function fill server with bots, with specified team & personality
 
    // always keep one slot
-   int maxClients = yb_autovacate.GetBool () ? engine.MaxClients () - 1 - GetHumansNum () : engine.MaxClients ();
+   int maxClients = yb_autovacate.GetBool () ? engine.MaxClients () - 1 - (engine.IsDedicatedServer () ? 0 : GetHumansNum ()) : engine.MaxClients ();
 
    if (GetBotsNum () >= maxClients - GetHumansNum ())
       return;
