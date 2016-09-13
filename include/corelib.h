@@ -41,6 +41,31 @@ typedef unsigned long uint32;
 template <typename T> inline T A_min (T a, T b) { return a < b ? a : b; }
 template <typename T> inline T A_max (T a, T b) { return a > b ? a : b; }
 
+// Fast stricmp got somewhere from chromium
+static inline int A_stricmp (const char *str1, const char *str2, int length = -1)
+{
+   int iter = 0;
+
+   if (length == -1)
+      length = strlen (str2);
+
+   for (; iter < length; iter++)
+   {
+      if ((str1[iter] | 32) != (str2[iter] | 32))
+         break;
+   }
+   if (iter != length)
+      return 1;
+
+   return 0;
+}
+
+// Cross platform strdup
+static inline char *A_strdup (const char *str)
+{
+   return strcpy (new char[strlen (str) + 1], str);
+}
+
 //
 // Title: Utility Classes Header
 //

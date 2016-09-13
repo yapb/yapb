@@ -31,9 +31,11 @@ BotManager::BotManager (void)
    m_lastWinner = -1;
    m_deathMsgSent = false;
 
-   m_economicsGood[TERRORIST] = true;
-   m_economicsGood[CT] = true;
-
+   for (int i = 0; i < SPECTATOR; i++)
+   {
+      m_leaderChoosen[i] = false;
+      m_economicsGood[i] = true;
+   }
    memset (m_bots, 0, sizeof (m_bots));
 
    m_maintainTime = 0.0f;

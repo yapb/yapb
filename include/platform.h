@@ -56,11 +56,11 @@
       #pragma comment (linker, "/SECTION:.data,RW")
    #endif
 
-   typedef int (FAR *EntityAPI_t) (gamefuncs_t *, int);
-   typedef int (FAR *NewEntityAPI_t) (newgamefuncs_t *, int *);
-   typedef int (FAR *BlendAPI_t) (int, void **, void *, float (*)[3][4], float (*)[128][3][4]);
-   typedef void (__stdcall *FuncPointers_t) (enginefuncs_t *, globalvars_t *);
-   typedef void (FAR *EntityPtr_t) (entvars_t *);
+   typedef int (*GetEntityApi2_FN) (gamefuncs_t *, int);
+   typedef int (*GetNewEntityApi_FN) (newgamefuncs_t *, int *);
+   typedef int (*GetBlendingInterface_FN) (int, void **, void *, float (*)[3][4], float (*)[128][3][4]);
+   typedef void (*Entity_FN) (entvars_t *);
+   typedef void (__stdcall *GiveFnptrsToDll_FN) (enginefuncs_t *, globalvars_t *);
 
 #elif defined (PLATFORM_LINUX) || defined (PLATFORM_OSX)
 
@@ -82,15 +82,17 @@
    #define DLL_GIVEFNPTRSTODLL extern "C" void __attribute__((visibility("default")))
 
    #if defined (__ANDROID__)
-   #define PLATFORM_ANDROID 1
+      #define PLATFORM_ANDROID 1
    #endif
 
-   typedef int (*EntityAPI_t) (gamefuncs_t *, int);
-   typedef int (*NewEntityAPI_t) (newgamefuncs_t *, int *);
-   typedef int (*BlendAPI_t) (int, void **, void *, float (*)[3][4], float (*)[128][3][4]);
-   typedef void (*FuncPointers_t) (enginefuncs_t *, globalvars_t *);
-   typedef void (*EntityPtr_t) (entvars_t *);
+   typedef int (*GetEntityApi2_FN) (gamefuncs_t *, int);
+   typedef int (*GetNewEntityApi_FN) (newgamefuncs_t *, int *);
+   typedef int (*GetBlendingInterface_FN) (int, void **, void *, float (*)[3][4], float (*)[128][3][4]);
+   typedef void (*Entity_FN) (entvars_t *);
+   typedef void (*GiveFnptrsToDll_FN) (enginefuncs_t *, globalvars_t *);
 
+   // posix compatibility
+   #define _unlink unlink
 #else
    #error "Platform unrecognized."
 #endif

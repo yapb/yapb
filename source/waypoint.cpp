@@ -1092,7 +1092,7 @@ bool Waypoint::Load (void)
             fp.Close ();
             return false;
          }
-         else if (stricmp (header.mapName, map))
+         else if (A_stricmp (header.mapName, map))
          {
             sprintf (m_infoBuffer, "%s.pwf - hacked waypoint file, file name doesn't match waypoint header information (mapname: '%s', header: '%s')", map, map, header.mapName);
             AddLogEntry (true, LL_ERROR, m_infoBuffer);
@@ -2396,7 +2396,7 @@ void Waypoint::EraseFromHardDisk (void)
 {
    // this function removes waypoint file from the hard disk
 
-   String deleteList[5];
+   String deleteList[4];
    const char *map = engine.GetMapName ();
 
    // if we're delete waypoint, delete all corresponding to it files
@@ -2404,13 +2404,12 @@ void Waypoint::EraseFromHardDisk (void)
    deleteList[1] = FormatBuffer ("%slearned/%s.exp", GetDataDir (), map); // corresponding to waypoint experience
    deleteList[3] = FormatBuffer ("%slearned/%s.vis", GetDataDir (), map); // corresponding to waypoint vistable
    deleteList[3] = FormatBuffer ("%slearned/%s.pmt", GetDataDir (), map); // corresponding to waypoint path matrix
-   deleteList[4] = FormatBuffer ("%slearned/%s.xml", GetDataDir (), map); // corresponding to waypoint xml database
 
    for (int i = 0; i < 4; i++)
    {
       if (File::Accessible (const_cast <char *> (deleteList[i].GetBuffer ())))
       {
-         unlink (deleteList[i].GetBuffer ());
+         _unlink (deleteList[i].GetBuffer ());
          AddLogEntry (true, LL_DEFAULT, "File %s, has been deleted from the hard disk", deleteList[i].GetBuffer ());
       }
       else

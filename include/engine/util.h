@@ -225,17 +225,6 @@ static inline void STOP_SOUND (edict_t *entity, int channel, const char *sample)
    EMIT_SOUND_DYN (entity, channel, sample, 0, 0, SND_STOP, PITCH_NORM);
 }
 
-///             ///
-// Bot Additions //
-///             ///
-
-// removes linker warning when using msvcrt library
-#if defined ( _MSC_VER )
-#define stricmp _stricmp
-#define unlink _unlink
-#define mkdir _mkdir
-#endif
-
 // macro to handle memory allocation fails
 #define TerminateOnMalloc() \
    AddLogEntry (true, LL_FATAL, "Memory Allocation Fail!\nFile: %s (Line: %d)", __FILE__, __LINE__) \

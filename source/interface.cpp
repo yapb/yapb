@@ -21,59 +21,59 @@ ConVar mp_startmoney ("mp_startmoney", nullptr, VT_NOREGISTER);
 int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *self)
 {
    // adding one bot with random parameters to random team
-   if (stricmp (arg0, "addbot") == 0 || stricmp (arg0, "add") == 0)
+   if (A_stricmp (arg0, "addbot") == 0 || A_stricmp (arg0, "add") == 0)
       bots.AddBot (arg4, arg1, arg2, arg3, arg5);
 
    // adding one bot with high difficulty parameters to random team
-   else if (stricmp (arg0, "addbot_hs") == 0 || stricmp (arg0, "addhs") == 0)
+   else if (A_stricmp (arg0, "addbot_hs") == 0 || A_stricmp (arg0, "addhs") == 0)
       bots.AddBot (arg4, "4", "1", arg3, arg5);
 
    // adding one bot with random parameters to terrorist team
-   else if (stricmp (arg0, "addbot_t") == 0 || stricmp (arg0, "add_t") == 0)
+   else if (A_stricmp (arg0, "addbot_t") == 0 || A_stricmp (arg0, "add_t") == 0)
       bots.AddBot (arg4, arg1, arg2, "1", arg5);
 
    // adding one bot with random parameters to counter-terrorist team
-   else if (stricmp (arg0, "addbot_ct") == 0 || stricmp (arg0, "add_ct") == 0)
+   else if (A_stricmp (arg0, "addbot_ct") == 0 || A_stricmp (arg0, "add_ct") == 0)
       bots.AddBot (arg4, arg1, arg2, "2", arg5);
          
    // kicking off one bot from the terrorist team
-   else if (stricmp (arg0, "kickbot_t") == 0 || stricmp (arg0, "kick_t") == 0)
+   else if (A_stricmp (arg0, "kickbot_t") == 0 || A_stricmp (arg0, "kick_t") == 0)
       bots.RemoveFromTeam (TERRORIST);
 
    // kicking off one bot from the counter-terrorist team
-   else if (stricmp (arg0, "kickbot_ct") == 0 || stricmp (arg0, "kick_ct") == 0)
+   else if (A_stricmp (arg0, "kickbot_ct") == 0 || A_stricmp (arg0, "kick_ct") == 0)
       bots.RemoveFromTeam (CT);
 
    // kills all bots on the terrorist team
-   else if (stricmp (arg0, "killbots_t") == 0 || stricmp (arg0, "kill_t") == 0)
+   else if (A_stricmp (arg0, "killbots_t") == 0 || A_stricmp (arg0, "kill_t") == 0)
       bots.KillAll (TERRORIST);
 
    // kills all bots on the counter-terrorist team
-   else if (stricmp (arg0, "killbots_ct") == 0 || stricmp (arg0, "kill_ct") == 0)
+   else if (A_stricmp (arg0, "killbots_ct") == 0 || A_stricmp (arg0, "kill_ct") == 0)
       bots.KillAll (CT);
 
    // list all bots playeing on the server
-   else if (stricmp (arg0, "listbots") == 0 || stricmp (arg0, "list") == 0)
+   else if (A_stricmp (arg0, "listbots") == 0 || A_stricmp (arg0, "list") == 0)
       bots.ListBots ();
 
    // kick off all bots from the played server
-   else if (stricmp (arg0, "kickbots") == 0 || stricmp (arg0, "kickall") == 0)
+   else if (A_stricmp (arg0, "kickbots") == 0 || A_stricmp (arg0, "kickall") == 0)
       bots.RemoveAll ();
 
    // kill all bots on the played server
-   else if (stricmp (arg0, "killbots") == 0 || stricmp (arg0, "killall") == 0)
+   else if (A_stricmp (arg0, "killbots") == 0 || A_stricmp (arg0, "killall") == 0)
       bots.KillAll ();
 
    // kick off one random bot from the played server
-   else if (stricmp (arg0, "kickone") == 0 || stricmp (arg0, "kick") == 0)
+   else if (A_stricmp (arg0, "kickone") == 0 || A_stricmp (arg0, "kick") == 0)
       bots.RemoveRandom ();
 
    // fill played server with bots
-   else if (stricmp (arg0, "fillserver") == 0 || stricmp (arg0, "fill") == 0)
+   else if (A_stricmp (arg0, "fillserver") == 0 || A_stricmp (arg0, "fill") == 0)
       bots.FillServer (atoi (arg1), IsNullString (arg2) ? -1 : atoi (arg2), IsNullString (arg3) ? -1 : atoi (arg3), IsNullString (arg4) ? -1 : atoi (arg4));
 
    // select the weapon mode for bots
-   else if (stricmp (arg0, "weaponmode") == 0 || stricmp (arg0, "wmode") == 0)
+   else if (A_stricmp (arg0, "weaponmode") == 0 || A_stricmp (arg0, "wmode") == 0)
    {
       int selection = atoi (arg1);
 
@@ -85,7 +85,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    }
 
    // force all bots to vote to specified map
-   else if (stricmp (arg0, "votemap") == 0)
+   else if (A_stricmp (arg0, "votemap") == 0)
    {
       if (!IsNullString (arg1))
       {
@@ -104,7 +104,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    }
 
    // displays version information
-   else if (stricmp (arg0, "version") == 0 || stricmp (arg0, "ver") == 0)
+   else if (A_stricmp (arg0, "version") == 0 || A_stricmp (arg0, "ver") == 0)
    {
       char versionData[] =
          "------------------------------------------------\n"
@@ -119,7 +119,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    }
 
    // display some sort of help information
-   else if (stricmp (arg0, "?") == 0 || stricmp (arg0, "help") == 0)
+   else if (A_stricmp (arg0, "?") == 0 || A_stricmp (arg0, "help") == 0)
    {
       engine.ClientPrintf (ent, "Bot Commands:");
       engine.ClientPrintf (ent, "%s version\t - display version information.", self);
@@ -132,7 +132,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       engine.ClientPrintf (ent, "%s votemap\t - allows dead bots to vote for specific map.", self);
       engine.ClientPrintf (ent, "%s cmenu\t - displaying bots command menu.", self);
 
-      if (stricmp (arg1, "full") == 0 || stricmp (arg1, "f") == 0 || stricmp (arg1, "?") == 0)
+      if (A_stricmp (arg1, "full") == 0 || A_stricmp (arg1, "f") == 0 || A_stricmp (arg1, "?") == 0)
       {
          engine.ClientPrintf (ent, "%s add_t\t - creates one random bot to terrorist team.", self);
          engine.ClientPrintf (ent, "%s add_ct\t - creates one random bot to ct team.", self);
@@ -171,7 +171,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
           }
       }
    }
-   else if (stricmp (arg0, "bot_takedamage") == 0 && !IsNullString (arg1))
+   else if (A_stricmp (arg0, "bot_takedamage") == 0 && !IsNullString (arg1))
    {
       bool isOn = !!(atoi (arg1) == 1);
 
@@ -187,11 +187,11 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    }
 
    // displays main bot menu
-   else if (stricmp (arg0, "botmenu") == 0 || stricmp (arg0, "menu") == 0)
+   else if (A_stricmp (arg0, "botmenu") == 0 || A_stricmp (arg0, "menu") == 0)
       DisplayMenuToClient (ent, BOT_MENU_MAIN);
 
    // display command menu
-   else if (stricmp (arg0, "cmdmenu") == 0 || stricmp (arg0, "cmenu") == 0)
+   else if (A_stricmp (arg0, "cmdmenu") == 0 || A_stricmp (arg0, "cmenu") == 0)
    {
       if (IsAlive (ent))
          DisplayMenuToClient (ent, BOT_MENU_COMMANDS);
@@ -203,19 +203,19 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    }
 
    // waypoint manimupulation (really obsolete, can be edited through menu) (supported only on listen server)
-   else if (stricmp (arg0, "waypoint") == 0 || stricmp (arg0, "wp") == 0 || stricmp (arg0, "wpt") == 0)
+   else if (A_stricmp (arg0, "waypoint") == 0 || A_stricmp (arg0, "wp") == 0 || A_stricmp (arg0, "wpt") == 0)
    {
       if (engine.IsDedicatedServer () || engine.IsNullEntity (g_hostEntity))
          return 2;
 
       // enables or disable waypoint displaying
-      if (stricmp (arg1, "on") == 0)
+      if (A_stricmp (arg1, "on") == 0)
       {
          g_waypointOn = true;
          engine.Printf ("Waypoint Editing Enabled");
 
          // enables noclip cheat
-         if (stricmp (arg2, "noclip") == 0)
+         if (A_stricmp (arg2, "noclip") == 0)
          {
             if (g_editNoclip)
             {
@@ -233,7 +233,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       }
 
       // switching waypoint editing off
-      else if (stricmp (arg1, "off") == 0)
+      else if (A_stricmp (arg1, "off") == 0)
       {
          g_waypointOn = false;
          g_editNoclip = false;
@@ -244,11 +244,11 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       }
 
       // toggles displaying player models on spawn spots
-      else if (stricmp (arg1, "mdl") == 0 || stricmp (arg1, "models") == 0)
+      else if (A_stricmp (arg1, "mdl") == 0 || A_stricmp (arg1, "models") == 0)
       {
          edict_t *spawnEntity = nullptr;
 
-         if (stricmp (arg2, "on") == 0)
+         if (A_stricmp (arg2, "on") == 0)
          {
             while (!engine.IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
                spawnEntity->v.effects &= ~EF_NODRAW;
@@ -261,7 +261,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
             engine.IssueCmd ("mp_timelimit 0"); // disable the time limit
             engine.IssueCmd ("mp_freezetime 0"); // disable freezetime
          }
-         else if (stricmp (arg2, "off") == 0)
+         else if (A_stricmp (arg2, "off") == 0)
          {
             while (!engine.IsNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
                spawnEntity->v.effects |= EF_NODRAW;
@@ -273,32 +273,32 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       }
 
       // show direction to specified waypoint
-      else if (stricmp (arg1, "find") == 0)
+      else if (A_stricmp (arg1, "find") == 0)
          waypoints.SetFindIndex (atoi (arg2));
 
       // opens adding waypoint menu
-      else if (stricmp (arg1, "add") == 0)
+      else if (A_stricmp (arg1, "add") == 0)
       {
          g_waypointOn = true;  // turn waypoints on
          DisplayMenuToClient (g_hostEntity, BOT_MENU_WAYPOINT_TYPE);
       }
 
       // creates basic waypoints on the map (ladder/spawn points/goals)
-      else if (stricmp (arg1, "addbasic") == 0)
+      else if (A_stricmp (arg1, "addbasic") == 0)
       {
          waypoints.CreateBasic ();
          engine.CenterPrintf ("Basic waypoints was Created");
       }
 
       // delete nearest to host edict waypoint
-      else if (stricmp (arg1, "delete") == 0)
+      else if (A_stricmp (arg1, "delete") == 0)
       {
          g_waypointOn = true; // turn waypoints on
          waypoints.Delete ();
       }
 
       // save waypoint data into file on hard disk
-      else if (stricmp (arg1, "save") == 0)
+      else if (A_stricmp (arg1, "save") == 0)
       {
          char *waypointSaveMessage = engine.TraslateMessage ("Waypoints Saved");
 
@@ -315,37 +315,37 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       }
 
       // remove waypoint and all corresponding files from hard disk
-      else if (stricmp (arg1, "erase") == 0)
+      else if (A_stricmp (arg1, "erase") == 0)
          waypoints.EraseFromHardDisk ();
 
       // load all waypoints again (overrides all changes, that wasn't saved)
-      else if (stricmp (arg1, "load") == 0)
+      else if (A_stricmp (arg1, "load") == 0)
       {
          if (waypoints.Load ())
             engine.Printf ("Waypoints loaded");
       }
 
       // check all nodes for validation
-      else if (stricmp (arg1, "check") == 0)
+      else if (A_stricmp (arg1, "check") == 0)
       {
          if (waypoints.NodesValid ())
             engine.CenterPrintf ("Nodes work Fine");
       }
 
       // opens menu for setting (removing) waypoint flags
-      else if (stricmp (arg1, "flags") == 0)
+      else if (A_stricmp (arg1, "flags") == 0)
          DisplayMenuToClient (g_hostEntity, BOT_MENU_WAYPOINT_FLAG);
 
       // setting waypoint radius
-      else if (stricmp (arg1, "setradius") == 0)
+      else if (A_stricmp (arg1, "setradius") == 0)
          waypoints.SetRadius (atoi (arg2));
 
       // remembers nearest waypoint
-      else if (stricmp (arg1, "cache") == 0)
+      else if (A_stricmp (arg1, "cache") == 0)
          waypoints.CacheWaypoint ();
 
       // teleport player to specified waypoint
-      else if (stricmp (arg1, "teleport") == 0)
+      else if (A_stricmp (arg1, "teleport") == 0)
       {
          int teleportPoint = atoi (arg2);
 
@@ -362,7 +362,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       }
 
       // displays waypoint menu
-      else if (stricmp (arg1, "menu") == 0)
+      else if (A_stricmp (arg1, "menu") == 0)
          DisplayMenuToClient (g_hostEntity, BOT_MENU_WAYPOINT_MAIN_PAGE1);
 
       // otherwise display waypoint current status
@@ -371,51 +371,51 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    }
 
    // path waypoint editing system (supported only on listen server)
-   else if (stricmp (arg0, "pathwaypoint") == 0 || stricmp (arg0, "path") == 0 || stricmp (arg0, "pwp") == 0)
+   else if (A_stricmp (arg0, "pathwaypoint") == 0 || A_stricmp (arg0, "path") == 0 || A_stricmp (arg0, "pwp") == 0)
    {
       if (engine.IsDedicatedServer () || engine.IsNullEntity (g_hostEntity))
          return 2;
 
       // opens path creation menu
-      if (stricmp (arg1, "create") == 0)
+      if (A_stricmp (arg1, "create") == 0)
          DisplayMenuToClient (g_hostEntity, BOT_MENU_WAYPOINT_PATH);
 
       // creates incoming path from the cached waypoint
-      else if (stricmp (arg1, "create_in") == 0)
+      else if (A_stricmp (arg1, "create_in") == 0)
          waypoints.CreatePath (CONNECTION_INCOMING);
 
       // creates outgoing path from current waypoint
-      else if (stricmp (arg1, "create_out") == 0)
+      else if (A_stricmp (arg1, "create_out") == 0)
          waypoints.CreatePath (CONNECTION_OUTGOING);
 
       // creates bidirectional path from cahed to current waypoint
-      else if (stricmp (arg1, "create_both") == 0)
+      else if (A_stricmp (arg1, "create_both") == 0)
          waypoints.CreatePath (CONNECTION_BOTHWAYS);
 
       // delete special path
-      else if (stricmp (arg1, "delete") == 0)
+      else if (A_stricmp (arg1, "delete") == 0)
          waypoints.DeletePath ();
 
       // sets auto path maximum distance
-      else if (stricmp (arg1, "autodistance") == 0)
+      else if (A_stricmp (arg1, "autodistance") == 0)
          DisplayMenuToClient (g_hostEntity, BOT_MENU_WAYPOINT_AUTOPATH);
    }
 
    // automatic waypoint handling (supported only on listen server)
-   else if (stricmp (arg0, "autowaypoint") == 0 || stricmp (arg0, "autowp") == 0)
+   else if (A_stricmp (arg0, "autowaypoint") == 0 || A_stricmp (arg0, "autowp") == 0)
    {
       if (engine.IsDedicatedServer () || engine.IsNullEntity (g_hostEntity))
          return 2;
 
       // enable autowaypointing
-      if (stricmp (arg1, "on") == 0)
+      if (A_stricmp (arg1, "on") == 0)
       {
          g_autoWaypoint = true;
          g_waypointOn = true; // turn this on just in case
       }
 
       // disable autowaypointing
-      else if (stricmp (arg1, "off") == 0)
+      else if (A_stricmp (arg1, "off") == 0)
          g_autoWaypoint = false;
 
       // display status
@@ -423,13 +423,13 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    }
 
    // experience system handling (supported only on listen server)
-   else if (stricmp (arg0, "experience") == 0 || stricmp (arg0, "exp") == 0)
+   else if (A_stricmp (arg0, "experience") == 0 || A_stricmp (arg0, "exp") == 0)
    {
       if (engine.IsDedicatedServer () || engine.IsNullEntity (g_hostEntity))
          return 2;
 
       // write experience table (and visibility table) to hard disk
-      if (stricmp (arg1, "save") == 0)
+      if (A_stricmp (arg1, "save") == 0)
       {
          waypoints.SaveExperienceTab ();
          waypoints.SaveVisibilityTab ();
@@ -861,7 +861,7 @@ void InitConfig (void)
             if (!IsNullString (buffer))
             {
                String::TrimExternalBuffer (buffer);
-               temp.translated = _strdup (buffer);
+               temp.translated = A_strdup (buffer);
                buffer[0] = 0x0;
             }
 
@@ -871,7 +871,7 @@ void InitConfig (void)
          else if (strncmp (line, "[TRANSLATED]", 12) == 0)
          {
             String::TrimExternalBuffer (buffer);
-            temp.original = _strdup (buffer);
+            temp.original = A_strdup (buffer);
             buffer[0] = 0x0;
 
             langState = Lang_Translate;
@@ -1205,7 +1205,7 @@ void ClientCommand (edict_t *ent)
 
    if (!engine.IsBotCommand () && (ent == g_hostEntity || (g_clients[issuerPlayerIndex].flags & CF_ADMIN)))
    {
-      if (stricmp (command, "yapb") == 0 || stricmp (command, "yb") == 0)
+      if (A_stricmp (command, "yapb") == 0 || A_stricmp (command, "yb") == 0)
       {
          int state = BotCommandHandler (ent, IsNullString (arg1) ? "help" : arg1, CMD_ARGV (2), CMD_ARGV (3), CMD_ARGV (4), CMD_ARGV (5), CMD_ARGV (6), CMD_ARGV (0));
 
@@ -1224,7 +1224,7 @@ void ClientCommand (edict_t *ent)
 
          return;
       }
-      else if (stricmp (command, "menuselect") == 0 && !IsNullString (arg1) && g_clients[issuerPlayerIndex].menu != BOT_MENU_IVALID)
+      else if (A_stricmp (command, "menuselect") == 0 && !IsNullString (arg1) && g_clients[issuerPlayerIndex].menu != BOT_MENU_IVALID)
       {
          Client *client = &g_clients[issuerPlayerIndex];
          int selection = atoi (arg1);
@@ -1984,7 +1984,7 @@ void ClientCommand (edict_t *ent)
       }
    }
 
-   if (!engine.IsBotCommand () && (stricmp (command, "say") == 0 || stricmp (command, "say_team") == 0))
+   if (!engine.IsBotCommand () && (A_stricmp (command, "say") == 0 || A_stricmp (command, "say_team") == 0))
    {
       Bot *bot = nullptr;
 
@@ -2794,7 +2794,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *)
 
    if (!(g_gameFlags & GAME_METAMOD))
    {
-      auto api_GetEntityAPI = g_gameLib->GetFuncAddr <EntityAPI_t> ("GetEntityAPI");
+      auto api_GetEntityAPI = g_gameLib->GetFuncAddr <GetEntityApi2_FN> ("GetEntityAPI");
 
       // pass other DLLs engine callbacks to function table...
       if (api_GetEntityAPI (&g_functionTable, INTERFACE_VERSION) == 0)
@@ -2853,7 +2853,7 @@ SHARED_LIBRARAY_EXPORT int GetNewDLLFunctions (newgamefuncs_t *functionTable, in
    // pass them too, else the DLL interfacing wouldn't be complete and the game possibly wouldn't
    // run properly.
 
-   auto api_GetNewDLLFunctions = g_gameLib->GetFuncAddr <NewEntityAPI_t> ("GetNewDLLFunctions");
+   auto api_GetNewDLLFunctions = g_gameLib->GetFuncAddr <GetNewEntityApi_FN> ("GetNewDLLFunctions");
 
    if (api_GetNewDLLFunctions == nullptr)
       return FALSE;
@@ -2913,7 +2913,7 @@ SHARED_LIBRARAY_EXPORT int Server_GetBlendingInterface (int version, void **ppin
    // of the body move, which bones, which hitboxes and how) between the server and the game DLL.
    // some MODs can be using a different hitbox scheme than the standard one.
 
-   auto api_GetBlendingInterface = g_gameLib->GetFuncAddr <BlendAPI_t> ("Server_GetBlendingInterface");
+   auto api_GetBlendingInterface = g_gameLib->GetFuncAddr <GetBlendingInterface_FN> ("Server_GetBlendingInterface");
 
    if (api_GetBlendingInterface == nullptr)
       return FALSE;
@@ -3040,7 +3040,7 @@ Library *LoadCSBinary (void)
          }
 
          // detect if we're running modern game
-         EntityPtr_t entity = game->GetFuncAddr <EntityPtr_t> ("weapon_famas");
+         Entity_FN entity = game->GetFuncAddr <Entity_FN> ("weapon_famas");
 
          if (entity != nullptr)
             g_gameFlags |= GAME_CSTRIKE16;
@@ -3143,7 +3143,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    }
 #endif
 
-   auto api_GiveFnptrsToDll = g_gameLib->GetFuncAddr <FuncPointers_t> ("GiveFnptrsToDll");
+   auto api_GiveFnptrsToDll = g_gameLib->GetFuncAddr <GiveFnptrsToDll_FN> ("GiveFnptrsToDll");
 
    if (!api_GiveFnptrsToDll)
       TerminateOnMalloc ();
@@ -3169,10 +3169,10 @@ DLL_ENTRYPOINT
    DLL_RETENTRY; // the return data type is OS specific too
 }
 
-void LinkEntity_Helper (EntityPtr_t &addr, const char *name, entvars_t *pev)
+void LinkEntity_Helper (Entity_FN &addr, const char *name, entvars_t *pev)
 {
    if (addr == nullptr)
-      addr = g_gameLib->GetFuncAddr <EntityPtr_t > (name);
+      addr = g_gameLib->GetFuncAddr <Entity_FN > (name);
 
    if (addr == nullptr)
       return;
@@ -3183,7 +3183,7 @@ void LinkEntity_Helper (EntityPtr_t &addr, const char *name, entvars_t *pev)
 #define LINK_ENTITY(entityName) \
 SHARED_LIBRARAY_EXPORT void entityName (entvars_t *pev) \
 { \
-   static EntityPtr_t addr; \
+   static Entity_FN addr; \
    LinkEntity_Helper (addr, #entityName, pev); \
 } \
 
