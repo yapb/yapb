@@ -74,6 +74,8 @@ static inline bool A_IsValidCodePointer (const void *ptr)
       return false;
 #endif
 
+   (void) (ptr);
+
    // do not check on linux
    return true;
 }
