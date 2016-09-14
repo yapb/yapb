@@ -322,7 +322,7 @@ void Engine::RegisterCmd (const char * command, void func (void))
    // pointed to by "function" in order to handle it.
 
    // check for hl pre 1.1.0.4, as it's doesn't have pfnAddServerCommand
-   if (!A_IsValidCodePointer (g_engfuncs.pfnAddServerCommand))
+   if (!A_IsValidCodePointer (reinterpret_cast <const void *> (g_engfuncs.pfnAddServerCommand)))
       AddLogEntry (true, LL_FATAL, "YaPB's minimum HL engine version is 1.1.0.4 and minimum Counter-Strike Beta 6.6. Please update your engine version.");
 
    g_engfuncs.pfnAddServerCommand (const_cast <char *> (command), func);
