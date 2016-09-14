@@ -1330,7 +1330,7 @@ void Bot::StartGame (void)
 
 void BotManager::CalculatePingOffsets (void)
 {
-   if ((g_gameFlags & GAME_LEGACY) || yb_latency_display.GetInt () != 2)
+   if (!(g_gameFlags & GAME_SUPPORT_SVC_PINGS) || yb_latency_display.GetInt () != 2)
       return;
 
    int averagePing = 0;
@@ -1391,7 +1391,7 @@ void BotManager::CalculatePingOffsets (void)
 
 void BotManager::SendPingDataOffsets (edict_t *to)
 {
-   if ((g_gameFlags & GAME_LEGACY) || yb_latency_display.GetInt () != 2 || engine.IsNullEntity (to) || (to->v.flags & FL_FAKECLIENT))
+   if (!(g_gameFlags & GAME_SUPPORT_SVC_PINGS) || yb_latency_display.GetInt () != 2 || engine.IsNullEntity (to) || (to->v.flags & FL_FAKECLIENT))
       return;
 
    if (!(to->v.flags & FL_CLIENT) && !(((to->v.button & IN_SCORE) || !(to->v.oldbuttons & IN_SCORE))))

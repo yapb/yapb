@@ -20,6 +20,7 @@
    /* disable deprecation warnings concerning unsafe CRT functions */
    #if !defined _CRT_SECURE_NO_DEPRECATE
       #define _CRT_SECURE_NO_DEPRECATE
+      #define _WINSOCK_DEPRECATED_NO_WARNINGS
    #endif
 #endif
 

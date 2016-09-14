@@ -115,8 +115,11 @@ void DisplayMenuToClient (edict_t *ent, MenuId menu)
          parsed->text.Assign (engine.TraslateMessage (parsed->text.GetBuffer ()));
 
          // make menu looks best
-         for (int j = 0; j < 10; j++)
-            parsed->text.Replace (FormatBuffer ("%d.", j), FormatBuffer ("\\r%d.\\w", j));
+         if (!(g_gameFlags & GAME_LEGACY))
+         {
+            for (int j = 0; j < 10; j++)
+               parsed->text.Replace (FormatBuffer ("%d.", j), FormatBuffer ("\\r%d.\\w", j));
+         }
       }
       s_menusParsed = true;
    }
@@ -148,6 +151,13 @@ void DisplayMenuToClient (edict_t *ent, MenuId menu)
          menuPtr = &g_menus[i];
          break;
       }
+   }
+
+   // worst case
+   if (!menuPtr)
+   {
+      client.menu = BOT_MENU_IVALID;
+      return;
    }
    const char *displayText = ((g_gameFlags & (GAME_XASH_ENGINE | GAME_MOBILITY)) && !yb_display_menu_text.GetBool ()) ? " " : menuPtr->text.GetBuffer ();
 
@@ -755,49 +765,49 @@ void SoundAttachToClients (edict_t *ent, const char *sample, float volume)
       // hit/fall sound?
       client.hearingDistance = 768.0f * volume;
       client.timeSoundLasting = engine.Time () + 0.5f;
-      client.soundPosition = origin;
+      client.soundPos = origin;
    }
    else if (strncmp ("items/gunpickup", sample, 15) == 0)
    {
       // weapon pickup?
       client.hearingDistance = 768.0f * volume;
       client.timeSoundLasting = engine.Time () + 0.5f;
-      client.soundPosition = origin;
+      client.soundPos = origin;
    }
    else if (strncmp ("weapons/zoom", sample, 12) == 0)
    {
       // sniper zooming?
       client.hearingDistance = 512.0f * volume;
       client.timeSoundLasting = engine.Time () + 0.1f;
-      client.soundPosition = origin;
+      client.soundPos = origin;
    }
    else if (strncmp ("items/9mmclip", sample, 13) == 0)
    {
       // ammo pickup?
       client.hearingDistance = 512.0f * volume;
       client.timeSoundLasting = engine.Time () + 0.1f;
-      client.soundPosition = origin;
+      client.soundPos = origin;
    }
    else if (strncmp ("hostage/hos", sample, 11) == 0)
    {
       // CT used hostage?
       client.hearingDistance = 1024.0f * volume;
       client.timeSoundLasting = engine.Time () + 5.0f;
-      client.soundPosition = origin;
+      client.soundPos = origin;
    }
    else if (strncmp ("debris/bustmetal", sample, 16) == 0 || strncmp ("debris/bustglass", sample, 16) == 0)
    {
       // broke something?
       client.hearingDistance = 1024.0f * volume;
       client.timeSoundLasting = engine.Time () + 2.0f;
-      client.soundPosition = origin;
+      client.soundPos = origin;
    }
    else if (strncmp ("doors/doormove", sample, 14) == 0)
    {
       // someone opened a door
       client.hearingDistance = 1024.0f * volume;
       client.timeSoundLasting = engine.Time () + 3.0f;
-      client.soundPosition = origin;
+      client.soundPos = origin;
    }
 }
 
@@ -860,7 +870,7 @@ void SoundSimulateUpdate (int playerIndex)
          // override it with new
          client.hearingDistance = hearDistance;
          client.timeSoundLasting = timeSound;
-         client.soundPosition = client.ent->v.origin;
+         client.soundPos = client.ent->v.origin;
       }
    }
    else
@@ -868,7 +878,7 @@ void SoundSimulateUpdate (int playerIndex)
       // just remember it
       client.hearingDistance = hearDistance;
       client.timeSoundLasting = timeSound;
-      client.soundPosition = client.ent->v.origin;
+      client.soundPos = client.ent->v.origin;
    }
 }
 

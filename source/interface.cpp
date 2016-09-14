@@ -468,11 +468,14 @@ void ParseVoiceEvent (const String &base, int type, float timeToRepeat)
    {
       temp[i].Trim ().TrimQuotes ();
 
-      if (engine.GetWaveLength (temp[i]) <= 0.0f)
+      float duration = engine.GetWaveLength (temp[i]);
+
+      if (duration <= 0.0f)
          continue;
 
       chatterItem.name = temp[i];
-      chatterItem.repeatTime = timeToRepeat;
+      chatterItem.repeat = timeToRepeat;
+      chatterItem.duration = duration;
 
       g_chatterFactory[type].Push (chatterItem);
     }
@@ -727,7 +730,7 @@ void InitConfig (void)
    }
 
    // CHATTER SYSTEM INITIALIZATION
-   if (OpenConfig ("chatter.cfg", "Couldn't open chatter system configuration", &fp) && !(g_gameFlags & GAME_LEGACY) && yb_communication_type.GetInt () == 2)
+   if ((g_gameFlags & GAME_SUPPORT_BOT_VOICE) && yb_communication_type.GetInt () == 2 && OpenConfig ("chatter.cfg", "Couldn't open chatter system configuration", &fp))
    {
       Array <String> array;
 
@@ -744,7 +747,7 @@ void InitConfig (void)
             array = String (&line[6]).Split ('=');
 
             if (array.GetElementNumber () != 2)
-               AddLogEntry (true, LL_FATAL, "Error in chatter config file syntax... Please correct all Errors.");
+               AddLogEntry (true, LL_ERROR, "Error in chatter config file syntax... Please correct all Errors.");
 
             FOR_EACH_AE (array, i)
                array[i].Trim ().Trim (); // double trim
@@ -1069,7 +1072,7 @@ void UpdateClientData (const struct edict_s *ent, int sendweapons, struct client
 {
    extern ConVar yb_latency_display;
 
-   if (!(g_gameFlags & GAME_LEGACY) && yb_latency_display.GetInt () == 2)
+   if ((g_gameFlags & GAME_SUPPORT_SVC_PINGS) && yb_latency_display.GetInt () == 2)
       bots.SendPingDataOffsets (const_cast <edict_t *> (ent));
 
    if (g_gameFlags & GAME_METAMOD)
@@ -2414,7 +2417,7 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
       engine.AssignMessageId (NETMSG_SENDAUDIO, GET_USER_MSG_ID (PLID, "SendAudio", nullptr));
       engine.AssignMessageId (NETMSG_SAYTEXT, GET_USER_MSG_ID (PLID, "SayText", nullptr));
 
-      if (!(g_gameFlags & GAME_LEGACY))
+      if (g_gameFlags & GAME_SUPPORT_BOT_VOICE)
          engine.AssignMessageId (NETMSG_BOTVOICE, GET_USER_MSG_ID (PLID, "BotVoice", nullptr));
    }
    engine.ResetMessageCapture ();
@@ -3025,11 +3028,16 @@ Library *LoadCSBinary (void)
             AddLogEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", libs[i], modname);
             return nullptr;
          }
+         // detect if we're running modern game
+         Entity_FN entity = game->GetFuncAddr <Entity_FN> ("weapon_famas");
 
          // detect xash engine
          if (g_engfuncs.pfnCVarGetPointer ("build") != nullptr)
          {
             g_gameFlags |= (GAME_LEGACY | GAME_XASH_ENGINE);
+
+            if (entity != nullptr)
+               g_gameFlags |= GAME_SUPPORT_BOT_VOICE;
 
             if (g_gameFlags & GAME_METAMOD)
             {
@@ -3039,11 +3047,8 @@ Library *LoadCSBinary (void)
             return game;
          }
 
-         // detect if we're running modern game
-         Entity_FN entity = game->GetFuncAddr <Entity_FN> ("weapon_famas");
-
          if (entity != nullptr)
-            g_gameFlags |= GAME_CSTRIKE16;
+            g_gameFlags |= (GAME_CSTRIKE16 | GAME_SUPPORT_BOT_VOICE | GAME_SUPPORT_SVC_PINGS);
          else
             g_gameFlags |= GAME_LEGACY;
 
@@ -3088,7 +3093,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    }
 
 #ifdef PLATFORM_ANDROID
-   g_gameFlags |= (GAME_LEGACY | GAME_XASH_ENGINE | GAME_MOBILITY);
+   g_gameFlags |= (GAME_LEGACY | GAME_XASH_ENGINE | GAME_MOBILITY | GAME_SUPPORT_BOT_VOICE);
 
    if (g_gameFlags & GAME_METAMOD)
       return;  // we should stop the attempt for loading the real gamedll, since metamod handle this for us
@@ -3136,6 +3141,13 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 
          gameVersionStr.Replace ("Legacy", "1.6 Limited");
       }
+
+      if (g_gameFlags & GAME_SUPPORT_BOT_VOICE)
+         gameVersionStr.Append (" (BV)");
+
+      if (g_gameFlags & GAME_SUPPORT_SVC_PINGS)
+         gameVersionStr.Append (" (SVC)");
+
       engine.Printf ("YaPB Bot has detect game version as Counter-Strike: %s", gameVersionStr.GetBuffer ());
 
       if (g_gameFlags & GAME_METAMOD)

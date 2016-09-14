@@ -152,7 +152,8 @@ enum ClientFlags
 {
    CF_USED  = (1 << 0),
    CF_ALIVE = (1 << 1),
-   CF_ADMIN = (1 << 2)
+   CF_ADMIN = (1 << 2),
+   CF_ICON  = (1 << 3)
 };
 
 // bot create status
@@ -608,7 +609,8 @@ struct BotName
 struct ChatterItem
 {
    String name;
-   float repeatTime;
+   float repeat;
+   float duration;
 };
 
 struct WeaponSelect
@@ -642,7 +644,7 @@ struct Client
    MenuId menu; // id to opened bot menu
    edict_t *ent; // pointer to actual edict
    Vector origin; // position in the world
-   Vector soundPosition; // position sound was played
+   Vector soundPos; // position sound was played
 
    int team; // bot team
    int team2; // real bot team in free for all mode (csdm)
@@ -650,6 +652,9 @@ struct Client
 
    float hearingDistance; // distance this sound is heared
    float timeSoundLasting; // time sound is played/heared
+
+   int iconFlags[MAX_ENGINE_PLAYERS]; // flag holding chatter icons
+   float iconTimestamp[MAX_ENGINE_PLAYERS]; // timers for chatter icons
 
    Client (void) : menu (BOT_MENU_IVALID) { }
 };

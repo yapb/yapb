@@ -207,7 +207,7 @@ float Engine::GetWaveLength (const char *fileName)
       return 0.0f;
 
    // check if we have engine function for this
-   if (g_engfuncs.pfnGetApproxWavePlayLen != nullptr)
+   if (!(g_gameFlags & GAME_XASH_ENGINE) && g_engfuncs.pfnGetApproxWavePlayLen != nullptr)
    {
       fp.Close ();
       return g_engfuncs.pfnGetApproxWavePlayLen (filePath) / 1000.0f;
@@ -545,7 +545,7 @@ char *Engine::TraslateMessage (const char *input)
    if (IsDedicatedServer ())
       return const_cast <char *> (&input[0]);
 
-   static char string[MAX_PRINT_BUFFER];
+   static char string[MAX_PRINT_BUFFER] = { 0, };
    const char *ptr = input + strlen (input) - 1;
 
    while (ptr > input && *ptr == '\n')

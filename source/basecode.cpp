@@ -967,20 +967,36 @@ void Bot::EnableChatterIcon (bool show)
 {
    // this function depending on show boolen, shows/remove chatter, icon, on the head of bot.
 
-   if ((g_gameFlags & GAME_LEGACY) || yb_communication_type.GetInt () != 2)
+   if (!(g_gameFlags & GAME_SUPPORT_BOT_VOICE) || yb_communication_type.GetInt () != 2)
       return;
+
+   auto SendBotVoiceMsg = [] (bool show, edict_t *ent, int ownId)
+   {
+      MESSAGE_BEGIN (MSG_ONE, engine.FindMessageId (NETMSG_BOTVOICE), nullptr, ent); // begin message
+         WRITE_BYTE (show); // switch on/off
+         WRITE_BYTE (ownId);
+      MESSAGE_END ();
+  
+   };
+
+   int ownId = GetIndex ();
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      const Client &client = g_clients[i];
+      Client &client = g_clients[i];
 
       if (!(client.flags & CF_USED) || (client.ent->v.flags & FL_FAKECLIENT) || client.team != m_team)
          continue;
 
-      MESSAGE_BEGIN (MSG_ONE, engine.FindMessageId (NETMSG_BOTVOICE), nullptr, g_clients[i].ent); // begin message
-         WRITE_BYTE (show); // switch on/off
-         WRITE_BYTE (GetIndex ());
-      MESSAGE_END ();
+      if (!show && (client.iconFlags[ownId] & CF_ICON) && client.iconTimestamp[ownId] < engine.Time ())
+      {
+         SendBotVoiceMsg (false, client.ent, ownId);
+
+         client.iconTimestamp[ownId] = 0.0f;
+         client.iconFlags[ownId] &= ~CF_ICON;
+      }
+      else if (show && !(client.iconFlags[ownId] & CF_ICON))
+         SendBotVoiceMsg (true, client.ent, ownId);
    }
 }
 
@@ -988,13 +1004,13 @@ void Bot::InstantChatterMessage (int type)
 {
    // this function sends instant chatter messages.
 
-   if ((g_gameFlags & GAME_LEGACY) || yb_communication_type.GetInt () != 2 || g_chatterFactory[type].IsEmpty ())
+   if (!(g_gameFlags & GAME_SUPPORT_BOT_VOICE) || yb_communication_type.GetInt () != 2 || g_chatterFactory[type].IsEmpty ())
       return;
 
    if (m_notKilled)
       EnableChatterIcon (true);
 
-   // delay only reportteam
+   // delay only report team
    if (type == Radio_ReportTeam)
    {
       if (m_timeRepotingInDelay < engine.Time ())
@@ -1002,13 +1018,14 @@ void Bot::InstantChatterMessage (int type)
 
       m_timeRepotingInDelay = engine.Time () + Random.Float (30.0f, 60.0f);
    }
+   auto playbackSound = g_chatterFactory[type].GetRandomElement ();
 
-   const String &defaultSound = g_chatterFactory[type].GetRandomElement ().name;
+   const String &defaultSound = playbackSound.name;
    const String &painSound = g_chatterFactory[Chatter_DiePain].GetRandomElement ().name;
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      const Client &client = g_clients[i];
+      Client &client = g_clients[i];
 
       if (!(client.flags & CF_USED) || (client.ent->v.flags & FL_FAKECLIENT) || client.team != m_team)
          continue;
@@ -1023,6 +1040,9 @@ void Bot::InstantChatterMessage (int type)
 
          WRITE_SHORT (m_voicePitch);
       MESSAGE_END ();
+
+      client.iconTimestamp[GetIndex ()] = engine.Time () + playbackSound.duration;
+      client.iconFlags[GetIndex ()] |= CF_ICON;
    }
 }
 
@@ -1033,7 +1053,7 @@ void Bot::RadioMessage (int message)
    if (yb_communication_type.GetInt () == 0 || m_numFriendsLeft == 0)
       return;
 
-   if ((g_gameFlags & GAME_LEGACY) || g_chatterFactory[message].IsEmpty () || yb_communication_type.GetInt () != 2)
+   if (!(g_gameFlags & GAME_SUPPORT_BOT_VOICE) || g_chatterFactory[message].IsEmpty () || yb_communication_type.GetInt () != 2)
       m_forceRadio = true; // use radio instead voice
    else
       m_forceRadio = false;
@@ -1046,7 +1066,7 @@ void Bot::ChatterMessage (int message)
 {
    // this function inserts the voice message into the message queue (mostly same as above)
 
-   if ((g_gameFlags & GAME_LEGACY) || yb_communication_type.GetInt () != 2 || g_chatterFactory[message].IsEmpty () || m_numFriendsLeft == 0)
+   if (!(g_gameFlags & GAME_SUPPORT_BOT_VOICE) || yb_communication_type.GetInt () != 2 || g_chatterFactory[message].IsEmpty () || m_numFriendsLeft == 0)
       return;
 
    bool shouldExecute = false;
@@ -1054,7 +1074,7 @@ void Bot::ChatterMessage (int message)
    if (m_chatterTimes[message] < engine.Time () || m_chatterTimes[message] == 99999.0f)
    {
       if (m_chatterTimes[message] != 99999.0f)
-         m_chatterTimes[message] = engine.Time () + g_chatterFactory[message][0].repeatTime;
+         m_chatterTimes[message] = engine.Time () + g_chatterFactory[message][0].repeat;
 
       shouldExecute = true;
    }
@@ -1247,7 +1267,7 @@ void Bot::CheckMessageQueue (void)
             }
          }
 
-         if ((m_radioSelect != Radio_ReportingIn && m_forceRadio) || yb_communication_type.GetInt () != 2 || g_chatterFactory[m_radioSelect].IsEmpty () || (g_gameFlags & GAME_LEGACY))
+         if ((m_radioSelect != Radio_ReportingIn && m_forceRadio) || yb_communication_type.GetInt () != 2 || g_chatterFactory[m_radioSelect].IsEmpty () || !(g_gameFlags & GAME_SUPPORT_BOT_VOICE))
          {
             if (m_radioSelect < Radio_GoGoGo)
                engine.IssueBotCommand (GetEntity (), "radio1");
@@ -2920,10 +2940,6 @@ void Bot::ThinkFrame (void)
 
    CheckMessageQueue (); // check for pending messages
 
-   // remove voice icon
-   if (!(g_gameFlags & GAME_LEGACY) && g_lastRadioTime[g_clients[GetIndex () - 1].team2] + Random.Float (0.8f, 2.1f) < engine.Time ())
-      EnableChatterIcon (false); // hide icon
-
    if (botMovement)
       BotAI (); // execute main code
 
@@ -2979,6 +2995,9 @@ void Bot::PeriodicThink (void)
             m_sayTextBuffer.lastUsedSentences.RemoveAll ();
       }
    }
+
+   if (g_gameFlags & GAME_SUPPORT_BOT_VOICE)
+      EnableChatterIcon (false); // end voice feedback
 
    // clear enemy far away
    if (!m_lastEnemyOrigin.IsZero () && !engine.IsNullEntity (m_lastEnemy) && (pev->origin - m_lastEnemyOrigin).GetLength () >= 1600.0f)
@@ -5871,7 +5890,7 @@ void Bot::ReactOnSound (void)
       if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.ent == GetEntity () || client.team == m_team || client.timeSoundLasting < engine.Time ())
          continue;
 
-      float distance = (client.soundPosition - pev->origin).GetLength ();
+      float distance = (client.soundPos - pev->origin).GetLength ();
      
       if (distance > client.hearingDistance)
          continue;
