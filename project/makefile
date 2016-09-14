@@ -55,7 +55,7 @@ endif
 LINK += -m32 -lm -ldl
 
 CFLAGS += -msse2 -std=c++11 -m32 -Wall -Werror -Wextra
-CPPFLAGS += -fno-exceptions -fno-rtti -fno-builtin
+CPPFLAGS += -fno-exceptions -fno-rtti
 
 BINARY = $(PROJECT).$(LIB_EXT)
 

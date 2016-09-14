@@ -1445,7 +1445,7 @@ void Bot::PurchaseWeapons (void)
    bool teamEcoValid = bots.IsEcoValid (m_team);
 
    // do this, because xash engine is not capable to run all the features goldsrc, but we have cs 1.6 on it, so buy table must be the same
-   bool isOldGame = (g_gameFlags & GAME_LEGACY) && !(g_gameFlags & GAME_XASH);
+   bool isOldGame = (g_gameFlags & GAME_LEGACY) && !(g_gameFlags & GAME_XASH_ENGINE);
 
    switch (m_buyState)
    {

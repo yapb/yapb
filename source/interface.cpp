@@ -2419,7 +2419,7 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
    }
    engine.ResetMessageCapture ();
 
-   if ((!(g_gameFlags & GAME_LEGACY) || (g_gameFlags & GAME_XASH)) && msgDest == MSG_SPEC && msgType == engine.FindMessageId (NETMSG_HLTV))
+   if ((!(g_gameFlags & GAME_LEGACY) || (g_gameFlags & GAME_XASH_ENGINE)) && msgDest == MSG_SPEC && msgType == engine.FindMessageId (NETMSG_HLTV))
       engine.SetOngoingMessageId (NETMSG_HLTV);
 
    engine.TryCaptureMessage (msgType, NETMSG_WEAPONLIST);
@@ -3029,7 +3029,7 @@ Library *LoadCSBinary (void)
          // detect xash engine
          if (g_engfuncs.pfnCVarGetPointer ("build") != nullptr)
          {
-            g_gameFlags |= (GAME_LEGACY | GAME_XASH);
+            g_gameFlags |= (GAME_LEGACY | GAME_XASH_ENGINE);
 
             if (g_gameFlags & GAME_METAMOD)
             {
@@ -3088,7 +3088,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    }
 
 #ifdef PLATFORM_ANDROID
-   g_gameFlags |= (GAME_LEGACY | GAME_XASH | GAME_MOBILITY);
+   g_gameFlags |= (GAME_LEGACY | GAME_XASH_ENGINE | GAME_MOBILITY);
 
    if (g_gameFlags & GAME_METAMOD)
       return;  // we should stop the attempt for loading the real gamedll, since metamod handle this for us
@@ -3127,7 +3127,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       else if (g_gameFlags & GAME_CSTRIKE16)
          gameVersionStr.Assign ("v1.6");
 
-      if (g_gameFlags & GAME_XASH)
+      if (g_gameFlags & GAME_XASH_ENGINE)
       {
          gameVersionStr.Append (" @ Xash3D Engine");
 

@@ -149,7 +149,7 @@ void DisplayMenuToClient (edict_t *ent, MenuId menu)
          break;
       }
    }
-   const char *displayText = ((g_gameFlags & (GAME_XASH | GAME_MOBILITY)) && !yb_display_menu_text.GetBool ()) ? " " : menuPtr->text.GetBuffer ();
+   const char *displayText = ((g_gameFlags & (GAME_XASH_ENGINE | GAME_MOBILITY)) && !yb_display_menu_text.GetBool ()) ? " " : menuPtr->text.GetBuffer ();
 
    while (strlen (displayText) >= 64)
    {
@@ -528,7 +528,7 @@ void CheckWelcomeMessage (void)
 
    Array <String> sentences;
 
-   if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH)))
+   if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH_ENGINE)))
    {
       // add default messages
       sentences.Push ("hello user,communication is acquired");
@@ -554,7 +554,7 @@ void CheckWelcomeMessage (void)
 
    if (receiveTime > 0.0f && receiveTime < engine.Time () && !alreadyReceived && (g_numWaypoints > 0 ? g_gameWelcomeSent : true))
    {
-      if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH)))
+      if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH_ENGINE)))
          engine.IssueCmd ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));
 
       engine.ChatPrintf ("----- %s v%s (Build: %u), {%s}, (c) 2016, by %s (%s)-----", PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_DATE, PRODUCT_AUTHOR, PRODUCT_URL);

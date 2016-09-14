@@ -58,12 +58,14 @@ enum TaskID
 enum GameFlags
 {
    GAME_CSTRIKE16 = (1 << 0), // Counter-Strike 1.6 and Above
-   GAME_XASH = (1 << 1), // Counter-Strike 1.6 under the xash engine (additional flag)
+   GAME_XASH_ENGINE = (1 << 1), // Counter-Strike 1.6 under the xash engine (additional flag)
    GAME_CZERO = (1 << 2), // Counter-Strike: Condition Zero
    GAME_LEGACY = (1 << 3), // Counter-Strike 1.3-1.5 with/without Steam
    GAME_MOBILITY = (1 << 4), // additional flag that bot is running on android (additional flag)
    GAME_OFFICIAL_CSBOT = (1 << 5), // additional flag that indicates official cs bots are in game
-   GAME_METAMOD = (1 << 6)
+   GAME_METAMOD = (1 << 6), // game running under metamod
+   GAME_SUPPORT_SVC_PINGS = (1 << 7), // on that game version we can fake bots pings
+   GAME_SUPPORT_BOT_VOICE = (1 << 8) // on that game version we can use chatter
 };
 
 // bot menu ids
