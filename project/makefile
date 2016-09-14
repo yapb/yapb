@@ -22,13 +22,13 @@ OBJECTS = $(SRC_DIR)/basecode.cpp	\
 	  $(SRC_DIR)/support.cpp	\
 	  $(SRC_DIR)/waypoint.cpp	\
 
-C_OPT_FLAGS = -O2 -DNDEBUG -pipe -fno-strict-aliasing
+C_OPT_FLAGS = -O2 -DNDEBUG -pipe -fno-strict-aliasing -mtune=generic
 C_DEBUG_FLAGS = -D_DEBUG -DDEBUG -g -ggdb3
 
 C_GCC_FLAGS = -fvisibility=hidden
 CPP_GCC_FLAGS = -fvisibility-inlines-hidden
 
-CPP = clang-3.7
+CPP = clang-3.8
 CPP_MAC = o32-clang
 
 LINK =
