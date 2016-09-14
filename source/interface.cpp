@@ -443,20 +443,6 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    return 1; // command was handled by bot
 }
 
-void CommandHandler (void)
-{
-   // this function is the dedicated server command handler for the new yapb server command we
-   // registered at game start. It will be called by the engine each time a server command that
-   // starts with "yapb" is entered in the server console. It works exactly the same way as
-   // ClientCommand() does, using the CmdArgc() and CmdArgv() facilities of the engine. Argv(0)
-   // is the server command itself (here "yapb") and the next ones are its arguments. Just like
-   // the stdio command-line parsing in C when you write "long main (long argc, char **argv)".
-
-   // check status for dedicated server command
-   if (BotCommandHandler (g_hostEntity, IsNullString (CMD_ARGV (1)) ? "help" : CMD_ARGV (1), CMD_ARGV (2), CMD_ARGV (3), CMD_ARGV (4), CMD_ARGV (5), CMD_ARGV (6), CMD_ARGV (0)) == 0)
-      engine.Printf ("Unknown command: %s", CMD_ARGV (1));
-}
-
 void ParseVoiceEvent (const String &base, int type, float timeToRepeat)
 {
    // this function does common work of parsing single line of voice chatter
@@ -917,6 +903,12 @@ void GameDLLInit (void)
    // This one is called once, and only once, when the game process boots up before the first
    // server is enabled. Here is a good place to do our own game session initialization, and
    // to register by the engine side the server commands we need to administrate our bots.
+
+   auto CommandHandler = [] (void)
+   {
+      if (BotCommandHandler (g_hostEntity, IsNullString (CMD_ARGV (1)) ? "help" : CMD_ARGV (1), CMD_ARGV (2), CMD_ARGV (3), CMD_ARGV (4), CMD_ARGV (5), CMD_ARGV (6), CMD_ARGV (0)) == 0)
+         engine.Printf ("Unknown command: %s", CMD_ARGV (1));
+   };
 
    // register server command(s)
    engine.RegisterCmd ("yapb", CommandHandler);   
