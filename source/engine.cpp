@@ -321,6 +321,10 @@ void Engine::RegisterCmd (const char * command, void func (void))
    // that for every "command_name" server command it receives, it should call the function
    // pointed to by "function" in order to handle it.
 
+   // check for hl pre 1.1.0.4, as it's doesn't have pfnAddServerCommand
+   if (!A_IsValidCodePointer (g_engfuncs.pfnAddServerCommand))
+      AddLogEntry (true, LL_FATAL, "YaPB's minimum HL engine version is 1.1.0.4 and minimum Counter-Strike Beta 6.6. Please update your engine version.");
+
    g_engfuncs.pfnAddServerCommand (const_cast <char *> (command), func);
 }
 
@@ -479,7 +483,7 @@ void Engine::IssueCmd (const char *fmt, ...)
    g_engfuncs.pfnServerCommand (string);
 }
 
-void Engine::PushVariableToStack (const char *variable, const char *value, VarType varType, bool regMissing, ConVar *self)
+void Engine::PushVariableToStack (const char *variable, const char *value, VarType varType, bool regMissing, const char *regVal, ConVar *self)
 {
    // this function adds globally defined variable to registration stack
 
@@ -489,6 +493,7 @@ void Engine::PushVariableToStack (const char *variable, const char *value, VarTy
    pair.reg.name = const_cast <char *> (variable);
    pair.reg.string = const_cast <char *> (value);
    pair.regMissing = regMissing;
+   pair.regVal = regVal;
 
    int engineFlags = FCVAR_EXTDLL;
 
@@ -530,10 +535,17 @@ void Engine::PushRegisteredConVarsToEngine (bool gameVars)
 
          if (ptr->regMissing && ptr->self->m_eptr == nullptr)
          {
+            if (ptr->reg.string == nullptr && ptr->regVal != nullptr)
+            {
+               ptr->reg.string = const_cast <char *> (ptr->regVal);
+               ptr->reg.flags |= FCVAR_SERVER;
+            }
             g_engfuncs.pfnCVarRegister (&ptr->reg);
             ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
          }
-         InternalAssert (ptr->self->m_eptr != nullptr); // ensure game var exists
+         
+         if (!ptr->self->m_eptr)
+            engine.Printf ("Got nullptr on cvar %s!", ptr->reg.name);
       }
    }
 }
@@ -1056,7 +1068,7 @@ void Engine::ProcessMessageCapture (void *ptr)
    m_msgBlock.state++; // and finally update network message state
 }
 
-ConVar::ConVar (const char *name, const char *initval, VarType type, bool regMissing) : m_eptr (nullptr)
+ConVar::ConVar (const char *name, const char *initval, VarType type, bool regMissing, const char *regVal) : m_eptr (nullptr)
 {
-   engine.PushVariableToStack (name, initval, type, regMissing, this);
+   engine.PushVariableToStack (name, initval, type, regMissing, regVal, this);
 }

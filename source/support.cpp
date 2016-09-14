@@ -12,7 +12,7 @@
 ConVar yb_display_menu_text ("yb_display_menu_text", "1");
 
 ConVar mp_roundtime ("mp_roundtime", nullptr, VT_NOREGISTER);
-ConVar mp_freezetime ("mp_freezetime", nullptr, VT_NOREGISTER, true);
+ConVar mp_freezetime ("mp_freezetime", nullptr, VT_NOREGISTER, true, "0");
 
 uint16 FixedUnsigned16 (float value, float scale)
 {

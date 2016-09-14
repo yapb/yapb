@@ -1283,6 +1283,10 @@ void Bot::StartGame (void)
    return;
 #endif
 
+   // cs prior beta 7.0 uses hud-based motd, so press fire once
+   if (g_gameFlags & GAME_LEGACY)
+      pev->button |= IN_ATTACK;
+
    // handle counter-strike stuff here...
    if (m_startAction == GSM_TEAM_SELECT)
    {
@@ -1321,7 +1325,7 @@ void Bot::StartGame (void)
 
       // bot has now joined the game (doesn't need to be started)
       m_notStarted = false;
-
+      
       // check for greeting other players, since we connected
       if (Random.Int (0, 100) < 20)
          ChatMessage (CHAT_WELCOME);

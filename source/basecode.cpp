@@ -31,7 +31,7 @@ ConVar yb_best_weapon_picker_type ("yb_best_weapon_picker_type", "2");
 
 // game console variables
 ConVar mp_c4timer ("mp_c4timer", nullptr, VT_NOREGISTER);
-ConVar mp_buytime ("mp_buytime", nullptr, VT_NOREGISTER);
+ConVar mp_buytime ("mp_buytime", nullptr, VT_NOREGISTER, true, "1");
 ConVar mp_footsteps ("mp_footsteps", nullptr, VT_NOREGISTER);
 ConVar sv_gravity ("sv_gravity", nullptr, VT_NOREGISTER);
 
@@ -5995,13 +5995,8 @@ void Bot::EquipInBuyzone (int buyState)
 {
    // this function is gets called when bot enters a buyzone, to allow bot to buy some stuff
 
-   bool checkBuyTime = false;
-
-   if (mp_buytime.m_eptr != nullptr)
-      checkBuyTime = (g_timeRoundStart + Random.Float (10.0f, 20.0f) + mp_buytime.GetFloat () < engine.Time ());
-   
    // if bot is in buy zone, try to buy ammo for this weapon...
-   if (m_seeEnemyTime + 5.0f < engine.Time () && m_lastEquipTime + 15.0f < engine.Time () && m_inBuyZone && checkBuyTime && !g_bombPlanted && m_moneyAmount > g_botBuyEconomyTable[0])
+   if (m_seeEnemyTime + 5.0f < engine.Time () && m_lastEquipTime + 15.0f < engine.Time () && m_inBuyZone && (g_timeRoundStart + Random.Float (10.0f, 20.0f) + mp_buytime.GetFloat () < engine.Time ()) && !g_bombPlanted && m_moneyAmount > g_botBuyEconomyTable[0])
    {
       m_buyingFinished = false;
       m_buyState = buyState;

@@ -16,7 +16,7 @@ ConVar yb_password_key ("yb_password_key", "_ybpw");
 ConVar yb_language ("yb_language", "en");
 ConVar yb_version ("yb_version", PRODUCT_VERSION, VT_READONLY);
 
-ConVar mp_startmoney ("mp_startmoney", nullptr, VT_NOREGISTER);
+ConVar mp_startmoney ("mp_startmoney", nullptr, VT_NOREGISTER, true, "800");
 
 int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *self)
 {
@@ -2370,8 +2370,10 @@ void pfnClientCommand (edict_t *ent, char const *format, ...)
    va_end (ap);
 
    // is the target entity an official bot, or a third party bot ?
-   if (ent->v.flags & FL_FAKECLIENT)
+   if (IsValidBot (ent))
    {
+      engine.IssueBotCommand (ent, buffer);
+
       if (g_gameFlags & GAME_METAMOD)
          RETURN_META (MRES_SUPERCEDE); // prevent bots to be forced to issue client commands
 
@@ -2463,7 +2465,7 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
    if (g_gameFlags & GAME_METAMOD)
       RETURN_META (MRES_IGNORED);
 
-   MESSAGE_BEGIN (msgDest, msgType, origin, ed);
+   g_engfuncs.pfnMessageBegin (msgDest, msgType, origin, ed);
 }
 
 void pfnMessageEnd (void)
@@ -2473,7 +2475,7 @@ void pfnMessageEnd (void)
    if (g_gameFlags & GAME_METAMOD)
       RETURN_META (MRES_IGNORED);
 
-   MESSAGE_END ();
+   g_engfuncs.pfnMessageEnd ();
 
    // send latency fix
    bots.SendDeathMsgFix ();
@@ -2495,7 +2497,7 @@ void pfnWriteByte (int value)
    if (g_gameFlags & GAME_METAMOD)
       RETURN_META (MRES_IGNORED);
 
-   WRITE_BYTE (value);
+   g_engfuncs.pfnWriteByte (value);
 }
 
 void pfnWriteChar (int value)
@@ -2506,7 +2508,7 @@ void pfnWriteChar (int value)
    if (g_gameFlags & GAME_METAMOD)
       RETURN_META (MRES_IGNORED);
 
-   WRITE_CHAR (value);
+   g_engfuncs.pfnWriteChar (value);
 }
 
 void pfnWriteShort (int value)
@@ -2517,7 +2519,7 @@ void pfnWriteShort (int value)
    if (g_gameFlags & GAME_METAMOD)
       RETURN_META (MRES_IGNORED);
 
-   WRITE_SHORT (value);
+   g_engfuncs.pfnWriteShort (value);
 }
 
 void pfnWriteLong (int value)
@@ -2528,7 +2530,7 @@ void pfnWriteLong (int value)
    if (g_gameFlags & GAME_METAMOD)
       RETURN_META (MRES_IGNORED);
 
-   WRITE_LONG (value);
+   g_engfuncs.pfnWriteLong (value);
 }
 
 void pfnWriteAngle (float value)
@@ -2539,7 +2541,7 @@ void pfnWriteAngle (float value)
    if (g_gameFlags & GAME_METAMOD)
       RETURN_META (MRES_IGNORED);
 
-   WRITE_ANGLE (value);
+   g_engfuncs.pfnWriteAngle (value);
 }
 
 void pfnWriteCoord (float value)
@@ -2550,7 +2552,7 @@ void pfnWriteCoord (float value)
    if (g_gameFlags & GAME_METAMOD)
       RETURN_META (MRES_IGNORED);
 
-   WRITE_COORD (value);
+   g_engfuncs.pfnWriteCoord (value);
 }
 
 void pfnWriteString (const char *sz)
@@ -2561,7 +2563,7 @@ void pfnWriteString (const char *sz)
    if (g_gameFlags & GAME_METAMOD)
       RETURN_META (MRES_IGNORED);
 
-   WRITE_STRING (sz);
+   g_engfuncs.pfnWriteString (sz);
 }
 
 void pfnWriteEntity (int value)
@@ -2572,7 +2574,7 @@ void pfnWriteEntity (int value)
    if (g_gameFlags & GAME_METAMOD)
       RETURN_META (MRES_IGNORED);
 
-   WRITE_ENTITY (value);
+   g_engfuncs.pfnWriteEntity (value);
 }
 
 int pfnCmd_Argc (void)

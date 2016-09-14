@@ -66,6 +66,18 @@ static inline char *A_strdup (const char *str)
    return strcpy (new char[strlen (str) + 1], str);
 }
 
+// From metamod-p
+static inline bool A_IsValidCodePointer (const void *ptr)
+{
+#ifdef _WIN32
+   if (IsBadCodePtr (reinterpret_cast <FARPROC> (ptr)))
+      return false;
+#endif
+
+   // do not check on linux
+   return true;
+}
+
 //
 // Title: Utility Classes Header
 //

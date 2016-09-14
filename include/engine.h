@@ -68,8 +68,10 @@ struct VarPair
 {
    VarType type;
    cvar_t reg;
-   bool regMissing;
    class ConVar *self;
+
+   bool regMissing;
+   const char *regVal;
 };
 
 // translation pair
@@ -167,7 +169,7 @@ public:
    void IssueBotCommand (edict_t *ent, const char *fmt, ...);
 
    // adds cvar to registration stack
-   void PushVariableToStack (const char *variable, const char *value, VarType varType, bool regMissing, ConVar *self);
+   void PushVariableToStack (const char *variable, const char *value, VarType varType, bool regMissing, const char *regVal, ConVar *self);
 
    // sends local registration stack for engine registration
    void PushRegisteredConVarsToEngine (bool gameVars = false);
@@ -312,7 +314,7 @@ public:
    cvar_t *m_eptr;
 
 public:
-   ConVar (const char *name, const char *initval, VarType type = VT_NOSERVER, bool regMissing = false);
+   ConVar (const char *name, const char *initval, VarType type = VT_NOSERVER, bool regMissing = false, const char *regVal = nullptr);
 
    FORCEINLINE bool GetBool (void) { return m_eptr->value > 0.0f; }
    FORCEINLINE int GetInt (void) { return static_cast <int> (m_eptr->value); }
