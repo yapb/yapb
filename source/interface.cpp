@@ -512,7 +512,7 @@ void InitConfig (void)
          memset (&item, 0, sizeof (item));
 
          item.name = line;
-         item.used = false;
+         item.usedBy = 0;
 
          if (pair.GetElementNumber () > 1)
             item.steamId = pair[1].Trim ();
@@ -1134,8 +1134,6 @@ void ClientDisconnect (edict_t *ent)
       if (bot->pev == &ent->v)
       {
          bot->EnableChatterIcon (false);
-         bot->ReleaseUsedName ();
-
          bots.Free (i);
       }
    }

@@ -602,7 +602,7 @@ struct BotName
 {
    String steamId;
    String name;
-   bool used;
+   int usedBy;
 };
 
 // voice config structure definition

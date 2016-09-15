@@ -152,6 +152,7 @@ BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int
    }
 
    String steamId = "";
+   BotName *botName = nullptr;
 
    // setup name
    if (name.IsEmpty ())
@@ -160,23 +161,23 @@ BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int
       {
          bool nameFound = false;
 
-         for (int i = 0; i < g_botNames.GetSize (); i++)
+         FOR_EACH_AE (g_botNames, i)
          {
             if (nameFound)
                break;
 
-            BotName *pickedName = &g_botNames.GetRandomElement ();
+            botName = &g_botNames.GetRandomElement ();
 
-            if (pickedName == nullptr)
+            if (botName == nullptr)
                continue;
 
-            if (pickedName->used)
+            if (botName->usedBy != 0)
                continue;
 
-            pickedName->used = nameFound = true;
-            strncpy (outputName, pickedName->name, SIZEOF_CHAR (outputName));
+            nameFound = true;
+            strncpy (outputName, botName->name, SIZEOF_CHAR (outputName));
 
-            steamId = pickedName->steamId;
+            steamId = botName->steamId;
          }
       }
       else
@@ -205,6 +206,9 @@ BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int
    }
    int index = engine.IndexOfEntity (bot) - 1;
 
+   // ensure it free
+   Free (index);
+
    InternalAssert (index >= 0 && index <= MAX_ENGINE_PLAYERS); // check index
    InternalAssert (m_bots[index] == nullptr); // check bot slot
 
@@ -212,6 +216,10 @@ BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int
 
    if (m_bots[index] == nullptr)
       TerminateOnMalloc ();
+
+   // assign owner of bot name
+   if (botName != nullptr)
+      botName->usedBy = m_bots[index]->GetIndex ();
 
    engine.Printf ("Connecting Bot...");
 
@@ -853,7 +861,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    int clientIndex = engine.IndexOfEntity (bot);
 
    memset (reinterpret_cast <void *> (this), 0, sizeof (*this));
-
+   
    pev = &bot->v;
 
    if (bot->pvPrivateData != nullptr)
@@ -969,9 +977,9 @@ void Bot::ReleaseUsedName (void)
    {
       BotName &name = g_botNames[j];
 
-      if (strcmp (name.name, STRING (pev->netname)) == 0)
+      if (name.usedBy == GetIndex ())
       {
-         name.used = false;
+         name.usedBy = 0;
          break;
       }
    }
@@ -981,6 +989,7 @@ Bot::~Bot (void)
 {
    // this is bot destructor
 
+   ReleaseUsedName ();
    DeleteSearchNodes ();
    ResetTasks ();
 }

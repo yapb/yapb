@@ -63,3 +63,4 @@ project/yapb.vcxproj.user
 /project/#Verone/incremental_index
 *.vsp
 *.lastcodeanalysissucceeded
+*.json
