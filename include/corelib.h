@@ -47,6 +47,7 @@ typedef unsigned long uint32;
 // Own min/max implementation
 template <typename T> inline T A_min (T a, T b) { return a < b ? a : b; }
 template <typename T> inline T A_max (T a, T b) { return a > b ? a : b; }
+template <typename T> inline T A_clamp (T x, T a, T b) { return A_min (A_max (x, a), b); }
 
 // Fast stricmp got somewhere from chromium
 static inline int A_stricmp (const char *str1, const char *str2, int length = -1)
@@ -385,11 +386,6 @@ namespace Math
    static inline float AngleDiff (float destAngle, float srcAngle)
    {
       return AngleNormalize (destAngle - srcAngle);
-   }
-
-   template <typename Type> Type Clamp (Type x, Type a, Type b)
-   {
-         return (x < a) ? a : ((x > b) ? b : x);
    }
 }
 

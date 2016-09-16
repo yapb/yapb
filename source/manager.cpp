@@ -1271,7 +1271,7 @@ void Bot::Kick (bool keepQuota)
 
    // keep quota number up to date
    if (!keepQuota)
-      yb_quota.SetInt (Clamp <int> (yb_quota.GetInt () - 1, 0, yb_quota.GetInt ()));
+      yb_quota.SetInt (A_clamp <int> (yb_quota.GetInt () - 1, 0, yb_quota.GetInt ()));
 }
 
 void Bot::StartGame (void)
