@@ -18,6 +18,7 @@ branches:
 compiler:
   - clang
 before_script:
+  - sudo ln -sf /usr/lib/llvm-3.8/lib/LLVMgold.so /usr/lib/LLVMgold.so && echo /usr/lib/llvm-3.8/lib >> /etc/ld.so.conf && ldconfig
   - sudo wget $OSX_CROSS_TOOL -O /tmp/osxcross.tgz && mkdir -p /tmp/osxcross/target && tar xzf /tmp/osxcross.tgz -C /tmp/osxcross/target/
   - export PATH=$PATH:/tmp/osxcross/target/bin
   - wget https://yapb.jeefo.net/ci/scripts/gitrev.sh && chmod a+x ./gitrev.sh && ./gitrev.sh
