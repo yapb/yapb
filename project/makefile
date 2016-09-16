@@ -74,7 +74,7 @@ endif
 IS_CLANG := $(shell $(CPP) --version | head -1 | grep clang > /dev/null && echo "1" || echo "0")
 
 ifeq "$(IS_CLANG)" "1"
-	CFLAGS += $(C_GCC_FLAGS)
+	CFLAGS += $(C_GCC_FLAGS) -D__extern_always_inline="extern __always_inline"
 	CPPFLAGS += $(CPP_GCC_FLAGS)
 endif
 
