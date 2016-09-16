@@ -27,8 +27,7 @@ LOCAL_SRC_FILES := \
 	support.cpp \
 	waypoint.cpp \
 
-LOCAL_CFLAGS += -Ofast -std=c++11 -DLINUX -D_LINUX -DPOSIX -pipe -flto -fno-strict-aliasing -Wall -Werror
+LOCAL_CFLAGS += -O2 -std=c++11 -DLINUX -D_LINUX -DPOSIX -pipe -fno-strict-aliasing -Wall -Werror
 LOCAL_CPPFLAGS += -fno-exceptions -fno-rtti
-LOCAL_LDFLAGS += -flto
 
 include $(BUILD_SHARED_LIBRARY)
