@@ -3095,7 +3095,7 @@ void Bot::ChangeYaw (float speed)
 
 #endif
 
-int Bot::GetAimingWaypoint (void)
+int Bot::GetCampAimingWaypoint (void)
 {
    // find a good waypoint to look at when camping
 

@@ -79,7 +79,7 @@ bool IsInViewCone (const Vector &origin, edict_t *ent)
 {
    MakeVectors (ent->v.v_angle);
 
-   if (((origin - (ent->v.origin + ent->v.view_ofs)).Normalize () | g_pGlobals->v_forward) >= cosf (((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f) * MATH_D2R))
+   if (((origin - (ent->v.origin + ent->v.view_ofs)).Normalize () | g_pGlobals->v_forward) >= A_cosf (((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f) * MATH_D2R))
       return true;
 
    return false;
@@ -129,42 +129,32 @@ void DisplayMenuToClient (edict_t *ent, MenuId menu)
 
    Client &client = g_clients[engine.IndexOfEntity (ent) - 1];
 
-   if (menu == BOT_MENU_IVALID)
+   if (menu == BOT_MENU_INVALID)
    {
       MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), nullptr, ent);
-         WRITE_SHORT (0);
-         WRITE_CHAR (0);
-         WRITE_BYTE (0);
-         WRITE_STRING ("");
+      WRITE_SHORT (0);
+      WRITE_CHAR (0);
+      WRITE_BYTE (0);
+      WRITE_STRING ("");
       MESSAGE_END ();
 
-      client.menu = BOT_MENU_IVALID;
+      client.menu = BOT_MENU_INVALID;
       return;
    }
+   int menuIndex = 0;
 
-   MenuText *menuPtr = nullptr;
-
-   for (int i = 0; i < ARRAYSIZE_HLSDK (g_menus); i++)
+   for (; menuIndex < ARRAYSIZE_HLSDK (g_menus); menuIndex++)
    {
-      if (g_menus[i].id == menu)
-      {
-         menuPtr = &g_menus[i];
+      if (g_menus[menuIndex].id == menu)
          break;
-      }
    }
-
-   // worst case
-   if (!menuPtr)
-   {
-      client.menu = BOT_MENU_IVALID;
-      return;
-   }
-   const char *displayText = ((g_gameFlags & (GAME_XASH_ENGINE | GAME_MOBILITY)) && !yb_display_menu_text.GetBool ()) ? " " : menuPtr->text.GetBuffer ();
+   const auto &menuRef = g_menus[menuIndex];
+   const char *displayText = ((g_gameFlags & (GAME_XASH_ENGINE | GAME_MOBILITY)) && !yb_display_menu_text.GetBool ()) ? " " : menuRef.text.GetBuffer ();
 
    while (strlen (displayText) >= 64)
    {
       MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), nullptr, ent);
-         WRITE_SHORT (menuPtr->slots);
+         WRITE_SHORT (menuRef.slots);
          WRITE_CHAR (-1);
          WRITE_BYTE (1);
 
@@ -176,7 +166,7 @@ void DisplayMenuToClient (edict_t *ent, MenuId menu)
    }
 
    MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), nullptr, ent);
-      WRITE_SHORT (menuPtr->slots);
+      WRITE_SHORT (menuRef.slots);
       WRITE_CHAR (-1);
       WRITE_BYTE (0);
       WRITE_STRING (displayText);
@@ -756,7 +746,7 @@ void SoundAttachToClients (edict_t *ent, const char *sample, float volume)
 
    // in case of worst case
    if (index < 0 || index >= engine.MaxClients ())
-      index = 0;
+      return;
 
    Client &client = g_clients[index];
 

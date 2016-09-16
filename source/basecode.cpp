@@ -1007,9 +1007,6 @@ void Bot::InstantChatterMessage (int type)
    if (!(g_gameFlags & GAME_SUPPORT_BOT_VOICE) || yb_communication_type.GetInt () != 2 || g_chatterFactory[type].IsEmpty ())
       return;
 
-   if (m_notKilled)
-      EnableChatterIcon (true);
-
    // delay only report team
    if (type == Radio_ReportTeam)
    {
@@ -1019,9 +1016,10 @@ void Bot::InstantChatterMessage (int type)
       m_timeRepotingInDelay = engine.Time () + Random.Float (30.0f, 60.0f);
    }
    auto playbackSound = g_chatterFactory[type].GetRandomElement ();
+   auto painSound = g_chatterFactory[Chatter_DiePain].GetRandomElement ();
 
-   const String &defaultSound = playbackSound.name;
-   const String &painSound = g_chatterFactory[Chatter_DiePain].GetRandomElement ().name;
+   if (m_notKilled)
+      EnableChatterIcon (true);
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
@@ -1034,14 +1032,18 @@ void Bot::InstantChatterMessage (int type)
          WRITE_BYTE (GetIndex ());
 
          if (pev->deadflag & DEAD_DYING)
-            WRITE_STRING (FormatBuffer ("%s/%s.wav", yb_chatter_path.GetString (), painSound.GetBuffer ()));
+         {
+            client.iconTimestamp[GetIndex ()] = engine.Time () + painSound.duration;
+            WRITE_STRING (FormatBuffer ("%s/%s.wav", yb_chatter_path.GetString (), painSound.name.GetBuffer ()));
+         }
          else if (!(pev->deadflag & DEAD_DEAD))
-            WRITE_STRING (FormatBuffer ("%s/%s.wav", yb_chatter_path.GetString (), defaultSound.GetBuffer ()));
-
+         {
+            client.iconTimestamp[GetIndex ()] = engine.Time () + playbackSound.duration;
+            WRITE_STRING (FormatBuffer ("%s/%s.wav", yb_chatter_path.GetString (), playbackSound.name.GetBuffer ()));
+         }
          WRITE_SHORT (m_voicePitch);
       MESSAGE_END ();
 
-      client.iconTimestamp[GetIndex ()] = engine.Time () + playbackSound.duration;
       client.iconFlags[GetIndex ()] |= CF_ICON;
    }
 }
@@ -2828,11 +2830,8 @@ void Bot::ChooseAimDirection (void)
    {
       bool changePredictedEnemy = true;
 
-      if (m_trackingEdict == m_lastEnemy)
-      {
-         if (m_timeNextTracking < engine.Time ())
-            changePredictedEnemy = false;
-      }
+      if (m_trackingEdict == m_lastEnemy && m_timeNextTracking < engine.Time ())
+         changePredictedEnemy = false;
 
       if (changePredictedEnemy)
       {
@@ -3605,10 +3604,10 @@ void Bot::RunTask_Camp (void)
          if (--numFoundPoints >= 0)
             m_camp = waypoints.GetPath (foundPoints[Random.Int (0, numFoundPoints)])->origin;
          else
-            m_camp = waypoints.GetPath (GetAimingWaypoint ())->origin;
+            m_camp = waypoints.GetPath (GetCampAimingWaypoint ())->origin;
       }
       else
-         m_camp = waypoints.GetPath (GetAimingWaypoint ())->origin;
+         m_camp = waypoints.GetPath (GetCampAimingWaypoint ())->origin;
    }
    // press remembered crouch button
    pev->button |= m_campButtons;
@@ -5230,7 +5229,7 @@ int Bot::GetAmmo (void)
    return m_ammo[g_weaponDefs[m_currentWeapon].ammo1];
 }
 
-void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits)
+void Bot::GetDamage (edict_t *inflictor, int damage, int armor, int bits)
 {
    // this function gets called from the network message handler, when bot's gets hurt from any
    // other player.
@@ -5283,7 +5282,7 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits)
             m_seeEnemyTime = engine.Time ();
          }
 
-         if (yb_csdm_mode.GetInt () == 0)
+         if (!yb_csdm_mode.GetBool ())
             CollectExperienceData (inflictor, armor + damage);
       }
    }
@@ -5298,18 +5297,18 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits)
    }
 }
 
-void Bot::TakeBlinded (int r, int g, int b, int alpha)
+void Bot::GotBlind (int alpha)
 {
    // this function gets called by network message handler, when screenfade message get's send
    // it's used to make bot blind from the grenade.
 
-   if (r != 255 || g != 255 || b != 255 || alpha <= 170)
+   m_maxViewDistance = Random.Float (10.0f, 20.0f);
+   m_blindTime = engine.Time () + static_cast <float> (alpha - 200) / 16.0f;
+
+   if (m_blindTime < engine.Time ())
       return;
 
    m_enemy = nullptr;
-
-   m_maxViewDistance = Random.Float (10.0f, 20.0f);
-   m_blindTime = engine.Time () + static_cast <float> (alpha - 200) / 16.0f;
 
    if (m_difficulty <= 2)
    {
@@ -5323,22 +5322,20 @@ void Bot::TakeBlinded (int r, int g, int b, int alpha)
    m_blindMoveSpeed = -pev->maxspeed;
    m_blindSidemoveSpeed = 0.0f;
 
-   float walkSpeed = GetWalkSpeed ();
-
    if (Random.Int (0, 100) > 50)
-      m_blindSidemoveSpeed = walkSpeed;
+      m_blindSidemoveSpeed = pev->maxspeed;
    else
-      m_blindSidemoveSpeed = -walkSpeed;
+      m_blindSidemoveSpeed = -pev->maxspeed;
 
    if (pev->health < 85.0f)
-      m_blindMoveSpeed = -walkSpeed;
+      m_blindMoveSpeed = -pev->maxspeed;
    else if (m_personality == PERSONALITY_CAREFUL)
    {
       m_blindMoveSpeed = 0.0f;
       m_blindButton = IN_DUCK;
    }
    else
-      m_blindMoveSpeed = walkSpeed;
+      m_blindMoveSpeed = pev->maxspeed;
 }
 
 void Bot::CollectGoalExperience (int damage, int team)
@@ -5456,7 +5453,7 @@ void Bot::HandleChatterMessage (const char *tempMessage)
 {
    // this function is added to prevent engine crashes with: 'Message XX started, before message XX ended', or something.
 
-   if (FStrEq (tempMessage, "#CTs_Win") && m_team == CT)
+   if ((m_team == CT && strcmp (tempMessage, "#CTs_Win") == 0) || (m_team == TERRORIST && strcmp (tempMessage, "#Terrorists_Win") == 0))
    {
       if (g_timeRoundMid > engine.Time ())
          ChatterMessage (Chatter_QuicklyWonTheRound);
@@ -5464,21 +5461,13 @@ void Bot::HandleChatterMessage (const char *tempMessage)
          ChatterMessage (Chatter_WonTheRound);
    }
 
-   if (FStrEq (tempMessage, "#Terrorists_Win") && m_team == TERRORIST)
-   {
-      if (g_timeRoundMid > engine.Time ())
-         ChatterMessage (Chatter_QuicklyWonTheRound);
-      else
-         ChatterMessage (Chatter_WonTheRound);
-   }
-
-   if (FStrEq (tempMessage, "#Bot_TeamAttack"))
+   else if (strcmp (tempMessage, "#Bot_TeamAttack") == 0)
       ChatterMessage (Chatter_FriendlyFire);
 
-   if (FStrEq (tempMessage, "#Bot_NiceShotCommander"))
+   else if (strcmp (tempMessage, "#Bot_NiceShotCommander") == 0)
       ChatterMessage (Chatter_NiceshotCommander);
 
-   if (FStrEq (tempMessage, "#Bot_NiceShotPall"))
+   else if (strcmp (tempMessage, "#Bot_NiceShotPall") == 0)
       ChatterMessage (Chatter_NiceshotPall);
 }
 
@@ -5605,8 +5594,8 @@ Vector Bot::CheckToss(const Vector &start, const Vector &stop)
    if ((midPoint.z < start.z) || (midPoint.z < end.z))
       return Vector::GetZero ();
 
-   float timeOne = sqrtf ((midPoint.z - start.z) / (0.5f * gravity));
-   float timeTwo = sqrtf ((midPoint.z - end.z) / (0.5f * gravity));
+   float timeOne = A_sqrtf ((midPoint.z - start.z) / (0.5f * gravity));
+   float timeTwo = A_sqrtf ((midPoint.z - end.z) / (0.5f * gravity));
 
    if (timeOne < 0.1f)
       return Vector::GetZero ();
@@ -6050,8 +6039,8 @@ bool Bot::IsBombDefusing (const Vector &bombOrigin)
 
 float Bot::GetWalkSpeed (void)
 {
-   if ((GetTaskId () == TASK_SEEKCOVER) || (pev->flags & FL_DUCKING) || (pev->button & IN_DUCK) || (pev->oldbuttons & IN_DUCK) || (m_currentTravelFlags & PATHFLAG_JUMP) || (m_currentPath != nullptr && m_currentPath->flags & FLAG_LADDER) || IsOnLadder () || IsInWater ())
+   if (GetTaskId () == TASK_SEEKCOVER || (pev->flags & FL_DUCKING) || (pev->button & IN_DUCK) || (pev->oldbuttons & IN_DUCK) || (m_currentTravelFlags & PATHFLAG_JUMP) || (m_currentPath != nullptr && m_currentPath->flags & FLAG_LADDER) || IsOnLadder () || IsInWater ())
       return pev->maxspeed;
 
-   return static_cast <float> ((static_cast <int> (pev->maxspeed) * 0.5f) + (static_cast <int> (pev->maxspeed) / 50.0f)) - 18.0f;
+   return static_cast <float> (pev->maxspeed * 0.4f);
 }

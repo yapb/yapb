@@ -8,20 +8,12 @@
 #ifndef META_API_H
 #define META_API_H
 
-
-typedef int (*GameAPI_t) (gamefuncs_t *, int);
-typedef int (*GameAPI2_t) (gamefuncs_t *, int *);
-typedef int (*NewAPI2_t) (gamefuncs_t *, int *);
-typedef int (*EngineAPI_t) (enginefuncs_t *, int *);
-
 typedef int (*GETENTITYAPI_FN) (gamefuncs_t *pFunctionTable, int interfaceVersion);
 typedef int (*GETENTITYAPI2_FN) (gamefuncs_t *pFunctionTable, int *interfaceVersion);
 typedef int (*GETNEWDLLFUNCTIONS_FN) (newgamefuncs_t *pFunctionTable, int *interfaceVersion);
 typedef int (*GET_ENGINE_FUNCTIONS_FN) (enginefuncs_t *pengfuncsFromEngine, int *interfaceVersion);
 
-
 #define META_INTERFACE_VERSION "5:13"
-
 
 typedef enum
 {
@@ -107,7 +99,6 @@ typedef struct
 
 #include "util.h"
 
-
 // max buffer size for printed messages
 #define MAX_LOGMSG_LEN  1024
 
@@ -156,7 +147,6 @@ extern gamedll_funcs_t *gpGamedllFuncs;
 extern mutil_funcs_t *gpMetaUtilFuncs;
 extern meta_globals_t *gpMetaGlobals;
 extern metamod_funcs_t gMetaFunctionTable;
-
 
 #define MDLL_FUNC   gpGamedllFuncs->dllapi_table
 
@@ -238,6 +228,5 @@ extern metamod_funcs_t gMetaFunctionTable;
 #define IS_QUERYING_CLIENT_CVAR (*gpMetaUtilFuncs->pfnIsQueryingClienCVar_t)
 #define MAKE_REQUESTID      (*gpMetaUtilFuncs->pfnMakeRequestID)
 #define GET_HOOK_TABLES    (*gpMetaUtilFuncs->pfnGetHookTables) 
-uint16 FixedUnsigned16 (float fValue, float fScale);
-short FixedSigned16 (float fValue, float fScale);
+
 #endif

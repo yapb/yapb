@@ -588,7 +588,7 @@ bool Bot::IsFriendInLineOfFire (float distance)
       edict_t *ent = client.ent;
 
       float friendDistance = (ent->v.origin - pev->origin).GetLength ();
-      float squareDistance = sqrtf (1089.0f + (friendDistance * friendDistance));
+      float squareDistance = A_sqrtf (1089.0f + (friendDistance * friendDistance));
 
       if (GetShootingConeDeviation (GetEntity (), &ent->v.origin) > (friendDistance * friendDistance) / (squareDistance * squareDistance) && friendDistance <= distance)
          return true;
@@ -705,11 +705,11 @@ bool Bot::DoFirePause (float distance)
    }
 
    float offset = 0.0f;
-   const float BurstDistance = 300.0f;
+   const float SprayDistance = 200.0f;
 
-   if (distance < BurstDistance)
+   if (distance < SprayDistance)
       return false;
-   else if (distance < 2 * BurstDistance)
+   else if (distance < 2 * SprayDistance)
       offset = 10.0f;
    else
       offset = 5.0f;
@@ -717,11 +717,16 @@ bool Bot::DoFirePause (float distance)
    const float xPunch = DegreeToRadian (pev->punchangle.x);
    const float yPunch = DegreeToRadian (pev->punchangle.y);
 
+   float interval = m_thinkInterval;
+
+   if ((g_gameFlags & GAME_LEGACY) && Math::FltZero (interval))
+      interval = (1.0f / 30.0f) * Random.Float (0.95f, 1.05f);
+
    // check if we need to compensate recoil
-   if (tanf (sqrtf (fabsf (xPunch * xPunch) + fabsf (yPunch * yPunch))) * distance > offset + 30.0f + ((100 - (m_difficulty * 25)) / 100.f))
+   if (tanf (A_sqrtf (fabsf (xPunch * xPunch) + fabsf (yPunch * yPunch))) * distance > offset + 30.0f + ((100 - (m_difficulty * 25)) / 100.f))
    {
-      if (m_firePause < engine.Time () - 0.4f)
-         m_firePause = engine.Time () + Random.Float (0.4f, 0.4f + 0.3f * ((100 - (m_difficulty * 25)) / 100.f));
+      if (m_firePause < engine.Time () - interval)
+         m_firePause = engine.Time () + Random.Float (0.5f, 0.5f + 0.3f * ((100.0f - (m_difficulty * 25)) / 100.f));
 
       return true;
    }

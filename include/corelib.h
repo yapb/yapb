@@ -21,10 +21,17 @@
 #include <math.h>
 #include <assert.h>
 
-#ifdef _WIN32
+#include <platform.h>
+
+#ifdef PLATFORM_WIN32
 #include <direct.h>
 #else
 #include <sys/stat.h>
+#endif
+
+#ifdef ENABLE_SSE_INTRINSICS
+#include <xmmintrin.h>
+#include <emmintrin.h>
 #endif
 
 //
@@ -69,7 +76,7 @@ static inline char *A_strdup (const char *str)
 // From metamod-p
 static inline bool A_IsValidCodePointer (const void *ptr)
 {
-#ifdef _WIN32
+#ifdef PLATFORM_WIN32
    if (IsBadCodePtr (reinterpret_cast <FARPROC> (ptr)))
       return false;
 #endif
@@ -79,6 +86,11 @@ static inline bool A_IsValidCodePointer (const void *ptr)
    // do not check on linux
    return true;
 }
+
+#ifndef PLATFORM_WIN32
+#define _unlink(p) unlink (p)
+#define _mkdir(p) mkdir (p, 0777)
+#endif
 
 //
 // Title: Utility Classes Header
@@ -134,6 +146,106 @@ namespace Math
 
    const float MATH_D2R = MATH_PI / 180.0f;
    const float MATH_R2D = 180.0f / MATH_PI;
+
+#ifdef ENABLE_SSE_INTRINSICS
+   //
+   // Function: mm_abs
+   //
+   // mm version if abs
+   //
+   static inline __m128 mm_abs (__m128 val)
+   {
+      return _mm_andnot_ps (_mm_castsi128_ps (_mm_set1_epi32 (0x80000000)), val);
+   };
+
+   //
+   // Function: mm_sine
+   //
+   // mm version if sine
+   //
+   static inline __m128 mm_sine (__m128 inp)
+   {
+      __m128 pi2 = _mm_set1_ps (MATH_PI * 2);
+      __m128 val = _mm_cmpnlt_ps (inp, _mm_set1_ps (MATH_PI));
+
+      val = _mm_and_ps (val, pi2);
+      inp = _mm_sub_ps (inp, val);
+      val = _mm_cmpngt_ps (inp, _mm_set1_ps (-MATH_PI));
+      val = _mm_and_ps (val, pi2);
+      inp = _mm_add_ps (inp, val);
+      val = _mm_mul_ps (mm_abs (inp), _mm_set1_ps (-4.0f / (MATH_PI * MATH_PI)));
+      val = _mm_add_ps (val, _mm_set1_ps (4.0f / MATH_PI));
+
+      __m128 res = _mm_mul_ps (val, inp);
+
+      val = _mm_mul_ps (mm_abs (res), res);
+      val = _mm_sub_ps (val, res);
+      val = _mm_mul_ps (val, _mm_set1_ps (0.225f));
+      res = _mm_add_ps (val, res);
+
+      return res;
+   }
+#endif
+   //
+   // Function: A_sqrtf
+   //
+   // SIMD version of sqrtf.
+   //
+   static inline float A_sqrtf (float value)
+   {
+#ifdef ENABLE_SSE_INTRINSICS
+      return _mm_cvtss_f32 (_mm_sqrt_ss (_mm_load_ss (&value)));
+#else
+      return sqrtf (value);
+#endif
+   }
+
+   //
+   // Function: A_sinf
+   //
+   // SIMD version of sinf.
+   //
+   static inline float A_sinf (float value)
+   {
+#ifdef ENABLE_SSE_INTRINSICS
+      return _mm_cvtss_f32 (mm_sine (_mm_set1_ps (value)));
+#else
+      return sinf (value);
+#endif
+   }
+
+   //
+   // Function: A_cosf
+   //
+   // SIMD version of cosf.
+   //
+   static inline float A_cosf (float value)
+   {
+#ifdef ENABLE_SSE_INTRINSICS
+      return _mm_cvtss_f32 (mm_sine (_mm_set1_ps (value + MATH_PI / 2.0f)));
+#else
+      return cosf (value);
+#endif
+   }
+
+   //
+   // Function: A_sincosf
+   //
+   // SIMD version of sincosf.
+   //
+   static inline void A_sincosf (float rad, float *sine, float *cosine)
+   {
+#ifdef ENABLE_SSE_INTRINSICS
+      __m128 m_sincos = mm_sine (_mm_set_ps (0.0f, 0.0f, rad + MATH_PI / 2.f, rad));
+      __m128 m_cos = _mm_shuffle_ps (m_sincos, m_sincos, _MM_SHUFFLE (0, 0, 0, 1));
+
+      *sine = _mm_cvtss_f32 (m_sincos);
+      *cosine = _mm_cvtss_f32 (m_cos);
+#else
+      *sine = sinf (rad);
+      *cosine = cosf (rad);
+#endif
+   }
 
    //
    // Function: FltZero
@@ -262,28 +374,11 @@ namespace Math
    //
    static inline void SineCosine (float rad, float *sine, float *cosine)
    {
-#if defined (_WIN32) && defined (_MSC_VER) && !defined (__clang__)
-      __asm
-      {
-         fld dword ptr[rad]
-         fsincos
-         mov ebx, [cosine]
-         fstp dword ptr[ebx]
-         mov ebx, [sine]
-         fstp dword ptr[ebx]
-      }
-#elif defined (__ANDROID__)
+#if defined (__ANDROID__)
       *sine = sinf (rad);
       *cosine = cosf (rad);
-#elif defined (__linux__) || defined (GCC) || defined (__APPLE__) 
-      double _cos, _sin;
-      __asm __volatile__ ("fsincos" : "=t" (_cos), "=u" (_sin) : "0" (rad));
-
-      *cosine = _cos;
-      *sine = _sin;
 #else
-      *sine = sinf (rad);
-      *cosine = cosf (rad);
+      A_sincosf (rad, sine, cosine);
 #endif
    }
 
@@ -294,7 +389,7 @@ namespace Math
 
    template <typename Type> Type Clamp (Type x, Type a, Type b)
    {
-         return x < a ? a : (x > b ? b : x);
+         return (x < a) ? a : ((x > b) ? b : x);
    }
 }
 
@@ -549,7 +644,7 @@ public:
    //
    inline float GetLength (void) const
    {
-      return sqrtf (x * x + y * y + z * z);
+      return Math::A_sqrtf (x * x + y * y + z * z);
    }
 
    //
@@ -565,7 +660,7 @@ public:
    //
    inline float GetLength2D (void) const
    {
-      return sqrtf (x * x + y * y);
+      return Math::A_sqrtf (x * x + y * y);
    }
 
    //
@@ -3693,19 +3788,11 @@ public:
          {
             // create the directory
             *ofs = 0;
-#ifdef _WIN32
             _mkdir (path);
-#else
-            mkdir (path, 0777);
-#endif
             *ofs = '/';
          }
       }
-#ifdef _WIN32
       _mkdir (path);
-#else
-      mkdir (path, 0777);
-#endif
    }
 };
 

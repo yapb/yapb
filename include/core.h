@@ -17,15 +17,11 @@
 
 using namespace Math;
 
-#include "platform.h"
-
 #include <assert.h>
 #include <ctype.h>
 #include <limits.h>
 #include <float.h>
 #include <time.h>
-
-#include <corelib.h>
 
 // defines bots tasks
 enum TaskID
@@ -71,7 +67,7 @@ enum GameFlags
 // bot menu ids
 enum MenuId
 {
-   BOT_MENU_IVALID = -1,
+   BOT_MENU_INVALID = 0,
    BOT_MENU_MAIN,
    BOT_MENU_FEATURES,
    BOT_MENU_CONTROL,
@@ -655,8 +651,6 @@ struct Client
 
    int iconFlags[MAX_ENGINE_PLAYERS]; // flag holding chatter icons
    float iconTimestamp[MAX_ENGINE_PLAYERS]; // timers for chatter icons
-
-   Client (void) : menu (BOT_MENU_IVALID) { }
 };
 
 // experience data hold in memory while playing
@@ -1076,7 +1070,7 @@ private:
    float GetBombTimeleft (void);
    float GetEstimatedReachTime (void);
 
-   int GetAimingWaypoint (void);
+   int GetCampAimingWaypoint (void);
    int GetAimingWaypoint (const Vector &to);
 
    void FindShortestPath (int srcIndex, int destIndex);
@@ -1214,6 +1208,9 @@ public:
    /// the things that can be executed while skipping frames
    void ThinkFrame (void);
 
+   void GotBlind (int alpha);
+   void GetDamage (edict_t *inflictor, int damage, int armor, int bits);
+
    void DisplayDebugOverlay (void);
    void NewRound (void);
    void EquipInBuyzone (int buyState);
@@ -1226,19 +1223,16 @@ public:
    void DeleteSearchNodes (void); 
    void VerifyBreakable (edict_t *touch);
 
-   void RemoveCertainTask (TaskID id);
    void PushTask (TaskID id, float desire, int data, float time, bool canContinue);
-
+   void RemoveCertainTask (TaskID id);
    void ApplyTaskFilters (void);
    void ResetTasks (void);
 
    TaskItem *GetTask (void);
    inline TaskID GetTaskId (void) { return GetTask ()->id; };
 
-   void TakeDamage (edict_t *inflictor, int damage, int armor, int bits);
-   void TakeBlinded (int r, int g, int b, int alpha);
-
    void DiscardWeaponForUser (edict_t *user, bool discardC4);
+   void ReleaseUsedName (void);
 
    void SayText (const char *text);
    void TeamSayText (const char *text);
@@ -1266,8 +1260,6 @@ public:
    bool HasSecondaryWeapon(void);
    bool HasShield (void);
    bool IsShieldDrawn (void);
-
-   void ReleaseUsedName (void);
 };
 
 // manager class

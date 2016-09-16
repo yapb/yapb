@@ -34,20 +34,25 @@
    #error "Can't configure export macros. Compiler unrecognized."
 #endif
 
+// enable sse intrinsics
+#define ENABLE_SSE_INTRINSICS 1
+
 // operating system specific macros, functions and typedefs
 #ifdef PLATFORM_WIN32
 
    #include <direct.h>
    #include <string.h>
 
-   #define DLL_ENTRYPOINT int __stdcall DllMain (HINSTANCE, DWORD dwReason, LPVOID)
+   #define STD_CALL __stdcall
+
+   #define DLL_ENTRYPOINT int STD_CALL DllMain (HINSTANCE, DWORD dwReason, LPVOID)
    #define DLL_DETACHING (dwReason == DLL_PROCESS_DETACH)
    #define DLL_RETENTRY return TRUE
 
    #if defined (COMPILER_VISUALC)
-      #define DLL_GIVEFNPTRSTODLL extern "C" void __stdcall
+      #define DLL_GIVEFNPTRSTODLL extern "C" void STD_CALL
    #elif defined (COMPILER_MINGW32)
-      #define DLL_GIVEFNPTRSTODLL SHARED_LIBRARAY_EXPORT void __stdcall
+      #define DLL_GIVEFNPTRSTODLL SHARED_LIBRARAY_EXPORT void STD_CALL
    #endif
 
    // specify export parameter
@@ -55,12 +60,6 @@
       #pragma comment (linker, "/EXPORT:GiveFnptrsToDll=_GiveFnptrsToDll@8,@1")
       #pragma comment (linker, "/SECTION:.data,RW")
    #endif
-
-   typedef int (*GetEntityApi2_FN) (gamefuncs_t *, int);
-   typedef int (*GetNewEntityApi_FN) (newgamefuncs_t *, int *);
-   typedef int (*GetBlendingInterface_FN) (int, void **, void *, float (*)[3][4], float (*)[128][3][4]);
-   typedef void (*Entity_FN) (entvars_t *);
-   typedef void (__stdcall *GiveFnptrsToDll_FN) (enginefuncs_t *, globalvars_t *);
 
 #elif defined (PLATFORM_LINUX) || defined (PLATFORM_OSX)
 
@@ -81,18 +80,12 @@
    #define DLL_RETENTRY return
    #define DLL_GIVEFNPTRSTODLL extern "C" void __attribute__((visibility("default")))
 
+   #define STD_CALL /* */
+
    #if defined (__ANDROID__)
       #define PLATFORM_ANDROID 1
+      #undef ENABLE_SSE_INTRINSICS
    #endif
-
-   typedef int (*GetEntityApi2_FN) (gamefuncs_t *, int);
-   typedef int (*GetNewEntityApi_FN) (newgamefuncs_t *, int *);
-   typedef int (*GetBlendingInterface_FN) (int, void **, void *, float (*)[3][4], float (*)[128][3][4]);
-   typedef void (*Entity_FN) (entvars_t *);
-   typedef void (*GiveFnptrsToDll_FN) (enginefuncs_t *, globalvars_t *);
-
-   // posix compatibility
-   #define _unlink unlink
 #else
    #error "Platform unrecognized."
 #endif

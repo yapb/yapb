@@ -197,7 +197,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          DisplayMenuToClient (ent, BOT_MENU_COMMANDS);
       else
       {
-         DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+         DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
          engine.CenterPrintf ("You're dead, and have no access to this menu");
       }
    }
@@ -1217,14 +1217,14 @@ void ClientCommand (edict_t *ent)
 
          return;
       }
-      else if (A_stricmp (command, "menuselect") == 0 && !IsNullString (arg1) && g_clients[issuerPlayerIndex].menu != BOT_MENU_IVALID)
+      else if (A_stricmp (command, "menuselect") == 0 && !IsNullString (arg1) && g_clients[issuerPlayerIndex].menu != BOT_MENU_INVALID)
       {
          Client *client = &g_clients[issuerPlayerIndex];
          int selection = atoi (arg1);
 
          if (client->menu == BOT_MENU_WAYPOINT_TYPE)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             switch (selection)
             {
@@ -1247,7 +1247,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, BOT_MENU_IVALID);
+               DisplayMenuToClient (ent, BOT_MENU_INVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1257,7 +1257,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_WAYPOINT_FLAG)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             switch (selection)
             {
@@ -1288,7 +1288,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_WAYPOINT_MAIN_PAGE1)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             switch (selection)
             {
@@ -1339,7 +1339,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, BOT_MENU_IVALID);
+               DisplayMenuToClient (ent, BOT_MENU_INVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1349,7 +1349,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_WAYPOINT_MAIN_PAGE2)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             switch (selection)
             {
@@ -1445,7 +1445,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_WAYPOINT_RADIUS)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             g_waypointOn = true;  // turn waypoints on in case
 
@@ -1461,7 +1461,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_MAIN)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             switch (selection)
             {
@@ -1484,7 +1484,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, BOT_MENU_IVALID);
+               DisplayMenuToClient (ent, BOT_MENU_INVALID);
                break;
 
             }
@@ -1495,7 +1495,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_CONTROL)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             switch (selection)
             {
@@ -1520,7 +1520,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, BOT_MENU_IVALID);
+               DisplayMenuToClient (ent, BOT_MENU_INVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1530,7 +1530,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_FEATURES)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             switch (selection)
             {
@@ -1557,13 +1557,13 @@ void ClientCommand (edict_t *ent)
                   DisplayMenuToClient (ent, BOT_MENU_COMMANDS);
                else
                {
-                  DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+                  DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
                   engine.CenterPrintf ("You're dead, and have no access to this menu");
                }
                break;
 
             case 10:
-               DisplayMenuToClient (ent, BOT_MENU_IVALID);
+               DisplayMenuToClient (ent, BOT_MENU_INVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1573,7 +1573,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_COMMANDS)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
             Bot *bot = nullptr;
 
             switch (selection)
@@ -1609,7 +1609,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, BOT_MENU_IVALID);
+               DisplayMenuToClient (ent, BOT_MENU_INVALID);
                break;
             }
 
@@ -1620,7 +1620,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu ==BOT_MENU_WAYPOINT_AUTOPATH)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             const float autoDistanceValue[] = {0.0f, 100.0f, 130.0f, 160.0f, 190.0f, 220.0f, 250.0f };
 
@@ -1639,7 +1639,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_WAYPOINT_PATH)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             switch (selection)
             {
@@ -1656,7 +1656,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, BOT_MENU_IVALID);
+               DisplayMenuToClient (ent, BOT_MENU_INVALID);
                break;
             }
 
@@ -1667,7 +1667,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_DIFFICULTY)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             client->menu = BOT_MENU_PERSONALITY;
 
@@ -1694,7 +1694,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, BOT_MENU_IVALID);
+               DisplayMenuToClient (ent, BOT_MENU_INVALID);
                break;
             }
 
@@ -1708,7 +1708,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_TEAM_SELECT && fillCommand)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             switch (selection)
             {
@@ -1724,7 +1724,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, BOT_MENU_IVALID);
+               DisplayMenuToClient (ent, BOT_MENU_INVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1734,7 +1734,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_PERSONALITY && fillCommand)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             switch (selection)
             {
@@ -1745,7 +1745,7 @@ void ClientCommand (edict_t *ent)
                bots.FillServer (fillServerTeam, selection - 2, g_storeAddbotVars[0]);
 
             case 10:
-               DisplayMenuToClient (ent, BOT_MENU_IVALID);
+               DisplayMenuToClient (ent, BOT_MENU_INVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1755,7 +1755,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_TEAM_SELECT)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             switch (selection)
             {
@@ -1778,7 +1778,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, BOT_MENU_IVALID);
+               DisplayMenuToClient (ent, BOT_MENU_INVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1788,7 +1788,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_PERSONALITY)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             switch (selection)
             {
@@ -1801,7 +1801,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, BOT_MENU_IVALID);
+               DisplayMenuToClient (ent, BOT_MENU_INVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1811,7 +1811,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_TERRORIST_SELECT || client->menu == BOT_MENU_CT_SELECT)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             switch (selection)
             {
@@ -1825,7 +1825,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, BOT_MENU_IVALID);
+               DisplayMenuToClient (ent, BOT_MENU_INVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1835,7 +1835,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_WEAPON_MODE)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             switch (selection)
             {
@@ -1850,7 +1850,7 @@ void ClientCommand (edict_t *ent)
                break;
 
             case 10:
-               DisplayMenuToClient (ent, BOT_MENU_IVALID);
+               DisplayMenuToClient (ent, BOT_MENU_INVALID);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1860,7 +1860,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_KICK_PAGE_1)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             switch (selection)
             {
@@ -1890,7 +1890,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_KICK_PAGE_2)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             switch (selection)
             {
@@ -1920,7 +1920,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_KICK_PAGE_3)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             switch (selection)
             {
@@ -1950,7 +1950,7 @@ void ClientCommand (edict_t *ent)
          }
          else if (client->menu == BOT_MENU_KICK_PAGE_4)
          {
-            DisplayMenuToClient (ent, BOT_MENU_IVALID); // reset menu display
+            DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
             switch (selection)
             {
@@ -2367,8 +2367,7 @@ void pfnClientCommand (edict_t *ent, char const *format, ...)
    _vsnprintf (buffer, SIZEOF_CHAR (buffer), format, ap);
    va_end (ap);
 
-   // is the target entity an official bot, or a third party bot ?
-   if (IsValidBot (ent))
+   if (bots.GetBot (ent))
    {
       engine.IssueBotCommand (ent, buffer);
 
@@ -2771,6 +2770,7 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...)
    (*g_engfuncs.pfnAlertMessage) (alertType, buffer);
 }
 
+typedef void (*entity_func_t) (entvars_t *);
 gamedll_funcs_t gameDLLFunc;
 
 SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *)
@@ -2789,7 +2789,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *)
 
    if (!(g_gameFlags & GAME_METAMOD))
    {
-      auto api_GetEntityAPI = g_gameLib->GetFuncAddr <GetEntityApi2_FN> ("GetEntityAPI");
+      auto api_GetEntityAPI = g_gameLib->GetFuncAddr <int (*) (gamefuncs_t *, int)> ("GetEntityAPI");
 
       // pass other DLLs engine callbacks to function table...
       if (api_GetEntityAPI (&g_functionTable, INTERFACE_VERSION) == 0)
@@ -2848,7 +2848,7 @@ SHARED_LIBRARAY_EXPORT int GetNewDLLFunctions (newgamefuncs_t *functionTable, in
    // pass them too, else the DLL interfacing wouldn't be complete and the game possibly wouldn't
    // run properly.
 
-   auto api_GetNewDLLFunctions = g_gameLib->GetFuncAddr <GetNewEntityApi_FN> ("GetNewDLLFunctions");
+   auto api_GetNewDLLFunctions = g_gameLib->GetFuncAddr <int (*) (newgamefuncs_t *, int *)> ("GetNewDLLFunctions");
 
    if (api_GetNewDLLFunctions == nullptr)
       return FALSE;
@@ -2908,7 +2908,7 @@ SHARED_LIBRARAY_EXPORT int Server_GetBlendingInterface (int version, void **ppin
    // of the body move, which bones, which hitboxes and how) between the server and the game DLL.
    // some MODs can be using a different hitbox scheme than the standard one.
 
-   auto api_GetBlendingInterface = g_gameLib->GetFuncAddr <GetBlendingInterface_FN> ("Server_GetBlendingInterface");
+   auto api_GetBlendingInterface = g_gameLib->GetFuncAddr <int (*) (int, void **, void *, float (*)[3][4], float (*)[128][3][4])> ("Server_GetBlendingInterface");
 
    if (api_GetBlendingInterface == nullptr)
       return FALSE;
@@ -3021,7 +3021,7 @@ Library *LoadCSBinary (void)
             return nullptr;
          }
          // detect if we're running modern game
-         Entity_FN entity = game->GetFuncAddr <Entity_FN> ("weapon_famas");
+         auto entity = game->GetFuncAddr <entity_func_t> ("weapon_famas");
 
          // detect xash engine
          if (g_engfuncs.pfnCVarGetPointer ("build") != nullptr)
@@ -3147,7 +3147,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    }
 #endif
 
-   auto api_GiveFnptrsToDll = g_gameLib->GetFuncAddr <GiveFnptrsToDll_FN> ("GiveFnptrsToDll");
+   auto api_GiveFnptrsToDll = g_gameLib->GetFuncAddr <void (STD_CALL *) (enginefuncs_t *, globalvars_t *)> ("GiveFnptrsToDll");
 
    if (!api_GiveFnptrsToDll)
       TerminateOnMalloc ();
@@ -3173,10 +3173,10 @@ DLL_ENTRYPOINT
    DLL_RETENTRY; // the return data type is OS specific too
 }
 
-void LinkEntity_Helper (Entity_FN &addr, const char *name, entvars_t *pev)
+void LinkEntity_Helper (entity_func_t &addr, const char *name, entvars_t *pev)
 {
    if (addr == nullptr)
-      addr = g_gameLib->GetFuncAddr <Entity_FN > (name);
+      addr = g_gameLib->GetFuncAddr <entity_func_t> (name);
 
    if (addr == nullptr)
       return;
@@ -3187,7 +3187,7 @@ void LinkEntity_Helper (Entity_FN &addr, const char *name, entvars_t *pev)
 #define LINK_ENTITY(entityName) \
 SHARED_LIBRARAY_EXPORT void entityName (entvars_t *pev) \
 { \
-   static Entity_FN addr; \
+   static entity_func_t addr; \
    LinkEntity_Helper (addr, #entityName, pev); \
 } \
 

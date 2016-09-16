@@ -22,7 +22,7 @@ OBJECTS = $(SRC_DIR)/basecode.cpp	\
 	  $(SRC_DIR)/support.cpp	\
 	  $(SRC_DIR)/waypoint.cpp	\
 
-C_OPT_FLAGS = -O2 -DNDEBUG -pipe -fno-strict-aliasing -mtune=generic
+C_OPT_FLAGS = -Ofast -DNDEBUG -pipe -flto -fno-strict-aliasing -mtune=generic
 C_DEBUG_FLAGS = -D_DEBUG -DDEBUG -g -ggdb3
 
 C_GCC_FLAGS = -fvisibility=hidden
@@ -49,10 +49,10 @@ ifeq "$(OS)" "Darwin"
 else
 	LIB_EXT = so
 	CFLAGS += -DLINUX -D_LINUX -DPOSIX
-	LINK += -shared -lsupc++
+	LINK += -shared
 endif
 
-LINK += -m32 -lm -ldl
+LINK += -m32 -lm -ldl -flto
 
 CFLAGS += -msse2 -std=c++11 -m32 -Wall -Werror -Wextra
 CPPFLAGS += -fno-exceptions -fno-rtti

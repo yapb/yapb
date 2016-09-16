@@ -17,7 +17,6 @@ $RECYCLE.BIN/
 # =========================
 # Operating System Files
 # =========================
-
 # OSX
 # =========================
 
@@ -35,6 +34,7 @@ Icon
 # Files that might appear on external disk
 .Spotlight-V100
 .Trashes
+/project/#Verone
 
 *.pdb
 *.asm
@@ -53,14 +53,15 @@ Icon
 *.suo
 *.idb
 *.vspx
-project/yapb.vcxproj.user
+*.user
 *.psess
 *.opendb
 *.aps
 *.db
 *.enc
 *.xml
-/project/#Verone/incremental_index
 *.vsp
 *.lastcodeanalysissucceeded
 *.json
+*.html
+*.settings

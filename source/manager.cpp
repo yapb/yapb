@@ -171,12 +171,12 @@ BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int
             if (botName == nullptr)
                continue;
 
-            if (botName->usedBy != 0)
+            if (botName->name.GetLength () < 3 || botName->usedBy != 0)
                continue;
 
             nameFound = true;
-            strncpy (outputName, botName->name, SIZEOF_CHAR (outputName));
 
+            strncpy (outputName, botName->name.GetBuffer (), SIZEOF_CHAR (outputName));
             steamId = botName->steamId;
          }
       }
@@ -191,11 +191,11 @@ BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int
       char prefixedName[33]; // temp buffer for storing modified name
 
       if (!IsNullString (yb_name_prefix.GetString ()))
-         sprintf (prefixedName, "%s %s", yb_name_prefix.GetString (), outputName);
+         snprintf (prefixedName, SIZEOF_CHAR (prefixedName), "%s %s", yb_name_prefix.GetString (), outputName);
 
       // buffer has been modified, copy to real name
       if (!IsNullString (prefixedName))
-         strcpy (outputName, prefixedName);
+         strncpy (outputName, prefixedName, SIZEOF_CHAR (outputName));
    }
    bot = g_engfuncs.pfnCreateFakeClient (outputName);
 

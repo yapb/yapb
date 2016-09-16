@@ -1727,7 +1727,7 @@ void Waypoint::Think (void)
       // if radius is nonzero, draw a full circle
       if (path->radius > 0.0f)
       {
-         float squareRoot = sqrtf (path->radius * path->radius * 0.5f);
+         float squareRoot = A_sqrtf (path->radius * path->radius * 0.5f);
 
          engine.DrawLine (g_hostEntity, origin + Vector (path->radius, 0.0f, 0.0f), origin + Vector (squareRoot, -squareRoot, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
          engine.DrawLine (g_hostEntity, origin + Vector (squareRoot, -squareRoot, 0.0f), origin + Vector (0.0f, -path->radius, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
@@ -1743,7 +1743,7 @@ void Waypoint::Think (void)
       }
       else
       {
-         float squareRoot = sqrtf (32.0f);
+         float squareRoot = A_sqrtf (32.0f);
 
          engine.DrawLine (g_hostEntity, origin + Vector (squareRoot, -squareRoot, 0.0f), origin + Vector (-squareRoot, squareRoot, 0.0f), 5, 0, 255, 0, 0, 200, 0, 10);
          engine.DrawLine (g_hostEntity, origin + Vector (-squareRoot, -squareRoot, 0.0f), origin + Vector (squareRoot, squareRoot, 0.0f), 5, 0, 255, 0, 0, 200, 0, 10);

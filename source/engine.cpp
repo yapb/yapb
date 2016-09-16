@@ -783,7 +783,7 @@ void Engine::ProcessMessageCapture (void *ptr)
          damageBits = intVal;
 
          if (bot != nullptr && (damageArmor > 0 || damageTaken > 0))
-            bot->TakeDamage (bot->pev->dmg_inflictor, damageTaken, damageArmor, damageBits);
+            bot->GetDamage (bot->pev->dmg_inflictor, damageTaken, damageArmor, damageBits);
          break;
       }
       break;
@@ -916,7 +916,8 @@ void Engine::ProcessMessageCapture (void *ptr)
          break;
 
       case 6:
-         bot->TakeBlinded (r, g, b, byteVal);
+         if (bot != nullptr && r >= 255 && g >= 255 && b >= 255 && byteVal > 170)
+            bot->GotBlind (byteVal);
          break;
       }
       break;
