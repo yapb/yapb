@@ -49,7 +49,7 @@ ifeq "$(OS)" "Darwin"
 else
 	LIB_EXT = so
 	CFLAGS += -DLINUX -D_LINUX -DPOSIX
-	LINK += -shared
+	LINK += -shared -lsupc++
 endif
 
 LINK += -m32 -lm -ldl
