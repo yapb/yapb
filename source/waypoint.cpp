@@ -1217,8 +1217,6 @@ bool Waypoint::Load (void)
    InitVisibilityTab ();
    InitExperienceTab ();
 
-   bots.InitQuota ();
-
    extern ConVar yb_debug_goal;
    yb_debug_goal.SetInt (-1);
 

@@ -348,7 +348,7 @@ void BotManager::AdjustQuota (bool isPlayerConnection, edict_t *ent)
 {
    // this function increases or decreases bot quota amount depending on auto vacate variables
 
-   if (!engine.IsDedicatedServer () || !yb_autovacate.GetBool () || GetBot (ent) != nullptr)
+   if (!engine.IsDedicatedServer () || !yb_autovacate.GetBool () || GetBot (ent))
       return;
 
    if (isPlayerConnection)
@@ -388,7 +388,7 @@ void BotManager::AddPlayerToCheckTeamQueue (edict_t *ent)
 
 void BotManager::VerifyPlayersHasJoinedTeam (int &desiredCount)
 {
-   if (!m_trackedPlayers.GetElementNumber ())
+   if (m_trackedPlayers.IsEmpty ())
       return;
 
    for (int i = 0; i < engine.MaxClients (); i++)
@@ -449,8 +449,7 @@ void BotManager::MaintainBotQuota (void)
          if (yb_quota.GetInt () < 0)
             yb_quota.SetInt (0);
 
-         // always keep one slot
-         int maxClients = yb_autovacate.GetBool () ? engine.MaxClients () - 1 - (engine.IsDedicatedServer () ? 0 : GetHumansNum ()) : engine.MaxClients ();
+         int maxClients = engine.MaxClients ();
 
          if (yb_quota.GetInt () > maxClients)
             yb_quota.SetInt (maxClients);
