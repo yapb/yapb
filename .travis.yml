@@ -28,3 +28,5 @@ after_success:
   - curl --ftp-create-dirs -T ./debug/yapb.so -u $FTP_USER:$FTP_PASS ftp://$FTP_HOST/project/debug/yapb.so
   - curl --ftp-create-dirs -T ./release/yapb.dylib -u $FTP_USER:$FTP_PASS ftp://$FTP_HOST/project/release/yapb.dylib
   - curl --ftp-create-dirs -T ./debug/yapb.dylib -u $FTP_USER:$FTP_PASS ftp://$FTP_HOST/project/debug/yapb.dylib
+  - curl -i $YAPB_PACKAGE_TRIGGER
+  
