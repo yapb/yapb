@@ -94,8 +94,6 @@ $(BIN_DIR)/%.o: %.cpp
 	$(CPP) $(INCLUDE) $(CFLAGS) $(CPPFLAGS) -o $(subst $(SRC_DIR)/,,$@) -c $<
 
 main:
-	mkdir -p release
-	mkdir -p debug
 	$(MAKE) $(PROJECT)
 
 $(PROJECT): $(OBJ_BIN)
