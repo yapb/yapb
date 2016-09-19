@@ -4821,7 +4821,7 @@ void Bot::BotAI (void)
       }
 
       // if bomb planted warn teammates !
-      if (g_canSayBombPlanted && g_bombPlanted && engine.GetTeam (GetEntity ()) == CT)
+      if (g_canSayBombPlanted && g_bombPlanted && m_team == CT)
       {
          g_canSayBombPlanted = false;
          ChatterMessage (Chatter_GottaFindTheBomb);
