@@ -157,25 +157,26 @@ WeaponSelect g_weaponSelect[NUM_WEAPONS + 1] =
    {0,                 "",                 "",              0,    0,  0,  0,  0,   0, 0,  0,  0, false}
 };
 
-// bot menus
-MenuText g_menus[BOT_MENU_TOTAL_MENUS] =
+void SetupBotMenus (void)
 {
-   // main menu
+   int counter = 0;
+
+   // bots main menu
+   g_menus[counter] =
    {
-      BOT_MENU_MAIN,
-      0x2ff,
+      BOT_MENU_MAIN, 0x2ff,
       "\\yMain Menu\\w\v\v"
       "1. Control Bots\v"
       "2. Features\v\v"
       "3. Fill Server\v"
       "4. End Round\v\v"
       "0. Exit"
-   },
+   };
 
-   // bot features menu
+   // bots features menu
+   g_menus[++counter] =
    {
-      BOT_MENU_FEATURES,
-      0x25f,
+      BOT_MENU_FEATURES, 0x25f,
       "\\yBots Features\\w\v\v"
       "1. Weapon Mode Menu\v"
       "2. Waypoint Menu\v"
@@ -183,12 +184,12 @@ MenuText g_menus[BOT_MENU_TOTAL_MENUS] =
       "4. Toggle Debug Mode\v"
       "5. Command Menu\v\v"
       "0. Exit"
-   },
+   };
 
    // bot control menu
+   g_menus[++counter] =
    {
-      BOT_MENU_CONTROL,
-      0x2ff,
+      BOT_MENU_CONTROL, 0x2ff,
       "\\yBots Control Menu\\w\v\v"
       "1. Add a Bot, Quick\v"
       "2. Add a Bot, Specified\v\v"
@@ -196,12 +197,12 @@ MenuText g_menus[BOT_MENU_TOTAL_MENUS] =
       "4. Remove All Bots\v\v"
       "5. Remove Bot Menu\v\v"
       "0. Exit"
-   },
+   };
 
    // weapon mode select menu
+   g_menus[++counter] =
    {
-      BOT_MENU_WEAPON_MODE,
-      0x27f,
+      BOT_MENU_WEAPON_MODE, 0x27f,
       "\\yBots Weapon Mode\\w\v\v"
       "1. Knives only\v"
       "2. Pistols only\v"
@@ -211,24 +212,24 @@ MenuText g_menus[BOT_MENU_TOTAL_MENUS] =
       "6. Sniper Weapons only\v"
       "7. All Weapons\v\v"
       "0. Exit"
-   },
+   };
 
    // personality select menu
+   g_menus[++counter] =
    {
-      BOT_MENU_PERSONALITY,
-      0x20f,
+      BOT_MENU_PERSONALITY, 0x20f,
       "\\yBots Personality\\w\v\v"
       "1. Random\v"
       "2. Normal\v"
       "3. Aggressive\v"
       "4. Careful\v\v"
       "0. Exit"
-   },
+   };
 
    // difficulty select menu
+   g_menus[++counter] =
    {
-      BOT_MENU_DIFFICULTY,
-      0x23f,
+      BOT_MENU_DIFFICULTY, 0x23f,
       "\\yBots Difficulty Level\\w\v\v"
       "1. Newbie\v"
       "2. Average\v"
@@ -236,23 +237,23 @@ MenuText g_menus[BOT_MENU_TOTAL_MENUS] =
       "4. Professional\v"
       "5. Godlike\v\v"
       "0. Exit"
-   },
+   };
 
    // team select menu
+   g_menus[++counter] =
    {
-      BOT_MENU_TEAM_SELECT,
-      0x213,
+      BOT_MENU_TEAM_SELECT, 0x213,
       "\\ySelect a team\\w\v\v"
       "1. Terrorist Force\v"
       "2. Counter-Terrorist Force\v\v"
       "5. Auto-select\v\v"
       "0. Exit"
-   },
+   };
 
    // terrorist model select menu
+   g_menus[++counter] =
    {
-      BOT_MENU_TERRORIST_SELECT,
-      0x21f,
+      BOT_MENU_TERRORIST_SELECT, 0x21f,
       "\\ySelect an appearance\\w\v\v"
       "1. Phoenix Connexion\v"
       "2. L337 Krew\v"
@@ -260,12 +261,12 @@ MenuText g_menus[BOT_MENU_TOTAL_MENUS] =
       "4. Guerilla Warfare\v\v"
       "5. Auto-select\v\v"
       "0. Exit"
-   },
+   };
 
    // counter-terrorist model select menu
+   g_menus[++counter] =
    {
-      BOT_MENU_CT_SELECT,
-      0x21f,
+      BOT_MENU_CT_SELECT, 0x21f,
       "\\ySelect an appearance\\w\v\v"
       "1. Seal Team 6 (DEVGRU)\v"
       "2. German GSG-9\v"
@@ -273,24 +274,24 @@ MenuText g_menus[BOT_MENU_TOTAL_MENUS] =
       "4. French GIGN\v\v"
       "5. Auto-select\v\v"
       "0. Exit"
-   },
+   };
 
    // command menu
+   g_menus[++counter] =
    {
-      BOT_MENU_COMMANDS,
-      0x23f,
+      BOT_MENU_COMMANDS, 0x23f,
       "\\yBot Command Menu\\w\v\v"
       "1. Make Double Jump\v"
       "2. Finish Double Jump\v\v"
       "3. Drop the C4 Bomb\v"
       "4. Drop the Weapon\v\v"
       "0. Exit"
-   },
+   };
 
    // main waypoint menu
+   g_menus[++counter] =
    {
-      BOT_MENU_WAYPOINT_MAIN_PAGE1,
-      0x3ff,
+      BOT_MENU_WAYPOINT_MAIN_PAGE1, 0x3ff,
       "\\yWaypoint Operations (Page 1)\\w\v\v"
       "1. Show/Hide waypoints\v"
       "2. Cache waypoint\v"
@@ -302,12 +303,12 @@ MenuText g_menus[BOT_MENU_TOTAL_MENUS] =
       "8. Set Radius\v\v"
       "9. Next...\v\v"
       "0. Exit"
-   },
+   };
 
    // main waypoint menu (page 2)
+   g_menus[++counter] =
    {
-      BOT_MENU_WAYPOINT_MAIN_PAGE2,
-      0x3ff,
+      BOT_MENU_WAYPOINT_MAIN_PAGE2, 0x3ff,
       "\\yWaypoint Operations (Page 2)\\w\v\v"
       "1. Waypoint stats\v"
       "2. Autowaypoint on/off\v"
@@ -319,12 +320,12 @@ MenuText g_menus[BOT_MENU_TOTAL_MENUS] =
       "8. Noclip cheat on/off\v\v"
       "9. Previous...\v\v"
       "0. Exit"
-   },
+   };
 
    // select waypoint radius menu
+   g_menus[++counter] =
    {
-      BOT_MENU_WAYPOINT_RADIUS,
-      0x3ff,
+      BOT_MENU_WAYPOINT_RADIUS, 0x3ff,
       "\\yWaypoint Radius\\w\v\v"
       "1. SetRadius 0\v"
       "2. SetRadius 8\v"
@@ -336,12 +337,12 @@ MenuText g_menus[BOT_MENU_TOTAL_MENUS] =
       "8. SetRadius 96\v"
       "9. SetRadius 128\v\v"
       "0. Exit"
-   },
+   };
 
    // waypoint add menu
+   g_menus[++counter] =
    {
-      BOT_MENU_WAYPOINT_TYPE,
-      0x3ff,
+      BOT_MENU_WAYPOINT_TYPE, 0x3ff,
       "\\yWaypoint Type\\w\v\v"
       "1. Normal\v"
       "\\r2. Terrorist Important\v"
@@ -353,12 +354,12 @@ MenuText g_menus[BOT_MENU_TOTAL_MENUS] =
       "\\r8. Map Goal\v"
       "\\w9. Jump\v\v"
       "0. Exit"
-   },
+   };
 
    // set waypoint flag menu
+   g_menus[++counter] =
    {
-      BOT_MENU_WAYPOINT_FLAG,
-      0x2ff,
+      BOT_MENU_WAYPOINT_FLAG, 0x2ff,
       "\\yToggle Waypoint Flags\\w\v\v"
       "1. Block with Hostage\v"
       "2. Terrorists Specific\v"
@@ -366,9 +367,10 @@ MenuText g_menus[BOT_MENU_TOTAL_MENUS] =
       "4. Use Elevator\v"
       "5. Sniper Point (\\yFor Camp Points Only!\\w)\v\v"
       "0. Exit"
-   },
+   };
 
    // auto-path max distance
+   g_menus[++counter] =
    {
       BOT_MENU_WAYPOINT_AUTOPATH,
       0x27f,
@@ -381,9 +383,10 @@ MenuText g_menus[BOT_MENU_TOTAL_MENUS] =
       "6. Distance 220\v"
       "7. Distance 250 (Default)\v\v"
       "0. Exit"
-   },
+   };
 
    // path connections
+   g_menus[++counter] =
    {
       BOT_MENU_WAYPOINT_PATH,
       0x207,
@@ -392,33 +395,16 @@ MenuText g_menus[BOT_MENU_TOTAL_MENUS] =
       "2. Incoming Path\v"
       "3. Bidirectional (Both Ways)\v\v"
       "0. Exit"
-   },
+   };
 
-   // kickmenu #1
-   {
-      BOT_MENU_KICK_PAGE_1,
-      0x0,
-      nullptr,
-   },
+   const String &empty = "";
 
-   // kickmenu #2
-   {
-      BOT_MENU_KICK_PAGE_2,
-      0x0,
-      nullptr,
-   },
+   // kick menus
+   g_menus[++counter] = { BOT_MENU_KICK_PAGE_1, 0x0, empty, };
+   g_menus[++counter] = { BOT_MENU_KICK_PAGE_2, 0x0, empty, };
+   g_menus[++counter] = { BOT_MENU_KICK_PAGE_3, 0x0, empty, };
+   g_menus[++counter] = { BOT_MENU_KICK_PAGE_4, 0x0, empty, };
+}
 
-   // kickmenu #3
-   {
-      BOT_MENU_KICK_PAGE_3,
-      0x0,
-      nullptr,
-   },
-
-   // kickmenu #4
-   {
-      BOT_MENU_KICK_PAGE_4,
-      0x0,
-      nullptr,
-   }
-};
+// bot menus
+MenuText g_menus[BOT_MENU_TOTAL_MENUS];

@@ -572,12 +572,14 @@ void BotManager::RemoveMenu (edict_t *ent, int selection)
 
    int validSlots = (selection == 4) ? (1 << 9) : ((1 << 8) | (1 << 9));
 
-   for (int i = ((selection - 1) * 8); i < selection * 8; i++)
+   for (int i = (selection - 1) * 8; i < selection * 8; i++)
    {
-      if (m_bots[i] != nullptr && !engine.IsNullEntity (m_bots[i]->GetEntity ()))
+      const Bot *bot = GetBot (i);
+
+      if (bot != nullptr && (bot->pev->flags & FL_FAKECLIENT))
       {
          validSlots |= 1 << (i - ((selection - 1) * 8));
-         sprintf (buffer, "%s %1.1d. %s%s\n", buffer, i - ((selection - 1) * 8) + 1, STRING (m_bots[i]->pev->netname), engine.GetTeam (m_bots[i]->GetEntity ()) == CT ? " \\y(CT)\\w" : " \\r(T)\\w");
+         sprintf (buffer, "%s %1.1d. %s%s\n", buffer, i - ((selection - 1) * 8) + 1, STRING (bot->pev->netname), bot->m_team == CT ? " \\y(CT)\\w" : " \\r(T)\\w");
       }
       else
          sprintf (buffer, "%s\\d %1.1d. Not a Bot\\w\n", buffer, i - ((selection - 1) * 8) + 1);
@@ -585,32 +587,58 @@ void BotManager::RemoveMenu (edict_t *ent, int selection)
 
    sprintf (tempBuffer, "\\yBots Remove Menu (%d/4):\\w\n\n%s\n%s 0. Back", selection, buffer, (selection == 4) ? "" : " 9. More...\n");
 
+   // force to clear current menu
+   DisplayMenuToClient (ent, BOT_MENU_INVALID);
+
+   auto FindMenu = [] (MenuId id)
+   {
+      int menuIndex = 0;
+
+      for (; menuIndex < ARRAYSIZE_HLSDK (g_menus); menuIndex++)
+      {
+         if (g_menus[menuIndex].id == id)
+            break;
+      }
+      return &g_menus[menuIndex];
+   };
+
+   MenuText *menu = nullptr;
+   const unsigned int slots = validSlots & static_cast <unsigned int> (-1);
+
    switch (selection)
    {
    case 1:
-      g_menus[BOT_MENU_KICK_PAGE_1].slots = validSlots & static_cast <unsigned int> (-1);
-      g_menus[14].text = tempBuffer;
+      menu = FindMenu (BOT_MENU_KICK_PAGE_1);
+
+      menu->slots = slots;
+      menu->text = tempBuffer;
 
       DisplayMenuToClient (ent, BOT_MENU_KICK_PAGE_1);
       break;
 
    case 2:
-      g_menus[BOT_MENU_KICK_PAGE_2].slots = validSlots & static_cast <unsigned int> (-1);
-      g_menus[BOT_MENU_KICK_PAGE_2].text = tempBuffer;
+      menu = FindMenu (BOT_MENU_KICK_PAGE_2);
+
+      menu->slots = slots;
+      menu->text = tempBuffer;
 
       DisplayMenuToClient (ent, BOT_MENU_KICK_PAGE_2);
       break;
 
     case 3:
-      g_menus[BOT_MENU_KICK_PAGE_3].slots = validSlots & static_cast <unsigned int> (-1);
-      g_menus[BOT_MENU_KICK_PAGE_3].text = tempBuffer;
+       menu = FindMenu (BOT_MENU_KICK_PAGE_3);
+
+       menu->slots = slots;
+       menu->text = tempBuffer;
 
       DisplayMenuToClient (ent, BOT_MENU_KICK_PAGE_3);
       break;
 
    case 4:
-      g_menus[BOT_MENU_KICK_PAGE_4].slots = validSlots & static_cast <unsigned int> (-1);
-      g_menus[BOT_MENU_KICK_PAGE_4].text = tempBuffer;
+      menu = FindMenu (BOT_MENU_KICK_PAGE_4);
+
+      menu->slots = slots;
+      menu->text = tempBuffer;
 
       DisplayMenuToClient (ent, BOT_MENU_KICK_PAGE_4);
       break;
@@ -1264,6 +1292,9 @@ void Bot::Kill (void)
 void Bot::Kick (bool keepQuota)
 {
    // this function kick off one bot from the server.
+
+   // clear fakeclient bit immediately
+   pev->flags &= ~FL_FAKECLIENT;
 
    engine.IssueCmd ("kick \"%s\"", STRING (pev->netname));
    engine.CenterPrintf ("Bot '%s' kicked", STRING (pev->netname));

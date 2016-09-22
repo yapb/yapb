@@ -1712,7 +1712,7 @@ void Bot::PurchaseWeapons (void)
 
             else // steam cs buy menu is different from old one
             {
-               if (engine.GetTeam (GetEntity ()) == TERRORIST)
+               if (m_team == TERRORIST)
                   engine.IssueBotCommand (GetEntity (), "menuselect %d", selectedWeapon->newBuySelectT);
                else
                   engine.IssueBotCommand (GetEntity (), "menuselect %d", selectedWeapon->newBuySelectCT);
@@ -2929,7 +2929,7 @@ void Bot::ThinkFrame (void)
          m_voteMap = 0;
       }
    }
-   else if (m_notKilled && m_buyingFinished && !(pev->maxspeed < 10.0f && GetTaskId () != TASK_PLANTBOMB && GetTaskId () != TASK_DEFUSEBOMB) && !yb_freeze_bots.GetBool ())
+   else if (m_notKilled && m_buyingFinished && !(pev->maxspeed < 10.0f && GetTaskId () != TASK_PLANTBOMB && GetTaskId () != TASK_DEFUSEBOMB) && !yb_freeze_bots.GetBool () && !waypoints.HasChanged ())
       botMovement = true;
 
 #ifdef XASH_CSDM
@@ -2955,9 +2955,13 @@ void Bot::PeriodicThink (void)
    m_numFriendsLeft = GetNearbyFriendsNearPosition (pev->origin, 99999.0f);
    m_numEnemiesLeft = GetNearbyEnemiesNearPosition (pev->origin, 99999.0f);
 
-   if (g_bombPlanted && m_team == CT && (pev->origin - waypoints.GetBombPosition ()).GetLength () < 700 && !IsBombDefusing (waypoints.GetBombPosition ()) && !m_hasProgressBar && GetTaskId () != TASK_ESCAPEFROMBOMB)
-      ResetTasks ();
+   if (g_bombPlanted && m_team == CT)
+   {
+      const Vector &bombPosition = waypoints.GetBombPosition ();
 
+         if (!m_hasProgressBar && GetTaskId () != TASK_ESCAPEFROMBOMB  && (pev->origin - bombPosition).GetLength () < 700 && !IsBombDefusing ())
+            ResetTasks ();
+   }
    CheckSpawnTimeConditions ();
 
    extern ConVar yb_chat;
@@ -3559,10 +3563,10 @@ void Bot::RunTask_Camp (void)
          dest.z = 0.0f;
 
          // find a visible waypoint to this direction...
-         // i know this is ugly hack, but i just don't want to break compatiability :)
+         // i know this is ugly hack, but i just don't want to break compatibility :)
          int numFoundPoints = 0;
-         int foundPoints[3];
-         int distanceTab[3];
+         int campPoints[3] = { 0, };
+         int distances[3] = { 0, };
 
          const Vector &dotA = (dest - pev->origin).Normalize2D ();
 
@@ -3574,7 +3578,7 @@ void Bot::RunTask_Camp (void)
 
             const Vector &dotB = (waypoints.GetPath (i)->origin - pev->origin).Normalize2D ();
 
-            if ((dotA | dotB) > 0.9)
+            if ((dotA | dotB) > 0.9f)
             {
                int distance = static_cast <int> ((pev->origin - waypoints.GetPath (i)->origin).GetLength ());
 
@@ -3582,10 +3586,10 @@ void Bot::RunTask_Camp (void)
                {
                   for (int j = 0; j < 3; j++)
                   {
-                     if (distance > distanceTab[j])
+                     if (distance > distances[j])
                      {
-                        distanceTab[j] = distance;
-                        foundPoints[j] = i;
+                        distances[j] = distance;
+                        campPoints[j] = i;
 
                         break;
                      }
@@ -3593,8 +3597,8 @@ void Bot::RunTask_Camp (void)
                }
                else
                {
-                  foundPoints[numFoundPoints] = i;
-                  distanceTab[numFoundPoints] = distance;
+                  campPoints[numFoundPoints] = i;
+                  distances[numFoundPoints] = distance;
 
                   numFoundPoints++;
                }
@@ -3602,7 +3606,7 @@ void Bot::RunTask_Camp (void)
          }
 
          if (--numFoundPoints >= 0)
-            m_camp = waypoints.GetPath (foundPoints[Random.Int (0, numFoundPoints)])->origin;
+            m_camp = waypoints.GetPath (campPoints[Random.Int (0, numFoundPoints)])->origin;
          else
             m_camp = waypoints.GetPath (GetCampAimingWaypoint ())->origin;
       }

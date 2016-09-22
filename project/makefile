@@ -6,123 +6,105 @@
 # Additional exceptions apply. For full license details, see LICENSE.txt or visit:
 #     https://yapb.jeefo.net/license
 #
-# Based on Makefile written by David "BAILOPAN" Anderson.
-#
 
 PROJECT = yapb
-SRC_DIR = ../source
-OBJECTS = $(SRC_DIR)/basecode.cpp	\
-	  $(SRC_DIR)/manager.cpp	\
-	  $(SRC_DIR)/chatlib.cpp	\
-	  $(SRC_DIR)/combat.cpp		\
-	  $(SRC_DIR)/globals.cpp	\
-	  $(SRC_DIR)/engine.cpp		\
-	  $(SRC_DIR)/interface.cpp	\
-	  $(SRC_DIR)/navigate.cpp	\
-	  $(SRC_DIR)/support.cpp	\
-	  $(SRC_DIR)/waypoint.cpp	\
+SOURCES = ../source
+OBJECTS = $(wildcard $(SOURCES)/*.cpp)
 
-C_OPT_FLAGS = -Ofast -DNDEBUG -pipe -fno-strict-aliasing -mtune=generic
-C_DEBUG_FLAGS = -D_DEBUG -DDEBUG -g -ggdb3
+COMPILER_FLAGS = -std=c++11 -m32 -Wall -Werror -Wextra -fno-exceptions -fno-rtti
+LINKER_FLAGS = -m32 -lm -ldl
 
-C_GCC_FLAGS = -fvisibility=hidden
-CPP_GCC_FLAGS = -fvisibility-inlines-hidden
-
-CPP = clang-3.8
-CPP_MAC = o32-clang
-
-LINK =
-INCLUDE = -I../include -I../include/engine
-
-ifeq "$(MAC)" "true"
-	OS = Darwin
-	CPP_MAC = o32-clang
+ifeq "$(SSE_VERSION)" ""
+	COMPILER_SSE_VERSION = 2
 else
-	OS := $(shell uname -s)
+	COMPILER_SSE_VERSION = $(SSE_VERSION)
 endif
-
-ifeq "$(OS)" "Darwin"
-	CPP = $(CPP_MAC)
-	LIB_EXT = dylib
-	CFLAGS += -DOSX -D_OSX -DPOSIX
-	LINK += -dynamiclib -lstdc++ -mmacosx-version-min=10.5 -arch i386
-else
-	LIB_EXT = so
-	CFLAGS += -DLINUX -D_LINUX -DPOSIX
-	LINK += -shared -lsupc++
-endif
-
-LINK += -m32 -lm -ldl
-
-CFLAGS += -msse2 -std=c++11 -m32 -Wall -Werror -Wextra
-CPPFLAGS += -fno-exceptions -fno-rtti
-
-BINARY = $(PROJECT).$(LIB_EXT)
 
 ifeq "$(DEBUG)" "true"
-	BIN_DIR = debug
-	CFLAGS += $(C_DEBUG_FLAGS)
+	COMPILER_FLAGS += -D_DEBUG -DDEBUG -g3
+	BINARY_DIR = debug
 else
-	BIN_DIR = release
-	CFLAGS += $(C_OPT_FLAGS)
+	COMPILER_FLAGS += -DNDEBUG -pipe -Ofast -msse$(COMPILER_SSE_VERSION) -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden
+	BINARY_DIR = release
+endif
 
-	ifneq "$(OS)" "Darwin"
-		LINK += -s
+INCLUDE = -I../include -I../include/engine
+COMPILER = $(CC)
+
+ifeq "$(shell uname -s)" "Darwin"
+	MACOS = true
+else
+	ifeq "$(MACOS)" "true"
+		COMPILER = o32-clang
 	endif
 endif
 
-IS_CLANG := $(shell $(CPP) --version | head -1 | grep clang > /dev/null && echo "1" || echo "0")
-
-ifeq "$(IS_CLANG)" "1"
-	CFLAGS += $(C_GCC_FLAGS) -D__extern_always_inline="extern __always_inline"
-	CPPFLAGS += $(CPP_GCC_FLAGS)
+ifeq "$(MACOS)" "true"
+	LIBRARY_EXT = dylib
+	COMPILER_FLAGS += -DOSX -D_OSX -DPOSIX
+	LINKER_FLAGS += -s -dynamiclib -lstdc++ -mmacosx-version-min=10.5 -arch i386
+else
+	LIBRARY_EXT = so
+	COMPILER_FLAGS += -DLINUX -D_LINUX -DPOSIX
+	LINKER_FLAGS += -shared -lsupc++
 endif
 
-# OS is Linux and not using clang
-ifeq "$(shell expr $(OS) \= Linux \& $(IS_CLANG) \= 0)" "1"
-	LINK += -static-libgcc
+BINARY_OUTPUT = $(PROJECT).$(LIBRARY_EXT)
+
+ifeq ($(findstring clang,$(COMPILER)),clang)
+	COMPILER_FLAGS += -D__extern_always_inline="extern __always_inline"
+	ifeq "$(MACOS)" "false"
+		LINKER_FLAGS += -lgcc_eh
+	endif
+else ifeq ($(findstring gcc,$(COMPILER)),gcc)
+	ifneq "$(MACOS)" "false"
+		LINKER_FLAGS += -static-libgcc
+		COMPILER_FLAGS += -funroll-all-loops
+	endif
+else ifeq ($(findstring icpc,$(COMPILER)),icpc)
+	COMPILER_FLAGS += -funroll-all-loops -no-prec-div -no-inline-min-size -no-inline-max-size -wd11076 -wd11074
+	LINKER_FLAGS += -static-intel -no-intel-extensions
+else
+	$(error Compiler unrecognized. Specify CC.)
 endif
 
-# OS is Linux and using clang
-ifeq "$(shell expr $(OS) \= Linux \& $(IS_CLANG) \= 1)" "1"
-	LINK += -lgcc_eh
-endif
+OBJECTS_BIN := $(OBJECTS:%.cpp=$(BINARY_DIR)/%.o)
 
-OBJ_BIN := $(OBJECTS:%.cpp=$(BIN_DIR)/%.o)
+$(BINARY_DIR)/%.o: %.cpp
+	$(COMPILER) $(INCLUDE) $(COMPILER_FLAGS) -o $(subst $(SOURCES)/,,$@) -c $<
 
-$(BIN_DIR)/%.o: %.cpp
-	$(CPP) $(INCLUDE) $(CFLAGS) $(CPPFLAGS) -o $(subst $(SRC_DIR)/,,$@) -c $<
-
-main:
-	mkdir -p release
-	mkdir -p debug
+compile:
+	mkdir -p $(BINARY_DIR)
 	$(MAKE) $(PROJECT)
 
-$(PROJECT): $(OBJ_BIN)
-	$(CPP) $(INCLUDE) $(subst $(SRC_DIR)/,,$(OBJ_BIN)) $(LINK) -o $(BIN_DIR)/$(BINARY)
-
-debug:
-	mkdir -p debug
-	$(MAKE) main DEBUG=true
+$(PROJECT): $(OBJECTS_BIN)
+	$(COMPILER) $(INCLUDE) $(subst $(SOURCES)/,,$(OBJECTS_BIN)) $(LINKER_FLAGS) -o $(BINARY_DIR)/$(BINARY_OUTPUT)
 
 release:
-	mkdir -p release
-	$(MAKE) main DEBUG=false
+	$(MAKE) compile DEBUG=false
 
-release_osx:
-	mkdir -p release
-	$(MAKE) main OSX=true DEBUG=false
+debug:
+	$(MAKE) compile DEBUG=true
 
-debug_osx:
-	mkdir -p debug
-	$(MAKE) main OSX=true DEBUG=true
+release_macos:
+	$(MAKE) compile MACOS=true DEBUG=false
 
-all_linux: release debug
-all_osx: release_osx debug_osx
-all: all_linux all_osx
+debug_macos:
+	$(MAKE) compile MACOS=true DEBUG=true
 
-default: all
+all_linux:
+	$(MAKE) compile DEBUG=true
+	$(MAKE) compile DEBUG=false
+
+all_macos:
+	$(MAKE) compile MACOS=true DEBUG=false
+	$(MAKE) compile MACOS=true DEBUG=true
+
+all: all_linux all_macos
+default: all_linux
 
 clean:
-	rm -rf release
-	rm -rf debug
+	rm -rf release/*.o
+	rm -rf release/$(BINARY_OUTPUT)
+	rm -rf debug/*.o
+	rm -rf debug/$(BINARY_OUTPUT)

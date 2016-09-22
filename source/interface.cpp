@@ -1236,14 +1236,20 @@ void ClientCommand (edict_t *ent)
             case 6:
             case 7:
                waypoints.Add (selection - 1);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_TYPE);
+
                break;
 
             case 8:
                waypoints.Add (100);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_TYPE);
+
                break;
 
             case 9:
                waypoints.SetLearnJumpWaypoint ();
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_TYPE);
+
                break;
 
             case 10:
@@ -1263,22 +1269,27 @@ void ClientCommand (edict_t *ent)
             {
             case 1:
                waypoints.ToggleFlags (FLAG_NOHOSTAGE);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_FLAG);
                break;
 
             case 2:
                waypoints.ToggleFlags (FLAG_TF_ONLY);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_FLAG);
                break;
 
             case 3:
                waypoints.ToggleFlags (FLAG_CF_ONLY);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_FLAG);
                break;
 
             case 4:
                waypoints.ToggleFlags (FLAG_LIFT);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_FLAG);
                break;
 
             case 5:
                waypoints.ToggleFlags (FLAG_SNIPER);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_FLAG);
                break;
             }
             if (g_gameFlags & GAME_METAMOD)
@@ -1297,11 +1308,15 @@ void ClientCommand (edict_t *ent)
                   engine.IssueCmd ("yapb waypoint off");
                else
                   engine.IssueCmd ("yapb waypoint on");
+
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_MAIN_PAGE1);
                break;
 
             case 2:
                g_waypointOn = true;
                waypoints.CacheWaypoint ();
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_MAIN_PAGE1);
+
                break;
 
             case 3:
@@ -1312,6 +1327,8 @@ void ClientCommand (edict_t *ent)
             case 4:
                g_waypointOn = true;
                waypoints.DeletePath ();
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_MAIN_PAGE1);
+
                break;
 
             case 5:
@@ -1322,6 +1339,8 @@ void ClientCommand (edict_t *ent)
             case 6:
                g_waypointOn = true;
                waypoints.Delete ();
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_MAIN_PAGE1);
+
                break;
 
             case 7:
@@ -1392,6 +1411,8 @@ void ClientCommand (edict_t *ent)
                                     "CT Points: %d - Goal Points: %d\n"
                                     "Rescue Points: %d - Camp Points: %d\n"
                                     "Block Hostage Points: %d - Sniper Points: %d\n", g_numWaypoints, terrPoints, ctPoints, goalPoints, rescuePoints, campPoints, noHostagePoints, sniperPoints);
+
+                  DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_MAIN_PAGE2);
                }
                break;
 
@@ -1401,6 +1422,8 @@ void ClientCommand (edict_t *ent)
                g_autoWaypoint ^= 1;
 
                engine.CenterPrintf ("Auto-Waypoint %s", g_autoWaypoint ? "Enabled" : "Disabled");
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_MAIN_PAGE2);
+
                break;
 
             case 3:
@@ -1413,14 +1436,18 @@ void ClientCommand (edict_t *ent)
                   waypoints.Save ();
                else
                   engine.CenterPrintf ("Waypoint not saved\nThere are errors, see console");
+
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_MAIN_PAGE2);
                break;
 
             case 5:
                waypoints.Save ();
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_MAIN_PAGE2);
                break;
 
             case 6:
                waypoints.Load ();
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_MAIN_PAGE2);
                break;
 
             case 7:
@@ -1428,10 +1455,13 @@ void ClientCommand (edict_t *ent)
                   engine.CenterPrintf ("Nodes works fine");
                else
                   engine.CenterPrintf ("There are errors, see console");
+
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_MAIN_PAGE2);
                break;
 
             case 8:
                engine.IssueCmd ("yapb wp on noclip");
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_MAIN_PAGE2);
                break;
 
             case 9:
@@ -1453,6 +1483,8 @@ void ClientCommand (edict_t *ent)
 
             if ((selection >= 1) && (selection <= 9))
                waypoints.SetRadius (radiusValue[selection - 1]);
+
+            DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_RADIUS);
 
             if (g_gameFlags & GAME_METAMOD)
                RETURN_META (MRES_SUPERCEDE);
@@ -1481,6 +1513,7 @@ void ClientCommand (edict_t *ent)
 
             case 4:
                bots.KillAll ();
+               DisplayMenuToClient (ent, BOT_MENU_MAIN);
                break;
 
             case 10:
@@ -1501,6 +1534,7 @@ void ClientCommand (edict_t *ent)
             {
             case 1:
                bots.AddRandom ();
+               DisplayMenuToClient (ent, BOT_MENU_CONTROL);
                break;
 
             case 2:
@@ -1509,10 +1543,12 @@ void ClientCommand (edict_t *ent)
 
             case 3:
                bots.RemoveRandom ();
+               DisplayMenuToClient (ent, BOT_MENU_CONTROL);
                break;
 
             case 4:
                bots.RemoveAll ();
+               DisplayMenuToClient (ent, BOT_MENU_CONTROL);
                break;
 
             case 5:
@@ -1550,6 +1586,7 @@ void ClientCommand (edict_t *ent)
                extern ConVar yb_debug;
                yb_debug.SetInt (yb_debug.GetInt () ^ 1);
 
+               DisplayMenuToClient (ent, BOT_MENU_FEATURES);
                break;
 
             case 5:
@@ -1596,16 +1633,17 @@ void ClientCommand (edict_t *ent)
                      }
                      else if (selection == 2)
                         bot->ResetDoubleJumpState ();
-
-                     break;
                   }
                }
+               DisplayMenuToClient (ent, BOT_MENU_COMMANDS);
                break;
 
             case 3:
             case 4:
                if (FindNearestPlayer (reinterpret_cast <void **> (&bot), ent, 300.0f, true, true, true))
                   bot->DiscardWeaponForUser (ent, selection == 4 ? false : true);
+
+               DisplayMenuToClient (ent, BOT_MENU_COMMANDS);
                break;
 
             case 10:
@@ -1618,7 +1656,7 @@ void ClientCommand (edict_t *ent)
 
             return;
          }
-         else if (client->menu ==BOT_MENU_WAYPOINT_AUTOPATH)
+         else if (client->menu == BOT_MENU_WAYPOINT_AUTOPATH)
          {
             DisplayMenuToClient (ent, BOT_MENU_INVALID); // reset menu display
 
@@ -1631,6 +1669,8 @@ void ClientCommand (edict_t *ent)
                engine.CenterPrintf ("AutoPath disabled");
             else
                engine.CenterPrintf ("AutoPath maximum distance set to %.2f", g_autoPathDistance);
+
+            DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_AUTOPATH);
 
             if (g_gameFlags & GAME_METAMOD)
                RETURN_META (MRES_SUPERCEDE);
@@ -1645,14 +1685,17 @@ void ClientCommand (edict_t *ent)
             {
             case 1:
                waypoints.CreatePath (CONNECTION_OUTGOING);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_PATH);
                break;
 
             case 2:
                waypoints.CreatePath (CONNECTION_INCOMING);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_PATH);
                break;
 
             case 3:
                waypoints.CreatePath (CONNECTION_BOTHWAYS);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_PATH);
                break;
 
             case 10:
@@ -1847,6 +1890,7 @@ void ClientCommand (edict_t *ent)
             case 6:
             case 7:
                bots.SetWeaponMode (selection);
+               DisplayMenuToClient (ent, BOT_MENU_WEAPON_MODE);
                break;
 
             case 10:
@@ -1873,6 +1917,7 @@ void ClientCommand (edict_t *ent)
             case 7:
             case 8:
                bots.GetBot (selection - 1)->Kick ();
+               bots.RemoveMenu (ent, 1);
                break;
 
             case 9:
@@ -1903,6 +1948,7 @@ void ClientCommand (edict_t *ent)
             case 7:
             case 8:
                bots.GetBot (selection + 8 - 1)->Kick ();
+               bots.RemoveMenu (ent, 2);
                break;
 
             case 9:
@@ -1933,6 +1979,7 @@ void ClientCommand (edict_t *ent)
             case 7:
             case 8:
                bots.GetBot (selection + 16 - 1)->Kick ();
+               bots.RemoveMenu (ent, 3);
                break;
 
             case 9:
@@ -1963,6 +2010,7 @@ void ClientCommand (edict_t *ent)
             case 7:
             case 8:
                bots.GetBot (selection + 24 - 1)->Kick ();
+               bots.RemoveMenu (ent, 4);
                break;
 
             case 10:

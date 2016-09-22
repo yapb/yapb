@@ -22,7 +22,7 @@ before_script:
   - export PATH=$PATH:/tmp/osxcross/target/bin
   - wget https://yapb.jeefo.net/ci/scripts/gitrev.sh && chmod a+x ./gitrev.sh && ./gitrev.sh
 script:
-  - cd project && make all
+  - cd project && CC=clang-3.8 make all
 after_success:
   - curl --ftp-create-dirs -T ./release/yapb.so -u $FTP_USER:$FTP_PASS ftp://$FTP_HOST/project/release/yapb.so
   - curl --ftp-create-dirs -T ./debug/yapb.so -u $FTP_USER:$FTP_PASS ftp://$FTP_HOST/project/debug/yapb.so

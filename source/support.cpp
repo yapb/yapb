@@ -106,6 +106,9 @@ void DisplayMenuToClient (edict_t *ent, MenuId menu)
    // make menus looks like we need only once
    if (!s_menusParsed)
    {
+      extern void SetupBotMenus (void);
+      SetupBotMenus ();
+
       for (int i = 0; i < ARRAYSIZE_HLSDK (g_menus); i++)
       {
          auto parsed = &g_menus[i];
