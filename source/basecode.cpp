@@ -2959,8 +2959,8 @@ void Bot::PeriodicThink (void)
    {
       const Vector &bombPosition = waypoints.GetBombPosition ();
 
-         if (!m_hasProgressBar && GetTaskId () != TASK_ESCAPEFROMBOMB  && (pev->origin - bombPosition).GetLength () < 700 && !IsBombDefusing ())
-            ResetTasks ();
+      if (!m_hasProgressBar && GetTaskId () != TASK_ESCAPEFROMBOMB && (pev->origin - bombPosition).GetLength () < 700 && !IsBombDefusing (bombPosition))
+         ResetTasks ();
    }
    CheckSpawnTimeConditions ();
 
