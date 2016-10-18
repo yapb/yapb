@@ -24,6 +24,8 @@ ConVar yb_difficulty ("yb_difficulty", "4");
 ConVar yb_latency_display ("yb_latency_display", "2");
 ConVar yb_avatar_display ("yb_avatar_display", "1");
 
+ConVar mp_limitteams ("mp_limitteams", nullptr, VT_NOREGISTER);
+
 BotManager::BotManager (void)
 {
    // this is a bot manager class constructor
@@ -128,17 +130,24 @@ BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int
       engine.CenterPrintf ("Waypoints have been changed. Load waypoints again...");
       return BOT_RESULT_NAV_ERROR;
    }
-
-   if (difficulty < 0 || difficulty > 4)
-      difficulty = yb_difficulty.GetInt ();
+   else if (team != -1 && IsTeamStacked (team - 1))
+   {
+      engine.CenterPrintf ("Desired team is stacked. Unable to proceed with bot creation");
+      return BOT_RESULT_TEAM_STACKED;
+   }
 
    if (difficulty < 0 || difficulty > 4)
    {
-      difficulty = Random.Int (3, 4);
-      yb_difficulty.SetInt (difficulty);
+      difficulty = yb_difficulty.GetInt ();
+
+      if (difficulty < 0 || difficulty > 4)
+      {
+         difficulty = Random.Int (3, 4);
+         yb_difficulty.SetInt (difficulty);
+      }
    }
 
-   if (personality < 0 || personality > 2)
+   if (personality < PERSONALITY_NORMAL || personality > PERSONALITY_CAREFUL)
    {
       if (Random.Int (0, 100) < 50)
          personality = PERSONALITY_NORMAL;
@@ -437,6 +446,10 @@ void BotManager::MaintainBotQuota (void)
       {
          m_creationTab.RemoveAll (); // maximum players reached, so set quota to maximum players
          yb_quota.SetInt (GetBotsNum ());
+      }
+      else if (callResult == BOT_RESULT_TEAM_STACKED)
+      {
+         engine.Printf ("Could not add bot to the game: Team is stacked (to disable this check, set mp_limitteams and mp_autoteambalance to zero and restart the round)");
       }
       m_maintainTime = engine.Time () + 0.20f;
    }
@@ -934,6 +947,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    m_forceRadio = false;
 
    m_startAction = GSM_IDLE;
+   m_retryJoin = 0;
    m_moneyAmount = 0;
    m_logotypeIndex = Random.Int (0, 9);
 
@@ -1068,6 +1082,26 @@ int BotManager::GetHumansJoinedTeam (void)
    }
    return count;
 }
+
+bool BotManager::IsTeamStacked (int team)
+{
+   int teamLimit = mp_limitteams.GetInt ();
+
+   if (!teamLimit)
+      return false;
+
+   int teamCount[SPECTATOR] = { 0, };
+
+   for (int i = 0; i < engine.MaxClients (); i++)
+   {
+      const Client &client = g_clients[i];
+
+      if ((client.flags & CF_USED) && ((client.team == TERRORIST) || client.team == CT))
+         teamCount[client.team]++;
+   }
+   return teamCount[team] + 1 > teamCount[team == CT ? TERRORIST : CT] + teamLimit;
+}
+
 
 void Bot::NewRound (void)
 {     
@@ -1326,6 +1360,24 @@ void Bot::StartGame (void)
    if (g_gameFlags & GAME_LEGACY)
       pev->button |= IN_ATTACK;
 
+   // check if something has assigned team to us
+   else if (m_team == TERRORIST || m_team == CT)
+      m_notStarted = false;
+
+   // if bot was unable to join team, and no menus popups, check for stacked team
+   if (m_startAction == GSM_IDLE && ++m_retryJoin > 2)
+   {
+      if (bots.IsTeamStacked (m_wantedTeam - 1))
+      {
+         m_retryJoin = 0;
+
+         engine.Printf ("Could not add bot to the game: Team is stacked (to disable this check, set mp_limitteams and mp_autoteambalance to zero and restart the round).");
+         Kick ();
+
+         return;
+      }
+   }
+
    // handle counter-strike stuff here...
    if (m_startAction == GSM_TEAM_SELECT)
    {
@@ -1348,16 +1400,11 @@ void Bot::StartGame (void)
    {
       m_startAction = GSM_IDLE;  // switch back to idle
 
-      if (g_gameFlags & GAME_CZERO) // czero has spetsnaz and militia skins
-      {
-         if (m_wantedClass < 1 || m_wantedClass > 5)
-            m_wantedClass = Random.Int (1, 5); //  use random if invalid
-      }
-      else
-      {
-         if (m_wantedClass < 1 || m_wantedClass > 4)
-            m_wantedClass = Random.Int (1, 4); // use random if invalid
-      }
+      // czero has additional models
+      int maxChoice = (g_gameFlags & GAME_CZERO) ? 5 : 4;
+
+      if (m_wantedClass < 1 || m_wantedClass > maxChoice)
+         m_wantedClass = Random.Int (1, maxChoice); // use random if invalid
 
       // select the class the bot wishes to use...
       engine.IssueBotCommand (GetEntity (), "menuselect %d", m_wantedClass);

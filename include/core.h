@@ -157,7 +157,8 @@ enum BotCreationResult
 {
    BOT_RESULT_CREATED,
    BOT_RESULT_MAX_PLAYERS_REACHED,
-   BOT_RESULT_NAV_ERROR
+   BOT_RESULT_NAV_ERROR,
+   BOT_RESULT_TEAM_STACKED
 };
 
 // radio messages
@@ -1098,7 +1099,9 @@ public:
    int m_numEnemiesLeft; // number of enemies alive left on map
    int m_numFriendsLeft; // number of friend alive left on map
 
+   int m_retryJoin; // retry count for chosing team/class
    int m_startAction; // team/class selection state
+
    bool m_notKilled; // has the player been killed or has he just respawned
    bool m_notStarted; // team/class not chosen yet
 
@@ -1294,6 +1297,7 @@ public:
   ~BotManager (void);
 
    bool IsEcoValid (int team) { return m_economicsGood[team]; }
+   bool IsTeamStacked (int team);
 
    int GetLastWinner (void) const { return m_lastWinner; }
    void SetLastWinner (int winner) { m_lastWinner = winner; }

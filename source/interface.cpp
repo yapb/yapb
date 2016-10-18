@@ -1548,7 +1548,6 @@ void ClientCommand (edict_t *ent)
 
             case 4:
                bots.RemoveAll ();
-               DisplayMenuToClient (ent, BOT_MENU_CONTROL);
                break;
 
             case 5:
