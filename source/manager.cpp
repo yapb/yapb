@@ -450,6 +450,9 @@ void BotManager::MaintainBotQuota (void)
       else if (callResult == BOT_RESULT_TEAM_STACKED)
       {
          engine.Printf ("Could not add bot to the game: Team is stacked (to disable this check, set mp_limitteams and mp_autoteambalance to zero and restart the round)");
+
+         m_creationTab.RemoveAll ();
+         yb_quota.SetInt (GetBotsNum ());
       }
       m_maintainTime = engine.Time () + 0.20f;
    }
@@ -478,9 +481,9 @@ void BotManager::MaintainBotQuota (void)
       // quota mode
       char mode = yb_quota_mode.GetString ()[0];
 
-      if (mode == 'f') // fill
+      if (mode == 'f' || mode == 'F') // fill
          desiredCount = A_max (0, desiredCount - numHumans);
-      else if (mode == 'm') // match
+      else if (mode == 'm' || mode == 'M') // match
          desiredCount = A_max (0, yb_quota.GetInt () * numHumans);
 
       desiredCount = A_min (desiredCount, engine.MaxClients () - (numHumans + (yb_autovacate.GetBool () ? 1 : 0)));
@@ -946,7 +949,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    m_notStarted = true;  // hasn't joined game yet
    m_forceRadio = false;
 
-   m_startAction = GSM_IDLE;
+   m_startAction = GAME_MSG_NONE;
    m_retryJoin = 0;
    m_moneyAmount = 0;
    m_logotypeIndex = Random.Int (0, 9);
@@ -1030,7 +1033,9 @@ Bot::~Bot (void)
 {
    // this is bot destructor
 
+   EnableChatterIcon (false);
    ReleaseUsedName ();
+
    DeleteSearchNodes ();
    ResetTasks ();
 }
@@ -1096,12 +1101,11 @@ bool BotManager::IsTeamStacked (int team)
    {
       const Client &client = g_clients[i];
 
-      if ((client.flags & CF_USED) && ((client.team == TERRORIST) || client.team == CT))
-         teamCount[client.team]++;
+      if ((client.flags & CF_USED) && client.team2 != SPECTATOR)
+         teamCount[client.team2]++;
    }
    return teamCount[team] + 1 > teamCount[team == CT ? TERRORIST : CT] + teamLimit;
 }
-
 
 void Bot::NewRound (void)
 {     
@@ -1300,13 +1304,13 @@ void Bot::NewRound (void)
 
    // clear its message queue
    for (i = 0; i < 32; i++)
-      m_messageQueue[i] = GSM_IDLE;
+      m_messageQueue[i] = GAME_MSG_NONE;
 
    m_actMessageIndex = 0;
    m_pushMessageIndex = 0;
 
    // and put buying into its message queue
-   PushMessageQueue (GSM_BUY_STUFF);
+   PushMessageQueue (GAME_MSG_PURCHASE);
    PushTask (TASK_NORMAL, TASKPRI_NORMAL, -1, 0.0f, true);
 
    if (Random.Int (0, 100) < 50)
@@ -1365,7 +1369,7 @@ void Bot::StartGame (void)
       m_notStarted = false;
 
    // if bot was unable to join team, and no menus popups, check for stacked team
-   if (m_startAction == GSM_IDLE && ++m_retryJoin > 2)
+   if (m_startAction == GAME_MSG_NONE && ++m_retryJoin > 2)
    {
       if (bots.IsTeamStacked (m_wantedTeam - 1))
       {
@@ -1379,9 +1383,9 @@ void Bot::StartGame (void)
    }
 
    // handle counter-strike stuff here...
-   if (m_startAction == GSM_TEAM_SELECT)
+   if (m_startAction == GAME_MSG_TEAM_SELECT)
    {
-      m_startAction = GSM_IDLE;  // switch back to idle
+      m_startAction = GAME_MSG_NONE;  // switch back to idle
       
       char teamJoin = yb_join_team.GetString ()[0];
 
@@ -1396,9 +1400,9 @@ void Bot::StartGame (void)
       // select the team the bot wishes to join...
       engine.IssueBotCommand (GetEntity (), "menuselect %d", m_wantedTeam);
    }
-   else if (m_startAction == GSM_CLASS_SELECT)
+   else if (m_startAction == GAME_MSG_CLASS_SELECT)
    {
-      m_startAction = GSM_IDLE;  // switch back to idle
+      m_startAction = GAME_MSG_NONE;  // switch back to idle
 
       // czero has additional models
       int maxChoice = (g_gameFlags & GAME_CZERO) ? 5 : 4;

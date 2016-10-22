@@ -12,7 +12,6 @@
 // console vars
 ConVar yb_password ("yb_password", "", VT_PASSWORD);
 ConVar yb_password_key ("yb_password_key", "_ybpw");
-
 ConVar yb_language ("yb_language", "en");
 ConVar yb_version ("yb_version", PRODUCT_VERSION, VT_READONLY);
 
@@ -1513,7 +1512,6 @@ void ClientCommand (edict_t *ent)
 
             case 4:
                bots.KillAll ();
-               DisplayMenuToClient (ent, BOT_MENU_MAIN);
                break;
 
             case 10:
@@ -2262,17 +2260,25 @@ void StartFrame (void)
 
       if (g_gameFlags & GAME_METAMOD)
       {
-         static cvar_t *csdm_active;
-         static cvar_t *mp_freeforall;
+         static auto dmActive = g_engfuncs.pfnCVarGetPointer ("csdm_active");
+         static auto freeForAll = g_engfuncs.pfnCVarGetPointer ("mp_freeforall");
 
-         if (csdm_active == nullptr)
-            csdm_active = CVAR_GET_POINTER ("csdm_active");
+         if (dmActive && freeForAll)
+         {
+            if (dmActive->value > 0.0f)
+            {
+               g_gameFlags |= GAME_CSDM;
 
-         if (mp_freeforall == nullptr)
-            mp_freeforall = CVAR_GET_POINTER ("mp_freeforall");
+               if (freeForAll->value > 0.0f)
+                  g_gameFlags |= GAME_CSDM_FFA;
+               else if (g_gameFlags & GAME_CSDM_FFA)
+                  g_gameFlags &= ~GAME_CSDM_FFA;
+            }
+            else if (g_gameFlags & GAME_CSDM)
+               g_gameFlags &= ~GAME_CSDM;
 
-         if (csdm_active != nullptr && csdm_active->value > 0)
-            yb_csdm_mode.SetInt (mp_freeforall != nullptr && mp_freeforall->value > 0 ? 2 : 1);
+            engine.Printf ("CSDM = %s (FFA = %s)", g_gameFlags & GAME_CSDM ? "true" : "false", g_gameFlags & GAME_CSDM_FFA ? "true" : "false");
+         }
       }
       g_timePerSecondUpdate = engine.Time () + 1.0f;
    }

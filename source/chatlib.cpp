@@ -416,7 +416,7 @@ bool Bot::RepliesToPlayer (void)
          if (Random.Int (1, 100) < m_sayTextBuffer.chatProbability + Random.Int (2, 10) && ParseChat (reinterpret_cast <char *> (&text)))
          {
             PrepareChatMessage (text);
-            PushMessageQueue (GSM_SAY);
+            PushMessageQueue (GAME_MSG_SAY_CMD);
 
             m_sayTextBuffer.entityIndex = -1;
             m_sayTextBuffer.sayText[0] = 0x0;

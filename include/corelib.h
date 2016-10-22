@@ -55,13 +55,14 @@ static inline int A_stricmp (const char *str1, const char *str2, int length = -1
    int iter = 0;
 
    if (length == -1)
-      length = strlen (str2);
+      length = strlen (str1);
 
    for (; iter < length; iter++)
    {
       if ((str1[iter] | 32) != (str2[iter] | 32))
          break;
    }
+
    if (iter != length)
       return 1;
 

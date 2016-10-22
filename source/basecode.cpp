@@ -49,7 +49,7 @@ void Bot::PushMessageQueue (int message)
 {
    // this function put a message into the bot message queue
 
-   if (message == GSM_SAY)
+   if (message == GAME_MSG_SAY_CMD)
    {
       // notify other bots of the spoken text otherwise, bots won't respond to other bots (network messages aren't sent from bots)
       int entityIndex = GetIndex ();
@@ -108,11 +108,13 @@ bool Bot::ItemIsVisible (const Vector &destination, const char *itemName)
    // check if line of sight to object is not blocked (i.e. visible)
    if (tr.flFraction != 1.0f)
    {
+      auto classname = STRING (tr.pHit->v.classname);
+
       // check for standard items
-      if (strcmp (STRING (tr.pHit->v.classname), itemName) == 0)
+      if (strcmp (classname, itemName) == 0)
          return true;
 
-      if (tr.flFraction > 0.98f && (yb_csdm_mode.GetBool () && strncmp (STRING (tr.pHit->v.classname), "csdmw_", 6) == 0))
+      if (tr.flFraction > 0.98f && ((g_gameFlags & GAME_CSDM) && strncmp (classname, "csdmw_", 6) == 0))
          return true;
 
       return false;
@@ -1061,7 +1063,7 @@ void Bot::RadioMessage (int message)
       m_forceRadio = false;
 
    m_radioSelect = message;
-   PushMessageQueue (GSM_RADIO);
+   PushMessageQueue (GAME_MSG_RADIO);
 }
 
 void Bot::ChatterMessage (int message)
@@ -1085,7 +1087,7 @@ void Bot::ChatterMessage (int message)
       return;
 
    m_radioSelect = message;
-   PushMessageQueue (GSM_RADIO);
+   PushMessageQueue (GAME_MSG_RADIO);
 }
 
 void Bot::CheckMessageQueue (void)
@@ -1100,22 +1102,22 @@ void Bot::CheckMessageQueue (void)
    int state = GetMessageQueue ();
 
    // nothing to do?
-   if (state == GSM_IDLE || (state == GSM_RADIO && yb_csdm_mode.GetInt () == 2))
+   if (state == GAME_MSG_NONE || (state == GAME_MSG_RADIO && (g_gameFlags & GAME_CSDM_FFA)))
       return;
 
    switch (state)
    {
-   case GSM_BUY_STUFF: // general buy message
+   case GAME_MSG_PURCHASE: // general buy message
 
       // buy weapon
       if (m_nextBuyTime > engine.Time ())
       {
          // keep sending message
-         PushMessageQueue (GSM_BUY_STUFF);
+         PushMessageQueue (GAME_MSG_PURCHASE);
          return;
       }
 
-      if (!m_inBuyZone || yb_csdm_mode.GetBool ())
+      if (!m_inBuyZone || (g_gameFlags & GAME_CSDM))
       {
          m_buyPending = true;
          m_buyingFinished = true;
@@ -1164,12 +1166,12 @@ void Bot::CheckMessageQueue (void)
          return;
       }
 
-      PushMessageQueue (GSM_IDLE);
+      PushMessageQueue (GAME_MSG_NONE);
       PurchaseWeapons ();
 
       break;
 
-   case GSM_RADIO: // general radio message issued
+   case GAME_MSG_RADIO: // general radio message issued
      // if last bot radio command (global) happened just a second ago, delay response
       if (g_lastRadioTime[m_team] + 1.0f < engine.Time ())
       {
@@ -1294,16 +1296,16 @@ void Bot::CheckMessageQueue (void)
          g_lastRadioTime[m_team] = engine.Time (); // store last radio usage
       }
       else
-         PushMessageQueue (GSM_RADIO);
+         PushMessageQueue (GAME_MSG_RADIO);
       break;
 
    // team independent saytext
-   case GSM_SAY:
+   case GAME_MSG_SAY_CMD:
       SayText (m_tempStrings);
       break;
 
    // team dependent saytext
-   case GSM_SAY_TEAM:
+   case GAME_MSG_SAY_TEAM_MSG:
       TeamSayText (m_tempStrings);
       break;
 
@@ -1773,7 +1775,7 @@ void Bot::PurchaseWeapons (void)
    }
 
    m_buyState++;
-   PushMessageQueue (GSM_BUY_STUFF);
+   PushMessageQueue (GAME_MSG_PURCHASE);
 }
 
 TaskItem *MaxDesire (TaskItem *first, TaskItem *second)
@@ -2987,7 +2989,7 @@ void Bot::PeriodicThink (void)
          if (!sayBufferExists)
          {
             PrepareChatMessage (pickedPhrase);
-            PushMessageQueue (GSM_SAY);
+            PushMessageQueue (GAME_MSG_SAY_CMD);
 
             // add to ignore list
             m_sayTextBuffer.lastUsedSentences.Push (pickedPhrase);
@@ -3060,7 +3062,7 @@ void Bot::RunTask_Normal (void)
       }
 
       // reached waypoint is a camp waypoint
-      if ((m_currentPath->flags & FLAG_CAMP) && !yb_csdm_mode.GetBool () && yb_camping_allowed.GetBool ())
+      if ((m_currentPath->flags & FLAG_CAMP) && !(g_gameFlags & GAME_CSDM) && yb_camping_allowed.GetBool ())
       {
          // check if bot has got a primary weapon and hasn't camped before
          if (HasPrimaryWeapon () && m_timeCamping + 10.0f < engine.Time () && !HasHostage ())
@@ -5286,7 +5288,7 @@ void Bot::GetDamage (edict_t *inflictor, int damage, int armor, int bits)
             m_seeEnemyTime = engine.Time ();
          }
 
-         if (!yb_csdm_mode.GetBool ())
+         if (!(g_gameFlags & GAME_CSDM))
             CollectExperienceData (inflictor, armor + damage);
       }
    }
@@ -5488,7 +5490,7 @@ void Bot::ChatMessage (int type, bool isTeamSay)
       return;
 
    PrepareChatMessage (const_cast <char *> (pickedPhrase));
-   PushMessageQueue (isTeamSay ? GSM_SAY_TEAM : GSM_SAY);
+   PushMessageQueue (isTeamSay ? GAME_MSG_SAY_TEAM_MSG : GAME_MSG_SAY_CMD);
 }
 
 void Bot::DiscardWeaponForUser (edict_t *user, bool discardC4)
@@ -5521,7 +5523,7 @@ void Bot::DiscardWeaponForUser (edict_t *user, bool discardC4)
          m_buyingFinished = false;
          m_buyState = BUYSTATE_PRIMARY_WEAPON;
 
-         PushMessageQueue (GSM_BUY_STUFF);
+         PushMessageQueue (GAME_MSG_PURCHASE);
          m_nextBuyTime = engine.Time ();
       }
    }
@@ -5899,7 +5901,7 @@ void Bot::ReactOnSound (void)
    }
    edict_t *player = nullptr;
 
-   if (hearEnemyIndex >= 0 && g_clients[hearEnemyIndex].team != m_team && yb_csdm_mode.GetInt () != 2)
+   if (hearEnemyIndex >= 0 && g_clients[hearEnemyIndex].team != m_team && !(g_gameFlags & GAME_CSDM_FFA))
       player = g_clients[hearEnemyIndex].ent;
 
    // did the bot hear someone ?
@@ -5995,7 +5997,7 @@ void Bot::EquipInBuyzone (int buyState)
       m_buyState = buyState;
 
       // push buy message
-      PushMessageQueue (GSM_BUY_STUFF);
+      PushMessageQueue (GAME_MSG_PURCHASE);
 
       m_nextBuyTime = engine.Time ();
       m_lastEquipTime = engine.Time ();

@@ -631,12 +631,12 @@ void Engine::ProcessMessageCapture (void *ptr)
          switch (intVal)
          {
          case VMS_TEAM:
-            bot->m_startAction = GSM_TEAM_SELECT;
+            bot->m_startAction = GAME_MSG_TEAM_SELECT;
             break;
 
          case VMS_TF:
          case VMS_CT:
-            bot->m_startAction = GSM_CLASS_SELECT;
+            bot->m_startAction = GAME_MSG_CLASS_SELECT;
             break;
          }
       }
@@ -649,21 +649,21 @@ void Engine::ProcessMessageCapture (void *ptr)
          break;
 
       if (strcmp (strVal, "#Team_Select") == 0) // team select menu?
-         bot->m_startAction = GSM_TEAM_SELECT;
+         bot->m_startAction = GAME_MSG_TEAM_SELECT;
       else if (strcmp (strVal, "#Team_Select_Spect") == 0) // team select menu?
-         bot->m_startAction = GSM_TEAM_SELECT;
+         bot->m_startAction = GAME_MSG_TEAM_SELECT;
       else if (strcmp (strVal, "#IG_Team_Select_Spect") == 0) // team select menu?
-         bot->m_startAction = GSM_TEAM_SELECT;
+         bot->m_startAction = GAME_MSG_TEAM_SELECT;
       else if (strcmp (strVal, "#IG_Team_Select") == 0) // team select menu?
-         bot->m_startAction = GSM_TEAM_SELECT;
+         bot->m_startAction = GAME_MSG_TEAM_SELECT;
       else if (strcmp (strVal, "#IG_VIP_Team_Select") == 0) // team select menu?
-         bot->m_startAction = GSM_TEAM_SELECT;
+         bot->m_startAction = GAME_MSG_TEAM_SELECT;
       else if (strcmp (strVal, "#IG_VIP_Team_Select_Spect") == 0) // team select menu?
-         bot->m_startAction = GSM_TEAM_SELECT;
+         bot->m_startAction = GAME_MSG_TEAM_SELECT;
       else if (strcmp (strVal, "#Terrorist_Select") == 0) // T model select?
-         bot->m_startAction = GSM_CLASS_SELECT;
+         bot->m_startAction = GAME_MSG_CLASS_SELECT;
       else if (strcmp (strVal, "#CT_Select") == 0) // CT model select menu?
-         bot->m_startAction = GSM_CLASS_SELECT;
+         bot->m_startAction = GAME_MSG_CLASS_SELECT;
 
       break;
 
@@ -1043,7 +1043,7 @@ void Engine::ProcessMessageCapture (void *ptr)
             else
                client.team2 = SPECTATOR;
 
-            if (yb_csdm_mode.GetInt () == 2)
+            if (g_gameFlags & GAME_CSDM_FFA)
                client.team = playerIndex;
             else
                client.team = client.team2;

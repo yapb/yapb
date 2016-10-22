@@ -60,8 +60,10 @@ enum GameFlags
    GAME_MOBILITY = (1 << 4), // additional flag that bot is running on android (additional flag)
    GAME_OFFICIAL_CSBOT = (1 << 5), // additional flag that indicates official cs bots are in game
    GAME_METAMOD = (1 << 6), // game running under metamod
-   GAME_SUPPORT_SVC_PINGS = (1 << 7), // on that game version we can fake bots pings
-   GAME_SUPPORT_BOT_VOICE = (1 << 8) // on that game version we can use chatter
+   GAME_CSDM = (1 << 7), // csdm mod currently in use
+   GAME_CSDM_FFA = (1 << 8), // csdm mod with ffa mode
+   GAME_SUPPORT_SVC_PINGS = (1 << 9), // on that game version we can fake bots pings
+   GAME_SUPPORT_BOT_VOICE = (1 << 10) // on that game version we can use chatter
 };
 
 // bot menu ids
@@ -121,6 +123,12 @@ enum Personality
    PERSONALITY_NORMAL = 0,
    PERSONALITY_RUSHER,
    PERSONALITY_CAREFUL
+};
+
+// bot difficulties
+enum Difficulty
+{
+
 };
 
 // collision states
@@ -423,15 +431,15 @@ enum WaypointDownloadError
 };
 
 // game start messages for counter-strike...
-enum GameStartMessage
+enum GameMessage
 {
-   GSM_IDLE = 1,
-   GSM_TEAM_SELECT = 2,
-   GSM_CLASS_SELECT = 3,
-   GSM_BUY_STUFF = 100,
-   GSM_RADIO = 200,
-   GSM_SAY = 10000,
-   GSM_SAY_TEAM = 10001
+   GAME_MSG_NONE = 1,
+   GAME_MSG_TEAM_SELECT = 2,
+   GAME_MSG_CLASS_SELECT = 3,
+   GAME_MSG_PURCHASE = 100,
+   GAME_MSG_RADIO = 200,
+   GAME_MSG_SAY_CMD = 10000,
+   GAME_MSG_SAY_TEAM_MSG = 10001
 };
 
 // sensing states
@@ -1531,7 +1539,6 @@ extern const char *FormatBuffer (const char *format, ...);
 // very global convars
 extern ConVar yb_jasonmode;
 extern ConVar yb_communication_type;
-extern ConVar yb_csdm_mode;
 extern ConVar yb_ignore_enemies;
 
 #include <globals.h>

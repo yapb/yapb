@@ -11,7 +11,6 @@
 
 ConVar yb_shoots_thru_walls ("yb_shoots_thru_walls", "2");
 ConVar yb_ignore_enemies ("yb_ignore_enemies", "0");
-ConVar yb_csdm_mode ("yb_csdm_mode", "0");
 ConVar yb_check_enemy_rendering ("yb_check_enemy_rendering", "0");
 
 ConVar mp_friendlyfire ("mp_friendlyfire", nullptr, VT_NOREGISTER);
@@ -559,7 +558,7 @@ float Bot::GetZOffset (float distance)
 bool Bot::IsFriendInLineOfFire (float distance)
 {
    // bot can't hurt teammates, if friendly fire is not enabled...
-   if (!mp_friendlyfire.GetBool () || yb_csdm_mode.GetInt () > 0)
+   if (!mp_friendlyfire.GetBool () || (g_gameFlags & GAME_CSDM))
       return false;
 
    MakeVectors (pev->v_angle);
@@ -1470,7 +1469,7 @@ void Bot::AttachToUser (void)
 void Bot::CommandTeam (void)
 {
    // prevent spamming
-   if (m_timeTeamOrder > engine.Time () + 2 || yb_csdm_mode.GetInt () == 2 || yb_communication_type.GetInt () == 0)
+   if (m_timeTeamOrder > engine.Time () + 2.0f || (g_gameFlags & GAME_CSDM_FFA) || !yb_communication_type.GetInt ())
       return;
 
    bool memberNear = false;
