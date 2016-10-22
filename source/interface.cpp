@@ -2276,8 +2276,6 @@ void StartFrame (void)
             }
             else if (g_gameFlags & GAME_CSDM)
                g_gameFlags &= ~GAME_CSDM;
-
-            engine.Printf ("CSDM = %s (FFA = %s)", g_gameFlags & GAME_CSDM ? "true" : "false", g_gameFlags & GAME_CSDM_FFA ? "true" : "false");
          }
       }
       g_timePerSecondUpdate = engine.Time () + 1.0f;
