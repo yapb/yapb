@@ -10,7 +10,7 @@
 #include <core.h>
 
 ConVar yb_autovacate ("yb_autovacate", "1");
-ConVar yb_autovacate_smart_kick ("yb_autovacate_smart_kick", "0");
+ConVar yb_autovacate_smart_kick ("yb_autovacate_smart_kick", "1");
 
 ConVar yb_quota ("yb_quota", "0", VT_NORMAL);
 ConVar yb_quota_mode ("yb_quota_mode", "normal");
@@ -1331,11 +1331,16 @@ void Bot::Kick (bool keepQuota)
 {
    // this function kick off one bot from the server.
 
+   auto username = STRING (pev->netname);
+
+   if (!(pev->flags & FL_FAKECLIENT) || IsNullString (username))
+      return;
+
    // clear fakeclient bit immediately
    pev->flags &= ~FL_FAKECLIENT;
 
-   engine.IssueCmd ("kick \"%s\"", STRING (pev->netname));
-   engine.CenterPrintf ("Bot '%s' kicked", STRING (pev->netname));
+   engine.IssueCmd ("kick \"%s\"", username);
+   engine.CenterPrintf ("Bot '%s' kicked", username);
 
    // keep quota number up to date
    if (!keepQuota)

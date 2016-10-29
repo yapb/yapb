@@ -30,7 +30,6 @@
 #endif
 
 #ifdef ENABLE_SSE_INTRINSICS
-#include <xmmintrin.h>
 #include <emmintrin.h>
 #endif
 
@@ -150,22 +149,23 @@ namespace Math
    const float MATH_R2D = 180.0f / MATH_PI;
 
 #ifdef ENABLE_SSE_INTRINSICS
+
    //
-   // Function: mm_abs
+   // Function: sse_abs
    //
    // mm version if abs
    //
-   static inline __m128 mm_abs (__m128 val)
+   static inline __m128 sse_abs (__m128 val)
    {
       return _mm_andnot_ps (_mm_castsi128_ps (_mm_set1_epi32 (0x80000000)), val);
    };
 
    //
-   // Function: mm_sine
+   // Function: sse_sine
    //
    // mm version if sine
    //
-   static inline __m128 mm_sine (__m128 inp)
+   static inline __m128 sse_sine (__m128 inp)
    {
       __m128 pi2 = _mm_set1_ps (MATH_PI * 2);
       __m128 val = _mm_cmpnlt_ps (inp, _mm_set1_ps (MATH_PI));
@@ -175,12 +175,12 @@ namespace Math
       val = _mm_cmpngt_ps (inp, _mm_set1_ps (-MATH_PI));
       val = _mm_and_ps (val, pi2);
       inp = _mm_add_ps (inp, val);
-      val = _mm_mul_ps (mm_abs (inp), _mm_set1_ps (-4.0f / (MATH_PI * MATH_PI)));
+      val = _mm_mul_ps (sse_abs (inp), _mm_set1_ps (-4.0f / (MATH_PI * MATH_PI)));
       val = _mm_add_ps (val, _mm_set1_ps (4.0f / MATH_PI));
 
       __m128 res = _mm_mul_ps (val, inp);
 
-      val = _mm_mul_ps (mm_abs (res), res);
+      val = _mm_mul_ps (sse_abs (res), res);
       val = _mm_sub_ps (val, res);
       val = _mm_mul_ps (val, _mm_set1_ps (0.225f));
       res = _mm_add_ps (val, res);
@@ -196,7 +196,7 @@ namespace Math
    static inline float A_sqrtf (float value)
    {
 #ifdef ENABLE_SSE_INTRINSICS
-      return _mm_cvtss_f32 (_mm_sqrt_ss (_mm_load_ss (&value)));
+      return _mm_cvtss_f32 (_mm_sqrt_ss (_mm_set1_ps (value)));
 #else
       return sqrtf (value);
 #endif
@@ -210,7 +210,7 @@ namespace Math
    static inline float A_sinf (float value)
    {
 #ifdef ENABLE_SSE_INTRINSICS
-      return _mm_cvtss_f32 (mm_sine (_mm_set1_ps (value)));
+      return _mm_cvtss_f32 (sse_sine (_mm_set1_ps (value)));
 #else
       return sinf (value);
 #endif
@@ -224,7 +224,7 @@ namespace Math
    static inline float A_cosf (float value)
    {
 #ifdef ENABLE_SSE_INTRINSICS
-      return _mm_cvtss_f32 (mm_sine (_mm_set1_ps (value + MATH_PI / 2.0f)));
+      return _mm_cvtss_f32 (sse_sine (_mm_set1_ps (value + MATH_PI / 2.0f)));
 #else
       return cosf (value);
 #endif
@@ -238,7 +238,7 @@ namespace Math
    static inline void A_sincosf (float rad, float *sine, float *cosine)
    {
 #ifdef ENABLE_SSE_INTRINSICS
-      __m128 m_sincos = mm_sine (_mm_set_ps (0.0f, 0.0f, rad + MATH_PI / 2.f, rad));
+      __m128 m_sincos = sse_sine (_mm_set_ps (0.0f, 0.0f, rad + MATH_PI / 2.f, rad));
       __m128 m_cos = _mm_shuffle_ps (m_sincos, m_sincos, _MM_SHUFFLE (0, 0, 0, 1));
 
       *sine = _mm_cvtss_f32 (m_sincos);
