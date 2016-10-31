@@ -472,7 +472,7 @@ void BotManager::MaintainBotQuota (void)
       }
 
       int numBots = GetBotsNum ();
-      int numHumans = yb_autovacate_smart_kick.GetBool () ? GetHumansNum () : GetHumansJoinedTeam ();
+      int numHumans = yb_autovacate_smart_kick.GetBool () ? GetHumansJoinedTeam () : GetHumansNum ();
       int desiredCount = yb_quota.GetInt ();
 
       if (yb_join_after_player.GetBool () && !numHumans)
