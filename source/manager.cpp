@@ -275,7 +275,7 @@ Bot *BotManager::GetBot (edict_t *ent)
    return GetBot (GetIndex (ent));
 }
 
-Bot *BotManager::FindOneValidAliveBot (void)
+Bot *BotManager::GetAliveBot (void)
 {
    // this function finds one bot, alive bot :)
 
@@ -353,14 +353,14 @@ void BotManager::AddBot (const String &name, const String &difficulty, const Str
    m_creationTab.Push (bot);
 }
 
-void BotManager::AdjustQuota (bool isPlayerConnection, edict_t *ent)
+void BotManager::AdjustQuota (bool isPlayerConnecting, edict_t *ent)
 {
    // this function increases or decreases bot quota amount depending on auto vacate variables
 
-   if (!engine.IsDedicatedServer () || !yb_autovacate.GetBool () || GetBot (ent))
+   if (!engine.IsDedicatedServer () || !yb_autovacate.GetBool () || IsValidBot (ent))
       return;
 
-   if (isPlayerConnection)
+   if (isPlayerConnecting)
    {
       if (yb_autovacate_smart_kick.GetBool ())
          AddPlayerToCheckTeamQueue (ent);
@@ -370,15 +370,18 @@ void BotManager::AdjustQuota (bool isPlayerConnection, edict_t *ent)
          m_balanceCount--;
       }
    }
-   else if (m_balanceCount <= 0)
+   else if (m_balanceCount < 0)
    {
-      AddRandom ();
+      AddRandom (false);
       m_balanceCount++;
    }
 }
 
 void BotManager::AddPlayerToCheckTeamQueue (edict_t *ent)
 {
+	if (!engine.IsDedicatedServer () || !yb_autovacate.GetBool () || IsValidBot (ent))
+		return;
+
    // entity must be unique
    bool hasFound = false;
 
@@ -397,8 +400,8 @@ void BotManager::AddPlayerToCheckTeamQueue (edict_t *ent)
 
 void BotManager::VerifyPlayersHasJoinedTeam (int &desiredCount)
 {
-   if (m_trackedPlayers.IsEmpty ())
-      return;
+	if (!engine.IsDedicatedServer () || !yb_autovacate.GetBool () || m_trackedPlayers.IsEmpty ())
+		return;
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
@@ -1082,7 +1085,7 @@ int BotManager::GetHumansJoinedTeam (void)
    {
       const Client &client = g_clients[i];
 
-      if ((client.flags & (CF_USED | CF_ALIVE)) && m_bots[i] == nullptr && client.team != SPECTATOR && !(client.ent->v.flags & FL_FAKECLIENT) && client.ent->v.movetype != MOVETYPE_FLY)
+      if ((client.flags & (CF_USED | CF_ALIVE)) && m_bots[i] == nullptr && client.team != SPECTATOR && !(client.ent->v.flags & FL_FAKECLIENT))
          count++;
    }
    return count;

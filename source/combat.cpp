@@ -238,6 +238,7 @@ bool Bot::LookupEnemy (void)
       // ignore shielded enemies, while we have real one
       edict_t *shieldEnemy = nullptr;
 
+#if 0
       // setup potentially visible set for this bot
       Vector potentialVisibility = EyePosition ();
 
@@ -245,6 +246,7 @@ bool Bot::LookupEnemy (void)
          potentialVisibility = potentialVisibility + (VEC_HULL_MIN - VEC_DUCK_HULL_MIN);
 
       uint8 *pvs = ENGINE_SET_PVS (reinterpret_cast <float *> (&potentialVisibility));
+#endif
 
       // search the world for players...
       for (int i = 0; i < engine.MaxClients (); i++)
@@ -255,11 +257,11 @@ bool Bot::LookupEnemy (void)
             continue;
 
          player = client.ent;
-
+#if 0
          // let the engine check if this player is potentially visible
          if (!ENGINE_CHECK_VISIBILITY (player, pvs))
             continue;
-
+#endif
          // do some blind by smoke grenade
          if (m_blindRecognizeTime < engine.Time () && IsBehindSmokeClouds (player))
          {

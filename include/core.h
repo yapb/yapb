@@ -1313,7 +1313,7 @@ public:
    int GetIndex (edict_t *ent);
    Bot *GetBot (int index);
    Bot *GetBot (edict_t *ent);
-   Bot *FindOneValidAliveBot (void);
+   Bot *GetAliveBot (void);
    Bot *GetHighestFragsBot (int team);
 
    int GetHumansNum (void);
