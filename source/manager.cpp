@@ -368,19 +368,21 @@ void BotManager::AdjustQuota (bool isPlayerConnecting, edict_t *ent)
       {
          RemoveRandom ();
          m_balanceCount--;
+
+         m_quotaMaintainTime = engine.Time () + 2.0f;
       }
    }
    else if (m_balanceCount < 0)
    {
-      AddRandom (false);
+      AddRandom ();
       m_balanceCount++;
    }
 }
 
 void BotManager::AddPlayerToCheckTeamQueue (edict_t *ent)
 {
-	if (!engine.IsDedicatedServer () || !yb_autovacate.GetBool () || IsValidBot (ent))
-		return;
+   if (!engine.IsDedicatedServer () || !yb_autovacate.GetBool () || IsValidBot (ent))
+      return;
 
    // entity must be unique
    bool hasFound = false;
@@ -400,8 +402,8 @@ void BotManager::AddPlayerToCheckTeamQueue (edict_t *ent)
 
 void BotManager::VerifyPlayersHasJoinedTeam (int &desiredCount)
 {
-	if (!engine.IsDedicatedServer () || !yb_autovacate.GetBool () || m_trackedPlayers.IsEmpty ())
-		return;
+   if (!engine.IsDedicatedServer () || !yb_autovacate.GetBool () || m_trackedPlayers.IsEmpty ())
+      return;
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
@@ -475,21 +477,23 @@ void BotManager::MaintainBotQuota (void)
       }
 
       int numBots = GetBotsNum ();
-      int numHumans = yb_autovacate_smart_kick.GetBool () ? GetHumansJoinedTeam () : GetHumansNum ();
+      int numHumans = GetHumansNum ();
       int desiredCount = yb_quota.GetInt ();
 
       if (yb_join_after_player.GetBool () && !numHumans)
          desiredCount = 0;
 
+      int numHumansOnTeam = yb_autovacate_smart_kick.GetBool () ? GetHumansJoinedTeam () : numHumans;
+
       // quota mode
       char mode = yb_quota_mode.GetString ()[0];
 
       if (mode == 'f' || mode == 'F') // fill
-         desiredCount = A_max (0, desiredCount - numHumans);
+         desiredCount = A_max (0, desiredCount - numHumansOnTeam);
       else if (mode == 'm' || mode == 'M') // match
-         desiredCount = A_max (0, yb_quota.GetInt () * numHumans);
+         desiredCount = A_max (0, yb_quota.GetInt () * numHumansOnTeam);
 
-      desiredCount = A_min (desiredCount, engine.MaxClients () - (numHumans + (yb_autovacate.GetBool () ? 1 : 0)));
+      desiredCount = A_min (desiredCount, engine.MaxClients () - (numHumansOnTeam + (yb_autovacate.GetBool () ? 1 : 0)));
  
       if (yb_autovacate_smart_kick.GetBool () && numBots > 1 && desiredCount > 1)
          VerifyPlayersHasJoinedTeam (desiredCount);

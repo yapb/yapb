@@ -972,7 +972,7 @@ bool Bot::IsWeaponBadInDistance (int weaponIndex, float distance)
    int wid = g_weaponSelect[weaponIndex].id;
 
    if (wid == WEAPON_KNIFE)
-	   return false;
+      return false;
 
    // check is ammo available for secondary weapon
    if (m_ammoInClip[g_weaponSelect[GetBestSecondaryWeaponCarried ()].id] >= 1)
