@@ -1131,10 +1131,7 @@ void ClientDisconnect (edict_t *ent)
    if (bot != nullptr)
    {
       if (bot->pev == &ent->v)
-      {
-         bot->EnableChatterIcon (false);
          bots.Free (i);
-      }
    }
 
    if (g_gameFlags & GAME_METAMOD)
