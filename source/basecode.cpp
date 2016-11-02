@@ -5867,16 +5867,6 @@ bool Bot::OutOfBombTimer (void)
 void Bot::ReactOnSound (void)
 {
    int hearEnemyIndex = -1;
-
-#if 0
-   Vector pasOrg = EyePosition ();
-
-   if (pev->flags & FL_DUCKING)
-      pasOrg = pasOrg + (VEC_HULL_MIN - VEC_DUCK_HULL_MIN);
-
-   uint8 *pas = ENGINE_SET_PAS (reinterpret_cast <float *> (&pasOrg));
-#endif
-
    float minDistance = 99999.0f;
 
    // loop through all enemy clients to check for hearable stuff
@@ -5891,10 +5881,7 @@ void Bot::ReactOnSound (void)
      
       if (distance > client.hearingDistance)
          continue;
-#if 0
-      if (!ENGINE_CHECK_VISIBILITY (client.ent, pas))
-         continue;
-#endif
+
       if (distance < minDistance)
       {
          hearEnemyIndex = i;
