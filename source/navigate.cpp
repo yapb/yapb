@@ -626,7 +626,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
                if (IsOnFloor () || IsInWater ())
                {
                   pev->button |= IN_JUMP;
-                  m_jumpStateTimer = Random.Float (1.0f, 2.0f);
+                  m_jumpStateTimer = Random.Float (2.0f, 3.0f);
                }
                break;
 
@@ -1150,7 +1150,6 @@ bool Bot::DoWaypointNav (void)
                m_lastEnemy = ent;
                m_enemy = ent;
                m_lastEnemyOrigin = ent->v.origin;
-
             }
             else if (IsValidPlayer (ent) && IsAlive (ent) && m_team == engine.GetTeam (ent))
             {
@@ -1193,7 +1192,7 @@ bool Bot::DoWaypointNav (void)
 
    if (waypointDistance < desiredDistance)
    {
-      // Did we reach a destination Waypoint?
+      // did we reach a destination waypoint?
       if (GetTask ()->data == m_currentWaypointIndex)
       {
          // add goal values
@@ -1247,7 +1246,7 @@ bool Bot::DoWaypointNav (void)
          {
             float distance = (bombOrigin - waypoints.GetPath (taskTarget)->origin).GetLength ();
 
-            if (distance > 512.0)
+            if (distance > 512.0f)
             {
                if (Random.Int (0, 100) < 50 && !waypoints.IsGoalVisited (taskTarget))
                   RadioMessage (Radio_SectorClear);
@@ -2427,8 +2426,10 @@ bool Bot::HeadTowardWaypoint (void)
          GetBestNextWaypoint ();
          m_minSpeed = pev->maxspeed;
 
+         TaskID taskID = GetTaskId ();
+
          // only if we in normal task and bomb is not planted
-         if (GetTaskId () == TASK_NORMAL && g_timeRoundMid + 5.0f < engine.Time () && m_timeCamping + 5.0f < engine.Time () && !g_bombPlanted && m_personality != PERSONALITY_RUSHER && !m_hasC4 && !m_isVIP && m_loosedBombWptIndex == -1 && !HasHostage ())
+         if (taskID == TASK_NORMAL && g_timeRoundMid + 5.0f < engine.Time () && m_timeCamping + 5.0f < engine.Time () && !g_bombPlanted && m_personality != PERSONALITY_RUSHER && !m_hasC4 && !m_isVIP && m_loosedBombWptIndex == -1 && !HasHostage ())
          {
             m_campButtons = 0;
 
@@ -2466,6 +2467,24 @@ bool Bot::HeadTowardWaypoint (void)
                   m_campButtons |= IN_DUCK;
                else if (Random.Int (1, 100) > m_difficulty * 25)
                   m_minSpeed = GetWalkSpeed ();
+            }
+
+            // force terrorist bot to plant bomb
+            if (taskID == TASK_NORMAL && m_inBombZone && !m_hasProgressBar && m_hasC4)
+            {
+               int newGoal = FindGoal ();
+
+               m_prevGoalIndex = newGoal;
+               m_chosenGoalIndex = newGoal;
+
+               // remember index
+               GetTask ()->data = newGoal;
+
+               // do path finding if it's not the current waypoint
+               if (newGoal != m_currentWaypointIndex)
+                  FindPath (m_currentWaypointIndex, newGoal, m_pathType);
+
+               return false;
             }
          }
       }
@@ -3373,12 +3392,21 @@ bool Bot::IsPointOccupied (int index)
 
       if (bot->m_notKilled && m_currentWaypointIndex != -1 && bot->m_prevWptIndex[0] != -1)
       {
+         int targetId = bot->GetTask ()->data;
+
+         if (index == targetId)
+            return true;
+
+         // check bot's current waypoint
          int occupyId = GetShootingConeDeviation (bot->GetEntity (), &pev->origin) >= 0.7f ? bot->m_prevWptIndex[0] : m_currentWaypointIndex;
+
+         if (index == occupyId)
+            return true;
 
          // length check
          float length = (waypoints.GetPath (occupyId)->origin - waypoints.GetPath (index)->origin).GetLengthSquared ();
 
-         if (occupyId == index || bot->GetTask ()->data == index || length < GET_SQUARE (64.0f))
+         if (length < GET_SQUARE (128.0f))
             return true;
       }
    }

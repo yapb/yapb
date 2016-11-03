@@ -1119,20 +1119,17 @@ void ClientDisconnect (edict_t *ent)
    // to reset his entity pointer for safety. There are still a few server frames to go once a
    // listen server client disconnects, and we don't want to send him any sort of message then.
 
-   bots.AdjustQuota (false, ent);
+   int index = engine.IndexOfEntity (ent) - 1;
 
-   int i = engine.IndexOfEntity (ent) - 1;
+   InternalAssert (index >= 0 && index < MAX_ENGINE_PLAYERS);
 
-   InternalAssert (i >= 0 && i < MAX_ENGINE_PLAYERS);
-
-   Bot *bot = bots.GetBot (i);
+   Bot *bot = bots.GetBot (index);
 
    // check if its a bot
-   if (bot != nullptr)
-   {
-      if (bot->pev == &ent->v)
-         bots.Free (i);
-   }
+   if (bot != nullptr && bot->pev == &ent->v)
+      bots.Free (index);
+
+   bots.AdjustQuota (false, ent);
 
    if (g_gameFlags & GAME_METAMOD)
       RETURN_META (MRES_IGNORED);

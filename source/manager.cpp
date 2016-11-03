@@ -1297,7 +1297,7 @@ void Bot::NewRound (void)
    m_defendHostage = false;
    m_headedTime = 0.0f;
 
-   m_timeLogoSpray = engine.Time () + Random.Float (0.5f, 2.0f);
+   m_timeLogoSpray = engine.Time () + Random.Float (5.0f, 30.0f);
    m_spawnTime = engine.Time ();
    m_lastChatTime = engine.Time ();
 
