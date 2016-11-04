@@ -1127,7 +1127,10 @@ void ClientDisconnect (edict_t *ent)
 
    // check if its a bot
    if (bot != nullptr && bot->pev == &ent->v)
+   {
+      bot->EnableChatterIcon (false);
       bots.Free (index);
+   }
 
    bots.AdjustQuota (false, ent);
 

@@ -1040,9 +1040,7 @@ Bot::~Bot (void)
 {
    // this is bot destructor
 
-   EnableChatterIcon (false);
    ReleaseUsedName ();
-
    DeleteSearchNodes ();
    ResetTasks ();
 }
