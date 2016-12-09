@@ -3025,7 +3025,7 @@ void Bot::RunTask_Normal (void)
    }
 
    // bots rushing with knife, when have no enemy (thanks for idea to nicebot project)
-   if (m_currentWeapon == WEAPON_KNIFE && (engine.IsNullEntity (m_lastEnemy) || !IsAlive (m_lastEnemy)) && engine.IsNullEntity (m_enemy) && m_knifeAttackTime < engine.Time () && !HasShield () && GetNearbyFriendsNearPosition (pev->origin, 96) == 0)
+   if (m_currentWeapon == WEAPON_KNIFE && (engine.IsNullEntity (m_lastEnemy) || !IsAlive (m_lastEnemy)) && engine.IsNullEntity (m_enemy) && m_knifeAttackTime < engine.Time () && !HasShield () && GetNearbyFriendsNearPosition (pev->origin, 96.0f) == 0)
    {
       if (Random.Int (0, 100) < 40)
          pev->button |= IN_ATTACK;
@@ -3137,14 +3137,17 @@ void Bot::RunTask_Normal (void)
                      m_hostages[i] = nullptr; // clear array of hostage pointers
                }
             }
-            else if (m_team == TERRORIST && Random.Int (0, 100) < 80)
+            else if (m_team == TERRORIST && Random.Int (0, 100) < 75)
             {
                int index = FindDefendWaypoint (m_currentPath->origin);
 
                PushTask (TASK_CAMP, TASKPRI_CAMP, -1, engine.Time () + Random.Float (60.0f, 120.0f), true); // push camp task on to stack
                PushTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, engine.Time () + Random.Float (5.0f, 10.0f), true); // push move command
 
-               if (waypoints.GetPath (index)->vis.crouch <= waypoints.GetPath (index)->vis.stand)
+			   auto path = waypoints.GetPath (index);
+
+			   // decide to duck or not to duck
+               if (path->vis.crouch <= path->vis.stand)
                   m_campButtons |= IN_DUCK;
                else
                   m_campButtons &= ~IN_DUCK;
@@ -3183,10 +3186,13 @@ void Bot::RunTask_Normal (void)
                   PushTask (TASK_CAMP, TASKPRI_CAMP, -1, engine.Time () + campTime, true); // push camp task on to stack
                   PushTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, engine.Time () + Random.Float (5.0f, 11.0f), true); // push move command
 
-                  if (waypoints.GetPath (index)->vis.crouch <= waypoints.GetPath (index)->vis.stand)
-                     m_campButtons |= IN_DUCK;
-                  else
-                     m_campButtons &= ~IN_DUCK;
+				  auto path = waypoints.GetPath (index);
+
+				  // decide to duck or not to duck
+				  if (path->vis.crouch <= path->vis.stand)
+					  m_campButtons |= IN_DUCK;
+				  else
+					  m_campButtons &= ~IN_DUCK;
 
                   ChatterMessage (Chatter_DefendingBombSite); // play info about that
                }
@@ -3211,7 +3217,7 @@ void Bot::RunTask_Normal (void)
 
       // do pathfinding if it's not the current waypoint
       if (destIndex != m_currentWaypointIndex)
-         FindPath (m_currentWaypointIndex, destIndex, ((g_bombPlanted && m_team == CT) || yb_debug_goal.GetInt () != -1) ? SEARCH_PATH_FASTEST : m_pathType);
+         FindPath (m_currentWaypointIndex, destIndex, m_pathType);
    }
    else
    {
@@ -5867,14 +5873,6 @@ bool Bot::OutOfBombTimer (void)
 void Bot::ReactOnSound (void)
 {
    int hearEnemyIndex = -1;
-
-   Vector pasOrg = EyePosition ();
-
-   if (pev->flags & FL_DUCKING)
-      pasOrg = pasOrg + (VEC_HULL_MIN - VEC_DUCK_HULL_MIN);
-
-   uint8 *pas = ENGINE_SET_PAS (reinterpret_cast <float *> (&pasOrg));
-
    float minDistance = 99999.0f;
 
    // loop through all enemy clients to check for hearable stuff
@@ -5888,9 +5886,6 @@ void Bot::ReactOnSound (void)
       float distance = (client.soundPos - pev->origin).GetLength ();
      
       if (distance > client.hearingDistance)
-         continue;
-
-      if (!ENGINE_CHECK_VISIBILITY (client.ent, pas))
          continue;
 
       if (distance < minDistance)

@@ -238,14 +238,6 @@ bool Bot::LookupEnemy (void)
       // ignore shielded enemies, while we have real one
       edict_t *shieldEnemy = nullptr;
 
-      // setup potentially visible set for this bot
-      Vector potentialVisibility = EyePosition ();
-
-      if (pev->flags & FL_DUCKING)
-         potentialVisibility = potentialVisibility + (VEC_HULL_MIN - VEC_DUCK_HULL_MIN);
-
-      uint8 *pvs = ENGINE_SET_PVS (reinterpret_cast <float *> (&potentialVisibility));
-
       // search the world for players...
       for (int i = 0; i < engine.MaxClients (); i++)
       {
@@ -255,10 +247,6 @@ bool Bot::LookupEnemy (void)
             continue;
 
          player = client.ent;
-
-         // let the engine check if this player is potentially visible
-         if (!ENGINE_CHECK_VISIBILITY (player, pvs))
-            continue;
 
          // do some blind by smoke grenade
          if (m_blindRecognizeTime < engine.Time () && IsBehindSmokeClouds (player))
@@ -970,7 +958,7 @@ bool Bot::IsWeaponBadInDistance (int weaponIndex, float distance)
    int wid = g_weaponSelect[weaponIndex].id;
 
    if (wid == WEAPON_KNIFE)
-	   return false;
+      return false;
 
    // check is ammo available for secondary weapon
    if (m_ammoInClip[g_weaponSelect[GetBestSecondaryWeaponCarried ()].id] >= 1)

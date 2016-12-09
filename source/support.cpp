@@ -722,6 +722,10 @@ void SoundAttachToClients (edict_t *ent, const char *sample, float volume)
       return;
 
    const Vector &origin = engine.GetAbsOrigin (ent);
+
+   if (origin.IsZero ())
+      return;
+
    int index = engine.IndexOfEntity (ent) - 1;
 
    if (index < 0 || index >= engine.MaxClients ())

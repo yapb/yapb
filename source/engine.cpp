@@ -969,7 +969,7 @@ void Engine::ProcessMessageCapture (void *ptr)
 
                if (yb_communication_type.GetInt () == 2)
                {
-                  Bot *notify = bots.FindOneValidAliveBot ();
+                  Bot *notify = bots.GetAliveBot ();
 
                   if (notify != nullptr && notify->m_notKilled)
                      notify->HandleChatterMessage (strVal);
@@ -988,7 +988,7 @@ void Engine::ProcessMessageCapture (void *ptr)
 
                if (yb_communication_type.GetInt () == 2)
                {
-                  Bot *notify = bots.FindOneValidAliveBot ();
+                  Bot *notify = bots.GetAliveBot ();
 
                   if (notify != nullptr && notify->m_notKilled)
                      notify->HandleChatterMessage (strVal);
@@ -1069,6 +1069,7 @@ void Engine::ProcessMessageCapture (void *ptr)
    m_msgBlock.state++; // and finally update network message state
 }
 
+// console var registrator
 ConVar::ConVar (const char *name, const char *initval, VarType type, bool regMissing, const char *regVal) : m_eptr (nullptr)
 {
    engine.PushVariableToStack (name, initval, type, regMissing, regVal, this);
