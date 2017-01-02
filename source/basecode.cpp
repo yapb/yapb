@@ -2934,11 +2934,6 @@ void Bot::ThinkFrame (void)
    else if (m_notKilled && m_buyingFinished && !(pev->maxspeed < 10.0f && GetTaskId () != TASK_PLANTBOMB && GetTaskId () != TASK_DEFUSEBOMB) && !yb_freeze_bots.GetBool () && !waypoints.HasChanged ())
       botMovement = true;
 
-#ifdef XASH_CSDM
-   if (m_notKilled)
-      botMovement = true;
-#endif
-
    CheckMessageQueue (); // check for pending messages
 
    if (botMovement)
@@ -3144,9 +3139,9 @@ void Bot::RunTask_Normal (void)
                PushTask (TASK_CAMP, TASKPRI_CAMP, -1, engine.Time () + Random.Float (60.0f, 120.0f), true); // push camp task on to stack
                PushTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, engine.Time () + Random.Float (5.0f, 10.0f), true); // push move command
 
-			   auto path = waypoints.GetPath (index);
+               auto path = waypoints.GetPath (index);
 
-			   // decide to duck or not to duck
+               // decide to duck or not to duck
                if (path->vis.crouch <= path->vis.stand)
                   m_campButtons |= IN_DUCK;
                else
@@ -3186,13 +3181,13 @@ void Bot::RunTask_Normal (void)
                   PushTask (TASK_CAMP, TASKPRI_CAMP, -1, engine.Time () + campTime, true); // push camp task on to stack
                   PushTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, engine.Time () + Random.Float (5.0f, 11.0f), true); // push move command
 
-				  auto path = waypoints.GetPath (index);
+                  auto path = waypoints.GetPath (index);
 
-				  // decide to duck or not to duck
-				  if (path->vis.crouch <= path->vis.stand)
-					  m_campButtons |= IN_DUCK;
-				  else
-					  m_campButtons &= ~IN_DUCK;
+                  // decide to duck or not to duck
+                  if (path->vis.crouch <= path->vis.stand)
+                     m_campButtons |= IN_DUCK;
+                  else
+                     m_campButtons &= ~IN_DUCK;
 
                   ChatterMessage (Chatter_DefendingBombSite); // play info about that
                }

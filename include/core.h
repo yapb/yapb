@@ -256,7 +256,6 @@ enum ChatterMessage
 // counter-strike weapon id's
 enum Weapon
 {
-#ifndef XASH_CSDM
    WEAPON_P228 = 1,
    WEAPON_SHIELD = 2,
    WEAPON_SCOUT = 3,
@@ -290,41 +289,6 @@ enum Weapon
    WEAPON_ARMOR = 31,
    WEAPON_ARMORHELM = 32,
    WEAPON_DEFUSER = 33
-#else
-   WEAPON_KNIFE = 1,
-   WEAPON_USP = 2,
-   WEAPON_GLOCK = 3,
-   WEAPON_EXPLOSIVE = 4,
-   WEAPON_FLASHBANG = 5,
-   WEAPON_SMOKE = 6,
-   WEAPON_M4A1 = 7,
-   WEAPON_AK47 = 8,
-   WEAPON_AWP = 9,
-   WEAPON_GALIL = 10,
-   WEAPON_FAMAS = 11,
-   WEAPON_DEAGLE = 12,
-   WEAPON_AUG = 13,
-   WEAPON_SG552 = 14,
-   WEAPON_MP5 = 15,
-   WEAPON_M3 = 16,
-   WEAPON_C4 = 17,
-   WEAPON_SCOUT = 18,
-   WEAPON_MAC10 = 19,
-   WEAPON_M249 = 20,
-   WEAPON_FIVESEVEN = 21,
-   WEAPON_UMP45 = 22,
-   WEAPON_TMP = 23,
-   WEAPON_G3SG1 = 24,
-   WEAPON_SG550 = 25,
-   WEAPON_ELITE = 26,
-   WEAPON_P228 = 27,
-   WEAPON_SHIELD = 28,
-   WEAPON_XM1014 = 29,
-   WEAPON_P90 = 30,
-   WEAPON_ARMOR = 31,
-   WEAPON_ARMORHELM = 32,
-   WEAPON_DEFUSER = 33
-#endif
 };
 
 // buy counts

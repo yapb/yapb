@@ -442,30 +442,6 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    return 1; // command was handled by bot
 }
 
-void ParseVoiceEvent (const String &base, int type, float timeToRepeat)
-{
-   // this function does common work of parsing single line of voice chatter
-
-   Array <String> temp = String (base).Split (',');
-   ChatterItem chatterItem;
-
-   FOR_EACH_AE (temp, i)
-   {
-      temp[i].Trim ().TrimQuotes ();
-
-      float duration = engine.GetWaveLength (temp[i]);
-
-      if (duration <= 0.0f)
-         continue;
-
-      chatterItem.name = temp[i];
-      chatterItem.repeat = timeToRepeat;
-      chatterItem.duration = duration;
-
-      g_chatterFactory[type].Push (chatterItem);
-    }
-   temp.RemoveAll ();
-}
 
 // forwards for MemoryFile
 MemoryFile::MF_Loader MemoryFile::Loader = nullptr;
@@ -644,7 +620,7 @@ void InitConfig (void)
       {
          SKIP_COMMENTS ();
 
-         Array <String> pair = String (line).Split ('=');
+         auto pair = String (line).Split ('=');
 
          if (pair.GetElementNumber () != 2)
             continue;
@@ -652,7 +628,7 @@ void InitConfig (void)
          pair[0].Trim ().Trim ();
          pair[1].Trim ().Trim ();
 
-         Array <String> splitted = pair[1].Split (',');
+         auto splitted = pair[1].Split (',');
 
          if (pair[0] == "MapStandard")
          {
@@ -717,108 +693,137 @@ void InitConfig (void)
    // CHATTER SYSTEM INITIALIZATION
    if ((g_gameFlags & GAME_SUPPORT_BOT_VOICE) && yb_communication_type.GetInt () == 2 && OpenConfig ("chatter.cfg", "Couldn't open chatter system configuration", &fp))
    {
-      Array <String> array;
+      const float ChatterInfinity = 99999.0f;
 
-      extern ConVar yb_chatter_path;
+      // for faster loading
+      struct EventMap
+      {
+         const char *str;
+         int code;
+         float repeat;
+
+      } chatterEventMap[] = {
+         { STRINGIFY (Radio_CoverMe), Radio_CoverMe, ChatterInfinity },
+         { STRINGIFY (Radio_YouTakePoint), Radio_YouTakePoint, ChatterInfinity },
+         { STRINGIFY (Radio_HoldPosition), Radio_HoldPosition, ChatterInfinity },
+         { STRINGIFY (Radio_RegroupTeam), Radio_RegroupTeam, ChatterInfinity },
+         { STRINGIFY (Radio_FollowMe), Radio_FollowMe, ChatterInfinity },
+         { STRINGIFY (Radio_TakingFire), Radio_TakingFire, ChatterInfinity },
+         { STRINGIFY (Radio_GoGoGo), Radio_GoGoGo, ChatterInfinity },
+         { STRINGIFY (Radio_Fallback), Radio_Fallback, ChatterInfinity },
+         { STRINGIFY (Radio_StickTogether), Radio_StickTogether, ChatterInfinity },
+         { STRINGIFY (Radio_GetInPosition), Radio_GetInPosition, ChatterInfinity },
+         { STRINGIFY (Radio_StormTheFront), Radio_StormTheFront, ChatterInfinity },
+         { STRINGIFY (Radio_ReportTeam), Radio_ReportTeam, ChatterInfinity },
+         { STRINGIFY (Radio_Affirmative), Radio_Affirmative, ChatterInfinity },
+         { STRINGIFY (Radio_EnemySpotted), Radio_EnemySpotted, ChatterInfinity },
+         { STRINGIFY (Radio_NeedBackup), Radio_NeedBackup, ChatterInfinity },
+         { STRINGIFY (Radio_SectorClear), Radio_SectorClear, ChatterInfinity },
+         { STRINGIFY (Radio_InPosition), Radio_InPosition, ChatterInfinity },
+         { STRINGIFY (Radio_ReportingIn), Radio_ReportingIn, ChatterInfinity },
+         { STRINGIFY (Radio_ShesGonnaBlow), Radio_ShesGonnaBlow, ChatterInfinity },
+         { STRINGIFY (Radio_Negative), Radio_Negative, ChatterInfinity },
+         { STRINGIFY (Radio_EnemyDown), Radio_EnemyDown, ChatterInfinity },
+         { STRINGIFY (Chatter_DiePain), Chatter_DiePain, ChatterInfinity },
+         { STRINGIFY (Chatter_GoingToPlantBomb), Chatter_GoingToPlantBomb, ChatterInfinity },
+         { STRINGIFY (Chatter_GoingToGuardVIPSafety), Chatter_GoingToGuardVIPSafety, ChatterInfinity },
+         { STRINGIFY (Chatter_RescuingHostages), Chatter_RescuingHostages, ChatterInfinity },
+         { STRINGIFY (Chatter_TeamKill), Chatter_TeamKill, ChatterInfinity },
+         { STRINGIFY (Chatter_GuardingVipSafety), Chatter_GuardingVipSafety, ChatterInfinity },
+         { STRINGIFY (Chatter_PlantingC4), Chatter_PlantingC4, ChatterInfinity },
+         { STRINGIFY (Chatter_InCombat), Chatter_InCombat,  ChatterInfinity },
+         { STRINGIFY (Chatter_SeeksEnemy), Chatter_SeeksEnemy, ChatterInfinity },
+         { STRINGIFY (Chatter_Nothing), Chatter_Nothing,  ChatterInfinity },
+         { STRINGIFY (Chatter_EnemyDown), Chatter_EnemyDown, ChatterInfinity },
+         { STRINGIFY (Chatter_UseHostage), Chatter_UseHostage, ChatterInfinity },
+         { STRINGIFY (Chatter_WonTheRound), Chatter_WonTheRound, ChatterInfinity },
+         { STRINGIFY (Chatter_QuicklyWonTheRound), Chatter_QuicklyWonTheRound, ChatterInfinity },
+         { STRINGIFY (Chatter_NoEnemiesLeft), Chatter_NoEnemiesLeft, ChatterInfinity },
+         { STRINGIFY (Chatter_FoundBombPlace), Chatter_FoundBombPlace, ChatterInfinity },
+         { STRINGIFY (Chatter_WhereIsTheBomb), Chatter_WhereIsTheBomb, ChatterInfinity },
+         { STRINGIFY (Chatter_DefendingBombSite), Chatter_DefendingBombSite, ChatterInfinity },
+         { STRINGIFY (Chatter_BarelyDefused), Chatter_BarelyDefused, ChatterInfinity },
+         { STRINGIFY (Chatter_NiceshotCommander), Chatter_NiceshotCommander, ChatterInfinity },
+         { STRINGIFY (Chatter_ReportingIn), Chatter_ReportingIn, 10.0f },
+         { STRINGIFY (Chatter_SpotTheBomber), Chatter_SpotTheBomber, 4.3f },
+         { STRINGIFY (Chatter_VIPSpotted), Chatter_VIPSpotted, 5.3f },
+         { STRINGIFY (Chatter_FriendlyFire), Chatter_FriendlyFire, 2.1f },
+         { STRINGIFY (Chatter_GotBlinded), Chatter_GotBlinded, 5.0f },
+         { STRINGIFY (Chatter_GuardDroppedC4), Chatter_GuardDroppedC4, 3.0f },
+         { STRINGIFY (Chatter_DefusingC4), Chatter_DefusingC4, 3.0f },
+         { STRINGIFY (Chatter_FoundC4), Chatter_FoundC4, 5.5f },
+         { STRINGIFY (Chatter_ScaredEmotion), Chatter_ScaredEmotion, 6.1f },
+         { STRINGIFY (Chatter_HeardEnemy), Chatter_ScaredEmotion, 12.8f },
+         { STRINGIFY (Chatter_SniperWarning), Chatter_SniperWarning, 4.3f },
+         { STRINGIFY (Chatter_SniperKilled), Chatter_SniperKilled, 2.1f },
+         { STRINGIFY (Chatter_OneEnemyLeft), Chatter_OneEnemyLeft, 2.5f },
+         { STRINGIFY (Chatter_TwoEnemiesLeft), Chatter_TwoEnemiesLeft, 2.5f },
+         { STRINGIFY (Chatter_ThreeEnemiesLeft), Chatter_ThreeEnemiesLeft, 2.5f },
+         { STRINGIFY (Chatter_NiceshotPall), Chatter_NiceshotPall, 2.0f },
+         { STRINGIFY (Chatter_GoingToGuardHostages), Chatter_GoingToGuardHostages, 3.0f },
+         { STRINGIFY (Chatter_GoingToGuardDoppedBomb), Chatter_GoingToGuardDoppedBomb, 3.0f },
+         { STRINGIFY (Chatter_OnMyWay), Chatter_OnMyWay, 1.5f },
+         { STRINGIFY (Chatter_LeadOnSir), Chatter_LeadOnSir, 5.0f },
+         { STRINGIFY (Chatter_Pinned_Down), Chatter_Pinned_Down, 5.0f },
+         { STRINGIFY (Chatter_GottaFindTheBomb), Chatter_GottaFindTheBomb, 3.0f },
+         { STRINGIFY (Chatter_You_Heard_The_Man), Chatter_You_Heard_The_Man, 3.0f },
+         { STRINGIFY (Chatter_Lost_The_Commander), Chatter_Lost_The_Commander, 4.5f },
+         { STRINGIFY (Chatter_NewRound), Chatter_NewRound, 3.5f },
+         { STRINGIFY (Chatter_CoverMe), Chatter_CoverMe, 3.5f },
+         { STRINGIFY (Chatter_BehindSmoke), Chatter_BehindSmoke, 3.5f },
+         { STRINGIFY (Chatter_BombSiteSecured), Chatter_BombSiteSecured, 3.5f },
+         { STRINGIFY (Chatter_GoingToCamp), Chatter_GoingToCamp, 5.0f },
+         { STRINGIFY (Chatter_Camp), Chatter_Camp, 5.0f },
+      };
 
       while (fp.GetBuffer (line, 511))
       {
          SKIP_COMMENTS ();
 
          if (strncmp (line, "RewritePath", 11) == 0)
+         {
+            extern ConVar yb_chatter_path;
             yb_chatter_path.SetString (String (&line[12]).Trim ());
+         }
          else if (strncmp (line, "Event", 5) == 0)
          {
-            array = String (&line[6]).Split ('=');
+            auto items = String (&line[6]).Split ('=');
 
-            if (array.GetElementNumber () != 2)
-               AddLogEntry (true, LL_ERROR, "Error in chatter config file syntax... Please correct all Errors.");
+            if (items.GetElementNumber () != 2)
+            {
+               AddLogEntry (true, LL_ERROR, "Error in chatter config file syntax... Please correct all errors.");
+               continue;
+            }
 
-            FOR_EACH_AE (array, i)
-               array[i].Trim ().Trim (); // double trim
+            FOR_EACH_AE (items, i)
+               items[i].Trim ().Trim (); // double trim
 
             // just to be more unique :)
-            array[1].TrimLeft ('(');
-            array[1].TrimRight (';');
-            array[1].TrimRight (')');
+            items[1].TrimLeft ('(');
+            items[1].TrimRight (';');
+            items[1].TrimRight (')');
 
-            #define PARSE_CHATTER_ITEM(type, timeToRepeatAgain) { if (strcmp (array[0], #type) == 0) ParseVoiceEvent (array[1], type, timeToRepeatAgain); }
-            #define PARSE_CHATTER_ITEM_NR(type) PARSE_CHATTER_ITEM(type, 99999.0f)
+            for (int i = 0; i < ARRAYSIZE_HLSDK (chatterEventMap); i++)
+            {
+               auto event = &chatterEventMap[i];
 
-            // radio system
-            PARSE_CHATTER_ITEM_NR (Radio_CoverMe);
-            PARSE_CHATTER_ITEM_NR (Radio_YouTakePoint);
-            PARSE_CHATTER_ITEM_NR (Radio_HoldPosition);
-            PARSE_CHATTER_ITEM_NR (Radio_RegroupTeam);
-            PARSE_CHATTER_ITEM_NR (Radio_FollowMe);
-            PARSE_CHATTER_ITEM_NR (Radio_TakingFire);
-            PARSE_CHATTER_ITEM_NR (Radio_GoGoGo);
-            PARSE_CHATTER_ITEM_NR (Radio_Fallback);
-            PARSE_CHATTER_ITEM_NR (Radio_StickTogether);
-            PARSE_CHATTER_ITEM_NR (Radio_GetInPosition);
-            PARSE_CHATTER_ITEM_NR (Radio_StormTheFront);
-            PARSE_CHATTER_ITEM_NR (Radio_ReportTeam);
-            PARSE_CHATTER_ITEM_NR (Radio_Affirmative);
-            PARSE_CHATTER_ITEM_NR (Radio_EnemySpotted);
-            PARSE_CHATTER_ITEM_NR (Radio_NeedBackup);
-            PARSE_CHATTER_ITEM_NR (Radio_SectorClear);
-            PARSE_CHATTER_ITEM_NR (Radio_InPosition);
-            PARSE_CHATTER_ITEM_NR (Radio_ReportingIn);
-            PARSE_CHATTER_ITEM_NR (Radio_ShesGonnaBlow);
-            PARSE_CHATTER_ITEM_NR (Radio_Negative);
-            PARSE_CHATTER_ITEM_NR (Radio_EnemyDown);
+               if (A_stricmp (event->str, items[0].GetBuffer ()) == 0)
+               {
+                  // this does common work of parsing comma-separated chatter line
+                  auto sounds = items[1].Split (',');
 
-            // voice system
-            PARSE_CHATTER_ITEM (Chatter_SpotTheBomber, 4.3f);
-            PARSE_CHATTER_ITEM (Chatter_VIPSpotted, 5.3f);
-            PARSE_CHATTER_ITEM (Chatter_FriendlyFire, 2.1f);
-            PARSE_CHATTER_ITEM_NR (Chatter_DiePain);
-            PARSE_CHATTER_ITEM (Chatter_GotBlinded, 5.0f);
-            PARSE_CHATTER_ITEM_NR (Chatter_GoingToPlantBomb);
-            PARSE_CHATTER_ITEM_NR (Chatter_GoingToGuardVIPSafety);
-            PARSE_CHATTER_ITEM_NR (Chatter_RescuingHostages);
-            PARSE_CHATTER_ITEM_NR (Chatter_GoingToCamp);
-            PARSE_CHATTER_ITEM_NR (Chatter_TeamKill);
-            PARSE_CHATTER_ITEM_NR (Chatter_ReportingIn);
-            PARSE_CHATTER_ITEM (Chatter_GuardDroppedC4, 3.0f);
-            PARSE_CHATTER_ITEM_NR (Chatter_Camp);
-            PARSE_CHATTER_ITEM_NR (Chatter_GuardingVipSafety);
-            PARSE_CHATTER_ITEM_NR (Chatter_PlantingC4);
-            PARSE_CHATTER_ITEM (Chatter_DefusingC4, 3.0f);
-            PARSE_CHATTER_ITEM_NR (Chatter_InCombat);
-            PARSE_CHATTER_ITEM_NR (Chatter_SeeksEnemy);
-            PARSE_CHATTER_ITEM_NR (Chatter_Nothing);
-            PARSE_CHATTER_ITEM_NR (Chatter_EnemyDown);
-            PARSE_CHATTER_ITEM_NR (Chatter_UseHostage);
-            PARSE_CHATTER_ITEM (Chatter_FoundC4, 5.5f);
-            PARSE_CHATTER_ITEM_NR (Chatter_WonTheRound);
-            PARSE_CHATTER_ITEM (Chatter_ScaredEmotion, 6.1f);
-            PARSE_CHATTER_ITEM (Chatter_HeardEnemy, 12.2f);
-            PARSE_CHATTER_ITEM (Chatter_SniperWarning, 4.3f);
-            PARSE_CHATTER_ITEM (Chatter_SniperKilled, 2.1f);
-            PARSE_CHATTER_ITEM_NR (Chatter_QuicklyWonTheRound);
-            PARSE_CHATTER_ITEM (Chatter_OneEnemyLeft, 2.5f);
-            PARSE_CHATTER_ITEM (Chatter_TwoEnemiesLeft, 2.5f);
-            PARSE_CHATTER_ITEM (Chatter_ThreeEnemiesLeft, 2.5f);
-            PARSE_CHATTER_ITEM_NR (Chatter_NoEnemiesLeft);
-            PARSE_CHATTER_ITEM_NR (Chatter_FoundBombPlace);
-            PARSE_CHATTER_ITEM_NR (Chatter_WhereIsTheBomb);
-            PARSE_CHATTER_ITEM_NR (Chatter_DefendingBombSite);
-            PARSE_CHATTER_ITEM_NR (Chatter_BarelyDefused);
-            PARSE_CHATTER_ITEM_NR (Chatter_NiceshotCommander);
-            PARSE_CHATTER_ITEM (Chatter_NiceshotPall, 2.0);
-            PARSE_CHATTER_ITEM (Chatter_GoingToGuardHostages, 3.0f);
-            PARSE_CHATTER_ITEM (Chatter_GoingToGuardDoppedBomb, 3.0f);
-            PARSE_CHATTER_ITEM (Chatter_OnMyWay, 1.5f);
-            PARSE_CHATTER_ITEM (Chatter_LeadOnSir, 5.0f);
-            PARSE_CHATTER_ITEM (Chatter_Pinned_Down, 5.0f);
-            PARSE_CHATTER_ITEM (Chatter_GottaFindTheBomb, 3.0f);
-            PARSE_CHATTER_ITEM (Chatter_You_Heard_The_Man, 3.0f);
-            PARSE_CHATTER_ITEM (Chatter_Lost_The_Commander, 4.5f);
-            PARSE_CHATTER_ITEM (Chatter_NewRound, 3.5f);
-            PARSE_CHATTER_ITEM (Chatter_CoverMe, 3.5f);
-            PARSE_CHATTER_ITEM (Chatter_BehindSmoke, 3.5f);
-            PARSE_CHATTER_ITEM (Chatter_BombSiteSecured, 3.5f);
+                  FOR_EACH_AE (sounds, j)
+                  {
+                     sounds[j].Trim ().TrimQuotes ();
+
+                     float duration = engine.GetWaveLength (sounds[j]);
+
+                     if (duration > 0.0f)
+                        g_chatterFactory[event->code].Push ({ sounds[j], event->repeat, duration }, true);
+                  }
+                  sounds.RemoveAll ();
+               }
+            }
          }
       }
       fp.Close ();
@@ -1003,7 +1008,6 @@ int Spawn (edict_t *ent)
          return 0;
       }
    }
-#ifndef XASH_CSDM
    else if (strcmp (entityClassname, "info_player_start") == 0)
    {
       SET_MODEL (ent, ENGINE_STR ("models/player/urban/urban.mdl"));
@@ -1029,7 +1033,6 @@ int Spawn (edict_t *ent)
       ent->v.renderamt = 127; // set its transparency amount
       ent->v.effects |= EF_NODRAW;
    }
-#endif
    else if (strcmp (entityClassname, "func_vip_safetyzone") == 0 || strcmp (STRING (ent->v.classname), "info_vip_safetyzone") == 0)
       g_mapType |= MAP_AS; // assassination map
 
@@ -3436,43 +3439,3 @@ LINK_ENTITY (weapon_xm1014)
 LINK_ENTITY (weaponbox)
 LINK_ENTITY (world_items)
 LINK_ENTITY (worldspawn)
-
-#ifdef XASH_CSDM
-LINK_ENTITY (aiscripted_sequence)
-LINK_ENTITY (cine_blood)
-LINK_ENTITY (deadplayer_entity)
-LINK_ENTITY (func_headq)
-LINK_ENTITY (info_node)
-LINK_ENTITY (info_node_air)
-LINK_ENTITY (info_player_csdm)
-LINK_ENTITY (monster_c4)
-LINK_ENTITY (monster_cine2_hvyweapons)
-LINK_ENTITY (monster_cine2_scientist)
-LINK_ENTITY (monster_cine2_slave)
-LINK_ENTITY (monster_cine3_barney)
-LINK_ENTITY (monster_cine3_scientist)
-LINK_ENTITY (monster_cine_barney)
-LINK_ENTITY (monster_cine_panther)
-LINK_ENTITY (monster_cine_scientist)
-LINK_ENTITY (monster_cockroach)
-LINK_ENTITY (monster_furniture)
-LINK_ENTITY (monster_osprey)
-LINK_ENTITY (monster_rat)
-LINK_ENTITY (monster_tentacle)
-LINK_ENTITY (monster_tentaclemaw)
-LINK_ENTITY (monstermaker)
-LINK_ENTITY (node_viewer)
-LINK_ENTITY (node_viewer_fly)
-LINK_ENTITY (node_viewer_human)
-LINK_ENTITY (node_viewer_large)
-LINK_ENTITY (scripted_sequence)
-LINK_ENTITY (testhull)
-LINK_ENTITY (xen_hair)
-LINK_ENTITY (xen_hull)
-LINK_ENTITY (xen_plantlight)
-LINK_ENTITY (xen_spore_large)
-LINK_ENTITY (xen_spore_medium)
-LINK_ENTITY (xen_spore_small)
-LINK_ENTITY (xen_tree)
-LINK_ENTITY (xen_ttrigger)
-#endif

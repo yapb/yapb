@@ -249,12 +249,7 @@ public:
    FORCEINLINE int GetTeam (edict_t *ent)
    {
       extern Client g_clients[MAX_ENGINE_PLAYERS];
-
-#ifndef XASH_CSDM
       return g_clients[IndexOfEntity (ent) - 1].team;
-#else
-      return g_clients[IndexOfEntity (ent) - 1].team = ent->v.team == 1 ? TERRORIST : CT;
-#endif
    }
 
    // adds translation pair from config
