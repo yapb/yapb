@@ -1356,20 +1356,6 @@ void Bot::StartGame (void)
 {
    // this function handles the selection of teams & class
 
-#ifdef XASH_CSDM
-   m_wantedTeam = Random.Int (1, 2);
-   
-   engine.IssueBotCommand (GetEntity (), "jointeam %d", m_wantedTeam);
-   
-   SET_CLIENT_KEYVALUE (GetIndex (), GET_INFOKEYBUFFER (GetEntity ()), "model", m_wantedTeam == 2 ? "Counter-Terrorists" : "Terrorists");
-
-   if (Random.Int (0, 100) < 20)
-      ChatMessage (CHAT_WELCOME);
-   
-   m_notStarted = false;
-   return;
-#endif
-
    // cs prior beta 7.0 uses hud-based motd, so press fire once
    if (g_gameFlags & GAME_LEGACY)
       pev->button |= IN_ATTACK;

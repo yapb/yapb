@@ -35,6 +35,8 @@ Icon
 .Spotlight-V100
 .Trashes
 /project/#Verone
+/project/.vs
+/.vs
 
 *.pdb
 *.asm

@@ -43,11 +43,6 @@ typedef unsigned char uint8;
 typedef unsigned short uint16;
 typedef unsigned long uint32;
 
-// Own min/max implementation
-template <typename T> inline T A_min (T a, T b) { return a < b ? a : b; }
-template <typename T> inline T A_max (T a, T b) { return a > b ? a : b; }
-template <typename T> inline T A_clamp (T x, T a, T b) { return A_min (A_max (x, a), b); }
-
 // Fast stricmp got somewhere from chromium
 static inline int A_stricmp (const char *str1, const char *str2, int length = -1)
 {
@@ -199,6 +194,31 @@ namespace Math
       return _mm_cvtss_f32 (_mm_sqrt_ss (_mm_set1_ps (value)));
 #else
       return sqrtf (value);
+#endif
+   }
+
+   // own min/max implementation
+   template <typename T> static inline T A_min (T a, T b)
+   {
+      return a < b ? a : b;
+   }
+
+   template <typename T> static inline T A_max (T a, T b)
+   {
+      return a > b ? a : b;
+   }
+
+   template <typename T> static inline T A_clamp (T x, T a, T b)
+   {
+      return A_min (A_max (x, a), b);
+   }
+
+   static inline float F_clamp (float x, float a, float b)
+   {
+#ifdef ENABLE_SSE_INTRINSICS
+      return _mm_cvtss_f32 (_mm_min_ss (_mm_max_ss (_mm_set1_ps (x), _mm_set1_ps (a)), _mm_set1_ps (b)));
+#else
+      return A_clamp <float> (x, a, b);
 #endif
    }
 
@@ -422,7 +442,7 @@ private:
 public:
    RandomSequenceOfUnique (void)
    {
-      unsigned int seedBase = static_cast <unsigned int> (time (NULL));
+      unsigned int seedBase = static_cast <unsigned int> (time (nullptr));
       unsigned int seedOffset = seedBase + 1;
 
       m_index = PermuteQPR (PermuteQPR (seedBase) + 0x682f0161);
@@ -867,21 +887,21 @@ public:
       Math::SineCosine (Math::DegreeToRadian (y), &sineYaw, &cosineYaw); // compute the sine and cosine of the yaw component
       Math::SineCosine (Math::DegreeToRadian (z), &sineRoll, &cosineRoll); // compute the sine and cosine of the roll component
 
-      if (forward != NULL)
+      if (forward != nullptr)
       {
          forward->x = cosinePitch * cosineYaw;
          forward->y = cosinePitch * sineYaw;
          forward->z = -sinePitch;
       }
 
-      if (right != NULL)
+      if (right != nullptr)
       {
          right->x = -sineRoll * sinePitch * cosineYaw + cosineRoll * sineYaw;
          right->y = -sineRoll * sinePitch * sineYaw - cosineRoll * cosineYaw;
          right->z = -sineRoll * cosinePitch;
       }
 
-      if (upward != NULL)
+      if (upward != nullptr)
       {
          upward->x = cosineRoll * sinePitch * cosineYaw + sineRoll * sineYaw;
          upward->y = cosineRoll * sinePitch * sineYaw - sineRoll * cosineYaw;
@@ -907,9 +927,9 @@ public:
    public:
       Node (void)
       {
-         m_next = NULL;
-         m_prev = NULL;
-         m_data = NULL;
+         m_next = nullptr;
+         m_prev = nullptr;
+         m_data = nullptr;
       }
    };
 
@@ -939,8 +959,8 @@ public:
    //
    void Destory (void)
    {
-      m_first = NULL;
-      m_last = NULL;
+      m_first = nullptr;
+      m_last = nullptr;
       m_count = 0;
    }
 
@@ -958,32 +978,32 @@ public:
 
    //
    // Function: GetFirst
-   //  Gets the first list entry. NULL in case list is empty.
+   //  Gets the first list entry. nullptr in case list is empty.
    //
    // Returns:
    //  First list entry.
    //
    inline T *GetFirst (void) const
    {
-      if (m_first != NULL)
+      if (m_first != nullptr)
          return m_first->m_data;
 
-      return NULL;
+      return nullptr;
    };
 
    //
    // Function: GetLast
-   //  Gets the last list entry. NULL in case list is empty.
+   //  Gets the last list entry. nullptr in case list is empty.
    //
    // Returns:
    //  Last list entry.
    //
    inline T *GetLast (void) const
    {
-      if (m_last != NULL)
+      if (m_last != nullptr)
         return m_last->m_data;
 
-      return NULL;
+      return nullptr;
    };
 
    //
@@ -998,15 +1018,15 @@ public:
    //
    T *GetNext (T *current)
    {
-      if (current == NULL)
+      if (current == nullptr)
          return GetFirst ();
 
       Node <T> *next = FindNode (current)->m_next;
 
-      if (next != NULL)
+      if (next != nullptr)
          return next->m_data;
 
-      return NULL;
+      return nullptr;
    }
 
    //
@@ -1021,15 +1041,15 @@ public:
    //
    T *GetPrev (T *current)
    {
-      if (current == NULL)
+      if (current == nullptr)
          return GetLast ();
 
       Node <T> *prev = FindNode (current)->m_prev;
 
-      if (prev != NULL)
+      if (prev != nullptr)
          return prev->m_prev;
 
-      return NULL;
+      return nullptr;
    }
 
    //
@@ -1041,17 +1061,17 @@ public:
    //  next - Next node to be inserted into linked list.
    //
    // Returns:
-   //  Item if operation success, NULL otherwise.
+   //  Item if operation success, nullptr otherwise.
    //
-   T *Link (T *entry, T *next = NULL)
+   T *Link (T *entry, T *next = nullptr)
    {
-      Node <T> *prevNode = NULL;
+      Node <T> *prevNode = nullptr;
       Node <T> *nextNode = FindNode (next);
       Node <T> *newNode = new Node <T> ();
 
       newNode->m_data = entry;
 
-      if (nextNode  == NULL)
+      if (nextNode  == nullptr)
       {
          prevNode = m_last;
          m_last = newNode;
@@ -1062,7 +1082,7 @@ public:
          nextNode->m_prev = newNode;
       }
 
-      if (prevNode == NULL)
+      if (prevNode == nullptr)
          m_first = newNode;
       else
          prevNode->m_next = newNode;
@@ -1084,9 +1104,9 @@ public:
    //  next - Next node to be inserted into linked list.
    //
    // Returns:
-   //  Item if operation success, NULL otherwise.
+   //  Item if operation success, nullptr otherwise.
    //
-   T *Link (T &entry, T *next = NULL)
+   T *Link (T &entry, T *next = nullptr)
    {
       T *newEntry = new T ();
       *newEntry = entry;
@@ -1105,15 +1125,15 @@ public:
    {
       Node <T> *entryNode = FindNode (entry);
 
-      if (entryNode == NULL)
+      if (entryNode == nullptr)
          return;
 
-      if (entryNode->m_prev == NULL)
+      if (entryNode->m_prev == nullptr)
          m_first = entryNode->m_next;
       else
          entryNode->m_prev->m_next = entryNode->m_next;
 
-      if (entryNode->m_next == NULL)
+      if (entryNode->m_next == nullptr)
          m_last = entryNode->m_prev;
       else
          entryNode->m_next->m_prev = entryNode->m_prev;
@@ -1132,7 +1152,7 @@ public:
    // Returns:
    //  Item that was inserted.
    //
-   T *Allocate (T *next = NULL)
+   T *Allocate (T *next = nullptr)
    {
       T *entry = new T ();
 
@@ -1158,9 +1178,9 @@ public:
    //
    void RemoveAll (void)
    {
-      Node <T> *node = NULL;
+      Node <T> *node = nullptr;
 
-      while ((node = GetIterator (node)) != NULL)
+      while ((node = GetIterator (node)) != nullptr)
       {
          Node <T> *nodeToKill = node;
          node = node->m_prev;
@@ -1181,14 +1201,14 @@ public:
    //
    Node <T> *FindNode (T *entry)
    {
-      Node <T> *iter = NULL;
+      Node <T> *iter = nullptr;
 
-      while ((iter = GetIterator (iter)) != NULL)
+      while ((iter = GetIterator (iter)) != nullptr)
       {
          if (iter->m_data == entry)
             return iter;
       }
-      return NULL;
+      return nullptr;
    }
 
    //
@@ -1201,9 +1221,9 @@ public:
    // Returns:
    //  Node pointer.
    //
-   Node <T> *GetIterator (Node <T> *entry = NULL)
+   Node <T> *GetIterator (Node <T> *entry = nullptr)
    {
-      if (entry == NULL)
+      if (entry == nullptr)
          return m_first;
       
       return entry->m_next;
@@ -1237,7 +1257,7 @@ public:
    //
    Array (int resizeStep = 0)
    {
-      m_elements = NULL;
+      m_elements = nullptr;
       m_itemSize = 0;
       m_itemCount = 0;
       m_resizeStep = resizeStep;
@@ -1252,7 +1272,7 @@ public:
    //
    Array (const Array <T> &other)
    {
-      m_elements = NULL;
+      m_elements = nullptr;
       m_itemSize = 0;
       m_itemCount = 0;
       m_resizeStep = 0;
@@ -1282,7 +1302,7 @@ public:
    {
       delete [] m_elements;
 
-      m_elements = NULL;
+      m_elements = nullptr;
       m_itemSize = 0;
       m_itemCount = 0;
    }
@@ -1328,7 +1348,7 @@ public:
 
       T *buffer = new T[checkSize];
 
-      if (keepData && m_elements != NULL)
+      if (keepData && m_elements != nullptr)
       {
          if (checkSize < m_itemCount)
             m_itemCount = checkSize;
@@ -1486,7 +1506,7 @@ public:
    //
    bool InsertAt (int index, T *objects, int count = 1, bool enlarge = true)
    {
-      if (objects == NULL || count < 1)
+      if (objects == nullptr || count < 1)
          return false;
 
       int newSize = 0;
@@ -1675,7 +1695,7 @@ public:
 
       T *buffer = new T[m_itemCount];
 
-      if (m_elements != NULL)
+      if (m_elements != nullptr)
       {
          for (int i = 0; i < m_itemCount; i++)
             buffer[i] = m_elements[i];
@@ -1795,7 +1815,7 @@ protected:
    public:
       HashItem (void) 
       { 
-         m_next = NULL;
+         m_next = nullptr;
          m_index = 0;
       }
 
@@ -2024,7 +2044,7 @@ public:
       int hashId = Hash <K> (keyName) % m_hashSize;
       HashItem *hashItem = m_table[hashId], *nextHash = 0;
 
-      while (hashItem != NULL)
+      while (hashItem != nullptr)
       {
          if (m_mapTable[hashItem->m_index].key == keyName)
          {
@@ -2054,7 +2074,7 @@ public:
       {
          HashItem *ptr = m_table[i];
 
-         while (ptr != NULL)
+         while (ptr != nullptr)
          {
             HashItem *m_next = ptr->m_next;
 
@@ -2081,7 +2101,7 @@ public:
    {
       int hashId = Hash <K> (keyName) % m_hashSize;
 
-      for (HashItem *ptr = m_table[hashId]; ptr != NULL; ptr = ptr->m_next)
+      for (HashItem *ptr = m_table[hashId]; ptr != nullptr; ptr = ptr->m_next)
       {
          if (m_mapTable[ptr->m_index].key == keyName)
             return ptr->m_index;
@@ -2132,7 +2152,7 @@ private:
       m_allocatedSize = size + 16;
       char *tempBuffer = new char[size + 1];
 
-      if (m_bufferPtr != NULL)
+      if (m_bufferPtr != nullptr)
       {
          strcpy (tempBuffer, m_bufferPtr);
          tempBuffer[m_stringLength] = 0;
@@ -2233,7 +2253,7 @@ private:
 public:
    String (void)
    {
-      m_bufferPtr = NULL;
+      m_bufferPtr = nullptr;
       m_allocatedSize = 0;
       m_stringLength = 0;
    }
@@ -2245,7 +2265,7 @@ public:
 
    String (const char *bufferPtr)
    {
-      m_bufferPtr = NULL;
+      m_bufferPtr = nullptr;
       m_allocatedSize = 0;
       m_stringLength = 0;
 
@@ -2254,7 +2274,7 @@ public:
 
    String (char input)
    {
-      m_bufferPtr = NULL;
+      m_bufferPtr = nullptr;
       m_allocatedSize = 0;
       m_stringLength = 0;
 
@@ -2263,7 +2283,7 @@ public:
 
    String (const String &inputString)
    {
-      m_bufferPtr = NULL;
+      m_bufferPtr = nullptr;
       m_allocatedSize = 0;
       m_stringLength = 0;
 
@@ -2284,7 +2304,7 @@ public:
    //
    const char *GetBuffer (void)
    {
-      if (m_bufferPtr == NULL || *m_bufferPtr == 0x0)
+      if (m_bufferPtr == nullptr || *m_bufferPtr == 0x0)
          return "";
 
       return &m_bufferPtr[0];
@@ -2299,7 +2319,7 @@ public:
    //
    const char *GetBuffer (void) const
    {
-      if (m_bufferPtr == NULL || *m_bufferPtr == 0x0)
+      if (m_bufferPtr == nullptr || *m_bufferPtr == 0x0)
          return "";
 
       return &m_bufferPtr[0];
@@ -2488,7 +2508,7 @@ public:
    //
    void Assign (const char *bufferPtr)
    {
-      if (bufferPtr == NULL)
+      if (bufferPtr == nullptr)
       {
          UpdateBufferSize (1);
          m_stringLength = 0;
@@ -2497,7 +2517,7 @@ public:
       }
       UpdateBufferSize (strlen (bufferPtr));
 
-      if (m_bufferPtr != NULL)
+      if (m_bufferPtr != nullptr)
       {
          strcpy (m_bufferPtr, bufferPtr);
          m_stringLength = strlen (m_bufferPtr);
@@ -2531,7 +2551,7 @@ public:
    //
    void Empty (void)
    {
-      if (m_bufferPtr != NULL)
+      if (m_bufferPtr != nullptr)
       {
          m_bufferPtr[0] = 0;
          m_stringLength = 0;
@@ -2547,7 +2567,7 @@ public:
    //
    bool IsEmpty (void) const
    {
-      if (m_bufferPtr == NULL || m_stringLength == 0)
+      if (m_bufferPtr == nullptr || m_stringLength == 0)
          return true;
 
       return false;
@@ -2562,7 +2582,7 @@ public:
    //
    int GetLength (void) const
    {
-      if (m_bufferPtr == NULL)
+      if (m_bufferPtr == nullptr)
          return 0;
 
       return m_stringLength;
@@ -3083,21 +3103,21 @@ public:
    String &TrimRight (void)
    {
       char *str = m_bufferPtr;
-      char *last = NULL;
+      char *last = nullptr;
 
       while (*str != 0)
       {
          if (IsTrimChar (*str))
          {
-            if (last == NULL)
+            if (last == nullptr)
                last = str;
          }
          else
-            last = NULL;
+            last = nullptr;
          str++;
       }
 
-      if (last != NULL)
+      if (last != nullptr)
          Delete (last - m_bufferPtr);
 
       return *this;
@@ -3153,21 +3173,21 @@ public:
    void TrimRight (char ch)
    {
       const char *str = m_bufferPtr;
-      const char *last = NULL;
+      const char *last = nullptr;
 
       while (*str != 0)
       {
          if (*str == ch)
          {
-            if (last == NULL)
+            if (last == nullptr)
                last = str;
          }
          else
-            last = NULL;
+            last = nullptr;
 
          str++;
       }
-      if (last != NULL)
+      if (last != nullptr)
       {
          int i = last - m_bufferPtr;
          Delete (i, m_stringLength - i);
@@ -3369,7 +3389,7 @@ public:
    //
    bool Contains (const String &what)
    {
-      return strstr (m_bufferPtr, what.m_bufferPtr) != NULL;
+      return strstr (m_bufferPtr, what.m_bufferPtr) != nullptr;
    }
 
    //
@@ -3497,7 +3517,7 @@ public:
    //
    File (void)
    {
-      m_handle = NULL;
+      m_handle = nullptr;
       m_fileSize = 0;
    }
 
@@ -3532,7 +3552,7 @@ public:
    //
    bool Open (const String &fileName, const String &mode)
    {
-      if ((m_handle = fopen (fileName.GetBuffer (), mode.GetBuffer ())) == NULL)
+      if ((m_handle = fopen (fileName.GetBuffer (), mode.GetBuffer ())) == nullptr)
          return false;
 
       fseek (m_handle, 0L, SEEK_END);
@@ -3548,10 +3568,10 @@ public:
    //
    void Close (void)
    {
-      if (m_handle != NULL)
+      if (m_handle != nullptr)
       {
          fclose (m_handle);
-         m_handle = NULL;
+         m_handle = nullptr;
       }
       m_fileSize = 0;
    }
@@ -3565,7 +3585,7 @@ public:
    //
    bool Eof (void)
    {
-      assert (m_handle != NULL);
+      assert (m_handle != nullptr);
       return feof (m_handle) ? true : false;
    }
 
@@ -3578,7 +3598,7 @@ public:
    //
    bool Flush (void)
    {
-      assert (m_handle != NULL);
+      assert (m_handle != nullptr);
       return fflush (m_handle) ? false : true;
    }
 
@@ -3591,7 +3611,7 @@ public:
    //
    int GetChar (void)
    {
-      assert (m_handle != NULL);
+      assert (m_handle != nullptr);
       return fgetc (m_handle);
    }
 
@@ -3608,7 +3628,7 @@ public:
    //
    char *GetBuffer (char *buffer, int count)
    {
-      assert (m_handle != NULL);
+      assert (m_handle != nullptr);
       return fgets (buffer, count, m_handle);
    }
 
@@ -3624,7 +3644,7 @@ public:
    //
    int Printf (const char *format, ...)
    {
-      assert (m_handle != NULL);
+      assert (m_handle != nullptr);
 
       va_list ap;
       va_start (ap, format);
@@ -3649,7 +3669,7 @@ public:
    //
    char PutChar (char ch)
    {
-      assert (m_handle != NULL);
+      assert (m_handle != nullptr);
       return static_cast <char> (fputc (ch, m_handle));
    }
 
@@ -3665,7 +3685,7 @@ public:
    //
    bool PutString (String buffer)
    {
-      assert (m_handle != NULL);
+      assert (m_handle != nullptr);
 
       if (fputs (buffer.GetBuffer (), m_handle) < 0)
          return false;
@@ -3687,7 +3707,7 @@ public:
    //
    int Read (void *buffer, int size, int count = 1)
    {
-      assert (m_handle != NULL);
+      assert (m_handle != nullptr);
       return fread (buffer, size, count, m_handle);
    }
 
@@ -3705,7 +3725,7 @@ public:
    //
    int Write (void *buffer, int size, int count = 1)
    {
-      assert (m_handle != NULL);
+      assert (m_handle != nullptr);
       return fwrite (buffer, size, count, m_handle);
    }
 
@@ -3722,7 +3742,7 @@ public:
    //
    bool Seek (long offset, int origin)
    {
-      assert (m_handle != NULL);
+      assert (m_handle != nullptr);
 
       if (fseek (m_handle, offset, origin) != 0)
          return false;
@@ -3736,7 +3756,7 @@ public:
    //
    void Rewind (void)
    {
-      assert (m_handle != NULL);
+      assert (m_handle != nullptr);
       rewind (m_handle);
    }
 
@@ -3761,7 +3781,7 @@ public:
    //
    bool IsValid (void)
    {
-      return m_handle != NULL;
+      return m_handle != nullptr;
    }
 
 public:
@@ -3826,7 +3846,7 @@ public:
       m_size = 0;
       m_pos = 0;
 
-      m_buffer = NULL;
+      m_buffer = nullptr;
    }
 
    //
@@ -3838,7 +3858,7 @@ public:
       m_size = 0;
       m_pos = 0;
 
-      m_buffer = NULL;
+      m_buffer = nullptr;
 
       Open (fileName);
    }
@@ -3872,7 +3892,7 @@ public:
 
       m_buffer = Loader (fileName, &m_size);
 
-      if (m_buffer == NULL || m_size < 0)
+      if (m_buffer == nullptr || m_size < 0)
          return false;
 
       return true;
@@ -3884,13 +3904,13 @@ public:
    //
    void Close (void)
    {
-      if (Unloader != NULL)
+      if (Unloader != nullptr)
          Unloader (m_buffer);
 
       m_size = 0;
       m_pos = 0;
 
-      m_buffer = NULL;
+      m_buffer = nullptr;
    }
 
    //
@@ -3902,7 +3922,7 @@ public:
    //
    int GetChar (void)
    {
-      if (m_buffer == NULL || m_pos >= m_size)
+      if (m_buffer == nullptr || m_pos >= m_size)
          return -1;
 
       int readCh = m_buffer[m_pos];
@@ -3924,8 +3944,8 @@ public:
    //
    char *GetBuffer (char *buffer, int count)
    {
-      if (m_buffer == NULL || m_pos >= m_size)
-         return NULL;
+      if (m_buffer == nullptr || m_pos >= m_size)
+         return nullptr;
 
       int start = m_pos;
       int end = m_size - 1;
@@ -3942,7 +3962,7 @@ public:
       }
 
       if (m_pos == start)
-         return NULL;
+         return nullptr;
 
       int pos = start;
 
@@ -3977,10 +3997,10 @@ public:
    //
    int Read (void *buffer, int size, int count = 1)
    {
-      if (!m_buffer|| m_pos >= m_size || buffer == NULL || !size || !count)
+      if (!m_buffer|| m_pos >= m_size || buffer == nullptr || !size || !count)
          return 0;
 
-      int blocksRead = A_min ((m_size - m_pos) / size, count) * size;
+      int blocksRead = Math::A_min ((m_size - m_pos) / size, count) * size;
 
       memcpy (buffer, &m_buffer[m_pos], blocksRead);
       m_pos += blocksRead;
@@ -4001,7 +4021,7 @@ public:
    //
    bool Seek (long offset, int origin)
    {
-      if (m_buffer == NULL || m_pos >= m_size)
+      if (m_buffer == nullptr || m_pos >= m_size)
          return false;
 
       if (origin == SEEK_SET)
@@ -4049,7 +4069,7 @@ public:
    //
    bool IsValid (void)
    {
-      return m_buffer != NULL && m_size > 0;
+      return m_buffer != nullptr && m_size > 0;
    }
 };
 
@@ -4119,18 +4139,6 @@ public:
       return reference;
    };
 };
-
-//
-// Macro: ThrowException
-//  Throws debug exception.
-//
-// Parameters:
-//  text - Text of error.
-//
-#define ThrowException(text) \
-   throw Exception (text, __FILE__, __LINE__)
-
-
 //
 // Macro: IterateArray
 //  Utility macro for iterating arrays.
@@ -4155,3 +4163,7 @@ public:
 // Squared Length
 //
 #define GET_SQUARE(in) (in * in)
+
+//
+// Stringify a string
+#define STRINGIFY(str) (#str)

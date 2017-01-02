@@ -687,12 +687,12 @@ bool Bot::DoFirePause (float distance)
 
    if ((m_aimFlags & AIM_ENEMY) && !m_enemyOrigin.IsZero ())
    {
-      if (IsEnemyProtectedByShield (m_enemy) && GetShootingConeDeviation (GetEntity (), &m_enemyOrigin) > 0.92f)
+      if (GetShootingConeDeviation (GetEntity (), &m_enemyOrigin) > 0.92f && IsEnemyProtectedByShield (m_enemy))
          return true;
    }
 
    float offset = 0.0f;
-   const float SprayDistance = 200.0f;
+   const float SprayDistance = 250.0f;
 
    if (distance < SprayDistance)
       return false;
@@ -712,8 +712,11 @@ bool Bot::DoFirePause (float distance)
    // check if we need to compensate recoil
    if (tanf (A_sqrtf (fabsf (xPunch * xPunch) + fabsf (yPunch * yPunch))) * distance > offset + 30.0f + ((100 - (m_difficulty * 25)) / 100.f))
    {
-      if (m_firePause < engine.Time () - interval)
-         m_firePause = engine.Time () + Random.Float (0.5f, 0.5f + 0.3f * ((100.0f - (m_difficulty * 25)) / 100.f));
+      if (m_firePause < engine.Time ())
+         m_firePause = Random.Float (0.5f, 0.5f + 0.3f * ((100.0f - (m_difficulty * 25)) / 100.f));
+
+      m_firePause -= interval;
+      m_firePause += engine.Time ();
 
       return true;
    }

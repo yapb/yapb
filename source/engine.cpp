@@ -1033,7 +1033,6 @@ void Engine::ProcessMessageCapture (void *ptr)
       case 4:
          if (playerIndex >= 0 && playerIndex <= MaxClients ())
          {
-#ifndef XASH_CSDM
             Client &client = g_clients[playerIndex - 1];
 
             if (intVal == 1)
@@ -1047,7 +1046,6 @@ void Engine::ProcessMessageCapture (void *ptr)
                client.team = playerIndex;
             else
                client.team = client.team2;
-#endif
          }
          break;
       }

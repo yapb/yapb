@@ -3181,7 +3181,7 @@ void Bot::UpdateBodyAngles (void)
 
 void Bot::UpdateLookAngles (void)
 {
-   const float delta = A_clamp <float> (engine.Time () - m_lookUpdateTime, MATH_EQEPSILON, 0.05f);
+   const float delta = F_clamp (engine.Time () - m_lookUpdateTime, MATH_EQEPSILON, 0.05f);
    m_lookUpdateTime = engine.Time ();
 
    // adjust all body and view angles to face an absolute vector
