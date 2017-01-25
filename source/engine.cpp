@@ -81,6 +81,7 @@ void Engine::ChatPrintf (const char *fmt, ...)
 
    MESSAGE_BEGIN (MSG_BROADCAST, FindMessageId (NETMSG_TEXTMSG));
       WRITE_BYTE (HUD_PRINTTALK);
+      WRITE_STRING ("%s");
       WRITE_STRING (string);
    MESSAGE_END ();
 }
@@ -101,8 +102,7 @@ void Engine::CenterPrintf (const char *fmt, ...)
    }
    strcat (string, "\n");
 
-   MESSAGE_BEGIN (MSG_BROADCAST, FindMessageId (NETMSG_TEXTMSG));
-      WRITE_BYTE (HUD_PRINTCENTER);
+   MESSAGE_BEGIN (MSG_BROADCAST, SVC_CENTERPRINT);
       WRITE_STRING (string);
    MESSAGE_END ();
 }

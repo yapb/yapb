@@ -173,6 +173,7 @@ typedef struct hudtextparms_s
 #define VEC_DUCK_VIEW        Vector( 0, 0, 12 )
 
 #define SVC_TEMPENTITY      23
+#define SVC_CENTERPRINT     26
 #define SVC_INTERMISSION    30
 #define SVC_CDTRACK         32
 #define SVC_WEAPONANIM      35
