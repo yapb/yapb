@@ -345,7 +345,7 @@ void Engine::IssueBotCommand (edict_t *ent, const char *fmt, ...)
       return; 
 
    va_list ap;
-   static char string[256];
+   char string[256];
 
    va_start (ap, fmt);
    vsnprintf (string, SIZEOF_CHAR (string), fmt, ap);
@@ -354,7 +354,7 @@ void Engine::IssueBotCommand (edict_t *ent, const char *fmt, ...)
    if (IsNullString (string))
       return;
 
-   m_arguments[0] = 0x0;
+   m_arguments[0] = '\0';
    m_argumentCount = 0;
 
    m_isBotCommand = true;
@@ -407,16 +407,24 @@ void Engine::IssueBotCommand (edict_t *ent, const char *fmt, ...)
    }
    m_isBotCommand = false;
 
-   m_arguments[0] = 0x0;
+   m_arguments[0] = '\0';
    m_argumentCount = 0;
 }
 
-const char *Engine::ExtractSingleField (const char *string, int id, bool terminate)
+const char *Engine::ExtractSingleField (const char *string, int id)
 {
    // this function gets and returns a particular field in a string where several strings are concatenated
 
-   static char field[256];
-   field[0] = 0x0;
+   const int IterBufMax = 4;
+
+   static char arg[IterBufMax][256];
+   static int iter = -1;
+
+   if (iter > IterBufMax - 1)
+      iter = 0;
+
+   char *ptr = arg[++iter];
+   ptr[0] = 0;
 
    int pos = 0, count = 0, start = 0, stop = 0;
    int length = strlen (string);
@@ -452,19 +460,16 @@ const char *Engine::ExtractSingleField (const char *string, int id, bool termina
          int i = start;
 
          for (; i <= stop; i++)
-            field[i - start] = string[i];
+            ptr[i - start] = string[i];
 
-         field[i - start] = 0;
+         ptr[i - start] = 0;
          break;
       }
       count++; // we have parsed one field more
    }
+   String::TrimExternalBuffer (ptr);
 
-   if (terminate)
-      field[strlen (field) - 1] = 0;
-
-   String::TrimExternalBuffer (field);
-   return field;
+   return ptr;
 }
 
 void Engine::IssueCmd (const char *fmt, ...)

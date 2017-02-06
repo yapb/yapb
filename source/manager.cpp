@@ -1036,6 +1036,14 @@ void Bot::ReleaseUsedName (void)
    }
 }
 
+float Bot::GetThinkInterval (void)
+{
+   if (Math::FltZero (m_thinkInterval))
+      return m_frameInterval;
+
+   return m_thinkInterval;
+}
+
 Bot::~Bot (void)
 {
    // this is bot destructor
@@ -1138,6 +1146,9 @@ void Bot::NewRound (void)
 
    m_numFriendsLeft = 0;
    m_numEnemiesLeft = 0;
+
+   m_avoid = nullptr;
+   m_avoidTime = 0.0f;
 
    for (i = 0; i < 5; i++)
       m_prevWptIndex[i] = -1;

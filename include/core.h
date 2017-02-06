@@ -524,6 +524,8 @@ const float TASKPRI_SHOOTBREAKABLE = 100.0f;
 const float TASKPRI_ESCAPEFROMBOMB = 100.0f;
 
 const float MAX_GRENADE_TIMER = 2.34f;
+const float MAX_SPRAY_DISTANCE = 250.0f;
+const float MAX_SPRAY_DISTANCE_X2 = MAX_SPRAY_DISTANCE * 2;
 
 const int MAX_HOSTAGES = 8;
 const int MAX_PATH_INDEX = 8;
@@ -744,6 +746,9 @@ private:
    char m_tempStrings[160]; // space for strings (say text...)
    int m_radioSelect; // radio entry
    float m_headedTime; 
+
+   edict_t *m_avoid; // avoid players on our way
+   float m_avoidTime; // time to avoid players around
 
    float m_blindRecognizeTime; // time to recognize enemy
    float m_itemCheckTime; // time next search for items needs to be done
@@ -1177,6 +1182,8 @@ public:
    inline Vector Center (void) { return (pev->absmax + pev->absmin) * 0.5; };
    inline Vector EyePosition (void) { return pev->origin + pev->view_ofs; };
 
+   float GetThinkInterval (void);
+
    // the main function that decides intervals of running bot ai
    void Think (void);
 
@@ -1197,6 +1204,7 @@ public:
    void EnableChatterIcon (bool show);
    void DeleteSearchNodes (void); 
    void VerifyBreakable (edict_t *touch);
+   void AvoidPlayersOnTheWay (edict_t *touch);
 
    void PushTask (TaskID id, float desire, int data, float time, bool canContinue);
    void RemoveCertainTask (TaskID id);
@@ -1220,7 +1228,10 @@ public:
 
    void Kill (void);
    void Kick (bool keepQuota = false);
+
    void ResetDoubleJumpState (void);
+   void StartDoubleJump (edict_t *ent);
+
    int FindPlantedBomb(void);
 
    bool HasHostage (void);
