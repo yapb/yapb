@@ -466,7 +466,7 @@ const Vector &Bot::GetAimPosition (void)
       }
       m_lastEnemyOrigin = targetOrigin;
    }
-   const Vector &velocity = UsesSniper () ? Vector::GetZero () : 1.0f * m_frameInterval * (m_enemy->v.velocity - pev->velocity);
+   const Vector &velocity = UsesSniper () ? Vector::GetZero () : 1.0f * GetThinkInterval () * (m_enemy->v.velocity - pev->velocity);
 
    if (m_difficulty < 3 && !randomize.IsZero ())
    {
@@ -505,12 +505,9 @@ float Bot::GetZOffset (float distance)
    bool shotgun = (m_currentWeapon == WEAPON_XM1014 || m_currentWeapon == WEAPON_M3);
    bool m249 = m_currentWeapon == WEAPON_M249;
 
-   const float BurstDistance = 300.0f;
-   const float DoubleBurstDistance = BurstDistance * 2;
-
    float result = 3.5f;
 
-   if (distance < 2800.0f && distance > DoubleBurstDistance)
+   if (distance < 2800.0f && distance > MAX_SPRAY_DISTANCE_X2)
    {
       if (sniper) result = 1.5f;
       else if (zoomableRifle) result = 4.5f;
@@ -520,7 +517,7 @@ float Bot::GetZOffset (float distance)
       else if (m249) result = 2.5f;
       else if (shotgun) result = 10.5f;
    }
-   else if (distance > BurstDistance && distance <= DoubleBurstDistance)
+   else if (distance > MAX_SPRAY_DISTANCE && distance <= MAX_SPRAY_DISTANCE_X2)
    {
       if (sniper) result = 2.5f;
       else if (zoomableRifle) result = 3.5f;
@@ -530,7 +527,7 @@ float Bot::GetZOffset (float distance)
       else if (m249) result = -1.0f;
       else if (shotgun) result = 10.0f;
    }
-   else if (distance < BurstDistance)
+   else if (distance < MAX_SPRAY_DISTANCE)
    {
       if (sniper) result = 4.5f;
       else if (zoomableRifle) result = -5.0f;
@@ -690,13 +687,11 @@ bool Bot::DoFirePause (float distance)
       if (GetShootingConeDeviation (GetEntity (), &m_enemyOrigin) > 0.92f && IsEnemyProtectedByShield (m_enemy))
          return true;
    }
-
    float offset = 0.0f;
-   const float SprayDistance = 250.0f;
 
-   if (distance < SprayDistance)
+   if (distance < MAX_SPRAY_DISTANCE)
       return false;
-   else if (distance < 2 * SprayDistance)
+   else if (distance < MAX_SPRAY_DISTANCE_X2)
       offset = 10.0f;
    else
       offset = 5.0f;
@@ -704,10 +699,7 @@ bool Bot::DoFirePause (float distance)
    const float xPunch = DegreeToRadian (pev->punchangle.x);
    const float yPunch = DegreeToRadian (pev->punchangle.y);
 
-   float interval = m_thinkInterval;
-
-   if ((g_gameFlags & GAME_LEGACY) && Math::FltZero (interval))
-      interval = (1.0f / 30.0f) * Random.Float (0.95f, 1.05f);
+   float interval = GetThinkInterval ();
 
    // check if we need to compensate recoil
    if (tanf (A_sqrtf (fabsf (xPunch * xPunch) + fabsf (yPunch * yPunch))) * distance > offset + 30.0f + ((100 - (m_difficulty * 25)) / 100.f))
@@ -805,7 +797,7 @@ void Bot::FinishWeaponSelection (float distance, int index, int id, int choosen)
    }
 
    // need to care for burst fire?
-   if (distance < 256.0f || m_blindTime > engine.Time ())
+   if (distance < MAX_SPRAY_DISTANCE || m_blindTime > engine.Time ())
    {
       if (id == WEAPON_KNIFE)
       {
@@ -1192,7 +1184,7 @@ void Bot::CombatFight (void)
    {
       MakeVectors (pev->v_angle);
 
-      if (IsDeadlyDrop (pev->origin + (g_pGlobals->v_forward * m_moveSpeed * 0.2f) + (g_pGlobals->v_right * m_strafeSpeed * 0.2f) + (pev->velocity * m_frameInterval)))
+      if (IsDeadlyDrop (pev->origin + (g_pGlobals->v_forward * m_moveSpeed * 0.2f) + (g_pGlobals->v_right * m_strafeSpeed * 0.2f) + (pev->velocity * GetThinkInterval ())))
       {
          m_strafeSpeed = -m_strafeSpeed;
          m_moveSpeed = -m_moveSpeed;

@@ -97,8 +97,8 @@ private:
    int m_drawModels[DRAW_NUM];
 
    // bot client command
-   bool m_isBotCommand;
    char m_arguments[256];
+   bool m_isBotCommand;
    int m_argumentCount;
 
    edict_t *m_startEntity;
@@ -218,7 +218,7 @@ public:
    // gets custom engine argv for client command
    inline const char *GetOverrideArgv (int num)
    {
-      return ExtractSingleField (m_arguments, num, false);
+      return ExtractSingleField (m_arguments, num);
    }
 
    // gets custom engine argc for client command
@@ -298,8 +298,8 @@ public:
    }
 
    // static utility functions
-public:
-   static const char *ExtractSingleField (const char *string, int id, bool terminate);
+private:
+   const char *ExtractSingleField (const char *string, int id);
 };
 
 // simplify access for console variables

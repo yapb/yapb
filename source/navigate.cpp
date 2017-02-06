@@ -320,54 +320,34 @@ void Bot::CheckCloseAvoidance (const Vector &dirNormal)
    if (m_seeEnemyTime + 1.5f < engine.Time ())
       return;
 
-   edict_t *nearest = nullptr;
-   float nearestDist = 99999.0f;
-   int playerCount = 0;
+   if (m_avoidTime < engine.Time () || m_avoid == nullptr)
+      return;
 
-   for (int i = 0; i < engine.MaxClients (); i++)
+   MakeVectors (m_moveAngles); // use our movement angles
+
+   float interval = GetThinkInterval ();
+
+   // try to predict where we should be next frame
+   Vector moved = pev->origin + g_pGlobals->v_forward * m_moveSpeed * interval;
+   moved += g_pGlobals->v_right * m_strafeSpeed * interval;
+   moved += pev->velocity * interval;
+
+   float nearestDistance = (m_avoid->v.origin - pev->origin).GetLength2D ();
+   float nextFrameDistance = ((m_avoid->v.origin + m_avoid->v.velocity * interval) - pev->origin).GetLength2D ();
+
+   // is player that near now or in future that we need to steer away?
+   if ((m_avoid->v.origin - moved).GetLength2D () <= 48.0f || (nearestDistance <= 56.0f && nextFrameDistance < nearestDistance))
    {
-      const Client &client = g_clients[i];
+      // to start strafing, we have to first figure out if the target is on the left side or right side
+      const Vector &dirToPoint = (pev->origin - m_avoid->v.origin).Get2D ();
 
-      if (!(client.flags & (CF_USED | CF_ALIVE)) || client.ent == GetEntity () || client.team != m_team)
-         continue;
+      if ((dirToPoint | g_pGlobals->v_right.Get2D ()) > 0.0f)
+         SetStrafeSpeed (dirNormal, pev->maxspeed);
+      else
+         SetStrafeSpeed (dirNormal, -pev->maxspeed);
 
-      float distance = (client.ent->v.origin - pev->origin).GetLength ();
-
-      if (distance < nearestDist && distance < pev->maxspeed)
-      {
-         nearestDist = distance;
-         nearest = client.ent;
-
-         playerCount++;
-      }
-   }
-
-   if (playerCount < 4 && IsValidPlayer (nearest))
-   {
-      MakeVectors (m_moveAngles); // use our movement angles
-
-      // try to predict where we should be next frame
-      Vector moved = pev->origin + g_pGlobals->v_forward * m_moveSpeed * m_frameInterval;
-      moved += g_pGlobals->v_right * m_strafeSpeed * m_frameInterval;
-      moved += pev->velocity * m_frameInterval;
-
-      float nearestDistance = (nearest->v.origin - pev->origin).GetLength2D ();
-      float nextFrameDistance = ((nearest->v.origin + nearest->v.velocity * m_frameInterval) - pev->origin).GetLength2D ();
-
-      // is player that near now or in future that we need to steer away?
-      if ((nearest->v.origin - moved).GetLength2D () <= 48.0f || (nearestDistance <= 56.0f && nextFrameDistance < nearestDistance))
-      {
-         // to start strafing, we have to first figure out if the target is on the left side or right side
-         const Vector &dirToPoint = (pev->origin - nearest->v.origin).Get2D ();
-
-         if ((dirToPoint | g_pGlobals->v_right.Get2D ()) > 0.0f)
-            SetStrafeSpeed (dirNormal, pev->maxspeed);
-         else
-            SetStrafeSpeed (dirNormal, -pev->maxspeed);
-
-         if (nearestDistance < 56.0f && (dirToPoint | g_pGlobals->v_forward.Get2D ()) < 0.0f)
-            m_moveSpeed = -pev->maxspeed;
-      }
+      if (nearestDistance < 56.0f && (dirToPoint | g_pGlobals->v_forward.Get2D ()) < 0.0f)
+         m_moveSpeed = -pev->maxspeed;
    }
 }
 
@@ -375,8 +355,6 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
 {
    m_isStuck = false;
    TraceResult tr;
-
-   CheckCloseAvoidance (dirNormal);
 
    // Standing still, no need to check?
    // FIXME: doesn't care for ladder movement (handled separately) should be included in some way
@@ -626,7 +604,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
                if (IsOnFloor () || IsInWater ())
                {
                   pev->button |= IN_JUMP;
-                  m_jumpStateTimer = Random.Float (2.0f, 3.0f);
+                  m_jumpStateTimer = engine.Time () + Random.Float (0.7f, 1.5f);
                }
                break;
 
@@ -648,6 +626,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
          }
       }
    }
+   CheckCloseAvoidance (dirNormal);
 }
 
 bool Bot::DoWaypointNav (void)
@@ -1187,7 +1166,7 @@ bool Bot::DoWaypointNav (void)
    }
 
    // needs precise placement - check if we get past the point
-   if (desiredDistance < 16.0f && waypointDistance < 30.0f && (pev->origin + (pev->velocity * m_frameInterval) - m_waypointOrigin).GetLength () > waypointDistance)
+   if (desiredDistance < 16.0f && waypointDistance < 30.0f && (pev->origin + (pev->velocity * GetThinkInterval ()) - m_waypointOrigin).GetLength () > waypointDistance)
       desiredDistance = waypointDistance + 1.0f;
 
    if (waypointDistance < desiredDistance)

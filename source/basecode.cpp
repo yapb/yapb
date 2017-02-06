@@ -330,7 +330,7 @@ void Bot::AvoidGrenades (void)
          if ((ent->v.flags & FL_ONGROUND) == 0)
          {
             float distance = (ent->v.origin - pev->origin).GetLength ();
-            float distanceMoved = ((ent->v.origin + ent->v.velocity * m_frameInterval) - pev->origin).GetLength ();
+            float distanceMoved = ((ent->v.origin + ent->v.velocity * GetThinkInterval ()) - pev->origin).GetLength ();
 
             if (distanceMoved < distance && distance < 500.0f)
             {
@@ -478,6 +478,30 @@ void Bot::VerifyBreakable (edict_t *touch)
    m_campButtons = pev->button & IN_DUCK;
 
    PushTask (TASK_SHOOTBREAKABLE, TASKPRI_SHOOTBREAKABLE, -1, 0.0f, false);
+}
+
+void Bot::AvoidPlayersOnTheWay (edict_t *touch)
+{
+   auto task = GetTaskId ();
+
+   if (task == TASK_PLANTBOMB || task == TASK_DEFUSEBOMB)
+      return;
+
+   int ownId = GetIndex ();
+   int otherId = engine.IndexOfEntity (touch);
+
+   if (ownId < otherId)
+      return;
+
+   if (m_avoid != nullptr)
+   {
+      int currentId = engine.IndexOfEntity (m_avoid);
+
+      if (currentId < otherId)
+         return;
+   }
+   m_avoid = touch;
+   m_avoidTime = engine.Time () + 0.6f;
 }
 
 edict_t *Bot::FindBreakable (void)
@@ -837,7 +861,7 @@ void Bot::FindItem (void)
                   m_itemIgnore = ent;
                   allowPickup = false;
 
-                  if (!m_defendedBomb && m_difficulty >= 2 && Random.Int (0, 100) < 80)
+                  if (!m_defendedBomb && m_difficulty >= 2 && Random.Int (0, 100) < 75 && pev->health < 80)
                   {
                      int index = FindDefendWaypoint (entityOrigin);
 
@@ -2971,7 +2995,7 @@ void Bot::PeriodicThink (void)
          m_lastChatTime = engine.Time ();
          g_lastChatTime = engine.Time ();
 
-         char *pickedPhrase = const_cast <char *> (g_chatFactory[CHAT_DEAD].GetRandomElement ().GetBuffer ());
+         auto pickedPhrase = g_chatFactory[CHAT_DEAD].GetRandomElement ().GetBuffer ();
          bool sayBufferExists = false;
 
          // search for last messages, sayed
@@ -2983,7 +3007,7 @@ void Bot::PeriodicThink (void)
 
          if (!sayBufferExists)
          {
-            PrepareChatMessage (pickedPhrase);
+            PrepareChatMessage (const_cast <char *> (pickedPhrase));
             PushMessageQueue (GAME_MSG_SAY_CMD);
 
             // add to ignore list
@@ -4230,7 +4254,7 @@ void Bot::RunTask_Throw_SG (void)
 
 void Bot::RunTask_DoubleJump (void)
 {
-   if (!IsAlive (m_doubleJumpEntity) || (m_aimFlags & AIM_ENEMY) || (m_travelStartIndex != -1 && GetTask ()->time + (waypoints.GetTravelTime (pev->maxspeed, waypoints.GetPath (m_travelStartIndex)->origin, m_doubleJumpOrigin) + 11.0) < engine.Time ()))
+   if (!IsAlive (m_doubleJumpEntity) || (m_aimFlags & AIM_ENEMY) || (m_travelStartIndex != -1 && GetTask ()->time + (waypoints.GetTravelTime (pev->maxspeed, waypoints.GetPath (m_travelStartIndex)->origin, m_doubleJumpOrigin) + 11.0f) < engine.Time ()))
    {
       ResetDoubleJumpState ();
       return;
@@ -4246,24 +4270,25 @@ void Bot::RunTask_DoubleJump (void)
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
 
+      bool inJump = (m_doubleJumpEntity->v.button & IN_JUMP) || (m_doubleJumpEntity->v.oldbuttons & IN_JUMP);
+
       if (m_duckForJump < engine.Time ())
          pev->button |= IN_DUCK;
+      else if (inJump && !(pev->oldbuttons & IN_JUMP))
+         pev->button |= IN_JUMP;
 
-      MakeVectors (Vector::GetZero ());
+      MakeVectors (Vector (0.0f, pev->angles.y, 0.0f));
 
-      Vector dest = EyePosition () + g_pGlobals->v_forward * 500.0f;
-      dest.z = 180.0f;
+      Vector src = pev->origin + Vector (0.0f, 0.0f, 45.0f);
+      Vector dest = src + g_pGlobals->v_up * 256.0f;
 
       TraceResult tr;
-      engine.TestLine (EyePosition (), dest, TRACE_IGNORE_GLASS, GetEntity (), &tr);
+      engine.TestLine (src, dest, TRACE_IGNORE_NONE, GetEntity (), &tr);
 
-      if (tr.flFraction < 1.0f && tr.pHit == m_doubleJumpEntity)
+      if (tr.flFraction < 1.0f && tr.pHit == m_doubleJumpEntity && inJump)
       {
-         if (m_doubleJumpEntity->v.button & IN_JUMP)
-         {
-            m_duckForJump = engine.Time () + Random.Float (3.0f, 5.0f);
-            GetTask ()->time = engine.Time ();
-         }
+         m_duckForJump = engine.Time () + Random.Float (3.0f, 5.0f);
+         GetTask ()->time = engine.Time ();
       }
       return;
    }
@@ -4289,7 +4314,7 @@ void Bot::RunTask_DoubleJump (void)
          GetTask ()->data = destIndex;
          m_travelStartIndex = m_currentWaypointIndex;
 
-         // Always take the shortest path
+         // always take the shortest path
          FindShortestPath (m_currentWaypointIndex, destIndex);
 
          if (m_currentWaypointIndex == destIndex)
@@ -4859,7 +4884,7 @@ void Bot::BotAI (void)
    SetIdealReactionTimes ();
 
    // calculate 2 direction vectors, 1 without the up/down component
-   const Vector &dirOld = m_destOrigin - (pev->origin + pev->velocity * m_frameInterval);
+   const Vector &dirOld = m_destOrigin - (pev->origin + pev->velocity * GetThinkInterval ());
    const Vector &dirNormal = dirOld.Normalize2D ();
 
    m_moveAngles = dirOld.ToAngles ();
@@ -5499,7 +5524,7 @@ void Bot::DiscardWeaponForUser (edict_t *user, bool discardC4)
    // this function, asks bot to discard his current primary weapon (or c4) to the user that requsted it with /drop*
    // command, very useful, when i'm don't have money to buy anything... )
 
-   if (IsAlive (user) && m_moneyAmount >= 2000 && HasPrimaryWeapon () && (user->v.origin - pev->origin).GetLength () <= 240.0f)
+   if (IsAlive (user) && m_moneyAmount >= 2000 && HasPrimaryWeapon () && (user->v.origin - pev->origin).GetLength () <= 450.0f)
    {
       m_aimFlags |= AIM_ENTITY;
       m_lookAt = user->v.origin;
@@ -5528,6 +5553,17 @@ void Bot::DiscardWeaponForUser (edict_t *user, bool discardC4)
          m_nextBuyTime = engine.Time ();
       }
    }
+}
+
+void Bot::StartDoubleJump (edict_t *ent)
+{
+   ResetDoubleJumpState ();
+
+   m_doubleJumpOrigin = ent->v.origin;
+   m_doubleJumpEntity = ent;
+
+   PushTask (TASK_DOUBLEJUMP, TASKPRI_DOUBLEJUMP, -1, engine.Time (), true);
+   TeamSayText (FormatBuffer ("Ok %s, i will help you!", STRING (ent->v.netname)));
 }
 
 void Bot::ResetDoubleJumpState (void)

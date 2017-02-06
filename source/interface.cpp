@@ -118,7 +118,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    }
 
    // display some sort of help information
-   else if (A_stricmp (arg0, "?") == 0 || A_stricmp (arg0, "help") == 0)
+   else if (strcmp (arg0, "?") == 0 || strcmp (arg0, "help") == 0)
    {
       engine.ClientPrintf (ent, "Bot Commands:");
       engine.ClientPrintf (ent, "%s version\t - display version information.", self);
@@ -131,7 +131,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       engine.ClientPrintf (ent, "%s votemap\t - allows dead bots to vote for specific map.", self);
       engine.ClientPrintf (ent, "%s cmenu\t - displaying bots command menu.", self);
 
-      if (A_stricmp (arg1, "full") == 0 || A_stricmp (arg1, "f") == 0 || A_stricmp (arg1, "?") == 0)
+      if (strcmp (arg1, "full") == 0 || strcmp (arg1, "?") == 0)
       {
          engine.ClientPrintf (ent, "%s add_t\t - creates one random bot to terrorist team.", self);
          engine.ClientPrintf (ent, "%s add_ct\t - creates one random bot to ct team.", self);
@@ -140,8 +140,6 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          engine.ClientPrintf (ent, "%s kill_t\t - kills all bots on terrorist team.", self);
          engine.ClientPrintf (ent, "%s kill_ct\t - kills all bots on ct team.", self);
          engine.ClientPrintf (ent, "%s list\t - display list of bots currently playing.", self);
-         engine.ClientPrintf (ent, "%s order\t - execute specific command on specified bot.", self);
-         engine.ClientPrintf (ent, "%s time\t - displays current time on server.", self);
          engine.ClientPrintf (ent, "%s deletewp\t - erase waypoint file from hard disk (permanently).", self);
 
           if (!engine.IsDedicatedServer ())
@@ -151,6 +149,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
              engine.Printf ("%s wp on noclip\t - enable noclip cheat", self);
              engine.Printf ("%s wp save nocheck\t - save waypoints without checking.", self);
              engine.Printf ("%s wp add\t - open menu for waypoint creation.", self);
+             engine.Printf ("%s wp delete\t - delete waypoint nearest to host edict.", self);
              engine.Printf ("%s wp menu\t - open main waypoint menu.", self);
              engine.Printf ("%s wp addbasic\t - creates basic waypoints on map.", self);
              engine.Printf ("%s wp find\t - show direction to specified waypoint.", self);
@@ -497,6 +496,8 @@ void InitConfig (void)
       fp.Close ();
    }
 
+   engine.Printf ("INITING CHAT.CfG");
+
    // CHAT SYSTEM CONFIG INITIALIZATION
    if (OpenConfig ("chat.cfg", "Chat file not found.", &fp, true))
    {
@@ -506,7 +507,9 @@ void InitConfig (void)
       while (fp.GetBuffer (line, 255))
       {
          SKIP_COMMENTS ();
-         strncpy (section, Engine::ExtractSingleField (line, 0, 1), SIZEOF_CHAR (section));
+
+         String::TrimExternalBuffer (line);
+         strncpy (section, line, SIZEOF_CHAR (section));
 
          if (strcmp (section, "[KILLED]") == 0)
          {
@@ -551,8 +554,6 @@ void InitConfig (void)
 
          if (chatType != 3)
             line[79] = 0;
-
-         String::TrimExternalBuffer (line);
 
          switch (chatType)
          {
@@ -957,7 +958,12 @@ void Touch (edict_t *pentTouched, edict_t *pentOther)
       Bot *bot = bots.GetBot (pentOther);
 
       if (bot != nullptr)
-         bot->VerifyBreakable (pentTouched);
+      {
+         if (IsValidPlayer (pentTouched))
+            bot->AvoidPlayersOnTheWay (pentTouched);
+         else
+            bot->VerifyBreakable (pentTouched);
+      }
    }
    if (g_gameFlags & GAME_METAMOD)
       RETURN_META (MRES_IGNORED);
@@ -1614,20 +1620,12 @@ void ClientCommand (edict_t *ent)
             {
             case 1:
             case 2:
-               if (FindNearestPlayer (reinterpret_cast <void **> (&bot), client->ent, 300.0f, true, true, true))
+               if (FindNearestPlayer (reinterpret_cast <void **> (&bot), client->ent, 450.0f, true, true, true))
                {
-                  if (!bot->m_hasC4 && !bot->HasHostage () )
+                  if (!bot->m_hasC4 && !bot->HasHostage ())
                   {
                      if (selection == 1)
-                     {
-                        bot->ResetDoubleJumpState ();
-
-                        bot->m_doubleJumpOrigin = client->ent->v.origin;
-                        bot->m_doubleJumpEntity = client->ent;
-
-                        bot->PushTask (TASK_DOUBLEJUMP, TASKPRI_DOUBLEJUMP, -1, engine.Time (), true);
-                        bot->TeamSayText (FormatBuffer ("Ok %s, i will help you!", STRING (ent->v.netname)));
-                     }
+                        bot->StartDoubleJump (client->ent);
                      else if (selection == 2)
                         bot->ResetDoubleJumpState ();
                   }
@@ -1637,7 +1635,7 @@ void ClientCommand (edict_t *ent)
 
             case 3:
             case 4:
-               if (FindNearestPlayer (reinterpret_cast <void **> (&bot), ent, 300.0f, true, true, true))
+               if (FindNearestPlayer (reinterpret_cast <void **> (&bot), ent, 450.0f, true, true, true))
                   bot->DiscardWeaponForUser (ent, selection == 4 ? false : true);
 
                DisplayMenuToClient (ent, BOT_MENU_COMMANDS);
