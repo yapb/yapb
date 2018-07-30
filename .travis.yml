@@ -18,8 +18,6 @@ os:
   - linux
   - osx
 before_script:
-  - sudo wget https://yapb.ru/ci/crosstool/osxcross.tar.gz -O /tmp/osxcross.tgz && mkdir -p /tmp/osxcross/target && tar xzf /tmp/osxcross.tgz -C /tmp/osxcross/target/
-  - export PATH=$PATH:/tmp/osxcross/target/bin
   - wget https://yapb.ru/ci/scripts/gitrev.sh && chmod a+x ./gitrev.sh && ./gitrev.sh
 script:
   - cd project && CC=clang && make all
