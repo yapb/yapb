@@ -10,6 +10,7 @@
 #include <core.h>
 
 ConVar yb_display_menu_text ("yb_display_menu_text", "1");
+ConVar yb_display_welcome_text ("yb_display_welcome_text", "1");
 
 ConVar mp_roundtime ("mp_roundtime", nullptr, VT_NOREGISTER);
 ConVar mp_freezetime ("mp_freezetime", nullptr, VT_NOREGISTER, true, "0");
@@ -523,7 +524,7 @@ void CheckWelcomeMessage (void)
 {
    // the purpose of this function, is  to send quick welcome message, to the listenserver entity.
 
-   static bool alreadyReceived = false;
+   static bool alreadyReceived = !yb_display_welcome_text.GetBool ();
    static float receiveTime = 0.0f;
 
    if (alreadyReceived)
