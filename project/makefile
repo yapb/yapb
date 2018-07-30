@@ -38,7 +38,7 @@ endif
 ifeq "$(OSX)" "true"
 	LIBRARY_EXT = dylib
 	COMPILER_FLAGS += -DOSX -D_OSX -DPOSIX
-	LINKER_FLAGS += -dynamiclib -lstdc++ -mmacosx-version-min=10.5 -arch i386
+	LINKER_FLAGS += -dynamiclib -lstdc++ -mmacosx-version-min=10.12 -arch i386
 else
 	LIBRARY_EXT = so
 	COMPILER_FLAGS += -DLINUX -D_LINUX -DPOSIX
@@ -48,7 +48,6 @@ endif
 BINARY_OUTPUT = $(PROJECT).$(LIBRARY_EXT)
 
 ifeq ($(findstring clang,$(COMPILER)),clang)
-	COMPILER_FLAGS += -D__extern_always_inline="extern __always_inline"
 	ifeq "$(OSX)" "false"
 		LINKER_FLAGS += -lgcc_eh
 	endif
