@@ -24,7 +24,7 @@ ifeq "$(DEBUG)" "true"
 	COMPILER_FLAGS += -D_DEBUG -DDEBUG -g3
 	BINARY_DIR = debug
 else
-	COMPILER_FLAGS += -DNDEBUG -pipe -Ofast -msse$(COMPILER_SSE_VERSION) -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden
+	COMPILER_FLAGS += -DNDEBUG -pipe -O2 -msse$(COMPILER_SSE_VERSION) -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden
 	BINARY_DIR = release
 endif
 
@@ -33,10 +33,6 @@ COMPILER = $(CC)
 
 ifeq "$(shell uname -s)" "Darwin"
 	MACOS = true
-else
-	ifeq "$(MACOS)" "true"
-		COMPILER = o32-clang
-	endif
 endif
 
 ifeq "$(MACOS)" "true"
