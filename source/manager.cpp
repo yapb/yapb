@@ -480,10 +480,10 @@ void BotManager::MaintainBotQuota (void)
       int numHumans = GetHumansNum ();
       int desiredCount = yb_quota.GetInt ();
 
-      if (yb_join_after_player.GetBool () && !numHumans)
-         desiredCount = 0;
-
       int numHumansOnTeam = yb_autovacate_smart_kick.GetBool () ? GetHumansJoinedTeam () : numHumans;
+
+      if (yb_join_after_player.GetBool () && !numHumansOnTeam)
+          desiredCount = 0;
 
       // quota mode
       char mode = yb_quota_mode.GetString ()[0];
