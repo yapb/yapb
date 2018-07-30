@@ -24,7 +24,7 @@ ifeq "$(DEBUG)" "true"
 	COMPILER_FLAGS += -D_DEBUG -DDEBUG -g3
 	BINARY_DIR = debug
 else
-	COMPILER_FLAGS += -DNDEBUG -pipe -Ofast -msse$(COMPILER_SSE_VERSION) -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden
+	COMPILER_FLAGS += -DNDEBUG -pipe -O2 -msse$(COMPILER_SSE_VERSION) -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden
 	BINARY_DIR = release
 endif
 
@@ -32,17 +32,13 @@ INCLUDE = -I../include -I../include/engine
 COMPILER = $(CC)
 
 ifeq "$(shell uname -s)" "Darwin"
-	MACOS = true
-else
-	ifeq "$(MACOS)" "true"
-		COMPILER = o32-clang
-	endif
+	OSX = true
 endif
 
-ifeq "$(MACOS)" "true"
+ifeq "$(OSX)" "true"
 	LIBRARY_EXT = dylib
 	COMPILER_FLAGS += -DOSX -D_OSX -DPOSIX
-	LINKER_FLAGS += -dynamiclib -lstdc++ -mmacosx-version-min=10.5 -arch i386
+	LINKER_FLAGS += -dynamiclib -lstdc++ -mmacosx-version-min=10.12 -arch i386
 else
 	LIBRARY_EXT = so
 	COMPILER_FLAGS += -DLINUX -D_LINUX -DPOSIX
@@ -52,12 +48,11 @@ endif
 BINARY_OUTPUT = $(PROJECT).$(LIBRARY_EXT)
 
 ifeq ($(findstring clang,$(COMPILER)),clang)
-	COMPILER_FLAGS += -D__extern_always_inline="extern __always_inline"
-	ifeq "$(MACOS)" "false"
+	ifeq "$(OSX)" "false"
 		LINKER_FLAGS += -lgcc_eh
 	endif
 else ifeq ($(findstring gcc,$(COMPILER)),gcc)
-	ifneq "$(MACOS)" "false"
+	ifneq "$(OSX)" "false"
 		LINKER_FLAGS += -static-libgcc
 		COMPILER_FLAGS += -funroll-all-loops
 	endif
@@ -86,23 +81,9 @@ release:
 debug:
 	$(MAKE) compile DEBUG=true
 
-release_macos:
-	$(MAKE) compile MACOS=true DEBUG=false
-
-debug_macos:
-	$(MAKE) compile MACOS=true DEBUG=true
-
-all_linux:
+all:
 	$(MAKE) compile DEBUG=true
 	$(MAKE) compile DEBUG=false
-
-all_macos:
-	$(MAKE) compile MACOS=true DEBUG=false
-	$(MAKE) compile MACOS=true DEBUG=true
-
-all: all_linux all_macos
-default: all_linux
-
 clean:
 	rm -rf release/*.o
 	rm -rf release/$(BINARY_OUTPUT)
