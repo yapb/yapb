@@ -9,7 +9,7 @@
 
 #pragma once
 
-const int N = 4096, F = 18, THRESHOLD = 2, NIL = N;
+static const int MAXBUF = 4096, PADDING = 18, THRESHOLD = 2, NIL = MAXBUF;
 
 class Compressor
 {
@@ -17,21 +17,21 @@ protected:
    unsigned long int m_textSize;
    unsigned long int m_codeSize;
 
-   uint8 m_textBuffer[N + F - 1];
+   uint8 m_textBuffer[MAXBUF + PADDING - 1];
    int m_matchPosition;
    int m_matchLength;
 
-   int m_left[N + 1];
-   int m_right[N + 257];
-   int m_parent[N + 1];
+   int m_left[MAXBUF + 1];
+   int m_right[MAXBUF + 257];
+   int m_parent[MAXBUF + 1];
 
 private:
    void InitTree (void)
    {
-      for (int i = N + 1; i <= N + 256; i++)
+      for (int i = MAXBUF + 1; i <= MAXBUF + 256; i++)
          m_right[i] = NIL;
 
-      for (int j = 0; j < N; j++)
+      for (int j = 0; j < MAXBUF; j++)
          m_parent[j] = NIL;
    }
 
@@ -42,7 +42,7 @@ private:
       int compare = 1;
 
       uint8 *key = &m_textBuffer[node];
-      int temp = N + 1 + key[0];
+      int temp = MAXBUF + 1 + key[0];
 
       m_right[node] = m_left[node] = NIL;
       m_matchLength = 0;
@@ -72,7 +72,7 @@ private:
             }
          }
 
-         for (i = 1; i < F; i++)
+         for (i = 1; i < PADDING; i++)
             if ((compare = key[i] - m_textBuffer[temp + i]) != 0)
                break;
 
@@ -80,7 +80,7 @@ private:
          {
             m_matchPosition = temp;
             
-            if ((m_matchLength = i) >= F)
+            if ((m_matchLength = i) >= PADDING)
                break;
          }
       }
@@ -190,12 +190,12 @@ public:
       codeBuffer[0] = 0;
       codeBufferPtr = mask = 1;
       strPtr = 0;
-      node = N - F;
+      node = MAXBUF - PADDING;
 
       for (i = strPtr; i < node; i++)
          m_textBuffer[i] = ' ';
 
-      for (length = 0; (length < F) && (bufferPtr < bufferSize); length++)
+      for (length = 0; (length < PADDING) && (bufferPtr < bufferSize); length++)
       {
          bit = buffer[bufferPtr++];
          m_textBuffer[node + length] = bit;
@@ -204,7 +204,7 @@ public:
       if ((m_textSize = length) == 0)
          return -1;
 
-      for (i = 1; i <= F; i++)
+      for (i = 1; i <= PADDING; i++)
          InsertNode (node - i);
       InsertNode (node);
 
@@ -243,11 +243,11 @@ public:
 
             m_textBuffer[strPtr] = bit;
 
-            if (strPtr < F - 1)
-               m_textBuffer[strPtr + N] = bit;
+            if (strPtr < PADDING - 1)
+               m_textBuffer[strPtr + MAXBUF] = bit;
 
-            strPtr = (strPtr + 1) & (N - 1);
-            node = (node + 1) & (N - 1);
+            strPtr = (strPtr + 1) & (MAXBUF - 1);
+            node = (node + 1) & (MAXBUF - 1);
             InsertNode (node);
          }
 
@@ -255,8 +255,8 @@ public:
          {
             DeleteNode (strPtr);
 
-            strPtr = (strPtr + 1) & (N - 1);
-            node = (node + 1) & (N - 1);
+            strPtr = (strPtr + 1) & (MAXBUF - 1);
+            node = (node + 1) & (MAXBUF - 1);
 
             if (length--)
                InsertNode (node);
@@ -290,7 +290,7 @@ public:
 
       fp.Seek (headerSize, SEEK_SET);
 
-      node = N - F;
+      node = MAXBUF - PADDING;
       for (i = 0; i < node; i++)
          m_textBuffer[i] = ' ';
 
@@ -324,7 +324,7 @@ public:
                return -1;
 
             m_textBuffer[node++] = bit;
-            node &= (N - 1);
+            node &= (MAXBUF - 1);
          }
          else
          {
@@ -339,14 +339,14 @@ public:
 
             for (k = 0; k <= j; k++)
             {
-               bit = m_textBuffer[(i + k) & (N - 1)];
+               bit = m_textBuffer[(i + k) & (MAXBUF - 1)];
                buffer[bufferPtr++] = bit;
 
                if (bufferPtr > bufferSize)
                   return -1;
 
                m_textBuffer[node++] = bit;
-               node &= (N - 1);
+               node &= (MAXBUF - 1);
             }
          }
       }
@@ -363,7 +363,7 @@ public:
    }
 
    // external encoder
-   static int Compress(const char *fileName, uint8 *header, int headerSize, uint8 *buffer, int bufferSize)
+   static int Compress (const char *fileName, uint8 *header, int headerSize, uint8 *buffer, int bufferSize)
    {
       static Compressor compressor = Compressor ();
       return compressor.InternalEncode (fileName, header, headerSize, buffer, bufferSize);

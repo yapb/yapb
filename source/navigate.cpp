@@ -14,7 +14,7 @@ ConVar yb_whose_your_daddy ("yb_whose_your_daddy", "0");
 int Bot::FindGoal (void)
 {
    // chooses a destination (goal) waypoint for a bot
-   if (!g_bombPlanted && m_team == TERRORIST && (g_mapType & MAP_DE))
+   if (!g_bombPlanted && m_team == TEAM_TERRORIST && (g_mapType & MAP_DE))
    {
       edict_t *pent = nullptr;
 
@@ -52,12 +52,12 @@ int Bot::FindGoal (void)
 
    switch (m_team)
    {
-   case TERRORIST:
+   case TEAM_TERRORIST:
       offensiveWpts = &waypoints.m_ctPoints;
       defensiveWpts = &waypoints.m_terrorPoints;
       break;
 
-   case CT:
+   case TEAM_COUNTER:
    default:
       offensiveWpts = &waypoints.m_terrorPoints;
       defensiveWpts = &waypoints.m_ctPoints;
@@ -70,7 +70,7 @@ int Bot::FindGoal (void)
       tactic = 3;
       return FinishFindGoal (tactic, defensiveWpts, offensiveWpts);
    }
-   else if (m_team == CT && HasHostage ())
+   else if (m_team == TEAM_COUNTER && HasHostage ())
    {
       tactic = 2;
       offensiveWpts = &waypoints.m_rescuePoints;
@@ -83,12 +83,12 @@ int Bot::FindGoal (void)
 
    if (g_mapType & (MAP_AS | MAP_CS))
    {
-      if (m_team == TERRORIST)
+      if (m_team == TEAM_TERRORIST)
       {
          defensive += 25.0f;
          offensive -= 25.0f;
       }
-      else if (m_team == CT)
+      else if (m_team == TEAM_COUNTER)
       {
          // on hostage maps force more bots to save hostages
          if (g_mapType & MAP_CS)
@@ -103,7 +103,7 @@ int Bot::FindGoal (void)
          }
       }
    }
-   else if ((g_mapType & MAP_DE) && m_team == CT)
+   else if ((g_mapType & MAP_DE) && m_team == TEAM_COUNTER)
    {
       if (g_bombPlanted && GetTaskId () != TASK_ESCAPEFROMBOMB && !waypoints.GetBombPosition ().IsZero ())
       {
@@ -120,7 +120,7 @@ int Bot::FindGoal (void)
       if (m_personality != PERSONALITY_RUSHER)
          defensive += 10.0f;
    }
-   else if ((g_mapType & MAP_DE) && m_team == TERRORIST && g_timeRoundStart + 10.0f < engine.Time ())
+   else if ((g_mapType & MAP_DE) && m_team == TEAM_TERRORIST && g_timeRoundStart + 10.0f < engine.Time ())
    {
       // send some terrorists to guard planted bomb
       if (!m_defendedBomb && g_bombPlanted && GetTaskId () != TASK_ESCAPEFROMBOMB && GetBombTimeleft () >= 15.0)
@@ -175,7 +175,7 @@ int Bot::FinishFindGoal (int tactic, Array <int> *defensive, Array <int> *offsen
    else if (tactic == 3 && !waypoints.m_goalPoints.IsEmpty ()) // map goal waypoint
    {
       // force bomber to select closest goal, if round-start goal was reset by something
-      if (m_hasC4 && g_timeRoundStart + 10.0f < engine.Time ())
+      if (m_hasC4 && g_timeRoundStart + 20.0f < engine.Time ())
       {
          float minDist = 99999.0f;
          int count = 0;
@@ -232,8 +232,8 @@ int Bot::FinishFindGoal (int tactic, Array <int> *defensive, Array <int> *offsen
          if (testIndex < 0)
             break;
 
-         int goal1 = m_team == TERRORIST ? (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + goalChoices[i])->team0Value : (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + goalChoices[i])->team1Value;
-         int goal2 = m_team == TERRORIST ? (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + goalChoices[i + 1])->team0Value : (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + goalChoices[i + 1])->team1Value;
+         int goal1 = m_team == TEAM_TERRORIST ? (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + goalChoices[i])->team0Value : (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + goalChoices[i])->team1Value;
+         int goal2 = m_team == TEAM_TERRORIST ? (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + goalChoices[i + 1])->team0Value : (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + goalChoices[i + 1])->team1Value;
 
          if (goal1 < goal2)
          {
@@ -306,7 +306,7 @@ void Bot::ResetCollideState (void)
       m_collideMoves[i] = 0;
 }
 
-void Bot::IgnoreCollisionShortly (void)
+void Bot::IgnoreCollision (void)
 {
    ResetCollideState ();
 
@@ -366,7 +366,7 @@ void Bot::CheckTerrain (float movedDistance, const Vector &dirNormal)
          m_prevTime = engine.Time ();
          m_isStuck = true;
 
-         if (m_firstCollideTime == 0.0)
+         if (m_firstCollideTime == 0.0f)
             m_firstCollideTime = engine.Time () + 0.2f;
       }
       else // not stuck yet
@@ -1081,7 +1081,7 @@ bool Bot::DoWaypointNav (void)
       // if the door is near enough...
       if ((engine.GetAbsOrigin (tr.pHit) - pev->origin).GetLengthSquared () < 2500.0f)
       {
-         IgnoreCollisionShortly (); // don't consider being stuck
+         IgnoreCollision (); // don't consider being stuck
 
          if (Random.Int (1, 100) < 50)
          {
@@ -1095,6 +1095,7 @@ bool Bot::DoWaypointNav (void)
 
       // make sure we are always facing the door when going through it
       m_aimFlags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
+      m_canChooseAimDirection = false;
 
       edict_t *button = FindNearestButton (STRING (tr.pHit->v.targetname));
 
@@ -1110,37 +1111,28 @@ bool Bot::DoWaypointNav (void)
       // if bot hits the door, then it opens, so wait a bit to let it open safely
       if (pev->velocity.GetLength2D () < 2 && m_timeDoorOpen < engine.Time ())
       {
-         PushTask (TASK_PAUSE, TASKPRI_PAUSE, -1, engine.Time () + 1, false);
-
-         m_doorOpenAttempt++;
+         PushTask (TASK_PAUSE, TASKPRI_PAUSE, -1, engine.Time () + 0.5f, false);
          m_timeDoorOpen = engine.Time () + 1.0f; // retry in 1 sec until door is open
 
          edict_t *ent = nullptr;
 
-         if (m_doorOpenAttempt > 2 && !engine.IsNullEntity (ent = FIND_ENTITY_IN_SPHERE (ent, pev->origin, 512.0f)))
+         if (m_tryOpenDoor++ > 2 && FindNearestPlayer (reinterpret_cast <void **> (&ent), GetEntity (), 256.0f, false, false, true, true, false))
          {
-            if (IsValidPlayer (ent) && IsAlive (ent) && m_team != engine.GetTeam (ent) && GetWeaponPenetrationPower (m_currentWeapon) > 0)
-            {
-               m_seeEnemyTime = engine.Time () - 0.5f;
+            m_seeEnemyTime = engine.Time () - 0.5f;
 
-               m_states |= STATE_SEEING_ENEMY;
-               m_aimFlags |= AIM_ENEMY;
+            m_states |= STATE_SEEING_ENEMY;
+            m_aimFlags |= AIM_ENEMY;
 
-               m_lastEnemy = ent;
-               m_enemy = ent;
-               m_lastEnemyOrigin = ent->v.origin;
-            }
-            else if (IsValidPlayer (ent) && IsAlive (ent) && m_team == engine.GetTeam (ent))
-            {
-               DeleteSearchNodes ();
-               ResetTasks ();
-            }
-            else if (IsValidPlayer (ent) && (!IsAlive (ent) || (ent->v.deadflag & DEAD_DYING)))
-               m_doorOpenAttempt = 0; // reset count
+            m_lastEnemy = ent;
+            m_enemy = ent;
+            m_lastEnemyOrigin = ent->v.origin;
+
+            m_tryOpenDoor = 0;
          }
+         else
+            m_tryOpenDoor = 0;
       }
    }
-
    float desiredDistance = 0.0f;
 
    // initialize the radius for a special waypoint type, where the wpt is considered to be reached
@@ -1182,7 +1174,7 @@ bool Bot::DoWaypointNav (void)
             int startIndex = m_chosenGoalIndex;
             int goalIndex = m_currentWaypointIndex;
 
-            if (m_team == TERRORIST)
+            if (m_team == TEAM_TERRORIST)
             {
                waypointValue = (g_experienceData + (startIndex * g_numWaypoints) + goalIndex)->team0Value;
                waypointValue += static_cast <int16> (pev->health * 0.5f);
@@ -1216,7 +1208,7 @@ bool Bot::DoWaypointNav (void)
 
       int taskTarget = GetTask ()->data;
 
-      if ((g_mapType & MAP_DE) && g_bombPlanted && m_team == CT && GetTaskId () != TASK_ESCAPEFROMBOMB && taskTarget != -1)
+      if ((g_mapType & MAP_DE) && g_bombPlanted && m_team == TEAM_COUNTER && GetTaskId () != TASK_ESCAPEFROMBOMB && taskTarget != -1)
       {
          const Vector &bombOrigin = CheckBombAudible ();
 
@@ -1290,9 +1282,6 @@ void Bot::FindShortestPath (int srcIndex, int destIndex)
 
       node->next = new PathNode;
       node = node->next;
-
-      if (node == nullptr)
-         TerminateOnMalloc ();
 
       node->index = srcIndex;
       node->next = nullptr;
@@ -1371,7 +1360,7 @@ public:
          if (m_heap[parent].pri <= m_heap[child].pri)
             break;
 
-         Node ref = m_heap[child];
+         Node &ref = m_heap[child];
 
          m_heap[child] = m_heap[parent];
          m_heap[parent] = ref;
@@ -1391,7 +1380,7 @@ public:
       int parent = 0;
       int child = (2 * parent) + 1;
 
-      Node ref = m_heap[parent];
+      Node &ref = m_heap[parent];
 
       while (child < m_size)
       {
@@ -1662,6 +1651,7 @@ void Bot::FindPath(int srcIndex, int destIndex, SearchPathType pathType /*= SEAR
 
    switch (pathType)
    {
+   default:
    case SEARCH_PATH_FASTEST:
       if ((g_mapType & MAP_CS) && HasHostage ())
       {
@@ -1676,7 +1666,7 @@ void Bot::FindPath(int srcIndex, int destIndex, SearchPathType pathType /*= SEAR
       break;
 
    case SEARCH_PATH_SAFEST_FASTER:
-      if (m_team == TERRORIST)
+      if (m_team == TEAM_TERRORIST)
       {
          gcalc = gfunctionKillsDistT;
          hcalc = hfunctionSquareDist;
@@ -1694,8 +1684,7 @@ void Bot::FindPath(int srcIndex, int destIndex, SearchPathType pathType /*= SEAR
       break;
 
    case SEARCH_PATH_SAFEST:
-   default:
-      if (m_team == TERRORIST)
+      if (m_team == TEAM_TERRORIST)
       {
          gcalc = gfunctionKillsT;
          hcalc = hfunctionNone;
@@ -1951,7 +1940,7 @@ void Bot::GetValidWaypoint (void)
    }
    else if (m_navTimeset + GetEstimatedReachTime () < engine.Time () && engine.IsNullEntity (m_enemy))
    {
-      if (m_team == TERRORIST)
+      if (m_team == TEAM_TERRORIST)
       {
          int value = (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + m_currentWaypointIndex)->team0Damage;
          value += 100;
@@ -2052,16 +2041,21 @@ int Bot::ChooseBombWaypoint (void)
 {
    // this function finds the best goal (bomb) waypoint for CTs when searching for a planted bomb.
 
-   Array <int> goals = waypoints.m_goalPoints;
+   auto &goals = waypoints.m_goalPoints;
+   auto bomb = CheckBombAudible ();
 
-   if (goals.IsEmpty ())
+   if (goals.IsEmpty () || bomb.IsZero ())
       return Random.Int (0, g_numWaypoints - 1); // reliability check
 
-   Vector bombOrigin = CheckBombAudible ();
-
-   // if bomb returns no valid vector, return the current bot pos
-   if (bombOrigin.IsZero ())
-      bombOrigin = pev->origin;
+   // take the nearest to bomb waypoints instead of goal if close enough
+   else if ((pev->origin - bomb).GetLengthSquared () < GET_SQUARE (512.0f))
+   {
+      int waypoint = waypoints.FindNearest (bomb, 80.0f);
+      m_bombSearchOverridden = true;
+      
+      if (waypoint != -1)
+         return waypoint;
+   }
 
    int goal = 0, count = 0;
    float lastDistance = 999999.0f;
@@ -2069,7 +2063,7 @@ int Bot::ChooseBombWaypoint (void)
    // find nearest goal waypoint either to bomb (if "heard" or player)
    FOR_EACH_AE (goals, i)
    {
-      float distance = (waypoints.GetPath (goals[i])->origin - bombOrigin).GetLengthSquared ();
+      float distance = (waypoints.GetPath (goals[i])->origin - bomb).GetLengthSquared ();
 
       // check if we got more close distance
       if (distance < lastDistance)
@@ -2149,12 +2143,12 @@ int Bot::FindDefendWaypoint (const Vector &origin)
          Experience *exp = (g_experienceData + (waypointIndex[i] * g_numWaypoints) + waypointIndex[i]);
          int experience = -1;
 
-         if (m_team == TERRORIST)
+         if (m_team == TEAM_TERRORIST)
             experience = exp->team0Damage;
          else
             experience = exp->team1Damage;
 
-         experience = (experience * 100) / (m_team == TERRORIST ? g_highestDamageT : g_highestDamageCT);
+         experience = (experience * 100) / (m_team == TEAM_TERRORIST ? g_highestDamageT : g_highestDamageCT);
          minDistance[i] = (experience * 100) / 8192;
          minDistance[i] += experience;
       }
@@ -2298,7 +2292,7 @@ int Bot::FindCoverWaypoint (float maxDistance)
          Experience *exp = (g_experienceData + (waypointIndex[i] * g_numWaypoints) + waypointIndex[i]);
          int experience = -1;
 
-         if (m_team == TERRORIST)
+         if (m_team == TEAM_TERRORIST)
             experience = exp->team0Damage;
          else
             experience = exp->team1Damage;
@@ -2415,7 +2409,7 @@ bool Bot::HeadTowardWaypoint (void)
             int nextIndex = m_navNode->next->index;
             float kills = 0;
 
-            if (m_team == TERRORIST)
+            if (m_team == TEAM_TERRORIST)
                kills = (g_experienceData + (nextIndex * g_numWaypoints) + nextIndex)->team0Damage;
             else
                kills = (g_experienceData + (nextIndex * g_numWaypoints) + nextIndex)->team1Damage;
@@ -2449,7 +2443,7 @@ bool Bot::HeadTowardWaypoint (void)
             }
 
             // force terrorist bot to plant bomb
-            if (taskID == TASK_NORMAL && m_inBombZone && !m_hasProgressBar && m_hasC4)
+            if (m_inBombZone && !m_hasProgressBar && m_hasC4)
             {
                int newGoal = FindGoal ();
 
@@ -3332,7 +3326,7 @@ int Bot::FindPlantedBomb (void)
 {
    // this function tries to find planted c4 on the defuse scenario map and returns nearest to it waypoint
 
-   if (m_team != TERRORIST || !(g_mapType & MAP_DE))
+   if (m_team != TEAM_TERRORIST || !(g_mapType & MAP_DE))
       return -1; // don't search for bomb if the player is CT, or it's not defusing bomb
 
    edict_t *bombEntity = nullptr; // temporaly pointer to bomb

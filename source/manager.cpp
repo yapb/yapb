@@ -10,10 +10,10 @@
 #include <core.h>
 
 ConVar yb_autovacate ("yb_autovacate", "1");
-ConVar yb_autovacate_smart_kick ("yb_autovacate_smart_kick", "1");
 
 ConVar yb_quota ("yb_quota", "0", VT_NORMAL);
 ConVar yb_quota_mode ("yb_quota_mode", "normal");
+ConVar yb_quota_match ("yb_quota_match", "0");
 
 ConVar yb_join_after_player ("yb_join_after_player", "0");
 ConVar yb_join_team ("yb_join_team", "any");
@@ -33,7 +33,7 @@ BotManager::BotManager (void)
    m_lastWinner = -1;
    m_deathMsgSent = false;
 
-   for (int i = 0; i < SPECTATOR; i++)
+   for (int i = TEAM_TERRORIST; i < TEAM_SPECTATOR; i++)
    {
       m_leaderChoosen[i] = false;
       m_economicsGood[i] = true;
@@ -46,7 +46,6 @@ BotManager::BotManager (void)
 
    m_creationTab.RemoveAll ();
    m_killerEntity = nullptr;
-   m_balanceCount = 0;
 }
 
 BotManager::~BotManager (void)
@@ -112,7 +111,7 @@ void BotManager::CallGameEntity (entvars_t *vars)
    player (vars);
 }
 
-BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int personality, int team, int member, bool isConsoleCmd)
+BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int personality, int team, int member)
 {
    // this function completely prepares bot entity (edict) for creation, creates team, difficulty, sets name etc, and
    // then sends result to bot constructor
@@ -153,7 +152,7 @@ BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int
          personality = PERSONALITY_NORMAL;
       else
       {
-         if (Random.Int (0, 100) < 65)
+         if (Random.Int (0, 100) < 50)
             personality = PERSONALITY_RUSHER;
          else
             personality = PERSONALITY_CAREFUL;
@@ -177,9 +176,6 @@ BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int
 
             botName = &g_botNames.GetRandomElement ();
 
-            if (botName == nullptr)
-               continue;
-
             if (botName->name.GetLength () < 3 || botName->usedBy != 0)
                continue;
 
@@ -198,9 +194,7 @@ BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int
    if (!IsNullString (yb_name_prefix.GetString ()))
    {
       char prefixedName[33]; // temp buffer for storing modified name
-
-      if (!IsNullString (yb_name_prefix.GetString ()))
-         snprintf (prefixedName, SIZEOF_CHAR (prefixedName), "%s %s", yb_name_prefix.GetString (), outputName);
+      snprintf (prefixedName, SIZEOF_CHAR (prefixedName), "%s %s", yb_name_prefix.GetString (), outputName);
 
       // buffer has been modified, copy to real name
       if (!IsNullString (prefixedName))
@@ -223,17 +217,11 @@ BotCreationResult BotManager::CreateBot (const String &name, int difficulty, int
 
    m_bots[index] = new Bot (bot, difficulty, personality, team, member, steamId);
 
-   if (m_bots[index] == nullptr)
-      TerminateOnMalloc ();
-
    // assign owner of bot name
    if (botName != nullptr)
       botName->usedBy = m_bots[index]->GetIndex ();
 
    engine.Printf ("Connecting Bot...");
-
-   if (isConsoleCmd)
-      yb_quota.SetInt (yb_quota.GetInt () + 1);
 
    return BOT_RESULT_CREATED;
 }
@@ -302,8 +290,10 @@ void BotManager::Think (void)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (m_bots[i] != nullptr)
-         m_bots[i]->Think ();
+      auto bot = m_bots[i];
+
+      if (bot != nullptr)
+         bot->Think ();
    }
 }
 
@@ -313,12 +303,21 @@ void BotManager::PeriodicThink (void)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (m_bots[i] != nullptr)
-         m_bots[i]->PeriodicThink ();
+      auto bot = m_bots[i];
+
+      if (bot != nullptr)
+         bot->PeriodicThink ();
+   }
+
+   // select leader each team somewhere in round start
+   if (g_timeRoundStart + 5.0f > engine.Time () && g_timeRoundStart + 10.0f < engine.Time ())
+   {
+      for (int team = TEAM_TERRORIST; team < TEAM_SPECTATOR; team++)
+         SelectLeaderEachTeam (team, false);
    }
 }
 
-void BotManager::AddBot (const String &name, int difficulty, int personality, int team, int member, bool isConsoleCmd)
+void BotManager::AddBot (const String &name, int difficulty, int personality, int team, int member, bool manual)
 {
    // this function putting bot creation process to queue to prevent engine crashes
 
@@ -330,13 +329,13 @@ void BotManager::AddBot (const String &name, int difficulty, int personality, in
    bot.personality = personality;
    bot.team = team;
    bot.member = member;
-   bot.console = isConsoleCmd;
+   bot.manual = manual;
 
    // put to queue
    m_creationTab.Push (bot);
 }
 
-void BotManager::AddBot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member, bool isConsoleCmd)
+void BotManager::AddBot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member, bool manual)
 {
    // this function is same as the function above, but accept as parameters string instead of integers
 
@@ -348,83 +347,9 @@ void BotManager::AddBot (const String &name, const String &difficulty, const Str
    bot.team = (team.IsEmpty () || team == any) ? -1 : team.ToInt ();
    bot.member = (member.IsEmpty () || member == any) ? -1 : member.ToInt ();
    bot.personality = (personality.IsEmpty () || personality == any) ? -1 : personality.ToInt ();
-   bot.console = isConsoleCmd;
+   bot.manual = manual;
 
    m_creationTab.Push (bot);
-}
-
-void BotManager::AdjustQuota (bool isPlayerConnecting, edict_t *ent)
-{
-   // this function increases or decreases bot quota amount depending on auto vacate variables
-
-   if (!engine.IsDedicatedServer () || !yb_autovacate.GetBool () || IsValidBot (ent))
-      return;
-
-   if (isPlayerConnecting)
-   {
-      if (yb_autovacate_smart_kick.GetBool ())
-         AddPlayerToCheckTeamQueue (ent);
-      else
-      {
-         RemoveRandom ();
-         m_balanceCount--;
-
-         m_quotaMaintainTime = engine.Time () + 2.0f;
-      }
-   }
-   else if (m_balanceCount < 0)
-   {
-      AddRandom ();
-      m_balanceCount++;
-   }
-}
-
-void BotManager::AddPlayerToCheckTeamQueue (edict_t *ent)
-{
-   if (!engine.IsDedicatedServer () || !yb_autovacate.GetBool () || IsValidBot (ent))
-      return;
-
-   // entity must be unique
-   bool hasFound = false;
-
-   FOR_EACH_AE (m_trackedPlayers, it)
-   {
-      if (m_trackedPlayers[it] == ent)
-      {
-         hasFound = true;
-         break;
-      }
-   }
-
-   if (!hasFound)
-      m_trackedPlayers.Push (ent);
-}
-
-void BotManager::VerifyPlayersHasJoinedTeam (int &desiredCount)
-{
-   if (!engine.IsDedicatedServer () || !yb_autovacate.GetBool () || m_trackedPlayers.IsEmpty ())
-      return;
-
-   for (int i = 0; i < engine.MaxClients (); i++)
-   {
-      const Client &client = g_clients[i];
-
-      if (!(client.flags & CF_USED) || client.team == SPECTATOR || IsValidBot (client.ent))
-         continue;
-      
-      FOR_EACH_AE (m_trackedPlayers, it)
-      {
-         if (client.ent != m_trackedPlayers[it])
-            continue;
-
-         m_balanceCount--;
-         desiredCount--;
-
-         m_trackedPlayers.RemoveAt (it);
-
-         break;
-      }
-   }
 }
 
 void BotManager::MaintainBotQuota (void)
@@ -439,7 +364,10 @@ void BotManager::MaintainBotQuota (void)
    if (!m_creationTab.IsEmpty () && m_maintainTime < engine.Time ())
    {
       const CreateQueue &last = m_creationTab.Pop ();
-      const BotCreationResult callResult = CreateBot (last.name, last.difficulty, last.personality, last.team, last.member, last.console);
+      const BotCreationResult callResult = CreateBot (last.name, last.difficulty, last.personality, last.team, last.member);
+
+      if (last.manual)
+         yb_quota.SetInt (yb_quota.GetInt () + 1);
 
       // check the result of creation
       if (callResult == BOT_RESULT_NAV_ERROR)
@@ -463,54 +391,70 @@ void BotManager::MaintainBotQuota (void)
    }
 
    // now keep bot number up to date
-   if (m_quotaMaintainTime < engine.Time ())
+   if (m_quotaMaintainTime > engine.Time ())
+      return;
+
+   int numSpectators = GetHumansOnTeam (TEAM_SPECTATOR);
+   int humanPlayersInGame = GetHumansOnTeam (TEAM_TERRORIST) + GetHumansOnTeam (TEAM_COUNTER);
+   int totalHumansInGame = humanPlayersInGame + numSpectators;
+
+   if (!engine.IsDedicatedServer () && totalHumansInGame == 0)
+      return;
+
+   int desiredBotCount = yb_quota.GetInt ();
+   int botsInGame = GetBotsNum ();
+
+   bool halfRoundPassed = g_gameWelcomeSent && g_timeRoundMid > engine.Time ();
+
+   if (A_stricmp (yb_quota_mode.GetString (), "fill") == 0)
    {
-      // keep the quota number in valid ranges
-      {
-         if (yb_quota.GetInt () < 0)
-            yb_quota.SetInt (0);
-
-         int maxClients = engine.MaxClients ();
-
-         if (yb_quota.GetInt () > maxClients)
-            yb_quota.SetInt (maxClients);
-      }
-
-      int numBots = GetBotsNum ();
-      int numHumans = GetHumansNum ();
-      int desiredCount = yb_quota.GetInt ();
-
-      int numHumansOnTeam = yb_autovacate_smart_kick.GetBool () ? GetHumansJoinedTeam () : numHumans;
-
-      if (yb_join_after_player.GetBool () && !numHumansOnTeam)
-          desiredCount = 0;
-
-      // quota mode
-      char mode = yb_quota_mode.GetString ()[0];
-
-      if (mode == 'f' || mode == 'F') // fill
-         desiredCount = A_max (0, desiredCount - numHumansOnTeam);
-      else if (mode == 'm' || mode == 'M') // match
-         desiredCount = A_max (0, yb_quota.GetInt () * numHumansOnTeam);
-
-      desiredCount = A_min (desiredCount, engine.MaxClients () - (numHumansOnTeam + (yb_autovacate.GetBool () ? 1 : 0)));
- 
-      if (yb_autovacate_smart_kick.GetBool () && numBots > 1 && desiredCount > 1)
-         VerifyPlayersHasJoinedTeam (desiredCount);
-
-      if (desiredCount > numBots)
-         AddRandom (false);
-      else if (desiredCount < numBots)
-         RemoveRandom (true);
-
-      m_quotaMaintainTime = engine.Time () + 0.40f;
+      if (halfRoundPassed)
+         desiredBotCount = botsInGame;
+      else
+         desiredBotCount = A_max <int> (0, desiredBotCount - humanPlayersInGame);
    }
+   else if (A_stricmp (yb_quota_mode.GetString (), "match") == 0)
+   {
+      if (halfRoundPassed)
+         desiredBotCount = botsInGame;
+      else
+      {
+         int quotaMatch = yb_quota_match.GetInt () == 0 ? yb_quota.GetInt () : yb_quota_match.GetInt ();
+         desiredBotCount = A_max <int> (0, quotaMatch * humanPlayersInGame);
+      }
+   }
+
+   if (yb_join_after_player.GetBool () && humanPlayersInGame == 0)
+       desiredBotCount = 0;
+
+   int maxClients = engine.MaxClients ();
+
+   if (yb_autovacate.GetBool ())
+      desiredBotCount = A_min <int> (desiredBotCount, maxClients - (humanPlayersInGame + 1));
+   else
+      desiredBotCount = A_min <int> (desiredBotCount, maxClients - humanPlayersInGame);
+
+   // add bots if necessary
+   if (desiredBotCount > botsInGame)
+      AddRandom ();
+   else if (desiredBotCount < botsInGame)
+      RemoveRandom (false);
+
+   m_quotaMaintainTime = engine.Time () + 0.40f;
+}
+
+void BotManager::DecrementQuota (int by)
+{
+   if (by != 0)
+   {
+      yb_quota.SetInt (A_clamp <int> (yb_quota.GetInt () - by, 0, yb_quota.GetInt ()));
+      return;
+   }
+   yb_quota.SetInt (0);
 }
 
 void BotManager::InitQuota (void)
 {
-   m_balanceCount = 0;
-
    m_maintainTime = engine.Time () + 3.0f;
    m_quotaMaintainTime = engine.Time () + 3.0f;
 
@@ -549,19 +493,29 @@ void BotManager::FillServer (int selection, int personality, int difficulty, int
    int toAdd = numToAdd == -1 ? maxClients - (GetHumansNum () + GetBotsNum ()) : numToAdd;
 
    for (int i = 0; i <= toAdd; i++)
-      AddBot ("", difficulty, personality, selection, -1);
+      AddBot ("", difficulty, personality, selection, -1, true);
 
    engine.CenterPrintf ("Fill Server with %s bots...", &teams[selection][0]);
 }
 
-void BotManager::RemoveAll (void)
+void BotManager::RemoveAll (bool instant)
 {
    // this function drops all bot clients from server (this function removes only yapb's)`q
 
    engine.CenterPrintf ("Bots are removed from server.");
+   DecrementQuota (0);
 
+   if (instant)
+   {
+      for (int i = 0; i < engine.MaxClients (); i++)
+      {
+         auto bot = m_bots[i];
+
+         if (bot != nullptr)
+            bot->Kick ();
+      }
+   }
    m_creationTab.RemoveAll ();
-   yb_quota.SetInt (0);
 }
 
 void BotManager::RemoveFromTeam (Team team, bool removeAll)
@@ -570,9 +524,12 @@ void BotManager::RemoveFromTeam (Team team, bool removeAll)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (m_bots[i] != nullptr && team == engine.GetTeam (m_bots[i]->GetEntity ()))
+      auto bot = m_bots[i];
+
+      if (bot != nullptr && team == bot->m_team == team)
       {
-         m_bots[i]->Kick ();
+         DecrementQuota ();
+         bot->Kick ();
 
          if (!removeAll)
             break;
@@ -587,28 +544,33 @@ void BotManager::RemoveMenu (edict_t *ent, int selection)
    if (selection > 4 || selection < 1)
       return;
 
-   static char tempBuffer[1024];
-   char buffer[1024];
+   const int MaxMenuLength = 768;
 
-   memset (tempBuffer, 0, sizeof (tempBuffer));
-   memset (buffer, 0, sizeof (buffer));
+   static char menuBuffer[MaxMenuLength];
+   char menuHolder[MaxMenuLength];
 
-   int validSlots = (selection == 4) ? (1 << 9) : ((1 << 8) | (1 << 9));
+   memset (menuBuffer, 0, sizeof (menuBuffer));
+   memset (menuHolder, 0, sizeof (menuHolder));
 
-   for (int i = (selection - 1) * 8; i < selection * 8; i++)
+   int menuKeys = (selection == 4) ? (1 << 9) : ((1 << 8) | (1 << 9));
+   int menuKey = (selection - 1) * 8;
+
+   for (int i = menuKey; i < selection * 8; i++)
    {
-      const Bot *bot = GetBot (i);
+      char menuItem[32];
+      auto bot = GetBot (i);
 
       if (bot != nullptr && (bot->pev->flags & FL_FAKECLIENT))
       {
-         validSlots |= 1 << (i - ((selection - 1) * 8));
-         sprintf (buffer, "%s %1.1d. %s%s\n", buffer, i - ((selection - 1) * 8) + 1, STRING (bot->pev->netname), bot->m_team == CT ? " \\y(CT)\\w" : " \\r(T)\\w");
+         menuKeys |= 1 << (i - menuKey);
+         sprintf (menuItem, "%1.1d. %s%s\n",  i - menuKey + 1, STRING (bot->pev->netname), bot->m_team == TEAM_COUNTER ? " \\y(CT)\\w" : " \\r(T)\\w");
       }
       else
-         sprintf (buffer, "%s\\d %1.1d. Not a Bot\\w\n", buffer, i - ((selection - 1) * 8) + 1);
-   }
+         sprintf (menuItem, "\\d %1.1d. Not a Bot\\w\n", i - menuKey + 1);
 
-   sprintf (tempBuffer, "\\yBots Remove Menu (%d/4):\\w\n\n%s\n%s 0. Back", selection, buffer, (selection == 4) ? "" : " 9. More...\n");
+      strncat (menuHolder, menuItem, SIZEOF_CHAR (menuHolder));
+   }
+   sprintf (menuBuffer, "\\yBots Remove Menu (%d/4):\\w\n\n%s\n%s 0. Back", selection, menuHolder, (selection == 4) ? "" : " 9. More...\n");
 
    // force to clear current menu
    DisplayMenuToClient (ent, BOT_MENU_INVALID);
@@ -625,47 +587,15 @@ void BotManager::RemoveMenu (edict_t *ent, int selection)
       return &g_menus[menuIndex];
    };
 
-   MenuText *menu = nullptr;
-   const unsigned int slots = validSlots & static_cast <unsigned int> (-1);
+   const unsigned int slots = menuKeys & static_cast <unsigned int> (-1);
+   MenuId id = static_cast <MenuId> (BOT_MENU_KICK_PAGE_1 - 1 + selection);
 
-   switch (selection)
-   {
-   case 1:
-      menu = FindMenu (BOT_MENU_KICK_PAGE_1);
+   MenuText *menu = FindMenu (id);
 
-      menu->slots = slots;
-      menu->text = tempBuffer;
+   menu->slots = slots;
+   menu->text = menuBuffer;
 
-      DisplayMenuToClient (ent, BOT_MENU_KICK_PAGE_1);
-      break;
-
-   case 2:
-      menu = FindMenu (BOT_MENU_KICK_PAGE_2);
-
-      menu->slots = slots;
-      menu->text = tempBuffer;
-
-      DisplayMenuToClient (ent, BOT_MENU_KICK_PAGE_2);
-      break;
-
-    case 3:
-       menu = FindMenu (BOT_MENU_KICK_PAGE_3);
-
-       menu->slots = slots;
-       menu->text = tempBuffer;
-
-      DisplayMenuToClient (ent, BOT_MENU_KICK_PAGE_3);
-      break;
-
-   case 4:
-      menu = FindMenu (BOT_MENU_KICK_PAGE_4);
-
-      menu->slots = slots;
-      menu->text = tempBuffer;
-
-      DisplayMenuToClient (ent, BOT_MENU_KICK_PAGE_4);
-      break;
-   }
+   DisplayMenuToClient (ent, id);
 }
 
 void BotManager::KillAll (int team)
@@ -685,20 +615,29 @@ void BotManager::KillAll (int team)
    engine.CenterPrintf ("All Bots died !");
 }
 
-void BotManager::RemoveRandom (bool keepQuota)
+void BotManager::RemoveRandom (bool decrementQuota)
 {
    // this function removes random bot from server (only yapb's)
 
    bool deadBotFound = false;
 
+   auto UpdateQuota = [&] (void)
+   {
+      if (decrementQuota)
+         DecrementQuota ();
+   };
+
    // first try to kick the bot that is currently dead
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (m_bots[i] != nullptr && !m_bots[i]->m_notKilled)  // is this slot used?
-      {
-         m_bots[i]->Kick (keepQuota);
-         deadBotFound = true;
+      auto bot = bots.GetBot (i);
 
+      if (bot != nullptr && !bot->m_notKilled)  // is this slot used?
+      {
+         UpdateQuota ();
+         bot->Kick ();
+         
+         deadBotFound = true;
          break;
       }
    }
@@ -713,7 +652,7 @@ void BotManager::RemoveRandom (bool keepQuota)
    // search bots in this team
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      Bot *bot = bots.GetBot (i);
+      auto bot = bots.GetBot (i);
 
       if (bot != nullptr && bot->pev->frags < score)
       {
@@ -725,7 +664,9 @@ void BotManager::RemoveRandom (bool keepQuota)
    // if found some bots
    if (index != 0)
    {
-      m_bots[index]->Kick (keepQuota);
+      UpdateQuota ();
+      m_bots[index]->Kick ();
+
       return;
    }
 
@@ -734,7 +675,9 @@ void BotManager::RemoveRandom (bool keepQuota)
    {
       if (m_bots[i] != nullptr)  // is this slot used?
       {
-         m_bots[i]->Kick (keepQuota);
+         UpdateQuota ();
+         m_bots[i]->Kick ();
+        
          break;
       }
    }
@@ -804,7 +747,7 @@ void BotManager::ListBots (void)
 
       // is this player slot valid
       if (bot != nullptr)
-         engine.Printf ("[%-3.1d] %-9.13s %-17.18s %-3.4s %-3.1d %-3.1d", i, STRING (bot->pev->netname), bot->m_personality == PERSONALITY_RUSHER ? "rusher" : bot->m_personality == PERSONALITY_NORMAL ? "normal" : "careful", bot->m_team == CT ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags));
+         engine.Printf ("[%-3.1d] %-9.13s %-17.18s %-3.4s %-3.1d %-3.1d", i, STRING (bot->pev->netname), bot->m_personality == PERSONALITY_RUSHER ? "rusher" : bot->m_personality == PERSONALITY_NORMAL ? "normal" : "careful", bot->m_team == TEAM_COUNTER ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags));
    }
 }
 
@@ -844,7 +787,7 @@ Bot *BotManager::GetHighestFragsBot (int team)
    return GetBot (bestIndex);
 }
 
-void BotManager::CheckTeamEconomics (int team, bool setTrue)
+void BotManager::CheckTeamEconomics (int team, bool forceGoodEconomics)
 {
    // this function decides is players on specified team is able to buy primary weapons by calculating players
    // that have not enough money to buy primary (with economics), and if this result higher 80%, player is can't
@@ -852,7 +795,7 @@ void BotManager::CheckTeamEconomics (int team, bool setTrue)
 
    extern ConVar yb_economics_rounds;
 
-   if (setTrue || !yb_economics_rounds.GetBool ())
+   if (forceGoodEconomics || !yb_economics_rounds.GetBool ())
    {
       m_economicsGood[team] = true;
       return; // don't check economics while economics disable
@@ -864,9 +807,11 @@ void BotManager::CheckTeamEconomics (int team, bool setTrue)
    // start calculating
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (m_bots[i] != nullptr && engine.GetTeam (m_bots[i]->GetEntity ()) == team)
+      auto bot = m_bots[i];
+
+      if (bot != nullptr && bot->m_team == team)
       {
-         if (m_bots[i]->m_moneyAmount <= g_botBuyEconomyTable[0])
+         if (bot->m_moneyAmount <= g_botBuyEconomyTable[0])
             numPoorPlayers++;
 
          numTeamPlayers++; // update count of team
@@ -1085,7 +1030,7 @@ int BotManager::GetHumansAliveNum (void)
    return count;
 }
 
-int BotManager::GetHumansJoinedTeam (void)
+int BotManager::GetHumansOnTeam (int team)
 {
    // this function returns number of humans playing on the server
 
@@ -1095,7 +1040,7 @@ int BotManager::GetHumansJoinedTeam (void)
    {
       const Client &client = g_clients[i];
 
-      if ((client.flags & (CF_USED | CF_ALIVE)) && m_bots[i] == nullptr && client.team != SPECTATOR && !(client.ent->v.flags & FL_FAKECLIENT))
+      if ((client.flags & CF_USED) && m_bots[i] == nullptr && client.team == team && !(client.ent->v.flags & FL_FAKECLIENT))
          count++;
    }
    return count;
@@ -1103,21 +1048,21 @@ int BotManager::GetHumansJoinedTeam (void)
 
 bool BotManager::IsTeamStacked (int team)
 {
-   int teamLimit = mp_limitteams.GetInt ();
+   int limitTeams = mp_limitteams.GetInt ();
 
-   if (!teamLimit)
+   if (!limitTeams)
       return false;
 
-   int teamCount[SPECTATOR] = { 0, };
+   int teamCount[TEAM_SPECTATOR] = { 0, };
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
       const Client &client = g_clients[i];
 
-      if ((client.flags & CF_USED) && client.team2 != SPECTATOR)
+      if ((client.flags & CF_USED) && client.team2 != TEAM_SPECTATOR)
          teamCount[client.team2]++;
    }
-   return teamCount[team] + 1 > teamCount[team == CT ? TERRORIST : CT] + teamLimit;
+   return teamCount[team] + 1 > teamCount[team == TEAM_COUNTER ? TEAM_TERRORIST : TEAM_COUNTER] + limitTeams;
 }
 
 void Bot::NewRound (void)
@@ -1139,6 +1084,7 @@ void Bot::NewRound (void)
    m_prevGoalIndex = -1;
    m_chosenGoalIndex = -1;
    m_loosedBombWptIndex = -1;
+   m_plantedBombWptIndex = -1;
 
    m_moveToC4 = false;
    m_duckDefuse = false;
@@ -1146,6 +1092,7 @@ void Bot::NewRound (void)
 
    m_numFriendsLeft = 0;
    m_numEnemiesLeft = 0;
+   m_oldButtons = pev->button;
 
    m_avoid = nullptr;
    m_avoidTime = 0.0f;
@@ -1181,7 +1128,6 @@ void Bot::NewRound (void)
    m_canChooseAimDirection = true;
    m_turnAwayFromFlashbang = 0.0f;
 
-   m_maxThrowTimer = 0.0f;
    m_timeTeamOrder = 0.0f;
    m_timeRepotingInDelay = Random.Float (40.0f, 240.0f);
    m_askCheckTime = 0.0f;
@@ -1189,7 +1135,6 @@ void Bot::NewRound (void)
    m_prevSpeed = 0.0f;
    m_prevOrigin = Vector (9999.0f, 9999.0f, 9999.0f);
    m_prevTime = engine.Time ();
-   m_blindRecognizeTime = engine.Time ();
    m_lookUpdateTime = engine.Time ();
    
    m_viewDistance = 4096.0f;
@@ -1229,7 +1174,7 @@ void Bot::NewRound (void)
    m_voteKickIndex = 0;
    m_lastVoteKick = 0;
    m_voteMap = 0;
-   m_doorOpenAttempt = 0;
+   m_tryOpenDoor = 0;
    m_aimFlags = 0;
    m_liftState = 0;
 
@@ -1259,6 +1204,7 @@ void Bot::NewRound (void)
 
    m_grenadeCheckTime = 0.0f;
    m_isUsingGrenade = false;
+   m_bombSearchOverridden = false;
 
    m_blindButton = 0;
    m_blindTime = 0.0f;
@@ -1287,6 +1233,7 @@ void Bot::NewRound (void)
 
    m_buyPending = false;
    m_inBombZone = false;
+   m_ignoreBuyDelay = false;
    m_hasC4 = false;
 
    m_shieldCheckTime = 0.0f;
@@ -1343,10 +1290,9 @@ void Bot::Kill (void)
    bots.TouchWithKillerEntity (this);
 }
 
-void Bot::Kick (bool keepQuota)
+void Bot::Kick (void)
 {
    // this function kick off one bot from the server.
-
    auto username = STRING (pev->netname);
 
    if (!(pev->flags & FL_FAKECLIENT) || IsNullString (username))
@@ -1357,10 +1303,6 @@ void Bot::Kick (bool keepQuota)
 
    engine.IssueCmd ("kick \"%s\"", username);
    engine.CenterPrintf ("Bot '%s' kicked", username);
-
-   // keep quota number up to date
-   if (!keepQuota)
-      yb_quota.SetInt (A_clamp <int> (yb_quota.GetInt () - 1, 0, yb_quota.GetInt ()));
 }
 
 void Bot::StartGame (void)
@@ -1372,7 +1314,7 @@ void Bot::StartGame (void)
       pev->button |= IN_ATTACK;
 
    // check if something has assigned team to us
-   else if (m_team == TERRORIST || m_team == CT)
+   else if (m_team == TEAM_TERRORIST || m_team == TEAM_COUNTER)
       m_notStarted = false;
 
    // if bot was unable to join team, and no menus popups, check for stacked team
@@ -1581,7 +1523,7 @@ void BotManager::UpdateActiveGrenades (void)
 
       m_activeGrenades.Push (grenade);
    }
-   m_grenadeUpdateTime = 0.213f + engine.Time ();
+   m_grenadeUpdateTime = engine.Time () + 0.213f;
 }
 
 const Array <edict_t *> &BotManager::GetActiveGrenades (void)
@@ -1597,9 +1539,12 @@ void BotManager::SelectLeaderEachTeam (int team, bool reset)
       return;
    }
 
+   if (m_leaderChoosen[team])
+      return;
+
    if (g_mapType & MAP_AS)
    {
-      if (team == CT && !m_leaderChoosen[CT])
+      if (team == TEAM_COUNTER && !m_leaderChoosen[TEAM_COUNTER])
       {
          for (int i = 0; i < engine.MaxClients (); i++)
          {
@@ -1617,9 +1562,9 @@ void BotManager::SelectLeaderEachTeam (int team, bool reset)
                }
             }
          }
-         m_leaderChoosen[CT] = true;
+         m_leaderChoosen[TEAM_COUNTER] = true;
       }
-      else if (team == TERRORIST && !m_leaderChoosen[TERRORIST])
+      else if (team == TEAM_TERRORIST && !m_leaderChoosen[TEAM_TERRORIST])
       {
          auto bot = bots.GetHighestFragsBot (team);
 
@@ -1630,12 +1575,12 @@ void BotManager::SelectLeaderEachTeam (int team, bool reset)
             if (Random.Int (1, 100) < 45)
                bot->RadioMessage (Radio_FollowMe);
          }
-         m_leaderChoosen[TERRORIST] = true;
+         m_leaderChoosen[TEAM_TERRORIST] = true;
       }
    }
    else if (g_mapType & MAP_DE)
    {
-      if (team == TERRORIST && !m_leaderChoosen[TERRORIST])
+      if (team == TEAM_TERRORIST && !m_leaderChoosen[TEAM_TERRORIST])
       {
          for (int i = 0; i < engine.MaxClients (); i++)
          {
@@ -1657,10 +1602,10 @@ void BotManager::SelectLeaderEachTeam (int team, bool reset)
                   bot->m_campButtons = 0;
                }
             }
-            m_leaderChoosen[TERRORIST] = true;
          }
+         m_leaderChoosen[TEAM_TERRORIST] = true;
       }
-      else if (!m_leaderChoosen[CT])
+      else if (!m_leaderChoosen[TEAM_COUNTER])
       {
          if (auto bot = bots.GetHighestFragsBot (team))
          {
@@ -1669,27 +1614,35 @@ void BotManager::SelectLeaderEachTeam (int team, bool reset)
             if (Random.Int (1, 100) < 30)
                bot->RadioMessage (Radio_FollowMe);
          }
-         m_leaderChoosen[CT] = true;
+         m_leaderChoosen[TEAM_COUNTER] = true;
       }
    }
    else if (g_mapType & (MAP_ES | MAP_KA | MAP_FY))
    {
-      if (auto bot = bots.GetHighestFragsBot (team))
+      auto bot = bots.GetHighestFragsBot (team);
+
+      if (!m_leaderChoosen[team] && bot)
       {
          bot->m_isLeader = true;
 
          if (Random.Int (1, 100) < 30)
             bot->RadioMessage (Radio_FollowMe);
+
+         m_leaderChoosen[team] = true;
       }
    }
    else
    {
-      if (auto bot = bots.GetHighestFragsBot (team))
+      auto bot = bots.GetHighestFragsBot (team);
+
+      if (!m_leaderChoosen[team] && bot)
       {
          bot->m_isLeader = true;
 
-         if (Random.Int (1, 100) < (team == TERRORIST ? 30 : 40))
+         if (Random.Int (1, 100) < (team == TEAM_TERRORIST ? 30 : 40))
             bot->RadioMessage (Radio_FollowMe);
+
+         m_leaderChoosen[team] = true;
       }
    }
 }

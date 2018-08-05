@@ -44,23 +44,17 @@ typedef unsigned short uint16;
 typedef unsigned long uint32;
 
 // Fast stricmp got somewhere from chromium
-static inline int A_stricmp (const char *str1, const char *str2, int length = -1)
+static inline int A_stricmp (const char *str1, const char *str2)
 {
-   int iter = 0;
+   int chr1, chr2 = 0;
 
-   if (length == -1)
-      length = strlen (str1);
+   do {
+      chr1 = tolower (*str1++);
+      chr2 = tolower (*str2++);
 
-   for (; iter < length; iter++)
-   {
-      if ((str1[iter] | 32) != (str2[iter] | 32))
-         break;
-   }
+   } while (chr1 == chr2 && chr1 != 0);
 
-   if (iter != length)
-      return 1;
-
-   return 0;
+   return chr1 - chr2;
 }
 
 // Cross platform strdup
@@ -73,7 +67,7 @@ static inline char *A_strdup (const char *str)
 static inline bool A_IsValidCodePointer (const void *ptr)
 {
 #ifdef PLATFORM_WIN32
-   if (IsBadCodePtr (reinterpret_cast <FARPROC> (ptr)))
+   if (IsBadCodePtr ((FARPROC) ptr))
       return false;
 #endif
 
@@ -2436,7 +2430,7 @@ public:
       UpdateBufferSize (m_stringLength + 2);
 
       m_bufferPtr[m_stringLength] = input;
-      m_bufferPtr[m_stringLength++] = 0;
+      m_bufferPtr[++m_stringLength] = 0;
    }
 
    //
@@ -4157,12 +4151,12 @@ public:
 //
 // Sizeof bounds
 //
-#define SIZEOF_CHAR(in) sizeof (in) - 1
+#define SIZEOF_CHAR(in) (sizeof ((in)) - 1)
 
 //
 // Squared Length
 //
-#define GET_SQUARE(in) (in * in)
+#define GET_SQUARE(in) ((in) * (in))
 
 //
 // Stringify a string

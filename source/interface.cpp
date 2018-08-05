@@ -21,35 +21,35 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 {
    // adding one bot with random parameters to random team
    if (A_stricmp (arg0, "addbot") == 0 || A_stricmp (arg0, "add") == 0)
-      bots.AddBot (arg4, arg1, arg2, arg3, arg5);
+      bots.AddBot (arg4, arg1, arg2, arg3, arg5, true);
 
    // adding one bot with high difficulty parameters to random team
    else if (A_stricmp (arg0, "addbot_hs") == 0 || A_stricmp (arg0, "addhs") == 0)
-      bots.AddBot (arg4, "4", "1", arg3, arg5);
+      bots.AddBot (arg4, "4", "1", arg3, arg5, true);
 
    // adding one bot with random parameters to terrorist team
    else if (A_stricmp (arg0, "addbot_t") == 0 || A_stricmp (arg0, "add_t") == 0)
-      bots.AddBot (arg4, arg1, arg2, "1", arg5);
+      bots.AddBot (arg4, arg1, arg2, "1", arg5, true);
 
    // adding one bot with random parameters to counter-terrorist team
    else if (A_stricmp (arg0, "addbot_ct") == 0 || A_stricmp (arg0, "add_ct") == 0)
-      bots.AddBot (arg4, arg1, arg2, "2", arg5);
+      bots.AddBot (arg4, arg1, arg2, "2", arg5, true);
          
    // kicking off one bot from the terrorist team
    else if (A_stricmp (arg0, "kickbot_t") == 0 || A_stricmp (arg0, "kick_t") == 0)
-      bots.RemoveFromTeam (TERRORIST);
+      bots.RemoveFromTeam (TEAM_TERRORIST);
 
    // kicking off one bot from the counter-terrorist team
    else if (A_stricmp (arg0, "kickbot_ct") == 0 || A_stricmp (arg0, "kick_ct") == 0)
-      bots.RemoveFromTeam (CT);
+      bots.RemoveFromTeam (TEAM_COUNTER);
 
    // kills all bots on the terrorist team
    else if (A_stricmp (arg0, "killbots_t") == 0 || A_stricmp (arg0, "kill_t") == 0)
-      bots.KillAll (TERRORIST);
+      bots.KillAll (TEAM_TERRORIST);
 
    // kills all bots on the counter-terrorist team
    else if (A_stricmp (arg0, "killbots_ct") == 0 || A_stricmp (arg0, "kill_ct") == 0)
-      bots.KillAll (CT);
+      bots.KillAll (TEAM_COUNTER);
 
    // list all bots playeing on the server
    else if (A_stricmp (arg0, "listbots") == 0 || A_stricmp (arg0, "list") == 0)
@@ -213,19 +213,22 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          engine.Printf ("Waypoint Editing Enabled");
 
          // enables noclip cheat
-         if (A_stricmp (arg2, "noclip") == 0)
+         if (!IsNullString (arg2) && A_stricmp (arg2, "noclip") == 0)
          {
             if (g_editNoclip)
             {
                g_hostEntity->v.movetype = MOVETYPE_WALK;
                engine.Printf ("Noclip Cheat Disabled");
+
+               g_editNoclip = false;
             }
             else
             {
                g_hostEntity->v.movetype = MOVETYPE_NOCLIP;
                engine.Printf ("Noclip Cheat Enabled");
+
+               g_editNoclip = true;
             }
-            g_editNoclip = !g_editNoclip; // switch on/off (XOR it!)
          }
          engine.IssueCmd ("yapb wp mdl on");
       }
@@ -483,7 +486,6 @@ void InitConfig (void)
          line[32] = 0;
 
          BotName item;
-         memset (&item, 0, sizeof (item));
 
          item.name = line;
          item.usedBy = 0;
@@ -495,8 +497,6 @@ void InitConfig (void)
       }
       fp.Close ();
    }
-
-   engine.Printf ("INITING CHAT.CfG");
 
    // CHAT SYSTEM CONFIG INITIALIZATION
    if (OpenConfig ("chat.cfg", "Chat file not found.", &fp, true))
@@ -841,16 +841,16 @@ void InitConfig (void)
       if (engine.IsDedicatedServer ())
          return; // dedicated server will use only english translation
 
-      enum Lang { Lang_Original, Lang_Translate } langState = static_cast <Lang> (2);
+      enum Lang { LANG_ORIGINAL, LANG_TRANSLATED, LANG_UNDEFINED } langState = static_cast <Lang> (LANG_UNDEFINED);
 
-      char buffer[1024];
+      char buffer[1024] = { 0, };
       TranslatorPair temp = {"", ""};
 
       while (fp.GetBuffer (line, 255))
       {
          if (strncmp (line, "[ORIGINAL]", 10) == 0)
          {
-            langState = Lang_Original;
+            langState = LANG_ORIGINAL;
 
             if (!IsNullString (buffer))
             {
@@ -868,18 +868,21 @@ void InitConfig (void)
             temp.original = A_strdup (buffer);
             buffer[0] = 0x0;
 
-            langState = Lang_Translate;
+            langState = LANG_TRANSLATED;
          }
          else
          {
             switch (langState)
             {
-            case Lang_Original:
+            case LANG_ORIGINAL:
                strncat (buffer, line, 1024 - 1 - strlen (buffer));
                break;
 
-            case Lang_Translate:
+            case LANG_TRANSLATED:
                strncat (buffer, line, 1024 - 1 - strlen (buffer));
+               break;
+
+            case LANG_UNDEFINED:
                break;
             }
          }
@@ -1107,8 +1110,6 @@ int ClientConnect (edict_t *ent, const char *name, const char *addr, char reject
    if (strcmp (addr, "loopback") == 0)
       g_hostEntity = ent; // save the edict of the listen server client...
 
-   bots.AdjustQuota (true, ent);
-
    if (g_gameFlags & GAME_METAMOD)
       RETURN_META_VALUE (MRES_IGNORED, 0);
 
@@ -1140,9 +1141,7 @@ void ClientDisconnect (edict_t *ent)
       bot->EnableChatterIcon (false);
       bots.Free (index);
    }
-
-   bots.AdjustQuota (false, ent);
-
+ 
    if (g_gameFlags & GAME_METAMOD)
       RETURN_META (MRES_IGNORED);
 
@@ -1484,12 +1483,13 @@ void ClientCommand (edict_t *ent)
 
             g_waypointOn = true;  // turn waypoints on in case
 
-            const int radiusValue[] = {0, 8, 16, 32, 48, 64, 80, 96, 128};
+            const int radiusValue[] = { 0, 8, 16, 32, 48, 64, 80, 96, 128 };
 
-            if ((selection >= 1) && (selection <= 9))
+            if (selection >= 1 && selection <= 9)
+            {
                waypoints.SetRadius (radiusValue[selection - 1]);
-
-            DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_RADIUS);
+               DisplayMenuToClient (ent, BOT_MENU_WAYPOINT_RADIUS);
+            }
 
             if (g_gameFlags & GAME_METAMOD)
                RETURN_META (MRES_SUPERCEDE);
@@ -1620,7 +1620,7 @@ void ClientCommand (edict_t *ent)
             {
             case 1:
             case 2:
-               if (FindNearestPlayer (reinterpret_cast <void **> (&bot), client->ent, 450.0f, true, true, true))
+               if (FindNearestPlayer (reinterpret_cast <void **> (&bot), client->ent, 600.0f, true, true, true))
                {
                   if (!bot->m_hasC4 && !bot->HasHostage ())
                   {
@@ -1635,7 +1635,7 @@ void ClientCommand (edict_t *ent)
 
             case 3:
             case 4:
-               if (FindNearestPlayer (reinterpret_cast <void **> (&bot), ent, 450.0f, true, true, true))
+               if (FindNearestPlayer (reinterpret_cast <void **> (&bot), ent, 600.0f, true, true, true, true, selection == 4 ? false : true))
                   bot->DiscardWeaponForUser (ent, selection == 4 ? false : true);
 
                DisplayMenuToClient (ent, BOT_MENU_COMMANDS);
@@ -1735,9 +1735,7 @@ void ClientCommand (edict_t *ent)
                DisplayMenuToClient (ent, BOT_MENU_INVALID);
                break;
             }
-
-            if (client->menu == BOT_MENU_PERSONALITY)
-               DisplayMenuToClient (ent, BOT_MENU_PERSONALITY);
+            DisplayMenuToClient (ent, BOT_MENU_PERSONALITY);
 
             if (g_gameFlags & GAME_METAMOD)
                RETURN_META (MRES_SUPERCEDE);
@@ -1804,7 +1802,7 @@ void ClientCommand (edict_t *ent)
                if (selection == 5)
                {
                   g_storeAddbotVars[2] = 5;
-                  bots.AddBot ("", g_storeAddbotVars[0], g_storeAddbotVars[3], g_storeAddbotVars[1], g_storeAddbotVars[2]);
+                  bots.AddBot ("", g_storeAddbotVars[0], g_storeAddbotVars[3], g_storeAddbotVars[1], g_storeAddbotVars[2], true);
                }
                else
                {
@@ -1859,7 +1857,7 @@ void ClientCommand (edict_t *ent)
             case 4:
             case 5:
                g_storeAddbotVars[2] = selection;
-               bots.AddBot ("", g_storeAddbotVars[0], g_storeAddbotVars[3], g_storeAddbotVars[1], g_storeAddbotVars[2]);
+               bots.AddBot ("", g_storeAddbotVars[0], g_storeAddbotVars[3], g_storeAddbotVars[1], g_storeAddbotVars[2], true);
                break;
 
             case 10:
@@ -2234,7 +2232,7 @@ void StartFrame (void)
             {
                if (IsNullString (yb_password_key.GetString ()) && IsNullString (yb_password.GetString ()))
                   client.flags &= ~CF_ADMIN;
-               else if (strcmp (yb_password.GetString (), INFOKEY_VALUE (GET_INFOKEYBUFFER (client.ent), const_cast <char *> (yb_password_key.GetString ()))))
+               else if (!!strcmp (yb_password.GetString (), INFOKEY_VALUE (GET_INFOKEYBUFFER (client.ent), const_cast <char *> (yb_password_key.GetString ()))))
                {
                   client.flags &= ~CF_ADMIN;
                   engine.Printf ("Player %s had lost remote access to yapb.", STRING (player->v.netname));
@@ -2251,10 +2249,6 @@ void StartFrame (void)
          }
       }
       bots.CalculatePingOffsets ();
-
-      // select the leader each team
-      for (int team = TERRORIST; team < SPECTATOR; team++)
-         bots.SelectLeaderEachTeam (team, false);
 
       if (g_gameFlags & GAME_METAMOD)
       {
@@ -2364,7 +2358,7 @@ void pfnChangeLevel (char *s1, char *s2)
 edict_t *pfnFindEntityByString (edict_t *edictStartSearchAfter, const char *field, const char *value)
 {
    // round starts in counter-strike 1.5
-   if (strcmp (value, "info_map_parameters") == 0)
+   if ((g_gameFlags & GAME_LEGACY) && strcmp (value, "info_map_parameters") == 0)
       RoundInit ();
 
    if (g_gameFlags & GAME_METAMOD)
@@ -2452,7 +2446,7 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
       engine.AssignMessageId (NETMSG_SCREENFADE, GET_USER_MSG_ID (PLID, "ScreenFade", nullptr));
       engine.AssignMessageId (NETMSG_HLTV, GET_USER_MSG_ID (PLID, "HLTV", nullptr));
       engine.AssignMessageId (NETMSG_TEXTMSG, GET_USER_MSG_ID (PLID, "TextMsg", nullptr));
-      engine.AssignMessageId (NETMSG_SCOREINFO, GET_USER_MSG_ID (PLID, "ScoreInfo", nullptr));
+      engine.AssignMessageId (NETMSG_TEAMINFO, GET_USER_MSG_ID (PLID, "TeamInfo", nullptr));
       engine.AssignMessageId (NETMSG_BARTIME, GET_USER_MSG_ID (PLID, "BarTime", nullptr));
       engine.AssignMessageId (NETMSG_SENDAUDIO, GET_USER_MSG_ID (PLID, "SendAudio", nullptr));
       engine.AssignMessageId (NETMSG_SAYTEXT, GET_USER_MSG_ID (PLID, "SayText", nullptr));
@@ -2492,7 +2486,7 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
    }
    else if (msgDest == MSG_ALL)
    {
-      engine.TryCaptureMessage (msgType, NETMSG_SCOREINFO);
+      engine.TryCaptureMessage (msgType, NETMSG_TEAMINFO);
       engine.TryCaptureMessage (msgType, NETMSG_DEATH);
       engine.TryCaptureMessage (msgType, NETMSG_TEXTMSG);
 
@@ -2773,8 +2767,8 @@ int pfnRegUserMsg (const char *name, int size)
       engine.AssignMessageId (NETMSG_HLTV, message);
    else if (strcmp (name, "TextMsg") == 0)
       engine.AssignMessageId (NETMSG_TEXTMSG, message);
-   else if (strcmp (name, "ScoreInfo") == 0)
-      engine.AssignMessageId (NETMSG_SCOREINFO, message);
+   else if (strcmp (name, "TeamInfo") == 0)
+      engine.AssignMessageId (NETMSG_TEAMINFO, message);
    else if (strcmp (name, "BarTime") == 0)
       engine.AssignMessageId (NETMSG_BARTIME, message);
    else if (strcmp (name, "SendAudio") == 0)
@@ -2803,7 +2797,7 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...)
       {
          Bot *bot = bots.GetBot (i);
 
-         if (bot != nullptr && bot->m_team == TERRORIST && bot->m_notKilled)
+         if (bot != nullptr && bot->m_team == TEAM_TERRORIST && bot->m_notKilled)
          {
             bot->DeleteSearchNodes ();
 
@@ -2983,7 +2977,6 @@ SHARED_LIBRARAY_EXPORT int Meta_Attach (PLUG_LOADTIME, metamod_funcs_t *function
    // where we can tell if the plugin will be allowed to run or not, we wait until here to make
    // our initialization stuff, like registering CVARs and dedicated server commands.
 
-
    // metamod engine & dllapi function tables
    static metamod_funcs_t metamodFunctionTable =
    {
@@ -3010,7 +3003,7 @@ SHARED_LIBRARAY_EXPORT int Meta_Detach (PLUG_LOADTIME, PL_UNLOAD_REASON)
    // this function is called when metamod unloads the plugin. A basic check is made in order
    // to prevent unloading the plugin if its processing should not be interrupted.
 
-   bots.RemoveAll (); // kick all bots off this server
+   bots.RemoveAll (true); // kick all bots off this server
    FreeLibraryMemory ();
 
    return TRUE;
@@ -3067,7 +3060,9 @@ Library *LoadCSBinary (void)
          if (!game->IsLoaded ())
          {
             AddLogEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", libs[i], modname);
-            return nullptr;
+
+			delete game;
+			return nullptr;
          }
          // detect if we're running modern game
          auto entity = game->GetFuncAddr <entity_func_t> ("weapon_famas");
@@ -3198,9 +3193,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 
    auto api_GiveFnptrsToDll = g_gameLib->GetFuncAddr <void (STD_CALL *) (enginefuncs_t *, globalvars_t *)> ("GiveFnptrsToDll");
 
-   if (!api_GiveFnptrsToDll)
-      TerminateOnMalloc ();
-
+   InternalAssert (api_GiveFnptrsToDll != nullptr);
    GetEngineFunctions (functionTable, nullptr);
    
    // give the engine functions to the other DLL...

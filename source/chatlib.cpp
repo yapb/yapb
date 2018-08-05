@@ -15,6 +15,9 @@ void StripTags (char *buffer)
 {
    // this function strips 'clan' tags specified below in given string buffer
 
+   if (!buffer)
+      return;
+
    const char *tagOpen[] = {"-=", "-[", "-]", "-}", "-{", "<[", "<]", "[-", "]-", "{-", "}-", "[[", "[", "{", "]", "}", "<", ">", "-", "|", "=", "+", "(", ")"};
    const char *tagClose[] = {"=-", "]-", "[-", "{-", "}-", "]>", "[>", "-]", "-[", "-}", "-{", "]]", "]", "}", "[", "{", ">", "<", "-", "|", "=", "+", ")", "("};
 

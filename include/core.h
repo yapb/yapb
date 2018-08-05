@@ -146,9 +146,9 @@ enum CollisionState
 // counter-strike team id's
 enum Team
 {
-   TERRORIST = 0,
-   CT,
-   SPECTATOR
+   TEAM_TERRORIST = 0,
+   TEAM_COUNTER,
+   TEAM_SPECTATOR
 };
 
 // client flags
@@ -523,8 +523,8 @@ const float TASKPRI_BLINDED = 100.0f;
 const float TASKPRI_SHOOTBREAKABLE = 100.0f;
 const float TASKPRI_ESCAPEFROMBOMB = 100.0f;
 
-const float MAX_GRENADE_TIMER = 2.34f;
-const float MAX_SPRAY_DISTANCE = 250.0f;
+const float MAX_GRENADE_TIMER = 2.15f;
+const float MAX_SPRAY_DISTANCE = 260.0f;
 const float MAX_SPRAY_DISTANCE_X2 = MAX_SPRAY_DISTANCE * 2;
 
 const int MAX_HOSTAGES = 8;
@@ -651,7 +651,7 @@ struct ExperienceSave
 // bot creation tab
 struct CreateQueue
 {
-   bool console;
+   bool manual;
    int difficulty;
    int team;
    int member;
@@ -750,7 +750,6 @@ private:
    edict_t *m_avoid; // avoid players on our way
    float m_avoidTime; // time to avoid players around
 
-   float m_blindRecognizeTime; // time to recognize enemy
    float m_itemCheckTime; // time next search for items needs to be done
    PickupType m_pickupType; // type of entity which needs to be used/picked up
    Vector m_breakableOrigin; // origin of breakable
@@ -790,6 +789,7 @@ private:
    int m_travelStartIndex; // travel start index to double jump action
    int m_prevWptIndex[5]; // previous waypoint indices from waypoint find
    int m_waypointFlags; // current waypoint flags
+
    int m_loosedBombWptIndex; // nearest to loosed bomb waypoint
    int m_plantedBombWptIndex;// nearest to planted bomb waypoint
 
@@ -822,6 +822,7 @@ private:
    bool m_isReloading; // bot is reloading a gun
    bool m_forceRadio; // should bot use radio anyway?
 
+   int m_oldButtons; // our old buttons
    int m_reloadState; // current reload state
    int m_voicePitch; // bot voice pitch
 
@@ -840,18 +841,18 @@ private:
    bool m_checkKnifeSwitch; // is time to check switch to knife action
    bool m_checkWeaponSwitch; // is time to check weapon switch
    bool m_isUsingGrenade; // bot currently using grenade??
+   bool m_bombSearchOverridden; // use normal waypoint if applicable when near the bomb
 
    StrafeDir m_combatStrafeDir; // direction to strafe
    FightStyle m_fightStyle; // combat style to use
    float m_lastFightStyleCheck; // time checked style
    float m_strafeSetTime; // time strafe direction was set
 
-   float m_maxThrowTimer; // time that completes the throw task
    float m_timeCamping; // time to camp
    int m_campDirection; // camp Facing direction
    float m_nextCampDirTime; // time next camp direction change
    int m_campButtons; // buttons to press while camping
-   int m_doorOpenAttempt; // attempt's to open the door
+   int m_tryOpenDoor; // attempt's to open the door
    int m_liftState; // state of lift handling
 
    float m_duckTime; // time to duck
@@ -951,7 +952,7 @@ private:
    bool IsInViewCone (const Vector &origin);
    void ReactOnSound (void);
    bool CheckVisibility (edict_t *target, Vector *origin, uint8 *bodyPart);
-   bool IsEnemyViewable (edict_t *player);
+   bool IsEnemyVisible (edict_t *player);
 
    edict_t *FindNearestButton (const char *className);
    edict_t *FindBreakable (void);
@@ -983,14 +984,13 @@ private:
    
    bool ItemIsVisible (const Vector &dest, const char *itemName);
    bool LastEnemyShootable (void);
-   bool IsBehindSmokeClouds (edict_t *ent);
    void RunTask (void);
 
    bool IsShootableBreakable (edict_t *ent);
    bool RateGroundWeapon (edict_t *ent);
    bool ReactOnEnemy (void);
    void ResetCollideState (void);
-   void IgnoreCollisionShortly (void);
+   void IgnoreCollision (void);
    void SetConditions (void);
    void SetConditionsOverride (void);
    void UpdateEmotions (void);
@@ -1008,8 +1008,9 @@ private:
    bool IsDeadlyDrop (const Vector &to);
    bool OutOfBombTimer (void);
 
-   Vector CheckThrow (const Vector &start, const Vector &stop);
-   Vector CheckToss (const Vector &start, const Vector &stop);
+   edict_t *SetCorrectVelocity (const char *model);
+   Vector CheckThrow (const Vector &spot1, const Vector &spot2);
+   Vector CheckToss (const Vector &spot1, const Vector &spot2);
    Vector CheckBombAudible (void);
 
    const Vector &GetAimPosition (void);
@@ -1087,6 +1088,7 @@ public:
    int m_voteMap; // number of map to vote for
    int m_logotypeIndex; // index for logotype
  
+   bool m_ignoreBuyDelay; // when reaching buyzone in the middle of the round don't do pauses
    bool m_inBombZone; // bot in the bomb zone or not
    int m_buyState; // current Count in Buying
    float m_nextBuyTime; // next buy time
@@ -1132,7 +1134,6 @@ public:
    Vector m_destOrigin; // origin of move destination
    Vector m_position; // position to move to in move to position task
    Vector m_doubleJumpOrigin; // origin of double jump
-   Vector m_lastBombPosition; // origin of last remembered bomb position
 
    float m_viewDistance; // current view distance
    float m_maxViewDistance; // maximum view distance
@@ -1227,7 +1228,7 @@ public:
    void TryHeadTowardRadioEntity (void);
 
    void Kill (void);
-   void Kick (bool keepQuota = false);
+   void Kick (void);
 
    void ResetDoubleJumpState (void);
    void StartDoubleJump (edict_t *ent);
@@ -1261,10 +1262,9 @@ private:
    float m_grenadeUpdateTime; // time to update active grenades
 
    int m_lastWinner; // the team who won previous round
-   int m_balanceCount; // limit of bots to add
 
-   bool m_leaderChoosen[SPECTATOR]; // is team leader choose theese round
-   bool m_economicsGood[SPECTATOR]; // is team able to buy anything
+   bool m_leaderChoosen[TEAM_SPECTATOR]; // is team leader choose theese round
+   bool m_economicsGood[TEAM_SPECTATOR]; // is team able to buy anything
    bool m_deathMsgSent; // for fake ping
 
    Array <edict_t *> m_activeGrenades; // holds currently active grenades in the map
@@ -1273,7 +1273,7 @@ private:
    edict_t *m_killerEntity; // killer entity for bots
 
 protected:
-   BotCreationResult CreateBot (const String &name, int difficulty, int personality, int team, int member, bool isConsoleCmd);
+   BotCreationResult CreateBot (const String &name, int difficulty, int personality, int team, int member);
 
 public:
    BotManager (void);
@@ -1293,7 +1293,7 @@ public:
 
    int GetHumansNum (void);
    int GetHumansAliveNum(void);
-   int GetHumansJoinedTeam (void);
+   int GetHumansOnTeam (int team);
    int GetBotsNum (void);
 
    void Think (void);
@@ -1306,19 +1306,20 @@ public:
    void Free (void);
    void Free (int index);
   
-   void AddRandom (bool isConsoleCmd = true) { AddBot ("", -1, -1, -1, -1, isConsoleCmd); }
-   void AddBot (const String &name, int difficulty, int personality, int team, int member, bool isConsoleCmd = true);
-   void AddBot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member, bool isConsoleCmd = true);
+   void AddRandom (bool manual = false) { AddBot ("", -1, -1, -1, -1, manual); }
+   void AddBot (const String &name, int difficulty, int personality, int team, int member, bool manual);
+   void AddBot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member, bool manual);
    void FillServer (int selection, int personality = PERSONALITY_NORMAL, int difficulty = -1, int numToAdd = -1);
 
-   void RemoveAll (void);
-   void RemoveRandom (bool keepQuota = false);
+   void RemoveAll (bool instant = false);
+   void RemoveRandom (bool decrementQuota = true);
    void RemoveFromTeam (Team team, bool removeAll = false);
+
    void RemoveMenu (edict_t *ent, int selection);
    void KillAll (int team = -1);
    void MaintainBotQuota (void);
-   void AdjustQuota (bool isPlayerConnection, edict_t *ent);
    void InitQuota (void);
+   void DecrementQuota (int by = 1);
 
    void AddPlayerToCheckTeamQueue (edict_t *ent);
    void VerifyPlayersHasJoinedTeam (int &desiredCount);
@@ -1426,7 +1427,7 @@ public:
    bool IsVisible (int srcIndex, int destIndex);
    bool IsStandVisible (int srcIndex, int destIndex);
    bool IsDuckVisible (int srcIndex, int destIndex);
-   void CalculateWayzone (int index);
+   void CalculatePathRadius (int index);
 
    bool Load (void);
    void Save (void);
@@ -1462,7 +1463,7 @@ public:
    const char *GetDataDir (bool isMemoryFile = false);
    const char *GetFileName (bool isMemoryFile = false);
 
-   void SetBombPosition (bool shouldReset = false);
+   void SetBombPosition (bool reset = false, const Vector &pos = Vector::GetZero ());
    inline const Vector &GetBombPosition (void) { return m_foundBombOrigin; }
 
    // free's socket handle
@@ -1470,11 +1471,6 @@ public:
 
    // do actually downloading of waypoint file
    WaypointDownloadError RequestWaypoint (void);
-};
-
-class BotMenu
-{
-
 };
 
 #include <engine.h>
@@ -1498,7 +1494,7 @@ extern bool IsValidBot (edict_t *ent);
 extern bool IsValidPlayer (edict_t *ent);
 extern bool IsPlayerVIP (edict_t *ent);
 extern bool OpenConfig (const char *fileName, const char *errorIfNotExists, MemoryFile *outFile, bool languageDependant = false);
-extern bool FindNearestPlayer (void **holder, edict_t *to, float searchDistance = 4096.0, bool sameTeam = false, bool needBot = false, bool needAlive = false, bool needDrawn = false);
+extern bool FindNearestPlayer (void **holder, edict_t *to, float searchDistance = 4096.0, bool sameTeam = false, bool needBot = false, bool needAlive = false, bool needDrawn = false, bool needBotWithC4 = false);
 
 extern void FreeLibraryMemory (void);
 extern void RoundInit (void);

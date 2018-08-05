@@ -27,10 +27,10 @@ float g_timeRoundMid = 0.0f;
 float g_timeNextBombUpdate = 0.0f;
 float g_timeBombPlanted = 0.0f;
 float g_timePerSecondUpdate = 0.0f;
-float g_lastRadioTime[2] = {0.0f, 0.0f};
+float g_lastRadioTime[TEAM_SPECTATOR] = {0.0f, 0.0f};
 float g_autoPathDistance = 250.0f;
 
-int g_lastRadio[2];
+int g_lastRadio[TEAM_SPECTATOR];
 int g_storeAddbotVars[4];
 int g_radioSelect[MAX_ENGINE_PLAYERS];
 int g_gameFlags = 0;
@@ -279,7 +279,7 @@ void SetupBotMenus (void)
    // command menu
    g_menus[++counter] =
    {
-      BOT_MENU_COMMANDS, 0x23f,
+      BOT_MENU_COMMANDS, 0x23fu,
       "\\yBot Command Menu\\w\v\v"
       "1. Make Double Jump\v"
       "2. Finish Double Jump\v\v"

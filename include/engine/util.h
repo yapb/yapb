@@ -63,11 +63,6 @@ static inline edict_t *FIND_ENTITY_BY_TARGET (edict_t *entStart, const char *psz
 // More explicit than "int"
 typedef int EOFFSET;
 
-// In case it's not alread defined
-#ifndef BOOL
-typedef int BOOL;
-#endif
-
 // In case this ever changes
 #ifndef M_PI
 #define M_PI 3.1415926
@@ -88,15 +83,15 @@ static inline void MESSAGE_BEGIN (int msg_dest, int msg_type, const float *pOrig
 #define VIEW_FIELD_ULTRA_NARROW (float)0.9   // +-25 degrees, more narrow check used to set up ranged attacks
 
 // Misc useful
-static inline BOOL FStrEq (const char *sz1, const char *sz2)
+static inline bool FStrEq (const char *sz1, const char *sz2)
 {
-   return (strcmp (sz1, sz2) == 0);
+   return strcmp (sz1, sz2) == 0;
 }
-static inline BOOL FClassnameIs (edict_t *pent, const char *szClassname)
+static inline bool FClassnameIs (edict_t *pent, const char *szClassname)
 {
    return FStrEq (STRING (pent->v.classname), szClassname);
 }
-static inline BOOL FClassnameIs (entvars_t *pev, const char *szClassname)
+static inline bool FClassnameIs (entvars_t *pev, const char *szClassname)
 {
    return FStrEq (STRING (pev->classname), szClassname);
 }
@@ -225,10 +220,6 @@ static inline void STOP_SOUND (edict_t *entity, int channel, const char *sample)
 {
    EMIT_SOUND_DYN (entity, channel, sample, 0, 0, SND_STOP, PITCH_NORM);
 }
-
-// macro to handle memory allocation fails
-#define TerminateOnMalloc() \
-   AddLogEntry (true, LL_FATAL, "Memory Allocation Fail!\nFile: %s (Line: %d)", __FILE__, __LINE__) \
 
 // internal assert function
 #define InternalAssert(Expr) \

@@ -184,7 +184,7 @@ bool Bot::CheckVisibility (edict_t *target, Vector *origin, uint8 *bodyPart)
    return false;
 }
 
-bool Bot::IsEnemyViewable (edict_t *player)
+bool Bot::IsEnemyVisible (edict_t *player)
 {
    if (engine.IsNullEntity (player))
       return false;
@@ -226,7 +226,7 @@ bool Bot::LookupEnemy (void)
       player = m_enemy;
 
       // is player is alive
-      if (IsAlive (player) && IsEnemyViewable (player))
+      if (IsAlive (player) && IsEnemyVisible (player))
          newEnemy = player;
    }
 
@@ -248,20 +248,11 @@ bool Bot::LookupEnemy (void)
 
          player = client.ent;
 
-         // do some blind by smoke grenade
-         if (m_blindRecognizeTime < engine.Time () && IsBehindSmokeClouds (player))
-         {
-            m_blindRecognizeTime = engine.Time () + Random.Float (1.0f, 2.0f);
-
-            if (Random.Int (0, 100) < 50)
-               ChatterMessage (Chatter_BehindSmoke);
-         }
-
-         if (player->v.button & (IN_ATTACK | IN_ATTACK2))
-            m_blindRecognizeTime = engine.Time () - 0.1f;
+         if ((player->v.button & (IN_ATTACK | IN_ATTACK2)) && m_viewDistance < m_maxViewDistance)
+            nearestDistance = m_maxViewDistance;
 
          // see if bot can see the player...
-         if (m_blindRecognizeTime < engine.Time () && IsEnemyViewable (player))
+         if (IsEnemyVisible (player))
          {
             if (IsEnemyProtectedByShield (player))
             {
@@ -327,7 +318,7 @@ bool Bot::LookupEnemy (void)
          // keep track of when we last saw an enemy
          m_seeEnemyTime = engine.Time ();
 
-         if (!(pev->oldbuttons & IN_ATTACK))
+         if (!(m_oldButtons & IN_ATTACK))
             return true;
 
          // now alarm all teammates who see this bot & don't have an actual enemy of the bots enemy should simulate human players seeing a teammate firing
@@ -509,7 +500,7 @@ float Bot::GetZOffset (float distance)
 
    if (distance < 2800.0f && distance > MAX_SPRAY_DISTANCE_X2)
    {
-      if (sniper) result = 1.5f;
+      if (sniper) result = 1.8f;
       else if (zoomableRifle) result = 4.5f;
       else if (pistol) result = 6.5f;
       else if (submachine) result = 5.5f;
@@ -519,7 +510,7 @@ float Bot::GetZOffset (float distance)
    }
    else if (distance > MAX_SPRAY_DISTANCE && distance <= MAX_SPRAY_DISTANCE_X2)
    {
-      if (sniper) result = 2.5f;
+      if (sniper) result = 2.8f;
       else if (zoomableRifle) result = 3.5f;
       else if (pistol) result = 6.5f;
       else if (submachine) result = 3.5f;
@@ -529,7 +520,7 @@ float Bot::GetZOffset (float distance)
    }
    else if (distance < MAX_SPRAY_DISTANCE)
    {
-      if (sniper) result = 4.5f;
+      if (sniper) result = 4.8f;
       else if (zoomableRifle) result = -5.0f;
       else if (pistol) result = 4.5f;
       else if (submachine) result = -4.5f;
@@ -614,17 +605,18 @@ bool Bot::IsShootableThruObstacle (const Vector &dest)
          if (tr.vecEndPos.z >= dest.z + 200.0f)
             return false;
 
-         obstacleDistance = (tr.vecEndPos - source).GetLength ();
+         obstacleDistance = (tr.vecEndPos - source).GetLengthSquared ();
       }
    }
+   float distance = GET_SQUARE (75.0f);
 
    if (obstacleDistance > 0.0f)
    {
       while (penetratePower > 0)
       {
-         if (obstacleDistance > 75.0f)
+         if (obstacleDistance > distance)
          {
-            obstacleDistance -= 75.0f;
+            obstacleDistance -= distance;
             penetratePower--;
 
             continue;
@@ -642,14 +634,15 @@ bool Bot::IsShootableThruObstacleEx (const Vector &dest)
    if (m_difficulty < 2 || GetWeaponPenetrationPower (m_currentWeapon) == 0)
       return false;
 
-   Vector source = EyePosition ();
-   Vector direction = (dest - source).Normalize ();  // 1 unit long
-   Vector point;
+   const Vector &source = EyePosition ();
+   const Vector &direction = (dest - source).Normalize (); // 1 unit long
 
    int thikness = 0;
    int numHits = 0;
 
+   Vector point;
    TraceResult tr;
+
    engine.TestLine (source, dest, TRACE_IGNORE_EVERYTHING, GetEntity (), &tr);
 
    while (tr.flFraction != 1.0f && numHits < 3)
@@ -689,8 +682,10 @@ bool Bot::DoFirePause (float distance)
    }
    float offset = 0.0f;
 
-   if (distance < MAX_SPRAY_DISTANCE)
+   if (distance < MAX_SPRAY_DISTANCE * 0.5f)
       return false;
+   else if (distance < MAX_SPRAY_DISTANCE)
+      offset = 12.0f;
    else if (distance < MAX_SPRAY_DISTANCE_X2)
       offset = 10.0f;
    else
@@ -700,12 +695,13 @@ bool Bot::DoFirePause (float distance)
    const float yPunch = DegreeToRadian (pev->punchangle.y);
 
    float interval = GetThinkInterval ();
+   float tolerance = (100.0f - m_difficulty * 25.0f) / 100.0f;
 
    // check if we need to compensate recoil
-   if (tanf (A_sqrtf (fabsf (xPunch * xPunch) + fabsf (yPunch * yPunch))) * distance > offset + 30.0f + ((100 - (m_difficulty * 25)) / 100.f))
+   if (tanf (A_sqrtf (fabsf (xPunch * xPunch) + fabsf (yPunch * yPunch))) * distance > offset + 30.0f + tolerance)
    {
       if (m_firePause < engine.Time ())
-         m_firePause = Random.Float (0.5f, 0.5f + 0.3f * ((100.0f - (m_difficulty * 25)) / 100.f));
+         m_firePause = Random.Float (0.5f, 0.5f + 0.3f * tolerance);
 
       m_firePause -= interval;
       m_firePause += engine.Time ();
@@ -759,7 +755,7 @@ void Bot::FinishWeaponSelection (float distance, int index, int id, int choosen)
    {
       if (distance >= 750.0f && !IsShieldDrawn ())
          pev->button |= IN_ATTACK2; // draw the shield
-      else if (IsShieldDrawn () || (!engine.IsNullEntity (m_enemy) && ((m_enemy->v.button & IN_RELOAD) || !IsEnemyViewable (m_enemy))))
+      else if (IsShieldDrawn () || (!engine.IsNullEntity (m_enemy) && ((m_enemy->v.button & IN_RELOAD) || !IsEnemyVisible (m_enemy))))
          pev->button |= IN_ATTACK2; // draw out the shield
 
       m_shieldCheckTime = engine.Time () + 1.0f;
@@ -777,13 +773,6 @@ void Bot::FinishWeaponSelection (float distance, int index, int id, int choosen)
          pev->button |= IN_ATTACK2;
 
       m_zoomCheckTime = engine.Time ();
-
-      if (!engine.IsNullEntity (m_enemy) && (m_states & STATE_SEEING_ENEMY))
-      {
-         m_moveSpeed = 0.0f;
-         m_strafeSpeed = 0.0f;
-         m_navTimeset = engine.Time ();
-      }
    }
    else if (m_difficulty < 4 && UsesZoomableRifle ()) // else is the bot holding a zoomable rifle?
    {
@@ -815,7 +804,7 @@ void Bot::FinishWeaponSelection (float distance, int index, int id, int choosen)
             pev->button |= IN_ATTACK;
          else // if not, toggle buttons
          {
-            if ((pev->oldbuttons & IN_ATTACK) == 0)
+            if ((m_oldButtons & IN_ATTACK) == 0)
                pev->button |= IN_ATTACK;
          }
       }
@@ -854,13 +843,6 @@ void Bot::FireWeapon (void)
 {
    // this function will return true if weapon was fired, false otherwise
    float distance = (m_lookAt - EyePosition ()).GetLength (); // how far away is the enemy?
-
-   // if using grenade stop this
-   if (m_isUsingGrenade)
-   {
-      m_shootTime = engine.Time () + 0.1f;
-      return;
-   }
 
    // or if friend in line of fire, stop this too but do not update shoot time
    if (!engine.IsNullEntity (m_enemy))
@@ -1127,21 +1109,21 @@ void Bot::CombatFight (void)
          if (m_combatStrafeDir == STRAFE_DIR_RIGHT)
          {
             if (!CheckWallOnLeft ())
-               m_strafeSpeed = -pev->maxspeed;
+               m_strafeSpeed = -GetWalkSpeed ();
             else
             {
                m_combatStrafeDir = STRAFE_DIR_LEFT;
-               m_strafeSetTime = engine.Time () + 1.5f;
+               m_strafeSetTime = engine.Time () + Random.Float (0.8f, 1.3f);
             }
          }
          else
          {
             if (!CheckWallOnRight ())
-               m_strafeSpeed = pev->maxspeed;
+               m_strafeSpeed = GetWalkSpeed ();
             else
             {
                m_combatStrafeDir = STRAFE_DIR_RIGHT;
-               m_strafeSetTime = engine.Time () + 1.5f;
+               m_strafeSetTime = engine.Time () + Random.Float (0.8f, 1.3f);
             }
          }
 
@@ -1192,7 +1174,7 @@ void Bot::CombatFight (void)
          pev->button &= ~IN_JUMP;
       }
    }
-   IgnoreCollisionShortly ();
+   IgnoreCollision ();
 }
 
 bool Bot::HasPrimaryWeapon (void)
@@ -1487,7 +1469,7 @@ void Bot::CommandTeam (void)
    else if (memberExists && yb_communication_type.GetInt () == 2)
       ChatterMessage(Chatter_ScaredEmotion);
 
-   m_timeTeamOrder = engine.Time () + Random.Float (5.0f, 30.0f);
+   m_timeTeamOrder = engine.Time () + Random.Float (15.0f, 30.0f);
 }
 
 bool Bot::IsGroupOfEnemies (const Vector &location, int numEnemies, int radius)
@@ -1624,7 +1606,7 @@ void Bot::CheckReload (void)
 
           pev->button &= ~IN_ATTACK;
 
-         if ((pev->oldbuttons & IN_RELOAD) == RELOAD_NONE)
+         if ((m_oldButtons & IN_RELOAD) == RELOAD_NONE)
             pev->button |= IN_RELOAD; // press reload button
 
          m_isReloading = true;

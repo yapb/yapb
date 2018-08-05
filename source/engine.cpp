@@ -22,7 +22,9 @@ Engine::Engine (void)
 
    m_isBotCommand = false;
    m_argumentCount = 0;
+
    memset (m_arguments, 0, sizeof (m_arguments));
+   memset (m_drawModels, 0, sizeof (m_drawModels));
 
    m_cvars.RemoveAll ();
    m_language.RemoveAll ();
@@ -81,7 +83,6 @@ void Engine::ChatPrintf (const char *fmt, ...)
 
    MESSAGE_BEGIN (MSG_BROADCAST, FindMessageId (NETMSG_TEXTMSG));
       WRITE_BYTE (HUD_PRINTTALK);
-      WRITE_STRING ("%s");
       WRITE_STRING (string);
    MESSAGE_END ();
 }
@@ -192,7 +193,7 @@ void Engine::TestHull (const Vector &start, const Vector &end, int ignoreFlags, 
    // function allows to specify whether the trace starts "inside" an entity's polygonal model,
    // and if so, to specify that entity in ignoreEntity in order to ignore it as an obstacle.
 
-   (*g_engfuncs.pfnTraceHull) (start, end, (ignoreFlags & TRACE_IGNORE_MONSTERS), hullNumber, ignoreEntity, ptr);
+   (*g_engfuncs.pfnTraceHull) (start, end, !!(ignoreFlags & TRACE_IGNORE_MONSTERS), hullNumber, ignoreEntity, ptr);
 }
 
 float Engine::GetWaveLength (const char *fileName)
@@ -295,7 +296,7 @@ const char *Engine::GetMapName (void)
    // this function gets the map name and store it in the map_name global string variable.
 
    static char engineMap[256];
-   strncpy (engineMap, const_cast <const char *> (g_pGlobals->pStringBase + static_cast <int> (g_pGlobals->mapname)), SIZEOF_CHAR (engineMap));
+   strncpy (engineMap, STRING (g_pGlobals->mapname), SIZEOF_CHAR (engineMap));
 
    return &engineMap[0];
 }
@@ -370,7 +371,7 @@ void Engine::IssueBotCommand (edict_t *ent, const char *fmt, ...)
       while (pos < length && string[pos] != ';')
          pos++;
 
-      if (string[pos - 1] == '\n')
+      if (pos > 1 && string[pos - 1] == '\n')
          stop = pos - 2;
       else
          stop = pos - 1; 
@@ -423,7 +424,7 @@ const char *Engine::ExtractSingleField (const char *string, int id)
    if (iter > IterBufMax - 1)
       iter = 0;
 
-   char *ptr = arg[++iter];
+   char *ptr = arg[A_clamp <int> (++iter, 0, IterBufMax - 1)];
    ptr[0] = 0;
 
    int pos = 0, count = 0, start = 0, stop = 0;
@@ -534,7 +535,7 @@ void Engine::PushRegisteredConVarsToEngine (bool gameVars)
             ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
          }
       }
-      else if (gameVars && ptr->type == VT_NOREGISTER)
+      else if (gameVars)
       {
          ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
 
@@ -970,7 +971,7 @@ void Engine::ProcessMessageCapture (void *ptr)
 
             if (FStrEq (strVal, "#CTs_Win"))
             {
-               bots.SetLastWinner (CT); // update last winner for economics
+               bots.SetLastWinner (TEAM_COUNTER); // update last winner for economics
 
                if (yb_communication_type.GetInt () == 2)
                {
@@ -983,13 +984,13 @@ void Engine::ProcessMessageCapture (void *ptr)
 
             if (FStrEq (strVal, "#Game_will_restart_in"))
             {
-               bots.CheckTeamEconomics (CT, true);
-               bots.CheckTeamEconomics (TERRORIST, true);
+               bots.CheckTeamEconomics (TEAM_COUNTER, true);
+               bots.CheckTeamEconomics (TEAM_TERRORIST, true);
             }
 
             if (FStrEq (strVal, "#Terrorists_Win"))
             {
-               bots.SetLastWinner (TERRORIST); // update last winner for economics
+               bots.SetLastWinner (TEAM_TERRORIST); // update last winner for economics
 
                if (yb_communication_type.GetInt () == 2)
                {
@@ -1015,7 +1016,7 @@ void Engine::ProcessMessageCapture (void *ptr)
                   notify->DeleteSearchNodes ();
                   notify->ResetTasks ();
 
-                  if (yb_communication_type.GetInt () == 2 && Random.Int (0, 100) < 75 && notify->m_team == CT)
+                  if (yb_communication_type.GetInt () == 2 && Random.Int (0, 100) < 75 && notify->m_team == TEAM_COUNTER)
                      notify->ChatterMessage (Chatter_WhereIsTheBomb);
                }
             }
@@ -1028,29 +1029,31 @@ void Engine::ProcessMessageCapture (void *ptr)
       }
       break;
 
-   case NETMSG_SCOREINFO:
+   case NETMSG_TEAMINFO:
       switch (m_msgBlock.state)
       {
       case 0:
          playerIndex = intVal;
          break;
 
-      case 4:
+      case 1:
          if (playerIndex >= 0 && playerIndex <= MaxClients ())
          {
-            Client &client = g_clients[playerIndex - 1];
+            int team = TEAM_SPECTATOR;
 
-            if (intVal == 1)
-               client.team2 = TERRORIST;
-            else if (intVal == 2)
-               client.team2 = CT;
-            else
-               client.team2 = SPECTATOR;
+            if (strVal[0] == 'U' && strVal[1] == 'N')
+               team = TEAM_SPECTATOR;
+            else if (strVal[0] == 'T' && strVal[1] == 'E')
+               team = TEAM_TERRORIST;
+            else if (strVal[0] == 'C' && strVal[1] == 'T')
+               team = TEAM_COUNTER;
+            else if (strVal[0] == 'S' && strVal[1] == 'P')
+               team = TEAM_SPECTATOR;
 
-            if (g_gameFlags & GAME_CSDM_FFA)
-               client.team = playerIndex;
-            else
-               client.team = client.team2;
+            auto &client = g_clients[playerIndex - 1];
+
+            client.team2 = team;
+            client.team = (g_gameFlags & GAME_CSDM_FFA) ? playerIndex : team;
          }
          break;
       }
@@ -1070,6 +1073,11 @@ void Engine::ProcessMessageCapture (void *ptr)
       AddLogEntry (true, LL_FATAL, "Network message handler error. Call to unrecognized message id (%d).\n", m_msgBlock.msg);
    }
    m_msgBlock.state++; // and finally update network message state
+}
+
+edict_t *Engine::SearchEntitiesSphere (edict_t *first, const float *pos, float radius)
+{
+   return g_engfuncs.pfnFindEntityInSphere (first, pos, radius);
 }
 
 // console var registrator

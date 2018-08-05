@@ -55,7 +55,7 @@ enum NetMsgId
    NETMSG_SCREENFADE = 11,
    NETMSG_HLTV = 12,
    NETMSG_TEXTMSG = 13,
-   NETMSG_SCOREINFO = 14,
+   NETMSG_TEAMINFO = 14,
    NETMSG_BARTIME = 15,
    NETMSG_SENDAUDIO = 17,
    NETMSG_SAYTEXT = 18,
@@ -89,6 +89,9 @@ struct MessageBlock
    int msg;
    int regMsgs[NETMSG_NUM];
 };
+
+// callback for entity searcher
+typedef bool *(*EntitySearcher) (edict_t *);
 
 // provides utility functions to not call original engine (less call-cost)
 class Engine : public Singleton <Engine>
@@ -182,6 +185,8 @@ public:
 
    // do actual network message processing
    void ProcessMessageCapture (void *ptr);
+
+   edict_t *SearchEntitiesSphere (edict_t *first, const float *pos, float radius);
 
    // public inlines
 public:

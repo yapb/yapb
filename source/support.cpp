@@ -393,7 +393,7 @@ void RoundInit (void)
    g_canSayBombPlanted = true;
 
    // check team economics
-   for (int team = TERRORIST; team < SPECTATOR; team++)
+   for (int team = TEAM_TERRORIST; team < TEAM_SPECTATOR; team++)
    {
       bots.CheckTeamEconomics (team);
       bots.SelectLeaderEachTeam (team, true);
@@ -401,8 +401,10 @@ void RoundInit (void)
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
-      if (bots.GetBot (i))
-         bots.GetBot (i)->NewRound ();
+      auto bot = bots.GetBot (i);
+
+      if (bot != nullptr)
+         bot->NewRound ();
 
       g_radioSelect[i] = 0;
    }
@@ -413,8 +415,9 @@ void RoundInit (void)
    g_timeBombPlanted = 0.0f;
    g_timeNextBombUpdate = 0.0f;
 
-   g_lastRadioTime[0] = 0.0f;
-   g_lastRadioTime[1] = 0.0f;
+   for (int i = 0; i < TEAM_SPECTATOR; i++)
+      g_lastRadioTime[i] = 0.0f;
+
    g_botsCanPause = false;
 
    for (int i = 0; i < TASK_MAX; i++)
@@ -524,15 +527,18 @@ void CheckWelcomeMessage (void)
 {
    // the purpose of this function, is  to send quick welcome message, to the listenserver entity.
 
+   if (engine.IsDedicatedServer ())
+      return;
+
    static bool alreadyReceived = !yb_display_welcome_text.GetBool ();
    static float receiveTime = 0.0f;
 
    if (alreadyReceived)
       return;
 
-   Array <String> sentences;
+   static Array <String> sentences;
 
-   if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH_ENGINE)))
+   if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH_ENGINE)) && sentences.IsEmpty ())
    {
       // add default messages
       sentences.Push ("hello user,communication is acquired");
@@ -553,15 +559,15 @@ void CheckWelcomeMessage (void)
       sentences.Push ("warning, medical attention required");
    }
 
-   if (IsAlive (g_hostEntity) && !alreadyReceived && receiveTime < 1.0 && (g_numWaypoints > 0 ? g_gameWelcomeSent : true))
+   if (IsAlive (g_hostEntity) && receiveTime < 1.0 && (g_numWaypoints > 0 ? g_gameWelcomeSent : true))
       receiveTime = engine.Time () + 4.0f; // receive welcome message in four seconds after game has commencing
 
-   if (receiveTime > 0.0f && receiveTime < engine.Time () && !alreadyReceived && (g_numWaypoints > 0 ? g_gameWelcomeSent : true))
+   if (receiveTime > 0.0f && receiveTime < engine.Time () && (g_numWaypoints > 0 ? g_gameWelcomeSent : true))
    {
       if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH_ENGINE)))
          engine.IssueCmd ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));
 
-      engine.ChatPrintf ("----- %s v%s (Build: %u), {%s}, (c) 2016, by %s (%s)-----", PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_DATE, PRODUCT_AUTHOR, PRODUCT_URL);
+      engine.ChatPrintf ("----- %s v%s (Build: %u), {%s}, (c) %s, by %s (%s)-----", PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_DATE, PRODUCT_END_YEAR, PRODUCT_AUTHOR, PRODUCT_URL);
       
       MESSAGE_BEGIN (MSG_ONE, SVC_TEMPENTITY, nullptr, g_hostEntity);
       WRITE_BYTE (TE_TEXTMESSAGE);
@@ -647,14 +653,14 @@ void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
    time_t tickTime = time (&tickTime);
    tm *time = localtime (&tickTime);
 
-   sprintf (logLine, "[%02d:%02d:%02d] %s%s", time->tm_hour, time->tm_min, time->tm_sec, levelString, buffer);
+   snprintf (logLine, SIZEOF_CHAR (logLine), "%02d:%02d:%02d --> %s%s", time->tm_hour, time->tm_min, time->tm_sec, levelString, buffer);
 
    fp.Printf ("%s\n", logLine);
    fp.Close ();
 
    if (logLevel == LL_FATAL)
    {
-      bots.RemoveAll ();
+      bots.RemoveAll (true);
       FreeLibraryMemory ();
 
 #if defined (PLATFORM_WIN32)
@@ -672,7 +678,7 @@ void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
    }
 }
 
-bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool sameTeam, bool needBot, bool isAlive, bool needDrawn)
+bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool sameTeam, bool needBot, bool isAlive, bool needDrawn, bool needBotWithC4)
 {
    // this function finds nearest to to, player with set of parameters, like his
    // team, live status, search distance etc. if needBot is true, then pvHolder, will
@@ -690,7 +696,7 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
       if (!(client.flags & CF_USED) || client.ent == to)
          continue;
 
-      if ((sameTeam && client.team != toTeam) || (isAlive && !(client.flags & CF_ALIVE)) || (needBot && !IsValidBot (client.ent)) || (needDrawn && (client.ent->v.effects & EF_NODRAW)))
+      if ((sameTeam && client.team != toTeam) || (isAlive && !(client.flags & CF_ALIVE)) || (needBot && !IsValidBot (client.ent)) || (needDrawn && (client.ent->v.effects & EF_NODRAW)) || (needBotWithC4 && (client.ent->v.weapons & WEAPON_C4)))
          continue; // filter players with parameters
 
       float distance = (client.ent->v.origin - to->v.origin).GetLength ();
