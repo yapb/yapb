@@ -27,7 +27,7 @@ ConVar yb_botbuy ("yb_botbuy", "1");
 
 ConVar yb_chatter_path ("yb_chatter_path", "sound/radio/bot");
 ConVar yb_restricted_weapons ("yb_restricted_weapons", "");
-ConVar yb_best_weapon_picker_type ("yb_best_weapon_picker_type", "2");
+ConVar yb_best_weapon_picker_type ("yb_best_weapon_picker_type", "1");
 
 // game console variables
 ConVar mp_c4timer ("mp_c4timer", nullptr, VT_NOREGISTER);
@@ -2835,7 +2835,7 @@ void Bot::ChooseAimDirection (void)
          angleCorrection = 0.0f;
          coordCorrection = 0.25f * (m_throw.z - pev->origin.z);
       }
-      else if (throwDistance >= 800.0)
+      else if (throwDistance >= 800.0f)
       {
          angleCorrection = 37.0f * (throwDistance - 800.0f) / 800.0f;
 
@@ -2844,7 +2844,7 @@ void Bot::ChooseAimDirection (void)
 
          coordCorrection = throwDistance * tanf (angleCorrection * Math::MATH_PI / 180.0f) + 0.25f * (m_throw.z - pev->origin.z);
       }
-      m_lookAt.z -= coordCorrection;
+      m_lookAt.z += coordCorrection * 0.5f; 
    }
    else if (flags & AIM_ENEMY)
       FocusEnemy ();
@@ -3089,6 +3089,8 @@ void Bot::RunTask_Normal (void)
          if (!((g_mapType & MAP_DE) && g_bombPlanted && m_team == TEAM_COUNTER))
             PushTask (TASK_SPRAY, TASKPRI_SPRAYLOGO, -1, engine.Time () + 1.0f, false);
       }
+      m_lastCollTime = engine.Time () + 1.2f;
+      m_prevTime = engine.Time () + 1.8f;
 
       // reached waypoint is a camp waypoint
       if ((m_currentPath->flags & FLAG_CAMP) && !(g_gameFlags & GAME_CSDM) && yb_camping_allowed.GetBool ())
@@ -3133,7 +3135,8 @@ void Bot::RunTask_Normal (void)
 
                MakeVectors (pev->v_angle);
 
-               PushTask (TASK_CAMP, TASKPRI_CAMP, -1, engine.Time () + Random.Float (20.0f, 40.0f), true);
+               m_timeCamping = engine.Time () + Random.Float (10.0f, 25.0f);
+               PushTask (TASK_CAMP, TASKPRI_CAMP, -1, m_timeCamping, true);
 
                m_camp = Vector (m_currentPath->campStartX, m_currentPath->campStartY, 0.0f);
                m_aimFlags |= AIM_CAMP;
@@ -3562,6 +3565,7 @@ void Bot::RunTask_Camp (void)
       m_defendedBomb = false;
       TaskComplete ();
    }
+   IgnoreCollision ();
 
    // half the reaction time if camping because you're more aware of enemies if camping
    SetIdealReactionTimes ();

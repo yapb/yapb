@@ -3941,40 +3941,23 @@ public:
       if (m_buffer == nullptr || m_pos >= m_size)
          return nullptr;
 
-      int start = m_pos;
-      int end = m_size - 1;
-      
-      if (m_size - m_pos > count - 1)
-         end = m_pos + count - 1;
+      int index = 0;
+      buffer[0] = 0;
 
-      while (m_pos < end)
+      for (; index < count - 1;)
       {
-         if (m_buffer[m_pos] == 0x0a)
-            end = m_pos;
+         if (m_pos < m_size)
+         {
+            buffer[index] = m_buffer[m_pos++];
 
-         m_pos++;
+            if (buffer[index++] == '\n')
+               break;
+         }
+         else
+            break;
       }
-
-      if (m_pos == start)
-         return nullptr;
-
-      int pos = start;
-
-      for (; pos <= end; pos++)
-         buffer[pos - start] = m_buffer[pos];
-
-      if (buffer[pos - start - 2] == 0x0d)
-      {
-         buffer[pos - start - 2] = '\n';
-         pos--;
-      }
-
-      if (buffer[pos - start - 1] == 0x0d || buffer[pos - start - 1] == 0x0a)
-         buffer[pos - start - 1] = '\n';
-
-      buffer[pos - start] = 0;
-
-      return buffer;
+      buffer[index] = 0;
+      return index ? buffer : nullptr;
    }
 
    //
@@ -3991,15 +3974,18 @@ public:
    //
    int Read (void *buffer, int size, int count = 1)
    {
-      if (!m_buffer|| m_pos >= m_size || buffer == nullptr || !size || !count)
+      if (!m_buffer || m_size <= m_pos ||buffer == nullptr || !size || !count)
          return 0;
 
-      int blocksRead = Math::A_min ((m_size - m_pos) / size, count) * size;
+      if (m_size <= m_pos)
+         return 0;
+
+      size_t blocksRead = size * count <= m_size - m_pos ? size * count : m_size - m_pos;
 
       memcpy (buffer, &m_buffer[m_pos], blocksRead);
       m_pos += blocksRead;
 
-      return blocksRead;
+      return blocksRead / size;
    }
 
    //

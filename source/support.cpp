@@ -393,7 +393,7 @@ void RoundInit (void)
    g_canSayBombPlanted = true;
 
    // check team economics
-   for (int team = TEAM_TERRORIST; team < TEAM_SPECTATOR; team++)
+   for (int team = 0; team < MAX_TEAM_COUNT; team++)
    {
       bots.CheckTeamEconomics (team);
       bots.SelectLeaderEachTeam (team, true);
@@ -415,7 +415,7 @@ void RoundInit (void)
    g_timeBombPlanted = 0.0f;
    g_timeNextBombUpdate = 0.0f;
 
-   for (int i = 0; i < TEAM_SPECTATOR; i++)
+   for (int i = 0; i < MAX_TEAM_COUNT; i++)
       g_lastRadioTime[i] = 0.0f;
 
    g_botsCanPause = false;
@@ -530,11 +530,14 @@ void CheckWelcomeMessage (void)
    if (engine.IsDedicatedServer ())
       return;
 
-   static bool alreadyReceived = !yb_display_welcome_text.GetBool ();
+   static bool messageSent = !yb_display_welcome_text.GetBool ();
    static float receiveTime = 0.0f;
 
-   if (alreadyReceived)
+   if (messageSent)
       return;
+
+   if (g_gameFlags & GAME_LEGACY)
+      g_gameWelcomeSent = true;
 
    static Array <String> sentences;
 
@@ -558,11 +561,12 @@ void CheckWelcomeMessage (void)
       sentences.Push ("attention, expect experimental armed hostile presence");
       sentences.Push ("warning, medical attention required");
    }
+   bool needToSendMsg = (g_numWaypoints > 0 ? g_gameWelcomeSent : true);
 
-   if (IsAlive (g_hostEntity) && receiveTime < 1.0 && (g_numWaypoints > 0 ? g_gameWelcomeSent : true))
+   if (IsAlive (g_hostEntity) && receiveTime < 1.0 && needToSendMsg)
       receiveTime = engine.Time () + 4.0f; // receive welcome message in four seconds after game has commencing
 
-   if (receiveTime > 0.0f && receiveTime < engine.Time () && (g_numWaypoints > 0 ? g_gameWelcomeSent : true))
+   if (receiveTime > 0.0f && receiveTime < engine.Time () && needToSendMsg)
    {
       if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH_ENGINE)))
          engine.IssueCmd ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));
@@ -591,7 +595,7 @@ void CheckWelcomeMessage (void)
       MESSAGE_END ();
 
       receiveTime = 0.0;
-      alreadyReceived = true;
+      messageSent = true;
    }
 }
 
@@ -667,7 +671,7 @@ void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
       DestroyWindow (GetForegroundWindow ());
       MessageBoxA (GetActiveWindow (), buffer, "YaPB Error", MB_ICONSTOP);
 #else
-      printf ("%s", buffer);
+      printf ("%s\n", buffer);
 #endif
 
 #if defined (PLATFORM_WIN32)

@@ -990,7 +990,7 @@ void Waypoint::InitVisibilityTab (void)
       m_visibilityIndex = 0;
       m_redoneVisibility = true;
 
-      AddLogEntry (true, LL_DEFAULT, "Vistable doesn't, vistable will be rebuilded");
+      AddLogEntry (true, LL_DEFAULT, "Vistable doesn't exists, vistable will be rebuilded");
       return;
    }
 
@@ -1059,6 +1059,8 @@ bool Waypoint::Load (void)
 {
    if (m_loadTries++ > 3)
    {
+      m_loadTries = 0;
+
       sprintf (m_infoBuffer, "Giving up loading waypoint file (%s). Something went wrong.", engine.GetMapName ());
       AddLogEntry (true, LL_ERROR, m_infoBuffer);
 
@@ -1257,15 +1259,11 @@ void Waypoint::Save (void)
 
 const char *Waypoint::GetFileName (bool isMemoryFile)
 {
-   String returnFile = "";
+   static char buffer[256];
+   snprintf (buffer, SIZEOF_CHAR (buffer), "%s%s%s.pwf", GetDataDir (isMemoryFile), IsNullString (yb_wptsubfolder.GetString ()) ? "" : yb_wptsubfolder.GetString (), engine.GetMapName ());
 
-   if (!IsNullString (yb_wptsubfolder.GetString ()))
-      returnFile += (String (yb_wptsubfolder.GetString ()) + "/");
-
-   returnFile = FormatBuffer ("%s%s%s.pwf", GetDataDir (isMemoryFile), returnFile.GetBuffer (), engine.GetMapName ());
-
-   if (File::Accessible (returnFile))
-      return returnFile.GetBuffer ();
+   if (File::Accessible (buffer))
+      return &buffer[0];
 
    return FormatBuffer ("%s%s.pwf", GetDataDir (isMemoryFile), engine.GetMapName ());
 }
@@ -2299,16 +2297,6 @@ void Waypoint::CreateBasic (void)
    AutoCreateForEntity (100, "hostage_entity"); // hostage entities
    AutoCreateForEntity (100, "func_vip_safetyzone"); // vip rescue (safety) zone
    AutoCreateForEntity (100, "func_escapezone"); // terrorist escape zone
-}
-
-Path *Waypoint::GetPath (int id)
-{
-   Path *path = m_paths[id];
-
-   if (path == nullptr)
-      return nullptr;
-
-   return path;
 }
 
 void Waypoint::EraseFromHardDisk (void)

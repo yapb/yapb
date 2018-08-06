@@ -103,7 +103,8 @@ void Engine::CenterPrintf (const char *fmt, ...)
    }
    strcat (string, "\n");
 
-   MESSAGE_BEGIN (MSG_BROADCAST, SVC_CENTERPRINT);
+   MESSAGE_BEGIN (MSG_BROADCAST, FindMessageId (NETMSG_TEXTMSG));
+   WRITE_BYTE (HUD_PRINTCENTER);
       WRITE_STRING (string);
    MESSAGE_END ();
 }
@@ -342,7 +343,7 @@ void Engine::IssueBotCommand (edict_t *ent, const char *fmt, ...)
    // supply directly the whole string as if you were typing it in the bot's "console". It
    // is supposed to work exactly like the pfnClientCommand (server-sided client command).
 
-   if (IsNullEntity (ent))
+   if (!IsValidBot (ent))
       return; 
 
    va_list ap;
@@ -418,7 +419,7 @@ const char *Engine::ExtractSingleField (const char *string, int id)
 
    const int IterBufMax = 4;
 
-   static char arg[IterBufMax][256];
+   static char arg[IterBufMax][512];
    static int iter = -1;
 
    if (iter > IterBufMax - 1)
@@ -1039,10 +1040,10 @@ void Engine::ProcessMessageCapture (void *ptr)
       case 1:
          if (playerIndex >= 0 && playerIndex <= MaxClients ())
          {
-            int team = TEAM_SPECTATOR;
+            int team = TEAM_UNASSIGNED;
 
             if (strVal[0] == 'U' && strVal[1] == 'N')
-               team = TEAM_SPECTATOR;
+               team = TEAM_UNASSIGNED;
             else if (strVal[0] == 'T' && strVal[1] == 'E')
                team = TEAM_TERRORIST;
             else if (strVal[0] == 'C' && strVal[1] == 'T')
@@ -1073,11 +1074,6 @@ void Engine::ProcessMessageCapture (void *ptr)
       AddLogEntry (true, LL_FATAL, "Network message handler error. Call to unrecognized message id (%d).\n", m_msgBlock.msg);
    }
    m_msgBlock.state++; // and finally update network message state
-}
-
-edict_t *Engine::SearchEntitiesSphere (edict_t *first, const float *pos, float radius)
-{
-   return g_engfuncs.pfnFindEntityInSphere (first, pos, radius);
 }
 
 // console var registrator

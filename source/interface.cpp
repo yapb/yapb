@@ -1537,7 +1537,7 @@ void ClientCommand (edict_t *ent)
             switch (selection)
             {
             case 1:
-               bots.AddRandom ();
+               bots.AddRandom (true);
                DisplayMenuToClient (ent, BOT_MENU_CONTROL);
                break;
 
@@ -1909,7 +1909,7 @@ void ClientCommand (edict_t *ent)
             case 6:
             case 7:
             case 8:
-               bots.GetBot (selection - 1)->Kick ();
+               bots.RemoveBot (selection - 1);
                bots.RemoveMenu (ent, 1);
                break;
 
@@ -1940,7 +1940,7 @@ void ClientCommand (edict_t *ent)
             case 6:
             case 7:
             case 8:
-               bots.GetBot (selection + 8 - 1)->Kick ();
+               bots.RemoveBot (selection + 8 - 1);
                bots.RemoveMenu (ent, 2);
                break;
 
@@ -1971,7 +1971,7 @@ void ClientCommand (edict_t *ent)
             case 6:
             case 7:
             case 8:
-               bots.GetBot (selection + 16 - 1)->Kick ();
+               bots.RemoveBot (selection + 16 - 1);
                bots.RemoveMenu (ent, 3);
                break;
 
@@ -2002,7 +2002,7 @@ void ClientCommand (edict_t *ent)
             case 6:
             case 7:
             case 8:
-               bots.GetBot (selection + 24 - 1)->Kick ();
+               bots.RemoveBot (selection + 24 - 1);
                bots.RemoveMenu (ent, 4);
                break;
 
@@ -2114,9 +2114,6 @@ void ServerActivate (edict_t *pentEdictList, int edictCount, int clientMax)
    waypoints.Init ();
    waypoints.Load ();
 
-   // create global killer entity
-   bots.CreateKillerEntity ();
-
    // execute main config
    engine.IssueCmd ("exec addons/yapb/conf/yapb.cfg");
 
@@ -2212,13 +2209,13 @@ void StartFrame (void)
    {
       if (g_waypointOn)
          waypoints.Think ();
-
-      CheckWelcomeMessage ();
    }
    bots.SetDeathMsgState (false);
 
    if (g_timePerSecondUpdate < engine.Time ())
    {
+      CheckWelcomeMessage ();
+
       for (int i = 0; i < engine.MaxClients (); i++)
       {
          edict_t *player = engine.EntityOfIndex (i + 1);
@@ -2410,9 +2407,10 @@ void pfnClientCommand (edict_t *ent, char const *format, ...)
    _vsnprintf (buffer, SIZEOF_CHAR (buffer), format, ap);
    va_end (ap);
 
-   if (bots.GetBot (ent))
+   if (ent && (ent->v.flags & FL_FAKECLIENT | FL_DORMANT))
    {
-      engine.IssueBotCommand (ent, buffer);
+      if (bots.GetBot (ent))
+         engine.IssueBotCommand (ent, buffer);
 
       if (g_gameFlags & GAME_METAMOD)
          RETURN_META (MRES_SUPERCEDE); // prevent bots to be forced to issue client commands

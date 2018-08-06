@@ -27,7 +27,7 @@ extern float g_timeRoundEnd;
 extern float g_timeRoundMid;
 extern float g_timeRoundStart;
 extern float g_timePerSecondUpdate;
-extern float g_lastRadioTime[TEAM_SPECTATOR];
+extern float g_lastRadioTime[MAX_TEAM_COUNT];
 
 extern int g_mapType;
 extern int g_numWaypoints;
@@ -43,7 +43,7 @@ extern int g_carefulWeaponPrefs[NUM_WEAPONS];
 extern int g_grenadeBuyPrecent[NUM_WEAPONS - 23];
 extern int g_botBuyEconomyTable[NUM_WEAPONS - 15];
 extern int g_radioSelect[MAX_ENGINE_PLAYERS];
-extern int g_lastRadio[TEAM_SPECTATOR];
+extern int g_lastRadio[MAX_TEAM_COUNT];
 extern int g_storeAddbotVars[4];
 extern int *g_weaponPrefs[];
 

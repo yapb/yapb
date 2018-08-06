@@ -186,8 +186,6 @@ public:
    // do actual network message processing
    void ProcessMessageCapture (void *ptr);
 
-   edict_t *SearchEntitiesSphere (edict_t *first, const float *pos, float radius);
-
    // public inlines
 public:
 

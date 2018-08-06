@@ -310,7 +310,7 @@ void Bot::IgnoreCollision (void)
 {
    ResetCollideState ();
 
-   m_lastCollTime = engine.Time () + 0.35f;
+   m_lastCollTime = engine.Time () + 0.5f;
    m_isStuck = false;
    m_checkTerrain = false;
 }
@@ -1287,118 +1287,114 @@ void Bot::FindShortestPath (int srcIndex, int destIndex)
       node->next = nullptr;
    }
 }
-
-// priority queue class (smallest item out first, hlsdk)
+// Priority queue class (smallest item out first)
 class PriorityQueue
 {
 private:
-   struct Node
-   {
-      int id;
-      float pri;
-   };
-
-   int m_allocCount;
    int m_size;
-   int m_heapSize;
-   Node *m_heap;
+   int m_maxSize;
+
+   struct HeapNode
+   {
+      int index;
+      float priority;
+   } *m_heap;
 
 public:
-
-   inline bool IsEmpty (void)
-   {
-      return m_size == 0;
-   }
-
-   inline PriorityQueue (int initialSize = MAX_WAYPOINTS * 0.5f)
+   PriorityQueue::PriorityQueue (int maxSize, int index, float priority)
    {
       m_size = 0;
-      m_heapSize = initialSize;
-      m_allocCount = 0;
+      m_maxSize = maxSize;
+      m_heap = new HeapNode[m_maxSize + 1];
 
-      m_heap = static_cast <Node *> (malloc (sizeof (Node) * m_heapSize));
+      Push (index, priority);
    }
 
-   inline ~PriorityQueue (void)
+   PriorityQueue::~PriorityQueue (void)
    {
-      free (m_heap);
-      m_heap = nullptr;
+      delete [] m_heap;
    }
 
-   // inserts a value into the priority queue
-   inline void Push (int value, float pri)
+   void PriorityQueue::Push (int index, float priority)
    {
-      if (m_allocCount > 20)
-      {
-         AddLogEntry (false, LL_FATAL, "Tried to re-allocate heap too many times in pathfinder. This usually indicates corrupted waypoint file. Please obtain new copy of waypoint.");
-         return;
-      }
-
-      if (m_heap == nullptr)
+      if (m_size >= m_maxSize)
          return;
 
-      if (m_size >= m_heapSize)
-      {
-         m_allocCount++;
-         m_heapSize += 100;
+      m_heap[m_size].priority = priority;
+      m_heap[m_size].index = index;
+      m_size++;
 
-         Node *newHeap = static_cast <Node *> (realloc (m_heap, sizeof (Node) * m_heapSize));
-
-         if (newHeap != nullptr)
-            m_heap = newHeap;
-      }
-
-      m_heap[m_size].pri = pri;
-      m_heap[m_size].id = value;
-
-      int child = ++m_size - 1;
+      int child = m_size - 1;
 
       while (child)
       {
-         int parent = static_cast <int> ((child - 1) * 0.5f);
+         int parent = Parent (child);
 
-         if (m_heap[parent].pri <= m_heap[child].pri)
+         if (m_heap[parent].priority <= m_heap[child].priority)
             break;
 
-         Node &ref = m_heap[child];
+         HeapNode swap;
+         swap = m_heap[child];
 
          m_heap[child] = m_heap[parent];
-         m_heap[parent] = ref;
+         m_heap[parent] = swap;
 
          child = parent;
       }
    }
 
-   // removes the smallest item from the priority queue
-   inline int Pop (void)
+   int PriorityQueue::Pop (void)
    {
-      int result = m_heap[0].id;
-
+      int iReturn = m_heap[0].index;
       m_size--;
       m_heap[0] = m_heap[m_size];
 
       int parent = 0;
-      int child = (2 * parent) + 1;
+      int child = LeftChild (parent);
 
-      Node &ref = m_heap[parent];
+      HeapNode swap = m_heap[parent];
 
       while (child < m_size)
       {
-         int right = (2 * parent) + 2;
+         int rightChild = RightChild (parent);
 
-         if (right < m_size && m_heap[right].pri < m_heap[child].pri)
-            child = right;
+         if (rightChild < m_size)
+         {
+            if (m_heap[rightChild].priority < m_heap[child].priority)
+               child = rightChild;
+         }
 
-         if (ref.pri <= m_heap[child].pri)
+         if (swap.priority <= m_heap[child].priority)
             break;
 
          m_heap[parent] = m_heap[child];
-
          parent = child;
-         child = (2 * parent) + 1;
+         child = LeftChild (parent);
       }
-      m_heap[parent] = ref;
-      return result;
+      m_heap[parent] = swap;
+
+      return iReturn;
+   }
+
+   FORCEINLINE int IsEmpty (void)
+   {
+      return !m_size;
+   }
+
+protected:
+   FORCEINLINE int LeftChild (int index)
+   {
+      return (index << 1) | 1;
+   }
+
+   FORCEINLINE int RightChild (int index)
+   {
+      return (++index) << 1;
+   }
+
+   FORCEINLINE int Parent (int index)
+   {
+      return (--index) >> 1;
    }
 };
 
@@ -1424,7 +1420,7 @@ float gfunctionKillsDistT (int currentIndex, int parentIndex)
    if (current->flags & FLAG_CROUCH)
       cost *= 1.5f;
 
-   return static_cast <float> (waypoints.GetPathDistance (parentIndex, currentIndex)) + cost;
+   return cost;
 }
 
 
@@ -1450,7 +1446,7 @@ float gfunctionKillsDistCT (int currentIndex, int parentIndex)
    if (current->flags & FLAG_CROUCH)
       cost *= 1.5f;
 
-   return static_cast <float> (waypoints.GetPathDistance (parentIndex, currentIndex)) + cost;
+   return cost;
 }
 
 float gfunctionKillsDistCTWithHostage (int currentIndex, int parentIndex)
@@ -1487,7 +1483,7 @@ float gfunctionKillsT (int currentIndex, int)
    if (current->flags & FLAG_CROUCH)
       cost *= 1.5f;
 
-   return cost;
+   return cost + 0.5f;
 }
 
 float gfunctionKillsCT (int currentIndex, int parentIndex)
@@ -1625,25 +1621,13 @@ void Bot::FindPath(int srcIndex, int destIndex, SearchPathType pathType /*= SEAR
    m_chosenGoalIndex = srcIndex;
    m_goalValue = 0.0f;
 
-   // A* Stuff
-   enum AStarState {OPEN, CLOSED, NEW};
-
-   struct AStar
+   for (int i = 0; i < g_numWaypoints; i++)
    {
-      float g;
-      float f;
-      int parentIndex;
-      AStarState state;
-   } astar[MAX_WAYPOINTS];
+      auto route = &m_routes[i];
 
-   PriorityQueue openList;
-
-   for (int i = 0; i < MAX_WAYPOINTS; i++)
-   {
-      astar[i].g = 0.0f;
-      astar[i].f = 0.0f;
-      astar[i].parentIndex = -1;
-      astar[i].state = NEW;
+      route->g = route->f = 0.0f;
+      route->parent = -1;
+      route->state = ROUTE_NEW;
    }
 
    float (*gcalc) (int, int) = nullptr;
@@ -1691,7 +1675,7 @@ void Bot::FindPath(int srcIndex, int destIndex, SearchPathType pathType /*= SEAR
       }
       else if ((g_mapType & MAP_CS) && HasHostage ())
       {
-         gcalc = gfunctionKillsDistCTWithHostage;
+         gcalc = gfunctionKillsCTWithHostage;
          hcalc = hfunctionNone;
       }
       else
@@ -1701,24 +1685,20 @@ void Bot::FindPath(int srcIndex, int destIndex, SearchPathType pathType /*= SEAR
       }
       break;
    }
+   auto srcRoute = &m_routes[srcIndex];
 
    // put start node into open list
-   astar[srcIndex].g = gcalc (srcIndex, -1);
-   astar[srcIndex].f = astar[srcIndex].g + hcalc (srcIndex, srcIndex, destIndex);
-   astar[srcIndex].state = OPEN;
+   srcRoute->g = gcalc (srcIndex, -1);
+   srcRoute->f = srcRoute->g + hcalc (srcIndex, srcIndex, destIndex);
+   srcRoute->state = ROUTE_OPEN;
 
-   openList.Push (srcIndex, astar[srcIndex].g);
+   PriorityQueue que (g_numWaypoints, srcIndex, srcRoute->g);
 
-   while (!openList.IsEmpty ())
+   //while (!openList.IsEmpty ())
+   while (!que.IsEmpty ())
    {
       // remove the first node from the open list
-      int currentIndex = openList.Pop ();
-
-      if (currentIndex < 0 || currentIndex > g_numWaypoints)
-      {
-         AddLogEntry (false, LL_FATAL, "openList.Pop () = %d. It's not possible to continue execution. Please obtain better waypoint.");
-         return;
-      }
+      int currentIndex = que.Pop ();
 
       // is the current node the goal node?
       if (currentIndex == destIndex)
@@ -1734,19 +1714,20 @@ void Bot::FindPath(int srcIndex, int destIndex, SearchPathType pathType /*= SEAR
             path->next = m_navNode;
 
             m_navNode = path;
-            currentIndex = astar[currentIndex].parentIndex;
+            currentIndex = m_routes[currentIndex].parent;
 
          } while (currentIndex != -1);
 
          m_navNodeStart = m_navNode;
          return;
       }
+      auto curRoute = &m_routes[currentIndex];
 
-      if (astar[currentIndex].state != OPEN)
+      if (curRoute->state != ROUTE_OPEN)
          continue;
 
       // put current node into CLOSED list
-      astar[currentIndex].state = CLOSED;
+      curRoute->state = ROUTE_CLOSED;
 
       // now expand the current node
       for (int i = 0; i < MAX_PATH_INDEX; i++)
@@ -1756,21 +1737,23 @@ void Bot::FindPath(int srcIndex, int destIndex, SearchPathType pathType /*= SEAR
          if (currentChild == -1)
             continue;
 
+         auto childRoute = &m_routes[currentChild];
+
          // calculate the F value as F = G + H
-         float g = astar[currentIndex].g + gcalc (currentChild, currentIndex);
+         float g = curRoute->g + gcalc (currentChild, currentIndex);
          float h = hcalc (currentChild, srcIndex, destIndex);
          float f = g + h;
 
-         if (astar[currentChild].state == NEW || astar[currentChild].f > f)
+         if (childRoute->state == ROUTE_NEW || childRoute->f > f)
          {
             // put the current child into open list
-            astar[currentChild].parentIndex = currentIndex;
-            astar[currentChild].state = OPEN;
+            childRoute->parent = currentIndex;
+            childRoute->state = ROUTE_OPEN;
 
-            astar[currentChild].g = g;
-            astar[currentChild].f = f;
+            childRoute->g = g;
+            childRoute->f = f;
 
-            openList.Push (currentChild, g);
+            que.Push (currentChild, g);
          }
       }
    }
@@ -3098,7 +3081,7 @@ int Bot::GetCampAimingWaypoint (void)
    int currentWaypoint = m_currentWaypointIndex;
 
    if (currentWaypoint == -1)
-      return Random.Int (0, g_numWaypoints - 1);
+      return waypoints.FindNearest (pev->origin);
 
    for (int i = 0; i < g_numWaypoints; i++)
    {
@@ -3400,12 +3383,12 @@ edict_t *Bot::FindNearestButton (const char *targetName)
    // find the nearest button which can open our target
    while (!engine.IsNullEntity(searchEntity = FIND_ENTITY_BY_TARGET (searchEntity, targetName)))
    {
-      Vector entityOrign = engine.GetAbsOrigin (searchEntity);
+      const Vector &pos = engine.GetAbsOrigin (searchEntity);
 
       // check if this place safe
-      if (!IsDeadlyDrop (entityOrign))
+      if (!IsDeadlyDrop (pos))
       {
-         float distance = (pev->origin - entityOrign).GetLengthSquared ();
+         float distance = (pev->origin - pos).GetLengthSquared ();
 
          // check if we got more close button
          if (distance <= nearestDistance)

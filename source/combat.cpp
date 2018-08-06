@@ -457,7 +457,6 @@ const Vector &Bot::GetAimPosition (void)
       }
       m_lastEnemyOrigin = targetOrigin;
    }
-   const Vector &velocity = UsesSniper () ? Vector::GetZero () : 1.0f * GetThinkInterval () * (m_enemy->v.velocity - pev->velocity);
 
    if (m_difficulty < 3 && !randomize.IsZero ())
    {
@@ -476,8 +475,8 @@ const Vector &Bot::GetAimPosition (void)
    else
       m_enemyOrigin = targetOrigin;
 
-   if (distance >= 256.0f && m_difficulty < 4)
-      m_enemyOrigin += velocity;
+   if (distance >= 256.0f && m_difficulty < 3)
+      m_enemyOrigin += (UsesSniper () ? Vector::GetZero () : 1.0f * GetThinkInterval () * m_enemy->v.velocity - 1.0f * GetThinkInterval () * pev->velocity).Get2D ();
 
    return m_enemyOrigin;
 }
@@ -498,9 +497,9 @@ float Bot::GetZOffset (float distance)
 
    float result = 3.5f;
 
-   if (distance < 2800.0f && distance > MAX_SPRAY_DISTANCE_X2)
+   if (distance < 3000.0f && distance > MAX_SPRAY_DISTANCE_X2)
    {
-      if (sniper) result = 1.8f;
+      if (sniper) result = 5.5f;
       else if (zoomableRifle) result = 4.5f;
       else if (pistol) result = 6.5f;
       else if (submachine) result = 5.5f;
@@ -510,17 +509,17 @@ float Bot::GetZOffset (float distance)
    }
    else if (distance > MAX_SPRAY_DISTANCE && distance <= MAX_SPRAY_DISTANCE_X2)
    {
-      if (sniper) result = 2.8f;
+      if (sniper) result = 3.5f;
       else if (zoomableRifle) result = 3.5f;
       else if (pistol) result = 6.5f;
       else if (submachine) result = 3.5f;
-      else if (rifle) result = 1.6f;
-      else if (m249) result = -1.0f;
+      else if (rifle) result = 1.4f;
+      else if (m249) result = -2.0f;
       else if (shotgun) result = 10.0f;
    }
    else if (distance < MAX_SPRAY_DISTANCE)
    {
-      if (sniper) result = 4.8f;
+      if (sniper) result = 3.5f;
       else if (zoomableRifle) result = -5.0f;
       else if (pistol) result = 4.5f;
       else if (submachine) result = -4.5f;
@@ -761,7 +760,7 @@ void Bot::FinishWeaponSelection (float distance, int index, int id, int choosen)
       m_shieldCheckTime = engine.Time () + 1.0f;
    }
 
-   if (UsesSniper () && m_zoomCheckTime + 1.0f < engine.Time ()) // is the bot holding a sniper rifle?
+   if (UsesSniper () && m_zoomCheckTime < engine.Time ()) // is the bot holding a sniper rifle?
    {
       if (distance > 1500.0f && pev->fov >= 40.0f) // should the bot switch to the long-range zoom?
          pev->button |= IN_ATTACK2;
@@ -772,9 +771,10 @@ void Bot::FinishWeaponSelection (float distance, int index, int id, int choosen)
       else if (distance <= 150.0f && pev->fov < 90.0f) // else should the bot restore the normal view ?
          pev->button |= IN_ATTACK2;
 
-      m_zoomCheckTime = engine.Time ();
+      m_zoomCheckTime = engine.Time () + 0.5f;
    }
-   else if (m_difficulty < 4 && UsesZoomableRifle ()) // else is the bot holding a zoomable rifle?
+   
+   if (m_difficulty < 4 && UsesZoomableRifle () && m_zoomCheckTime < engine.Time ()) // else is the bot holding a zoomable rifle?
    {
       if (distance > 800.0f && pev->fov >= 90.0f) // should the bot switch to zoomed mode?
          pev->button |= IN_ATTACK2;
@@ -782,7 +782,7 @@ void Bot::FinishWeaponSelection (float distance, int index, int id, int choosen)
       else if (distance <= 800.0f && pev->fov < 90.0f) // else should the bot restore the normal view?
          pev->button |= IN_ATTACK2;
 
-      m_zoomCheckTime = engine.Time ();
+      m_zoomCheckTime = engine.Time () + 1.0f;
    }
 
    // need to care for burst fire?

@@ -148,7 +148,8 @@ enum Team
 {
    TEAM_TERRORIST = 0,
    TEAM_COUNTER,
-   TEAM_SPECTATOR
+   TEAM_SPECTATOR,
+   TEAM_UNASSIGNED
 };
 
 // client flags
@@ -496,6 +497,14 @@ enum PathConnection
    CONNECTION_BOTHWAYS
 };
 
+// a* route state
+enum RouteState
+{
+   ROUTE_OPEN,
+   ROUTE_CLOSED,
+   ROUTE_NEW
+};
+
 // bot known file headers
 const char FH_WAYPOINT[] = "PODWAY!";
 const char FH_EXPERIENCE[] = "PODEXP!";
@@ -538,10 +547,19 @@ const int NUM_WEAPONS = 26;
 const int MAX_COLLIDE_MOVES = 3;
 const int MAX_ENGINE_PLAYERS = 32; // we can have 64 players with xash
 const int MAX_PRINT_BUFFER = 1024;
+const int MAX_TEAM_COUNT = 2;
 
 // weapon masks
 const int WEAPON_PRIMARY = ((1 << WEAPON_XM1014) | (1 <<WEAPON_M3) | (1 << WEAPON_MAC10) | (1 << WEAPON_UMP45) | (1 << WEAPON_MP5) | (1 << WEAPON_TMP) | (1 << WEAPON_P90) | (1 << WEAPON_AUG) | (1 << WEAPON_M4A1) | (1 << WEAPON_SG552) | (1 << WEAPON_AK47) | (1 << WEAPON_SCOUT) | (1 << WEAPON_SG550) | (1 << WEAPON_AWP) | (1 << WEAPON_G3SG1) | (1 << WEAPON_M249) | (1 << WEAPON_FAMAS) | (1 << WEAPON_GALIL));
-const int WEAPON_SECONDARY = ((1 << WEAPON_P228) | (1 << WEAPON_ELITE) | (1 << WEAPON_USP) | (1 << WEAPON_GLOCK) | (1 << WEAPON_DEAGLE) | (1 << WEAPON_FIVESEVEN));
+const int WEAPON_SECONDARY = ((1<< WEAPON_P228) | (1 << WEAPON_ELITE) | (1 << WEAPON_USP) | (1 << WEAPON_GLOCK) | (1 << WEAPON_DEAGLE) | (1 << WEAPON_FIVESEVEN));
+
+// a* route
+struct Route
+{
+   float g, f;
+   int parent;
+   RouteState state;
+};
 
 // this structure links waypoints returned from pathfinder
 struct PathNode
@@ -778,6 +796,7 @@ private:
    unsigned int m_collStateIndex; // index into collide moves
    CollisionState m_collisionState; // collision State
 
+   Route *m_routes; // pointer
    PathNode *m_navNode; // pointer to current node from path
    PathNode *m_navNodeStart; // pointer to start of path finding nodes
    Path *m_currentPath; // pointer to the current path waypoint
@@ -1263,8 +1282,8 @@ private:
 
    int m_lastWinner; // the team who won previous round
 
-   bool m_leaderChoosen[TEAM_SPECTATOR]; // is team leader choose theese round
-   bool m_economicsGood[TEAM_SPECTATOR]; // is team able to buy anything
+   bool m_leaderChoosen[MAX_TEAM_COUNT]; // is team leader choose theese round
+   bool m_economicsGood[MAX_TEAM_COUNT]; // is team able to buy anything
    bool m_deathMsgSent; // for fake ping
 
    Array <edict_t *> m_activeGrenades; // holds currently active grenades in the map
@@ -1291,9 +1310,8 @@ public:
    Bot *GetAliveBot (void);
    Bot *GetHighestFragsBot (int team);
 
-   int GetHumansNum (void);
+   int GetHumansNum (bool ignoreSpectators = false);
    int GetHumansAliveNum(void);
-   int GetHumansOnTeam (int team);
    int GetBotsNum (void);
 
    void Think (void);
@@ -1313,6 +1331,7 @@ public:
 
    void RemoveAll (bool instant = false);
    void RemoveRandom (bool decrementQuota = true);
+   void RemoveBot (int index);
    void RemoveFromTeam (Team team, bool removeAll = false);
 
    void RemoveMenu (edict_t *ent, int selection);
@@ -1447,7 +1466,6 @@ public:
    bool LoadPathMatrix (void);
 
    int GetPathDistance (int srcIndex, int destIndex);
-   Path *GetPath (int id);
    const char *GetWaypointInfo (int id);
 
    char *GetInfo (void) { return m_infoBuffer; }
@@ -1465,6 +1483,11 @@ public:
 
    void SetBombPosition (bool reset = false, const Vector &pos = Vector::GetZero ());
    inline const Vector &GetBombPosition (void) { return m_foundBombOrigin; }
+
+   FORCEINLINE Path *GetPath (int id)
+   {
+      return m_paths[id];
+   }
 
    // free's socket handle
    void CloseSocketHandle (int sock);

@@ -33,7 +33,7 @@ BotManager::BotManager (void)
    m_lastWinner = -1;
    m_deathMsgSent = false;
 
-   for (int i = TEAM_TERRORIST; i < TEAM_SPECTATOR; i++)
+   for (int i = 0; i < MAX_TEAM_COUNT; i++)
    {
       m_leaderChoosen[i] = false;
       m_economicsGood[i] = true;
@@ -79,7 +79,11 @@ void BotManager::TouchWithKillerEntity (Bot *bot)
 {
    if (engine.IsNullEntity (m_killerEntity))
    {
-      MDLL_ClientKill (bot->GetEntity ());
+      CreateKillerEntity ();
+
+      if (engine.IsNullEntity (m_killerEntity))
+         MDLL_ClientKill (bot->GetEntity ());
+
       return;
    }
 
@@ -312,7 +316,7 @@ void BotManager::PeriodicThink (void)
    // select leader each team somewhere in round start
    if (g_timeRoundStart + 5.0f > engine.Time () && g_timeRoundStart + 10.0f < engine.Time ())
    {
-      for (int team = TEAM_TERRORIST; team < TEAM_SPECTATOR; team++)
+      for (int team = 0; team < MAX_TEAM_COUNT; team++)
          SelectLeaderEachTeam (team, false);
    }
 }
@@ -387,18 +391,19 @@ void BotManager::MaintainBotQuota (void)
          m_creationTab.RemoveAll ();
          yb_quota.SetInt (GetBotsNum ());
       }
-      m_maintainTime = engine.Time () + 0.20f;
+      m_maintainTime = engine.Time () + 0.10f;
    }
 
    // now keep bot number up to date
    if (m_quotaMaintainTime > engine.Time ())
       return;
 
-   int numSpectators = GetHumansOnTeam (TEAM_SPECTATOR);
-   int humanPlayersInGame = GetHumansOnTeam (TEAM_TERRORIST) + GetHumansOnTeam (TEAM_COUNTER);
-   int totalHumansInGame = humanPlayersInGame + numSpectators;
+   yb_quota.SetInt (A_clamp <int> (yb_quota.GetInt (), 0, engine.MaxClients ()));
 
-   if (!engine.IsDedicatedServer () && totalHumansInGame == 0)
+   int totalHumansInGame = GetHumansNum ();
+   int humanPlayersInGame = GetHumansNum (true);
+
+   if (!engine.IsDedicatedServer () && !totalHumansInGame)
       return;
 
    int desiredBotCount = yb_quota.GetInt ();
@@ -526,7 +531,7 @@ void BotManager::RemoveFromTeam (Team team, bool removeAll)
    {
       auto bot = m_bots[i];
 
-      if (bot != nullptr && team == bot->m_team == team)
+      if (bot != nullptr && team == bot->m_team)
       {
          DecrementQuota ();
          bot->Kick ();
@@ -563,14 +568,14 @@ void BotManager::RemoveMenu (edict_t *ent, int selection)
       if (bot != nullptr && (bot->pev->flags & FL_FAKECLIENT))
       {
          menuKeys |= 1 << (i - menuKey);
-         sprintf (menuItem, "%1.1d. %s%s\n",  i - menuKey + 1, STRING (bot->pev->netname), bot->m_team == TEAM_COUNTER ? " \\y(CT)\\w" : " \\r(T)\\w");
+         snprintf (menuItem, SIZEOF_CHAR (menuItem), "%1.1d. %s%s\n",  i - menuKey + 1, STRING (bot->pev->netname), bot->m_team == TEAM_COUNTER ? " \\y(CT)\\w" : " \\r(T)\\w");
       }
       else
-         sprintf (menuItem, "\\d %1.1d. Not a Bot\\w\n", i - menuKey + 1);
+         snprintf (menuItem, SIZEOF_CHAR (menuItem), "\\d %1.1d. Not a Bot\\w\n", i - menuKey + 1);
 
       strncat (menuHolder, menuItem, SIZEOF_CHAR (menuHolder));
    }
-   sprintf (menuBuffer, "\\yBots Remove Menu (%d/4):\\w\n\n%s\n%s 0. Back", selection, menuHolder, (selection == 4) ? "" : " 9. More...\n");
+   snprintf (menuBuffer, SIZEOF_CHAR (menuBuffer), "\\yBots Remove Menu (%d/4):\\w\n\n%s\n%s 0. Back", selection, menuHolder, (selection == 4) ? "" : " 9. More...\n");
 
    // force to clear current menu
    DisplayMenuToClient (ent, BOT_MENU_INVALID);
@@ -613,6 +618,17 @@ void BotManager::KillAll (int team)
       }
    }
    engine.CenterPrintf ("All Bots died !");
+}
+
+void BotManager::RemoveBot (int index)
+{
+   auto bot = GetBot (index);
+
+   if (bot)
+   {
+      DecrementQuota ();
+      bot->Kick ();
+   }
 }
 
 void BotManager::RemoveRandom (bool decrementQuota)
@@ -852,11 +868,9 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    // this function does core operation of creating bot, it's called by CreateBot (),
    // when bot setup completed, (this is a bot class constructor)
 
-   char rejectReason[128];
    int clientIndex = engine.IndexOfEntity (bot);
 
    memset (reinterpret_cast <void *> (this), 0, sizeof (*this));
-   
    pev = &bot->v;
 
    if (bot->pvPrivateData != nullptr)
@@ -875,24 +889,24 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    if (!(g_gameFlags & GAME_LEGACY) && yb_latency_display.GetInt () == 1)
       SET_CLIENT_KEYVALUE (clientIndex, buffer, "*bot", "1");
 
-   rejectReason[0] = 0; // reset the reject reason template string
-   MDLL_ClientConnect (bot, "BOT", FormatBuffer ("127.0.0.%d", engine.IndexOfEntity (bot) + 100), rejectReason);
-   
+   char reject[256] = { 0, };
+   MDLL_ClientConnect (bot, STRING (bot->v.netname), FormatBuffer ("127.0.0.%d", engine.IndexOfEntity (bot) + 100), reject);
+
+   if (!IsNullString (reject))
+   {
+      AddLogEntry (true, LL_WARNING, "Server refused '%s' connection (%s)", STRING (bot->v.netname), reject);
+      engine.IssueCmd ("kick \"%s\"", STRING (bot->v.netname)); // kick the bot player if the server refused it
+
+      bot->v.flags |= FL_KILLME;
+      return;
+   }
+
    // should be set after client connect
    if (yb_avatar_display.GetBool () && !steamId.IsEmpty ())
       SET_CLIENT_KEYVALUE (clientIndex, buffer, "*sid", const_cast <char *> (steamId.GetBuffer ()));
 
    memset (&m_pingOffset, 0, sizeof (m_pingOffset));
    memset (&m_ping, 0, sizeof (m_ping));
-
-   if (!IsNullString (rejectReason))
-   {
-      AddLogEntry (true, LL_WARNING, "Server refused '%s' connection (%s)", STRING (bot->v.netname), rejectReason);
-      engine.IssueCmd ("kick \"%s\"", STRING (bot->v.netname)); // kick the bot player if the server refused it
-
-      bot->v.flags |= FL_KILLME;
-      return;
-   }
 
    MDLL_ClientPutInServer (bot);
    bot->v.flags |= FL_FAKECLIENT; // set this player as fakeclient
@@ -964,6 +978,9 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    m_wantedTeam = team;
    m_wantedClass = member;
 
+   // initialize a*
+   m_routes = new Route[g_numWaypoints + 1];
+
    NewRound ();
 }
 
@@ -996,9 +1013,12 @@ Bot::~Bot (void)
    ReleaseUsedName ();
    DeleteSearchNodes ();
    ResetTasks ();
+
+   // clear a* paths
+   delete[] m_routes;
 }
 
-int BotManager::GetHumansNum (void)
+int BotManager::GetHumansNum (bool ignoreSpectators)
 {
    // this function returns number of humans playing on the server
 
@@ -1009,7 +1029,12 @@ int BotManager::GetHumansNum (void)
       const Client &client = g_clients[i];
 
       if ((client.flags & CF_USED) && m_bots[i] == nullptr && !(client.ent->v.flags & FL_FAKECLIENT))
+      {
+         if (ignoreSpectators && client.team2 != TEAM_TERRORIST && client.team2 != TEAM_COUNTER)
+            continue;
+
          count++;
+      }
    }
    return count;
 }
@@ -1030,22 +1055,6 @@ int BotManager::GetHumansAliveNum (void)
    return count;
 }
 
-int BotManager::GetHumansOnTeam (int team)
-{
-   // this function returns number of humans playing on the server
-
-   int count = 0;
-
-   for (int i = 0; i < engine.MaxClients (); i++)
-   {
-      const Client &client = g_clients[i];
-
-      if ((client.flags & CF_USED) && m_bots[i] == nullptr && client.team == team && !(client.ent->v.flags & FL_FAKECLIENT))
-         count++;
-   }
-   return count;
-}
-
 bool BotManager::IsTeamStacked (int team)
 {
    int limitTeams = mp_limitteams.GetInt ();
@@ -1053,13 +1062,13 @@ bool BotManager::IsTeamStacked (int team)
    if (!limitTeams)
       return false;
 
-   int teamCount[TEAM_SPECTATOR] = { 0, };
+   int teamCount[MAX_TEAM_COUNT] = { 0, };
 
    for (int i = 0; i < engine.MaxClients (); i++)
    {
       const Client &client = g_clients[i];
 
-      if ((client.flags & CF_USED) && client.team2 != TEAM_SPECTATOR)
+      if ((client.flags & CF_USED) && client.team2 != TEAM_UNASSIGNED && client.team2 != TEAM_SPECTATOR)
          teamCount[client.team2]++;
    }
    return teamCount[team] + 1 > teamCount[team == TEAM_COUNTER ? TEAM_TERRORIST : TEAM_COUNTER] + limitTeams;
@@ -1257,7 +1266,7 @@ void Bot::NewRound (void)
    m_spawnTime = engine.Time ();
    m_lastChatTime = engine.Time ();
 
-   m_timeCamping = 0;
+   m_timeCamping = 0.0f;
    m_campDirection = 0;
    m_nextCampDirTime = 0;
    m_campButtons = 0;
@@ -1298,9 +1307,6 @@ void Bot::Kick (void)
    if (!(pev->flags & FL_FAKECLIENT) || IsNullString (username))
       return;
 
-   // clear fakeclient bit immediately
-   pev->flags &= ~FL_FAKECLIENT;
-
    engine.IssueCmd ("kick \"%s\"", username);
    engine.CenterPrintf ("Bot '%s' kicked", username);
 }
@@ -1318,7 +1324,7 @@ void Bot::StartGame (void)
       m_notStarted = false;
 
    // if bot was unable to join team, and no menus popups, check for stacked team
-   if (m_startAction == GAME_MSG_NONE && ++m_retryJoin > 2)
+   if (m_startAction == GAME_MSG_NONE && ++m_retryJoin > 3)
    {
       if (bots.IsTeamStacked (m_wantedTeam - 1))
       {

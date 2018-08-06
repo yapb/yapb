@@ -27,10 +27,10 @@ float g_timeRoundMid = 0.0f;
 float g_timeNextBombUpdate = 0.0f;
 float g_timeBombPlanted = 0.0f;
 float g_timePerSecondUpdate = 0.0f;
-float g_lastRadioTime[TEAM_SPECTATOR] = {0.0f, 0.0f};
+float g_lastRadioTime[MAX_TEAM_COUNT] = {0.0f, };
 float g_autoPathDistance = 250.0f;
 
-int g_lastRadio[TEAM_SPECTATOR];
+int g_lastRadio[MAX_TEAM_COUNT];
 int g_storeAddbotVars[4];
 int g_radioSelect[MAX_ENGINE_PLAYERS];
 int g_gameFlags = 0;
