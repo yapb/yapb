@@ -2407,7 +2407,7 @@ void pfnClientCommand (edict_t *ent, char const *format, ...)
    _vsnprintf (buffer, SIZEOF_CHAR (buffer), format, ap);
    va_end (ap);
 
-   if (ent && (ent->v.flags & FL_FAKECLIENT | FL_DORMANT))
+   if (ent && (ent->v.flags & (FL_FAKECLIENT | FL_DORMANT)))
    {
       if (bots.GetBot (ent))
          engine.IssueBotCommand (ent, buffer);

@@ -1301,7 +1301,7 @@ private:
    } *m_heap;
 
 public:
-   PriorityQueue::PriorityQueue (int maxSize, int index, float priority)
+   FORCEINLINE PriorityQueue (int maxSize, int index, float priority)
    {
       m_size = 0;
       m_maxSize = maxSize;
@@ -1310,12 +1310,12 @@ public:
       Push (index, priority);
    }
 
-   PriorityQueue::~PriorityQueue (void)
+   FORCEINLINE ~PriorityQueue (void)
    {
       delete [] m_heap;
    }
 
-   void PriorityQueue::Push (int index, float priority)
+   void Push (int index, float priority)
    {
       if (m_size >= m_maxSize)
          return;
@@ -1343,7 +1343,7 @@ public:
       }
    }
 
-   int PriorityQueue::Pop (void)
+   int Pop (void)
    {
       int iReturn = m_heap[0].index;
       m_size--;
