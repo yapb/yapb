@@ -4,7 +4,7 @@
 //
 // This software is licensed under the BSD-style license.
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.jeefo.net/license
+//     https://yapb.ru/license
 //
 
 #include <core.h>
@@ -15,40 +15,13 @@ ConVar yb_display_welcome_text ("yb_display_welcome_text", "1");
 ConVar mp_roundtime ("mp_roundtime", nullptr, VT_NOREGISTER);
 ConVar mp_freezetime ("mp_freezetime", nullptr, VT_NOREGISTER, true, "0");
 
-uint16 FixedUnsigned16 (float value, float scale)
-{
-   int output = (static_cast <int> (value * scale));
-
-   if (output < 0)
-      output = 0;
-
-   if (output > 0xffff)
-      output = 0xffff;
-
-   return static_cast <uint16> (output);
-}
-
-short FixedSigned16 (float value, float scale)
-{
-   int output = (static_cast <int> (value * scale));
-
-   if (output > 32767)
-      output = 32767;
-
-   if (output < -32768)
-      output = -32768;
-
-   return static_cast <short> (output);
-}
-
-const char *FormatBuffer (const char *format, ...)
-{
+const char *format (const char *format, ...) {
    static char strBuffer[2][MAX_PRINT_BUFFER];
    static int rotator = 0;
 
    if (format == nullptr)
       return strBuffer[rotator];
-      
+
    static char *ptr = strBuffer[rotator ^= 1];
 
    va_list ap;
@@ -59,40 +32,36 @@ const char *FormatBuffer (const char *format, ...)
    return ptr;
 }
 
-bool IsAlive (edict_t *ent)
-{
-   if (engine.IsNullEntity (ent))
+bool isAlive (edict_t *ent) {
+   if (engine.isNullEntity (ent))
       return false;
 
    return ent->v.deadflag == DEAD_NO && ent->v.health > 0 && ent->v.movetype != MOVETYPE_NOCLIP;
 }
 
-float GetShootingConeDeviation (edict_t *ent, Vector *position)
-{
-   const Vector &dir = (*position - (ent->v.origin + ent->v.view_ofs)).Normalize ();
+float getShootingConeDeviation (edict_t *ent, Vector *position) {
+   const Vector &dir = (*position - (ent->v.origin + ent->v.view_ofs)).normalize ();
    MakeVectors (ent->v.v_angle);
 
    // he's facing it, he meant it
    return g_pGlobals->v_forward | dir;
 }
 
-bool IsInViewCone (const Vector &origin, edict_t *ent)
-{
+bool isInViewCone (const Vector &origin, edict_t *ent) {
    MakeVectors (ent->v.v_angle);
 
-   if (((origin - (ent->v.origin + ent->v.view_ofs)).Normalize () | g_pGlobals->v_forward) >= A_cosf (((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f) * MATH_D2R))
+   if (((origin - (ent->v.origin + ent->v.view_ofs)).normalize () | g_pGlobals->v_forward) >= A_cosf (((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f) * MATH_D2R))
       return true;
 
    return false;
 }
 
-bool IsVisible (const Vector &origin, edict_t *ent)
-{
-   if (engine.IsNullEntity (ent))
+bool isVisible (const Vector &origin, edict_t *ent) {
+   if (engine.isNullEntity (ent))
       return false;
 
    TraceResult tr;
-   engine.TestLine (ent->v.origin + ent->v.view_ofs, origin, TRACE_IGNORE_EVERYTHING, ent, &tr);
+   engine.testLine (ent->v.origin + ent->v.view_ofs, origin, TRACE_IGNORE_EVERYTHING, ent, &tr);
 
    if (tr.flFraction != 1.0f)
       return false;
@@ -100,97 +69,87 @@ bool IsVisible (const Vector &origin, edict_t *ent)
    return true;
 }
 
-void DisplayMenuToClient (edict_t *ent, MenuId menu)
-{
+void showMenu (edict_t *ent, MenuId menu) {
    static bool s_menusParsed = false;
 
    // make menus looks like we need only once
-   if (!s_menusParsed)
-   {
-      extern void SetupBotMenus (void);
-      SetupBotMenus ();
+   if (!s_menusParsed) {
+      extern void setupBotMenus (void);
+      setupBotMenus ();
 
-      for (int i = 0; i < ARRAYSIZE_HLSDK (g_menus); i++)
-      {
+      for (int i = 0; i < ARRAYSIZE_HLSDK (g_menus); i++) {
          auto parsed = &g_menus[i];
 
          // translate all the things
-         parsed->text.Replace ("\v", "\n");
-         parsed->text.Assign (engine.TraslateMessage (parsed->text.GetBuffer ()));
+         parsed->text.assign (engine.translate (parsed->text.chars ()));
 
          // make menu looks best
-         if (!(g_gameFlags & GAME_LEGACY))
-         {
+         if (!(g_gameFlags & GAME_LEGACY)) {
             for (int j = 0; j < 10; j++)
-               parsed->text.Replace (FormatBuffer ("%d.", j), FormatBuffer ("\\r%d.\\w", j));
+               parsed->text.replace (format ("%d.", j), format ("\\r%d.\\w", j));
          }
       }
       s_menusParsed = true;
    }
 
-   if (!IsValidPlayer (ent))
+   if (!isPlayer (ent))
       return;
 
-   Client &client = g_clients[engine.IndexOfEntity (ent) - 1];
+   Client &client = g_clients[engine.indexOfEntity (ent) - 1];
 
-   if (menu == BOT_MENU_INVALID)
-   {
-      MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), nullptr, ent);
-      WRITE_SHORT (0);
-      WRITE_CHAR (0);
-      WRITE_BYTE (0);
-      WRITE_STRING ("");
-      MESSAGE_END ();
+   if (menu == BOT_MENU_INVALID) {
+      MessageWriter (MSG_ONE_UNRELIABLE, engine.getMessageId (NETMSG_SHOWMENU), Vector::null (), ent)
+         .writeShort (0)
+         .writeChar (0)
+         .writeByte (0)
+         .writeString ("");
 
-      client.menu = BOT_MENU_INVALID;
+      client.menu = menu;
       return;
    }
    int menuIndex = 0;
 
-   for (; menuIndex < ARRAYSIZE_HLSDK (g_menus); menuIndex++)
-   {
+   for (; menuIndex < ARRAYSIZE_HLSDK (g_menus); menuIndex++) {
       if (g_menus[menuIndex].id == menu)
          break;
    }
    const auto &menuRef = g_menus[menuIndex];
-   const char *displayText = ((g_gameFlags & (GAME_XASH_ENGINE | GAME_MOBILITY)) && !yb_display_menu_text.GetBool ()) ? " " : menuRef.text.GetBuffer ();
+   const char *text = ((g_gameFlags & (GAME_XASH_ENGINE | GAME_MOBILITY)) && !yb_display_menu_text.boolean ()) ? " " : menuRef.text.chars ();
+   MessageWriter msg;
 
-   while (strlen (displayText) >= 64)
-   {
-      MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), nullptr, ent);
-         WRITE_SHORT (menuRef.slots);
-         WRITE_CHAR (-1);
-         WRITE_BYTE (1);
+   while (strlen (text) >= 64) {
+      msg.start (MSG_ONE_UNRELIABLE, engine.getMessageId (NETMSG_SHOWMENU), Vector::null (), ent)
+         .writeShort (menuRef.slots)
+         .writeChar (-1)
+         .writeByte (1);
 
-      for (int i = 0; i <= 63; i++)
-         WRITE_CHAR (displayText[i]);
-
-      MESSAGE_END ();
-      displayText += 64;
+      for (int i = 0; i < 64; i++) {
+         msg.writeChar (text[i]);
+      }
+      msg.end ();
+      text += 64;
    }
 
-   MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, engine.FindMessageId (NETMSG_SHOWMENU), nullptr, ent);
-      WRITE_SHORT (menuRef.slots);
-      WRITE_CHAR (-1);
-      WRITE_BYTE (0);
-      WRITE_STRING (displayText);
-   MESSAGE_END();
+   MessageWriter (MSG_ONE_UNRELIABLE, engine.getMessageId (NETMSG_SHOWMENU), Vector::null (), ent)
+      .writeShort (menuRef.slots)
+      .writeChar (-1)
+      .writeByte (0)
+      .writeString (text);
 
    client.menu = menu;
    CLIENT_COMMAND (ent, "speak \"player/geiger1\"\n"); // Stops others from hearing menu sounds..
 }
 
-void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex)
-{
+void traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIndex) {
    // this function draw spraypaint depending on the tracing results.
 
-   static Array <String> logotypes;
+   static StringArray logotypes;
 
-   if (logotypes.IsEmpty ())
-      logotypes = String ("{biohaz;{graf003;{graf004;{graf005;{lambda06;{target;{hand1;{spit2;{bloodhand6;{foot_l;{foot_r").Split (";");
+   if (logotypes.empty ())
+      logotypes = String ("{biohaz;{graf003;{graf004;{graf005;{lambda06;{target;{hand1;{spit2;{bloodhand6;{foot_l;{foot_r").split (";");
 
    int entityIndex = -1, message = TE_DECAL;
-   int decalIndex = (*g_engfuncs.pfnDecalIndex) (logotypes[logotypeIndex].GetBuffer ());
+   int decalIndex = (*g_engfuncs.pfnDecalIndex) (logotypes[logotypeIndex].chars ());
 
    if (decalIndex < 0)
       decalIndex = (*g_engfuncs.pfnDecalIndex) ("{lambda06");
@@ -198,78 +157,70 @@ void DecalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex)
    if (trace->flFraction == 1.0f)
       return;
 
-   if (!engine.IsNullEntity (trace->pHit))
-   {
+   if (!engine.isNullEntity (trace->pHit)) {
       if (trace->pHit->v.solid == SOLID_BSP || trace->pHit->v.movetype == MOVETYPE_PUSHSTEP)
-         entityIndex = engine.IndexOfEntity (trace->pHit);
+         entityIndex = engine.indexOfEntity (trace->pHit);
       else
          return;
    }
    else
       entityIndex = 0;
 
-   if (entityIndex != 0)
-   {
-      if (decalIndex > 255)
-      {
+   if (entityIndex != 0) {
+      if (decalIndex > 255) {
          message = TE_DECALHIGH;
          decalIndex -= 256;
       }
    }
-   else
-   {
+   else {
       message = TE_WORLDDECAL;
 
-      if (decalIndex > 255)
-      {
+      if (decalIndex > 255) {
          message = TE_WORLDDECALHIGH;
          decalIndex -= 256;
       }
    }
 
-   if (logotypes[logotypeIndex].Contains ("{"))
-   {
-      MESSAGE_BEGIN (MSG_BROADCAST, SVC_TEMPENTITY);
-         WRITE_BYTE (TE_PLAYERDECAL);
-         WRITE_BYTE (engine.IndexOfEntity (pev->pContainingEntity));
-         WRITE_COORD (trace->vecEndPos.x);
-         WRITE_COORD (trace->vecEndPos.y);
-         WRITE_COORD (trace->vecEndPos.z);
-         WRITE_SHORT (static_cast <short> (engine.IndexOfEntity (trace->pHit)));
-         WRITE_BYTE (decalIndex);
-      MESSAGE_END ();
+   if (logotypes[logotypeIndex].contains ("{")) {
+      MessageWriter (MSG_BROADCAST, SVC_TEMPENTITY)
+         .writeByte (TE_PLAYERDECAL)
+         .writeByte (engine.indexOfEntity (pev->pContainingEntity))
+         .writeCoord (trace->vecEndPos.x)
+         .writeCoord (trace->vecEndPos.y)
+         .writeCoord (trace->vecEndPos.z)
+         .writeShort (static_cast<short> (engine.indexOfEntity (trace->pHit)))
+         .writeByte (decalIndex);
    }
-   else
-   {
-      MESSAGE_BEGIN (MSG_BROADCAST, SVC_TEMPENTITY);
-         WRITE_BYTE (message);
-         WRITE_COORD (trace->vecEndPos.x);
-         WRITE_COORD (trace->vecEndPos.y);
-         WRITE_COORD (trace->vecEndPos.z);
-         WRITE_BYTE (decalIndex);
+   else {
+      MessageWriter msg;
+
+      msg.start (MSG_BROADCAST, SVC_TEMPENTITY)
+      .writeByte (message)
+      .writeCoord (trace->vecEndPos.x)
+      .writeCoord (trace->vecEndPos.y)
+      .writeCoord (trace->vecEndPos.z)
+      .writeByte (decalIndex);
 
       if (entityIndex)
-         WRITE_SHORT (entityIndex);
+         msg.writeShort (entityIndex);
 
-      MESSAGE_END();
+      msg.end ();
    }
 }
 
-void FreeLibraryMemory (void)
-{
+void cleanupGarbage (void) {
    // this function free's all allocated memory
-   waypoints.Init (); // frees waypoint data
+   waypoints.init (); // frees waypoint data
 
-   delete [] g_experienceData;
+   delete[] g_experienceData;
    g_experienceData = nullptr;
 }
 
-void UpdateGlobalExperienceData (void)
-{
+void UpdateGlobalExperienceData (void) {
    // this function called after each end of the round to update knowledge about most dangerous waypoints for each team.
 
    // no waypoints, no experience used or waypoints edited or being edited?
-   if (g_numWaypoints < 1 || waypoints.HasChanged ())
+   if (g_numWaypoints < 1 || waypoints.hasChanged ())
       return; // no action
 
    uint16 maxDamage; // maximum damage
@@ -279,20 +230,17 @@ void UpdateGlobalExperienceData (void)
    bool recalcKills = false;
 
    // get the most dangerous waypoint for this position for terrorist team
-   for (int i = 0; i < g_numWaypoints; i++)
-   {
+   for (int i = 0; i < g_numWaypoints; i++) {
       maxDamage = 0;
       bestIndex = -1;
 
-      for (int j = 0; j < g_numWaypoints; j++)
-      {
+      for (int j = 0; j < g_numWaypoints; j++) {
          if (i == j)
             continue;
 
          actDamage = (g_experienceData + (i * g_numWaypoints) + j)->team0Damage;
 
-         if (actDamage > maxDamage)
-         {
+         if (actDamage > maxDamage) {
             maxDamage = actDamage;
             bestIndex = j;
          }
@@ -301,24 +249,21 @@ void UpdateGlobalExperienceData (void)
       if (maxDamage > MAX_DAMAGE_VALUE)
          recalcKills = true;
 
-      (g_experienceData + (i * g_numWaypoints) + i)->team0DangerIndex = static_cast <short> (bestIndex);
+      (g_experienceData + (i * g_numWaypoints) + i)->team0DangerIndex = static_cast<short> (bestIndex);
    }
 
    // get the most dangerous waypoint for this position for counter-terrorist team
-   for (int i = 0; i < g_numWaypoints; i++)
-   {
+   for (int i = 0; i < g_numWaypoints; i++) {
       maxDamage = 0;
       bestIndex = -1;
 
-      for (int j = 0; j < g_numWaypoints; j++)
-      {
+      for (int j = 0; j < g_numWaypoints; j++) {
          if (i == j)
             continue;
 
          actDamage = (g_experienceData + (i * g_numWaypoints) + j)->team1Damage;
 
-         if (actDamage > maxDamage)
-         {
+         if (actDamage > maxDamage) {
             maxDamage = actDamage;
             bestIndex = j;
          }
@@ -327,89 +272,81 @@ void UpdateGlobalExperienceData (void)
       if (maxDamage > MAX_DAMAGE_VALUE)
          recalcKills = true;
 
-     (g_experienceData + (i * g_numWaypoints) + i)->team1DangerIndex = static_cast <short> (bestIndex);
+      (g_experienceData + (i * g_numWaypoints) + i)->team1DangerIndex = static_cast<short> (bestIndex);
    }
 
    // adjust values if overflow is about to happen
-   if (recalcKills)
-   {
-      for (int i = 0; i < g_numWaypoints; i++)
-      {
-         for (int j = 0; j < g_numWaypoints; j++)
-         {
+   if (recalcKills) {
+      for (int i = 0; i < g_numWaypoints; i++) {
+         for (int j = 0; j < g_numWaypoints; j++) {
             if (i == j)
                continue;
 
             int clip = (g_experienceData + (i * g_numWaypoints) + j)->team0Damage;
-            clip -= static_cast <int> (MAX_DAMAGE_VALUE * 0.5);
+            clip -= static_cast<int> (MAX_DAMAGE_VALUE * 0.5);
 
             if (clip < 0)
                clip = 0;
 
-            (g_experienceData + (i * g_numWaypoints) + j)->team0Damage = static_cast <uint16> (clip);
+            (g_experienceData + (i * g_numWaypoints) + j)->team0Damage = static_cast<uint16> (clip);
 
             clip = (g_experienceData + (i * g_numWaypoints) + j)->team1Damage;
-            clip -= static_cast <int> (MAX_DAMAGE_VALUE * 0.5);
+            clip -= static_cast<int> (MAX_DAMAGE_VALUE * 0.5);
 
             if (clip < 0)
                clip = 0;
 
-            (g_experienceData + (i * g_numWaypoints) + j)->team1Damage = static_cast <uint16> (clip);
+            (g_experienceData + (i * g_numWaypoints) + j)->team1Damage = static_cast<uint16> (clip);
          }
       }
    }
    g_highestKills++;
 
-   int clip = g_highestDamageT - static_cast <int> (MAX_DAMAGE_VALUE * 0.5);
+   int clip = g_highestDamageT - static_cast<int> (MAX_DAMAGE_VALUE * 0.5);
 
    if (clip < 1)
       clip = 1;
 
    g_highestDamageT = clip;
 
-   clip = (int) g_highestDamageCT - static_cast <int> (MAX_DAMAGE_VALUE * 0.5);
+   clip = (int)g_highestDamageCT - static_cast<int> (MAX_DAMAGE_VALUE * 0.5);
 
    if (clip < 1)
       clip = 1;
 
    g_highestDamageCT = clip;
 
-   if (g_highestKills == MAX_KILL_HISTORY)
-   {
-      for (int i = 0; i < g_numWaypoints; i++)
-      {
-         (g_experienceData + (i * g_numWaypoints) + i)->team0Damage /= static_cast <uint16> (engine.MaxClients () * 0.5);
-         (g_experienceData + (i * g_numWaypoints) + i)->team1Damage /= static_cast <uint16> (engine.MaxClients () * 0.5);
+   if (g_highestKills == MAX_KILL_HISTORY) {
+      for (int i = 0; i < g_numWaypoints; i++) {
+         (g_experienceData + (i * g_numWaypoints) + i)->team0Damage /= static_cast<uint16> (engine.maxClients () * 0.5);
+         (g_experienceData + (i * g_numWaypoints) + i)->team1Damage /= static_cast<uint16> (engine.maxClients () * 0.5);
       }
       g_highestKills = 1;
    }
 }
 
-void RoundInit (void)
-{
+void initRound (void) {
    // this is called at the start of each round
 
    g_roundEnded = false;
    g_canSayBombPlanted = true;
 
    // check team economics
-   for (int team = 0; team < MAX_TEAM_COUNT; team++)
-   {
-      bots.CheckTeamEconomics (team);
-      bots.SelectLeaderEachTeam (team, true);
+   for (int team = 0; team < MAX_TEAM_COUNT; team++) {
+      bots.updateTeamEconomics (team);
+      bots.selectLeaders (team, true);
    }
 
-   for (int i = 0; i < engine.MaxClients (); i++)
-   {
-      auto bot = bots.GetBot (i);
+   for (int i = 0; i < engine.maxClients (); i++) {
+      auto bot = bots.getBot (i);
 
       if (bot != nullptr)
-         bot->NewRound ();
+         bot->processNewRound ();
 
       g_radioSelect[i] = 0;
    }
-   waypoints.SetBombPosition (true);
-   waypoints.ClearVisitedGoals ();
+   waypoints.setBombPos (true);
+   waypoints.clearVisited ();
 
    g_bombSayString = false;
    g_timeBombPlanted = 0.0f;
@@ -426,19 +363,17 @@ void RoundInit (void)
    UpdateGlobalExperienceData (); // update experience data on round start
 
    // calculate the round mid/end in world time
-   g_timeRoundStart = engine.Time () + mp_freezetime.GetFloat ();
-   g_timeRoundMid = g_timeRoundStart + mp_roundtime.GetFloat () * 60.0f * 0.5f;
-   g_timeRoundEnd = g_timeRoundStart + mp_roundtime.GetFloat () * 60.0f;
+   g_timeRoundStart = engine.timebase () + mp_freezetime.flt ();
+   g_timeRoundMid = g_timeRoundStart + mp_roundtime.flt () * 60.0f * 0.5f;
+   g_timeRoundEnd = g_timeRoundStart + mp_roundtime.flt () * 60.0f;
 }
 
-int GetWeaponPenetrationPower (int id)
-{
+int getWeaponPenetrationPower (int id) {
    // returns if weapon can pierce through a wall
 
    int i = 0;
 
-   while (g_weaponSelect[i].id)
-   {
+   while (g_weaponSelect[i].id) {
       if (g_weaponSelect[i].id == id)
          return g_weaponSelect[i].penetratePower;
 
@@ -447,90 +382,82 @@ int GetWeaponPenetrationPower (int id)
    return 0;
 }
 
-bool IsValidPlayer (edict_t *ent)
-{
-   if (engine.IsNullEntity (ent))
+bool isPlayer (edict_t *ent) {
+   if (engine.isNullEntity (ent))
       return false;
 
    if (ent->v.flags & FL_PROXY)
       return false;
 
-   if ((ent->v.flags & (FL_CLIENT | FL_FAKECLIENT)) || bots.GetBot (ent) != nullptr)
-      return !IsNullString (STRING (ent->v.netname));
+   if ((ent->v.flags & (FL_CLIENT | FL_FAKECLIENT)) || bots.getBot (ent) != nullptr)
+      return !isEmptyStr (STRING (ent->v.netname));
 
    return false;
 }
 
-bool IsPlayerVIP (edict_t *ent)
-{
+bool isPlayerVIP (edict_t *ent) {
    if (!(g_mapType & MAP_AS))
       return false;
 
-   if (!IsValidPlayer (ent))
+   if (!isPlayer (ent))
       return false;
 
    return *(INFOKEY_VALUE (GET_INFOKEYBUFFER (ent), "model")) == 'v';
 }
 
-bool IsValidBot (edict_t *ent)
-{
-   if (bots.GetBot (ent) != nullptr || (!engine.IsNullEntity (ent) && (ent->v.flags & FL_FAKECLIENT)))
+bool isFakeClient (edict_t *ent) {
+   if (bots.getBot (ent) != nullptr || (!engine.isNullEntity (ent) && (ent->v.flags & FL_FAKECLIENT)))
       return true;
 
    return false;
 }
 
-bool OpenConfig (const char *fileName, const char *errorIfNotExists, MemoryFile *outFile, bool languageDependant /*= false*/)
-{
-   if (outFile->IsValid ())
-      outFile->Close ();
+bool openConfig (const char *fileName, const char *errorIfNotExists, MemFile *outFile, bool languageDependant /*= false*/) {
+   if (outFile->isValid ())
+      outFile->close ();
 
    // save config dir
    const char *configDir = "addons/yapb/conf";
 
-   if (languageDependant)
-   {
+   if (languageDependant) {
       extern ConVar yb_language;
 
-      if (strcmp (fileName, "lang.cfg") == 0 && strcmp (yb_language.GetString (), "en") == 0)
+      if (strcmp (fileName, "lang.cfg") == 0 && strcmp (yb_language.str (), "en") == 0)
          return false;
 
-      const char *langConfig = FormatBuffer ("%s/lang/%s_%s", configDir, yb_language.GetString (), fileName);
+      const char *langConfig = format ("%s/lang/%s_%s", configDir, yb_language.str (), fileName);
 
       // check file existence
       int size = 0;
       uint8 *buffer = nullptr;
 
       // check is file is exists for this language
-      if ((buffer = MemoryFile::Loader (langConfig, &size)) != nullptr)
-      {
-         MemoryFile::Unloader (buffer);
+      if ((buffer = MemFile::Loader (langConfig, &size)) != nullptr) {
+         MemFile::Unloader (buffer);
 
          // unload and reopen file using MemoryFile
-         outFile->Open (langConfig);
+         outFile->open (langConfig);
       }
       else
-         outFile->Open (FormatBuffer ("%s/lang/en_%s", configDir, fileName));
+         outFile->open (format ("%s/lang/en_%s", configDir, fileName));
    }
    else
-      outFile->Open (FormatBuffer ("%s/%s", configDir, fileName));
+      outFile->open (format ("%s/%s", configDir, fileName));
 
-   if (!outFile->IsValid ())
-   {
-      AddLogEntry (true, LL_ERROR, errorIfNotExists);
+   if (!outFile->isValid ()) {
+      logEntry (true, LL_ERROR, errorIfNotExists);
       return false;
    }
    return true;
 }
 
-void CheckWelcomeMessage (void)
-{
+void checkWelcome (void) {
    // the purpose of this function, is  to send quick welcome message, to the listenserver entity.
 
-   if (engine.IsDedicatedServer ())
+   if (engine.isDedicated ())
       return;
 
-   static bool messageSent = !yb_display_welcome_text.GetBool ();
+   static bool messageSent = !yb_display_welcome_text.boolean ();
    static float receiveTime = 0.0f;
 
    if (messageSent)
@@ -539,79 +466,84 @@ void CheckWelcomeMessage (void)
    if (g_gameFlags & GAME_LEGACY)
       g_gameWelcomeSent = true;
 
-   static Array <String> sentences;
+   static StringArray sentences;
 
-   if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH_ENGINE)) && sentences.IsEmpty ())
-   {
+   if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH_ENGINE)) && sentences.empty ()) {
       // add default messages
-      sentences.Push ("hello user,communication is acquired");
-      sentences.Push ("your presence is acknowledged");
-      sentences.Push ("high man, your in command now");
-      sentences.Push ("blast your hostile for good");
-      sentences.Push ("high man, kill some idiot here");
-      sentences.Push ("is there a doctor in the area");
-      sentences.Push ("warning, experimental materials detected");
-      sentences.Push ("high amigo, shoot some but");
-      sentences.Push ("attention, hours of work software, detected");
-      sentences.Push ("time for some bad ass explosion");
-      sentences.Push ("bad ass son of a breach device activated");
-      sentences.Push ("high, do not question this great service");
-      sentences.Push ("engine is operative, hello and goodbye");
-      sentences.Push ("high amigo, your administration has been great last day");
-      sentences.Push ("attention, expect experimental armed hostile presence");
-      sentences.Push ("warning, medical attention required");
+      sentences.push ("hello user,communication is acquired");
+      sentences.push ("your presence is acknowledged");
+      sentences.push ("high man, your in command now");
+      sentences.push ("blast your hostile for good");
+      sentences.push ("high man, kill some idiot here");
+      sentences.push ("is there a doctor in the area");
+      sentences.push ("warning, experimental materials detected");
+      sentences.push ("high amigo, shoot some but");
+      sentences.push ("attention, hours of work software, detected");
+      sentences.push ("time for some bad ass explosion");
+      sentences.push ("bad ass son of a breach device activated");
+      sentences.push ("high, do not question this great service");
+      sentences.push ("engine is operative, hello and goodbye");
+      sentences.push ("high amigo, your administration has been great last day");
+      sentences.push ("attention, expect experimental armed hostile presence");
+      sentences.push ("warning, medical attention required");
    }
    bool needToSendMsg = (g_numWaypoints > 0 ? g_gameWelcomeSent : true);
 
-   if (IsAlive (g_hostEntity) && receiveTime < 1.0 && needToSendMsg)
-      receiveTime = engine.Time () + 4.0f; // receive welcome message in four seconds after game has commencing
+   if (isAlive (g_hostEntity) && receiveTime < 1.0 && needToSendMsg)
+      receiveTime = engine.timebase () + 4.0f; // receive welcome message in four seconds after game has commencing
 
-   if (receiveTime > 0.0f && receiveTime < engine.Time () && needToSendMsg)
-   {
+   if (receiveTime > 0.0f && receiveTime < engine.timebase () && needToSendMsg) {
       if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH_ENGINE)))
-         engine.IssueCmd ("speak \"%s\"", const_cast <char *> (sentences.GetRandomElement ().GetBuffer ()));
+         engine.execCmd ("speak \"%s\"", const_cast<char *> (sentences.random ().chars ()));
 
-      engine.ChatPrintf ("----- %s v%s (Build: %u), {%s}, (c) %s, by %s (%s)-----", PRODUCT_NAME, PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_DATE, PRODUCT_END_YEAR, PRODUCT_AUTHOR, PRODUCT_URL);
-      
-      MESSAGE_BEGIN (MSG_ONE, SVC_TEMPENTITY, nullptr, g_hostEntity);
-      WRITE_BYTE (TE_TEXTMESSAGE);
-      WRITE_BYTE (1);
-      WRITE_SHORT (FixedSigned16 (-1, 1 << 13));
-      WRITE_SHORT (FixedSigned16 (-1, 1 << 13));
-      WRITE_BYTE (2);
-      WRITE_BYTE (Random.Int (33, 255));
-      WRITE_BYTE (Random.Int (33, 255));
-      WRITE_BYTE (Random.Int (33, 255));
-      WRITE_BYTE (0);
-      WRITE_BYTE (Random.Int (230, 255));
-      WRITE_BYTE (Random.Int (230, 255));
-      WRITE_BYTE (Random.Int (230, 255));
-      WRITE_BYTE (200);
-      WRITE_SHORT (FixedUnsigned16 (0.0078125f, 1 << 8));
-      WRITE_SHORT (FixedUnsigned16 (2.0f, 1 << 8));
-      WRITE_SHORT (FixedUnsigned16 (6.0f, 1 << 8));
-      WRITE_SHORT (FixedUnsigned16 (0.1f, 1 << 8));
-      WRITE_STRING (FormatBuffer ("\nServer is running YaPB v%s (Build: %u)\nDeveloped by %s\n\n%s", PRODUCT_VERSION, GenerateBuildNumber (), PRODUCT_AUTHOR, waypoints.GetInfo ()));
-      MESSAGE_END ();
+      engine.chatPrint ("----- %s v%s (Build: %u), {%s}, (c) %s, by %s (%s)-----", PRODUCT_NAME, PRODUCT_VERSION, buildNumber (), PRODUCT_DATE, PRODUCT_END_YEAR, PRODUCT_AUTHOR, PRODUCT_URL);
+
+      MessageWriter (MSG_ONE, SVC_TEMPENTITY, Vector::null (), g_hostEntity)
+         .writeByte (TE_TEXTMESSAGE)
+         .writeByte (1)
+         .writeShort (MessageWriter::fs16 (-1, 1 << 13))
+         .writeShort (MessageWriter::fs16 (-1, 1 << 13))
+         .writeByte (2)
+         .writeByte (rng.getInt (33, 255))
+         .writeByte (rng.getInt (33, 255))
+         .writeByte (rng.getInt (33, 255))
+         .writeByte (0)
+         .writeByte (rng.getInt (230, 255))
+         .writeByte (rng.getInt (230, 255))
+         .writeByte (rng.getInt (230, 255))
+         .writeByte (200)
+         .writeShort (MessageWriter::fu16 (0.0078125f, 1 << 8))
+         .writeShort (MessageWriter::fu16 (2.0f, 1 << 8))
+         .writeShort (MessageWriter::fu16 (6.0f, 1 << 8))
+         .writeShort (MessageWriter::fu16 (0.1f, 1 << 8))
+         .writeString (format ("\nServer is running YaPB v%s (Build: %u)\nDeveloped by %s\n\n%s", PRODUCT_VERSION, buildNumber (), PRODUCT_AUTHOR, waypoints.getAuthor ()));
 
       receiveTime = 0.0;
       messageSent = true;
    }
 }
 
-void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
-{
+void logEntry (bool outputToConsole, int logLevel, const char *format, ...) {
    // this function logs a message to the message log file root directory.
 
    va_list ap;
-   char buffer[MAX_PRINT_BUFFER] = {0, }, levelString[32] = {0, }, logLine[MAX_PRINT_BUFFER] = {0, };
+   char buffer[MAX_PRINT_BUFFER] =
+      {
+         0,
+      },
+        levelString[32] =
+           {
+              0,
+           },
+        logLine[MAX_PRINT_BUFFER] = {
+           0,
+        };
 
    va_start (ap, format);
-   vsnprintf (buffer, SIZEOF_CHAR (buffer), format, ap);
+   vsnprintf (buffer, A_bufsize (buffer), format, ap);
    va_end (ap);
 
-   switch (logLevel)
-   {
+   switch (logLevel) {
    case LL_DEFAULT:
       strcpy (levelString, "LOG: ");
       break;
@@ -630,20 +562,19 @@ void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
    }
 
    if (outputToConsole)
-      engine.Printf ("%s%s", levelString, buffer);
+      engine.print ("%s%s", levelString, buffer);
 
    // now check if logging disabled
-   if (!(logLevel & LL_IGNORE))
-   {
+   if (!(logLevel & LL_IGNORE)) {
       extern ConVar yb_debug;
 
-      if (logLevel == LL_DEFAULT && yb_debug.GetInt () < 3)
+      if (logLevel == LL_DEFAULT && yb_debug.integer () < 3)
          return; // no log, default logging is disabled
 
-      if (logLevel == LL_WARNING && yb_debug.GetInt () < 2)
+      if (logLevel == LL_WARNING && yb_debug.integer () < 2)
          return; // no log, warning logging is disabled
 
-      if (logLevel == LL_ERROR && yb_debug.GetInt () < 1)
+      if (logLevel == LL_ERROR && yb_debug.integer () < 1)
          return; // no log, error logging is disabled
    }
 
@@ -651,30 +582,29 @@ void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
    File fp ("yapb.txt", "at");
 
    // check if we got a valid handle
-   if (!fp.IsValid ())
+   if (!fp.isValid ())
       return;
 
    time_t tickTime = time (&tickTime);
    tm *time = localtime (&tickTime);
 
-   snprintf (logLine, SIZEOF_CHAR (logLine), "%02d:%02d:%02d --> %s%s", time->tm_hour, time->tm_min, time->tm_sec, levelString, buffer);
+   snprintf (logLine, A_bufsize (logLine), "%02d:%02d:%02d --> %s%s", time->tm_hour, time->tm_min, time->tm_sec, levelString, buffer);
 
-   fp.Printf ("%s\n", logLine);
-   fp.Close ();
+   fp.writeFormat ("%s\n", logLine);
+   fp.close ();
 
-   if (logLevel == LL_FATAL)
-   {
-      bots.RemoveAll (true);
-      FreeLibraryMemory ();
+   if (logLevel == LL_FATAL) {
+      bots.kickEveryone (true);
+      cleanupGarbage ();
 
-#if defined (PLATFORM_WIN32)
+#if defined(PLATFORM_WIN32)
       DestroyWindow (GetForegroundWindow ());
       MessageBoxA (GetActiveWindow (), buffer, "YaPB Error", MB_ICONSTOP);
 #else
       printf ("%s\n", buffer);
 #endif
 
-#if defined (PLATFORM_WIN32)
+#if defined(PLATFORM_WIN32)
       _exit (1);
 #else
       exit (1);
@@ -682,8 +612,7 @@ void AddLogEntry (bool outputToConsole, int logLevel, const char *format, ...)
    }
 }
 
-bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool sameTeam, bool needBot, bool isAlive, bool needDrawn, bool needBotWithC4)
-{
+bool findNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool sameTeam, bool needBot, bool isAlive, bool needDrawn, bool needBotWithC4) {
    // this function finds nearest to to, player with set of parameters, like his
    // team, live status, search distance etc. if needBot is true, then pvHolder, will
    // be filled with bot pointer, else with edict pointer(!).
@@ -691,71 +620,65 @@ bool FindNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
    edict_t *survive = nullptr; // pointer to temporally & survive entity
    float nearestPlayer = 4096.0f; // nearest player
 
-   int toTeam = engine.GetTeam (to);
+   int toTeam = engine.getTeam (to);
 
-   for (int i = 0; i < engine.MaxClients (); i++)
-   {
+   for (int i = 0; i < engine.maxClients (); i++) {
       const Client &client = g_clients[i];
 
       if (!(client.flags & CF_USED) || client.ent == to)
          continue;
 
-      if ((sameTeam && client.team != toTeam) || (isAlive && !(client.flags & CF_ALIVE)) || (needBot && !IsValidBot (client.ent)) || (needDrawn && (client.ent->v.effects & EF_NODRAW)) || (needBotWithC4 && (client.ent->v.weapons & WEAPON_C4)))
+      if ((sameTeam && client.team != toTeam) || (isAlive && !(client.flags & CF_ALIVE)) || (needBot && !isFakeClient (client.ent)) || (needDrawn && (client.ent->v.effects & EF_NODRAW)) || (needBotWithC4 && (client.ent->v.weapons & WEAPON_C4)))
          continue; // filter players with parameters
 
-      float distance = (client.ent->v.origin - to->v.origin).GetLength ();
+      float distance = (client.ent->v.origin - to->v.origin).length ();
 
-      if (distance < nearestPlayer && distance < searchDistance)
-      {
+      if (distance < nearestPlayer && distance < searchDistance) {
          nearestPlayer = distance;
          survive = client.ent;
       }
    }
 
-   if (engine.IsNullEntity (survive))
+   if (engine.isNullEntity (survive))
       return false; // nothing found
 
    // fill the holder
    if (needBot)
-      *pvHolder = reinterpret_cast <void *> (bots.GetBot (survive));
+      *pvHolder = reinterpret_cast<void *> (bots.getBot (survive));
    else
-      *pvHolder = reinterpret_cast <void *> (survive);
+      *pvHolder = reinterpret_cast<void *> (survive);
 
    return true;
 }
 
-void SoundAttachToClients (edict_t *ent, const char *sample, float volume)
-{
+void attackSoundsToClients (edict_t *ent, const char *sample, float volume) {
    // this function called by the sound hooking code (in emit_sound) enters the played sound into
    // the array associated with the entity
 
-   if (engine.IsNullEntity (ent) || IsNullString (sample))
+   if (engine.isNullEntity (ent) || isEmptyStr (sample))
       return;
 
-   const Vector &origin = engine.GetAbsOrigin (ent);
+   const Vector &origin = engine.getAbsPos (ent);
 
-   if (origin.IsZero ())
+   if (origin.empty ())
       return;
 
-   int index = engine.IndexOfEntity (ent) - 1;
+   int index = engine.indexOfEntity (ent) - 1;
 
-   if (index < 0 || index >= engine.MaxClients ())
-   {
+   if (index < 0 || index >= engine.maxClients ()) {
       float nearestDistance = 99999.0f;
 
       // loop through all players
-      for (int i = 0; i < engine.MaxClients (); i++)
-      {
+      for (int i = 0; i < engine.maxClients (); i++) {
          const Client &client = g_clients[i];
 
          if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE))
             continue;
 
-         float distance = (client.origin - origin).GetLength ();
+         float distance = (client.origin - origin).length ();
 
          // now find nearest player
-         if (distance < nearestDistance)
-         {
+         if (distance < nearestDistance) {
             index = i;
             nearestDistance = distance;
          }
@@ -763,68 +686,60 @@ void SoundAttachToClients (edict_t *ent, const char *sample, float volume)
    }
 
    // in case of worst case
-   if (index < 0 || index >= engine.MaxClients ())
+   if (index < 0 || index >= engine.maxClients ())
       return;
 
    Client &client = g_clients[index];
 
-   if (strncmp ("player/bhit_flesh", sample, 17) == 0 || strncmp ("player/headshot", sample, 15) == 0)
-   {
+   if (strncmp ("player/bhit_flesh", sample, 17) == 0 || strncmp ("player/headshot", sample, 15) == 0) {
       // hit/fall sound?
       client.hearingDistance = 768.0f * volume;
-      client.timeSoundLasting = engine.Time () + 0.5f;
+      client.timeSoundLasting = engine.timebase () + 0.5f;
       client.soundPos = origin;
    }
-   else if (strncmp ("items/gunpickup", sample, 15) == 0)
-   {
+   else if (strncmp ("items/gunpickup", sample, 15) == 0) {
       // weapon pickup?
       client.hearingDistance = 768.0f * volume;
-      client.timeSoundLasting = engine.Time () + 0.5f;
+      client.timeSoundLasting = engine.timebase () + 0.5f;
       client.soundPos = origin;
    }
-   else if (strncmp ("weapons/zoom", sample, 12) == 0)
-   {
+   else if (strncmp ("weapons/zoom", sample, 12) == 0) {
       // sniper zooming?
       client.hearingDistance = 512.0f * volume;
-      client.timeSoundLasting = engine.Time () + 0.1f;
+      client.timeSoundLasting = engine.timebase () + 0.1f;
       client.soundPos = origin;
    }
-   else if (strncmp ("items/9mmclip", sample, 13) == 0)
-   {
+   else if (strncmp ("items/9mmclip", sample, 13) == 0) {
       // ammo pickup?
       client.hearingDistance = 512.0f * volume;
-      client.timeSoundLasting = engine.Time () + 0.1f;
+      client.timeSoundLasting = engine.timebase () + 0.1f;
       client.soundPos = origin;
    }
-   else if (strncmp ("hostage/hos", sample, 11) == 0)
-   {
+   else if (strncmp ("hostage/hos", sample, 11) == 0) {
       // CT used hostage?
       client.hearingDistance = 1024.0f * volume;
-      client.timeSoundLasting = engine.Time () + 5.0f;
+      client.timeSoundLasting = engine.timebase () + 5.0f;
       client.soundPos = origin;
    }
-   else if (strncmp ("debris/bustmetal", sample, 16) == 0 || strncmp ("debris/bustglass", sample, 16) == 0)
-   {
+   else if (strncmp ("debris/bustmetal", sample, 16) == 0 || strncmp ("debris/bustglass", sample, 16) == 0) {
       // broke something?
       client.hearingDistance = 1024.0f * volume;
-      client.timeSoundLasting = engine.Time () + 2.0f;
+      client.timeSoundLasting = engine.timebase () + 2.0f;
       client.soundPos = origin;
    }
-   else if (strncmp ("doors/doormove", sample, 14) == 0)
-   {
+   else if (strncmp ("doors/doormove", sample, 14) == 0) {
       // someone opened a door
       client.hearingDistance = 1024.0f * volume;
-      client.timeSoundLasting = engine.Time () + 3.0f;
+      client.timeSoundLasting = engine.timebase () + 3.0f;
       client.soundPos = origin;
    }
 }
 
-void SoundSimulateUpdate (int playerIndex)
-{
+void simulateSoundUpdates (int playerIndex) {
    // this function tries to simulate playing of sounds to let the bots hear sounds which aren't
    // captured through server sound hooking
 
-   if (playerIndex < 0 || playerIndex >= engine.MaxClients ())
+   if (playerIndex < 0 || playerIndex >= engine.maxClients ())
       return; // reliability check
 
    Client &client = g_clients[playerIndex];
@@ -835,35 +750,32 @@ void SoundSimulateUpdate (int playerIndex)
    if (client.ent->v.oldbuttons & IN_ATTACK) // pressed attack button?
    {
       hearDistance = 2048.0f;
-      timeSound = engine.Time () + 0.3f;
+      timeSound = engine.timebase () + 0.3f;
    }
    else if (client.ent->v.oldbuttons & IN_USE) // pressed used button?
    {
       hearDistance = 512.0f;
-      timeSound = engine.Time () + 0.5f;
+      timeSound = engine.timebase () + 0.5f;
    }
    else if (client.ent->v.oldbuttons & IN_RELOAD) // pressed reload button?
    {
       hearDistance = 512.0f;
-      timeSound = engine.Time () + 0.5f;
+      timeSound = engine.timebase () + 0.5f;
    }
    else if (client.ent->v.movetype == MOVETYPE_FLY) // uses ladder?
    {
-      if (fabsf (client.ent->v.velocity.z) > 50.0f)
-      {
+      if (fabsf (client.ent->v.velocity.z) > 50.0f) {
          hearDistance = 1024.0f;
-         timeSound = engine.Time () + 0.3f;
+         timeSound = engine.timebase () + 0.3f;
       }
    }
-   else
-   {
+   else {
       extern ConVar mp_footsteps;
 
-      if (mp_footsteps.GetBool ())
-      {
+      if (mp_footsteps.boolean ()) {
          // moves fast enough?
-         hearDistance = 1280.0f * (client.ent->v.velocity.GetLength2D () / 260.0f);
-         timeSound = engine.Time () + 0.3f;
+         hearDistance = 1280.0f * (client.ent->v.velocity.length2D () / 260.0f);
+         timeSound = engine.timebase () + 0.3f;
       }
    }
 
@@ -871,18 +783,15 @@ void SoundSimulateUpdate (int playerIndex)
       return; // didn't issue sound?
 
    // some sound already associated
-   if (client.timeSoundLasting > engine.Time ())
-   {
-      if (client.hearingDistance <= hearDistance)
-      {
+   if (client.timeSoundLasting > engine.timebase ()) {
+      if (client.hearingDistance <= hearDistance) {
          // override it with new
          client.hearingDistance = hearDistance;
          client.timeSoundLasting = timeSound;
          client.soundPos = client.ent->v.origin;
       }
    }
-   else
-   {
+   else {
       // just remember it
       client.hearingDistance = hearDistance;
       client.timeSoundLasting = timeSound;
@@ -890,8 +799,7 @@ void SoundSimulateUpdate (int playerIndex)
    }
 }
 
-int GenerateBuildNumber (void)
-{
+int buildNumber (void) {
    // this function generates build number from the compiler date macros
 
    static int buildNumber = 0;
@@ -913,8 +821,7 @@ int GenerateBuildNumber (void)
    int i = 0;
 
    // go through all months, and calculate, days since year start
-   for (i = 0; i < 11; i++)
-   {
+   for (i = 0; i < 11; i++) {
       if (strncmp (&date[0], months[i], 3) == 0)
          break; // found current month break
 
@@ -923,7 +830,7 @@ int GenerateBuildNumber (void)
    day += atoi (&date[4]) - 1; // finally calculate day
    year = atoi (&date[7]) - 2000; // get years since year 2000
 
-   buildNumber = day + static_cast <int> ((year - 1) * 365.25);
+   buildNumber = day + static_cast<int> ((year - 1) * 365.25);
 
    // if the year is a leap year?
    if ((year % 4) == 0 && i > 1)
@@ -934,20 +841,17 @@ int GenerateBuildNumber (void)
    return buildNumber;
 }
 
-int GetWeaponReturn (bool needString, const char *weaponAlias, int weaponIndex)
-{
+int getWeaponData (bool needString, const char *weaponAlias, int weaponIndex) {
    // this function returning weapon id from the weapon alias and vice versa.
 
    // structure definition for weapon tab
-   struct WeaponTab_t
-   {
+   struct WeaponTab_t {
       Weapon weaponIndex; // weapon id
       const char *alias; // weapon alias
    };
 
    // weapon enumeration
-   WeaponTab_t weaponTab[] =
-   {
+   WeaponTab_t weaponTab[] = {
       {WEAPON_USP, "usp"}, // HK USP .45 Tactical
       {WEAPON_GLOCK, "glock"}, // Glock18 Select Fire
       {WEAPON_DEAGLE, "deagle"}, // Desert Eagle .50AE
@@ -982,10 +886,8 @@ int GetWeaponReturn (bool needString, const char *weaponAlias, int weaponIndex)
    };
 
    // if we need to return the string, find by weapon id
-   if (needString && weaponIndex != -1)
-   {
-      for (int i = 0; i < ARRAYSIZE_HLSDK (weaponTab); i++)
-      {
+   if (needString && weaponIndex != -1) {
+      for (int i = 0; i < ARRAYSIZE_HLSDK (weaponTab); i++) {
          if (weaponTab[i].weaponIndex == weaponIndex) // is weapon id found?
             return MAKE_STRING (weaponTab[i].alias);
       }
@@ -993,8 +895,7 @@ int GetWeaponReturn (bool needString, const char *weaponAlias, int weaponIndex)
    }
 
    // else search weapon by name and return weapon id
-   for (int i = 0; i < ARRAYSIZE_HLSDK (weaponTab); i++)
-   {
+   for (int i = 0; i < ARRAYSIZE_HLSDK (weaponTab); i++) {
       if (strncmp (weaponTab[i].alias, weaponAlias, strlen (weaponTab[i].alias)) == 0)
          return weaponTab[i].weaponIndex;
    }

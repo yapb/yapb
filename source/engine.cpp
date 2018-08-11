@@ -4,18 +4,17 @@
 //
 // This software is licensed under the BSD-style license.
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.jeefo.net/license
+//     https://yapb.ru/license
 //
 
 #include <core.h>
 
-Engine::Engine (void)
-{
+Engine::Engine (void) {
    m_startEntity = nullptr;
    m_localEntity = nullptr;
 
-   m_language.RemoveAll ();
-   ResetMessageCapture ();
+   m_language.clear ();
+   resetMessages ();
 
    for (int i = 0; i < NETMSG_NUM; i++)
       m_msgBlock.regMsgs[i] = NETMSG_UNDEFINED;
@@ -26,21 +25,18 @@ Engine::Engine (void)
    memset (m_arguments, 0, sizeof (m_arguments));
    memset (m_drawModels, 0, sizeof (m_drawModels));
 
-   m_cvars.RemoveAll ();
-   m_language.RemoveAll ();
+   m_cvars.clear ();
+   m_language.clear ();
 }
 
-Engine::~Engine (void)
-{
-   TerminateTranslator ();
-   ResetMessageCapture ();
+Engine::~Engine (void) {
+   resetMessages ();
 
    for (int i = 0; i < NETMSG_NUM; i++)
       m_msgBlock.regMsgs[i] = NETMSG_UNDEFINED;
 }
 
-void Engine::Precache (edict_t *startEntity)
-{
+void Engine::precacheStuff (edict_t *startEntity) {
    // this function precaches needed models and initialize class variables
 
    m_drawModels[DRAW_SIMPLE] = PRECACHE_MODEL (ENGINE_STR ("sprites/laserbeam.spr"));
@@ -50,118 +46,104 @@ void Engine::Precache (edict_t *startEntity)
    m_startEntity = startEntity;
 }
 
-void Engine::Printf (const char *fmt, ...)
-{
+void Engine::print (const char *fmt, ...) {
    // this function outputs string into server console
 
    va_list ap;
    char string[MAX_PRINT_BUFFER];
 
    va_start (ap, fmt);
-   vsnprintf (string, SIZEOF_CHAR (string), TraslateMessage (fmt), ap);
+   vsnprintf (string, A_bufsize (string), translate (fmt), ap);
    va_end (ap);
 
    strcat (string, "\n");
    g_engfuncs.pfnServerPrint (string);
 }
 
-void Engine::ChatPrintf (const char *fmt, ...)
-{
+void Engine::chatPrint (const char *fmt, ...) {
    va_list ap;
    char string[MAX_PRINT_BUFFER];
 
    va_start (ap, fmt);
-   vsnprintf (string, SIZEOF_CHAR (string), TraslateMessage (fmt), ap);
+   vsnprintf (string, A_bufsize (string), translate (fmt), ap);
    va_end (ap);
 
-   if (IsDedicatedServer ())
-   {
-      Printf (string);
+   if (isDedicated ()) {
+      print (string);
       return;
    }
    strcat (string, "\n");
 
-   MESSAGE_BEGIN (MSG_BROADCAST, FindMessageId (NETMSG_TEXTMSG));
-      WRITE_BYTE (HUD_PRINTTALK);
-      WRITE_STRING (string);
-   MESSAGE_END ();
+   MessageWriter (MSG_BROADCAST, getMessageId (NETMSG_TEXTMSG))
+      .writeByte (HUD_PRINTTALK)
+      .writeString (string);
 }
 
-void Engine::CenterPrintf (const char *fmt, ...)
-{
+void Engine::centerPrint (const char *fmt, ...) {
    va_list ap;
    char string[MAX_PRINT_BUFFER];
 
    va_start (ap, fmt);
-   vsnprintf (string, SIZEOF_CHAR (string), TraslateMessage (fmt), ap);
+   vsnprintf (string, A_bufsize (string), translate (fmt), ap);
    va_end (ap);
 
-   if (IsDedicatedServer ())
-   {
-      Printf (string);
+   if (isDedicated ()) {
+      print (string);
       return;
    }
    strcat (string, "\n");
 
-   MESSAGE_BEGIN (MSG_BROADCAST, FindMessageId (NETMSG_TEXTMSG));
-   WRITE_BYTE (HUD_PRINTCENTER);
-      WRITE_STRING (string);
-   MESSAGE_END ();
+   MessageWriter (MSG_BROADCAST, getMessageId (NETMSG_TEXTMSG))
+      .writeByte (HUD_PRINTCENTER)
+      .writeString (string);
 }
 
-void Engine::ClientPrintf (edict_t *ent, const char *fmt, ...)
-{
+void Engine::clientPrint (edict_t *ent, const char *fmt, ...) {
    va_list ap;
    char string[MAX_PRINT_BUFFER];
 
    va_start (ap, fmt);
-   vsnprintf (string, SIZEOF_CHAR (string), TraslateMessage (fmt), ap);
+   vsnprintf (string, A_bufsize (string), translate (fmt), ap);
    va_end (ap);
 
-   if (IsDedicatedServer () || IsNullEntity (ent) || ent == g_hostEntity)
-   {
-      Printf (string);
+   if (isDedicated () || isNullEntity (ent) || ent == g_hostEntity) {
+      print (string);
       return;
    }
    strcat (string, "\n");
    g_engfuncs.pfnClientPrintf (ent, print_console, string);
 }
 
-void Engine::DrawLine (edict_t * ent, const Vector &start, const Vector &end, int width, int noise, int red, int green, int blue, int brightness, int speed, int life, DrawLineType type)
-{
+void Engine::drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, int red, int green, int blue, int brightness, int speed, int life, DrawLineType type) {
    // this function draws a arrow visible from the client side of the player whose player entity
    // is pointed to by ent, from the vector location start to the vector location end,
    // which is supposed to last life tenths seconds, and having the color defined by RGB.
 
-   if (!IsValidPlayer (ent))
+   if (!isPlayer (ent))
       return; // reliability check
 
-   MESSAGE_BEGIN (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, nullptr, ent);
-      WRITE_BYTE (TE_BEAMPOINTS);
-      WRITE_COORD (end.x);
-      WRITE_COORD (end.y);
-      WRITE_COORD (end.z);
-      WRITE_COORD (start.x);
-      WRITE_COORD (start.y);
-      WRITE_COORD (start.z);
-      WRITE_SHORT (m_drawModels[type]);
-      WRITE_BYTE (0); // framestart
-      WRITE_BYTE (10); // framerate
-      WRITE_BYTE (life); // life in 0.1's
-      WRITE_BYTE (width); // width
-      WRITE_BYTE (noise); // noise
-
-      WRITE_BYTE (red); // r, g, b
-      WRITE_BYTE (green); // r, g, b
-      WRITE_BYTE (blue); // r, g, b
-
-      WRITE_BYTE (brightness); // brightness
-      WRITE_BYTE (speed); // speed
-   MESSAGE_END ();
+   MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, Vector::null (), ent)
+      .writeByte (TE_BEAMPOINTS)
+      .writeCoord (end.x)
+      .writeCoord (end.y)
+      .writeCoord (end.z)
+      .writeCoord (start.x)
+      .writeCoord (start.y)
+      .writeCoord (start.z)
+      .writeShort (m_drawModels[type])
+      .writeByte (0) // framestart
+      .writeByte (10) // framerate
+      .writeByte (life) // life in 0.1's
+      .writeByte (width) // width
+      .writeByte (noise) // noise
+      .writeByte (red) // r, g, b
+      .writeByte (green) // r, g, b
+      .writeByte (blue) // r, g, b
+      .writeByte (brightness) // brightness
+      .writeByte (speed); // speed
 }
 
-void Engine::TestLine (const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult *ptr)
-{
+void Engine::testLine (const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult *ptr) {
    // this function traces a line dot by dot, starting from vecStart in the direction of vecEnd,
    // ignoring or not monsters (depending on the value of IGNORE_MONSTERS, true or false), and stops
    // at the first obstacle encountered, returning the results of the trace in the TraceResult structure
@@ -181,8 +163,7 @@ void Engine::TestLine (const Vector &start, const Vector &end, int ignoreFlags, 
    g_engfuncs.pfnTraceLine (start, end, engineFlags, ignoreEntity, ptr);
 }
 
-void Engine::TestHull (const Vector &start, const Vector &end, int ignoreFlags, int hullNumber, edict_t *ignoreEntity, TraceResult *ptr)
-{
+void Engine::testHull (const Vector &start, const Vector &end, int ignoreFlags, int hullNumber, edict_t *ignoreEntity, TraceResult *ptr) {
    // this function traces a hull dot by dot, starting from vecStart in the direction of vecEnd,
    // ignoring or not monsters (depending on the value of IGNORE_MONSTERS, true or
    // false), and stops at the first obstacle encountered, returning the results
@@ -197,27 +178,24 @@ void Engine::TestHull (const Vector &start, const Vector &end, int ignoreFlags, 
    (*g_engfuncs.pfnTraceHull) (start, end, !!(ignoreFlags & TRACE_IGNORE_MONSTERS), hullNumber, ignoreEntity, ptr);
 }
 
-float Engine::GetWaveLength (const char *fileName)
-{
+float Engine::getWaveLen (const char *fileName) {
    extern ConVar yb_chatter_path;
-   const char *filePath = FormatBuffer ("%s/%s/%s.wav", GetModName (), yb_chatter_path.GetString (), fileName);
+   const char *filePath = format ("%s/%s/%s.wav", getModName (), yb_chatter_path.str (), fileName);
 
    File fp (filePath, "rb");
 
    // we're got valid handle?
-   if (!fp.IsValid ())
+   if (!fp.isValid ())
       return 0.0f;
 
    // check if we have engine function for this
-   if (!(g_gameFlags & GAME_XASH_ENGINE) && g_engfuncs.pfnGetApproxWavePlayLen != nullptr)
-   {
-      fp.Close ();
+   if (!(g_gameFlags & GAME_XASH_ENGINE) && g_engfuncs.pfnGetApproxWavePlayLen != nullptr) {
+      fp.close ();
       return g_engfuncs.pfnGetApproxWavePlayLen (filePath) / 1000.0f;
    }
 
    // else fuck with manual search
-   struct WavHeader
-   {
+   struct WavHeader {
       char riffChunkId[4];
       unsigned long packageSize;
       char chunkID[4];
@@ -235,125 +213,115 @@ float Engine::GetWaveLength (const char *fileName)
 
    memset (&waveHdr, 0, sizeof (waveHdr));
 
-   if (fp.Read (&waveHdr, sizeof (WavHeader)) == 0)
-   {
-      AddLogEntry (true, LL_ERROR, "Wave File %s - has wrong or unsupported format", filePath);
+   if (fp.read (&waveHdr, sizeof (WavHeader)) == 0) {
+      logEntry (true, LL_ERROR, "Wave File %s - has wrong or unsupported format", filePath);
       return 0.0f;
    }
 
-   if (strncmp (waveHdr.chunkID, "WAVE", 4) != 0)
-   {
-      AddLogEntry (true, LL_ERROR, "Wave File %s - has wrong wave chunk id", filePath);
+   if (strncmp (waveHdr.chunkID, "WAVE", 4) != 0) {
+      logEntry (true, LL_ERROR, "Wave File %s - has wrong wave chunk id", filePath);
       return 0.0f;
    }
-   fp.Close ();
+   fp.close ();
 
-   if (waveHdr.dataChunkLength == 0)
-   {
-      AddLogEntry (true, LL_ERROR, "Wave File %s - has zero length!", filePath);
+   if (waveHdr.dataChunkLength == 0) {
+      logEntry (true, LL_ERROR, "Wave File %s - has zero length!", filePath);
       return 0.0f;
    }
-   return static_cast <float> (waveHdr.dataChunkLength) / static_cast <float> (waveHdr.bytesPerSecond);
+   return static_cast<float> (waveHdr.dataChunkLength) / static_cast<float> (waveHdr.bytesPerSecond);
 }
 
-bool Engine::IsDedicatedServer (void)
-{
+bool Engine::isDedicated (void) {
    // return true if server is dedicated server, false otherwise
    static bool dedicated = g_engfuncs.pfnIsDedicatedServer () > 0;
 
    return dedicated;
 }
 
-const char *Engine::GetModName (void)
-{
+const char *Engine::getModName (void) {
    // this function returns mod name without path
 
-   static char engineModName[256];
+   static char modname[256];
 
-   g_engfuncs.pfnGetGameDir (engineModName);
-   int length = strlen (engineModName);
+   g_engfuncs.pfnGetGameDir (modname);
+   int length = strlen (modname);
 
    int stop = length - 1;
-   while ((engineModName[stop] == '\\' || engineModName[stop] == '/') && stop > 0)
+   while ((modname[stop] == '\\' || modname[stop] == '/') && stop > 0)
       stop--;
 
    int start = stop;
-   while (engineModName[start] != '\\' && engineModName[start] != '/' && start > 0)
+   while (modname[start] != '\\' && modname[start] != '/' && start > 0)
       start--;
 
-   if (engineModName[start] == '\\' || engineModName[start] == '/')
+   if (modname[start] == '\\' || modname[start] == '/')
       start++;
 
    for (length = start; length <= stop; length++)
-      engineModName[length - start] = engineModName[length];
+      modname[length - start] = modname[length];
 
-   engineModName[length - start] = 0; // terminate the string
+   modname[length - start] = 0; // terminate the string
 
-   return &engineModName[0];
+   return &modname[0];
 }
 
-const char *Engine::GetMapName (void)
-{
+const char *Engine::getMapName (void) {
    // this function gets the map name and store it in the map_name global string variable.
 
    static char engineMap[256];
-   strncpy (engineMap, STRING (g_pGlobals->mapname), SIZEOF_CHAR (engineMap));
+   strncpy (engineMap, STRING (g_pGlobals->mapname), A_bufsize (engineMap));
 
    return &engineMap[0];
 }
 
-Vector Engine::GetAbsOrigin (edict_t *ent)
-{
+Vector Engine::getAbsPos (edict_t *ent) {
    // this expanded function returns the vector origin of a bounded entity, assuming that any
    // entity that has a bounding box has its center at the center of the bounding box itself.
 
-   if (IsNullEntity (ent))
-      return Vector::GetZero ();
+   if (isNullEntity (ent))
+      return Vector::null ();
 
-   if (ent->v.origin.IsZero ())
+   if (ent->v.origin.empty ())
       return ent->v.absmin + ent->v.size * 0.5f;
 
    return ent->v.origin;
 }
 
-void Engine::RegisterCmd (const char * command, void func (void))
-{
+void Engine::registerCmd (const char *command, void func (void)) {
    // this function tells the engine that a new server command is being declared, in addition
    // to the standard ones, whose name is command_name. The engine is thus supposed to be aware
    // that for every "command_name" server command it receives, it should call the function
    // pointed to by "function" in order to handle it.
 
    // check for hl pre 1.1.0.4, as it's doesn't have pfnAddServerCommand
-   if (!A_IsValidCodePointer (reinterpret_cast <const void *> (g_engfuncs.pfnAddServerCommand)))
-      AddLogEntry (true, LL_FATAL, "YaPB's minimum HL engine version is 1.1.0.4 and minimum Counter-Strike Beta 6.6. Please update your engine version.");
+   if (!A_checkptr (reinterpret_cast<const void *> (g_engfuncs.pfnAddServerCommand)))
+      logEntry (true, LL_FATAL, "YaPB's minimum HL engine version is 1.1.0.4 and minimum Counter-Strike is Beta 6.6. Please update your engine version.");
 
-   g_engfuncs.pfnAddServerCommand (const_cast <char *> (command), func);
+   g_engfuncs.pfnAddServerCommand (const_cast<char *> (command), func);
 }
 
-void Engine::EmitSound (edict_t *ent, const char *sound)
-{
+void Engine::playSound (edict_t *ent, const char *sound) {
    g_engfuncs.pfnEmitSound (ent, CHAN_WEAPON, sound, 1.0f, ATTN_NORM, 0, 100);
 }
 
-void Engine::IssueBotCommand (edict_t *ent, const char *fmt, ...)
-{
+void Engine::execBotCmd (edict_t *ent, const char *fmt, ...) {
    // the purpose of this function is to provide fakeclients (bots) with the same client
    // command-scripting advantages (putting multiple commands in one line between semicolons)
    // as real players. It is an improved version of botman's FakeClientCommand, in which you
    // supply directly the whole string as if you were typing it in the bot's "console". It
    // is supposed to work exactly like the pfnClientCommand (server-sided client command).
 
-   if (!IsValidBot (ent))
-      return; 
+   if (!isFakeClient (ent))
+      return;
 
    va_list ap;
    char string[256];
 
    va_start (ap, fmt);
-   vsnprintf (string, SIZEOF_CHAR (string), fmt, ap);
+   vsnprintf (string, A_bufsize (string), fmt, ap);
    va_end (ap);
 
-   if (IsNullString (string))
+   if (isEmptyStr (string))
       return;
 
    m_arguments[0] = '\0';
@@ -364,8 +332,7 @@ void Engine::IssueBotCommand (edict_t *ent, const char *fmt, ...)
    int i, pos = 0;
    int length = strlen (string);
 
-   while (pos < length)
-   {
+   while (pos < length) {
       int start = pos;
       int stop = pos;
 
@@ -375,7 +342,7 @@ void Engine::IssueBotCommand (edict_t *ent, const char *fmt, ...)
       if (pos > 1 && string[pos - 1] == '\n')
          stop = pos - 2;
       else
-         stop = pos - 1; 
+         stop = pos - 1;
 
       for (i = start; i <= stop; i++)
          m_arguments[i - start] = string[i];
@@ -386,13 +353,11 @@ void Engine::IssueBotCommand (edict_t *ent, const char *fmt, ...)
       int index = 0;
       m_argumentCount = 0;
 
-      while (index < i - start)
-      {
+      while (index < i - start) {
          while (index < i - start && m_arguments[index] == ' ')
             index++;
 
-         if (m_arguments[index] == '"')
-         {
+         if (m_arguments[index] == '"') {
             index++;
 
             while (index < i - start && m_arguments[index] != '"')
@@ -413,8 +378,7 @@ void Engine::IssueBotCommand (edict_t *ent, const char *fmt, ...)
    m_argumentCount = 0;
 }
 
-const char *Engine::ExtractSingleField (const char *string, int id)
-{
+const char *Engine::getField (const char *string, int id) {
    // this function gets and returns a particular field in a string where several strings are concatenated
 
    const int IterBufMax = 4;
@@ -425,19 +389,17 @@ const char *Engine::ExtractSingleField (const char *string, int id)
    if (iter > IterBufMax - 1)
       iter = 0;
 
-   char *ptr = arg[A_clamp <int> (++iter, 0, IterBufMax - 1)];
+   char *ptr = arg[A_clamp<int> (++iter, 0, IterBufMax - 1)];
    ptr[0] = 0;
 
    int pos = 0, count = 0, start = 0, stop = 0;
    int length = strlen (string);
 
-   while (pos < length && count <= id)
-   {
+   while (pos < length && count <= id) {
       while (pos < length && (string[pos] == ' ' || string[pos] == '\t'))
          pos++;
 
-      if (string[pos] == '"')
-      {
+      if (string[pos] == '"') {
          pos++;
          start = pos;
 
@@ -447,8 +409,7 @@ const char *Engine::ExtractSingleField (const char *string, int id)
          stop = pos - 1;
          pos++;
       }
-      else
-      {
+      else {
          start = pos;
 
          while (pos < length && string[pos] != ' ' && string[pos] != '\t')
@@ -457,8 +418,7 @@ const char *Engine::ExtractSingleField (const char *string, int id)
          stop = pos - 1;
       }
 
-      if (count == id)
-      {
+      if (count == id) {
          int i = start;
 
          for (; i <= stop; i++)
@@ -469,13 +429,12 @@ const char *Engine::ExtractSingleField (const char *string, int id)
       }
       count++; // we have parsed one field more
    }
-   String::TrimExternalBuffer (ptr);
+   String::trimChars (ptr);
 
    return ptr;
 }
 
-void Engine::IssueCmd (const char *fmt, ...)
-{
+void Engine::execCmd (const char *fmt, ...) {
    // this function asks the engine to execute a server command
 
    va_list ap;
@@ -483,22 +442,21 @@ void Engine::IssueCmd (const char *fmt, ...)
 
    // concatenate all the arguments in one string
    va_start (ap, fmt);
-   vsnprintf (string, SIZEOF_CHAR (string), fmt, ap);
+   vsnprintf (string, A_bufsize (string), fmt, ap);
    va_end (ap);
 
    strcat (string, "\n");
    g_engfuncs.pfnServerCommand (string);
 }
 
-void Engine::PushVariableToStack (const char *variable, const char *value, VarType varType, bool regMissing, const char *regVal, ConVar *self)
-{
+void Engine::pushVarToRegStack (const char *variable, const char *value, VarType varType, bool regMissing, const char *regVal, ConVar *self) {
    // this function adds globally defined variable to registration stack
 
    VarPair pair;
    memset (&pair, 0, sizeof (VarPair));
 
-   pair.reg.name = const_cast <char *> (variable);
-   pair.reg.string = const_cast <char *> (value);
+   pair.reg.name = const_cast<char *> (variable);
+   pair.reg.string = const_cast<char *> (value);
    pair.regMissing = regMissing;
    pair.regVal = regVal;
 
@@ -515,96 +473,77 @@ void Engine::PushVariableToStack (const char *variable, const char *value, VarTy
    pair.self = self;
    pair.type = varType;
 
-   m_cvars.Push (pair);
+   m_cvars.push (pair);
 }
 
-void Engine::PushRegisteredConVarsToEngine (bool gameVars)
-{
+void Engine::pushRegStackToEngine (bool gameVars) {
    // this function pushes all added global variables to engine registration
 
-   FOR_EACH_AE (m_cvars, i)
-   {
-      VarPair *ptr = &m_cvars[i];
+   for (auto &var : m_cvars) {
+      ConVar &self = *var.self;
+      cvar_t &reg = var.reg;
 
-      if (ptr->type != VT_NOREGISTER)
-      {
-         ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
+      if (var.type != VT_NOREGISTER) {
+         self.m_eptr = g_engfuncs.pfnCVarGetPointer (reg.name);
 
-         if (ptr->self->m_eptr == nullptr)
-         {
-            g_engfuncs.pfnCVarRegister (&ptr->reg);
-            ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
+         if (self.m_eptr == nullptr) {
+            g_engfuncs.pfnCVarRegister (&var.reg);
+            self.m_eptr = g_engfuncs.pfnCVarGetPointer (reg.name);
          }
       }
-      else if (gameVars)
-      {
-         ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
+      else if (gameVars) {
+         self.m_eptr = g_engfuncs.pfnCVarGetPointer (reg.name);
 
-         if (ptr->regMissing && ptr->self->m_eptr == nullptr)
-         {
-            if (ptr->reg.string == nullptr && ptr->regVal != nullptr)
-            {
-               ptr->reg.string = const_cast <char *> (ptr->regVal);
-               ptr->reg.flags |= FCVAR_SERVER;
+         if (var.regMissing && self.m_eptr == nullptr) {
+            if (reg.string == nullptr && var.regVal != nullptr) {
+               reg.string = const_cast<char *> (var.regVal);
+               reg.flags |= FCVAR_SERVER;
             }
-            g_engfuncs.pfnCVarRegister (&ptr->reg);
-            ptr->self->m_eptr = g_engfuncs.pfnCVarGetPointer (ptr->reg.name);
+            g_engfuncs.pfnCVarRegister (&var.reg);
+            self.m_eptr = g_engfuncs.pfnCVarGetPointer (reg.name);
          }
-         
-         if (!ptr->self->m_eptr)
-            engine.Printf ("Got nullptr on cvar %s!", ptr->reg.name);
+
+         if (!self.m_eptr)
+            print ("Got nullptr on cvar %s!", reg.name);
       }
    }
 }
 
-char *Engine::TraslateMessage (const char *input)
-{
+char *Engine::translate (const char *input) {
    // this function translate input string into needed language
 
-   if (IsDedicatedServer ())
-      return const_cast <char *> (&input[0]);
+   if (isDedicated ())
+      return const_cast<char *> (input);
 
    static char string[MAX_PRINT_BUFFER] = { 0, };
-   const char *ptr = input + strlen (input) - 1;
+   strncpy (string, input, A_bufsize (string));
 
-   while (ptr > input && *ptr == '\n')
-      ptr--;
+   static auto langCmp = [](const char *str1, const char *str2) {
+      for (const char *cmp1 = str1, *cmp2 = str2;; cmp1++, cmp2++) {
+         while (*cmp1 == '\n')
+            cmp1++;
+         while (*cmp2 == '\n')
+            cmp2++;
 
-   if (ptr != input)
-      ptr++;
+         if (!*cmp1 || !*cmp2)
+            return 0;
+         if (*cmp1 > *cmp2)
+            return 1;
+         if (*cmp1 < *cmp2)
+            return -1;
+      }
+   };
 
-   strncpy (string, input, SIZEOF_CHAR (string));
-   String::TrimExternalBuffer (string);
-
-   FOR_EACH_AE (m_language, i)
-   {
-      if (strcmp (string, m_language[i].original) == 0)
-      {
-         strncpy (string, m_language[i].translated, SIZEOF_CHAR (string));
-
-         if (ptr != input)
-            strncat (string, ptr, MAX_PRINT_BUFFER - 1 - strlen (string));
-
-         return &string[0];
+   for (auto &lang : m_language) {
+      if (langCmp (string, lang.first.chars ()) == 0) {
+         strncpy (string, lang.second.chars (), A_bufsize (string));
+         return string;
       }
    }
-   return const_cast <char *> (&input[0]); // nothing found
+   return const_cast<char *> (input); // nothing found
 }
 
-void Engine::TerminateTranslator (void)
-{
-   // this function terminates language translator and frees all memory
-
-   FOR_EACH_AE (m_language, it)
-   {
-      delete[] m_language[it].original;
-      delete[] m_language[it].translated;
-   }
-   m_language.RemoveAll ();
-}
-
-void Engine::ProcessMessageCapture (void *ptr)
-{
+void Engine::processMessages (void *ptr) {
    if (m_msgBlock.msg == NETMSG_UNDEFINED)
       return;
 
@@ -621,22 +560,19 @@ void Engine::ProcessMessageCapture (void *ptr)
    static WeaponProperty weaponProp;
 
    // some widely used stuff
-   Bot *bot = bots.GetBot (m_msgBlock.bot);
+   Bot *bot = bots.getBot (m_msgBlock.bot);
 
-   char *strVal = reinterpret_cast <char *> (ptr);
-   int intVal = *reinterpret_cast <int *> (ptr);
-   uint8 byteVal = *reinterpret_cast <uint8 *> (ptr);
+   char *strVal = reinterpret_cast<char *> (ptr);
+   int intVal = *reinterpret_cast<int *> (ptr);
+   uint8 byteVal = *reinterpret_cast<uint8 *> (ptr);
 
    // now starts of network message execution
-   switch (m_msgBlock.msg)
-   {
+   switch (m_msgBlock.msg) {
    case NETMSG_VGUI:
       // this message is sent when a VGUI menu is displayed.
 
-      if (m_msgBlock.state == 0)
-      {
-         switch (intVal)
-         {
+      if (m_msgBlock.state == 0) {
+         switch (intVal) {
          case VMS_TEAM:
             bot->m_startAction = GAME_MSG_TEAM_SELECT;
             break;
@@ -677,10 +613,9 @@ void Engine::ProcessMessageCapture (void *ptr)
    case NETMSG_WEAPONLIST:
       // this message is sent when a client joins the game. All of the weapons are sent with the weapon ID and information about what ammo is used.
 
-      switch (m_msgBlock.state)
-      {
+      switch (m_msgBlock.state) {
       case 0:
-         strncpy (weaponProp.className, strVal, SIZEOF_CHAR (weaponProp.className));
+         strncpy (weaponProp.className, strVal, A_bufsize (weaponProp.className));
          break;
 
       case 1:
@@ -713,8 +648,7 @@ void Engine::ProcessMessageCapture (void *ptr)
    case NETMSG_CURWEAPON:
       // this message is sent when a weapon is selected (either by the bot chosing a weapon or by the server auto assigning the bot a weapon). In CS it's also called when Ammo is increased/decreased
 
-      switch (m_msgBlock.state)
-      {
+      switch (m_msgBlock.state) {
       case 0:
          state = intVal; // state of the current weapon (WTF???)
          break;
@@ -726,14 +660,13 @@ void Engine::ProcessMessageCapture (void *ptr)
       case 2:
          clip = intVal; // ammo currently in the clip for this weapon
 
-         if (id <= 31)
-         {
+         if (id <= 31) {
             if (state != 0)
                bot->m_currentWeapon = id;
 
             // ammo amount decreased ? must have fired a bullet...
             if (id == bot->m_currentWeapon && bot->m_ammoInClip[id] > clip)
-               bot->m_timeLastFired = Time (); // remember the last bullet time
+               bot->m_timeLastFired = timebase (); // remember the last bullet time
 
             bot->m_ammoInClip[id] = clip;
          }
@@ -744,8 +677,7 @@ void Engine::ProcessMessageCapture (void *ptr)
    case NETMSG_AMMOX:
       // this message is sent whenever ammo amounts are adjusted (up or down). NOTE: Logging reveals that CS uses it very unreliable!
 
-      switch (m_msgBlock.state)
-      {
+      switch (m_msgBlock.state) {
       case 0:
          index = intVal; // ammo index (for type of ammo)
          break;
@@ -761,8 +693,7 @@ void Engine::ProcessMessageCapture (void *ptr)
       // not really necessary except it allows the HUD to draw pictures of ammo that have been picked up.  The bots
       // don't really need pictures since they don't have any eyes anyway.
 
-      switch (m_msgBlock.state)
-      {
+      switch (m_msgBlock.state) {
       case 0:
          index = intVal;
          break;
@@ -776,8 +707,7 @@ void Engine::ProcessMessageCapture (void *ptr)
    case NETMSG_DAMAGE:
       // this message gets sent when the bots are getting damaged.
 
-      switch (m_msgBlock.state)
-      {
+      switch (m_msgBlock.state) {
       case 0:
          damageArmor = intVal;
          break;
@@ -790,7 +720,7 @@ void Engine::ProcessMessageCapture (void *ptr)
          damageBits = intVal;
 
          if (bot != nullptr && (damageArmor > 0 || damageTaken > 0))
-            bot->GetDamage (bot->pev->dmg_inflictor, damageTaken, damageArmor, damageBits);
+            bot->processDamage (bot->pev->dmg_inflictor, damageTaken, damageArmor, damageBits);
          break;
       }
       break;
@@ -803,8 +733,7 @@ void Engine::ProcessMessageCapture (void *ptr)
       break;
 
    case NETMSG_STATUSICON:
-      switch (m_msgBlock.state)
-      {
+      switch (m_msgBlock.state) {
       case 0:
          enabled = byteVal;
          break;
@@ -812,12 +741,11 @@ void Engine::ProcessMessageCapture (void *ptr)
       case 1:
          if (strcmp (strVal, "defuser") == 0)
             bot->m_hasDefuser = (enabled != 0);
-         else if (strcmp (strVal, "buyzone") == 0)
-         {
+         else if (strcmp (strVal, "buyzone") == 0) {
             bot->m_inBuyZone = (enabled != 0);
 
             // try to equip in buyzone
-            bot->EquipInBuyzone (BUYSTATE_PRIMARY_WEAPON);
+            bot->processBuyzoneEntering (BUYSTATE_PRIMARY_WEAPON);
          }
          else if (strcmp (strVal, "vipsafety") == 0)
             bot->m_inVIPZone = (enabled != 0);
@@ -829,8 +757,7 @@ void Engine::ProcessMessageCapture (void *ptr)
       break;
 
    case NETMSG_DEATH: // this message sends on death
-      switch (m_msgBlock.state)
-      {
+      switch (m_msgBlock.state) {
       case 0:
          killerIndex = intVal;
          break;
@@ -840,29 +767,25 @@ void Engine::ProcessMessageCapture (void *ptr)
          break;
 
       case 2:
-         bots.SetDeathMsgState (true);
+         bots.updateDeathMsgState (true);
 
-         if (killerIndex != 0 && killerIndex != victimIndex)
-         {
-            edict_t *killer = EntityOfIndex (killerIndex);
-            edict_t *victim = EntityOfIndex (victimIndex);
+         if (killerIndex != 0 && killerIndex != victimIndex) {
+            edict_t *killer = entityOfIndex (killerIndex);
+            edict_t *victim = entityOfIndex (victimIndex);
 
-            if (IsNullEntity (killer) || IsNullEntity (victim))
+            if (isNullEntity (killer) || isNullEntity (victim))
                break;
 
-            if (yb_communication_type.GetInt () == 2)
-            {
+            if (yb_communication_type.integer () == 2) {
                // need to send congrats on well placed shot
-               for (int i = 0; i < MaxClients (); i++)
-               {
-                  Bot *notify = bots.GetBot (i);
+               for (int i = 0; i < maxClients (); i++) {
+                  Bot *notify = bots.getBot (i);
 
-                  if (notify != nullptr && notify->m_notKilled && killer != notify->GetEntity () && notify->EntityIsVisible (victim->v.origin) && GetTeam (killer) == notify->m_team && GetTeam (killer) != GetTeam (victim))
-                  {
+                  if (notify != nullptr && notify->m_notKilled && killer != notify->ent () && notify->seesEntity (victim->v.origin) && getTeam (killer) == notify->m_team && getTeam (killer) != getTeam (victim)) {
                      if (killer == g_hostEntity)
-                        notify->HandleChatterMessage ("#Bot_NiceShotCommander");
+                        notify->processChatterMessage ("#Bot_NiceShotCommander");
                      else
-                        notify->HandleChatterMessage ("#Bot_NiceShotPall");
+                        notify->processChatterMessage ("#Bot_NiceShotPall");
 
                      break;
                   }
@@ -870,21 +793,19 @@ void Engine::ProcessMessageCapture (void *ptr)
             }
 
             // notice nearby to victim teammates, that attacker is near
-            for (int i = 0; i < MaxClients (); i++)
-            {
-               Bot *notify = bots.GetBot (i);
+            for (int i = 0; i < maxClients (); i++) {
+               Bot *notify = bots.getBot (i);
 
-               if (notify != nullptr && notify->m_seeEnemyTime + 2.0f < Time () && notify->m_notKilled && notify->m_team == GetTeam (victim) && IsVisible (killer->v.origin, notify->GetEntity ()) && IsNullEntity (notify->m_enemy) && GetTeam (killer) != GetTeam (victim))
-               {
+               if (notify != nullptr && notify->m_seeEnemyTime + 2.0f < timebase () && notify->m_notKilled && notify->m_team == getTeam (victim) && isVisible (killer->v.origin, notify->ent ()) && isNullEntity (notify->m_enemy) && getTeam (killer) != getTeam (victim)) {
                   notify->m_actualReactionTime = 0.0f;
-                  notify->m_seeEnemyTime = Time ();
+                  notify->m_seeEnemyTime = timebase ();
                   notify->m_enemy = killer;
                   notify->m_lastEnemy = killer;
                   notify->m_lastEnemyOrigin = killer->v.origin;
                }
             }
 
-            Bot *notify = bots.GetBot (killer);
+            Bot *notify = bots.getBot (killer);
 
             // is this message about a bot who killed somebody?
             if (notify != nullptr)
@@ -892,11 +813,10 @@ void Engine::ProcessMessageCapture (void *ptr)
 
             else // did a human kill a bot on his team?
             {
-               Bot *target = bots.GetBot (victim);
+               Bot *target = bots.getBot (victim);
 
-               if (target != nullptr)
-               {
-                  if (GetTeam (killer) == GetTeam (victim))
+               if (target != nullptr) {
+                  if (getTeam (killer) == getTeam (victim))
                      target->m_voteKickIndex = killerIndex;
 
                   target->m_notKilled = false;
@@ -908,8 +828,7 @@ void Engine::ProcessMessageCapture (void *ptr)
       break;
 
    case NETMSG_SCREENFADE: // this message gets sent when the screen fades (flashbang)
-      switch (m_msgBlock.state)
-      {
+      switch (m_msgBlock.state) {
       case 3:
          r = byteVal;
          break;
@@ -924,104 +843,76 @@ void Engine::ProcessMessageCapture (void *ptr)
 
       case 6:
          if (bot != nullptr && r >= 255 && g >= 255 && b >= 255 && byteVal > 170)
-            bot->GotBlind (byteVal);
+            bot->processBlind (byteVal);
          break;
       }
       break;
 
    case NETMSG_HLTV: // round restart in steam cs
-      switch (m_msgBlock.state)
-      {
+      switch (m_msgBlock.state) {
       case 0:
          numPlayers = intVal;
          break;
 
       case 1:
          if (numPlayers == 0 && intVal == 0)
-            RoundInit ();
+            initRound ();
          break;
       }
       break;
 
-
    case NETMSG_TEXTMSG:
-      if (m_msgBlock.state == 1)
-      {
-         if (FStrEq (strVal, "#CTs_Win") ||
-            FStrEq (strVal, "#Bomb_Defused") ||
-            FStrEq (strVal, "#Terrorists_Win") ||
-            FStrEq (strVal, "#Round_Draw") ||
-            FStrEq (strVal, "#All_Hostages_Rescued") ||
-            FStrEq (strVal, "#Target_Saved") ||
-            FStrEq (strVal, "#Hostages_Not_Rescued") ||
-            FStrEq (strVal, "#Terrorists_Not_Escaped") ||
-            FStrEq (strVal, "#VIP_Not_Escaped") ||
-            FStrEq (strVal, "#Escaping_Terrorists_Neutralized") ||
-            FStrEq (strVal, "#VIP_Assassinated") ||
-            FStrEq (strVal, "#VIP_Escaped") ||
-            FStrEq (strVal, "#Terrorists_Escaped") ||
-            FStrEq (strVal, "#CTs_PreventEscape") ||
-            FStrEq (strVal, "#Target_Bombed") ||
-            FStrEq (strVal, "#Game_Commencing") ||
-            FStrEq (strVal, "#Game_will_restart_in"))
-         {
+      if (m_msgBlock.state == 1) {
+         if (FStrEq (strVal, "#CTs_Win") || FStrEq (strVal, "#Bomb_Defused") || FStrEq (strVal, "#Terrorists_Win") || FStrEq (strVal, "#Round_Draw") || FStrEq (strVal, "#All_Hostages_Rescued") || FStrEq (strVal, "#Target_Saved") || FStrEq (strVal, "#Hostages_Not_Rescued") || FStrEq (strVal, "#Terrorists_Not_Escaped") || FStrEq (strVal, "#VIP_Not_Escaped") || FStrEq (strVal, "#Escaping_Terrorists_Neutralized") || FStrEq (strVal, "#VIP_Assassinated") || FStrEq (strVal, "#VIP_Escaped") || FStrEq (strVal, "#Terrorists_Escaped") || FStrEq (strVal, "#CTs_PreventEscape") || FStrEq (strVal, "#Target_Bombed") || FStrEq (strVal, "#Game_Commencing") || FStrEq (strVal, "#Game_will_restart_in")) {
             g_roundEnded = true;
 
             if (FStrEq (strVal, "#Game_Commencing"))
                g_gameWelcomeSent = true;
 
-            if (FStrEq (strVal, "#CTs_Win"))
-            {
-               bots.SetLastWinner (TEAM_COUNTER); // update last winner for economics
+            if (FStrEq (strVal, "#CTs_Win")) {
+               bots.setLastWinner (TEAM_COUNTER); // update last winner for economics
 
-               if (yb_communication_type.GetInt () == 2)
-               {
-                  Bot *notify = bots.GetAliveBot ();
+               if (yb_communication_type.integer () == 2) {
+                  Bot *notify = bots.getAliveBot ();
 
                   if (notify != nullptr && notify->m_notKilled)
-                     notify->HandleChatterMessage (strVal);
+                     notify->processChatterMessage (strVal);
                }
             }
 
-            if (FStrEq (strVal, "#Game_will_restart_in"))
-            {
-               bots.CheckTeamEconomics (TEAM_COUNTER, true);
-               bots.CheckTeamEconomics (TEAM_TERRORIST, true);
+            if (FStrEq (strVal, "#Game_will_restart_in")) {
+               bots.updateTeamEconomics (TEAM_COUNTER, true);
+               bots.updateTeamEconomics (TEAM_TERRORIST, true);
             }
 
-            if (FStrEq (strVal, "#Terrorists_Win"))
-            {
-               bots.SetLastWinner (TEAM_TERRORIST); // update last winner for economics
+            if (FStrEq (strVal, "#Terrorists_Win")) {
+               bots.setLastWinner (TEAM_TERRORIST); // update last winner for economics
 
-               if (yb_communication_type.GetInt () == 2)
-               {
-                  Bot *notify = bots.GetAliveBot ();
+               if (yb_communication_type.integer () == 2) {
+                  Bot *notify = bots.getAliveBot ();
 
                   if (notify != nullptr && notify->m_notKilled)
-                     notify->HandleChatterMessage (strVal);
+                     notify->processChatterMessage (strVal);
                }
             }
-            waypoints.SetBombPosition (true);
+            waypoints.setBombPos (true);
          }
-         else if (!g_bombPlanted && FStrEq (strVal, "#Bomb_Planted"))
-         {
+         else if (!g_bombPlanted && FStrEq (strVal, "#Bomb_Planted")) {
             g_bombPlanted = g_bombSayString = true;
-            g_timeBombPlanted = Time ();
+            g_timeBombPlanted = timebase ();
 
-            for (int i = 0; i < MaxClients (); i++)
-            {
-               Bot *notify = bots.GetBot (i);
+            for (int i = 0; i < maxClients (); i++) {
+               Bot *notify = bots.getBot (i);
 
-               if (notify != nullptr && notify->m_notKilled)
-               {
-                  notify->DeleteSearchNodes ();
-                  notify->ResetTasks ();
+               if (notify != nullptr && notify->m_notKilled) {
+                  notify->clearSearchNodes ();
+                  notify->resetTasks ();
 
-                  if (yb_communication_type.GetInt () == 2 && Random.Int (0, 100) < 75 && notify->m_team == TEAM_COUNTER)
-                     notify->ChatterMessage (Chatter_WhereIsTheBomb);
+                  if (yb_communication_type.integer () == 2 && rng.getInt (0, 100) < 55 && notify->m_team == TEAM_COUNTER) {
+                     notify->pushChatterMessage (Chatter_WhereIsTheBomb);
                }
             }
-            waypoints.SetBombPosition ();
+            waypoints.setBombPos ();
          }
          else if (bot != nullptr && FStrEq (strVal, "#Switch_To_BurstFire"))
             bot->m_weaponBurstMode = BM_ON;
@@ -1031,15 +922,13 @@ void Engine::ProcessMessageCapture (void *ptr)
       break;
 
    case NETMSG_TEAMINFO:
-      switch (m_msgBlock.state)
-      {
+      switch (m_msgBlock.state) {
       case 0:
          playerIndex = intVal;
          break;
 
       case 1:
-         if (playerIndex >= 0 && playerIndex <= MaxClients ())
-         {
+         if (playerIndex >= 0 && playerIndex <= maxClients ()) {
             int team = TEAM_UNASSIGNED;
 
             if (strVal[0] == 'U' && strVal[1] == 'N')
@@ -1061,8 +950,7 @@ void Engine::ProcessMessageCapture (void *ptr)
       break;
 
    case NETMSG_BARTIME:
-      if (m_msgBlock.state == 0)
-      {
+      if (m_msgBlock.state == 0) {
          if (intVal > 0)
             bot->m_hasProgressBar = true; // the progress bar on a hud
          else if (intVal == 0)
@@ -1071,13 +959,13 @@ void Engine::ProcessMessageCapture (void *ptr)
       break;
 
    default:
-      AddLogEntry (true, LL_FATAL, "Network message handler error. Call to unrecognized message id (%d).\n", m_msgBlock.msg);
+      logEntry (true, LL_FATAL, "Network message handler error. Call to unrecognized message id (%d).\n", m_msgBlock.msg);
    }
    m_msgBlock.state++; // and finally update network message state
 }
 
 // console var registrator
-ConVar::ConVar (const char *name, const char *initval, VarType type, bool regMissing, const char *regVal) : m_eptr (nullptr)
-{
-   engine.PushVariableToStack (name, initval, type, regMissing, regVal, this);
+ConVar::ConVar (const char *name, const char *initval, VarType type, bool regMissing, const char *regVal)
+   : m_eptr (nullptr) {
+   engine.pushVarToRegStack (name, initval, type, regMissing, regVal, this);
 }
