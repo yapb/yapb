@@ -908,7 +908,7 @@ void Engine::processMessages (void *ptr) {
                   notify->clearSearchNodes ();
                   notify->resetTasks ();
 
-                  if (yb_communication_type.integer () == 2 && rng.getInt (0, 100) < 55 && notify->m_team == TEAM_COUNTER) {
+                  if (yb_communication_type.integer () == 2 && rng.getInt (0, 100) < 55 && notify->m_team == TEAM_COUNTER)
                      notify->pushChatterMessage (Chatter_WhereIsTheBomb);
                }
             }

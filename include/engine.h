@@ -75,9 +75,6 @@ struct MessageBlock {
    int regMsgs[NETMSG_NUM];
 };
 
-// callback for entity searcher
-typedef bool *(*EntitySearcher) (edict_t *);
-
 // provides utility functions to not call original engine (less call-cost)
 class Engine : public Singleton<Engine> {
 private:
