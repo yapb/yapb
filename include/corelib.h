@@ -474,7 +474,6 @@ private:
 public:
    Library (const char *filename)
       : m_ptr (nullptr) {
-      m_ptr = nullptr;
 
       if (!filename) {
          return;
@@ -498,7 +497,7 @@ public:
 #ifdef PLATFORM_WIN32
       m_ptr = LoadLibrary (filename);
 #else
-      m_ptr = dlopen (fileName, RTLD_NOW);
+      m_ptr = dlopen (filename, RTLD_NOW);
 #endif
       return m_ptr;
    }
@@ -1228,7 +1227,7 @@ public:
       return NPOS;
    }
 
-   String substr (size_t start, int count = -1) {
+   String substr (size_t start, size_t count = NPOS) {
       String out;
 
       if (start >= m_length || !m_chars) {
@@ -1241,7 +1240,7 @@ public:
       else if (start + count >= m_length) {
          count = m_length - start;
       }
-      int j = 0;
+      size_t j = 0;
       char *holder = new char[m_length + 1];
 
       for (size_t i = start; i < start + count; i++)
@@ -1492,7 +1491,7 @@ public:
       m_pos = 0;
       m_buffer = Loader (filename.chars (), reinterpret_cast<int *> (&m_size));
 
-      if (!m_buffer || m_size < 0) {
+      if (!m_buffer) {
          return false;
       }
       return true;

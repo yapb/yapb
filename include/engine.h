@@ -300,7 +300,7 @@ public:
 
 class MessageWriter {
 private:
-   bool m_autoDestruct{ false };
+   bool m_autoDestruct { false };
 
 public:
    MessageWriter (void) = default;
@@ -326,27 +326,27 @@ public:
       g_engfuncs.pfnMessageEnd ();
    }
 
-   auto &writeByte (int val) {
+   MessageWriter &writeByte (int val) {
       g_engfuncs.pfnWriteByte (val);
       return *this;
    }
 
-   auto &writeChar (int val) {
+   MessageWriter &writeChar (int val) {
       g_engfuncs.pfnWriteChar (val);
       return *this;
    }
 
-   auto &writeShort (int val) {
+   MessageWriter &writeShort (int val) {
       g_engfuncs.pfnWriteShort (val);
       return *this;
    }
 
-   auto &writeCoord (float val) {
+   MessageWriter &writeCoord (float val) {
       g_engfuncs.pfnWriteCoord (val);
       return *this;
    }
 
-   auto &writeString (const char *val) {
+   MessageWriter &writeString (const char *val) {
       g_engfuncs.pfnWriteString (val);
       return *this;
    }
