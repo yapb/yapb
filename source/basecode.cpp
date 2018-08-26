@@ -1777,9 +1777,7 @@ void Bot::updateEmotions (void) {
 }
 
 void Bot::overrideConditions (void) {
-
-#if 0
-   if (m_currentWeapon != WEAPON_KNIFE && m_difficulty > 3 && ((m_aimFlags & AIM_ENEMY) || (m_states & (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY)) || (taskId () == TASK_SEEKCOVER && (m_isReloading || m_isVIP))) && !yb_jasonmode.boolean () && taskId () != TASK_CAMP && !isOnLadder ()) {
+   if (m_currentWeapon != WEAPON_KNIFE && m_difficulty > 3 && ((m_aimFlags & AIM_ENEMY) || (m_states & STATE_SEEING_ENEMY)) && !yb_jasonmode.boolean () && taskId () != TASK_CAMP && taskId () != TASK_SEEKCOVER && !isOnLadder ()) {
       m_moveToGoal = false; // don't move to goal
       m_navTimeset = engine.timebase ();
 
@@ -1787,7 +1785,6 @@ void Bot::overrideConditions (void) {
          attackMovement ();
       }
    }
-#endif
 
    // check if we need to escape from bomb
    if ((g_mapType & MAP_DE) && g_bombPlanted && m_notKilled && taskId () != TASK_ESCAPEFROMBOMB && taskId () != TASK_CAMP && isOutOfBombTimer ()) {

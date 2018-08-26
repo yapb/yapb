@@ -127,7 +127,7 @@ bool Bot::checkBodyParts (edict_t *target, Vector *origin, uint8 *bodyPart) {
       *origin = result.vecEndPos;
 
       if (m_difficulty > 3) {
-         origin->z += 0.25f;
+         origin->z += 1.0f;
       }
    }
 
