@@ -2020,13 +2020,8 @@ void Bot::filterTasks (void) {
       else {
          ratio /= 2.0f; // reduce seek cover otherwise
       }
-
-      if (distance > 300.0f) {
-         g_taskFilters[TASK_SEEKCOVER].desire = retreatLevel * ratio;
-      }
-      else {
-         g_taskFilters[TASK_SEEKCOVER].desire = 0.0f;
-      }
+      g_taskFilters[TASK_SEEKCOVER].desire = retreatLevel * ratio;
+   
 
       // if half of the round is over, allow hunting
       if (taskId () != TASK_ESCAPEFROMBOMB && engine.isNullEntity (m_enemy) && g_timeRoundMid < engine.timebase () && !m_isUsingGrenade && m_currentWaypointIndex != waypoints.getNearest (m_lastEnemyOrigin) && m_personality != PERSONALITY_CAREFUL && !yb_ignore_enemies.boolean ()) {
@@ -2783,7 +2778,7 @@ void Bot::updateAimDir (void) {
             m_trackingEdict = m_lastEnemy;
          }
          else {
-            flags &= AIM_PREDICT_PATH;
+            flags &= ~AIM_PREDICT_PATH;
          }
       }
       else {
