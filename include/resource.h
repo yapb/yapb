@@ -11,7 +11,7 @@
 
 // general product information
 #define PRODUCT_NAME "Yet Another POD-Bot"
-#define PRODUCT_VERSION "2.8"
+#define PRODUCT_VERSION "2.9"
 #define PRODUCT_AUTHOR "YaPB Dev Team"
 #define PRODUCT_URL "https://yapb.ru/"
 #define PRODUCT_EMAIL "d@entix.io"

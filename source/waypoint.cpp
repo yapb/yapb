@@ -23,9 +23,9 @@ void Waypoint::init (void) {
    m_lastWaypoint.nullify ();
 
    // have any waypoint path nodes been allocated yet?
-   if (m_waypointPaths)
+   if (m_waypointPaths) {
       cleanupPathMemory ();
-
+   }
    g_numWaypoints = 0;
 }
 
@@ -37,9 +37,9 @@ void Waypoint::cleanupPathMemory (void) {
 }
 
 void Waypoint::addPath (int addIndex, int pathIndex, float distance) {
-   if (addIndex < 0 || addIndex >= g_numWaypoints || pathIndex < 0 || pathIndex >= g_numWaypoints || addIndex == pathIndex)
+   if (addIndex < 0 || addIndex >= g_numWaypoints || pathIndex < 0 || pathIndex >= g_numWaypoints || addIndex == pathIndex) {
       return;
-
+   }
    Path *path = m_paths[addIndex];
 
    // don't allow paths get connected twice
@@ -52,7 +52,7 @@ void Waypoint::addPath (int addIndex, int pathIndex, float distance) {
 
    // check for free space in the connection indices
    for (int16 i = 0; i < MAX_PATH_INDEX; i++) {
-      if (path->index[i] == -1) {
+      if (path->index[i] == INVALID_WAYPOINT_INDEX) {
          path->index[i] = static_cast<int16> (pathIndex);
          path->distances[i] = abs (static_cast<int> (distance));
 
@@ -63,7 +63,7 @@ void Waypoint::addPath (int addIndex, int pathIndex, float distance) {
 
    // there wasn't any free space. try exchanging it with a long-distance path
    int maxDistance = -9999;
-   int slotID = -1;
+   int slotID = INVALID_WAYPOINT_INDEX;
 
    for (int i = 0; i < MAX_PATH_INDEX; i++) {
       if (path->distances[i] > maxDistance) {
@@ -72,7 +72,7 @@ void Waypoint::addPath (int addIndex, int pathIndex, float distance) {
       }
    }
 
-   if (slotID != -1) {
+   if (slotID != INVALID_WAYPOINT_INDEX) {
       logEntry (true, LL_DEFAULT, "Path added from %d to %d", addIndex, pathIndex);
 
       path->index[slotID] = static_cast<int16> (pathIndex);
@@ -83,7 +83,7 @@ void Waypoint::addPath (int addIndex, int pathIndex, float distance) {
 int Waypoint::getFarest (const Vector &origin, float maxDistance) {
    // find the farest waypoint to that Origin, and return the index to this waypoint
 
-   int index = -1;
+   int index = INVALID_WAYPOINT_INDEX;
    maxDistance = A_square (maxDistance);
 
    for (int i = 0; i < g_numWaypoints; i++) {
@@ -100,13 +100,13 @@ int Waypoint::getFarest (const Vector &origin, float maxDistance) {
 int Waypoint::getNearest (const Vector &origin, float minDistance, int flags) {
    // find the nearest waypoint to that origin and return the index
 
-   int index = -1;
+   int index = INVALID_WAYPOINT_INDEX;
    minDistance = A_square (minDistance);
 
    for (int i = 0; i < g_numWaypoints; i++) {
-      if (flags != -1 && !(m_paths[i]->flags & flags))
+      if (flags != -1 && !(m_paths[i]->flags & flags)) {
          continue; // if flag not -1 and waypoint has no this flag, skip waypoint
-
+      }
       float distance = (m_paths[i]->origin - origin).lengthSq ();
 
       if (distance < minDistance) {
@@ -123,19 +123,22 @@ void Waypoint::searchRadius (IntArray &radiusHolder, float radius, const Vector 
    radius = A_square (radius);
 
    for (int i = 0; i < g_numWaypoints; i++) {
-      if (maxCount != -1 && static_cast<int> (radiusHolder.length ()) > maxCount)
+      if (maxCount != -1 && static_cast<int> (radiusHolder.length ()) > maxCount) {
          break;
+      }
 
-      if ((m_paths[i]->origin - origin).lengthSq () < radius)
+      if ((m_paths[i]->origin - origin).lengthSq () < radius) {
          radiusHolder.push (i);
+      }
    }
 }
 
 void Waypoint::push (int flags, const Vector &waypointOrigin) {
-   if (engine.isNullEntity (g_hostEntity))
+   if (engine.isNullEntity (g_hostEntity)) {
       return;
+   }
 
-   int index = -1, i;
+   int index = INVALID_WAYPOINT_INDEX, i;
    float distance;
 
    Vector forward;
@@ -144,19 +147,20 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
    bool placeNew = true;
    Vector newOrigin = waypointOrigin;
 
-   if (waypointOrigin.empty ())
+   if (waypointOrigin.empty ()) {
       newOrigin = g_hostEntity->v.origin;
+   }
 
-   if (bots.getBotCount () > 0)
+   if (bots.getBotCount () > 0) {
       bots.kickEveryone (true);
-
+   }
    m_waypointsChanged = true;
 
    switch (flags) {
    case 6:
       index = getNearest (g_hostEntity->v.origin, 50.0f);
 
-      if (index != -1) {
+      if (index != INVALID_WAYPOINT_INDEX) {
          path = m_paths[index];
 
          if (!(path->flags & FLAG_CAMP)) {
@@ -164,7 +168,7 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
             return;
          }
 
-         MakeVectors (g_hostEntity->v.v_angle);
+         makeVectors (g_hostEntity->v.v_angle);
          forward = g_hostEntity->v.origin + g_hostEntity->v.view_ofs + g_pGlobals->v_forward * 640.0f;
 
          path->campEndX = forward.x;
@@ -178,7 +182,7 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
    case 9:
       index = getNearest (g_hostEntity->v.origin, 50.0f);
 
-      if (index != -1 && m_paths[index] != nullptr) {
+      if (index != INVALID_WAYPOINT_INDEX && m_paths[index] != nullptr) {
          distance = (m_paths[index]->origin - g_hostEntity->v.origin).length ();
 
          if (distance < 50.0f) {
@@ -195,7 +199,7 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
    case 10:
       index = getNearest (g_hostEntity->v.origin, 50.0f);
 
-      if (index != -1 && m_paths[index] != nullptr) {
+      if (index != INVALID_WAYPOINT_INDEX && m_paths[index] != nullptr) {
          distance = (m_paths[index]->origin - g_hostEntity->v.origin).length ();
 
          if (distance < 50.0f) {
@@ -204,20 +208,21 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
 
             int connectionFlags = 0;
 
-            for (i = 0; i < MAX_PATH_INDEX; i++)
+            for (i = 0; i < MAX_PATH_INDEX; i++) {
                connectionFlags += path->connectionFlags[i];
-
-            if (connectionFlags == 0)
+            }
+            if (connectionFlags == 0) {
                path->origin = (path->origin + g_hostEntity->v.origin) * 0.5f;
+            }
          }
       }
       break;
    }
 
    if (placeNew) {
-      if (g_numWaypoints >= MAX_WAYPOINTS)
+      if (g_numWaypoints >= MAX_WAYPOINTS) {
          return;
-
+      }
       index = g_numWaypoints;
 
       m_paths[index] = new Path;
@@ -237,7 +242,7 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
       path->campStartY = 0.0f;
 
       for (i = 0; i < MAX_PATH_INDEX; i++) {
-         path->index[i] = -1;
+         path->index[i] = INVALID_WAYPOINT_INDEX;
          path->distances[i] = 0;
 
          path->connectionFlags[i] = 0;
@@ -251,8 +256,9 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
    // set the time that this waypoint was originally displayed...
    m_waypointDisplayTime[index] = 0;
 
-   if (flags == 9)
+   if (flags == 9) {
       m_lastJumpWaypoint = index;
+   }
    else if (flags == 10) {
       distance = (m_paths[m_lastJumpWaypoint]->origin - g_hostEntity->v.origin).length ();
       addPath (m_lastJumpWaypoint, index, distance);
@@ -270,21 +276,24 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
       return;
    }
 
-   if (path == nullptr)
+   if (path == nullptr) {
       return;
+   }
 
-   if (g_hostEntity->v.flags & FL_DUCKING)
+   if (g_hostEntity->v.flags & FL_DUCKING) {
       path->flags |= FLAG_CROUCH; // set a crouch waypoint
+   }
 
    if (g_hostEntity->v.movetype == MOVETYPE_FLY) {
       path->flags |= FLAG_LADDER;
-      MakeVectors (g_hostEntity->v.v_angle);
+      makeVectors (g_hostEntity->v.v_angle);
 
       forward = g_hostEntity->v.origin + g_hostEntity->v.view_ofs + g_pGlobals->v_forward * 640.0f;
       path->campStartY = forward.y;
    }
-   else if (m_isOnLadder)
+   else if (m_isOnLadder) {
       path->flags |= FLAG_LADDER;
+   }
 
    switch (flags) {
    case 1:
@@ -309,7 +318,7 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
       path->flags |= FLAG_CROSSING;
       path->flags |= FLAG_CAMP;
 
-      MakeVectors (g_hostEntity->v.v_angle);
+      makeVectors (g_hostEntity->v.v_angle);
       forward = g_hostEntity->v.origin + g_hostEntity->v.view_ofs + g_pGlobals->v_forward * 640.0f;
 
       path->campStartX = forward.x;
@@ -324,16 +333,17 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
    // Ladder waypoints need careful connections
    if (path->flags & FLAG_LADDER) {
       float minDistance = 9999.0f;
-      int destIndex = -1;
+      int destIndex = INVALID_WAYPOINT_INDEX;
 
       TraceResult tr;
 
       // calculate all the paths to this new waypoint
       for (i = 0; i < g_numWaypoints; i++) {
-         if (i == index)
+         if (i == index) {
             continue; // skip the waypoint that was just added
+         }
 
-         // Other ladder waypoints should connect to this
+         // other ladder waypoints should connect to this
          if (m_paths[i]->flags & FLAG_LADDER) {
             // check if the waypoint is reachable from the new one
             engine.testLine (newOrigin, m_paths[i]->origin, TRACE_IGNORE_MONSTERS, g_hostEntity, &tr);
@@ -358,7 +368,7 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
          }
       }
 
-      if (destIndex > -1 && destIndex < g_numWaypoints) {
+      if (destIndex > INVALID_WAYPOINT_INDEX && destIndex < g_numWaypoints) {
          // check if the waypoint is reachable from the new one (one-way)
          if (isNodeReacheable (newOrigin, m_paths[destIndex]->origin)) {
             distance = (m_paths[destIndex]->origin - newOrigin).length ();
@@ -375,8 +385,9 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
    else {
       // calculate all the paths to this new waypoint
       for (i = 0; i < g_numWaypoints; i++) {
-         if (i == index)
+         if (i == index) {
             continue; // skip the waypoint that was just added
+         }
 
          // check if the waypoint is reachable from the new one (one-way)
          if (isNodeReacheable (newOrigin, m_paths[i]->origin)) {
@@ -398,16 +409,18 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
 void Waypoint::erase (void) {
    m_waypointsChanged = true;
 
-   if (g_numWaypoints < 1)
+   if (g_numWaypoints < 1) {
       return;
+   }
 
-   if (bots.getBotCount () > 0)
+   if (bots.getBotCount () > 0) {
       bots.kickEveryone (true);
-
+   }
    int index = getNearest (g_hostEntity->v.origin, 50.0f);
 
-   if (index < 0)
+   if (index < 0) {
       return;
+   }
 
    Path *path = nullptr;
    assert (m_paths[index] != nullptr);
@@ -420,7 +433,7 @@ void Waypoint::erase (void) {
 
       for (j = 0; j < MAX_PATH_INDEX; j++) {
          if (path->index[j] == index) {
-            path->index[j] = -1; // unassign this path
+            path->index[j] = INVALID_WAYPOINT_INDEX; // unassign this path
             path->connectionFlags[j] = 0;
             path->distances[j] = 0;
             path->connectionVelocity[j].nullify ();
@@ -431,12 +444,14 @@ void Waypoint::erase (void) {
    for (i = 0; i < g_numWaypoints; i++) {
       path = m_paths[i];
 
-      if (path->pathNumber > index) // if pathnumber bigger than deleted node...
+      if (path->pathNumber > index) { // if pathnumber bigger than deleted node...
          path->pathNumber--;
+      }
 
       for (j = 0; j < MAX_PATH_INDEX; j++) {
-         if (path->index[j] > index)
+         if (path->index[j] > index) {
             path->index[j]--;
+         }
       }
    }
 
@@ -445,24 +460,24 @@ void Waypoint::erase (void) {
    m_paths[index] = nullptr;
 
    // rotate path array down
-   for (i = index; i < g_numWaypoints - 1; i++)
+   for (i = index; i < g_numWaypoints - 1; i++) {
       m_paths[i] = m_paths[i + 1];
-
+   }
    g_numWaypoints--;
    m_waypointDisplayTime[index] = 0;
 
    engine.playSound (g_hostEntity, "weapons/mine_activate.wav");
 }
 
-void Waypoint::toggleRadius (int toggleFlag) {
+void Waypoint::toggleFlags (int toggleFlag) {
    // this function allow manually changing flags
 
    int index = getNearest (g_hostEntity->v.origin, 50.0f);
 
-   if (index != -1) {
-      if (m_paths[index]->flags & toggleFlag)
+   if (index != INVALID_WAYPOINT_INDEX) {
+      if (m_paths[index]->flags & toggleFlag) {
          m_paths[index]->flags &= ~toggleFlag;
-
+      }
       else if (!(m_paths[index]->flags & toggleFlag)) {
          if (toggleFlag == FLAG_SNIPER && !(m_paths[index]->flags & FLAG_CAMP)) {
             logEntry (true, LL_ERROR, "Cannot assign sniper flag to waypoint #%d. This is not camp waypoint", index);
@@ -481,7 +496,7 @@ void Waypoint::setRadius (int radius) {
 
    int index = getNearest (g_hostEntity->v.origin, 50.0f);
 
-   if (index != -1) {
+   if (index != INVALID_WAYPOINT_INDEX) {
       m_paths[index]->radius = static_cast<float> (radius);
 
       // play "done" sound...
@@ -493,8 +508,9 @@ bool Waypoint::isConnected (int pointA, int pointB) {
    // this function checks if waypoint A has a connection to waypoint B
 
    for (int i = 0; i < MAX_PATH_INDEX; i++) {
-      if (m_paths[pointA]->index[i] == pointB)
+      if (m_paths[pointA]->index[i] == pointB) {
          return true;
+      }
    }
    return false;
 }
@@ -502,7 +518,7 @@ bool Waypoint::isConnected (int pointA, int pointB) {
 int Waypoint::getFacingIndex (void) {
    // this function finds waypoint the user is pointing at.
 
-   int pointedIndex = -1;
+   int pointedIndex = INVALID_WAYPOINT_INDEX;
    float viewCone[3] = {0.0f, 0.0f, 0.0f};
 
    // find the waypoint the user is pointing at
@@ -522,9 +538,9 @@ int Waypoint::getFacingIndex (void) {
       viewCone[2] = getShootingConeDeviation (g_hostEntity, &bound);
 
       // check if we can see it
-      if (viewCone[0] < 0.998f && viewCone[1] < 0.997f && viewCone[2] < 0.997f)
+      if (viewCone[0] < 0.998f && viewCone[1] < 0.997f && viewCone[2] < 0.997f) {
          continue;
-
+      }
       pointedIndex = i;
    }
    return pointedIndex;
@@ -535,15 +551,16 @@ void Waypoint::pathCreate (char dir) {
 
    int nodeFrom = getNearest (g_hostEntity->v.origin, 50.0f);
 
-   if (nodeFrom == -1) {
+   if (nodeFrom == INVALID_WAYPOINT_INDEX) {
       engine.centerPrint ("Unable to find nearest waypoint in 50 units");
       return;
    }
    int nodeTo = m_facingAtIndex;
 
    if (nodeTo < 0 || nodeTo >= g_numWaypoints) {
-      if (m_cacheWaypointIndex >= 0 && m_cacheWaypointIndex < g_numWaypoints)
+      if (m_cacheWaypointIndex >= 0 && m_cacheWaypointIndex < g_numWaypoints) {
          nodeTo = m_cacheWaypointIndex;
+      }
       else {
          engine.centerPrint ("Unable to find destination waypoint");
          return;
@@ -557,10 +574,12 @@ void Waypoint::pathCreate (char dir) {
 
    float distance = (m_paths[nodeTo]->origin - m_paths[nodeFrom]->origin).length ();
 
-   if (dir == CONNECTION_OUTGOING)
+   if (dir == CONNECTION_OUTGOING) {
       addPath (nodeFrom, nodeTo, distance);
-   else if (dir == CONNECTION_INCOMING)
+   }
+   else if (dir == CONNECTION_INCOMING) {
       addPath (nodeTo, nodeFrom, distance);
+   }
    else {
       addPath (nodeFrom, nodeTo, distance);
       addPath (nodeTo, nodeFrom, distance);
@@ -576,15 +595,16 @@ void Waypoint::erasePath (void) {
    int nodeFrom = getNearest (g_hostEntity->v.origin, 50.0f);
    int index = 0;
 
-   if (nodeFrom == -1) {
+   if (nodeFrom == INVALID_WAYPOINT_INDEX) {
       engine.centerPrint ("Unable to find nearest waypoint in 50 units");
       return;
    }
    int nodeTo = m_facingAtIndex;
 
    if (nodeTo < 0 || nodeTo >= g_numWaypoints) {
-      if (m_cacheWaypointIndex >= 0 && m_cacheWaypointIndex < g_numWaypoints)
+      if (m_cacheWaypointIndex >= 0 && m_cacheWaypointIndex < g_numWaypoints) {
          nodeTo = m_cacheWaypointIndex;
+      }
       else {
          engine.centerPrint ("Unable to find destination waypoint");
          return;
@@ -595,7 +615,7 @@ void Waypoint::erasePath (void) {
       if (m_paths[nodeFrom]->index[index] == nodeTo) {
          m_waypointsChanged = true;
 
-         m_paths[nodeFrom]->index[index] = -1; // unassigns this path
+         m_paths[nodeFrom]->index[index] = INVALID_WAYPOINT_INDEX; // unassigns this path
          m_paths[nodeFrom]->distances[index] = 0;
          m_paths[nodeFrom]->connectionFlags[index] = 0;
          m_paths[nodeFrom]->connectionVelocity[index].nullify ();
@@ -614,7 +634,7 @@ void Waypoint::erasePath (void) {
       if (m_paths[nodeFrom]->index[index] == nodeTo) {
          m_waypointsChanged = true;
 
-         m_paths[nodeFrom]->index[index] = -1; // unassign this path
+         m_paths[nodeFrom]->index[index] = INVALID_WAYPOINT_INDEX; // unassign this path
          m_paths[nodeFrom]->distances[index] = 0;
 
          m_paths[nodeFrom]->connectionFlags[index] = 0;
@@ -630,8 +650,8 @@ void Waypoint::erasePath (void) {
 void Waypoint::cachePoint (void) {
    int node = getNearest (g_hostEntity->v.origin, 50.0f);
 
-   if (node == -1) {
-      m_cacheWaypointIndex = -1;
+   if (node == INVALID_WAYPOINT_INDEX) {
+      m_cacheWaypointIndex = INVALID_WAYPOINT_INDEX;
       engine.centerPrint ("Cached waypoint cleared (nearby point not found in 50 units range)");
 
       return;
@@ -652,7 +672,7 @@ void Waypoint::calculatePathRadius (int index) {
    }
 
    for (int i = 0; i < MAX_PATH_INDEX; i++) {
-      if (path->index[i] != -1 && (m_paths[path->index[i]]->flags & FLAG_LADDER)) {
+      if (path->index[i] != INVALID_WAYPOINT_INDEX && (m_paths[path->index[i]]->flags & FLAG_LADDER)) {
          path->radius = 0.0f;
          return;
       }
@@ -662,7 +682,7 @@ void Waypoint::calculatePathRadius (int index) {
 
    for (float scanDistance = 32.0f; scanDistance < 128.0f; scanDistance += 16.0f) {
       start = path->origin;
-      MakeVectors (Vector::null ());
+      makeVectors (Vector::null ());
 
       direction = g_pGlobals->v_forward * scanDistance;
       direction = direction.toAngles ();
@@ -670,7 +690,7 @@ void Waypoint::calculatePathRadius (int index) {
       path->radius = scanDistance;
 
       for (float circleRadius = 0.0f; circleRadius < 360.0f; circleRadius += 20.0f) {
-         MakeVectors (direction);
+         makeVectors (direction);
 
          Vector radiusStart = start + g_pGlobals->v_forward * scanDistance;
          Vector radiusEnd = start + g_pGlobals->v_forward * scanDistance;
@@ -720,13 +740,15 @@ void Waypoint::calculatePathRadius (int index) {
          if (tr.flFraction < 1.0f) {
             wayBlocked = true;
             path->radius -= 16.0f;
+
             break;
          }
          direction.y = angleNorm (direction.y + circleRadius);
       }
 
-      if (wayBlocked)
+      if (wayBlocked) {
          break;
+      }
    }
    path->radius -= 16.0f;
 
@@ -737,8 +759,9 @@ void Waypoint::calculatePathRadius (int index) {
 void Waypoint::saveExperience (void) {
    ExtensionHeader header;
 
-   if (g_numWaypoints < 1 || m_waypointsChanged)
+   if (g_numWaypoints < 1 || m_waypointsChanged) {
       return;
+   }
 
    memset (header.header, 0, sizeof (header.header));
    strcpy (header.header, FH_EXPERIENCE);
@@ -756,8 +779,7 @@ void Waypoint::saveExperience (void) {
          (experienceSave + (i * g_numWaypoints) + j)->team1Value = static_cast<int8> ((g_experienceData + (i * g_numWaypoints) + j)->team1Value / 8);
       }
    }
-
-   int result = Compress::encode (format ("%slearned/%s.exp", getDataDirectory (), engine.getMapName ()), (uint8 *)&header, sizeof (ExtensionHeader), (uint8 *)experienceSave, g_numWaypoints * g_numWaypoints * sizeof (ExperienceSave));
+   int result = Compress::encode (format ("%slearned/%s.exp", getDataDirectory (), engine.getMapName ()), (uint8 *)&header, sizeof (ExtensionHeader), (uint8 *) experienceSave, g_numWaypoints * g_numWaypoints * sizeof (ExperienceSave));
 
    delete[] experienceSave;
 
@@ -773,9 +795,9 @@ void Waypoint::initExperience (void) {
    delete[] g_experienceData;
    g_experienceData = nullptr;
 
-   if (g_numWaypoints < 1)
+   if (g_numWaypoints < 1) {
       return;
-
+   }
    g_experienceData = new Experience[g_numWaypoints * g_numWaypoints];
 
    g_highestDamageCT = 1;
@@ -784,10 +806,12 @@ void Waypoint::initExperience (void) {
    // initialize table by hand to correct values, and NOT zero it out
    for (i = 0; i < g_numWaypoints; i++) {
       for (j = 0; j < g_numWaypoints; j++) {
-         (g_experienceData + (i * g_numWaypoints) + j)->team0DangerIndex = -1;
-         (g_experienceData + (i * g_numWaypoints) + j)->team1DangerIndex = -1;
+         (g_experienceData + (i * g_numWaypoints) + j)->team0DangerIndex = INVALID_WAYPOINT_INDEX;
+         (g_experienceData + (i * g_numWaypoints) + j)->team1DangerIndex = INVALID_WAYPOINT_INDEX;
+
          (g_experienceData + (i * g_numWaypoints) + j)->team0Damage = 0;
          (g_experienceData + (i * g_numWaypoints) + j)->team1Damage = 0;
+
          (g_experienceData + (i * g_numWaypoints) + j)->team0Value = 0;
          (g_experienceData + (i * g_numWaypoints) + j)->team1Value = 0;
       }
@@ -843,8 +867,9 @@ void Waypoint::initExperience (void) {
 }
 
 void Waypoint::saveVisibility (void) {
-   if (g_numWaypoints == 0)
+   if (g_numWaypoints == 0) {
       return;
+   }
 
    ExtensionHeader header;
    memset (&header, 0, sizeof (ExtensionHeader));
@@ -925,18 +950,24 @@ void Waypoint::initTypes (void) {
    m_visitedGoals.clear ();
 
    for (int i = 0; i < g_numWaypoints; i++) {
-      if (m_paths[i]->flags & FLAG_TF_ONLY)
+      if (m_paths[i]->flags & FLAG_TF_ONLY) {
          m_terrorPoints.push (i);
-      else if (m_paths[i]->flags & FLAG_CF_ONLY)
+      }
+      else if (m_paths[i]->flags & FLAG_CF_ONLY) {
          m_ctPoints.push (i);
-      else if (m_paths[i]->flags & FLAG_GOAL)
+      }
+      else if (m_paths[i]->flags & FLAG_GOAL) {
          m_goalPoints.push (i);
-      else if (m_paths[i]->flags & FLAG_CAMP)
+      }
+      else if (m_paths[i]->flags & FLAG_CAMP) {
          m_campPoints.push (i);
-      else if (m_paths[i]->flags & FLAG_SNIPER)
+      }
+      else if (m_paths[i]->flags & FLAG_SNIPER) {
          m_sniperPoints.push (i);
-      else if (m_paths[i]->flags & FLAG_RESCUE)
+      }
+      else if (m_paths[i]->flags & FLAG_RESCUE) {
          m_rescuePoints.push (i);
+      }
    }
 }
 
@@ -1063,13 +1094,16 @@ bool Waypoint::load (void) {
       return false;
    }
 
-   if (strncmp (header.author, "official", 7) == 0)
+   if (strncmp (header.author, "official", 7) == 0) {
       sprintf (m_infoBuffer, "Using Official Waypoint File");
-   else
+   }
+   else {
       sprintf (m_infoBuffer, "Using waypoint file by: %s", header.author);
-
-   for (int i = 0; i < g_numWaypoints; i++)
+   }
+    
+   for (int i = 0; i < g_numWaypoints; i++) {
       m_waypointDisplayTime[i] = 0.0;
+   }
 
    initPathMatrix ();
    initTypes ();
@@ -1084,7 +1118,7 @@ bool Waypoint::load (void) {
    initExperience ();
 
    extern ConVar yb_debug_goal;
-   yb_debug_goal.setInteger (-1);
+   yb_debug_goal.setInteger (INVALID_WAYPOINT_INDEX);
 
    return true;
 }
@@ -1112,9 +1146,9 @@ void Waypoint::save (void) {
       fp.write (&header, sizeof (header), 1);
 
       // save the waypoint paths...
-      for (int i = 0; i < g_numWaypoints; i++)
+      for (int i = 0; i < g_numWaypoints; i++) {
          fp.write (m_paths[i], sizeof (Path));
-
+      }
       fp.close ();
    }
    else
@@ -1125,9 +1159,9 @@ const char *Waypoint::getWaypointFilename (bool isMemoryFile) {
    static char buffer[256];
    snprintf (buffer, A_bufsize (buffer), "%s%s%s.pwf", getDataDirectory (isMemoryFile), isEmptyStr (yb_wptsubfolder.str ()) ? "" : yb_wptsubfolder.str (), engine.getMapName ());
 
-   if (File::exists (buffer))
+   if (File::exists (buffer)) {
       return &buffer[0];
-
+   }
    return format ("%s%s.pwf", getDataDirectory (isMemoryFile), engine.getMapName ());
 }
 
@@ -1140,8 +1174,9 @@ float Waypoint::calculateTravelTime (float maxSpeed, const Vector &src, const Ve
 bool Waypoint::isReachable (Bot *bot, int index) {
    // this function return wether bot able to reach index waypoint or not, depending on several factors.
 
-   if (bot == nullptr || index < 0 || index >= g_numWaypoints)
+   if (bot == nullptr || index < 0 || index >= g_numWaypoints) {
       return false;
+   }
 
    Vector src = bot->pev->origin;
    Vector dest = m_paths[index]->origin;
@@ -1149,23 +1184,24 @@ bool Waypoint::isReachable (Bot *bot, int index) {
    float distance = (dest - src).length ();
 
    // check is destination is close to us enough
-   if (distance >= 150.0f)
+   if (distance >= 150.0f) {
       return false;
+   }
 
    TraceResult tr;
    engine.testLine (src, dest, TRACE_IGNORE_MONSTERS, bot->ent (), &tr);
 
    // if waypoint is visible from current position (even behind head)...
    if (tr.flFraction >= 1.0f) {
-      if (bot->pev->waterlevel == 2 || bot->pev->waterlevel == 3)
+      if (bot->pev->waterlevel == 2 || bot->pev->waterlevel == 3) {
          return true;
-
+      }
       float distance2D = (dest - src).length2D ();
 
       // is destination waypoint higher that source (62 is max jump height), or destination waypoint higher that source
-      if (((dest.z > src.z + 62.0f || dest.z < src.z - 100.0f) && (!(m_paths[index]->flags & FLAG_LADDER))) || distance2D >= 120.0f)
+      if (((dest.z > src.z + 62.0f || dest.z < src.z - 100.0f) && (!(m_paths[index]->flags & FLAG_LADDER))) || distance2D >= 120.0f) {
          return false; // unable to reach this one
-
+      }
       return true;
    }
    return false;
@@ -1177,14 +1213,16 @@ bool Waypoint::isNodeReacheable (const Vector &src, const Vector &destination) {
    float distance = (destination - src).length ();
 
    // is the destination not close enough?
-   if (distance > g_autoPathDistance)
+   if (distance > g_autoPathDistance) {
       return false;
+   }
 
    // check if we go through a func_illusionary, in which case return false
    engine.testHull (src, destination, TRACE_IGNORE_MONSTERS, head_hull, g_hostEntity, &tr);
 
-   if (!engine.isNullEntity (tr.pHit) && strcmp ("func_illusionary", STRING (tr.pHit->v.classname)) == 0)
+   if (!engine.isNullEntity (tr.pHit) && strcmp ("func_illusionary", STRING (tr.pHit->v.classname)) == 0) {
       return false; // don't add pathwaypoints through func_illusionaries
+   }
 
    // check if this waypoint is "visible"...
    engine.testLine (src, destination, TRACE_IGNORE_MONSTERS, g_hostEntity, &tr);
@@ -1200,8 +1238,9 @@ bool Waypoint::isNodeReacheable (const Vector &src, const Vector &destination) {
       }
 
       // check for special case of both waypoints being in water...
-      if (POINT_CONTENTS (src) == CONTENTS_WATER && POINT_CONTENTS (destination) == CONTENTS_WATER)
+      if (g_engfuncs.pfnPointContents (src) == CONTENTS_WATER && g_engfuncs.pfnPointContents (destination) == CONTENTS_WATER) {
          return true; // then they're reachable each other
+      }
 
       // is dest waypoint higher than src? (45 is max jump height)
       if (destination.z > src.z + 45.0f) {
@@ -1212,8 +1251,9 @@ bool Waypoint::isNodeReacheable (const Vector &src, const Vector &destination) {
          engine.testLine (sourceNew, destinationNew, TRACE_IGNORE_MONSTERS, g_hostEntity, &tr);
 
          // check if we didn't hit anything, if not then it's in mid-air
-         if (tr.flFraction >= 1.0)
+         if (tr.flFraction >= 1.0) {
             return false; // can't reach this one
+         }
       }
 
       // check if distance to ground drops more than step height at points between source and destination...
@@ -1239,9 +1279,9 @@ bool Waypoint::isNodeReacheable (const Vector &src, const Vector &destination) {
          float height = tr.flFraction * 1000.0f; // height from ground
 
          // is the current height greater than the step height?
-         if (height < lastHeight - 18.0f)
+         if (height < lastHeight - 18.0f) {
             return false; // can't get there without jumping...
-
+         }
          lastHeight = height;
          distance = (destination - check).length (); // distance from goal
       }
@@ -1251,9 +1291,9 @@ bool Waypoint::isNodeReacheable (const Vector &src, const Vector &destination) {
 }
 
 void Waypoint::rebuildVisibility (void) {
-   if (!m_redoneVisibility)
+   if (!m_redoneVisibility) {
       return;
-
+   }
    TraceResult tr;
    uint8 res, shift;
 
@@ -1278,28 +1318,32 @@ void Waypoint::rebuildVisibility (void) {
          engine.testLine (sourceDuck, dest, TRACE_IGNORE_MONSTERS, nullptr, &tr);
 
          // check if line of sight to object is not blocked (i.e. visible)
-         if (tr.flFraction != 1.0f || tr.fStartSolid)
+         if (tr.flFraction != 1.0f || tr.fStartSolid) {
             res = 1;
-         else
+         }
+         else {
             res = 0;
-
+         }
          res <<= 1;
 
          engine.testLine (sourceStand, dest, TRACE_IGNORE_MONSTERS, nullptr, &tr);
 
          // check if line of sight to object is not blocked (i.e. visible)
-         if (tr.flFraction != 1.0f || tr.fStartSolid)
+         if (tr.flFraction != 1.0f || tr.fStartSolid) {
             res |= 1;
-
+         }
          shift = (i % 4) << 1;
+
          m_visLUT[m_visibilityIndex][i >> 2] &= ~(3 << shift);
          m_visLUT[m_visibilityIndex][i >> 2] |= res << shift;
 
-         if (!(res & 2))
+         if (!(res & 2)) {
             crouchCount++;
+         }
 
-         if (!(res & 1))
+         if (!(res & 1)) {
             standCount++;
+         }
       }
       m_paths[m_visibilityIndex]->vis.crouch = crouchCount;
       m_paths[m_visibilityIndex]->vis.stand = standCount;
@@ -1334,16 +1378,17 @@ const char *Waypoint::getInformation (int id) {
    Path *path = m_paths[id];
 
    // if this path is null, return
-   if (path == nullptr)
+   if (path == nullptr) {
       return "\0";
-
+   }
    bool jumpPoint = false;
 
    // iterate through connections and find, if it's a jump path
    for (int i = 0; i < MAX_PATH_INDEX; i++) {
       // check if we got a valid connection
-      if (path->index[i] != -1 && (path->connectionFlags[i] & PATHFLAG_JUMP))
+      if (path->index[i] != INVALID_WAYPOINT_INDEX && (path->connectionFlags[i] & PATHFLAG_JUMP)) {
          jumpPoint = true;
+      }
    }
 
    static char messageBuffer[MAX_PRINT_BUFFER];
@@ -1356,11 +1401,12 @@ const char *Waypoint::getInformation (int id) {
 void Waypoint::frame (void) {
    // this function executes frame of waypoint operation code.
 
-   if (engine.isNullEntity (g_hostEntity))
+   if (engine.isNullEntity (g_hostEntity)) {
       return; // this function is only valid on listenserver, and in waypoint enabled mode.
+   }
 
    float nearestDistance = 99999.0f;
-   int nearestIndex = -1;
+   int nearestIndex = INVALID_WAYPOINT_INDEX;
 
    // check if it's time to add jump waypoint
    if (m_learnJumpWaypoint) {
@@ -1395,14 +1441,16 @@ void Waypoint::frame (void) {
             if (isNodeReacheable (g_hostEntity->v.origin, m_paths[i]->origin)) {
                distance = (m_paths[i]->origin - g_hostEntity->v.origin).lengthSq ();
 
-               if (distance < nearestDistance)
+               if (distance < nearestDistance) {
                   nearestDistance = distance;
+               }
             }
          }
 
          // make sure nearest waypoint is far enough away...
-         if (nearestDistance >= 16384.0f)
+         if (nearestDistance >= 16384.0f) {
             push (0); // place a waypoint here
+         }
       }
    }
    m_facingAtIndex = getFacingIndex ();
@@ -1426,46 +1474,58 @@ void Waypoint::frame (void) {
             float nodeHeight = 0.0f;
 
             // check the node height
-            if (m_paths[i]->flags & FLAG_CROUCH)
+            if (m_paths[i]->flags & FLAG_CROUCH) {
                nodeHeight = 36.0f;
-            else
+            }
+            else {
                nodeHeight = 72.0f;
-
+            }
             float nodeHalfHeight = nodeHeight * 0.5f;
 
             // all waypoints are by default are green
             Vector nodeColor;
 
             // colorize all other waypoints
-            if (m_paths[i]->flags & FLAG_CAMP)
+            if (m_paths[i]->flags & FLAG_CAMP) {
                nodeColor = Vector (0, 255, 255);
-            else if (m_paths[i]->flags & FLAG_GOAL)
+            }
+            else if (m_paths[i]->flags & FLAG_GOAL) {
                nodeColor = Vector (128, 0, 255);
-            else if (m_paths[i]->flags & FLAG_LADDER)
+            }
+            else if (m_paths[i]->flags & FLAG_LADDER) {
                nodeColor = Vector (128, 64, 0);
-            else if (m_paths[i]->flags & FLAG_RESCUE)
+            }
+            else if (m_paths[i]->flags & FLAG_RESCUE) {
                nodeColor = Vector (255, 255, 255);
-            else
+            }
+            else {
                nodeColor = Vector (0, 255, 0);
+            }
 
             // colorize additional flags
             Vector nodeFlagColor = Vector (-1, -1, -1);
 
             // check the colors
-            if (m_paths[i]->flags & FLAG_SNIPER)
+            if (m_paths[i]->flags & FLAG_SNIPER) {
                nodeFlagColor = Vector (130, 87, 0);
-            else if (m_paths[i]->flags & FLAG_NOHOSTAGE)
+            }
+            else if (m_paths[i]->flags & FLAG_NOHOSTAGE) {
                nodeFlagColor = Vector (255, 255, 255);
-            else if (m_paths[i]->flags & FLAG_TF_ONLY)
+            }
+            else if (m_paths[i]->flags & FLAG_TF_ONLY) {
                nodeFlagColor = Vector (255, 0, 0);
-            else if (m_paths[i]->flags & FLAG_CF_ONLY)
+            }
+            else if (m_paths[i]->flags & FLAG_CF_ONLY) {
                nodeFlagColor = Vector (0, 0, 255);
+            }
 
             // draw node without additional flags
-            if (nodeFlagColor.x == -1)
+            if (nodeFlagColor.x == -1) {
                engine.drawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight), m_paths[i]->origin + Vector (0, 0, nodeHalfHeight), 15, 0, static_cast<int> (nodeColor.x), static_cast<int> (nodeColor.y), static_cast<int> (nodeColor.z), 250, 0, 10);
-            else // draw node with flags
-            {
+            }
+            
+            // draw node with flags
+            else {
                engine.drawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight), m_paths[i]->origin - Vector (0, 0, nodeHalfHeight - nodeHeight * 0.75f), 14, 0, static_cast<int> (nodeColor.x), static_cast<int> (nodeColor.y), static_cast<int> (nodeColor.z), 250, 0, 10); // draw basic path
                engine.drawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight - nodeHeight * 0.75f), m_paths[i]->origin + Vector (0, 0, nodeHalfHeight), 14, 0, static_cast<int> (nodeFlagColor.x), static_cast<int> (nodeFlagColor.y), static_cast<int> (nodeFlagColor.z), 250, 0, 10); // draw additional path
             }
@@ -1474,25 +1534,29 @@ void Waypoint::frame (void) {
       }
    }
 
-   if (nearestIndex == -1)
+   if (nearestIndex == INVALID_WAYPOINT_INDEX) {
       return;
+   }
 
    // draw arrow to a some importaint waypoints
-   if ((m_findWPIndex != -1 && m_findWPIndex < g_numWaypoints) || (m_cacheWaypointIndex != -1 && m_cacheWaypointIndex < g_numWaypoints) || (m_facingAtIndex != -1 && m_facingAtIndex < g_numWaypoints)) {
+   if ((m_findWPIndex != INVALID_WAYPOINT_INDEX && m_findWPIndex < g_numWaypoints) || (m_cacheWaypointIndex != INVALID_WAYPOINT_INDEX && m_cacheWaypointIndex < g_numWaypoints) || (m_facingAtIndex != INVALID_WAYPOINT_INDEX && m_facingAtIndex < g_numWaypoints)) {
       // check for drawing code
       if (m_arrowDisplayTime + 0.5f < engine.timebase ()) {
+
          // finding waypoint - pink arrow
-         if (m_findWPIndex != -1)
+         if (m_findWPIndex != INVALID_WAYPOINT_INDEX) {
             engine.drawLine (g_hostEntity, g_hostEntity->v.origin, m_paths[m_findWPIndex]->origin, 10, 0, 128, 0, 128, 200, 0, 5, DRAW_ARROW);
+         }
 
          // cached waypoint - yellow arrow
-         if (m_cacheWaypointIndex != -1)
+         if (m_cacheWaypointIndex != INVALID_WAYPOINT_INDEX) {
             engine.drawLine (g_hostEntity, g_hostEntity->v.origin, m_paths[m_cacheWaypointIndex]->origin, 10, 0, 255, 255, 0, 200, 0, 5, DRAW_ARROW);
+         }
 
          // waypoint user facing at - white arrow
-         if (m_facingAtIndex != -1)
+         if (m_facingAtIndex != INVALID_WAYPOINT_INDEX) {
             engine.drawLine (g_hostEntity, g_hostEntity->v.origin, m_paths[m_facingAtIndex]->origin, 10, 0, 255, 255, 255, 200, 0, 5, DRAW_ARROW);
-
+         }
          m_arrowDisplayTime = engine.timebase ();
       }
    }
@@ -1509,9 +1573,9 @@ void Waypoint::frame (void) {
          Vector campSourceOrigin = path->origin + Vector (0.0f, 0.0f, 36.0f);
 
          // check if it's a source
-         if (path->flags & FLAG_CROUCH)
+         if (path->flags & FLAG_CROUCH) {
             campSourceOrigin = path->origin + Vector (0.0f, 0.0f, 18.0f);
-
+         }
          Vector campStartOrigin = Vector (path->campStartX, path->campStartY, campSourceOrigin.z); // camp start
          Vector campEndOrigin = Vector (path->campEndX, path->campEndY, campSourceOrigin.z); // camp end
 
@@ -1522,22 +1586,26 @@ void Waypoint::frame (void) {
 
       // draw the connections
       for (int i = 0; i < MAX_PATH_INDEX; i++) {
-         if (path->index[i] == -1)
+         if (path->index[i] == INVALID_WAYPOINT_INDEX) {
             continue;
-
+         }
          // jump connection
-         if (path->connectionFlags[i] & PATHFLAG_JUMP)
+         if (path->connectionFlags[i] & PATHFLAG_JUMP) {
             engine.drawLine (g_hostEntity, path->origin, m_paths[path->index[i]]->origin, 5, 0, 255, 0, 128, 200, 0, 10);
-         else if (isConnected (path->index[i], nearestIndex)) // twoway connection
+         }
+         else if (isConnected (path->index[i], nearestIndex)) { // twoway connection
             engine.drawLine (g_hostEntity, path->origin, m_paths[path->index[i]]->origin, 5, 0, 255, 255, 0, 200, 0, 10);
-         else // oneway connection
+         }
+         else { // oneway connection
             engine.drawLine (g_hostEntity, path->origin, m_paths[path->index[i]]->origin, 5, 0, 250, 250, 250, 200, 0, 10);
+         }
       }
 
       // now look for oneway incoming connections
       for (int i = 0; i < g_numWaypoints; i++) {
-         if (isConnected (m_paths[i]->pathNumber, path->pathNumber) && !isConnected (path->pathNumber, m_paths[i]->pathNumber))
+         if (isConnected (m_paths[i]->pathNumber, path->pathNumber) && !isConnected (path->pathNumber, m_paths[i]->pathNumber)) {
             engine.drawLine (g_hostEntity, path->origin, m_paths[i]->origin, 5, 0, 0, 192, 96, 200, 0, 10);
+         }
       }
 
       // draw the radius circle
@@ -1568,13 +1636,14 @@ void Waypoint::frame (void) {
 
       // draw the danger directions
       if (!m_waypointsChanged) {
-         if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team0DangerIndex != -1 && engine.getTeam (g_hostEntity) == TEAM_TERRORIST)
+         if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team0DangerIndex != INVALID_WAYPOINT_INDEX && engine.getTeam (g_hostEntity) == TEAM_TERRORIST) {
             engine.drawLine (g_hostEntity, path->origin, m_paths[(g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team0DangerIndex]->origin, 15, 0, 255, 0, 0, 200, 0, 10, DRAW_ARROW); // draw a red arrow to this index's danger point
+         }
 
-         if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team1DangerIndex != -1 && engine.getTeam (g_hostEntity) == TEAM_COUNTER)
+         if ((g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team1DangerIndex != INVALID_WAYPOINT_INDEX && engine.getTeam (g_hostEntity) == TEAM_COUNTER) {
             engine.drawLine (g_hostEntity, path->origin, m_paths[(g_experienceData + (nearestIndex * g_numWaypoints) + nearestIndex)->team1DangerIndex]->origin, 15, 0, 0, 0, 255, 200, 0, 10, DRAW_ARROW); // draw a blue arrow to this index's danger point
+         }
       }
-
       // display some information
       char tempMessage[4096];
 
@@ -1594,11 +1663,11 @@ void Waypoint::frame (void) {
                             "      Experience Info:\n"
                             "      CT: %d / %d\n"
                             "      T: %d / %d\n",
-                            dangerIndexCT, dangerIndexCT != -1 ? (g_experienceData + nearestIndex * g_numWaypoints + dangerIndexCT)->team1Damage : 0, dangerIndexT, dangerIndexT != -1 ? (g_experienceData + nearestIndex * g_numWaypoints + dangerIndexT)->team0Damage : 0);
+                            dangerIndexCT, dangerIndexCT != INVALID_WAYPOINT_INDEX ? (g_experienceData + nearestIndex * g_numWaypoints + dangerIndexCT)->team1Damage : 0, dangerIndexT, dangerIndexT != INVALID_WAYPOINT_INDEX ? (g_experienceData + nearestIndex * g_numWaypoints + dangerIndexT)->team0Damage : 0);
       }
 
       // check if we need to show the cached point index
-      if (m_cacheWaypointIndex != -1) {
+      if (m_cacheWaypointIndex != INVALID_WAYPOINT_INDEX) {
          length += sprintf (&tempMessage[length],
                             "\n    Cached Waypoint Information:\n\n"
                             "      Waypoint %d of %d, Radius: %.1f\n"
@@ -1607,7 +1676,7 @@ void Waypoint::frame (void) {
       }
 
       // check if we need to show the facing point index
-      if (m_facingAtIndex != -1) {
+      if (m_facingAtIndex != INVALID_WAYPOINT_INDEX) {
          length += sprintf (&tempMessage[length],
                             "\n    Facing Waypoint Information:\n\n"
                             "      Waypoint %d of %d, Radius: %.1f\n"
@@ -1639,10 +1708,12 @@ void Waypoint::frame (void) {
 
 bool Waypoint::isConnected (int index) {
    for (int i = 0; i < g_numWaypoints; i++) {
-      if (i != index) {
-         for (int j = 0; j < MAX_PATH_INDEX; j++) {
-            if (m_paths[i]->index[j] == index)
-               return true;
+      if (i == index) {
+         continue;
+      }
+      for (int j = 0; j < MAX_PATH_INDEX; j++) {
+         if (m_paths[i]->index[j] == index) {
+            return true;
          }
       }
    }
@@ -1660,7 +1731,7 @@ bool Waypoint::isNodesValid (void) {
       int connections = 0;
 
       for (j = 0; j < MAX_PATH_INDEX; j++) {
-         if (m_paths[i]->index[j] != -1) {
+         if (m_paths[i]->index[j] != INVALID_WAYPOINT_INDEX) {
             if (m_paths[i]->index[j] > g_numWaypoints) {
                logEntry (true, LL_WARNING, "Waypoint %d connected with invalid Waypoint #%d!", i, m_paths[i]->index[j]);
                return false;
@@ -1688,20 +1759,24 @@ bool Waypoint::isNodesValid (void) {
             return false;
          }
       }
-      else if (m_paths[i]->flags & FLAG_TF_ONLY)
+      else if (m_paths[i]->flags & FLAG_TF_ONLY) {
          terrPoints++;
-      else if (m_paths[i]->flags & FLAG_CF_ONLY)
+      }
+      else if (m_paths[i]->flags & FLAG_CF_ONLY) {
          ctPoints++;
-      else if (m_paths[i]->flags & FLAG_GOAL)
+      }
+      else if (m_paths[i]->flags & FLAG_GOAL) {
          goalPoints++;
-      else if (m_paths[i]->flags & FLAG_RESCUE)
+      }
+      else if (m_paths[i]->flags & FLAG_RESCUE) {
          rescuePoints++;
+      }
 
       for (int k = 0; k < MAX_PATH_INDEX; k++) {
-         if (m_paths[i]->index[k] != -1) {
-            if (m_paths[i]->index[k] >= g_numWaypoints || m_paths[i]->index[k] < -1) {
+         if (m_paths[i]->index[k] != INVALID_WAYPOINT_INDEX) {
+            if (m_paths[i]->index[k] >= g_numWaypoints || m_paths[i]->index[k] < INVALID_WAYPOINT_INDEX) {
                logEntry (true, LL_WARNING, "Waypoint %d - Pathindex %d out of Range!", i, k);
-               (*g_engfuncs.pfnSetOrigin) (g_hostEntity, m_paths[i]->origin);
+               g_engfuncs.pfnSetOrigin (g_hostEntity, m_paths[i]->origin);
 
                g_waypointOn = true;
                g_editNoclip = true;
@@ -1712,7 +1787,7 @@ bool Waypoint::isNodesValid (void) {
                logEntry (true, LL_WARNING, "Waypoint %d - Pathindex %d points to itself!", i, k);
 
                if (g_waypointOn && !engine.isDedicated ()) {
-                  (*g_engfuncs.pfnSetOrigin) (g_hostEntity, m_paths[i]->origin);
+                  g_engfuncs.pfnSetOrigin (g_hostEntity, m_paths[i]->origin);
 
                   g_waypointOn = true;
                   g_editNoclip = true;
@@ -1747,8 +1822,9 @@ bool Waypoint::isNodesValid (void) {
    bool visited[MAX_WAYPOINTS];
 
    // first check incoming connectivity, initialize the "visited" table
-   for (i = 0; i < g_numWaypoints; i++)
+   for (i = 0; i < g_numWaypoints; i++) {
       visited[i] = false;
+   }
 
    // check from waypoint nr. 0
    stack->next = nullptr;
@@ -1765,9 +1841,9 @@ bool Waypoint::isNodesValid (void) {
          int index = m_paths[current->index]->index[j];
 
          if (index >= 0 && index < g_numWaypoints) {
-            if (visited[index])
+            if (visited[index]) {
                continue; // skip this waypoint as it's already visited
-
+            }
             PathNode *newNode = new PathNode;
 
             newNode->next = stack;
@@ -1783,7 +1859,7 @@ bool Waypoint::isNodesValid (void) {
          logEntry (true, LL_WARNING, "Path broken from Waypoint #0 to Waypoint #%d!", i);
 
          if (g_waypointOn && !engine.isDedicated ()) {
-            (*g_engfuncs.pfnSetOrigin) (g_hostEntity, m_paths[i]->origin);
+            g_engfuncs.pfnSetOrigin (g_hostEntity, m_paths[i]->origin);
 
             g_waypointOn = true;
             g_editNoclip = true;
@@ -1797,14 +1873,16 @@ bool Waypoint::isNodesValid (void) {
 
    for (i = 0; i < g_numWaypoints; i++) {
       for (j = 0; j < MAX_PATH_INDEX; j++) {
-         if (m_paths[i]->index[j] >= 0 && m_paths[i]->index[j] < g_numWaypoints)
+         if (m_paths[i]->index[j] >= 0 && m_paths[i]->index[j] < g_numWaypoints) {
             outgoingPaths[m_paths[i]->index[j]].push (i);
+         }
       }
    }
 
    // initialize the "visited" table
-   for (i = 0; i < g_numWaypoints; i++)
+   for (i = 0; i < g_numWaypoints; i++) {
       visited[i] = false;
+   }
 
    // check from Waypoint nr. 0
    stack = new PathNode;
@@ -1819,9 +1897,9 @@ bool Waypoint::isNodesValid (void) {
       visited[current->index] = true;
 
       for (auto &outgoing : outgoingPaths[current->index]) {
-         if (visited[outgoing])
+         if (visited[outgoing]) {
             continue; // skip this waypoint as it's already visited
-
+         }
          PathNode *newNode = new PathNode;
 
          newNode->next = stack;
@@ -1837,7 +1915,7 @@ bool Waypoint::isNodesValid (void) {
          logEntry (true, LL_WARNING, "Path broken from Waypoint #%d to Waypoint #0!", i);
 
          if (g_waypointOn && !engine.isDedicated ()) {
-            (*g_engfuncs.pfnSetOrigin) (g_hostEntity, m_paths[i]->origin);
+            g_engfuncs.pfnSetOrigin (g_hostEntity, m_paths[i]->origin);
 
             g_waypointOn = true;
             g_editNoclip = true;
@@ -1860,13 +1938,14 @@ void Waypoint::initPathMatrix (void) {
    m_distMatrix = new int[g_numWaypoints * g_numWaypoints];
    m_pathMatrix = new int[g_numWaypoints * g_numWaypoints];
 
-   if (loadPathMatrix ())
+   if (loadPathMatrix ()) {
       return; // matrix loaded from file
+   }
 
    for (i = 0; i < g_numWaypoints; i++) {
       for (j = 0; j < g_numWaypoints; j++) {
          *(m_distMatrix + i * g_numWaypoints + j) = 999999;
-         *(m_pathMatrix + i * g_numWaypoints + j) = -1;
+         *(m_pathMatrix + i * g_numWaypoints + j) = INVALID_WAYPOINT_INDEX;
       }
    }
 
@@ -1879,8 +1958,9 @@ void Waypoint::initPathMatrix (void) {
       }
    }
 
-   for (i = 0; i < g_numWaypoints; i++)
+   for (i = 0; i < g_numWaypoints; i++) {
       *(m_distMatrix + (i * g_numWaypoints) + i) = 0;
+   }
 
    for (k = 0; k < g_numWaypoints; k++) {
       for (i = 0; i < g_numWaypoints; i++) {
@@ -1898,6 +1978,10 @@ void Waypoint::initPathMatrix (void) {
 }
 
 void Waypoint::savePathMatrix (void) {
+   if (g_numWaypoints < 1 || m_waypointsChanged) {
+      return;
+   }
+
    File fp (format ("%slearned/%s.pmt", getDataDirectory (), engine.getMapName ()), "wb");
 
    // unable to open file
@@ -1905,9 +1989,16 @@ void Waypoint::savePathMatrix (void) {
       logEntry (false, LL_FATAL, "Failed to open file for writing");
       return;
    }
+   ExtensionHeader header;
 
-   // write number of waypoints
-   fp.write (&g_numWaypoints, sizeof (int));
+   memset (header.header, 0, sizeof (header.header));
+   strcpy (header.header, FH_MATRIX);
+
+   header.fileVersion = FV_MATRIX;
+   header.pointNumber = g_numWaypoints;
+
+   // write header info
+   fp.write (&header, sizeof (ExtensionHeader));
 
    // write path & distance matrix
    fp.write (m_pathMatrix, sizeof (int), g_numWaypoints * g_numWaypoints);
@@ -1921,18 +2012,20 @@ bool Waypoint::loadPathMatrix (void) {
    File fp (format ("%slearned/%s.pmt", getDataDirectory (), engine.getMapName ()), "rb");
 
    // file doesn't exists return false
-   if (!fp.isValid ())
+   if (!fp.isValid ()) {
       return false;
+   }
 
-   int num = 0;
+   ExtensionHeader header;
+   memset (&header, 0, sizeof (header));
 
    // read number of waypoints
-   if (fp.read (&num, sizeof (int)) == 0) {
+   if (fp.read (&header, sizeof (ExtensionHeader)) == 0) {
       fp.close ();
       return false;
    }
 
-   if (num != g_numWaypoints) {
+   if (header.pointNumber != g_numWaypoints || header.fileVersion != FV_MATRIX) {
       logEntry (true, LL_WARNING, "Pathmatrix damaged (wrong version, or not for this map). Pathmatrix will be rebuilt.");
       fp.close ();
 
@@ -1955,16 +2048,16 @@ bool Waypoint::loadPathMatrix (void) {
 }
 
 int Waypoint::getPathDist (int srcIndex, int destIndex) {
-   if (srcIndex < 0 || srcIndex >= g_numWaypoints || destIndex < 0 || destIndex >= g_numWaypoints)
+   if (srcIndex < 0 || srcIndex >= g_numWaypoints || destIndex < 0 || destIndex >= g_numWaypoints) {
       return 1;
-
+   }
    return *(m_distMatrix + (srcIndex * g_numWaypoints) + destIndex);
 }
 
 void Waypoint::setVisited (int index) {
-   if (index < 0 || index >= g_numWaypoints)
+   if (index < 0 || index >= g_numWaypoints) {
       return;
-
+   }
    if (!isVisited (index) && (m_paths[index]->flags & FLAG_GOAL))
       m_visitedGoals.push (index);
 }
@@ -1975,8 +2068,9 @@ void Waypoint::clearVisited (void) {
 
 bool Waypoint::isVisited (int index) {
    for (auto &visited : m_visitedGoals) {
-      if (visited == index)
+      if (visited == index) {
          return true;
+      }
    }
    return false;
 }
@@ -1987,7 +2081,7 @@ void Waypoint::addBasic (void) {
    edict_t *ent = nullptr;
 
    // first of all, if map contains ladder points, create it
-   while (!engine.isNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "func_ladder"))) {
+   while (!engine.isNullEntity (ent = g_engfuncs.pfnFindEntityByString (ent, "classname", "func_ladder"))) {
       Vector ladderLeft = ent->v.absmin;
       Vector ladderRight = ent->v.absmax;
       ladderLeft.z = ladderRight.z;
@@ -2006,7 +2100,7 @@ void Waypoint::addBasic (void) {
 
       engine.testHull (down, up, TRACE_IGNORE_MONSTERS, point_hull, nullptr, &tr);
 
-      if (POINT_CONTENTS (up) == CONTENTS_SOLID || tr.flFraction != 1.0f) {
+      if (g_engfuncs.pfnPointContents (up) == CONTENTS_SOLID || tr.flFraction != 1.0f) {
          up = down = back;
          down.z = ent->v.absmax.z;
       }
@@ -2018,28 +2112,29 @@ void Waypoint::addBasic (void) {
       m_isOnLadder = true;
 
       do {
-         if (getNearest (pointOrigin, 50.0f) == -1)
+         if (getNearest (pointOrigin, 50.0f) == INVALID_WAYPOINT_INDEX) {
             push (3, pointOrigin);
-
+         }
          pointOrigin.z += 160;
       } while (pointOrigin.z < down.z - 40.0f);
 
       pointOrigin = down + Vector (0.0f, 0.0f, 38.0f);
 
-      if (getNearest (pointOrigin, 50.0f) == -1)
+      if (getNearest (pointOrigin, 50.0f) == INVALID_WAYPOINT_INDEX) {
          push (3, pointOrigin);
-
+      }
       m_isOnLadder = false;
    }
 
    auto autoCreateForEntity = [](int type, const char *entity) {
       edict_t *ent = nullptr;
 
-      while (!engine.isNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, entity))) {
+      while (!engine.isNullEntity (ent = g_engfuncs.pfnFindEntityByString (ent, "classname", entity))) {
          const Vector &pos = engine.getAbsPos (ent);
 
-         if (waypoints.getNearest (pos, 50.0f) == -1)
+         if (waypoints.getNearest (pos, 50.0f) == INVALID_WAYPOINT_INDEX) {
             waypoints.push (type, pos);
+         }
       }
    };
 
@@ -2061,24 +2156,25 @@ void Waypoint::addBasic (void) {
 void Waypoint::eraseFromDisk (void) {
    // this function removes waypoint file from the hard disk
 
-   String deleteList[4];
+   StringArray forErase;
    const char *map = engine.getMapName ();
 
    bots.kickEveryone (true);
 
    // if we're delete waypoint, delete all corresponding to it files
-   deleteList[0] = format ("%s%s.pwf", getDataDirectory (), map); // waypoint itself
-   deleteList[1] = format ("%slearned/%s.exp", getDataDirectory (), map); // corresponding to waypoint experience
-   deleteList[2] = format ("%slearned/%s.vis", getDataDirectory (), map); // corresponding to waypoint vistable
-   deleteList[3] = format ("%slearned/%s.pmt", getDataDirectory (), map); // corresponding to waypoint path matrix
+   forErase.push (format ("%s%s.pwf", getDataDirectory (), map)); // waypoint itself
+   forErase.push (format ("%slearned/%s.exp", getDataDirectory (), map)); // corresponding to waypoint experience
+   forErase.push (format ("%slearned/%s.vis", getDataDirectory (), map)); // corresponding to waypoint vistable
+   forErase.push (format ("%slearned/%s.pmt", getDataDirectory (), map)); // corresponding to waypoint path matrix
 
-   for (int i = 0; i < 4; i++) {
-      if (File::exists (const_cast<char *> (deleteList[i].chars ()))) {
-         _unlink (deleteList[i].chars ());
-         logEntry (true, LL_DEFAULT, "File %s, has been deleted from the hard disk", deleteList[i].chars ());
+   for (auto &item : forErase) {
+      if (File::exists (const_cast<char *> (item.chars ()))) {
+         _unlink (item.chars ());
+         logEntry (true, LL_DEFAULT, "File %s, has been deleted from the hard disk", item.chars ());
       }
-      else
-         logEntry (true, LL_ERROR, "Unable to open %s", deleteList[i].chars ());
+      else {
+         logEntry (true, LL_ERROR, "Unable to open %s", item.chars ());
+      }
    }
    init (); // reintialize points
 }
@@ -2086,11 +2182,12 @@ void Waypoint::eraseFromDisk (void) {
 const char *Waypoint::getDataDirectory (bool isMemoryFile) {
    static char buffer[256];
 
-   if (isMemoryFile)
+   if (isMemoryFile) {
       sprintf (buffer, "addons/yapb/data/");
-   else
+   }
+   else {
       sprintf (buffer, "%s/addons/yapb/data/", engine.getModName ());
-
+   }
    return &buffer[0];
 }
 
@@ -2110,7 +2207,7 @@ void Waypoint::setBombPos (bool reset, const Vector &pos) {
    }
    edict_t *ent = nullptr;
 
-   while (!engine.isNullEntity (ent = FIND_ENTITY_BY_CLASSNAME (ent, "grenade"))) {
+   while (!engine.isNullEntity (ent = g_engfuncs.pfnFindEntityByString (ent, "classname", "grenade"))) {
       if (strcmp (STRING (ent->v.model) + 9, "c4.mdl") == 0) {
          m_bombPos = engine.getAbsPos (ent);
          break;
@@ -2125,10 +2222,12 @@ void Waypoint::startLearnJump (void) {
 void Waypoint::setSearchIndex (int index) {
    m_findWPIndex = index;
 
-   if (m_findWPIndex < g_numWaypoints)
+   if (m_findWPIndex < g_numWaypoints) {
       engine.print ("Showing Direction to Waypoint #%d", m_findWPIndex);
-   else
-      m_findWPIndex = -1;
+   }
+   else {
+      m_findWPIndex = INVALID_WAYPOINT_INDEX;
+   }
 }
 
 Waypoint::Waypoint (void) {
@@ -2145,10 +2244,10 @@ Waypoint::Waypoint (void) {
    m_waypointsChanged = false;
    m_timeJumpStarted = 0.0f;
 
-   m_lastJumpWaypoint = -1;
-   m_cacheWaypointIndex = -1;
-   m_findWPIndex = -1;
-   m_facingAtIndex = -1;
+   m_lastJumpWaypoint = INVALID_WAYPOINT_INDEX;
+   m_cacheWaypointIndex = INVALID_WAYPOINT_INDEX;
+   m_findWPIndex = INVALID_WAYPOINT_INDEX;
+   m_facingAtIndex = INVALID_WAYPOINT_INDEX;
    m_visibilityIndex = 0;
    m_loadTries = 0;
 
@@ -2180,9 +2279,9 @@ Waypoint::~Waypoint (void) {
 
 void Waypoint::closeSocket (int sock) {
 #if defined(PLATFORM_WIN32)
-   if (sock != -1)
+   if (sock != -1) {
       closesocket (sock);
-
+   }
    WSACleanup ();
 #else
    if (sock != -1)
@@ -2197,15 +2296,16 @@ WaypointDownloadError Waypoint::downloadWaypoint (void) {
 
    int wsa = WSAStartup (requestedVersion, &wsaData);
 
-   if (wsa != 0)
+   if (wsa != 0) {
       return WDE_SOCKET_ERROR;
+   }
 #endif
 
    hostent *host = gethostbyname (yb_waypoint_autodl_host.str ());
 
-   if (host == nullptr)
+   if (host == nullptr) {
       return WDE_SOCKET_ERROR;
-
+   }
    int socketHandle = socket (AF_INET, SOCK_STREAM, 0);
 
    if (socketHandle < 0) {
@@ -2250,18 +2350,17 @@ WaypointDownloadError Waypoint::downloadWaypoint (void) {
    }
 
    const int ChunkSize = MAX_PRINT_BUFFER;
-   char buffer[ChunkSize] = {
-      0,
-   };
+   char buffer[ChunkSize] = { 0, };
 
    bool finished = false;
    int recvPosition = 0;
    int symbolsInLine = 0;
 
    // scan for the end of the header
-   while (!finished && recvPosition < ChunkSize) {
-      if (recv (socketHandle, &buffer[recvPosition], 1, 0) == 0)
+   while (!finished && recvPosition < ChunkSize) { 
+      if (recv (socketHandle, &buffer[recvPosition], 1, 0) == 0) {
          finished = true;
+      }
 
       // ugly, but whatever
       if (recvPosition > 2 && buffer[recvPosition - 2] == '4' && buffer[recvPosition - 1] == '0' && buffer[recvPosition] == '4') {
@@ -2293,7 +2392,6 @@ WaypointDownloadError Waypoint::downloadWaypoint (void) {
       closeSocket (socketHandle);
       return WDE_SOCKET_ERROR;
    }
-
    int recvSize = 0;
 
    do {

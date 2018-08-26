@@ -25,6 +25,7 @@ ConVar yb_latency_display ("yb_latency_display", "2");
 ConVar yb_avatar_display ("yb_avatar_display", "1");
 
 ConVar mp_limitteams ("mp_limitteams", nullptr, VT_NOREGISTER);
+ConVar mp_autoteambalance ("mp_autoteambalance", nullptr, VT_NOREGISTER);
 
 BotManager::BotManager (void) {
    // this is a bot manager class constructor
@@ -66,17 +67,18 @@ void BotManager::createKillerEntity (void) {
 }
 
 void BotManager::destroyKillerEntity (void) {
-   if (!engine.isNullEntity (m_killerEntity))
+   if (!engine.isNullEntity (m_killerEntity)) {
       g_engfuncs.pfnRemoveEntity (m_killerEntity);
+   }
 }
 
 void BotManager::touchKillerEntity (Bot *bot) {
    if (engine.isNullEntity (m_killerEntity)) {
       createKillerEntity ();
 
-      if (engine.isNullEntity (m_killerEntity))
+      if (engine.isNullEntity (m_killerEntity)) {
          MDLL_ClientKill (bot->ent ());
-
+      }
       return;
    }
 
@@ -113,13 +115,14 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
    edict_t *bot = nullptr;
    char outputName[33];
 
-   if (g_numWaypoints < 1) // don't allow creating bots with no waypoints loaded
-   {
+   // do not allow create bots when there is no waypoints
+   if (g_numWaypoints < 1) {
       engine.centerPrint ("Map is not waypointed. Cannot create bot");
       return BOT_RESULT_NAV_ERROR;
    }
-   else if (waypoints.hasChanged ()) // don't allow creating bots with changed waypoints (distance tables are messed up)
-   {
+
+   // don't allow creating bots with changed waypoints (distance tables are messed up)
+   else if (waypoints.hasChanged ())  {
       engine.centerPrint ("Waypoints have been changed. Load waypoints again...");
       return BOT_RESULT_NAV_ERROR;
    }
@@ -127,7 +130,6 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
       engine.centerPrint ("Desired team is stacked. Unable to proceed with bot creation");
       return BOT_RESULT_TEAM_STACKED;
    }
-
    if (difficulty < 0 || difficulty > 4) {
       difficulty = yb_difficulty.integer ();
 
@@ -138,13 +140,16 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
    }
 
    if (personality < PERSONALITY_NORMAL || personality > PERSONALITY_CAREFUL) {
-      if (rng.getInt (0, 100) < 50)
+      if (rng.getInt (0, 100) < 50) {
          personality = PERSONALITY_NORMAL;
+      }
       else {
-         if (rng.getInt (0, 100) < 50)
+         if (rng.getInt (0, 100) < 50) {
             personality = PERSONALITY_RUSHER;
-         else
+         }
+         else {
             personality = PERSONALITY_CAREFUL;
+         }
       }
    }
 
@@ -157,14 +162,14 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
          bool nameFound = false;
 
          while (true) {
-            if (nameFound)
+            if (nameFound) {
                break;
-
+            }
             botName = &g_botNames.random ();
 
-            if (botName->name.length () < 3 || botName->usedBy != 0)
+            if (botName->name.length () < 3 || botName->usedBy != 0) {
                continue;
-
+            }
             nameFound = true;
 
             strncpy (outputName, botName->name.chars (), A_bufsize (outputName));
@@ -182,8 +187,9 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
       snprintf (prefixedName, A_bufsize (prefixedName), "%s %s", yb_name_prefix.str (), outputName);
 
       // buffer has been modified, copy to real name
-      if (!isEmptyStr (prefixedName))
+      if (!isEmptyStr (prefixedName)) {
          strncpy (outputName, prefixedName, A_bufsize (outputName));
+      }
    }
    bot = g_engfuncs.pfnCreateFakeClient (outputName);
 
@@ -202,9 +208,9 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
    m_bots[index] = new Bot (bot, difficulty, personality, team, member, steamId);
 
    // assign owner of bot name
-   if (botName != nullptr)
+   if (botName != nullptr) {
       botName->usedBy = m_bots[index]->index ();
-
+   }
    engine.print ("Connecting Bot...");
 
    return BOT_RESULT_CREATED;
@@ -212,29 +218,31 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
 
 int BotManager::index (edict_t *ent) {
    // this function returns index of bot (using own bot array)
-   if (engine.isNullEntity (ent))
+   if (engine.isNullEntity (ent)) {
       return -1;
-
+   }
    int index = engine.indexOfEntity (ent) - 1;
 
-   if (index < 0 || index >= MAX_ENGINE_PLAYERS)
+   if (index < 0 || index >= MAX_ENGINE_PLAYERS) {
       return -1;
+   }
 
-   if (m_bots[index] != nullptr)
+   if (m_bots[index] != nullptr) {
       return index;
-
+   }
    return -1; // if no edict, return -1;
 }
 
 Bot *BotManager::getBot (int index) {
    // this function finds a bot specified by index, and then returns pointer to it (using own bot array)
 
-   if (index < 0 || index >= MAX_ENGINE_PLAYERS)
+   if (index < 0 || index >= MAX_ENGINE_PLAYERS) {
       return nullptr;
+   }
 
-   if (m_bots[index] != nullptr)
+   if (m_bots[index] != nullptr) {
       return m_bots[index];
-
+   }
    return nullptr; // no bot
 }
 
@@ -250,16 +258,17 @@ Bot *BotManager::getAliveBot (void) {
    IntArray result;
 
    for (int i = 0; i < engine.maxClients (); i++) {
-      if (result.length () > 4)
+      if (result.length () > 4) {
          break;
-
-      if (m_bots[i] != nullptr && isAlive (m_bots[i]->ent ()))
+      }
+      if (m_bots[i] != nullptr && isAlive (m_bots[i]->ent ())) {
          result.push (i);
+      }
    }
 
-   if (!result.empty ())
+   if (!result.empty ()) {
       return m_bots[result.random ()];
-
+   }
    return nullptr;
 }
 
@@ -269,8 +278,9 @@ void BotManager::framePeriodic (void) {
    for (int i = 0; i < engine.maxClients (); i++) {
       auto bot = m_bots[i];
 
-      if (bot != nullptr)
+      if (bot != nullptr) {
          bot->framePeriodic ();
+      }
    }
 }
 
@@ -280,14 +290,16 @@ void BotManager::frame (void) {
    for (int i = 0; i < engine.maxClients (); i++) {
       auto bot = m_bots[i];
 
-      if (bot != nullptr)
+      if (bot != nullptr) {
          bot->frame ();
+      }
    }
 
    // select leader each team somewhere in round start
    if (g_timeRoundStart + 5.0f > engine.timebase () && g_timeRoundStart + 10.0f < engine.timebase ()) {
-      for (int team = 0; team < MAX_TEAM_COUNT; team++)
+      for (int team = 0; team < MAX_TEAM_COUNT; team++) {
          selectLeaders (team, false);
+      }
    }
 }
 
@@ -328,16 +340,18 @@ void BotManager::maintainQuota (void) {
    // this function keeps number of bots up to date, and don't allow to maintain bot creation
    // while creation process in process.
 
-   if (g_numWaypoints < 1 || waypoints.hasChanged ())
+   if (g_numWaypoints < 1 || waypoints.hasChanged ()) {
       return;
+   }
 
    // bot's creation update
    if (!m_creationTab.empty () && m_maintainTime < engine.timebase ()) {
       const CreateQueue &last = m_creationTab.pop ();
       const BotCreationResult callResult = create (last.name, last.difficulty, last.personality, last.team, last.member);
 
-      if (last.manual)
+      if (last.manual) {
          yb_quota.setInteger (yb_quota.integer () + 1);
+      }
 
       // check the result of creation
       if (callResult == BOT_RESULT_NAV_ERROR) {
@@ -358,53 +372,59 @@ void BotManager::maintainQuota (void) {
    }
 
    // now keep bot number up to date
-   if (m_quotaMaintainTime > engine.timebase ())
+   if (m_quotaMaintainTime > engine.timebase ()) {
       return;
-
+   }
    yb_quota.setInteger (A_clamp<int> (yb_quota.integer (), 0, engine.maxClients ()));
 
    int totalHumansInGame = getHumansCount ();
    int humanPlayersInGame = getHumansCount (true);
 
-   if (!engine.isDedicated () && !totalHumansInGame)
+   if (!engine.isDedicated () && !totalHumansInGame) {
       return;
-
+   }
    int desiredBotCount = yb_quota.integer ();
    int botsInGame = getBotCount ();
 
    bool halfRoundPassed = g_gameWelcomeSent && g_timeRoundMid > engine.timebase ();
 
    if (stricmp (yb_quota_mode.str (), "fill") == 0) {
-      if (halfRoundPassed)
+      if (halfRoundPassed) {
          desiredBotCount = botsInGame;
-      else
+      }
+      else {
          desiredBotCount = A_max<int> (0, desiredBotCount - humanPlayersInGame);
+      }
    }
    else if (stricmp (yb_quota_mode.str (), "match") == 0) {
-      if (halfRoundPassed)
+      if (halfRoundPassed) {
          desiredBotCount = botsInGame;
+      }
       else {
          int quotaMatch = yb_quota_match.integer () == 0 ? yb_quota.integer () : yb_quota_match.integer ();
          desiredBotCount = A_max<int> (0, quotaMatch * humanPlayersInGame);
       }
    }
 
-   if (yb_join_after_player.boolean () && humanPlayersInGame == 0)
+   if (yb_join_after_player.boolean () && humanPlayersInGame == 0) {
       desiredBotCount = 0;
-
+   }
    int maxClients = engine.maxClients ();
 
-   if (yb_autovacate.boolean ())
+   if (yb_autovacate.boolean ()) {
       desiredBotCount = A_min<int> (desiredBotCount, maxClients - (humanPlayersInGame + 1));
-   else
+   }
+   else {
       desiredBotCount = A_min<int> (desiredBotCount, maxClients - humanPlayersInGame);
+   }
 
    // add bots if necessary
-   if (desiredBotCount > botsInGame)
+   if (desiredBotCount > botsInGame) {
       createRandom ();
-   else if (desiredBotCount < botsInGame)
+   }
+   else if (desiredBotCount < botsInGame) {
       kickRandom (false);
-
+   }
    m_quotaMaintainTime = engine.timebase () + 0.40f;
 }
 
@@ -429,25 +449,23 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
    // always keep one slot
    int maxClients = yb_autovacate.boolean () ? engine.maxClients () - 1 - (engine.isDedicated () ? 0 : getHumansCount ()) : engine.maxClients ();
 
-   if (getBotCount () >= maxClients - getHumansCount ())
+   if (getBotCount () >= maxClients - getHumansCount ()) {
       return;
-
-   if (selection == 1 || selection == 2) {
-      CVAR_SET_STRING ("mp_limitteams", "0");
-      CVAR_SET_STRING ("mp_autoteambalance", "0");
    }
-   else
+   if (selection == 1 || selection == 2) {
+      mp_limitteams.setInteger (0);
+      mp_autoteambalance.setInteger (0);
+   }
+   else {
       selection = 5;
-
-   char teams[6][12] = {
-      "", {"Terrorists"}, {"CTs"}, "", "", {"Random"},
-   };
+   }
+   char teams[6][12] = {"", {"Terrorists"}, {"CTs"}, "", "", {"Random"}, };
 
    int toAdd = numToAdd == -1 ? maxClients - (getHumansCount () + getBotCount ()) : numToAdd;
 
-   for (int i = 0; i <= toAdd; i++)
+   for (int i = 0; i <= toAdd; i++) {
       addbot ("", difficulty, personality, selection, -1, true);
-
+   }
    engine.centerPrint ("Fill Server with %s bots...", &teams[selection][0]);
 }
 
@@ -461,8 +479,9 @@ void BotManager::kickEveryone (bool instant) {
       for (int i = 0; i < engine.maxClients (); i++) {
          auto bot = m_bots[i];
 
-         if (bot != nullptr)
+         if (bot != nullptr) {
             bot->kick ();
+         }
       }
    }
    m_creationTab.clear ();
@@ -478,8 +497,9 @@ void BotManager::kickFromTeam (Team team, bool removeAll) {
          decrementQuota ();
          bot->kick ();
 
-         if (!removeAll)
+         if (!removeAll) {
             break;
+         }
       }
    }
 }
@@ -503,20 +523,22 @@ void BotManager::kickBotByMenu (edict_t *ent, int selection) {
          menuKeys |= 1 << (i - menuKey);
          menus.formatAppend ("%1.1d. %s%s\n", i - menuKey + 1, STRING (bot->pev->netname), bot->m_team == TEAM_COUNTER ? " \\y(CT)\\w" : " \\r(T)\\w");
       }
-      else
+      else {
          menus.formatAppend ("\\d %1.1d. Not a Bot\\w\n", i - menuKey + 1);
+      }
    }
    menus.formatAppend ("\n%s 0. Back", (selection == 4) ? "" : " 9. More...\n");
 
    // force to clear current menu
    showMenu (ent, BOT_MENU_INVALID);
 
-   auto FindMenu = [](MenuId id) {
+   auto searchMenu = [](MenuId id) {
       int menuIndex = 0;
 
       for (; menuIndex < ARRAYSIZE_HLSDK (g_menus); menuIndex++) {
-         if (g_menus[menuIndex].id == id)
+         if (g_menus[menuIndex].id == id) {
             break;
+         }
       }
       return &g_menus[menuIndex];
    };
@@ -524,7 +546,7 @@ void BotManager::kickBotByMenu (edict_t *ent, int selection) {
    const unsigned int slots = menuKeys & static_cast<unsigned int> (-1);
    MenuId id = static_cast<MenuId> (BOT_MENU_KICK_PAGE_1 - 1 + selection);
 
-   MenuText *menu = FindMenu (id);
+   auto menu = searchMenu (id);
 
    menu->slots = slots;
    menu->text = menus;
@@ -537,9 +559,9 @@ void BotManager::killAllBots (int team) {
 
    for (int i = 0; i < engine.maxClients (); i++) {
       if (m_bots[i] != nullptr) {
-         if (team != -1 && team != m_bots[i]->m_team)
+         if (team != -1 && team != m_bots[i]->m_team) {
             continue;
-
+         }
          m_bots[i]->kill ();
       }
    }
@@ -560,9 +582,10 @@ void BotManager::kickRandom (bool decQuota) {
 
    bool deadBotFound = false;
 
-   auto UpdateQuota = [&](void) {
-      if (decQuota)
+   auto updateQuota = [&](void) {
+      if (decQuota) {
          decrementQuota ();
+      }
    };
 
    // first try to kick the bot that is currently dead
@@ -571,7 +594,7 @@ void BotManager::kickRandom (bool decQuota) {
 
       if (bot != nullptr && !bot->m_notKilled) // is this slot used?
       {
-         UpdateQuota ();
+         updateQuota ();
          bot->kick ();
 
          deadBotFound = true;
@@ -579,8 +602,9 @@ void BotManager::kickRandom (bool decQuota) {
       }
    }
 
-   if (deadBotFound)
+   if (deadBotFound) {
       return;
+   }
 
    // if no dead bots found try to find one with lowest amount of frags
    int index = 0;
@@ -598,7 +622,7 @@ void BotManager::kickRandom (bool decQuota) {
 
    // if found some bots
    if (index != 0) {
-      UpdateQuota ();
+      updateQuota ();
       m_bots[index]->kick ();
 
       return;
@@ -608,7 +632,7 @@ void BotManager::kickRandom (bool decQuota) {
    for (int i = 0; i < engine.maxClients (); i++) {
       if (m_bots[i] != nullptr) // is this slot used?
       {
-         UpdateQuota ();
+         updateQuota ();
          m_bots[i]->kick ();
 
          break;
@@ -647,11 +671,12 @@ void BotManager::setWeaponMode (int selection) {
       g_weaponSelect[i].teamAS = tabMapAS[selection][i];
    }
 
-   if (selection == 0)
+   if (selection == 0) {
       yb_jasonmode.setInteger (1);
-   else
+   }
+   else {
       yb_jasonmode.setInteger (0);
-
+   }
    engine.centerPrint ("%s weapon mode selected", &modeName[selection][0]);
 }
 
@@ -664,8 +689,9 @@ void BotManager::listBots (void) {
       Bot *bot = getBot (i);
 
       // is this player slot valid
-      if (bot != nullptr)
+      if (bot != nullptr) {
          engine.print ("[%-3.1d] %-9.13s %-17.18s %-3.4s %-3.1d %-3.1d", i, STRING (bot->pev->netname), bot->m_personality == PERSONALITY_RUSHER ? "rusher" : bot->m_personality == PERSONALITY_NORMAL ? "normal" : "careful", bot->m_team == TEAM_COUNTER ? "CT" : "T", bot->m_difficulty, static_cast<int> (bot->pev->frags));
+      }
    }
 }
 
@@ -675,8 +701,9 @@ int BotManager::getBotCount (void) {
    int count = 0;
 
    for (int i = 0; i < engine.maxClients (); i++) {
-      if (m_bots[i] != nullptr)
+      if (m_bots[i] != nullptr) {
          count++;
+      }
    }
    return count;
 }
@@ -687,7 +714,7 @@ Bot *BotManager::getHighfragBot (int team) {
 
    // search bots in this team
    for (int i = 0; i < engine.maxClients (); i++) {
-      Bot *bot = bots.getBot (i);
+      auto bot = bots.getBot (i);
 
       if (bot != nullptr && bot->m_notKilled && bot->m_team == team) {
          if (bot->pev->frags > bestScore) {
@@ -719,31 +746,34 @@ void BotManager::updateTeamEconomics (int team, bool forceGoodEconomics) {
       auto bot = m_bots[i];
 
       if (bot != nullptr && bot->m_team == team) {
-         if (bot->m_moneyAmount <= g_botBuyEconomyTable[0])
+         if (bot->m_moneyAmount <= g_botBuyEconomyTable[0]) {
             numPoorPlayers++;
-
+         }
          numTeamPlayers++; // update count of team
       }
    }
    m_economicsGood[team] = true;
 
-   if (numTeamPlayers <= 1)
+   if (numTeamPlayers <= 1) {
       return;
-
+   }
    // if 80 percent of team have no enough money to purchase primary weapon
-   if ((numTeamPlayers * 80) / 100 <= numPoorPlayers)
+   if ((numTeamPlayers * 80) / 100 <= numPoorPlayers) {
       m_economicsGood[team] = false;
+   }
 
    // winner must buy something!
-   if (m_lastWinner == team)
+   if (m_lastWinner == team) {
       m_economicsGood[team] = true;
+   }
 }
 
 void BotManager::destroy (void) {
    // this function free all bots slots (used on server shutdown)
 
-   for (int i = 0; i < MAX_ENGINE_PLAYERS; i++)
+   for (int i = 0; i < MAX_ENGINE_PLAYERS; i++) {
       destroy (i);
+   }
 }
 
 void BotManager::destroy (int index) {
@@ -762,8 +792,9 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    memset (reinterpret_cast<void *> (this), 0, sizeof (*this));
    pev = &bot->v;
 
-   if (bot->pvPrivateData != nullptr)
-      FREE_PRIVATE (bot);
+   if (bot->pvPrivateData != nullptr) {
+      g_engfuncs.pfnFreeEntPrivateData (bot);
+   }
 
    bot->pvPrivateData = nullptr;
    bot->v.frags = 0;
@@ -772,15 +803,14 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    BotManager::execGameEntity (&bot->v);
 
    // set all info buffer keys for this bot
-   char *buffer = GET_INFOKEYBUFFER (bot);
-   SET_CLIENT_KEYVALUE (clientIndex, buffer, "_vgui_menus", "0");
+   char *buffer = g_engfuncs.pfnGetInfoKeyBuffer (bot);
+   g_engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "_vgui_menus", "0");
 
-   if (!(g_gameFlags & GAME_LEGACY) && yb_latency_display.integer () == 1)
-      SET_CLIENT_KEYVALUE (clientIndex, buffer, "*bot", "1");
+   if (!(g_gameFlags & GAME_LEGACY) && yb_latency_display.integer () == 1) {
+      g_engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "*bot", "1");
+   }
 
-   char reject[256] = {
-      0,
-   };
+   char reject[256] = {0, };
    MDLL_ClientConnect (bot, STRING (bot->v.netname), format ("127.0.0.%d", engine.indexOfEntity (bot) + 100), reject);
 
    if (!isEmptyStr (reject)) {
@@ -792,9 +822,9 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    }
 
    // should be set after client connect
-   if (yb_avatar_display.boolean () && !steamId.empty ())
-      SET_CLIENT_KEYVALUE (clientIndex, buffer, "*sid", const_cast<char *> (steamId.chars ()));
-
+   if (yb_avatar_display.boolean () && !steamId.empty ()) {
+      g_engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "*sid", const_cast<char *> (steamId.chars ()));
+   }
    memset (&m_pingOffset, 0, sizeof (m_pingOffset));
    memset (&m_ping, 0, sizeof (m_ping));
 
@@ -869,7 +899,6 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
 
    // initialize a*
    m_routes = new Route[g_numWaypoints + 1];
-
    processNewRound ();
 }
 
@@ -883,9 +912,9 @@ void Bot::clearUsedName (void) {
 }
 
 float Bot::calcThinkInterval (void) {
-   if (Math::isFltZero (m_thinkInterval))
+   if (Math::isFltZero (m_thinkInterval)) {
       return m_frameInterval;
-
+   }
    return m_thinkInterval;
 }
 
@@ -909,9 +938,9 @@ int BotManager::getHumansCount (bool ignoreSpectators) {
       const Client &client = g_clients[i];
 
       if ((client.flags & CF_USED) && m_bots[i] == nullptr && !(client.ent->v.flags & FL_FAKECLIENT)) {
-         if (ignoreSpectators && client.team2 != TEAM_TERRORIST && client.team2 != TEAM_COUNTER)
+         if (ignoreSpectators && client.team2 != TEAM_TERRORIST && client.team2 != TEAM_COUNTER) {
             continue;
-
+         }
          count++;
       }
    }
@@ -926,8 +955,9 @@ int BotManager::getAliveHumansCount (void) {
    for (int i = 0; i < engine.maxClients (); i++) {
       const Client &client = g_clients[i];
 
-      if ((client.flags & (CF_USED | CF_ALIVE)) && m_bots[i] == nullptr && !(client.ent->v.flags & FL_FAKECLIENT))
+      if ((client.flags & (CF_USED | CF_ALIVE)) && m_bots[i] == nullptr && !(client.ent->v.flags & FL_FAKECLIENT)) {
          count++;
+      }
    }
    return count;
 }
@@ -935,18 +965,17 @@ int BotManager::getAliveHumansCount (void) {
 bool BotManager::isTeamStacked (int team) {
    int limitTeams = mp_limitteams.integer ();
 
-   if (!limitTeams)
+   if (!limitTeams) {
       return false;
-
-   int teamCount[MAX_TEAM_COUNT] = {
-      0,
-   };
+   }
+   int teamCount[MAX_TEAM_COUNT] = { 0, };
 
    for (int i = 0; i < engine.maxClients (); i++) {
       const Client &client = g_clients[i];
 
-      if ((client.flags & CF_USED) && client.team2 != TEAM_UNASSIGNED && client.team2 != TEAM_SPECTATOR)
+      if ((client.flags & CF_USED) && client.team2 != TEAM_UNASSIGNED && client.team2 != TEAM_SPECTATOR) {
          teamCount[client.team2]++;
+      }
    }
    return teamCount[team] + 1 > teamCount[team == TEAM_COUNTER ? TEAM_TERRORIST : TEAM_COUNTER] + limitTeams;
 }
@@ -961,15 +990,15 @@ void Bot::processNewRound (void) {
 
    m_waypointOrigin.nullify ();
    m_destOrigin.nullify ();
-   m_currentWaypointIndex = -1;
+   m_currentWaypointIndex = INVALID_WAYPOINT_INDEX;
    m_currentPath = nullptr;
    m_currentTravelFlags = 0;
    m_goalFailed = 0;
    m_desiredVelocity.nullify ();
-   m_prevGoalIndex = -1;
-   m_chosenGoalIndex = -1;
-   m_loosedBombWptIndex = -1;
-   m_plantedBombWptIndex = -1;
+   m_prevGoalIndex = INVALID_WAYPOINT_INDEX;
+   m_chosenGoalIndex = INVALID_WAYPOINT_INDEX;
+   m_loosedBombWptIndex = INVALID_WAYPOINT_INDEX;
+   m_plantedBombWptIndex = INVALID_WAYPOINT_INDEX;
 
    m_moveToC4 = false;
    m_duckDefuse = false;
@@ -982,9 +1011,9 @@ void Bot::processNewRound (void) {
    m_avoid = nullptr;
    m_avoidTime = 0.0f;
 
-   for (i = 0; i < 5; i++)
-      m_prevWptIndex[i] = -1;
-
+   for (i = 0; i < 5; i++) {
+      m_prevWptIndex[i] = INVALID_WAYPOINT_INDEX;
+   }
    m_navTimeset = engine.timebase ();
    m_team = engine.getTeam (ent ());
    m_isVIP = false;
@@ -1072,12 +1101,13 @@ void Bot::processNewRound (void) {
    m_tasks.reserve (TASK_MAX);
    m_followWaitTime = 0.0f;
 
-   for (i = 0; i < MAX_HOSTAGES; i++)
+   for (i = 0; i < MAX_HOSTAGES; i++) {
       m_hostages[i] = nullptr;
+   }
 
-   for (i = 0; i < Chatter_Total; i++)
+   for (i = 0; i < Chatter_Total; i++) {
       m_chatterTimes[i] = -1.0f;
-
+   }
    m_isReloading = false;
    m_reloadState = RELOAD_NONE;
 
@@ -1105,8 +1135,8 @@ void Bot::processNewRound (void) {
    m_buyState = BUYSTATE_PRIMARY_WEAPON;
    m_lastEquipTime = 0.0f;
 
-   if (!m_notKilled) // if bot died, clear all weapon stuff and force buying again
-   {
+   // if bot died, clear all weapon stuff and force buying again
+   if (!m_notKilled) {
       memset (&m_ammoInClip, 0, sizeof (m_ammoInClip));
       memset (&m_ammo, 0, sizeof (m_ammo));
 
@@ -1151,19 +1181,19 @@ void Bot::processNewRound (void) {
    m_heardSoundTime = engine.timebase ();
 
    // clear its message queue
-   for (i = 0; i < 32; i++)
+   for (i = 0; i < 32; i++) {
       m_messageQueue[i] = GAME_MSG_NONE;
-
+   }
    m_actMessageIndex = 0;
    m_pushMessageIndex = 0;
 
    // and put buying into its message queue
    pushMsgQueue (GAME_MSG_PURCHASE);
-   startTask (TASK_NORMAL, TASKPRI_NORMAL, -1, 0.0f, true);
+   startTask (TASK_NORMAL, TASKPRI_NORMAL, INVALID_WAYPOINT_INDEX, 0.0f, true);
 
-   if (rng.getInt (0, 100) < 50)
+   if (rng.getInt (0, 100) < 50) {
       pushChatterMessage (Chatter_NewRound);
-
+   }
    m_thinkInterval = (g_gameFlags & GAME_LEGACY) ? 0.0f : (1.0f / 30.0f) * rng.getFloat (0.95f, 1.05f);
 }
 
@@ -1178,9 +1208,9 @@ void Bot::kick (void) {
    // this function kick off one bot from the server.
    auto username = STRING (pev->netname);
 
-   if (!(pev->flags & FL_FAKECLIENT) || isEmptyStr (username))
+   if (!(pev->flags & FL_FAKECLIENT) || isEmptyStr (username)) {
       return;
-
+   }
    // clear fakeclient bit
    pev->flags &= ~FL_FAKECLIENT;
 
@@ -1192,12 +1222,14 @@ void Bot::processTeamJoin (void) {
    // this function handles the selection of teams & class
 
    // cs prior beta 7.0 uses hud-based motd, so press fire once
-   if (g_gameFlags & GAME_LEGACY)
+   if (g_gameFlags & GAME_LEGACY) {
       pev->button |= IN_ATTACK;
+   }
 
    // check if something has assigned team to us
-   else if (m_team == TEAM_TERRORIST || m_team == TEAM_COUNTER)
+   else if (m_team == TEAM_TERRORIST || m_team == TEAM_COUNTER) {
       m_notStarted = false;
+   }
 
    // if bot was unable to join team, and no menus popups, check for stacked team
    if (m_startAction == GAME_MSG_NONE && ++m_retryJoin > 3) {
@@ -1217,13 +1249,16 @@ void Bot::processTeamJoin (void) {
 
       char teamJoin = yb_join_team.str ()[0];
 
-      if (teamJoin == 'C' || teamJoin == 'c')
+      if (teamJoin == 'C' || teamJoin == 'c') {
          m_wantedTeam = 2;
-      else if (teamJoin == 'T' || teamJoin == 't')
+      }
+      else if (teamJoin == 'T' || teamJoin == 't') {
          m_wantedTeam = 1;
+      }
 
-      if (m_wantedTeam != 1 && m_wantedTeam != 2)
+      if (m_wantedTeam != 1 && m_wantedTeam != 2) {
          m_wantedTeam = 5;
+      }
 
       // select the team the bot wishes to join...
       engine.execBotCmd (ent (), "menuselect %d", m_wantedTeam);
@@ -1234,8 +1269,9 @@ void Bot::processTeamJoin (void) {
       // czero has additional models
       int maxChoice = (g_gameFlags & GAME_CZERO) ? 5 : 4;
 
-      if (m_wantedClass < 1 || m_wantedClass > maxChoice)
+      if (m_wantedClass < 1 || m_wantedClass > maxChoice) {
          m_wantedClass = rng.getInt (1, maxChoice); // use random if invalid
+      }
 
       // select the class the bot wishes to use...
       engine.execBotCmd (ent (), "menuselect %d", m_wantedClass);
@@ -1244,53 +1280,59 @@ void Bot::processTeamJoin (void) {
       m_notStarted = false;
 
       // check for greeting other players, since we connected
-      if (rng.getInt (0, 100) < 20)
+      if (rng.getInt (0, 100) < 20) {
          pushChatMessage (CHAT_WELCOME);
+      }
    }
 }
 
 void BotManager::calculatePingOffsets (void) {
-   if (!(g_gameFlags & GAME_SUPPORT_SVC_PINGS) || yb_latency_display.integer () != 2)
+   if (!(g_gameFlags & GAME_SUPPORT_SVC_PINGS) || yb_latency_display.integer () != 2) {
       return;
-
+   }
    int averagePing = 0;
    int numHumans = 0;
 
    for (int i = 0; i < engine.maxClients (); i++) {
       edict_t *ent = engine.entityOfIndex (i + 1);
 
-      if (!isPlayer (ent))
+      if (!isPlayer (ent)) {
          continue;
-
+      }
       numHumans++;
 
       int ping, loss;
-      PLAYER_CNX_STATS (ent, &ping, &loss);
+      g_engfuncs.pfnGetPlayerStats (ent, &ping, &loss);
 
-      if (ping < 0 || ping > 100)
+      if (ping < 0 || ping > 100) {
          ping = rng.getInt (3, 15);
-
+      }
       averagePing += ping;
    }
 
-   if (numHumans > 0)
+   if (numHumans > 0) {
       averagePing /= numHumans;
-   else
+   }
+   else {
       averagePing = rng.getInt (30, 40);
+   }
 
    for (int i = 0; i < engine.maxClients (); i++) {
       Bot *bot = getBot (i);
 
-      if (bot == nullptr)
+      if (bot == nullptr) {
          continue;
+      }
 
       int part = static_cast<int> (averagePing * 0.2f);
       int botPing = rng.getInt (averagePing - part, averagePing + part) + rng.getInt (bot->m_difficulty + 3, bot->m_difficulty + 6) + 10;
 
-      if (botPing <= 5)
+      if (botPing <= 5) {
          botPing = rng.getInt (10, 23);
-      else if (botPing > 100)
+      }
+      else if (botPing > 100) {
          botPing = rng.getInt (30, 40);
+      }
 
       for (int j = 0; j < 2; j++) {
          for (bot->m_pingOffset[j] = 0; bot->m_pingOffset[j] < 4; bot->m_pingOffset[j]++) {
@@ -1305,11 +1347,13 @@ void BotManager::calculatePingOffsets (void) {
 }
 
 void BotManager::sendPingOffsets (edict_t *to) {
-   if (!(g_gameFlags & GAME_SUPPORT_SVC_PINGS) || yb_latency_display.integer () != 2 || engine.isNullEntity (to) || (to->v.flags & FL_FAKECLIENT))
+   if (!(g_gameFlags & GAME_SUPPORT_SVC_PINGS) || yb_latency_display.integer () != 2 || engine.isNullEntity (to) || (to->v.flags & FL_FAKECLIENT)) {
       return;
+   }
 
-   if (!(to->v.flags & FL_CLIENT) && !(((to->v.button & IN_SCORE) || !(to->v.oldbuttons & IN_SCORE))))
+   if (!(to->v.flags & FL_CLIENT) && !(((to->v.button & IN_SCORE) || !(to->v.oldbuttons & IN_SCORE)))) {
       return;
+   }
 
    static int sending;
    sending = 0;
@@ -1322,8 +1366,9 @@ void BotManager::sendPingOffsets (edict_t *to) {
    for (int i = 0; i < engine.maxClients (); i++) {
       Bot *bot = m_bots[i];
 
-      if (bot == nullptr)
+      if (bot == nullptr) {
          continue;
+      }
 
       switch (sending) {
       case 0: {
@@ -1363,26 +1408,27 @@ void BotManager::sendDeathMsgFix (void) {
    if (yb_latency_display.integer () == 2 && m_deathMsgSent) {
       m_deathMsgSent = false;
 
-      for (int i = 0; i < engine.maxClients (); i++)
+      for (int i = 0; i < engine.maxClients (); i++) {
          sendPingOffsets (g_clients[i].ent);
+      }
    }
 }
 
 void BotManager::updateActiveGrenade (void) {
-   if (m_grenadeUpdateTime > engine.timebase ())
+   if (m_grenadeUpdateTime > engine.timebase ()) {
       return;
-
+   }
    edict_t *grenade = nullptr;
 
    // clear previously stored grenades
    m_activeGrenades.clear ();
 
    // search the map for any type of grenade
-   while (!engine.isNullEntity (grenade = FIND_ENTITY_BY_CLASSNAME (grenade, "grenade"))) {
+   while (!engine.isNullEntity (grenade = g_engfuncs.pfnFindEntityByString (grenade, "classname", "grenade"))) {
       // do not count c4 as a grenade
-      if (strcmp (STRING (grenade->v.model) + 9, "c4.mdl") == 0)
+      if (strcmp (STRING (grenade->v.model) + 9, "c4.mdl") == 0) {
          continue;
-
+      }
       m_activeGrenades.push (grenade);
    }
    m_grenadeUpdateTime = engine.timebase () + 0.213f;
@@ -1398,8 +1444,9 @@ void BotManager::selectLeaders (int team, bool reset) {
       return;
    }
 
-   if (m_leaderChoosen[team])
+   if (m_leaderChoosen[team]) {
       return;
+   }
 
    if (g_mapType & MAP_AS) {
       if (team == TEAM_COUNTER && !m_leaderChoosen[TEAM_COUNTER]) {
@@ -1424,8 +1471,9 @@ void BotManager::selectLeaders (int team, bool reset) {
          if (bot != nullptr && bot->m_notKilled) {
             bot->m_isLeader = true;
 
-            if (rng.getInt (1, 100) < 45)
+            if (rng.getInt (1, 100) < 45) {
                bot->pushRadioMessage (Radio_FollowMe);
+            }
          }
          m_leaderChoosen[TEAM_TERRORIST] = true;
       }
@@ -1441,11 +1489,12 @@ void BotManager::selectLeaders (int team, bool reset) {
 
                // terrorist carrying a bomb needs to have some company
                if (rng.getInt (1, 100) < 80) {
-                  if (yb_communication_type.integer () == 2)
+                  if (yb_communication_type.integer () == 2) {
                      bot->pushChatterMessage (Chatter_GoingToPlantBomb);
-                  else
+                  }
+                  else {
                      bot->pushChatterMessage (Radio_FollowMe);
-
+                  }
                   bot->m_campButtons = 0;
                }
             }
@@ -1456,8 +1505,9 @@ void BotManager::selectLeaders (int team, bool reset) {
          if (auto bot = bots.getHighfragBot (team)) {
             bot->m_isLeader = true;
 
-            if (rng.getInt (1, 100) < 30)
+            if (rng.getInt (1, 100) < 30) {
                bot->pushRadioMessage (Radio_FollowMe);
+            }
          }
          m_leaderChoosen[TEAM_COUNTER] = true;
       }
@@ -1468,9 +1518,9 @@ void BotManager::selectLeaders (int team, bool reset) {
       if (!m_leaderChoosen[team] && bot) {
          bot->m_isLeader = true;
 
-         if (rng.getInt (1, 100) < 30)
+         if (rng.getInt (1, 100) < 30) {
             bot->pushRadioMessage (Radio_FollowMe);
-
+         }
          m_leaderChoosen[team] = true;
       }
    }
@@ -1480,9 +1530,9 @@ void BotManager::selectLeaders (int team, bool reset) {
       if (!m_leaderChoosen[team] && bot) {
          bot->m_isLeader = true;
 
-         if (rng.getInt (1, 100) < (team == TEAM_TERRORIST ? 30 : 40))
+         if (rng.getInt (1, 100) < (team == TEAM_TERRORIST ? 30 : 40)) {
             bot->pushRadioMessage (Radio_FollowMe);
-
+         }
          m_leaderChoosen[team] = true;
       }
    }

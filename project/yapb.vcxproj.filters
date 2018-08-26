@@ -54,9 +54,6 @@
     <ClInclude Include="..\include\engine.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\engine\enginecallback.h">
-      <Filter>include\engine</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\chatlib.cpp">

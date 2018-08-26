@@ -20,56 +20,69 @@ ConVar mp_startmoney ("mp_startmoney", nullptr, VT_NOREGISTER, true, "800");
 
 int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *self) {
    // adding one bot with random parameters to random team
-   if (stricmp (arg0, "addbot") == 0 || stricmp (arg0, "add") == 0)
+   if (stricmp (arg0, "addbot") == 0 || stricmp (arg0, "add") == 0) {
       bots.addbot (arg4, arg1, arg2, arg3, arg5, true);
+   }
 
    // adding one bot with high difficulty parameters to random team
-   else if (stricmp (arg0, "addbot_hs") == 0 || stricmp (arg0, "addhs") == 0)
+   else if (stricmp (arg0, "addbot_hs") == 0 || stricmp (arg0, "addhs") == 0) {
       bots.addbot (arg4, "4", "1", arg3, arg5, true);
+   }
 
    // adding one bot with random parameters to terrorist team
-   else if (stricmp (arg0, "addbot_t") == 0 || stricmp (arg0, "add_t") == 0)
+   else if (stricmp (arg0, "addbot_t") == 0 || stricmp (arg0, "add_t") == 0) {
       bots.addbot (arg4, arg1, arg2, "1", arg5, true);
+   }
 
    // adding one bot with random parameters to counter-terrorist team
-   else if (stricmp (arg0, "addbot_ct") == 0 || stricmp (arg0, "add_ct") == 0)
+   else if (stricmp (arg0, "addbot_ct") == 0 || stricmp (arg0, "add_ct") == 0) {
       bots.addbot (arg4, arg1, arg2, "2", arg5, true);
+   }
 
    // kicking off one bot from the terrorist team
-   else if (stricmp (arg0, "kickbot_t") == 0 || stricmp (arg0, "kick_t") == 0)
+   else if (stricmp (arg0, "kickbot_t") == 0 || stricmp (arg0, "kick_t") == 0) {
       bots.kickFromTeam (TEAM_TERRORIST);
+   }
 
    // kicking off one bot from the counter-terrorist team
-   else if (stricmp (arg0, "kickbot_ct") == 0 || stricmp (arg0, "kick_ct") == 0)
+   else if (stricmp (arg0, "kickbot_ct") == 0 || stricmp (arg0, "kick_ct") == 0) {
       bots.kickFromTeam (TEAM_COUNTER);
+   }
 
    // kills all bots on the terrorist team
-   else if (stricmp (arg0, "killbots_t") == 0 || stricmp (arg0, "kill_t") == 0)
+   else if (stricmp (arg0, "killbots_t") == 0 || stricmp (arg0, "kill_t") == 0) {
       bots.killAllBots (TEAM_TERRORIST);
+   }
 
    // kills all bots on the counter-terrorist team
-   else if (stricmp (arg0, "killbots_ct") == 0 || stricmp (arg0, "kill_ct") == 0)
+   else if (stricmp (arg0, "killbots_ct") == 0 || stricmp (arg0, "kill_ct") == 0) {
       bots.killAllBots (TEAM_COUNTER);
+   }
 
    // list all bots playeing on the server
-   else if (stricmp (arg0, "listbots") == 0 || stricmp (arg0, "list") == 0)
+   else if (stricmp (arg0, "listbots") == 0 || stricmp (arg0, "list") == 0) {
       bots.listBots ();
+   }
 
    // kick off all bots from the played server
-   else if (stricmp (arg0, "kickbots") == 0 || stricmp (arg0, "kickall") == 0)
+   else if (stricmp (arg0, "kickbots") == 0 || stricmp (arg0, "kickall") == 0) {
       bots.kickEveryone ();
+   }
 
    // kill all bots on the played server
-   else if (stricmp (arg0, "killbots") == 0 || stricmp (arg0, "killall") == 0)
+   else if (stricmp (arg0, "killbots") == 0 || stricmp (arg0, "killall") == 0) {
       bots.killAllBots ();
+   }
 
    // kick off one random bot from the played server
-   else if (stricmp (arg0, "kickone") == 0 || stricmp (arg0, "kick") == 0)
+   else if (stricmp (arg0, "kickone") == 0 || stricmp (arg0, "kick") == 0) {
       bots.kickRandom ();
+   }
 
    // fill played server with bots
-   else if (stricmp (arg0, "fillserver") == 0 || stricmp (arg0, "fill") == 0)
+   else if (stricmp (arg0, "fillserver") == 0 || stricmp (arg0, "fill") == 0) {
       bots.serverFill (atoi (arg1), isEmptyStr (arg2) ? -1 : atoi (arg2), isEmptyStr (arg3) ? -1 : atoi (arg3), isEmptyStr (arg4) ? -1 : atoi (arg4));
+   }
 
    // select the weapon mode for bots
    else if (stricmp (arg0, "weaponmode") == 0 || stricmp (arg0, "wmode") == 0) {
@@ -173,13 +186,15 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    }
 
    // displays main bot menu
-   else if (stricmp (arg0, "botmenu") == 0 || stricmp (arg0, "menu") == 0)
+   else if (stricmp (arg0, "botmenu") == 0 || stricmp (arg0, "menu") == 0) {
       showMenu (ent, BOT_MENU_MAIN);
+   }
 
    // display command menu
    else if (stricmp (arg0, "cmdmenu") == 0 || stricmp (arg0, "cmenu") == 0) {
-      if (isAlive (ent))
+      if (isAlive (ent)) {
          showMenu (ent, BOT_MENU_COMMANDS);
+      }
       else {
          showMenu (ent, BOT_MENU_INVALID); // reset menu display
          engine.centerPrint ("You're dead, and have no access to this menu");
@@ -188,8 +203,9 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
    // waypoint manimupulation (really obsolete, can be edited through menu) (supported only on listen server)
    else if (stricmp (arg0, "waypoint") == 0 || stricmp (arg0, "wp") == 0 || stricmp (arg0, "wpt") == 0) {
-      if (engine.isDedicated () || engine.isNullEntity (g_hostEntity))
+      if (engine.isDedicated () || engine.isNullEntity (g_hostEntity)) {
          return 2;
+      }
 
       // enables or disable waypoint displaying
       if (stricmp (arg1, "on") == 0) {
@@ -226,33 +242,45 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
       // toggles displaying player models on spawn spots
       else if (stricmp (arg1, "mdl") == 0 || stricmp (arg1, "models") == 0) {
-         edict_t *spawnEntity = nullptr;
+
+         auto toggleDraw = [] (bool draw, const String &stuff) {
+            edict_t *ent = nullptr;
+
+            while (!engine.isNullEntity (ent = g_engfuncs.pfnFindEntityByString (ent, "classname", stuff.chars ()))) {
+               if (draw) {
+                  ent->v.effects &= ~EF_NODRAW;
+               }
+               else {
+                  ent->v.effects |= EF_NODRAW;
+               }
+            }
+         };
+         StringArray entities;
+
+         entities.push ("info_player_start");
+         entities.push ("info_player_deathmatch");
+         entities.push ("info_vip_start");
 
          if (stricmp (arg2, "on") == 0) {
-            while (!engine.isNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
-               spawnEntity->v.effects &= ~EF_NODRAW;
-            while (!engine.isNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_deathmatch")))
-               spawnEntity->v.effects &= ~EF_NODRAW;
-            while (!engine.isNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_vip_start")))
-               spawnEntity->v.effects &= ~EF_NODRAW;
+            for (auto &type : entities) {
+               toggleDraw (true, type);
+            }
 
             engine.execCmd ("mp_roundtime 9"); // reset round time to maximum
             engine.execCmd ("mp_timelimit 0"); // disable the time limit
             engine.execCmd ("mp_freezetime 0"); // disable freezetime
          }
          else if (stricmp (arg2, "off") == 0) {
-            while (!engine.isNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_start")))
-               spawnEntity->v.effects |= EF_NODRAW;
-            while (!engine.isNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_player_deathmatch")))
-               spawnEntity->v.effects |= EF_NODRAW;
-            while (!engine.isNullEntity (spawnEntity = FIND_ENTITY_BY_CLASSNAME (spawnEntity, "info_vip_start")))
-               spawnEntity->v.effects |= EF_NODRAW;
+            for (auto &type : entities) {
+               toggleDraw (false, type);
+            }
          }
       }
 
       // show direction to specified waypoint
-      else if (stricmp (arg1, "find") == 0)
+      else if (stricmp (arg1, "find") == 0) {
          waypoints.setSearchIndex (atoi (arg2));
+      }
 
       // opens adding waypoint menu
       else if (stricmp (arg1, "add") == 0) {
@@ -276,7 +304,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       else if (stricmp (arg1, "save") == 0) {
          char *waypointSaveMessage = engine.translate ("Waypoints Saved");
 
-         if (FStrEq (arg2, "nocheck")) {
+         if (strcmp (arg2, "nocheck") == 0) {
             waypoints.save ();
             engine.print (waypointSaveMessage);
          }
@@ -287,8 +315,9 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       }
 
       // remove waypoint and all corresponding files from hard disk
-      else if (stricmp (arg1, "erase") == 0)
+      else if (stricmp (arg1, "erase") == 0) {
          waypoints.eraseFromDisk ();
+      }
 
       // load all waypoints again (overrides all changes, that wasn't saved)
       else if (stricmp (arg1, "load") == 0) {
@@ -303,75 +332,88 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       }
 
       // opens menu for setting (removing) waypoint flags
-      else if (stricmp (arg1, "flags") == 0)
+      else if (stricmp (arg1, "flags") == 0) {
          showMenu (g_hostEntity, BOT_MENU_WAYPOINT_FLAG);
+      }
 
       // setting waypoint radius
-      else if (stricmp (arg1, "setradius") == 0)
+      else if (stricmp (arg1, "setradius") == 0) {
          waypoints.setRadius (atoi (arg2));
+      }
 
       // remembers nearest waypoint
-      else if (stricmp (arg1, "cache") == 0)
+      else if (stricmp (arg1, "cache") == 0) {
          waypoints.cachePoint ();
+      }
 
       // teleport player to specified waypoint
       else if (stricmp (arg1, "teleport") == 0) {
          int teleportPoint = atoi (arg2);
 
          if (teleportPoint < g_numWaypoints) {
-            Path *path = waypoints.getPath (teleportPoint);
+            Path &path = waypoints[teleportPoint];
 
-            (*g_engfuncs.pfnSetOrigin) (g_hostEntity, path->origin);
+            g_engfuncs.pfnSetOrigin (g_hostEntity, path.origin);
             g_waypointOn = true;
 
-            engine.print ("Player '%s' teleported to waypoint #%d (x:%.1f, y:%.1f, z:%.1f)", STRING (g_hostEntity->v.netname), teleportPoint, path->origin.x, path->origin.y, path->origin.z); //-V807
+            engine.print ("Player '%s' teleported to waypoint #%d (x:%.1f, y:%.1f, z:%.1f)", STRING (g_hostEntity->v.netname), teleportPoint, path.origin.x, path.origin.y, path.origin.z); //-V807
             g_editNoclip = true;
          }
       }
 
       // displays waypoint menu
-      else if (stricmp (arg1, "menu") == 0)
+      else if (stricmp (arg1, "menu") == 0) {
          showMenu (g_hostEntity, BOT_MENU_WAYPOINT_MAIN_PAGE1);
+      }
 
       // otherwise display waypoint current status
-      else
+      else {
          engine.print ("Waypoints are %s", g_waypointOn == true ? "Enabled" : "Disabled");
+      }
    }
 
    // path waypoint editing system (supported only on listen server)
    else if (stricmp (arg0, "pathwaypoint") == 0 || stricmp (arg0, "path") == 0 || stricmp (arg0, "pwp") == 0) {
-      if (engine.isDedicated () || engine.isNullEntity (g_hostEntity))
+      if (engine.isDedicated () || engine.isNullEntity (g_hostEntity)) {
          return 2;
+      }
 
       // opens path creation menu
-      if (stricmp (arg1, "create") == 0)
+      if (stricmp (arg1, "create") == 0) {
          showMenu (g_hostEntity, BOT_MENU_WAYPOINT_PATH);
+      }
 
       // creates incoming path from the cached waypoint
-      else if (stricmp (arg1, "create_in") == 0)
+      else if (stricmp (arg1, "create_in") == 0) {
          waypoints.pathCreate (CONNECTION_INCOMING);
+      }
 
       // creates outgoing path from current waypoint
-      else if (stricmp (arg1, "create_out") == 0)
+      else if (stricmp (arg1, "create_out") == 0) {
          waypoints.pathCreate (CONNECTION_OUTGOING);
+      }
 
       // creates bidirectional path from cahed to current waypoint
-      else if (stricmp (arg1, "create_both") == 0)
+      else if (stricmp (arg1, "create_both") == 0) {
          waypoints.pathCreate (CONNECTION_BOTHWAYS);
+      }
 
       // delete special path
-      else if (stricmp (arg1, "delete") == 0)
+      else if (stricmp (arg1, "delete") == 0) {
          waypoints.erasePath ();
+      }
 
       // sets auto path maximum distance
-      else if (stricmp (arg1, "autodistance") == 0)
+      else if (stricmp (arg1, "autodistance") == 0) {
          showMenu (g_hostEntity, BOT_MENU_WAYPOINT_AUTOPATH);
+      }
    }
 
    // automatic waypoint handling (supported only on listen server)
    else if (stricmp (arg0, "autowaypoint") == 0 || stricmp (arg0, "autowp") == 0) {
-      if (engine.isDedicated () || engine.isNullEntity (g_hostEntity))
+      if (engine.isDedicated () || engine.isNullEntity (g_hostEntity)) {
          return 2;
+      }
 
       // enable autowaypointing
       if (stricmp (arg1, "on") == 0) {
@@ -380,8 +422,9 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       }
 
       // disable autowaypointing
-      else if (stricmp (arg1, "off") == 0)
+      else if (stricmp (arg1, "off") == 0) {
          g_autoWaypoint = false;
+      }
 
       // display status
       engine.print ("Auto-Waypoint %s", g_autoWaypoint ? "Enabled" : "Disabled");
@@ -389,8 +432,9 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
    // experience system handling (supported only on listen server)
    else if (stricmp (arg0, "experience") == 0 || stricmp (arg0, "exp") == 0) {
-      if (engine.isDedicated () || engine.isNullEntity (g_hostEntity))
+      if (engine.isDedicated () || engine.isNullEntity (g_hostEntity)) {
          return 2;
+      }
 
       // write experience table (and visibility table) to hard disk
       if (stricmp (arg1, "save") == 0) {
@@ -400,9 +444,9 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
          engine.print ("Experience tab saved");
       }
    }
-   else
+   else {
       return 0; // command is not handled by bot
-
+   }
    return 1; // command was handled by bot
 }
 
@@ -430,19 +474,20 @@ void processBotConfigs (bool onlyMain) {
 
       auto needsToIgnoreVar = [](StringArray &list, const char *needle) {
          for (auto &var : list) {
-            if (var == needle)
+            if (var == needle) {
                return true;
+            }
          }
          return false;
       };
 
       if (openConfig ("yapb.cfg", "YaPB main config file is not found.", &fp, false)) {
          while (fp.gets (lineBuffer, 255)) {
-            if (isCommentLine (lineBuffer))
+            if (isCommentLine (lineBuffer)) {
                continue;
-
+            }
             if (firstLoad) {
-               g_engfuncs.pfnServerCommand (lineBuffer);
+               engine.execCmd (lineBuffer);
                continue;
             }
             auto keyval = String (lineBuffer).split (" ");
@@ -463,8 +508,9 @@ void processBotConfigs (bool onlyMain) {
                         // ensure cvar will have old value
                         g_engfuncs.pfnCvar_DirectSet (cvar, cvar->string);
                      }
-                     else
+                     else {
                         g_engfuncs.pfnCvar_DirectSet (cvar, value);
+                     }
                   }
                }
                else
@@ -487,13 +533,14 @@ void processBotConfigs (bool onlyMain) {
       g_botNames.clear ();
 
       while (fp.gets (lineBuffer, 255)) {
-         if (isCommentLine (lineBuffer))
+         if (isCommentLine (lineBuffer)) {
             continue;
-
+         }
          StringArray pair = String (lineBuffer).split ("\t\t");
 
-         if (pair.length () > 1)
+         if (pair.length () > 1) {
             strncpy (lineBuffer, pair[0].trim ().chars (), A_bufsize (lineBuffer));
+         }
 
          String::trimChars (lineBuffer);
          lineBuffer[32] = 0;
@@ -502,9 +549,9 @@ void processBotConfigs (bool onlyMain) {
          item.name = lineBuffer;
          item.usedBy = 0;
 
-         if (pair.length () > 1)
+         if (pair.length () > 1) {
             item.steamId = pair[1].trim ();
-
+         }
          g_botNames.push (item);
       }
       fp.close ();
@@ -516,9 +563,9 @@ void processBotConfigs (bool onlyMain) {
       int chatType = -1;
 
       while (fp.gets (lineBuffer, 255)) {
-         if (isCommentLine (lineBuffer))
+         if (isCommentLine (lineBuffer)) {
             continue;
-
+         }
          String::trimChars (lineBuffer);
          strncpy (section, lineBuffer, A_bufsize (section));
 
@@ -555,8 +602,9 @@ void processBotConfigs (bool onlyMain) {
             continue;
          }
 
-         if (chatType != 3)
+         if (chatType != 3) {
             lineBuffer[79] = 0;
+         }
 
          switch (chatType) {
          case 0:
@@ -581,12 +629,13 @@ void processBotConfigs (bool onlyMain) {
                replies.keywords.clear ();
                replies.keywords = String (&lineBuffer[4]).split (",");
 
-               for (auto &keywords : replies.keywords)
+               for (auto &keywords : replies.keywords) {
                   keywords.trim ().trim ("\"");
+               }
             }
-            else if (!replies.keywords.empty ())
+            else if (!replies.keywords.empty ()) {
                replies.replies.push (lineBuffer);
-
+            }
             break;
 
          case 4:
@@ -616,67 +665,82 @@ void processBotConfigs (bool onlyMain) {
    // GENERAL DATA INITIALIZATION
    if (openConfig ("general.cfg", "General configuration file not found. Loading defaults", &fp)) {
       while (fp.gets (lineBuffer, 255)) {
-         if (isCommentLine (lineBuffer))
+         if (isCommentLine (lineBuffer)) {
             continue;
-
+         }
          auto pair = String (lineBuffer).split ("=");
 
-         if (pair.length () != 2)
+         if (pair.length () != 2) {
             continue;
+         }
 
-         for (auto &trim : pair)
+         for (auto &trim : pair) {
             trim.trim ();
-
+         }
          auto splitted = pair[1].split (",");
 
          if (pair[0] == "MapStandard") {
-            if (splitted.length () != NUM_WEAPONS)
+            if (splitted.length () != NUM_WEAPONS) {
                logEntry (true, LL_FATAL, "%s entry in general config is not valid.", pair[0].chars ());
+            }
 
-            for (int i = 0; i < NUM_WEAPONS; i++)
+            for (int i = 0; i < NUM_WEAPONS; i++) {
                g_weaponSelect[i].teamStandard = splitted[i].toInt32 ();
+            }
          }
          else if (pair[0] == "MapAS") {
-            if (splitted.length () != NUM_WEAPONS)
+            if (splitted.length () != NUM_WEAPONS) {
                logEntry (true, LL_FATAL, "%s entry in general config is not valid.", pair[0].chars ());
+            }
 
-            for (int i = 0; i < NUM_WEAPONS; i++)
+            for (int i = 0; i < NUM_WEAPONS; i++) {
                g_weaponSelect[i].teamAS = splitted[i].toInt32 ();
+            }
          }
          else if (pair[0] == "GrenadePercent") {
-            if (splitted.length () != 3)
+            if (splitted.length () != 3) {
                logEntry (true, LL_FATAL, "%s entry in general config is not valid.", pair[0].chars ());
+            }
 
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 3; i++) {
                g_grenadeBuyPrecent[i] = splitted[i].toInt32 ();
+            }
          }
          else if (pair[0] == "Economics") {
-            if (splitted.length () != 11)
+            if (splitted.length () != 11) {
                logEntry (true, LL_FATAL, "%s entry in general config is not valid.", pair[0].chars ());
+            }
 
-            for (int i = 0; i < 11; i++)
+            for (int i = 0; i < 11; i++) {
                g_botBuyEconomyTable[i] = splitted[i].toInt32 ();
+            }
          }
          else if (pair[0] == "PersonalityNormal") {
-            if (splitted.length () != NUM_WEAPONS)
+            if (splitted.length () != NUM_WEAPONS) {
                logEntry (true, LL_FATAL, "%s entry in general config is not valid.", pair[0].chars ());
+            }
 
-            for (int i = 0; i < NUM_WEAPONS; i++)
+            for (int i = 0; i < NUM_WEAPONS; i++) {
                g_normalWeaponPrefs[i] = splitted[i].toInt32 ();
+            }
          }
          else if (pair[0] == "PersonalityRusher") {
-            if (splitted.length () != NUM_WEAPONS)
+            if (splitted.length () != NUM_WEAPONS) {
                logEntry (true, LL_FATAL, "%s entry in general config is not valid.", pair[0].chars ());
+            }
 
-            for (int i = 0; i < NUM_WEAPONS; i++)
+            for (int i = 0; i < NUM_WEAPONS; i++) {
                g_rusherWeaponPrefs[i] = splitted[i].toInt32 ();
+            }
          }
          else if (pair[0] == "PersonalityCareful") {
-            if (splitted.length () != NUM_WEAPONS)
+            if (splitted.length () != NUM_WEAPONS) {
                logEntry (true, LL_FATAL, "%s entry in general config is not valid.", pair[0].chars ());
+            }
 
-            for (int i = 0; i < NUM_WEAPONS; i++)
+            for (int i = 0; i < NUM_WEAPONS; i++) {
                g_carefulWeaponPrefs[i] = splitted[i].toInt32 ();
+            }
          }
       }
       fp.close ();
@@ -686,8 +750,7 @@ void processBotConfigs (bool onlyMain) {
    if ((g_gameFlags & GAME_SUPPORT_BOT_VOICE) && yb_communication_type.integer () == 2 && openConfig ("chatter.cfg", "Couldn't open chatter system configuration", &fp)) {
       const float ChatterInfinity = MAX_CHATTER_REPEAT;
 
-      struct EventMap
-      {
+      struct EventMap {
          const char *str;
          int code;
          float repeat;
@@ -767,8 +830,9 @@ void processBotConfigs (bool onlyMain) {
       };
 
       while (fp.gets (lineBuffer, 511)) {
-         if (isCommentLine (lineBuffer))
+         if (isCommentLine (lineBuffer)) {
             continue;
+         }
 
          if (strncmp (lineBuffer, "RewritePath", 11) == 0) {
             extern ConVar yb_chatter_path;
@@ -782,9 +846,9 @@ void processBotConfigs (bool onlyMain) {
                continue;
             }
 
-            for (auto &item : items)
+            for (auto &item : items) {
                item.trim ();
-
+            }
             items[1].trim ("(;)");
 
             for (int i = 0; i < ARRAYSIZE_HLSDK (chatterEventMap); i++) {
@@ -798,8 +862,9 @@ void processBotConfigs (bool onlyMain) {
                      sound.trim ().trim ("\"");
                      float duration = engine.getWaveLen (sound.chars ());
 
-                     if (duration > 0.0f)
-                        g_chatterFactory[event->code].push ({sound, event->repeat, duration});
+                     if (duration > 0.0f) {
+                        g_chatterFactory[event->code].push ({ sound, event->repeat, duration });
+                     }
                   }
                   sounds.clear ();
                }
@@ -815,17 +880,18 @@ void processBotConfigs (bool onlyMain) {
 
    // LOCALIZER INITITALIZATION
    if (!(g_gameFlags & GAME_LEGACY) && openConfig ("lang.cfg", "Specified language not found", &fp, true)) {
-      if (engine.isDedicated ())
+      if (engine.isDedicated ()) {
          return; // dedicated server will use only english translation
-
+      }
       enum Lang { LANG_ORIGINAL, LANG_TRANSLATED, LANG_UNDEFINED } langState = static_cast<Lang> (LANG_UNDEFINED);
 
       char buffer[1024] = { 0, };
       Pair<String, String> lang;
 
       while (fp.gets (lineBuffer, 255)) {
-         if (isCommentLine (lineBuffer))
+         if (isCommentLine (lineBuffer)) {
             continue;
+         }
 
          if (strncmp (lineBuffer, "[ORIGINAL]", 10) == 0) {
             langState = LANG_ORIGINAL;
@@ -837,8 +903,9 @@ void processBotConfigs (bool onlyMain) {
                buffer[0] = 0;
             }
 
-            if (!lang.second.empty () && !lang.first.empty ())
-               engine.addTranslation (lang);
+            if (!lang.second.empty () && !lang.first.empty ()) {
+               engine.addTranslation (lang.first, lang.second);
+            }
          }
          else if (strncmp (lineBuffer, "[TRANSLATED]", 12) == 0) {
 
@@ -865,10 +932,12 @@ void processBotConfigs (bool onlyMain) {
       }
       fp.close ();
    }
-   else if (g_gameFlags & GAME_LEGACY)
+   else if (g_gameFlags & GAME_LEGACY) {
       logEntry (true, LL_DEFAULT, "Multilingual system disabled, due to your Counter-Strike Version!");
-   else if (strcmp (yb_language.str (), "en") != 0)
+   }
+   else if (strcmp (yb_language.str (), "en") != 0) {
       logEntry (true, LL_ERROR, "Couldn't load language configuration");
+   }
 
    // set personality weapon pointers here
    g_weaponPrefs[PERSONALITY_NORMAL] = reinterpret_cast<int *> (&g_normalWeaponPrefs);
@@ -888,8 +957,9 @@ void GameDLLInit (void) {
    // to register by the engine side the server commands we need to administrate our bots.
 
    auto commandHandler = [](void) {
-      if (BotCommandHandler (g_hostEntity, isEmptyStr (CMD_ARGV (1)) ? "help" : CMD_ARGV (1), CMD_ARGV (2), CMD_ARGV (3), CMD_ARGV (4), CMD_ARGV (5), CMD_ARGV (6), CMD_ARGV (0)) == 0)
-         engine.print ("Unknown command: %s", CMD_ARGV (1));
+      if (BotCommandHandler (g_hostEntity, isEmptyStr (g_engfuncs.pfnCmd_Argv (1)) ? "help" : g_engfuncs.pfnCmd_Argv (1), g_engfuncs.pfnCmd_Argv (2), g_engfuncs.pfnCmd_Argv (3), g_engfuncs.pfnCmd_Argv (4), g_engfuncs.pfnCmd_Argv (5), g_engfuncs.pfnCmd_Argv (6), g_engfuncs.pfnCmd_Argv (0)) == 0) {
+         engine.print ("Unknown command: %s", g_engfuncs.pfnCmd_Argv (1));
+      }
    };
 
    // register server command(s)
@@ -907,10 +977,10 @@ void GameDLLInit (void) {
       engine.registerCmd ("meta", [](void) { engine.print ("You're launched standalone version of yapb. Metamod is not installed or not enabled!"); });
    }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
-   (*g_functionTable.pfnGameInit) ();
+   }
+   g_functionTable.pfnGameInit ();
 }
 
 void Touch (edict_t *pentTouched, edict_t *pentOther) {
@@ -929,16 +999,19 @@ void Touch (edict_t *pentTouched, edict_t *pentOther) {
       Bot *bot = bots.getBot (pentOther);
 
       if (bot != nullptr) {
-         if (isPlayer (pentTouched))
+         if (isPlayer (pentTouched)) {
             bot->avoidIncomingPlayers (pentTouched);
-         else
+         }
+         else {
             bot->processBreakables (pentTouched);
+         }
       }
    }
-   if (g_gameFlags & GAME_METAMOD)
-      RETURN_META (MRES_IGNORED);
 
-   (*g_functionTable.pfnTouch) (pentTouched, pentOther);
+   if (g_gameFlags & GAME_METAMOD) {
+      RETURN_META (MRES_IGNORED);
+   }
+   g_functionTable.pfnTouch (pentTouched, pentOther);
 }
 
 int Spawn (edict_t *ent) {
@@ -954,41 +1027,43 @@ int Spawn (edict_t *ent) {
       engine.precacheStuff (ent);
       engine.pushRegStackToEngine (true);
 
-      PRECACHE_SOUND (ENGINE_STR ("weapons/xbow_hit1.wav")); // waypoint add
-      PRECACHE_SOUND (ENGINE_STR ("weapons/mine_activate.wav")); // waypoint delete
-      PRECACHE_SOUND (ENGINE_STR ("common/wpn_hudoff.wav")); // path add/delete start
-      PRECACHE_SOUND (ENGINE_STR ("common/wpn_hudon.wav")); // path add/delete done
-      PRECACHE_SOUND (ENGINE_STR ("common/wpn_moveselect.wav")); // path add/delete cancel
-      PRECACHE_SOUND (ENGINE_STR ("common/wpn_denyselect.wav")); // path add/delete error
+      g_engfuncs.pfnPrecacheSound (ENGINE_STR ("weapons/xbow_hit1.wav")); // waypoint add
+      g_engfuncs.pfnPrecacheSound (ENGINE_STR ("weapons/mine_activate.wav")); // waypoint delete
+      g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_hudoff.wav")); // path add/delete start
+      g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_hudon.wav")); // path add/delete done
+      g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_moveselect.wav")); // path add/delete cancel
+      g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_denyselect.wav")); // path add/delete error
 
       initRound ();
       g_mapType = 0; // reset map type as worldspawn is the first entity spawned
 
       // detect official csbots here, as they causing crash in linkent code when active for some reason
-      if (!(g_gameFlags & GAME_LEGACY) && g_engfuncs.pfnCVarGetPointer ("bot_stop") != nullptr)
+      if (!(g_gameFlags & GAME_LEGACY) && g_engfuncs.pfnCVarGetPointer ("bot_stop") != nullptr) {
          g_gameFlags |= GAME_OFFICIAL_CSBOT;
+      }
    }
    else if (strcmp (entityClassname, "player_weaponstrip") == 0) {
-      if ((g_gameFlags & GAME_LEGACY) && (STRING (ent->v.target))[0] == '0')
-         ent->v.target = ent->v.targetname = ALLOC_STRING ("fake");
+      if ((g_gameFlags & GAME_LEGACY) && (STRING (ent->v.target))[0] == '0') {
+         ent->v.target = ent->v.targetname = g_engfuncs.pfnAllocString ("fake");
+      }
       else {
-         REMOVE_ENTITY (ent);
+         g_engfuncs.pfnRemoveEntity (ent);
 
-         if (g_gameFlags & GAME_METAMOD)
+         if (g_gameFlags & GAME_METAMOD) {
             RETURN_META_VALUE (MRES_SUPERCEDE, 0);
-
+         }
          return 0;
       }
    }
    else if (strcmp (entityClassname, "info_player_start") == 0) {
-      SET_MODEL (ent, ENGINE_STR ("models/player/urban/urban.mdl"));
+      g_engfuncs.pfnSetModel (ent, ENGINE_STR ("models/player/urban/urban.mdl"));
 
       ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
       ent->v.renderamt = 127; // set its transparency amount
       ent->v.effects |= EF_NODRAW;
    }
    else if (strcmp (entityClassname, "info_player_deathmatch") == 0) {
-      SET_MODEL (ent, ENGINE_STR ("models/player/terror/terror.mdl"));
+      g_engfuncs.pfnSetModel (ent, ENGINE_STR ("models/player/terror/terror.mdl"));
 
       ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
       ent->v.renderamt = 127; // set its transparency amount
@@ -996,51 +1071,55 @@ int Spawn (edict_t *ent) {
    }
 
    else if (strcmp (entityClassname, "info_vip_start") == 0) {
-      SET_MODEL (ent, ENGINE_STR ("models/player/vip/vip.mdl"));
+      g_engfuncs.pfnSetModel (ent, ENGINE_STR ("models/player/vip/vip.mdl"));
 
       ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
       ent->v.renderamt = 127; // set its transparency amount
       ent->v.effects |= EF_NODRAW;
    }
-   else if (strcmp (entityClassname, "func_vip_safetyzone") == 0 || strcmp (entityClassname, "info_vip_safetyzone") == 0)
+   else if (strcmp (entityClassname, "func_vip_safetyzone") == 0 || strcmp (entityClassname, "info_vip_safetyzone") == 0) {
       g_mapType |= MAP_AS; // assassination map
-
-   else if (strcmp (entityClassname, "hostage_entity") == 0)
+   }
+   else if (strcmp (entityClassname, "hostage_entity") == 0) {
       g_mapType |= MAP_CS; // rescue map
-
-   else if (strcmp (entityClassname, "func_bomb_target") == 0 || strcmp (entityClassname, "info_bomb_target") == 0)
+   }
+   else if (strcmp (entityClassname, "func_bomb_target") == 0 || strcmp (entityClassname, "info_bomb_target") == 0) {
       g_mapType |= MAP_DE; // defusion map
-
-   else if (strcmp (entityClassname, "func_escapezone") == 0)
+   }
+   else if (strcmp (entityClassname, "func_escapezone") == 0) {
       g_mapType |= MAP_ES;
+   }
 
    // next maps doesn't have map-specific entities, so determine it by name
-   else if (strncmp (engine.getMapName (), "fy_", 3) == 0) // fun map
+   else if (strncmp (engine.getMapName (), "fy_", 3) == 0) {
       g_mapType |= MAP_FY;
-   else if (strncmp (engine.getMapName (), "ka_", 3) == 0) // knife arena map
+   }
+   else if (strncmp (engine.getMapName (), "ka_", 3) == 0) {
       g_mapType |= MAP_KA;
+   }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META_VALUE (MRES_IGNORED, 0);
+   }
+   int result = g_functionTable.pfnSpawn (ent); // get result
 
-   int result = (*g_functionTable.pfnSpawn) (ent); // get result
-
-   if (ent->v.rendermode == kRenderTransTexture)
+   if (ent->v.rendermode == kRenderTransTexture) {
       ent->v.flags &= ~FL_WORLDBRUSH; // clear the FL_WORLDBRUSH flag out of transparent ents
-
+   }
    return result;
 }
 
 void UpdateClientData (const struct edict_s *ent, int sendweapons, struct clientdata_s *cd) {
    extern ConVar yb_latency_display;
 
-   if ((g_gameFlags & GAME_SUPPORT_SVC_PINGS) && yb_latency_display.integer () == 2)
+   if ((g_gameFlags & GAME_SUPPORT_SVC_PINGS) && yb_latency_display.integer () == 2) {
       bots.sendPingOffsets (const_cast<edict_t *> (ent));
+   }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
-   (*g_functionTable.pfnUpdateClientData) (ent, sendweapons, cd);
+   }
+   g_functionTable.pfnUpdateClientData (ent, sendweapons, cd);
 }
 
 int ClientConnect (edict_t *ent, const char *name, const char *addr, char rejectReason[128]) {
@@ -1065,13 +1144,14 @@ int ClientConnect (edict_t *ent, const char *name, const char *addr, char reject
    // the server for incoming clients.
 
    // check if this client is the listen server client
-   if (strcmp (addr, "loopback") == 0)
+   if (strcmp (addr, "loopback") == 0) {
       g_hostEntity = ent; // save the edict of the listen server client...
+   }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META_VALUE (MRES_IGNORED, 0);
-
-   return (*g_functionTable.pfnClientConnect) (ent, name, addr, rejectReason);
+   }
+   return g_functionTable.pfnClientConnect (ent, name, addr, rejectReason);
 }
 
 void ClientDisconnect (edict_t *ent) {
@@ -1097,10 +1177,10 @@ void ClientDisconnect (edict_t *ent) {
       bots.destroy (index);
    }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
-   (*g_functionTable.pfnClientDisconnect) (ent);
+   }
+   g_functionTable.pfnClientDisconnect (ent);
 }
 
 void ClientUserInfoChanged (edict_t *ent, char *infobuffer) {
@@ -1116,17 +1196,19 @@ void ClientUserInfoChanged (edict_t *ent, char *infobuffer) {
       if (!isEmptyStr (passwordField) || !isEmptyStr (password)) {
          int clientIndex = engine.indexOfEntity (ent) - 1;
 
-         if (strcmp (password, INFOKEY_VALUE (infobuffer, const_cast<char *> (passwordField))) == 0)
+         if (strcmp (password, g_engfuncs.pfnInfoKeyValue (infobuffer, const_cast<char *> (passwordField))) == 0) {
             g_clients[clientIndex].flags |= CF_ADMIN;
-         else
+         }
+         else {
             g_clients[clientIndex].flags &= ~CF_ADMIN;
+         }
       }
    }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
-   (*g_functionTable.pfnClientUserInfoChanged) (ent, infobuffer);
+   }
+   g_functionTable.pfnClientUserInfoChanged (ent, infobuffer);
 }
 
 void ClientCommand (edict_t *ent) {
@@ -1143,8 +1225,8 @@ void ClientCommand (edict_t *ent) {
    // so as this is just a bot DLL, not a MOD. The purpose is not to add functionality to
    // clients. Hence it can lack of commenting a bit, since this code is very subject to change.
 
-   const char *command = CMD_ARGV (0);
-   const char *arg1 = CMD_ARGV (1);
+   const char *command = g_engfuncs.pfnCmd_Argv (0);
+   const char *arg1 = g_engfuncs.pfnCmd_Argv (1);
 
    static int fillServerTeam = 5;
    static bool fillCommand = false;
@@ -1153,7 +1235,7 @@ void ClientCommand (edict_t *ent) {
 
    if (!engine.isBotCmd () && (ent == g_hostEntity || (g_clients[issuerPlayerIndex].flags & CF_ADMIN))) {
       if (stricmp (command, "yapb") == 0 || stricmp (command, "yb") == 0) {
-         int state = BotCommandHandler (ent, isEmptyStr (arg1) ? "help" : arg1, CMD_ARGV (2), CMD_ARGV (3), CMD_ARGV (4), CMD_ARGV (5), CMD_ARGV (6), CMD_ARGV (0));
+         int state = BotCommandHandler (ent, isEmptyStr (arg1) ? "help" : arg1, g_engfuncs.pfnCmd_Argv (2), g_engfuncs.pfnCmd_Argv (3), g_engfuncs.pfnCmd_Argv (4), g_engfuncs.pfnCmd_Argv (5), g_engfuncs.pfnCmd_Argv (6), g_engfuncs.pfnCmd_Argv (0));
 
          switch (state) {
          case 0:
@@ -1164,9 +1246,10 @@ void ClientCommand (edict_t *ent) {
             engine.clientPrint (ent, "Command %s, can only be executed from server console.", arg1);
             break;
          }
-         if (g_gameFlags & GAME_METAMOD)
-            RETURN_META (MRES_SUPERCEDE);
 
+         if (g_gameFlags & GAME_METAMOD) {
+            RETURN_META (MRES_SUPERCEDE);
+         }
          return;
       }
       else if (stricmp (command, "menuselect") == 0 && !isEmptyStr (arg1) && g_clients[issuerPlayerIndex].menu != BOT_MENU_INVALID) {
@@ -1205,9 +1288,10 @@ void ClientCommand (edict_t *ent) {
                showMenu (ent, BOT_MENU_INVALID);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
-               RETURN_META (MRES_SUPERCEDE);
 
+            if (g_gameFlags & GAME_METAMOD) {
+               RETURN_META (MRES_SUPERCEDE);
+            }
             return;
          }
          else if (client->menu == BOT_MENU_WAYPOINT_FLAG) {
@@ -1215,33 +1299,34 @@ void ClientCommand (edict_t *ent) {
 
             switch (selection) {
             case 1:
-               waypoints.toggleRadius (FLAG_NOHOSTAGE);
+               waypoints.toggleFlags (FLAG_NOHOSTAGE);
                showMenu (ent, BOT_MENU_WAYPOINT_FLAG);
                break;
 
             case 2:
-               waypoints.toggleRadius (FLAG_TF_ONLY);
+               waypoints.toggleFlags (FLAG_TF_ONLY);
                showMenu (ent, BOT_MENU_WAYPOINT_FLAG);
                break;
 
             case 3:
-               waypoints.toggleRadius (FLAG_CF_ONLY);
+               waypoints.toggleFlags (FLAG_CF_ONLY);
                showMenu (ent, BOT_MENU_WAYPOINT_FLAG);
                break;
 
             case 4:
-               waypoints.toggleRadius (FLAG_LIFT);
+               waypoints.toggleFlags (FLAG_LIFT);
                showMenu (ent, BOT_MENU_WAYPOINT_FLAG);
                break;
 
             case 5:
-               waypoints.toggleRadius (FLAG_SNIPER);
+               waypoints.toggleFlags (FLAG_SNIPER);
                showMenu (ent, BOT_MENU_WAYPOINT_FLAG);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
-               RETURN_META (MRES_SUPERCEDE);
 
+            if (g_gameFlags & GAME_METAMOD) {
+               RETURN_META (MRES_SUPERCEDE);
+            }
             return;
          }
          else if (client->menu == BOT_MENU_WAYPOINT_MAIN_PAGE1) {
@@ -1306,9 +1391,10 @@ void ClientCommand (edict_t *ent) {
                showMenu (ent, BOT_MENU_INVALID);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
-               RETURN_META (MRES_SUPERCEDE);
 
+            if (g_gameFlags & GAME_METAMOD) {
+               RETURN_META (MRES_SUPERCEDE);
+            }
             return;
          }
          else if (client->menu == BOT_MENU_WAYPOINT_MAIN_PAGE2) {
@@ -1325,28 +1411,35 @@ void ClientCommand (edict_t *ent) {
                int noHostagePoints = 0;
 
                for (int i = 0; i < g_numWaypoints; i++) {
-                  Path *path = waypoints.getPath (i);
+                  Path &path = waypoints[i];
 
-                  if (path->flags & FLAG_TF_ONLY)
+                  if (path.flags & FLAG_TF_ONLY) {
                      terrPoints++;
+                  }
 
-                  if (path->flags & FLAG_CF_ONLY)
+                  if (path.flags & FLAG_CF_ONLY) {
                      ctPoints++;
+                  }
 
-                  if (path->flags & FLAG_GOAL)
+                  if (path.flags & FLAG_GOAL) {
                      goalPoints++;
+                  }
 
-                  if (path->flags & FLAG_RESCUE)
+                  if (path.flags & FLAG_RESCUE) {
                      rescuePoints++;
+                  }
 
-                  if (path->flags & FLAG_CAMP)
+                  if (path.flags & FLAG_CAMP) {
                      campPoints++;
+                  }
 
-                  if (path->flags & FLAG_SNIPER)
+                  if (path.flags & FLAG_SNIPER) {
                      sniperPoints++;
+                  }
 
-                  if (path->flags & FLAG_NOHOSTAGE)
+                  if (path.flags & FLAG_NOHOSTAGE) {
                      noHostagePoints++;
+                  }
                }
                engine.print ("Waypoints: %d - T Points: %d\n"
                               "CT Points: %d - Goal Points: %d\n"
@@ -1373,11 +1466,12 @@ void ClientCommand (edict_t *ent) {
                break;
 
             case 4:
-               if (waypoints.isNodesValid ())
+               if (waypoints.isNodesValid ()) {
                   waypoints.save ();
-               else
+               }
+               else {
                   engine.centerPrint ("Waypoint not saved\nThere are errors, see console");
-
+               }
                showMenu (ent, BOT_MENU_WAYPOINT_MAIN_PAGE2);
                break;
 
@@ -1392,11 +1486,12 @@ void ClientCommand (edict_t *ent) {
                break;
 
             case 7:
-               if (waypoints.isNodesValid ())
+               if (waypoints.isNodesValid ()) {
                   engine.centerPrint ("Nodes works fine");
-               else
+               }
+               else {
                   engine.centerPrint ("There are errors, see console");
-
+               }
                showMenu (ent, BOT_MENU_WAYPOINT_MAIN_PAGE2);
                break;
 
@@ -1409,9 +1504,10 @@ void ClientCommand (edict_t *ent) {
                showMenu (ent, BOT_MENU_WAYPOINT_MAIN_PAGE1);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
-               RETURN_META (MRES_SUPERCEDE);
 
+            if (g_gameFlags & GAME_METAMOD) {
+               RETURN_META (MRES_SUPERCEDE);
+            }
             return;
          }
          else if (client->menu == BOT_MENU_WAYPOINT_RADIUS) {
@@ -1426,9 +1522,9 @@ void ClientCommand (edict_t *ent) {
                showMenu (ent, BOT_MENU_WAYPOINT_RADIUS);
             }
 
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_gameFlags & GAME_METAMOD) {
                RETURN_META (MRES_SUPERCEDE);
-
+            }
             return;
          }
          else if (client->menu == BOT_MENU_MAIN) {
@@ -1457,9 +1553,10 @@ void ClientCommand (edict_t *ent) {
                showMenu (ent, BOT_MENU_INVALID);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
-               RETURN_META (MRES_SUPERCEDE);
 
+            if (g_gameFlags & GAME_METAMOD) {
+               RETURN_META (MRES_SUPERCEDE);
+            }
             return;
          }
          else if (client->menu == BOT_MENU_CONTROL) {
@@ -1492,9 +1589,10 @@ void ClientCommand (edict_t *ent) {
                showMenu (ent, BOT_MENU_INVALID);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
-               RETURN_META (MRES_SUPERCEDE);
 
+            if (g_gameFlags & GAME_METAMOD) {
+               RETURN_META (MRES_SUPERCEDE);
+            }
             return;
          }
          else if (client->menu == BOT_MENU_FEATURES) {
@@ -1521,8 +1619,9 @@ void ClientCommand (edict_t *ent) {
                break;
 
             case 5:
-               if (isAlive (ent))
+               if (isAlive (ent)) {
                   showMenu (ent, BOT_MENU_COMMANDS);
+               }
                else {
                   showMenu (ent, BOT_MENU_INVALID); // reset menu display
                   engine.centerPrint ("You're dead, and have no access to this menu");
@@ -1533,9 +1632,10 @@ void ClientCommand (edict_t *ent) {
                showMenu (ent, BOT_MENU_INVALID);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
-               RETURN_META (MRES_SUPERCEDE);
 
+            if (g_gameFlags & GAME_METAMOD) {
+               RETURN_META (MRES_SUPERCEDE);
+            }
             return;
          }
          else if (client->menu == BOT_MENU_COMMANDS) {
@@ -1547,10 +1647,12 @@ void ClientCommand (edict_t *ent) {
             case 2:
                if (findNearestPlayer (reinterpret_cast<void **> (&bot), client->ent, 600.0f, true, true, true)) {
                   if (!bot->m_hasC4 && !bot->hasHostage ()) {
-                     if (selection == 1)
-                        bot->StartDoubleJump (client->ent);
-                     else if (selection == 2)
+                     if (selection == 1) {
+                        bot->startDoubleJump (client->ent);
+                     }
+                     else if (selection == 2) {
                         bot->resetDoubleJump ();
+                     }
                   }
                }
                showMenu (ent, BOT_MENU_COMMANDS);
@@ -1558,9 +1660,9 @@ void ClientCommand (edict_t *ent) {
 
             case 3:
             case 4:
-               if (findNearestPlayer (reinterpret_cast<void **> (&bot), ent, 600.0f, true, true, true, true, selection == 4 ? false : true))
+               if (findNearestPlayer (reinterpret_cast<void **> (&bot), ent, 600.0f, true, true, true, true, selection == 4 ? false : true)) {
                   bot->dropWeaponForUser (ent, selection == 4 ? false : true);
-
+               }
                showMenu (ent, BOT_MENU_COMMANDS);
                break;
 
@@ -1569,9 +1671,9 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_gameFlags & GAME_METAMOD) {
                RETURN_META (MRES_SUPERCEDE);
-
+            }
             return;
          }
          else if (client->menu == BOT_MENU_WAYPOINT_AUTOPATH) {
@@ -1579,19 +1681,21 @@ void ClientCommand (edict_t *ent) {
 
             const float autoDistanceValue[] = {0.0f, 100.0f, 130.0f, 160.0f, 190.0f, 220.0f, 250.0f};
 
-            if (selection >= 1 && selection <= 7)
+            if (selection >= 1 && selection <= 7) {
                g_autoPathDistance = autoDistanceValue[selection - 1];
+            }
 
-            if (g_autoPathDistance == 0.0f)
+            if (g_autoPathDistance == 0.0f) {
                engine.centerPrint ("AutoPath disabled");
-            else
+            }
+            else {
                engine.centerPrint ("AutoPath maximum distance set to %.2f", g_autoPathDistance);
-
+            }
             showMenu (ent, BOT_MENU_WAYPOINT_AUTOPATH);
 
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_gameFlags & GAME_METAMOD) {
                RETURN_META (MRES_SUPERCEDE);
-
+            }
             return;
          }
          else if (client->menu == BOT_MENU_WAYPOINT_PATH) {
@@ -1618,9 +1722,9 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_gameFlags & GAME_METAMOD) {
                RETURN_META (MRES_SUPERCEDE);
-
+            }
             return;
          }
          else if (client->menu == BOT_MENU_DIFFICULTY) {
@@ -1655,9 +1759,9 @@ void ClientCommand (edict_t *ent) {
             }
             showMenu (ent, BOT_MENU_PERSONALITY);
 
-            if (g_gameFlags & GAME_METAMOD)
+            if (g_gameFlags & GAME_METAMOD) {
                RETURN_META (MRES_SUPERCEDE);
-
+            }
             return;
          }
          else if (client->menu == BOT_MENU_TEAM_SELECT && fillCommand) {
@@ -1667,8 +1771,11 @@ void ClientCommand (edict_t *ent) {
             case 1:
             case 2:
                // turn off cvars if specified team
-               CVAR_SET_STRING ("mp_limitteams", "0");
-               CVAR_SET_STRING ("mp_autoteambalance", "0");
+               extern ConVar mp_limitteams;
+               extern ConVar mp_autoteambalance;
+               
+               mp_limitteams.setInteger (0);
+               mp_autoteambalance.setInteger (0);
 
             case 5:
                fillServerTeam = selection;
@@ -1679,9 +1786,10 @@ void ClientCommand (edict_t *ent) {
                showMenu (ent, BOT_MENU_INVALID);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
-               RETURN_META (MRES_SUPERCEDE);
 
+            if (g_gameFlags & GAME_METAMOD) {
+               RETURN_META (MRES_SUPERCEDE);
+            }
             return;
          }
          else if (client->menu == BOT_MENU_PERSONALITY && fillCommand) {
@@ -1698,9 +1806,10 @@ void ClientCommand (edict_t *ent) {
                showMenu (ent, BOT_MENU_INVALID);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
-               RETURN_META (MRES_SUPERCEDE);
 
+            if (g_gameFlags & GAME_METAMOD) {
+               RETURN_META (MRES_SUPERCEDE);
+            }
             return;
          }
          else if (client->menu == BOT_MENU_TEAM_SELECT) {
@@ -1711,15 +1820,18 @@ void ClientCommand (edict_t *ent) {
             case 2:
             case 5:
                g_storeAddbotVars[1] = selection;
+
                if (selection == 5) {
                   g_storeAddbotVars[2] = 5;
                   bots.addbot ("", g_storeAddbotVars[0], g_storeAddbotVars[3], g_storeAddbotVars[1], g_storeAddbotVars[2], true);
                }
                else {
-                  if (selection == 1)
+                  if (selection == 1) {
                      showMenu (ent, BOT_MENU_TERRORIST_SELECT);
-                  else
+                  }
+                  else {
                      showMenu (ent, BOT_MENU_CT_SELECT);
+                  }
                }
                break;
 
@@ -1727,9 +1839,10 @@ void ClientCommand (edict_t *ent) {
                showMenu (ent, BOT_MENU_INVALID);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
-               RETURN_META (MRES_SUPERCEDE);
 
+            if (g_gameFlags & GAME_METAMOD) {
+               RETURN_META (MRES_SUPERCEDE);
+            }
             return;
          }
          else if (client->menu == BOT_MENU_PERSONALITY) {
@@ -1748,9 +1861,10 @@ void ClientCommand (edict_t *ent) {
                showMenu (ent, BOT_MENU_INVALID);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
-               RETURN_META (MRES_SUPERCEDE);
 
+            if (g_gameFlags & GAME_METAMOD) {
+               RETURN_META (MRES_SUPERCEDE);
+            }
             return;
          }
          else if (client->menu == BOT_MENU_TERRORIST_SELECT || client->menu == BOT_MENU_CT_SELECT) {
@@ -1770,9 +1884,10 @@ void ClientCommand (edict_t *ent) {
                showMenu (ent, BOT_MENU_INVALID);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
-               RETURN_META (MRES_SUPERCEDE);
 
+            if (g_gameFlags & GAME_METAMOD) {
+               RETURN_META (MRES_SUPERCEDE);
+            }
             return;
          }
          else if (client->menu == BOT_MENU_WEAPON_MODE) {
@@ -1794,9 +1909,10 @@ void ClientCommand (edict_t *ent) {
                showMenu (ent, BOT_MENU_INVALID);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
-               RETURN_META (MRES_SUPERCEDE);
 
+            if (g_gameFlags & GAME_METAMOD) {
+               RETURN_META (MRES_SUPERCEDE);
+            }
             return;
          }
          else if (client->menu == BOT_MENU_KICK_PAGE_1) {
@@ -1823,9 +1939,10 @@ void ClientCommand (edict_t *ent) {
                showMenu (ent, BOT_MENU_CONTROL);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
-               RETURN_META (MRES_SUPERCEDE);
 
+            if (g_gameFlags & GAME_METAMOD) {
+               RETURN_META (MRES_SUPERCEDE);
+            }
             return;
          }
          else if (client->menu == BOT_MENU_KICK_PAGE_2) {
@@ -1852,9 +1969,10 @@ void ClientCommand (edict_t *ent) {
                bots.kickBotByMenu (ent, 1);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
-               RETURN_META (MRES_SUPERCEDE);
 
+            if (g_gameFlags & GAME_METAMOD) {
+               RETURN_META (MRES_SUPERCEDE);
+            }
             return;
          }
          else if (client->menu == BOT_MENU_KICK_PAGE_3) {
@@ -1881,9 +1999,10 @@ void ClientCommand (edict_t *ent) {
                bots.kickBotByMenu (ent, 2);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
-               RETURN_META (MRES_SUPERCEDE);
 
+            if (g_gameFlags & GAME_METAMOD) {
+               RETURN_META (MRES_SUPERCEDE);
+            }
             return;
          }
          else if (client->menu == BOT_MENU_KICK_PAGE_4) {
@@ -1906,9 +2025,10 @@ void ClientCommand (edict_t *ent) {
                bots.kickBotByMenu (ent, 3);
                break;
             }
-            if (g_gameFlags & GAME_METAMOD)
-               RETURN_META (MRES_SUPERCEDE);
 
+            if (g_gameFlags & GAME_METAMOD) {
+               RETURN_META (MRES_SUPERCEDE);
+            }
             return;
          }
       }
@@ -1917,34 +2037,35 @@ void ClientCommand (edict_t *ent) {
    if (!engine.isBotCmd () && (stricmp (command, "say") == 0 || stricmp (command, "say_team") == 0)) {
       Bot *bot = nullptr;
 
-      if (FStrEq (arg1, "dropme") || FStrEq (arg1, "dropc4")) {
-         if (findNearestPlayer (reinterpret_cast<void **> (&bot), ent, 300.0f, true, true, true))
+      if (strcmp (arg1, "dropme") == 0 || strcmp (arg1, "dropc4") == 0) {
+         if (findNearestPlayer (reinterpret_cast<void **> (&bot), ent, 300.0f, true, true, true)) {
             bot->dropWeaponForUser (ent, isEmptyStr (strstr (arg1, "c4")) ? false : true);
-
+         }
          return;
       }
 
       bool alive = isAlive (ent);
       int team = -1;
 
-      if (FStrEq (command, "say_team"))
+      if (strcmp (command, "say_team") == 0) {
          team = engine.getTeam (ent);
+      }
 
       for (int i = 0; i < engine.maxClients (); i++) {
          const Client &client = g_clients[i];
 
-         if (!(client.flags & CF_USED) || (team != -1 && team != client.team) || alive != isAlive (client.ent))
+         if (!(client.flags & CF_USED) || team != -1 && team != client.team || alive != isAlive (client.ent)) {
             continue;
-
+         }
          Bot *target = bots.getBot (i);
 
          if (target != nullptr) {
             target->m_sayTextBuffer.entityIndex = engine.indexOfEntity (ent);
 
-            if (isEmptyStr (CMD_ARGS ()))
+            if (isEmptyStr (g_engfuncs.pfnCmd_Args ())) {
                continue;
-
-            strncpy (target->m_sayTextBuffer.sayText, CMD_ARGS (), A_bufsize (target->m_sayTextBuffer.sayText));
+            }
+            strncpy (target->m_sayTextBuffer.sayText, g_engfuncs.pfnCmd_Args (), A_bufsize (target->m_sayTextBuffer.sayText));
             target->m_sayTextBuffer.timeNextChat = engine.timebase () + target->m_sayTextBuffer.chatDelay;
          }
       }
@@ -1975,13 +2096,14 @@ void ClientCommand (edict_t *ent) {
       }
       g_radioSelect[clientIndex] = 0;
    }
-   else if (strncmp (command, "radio", 5) == 0)
+   else if (strncmp (command, "radio", 5) == 0) {
       g_radioSelect[clientIndex] = atoi (&command[5]);
+   }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
-   (*g_functionTable.pfnClientCommand) (ent);
+   }
+   g_functionTable.pfnClientCommand (ent);
 }
 
 void ServerActivate (edict_t *pentEdictList, int edictCount, int clientMax) {
@@ -2008,10 +2130,10 @@ void ServerActivate (edict_t *pentEdictList, int edictCount, int clientMax) {
    }
    bots.initQuota ();
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
-   (*g_functionTable.pfnServerActivate) (pentEdictList, edictCount, clientMax);
+   }
+   g_functionTable.pfnServerActivate (pentEdictList, edictCount, clientMax);
 
    waypoints.rebuildVisibility ();
 }
@@ -2036,10 +2158,10 @@ void ServerDeactivate (void) {
 
    cleanupGarbage ();
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
-   (*g_functionTable.pfnServerDeactivate) ();
+   }
+   g_functionTable.pfnServerDeactivate ();
 }
 
 void StartFrame (void) {
@@ -2063,16 +2185,18 @@ void StartFrame (void) {
          client.ent = player;
          client.flags |= CF_USED;
 
-         if (isAlive (player))
+         if (isAlive (player)) {
             client.flags |= CF_ALIVE;
-         else
+         }
+         else {
             client.flags &= ~CF_ALIVE;
+         }
 
          if (client.flags & CF_ALIVE) {
             // keep the clipping mode enabled, or it can be turned off after new round has started
-            if (g_hostEntity == player && g_editNoclip)
+            if (g_hostEntity == player && g_editNoclip) {
                g_hostEntity->v.movetype = MOVETYPE_NOCLIP;
-
+            }
             client.origin = player->v.origin;
             simulateSoundUpdates (i);
          }
@@ -2083,9 +2207,8 @@ void StartFrame (void) {
       }
    }
 
-   if (!engine.isDedicated () && !engine.isNullEntity (g_hostEntity)) {
-      if (g_waypointOn)
-         waypoints.frame ();
+   if (!engine.isDedicated () && !engine.isNullEntity (g_hostEntity) & g_waypointOn) {
+      waypoints.frame ();
    }
    bots.updateDeathMsgState (false);
 
@@ -2100,15 +2223,16 @@ void StartFrame (void) {
             Client &client = g_clients[i];
 
             if (client.flags & CF_ADMIN) {
-               if (isEmptyStr (yb_password_key.str ()) && isEmptyStr (yb_password.str ()))
+               if (isEmptyStr (yb_password_key.str ()) && isEmptyStr (yb_password.str ())) {
                   client.flags &= ~CF_ADMIN;
-               else if (!!strcmp (yb_password.str (), INFOKEY_VALUE (GET_INFOKEYBUFFER (client.ent), const_cast<char *> (yb_password_key.str ())))) {
+               }
+               else if (!!strcmp (yb_password.str (), g_engfuncs.pfnInfoKeyValue (g_engfuncs.pfnGetInfoKeyBuffer (client.ent), const_cast<char *> (yb_password_key.str ())))) {
                   client.flags &= ~CF_ADMIN;
                   engine.print ("Player %s had lost remote access to yapb.", STRING (player->v.netname));
                }
             }
             else if (!(client.flags & CF_ADMIN) && !isEmptyStr (yb_password_key.str ()) && !isEmptyStr (yb_password.str ())) {
-               if (strcmp (yb_password.str (), INFOKEY_VALUE (GET_INFOKEYBUFFER (client.ent), const_cast<char *> (yb_password_key.str ()))) == 0) {
+               if (strcmp (yb_password.str (), g_engfuncs.pfnInfoKeyValue (g_engfuncs.pfnGetInfoKeyBuffer (client.ent), const_cast<char *> (yb_password_key.str ()))) == 0) {
                   client.flags |= CF_ADMIN;
                   engine.print ("Player %s had gained full remote access to yapb.", STRING (player->v.netname));
                }
@@ -2125,13 +2249,16 @@ void StartFrame (void) {
             if (dmActive->value > 0.0f) {
                g_gameFlags |= GAME_CSDM;
 
-               if (freeForAll->value > 0.0f)
+               if (freeForAll->value > 0.0f) {
                   g_gameFlags |= GAME_CSDM_FFA;
-               else if (g_gameFlags & GAME_CSDM_FFA)
+               }
+               else if (g_gameFlags & GAME_CSDM_FFA) {
                   g_gameFlags &= ~GAME_CSDM_FFA;
+               }
             }
-            else if (g_gameFlags & GAME_CSDM)
+            else if (g_gameFlags & GAME_CSDM) {
                g_gameFlags &= ~GAME_CSDM;
+            }
          }
       }
       g_timePerSecondUpdate = engine.timebase () + 1.0f;
@@ -2143,10 +2270,10 @@ void StartFrame (void) {
    // keep bot number up to date
    bots.maintainQuota ();
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
-   (*g_functionTable.pfnStartFrame) ();
+   }
+   g_functionTable.pfnStartFrame ();
 
    // **** AI EXECUTION STARTS ****
    bots.framePeriodic ();
@@ -2175,9 +2302,9 @@ int Spawn_Post (edict_t *ent) {
    // only by metamod.
 
    // solves the bots unable to see through certain types of glass bug.
-   if (ent->v.rendermode == kRenderTransTexture)
+   if (ent->v.rendermode == kRenderTransTexture) {
       ent->v.flags &= ~FL_WORLDBRUSH; // clear the FL_WORLDBRUSH flag out of transparent ents
-
+   }
    RETURN_META_VALUE (MRES_IGNORED, 0);
 }
 
@@ -2209,21 +2336,22 @@ void pfnChangeLevel (char *s1, char *s2) {
    waypoints.saveExperience ();
    waypoints.saveVisibility ();
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
-   CHANGE_LEVEL (s1, s2);
+   }
+   g_engfuncs.pfnChangeLevel (s1, s2);
 }
 
 edict_t *pfnFindEntityByString (edict_t *edictStartSearchAfter, const char *field, const char *value) {
    // round starts in counter-strike 1.5
-   if ((g_gameFlags & GAME_LEGACY) && strcmp (value, "info_map_parameters") == 0)
+   if ((g_gameFlags & GAME_LEGACY) && strcmp (value, "info_map_parameters") == 0) {
       initRound ();
+   }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META_VALUE (MRES_IGNORED, 0);
-
-   return FIND_ENTITY_BY_STRING (edictStartSearchAfter, field, value);
+   }
+   return g_engfuncs.pfnFindEntityByString (edictStartSearchAfter, field, value);
 }
 
 void pfnEmitSound (edict_t *entity, int channel, const char *sample, float volume, float attenuation, int flags, int pitch) {
@@ -2237,12 +2365,12 @@ void pfnEmitSound (edict_t *entity, int channel, const char *sample, float volum
    // SoundAttachToThreat() to bring the sound to the ears of the bots. Since bots have no client DLL
    // to handle this for them, such a job has to be done manually.
 
-   attackSoundsToClients (entity, sample, volume);
+   attachSoundsToClients (entity, sample, volume);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
-   (*g_engfuncs.pfnEmitSound) (entity, channel, sample, volume, attenuation, flags, pitch);
+   }
+   g_engfuncs.pfnEmitSound (entity, channel, sample, volume, attenuation, flags, pitch);
 }
 
 void pfnClientCommand (edict_t *ent, char const *format, ...) {
@@ -2268,19 +2396,20 @@ void pfnClientCommand (edict_t *ent, char const *format, ...) {
    va_end (ap);
 
    if (ent && (ent->v.flags & (FL_FAKECLIENT | FL_DORMANT))) {
-      if (bots.getBot (ent))
+      if (bots.getBot (ent)) {
          engine.execBotCmd (ent, buffer);
+      }
 
-      if (g_gameFlags & GAME_METAMOD)
+      if (g_gameFlags & GAME_METAMOD) {
          RETURN_META (MRES_SUPERCEDE); // prevent bots to be forced to issue client commands
-
+      }
       return;
    }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
-   CLIENT_COMMAND (ent, buffer);
+   }
+   g_engfuncs.pfnClientCommand (ent, buffer);
 }
 
 void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed) {
@@ -2306,14 +2435,15 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
       engine.setMessageId (NETMSG_SENDAUDIO, GET_USER_MSG_ID (PLID, "SendAudio", nullptr));
       engine.setMessageId (NETMSG_SAYTEXT, GET_USER_MSG_ID (PLID, "SayText", nullptr));
 
-      if (g_gameFlags & GAME_SUPPORT_BOT_VOICE)
+      if (g_gameFlags & GAME_SUPPORT_BOT_VOICE) {
          engine.setMessageId (NETMSG_BOTVOICE, GET_USER_MSG_ID (PLID, "BotVoice", nullptr));
+      }
    }
    engine.resetMessages ();
 
-   if ((!(g_gameFlags & GAME_LEGACY) || (g_gameFlags & GAME_XASH_ENGINE)) && msgDest == MSG_SPEC && msgType == engine.getMessageId (NETMSG_HLTV))
+   if ((!(g_gameFlags & GAME_LEGACY) || (g_gameFlags & GAME_XASH_ENGINE)) && msgDest == MSG_SPEC && msgType == engine.getMessageId (NETMSG_HLTV)) {
       engine.setCurrentMessageId (NETMSG_HLTV);
-
+   }
    engine.captureMessage (msgType, NETMSG_WEAPONLIST);
 
    if (!engine.isNullEntity (ed)) {
@@ -2346,24 +2476,25 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
          for (int i = 0; i < engine.maxClients (); i++) {
             Bot *bot = bots.getBot (i);
 
-            if (bot != nullptr)
+            if (bot != nullptr) {
                bot->m_notKilled = false;
+            }
          }
       }
    }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
+   }
    g_engfuncs.pfnMessageBegin (msgDest, msgType, origin, ed);
 }
 
 void pfnMessageEnd (void) {
    engine.resetMessages ();
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
+   }
    g_engfuncs.pfnMessageEnd ();
 
    // send latency fix
@@ -2381,9 +2512,9 @@ void pfnWriteByte (int value) {
    // if this message is for a bot, call the client message function...
    engine.processMessages ((void *)&value);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
+   }
    g_engfuncs.pfnWriteByte (value);
 }
 
@@ -2391,9 +2522,9 @@ void pfnWriteChar (int value) {
    // if this message is for a bot, call the client message function...
    engine.processMessages ((void *)&value);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
+   }
    g_engfuncs.pfnWriteChar (value);
 }
 
@@ -2401,9 +2532,9 @@ void pfnWriteShort (int value) {
    // if this message is for a bot, call the client message function...
    engine.processMessages ((void *)&value);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
+   }
    g_engfuncs.pfnWriteShort (value);
 }
 
@@ -2411,9 +2542,9 @@ void pfnWriteLong (int value) {
    // if this message is for a bot, call the client message function...
    engine.processMessages ((void *)&value);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
+   }
    g_engfuncs.pfnWriteLong (value);
 }
 
@@ -2421,9 +2552,9 @@ void pfnWriteAngle (float value) {
    // if this message is for a bot, call the client message function...
    engine.processMessages ((void *)&value);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
+   }
    g_engfuncs.pfnWriteAngle (value);
 }
 
@@ -2431,9 +2562,9 @@ void pfnWriteCoord (float value) {
    // if this message is for a bot, call the client message function...
    engine.processMessages ((void *)&value);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
+   }
    g_engfuncs.pfnWriteCoord (value);
 }
 
@@ -2441,9 +2572,9 @@ void pfnWriteString (const char *sz) {
    // if this message is for a bot, call the client message function...
    engine.processMessages ((void *)sz);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
+   }
    g_engfuncs.pfnWriteString (sz);
 }
 
@@ -2451,9 +2582,9 @@ void pfnWriteEntity (int value) {
    // if this message is for a bot, call the client message function...
    engine.processMessages ((void *)&value);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
+   }
    g_engfuncs.pfnWriteEntity (value);
 }
 
@@ -2467,16 +2598,16 @@ int pfnCmd_Argc (void) {
 
    // is this a bot issuing that client command?
    if (engine.isBotCmd ()) {
-      if (g_gameFlags & GAME_METAMOD)
+      if (g_gameFlags & GAME_METAMOD) {
          RETURN_META_VALUE (MRES_SUPERCEDE, engine.botArgc ());
-
+      }
       return engine.botArgc (); // if so, then return the argument count we know
    }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META_VALUE (MRES_IGNORED, 0);
-
-   return CMD_ARGC (); // ask the engine how many arguments there are
+   }
+   return g_engfuncs.pfnCmd_Argc (); // ask the engine how many arguments there are
 }
 
 const char *pfnCmd_Args (void) {
@@ -2489,16 +2620,16 @@ const char *pfnCmd_Args (void) {
 
    // is this a bot issuing that client command?
    if (engine.isBotCmd ()) {
-      if (g_gameFlags & GAME_METAMOD)
+      if (g_gameFlags & GAME_METAMOD) {
          RETURN_META_VALUE (MRES_SUPERCEDE, engine.botArgs ());
-
+      }
       return engine.botArgs (); // else return the whole bot client command string we know
    }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META_VALUE (MRES_IGNORED, nullptr);
-
-   return CMD_ARGS (); // ask the client command string to the engine
+   }
+   return g_engfuncs.pfnCmd_Args (); // ask the client command string to the engine
 }
 
 const char *pfnCmd_Argv (int argc) {
@@ -2511,15 +2642,16 @@ const char *pfnCmd_Argv (int argc) {
 
    // is this a bot issuing that client command?
    if (engine.isBotCmd ()) {
-      if (g_gameFlags & GAME_METAMOD)
+      if (g_gameFlags & GAME_METAMOD) {
          RETURN_META_VALUE (MRES_SUPERCEDE, engine.botArgv (argc));
-
+      }
       return engine.botArgv (argc); // if so, then return the wanted argument we know
    }
-   if (g_gameFlags & GAME_METAMOD)
-      RETURN_META_VALUE (MRES_IGNORED, nullptr);
 
-   return CMD_ARGV (argc); // ask the argument number "argc" to the engine
+   if (g_gameFlags & GAME_METAMOD) {
+      RETURN_META_VALUE (MRES_IGNORED, nullptr);
+   }
+   return g_engfuncs.pfnCmd_Argv (argc); // ask the argument number "argc" to the engine
 }
 
 void pfnClientPrintf (edict_t *ent, PRINT_TYPE printType, const char *message) {
@@ -2530,29 +2662,30 @@ void pfnClientPrintf (edict_t *ent, PRINT_TYPE printType, const char *message) {
    // we know, right ? But since stupidity rules this world, we do a preventive check :)
 
    if (isFakeClient (ent)) {
-      if (g_gameFlags & GAME_METAMOD)
+      if (g_gameFlags & GAME_METAMOD) {
          RETURN_META (MRES_SUPERCEDE);
-
+      }
       return;
    }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
-   CLIENT_PRINTF (ent, printType, message);
+   }
+   g_engfuncs.pfnClientPrintf (ent, printType, message);
 }
 
 void pfnSetClientMaxspeed (const edict_t *ent, float newMaxspeed) {
    Bot *bot = bots.getBot (const_cast<edict_t *> (ent));
 
    // check wether it's not a bot
-   if (bot != nullptr)
+   if (bot != nullptr) {
       bot->pev->maxspeed = newMaxspeed;
+   }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
-   (*g_engfuncs.pfnSetClientMaxspeed) (ent, newMaxspeed);
+   }
+   g_engfuncs.pfnSetClientMaxspeed (ent, newMaxspeed);
 }
 
 int pfnRegUserMsg (const char *name, int size) {
@@ -2566,48 +2699,65 @@ int pfnRegUserMsg (const char *name, int size) {
    // using pfnMessageBegin (), it will know what message ID number to send, and the engine will
    // know what to do, only for non-metamod version
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META_VALUE (MRES_IGNORED, 0);
+   }
+   int message = g_engfuncs.pfnRegUserMsg (name, size);
 
-   int message = REG_USER_MSG (name, size);
-
-   if (strcmp (name, "VGUIMenu") == 0)
+   if (strcmp (name, "VGUIMenu") == 0) {
       engine.setMessageId (NETMSG_VGUI, message);
-   else if (strcmp (name, "ShowMenu") == 0)
+   }
+   else if (strcmp (name, "ShowMenu") == 0) {
       engine.setMessageId (NETMSG_SHOWMENU, message);
-   else if (strcmp (name, "WeaponList") == 0)
+   }
+   else if (strcmp (name, "WeaponList") == 0) {
       engine.setMessageId (NETMSG_WEAPONLIST, message);
-   else if (strcmp (name, "CurWeapon") == 0)
+   }
+   else if (strcmp (name, "CurWeapon") == 0) {
       engine.setMessageId (NETMSG_CURWEAPON, message);
-   else if (strcmp (name, "AmmoX") == 0)
+   }
+   else if (strcmp (name, "AmmoX") == 0) {
       engine.setMessageId (NETMSG_AMMOX, message);
-   else if (strcmp (name, "AmmoPickup") == 0)
+   }
+   else if (strcmp (name, "AmmoPickup") == 0) {
       engine.setMessageId (NETMSG_AMMOPICKUP, message);
-   else if (strcmp (name, "Damage") == 0)
+   }
+   else if (strcmp (name, "Damage") == 0) {
       engine.setMessageId (NETMSG_DAMAGE, message);
-   else if (strcmp (name, "Money") == 0)
+   }
+   else if (strcmp (name, "Money") == 0) {
       engine.setMessageId (NETMSG_MONEY, message);
-   else if (strcmp (name, "StatusIcon") == 0)
+   }
+   else if (strcmp (name, "StatusIcon") == 0) {
       engine.setMessageId (NETMSG_STATUSICON, message);
-   else if (strcmp (name, "DeathMsg") == 0)
+   }
+   else if (strcmp (name, "DeathMsg") == 0) {
       engine.setMessageId (NETMSG_DEATH, message);
-   else if (strcmp (name, "ScreenFade") == 0)
+   }
+   else if (strcmp (name, "ScreenFade") == 0) {
       engine.setMessageId (NETMSG_SCREENFADE, message);
-   else if (strcmp (name, "HLTV") == 0)
+   }
+   else if (strcmp (name, "HLTV") == 0) {
       engine.setMessageId (NETMSG_HLTV, message);
-   else if (strcmp (name, "TextMsg") == 0)
+   }
+   else if (strcmp (name, "TextMsg") == 0) {
       engine.setMessageId (NETMSG_TEXTMSG, message);
-   else if (strcmp (name, "TeamInfo") == 0)
+   }
+   else if (strcmp (name, "TeamInfo") == 0) {
       engine.setMessageId (NETMSG_TEAMINFO, message);
-   else if (strcmp (name, "BarTime") == 0)
+   }
+   else if (strcmp (name, "BarTime") == 0) {
       engine.setMessageId (NETMSG_BARTIME, message);
-   else if (strcmp (name, "SendAudio") == 0)
+   }
+   else if (strcmp (name, "SendAudio") == 0) {
       engine.setMessageId (NETMSG_SENDAUDIO, message);
-   else if (strcmp (name, "SayText") == 0)
+   }
+   else if (strcmp (name, "SayText") == 0) {
       engine.setMessageId (NETMSG_SAYTEXT, message);
-   else if (strcmp (name, "BotVoice") == 0)
+   }
+   else if (strcmp (name, "BotVoice") == 0) {
       engine.setMessageId (NETMSG_BOTVOICE, message);
-
+   }
    return message;
 }
 
@@ -2628,15 +2778,15 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...) {
             bot->clearSearchNodes ();
 
             bot->m_position = waypoints.getBombPos ();
-            bot->startTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, -1, 0.0f, true);
+            bot->startTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, INVALID_WAYPOINT_INDEX, 0.0f, true);
          }
       }
    }
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
-
-   (*g_engfuncs.pfnAlertMessage) (alertType, buffer);
+   }
+   g_engfuncs.pfnAlertMessage (alertType, buffer);
 }
 
 typedef void (*entity_func_t) (entvars_t *);
@@ -2663,7 +2813,6 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
          logEntry (true, LL_FATAL, "GetEntityAPI2: ERROR - Not Initialized.");
          return FALSE; // error initializing function table!!!
       }
-
       gameDLLFunc.dllapi_table = &g_functionTable;
       gpGamedllFuncs = &gameDLLFunc;
 
@@ -2714,8 +2863,9 @@ SHARED_LIBRARAY_EXPORT int GetNewDLLFunctions (newgamefuncs_t *functionTable, in
 
    auto api_GetNewDLLFunctions = g_gameLib->resolve<int (*) (newgamefuncs_t *, int *)> ("GetNewDLLFunctions");
 
-   if (api_GetNewDLLFunctions == nullptr)
+   if (api_GetNewDLLFunctions == nullptr) {
       return FALSE;
+   }
 
    if (!api_GetNewDLLFunctions (functionTable, interfaceVersion)) {
       logEntry (true, LL_FATAL, "GetNewDLLFunctions: ERROR - Not Initialized.");
@@ -2727,8 +2877,9 @@ SHARED_LIBRARAY_EXPORT int GetNewDLLFunctions (newgamefuncs_t *functionTable, in
 }
 
 SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       memset (functionTable, 0, sizeof (enginefuncs_t));
+   }
 
    functionTable->pfnChangeLevel = pfnChangeLevel;
    functionTable->pfnFindEntityByString = pfnFindEntityByString;
@@ -2756,8 +2907,8 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
 }
 
 SHARED_LIBRARAY_EXPORT int GetEngineFunctions_Post (enginefuncs_t *functionTable, int *) {
-   memset (functionTable, 0, sizeof (enginefuncs_t));
 
+   memset (functionTable, 0, sizeof (enginefuncs_t));
    functionTable->pfnMessageEnd = pfnMessageEnd_Post;
 
    return TRUE;
@@ -2770,9 +2921,9 @@ SHARED_LIBRARAY_EXPORT int Server_GetBlendingInterface (int version, void **ppin
 
    auto api_GetBlendingInterface = g_gameLib->resolve<int (*) (int, void **, void *, float(*)[3][4], float(*)[128][3][4])> ("Server_GetBlendingInterface");
 
-   if (api_GetBlendingInterface == nullptr)
+   if (api_GetBlendingInterface == nullptr) {
       return FALSE;
-
+   }
    return api_GetBlendingInterface (version, ppinterface, pstudio, rotationmatrix, bonetransform);
 }
 
@@ -2849,16 +3000,17 @@ Library *LoadCSBinary (void) {
       sprintf (path, "%s/dlls/%s", modname, libs[i]);
 
       // if we can't read file, skip it
-      if (!File::exists (path))
+      if (!File::exists (path)) {
          continue;
+      }
 
       // special case, czero is always detected first, as it's has custom directory
       if (strcmp (modname, "czero") == 0) {
          g_gameFlags |= GAME_CZERO;
 
-         if (g_gameFlags & GAME_METAMOD)
+         if (g_gameFlags & GAME_METAMOD) {
             return nullptr;
-
+         }
          return new Library (path);
       }
       else {
@@ -2878,8 +3030,9 @@ Library *LoadCSBinary (void) {
          if (g_engfuncs.pfnCVarGetPointer ("build") != nullptr) {
             g_gameFlags |= (GAME_LEGACY | GAME_XASH_ENGINE);
 
-            if (entity != nullptr)
+            if (entity != nullptr) {
                g_gameFlags |= GAME_SUPPORT_BOT_VOICE;
+            }
 
             if (g_gameFlags & GAME_METAMOD) {
                delete game;
@@ -2888,10 +3041,12 @@ Library *LoadCSBinary (void) {
             return game;
          }
 
-         if (entity != nullptr)
+         if (entity != nullptr) {
             g_gameFlags |= (GAME_CSTRIKE16 | GAME_SUPPORT_BOT_VOICE | GAME_SUPPORT_SVC_PINGS);
-         else
+         }
+         else {
             g_gameFlags |= GAME_LEGACY;
+         }
 
          if (g_gameFlags & GAME_METAMOD) {
             delete game;
@@ -2934,8 +3089,9 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 #ifdef PLATFORM_ANDROID
    g_gameFlags |= (GAME_LEGACY | GAME_XASH_ENGINE | GAME_MOBILITY | GAME_SUPPORT_BOT_VOICE);
 
-   if (g_gameFlags & GAME_METAMOD)
+   if (g_gameFlags & GAME_METAMOD) {
       return; // we should stop the attempt for loading the real gamedll, since metamod handle this for us
+   }
 
 #ifdef LOAD_HARDFP
    const char *serverDLL = "libserver_hardfp.so";
@@ -2948,8 +3104,10 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 
    g_gameLib = new Library (gameDLLName);
 
-   if (!g_gameLib->IsLoaded ())
+   if (!g_gameLib->IsLoaded ()) {
       logEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gameDLLName, engine.GetModName ());
+      delete g_gameLib;
+   }
 #else
    g_gameLib = LoadCSBinary ();
    {
@@ -2961,34 +3119,36 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       // print game detection info
       String gameVersionStr;
 
-      if (g_gameFlags & GAME_LEGACY)
+      if (g_gameFlags & GAME_LEGACY) {
          gameVersionStr.assign ("Legacy");
-
-      else if (g_gameFlags & GAME_CZERO)
+      }
+      else if (g_gameFlags & GAME_CZERO) {
          gameVersionStr.assign ("Condition Zero");
-
-      else if (g_gameFlags & GAME_CSTRIKE16)
+      }
+      else if (g_gameFlags & GAME_CSTRIKE16) {
          gameVersionStr.assign ("v1.6");
-
+      }
       if (g_gameFlags & GAME_XASH_ENGINE) {
          gameVersionStr.append (" @ Xash3D Engine");
 
-         if (g_gameFlags & GAME_MOBILITY)
+         if (g_gameFlags & GAME_MOBILITY) {
             gameVersionStr.append (" Mobile");
-
+         }
          gameVersionStr.replace ("Legacy", "1.6 Limited");
       }
 
-      if (g_gameFlags & GAME_SUPPORT_BOT_VOICE)
+      if (g_gameFlags & GAME_SUPPORT_BOT_VOICE) {
          gameVersionStr.append (" (BV)");
+      }
 
-      if (g_gameFlags & GAME_SUPPORT_SVC_PINGS)
+      if (g_gameFlags & GAME_SUPPORT_SVC_PINGS) {
          gameVersionStr.append (" (SVC)");
-
+      }
       engine.print ("YaPB Bot has detect game version as Counter-Strike: %s", gameVersionStr.chars ());
 
-      if (g_gameFlags & GAME_METAMOD)
+      if (g_gameFlags & GAME_METAMOD) {
          return;
+      }
    }
 #endif
 
@@ -3015,12 +3175,13 @@ DLL_ENTRYPOINT {
 }
 
 void LinkEntity_Helper (entity_func_t &addr, const char *name, entvars_t *pev) {
-   if (addr == nullptr)
+   if (addr == nullptr) {
       addr = g_gameLib->resolve<entity_func_t> (name);
+   }
 
-   if (addr == nullptr)
+   if (addr == nullptr) {
       return;
-
+   }
    addr (pev);
 }
 

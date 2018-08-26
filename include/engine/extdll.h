@@ -97,6 +97,5 @@ struct edict_s {
 #define HUD_PRINTCENTER 4
 
 #define WEAPON_SUIT 31
-#define __USE_GNU 1
 
 #endif // EXTDLL_H

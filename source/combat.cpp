@@ -21,11 +21,13 @@ int Bot::numFriendsNear (const Vector &origin, float radius) {
    for (int i = 0; i < engine.maxClients (); i++) {
       const Client &client = g_clients[i];
 
-      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ())
+      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ()) {
          continue;
+      }
 
-      if ((client.origin - origin).lengthSq () < A_square (radius))
+      if ((client.origin - origin).lengthSq () < A_square (radius)) {
          count++;
+      }
    }
    return count;
 }
@@ -36,49 +38,55 @@ int Bot::numEnemiesNear (const Vector &origin, float radius) {
    for (int i = 0; i < engine.maxClients (); i++) {
       const Client &client = g_clients[i];
 
-      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team == m_team)
+      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team == m_team) {
          continue;
+      }
 
-      if ((client.origin - origin).lengthSq () < A_square (radius))
+      if ((client.origin - origin).lengthSq () < A_square (radius)) {
          count++;
+      }
    }
    return count;
 }
 
 bool Bot::isEnemyHidden (edict_t *enemy) {
-   if (!yb_check_enemy_rendering.boolean () || engine.isNullEntity (enemy))
+   if (!yb_check_enemy_rendering.boolean () || engine.isNullEntity (enemy)) {
       return false;
-
+   }
    entvars_t &v = enemy->v;
 
    bool enemyHasGun = (v.weapons & WEAPON_PRIMARY) || (v.weapons & WEAPON_SECONDARY);
    bool enemyGunfire = (v.button & IN_ATTACK) || (v.oldbuttons & IN_ATTACK);
 
-   if ((v.renderfx == kRenderFxExplode || (v.effects & EF_NODRAW)) && (!enemyGunfire || !enemyHasGun))
+   if ((v.renderfx == kRenderFxExplode || (v.effects & EF_NODRAW)) && (!enemyGunfire || !enemyHasGun)) {
       return true;
+   }
 
-   if ((v.renderfx == kRenderFxExplode || (v.effects & EF_NODRAW)) && enemyGunfire && enemyHasGun)
+   if ((v.renderfx == kRenderFxExplode || (v.effects & EF_NODRAW)) && enemyGunfire && enemyHasGun) {
       return false;
+   }
 
    if (v.renderfx != kRenderFxHologram && v.renderfx != kRenderFxExplode && v.rendermode != kRenderNormal) {
       if (v.renderfx == kRenderFxGlowShell) {
          if (v.renderamt <= 20.0f && v.rendercolor.x <= 20.0f && v.rendercolor.y <= 20.0f && v.rendercolor.z <= 20.0f) {
-            if (!enemyGunfire || !enemyHasGun)
+            if (!enemyGunfire || !enemyHasGun) {
                return true;
-
+            }
             return false;
          }
-         else if (!enemyGunfire && v.renderamt <= 60.0f && v.rendercolor.x <= 60.f && v.rendercolor.y <= 60.0f && v.rendercolor.z <= 60.0f)
+         else if (!enemyGunfire && v.renderamt <= 60.0f && v.rendercolor.x <= 60.f && v.rendercolor.y <= 60.0f && v.rendercolor.z <= 60.0f) {
             return true;
+         }
       }
       else if (v.renderamt <= 20.0f) {
-         if (!enemyGunfire || !enemyHasGun)
+         if (!enemyGunfire || !enemyHasGun) {
             return true;
-
+         }
          return false;
       }
-      else if (!enemyGunfire && v.renderamt <= 60.0f)
+      else if (!enemyGunfire && v.renderamt <= 60.0f) {
          return true;
+      }
    }
    return false;
 }
@@ -105,8 +113,9 @@ bool Bot::checkBodyParts (edict_t *target, Vector *origin, uint8 *bodyPart) {
       *bodyPart |= VISIBLE_BODY;
       *origin = result.vecEndPos;
 
-      if (m_difficulty > 3)
+      if (m_difficulty > 3) {
          origin->z += 3.0f;
+      }
    }
 
    // check top of head
@@ -117,21 +126,24 @@ bool Bot::checkBodyParts (edict_t *target, Vector *origin, uint8 *bodyPart) {
       *bodyPart |= VISIBLE_HEAD;
       *origin = result.vecEndPos;
 
-      if (m_difficulty > 3)
-         origin->z += 1.0f;
+      if (m_difficulty > 3) {
+         origin->z += 0.25f;
+      }
    }
 
-   if (*bodyPart != 0)
+   if (*bodyPart != 0) {
       return true;
+   }
 
    const float standFeet = 34.0f;
    const float crouchFeet = 14.0f;
 
-   if (target->v.flags & FL_DUCKING)
+   if (target->v.flags & FL_DUCKING) {
       spot.z = target->v.origin.z - crouchFeet;
-   else
+   }
+   else {
       spot.z = target->v.origin.z - standFeet;
-
+   }
    engine.testLine (eyes, spot, TRACE_IGNORE_EVERYTHING, pev->pContainingEntity, &result);
 
    if (result.flFraction >= 1.0f) {
@@ -169,15 +181,16 @@ bool Bot::checkBodyParts (edict_t *target, Vector *origin, uint8 *bodyPart) {
 }
 
 bool Bot::seesEnemy (edict_t *player) {
-   if (engine.isNullEntity (player))
+   if (engine.isNullEntity (player)) {
       return false;
+   }
+   bool ignoreFOV = false;
 
-   bool forceTrueIfVisible = false;
+   if (isPlayer (pev->dmg_inflictor) && engine.getTeam (pev->dmg_inflictor) != m_team) {
+      ignoreFOV = true;
+   }
 
-   if (isPlayer (pev->dmg_inflictor) && engine.getTeam (pev->dmg_inflictor) != m_team)
-      forceTrueIfVisible = true;
-
-   if ((isInViewCone (player->v.origin + pev->view_ofs) || forceTrueIfVisible) && checkBodyParts (player, &m_enemyOrigin, &m_visibility)) {
+   if ((isInViewCone (player->v.origin + pev->view_ofs) || ignoreFOV) && checkBodyParts (player, &m_enemyOrigin, &m_visibility)) {
       m_seeEnemyTime = engine.timebase ();
       m_lastEnemy = player;
       m_lastEnemyOrigin = player->v.origin;
@@ -191,23 +204,25 @@ bool Bot::lookupEnemies (void) {
    // this function tries to find the best suitable enemy for the bot
 
    // do not search for enemies while we're blinded, or shooting disabled by user
-   if (m_enemyIgnoreTimer > engine.timebase () || m_blindTime > engine.timebase () || yb_ignore_enemies.boolean ())
+   if (m_enemyIgnoreTimer > engine.timebase () || m_blindTime > engine.timebase () || yb_ignore_enemies.boolean ()) {
       return false;
-
+   }
    edict_t *player, *newEnemy = nullptr;
 
    float nearestDistance = m_viewDistance;
 
    // clear suspected flag
-   if (m_seeEnemyTime + 3.0f < engine.timebase ())
+   if (m_seeEnemyTime + 3.0f < engine.timebase ()) {
       m_states &= ~STATE_SUSPECT_ENEMY;
+   }
 
    if (!engine.isNullEntity (m_enemy) && m_enemyUpdateTime > engine.timebase ()) {
       player = m_enemy;
 
       // is player is alive
-      if (isAlive (player) && seesEnemy (player))
+      if (isAlive (player) && seesEnemy (player)) {
          newEnemy = player;
+      }
    }
 
    // the old enemy is no longer visible or
@@ -221,13 +236,14 @@ bool Bot::lookupEnemies (void) {
       for (int i = 0; i < engine.maxClients (); i++) {
          const Client &client = g_clients[i];
 
-         if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team == m_team || client.ent == ent ())
+         if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team == m_team || client.ent == ent ()) {
             continue;
-
+         }
          player = client.ent;
 
-         if ((player->v.button & (IN_ATTACK | IN_ATTACK2)) && m_viewDistance < m_maxViewDistance)
+         if ((player->v.button & (IN_ATTACK | IN_ATTACK2)) && m_viewDistance < m_maxViewDistance) {
             nearestDistance = m_maxViewDistance;
+         }
 
          // see if bot can see the player...
          if (seesEnemy (player)) {
@@ -242,14 +258,16 @@ bool Bot::lookupEnemies (void) {
                newEnemy = player;
 
                // aim VIP first on AS maps...
-               if (isPlayerVIP (newEnemy))
+               if (isPlayerVIP (newEnemy)) {
                   break;
+               }
             }
          }
       }
 
-      if (engine.isNullEntity (newEnemy) && !engine.isNullEntity (shieldEnemy))
+      if (engine.isNullEntity (newEnemy) && !engine.isNullEntity (shieldEnemy)) {
          newEnemy = shieldEnemy;
+      }
    }
 
    if (isPlayer (newEnemy)) {
@@ -270,15 +288,17 @@ bool Bot::lookupEnemies (void) {
          return true;
       }
       else {
-         if (m_seeEnemyTime + 3.0 < engine.timebase () && (m_hasC4 || hasHostage () || !engine.isNullEntity (m_targetEntity)))
+         if (m_seeEnemyTime + 3.0 < engine.timebase () && (m_hasC4 || hasHostage () || !engine.isNullEntity (m_targetEntity))) {
             pushRadioMessage (Radio_EnemySpotted);
-
+         }
          m_targetEntity = nullptr; // stop following when we see an enemy...
 
-         if (rng.getInt (0, 100) < m_difficulty * 25)
+         if (rng.getInt (0, 100) < m_difficulty * 25) {
             m_enemySurpriseTime = engine.timebase () + m_actualReactionTime * 0.5f;
-         else
+         }
+         else {
             m_enemySurpriseTime = engine.timebase () + m_actualReactionTime;
+         }
 
          // zero out reaction time
          m_actualReactionTime = 0.0f;
@@ -290,16 +310,17 @@ bool Bot::lookupEnemies (void) {
          // keep track of when we last saw an enemy
          m_seeEnemyTime = engine.timebase ();
 
-         if (!(m_oldButtons & IN_ATTACK))
+         if (!(m_oldButtons & IN_ATTACK)) {
             return true;
+         }
 
          // now alarm all teammates who see this bot & don't have an actual enemy of the bots enemy should simulate human players seeing a teammate firing
          for (int j = 0; j < engine.maxClients (); j++) {
             const Client &client = g_clients[j];
 
-            if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ())
+            if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ()) {
                continue;
-
+            }
             Bot *other = bots.getBot (client.ent);
 
             if (other != nullptr && other->m_seeEnemyTime + 2.0f < engine.timebase () && engine.isNullEntity (other->m_lastEnemy) && isVisible (pev->origin, other->ent ()) && other->isInViewCone (pev->origin)) {
@@ -321,7 +342,7 @@ bool Bot::lookupEnemies (void) {
          m_enemy = nullptr;
 
          // shoot at dying players if no new enemy to give some more human-like illusion
-         if (m_seeEnemyTime + 0.1f > engine.timebase ()) {
+         if (m_seeEnemyTime + 0.3f > engine.timebase ()) {
             if (!usesSniper ()) {
                m_shootAtDeadTime = engine.timebase () + 0.4f;
                m_actualReactionTime = 0.0f;
@@ -357,16 +378,19 @@ bool Bot::lookupEnemies (void) {
 
    // check if bots should reload...
    if ((m_aimFlags <= AIM_PREDICT_PATH && m_seeEnemyTime + 3.0f < engine.timebase () && !(m_states & (STATE_SEEING_ENEMY | STATE_HEARING_ENEMY)) && engine.isNullEntity (m_lastEnemy) && engine.isNullEntity (m_enemy) && taskId () != TASK_SHOOTBREAKABLE && taskId () != TASK_PLANTBOMB && taskId () != TASK_DEFUSEBOMB) || g_roundEnded) {
-      if (!m_reloadState)
+      if (!m_reloadState) {
          m_reloadState = RELOAD_PRIMARY;
+      }
    }
 
    // is the bot using a sniper rifle or a zoomable rifle?
    if ((usesSniper () || usesZoomableRifle ()) && m_zoomCheckTime + 1.0f < engine.timebase ()) {
-      if (pev->fov < 90.0f) // let the bot zoom out
+      if (pev->fov < 90.0f) {
          pev->button |= IN_ATTACK2;
-      else
+      }
+      else {
          m_zoomCheckTime = 0.0f;
+      }
    }
    return false;
 }
@@ -384,36 +408,42 @@ const Vector &Bot::getEnemyBodyOffset (void) {
    const Vector &adjust = Vector (rng.getFloat (m_enemy->v.mins.x * 0.5f, m_enemy->v.maxs.x * 0.5f), rng.getFloat (m_enemy->v.mins.y * 0.5f, m_enemy->v.maxs.y * 0.5f), rng.getFloat (m_enemy->v.mins.z * 0.5f, m_enemy->v.maxs.z * 0.5f));
 
    // do not aim at head, at long distance (only if not using sniper weapon)
-   if ((m_visibility & VISIBLE_BODY) && !usesSniper () && !usesPistol () && (distance > (m_difficulty == 4 ? 2400.0 : 1200.0)))
+   if ((m_visibility & VISIBLE_BODY) && !usesSniper () && !usesPistol () && (distance > (m_difficulty == 4 ? 2400.0 : 1200.0))) {
       m_visibility &= ~VISIBLE_HEAD;
+   }
 
    // if we only suspect an enemy behind a wall take the worst skill
-   if ((m_states & STATE_SUSPECT_ENEMY) && !(m_states & STATE_SEEING_ENEMY))
+   if ((m_states & STATE_SUSPECT_ENEMY) && !(m_states & STATE_SEEING_ENEMY)) {
       targetOrigin = targetOrigin + adjust;
+   }
    else {
       // now take in account different parts of enemy body
-      if (m_visibility & (VISIBLE_HEAD | VISIBLE_BODY)) // visible head & body
-      {
-         int headshotFreq[5] = {20, 40, 60, 80, 100};
+      if (m_visibility & (VISIBLE_HEAD | VISIBLE_BODY)) {
+         int headshotFreq[4] = {20, 40, 80, 100};
 
          // now check is our skill match to aim at head, else aim at enemy body
-         if ((rng.getInt (1, 100) < headshotFreq[m_difficulty]) || usesPistol ())
+         if ((rng.getInt (1, 100) < headshotFreq[m_difficulty]) || usesPistol ()) {
             targetOrigin = targetOrigin + m_enemy->v.view_ofs + Vector (0.0f, 0.0f, getEnemyBodyOffsetCorrection (distance));
-         else
+         }
+         else {
             targetOrigin = targetOrigin + Vector (0.0f, 0.0f, getEnemyBodyOffsetCorrection (distance));
+         }
       }
-      else if (m_visibility & VISIBLE_BODY) // visible only body
+      else if (m_visibility & VISIBLE_BODY) {
          targetOrigin = targetOrigin + Vector (0.0f, 0.0f, getEnemyBodyOffsetCorrection (distance));
-      else if (m_visibility & VISIBLE_OTHER) // random part of body is visible
+      }
+      else if (m_visibility & VISIBLE_OTHER) {
          targetOrigin = m_enemyOrigin;
-      else if (m_visibility & VISIBLE_HEAD) // visible only head
+      }
+      else if (m_visibility & VISIBLE_HEAD) {
          targetOrigin = targetOrigin + m_enemy->v.view_ofs + Vector (0.0f, 0.0f, getEnemyBodyOffsetCorrection (distance));
-      else // something goes wrong, use last enemy origin
-      {
+      }
+      else {
          targetOrigin = m_lastEnemyOrigin;
 
-         if (m_difficulty < 3)
+         if (m_difficulty < 3) {
             randomize = adjust;
+         }
       }
       m_lastEnemyOrigin = targetOrigin;
    }
@@ -421,28 +451,33 @@ const Vector &Bot::getEnemyBodyOffset (void) {
    if (m_difficulty < 3 && !randomize.empty ()) {
       float divOffs = (m_enemyOrigin - pev->origin).length ();
 
-      if (pev->fov < 40)
+      if (pev->fov < 40) {
          divOffs = divOffs / 2000;
-      else if (pev->fov < 90)
+      }
+      else if (pev->fov < 90) {
          divOffs = divOffs / 1000;
-      else
+      }
+      else {
          divOffs = divOffs / 500;
+      }
 
       // randomize the target position
       m_enemyOrigin = divOffs * randomize;
    }
-   else
+   else {
       m_enemyOrigin = targetOrigin;
+   }
 
-   if (distance >= 256.0f && m_difficulty < 3)
+   if (distance >= 256.0f && m_difficulty < 3) {
       m_enemyOrigin += (usesSniper () ? Vector::null () : 1.0f * calcThinkInterval () * m_enemy->v.velocity - 1.0f * calcThinkInterval () * pev->velocity).make2D ();
-
+   }
    return m_enemyOrigin;
 }
 
 float Bot::getEnemyBodyOffsetCorrection (float distance) {
-   if (m_difficulty < 3)
+   if (m_difficulty < 3) {
       return 0.0f;
+   }
 
    bool sniper = usesSniper ();
    bool pistol = usesPistol ();
@@ -456,62 +491,83 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
    float result = 3.5f;
 
    if (distance < 3000.0f && distance > MAX_SPRAY_DISTANCE_X2) {
-      if (sniper)
+      if (sniper) {
          result = 5.5f;
-      else if (zoomableRifle)
+      }
+      else if (zoomableRifle) {
          result = 4.5f;
-      else if (pistol)
+      }
+      else if (pistol) {
          result = 6.5f;
-      else if (submachine)
+      }
+      else if (submachine) {
          result = 5.5f;
-      else if (rifle)
+      }
+      else if (rifle) {
          result = 5.5f;
-      else if (m249)
+      }
+      else if (m249) {
          result = 2.5f;
-      else if (shotgun)
+      }
+      else if (shotgun) {
          result = 10.5f;
+      }
    }
    else if (distance > MAX_SPRAY_DISTANCE && distance <= MAX_SPRAY_DISTANCE_X2) {
-      if (sniper)
+      if (sniper) {
          result = 3.5f;
-      else if (zoomableRifle)
+      }
+      else if (zoomableRifle) {
          result = 3.5f;
-      else if (pistol)
+      }
+      else if (pistol) {
          result = 6.5f;
-      else if (submachine)
+      }
+      else if (submachine) {
          result = 3.5f;
-      else if (rifle)
+      }
+      else if (rifle) {
          result = 1.4f;
-      else if (m249)
+      }
+      else if (m249) {
          result = -2.0f;
-      else if (shotgun)
+      }
+      else if (shotgun) {
          result = 10.0f;
+      }
    }
    else if (distance < MAX_SPRAY_DISTANCE) {
-      if (sniper)
+      if (sniper) {
          result = 3.5f;
-      else if (zoomableRifle)
+      }
+      else if (zoomableRifle) {
          result = -5.0f;
-      else if (pistol)
+      }
+      else if (pistol) {
          result = 4.5f;
-      else if (submachine)
+      }
+      else if (submachine) {
          result = -4.5f;
-      else if (rifle)
+      }
+      else if (rifle) {
          result = -4.5f;
-      else if (m249)
+      }
+      else if (m249) {
          result = -6.0f;
-      else if (shotgun)
+      }
+      else if (shotgun) {
          result = -5.0f;
+      }
    }
    return result;
 }
 
 bool Bot::isFriendInLineOfFire (float distance) {
    // bot can't hurt teammates, if friendly fire is not enabled...
-   if (!mp_friendlyfire.boolean () || (g_gameFlags & GAME_CSDM))
+   if (!mp_friendlyfire.boolean () || (g_gameFlags & GAME_CSDM)) {
       return false;
-
-   MakeVectors (pev->v_angle);
+   }
+   makeVectors (pev->v_angle);
 
    TraceResult tr;
    engine.testLine (eyePos (), eyePos () + 10000.0f * pev->v_angle, TRACE_IGNORE_NONE, ent (), &tr);
@@ -521,24 +577,26 @@ bool Bot::isFriendInLineOfFire (float distance) {
       int playerIndex = engine.indexOfEntity (tr.pHit) - 1;
 
       // check valid range
-      if (playerIndex >= 0 && playerIndex < engine.maxClients () && g_clients[playerIndex].team == m_team && (g_clients[playerIndex].flags & CF_ALIVE))
+      if (playerIndex >= 0 && playerIndex < engine.maxClients () && g_clients[playerIndex].team == m_team && (g_clients[playerIndex].flags & CF_ALIVE)) {
          return true;
+      }
    }
 
    // search the world for players
    for (int i = 0; i < engine.maxClients (); i++) {
       const Client &client = g_clients[i];
 
-      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ())
+      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ()) {
          continue;
-
+      }
       edict_t *pent = client.ent;
 
       float friendDistance = (pent->v.origin - pev->origin).length ();
       float squareDistance = A_sqrtf (1089.0f + (friendDistance * friendDistance));
 
-      if (getShootingConeDeviation (ent (), &pent->v.origin) > (friendDistance * friendDistance) / (squareDistance * squareDistance) && friendDistance <= distance)
+      if (getShootingConeDeviation (ent (), &pent->v.origin) > (friendDistance * friendDistance) / (squareDistance * squareDistance) && friendDistance <= distance) {
          return true;
+      }
    }
    return false;
 }
@@ -547,17 +605,18 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
    // this function returns true if enemy can be shoot through some obstacle, false otherwise.
    // credits goes to Immortal_BLG
 
-   if (yb_shoots_thru_walls.integer () == 2)
+   if (yb_shoots_thru_walls.integer () == 2) {
       return isPenetrableObstacle2 (dest);
+   }
 
-   if (m_difficulty < 2)
+   if (m_difficulty < 2) {
       return false;
-
+   }
    int penetratePower = getWeaponPenetrationPower (m_currentWeapon);
 
-   if (penetratePower == 0)
+   if (penetratePower == 0) {
       return false;
-
+   }
    TraceResult tr;
 
    float obstacleDistance = 0.0f;
@@ -568,12 +627,13 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
       engine.testLine (dest, source, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
       if (tr.flFraction != 1.0f) {
-         if ((tr.vecEndPos - dest).lengthSq () > A_square (800.0f))
+         if ((tr.vecEndPos - dest).lengthSq () > A_square (800.0f)) {
             return false;
+         }
 
-         if (tr.vecEndPos.z >= dest.z + 200.0f)
+         if (tr.vecEndPos.z >= dest.z + 200.0f) {
             return false;
-
+         }
          obstacleDistance = (tr.vecEndPos - source).lengthSq ();
       }
    }
@@ -596,8 +656,9 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
 bool Bot::isPenetrableObstacle2 (const Vector &dest) {
    // this function returns if enemy can be shoot through some obstacle
 
-   if (m_difficulty < 2 || getWeaponPenetrationPower (m_currentWeapon) == 0)
+   if (m_difficulty < 2 || getWeaponPenetrationPower (m_currentWeapon) == 0) {
       return false;
+   }
 
    const Vector &source = eyePos ();
    const Vector &direction = (dest - source).normalize (); // 1 unit long
@@ -616,7 +677,7 @@ bool Bot::isPenetrableObstacle2 (const Vector &dest) {
 
       point = tr.vecEndPos + direction;
 
-      while (POINT_CONTENTS (point) == CONTENTS_SOLID && thikness < 98) {
+      while (g_engfuncs.pfnPointContents (point) == CONTENTS_SOLID && thikness < 98) {
          point = point + direction;
          thikness++;
       }
@@ -624,8 +685,9 @@ bool Bot::isPenetrableObstacle2 (const Vector &dest) {
    }
 
    if (numHits < 3 && thikness < 98) {
-      if ((dest - point).lengthSq () < 13143)
+      if ((dest - point).lengthSq () < 13143.0f) {
          return true;
+      }
    }
    return false;
 }
@@ -637,31 +699,32 @@ bool Bot::throttleFiring (float distance) {
       return true;
 
    if ((m_aimFlags & AIM_ENEMY) && !m_enemyOrigin.empty ()) {
-      if (getShootingConeDeviation (ent (), &m_enemyOrigin) > 0.92f && isEnemyBehindShield (m_enemy))
+      if (getShootingConeDeviation (ent (), &m_enemyOrigin) > 0.92f && isEnemyBehindShield (m_enemy)) {
          return true;
+      }
    }
-   float offset = 0.0f;
+   float offset = 5.0f;
 
-   if (distance < MAX_SPRAY_DISTANCE * 0.5f)
+   if (distance < MAX_SPRAY_DISTANCE * 0.5f) {
       return false;
-   else if (distance < MAX_SPRAY_DISTANCE)
+   }
+   else if (distance < MAX_SPRAY_DISTANCE) {
       offset = 12.0f;
-   else if (distance < MAX_SPRAY_DISTANCE_X2)
+   }
+   else if (distance < MAX_SPRAY_DISTANCE_X2) {
       offset = 10.0f;
-   else
-      offset = 5.0f;
-
+   }
    const float xPunch = degToRad (pev->punchangle.x);
    const float yPunch = degToRad (pev->punchangle.y);
 
    float interval = calcThinkInterval ();
-   float tolerance = (100.0f - m_difficulty * 25.0f) / 100.0f;
+   float tolerance = (100.0f - m_difficulty * 25.0f) / 99.0f;
 
    // check if we need to compensate recoil
    if (tanf (A_sqrtf (fabsf (xPunch * xPunch) + fabsf (yPunch * yPunch))) * distance > offset + 30.0f + tolerance) {
-      if (m_firePause < engine.timebase ())
+      if (m_firePause < engine.timebase ()) {
          m_firePause = rng.getFloat (0.5f, 0.5f + 0.3f * tolerance);
-
+      }
       m_firePause -= interval;
       m_firePause += engine.timebase ();
 
@@ -695,9 +758,9 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
 
       // loop through all the weapons until terminator is found...
       while (tab[choosen].id) {
-         if (tab[choosen].id == id)
+         if (tab[choosen].id == id) {
             break;
-
+         }
          choosen++;
       }
    }
@@ -707,36 +770,45 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
 
    if (hasShield () && m_shieldCheckTime < engine.timebase () && taskId () != TASK_CAMP) // better shield gun usage
    {
-      if (distance >= 750.0f && !isShieldDrawn ())
+      if (distance >= 750.0f && !isShieldDrawn ()) {
          pev->button |= IN_ATTACK2; // draw the shield
-      else if (isShieldDrawn () || (!engine.isNullEntity (m_enemy) && ((m_enemy->v.button & IN_RELOAD) || !seesEnemy (m_enemy))))
+      }
+      else if (isShieldDrawn () || (!engine.isNullEntity (m_enemy) && ((m_enemy->v.button & IN_RELOAD) || !seesEnemy (m_enemy)))) {
          pev->button |= IN_ATTACK2; // draw out the shield
-
+      }
       m_shieldCheckTime = engine.timebase () + 1.0f;
    }
 
-   if (usesSniper () && m_zoomCheckTime < engine.timebase ()) // is the bot holding a sniper rifle?
-   {
-      if (distance > 1500.0f && pev->fov >= 40.0f) // should the bot switch to the long-range zoom?
+   // is the bot holding a sniper rifle?
+   if (usesSniper () && m_zoomCheckTime < engine.timebase ())  {
+      // should the bot switch to the long-range zoom?
+      if (distance > 1500.0f && pev->fov >= 40.0f) {
          pev->button |= IN_ATTACK2;
+      }
 
-      else if (distance > 150.0f && pev->fov >= 90.0f) // else should the bot switch to the close-range zoom ?
+      // else should the bot switch to the close-range zoom ?
+      else if (distance > 150.0f && pev->fov >= 90.0f) {
          pev->button |= IN_ATTACK2;
+      }
 
-      else if (distance <= 150.0f && pev->fov < 90.0f) // else should the bot restore the normal view ?
+      // else should the bot restore the normal view ?
+      else if (distance <= 150.0f && pev->fov < 90.0f) {
          pev->button |= IN_ATTACK2;
-
+      }
       m_zoomCheckTime = engine.timebase () + 0.5f;
    }
 
-   if (m_difficulty < 4 && usesZoomableRifle () && m_zoomCheckTime < engine.timebase ()) // else is the bot holding a zoomable rifle?
-   {
-      if (distance > 800.0f && pev->fov >= 90.0f) // should the bot switch to zoomed mode?
+   // else is the bot holding a zoomable rifle?
+   if (m_difficulty < 4 && usesZoomableRifle () && m_zoomCheckTime < engine.timebase ())  {
+      // should the bot switch to zoomed mode?
+      if (distance > 800.0f && pev->fov >= 90.0f) {
          pev->button |= IN_ATTACK2;
+      }
 
-      else if (distance <= 800.0f && pev->fov < 90.0f) // else should the bot restore the normal view?
+      // else should the bot restore the normal view?
+      else if (distance <= 800.0f && pev->fov < 90.0f) {
          pev->button |= IN_ATTACK2;
-
+      }
       m_zoomCheckTime = engine.timebase () + 1.0f;
    }
 
@@ -744,26 +816,34 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
    if (distance < MAX_SPRAY_DISTANCE || m_blindTime > engine.timebase ()) {
       if (id == WEAPON_KNIFE) {
          if (distance < 64.0f) {
-            if (rng.getInt (1, 100) < 30 || hasShield ())
+            if (rng.getInt (1, 100) < 30 || hasShield ()) {
                pev->button |= IN_ATTACK; // use primary attack
-            else
+            }
+            else {
                pev->button |= IN_ATTACK2; // use secondary attack
+            }
          }
       }
       else {
-         if (tab[choosen].primaryFireHold && m_ammo[g_weaponDefs[tab[index].id].ammo1] > tab[index].minPrimaryAmmo) // if automatic weapon, just press attack
+
+         // if automatic weapon press attack
+         if (tab[choosen].primaryFireHold && m_ammo[g_weaponDefs[tab[index].id].ammo1] > tab[index].minPrimaryAmmo) {
             pev->button |= IN_ATTACK;
-         else // if not, toggle buttons
-         {
-            if ((m_oldButtons & IN_ATTACK) == 0)
+         }
+
+         // if not, toggle
+         else {
+            if ((m_oldButtons & IN_ATTACK) == 0) {
                pev->button |= IN_ATTACK;
+            }
          }
       }
       m_shootTime = engine.timebase ();
    }
    else {
-      if (throttleFiring (distance))
+      if (throttleFiring (distance)) {
          return;
+      }
 
       // don't attack with knife over long distance
       if (id == WEAPON_KNIFE) {
@@ -823,8 +903,9 @@ void Bot::fireWeapons (void) {
       // is the bot carrying this weapon?
       if (weapons & (1 << tab[selectIndex].id)) {
          // is enough ammo available to fire AND check is better to use pistol in our current situation...
-         if (m_ammoInClip[tab[selectIndex].id] > 0 && !isWeaponBadAtDistance (selectIndex, distance))
+         if (m_ammoInClip[tab[selectIndex].id] > 0 && !isWeaponBadAtDistance (selectIndex, distance)) {
             choosenWeapon = selectIndex;
+         }
       }
       selectIndex++;
    }
@@ -863,26 +944,29 @@ bool Bot::isWeaponBadAtDistance (int weaponIndex, float distance) {
    // this function checks, is it better to use pistol instead of current primary weapon
    // to attack our enemy, since current weapon is not very good in this situation.
 
-   if (m_difficulty < 2)
+   if (m_difficulty < 2) {
       return false;
-
+   }
    int wid = g_weaponSelect[weaponIndex].id;
 
-   if (wid == WEAPON_KNIFE)
+   if (wid == WEAPON_KNIFE) {
       return false;
+   }
 
    // check is ammo available for secondary weapon
-   if (m_ammoInClip[g_weaponSelect[bestSecondaryCarried ()].id] >= 1)
+   if (m_ammoInClip[g_weaponSelect[bestSecondaryCarried ()].id] >= 1) {
       return false;
+   }
 
    // better use pistol in short range distances, when using sniper weapons
-   if ((wid == WEAPON_SCOUT || wid == WEAPON_AWP || wid == WEAPON_G3SG1 || wid == WEAPON_SG550) && distance < 500.0f)
+   if ((wid == WEAPON_SCOUT || wid == WEAPON_AWP || wid == WEAPON_G3SG1 || wid == WEAPON_SG550) && distance < 500.0f) {
       return true;
+   }
 
    // shotguns is too inaccurate at long distances, so weapon is bad
-   if ((wid == WEAPON_M3 || wid == WEAPON_XM1014) && distance > 750.0f)
+   if ((wid == WEAPON_M3 || wid == WEAPON_XM1014) && distance > 750.0f) {
       return true;
-
+   }
    return false;
 }
 
@@ -890,35 +974,41 @@ void Bot::FocusEnemy (void) {
    // aim for the head and/or body
    m_lookAt = getEnemyBodyOffset ();
 
-   if (m_enemySurpriseTime > engine.timebase ())
+   if (m_enemySurpriseTime > engine.timebase ()) {
       return;
-
+   }
    float distance = (m_lookAt - eyePos ()).length2D (); // how far away is the enemy scum?
 
    if (distance < 128.0f) {
       if (m_currentWeapon == WEAPON_KNIFE) {
-         if (distance < 80.0f)
+         if (distance < 80.0f) {
             m_wantsToFire = true;
+         }
       }
-      else
+      else {
          m_wantsToFire = true;
+      }
    }
    else {
       float dot = getShootingConeDeviation (ent (), &m_enemyOrigin);
 
-      if (dot < 0.90f)
+      if (dot < 0.90f) {
          m_wantsToFire = false;
+      }
       else {
          float enemyDot = getShootingConeDeviation (m_enemy, &pev->origin);
 
          // enemy faces bot?
-         if (enemyDot >= 0.90f)
+         if (enemyDot >= 0.90f) {
             m_wantsToFire = true;
+         }
          else {
-            if (dot > 0.99f)
+            if (dot > 0.99f) {
                m_wantsToFire = true;
-            else
+            }
+            else {
                m_wantsToFire = false;
+            }
          }
       }
    }
@@ -926,25 +1016,29 @@ void Bot::FocusEnemy (void) {
 
 void Bot::attackMovement (void) {
    // no enemy? no need to do strafing
-   if (engine.isNullEntity (m_enemy))
+   if (engine.isNullEntity (m_enemy)) {
       return;
-
+   }
    float distance = (m_lookAt - eyePos ()).length2D (); // how far away is the enemy scum?
 
    if (m_timeWaypointMove < engine.timebase ()) {
       int approach;
 
-      if (m_currentWeapon == WEAPON_KNIFE) // knife?
+      if (m_currentWeapon == WEAPON_KNIFE) {
          approach = 100;
-      else if ((m_states & STATE_SUSPECT_ENEMY) && !(m_states & STATE_SEEING_ENEMY)) // if suspecting enemy stand still
+      }
+      else if ((m_states & STATE_SUSPECT_ENEMY) && !(m_states & STATE_SEEING_ENEMY)) {
          approach = 49;
-      else if (m_isReloading || m_isVIP) // if reloading or vip back off
+      }
+      else if (m_isReloading || m_isVIP) {
          approach = 29;
+      }
       else {
          approach = static_cast<int> (pev->health * m_agressionLevel);
 
-         if (usesSniper () && approach > 49)
+         if (usesSniper () && approach > 49) {
             approach = 49;
+         }
       }
 
       // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
@@ -957,13 +1051,16 @@ void Bot::attackMovement (void) {
          t->resume = true;
          t->desire = TASKPRI_ATTACK + 1.0f;
       }
-      else if (approach < 50)
+      else if (approach < 50) {
          m_moveSpeed = 0.0f;
-      else
+      }
+      else {
          m_moveSpeed = pev->maxspeed;
+      }
 
-      if (distance < 96.0f && m_currentWeapon != WEAPON_KNIFE)
+      if (distance < 96.0f && m_currentWeapon != WEAPON_KNIFE) {
          m_moveSpeed = -pev->maxspeed;
+      }
 
       if (usesSniper ()) {
          m_fightStyle = FIGHT_STAY;
@@ -973,30 +1070,36 @@ void Bot::attackMovement (void) {
          if (m_lastFightStyleCheck + 3.0f < engine.timebase ()) {
             int rand = rng.getInt (1, 100);
 
-            if (distance < 450.0f)
+            if (distance < 450.0f) {
                m_fightStyle = FIGHT_STRAFE;
+            }
             else if (distance < 1024.0f) {
-               if (rand < (usesSubmachine () ? 50 : 30))
+               if (rand < (usesSubmachine () ? 50 : 30)) {
                   m_fightStyle = FIGHT_STRAFE;
-               else
+               }
+               else {
                   m_fightStyle = FIGHT_STAY;
+               }
             }
             else {
-               if (rand < (usesSubmachine () ? 80 : 93))
+               if (rand < (usesSubmachine () ? 80 : 93)) {
                   m_fightStyle = FIGHT_STAY;
-               else
+               }
+               else {
                   m_fightStyle = FIGHT_STRAFE;
+               }
             }
             m_lastFightStyleCheck = engine.timebase ();
          }
       }
       else {
          if (m_lastFightStyleCheck + 3.0f < engine.timebase ()) {
-            if (rng.getInt (0, 100) < 50)
+            if (rng.getInt (0, 100) < 50) {
                m_fightStyle = FIGHT_STRAFE;
-            else
+            }
+            else {
                m_fightStyle = FIGHT_STAY;
-
+            }
             m_lastFightStyleCheck = engine.timebase ();
          }
       }
@@ -1004,54 +1107,62 @@ void Bot::attackMovement (void) {
       if (m_fightStyle == FIGHT_STRAFE || ((pev->button & IN_RELOAD) || m_isReloading) || (usesPistol () && distance < 400.0f) || m_currentWeapon == WEAPON_KNIFE) {
          if (m_strafeSetTime < engine.timebase ()) {
             // to start strafing, we have to first figure out if the target is on the left side or right side
-            MakeVectors (m_enemy->v.v_angle);
+            makeVectors (m_enemy->v.v_angle);
 
             const Vector &dirToPoint = (pev->origin - m_enemy->v.origin).normalize2D ();
             const Vector &rightSide = g_pGlobals->v_right.normalize2D ();
 
-            if ((dirToPoint | rightSide) < 0)
+            if ((dirToPoint | rightSide) < 0) {
                m_combatStrafeDir = STRAFE_DIR_LEFT;
-            else
+            }
+            else {
                m_combatStrafeDir = STRAFE_DIR_RIGHT;
+            }
 
-            if (rng.getInt (1, 100) < 30)
+            if (rng.getInt (1, 100) < 30) {
                m_combatStrafeDir = (m_combatStrafeDir == STRAFE_DIR_LEFT ? STRAFE_DIR_RIGHT : STRAFE_DIR_LEFT);
-
+            }
             m_strafeSetTime = engine.timebase () + rng.getFloat (0.5f, 3.0f);
          }
 
          if (m_combatStrafeDir == STRAFE_DIR_RIGHT) {
-            if (!checkWallOnLeft ())
+            if (!checkWallOnLeft ()) {
                m_strafeSpeed = -getShiftSpeed ();
+            }
             else {
                m_combatStrafeDir = STRAFE_DIR_LEFT;
                m_strafeSetTime = engine.timebase () + rng.getFloat (0.8f, 1.3f);
             }
          }
          else {
-            if (!checkWallOnRight ())
+            if (!checkWallOnRight ()) {
                m_strafeSpeed = getShiftSpeed ();
+            }
             else {
                m_combatStrafeDir = STRAFE_DIR_RIGHT;
                m_strafeSetTime = engine.timebase () + rng.getFloat (0.8f, 1.3f);
             }
          }
 
-         if (m_difficulty >= 3 && (m_jumpTime + 5.0f < engine.timebase () && isOnFloor () && rng.getInt (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.length2D () > 120.0f) && !usesSniper ())
+         if (m_difficulty >= 3 && (m_jumpTime + 5.0f < engine.timebase () && isOnFloor () && rng.getInt (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.length2D () > 120.0f) && !usesSniper ()) {
             pev->button |= IN_JUMP;
+         }
 
-         if (m_moveSpeed > 0.0f && distance > 100.0f && m_currentWeapon != WEAPON_KNIFE)
+         if (m_moveSpeed > 0.0f && distance > 100.0f && m_currentWeapon != WEAPON_KNIFE) {
             m_moveSpeed = 0.0f;
+         }
 
-         if (m_currentWeapon == WEAPON_KNIFE)
+         if (m_currentWeapon == WEAPON_KNIFE) {
             m_strafeSpeed = 0.0f;
+         }
       }
       else if (m_fightStyle == FIGHT_STAY) {
          if ((m_visibility & (VISIBLE_HEAD | VISIBLE_BODY)) && taskId () != TASK_SEEKCOVER && taskId () != TASK_HUNTENEMY) {
             int enemyNearestIndex = waypoints.getNearest (m_enemy->v.origin);
 
-            if (waypoints.isDuckVisible (m_currentWaypointIndex, enemyNearestIndex) && waypoints.isDuckVisible (enemyNearestIndex, m_currentWaypointIndex))
+            if (waypoints.isDuckVisible (m_currentWaypointIndex, enemyNearestIndex) && waypoints.isDuckVisible (enemyNearestIndex, m_currentWaypointIndex)) {
                m_duckTime = engine.timebase () + 0.55f;
+            }
          }
          m_moveSpeed = 0.0f;
          m_strafeSpeed = 0.0f;
@@ -1064,8 +1175,9 @@ void Bot::attackMovement (void) {
       m_strafeSpeed = 0.0f;
    }
 
-   if (m_moveSpeed > 0.0f && m_currentWeapon != WEAPON_KNIFE)
+   if (m_moveSpeed > 0.0f && m_currentWeapon != WEAPON_KNIFE) {
       m_moveSpeed = getShiftSpeed ();
+   }
 
    if (m_isReloading) {
       m_moveSpeed = -pev->maxspeed;
@@ -1073,7 +1185,7 @@ void Bot::attackMovement (void) {
    }
 
    if (!isInWater () && !isOnLadder () && (m_moveSpeed > 0.0f || m_strafeSpeed >= 0.0f)) {
-      MakeVectors (pev->v_angle);
+      makeVectors (pev->v_angle);
 
       if (isDeadlyMove (pev->origin + (g_pGlobals->v_forward * m_moveSpeed * 0.2f) + (g_pGlobals->v_right * m_strafeSpeed * 0.2f) + (pev->velocity * calcThinkInterval ()))) {
          m_strafeSpeed = -m_strafeSpeed;
@@ -1106,22 +1218,24 @@ bool Bot::hasShield (void) {
 bool Bot::isShieldDrawn (void) {
    // this function returns true, is the tactical shield is drawn
 
-   if (!hasShield ())
+   if (!hasShield ()) {
       return false;
-
+   }
    return pev->weaponanim == 6 || pev->weaponanim == 7;
 }
 
 bool Bot::isEnemyBehindShield (edict_t *enemy) {
    // this function returns true, if enemy protected by the shield
 
-   if (engine.isNullEntity (enemy) || isShieldDrawn ())
+   if (engine.isNullEntity (enemy) || isShieldDrawn ()) {
       return false;
+   }
 
    // check if enemy has shield and this shield is drawn
    if (strncmp (STRING (enemy->v.viewmodel), "models/shield/v_shield_", 23) == 0 && (enemy->v.weaponanim == 6 || enemy->v.weaponanim == 7)) {
-      if (::isInViewCone (pev->origin, enemy))
+      if (::isInViewCone (pev->origin, enemy)) {
          return true;
+      }
    }
    return false;
 }
@@ -1137,16 +1251,16 @@ bool Bot::usesRifle (void) {
    int count = 0;
 
    while (tab->id) {
-      if (m_currentWeapon == tab->id)
+      if (m_currentWeapon == tab->id) {
          break;
-
+      }
       tab++;
       count++;
    }
 
-   if (tab->id && count > 13)
+   if (tab->id && count > 13) {
       return true;
-
+   }
    return false;
 }
 
@@ -1156,16 +1270,16 @@ bool Bot::usesPistol (void) {
 
    // loop through all the weapons until terminator is found
    while (tab->id) {
-      if (m_currentWeapon == tab->id)
+      if (m_currentWeapon == tab->id) {
          break;
-
+      }
       tab++;
       count++;
    }
 
-   if (tab->id && count < 7)
+   if (tab->id && count < 7) {
       return true;
-
+   }
    return false;
 }
 
@@ -1186,13 +1300,15 @@ bool Bot::usesBadWeapon (void) {
 }
 
 int Bot::bestGrenadeCarried (void) {
-   if (pev->weapons & (1 << WEAPON_EXPLOSIVE))
+   if (pev->weapons & (1 << WEAPON_EXPLOSIVE)) {
       return WEAPON_EXPLOSIVE;
-   else if (pev->weapons & (1 << WEAPON_FLASHBANG))
+   }
+   else if (pev->weapons & (1 << WEAPON_FLASHBANG)) {
       return WEAPON_FLASHBANG;
-   else if (pev->weapons & (1 << WEAPON_SMOKE))
+   }
+   else if (pev->weapons & (1 << WEAPON_SMOKE)) {
       return WEAPON_SMOKE;
-
+   }
    return -1;
 }
 
@@ -1206,9 +1322,9 @@ void Bot::selectBestWeapon (void) {
       return;
    }
 
-   if (m_isReloading)
+   if (m_isReloading) {
       return;
-
+   }
    WeaponSelect *tab = &g_weaponSelect[0];
 
    int selectIndex = 0;
@@ -1226,16 +1342,18 @@ void Bot::selectBestWeapon (void) {
       bool ammoLeft = false;
 
       // is the bot already holding this weapon and there is still ammo in clip?
-      if (tab[selectIndex].id == m_currentWeapon && (ammoClip () < 0 || ammoClip () >= tab[selectIndex].minPrimaryAmmo))
+      if (tab[selectIndex].id == m_currentWeapon && (ammoClip () < 0 || ammoClip () >= tab[selectIndex].minPrimaryAmmo)) {
          ammoLeft = true;
+      }
 
       // is no ammo required for this weapon OR enough ammo available to fire
-      if (g_weaponDefs[id].ammo1 < 0 || (g_weaponDefs[id].ammo1 < 32 && m_ammo[g_weaponDefs[id].ammo1] >= tab[selectIndex].minPrimaryAmmo))
+      if (g_weaponDefs[id].ammo1 < 0 || (g_weaponDefs[id].ammo1 < 32 && m_ammo[g_weaponDefs[id].ammo1] >= tab[selectIndex].minPrimaryAmmo)) {
          ammoLeft = true;
+      }
 
-      if (ammoLeft)
+      if (ammoLeft) {
          chosenWeaponIndex = selectIndex;
-
+      }
       selectIndex++;
    }
 
@@ -1245,9 +1363,9 @@ void Bot::selectBestWeapon (void) {
    int id = tab[selectIndex].id;
 
    // select this weapon if it isn't already selected
-   if (m_currentWeapon != id)
+   if (m_currentWeapon != id) {
       selectWeaponByName (tab[selectIndex].weaponName);
-
+   }
    m_isReloading = false;
    m_reloadState = RELOAD_NONE;
 }
@@ -1271,9 +1389,9 @@ int Bot::bestWeaponCarried (void) {
    // loop through all the weapons until terminator is found...
    while (tab->id) {
       // is the bot carrying this weapon?
-      if (weapons & (1 << tab->id))
+      if (weapons & (1 << tab->id)) {
          num = i;
-
+      }
       i++;
       tab++;
    }
@@ -1296,26 +1414,29 @@ void Bot::decideFollowUser (void) {
    for (int i = 0; i < engine.maxClients (); i++) {
       const Client &client = g_clients[i];
 
-      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ())
+      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ()) {
          continue;
+      }
 
-      if (seesEntity (client.origin) && !isFakeClient (client.ent))
+      if (seesEntity (client.origin) && !isFakeClient (client.ent)) {
          users.push (client.ent);
+      }
    }
 
-   if (users.empty ())
+   if (users.empty ()) {
       return;
-
+   }
    m_targetEntity = users.random ();
 
    pushChatterMessage (Chatter_LeadOnSir);
-   startTask (TASK_FOLLOWUSER, TASKPRI_FOLLOWUSER, -1, 0.0f, true);
+   startTask (TASK_FOLLOWUSER, TASKPRI_FOLLOWUSER, INVALID_WAYPOINT_INDEX, 0.0f, true);
 }
 
 void Bot::processTeamCommands (void) {
    // prevent spamming
-   if (m_timeTeamOrder > engine.timebase () + 2.0f || (g_gameFlags & GAME_CSDM_FFA) || !yb_communication_type.integer ())
+   if (m_timeTeamOrder > engine.timebase () + 2.0f || (g_gameFlags & GAME_CSDM_FFA) || !yb_communication_type.integer ()) {
       return;
+   }
 
    bool memberNear = false;
    bool memberExists = false;
@@ -1324,9 +1445,9 @@ void Bot::processTeamCommands (void) {
    for (int i = 0; i < engine.maxClients (); i++) {
       const Client &client = g_clients[i];
 
-      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ())
+      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ()) {
          continue;
-
+      }
       memberExists = true;
 
       if (seesEntity (client.origin)) {
@@ -1335,18 +1456,21 @@ void Bot::processTeamCommands (void) {
       }
    }
 
-   if (memberNear) // has teammates ?
-   {
-      if (m_personality == PERSONALITY_RUSHER && yb_communication_type.integer () == 2)
+   // has teammates?
+   if (memberNear) {
+      if (m_personality == PERSONALITY_RUSHER && yb_communication_type.integer () == 2) {
          pushRadioMessage (Radio_StormTheFront);
-      else if (m_personality != PERSONALITY_RUSHER && yb_communication_type.integer () == 2)
+      }
+      else if (m_personality != PERSONALITY_RUSHER && yb_communication_type.integer () == 2) {
          pushRadioMessage (Radio_Fallback);
+      }
    }
-   else if (memberExists && yb_communication_type.integer () == 1)
+   else if (memberExists && yb_communication_type.integer () == 1) {
       pushRadioMessage (Radio_TakingFire);
-   else if (memberExists && yb_communication_type.integer () == 2)
+   }
+   else if (memberExists && yb_communication_type.integer () == 2) {
       pushChatterMessage (Chatter_ScaredEmotion);
-
+   }
    m_timeTeamOrder = engine.timebase () + rng.getFloat (15.0f, 30.0f);
 }
 
@@ -1357,16 +1481,19 @@ bool Bot::isGroupOfEnemies (const Vector &location, int numEnemies, float radius
    for (int i = 0; i < engine.maxClients (); i++) {
       const Client &client = g_clients[i];
 
-      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.ent == ent ())
+      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.ent == ent ()) {
          continue;
+      }
 
       if ((client.ent->v.origin - location).lengthSq () < A_square (radius)) {
          // don't target our teammates...
-         if (client.team == m_team)
+         if (client.team == m_team) {
             return false;
+         }
 
-         if (numPlayers++ > numEnemies)
+         if (numPlayers++ > numEnemies) {
             return true;
+         }
       }
    }
    return false;
@@ -1386,17 +1513,19 @@ void Bot::checkReload (void) {
       int weaponIndex = 0, maxClip = 0;
       int weapons = pev->weapons;
 
-      if (m_reloadState == RELOAD_PRIMARY)
+      if (m_reloadState == RELOAD_PRIMARY) {
          weapons &= WEAPON_PRIMARY;
-      else if (m_reloadState == RELOAD_SECONDARY)
+      }
+      else if (m_reloadState == RELOAD_SECONDARY) {
          weapons &= WEAPON_SECONDARY;
+      }
 
       if (weapons == 0) {
          m_reloadState++;
 
-         if (m_reloadState > RELOAD_SECONDARY)
+         if (m_reloadState > RELOAD_SECONDARY) {
             m_reloadState = RELOAD_NONE;
-
+         }
          return;
       }
 
@@ -1406,76 +1535,17 @@ void Bot::checkReload (void) {
             break;
          }
       }
-      assert (weaponIndex);
-
-      switch (weaponIndex) {
-      case WEAPON_M249:
-         maxClip = 100;
-         break;
-
-      case WEAPON_P90:
-         maxClip = 50;
-         break;
-
-      case WEAPON_GALIL:
-         maxClip = 35;
-         break;
-
-      case WEAPON_ELITE:
-      case WEAPON_MP5:
-      case WEAPON_TMP:
-      case WEAPON_MAC10:
-      case WEAPON_M4A1:
-      case WEAPON_AK47:
-      case WEAPON_SG552:
-      case WEAPON_AUG:
-      case WEAPON_SG550:
-         maxClip = 30;
-         break;
-
-      case WEAPON_UMP45:
-      case WEAPON_FAMAS:
-         maxClip = 25;
-         break;
-
-      case WEAPON_GLOCK:
-      case WEAPON_FIVESEVEN:
-      case WEAPON_G3SG1:
-         maxClip = 20;
-         break;
-
-      case WEAPON_P228:
-         maxClip = 13;
-         break;
-
-      case WEAPON_USP:
-         maxClip = 12;
-         break;
-
-      case WEAPON_AWP:
-      case WEAPON_SCOUT:
-         maxClip = 10;
-         break;
-
-      case WEAPON_M3:
-         maxClip = 8;
-         break;
-
-      case WEAPON_DEAGLE:
-      case WEAPON_XM1014:
-         maxClip = 7;
-         break;
-      }
+      maxClip = getMaxClip (weaponIndex);
 
       if (m_ammoInClip[weaponIndex] < maxClip * 0.8f && g_weaponDefs[weaponIndex].ammo1 != -1 && g_weaponDefs[weaponIndex].ammo1 < 32 && m_ammo[g_weaponDefs[weaponIndex].ammo1] > 0) {
-         if (m_currentWeapon != weaponIndex)
+         if (m_currentWeapon != weaponIndex) {
             selectWeaponByName (g_weaponDefs[weaponIndex].className);
-
+         }
          pev->button &= ~IN_ATTACK;
 
-         if ((m_oldButtons & IN_RELOAD) == RELOAD_NONE)
+         if ((m_oldButtons & IN_RELOAD) == RELOAD_NONE) {
             pev->button |= IN_RELOAD; // press reload button
-
+         }
          m_isReloading = true;
       }
       else {
@@ -1486,10 +1556,74 @@ void Bot::checkReload (void) {
          }
          m_reloadState++;
 
-         if (m_reloadState > RELOAD_SECONDARY)
+         if (m_reloadState > RELOAD_SECONDARY) {
             m_reloadState = RELOAD_NONE;
-
+         }
          return;
       }
    }
+}
+
+int Bot::getMaxClip (int id) {
+   int maxClip = 0;
+
+   switch (id) {
+   case WEAPON_M249:
+      maxClip = 100;
+      break;
+
+   case WEAPON_P90:
+      maxClip = 50;
+      break;
+
+   case WEAPON_GALIL:
+      maxClip = 35;
+      break;
+
+   case WEAPON_ELITE:
+   case WEAPON_MP5:
+   case WEAPON_TMP:
+   case WEAPON_MAC10:
+   case WEAPON_M4A1:
+   case WEAPON_AK47:
+   case WEAPON_SG552:
+   case WEAPON_AUG:
+   case WEAPON_SG550:
+      maxClip = 30;
+      break;
+
+   case WEAPON_UMP45:
+   case WEAPON_FAMAS:
+      maxClip = 25;
+      break;
+
+   case WEAPON_GLOCK:
+   case WEAPON_FIVESEVEN:
+   case WEAPON_G3SG1:
+      maxClip = 20;
+      break;
+
+   case WEAPON_P228:
+      maxClip = 13;
+      break;
+
+   case WEAPON_USP:
+      maxClip = 12;
+      break;
+
+   case WEAPON_AWP:
+   case WEAPON_SCOUT:
+      maxClip = 10;
+      break;
+
+   case WEAPON_M3:
+      maxClip = 8;
+      break;
+
+   case WEAPON_DEAGLE:
+   case WEAPON_XM1014:
+      maxClip = 7;
+      break;
+   }
+   return maxClip;
 }

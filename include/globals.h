@@ -58,7 +58,7 @@ extern WeaponProperty g_weaponDefs[MAX_WEAPONS + 1];
 
 extern Client g_clients[MAX_ENGINE_PLAYERS];
 extern MenuText g_menus[BOT_MENU_TOTAL_MENUS];
-extern TaskItem g_taskFilters[];
+extern Task g_taskFilters[];
 
 extern Experience *g_experienceData;
 

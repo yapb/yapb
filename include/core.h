@@ -478,10 +478,12 @@ enum RouteState {
 const char FH_WAYPOINT[] = "PODWAY!";
 const char FH_EXPERIENCE[] = "PODEXP!";
 const char FH_VISTABLE[] = "PODVIS!";
+const char FH_MATRIX[] = "PODMAT!";
 
 const int FV_WAYPOINT = 7;
 const int FV_EXPERIENCE = 3;
 const int FV_VISTABLE = 1;
+const int FV_MATRIX = 2;
 
 // some hardcoded desire defines used to override calculated ones
 const float TASKPRI_NORMAL = 35.0f;
@@ -518,6 +520,7 @@ const int MAX_COLLIDE_MOVES = 3;
 const int MAX_ENGINE_PLAYERS = 32; // we can have 64 players with xash
 const int MAX_PRINT_BUFFER = 1024;
 const int MAX_TEAM_COUNT = 2;
+const int INVALID_WAYPOINT_INDEX = -1;
 
 // weapon masks
 const int WEAPON_PRIMARY = ((1 << WEAPON_XM1014) | (1 << WEAPON_M3) | (1 << WEAPON_MAC10) | (1 << WEAPON_UMP45) | (1 << WEAPON_MP5) | (1 << WEAPON_TMP) | (1 << WEAPON_P90) | (1 << WEAPON_AUG) | (1 << WEAPON_M4A1) | (1 << WEAPON_SG552) | (1 << WEAPON_AK47) | (1 << WEAPON_SCOUT) | (1 << WEAPON_SG550) | (1 << WEAPON_AWP) | (1 << WEAPON_G3SG1) | (1 << WEAPON_M249) | (1 << WEAPON_FAMAS) | (1 << WEAPON_GALIL));
@@ -544,7 +547,7 @@ struct KeywordFactory {
 };
 
 // tasks definition
-struct TaskItem {
+struct Task {
    TaskID id; // major task/action carried out
    float desire; // desire (filled in) for this task
    int data; // additional data (waypoint index)
@@ -694,6 +697,107 @@ struct Path {
    } vis;
 };
 
+// priority queue class (smallest item out first)
+template <int maxSize> class RoutePriorityQueue {
+private:
+   int m_size;
+   int m_maxSize;
+
+   struct HeapNode {
+      int index;
+      float priority;
+   } *m_heap;
+
+public:
+   RoutePriorityQueue (void) {
+      m_size = 0;
+      m_maxSize = maxSize;
+      m_heap = new HeapNode[m_maxSize + 1];
+   }
+
+   ~RoutePriorityQueue (void) {
+      delete[] m_heap;
+   }
+
+   void push (int index, float priority) {
+      if (m_size >= m_maxSize) {
+         return;
+      }
+      m_heap[m_size].priority = priority;
+      m_heap[m_size].index = index;
+      m_size++;
+
+      int child = m_size - 1;
+
+      while (child) {
+         int parent = parentOf (child);
+
+         if (m_heap[parent].priority <= m_heap[child].priority) {
+            break;
+         }
+         HeapNode swap;
+         swap = m_heap[child];
+
+         m_heap[child] = m_heap[parent];
+         m_heap[parent] = swap;
+
+         child = parent;
+      }
+   }
+
+   int pop (void) {
+      int ret = m_heap[0].index;
+      m_size--;
+      m_heap[0] = m_heap[m_size];
+
+      int parent = 0;
+      int child = leftOf (parent);
+
+      HeapNode swap = m_heap[parent];
+
+      while (child < m_size) {
+         int rightChild = rightOf (parent);
+
+         if (rightChild < m_size) {
+            if (m_heap[rightChild].priority < m_heap[child].priority) {
+               child = rightChild;
+            }
+         }
+
+         if (swap.priority <= m_heap[child].priority) {
+            break;
+         }
+         m_heap[parent] = m_heap[child];
+         parent = child;
+         child = leftOf (parent);
+      }
+      m_heap[parent] = swap;
+
+      return ret;
+   }
+
+   int empty (void) {
+      return !m_size;
+   }
+
+   void clear (void) {
+      m_size = 0;
+   }
+
+protected:
+   constexpr int leftOf (int index) {
+      return (index << 1) | 1;
+   }
+
+   constexpr int rightOf (int index) {
+      return (++index) << 1;
+   }
+
+   constexpr int parentOf (int index) {
+      return (--index) >> 1;
+   }
+};
+
 // main bot class
 class Bot {
    friend class BotManager;
@@ -750,6 +854,7 @@ private:
    unsigned int m_collStateIndex; // index into collide moves
    CollisionState m_collisionState; // collision State
 
+   RoutePriorityQueue <MAX_WAYPOINTS> m_routeQue;
    Route *m_routes; // pointer
    PathNode *m_navNode; // pointer to current node from path
    PathNode *m_navNodeStart; // pointer to start of path finding nodes
@@ -903,6 +1008,7 @@ private:
    void checkMsgQueue (void);
    void checkRadioQueue (void);
    void checkReload (void);
+   int getMaxClip (int id);
    void avoidGrenades (void);
    void checkGrenadesThrow (void);
    void checkBurstMode (float distance);
@@ -1149,7 +1255,7 @@ public:
    // a little optimization
    int m_team;
 
-   Array<TaskItem> m_tasks;
+   Array<Task> m_tasks;
 
    Bot (edict_t *bot, int difficulty, int personality, int team, int member, const String &steamId);
    ~Bot (void);
@@ -1200,7 +1306,7 @@ public:
    void filterTasks (void);
    void resetTasks (void);
 
-   TaskItem *task (void);
+   Task *task (void);
    inline TaskID taskId (void) {
       return task ()->id;
    };
@@ -1221,7 +1327,7 @@ public:
    void kick (void);
 
    void resetDoubleJump (void);
-   void StartDoubleJump (edict_t *ent);
+   void startDoubleJump (edict_t *ent);
 
    int locatePlantedC4 (void);
 
@@ -1404,7 +1510,7 @@ public:
 
    void push (int flags, const Vector &waypointOrigin = Vector::null ());
    void erase (void);
-   void toggleRadius (int toggleFlag);
+   void toggleFlags (int toggleFlag);
    void setRadius (int radius);
    bool isConnected (int pointA, int pointB);
    bool isConnected (int num);
@@ -1460,12 +1566,12 @@ public:
    inline const Vector &getBombPos (void) {
       return m_bombPos;
    }
-
+   /*
    FORCEINLINE Path *getPath (int id) {
       return m_paths[id];
    }
-
-   FORCEINLINE Path &operator [] (int index) {
+   */
+   constexpr Path &operator [] (int index) {
       return *m_paths[index];
    }
 
@@ -1479,9 +1585,9 @@ public:
 #include <engine.h>
 
 // expose bot super-globals
-#define waypoints Waypoint::ref ()
-#define engine Engine::ref ()
-#define bots BotManager::ref ()
+static auto &waypoints = Waypoint::ref ();
+static auto &bots = BotManager::ref ();
+static auto &engine = Engine::ref ();
 
 // prototypes of bot functions...
 extern int getWeaponData (bool isString, const char *weaponAlias, int weaponIndex = -1);
@@ -1492,7 +1598,6 @@ extern float getShootingConeDeviation (edict_t *ent, Vector *position);
 extern bool isVisible (const Vector &origin, edict_t *ent);
 extern bool isAlive (edict_t *ent);
 extern bool isInViewCone (const Vector &origin, edict_t *ent);
-
 extern bool isFakeClient (edict_t *ent);
 extern bool isPlayer (edict_t *ent);
 extern bool isPlayerVIP (edict_t *ent);
@@ -1505,7 +1610,7 @@ extern void checkWelcome (void);
 extern void logEntry (bool outputToConsole, int logLevel, const char *format, ...);
 extern void showMenu (edict_t *ent, MenuId menu);
 extern void traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIndex);
-extern void attackSoundsToClients (edict_t *ent, const char *sample, float volume);
+extern void attachSoundsToClients (edict_t *ent, const char *sample, float volume);
 extern void simulateSoundUpdates (int playerIndex);
 
 extern const char *format (const char *format, ...);
@@ -1523,6 +1628,6 @@ inline int Bot::index (void) {
    return engine.indexOfEntity (ent ());
 }
 
-static inline void MakeVectors (const Vector &in) {
+static inline void makeVectors (const Vector &in) {
    in.makeVectors (&g_pGlobals->v_forward, &g_pGlobals->v_right, &g_pGlobals->v_up);
 }

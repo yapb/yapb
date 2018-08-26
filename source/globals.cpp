@@ -27,9 +27,7 @@ float g_timeRoundMid = 0.0f;
 float g_timeNextBombUpdate = 0.0f;
 float g_timeBombPlanted = 0.0f;
 float g_timePerSecondUpdate = 0.0f;
-float g_lastRadioTime[MAX_TEAM_COUNT] = {
-   0.0f,
-};
+float g_lastRadioTime[MAX_TEAM_COUNT] = { 0.0f, };
 float g_autoPathDistance = 250.0f;
 
 int g_lastRadio[MAX_TEAM_COUNT];
@@ -66,15 +64,10 @@ Experience *g_experienceData = nullptr;
 
 // default tables for personality weapon preferences, overridden by weapons.cfg
 int g_normalWeaponPrefs[NUM_WEAPONS] = {0, 2, 1, 4, 5, 6, 3, 12, 10, 24, 25, 13, 11, 8, 7, 22, 23, 18, 21, 17, 19, 15, 17, 9, 14, 16};
-
 int g_rusherWeaponPrefs[NUM_WEAPONS] = {0, 2, 1, 4, 5, 6, 3, 24, 19, 22, 23, 20, 21, 10, 12, 13, 7, 8, 11, 9, 18, 17, 19, 25, 15, 16};
-
 int g_carefulWeaponPrefs[NUM_WEAPONS] = {0, 2, 1, 4, 25, 6, 3, 7, 8, 12, 10, 13, 11, 9, 24, 18, 14, 17, 16, 15, 19, 20, 21, 22, 23, 5};
-
 int g_grenadeBuyPrecent[NUM_WEAPONS - 23] = {95, 85, 60};
-
 int g_botBuyEconomyTable[NUM_WEAPONS - 15] = {1900, 2100, 2100, 4000, 6000, 7000, 16000, 1200, 800, 1000, 3000};
-
 int *g_weaponPrefs[] = {g_normalWeaponPrefs, g_rusherWeaponPrefs, g_carefulWeaponPrefs};
 
 // metamod plugin information
@@ -91,28 +84,28 @@ plugin_info_t Plugin_info = {
 };
 
 // table with all available actions for the bots (filtered in & out in Bot::SetConditions) some of them have subactions included
-TaskItem g_taskFilters[] = {
-   { TASK_NORMAL, 0, -1, 0.0f, true },
-   { TASK_PAUSE, 0, -1, 0.0f, false },
-   { TASK_MOVETOPOSITION, 0, -1, 0.0f, true },
-   { TASK_FOLLOWUSER, 0, -1, 0.0f, true },
-   { TASK_WAITFORGO, 0, -1, 0.0f, true },
-   { TASK_PICKUPITEM, 0, -1, 0.0f, true },
-   { TASK_CAMP, 0, -1, 0.0f, true },
-   { TASK_PLANTBOMB, 0, -1, 0.0f, false },
-   { TASK_DEFUSEBOMB, 0, -1, 0.0f, false },
-   { TASK_ATTACK, 0, -1, 0.0f, false },
-   { TASK_HUNTENEMY, 0, -1, 0.0f, false },
-   { TASK_SEEKCOVER, 0, -1, 0.0f, false },
-   { TASK_THROWHEGRENADE, 0, -1, 0.0f, false },
-   { TASK_THROWFLASHBANG, 0, -1, 0.0f, false },
-   { TASK_THROWSMOKE, 0, -1, 0.0f, false },
-   { TASK_DOUBLEJUMP, 0, -1, 0.0f, false },
-   { TASK_ESCAPEFROMBOMB, 0, -1, 0.0f, false },
-   { TASK_SHOOTBREAKABLE, 0, -1, 0.0f, false },
-   { TASK_HIDE, 0, -1, 0.0f, false },
-   { TASK_BLINDED, 0, -1, 0.0f, false },
-   { TASK_SPRAY, 0, -1, 0.0f, false }
+Task g_taskFilters[] = {
+   { TASK_NORMAL, 0, INVALID_WAYPOINT_INDEX, 0.0f, true },
+   { TASK_PAUSE, 0, INVALID_WAYPOINT_INDEX, 0.0f, false },
+   { TASK_MOVETOPOSITION, 0, INVALID_WAYPOINT_INDEX, 0.0f, true },
+   { TASK_FOLLOWUSER, 0, INVALID_WAYPOINT_INDEX, 0.0f, true },
+   { TASK_WAITFORGO, 0, INVALID_WAYPOINT_INDEX, 0.0f, true },
+   { TASK_PICKUPITEM, 0, INVALID_WAYPOINT_INDEX, 0.0f, true },
+   { TASK_CAMP, 0, INVALID_WAYPOINT_INDEX, 0.0f, true },
+   { TASK_PLANTBOMB, 0, INVALID_WAYPOINT_INDEX, 0.0f, false },
+   { TASK_DEFUSEBOMB, 0, INVALID_WAYPOINT_INDEX, 0.0f, false },
+   { TASK_ATTACK, 0, INVALID_WAYPOINT_INDEX, 0.0f, false },
+   { TASK_HUNTENEMY, 0, INVALID_WAYPOINT_INDEX, 0.0f, false },
+   { TASK_SEEKCOVER, 0, INVALID_WAYPOINT_INDEX, 0.0f, false },
+   { TASK_THROWHEGRENADE, 0, INVALID_WAYPOINT_INDEX, 0.0f, false },
+   { TASK_THROWFLASHBANG, 0, INVALID_WAYPOINT_INDEX, 0.0f, false },
+   { TASK_THROWSMOKE, 0, INVALID_WAYPOINT_INDEX, 0.0f, false },
+   { TASK_DOUBLEJUMP, 0, INVALID_WAYPOINT_INDEX, 0.0f, false },
+   { TASK_ESCAPEFROMBOMB, 0, INVALID_WAYPOINT_INDEX, 0.0f, false },
+   { TASK_SHOOTBREAKABLE, 0, INVALID_WAYPOINT_INDEX, 0.0f, false },
+   { TASK_HIDE, 0, INVALID_WAYPOINT_INDEX, 0.0f, false },
+   { TASK_BLINDED, 0, INVALID_WAYPOINT_INDEX, 0.0f, false },
+   { TASK_SPRAY, 0, INVALID_WAYPOINT_INDEX, 0.0f, false }
 };
 
 // weapons and their specifications
@@ -150,8 +143,7 @@ void setupBotMenus (void) {
    int counter = 0;
 
    // bots main menu
-   g_menus[counter] =
-   {
+   g_menus[counter] = {
       BOT_MENU_MAIN, 0x2ff,
       "\\yMain Menu\\w\n\n"
       "1. Control Bots\n"
@@ -162,8 +154,7 @@ void setupBotMenus (void) {
    };
 
    // bots features menu
-   g_menus[++counter] =
-   {
+   g_menus[++counter] = {
       BOT_MENU_FEATURES, 0x25f,
       "\\yBots Features\\w\n\n"
       "1. Weapon Mode Menu\n"
@@ -175,8 +166,7 @@ void setupBotMenus (void) {
    };
 
    // bot control menu
-   g_menus[++counter] =
-   {
+   g_menus[++counter] = {
       BOT_MENU_CONTROL, 0x2ff,
       "\\yBots Control Menu\\w\n\n"
       "1. Add a Bot, Quick\n"
@@ -188,8 +178,7 @@ void setupBotMenus (void) {
    };
 
    // weapon mode select menu
-   g_menus[++counter] =
-   {
+   g_menus[++counter] = {
       BOT_MENU_WEAPON_MODE, 0x27f,
       "\\yBots Weapon Mode\\w\n\n"
       "1. Knives only\n"
@@ -203,8 +192,7 @@ void setupBotMenus (void) {
    };
 
    // personality select menu
-   g_menus[++counter] =
-   {
+   g_menus[++counter] = {
       BOT_MENU_PERSONALITY, 0x20f,
       "\\yBots Personality\\w\n\n"
       "1. Random\n"
@@ -215,8 +203,7 @@ void setupBotMenus (void) {
    };
 
    // difficulty select menu
-   g_menus[++counter] =
-   {
+   g_menus[++counter] = {
       BOT_MENU_DIFFICULTY, 0x23f,
       "\\yBots Difficulty Level\\w\n\n"
       "1. Newbie\n"
@@ -228,8 +215,7 @@ void setupBotMenus (void) {
    };
 
    // team select menu
-   g_menus[++counter] =
-   {
+   g_menus[++counter] = {
       BOT_MENU_TEAM_SELECT, 0x213,
       "\\ySelect a team\\w\n\n"
       "1. Terrorist Force\n"
@@ -239,8 +225,7 @@ void setupBotMenus (void) {
    };
 
    // terrorist model select menu
-   g_menus[++counter] =
-   {
+   g_menus[++counter] = {
       BOT_MENU_TERRORIST_SELECT, 0x21f,
       "\\ySelect an appearance\\w\n\n"
       "1. Phoenix Connexion\n"
@@ -252,8 +237,7 @@ void setupBotMenus (void) {
    };
 
    // counter-terrorist model select menu
-   g_menus[++counter] =
-   {
+   g_menus[++counter] = {
       BOT_MENU_CT_SELECT, 0x21f,
       "\\ySelect an appearance\\w\n\n"
       "1. Seal Team 6 (DEVGRU)\n"
@@ -265,8 +249,7 @@ void setupBotMenus (void) {
    };
 
    // command menu
-   g_menus[++counter] =
-   {
+   g_menus[++counter] = {
       BOT_MENU_COMMANDS, 0x23fu,
       "\\yBot Command Menu\\w\n\n"
       "1. Make Double Jump\n"
@@ -277,8 +260,7 @@ void setupBotMenus (void) {
    };
 
    // main waypoint menu
-   g_menus[++counter] =
-   {
+   g_menus[++counter] = {
       BOT_MENU_WAYPOINT_MAIN_PAGE1, 0x3ff,
       "\\yWaypoint Operations (Page 1)\\w\n\n"
       "1. Show/Hide waypoints\n"
@@ -294,8 +276,7 @@ void setupBotMenus (void) {
    };
 
    // main waypoint menu (page 2)
-   g_menus[++counter] =
-   {
+   g_menus[++counter] = {
       BOT_MENU_WAYPOINT_MAIN_PAGE2, 0x3ff,
       "\\yWaypoint Operations (Page 2)\\w\n\n"
       "1. Waypoint stats\n"
@@ -311,8 +292,7 @@ void setupBotMenus (void) {
    };
 
    // select waypoint radius menu
-   g_menus[++counter] =
-   {
+   g_menus[++counter] = {
       BOT_MENU_WAYPOINT_RADIUS, 0x3ff,
       "\\yWaypoint Radius\\w\n\n"
       "1. SetRadius 0\n"
@@ -328,8 +308,7 @@ void setupBotMenus (void) {
    };
 
    // waypoint add menu
-   g_menus[++counter] =
-   {
+   g_menus[++counter] = {
       BOT_MENU_WAYPOINT_TYPE, 0x3ff,
       "\\yWaypoint Type\\w\n\n"
       "1. Normal\n"
@@ -345,8 +324,7 @@ void setupBotMenus (void) {
    };
 
    // set waypoint flag menu
-   g_menus[++counter] =
-   {
+   g_menus[++counter] = {
       BOT_MENU_WAYPOINT_FLAG, 0x2ff,
       "\\yToggle Waypoint Flags\\w\n\n"
       "1. Block with Hostage\n"
@@ -358,8 +336,7 @@ void setupBotMenus (void) {
    };
 
    // auto-path max distance
-   g_menus[++counter] =
-   {
+   g_menus[++counter] = {
       BOT_MENU_WAYPOINT_AUTOPATH,
       0x27f,
       "\\yAutoPath Distance\\w\n\n"
@@ -374,8 +351,7 @@ void setupBotMenus (void) {
    };
 
    // path connections
-   g_menus[++counter] =
-   {
+   g_menus[++counter] = {
       BOT_MENU_WAYPOINT_PATH,
       0x207,
       "\\yCreate Path (Choose Direction)\\w\n\n"

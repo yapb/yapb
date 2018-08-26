@@ -35,9 +35,9 @@ void StripTags (char *buffer) {
          if (fieldStop > fieldStart && fieldStop < 32) {
             int tagLength = strlen (tagClose[index]);
 
-            for (i = fieldStart; i < length - (fieldStop + tagLength - fieldStart); i++)
+            for (i = fieldStart; i < length - (fieldStop + tagLength - fieldStart); i++) {
                buffer[i] = buffer[i + (fieldStop + tagLength - fieldStart)]; // overwrite the buffer with the stripped string
-
+            }
             buffer[i] = 0x0; // terminate the string
          }
       }
@@ -57,9 +57,9 @@ void StripTags (char *buffer) {
          if (fieldStart >= 0 && fieldStart < 32) {
             tagLength = strlen (tagOpen[index]);
 
-            for (i = fieldStart; i < length - tagLength; i++)
+            for (i = fieldStart; i < length - tagLength; i++) {
                buffer[i] = buffer[i + tagLength]; // overwrite the buffer with the stripped string
-
+            }
             buffer[i] = 0x0; // terminate the string
 
             fieldStart = strstr (buffer, tagClose[index]) - buffer; // look for a tag stop
@@ -68,9 +68,9 @@ void StripTags (char *buffer) {
             if (fieldStart >= 0 && fieldStart < 32) {
                tagLength = strlen (tagClose[index]);
 
-               for (i = fieldStart; i < length - tagLength; i++)
+               for (i = fieldStart; i < length - tagLength; i++) {
                   buffer[i] = buffer[i + tagLength]; // overwrite the buffer with the stripped string
-
+               }
                buffer[i] = 0; // terminate the string
             }
          }
@@ -86,16 +86,19 @@ char *HumanizeName (char *name) {
    strncpy (outputName, name, A_bufsize (outputName)); // copy name to new buffer
 
    // drop tag marks, 80 percent of time
-   if (rng.getInt (1, 100) < 80)
+   if (rng.getInt (1, 100) < 80) {
       StripTags (outputName);
-   else
+   }
+   else {
       String::trimChars (outputName);
+   }
 
    // sometimes switch name to lower characters
    // note: since we're using russian names written in english, we reduce this shit to 6 percent
    if (rng.getInt (1, 100) <= 6) {
-      for (int i = 0; i < static_cast<int> (strlen (outputName)); i++)
+      for (int i = 0; i < static_cast<int> (strlen (outputName)); i++) {
          outputName[i] = static_cast<char> (tolower (static_cast<int> (outputName[i]))); // to lower case
+      }
    }
    return &outputName[0]; // return terminated string
 }
@@ -109,8 +112,9 @@ void HumanizeChat (char *buffer) {
    // sometimes switch text to lowercase
    // note: since we're using russian chat written in english, we reduce this shit to 4 percent
    if (rng.getInt (1, 100) <= 4) {
-      for (i = 0; i < length; i++)
+      for (i = 0; i < length; i++) {
          buffer[i] = static_cast<char> (tolower (static_cast<int> (buffer[i]))); // switch to lowercase
+      }
    }
 
    if (length > 15) {
@@ -118,16 +122,16 @@ void HumanizeChat (char *buffer) {
       if (rng.getInt (1, 100) < (length / 2)) {
          int pos = rng.getInt ((length / 8), length - (length / 8)); // chose random position in string
 
-         for (i = pos; i < length - 1; i++)
+         for (i = pos; i < length - 1; i++) {
             buffer[i] = buffer[i + 1]; // overwrite the buffer with stripped string
-
+         }
          buffer[i] = 0x0; // terminate string;
          length--; // update new string length
       }
 
       // "length" / 4 precent of time swap character
-      if (rng.getInt (1, 100) < (length / 4)) {
-         int pos = rng.getInt ((length / 8), ((3 * length) / 8)); // choose random position in string
+      if (rng.getInt (1, 100) < length / 4) {
+         int pos = rng.getInt (length / 8, 3 * length / 8); // choose random position in string
          char ch = buffer[pos]; // swap characters
 
          buffer[pos] = buffer[pos + 1];
@@ -140,9 +144,9 @@ void HumanizeChat (char *buffer) {
 void Bot::prepareChatMessage (char *text) {
    // this function parses messages from the botchat, replaces keywords and converts names into a more human style
 
-   if (!yb_chat.boolean () || isEmptyStr (text))
+   if (!yb_chat.boolean () || isEmptyStr (text)) {
       return;
-
+   }
    memset (&m_tempStrings, 0, sizeof (m_tempStrings));
 
    char *textStart = text;
@@ -153,8 +157,9 @@ void Bot::prepareChatMessage (char *text) {
    static auto assignChatTalkEntity = [](edict_t *ent, char *buffer) {
       const char *botName = STRING (ent->v.netname);
 
-      if (!engine.isNullEntity (ent))
+      if (!engine.isNullEntity (ent)) {
          strncat (buffer, HumanizeName (const_cast<char *> (botName)), 159);
+      }
    };
 
    while (pattern != nullptr) {
@@ -164,9 +169,9 @@ void Bot::prepareChatMessage (char *text) {
       if (pattern != nullptr) {
          int length = pattern - textStart;
 
-         if (length > 0)
+         if (length > 0) {
             strncpy (m_tempStrings, textStart, length);
-
+         }
          pattern++;
 
          // player with most frags?
@@ -177,9 +182,9 @@ void Bot::prepareChatMessage (char *text) {
             for (int i = 0; i < engine.maxClients (); i++) {
                const Client &client = g_clients[i];
 
-               if (!(client.flags & CF_USED) || client.ent == ent ())
+               if (!(client.flags & CF_USED) || client.ent == ent ()) {
                   continue;
-
+               }
                int frags = static_cast<int> (client.ent->v.frags);
 
                if (frags > highestFrags) {
@@ -192,8 +197,9 @@ void Bot::prepareChatMessage (char *text) {
             assignChatTalkEntity (talkEntity, m_tempStrings);
          }
          // mapname?
-         else if (*pattern == 'm')
+         else if (*pattern == 'm') {
             strncat (m_tempStrings, engine.getMapName (), A_bufsize (m_tempStrings));
+         }
          // roundtime?
          else if (*pattern == 'r') {
             int time = static_cast<int> (g_timeRoundEnd - engine.timebase ());
@@ -211,18 +217,19 @@ void Bot::prepareChatMessage (char *text) {
             for (i = 0; i < engine.maxClients (); i++) {
                const Client &client = g_clients[i];
 
-               if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ())
+               if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ()) {
                   continue;
-
+               }
                break;
             }
 
             if (i < engine.maxClients ()) {
-               if (!engine.isNullEntity (pev->dmg_inflictor) && m_team == engine.getTeam (pev->dmg_inflictor))
+               if (!engine.isNullEntity (pev->dmg_inflictor) && m_team == engine.getTeam (pev->dmg_inflictor)) {
                   talkEntity = pev->dmg_inflictor;
-               else
+               }
+               else {
                   talkEntity = g_clients[i].ent;
-
+               }
                assignChatTalkEntity (talkEntity, m_tempStrings);
             }
             else // no teammates alive...
@@ -230,9 +237,9 @@ void Bot::prepareChatMessage (char *text) {
                for (i = 0; i < engine.maxClients (); i++) {
                   const Client &client = g_clients[i];
 
-                  if (!(client.flags & CF_USED) || client.team != m_team || client.ent == ent ())
+                  if (!(client.flags & CF_USED) || client.team != m_team || client.ent == ent ()) {
                      continue;
-
+                  }
                   break;
                }
 
@@ -248,9 +255,9 @@ void Bot::prepareChatMessage (char *text) {
             for (i = 0; i < engine.maxClients (); i++) {
                const Client &client = g_clients[i];
 
-               if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team == m_team || client.ent == ent ())
+               if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team == m_team || client.ent == ent ()) {
                   continue;
-
+               }
                break;
             }
 
@@ -258,14 +265,15 @@ void Bot::prepareChatMessage (char *text) {
                talkEntity = g_clients[i].ent;
                assignChatTalkEntity (talkEntity, m_tempStrings);
             }
-            else // no teammates alive...
-            {
+
+            // no teammates alive ?
+            else {
                for (i = 0; i < engine.maxClients (); i++) {
                   const Client &client = g_clients[i];
 
-                  if (!(client.flags & CF_USED) || client.team == m_team || client.ent == ent ())
+                  if (!(client.flags & CF_USED) || client.team == m_team || client.ent == ent ()) {
                      continue;
-
+                  }
                   break;
                }
                if (i < engine.maxClients ()) {
@@ -276,16 +284,20 @@ void Bot::prepareChatMessage (char *text) {
          }
          else if (*pattern == 'd') {
             if (g_gameFlags & GAME_CZERO) {
-               if (rng.getInt (1, 100) < 30)
+               if (rng.getInt (1, 100) < 30) {
                   strcat (m_tempStrings, "CZ");
-               else
+               }
+               else {
                   strcat (m_tempStrings, "Condition Zero");
+               }
             }
             else if ((g_gameFlags & GAME_CSTRIKE16) || (g_gameFlags & GAME_LEGACY)) {
-               if (rng.getInt (1, 100) < 30)
+               if (rng.getInt (1, 100) < 30) {
                   strcat (m_tempStrings, "CS");
-               else
+               }
+               else {
                   strcat (m_tempStrings, "Counter-Strike");
+               }
             }
          }
          else if (*pattern == 'v') {
@@ -310,9 +322,10 @@ void Bot::prepareChatMessage (char *text) {
 bool CheckKeywords (char *message, char *reply) {
    // this function checks is string contain keyword, and generates reply to it
 
-   if (!yb_chat.boolean () || isEmptyStr (message))
+   if (!yb_chat.boolean () || isEmptyStr (message)) {
       return false;
-  
+   }
+
    for (auto &factory : g_replyFactory) {
       for (auto &keyword : factory.keywords) {
 
@@ -362,9 +375,9 @@ bool Bot::processChatKeywords (char *reply) {
    strcpy (tempMessage, m_sayTextBuffer.sayText); // copy to safe place
 
    // text to uppercase for keyword parsing
-   for (int i = 0; i < static_cast<int> (strlen (tempMessage)); i++)
+   for (int i = 0; i < static_cast<int> (strlen (tempMessage)); i++) {
       tempMessage[i] = static_cast<char> (toupper (static_cast<int> (tempMessage[i])));
-
+   }
    return CheckKeywords (tempMessage, reply);
 }
 
@@ -397,17 +410,17 @@ bool Bot::isReplyingToChat (void) {
 void Bot::say (const char *text) {
    // this function prints saytext message to all players
 
-   if (isEmptyStr (text))
+   if (isEmptyStr (text)) {
       return;
-
+   }
    engine.execBotCmd (ent (), "say \"%s\"", text);
 }
 
 void Bot::sayTeam (const char *text) {
    // this function prints saytext message only for teammates
 
-   if (isEmptyStr (text))
+   if (isEmptyStr (text)) {
       return;
-
+   }
    engine.execBotCmd (ent (), "say_team \"%s\"", text);
 }

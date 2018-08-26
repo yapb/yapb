@@ -75,6 +75,24 @@ struct MessageBlock {
    int regMsgs[NETMSG_NUM];
 };
 
+// compare language
+struct LangComprarer {
+   unsigned long operator () (const String &key) const
+   {
+      size_t hash = 1234;
+      char *str = const_cast <char *> (key.chars ());
+      char ch = 0;
+
+      while (ch = *str++) {
+         if (ch == '\n' || ch == '\r') {
+            continue;
+         }
+         hash = ((hash << 5) + hash) + ch;
+      }
+      return hash;
+   }
+};
+
 // provides utility functions to not call original engine (less call-cost)
 class Engine : public Singleton<Engine> {
 private:
@@ -89,7 +107,7 @@ private:
    edict_t *m_localEntity;
 
    Array<VarPair> m_cvars;
-   Array<Pair<String, String>> m_language;
+   HashMap <String, String, LangComprarer> m_language;
 
    MessageBlock m_msgBlock;
 
@@ -182,11 +200,12 @@ public:
 
    // gets custom engine args for client command
    inline const char *botArgs (void) {
-      if (strncmp ("say ", m_arguments, 4) == 0)
+      if (strncmp ("say ", m_arguments, 4) == 0) {
          return &m_arguments[4];
-      else if (strncmp ("say_team ", m_arguments, 9) == 0)
+      }
+      else if (strncmp ("say_team ", m_arguments, 9) == 0) {
          return &m_arguments[9];
-
+      }
       return m_arguments;
    }
 
@@ -222,8 +241,8 @@ public:
    }
 
    // adds translation pair from config
-   inline void addTranslation (const Pair<String, String> &lang) {
-      m_language.push (lang);
+   inline void addTranslation (const String &original, const String &translated) {
+      m_language.put (original, translated);
    }
 
    // resets the message capture mechanism
@@ -255,8 +274,9 @@ public:
 
    // tries to set needed message id
    FORCEINLINE void captureMessage (int type, int msgId) {
-      if (type == m_msgBlock.regMsgs[msgId])
+      if (type == m_msgBlock.regMsgs[msgId]) {
          setCurrentMessageId (msgId);
+      }
    }
 
    // static utility functions
@@ -350,26 +370,10 @@ public:
 
 public:
    static inline uint16 fu16 (float value, float scale) {
-      int output = (static_cast<int> (value * scale));
-
-      if (output < 0) {
-         output = 0;
-      }
-      if (output > 0xffff) {
-         output = 0xffff;
-      }
-      return static_cast<uint16> (output);
+      return A_clamp<uint16> (static_cast <uint16> (value * scale), 0, 0xffff);
    }
 
    static inline short fs16 (float value, float scale) {
-      int output = (static_cast<int> (value * scale));
-
-      if (output > 32767) {
-         output = 32767;
-      }
-      if (output < -32768) {
-         output = -32768;
-      }
-      return static_cast<short> (output);
+      return A_clamp<short> (static_cast <short> (value * scale), -32767, 32767);
    }
 };

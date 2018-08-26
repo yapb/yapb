@@ -19,9 +19,9 @@ const char *format (const char *format, ...) {
    static char strBuffer[2][MAX_PRINT_BUFFER];
    static int rotator = 0;
 
-   if (format == nullptr)
+   if (format == nullptr) {
       return strBuffer[rotator];
-
+   }
    static char *ptr = strBuffer[rotator ^= 1];
 
    va_list ap;
@@ -33,39 +33,39 @@ const char *format (const char *format, ...) {
 }
 
 bool isAlive (edict_t *ent) {
-   if (engine.isNullEntity (ent))
+   if (engine.isNullEntity (ent)) {
       return false;
-
+   }
    return ent->v.deadflag == DEAD_NO && ent->v.health > 0 && ent->v.movetype != MOVETYPE_NOCLIP;
 }
 
 float getShootingConeDeviation (edict_t *ent, Vector *position) {
    const Vector &dir = (*position - (ent->v.origin + ent->v.view_ofs)).normalize ();
-   MakeVectors (ent->v.v_angle);
+   makeVectors (ent->v.v_angle);
 
    // he's facing it, he meant it
    return g_pGlobals->v_forward | dir;
 }
 
 bool isInViewCone (const Vector &origin, edict_t *ent) {
-   MakeVectors (ent->v.v_angle);
+   makeVectors (ent->v.v_angle);
 
-   if (((origin - (ent->v.origin + ent->v.view_ofs)).normalize () | g_pGlobals->v_forward) >= A_cosf (((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f) * MATH_D2R))
+   if (((origin - (ent->v.origin + ent->v.view_ofs)).normalize () | g_pGlobals->v_forward) >= A_cosf (((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f) * MATH_D2R)) {
       return true;
-
+   }
    return false;
 }
 
 bool isVisible (const Vector &origin, edict_t *ent) {
-   if (engine.isNullEntity (ent))
+   if (engine.isNullEntity (ent)) {
       return false;
-
+   }
    TraceResult tr;
    engine.testLine (ent->v.origin + ent->v.view_ofs, origin, TRACE_IGNORE_EVERYTHING, ent, &tr);
 
-   if (tr.flFraction != 1.0f)
+   if (tr.flFraction != 1.0f) {
       return false;
-
+   }
    return true;
 }
 
@@ -85,16 +85,17 @@ void showMenu (edict_t *ent, MenuId menu) {
 
          // make menu looks best
          if (!(g_gameFlags & GAME_LEGACY)) {
-            for (int j = 0; j < 10; j++)
+            for (int j = 0; j < 10; j++) {
                parsed->text.replace (format ("%d.", j), format ("\\r%d.\\w", j));
+            }
          }
       }
       s_menusParsed = true;
    }
 
-   if (!isPlayer (ent))
+   if (!isPlayer (ent)) {
       return;
-
+   }
    Client &client = g_clients[engine.indexOfEntity (ent) - 1];
 
    if (menu == BOT_MENU_INVALID) {
@@ -110,8 +111,9 @@ void showMenu (edict_t *ent, MenuId menu) {
    int menuIndex = 0;
 
    for (; menuIndex < ARRAYSIZE_HLSDK (g_menus); menuIndex++) {
-      if (g_menus[menuIndex].id == menu)
+      if (g_menus[menuIndex].id == menu) {
          break;
+      }
    }
    const auto &menuRef = g_menus[menuIndex];
    const char *text = ((g_gameFlags & (GAME_XASH_ENGINE | GAME_MOBILITY)) && !yb_display_menu_text.boolean ()) ? " " : menuRef.text.chars ();
@@ -137,7 +139,7 @@ void showMenu (edict_t *ent, MenuId menu) {
       .writeString (text);
 
    client.menu = menu;
-   CLIENT_COMMAND (ent, "speak \"player/geiger1\"\n"); // Stops others from hearing menu sounds..
+   g_engfuncs.pfnClientCommand (ent, "speak \"player/geiger1\"\n"); // Stops others from hearing menu sounds..
 }
 
 void traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIndex) {
@@ -145,26 +147,30 @@ void traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIndex) {
 
    static StringArray logotypes;
 
-   if (logotypes.empty ())
+   if (logotypes.empty ()) {
       logotypes = String ("{biohaz;{graf003;{graf004;{graf005;{lambda06;{target;{hand1;{spit2;{bloodhand6;{foot_l;{foot_r").split (";");
-
-   int entityIndex = -1, message = TE_DECAL;
-   int decalIndex = (*g_engfuncs.pfnDecalIndex) (logotypes[logotypeIndex].chars ());
-
-   if (decalIndex < 0)
-      decalIndex = (*g_engfuncs.pfnDecalIndex) ("{lambda06");
-
-   if (trace->flFraction == 1.0f)
-      return;
-
-   if (!engine.isNullEntity (trace->pHit)) {
-      if (trace->pHit->v.solid == SOLID_BSP || trace->pHit->v.movetype == MOVETYPE_PUSHSTEP)
-         entityIndex = engine.indexOfEntity (trace->pHit);
-      else
-         return;
    }
-   else
+   int entityIndex = -1, message = TE_DECAL;
+   int decalIndex = g_engfuncs.pfnDecalIndex (logotypes[logotypeIndex].chars ());
+
+   if (decalIndex < 0) {
+      decalIndex = g_engfuncs.pfnDecalIndex ("{lambda06");
+   }
+
+   if (trace->flFraction == 1.0f) {
+      return;
+   }
+   if (!engine.isNullEntity (trace->pHit)) {
+      if (trace->pHit->v.solid == SOLID_BSP || trace->pHit->v.movetype == MOVETYPE_PUSHSTEP) {
+         entityIndex = engine.indexOfEntity (trace->pHit);
+      }
+      else {
+         return;
+      }
+   }
+   else {
       entityIndex = 0;
+   }
 
    if (entityIndex != 0) {
       if (decalIndex > 255) {
@@ -201,9 +207,9 @@ void traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIndex) {
       .writeCoord (trace->vecEndPos.z)
       .writeByte (decalIndex);
 
-      if (entityIndex)
+      if (entityIndex) {
          msg.writeShort (entityIndex);
-
+      }
       msg.end ();
    }
 }
@@ -216,12 +222,13 @@ void cleanupGarbage (void) {
    g_experienceData = nullptr;
 }
 
-void UpdateGlobalExperienceData (void) {
+void updateGlobalExperience (void) {
    // this function called after each end of the round to update knowledge about most dangerous waypoints for each team.
 
    // no waypoints, no experience used or waypoints edited or being edited?
-   if (g_numWaypoints < 1 || waypoints.hasChanged ())
+   if (g_numWaypoints < 1 || waypoints.hasChanged ()) {
       return; // no action
+   }
 
    uint16 maxDamage; // maximum damage
    uint16 actDamage; // actual damage
@@ -232,12 +239,12 @@ void UpdateGlobalExperienceData (void) {
    // get the most dangerous waypoint for this position for terrorist team
    for (int i = 0; i < g_numWaypoints; i++) {
       maxDamage = 0;
-      bestIndex = -1;
+      bestIndex = INVALID_WAYPOINT_INDEX;
 
       for (int j = 0; j < g_numWaypoints; j++) {
-         if (i == j)
+         if (i == j) {
             continue;
-
+         }
          actDamage = (g_experienceData + (i * g_numWaypoints) + j)->team0Damage;
 
          if (actDamage > maxDamage) {
@@ -246,21 +253,21 @@ void UpdateGlobalExperienceData (void) {
          }
       }
 
-      if (maxDamage > MAX_DAMAGE_VALUE)
+      if (maxDamage > MAX_DAMAGE_VALUE) {
          recalcKills = true;
-
+      }
       (g_experienceData + (i * g_numWaypoints) + i)->team0DangerIndex = static_cast<short> (bestIndex);
    }
 
    // get the most dangerous waypoint for this position for counter-terrorist team
    for (int i = 0; i < g_numWaypoints; i++) {
       maxDamage = 0;
-      bestIndex = -1;
+      bestIndex = INVALID_WAYPOINT_INDEX;
 
       for (int j = 0; j < g_numWaypoints; j++) {
-         if (i == j)
+         if (i == j) {
             continue;
-
+         }
          actDamage = (g_experienceData + (i * g_numWaypoints) + j)->team1Damage;
 
          if (actDamage > maxDamage) {
@@ -269,9 +276,9 @@ void UpdateGlobalExperienceData (void) {
          }
       }
 
-      if (maxDamage > MAX_DAMAGE_VALUE)
+      if (maxDamage > MAX_DAMAGE_VALUE) {
          recalcKills = true;
-
+      }
       (g_experienceData + (i * g_numWaypoints) + i)->team1DangerIndex = static_cast<short> (bestIndex);
    }
 
@@ -279,23 +286,24 @@ void UpdateGlobalExperienceData (void) {
    if (recalcKills) {
       for (int i = 0; i < g_numWaypoints; i++) {
          for (int j = 0; j < g_numWaypoints; j++) {
-            if (i == j)
+            if (i == j) {
                continue;
+            }
 
             int clip = (g_experienceData + (i * g_numWaypoints) + j)->team0Damage;
             clip -= static_cast<int> (MAX_DAMAGE_VALUE * 0.5);
 
-            if (clip < 0)
+            if (clip < 0) {
                clip = 0;
-
+            }
             (g_experienceData + (i * g_numWaypoints) + j)->team0Damage = static_cast<uint16> (clip);
 
             clip = (g_experienceData + (i * g_numWaypoints) + j)->team1Damage;
             clip -= static_cast<int> (MAX_DAMAGE_VALUE * 0.5);
 
-            if (clip < 0)
+            if (clip < 0) {
                clip = 0;
-
+            }
             (g_experienceData + (i * g_numWaypoints) + j)->team1Damage = static_cast<uint16> (clip);
          }
       }
@@ -304,16 +312,16 @@ void UpdateGlobalExperienceData (void) {
 
    int clip = g_highestDamageT - static_cast<int> (MAX_DAMAGE_VALUE * 0.5);
 
-   if (clip < 1)
+   if (clip < 1) {
       clip = 1;
-
+   }
    g_highestDamageT = clip;
 
    clip = (int)g_highestDamageCT - static_cast<int> (MAX_DAMAGE_VALUE * 0.5);
 
-   if (clip < 1)
+   if (clip < 1) {
       clip = 1;
-
+   }
    g_highestDamageCT = clip;
 
    if (g_highestKills == MAX_KILL_HISTORY) {
@@ -340,9 +348,9 @@ void initRound (void) {
    for (int i = 0; i < engine.maxClients (); i++) {
       auto bot = bots.getBot (i);
 
-      if (bot != nullptr)
+      if (bot != nullptr) {
          bot->processNewRound ();
-
+      }
       g_radioSelect[i] = 0;
    }
    waypoints.setBombPos (true);
@@ -352,15 +360,15 @@ void initRound (void) {
    g_timeBombPlanted = 0.0f;
    g_timeNextBombUpdate = 0.0f;
 
-   for (int i = 0; i < MAX_TEAM_COUNT; i++)
+   for (int i = 0; i < MAX_TEAM_COUNT; i++) {
       g_lastRadioTime[i] = 0.0f;
-
+   }
    g_botsCanPause = false;
 
-   for (int i = 0; i < TASK_MAX; i++)
+   for (int i = 0; i < TASK_MAX; i++) {
       g_taskFilters[i].time = 0.0f;
-
-   UpdateGlobalExperienceData (); // update experience data on round start
+   }
+   updateGlobalExperience (); // update experience data on round start
 
    // calculate the round mid/end in world time
    g_timeRoundStart = engine.timebase () + mp_freezetime.flt ();
@@ -374,47 +382,51 @@ int getWeaponPenetrationPower (int id) {
    int i = 0;
 
    while (g_weaponSelect[i].id) {
-      if (g_weaponSelect[i].id == id)
+      if (g_weaponSelect[i].id == id) {
          return g_weaponSelect[i].penetratePower;
-
+      }
       i++;
    }
    return 0;
 }
 
 bool isPlayer (edict_t *ent) {
-   if (engine.isNullEntity (ent))
+   if (engine.isNullEntity (ent)) {
       return false;
+   }
 
-   if (ent->v.flags & FL_PROXY)
+   if (ent->v.flags & FL_PROXY) {
       return false;
+   }
 
-   if ((ent->v.flags & (FL_CLIENT | FL_FAKECLIENT)) || bots.getBot (ent) != nullptr)
+   if ((ent->v.flags & (FL_CLIENT | FL_FAKECLIENT)) || bots.getBot (ent) != nullptr) {
       return !isEmptyStr (STRING (ent->v.netname));
-
+   }
    return false;
 }
 
 bool isPlayerVIP (edict_t *ent) {
-   if (!(g_mapType & MAP_AS))
+   if (!(g_mapType & MAP_AS)) {
       return false;
+   }
 
-   if (!isPlayer (ent))
+   if (!isPlayer (ent)) {
       return false;
-
-   return *(INFOKEY_VALUE (GET_INFOKEYBUFFER (ent), "model")) == 'v';
+   }
+   return *(g_engfuncs.pfnInfoKeyValue (g_engfuncs.pfnGetInfoKeyBuffer (ent), "model")) == 'v';
 }
 
 bool isFakeClient (edict_t *ent) {
-   if (bots.getBot (ent) != nullptr || (!engine.isNullEntity (ent) && (ent->v.flags & FL_FAKECLIENT)))
+   if (bots.getBot (ent) != nullptr || (!engine.isNullEntity (ent) && (ent->v.flags & FL_FAKECLIENT))) {
       return true;
-
+   }
    return false;
 }
 
 bool openConfig (const char *fileName, const char *errorIfNotExists, MemFile *outFile, bool languageDependant /*= false*/) {
-   if (outFile->isValid ())
+   if (outFile->isValid ()) {
       outFile->close ();
+   }
 
    // save config dir
    const char *configDir = "addons/yapb/conf";
@@ -422,9 +434,9 @@ bool openConfig (const char *fileName, const char *errorIfNotExists, MemFile *ou
    if (languageDependant) {
       extern ConVar yb_language;
 
-      if (strcmp (fileName, "lang.cfg") == 0 && strcmp (yb_language.str (), "en") == 0)
+      if (strcmp (fileName, "lang.cfg") == 0 && strcmp (yb_language.str (), "en") == 0) {
          return false;
-
+      }
       const char *langConfig = format ("%s/lang/%s_%s", configDir, yb_language.str (), fileName);
 
       // check file existence
@@ -460,11 +472,13 @@ void checkWelcome (void) {
    static bool messageSent = !yb_display_welcome_text.boolean ();
    static float receiveTime = 0.0f;
 
-   if (messageSent)
+   if (messageSent) {
       return;
+   }
 
-   if (g_gameFlags & GAME_LEGACY)
+   if (g_gameFlags & GAME_LEGACY) {
       g_gameWelcomeSent = true;
+   }
 
    static StringArray sentences;
 
@@ -489,13 +503,14 @@ void checkWelcome (void) {
    }
    bool needToSendMsg = (g_numWaypoints > 0 ? g_gameWelcomeSent : true);
 
-   if (isAlive (g_hostEntity) && receiveTime < 1.0 && needToSendMsg)
+   if (isAlive (g_hostEntity) && receiveTime < 1.0 && needToSendMsg) {
       receiveTime = engine.timebase () + 4.0f; // receive welcome message in four seconds after game has commencing
+   }
 
    if (receiveTime > 0.0f && receiveTime < engine.timebase () && needToSendMsg) {
-      if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH_ENGINE)))
+      if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH_ENGINE))) {
          engine.execCmd ("speak \"%s\"", const_cast<char *> (sentences.random ().chars ()));
-
+      }
       engine.chatPrint ("----- %s v%s (Build: %u), {%s}, (c) %s, by %s (%s)-----", PRODUCT_NAME, PRODUCT_VERSION, buildNumber (), PRODUCT_DATE, PRODUCT_END_YEAR, PRODUCT_AUTHOR, PRODUCT_URL);
 
       MessageWriter (MSG_ONE, SVC_TEMPENTITY, Vector::null (), g_hostEntity)
@@ -527,17 +542,7 @@ void logEntry (bool outputToConsole, int logLevel, const char *format, ...) {
    // this function logs a message to the message log file root directory.
 
    va_list ap;
-   char buffer[MAX_PRINT_BUFFER] =
-      {
-         0,
-      },
-        levelString[32] =
-           {
-              0,
-           },
-        logLine[MAX_PRINT_BUFFER] = {
-           0,
-        };
+   char buffer[MAX_PRINT_BUFFER] = { 0, }, levelString[32] = { 0, }, logLine[MAX_PRINT_BUFFER] = {0, };
 
    va_start (ap, format);
    vsnprintf (buffer, A_bufsize (buffer), format, ap);
@@ -561,29 +566,34 @@ void logEntry (bool outputToConsole, int logLevel, const char *format, ...) {
       break;
    }
 
-   if (outputToConsole)
+   if (outputToConsole) {
       engine.print ("%s%s", levelString, buffer);
+   }
 
    // now check if logging disabled
    if (!(logLevel & LL_IGNORE)) {
       extern ConVar yb_debug;
 
-      if (logLevel == LL_DEFAULT && yb_debug.integer () < 3)
+      if (logLevel == LL_DEFAULT && yb_debug.integer () < 3) {
          return; // no log, default logging is disabled
+      }
 
-      if (logLevel == LL_WARNING && yb_debug.integer () < 2)
+      if (logLevel == LL_WARNING && yb_debug.integer () < 2) {
          return; // no log, warning logging is disabled
+      }
 
-      if (logLevel == LL_ERROR && yb_debug.integer () < 1)
+      if (logLevel == LL_ERROR && yb_debug.integer () < 1) {
          return; // no log, error logging is disabled
+      }
    }
 
    // open file in a standard stream
    File fp ("yapb.txt", "at");
 
    // check if we got a valid handle
-   if (!fp.isValid ())
+   if (!fp.isValid ()) {
       return;
+   }
 
    time_t tickTime = time (&tickTime);
    tm *time = localtime (&tickTime);
@@ -625,12 +635,13 @@ bool findNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
    for (int i = 0; i < engine.maxClients (); i++) {
       const Client &client = g_clients[i];
 
-      if (!(client.flags & CF_USED) || client.ent == to)
+      if (!(client.flags & CF_USED) || client.ent == to) {
          continue;
+      }
 
-      if ((sameTeam && client.team != toTeam) || (isAlive && !(client.flags & CF_ALIVE)) || (needBot && !isFakeClient (client.ent)) || (needDrawn && (client.ent->v.effects & EF_NODRAW)) || (needBotWithC4 && (client.ent->v.weapons & WEAPON_C4)))
+      if ((sameTeam && client.team != toTeam) || (isAlive && !(client.flags & CF_ALIVE)) || (needBot && !isFakeClient (client.ent)) || (needDrawn && (client.ent->v.effects & EF_NODRAW)) || (needBotWithC4 && (client.ent->v.weapons & WEAPON_C4))) {
          continue; // filter players with parameters
-
+      }
       float distance = (client.ent->v.origin - to->v.origin).length ();
 
       if (distance < nearestPlayer && distance < searchDistance) {
@@ -643,26 +654,27 @@ bool findNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
       return false; // nothing found
 
    // fill the holder
-   if (needBot)
+   if (needBot) {
       *pvHolder = reinterpret_cast<void *> (bots.getBot (survive));
-   else
+   }
+   else {
       *pvHolder = reinterpret_cast<void *> (survive);
-
+   }
    return true;
 }
 
-void attackSoundsToClients (edict_t *ent, const char *sample, float volume) {
+void attachSoundsToClients (edict_t *ent, const char *sample, float volume) {
    // this function called by the sound hooking code (in emit_sound) enters the played sound into
    // the array associated with the entity
 
-   if (engine.isNullEntity (ent) || isEmptyStr (sample))
+   if (engine.isNullEntity (ent) || isEmptyStr (sample)) {
       return;
-
+   }
    const Vector &origin = engine.getAbsPos (ent);
 
-   if (origin.empty ())
+   if (origin.empty ()) {
       return;
-
+   }
    int index = engine.indexOfEntity (ent) - 1;
 
    if (index < 0 || index >= engine.maxClients ()) {
@@ -672,9 +684,9 @@ void attackSoundsToClients (edict_t *ent, const char *sample, float volume) {
       for (int i = 0; i < engine.maxClients (); i++) {
          const Client &client = g_clients[i];
 
-         if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE))
+         if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE)) {
             continue;
-
+         }
          float distance = (client.origin - origin).length ();
 
          // now find nearest player
@@ -686,9 +698,9 @@ void attackSoundsToClients (edict_t *ent, const char *sample, float volume) {
    }
 
    // in case of worst case
-   if (index < 0 || index >= engine.maxClients ())
+   if (index < 0 || index >= engine.maxClients ()) {
       return;
-
+   }
    Client &client = g_clients[index];
 
    if (strncmp ("player/bhit_flesh", sample, 17) == 0 || strncmp ("player/headshot", sample, 15) == 0) {
@@ -739,9 +751,9 @@ void simulateSoundUpdates (int playerIndex) {
    // this function tries to simulate playing of sounds to let the bots hear sounds which aren't
    // captured through server sound hooking
 
-   if (playerIndex < 0 || playerIndex >= engine.maxClients ())
+   if (playerIndex < 0 || playerIndex >= engine.maxClients ()) {
       return; // reliability check
-
+   }
    Client &client = g_clients[playerIndex];
 
    float hearDistance = 0.0f;
@@ -779,8 +791,9 @@ void simulateSoundUpdates (int playerIndex) {
       }
    }
 
-   if (hearDistance <= 0.0)
+   if (hearDistance <= 0.0) {
       return; // didn't issue sound?
+   }
 
    // some sound already associated
    if (client.timeSoundLasting > engine.timebase ()) {
@@ -804,9 +817,9 @@ int buildNumber (void) {
 
    static int buildNumber = 0;
 
-   if (buildNumber != 0)
+   if (buildNumber != 0) {
       return buildNumber;
-
+   }
    // get compiling date using compiler macros
    const char *date = __DATE__;
 
@@ -822,9 +835,9 @@ int buildNumber (void) {
 
    // go through all months, and calculate, days since year start
    for (i = 0; i < 11; i++) {
-      if (strncmp (&date[0], months[i], 3) == 0)
+      if (strncmp (&date[0], months[i], 3) == 0) {
          break; // found current month break
-
+      }
       day += monthDays[i]; // add month days
    }
    day += atoi (&date[4]) - 1; // finally calculate day
@@ -833,9 +846,9 @@ int buildNumber (void) {
    buildNumber = day + static_cast<int> ((year - 1) * 365.25);
 
    // if the year is a leap year?
-   if ((year % 4) == 0 && i > 1)
+   if ((year % 4) == 0 && i > 1) {
       buildNumber += 1; // add one year more
-
+   }
    buildNumber -= 1114;
 
    return buildNumber;
@@ -888,16 +901,18 @@ int getWeaponData (bool needString, const char *weaponAlias, int weaponIndex) {
    // if we need to return the string, find by weapon id
    if (needString && weaponIndex != -1) {
       for (int i = 0; i < ARRAYSIZE_HLSDK (weaponTab); i++) {
-         if (weaponTab[i].weaponIndex == weaponIndex) // is weapon id found?
+         if (weaponTab[i].weaponIndex == weaponIndex) { // is weapon id found?
             return MAKE_STRING (weaponTab[i].alias);
+         }
       }
       return MAKE_STRING ("(none)"); // return none
    }
 
    // else search weapon by name and return weapon id
    for (int i = 0; i < ARRAYSIZE_HLSDK (weaponTab); i++) {
-      if (strncmp (weaponTab[i].alias, weaponAlias, strlen (weaponTab[i].alias)) == 0)
+      if (strncmp (weaponTab[i].alias, weaponAlias, strlen (weaponTab[i].alias)) == 0) {
          return weaponTab[i].weaponIndex;
+      }
    }
    return -1; // no weapon was found return -1
 }

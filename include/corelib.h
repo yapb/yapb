@@ -66,13 +66,13 @@ static inline bool A_checkptr (const void *ptr) {
 #define A_stringify(value) (#value)
 
 namespace Math {
-const float MATH_ONEPSILON = 0.01f;
-const float MATH_EQEPSILON = 0.001f;
-const float MATH_FLEPSILON = 1.192092896e-07f;
+static constexpr float MATH_ONEPSILON = 0.01f;
+static constexpr float MATH_EQEPSILON = 0.001f;
+static constexpr float MATH_FLEPSILON = 1.192092896e-07f;
 
-const float MATH_PI = 3.141592653589793238462643383279502884f;
-const float MATH_D2R = MATH_PI / 180.0f;
-const float MATH_R2D = 180.0f / MATH_PI;
+static constexpr float MATH_PI = 3.141592653589793238462643383279502884f;
+static constexpr float MATH_D2R = MATH_PI / 180.0f;
+static constexpr float MATH_R2D = 180.0f / MATH_PI;
 
 #ifdef ENABLE_SSE_INTRINSICS
 
@@ -247,25 +247,10 @@ public:
    float x, y, z;
 
 public:
-   inline Vector (float scaler = 0.0f)
-      : x (scaler)
-      , y (scaler)
-      , z (scaler) {}
-
-   inline Vector (float inputX, float inputY, float inputZ)
-      : x (inputX)
-      , y (inputY)
-      , z (inputZ) {}
-
-   inline Vector (float *other)
-      : x (other[0])
-      , y (other[1])
-      , z (other[2]) {}
-
-   inline Vector (const Vector &right)
-      : x (right.x)
-      , y (right.y)
-      , z (right.z) {}
+   inline Vector (float scaler = 0.0f) : x (scaler), y (scaler), z (scaler) {}
+   inline Vector (float inputX, float inputY, float inputZ) : x (inputX) , y (inputY) , z (inputZ) {}
+   inline Vector (float *other) : x (other[0]) , y (other[1]) , z (other[2]) {}
+   inline Vector (const Vector &right) : x (right.x) , y (right.y) , z (right.z) {}
 
 public:
    inline operator float * (void) {
@@ -538,7 +523,7 @@ public:
    ~Pair (void) = default;
 
 public:
-   static Pair<A, B> make (A first, A second) {
+   static Pair<A, B> make (A first, B second) {
       return Pair<A, B> (first, second);
    }
 };
@@ -1322,6 +1307,84 @@ public:
    }
 };
 
+template <typename K> struct MapKeyHash {
+   constexpr unsigned long operator () (const K &key) const
+   {
+      size_t hash = 5321;
+      char *str = const_cast <char *> (key.chars ());
+      char ch;
+
+      while (ch = *str++) {
+         hash = ((hash << 5) + hash) + ch;
+      }
+      return hash;
+   }
+};
+
+
+template <typename K, typename V, typename H = MapKeyHash <K>, size_t I = 256> class HashMap {
+public:
+   using Bucket = Pair <K, V>;
+
+private:
+   Array<Bucket> m_buckets[I];
+   H m_hash;
+
+   auto &getBucket (const K &key) {
+      return m_buckets[m_hash (key) % I];
+   }
+
+public:
+
+   bool exists (const K &key) {
+      return get (key, nullptr);
+   }
+
+   bool get (const K &key, V *val) {
+      for (auto &entry : getBucket (key)) {
+         if (entry.first == key) {
+            if (val != nullptr) {
+               *val = entry.second;
+            }
+            return true;
+         }
+      }
+      return false;
+   }
+
+   bool get (const K &key, V &val) {
+      return get (key, &val);
+   }
+
+   bool put (const K &key, const V &val) {
+      if (exists (key)) {
+         return false;
+      }
+      getBucket (key).push (Pair <K, V>::make (key, val));
+      return true;
+   }
+
+   bool erase (const K &key) {
+      auto &bucket = getBucket (key);
+
+      for (auto &entry : getBucket (key)) {
+         if (entry.first == key) {
+            bucket.erase (entry);
+            return true;
+         }
+      }
+      return false;
+   }
+
+public:
+   V & operator [] (const K &key) {
+      V res;
+      get (key, res);
+
+      return res;
+   }
+};
+
 class File {
 private:
    FILE *m_handle;
@@ -1332,7 +1395,7 @@ public:
       : m_handle (nullptr)
       , m_size (0) {}
 
-   File (const String &fileName, const String &mode = "rt") {
+   File (const String &fileName, const String &mode = "rt") : m_size (0){
       open (fileName, mode);
    }
 

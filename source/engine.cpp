@@ -13,12 +13,11 @@ Engine::Engine (void) {
    m_startEntity = nullptr;
    m_localEntity = nullptr;
 
-   m_language.clear ();
    resetMessages ();
 
-   for (int i = 0; i < NETMSG_NUM; i++)
+   for (int i = 0; i < NETMSG_NUM; i++) {
       m_msgBlock.regMsgs[i] = NETMSG_UNDEFINED;
-
+   }
    m_isBotCommand = false;
    m_argumentCount = 0;
 
@@ -26,21 +25,21 @@ Engine::Engine (void) {
    memset (m_drawModels, 0, sizeof (m_drawModels));
 
    m_cvars.clear ();
-   m_language.clear ();
 }
 
 Engine::~Engine (void) {
    resetMessages ();
 
-   for (int i = 0; i < NETMSG_NUM; i++)
+   for (int i = 0; i < NETMSG_NUM; i++) {
       m_msgBlock.regMsgs[i] = NETMSG_UNDEFINED;
+   }
 }
 
 void Engine::precacheStuff (edict_t *startEntity) {
    // this function precaches needed models and initialize class variables
 
-   m_drawModels[DRAW_SIMPLE] = PRECACHE_MODEL (ENGINE_STR ("sprites/laserbeam.spr"));
-   m_drawModels[DRAW_ARROW] = PRECACHE_MODEL (ENGINE_STR ("sprites/arrow1.spr"));
+   m_drawModels[DRAW_SIMPLE] = g_engfuncs.pfnPrecacheModel (ENGINE_STR ("sprites/laserbeam.spr"));
+   m_drawModels[DRAW_ARROW] = g_engfuncs.pfnPrecacheModel (ENGINE_STR ("sprites/arrow1.spr"));
 
    m_localEntity = nullptr;
    m_startEntity = startEntity;
@@ -119,8 +118,9 @@ void Engine::drawLine (edict_t *ent, const Vector &start, const Vector &end, int
    // is pointed to by ent, from the vector location start to the vector location end,
    // which is supposed to last life tenths seconds, and having the color defined by RGB.
 
-   if (!isPlayer (ent))
+   if (!isPlayer (ent)) {
       return; // reliability check
+   }
 
    MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, Vector::null (), ent)
       .writeByte (TE_BEAMPOINTS)
@@ -154,12 +154,13 @@ void Engine::testLine (const Vector &start, const Vector &end, int ignoreFlags, 
 
    int engineFlags = 0;
 
-   if (ignoreFlags & TRACE_IGNORE_MONSTERS)
+   if (ignoreFlags & TRACE_IGNORE_MONSTERS) {
       engineFlags = 1;
+   }
 
-   if (ignoreFlags & TRACE_IGNORE_GLASS)
+   if (ignoreFlags & TRACE_IGNORE_GLASS) {
       engineFlags |= 0x100;
-
+   }
    g_engfuncs.pfnTraceLine (start, end, engineFlags, ignoreEntity, ptr);
 }
 
@@ -175,7 +176,7 @@ void Engine::testHull (const Vector &start, const Vector &end, int ignoreFlags, 
    // function allows to specify whether the trace starts "inside" an entity's polygonal model,
    // and if so, to specify that entity in ignoreEntity in order to ignore it as an obstacle.
 
-   (*g_engfuncs.pfnTraceHull) (start, end, !!(ignoreFlags & TRACE_IGNORE_MONSTERS), hullNumber, ignoreEntity, ptr);
+   g_engfuncs.pfnTraceHull (start, end, !!(ignoreFlags & TRACE_IGNORE_MONSTERS), hullNumber, ignoreEntity, ptr);
 }
 
 float Engine::getWaveLen (const char *fileName) {
@@ -185,9 +186,9 @@ float Engine::getWaveLen (const char *fileName) {
    File fp (filePath, "rb");
 
    // we're got valid handle?
-   if (!fp.isValid ())
+   if (!fp.isValid ()) {
       return 0.0f;
-
+   }
    // check if we have engine function for this
    if (!(g_gameFlags & GAME_XASH_ENGINE) && g_engfuncs.pfnGetApproxWavePlayLen != nullptr) {
       fp.close ();
@@ -247,21 +248,23 @@ const char *Engine::getModName (void) {
    int length = strlen (modname);
 
    int stop = length - 1;
-   while ((modname[stop] == '\\' || modname[stop] == '/') && stop > 0)
+   while ((modname[stop] == '\\' || modname[stop] == '/') && stop > 0) {
       stop--;
+   }
 
    int start = stop;
-   while (modname[start] != '\\' && modname[start] != '/' && start > 0)
+   while (modname[start] != '\\' && modname[start] != '/' && start > 0) {
       start--;
+   }
 
-   if (modname[start] == '\\' || modname[start] == '/')
+   if (modname[start] == '\\' || modname[start] == '/') {
       start++;
+   }
 
-   for (length = start; length <= stop; length++)
+   for (length = start; length <= stop; length++) {
       modname[length - start] = modname[length];
-
+   }
    modname[length - start] = 0; // terminate the string
-
    return &modname[0];
 }
 
@@ -278,12 +281,13 @@ Vector Engine::getAbsPos (edict_t *ent) {
    // this expanded function returns the vector origin of a bounded entity, assuming that any
    // entity that has a bounding box has its center at the center of the bounding box itself.
 
-   if (isNullEntity (ent))
+   if (isNullEntity (ent)) {
       return Vector::null ();
+   }
 
-   if (ent->v.origin.empty ())
+   if (ent->v.origin.empty ()) {
       return ent->v.absmin + ent->v.size * 0.5f;
-
+   }
    return ent->v.origin;
 }
 
@@ -294,9 +298,9 @@ void Engine::registerCmd (const char *command, void func (void)) {
    // pointed to by "function" in order to handle it.
 
    // check for hl pre 1.1.0.4, as it's doesn't have pfnAddServerCommand
-   if (!A_checkptr (reinterpret_cast<const void *> (g_engfuncs.pfnAddServerCommand)))
+   if (!A_checkptr (reinterpret_cast<const void *> (g_engfuncs.pfnAddServerCommand))) {
       logEntry (true, LL_FATAL, "YaPB's minimum HL engine version is 1.1.0.4 and minimum Counter-Strike is Beta 6.6. Please update your engine version.");
-
+   }
    g_engfuncs.pfnAddServerCommand (const_cast<char *> (command), func);
 }
 
@@ -311,9 +315,9 @@ void Engine::execBotCmd (edict_t *ent, const char *fmt, ...) {
    // supply directly the whole string as if you were typing it in the bot's "console". It
    // is supposed to work exactly like the pfnClientCommand (server-sided client command).
 
-   if (!isFakeClient (ent))
+   if (!isFakeClient (ent)) {
       return;
-
+   }
    va_list ap;
    char string[256];
 
@@ -321,9 +325,9 @@ void Engine::execBotCmd (edict_t *ent, const char *fmt, ...) {
    vsnprintf (string, A_bufsize (string), fmt, ap);
    va_end (ap);
 
-   if (isEmptyStr (string))
+   if (isEmptyStr (string)) {
       return;
-
+   }
    m_arguments[0] = '\0';
    m_argumentCount = 0;
 
@@ -336,17 +340,20 @@ void Engine::execBotCmd (edict_t *ent, const char *fmt, ...) {
       int start = pos;
       int stop = pos;
 
-      while (pos < length && string[pos] != ';')
+      while (pos < length && string[pos] != ';') {
          pos++;
+      }
 
-      if (pos > 1 && string[pos - 1] == '\n')
+      if (pos > 1 && string[pos - 1] == '\n') {
          stop = pos - 2;
-      else
+      }
+      else {
          stop = pos - 1;
+      }
 
-      for (i = start; i <= stop; i++)
+      for (i = start; i <= stop; i++) {
          m_arguments[i - start] = string[i];
-
+      }
       m_arguments[i - start] = 0;
       pos++;
 
@@ -354,20 +361,22 @@ void Engine::execBotCmd (edict_t *ent, const char *fmt, ...) {
       m_argumentCount = 0;
 
       while (index < i - start) {
-         while (index < i - start && m_arguments[index] == ' ')
+         while (index < i - start && m_arguments[index] == ' ') {
             index++;
-
+         }
          if (m_arguments[index] == '"') {
             index++;
 
-            while (index < i - start && m_arguments[index] != '"')
+            while (index < i - start && m_arguments[index] != '"') {
                index++;
+            }
             index++;
          }
-         else
-            while (index < i - start && m_arguments[index] != ' ')
+         else {
+            while (index < i - start && m_arguments[index] != ' ') {
                index++;
-
+            }
+         }
          m_argumentCount++;
       }
       MDLL_ClientCommand (ent);
@@ -386,8 +395,9 @@ const char *Engine::getField (const char *string, int id) {
    static char arg[IterBufMax][512];
    static int iter = -1;
 
-   if (iter > IterBufMax - 1)
+   if (iter > IterBufMax - 1) {
       iter = 0;
+   }
 
    char *ptr = arg[A_clamp<int> (++iter, 0, IterBufMax - 1)];
    ptr[0] = 0;
@@ -396,34 +406,34 @@ const char *Engine::getField (const char *string, int id) {
    int length = strlen (string);
 
    while (pos < length && count <= id) {
-      while (pos < length && (string[pos] == ' ' || string[pos] == '\t'))
+      while (pos < length && (string[pos] == ' ' || string[pos] == '\t')) {
          pos++;
-
+      }
       if (string[pos] == '"') {
          pos++;
          start = pos;
 
-         while (pos < length && string[pos] != '"')
+         while (pos < length && string[pos] != '"') {
             pos++;
-
+         }
          stop = pos - 1;
          pos++;
       }
       else {
          start = pos;
 
-         while (pos < length && string[pos] != ' ' && string[pos] != '\t')
+         while (pos < length && string[pos] != ' ' && string[pos] != '\t') {
             pos++;
-
+         }
          stop = pos - 1;
       }
 
       if (count == id) {
          int i = start;
 
-         for (; i <= stop; i++)
+         for (; i <= stop; i++) {
             ptr[i - start] = string[i];
-
+         }
          ptr[i - start] = 0;
          break;
       }
@@ -462,12 +472,15 @@ void Engine::pushVarToRegStack (const char *variable, const char *value, VarType
 
    int engineFlags = FCVAR_EXTDLL;
 
-   if (varType == VT_NORMAL)
+   if (varType == VT_NORMAL) {
       engineFlags |= FCVAR_SERVER;
-   else if (varType == VT_READONLY)
+   }
+   else if (varType == VT_READONLY) {
       engineFlags |= FCVAR_SERVER | FCVAR_SPONLY | FCVAR_PRINTABLEONLY;
-   else if (varType == VT_PASSWORD)
+   }
+   else if (varType == VT_PASSWORD) {
       engineFlags |= FCVAR_PROTECTED;
+   }
 
    pair.reg.flags = engineFlags;
    pair.self = self;
@@ -503,8 +516,9 @@ void Engine::pushRegStackToEngine (bool gameVars) {
             self.m_eptr = g_engfuncs.pfnCVarGetPointer (reg.name);
          }
 
-         if (!self.m_eptr)
+         if (!self.m_eptr) {
             print ("Got nullptr on cvar %s!", reg.name);
+         }
       }
    }
 }
@@ -512,40 +526,21 @@ void Engine::pushRegStackToEngine (bool gameVars) {
 char *Engine::translate (const char *input) {
    // this function translate input string into needed language
 
-   if (isDedicated ())
+   if (isDedicated ()) {
       return const_cast<char *> (input);
+   }
+   static String result;
 
-   static char string[MAX_PRINT_BUFFER] = { 0, };
-   strncpy (string, input, A_bufsize (string));
-
-   static auto langCmp = [](const char *str1, const char *str2) {
-      for (const char *cmp1 = str1, *cmp2 = str2;; cmp1++, cmp2++) {
-         while (*cmp1 == '\n')
-            cmp1++;
-         while (*cmp2 == '\n')
-            cmp2++;
-
-         if (!*cmp1 || !*cmp2)
-            return 0;
-         if (*cmp1 > *cmp2)
-            return 1;
-         if (*cmp1 < *cmp2)
-            return -1;
-      }
-   };
-
-   for (auto &lang : m_language) {
-      if (langCmp (string, lang.first.chars ()) == 0) {
-         strncpy (string, lang.second.chars (), A_bufsize (string));
-         return string;
-      }
+   if (m_language.get (input, result)) {
+      return const_cast<char *> (result.chars ());
    }
    return const_cast<char *> (input); // nothing found
 }
 
 void Engine::processMessages (void *ptr) {
-   if (m_msgBlock.msg == NETMSG_UNDEFINED)
+   if (m_msgBlock.msg == NETMSG_UNDEFINED) {
       return;
+   }
 
    // some needed variables
    static uint8 r, g, b;
@@ -591,23 +586,30 @@ void Engine::processMessages (void *ptr) {
       if (m_msgBlock.state < 3) // ignore first 3 fields of message
          break;
 
-      if (strcmp (strVal, "#Team_Select") == 0) // team select menu?
+      if (strcmp (strVal, "#Team_Select") == 0) {
          bot->m_startAction = GAME_MSG_TEAM_SELECT;
-      else if (strcmp (strVal, "#Team_Select_Spect") == 0) // team select menu?
+      }
+      else if (strcmp (strVal, "#Team_Select_Spect") == 0) {
          bot->m_startAction = GAME_MSG_TEAM_SELECT;
-      else if (strcmp (strVal, "#IG_Team_Select_Spect") == 0) // team select menu?
+      }
+      else if (strcmp (strVal, "#IG_Team_Select_Spect") == 0) {
          bot->m_startAction = GAME_MSG_TEAM_SELECT;
-      else if (strcmp (strVal, "#IG_Team_Select") == 0) // team select menu?
+      }
+      else if (strcmp (strVal, "#IG_Team_Select") == 0) {
          bot->m_startAction = GAME_MSG_TEAM_SELECT;
-      else if (strcmp (strVal, "#IG_VIP_Team_Select") == 0) // team select menu?
+      }
+      else if (strcmp (strVal, "#IG_VIP_Team_Select") == 0) {
          bot->m_startAction = GAME_MSG_TEAM_SELECT;
-      else if (strcmp (strVal, "#IG_VIP_Team_Select_Spect") == 0) // team select menu?
+      }
+      else if (strcmp (strVal, "#IG_VIP_Team_Select_Spect") == 0) {
          bot->m_startAction = GAME_MSG_TEAM_SELECT;
-      else if (strcmp (strVal, "#Terrorist_Select") == 0) // T model select?
+      }
+      else if (strcmp (strVal, "#Terrorist_Select") == 0) {
          bot->m_startAction = GAME_MSG_CLASS_SELECT;
-      else if (strcmp (strVal, "#CT_Select") == 0) // CT model select menu?
+      }
+      else if (strcmp (strVal, "#CT_Select") == 0) {
          bot->m_startAction = GAME_MSG_CLASS_SELECT;
-
+      }
       break;
 
    case NETMSG_WEAPONLIST:
@@ -661,13 +663,14 @@ void Engine::processMessages (void *ptr) {
          clip = intVal; // ammo currently in the clip for this weapon
 
          if (id <= 31) {
-            if (state != 0)
+            if (state != 0) {
                bot->m_currentWeapon = id;
+            }
 
             // ammo amount decreased ? must have fired a bullet...
-            if (id == bot->m_currentWeapon && bot->m_ammoInClip[id] > clip)
+            if (id == bot->m_currentWeapon && bot->m_ammoInClip[id] > clip) {
                bot->m_timeLastFired = timebase (); // remember the last bullet time
-
+            }
             bot->m_ammoInClip[id] = clip;
          }
          break;
@@ -719,8 +722,9 @@ void Engine::processMessages (void *ptr) {
       case 2:
          damageBits = intVal;
 
-         if (bot != nullptr && (damageArmor > 0 || damageTaken > 0))
+         if (bot != nullptr && (damageArmor > 0 || damageTaken > 0)) {
             bot->processDamage (bot->pev->dmg_inflictor, damageTaken, damageArmor, damageBits);
+         }
          break;
       }
       break;
@@ -728,8 +732,9 @@ void Engine::processMessages (void *ptr) {
    case NETMSG_MONEY:
       // this message gets sent when the bots money amount changes
 
-      if (m_msgBlock.state == 0)
+      if (m_msgBlock.state == 0) {
          bot->m_moneyAmount = intVal; // amount of money
+      }
       break;
 
    case NETMSG_STATUSICON:
@@ -739,19 +744,21 @@ void Engine::processMessages (void *ptr) {
          break;
 
       case 1:
-         if (strcmp (strVal, "defuser") == 0)
+         if (strcmp (strVal, "defuser") == 0) {
             bot->m_hasDefuser = (enabled != 0);
+         }
          else if (strcmp (strVal, "buyzone") == 0) {
             bot->m_inBuyZone = (enabled != 0);
 
             // try to equip in buyzone
             bot->processBuyzoneEntering (BUYSTATE_PRIMARY_WEAPON);
          }
-         else if (strcmp (strVal, "vipsafety") == 0)
+         else if (strcmp (strVal, "vipsafety") == 0) {
             bot->m_inVIPZone = (enabled != 0);
-         else if (strcmp (strVal, "c4") == 0)
+         }
+         else if (strcmp (strVal, "c4") == 0) {
             bot->m_inBombZone = (enabled == 2);
-
+         }
          break;
       }
       break;
@@ -773,8 +780,9 @@ void Engine::processMessages (void *ptr) {
             edict_t *killer = entityOfIndex (killerIndex);
             edict_t *victim = entityOfIndex (victimIndex);
 
-            if (isNullEntity (killer) || isNullEntity (victim))
+            if (isNullEntity (killer) || isNullEntity (victim)) {
                break;
+            }
 
             if (yb_communication_type.integer () == 2) {
                // need to send congrats on well placed shot
@@ -782,11 +790,12 @@ void Engine::processMessages (void *ptr) {
                   Bot *notify = bots.getBot (i);
 
                   if (notify != nullptr && notify->m_notKilled && killer != notify->ent () && notify->seesEntity (victim->v.origin) && getTeam (killer) == notify->m_team && getTeam (killer) != getTeam (victim)) {
-                     if (killer == g_hostEntity)
+                     if (killer == g_hostEntity) {
                         notify->processChatterMessage ("#Bot_NiceShotCommander");
-                     else
+                     }
+                     else {
                         notify->processChatterMessage ("#Bot_NiceShotPall");
-
+                     }
                      break;
                   }
                }
@@ -808,17 +817,17 @@ void Engine::processMessages (void *ptr) {
             Bot *notify = bots.getBot (killer);
 
             // is this message about a bot who killed somebody?
-            if (notify != nullptr)
+            if (notify != nullptr) {
                notify->m_lastVictim = victim;
-
+            }
             else // did a human kill a bot on his team?
             {
                Bot *target = bots.getBot (victim);
 
                if (target != nullptr) {
-                  if (getTeam (killer) == getTeam (victim))
+                  if (getTeam (killer) == getTeam (victim)) {
                      target->m_voteKickIndex = killerIndex;
-
+                  }
                   target->m_notKilled = false;
                }
             }
@@ -842,8 +851,9 @@ void Engine::processMessages (void *ptr) {
          break;
 
       case 6:
-         if (bot != nullptr && r >= 255 && g >= 255 && b >= 255 && byteVal > 170)
+         if (bot != nullptr && r >= 255 && g >= 255 && b >= 255 && byteVal > 170) {
             bot->processBlind (byteVal);
+         }
          break;
       }
       break;
@@ -855,49 +865,69 @@ void Engine::processMessages (void *ptr) {
          break;
 
       case 1:
-         if (numPlayers == 0 && intVal == 0)
+         if (numPlayers == 0 && intVal == 0) {
             initRound ();
+         }
          break;
       }
       break;
 
    case NETMSG_TEXTMSG:
       if (m_msgBlock.state == 1) {
-         if (FStrEq (strVal, "#CTs_Win") || FStrEq (strVal, "#Bomb_Defused") || FStrEq (strVal, "#Terrorists_Win") || FStrEq (strVal, "#Round_Draw") || FStrEq (strVal, "#All_Hostages_Rescued") || FStrEq (strVal, "#Target_Saved") || FStrEq (strVal, "#Hostages_Not_Rescued") || FStrEq (strVal, "#Terrorists_Not_Escaped") || FStrEq (strVal, "#VIP_Not_Escaped") || FStrEq (strVal, "#Escaping_Terrorists_Neutralized") || FStrEq (strVal, "#VIP_Assassinated") || FStrEq (strVal, "#VIP_Escaped") || FStrEq (strVal, "#Terrorists_Escaped") || FStrEq (strVal, "#CTs_PreventEscape") || FStrEq (strVal, "#Target_Bombed") || FStrEq (strVal, "#Game_Commencing") || FStrEq (strVal, "#Game_will_restart_in")) {
+         if (strcmp (strVal, "#CTs_Win") == 0 ||
+            strcmp (strVal, "#Bomb_Defused") == 0 ||
+            strcmp (strVal, "#Terrorists_Win") == 0 ||
+            strcmp (strVal, "#Round_Draw") == 0 ||
+            strcmp (strVal, "#All_Hostages_Rescued") == 0 ||
+            strcmp (strVal, "#Target_Saved") == 0 ||
+            strcmp (strVal, "#Hostages_Not_Rescued") == 0 ||
+            strcmp (strVal, "#Terrorists_Not_Escaped") == 0 ||
+            strcmp (strVal, "#VIP_Not_Escaped") == 0 ||
+            strcmp (strVal, "#Escaping_Terrorists_Neutralized") == 0 ||
+            strcmp (strVal, "#VIP_Assassinated") == 0 ||
+            strcmp (strVal, "#VIP_Escaped") == 0 ||
+            strcmp (strVal, "#Terrorists_Escaped") == 0 ||
+            strcmp (strVal, "#CTs_PreventEscape") == 0 ||
+            strcmp (strVal, "#Target_Bombed") == 0 ||
+            strcmp (strVal, "#Game_Commencing") == 0 ||
+            strcmp (strVal, "#Game_will_restart_in") == 0) {
             g_roundEnded = true;
 
-            if (FStrEq (strVal, "#Game_Commencing"))
+            if (strcmp (strVal, "#Game_Commencing") == 0) {
                g_gameWelcomeSent = true;
+            }
 
-            if (FStrEq (strVal, "#CTs_Win")) {
+            if (strcmp (strVal, "#CTs_Win") == 0) {
                bots.setLastWinner (TEAM_COUNTER); // update last winner for economics
 
                if (yb_communication_type.integer () == 2) {
                   Bot *notify = bots.getAliveBot ();
 
-                  if (notify != nullptr && notify->m_notKilled)
+                  if (notify != nullptr && notify->m_notKilled) {
                      notify->processChatterMessage (strVal);
+                  }
                }
             }
 
-            if (FStrEq (strVal, "#Game_will_restart_in")) {
+            if (strcmp (strVal, "#Game_will_restart_in") == 0) {
                bots.updateTeamEconomics (TEAM_COUNTER, true);
                bots.updateTeamEconomics (TEAM_TERRORIST, true);
             }
 
-            if (FStrEq (strVal, "#Terrorists_Win")) {
+            if (strcmp (strVal, "#Terrorists_Win") == 0) {
                bots.setLastWinner (TEAM_TERRORIST); // update last winner for economics
 
                if (yb_communication_type.integer () == 2) {
                   Bot *notify = bots.getAliveBot ();
 
-                  if (notify != nullptr && notify->m_notKilled)
+                  if (notify != nullptr && notify->m_notKilled) {
                      notify->processChatterMessage (strVal);
+                  }
                }
             }
             waypoints.setBombPos (true);
          }
-         else if (!g_bombPlanted && FStrEq (strVal, "#Bomb_Planted")) {
+         else if (!g_bombPlanted && strcmp (strVal, "#Bomb_Planted") == 0) {
             g_bombPlanted = g_bombSayString = true;
             g_timeBombPlanted = timebase ();
 
@@ -908,16 +938,19 @@ void Engine::processMessages (void *ptr) {
                   notify->clearSearchNodes ();
                   notify->resetTasks ();
 
-                  if (yb_communication_type.integer () == 2 && rng.getInt (0, 100) < 55 && notify->m_team == TEAM_COUNTER)
+                  if (yb_communication_type.integer () == 2 && rng.getInt (0, 100) < 55 && notify->m_team == TEAM_COUNTER) {
                      notify->pushChatterMessage (Chatter_WhereIsTheBomb);
+                  }
                }
             }
             waypoints.setBombPos ();
          }
-         else if (bot != nullptr && FStrEq (strVal, "#Switch_To_BurstFire"))
+         else if (bot != nullptr && strcmp (strVal, "#Switch_To_BurstFire") == 0) {
             bot->m_weaponBurstMode = BM_ON;
-         else if (bot != nullptr && FStrEq (strVal, "#Switch_To_SemiAuto"))
+         }
+         else if (bot != nullptr && strcmp (strVal, "#Switch_To_SemiAuto") == 0) {
             bot->m_weaponBurstMode = BM_OFF;
+         }
       }
       break;
 
@@ -931,15 +964,18 @@ void Engine::processMessages (void *ptr) {
          if (playerIndex >= 0 && playerIndex <= maxClients ()) {
             int team = TEAM_UNASSIGNED;
 
-            if (strVal[0] == 'U' && strVal[1] == 'N')
+            if (strVal[0] == 'U' && strVal[1] == 'N') {
                team = TEAM_UNASSIGNED;
-            else if (strVal[0] == 'T' && strVal[1] == 'E')
+            }
+            else if (strVal[0] == 'T' && strVal[1] == 'E') {
                team = TEAM_TERRORIST;
-            else if (strVal[0] == 'C' && strVal[1] == 'T')
+            }
+            else if (strVal[0] == 'C' && strVal[1] == 'T') {
                team = TEAM_COUNTER;
-            else if (strVal[0] == 'S' && strVal[1] == 'P')
+            }
+            else if (strVal[0] == 'S' && strVal[1] == 'P') {
                team = TEAM_SPECTATOR;
-
+            }
             auto &client = g_clients[playerIndex - 1];
 
             client.team2 = team;
@@ -951,10 +987,12 @@ void Engine::processMessages (void *ptr) {
 
    case NETMSG_BARTIME:
       if (m_msgBlock.state == 0) {
-         if (intVal > 0)
+         if (intVal > 0) {
             bot->m_hasProgressBar = true; // the progress bar on a hud
-         else if (intVal == 0)
+         }
+         else if (intVal == 0) {
             bot->m_hasProgressBar = false; // no progress bar or disappeared
+         }
       }
       break;
 
@@ -965,7 +1003,6 @@ void Engine::processMessages (void *ptr) {
 }
 
 // console var registrator
-ConVar::ConVar (const char *name, const char *initval, VarType type, bool regMissing, const char *regVal)
-   : m_eptr (nullptr) {
-   engine.pushVarToRegStack (name, initval, type, regMissing, regVal, this);
+ConVar::ConVar (const char *name, const char *initval, VarType type, bool regMissing, const char *regVal) : m_eptr (nullptr) {
+   Engine::ref ().pushVarToRegStack (name, initval, type, regMissing, regVal, this);
 }

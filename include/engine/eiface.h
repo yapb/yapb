@@ -157,7 +157,7 @@ typedef struct enginefuncs_s {
    void *(*pfnPvEntPrivateData) (edict_t *ent);
    void (*pfnFreeEntPrivateData) (edict_t *ent);
    const char *(*pfnSzFromIndex) (int stingPtr);
-   int (*pfnAllostring) (const char *szValue);
+   int (*pfnAllocString) (const char *szValue);
    struct entvars_s *(*pfnGetVarsOfEnt) (edict_t *ent);
    edict_t *(*pfnPEntityOfEntOffset) (int iEntOffset);
    int (*pfnEntOffsetOfPEntity) (const edict_t *ent);
