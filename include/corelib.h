@@ -1335,7 +1335,7 @@ private:
    Array<Bucket> m_buckets[I];
    H m_hash;
 
-   auto &getBucket (const K &key) {
+   Array<Bucket> &getBucket (const K &key) {
       return m_buckets[m_hash (key) % I];
    }
 
