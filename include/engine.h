@@ -77,17 +77,15 @@ struct MessageBlock {
 
 // compare language
 struct LangComprarer {
-   unsigned long operator () (const String &key) const
-   {
-      size_t hash = 1234;
+   unsigned long operator () (const String &key) const {
       char *str = const_cast <char *> (key.chars ());
-      char ch = 0;
+      size_t hash = key.length ();
 
-      while (ch = *str++) {
-         if (ch == '\n' || ch == '\r') {
+      while (*str++) {
+         if (*str == '\n' || *str == '\r') {
             continue;
          }
-         hash = ((hash << 5) + hash) + ch;
+         hash = ((hash << 5) + hash) + *str;
       }
       return hash;
    }
