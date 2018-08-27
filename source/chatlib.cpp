@@ -11,7 +11,7 @@
 
 ConVar yb_chat ("yb_chat", "1");
 
-void StripTags (char *buffer) {
+void stripClanTags (char *buffer) {
    // this function strips 'clan' tags specified below in given string buffer
 
    if (!buffer)
@@ -79,7 +79,7 @@ void StripTags (char *buffer) {
    String::trimChars (buffer); // to finish, strip eventual blanks after and before the tag marks
 }
 
-char *HumanizeName (char *name) {
+char *humanizeName (char *name) {
    // this function humanize player name (i.e. trim clan and switch to lower case (sometimes))
 
    static char outputName[64]; // create return name buffer
@@ -87,7 +87,7 @@ char *HumanizeName (char *name) {
 
    // drop tag marks, 80 percent of time
    if (rng.getInt (1, 100) < 80) {
-      StripTags (outputName);
+      stripClanTags (outputName);
    }
    else {
       String::trimChars (outputName);
@@ -103,7 +103,7 @@ char *HumanizeName (char *name) {
    return &outputName[0]; // return terminated string
 }
 
-void HumanizeChat (char *buffer) {
+void addChatErrors (char *buffer) {
    // this function humanize chat string to be more handwritten
 
    int length = strlen (buffer); // get length of string
@@ -158,7 +158,7 @@ void Bot::prepareChatMessage (char *text) {
       const char *botName = STRING (ent->v.netname);
 
       if (!engine.isNullEntity (ent)) {
-         strncat (buffer, HumanizeName (const_cast<char *> (botName)), 159);
+         strncat (buffer, humanizeName (const_cast<char *> (botName)), 159);
       }
    };
 
@@ -314,12 +314,12 @@ void Bot::prepareChatMessage (char *text) {
       char tempString[160];
       strncpy (tempString, textStart, A_bufsize (tempString));
 
-      HumanizeChat (tempString);
+      addChatErrors (tempString);
       strncat (m_tempStrings, tempString, A_bufsize (m_tempStrings));
    }
 }
 
-bool CheckKeywords (char *message, char *reply) {
+bool checkForKeywords (char *message, char *reply) {
    // this function checks is string contain keyword, and generates reply to it
 
    if (!yb_chat.boolean () || isEmptyStr (message)) {
@@ -378,7 +378,7 @@ bool Bot::processChatKeywords (char *reply) {
    for (int i = 0; i < static_cast<int> (strlen (tempMessage)); i++) {
       tempMessage[i] = static_cast<char> (toupper (static_cast<int> (tempMessage[i])));
    }
-   return CheckKeywords (tempMessage, reply);
+   return checkForKeywords (tempMessage, reply);
 }
 
 bool Bot::isReplyingToChat (void) {

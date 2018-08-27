@@ -480,51 +480,51 @@ const char FH_EXPERIENCE[] = "PODEXP!";
 const char FH_VISTABLE[] = "PODVIS!";
 const char FH_MATRIX[] = "PODMAT!";
 
-const int FV_WAYPOINT = 7;
-const int FV_EXPERIENCE = 3;
-const int FV_VISTABLE = 1;
-const int FV_MATRIX = 2;
+constexpr int FV_WAYPOINT = 7;
+constexpr int FV_EXPERIENCE = 3;
+constexpr int FV_VISTABLE = 2;
+constexpr int FV_MATRIX = 2;
 
 // some hardcoded desire defines used to override calculated ones
-const float TASKPRI_NORMAL = 35.0f;
-const float TASKPRI_PAUSE = 36.0f;
-const float TASKPRI_CAMP = 37.0f;
-const float TASKPRI_SPRAYLOGO = 38.0f;
-const float TASKPRI_FOLLOWUSER = 39.0f;
-const float TASKPRI_MOVETOPOSITION = 50.0f;
-const float TASKPRI_DEFUSEBOMB = 89.0f;
-const float TASKPRI_PLANTBOMB = 89.0f;
-const float TASKPRI_ATTACK = 90.0f;
-const float TASKPRI_SEEKCOVER = 91.0f;
-const float TASKPRI_HIDE = 92.0f;
-const float TASKPRI_THROWGRENADE = 99.0f;
-const float TASKPRI_DOUBLEJUMP = 99.0f;
-const float TASKPRI_BLINDED = 100.0f;
-const float TASKPRI_SHOOTBREAKABLE = 100.0f;
-const float TASKPRI_ESCAPEFROMBOMB = 100.0f;
+constexpr float TASKPRI_NORMAL = 35.0f;
+constexpr float TASKPRI_PAUSE = 36.0f;
+constexpr float TASKPRI_CAMP = 37.0f;
+constexpr float TASKPRI_SPRAYLOGO = 38.0f;
+constexpr float TASKPRI_FOLLOWUSER = 39.0f;
+constexpr float TASKPRI_MOVETOPOSITION = 50.0f;
+constexpr float TASKPRI_DEFUSEBOMB = 89.0f;
+constexpr float TASKPRI_PLANTBOMB = 89.0f;
+constexpr float TASKPRI_ATTACK = 90.0f;
+constexpr float TASKPRI_SEEKCOVER = 91.0f;
+constexpr float TASKPRI_HIDE = 92.0f;
+constexpr float TASKPRI_THROWGRENADE = 99.0f;
+constexpr float TASKPRI_DOUBLEJUMP = 99.0f;
+constexpr float TASKPRI_BLINDED = 100.0f;
+constexpr float TASKPRI_SHOOTBREAKABLE = 100.0f;
+constexpr float TASKPRI_ESCAPEFROMBOMB = 100.0f;
 
-const float MAX_GRENADE_TIMER = 2.15f;
-const float MAX_SPRAY_DISTANCE = 260.0f;
-const float MAX_SPRAY_DISTANCE_X2 = MAX_SPRAY_DISTANCE * 2;
-const float MAX_CHATTER_REPEAT = 99.0f;
+constexpr float MAX_GRENADE_TIMER = 2.15f;
+constexpr float MAX_SPRAY_DISTANCE = 260.0f;
+constexpr float MAX_SPRAY_DISTANCE_X2 = MAX_SPRAY_DISTANCE * 2;
+constexpr float MAX_CHATTER_REPEAT = 99.0f;
 
-const int MAX_HOSTAGES = 8;
-const int MAX_PATH_INDEX = 8;
-const int MAX_DAMAGE_VALUE = 2040;
-const int MAX_GOAL_VALUE = 2040;
+constexpr int MAX_HOSTAGES = 8;
+constexpr int MAX_PATH_INDEX = 8;
+constexpr int MAX_DAMAGE_VALUE = 2040;
+constexpr int MAX_GOAL_VALUE = 2040;
 const int MAX_KILL_HISTORY = 16;
-const int MAX_WAYPOINTS = 1024;
-const int MAX_WEAPONS = 32;
-const int NUM_WEAPONS = 26;
-const int MAX_COLLIDE_MOVES = 3;
-const int MAX_ENGINE_PLAYERS = 32; // we can have 64 players with xash
-const int MAX_PRINT_BUFFER = 1024;
-const int MAX_TEAM_COUNT = 2;
-const int INVALID_WAYPOINT_INDEX = -1;
+constexpr int MAX_WAYPOINTS = 1024;
+constexpr int MAX_WEAPONS = 32;
+constexpr int NUM_WEAPONS = 26;
+constexpr int MAX_COLLIDE_MOVES = 3;
+constexpr int MAX_ENGINE_PLAYERS = 32; // we can have 64 players with xash
+constexpr int MAX_PRINT_BUFFER = 1024;
+constexpr int MAX_TEAM_COUNT = 2;
+constexpr int INVALID_WAYPOINT_INDEX = -1;
 
 // weapon masks
-const int WEAPON_PRIMARY = ((1 << WEAPON_XM1014) | (1 << WEAPON_M3) | (1 << WEAPON_MAC10) | (1 << WEAPON_UMP45) | (1 << WEAPON_MP5) | (1 << WEAPON_TMP) | (1 << WEAPON_P90) | (1 << WEAPON_AUG) | (1 << WEAPON_M4A1) | (1 << WEAPON_SG552) | (1 << WEAPON_AK47) | (1 << WEAPON_SCOUT) | (1 << WEAPON_SG550) | (1 << WEAPON_AWP) | (1 << WEAPON_G3SG1) | (1 << WEAPON_M249) | (1 << WEAPON_FAMAS) | (1 << WEAPON_GALIL));
-const int WEAPON_SECONDARY = ((1 << WEAPON_P228) | (1 << WEAPON_ELITE) | (1 << WEAPON_USP) | (1 << WEAPON_GLOCK) | (1 << WEAPON_DEAGLE) | (1 << WEAPON_FIVESEVEN));
+constexpr int WEAPON_PRIMARY = ((1 << WEAPON_XM1014) | (1 << WEAPON_M3) | (1 << WEAPON_MAC10) | (1 << WEAPON_UMP45) | (1 << WEAPON_MP5) | (1 << WEAPON_TMP) | (1 << WEAPON_P90) | (1 << WEAPON_AUG) | (1 << WEAPON_M4A1) | (1 << WEAPON_SG552) | (1 << WEAPON_AK47) | (1 << WEAPON_SCOUT) | (1 << WEAPON_SG550) | (1 << WEAPON_AWP) | (1 << WEAPON_G3SG1) | (1 << WEAPON_M249) | (1 << WEAPON_FAMAS) | (1 << WEAPON_GALIL));
+constexpr int WEAPON_SECONDARY = ((1 << WEAPON_P228) | (1 << WEAPON_ELITE) | (1 << WEAPON_USP) | (1 << WEAPON_GLOCK) | (1 << WEAPON_DEAGLE) | (1 << WEAPON_FIVESEVEN));
 
 // a* route
 struct Route {
@@ -951,10 +951,12 @@ private:
    float m_lookYawVel; // look yaw velocity
    float m_lookPitchVel; // look pitch velocity
    float m_lookUpdateTime; // lookangles update time
+   float m_aimErrorTime; // time to update error vector
 
    Vector m_randomizedIdealAngles; // angle wanted with noise
    Vector m_angularDeviation; // angular deviation from current to ideal angles
    Vector m_aimSpeed; // aim speed calculated
+   Vector m_aimLastError; // last calculated aim error
 
    float m_randomizeAnglesTime; // time last randomized location
    float m_playerTargetTime; // time last targeting
@@ -1030,7 +1032,7 @@ private:
    bool isInViewCone (const Vector &origin);
    void processHearing (void);
    bool checkBodyParts (edict_t *target, Vector *origin, uint8 *bodyPart);
-   bool seesEnemy (edict_t *player);
+   bool seesEnemy (edict_t *player, bool ignoreFOV = false);
 
    edict_t *getNearestButton (const char *className);
    edict_t *lookupBreakable (void);
@@ -1102,6 +1104,7 @@ private:
    Vector isBombAudible (void);
 
    const Vector &getEnemyBodyOffset (void);
+   Vector getBodyOffserError (void);
    float getEnemyBodyOffsetCorrection (float distance);
 
    void processTeamCommands (void);
@@ -1593,7 +1596,7 @@ static auto &engine = Engine::ref ();
 extern int getWeaponData (bool isString, const char *weaponAlias, int weaponIndex = -1);
 extern int getWeaponPenetrationPower (int id);
 extern int buildNumber (void);
-extern float getShootingConeDeviation (edict_t *ent, Vector *position);
+extern float getShootingConeDeviation (edict_t *ent, const Vector &position);
 
 extern bool isVisible (const Vector &origin, edict_t *ent);
 extern bool isAlive (edict_t *ent);

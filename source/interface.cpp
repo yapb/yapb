@@ -1552,6 +1552,10 @@ void ClientCommand (edict_t *ent) {
             case 10:
                showMenu (ent, BOT_MENU_INVALID);
                break;
+
+            default:
+               showMenu (ent, BOT_MENU_MAIN);
+               break;
             }
 
             if (g_gameFlags & GAME_METAMOD) {
@@ -1650,7 +1654,7 @@ void ClientCommand (edict_t *ent) {
                      if (selection == 1) {
                         bot->startDoubleJump (client->ent);
                      }
-                     else if (selection == 2) {
+                     else {
                         bot->resetDoubleJump ();
                      }
                   }
@@ -2054,7 +2058,7 @@ void ClientCommand (edict_t *ent) {
       for (int i = 0; i < engine.maxClients (); i++) {
          const Client &client = g_clients[i];
 
-         if (!(client.flags & CF_USED) || team != -1 && team != client.team || alive != isAlive (client.ent)) {
+         if (!(client.flags & CF_USED) || (team != -1 && team != client.team) || alive != isAlive (client.ent)) {
             continue;
          }
          Bot *target = bots.getBot (i);

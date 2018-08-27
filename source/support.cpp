@@ -39,21 +39,15 @@ bool isAlive (edict_t *ent) {
    return ent->v.deadflag == DEAD_NO && ent->v.health > 0 && ent->v.movetype != MOVETYPE_NOCLIP;
 }
 
-float getShootingConeDeviation (edict_t *ent, Vector *position) {
-   const Vector &dir = (*position - (ent->v.origin + ent->v.view_ofs)).normalize ();
+float getShootingConeDeviation (edict_t *ent, const Vector &position) {
    makeVectors (ent->v.v_angle);
 
    // he's facing it, he meant it
-   return g_pGlobals->v_forward | dir;
+   return g_pGlobals->v_forward | (position - (ent->v.origin + ent->v.view_ofs)).normalize ();
 }
 
 bool isInViewCone (const Vector &origin, edict_t *ent) {
-   makeVectors (ent->v.v_angle);
-
-   if (((origin - (ent->v.origin + ent->v.view_ofs)).normalize () | g_pGlobals->v_forward) >= A_cosf (((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f) * MATH_D2R)) {
-      return true;
-   }
-   return false;
+   return getShootingConeDeviation (ent, origin) >= A_cosf (((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f) * MATH_D2R);
 }
 
 bool isVisible (const Vector &origin, edict_t *ent) {
@@ -776,7 +770,7 @@ void simulateSoundUpdates (int playerIndex) {
    }
    else if (client.ent->v.movetype == MOVETYPE_FLY) // uses ladder?
    {
-      if (fabsf (client.ent->v.velocity.z) > 50.0f) {
+      if (A_abs (client.ent->v.velocity.z) > 50.0f) {
          hearDistance = 1024.0f;
          timeSound = engine.timebase () + 0.3f;
       }

@@ -705,7 +705,7 @@ bool Bot::processNavigation (void) {
       // if trace result shows us that it is a lift
       if (!engine.isNullEntity (tr.pHit) && m_navNode != nullptr && (strcmp (STRING (tr.pHit->v.classname), "func_door") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_plat") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_train") == 0) && !liftClosedDoorExists) {
          if ((m_liftState == LIFT_NO_NEARBY || m_liftState == LIFT_WAITING_FOR || m_liftState == LIFT_LOOKING_BUTTON_OUTSIDE) && tr.pHit->v.velocity.z == 0.0f) {
-            if (fabsf (pev->origin.z - tr.vecEndPos.z) < 70.0f) {
+            if (A_abs (pev->origin.z - tr.vecEndPos.z) < 70.0f) {
                m_liftEntity = tr.pHit;
                m_liftState = LIFT_ENTERING_IN;
                m_liftTravelPos = m_currentPath->origin;
@@ -1387,9 +1387,9 @@ float hfunctionSquareDist (int index, int, int goalIndex) {
    Path &start = waypoints[index];
    Path &goal = waypoints[goalIndex];
 
-   float xDist = fabsf (start.origin.x - goal.origin.x);
-   float yDist = fabsf (start.origin.y - goal.origin.y);
-   float zDist = fabsf (start.origin.z - goal.origin.z);
+   float xDist = A_abs (start.origin.x - goal.origin.x);
+   float yDist = A_abs (start.origin.y - goal.origin.y);
+   float zDist = A_abs (start.origin.z - goal.origin.z);
 
    if (xDist > yDist) {
       return 1.4f * yDist + (xDist - yDist) + zDist;
@@ -1696,6 +1696,31 @@ bool Bot::findPoint (void) {
    changePointIndex (indices[i]);
 
    return true;
+}
+
+float Bot::getReachTime (void) {
+   float estimatedTime = 2.25f; // time to reach next waypoint
+
+   // calculate 'real' time that we need to get from one waypoint to another
+   if (m_currentWaypointIndex >= 0 && m_currentWaypointIndex < g_numWaypoints && m_prevWptIndex[0] >= 0 && m_prevWptIndex[0] < g_numWaypoints) {
+      float distance = (waypoints[m_prevWptIndex[0]].origin - m_currentPath->origin).length ();
+
+      // caclulate estimated time
+      if (pev->maxspeed <= 0.0f) {
+         estimatedTime = 3.0f * distance / 240.0f;
+      }
+      else {
+         estimatedTime = 3.0f * distance / pev->maxspeed;
+      }
+      bool longTermReachability = (m_currentPath->flags & FLAG_CROUCH) || (m_currentPath->flags & FLAG_LADDER) || (pev->button & IN_DUCK);
+
+      // check for special waypoints, that can slowdown our movement
+      if (longTermReachability) {
+         estimatedTime *= 3.0f;
+      }
+      estimatedTime = F_clamp (estimatedTime, 1.2f, longTermReachability ? 10.0f : 5.0f);
+   }
+   return estimatedTime;
 }
 
 void Bot::getValidPoint (void) {
@@ -3067,7 +3092,7 @@ bool Bot::isOccupiedPoint (int index) {
          if (index == bot->task ()->data) {
             return true;
          }
-         int occupyId = bot->m_prevWptIndex[0] != INVALID_WAYPOINT_INDEX && getShootingConeDeviation (bot->ent (), &pev->origin) >= 0.7f ? bot->m_prevWptIndex[0] : bot->m_currentWaypointIndex;
+         int occupyId = bot->m_prevWptIndex[0] != INVALID_WAYPOINT_INDEX && getShootingConeDeviation (bot->ent (), pev->origin) >= 0.7f ? bot->m_prevWptIndex[0] : bot->m_currentWaypointIndex;
 
          if (index == occupyId) {
             return true;

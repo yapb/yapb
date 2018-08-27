@@ -66,13 +66,13 @@ static inline bool A_checkptr (const void *ptr) {
 #define A_stringify(value) (#value)
 
 namespace Math {
-static constexpr float MATH_ONEPSILON = 0.01f;
-static constexpr float MATH_EQEPSILON = 0.001f;
-static constexpr float MATH_FLEPSILON = 1.192092896e-07f;
+constexpr float MATH_ONEPSILON = 0.01f;
+constexpr float MATH_EQEPSILON = 0.001f;
+constexpr float MATH_FLEPSILON = 1.192092896e-07f;
 
-static constexpr float MATH_PI = 3.141592653589793238462643383279502884f;
-static constexpr float MATH_D2R = MATH_PI / 180.0f;
-static constexpr float MATH_R2D = 180.0f / MATH_PI;
+constexpr float MATH_PI = 3.141592653589793238462643383279502884f;
+constexpr float MATH_D2R = MATH_PI / 180.0f;
+constexpr float MATH_R2D = 180.0f / MATH_PI;
 
 #ifdef ENABLE_SSE_INTRINSICS
 
@@ -114,16 +114,20 @@ static inline float A_square (const float value) {
    return value * value;
 }
 
-template <typename T> static inline T A_min (T a, T b) {
+template <typename T> constexpr T A_min (T a, T b) {
    return a < b ? a : b;
 }
 
-template <typename T> static inline T A_max (T a, T b) {
+template <typename T> constexpr T A_max (T a, T b) {
    return a > b ? a : b;
 }
 
-template <typename T> static inline T A_clamp (T x, T a, T b) {
+template <typename T> constexpr T A_clamp (T x, T a, T b) {
    return A_min (A_max (x, a), b);
+}
+
+template<typename T> constexpr T A_abs (T a) {
+   return a > 0 ? a : -a;
 }
 
 static inline float F_clamp (float x, float a, float b) {
@@ -150,6 +154,10 @@ static inline float A_cosf (float value) {
 #endif
 }
 
+static inline float A_tanf (float value) {
+   return tanf (value);
+}
+
 static inline void A_sincosf (float rad, float *sine, float *cosine) {
 #ifdef ENABLE_SSE_INTRINSICS
    __m128 m_sincos = sse_sine (_mm_set_ps (0.0f, 0.0f, rad + MATH_PI / 2.f, rad));
@@ -163,28 +171,32 @@ static inline void A_sincosf (float rad, float *sine, float *cosine) {
 #endif
 }
 
-static inline bool isFltZero (float entry) {
-   return fabsf (entry) < MATH_ONEPSILON;
+constexpr bool isFltZero (float entry) {
+   return A_abs (entry) < MATH_ONEPSILON;
 }
 
-static inline bool isFltEqual (float entry1, float entry2) {
-   return fabsf (entry1 - entry2) < MATH_EQEPSILON;
+constexpr bool isFltEqual (float entry1, float entry2) {
+   return A_abs (entry1 - entry2) < MATH_EQEPSILON;
 }
 
-static inline float radToDeg (float radian) {
+constexpr float radToDeg (float radian) {
    return radian * MATH_R2D;
 }
 
-static inline float degToRad (float degree) {
+constexpr float degToRad (float degree) {
    return degree * MATH_D2R;
 }
 
-static inline float angleMod (float angle) {
+constexpr float angleMod (float angle) {
    return 360.0f / 65536.0f * (static_cast<int> (angle * (65536.0f / 360.0f)) & 65535);
 }
 
-static inline float angleNorm (float angle) {
+constexpr float angleNorm (float angle) {
    return 360.0f / 65536.0f * (static_cast<int> ((angle + 180.0f) * (65536.0f / 360.0f)) & 65535) - 180.0f;
+}
+
+constexpr float angleDiff (float dest, float src) {
+   return angleNorm (dest - src);
 }
 
 static inline void sincosf (float rad, float *sine, float *cosine) {
@@ -194,10 +206,6 @@ static inline void sincosf (float rad, float *sine, float *cosine) {
 #else
    A_sincosf (rad, sine, cosine);
 #endif
-}
-
-static inline float angleDiff (float dest, float src) {
-   return angleNorm (dest - src);
 }
 }
 
@@ -210,7 +218,7 @@ private:
 
 private:
    unsigned int premute (unsigned int x) {
-      static const unsigned int prime = 4294967291u;
+      static constexpr unsigned int prime = 4294967291u;
 
       if (x >= prime) {
          return x;
@@ -1320,7 +1328,6 @@ template <typename K> struct MapKeyHash {
       return hash;
    }
 };
-
 
 template <typename K, typename V, typename H = MapKeyHash <K>, size_t I = 256> class HashMap {
 public:

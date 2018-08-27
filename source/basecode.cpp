@@ -253,7 +253,7 @@ void Bot::checkGrenadesThrow (void) {
 
       case WEAPON_SMOKE:
          if (allowThrowing && !engine.isNullEntity (m_lastEnemy)) {
-            if (getShootingConeDeviation (m_lastEnemy, &pev->origin) >= 0.9f) {
+            if (getShootingConeDeviation (m_lastEnemy, pev->origin) >= 0.9f) {
                allowThrowing = false;
             }
          }
@@ -1795,14 +1795,14 @@ void Bot::overrideConditions (void) {
    }
 
    // special handling, if we have a knife in our hands
-   if (m_currentWeapon == WEAPON_KNIFE && isPlayer (m_enemy) && (taskId () != TASK_MOVETOPOSITION || task ()->desire != TASKPRI_HIDE)) {
+   if (!(pev->weapons & (WEAPON_PRIMARY | WEAPON_SECONDARY)) && m_currentWeapon == WEAPON_KNIFE && isPlayer (m_enemy) && (taskId () != TASK_MOVETOPOSITION || task ()->desire != TASKPRI_HIDE)) {
       float length = (pev->origin - m_enemy->v.origin).length2D ();
 
       // do waypoint movement if enemy is not reacheable with a knife
       if (length > 100.0f && (m_states & STATE_SEEING_ENEMY)) {
          int nearestToEnemyPoint = waypoints.getNearest (m_enemy->v.origin);
 
-         if (nearestToEnemyPoint != INVALID_WAYPOINT_INDEX && nearestToEnemyPoint != m_currentWaypointIndex && fabsf (waypoints[nearestToEnemyPoint].origin.z - m_enemy->v.origin.z) < 16.0f) {
+         if (nearestToEnemyPoint != INVALID_WAYPOINT_INDEX && nearestToEnemyPoint != m_currentWaypointIndex && A_abs (waypoints[nearestToEnemyPoint].origin.z - m_enemy->v.origin.z) < 16.0f) {
             startTask (TASK_MOVETOPOSITION, TASKPRI_HIDE, nearestToEnemyPoint, engine.timebase () + rng.getFloat (5.0f, 10.0f), true);
 
             m_isEnemyReachable = false;
@@ -2118,6 +2118,7 @@ void Bot::filterTasks (void) {
 void Bot::resetTasks (void) {
    // this function resets bot tasks stack, by removing all entries from the stack.
 
+   ignoreCollision ();
    m_tasks.clear ();
 }
 
@@ -2187,14 +2188,15 @@ Task *Bot::task (void) {
 void Bot::clearTask (TaskID id) {
    // this function removes one task from the bot task stack.
 
-   if (m_tasks.empty () || (!m_tasks.empty () && taskId () == TASK_NORMAL)) {
+   if (m_tasks.empty () || taskId () == TASK_NORMAL) {
       return; // since normal task can be only once on the stack, don't remove it...
    }
 
    if (taskId () == id) {
       clearSearchNodes ();
-      m_tasks.pop ();
+      ignoreCollision ();
 
+      m_tasks.pop ();
       return;
    }
 
@@ -2203,6 +2205,8 @@ void Bot::clearTask (TaskID id) {
          m_tasks.erase (task);
       }
    }
+
+   ignoreCollision ();
    clearSearchNodes ();
 }
 
@@ -2217,6 +2221,7 @@ void Bot::completeTask (void) {
       m_tasks.pop ();
    } while (!m_tasks.empty () && !m_tasks.back ().resume);
 
+   ignoreCollision ();
    clearSearchNodes ();
 }
 
@@ -2272,7 +2277,7 @@ bool Bot::lastEnemyShootable (void) {
    if (!(m_aimFlags & AIM_LAST_ENEMY) || m_lastEnemyOrigin.empty () || engine.isNullEntity (m_lastEnemy)) {
       return false;
    }
-   return getShootingConeDeviation (ent (), &m_lastEnemyOrigin) >= 0.90f && isPenetrableObstacle (m_lastEnemyOrigin);
+   return getShootingConeDeviation (ent (), m_lastEnemyOrigin) >= 0.90f && isPenetrableObstacle (m_lastEnemyOrigin);
 }
 
 void Bot::checkRadioQueue (void) {
@@ -2705,7 +2710,7 @@ void Bot::tryHeadTowardRadioMessage (void) {
 }
 
 void Bot::updateAimDir (void) {
-   unsigned int &flags = m_aimFlags;
+   unsigned int flags = m_aimFlags;
 
    // don't allow bot to look at danger positions under certain circumstances
    if (!(flags & (AIM_GRENADE | AIM_ENEMY | AIM_ENTITY))) {
@@ -2775,7 +2780,7 @@ void Bot::updateAimDir (void) {
             m_trackingEdict = m_lastEnemy;
          }
          else {
-            flags &= ~AIM_PREDICT_PATH;
+            m_aimFlags &= ~AIM_PREDICT_PATH;
          }
       }
       else {
@@ -3208,29 +3213,25 @@ void Bot::spraypaint_ (void) {
 
 void Bot::huntEnemy_ (void) {
    m_aimFlags |= AIM_NAVPOINT;
-   m_checkTerrain = true;
-
+   
    // if we've got new enemy...
    if (!engine.isNullEntity (m_enemy) || engine.isNullEntity (m_lastEnemy)) {
       // forget about it...
-      completeTask ();
+      clearTask (TASK_HUNTENEMY);
       m_prevGoalIndex = INVALID_WAYPOINT_INDEX;
-
-      m_lastEnemy = nullptr;
-      m_lastEnemyOrigin.nullify ();
    }
    else if (engine.getTeam (m_lastEnemy) == m_team) {
       // don't hunt down our teammate...
       clearTask (TASK_HUNTENEMY);
       m_prevGoalIndex = INVALID_WAYPOINT_INDEX;
+      m_lastEnemy = nullptr;
    }
    else if (processNavigation ()) // reached last enemy pos?
    {
       // forget about it...
       completeTask ();
-      m_prevGoalIndex = INVALID_WAYPOINT_INDEX;
 
-      m_lastEnemy = nullptr;
+      m_prevGoalIndex = INVALID_WAYPOINT_INDEX;
       m_lastEnemyOrigin.nullify ();
    }
    else if (!isGoalValid ()) // do we need to calculate a new path?
@@ -3292,7 +3293,7 @@ void Bot::seekCover_ (void) {
       m_pathType = SEARCH_PATH_FASTEST;
 
       // start hide task
-      startTask (TASK_HIDE, TASKPRI_HIDE, INVALID_WAYPOINT_INDEX, engine.timebase () + rng.getFloat (5.0f, 15.0f), false);
+      startTask (TASK_HIDE, TASKPRI_HIDE, INVALID_WAYPOINT_INDEX, engine.timebase () + rng.getFloat (3.0f, 12.0f), false);
       Vector dest = m_lastEnemyOrigin;
 
       // get a valid look direction
@@ -3329,14 +3330,14 @@ void Bot::seekCover_ (void) {
          m_currentPath->campEndY = dest.y;
       }
 
-      if (m_reloadState == RELOAD_NONE && ammoClip () < 8 && ammo () != 0) {
+      if (m_reloadState == RELOAD_NONE && ammoClip () < 5 && ammo () != 0) {
          m_reloadState = RELOAD_PRIMARY;
       }
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
 
       m_moveToGoal = false;
-      m_checkTerrain = true;
+      m_checkTerrain = false;
    }
    else if (!isGoalValid ()) // we didn't choose a cover waypoint yet or lost it due to an attack?
    {
@@ -3350,7 +3351,7 @@ void Bot::seekCover_ (void) {
          destIndex = getCoverPoint (1024.0f);
 
          if (destIndex == INVALID_WAYPOINT_INDEX) {
-            destIndex = waypoints.getNearest (pev->origin, 512.0f);
+            destIndex = waypoints.getFarest (pev->origin, 1024.0f);
          }
       }
       m_campDirection = 0;
@@ -3401,7 +3402,7 @@ void Bot::pause_ (void) {
    // is bot blinded and above average difficulty?
    if (m_viewDistance < 500.0f && m_difficulty >= 2) {
       // go mad!
-      m_moveSpeed = -fabsf ((m_viewDistance - 500.0f) * 0.5f);
+      m_moveSpeed = -A_abs ((m_viewDistance - 500.0f) * 0.5f);
 
       if (m_moveSpeed < -pev->maxspeed) {
          m_moveSpeed = -pev->maxspeed;
@@ -4294,7 +4295,7 @@ void Bot::shootBreakable_ (void) {
    m_camp = src;
 
    // is bot facing the breakable?
-   if (getShootingConeDeviation (ent (), &src) >= 0.90f) {
+   if (getShootingConeDeviation (ent (), src) >= 0.90f) {
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
 
@@ -4859,7 +4860,7 @@ void Bot::processFlow (void) {
    }
 
    // save the previous speed (for checking if stuck)
-   m_prevSpeed = fabsf (m_moveSpeed);
+   m_prevSpeed = A_abs (m_moveSpeed);
    m_lastDamageType = -1; // reset damage
 }
 
@@ -5467,7 +5468,7 @@ Vector Bot::calcToss (const Vector &start, const Vector &stop) {
    Vector end = stop - pev->velocity;
    end.z -= 15.0f;
 
-   if (fabsf (end.z - start.z) > 500.0f) {
+   if (A_abs (end.z - start.z) > 500.0f) {
       return Vector::null ();
    }
    Vector midPoint = start + (end - start) * 0.5f;
@@ -5695,40 +5696,6 @@ float Bot::getBombTimeleft (void) {
    return timeLeft;
 }
 
-float Bot::getReachTime (void) {
-   float estimatedTime = 4.0f; // time to reach next waypoint
-
-   // calculate 'real' time that we need to get from one waypoint to another
-   if (m_currentWaypointIndex >= 0 && m_currentWaypointIndex < g_numWaypoints && m_prevWptIndex[0] >= 0 && m_prevWptIndex[0] < g_numWaypoints) {
-      float distance = (waypoints[m_prevWptIndex[0]].origin - m_currentPath->origin).length ();
-
-      // caclulate estimated time
-      if (pev->maxspeed <= 0.0f) {
-         estimatedTime = 3.0f * distance / 240.0f;
-      }
-      else {
-         estimatedTime = 3.0f * distance / pev->maxspeed;
-      }
-      bool longTermReachability = (m_currentPath->flags & FLAG_CROUCH) || (m_currentPath->flags & FLAG_LADDER) || (pev->button & IN_DUCK);
-
-      // check for special waypoints, that can slowdown our movement
-      if (longTermReachability) {
-         estimatedTime *= 3.0f;
-      }
-      // check for too low values
-      if (estimatedTime < 1.0f) {
-         estimatedTime = 1.0f;
-      }
-      const float maxReachTime = longTermReachability ? 10.0f : 5.0f;
-
-      // check for too high values
-      if (estimatedTime > maxReachTime) {
-         estimatedTime = maxReachTime;
-      }
-   }
-   return estimatedTime;
-}
-
 bool Bot::isOutOfBombTimer (void) {
    if (m_currentWaypointIndex == INVALID_WAYPOINT_INDEX || ((g_mapType & MAP_DE) && (m_hasProgressBar || taskId () == TASK_ESCAPEFROMBOMB)))
       return false; // if CT bot already start defusing, or already escaping, return false
@@ -5846,10 +5813,10 @@ void Bot::processHearing (void) {
       extern ConVar yb_shoots_thru_walls;
 
       // check if heard enemy can be seen
-      if (checkBodyParts (player, &m_lastEnemyOrigin, &m_visibility)) {
+      if (checkBodyParts (player, &m_enemyOrigin, &m_visibility)) {
          m_enemy = player;
          m_lastEnemy = player;
-         m_enemyOrigin = m_lastEnemyOrigin;
+         m_lastEnemyOrigin = m_enemyOrigin;
 
          m_states |= STATE_SEEING_ENEMY;
          m_seeEnemyTime = engine.timebase ();

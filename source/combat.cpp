@@ -107,30 +107,22 @@ bool Bot::checkBodyParts (edict_t *target, Vector *origin, uint8 *bodyPart) {
 
    *bodyPart = 0;
 
-   engine.testLine (eyes, spot, TRACE_IGNORE_EVERYTHING, pev->pContainingEntity, &result);
+   engine.testLine (eyes, spot, TRACE_IGNORE_EVERYTHING, ent (), &result);
 
    if (result.flFraction >= 1.0f) {
       *bodyPart |= VISIBLE_BODY;
       *origin = result.vecEndPos;
-
-      if (m_difficulty > 3) {
-         origin->z += 3.0f;
-      }
    }
 
    // check top of head
-   spot = spot + Vector (0, 0, 25.0f);
-   engine.testLine (eyes, spot, TRACE_IGNORE_EVERYTHING, pev->pContainingEntity, &result);
+   spot.z += 25.0f;
+   engine.testLine (eyes, spot, TRACE_IGNORE_EVERYTHING, ent (), &result);
 
    if (result.flFraction >= 1.0f) {
       *bodyPart |= VISIBLE_HEAD;
       *origin = result.vecEndPos;
-
-      if (m_difficulty > 3) {
-         origin->z += 1.0f;
-      }
    }
-
+  
    if (*bodyPart != 0) {
       return true;
    }
@@ -144,7 +136,7 @@ bool Bot::checkBodyParts (edict_t *target, Vector *origin, uint8 *bodyPart) {
    else {
       spot.z = target->v.origin.z - standFeet;
    }
-   engine.testLine (eyes, spot, TRACE_IGNORE_EVERYTHING, pev->pContainingEntity, &result);
+   engine.testLine (eyes, spot, TRACE_IGNORE_EVERYTHING, ent (), &result);
 
    if (result.flFraction >= 1.0f) {
       *bodyPart |= VISIBLE_OTHER;
@@ -159,7 +151,7 @@ bool Bot::checkBodyParts (edict_t *target, Vector *origin, uint8 *bodyPart) {
    Vector perp (-dir.y, dir.x, 0.0f);
    spot = target->v.origin + Vector (perp.x * edgeOffset, perp.y * edgeOffset, 0);
 
-   engine.testLine (eyes, spot, TRACE_IGNORE_EVERYTHING, pev->pContainingEntity, &result);
+   engine.testLine (eyes, spot, TRACE_IGNORE_EVERYTHING, ent (), &result);
 
    if (result.flFraction >= 1.0f) {
       *bodyPart |= VISIBLE_OTHER;
@@ -169,7 +161,7 @@ bool Bot::checkBodyParts (edict_t *target, Vector *origin, uint8 *bodyPart) {
    }
    spot = target->v.origin - Vector (perp.x * edgeOffset, perp.y * edgeOffset, 0);
 
-   engine.testLine (eyes, spot, TRACE_IGNORE_EVERYTHING, pev->pContainingEntity, &result);
+   engine.testLine (eyes, spot, TRACE_IGNORE_EVERYTHING, ent (), &result);
 
    if (result.flFraction >= 1.0f) {
       *bodyPart |= VISIBLE_OTHER;
@@ -180,20 +172,19 @@ bool Bot::checkBodyParts (edict_t *target, Vector *origin, uint8 *bodyPart) {
    return false;
 }
 
-bool Bot::seesEnemy (edict_t *player) {
+bool Bot::seesEnemy (edict_t *player, bool ignoreFOV) {
    if (engine.isNullEntity (player)) {
       return false;
    }
-   bool ignoreFOV = false;
 
    if (isPlayer (pev->dmg_inflictor) && engine.getTeam (pev->dmg_inflictor) != m_team) {
       ignoreFOV = true;
    }
 
-   if ((isInViewCone (player->v.origin + pev->view_ofs) || ignoreFOV) && checkBodyParts (player, &m_enemyOrigin, &m_visibility)) {
+   if ((ignoreFOV || isInViewCone (player->v.origin)) && checkBodyParts (player, &m_enemyOrigin, &m_visibility)) {
       m_seeEnemyTime = engine.timebase ();
       m_lastEnemy = player;
-      m_lastEnemyOrigin = player->v.origin;
+      m_lastEnemyOrigin = m_enemyOrigin;
 
       return true;
    }
@@ -215,12 +206,14 @@ bool Bot::lookupEnemies (void) {
    if (m_seeEnemyTime + 3.0f < engine.timebase ()) {
       m_states &= ~STATE_SUSPECT_ENEMY;
    }
+   m_visibility = 0;
+   m_enemyOrigin.nullify ();
 
    if (!engine.isNullEntity (m_enemy) && m_enemyUpdateTime > engine.timebase ()) {
       player = m_enemy;
 
       // is player is alive
-      if (isAlive (player) && seesEnemy (player)) {
+      if (isAlive (player) && seesEnemy (player, true)) {
          newEnemy = player;
       }
    }
@@ -395,90 +388,77 @@ bool Bot::lookupEnemies (void) {
    return false;
 }
 
+Vector Bot::getBodyOffserError (void) {
+   if (engine.isNullEntity (m_enemy)) {
+      return Vector::null ();
+   }
+
+   if (m_aimErrorTime < engine.timebase ()) {
+      m_aimLastError = Vector (rng.getFloat (m_enemy->v.mins.x * 0.5f, m_enemy->v.maxs.x * 0.5f), rng.getFloat (m_enemy->v.mins.y * 0.5f, m_enemy->v.maxs.y * 0.5f), rng.getFloat (m_enemy->v.mins.z * 0.5f, m_enemy->v.maxs.z * 0.5f));
+      
+      m_aimErrorTime = engine.timebase () + rng.getFloat (0.5f, 1.0f);
+   }
+   return m_aimLastError;
+}
+
 const Vector &Bot::getEnemyBodyOffset (void) {
    // the purpose of this function, is to make bot aiming not so ideal. it's mutate m_enemyOrigin enemy vector
    // returned from visibility check function.
 
+   // if no visibility data, use last one
+   if (!m_visibility) {
+      return m_enemyOrigin;
+   }
+
    float distance = (m_enemy->v.origin - pev->origin).length ();
 
-   // get enemy position initially
-   Vector targetOrigin = m_enemy->v.origin;
-   Vector randomize;
-
-   const Vector &adjust = Vector (rng.getFloat (m_enemy->v.mins.x * 0.5f, m_enemy->v.maxs.x * 0.5f), rng.getFloat (m_enemy->v.mins.y * 0.5f, m_enemy->v.maxs.y * 0.5f), rng.getFloat (m_enemy->v.mins.z * 0.5f, m_enemy->v.maxs.z * 0.5f));
-
    // do not aim at head, at long distance (only if not using sniper weapon)
-   if ((m_visibility & VISIBLE_BODY) && !usesSniper () && !usesPistol () && (distance > (m_difficulty == 4 ? 2400.0 : 1200.0))) {
+   if ((m_visibility & VISIBLE_BODY) && !usesSniper () && distance > (m_difficulty > 2 ? 2000.0f : 1000.0f)) {
       m_visibility &= ~VISIBLE_HEAD;
+   }
+   Vector aimPos = m_enemy->v.origin;
+
+   if (m_difficulty > 2 && !(m_visibility & VISIBLE_OTHER)) {
+      aimPos = (m_enemy->v.velocity - pev->velocity) * calcThinkInterval () * 2.0f + aimPos;
    }
 
    // if we only suspect an enemy behind a wall take the worst skill
-   if ((m_states & STATE_SUSPECT_ENEMY) && !(m_states & STATE_SEEING_ENEMY)) {
-      targetOrigin = targetOrigin + adjust;
+   if (!m_visibility && m_states & STATE_SUSPECT_ENEMY) {
+      aimPos += getBodyOffserError ();
    }
    else {
       // now take in account different parts of enemy body
       if (m_visibility & (VISIBLE_HEAD | VISIBLE_BODY)) {
-         int headshotFreq[4] = {20, 40, 80, 100};
+         int headshotFreq[5] = { 20, 40, 60, 80, 100 };
 
          // now check is our skill match to aim at head, else aim at enemy body
          if ((rng.getInt (1, 100) < headshotFreq[m_difficulty]) || usesPistol ()) {
-            targetOrigin = targetOrigin + m_enemy->v.view_ofs + Vector (0.0f, 0.0f, getEnemyBodyOffsetCorrection (distance));
+            aimPos.z += 20.0f;
          }
-         else {
-            targetOrigin = targetOrigin + Vector (0.0f, 0.0f, getEnemyBodyOffsetCorrection (distance));
-         }
+         aimPos.z += getEnemyBodyOffsetCorrection (distance);
       }
       else if (m_visibility & VISIBLE_BODY) {
-         targetOrigin = targetOrigin + Vector (0.0f, 0.0f, getEnemyBodyOffsetCorrection (distance));
+         aimPos.z += getEnemyBodyOffsetCorrection (distance);
       }
       else if (m_visibility & VISIBLE_OTHER) {
-         targetOrigin = m_enemyOrigin;
+         aimPos = m_enemyOrigin;
       }
       else if (m_visibility & VISIBLE_HEAD) {
-         targetOrigin = targetOrigin + m_enemy->v.view_ofs + Vector (0.0f, 0.0f, getEnemyBodyOffsetCorrection (distance));
+         aimPos.z += getEnemyBodyOffsetCorrection (distance) + 20.0f;
       }
-      else {
-         targetOrigin = m_lastEnemyOrigin;
-
-         if (m_difficulty < 3) {
-            randomize = adjust;
-         }
-      }
-      m_lastEnemyOrigin = targetOrigin;
    }
 
-   if (m_difficulty < 3 && !randomize.empty ()) {
-      float divOffs = (m_enemyOrigin - pev->origin).length ();
+   m_enemyOrigin = aimPos;
+   m_lastEnemyOrigin = aimPos;
 
-      if (pev->fov < 40) {
-         divOffs = divOffs / 2000;
-      }
-      else if (pev->fov < 90) {
-         divOffs = divOffs / 1000;
-      }
-      else {
-         divOffs = divOffs / 500;
-      }
-
-      // randomize the target position
-      m_enemyOrigin = divOffs * randomize;
-   }
-   else {
-      m_enemyOrigin = targetOrigin;
-   }
-
-   if (distance >= 256.0f && m_difficulty < 3) {
-      m_enemyOrigin += (usesSniper () ? Vector::null () : 1.0f * calcThinkInterval () * m_enemy->v.velocity - 1.0f * calcThinkInterval () * pev->velocity).make2D ();
+   // add some error to unskilled bots
+   if (m_difficulty < 3) {
+      m_enemyOrigin += getBodyOffserError ();
    }
    return m_enemyOrigin;
 }
 
 float Bot::getEnemyBodyOffsetCorrection (float distance) {
-   if (m_difficulty < 3) {
-      return 0.0f;
-   }
-
    bool sniper = usesSniper ();
    bool pistol = usesPistol ();
    bool rifle = usesRifle ();
@@ -490,7 +470,7 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
 
    float result = 3.5f;
 
-   if (distance < 3000.0f && distance > MAX_SPRAY_DISTANCE_X2) {
+   if (distance < 3000.0f && distance >= MAX_SPRAY_DISTANCE_X2) {
       if (sniper) {
          result = 5.5f;
       }
@@ -536,7 +516,7 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
          result = 10.0f;
       }
    }
-   else if (distance < MAX_SPRAY_DISTANCE) {
+   else if (distance <= MAX_SPRAY_DISTANCE) {
       if (sniper) {
          result = 3.5f;
       }
@@ -594,7 +574,7 @@ bool Bot::isFriendInLineOfFire (float distance) {
       float friendDistance = (pent->v.origin - pev->origin).length ();
       float squareDistance = A_sqrtf (1089.0f + (friendDistance * friendDistance));
 
-      if (getShootingConeDeviation (ent (), &pent->v.origin) > (friendDistance * friendDistance) / (squareDistance * squareDistance) && friendDistance <= distance) {
+      if (getShootingConeDeviation (ent (), pent->v.origin) > (friendDistance * friendDistance) / (squareDistance * squareDistance) && friendDistance <= distance) {
          return true;
       }
    }
@@ -699,7 +679,7 @@ bool Bot::throttleFiring (float distance) {
       return true;
 
    if ((m_aimFlags & AIM_ENEMY) && !m_enemyOrigin.empty ()) {
-      if (getShootingConeDeviation (ent (), &m_enemyOrigin) > 0.92f && isEnemyBehindShield (m_enemy)) {
+      if (getShootingConeDeviation (ent (), m_enemyOrigin) > 0.92f && isEnemyBehindShield (m_enemy)) {
          return true;
       }
    }
@@ -721,7 +701,7 @@ bool Bot::throttleFiring (float distance) {
    float tolerance = (100.0f - m_difficulty * 25.0f) / 99.0f;
 
    // check if we need to compensate recoil
-   if (tanf (A_sqrtf (fabsf (xPunch * xPunch) + fabsf (yPunch * yPunch))) * distance > offset + 30.0f + tolerance) {
+   if (A_tanf (A_sqrtf (A_abs (xPunch * xPunch) + A_abs (yPunch * yPunch))) * distance > offset + 30.0f + tolerance) {
       if (m_firePause < engine.timebase ()) {
          m_firePause = rng.getFloat (0.5f, 0.5f + 0.3f * tolerance);
       }
@@ -990,13 +970,13 @@ void Bot::FocusEnemy (void) {
       }
    }
    else {
-      float dot = getShootingConeDeviation (ent (), &m_enemyOrigin);
+      float dot = getShootingConeDeviation (ent (), m_enemyOrigin);
 
       if (dot < 0.90f) {
          m_wantsToFire = false;
       }
       else {
-         float enemyDot = getShootingConeDeviation (m_enemy, &pev->origin);
+         float enemyDot = getShootingConeDeviation (m_enemy, pev->origin);
 
          // enemy faces bot?
          if (enemyDot >= 0.90f) {
@@ -1157,7 +1137,7 @@ void Bot::attackMovement (void) {
          }
       }
       else if (m_fightStyle == FIGHT_STAY) {
-         if ((m_visibility & (VISIBLE_HEAD | VISIBLE_BODY)) && taskId () != TASK_SEEKCOVER && taskId () != TASK_HUNTENEMY) {
+         if ((m_visibility & (VISIBLE_HEAD | VISIBLE_BODY)) && !(m_visibility & VISIBLE_OTHER) && taskId () != TASK_SEEKCOVER && taskId () != TASK_HUNTENEMY) {
             int enemyNearestIndex = waypoints.getNearest (m_enemy->v.origin);
 
             if (waypoints.isDuckVisible (m_currentWaypointIndex, enemyNearestIndex) && waypoints.isDuckVisible (enemyNearestIndex, m_currentWaypointIndex)) {

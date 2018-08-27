@@ -1050,6 +1050,7 @@ void Bot::processNewRound (void) {
    m_prevOrigin = Vector (9999.0f, 9999.0f, 9999.0f);
    m_prevTime = engine.timebase ();
    m_lookUpdateTime = engine.timebase ();
+   m_aimErrorTime = engine.timebase ();
 
    m_viewDistance = 4096.0f;
    m_maxViewDistance = 4096.0f;
@@ -1092,6 +1093,7 @@ void Bot::processNewRound (void) {
    m_aimFlags = 0;
    m_liftState = 0;
 
+   m_aimLastError.nullify ();
    m_position.nullify ();
    m_liftTravelPos.nullify ();
 

@@ -523,19 +523,19 @@ int Waypoint::getFacingIndex (void) {
 
    // find the waypoint the user is pointing at
    for (int i = 0; i < g_numWaypoints; i++) {
-      if ((m_paths[i]->origin - g_hostEntity->v.origin).lengthSq () > 250000.0f)
+      if ((m_paths[i]->origin - g_hostEntity->v.origin).lengthSq () > 250000.0f) {
          continue;
-
+      }
       // get the current view cone
-      viewCone[0] = getShootingConeDeviation (g_hostEntity, &m_paths[i]->origin);
+      viewCone[0] = getShootingConeDeviation (g_hostEntity, m_paths[i]->origin);
       Vector bound = m_paths[i]->origin - Vector (0.0f, 0.0f, (m_paths[i]->flags & FLAG_CROUCH) ? 8.0f : 15.0f);
 
       // get the current view cone
-      viewCone[1] = getShootingConeDeviation (g_hostEntity, &bound);
+      viewCone[1] = getShootingConeDeviation (g_hostEntity, bound);
       bound = m_paths[i]->origin + Vector (0.0f, 0.0f, (m_paths[i]->flags & FLAG_CROUCH) ? 8.0f : 15.0f);
 
       // get the current view cone
-      viewCone[2] = getShootingConeDeviation (g_hostEntity, &bound);
+      viewCone[2] = getShootingConeDeviation (g_hostEntity, bound);
 
       // check if we can see it
       if (viewCone[0] < 0.998f && viewCone[1] < 0.997f && viewCone[2] < 0.997f) {
@@ -1172,7 +1172,7 @@ float Waypoint::calculateTravelTime (float maxSpeed, const Vector &src, const Ve
 }
 
 bool Waypoint::isReachable (Bot *bot, int index) {
-   // this function return wether bot able to reach index waypoint or not, depending on several factors.
+   // this function return whether bot able to reach index waypoint or not, depending on several factors.
 
    if (bot == nullptr || index < 0 || index >= g_numWaypoints) {
       return false;
@@ -1199,7 +1199,7 @@ bool Waypoint::isReachable (Bot *bot, int index) {
       float distance2D = (dest - src).length2D ();
 
       // is destination waypoint higher that source (62 is max jump height), or destination waypoint higher that source
-      if (((dest.z > src.z + 62.0f || dest.z < src.z - 100.0f) && (!(m_paths[index]->flags & FLAG_LADDER))) || distance2D >= 120.0f) {
+      if (((dest.z > src.z + 62.0f || dest.z < src.z - 100.0f) && (!(m_paths[index]->flags & FLAG_LADDER))) || distance2D >= 96.0f) {
          return false; // unable to reach this one
       }
       return true;
@@ -1331,6 +1331,36 @@ void Waypoint::rebuildVisibility (void) {
          // check if line of sight to object is not blocked (i.e. visible)
          if (tr.flFraction != 1.0f || tr.fStartSolid) {
             res |= 1;
+         }
+
+         if (res != 0) {
+            dest = m_paths[i]->origin;
+
+            // first check ducked visibility
+            if (m_paths[i]->flags & FLAG_CROUCH) {
+               dest.z += 18.0f + 28.0f;
+            }
+            else {
+               dest.z += 28.0f;
+            }
+            engine.testLine (sourceDuck, dest, TRACE_IGNORE_MONSTERS, nullptr, &tr);
+
+            // check if line of sight to object is not blocked (i.e. visible)
+            if (tr.flFraction != 1.0f) {
+               res |= 2;
+            }
+            else {
+               res &= 1;
+            }
+            engine.testLine (sourceStand, dest, TRACE_IGNORE_MONSTERS, nullptr, &tr);
+
+            // check if line of sight to object is not blocked (i.e. visible)
+            if (tr.flFraction != 1.0f) {
+               res |= 1;
+            }
+            else {
+               res &= 2;
+            }
          }
          shift = (i % 4) << 1;
 
