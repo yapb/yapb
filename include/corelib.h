@@ -1316,14 +1316,11 @@ public:
 };
 
 template <typename K> struct MapKeyHash {
-   constexpr unsigned long operator () (const K &key) const
-   {
-      size_t hash = 5321;
+   constexpr unsigned long operator () (const K &key) const {
       char *str = const_cast <char *> (key.chars ());
-      char ch;
 
-      while (ch = *str++) {
-         hash = ((hash << 5) + hash) + ch;
+      while (*str++) {
+         hash = ((hash << 5) + 5321) + *str;
       }
       return hash;
    }

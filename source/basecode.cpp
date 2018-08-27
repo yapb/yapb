@@ -120,10 +120,11 @@ void Bot::checkGrenadesThrow (void) {
 
    static auto clearThrowStates = [&](void) {
       m_states &= ~(STATE_THROW_HE | STATE_THROW_FB | STATE_THROW_SG);
+      m_grenadeCheckTime = engine.timebase () + 1.0f;
    };
 
    // check if throwing a grenade is a good thing to do...
-   if (checkTasks || yb_ignore_enemies.boolean () || m_isUsingGrenade || m_isReloading || yb_jasonmode.boolean () || m_grenadeCheckTime >= engine.timebase ()) {
+   if (checkTasks || yb_ignore_enemies.boolean () || m_isUsingGrenade || g_bombPlanted || m_isReloading || yb_jasonmode.boolean () || m_grenadeCheckTime >= engine.timebase ()) {
       clearThrowStates ();
       return;
    }

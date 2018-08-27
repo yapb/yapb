@@ -784,16 +784,16 @@ public:
       m_size = 0;
    }
 
-protected:
-   constexpr int leftOf (int index) {
+public:
+   static constexpr int leftOf (int index) {
       return (index << 1) | 1;
    }
 
-   constexpr int rightOf (int index) {
+   static constexpr int rightOf (int index) {
       return (++index) << 1;
    }
 
-   constexpr int parentOf (int index) {
+   static constexpr int parentOf (int index) {
       return (--index) >> 1;
    }
 };
@@ -1566,15 +1566,12 @@ public:
    const char *getWaypointFilename (bool isMemoryFile = false);
 
    void setBombPos (bool reset = false, const Vector &pos = Vector::null ());
+
    inline const Vector &getBombPos (void) {
       return m_bombPos;
    }
-   /*
-   FORCEINLINE Path *getPath (int id) {
-      return m_paths[id];
-   }
-   */
-   constexpr Path &operator [] (int index) {
+
+   inline Path &operator [] (int index) {
       return *m_paths[index];
    }
 
