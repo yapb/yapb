@@ -14,6 +14,7 @@ ConVar yb_autovacate ("yb_autovacate", "1");
 ConVar yb_quota ("yb_quota", "0", VT_NORMAL);
 ConVar yb_quota_mode ("yb_quota_mode", "normal");
 ConVar yb_quota_match ("yb_quota_match", "0");
+ConVar yb_think_fps ("yb_think_fps", "30.0");
 
 ConVar yb_join_after_player ("yb_join_after_player", "0");
 ConVar yb_join_team ("yb_join_team", "any");
@@ -161,7 +162,7 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
       if (!g_botNames.empty ()) {
          bool nameFound = false;
 
-         while (true) {
+         for (int i = 0; i < MAX_ENGINE_PLAYERS; i++) {
             if (nameFound) {
                break;
             }
@@ -535,7 +536,7 @@ void BotManager::kickBotByMenu (edict_t *ent, int selection) {
    auto searchMenu = [](MenuId id) {
       int menuIndex = 0;
 
-      for (; menuIndex < ARRAYSIZE_HLSDK (g_menus); menuIndex++) {
+      for (; menuIndex < A_arrsize (g_menus); menuIndex++) {
          if (g_menus[menuIndex].id == id) {
             break;
          }
@@ -1196,7 +1197,7 @@ void Bot::processNewRound (void) {
    if (rng.getInt (0, 100) < 50) {
       pushChatterMessage (Chatter_NewRound);
    }
-   m_thinkInterval = (g_gameFlags & GAME_LEGACY) ? 0.0f : (1.0f / 30.0f) * rng.getFloat (0.95f, 1.05f);
+   m_thinkInterval = (g_gameFlags & GAME_LEGACY) ? 0.0f : (1.0f / F_clamp (yb_think_fps.flt (), 30.0f, 90.0f)) * rng.getFloat (0.95f, 1.05f);
 }
 
 void Bot::kill (void) {

@@ -266,7 +266,6 @@ typedef struct KeyValueData_s {
    int32 fHandled; // out: DLL sets to true if key-value pair was understood
 } KeyValueData;
 
-#define ARRAYSIZE_HLSDK(p) (int)(sizeof (p) / sizeof (p[0]))
 typedef struct customization_s customization_t;
 
 typedef struct {

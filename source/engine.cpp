@@ -399,7 +399,7 @@ const char *Engine::getField (const char *string, int id) {
       iter = 0;
    }
 
-   char *ptr = arg[A_clamp<int> (++iter, 0, IterBufMax - 1)];
+   char *ptr = arg[A_clamp<int> (iter++, 0, IterBufMax - 1)];
    ptr[0] = 0;
 
    int pos = 0, count = 0, start = 0, stop = 0;
@@ -732,7 +732,7 @@ void Engine::processMessages (void *ptr) {
    case NETMSG_MONEY:
       // this message gets sent when the bots money amount changes
 
-      if (m_msgBlock.state == 0) {
+      if (bot != nullptr && m_msgBlock.state == 0) {
          bot->m_moneyAmount = intVal; // amount of money
       }
       break;

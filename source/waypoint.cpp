@@ -1294,6 +1294,7 @@ void Waypoint::rebuildVisibility (void) {
    if (!m_redoneVisibility) {
       return;
    }
+
    TraceResult tr;
    uint8 res, shift;
 
@@ -1382,6 +1383,10 @@ void Waypoint::rebuildVisibility (void) {
 }
 
 bool Waypoint::isVisible (int srcIndex, int destIndex) {
+   if (srcIndex < 0 || srcIndex >= g_numWaypoints || destIndex < 0 || destIndex >= g_numWaypoints) {
+      return false;
+   }
+
    uint8 res = m_visLUT[srcIndex][destIndex >> 2];
    res >>= (destIndex % 4) << 1;
 
@@ -1389,6 +1394,10 @@ bool Waypoint::isVisible (int srcIndex, int destIndex) {
 }
 
 bool Waypoint::isDuckVisible (int srcIndex, int destIndex) {
+   if (srcIndex < 0 || srcIndex >= g_numWaypoints || destIndex < 0 || destIndex >= g_numWaypoints) {
+      return false;
+   }
+
    uint8 res = m_visLUT[srcIndex][destIndex >> 2];
    res >>= (destIndex % 4) << 1;
 
@@ -1396,6 +1405,10 @@ bool Waypoint::isDuckVisible (int srcIndex, int destIndex) {
 }
 
 bool Waypoint::isStandVisible (int srcIndex, int destIndex) {
+   if (srcIndex < 0 || srcIndex >= g_numWaypoints || destIndex < 0 || destIndex >= g_numWaypoints) {
+      return false;
+   }
+
    uint8 res = m_visLUT[srcIndex][destIndex >> 2];
    res >>= (destIndex % 4) << 1;
 
@@ -2295,6 +2308,10 @@ Waypoint::Waypoint (void) {
 
    m_distMatrix = nullptr;
    m_pathMatrix = nullptr;
+
+   for (int i = 0; i < MAX_WAYPOINTS; i++) {
+      m_paths[i] = nullptr;
+   }
 }
 
 Waypoint::~Waypoint (void) {
@@ -2305,6 +2322,10 @@ Waypoint::~Waypoint (void) {
 
    m_distMatrix = nullptr;
    m_pathMatrix = nullptr;
+
+   for (int i = 0; i < MAX_WAYPOINTS; i++) {
+      m_paths[i] = nullptr;
+   }
 }
 
 void Waypoint::closeSocket (int sock) {

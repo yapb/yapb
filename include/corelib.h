@@ -62,8 +62,13 @@ static inline bool A_checkptr (const void *ptr) {
 #define stricmp _stricmp
 #endif
 
-#define A_bufsize(value) (sizeof (value) - 1)
-#define A_stringify(value) (#value)
+template <typename T, int N> constexpr int A_bufsize (const T (&)[N]) {
+   return N - 1;
+}
+
+template <typename T, int N> constexpr int A_arrsize (const T (&)[N]) {
+   return N;
+}
 
 namespace Math {
 constexpr float MATH_ONEPSILON = 0.01f;

@@ -1104,7 +1104,7 @@ private:
    Vector isBombAudible (void);
 
    const Vector &getEnemyBodyOffset (void);
-   Vector getBodyOffserError (void);
+   Vector getBodyOffserError (float distance);
    float getEnemyBodyOffsetCorrection (float distance);
 
    void processTeamCommands (void);

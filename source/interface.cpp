@@ -492,7 +492,7 @@ void processBotConfigs (bool onlyMain) {
             }
             auto keyval = String (lineBuffer).split (" ");
 
-            if (!firstLoad && keyval.length () > 1) {
+            if (keyval.length () > 1) {
                auto ignore = String (yb_ignore_cvars_on_changelevel.str ()).split (",");
 
                auto key = keyval[0].trim ().chars ();
@@ -754,79 +754,78 @@ void processBotConfigs (bool onlyMain) {
          const char *str;
          int code;
          float repeat;
-
       } chatterEventMap[] = {
-         { A_stringify (Radio_CoverMe), Radio_CoverMe, ChatterInfinity },
-         { A_stringify (Radio_YouTakePoint), Radio_YouTakePoint, ChatterInfinity },
-         { A_stringify (Radio_HoldPosition), Radio_HoldPosition, ChatterInfinity },
-         { A_stringify (Radio_RegroupTeam), Radio_RegroupTeam, ChatterInfinity },
-         { A_stringify (Radio_FollowMe), Radio_FollowMe, ChatterInfinity },
-         { A_stringify (Radio_TakingFire), Radio_TakingFire, ChatterInfinity },
-         { A_stringify (Radio_GoGoGo), Radio_GoGoGo, ChatterInfinity },
-         { A_stringify (Radio_Fallback), Radio_Fallback, ChatterInfinity },
-         { A_stringify (Radio_StickTogether), Radio_StickTogether, ChatterInfinity },
-         { A_stringify (Radio_GetInPosition), Radio_GetInPosition, ChatterInfinity },
-         { A_stringify (Radio_StormTheFront), Radio_StormTheFront, ChatterInfinity },
-         { A_stringify (Radio_ReportTeam), Radio_ReportTeam, ChatterInfinity },
-         { A_stringify (Radio_Affirmative), Radio_Affirmative, ChatterInfinity },
-         { A_stringify (Radio_EnemySpotted), Radio_EnemySpotted, ChatterInfinity },
-         { A_stringify (Radio_NeedBackup), Radio_NeedBackup, ChatterInfinity },
-         { A_stringify (Radio_SectorClear), Radio_SectorClear, ChatterInfinity },
-         { A_stringify (Radio_InPosition), Radio_InPosition, ChatterInfinity },
-         { A_stringify (Radio_ReportingIn), Radio_ReportingIn, ChatterInfinity },
-         { A_stringify (Radio_ShesGonnaBlow), Radio_ShesGonnaBlow, ChatterInfinity },
-         { A_stringify (Radio_Negative), Radio_Negative, ChatterInfinity },
-         { A_stringify (Radio_EnemyDown), Radio_EnemyDown, ChatterInfinity },
-         { A_stringify (Chatter_DiePain), Chatter_DiePain, ChatterInfinity },
-         { A_stringify (Chatter_GoingToPlantBomb), Chatter_GoingToPlantBomb, ChatterInfinity },
-         { A_stringify (Chatter_GoingToGuardVIPSafety), Chatter_GoingToGuardVIPSafety, ChatterInfinity },
-         { A_stringify (Chatter_RescuingHostages), Chatter_RescuingHostages, ChatterInfinity },
-         { A_stringify (Chatter_TeamKill), Chatter_TeamKill, ChatterInfinity },
-         { A_stringify (Chatter_GuardingVipSafety), Chatter_GuardingVipSafety, ChatterInfinity },
-         { A_stringify (Chatter_PlantingC4), Chatter_PlantingC4, ChatterInfinity },
-         { A_stringify (Chatter_InCombat), Chatter_InCombat,  ChatterInfinity },
-         { A_stringify (Chatter_SeeksEnemy), Chatter_SeeksEnemy, ChatterInfinity },
-         { A_stringify (Chatter_Nothing), Chatter_Nothing,  ChatterInfinity },
-         { A_stringify (Chatter_EnemyDown), Chatter_EnemyDown, ChatterInfinity },
-         { A_stringify (Chatter_UseHostage), Chatter_UseHostage, ChatterInfinity },
-         { A_stringify (Chatter_WonTheRound), Chatter_WonTheRound, ChatterInfinity },
-         { A_stringify (Chatter_QuicklyWonTheRound), Chatter_QuicklyWonTheRound, ChatterInfinity },
-         { A_stringify (Chatter_NoEnemiesLeft), Chatter_NoEnemiesLeft, ChatterInfinity },
-         { A_stringify (Chatter_FoundBombPlace), Chatter_FoundBombPlace, ChatterInfinity },
-         { A_stringify (Chatter_WhereIsTheBomb), Chatter_WhereIsTheBomb, ChatterInfinity },
-         { A_stringify (Chatter_DefendingBombSite), Chatter_DefendingBombSite, ChatterInfinity },
-         { A_stringify (Chatter_BarelyDefused), Chatter_BarelyDefused, ChatterInfinity },
-         { A_stringify (Chatter_NiceshotCommander), Chatter_NiceshotCommander, ChatterInfinity },
-         { A_stringify (Chatter_ReportingIn), Chatter_ReportingIn, 10.0f },
-         { A_stringify (Chatter_SpotTheBomber), Chatter_SpotTheBomber, 4.3f },
-         { A_stringify (Chatter_VIPSpotted), Chatter_VIPSpotted, 5.3f },
-         { A_stringify (Chatter_FriendlyFire), Chatter_FriendlyFire, 2.1f },
-         { A_stringify (Chatter_GotBlinded), Chatter_GotBlinded, 5.0f },
-         { A_stringify (Chatter_GuardDroppedC4), Chatter_GuardDroppedC4, 3.0f },
-         { A_stringify (Chatter_DefusingC4), Chatter_DefusingC4, 3.0f },
-         { A_stringify (Chatter_FoundC4), Chatter_FoundC4, 5.5f },
-         { A_stringify (Chatter_ScaredEmotion), Chatter_ScaredEmotion, 6.1f },
-         { A_stringify (Chatter_HeardEnemy), Chatter_ScaredEmotion, 12.8f },
-         { A_stringify (Chatter_SniperWarning), Chatter_SniperWarning, 14.3f },
-         { A_stringify (Chatter_SniperKilled), Chatter_SniperKilled, 2.1f },
-         { A_stringify (Chatter_OneEnemyLeft), Chatter_OneEnemyLeft, 2.5f },
-         { A_stringify (Chatter_TwoEnemiesLeft), Chatter_TwoEnemiesLeft, 2.5f },
-         { A_stringify (Chatter_ThreeEnemiesLeft), Chatter_ThreeEnemiesLeft, 2.5f },
-         { A_stringify (Chatter_NiceshotPall), Chatter_NiceshotPall, 2.0f },
-         { A_stringify (Chatter_GoingToGuardHostages), Chatter_GoingToGuardHostages, 3.0f },
-         { A_stringify (Chatter_GoingToGuardDoppedBomb), Chatter_GoingToGuardDoppedBomb, 3.0f },
-         { A_stringify (Chatter_OnMyWay), Chatter_OnMyWay, 1.5f },
-         { A_stringify (Chatter_LeadOnSir), Chatter_LeadOnSir, 5.0f },
-         { A_stringify (Chatter_Pinned_Down), Chatter_Pinned_Down, 5.0f },
-         { A_stringify (Chatter_GottaFindTheBomb), Chatter_GottaFindTheBomb, 3.0f },
-         { A_stringify (Chatter_You_Heard_The_Man), Chatter_You_Heard_The_Man, 3.0f },
-         { A_stringify (Chatter_Lost_The_Commander), Chatter_Lost_The_Commander, 4.5f },
-         { A_stringify (Chatter_NewRound), Chatter_NewRound, 3.5f },
-         { A_stringify (Chatter_CoverMe), Chatter_CoverMe, 3.5f },
-         { A_stringify (Chatter_BehindSmoke), Chatter_BehindSmoke, 3.5f },
-         { A_stringify (Chatter_BombSiteSecured), Chatter_BombSiteSecured, 3.5f },
-         { A_stringify (Chatter_GoingToCamp), Chatter_GoingToCamp, 25.0f },
-         { A_stringify (Chatter_Camp), Chatter_Camp, 25.0f },
+         { "Radio_CoverMe", Radio_CoverMe, ChatterInfinity },
+         { "Radio_YouTakePoint", Radio_YouTakePoint, ChatterInfinity },
+         { "Radio_HoldPosition", Radio_HoldPosition, ChatterInfinity },
+         { "Radio_RegroupTeam", Radio_RegroupTeam, ChatterInfinity },
+         { "Radio_FollowMe", Radio_FollowMe, ChatterInfinity },
+         { "Radio_TakingFire", Radio_TakingFire, ChatterInfinity },
+         { "Radio_GoGoGo", Radio_GoGoGo, ChatterInfinity },
+         { "Radio_Fallback", Radio_Fallback, ChatterInfinity },
+         { "Radio_StickTogether", Radio_StickTogether, ChatterInfinity },
+         { "Radio_GetInPosition", Radio_GetInPosition, ChatterInfinity },
+         { "Radio_StormTheFront", Radio_StormTheFront, ChatterInfinity },
+         { "Radio_ReportTeam", Radio_ReportTeam, ChatterInfinity },
+         { "Radio_Affirmative", Radio_Affirmative, ChatterInfinity },
+         { "Radio_EnemySpotted", Radio_EnemySpotted, ChatterInfinity },
+         { "Radio_NeedBackup", Radio_NeedBackup, ChatterInfinity },
+         { "Radio_SectorClear", Radio_SectorClear, ChatterInfinity },
+         { "Radio_InPosition", Radio_InPosition, ChatterInfinity },
+         { "Radio_ReportingIn", Radio_ReportingIn, ChatterInfinity },
+         { "Radio_ShesGonnaBlow", Radio_ShesGonnaBlow, ChatterInfinity },
+         { "Radio_Negative", Radio_Negative, ChatterInfinity },
+         { "Radio_EnemyDown", Radio_EnemyDown, ChatterInfinity },
+         { "Chatter_DiePain", Chatter_DiePain, ChatterInfinity },
+         { "Chatter_GoingToPlantBomb", Chatter_GoingToPlantBomb, ChatterInfinity },
+         { "Chatter_GoingToGuardVIPSafety", Chatter_GoingToGuardVIPSafety, ChatterInfinity },
+         { "Chatter_RescuingHostages", Chatter_RescuingHostages, ChatterInfinity },
+         { "Chatter_TeamKill", Chatter_TeamKill, ChatterInfinity },
+         { "Chatter_GuardingVipSafety", Chatter_GuardingVipSafety, ChatterInfinity },
+         { "Chatter_PlantingC4", Chatter_PlantingC4, ChatterInfinity },
+         { "Chatter_InCombat", Chatter_InCombat,  ChatterInfinity },
+         { "Chatter_SeeksEnemy", Chatter_SeeksEnemy, ChatterInfinity },
+         { "Chatter_Nothing", Chatter_Nothing,  ChatterInfinity },
+         { "Chatter_EnemyDown", Chatter_EnemyDown, ChatterInfinity },
+         { "Chatter_UseHostage", Chatter_UseHostage, ChatterInfinity },
+         { "Chatter_WonTheRound", Chatter_WonTheRound, ChatterInfinity },
+         { "Chatter_QuicklyWonTheRound", Chatter_QuicklyWonTheRound, ChatterInfinity },
+         { "Chatter_NoEnemiesLeft", Chatter_NoEnemiesLeft, ChatterInfinity },
+         { "Chatter_FoundBombPlace", Chatter_FoundBombPlace, ChatterInfinity },
+         { "Chatter_WhereIsTheBomb", Chatter_WhereIsTheBomb, ChatterInfinity },
+         { "Chatter_DefendingBombSite", Chatter_DefendingBombSite, ChatterInfinity },
+         { "Chatter_BarelyDefused", Chatter_BarelyDefused, ChatterInfinity },
+         { "Chatter_NiceshotCommander", Chatter_NiceshotCommander, ChatterInfinity },
+         { "Chatter_ReportingIn", Chatter_ReportingIn, 10.0f },
+         { "Chatter_SpotTheBomber", Chatter_SpotTheBomber, 4.3f },
+         { "Chatter_VIPSpotted", Chatter_VIPSpotted, 5.3f },
+         { "Chatter_FriendlyFire", Chatter_FriendlyFire, 2.1f },
+         { "Chatter_GotBlinded", Chatter_GotBlinded, 5.0f },
+         { "Chatter_GuardDroppedC4", Chatter_GuardDroppedC4, 3.0f },
+         { "Chatter_DefusingC4", Chatter_DefusingC4, 3.0f },
+         { "Chatter_FoundC4", Chatter_FoundC4, 5.5f },
+         { "Chatter_ScaredEmotion", Chatter_ScaredEmotion, 6.1f },
+         { "Chatter_HeardEnemy", Chatter_ScaredEmotion, 12.8f },
+         { "Chatter_SniperWarning", Chatter_SniperWarning, 14.3f },
+         { "Chatter_SniperKilled", Chatter_SniperKilled, 2.1f },
+         { "Chatter_OneEnemyLeft", Chatter_OneEnemyLeft, 2.5f },
+         { "Chatter_TwoEnemiesLeft", Chatter_TwoEnemiesLeft, 2.5f },
+         { "Chatter_ThreeEnemiesLeft", Chatter_ThreeEnemiesLeft, 2.5f },
+         { "Chatter_NiceshotPall", Chatter_NiceshotPall, 2.0f },
+         { "Chatter_GoingToGuardHostages", Chatter_GoingToGuardHostages, 3.0f },
+         { "Chatter_GoingToGuardDoppedBomb", Chatter_GoingToGuardDoppedBomb, 3.0f },
+         { "Chatter_OnMyWay", Chatter_OnMyWay, 1.5f },
+         { "Chatter_LeadOnSir", Chatter_LeadOnSir, 5.0f },
+         { "Chatter_Pinned_Down", Chatter_Pinned_Down, 5.0f },
+         { "Chatter_GottaFindTheBomb", Chatter_GottaFindTheBomb, 3.0f },
+         { "Chatter_You_Heard_The_Man", Chatter_You_Heard_The_Man, 3.0f },
+         { "Chatter_Lost_The_Commander", Chatter_Lost_The_Commander, 4.5f },
+         { "Chatter_NewRound", Chatter_NewRound, 3.5f },
+         { "Chatter_CoverMe", Chatter_CoverMe, 3.5f },
+         { "Chatter_BehindSmoke", Chatter_BehindSmoke, 3.5f },
+         { "Chatter_BombSiteSecured", Chatter_BombSiteSecured, 3.5f },
+         { "Chatter_GoingToCamp", Chatter_GoingToCamp, 25.0f },
+         { "Chatter_Camp", Chatter_Camp, 25.0f },
       };
 
       while (fp.gets (lineBuffer, 511)) {
@@ -851,7 +850,7 @@ void processBotConfigs (bool onlyMain) {
             }
             items[1].trim ("(;)");
 
-            for (int i = 0; i < ARRAYSIZE_HLSDK (chatterEventMap); i++) {
+            for (int i = 0; i < A_arrsize (chatterEventMap); i++) {
                auto event = &chatterEventMap[i];
 
                if (stricmp (event->str, items[0].chars ()) == 0) {
@@ -2999,7 +2998,7 @@ Library *LoadCSBinary (void) {
 #endif
 
    // search the libraries inside game dlls directory
-   for (int i = 0; i < ARRAYSIZE_HLSDK (libs); i++) {
+   for (int i = 0; i < A_arrsize (libs); i++) {
       char path[256];
       sprintf (path, "%s/dlls/%s", modname, libs[i]);
 

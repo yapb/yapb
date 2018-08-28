@@ -24,7 +24,7 @@ void stripClanTags (char *buffer) {
    int length = strlen (buffer); // get length of string
 
    // foreach known tag...
-   for (index = 0; index < ARRAYSIZE_HLSDK (tagOpen); index++) {
+   for (index = 0; index < A_arrsize (tagOpen); index++) {
       fieldStart = strstr (buffer, tagOpen[index]) - buffer; // look for a tag start
 
       // have we found a tag start?
@@ -50,7 +50,7 @@ void stripClanTags (char *buffer) {
       int tagLength = 0;
 
       // strip just the tag part...
-      for (index = 0; index < ARRAYSIZE_HLSDK (tagOpen); index++) {
+      for (index = 0; index < A_arrsize (tagOpen); index++) {
          fieldStart = strstr (buffer, tagOpen[index]) - buffer; // look for a tag start
 
          // have we found a tag start?

@@ -122,7 +122,7 @@ bool Bot::checkBodyParts (edict_t *target, Vector *origin, uint8 *bodyPart) {
       *bodyPart |= VISIBLE_HEAD;
       *origin = result.vecEndPos;
    }
-  
+
    if (*bodyPart != 0) {
       return true;
    }
@@ -199,28 +199,30 @@ bool Bot::lookupEnemies (void) {
       return false;
    }
    edict_t *player, *newEnemy = nullptr;
-
-   float nearestDistance = m_viewDistance;
+   float nearestDistance = A_square (m_viewDistance);
 
    // clear suspected flag
-   if (m_seeEnemyTime + 3.0f < engine.timebase ()) {
+   if (!engine.isNullEntity (m_enemy) && (m_states & STATE_SEEING_ENEMY)) {
       m_states &= ~STATE_SUSPECT_ENEMY;
+   }
+   else if (engine.isNullEntity (m_enemy) && m_seeEnemyTime + 1.0f > engine.timebase () && isAlive (m_lastEnemy)) {
+      m_states |= STATE_SUSPECT_ENEMY;
+      m_aimFlags |= AIM_LAST_ENEMY;
    }
    m_visibility = 0;
    m_enemyOrigin.nullify ();
 
-   if (!engine.isNullEntity (m_enemy) && m_enemyUpdateTime > engine.timebase ()) {
+   if (!engine.isNullEntity (m_enemy)) {
       player = m_enemy;
 
       // is player is alive
-      if (isAlive (player) && seesEnemy (player, true)) {
+      if (m_enemyUpdateTime > engine.timebase () && (m_enemy->v.origin - pev->origin).lengthSq () < nearestDistance && isAlive (player) && seesEnemy (player)) {
          newEnemy = player;
       }
    }
 
    // the old enemy is no longer visible or
    if (engine.isNullEntity (newEnemy)) {
-      m_enemyUpdateTime = engine.timebase () + 0.5f;
 
       // ignore shielded enemies, while we have real one
       edict_t *shieldEnemy = nullptr;
@@ -235,7 +237,7 @@ bool Bot::lookupEnemies (void) {
          player = client.ent;
 
          if ((player->v.button & (IN_ATTACK | IN_ATTACK2)) && m_viewDistance < m_maxViewDistance) {
-            nearestDistance = m_maxViewDistance;
+            nearestDistance = A_square (m_maxViewDistance);
          }
 
          // see if bot can see the player...
@@ -244,9 +246,9 @@ bool Bot::lookupEnemies (void) {
                shieldEnemy = player;
                continue;
             }
-            float distance = (player->v.origin - pev->origin).length ();
+            float distance = (player->v.origin - pev->origin).lengthSq ();
 
-            if (distance < nearestDistance) {
+            if (distance * 0.7f < nearestDistance) {
                nearestDistance = distance;
                newEnemy = player;
 
@@ -257,6 +259,7 @@ bool Bot::lookupEnemies (void) {
             }
          }
       }
+      m_enemyUpdateTime = engine.timebase () + calcThinkInterval () * 30.0f;
 
       if (engine.isNullEntity (newEnemy) && !engine.isNullEntity (shieldEnemy)) {
          newEnemy = shieldEnemy;
@@ -388,14 +391,15 @@ bool Bot::lookupEnemies (void) {
    return false;
 }
 
-Vector Bot::getBodyOffserError (void) {
+Vector Bot::getBodyOffserError (float distance) {
    if (engine.isNullEntity (m_enemy)) {
       return Vector::null ();
    }
 
    if (m_aimErrorTime < engine.timebase ()) {
-      m_aimLastError = Vector (rng.getFloat (m_enemy->v.mins.x * 0.5f, m_enemy->v.maxs.x * 0.5f), rng.getFloat (m_enemy->v.mins.y * 0.5f, m_enemy->v.maxs.y * 0.5f), rng.getFloat (m_enemy->v.mins.z * 0.5f, m_enemy->v.maxs.z * 0.5f));
-      
+      const float error = distance / (m_difficulty * 1000.0f);
+
+      m_aimLastError = Vector (rng.getFloat (m_enemy->v.mins.x * error, m_enemy->v.maxs.x * error), rng.getFloat (m_enemy->v.mins.y * error, m_enemy->v.maxs.y * error), rng.getFloat (m_enemy->v.mins.z * error, m_enemy->v.maxs.z * error));
       m_aimErrorTime = engine.timebase () + rng.getFloat (0.5f, 1.0f);
    }
    return m_aimLastError;
@@ -418,13 +422,13 @@ const Vector &Bot::getEnemyBodyOffset (void) {
    }
    Vector aimPos = m_enemy->v.origin;
 
-   if (m_difficulty > 2 && !(m_visibility & VISIBLE_OTHER)) {
+   if (m_difficulty > 2 && !(m_visibility & VISIBLE_OTHER) && distance > MAX_SPRAY_DISTANCE && !usesSniper ()) {
       aimPos = (m_enemy->v.velocity - pev->velocity) * calcThinkInterval () * 2.0f + aimPos;
    }
 
    // if we only suspect an enemy behind a wall take the worst skill
-   if (!m_visibility && m_states & STATE_SUSPECT_ENEMY) {
-      aimPos += getBodyOffserError ();
+   if (!m_visibility && (m_states & STATE_SUSPECT_ENEMY)) {
+      aimPos += getBodyOffserError (distance);
    }
    else {
       // now take in account different parts of enemy body
@@ -453,7 +457,7 @@ const Vector &Bot::getEnemyBodyOffset (void) {
 
    // add some error to unskilled bots
    if (m_difficulty < 3) {
-      m_enemyOrigin += getBodyOffserError ();
+      m_enemyOrigin += getBodyOffserError (distance);
    }
    return m_enemyOrigin;
 }
@@ -472,25 +476,25 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
 
    if (distance < 3000.0f && distance >= MAX_SPRAY_DISTANCE_X2) {
       if (sniper) {
-         result = 5.5f;
+         result = 3.5f;
       }
       else if (zoomableRifle) {
-         result = 4.5f;
+         result = 3.5f;
       }
       else if (pistol) {
-         result = 6.5f;
+         result = 4.5f;
       }
       else if (submachine) {
-         result = 5.5f;
+         result = 2.5f;
       }
       else if (rifle) {
-         result = 5.5f;
+         result = 2.0f;
       }
       else if (m249) {
          result = 2.5f;
       }
       else if (shotgun) {
-         result = 10.5f;
+         result = 8.5f;
       }
    }
    else if (distance > MAX_SPRAY_DISTANCE && distance <= MAX_SPRAY_DISTANCE_X2) {
@@ -501,10 +505,10 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
          result = 3.5f;
       }
       else if (pistol) {
-         result = 6.5f;
+         result = 5.5f;
       }
       else if (submachine) {
-         result = 3.5f;
+         result = 2.5f;
       }
       else if (rifle) {
          result = 1.4f;
@@ -513,18 +517,18 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
          result = -2.0f;
       }
       else if (shotgun) {
-         result = 10.0f;
+         result = 8.0f;
       }
    }
    else if (distance <= MAX_SPRAY_DISTANCE) {
       if (sniper) {
-         result = 3.5f;
+         result = 1.5f;
       }
       else if (zoomableRifle) {
          result = -5.0f;
       }
       else if (pistol) {
-         result = 4.5f;
+         result = 1.5f;
       }
       else if (submachine) {
          result = -4.5f;
@@ -572,9 +576,9 @@ bool Bot::isFriendInLineOfFire (float distance) {
       edict_t *pent = client.ent;
 
       float friendDistance = (pent->v.origin - pev->origin).length ();
-      float squareDistance = A_sqrtf (1089.0f + (friendDistance * friendDistance));
+      float squareDistance = A_sqrtf (1089.0f + A_square (friendDistance));
 
-      if (getShootingConeDeviation (ent (), pent->v.origin) > (friendDistance * friendDistance) / (squareDistance * squareDistance) && friendDistance <= distance) {
+      if (getShootingConeDeviation (ent (), pent->v.origin) > A_square (friendDistance) / (squareDistance * squareDistance) && friendDistance <= distance) {
          return true;
       }
    }

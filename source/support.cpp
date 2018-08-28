@@ -71,7 +71,7 @@ void showMenu (edict_t *ent, MenuId menu) {
       extern void setupBotMenus (void);
       setupBotMenus ();
 
-      for (int i = 0; i < ARRAYSIZE_HLSDK (g_menus); i++) {
+      for (int i = 0; i < A_arrsize (g_menus); i++) {
          auto parsed = &g_menus[i];
 
          // translate all the things
@@ -104,18 +104,18 @@ void showMenu (edict_t *ent, MenuId menu) {
    }
    int menuIndex = 0;
 
-   for (; menuIndex < ARRAYSIZE_HLSDK (g_menus); menuIndex++) {
+   for (; menuIndex < A_arrsize (g_menus); menuIndex++) {
       if (g_menus[menuIndex].id == menu) {
          break;
       }
    }
-   const auto &menuRef = g_menus[menuIndex];
-   const char *text = ((g_gameFlags & (GAME_XASH_ENGINE | GAME_MOBILITY)) && !yb_display_menu_text.boolean ()) ? " " : menuRef.text.chars ();
+   const auto &menuText = g_menus[menuIndex];
+   const char *text = ((g_gameFlags & (GAME_XASH_ENGINE | GAME_MOBILITY)) && !yb_display_menu_text.boolean ()) ? " " : menuText.text.chars ();
    MessageWriter msg;
 
    while (strlen (text) >= 64) {
       msg.start (MSG_ONE_UNRELIABLE, engine.getMessageId (NETMSG_SHOWMENU), Vector::null (), ent)
-         .writeShort (menuRef.slots)
+         .writeShort (menuText.slots)
          .writeChar (-1)
          .writeByte (1);
 
@@ -127,7 +127,7 @@ void showMenu (edict_t *ent, MenuId menu) {
    }
 
    MessageWriter (MSG_ONE_UNRELIABLE, engine.getMessageId (NETMSG_SHOWMENU), Vector::null (), ent)
-      .writeShort (menuRef.slots)
+      .writeShort (menuText.slots)
       .writeChar (-1)
       .writeByte (0)
       .writeString (text);
@@ -894,7 +894,7 @@ int getWeaponData (bool needString, const char *weaponAlias, int weaponIndex) {
 
    // if we need to return the string, find by weapon id
    if (needString && weaponIndex != -1) {
-      for (int i = 0; i < ARRAYSIZE_HLSDK (weaponTab); i++) {
+      for (int i = 0; i < A_arrsize (weaponTab); i++) {
          if (weaponTab[i].weaponIndex == weaponIndex) { // is weapon id found?
             return MAKE_STRING (weaponTab[i].alias);
          }
@@ -903,7 +903,7 @@ int getWeaponData (bool needString, const char *weaponAlias, int weaponIndex) {
    }
 
    // else search weapon by name and return weapon id
-   for (int i = 0; i < ARRAYSIZE_HLSDK (weaponTab); i++) {
+   for (int i = 0; i < A_arrsize (weaponTab); i++) {
       if (strncmp (weaponTab[i].alias, weaponAlias, strlen (weaponTab[i].alias)) == 0) {
          return weaponTab[i].weaponIndex;
       }

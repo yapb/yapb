@@ -1796,7 +1796,7 @@ void Bot::overrideConditions (void) {
    }
 
    // special handling, if we have a knife in our hands
-   if (!(pev->weapons & (WEAPON_PRIMARY | WEAPON_SECONDARY)) && m_currentWeapon == WEAPON_KNIFE && isPlayer (m_enemy) && (taskId () != TASK_MOVETOPOSITION || task ()->desire != TASKPRI_HIDE)) {
+   if ((g_timeRoundStart + 10.0f > engine.timebase () || !(pev->weapons & (WEAPON_PRIMARY | WEAPON_SECONDARY))) && m_currentWeapon == WEAPON_KNIFE && isPlayer (m_enemy) && (taskId () != TASK_MOVETOPOSITION || task ()->desire != TASKPRI_HIDE)) {
       float length = (pev->origin - m_enemy->v.origin).length2D ();
 
       // do waypoint movement if enemy is not reacheable with a knife
@@ -1923,7 +1923,7 @@ void Bot::setConditions (void) {
    if (engine.isNullEntity (m_enemy) && !engine.isNullEntity (m_lastEnemy) && !m_lastEnemyOrigin.empty ()) {
       m_aimFlags |= AIM_PREDICT_PATH;
 
-      if (seesEntity (m_lastEnemyOrigin)) {
+      if (seesEntity (m_lastEnemyOrigin, true)) {
          m_aimFlags |= AIM_LAST_ENEMY;
       }
    }
@@ -5632,7 +5632,7 @@ void Bot::processMovement (void) {
 
    uint8 msecVal = computeMsec ();
    m_lastCommandTime = engine.timebase ();
-
+   //pev->button &= ~IN_ATTACK;
    g_engfuncs.pfnRunPlayerMove (pev->pContainingEntity, m_moveAngles, m_moveSpeed, m_strafeSpeed, 0.0f, static_cast<uint16> (pev->button), static_cast<uint8> (pev->impulse), msecVal);
 
    // save our own copy of old buttons, since bot ai code is not running every frame now
@@ -5643,7 +5643,7 @@ void Bot::checkBurstMode (float distance) {
    // this function checks burst mode, and switch it depending distance to to enemy.
 
    if (hasShield ()) {
-      return; // no checking when shiled is active
+      return; // no checking when shield is active
    }
 
    // if current weapon is glock, disable burstmode on long distances, enable it else
