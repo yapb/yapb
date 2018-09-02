@@ -991,11 +991,10 @@ void Bot::processNewRound (void) {
 
    m_waypointOrigin.nullify ();
    m_destOrigin.nullify ();
-   m_currentWaypointIndex = INVALID_WAYPOINT_INDEX;
    m_currentPath = nullptr;
    m_currentTravelFlags = 0;
-   m_goalFailed = 0;
    m_desiredVelocity.nullify ();
+   m_currentWaypointIndex = INVALID_WAYPOINT_INDEX;
    m_prevGoalIndex = INVALID_WAYPOINT_INDEX;
    m_chosenGoalIndex = INVALID_WAYPOINT_INDEX;
    m_loosedBombWptIndex = INVALID_WAYPOINT_INDEX;

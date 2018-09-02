@@ -1827,26 +1827,8 @@ void Bot::getValidPoint (void) {
          }
       }
       clearSearchNodes ();
-
-      if (m_goalFailed > 1) {
-         int newGoal = getGoal ();
-
-         m_prevGoalIndex = newGoal;
-         m_chosenGoalIndex = newGoal;
-
-         // remember index
-         task ()->data = newGoal;
-
-         // do path finding if it's not the current waypoint
-         if (newGoal != m_currentWaypointIndex) {
-            searchPath (m_currentWaypointIndex, newGoal, m_pathType);
-         }
-         m_goalFailed = 0;
-      }
-      else {
-         findPoint ();
-         m_goalFailed++;
-      }
+      findPoint ();
+ 
       m_waypointOrigin = m_currentPath->origin;
    }
 }

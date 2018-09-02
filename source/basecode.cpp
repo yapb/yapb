@@ -2751,7 +2751,7 @@ void Bot::updateAimDir (void) {
    else if (flags & AIM_PREDICT_PATH) {
       bool changePredictedEnemy = true;
 
-      if (m_trackingEdict == m_lastEnemy && m_timeNextTracking < engine.timebase ()) {
+      if (m_trackingEdict == m_lastEnemy && isAlive (m_lastEnemy) && m_timeNextTracking < engine.timebase ()) {
          changePredictedEnemy = false;
       }
 
@@ -4757,8 +4757,8 @@ void Bot::ai (void) {
    if (m_moveToGoal) {
       getValidPoint ();
 
-      // Press duck button if we need to
-      if ((m_currentPath->flags & FLAG_CROUCH) && !(m_currentPath->flags & FLAG_CAMP)) {
+      // press duck button if we need to
+      if ((m_currentPath->flags & FLAG_CROUCH) && !(m_currentPath->flags & (FLAG_CAMP | FLAG_GOAL))) {
          pev->button |= IN_DUCK;
       }
       m_timeWaypointMove = engine.timebase ();

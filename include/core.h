@@ -510,7 +510,7 @@ constexpr int MAX_HOSTAGES = 8;
 constexpr int MAX_PATH_INDEX = 8;
 constexpr int MAX_DAMAGE_VALUE = 2040;
 constexpr int MAX_GOAL_VALUE = 2040;
-const int MAX_KILL_HISTORY = 16;
+constexpr int MAX_KILL_HISTORY = 16;
 constexpr int MAX_WAYPOINTS = 1024;
 constexpr int MAX_WEAPONS = 32;
 constexpr int NUM_WEAPONS = 26;
@@ -1214,7 +1214,6 @@ public:
    int m_actMessageIndex; // current processed message
    int m_pushMessageIndex; // offset for next pushed message
 
-   int m_goalFailed; // if bot can't reach several times in a row
    int m_prevGoalIndex; // holds destination goal waypoint
    int m_chosenGoalIndex; // used for experience, same as above
    float m_goalValue; // ranking value for this waypoint
