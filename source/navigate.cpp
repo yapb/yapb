@@ -3136,7 +3136,7 @@ bool Bot::isOccupiedPoint (int index) {
       }
       float length = (waypoints[index].origin - client.origin).lengthSq ();
 
-      if (length < A_clamp (waypoints[index].radius, A_square (50.0f), A_square (96.0f)) && client.ent->v.velocity.length2D () < 30.0f) {
+      if (length < A_clamp (waypoints[index].radius, A_square (64.0f), A_square (128.0f)) && client.ent->v.velocity.length2D () < 64.0f) {
          return true;
       }
    }

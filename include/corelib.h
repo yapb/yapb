@@ -70,7 +70,9 @@ constexpr float MATH_EQEPSILON = 0.001f;
 constexpr float MATH_FLEPSILON = 1.192092896e-07f;
 
 constexpr float MATH_PI = 3.14159265358979323846f;
-constexpr float HALF_PI = MATH_PI * 0.5f;
+constexpr float MATH_PI_RECIPROCAL = 1.0f / MATH_PI;
+constexpr float MATH_PI_HALF = MATH_PI * 0.5f;
+
 constexpr float MATH_D2R = MATH_PI / 180.0f;
 constexpr float MATH_R2D = 180.0f / MATH_PI;
 
@@ -94,7 +96,7 @@ template<typename T> constexpr T A_abs (const T a) {
    return a > 0 ? a : -a;
 }
 
-constexpr float A_powf (const float a, const float b) {
+static inline float A_powf (const float a, const float b) {
    union {
       float d;
       int x;
@@ -104,12 +106,12 @@ constexpr float A_powf (const float a, const float b) {
    return res.d;
 }
 
-constexpr float A_sqrtf (const float value) {
+static inline float A_sqrtf (const float value) {
    return A_powf (value, 0.5f);
 }
 
-constexpr float A_sinf (const float value) {
-   signed long sign = static_cast <signed long> (value * (1.0f / MATH_PI));
+static inline float A_sinf (const float value) {
+   signed long sign = static_cast <signed long> (value * MATH_PI_RECIPROCAL);
    const float calc = (value - static_cast <float> (sign) * MATH_PI);
 
    const float square = A_square (calc);
@@ -119,8 +121,8 @@ constexpr float A_sinf (const float value) {
    return (sign & 1) ? -calc * res : value * res;
 }
 
-constexpr float A_cosf (const float value) {
-   signed long sign = static_cast <signed long> (value * (1.0f / MATH_PI));
+static inline float A_cosf (const float value) {
+   signed long sign = static_cast <signed long> (value * MATH_PI_RECIPROCAL);
    const float calc = (value - static_cast <float> (sign) * MATH_PI);
 
    const float square = A_square (calc);
@@ -132,17 +134,17 @@ constexpr float A_cosf (const float value) {
    return (sign & 1) ? f - res : -f + res;
 }
 
-constexpr float A_tanf (const float value) {
+static inline float A_tanf (const float value) {
    return A_sinf (value) / A_cosf (value);
 }
 
-constexpr float A_atan2f (const float y, const float x) {
+static inline float A_atan2f (const float y, const float x) {
    if (x == 0.0f) {
       if (y > 0.0f) {
-         return HALF_PI;
+         return MATH_PI_HALF;
       }
       else if (y < 0.0f) {
-         return -HALF_PI;
+         return -MATH_PI_HALF;
       }
       return 0.0f;
    }
@@ -160,7 +162,7 @@ constexpr float A_atan2f (const float y, const float x) {
       }
    }
    else {
-      result = HALF_PI - z / (z * z + 0.28f);
+      result = MATH_PI_HALF - z / (z * z + 0.28f);
 
       if (y < 0.0f) {
          return result - MATH_PI;
@@ -169,7 +171,7 @@ constexpr float A_atan2f (const float y, const float x) {
    return result;
 }
 
-constexpr void A_sincosf (const float rad, float &sine, float &cosine) {
+static inline void A_sincosf (const float rad, float &sine, float &cosine) {
    sine = A_sinf (rad);
    cosine = A_cosf (rad);
 }
@@ -259,7 +261,7 @@ public:
       return &x;
    }
 
-   inline operator const float * (void)const {
+   inline operator const float * (void) const {
       return &x;
    }
 
