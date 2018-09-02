@@ -18,7 +18,6 @@
 #include <ctype.h>
 #include <float.h>
 #include <limits.h>
-#include <math.h>
 #include <time.h>
 
 #include <platform.h>
@@ -28,20 +27,15 @@
 #else
 #include <sys/stat.h>
 #endif
-
-#ifdef ENABLE_SSE_INTRINSICS
-#include <emmintrin.h>
-#endif
-
 //
 // Basic Types
 //
-typedef signed char int8;
-typedef signed short int16;
-typedef signed long int32;
-typedef unsigned char uint8;
-typedef unsigned short uint16;
-typedef unsigned long uint32;
+using int8 = signed char;
+using int16 = signed short;
+using int32 = signed long;
+using uint8 = unsigned char;
+using uint16 = unsigned short;
+using uint32 = unsigned long;
 
 // From metamod-p
 static inline bool A_checkptr (const void *ptr) {
@@ -55,11 +49,11 @@ static inline bool A_checkptr (const void *ptr) {
 }
 
 #ifndef PLATFORM_WIN32
-#define _unlink unlink
-#define _mkdir(p) mkdir (p, 0777)
-#define stricmp strcasecmp
+   #define _unlink unlink
+   #define _mkdir(p) mkdir (p, 0777)
+   #define stricmp strcasecmp
 #else
-#define stricmp _stricmp
+   #define stricmp _stricmp
 #endif
 
 template <typename T, int N> constexpr int A_bufsize (const T (&)[N]) {
@@ -75,142 +69,137 @@ constexpr float MATH_ONEPSILON = 0.01f;
 constexpr float MATH_EQEPSILON = 0.001f;
 constexpr float MATH_FLEPSILON = 1.192092896e-07f;
 
-constexpr float MATH_PI = 3.141592653589793238462643383279502884f;
+constexpr float MATH_PI = 3.14159265358979323846f;
+constexpr float HALF_PI = MATH_PI * 0.5f;
 constexpr float MATH_D2R = MATH_PI / 180.0f;
 constexpr float MATH_R2D = 180.0f / MATH_PI;
 
-#ifdef ENABLE_SSE_INTRINSICS
-
-static inline __m128 sse_abs (__m128 val) {
-   return _mm_andnot_ps (_mm_castsi128_ps (_mm_set1_epi32 (0x80000000)), val);
-};
-
-static inline __m128 sse_sine (__m128 inp) {
-   __m128 pi2 = _mm_set1_ps (MATH_PI * 2);
-   __m128 val = _mm_cmpnlt_ps (inp, _mm_set1_ps (MATH_PI));
-
-   val = _mm_and_ps (val, pi2);
-   inp = _mm_sub_ps (inp, val);
-   val = _mm_cmpngt_ps (inp, _mm_set1_ps (-MATH_PI));
-   val = _mm_and_ps (val, pi2);
-   inp = _mm_add_ps (inp, val);
-   val = _mm_mul_ps (sse_abs (inp), _mm_set1_ps (-4.0f / (MATH_PI * MATH_PI)));
-   val = _mm_add_ps (val, _mm_set1_ps (4.0f / MATH_PI));
-
-   __m128 res = _mm_mul_ps (val, inp);
-
-   val = _mm_mul_ps (sse_abs (res), res);
-   val = _mm_sub_ps (val, res);
-   val = _mm_mul_ps (val, _mm_set1_ps (0.225f));
-   res = _mm_add_ps (val, res);
-
-   return res;
-}
-#endif
-static inline float A_sqrtf (float value) {
-#ifdef ENABLE_SSE_INTRINSICS
-   return _mm_cvtss_f32 (_mm_sqrt_ss (_mm_set1_ps (value)));
-#else
-   return sqrtf (value);
-#endif
-}
-
-static inline float A_square (const float value) {
+constexpr float A_square (const float value) {
    return value * value;
 }
 
-template <typename T> constexpr T A_min (T a, T b) {
+template <typename T> constexpr T A_min (const T a, const T b) {
    return a < b ? a : b;
 }
 
-template <typename T> constexpr T A_max (T a, T b) {
+template <typename T> constexpr T A_max (const T a, const T b) {
    return a > b ? a : b;
 }
 
-template <typename T> constexpr T A_clamp (T x, T a, T b) {
+template <typename T> constexpr T A_clamp (const T x, const T a, const T b) {
    return A_min (A_max (x, a), b);
 }
 
-template<typename T> constexpr T A_abs (T a) {
+template<typename T> constexpr T A_abs (const T a) {
    return a > 0 ? a : -a;
 }
 
-static inline float F_clamp (float x, float a, float b) {
-#ifdef ENABLE_SSE_INTRINSICS
-   return _mm_cvtss_f32 (_mm_min_ss (_mm_max_ss (_mm_set1_ps (x), _mm_set1_ps (a)), _mm_set1_ps (b)));
-#else
-   return A_clamp<float> (x, a, b);
-#endif
+constexpr float A_powf (const float a, const float b) {
+   union {
+      float d;
+      int x;
+   } res { a };
+
+   res.x = static_cast <int> (b * (res.x - 1064866805) + 1064866805);
+   return res.d;
 }
 
-static inline float A_sinf (float value) {
-#ifdef ENABLE_SSE_INTRINSICS
-   return _mm_cvtss_f32 (sse_sine (_mm_set1_ps (value)));
-#else
-   return sinf (value);
-#endif
+constexpr float A_sqrtf (const float value) {
+   return A_powf (value, 0.5f);
 }
 
-static inline float A_cosf (float value) {
-#ifdef ENABLE_SSE_INTRINSICS
-   return _mm_cvtss_f32 (sse_sine (_mm_set1_ps (value + MATH_PI / 2.0f)));
-#else
-   return cosf (value);
-#endif
+constexpr float A_sinf (const float value) {
+   signed long sign = static_cast <signed long> (value * (1.0f / MATH_PI));
+   const float calc = (value - static_cast <float> (sign) * MATH_PI);
+
+   const float square = A_square (calc);
+   const float res = 1.00000000000000000000e+00f + square * (-1.66666671633720397949e-01f + square * (8.33333376795053482056e-03f + square * (-1.98412497411482036114e-04f +
+      square * (2.75565571428160183132e-06f + square * (-2.50368472620721149724e-08f + square * (1.58849267073435385100e-10f + square * -6.58925550841432672300e-13f))))));
+
+   return (sign & 1) ? -calc * res : value * res;
 }
 
-static inline float A_tanf (float value) {
-   return tanf (value);
+constexpr float A_cosf (const float value) {
+   signed long sign = static_cast <signed long> (value * (1.0f / MATH_PI));
+   const float calc = (value - static_cast <float> (sign) * MATH_PI);
+
+   const float square = A_square (calc);
+   const float res = square * (-5.00000000000000000000e-01f + square * (4.16666641831398010254e-02f + square * (-1.38888671062886714935e-03f + square * (2.48006890615215525031e-05f +
+      square * (-2.75369927749125054106e-07f + square * (2.06207229069832465029e-09f + square * -9.77507137733812925262e-12f))))));
+
+   const float f = -1.00000000000000000000e+00f;
+
+   return (sign & 1) ? f - res : -f + res;
 }
 
-static inline void A_sincosf (float rad, float *sine, float *cosine) {
-#ifdef ENABLE_SSE_INTRINSICS
-   __m128 m_sincos = sse_sine (_mm_set_ps (0.0f, 0.0f, rad + MATH_PI / 2.f, rad));
-   __m128 m_cos = _mm_shuffle_ps (m_sincos, m_sincos, _MM_SHUFFLE (0, 0, 0, 1));
-
-   *sine = _mm_cvtss_f32 (m_sincos);
-   *cosine = _mm_cvtss_f32 (m_cos);
-#else
-   *sine = sinf (rad);
-   *cosine = cosf (rad);
-#endif
+constexpr float A_tanf (const float value) {
+   return A_sinf (value) / A_cosf (value);
 }
 
-constexpr bool isFltZero (float entry) {
+constexpr float A_atan2f (const float y, const float x) {
+   if (x == 0.0f) {
+      if (y > 0.0f) {
+         return HALF_PI;
+      }
+      else if (y < 0.0f) {
+         return -HALF_PI;
+      }
+      return 0.0f;
+   }
+   float result = 0.0f;
+   float z = y / x;
+
+   if (A_abs (z) < 1.0f) {
+      result = z / (1.0f + 0.28f * z * z);
+
+      if (x < 0.0f) {
+         if (y < 0.0f) {
+            return result - MATH_PI;
+         }
+         return result + MATH_PI;
+      }
+   }
+   else {
+      result = HALF_PI - z / (z * z + 0.28f);
+
+      if (y < 0.0f) {
+         return result - MATH_PI;
+      }
+   }
+   return result;
+}
+
+constexpr void A_sincosf (const float rad, float &sine, float &cosine) {
+   sine = A_sinf (rad);
+   cosine = A_cosf (rad);
+}
+
+constexpr bool isFltZero (const float entry) {
    return A_abs (entry) < MATH_ONEPSILON;
 }
 
-constexpr bool isFltEqual (float entry1, float entry2) {
+constexpr bool isFltEqual (const float entry1, const float entry2) {
    return A_abs (entry1 - entry2) < MATH_EQEPSILON;
 }
 
-constexpr float radToDeg (float radian) {
+constexpr float radToDeg (const float radian) {
    return radian * MATH_R2D;
 }
 
-constexpr float degToRad (float degree) {
+constexpr float degToRad (const float degree) {
    return degree * MATH_D2R;
 }
 
-constexpr float angleMod (float angle) {
+constexpr float angleMod (const float angle) {
    return 360.0f / 65536.0f * (static_cast<int> (angle * (65536.0f / 360.0f)) & 65535);
 }
 
-constexpr float angleNorm (float angle) {
+constexpr float angleNorm (const float angle) {
    return 360.0f / 65536.0f * (static_cast<int> ((angle + 180.0f) * (65536.0f / 360.0f)) & 65535) - 180.0f;
 }
 
-constexpr float angleDiff (float dest, float src) {
+constexpr float angleDiff (const float dest, const float src) {
    return angleNorm (dest - src);
-}
-
-static inline void sincosf (float rad, float *sine, float *cosine) {
-#if defined(__ANDROID__)
-   *sine = sinf (rad);
-   *cosine = cosf (rad);
-#else
-   A_sincosf (rad, sine, cosine);
-#endif
 }
 }
 
@@ -421,29 +410,29 @@ public:
       if (Math::isFltZero (x) && Math::isFltZero (y)) {
          return 0.0f;
       }
-      return Math::radToDeg (atan2f (z, length2D ()));
+      return Math::radToDeg (Math::A_atan2f (z, length2D ()));
    }
 
    inline float toYaw (void) const {
       if (Math::isFltZero (x) && Math::isFltZero (y)) {
          return 0.0f;
       }
-      return Math::radToDeg (atan2f (y, x));
+      return Math::radToDeg (Math::A_atan2f (y, x));
    }
 
    inline Vector toAngles (void) const {
       if (Math::isFltZero (x) && Math::isFltZero (y)) {
          return Vector (z > 0.0f ? 90.0f : 270.0f, 0.0, 0.0f);
       }
-      return Vector (Math::radToDeg (atan2f (z, length2D ())), Math::radToDeg (atan2f (y, x)), 0.0f);
+      return Vector (Math::radToDeg (Math::A_atan2f (z, length2D ())), Math::radToDeg (Math::A_atan2f (y, x)), 0.0f);
    }
 
    inline void makeVectors (Vector *forward, Vector *right, Vector *upward) const {
       float sinePitch = 0.0f, cosinePitch = 0.0f, sineYaw = 0.0f, cosineYaw = 0.0f, sineRoll = 0.0f, cosineRoll = 0.0f;
 
-      Math::sincosf (Math::degToRad (x), &sinePitch, &cosinePitch); // compute the sine and cosine of the pitch component
-      Math::sincosf (Math::degToRad (y), &sineYaw, &cosineYaw); // compute the sine and cosine of the yaw component
-      Math::sincosf (Math::degToRad (z), &sineRoll, &cosineRoll); // compute the sine and cosine of the roll component
+      Math::A_sincosf (Math::degToRad (x), sinePitch, cosinePitch); // compute the sine and cosine of the pitch component
+      Math::A_sincosf (Math::degToRad (y), sineYaw, cosineYaw); // compute the sine and cosine of the yaw component
+      Math::A_sincosf (Math::degToRad (z), sineRoll, cosineRoll); // compute the sine and cosine of the roll component
 
       if (forward) {
          forward->x = cosinePitch * cosineYaw;
@@ -879,10 +868,6 @@ protected:
 
       if (maxSize + delta < length) {
          delta = length - maxSize;
-      }
-
-      if (delta < 0) {
-         delta = 0;
       }
       grow (m_capacity + static_cast<size_t> (delta));
    }
@@ -1388,10 +1373,12 @@ public:
 
 public:
    V & operator [] (const K &key) {
-      V res;
-      get (key, res);
-
-      return res;
+      for (auto &entry : getBucket (key)) {
+         if (entry.first == key) {
+            return entry.second;
+         }
+      }
+      assert (nullptr);
    }
 };
 
@@ -1661,25 +1648,21 @@ public:
 using StringArray = Array <String>;
 using IntArray = Array <int>;
 
-#ifndef FORCEINLINE
-#define FORCEINLINE inline
-#endif
-
 template <typename T> class Singleton {
 protected:
-   Singleton (void) {}
-   virtual ~Singleton (void) {}
+   Singleton (void) = default;
+   virtual ~Singleton (void) = default;
 
 private:
    Singleton (const Singleton &) = delete;
    Singleton &operator= (const Singleton &) = delete;
 
 public:
-   static FORCEINLINE T *ptr (void) {
+   static constexpr T *ptr (void) {
       return &ref ();
    }
 
-   static FORCEINLINE T &ref (void) {
+   static constexpr T &ref (void) {
       static T ref;
       return ref;
    };

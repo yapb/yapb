@@ -182,12 +182,12 @@ public:
    // public inlines
 public:
    // get the current time on server
-   FORCEINLINE float timebase (void) {
+   constexpr float timebase (void) {
       return g_pGlobals->time;
    }
 
    // get "maxplayers" limit on server
-   FORCEINLINE int maxClients (void) {
+   constexpr int maxClients (void) {
       return g_pGlobals->maxClients;
    }
 
@@ -218,22 +218,22 @@ public:
    }
 
    // gets edict pointer out of entity index
-   FORCEINLINE edict_t *entityOfIndex (const int index) {
+   constexpr edict_t *entityOfIndex (const int index) {
       return static_cast<edict_t *> (m_startEntity + index);
    };
 
    // gets edict index out of it's pointer
-   FORCEINLINE int indexOfEntity (const edict_t *ent) {
+   constexpr int indexOfEntity (const edict_t *ent) {
       return static_cast<int> (ent - m_startEntity);
    };
 
    // verify entity isn't null
-   FORCEINLINE bool isNullEntity (const edict_t *ent) {
+   constexpr bool isNullEntity (const edict_t *ent) {
       return !ent || !indexOfEntity (ent);
    }
 
    // gets the player team
-   FORCEINLINE int getTeam (edict_t *ent) {
+   inline int getTeam (edict_t *ent) {
       extern Client g_clients[MAX_ENGINE_PLAYERS];
       return g_clients[indexOfEntity (ent) - 1].team;
    }
@@ -261,7 +261,7 @@ public:
    }
 
    // find registered message id
-   FORCEINLINE int getMessageId (int type) {
+   constexpr int getMessageId (int type) {
       return m_msgBlock.regMsgs[type];
    }
 
@@ -271,7 +271,7 @@ public:
    }
 
    // tries to set needed message id
-   FORCEINLINE void captureMessage (int type, int msgId) {
+   constexpr void captureMessage (int type, int msgId) {
       if (type == m_msgBlock.regMsgs[msgId]) {
          setCurrentMessageId (msgId);
       }
@@ -288,27 +288,29 @@ public:
    cvar_t *m_eptr;
 
 public:
-   ConVar (const char *name, const char *initval, VarType type = VT_NOSERVER, bool regMissing = false, const char *regVal = nullptr);
+   ConVar (const char *name, const char *initval, VarType type = VT_NOSERVER, bool regMissing = false, const char *regVal = nullptr) : m_eptr (nullptr) {
+      Engine::ref ().pushVarToRegStack (name, initval, type, regMissing, regVal, this);
+   }
 
-   FORCEINLINE bool boolean (void) {
+   constexpr bool boolean (void) {
       return m_eptr->value > 0.0f;
    }
-   FORCEINLINE int integer (void) {
+   constexpr int integer (void) {
       return static_cast<int> (m_eptr->value);
    }
-   FORCEINLINE float flt (void) {
+   constexpr float flt (void) {
       return m_eptr->value;
    }
-   FORCEINLINE const char *str (void) {
+   constexpr const char *str (void) {
       return m_eptr->string;
    }
-   FORCEINLINE void setFloat (float val) {
+   constexpr void setFloat (float val) {
       g_engfuncs.pfnCVarSetFloat (m_eptr->name, val);
    }
-   FORCEINLINE void setInteger (int val) {
+   constexpr void setInteger (int val) {
       setFloat (static_cast<float> (val));
    }
-   FORCEINLINE void setString (const char *val) {
+   constexpr void setString (const char *val) {
       g_engfuncs.pfnCvar_DirectSet (m_eptr, const_cast<char *> (val));
    }
 };

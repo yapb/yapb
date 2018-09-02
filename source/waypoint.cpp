@@ -54,7 +54,7 @@ void Waypoint::addPath (int addIndex, int pathIndex, float distance) {
    for (int16 i = 0; i < MAX_PATH_INDEX; i++) {
       if (path->index[i] == INVALID_WAYPOINT_INDEX) {
          path->index[i] = static_cast<int16> (pathIndex);
-         path->distances[i] = abs (static_cast<int> (distance));
+         path->distances[i] = A_abs (static_cast<int> (distance));
 
          logEntry (true, LL_DEFAULT, "Path added from %d to %d", addIndex, pathIndex);
          return;
@@ -76,7 +76,7 @@ void Waypoint::addPath (int addIndex, int pathIndex, float distance) {
       logEntry (true, LL_DEFAULT, "Path added from %d to %d", addIndex, pathIndex);
 
       path->index[slotID] = static_cast<int16> (pathIndex);
-      path->distances[slotID] = abs (static_cast<int> (distance));
+      path->distances[slotID] = A_abs (static_cast<int> (distance));
    }
 }
 
@@ -97,10 +97,12 @@ int Waypoint::getFarest (const Vector &origin, float maxDistance) {
    return index;
 }
 
-int Waypoint::getNearest (const Vector &origin, float minDistance, int flags) {
+int Waypoint::getNearest (const Vector &origin, float minDistance, int flags, Bot *bot) {
    // find the nearest waypoint to that origin and return the index
 
    int index = INVALID_WAYPOINT_INDEX;
+   int visible = INVALID_WAYPOINT_INDEX;
+
    minDistance = A_square (minDistance);
 
    for (int i = 0; i < g_numWaypoints; i++) {
@@ -112,9 +114,25 @@ int Waypoint::getNearest (const Vector &origin, float minDistance, int flags) {
       if (distance < minDistance) {
          index = i;
          minDistance = distance;
+
+         // if bot doing navigation, make sure waypoint really visible and not too high
+         if (bot && A_abs (m_paths[i]->origin.z - origin.z) < 40.0f) {
+
+            if (bot->getCurrentWaypointIndex () != INVALID_WAYPOINT_INDEX && isVisible (bot->getCurrentWaypointIndex (), index)) {
+               visible = index;
+            }
+            else {
+               TraceResult tr;
+               engine.testLine (origin, m_paths[i]->origin, TRACE_IGNORE_MONSTERS, bot->ent (), &tr);
+
+               if (tr.flFraction >= 1.0f) {
+                  visible = index;
+               }
+            }
+         }
       }
    }
-   return index;
+   return visible == INVALID_WAYPOINT_INDEX ? index : visible;
 }
 
 void Waypoint::searchRadius (IntArray &radiusHolder, float radius, const Vector &origin, int maxCount) {
@@ -348,7 +366,7 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
             // check if the waypoint is reachable from the new one
             engine.testLine (newOrigin, m_paths[i]->origin, TRACE_IGNORE_MONSTERS, g_hostEntity, &tr);
 
-            if (tr.flFraction == 1.0f && fabs (newOrigin.x - m_paths[i]->origin.x) < 64.0f && fabs (newOrigin.y - m_paths[i]->origin.y) < 64.0f && fabs (newOrigin.z - m_paths[i]->origin.z) < g_autoPathDistance) {
+            if (tr.flFraction == 1.0f && A_abs (newOrigin.x - m_paths[i]->origin.x) < 64.0f && A_abs (newOrigin.y - m_paths[i]->origin.y) < 64.0f && A_abs (newOrigin.z - m_paths[i]->origin.z) < g_autoPathDistance) {
                distance = (m_paths[i]->origin - newOrigin).length ();
 
                addPath (index, i, distance);
@@ -1347,7 +1365,7 @@ void Waypoint::rebuildVisibility (void) {
             engine.testLine (sourceDuck, dest, TRACE_IGNORE_MONSTERS, nullptr, &tr);
 
             // check if line of sight to object is not blocked (i.e. visible)
-            if (tr.flFraction != 1.0f) {
+            if (tr.flFraction != 1.0f || tr.fStartSolid) {
                res |= 2;
             }
             else {
@@ -1356,7 +1374,7 @@ void Waypoint::rebuildVisibility (void) {
             engine.testLine (sourceStand, dest, TRACE_IGNORE_MONSTERS, nullptr, &tr);
 
             // check if line of sight to object is not blocked (i.e. visible)
-            if (tr.flFraction != 1.0f) {
+            if (tr.flFraction != 1.0f || tr.fStartSolid) {
                res |= 1;
             }
             else {
@@ -2151,20 +2169,20 @@ void Waypoint::addBasic (void) {
       engine.testHull (down, up - Vector (0.0f, 0.0f, 1000.0f), TRACE_IGNORE_MONSTERS, point_hull, nullptr, &tr);
       up = tr.vecEndPos;
 
-      Vector pointOrigin = up + Vector (0.0f, 0.0f, 39.0f);
+      Vector point = up + Vector (0.0f, 0.0f, 39.0f);
       m_isOnLadder = true;
 
       do {
-         if (getNearest (pointOrigin, 50.0f) == INVALID_WAYPOINT_INDEX) {
-            push (3, pointOrigin);
+         if (getNearest (point, 50.0f) == INVALID_WAYPOINT_INDEX) {
+            push (3, point);
          }
-         pointOrigin.z += 160;
-      } while (pointOrigin.z < down.z - 40.0f);
+         point.z += 160;
+      } while (point.z < down.z - 40.0f);
 
-      pointOrigin = down + Vector (0.0f, 0.0f, 38.0f);
+      point = down + Vector (0.0f, 0.0f, 38.0f);
 
-      if (getNearest (pointOrigin, 50.0f) == INVALID_WAYPOINT_INDEX) {
-         push (3, pointOrigin);
+      if (getNearest (point, 50.0f) == INVALID_WAYPOINT_INDEX) {
+         push (3, point);
       }
       m_isOnLadder = false;
    }

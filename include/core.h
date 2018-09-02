@@ -12,14 +12,13 @@
 #include <extdll.h>
 #include <memory.h>
 #include <stdio.h>
-
+#include <math.h>
 #include <meta_api.h>
 
 using namespace Math;
 
 #include <assert.h>
 #include <ctype.h>
-#include <float.h>
 #include <limits.h>
 #include <time.h>
 
@@ -29,7 +28,6 @@ enum TaskID {
    TASK_PAUSE,
    TASK_MOVETOPOSITION,
    TASK_FOLLOWUSER,
-   TASK_WAITFORGO,
    TASK_PICKUPITEM,
    TASK_CAMP,
    TASK_PLANTBOMB,
@@ -51,10 +49,10 @@ enum TaskID {
 
 // supported cs's
 enum GameFlags {
-   GAME_CSTRIKE16 = (1 << 0), // Counter-Strike 1.6 and Above
-   GAME_XASH_ENGINE = (1 << 1), // Counter-Strike 1.6 under the xash engine (additional flag)
-   GAME_CZERO = (1 << 2), // Counter-Strike: Condition Zero
-   GAME_LEGACY = (1 << 3), // Counter-Strike 1.3-1.5 with/without Steam
+   GAME_CSTRIKE16 = (1 << 0), // counter-strike 1.6 and above
+   GAME_XASH_ENGINE = (1 << 1), // counter-strike 1.6 under the xash engine (additional flag)
+   GAME_CZERO = (1 << 2), // counter-strike: condition zero
+   GAME_LEGACY = (1 << 3), // counter-strike 1.3-1.5 with/without steam
    GAME_MOBILITY = (1 << 4), // additional flag that bot is running on android (additional flag)
    GAME_OFFICIAL_CSBOT = (1 << 5), // additional flag that indicates official cs bots are in game
    GAME_METAMOD = (1 << 6), // game running under metamod
@@ -914,6 +912,7 @@ private:
    float m_zoomCheckTime; // time to check zoom again
    float m_shieldCheckTime; // time to check shiled drawing again
    float m_grenadeCheckTime; // time to check grenade usage
+   float m_sniperSwitchCheckTime; // bot switched to other weapon?
    float m_lastEquipTime; // last time we equipped in buyzone
 
    bool m_checkKnifeSwitch; // is time to check switch to knife action
@@ -962,7 +961,7 @@ private:
    float m_playerTargetTime; // time last targeting
 
    void instantChatter (int type);
-   void processFlow (void);
+   void ai (void);
    void checkSpawnConditions (void);
    void buyStuff (void);
 
@@ -973,28 +972,6 @@ private:
    bool canJumpUp (const Vector &normal);
    bool doneCanJumpUp (const Vector &normal);
    bool cantMoveForward (const Vector &normal, TraceResult *tr);
-
-   // split processTasks into RunTask_* functions
-   void normal_ (void);
-   void spraypaint_ (void);
-   void huntEnemy_ (void);
-   void seekCover_ (void);
-   void attackEnemy_ (void);
-   void pause_ (void);
-   void blind_ (void);
-   void camp_ (void);
-   void hide_ (void);
-   void moveToPos_ (void);
-   void plantBomb_ (void);
-   void bombDefuse_ (void);
-   void followUser_ (void);
-   void throwExplosive_ (void);
-   void throwFlashbang_ (void);
-   void throwSmoke_ (void);
-   void doublejump_ (void);
-   void escapeFromBomb_ (void);
-   void pickupItem_ (void);
-   void shootBreakable_ (void);
 
 #ifdef DEAD_CODE
    bool canStrafeLeft (TraceResult *tr);
@@ -1043,7 +1020,7 @@ private:
    void filterGoals (const IntArray &goals, int *result);
    void processPickups (void);
    void checkTerrain (float movedDistance, const Vector &dirNormal);
-   void processPlayerAvoidance (const Vector &dirNormal);
+   bool doPlayerAvoidance (const Vector &normal);
 
    void getCampDir (Vector *dest);
    void collectGoalExperience (int damage, int team);
@@ -1051,7 +1028,7 @@ private:
    int getMsgQueue (void);
    bool isGoalValid (void);
    bool advanceMovement (void);
-   int isInFOV (const Vector &dest);
+   float isInFOV (const Vector &dest);
 
    bool isBombDefusing (const Vector &bombOrigin);
    bool isOccupiedPoint (int index);
@@ -1072,6 +1049,28 @@ private:
    bool seesItem (const Vector &dest, const char *itemName);
    bool lastEnemyShootable (void);
    void processTasks (void);
+
+   // split big task list into separate functions
+   void normal_ (void);
+   void spraypaint_ (void);
+   void huntEnemy_ (void);
+   void seekCover_ (void);
+   void attackEnemy_ (void);
+   void pause_ (void);
+   void blind_ (void);
+   void camp_ (void);
+   void hide_ (void);
+   void moveToPos_ (void);
+   void plantBomb_ (void);
+   void bombDefuse_ (void);
+   void followUser_ (void);
+   void throwExplosive_ (void);
+   void throwFlashbang_ (void);
+   void throwSmoke_ (void);
+   void doublejump_ (void);
+   void escapeFromBomb_ (void);
+   void pickupItem_ (void);
+   void shootBreakable_ (void);
 
    bool isShootableBreakable (edict_t *ent);
    bool rateGroundWeapon (edict_t *ent);
@@ -1095,6 +1094,7 @@ private:
    uint8 computeMsec (void);
    void getValidPoint (void);
    int changePointIndex (int waypointIndex);
+   int getNearestPoint (void);
    bool isDeadlyMove (const Vector &to);
    bool isOutOfBombTimer (void);
 
@@ -1231,6 +1231,7 @@ public:
    BurstMode m_weaponBurstMode; // bot using burst mode? (famas/glock18, but also silencer mode)
 
    edict_t *m_enemy; // pointer to enemy entity
+   float m_retreatTime; // time to retreat?
    float m_enemyUpdateTime; // time to check for new enemies
    float m_enemyReachableTimer; // time to recheck if enemy reachable
    float m_enemyIgnoreTimer; // ignore enemy for some time
@@ -1254,10 +1255,7 @@ public:
    int m_currentWeapon; // one current weapon for each bot
    int m_ammoInClip[MAX_WEAPONS]; // ammo in clip for each weapons
    int m_ammo[MAX_AMMO_SLOTS]; // total ammo amounts
-
-   // a little optimization
-   int m_team;
-
+   int m_team; // bot team
    Array<Task> m_tasks;
 
    Bot (edict_t *bot, int difficulty, int personality, int team, int member, const String &steamId);
@@ -1310,9 +1308,14 @@ public:
    void resetTasks (void);
 
    Task *task (void);
+
    inline TaskID taskId (void) {
       return task ()->id;
-   };
+   }
+
+   inline int getCurrentWaypointIndex (void) {
+      return m_currentWaypointIndex;
+   }
 
    void dropWeaponForUser (edict_t *user, bool discardC4);
    void clearUsedName (void);
@@ -1508,7 +1511,7 @@ public:
 
    int getFacingIndex (void);
    int getFarest (const Vector &origin, float maxDistance = 32.0);
-   int getNearest (const Vector &origin, float minDistance = 9999.0f, int flags = -1);
+   int getNearest (const Vector &origin, float minDistance = 9999.0f, int flags = -1, Bot *bot = nullptr);
    void searchRadius (IntArray &holder, float radius, const Vector &origin, int maxCount = -1);
 
    void push (int flags, const Vector &waypointOrigin = Vector::null ());

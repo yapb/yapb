@@ -29,7 +29,7 @@ int Bot::getGoal (void) {
 
       // forcing terrorist bot to not move to another bomb spot
       if (m_inBombZone && !m_hasProgressBar && m_hasC4) {
-         return waypoints.getNearest (pev->origin, 400.0f, FLAG_GOAL);
+         return waypoints.getNearest (pev->origin, 768.0f, FLAG_GOAL);
       }
    }
    int tactic = 0;
@@ -196,7 +196,7 @@ int Bot::getGoalProcess (int tactic, IntArray *defensive, IntArray *offsensive) 
    }
 
    if (m_currentWaypointIndex == INVALID_WAYPOINT_INDEX || m_currentWaypointIndex >= g_numWaypoints) {
-      m_currentWaypointIndex = changePointIndex (waypoints.getNearest (pev->origin));
+      m_currentWaypointIndex = changePointIndex (getNearestPoint ());
    }
 
    if (goalChoices[0] == INVALID_WAYPOINT_INDEX) {
@@ -290,47 +290,77 @@ void Bot::resetCollision (void) {
 void Bot::ignoreCollision (void) {
    resetCollision ();
 
-   m_lastCollTime = engine.timebase () + 0.5f;
+   m_prevTime = engine.timebase () + 1.2f;
+   m_lastCollTime = engine.timebase () + 1.5f;
    m_isStuck = false;
    m_checkTerrain = false;
+   m_prevSpeed = m_moveSpeed;
 }
 
-void Bot::processPlayerAvoidance (const Vector &dirNormal) {
-   if (m_seeEnemyTime + 1.5f < engine.timebase ()) {
+void Bot::avoidIncomingPlayers (edict_t *touch) {
+   auto task = taskId ();
+
+   if (task == TASK_PLANTBOMB || task == TASK_DEFUSEBOMB || task == TASK_CAMP || m_moveSpeed <= 100.0f) {
       return;
    }
 
-   if (m_avoidTime < engine.timebase () || !isPlayer (m_avoid)) {
+   int ownId = engine.indexOfEntity (ent ());
+   int otherId = engine.indexOfEntity (touch);
+
+   if (ownId < otherId) {
       return;
    }
-   makeVectors (m_moveAngles); // use our movement angles
+   
+   if (m_avoid) {
+      int currentId = engine.indexOfEntity (m_avoid);
 
-   float interval = calcThinkInterval ();
-
-   // try to predict where we should be next frame
-   Vector moved = pev->origin + g_pGlobals->v_forward * m_moveSpeed * interval;
-   moved += g_pGlobals->v_right * m_strafeSpeed * interval;
-   moved += pev->velocity * interval;
-
-   float nearestDistance = (m_avoid->v.origin - pev->origin).length2D ();
-   float nextFrameDistance = ((m_avoid->v.origin + m_avoid->v.velocity * interval) - pev->origin).length2D ();
-
-   // is player that near now or in future that we need to steer away?
-   if ((m_avoid->v.origin - moved).length2D () <= 48.0f || (nearestDistance <= 56.0f && nextFrameDistance < nearestDistance)) {
-      // to start strafing, we have to first figure out if the target is on the left side or right side
-      const Vector &dirToPoint = (pev->origin - m_avoid->v.origin).make2D ();
-
-      if ((dirToPoint | g_pGlobals->v_right.make2D ()) > 0.0f) {
-         setStrafeSpeed (dirNormal, pev->maxspeed);
+      if (currentId < otherId) {
+         return;
       }
-      else {
-         setStrafeSpeed (dirNormal, -pev->maxspeed);
-      }
+   }
+   m_avoid = touch;
+   m_avoidTime = engine.timebase () + 0.33f + calcThinkInterval ();
+}
 
-      if (nearestDistance < 56.0f && (dirToPoint | g_pGlobals->v_forward.make2D ()) < 0.0f) {
+bool Bot::doPlayerAvoidance (const Vector &normal) {
+   // avoid collssion entity, got it form official csbot
+
+   if (m_avoidTime> engine.timebase () && isAlive (m_avoid)) {
+
+      Vector dir (A_cosf (pev->v_angle.y), A_sinf (pev->v_angle.y), 0.0f);
+      Vector lat (-dir.y, dir.x, 0.0f);
+      Vector to = Vector (m_avoid->v.origin.x - pev->origin.x, m_avoid->v.origin.y - pev->origin.y, 0.0f).normalize ();
+
+      float toProj = to.x * dir.x + to.y * dir.y;
+      float latProj = to.x * lat.x + to.y * lat.y;
+
+      const float c = 0.5f;
+
+      if (toProj > c) {
          m_moveSpeed = -pev->maxspeed;
+         return true;
       }
+      else if (toProj < -c) {
+         m_moveSpeed = pev->maxspeed;
+         return true;
+      }
+
+      if (latProj >= c) {
+         pev->button |= IN_MOVELEFT;
+         setStrafeSpeed (normal, pev->maxspeed);
+         return true;
+      }
+      else if (latProj <= -c) {
+         pev->button |= IN_MOVERIGHT;
+         setStrafeSpeed (normal, -pev->maxspeed);
+         return true;
+      }
+      return false;
    }
+   else {
+      m_avoid = nullptr;
+   }
+   return false;
 }
 
 void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
@@ -340,18 +370,18 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
    // Standing still, no need to check?
    // FIXME: doesn't care for ladder movement (handled separately) should be included in some way
    if ((m_moveSpeed >= 10.0f || m_strafeSpeed >= 10.0f) && m_lastCollTime < engine.timebase () && m_seeEnemyTime + 0.8f < engine.timebase () && taskId () != TASK_ATTACK) {
-      if (movedDistance < 2.0f && m_prevSpeed >= 20.0f) // didn't we move enough previously?
-      {
-         // Then consider being stuck
-         m_prevTime = engine.timebase ();
+
+      // didn't we move enough previously?
+      if (movedDistance < 2.0f && m_prevSpeed >= 20.0f) {
+         m_prevTime = engine.timebase (); // then consider being stuck
          m_isStuck = true;
 
-         if (m_firstCollideTime == 0.0f) {
+         if (isFltZero (m_firstCollideTime)) {
             m_firstCollideTime = engine.timebase () + 0.2f;
          }
       }
-      else // not stuck yet
-      {
+      // not stuck yet
+      else {
          // test if there's something ahead blocking the way
          if (cantMoveForward (dirNormal, &tr) && !isOnLadder ()) {
             if (m_firstCollideTime == 0.0f) {
@@ -366,8 +396,8 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
          }
       }
 
-      if (!m_isStuck) // not stuck?
-      {
+      // not stuck?
+      if (!m_isStuck) {
          if (m_probeTime + 0.5f < engine.timebase ()) {
             resetCollision (); // reset collision memory if not being stuck for 0.5 secs
          }
@@ -614,7 +644,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
          }
       }
    }
-   processPlayerAvoidance (dirNormal);
+   doPlayerAvoidance (dirNormal);
 }
 
 bool Bot::processNavigation (void) {
@@ -651,7 +681,7 @@ bool Bot::processNavigation (void) {
          // pressing the jump button gives the illusion of the bot actual jmping.
          if (isOnFloor () || isOnLadder ()) {
             if (m_desiredVelocity.x != 0.0f && m_desiredVelocity.y != 0.0f) {
-               pev->velocity = m_desiredVelocity + m_desiredVelocity * 0.046f;
+               pev->velocity = m_desiredVelocity + m_desiredVelocity * 0.086f;
             }
             pev->button |= IN_JUMP;
 
@@ -1575,27 +1605,27 @@ int Bot::searchAimingPoint (const Vector &to) {
    // return the most distant waypoint which is seen from the bot to the target and is within count
 
    if (m_currentWaypointIndex == INVALID_WAYPOINT_INDEX) {
-      m_currentWaypointIndex = changePointIndex (waypoints.getNearest (pev->origin));
+      m_currentWaypointIndex = changePointIndex (getNearestPoint ());
    }
 
    int destIndex = waypoints.getNearest (to);
    int bestIndex = m_currentWaypointIndex;
-   int depth = 0;
 
    while (destIndex != m_currentWaypointIndex) {
       destIndex = *(waypoints.m_pathMatrix + (destIndex * g_numWaypoints) + m_currentWaypointIndex);
 
-      if (destIndex < 0)
+      if (destIndex < 0) {
          break;
-
-      if (++depth > 10) {
-         return INVALID_WAYPOINT_INDEX;
       }
 
       if (waypoints.isVisible (m_currentWaypointIndex, destIndex)) {
          bestIndex = destIndex;
          break;
       }
+   }
+
+   if (bestIndex == m_currentWaypointIndex) {
+      return INVALID_WAYPOINT_INDEX;
    }
    return bestIndex;
 }
@@ -1616,7 +1646,7 @@ bool Bot::findPoint (void) {
    // do main search loop
    for (i = 0; i < g_numWaypoints; i++) {
       // ignore current waypoint and previous recent waypoints...
-      if (i == m_currentWaypointIndex || i == m_prevWptIndex[0] || i == m_prevWptIndex[1] || i == m_prevWptIndex[2]) {
+      if (i == m_currentWaypointIndex || i == m_prevWptIndex[0] || i == m_prevWptIndex[1] || i == m_prevWptIndex[2] || i == m_prevWptIndex[3] || i == m_prevWptIndex[4]) {
          continue;
       }
 
@@ -1665,7 +1695,7 @@ bool Bot::findPoint (void) {
       i = 0;
 
       IntArray found;
-      waypoints.searchRadius (found, 256.0f, pev->origin);
+      waypoints.searchRadius (found, 512.0f, pev->origin);
 
       if (!found.empty ()) {
          bool gotId = false;
@@ -1677,6 +1707,11 @@ bool Bot::findPoint (void) {
             if (!waypoints.isReachable (this, index)) {
                continue;
             }
+
+            if (!isOccupiedPoint (index)) {
+               continue;
+            }
+
             indices[i] = index;
             gotId = true;
 
@@ -1699,11 +1734,22 @@ bool Bot::findPoint (void) {
 }
 
 float Bot::getReachTime (void) {
-   float estimatedTime = 2.25f; // time to reach next waypoint
+   auto task = taskId ();
+   float estimatedTime = 0.0f; 
+
+   switch (task) {
+   case TASK_PAUSE:
+   case TASK_CAMP:
+   case TASK_HIDE:
+      return 0.0f;
+
+   default:
+      estimatedTime = 2.25f; // time to reach next waypoint
+   }
 
    // calculate 'real' time that we need to get from one waypoint to another
    if (m_currentWaypointIndex >= 0 && m_currentWaypointIndex < g_numWaypoints && m_prevWptIndex[0] >= 0 && m_prevWptIndex[0] < g_numWaypoints) {
-      float distance = (waypoints[m_prevWptIndex[0]].origin - m_currentPath->origin).length ();
+      float distance = (waypoints[m_prevWptIndex[0]].origin - waypoints[m_currentWaypointIndex].origin).length ();
 
       // caclulate estimated time
       if (pev->maxspeed <= 0.0f) {
@@ -1712,13 +1758,13 @@ float Bot::getReachTime (void) {
       else {
          estimatedTime = 3.0f * distance / pev->maxspeed;
       }
-      bool longTermReachability = (m_currentPath->flags & FLAG_CROUCH) || (m_currentPath->flags & FLAG_LADDER) || (pev->button & IN_DUCK);
+      bool longTermReachability = (m_currentPath->flags & FLAG_CROUCH) || (m_currentPath->flags & FLAG_LADDER) || (pev->button & IN_DUCK) || (m_oldButtons & IN_DUCK);
 
       // check for special waypoints, that can slowdown our movement
       if (longTermReachability) {
-         estimatedTime *= 3.0f;
+         estimatedTime *= 2.0f;
       }
-      estimatedTime = F_clamp (estimatedTime, 1.2f, longTermReachability ? 10.0f : 5.0f);
+      estimatedTime = A_clamp (estimatedTime, 1.2f, longTermReachability ? 8.0f : 5.0f);
    }
    return estimatedTime;
 }
@@ -1824,6 +1870,12 @@ int Bot::changePointIndex (int waypointIndex) {
    return m_currentWaypointIndex; // to satisfy static-code analyzers
 }
 
+int Bot::getNearestPoint (void) {
+   // get the current nearest waypoint to bot with visibility checks
+
+   return waypoints.getNearest (pev->origin, 9999.0f, -1, this);
+}
+
 int Bot::getBombPoint (void) {
    // this function finds the best goal (bomb) waypoint for CTs when searching for a planted bomb.
 
@@ -1872,6 +1924,9 @@ int Bot::getDefendPoint (const Vector &origin) {
    // this function tries to find a good position which has a line of sight to a position,
    // provides enough cover point, and is far away from the defending position
 
+   if (m_currentWaypointIndex == INVALID_WAYPOINT_INDEX) {
+      m_currentWaypointIndex = changePointIndex (getNearestPoint ());
+   }
    TraceResult tr;
 
    int waypointIndex[MAX_PATH_INDEX];
@@ -1883,7 +1938,7 @@ int Bot::getDefendPoint (const Vector &origin) {
    }
 
    int posIndex = waypoints.getNearest (origin);
-   int srcIndex = waypoints.getNearest (pev->origin);
+   int srcIndex = m_currentWaypointIndex;
 
    // some of points not found, return random one
    if (srcIndex == INVALID_WAYPOINT_INDEX || posIndex == INVALID_WAYPOINT_INDEX) {
@@ -2269,7 +2324,7 @@ bool Bot::advanceMovement (void) {
             }
 
             // is there a jump waypoint right ahead and do we need to draw out the light weapon ?
-            if (willJump && m_currentWeapon != WEAPON_KNIFE && m_currentWeapon != WEAPON_SCOUT && !m_isReloading && !usesPistol () && (jumpDistance > 210.0f || (dst.z + 32.0f > src.z && jumpDistance > 150.0f) || ((dst - src).length2D () < 60.0f && jumpDistance > 60.0f)) && engine.isNullEntity (m_enemy)) {
+            if (willJump && m_currentWeapon != WEAPON_KNIFE && m_currentWeapon != WEAPON_SCOUT && !m_isReloading && !usesPistol () && (jumpDistance > 210.0f || (dst.z + 32.0f > src.z && jumpDistance > 150.0f) || ((dst - src).length2D () < 60.0f && jumpDistance > 60.0f)) && !(m_states & (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY))) {
                selectWeaponByName ("weapon_knife"); // draw out the knife if we needed
             }
 
@@ -2280,7 +2335,7 @@ bool Bot::advanceMovement (void) {
                   Bot *otherBot = bots.getBot (c);
 
                   // if another bot uses this ladder, wait 3 secs
-                  if (otherBot != nullptr && otherBot != this && isAlive (otherBot->ent ()) && otherBot->m_currentWaypointIndex == m_navNode->index) {
+                  if (otherBot != nullptr && otherBot != this && otherBot->m_notKilled && otherBot->m_currentWaypointIndex == m_navNode->index) {
                      startTask (TASK_PAUSE, TASKPRI_PAUSE, INVALID_WAYPOINT_INDEX, engine.timebase () + 3.0f, false);
                      return true;
                   }
@@ -2849,15 +2904,15 @@ void Bot::changeYaw (float speed) {
 int Bot::searchCampDirectionPoint (void) {
    // find a good waypoint to look at when camping
 
+   if (m_currentWaypointIndex == INVALID_WAYPOINT_INDEX) {
+      m_currentWaypointIndex = changePointIndex (getNearestPoint ());
+   }
+
    int count = 0, indices[3];
    float distTab[3];
    uint16 visibility[3];
 
    int currentWaypoint = m_currentWaypointIndex;
-
-   if (currentWaypoint == INVALID_WAYPOINT_INDEX) {
-      return waypoints.getNearest (pev->origin);
-   }
 
    for (int i = 0; i < g_numWaypoints; i++) {
       if (currentWaypoint == i || !waypoints.isVisible (currentWaypoint, i)) {
@@ -2906,7 +2961,7 @@ void Bot::processBodyAngles (void) {
 }
 
 void Bot::processLookAngles (void) {
-   const float delta = F_clamp (engine.timebase () - m_lookUpdateTime, MATH_EQEPSILON, 0.05f);
+   const float delta = A_clamp (engine.timebase () - m_lookUpdateTime, MATH_EQEPSILON, 0.05f);
    m_lookUpdateTime = engine.timebase ();
 
    // adjust all body and view angles to face an absolute vector
@@ -2922,19 +2977,17 @@ void Bot::processLookAngles (void) {
 
       return;
    }
-
-   // this is what makes bot almost godlike (got it from sypb)
    if (m_difficulty > 3 && (m_aimFlags & AIM_ENEMY) && (m_wantsToFire || usesSniper ()) && yb_whose_your_daddy.boolean ()) {
       pev->v_angle = direction;
       processBodyAngles ();
 
       return;
    }
-   bool needPreciseAim = (m_aimFlags & (AIM_ENEMY | AIM_ENTITY | AIM_GRENADE |  AIM_CAMP) || taskId () == TASK_SHOOTBREAKABLE);
+   bool needPreciseAim = (m_aimFlags & (AIM_ENEMY | AIM_ENTITY | AIM_GRENADE) || taskId () == TASK_SHOOTBREAKABLE);
 
-   float accelerate = needPreciseAim ? 3600.0f : 3000.0f;
-   float stiffness = needPreciseAim ? 300.0f : 200.0f;
-   float damping = needPreciseAim ? 20.0f : 25.0f;
+   float accelerate = needPreciseAim ? 3800.0f : 3000.0f;
+   float stiffness = needPreciseAim ? 320.0f : 200.0f;
+   float damping = needPreciseAim ? 17.0f : 25.0f;
 
    m_idealAngles = pev->v_angle;
 
@@ -2946,15 +2999,15 @@ void Bot::processLookAngles (void) {
       m_idealAngles.y = direction.y;
    }
    else {
-      float accel = F_clamp (stiffness * angleDiffYaw - damping * m_lookYawVel, -accelerate, accelerate);
+      float accel = A_clamp (stiffness * angleDiffYaw - damping * m_lookYawVel, -accelerate, accelerate);
 
       m_lookYawVel += delta * accel;
       m_idealAngles.y += delta * m_lookYawVel;
    }
-   float accel = F_clamp (2.0f * stiffness * angleDiffPitch - damping * m_lookPitchVel, -accelerate, accelerate);
+   float accel = A_clamp (2.0f * stiffness * angleDiffPitch - damping * m_lookPitchVel, -accelerate, accelerate);
 
    m_lookPitchVel += delta * accel;
-   m_idealAngles.x += F_clamp (delta * m_lookPitchVel, -89.0f, 89.0f);
+   m_idealAngles.x += A_clamp (delta * m_lookPitchVel, -89.0f, 89.0f);
 
    pev->v_angle = m_idealAngles;
    pev->v_angle.clampAngles ();
@@ -2966,8 +3019,10 @@ void Bot::updateLookAnglesNewbie (const Vector &direction, const float delta) {
    Vector spring (13.0f, 13.0f, 0.0f);
    Vector damperCoefficient (0.22f, 0.22f, 0.0f);
 
-   Vector influence = Vector (0.25f, 0.17f, 0.0f) * ((100 - (m_difficulty * 25)) / 100.f);
-   Vector randomization = Vector (2.0f, 0.18f, 0.0f) * ((100 - (m_difficulty * 25)) / 100.f);
+   const float skill = 100.0f - m_difficulty * 25;
+
+   Vector influence = Vector (0.25f, 0.17f, 0.0f) * skill / 100.f;
+   Vector randomization = Vector (2.0f, 0.18f, 0.0f) * skill / 100.f;
 
    const float noTargetRatio = 0.3f;
    const float offsetDelay = 1.2f;
@@ -3088,19 +3143,18 @@ bool Bot::isOccupiedPoint (int index) {
       }
       auto bot = bots.getBot (i);
 
-      if (bot != nullptr) {
-         if (index == bot->task ()->data) {
-            return true;
-         }
-         int occupyId = bot->m_prevWptIndex[0] != INVALID_WAYPOINT_INDEX && getShootingConeDeviation (bot->ent (), pev->origin) >= 0.7f ? bot->m_prevWptIndex[0] : bot->m_currentWaypointIndex;
+      if (bot == this) {
+         continue;
+      }
 
-         if (index == occupyId) {
+      if (bot != nullptr) {
+         if (index == bot->task ()->data || index == bot->m_currentWaypointIndex) {
             return true;
          }
       }
       float length = (waypoints[index].origin - client.origin).lengthSq ();
 
-      if (length < F_clamp (waypoints[index].radius, A_square (64.0f), A_square (128.0f)) && client.ent->v.velocity.length2D () < 30.0f) {
+      if (length < A_clamp (waypoints[index].radius, A_square (50.0f), A_square (96.0f)) && client.ent->v.velocity.length2D () < 30.0f) {
          return true;
       }
    }

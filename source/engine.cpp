@@ -583,8 +583,10 @@ void Engine::processMessages (void *ptr) {
    case NETMSG_SHOWMENU:
       // this message is sent when a text menu is displayed.
 
-      if (m_msgBlock.state < 3) // ignore first 3 fields of message
+      // ignore first 3 fields of message
+      if (m_msgBlock.state < 3) {
          break;
+      }
 
       if (strcmp (strVal, "#Team_Select") == 0) {
          bot->m_startAction = GAME_MSG_TEAM_SELECT;
@@ -1000,9 +1002,4 @@ void Engine::processMessages (void *ptr) {
       logEntry (true, LL_FATAL, "Network message handler error. Call to unrecognized message id (%d).\n", m_msgBlock.msg);
    }
    m_msgBlock.state++; // and finally update network message state
-}
-
-// console var registrator
-ConVar::ConVar (const char *name, const char *initval, VarType type, bool regMissing, const char *regVal) : m_eptr (nullptr) {
-   Engine::ref ().pushVarToRegStack (name, initval, type, regMissing, regVal, this);
 }

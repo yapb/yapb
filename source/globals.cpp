@@ -83,13 +83,12 @@ plugin_info_t Plugin_info = {
    PT_ANYTIME, // when unloadable
 };
 
-// table with all available actions for the bots (filtered in & out in Bot::SetConditions) some of them have subactions included
-Task g_taskFilters[] = {
-   { TASK_NORMAL, 0, INVALID_WAYPOINT_INDEX, 0.0f, true },
+// table with all available actions for the bots (filtered in & out in Bot::setConditions) some of them have subactions included
+Task g_taskFilters[TASK_MAX] = {
+   { TASK_NORMAL, 0, INVALID_WAYPOINT_INDEX, 0.0f, true  },
    { TASK_PAUSE, 0, INVALID_WAYPOINT_INDEX, 0.0f, false },
    { TASK_MOVETOPOSITION, 0, INVALID_WAYPOINT_INDEX, 0.0f, true },
    { TASK_FOLLOWUSER, 0, INVALID_WAYPOINT_INDEX, 0.0f, true },
-   { TASK_WAITFORGO, 0, INVALID_WAYPOINT_INDEX, 0.0f, true },
    { TASK_PICKUPITEM, 0, INVALID_WAYPOINT_INDEX, 0.0f, true },
    { TASK_CAMP, 0, INVALID_WAYPOINT_INDEX, 0.0f, true },
    { TASK_PLANTBOMB, 0, INVALID_WAYPOINT_INDEX, 0.0f, false },

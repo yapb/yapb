@@ -58,7 +58,7 @@ extern WeaponProperty g_weaponDefs[MAX_WEAPONS + 1];
 
 extern Client g_clients[MAX_ENGINE_PLAYERS];
 extern MenuText g_menus[BOT_MENU_TOTAL_MENUS];
-extern Task g_taskFilters[];
+extern Task g_taskFilters[TASK_MAX];
 
 extern Experience *g_experienceData;
 
@@ -68,8 +68,8 @@ extern Library *g_gameLib;
 extern gamefuncs_t g_functionTable;
 
 static inline bool isEmptyStr (const char *input) {
-   if (input == nullptr)
+   if (input == nullptr) {
       return true;
-
+   }
    return *input == '\0';
 }

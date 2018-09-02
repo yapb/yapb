@@ -34,9 +34,6 @@
    #error "Can't configure export macros. Compiler unrecognized."
 #endif
 
-// enable sse intrinsics
-#define ENABLE_SSE_INTRINSICS 1
-
 // operating system specific macros, functions and typedefs
 #ifdef PLATFORM_WIN32
 
@@ -83,7 +80,6 @@
 
    #if defined(__ANDROID__)
       #define PLATFORM_ANDROID 1
-      #undef ENABLE_SSE_INTRINSICS
    #endif
 #else
    #error "Platform unrecognized."

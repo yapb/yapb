@@ -998,7 +998,7 @@ void Touch (edict_t *pentTouched, edict_t *pentOther) {
       Bot *bot = bots.getBot (pentOther);
 
       if (bot != nullptr) {
-         if (isPlayer (pentTouched)) {
+         if (pentTouched != bot->ent () && isAlive (pentTouched)) {
             bot->avoidIncomingPlayers (pentTouched);
          }
          else {
@@ -3177,7 +3177,7 @@ DLL_ENTRYPOINT {
    DLL_RETENTRY; // the return data type is OS specific too
 }
 
-void LinkEntity_Helper (entity_func_t &addr, const char *name, entvars_t *pev) {
+void helper_LinkEntity (entity_func_t &addr, const char *name, entvars_t *pev) {
    if (addr == nullptr) {
       addr = g_gameLib->resolve<entity_func_t> (name);
    }
@@ -3191,7 +3191,7 @@ void LinkEntity_Helper (entity_func_t &addr, const char *name, entvars_t *pev) {
 #define LINK_ENTITY(entityName)                              \
    SHARED_LIBRARAY_EXPORT void entityName (entvars_t *pev) { \
       static entity_func_t addr;                             \
-      LinkEntity_Helper (addr, #entityName, pev);            \
+      helper_LinkEntity (addr, #entityName, pev);            \
    }
 
 // entities in counter-strike...

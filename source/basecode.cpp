@@ -67,17 +67,17 @@ void Bot::pushMsgQueue (int message) {
    m_pushMessageIndex &= 0x1f; // wraparound
 }
 
-int Bot::isInFOV (const Vector &destination) {
+float Bot::isInFOV (const Vector &destination) {
    float entityAngle = angleMod (destination.toYaw ()); // find yaw angle from source to destination...
    float viewAngle = angleMod (pev->v_angle.y); // get bot's current view angle...
 
    // return the absolute value of angle to destination entity
    // zero degrees means straight ahead, 45 degrees to the left or
    // 45 degrees to the right is the limit of the normal view angle
-   int absoluteAngle = abs (static_cast<int> (viewAngle) - static_cast<int> (entityAngle));
+   float absoluteAngle = A_abs (viewAngle - entityAngle);
 
-   if (absoluteAngle > 180) {
-      absoluteAngle = 360 - absoluteAngle;
+   if (absoluteAngle > 180.0f) {
+      absoluteAngle = 360.0f - absoluteAngle;
    }
    return absoluteAngle;
 }
@@ -124,7 +124,7 @@ void Bot::checkGrenadesThrow (void) {
    };
 
    // check if throwing a grenade is a good thing to do...
-   if (checkTasks || yb_ignore_enemies.boolean () || m_isUsingGrenade || g_bombPlanted || m_isReloading || yb_jasonmode.boolean () || m_grenadeCheckTime >= engine.timebase ()) {
+   if (checkTasks || yb_ignore_enemies.boolean () || m_isUsingGrenade || m_isReloading || yb_jasonmode.boolean () || m_grenadeCheckTime >= engine.timebase ()) {
       clearThrowStates ();
       return;
    }
@@ -300,7 +300,7 @@ void Bot::avoidGrenades (void) {
       m_avoidGrenade = nullptr;
       m_needAvoidGrenade = 0;
    }
-   Array<edict_t *> activeGrenades = bots.searchActiveGrenades ();
+   auto activeGrenades = bots.searchActiveGrenades ();
 
    // find all grenades on the map
    for (edict_t *pent : activeGrenades) {
@@ -328,11 +328,11 @@ void Bot::avoidGrenades (void) {
             return;
          }
 
-         if (engine.getTeam (pent->v.owner) == m_team && pent->v.owner != ent ()) {
+         if (engine.getTeam (pent->v.owner) == m_team || pent->v.owner == ent ()) {
             return;
          }
 
-         if ((pent->v.flags & FL_ONGROUND) == 0) {
+         if (!(pent->v.flags & FL_ONGROUND)) {
             float distance = (pent->v.origin - pev->origin).length ();
             float distanceMoved = ((pent->v.origin + pent->v.velocity * calcThinkInterval ()) - pev->origin).length ();
 
@@ -455,30 +455,6 @@ void Bot::processBreakables (edict_t *touch) {
    startTask (TASK_SHOOTBREAKABLE, TASKPRI_SHOOTBREAKABLE, INVALID_WAYPOINT_INDEX, 0.0f, false);
 }
 
-void Bot::avoidIncomingPlayers (edict_t *touch) {
-   auto task = taskId ();
-
-   if (task == TASK_PLANTBOMB || task == TASK_DEFUSEBOMB) {
-      return;
-   }
-   int ownId = index ();
-   int otherId = engine.indexOfEntity (touch);
-
-   if (ownId < otherId) {
-      return;
-   }
-
-   if (isPlayer (m_avoid)) {
-      int currentId = engine.indexOfEntity (m_avoid);
-
-      if (currentId < otherId) {
-         return;
-      }
-   }
-   m_avoid = touch;
-   m_avoidTime = engine.timebase () + 0.6f;
-}
-
 edict_t *Bot::lookupBreakable (void) {
    // this function checks if bot is blocked by a shoot able breakable in his moving direction
 
@@ -553,7 +529,7 @@ void Bot::processPickups (void) {
             continue; // someone owns this weapon or it hasn't re spawned yet
          }
          if (ent == pickupItem) {
-            if (seesItem (engine.getAbsPos (ent), const_cast<char *> (STRING (ent->v.classname)))) {
+            if (seesItem (engine.getAbsPos (ent), STRING (ent->v.classname))) {
                itemExists = true;
             }
             break;
@@ -1379,7 +1355,7 @@ int Bot::pickBestWeapon (int *vec, int count, int moneySave) {
          *end = *begin;
          *begin = swap;
       }
-      return vec[static_cast<int> (static_cast<float> (count - 1) * log10f (rng.getFloat (1, powf (10.0f, buyFactor))) / buyFactor + 0.5f)];
+      return vec[static_cast<int> (static_cast<float> (count - 1) * log10f (rng.getFloat (1, A_powf (10.0f, buyFactor))) / buyFactor + 0.5f)];
    }
 
    int chance = 95;
@@ -1957,8 +1933,8 @@ void Bot::filterTasks (void) {
 
    // increase/decrease fear/aggression if bot uses a sniping weapon to be more careful
    if (usesSniper ()) {
-      tempFear = tempFear * 1.5f;
-      tempAgression = tempAgression * 0.5f;
+      tempFear = tempFear * 1.2f;
+      tempAgression = tempAgression * 0.6f;
    }
 
    // bot found some item to use?
@@ -1989,41 +1965,49 @@ void Bot::filterTasks (void) {
    else {
       g_taskFilters[TASK_ATTACK].desire = 0.0f;
    }
+   float &seekCoverDesire = g_taskFilters[TASK_SEEKCOVER].desire;
+   float &huntEnemyDesire = g_taskFilters[TASK_HUNTENEMY].desire;
+   float &blindedDesire = g_taskFilters[TASK_BLINDED].desire;
 
    // calculate desires to seek cover or hunt
    if (isPlayer (m_lastEnemy) && !m_lastEnemyOrigin.empty () && !m_hasC4) {
-      float distance = (m_lastEnemyOrigin - pev->origin).length ();
+      float retreatLevel = (100.0f - (pev->health > 50.0f ? 100.0f : pev->health)) * tempFear; // retreat level depends on bot health
 
-      // retreat level depends on bot health
-      float retreatLevel = (100.0f - (pev->health > 50.0f ? 100.0f : pev->health)) * tempFear;
-      float timeSeen = m_seeEnemyTime - engine.timebase ();
-      float timeHeard = m_heardSoundTime - engine.timebase ();
-      float ratio = 0.0f;
+      if (m_numEnemiesLeft > m_numFriendsLeft * 0.5f && m_retreatTime < engine.timebase () && m_seeEnemyTime - rng.getFloat (2.0f, 4.0f) < engine.timebase ()) {
 
-      if (timeSeen > timeHeard) {
-         timeSeen += 10.0f;
-         ratio = timeSeen * 0.1f;
+         float timeSeen = m_seeEnemyTime - engine.timebase ();
+         float timeHeard = m_heardSoundTime - engine.timebase ();
+         float ratio = 0.0f;
+
+         m_retreatTime = engine.timebase () + rng.getFloat (3.0f, 15.0f);
+
+         if (timeSeen > timeHeard) {
+            timeSeen += 10.0f;
+            ratio = timeSeen * 0.1f;
+         }
+         else {
+            timeHeard += 10.0f;
+            ratio = timeHeard * 0.1f;
+         }
+
+         if (g_bombPlanted || m_isStuck || m_currentWeapon == WEAPON_KNIFE) {
+            ratio /= 3.0f; // reduce the seek cover desire if bomb is planted
+         }
+         else if (m_isVIP || m_isReloading || (m_ammoInClip[m_currentWeapon] < getMaxClip (m_currentWeapon) * 0.18f && !usesSniper ())) {
+            ratio *= 2.0f; // triple the seek cover desire if bot is VIP or reloading
+         }
+         else {
+            ratio /= 2.0f; // reduce seek cover otherwise
+         }
+         seekCoverDesire = retreatLevel * ratio;
       }
       else {
-         timeHeard += 10.0f;
-         ratio = timeHeard * 0.1f;
+         seekCoverDesire = 0.0f;
       }
-
-      if (g_bombPlanted || m_isStuck || m_currentWeapon == WEAPON_KNIFE) {
-         ratio /= 3.0f; // reduce the seek cover desire if bomb is planted
-      }
-      else if (m_isVIP || m_isReloading || m_ammoInClip[m_currentWeapon] < getMaxClip (m_currentWeapon) * 0.18f) {
-         ratio *= 3.0f; // triple the seek cover desire if bot is VIP or reloading
-      }
-      else {
-         ratio /= 2.0f; // reduce seek cover otherwise
-      }
-      g_taskFilters[TASK_SEEKCOVER].desire = retreatLevel * ratio;
    
-
       // if half of the round is over, allow hunting
       if (taskId () != TASK_ESCAPEFROMBOMB && engine.isNullEntity (m_enemy) && g_timeRoundMid < engine.timebase () && !m_isUsingGrenade && m_currentWaypointIndex != waypoints.getNearest (m_lastEnemyOrigin) && m_personality != PERSONALITY_CAREFUL && !yb_ignore_enemies.boolean ()) {
-         float desireLevel = 4096.0f - ((1.0f - tempAgression) * distance);
+         float desireLevel = 4096.0f - ((1.0f - tempAgression) * (m_lastEnemyOrigin - pev->origin).length ());
 
          desireLevel = (100.0f * desireLevel) / 4096.0f;
          desireLevel -= retreatLevel;
@@ -2031,24 +2015,20 @@ void Bot::filterTasks (void) {
          if (desireLevel > 89.0f) {
             desireLevel = 89.0f;
          }
-         g_taskFilters[TASK_HUNTENEMY].desire = desireLevel;
+         huntEnemyDesire = desireLevel;
       }
       else {
-         g_taskFilters[TASK_HUNTENEMY].desire = 0.0f;
+         huntEnemyDesire = 0.0f;
       }
    }
    else {
-      g_taskFilters[TASK_SEEKCOVER].desire = 0.0f;
-      g_taskFilters[TASK_HUNTENEMY].desire = 0.0f;
+      huntEnemyDesire = 0.0f;
+      seekCoverDesire = 0.0f;
    }
 
    // blinded behavior
-   if (m_blindTime > engine.timebase ()) {
-      g_taskFilters[TASK_BLINDED].desire = TASKPRI_BLINDED;
-   }
-   else {
-      g_taskFilters[TASK_BLINDED].desire = 0.0f;
-   }
+   blindedDesire = m_blindTime > engine.timebase () ? TASKPRI_BLINDED : 0.0f;
+
 
    // now we've initialized all the desires go through the hard work
    // of filtering all actions against each other to pick the most
@@ -2097,18 +2077,18 @@ void Bot::filterTasks (void) {
    m_oldCombatDesire = hysteresisDesire (g_taskFilters[TASK_ATTACK].desire, 40.0f, 90.0f, m_oldCombatDesire);
    g_taskFilters[TASK_ATTACK].desire = m_oldCombatDesire;
 
-   Task *taskOffensive = &g_taskFilters[TASK_ATTACK];
-   Task *taskPickup = &g_taskFilters[TASK_PICKUPITEM];
+   auto offensive = &g_taskFilters[TASK_ATTACK];
+   auto pickup = &g_taskFilters[TASK_PICKUPITEM];
 
    // calc survive (cover/hide)
-   Task *taskSurvive = thresholdDesire (&g_taskFilters[TASK_SEEKCOVER], 40.0f, 0.0f);
-   taskSurvive = subsumeDesire (&g_taskFilters[TASK_HIDE], taskSurvive);
+   auto survive = thresholdDesire (&g_taskFilters[TASK_SEEKCOVER], 40.0f, 0.0f);
+   survive = subsumeDesire (&g_taskFilters[TASK_HIDE], survive);
 
-   Task *def = thresholdDesire (&g_taskFilters[TASK_HUNTENEMY], 41.0f, 0.0f); // don't allow hunting if desires 60<
-   taskOffensive = subsumeDesire (taskOffensive, taskPickup); // if offensive task, don't allow picking up stuff
+   auto def = thresholdDesire (&g_taskFilters[TASK_HUNTENEMY], 41.0f, 0.0f); // don't allow hunting if desires 60<
+   offensive = subsumeDesire (offensive, pickup); // if offensive task, don't allow picking up stuff
 
-   Task *taskSub = maxDesire (taskOffensive, def); // default normal & careful tasks against offensive actions
-   Task *final = subsumeDesire (&g_taskFilters[TASK_BLINDED], maxDesire (taskSurvive, taskSub)); // reason about fleeing instead
+   auto sub = maxDesire (offensive, def); // default normal & careful tasks against offensive actions
+   auto final = subsumeDesire (&g_taskFilters[TASK_BLINDED], maxDesire (survive, sub)); // reason about fleeing instead
 
    if (!m_tasks.empty ()) {
       final = maxDesire (final, task ());
@@ -2214,6 +2194,8 @@ void Bot::clearTask (TaskID id) {
 void Bot::completeTask (void) {
    // this function called whenever a task is completed.
 
+   ignoreCollision ();
+
    if (m_tasks.empty ()) {
       return;
    }
@@ -2222,7 +2204,6 @@ void Bot::completeTask (void) {
       m_tasks.pop ();
    } while (!m_tasks.empty () && !m_tasks.back ().resume);
 
-   ignoreCollision ();
    clearSearchNodes ();
 }
 
@@ -2251,11 +2232,15 @@ bool Bot::reactOnEnemy (void) {
    }
 
    if (m_enemyReachableTimer < engine.timebase ()) {
-      int i = waypoints.getNearest (pev->origin);
+      int ownIndex = m_currentWaypointIndex;
+
+      if (ownIndex == INVALID_WAYPOINT_INDEX) {
+         ownIndex = getNearestPoint ();
+      }
       int enemyIndex = waypoints.getNearest (m_enemy->v.origin);
 
       float lineDist = (m_enemy->v.origin - pev->origin).length ();
-      float pathDist = static_cast<float> (waypoints.getPathDist (i, enemyIndex));
+      float pathDist = static_cast<float> (waypoints.getPathDist (ownIndex, enemyIndex));
 
       if (pathDist - lineDist > 112.0f) {
          m_isEnemyReachable = false;
@@ -2741,7 +2726,7 @@ void Bot::updateAimDir (void) {
          if (angleCorrection > 45.0f) {
             angleCorrection = 45.0f;
          }
-         coordCorrection = throwDistance * tanf (angleCorrection * Math::MATH_PI / 180.0f) + 0.25f * (m_throw.z - pev->origin.z);
+         coordCorrection = throwDistance * A_tanf (angleCorrection * MATH_D2R) + 0.25f * (m_throw.z - pev->origin.z);
       }
       m_lookAt.z += coordCorrection * 0.5f;
    }
@@ -2782,6 +2767,7 @@ void Bot::updateAimDir (void) {
          }
          else {
             m_aimFlags &= ~AIM_PREDICT_PATH;
+            m_destOrigin = m_destOrigin;
          }
       }
       else {
@@ -2795,16 +2781,16 @@ void Bot::updateAimDir (void) {
       m_lookAt = m_destOrigin;
 
       if (m_canChooseAimDirection && m_currentWaypointIndex != INVALID_WAYPOINT_INDEX && !(m_currentPath->flags & FLAG_LADDER)) {
-         int index = m_currentWaypointIndex;
+         auto experience = (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + m_currentWaypointIndex);
 
          if (m_team == TEAM_TERRORIST) {
-            if ((g_experienceData + (index * g_numWaypoints) + index)->team0DangerIndex != INVALID_WAYPOINT_INDEX) {
-               m_lookAt = waypoints[(g_experienceData + (index * g_numWaypoints) + index)->team0DangerIndex].origin;
+            if (experience->team0DangerIndex != INVALID_WAYPOINT_INDEX && waypoints.isVisible (m_currentWaypointIndex, experience->team0DangerIndex)) {
+               m_lookAt = waypoints[experience->team0DangerIndex].origin;
             }
          }
          else {
-            if ((g_experienceData + (index * g_numWaypoints) + index)->team1DangerIndex != INVALID_WAYPOINT_INDEX) {
-               m_lookAt = waypoints[(g_experienceData + (index * g_numWaypoints) + index)->team1DangerIndex].origin;
+            if (experience->team1DangerIndex != INVALID_WAYPOINT_INDEX && waypoints.isVisible (m_currentWaypointIndex, experience->team1DangerIndex)) {
+               m_lookAt = waypoints[experience->team1DangerIndex].origin;
             }
          }
       }
@@ -2885,7 +2871,7 @@ void Bot::processFrameThink (void) {
    checkMsgQueue (); // check for pending messages
 
    if (botMovement) {
-      processFlow (); // execute main code
+      ai (); // execute main code
    }
    processMovement (); // run the player movement
 }
@@ -2999,11 +2985,10 @@ void Bot::normal_ (void) {
             startTask (TASK_SPRAY, TASKPRI_SPRAYLOGO, INVALID_WAYPOINT_INDEX, engine.timebase () + 1.0f, false);
          }
       }
-      m_lastCollTime = engine.timebase () + 1.2f;
-      m_prevTime = engine.timebase () + 1.8f;
 
       // reached waypoint is a camp waypoint
       if ((m_currentPath->flags & FLAG_CAMP) && !(g_gameFlags & GAME_CSDM) && yb_camping_allowed.boolean ()) {
+
          // check if bot has got a primary weapon and hasn't camped before
          if (hasPrimaryWeapon () && m_timeCamping + 10.0f < engine.timebase () && !hasHostage ()) {
             bool campingAllowed = true;
@@ -3280,7 +3265,7 @@ void Bot::huntEnemy_ (void) {
 void Bot::seekCover_ (void) {
    m_aimFlags |= AIM_NAVPOINT;
 
-   if (engine.isNullEntity (m_lastEnemy) || !isAlive (m_lastEnemy)) {
+   if (!isAlive (m_lastEnemy)) {
       completeTask ();
       m_prevGoalIndex = INVALID_WAYPOINT_INDEX;
    }
@@ -3349,10 +3334,14 @@ void Bot::seekCover_ (void) {
          destIndex = task ()->data;
       }
       else {
-         destIndex = getCoverPoint (1024.0f);
+         destIndex = getCoverPoint (usesSniper () ? 256.0f : 512.0f);
 
          if (destIndex == INVALID_WAYPOINT_INDEX) {
-            destIndex = waypoints.getFarest (pev->origin, 1024.0f);
+            m_retreatTime = engine.timebase () + rng.getFloat (5.0f, 10.0f);
+            m_prevGoalIndex = INVALID_WAYPOINT_INDEX;
+
+            completeTask ();
+            return;
          }
       }
       m_campDirection = 0;
@@ -4430,10 +4419,10 @@ void Bot::pickupItem_ () {
       }
 
       if (itemDistance < 50.0f) {
-         int angleToEntity = isInFOV (dest - eyePos ());
+         float angleToEntity = isInFOV (dest - eyePos ());
 
          // bot faces hostage?
-         if (angleToEntity <= 10) {
+         if (angleToEntity <= 10.0f) {
             // use game dll function to make sure the hostage is correctly 'used'
             MDLL_Use (m_pickupItem, ent ());
 
@@ -4476,7 +4465,7 @@ void Bot::pickupItem_ () {
       }
 
       // find angles from bot origin to entity...
-      int angleToEntity = isInFOV (dest - eyePos ());
+      float angleToEntity = isInFOV (dest - eyePos ());
 
       // near to the button?
       if (itemDistance < 90.0f) {
@@ -4486,7 +4475,7 @@ void Bot::pickupItem_ () {
          m_checkTerrain = false;
 
          // facing it directly?
-         if (angleToEntity <= 10) {
+         if (angleToEntity <= 10.0f) {
             MDLL_Use (m_pickupItem, ent ());
 
             m_pickupItem = nullptr;
@@ -4609,7 +4598,7 @@ void Bot::processTasks (void) {
 }
 
 void Bot::checkSpawnConditions (void) {
-   // this function is called instead of processFlow when buying finished, but freezetime is not yet left.
+   // this function is called instead of ai when buying finished, but freezetime is not yet left.
 
    // switch to knife if time to do this
    if (m_checkKnifeSwitch && !m_checkWeaponSwitch && m_buyingFinished && m_spawnTime + rng.getFloat (4.0f, 6.5f) < engine.timebase ()) {
@@ -4657,7 +4646,7 @@ void Bot::checkSpawnConditions (void) {
    }
 }
 
-void Bot::processFlow (void) {
+void Bot::ai (void) {
    // this function gets called each frame and is the core of all bot ai. from here all other subroutines are called
 
    float movedDistance = 2.0f; // length of different vector (distance bot moved)
@@ -4908,10 +4897,6 @@ void Bot::showDebugOverlay (void) {
 
             case TASK_FOLLOWUSER:
                sprintf (taskName, "FollowUser");
-               break;
-
-            case TASK_WAITFORGO:
-               sprintf (taskName, "WaitForGo");
                break;
 
             case TASK_PICKUPITEM:
@@ -5286,7 +5271,11 @@ void Bot::collectDataExperience (edict_t *attacker, int damage) {
    }
 
    int attackerIndex = waypoints.getNearest (attacker->v.origin);
-   int victimIndex = waypoints.getNearest (pev->origin);
+   int victimIndex = m_currentWaypointIndex;
+
+   if (victimIndex == INVALID_WAYPOINT_INDEX) {
+      victimIndex = getNearestPoint ();
+   }
 
    if (pev->health > 20.0f) {
       if (victimTeam == TEAM_TERRORIST) {
@@ -5698,8 +5687,13 @@ float Bot::getBombTimeleft (void) {
 }
 
 bool Bot::isOutOfBombTimer (void) {
-   if (m_currentWaypointIndex == INVALID_WAYPOINT_INDEX || ((g_mapType & MAP_DE) && (m_hasProgressBar || taskId () == TASK_ESCAPEFROMBOMB)))
+   if (!(g_mapType & MAP_DE)) {
+      return false;
+   }
+
+   if (m_currentWaypointIndex == INVALID_WAYPOINT_INDEX || (m_hasProgressBar || taskId () == TASK_ESCAPEFROMBOMB)) {
       return false; // if CT bot already start defusing, or already escaping, return false
+   }
 
    // calculate left time
    float timeLeft = getBombTimeleft ();
@@ -5711,17 +5705,17 @@ bool Bot::isOutOfBombTimer (void) {
    const Vector &bombOrigin = waypoints.getBombPos ();
 
    // for terrorist, if timer is lower than 13 seconds, return true
-   if (static_cast<int> (timeLeft) < 13 && m_team == TEAM_TERRORIST && (bombOrigin - pev->origin).length () < 1000.0f) {
+   if (timeLeft < 13.0f && m_team == TEAM_TERRORIST && (bombOrigin - pev->origin).length () < 1000.0f) {
       return true;
    }
    bool hasTeammatesWithDefuserKit = false;
 
    // check if our teammates has defusal kit
    for (int i = 0; i < engine.maxClients (); i++) {
-      Bot *bot = nullptr; // temporaly pointer to bot
+      auto *bot = bots.getBot (i);
 
       // search players with defuse kit
-      if ((bot = bots.getBot (i)) != nullptr && bot->m_team == TEAM_COUNTER && bot->m_hasDefuser && (bombOrigin - bot->pev->origin).length () < 500.0f) {
+      if (bot != nullptr && bot != this && bot->m_team == TEAM_COUNTER && bot->m_hasDefuser && (bombOrigin - bot->pev->origin).length () < 500.0f) {
          hasTeammatesWithDefuserKit = true;
          break;
       }
@@ -5731,7 +5725,7 @@ bool Bot::isOutOfBombTimer (void) {
    float reachTime = waypoints.calculateTravelTime (pev->maxspeed, m_currentPath->origin, bombOrigin);
 
    // for counter-terrorist check alos is we have time to reach position plus average defuse time
-   if ((timeLeft < reachTime + 6.0f && !m_hasDefuser && !hasTeammatesWithDefuserKit) || (timeLeft < reachTime + 2.0f && m_hasDefuser)) {
+   if ((timeLeft < reachTime + 8.0f && !m_hasDefuser && !hasTeammatesWithDefuserKit) || (timeLeft < reachTime + 4.0f && m_hasDefuser)) {
       return true;
    }
 
@@ -5779,7 +5773,7 @@ void Bot::processHearing (void) {
       m_heardSoundTime = engine.timebase ();
       m_states |= STATE_HEARING_ENEMY;
 
-      if ((rng.getInt (0, 100) < 15) && engine.isNullEntity (m_enemy) && engine.isNullEntity (m_lastEnemy) && m_seeEnemyTime + 7.0f < engine.timebase ()) {
+      if (rng.getInt (0, 100) < 15 && engine.isNullEntity (m_enemy) && engine.isNullEntity (m_lastEnemy) && m_seeEnemyTime + 7.0f < engine.timebase ()) {
          pushChatterMessage (Chatter_HeardEnemy);
       }
 

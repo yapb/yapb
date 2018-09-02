@@ -417,13 +417,13 @@ const Vector &Bot::getEnemyBodyOffset (void) {
    float distance = (m_enemy->v.origin - pev->origin).length ();
 
    // do not aim at head, at long distance (only if not using sniper weapon)
-   if ((m_visibility & VISIBLE_BODY) && !usesSniper () && distance > (m_difficulty > 2 ? 2000.0f : 1000.0f)) {
+   if ((m_visibility & VISIBLE_BODY) && distance > (m_difficulty > 2 ? 2000.0f : 1000.0f)) {
       m_visibility &= ~VISIBLE_HEAD;
    }
    Vector aimPos = m_enemy->v.origin;
 
-   if (m_difficulty > 2 && !(m_visibility & VISIBLE_OTHER) && distance > MAX_SPRAY_DISTANCE && !usesSniper ()) {
-      aimPos = (m_enemy->v.velocity - pev->velocity) * calcThinkInterval () * 2.0f + aimPos;
+   if (m_difficulty > 2 && !(m_visibility & VISIBLE_OTHER)) {
+      aimPos = (m_enemy->v.velocity - pev->velocity) * calcThinkInterval () + aimPos;
    }
 
    // if we only suspect an enemy behind a wall take the worst skill
@@ -472,75 +472,32 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
    bool shotgun = (m_currentWeapon == WEAPON_XM1014 || m_currentWeapon == WEAPON_M3);
    bool m249 = m_currentWeapon == WEAPON_M249;
 
-   float result = 3.5f;
+   float result = -1.5f;
 
-   if (distance < 3000.0f && distance >= MAX_SPRAY_DISTANCE_X2) {
+   if (distance < MAX_SPRAY_DISTANCE) {
+      return -5.0f;
+   }
+   if (distance >= MAX_SPRAY_DISTANCE_X2) {
       if (sniper) {
-         result = 3.5f;
+         result = 0.5f;
       }
       else if (zoomableRifle) {
-         result = 3.5f;
+         result = 1.5f;
       }
       else if (pistol) {
-         result = 4.5f;
+         result = 2.5f;
       }
       else if (submachine) {
-         result = 2.5f;
+         result = 1.5f;
       }
       else if (rifle) {
          result = 2.0f;
       }
       else if (m249) {
-         result = 2.5f;
+         result = -5.5f;
       }
       else if (shotgun) {
-         result = 8.5f;
-      }
-   }
-   else if (distance > MAX_SPRAY_DISTANCE && distance <= MAX_SPRAY_DISTANCE_X2) {
-      if (sniper) {
-         result = 3.5f;
-      }
-      else if (zoomableRifle) {
-         result = 3.5f;
-      }
-      else if (pistol) {
-         result = 5.5f;
-      }
-      else if (submachine) {
-         result = 2.5f;
-      }
-      else if (rifle) {
-         result = 1.4f;
-      }
-      else if (m249) {
-         result = -2.0f;
-      }
-      else if (shotgun) {
-         result = 8.0f;
-      }
-   }
-   else if (distance <= MAX_SPRAY_DISTANCE) {
-      if (sniper) {
-         result = 1.5f;
-      }
-      else if (zoomableRifle) {
-         result = -5.0f;
-      }
-      else if (pistol) {
-         result = 1.5f;
-      }
-      else if (submachine) {
          result = -4.5f;
-      }
-      else if (rifle) {
-         result = -4.5f;
-      }
-      else if (m249) {
-         result = -6.0f;
-      }
-      else if (shotgun) {
-         result = -5.0f;
       }
    }
    return result;
@@ -554,7 +511,7 @@ bool Bot::isFriendInLineOfFire (float distance) {
    makeVectors (pev->v_angle);
 
    TraceResult tr;
-   engine.testLine (eyePos (), eyePos () + 10000.0f * pev->v_angle, TRACE_IGNORE_NONE, ent (), &tr);
+   engine.testLine (eyePos (), eyePos () + distance * pev->v_angle, TRACE_IGNORE_NONE, ent (), &tr);
 
    // check if we hit something
    if (!engine.isNullEntity (tr.pHit)) {
@@ -886,8 +843,14 @@ void Bot::fireWeapons (void) {
    while (tab[selectIndex].id) {
       // is the bot carrying this weapon?
       if (weapons & (1 << tab[selectIndex].id)) {
+         bool isWeaponBadNow = isWeaponBadAtDistance (selectIndex, distance);
+
+         if (isWeaponBadNow) {
+            m_sniperSwitchCheckTime = rng.getFloat (2.5f, 6.0f);
+         }
+
          // is enough ammo available to fire AND check is better to use pistol in our current situation...
-         if (m_ammoInClip[tab[selectIndex].id] > 0 && !isWeaponBadAtDistance (selectIndex, distance)) {
+         if (m_ammoInClip[tab[selectIndex].id] > 0 && !isWeaponBadNow) {
             choosenWeapon = selectIndex;
          }
       }
@@ -928,7 +891,7 @@ bool Bot::isWeaponBadAtDistance (int weaponIndex, float distance) {
    // this function checks, is it better to use pistol instead of current primary weapon
    // to attack our enemy, since current weapon is not very good in this situation.
 
-   if (m_difficulty < 2) {
+   if (m_difficulty < 2 || m_sniperSwitchCheckTime < engine.timebase ()) {
       return false;
    }
    int wid = g_weaponSelect[weaponIndex].id;
@@ -1005,7 +968,7 @@ void Bot::attackMovement (void) {
    }
    float distance = (m_lookAt - eyePos ()).length2D (); // how far away is the enemy scum?
 
-   if (m_timeWaypointMove < engine.timebase ()) {
+   if (m_timeWaypointMove + calcThinkInterval () + 0.5f < engine.timebase ()) {
       int approach;
 
       if (m_currentWeapon == WEAPON_KNIFE) {
@@ -1026,14 +989,9 @@ void Bot::attackMovement (void) {
       }
 
       // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
-      if (approach < 30 && !g_bombPlanted && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
+      if ((m_states & STATE_SEEING_ENEMY) && approach < 30 && !g_bombPlanted && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
          m_moveSpeed = -pev->maxspeed;
-
-         auto t = task ();
-
-         t->id = TASK_SEEKCOVER;
-         t->resume = true;
-         t->desire = TASKPRI_ATTACK + 1.0f;
+         startTask (TASK_SEEKCOVER, TASKPRI_SEEKCOVER, INVALID_WAYPOINT_INDEX, 0.0f, true);
       }
       else if (approach < 50) {
          m_moveSpeed = 0.0f;
@@ -1145,7 +1103,7 @@ void Bot::attackMovement (void) {
             int enemyNearestIndex = waypoints.getNearest (m_enemy->v.origin);
 
             if (waypoints.isDuckVisible (m_currentWaypointIndex, enemyNearestIndex) && waypoints.isDuckVisible (enemyNearestIndex, m_currentWaypointIndex)) {
-               m_duckTime = engine.timebase () + 0.55f;
+               m_duckTime = engine.timebase () + 1.0f;
             }
          }
          m_moveSpeed = 0.0f;

@@ -162,7 +162,7 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
       if (!g_botNames.empty ()) {
          bool nameFound = false;
 
-         for (int i = 0; i < MAX_ENGINE_PLAYERS; i++) {
+         for (int i = 0; i < MAX_ENGINE_PLAYERS * 4; i++) {
             if (nameFound) {
                break;
             }
@@ -1078,6 +1078,7 @@ void Bot::processNewRound (void) {
    m_buttonPushTime = 0.0f;
    m_enemyUpdateTime = 0.0f;
    m_enemyIgnoreTimer = 0.0f;
+   m_retreatTime = 0.0f;
    m_seeEnemyTime = 0.0f;
    m_shootAtDeadTime = 0.0f;
    m_oldCombatDesire = 0.0f;
@@ -1120,6 +1121,7 @@ void Bot::processNewRound (void) {
    m_firePause = 0.0f;
    m_timeLastFired = 0.0f;
 
+   m_sniperSwitchCheckTime = 0.0f;
    m_grenadeCheckTime = 0.0f;
    m_isUsingGrenade = false;
    m_bombSearchOverridden = false;
@@ -1197,7 +1199,7 @@ void Bot::processNewRound (void) {
    if (rng.getInt (0, 100) < 50) {
       pushChatterMessage (Chatter_NewRound);
    }
-   m_thinkInterval = (g_gameFlags & GAME_LEGACY) ? 0.0f : (1.0f / F_clamp (yb_think_fps.flt (), 30.0f, 90.0f)) * rng.getFloat (0.95f, 1.05f);
+   m_thinkInterval = (g_gameFlags & GAME_LEGACY) ? 0.0f : (1.0f / A_clamp (yb_think_fps.flt (), 30.0f, 90.0f)) * rng.getFloat (0.95f, 1.05f);
 }
 
 void Bot::kill (void) {
@@ -1232,6 +1234,9 @@ void Bot::processTeamJoin (void) {
    // check if something has assigned team to us
    else if (m_team == TEAM_TERRORIST || m_team == TEAM_COUNTER) {
       m_notStarted = false;
+   }
+   else if (m_team == TEAM_UNASSIGNED && m_retryJoin > 2) {
+      m_startAction = GAME_MSG_TEAM_SELECT;
    }
 
    // if bot was unable to join team, and no menus popups, check for stacked team
