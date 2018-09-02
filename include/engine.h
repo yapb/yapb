@@ -182,12 +182,12 @@ public:
    // public inlines
 public:
    // get the current time on server
-   constexpr float timebase (void) {
+   inline float timebase (void) {
       return g_pGlobals->time;
    }
 
    // get "maxplayers" limit on server
-   constexpr int maxClients (void) {
+   inline int maxClients (void) {
       return g_pGlobals->maxClients;
    }
 
@@ -218,17 +218,17 @@ public:
    }
 
    // gets edict pointer out of entity index
-   constexpr edict_t *entityOfIndex (const int index) {
+   inline edict_t *entityOfIndex (const int index) {
       return static_cast<edict_t *> (m_startEntity + index);
    };
 
    // gets edict index out of it's pointer
-   constexpr int indexOfEntity (const edict_t *ent) {
+   inline int indexOfEntity (const edict_t *ent) {
       return static_cast<int> (ent - m_startEntity);
    };
 
    // verify entity isn't null
-   constexpr bool isNullEntity (const edict_t *ent) {
+   inline bool isNullEntity (const edict_t *ent) {
       return !ent || !indexOfEntity (ent);
    }
 
@@ -261,7 +261,7 @@ public:
    }
 
    // find registered message id
-   constexpr int getMessageId (int type) {
+   inline int getMessageId (int type) {
       return m_msgBlock.regMsgs[type];
    }
 
@@ -271,7 +271,7 @@ public:
    }
 
    // tries to set needed message id
-   constexpr void captureMessage (int type, int msgId) {
+   inline void captureMessage (int type, int msgId) {
       if (type == m_msgBlock.regMsgs[msgId]) {
          setCurrentMessageId (msgId);
       }
@@ -292,25 +292,31 @@ public:
       Engine::ref ().pushVarToRegStack (name, initval, type, regMissing, regVal, this);
    }
 
-   constexpr bool boolean (void) {
+   constexpr bool boolean (void) const {
       return m_eptr->value > 0.0f;
    }
-   constexpr int integer (void) {
+
+   constexpr int integer (void) const {
       return static_cast<int> (m_eptr->value);
    }
-   constexpr float flt (void) {
+
+   constexpr float flt (void) const {
       return m_eptr->value;
    }
-   constexpr const char *str (void) {
+
+   constexpr const char *str (void) const {
       return m_eptr->string;
    }
-   constexpr void setFloat (float val) {
+
+   inline void setFloat (float val) const {
       g_engfuncs.pfnCVarSetFloat (m_eptr->name, val);
    }
-   constexpr void setInteger (int val) {
+
+   inline void setInteger (int val) const {
       setFloat (static_cast<float> (val));
    }
-   constexpr void setString (const char *val) {
+
+   inline void setString (const char *val) const {
       g_engfuncs.pfnCvar_DirectSet (m_eptr, const_cast<char *> (val));
    }
 };

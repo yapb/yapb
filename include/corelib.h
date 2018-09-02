@@ -1660,11 +1660,11 @@ private:
    Singleton &operator= (const Singleton &) = delete;
 
 public:
-   static constexpr T *ptr (void) {
+   inline static T *ptr (void) {
       return &ref ();
    }
 
-   static constexpr T &ref (void) {
+   inline static T &ref (void) {
       static T ref;
       return ref;
    };

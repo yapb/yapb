@@ -2417,7 +2417,7 @@ void pfnClientCommand (edict_t *ent, char const *format, ...) {
 
 void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed) {
    // this function called each time a message is about to sent.
-
+   
    // store the message type in our own variables, since the GET_USER_MSG_ID () will just do a lot of strcmp()'s...
    if ((g_gameFlags & GAME_METAMOD) && engine.getMessageId (NETMSG_MONEY) == -1) {
       engine.setMessageId (NETMSG_VGUI, GET_USER_MSG_ID (PLID, "VGUIMenu", nullptr));
