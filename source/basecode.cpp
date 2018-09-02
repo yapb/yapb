@@ -517,7 +517,7 @@ void Bot::processPickups (void) {
    edict_t *ent = nullptr, *pickupItem = nullptr;
    Bot *bot = nullptr;
 
-   const float radius = 400.0f;
+   const float radius = 320.0f;
    float minDistance = A_square (radius + 10.0f);
 
    if (!engine.isNullEntity (m_pickupItem)) {
@@ -596,8 +596,8 @@ void Bot::processPickups (void) {
          }
       }
 
-      if (allowPickup) // if the bot found something it can pickup...
-      {
+      // if the bot found something it can pickup...
+      if (allowPickup) {
          float distance = (entPos - pev->origin).lengthSq ();
 
          // see if it's the closest item so far...
