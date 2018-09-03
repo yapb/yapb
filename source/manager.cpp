@@ -136,7 +136,7 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
 
       if (difficulty < 0 || difficulty > 4) {
          difficulty = rng.getInt (3, 4);
-         yb_difficulty.setInteger (difficulty);
+         yb_difficulty.set (difficulty);
       }
    }
 
@@ -351,23 +351,23 @@ void BotManager::maintainQuota (void) {
       const BotCreationResult callResult = create (last.name, last.difficulty, last.personality, last.team, last.member);
 
       if (last.manual) {
-         yb_quota.setInteger (yb_quota.integer () + 1);
+         yb_quota.set (yb_quota.integer () + 1);
       }
 
       // check the result of creation
       if (callResult == BOT_RESULT_NAV_ERROR) {
          m_creationTab.clear (); // something wrong with waypoints, reset tab of creation
-         yb_quota.setInteger (0); // reset quota
+         yb_quota.set (0); // reset quota
       }
       else if (callResult == BOT_RESULT_MAX_PLAYERS_REACHED) {
          m_creationTab.clear (); // maximum players reached, so set quota to maximum players
-         yb_quota.setInteger (getBotCount ());
+         yb_quota.set (getBotCount ());
       }
       else if (callResult == BOT_RESULT_TEAM_STACKED) {
          engine.print ("Could not add bot to the game: Team is stacked (to disable this check, set mp_limitteams and mp_autoteambalance to zero and restart the round)");
 
          m_creationTab.clear ();
-         yb_quota.setInteger (getBotCount ());
+         yb_quota.set (getBotCount ());
       }
       m_maintainTime = engine.timebase () + 0.10f;
    }
@@ -376,7 +376,7 @@ void BotManager::maintainQuota (void) {
    if (m_quotaMaintainTime > engine.timebase ()) {
       return;
    }
-   yb_quota.setInteger (A_clamp<int> (yb_quota.integer (), 0, engine.maxClients ()));
+   yb_quota.set (A_clamp<int> (yb_quota.integer (), 0, engine.maxClients ()));
 
    int totalHumansInGame = getHumansCount ();
    int humanPlayersInGame = getHumansCount (true);
@@ -431,10 +431,10 @@ void BotManager::maintainQuota (void) {
 
 void BotManager::decrementQuota (int by) {
    if (by != 0) {
-      yb_quota.setInteger (A_clamp<int> (yb_quota.integer () - by, 0, yb_quota.integer ()));
+      yb_quota.set (A_clamp<int> (yb_quota.integer () - by, 0, yb_quota.integer ()));
       return;
    }
-   yb_quota.setInteger (0);
+   yb_quota.set (0);
 }
 
 void BotManager::initQuota (void) {
@@ -454,8 +454,8 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
       return;
    }
    if (selection == 1 || selection == 2) {
-      mp_limitteams.setInteger (0);
-      mp_autoteambalance.setInteger (0);
+      mp_limitteams.set (0);
+      mp_autoteambalance.set (0);
    }
    else {
       selection = 5;
@@ -673,10 +673,10 @@ void BotManager::setWeaponMode (int selection) {
    }
 
    if (selection == 0) {
-      yb_jasonmode.setInteger (1);
+      yb_jasonmode.set (1);
    }
    else {
-      yb_jasonmode.setInteger (0);
+      yb_jasonmode.set (0);
    }
    engine.centerPrint ("%s weapon mode selected", &modeName[selection][0]);
 }
@@ -852,7 +852,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
 
    if (difficulty < 0 || difficulty > 4) {
       difficulty = rng.getInt (3, 4);
-      yb_difficulty.setInteger (difficulty);
+      yb_difficulty.set (difficulty);
    }
 
    m_lastCommandTime = engine.timebase () - 0.1f;
@@ -1082,6 +1082,7 @@ void Bot::processNewRound (void) {
    m_shootAtDeadTime = 0.0f;
    m_oldCombatDesire = 0.0f;
    m_liftUsageTime = 0.0f;
+   m_randomPointChoiceTimer = 0.0f;
 
    m_avoidGrenade = nullptr;
    m_needAvoidGrenade = 0;
@@ -1104,9 +1105,7 @@ void Bot::processNewRound (void) {
    m_tasks.reserve (TASK_MAX);
    m_followWaitTime = 0.0f;
 
-   for (i = 0; i < MAX_HOSTAGES; i++) {
-      m_hostages[i] = nullptr;
-   }
+   m_hostages.clear ();
 
    for (i = 0; i < Chatter_Total; i++) {
       m_chatterTimes[i] = -1.0f;

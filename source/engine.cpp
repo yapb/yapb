@@ -52,7 +52,7 @@ void Engine::print (const char *fmt, ...) {
    char string[MAX_PRINT_BUFFER];
 
    va_start (ap, fmt);
-   vsnprintf (string, A_bufsize (string), translate (fmt), ap);
+                     vsnprintf (string, A_bufsize (string), translate (fmt), ap);
    va_end (ap);
 
    strcat (string, "\n");

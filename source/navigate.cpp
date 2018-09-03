@@ -10,6 +10,7 @@
 #include <core.h>
 
 ConVar yb_whose_your_daddy ("yb_whose_your_daddy", "0");
+ConVar yb_debug_heuristic_type ("yb_debug_heuristic_type", "0");
 
 int Bot::getGoal (void) {
    // chooses a destination (goal) waypoint for a bot
@@ -295,6 +296,7 @@ void Bot::ignoreCollision (void) {
    m_isStuck = false;
    m_checkTerrain = false;
    m_prevSpeed = m_moveSpeed;
+   m_prevOrigin = pev->origin;
 }
 
 void Bot::avoidIncomingPlayers (edict_t *touch) {
@@ -323,7 +325,7 @@ void Bot::avoidIncomingPlayers (edict_t *touch) {
 }
 
 bool Bot::doPlayerAvoidance (const Vector &normal) {
-   // avoid collssion entity, got it form official csbot
+   // avoid collision entity, got it form official csbot
 
    if (m_avoidTime> engine.timebase () && isAlive (m_avoid)) {
 
@@ -664,13 +666,8 @@ bool Bot::processNavigation (void) {
       }
       m_navTimeset = engine.timebase ();
    }
+   m_destOrigin = m_waypointOrigin + pev->view_ofs;
 
-   if (pev->flags & FL_DUCKING) {
-      m_destOrigin = m_waypointOrigin;
-   }
-   else {
-      m_destOrigin = m_waypointOrigin + pev->view_ofs;
-   }
    float waypointDistance = (pev->origin - m_waypointOrigin).length ();
 
    // this waypoint has additional travel flags - care about them
@@ -1009,7 +1006,7 @@ bool Bot::processNavigation (void) {
                m_liftUsageTime = 0.0f;
 
                clearSearchNodes ();
-               findPoint ();
+               searchOptimalPoint ();
 
                if (m_prevWptIndex[2] >= 0 && m_prevWptIndex[2] < g_numWaypoints) {
                   searchShortestPath (m_currentWaypointIndex, m_prevWptIndex[2]);
@@ -1045,11 +1042,11 @@ bool Bot::processNavigation (void) {
             changePointIndex (m_prevWptIndex[0]);
          }
          else {
-            findPoint ();
+            searchOptimalPoint ();
          }
       }
       else {
-         findPoint ();
+         searchOptimalPoint ();
       }
       return false;
    }
@@ -1411,38 +1408,148 @@ float gfunctionPathDistWithHostage (int currentIndex, int parentIndex) {
    return gfunctionPathDist (currentIndex, parentIndex);
 }
 
-float hfunctionSquareDist (int index, int, int goalIndex) {
+float hfunctionPathDist (int index, int, int goalIndex) {
    // square distance heuristic
 
    Path &start = waypoints[index];
    Path &goal = waypoints[goalIndex];
 
-   float xDist = A_abs (start.origin.x - goal.origin.x);
-   float yDist = A_abs (start.origin.y - goal.origin.y);
-   float zDist = A_abs (start.origin.z - goal.origin.z);
+   float x = A_abs (start.origin.x - goal.origin.x);
+   float y = A_abs (start.origin.y - goal.origin.y);
+   float z = A_abs (start.origin.z - goal.origin.z);
 
-   if (xDist > yDist) {
-      return 1.4f * yDist + (xDist - yDist) + zDist;
+   switch (yb_debug_heuristic_type.integer ()) {
+   case 0:
+   default:
+      return A_max (A_max (x, y), z); // chebyshev distance
+
+   case 1:
+      return x + y + z; // manhattan distance
+
+   case 2:
+      return 0.0f; // no heuristic
+
+   case 3:
+   case 4: 
+      // euclidean based distance
+      float euclidean = A_powf (A_powf (x, 2.0f) + A_powf (y, 2.0f) + A_powf (z, 2.0f), 0.5f);
+
+      if (yb_debug_heuristic_type.integer () == 4) {
+         return 1000.0f * (ceilf (euclidean) - euclidean);
+      }
+      return euclidean;
    }
-   return 1.4f * xDist + (yDist - xDist) + zDist;
 }
 
-float hfunctionSquareDistWithHostage (int index, int startIndex, int goalIndex) {
+float hfunctionPathDistWithHostage (int index, int startIndex, int goalIndex) {
    // square distance heuristic with hostages
 
    if (waypoints[startIndex].flags & FLAG_NOHOSTAGE) {
       return 65355.0f;
    }
-   return hfunctionSquareDist (index, startIndex, goalIndex);
+   return hfunctionPathDist (index, startIndex, goalIndex);
 }
 
 float hfunctionNone (int index, int startIndex, int goalIndex) {
-   return hfunctionSquareDist (index, startIndex, goalIndex) / (128.0f * 10.0f);
+   return hfunctionPathDist (index, startIndex, goalIndex) / 128.0f * 10.0f;
 }
 
-float hfunctionNumberNodes (int index, int startIndex, int goalIndex) {
-   return hfunctionSquareDist (index, startIndex, goalIndex) / 128.0f * g_highestKills;
-}
+// priority queue class (smallest item out first)
+template <int maxSize> class RoutePriorityQueue {
+private:
+   int m_size;
+   int m_maxSize;
+
+   struct HeapNode {
+      int index;
+      float priority;
+   } *m_heap;
+
+public:
+   RoutePriorityQueue (void) {
+      m_size = 0;
+      m_maxSize = maxSize;
+      m_heap = new HeapNode[m_maxSize + 1];
+   }
+
+   ~RoutePriorityQueue (void) {
+      delete[] m_heap;
+   }
+
+   void push (int index, float priority) {
+      if (m_size >= m_maxSize) {
+         return;
+      }
+      m_heap[m_size].priority = priority;
+      m_heap[m_size].index = index;
+      m_size++;
+
+      int child = m_size - 1;
+
+      while (child) {
+         int parent = parentOf (child);
+
+         if (m_heap[parent].priority <= m_heap[child].priority) {
+            break;
+         }
+         HeapNode swap;
+         swap = m_heap[child];
+
+         m_heap[child] = m_heap[parent];
+         m_heap[parent] = swap;
+
+         child = parent;
+      }
+   }
+
+   int pop (void) {
+      int ret = m_heap[0].index;
+      m_size--;
+      m_heap[0] = m_heap[m_size];
+
+      int parent = 0;
+      int child = leftOf (parent);
+
+      HeapNode swap = m_heap[parent];
+
+      while (child < m_size) {
+         int rightChild = rightOf (parent);
+
+         if (rightChild < m_size) {
+            if (m_heap[rightChild].priority < m_heap[child].priority) {
+               child = rightChild;
+            }
+         }
+
+         if (swap.priority <= m_heap[child].priority) {
+            break;
+         }
+         m_heap[parent] = m_heap[child];
+         parent = child;
+         child = leftOf (parent);
+      }
+      m_heap[parent] = swap;
+
+      return ret;
+   }
+
+   int empty (void) {
+      return !m_size;
+   }
+
+public:
+   static constexpr int leftOf (int index) {
+      return (index << 1) | 1;
+   }
+
+   static constexpr int rightOf (int index) {
+      return (++index) << 1;
+   }
+
+   static constexpr int parentOf (int index) {
+      return (--index) >> 1;
+   }
+};
 
 void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= SEARCH_PATH_FASTEST */) {
    // this function finds a path from srcIndex to destIndex
@@ -1477,26 +1584,26 @@ void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= S
    case SEARCH_PATH_FASTEST:
       if ((g_mapType & MAP_CS) && hasHostage ()) {
          gcalc = gfunctionPathDistWithHostage;
-         hcalc = hfunctionSquareDistWithHostage;
+         hcalc = hfunctionPathDistWithHostage;
       }
       else {
          gcalc = gfunctionPathDist;
-         hcalc = hfunctionSquareDist;
+         hcalc = hfunctionPathDist;
       }
       break;
 
    case SEARCH_PATH_SAFEST_FASTER:
       if (m_team == TEAM_TERRORIST) {
          gcalc = gfunctionKillsDistT;
-         hcalc = hfunctionSquareDist;
+         hcalc = hfunctionPathDist;
       }
       else if ((g_mapType & MAP_CS) && hasHostage ()) {
          gcalc = gfunctionKillsDistCTWithHostage;
-         hcalc = hfunctionSquareDistWithHostage;
+         hcalc = hfunctionPathDistWithHostage;
       }
       else {
          gcalc = gfunctionKillsDistCT;
-         hcalc = hfunctionSquareDist;
+         hcalc = hfunctionPathDist;
       }
       break;
 
@@ -1522,12 +1629,12 @@ void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= S
    srcRoute->f = srcRoute->g + hcalc (srcIndex, srcIndex, destIndex);
    srcRoute->state = ROUTE_OPEN;
 
-   m_routeQue.clear ();
-   m_routeQue.push (srcIndex, srcRoute->g);
+   RoutePriorityQueue <MAX_WAYPOINTS> routeQue;
+   routeQue.push (srcIndex, srcRoute->g);
 
-   while (!m_routeQue.empty ()) {
+   while (!routeQue.empty ()) {
       // remove the first node from the open list
-      int currentIndex = m_routeQue.pop ();
+      int currentIndex = routeQue.pop ();
 
       // is the current node the goal node?
       if (currentIndex == destIndex) {
@@ -1579,7 +1686,7 @@ void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= S
             childRoute->g = g;
             childRoute->f = f;
 
-            m_routeQue.push (currentChild, g);
+            routeQue.push (currentChild, g);
          }
       }
    }
@@ -1630,27 +1737,38 @@ int Bot::searchAimingPoint (const Vector &to) {
    return bestIndex;
 }
 
-bool Bot::findPoint (void) {
+bool Bot::searchOptimalPoint (void) {
    // this function find a waypoint in the near of the bot if bot had lost his path of pathfinder needs
    // to be restarted over again.
 
-   int indices[3], coveredWaypoint = INVALID_WAYPOINT_INDEX, i = 0;
-   float distances[3];
+   int busy = INVALID_WAYPOINT_INDEX;
 
-   // nullify all waypoint search stuff
-   for (i = 0; i < 3; i++) {
-      indices[i] = INVALID_WAYPOINT_INDEX;
-      distances[i] = 9999.0f;
-   }
+   float lessDist[3] = { 99999.0f, };
+   int lessIndex[3] = { INVALID_WAYPOINT_INDEX, };
 
-   // do main search loop
-   for (i = 0; i < g_numWaypoints; i++) {
-      // ignore current waypoint and previous recent waypoints...
-      if (i == m_currentWaypointIndex || i == m_prevWptIndex[0] || i == m_prevWptIndex[1] || i == m_prevWptIndex[2] || i == m_prevWptIndex[3] || i == m_prevWptIndex[4]) {
+   for (int i = 0; i < g_numWaypoints; i++) {
+      bool skip = !!(i == m_currentWaypointIndex);
+
+      // skip the current waypoint, if any
+      if (skip) {
          continue;
       }
 
-      if ((g_mapType & MAP_CS) && hasHostage () && (waypoints[i].flags & FLAG_NOHOSTAGE)) {
+      // skip current and recent previous waypoints
+      for (int j = 0; j < 5; j++) {
+         if (i == m_prevWptIndex[j]) {
+            skip = true;
+            break;
+         }
+      }
+
+      // skip waypoint from recent list
+      if (skip) {
+         continue;
+      }
+
+      // cts with hostages should not pick waypoints with no hostage flag
+      if ((g_mapType & MAP_CS) && m_team == TEAM_COUNTER && (waypoints[i].flags & FLAG_NOHOSTAGE) && hasHostage ()) {
          continue;
       }
 
@@ -1661,74 +1779,73 @@ bool Bot::findPoint (void) {
 
       // check if waypoint is already used by another bot...
       if (isOccupiedPoint (i)) {
-         coveredWaypoint = i;
+         busy = i;
          continue;
       }
 
-      // now pick 1-2 random waypoints that near the bot
-      float distance = (waypoints[i].origin - pev->origin).lengthSq ();
+      // if we're still here, find some close waypoints
+      float distance = (pev->origin - waypoints[i].origin).lengthSq ();
 
-      // now fill the waypoint list
-      for (int j = 0; j < 3; j++) {
-         if (distance < distances[j]) {
-            indices[j] = i;
-            distances[j] = distance;
-         }
+      if (distance < lessDist[0]) {
+         lessDist[2] = lessDist[1];
+         lessIndex[2] = lessIndex[1];
+
+         lessDist[1] = lessDist[0];
+         lessIndex[1] = lessIndex[0];
+
+         lessDist[0] = distance;
+         lessIndex[0] = i;
+      }
+      else if (distance < lessDist[1]) {
+         lessDist[2] = lessDist[1];
+         lessIndex[2] = lessIndex[1];
+
+         lessDist[1] = distance;
+         lessIndex[1] = i;
+      }
+      else if (distance < lessDist[2]) {
+         lessDist[2] = distance;
+         lessIndex[2] = i;
       }
    }
+   int selected = INVALID_WAYPOINT_INDEX;
 
    // now pick random one from choosen
-   if (indices[2] != INVALID_WAYPOINT_INDEX) {
-      i = rng.getInt (0, 2);
+   if (rng.getInt (0, 100) < 30 && m_randomPointChoiceTimer < engine.timebase ()) {
+      m_randomPointChoiceTimer = engine.timebase () + rng.getFloat (5.0f, 10.0f);
+
+      int index = 0;
+
+      // choice from found
+      if (lessIndex[2] != INVALID_WAYPOINT_INDEX) {
+         index = rng.getInt (0, 2);
+      }
+      else if (lessIndex[1] != INVALID_WAYPOINT_INDEX) {
+         index = rng.getInt (0, 1);
+      }
+      else if (lessIndex[0] != INVALID_WAYPOINT_INDEX) {
+         index = 0;
+      }
+      selected = lessIndex[index];
    }
-   else if (indices[1] != INVALID_WAYPOINT_INDEX) {
-      i = rng.getInt (0, 1);
-   }
-   else if (indices[0] != INVALID_WAYPOINT_INDEX) {
-      i = rng.getInt (0, 0);
-   }
-   else if (coveredWaypoint != INVALID_WAYPOINT_INDEX) {
-      i = 0;
-      indices[i] = coveredWaypoint;
-   }
+
+   // use the closet available
    else {
-      i = 0;
-
-      IntArray found;
-      waypoints.searchRadius (found, 512.0f, pev->origin);
-
-      if (!found.empty ()) {
-         bool gotId = false;
-         int choose = found.random ();
-
-         while (!found.empty ()) {
-            int index = found.pop ();
-
-            if (!waypoints.isReachable (this, index)) {
-               continue;
-            }
-
-            if (!isOccupiedPoint (index)) {
-               continue;
-            }
-
-            indices[i] = index;
-            gotId = true;
-
-            break;
-         }
-
-         if (!gotId) {
-            indices[i] = choose;
-         }
-      }
-      else {
-         indices[i] = rng.getInt (0, g_numWaypoints - 1);
-      }
+      selected = lessIndex[0];
    }
 
-   m_collideTime = engine.timebase ();
-   changePointIndex (indices[i]);
+   // if we're still have no waypoint and have busy one (by other bot) pick it up
+   if (selected == INVALID_WAYPOINT_INDEX && busy != INVALID_WAYPOINT_INDEX) {
+      selected = busy;
+   }
+
+   // worst case... find atleeast something
+   if (selected == INVALID_WAYPOINT_INDEX) {
+      selected = getNearestPoint ();
+   }
+
+   ignoreCollision ();
+   changePointIndex (selected);
 
    return true;
 }
@@ -1775,7 +1892,7 @@ void Bot::getValidPoint (void) {
    // if bot hasn't got a waypoint we need a new one anyway or if time to get there expired get new one as well
    if (m_currentWaypointIndex == INVALID_WAYPOINT_INDEX) {
       clearSearchNodes ();
-      findPoint ();
+      searchOptimalPoint ();
 
       m_waypointOrigin = m_currentPath->origin;
 
@@ -1827,26 +1944,25 @@ void Bot::getValidPoint (void) {
          }
       }
       clearSearchNodes ();
-      findPoint ();
+      searchOptimalPoint ();
  
       m_waypointOrigin = m_currentPath->origin;
    }
 }
 
-int Bot::changePointIndex (int waypointIndex) {
-   if (waypointIndex == INVALID_WAYPOINT_INDEX) {
+int Bot::changePointIndex (int index) {
+   if (index == INVALID_WAYPOINT_INDEX) {
       return 0;
    }
-
    m_prevWptIndex[4] = m_prevWptIndex[3];
    m_prevWptIndex[3] = m_prevWptIndex[2];
    m_prevWptIndex[2] = m_prevWptIndex[1];
    m_prevWptIndex[0] = m_currentWaypointIndex;
 
-   m_currentWaypointIndex = waypointIndex;
+   m_currentWaypointIndex = index;
    m_navTimeset = engine.timebase ();
 
-   m_currentPath = &waypoints[m_currentWaypointIndex];
+   m_currentPath = &waypoints[index];
    m_waypointFlags = m_currentPath->flags;
 
    return m_currentWaypointIndex; // to satisfy static-code analyzers
@@ -1855,7 +1971,39 @@ int Bot::changePointIndex (int waypointIndex) {
 int Bot::getNearestPoint (void) {
    // get the current nearest waypoint to bot with visibility checks
 
-   return waypoints.getNearest (pev->origin, 9999.0f, -1, this);
+   int index = INVALID_WAYPOINT_INDEX;
+   float minimum = A_square (1024.0f);
+
+   for (int i = 0; i < g_numWaypoints; i++) {
+      if (i == m_currentWaypointIndex) {
+         continue;
+      }
+      float distance = (waypoints[i].origin - pev->origin).lengthSq ();
+
+      if (distance < minimum) {
+         
+         // if bot doing navigation, make sure waypoint really visible and not too high
+         if (m_currentWaypointIndex != INVALID_WAYPOINT_INDEX && waypoints.isVisible (m_currentWaypointIndex, i)) {
+            index = i;
+            minimum = distance;
+         }
+         else {
+            TraceResult tr;
+            engine.testLine (eyePos (), waypoints[i].origin, TRACE_IGNORE_MONSTERS, ent (), &tr);
+
+            if (tr.flFraction >= 1.0f && !tr.fStartSolid) {
+               index = i;
+               minimum = distance;
+            }
+         }
+      }
+   }
+
+   // worst case, take any waypoint...
+   if (index == INVALID_WAYPOINT_INDEX) {
+      index = waypoints.getNearest (pev->origin);
+   }
+   return index;
 }
 
 int Bot::getBombPoint (void) {
@@ -2171,9 +2319,12 @@ bool Bot::getNextBestPoint (void) {
       int id = m_currentPath->index[i];
 
       if (id != INVALID_WAYPOINT_INDEX && waypoints.isConnected (id, m_navNode->next->index) && waypoints.isConnected (m_currentWaypointIndex, id)) {
-         if (waypoints[id].flags & FLAG_LADDER) { // don't use ladder waypoints as alternative
+
+         // don't use ladder waypoints as alternative
+         if (waypoints[id].flags & FLAG_LADDER) {
             continue;
          }
+
          if (!isOccupiedPoint (id)) {
             m_navNode->index = id;
             return true;
@@ -3130,13 +3281,17 @@ bool Bot::isOccupiedPoint (int index) {
       }
 
       if (bot != nullptr) {
-         if (index == bot->task ()->data || index == bot->m_currentWaypointIndex) {
-            return true;
+         int occupyId = getShootingConeDeviation (bot->ent (), pev->origin) >= 0.7f ? bot->m_prevWptIndex[0] : bot->m_currentWaypointIndex;
+
+         if (bot != nullptr) {
+            if (index == occupyId) {
+               return true;
+            }
          }
       }
       float length = (waypoints[index].origin - client.origin).lengthSq ();
 
-      if (length < A_clamp (waypoints[index].radius, A_square (64.0f), A_square (128.0f)) && client.ent->v.velocity.length2D () < 64.0f) {
+      if (length < A_clamp (waypoints[index].radius, A_square (32.0f), A_square (90.0f))) {
          return true;
       }
    }

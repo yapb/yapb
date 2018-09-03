@@ -417,7 +417,7 @@ const Vector &Bot::getEnemyBodyOffset (void) {
    float distance = (m_enemy->v.origin - pev->origin).length ();
 
    // do not aim at head, at long distance (only if not using sniper weapon)
-   if ((m_visibility & VISIBLE_BODY) && distance > (m_difficulty > 2 ? 2000.0f : 1000.0f)) {
+   if ((m_visibility & VISIBLE_BODY) && !usesSniper () && distance > (m_difficulty > 2 ? 2000.0f : 1000.0f)) {
       m_visibility &= ~VISIBLE_HEAD;
    }
    Vector aimPos = m_enemy->v.origin;
@@ -1252,6 +1252,10 @@ int Bot::bestGrenadeCarried (void) {
       return WEAPON_SMOKE;
    }
    return -1;
+}
+
+bool Bot::hasAnyWeapons (void) {
+   return (pev->weapons & (WEAPON_PRIMARY | WEAPON_SECONDARY));
 }
 
 void Bot::selectBestWeapon (void) {

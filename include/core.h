@@ -506,7 +506,6 @@ constexpr float MAX_SPRAY_DISTANCE = 260.0f;
 constexpr float MAX_SPRAY_DISTANCE_X2 = MAX_SPRAY_DISTANCE * 2;
 constexpr float MAX_CHATTER_REPEAT = 99.0f;
 
-constexpr int MAX_HOSTAGES = 8;
 constexpr int MAX_PATH_INDEX = 8;
 constexpr int MAX_DAMAGE_VALUE = 2040;
 constexpr int MAX_GOAL_VALUE = 2040;
@@ -695,107 +694,6 @@ struct Path {
    } vis;
 };
 
-// priority queue class (smallest item out first)
-template <int maxSize> class RoutePriorityQueue {
-private:
-   int m_size;
-   int m_maxSize;
-
-   struct HeapNode {
-      int index;
-      float priority;
-   } *m_heap;
-
-public:
-   RoutePriorityQueue (void) {
-      m_size = 0;
-      m_maxSize = maxSize;
-      m_heap = new HeapNode[m_maxSize + 1];
-   }
-
-   ~RoutePriorityQueue (void) {
-      delete[] m_heap;
-   }
-
-   void push (int index, float priority) {
-      if (m_size >= m_maxSize) {
-         return;
-      }
-      m_heap[m_size].priority = priority;
-      m_heap[m_size].index = index;
-      m_size++;
-
-      int child = m_size - 1;
-
-      while (child) {
-         int parent = parentOf (child);
-
-         if (m_heap[parent].priority <= m_heap[child].priority) {
-            break;
-         }
-         HeapNode swap;
-         swap = m_heap[child];
-
-         m_heap[child] = m_heap[parent];
-         m_heap[parent] = swap;
-
-         child = parent;
-      }
-   }
-
-   int pop (void) {
-      int ret = m_heap[0].index;
-      m_size--;
-      m_heap[0] = m_heap[m_size];
-
-      int parent = 0;
-      int child = leftOf (parent);
-
-      HeapNode swap = m_heap[parent];
-
-      while (child < m_size) {
-         int rightChild = rightOf (parent);
-
-         if (rightChild < m_size) {
-            if (m_heap[rightChild].priority < m_heap[child].priority) {
-               child = rightChild;
-            }
-         }
-
-         if (swap.priority <= m_heap[child].priority) {
-            break;
-         }
-         m_heap[parent] = m_heap[child];
-         parent = child;
-         child = leftOf (parent);
-      }
-      m_heap[parent] = swap;
-
-      return ret;
-   }
-
-   int empty (void) {
-      return !m_size;
-   }
-
-   void clear (void) {
-      m_size = 0;
-   }
-
-public:
-   static constexpr int leftOf (int index) {
-      return (index << 1) | 1;
-   }
-
-   static constexpr int rightOf (int index) {
-      return (++index) << 1;
-   }
-
-   static constexpr int parentOf (int index) {
-      return (--index) >> 1;
-   }
-};
-
 // main bot class
 class Bot {
    friend class BotManager;
@@ -846,13 +744,13 @@ private:
    float m_probeTime; // time of probing different moves
    float m_lastCollTime; // time until next collision check
    float m_jumpStateTimer; // timer for jumping collision check
+   float m_randomPointChoiceTimer; // time to find random waypoint
 
    unsigned int m_collisionProbeBits; // bits of possible collision moves
    unsigned int m_collideMoves[MAX_COLLIDE_MOVES]; // sorted array of movements
    unsigned int m_collStateIndex; // index into collide moves
    CollisionState m_collisionState; // collision State
 
-   RoutePriorityQueue <MAX_WAYPOINTS> m_routeQue;
    Route *m_routes; // pointer
    PathNode *m_navNode; // pointer to current node from path
    PathNode *m_navNodeStart; // pointer to start of path finding nodes
@@ -891,7 +789,7 @@ private:
 
    float m_followWaitTime; // wait to follow time
    edict_t *m_targetEntity; // the entity that the bot is trying to reach
-   edict_t *m_hostages[MAX_HOSTAGES]; // pointer to used hostage entities
+   Array <edict_t *> m_hostages; // pointer to used hostage entities
 
    bool m_moveToGoal; // bot currently moving to goal??
    bool m_isStuck; // bot is stuck
@@ -1089,11 +987,13 @@ private:
    int bestSecondaryCarried (void);
    int bestGrenadeCarried (void);
    int bestWeaponCarried (void);
+   bool hasAnyWeapons (void);
 
    void processMovement (void);
    uint8 computeMsec (void);
    void getValidPoint (void);
-   int changePointIndex (int waypointIndex);
+
+   int changePointIndex (int index);
    int getNearestPoint (void);
    bool isDeadlyMove (const Vector &to);
    bool isOutOfBombTimer (void);
@@ -1283,7 +1183,7 @@ public:
    void framePeriodic (void);
 
    /// the things that can be executed while skipping frames
-   void processFrameThink (void);
+   void frameThink (void);
 
    void processBlind (int alpha);
    void processDamage (edict_t *inflictor, int damage, int armor, int bits);
@@ -1293,7 +1193,7 @@ public:
    void processBuyzoneEntering (int buyState);
    void pushMsgQueue (int message);
    void prepareChatMessage (char *text);
-   bool findPoint (void);
+   bool searchOptimalPoint (void);
    bool seesEntity (const Vector &dest, bool fromBody = false);
 
    void showChaterIcon (bool show);
@@ -1310,10 +1210,6 @@ public:
 
    inline TaskID taskId (void) {
       return task ()->id;
-   }
-
-   inline int getCurrentWaypointIndex (void) {
-      return m_currentWaypointIndex;
    }
 
    void dropWeaponForUser (edict_t *user, bool discardC4);
@@ -1510,7 +1406,7 @@ public:
 
    int getFacingIndex (void);
    int getFarest (const Vector &origin, float maxDistance = 32.0);
-   int getNearest (const Vector &origin, float minDistance = 9999.0f, int flags = -1, Bot *bot = nullptr);
+   int getNearest (const Vector &origin, float minDistance = 9999.0f, int flags = -1);
    void searchRadius (IntArray &holder, float radius, const Vector &origin, int maxCount = -1);
 
    void push (int flags, const Vector &waypointOrigin = Vector::null ());

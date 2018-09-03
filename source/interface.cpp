@@ -659,7 +659,7 @@ void processBotConfigs (bool onlyMain) {
    }
    else {
       extern ConVar yb_chat;
-      yb_chat.setInteger (0);
+      yb_chat.set (0);
    }
 
    // GENERAL DATA INITIALIZATION
@@ -835,7 +835,7 @@ void processBotConfigs (bool onlyMain) {
 
          if (strncmp (lineBuffer, "RewritePath", 11) == 0) {
             extern ConVar yb_chatter_path;
-            yb_chatter_path.setString (String (&lineBuffer[12]).trim ().chars ());
+            yb_chatter_path.set (String (&lineBuffer[12]).trim ().chars ());
          }
          else if (strncmp (lineBuffer, "Event", 5) == 0) {
             auto items = String (&lineBuffer[6]).split ("=");
@@ -873,7 +873,7 @@ void processBotConfigs (bool onlyMain) {
       fp.close ();
    }
    else {
-      yb_communication_type.setInteger (1);
+      yb_communication_type.set (1);
       logEntry (true, LL_DEFAULT, "Chatter Communication disabled.");
    }
 
@@ -966,7 +966,7 @@ void GameDLLInit (void) {
    engine.registerCmd ("yb", commandHandler);
 
    // set correct version string
-   yb_version.setString (format ("%d.%d.%d", PRODUCT_VERSION_DWORD_INTERNAL, buildNumber ()));
+   yb_version.set (format ("%d.%d.%d", PRODUCT_VERSION_DWORD_INTERNAL, buildNumber ()));
 
    // execute main config
    processBotConfigs (true);
@@ -994,15 +994,16 @@ void Touch (edict_t *pentTouched, edict_t *pentOther) {
    // the two entities both have velocities, for example two players colliding, this function
    // is called twice, once for each entity moving.
 
-   if (!engine.isNullEntity (pentOther) && (pentOther->v.flags & FL_FAKECLIENT)) {
-      Bot *bot = bots.getBot (pentOther);
+   if (!engine.isNullEntity (pentTouched) && (pentTouched->v.flags & FL_FAKECLIENT) && pentOther != engine.getStartEntity ()) {
+      Bot *bot = bots.getBot (pentTouched);
 
-      if (bot != nullptr) {
-         if (pentTouched != bot->ent () && isAlive (pentTouched)) {
-            bot->avoidIncomingPlayers (pentTouched);
+      if (bot != nullptr && pentOther != bot->ent ()) {
+
+         if (isPlayer (pentOther) && isAlive (pentOther)) {
+            bot->avoidIncomingPlayers (pentOther);
          }
          else {
-            bot->processBreakables (pentTouched);
+            bot->processBreakables (pentOther);
          }
       }
    }
@@ -1616,7 +1617,7 @@ void ClientCommand (edict_t *ent) {
 
             case 4:
                extern ConVar yb_debug;
-               yb_debug.setInteger (yb_debug.integer () ^ 1);
+               yb_debug.set (yb_debug.integer () ^ 1);
 
                showMenu (ent, BOT_MENU_FEATURES);
                break;
@@ -1777,8 +1778,8 @@ void ClientCommand (edict_t *ent) {
                extern ConVar mp_limitteams;
                extern ConVar mp_autoteambalance;
                
-               mp_limitteams.setInteger (0);
-               mp_autoteambalance.setInteger (0);
+               mp_limitteams.set (0);
+               mp_autoteambalance.set (0);
 
             case 5:
                fillServerTeam = selection;

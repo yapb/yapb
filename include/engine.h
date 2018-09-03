@@ -232,6 +232,11 @@ public:
       return !ent || !indexOfEntity (ent);
    }
 
+   // get the wroldspawn entity
+   inline edict_t *getStartEntity (void) {
+      return m_startEntity;
+   }
+
    // gets the player team
    inline int getTeam (edict_t *ent) {
       extern Client g_clients[MAX_ENGINE_PLAYERS];
@@ -308,15 +313,15 @@ public:
       return m_eptr->string;
    }
 
-   inline void setFloat (float val) const {
+   inline void set (float val) const {
       g_engfuncs.pfnCVarSetFloat (m_eptr->name, val);
    }
 
-   inline void setInteger (int val) const {
-      setFloat (static_cast<float> (val));
+   inline void set (int val) const {
+      set (static_cast<float> (val));
    }
 
-   inline void setString (const char *val) const {
+   inline void set (const char *val) const {
       g_engfuncs.pfnCvar_DirectSet (m_eptr, const_cast<char *> (val));
    }
 };

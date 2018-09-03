@@ -97,12 +97,10 @@ int Waypoint::getFarest (const Vector &origin, float maxDistance) {
    return index;
 }
 
-int Waypoint::getNearest (const Vector &origin, float minDistance, int flags, Bot *bot) {
+int Waypoint::getNearest (const Vector &origin, float minDistance, int flags) {
    // find the nearest waypoint to that origin and return the index
 
    int index = INVALID_WAYPOINT_INDEX;
-   int visible = INVALID_WAYPOINT_INDEX;
-
    minDistance = A_square (minDistance);
 
    for (int i = 0; i < g_numWaypoints; i++) {
@@ -114,25 +112,9 @@ int Waypoint::getNearest (const Vector &origin, float minDistance, int flags, Bo
       if (distance < minDistance) {
          index = i;
          minDistance = distance;
-
-         // if bot doing navigation, make sure waypoint really visible and not too high
-         if (bot && A_abs (m_paths[i]->origin.z - origin.z) < 40.0f) {
-
-            if (bot->getCurrentWaypointIndex () != INVALID_WAYPOINT_INDEX && isVisible (bot->getCurrentWaypointIndex (), index)) {
-               visible = index;
-            }
-            else {
-               TraceResult tr;
-               engine.testLine (origin, m_paths[i]->origin, TRACE_IGNORE_MONSTERS, bot->ent (), &tr);
-
-               if (tr.flFraction >= 1.0f) {
-                  visible = index;
-               }
-            }
-         }
       }
    }
-   return visible == INVALID_WAYPOINT_INDEX ? index : visible;
+   return index;
 }
 
 void Waypoint::searchRadius (IntArray &radiusHolder, float radius, const Vector &origin, int maxCount) {
@@ -1083,7 +1065,7 @@ bool Waypoint::load (void) {
             sprintf (m_infoBuffer, "%s.pwf does not exist. Can't autodownload. Socket error.", map);
             logEntry (true, LL_ERROR, m_infoBuffer);
 
-            yb_waypoint_autodl_enable.setInteger (0);
+            yb_waypoint_autodl_enable.set (0);
 
             return false;
          }
@@ -1091,7 +1073,7 @@ bool Waypoint::load (void) {
             sprintf (m_infoBuffer, "%s.pwf does not exist. Can't autodownload. Connection problems.", map);
             logEntry (true, LL_ERROR, m_infoBuffer);
 
-            yb_waypoint_autodl_enable.setInteger (0);
+            yb_waypoint_autodl_enable.set (0);
 
             return false;
          }
@@ -1136,7 +1118,7 @@ bool Waypoint::load (void) {
    initExperience ();
 
    extern ConVar yb_debug_goal;
-   yb_debug_goal.setInteger (INVALID_WAYPOINT_INDEX);
+   yb_debug_goal.set (INVALID_WAYPOINT_INDEX);
 
    return true;
 }
@@ -1192,33 +1174,41 @@ float Waypoint::calculateTravelTime (float maxSpeed, const Vector &src, const Ve
 bool Waypoint::isReachable (Bot *bot, int index) {
    // this function return whether bot able to reach index waypoint or not, depending on several factors.
 
-   if (bot == nullptr || index < 0 || index >= g_numWaypoints) {
+   if (!bot || index < 0 || index >= g_numWaypoints) {
       return false;
    }
 
-   Vector src = bot->pev->origin;
-   Vector dest = m_paths[index]->origin;
+   const Vector &src = bot->pev->origin;
+   const Vector &dst = m_paths[index]->origin;
 
-   float distance = (dest - src).length ();
-
-   // check is destination is close to us enough
-   if (distance >= 150.0f) {
+   // is the destination close enough?
+   if ((dst - src).lengthSq () >= A_square (400.0f)) {
       return false;
    }
+   float ladderDist = (dst - src).length2D ();
 
    TraceResult tr;
-   engine.testLine (src, dest, TRACE_IGNORE_MONSTERS, bot->ent (), &tr);
+   engine.testLine (src, dst, TRACE_IGNORE_MONSTERS, bot->ent (), &tr);
 
    // if waypoint is visible from current position (even behind head)...
    if (tr.flFraction >= 1.0f) {
+
+      // it's should be not a problem to reach waypoint inside water...
       if (bot->pev->waterlevel == 2 || bot->pev->waterlevel == 3) {
          return true;
       }
-      float distance2D = (dest - src).length2D ();
 
-      // is destination waypoint higher that source (62 is max jump height), or destination waypoint higher that source
-      if (((dest.z > src.z + 62.0f || dest.z < src.z - 100.0f) && (!(m_paths[index]->flags & FLAG_LADDER))) || distance2D >= 96.0f) {
-         return false; // unable to reach this one
+      // check for ladder
+      bool nonLadder = !(m_paths[index]->flags & FLAG_LADDER) || ladderDist > 16.0f;
+
+      // is dest waypoint higher than src? (62 is max jump height)
+      if (nonLadder && dst.z > src.z + 62.0f) {
+         return false; // can't reach this one
+      }
+
+      // is dest waypoint lower than src?
+      if (nonLadder && dst.z < src.z - 100.0f) {
+         return false; // can't reach this one
       }
       return true;
    }

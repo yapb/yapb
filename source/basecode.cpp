@@ -303,7 +303,7 @@ void Bot::avoidGrenades (void) {
    auto activeGrenades = bots.searchActiveGrenades ();
 
    // find all grenades on the map
-   for (edict_t *pent : activeGrenades) {
+   for (auto pent : activeGrenades) {
       if (pent->v.effects & EF_NODRAW) {
          continue;
       }
@@ -442,6 +442,7 @@ bool Bot::rateGroundWeapon (edict_t *ent) {
 }
 
 void Bot::processBreakables (edict_t *touch) {
+
    if (!isShootableBreakable (touch)) {
       return;
    }
@@ -730,8 +731,8 @@ void Bot::processPickups (void) {
                   else
                      for (int i = 0; i < engine.maxClients (); i++) {
                         if ((bot = bots.getBot (i)) != nullptr && bot->m_notKilled) {
-                           for (int j = 0; j < MAX_HOSTAGES; j++) {
-                              if (bot->m_hostages[j] == ent) {
+                           for (auto hostage : bot->m_hostages) {
+                              if (hostage == ent) {
                                  allowPickup = false;
                                  break;
                               }
@@ -1088,7 +1089,7 @@ void Bot::checkMsgQueue (void) {
          m_buyState = BUYSTATE_FINISHED;
 
          if (g_mapType & MAP_KA) {
-            yb_jasonmode.setInteger (1);
+            yb_jasonmode.set (1);
          }
       }
 
@@ -1286,8 +1287,9 @@ bool Bot::isWeaponRestrictedAMX (int weaponIndex) {
       }
       return restrictedWeapons[index] != '0';
    }
-   else // check for equipment restrictions
-   {
+
+   // check for equipment restrictions
+   else {
       const char *restrictedEquipment = g_engfuncs.pfnCVarGetString ("amx_restrequipammo");
 
       if (isEmptyStr (restrictedEquipment)) {
@@ -1772,7 +1774,7 @@ void Bot::overrideConditions (void) {
    }
 
    // special handling, if we have a knife in our hands
-   if ((g_timeRoundStart + 10.0f > engine.timebase () || !(pev->weapons & (WEAPON_PRIMARY | WEAPON_SECONDARY))) && m_currentWeapon == WEAPON_KNIFE && isPlayer (m_enemy) && (taskId () != TASK_MOVETOPOSITION || task ()->desire != TASKPRI_HIDE)) {
+   if ((g_timeRoundStart + 6.0f > engine.timebase () || !hasAnyWeapons ()) && m_currentWeapon == WEAPON_KNIFE && isPlayer (m_enemy) && (taskId () != TASK_MOVETOPOSITION || task ()->desire != TASKPRI_HIDE)) {
       float length = (pev->origin - m_enemy->v.origin).length2D ();
 
       // do waypoint movement if enemy is not reacheable with a knife
@@ -2804,7 +2806,7 @@ void Bot::updateAimDir (void) {
 void Bot::framePeriodic (void) {
    if (m_thinkFps <= engine.timebase ()) {
       // execute delayed think
-      processFrameThink ();
+      frameThink ();
 
       // skip some frames
       m_thinkFps = engine.timebase () + m_thinkInterval;
@@ -2814,7 +2816,7 @@ void Bot::framePeriodic (void) {
    }
 }
 
-void Bot::processFrameThink (void) {
+void Bot::frameThink (void) {
    pev->button = 0;
    pev->flags |= FL_FAKECLIENT; // restore fake client bit, if it were removed by some evil action =)
 
@@ -2933,7 +2935,7 @@ void Bot::frame (void) {
    }
 
    // clear enemy far away
-   if (!m_lastEnemyOrigin.empty () && !engine.isNullEntity (m_lastEnemy) && (pev->origin - m_lastEnemyOrigin).length () >= 1600.0f) {
+   if (!m_lastEnemyOrigin.empty () && !engine.isNullEntity (m_lastEnemy) && (pev->origin - m_lastEnemyOrigin).lengthSq () >= A_square (1600.0f)) {
       m_lastEnemy = nullptr;
       m_lastEnemyOrigin.nullify ();
    }
@@ -2973,12 +2975,12 @@ void Bot::normal_ (void) {
    if (!g_bombPlanted && m_currentWaypointIndex != INVALID_WAYPOINT_INDEX && (m_currentPath->flags & FLAG_GOAL) && rng.getInt (0, 100) < 50 && numEnemiesNear (pev->origin, 650.0f) == 0) {
       pushRadioMessage (Radio_SectorClear);
    }
-
+   
    // reached the destination (goal) waypoint?
    if (processNavigation ()) {
       completeTask ();
       m_prevGoalIndex = INVALID_WAYPOINT_INDEX;
-
+      
       // spray logo sometimes if allowed to do so
       if (m_timeLogoSpray < engine.timebase () && yb_spraypaints.boolean () && rng.getInt (1, 100) < 60 && m_moveSpeed > getShiftSpeed () && engine.isNullEntity (m_pickupItem)) {
          if (!((g_mapType & MAP_DE) && g_bombPlanted && m_team == TEAM_COUNTER)) {
@@ -3056,9 +3058,7 @@ void Bot::normal_ (void) {
             if (m_team == TEAM_COUNTER && hasHostage ()) {
                // and reached a Rescue Point?
                if (m_currentPath->flags & FLAG_RESCUE) {
-                  for (int i = 0; i < MAX_HOSTAGES; i++) {
-                     m_hostages[i] = nullptr; // clear array of hostage pointers
-                  }
+                  m_hostages.clear ();
                }
             }
             else if (m_team == TEAM_TERRORIST && rng.getInt (0, 100) < 75) {
@@ -3255,7 +3255,7 @@ void Bot::huntEnemy_ (void) {
             }
          }
 
-         if ((m_lastEnemyOrigin - pev->origin).length () < 512.0f) {
+         if ((m_lastEnemyOrigin - pev->origin).lengthSq () < A_square (512.0f)) {
             m_moveSpeed = getShiftSpeed ();
          }
       }
@@ -3898,7 +3898,7 @@ void Bot::followUser_ (void) {
       m_reloadState = RELOAD_PRIMARY;
    }
 
-   if ((m_targetEntity->v.origin - pev->origin).length () > 130) {
+   if ((m_targetEntity->v.origin - pev->origin).lengthSq () > A_square (130.0f)) {
       m_followWaitTime = 0.0f;
    }
    else {
@@ -4429,17 +4429,8 @@ void Bot::pickupItem_ () {
             if (rng.getInt (0, 100) < 80) {
                pushChatterMessage (Chatter_UseHostage);
             }
-
-            for (int i = 0; i < MAX_HOSTAGES; i++) {
-
-               // store pointer to hostage so other bots don't steal from this one or bot tries to reuse it
-               if (engine.isNullEntity (m_hostages[i])) {
-                  m_hostages[i] = m_pickupItem;
-                  m_pickupItem = nullptr;
-
-                  break;
-               }
-            }
+            m_hostages.push (m_pickupItem);
+            m_pickupItem = nullptr;
          }
          ignoreCollision (); // also don't consider being stuck
       }
@@ -5082,11 +5073,12 @@ void Bot::showDebugOverlay (void) {
 }
 
 bool Bot::hasHostage (void) {
-   for (int i = 0; i < MAX_HOSTAGES; i++) {
-      if (!engine.isNullEntity (m_hostages[i])) {
+   for (auto hostage : m_hostages) {
+      if (!engine.isNullEntity (hostage)) {
+
          // don't care about dead hostages
-         if (m_hostages[i]->v.health <= 0.0f || (pev->origin - m_hostages[i]->v.origin).length () > 600.0f) {
-            m_hostages[i] = nullptr;
+         if (hostage->v.health <= 0.0f || (pev->origin - hostage->v.origin).lengthSq () > A_square (600.0f)) {
+            hostage = nullptr;
             continue;
          }
          return true;
@@ -5096,7 +5088,7 @@ bool Bot::hasHostage (void) {
 }
 
 int Bot::ammo (void) {
-   if (g_weaponDefs[m_currentWeapon].ammo1 == -1 || g_weaponDefs[m_currentWeapon].ammo1 > 31) {
+   if (g_weaponDefs[m_currentWeapon].ammo1 == -1 || g_weaponDefs[m_currentWeapon].ammo1 > MAX_WEAPONS - 1) {
       return 0;
    }
    return m_ammo[g_weaponDefs[m_currentWeapon].ammo1];
@@ -5160,7 +5152,7 @@ void Bot::processDamage (edict_t *inflictor, int damage, int armor, int bits) {
       // leave the camping/hiding position
       if (!waypoints.isReachable (this, waypoints.getNearest (m_destOrigin))) {
          clearSearchNodes ();
-         findPoint ();
+         searchOptimalPoint ();
       }
    }
 }
@@ -5705,7 +5697,7 @@ bool Bot::isOutOfBombTimer (void) {
    const Vector &bombOrigin = waypoints.getBombPos ();
 
    // for terrorist, if timer is lower than 13 seconds, return true
-   if (timeLeft < 13.0f && m_team == TEAM_TERRORIST && (bombOrigin - pev->origin).length () < 1000.0f) {
+   if (timeLeft < 13.0f && m_team == TEAM_TERRORIST && (bombOrigin - pev->origin).lengthSq () < A_square (964.0f)) {
       return true;
    }
    bool hasTeammatesWithDefuserKit = false;
@@ -5715,7 +5707,7 @@ bool Bot::isOutOfBombTimer (void) {
       auto *bot = bots.getBot (i);
 
       // search players with defuse kit
-      if (bot != nullptr && bot != this && bot->m_team == TEAM_COUNTER && bot->m_hasDefuser && (bombOrigin - bot->pev->origin).length () < 500.0f) {
+      if (bot != nullptr && bot != this && bot->m_team == TEAM_COUNTER && bot->m_hasDefuser && (bombOrigin - bot->pev->origin).lengthSq () < A_square (512.0f)) {
          hasTeammatesWithDefuserKit = true;
          break;
       }
@@ -5819,7 +5811,7 @@ void Bot::processHearing (void) {
 
       // check if heard enemy can be shoot through some obstacle
       else {
-         if (m_difficulty > 2 && m_lastEnemy == player && m_seeEnemyTime + 3.0 > engine.timebase () && yb_shoots_thru_walls.boolean () && isPenetrableObstacle (player->v.origin)) {
+         if (m_difficulty > 2 && m_lastEnemy == player && m_seeEnemyTime + 3.0f > engine.timebase () && yb_shoots_thru_walls.boolean () && isPenetrableObstacle (player->v.origin)) {
             m_enemy = player;
             m_lastEnemy = player;
             m_enemyOrigin = player->v.origin;
@@ -5835,8 +5827,10 @@ void Bot::processHearing (void) {
 bool Bot::isShootableBreakable (edict_t *ent) {
    // this function is checking that pointed by ent pointer obstacle, can be destroyed.
 
-   if ((strcmp (STRING (ent->v.classname), "func_breakable") == 0 || strcmp (STRING (ent->v.classname), "func_pushable") == 0) && (ent->v.spawnflags & SF_PUSH_BREAKABLE)) {
-      return (ent->v.takedamage != DAMAGE_NO) && ent->v.impulse <= 0 && !(ent->v.flags & FL_WORLDBRUSH) && !(ent->v.spawnflags & SF_BREAK_TRIGGER_ONLY) && ent->v.health < 500.0f;
+   auto classname = STRING (ent->v.classname);
+
+   if (strcmp (classname, "func_breakable") == 0 || (strcmp (classname, "func_pushable") == 0 && (ent->v.spawnflags & SF_PUSH_BREAKABLE))) {
+      return ent->v.takedamage != DAMAGE_NO && ent->v.impulse <= 0 && !(ent->v.flags & FL_WORLDBRUSH) && !(ent->v.spawnflags & SF_BREAK_TRIGGER_ONLY) && ent->v.health < 500.0f;
    }
    return false;
 }

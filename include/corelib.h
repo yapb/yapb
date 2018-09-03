@@ -883,35 +883,24 @@ protected:
    }
 
 public:
-   String (void)
-      : m_chars (nullptr)
-      , m_capacity (0)
-      , m_length (0) {}
+   String (void) : m_chars (nullptr) , m_capacity (0) , m_length (0) {}
+
+   String (const char *input) : m_chars (nullptr) , m_capacity (0) , m_length (0) {
+      assign (input);
+   }
+
+   String (char input) : m_chars (nullptr) , m_capacity (0), m_length (0) {
+      assign (input);
+   }
+
+   String (const String &input) : m_chars (nullptr) , m_capacity (0) , m_length (0) {
+      assign (input.chars ());
+   }
 
    virtual ~String (void) {
       delete[] m_chars;
    }
 
-   String (const char *input)
-      : m_chars (nullptr)
-      , m_capacity (0)
-      , m_length (0) {
-      assign (input);
-   }
-
-   String (char input)
-      : m_chars (nullptr)
-      , m_capacity (0)
-      , m_length (0) {
-      assign (input);
-   }
-
-   String (const String &input)
-      : m_chars (nullptr)
-      , m_capacity (0)
-      , m_length (0) {
-      assign (input.chars ());
-   }
 
 public:
    char *begin (void) {
@@ -1390,9 +1379,7 @@ private:
    size_t m_size;
 
 public:
-   File (void)
-      : m_handle (nullptr)
-      , m_size (0) {}
+   File (void) : m_handle (nullptr) , m_size (0) {}
 
    File (const String &fileName, const String &mode = "rt") : m_size (0){
       open (fileName, mode);
@@ -1529,15 +1516,9 @@ private:
    uint8 *m_buffer;
 
 public:
-   MemFile (void)
-      : m_size (0)
-      , m_pos (0)
-      , m_buffer (nullptr) {}
+   MemFile (void) : m_size (0) , m_pos (0) , m_buffer (nullptr) {}
 
-   MemFile (const String &filename)
-      : m_size (0)
-      , m_pos (0)
-      , m_buffer (nullptr) {
+   MemFile (const String &filename) : m_size (0) , m_pos (0) , m_buffer (nullptr) {
       open (filename);
    }
 
