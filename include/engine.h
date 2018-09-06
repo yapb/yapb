@@ -297,19 +297,19 @@ public:
       Engine::ref ().pushVarToRegStack (name, initval, type, regMissing, regVal, this);
    }
 
-   constexpr bool boolean (void) const {
+   inline bool boolean (void) const {
       return m_eptr->value > 0.0f;
    }
 
-   constexpr int integer (void) const {
+   inline int integer (void) const {
       return static_cast<int> (m_eptr->value);
    }
 
-   constexpr float flt (void) const {
+   inline float flt (void) const {
       return m_eptr->value;
    }
 
-   constexpr const char *str (void) const {
+   inline const char *str (void) const {
       return m_eptr->string;
    }
 
