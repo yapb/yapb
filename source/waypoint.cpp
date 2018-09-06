@@ -1771,7 +1771,7 @@ bool Waypoint::isConnected (int index) {
    return false;
 }
 
-bool Waypoint::isNodesValid (void) {
+bool Waypoint::checkNodes (void) {
    int terrPoints = 0;
    int ctPoints = 0;
    int goalPoints = 0;
@@ -1869,40 +1869,31 @@ bool Waypoint::isNodesValid (void) {
    }
 
    // perform DFS instead of floyd-warshall, this shit speedup this process in a bit
-   PathNode *stack = new PathNode;
+   PathWalk walk;
    bool visited[MAX_WAYPOINTS];
 
    // first check incoming connectivity, initialize the "visited" table
    for (i = 0; i < g_numWaypoints; i++) {
       visited[i] = false;
    }
+   walk.push (0); // always check from waypoint number 0
 
-   // check from waypoint nr. 0
-   stack->next = nullptr;
-   stack->index = 0;
-
-   while (stack != nullptr) {
+   while (!walk.empty ()) {
       // pop a node from the stack
-      PathNode *current = stack;
-      stack = stack->next;
+      const int current = walk.front ();
+      walk.shift ();
 
-      visited[current->index] = true;
+      visited[current] = true;
 
       for (j = 0; j < MAX_PATH_INDEX; j++) {
-         int index = m_paths[current->index]->index[j];
+         int index = m_paths[current]->index[j];
 
-         if (index >= 0 && index < g_numWaypoints) {
-            if (visited[index]) {
-               continue; // skip this waypoint as it's already visited
-            }
-            PathNode *newNode = new PathNode;
-
-            newNode->next = stack;
-            newNode->index = index;
-            stack = newNode;
+         // skip this waypoint as it's already visited
+         if (index >= 0 && index < g_numWaypoints && !visited[index]) {
+            visited[index] = true;
+            walk.push (index);
          }
       }
-      delete current;
    }
 
    for (i = 0; i < g_numWaypoints; i++) {
@@ -1923,6 +1914,8 @@ bool Waypoint::isNodesValid (void) {
    IntArray outgoingPaths[MAX_WAYPOINTS]; // store incoming paths for speedup
 
    for (i = 0; i < g_numWaypoints; i++) {
+      outgoingPaths[i].reserve (g_numWaypoints + 1);
+
       for (j = 0; j < MAX_PATH_INDEX; j++) {
          if (m_paths[i]->index[j] >= 0 && m_paths[i]->index[j] < g_numWaypoints) {
             outgoingPaths[m_paths[i]->index[j]].push (i);
@@ -1934,33 +1927,22 @@ bool Waypoint::isNodesValid (void) {
    for (i = 0; i < g_numWaypoints; i++) {
       visited[i] = false;
    }
+   walk.clear ();
+   walk.push (0); // always check from waypoint number 0
 
-   // check from Waypoint nr. 0
-   stack = new PathNode;
-   stack->next = nullptr;
-   stack->index = 0;
+   while (!walk.empty ()) {
+      const int current = walk.front (); // pop a node from the stack
+      walk.shift ();
 
-   while (stack != nullptr) {
-      // pop a node from the stack
-      PathNode *current = stack;
-      stack = stack->next;
-
-      visited[current->index] = true;
-
-      for (auto &outgoing : outgoingPaths[current->index]) {
+      for (auto &outgoing : outgoingPaths[current]) {
          if (visited[outgoing]) {
             continue; // skip this waypoint as it's already visited
          }
-         PathNode *newNode = new PathNode;
-
-         newNode->next = stack;
-         newNode->index = outgoing;
-
-         stack = newNode;
+         visited[outgoing] = true;
+         walk.push (outgoing);
       }
-      delete current;
    }
-
+   
    for (i = 0; i < g_numWaypoints; i++) {
       if (!visited[i]) {
          logEntry (true, LL_WARNING, "Path broken from Waypoint #%d to Waypoint #0!", i);

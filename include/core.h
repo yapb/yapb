@@ -511,10 +511,11 @@ constexpr int MAX_DAMAGE_VALUE = 2040;
 constexpr int MAX_GOAL_VALUE = 2040;
 constexpr int MAX_KILL_HISTORY = 16;
 constexpr int MAX_WAYPOINTS = 1024;
+constexpr int MAX_ROUTE_LENGTH = MAX_WAYPOINTS / 2;
 constexpr int MAX_WEAPONS = 32;
 constexpr int NUM_WEAPONS = 26;
 constexpr int MAX_COLLIDE_MOVES = 3;
-constexpr int MAX_ENGINE_PLAYERS = 32; // we can have 64 players with xash
+constexpr int MAX_ENGINE_PLAYERS = 32;
 constexpr int MAX_PRINT_BUFFER = 1024;
 constexpr int MAX_TEAM_COUNT = 2;
 constexpr int INVALID_WAYPOINT_INDEX = -1;
@@ -528,12 +529,6 @@ struct Route {
    float g, f;
    int parent;
    RouteState state;
-};
-
-// this structure links waypoints returned from pathfinder
-struct PathNode {
-   int index;
-   PathNode *next;
 };
 
 // links keywords and replies together
@@ -694,6 +689,27 @@ struct Path {
    } vis;
 };
 
+// this structure links waypoints returned from pathfinder
+class PathWalk : public Circular <int, MAX_ROUTE_LENGTH> {
+public:
+   PathWalk (void) {
+      clear ();
+   }
+
+   ~PathWalk (void) = default;
+public:
+   int &next (void) {
+      return at (1);
+   }
+
+   bool hasNext (void) const {
+      if (empty ()) {
+         return false;
+      }
+      return length () > 1;
+   }
+};
+
 // main bot class
 class Bot {
    friend class BotManager;
@@ -744,7 +760,6 @@ private:
    float m_probeTime; // time of probing different moves
    float m_lastCollTime; // time until next collision check
    float m_jumpStateTimer; // timer for jumping collision check
-   float m_randomPointChoiceTimer; // time to find random waypoint
 
    unsigned int m_collisionProbeBits; // bits of possible collision moves
    unsigned int m_collideMoves[MAX_COLLIDE_MOVES]; // sorted array of movements
@@ -752,8 +767,7 @@ private:
    CollisionState m_collisionState; // collision State
 
    Route *m_routes; // pointer
-   PathNode *m_navNode; // pointer to current node from path
-   PathNode *m_navNodeStart; // pointer to start of path finding nodes
+   PathWalk m_path; // pointer to current node from path
    Path *m_currentPath; // pointer to the current path waypoint
 
    SearchPathType m_pathType; // which pathfinder to use
@@ -913,7 +927,7 @@ private:
    edict_t *lookupBreakable (void);
    int getCoverPoint (float maxDistance);
    int getDefendPoint (const Vector &origin);
-   int getGoal (void);
+   int searchGoal (void);
    int getGoalProcess (int tactic, IntArray *defensive, IntArray *offsensive);
    void filterGoals (const IntArray &goals, int *result);
    void processPickups (void);
@@ -924,7 +938,7 @@ private:
    void collectGoalExperience (int damage, int team);
    void collectDataExperience (edict_t *attacker, int damage);
    int getMsgQueue (void);
-   bool isGoalValid (void);
+   bool hasActiveGoal (void);
    bool advanceMovement (void);
    float isInFOV (const Vector &dest);
 
@@ -1433,7 +1447,7 @@ public:
    bool isReachable (Bot *bot, int index);
    bool isNodeReacheable (const Vector &src, const Vector &destination);
    void frame (void);
-   bool isNodesValid (void);
+   bool checkNodes (void);
    void saveExperience (void);
    void saveVisibility (void);
    void addBasic (void);

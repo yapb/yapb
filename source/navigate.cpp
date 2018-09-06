@@ -12,7 +12,7 @@
 ConVar yb_whose_your_daddy ("yb_whose_your_daddy", "0");
 ConVar yb_debug_heuristic_type ("yb_debug_heuristic_type", "0");
 
-int Bot::getGoal (void) {
+int Bot::searchGoal (void) {
    // chooses a destination (goal) waypoint for a bot
    if (!g_bombPlanted && m_team == TEAM_TERRORIST && (g_mapType & MAP_DE)) {
       edict_t *pent = nullptr;
@@ -249,7 +249,7 @@ void Bot::filterGoals (const IntArray &goals, int *result) {
    }
 }
 
-bool Bot::isGoalValid (void) {
+bool Bot::hasActiveGoal (void) {
    int goal = task ()->data;
 
    if (goal == INVALID_WAYPOINT_INDEX) { // not decided about a goal
@@ -258,21 +258,10 @@ bool Bot::isGoalValid (void) {
    else if (goal == m_currentWaypointIndex) { // no nodes needed
       return true;
    }
-   else if (m_navNode == nullptr) { // no path calculated
+   else if (m_path.empty ()) { // no path calculated
       return false;
    }
-
-   // got path - check if still valid
-   PathNode *node = m_navNode;
-
-   while (node->next != nullptr) {
-      node = node->next;
-   }
-
-   if (node->index == goal) {
-      return true;
-   }
-   return false;
+   return goal == m_path.back (); // got path - check if still valid
 }
 
 void Bot::resetCollision (void) {
@@ -672,14 +661,14 @@ bool Bot::processNavigation (void) {
 
    // this waypoint has additional travel flags - care about them
    if (m_currentTravelFlags & PATHFLAG_JUMP) {
+
       // bot is not jumped yet?
       if (!m_jumpFinished) {
+
          // if bot's on the ground or on the ladder we're free to jump. actually setting the correct velocity is cheating.
-         // pressing the jump button gives the illusion of the bot actual jmping.
+         // pressing the jump button gives the illusion of the bot actual jumping.
          if (isOnFloor () || isOnLadder ()) {
-            if (m_desiredVelocity.x != 0.0f && m_desiredVelocity.y != 0.0f) {
-               pev->velocity = m_desiredVelocity + m_desiredVelocity * 0.086f;
-            }
+            pev->velocity = m_desiredVelocity * 1.25f;
             pev->button |= IN_JUMP;
 
             m_jumpFinished = true;
@@ -730,7 +719,7 @@ bool Bot::processNavigation (void) {
       engine.testLine (m_currentPath->origin, m_currentPath->origin + Vector (0.0f, 0.0f, -50.0f), TRACE_IGNORE_EVERYTHING, ent (), &tr);
 
       // if trace result shows us that it is a lift
-      if (!engine.isNullEntity (tr.pHit) && m_navNode != nullptr && (strcmp (STRING (tr.pHit->v.classname), "func_door") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_plat") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_train") == 0) && !liftClosedDoorExists) {
+      if (!engine.isNullEntity (tr.pHit) && !m_path.empty () && (strcmp (STRING (tr.pHit->v.classname), "func_door") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_plat") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_train") == 0) && !liftClosedDoorExists) {
          if ((m_liftState == LIFT_NO_NEARBY || m_liftState == LIFT_WAITING_FOR || m_liftState == LIFT_LOOKING_BUTTON_OUTSIDE) && tr.pHit->v.velocity.z == 0.0f) {
             if (A_abs (pev->origin.z - tr.vecEndPos.z) < 70.0f) {
                m_liftEntity = tr.pHit;
@@ -744,11 +733,13 @@ bool Bot::processNavigation (void) {
             m_liftUsageTime = engine.timebase () + 7.0f;
          }
       }
-      else if (m_navNode != nullptr) // no lift found at waypoint
+      else if (!m_path.empty ()) // no lift found at waypoint
       {
-         if ((m_liftState == LIFT_NO_NEARBY || m_liftState == LIFT_WAITING_FOR) && m_navNode->next != nullptr) {
-            if (m_navNode->next->index >= 0 && m_navNode->next->index < g_numWaypoints && (waypoints[m_navNode->next->index].flags & FLAG_LIFT)) {
-               engine.testLine (m_currentPath->origin, waypoints[m_navNode->next->index].origin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
+         if ((m_liftState == LIFT_NO_NEARBY || m_liftState == LIFT_WAITING_FOR) && m_path.hasNext ()) {
+            int nextNode = m_path.next ();
+
+            if (nextNode >= 0 && nextNode < g_numWaypoints && (waypoints[nextNode].flags & FLAG_LIFT)) {
+               engine.testLine (m_currentPath->origin, waypoints[nextNode].origin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
 
                if (!engine.isNullEntity (tr.pHit) && (strcmp (STRING (tr.pHit->v.classname), "func_door") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_plat") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_train") == 0)) {
                   m_liftEntity = tr.pHit;
@@ -1178,7 +1169,7 @@ bool Bot::processNavigation (void) {
          }
          return true;
       }
-      else if (m_navNode == nullptr) {
+      else if (m_path.empty ()) {
          return false;
       }
       int taskTarget = task ()->data;
@@ -1226,13 +1217,7 @@ void Bot::searchShortestPath (int srcIndex, int destIndex) {
    m_chosenGoalIndex = srcIndex;
    m_goalValue = 0.0f;
 
-   PathNode *node = new PathNode;
-
-   node->index = srcIndex;
-   node->next = nullptr;
-
-   m_navNodeStart = node;
-   m_navNode = m_navNodeStart;
+   m_path.push (srcIndex);
 
    while (srcIndex != destIndex) {
       srcIndex = *(waypoints.m_pathMatrix + (srcIndex * g_numWaypoints) + destIndex);
@@ -1243,12 +1228,7 @@ void Bot::searchShortestPath (int srcIndex, int destIndex) {
 
          return;
       }
-
-      node->next = new PathNode;
-      node = node->next;
-
-      node->index = srcIndex;
-      node->next = nullptr;
+      m_path.push (srcIndex);
    }
 }
 
@@ -1454,103 +1434,6 @@ float hfunctionNone (int index, int startIndex, int goalIndex) {
    return hfunctionPathDist (index, startIndex, goalIndex) / 128.0f * 10.0f;
 }
 
-// priority queue class (smallest item out first)
-template <int maxSize> class RoutePriorityQueue {
-private:
-   int m_size;
-   int m_maxSize;
-
-   struct HeapNode {
-      int index;
-      float priority;
-   } *m_heap;
-
-public:
-   RoutePriorityQueue (void) {
-      m_size = 0;
-      m_maxSize = maxSize;
-      m_heap = new HeapNode[m_maxSize + 1];
-   }
-
-   ~RoutePriorityQueue (void) {
-      delete[] m_heap;
-   }
-
-   void push (int index, float priority) {
-      if (m_size >= m_maxSize) {
-         return;
-      }
-      m_heap[m_size].priority = priority;
-      m_heap[m_size].index = index;
-      m_size++;
-
-      int child = m_size - 1;
-
-      while (child) {
-         int parent = parentOf (child);
-
-         if (m_heap[parent].priority <= m_heap[child].priority) {
-            break;
-         }
-         HeapNode swap;
-         swap = m_heap[child];
-
-         m_heap[child] = m_heap[parent];
-         m_heap[parent] = swap;
-
-         child = parent;
-      }
-   }
-
-   int pop (void) {
-      int ret = m_heap[0].index;
-      m_size--;
-      m_heap[0] = m_heap[m_size];
-
-      int parent = 0;
-      int child = leftOf (parent);
-
-      HeapNode swap = m_heap[parent];
-
-      while (child < m_size) {
-         int rightChild = rightOf (parent);
-
-         if (rightChild < m_size) {
-            if (m_heap[rightChild].priority < m_heap[child].priority) {
-               child = rightChild;
-            }
-         }
-
-         if (swap.priority <= m_heap[child].priority) {
-            break;
-         }
-         m_heap[parent] = m_heap[child];
-         parent = child;
-         child = leftOf (parent);
-      }
-      m_heap[parent] = swap;
-
-      return ret;
-   }
-
-   int empty (void) {
-      return !m_size;
-   }
-
-public:
-   static constexpr int leftOf (int index) {
-      return (index << 1) | 1;
-   }
-
-   static constexpr int rightOf (int index) {
-      return (++index) << 1;
-   }
-
-   static constexpr int parentOf (int index) {
-      return (--index) >> 1;
-   }
-};
-
 void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= SEARCH_PATH_FASTEST */) {
    // this function finds a path from srcIndex to destIndex
 
@@ -1629,30 +1512,31 @@ void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= S
    srcRoute->f = srcRoute->g + hcalc (srcIndex, srcIndex, destIndex);
    srcRoute->state = ROUTE_OPEN;
 
-   RoutePriorityQueue <MAX_WAYPOINTS> routeQue;
+   BinHeap <int, float, MAX_ROUTE_LENGTH> routeQue;
    routeQue.push (srcIndex, srcRoute->g);
 
    while (!routeQue.empty ()) {
       // remove the first node from the open list
       int currentIndex = routeQue.pop ();
 
+      // safes us from bad waypoints...
+      if (routeQue.length () >= MAX_ROUTE_LENGTH - 1) {
+         logEntry (true, LL_ERROR, "A* Search for bots \"%s\" has tried to build path with at least %d nodes. Seems to be waypoints are broken.", STRING (pev->netname), routeQue.length ());
+
+         // bail out to shortest path
+         searchShortestPath (srcIndex, destIndex);
+         return;
+      }
+
       // is the current node the goal node?
       if (currentIndex == destIndex) {
+
          // build the complete path
-         m_navNode = nullptr;
-
          do {
-            PathNode *path = new PathNode;
-
-            path->index = currentIndex;
-            path->next = m_navNode;
-
-            m_navNode = path;
+            m_path.unshift (currentIndex);
             currentIndex = m_routes[currentIndex].parent;
 
          } while (currentIndex != INVALID_WAYPOINT_INDEX);
-
-         m_navNodeStart = m_navNode;
          return;
       }
       auto curRoute = &m_routes[currentIndex];
@@ -1694,17 +1578,7 @@ void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= S
 }
 
 void Bot::clearSearchNodes (void) {
-   PathNode *deletingNode = nullptr;
-   PathNode *node = m_navNodeStart;
-
-   while (node != nullptr) {
-      deletingNode = node->next;
-      delete node;
-
-      node = deletingNode;
-   }
-   m_navNodeStart = nullptr;
-   m_navNode = nullptr;
+   m_path.clear ();
    m_chosenGoalIndex = INVALID_WAYPOINT_INDEX;
 }
 
@@ -1811,28 +1685,19 @@ bool Bot::searchOptimalPoint (void) {
    int selected = INVALID_WAYPOINT_INDEX;
 
    // now pick random one from choosen
-   if (rng.getInt (0, 100) < 30 && m_randomPointChoiceTimer < engine.timebase ()) {
-      m_randomPointChoiceTimer = engine.timebase () + rng.getFloat (5.0f, 10.0f);
+   int index = 0;
 
-      int index = 0;
-
-      // choice from found
-      if (lessIndex[2] != INVALID_WAYPOINT_INDEX) {
-         index = rng.getInt (0, 2);
-      }
-      else if (lessIndex[1] != INVALID_WAYPOINT_INDEX) {
-         index = rng.getInt (0, 1);
-      }
-      else if (lessIndex[0] != INVALID_WAYPOINT_INDEX) {
-         index = 0;
-      }
-      selected = lessIndex[index];
+   // choice from found
+   if (lessIndex[2] != INVALID_WAYPOINT_INDEX) {
+      index = rng.getInt (0, 2);
    }
-
-   // use the closet available
-   else {
-      selected = lessIndex[0];
+   else if (lessIndex[1] != INVALID_WAYPOINT_INDEX) {
+      index = rng.getInt (0, 1);
    }
+   else if (lessIndex[0] != INVALID_WAYPOINT_INDEX) {
+      index = 0;
+   }
+   selected = lessIndex[index];
 
    // if we're still have no waypoint and have busy one (by other bot) pick it up
    if (selected == INVALID_WAYPOINT_INDEX && busy != INVALID_WAYPOINT_INDEX) {
@@ -2308,17 +2173,17 @@ bool Bot::getNextBestPoint (void) {
    // this function does a realtime post processing of waypoints return from the
    // pathfinder, to vary paths and find the best waypoint on our way
 
-   assert (m_navNode != nullptr);
-   assert (m_navNode->next != nullptr);
+   assert (!m_path.empty ());
+   assert (m_path.hasNext ());
 
-   if (!isOccupiedPoint (m_navNode->index)) {
+   if (!isOccupiedPoint (m_path.front ())) {
       return false;
    }
 
    for (int i = 0; i < MAX_PATH_INDEX; i++) {
       int id = m_currentPath->index[i];
 
-      if (id != INVALID_WAYPOINT_INDEX && waypoints.isConnected (id, m_navNode->next->index) && waypoints.isConnected (m_currentWaypointIndex, id)) {
+      if (id != INVALID_WAYPOINT_INDEX && waypoints.isConnected (id, m_path.next ()) && waypoints.isConnected (m_currentWaypointIndex, id)) {
 
          // don't use ladder waypoints as alternative
          if (waypoints[id].flags & FLAG_LADDER) {
@@ -2326,7 +2191,7 @@ bool Bot::getNextBestPoint (void) {
          }
 
          if (!isOccupiedPoint (id)) {
-            m_navNode->index = id;
+            m_path.next () = id;
             return true;
          }
       }
@@ -2340,18 +2205,18 @@ bool Bot::advanceMovement (void) {
    getValidPoint (); // check if old waypoints is still reliable
 
    // no waypoints from pathfinding?
-   if (m_navNode == nullptr) {
+   if (m_path.empty ()) {
       return false;
    }
    TraceResult tr;
 
-   m_navNode = m_navNode->next; // advance in list
+   m_path.shift (); // advance in list
    m_currentTravelFlags = 0; // reset travel flags (jumping etc)
 
    // we're not at the end of the list?
-   if (m_navNode != nullptr) {
+   if (!m_path.empty ()) {
       // if in between a route, postprocess the waypoint (find better alternatives)...
-      if (m_navNode != m_navNodeStart && m_navNode->next != nullptr) {
+      if (m_path.hasNext () && m_path.front () != m_path.back ()) {
          getNextBestPoint ();
          m_minSpeed = pev->maxspeed;
 
@@ -2361,7 +2226,7 @@ bool Bot::advanceMovement (void) {
          if (taskID == TASK_NORMAL && g_timeRoundMid + 5.0f < engine.timebase () && m_timeCamping + 5.0f < engine.timebase () && !g_bombPlanted && m_personality != PERSONALITY_RUSHER && !m_hasC4 && !m_isVIP && m_loosedBombWptIndex == INVALID_WAYPOINT_INDEX && !hasHostage ()) {
             m_campButtons = 0;
 
-            int nextIndex = m_navNode->next->index;
+            const int nextIndex = m_path.next ();
             float kills = 0;
 
             if (m_team == TEAM_TERRORIST) {
@@ -2399,7 +2264,7 @@ bool Bot::advanceMovement (void) {
 
             // force terrorist bot to plant bomb
             if (m_inBombZone && !m_hasProgressBar && m_hasC4) {
-               int newGoal = getGoal ();
+               int newGoal = searchGoal ();
 
                m_prevGoalIndex = newGoal;
                m_chosenGoalIndex = newGoal;
@@ -2416,13 +2281,13 @@ bool Bot::advanceMovement (void) {
          }
       }
 
-      if (m_navNode != nullptr) {
-         int destIndex = m_navNode->index;
+      if (!m_path.empty ()) {
+         const int destIndex = m_path.front ();
 
          // find out about connection flags
          if (m_currentWaypointIndex != INVALID_WAYPOINT_INDEX) {
             for (int i = 0; i < MAX_PATH_INDEX; i++) {
-               if (m_currentPath->index[i] == m_navNode->index) {
+               if (m_currentPath->index[i] == destIndex) {
                   m_currentTravelFlags = m_currentPath->connectionFlags[i];
                   m_desiredVelocity = m_currentPath->connectionVelocity[i];
                   m_jumpFinished = false;
@@ -2439,12 +2304,14 @@ bool Bot::advanceMovement (void) {
             Vector dst;
 
             // try to find out about future connection flags
-            if (m_navNode->next != nullptr) {
+            if (m_path.hasNext ()) {
                for (int i = 0; i < MAX_PATH_INDEX; i++) {
-                  Path &path = waypoints[m_navNode->index];
-                  Path &next = waypoints[m_navNode->next->index];
+                  const int nextIndex = m_path.next ();
 
-                  if (path.index[i] == m_navNode->next->index && (path.connectionFlags[i] & PATHFLAG_JUMP)) {
+                  Path &path = waypoints[destIndex];
+                  Path &next = waypoints[nextIndex];
+
+                  if (path.index[i] == nextIndex && (path.connectionFlags[i] & PATHFLAG_JUMP)) {
                      src = path.origin;
                      dst = next.origin;
 
@@ -2468,7 +2335,7 @@ bool Bot::advanceMovement (void) {
                   Bot *otherBot = bots.getBot (c);
 
                   // if another bot uses this ladder, wait 3 secs
-                  if (otherBot != nullptr && otherBot != this && otherBot->m_notKilled && otherBot->m_currentWaypointIndex == m_navNode->index) {
+                  if (otherBot != nullptr && otherBot != this && otherBot->m_notKilled && otherBot->m_currentWaypointIndex == destIndex) {
                      startTask (TASK_PAUSE, TASKPRI_PAUSE, INVALID_WAYPOINT_INDEX, engine.timebase () + 3.0f, false);
                      return true;
                   }

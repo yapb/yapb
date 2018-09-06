@@ -308,7 +308,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
             waypoints.save ();
             engine.print (waypointSaveMessage);
          }
-         else if (waypoints.isNodesValid ()) {
+         else if (waypoints.checkNodes ()) {
             waypoints.save ();
             engine.print (waypointSaveMessage);
          }
@@ -327,7 +327,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
 
       // check all nodes for validation
       else if (stricmp (arg1, "check") == 0) {
-         if (waypoints.isNodesValid ())
+         if (waypoints.checkNodes ())
             engine.centerPrint ("Nodes work Fine");
       }
 
@@ -1190,13 +1190,13 @@ void ClientUserInfoChanged (edict_t *ent, char *infobuffer) {
    // team changes, recounting the teams population, etc...
 
    if (engine.isDedicated () && !isFakeClient (ent)) {
-      const char *passwordField = yb_password_key.str ();
-      const char *password = yb_password.str ();
+      const String &key = yb_password_key.str ();
+      const String &password = yb_password.str ();
 
-      if (!isEmptyStr (passwordField) || !isEmptyStr (password)) {
+      if (!key.empty () && !password.empty ()) {
          int clientIndex = engine.indexOfEntity (ent) - 1;
 
-         if (strcmp (password, g_engfuncs.pfnInfoKeyValue (infobuffer, const_cast<char *> (passwordField))) == 0) {
+         if (password == g_engfuncs.pfnInfoKeyValue (infobuffer, key.chars ())) {
             g_clients[clientIndex].flags |= CF_ADMIN;
          }
          else {
@@ -1243,7 +1243,7 @@ void ClientCommand (edict_t *ent) {
             break;
 
          case 2:
-            engine.clientPrint (ent, "Command %s, can only be executed from server console.", arg1);
+            engine.clientPrint (ent, "Command \"%s\", can only be executed from server console.", arg1);
             break;
          }
 
@@ -1466,7 +1466,7 @@ void ClientCommand (edict_t *ent) {
                break;
 
             case 4:
-               if (waypoints.isNodesValid ()) {
+               if (waypoints.checkNodes ()) {
                   waypoints.save ();
                }
                else {
@@ -1486,7 +1486,7 @@ void ClientCommand (edict_t *ent) {
                break;
 
             case 7:
-               if (waypoints.isNodesValid ()) {
+               if (waypoints.checkNodes ()) {
                   engine.centerPrint ("Nodes works fine");
                }
                else {
@@ -1608,7 +1608,7 @@ void ClientCommand (edict_t *ent) {
                break;
 
             case 2:
-               showMenu (ent, BOT_MENU_WAYPOINT_MAIN_PAGE1);
+               showMenu (ent, engine.isDedicated () ? BOT_MENU_FEATURES : BOT_MENU_WAYPOINT_MAIN_PAGE1);
                break;
 
             case 3:

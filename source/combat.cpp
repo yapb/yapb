@@ -1069,7 +1069,7 @@ void Bot::attackMovement (void) {
 
          if (m_combatStrafeDir == STRAFE_DIR_RIGHT) {
             if (!checkWallOnLeft ()) {
-               m_strafeSpeed = -getShiftSpeed ();
+               m_strafeSpeed = -pev->maxspeed;
             }
             else {
                m_combatStrafeDir = STRAFE_DIR_LEFT;
@@ -1078,7 +1078,7 @@ void Bot::attackMovement (void) {
          }
          else {
             if (!checkWallOnRight ()) {
-               m_strafeSpeed = getShiftSpeed ();
+               m_strafeSpeed = pev->maxspeed;
             }
             else {
                m_combatStrafeDir = STRAFE_DIR_RIGHT;

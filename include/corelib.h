@@ -6,6 +6,7 @@
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
 //     https://yapb.ru/license
 //
+//
 
 #pragma once
 
@@ -23,9 +24,9 @@
 #include <platform.h>
 
 #ifdef PLATFORM_WIN32
-#include <direct.h>
+   #include <direct.h>
 #else
-#include <sys/stat.h>
+   #include <sys/stat.h>
 #endif
 //
 // Basic Types
@@ -532,21 +533,121 @@ public:
    }
 };
 
+template <typename A, typename B, size_t Capacity> class BinHeap {
+private:
+   using PairType = Pair <A, B>;
+
+private:
+   size_t m_size;
+   PairType *m_heap;
+
+public:
+   BinHeap (void) : m_size (0), m_heap (new PairType[Capacity]) {
+   }
+
+   ~BinHeap (void) {
+      delete[] m_heap;
+   }
+
+public:
+   void push (const A &first, const B &second) {
+      if (m_size >= Capacity) {
+         return;
+      }
+      m_heap[m_size] = { first, second };
+      m_size++;
+
+      siftUp ();
+   }
+
+   A pop (void) {
+      assert (m_size > 0);
+
+      auto value = m_heap[0].first;
+
+      m_size--;
+      m_heap[0] = m_heap[m_size];
+
+      siftDown ();
+      return value;
+   }
+
+   inline bool empty (void) const {
+      return !length ();
+   }
+
+   inline size_t length (void) const {
+      return m_size;
+   }
+
+private:
+   void siftUp (void) {
+      size_t child = m_size - 1;
+
+      while (child != 0) {
+         size_t parentIndex = getParent (child);
+
+         if (m_heap[parentIndex].second <= m_heap[child].second) {
+            break;
+         }
+         auto temp = m_heap[child];
+         m_heap[child] = m_heap[parentIndex];
+         m_heap[parentIndex] = temp;
+
+         child = parentIndex;
+      }
+   }
+
+   void siftDown (void) {
+      size_t parent = 0;
+      size_t leftIndex = getLeft (parent);
+
+      auto ref = m_heap[parent];
+
+      while (leftIndex < m_size) {
+         size_t rightIndex = getRight (parent);
+
+         if (rightIndex < m_size) {
+            if (m_heap[rightIndex].second < m_heap[leftIndex].second) {
+               leftIndex = rightIndex;
+            }
+         }
+
+         if (ref.second <= m_heap[leftIndex].second) {
+            break;
+         }
+         m_heap[parent] = m_heap[leftIndex];
+         parent = leftIndex;
+
+         leftIndex = getLeft (parent);
+      }
+      m_heap[parent] = ref;
+   }
+
+private:
+   static constexpr size_t getLeft (size_t index) {
+      return index << 1 | 1;
+   }
+
+   static constexpr size_t getRight (size_t index) {
+      return ++index << 1;
+   }
+
+   static constexpr size_t getParent (size_t index) {
+      return --index >> 1;
+   }
+};
+
 template <typename T> class Array {
 private:
    T *m_data;
    size_t m_capacity, m_length;
 
 public:
-   Array (void)
-      : m_data (nullptr)
-      , m_capacity (0)
-      , m_length (0) {}
+   Array (void) : m_data (nullptr) , m_capacity (0) , m_length (0) {
+   }
 
-   Array (const Array &other)
-      : m_data (nullptr)
-      , m_capacity (0)
-      , m_length (0) {
+   Array (const Array &other) : m_data (nullptr) , m_capacity (0) , m_length (0) {
       assign (other);
    }
 
@@ -812,6 +913,184 @@ public:
    }
 };
 
+template <typename T, int32 MaxCapacity> class Circular {
+public:
+   static constexpr int32 NPOS = static_cast <int32> (-1);
+
+private:
+   int32 m_head;
+   int32 m_tail;
+   T m_data[MaxCapacity];
+
+public:
+   Circular (void) : m_head (0), m_tail (NPOS) {
+   }
+
+   ~Circular (void) = default;
+
+   bool empty (void) const {
+      return !length ();
+   }
+
+   void clear (void) {
+      m_tail = NPOS;
+      m_head = 0;
+   }
+
+   int32 length (void) const {
+      if (m_tail < 0) {
+         return 0;
+      }
+      else if (m_head > m_tail) {
+         return m_head - m_tail;
+      }
+      return MaxCapacity - m_tail + m_head;
+   }
+
+   int32 capacity (void) const {
+      return MaxCapacity - length ();
+   }
+
+   void resize (const int32 &newSize) {
+      if (newSize == 0) {
+         clear ();
+         return;
+      }
+
+      if (newSize > MaxCapacity) {
+         return;
+      }
+
+      if (m_tail < 0) {
+         m_tail = 0;
+      }
+      m_head = m_tail + newSize;
+
+      if (m_head >= MaxCapacity) {
+         m_head %= MaxCapacity;
+      }
+   }
+
+   const T &front (void) const {
+      return m_data[m_tail];
+   }
+
+   T &front (void) {
+      return m_data[m_tail];
+   }
+
+   const T &back (void) const {
+      int32 index = m_head - 1;
+
+      if (index < 0) {
+         index = MaxCapacity - 1;
+      }
+      return m_data[index];
+   }
+
+   T &back (void) {
+      int32 index = m_head - 1;
+
+      if (index < 0) {
+         index = MaxCapacity - 1;
+      }
+      return m_data[index];
+   }
+
+   void shift (void) {
+      if (empty ()) {
+         return;
+      }
+      if (++m_tail >= MaxCapacity) {
+         m_tail %= MaxCapacity;
+      }
+
+      if (m_tail == m_head) {
+         clear ();
+      }
+   }
+
+   void pop (void) {
+      if (empty ()) {
+         return;
+      }
+
+      if (--m_head < 0) {
+         m_head = MaxCapacity - 1;
+      }
+
+      if (m_head == m_tail) {
+         clear ();
+      }
+   }
+
+   void push (const T &val) {
+      if (capacity ()) {
+         m_data[m_head] = val;
+
+         if (empty ()) {
+            m_tail = m_head;
+         }
+
+         if (++m_head >= MaxCapacity) {
+            m_head %= MaxCapacity;
+         }
+      }
+   }
+
+   void unshift (const T &val) {
+      if (capacity ()) {
+         if (--m_tail < 0) {
+            m_tail = MaxCapacity - 1;
+         }
+         m_data[m_tail] = val;
+      }
+   }
+
+   void erase (const int32 &index) {
+      if (index >= length ()) {
+         return;
+      }
+      for (size_t i = index; i < length () - 1; i++) {
+         at (i) = at (i + 1);
+      }
+      pop ();
+   }
+
+   void erase (const int32 &start, const int32 &end) {
+      if (start > end || start >= length ()) {
+         return;
+      }
+      int32 target = start;
+
+      for (int32 i = end + 1; i < length (); i++) {
+         at (target++) = at (i);
+      }
+
+      for (int32 i = start; i <= end; i++) {
+         pop ();
+      }
+   }
+
+   T &at (const int32 &index) {
+      int32 pick = m_tail + index;
+
+      if (pick >= MaxCapacity) {
+         pick %= MaxCapacity;
+      }
+      return m_data[pick];
+   }
+
+   const T &at (const int32 &index) const {
+      int32 pick = m_tail + index;
+
+      if (pick >= MaxCapacity) {
+         pick %= MaxCapacity;
+      }
+      return m_data[pick];
+   }
+};
+
 class String {
 public:
    static constexpr size_t NPOS = static_cast<size_t> (-1);
@@ -853,13 +1132,13 @@ protected:
       return false;
    }
 
-   void allocateSpace (int length) {
-      int maxSize = static_cast<int> (m_capacity - m_length) - 1;
+   void allocateSpace (int32 length) {
+      int32 maxSize = static_cast<int> (m_capacity - m_length) - 1;
 
       if (length <= maxSize) {
          return;
       }
-      int delta = 8;
+      int32 delta = 8;
 
       if (m_capacity > 64) {
          delta = m_capacity / 2;
@@ -978,7 +1257,7 @@ public:
          m_length = 0;
    }
 
-   template <int BufferSize = 512> void format (const char *fmt, ...) {
+   template <size_t BufferSize = 512> void format (const char *fmt, ...) {
       va_list ap;
       char buffer[BufferSize];
 
@@ -989,7 +1268,7 @@ public:
       assign (buffer);
    }
 
-   template <int BufferSize = 512> void formatAppend (const char *fmt, ...) {
+   template <size_t BufferSize = 512> void formatAppend (const char *fmt, ...) {
       va_list ap;
       char buffer[BufferSize];
 
@@ -1015,7 +1294,7 @@ public:
       return m_chars ? m_length : 0;
    }
 
-   int toInt32 (void) const {
+   int32 toInt32 (void) const {
       return atoi (chars ());
    }
 
@@ -1104,11 +1383,11 @@ public:
       return m_chars[index];
    }
 
-   int compare (const String &what) const {
+   int32 compare (const String &what) const {
       return strcmp (m_chars, what.m_chars);
    }
 
-   int compare (const char *what) const {
+   int32 compare (const char *what) const {
       return strcmp (m_chars, what);
    }
 
@@ -1116,7 +1395,7 @@ public:
       return strstr (m_chars, what.m_chars) != nullptr;
    }
 
-   int erase (size_t index, size_t count = 1) {
+   size_t erase (size_t index, size_t count = 1) {
       if (index + count > m_length) {
          count = m_length - index;
       }
@@ -1160,10 +1439,10 @@ public:
          pos = m_length;
       }
 
-      int numInsertChars = input.length ();
+      size_t numInsertChars = input.length ();
       putSpace (pos, numInsertChars);
 
-      for (int i = 0; i < numInsertChars; i++) {
+      for (size_t i = 0; i < numInsertChars; i++) {
          m_chars[pos + i] = input[i];
       }
       m_length += numInsertChars;
@@ -1363,7 +1642,7 @@ public:
    }
 
 public:
-   V & operator [] (const K &key) {
+   V &operator [] (const K &key) {
       for (auto &entry : getBucket (key)) {
          if (entry.first == key) {
             return entry.second;
@@ -1628,9 +1907,6 @@ public:
    }
 };
 
-using StringArray = Array <String>;
-using IntArray = Array <int>;
-
 template <typename T> class Singleton {
 protected:
    Singleton (void) = default;
@@ -1650,3 +1926,7 @@ public:
       return ref;
    };
 };
+
+using StringArray = Array <String>;
+using IntArray = Array <int>;
+

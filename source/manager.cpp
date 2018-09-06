@@ -1082,7 +1082,6 @@ void Bot::processNewRound (void) {
    m_shootAtDeadTime = 0.0f;
    m_oldCombatDesire = 0.0f;
    m_liftUsageTime = 0.0f;
-   m_randomPointChoiceTimer = 0.0f;
 
    m_avoidGrenade = nullptr;
    m_needAvoidGrenade = 0;

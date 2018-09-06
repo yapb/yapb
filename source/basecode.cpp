@@ -2769,7 +2769,7 @@ void Bot::updateAimDir (void) {
          }
          else {
             m_aimFlags &= ~AIM_PREDICT_PATH;
-            m_destOrigin = m_destOrigin;
+            m_lookAt = m_destOrigin;
          }
       }
       else {
@@ -3122,12 +3122,12 @@ void Bot::normal_ (void) {
       }
    }
    // no more nodes to follow - search new ones (or we have a bomb)
-   else if (!isGoalValid ()) {
+   else if (!hasActiveGoal ()) {
       m_moveSpeed = 0.0f;
       clearSearchNodes ();
 
       // did we already decide about a goal before?
-      int destIndex = task ()->data != INVALID_WAYPOINT_INDEX ? task ()->data : getGoal ();
+      int destIndex = task ()->data != INVALID_WAYPOINT_INDEX ? task ()->data : searchGoal ();
 
       m_prevGoalIndex = destIndex;
       m_chosenGoalIndex = destIndex;
@@ -3220,7 +3220,7 @@ void Bot::huntEnemy_ (void) {
       m_prevGoalIndex = INVALID_WAYPOINT_INDEX;
       m_lastEnemyOrigin.nullify ();
    }
-   else if (!isGoalValid ()) // do we need to calculate a new path?
+   else if (!hasActiveGoal ()) // do we need to calculate a new path?
    {
       clearSearchNodes ();
 
@@ -3325,7 +3325,7 @@ void Bot::seekCover_ (void) {
       m_moveToGoal = false;
       m_checkTerrain = false;
    }
-   else if (!isGoalValid ()) // we didn't choose a cover waypoint yet or lost it due to an attack?
+   else if (!hasActiveGoal ()) // we didn't choose a cover waypoint yet or lost it due to an attack?
    {
       clearSearchNodes ();
       int destIndex = INVALID_WAYPOINT_INDEX;
@@ -3615,7 +3615,7 @@ void Bot::moveToPos_ (void) {
    }
 
    // didn't choose goal waypoint yet?
-   else if (!isGoalValid ()) {
+   else if (!hasActiveGoal ()) {
       clearSearchNodes ();
 
       int destIndex = INVALID_WAYPOINT_INDEX;
@@ -3935,7 +3935,7 @@ void Bot::followUser_ (void) {
    }
 
    // didn't choose goal waypoint yet?
-   if (!isGoalValid ()) {
+   if (!hasActiveGoal ()) {
       clearSearchNodes ();
 
       int destIndex = waypoints.getNearest (m_targetEntity->v.origin);
@@ -4178,7 +4178,7 @@ void Bot::doublejump_ (void) {
    }
 
    // didn't choose goal waypoint yet?
-   if (!isGoalValid ())  {
+   if (!hasActiveGoal ())  {
       clearSearchNodes ();
 
       int destIndex = waypoints.getNearest (m_doubleJumpOrigin);
@@ -4230,7 +4230,7 @@ void Bot::escapeFromBomb_ (void) {
    }
 
    // didn't choose goal waypoint yet?
-   else if (!isGoalValid ()) {
+   else if (!hasActiveGoal ()) {
       clearSearchNodes ();
 
       int lastSelectedGoal = INVALID_WAYPOINT_INDEX, minPathDistance = 99999;
@@ -5058,15 +5058,8 @@ void Bot::showDebugOverlay (void) {
          engine.drawLine (g_hostEntity, eyePos () - Vector (0.0f, 0.0f, 32.0f), eyePos () + g_pGlobals->v_forward * 300.0f, 10, 0, 255, 0, 0, 250, 5, 1, DRAW_ARROW);
 
          // now draw line from source to destination
-         PathNode *node = &m_navNode[0];
-
-         while (node != nullptr) {
-            const Vector &srcPath = waypoints[node->index].origin;
-            node = node->next;
-
-            if (node != nullptr) {
-               engine.drawLine (g_hostEntity, srcPath, waypoints[node->index].origin, 15, 0, 255, 100, 55, 200, 5, 1, DRAW_ARROW);
-            }
+         for (int32 i = 0; i < m_path.length () && i + 1 < m_path.length (); i++) {
+            engine.drawLine (g_hostEntity, waypoints[m_path.at (i)].origin, waypoints[m_path.at (i + 1)].origin, 15, 0, 255, 100, 55, 200, 5, 1, DRAW_ARROW);
          }
       }
    }
