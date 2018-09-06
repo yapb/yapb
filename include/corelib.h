@@ -513,6 +513,26 @@ public:
    }
 };
 
+template <typename T> class Singleton {
+protected:
+   Singleton (void) = default;
+   virtual ~Singleton (void) = default;
+
+private:
+   Singleton (const Singleton &) = delete;
+   Singleton &operator= (const Singleton &) = delete;
+
+public:
+   inline static T *ptr (void) {
+      return &ref ();
+   }
+
+   inline static T &ref (void) {
+      static T ref;
+      return ref;
+   };
+};
+
 template <typename A, typename B> class Pair {
 public:
    A first;
@@ -1524,6 +1544,9 @@ public:
    }
 
    String &trimRight (const char *chars = "\r\n\t ") {
+      if (empty ()) {
+         return *this;
+      }
       char *str = m_chars + m_length - 1;
 
       while (*str != 0) {
@@ -1780,15 +1803,40 @@ public:
    }
 };
 
+class MemoryLoader : public Singleton <MemoryLoader> {
+private:
+   using Load = uint8 * (*) (const char *, int *);
+   using Unload = void (*) (void *);
+
+private:
+   Load m_load;
+   Unload m_unload;
+
+public:
+   MemoryLoader (void) = default;
+   ~MemoryLoader (void) = default;
+
+public:
+   void setup (Load load, Unload unload) {
+      m_load = load;
+      m_unload = unload;
+   }
+
+   uint8 *load (const char *name, int *size) {
+      if (m_load) {
+         return m_load (name, size);
+      }
+      return nullptr;
+   }
+
+   void unload (void *buffer) {
+      if (m_unload) {
+         m_unload (buffer);
+      }
+   }
+};
+
 class MemFile {
-public:
-   typedef uint8 *(*MF_Loader) (const char *, int *);
-   typedef void (*MF_Unloader) (uint8 *);
-
-public:
-   static MF_Loader Loader;
-   static MF_Unloader Unloader;
-
 private:
    size_t m_size;
    size_t m_pos;
@@ -1806,12 +1854,9 @@ public:
    }
 
    bool open (const String &filename) {
-      if (!Loader) {
-         return false;
-      }
       m_size = 0;
       m_pos = 0;
-      m_buffer = Loader (filename.chars (), reinterpret_cast<int *> (&m_size));
+      m_buffer = MemoryLoader::ref ().load (filename.chars (), reinterpret_cast<int *> (&m_size));
 
       if (!m_buffer) {
          return false;
@@ -1820,9 +1865,8 @@ public:
    }
 
    void close (void) {
-      if (Unloader) {
-         Unloader (m_buffer);
-      }
+      MemoryLoader::ref ().unload (m_buffer);
+
       m_size = 0;
       m_pos = 0;
       m_buffer = nullptr;
@@ -1905,26 +1949,6 @@ public:
    bool isValid (void) const {
       return m_buffer && m_size > 0;
    }
-};
-
-template <typename T> class Singleton {
-protected:
-   Singleton (void) = default;
-   virtual ~Singleton (void) = default;
-
-private:
-   Singleton (const Singleton &) = delete;
-   Singleton &operator= (const Singleton &) = delete;
-
-public:
-   inline static T *ptr (void) {
-      return &ref ();
-   }
-
-   inline static T &ref (void) {
-      static T ref;
-      return ref;
-   };
 };
 
 using StringArray = Array <String>;

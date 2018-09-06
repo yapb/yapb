@@ -981,7 +981,7 @@ bool Waypoint::load (void) {
       return false;
    }
    MemFile fp (getWaypointFilename (true));
-
+ 
    WaypointHeader header;
    memset (&header, 0, sizeof (header));
 

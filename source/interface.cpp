@@ -450,17 +450,15 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    return 1; // command was handled by bot
 }
 
-// forwards for MemoryFile
-MemFile::MF_Loader MemFile::Loader = nullptr;
-MemFile::MF_Unloader MemFile::Unloader = nullptr;
-
 void processBotConfigs (bool onlyMain) {
-   if (!MemFile::Loader || !MemFile::Unloader) {
-      MemFile::Loader = reinterpret_cast<MemFile::MF_Loader> (g_engfuncs.pfnLoadFileForMe);
-      MemFile::Unloader = reinterpret_cast<MemFile::MF_Unloader> (g_engfuncs.pfnFreeFile);
+   static bool setMemoryPointers = true;
+
+   if (setMemoryPointers) {
+      MemoryLoader::ref ().setup (g_engfuncs.pfnLoadFileForMe, g_engfuncs.pfnFreeFile);
+      setMemoryPointers = true;
    }
 
-   auto isCommentLine = [](const char *line) {
+   auto isCommentLine = [] (const char *line) {
       char ch = *line;
       return ch == '#' || ch == '/' || ch == '\r' || ch == ';' || ch == 0 || ch == ' ';
    };

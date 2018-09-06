@@ -188,7 +188,7 @@ public:
             cb[cbp++] = m_buffer[node];
          }
          else {
-            cb[cbp++] = (uint8) m_matchPos;
+            cb[cbp++] = (uint8) (m_matchPos & 0xff);
             cb[cbp++] = (uint8) (((m_matchPos >> 4) & 0xf0) | (m_matchLen - (THRESHOLD + 1)));
          }
 

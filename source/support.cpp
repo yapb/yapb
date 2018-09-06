@@ -438,8 +438,8 @@ bool openConfig (const char *fileName, const char *errorIfNotExists, MemFile *ou
       uint8 *buffer = nullptr;
 
       // check is file is exists for this language
-      if ((buffer = MemFile::Loader (langConfig, &size)) != nullptr) {
-         MemFile::Unloader (buffer);
+      if ((buffer = MemoryLoader::ref ().load (langConfig, &size)) != nullptr) {
+         MemoryLoader::ref ().unload (buffer);
 
          // unload and reopen file using MemoryFile
          outFile->open (langConfig);
