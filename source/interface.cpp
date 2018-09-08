@@ -19,43 +19,6 @@ ConVar yb_version ("yb_version", PRODUCT_VERSION, VT_READONLY);
 
 ConVar mp_startmoney ("mp_startmoney", nullptr, VT_NOREGISTER, true, "800");
 
-#include <timeapi.h>
-
-#pragma comment(lib, "winmm.lib")
-class N_Script_Timer
-{
-public:
-   N_Script_Timer ()
-   {
-      running = false;
-      milliseconds = 0;
-      seconds = 0;
-      start_t = 0;
-      end_t = 0;
-   }
-   void Start ()
-   {
-      if (running)return;
-      running = true;
-      start_t = timeGetTime ();
-   }
-   void End ()
-   {
-      if (!running)return;
-      running = false;
-      end_t = timeGetTime ();
-      milliseconds = end_t - start_t;
-      seconds = milliseconds / (float)1000;
-   }
-   float milliseconds;
-   float seconds;
-
-private:
-   unsigned long start_t;
-   unsigned long end_t;
-   bool running;
-};
-
 int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *self) {
    // adding one bot with random parameters to random team
    if (stricmp (arg0, "addbot") == 0 || stricmp (arg0, "add") == 0) {
@@ -162,45 +125,6 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       engine.clientPrint (ent, versionData, PRODUCT_NAME, PRODUCT_VERSION, buildNumber (), __DATE__, __TIME__, PRODUCT_GIT_HASH, PRODUCT_GIT_COMMIT_AUTHOR);
    }
 
-   else if (stricmp (arg0, "testb") == 0) {
-      int near1 = INVALID_WAYPOINT_INDEX;
-      int near2 = INVALID_WAYPOINT_INDEX;
-      N_Script_Timer tt;
-
-      tt.Start ();
-
-      for (int i = 0; i < 1024 * MAX_ENGINE_PLAYERS; i++) //{
-      {
-         near1 = waypoints.getNearestFallback (g_hostEntity->v.origin);
-      }
-      tt.End ();
-      engine.print ("default took %g and nearest is %d", tt.milliseconds, near1);
-
-      tt.Start ();
-      auto b = waypoints.getWaypointsInBucket (g_hostEntity->v.origin);
-      engine.print ("bucket len = %d", b.length ());
-      float minDistance = A_square (9999.0f);
-      int flags = -1;
-
-      for (int k = 0; k < 1024 * MAX_ENGINE_PLAYERS; k++) {
-      //{
-         for (size_t i = 0; i < b.length (); i++) {
-            int at = b.at (i);
-
-            if (flags != -1 && !(waypoints[at].flags & flags)) {
-               continue; // if flag not -1 and waypoint has no this flag, skip waypoint
-            }
-            float distance = (waypoints[at].origin - g_hostEntity->v.origin).lengthSq ();
-
-            if (distance < minDistance) {
-               near2 = at;
-               minDistance = distance;
-            }
-         }
-      }
-      tt.End ();
-      engine.print ("default took %g and nearest is %d", tt.milliseconds, near2);
-   }
    // display some sort of help information
    else if (strcmp (arg0, "?") == 0 || strcmp (arg0, "help") == 0) {
       engine.clientPrint (ent, "Bot Commands:");
