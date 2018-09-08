@@ -9,6 +9,7 @@
 
 #include <core.h>
 
+
 // console vars
 ConVar yb_ignore_cvars_on_changelevel ("yb_ignore_cvars_on_changelevel", "yb_quota,yb_autovacate");
 ConVar yb_password ("yb_password", "", VT_PASSWORD);
@@ -17,6 +18,43 @@ ConVar yb_language ("yb_language", "en");
 ConVar yb_version ("yb_version", PRODUCT_VERSION, VT_READONLY);
 
 ConVar mp_startmoney ("mp_startmoney", nullptr, VT_NOREGISTER, true, "800");
+
+#include <timeapi.h>
+
+#pragma comment(lib, "winmm.lib")
+class N_Script_Timer
+{
+public:
+   N_Script_Timer ()
+   {
+      running = false;
+      milliseconds = 0;
+      seconds = 0;
+      start_t = 0;
+      end_t = 0;
+   }
+   void Start ()
+   {
+      if (running)return;
+      running = true;
+      start_t = timeGetTime ();
+   }
+   void End ()
+   {
+      if (!running)return;
+      running = false;
+      end_t = timeGetTime ();
+      milliseconds = end_t - start_t;
+      seconds = milliseconds / (float)1000;
+   }
+   float milliseconds;
+   float seconds;
+
+private:
+   unsigned long start_t;
+   unsigned long end_t;
+   bool running;
+};
 
 int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *self) {
    // adding one bot with random parameters to random team
@@ -124,6 +162,45 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       engine.clientPrint (ent, versionData, PRODUCT_NAME, PRODUCT_VERSION, buildNumber (), __DATE__, __TIME__, PRODUCT_GIT_HASH, PRODUCT_GIT_COMMIT_AUTHOR);
    }
 
+   else if (stricmp (arg0, "testb") == 0) {
+      int near1 = INVALID_WAYPOINT_INDEX;
+      int near2 = INVALID_WAYPOINT_INDEX;
+      N_Script_Timer tt;
+
+      tt.Start ();
+
+      for (int i = 0; i < 1024 * MAX_ENGINE_PLAYERS; i++) //{
+      {
+         near1 = waypoints.getNearestFallback (g_hostEntity->v.origin);
+      }
+      tt.End ();
+      engine.print ("default took %g and nearest is %d", tt.milliseconds, near1);
+
+      tt.Start ();
+      auto b = waypoints.getWaypointsInBucket (g_hostEntity->v.origin);
+      engine.print ("bucket len = %d", b.length ());
+      float minDistance = A_square (9999.0f);
+      int flags = -1;
+
+      for (int k = 0; k < 1024 * MAX_ENGINE_PLAYERS; k++) {
+      //{
+         for (size_t i = 0; i < b.length (); i++) {
+            int at = b.at (i);
+
+            if (flags != -1 && !(waypoints[at].flags & flags)) {
+               continue; // if flag not -1 and waypoint has no this flag, skip waypoint
+            }
+            float distance = (waypoints[at].origin - g_hostEntity->v.origin).lengthSq ();
+
+            if (distance < minDistance) {
+               near2 = at;
+               minDistance = distance;
+            }
+         }
+      }
+      tt.End ();
+      engine.print ("default took %g and nearest is %d", tt.milliseconds, near2);
+   }
    // display some sort of help information
    else if (strcmp (arg0, "?") == 0 || strcmp (arg0, "help") == 0) {
       engine.clientPrint (ent, "Bot Commands:");
@@ -350,7 +427,7 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
       else if (stricmp (arg1, "teleport") == 0) {
          int teleportPoint = atoi (arg2);
 
-         if (teleportPoint < g_numWaypoints) {
+         if (waypoints.exists (teleportPoint)) {
             Path &path = waypoints[teleportPoint];
 
             g_engfuncs.pfnSetOrigin (g_hostEntity, path.origin);
@@ -1033,7 +1110,7 @@ int Spawn (edict_t *ent) {
       g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_denyselect.wav")); // path add/delete error
 
       initRound ();
-      g_mapType = 0; // reset map type as worldspawn is the first entity spawned
+      g_mapFlags = 0; // reset map type as worldspawn is the first entity spawned
 
       // detect official csbots here, as they causing crash in linkent code when active for some reason
       if (!(g_gameFlags & GAME_LEGACY) && g_engfuncs.pfnCVarGetPointer ("bot_stop") != nullptr) {
@@ -1076,24 +1153,27 @@ int Spawn (edict_t *ent) {
       ent->v.effects |= EF_NODRAW;
    }
    else if (strcmp (entityClassname, "func_vip_safetyzone") == 0 || strcmp (entityClassname, "info_vip_safetyzone") == 0) {
-      g_mapType |= MAP_AS; // assassination map
+      g_mapFlags |= MAP_AS; // assassination map
    }
    else if (strcmp (entityClassname, "hostage_entity") == 0) {
-      g_mapType |= MAP_CS; // rescue map
+      g_mapFlags |= MAP_CS; // rescue map
    }
    else if (strcmp (entityClassname, "func_bomb_target") == 0 || strcmp (entityClassname, "info_bomb_target") == 0) {
-      g_mapType |= MAP_DE; // defusion map
+      g_mapFlags |= MAP_DE; // defusion map
    }
    else if (strcmp (entityClassname, "func_escapezone") == 0) {
-      g_mapType |= MAP_ES;
+      g_mapFlags |= MAP_ES;
+   }
+   else if (strncmp (entityClassname, "func_door", 9) == 0) {
+      g_mapFlags |= MAP_HAS_DOORS;
    }
 
    // next maps doesn't have map-specific entities, so determine it by name
    else if (strncmp (engine.getMapName (), "fy_", 3) == 0) {
-      g_mapType |= MAP_FY;
+      g_mapFlags |= MAP_FY;
    }
    else if (strncmp (engine.getMapName (), "ka_", 3) == 0) {
-      g_mapType |= MAP_KA;
+      g_mapFlags |= MAP_KA;
    }
 
    if (g_gameFlags & GAME_METAMOD) {
@@ -1408,7 +1488,7 @@ void ClientCommand (edict_t *ent) {
                int sniperPoints = 0;
                int noHostagePoints = 0;
 
-               for (int i = 0; i < g_numWaypoints; i++) {
+               for (int i = 0; i < waypoints.length (); i++) {
                   Path &path = waypoints[i];
 
                   if (path.flags & FLAG_TF_ONLY) {
@@ -1443,7 +1523,7 @@ void ClientCommand (edict_t *ent) {
                               "CT Points: %d - Goal Points: %d\n"
                               "Rescue Points: %d - Camp Points: %d\n"
                               "Block Hostage Points: %d - Sniper Points: %d\n",
-                              g_numWaypoints, terrPoints, ctPoints, goalPoints, rescuePoints, campPoints, noHostagePoints, sniperPoints);
+                              waypoints.length (), terrPoints, ctPoints, goalPoints, rescuePoints, campPoints, noHostagePoints, sniperPoints);
 
                showMenu (ent, BOT_MENU_WAYPOINT_MAIN_PAGE2);
             } break;
@@ -2771,7 +2851,7 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...) {
    vsnprintf (buffer, A_bufsize (buffer), format, ap);
    va_end (ap);
 
-   if ((g_mapType & MAP_DE) && g_bombPlanted && strstr (buffer, "_Defuse_") != nullptr) {
+   if ((g_mapFlags & MAP_DE) && g_bombPlanted && strstr (buffer, "_Defuse_") != nullptr) {
       // notify all terrorists that CT is starting bomb defusing
       for (int i = 0; i < engine.maxClients (); i++) {
          Bot *bot = bots.getBot (i);

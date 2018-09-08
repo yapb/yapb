@@ -29,8 +29,7 @@ extern float g_timeRoundStart;
 extern float g_timePerSecondUpdate;
 extern float g_lastRadioTime[MAX_TEAM_COUNT];
 
-extern int g_mapType;
-extern int g_numWaypoints;
+extern int g_mapFlags;
 extern int g_gameFlags;
 
 extern int g_highestDamageCT;

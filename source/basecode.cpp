@@ -118,14 +118,13 @@ void Bot::checkGrenadesThrow (void) {
    // do not check cancel if we have grenade in out hands
    bool checkTasks = taskId () == TASK_PLANTBOMB || taskId () == TASK_DEFUSEBOMB;
 
-   static auto clearThrowStates = [&](void) {
-      m_states &= ~(STATE_THROW_HE | STATE_THROW_FB | STATE_THROW_SG);
-      m_grenadeCheckTime = engine.timebase () + 1.0f;
+   auto clearThrowStates = [] (unsigned int &states) {
+      states &= ~(STATE_THROW_HE | STATE_THROW_FB | STATE_THROW_SG);
    };
 
    // check if throwing a grenade is a good thing to do...
    if (checkTasks || yb_ignore_enemies.boolean () || m_isUsingGrenade || m_isReloading || yb_jasonmode.boolean () || m_grenadeCheckTime >= engine.timebase ()) {
-      clearThrowStates ();
+      clearThrowStates (m_states);
       return;
    }
 
@@ -133,7 +132,7 @@ void Bot::checkGrenadesThrow (void) {
    m_grenadeCheckTime = engine.timebase () + 0.5f;
 
    if (!isAlive (m_lastEnemy) || !(m_states & (STATE_SUSPECT_ENEMY | STATE_HEARING_ENEMY))) {
-      clearThrowStates ();
+      clearThrowStates (m_states);
       return;
    }
 
@@ -144,7 +143,7 @@ void Bot::checkGrenadesThrow (void) {
    if (grenadeToThrow == -1) {
       m_grenadeCheckTime = engine.timebase () + 15.0f; // changed since, conzero can drop grens from dead players
 
-      clearThrowStates ();
+      clearThrowStates (m_states);
       return;
    }
    else {
@@ -157,7 +156,7 @@ void Bot::checkGrenadesThrow (void) {
          cancelProb = 5;
       }
       if (rng.getInt (0, 100) < cancelProb) {
-         clearThrowStates ();
+         clearThrowStates (m_states);
          return;
       }
    }
@@ -192,7 +191,7 @@ void Bot::checkGrenadesThrow (void) {
             }
 
             IntArray predicted;
-            waypoints.searchRadius (predicted, radius, pos, 8);
+            waypoints.searchRadius (predicted, radius, pos, 12);
 
             for (auto &predict : predicted) {
                allowThrowing = TRUE;
@@ -280,7 +279,7 @@ void Bot::checkGrenadesThrow (void) {
       }
    }
    else {
-      clearThrowStates ();
+      clearThrowStates (m_states);
    }
 }
 
@@ -861,31 +860,13 @@ void Bot::getCampDir (Vector *dest) {
          return;
       }
 
-      float minDistance = 99999.0f;
-      float maxDistance = 99999.0f;
-
-      int enemyIndex = INVALID_WAYPOINT_INDEX, tempIndex = INVALID_WAYPOINT_INDEX;
-
-      // find nearest waypoint to bot and position
-      for (int i = 0; i < g_numWaypoints; i++) {
-         float distance = (waypoints[i].origin - pev->origin).lengthSq ();
-
-         if (distance < minDistance) {
-            minDistance = distance;
-            tempIndex = i;
-         }
-         distance = (waypoints[i].origin - *dest).lengthSq ();
-
-         if (distance < maxDistance) {
-            maxDistance = distance;
-            enemyIndex = i;
-         }
-      }
+      int enemyIndex = waypoints.getNearest (*dest);
+      int tempIndex = waypoints.getNearest (pev->origin);
 
       if (tempIndex == INVALID_WAYPOINT_INDEX || enemyIndex == INVALID_WAYPOINT_INDEX) {
          return;
       }
-      minDistance = 99999.0f;
+      float minDistance = 99999.0f;
 
       int lookAtWaypoint = INVALID_WAYPOINT_INDEX;
       Path &path = waypoints[tempIndex];
@@ -902,7 +883,7 @@ void Bot::getCampDir (Vector *dest) {
          }
       }
 
-      if (lookAtWaypoint != INVALID_WAYPOINT_INDEX && lookAtWaypoint < g_numWaypoints) {
+      if (waypoints.exists (lookAtWaypoint)) {
          *dest = waypoints[lookAtWaypoint].origin;
       }
    }
@@ -1080,15 +1061,15 @@ void Bot::checkMsgQueue (void) {
       }
 
       // prevent terrorists from buying on es maps
-      if ((g_mapType & MAP_ES) && m_team == TEAM_TERRORIST) {
+      if ((g_mapFlags & MAP_ES) && m_team == TEAM_TERRORIST) {
          m_buyState = 6;
       }
 
       // prevent teams from buying on fun maps
-      if (g_mapType & (MAP_KA | MAP_FY)) {
+      if (g_mapFlags & (MAP_KA | MAP_FY)) {
          m_buyState = BUYSTATE_FINISHED;
 
-         if (g_mapType & MAP_KA) {
+         if (g_mapFlags & MAP_KA) {
             yb_jasonmode.set (1);
          }
       }
@@ -1138,7 +1119,7 @@ void Bot::checkMsgQueue (void) {
                   Path &path = waypoints[task ()->data];
 
                   if (path.flags & FLAG_GOAL) {
-                     if ((g_mapType & MAP_DE) && m_team == TEAM_TERRORIST && m_hasC4) {
+                     if ((g_mapFlags & MAP_DE) && m_team == TEAM_TERRORIST && m_hasC4) {
                         instantChatter (Chatter_GoingToPlantBomb);
                      }
                      else {
@@ -1426,7 +1407,7 @@ void Bot::buyStuff (void) {
             }
 
             // weapon available for every team?
-            if ((g_mapType & MAP_AS) && selectedWeapon->teamAS != 2 && selectedWeapon->teamAS != m_team) {
+            if ((g_mapFlags & MAP_AS) && selectedWeapon->teamAS != 2 && selectedWeapon->teamAS != m_team) {
                continue;
             }
 
@@ -1616,7 +1597,7 @@ void Bot::buyStuff (void) {
             }
 
             // weapon available for every team?
-            if ((g_mapType & MAP_AS) && selectedWeapon->teamAS != 2 && selectedWeapon->teamAS != m_team) {
+            if ((g_mapFlags & MAP_AS) && selectedWeapon->teamAS != 2 && selectedWeapon->teamAS != m_team) {
                continue;
             }
 
@@ -1690,7 +1671,7 @@ void Bot::buyStuff (void) {
       break;
 
    case BUYSTATE_DEFUSER: // if bot is CT and we're on a bomb map, randomly buy the defuse kit
-      if ((g_mapType & MAP_DE) && m_team == TEAM_COUNTER && rng.getInt (1, 100) < 80 && m_moneyAmount > 200 && !isWeaponRestricted (WEAPON_DEFUSER)) {
+      if ((g_mapFlags & MAP_DE) && m_team == TEAM_COUNTER && rng.getInt (1, 100) < 80 && m_moneyAmount > 200 && !isWeaponRestricted (WEAPON_DEFUSER)) {
          if (isOldGame) {
             engine.execBotCmd (ent (), "buyequip;menuselect 6");
          }
@@ -1766,7 +1747,7 @@ void Bot::overrideConditions (void) {
    }
 
    // check if we need to escape from bomb
-   if ((g_mapType & MAP_DE) && g_bombPlanted && m_notKilled && taskId () != TASK_ESCAPEFROMBOMB && taskId () != TASK_CAMP && isOutOfBombTimer ()) {
+   if ((g_mapFlags & MAP_DE) && g_bombPlanted && m_notKilled && taskId () != TASK_ESCAPEFROMBOMB && taskId () != TASK_CAMP && isOutOfBombTimer ()) {
       completeTask (); // complete current task
 
       // then start escape from bomb immidiate
@@ -2045,7 +2026,7 @@ void Bot::filterTasks (void) {
    // hard to check them all out.
 
    // this function returns the behavior having the higher activation level
-   static auto maxDesire = [] (Task *first, Task *second) {
+   auto maxDesire = [] (Task *first, Task *second) {
       if (first->desire > second->desire) {
          return first;
       }
@@ -2053,7 +2034,7 @@ void Bot::filterTasks (void) {
    };
 
    // this function returns the first behavior if its activation level is anything higher than zero
-   static auto subsumeDesire = [] (Task *first, Task *second) {
+   auto subsumeDesire = [] (Task *first, Task *second) {
       if (first->desire > 0) {
          return first;
       }
@@ -2061,7 +2042,7 @@ void Bot::filterTasks (void) {
    };
 
    // this function returns the input behavior if it's activation level exceeds the threshold, or some default behavior otherwise
-   static auto thresholdDesire = [] (Task *first, float threshold, float desire) {
+   auto thresholdDesire = [] (Task *first, float threshold, float desire) {
       if (first->desire < threshold) {
          first->desire = desire;
       }
@@ -2069,7 +2050,7 @@ void Bot::filterTasks (void) {
    };
 
    // this function clamp the inputs to be the last known value outside the [min, max] range.
-   static auto hysteresisDesire = [] (float cur, float min, float max, float old) {
+   auto hysteresisDesire = [] (float cur, float min, float max, float old) {
       if (cur <= min || cur >= max) {
          old = cur;
       }
@@ -2141,7 +2122,7 @@ void Bot::startTask (TaskID id, float desire, int data, float time, bool resume)
    }
 
    if (rng.getInt (0, 100) < 80 && tid == TASK_CAMP) {
-      if ((g_mapType & MAP_DE) && g_bombPlanted) {
+      if ((g_mapFlags & MAP_DE) && g_bombPlanted) {
          pushChatterMessage (Chatter_GuardDroppedC4);
       }
       else {
@@ -2783,7 +2764,7 @@ void Bot::updateAimDir (void) {
       m_lookAt = m_destOrigin;
 
       if (m_canChooseAimDirection && m_currentWaypointIndex != INVALID_WAYPOINT_INDEX && !(m_currentPath->flags & FLAG_LADDER)) {
-         auto experience = (g_experienceData + (m_currentWaypointIndex * g_numWaypoints) + m_currentWaypointIndex);
+         auto experience = (g_experienceData + (m_currentWaypointIndex * waypoints.length ()) + m_currentWaypointIndex);
 
          if (m_team == TEAM_TERRORIST) {
             if (experience->team0DangerIndex != INVALID_WAYPOINT_INDEX && waypoints.isVisible (m_currentWaypointIndex, experience->team0DangerIndex)) {
@@ -2828,11 +2809,11 @@ void Bot::frameThink (void) {
    m_notKilled = isAlive (ent ());
    m_team = engine.getTeam (ent ());
 
-   if ((g_mapType & MAP_AS) && !m_isVIP) {
+   if ((g_mapFlags & MAP_AS) && !m_isVIP) {
       m_isVIP = isPlayerVIP (ent ());
    }
 
-   if (m_team == TEAM_TERRORIST && (g_mapType & MAP_DE)) {
+   if (m_team == TEAM_TERRORIST && (g_mapFlags & MAP_DE)) {
       m_hasC4 = !!(pev->weapons & (1 << WEAPON_C4));
    }
 
@@ -2983,7 +2964,7 @@ void Bot::normal_ (void) {
       
       // spray logo sometimes if allowed to do so
       if (m_timeLogoSpray < engine.timebase () && yb_spraypaints.boolean () && rng.getInt (1, 100) < 60 && m_moveSpeed > getShiftSpeed () && engine.isNullEntity (m_pickupItem)) {
-         if (!((g_mapType & MAP_DE) && g_bombPlanted && m_team == TEAM_COUNTER)) {
+         if (!((g_mapFlags & MAP_DE) && g_bombPlanted && m_team == TEAM_COUNTER)) {
             startTask (TASK_SPRAY, TASKPRI_SPRAYLOGO, INVALID_WAYPOINT_INDEX, engine.timebase () + 1.0f, false);
          }
       }
@@ -3008,7 +2989,7 @@ void Bot::normal_ (void) {
             }
 
             // don't allow vip on as_ maps to camp + don't allow terrorist carrying c4 to camp
-            if (campingAllowed && (m_isVIP || ((g_mapType & MAP_DE) && m_team == TEAM_TERRORIST && !g_bombPlanted && m_hasC4))) {
+            if (campingAllowed && (m_isVIP || ((g_mapFlags & MAP_DE) && m_team == TEAM_TERRORIST && !g_bombPlanted && m_hasC4))) {
                campingAllowed = false;
             }
 
@@ -3053,7 +3034,7 @@ void Bot::normal_ (void) {
       }
       else {
          // some goal waypoints are map dependant so check it out...
-         if (g_mapType & MAP_CS) {
+         if (g_mapFlags & MAP_CS) {
             // CT Bot has some hostages following?
             if (m_team == TEAM_COUNTER && hasHostage ()) {
                // and reached a Rescue Point?
@@ -3079,7 +3060,7 @@ void Bot::normal_ (void) {
                pushChatterMessage (Chatter_GoingToGuardVIPSafety); // play info about that
             }
          }
-         else if ((g_mapType & MAP_DE) && ((m_currentPath->flags & FLAG_GOAL) || m_inBombZone)) {
+         else if ((g_mapFlags & MAP_DE) && ((m_currentPath->flags & FLAG_GOAL) || m_inBombZone)) {
             // is it a terrorist carrying the bomb?
             if (m_hasC4) {
                if ((m_states & STATE_SEEING_ENEMY) && numFriendsNear (pev->origin, 768.0f) == 0) {
@@ -3225,10 +3206,11 @@ void Bot::huntEnemy_ (void) {
       clearSearchNodes ();
 
       int destIndex = INVALID_WAYPOINT_INDEX;
+      int goal = task ()->data;
 
       // is there a remembered index?
-      if (task ()->data != INVALID_WAYPOINT_INDEX && task ()->data < g_numWaypoints) {
-         destIndex = task ()->data;
+      if (waypoints.exists (goal)) {
+         destIndex = goal;
       }
 
       // find new one instead
@@ -3490,7 +3472,7 @@ void Bot::camp_ (void) {
 
          const Vector &dotA = (dest - pev->origin).normalize2D ();
 
-         for (int i = 0; i < g_numWaypoints; i++) {
+         for (int i = 0; i < waypoints.length (); i++) {
             // skip invisible waypoints or current waypoint
             if (!waypoints.isVisible (m_currentWaypointIndex, i) || (i == m_currentWaypointIndex)) {
                continue;
@@ -3523,11 +3505,11 @@ void Bot::camp_ (void) {
             m_camp = waypoints[campPoints[rng.getInt (0, numFoundPoints)]].origin;
          }
          else {
-            m_camp = waypoints[searchCampDirectionPoint ()].origin;
+            m_camp = waypoints[searchCampDir ()].origin;
          }
       }
       else
-         m_camp = waypoints[searchCampDirectionPoint ()].origin;
+         m_camp = waypoints[searchCampDir ()].origin;
    }
    // press remembered crouch button
    pev->button |= m_campButtons;
@@ -3619,14 +3601,15 @@ void Bot::moveToPos_ (void) {
       clearSearchNodes ();
 
       int destIndex = INVALID_WAYPOINT_INDEX;
+      int goal = task ()->data;
 
-      if (task ()->data != INVALID_WAYPOINT_INDEX && task ()->data < g_numWaypoints) {
-         destIndex = task ()->data;
+      if (waypoints.exists (goal)) {
+         destIndex = goal;
       }
       else {
          destIndex = waypoints.getNearest (m_position);
       }
-      if (destIndex >= 0 && destIndex < g_numWaypoints) {
+      if (waypoints.exists (destIndex)) {
          m_prevGoalIndex = destIndex;
          task ()->data = destIndex;
 
@@ -3943,16 +3926,14 @@ void Bot::followUser_ (void) {
       IntArray points;
       waypoints.searchRadius (points, 200.0f, m_targetEntity->v.origin);
 
-      while (!points.empty ()) {
-         int newIndex = points.pop ();
-
+      for (auto &newIndex : points) {
          // if waypoint not yet used, assign it as dest
          if (!isOccupiedPoint (newIndex) && newIndex != m_currentWaypointIndex) {
             destIndex = newIndex;
          }
       }
 
-      if (destIndex >= 0 && destIndex < g_numWaypoints && destIndex != m_currentWaypointIndex && m_currentWaypointIndex >= 0 && m_currentWaypointIndex < g_numWaypoints) {
+      if (waypoints.exists (destIndex) && waypoints.exists (m_currentWaypointIndex)) {
          m_prevGoalIndex = destIndex;
          task ()->data = destIndex;
 
@@ -4183,7 +4164,7 @@ void Bot::doublejump_ (void) {
 
       int destIndex = waypoints.getNearest (m_doubleJumpOrigin);
 
-      if (destIndex >= 0 && destIndex < g_numWaypoints) {
+      if (waypoints.exists (destIndex)) {
          m_prevGoalIndex = destIndex;
          task ()->data = destIndex;
          m_travelStartIndex = m_currentWaypointIndex;
@@ -4236,7 +4217,7 @@ void Bot::escapeFromBomb_ (void) {
       int lastSelectedGoal = INVALID_WAYPOINT_INDEX, minPathDistance = 99999;
       float safeRadius = rng.getFloat (1248.0f, 2048.0f);
 
-      for (int i = 0; i < g_numWaypoints; i++) {
+      for (int i = 0; i < waypoints.length (); i++) {
          if ((waypoints[i].origin - waypoints.getBombPos ()).length () < safeRadius || isOccupiedPoint (i)) {
             continue;
          }
@@ -4597,7 +4578,7 @@ void Bot::checkSpawnConditions (void) {
          startTask (TASK_SPRAY, TASKPRI_SPRAYLOGO, INVALID_WAYPOINT_INDEX, engine.timebase () + 1.0f, false);
       }
 
-      if (m_difficulty >= 2 && rng.getInt (0, 100) < (m_personality == PERSONALITY_RUSHER ? 99 : 50) && !m_isReloading && (g_mapType & (MAP_CS | MAP_DE | MAP_ES | MAP_AS))) {
+      if (m_difficulty >= 2 && rng.getInt (0, 100) < (m_personality == PERSONALITY_RUSHER ? 99 : 50) && !m_isReloading && (g_mapFlags & (MAP_CS | MAP_DE | MAP_ES | MAP_AS))) {
          if (yb_jasonmode.boolean ()) {
             selectSecondary ();
             engine.execBotCmd (ent (), "drop");
@@ -5058,8 +5039,9 @@ void Bot::showDebugOverlay (void) {
          engine.drawLine (g_hostEntity, eyePos () - Vector (0.0f, 0.0f, 32.0f), eyePos () + g_pGlobals->v_forward * 300.0f, 10, 0, 255, 0, 0, 250, 5, 1, DRAW_ARROW);
 
          // now draw line from source to destination
-         for (int32 i = 0; i < m_path.length () && i + 1 < m_path.length (); i++) {
-            engine.drawLine (g_hostEntity, waypoints[m_path.at (i)].origin, waypoints[m_path.at (i + 1)].origin, 15, 0, 255, 100, 55, 200, 5, 1, DRAW_ARROW);
+ 
+         for (size_t i = 0; i < m_path.length () && i + 1 < m_path.length (); i++) {
+            engine.drawLine (g_hostEntity, waypoints[m_path[i]].origin, waypoints[m_path[i + 1]].origin, 15, 0, 255, 100, 55, 200, 5, 1, DRAW_ARROW);
          }
       }
    }
@@ -5196,7 +5178,7 @@ void Bot::collectGoalExperience (int damage, int team) {
    // gets called each time a bot gets damaged by some enemy. tries to achieve a statistic about most/less dangerous
    // waypoints for a destination goal used for pathfinding
 
-   if (g_numWaypoints < 1 || waypoints.hasChanged () || m_chosenGoalIndex < 0 || m_prevGoalIndex < 0) {
+   if (waypoints.length () < 1 || waypoints.hasChanged () || m_chosenGoalIndex < 0 || m_prevGoalIndex < 0) {
       return;
    }
 
@@ -5204,7 +5186,7 @@ void Bot::collectGoalExperience (int damage, int team) {
    // FIXME: could be done a lot better, however this cares most about damage done by sniping or really deadly weapons
    if (pev->health - damage <= 0) {
       if (team == TEAM_TERRORIST) {
-         int value = (g_experienceData + (m_chosenGoalIndex * g_numWaypoints) + m_prevGoalIndex)->team0Value;
+         int value = (g_experienceData + (m_chosenGoalIndex * waypoints.length ()) + m_prevGoalIndex)->team0Value;
          value -= static_cast<int> (pev->health / 20);
 
          if (value < -MAX_GOAL_VALUE) {
@@ -5213,10 +5195,10 @@ void Bot::collectGoalExperience (int damage, int team) {
          else if (value > MAX_GOAL_VALUE) {
             value = MAX_GOAL_VALUE;
          }
-         (g_experienceData + (m_chosenGoalIndex * g_numWaypoints) + m_prevGoalIndex)->team0Value = static_cast<int16> (value);
+         (g_experienceData + (m_chosenGoalIndex * waypoints.length ()) + m_prevGoalIndex)->team0Value = static_cast<int16> (value);
       }
       else {
-         int value = (g_experienceData + (m_chosenGoalIndex * g_numWaypoints) + m_prevGoalIndex)->team1Value;
+         int value = (g_experienceData + (m_chosenGoalIndex * waypoints.length ()) + m_prevGoalIndex)->team1Value;
          value -= static_cast<int> (pev->health / 20);
 
          if (value < -MAX_GOAL_VALUE) {
@@ -5225,7 +5207,7 @@ void Bot::collectGoalExperience (int damage, int team) {
          else if (value > MAX_GOAL_VALUE) {
             value = MAX_GOAL_VALUE;
          }
-         (g_experienceData + (m_chosenGoalIndex * g_numWaypoints) + m_prevGoalIndex)->team1Value = static_cast<int16> (value);
+         (g_experienceData + (m_chosenGoalIndex * waypoints.length ()) + m_prevGoalIndex)->team1Value = static_cast<int16> (value);
       }
    }
 }
@@ -5264,25 +5246,25 @@ void Bot::collectDataExperience (edict_t *attacker, int damage) {
 
    if (pev->health > 20.0f) {
       if (victimTeam == TEAM_TERRORIST) {
-         (g_experienceData + (victimIndex * g_numWaypoints) + victimIndex)->team0Damage++;
+         (g_experienceData + (victimIndex * waypoints.length ()) + victimIndex)->team0Damage++;
       }
       else {
-         (g_experienceData + (victimIndex * g_numWaypoints) + victimIndex)->team1Damage++;
+         (g_experienceData + (victimIndex * waypoints.length ()) + victimIndex)->team1Damage++;
       }
 
-      if ((g_experienceData + (victimIndex * g_numWaypoints) + victimIndex)->team0Damage > MAX_DAMAGE_VALUE) {
-         (g_experienceData + (victimIndex * g_numWaypoints) + victimIndex)->team0Damage = MAX_DAMAGE_VALUE;
+      if ((g_experienceData + (victimIndex * waypoints.length ()) + victimIndex)->team0Damage > MAX_DAMAGE_VALUE) {
+         (g_experienceData + (victimIndex * waypoints.length ()) + victimIndex)->team0Damage = MAX_DAMAGE_VALUE;
       }
 
-      if ((g_experienceData + (victimIndex * g_numWaypoints) + victimIndex)->team1Damage > MAX_DAMAGE_VALUE) {
-         (g_experienceData + (victimIndex * g_numWaypoints) + victimIndex)->team1Damage = MAX_DAMAGE_VALUE;
+      if ((g_experienceData + (victimIndex * waypoints.length ()) + victimIndex)->team1Damage > MAX_DAMAGE_VALUE) {
+         (g_experienceData + (victimIndex * waypoints.length ()) + victimIndex)->team1Damage = MAX_DAMAGE_VALUE;
       }
    }
    float updateDamage = isFakeClient (attacker) ? 10.0f : 7.0f;
 
    // store away the damage done
    if (victimTeam == TEAM_TERRORIST) {
-      int value = (g_experienceData + (victimIndex * g_numWaypoints) + attackerIndex)->team0Damage;
+      int value = (g_experienceData + (victimIndex * waypoints.length ()) + attackerIndex)->team0Damage;
       value += static_cast<int> (damage / updateDamage);
 
       if (value > MAX_DAMAGE_VALUE) {
@@ -5292,10 +5274,10 @@ void Bot::collectDataExperience (edict_t *attacker, int damage) {
       if (value > g_highestDamageT) {
          g_highestDamageT = value;
       }
-      (g_experienceData + (victimIndex * g_numWaypoints) + attackerIndex)->team0Damage = static_cast<uint16> (value);
+      (g_experienceData + (victimIndex * waypoints.length ()) + attackerIndex)->team0Damage = static_cast<uint16> (value);
    }
    else {
-      int value = (g_experienceData + (victimIndex * g_numWaypoints) + attackerIndex)->team1Damage;
+      int value = (g_experienceData + (victimIndex * waypoints.length ()) + attackerIndex)->team1Damage;
       value += static_cast<int> (damage / updateDamage);
 
       if (value > MAX_DAMAGE_VALUE) {
@@ -5305,7 +5287,7 @@ void Bot::collectDataExperience (edict_t *attacker, int damage) {
       if (value > g_highestDamageCT) {
          g_highestDamageCT = value;
       }
-      (g_experienceData + (victimIndex * g_numWaypoints) + attackerIndex)->team1Damage = static_cast<uint16> (value);
+      (g_experienceData + (victimIndex * waypoints.length ()) + attackerIndex)->team1Damage = static_cast<uint16> (value);
    }
 }
 
@@ -5672,7 +5654,7 @@ float Bot::getBombTimeleft (void) {
 }
 
 bool Bot::isOutOfBombTimer (void) {
-   if (!(g_mapType & MAP_DE)) {
+   if (!(g_mapFlags & MAP_DE)) {
       return false;
    }
 

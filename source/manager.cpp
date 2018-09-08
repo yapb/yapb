@@ -117,7 +117,7 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
    char outputName[33];
 
    // do not allow create bots when there is no waypoints
-   if (g_numWaypoints < 1) {
+   if (!waypoints.length ()) {
       engine.centerPrint ("Map is not waypointed. Cannot create bot");
       return BOT_RESULT_NAV_ERROR;
    }
@@ -341,7 +341,7 @@ void BotManager::maintainQuota (void) {
    // this function keeps number of bots up to date, and don't allow to maintain bot creation
    // while creation process in process.
 
-   if (g_numWaypoints < 1 || waypoints.hasChanged ()) {
+   if (waypoints.length () < 1 || waypoints.hasChanged ()) {
       return;
    }
 
@@ -899,7 +899,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    m_wantedClass = member;
 
    // initialize a*
-   m_routes = new Route[g_numWaypoints + 1];
+   m_routes = new Route[waypoints.length () + 1];
    processNewRound ();
 }
 
@@ -1453,7 +1453,7 @@ void BotManager::selectLeaders (int team, bool reset) {
       return;
    }
 
-   if (g_mapType & MAP_AS) {
+   if (g_mapFlags & MAP_AS) {
       if (team == TEAM_COUNTER && !m_leaderChoosen[TEAM_COUNTER]) {
          for (int i = 0; i < engine.maxClients (); i++) {
             auto bot = m_bots[i];
@@ -1483,7 +1483,7 @@ void BotManager::selectLeaders (int team, bool reset) {
          m_leaderChoosen[TEAM_TERRORIST] = true;
       }
    }
-   else if (g_mapType & MAP_DE) {
+   else if (g_mapFlags & MAP_DE) {
       if (team == TEAM_TERRORIST && !m_leaderChoosen[TEAM_TERRORIST]) {
          for (int i = 0; i < engine.maxClients (); i++) {
             auto bot = m_bots[i];
@@ -1517,7 +1517,7 @@ void BotManager::selectLeaders (int team, bool reset) {
          m_leaderChoosen[TEAM_COUNTER] = true;
       }
    }
-   else if (g_mapType & (MAP_ES | MAP_KA | MAP_FY)) {
+   else if (g_mapFlags & (MAP_ES | MAP_KA | MAP_FY)) {
       auto bot = bots.getHighfragBot (team);
 
       if (!m_leaderChoosen[team] && bot) {

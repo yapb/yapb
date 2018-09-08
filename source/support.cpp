@@ -220,7 +220,7 @@ void updateGlobalExperience (void) {
    // this function called after each end of the round to update knowledge about most dangerous waypoints for each team.
 
    // no waypoints, no experience used or waypoints edited or being edited?
-   if (g_numWaypoints < 1 || waypoints.hasChanged ()) {
+   if (waypoints.length () < 1 || waypoints.hasChanged ()) {
       return; // no action
    }
 
@@ -231,15 +231,15 @@ void updateGlobalExperience (void) {
    bool recalcKills = false;
 
    // get the most dangerous waypoint for this position for terrorist team
-   for (int i = 0; i < g_numWaypoints; i++) {
+   for (int i = 0; i < waypoints.length (); i++) {
       maxDamage = 0;
       bestIndex = INVALID_WAYPOINT_INDEX;
 
-      for (int j = 0; j < g_numWaypoints; j++) {
+      for (int j = 0; j < waypoints.length (); j++) {
          if (i == j) {
             continue;
          }
-         actDamage = (g_experienceData + (i * g_numWaypoints) + j)->team0Damage;
+         actDamage = (g_experienceData + (i * waypoints.length ()) + j)->team0Damage;
 
          if (actDamage > maxDamage) {
             maxDamage = actDamage;
@@ -250,19 +250,19 @@ void updateGlobalExperience (void) {
       if (maxDamage > MAX_DAMAGE_VALUE) {
          recalcKills = true;
       }
-      (g_experienceData + (i * g_numWaypoints) + i)->team0DangerIndex = static_cast<short> (bestIndex);
+      (g_experienceData + (i * waypoints.length ()) + i)->team0DangerIndex = static_cast<short> (bestIndex);
    }
 
    // get the most dangerous waypoint for this position for counter-terrorist team
-   for (int i = 0; i < g_numWaypoints; i++) {
+   for (int i = 0; i < waypoints.length (); i++) {
       maxDamage = 0;
       bestIndex = INVALID_WAYPOINT_INDEX;
 
-      for (int j = 0; j < g_numWaypoints; j++) {
+      for (int j = 0; j < waypoints.length (); j++) {
          if (i == j) {
             continue;
          }
-         actDamage = (g_experienceData + (i * g_numWaypoints) + j)->team1Damage;
+         actDamage = (g_experienceData + (i * waypoints.length ()) + j)->team1Damage;
 
          if (actDamage > maxDamage) {
             maxDamage = actDamage;
@@ -273,32 +273,32 @@ void updateGlobalExperience (void) {
       if (maxDamage > MAX_DAMAGE_VALUE) {
          recalcKills = true;
       }
-      (g_experienceData + (i * g_numWaypoints) + i)->team1DangerIndex = static_cast<short> (bestIndex);
+      (g_experienceData + (i * waypoints.length ()) + i)->team1DangerIndex = static_cast<short> (bestIndex);
    }
 
    // adjust values if overflow is about to happen
    if (recalcKills) {
-      for (int i = 0; i < g_numWaypoints; i++) {
-         for (int j = 0; j < g_numWaypoints; j++) {
+      for (int i = 0; i < waypoints.length (); i++) {
+         for (int j = 0; j < waypoints.length (); j++) {
             if (i == j) {
                continue;
             }
 
-            int clip = (g_experienceData + (i * g_numWaypoints) + j)->team0Damage;
+            int clip = (g_experienceData + (i * waypoints.length ()) + j)->team0Damage;
             clip -= static_cast<int> (MAX_DAMAGE_VALUE * 0.5);
 
             if (clip < 0) {
                clip = 0;
             }
-            (g_experienceData + (i * g_numWaypoints) + j)->team0Damage = static_cast<uint16> (clip);
+            (g_experienceData + (i * waypoints.length ()) + j)->team0Damage = static_cast<uint16> (clip);
 
-            clip = (g_experienceData + (i * g_numWaypoints) + j)->team1Damage;
+            clip = (g_experienceData + (i * waypoints.length ()) + j)->team1Damage;
             clip -= static_cast<int> (MAX_DAMAGE_VALUE * 0.5);
 
             if (clip < 0) {
                clip = 0;
             }
-            (g_experienceData + (i * g_numWaypoints) + j)->team1Damage = static_cast<uint16> (clip);
+            (g_experienceData + (i * waypoints.length ()) + j)->team1Damage = static_cast<uint16> (clip);
          }
       }
    }
@@ -319,9 +319,9 @@ void updateGlobalExperience (void) {
    g_highestDamageCT = clip;
 
    if (g_highestKills == MAX_KILL_HISTORY) {
-      for (int i = 0; i < g_numWaypoints; i++) {
-         (g_experienceData + (i * g_numWaypoints) + i)->team0Damage /= static_cast<uint16> (engine.maxClients () * 0.5);
-         (g_experienceData + (i * g_numWaypoints) + i)->team1Damage /= static_cast<uint16> (engine.maxClients () * 0.5);
+      for (int i = 0; i < waypoints.length (); i++) {
+         (g_experienceData + (i * waypoints.length ()) + i)->team0Damage /= static_cast<uint16> (engine.maxClients () * 0.5);
+         (g_experienceData + (i * waypoints.length ()) + i)->team1Damage /= static_cast<uint16> (engine.maxClients () * 0.5);
       }
       g_highestKills = 1;
    }
@@ -400,7 +400,7 @@ bool isPlayer (edict_t *ent) {
 }
 
 bool isPlayerVIP (edict_t *ent) {
-   if (!(g_mapType & MAP_AS)) {
+   if (!(g_mapFlags & MAP_AS)) {
       return false;
    }
 
@@ -495,7 +495,7 @@ void checkWelcome (void) {
       sentences.push ("attention, expect experimental armed hostile presence");
       sentences.push ("warning, medical attention required");
    }
-   bool needToSendMsg = (g_numWaypoints > 0 ? g_gameWelcomeSent : true);
+   bool needToSendMsg = (waypoints.length () > 0 ? g_gameWelcomeSent : true);
 
    if (isAlive (g_hostEntity) && receiveTime < 1.0 && needToSendMsg) {
       receiveTime = engine.timebase () + 4.0f; // receive welcome message in four seconds after game has commencing

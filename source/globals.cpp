@@ -34,8 +34,7 @@ int g_lastRadio[MAX_TEAM_COUNT];
 int g_storeAddbotVars[4];
 int g_radioSelect[MAX_ENGINE_PLAYERS];
 int g_gameFlags = 0;
-int g_numWaypoints = 0;
-int g_mapType = 0;
+int g_mapFlags = 0;
 
 int g_highestDamageCT = 1;
 int g_highestDamageT = 1;

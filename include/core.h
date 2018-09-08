@@ -421,13 +421,16 @@ enum Visibility {
 };
 
 // defines map type
-enum MapType {
+enum MapFlags {
    MAP_AS = (1 << 0),
    MAP_CS = (1 << 1),
    MAP_DE = (1 << 2),
    MAP_ES = (1 << 3),
    MAP_KA = (1 << 4),
-   MAP_FY = (1 << 5)
+   MAP_FY = (1 << 5),
+
+   // additional flags
+   MAP_HAS_DOORS = (1 << 6)
 };
 
 // defines for waypoint flags field (32 bits are available)
@@ -519,6 +522,10 @@ constexpr int MAX_ENGINE_PLAYERS = 32;
 constexpr int MAX_PRINT_BUFFER = 1024;
 constexpr int MAX_TEAM_COUNT = 2;
 constexpr int INVALID_WAYPOINT_INDEX = -1;
+
+constexpr int MAX_WAYPOINT_BUCKET_SIZE = static_cast <int> (MAX_WAYPOINTS * 0.65);
+constexpr int MAX_WAYPOINT_BUCKET_MAX = MAX_WAYPOINTS * 8 / MAX_WAYPOINT_BUCKET_SIZE;
+constexpr int MAX_WAYPOINT_BUCKET_WPTS = MAX_WAYPOINT_BUCKET_SIZE / MAX_WAYPOINT_BUCKET_MAX;
 
 // weapon masks
 constexpr int WEAPON_PRIMARY = ((1 << WEAPON_XM1014) | (1 << WEAPON_M3) | (1 << WEAPON_MAC10) | (1 << WEAPON_UMP45) | (1 << WEAPON_MP5) | (1 << WEAPON_TMP) | (1 << WEAPON_P90) | (1 << WEAPON_AUG) | (1 << WEAPON_M4A1) | (1 << WEAPON_SG552) | (1 << WEAPON_AK47) | (1 << WEAPON_SCOUT) | (1 << WEAPON_SG550) | (1 << WEAPON_AWP) | (1 << WEAPON_G3SG1) | (1 << WEAPON_M249) | (1 << WEAPON_FAMAS) | (1 << WEAPON_GALIL));
@@ -690,19 +697,24 @@ struct Path {
 };
 
 // this structure links waypoints returned from pathfinder
-class PathWalk : public Circular <int, MAX_ROUTE_LENGTH> {
+class PathWalk : public IntArray {
 public:
    PathWalk (void) {
+      reserve (MAX_ROUTE_LENGTH);
       clear ();
    }
 
    ~PathWalk (void) = default;
 public:
-   int &next (void) {
+   inline int &next (void) {
       return at (1);
    }
 
-   bool hasNext (void) const {
+   inline int &first (void) {
+      return at (0);
+   }
+
+   inline bool hasNext (void) const {
       if (empty ()) {
          return false;
       }
@@ -766,6 +778,7 @@ private:
    unsigned int m_collStateIndex; // index into collide moves
    CollisionState m_collisionState; // collision State
 
+   BinaryHeap <int, float, MAX_ROUTE_LENGTH> m_routeQue;
    Route *m_routes; // pointer
    PathWalk m_path; // pointer to current node from path
    Path *m_currentPath; // pointer to the current path waypoint
@@ -1052,7 +1065,7 @@ private:
    float getBombTimeleft (void);
    float getReachTime (void);
 
-   int searchCampDirectionPoint (void);
+   int searchCampDir (void);
    int searchAimingPoint (const Vector &to);
 
    void searchShortestPath (int srcIndex, int destIndex);
@@ -1364,9 +1377,15 @@ public:
 
 // waypoint operation class
 class Waypoint : public Singleton<Waypoint> {
+
+public:
    friend class Bot;
 
 private:
+   struct Bucket {
+      int x, y, z;
+   };
+
    Path *m_paths[MAX_WAYPOINTS];
 
    bool m_waypointPaths;
@@ -1380,6 +1399,7 @@ private:
    Vector m_learnPosition;
    Vector m_bombPos;
 
+   int m_numWaypoints;
    int m_loadTries;
    int m_cacheWaypointIndex;
    int m_lastJumpWaypoint;
@@ -1405,6 +1425,8 @@ private:
    IntArray m_rescuePoints;
    IntArray m_visitedGoals;
 
+   IntArray m_buckets[MAX_WAYPOINT_BUCKET_MAX][MAX_WAYPOINT_BUCKET_MAX][MAX_WAYPOINT_BUCKET_MAX];
+
 public:
    bool m_redoneVisibility;
 
@@ -1421,6 +1443,7 @@ public:
    int getFacingIndex (void);
    int getFarest (const Vector &origin, float maxDistance = 32.0);
    int getNearest (const Vector &origin, float minDistance = 9999.0f, int flags = -1);
+   int getNearestFallback (const Vector &origin, float minDistance = 9999.0f, int flags = -1);
    void searchRadius (IntArray &holder, float radius, const Vector &origin, int maxCount = -1);
 
    void push (int flags, const Vector &waypointOrigin = Vector::null ());
@@ -1483,8 +1506,19 @@ public:
       return m_bombPos;
    }
 
+   // access paths
    inline Path &operator [] (int index) {
       return *m_paths[index];
+   }
+
+   // check waypoints range
+   inline bool exists (int index) const {
+      return index >= 0 && index < m_numWaypoints;
+   }
+
+   // get real waypoint num
+   inline int length (void) const {
+      return m_numWaypoints;
    }
 
    // free's socket handle
@@ -1492,6 +1526,15 @@ public:
 
    // do actually downloading of waypoint file
    WaypointDownloadError downloadWaypoint (void);
+
+   // initalize waypoint buckets
+   void initBuckets (void);
+
+   void addToBucket (const Vector &pos, int index);
+   void eraseFromBucket (const Vector &pos, int index);
+
+   Bucket locateBucket (const Vector &pos);
+   const IntArray &getWaypointsInBucket (const Vector &pos);
 };
 
 #include <engine.h>

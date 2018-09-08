@@ -154,7 +154,7 @@ void Bot::prepareChatMessage (char *text) {
 
    edict_t *talkEntity = nullptr;
 
-   static auto assignChatTalkEntity = [](edict_t *ent, char *buffer) {
+   auto assignChatTalkEntity = [](edict_t *ent, char *buffer) {
       const char *botName = STRING (ent->v.netname);
 
       if (!engine.isNullEntity (ent)) {
@@ -224,7 +224,7 @@ void Bot::prepareChatMessage (char *text) {
             }
 
             if (i < engine.maxClients ()) {
-               if (!engine.isNullEntity (pev->dmg_inflictor) && m_team == engine.getTeam (pev->dmg_inflictor)) {
+               if (isPlayer (pev->dmg_inflictor) && m_team == engine.getTeam (pev->dmg_inflictor)) {
                   talkEntity = pev->dmg_inflictor;
                }
                else {
