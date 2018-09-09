@@ -579,21 +579,16 @@ public:
       m_length = 0;
    }
 
-   bool reserve (size_t newSize) {
-      if (!newSize) {
-         destroy ();
+   bool reserve (size_t growSize) {
+      if (m_length + growSize < m_capacity) {
          return true;
       }
+      size_t maxSize = Math::A_max (m_capacity * 2, 8u);
 
-      if (m_length + newSize < m_capacity) {
-         return true;
-      }
-      size_t maxSize = m_capacity ? m_capacity : 8;
-
-      while (m_length + newSize > maxSize) {
+      while (m_length + growSize > maxSize) {
          maxSize *= 2;
       }
-      T *buffer = new T[maxSize];
+      auto buffer = new T[maxSize];
 
       if (m_data != nullptr) {
          if (maxSize < m_length) {
@@ -602,9 +597,8 @@ public:
          for (size_t i = 0; i < m_length; i++) {
             buffer[i] = m_data[i];
          }
+         delete[] m_data;
       }
-      delete[] m_data;
-
       m_data = buffer;
       m_capacity = maxSize;
 
@@ -945,38 +939,15 @@ private:
 
 class String {
 public:
-   static constexpr size_t NPOS = static_cast<size_t> (-1);
+   static constexpr size_t INVALID_INDEX = static_cast <size_t> (-1);
 
 private:
-   char *m_chars;
-   size_t m_capacity, m_length;
+   Array <char> m_data;
 
-protected:
-   void grow (size_t size) {
-      if (size <= m_capacity) {
-         return;
-      }
-
-      m_capacity = size + sizeof (char) * 2;
-      char *chars = new char[size + 1];
-
-      if (m_chars) {
-         strcpy (chars, m_chars);
-         chars[m_length] = 0;
-
-         delete[] m_chars;
-      }
-      m_chars = chars;
-      m_capacity = size;
-   }
-
-   void moveItems (size_t dst, size_t src) {
-      memmove (m_chars + dst, m_chars + src, sizeof (char) * (m_length - src + 1));
-   }
-
-   bool checkTrimChar (char ch, const char *chars) {
+private:
+   bool isTrimChar (char chr, const char *chars) {
       do {
-         if (*chars == ch) {
+         if (*chars == chr) {
             return true;
          }
          chars++;
@@ -984,129 +955,117 @@ protected:
       return false;
    }
 
-   void allocateSpace (int32 length) {
-      int32 maxSize = static_cast<int> (m_capacity - m_length) - 1;
+public:
 
-      if (length <= maxSize) {
-         return;
-      }
-      int32 delta = 8;
+   String (void) = default;
+   ~String (void) = default;
 
-      if (m_capacity > 64) {
-         delta = m_capacity / 2;
-      }
-      else if (m_capacity > 8) {
-         delta = 16;
-      }
-
-      if (maxSize + delta < length) {
-         delta = length - maxSize;
-      }
-      grow (m_capacity + static_cast<size_t> (delta));
+public:
+   String (const char chr) {
+      assign (chr);
    }
 
-   void putSpace (size_t &index, size_t size) {
-      if (index > m_length) {
-         index = m_length;
-      }
-      allocateSpace (size);
-      moveItems (index + size, index);
+   String (const char *str, size_t length = 0) {
+      assign (str, length);
+   }
+
+   String (const String &str, size_t length = 0) {
+      assign (str.chars (), length);
    }
 
 public:
-   String (void) : m_chars (nullptr) , m_capacity (0) , m_length (0) {}
+   String &assign (const char *str, size_t length = 0) {
+      length = length > 0 ? length : strlen (str);
 
-   String (const char *input) : m_chars (nullptr) , m_capacity (0) , m_length (0) {
-      assign (input);
+      resize (length);
+      memcpy (begin (), str, length);
+
+      return *this;
    }
 
-   String (char input) : m_chars (nullptr) , m_capacity (0), m_length (0) {
-      assign (input);
+   String &assign (const String &str, size_t length = 0) {
+      return assign (str.chars (), length);
    }
 
-   String (const String &input) : m_chars (nullptr) , m_capacity (0) , m_length (0) {
-      assign (input.chars ());
+   String &assign (const char chr) {
+      resize (2);
+      m_data[0] = chr;
+
+      return *this;
    }
 
-   virtual ~String (void) {
-      delete[] m_chars;
+   String &append (const char *str) {
+      resize (length () + strlen (str));
+      strcat (begin (), str);
+
+      return *this;
    }
 
-
-public:
-   char *begin (void) {
-      return m_chars;
+   String &append (const String &str) {
+      return append (str.chars ());
    }
 
-   char *begin (void) const {
-      return m_chars;
-   }
-
-   char *end (void) {
-      return m_chars + m_length;
-   }
-
-   char *end (void) const {
-      return (m_chars + m_length);
+   String &append (const char chr) {
+      char app[] = { chr, '\0' };
+      return append (app);
    }
 
    const char *chars (void) const {
-      if (!m_chars)
+      if (empty ()) {
          return "";
-
-      return m_chars;
-   }
-
-   String &append (const char *buffer) {
-      grow (m_length + strlen (buffer) + 1);
-      strcat (m_chars, buffer);
-
-      m_length = strlen (m_chars);
-      return *this;
-   }
-
-   String &append (const char input) {
-      grow (m_length + 2);
-
-      m_chars[m_length] = input;
-      m_chars[++m_length] = 0;
-
-      return *this;
-   }
-
-   String &append (const String &input) {
-      const char *buffer = input.chars ();
-      grow (m_length + strlen (buffer));
-
-      strcat (m_chars, buffer);
-      m_length = strlen (m_chars);
-
-      return *this;
-   }
-
-   void assign (const String &input) {
-      assign (input.chars ());
-   }
-
-   void assign (char input) {
-      char psz[2] = {input, 0};
-      assign (psz);
-   }
-
-   void assign (const char *input) {
-      if (!input) {
-         grow (1);
-         m_length = 0;
-         return;
       }
-      grow (strlen (input));
+      return m_data.begin ();
+   }
 
-      if (m_chars) {
-         strcpy (m_chars, input);
-         m_length = strlen (m_chars);
-      }
-      else
-         m_length = 0;
+   size_t length (void) const {
+      return m_data.length ();
+   }
+
+   bool empty (void) const {
+      return !length ();
+   }
+
+   void clear (void) {
+      m_data.clear ();
+      m_data[0] = '\0';
+   }
+
+   void erase (size_t index, size_t count = 1) {
+      m_data.erase (index, count);
+      terminate ();
+   }
+
+   void reserve (size_t count) {
+      m_data.reserve (count);
+   }
+
+   void resize (size_t count) {
+      m_data.resize (count);
+      terminate ();
+   }
+
+   int toInt32 (void) const {
+      return atoi (chars ());
+   }
+
+   inline void terminate (void) {
+      m_data[length ()] = '\0';
+   }
+
+   inline char &at (size_t index) {
+      return m_data[index];
+   }
+
+   int compare (const String &what) const {
+      return strcmp (m_data.begin (), what.begin ());
+   }
+
+   int compare (const char *what) const {
+      return strcmp (begin (), what);
+   }
+
+   bool contains (const String &what) const {
+      return strstr (m_data.begin (), what.begin ()) != nullptr;
    }
 
    template <size_t BufferSize = 512> void format (const char *fmt, ...) {
@@ -1131,259 +1090,176 @@ public:
       append (buffer);
    }
 
-   void clear (void) {
-      if (m_chars != nullptr) {
-         m_chars[0] = 0;
-         m_length = 0;
+   size_t insert (size_t at, const String &str) {
+      if (m_data.insert (at, str.begin (), str.length ())) {
+         terminate ();
+         return length ();
       }
+      return 0;
    }
 
-   bool empty (void) const {
-      return !length ();
-   }
-
-   size_t length (void) const {
-      return m_chars ? m_length : 0;
-   }
-
-   int32 toInt32 (void) const {
-      return atoi (chars ());
-   }
-
-   friend String operator+ (const String &lhs, const String &rhs) {
-      return String (lhs).append (rhs);
-   }
-
-   friend String operator+ (const String &lhs, char rhs) {
-      return String (lhs).append (rhs);
-   }
-
-   friend String operator+ (char lhs, const String &rhs) {
-      return String (lhs).append (rhs);
-   }
-
-   friend String operator+ (const String &lhs, const char *rhs) {
-      return String (lhs).append (rhs);
-   }
-
-   friend String operator+ (const char *lhs, const String &rhs) {
-      return String (lhs).append (rhs);
-   }
-
-   friend bool operator== (const String &lhs, const String &rhs) {
-      return lhs.compare (rhs) == 0;
-   }
-
-   friend bool operator< (const String &lhs, const String &rhs) {
-      return lhs.compare (rhs) < 0;
-   }
-
-   friend bool operator> (const String &lhs, const String &rhs) {
-      return lhs.compare (rhs) > 0;
-   }
-
-   friend bool operator== (const char *lhs, const String &rhs) {
-      return rhs.compare (lhs) == 0;
-   }
-
-   friend bool operator== (const String &lhs, const char *rhs) {
-      return lhs.compare (rhs) == 0;
-   }
-
-   friend bool operator!= (const String &lhs, const String &rhs) {
-      return lhs.compare (rhs) != 0;
-   }
-
-   friend bool operator!= (const char *lhs, const String &rhs) {
-      return rhs.compare (lhs) != 0;
-   }
-
-   friend bool operator!= (const String &lhs, const char *rhs) {
-      return lhs.compare (rhs) != 0;
-   }
-
-   String &operator= (const String &rhs) {
-      assign (rhs);
-      return *this;
-   }
-
-   String &operator= (const char *rhs) {
-      assign (rhs);
-      return *this;
-   }
-
-   String &operator= (char rhs) {
-      assign (rhs);
-      return *this;
-   }
-
-   String &operator+= (const String &rhs) {
-      append (rhs);
-      return *this;
-   }
-
-   String &operator+= (const char *rhs) {
-      append (rhs);
-      return *this;
-   }
-
-   char operator[] (size_t index) const {
-      return m_chars[index];
-   }
-
-   char &operator[] (size_t index) {
-      return m_chars[index];
-   }
-
-   int32 compare (const String &what) const {
-      return strcmp (m_chars, what.m_chars);
-   }
-
-   int32 compare (const char *what) const {
-      return strcmp (m_chars, what);
-   }
-
-   bool contains (const String &what) const {
-      return strstr (m_chars, what.m_chars) != nullptr;
-   }
-
-   size_t erase (size_t index, size_t count = 1) {
-      if (index + count > m_length) {
-         count = m_length - index;
+   size_t find (const String &search, size_t pos) const {
+      if (pos > length ()) {
+         return INVALID_INDEX;
       }
+      size_t length = search.length ();
 
-      if (count > 0) {
-         moveItems (index, index + count);
-         m_length -= count;
+      for (size_t i = pos; length + i <= m_data.length (); i++) {
+         if (strncmp (m_data.begin () + i, search.chars (), length) == 0) {
+            return i;
+         }
       }
-      return m_length;
+      return INVALID_INDEX;
    }
 
    size_t replace (const String &what, const String &to) {
       if (!what.length () || !to.length ()) {
          return 0;
       }
+      size_t numReplaced = 0, posIndex = 0;
 
-      size_t num = 0;
-      size_t pos = 0;
+      while (posIndex < length ()) {
+         posIndex = find (what, posIndex);
 
-      while (pos < m_length) {
-         pos = find (what, pos);
-
-         if (pos == NPOS) {
+         if (posIndex == INVALID_INDEX) {
             break;
          }
-         erase (pos, what.length ());
-         insert (pos, to);
+         erase (posIndex, what.length ());
+         insert (posIndex, to);
 
-         pos += to.length ();
-         num++;
+         posIndex += to.length ();
+         numReplaced++;
       }
-      return num;
+      return numReplaced;
    }
 
-   size_t insert (size_t pos, const String &input) {
-      if (!input.length ()) {
-         return m_length;
+   String substr (size_t start, size_t count = INVALID_INDEX) {
+      String result;
+
+      if (start >= length () || empty ()) {
+         return result;
       }
-
-      if (pos > m_length) {
-         pos = m_length;
+      if (count == INVALID_INDEX) {
+         count = length () - start;
       }
-
-      size_t numInsertChars = input.length ();
-      putSpace (pos, numInsertChars);
-
-      for (size_t i = 0; i < numInsertChars; i++) {
-         m_chars[pos + i] = input[i];
+      else if (start + count >= length ()) {
+         count = length () - start;
       }
-      m_length += numInsertChars;
+      auto data = new char[length () + 1];
+      size_t update = 0;
 
-      return m_length;
+      for (size_t i = start; i < start + count; i++) {
+         data[update++] = m_data[i];
+      }
+      data[update] = '\0';
+
+      result.assign (data);
+      delete[] data;
+
+      return result;
    }
 
-   size_t find (char input, size_t start) const {
-      char *str = m_chars + start;
-
-      while (true) {
-         if (*str == input) {
-            return str - m_chars;
-         }
-
-         if (!*str) {
-            return NPOS;
-         }
-         str++;
-      }
-      return NPOS;
+   char &operator[] (size_t index) {
+      return at (index);
    }
 
-   size_t find (const String &search, size_t pos) const {
-      if (pos > m_length) {
-         return NPOS;
-      }
-      size_t inputLength = search.length ();
-
-      for (size_t i = pos; inputLength + i <= m_length; i++) {
-         if (strncmp (m_chars + i, search.chars (), inputLength) == 0) {
-            return i;
-         }
-      }
-      return NPOS;
+   friend String operator + (const String &lhs, const String &rhs) {
+      return String (lhs).append (rhs);
    }
 
-   String substr (size_t start, size_t count = NPOS) {
-      String out;
-
-      if (start >= m_length || !m_chars) {
-         return out;
-      }
-
-      if (count == NPOS) {
-         count = m_length - start;
-      }
-      else if (start + count >= m_length) {
-         count = m_length - start;
-      }
-      size_t j = 0;
-      char *holder = new char[m_length + 1];
-
-      for (size_t i = start; i < start + count; i++)
-         holder[j++] = m_chars[i];
-
-      holder[j] = '\0';
-      out.assign (holder);
-
-      delete[] holder;
-      return out;
+   friend String operator + (const String &lhs, char rhs) {
+      return String (lhs).append (rhs);
    }
 
-   Array <String> split (const char *sep) {
-      Array <String> tokens;
-      size_t length, index = 0;
+   friend String operator + (char lhs, const String &rhs) {
+      return String (lhs).append (rhs);
+   }
 
-      do {
-         index += strspn (&m_chars[index], sep);
-         length = strcspn (&m_chars[index], sep);
+   friend String operator + (const String &lhs, const char *rhs) {
+      return String (lhs).append (rhs);
+   }
 
-         if (length > 0) {
-            tokens.push (substr (index, length));
-         }
-         index += length;
-      } while (length > 0);
+   friend String operator + (const char *lhs, const String &rhs) {
+      return String (lhs).append (rhs);
+   }
 
-      return tokens;
+   friend bool operator == (const String &lhs, const String &rhs) {
+      return lhs.compare (rhs) == 0;
+   }
+
+   friend bool operator < (const String &lhs, const String &rhs) {
+      return lhs.compare (rhs) < 0;
+   }
+
+   friend bool operator > (const String &lhs, const String &rhs) {
+      return lhs.compare (rhs) > 0;
+   }
+
+   friend bool operator == (const char *lhs, const String &rhs) {
+      return rhs.compare (lhs) == 0;
+   }
+
+   friend bool operator == (const String &lhs, const char *rhs) {
+      return lhs.compare (rhs) == 0;
+   }
+
+   friend bool operator != (const String &lhs, const String &rhs) {
+      return lhs.compare (rhs) != 0;
+   }
+
+   friend bool operator != (const char *lhs, const String &rhs) {
+      return rhs.compare (lhs) != 0;
+   }
+
+   friend bool operator != (const String &lhs, const char *rhs) {
+      return lhs.compare (rhs) != 0;
+   }
+
+   String &operator = (const String &rhs) {
+      return assign (rhs);
+   }
+
+   String &operator = (const char *rhs) {
+      return assign (rhs);
+   }
+
+   String &operator = (char rhs) {
+      return assign (rhs);
+   }
+
+   String &operator += (const String &rhs) {
+      return append (rhs);
+   }
+
+   String &operator += (const char *rhs) {
+      return append (rhs);
+   }
+
+   char *begin (void) {
+      return m_data.begin ();
+   }
+
+   char *begin (void) const {
+      return m_data.begin ();
+   }
+
+   char *end (void) {
+      return begin () + length ();
+   }
+
+   char *end (void) const {
+      return begin () + length ();
    }
 
    String &trimRight (const char *chars = "\r\n\t ") {
       if (empty ()) {
          return *this;
       }
-      char *str = m_chars + m_length - 1;
+      char *str = end () - 1;
 
       while (*str != 0) {
-         if (checkTrimChar (*str, chars)) {
-            erase (str - m_chars);
+         if (isTrimChar (*str, chars)) {
+            erase (str - begin ());
          }
          else {
             break;
@@ -1394,19 +1270,37 @@ public:
    }
 
    String &trimLeft (const char *chars = "\r\n\t ") {
-      char *str = m_chars;
+      char *str = begin ();
 
-      while (checkTrimChar (*str, chars))
+      while (isTrimChar (*str, chars))
          str++;
 
-      if (m_chars != str) {
-         erase (0, str - m_chars);
+      if (begin () != str) {
+
+         erase (0, str - begin ());
       }
       return *this;
    }
 
    String &trim (const char *chars = "\r\n\t ") {
       return trimLeft (chars).trimRight (chars);
+   }
+
+   Array <String> split (const char *delimiter) {
+      Array <String> tokens;
+      size_t length, index = 0;
+
+      do {
+         index += strspn (&m_data[index], delimiter);
+         length = strcspn (&m_data[index], delimiter);
+
+         if (length > 0) {
+            tokens.push (substr (index, length));
+         }
+         index += length;
+      } while (length > 0);
+
+      return tokens;
    }
 
 public:
