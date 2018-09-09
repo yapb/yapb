@@ -583,7 +583,7 @@ public:
       if (m_length + growSize < m_capacity) {
          return true;
       }
-      size_t maxSize = Math::A_max (m_capacity * 2, 8u);
+      size_t maxSize = Math::A_max <size_t> (m_capacity * 2, static_cast <size_t> (8));
 
       while (m_length + growSize > maxSize) {
          maxSize *= 2;
