@@ -25,7 +25,7 @@ int Bot::numFriendsNear (const Vector &origin, float radius) {
          continue;
       }
 
-      if ((client.origin - origin).lengthSq () < A_square (radius)) {
+      if ((client.origin - origin).lengthSq () < cr::square (radius)) {
          count++;
       }
    }
@@ -42,7 +42,7 @@ int Bot::numEnemiesNear (const Vector &origin, float radius) {
          continue;
       }
 
-      if ((client.origin - origin).lengthSq () < A_square (radius)) {
+      if ((client.origin - origin).lengthSq () < cr::square (radius)) {
          count++;
       }
    }
@@ -199,7 +199,7 @@ bool Bot::lookupEnemies (void) {
       return false;
    }
    edict_t *player, *newEnemy = nullptr;
-   float nearestDistance = A_square (m_viewDistance);
+   float nearestDistance = cr::square (m_viewDistance);
 
    // clear suspected flag
    if (!engine.isNullEntity (m_enemy) && (m_states & STATE_SEEING_ENEMY)) {
@@ -237,7 +237,7 @@ bool Bot::lookupEnemies (void) {
          player = client.ent;
 
          if ((player->v.button & (IN_ATTACK | IN_ATTACK2)) && m_viewDistance < m_maxViewDistance) {
-            nearestDistance = A_square (m_maxViewDistance);
+            nearestDistance = cr::square (m_maxViewDistance);
          }
 
          // see if bot can see the player...
@@ -533,9 +533,9 @@ bool Bot::isFriendInLineOfFire (float distance) {
       edict_t *pent = client.ent;
 
       float friendDistance = (pent->v.origin - pev->origin).length ();
-      float squareDistance = A_sqrtf (1089.0f + A_square (friendDistance));
+      float squareDistance = cr::sqrtf (1089.0f + cr::square (friendDistance));
 
-      if (getShootingConeDeviation (ent (), pent->v.origin) > A_square (friendDistance) / (squareDistance * squareDistance) && friendDistance <= distance) {
+      if (getShootingConeDeviation (ent (), pent->v.origin) > cr::square (friendDistance) / (squareDistance * squareDistance) && friendDistance <= distance) {
          return true;
       }
    }
@@ -568,7 +568,7 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
       engine.testLine (dest, source, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
       if (tr.flFraction != 1.0f) {
-         if ((tr.vecEndPos - dest).lengthSq () > A_square (800.0f)) {
+         if ((tr.vecEndPos - dest).lengthSq () > cr::square (800.0f)) {
             return false;
          }
 
@@ -578,7 +578,7 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
          obstacleDistance = (tr.vecEndPos - source).lengthSq ();
       }
    }
-   float distance = A_square (75.0f);
+   float distance = cr::square (75.0f);
 
    if (obstacleDistance > 0.0f) {
       while (penetratePower > 0) {
@@ -655,14 +655,14 @@ bool Bot::throttleFiring (float distance) {
    else if (distance < MAX_SPRAY_DISTANCE_X2) {
       offset = 10.0f;
    }
-   const float xPunch = degToRad (pev->punchangle.x);
-   const float yPunch = degToRad (pev->punchangle.y);
+   const float xPunch = cr::deg2rad (pev->punchangle.x);
+   const float yPunch = cr::deg2rad (pev->punchangle.y);
 
    float interval = calcThinkInterval ();
    float tolerance = (100.0f - m_difficulty * 25.0f) / 99.0f;
 
    // check if we need to compensate recoil
-   if (A_tanf (A_sqrtf (A_abs (xPunch * xPunch) + A_abs (yPunch * yPunch))) * distance > offset + 30.0f + tolerance) {
+   if (cr::tanf (cr::sqrtf (cr::abs (xPunch * xPunch) + cr::abs (yPunch * yPunch))) * distance > offset + 30.0f + tolerance) {
       if (m_firePause < engine.timebase ()) {
          m_firePause = rng.getFloat (0.5f, 0.5f + 0.3f * tolerance);
       }
@@ -1431,7 +1431,7 @@ bool Bot::isGroupOfEnemies (const Vector &location, int numEnemies, float radius
          continue;
       }
 
-      if ((client.ent->v.origin - location).lengthSq () < A_square (radius)) {
+      if ((client.ent->v.origin - location).lengthSq () < cr::square (radius)) {
          // don't target our teammates...
          if (client.team == m_team) {
             return false;

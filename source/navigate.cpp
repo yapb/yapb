@@ -318,7 +318,7 @@ bool Bot::doPlayerAvoidance (const Vector &normal) {
 
    if (m_avoidTime> engine.timebase () && isAlive (m_avoid)) {
 
-      Vector dir (A_cosf (pev->v_angle.y), A_sinf (pev->v_angle.y), 0.0f);
+      Vector dir (cr::cosf (pev->v_angle.y), cr::sinf (pev->v_angle.y), 0.0f);
       Vector lat (-dir.y, dir.x, 0.0f);
       Vector to = Vector (m_avoid->v.origin.x - pev->origin.x, m_avoid->v.origin.y - pev->origin.y, 0.0f).normalize ();
 
@@ -367,7 +367,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
          m_prevTime = engine.timebase (); // then consider being stuck
          m_isStuck = true;
 
-         if (isFltZero (m_firstCollideTime)) {
+         if (cr::fzero (m_firstCollideTime)) {
             m_firstCollideTime = engine.timebase () + 0.2f;
          }
       }
@@ -650,7 +650,7 @@ bool Bot::processNavigation (void) {
 
       // if wayzone radios non zero vary origin a bit depending on the body angles
       if (m_currentPath->radius > 0) {
-         makeVectors (Vector (pev->angles.x, angleNorm (pev->angles.y + rng.getFloat (-90.0f, 90.0f)), 0.0f));
+         makeVectors (Vector (pev->angles.x, cr::angleNorm (pev->angles.y + rng.getFloat (-90.0f, 90.0f)), 0.0f));
          m_waypointOrigin = m_waypointOrigin + g_pGlobals->v_forward * rng.getFloat (0, m_currentPath->radius);
       }
       m_navTimeset = engine.timebase ();
@@ -721,7 +721,7 @@ bool Bot::processNavigation (void) {
       // if trace result shows us that it is a lift
       if (!engine.isNullEntity (tr.pHit) && !m_path.empty () && (strcmp (STRING (tr.pHit->v.classname), "func_door") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_plat") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_train") == 0) && !liftClosedDoorExists) {
          if ((m_liftState == LIFT_NO_NEARBY || m_liftState == LIFT_WAITING_FOR || m_liftState == LIFT_LOOKING_BUTTON_OUTSIDE) && tr.pHit->v.velocity.z == 0.0f) {
-            if (A_abs (pev->origin.z - tr.vecEndPos.z) < 70.0f) {
+            if (cr::abs (pev->origin.z - tr.vecEndPos.z) < 70.0f) {
                m_liftEntity = tr.pHit;
                m_liftState = LIFT_ENTERING_IN;
                m_liftTravelPos = m_currentPath->origin;
@@ -1395,14 +1395,14 @@ float hfunctionPathDist (int index, int, int goalIndex) {
    Path &start = waypoints[index];
    Path &goal = waypoints[goalIndex];
 
-   float x = A_abs (start.origin.x - goal.origin.x);
-   float y = A_abs (start.origin.y - goal.origin.y);
-   float z = A_abs (start.origin.z - goal.origin.z);
+   float x = cr::abs (start.origin.x - goal.origin.x);
+   float y = cr::abs (start.origin.y - goal.origin.y);
+   float z = cr::abs (start.origin.z - goal.origin.z);
 
    switch (yb_debug_heuristic_type.integer ()) {
    case 0:
    default:
-      return A_max (A_max (x, y), z); // chebyshev distance
+      return cr::max (cr::max (x, y), z); // chebyshev distance
 
    case 1:
       return x + y + z; // manhattan distance
@@ -1413,7 +1413,7 @@ float hfunctionPathDist (int index, int, int goalIndex) {
    case 3:
    case 4: 
       // euclidean based distance
-      float euclidean = A_powf (A_powf (x, 2.0f) + A_powf (y, 2.0f) + A_powf (z, 2.0f), 0.5f);
+      float euclidean = cr::powf (cr::powf (x, 2.0f) + cr::powf (y, 2.0f) + cr::powf (z, 2.0f), 0.5f);
 
       if (yb_debug_heuristic_type.integer () == 4) {
          return 1000.0f * (ceilf (euclidean) - euclidean);
@@ -1622,7 +1622,7 @@ bool Bot::searchOptimalPoint (void) {
    float lessDist[3] = { 99999.0f, };
    int lessIndex[3] = { INVALID_WAYPOINT_INDEX, };
 
-   auto bucket = waypoints.getWaypointsInBucket (pev->origin);
+   auto &bucket = waypoints.getWaypointsInBucket (pev->origin);
 
    for (const int at : bucket) {
       bool skip = !!(at == m_currentWaypointIndex);
@@ -1750,7 +1750,7 @@ float Bot::getReachTime (void) {
       if (longTermReachability) {
          estimatedTime *= 2.0f;
       }
-      estimatedTime = A_clamp (estimatedTime, 1.2f, longTermReachability ? 8.0f : 5.0f);
+      estimatedTime = cr::clamp (estimatedTime, 1.2f, longTermReachability ? 8.0f : 5.0f);
    }
    return estimatedTime;
 }
@@ -1841,9 +1841,9 @@ int Bot::getNearestPoint (void) {
    // get the current nearest waypoint to bot with visibility checks
 
    int index = INVALID_WAYPOINT_INDEX;
-   float minimum = A_square (1024.0f);
+   float minimum = cr::square (1024.0f);
 
-   auto bucket = waypoints.getWaypointsInBucket (pev->origin);
+   auto &bucket = waypoints.getWaypointsInBucket (pev->origin);
 
    for (const auto at : bucket) {
       if (at == m_currentWaypointIndex) {
@@ -1888,7 +1888,7 @@ int Bot::getBombPoint (void) {
    }
 
    // take the nearest to bomb waypoints instead of goal if close enough
-   else if ((pev->origin - bomb).lengthSq () < A_square (512.0f)) {
+   else if ((pev->origin - bomb).lengthSq () < cr::square (512.0f)) {
       int waypoint = waypoints.getNearest (bomb, 80.0f);
       m_bombSearchOverridden = true;
 
@@ -2019,7 +2019,7 @@ int Bot::getDefendPoint (const Vector &origin) {
       IntArray found;
 
       for (int i = 0; i < waypoints.length (); i++) {
-         if ((waypoints[i].origin - origin).lengthSq () <= A_square (1248.0f) && !waypoints.isVisible (i, posIndex) && !isOccupiedPoint (i)) {
+         if ((waypoints[i].origin - origin).lengthSq () <= cr::square (1248.0f) && !waypoints.isVisible (i, posIndex) && !isOccupiedPoint (i)) {
             found.push (i);
          }
       }
@@ -2218,7 +2218,7 @@ bool Bot::advanceMovement (void) {
    }
    TraceResult tr;
 
-   m_path.erase (0); // advance in list
+   m_path.shift (); // advance in list
    m_currentTravelFlags = 0; // reset travel flags (jumping etc)
 
    // we're not at the end of the list?
@@ -2357,7 +2357,7 @@ bool Bot::advanceMovement (void) {
 
    // if wayzone radius non zero vary origin a bit depending on the body angles
    if (m_currentPath->radius > 0.0f) {
-      makeVectors (Vector (pev->angles.x, angleNorm (pev->angles.y + rng.getFloat (-90.0f, 90.0f)), 0.0f));
+      makeVectors (Vector (pev->angles.x, cr::angleNorm (pev->angles.y + rng.getFloat (-90.0f, 90.0f)), 0.0f));
       m_waypointOrigin = m_waypointOrigin + g_pGlobals->v_forward * rng.getFloat (0.0f, m_currentPath->radius);
    }
 
@@ -2976,7 +2976,7 @@ void Bot::processBodyAngles (void) {
 }
 
 void Bot::processLookAngles (void) {
-   const float delta = A_clamp (engine.timebase () - m_lookUpdateTime, MATH_EQEPSILON, 0.05f);
+   const float delta = cr::clamp (engine.timebase () - m_lookUpdateTime, cr::EQEPSILON, 0.05f);
    m_lookUpdateTime = engine.timebase ();
 
    // adjust all body and view angles to face an absolute vector
@@ -3006,23 +3006,23 @@ void Bot::processLookAngles (void) {
 
    m_idealAngles = pev->v_angle;
 
-   float angleDiffYaw = angleDiff (direction.y, m_idealAngles.y);
-   float angleDiffPitch = angleDiff (direction.x, m_idealAngles.x);
+   float angleDiffYaw = cr::angleDiff (direction.y, m_idealAngles.y);
+   float angleDiffPitch = cr::angleDiff (direction.x, m_idealAngles.x);
 
    if (angleDiffYaw < 1.0f && angleDiffYaw > -1.0f) {
       m_lookYawVel = 0.0f;
       m_idealAngles.y = direction.y;
    }
    else {
-      float accel = A_clamp (stiffness * angleDiffYaw - damping * m_lookYawVel, -accelerate, accelerate);
+      float accel = cr::clamp (stiffness * angleDiffYaw - damping * m_lookYawVel, -accelerate, accelerate);
 
       m_lookYawVel += delta * accel;
       m_idealAngles.y += delta * m_lookYawVel;
    }
-   float accel = A_clamp (2.0f * stiffness * angleDiffPitch - damping * m_lookPitchVel, -accelerate, accelerate);
+   float accel = cr::clamp (2.0f * stiffness * angleDiffPitch - damping * m_lookPitchVel, -accelerate, accelerate);
 
    m_lookPitchVel += delta * accel;
-   m_idealAngles.x += A_clamp (delta * m_lookPitchVel, -89.0f, 89.0f);
+   m_idealAngles.x += cr::clamp (delta * m_lookPitchVel, -89.0f, 89.0f);
 
    pev->v_angle = m_idealAngles;
    pev->v_angle.clampAngles ();
@@ -3173,7 +3173,7 @@ bool Bot::isOccupiedPoint (int index) {
       }
       float length = (waypoints[index].origin - client.origin).lengthSq ();
 
-      if (length < A_clamp (waypoints[index].radius, A_square (32.0f), A_square (90.0f))) {
+      if (length < cr::clamp (waypoints[index].radius, cr::square (32.0f), cr::square (90.0f))) {
          return true;
       }
    }

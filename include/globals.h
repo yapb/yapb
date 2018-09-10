@@ -50,7 +50,6 @@ extern Array<StringArray> g_chatFactory;
 extern Array<Array<ChatterItem>> g_chatterFactory;
 extern Array<BotName> g_botNames;
 extern Array<KeywordFactory> g_replyFactory;
-extern RandomSequenceOfUnique rng;
 
 extern WeaponSelect g_weaponSelect[NUM_WEAPONS + 1];
 extern WeaponProperty g_weaponDefs[MAX_WEAPONS + 1];

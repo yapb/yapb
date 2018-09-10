@@ -54,7 +54,7 @@ void Waypoint::addPath (int addIndex, int pathIndex, float distance) {
    for (int16 i = 0; i < MAX_PATH_INDEX; i++) {
       if (path->index[i] == INVALID_WAYPOINT_INDEX) {
          path->index[i] = static_cast<int16> (pathIndex);
-         path->distances[i] = A_abs (static_cast<int> (distance));
+         path->distances[i] = cr::abs (static_cast<int> (distance));
 
          logEntry (true, LL_DEFAULT, "Path added from %d to %d", addIndex, pathIndex);
          return;
@@ -76,7 +76,7 @@ void Waypoint::addPath (int addIndex, int pathIndex, float distance) {
       logEntry (true, LL_DEFAULT, "Path added from %d to %d", addIndex, pathIndex);
 
       path->index[slotID] = static_cast<int16> (pathIndex);
-      path->distances[slotID] = A_abs (static_cast<int> (distance));
+      path->distances[slotID] = cr::abs (static_cast<int> (distance));
    }
 }
 
@@ -84,7 +84,7 @@ int Waypoint::getFarest (const Vector &origin, float maxDistance) {
    // find the farest waypoint to that Origin, and return the index to this waypoint
 
    int index = INVALID_WAYPOINT_INDEX;
-   maxDistance = A_square (maxDistance);
+   maxDistance = cr::square (maxDistance);
 
    for (int i = 0; i < m_numWaypoints; i++) {
       float distance = (m_paths[i]->origin - origin).lengthSq ();
@@ -102,7 +102,7 @@ int Waypoint::getNearestFallback (const Vector &origin, float minDistance, int f
 
    // fallback and go thru wall the waypoints...
    int index = INVALID_WAYPOINT_INDEX;
-   minDistance = A_square (minDistance);
+   minDistance = cr::square (minDistance);
 
    for (int i = 0; i < m_numWaypoints; i++) {
       if (flags != -1 && !(m_paths[i]->flags & flags)) {
@@ -121,13 +121,13 @@ int Waypoint::getNearestFallback (const Vector &origin, float minDistance, int f
 int Waypoint::getNearest (const Vector &origin, float minDistance, int flags) {
    // find the nearest waypoint to that origin and return the index
 
-   auto bucket = getWaypointsInBucket (origin);
+   auto &bucket = getWaypointsInBucket (origin);
 
    if (bucket.empty ()) {
       return getNearestFallback (origin, minDistance, flags);
    }
    int index = INVALID_WAYPOINT_INDEX;
-   minDistance = A_square (minDistance);
+   minDistance = cr::square (minDistance);
 
    for (const auto at : bucket) {
       if (flags != -1 && !(m_paths[at]->flags & flags)) {
@@ -146,7 +146,7 @@ int Waypoint::getNearest (const Vector &origin, float minDistance, int flags) {
 void Waypoint::searchRadius (IntArray &radiusHolder, float radius, const Vector &origin, int maxCount) {
    // returns all waypoints within radius from position
 
-   radius = A_square (radius);
+   radius = cr::square (radius);
 
    for (int i = 0; i < m_numWaypoints; i++) {
       if (maxCount != -1 && static_cast<int> (radiusHolder.length ()) > maxCount) {
@@ -375,7 +375,7 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
             // check if the waypoint is reachable from the new one
             engine.testLine (newOrigin, m_paths[i]->origin, TRACE_IGNORE_MONSTERS, g_hostEntity, &tr);
 
-            if (tr.flFraction == 1.0f && A_abs (newOrigin.x - m_paths[i]->origin.x) < 64.0f && A_abs (newOrigin.y - m_paths[i]->origin.y) < 64.0f && A_abs (newOrigin.z - m_paths[i]->origin.z) < g_autoPathDistance) {
+            if (tr.flFraction == 1.0f && cr::abs (newOrigin.x - m_paths[i]->origin.x) < 64.0f && cr::abs (newOrigin.y - m_paths[i]->origin.y) < 64.0f && cr::abs (newOrigin.z - m_paths[i]->origin.z) < g_autoPathDistance) {
                distance = (m_paths[i]->origin - newOrigin).length ();
 
                addPath (index, i, distance);
@@ -771,7 +771,7 @@ void Waypoint::calculatePathRadius (int index) {
 
             break;
          }
-         direction.y = angleNorm (direction.y + circleRadius);
+         direction.y = cr::angleNorm (direction.y + circleRadius);
       }
 
       if (wayBlocked) {
@@ -1162,8 +1162,8 @@ void Waypoint::save (void) {
    memset (header.header, 0, sizeof (header.header));
 
    strcpy (header.header, FH_WAYPOINT);
-   strncpy (header.author, STRING (g_hostEntity->v.netname), A_bufsize (header.author));
-   strncpy (header.mapName, engine.getMapName (), A_bufsize (header.mapName));
+   strncpy (header.author, STRING (g_hostEntity->v.netname), cr::bufsize (header.author));
+   strncpy (header.mapName, engine.getMapName (), cr::bufsize (header.mapName));
 
    header.mapName[31] = 0;
    header.fileVersion = FV_WAYPOINT;
@@ -1188,7 +1188,7 @@ void Waypoint::save (void) {
 
 const char *Waypoint::getWaypointFilename (bool isMemoryFile) {
    static char buffer[256];
-   snprintf (buffer, A_bufsize (buffer), "%s%s%s.pwf", getDataDirectory (isMemoryFile), isEmptyStr (yb_wptsubfolder.str ()) ? "" : yb_wptsubfolder.str (), engine.getMapName ());
+   snprintf (buffer, cr::bufsize (buffer), "%s%s%s.pwf", getDataDirectory (isMemoryFile), isEmptyStr (yb_wptsubfolder.str ()) ? "" : yb_wptsubfolder.str (), engine.getMapName ());
 
    if (File::exists (buffer)) {
       return &buffer[0];
@@ -1213,7 +1213,7 @@ bool Waypoint::isReachable (Bot *bot, int index) {
    const Vector &dst = m_paths[index]->origin;
 
    // is the destination close enough?
-   if ((dst - src).lengthSq () >= A_square (400.0f)) {
+   if ((dst - src).lengthSq () >= cr::square (400.0f)) {
       return false;
    }
    float ladderDist = (dst - src).length2D ();
@@ -1695,7 +1695,7 @@ void Waypoint::frame (void) {
 
       // if radius is nonzero, draw a full circle
       if (path->radius > 0.0f) {
-         float squareRoot = A_sqrtf (path->radius * path->radius * 0.5f);
+         float squareRoot = cr::sqrtf (path->radius * path->radius * 0.5f);
 
          engine.drawLine (g_hostEntity, origin + Vector (path->radius, 0.0f, 0.0f), origin + Vector (squareRoot, -squareRoot, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
          engine.drawLine (g_hostEntity, origin + Vector (squareRoot, -squareRoot, 0.0f), origin + Vector (0.0f, -path->radius, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
@@ -1710,7 +1710,7 @@ void Waypoint::frame (void) {
          engine.drawLine (g_hostEntity, origin + Vector (squareRoot, squareRoot, 0.0f), origin + Vector (path->radius, 0.0f, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
       }
       else {
-         float squareRoot = A_sqrtf (32.0f);
+         float squareRoot = cr::sqrtf (32.0f);
 
          engine.drawLine (g_hostEntity, origin + Vector (squareRoot, -squareRoot, 0.0f), origin + Vector (-squareRoot, squareRoot, 0.0f), 5, 0, 255, 0, 0, 200, 0, 10);
          engine.drawLine (g_hostEntity, origin + Vector (-squareRoot, -squareRoot, 0.0f), origin + Vector (squareRoot, squareRoot, 0.0f), 5, 0, 255, 0, 0, 200, 0, 10);
@@ -1912,7 +1912,7 @@ bool Waypoint::checkNodes (void) {
    while (!walk.empty ()) {
       // pop a node from the stack
       const int current = walk.first ();
-      walk.erase (0);
+      walk.shift ();
 
       visited[current] = true;
 
@@ -1963,7 +1963,7 @@ bool Waypoint::checkNodes (void) {
 
    while (!walk.empty ()) {
       const int current = walk.first (); // pop a node from the stack
-      walk.erase (0);
+      walk.shift ();
 
       for (auto &outgoing : outgoingPaths[current]) {
          if (visited[outgoing]) {
@@ -2504,7 +2504,7 @@ void Waypoint::eraseFromBucket (const Vector &pos, int index) {
 
    for (size_t i = 0; i < data.length (); i++) {
       if (data[i] == index) {
-         data.erase (i);
+         data.erase (i, 1);
          break;
       }
    }
@@ -2514,13 +2514,13 @@ Waypoint::Bucket Waypoint::locateBucket (const Vector &pos) {
    constexpr float size = 4096.0f;
 
    return {
-       A_abs (static_cast <int> ((pos.x + size) / MAX_WAYPOINT_BUCKET_SIZE)),
-       A_abs (static_cast <int> ((pos.y + size) / MAX_WAYPOINT_BUCKET_SIZE)),
-       A_abs (static_cast <int> ((pos.z + size) / MAX_WAYPOINT_BUCKET_SIZE))
+       cr::abs (static_cast <int> ((pos.x + size) / MAX_WAYPOINT_BUCKET_SIZE)),
+       cr::abs (static_cast <int> ((pos.y + size) / MAX_WAYPOINT_BUCKET_SIZE)),
+       cr::abs (static_cast <int> ((pos.z + size) / MAX_WAYPOINT_BUCKET_SIZE))
    };
 }
 
-const IntArray &Waypoint::getWaypointsInBucket (const Vector &pos) {
+IntArray &Waypoint::getWaypointsInBucket (const Vector &pos) {
    const Bucket &bucket = locateBucket (pos);
    return m_buckets[bucket.x][bucket.y][bucket.z];
 }

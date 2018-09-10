@@ -24,7 +24,7 @@ void stripClanTags (char *buffer) {
    int length = strlen (buffer); // get length of string
 
    // foreach known tag...
-   for (index = 0; index < A_arrsize (tagOpen); index++) {
+   for (index = 0; index < cr::arrsize (tagOpen); index++) {
       fieldStart = strstr (buffer, tagOpen[index]) - buffer; // look for a tag start
 
       // have we found a tag start?
@@ -50,7 +50,7 @@ void stripClanTags (char *buffer) {
       int tagLength = 0;
 
       // strip just the tag part...
-      for (index = 0; index < A_arrsize (tagOpen); index++) {
+      for (index = 0; index < cr::arrsize (tagOpen); index++) {
          fieldStart = strstr (buffer, tagOpen[index]) - buffer; // look for a tag start
 
          // have we found a tag start?
@@ -83,7 +83,7 @@ char *humanizeName (char *name) {
    // this function humanize player name (i.e. trim clan and switch to lower case (sometimes))
 
    static char outputName[64]; // create return name buffer
-   strncpy (outputName, name, A_bufsize (outputName)); // copy name to new buffer
+   strncpy (outputName, name, cr::bufsize (outputName)); // copy name to new buffer
 
    // drop tag marks, 80 percent of time
    if (rng.getInt (1, 100) < 80) {
@@ -198,12 +198,12 @@ void Bot::prepareChatMessage (char *text) {
          }
          // mapname?
          else if (*pattern == 'm') {
-            strncat (m_tempStrings, engine.getMapName (), A_bufsize (m_tempStrings));
+            strncat (m_tempStrings, engine.getMapName (), cr::bufsize (m_tempStrings));
          }
          // roundtime?
          else if (*pattern == 'r') {
             int time = static_cast<int> (g_timeRoundEnd - engine.timebase ());
-            strncat (m_tempStrings, format ("%02d:%02d", time / 60, time % 60), A_bufsize (m_tempStrings));
+            strncat (m_tempStrings, format ("%02d:%02d", time / 60, time % 60), cr::bufsize (m_tempStrings));
          }
          // chat reply?
          else if (*pattern == 's') {
@@ -312,10 +312,10 @@ void Bot::prepareChatMessage (char *text) {
    if (textStart != nullptr) {
       // let the bots make some mistakes...
       char tempString[160];
-      strncpy (tempString, textStart, A_bufsize (tempString));
+      strncpy (tempString, textStart, cr::bufsize (tempString));
 
       addChatErrors (tempString);
-      strncat (m_tempStrings, tempString, A_bufsize (m_tempStrings));
+      strncat (m_tempStrings, tempString, cr::bufsize (m_tempStrings));
    }
 }
 

@@ -538,7 +538,7 @@ void processBotConfigs (bool onlyMain) {
          StringArray pair = String (lineBuffer).split ("\t\t");
 
          if (pair.length () > 1) {
-            strncpy (lineBuffer, pair[0].trim ().chars (), A_bufsize (lineBuffer));
+            strncpy (lineBuffer, pair[0].trim ().chars (), cr::bufsize (lineBuffer));
          }
 
          String::trimChars (lineBuffer);
@@ -566,7 +566,7 @@ void processBotConfigs (bool onlyMain) {
             continue;
          }
          String::trimChars (lineBuffer);
-         strncpy (section, lineBuffer, A_bufsize (section));
+         strncpy (section, lineBuffer, cr::bufsize (section));
 
          if (strcmp (section, "[KILLED]") == 0) {
             chatType = 0;
@@ -621,7 +621,7 @@ void processBotConfigs (bool onlyMain) {
          case 3:
             if (strstr (lineBuffer, "@KEY") != nullptr) {
                if (!replies.keywords.empty () && !replies.replies.empty ()) {
-                  g_replyFactory.push (replies);
+                  g_replyFactory.push (cr::forward <KeywordFactory> (replies));
                   replies.replies.clear ();
                }
 
@@ -849,7 +849,7 @@ void processBotConfigs (bool onlyMain) {
             }
             items[1].trim ("(;)");
 
-            for (int i = 0; i < A_arrsize (chatterEventMap); i++) {
+            for (int i = 0; i < cr::arrsize (chatterEventMap); i++) {
                auto event = &chatterEventMap[i];
 
                if (stricmp (event->str, items[0].chars ()) == 0) {
@@ -2071,7 +2071,7 @@ void ClientCommand (edict_t *ent) {
             if (isEmptyStr (g_engfuncs.pfnCmd_Args ())) {
                continue;
             }
-            strncpy (target->m_sayTextBuffer.sayText, g_engfuncs.pfnCmd_Args (), A_bufsize (target->m_sayTextBuffer.sayText));
+            strncpy (target->m_sayTextBuffer.sayText, g_engfuncs.pfnCmd_Args (), cr::bufsize (target->m_sayTextBuffer.sayText));
             target->m_sayTextBuffer.timeNextChat = engine.timebase () + target->m_sayTextBuffer.chatDelay;
          }
       }
@@ -2398,7 +2398,7 @@ void pfnClientCommand (edict_t *ent, char const *format, ...) {
    char buffer[MAX_PRINT_BUFFER];
 
    va_start (ap, format);
-   _vsnprintf (buffer, A_bufsize (buffer), format, ap);
+   _vsnprintf (buffer, cr::bufsize (buffer), format, ap);
    va_end (ap);
 
    if (ent && (ent->v.flags & (FL_FAKECLIENT | FL_DORMANT))) {
@@ -2772,7 +2772,7 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...) {
    char buffer[1024];
 
    va_start (ap, format);
-   vsnprintf (buffer, A_bufsize (buffer), format, ap);
+   vsnprintf (buffer, cr::bufsize (buffer), format, ap);
    va_end (ap);
 
    if ((g_mapFlags & MAP_DE) && g_bombPlanted && strstr (buffer, "_Defuse_") != nullptr) {
@@ -3001,7 +3001,7 @@ Library *LoadCSBinary (void) {
 #endif
 
    // search the libraries inside game dlls directory
-   for (int i = 0; i < A_arrsize (libs); i++) {
+   for (int i = 0; i < cr::arrsize (libs); i++) {
       char path[256];
       sprintf (path, "%s/dlls/%s", modname, libs[i]);
 
@@ -3106,7 +3106,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 #endif
 
    char gameDLLName[256];
-   snprintf (gameDLLName, A_bufsize (gameDLLName), "%s/%s", getenv ("XASH3D_GAMELIBDIR"), serverDLL);
+   snprintf (gameDLLName, cr::bufsize (gameDLLName), "%s/%s", getenv ("XASH3D_GAMELIBDIR"), serverDLL);
 
    g_gameLib = new Library (gameDLLName);
 

@@ -47,7 +47,7 @@ float getShootingConeDeviation (edict_t *ent, const Vector &position) {
 }
 
 bool isInViewCone (const Vector &origin, edict_t *ent) {
-   return getShootingConeDeviation (ent, origin) >= A_cosf (((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f) * MATH_D2R);
+   return getShootingConeDeviation (ent, origin) >= cr::cosf (cr::deg2rad ((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f));
 }
 
 bool isVisible (const Vector &origin, edict_t *ent) {
@@ -71,7 +71,7 @@ void showMenu (edict_t *ent, MenuId menu) {
       extern void setupBotMenus (void);
       setupBotMenus ();
 
-      for (int i = 0; i < A_arrsize (g_menus); i++) {
+      for (int i = 0; i < cr::arrsize (g_menus); i++) {
          auto parsed = &g_menus[i];
 
          // translate all the things
@@ -104,7 +104,7 @@ void showMenu (edict_t *ent, MenuId menu) {
    }
    int menuIndex = 0;
 
-   for (; menuIndex < A_arrsize (g_menus); menuIndex++) {
+   for (; menuIndex < cr::arrsize (g_menus); menuIndex++) {
       if (g_menus[menuIndex].id == menu) {
          break;
       }
@@ -539,7 +539,7 @@ void logEntry (bool outputToConsole, int logLevel, const char *format, ...) {
    char buffer[MAX_PRINT_BUFFER] = { 0, }, levelString[32] = { 0, }, logLine[MAX_PRINT_BUFFER] = {0, };
 
    va_start (ap, format);
-   vsnprintf (buffer, A_bufsize (buffer), format, ap);
+   vsnprintf (buffer, cr::bufsize (buffer), format, ap);
    va_end (ap);
 
    switch (logLevel) {
@@ -592,7 +592,7 @@ void logEntry (bool outputToConsole, int logLevel, const char *format, ...) {
    time_t tickTime = time (&tickTime);
    tm *time = localtime (&tickTime);
 
-   snprintf (logLine, A_bufsize (logLine), "%02d:%02d:%02d --> %s%s", time->tm_hour, time->tm_min, time->tm_sec, levelString, buffer);
+   snprintf (logLine, cr::bufsize (logLine), "%02d:%02d:%02d --> %s%s", time->tm_hour, time->tm_min, time->tm_sec, levelString, buffer);
 
    fp.writeFormat ("%s\n", logLine);
    fp.close ();
@@ -770,7 +770,7 @@ void simulateSoundUpdates (int playerIndex) {
    }
    else if (client.ent->v.movetype == MOVETYPE_FLY) // uses ladder?
    {
-      if (A_abs (client.ent->v.velocity.z) > 50.0f) {
+      if (cr::abs (client.ent->v.velocity.z) > 50.0f) {
          hearDistance = 1024.0f;
          timeSound = engine.timebase () + 0.3f;
       }
@@ -894,7 +894,7 @@ int getWeaponData (bool needString, const char *weaponAlias, int weaponIndex) {
 
    // if we need to return the string, find by weapon id
    if (needString && weaponIndex != -1) {
-      for (int i = 0; i < A_arrsize (weaponTab); i++) {
+      for (int i = 0; i < cr::arrsize (weaponTab); i++) {
          if (weaponTab[i].weaponIndex == weaponIndex) { // is weapon id found?
             return MAKE_STRING (weaponTab[i].alias);
          }
@@ -903,7 +903,7 @@ int getWeaponData (bool needString, const char *weaponAlias, int weaponIndex) {
    }
 
    // else search weapon by name and return weapon id
-   for (int i = 0; i < A_arrsize (weaponTab); i++) {
+   for (int i = 0; i < cr::arrsize (weaponTab); i++) {
       if (strncmp (weaponTab[i].alias, weaponAlias, strlen (weaponTab[i].alias)) == 0) {
          return weaponTab[i].weaponIndex;
       }

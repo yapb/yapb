@@ -52,7 +52,7 @@ void Engine::print (const char *fmt, ...) {
    char string[MAX_PRINT_BUFFER];
 
    va_start (ap, fmt);
-   vsnprintf (string, A_bufsize (string), translate (fmt), ap);
+   vsnprintf (string, cr::bufsize (string), translate (fmt), ap);
    va_end (ap);
 
    strcat (string, "\n");
@@ -64,7 +64,7 @@ void Engine::chatPrint (const char *fmt, ...) {
    char string[MAX_PRINT_BUFFER];
 
    va_start (ap, fmt);
-   vsnprintf (string, A_bufsize (string), translate (fmt), ap);
+   vsnprintf (string, cr::bufsize (string), translate (fmt), ap);
    va_end (ap);
 
    if (isDedicated ()) {
@@ -83,7 +83,7 @@ void Engine::centerPrint (const char *fmt, ...) {
    char string[MAX_PRINT_BUFFER];
 
    va_start (ap, fmt);
-   vsnprintf (string, A_bufsize (string), translate (fmt), ap);
+   vsnprintf (string, cr::bufsize (string), translate (fmt), ap);
    va_end (ap);
 
    if (isDedicated ()) {
@@ -102,7 +102,7 @@ void Engine::clientPrint (edict_t *ent, const char *fmt, ...) {
    char string[MAX_PRINT_BUFFER];
 
    va_start (ap, fmt);
-   vsnprintf (string, A_bufsize (string), translate (fmt), ap);
+   vsnprintf (string, cr::bufsize (string), translate (fmt), ap);
    va_end (ap);
 
    if (isNullEntity (ent)) {
@@ -272,7 +272,7 @@ const char *Engine::getMapName (void) {
    // this function gets the map name and store it in the map_name global string variable.
 
    static char engineMap[256];
-   strncpy (engineMap, STRING (g_pGlobals->mapname), A_bufsize (engineMap));
+   strncpy (engineMap, STRING (g_pGlobals->mapname), cr::bufsize (engineMap));
 
    return &engineMap[0];
 }
@@ -298,7 +298,7 @@ void Engine::registerCmd (const char *command, void func (void)) {
    // pointed to by "function" in order to handle it.
 
    // check for hl pre 1.1.0.4, as it's doesn't have pfnAddServerCommand
-   if (!A_checkptr (reinterpret_cast<const void *> (g_engfuncs.pfnAddServerCommand))) {
+   if (!cr::checkptr (reinterpret_cast<const void *> (g_engfuncs.pfnAddServerCommand))) {
       logEntry (true, LL_FATAL, "YaPB's minimum HL engine version is 1.1.0.4 and minimum Counter-Strike is Beta 6.6. Please update your engine version.");
    }
    g_engfuncs.pfnAddServerCommand (const_cast<char *> (command), func);
@@ -322,7 +322,7 @@ void Engine::execBotCmd (edict_t *ent, const char *fmt, ...) {
    char string[256];
 
    va_start (ap, fmt);
-   vsnprintf (string, A_bufsize (string), fmt, ap);
+   vsnprintf (string, cr::bufsize (string), fmt, ap);
    va_end (ap);
 
    if (isEmptyStr (string)) {
@@ -399,7 +399,7 @@ const char *Engine::getField (const char *string, int id) {
       iter = 0;
    }
 
-   char *ptr = arg[A_clamp<int> (iter++, 0, IterBufMax - 1)];
+   char *ptr = arg[cr::clamp <int> (iter++, 0, IterBufMax - 1)];
    ptr[0] = 0;
 
    int pos = 0, count = 0, start = 0, stop = 0;
@@ -452,7 +452,7 @@ void Engine::execCmd (const char *fmt, ...) {
 
    // concatenate all the arguments in one string
    va_start (ap, fmt);
-   vsnprintf (string, A_bufsize (string), fmt, ap);
+   vsnprintf (string, cr::bufsize (string), fmt, ap);
    va_end (ap);
 
    strcat (string, "\n");
@@ -619,7 +619,7 @@ void Engine::processMessages (void *ptr) {
 
       switch (m_msgBlock.state) {
       case 0:
-         strncpy (weaponProp.className, strVal, A_bufsize (weaponProp.className));
+         strncpy (weaponProp.className, strVal, cr::bufsize (weaponProp.className));
          break;
 
       case 1:

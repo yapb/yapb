@@ -381,10 +381,10 @@ public:
 
 public:
    static inline uint16 fu16 (float value, float scale) {
-      return A_clamp<uint16> (static_cast <uint16> (value * scale), 0, 0xffff);
+      return cr::clamp <uint16> (static_cast <uint16> (value * scale), 0, 0xffff);
    }
 
    static inline short fs16 (float value, float scale) {
-      return A_clamp<short> (static_cast <short> (value * scale), -32767, 32767);
+      return cr::clamp <short> (static_cast <short> (value * scale), -32767, 32767);
    }
 };

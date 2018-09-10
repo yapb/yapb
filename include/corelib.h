@@ -28,26 +28,6 @@
 #else
    #include <sys/stat.h>
 #endif
-//
-// Basic Types
-//
-using int8 = signed char;
-using int16 = signed short;
-using int32 = signed long;
-using uint8 = unsigned char;
-using uint16 = unsigned short;
-using uint32 = unsigned long;
-
-// From metamod-p
-static inline bool A_checkptr (const void *ptr) {
-#ifdef PLATFORM_WIN32
-   if (IsBadCodePtr ((FARPROC)ptr))
-      return false;
-#endif
-
-   (void)(ptr);
-   return true;
-}
 
 #ifndef PLATFORM_WIN32
    #define _unlink unlink
@@ -57,47 +37,76 @@ static inline bool A_checkptr (const void *ptr) {
    #define stricmp _stricmp
 #endif
 
-template <typename T, int N> constexpr int A_bufsize (const T (&)[N]) {
+#undef min
+#undef max
+
+// to remove ugly A_ prefixes
+namespace cr {
+
+namespace types {
+
+using int8 = signed char;
+using int16 = signed short;
+using int32 = signed long;
+using uint8 = unsigned char;
+using uint16 = unsigned short;
+using uint32 = unsigned long;
+
+}
+
+using namespace cr::types;
+
+constexpr float ONEPSILON = 0.01f;
+constexpr float EQEPSILON = 0.001f;
+constexpr float FLEPSILON = 1.192092896e-07f;
+
+constexpr float PI = 3.14159265358979323846f;
+constexpr float PI_RECIPROCAL = 1.0f / PI;
+constexpr float PI_HALF = PI / 2;
+
+constexpr float D2R = PI / 180.0f;
+constexpr float R2D = 180.0f / PI;
+
+// from metamod-p
+static inline bool checkptr (const void *ptr) {
+#ifdef PLATFORM_WIN32
+   if (IsBadCodePtr ((FARPROC)ptr))
+      return false;
+#endif
+
+   (void)(ptr);
+   return true;
+}
+
+template <typename T, int N> constexpr int bufsize (const T (&)[N]) {
    return N - 1;
 }
 
-template <typename T, int N> constexpr int A_arrsize (const T (&)[N]) {
+template <typename T, int N> constexpr int arrsize (const T (&)[N]) {
    return N;
 }
 
-namespace Math {
-constexpr float MATH_ONEPSILON = 0.01f;
-constexpr float MATH_EQEPSILON = 0.001f;
-constexpr float MATH_FLEPSILON = 1.192092896e-07f;
-
-constexpr float MATH_PI = 3.14159265358979323846f;
-constexpr float MATH_PI_RECIPROCAL = 1.0f / MATH_PI;
-constexpr float MATH_PI_HALF = MATH_PI * 0.5f;
-
-constexpr float MATH_D2R = MATH_PI / 180.0f;
-constexpr float MATH_R2D = 180.0f / MATH_PI;
-
-constexpr float A_square (const float value) {
+constexpr float square (const float value) {
    return value * value;
 }
 
-template <typename T> constexpr T A_min (const T a, const T b) {
+template <typename T> constexpr T min (const T a, const T b) {
    return a < b ? a : b;
 }
 
-template <typename T> constexpr T A_max (const T a, const T b) {
+template <typename T> constexpr T max (const T a, const T b) {
    return a > b ? a : b;
 }
 
-template <typename T> constexpr T A_clamp (const T x, const T a, const T b) {
-   return A_min (A_max (x, a), b);
+template <typename T> constexpr T clamp (const T x, const T a, const T b) {
+   return min (max (x, a), b);
 }
 
-template<typename T> constexpr T A_abs (const T a) {
+template<typename T> constexpr T abs (const T a) {
    return a > 0 ? a : -a;
 }
 
-static inline float A_powf (const float a, const float b) {
+static inline float powf (const float a, const float b) {
    union {
       float d;
       int x;
@@ -107,90 +116,90 @@ static inline float A_powf (const float a, const float b) {
    return res.d;
 }
 
-static inline float A_sqrtf (const float value) {
-   return A_powf (value, 0.5f);
+static inline float sqrtf (const float value) {
+   return powf (value, 0.5f);
 }
 
-static inline float A_sinf (const float value) {
-   signed long sign = static_cast <signed long> (value * MATH_PI_RECIPROCAL);
-   const float calc = (value - static_cast <float> (sign) * MATH_PI);
+static inline float sinf (const float value) {
+   signed long sign = static_cast <signed long> (value * PI_RECIPROCAL);
+   const float calc = (value - static_cast <float> (sign) * PI);
 
-   const float square = A_square (calc);
-   const float res = 1.00000000000000000000e+00f + square * (-1.66666671633720397949e-01f + square * (8.33333376795053482056e-03f + square * (-1.98412497411482036114e-04f +
-      square * (2.75565571428160183132e-06f + square * (-2.50368472620721149724e-08f + square * (1.58849267073435385100e-10f + square * -6.58925550841432672300e-13f))))));
+   const float sqr = square (calc);
+   const float res = 1.00000000000000000000e+00f + sqr * (-1.66666671633720397949e-01f + sqr * (8.33333376795053482056e-03f + sqr * (-1.98412497411482036114e-04f +
+      sqr * (2.75565571428160183132e-06f + sqr * (-2.50368472620721149724e-08f + sqr * (1.58849267073435385100e-10f + sqr * -6.58925550841432672300e-13f))))));
 
    return (sign & 1) ? -calc * res : value * res;
 }
 
-static inline float A_cosf (const float value) {
-   signed long sign = static_cast <signed long> (value * MATH_PI_RECIPROCAL);
-   const float calc = (value - static_cast <float> (sign) * MATH_PI);
+static inline float cosf (const float value) {
+   signed long sign = static_cast <signed long> (value * PI_RECIPROCAL);
+   const float calc = (value - static_cast <float> (sign) * PI);
 
-   const float square = A_square (calc);
-   const float res = square * (-5.00000000000000000000e-01f + square * (4.16666641831398010254e-02f + square * (-1.38888671062886714935e-03f + square * (2.48006890615215525031e-05f +
-      square * (-2.75369927749125054106e-07f + square * (2.06207229069832465029e-09f + square * -9.77507137733812925262e-12f))))));
+   const float sqr = square (calc);
+   const float res = sqr * (-5.00000000000000000000e-01f + sqr * (4.16666641831398010254e-02f + sqr * (-1.38888671062886714935e-03f + sqr * (2.48006890615215525031e-05f +
+      sqr * (-2.75369927749125054106e-07f + sqr * (2.06207229069832465029e-09f + sqr * -9.77507137733812925262e-12f))))));
 
    const float f = -1.00000000000000000000e+00f;
 
    return (sign & 1) ? f - res : -f + res;
 }
 
-static inline float A_tanf (const float value) {
-   return A_sinf (value) / A_cosf (value);
+static inline float tanf (const float value) {
+   return sinf (value) /cosf (value);
 }
 
-static inline float A_atan2f (const float y, const float x) {
+static inline float atan2f (const float y, const float x) {
    if (x == 0.0f) {
       if (y > 0.0f) {
-         return MATH_PI_HALF;
+         return PI_HALF;
       }
       else if (y < 0.0f) {
-         return -MATH_PI_HALF;
+         return -PI_HALF;
       }
       return 0.0f;
    }
    float result = 0.0f;
    float z = y / x;
 
-   if (A_abs (z) < 1.0f) {
+   if (abs (z) < 1.0f) {
       result = z / (1.0f + 0.28f * z * z);
 
       if (x < 0.0f) {
          if (y < 0.0f) {
-            return result - MATH_PI;
+            return result - PI;
          }
-         return result + MATH_PI;
+         return result + PI;
       }
    }
    else {
-      result = MATH_PI_HALF - z / (z * z + 0.28f);
+      result = PI_HALF - z / (z * z + 0.28f);
 
       if (y < 0.0f) {
-         return result - MATH_PI;
+         return result - PI;
       }
    }
    return result;
 }
 
-static inline void A_sincosf (const float rad, float &sine, float &cosine) {
-   sine = A_sinf (rad);
-   cosine = A_cosf (rad);
+static inline void sincosf (const float rad, float &sine, float &cosine) {
+   sine = sinf (rad);
+   cosine = cosf (rad);
 }
 
-constexpr bool isFltZero (const float entry) {
-   return A_abs (entry) < MATH_ONEPSILON;
+constexpr bool fzero (const float entry) {
+   return abs (entry) < ONEPSILON;
 }
 
-constexpr bool isFltEqual (const float entry1, const float entry2) {
-   return A_abs (entry1 - entry2) < MATH_EQEPSILON;
+constexpr bool fequal (const float entry1, const float entry2) {
+   return abs (entry1 - entry2) < EQEPSILON;
 }
 
-constexpr float radToDeg (const float radian) {
-   return radian * MATH_R2D;
+constexpr float rad2deg (const float radian) {
+   return radian * R2D;
 }
 
-constexpr float degToRad (const float degree) {
-   return degree * MATH_D2R;
+constexpr float deg2rad (const float degree) {
+   return degree * D2R;
 }
 
 constexpr float angleMod (const float angle) {
@@ -204,10 +213,67 @@ constexpr float angleNorm (const float angle) {
 constexpr float angleDiff (const float dest, const float src) {
    return angleNorm (dest - src);
 }
+
+template <typename T> struct ClearRef {
+   using Type = T;
+};
+
+template <typename T> struct ClearRef <T &> {
+   using Type = T;
+};
+
+template <typename T> struct ClearRef <T&&> {
+   using Type = T;
+};
+
+template <typename T> static inline typename ClearRef <T>::Type &&move (T &&type) {
+   return static_cast <typename ClearRef <T>::Type &&> (type);
 }
 
+template <typename T> static inline void swap (T &left, T &right) {
+   auto temp = move (left);
+   left = move (right);
+   right = move (temp);
+}
+
+template <typename T> static constexpr inline T &&forward (typename ClearRef <T>::Type &type) noexcept {
+   return static_cast <T &&> (type);
+}
+
+template <typename T> static constexpr inline T &&forward (typename ClearRef <T>::Type &&type) noexcept {
+   return static_cast <T &&> (type);
+}
+
+template <typename T> static inline void moveArray (T *dest, T *src, size_t length) {
+   for (size_t i = 0; i < length; i++) {
+      dest[i] = move (src[i]);
+   }
+}
+
+namespace classes {
+
+template <typename T> class Singleton {
+protected:
+   Singleton (void) = default;
+   virtual ~Singleton (void) = default;
+
+private:
+   Singleton (const Singleton &) = delete;
+   Singleton &operator= (const Singleton &) = delete;
+
+public:
+   inline static T *ptr (void) {
+      return &ref ();
+   }
+
+   inline static T &ref (void) {
+      static T ref;
+      return ref;
+   };
+};
+
 // see: https://github.com/preshing/RandomSequence/
-class RandomSequenceOfUnique {
+class RandomSequence : public Singleton <RandomSequence> {
 private:
    unsigned int m_index;
    unsigned int m_intermediateOffset;
@@ -229,7 +295,7 @@ private:
    }
 
 public:
-   RandomSequenceOfUnique (void) {
+   RandomSequence (void) {
       unsigned int seedBase = static_cast<unsigned int> (time (nullptr));
       unsigned int seedOffset = seedBase + 1;
 
@@ -336,11 +402,11 @@ public:
    }
 
    inline bool operator== (const Vector &right) const {
-      return Math::isFltEqual (x, right.x) && Math::isFltEqual (y, right.y) && Math::isFltEqual (z, right.z);
+      return fequal (x, right.x) && fequal (y, right.y) && fequal (z, right.z);
    }
 
    inline bool operator!= (const Vector &right) const {
-      return !Math::isFltEqual (x, right.x) && !Math::isFltEqual (y, right.y) && !Math::isFltEqual (z, right.z);
+      return !fequal (x, right.x) && !fequal (y, right.y) && !fequal (z, right.z);
    }
 
    inline const Vector &operator= (const Vector &right) {
@@ -353,11 +419,11 @@ public:
 
 public:
    inline float length (void) const {
-      return Math::A_sqrtf (x * x + y * y + z * z);
+      return sqrtf (x * x + y * y + z * z);
    }
 
    inline float length2D (void) const {
-      return Math::A_sqrtf (x * x + y * y);
+      return sqrtf (x * x + y * y);
    }
 
    inline float lengthSq (void) const {
@@ -369,9 +435,9 @@ public:
    }
 
    inline Vector normalize (void) const {
-      float len = length () + static_cast<float> (Math::MATH_FLEPSILON);
+      float len = length () + static_cast<float> (FLEPSILON);
 
-      if (Math::isFltZero (len)) {
+      if (fzero (len)) {
          return Vector (0.0f, 0.0f, 1.0f);
       }
       len = 1.0f / len;
@@ -379,9 +445,9 @@ public:
    }
 
    inline Vector normalize2D (void) const {
-      float len = length2D () + static_cast<float> (Math::MATH_FLEPSILON);
+      float len = length2D () + static_cast<float> (FLEPSILON);
 
-      if (Math::isFltZero (len)) {
+      if (fzero (len)) {
          return Vector (0.0f, 1.0f, 0.0f);
       }
       len = 1.0f / len;
@@ -389,7 +455,7 @@ public:
    }
 
    inline bool empty (void) const {
-      return Math::isFltZero (x) && Math::isFltZero (y) && Math::isFltZero (z);
+      return fzero (x) && fzero (y) && fzero (z);
    }
 
    inline static const Vector &null (void) {
@@ -402,40 +468,40 @@ public:
    }
 
    inline Vector clampAngles (void) {
-      x = Math::angleNorm (x);
-      y = Math::angleNorm (y);
+      x = angleNorm (x);
+      y = angleNorm (y);
       z = 0.0f;
 
       return *this;
    }
 
    inline float toPitch (void) const {
-      if (Math::isFltZero (x) && Math::isFltZero (y)) {
+      if (fzero (x) && fzero (y)) {
          return 0.0f;
       }
-      return Math::radToDeg (Math::A_atan2f (z, length2D ()));
+      return rad2deg (atan2f (z, length2D ()));
    }
 
    inline float toYaw (void) const {
-      if (Math::isFltZero (x) && Math::isFltZero (y)) {
+      if (fzero (x) && fzero (y)) {
          return 0.0f;
       }
-      return Math::radToDeg (Math::A_atan2f (y, x));
+      return rad2deg (atan2f (y, x));
    }
 
    inline Vector toAngles (void) const {
-      if (Math::isFltZero (x) && Math::isFltZero (y)) {
+      if (fzero (x) && fzero (y)) {
          return Vector (z > 0.0f ? 90.0f : 270.0f, 0.0, 0.0f);
       }
-      return Vector (Math::radToDeg (Math::A_atan2f (z, length2D ())), Math::radToDeg (Math::A_atan2f (y, x)), 0.0f);
+      return Vector (rad2deg (atan2f (z, length2D ())), rad2deg (atan2f (y, x)), 0.0f);
    }
 
    inline void makeVectors (Vector *forward, Vector *right, Vector *upward) const {
       float sinePitch = 0.0f, cosinePitch = 0.0f, sineYaw = 0.0f, cosineYaw = 0.0f, sineRoll = 0.0f, cosineRoll = 0.0f;
 
-      Math::A_sincosf (Math::degToRad (x), sinePitch, cosinePitch); // compute the sine and cosine of the pitch component
-      Math::A_sincosf (Math::degToRad (y), sineYaw, cosineYaw); // compute the sine and cosine of the yaw component
-      Math::A_sincosf (Math::degToRad (z), sineRoll, cosineRoll); // compute the sine and cosine of the roll component
+      sincosf (deg2rad (x), sinePitch, cosinePitch); // compute the sine and cosine of the pitch component
+      sincosf (deg2rad (y), sineYaw, cosineYaw); // compute the sine and cosine of the yaw component
+      sincosf (deg2rad (z), sineRoll, cosineRoll); // compute the sine and cosine of the roll component
 
       if (forward) {
          forward->x = cosinePitch * cosineYaw;
@@ -513,26 +579,6 @@ public:
    }
 };
 
-template <typename T> class Singleton {
-protected:
-   Singleton (void) = default;
-   virtual ~Singleton (void) = default;
-
-private:
-   Singleton (const Singleton &) = delete;
-   Singleton &operator= (const Singleton &) = delete;
-
-public:
-   inline static T *ptr (void) {
-      return &ref ();
-   }
-
-   inline static T &ref (void) {
-      static T ref;
-      return ref;
-   };
-};
-
 template <typename A, typename B> class Pair {
 public:
    A first;
@@ -544,17 +590,13 @@ public:
       this->second = second;
    }
 
+public:
    Pair (void) = default;
    ~Pair (void) = default;
-
-public:
-   static Pair<A, B> make (A first, B second) {
-      return Pair<A, B> (first, second);
-   }
 };
 
 template <typename T> class Array {
-private:
+protected:
    T *m_data;
    size_t m_capacity, m_length;
 
@@ -562,8 +604,12 @@ public:
    Array (void) : m_data (nullptr), m_capacity (0), m_length (0) {
    }
 
-   Array (const Array &other) : m_data (nullptr), m_capacity (0), m_length (0) {
-      assign (other);
+   Array (Array &&other) {
+      m_data = other.m_data;
+      m_length = other.m_length;
+      m_capacity = other.m_capacity;
+
+      other.reset ();
    }
 
    virtual ~Array (void) {
@@ -573,7 +619,10 @@ public:
 public:
    void destroy (void) {
       delete[] m_data;
+      reset ();
+   }
 
+   void reset (void) {
       m_data = nullptr;
       m_capacity = 0;
       m_length = 0;
@@ -583,7 +632,7 @@ public:
       if (m_length + growSize < m_capacity) {
          return true;
       }
-      size_t maxSize = Math::A_max <size_t> (m_capacity * 2, static_cast <size_t> (8));
+      size_t maxSize = max <size_t> (m_capacity + 2, static_cast <size_t> (16));
 
       while (m_length + growSize > maxSize) {
          maxSize *= 2;
@@ -594,9 +643,7 @@ public:
          if (maxSize < m_length) {
             m_length = maxSize;
          }
-         for (size_t i = 0; i < m_length; i++) {
-            buffer[i] = m_data[i];
-         }
+         moveArray (buffer, m_data, m_length);
          delete[] m_data;
       }
       m_data = buffer;
@@ -624,7 +671,7 @@ public:
             return false;
          }
       }
-      m_data[index] = object;
+      m_data[index] = forward <T> (object);
 
       if (index >= m_length) {
          m_length = index + 1;
@@ -652,17 +699,16 @@ public:
       if (!objects || count < 1) {
          return false;
       }
-
       size_t newSize = m_length > index ? m_length : index;
       newSize += count;
 
-      if (newSize >= m_capacity && !reserve (newSize + 3)) {
+      if (newSize >= m_capacity && !reserve (newSize)) {
          return false;
       }
 
       if (index >= m_length) {
          for (size_t i = 0; i < count; i++) {
-            m_data[i + index] = objects[i];
+            m_data[i + index] = forward <T> (objects[i]);
          }
          m_length = newSize;
       }
@@ -670,33 +716,41 @@ public:
          size_t i = 0;
 
          for (i = m_length; i > index; i--) {
-            m_data[i + count - 1] = m_data[i - 1];
+            m_data[i + count - 1] = move (m_data[i - 1]);
          }
          for (i = 0; i < count; i++) {
-            m_data[i + index] = objects[i];
+            m_data[i + index] = forward <T> (objects[i]);
          }
          m_length += count;
       }
       return true;
    }
 
-   bool insert (size_t index, Array &other) {
+   bool insert (size_t at, Array &other) {
       if (&other == this) {
          return false;
       }
-      return insert (index, other.m_data, other.m_length);
+      return insert (at, other.m_data, other.m_length);
    }
 
-   bool erase (size_t index, size_t count = 1) {
+   bool erase (size_t index, size_t count) {
       if (index + count > m_capacity) {
          return false;
       }
       m_length -= count;
 
       for (size_t i = index; i < m_length; i++) {
-         m_data[i] = m_data[i + count];
+         m_data[i] = move (m_data[i + count]);
       }
       return true;
+   }
+
+   bool shift (void) {
+      return erase (0, 1);
+   }
+
+   bool unshift (T object) {
+      return insert (0, &object);
    }
 
    bool erase (T &item) {
@@ -707,11 +761,11 @@ public:
       return insert (m_length, &object);
    }
 
-   bool push (T *objects, size_t count = 1) {
+   bool push (T *objects, size_t count) {
       return insert (m_length, objects, count);
    }
 
-   bool push (Array &other) {
+   bool extend (Array &other) {
       if (&other == this) {
          return false;
       }
@@ -737,11 +791,10 @@ public:
 
       if (m_data != nullptr) {
          for (size_t i = 0; i < m_length; i++) {
-            buffer[i] = m_data[i];
+            moveArray (buffer, m_data);
          }
+         delete[] m_data;
       }
-      delete[] m_data;
-
       m_data = buffer;
       m_capacity = m_length;
    }
@@ -751,10 +804,10 @@ public:
    }
 
    T &pop (void) {
-      T &element = m_data[m_length - 1];
-      erase (m_length - 1);
+      T &item = m_data[m_length - 1];
+      erase (m_length - 1, 1);
 
-      return element;
+      return item;
    }
 
    const T &back (void) const {
@@ -780,32 +833,34 @@ public:
       if (!reserve (other.m_length)) {
          return false;
       }
-      for (size_t i = 0; i < other.m_length; i++) {
-         m_data[i] = other.m_data[i];
-      }
+      moveArray (m_data, other.m_data, other.m_length);
       m_length = other.m_length;
+
       return true;
    }
 
    void reverse (void) {
       for (size_t i = 0; i < m_length / 2; i++) {
-         auto temp = m_data[i];
-         m_data[i] = m_data[m_length - 1 - i];
-         m_data[m_length - 1 - i] = temp;
+         swap (m_data[i], m_data[m_length - 1 - i]);
       }
    }
 
    T &random (void) const {
-      extern RandomSequenceOfUnique rng;
-      return m_data[rng.getInt (0, m_length - 1)];
+      return m_data[RandomSequence::ref ().getInt (0, m_length - 1)];
    }
 
-   Array &operator= (const Array &other) {
-      assign (other);
+   Array &operator = (Array &&other) {
+      destroy ();
+
+      m_data = other.m_data;
+      m_length = other.m_length;
+      m_capacity = other.m_capacity;
+
+      other.reset ();
       return *this;
    }
 
-   T &operator[] (size_t index) {
+   T &operator [] (size_t index) {
       return at (index);
    }
 
@@ -822,32 +877,42 @@ public:
    }
 
    T *end (void) {
-
       return m_data + m_length;
    }
 
    T *end (void) const {
       return m_data + m_length;
    }
+
+private:
+   Array (const Array &) = delete;
+   Array &operator = (const Array &) = delete;
 };
 
-
-template <typename A, typename B, size_t Capacity = 0> class BinaryHeap {
+template <typename A, typename B, size_t Capacity = 0> class BinaryHeap : private Array <Pair <A, B>> {
 private:
    using PairType = Pair <A, B>;
+   using Base = Array <PairType>;
 
-private:
-   Array <PairType> m_heap;
+   using Base::m_data;
+   using Base::m_length;
 
 public:
    BinaryHeap (void) {
-      m_heap.reserve (Capacity);
+      Base::reserve (Capacity);
    }
+
+   BinaryHeap (BinaryHeap &&other) : Base (move (other)) { }
+
 public:
    void push (const A &first, const B &second) {
-      m_heap.push ({ first, second });
+      push ({ first, second });
+   }
 
-      if (m_heap.length () > 1) {
+   void push (PairType &&pair) {
+      Base::push (forward <PairType> (pair));
+
+      if (length () > 1) {
          siftUp ();
       }
    }
@@ -855,13 +920,13 @@ public:
    A pop (void) {
       assert (!empty ());
 
-      if (m_heap.length () == 1) {
-         return m_heap.pop ().first;
+      if (length () == 1) {
+         return Base::pop ().first;
       }
-      auto value = m_heap[0];
+      PairType value = move (m_data[0]);
 
-      m_heap[0] = m_heap.back ();
-      m_heap.pop ();
+      m_data[0] = move (Base::back ());
+      Base::pop ();
 
       siftDown ();
       return value.first;
@@ -872,27 +937,23 @@ public:
    }
 
    inline size_t length (void) const {
-      return m_heap.length ();
+      return m_length;
    }
 
    inline void clear (void) {
-      m_heap.clear ();
+      Base::clear ();
    }
 
-private:
    void siftUp (void) {
-      size_t child = m_heap.length () - 1;
+      size_t child = m_length - 1;
 
       while (child != 0) {
          size_t parentIndex = getParent (child);
 
-         if (m_heap[parentIndex].second <= m_heap[child].second) {
+         if (m_data[parentIndex].second <= m_data[child].second) {
             break;
          }
-         auto temp = m_heap[child];
-         m_heap[child] = m_heap[parentIndex];
-         m_heap[parentIndex] = temp;
-
+         swap (m_data[child], m_data[parentIndex]);
          child = parentIndex;
       }
    }
@@ -901,26 +962,31 @@ private:
       size_t parent = 0;
       size_t leftIndex = getLeft (parent);
 
-      auto ref = m_heap[parent];
+      auto ref = move (m_data[parent]);
 
-      while (leftIndex < m_heap.length ()) {
+      while (leftIndex < m_length) {
          size_t rightIndex = getRight (parent);
 
-         if (rightIndex < m_heap.length ()) {
-            if (m_heap[rightIndex].second < m_heap[leftIndex].second) {
+         if (rightIndex < m_length) {
+            if (m_data[rightIndex].second < m_data[leftIndex].second) {
                leftIndex = rightIndex;
             }
          }
 
-         if (ref.second <= m_heap[leftIndex].second) {
+         if (ref.second <= m_data[leftIndex].second) {
             break;
          }
-         m_heap[parent] = m_heap[leftIndex];
-         parent = leftIndex;
+         m_data[parent] = move (m_data[leftIndex]);
 
+         parent = leftIndex;
          leftIndex = getLeft (parent);
       }
-      m_heap[parent] = ref;
+      m_data[parent] = move (ref);
+   }
+
+   BinaryHeap &operator = (BinaryHeap &&other) {
+      Base::operator = (move (other));
+      return *this;
    }
 
 private:
@@ -935,14 +1001,18 @@ private:
    static constexpr size_t getParent (size_t index) {
       return --index >> 1;
    }
+
+private:
+   BinaryHeap (const BinaryHeap &) = delete;
+   BinaryHeap &operator = (const BinaryHeap &) = delete;
 };
 
-class String {
+class String : private Array <char> {
 public:
    static constexpr size_t INVALID_INDEX = static_cast <size_t> (-1);
 
 private:
-   Array <char> m_data;
+   using Base = Array <char>;
 
 private:
    bool isTrimChar (char chr, const char *chars) {
@@ -958,6 +1028,7 @@ private:
 public:
 
    String (void) = default;
+   String (String &&other) : Base (move (other)) { }
    ~String (void) = default;
 
 public:
@@ -969,7 +1040,7 @@ public:
       assign (str, length);
    }
 
-   String (const String &str, size_t length = 0) {
+   String (const String &str, size_t length = 0) : Base () {
       assign (str.chars (), length);
    }
 
@@ -978,7 +1049,7 @@ public:
       length = length > 0 ? length : strlen (str);
 
       resize (length);
-      memcpy (begin (), str, length);
+      memcpy (m_data, str, length);
 
       return *this;
    }
@@ -996,7 +1067,7 @@ public:
 
    String &append (const char *str) {
       resize (length () + strlen (str));
-      strcat (begin (), str);
+      strcat (m_data, str);
 
       return *this;
    }
@@ -1011,14 +1082,11 @@ public:
    }
 
    const char *chars (void) const {
-      if (empty ()) {
-         return "";
-      }
-      return m_data.begin ();
+      return empty () ? "" : m_data;
    }
 
    size_t length (void) const {
-      return m_data.length ();
+      return Base::length ();
    }
 
    bool empty (void) const {
@@ -1026,21 +1094,21 @@ public:
    }
 
    void clear (void) {
-      m_data.clear ();
+      Base::clear ();
       m_data[0] = '\0';
    }
 
    void erase (size_t index, size_t count = 1) {
-      m_data.erase (index, count);
+      Base::erase (index, count);
       terminate ();
    }
 
    void reserve (size_t count) {
-      m_data.reserve (count);
+      Base::reserve (count);
    }
 
    void resize (size_t count) {
-      m_data.resize (count);
+      Base::resize (count);
       terminate ();
    }
 
@@ -1057,7 +1125,7 @@ public:
    }
 
    int compare (const String &what) const {
-      return strcmp (m_data.begin (), what.begin ());
+      return strcmp (m_data, what.begin ());
    }
 
    int compare (const char *what) const {
@@ -1065,7 +1133,7 @@ public:
    }
 
    bool contains (const String &what) const {
-      return strstr (m_data.begin (), what.begin ()) != nullptr;
+      return strstr (m_data, what.begin ()) != nullptr;
    }
 
    template <size_t BufferSize = 512> void format (const char *fmt, ...) {
@@ -1091,7 +1159,7 @@ public:
    }
 
    size_t insert (size_t at, const String &str) {
-      if (m_data.insert (at, str.begin (), str.length ())) {
+      if (Base::insert (at, str.begin (), str.length ())) {
          terminate ();
          return length ();
       }
@@ -1102,10 +1170,10 @@ public:
       if (pos > length ()) {
          return INVALID_INDEX;
       }
-      size_t length = search.length ();
+      size_t len = search.length ();
 
-      for (size_t i = pos; length + i <= m_data.length (); i++) {
-         if (strncmp (m_data.begin () + i, search.chars (), length) == 0) {
+      for (size_t i = pos; len + i <= length (); i++) {
+         if (strncmp (m_data + i, search.chars (), len) == 0) {
             return i;
          }
       }
@@ -1145,16 +1213,10 @@ public:
       else if (start + count >= length ()) {
          count = length () - start;
       }
-      auto data = new char[length () + 1];
-      size_t update = 0;
+      result.resize (count);
 
-      for (size_t i = start; i < start + count; i++) {
-         data[update++] = m_data[i];
-      }
-      data[update] = '\0';
-
-      result.assign (data);
-      delete[] data;
+      moveArray (&result[0], &m_data[start], count);
+      result[count] = '\0';
 
       return result;
    }
@@ -1227,28 +1289,17 @@ public:
       return assign (rhs);
    }
 
+   String &operator = (String &&other) {
+      Base::operator = (move (other));
+      return *this;
+   }
+
    String &operator += (const String &rhs) {
       return append (rhs);
    }
 
    String &operator += (const char *rhs) {
       return append (rhs);
-   }
-
-   char *begin (void) {
-      return m_data.begin ();
-   }
-
-   char *begin (void) const {
-      return m_data.begin ();
-   }
-
-   char *end (void) {
-      return begin () + length ();
-   }
-
-   char *end (void) const {
-      return begin () + length ();
    }
 
    String &trimRight (const char *chars = "\r\n\t ") {
@@ -1276,7 +1327,6 @@ public:
          str++;
 
       if (begin () != str) {
-
          erase (0, str - begin ());
       }
       return *this;
@@ -1295,7 +1345,7 @@ public:
          length = strcspn (&m_data[index], delimiter);
 
          if (length > 0) {
-            tokens.push (substr (index, length));
+            tokens.push (move (substr (index, length)));
          }
          index += length;
       } while (length > 0);
@@ -1341,15 +1391,18 @@ public:
    using Bucket = Pair <K, V>;
 
 private:
-   Array<Bucket> m_buckets[I];
+   Array <Bucket> m_buckets[I];
    H m_hash;
 
-   Array<Bucket> &getBucket (const K &key) {
+   Array <Bucket> &getBucket (const K &key) {
       return m_buckets[m_hash (key) % I];
    }
 
 public:
+   HashMap (void) = default;
+   ~HashMap (void) = default;
 
+public:
    bool exists (const K &key) {
       return get (key, nullptr);
    }
@@ -1374,7 +1427,7 @@ public:
       if (exists (key)) {
          return false;
       }
-      getBucket (key).push (Pair <K, V>::make (key, val));
+      getBucket (key).push (Pair <K, V> (key, val));
       return true;
    }
 
@@ -1399,6 +1452,10 @@ public:
       }
       assert (nullptr);
    }
+
+private:
+   HashMap (const HashMap &) = delete;
+   HashMap &operator = (const HashMap &) = delete;
 };
 
 class File {
@@ -1677,6 +1734,15 @@ public:
    }
 };
 
-using StringArray = Array <String>;
-using IntArray = Array <int>;
+}}
+
+
+namespace cr {
+namespace types {
+
+using StringArray = cr::classes::Array <cr::classes::String>;
+using IntArray = cr::classes::Array <int>;
+
+}}
+
 

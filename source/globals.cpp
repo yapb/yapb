@@ -44,7 +44,6 @@ Array<StringArray> g_chatFactory;
 Array<Array<ChatterItem>> g_chatterFactory;
 Array<BotName> g_botNames;
 Array<KeywordFactory> g_replyFactory;
-RandomSequenceOfUnique rng;
 Library *g_gameLib = nullptr;
 
 meta_globals_t *gpMetaGlobals = nullptr;

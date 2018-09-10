@@ -68,13 +68,13 @@ void Bot::pushMsgQueue (int message) {
 }
 
 float Bot::isInFOV (const Vector &destination) {
-   float entityAngle = angleMod (destination.toYaw ()); // find yaw angle from source to destination...
-   float viewAngle = angleMod (pev->v_angle.y); // get bot's current view angle...
+   float entityAngle = cr::angleMod (destination.toYaw ()); // find yaw angle from source to destination...
+   float viewAngle = cr::angleMod (pev->v_angle.y); // get bot's current view angle...
 
    // return the absolute value of angle to destination entity
    // zero degrees means straight ahead, 45 degrees to the left or
    // 45 degrees to the right is the limit of the normal view angle
-   float absoluteAngle = A_abs (viewAngle - entityAngle);
+   float absoluteAngle = cr::abs (viewAngle - entityAngle);
 
    if (absoluteAngle > 180.0f) {
       absoluteAngle = 360.0f - absoluteAngle;
@@ -316,7 +316,7 @@ void Bot::avoidGrenades (void) {
       if (m_turnAwayFromFlashbang < engine.timebase () && m_personality == PERSONALITY_RUSHER && m_difficulty == 4 && strcmp (model, "flashbang.mdl") == 0) {
          // don't look at flash bang
          if (!(m_states & STATE_SEEING_ENEMY)) {
-            pev->v_angle.y = angleNorm ((engine.getAbsPos (pent) - eyePos ()).toAngles ().y + 180.0f);
+            pev->v_angle.y = cr::angleNorm ((engine.getAbsPos (pent) - eyePos ()).toAngles ().y + 180.0f);
 
             m_canChooseAimDirection = false;
             m_turnAwayFromFlashbang = engine.timebase () + rng.getFloat (1.0f, 2.0f);
@@ -518,7 +518,7 @@ void Bot::processPickups (void) {
    Bot *bot = nullptr;
 
    const float radius = 320.0f;
-   float minDistance = A_square (radius + 10.0f);
+   float minDistance = cr::square (radius + 10.0f);
 
    if (!engine.isNullEntity (m_pickupItem)) {
       bool itemExists = false;
@@ -994,8 +994,8 @@ void Bot::pushChatterMessage (int message) {
    float &messageTimer = m_chatterTimes[message];
    float &messageRepeat = g_chatterFactory[message][0].repeat;
 
-   if (messageTimer < engine.timebase () || Math::isFltEqual (messageTimer, MAX_CHATTER_REPEAT)) {
-      if (!Math::isFltEqual (messageTimer, MAX_CHATTER_REPEAT) && !Math::isFltEqual (messageRepeat, MAX_CHATTER_REPEAT)) {
+   if (messageTimer < engine.timebase () || cr::fequal (messageTimer, MAX_CHATTER_REPEAT)) {
+      if (!cr::fequal (messageTimer, MAX_CHATTER_REPEAT) && !cr::fequal (messageRepeat, MAX_CHATTER_REPEAT)) {
          messageTimer = engine.timebase () + messageRepeat;
       }
       sendMessage = true;
@@ -1333,12 +1333,9 @@ int Bot::pickBestWeapon (int *vec, int count, int moneySave) {
 
       // swap array values
       for (int *begin = vec, *end = vec + count - 1; begin < end; ++begin, --end) {
-         int swap = *end;
-
-         *end = *begin;
-         *begin = swap;
+         cr::swap (*end, *begin);
       }
-      return vec[static_cast<int> (static_cast<float> (count - 1) * log10f (rng.getFloat (1, A_powf (10.0f, buyFactor))) / buyFactor + 0.5f)];
+      return vec[static_cast<int> (static_cast<float> (count - 1) * log10f (rng.getFloat (1, cr::powf (10.0f, buyFactor))) / buyFactor + 0.5f)];
    }
 
    int chance = 95;
@@ -1762,7 +1759,7 @@ void Bot::overrideConditions (void) {
       if (length > 100.0f && (m_states & STATE_SEEING_ENEMY)) {
          int nearestToEnemyPoint = waypoints.getNearest (m_enemy->v.origin);
 
-         if (nearestToEnemyPoint != INVALID_WAYPOINT_INDEX && nearestToEnemyPoint != m_currentWaypointIndex && A_abs (waypoints[nearestToEnemyPoint].origin.z - m_enemy->v.origin.z) < 16.0f) {
+         if (nearestToEnemyPoint != INVALID_WAYPOINT_INDEX && nearestToEnemyPoint != m_currentWaypointIndex && cr::abs (waypoints[nearestToEnemyPoint].origin.z - m_enemy->v.origin.z) < 16.0f) {
             startTask (TASK_MOVETOPOSITION, TASKPRI_HIDE, nearestToEnemyPoint, engine.timebase () + rng.getFloat (5.0f, 10.0f), true);
 
             m_isEnemyReachable = false;
@@ -2089,7 +2086,7 @@ void Bot::resetTasks (void) {
 void Bot::startTask (TaskID id, float desire, int data, float time, bool resume) {
    for (auto &task : m_tasks) {
       if (task.id == id) {
-         if (!Math::isFltEqual (task.desire, desire)) {
+         if (!cr::fequal (task.desire, desire)) {
             task.desire = desire;
          }
          return;
@@ -2201,7 +2198,7 @@ bool Bot::isEnemyThreat (void) {
    }
 
    // if enemy is near or facing us directly
-   if ((m_enemy->v.origin - pev->origin).lengthSq () < A_square (256.0f) || isInViewCone (m_enemy->v.origin)) {
+   if ((m_enemy->v.origin - pev->origin).lengthSq () < cr::square (256.0f) || isInViewCone (m_enemy->v.origin)) {
       return true;
    }
    return false;
@@ -2709,7 +2706,7 @@ void Bot::updateAimDir (void) {
          if (angleCorrection > 45.0f) {
             angleCorrection = 45.0f;
          }
-         coordCorrection = throwDistance * A_tanf (angleCorrection * MATH_D2R) + 0.25f * (m_throw.z - pev->origin.z);
+         coordCorrection = throwDistance * cr::tanf (cr::deg2rad (angleCorrection)) + 0.25f * (m_throw.z - pev->origin.z);
       }
       m_lookAt.z += coordCorrection * 0.5f;
    }
@@ -2916,7 +2913,7 @@ void Bot::frame (void) {
    }
 
    // clear enemy far away
-   if (!m_lastEnemyOrigin.empty () && !engine.isNullEntity (m_lastEnemy) && (pev->origin - m_lastEnemyOrigin).lengthSq () >= A_square (1600.0f)) {
+   if (!m_lastEnemyOrigin.empty () && !engine.isNullEntity (m_lastEnemy) && (pev->origin - m_lastEnemyOrigin).lengthSq () >= cr::square (1600.0f)) {
       m_lastEnemy = nullptr;
       m_lastEnemyOrigin.nullify ();
    }
@@ -3237,7 +3234,7 @@ void Bot::huntEnemy_ (void) {
             }
          }
 
-         if ((m_lastEnemyOrigin - pev->origin).lengthSq () < A_square (512.0f)) {
+         if ((m_lastEnemyOrigin - pev->origin).lengthSq () < cr::square (512.0f)) {
             m_moveSpeed = getShiftSpeed ();
          }
       }
@@ -3374,7 +3371,7 @@ void Bot::pause_ (void) {
    // is bot blinded and above average difficulty?
    if (m_viewDistance < 500.0f && m_difficulty >= 2) {
       // go mad!
-      m_moveSpeed = -A_abs ((m_viewDistance - 500.0f) * 0.5f);
+      m_moveSpeed = -cr::abs ((m_viewDistance - 500.0f) * 0.5f);
 
       if (m_moveSpeed < -pev->maxspeed) {
          m_moveSpeed = -pev->maxspeed;
@@ -3881,7 +3878,7 @@ void Bot::followUser_ (void) {
       m_reloadState = RELOAD_PRIMARY;
    }
 
-   if ((m_targetEntity->v.origin - pev->origin).lengthSq () > A_square (130.0f)) {
+   if ((m_targetEntity->v.origin - pev->origin).lengthSq () > cr::square (130.0f)) {
       m_followWaitTime = 0.0f;
    }
    else {
@@ -3964,7 +3961,7 @@ void Bot::throwExplosive_ (void) {
 
    ignoreCollision ();
 
-   if ((pev->origin - dest).lengthSq () < A_square (400.0f)) {
+   if ((pev->origin - dest).lengthSq () < cr::square (400.0f)) {
       // heck, I don't wanna blow up myself
       m_grenadeCheckTime = engine.timebase () + MAX_GRENADE_TIMER;
 
@@ -4026,7 +4023,7 @@ void Bot::throwFlashbang_ (void) {
 
    ignoreCollision ();
 
-   if ((pev->origin - dest).lengthSq () < A_square (400.0f)) {
+   if ((pev->origin - dest).lengthSq () < cr::square (400.0f)) {
       // heck, I don't wanna blow up myself
       m_grenadeCheckTime = engine.timebase () + MAX_GRENADE_TIMER;
 
@@ -4822,7 +4819,7 @@ void Bot::ai (void) {
    }
 
    // save the previous speed (for checking if stuck)
-   m_prevSpeed = A_abs (m_moveSpeed);
+   m_prevSpeed = cr::abs (m_moveSpeed);
    m_lastDamageType = -1; // reset damage
 }
 
@@ -4939,10 +4936,10 @@ void Bot::showDebugOverlay (void) {
             char enemyName[80], weaponName[80], aimFlags[64], botType[32];
 
             if (!engine.isNullEntity (m_enemy)) {
-               strncpy (enemyName, STRING (m_enemy->v.netname), A_bufsize (enemyName));
+               strncpy (enemyName, STRING (m_enemy->v.netname), cr::bufsize (enemyName));
             }
             else if (!engine.isNullEntity (m_lastEnemy)) {
-               snprintf (enemyName, A_bufsize (enemyName), "%s (L)", STRING (m_lastEnemy->v.netname));
+               snprintf (enemyName, cr::bufsize (enemyName), "%s (L)", STRING (m_lastEnemy->v.netname));
             }
             else {
                strcpy (enemyName, " (null)");
@@ -4952,7 +4949,7 @@ void Bot::showDebugOverlay (void) {
             memset (pickupName, 0, sizeof (pickupName));
 
             if (!engine.isNullEntity (m_pickupItem)) {
-               strncpy (pickupName, STRING (m_pickupItem->v.classname), A_bufsize (pickupName));
+               strncpy (pickupName, STRING (m_pickupItem->v.classname), cr::bufsize (pickupName));
             }
             else {
                strcpy (pickupName, " (null)");
@@ -4968,10 +4965,10 @@ void Bot::showDebugOverlay (void) {
             memset (aimFlags, 0, sizeof (aimFlags));
 
             // set the aim flags
-            snprintf (aimFlags, A_bufsize (aimFlags), "%s%s%s%s%s%s%s%s", (m_aimFlags & AIM_NAVPOINT) ? " NavPoint" : "", (m_aimFlags & AIM_CAMP) ? " CampPoint" : "", (m_aimFlags & AIM_PREDICT_PATH) ? " PredictPath" : "", (m_aimFlags & AIM_LAST_ENEMY) ? " LastEnemy" : "", (m_aimFlags & AIM_ENTITY) ? " Entity" : "", (m_aimFlags & AIM_ENEMY) ? " Enemy" : "", (m_aimFlags & AIM_GRENADE) ? " Grenade" : "", (m_aimFlags & AIM_OVERRIDE) ? " Override" : "");
+            snprintf (aimFlags, cr::bufsize (aimFlags), "%s%s%s%s%s%s%s%s", (m_aimFlags & AIM_NAVPOINT) ? " NavPoint" : "", (m_aimFlags & AIM_CAMP) ? " CampPoint" : "", (m_aimFlags & AIM_PREDICT_PATH) ? " PredictPath" : "", (m_aimFlags & AIM_LAST_ENEMY) ? " LastEnemy" : "", (m_aimFlags & AIM_ENTITY) ? " Entity" : "", (m_aimFlags & AIM_ENEMY) ? " Enemy" : "", (m_aimFlags & AIM_GRENADE) ? " Grenade" : "", (m_aimFlags & AIM_OVERRIDE) ? " Override" : "");
 
             // set the bot type
-            snprintf (botType, A_bufsize (botType), "%s%s%s", m_personality == PERSONALITY_RUSHER ? " Rusher" : "", m_personality == PERSONALITY_CAREFUL ? " Careful" : "", m_personality == PERSONALITY_NORMAL ? " Normal" : "");
+            snprintf (botType, cr::bufsize (botType), "%s%s%s", m_personality == PERSONALITY_RUSHER ? " Rusher" : "", m_personality == PERSONALITY_CAREFUL ? " Careful" : "", m_personality == PERSONALITY_NORMAL ? " Normal" : "");
 
             if (weaponCount >= NUM_WEAPONS) {
                // prevent printing unknown message from known weapons
@@ -4997,12 +4994,12 @@ void Bot::showDebugOverlay (void) {
                }
             }
             else {
-               strncpy (weaponName, tab->weaponName, A_bufsize (weaponName));
+               strncpy (weaponName, tab->weaponName, cr::bufsize (weaponName));
             }
             char outputBuffer[512];
             memset (outputBuffer, 0, sizeof (outputBuffer));
 
-            snprintf (outputBuffer, A_bufsize (outputBuffer), "\n\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\nItem: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\nSP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\nEnemy=%s Pickup=%s Type=%s\n", STRING (pev->netname), pev->health, pev->armorvalue, taskID, taskName, task ()->desire, &weaponName[7], ammoClip (), ammo (), m_isReloading ? " (R)" : "", m_moneyAmount, aimFlags, m_moveSpeed, m_strafeSpeed, index, m_prevGoalIndex, goal, m_navTimeset - engine.timebase (), pev->movetype, enemyName, pickupName, botType);
+            snprintf (outputBuffer, cr::bufsize (outputBuffer), "\n\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\nItem: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\nSP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\nEnemy=%s Pickup=%s Type=%s\n", STRING (pev->netname), pev->health, pev->armorvalue, taskID, taskName, task ()->desire, &weaponName[7], ammoClip (), ammo (), m_isReloading ? " (R)" : "", m_moneyAmount, aimFlags, m_moveSpeed, m_strafeSpeed, index, m_prevGoalIndex, goal, m_navTimeset - engine.timebase (), pev->movetype, enemyName, pickupName, botType);
 
             MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, Vector::null (), g_hostEntity)
                .writeByte (TE_TEXTMESSAGE)
@@ -5052,7 +5049,7 @@ bool Bot::hasHostage (void) {
       if (!engine.isNullEntity (hostage)) {
 
          // don't care about dead hostages
-         if (hostage->v.health <= 0.0f || (pev->origin - hostage->v.origin).lengthSq () > A_square (600.0f)) {
+         if (hostage->v.health <= 0.0f || (pev->origin - hostage->v.origin).lengthSq () > cr::square (600.0f)) {
             hostage = nullptr;
             continue;
          }
@@ -5392,11 +5389,11 @@ void Bot::sayDebug (const char *format, ...) {
    char buffer[MAX_PRINT_BUFFER];
 
    va_start (ap, format);
-   vsnprintf (buffer, A_bufsize (buffer), format, ap);
+   vsnprintf (buffer, cr::bufsize (buffer), format, ap);
    va_end (ap);
 
    char printBuf[MAX_PRINT_BUFFER];
-   snprintf (printBuf, A_bufsize (printBuf), "%s: %s", STRING (pev->netname), buffer);
+   snprintf (printBuf, cr::bufsize (printBuf), "%s: %s", STRING (pev->netname), buffer);
 
    bool playMessage = false;
 
@@ -5425,7 +5422,7 @@ Vector Bot::calcToss (const Vector &start, const Vector &stop) {
    Vector end = stop - pev->velocity;
    end.z -= 15.0f;
 
-   if (A_abs (end.z - start.z) > 500.0f) {
+   if (cr::abs (end.z - start.z) > 500.0f) {
       return Vector::null ();
    }
    Vector midPoint = start + (end - start) * 0.5f;
@@ -5439,8 +5436,8 @@ Vector Bot::calcToss (const Vector &start, const Vector &stop) {
    if (midPoint.z < start.z || midPoint.z < end.z) {
       return Vector::null ();
    }
-   float timeOne = A_sqrtf ((midPoint.z - start.z) / (0.5f * gravity));
-   float timeTwo = A_sqrtf ((midPoint.z - end.z) / (0.5f * gravity));
+   float timeOne = cr::sqrtf ((midPoint.z - start.z) / (0.5f * gravity));
+   float timeTwo = cr::sqrtf ((midPoint.z - end.z) / (0.5f * gravity));
 
    if (timeOne < 0.1f) {
       return Vector::null ();
@@ -5672,7 +5669,7 @@ bool Bot::isOutOfBombTimer (void) {
    const Vector &bombOrigin = waypoints.getBombPos ();
 
    // for terrorist, if timer is lower than 13 seconds, return true
-   if (timeLeft < 13.0f && m_team == TEAM_TERRORIST && (bombOrigin - pev->origin).lengthSq () < A_square (964.0f)) {
+   if (timeLeft < 13.0f && m_team == TEAM_TERRORIST && (bombOrigin - pev->origin).lengthSq () < cr::square (964.0f)) {
       return true;
    }
    bool hasTeammatesWithDefuserKit = false;
@@ -5682,7 +5679,7 @@ bool Bot::isOutOfBombTimer (void) {
       auto *bot = bots.getBot (i);
 
       // search players with defuse kit
-      if (bot != nullptr && bot != this && bot->m_team == TEAM_COUNTER && bot->m_hasDefuser && (bombOrigin - bot->pev->origin).lengthSq () < A_square (512.0f)) {
+      if (bot != nullptr && bot != this && bot->m_team == TEAM_COUNTER && bot->m_hasDefuser && (bombOrigin - bot->pev->origin).lengthSq () < cr::square (512.0f)) {
          hasTeammatesWithDefuserKit = true;
          break;
       }

@@ -56,7 +56,8 @@ typedef float vec_t; // needed before including progdefs.h
 
 #include "corelib.h"
 
-#define vec3_t Vector
+typedef cr::classes::Vector vec3_t;
+using namespace cr::types;
 
 #include "const.h"
 #include "progdefs.h"

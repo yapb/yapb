@@ -173,7 +173,7 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
             }
             nameFound = true;
 
-            strncpy (outputName, botName->name.chars (), A_bufsize (outputName));
+            strncpy (outputName, botName->name.chars (), cr::bufsize (outputName));
             steamId = botName->steamId;
          }
       }
@@ -185,11 +185,11 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
 
    if (!isEmptyStr (yb_name_prefix.str ())) {
       char prefixedName[33]; // temp buffer for storing modified name
-      snprintf (prefixedName, A_bufsize (prefixedName), "%s %s", yb_name_prefix.str (), outputName);
+      snprintf (prefixedName, cr::bufsize (prefixedName), "%s %s", yb_name_prefix.str (), outputName);
 
       // buffer has been modified, copy to real name
       if (!isEmptyStr (prefixedName)) {
-         strncpy (outputName, prefixedName, A_bufsize (outputName));
+         strncpy (outputName, prefixedName, cr::bufsize (outputName));
       }
    }
    bot = g_engfuncs.pfnCreateFakeClient (outputName);
@@ -376,7 +376,7 @@ void BotManager::maintainQuota (void) {
    if (m_quotaMaintainTime > engine.timebase ()) {
       return;
    }
-   yb_quota.set (A_clamp<int> (yb_quota.integer (), 0, engine.maxClients ()));
+   yb_quota.set (cr::clamp <int> (yb_quota.integer (), 0, engine.maxClients ()));
 
    int totalHumansInGame = getHumansCount ();
    int humanPlayersInGame = getHumansCount (true);
@@ -394,7 +394,7 @@ void BotManager::maintainQuota (void) {
          desiredBotCount = botsInGame;
       }
       else {
-         desiredBotCount = A_max<int> (0, desiredBotCount - humanPlayersInGame);
+         desiredBotCount = cr::max <int> (0, desiredBotCount - humanPlayersInGame);
       }
    }
    else if (stricmp (yb_quota_mode.str (), "match") == 0) {
@@ -403,7 +403,7 @@ void BotManager::maintainQuota (void) {
       }
       else {
          int quotaMatch = yb_quota_match.integer () == 0 ? yb_quota.integer () : yb_quota_match.integer ();
-         desiredBotCount = A_max<int> (0, quotaMatch * humanPlayersInGame);
+         desiredBotCount = cr::max <int> (0, quotaMatch * humanPlayersInGame);
       }
    }
 
@@ -413,10 +413,10 @@ void BotManager::maintainQuota (void) {
    int maxClients = engine.maxClients ();
 
    if (yb_autovacate.boolean ()) {
-      desiredBotCount = A_min<int> (desiredBotCount, maxClients - (humanPlayersInGame + 1));
+      desiredBotCount = cr::min <int> (desiredBotCount, maxClients - (humanPlayersInGame + 1));
    }
    else {
-      desiredBotCount = A_min<int> (desiredBotCount, maxClients - humanPlayersInGame);
+      desiredBotCount = cr::min <int> (desiredBotCount, maxClients - humanPlayersInGame);
    }
 
    // add bots if necessary
@@ -431,7 +431,7 @@ void BotManager::maintainQuota (void) {
 
 void BotManager::decrementQuota (int by) {
    if (by != 0) {
-      yb_quota.set (A_clamp<int> (yb_quota.integer () - by, 0, yb_quota.integer ()));
+      yb_quota.set (cr::clamp <int> (yb_quota.integer () - by, 0, yb_quota.integer ()));
       return;
    }
    yb_quota.set (0);
@@ -536,7 +536,7 @@ void BotManager::kickBotByMenu (edict_t *ent, int selection) {
    auto searchMenu = [](MenuId id) {
       int menuIndex = 0;
 
-      for (; menuIndex < A_arrsize (g_menus); menuIndex++) {
+      for (; menuIndex < cr::arrsize (g_menus); menuIndex++) {
          if (g_menus[menuIndex].id == id) {
             break;
          }
@@ -913,10 +913,7 @@ void Bot::clearUsedName (void) {
 }
 
 float Bot::calcThinkInterval (void) {
-   if (Math::isFltZero (m_thinkInterval)) {
-      return m_frameInterval;
-   }
-   return m_thinkInterval;
+   return cr::fzero (m_thinkInterval) ? m_frameInterval : m_thinkInterval;
 }
 
 Bot::~Bot (void) {
@@ -1196,7 +1193,7 @@ void Bot::processNewRound (void) {
    if (rng.getInt (0, 100) < 50) {
       pushChatterMessage (Chatter_NewRound);
    }
-   m_thinkInterval = (g_gameFlags & GAME_LEGACY) ? 0.0f : (1.0f / A_clamp (yb_think_fps.flt (), 30.0f, 90.0f)) * rng.getFloat (0.95f, 1.05f);
+   m_thinkInterval = (g_gameFlags & GAME_LEGACY) ? 0.0f : (1.0f / cr::clamp (yb_think_fps.flt (), 30.0f, 90.0f)) * rng.getFloat (0.95f, 1.05f);
 }
 
 void Bot::kill (void) {
@@ -1439,8 +1436,8 @@ void BotManager::updateActiveGrenade (void) {
    m_grenadeUpdateTime = engine.timebase () + 0.213f;
 }
 
-const Array<edict_t *> &BotManager::searchActiveGrenades (void) {
-   return m_activeGrenades;
+Array<edict_t *> BotManager::searchActiveGrenades (void) {
+   return cr::move (m_activeGrenades);
 }
 
 void BotManager::selectLeaders (int team, bool reset) {

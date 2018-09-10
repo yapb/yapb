@@ -15,7 +15,8 @@
 #include <math.h>
 #include <meta_api.h>
 
-using namespace Math;
+using namespace cr::types;
+using namespace cr::classes;
 
 #include <assert.h>
 #include <ctype.h>
@@ -1359,7 +1360,7 @@ public:
 
    // grenades
    void updateActiveGrenade (void);
-   const Array<edict_t *> &searchActiveGrenades (void);
+   Array <edict_t *> searchActiveGrenades (void);
 
    inline bool hasActiveGrenades (void) {
       return !m_activeGrenades.empty ();
@@ -1534,7 +1535,7 @@ public:
    void eraseFromBucket (const Vector &pos, int index);
 
    Bucket locateBucket (const Vector &pos);
-   const IntArray &getWaypointsInBucket (const Vector &pos);
+   IntArray &getWaypointsInBucket (const Vector &pos);
 };
 
 #include <engine.h>
@@ -1543,6 +1544,7 @@ public:
 static auto &waypoints = Waypoint::ref ();
 static auto &bots = BotManager::ref ();
 static auto &engine = Engine::ref ();
+static auto &rng = RandomSequence::ref ();
 
 // prototypes of bot functions...
 extern int getWeaponData (bool isString, const char *weaponAlias, int weaponIndex = -1);
