@@ -1436,8 +1436,8 @@ void BotManager::updateActiveGrenade (void) {
    m_grenadeUpdateTime = engine.timebase () + 0.213f;
 }
 
-Array<edict_t *> BotManager::searchActiveGrenades (void) {
-   return cr::move (m_activeGrenades);
+Array<edict_t *> &BotManager::searchActiveGrenades (void) {
+   return m_activeGrenades;
 }
 
 void BotManager::selectLeaders (int team, bool reset) {

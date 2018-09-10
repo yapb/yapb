@@ -299,7 +299,7 @@ void Bot::avoidGrenades (void) {
       m_avoidGrenade = nullptr;
       m_needAvoidGrenade = 0;
    }
-   auto activeGrenades = bots.searchActiveGrenades ();
+   auto &activeGrenades = bots.searchActiveGrenades ();
 
    // find all grenades on the map
    for (auto pent : activeGrenades) {

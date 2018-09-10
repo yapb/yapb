@@ -1360,7 +1360,7 @@ public:
 
    // grenades
    void updateActiveGrenade (void);
-   Array <edict_t *> searchActiveGrenades (void);
+   Array <edict_t *> &searchActiveGrenades (void);
 
    inline bool hasActiveGrenades (void) {
       return !m_activeGrenades.empty ();
