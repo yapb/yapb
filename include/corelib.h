@@ -20,6 +20,7 @@
 #include <float.h>
 #include <limits.h>
 #include <time.h>
+#include <math.h>
 
 #include <platform.h>
 
@@ -54,10 +55,6 @@ using uint32 = unsigned long;
 
 }
 
-namespace cmath {
-#include <math.h>
-}
-
 using namespace cr::types;
 
 constexpr float ONEPSILON = 0.01f;
@@ -70,6 +67,12 @@ constexpr float PI_HALF = PI / 2;
 
 constexpr float D2R = PI / 180.0f;
 constexpr float R2D = 180.0f / PI;
+
+namespace cmath {
+using ::atan2f;
+using ::ceilf;
+using ::log10f;
+}
 
 // from metamod-p
 static inline bool checkptr (const void *ptr) {
