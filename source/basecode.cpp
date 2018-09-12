@@ -186,12 +186,10 @@ void Bot::checkGrenadesThrow (void) {
             float radius = m_lastEnemy->v.velocity.length2D ();
             const Vector &pos = (m_lastEnemy->v.velocity * 0.5f).make2D () + m_lastEnemy->v.origin;
 
-            if (radius < 128.0f) {
-               radius = 128.0f;
+            if (radius < 140.0f) {
+               radius = 140.0f;
             }
-
-            IntArray predicted;
-            waypoints.searchRadius (predicted, radius, pos, 12);
+            IntArray predicted = waypoints.searchRadius (radius, pos, 12);
 
             for (auto &predict : predicted) {
                allowThrowing = TRUE;
@@ -670,7 +668,7 @@ void Bot::processPickups (void) {
                   m_itemIgnore = ent;
                   allowPickup = false;
 
-                  if (!m_defendHostage && m_difficulty >= 3 && rng.getInt (0, 100) < 30 && m_timeCamping + 15.0f < engine.timebase ()) {
+                  if (!m_defendHostage && m_difficulty > 2 && rng.getInt (0, 100) < 30 && m_timeCamping + 15.0f < engine.timebase ()) {
                      int index = getDefendPoint (entPos);
 
                      startTask (TASK_CAMP, TASKPRI_CAMP, INVALID_WAYPOINT_INDEX, engine.timebase () + rng.getFloat (30.0f, 60.0f), true); // push camp task on to stack
@@ -786,7 +784,7 @@ void Bot::processPickups (void) {
                   m_itemIgnore = ent;
                   allowPickup = false;
 
-                  if (!m_defendedBomb && m_difficulty >= 2 && rng.getInt (0, 100) < 75 && pev->health < 80) {
+                  if (!m_defendedBomb && m_difficulty > 2 && rng.getInt (0, 100) < 75 && pev->health < 80) {
                      int index = getDefendPoint (entPos);
 
                      startTask (TASK_CAMP, TASKPRI_CAMP, INVALID_WAYPOINT_INDEX, engine.timebase () + rng.getFloat (30.0f, 70.0f), true); // push camp task on to stack
@@ -1335,7 +1333,7 @@ int Bot::pickBestWeapon (int *vec, int count, int moneySave) {
       for (int *begin = vec, *end = vec + count - 1; begin < end; ++begin, --end) {
          cr::swap (*end, *begin);
       }
-      return vec[static_cast<int> (static_cast<float> (count - 1) * log10f (rng.getFloat (1, cr::powf (10.0f, buyFactor))) / buyFactor + 0.5f)];
+      return vec[static_cast<int> (static_cast<float> (count - 1) * cr::log10f (rng.getFloat (1, cr::powf (10.0f, buyFactor))) / buyFactor + 0.5f)];
    }
 
    int chance = 95;
@@ -1734,7 +1732,8 @@ void Bot::updateEmotions (void) {
 }
 
 void Bot::overrideConditions (void) {
-   if (m_currentWeapon != WEAPON_KNIFE && m_difficulty > 3 && ((m_aimFlags & AIM_ENEMY) || (m_states & STATE_SEEING_ENEMY)) && !yb_jasonmode.boolean () && taskId () != TASK_CAMP && taskId () != TASK_SEEKCOVER && !isOnLadder ()) {
+
+   if (m_currentWeapon != WEAPON_KNIFE && m_difficulty > 2 && ((m_aimFlags & AIM_ENEMY) || (m_states & STATE_SEEING_ENEMY)) && !yb_jasonmode.boolean () && taskId () != TASK_CAMP && taskId () != TASK_SEEKCOVER && !isOnLadder ()) {
       m_moveToGoal = false; // don't move to goal
       m_navTimeset = engine.timebase ();
 
@@ -1747,7 +1746,7 @@ void Bot::overrideConditions (void) {
    if ((g_mapFlags & MAP_DE) && g_bombPlanted && m_notKilled && taskId () != TASK_ESCAPEFROMBOMB && taskId () != TASK_CAMP && isOutOfBombTimer ()) {
       completeTask (); // complete current task
 
-      // then start escape from bomb immidiate
+      // then start escape from bomb immediate
       startTask (TASK_ESCAPEFROMBOMB, TASKPRI_ESCAPEFROMBOMB, INVALID_WAYPOINT_INDEX, 0.0f, true);
    }
 
@@ -1755,7 +1754,7 @@ void Bot::overrideConditions (void) {
    if ((g_timeRoundStart + 6.0f > engine.timebase () || !hasAnyWeapons ()) && m_currentWeapon == WEAPON_KNIFE && isPlayer (m_enemy) && (taskId () != TASK_MOVETOPOSITION || task ()->desire != TASKPRI_HIDE)) {
       float length = (pev->origin - m_enemy->v.origin).length2D ();
 
-      // do waypoint movement if enemy is not reacheable with a knife
+      // do waypoint movement if enemy is not reachable with a knife
       if (length > 100.0f && (m_states & STATE_SEEING_ENEMY)) {
          int nearestToEnemyPoint = waypoints.getNearest (m_enemy->v.origin);
 
@@ -1765,9 +1764,16 @@ void Bot::overrideConditions (void) {
             m_isEnemyReachable = false;
             m_enemy = nullptr;
 
-            m_enemyIgnoreTimer = engine.timebase () + ((length / pev->maxspeed) * 0.5f);
+            m_enemyIgnoreTimer = engine.timebase () + length / pev->maxspeed * 0.5f;
          }
       }
+   }
+
+   // special handling for sniping
+   if (usesSniper () && (m_states & (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY)) && m_sniperStopTime > engine.timebase () && taskId () != TASK_SEEKCOVER) {
+      m_moveSpeed = 0.0f;
+      m_strafeSpeed = 0.0f;
+      m_navTimeset = engine.timebase ();
    }
 }
 
@@ -1969,11 +1975,12 @@ void Bot::filterTasks (void) {
             timeHeard += 10.0f;
             ratio = timeHeard * 0.1f;
          }
+         bool lowAmmo = m_ammoInClip[m_currentWeapon] < getMaxClip (m_currentWeapon) * 0.18f;
 
          if (g_bombPlanted || m_isStuck || m_currentWeapon == WEAPON_KNIFE) {
             ratio /= 3.0f; // reduce the seek cover desire if bomb is planted
          }
-         else if (m_isVIP || m_isReloading || (m_ammoInClip[m_currentWeapon] < getMaxClip (m_currentWeapon) * 0.18f && !usesSniper ())) {
+         else if (m_isVIP || m_isReloading || (lowAmmo && usesSniper ())) {
             ratio *= 2.0f; // triple the seek cover desire if bot is VIP or reloading
          }
          else {
@@ -2079,7 +2086,6 @@ void Bot::filterTasks (void) {
 void Bot::resetTasks (void) {
    // this function resets bot tasks stack, by removing all entries from the stack.
 
-   ignoreCollision ();
    m_tasks.clear ();
 }
 
@@ -2711,7 +2717,7 @@ void Bot::updateAimDir (void) {
       m_lookAt.z += coordCorrection * 0.5f;
    }
    else if (flags & AIM_ENEMY) {
-      FocusEnemy ();
+      focusEnemy ();
    }
    else if (flags & AIM_ENTITY) {
       m_lookAt = m_entity;
@@ -2730,24 +2736,27 @@ void Bot::updateAimDir (void) {
    }
    else if (flags & AIM_PREDICT_PATH) {
       bool changePredictedEnemy = true;
-
-      if (m_trackingEdict == m_lastEnemy && isAlive (m_lastEnemy) && m_timeNextTracking < engine.timebase ()) {
+  
+      if (m_timeNextTracking > engine.timebase () && m_trackingEdict == m_lastEnemy && isAlive (m_lastEnemy)) {
          changePredictedEnemy = false;
       }
 
       if (changePredictedEnemy) {
          int aimPoint = searchAimingPoint (m_lastEnemyOrigin);
 
-         if (aimPoint > 0) {
+         if (aimPoint != INVALID_WAYPOINT_INDEX) {
             m_lookAt = waypoints[aimPoint].origin;
             m_camp = m_lookAt;
 
-            m_timeNextTracking = engine.timebase () + 1.25f;
+            m_timeNextTracking = engine.timebase () + 0.5f;
             m_trackingEdict = m_lastEnemy;
          }
          else {
             m_aimFlags &= ~AIM_PREDICT_PATH;
-            m_lookAt = m_destOrigin;
+
+            if (!m_camp.empty ()) {
+               m_lookAt = m_camp;
+            }
          }
       }
       else {
@@ -2822,7 +2831,6 @@ void Bot::frameThink (void) {
       processTeamJoin (); // select team & class
    }
    else if (!m_notKilled) {
-      // no movement allowed in
 
        // we got a teamkiller? vote him away...
       if (m_voteKickIndex != m_lastVoteKick && yb_tkpunish.boolean ()) {
@@ -2845,13 +2853,27 @@ void Bot::frameThink (void) {
          m_voteMap = 0;
       }
    }
-   else if (m_buyingFinished && !(pev->maxspeed < 10.0f && taskId () != TASK_PLANTBOMB && taskId () != TASK_DEFUSEBOMB) && !yb_freeze_bots.boolean () && !waypoints.hasChanged ()) {
+   else if (!(pev->maxspeed < 10.0f && taskId () != TASK_PLANTBOMB && taskId () != TASK_DEFUSEBOMB) && !yb_freeze_bots.boolean () && !waypoints.hasChanged ()) {
       botMovement = true;
    }
    checkMsgQueue (); // check for pending messages
 
+   // allow ai running during freezetime
+   if (!botMovement && engine.timebase () <= g_timeRoundStart) {
+      botMovement = true;
+   }
+
    if (botMovement) {
       ai (); // execute main code
+
+      if (engine.timebase () <= g_timeRoundStart) {
+         m_checkTerrain = false;
+         m_moveToGoal = false;
+         m_navTimeset = engine.timebase ();
+
+         pev->button = 0;
+         ignoreCollision ();
+      }
    }
    processMovement (); // run the player movement
 }
@@ -2953,9 +2975,10 @@ void Bot::normal_ (void) {
    if (!g_bombPlanted && m_currentWaypointIndex != INVALID_WAYPOINT_INDEX && (m_currentPath->flags & FLAG_GOAL) && rng.getInt (0, 100) < 50 && numEnemiesNear (pev->origin, 650.0f) == 0) {
       pushRadioMessage (Radio_SectorClear);
    }
-   
+
    // reached the destination (goal) waypoint?
    if (processNavigation ()) {
+      
       completeTask ();
       m_prevGoalIndex = INVALID_WAYPOINT_INDEX;
       
@@ -3101,14 +3124,15 @@ void Bot::normal_ (void) {
    }
    // no more nodes to follow - search new ones (or we have a bomb)
    else if (!hasActiveGoal ()) {
-      m_moveSpeed = 0.0f;
+      m_moveSpeed = pev->maxspeed;
+      
       clearSearchNodes ();
+      ignoreCollision ();
 
       // did we already decide about a goal before?
       int destIndex = task ()->data != INVALID_WAYPOINT_INDEX ? task ()->data : searchGoal ();
 
       m_prevGoalIndex = destIndex;
-      m_chosenGoalIndex = destIndex;
 
       // remember index
       task ()->data = destIndex;
@@ -3119,13 +3143,14 @@ void Bot::normal_ (void) {
       }
    }
    else {
-      if (!(pev->flags & FL_DUCKING) && m_minSpeed != pev->maxspeed) {
+      if (!(pev->flags & FL_DUCKING) && m_minSpeed != pev->maxspeed && m_minSpeed > 1.0f) {
          m_moveSpeed = m_minSpeed;
       }
    }
+   float shiftSpeed = getShiftSpeed ();
 
-   if ((yb_walking_allowed.boolean () && mp_footsteps.boolean ()) && m_difficulty >= 3 && !(m_aimFlags & AIM_ENEMY) && (m_heardSoundTime + 6.0f >= engine.timebase () || (m_states & STATE_SUSPECT_ENEMY)) && numEnemiesNear (pev->origin, 768.0f) >= 1 && !yb_jasonmode.boolean () && !g_bombPlanted) {
-      m_moveSpeed = getShiftSpeed ();
+   if ((!cr::fzero (m_moveSpeed) && m_moveSpeed > shiftSpeed) && (yb_walking_allowed.boolean () && mp_footsteps.boolean ()) && m_difficulty > 2 && !(m_aimFlags & AIM_ENEMY) && (m_heardSoundTime + 6.0f >= engine.timebase () || (m_states & STATE_SUSPECT_ENEMY)) && numEnemiesNear (pev->origin, 768.0f) >= 1 && !yb_jasonmode.boolean () && !g_bombPlanted) {
+      m_moveSpeed = shiftSpeed;
    }
 
    // bot hasn't seen anything in a long time and is asking his teammates to report in
@@ -3180,11 +3205,13 @@ void Bot::huntEnemy_ (void) {
    
    // if we've got new enemy...
    if (!engine.isNullEntity (m_enemy) || engine.isNullEntity (m_lastEnemy)) {
+
       // forget about it...
       clearTask (TASK_HUNTENEMY);
       m_prevGoalIndex = INVALID_WAYPOINT_INDEX;
    }
    else if (engine.getTeam (m_lastEnemy) == m_team) {
+
       // don't hunt down our teammate...
       clearTask (TASK_HUNTENEMY);
       m_prevGoalIndex = INVALID_WAYPOINT_INDEX;
@@ -3225,11 +3252,11 @@ void Bot::huntEnemy_ (void) {
    }
 
    // bots skill higher than 60?
-   if (yb_walking_allowed.boolean () && mp_footsteps.boolean () && m_difficulty >= 2 && !yb_jasonmode.boolean ()) {
+   if (yb_walking_allowed.boolean () && mp_footsteps.boolean () && m_difficulty > 1 && !yb_jasonmode.boolean ()) {
       // then make him move slow if near enemy
       if (!(m_currentTravelFlags & PATHFLAG_JUMP)) {
          if (m_currentWaypointIndex != INVALID_WAYPOINT_INDEX) {
-            if (m_currentPath->radius < 32.0f && !isOnLadder () && !isInWater () && m_seeEnemyTime + 4.0f > engine.timebase () && m_difficulty < 2) {
+            if (m_currentPath->radius < 32.0f && !isOnLadder () && !isInWater () && m_seeEnemyTime + 4.0f > engine.timebase () && m_difficulty < 3) {
                pev->button |= IN_DUCK;
             }
          }
@@ -3253,9 +3280,7 @@ void Bot::seekCover_ (void) {
    else if (processNavigation ()) {
       // yep. activate hide behaviour
       completeTask ();
-
       m_prevGoalIndex = INVALID_WAYPOINT_INDEX;
-      m_pathType = SEARCH_PATH_FASTEST;
 
       // start hide task
       startTask (TASK_HIDE, TASKPRI_HIDE, INVALID_WAYPOINT_INDEX, engine.timebase () + rng.getFloat (3.0f, 12.0f), false);
@@ -3919,13 +3944,11 @@ void Bot::followUser_ (void) {
       clearSearchNodes ();
 
       int destIndex = waypoints.getNearest (m_targetEntity->v.origin);
-
-      IntArray points;
-      waypoints.searchRadius (points, 200.0f, m_targetEntity->v.origin);
+      IntArray points = waypoints.searchRadius (200.0f, m_targetEntity->v.origin);
 
       for (auto &newIndex : points) {
          // if waypoint not yet used, assign it as dest
-         if (!isOccupiedPoint (newIndex) && newIndex != m_currentWaypointIndex) {
+         if (newIndex != m_currentWaypointIndex && !isOccupiedPoint (newIndex)) {
             destIndex = newIndex;
          }
       }
@@ -4100,12 +4123,16 @@ void Bot::throwSmoke_ (void) {
          task ()->time = engine.timebase () + 1.2f;
       }
       else {
-         task ()->time = engine.timebase () + 0.1f;
+         selectBestWeapon ();
+         completeTask ();
+
+         return;
       }
    }
    else if (!(m_oldButtons & IN_ATTACK)) {
       pev->button |= IN_ATTACK;
    }
+   pev->button |= m_campButtons;
 }
 
 void Bot::doublejump_ (void) {
@@ -4334,10 +4361,18 @@ void Bot::pickupItem_ () {
          else {
             // primary weapon
             int wid = bestWeaponCarried ();
-
-            if (wid > 6 || hasShield ()) {
+            
+            if (wid == WEAPON_SHIELD || wid > 6 || hasShield ()) {
                selectWeaponById (wid);
                engine.execBotCmd (ent (), "drop");
+            }
+
+            if (!wid) {
+               m_itemIgnore = m_pickupItem;
+               m_pickupItem = nullptr;
+               m_pickupType = PICKUP_NONE;
+
+               break;
             }
             processBuyzoneEntering (BUYSTATE_PRIMARY_WEAPON);
          }
@@ -4720,6 +4755,7 @@ void Bot::ai (void) {
    m_moveAngles.clampAngles ();
    m_moveAngles.x *= -1.0f; // invert for engine
 
+   // do some overriding for special cases
    overrideConditions ();
 
    // allowed to move to a destination position?
@@ -4767,7 +4803,6 @@ void Bot::ai (void) {
 
    // time to reach waypoint
    if (m_navTimeset + getReachTime () < engine.timebase () && engine.isNullEntity (m_enemy)) {
-      m_currentWaypointIndex = INVALID_WAYPOINT_INDEX;
       getValidPoint ();
 
       // clear these pointers, bot mingh be stuck getting to them
@@ -5531,7 +5566,7 @@ Vector Bot::isBombAudible (void) {
       return Vector::null (); // reliability check
    }
 
-   if (m_difficulty > 3) {
+   if (m_difficulty > 2) {
       return waypoints.getBombPos ();
    }
    const Vector &bombOrigin = waypoints.getBombPos ();
@@ -5585,8 +5620,8 @@ void Bot::processMovement (void) {
 
    uint8 msecVal = computeMsec ();
    m_lastCommandTime = engine.timebase ();
-   //pev->button &= ~IN_ATTACK;
-   g_engfuncs.pfnRunPlayerMove (pev->pContainingEntity, m_moveAngles, m_moveSpeed, m_strafeSpeed, 0.0f, static_cast<uint16> (pev->button), static_cast<uint8> (pev->impulse), msecVal);
+
+   g_engfuncs.pfnRunPlayerMove (pev->pContainingEntity, m_moveAngles, m_moveSpeed, m_strafeSpeed, 0.0f, static_cast <uint16> (pev->button), static_cast <uint8> (pev->impulse), msecVal);
 
    // save our own copy of old buttons, since bot ai code is not running every frame now
    m_oldButtons = pev->button;

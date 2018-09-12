@@ -143,20 +143,32 @@ int Waypoint::getNearest (const Vector &origin, float minDistance, int flags) {
    return index;
 }
 
-void Waypoint::searchRadius (IntArray &radiusHolder, float radius, const Vector &origin, int maxCount) {
+IntArray Waypoint::searchRadius (float radius, const Vector &origin, int maxCount) {
    // returns all waypoints within radius from position
 
+   IntArray result;
+   auto &bucket = getWaypointsInBucket (origin);
+
+   if (bucket.empty ()) {
+      result.push (getNearestFallback (origin, radius));
+      return cr::move (result);
+   }
    radius = cr::square (radius);
 
-   for (int i = 0; i < m_numWaypoints; i++) {
-      if (maxCount != -1 && static_cast<int> (radiusHolder.length ()) > maxCount) {
+   if (maxCount != -1) {
+      result.reserve (maxCount);
+   }
+
+   for (const auto at : bucket) {
+      if (maxCount != -1 && static_cast<int> (result.length ()) > maxCount) {
          break;
       }
 
-      if ((m_paths[i]->origin - origin).lengthSq () < radius) {
-         radiusHolder.push (i);
+      if ((m_paths[at]->origin - origin).lengthSq () < radius) {
+         result.push (at);
       }
    }
+   return cr::move (result);
 }
 
 void Waypoint::push (int flags, const Vector &waypointOrigin) {
@@ -1213,7 +1225,7 @@ bool Waypoint::isReachable (Bot *bot, int index) {
    const Vector &dst = m_paths[index]->origin;
 
    // is the destination close enough?
-   if ((dst - src).lengthSq () >= cr::square (400.0f)) {
+   if ((dst - src).lengthSq () >= cr::square (320.0f)) {
       return false;
    }
    float ladderDist = (dst - src).length2D ();

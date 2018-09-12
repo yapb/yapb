@@ -290,11 +290,16 @@ bool Bot::lookupEnemies (void) {
          m_targetEntity = nullptr; // stop following when we see an enemy...
 
          if (rng.getInt (0, 100) < m_difficulty * 25) {
-            m_enemySurpriseTime = engine.timebase () + m_actualReactionTime * 0.5f;
+            m_enemySurpriseTime = m_actualReactionTime * 0.5f;
          }
          else {
-            m_enemySurpriseTime = engine.timebase () + m_actualReactionTime;
+            m_enemySurpriseTime = m_actualReactionTime;
          }
+
+         if (usesSniper ()) {
+            m_enemySurpriseTime *= 0.5f;
+         }
+         m_enemySurpriseTime += engine.timebase ();
 
          // zero out reaction time
          m_actualReactionTime = 0.0f;
@@ -397,7 +402,7 @@ Vector Bot::getBodyOffserError (float distance) {
    }
 
    if (m_aimErrorTime < engine.timebase ()) {
-      const float error = distance / (m_difficulty * 1000.0f);
+      const float error = distance / (m_difficulty * 1000.0f + 1.0f);
 
       m_aimLastError = Vector (rng.getFloat (m_enemy->v.mins.x * error, m_enemy->v.maxs.x * error), rng.getFloat (m_enemy->v.mins.y * error, m_enemy->v.maxs.y * error), rng.getFloat (m_enemy->v.mins.z * error, m_enemy->v.maxs.z * error));
       m_aimErrorTime = engine.timebase () + rng.getFloat (0.5f, 1.0f);
@@ -409,11 +414,14 @@ const Vector &Bot::getEnemyBodyOffset (void) {
    // the purpose of this function, is to make bot aiming not so ideal. it's mutate m_enemyOrigin enemy vector
    // returned from visibility check function.
 
+   auto headOffset = [] (edict_t *e) {
+      return e->v.absmin.z + e->v.size.z * 0.81f;
+   };
+
    // if no visibility data, use last one
    if (!m_visibility) {
       return m_enemyOrigin;
    }
-
    float distance = (m_enemy->v.origin - pev->origin).length ();
 
    // do not aim at head, at long distance (only if not using sniper weapon)
@@ -437,9 +445,11 @@ const Vector &Bot::getEnemyBodyOffset (void) {
 
          // now check is our skill match to aim at head, else aim at enemy body
          if ((rng.getInt (1, 100) < headshotFreq[m_difficulty]) || usesPistol ()) {
-            aimPos.z += 20.0f;
+            aimPos.z = headOffset (m_enemy) + getEnemyBodyOffsetCorrection (distance);
          }
-         aimPos.z += getEnemyBodyOffsetCorrection (distance);
+         else {
+            aimPos.z += getEnemyBodyOffsetCorrection (distance);
+         }
       }
       else if (m_visibility & VISIBLE_BODY) {
          aimPos.z += getEnemyBodyOffsetCorrection (distance);
@@ -448,7 +458,7 @@ const Vector &Bot::getEnemyBodyOffset (void) {
          aimPos = m_enemyOrigin;
       }
       else if (m_visibility & VISIBLE_HEAD) {
-         aimPos.z += getEnemyBodyOffsetCorrection (distance) + 20.0f;
+         aimPos.z = headOffset (m_enemy) + getEnemyBodyOffsetCorrection (distance);
       }
    }
 
@@ -472,14 +482,14 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
    bool shotgun = (m_currentWeapon == WEAPON_XM1014 || m_currentWeapon == WEAPON_M3);
    bool m249 = m_currentWeapon == WEAPON_M249;
 
-   float result = -1.5f;
+   float result = -2.0f;
 
    if (distance < MAX_SPRAY_DISTANCE) {
-      return -5.0f;
+      return -9.0f;
    }
-   if (distance >= MAX_SPRAY_DISTANCE_X2) {
+   else if (distance >= MAX_SPRAY_DISTANCE_X2) {
       if (sniper) {
-         result = 0.5f;
+         result = 0.18f;
       }
       else if (zoomableRifle) {
          result = 1.5f;
@@ -491,7 +501,7 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
          result = 1.5f;
       }
       else if (rifle) {
-         result = 2.0f;
+         result = 1.0f;
       }
       else if (m249) {
          result = -5.5f;
@@ -535,7 +545,7 @@ bool Bot::isFriendInLineOfFire (float distance) {
       float friendDistance = (pent->v.origin - pev->origin).length ();
       float squareDistance = cr::sqrtf (1089.0f + cr::square (friendDistance));
 
-      if (getShootingConeDeviation (ent (), pent->v.origin) > cr::square (friendDistance) / (squareDistance * squareDistance) && friendDistance <= distance) {
+      if (friendDistance <= distance && getShootingConeDeviation (ent (), pent->v.origin) > cr::square (friendDistance) / cr::square (squareDistance)) {
          return true;
       }
    }
@@ -635,6 +645,10 @@ bool Bot::isPenetrableObstacle2 (const Vector &dest) {
 
 bool Bot::throttleFiring (float distance) {
    // returns true if bot needs to pause between firing to compensate for punchangle & weapon spread
+
+   if (usesSniper ()) {
+      return false;
+   }
 
    if (m_firePause > engine.timebase ())
       return true;
@@ -736,11 +750,11 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
       else if (distance <= 150.0f && pev->fov < 90.0f) {
          pev->button |= IN_ATTACK2;
       }
-      m_zoomCheckTime = engine.timebase () + 0.5f;
+      m_zoomCheckTime = engine.timebase () + 0.25f;
    }
 
    // else is the bot holding a zoomable rifle?
-   if (m_difficulty < 4 && usesZoomableRifle () && m_zoomCheckTime < engine.timebase ())  {
+   else if (m_difficulty < 3 && usesZoomableRifle () && m_zoomCheckTime < engine.timebase ())  {
       // should the bot switch to zoomed mode?
       if (distance > 800.0f && pev->fov >= 90.0f) {
          pev->button |= IN_ATTACK2;
@@ -750,7 +764,19 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
       else if (distance <= 800.0f && pev->fov < 90.0f) {
          pev->button |= IN_ATTACK2;
       }
-      m_zoomCheckTime = engine.timebase () + 1.0f;
+      m_zoomCheckTime = engine.timebase () + 0.5f;
+   }
+
+   // we're should stand still before firing sniper weapons, else sniping is useless..
+   if (usesSniper () && (m_states & (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY)) && !m_isReloading && pev->velocity.lengthSq () > 0.0f) {
+      m_moveSpeed = 0.0f;
+      m_strafeSpeed = 0.0f;
+      m_navTimeset = engine.timebase ();
+
+      if (cr::abs (pev->velocity.x) > 5.0f || cr::abs (pev->velocity.y) > 5.0f || cr::abs (pev->velocity.z) > 5.0f) {
+         m_sniperStopTime = engine.timebase () + 2.5f;
+         return;
+      }
    }
 
    // need to care for burst fire?
@@ -801,8 +827,13 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
       else {
          pev->button |= IN_ATTACK;
 
-         m_shootTime = engine.timebase () + rng.getFloat (0.15f, 0.35f);
-         m_zoomCheckTime = engine.timebase () - 0.09f;
+         const float minDelay[] = { 0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.6f };
+         const float maxDelay[] = { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.7f };
+
+         const int offset = cr::abs <int> (m_difficulty * 25 / 20 - 5);
+
+         m_shootTime = engine.timebase () + 0.1f + rng.getFloat (minDelay[offset], maxDelay[offset]);
+         m_zoomCheckTime = engine.timebase ();
       }
    }
 }
@@ -843,14 +874,9 @@ void Bot::fireWeapons (void) {
    while (tab[selectIndex].id) {
       // is the bot carrying this weapon?
       if (weapons & (1 << tab[selectIndex].id)) {
-         bool isWeaponBadNow = isWeaponBadAtDistance (selectIndex, distance);
-
-         if (isWeaponBadNow) {
-            m_sniperSwitchCheckTime = rng.getFloat (2.5f, 6.0f);
-         }
 
          // is enough ammo available to fire AND check is better to use pistol in our current situation...
-         if (m_ammoInClip[tab[selectIndex].id] > 0 && !isWeaponBadNow) {
+         if (m_ammoInClip[tab[selectIndex].id] > 0 && !isWeaponBadAtDistance (selectIndex, distance)) {
             choosenWeapon = selectIndex;
          }
       }
@@ -891,7 +917,7 @@ bool Bot::isWeaponBadAtDistance (int weaponIndex, float distance) {
    // this function checks, is it better to use pistol instead of current primary weapon
    // to attack our enemy, since current weapon is not very good in this situation.
 
-   if (m_difficulty < 2 || m_sniperSwitchCheckTime < engine.timebase ()) {
+   if (m_difficulty < 2) {
       return false;
    }
    int wid = g_weaponSelect[weaponIndex].id;
@@ -906,7 +932,7 @@ bool Bot::isWeaponBadAtDistance (int weaponIndex, float distance) {
    }
 
    // better use pistol in short range distances, when using sniper weapons
-   if ((wid == WEAPON_SCOUT || wid == WEAPON_AWP || wid == WEAPON_G3SG1 || wid == WEAPON_SG550) && distance < 500.0f) {
+   if ((wid == WEAPON_SCOUT || wid == WEAPON_AWP || wid == WEAPON_G3SG1 || wid == WEAPON_SG550) && distance < 450.0f) {
       return true;
    }
 
@@ -917,19 +943,22 @@ bool Bot::isWeaponBadAtDistance (int weaponIndex, float distance) {
    return false;
 }
 
-void Bot::FocusEnemy (void) {
+void Bot::focusEnemy (void) {
    // aim for the head and/or body
    m_lookAt = getEnemyBodyOffset ();
 
    if (m_enemySurpriseTime > engine.timebase ()) {
       return;
-   }
+   } 
    float distance = (m_lookAt - eyePos ()).length2D (); // how far away is the enemy scum?
 
-   if (distance < 128.0f) {
+   if (distance < 128.0f && !usesSniper ()) {
       if (m_currentWeapon == WEAPON_KNIFE) {
          if (distance < 80.0f) {
             m_wantsToFire = true;
+         }
+         else if (distance > 120.0f) {
+            m_wantsToFire = false;
          }
       }
       else {
@@ -1245,11 +1274,11 @@ int Bot::bestGrenadeCarried (void) {
    if (pev->weapons & (1 << WEAPON_EXPLOSIVE)) {
       return WEAPON_EXPLOSIVE;
    }
-   else if (pev->weapons & (1 << WEAPON_FLASHBANG)) {
-      return WEAPON_FLASHBANG;
-   }
    else if (pev->weapons & (1 << WEAPON_SMOKE)) {
       return WEAPON_SMOKE;
+   }
+   else if (pev->weapons & (1 << WEAPON_FLASHBANG)) {
+      return WEAPON_FLASHBANG;
    }
    return -1;
 }

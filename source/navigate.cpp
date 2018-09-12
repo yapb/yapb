@@ -13,6 +13,7 @@ ConVar yb_whose_your_daddy ("yb_whose_your_daddy", "0");
 ConVar yb_debug_heuristic_type ("yb_debug_heuristic_type", "0");
 
 int Bot::searchGoal (void) {
+
    // chooses a destination (goal) waypoint for a bot
    if (!g_bombPlanted && m_team == TEAM_TERRORIST && (g_mapFlags & MAP_DE)) {
       edict_t *pent = nullptr;
@@ -642,12 +643,12 @@ bool Bot::processNavigation (void) {
    // this function is a main path navigation
 
    TraceResult tr, tr2;
-
+   
    // check if we need to find a waypoint...
    if (m_currentWaypointIndex == INVALID_WAYPOINT_INDEX) {
       getValidPoint ();
       m_waypointOrigin = m_currentPath->origin;
-
+      
       // if wayzone radios non zero vary origin a bit depending on the body angles
       if (m_currentPath->radius > 0) {
          makeVectors (Vector (pev->angles.x, cr::angleNorm (pev->angles.y + rng.getFloat (-90.0f, 90.0f)), 0.0f));
@@ -668,7 +669,7 @@ bool Bot::processNavigation (void) {
          // if bot's on the ground or on the ladder we're free to jump. actually setting the correct velocity is cheating.
          // pressing the jump button gives the illusion of the bot actual jumping.
          if (isOnFloor () || isOnLadder ()) {
-            pev->velocity = m_desiredVelocity * 1.25f;
+            pev->velocity = m_desiredVelocity;
             pev->button |= IN_JUMP;
 
             m_jumpFinished = true;
@@ -774,7 +775,7 @@ bool Bot::processNavigation (void) {
                if (bot == nullptr || bot == this) {
                   continue;
                }
-            
+
                if (!bot->m_notKilled || bot->m_team != m_team || bot->m_targetEntity != ent () || bot->taskId () != TASK_FOLLOWUSER) {
                   continue;
                }
@@ -1115,6 +1116,9 @@ bool Bot::processNavigation (void) {
    else if (m_currentTravelFlags & PATHFLAG_JUMP) {
       desiredDistance = 0.0f;
    }
+   else if (isOccupiedPoint (m_currentWaypointIndex)) {
+      desiredDistance = 120.0f;
+   }
    else {
       desiredDistance = m_currentPath->radius;
    }
@@ -1122,17 +1126,18 @@ bool Bot::processNavigation (void) {
    // check if waypoint has a special travelflag, so they need to be reached more precisely
    for (int i = 0; i < MAX_PATH_INDEX; i++) {
       if (m_currentPath->connectionFlags[i] != 0) {
-         desiredDistance = 0;
+         desiredDistance = 0.0f;
          break;
       }
    }
 
    // needs precise placement - check if we get past the point
-   if (desiredDistance < 16.0f && waypointDistance < 30.0f && (pev->origin + (pev->velocity * calcThinkInterval ()) - m_waypointOrigin).length () > waypointDistance) {
+   if (desiredDistance < 20.0f && waypointDistance < 30.0f && (pev->origin + (pev->velocity * calcThinkInterval ()) - m_waypointOrigin).lengthSq () > cr::square (waypointDistance)) {
       desiredDistance = waypointDistance + 1.0f;
    }
 
    if (waypointDistance < desiredDistance) {
+      
       // did we reach a destination waypoint?
       if (task ()->data == m_currentWaypointIndex) {
          // add goal values
@@ -1411,12 +1416,12 @@ float hfunctionPathDist (int index, int, int goalIndex) {
       return 0.0f; // no heuristic
 
    case 3:
-   case 4: 
+   case 4:
       // euclidean based distance
       float euclidean = cr::powf (cr::powf (x, 2.0f) + cr::powf (y, 2.0f) + cr::powf (z, 2.0f), 0.5f);
 
       if (yb_debug_heuristic_type.integer () == 4) {
-         return 1000.0f * (ceilf (euclidean) - euclidean);
+         return 1000.0f * (cr::ceilf (euclidean) - euclidean);
       }
       return euclidean;
    }
@@ -1594,6 +1599,10 @@ int Bot::searchAimingPoint (const Vector &to) {
    int destIndex = waypoints.getNearest (to);
    int bestIndex = m_currentWaypointIndex;
 
+   if (destIndex == INVALID_WAYPOINT_INDEX) {
+      return INVALID_WAYPOINT_INDEX;
+   }
+ 
    while (destIndex != m_currentWaypointIndex) {
       destIndex = *(waypoints.m_pathMatrix + (destIndex * waypoints.length ()) + m_currentWaypointIndex);
 
@@ -1601,7 +1610,7 @@ int Bot::searchAimingPoint (const Vector &to) {
          break;
       }
 
-      if (waypoints.isVisible (m_currentWaypointIndex, destIndex)) {
+      if (waypoints.isVisible (m_currentWaypointIndex, destIndex) && waypoints.isVisible (destIndex, m_currentWaypointIndex)) {
          bestIndex = destIndex;
          break;
       }
@@ -1619,10 +1628,11 @@ bool Bot::searchOptimalPoint (void) {
 
    int busy = INVALID_WAYPOINT_INDEX;
 
-   float lessDist[3] = { 99999.0f, };
-   int lessIndex[3] = { INVALID_WAYPOINT_INDEX, };
+   float lessDist[3] = { 99999.0f, 99999.0f , 99999.0f };
+   int lessIndex[3] = { INVALID_WAYPOINT_INDEX, INVALID_WAYPOINT_INDEX , INVALID_WAYPOINT_INDEX };
 
    auto &bucket = waypoints.getWaypointsInBucket (pev->origin);
+   int numToSkip = cr::clamp (rng.getInt (0, bucket.length () - 1), 0, 5);
 
    for (const int at : bucket) {
       bool skip = !!(at == m_currentWaypointIndex);
@@ -1633,7 +1643,7 @@ bool Bot::searchOptimalPoint (void) {
       }
 
       // skip current and recent previous waypoints
-      for (int j = 0; j < 5; j++) {
+      for (int j = 0; j < numToSkip; j++) {
          if (at == m_prevWptIndex[j]) {
             skip = true;
             break;
@@ -1708,7 +1718,7 @@ bool Bot::searchOptimalPoint (void) {
       selected = busy;
    }
 
-   // worst case... find atleeast something
+   // worst case... find atleast something
    if (selected == INVALID_WAYPOINT_INDEX) {
       selected = getNearestPoint ();
    }
@@ -1852,27 +1862,18 @@ int Bot::getNearestPoint (void) {
       float distance = (waypoints[at].origin - pev->origin).lengthSq ();
 
       if (distance < minimum) {
-         
+
          // if bot doing navigation, make sure waypoint really visible and not too high
-         if (m_currentWaypointIndex != INVALID_WAYPOINT_INDEX && waypoints.isVisible (m_currentWaypointIndex, at)) {
+         if ((m_currentWaypointIndex != INVALID_WAYPOINT_INDEX && waypoints.isVisible (m_currentWaypointIndex, at)) || waypoints.isReachable (this, at)) {
             index = at;
             minimum = distance;
-         }
-         else {
-            TraceResult tr;
-            engine.testLine (eyePos (), waypoints[at].origin, TRACE_IGNORE_MONSTERS, ent (), &tr);
-
-            if (tr.flFraction >= 1.0f && !tr.fStartSolid) {
-               index = at;
-               minimum = distance;
-            }
          }
       }
    }
 
    // worst case, take any waypoint...
    if (index == INVALID_WAYPOINT_INDEX) {
-      index = waypoints.getNearest (pev->origin);
+      index = waypoints.getNearestFallback (pev->origin);
    }
    return index;
 }
@@ -2199,7 +2200,7 @@ bool Bot::getNextBestPoint (void) {
          }
 
          if (!isOccupiedPoint (id)) {
-            m_path.next () = id;
+            m_path.first () = id;
             return true;
          }
       }
@@ -2211,16 +2212,16 @@ bool Bot::advanceMovement (void) {
    // advances in our pathfinding list and sets the appropiate destination origins for this bot
 
    getValidPoint (); // check if old waypoints is still reliable
-
+   
    // no waypoints from pathfinding?
    if (m_path.empty ()) {
       return false;
    }
    TraceResult tr;
-
+   
    m_path.shift (); // advance in list
    m_currentTravelFlags = 0; // reset travel flags (jumping etc)
-
+   
    // we're not at the end of the list?
    if (!m_path.empty ()) {
       // if in between a route, postprocess the waypoint (find better alternatives)...
@@ -2291,7 +2292,7 @@ bool Bot::advanceMovement (void) {
 
       if (!m_path.empty ()) {
          const int destIndex = m_path.first ();
-
+         
          // find out about connection flags
          if (m_currentWaypointIndex != INVALID_WAYPOINT_INDEX) {
             for (int i = 0; i < MAX_PATH_INDEX; i++) {
@@ -2332,7 +2333,7 @@ bool Bot::advanceMovement (void) {
             }
 
             // is there a jump waypoint right ahead and do we need to draw out the light weapon ?
-            if (willJump && m_currentWeapon != WEAPON_KNIFE && m_currentWeapon != WEAPON_SCOUT && !m_isReloading && !usesPistol () && (jumpDistance > 210.0f || (dst.z + 32.0f > src.z && jumpDistance > 150.0f) || ((dst - src).length2D () < 60.0f && jumpDistance > 60.0f)) && !(m_states & (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY))) {
+            if (willJump && m_currentWeapon != WEAPON_KNIFE && m_currentWeapon != WEAPON_SCOUT && !m_isReloading && !usesPistol () && (jumpDistance > 210.0f || (dst.z - 32.0f > src.z && jumpDistance > 150.0f)) && !(m_states & (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY))) {
                selectWeaponByName ("weapon_knife"); // draw out the knife if we needed
             }
 
@@ -2992,6 +2993,7 @@ void Bot::processLookAngles (void) {
 
       return;
    }
+
    if (m_difficulty > 3 && (m_aimFlags & AIM_ENEMY) && (m_wantsToFire || usesSniper ()) && yb_whose_your_daddy.boolean ()) {
       pev->v_angle = direction;
       processBodyAngles ();

@@ -49,7 +49,6 @@ int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const c
    else if (stricmp (arg0, "kickbot_ct") == 0 || stricmp (arg0, "kick_ct") == 0) {
       bots.kickFromTeam (TEAM_COUNTER);
    }
-
    // kills all bots on the terrorist team
    else if (stricmp (arg0, "killbots_t") == 0 || stricmp (arg0, "kill_t") == 0) {
       bots.killAllBots (TEAM_TERRORIST);
@@ -2908,7 +2907,7 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
    functionTable->pfnCmd_Argc = pfnCmd_Argc;
    functionTable->pfnSetClientMaxspeed = pfnSetClientMaxspeed;
    functionTable->pfnAlertMessage = pfnAlertMessage;
-
+   
    return TRUE;
 }
 

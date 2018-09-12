@@ -79,8 +79,8 @@ void BotManager::touchKillerEntity (Bot *bot) {
 
       if (engine.isNullEntity (m_killerEntity)) {
          MDLL_ClientKill (bot->ent ());
+         return;
       }
-      return;
    }
 
    m_killerEntity->v.classname = MAKE_STRING (g_weaponDefs[bot->m_currentWeapon].className);
@@ -1115,7 +1115,7 @@ void Bot::processNewRound (void) {
    m_firePause = 0.0f;
    m_timeLastFired = 0.0f;
 
-   m_sniperSwitchCheckTime = 0.0f;
+   m_sniperStopTime = 0.0f;
    m_grenadeCheckTime = 0.0f;
    m_isUsingGrenade = false;
    m_bombSearchOverridden = false;

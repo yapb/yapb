@@ -54,13 +54,17 @@ using uint32 = unsigned long;
 
 }
 
+namespace cmath {
+#include <math.h>
+}
+
 using namespace cr::types;
 
 constexpr float ONEPSILON = 0.01f;
 constexpr float EQEPSILON = 0.001f;
 constexpr float FLEPSILON = 1.192092896e-07f;
 
-constexpr float PI = 3.14159265358979323846f;
+constexpr float PI = 3.141592653589793115997963468544185161590576171875f;
 constexpr float PI_RECIPROCAL = 1.0f / PI;
 constexpr float PI_HALF = PI / 2;
 
@@ -106,13 +110,13 @@ template<typename T> constexpr T abs (const T a) {
    return a > 0 ? a : -a;
 }
 
-static inline float powf (const float a, const float b) {
+static inline float powf (const float x, const float y) {
    union {
       float d;
       int x;
-   } res { a };
+   } res { x };
 
-   res.x = static_cast <int> (b * (res.x - 1064866805) + 1064866805);
+   res.x = static_cast <int> (y * (res.x - 1064866805) + 1064866805);
    return res.d;
 }
 
@@ -145,40 +149,19 @@ static inline float cosf (const float value) {
 }
 
 static inline float tanf (const float value) {
-   return sinf (value) /cosf (value);
+   return sinf (value) / cosf (value);
 }
 
 static inline float atan2f (const float y, const float x) {
-   if (x == 0.0f) {
-      if (y > 0.0f) {
-         return PI_HALF;
-      }
-      else if (y < 0.0f) {
-         return -PI_HALF;
-      }
-      return 0.0f;
-   }
-   float result = 0.0f;
-   float z = y / x;
+   return cmath::atan2f (y, x);
+}
 
-   if (abs (z) < 1.0f) {
-      result = z / (1.0f + 0.28f * z * z);
+static inline float log10f (const float x) {
+   return cmath::log10f (x);
+}
 
-      if (x < 0.0f) {
-         if (y < 0.0f) {
-            return result - PI;
-         }
-         return result + PI;
-      }
-   }
-   else {
-      result = PI_HALF - z / (z * z + 0.28f);
-
-      if (y < 0.0f) {
-         return result - PI;
-      }
-   }
-   return result;
+static inline float ceilf (const float x) {
+   return cmath::ceilf (x);
 }
 
 static inline void sincosf (const float rad, float &sine, float &cosine) {
@@ -222,7 +205,7 @@ template <typename T> struct ClearRef <T &> {
    using Type = T;
 };
 
-template <typename T> struct ClearRef <T&&> {
+template <typename T> struct ClearRef <T &&> {
    using Type = T;
 };
 

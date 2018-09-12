@@ -838,7 +838,7 @@ private:
    float m_zoomCheckTime; // time to check zoom again
    float m_shieldCheckTime; // time to check shiled drawing again
    float m_grenadeCheckTime; // time to check grenade usage
-   float m_sniperSwitchCheckTime; // bot switched to other weapon?
+   float m_sniperStopTime; // bot switched to other weapon?
    float m_lastEquipTime; // last time we equipped in buyzone
 
    bool m_checkKnifeSwitch; // is time to check switch to knife action
@@ -1044,7 +1044,7 @@ private:
    bool isEnemyHidden (edict_t *enemy);
    void fireWeapons (void);
    void selectWeapons (float distance, int index, int id, int choosen);
-   void FocusEnemy (void);
+   void focusEnemy (void);
 
    void selectBestWeapon (void);
    void selectSecondary (void);
@@ -1445,7 +1445,7 @@ public:
    int getFarest (const Vector &origin, float maxDistance = 32.0);
    int getNearest (const Vector &origin, float minDistance = 9999.0f, int flags = -1);
    int getNearestFallback (const Vector &origin, float minDistance = 9999.0f, int flags = -1);
-   void searchRadius (IntArray &holder, float radius, const Vector &origin, int maxCount = -1);
+   IntArray searchRadius (float radius, const Vector &origin, int maxCount = -1);
 
    void push (int flags, const Vector &waypointOrigin = Vector::null ());
    void erase (void);
