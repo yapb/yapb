@@ -28,7 +28,7 @@
 #endif
 
 // configure export macros
-#if defined(CXX_MSVC) || defined(CXX_CLANG)
+#if defined(PLATFORM_WIN32)
    #define SHARED_LIBRARAY_EXPORT extern "C" __declspec (dllexport)
 #elif defined(PLATFORM_LINUX) || defined(PLATFORM_OSX)
    #define SHARED_LIBRARAY_EXPORT extern "C" __attribute__ ((visibility ("default")))
