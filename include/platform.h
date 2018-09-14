@@ -10,24 +10,26 @@
 #pragma once
 
 // detects the build platform
-#if defined(__linux__) || defined(__debian__) || defined(__linux)
-   #define PLATFORM_LINUX 1
+#if defined(__linux__)
+   #define PLATFORM_LINUX
 #elif defined(__APPLE__)
-   #define PLATFORM_OSX 1
+   #define PLATFORM_OSX
+#elif defined(__ANDROID__)
+   #define PLATFORM_ANDROID
 #elif defined(_WIN32)
-   #define PLATFORM_WIN32 1
+   #define PLATFORM_WIN32
 #endif
 
 // detects the compiler
 #if defined(_MSC_VER)
-   #define COMPILER_VISUALC _MSC_VER
-#elif defined(__MINGW32_MAJOR_VERSION)
-   #define COMPILER_MINGW32 __MINGW32_MAJOR_VERSION
+   #define CXX_MSVC
+#elif defined(__clang__)
+   #define CXX_CLANG
 #endif
 
 // configure export macros
-#if defined(COMPILER_VISUALC) || defined(COMPILER_MINGW32)
-   #define SHARED_LIBRARAY_EXPORT extern "C" __declspec(dllexport)
+#if defined(CXX_MSVC) || defined(CXX_CLANG)
+   #define SHARED_LIBRARAY_EXPORT extern "C" __declspec (dllexport)
 #elif defined(PLATFORM_LINUX) || defined(PLATFORM_OSX)
    #define SHARED_LIBRARAY_EXPORT extern "C" __attribute__ ((visibility ("default")))
 #else
@@ -46,14 +48,14 @@
    #define DLL_DETACHING (dwReason == DLL_PROCESS_DETACH)
    #define DLL_RETENTRY return TRUE
 
-   #if defined(COMPILER_VISUALC)
+   #if defined(CXX_MSVC)
       #define DLL_GIVEFNPTRSTODLL extern "C" void STD_CALL
-   #elif defined(COMPILER_MINGW32)
+   #elif defined(CXX_CLANG)
       #define DLL_GIVEFNPTRSTODLL SHARED_LIBRARAY_EXPORT void STD_CALL
    #endif
 
    // specify export parameter
-   #if defined(COMPILER_VISUALC) && (COMPILER_VISUALC > 1000)
+   #if defined(CXX_MSVC) || defined (CXX_CLANG)
       #pragma comment(linker, "/EXPORT:GiveFnptrsToDll=_GiveFnptrsToDll@8,@1")
       #pragma comment(linker, "/SECTION:.data,RW")
    #endif
@@ -78,9 +80,6 @@
 
    #define STD_CALL /* */
 
-   #if defined(__ANDROID__)
-      #define PLATFORM_ANDROID 1
-   #endif
 #else
    #error "Platform unrecognized."
 #endif

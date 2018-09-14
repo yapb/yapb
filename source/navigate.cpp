@@ -1740,7 +1740,7 @@ float Bot::getReachTime (void) {
       return 0.0f;
 
    default:
-      estimatedTime = 2.25f; // time to reach next waypoint
+      estimatedTime = 2.8f; // time to reach next waypoint
    }
 
    // calculate 'real' time that we need to get from one waypoint to another
