@@ -7,7 +7,7 @@
 //     https://yapb.ru/license
 //
 
-#include <core.h>
+#include <yapb.h>
 
 ConVar yb_autovacate ("yb_autovacate", "1");
 
@@ -39,13 +39,13 @@ BotManager::BotManager (void) {
       m_economicsGood[i] = true;
    }
    memset (m_bots, 0, sizeof (m_bots));
-
-   m_maintainTime = 0.0f;
-   m_quotaMaintainTime = 0.0f;
-   m_grenadeUpdateTime = 0.0f;
+   resetTimers ();
 
    m_creationTab.clear ();
    m_killerEntity = nullptr;
+
+   m_activeGrenades.reserve (16);
+   m_intrestingEntities.reserve (128);
 }
 
 BotManager::~BotManager (void) {
@@ -427,6 +427,13 @@ void BotManager::maintainQuota (void) {
       kickRandom (false);
    }
    m_quotaMaintainTime = engine.timebase () + 0.40f;
+}
+
+void BotManager::resetTimers (void) {
+   m_maintainTime = 0.0f;
+   m_quotaMaintainTime = 0.0f;
+   m_grenadeUpdateTime = 0.0f;
+   m_entityUpdateTime = 0.0f;
 }
 
 void BotManager::decrementQuota (int by) {
@@ -1436,8 +1443,44 @@ void BotManager::updateActiveGrenade (void) {
    m_grenadeUpdateTime = engine.timebase () + 0.213f;
 }
 
-Array<edict_t *> &BotManager::searchActiveGrenades (void) {
-   return m_activeGrenades;
+void BotManager::updateIntrestingEntities (void) {
+   if (m_entityUpdateTime > engine.timebase ()) {
+      return;
+   }
+
+   // clear previously stored entities
+   m_intrestingEntities.clear ();
+
+   // search the map for entities
+   for (int i = MAX_ENGINE_PLAYERS - 1; i < g_pGlobals->maxEntities; i++) {
+      auto ent = g_engfuncs.pfnPEntityOfEntIndex (i);
+
+      if (engine.isNullEntity (ent)) {
+         continue;
+      }
+
+      // only drawn entities
+      if (ent->v.effects & EF_NODRAW) {
+         continue;
+      }
+      auto classname = STRING (ent->v.classname);
+
+      // search for grenades, weaponboxes, weapons, items and armoury entities
+      if (strncmp ("weapon", classname, 6) == 0 || strncmp ("grenade", classname, 7) == 0 || strncmp ("item", classname, 4) == 0 || strncmp ("armoury", classname, 7) == 0) {
+         m_intrestingEntities.push (ent);
+      }
+
+      // pickup some csdm stuff if we're running csdm
+      if ((g_mapFlags & MAP_CS) && strncmp ("hostage", classname, 7) == 0) {
+         m_intrestingEntities.push (ent);
+      }
+      
+      // pickup some csdm stuff if we're running csdm
+      if ((g_gameFlags & GAME_CSDM) && strncmp ("csdm", classname, 4) == 0) {
+         m_intrestingEntities.push (ent);
+      }
+   }
+   m_entityUpdateTime = engine.timebase () + 0.5f;
 }
 
 void BotManager::selectLeaders (int team, bool reset) {

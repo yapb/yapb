@@ -18,9 +18,6 @@
     <ClInclude Include="..\include\compress.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\core.h">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\corelib.h">
       <Filter>include</Filter>
     </ClInclude>
@@ -54,6 +51,9 @@
     <ClInclude Include="..\include\engine.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\yapb.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\chatlib.cpp">
@@ -77,13 +77,13 @@
     <ClCompile Include="..\source\manager.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="..\source\basecode.cpp">
-      <Filter>source</Filter>
-    </ClCompile>
     <ClCompile Include="..\source\combat.cpp">
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="..\source\engine.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\basecode.cpp">
       <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>

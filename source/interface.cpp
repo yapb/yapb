@@ -7,8 +7,7 @@
 //     https://yapb.ru/license
 //
 
-#include <core.h>
-
+#include <yapb.h>
 
 // console vars
 ConVar yb_ignore_cvars_on_changelevel ("yb_ignore_cvars_on_changelevel", "yb_quota,yb_autovacate");
@@ -2193,6 +2192,9 @@ void StartFrame (void) {
 
    // keep track of grenades on map
    bots.updateActiveGrenade ();
+
+   // keep track of intresting entities
+   bots.updateIntrestingEntities ();
 
    // keep bot number up to date
    bots.maintainQuota ();

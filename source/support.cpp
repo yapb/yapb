@@ -7,7 +7,7 @@
 //     https://yapb.ru/license
 //
 
-#include <core.h>
+#include <yapb.h>
 
 ConVar yb_display_menu_text ("yb_display_menu_text", "1");
 ConVar yb_display_welcome_text ("yb_display_welcome_text", "1");
@@ -338,6 +338,7 @@ void initRound (void) {
       bots.updateTeamEconomics (team);
       bots.selectLeaders (team, true);
    }
+   bots.resetTimers ();
 
    for (int i = 0; i < engine.maxClients (); i++) {
       auto bot = bots.getBot (i);

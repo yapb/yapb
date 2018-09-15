@@ -7,7 +7,7 @@
 //     https://yapb.ru/license
 //
 
-#include <core.h>
+#include <yapb.h>
 
 ConVar yb_whose_your_daddy ("yb_whose_your_daddy", "0");
 ConVar yb_debug_heuristic_type ("yb_debug_heuristic_type", "0");

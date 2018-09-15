@@ -7,7 +7,7 @@
 //     https://yapb.ru/license
 //
 
-#include <core.h>
+#include <yapb.h>
 
 bool g_canSayBombPlanted = true;
 bool g_roundEnded = true;

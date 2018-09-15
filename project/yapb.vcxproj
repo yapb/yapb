@@ -12,7 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\compress.h" />
-    <ClInclude Include="..\include\core.h" />
+    <ClInclude Include="..\include\yapb.h" />
     <ClInclude Include="..\include\corelib.h" />
     <ClInclude Include="..\include\engine.h" />
     <ClInclude Include="..\include\engine\const.h" />

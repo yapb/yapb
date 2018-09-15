@@ -7,7 +7,7 @@
 //     https://yapb.ru/license
 //
 
-#include <core.h>
+#include <yapb.h>
 
 ConVar yb_wptsubfolder ("yb_wptsubfolder", "");
 

@@ -7,7 +7,7 @@
 //     https://yapb.ru/license
 //
 
-#include <core.h>
+#include <yapb.h>
 
 ConVar yb_shoots_thru_walls ("yb_shoots_thru_walls", "2");
 ConVar yb_ignore_enemies ("yb_ignore_enemies", "0");

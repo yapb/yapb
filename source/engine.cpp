@@ -7,7 +7,7 @@
 //     https://yapb.ru/license
 //
 
-#include <core.h>
+#include <yapb.h>
 
 Engine::Engine (void) {
    m_startEntity = nullptr;

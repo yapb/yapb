@@ -7,7 +7,7 @@
 //     https://yapb.ru/license
 //
 
-#include <core.h>
+#include <yapb.h>
 
 ConVar yb_debug ("yb_debug", "0");
 ConVar yb_debug_goal ("yb_debug_goal", "-1");
@@ -505,29 +505,34 @@ void Bot::processPickups (void) {
    // this function finds Items to collect or use in the near of a bot
 
    // don't try to pickup anything while on ladder or trying to escape from bomb...
-   if (isOnLadder () || taskId () == TASK_ESCAPEFROMBOMB || yb_jasonmode.boolean ()) {
+   if (isOnLadder () || taskId () == TASK_ESCAPEFROMBOMB || yb_jasonmode.boolean () || !bots.hasIntrestingEntities ()) {
       m_pickupItem = nullptr;
       m_pickupType = PICKUP_NONE;
 
       return;
    }
+   auto &intresting = bots.searchIntrestingEntities ();
 
-   edict_t *ent = nullptr, *pickupItem = nullptr;
    Bot *bot = nullptr;
-
-   const float radius = 320.0f;
-   float minDistance = cr::square (radius + 10.0f);
+   const float radius = cr::square (320.0f);
 
    if (!engine.isNullEntity (m_pickupItem)) {
       bool itemExists = false;
-      pickupItem = m_pickupItem;
+      auto pickupItem = m_pickupItem;
 
-      while (!engine.isNullEntity (ent = g_engfuncs.pfnFindEntityInSphere (ent, pev->origin, radius))) {
-         if ((ent->v.effects & EF_NODRAW) || isPlayer (ent->v.owner)) {
+      for (auto ent : intresting) {
+         if (isPlayer (ent->v.owner)) {
             continue; // someone owns this weapon or it hasn't re spawned yet
          }
+         const Vector &origin = engine.getAbsPos (ent);
+
+         // too far from us ?
+         if ((pev->origin - origin).lengthSq () > radius) {
+            continue;
+         }
+
          if (ent == pickupItem) {
-            if (seesItem (engine.getAbsPos (ent), STRING (ent->v.classname))) {
+            if (seesItem (origin, STRING (ent->v.classname))) {
                itemExists = true;
             }
             break;
@@ -543,31 +548,31 @@ void Bot::processPickups (void) {
       }
    }
 
-   ent = nullptr;
-   pickupItem = nullptr;
-
+   edict_t *pickupItem = nullptr;
    PickupType pickupType = PICKUP_NONE;
-
-   Vector pickupPos;
-   Vector entPos;
+   Vector pickupPos = Vector::null ();
 
    m_pickupItem = nullptr;
    m_pickupType = PICKUP_NONE;
 
-   while (!engine.isNullEntity (ent = g_engfuncs.pfnFindEntityInSphere (ent, pev->origin, radius))) {
+   for (auto ent : intresting) {
       bool allowPickup = false; // assume can't use it until known otherwise
 
-      if ((ent->v.effects & EF_NODRAW) || ent == m_itemIgnore) {
+      if (ent == m_itemIgnore) {
          continue; // someone owns this weapon or it hasn't respawned yet
+      }
+      const Vector &origin = engine.getAbsPos (ent);
+
+      // too far from us ?
+      if ((pev->origin - origin).lengthSq () > radius) {
+         continue;
       }
 
       auto classname = STRING (ent->v.classname);
       auto model = STRING (ent->v.model) + 9;
 
-      entPos = engine.getAbsPos (ent);
-
       // check if line of sight to object is not blocked (i.e. visible)
-      if (seesItem (entPos, classname)) {
+      if (seesItem (origin, classname)) {
          if (strncmp ("hostage_entity", classname, 14) == 0) {
             allowPickup = true;
             pickupType = PICKUP_HOSTAGE;
@@ -596,177 +601,109 @@ void Bot::processPickups (void) {
 
       // if the bot found something it can pickup...
       if (allowPickup) {
-         float distance = (entPos - pev->origin).lengthSq ();
+         if (pickupType == PICKUP_WEAPON) // found weapon on ground?
+         {
+            int weaponCarried = bestPrimaryCarried ();
+            int secondaryWeaponCarried = bestSecondaryCarried ();
 
-         // see if it's the closest item so far...
-         if (distance < minDistance) {
-            if (pickupType == PICKUP_WEAPON) // found weapon on ground?
-            {
-               int weaponCarried = bestPrimaryCarried ();
-               int secondaryWeaponCarried = bestSecondaryCarried ();
+            if (secondaryWeaponCarried < 7 && (m_ammo[g_weaponSelect[secondaryWeaponCarried].id] > 0.3 * g_weaponDefs[g_weaponSelect[secondaryWeaponCarried].id].ammo1Max) && strcmp (model, "w_357ammobox.mdl") == 0) {
+               allowPickup = false;
+            }
+            else if (!m_isVIP && weaponCarried >= 7 && (m_ammo[g_weaponSelect[weaponCarried].id] > 0.3 * g_weaponDefs[g_weaponSelect[weaponCarried].id].ammo1Max) && strncmp (model, "w_", 2) == 0) {
+               bool isSniperRifle = weaponCarried == WEAPON_AWP || weaponCarried == WEAPON_G3SG1 || weaponCarried == WEAPON_SG550;
+               bool isSubmachine = weaponCarried == WEAPON_MP5 || weaponCarried == WEAPON_TMP || weaponCarried == WEAPON_P90 || weaponCarried == WEAPON_MAC10 || weaponCarried == WEAPON_UMP45;
+               bool isShotgun = weaponCarried == WEAPON_M3;
+               bool isRifle = weaponCarried == WEAPON_FAMAS || weaponCarried == WEAPON_AK47 || weaponCarried == WEAPON_M4A1 || weaponCarried == WEAPON_GALIL || weaponCarried == WEAPON_AUG || weaponCarried == WEAPON_SG552;
 
-               if (secondaryWeaponCarried < 7 && (m_ammo[g_weaponSelect[secondaryWeaponCarried].id] > 0.3 * g_weaponDefs[g_weaponSelect[secondaryWeaponCarried].id].ammo1Max) && strcmp (model, "w_357ammobox.mdl") == 0) {
+               if (strcmp (model, "w_9mmarclip.mdl") == 0 && !isRifle) {
                   allowPickup = false;
                }
-               else if (!m_isVIP && weaponCarried >= 7 && (m_ammo[g_weaponSelect[weaponCarried].id] > 0.3 * g_weaponDefs[g_weaponSelect[weaponCarried].id].ammo1Max) && strncmp (model, "w_", 2) == 0) {
-                  bool isSniperRifle = weaponCarried == WEAPON_AWP || weaponCarried == WEAPON_G3SG1 || weaponCarried == WEAPON_SG550;
-                  bool isSubmachine = weaponCarried == WEAPON_MP5 || weaponCarried == WEAPON_TMP || weaponCarried == WEAPON_P90 || weaponCarried == WEAPON_MAC10 || weaponCarried == WEAPON_UMP45;
-                  bool isShotgun = weaponCarried == WEAPON_M3;
-                  bool isRifle = weaponCarried == WEAPON_FAMAS || weaponCarried == WEAPON_AK47 || weaponCarried == WEAPON_M4A1 || weaponCarried == WEAPON_GALIL || weaponCarried == WEAPON_AUG || weaponCarried == WEAPON_SG552;
-
-                  if (strcmp (model, "w_9mmarclip.mdl") == 0 && !isRifle) {
-                     allowPickup = false;
-                  }
-                  else if (strcmp (model, "w_shotbox.mdl") == 0 && !isShotgun) {
-                     allowPickup = false;
-                  }
-                  else if (strcmp (model, "w_9mmclip.mdl") == 0 && !isSubmachine) {
-                     allowPickup = false;
-                  }
-                  else if (strcmp (model, "w_crossbow_clip.mdl") == 0 && !isSniperRifle) {
-                     allowPickup = false;
-                  }
-                  else if (strcmp (model, "w_chainammo.mdl") == 0 && weaponCarried != WEAPON_M249) {
-                     allowPickup = false;
-                  }
-               }
-               else if (m_isVIP || !rateGroundWeapon (ent)) {
+               else if (strcmp (model, "w_shotbox.mdl") == 0 && !isShotgun) {
                   allowPickup = false;
                }
-               else if (strcmp (model, "medkit.mdl") == 0 && pev->health >= 100.0f) {
+               else if (strcmp (model, "w_9mmclip.mdl") == 0 && !isSubmachine) {
                   allowPickup = false;
                }
-               else if ((strcmp (model, "kevlar.mdl") == 0 || strcmp (model, "battery.mdl") == 0) && pev->armorvalue >= 100.0f) {
+               else if (strcmp (model, "w_crossbow_clip.mdl") == 0 && !isSniperRifle) {
                   allowPickup = false;
                }
-               else if (strcmp (model, "flashbang.mdl") == 0 && (pev->weapons & (1 << WEAPON_FLASHBANG))) {
-                  allowPickup = false;
-               }
-               else if (strcmp (model, "hegrenade.mdl") == 0 && (pev->weapons & (1 << WEAPON_EXPLOSIVE))) {
-                  allowPickup = false;
-               }
-               else if (strcmp (model, "smokegrenade.mdl") == 0 && (pev->weapons & (1 << WEAPON_SMOKE))) {
+               else if (strcmp (model, "w_chainammo.mdl") == 0 && weaponCarried != WEAPON_M249) {
                   allowPickup = false;
                }
             }
-            else if (pickupType == PICKUP_SHIELD) // found a shield on ground?
-            {
-               if ((pev->weapons & (1 << WEAPON_ELITE)) || hasShield () || m_isVIP || (hasPrimaryWeapon () && !rateGroundWeapon (ent))) {
-                  allowPickup = false;
+            else if (m_isVIP || !rateGroundWeapon (ent)) {
+               allowPickup = false;
+            }
+            else if (strcmp (model, "medkit.mdl") == 0 && pev->health >= 100.0f) {
+               allowPickup = false;
+            }
+            else if ((strcmp (model, "kevlar.mdl") == 0 || strcmp (model, "battery.mdl") == 0) && pev->armorvalue >= 100.0f) {
+               allowPickup = false;
+            }
+            else if (strcmp (model, "flashbang.mdl") == 0 && (pev->weapons & (1 << WEAPON_FLASHBANG))) {
+               allowPickup = false;
+            }
+            else if (strcmp (model, "hegrenade.mdl") == 0 && (pev->weapons & (1 << WEAPON_EXPLOSIVE))) {
+               allowPickup = false;
+            }
+            else if (strcmp (model, "smokegrenade.mdl") == 0 && (pev->weapons & (1 << WEAPON_SMOKE))) {
+               allowPickup = false;
+            }
+         }
+         else if (pickupType == PICKUP_SHIELD) // found a shield on ground?
+         {
+            if ((pev->weapons & (1 << WEAPON_ELITE)) || hasShield () || m_isVIP || (hasPrimaryWeapon () && !rateGroundWeapon (ent))) {
+               allowPickup = false;
+            }
+         }
+         else if (m_team == TEAM_TERRORIST) // terrorist team specific
+         {
+            if (pickupType == PICKUP_DROPPED_C4) {
+               allowPickup = true;
+               m_destOrigin = origin; // ensure we reached dropped bomb
+
+               pushChatterMessage (Chatter_FoundC4); // play info about that
+               clearSearchNodes ();
+            }
+            else if (pickupType == PICKUP_HOSTAGE) {
+               m_itemIgnore = ent;
+               allowPickup = false;
+
+               if (!m_defendHostage && m_difficulty > 2 && rng.getInt (0, 100) < 30 && m_timeCamping + 15.0f < engine.timebase ()) {
+                  int index = getDefendPoint (origin);
+
+                  startTask (TASK_CAMP, TASKPRI_CAMP, INVALID_WAYPOINT_INDEX, engine.timebase () + rng.getFloat (30.0f, 60.0f), true); // push camp task on to stack
+                  startTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, engine.timebase () + rng.getFloat (3.0f, 6.0f), true); // push move command
+
+                  if (waypoints[index].vis.crouch <= waypoints[index].vis.stand) {
+                     m_campButtons |= IN_DUCK;
+                  }
+                  else {
+                     m_campButtons &= ~IN_DUCK;
+                  }
+                  m_defendHostage = true;
+
+                  pushChatterMessage (Chatter_GoingToGuardHostages); // play info about that
+                  return;
                }
             }
-            else if (m_team == TEAM_TERRORIST) // terrorist team specific
-            {
-               if (pickupType == PICKUP_DROPPED_C4) {
-                  allowPickup = true;
-                  m_destOrigin = entPos; // ensure we reached dropped bomb
+            else if (pickupType == PICKUP_PLANTED_C4) {
+               allowPickup = false;
 
-                  pushChatterMessage (Chatter_FoundC4); // play info about that
-                  clearSearchNodes ();
-               }
-               else if (pickupType == PICKUP_HOSTAGE) {
-                  m_itemIgnore = ent;
-                  allowPickup = false;
+               if (!m_defendedBomb) {
+                  m_defendedBomb = true;
 
-                  if (!m_defendHostage && m_difficulty > 2 && rng.getInt (0, 100) < 30 && m_timeCamping + 15.0f < engine.timebase ()) {
-                     int index = getDefendPoint (entPos);
+                  int index = getDefendPoint (origin);
+                  Path &path = waypoints[index];
 
-                     startTask (TASK_CAMP, TASKPRI_CAMP, INVALID_WAYPOINT_INDEX, engine.timebase () + rng.getFloat (30.0f, 60.0f), true); // push camp task on to stack
-                     startTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, engine.timebase () + rng.getFloat (3.0f, 6.0f), true); // push move command
+                  float bombTimer = mp_c4timer.flt ();
+                  float timeMidBlowup = g_timeBombPlanted + (bombTimer * 0.5f + bombTimer * 0.25f) - waypoints.calculateTravelTime (pev->maxspeed, pev->origin, path.origin);
 
-                     if (waypoints[index].vis.crouch <= waypoints[index].vis.stand) {
-                        m_campButtons |= IN_DUCK;
-                     }
-                     else {
-                        m_campButtons &= ~IN_DUCK;
-                     }
-                     m_defendHostage = true;
-
-                     pushChatterMessage (Chatter_GoingToGuardHostages); // play info about that
-                     return;
-                  }
-               }
-               else if (pickupType == PICKUP_PLANTED_C4) {
-                  allowPickup = false;
-
-                  if (!m_defendedBomb) {
-                     m_defendedBomb = true;
-
-                     int index = getDefendPoint (entPos);
-                     Path &path = waypoints[index];
-
-                     float bombTimer = mp_c4timer.flt ();
-                     float timeMidBlowup = g_timeBombPlanted + (bombTimer * 0.5f + bombTimer * 0.25f) - waypoints.calculateTravelTime (pev->maxspeed, pev->origin, path.origin);
-
-                     if (timeMidBlowup > engine.timebase ()) {
-                        clearTask (TASK_MOVETOPOSITION); // remove any move tasks
-
-                        startTask (TASK_CAMP, TASKPRI_CAMP, INVALID_WAYPOINT_INDEX, timeMidBlowup, true); // push camp task on to stack
-                        startTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, timeMidBlowup, true); // push  move command
-
-                        if (path.vis.crouch <= path.vis.stand) {
-                           m_campButtons |= IN_DUCK;
-                        }
-                        else {
-                           m_campButtons &= ~IN_DUCK;
-                        }
-                        if (rng.getInt (0, 100) < 90) {
-                           pushChatterMessage (Chatter_DefendingBombSite);
-                        }
-                     }
-                     else {
-                        pushRadioMessage (Radio_ShesGonnaBlow); // issue an additional radio message
-                     }
-                  }
-               }
-            }
-            else if (m_team == TEAM_COUNTER) {
-               if (pickupType == PICKUP_HOSTAGE) {
-                  if (engine.isNullEntity (ent) || ent->v.health <= 0) {
-                     allowPickup = false; // never pickup dead hostage
-                  }
-                  else
-                     for (int i = 0; i < engine.maxClients (); i++) {
-                        if ((bot = bots.getBot (i)) != nullptr && bot->m_notKilled) {
-                           for (auto hostage : bot->m_hostages) {
-                              if (hostage == ent) {
-                                 allowPickup = false;
-                                 break;
-                              }
-                           }
-                        }
-                     }
-               }
-               else if (pickupType == PICKUP_PLANTED_C4) {
-                  if (isPlayer (m_enemy)) {
-                     allowPickup = false;
-                     return;
-                  }
-
-                  if (isOutOfBombTimer ()) {
-                     allowPickup = false;
-                     return;
-                  }
-
-                  if (rng.getInt (0, 100) < 90) {
-                     pushChatterMessage (Chatter_FoundBombPlace);
-                  }
-
-                  allowPickup = !isBombDefusing (entPos) || m_hasProgressBar;
-                  pickupType = PICKUP_PLANTED_C4;
-
-                  if (!m_defendedBomb && !allowPickup) {
-                     m_defendedBomb = true;
-
-                     int index = getDefendPoint (entPos);
-                     Path &path = waypoints[index];
-
-                     float timeToExplode = g_timeBombPlanted + mp_c4timer.flt () - waypoints.calculateTravelTime (pev->maxspeed, pev->origin, path.origin);
-
+                  if (timeMidBlowup > engine.timebase ()) {
                      clearTask (TASK_MOVETOPOSITION); // remove any move tasks
 
-                     startTask (TASK_CAMP, TASKPRI_CAMP, INVALID_WAYPOINT_INDEX, timeToExplode, true); // push camp task on to stack
-                     startTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, timeToExplode, true); // push move command
+                     startTask (TASK_CAMP, TASKPRI_CAMP, INVALID_WAYPOINT_INDEX, timeMidBlowup, true); // push camp task on to stack
+                     startTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, timeMidBlowup, true); // push  move command
 
                      if (path.vis.crouch <= path.vis.stand) {
                         m_campButtons |= IN_DUCK;
@@ -774,47 +711,110 @@ void Bot::processPickups (void) {
                      else {
                         m_campButtons &= ~IN_DUCK;
                      }
-
                      if (rng.getInt (0, 100) < 90) {
                         pushChatterMessage (Chatter_DefendingBombSite);
                      }
                   }
-               }
-               else if (pickupType == PICKUP_DROPPED_C4) {
-                  m_itemIgnore = ent;
-                  allowPickup = false;
-
-                  if (!m_defendedBomb && m_difficulty > 2 && rng.getInt (0, 100) < 75 && pev->health < 80) {
-                     int index = getDefendPoint (entPos);
-
-                     startTask (TASK_CAMP, TASKPRI_CAMP, INVALID_WAYPOINT_INDEX, engine.timebase () + rng.getFloat (30.0f, 70.0f), true); // push camp task on to stack
-                     startTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, engine.timebase () + rng.getFloat (10.0f, 30.0f), true); // push move command
-
-                     if (waypoints[index].vis.crouch <= waypoints[index].vis.stand) {
-                        m_campButtons |= IN_DUCK;
-                     }
-                     else {
-                        m_campButtons &= ~IN_DUCK;
-                     }
-                     m_defendedBomb = true;
-
-                     pushChatterMessage (Chatter_GoingToGuardDoppedBomb); // play info about that
-                     return;
+                  else {
+                     pushRadioMessage (Radio_ShesGonnaBlow); // issue an additional radio message
                   }
                }
             }
-
-            // if condition valid
-            if (allowPickup) {
-               minDistance = distance; // update the minimum distance
-               pickupPos = entPos; // remember location of entity
-               pickupItem = ent; // remember this entity
-
-               m_pickupType = pickupType;
+         }
+         else if (m_team == TEAM_COUNTER) {
+            if (pickupType == PICKUP_HOSTAGE) {
+               if (engine.isNullEntity (ent) || ent->v.health <= 0) {
+                  allowPickup = false; // never pickup dead hostage
+               }
+               else
+                  for (int i = 0; i < engine.maxClients (); i++) {
+                     if ((bot = bots.getBot (i)) != nullptr && bot->m_notKilled) {
+                        for (auto hostage : bot->m_hostages) {
+                           if (hostage == ent) {
+                              allowPickup = false;
+                              break;
+                           }
+                        }
+                     }
+                  }
             }
-            else {
-               pickupType = PICKUP_NONE;
+            else if (pickupType == PICKUP_PLANTED_C4) {
+               if (isPlayer (m_enemy)) {
+                  allowPickup = false;
+                  return;
+               }
+
+               if (isOutOfBombTimer ()) {
+                  allowPickup = false;
+                  return;
+               }
+
+               if (rng.getInt (0, 100) < 90) {
+                  pushChatterMessage (Chatter_FoundBombPlace);
+               }
+
+               allowPickup = !isBombDefusing (origin) || m_hasProgressBar;
+               pickupType = PICKUP_PLANTED_C4;
+
+               if (!m_defendedBomb && !allowPickup) {
+                  m_defendedBomb = true;
+
+                  int index = getDefendPoint (origin);
+                  Path &path = waypoints[index];
+
+                  float timeToExplode = g_timeBombPlanted + mp_c4timer.flt () - waypoints.calculateTravelTime (pev->maxspeed, pev->origin, path.origin);
+
+                  clearTask (TASK_MOVETOPOSITION); // remove any move tasks
+
+                  startTask (TASK_CAMP, TASKPRI_CAMP, INVALID_WAYPOINT_INDEX, timeToExplode, true); // push camp task on to stack
+                  startTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, timeToExplode, true); // push move command
+
+                  if (path.vis.crouch <= path.vis.stand) {
+                     m_campButtons |= IN_DUCK;
+                  }
+                  else {
+                     m_campButtons &= ~IN_DUCK;
+                  }
+
+                  if (rng.getInt (0, 100) < 90) {
+                     pushChatterMessage (Chatter_DefendingBombSite);
+                  }
+               }
             }
+            else if (pickupType == PICKUP_DROPPED_C4) {
+               m_itemIgnore = ent;
+               allowPickup = false;
+
+               if (!m_defendedBomb && m_difficulty > 2 && rng.getInt (0, 100) < 75 && pev->health < 80) {
+                  int index = getDefendPoint (origin);
+
+                  startTask (TASK_CAMP, TASKPRI_CAMP, INVALID_WAYPOINT_INDEX, engine.timebase () + rng.getFloat (30.0f, 70.0f), true); // push camp task on to stack
+                  startTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, index, engine.timebase () + rng.getFloat (10.0f, 30.0f), true); // push move command
+
+                  if (waypoints[index].vis.crouch <= waypoints[index].vis.stand) {
+                     m_campButtons |= IN_DUCK;
+                  }
+                  else {
+                     m_campButtons &= ~IN_DUCK;
+                  }
+                  m_defendedBomb = true;
+
+                  pushChatterMessage (Chatter_GoingToGuardDoppedBomb); // play info about that
+                  return;
+               }
+            }
+         }
+
+         // if condition valid
+         if (allowPickup) {
+            pickupPos = origin; // remember location of entity
+            pickupItem = ent; // remember this entity
+
+            m_pickupType = pickupType;
+            break;
+         }
+         else {
+            pickupType = PICKUP_NONE;
          }
       }
    } // end of the while loop
@@ -2945,10 +2945,23 @@ void Bot::frame (void) {
 void Bot::normal_ (void) {
    m_aimFlags |= AIM_NAVPOINT;
 
+   int debugGoal = yb_debug_goal.integer ();
+
    // user forced a waypoint as a goal?
-   if (yb_debug_goal.integer () != INVALID_WAYPOINT_INDEX && task ()->data != yb_debug_goal.integer ()) {
+   if (debugGoal != INVALID_WAYPOINT_INDEX && task ()->data != debugGoal) {
       clearSearchNodes ();
-      task ()->data = yb_debug_goal.integer ();
+      task ()->data = debugGoal;
+   }
+   
+   // stand still if reached debug goal
+   else if (m_currentWaypointIndex == debugGoal) {
+      pev->button = 0;
+      ignoreCollision ();
+
+      m_moveSpeed = 0.0;
+      m_strafeSpeed = 0.0f;
+
+      return;
    }
 
    // bots rushing with knife, when have no enemy (thanks for idea to nicebot project)

@@ -1284,6 +1284,7 @@ private:
    float m_maintainTime; // time to maintain bot creation
    float m_quotaMaintainTime; // time to maintain bot quota
    float m_grenadeUpdateTime; // time to update active grenades
+   float m_entityUpdateTime; // time to update intresting entities
 
    int m_lastWinner; // the team who won previous round
 
@@ -1291,7 +1292,8 @@ private:
    bool m_economicsGood[MAX_TEAM_COUNT]; // is team able to buy anything
    bool m_deathMsgSent; // for fake ping
 
-   Array<edict_t *> m_activeGrenades; // holds currently active grenades in the map
+   Array <edict_t *> m_activeGrenades; // holds currently active grenades on the map
+   Array <edict_t *> m_intrestingEntities;  // holds currently intresting entities on the map
    edict_t *m_killerEntity; // killer entity for bots
 
 protected:
@@ -1301,17 +1303,20 @@ public:
    BotManager (void);
    ~BotManager (void);
 
-   bool checkTeamEco (int team) {
+   inline bool checkTeamEco (int team) {
       return m_economicsGood[team];
    }
+
    bool isTeamStacked (int team);
 
-   int getLastWinner (void) const {
+   inline int getLastWinner (void) const {
       return m_lastWinner;
    }
-   void setLastWinner (int winner) {
+
+   inline void setLastWinner (int winner) {
       m_lastWinner = winner;
    }
+   void resetTimers (void);
 
    int index (edict_t *ent);
    Bot *getBot (int index);
@@ -1360,10 +1365,22 @@ public:
 
    // grenades
    void updateActiveGrenade (void);
-   Array <edict_t *> &searchActiveGrenades (void);
+   void updateIntrestingEntities (void);
+
+   inline Array <edict_t *> &searchActiveGrenades (void) {
+      return m_activeGrenades;
+   }
+
+   inline Array <edict_t *> &searchIntrestingEntities (void) {
+      return m_intrestingEntities;
+   }
 
    inline bool hasActiveGrenades (void) {
       return !m_activeGrenades.empty ();
+   }
+
+   inline bool hasIntrestingEntities (void) {
+      return !m_intrestingEntities.empty ();
    }
 
 public:
