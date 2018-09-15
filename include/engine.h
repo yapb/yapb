@@ -108,6 +108,7 @@ private:
    HashMap <String, String, LangComprarer> m_language;
 
    MessageBlock m_msgBlock;
+   bool m_precached;
 
 public:
    Engine (void);
@@ -117,6 +118,9 @@ public:
    // public functions
 public:
    // precaches internal stuff
+   void precache (void);
+
+   // initialize levels
    void levelInitialize (void);
 
    // prints data to servers console
@@ -280,6 +284,11 @@ public:
       if (type == m_msgBlock.regMsgs[msgId]) {
          setCurrentMessageId (msgId);
       }
+   }
+
+   // sets the precache to uninitialize
+   inline void setUnprecached (void) {
+      m_precached = false;
    }
 
    // static utility functions

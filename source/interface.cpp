@@ -1017,6 +1017,8 @@ int Spawn (edict_t *ent) {
    // Spawn() function is one of the functions any entity is supposed to have in the game DLL,
    // and any MOD is supposed to implement one for each of its entities.
 
+   engine.precache ();
+
    if (g_gameFlags & GAME_METAMOD) {
       RETURN_META_VALUE (MRES_IGNORED, 0);
    }
@@ -2081,6 +2083,9 @@ void ServerDeactivate (void) {
 
    // destroy global killer entity
    bots.destroyKillerEntity ();
+
+   // set state to unprecached
+   engine.setUnprecached ();
 
    cleanupGarbage ();
 

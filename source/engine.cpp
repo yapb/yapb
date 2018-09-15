@@ -35,6 +35,31 @@ Engine::~Engine (void) {
    }
 }
 
+void Engine::precache (void) {
+   if (m_precached) {
+      return;
+   }
+   m_precached = true;
+
+   m_drawModels[DRAW_SIMPLE] = g_engfuncs.pfnPrecacheModel (ENGINE_STR ("sprites/laserbeam.spr"));
+   m_drawModels[DRAW_ARROW] = g_engfuncs.pfnPrecacheModel (ENGINE_STR ("sprites/arrow1.spr"));
+
+   g_engfuncs.pfnPrecacheSound (ENGINE_STR ("weapons/xbow_hit1.wav")); // waypoint add
+   g_engfuncs.pfnPrecacheSound (ENGINE_STR ("weapons/mine_activate.wav")); // waypoint delete
+   g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_hudoff.wav")); // path add/delete start
+   g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_hudon.wav")); // path add/delete done
+   g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_moveselect.wav")); // path add/delete cancel
+   g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_denyselect.wav")); // path add/delete error
+
+   g_mapFlags = 0; // reset map type as worldspawn is the first entity spawned
+
+   // detect official csbots here, as they causing crash in linkent code when active for some reason
+   if (!(g_gameFlags & GAME_LEGACY) && g_engfuncs.pfnCVarGetPointer ("bot_stop") != nullptr) {
+      g_gameFlags |= GAME_OFFICIAL_CSBOT;
+   }
+   pushRegStackToEngine (true);
+}
+
 void Engine::levelInitialize (void) {
    // this function precaches needed models and initialize class variables
 
@@ -51,29 +76,13 @@ void Engine::levelInitialize (void) {
       auto classname = STRING (ent->v.classname);
 
       if (strcmp (classname, "worldspawn") == 0) {
-         engine.pushRegStackToEngine (true);
          m_startEntity = ent;
 
-         m_drawModels[DRAW_SIMPLE] = g_engfuncs.pfnPrecacheModel (ENGINE_STR ("sprites/laserbeam.spr"));
-         m_drawModels[DRAW_ARROW] = g_engfuncs.pfnPrecacheModel (ENGINE_STR ("sprites/arrow1.spr"));
-
-         g_engfuncs.pfnPrecacheSound (ENGINE_STR ("weapons/xbow_hit1.wav")); // waypoint add
-         g_engfuncs.pfnPrecacheSound (ENGINE_STR ("weapons/mine_activate.wav")); // waypoint delete
-         g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_hudoff.wav")); // path add/delete start
-         g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_hudon.wav")); // path add/delete done
-         g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_moveselect.wav")); // path add/delete cancel
-         g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_denyselect.wav")); // path add/delete error
-
+         // initialize some structures
          initRound ();
-         g_mapFlags = 0; // reset map type as worldspawn is the first entity spawned
-
-         // detect official csbots here, as they causing crash in linkent code when active for some reason
-         if (!(g_gameFlags & GAME_LEGACY) && g_engfuncs.pfnCVarGetPointer ("bot_stop") != nullptr) {
-            g_gameFlags |= GAME_OFFICIAL_CSBOT;
-         }
       }
       else if (strcmp (classname, "player_weaponstrip") == 0) {
-         if ((g_gameFlags & GAME_LEGACY) && (STRING (ent->v.target))[0] == '0') {
+         if ((g_gameFlags & GAME_LEGACY) && (STRING (ent->v.target))[0] == '\0') {
             ent->v.target = ent->v.targetname = g_engfuncs.pfnAllocString ("fake");
          }
          else {
