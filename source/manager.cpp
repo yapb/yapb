@@ -1453,7 +1453,7 @@ void BotManager::updateIntrestingEntities (void) {
 
    // search the map for entities
    for (int i = MAX_ENGINE_PLAYERS - 1; i < g_pGlobals->maxEntities; i++) {
-      auto ent = g_engfuncs.pfnPEntityOfEntIndex (i);
+      auto ent = engine.entityOfIndex (i);
 
       if (engine.isNullEntity (ent)) {
          continue;
