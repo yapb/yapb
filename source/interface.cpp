@@ -1018,87 +1018,6 @@ int Spawn (edict_t *ent) {
    // Spawn() function is one of the functions any entity is supposed to have in the game DLL,
    // and any MOD is supposed to implement one for each of its entities.
 
-   // for faster access
-   const char *entityClassname = STRING (ent->v.classname);
-
-   if (strcmp (entityClassname, "worldspawn") == 0) {
-      engine.precacheStuff (ent);
-      engine.pushRegStackToEngine (true);
-
-      g_engfuncs.pfnPrecacheSound (ENGINE_STR ("weapons/xbow_hit1.wav")); // waypoint add
-      g_engfuncs.pfnPrecacheSound (ENGINE_STR ("weapons/mine_activate.wav")); // waypoint delete
-      g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_hudoff.wav")); // path add/delete start
-      g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_hudon.wav")); // path add/delete done
-      g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_moveselect.wav")); // path add/delete cancel
-      g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_denyselect.wav")); // path add/delete error
-
-      initRound ();
-      g_mapFlags = 0; // reset map type as worldspawn is the first entity spawned
-
-      // detect official csbots here, as they causing crash in linkent code when active for some reason
-      if (!(g_gameFlags & GAME_LEGACY) && g_engfuncs.pfnCVarGetPointer ("bot_stop") != nullptr) {
-         g_gameFlags |= GAME_OFFICIAL_CSBOT;
-      }
-   }
-   else if (strcmp (entityClassname, "player_weaponstrip") == 0) {
-      if ((g_gameFlags & GAME_LEGACY) && (STRING (ent->v.target))[0] == '0') {
-         ent->v.target = ent->v.targetname = g_engfuncs.pfnAllocString ("fake");
-      }
-      else {
-         g_engfuncs.pfnRemoveEntity (ent);
-
-         if (g_gameFlags & GAME_METAMOD) {
-            RETURN_META_VALUE (MRES_SUPERCEDE, 0);
-         }
-         return 0;
-      }
-   }
-   else if (strcmp (entityClassname, "info_player_start") == 0) {
-      g_engfuncs.pfnSetModel (ent, ENGINE_STR ("models/player/urban/urban.mdl"));
-
-      ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
-      ent->v.renderamt = 127; // set its transparency amount
-      ent->v.effects |= EF_NODRAW;
-   }
-   else if (strcmp (entityClassname, "info_player_deathmatch") == 0) {
-      g_engfuncs.pfnSetModel (ent, ENGINE_STR ("models/player/terror/terror.mdl"));
-
-      ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
-      ent->v.renderamt = 127; // set its transparency amount
-      ent->v.effects |= EF_NODRAW;
-   }
-
-   else if (strcmp (entityClassname, "info_vip_start") == 0) {
-      g_engfuncs.pfnSetModel (ent, ENGINE_STR ("models/player/vip/vip.mdl"));
-
-      ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
-      ent->v.renderamt = 127; // set its transparency amount
-      ent->v.effects |= EF_NODRAW;
-   }
-   else if (strcmp (entityClassname, "func_vip_safetyzone") == 0 || strcmp (entityClassname, "info_vip_safetyzone") == 0) {
-      g_mapFlags |= MAP_AS; // assassination map
-   }
-   else if (strcmp (entityClassname, "hostage_entity") == 0) {
-      g_mapFlags |= MAP_CS; // rescue map
-   }
-   else if (strcmp (entityClassname, "func_bomb_target") == 0 || strcmp (entityClassname, "info_bomb_target") == 0) {
-      g_mapFlags |= MAP_DE; // defusion map
-   }
-   else if (strcmp (entityClassname, "func_escapezone") == 0) {
-      g_mapFlags |= MAP_ES;
-   }
-   else if (strncmp (entityClassname, "func_door", 9) == 0) {
-      g_mapFlags |= MAP_HAS_DOORS;
-   }
-
-   // next maps doesn't have map-specific entities, so determine it by name
-   else if (strncmp (engine.getMapName (), "fy_", 3) == 0) {
-      g_mapFlags |= MAP_FY;
-   }
-   else if (strncmp (engine.getMapName (), "ka_", 3) == 0) {
-      g_mapFlags |= MAP_KA;
-   }
-
    if (g_gameFlags & GAME_METAMOD) {
       RETURN_META_VALUE (MRES_IGNORED, 0);
    }
@@ -2121,6 +2040,9 @@ void ServerActivate (edict_t *pentEdictList, int edictCount, int clientMax) {
 
    cleanupGarbage ();
    processBotConfigs (false); // initialize all config files
+
+   // do a level initialization
+   engine.levelInitialize ();
 
    // do level initialization stuff here...
    waypoints.init ();

@@ -117,7 +117,7 @@ public:
    // public functions
 public:
    // precaches internal stuff
-   void precacheStuff (edict_t *startEntity);
+   void levelInitialize (void);
 
    // prints data to servers console
    void print (const char *fmt, ...);

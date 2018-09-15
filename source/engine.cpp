@@ -35,14 +35,97 @@ Engine::~Engine (void) {
    }
 }
 
-void Engine::precacheStuff (edict_t *startEntity) {
+void Engine::levelInitialize (void) {
    // this function precaches needed models and initialize class variables
 
-   m_drawModels[DRAW_SIMPLE] = g_engfuncs.pfnPrecacheModel (ENGINE_STR ("sprites/laserbeam.spr"));
-   m_drawModels[DRAW_ARROW] = g_engfuncs.pfnPrecacheModel (ENGINE_STR ("sprites/arrow1.spr"));
-
    m_localEntity = nullptr;
-   m_startEntity = startEntity;
+   
+   // go thru the all entities on map, and do whatever we're want
+   for (int i = 0; i < g_pGlobals->maxEntities; i++) {
+
+      auto ent = g_engfuncs.pfnPEntityOfEntIndex (i);
+
+      if (isNullEntity (ent)) {
+         continue;
+      }
+      auto classname = STRING (ent->v.classname);
+
+      if (strcmp (classname, "worldspawn") == 0) {
+         engine.pushRegStackToEngine (true);
+         m_startEntity = ent;
+
+         m_drawModels[DRAW_SIMPLE] = g_engfuncs.pfnPrecacheModel (ENGINE_STR ("sprites/laserbeam.spr"));
+         m_drawModels[DRAW_ARROW] = g_engfuncs.pfnPrecacheModel (ENGINE_STR ("sprites/arrow1.spr"));
+
+         g_engfuncs.pfnPrecacheSound (ENGINE_STR ("weapons/xbow_hit1.wav")); // waypoint add
+         g_engfuncs.pfnPrecacheSound (ENGINE_STR ("weapons/mine_activate.wav")); // waypoint delete
+         g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_hudoff.wav")); // path add/delete start
+         g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_hudon.wav")); // path add/delete done
+         g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_moveselect.wav")); // path add/delete cancel
+         g_engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_denyselect.wav")); // path add/delete error
+
+         initRound ();
+         g_mapFlags = 0; // reset map type as worldspawn is the first entity spawned
+
+         // detect official csbots here, as they causing crash in linkent code when active for some reason
+         if (!(g_gameFlags & GAME_LEGACY) && g_engfuncs.pfnCVarGetPointer ("bot_stop") != nullptr) {
+            g_gameFlags |= GAME_OFFICIAL_CSBOT;
+         }
+      }
+      else if (strcmp (classname, "player_weaponstrip") == 0) {
+         if ((g_gameFlags & GAME_LEGACY) && (STRING (ent->v.target))[0] == '0') {
+            ent->v.target = ent->v.targetname = g_engfuncs.pfnAllocString ("fake");
+         }
+         else {
+            g_engfuncs.pfnRemoveEntity (ent);
+         }
+      }
+      else if (strcmp (classname, "info_player_start") == 0) {
+         g_engfuncs.pfnSetModel (ent, ENGINE_STR ("models/player/urban/urban.mdl"));
+
+         ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
+         ent->v.renderamt = 127; // set its transparency amount
+         ent->v.effects |= EF_NODRAW;
+      }
+      else if (strcmp (classname, "info_player_deathmatch") == 0) {
+         g_engfuncs.pfnSetModel (ent, ENGINE_STR ("models/player/terror/terror.mdl"));
+
+         ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
+         ent->v.renderamt = 127; // set its transparency amount
+         ent->v.effects |= EF_NODRAW;
+      }
+
+      else if (strcmp (classname, "info_vip_start") == 0) {
+         g_engfuncs.pfnSetModel (ent, ENGINE_STR ("models/player/vip/vip.mdl"));
+
+         ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
+         ent->v.renderamt = 127; // set its transparency amount
+         ent->v.effects |= EF_NODRAW;
+      }
+      else if (strcmp (classname, "func_vip_safetyzone") == 0 || strcmp (classname, "info_vip_safetyzone") == 0) {
+         g_mapFlags |= MAP_AS; // assassination map
+      }
+      else if (strcmp (classname, "hostage_entity") == 0) {
+         g_mapFlags |= MAP_CS; // rescue map
+      }
+      else if (strcmp (classname, "func_bomb_target") == 0 || strcmp (classname, "info_bomb_target") == 0) {
+         g_mapFlags |= MAP_DE; // defusion map
+      }
+      else if (strcmp (classname, "func_escapezone") == 0) {
+         g_mapFlags |= MAP_ES;
+      }
+      else if (strncmp (classname, "func_door", 9) == 0) {
+         g_mapFlags |= MAP_HAS_DOORS;
+      }
+   }
+
+   // next maps doesn't have map-specific entities, so determine it by name
+   if (strncmp (engine.getMapName (), "fy_", 3) == 0) {
+      g_mapFlags |= MAP_FY;
+   }
+   else if (strncmp (engine.getMapName (), "ka_", 3) == 0) {
+      g_mapFlags |= MAP_KA;
+   }
 }
 
 void Engine::print (const char *fmt, ...) {
