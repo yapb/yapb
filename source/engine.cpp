@@ -321,7 +321,7 @@ float Engine::getWaveLen (const char *fileName) {
       logEntry (true, LL_ERROR, "Wave File %s - has zero length!", filePath);
       return 0.0f;
    }
-   return static_cast<float> (waveHdr.dataChunkLength) / static_cast<float> (waveHdr.bytesPerSecond);
+   return static_cast <float> (waveHdr.dataChunkLength) / static_cast <float> (waveHdr.bytesPerSecond);
 }
 
 bool Engine::isDedicated (void) {
@@ -390,10 +390,10 @@ void Engine::registerCmd (const char *command, void func (void)) {
    // pointed to by "function" in order to handle it.
 
    // check for hl pre 1.1.0.4, as it's doesn't have pfnAddServerCommand
-   if (!cr::checkptr (reinterpret_cast<const void *> (g_engfuncs.pfnAddServerCommand))) {
+   if (!cr::checkptr (reinterpret_cast <const void *> (g_engfuncs.pfnAddServerCommand))) {
       logEntry (true, LL_FATAL, "YaPB's minimum HL engine version is 1.1.0.4 and minimum Counter-Strike is Beta 6.6. Please update your engine version.");
    }
-   g_engfuncs.pfnAddServerCommand (const_cast<char *> (command), func);
+   g_engfuncs.pfnAddServerCommand (const_cast <char *> (command), func);
 }
 
 void Engine::playSound (edict_t *ent, const char *sound) {
@@ -557,8 +557,8 @@ void Engine::pushVarToRegStack (const char *variable, const char *value, VarType
    VarPair pair;
    memset (&pair, 0, sizeof (VarPair));
 
-   pair.reg.name = const_cast<char *> (variable);
-   pair.reg.string = const_cast<char *> (value);
+   pair.reg.name = const_cast <char *> (variable);
+   pair.reg.string = const_cast <char *> (value);
    pair.regMissing = regMissing;
    pair.regVal = regVal;
 
@@ -601,7 +601,7 @@ void Engine::pushRegStackToEngine (bool gameVars) {
 
          if (var.regMissing && self.m_eptr == nullptr) {
             if (reg.string == nullptr && var.regVal != nullptr) {
-               reg.string = const_cast<char *> (var.regVal);
+               reg.string = const_cast <char *> (var.regVal);
                reg.flags |= FCVAR_SERVER;
             }
             g_engfuncs.pfnCVarRegister (&var.reg);
@@ -619,14 +619,14 @@ char *Engine::translate (const char *input) {
    // this function translate input string into needed language
 
    if (isDedicated ()) {
-      return const_cast<char *> (input);
+      return const_cast <char *> (input);
    }
    static String result;
 
    if (m_language.get (input, result)) {
-      return const_cast<char *> (result.chars ());
+      return const_cast <char *> (result.chars ());
    }
-   return const_cast<char *> (input); // nothing found
+   return const_cast <char *> (input); // nothing found
 }
 
 void Engine::processMessages (void *ptr) {
@@ -649,9 +649,9 @@ void Engine::processMessages (void *ptr) {
    // some widely used stuff
    Bot *bot = bots.getBot (m_msgBlock.bot);
 
-   char *strVal = reinterpret_cast<char *> (ptr);
-   int intVal = *reinterpret_cast<int *> (ptr);
-   uint8 byteVal = *reinterpret_cast<uint8 *> (ptr);
+   char *strVal = reinterpret_cast <char *> (ptr);
+   int intVal = *reinterpret_cast <int *> (ptr);
+   uint8 byteVal = *reinterpret_cast <uint8 *> (ptr);
 
    // now starts of network message execution
    switch (m_msgBlock.msg) {

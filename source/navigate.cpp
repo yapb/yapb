@@ -1084,7 +1084,7 @@ bool Bot::processNavigation (void) {
 
             edict_t *pent = nullptr;
 
-            if (m_tryOpenDoor++ > 2 && findNearestPlayer (reinterpret_cast<void **> (&pent), ent (), 256.0f, false, false, true, true, false)) {
+            if (m_tryOpenDoor++ > 2 && findNearestPlayer (reinterpret_cast <void **> (&pent), ent (), 256.0f, false, false, true, true, false)) {
                m_seeEnemyTime = engine.timebase () - 0.5f;
 
                m_states |= STATE_SEEING_ENEMY;
@@ -1149,8 +1149,8 @@ bool Bot::processNavigation (void) {
 
             if (m_team == TEAM_TERRORIST) {
                waypointValue = (g_experienceData + (startIndex * waypoints.length ()) + goalIndex)->team0Value;
-               waypointValue += static_cast<int16> (pev->health * 0.5f);
-               waypointValue += static_cast<int16> (m_goalValue * 0.5f);
+               waypointValue += static_cast <int16> (pev->health * 0.5f);
+               waypointValue += static_cast <int16> (m_goalValue * 0.5f);
 
                if (waypointValue < -MAX_GOAL_VALUE) {
                   waypointValue = -MAX_GOAL_VALUE;
@@ -1162,8 +1162,8 @@ bool Bot::processNavigation (void) {
             }
             else {
                waypointValue = (g_experienceData + (startIndex * waypoints.length ()) + goalIndex)->team1Value;
-               waypointValue += static_cast<int16> (pev->health * 0.5f);
-               waypointValue += static_cast<int16> (m_goalValue * 0.5f);
+               waypointValue += static_cast <int16> (pev->health * 0.5f);
+               waypointValue += static_cast <int16> (m_goalValue * 0.5f);
 
                if (waypointValue < -MAX_GOAL_VALUE) {
                   waypointValue = -MAX_GOAL_VALUE;
@@ -1244,7 +1244,7 @@ float gfunctionKillsDistT (int currentIndex, int parentIndex) {
    if (parentIndex == INVALID_WAYPOINT_INDEX) {
       return 0.0f;
    }
-   float cost = static_cast<float> ((g_experienceData + (currentIndex * waypoints.length ()) + currentIndex)->team0Damage + g_highestDamageT);
+   float cost = static_cast <float> ((g_experienceData + (currentIndex * waypoints.length ()) + currentIndex)->team0Damage + g_highestDamageT);
 
    Path &current = waypoints[currentIndex];
 
@@ -1268,7 +1268,7 @@ float gfunctionKillsDistCT (int currentIndex, int parentIndex) {
    if (parentIndex == INVALID_WAYPOINT_INDEX) {
       return 0.0f;
    }
-   float cost = static_cast<float> ((g_experienceData + (currentIndex * waypoints.length ()) + currentIndex)->team1Damage + g_highestDamageCT);
+   float cost = static_cast <float> ((g_experienceData + (currentIndex * waypoints.length ()) + currentIndex)->team1Damage + g_highestDamageCT);
 
    Path &current = waypoints[currentIndex];
 
@@ -1276,7 +1276,7 @@ float gfunctionKillsDistCT (int currentIndex, int parentIndex) {
       int neighbour = current.index[i];
 
       if (neighbour != INVALID_WAYPOINT_INDEX) {
-         cost += static_cast<int> ((g_experienceData + (neighbour * waypoints.length ()) + neighbour)->team1Damage);
+         cost += static_cast <int> ((g_experienceData + (neighbour * waypoints.length ()) + neighbour)->team1Damage);
       }
    }
 
@@ -1376,7 +1376,7 @@ float gfunctionPathDist (int currentIndex, int parentIndex) {
          if (current.flags & (FLAG_CROUCH | FLAG_LADDER)) {
             return parent.distances[i] * 1.5f;
          }
-         return static_cast<float> (parent.distances[i]);
+         return static_cast <float> (parent.distances[i]);
       }
    }
    return 65355.0f;
@@ -1785,7 +1785,7 @@ void Bot::getValidPoint (void) {
          if (value > MAX_DAMAGE_VALUE) {
             value = MAX_DAMAGE_VALUE;
          }
-         (g_experienceData + (m_currentWaypointIndex * waypoints.length ()) + m_currentWaypointIndex)->team0Damage = static_cast<uint16> (value);
+         (g_experienceData + (m_currentWaypointIndex * waypoints.length ()) + m_currentWaypointIndex)->team0Damage = static_cast <uint16> (value);
 
          // affect nearby connected with victim waypoints
          for (int i = 0; i < MAX_PATH_INDEX; i++) {
@@ -1796,7 +1796,7 @@ void Bot::getValidPoint (void) {
                if (value > MAX_DAMAGE_VALUE) {
                   value = MAX_DAMAGE_VALUE;
                }
-               (g_experienceData + (m_currentPath->index[i] * waypoints.length ()) + m_currentPath->index[i])->team0Damage = static_cast<uint16> (value);
+               (g_experienceData + (m_currentPath->index[i] * waypoints.length ()) + m_currentPath->index[i])->team0Damage = static_cast <uint16> (value);
             }
          }
       }
@@ -1807,7 +1807,7 @@ void Bot::getValidPoint (void) {
          if (value > MAX_DAMAGE_VALUE) {
             value = MAX_DAMAGE_VALUE;
          }
-         (g_experienceData + (m_currentWaypointIndex * waypoints.length ()) + m_currentWaypointIndex)->team1Damage = static_cast<uint16> (value);
+         (g_experienceData + (m_currentWaypointIndex * waypoints.length ()) + m_currentWaypointIndex)->team1Damage = static_cast <uint16> (value);
 
          // affect nearby connected with victim waypoints
          for (int i = 0; i < MAX_PATH_INDEX; i++) {
@@ -1818,7 +1818,7 @@ void Bot::getValidPoint (void) {
                if (value > MAX_DAMAGE_VALUE) {
                   value = MAX_DAMAGE_VALUE;
                }
-               (g_experienceData + (m_currentPath->index[i] * waypoints.length ()) + m_currentPath->index[i])->team1Damage = static_cast<uint16> (value);
+               (g_experienceData + (m_currentPath->index[i] * waypoints.length ()) + m_currentPath->index[i])->team1Damage = static_cast <uint16> (value);
             }
          }
       }
@@ -1915,7 +1915,7 @@ int Bot::getBombPoint (void) {
    while (waypoints.isVisited (goal)) {
       goal = goals.random ();
 
-      if (count++ >= static_cast<int> (goals.length ())) {
+      if (count++ >= static_cast <int> (goals.length ())) {
          break;
       }
    }
@@ -2037,7 +2037,7 @@ int Bot::getDefendPoint (const Vector &origin) {
          break;
       }
    }
-   return waypointIndex[rng.getInt (0, static_cast<int> ((index - 1) * 0.5f))];
+   return waypointIndex[rng.getInt (0, static_cast <int> ((index - 1) * 0.5f))];
 }
 
 int Bot::getCoverPoint (float maxDistance) {
@@ -2065,7 +2065,7 @@ int Bot::getCoverPoint (float maxDistance) {
 
    for (int i = 0; i < MAX_PATH_INDEX; i++) {
       waypointIndex[i] = INVALID_WAYPOINT_INDEX;
-      minDistance[i] = static_cast<int> (maxDistance);
+      minDistance[i] = static_cast <int> (maxDistance);
    }
 
    if (enemyIndex == INVALID_WAYPOINT_INDEX) {
@@ -2258,12 +2258,12 @@ bool Bot::advanceMovement (void) {
                }
 
                if (m_baseAgressionLevel < kills && hasPrimaryWeapon ()) {
-                  startTask (TASK_CAMP, TASKPRI_CAMP, INVALID_WAYPOINT_INDEX, engine.timebase () + rng.getFloat (m_difficulty * 0.5f, static_cast<float> (m_difficulty)) * 5.0f, true);
+                  startTask (TASK_CAMP, TASKPRI_CAMP, INVALID_WAYPOINT_INDEX, engine.timebase () + rng.getFloat (m_difficulty * 0.5f, static_cast <float> (m_difficulty)) * 5.0f, true);
                   startTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, getDefendPoint (waypoints[nextIndex].origin), engine.timebase () + rng.getFloat (3.0f, 10.0f), true);
                }
             }
             else if (g_botsCanPause && !isOnLadder () && !isInWater () && !m_currentTravelFlags && isOnFloor ()) {
-               if (static_cast<float> (kills) == m_baseAgressionLevel) {
+               if (static_cast <float> (kills) == m_baseAgressionLevel) {
                   m_campButtons |= IN_DUCK;
                }
                else if (rng.getInt (1, 100) > m_difficulty * 25) {

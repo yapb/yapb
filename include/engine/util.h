@@ -22,7 +22,7 @@ extern enginefuncs_t g_engfuncs;
 // Use this instead of ALLOC_STRING on constant strings
 #define STRING(offset) (const char *)(g_pGlobals->pStringBase + (int)offset)
 #define MAKE_STRING(str) ((int)(size_t)str - (size_t)STRING (0))
-#define ENGINE_STR(str) (const_cast<char *> (STRING (g_engfuncs.pfnAllocString (str))))
+#define ENGINE_STR(str) (const_cast <char *> (STRING (g_engfuncs.pfnAllocString (str))))
 
 // Dot products for view cone checking
 #define VIEW_FIELD_FULL (float)-1.0 // +-180 degrees

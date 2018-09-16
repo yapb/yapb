@@ -189,11 +189,11 @@ constexpr float deg2rad (const float degree) {
 }
 
 constexpr float angleMod (const float angle) {
-   return 360.0f / 65536.0f * (static_cast<int> (angle * (65536.0f / 360.0f)) & 65535);
+   return 360.0f / 65536.0f * (static_cast <int> (angle * (65536.0f / 360.0f)) & 65535);
 }
 
 constexpr float angleNorm (const float angle) {
-   return 360.0f / 65536.0f * (static_cast<int> ((angle + 180.0f) * (65536.0f / 360.0f)) & 65535) - 180.0f;
+   return 360.0f / 65536.0f * (static_cast <int> ((angle + 180.0f) * (65536.0f / 360.0f)) & 65535) - 180.0f;
 }
 
 constexpr float angleDiff (const float dest, const float src) {
@@ -272,7 +272,7 @@ private:
       if (x >= prime) {
          return x;
       }
-      unsigned int residue = (static_cast<unsigned long long> (x) * x) % prime;
+      unsigned int residue = (static_cast <unsigned long long> (x) * x) % prime;
       return (x <= prime / 2) ? residue : prime - residue;
    }
 
@@ -282,20 +282,20 @@ private:
 
 public:
    RandomSequence (void) {
-      unsigned int seedBase = static_cast<unsigned int> (time (nullptr));
+      unsigned int seedBase = static_cast <unsigned int> (time (nullptr));
       unsigned int seedOffset = seedBase + 1;
 
       m_index = premute (premute (seedBase) + 0x682f0161);
       m_intermediateOffset = premute (premute (seedOffset) + 0x46790905);
-      m_divider = (static_cast<unsigned long long> (1)) << 32;
+      m_divider = (static_cast <unsigned long long> (1)) << 32;
    }
 
    inline int getInt (int low, int high) {
-      return static_cast<int> (random () * (static_cast<double> (high) - static_cast<double> (low) + 1.0) / m_divider + static_cast<double> (low));
+      return static_cast <int> (random () * (static_cast <double> (high) - static_cast <double> (low) + 1.0) / m_divider + static_cast <double> (low));
    }
 
    inline float getFloat (float low, float high) {
-      return static_cast<float> (random () * (static_cast<double> (high) - static_cast<double> (low)) / (m_divider - 1) + static_cast<double> (low));
+      return static_cast <float> (random () * (static_cast <double> (high) - static_cast <double> (low)) / (m_divider - 1) + static_cast <double> (low));
    }
 };
 
@@ -421,7 +421,7 @@ public:
    }
 
    inline Vector normalize (void) const {
-      float len = length () + static_cast<float> (FLEPSILON);
+      float len = length () + static_cast <float> (FLEPSILON);
 
       if (fzero (len)) {
          return Vector (0.0f, 0.0f, 1.0f);
@@ -431,7 +431,7 @@ public:
    }
 
    inline Vector normalize2D (void) const {
-      float len = length2D () + static_cast<float> (FLEPSILON);
+      float len = length2D () + static_cast <float> (FLEPSILON);
 
       if (fzero (len)) {
          return Vector (0.0f, 1.0f, 0.0f);
@@ -550,7 +550,7 @@ public:
       }
       return (R)
 #ifdef PLATFORM_WIN32
-         GetProcAddress (static_cast<HMODULE> (m_ptr), function);
+         GetProcAddress (static_cast <HMODULE> (m_ptr), function);
 #else
          dlsym (m_ptr, function);
 #endif
@@ -1036,6 +1036,7 @@ public:
 
       resize (length);
       memcpy (m_data, str, length);
+      terminate ();
 
       return *this;
    }
@@ -1052,6 +1053,9 @@ public:
    }
 
    String &append (const char *str) {
+      if (empty ()) {
+         return assign (str);
+      }
       resize (length () + strlen (str));
       strcat (m_data, str);
 
@@ -1081,7 +1085,10 @@ public:
 
    void clear (void) {
       Base::clear ();
-      m_data[0] = '\0';
+
+      if (m_data) {
+         m_data[0] = '\0';
+      }
    }
 
    void erase (size_t index, size_t count = 1) {
@@ -1103,7 +1110,7 @@ public:
    }
 
    inline void terminate (void) {
-      m_data[length ()] = '\0';
+      m_data[m_length] = '\0';
    }
 
    inline char &at (size_t index) {
@@ -1127,7 +1134,7 @@ public:
       char buffer[BufferSize];
 
       va_start (ap, fmt);
-      vsnprintf (buffer, sizeof (buffer) - 1, fmt, ap);
+      vsnprintf (buffer, bufsize (buffer), fmt, ap);
       va_end (ap);
 
       assign (buffer);
@@ -1138,7 +1145,7 @@ public:
       char buffer[BufferSize];
 
       va_start (ap, fmt);
-      vsnprintf (buffer, sizeof (buffer) - 1, fmt, ap);
+      vsnprintf (buffer, bufsize (buffer), fmt, ap);
       va_end (ap);
 
       append (buffer);
@@ -1307,6 +1314,9 @@ public:
    }
 
    String &trimLeft (const char *chars = "\r\n\t ") {
+      if (empty ()) {
+         return *this;
+      }
       char *str = begin ();
 
       while (isTrimChar (*str, chars))
@@ -1360,7 +1370,7 @@ public:
    }
 };
 
-template <typename K> struct MapKeyHash {
+template <typename K> struct StringHash {
    unsigned long operator () (const K &key) const {
       char *str = const_cast <char *> (key.chars ());
       size_t hash = key.length ();
@@ -1372,7 +1382,17 @@ template <typename K> struct MapKeyHash {
    }
 };
 
-template <typename K, typename V, typename H = MapKeyHash <K>, size_t I = 256> class HashMap {
+template <typename K> struct IntHash {
+   unsigned long operator () (K key) const {
+      key = ((key >> 16) ^ key) * 0x119de1f3;
+      key = ((key >> 16) ^ key) * 0x119de1f3;
+      key = (key >> 16) ^ key;
+
+      return key;
+   }
+};
+
+template <typename K, typename V, typename H = StringHash <K>, size_t I = 256> class HashMap {
 public:
    using Bucket = Pair <K, V>;
 
@@ -1436,7 +1456,8 @@ public:
             return entry.second;
          }
       }
-      assert (nullptr);
+      static V ret;
+      return ret;
    }
 
 private:
@@ -1510,7 +1531,7 @@ public:
    }
 
    char putch (char ch) {
-      return static_cast<char> (fputc (ch, m_handle));
+      return static_cast <char> (fputc (ch, m_handle));
    }
 
    bool puts (const String &buffer) {
@@ -1625,7 +1646,7 @@ public:
    bool open (const String &filename) {
       m_size = 0;
       m_pos = 0;
-      m_buffer = MemoryLoader::ref ().load (filename.chars (), reinterpret_cast<int *> (&m_size));
+      m_buffer = MemoryLoader::ref ().load (filename.chars (), reinterpret_cast <int *> (&m_size));
 
       if (!m_buffer) {
          return false;

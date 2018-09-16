@@ -267,7 +267,7 @@ public:
             if (read == EOF) {
                break;
             }
-            bit = static_cast<uint8> (read);
+            bit = static_cast <uint8> (read);
             flags = bit | 0xff00;
          }
 
@@ -277,7 +277,7 @@ public:
             if (read == EOF) {
                break;
             }
-            bit = static_cast<uint8> (read);
+            bit = static_cast <uint8> (read);
             buffer[bp++] = bit;
 
             if (bp > bufferSize) {

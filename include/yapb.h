@@ -655,7 +655,7 @@ struct ChatCollection {
    float chatDelay;
    float timeNextChat;
    int entityIndex;
-   char sayText[512];
+   String sayText;
    StringArray lastUsedSentences;
 };
 
@@ -744,7 +744,7 @@ private:
    Vector m_prevOrigin; // origin some frames before
 
    int m_messageQueue[32]; // stack for messages
-   char m_tempStrings[160]; // space for strings (say text...)
+   String m_tempStrings; // space for strings (say text...)
    int m_radioSelect; // radio entry
    float m_headedTime;
 

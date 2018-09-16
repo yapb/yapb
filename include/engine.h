@@ -223,12 +223,12 @@ public:
 
    // gets edict pointer out of entity index
    inline edict_t *entityOfIndex (const int index) {
-      return static_cast<edict_t *> (m_startEntity + index);
+      return static_cast <edict_t *> (m_startEntity + index);
    };
 
    // gets edict index out of it's pointer
    inline int indexOfEntity (const edict_t *ent) {
-      return static_cast<int> (ent - m_startEntity);
+      return static_cast <int> (ent - m_startEntity);
    };
 
    // verify entity isn't null
@@ -311,7 +311,7 @@ public:
    }
 
    inline int integer (void) const {
-      return static_cast<int> (m_eptr->value);
+      return static_cast <int> (m_eptr->value);
    }
 
    inline float flt (void) const {
@@ -327,11 +327,11 @@ public:
    }
 
    inline void set (int val) const {
-      set (static_cast<float> (val));
+      set (static_cast <float> (val));
    }
 
    inline void set (const char *val) const {
-      g_engfuncs.pfnCvar_DirectSet (m_eptr, const_cast<char *> (val));
+      g_engfuncs.pfnCvar_DirectSet (m_eptr, const_cast <char *> (val));
    }
 };
 

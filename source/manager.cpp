@@ -87,9 +87,9 @@ void BotManager::touchKillerEntity (Bot *bot) {
    m_killerEntity->v.dmg_inflictor = bot->ent ();
 
    KeyValueData kv;
-   kv.szClassName = const_cast<char *> (g_weaponDefs[bot->m_currentWeapon].className);
+   kv.szClassName = const_cast <char *> (g_weaponDefs[bot->m_currentWeapon].className);
    kv.szKeyName = "damagetype";
-   kv.szValue = const_cast<char *> (format ("%d", (1 << 4)));
+   kv.szValue = const_cast <char *> (format ("%d", (1 << 4)));
    kv.fHandled = FALSE;
 
    MDLL_KeyValue (m_killerEntity, &kv);
@@ -110,11 +110,11 @@ void BotManager::execGameEntity (entvars_t *vars) {
 }
 
 BotCreationResult BotManager::create (const String &name, int difficulty, int personality, int team, int member) {
-   // this function completely prepares bot entity (edict) for creation, creates team, difficulty, sets name etc, and
+   // this function completely prepares bot entity (edict) for creation, creates team, difficulty, sets named etc, and
    // then sends result to bot constructor
 
    edict_t *bot = nullptr;
-   char outputName[33];
+   String resultName;
 
    // do not allow create bots when there is no waypoints
    if (!waypoints.length ()) {
@@ -173,26 +173,25 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
             }
             nameFound = true;
 
-            strncpy (outputName, botName->name.chars (), cr::bufsize (outputName));
+            resultName = botName->name;
             steamId = botName->steamId;
          }
       }
       else
-         sprintf (outputName, "bot%i", rng.getInt (0, 100)); // just pick ugly random name
+         resultName.format ("yapb_%d.%d", rng.getInt (0, 10), rng.getInt (0, 10)); // just pick ugly random name
    }
-   else
-      strncpy (outputName, name.chars (), 21);
+   else {
+      resultName = name;
+   }
 
    if (!isEmptyStr (yb_name_prefix.str ())) {
-      char prefixedName[33]; // temp buffer for storing modified name
-      snprintf (prefixedName, cr::bufsize (prefixedName), "%s %s", yb_name_prefix.str (), outputName);
+      String prefixed; // temp buffer for storing modified name
+      prefixed.format ("%s %s", yb_name_prefix.str (), resultName.chars ());
 
       // buffer has been modified, copy to real name
-      if (!isEmptyStr (prefixedName)) {
-         strncpy (outputName, prefixedName, cr::bufsize (outputName));
-      }
+      resultName = prefixed;
    }
-   bot = g_engfuncs.pfnCreateFakeClient (outputName);
+   bot = g_engfuncs.pfnCreateFakeClient (resultName.chars ());
 
    if (engine.isNullEntity (bot)) {
       engine.centerPrint ("Maximum players reached (%d/%d). Unable to create Bot.", engine.maxClients (), engine.maxClients ());
@@ -307,18 +306,18 @@ void BotManager::frame (void) {
 void BotManager::addbot (const String &name, int difficulty, int personality, int team, int member, bool manual) {
    // this function putting bot creation process to queue to prevent engine crashes
 
-   CreateQueue bot;
+   CreateQueue create;
 
    // fill the holder
-   bot.name = name;
-   bot.difficulty = difficulty;
-   bot.personality = personality;
-   bot.team = team;
-   bot.member = member;
-   bot.manual = manual;
+   create.name = name;
+   create.difficulty = difficulty;
+   create.personality = personality;
+   create.team = team;
+   create.member = member;
+   create.manual = manual;
 
    // put to queue
-   m_creationTab.push (bot);
+   m_creationTab.push (cr::move (create));
 }
 
 void BotManager::addbot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member, bool manual) {
@@ -551,8 +550,8 @@ void BotManager::kickBotByMenu (edict_t *ent, int selection) {
       return &g_menus[menuIndex];
    };
 
-   const unsigned int slots = menuKeys & static_cast<unsigned int> (-1);
-   MenuId id = static_cast<MenuId> (BOT_MENU_KICK_PAGE_1 - 1 + selection);
+   const unsigned int slots = menuKeys & static_cast <unsigned int> (-1);
+   MenuId id = static_cast <MenuId> (BOT_MENU_KICK_PAGE_1 - 1 + selection);
 
    auto menu = searchMenu (id);
 
@@ -698,7 +697,7 @@ void BotManager::listBots (void) {
 
       // is this player slot valid
       if (bot != nullptr) {
-         engine.print ("[%-3.1d] %-9.13s %-17.18s %-3.4s %-3.1d %-3.1d", i, STRING (bot->pev->netname), bot->m_personality == PERSONALITY_RUSHER ? "rusher" : bot->m_personality == PERSONALITY_NORMAL ? "normal" : "careful", bot->m_team == TEAM_COUNTER ? "CT" : "T", bot->m_difficulty, static_cast<int> (bot->pev->frags));
+         engine.print ("[%-3.1d] %-9.13s %-17.18s %-3.4s %-3.1d %-3.1d", i, STRING (bot->pev->netname), bot->m_personality == PERSONALITY_RUSHER ? "rusher" : bot->m_personality == PERSONALITY_NORMAL ? "normal" : "careful", bot->m_team == TEAM_COUNTER ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags));
       }
    }
 }
@@ -797,7 +796,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
 
    int clientIndex = engine.indexOfEntity (bot);
 
-   memset (reinterpret_cast<void *> (this), 0, sizeof (*this));
+   memset (reinterpret_cast <void *> (this), 0, sizeof (*this));
    pev = &bot->v;
 
    if (bot->pvPrivateData != nullptr) {
@@ -831,7 +830,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
 
    // should be set after client connect
    if (yb_avatar_display.boolean () && !steamId.empty ()) {
-      g_engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "*sid", const_cast<char *> (steamId.chars ()));
+      g_engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "*sid", const_cast <char *> (steamId.chars ()));
    }
    memset (&m_pingOffset, 0, sizeof (m_pingOffset));
    memset (&m_ping, 0, sizeof (m_ping));
@@ -1136,7 +1135,7 @@ void Bot::processNewRound (void) {
 
    m_sayTextBuffer.timeNextChat = engine.timebase ();
    m_sayTextBuffer.entityIndex = -1;
-   m_sayTextBuffer.sayText[0] = 0x0;
+   m_sayTextBuffer.sayText.clear ();
 
    m_buyState = BUYSTATE_PRIMARY_WEAPON;
    m_lastEquipTime = 0.0f;
@@ -1333,7 +1332,7 @@ void BotManager::calculatePingOffsets (void) {
          continue;
       }
 
-      int part = static_cast<int> (averagePing * 0.2f);
+      int part = static_cast <int> (averagePing * 0.2f);
       int botPing = rng.getInt (averagePing - part, averagePing + part) + rng.getInt (bot->m_difficulty + 3, bot->m_difficulty + 6) + 10;
 
       if (botPing <= 5) {
@@ -1363,14 +1362,10 @@ void BotManager::sendPingOffsets (edict_t *to) {
    if (!(to->v.flags & FL_CLIENT) && !(((to->v.button & IN_SCORE) || !(to->v.oldbuttons & IN_SCORE)))) {
       return;
    }
-
-   static int sending;
-   sending = 0;
-
    MessageWriter msg;
 
    // missing from sdk
-   static const int SVC_PINGS = 17;
+   constexpr int SVC_PINGS = 17;
 
    for (int i = 0; i < engine.maxClients (); i++) {
       Bot *bot = m_bots[i];
@@ -1378,38 +1373,15 @@ void BotManager::sendPingOffsets (edict_t *to) {
       if (bot == nullptr) {
          continue;
       }
-
-      switch (sending) {
-      case 0: {
-         // start a new message
-         msg.start (MSG_ONE_UNRELIABLE, SVC_PINGS, Vector::null (), to)
-         .writeByte ((bot->m_pingOffset[sending] * 64) + (1 + 2 * i))
-         .writeShort (bot->m_ping[sending]);
-
-         sending++;
-      }
-      case 1: {
-         // append additional data
-         msg.writeByte ((bot->m_pingOffset[sending] * 128) + (2 + 4 * i))
-         .writeShort (bot->m_ping[sending]);
-
-         sending++;
-      }
-      case 2: {
-         // append additional data and end message
-         msg.writeByte (4 + 8 * i)
-         .writeShort (bot->m_ping[sending])
+      msg.start (MSG_ONE_UNRELIABLE, SVC_PINGS, Vector::null (), to)
+         .writeByte (bot->m_pingOffset[0] * 64 + (1 + 2 * i))
+         .writeShort (bot->m_ping[0])
+         .writeByte (bot->m_pingOffset[1] * 128 + (2 + 4 * i))
+         .writeShort (bot->m_ping[1])
+         .writeByte (4 + 8 * i)
+         .writeShort (bot->m_ping[2])
          .writeByte (0)
          .end ();
-
-         sending = 0;
-      }
-      }
-   }
-
-   // end message if not yet sent
-   if (sending) {
-      msg.writeByte (0).end ();
    }
 }
 

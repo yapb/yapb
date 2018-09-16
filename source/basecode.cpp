@@ -57,7 +57,7 @@ void Bot::pushMsgQueue (int message) {
          if (otherBot != nullptr && otherBot->pev != pev) {
             if (m_notKilled == otherBot->m_notKilled) {
                otherBot->m_sayTextBuffer.entityIndex = entityIndex;
-               strcpy (otherBot->m_sayTextBuffer.sayText, m_tempStrings);
+               otherBot->m_sayTextBuffer.sayText = m_tempStrings;
             }
             otherBot->m_sayTextBuffer.timeNextChat = engine.timebase () + otherBot->m_sayTextBuffer.chatDelay;
          }
@@ -873,7 +873,7 @@ void Bot::getCampDir (Vector *dest) {
          if (path.index[i] == INVALID_WAYPOINT_INDEX) {
             continue;
          }
-         float distance = static_cast<float> (waypoints.getPathDist (path.index[i], enemyIndex));
+         float distance = static_cast <float> (waypoints.getPathDist (path.index[i], enemyIndex));
 
          if (distance < minDistance) {
             minDistance = distance;
@@ -1213,12 +1213,12 @@ void Bot::checkMsgQueue (void) {
 
    // team independent saytext
    case GAME_MSG_SAY_CMD:
-      say (m_tempStrings);
+      say (m_tempStrings.chars ());
       break;
 
    // team dependent saytext
    case GAME_MSG_SAY_TEAM_MSG:
-      sayTeam (m_tempStrings);
+      sayTeam (m_tempStrings.chars ());
       break;
 
    default:
@@ -1261,7 +1261,7 @@ bool Bot::isWeaponRestrictedAMX (int weaponIndex) {
       int index = indices[weaponIndex - 1];
 
       // validate index range
-      if (index < 0 || index >= static_cast<int> (strlen (restrictedWeapons))) {
+      if (index < 0 || index >= static_cast <int> (strlen (restrictedWeapons))) {
          return false;
       }
       return restrictedWeapons[index] != '0';
@@ -1280,7 +1280,7 @@ bool Bot::isWeaponRestrictedAMX (int weaponIndex) {
       int index = indices[weaponIndex - 1];
 
       // validate index range
-      if (index < 0 || index >= static_cast<int> (strlen (restrictedEquipment))) {
+      if (index < 0 || index >= static_cast <int> (strlen (restrictedEquipment))) {
          return false;
       }
       return restrictedEquipment[index] != '0';
@@ -1323,7 +1323,7 @@ int Bot::pickBestWeapon (int *vec, int count, int moneySave) {
    // this function picks best available weapon from random choice with money save
 
    if (yb_best_weapon_picker_type.integer () == 1) {
-      float buyFactor = (m_moneyAmount - static_cast<float> (moneySave)) / (16000.0f - static_cast<float> (moneySave)) * 3.0f;
+      float buyFactor = (m_moneyAmount - static_cast <float> (moneySave)) / (16000.0f - static_cast <float> (moneySave)) * 3.0f;
 
       if (buyFactor < 1.0f) {
          buyFactor = 1.0f;
@@ -1333,7 +1333,7 @@ int Bot::pickBestWeapon (int *vec, int count, int moneySave) {
       for (int *begin = vec, *end = vec + count - 1; begin < end; ++begin, --end) {
          cr::swap (*end, *begin);
       }
-      return vec[static_cast<int> (static_cast<float> (count - 1) * cr::log10f (rng.getFloat (1, cr::powf (10.0f, buyFactor))) / buyFactor + 0.5f)];
+      return vec[static_cast <int> (static_cast <float> (count - 1) * cr::log10f (rng.getFloat (1, cr::powf (10.0f, buyFactor))) / buyFactor + 0.5f)];
    }
 
    int chance = 95;
@@ -2226,7 +2226,7 @@ bool Bot::reactOnEnemy (void) {
       int enemyIndex = waypoints.getNearest (m_enemy->v.origin);
 
       float lineDist = (m_enemy->v.origin - pev->origin).length ();
-      float pathDist = static_cast<float> (waypoints.getPathDist (ownIndex, enemyIndex));
+      float pathDist = static_cast <float> (waypoints.getPathDist (ownIndex, enemyIndex));
 
       if (pathDist - lineDist > 112.0f) {
          m_isEnemyReachable = false;
@@ -2904,27 +2904,29 @@ void Bot::frame (void) {
          m_lastChatTime = engine.timebase ();
          g_lastChatTime = engine.timebase ();
 
-         const String &phrase = g_chatFactory[CHAT_DEAD].random ();
-         bool sayBufferExists = false;
+         if (!g_chatFactory[CHAT_DEAD].empty ()) {
+            const String &phrase = g_chatFactory[CHAT_DEAD].random ();
+            bool sayBufferExists = false;
 
-         // search for last messages, sayed
-         for (auto &sentence : m_sayTextBuffer.lastUsedSentences) {
-            if (strncmp (sentence.chars (), phrase.chars (), sentence.length ()) == 0) {
-               sayBufferExists = true;
-               break;
+            // search for last messages, sayed
+            for (auto &sentence : m_sayTextBuffer.lastUsedSentences) {
+               if (strncmp (sentence.chars (), phrase.chars (), sentence.length ()) == 0) {
+                  sayBufferExists = true;
+                  break;
+               }
+            }
+
+            if (!sayBufferExists) {
+               prepareChatMessage (const_cast <char *> (phrase.chars ()));
+               pushMsgQueue (GAME_MSG_SAY_CMD);
+
+               // add to ignore list
+               m_sayTextBuffer.lastUsedSentences.push (phrase);
             }
          }
 
-         if (!sayBufferExists) {
-            prepareChatMessage (const_cast<char *> (phrase.chars ()));
-            pushMsgQueue (GAME_MSG_SAY_CMD);
-
-            // add to ignore list
-            m_sayTextBuffer.lastUsedSentences.push (phrase);
-         }
-
          // clear the used line buffer every now and then
-         if (static_cast<int> (m_sayTextBuffer.lastUsedSentences.length ()) > rng.getInt (4, 6)) {
+         if (static_cast <int> (m_sayTextBuffer.lastUsedSentences.length ()) > rng.getInt (4, 6)) {
             m_sayTextBuffer.lastUsedSentences.clear ();
          }
       }
@@ -3515,7 +3517,7 @@ void Bot::camp_ (void) {
             const Vector &dotB = (waypoints[i].origin - pev->origin).normalize2D ();
 
             if ((dotA | dotB) > 0.9f) {
-               int distance = static_cast<int> ((pev->origin - waypoints[i].origin).length ());
+               int distance = static_cast <int> ((pev->origin - waypoints[i].origin).length ());
 
                if (numFoundPoints >= 3) {
                   for (int j = 0; j < 3; j++) {
@@ -4881,7 +4883,7 @@ void Bot::showDebugOverlay (void) {
    if (!displayDebugOverlay && yb_debug.integer () >= 2) {
       Bot *nearest = nullptr;
 
-      if (findNearestPlayer (reinterpret_cast<void **> (&nearest), g_hostEntity, 128.0f, false, true, true, true) && nearest == this) {
+      if (findNearestPlayer (reinterpret_cast <void **> (&nearest), g_hostEntity, 128.0f, false, true, true, true) && nearest == this) {
          displayDebugOverlay = true;
       }
    }
@@ -4896,158 +4898,70 @@ void Bot::showDebugOverlay (void) {
             index = m_currentWaypointIndex;
             goal = task ()->data;
 
-            char taskName[80];
-            memset (taskName, 0, sizeof (taskName));
+            HashMap <int, String, IntHash <int>> tasks;
+            HashMap <int, String, IntHash <int>> personalities;
+            HashMap <int, String, IntHash <int>> flags;
 
-            switch (taskID) {
-            case TASK_NORMAL:
-               sprintf (taskName, "Normal");
-               break;
+            tasks.put (TASK_NORMAL, "Normal");
+            tasks.put (TASK_PAUSE, "Pause");
+            tasks.put (TASK_MOVETOPOSITION, "Move");
+            tasks.put (TASK_FOLLOWUSER, "Follow");
+            tasks.put (TASK_PICKUPITEM, "Pickup");
+            tasks.put (TASK_CAMP, "Camp");
+            tasks.put (TASK_PLANTBOMB, "PlantBomb");
+            tasks.put (TASK_DEFUSEBOMB, "DefuseBomb");
+            tasks.put (TASK_ATTACK, "Attack");
+            tasks.put (TASK_HUNTENEMY, "Hunt");
+            tasks.put (TASK_SEEKCOVER, "SeekCover");
+            tasks.put (TASK_THROWHEGRENADE, "ThrowHE");
+            tasks.put (TASK_THROWFLASHBANG, "ThrowFL");
+            tasks.put (TASK_THROWSMOKE, "ThrowSG");
+            tasks.put (TASK_DOUBLEJUMP, "DoubleJump");
+            tasks.put (TASK_ESCAPEFROMBOMB, "EscapeFromBomb");
+            tasks.put (TASK_SHOOTBREAKABLE, "DestroyBreakable");
+            tasks.put (TASK_HIDE, "Hide");
+            tasks.put (TASK_BLINDED, "Blind");
+            tasks.put (TASK_SPRAY, "Spray");
 
-            case TASK_PAUSE:
-               sprintf (taskName, "Pause");
-               break;
+            personalities.put (PERSONALITY_RUSHER, "Rusher");
+            personalities.put (PERSONALITY_NORMAL, "Normal");
+            personalities.put (PERSONALITY_CAREFUL, "Careful");
 
-            case TASK_MOVETOPOSITION:
-               sprintf (taskName, "MoveToPosition");
-               break;
+            flags.put (AIM_NAVPOINT, "Nav");
+            flags.put (AIM_CAMP, "Camp");
+            flags.put (AIM_PREDICT_PATH, "Predict");
+            flags.put (AIM_LAST_ENEMY, "LastEnemy");
+            flags.put (AIM_ENTITY, "Entity");
+            flags.put (AIM_ENEMY, "Enemy");
+            flags.put (AIM_GRENADE, "Grenade");
+            flags.put (AIM_OVERRIDE, "Override");
 
-            case TASK_FOLLOWUSER:
-               sprintf (taskName, "FollowUser");
-               break;
-
-            case TASK_PICKUPITEM:
-               sprintf (taskName, "PickupItem");
-               break;
-
-            case TASK_CAMP:
-               sprintf (taskName, "Camp");
-               break;
-
-            case TASK_PLANTBOMB:
-               sprintf (taskName, "PlantBomb");
-               break;
-
-            case TASK_DEFUSEBOMB:
-               sprintf (taskName, "DefuseBomb");
-               break;
-
-            case TASK_ATTACK:
-               sprintf (taskName, "AttackEnemy");
-               break;
-
-            case TASK_HUNTENEMY:
-               sprintf (taskName, "HuntEnemy");
-               break;
-
-            case TASK_SEEKCOVER:
-               sprintf (taskName, "SeekCover");
-               break;
-
-            case TASK_THROWHEGRENADE:
-               sprintf (taskName, "ThrowExpGrenade");
-               break;
-
-            case TASK_THROWFLASHBANG:
-               sprintf (taskName, "ThrowFlashGrenade");
-               break;
-
-            case TASK_THROWSMOKE:
-               sprintf (taskName, "ThrowSmokeGrenade");
-               break;
-
-            case TASK_DOUBLEJUMP:
-               sprintf (taskName, "PerformDoubleJump");
-               break;
-
-            case TASK_ESCAPEFROMBOMB:
-               sprintf (taskName, "EscapeFromBomb");
-               break;
-
-            case TASK_SHOOTBREAKABLE:
-               sprintf (taskName, "ShootBreakable");
-               break;
-
-            case TASK_HIDE:
-               sprintf (taskName, "Hide");
-               break;
-
-            case TASK_BLINDED:
-               sprintf (taskName, "Blinded");
-               break;
-
-            case TASK_SPRAY:
-               sprintf (taskName, "SprayLogo");
-               break;
-            }
-
-            char enemyName[80], weaponName[80], aimFlags[64], botType[32];
+            String enemy = "(none)";
 
             if (!engine.isNullEntity (m_enemy)) {
-               strncpy (enemyName, STRING (m_enemy->v.netname), cr::bufsize (enemyName));
+               enemy = STRING (m_enemy->v.netname);
             }
             else if (!engine.isNullEntity (m_lastEnemy)) {
-               snprintf (enemyName, cr::bufsize (enemyName), "%s (L)", STRING (m_lastEnemy->v.netname));
+               enemy.format ("%s (L)", STRING (m_lastEnemy->v.netname));
             }
-            else {
-               strcpy (enemyName, " (null)");
-            }
-
-            char pickupName[80];
-            memset (pickupName, 0, sizeof (pickupName));
+            String pickup = "(none)";
 
             if (!engine.isNullEntity (m_pickupItem)) {
-               strncpy (pickupName, STRING (m_pickupItem->v.classname), cr::bufsize (pickupName));
+               pickup = STRING (m_pickupItem->v.netname);
             }
-            else {
-               strcpy (pickupName, " (null)");
-            }
+            String aimFlags;
 
-            WeaponSelect *tab = &g_weaponSelect[0];
-            char weaponCount = 0;
+            for (int i = 0; i < 8; i++) {
+               bool hasFlag = m_aimFlags & (1 << i);
 
-            while (m_currentWeapon != tab->id && weaponCount < NUM_WEAPONS) {
-               tab++;
-               weaponCount++;
-            }
-            memset (aimFlags, 0, sizeof (aimFlags));
-
-            // set the aim flags
-            snprintf (aimFlags, cr::bufsize (aimFlags), "%s%s%s%s%s%s%s%s", (m_aimFlags & AIM_NAVPOINT) ? " NavPoint" : "", (m_aimFlags & AIM_CAMP) ? " CampPoint" : "", (m_aimFlags & AIM_PREDICT_PATH) ? " PredictPath" : "", (m_aimFlags & AIM_LAST_ENEMY) ? " LastEnemy" : "", (m_aimFlags & AIM_ENTITY) ? " Entity" : "", (m_aimFlags & AIM_ENEMY) ? " Enemy" : "", (m_aimFlags & AIM_GRENADE) ? " Grenade" : "", (m_aimFlags & AIM_OVERRIDE) ? " Override" : "");
-
-            // set the bot type
-            snprintf (botType, cr::bufsize (botType), "%s%s%s", m_personality == PERSONALITY_RUSHER ? " Rusher" : "", m_personality == PERSONALITY_CAREFUL ? " Careful" : "", m_personality == PERSONALITY_NORMAL ? " Normal" : "");
-
-            if (weaponCount >= NUM_WEAPONS) {
-               // prevent printing unknown message from known weapons
-               switch (m_currentWeapon) {
-               case WEAPON_EXPLOSIVE:
-                  strcpy (weaponName, "weapon_hegrenade");
-                  break;
-
-               case WEAPON_FLASHBANG:
-                  strcpy (weaponName, "weapon_flashbang");
-                  break;
-
-               case WEAPON_SMOKE:
-                  strcpy (weaponName, "weapon_smokegrenade");
-                  break;
-
-               case WEAPON_C4:
-                  strcpy (weaponName, "weapon_c4");
-                  break;
-
-               default:
-                  sprintf (weaponName, "Unknown! (%d)", m_currentWeapon);
+               if (hasFlag) {
+                  aimFlags.formatAppend (" %s", flags[1 << i].chars ());
                }
             }
-            else {
-               strncpy (weaponName, tab->weaponName, cr::bufsize (weaponName));
-            }
-            char outputBuffer[512];
-            memset (outputBuffer, 0, sizeof (outputBuffer));
+            String weapon = STRING (getWeaponData (true, nullptr, m_currentWeapon));
 
-            snprintf (outputBuffer, cr::bufsize (outputBuffer), "\n\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\nItem: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\nSP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\nEnemy=%s Pickup=%s Type=%s\n", STRING (pev->netname), pev->health, pev->armorvalue, taskID, taskName, task ()->desire, &weaponName[7], ammoClip (), ammo (), m_isReloading ? " (R)" : "", m_moneyAmount, aimFlags, m_moveSpeed, m_strafeSpeed, index, m_prevGoalIndex, goal, m_navTimeset - engine.timebase (), pev->movetype, enemyName, pickupName, botType);
+            String debugData;
+            debugData.format ("\n\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\nItem: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\nSP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\nEnemy=%s Pickup=%s Type=%s\n", STRING (pev->netname), pev->health, pev->armorvalue, taskID, tasks[taskID].chars (), task ()->desire, weapon.chars (), ammoClip (), ammo (), m_isReloading ? " (R)" : "", m_moneyAmount, aimFlags.trim ().chars (), m_moveSpeed, m_strafeSpeed, index, m_prevGoalIndex, goal, m_navTimeset - engine.timebase (), pev->movetype, enemy.chars (), pickup.chars (), personalities[m_personality].chars ());
 
             MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, Vector::null (), g_hostEntity)
                .writeByte (TE_TEXTMESSAGE)
@@ -5066,7 +4980,7 @@ void Bot::showDebugOverlay (void) {
                .writeShort (MessageWriter::fu16 (0, 1 << 8))
                .writeShort (MessageWriter::fu16 (0, 1 << 8))
                .writeShort (MessageWriter::fu16 (1.0, 1 << 8))
-               .writeString (const_cast<const char *> (&outputBuffer[0]));
+               .writeString (debugData.chars ());
 
             timeDebugUpdate = engine.timebase () + 1.0f;
          }
@@ -5182,7 +5096,7 @@ void Bot::processBlind (int alpha) {
    // it's used to make bot blind from the grenade.
 
    m_maxViewDistance = rng.getFloat (10.0f, 20.0f);
-   m_blindTime = engine.timebase () + static_cast<float> (alpha - 200) / 16.0f;
+   m_blindTime = engine.timebase () + static_cast <float> (alpha - 200) / 16.0f;
 
    if (m_blindTime < engine.timebase ()) {
       return;
@@ -5232,7 +5146,7 @@ void Bot::collectGoalExperience (int damage, int team) {
    if (pev->health - damage <= 0) {
       if (team == TEAM_TERRORIST) {
          int value = (g_experienceData + (m_chosenGoalIndex * waypoints.length ()) + m_prevGoalIndex)->team0Value;
-         value -= static_cast<int> (pev->health / 20);
+         value -= static_cast <int> (pev->health / 20);
 
          if (value < -MAX_GOAL_VALUE) {
             value = -MAX_GOAL_VALUE;
@@ -5240,11 +5154,11 @@ void Bot::collectGoalExperience (int damage, int team) {
          else if (value > MAX_GOAL_VALUE) {
             value = MAX_GOAL_VALUE;
          }
-         (g_experienceData + (m_chosenGoalIndex * waypoints.length ()) + m_prevGoalIndex)->team0Value = static_cast<int16> (value);
+         (g_experienceData + (m_chosenGoalIndex * waypoints.length ()) + m_prevGoalIndex)->team0Value = static_cast <int16> (value);
       }
       else {
          int value = (g_experienceData + (m_chosenGoalIndex * waypoints.length ()) + m_prevGoalIndex)->team1Value;
-         value -= static_cast<int> (pev->health / 20);
+         value -= static_cast <int> (pev->health / 20);
 
          if (value < -MAX_GOAL_VALUE) {
             value = -MAX_GOAL_VALUE;
@@ -5252,7 +5166,7 @@ void Bot::collectGoalExperience (int damage, int team) {
          else if (value > MAX_GOAL_VALUE) {
             value = MAX_GOAL_VALUE;
          }
-         (g_experienceData + (m_chosenGoalIndex * waypoints.length ()) + m_prevGoalIndex)->team1Value = static_cast<int16> (value);
+         (g_experienceData + (m_chosenGoalIndex * waypoints.length ()) + m_prevGoalIndex)->team1Value = static_cast <int16> (value);
       }
    }
 }
@@ -5272,10 +5186,10 @@ void Bot::collectDataExperience (edict_t *attacker, int damage) {
    }
 
    // if these are bots also remember damage to rank destination of the bot
-   m_goalValue -= static_cast<float> (damage);
+   m_goalValue -= static_cast <float> (damage);
 
    if (bots.getBot (attacker) != nullptr) {
-      bots.getBot (attacker)->m_goalValue += static_cast<float> (damage);
+      bots.getBot (attacker)->m_goalValue += static_cast <float> (damage);
    }
 
    if (damage < 20) {
@@ -5310,7 +5224,7 @@ void Bot::collectDataExperience (edict_t *attacker, int damage) {
    // store away the damage done
    if (victimTeam == TEAM_TERRORIST) {
       int value = (g_experienceData + (victimIndex * waypoints.length ()) + attackerIndex)->team0Damage;
-      value += static_cast<int> (damage / updateDamage);
+      value += static_cast <int> (damage / updateDamage);
 
       if (value > MAX_DAMAGE_VALUE) {
          value = MAX_DAMAGE_VALUE;
@@ -5319,11 +5233,11 @@ void Bot::collectDataExperience (edict_t *attacker, int damage) {
       if (value > g_highestDamageT) {
          g_highestDamageT = value;
       }
-      (g_experienceData + (victimIndex * waypoints.length ()) + attackerIndex)->team0Damage = static_cast<uint16> (value);
+      (g_experienceData + (victimIndex * waypoints.length ()) + attackerIndex)->team0Damage = static_cast <uint16> (value);
    }
    else {
       int value = (g_experienceData + (victimIndex * waypoints.length ()) + attackerIndex)->team1Damage;
-      value += static_cast<int> (damage / updateDamage);
+      value += static_cast <int> (damage / updateDamage);
 
       if (value > MAX_DAMAGE_VALUE) {
          value = MAX_DAMAGE_VALUE;
@@ -5332,7 +5246,7 @@ void Bot::collectDataExperience (edict_t *attacker, int damage) {
       if (value > g_highestDamageCT) {
          g_highestDamageCT = value;
       }
-      (g_experienceData + (victimIndex * waypoints.length ()) + attackerIndex)->team1Damage = static_cast<uint16> (value);
+      (g_experienceData + (victimIndex * waypoints.length ()) + attackerIndex)->team1Damage = static_cast <uint16> (value);
    }
 }
 
@@ -5371,7 +5285,7 @@ void Bot::pushChatMessage (int type, bool isTeamSay) {
       return;
    }
 
-   prepareChatMessage (const_cast<char *> (pickedPhrase));
+   prepareChatMessage (const_cast <char *> (pickedPhrase));
    pushMsgQueue (isTeamSay ? GAME_MSG_SAY_TEAM_MSG : GAME_MSG_SAY_CMD);
 }
 
@@ -5440,8 +5354,8 @@ void Bot::sayDebug (const char *format, ...) {
    vsnprintf (buffer, cr::bufsize (buffer), format, ap);
    va_end (ap);
 
-   char printBuf[MAX_PRINT_BUFFER];
-   snprintf (printBuf, cr::bufsize (printBuf), "%s: %s", STRING (pev->netname), buffer);
+   String printBuf;
+   printBuf.format ("%s: %s", STRING (pev->netname), buffer);
 
    bool playMessage = false;
 
@@ -5452,11 +5366,11 @@ void Bot::sayDebug (const char *format, ...) {
       playMessage = true;
    }
    if (playMessage && level > 3) {
-      logEntry (false, LL_DEFAULT, printBuf);
+      logEntry (false, LL_DEFAULT, printBuf.chars ());
    }
    if (playMessage) {
-      engine.print (printBuf);
-      say (printBuf);
+      engine.print (printBuf.chars ());
+      say (printBuf.chars ());
    }
 }
 
@@ -5611,7 +5525,7 @@ Vector Bot::isBombAudible (void) {
 uint8 Bot::computeMsec (void) {
    // estimate msec to use for this command based on time passed from the previous command
 
-   return static_cast<uint8> ((engine.timebase () - m_lastCommandTime) * 1000.0f);
+   return static_cast <uint8> ((engine.timebase () - m_lastCommandTime) * 1000.0f);
 }
 
 void Bot::processMovement (void) {
@@ -5914,5 +5828,5 @@ float Bot::getShiftSpeed (void) {
    if (taskId () == TASK_SEEKCOVER || (pev->flags & FL_DUCKING) || (pev->button & IN_DUCK) || (m_oldButtons & IN_DUCK) || (m_currentTravelFlags & PATHFLAG_JUMP) || (m_currentPath != nullptr && m_currentPath->flags & FLAG_LADDER) || isOnLadder () || isInWater ()) {
       return pev->maxspeed;
    }
-   return static_cast<float> (pev->maxspeed * 0.4f);
+   return static_cast <float> (pev->maxspeed * 0.4f);
 }

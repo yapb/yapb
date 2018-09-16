@@ -1010,7 +1010,7 @@ void Bot::attackMovement (void) {
          approach = 29;
       }
       else {
-         approach = static_cast<int> (pev->health * m_agressionLevel);
+         approach = static_cast <int> (pev->health * m_agressionLevel);
 
          if (usesSniper () && approach > 49) {
             approach = 49;

@@ -188,7 +188,7 @@ void traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIndex) {
          .writeCoord (trace->vecEndPos.x)
          .writeCoord (trace->vecEndPos.y)
          .writeCoord (trace->vecEndPos.z)
-         .writeShort (static_cast<short> (engine.indexOfEntity (trace->pHit)))
+         .writeShort (static_cast <short> (engine.indexOfEntity (trace->pHit)))
          .writeByte (decalIndex);
    }
    else {
@@ -250,7 +250,7 @@ void updateGlobalExperience (void) {
       if (maxDamage > MAX_DAMAGE_VALUE) {
          recalcKills = true;
       }
-      (g_experienceData + (i * waypoints.length ()) + i)->team0DangerIndex = static_cast<short> (bestIndex);
+      (g_experienceData + (i * waypoints.length ()) + i)->team0DangerIndex = static_cast <short> (bestIndex);
    }
 
    // get the most dangerous waypoint for this position for counter-terrorist team
@@ -273,7 +273,7 @@ void updateGlobalExperience (void) {
       if (maxDamage > MAX_DAMAGE_VALUE) {
          recalcKills = true;
       }
-      (g_experienceData + (i * waypoints.length ()) + i)->team1DangerIndex = static_cast<short> (bestIndex);
+      (g_experienceData + (i * waypoints.length ()) + i)->team1DangerIndex = static_cast <short> (bestIndex);
    }
 
    // adjust values if overflow is about to happen
@@ -285,33 +285,33 @@ void updateGlobalExperience (void) {
             }
 
             int clip = (g_experienceData + (i * waypoints.length ()) + j)->team0Damage;
-            clip -= static_cast<int> (MAX_DAMAGE_VALUE * 0.5);
+            clip -= static_cast <int> (MAX_DAMAGE_VALUE * 0.5);
 
             if (clip < 0) {
                clip = 0;
             }
-            (g_experienceData + (i * waypoints.length ()) + j)->team0Damage = static_cast<uint16> (clip);
+            (g_experienceData + (i * waypoints.length ()) + j)->team0Damage = static_cast <uint16> (clip);
 
             clip = (g_experienceData + (i * waypoints.length ()) + j)->team1Damage;
-            clip -= static_cast<int> (MAX_DAMAGE_VALUE * 0.5);
+            clip -= static_cast <int> (MAX_DAMAGE_VALUE * 0.5);
 
             if (clip < 0) {
                clip = 0;
             }
-            (g_experienceData + (i * waypoints.length ()) + j)->team1Damage = static_cast<uint16> (clip);
+            (g_experienceData + (i * waypoints.length ()) + j)->team1Damage = static_cast <uint16> (clip);
          }
       }
    }
    g_highestKills++;
 
-   int clip = g_highestDamageT - static_cast<int> (MAX_DAMAGE_VALUE * 0.5);
+   int clip = g_highestDamageT - static_cast <int> (MAX_DAMAGE_VALUE * 0.5);
 
    if (clip < 1) {
       clip = 1;
    }
    g_highestDamageT = clip;
 
-   clip = (int)g_highestDamageCT - static_cast<int> (MAX_DAMAGE_VALUE * 0.5);
+   clip = (int)g_highestDamageCT - static_cast <int> (MAX_DAMAGE_VALUE * 0.5);
 
    if (clip < 1) {
       clip = 1;
@@ -320,8 +320,8 @@ void updateGlobalExperience (void) {
 
    if (g_highestKills == MAX_KILL_HISTORY) {
       for (int i = 0; i < waypoints.length (); i++) {
-         (g_experienceData + (i * waypoints.length ()) + i)->team0Damage /= static_cast<uint16> (engine.maxClients () * 0.5);
-         (g_experienceData + (i * waypoints.length ()) + i)->team1Damage /= static_cast<uint16> (engine.maxClients () * 0.5);
+         (g_experienceData + (i * waypoints.length ()) + i)->team0Damage /= static_cast <uint16> (engine.maxClients () * 0.5);
+         (g_experienceData + (i * waypoints.length ()) + i)->team1Damage /= static_cast <uint16> (engine.maxClients () * 0.5);
       }
       g_highestKills = 1;
    }
@@ -504,7 +504,7 @@ void checkWelcome (void) {
 
    if (receiveTime > 0.0f && receiveTime < engine.timebase () && needToSendMsg) {
       if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH_ENGINE))) {
-         engine.execCmd ("speak \"%s\"", const_cast<char *> (sentences.random ().chars ()));
+         engine.execCmd ("speak \"%s\"", const_cast <char *> (sentences.random ().chars ()));
       }
       engine.chatPrint ("----- %s v%s (Build: %u), {%s}, (c) %s, by %s (%s)-----", PRODUCT_NAME, PRODUCT_VERSION, buildNumber (), PRODUCT_DATE, PRODUCT_END_YEAR, PRODUCT_AUTHOR, PRODUCT_URL);
 
@@ -537,7 +537,7 @@ void logEntry (bool outputToConsole, int logLevel, const char *format, ...) {
    // this function logs a message to the message log file root directory.
 
    va_list ap;
-   char buffer[MAX_PRINT_BUFFER] = { 0, }, levelString[32] = { 0, }, logLine[MAX_PRINT_BUFFER] = {0, };
+   char buffer[MAX_PRINT_BUFFER] = { 0, }, levelString[32] = { 0, };
 
    va_start (ap, format);
    vsnprintf (buffer, cr::bufsize (buffer), format, ap);
@@ -593,9 +593,7 @@ void logEntry (bool outputToConsole, int logLevel, const char *format, ...) {
    time_t tickTime = time (&tickTime);
    tm *time = localtime (&tickTime);
 
-   snprintf (logLine, cr::bufsize (logLine), "%02d:%02d:%02d --> %s%s", time->tm_hour, time->tm_min, time->tm_sec, levelString, buffer);
-
-   fp.writeFormat ("%s\n", logLine);
+   fp.writeFormat ("%02d:%02d:%02d --> %s%s", time->tm_hour, time->tm_min, time->tm_sec, levelString, buffer);
    fp.close ();
 
    if (logLevel == LL_FATAL) {
@@ -650,10 +648,10 @@ bool findNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
 
    // fill the holder
    if (needBot) {
-      *pvHolder = reinterpret_cast<void *> (bots.getBot (survive));
+      *pvHolder = reinterpret_cast <void *> (bots.getBot (survive));
    }
    else {
-      *pvHolder = reinterpret_cast<void *> (survive);
+      *pvHolder = reinterpret_cast <void *> (survive);
    }
    return true;
 }
@@ -838,7 +836,7 @@ int buildNumber (void) {
    day += atoi (&date[4]) - 1; // finally calculate day
    year = atoi (&date[7]) - 2000; // get years since year 2000
 
-   buildNumber = day + static_cast<int> ((year - 1) * 365.25);
+   buildNumber = day + static_cast <int> ((year - 1) * 365.25);
 
    // if the year is a leap year?
    if ((year % 4) == 0 && i > 1) {
@@ -891,6 +889,7 @@ int getWeaponData (bool needString, const char *weaponAlias, int weaponIndex) {
       {WEAPON_ARMORHELM, "vesthelm"}, // Kevlar Vest and Helmet
       {WEAPON_DEFUSER, "defuser"}, // Defuser Kit
       {WEAPON_SHIELD, "shield"}, // Tactical Shield
+      {WEAPON_KNIFE, "knife"} // Knife
    };
 
    // if we need to return the string, find by weapon id

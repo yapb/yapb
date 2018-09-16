@@ -53,8 +53,8 @@ void Waypoint::addPath (int addIndex, int pathIndex, float distance) {
    // check for free space in the connection indices
    for (int16 i = 0; i < MAX_PATH_INDEX; i++) {
       if (path->index[i] == INVALID_WAYPOINT_INDEX) {
-         path->index[i] = static_cast<int16> (pathIndex);
-         path->distances[i] = cr::abs (static_cast<int> (distance));
+         path->index[i] = static_cast <int16> (pathIndex);
+         path->distances[i] = cr::abs (static_cast <int> (distance));
 
          logEntry (true, LL_DEFAULT, "Path added from %d to %d", addIndex, pathIndex);
          return;
@@ -75,8 +75,8 @@ void Waypoint::addPath (int addIndex, int pathIndex, float distance) {
    if (slotID != INVALID_WAYPOINT_INDEX) {
       logEntry (true, LL_DEFAULT, "Path added from %d to %d", addIndex, pathIndex);
 
-      path->index[slotID] = static_cast<int16> (pathIndex);
-      path->distances[slotID] = cr::abs (static_cast<int> (distance));
+      path->index[slotID] = static_cast <int16> (pathIndex);
+      path->distances[slotID] = cr::abs (static_cast <int> (distance));
    }
 }
 
@@ -160,7 +160,7 @@ IntArray Waypoint::searchRadius (float radius, const Vector &origin, int maxCoun
    }
 
    for (const auto at : bucket) {
-      if (maxCount != -1 && static_cast<int> (result.length ()) > maxCount) {
+      if (maxCount != -1 && static_cast <int> (result.length ()) > maxCount) {
          break;
       }
 
@@ -537,7 +537,7 @@ void Waypoint::setRadius (int radius) {
    int index = getNearest (g_hostEntity->v.origin, 50.0f);
 
    if (index != INVALID_WAYPOINT_INDEX) {
-      m_paths[index]->radius = static_cast<float> (radius);
+      m_paths[index]->radius = static_cast <float> (radius);
 
       // play "done" sound...
       engine.playSound (g_hostEntity, "common/wpn_hudon.wav");
@@ -813,10 +813,10 @@ void Waypoint::saveExperience (void) {
 
    for (int i = 0; i < m_numWaypoints; i++) {
       for (int j = 0; j < m_numWaypoints; j++) {
-         (experienceSave + (i * m_numWaypoints) + j)->team0Damage = static_cast<uint8> ((g_experienceData + (i * m_numWaypoints) + j)->team0Damage >> 3);
-         (experienceSave + (i * m_numWaypoints) + j)->team1Damage = static_cast<uint8> ((g_experienceData + (i * m_numWaypoints) + j)->team1Damage >> 3);
-         (experienceSave + (i * m_numWaypoints) + j)->team0Value = static_cast<int8> ((g_experienceData + (i * m_numWaypoints) + j)->team0Value / 8);
-         (experienceSave + (i * m_numWaypoints) + j)->team1Value = static_cast<int8> ((g_experienceData + (i * m_numWaypoints) + j)->team1Value / 8);
+         (experienceSave + (i * m_numWaypoints) + j)->team0Damage = static_cast <uint8> ((g_experienceData + (i * m_numWaypoints) + j)->team0Damage >> 3);
+         (experienceSave + (i * m_numWaypoints) + j)->team1Damage = static_cast <uint8> ((g_experienceData + (i * m_numWaypoints) + j)->team1Damage >> 3);
+         (experienceSave + (i * m_numWaypoints) + j)->team0Value = static_cast <int8> ((g_experienceData + (i * m_numWaypoints) + j)->team0Value / 8);
+         (experienceSave + (i * m_numWaypoints) + j)->team1Value = static_cast <int8> ((g_experienceData + (i * m_numWaypoints) + j)->team1Value / 8);
       }
    }
    int result = Compress::encode (format ("%slearned/%s.exp", getDataDirectory (), engine.getMapName ()), (uint8 *)&header, sizeof (ExtensionHeader), (uint8 *) experienceSave, m_numWaypoints * m_numWaypoints * sizeof (ExperienceSave));
@@ -1199,11 +1199,11 @@ void Waypoint::save (void) {
 }
 
 const char *Waypoint::getWaypointFilename (bool isMemoryFile) {
-   static char buffer[256];
-   snprintf (buffer, cr::bufsize (buffer), "%s%s%s.pwf", getDataDirectory (isMemoryFile), isEmptyStr (yb_wptsubfolder.str ()) ? "" : yb_wptsubfolder.str (), engine.getMapName ());
+   static String buffer;
+   buffer.format ("%s%s%s.pwf", getDataDirectory (isMemoryFile), isEmptyStr (yb_wptsubfolder.str ()) ? "" : yb_wptsubfolder.str (), engine.getMapName ());
 
    if (File::exists (buffer)) {
-      return &buffer[0];
+      return buffer.chars ();
    }
    return format ("%s%s.pwf", getDataDirectory (isMemoryFile), engine.getMapName ());
 }
@@ -1615,13 +1615,13 @@ void Waypoint::frame (void) {
 
             // draw node without additional flags
             if (nodeFlagColor.x == -1) {
-               engine.drawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight), m_paths[i]->origin + Vector (0, 0, nodeHalfHeight), 15, 0, static_cast<int> (nodeColor.x), static_cast<int> (nodeColor.y), static_cast<int> (nodeColor.z), 250, 0, 10);
+               engine.drawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight), m_paths[i]->origin + Vector (0, 0, nodeHalfHeight), 15, 0, static_cast <int> (nodeColor.x), static_cast <int> (nodeColor.y), static_cast <int> (nodeColor.z), 250, 0, 10);
             }
             
             // draw node with flags
             else {
-               engine.drawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight), m_paths[i]->origin - Vector (0, 0, nodeHalfHeight - nodeHeight * 0.75f), 14, 0, static_cast<int> (nodeColor.x), static_cast<int> (nodeColor.y), static_cast<int> (nodeColor.z), 250, 0, 10); // draw basic path
-               engine.drawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight - nodeHeight * 0.75f), m_paths[i]->origin + Vector (0, 0, nodeHalfHeight), 14, 0, static_cast<int> (nodeFlagColor.x), static_cast<int> (nodeFlagColor.y), static_cast<int> (nodeFlagColor.z), 250, 0, 10); // draw additional path
+               engine.drawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight), m_paths[i]->origin - Vector (0, 0, nodeHalfHeight - nodeHeight * 0.75f), 14, 0, static_cast <int> (nodeColor.x), static_cast <int> (nodeColor.y), static_cast <int> (nodeColor.z), 250, 0, 10); // draw basic path
+               engine.drawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight - nodeHeight * 0.75f), m_paths[i]->origin + Vector (0, 0, nodeHalfHeight), 14, 0, static_cast <int> (nodeFlagColor.x), static_cast <int> (nodeFlagColor.y), static_cast <int> (nodeFlagColor.z), 250, 0, 10); // draw additional path
             }
             m_waypointDisplayTime[i] = engine.timebase ();
          }
@@ -2244,7 +2244,7 @@ void Waypoint::eraseFromDisk (void) {
    forErase.push (format ("%slearned/%s.pmt", getDataDirectory (), map)); // corresponding to waypoint path matrix
 
    for (auto &item : forErase) {
-      if (File::exists (const_cast<char *> (item.chars ()))) {
+      if (File::exists (const_cast <char *> (item.chars ()))) {
          _unlink (item.chars ());
          logEntry (true, LL_DEFAULT, "File %s, has been deleted from the hard disk", item.chars ());
       }
@@ -2256,15 +2256,15 @@ void Waypoint::eraseFromDisk (void) {
 }
 
 const char *Waypoint::getDataDirectory (bool isMemoryFile) {
-   static char buffer[256];
+   static String buffer;
 
    if (isMemoryFile) {
-      sprintf (buffer, "addons/yapb/data/");
+      buffer.assign ("addons/yapb/data/");
    }
    else {
-      sprintf (buffer, "%s/addons/yapb/data/", engine.getModName ());
+      buffer.format ("%s/addons/yapb/data/", engine.getModName ());
    }
-   return &buffer[0];
+   return buffer.chars ();
 }
 
 void Waypoint::setBombPos (bool reset, const Vector &pos) {

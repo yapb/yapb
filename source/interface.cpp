@@ -496,7 +496,7 @@ void processBotConfigs (bool onlyMain) {
                auto cvar = g_engfuncs.pfnCVarGetPointer (key);
 
                if (cvar != nullptr) {
-                  auto value = const_cast<char *> (keyval[1].trim ().trim ("\"").trim ().chars ());
+                  auto value = const_cast <char *> (keyval[1].trim ().trim ("\"").trim ().chars ());
 
                   if (needsToIgnoreVar (ignore, key)) {
                      if (!!stricmp (value, cvar->string)) {
@@ -556,45 +556,45 @@ void processBotConfigs (bool onlyMain) {
 
    // CHAT SYSTEM CONFIG INITIALIZATION
    if (openConfig ("chat.cfg", "Chat file not found.", &fp, true)) {
-      char section[80];
+     
       int chatType = -1;
 
       while (fp.gets (lineBuffer, 255)) {
          if (isCommentLine (lineBuffer)) {
             continue;
          }
-         String::trimChars (lineBuffer);
-         strncpy (section, lineBuffer, cr::bufsize (section));
+         String section (lineBuffer, strlen (lineBuffer) - 1);
+         section.trim ();
 
-         if (strcmp (section, "[KILLED]") == 0) {
+         if (section == "[KILLED]") {
             chatType = 0;
             continue;
          }
-         else if (strcmp (section, "[BOMBPLANT]") == 0) {
+         else if (section == "[BOMBPLANT]") {
             chatType = 1;
             continue;
          }
-         else if (strcmp (section, "[DEADCHAT]") == 0) {
+         else if (section == "[DEADCHAT]") {
             chatType = 2;
             continue;
          }
-         else if (strcmp (section, "[REPLIES]") == 0) {
+         else if (section == "[REPLIES]") {
             chatType = 3;
             continue;
          }
-         else if (strcmp (section, "[UNKNOWN]") == 0) {
+         else if (section == "[UNKNOWN]") {
             chatType = 4;
             continue;
          }
-         else if (strcmp (section, "[TEAMATTACK]") == 0) {
+         else if (section == "[TEAMATTACK]") {
             chatType = 5;
             continue;
          }
-         else if (strcmp (section, "[WELCOME]") == 0) {
+         else if (section == "[WELCOME]") {
             chatType = 6;
             continue;
          }
-         else if (strcmp (section, "[TEAMKILL]") == 0) {
+         else if (section == "[TEAMKILL]") {
             chatType = 7;
             continue;
          }
@@ -879,7 +879,7 @@ void processBotConfigs (bool onlyMain) {
       if (engine.isDedicated ()) {
          return; // dedicated server will use only english translation
       }
-      enum Lang { LANG_ORIGINAL, LANG_TRANSLATED, LANG_UNDEFINED } langState = static_cast<Lang> (LANG_UNDEFINED);
+      enum Lang { LANG_ORIGINAL, LANG_TRANSLATED, LANG_UNDEFINED } langState = static_cast <Lang> (LANG_UNDEFINED);
 
       char buffer[1024] = { 0, };
       Pair<String, String> lang;
@@ -936,9 +936,9 @@ void processBotConfigs (bool onlyMain) {
    }
 
    // set personality weapon pointers here
-   g_weaponPrefs[PERSONALITY_NORMAL] = reinterpret_cast<int *> (&g_normalWeaponPrefs);
-   g_weaponPrefs[PERSONALITY_RUSHER] = reinterpret_cast<int *> (&g_rusherWeaponPrefs);
-   g_weaponPrefs[PERSONALITY_CAREFUL] = reinterpret_cast<int *> (&g_carefulWeaponPrefs);
+   g_weaponPrefs[PERSONALITY_NORMAL] = reinterpret_cast <int *> (&g_normalWeaponPrefs);
+   g_weaponPrefs[PERSONALITY_RUSHER] = reinterpret_cast <int *> (&g_rusherWeaponPrefs);
+   g_weaponPrefs[PERSONALITY_CAREFUL] = reinterpret_cast <int *> (&g_carefulWeaponPrefs);
 
    g_timePerSecondUpdate = 0.0f;
 }
@@ -1034,7 +1034,7 @@ void UpdateClientData (const struct edict_s *ent, int sendweapons, struct client
    extern ConVar yb_latency_display;
 
    if ((g_gameFlags & GAME_SUPPORT_SVC_PINGS) && yb_latency_display.integer () == 2) {
-      bots.sendPingOffsets (const_cast<edict_t *> (ent));
+      bots.sendPingOffsets (const_cast <edict_t *> (ent));
    }
 
    if (g_gameFlags & GAME_METAMOD) {
@@ -1570,7 +1570,7 @@ void ClientCommand (edict_t *ent) {
             switch (selection) {
             case 1:
             case 2:
-               if (findNearestPlayer (reinterpret_cast<void **> (&bot), client->ent, 600.0f, true, true, true)) {
+               if (findNearestPlayer (reinterpret_cast <void **> (&bot), client->ent, 600.0f, true, true, true)) {
                   if (!bot->m_hasC4 && !bot->hasHostage ()) {
                      if (selection == 1) {
                         bot->startDoubleJump (client->ent);
@@ -1585,7 +1585,7 @@ void ClientCommand (edict_t *ent) {
 
             case 3:
             case 4:
-               if (findNearestPlayer (reinterpret_cast<void **> (&bot), ent, 600.0f, true, true, true, true, selection == 4 ? false : true)) {
+               if (findNearestPlayer (reinterpret_cast <void **> (&bot), ent, 600.0f, true, true, true, true, selection == 4 ? false : true)) {
                   bot->dropWeaponForUser (ent, selection == 4 ? false : true);
                }
                showMenu (ent, BOT_MENU_COMMANDS);
@@ -1692,16 +1692,18 @@ void ClientCommand (edict_t *ent) {
          else if (client->menu == BOT_MENU_TEAM_SELECT && fillCommand) {
             showMenu (ent, BOT_MENU_INVALID); // reset menu display
 
+            if (selection < 3) {
+               extern ConVar mp_limitteams;
+               extern ConVar mp_autoteambalance;
+
+               // turn off cvars if specified team
+               mp_limitteams.set (0);
+               mp_autoteambalance.set (0);
+            }
+
             switch (selection) {
             case 1:
             case 2:
-               // turn off cvars if specified team
-               extern ConVar mp_limitteams;
-               extern ConVar mp_autoteambalance;
-               
-               mp_limitteams.set (0);
-               mp_autoteambalance.set (0);
-
             case 5:
                fillServerTeam = selection;
                showMenu (ent, BOT_MENU_DIFFICULTY);
@@ -1726,6 +1728,8 @@ void ClientCommand (edict_t *ent) {
             case 3:
             case 4:
                bots.serverFill (fillServerTeam, selection - 2, g_storeAddbotVars[0]);
+               showMenu (ent, BOT_MENU_INVALID);
+               break;
 
             case 10:
                showMenu (ent, BOT_MENU_INVALID);
@@ -1963,7 +1967,7 @@ void ClientCommand (edict_t *ent) {
       Bot *bot = nullptr;
 
       if (strcmp (arg1, "dropme") == 0 || strcmp (arg1, "dropc4") == 0) {
-         if (findNearestPlayer (reinterpret_cast<void **> (&bot), ent, 300.0f, true, true, true)) {
+         if (findNearestPlayer (reinterpret_cast <void **> (&bot), ent, 300.0f, true, true, true)) {
             bot->dropWeaponForUser (ent, isEmptyStr (strstr (arg1, "c4")) ? false : true);
          }
          return;
@@ -1990,7 +1994,7 @@ void ClientCommand (edict_t *ent) {
             if (isEmptyStr (g_engfuncs.pfnCmd_Args ())) {
                continue;
             }
-            strncpy (target->m_sayTextBuffer.sayText, g_engfuncs.pfnCmd_Args (), cr::bufsize (target->m_sayTextBuffer.sayText));
+            target->m_sayTextBuffer.sayText = g_engfuncs.pfnCmd_Args ();
             target->m_sayTextBuffer.timeNextChat = engine.timebase () + target->m_sayTextBuffer.chatDelay;
          }
       }
@@ -2157,13 +2161,13 @@ void StartFrame (void) {
                if (isEmptyStr (yb_password_key.str ()) && isEmptyStr (yb_password.str ())) {
                   client.flags &= ~CF_ADMIN;
                }
-               else if (!!strcmp (yb_password.str (), g_engfuncs.pfnInfoKeyValue (g_engfuncs.pfnGetInfoKeyBuffer (client.ent), const_cast<char *> (yb_password_key.str ())))) {
+               else if (!!strcmp (yb_password.str (), g_engfuncs.pfnInfoKeyValue (g_engfuncs.pfnGetInfoKeyBuffer (client.ent), const_cast <char *> (yb_password_key.str ())))) {
                   client.flags &= ~CF_ADMIN;
                   engine.print ("Player %s had lost remote access to yapb.", STRING (player->v.netname));
                }
             }
             else if (!(client.flags & CF_ADMIN) && !isEmptyStr (yb_password_key.str ()) && !isEmptyStr (yb_password.str ())) {
-               if (strcmp (yb_password.str (), g_engfuncs.pfnInfoKeyValue (g_engfuncs.pfnGetInfoKeyBuffer (client.ent), const_cast<char *> (yb_password_key.str ()))) == 0) {
+               if (strcmp (yb_password.str (), g_engfuncs.pfnInfoKeyValue (g_engfuncs.pfnGetInfoKeyBuffer (client.ent), const_cast <char *> (yb_password_key.str ()))) == 0) {
                   client.flags |= CF_ADMIN;
                   engine.print ("Player %s had gained full remote access to yapb.", STRING (player->v.netname));
                }
@@ -2609,7 +2613,7 @@ void pfnClientPrintf (edict_t *ent, PRINT_TYPE printType, const char *message) {
 }
 
 void pfnSetClientMaxspeed (const edict_t *ent, float newMaxspeed) {
-   Bot *bot = bots.getBot (const_cast<edict_t *> (ent));
+   Bot *bot = bots.getBot (const_cast <edict_t *> (ent));
 
    // check wether it's not a bot
    if (bot != nullptr) {
@@ -3016,8 +3020,8 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       const char *mod = engine.getModName ();
 
       // create the needed paths
-      File::pathCreate (const_cast<char *> (format ("%s/addons/yapb/conf/lang", mod)));
-      File::pathCreate (const_cast<char *> (format ("%s/addons/yapb/data/learned", mod)));
+      File::pathCreate (const_cast <char *> (format ("%s/addons/yapb/conf/lang", mod)));
+      File::pathCreate (const_cast <char *> (format ("%s/addons/yapb/data/learned", mod)));
    }
 
 #ifdef PLATFORM_ANDROID
