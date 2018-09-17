@@ -616,18 +616,18 @@ void Engine::pushRegStackToEngine (bool gameVars) {
    }
 }
 
-char *Engine::translate (const char *input) {
+const char *Engine::translate (const char *input) {
    // this function translate input string into needed language
 
    if (isDedicated ()) {
-      return const_cast <char *> (input);
+      return input;
    }
    static String result;
 
    if (m_language.get (input, result)) {
-      return const_cast <char *> (result.chars ());
+      return result.chars ();
    }
-   return const_cast <char *> (input); // nothing found
+   return input; // nothing found
 }
 
 void Engine::processMessages (void *ptr) {

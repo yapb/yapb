@@ -4887,7 +4887,7 @@ void Bot::showDebugOverlay (void) {
          displayDebugOverlay = true;
       }
    }
-
+#if 0
    if (displayDebugOverlay) {
       static float timeDebugUpdate = 0.0f;
       static int index, goal, taskID;
@@ -5004,6 +5004,7 @@ void Bot::showDebugOverlay (void) {
          }
       }
    }
+#endif
 }
 
 bool Bot::hasHostage (void) {

@@ -82,17 +82,19 @@ struct LangComprarer {
       size_t hash = key.length ();
 
       while (*str++) {
-         if (*str == '\n' || *str == '\r') {
+         if (!isalpha (*str)) {
             continue;
          }
-         hash = ((hash << 5) + hash) + *str;
+         hash = ((*str << 5) + hash) + *str;
       }
       return hash;
    }
 };
 
+#include <unordered_map>
+
 // provides utility functions to not call original engine (less call-cost)
-class Engine : public Singleton<Engine> {
+class Engine : public Singleton <Engine> {
 private:
    int m_drawModels[DRAW_NUM];
 
@@ -104,7 +106,7 @@ private:
    edict_t *m_startEntity;
    edict_t *m_localEntity;
 
-   Array<VarPair> m_cvars;
+   Array <VarPair> m_cvars;
    HashMap <String, String, LangComprarer> m_language;
 
    MessageBlock m_msgBlock;
@@ -112,10 +114,8 @@ private:
 
 public:
    Engine (void);
-
    ~Engine (void);
 
-   // public functions
 public:
    // precaches internal stuff
    void precache (void);
@@ -178,7 +178,7 @@ public:
    void pushRegStackToEngine (bool gameVars = false);
 
    // translates bot message into needed language
-   char *translate (const char *input);
+   const char *translate (const char *input);
 
    // do actual network message processing
    void processMessages (void *ptr);

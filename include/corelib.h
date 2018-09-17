@@ -1062,8 +1062,10 @@ public:
       if (empty ()) {
          return assign (str);
       }
-      resize (length () + strlen (str));
-      strcat (m_data, str);
+      size_t maxLength = strlen (str);
+
+      resize (length () + maxLength + 1);
+      strncat (m_data, str, maxLength);
 
       return *this;
    }

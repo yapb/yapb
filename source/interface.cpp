@@ -301,7 +301,7 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
 
       // save waypoint data into file on hard disk
       else if (stricmp (arg1, "save") == 0) {
-         char *waypointSaveMessage = engine.translate ("Waypoints Saved");
+         const char *waypointSaveMessage = engine.translate ("Waypoints Saved");
 
          if (strcmp (arg2, "nocheck") == 0) {
             waypoints.save ();

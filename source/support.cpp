@@ -70,12 +70,13 @@ void showMenu (edict_t *ent, MenuId menu) {
    if (!s_menusParsed) {
       extern void setupBotMenus (void);
       setupBotMenus ();
-
+    
       for (int i = 0; i < cr::arrsize (g_menus); i++) {
          auto parsed = &g_menus[i];
+         const String &text = engine.translate (parsed->text.chars ());
 
          // translate all the things
-         parsed->text.assign (engine.translate (parsed->text.chars ()));
+         parsed->text = text;
 
          // make menu looks best
          if (!(g_gameFlags & GAME_LEGACY)) {
