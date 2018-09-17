@@ -4887,54 +4887,60 @@ void Bot::showDebugOverlay (void) {
          displayDebugOverlay = true;
       }
    }
-#if 0
+
    if (displayDebugOverlay) {
+      static bool s_mapsFilled = false;
+
       static float timeDebugUpdate = 0.0f;
       static int index, goal, taskID;
+
+      static HashMap <int, String, IntHash <int>> tasks;
+      static HashMap <int, String, IntHash <int>> personalities;
+      static HashMap <int, String, IntHash <int>> flags;
+
+      if (!s_mapsFilled) {
+         tasks.put (TASK_NORMAL, "Normal");
+         tasks.put (TASK_PAUSE, "Pause");
+         tasks.put (TASK_MOVETOPOSITION, "Move");
+         tasks.put (TASK_FOLLOWUSER, "Follow");
+         tasks.put (TASK_PICKUPITEM, "Pickup");
+         tasks.put (TASK_CAMP, "Camp");
+         tasks.put (TASK_PLANTBOMB, "PlantBomb");
+         tasks.put (TASK_DEFUSEBOMB, "DefuseBomb");
+         tasks.put (TASK_ATTACK, "Attack");
+         tasks.put (TASK_HUNTENEMY, "Hunt");
+         tasks.put (TASK_SEEKCOVER, "SeekCover");
+         tasks.put (TASK_THROWHEGRENADE, "ThrowHE");
+         tasks.put (TASK_THROWFLASHBANG, "ThrowFL");
+         tasks.put (TASK_THROWSMOKE, "ThrowSG");
+         tasks.put (TASK_DOUBLEJUMP, "DoubleJump");
+         tasks.put (TASK_ESCAPEFROMBOMB, "EscapeFromBomb");
+         tasks.put (TASK_SHOOTBREAKABLE, "DestroyBreakable");
+         tasks.put (TASK_HIDE, "Hide");
+         tasks.put (TASK_BLINDED, "Blind");
+         tasks.put (TASK_SPRAY, "Spray");
+
+         personalities.put (PERSONALITY_RUSHER, "Rusher");
+         personalities.put (PERSONALITY_NORMAL, "Normal");
+         personalities.put (PERSONALITY_CAREFUL, "Careful");
+
+         flags.put (AIM_NAVPOINT, "Nav");
+         flags.put (AIM_CAMP, "Camp");
+         flags.put (AIM_PREDICT_PATH, "Predict");
+         flags.put (AIM_LAST_ENEMY, "LastEnemy");
+         flags.put (AIM_ENTITY, "Entity");
+         flags.put (AIM_ENEMY, "Enemy");
+         flags.put (AIM_GRENADE, "Grenade");
+         flags.put (AIM_OVERRIDE, "Override");
+
+         s_mapsFilled = true;
+      }
 
       if (!m_tasks.empty ()) {
          if (taskID != taskId () || index != m_currentWaypointIndex || goal != task ()->data || timeDebugUpdate < engine.timebase ()) {
             taskID = taskId ();
             index = m_currentWaypointIndex;
             goal = task ()->data;
-
-            HashMap <int, String, IntHash <int>> tasks;
-            HashMap <int, String, IntHash <int>> personalities;
-            HashMap <int, String, IntHash <int>> flags;
-
-            tasks.put (TASK_NORMAL, "Normal");
-            tasks.put (TASK_PAUSE, "Pause");
-            tasks.put (TASK_MOVETOPOSITION, "Move");
-            tasks.put (TASK_FOLLOWUSER, "Follow");
-            tasks.put (TASK_PICKUPITEM, "Pickup");
-            tasks.put (TASK_CAMP, "Camp");
-            tasks.put (TASK_PLANTBOMB, "PlantBomb");
-            tasks.put (TASK_DEFUSEBOMB, "DefuseBomb");
-            tasks.put (TASK_ATTACK, "Attack");
-            tasks.put (TASK_HUNTENEMY, "Hunt");
-            tasks.put (TASK_SEEKCOVER, "SeekCover");
-            tasks.put (TASK_THROWHEGRENADE, "ThrowHE");
-            tasks.put (TASK_THROWFLASHBANG, "ThrowFL");
-            tasks.put (TASK_THROWSMOKE, "ThrowSG");
-            tasks.put (TASK_DOUBLEJUMP, "DoubleJump");
-            tasks.put (TASK_ESCAPEFROMBOMB, "EscapeFromBomb");
-            tasks.put (TASK_SHOOTBREAKABLE, "DestroyBreakable");
-            tasks.put (TASK_HIDE, "Hide");
-            tasks.put (TASK_BLINDED, "Blind");
-            tasks.put (TASK_SPRAY, "Spray");
-
-            personalities.put (PERSONALITY_RUSHER, "Rusher");
-            personalities.put (PERSONALITY_NORMAL, "Normal");
-            personalities.put (PERSONALITY_CAREFUL, "Careful");
-
-            flags.put (AIM_NAVPOINT, "Nav");
-            flags.put (AIM_CAMP, "Camp");
-            flags.put (AIM_PREDICT_PATH, "Predict");
-            flags.put (AIM_LAST_ENEMY, "LastEnemy");
-            flags.put (AIM_ENTITY, "Entity");
-            flags.put (AIM_ENEMY, "Enemy");
-            flags.put (AIM_GRENADE, "Grenade");
-            flags.put (AIM_OVERRIDE, "Override");
 
             String enemy = "(none)";
 
@@ -5004,7 +5010,6 @@ void Bot::showDebugOverlay (void) {
          }
       }
    }
-#endif
 }
 
 bool Bot::hasHostage (void) {
