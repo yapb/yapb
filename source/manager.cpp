@@ -39,7 +39,7 @@ BotManager::BotManager (void) {
       m_economicsGood[i] = true;
    }
    memset (m_bots, 0, sizeof (m_bots));
-   resetTimers ();
+   reset ();
 
    m_creationTab.clear ();
    m_killerEntity = nullptr;
@@ -323,17 +323,17 @@ void BotManager::addbot (const String &name, int difficulty, int personality, in
 void BotManager::addbot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member, bool manual) {
    // this function is same as the function above, but accept as parameters string instead of integers
 
-   CreateQueue bot;
+   CreateQueue create;
    const String &any = "*";
 
-   bot.name = (name.empty () || name == any) ? String ("\0") : name;
-   bot.difficulty = (difficulty.empty () || difficulty == any) ? -1 : difficulty.toInt32 ();
-   bot.team = (team.empty () || team == any) ? -1 : team.toInt32 ();
-   bot.member = (member.empty () || member == any) ? -1 : member.toInt32 ();
-   bot.personality = (personality.empty () || personality == any) ? -1 : personality.toInt32 ();
-   bot.manual = manual;
+   create.name = (name.empty () || name == any) ? String ("\0") : name;
+   create.difficulty = (difficulty.empty () || difficulty == any) ? -1 : difficulty.toInt32 ();
+   create.team = (team.empty () || team == any) ? -1 : team.toInt32 ();
+   create.member = (member.empty () || member == any) ? -1 : member.toInt32 ();
+   create.personality = (personality.empty () || personality == any) ? -1 : personality.toInt32 ();
+   create.manual = manual;
 
-   m_creationTab.push (bot);
+   m_creationTab.push (cr::move (create));
 }
 
 void BotManager::maintainQuota (void) {
@@ -341,6 +341,8 @@ void BotManager::maintainQuota (void) {
    // while creation process in process.
 
    if (waypoints.length () < 1 || waypoints.hasChanged ()) {
+      engine.centerPrint ("Map is not waypointed. Cannot create bot");
+      yb_quota.set (0);
       return;
    }
 
@@ -428,11 +430,14 @@ void BotManager::maintainQuota (void) {
    m_quotaMaintainTime = engine.timebase () + 0.40f;
 }
 
-void BotManager::resetTimers (void) {
+void BotManager::reset (void) {
    m_maintainTime = 0.0f;
    m_quotaMaintainTime = 0.0f;
    m_grenadeUpdateTime = 0.0f;
    m_entityUpdateTime = 0.0f;
+
+   m_intrestingEntities.clear ();
+   m_activeGrenades.clear ();
 }
 
 void BotManager::decrementQuota (int by) {
@@ -967,6 +972,9 @@ int BotManager::getAliveHumansCount (void) {
 }
 
 bool BotManager::isTeamStacked (int team) {
+   if (team != TEAM_COUNTER && team != TEAM_TERRORIST) {
+      return false;
+   }
    int limitTeams = mp_limitteams.integer ();
 
    if (!limitTeams) {
@@ -1427,12 +1435,8 @@ void BotManager::updateIntrestingEntities (void) {
    for (int i = MAX_ENGINE_PLAYERS - 1; i < g_pGlobals->maxEntities; i++) {
       auto ent = engine.entityOfIndex (i);
 
-      if (engine.isNullEntity (ent)) {
-         continue;
-      }
-
-      // only drawn entities
-      if (ent->v.effects & EF_NODRAW) {
+      // only valid drawn entities
+      if (engine.isNullEntity (ent) || ent->free || ent->v.classname == 0 || (ent->v.effects & EF_NODRAW)) {
          continue;
       }
       auto classname = STRING (ent->v.classname);

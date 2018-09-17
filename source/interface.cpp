@@ -18,7 +18,7 @@ ConVar yb_version ("yb_version", PRODUCT_VERSION, VT_READONLY);
 
 ConVar mp_startmoney ("mp_startmoney", nullptr, VT_NOREGISTER, true, "800");
 
-int BotCommandHandler (edict_t *ent, const char *arg0, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *self) {
+int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *self) {
    // adding one bot with random parameters to random team
    if (stricmp (arg0, "addbot") == 0 || stricmp (arg0, "add") == 0) {
       bots.addbot (arg4, arg1, arg2, arg3, arg5, true);
@@ -953,7 +953,7 @@ void GameDLLInit (void) {
    // to register by the engine side the server commands we need to administrate our bots.
 
    auto commandHandler = [](void) {
-      if (BotCommandHandler (g_hostEntity, isEmptyStr (g_engfuncs.pfnCmd_Argv (1)) ? "help" : g_engfuncs.pfnCmd_Argv (1), g_engfuncs.pfnCmd_Argv (2), g_engfuncs.pfnCmd_Argv (3), g_engfuncs.pfnCmd_Argv (4), g_engfuncs.pfnCmd_Argv (5), g_engfuncs.pfnCmd_Argv (6), g_engfuncs.pfnCmd_Argv (0)) == 0) {
+      if (handleBotCommands (g_hostEntity, isEmptyStr (g_engfuncs.pfnCmd_Argv (1)) ? "help" : g_engfuncs.pfnCmd_Argv (1), g_engfuncs.pfnCmd_Argv (2), g_engfuncs.pfnCmd_Argv (3), g_engfuncs.pfnCmd_Argv (4), g_engfuncs.pfnCmd_Argv (5), g_engfuncs.pfnCmd_Argv (6), g_engfuncs.pfnCmd_Argv (0)) == 0) {
          engine.print ("Unknown command: %s", g_engfuncs.pfnCmd_Argv (1));
       }
    };
@@ -1156,7 +1156,7 @@ void ClientCommand (edict_t *ent) {
 
    if (!engine.isBotCmd () && (ent == g_hostEntity || (g_clients[issuerPlayerIndex].flags & CF_ADMIN))) {
       if (stricmp (command, "yapb") == 0 || stricmp (command, "yb") == 0) {
-         int state = BotCommandHandler (ent, isEmptyStr (arg1) ? "help" : arg1, g_engfuncs.pfnCmd_Argv (2), g_engfuncs.pfnCmd_Argv (3), g_engfuncs.pfnCmd_Argv (4), g_engfuncs.pfnCmd_Argv (5), g_engfuncs.pfnCmd_Argv (6), g_engfuncs.pfnCmd_Argv (0));
+         int state = handleBotCommands (ent, isEmptyStr (arg1) ? "help" : arg1, g_engfuncs.pfnCmd_Argv (2), g_engfuncs.pfnCmd_Argv (3), g_engfuncs.pfnCmd_Argv (4), g_engfuncs.pfnCmd_Argv (5), g_engfuncs.pfnCmd_Argv (6), g_engfuncs.pfnCmd_Argv (0));
 
          switch (state) {
          case 0:
@@ -2199,11 +2199,13 @@ void StartFrame (void) {
       g_timePerSecondUpdate = engine.timebase () + 1.0f;
    }
 
-   // keep track of grenades on map
-   bots.updateActiveGrenade ();
+   if (bots.getBotCount () > 0) {
+      // keep track of grenades on map
+      bots.updateActiveGrenade ();
 
-   // keep track of intresting entities
-   bots.updateIntrestingEntities ();
+      // keep track of intresting entities
+      bots.updateIntrestingEntities ();
+   }
 
    // keep bot number up to date
    bots.maintainQuota ();
@@ -3088,6 +3090,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
          return;
       }
    }
+   
 #endif
 
    auto api_GiveFnptrsToDll = g_gameLib->resolve<void(STD_CALL *) (enginefuncs_t *, globalvars_t *)> ("GiveFnptrsToDll");

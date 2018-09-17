@@ -70,7 +70,8 @@ void Engine::levelInitialize (void) {
 
       auto ent = g_engfuncs.pfnPEntityOfEntIndex (i);
 
-      if (isNullEntity (ent)) {
+      // only valid entities
+      if (engine.isNullEntity (ent) || ent->free || ent->v.classname == 0) {
          continue;
       }
       auto classname = STRING (ent->v.classname);

@@ -338,7 +338,7 @@ void initRound (void) {
       bots.updateTeamEconomics (team);
       bots.selectLeaders (team, true);
    }
-   bots.resetTimers ();
+   bots.reset ();
 
    for (int i = 0; i < engine.maxClients (); i++) {
       auto bot = bots.getBot (i);
