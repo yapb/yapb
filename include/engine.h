@@ -91,8 +91,6 @@ struct LangComprarer {
    }
 };
 
-#include <unordered_map>
-
 // provides utility functions to not call original engine (less call-cost)
 class Engine : public Singleton <Engine> {
 private:
