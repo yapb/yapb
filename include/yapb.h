@@ -1316,7 +1316,7 @@ public:
    inline void setLastWinner (int winner) {
       m_lastWinner = winner;
    }
-   void resetTimers (void);
+   void reset (void);
 
    int index (edict_t *ent);
    Bot *getBot (int index);

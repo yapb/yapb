@@ -639,8 +639,12 @@ public:
    }
 
    bool resize (size_t newSize) {
-      m_length = newSize;
-      return reserve (newSize);
+      bool res = reserve (newSize);
+
+      while (m_length < newSize) {
+         push (T ());
+      }
+      return res;
    }
 
    inline size_t length (void) const {
@@ -1034,7 +1038,9 @@ public:
    String &assign (const char *str, size_t length = 0) {
       length = length > 0 ? length : strlen (str);
 
+      clear ();
       resize (length);
+
       memcpy (m_data, str, length);
       terminate ();
 
@@ -1056,8 +1062,10 @@ public:
       if (empty ()) {
          return assign (str);
       }
-      resize (length () + strlen (str));
-      strcat (m_data, str);
+      size_t maxLength = strlen (str);
+
+      resize (length () + maxLength + 1);
+      strncat (m_data, str, maxLength);
 
       return *this;
    }

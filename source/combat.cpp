@@ -947,7 +947,7 @@ void Bot::focusEnemy (void) {
    // aim for the head and/or body
    m_lookAt = getEnemyBodyOffset ();
 
-   if (m_enemySurpriseTime > engine.timebase ()) {
+   if (m_enemySurpriseTime > engine.timebase () || engine.isNullEntity (m_enemy)) {
       return;
    } 
    float distance = (m_lookAt - eyePos ()).length2D (); // how far away is the enemy scum?
