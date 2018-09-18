@@ -532,7 +532,7 @@ void BotManager::kickBotByMenu (edict_t *ent, int selection) {
       auto bot = getBot (i);
 
       if (bot != nullptr && (bot->pev->flags & FL_FAKECLIENT)) {
-         menuKeys |= 1 << (i - menuKey);
+         menuKeys |= 1 << (cr::abs (i - menuKey));
          menus.formatAppend ("%1.1d. %s%s\n", i - menuKey + 1, STRING (bot->pev->netname), bot->m_team == TEAM_COUNTER ? " \\y(CT)\\w" : " \\r(T)\\w");
       }
       else {

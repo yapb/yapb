@@ -18,6 +18,7 @@ Engine::Engine (void) {
    for (int i = 0; i < NETMSG_NUM; i++) {
       m_msgBlock.regMsgs[i] = NETMSG_UNDEFINED;
    }
+   m_precached = false;
    m_isBotCommand = false;
    m_argumentCount = 0;
 

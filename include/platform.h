@@ -48,15 +48,17 @@
    #define DLL_DETACHING (dwReason == DLL_PROCESS_DETACH)
    #define DLL_RETENTRY return TRUE
 
-   #if defined(CXX_MSVC)
+   #if defined(CXX_MSVC) && !defined (_M_X64)
       #define DLL_GIVEFNPTRSTODLL extern "C" void STD_CALL
-   #elif defined(CXX_CLANG)
+   #elif defined(CXX_CLANG) || defined (_M_X64)
       #define DLL_GIVEFNPTRSTODLL SHARED_LIBRARAY_EXPORT void STD_CALL
    #endif
 
    // specify export parameter
    #if defined(CXX_MSVC) || defined (CXX_CLANG)
-      #pragma comment(linker, "/EXPORT:GiveFnptrsToDll=_GiveFnptrsToDll@8,@1")
+      #if !defined (_M_X64)
+         #pragma comment(linker, "/EXPORT:GiveFnptrsToDll=_GiveFnptrsToDll@8,@1")
+      #endif
       #pragma comment(linker, "/SECTION:.data,RW")
    #endif
 

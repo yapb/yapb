@@ -1047,7 +1047,7 @@ bool Waypoint::load (void) {
             fp.close ();
             return false;
          }
-         else if (stricmp (header.mapName, map)) {
+         else if (!!stricmp (header.mapName, map)) {
             sprintf (m_infoBuffer, "%s.pwf - hacked waypoint file, file name doesn't match waypoint header information (mapname: '%s', header: '%s')", map, map, header.mapName);
             logEntry (true, LL_ERROR, m_infoBuffer);
 
@@ -2326,7 +2326,7 @@ Waypoint::Waypoint (void) {
    m_facingAtIndex = INVALID_WAYPOINT_INDEX;
    m_visibilityIndex = 0;
    m_loadTries = 0;
-
+   m_numWaypoints = 0;
    m_isOnLadder = false;
 
    m_pathDisplayTime = 0.0f;

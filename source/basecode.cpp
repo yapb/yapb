@@ -5004,7 +5004,7 @@ void Bot::showDebugOverlay (void) {
          engine.drawLine (g_hostEntity, eyePos () - Vector (0.0f, 0.0f, 32.0f), eyePos () + g_pGlobals->v_forward * 300.0f, 10, 0, 255, 0, 0, 250, 5, 1, DRAW_ARROW);
 
          // now draw line from source to destination
- 
+         
          for (size_t i = 0; i < m_path.length () && i + 1 < m_path.length (); i++) {
             engine.drawLine (g_hostEntity, waypoints[m_path[i]].origin, waypoints[m_path[i + 1]].origin, 15, 0, 255, 100, 55, 200, 5, 1, DRAW_ARROW);
          }

@@ -1312,11 +1312,11 @@ public:
       while (*str != 0) {
          if (isTrimChar (*str, chars)) {
             erase (str - begin ());
+            str--;
          }
          else {
             break;
          }
-         str--;
       }
       return *this;
    }
@@ -1327,8 +1327,9 @@ public:
       }
       char *str = begin ();
 
-      while (isTrimChar (*str, chars))
+      while (isTrimChar (*str, chars)) {
          str++;
+      }
 
       if (begin () != str) {
          erase (0, str - begin ());
@@ -1551,11 +1552,11 @@ public:
       return true;
    }
 
-   int read (void *buffer, int size, int count = 1) {
+   size_t read (void *buffer, size_t size, size_t count = 1) {
       return fread (buffer, size, count, m_handle);
    }
 
-   int write (void *buffer, int size, int count = 1) {
+   size_t write (void *buffer, size_t size, size_t count = 1) {
       return fwrite (buffer, size, count, m_handle);
    }
 
@@ -1703,7 +1704,7 @@ public:
       return index ? buffer : nullptr;
    }
 
-   int read (void *buffer, size_t size, size_t count = 1) {
+   size_t read (void *buffer, size_t size, size_t count = 1) {
       if (!m_buffer || m_size <= m_pos || !buffer || !size || !count) {
          return 0;
       }

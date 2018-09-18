@@ -392,7 +392,7 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
          waypoints.pathCreate (CONNECTION_OUTGOING);
       }
 
-      // creates bidirectional path from cahed to current waypoint
+      // creates bidirectional path from cached to current waypoint
       else if (stricmp (arg1, "create_both") == 0) {
          waypoints.pathCreate (CONNECTION_BOTHWAYS);
       }

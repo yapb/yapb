@@ -21,7 +21,17 @@ extern enginefuncs_t g_engfuncs;
 
 // Use this instead of ALLOC_STRING on constant strings
 #define STRING(offset) (const char *)(g_pGlobals->pStringBase + (int)offset)
-#define MAKE_STRING(str) ((int)(size_t)str - (size_t)STRING (0))
+
+// form fwgs-hlsdk
+static inline int MAKE_STRING (const char *val) {
+   long long ptrdiff = val - STRING (0);
+
+   if (ptrdiff > INT_MAX || ptrdiff < INT_MIN) {
+      return g_engfuncs.pfnAllocString (val);
+   }
+   return static_cast <int> (ptrdiff);
+}
+
 #define ENGINE_STR(str) (const_cast <char *> (STRING (g_engfuncs.pfnAllocString (str))))
 
 // Dot products for view cone checking

@@ -77,7 +77,7 @@ struct MessageBlock {
 
 // compare language
 struct LangComprarer {
-   unsigned long operator () (const String &key) const {
+   size_t operator () (const String &key) const {
       char *str = const_cast <char *> (key.chars ());
       size_t hash = key.length ();
 

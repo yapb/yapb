@@ -14,66 +14,66 @@ ConVar yb_chat ("yb_chat", "1");
 void stripClanTags (char *buffer) {
    // this function strips 'clan' tags specified below in given string buffer
 
-   if (!buffer) {
+   if (isEmptyStr (buffer)) {
       return;
    }
+   int nameLength = strlen (buffer);
 
-   const char *tagOpen[] = {"-=", "-[", "-]", "-}", "-{", "<[", "<]", "[-", "]-", "{-", "}-", "[[", "[", "{", "]", "}", "<", ">", "-", "|", "=", "+", "(", ")"};
-   const char *tagClose[] = {"=-", "]-", "[-", "{-", "}-", "]>", "[>", "-]", "-[", "-}", "-{", "]]", "]", "}", "[", "{", ">", "<", "-", "|", "=", "+", ")", "("};
+   constexpr char *open[] = { "-=", "-[", "-]", "-}", "-{", "<[", "<]", "[-", "]-", "{-", "}-", "[[", "[", "{", "]", "}", "<", ">", "-", "|", "=", "+", "(", ")" };
+   constexpr char *close[] = { "=-", "]-", "[-", "{-", "}-", "]>", "[>", "-]", "-[", "-}", "-{", "]]", "]", "}", "[", "{", ">", "<", "-", "|", "=", "+", ")", "(" };
 
-   int index, fieldStart, fieldStop, i;
-   int length = strlen (buffer); // get length of string
-
-   // foreach known tag...
-   for (index = 0; index < cr::arrsize (tagOpen); index++) {
-      fieldStart = strstr (buffer, tagOpen[index]) - buffer; // look for a tag start
+   // for each known tag...
+   for (int i = 0; i < cr::arrsize (open); i++) {
+      int start = strstr (buffer, open[i]) - buffer; // look for a tag start
 
       // have we found a tag start?
-      if (fieldStart >= 0 && fieldStart < 32) {
-         fieldStop = strstr (buffer, tagClose[index]) - buffer; // look for a tag stop
+      if (start >= 0 && start < 32) {
+         int stop = strstr (buffer, close[i]) - buffer; // look for a tag stop
 
          // have we found a tag stop?
-         if (fieldStop > fieldStart && fieldStop < 32) {
-            int tagLength = strlen (tagClose[index]);
+         if (stop > start && stop < 32) {
+            int tag = strlen (close[i]);
+            int j = start;
 
-            for (i = fieldStart; i < length - (fieldStop + tagLength - fieldStart); i++) {
-               buffer[i] = buffer[i + (fieldStop + tagLength - fieldStart)]; // overwrite the buffer with the stripped string
+            for (; j < nameLength - (stop + tag - start); j++) {
+               buffer[j] = buffer[j + (stop + tag - start)]; // overwrite the buffer with the stripped string
             }
-            buffer[i] = '\0'; // terminate the string
+            buffer[j] = '\0'; // terminate the string
          }
       }
    }
 
    // have we stripped too much (all the stuff)?
-   if (buffer[0] != '\0') {
-      String::trimChars (buffer); // if so, string is just a tag
+   if (isEmptyStr (buffer)) {
+      String::trimChars (buffer);
+      return;
+   }
+   String::trimChars (buffer); // if so, string is just a tag
 
-      int tagLength = 0;
+   // strip just the tag part...
+   for (int i = 0; i < cr::arrsize (open); i++) {
+      int start = strstr (buffer, open[i]) - buffer; // look for a tag start
 
-      // strip just the tag part...
-      for (index = 0; index < cr::arrsize (tagOpen); index++) {
-         fieldStart = strstr (buffer, tagOpen[index]) - buffer; // look for a tag start
+      // have we found a tag start?
+      if (start >= 0 && start < 32) {
+         int tag = strlen (open[i]);
+         int j = start;
 
-         // have we found a tag start?
-         if (fieldStart >= 0 && fieldStart < 32) {
-            tagLength = strlen (tagOpen[index]);
+         for (; j < nameLength - tag; j++) {
+            buffer[j] = buffer[j + tag]; // overwrite the buffer with the stripped string
+         }
+         buffer[j] = '\0'; // terminate the string
+         start = strstr (buffer, close[i]) - buffer; // look for a tag stop
 
-            for (i = fieldStart; i < length - tagLength; i++) {
-               buffer[i] = buffer[i + tagLength]; // overwrite the buffer with the stripped string
+         // have we found a tag stop ?
+         if (start >= 0 && start < 32) {
+            tag = strlen (close[i]);
+            j = start;
+
+            for (; j < nameLength - tag; j++) {
+               buffer[j] = buffer[j + tag]; // overwrite the buffer with the stripped string
             }
-            buffer[i] = '\0'; // terminate the string
-
-            fieldStart = strstr (buffer, tagClose[index]) - buffer; // look for a tag stop
-
-            // have we found a tag stop ?
-            if (fieldStart >= 0 && fieldStart < 32) {
-               tagLength = strlen (tagClose[index]);
-
-               for (i = fieldStart; i < length - tagLength; i++) {
-                  buffer[i] = buffer[i + tagLength]; // overwrite the buffer with the stripped string
-               }
-               buffer[i] = 0; // terminate the string
-            }
+            buffer[j] = 0; // terminate the string
          }
       }
    }

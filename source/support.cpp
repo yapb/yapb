@@ -505,7 +505,7 @@ void checkWelcome (void) {
 
    if (receiveTime > 0.0f && receiveTime < engine.timebase () && needToSendMsg) {
       if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH_ENGINE))) {
-         engine.execCmd ("speak \"%s\"", const_cast <char *> (sentences.random ().chars ()));
+         engine.execCmd ("speak \"%s\"", sentences.random ().chars ());
       }
       engine.chatPrint ("----- %s v%s (Build: %u), {%s}, (c) %s, by %s (%s)-----", PRODUCT_NAME, PRODUCT_VERSION, buildNumber (), PRODUCT_DATE, PRODUCT_END_YEAR, PRODUCT_AUTHOR, PRODUCT_URL);
 
