@@ -1347,7 +1347,7 @@ public:
    void addbot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member, bool manual);
    void serverFill (int selection, int personality = PERSONALITY_NORMAL, int difficulty = -1, int numToAdd = -1);
 
-   void kickEveryone (bool instant = false);
+   void kickEveryone (bool instant = false,  bool zeroQuota = true);
    void kickRandom (bool decQuota = true);
    void kickBot (int index);
    void kickFromTeam (Team team, bool removeAll = false);

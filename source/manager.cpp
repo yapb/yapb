@@ -487,11 +487,14 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
    engine.centerPrint ("Fill Server with %s bots...", &teams[selection][0]);
 }
 
-void BotManager::kickEveryone (bool instant) {
+void BotManager::kickEveryone (bool instant, bool zeroQuota) {
    // this function drops all bot clients from server (this function removes only yapb's)`q
 
    engine.centerPrint ("Bots are removed from server.");
-   decrementQuota (0);
+
+   if (zeroQuota) {
+      decrementQuota (0);
+   }
 
    if (instant) {
       for (int i = 0; i < engine.maxClients (); i++) {

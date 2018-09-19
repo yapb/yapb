@@ -2091,6 +2091,11 @@ void ServerDeactivate (void) {
    // set state to unprecached
    engine.setUnprecached ();
 
+   // xash is not kicking players on changelevel
+   if (g_gameFlags & GAME_XASH_ENGINE) {
+      bots.kickEveryone (true, false);
+      bots.destroy ();
+   }
    cleanupGarbage ();
 
    if (g_gameFlags & GAME_METAMOD) {
