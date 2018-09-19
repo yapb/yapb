@@ -22,10 +22,12 @@
 #define PRODUCT_LEGAL "Half-Life, Counter-Strike, Counter-Strike: Condition Zero, Steam, Valve is a trademark of Valve Corporation"
 #define PRODUCT_ORIGINAL_NAME "yapb.dll"
 #define PRODUCT_INTERNAL_NAME "skybot"
-#define PRODUCT_VERSION_DWORD_INTERNAL 2, 8
-#define PRODUCT_VERSION_DWORD PRODUCT_VERSION_DWORD_INTERNAL, 556
-#define PRODUCT_SUPPORT_VERSION "6.6b - CZ"
-#define PRODUCT_COMMENTS "http://github.com/jeefo/yapb/"
-#define PRODUCT_DATE __DATE__
 #define PRODUCT_GIT_HASH "unspecified_hash"
 #define PRODUCT_GIT_COMMIT_AUTHOR "unspecified_author"
+#define PRODUCT_GIT_COMMIT_ID 0000
+#define PRODUCT_VERSION_DWORD_INTERNAL 2, 9
+#define PRODUCT_VERSION_DWORD PRODUCT_VERSION_DWORD_INTERNAL, PRODUCT_GIT_COMMIT_ID
+#define PRODUCT_SUPPORT_VERSION "Beta 6.6 - Condition Zero"
+#define PRODUCT_COMMENTS "http://github.com/jeefo/yapb/"
+#define PRODUCT_DATE __DATE__
+
