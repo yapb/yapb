@@ -1018,7 +1018,7 @@ private:
    int bestWeaponCarried (void);
    bool hasAnyWeapons (void);
 
-   void processMovement (void);
+   void runMovement (void);
    uint8 computeMsec (void);
    void getValidPoint (void);
 

@@ -2863,29 +2863,15 @@ void Bot::frameThink (void) {
          m_voteMap = 0;
       }
    }
-   else if (!(pev->maxspeed < 10.0f && taskId () != TASK_PLANTBOMB && taskId () != TASK_DEFUSEBOMB) && !yb_freeze_bots.boolean () && !waypoints.hasChanged ()) {
+   else if (m_notKilled && m_buyingFinished && !(pev->maxspeed < 10.0f && taskId () != TASK_PLANTBOMB && taskId () != TASK_DEFUSEBOMB) && !yb_freeze_bots.boolean () && !waypoints.hasChanged ()) {
       botMovement = true;
    }
    checkMsgQueue (); // check for pending messages
 
-   // allow ai running during freezetime
-   if (!botMovement && engine.timebase () <= g_timeRoundStart) {
-      botMovement = true;
-   }
-
    if (botMovement) {
       ai (); // execute main code
-
-      if (engine.timebase () <= g_timeRoundStart) {
-         m_checkTerrain = false;
-         m_moveToGoal = false;
-         m_navTimeset = engine.timebase ();
-
-         pev->button = 0;
-         ignoreCollision ();
-      }
    }
-   processMovement (); // run the player movement
+   runMovement (); // run the player movement
 }
 
 void Bot::frame (void) {
@@ -5557,7 +5543,7 @@ uint8 Bot::computeMsec (void) {
    return static_cast <uint8> ((engine.timebase () - m_lastCommandTime) * 1000.0f);
 }
 
-void Bot::processMovement (void) {
+void Bot::runMovement (void) {
    // the purpose of this function is to compute, according to the specified computation
    // method, the msec value which will be passed as an argument of pfnRunPlayerMove. This
    // function is called every frame for every bot, since the RunPlayerMove is the function
