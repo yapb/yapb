@@ -140,7 +140,13 @@ private:
    }
 
 public:
-   Compress (void) : m_csize (0), m_matchPos (0), m_matchLen (0) { }
+   Compress (void) : m_csize (0), m_matchPos (0), m_matchLen (0) {
+      memset (m_right, 0, sizeof (m_right));
+      memset (m_left, 0, sizeof (m_left));
+      memset (m_parent, 0, sizeof (m_parent));
+      memset (m_buffer, 0, sizeof (m_buffer));
+   }
+
    ~Compress (void) = default;
 
    int encode_ (const char *fileName, uint8 *header, int headerSize, uint8 *buffer, int bufferSize) {

@@ -738,6 +738,7 @@ private:
    bool m_isLeader; // bot is leader of his team
    bool m_checkTerrain; // check for terrain
    bool m_moveToC4; // ct is moving to bomb
+   bool m_grenadeRequested; // bot requested change to grenade
 
    float m_prevTime; // time previously checked movement speed
    float m_prevSpeed; // speed some frames before
@@ -780,7 +781,7 @@ private:
    CollisionState m_collisionState; // collision State
 
    BinaryHeap <int, float, MAX_ROUTE_LENGTH> m_routeQue;
-   Route *m_routes; // pointer
+   Array <Route> m_routes; // pointer
    PathWalk m_path; // pointer to current node from path
    Path *m_currentPath; // pointer to the current path waypoint
 
@@ -1071,6 +1072,7 @@ private:
 
    void searchShortestPath (int srcIndex, int destIndex);
    void searchPath (int srcIndex, int destIndex, SearchPathType pathType = SEARCH_PATH_FASTEST);
+   void clearRoute (void);
    void sayDebug (const char *format, ...);
    void frame (void);
 
@@ -1217,7 +1219,7 @@ public:
    void processDamage (edict_t *inflictor, int damage, int armor, int bits);
 
    void showDebugOverlay (void);
-   void processNewRound (void);
+   void newRound (void);
    void processBuyzoneEntering (int buyState);
    void pushMsgQueue (int message);
    void prepareChatMessage (char *text);
@@ -1232,7 +1234,7 @@ public:
    void startTask (TaskID id, float desire, int data, float time, bool canContinue);
    void clearTask (TaskID id);
    void filterTasks (void);
-   void resetTasks (void);
+   void clearTasks (void);
 
    Task *task (void);
 
@@ -1277,7 +1279,7 @@ public:
 // manager class
 class BotManager : public Singleton<BotManager> {
 private:
-   Array<CreateQueue> m_creationTab; // bot creation tab
+   Array <CreateQueue> m_creationTab; // bot creation tab
 
    Bot *m_bots[MAX_ENGINE_PLAYERS]; // all available bots
 

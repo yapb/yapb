@@ -77,7 +77,7 @@ using ::log10f;
 // from metamod-p
 static inline bool checkptr (const void *ptr) {
 #ifdef PLATFORM_WIN32
-   if (IsBadCodePtr ((FARPROC)ptr))
+   if (IsBadCodePtr (reinterpret_cast <FARPROC> (ptr)))
       return false;
 #endif
 
@@ -85,11 +85,11 @@ static inline bool checkptr (const void *ptr) {
    return true;
 }
 
-template <typename T, int N> constexpr int bufsize (const T (&)[N]) {
+template <typename T, size_t N> constexpr size_t bufsize (const T (&)[N]) {
    return N - 1;
 }
 
-template <typename T, int N> constexpr int arrsize (const T (&)[N]) {
+template <typename T, size_t N> constexpr size_t arrsize (const T (&)[N]) {
    return N;
 }
 
@@ -109,7 +109,7 @@ template <typename T> constexpr T clamp (const T x, const T a, const T b) {
    return min (max (x, a), b);
 }
 
-template<typename T> constexpr T abs (const T a) {
+template <typename T> constexpr T abs (const T a) {
    return a > 0 ? a : -a;
 }
 
@@ -128,7 +128,7 @@ static inline float sqrtf (const float value) {
 }
 
 static inline float sinf (const float value) {
-   signed long sign = static_cast <signed long> (value * PI_RECIPROCAL);
+   const signed long sign = static_cast <signed long> (value * PI_RECIPROCAL);
    const float calc = (value - static_cast <float> (sign) * PI);
 
    const float sqr = square (calc);
@@ -139,7 +139,7 @@ static inline float sinf (const float value) {
 }
 
 static inline float cosf (const float value) {
-   signed long sign = static_cast <signed long> (value * PI_RECIPROCAL);
+   const signed long sign = static_cast <signed long> (value * PI_RECIPROCAL);
    const float calc = (value - static_cast <float> (sign) * PI);
 
    const float sqr = square (calc);
@@ -272,7 +272,7 @@ private:
       if (x >= prime) {
          return x;
       }
-      unsigned int residue = (static_cast <unsigned long long> (x) * x) % prime;
+      const unsigned int residue = (static_cast <unsigned long long> (x) * x) % prime;
       return (x <= prime / 2) ? residue : prime - residue;
    }
 
@@ -282,16 +282,17 @@ private:
 
 public:
    RandomSequence (void) {
-      unsigned int seedBase = static_cast <unsigned int> (time (nullptr));
-      unsigned int seedOffset = seedBase + 1;
+      const unsigned int seedBase = static_cast <unsigned int> (time (nullptr));
+      const unsigned int seedOffset = seedBase + 1;
 
       m_index = premute (premute (seedBase) + 0x682f0161);
       m_intermediateOffset = premute (premute (seedOffset) + 0x46790905);
       m_divider = (static_cast <unsigned long long> (1)) << 32;
    }
 
-   inline int getInt (int low, int high) {
-      return static_cast <int> (random () * (static_cast <double> (high) - static_cast <double> (low) + 1.0) / m_divider + static_cast <double> (low));
+
+   template <typename U> inline U getInt (U low, U high) {
+      return static_cast <U> (random () * (static_cast <double> (high) - static_cast <double> (low) + 1.0) / m_divider + static_cast <double> (low));
    }
 
    inline float getFloat (float low, float high) {
@@ -305,9 +306,9 @@ public:
 
 public:
    inline Vector (float scaler = 0.0f) : x (scaler), y (scaler), z (scaler) {}
-   inline Vector (float inputX, float inputY, float inputZ) : x (inputX) , y (inputY) , z (inputZ) {}
-   inline Vector (float *other) : x (other[0]) , y (other[1]) , z (other[2]) {}
-   inline Vector (const Vector &right) : x (right.x) , y (right.y) , z (right.z) {}
+   inline Vector (float inputX, float inputY, float inputZ) : x (inputX), y (inputY), z (inputZ) {}
+   inline Vector (float *other) : x (other[0]), y (other[1]), z (other[2]) {}
+   inline Vector (const Vector &right) : x (right.x), y (right.y), z (right.z) {}
 
 public:
    inline operator float * (void) {
@@ -571,9 +572,7 @@ public:
    B second;
 
 public:
-   Pair (A first, B second) {
-      this->first = first;
-      this->second = second;
+   Pair (A a, B b) : first (a), second (b) {
    }
 
 public:
@@ -590,7 +589,7 @@ public:
    Array (void) : m_data (nullptr), m_capacity (0), m_length (0) {
    }
 
-   Array (Array &&other) {
+   Array (Array &&other) noexcept {
       m_data = other.m_data;
       m_length = other.m_length;
       m_capacity = other.m_capacity;
@@ -836,10 +835,10 @@ public:
    }
 
    T &random (void) const {
-      return m_data[RandomSequence::ref ().getInt (0, m_length - 1)];
+      return m_data[RandomSequence::ref ().getInt (0, static_cast <int> (m_length - 1))];
    }
 
-   Array &operator = (Array &&other) {
+   Array &operator = (Array &&other) noexcept {
       destroy ();
 
       m_data = other.m_data;
@@ -891,8 +890,7 @@ public:
    BinaryHeap (void) {
       Base::reserve (Capacity);
    }
-
-   BinaryHeap (BinaryHeap &&other) : Base (move (other)) { }
+   BinaryHeap (BinaryHeap &&other) noexcept : Base (move (other)) { }
 
 public:
    void push (const A &first, const B &second) {
@@ -974,7 +972,7 @@ public:
       m_data[parent] = move (ref);
    }
 
-   BinaryHeap &operator = (BinaryHeap &&other) {
+   BinaryHeap &operator = (BinaryHeap &&other) noexcept {
       Base::operator = (move (other));
       return *this;
    }
@@ -1018,7 +1016,7 @@ private:
 public:
 
    String (void) = default;
-   String (String &&other) : Base (move (other)) { }
+   String (String &&other) noexcept : Base (move (other)) { }
    ~String (void) = default;
 
 public:
@@ -1062,9 +1060,9 @@ public:
       if (empty ()) {
          return assign (str);
       }
-      size_t maxLength = strlen (str);
+      const size_t maxLength = strlen (str) + 1;
 
-      resize (length () + maxLength + 1);
+      resize (length () + maxLength);
       strncat (m_data, str, maxLength);
 
       return *this;
@@ -1075,7 +1073,7 @@ public:
    }
 
    String &append (const char chr) {
-      char app[] = { chr, '\0' };
+      const char app[] = { chr, '\0' };
       return append (app);
    }
 
@@ -1113,7 +1111,7 @@ public:
       terminate ();
    }
 
-   int toInt32 (void) const {
+   int32 toInt32 (void) const {
       return atoi (chars ());
    }
 
@@ -1125,11 +1123,11 @@ public:
       return m_data[index];
    }
 
-   int compare (const String &what) const {
+   int32 compare (const String &what) const {
       return strcmp (m_data, what.begin ());
    }
 
-   int compare (const char *what) const {
+   int32 compare (const char *what) const {
       return strcmp (begin (), what);
    }
 
@@ -1290,7 +1288,7 @@ public:
       return assign (rhs);
    }
 
-   String &operator = (String &&other) {
+   String &operator = (String &&other) noexcept {
       Base::operator = (move (other));
       return *this;
    }
@@ -1480,9 +1478,9 @@ private:
    size_t m_size;
 
 public:
-   File (void) : m_handle (nullptr) , m_size (0) {}
+   File (void) : m_handle (nullptr), m_size (0) {}
 
-   File (const String &fileName, const String &mode = "rt") : m_size (0){
+   File (const String &fileName, const String &mode = "rt") : m_handle (nullptr), m_size (0){
       open (fileName, mode);
    }
 
@@ -1741,7 +1739,7 @@ public:
       return true;
    }
 
-   inline int getSize (void) const {
+   inline size_t getSize (void) const {
       return m_size;
    }
 

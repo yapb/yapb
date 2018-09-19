@@ -219,10 +219,17 @@ void Bot::checkGrenadesThrow (void) {
          }
          break;
 
-      case WEAPON_FLASHBANG:
-         m_throw = waypoints[waypoints.getNearest ((m_lastEnemy->v.velocity * 0.5f).make2D () + m_lastEnemy->v.origin)].origin;
+      case WEAPON_FLASHBANG: {
+         int nearest = waypoints.getNearest ((m_lastEnemy->v.velocity * 0.5f).make2D () + m_lastEnemy->v.origin);
 
-         if (numFriendsNear (m_throw, 128.0f) > 0) {
+         if (nearest != INVALID_WAYPOINT_INDEX) {
+            m_throw = waypoints[nearest].origin;
+
+            if (numFriendsNear (m_throw, 148.0f) > 0) {
+               allowThrowing = false;
+            }
+         }
+         else {
             allowThrowing = false;
          }
 
@@ -248,6 +255,7 @@ void Bot::checkGrenadesThrow (void) {
             m_states &= ~STATE_THROW_FB;
          }
          break;
+      }
 
       case WEAPON_SMOKE:
          if (allowThrowing && !engine.isNullEntity (m_lastEnemy)) {
@@ -514,7 +522,7 @@ void Bot::processPickups (void) {
    auto &intresting = bots.searchIntrestingEntities ();
 
    Bot *bot = nullptr;
-   const float radius = cr::square (320.0f);
+   constexpr float radius = cr::square (320.0f);
 
    if (!engine.isNullEntity (m_pickupItem)) {
       bool itemExists = false;
@@ -1184,24 +1192,26 @@ void Bot::checkMsgQueue (void) {
             }
          }
 
-         if ((m_radioSelect != Radio_ReportingIn && m_forceRadio) || yb_communication_type.integer () != 2 || g_chatterFactory[m_radioSelect].empty () || !(g_gameFlags & GAME_SUPPORT_BOT_VOICE)) {
-            if (m_radioSelect < Radio_GoGoGo) {
-               engine.execBotCmd (ent (), "radio1");
-            }
-            else if (m_radioSelect < Radio_Affirmative) {
-               m_radioSelect -= Radio_GoGoGo - 1;
-               engine.execBotCmd (ent (), "radio2");
-            }
-            else {
-               m_radioSelect -= Radio_Affirmative - 1;
-               engine.execBotCmd (ent (), "radio3");
-            }
+         if (m_radioSelect != -1) {
+            if ((m_radioSelect != Radio_ReportingIn && m_forceRadio) || yb_communication_type.integer () != 2 || g_chatterFactory[m_radioSelect].empty () || !(g_gameFlags & GAME_SUPPORT_BOT_VOICE)) {
+               if (m_radioSelect < Radio_GoGoGo) {
+                  engine.execBotCmd (ent (), "radio1");
+               }
+               else if (m_radioSelect < Radio_Affirmative) {
+                  m_radioSelect -= Radio_GoGoGo - 1;
+                  engine.execBotCmd (ent (), "radio2");
+               }
+               else {
+                  m_radioSelect -= Radio_Affirmative - 1;
+                  engine.execBotCmd (ent (), "radio3");
+               }
 
-            // select correct menu item for this radio message
-            engine.execBotCmd (ent (), "menuselect %d", m_radioSelect);
-         }
-         else if (m_radioSelect != -1 && m_radioSelect != Radio_ReportingIn) {
-            instantChatter (m_radioSelect);
+               // select correct menu item for this radio message
+               engine.execBotCmd (ent (), "menuselect %d", m_radioSelect);
+            }
+            else if (m_radioSelect != Radio_ReportingIn) {
+               instantChatter (m_radioSelect);
+            }
          }
          m_forceRadio = false; // reset radio to voice
          g_lastRadioTime[m_team] = engine.timebase (); // store last radio usage
@@ -2083,7 +2093,7 @@ void Bot::filterTasks (void) {
    }
 }
 
-void Bot::resetTasks (void) {
+void Bot::clearTasks (void) {
    // this function resets bot tasks stack, by removing all entries from the stack.
 
    m_tasks.clear ();
@@ -2890,7 +2900,7 @@ void Bot::frame (void) {
       const Vector &bombPosition = waypoints.getBombPos ();
 
       if (!m_hasProgressBar && taskId () != TASK_ESCAPEFROMBOMB && (pev->origin - bombPosition).length () < 700.0f && !isBombDefusing (bombPosition)) {
-         resetTasks ();
+         clearTasks ();
       }
    }
    checkSpawnConditions ();
@@ -4024,11 +4034,14 @@ void Bot::throwExplosive_ (void) {
       auto grenade = correctGrenadeVelocity ("hegrenade.mdl");
 
       if (engine.isNullEntity (grenade)) {
-         if (m_currentWeapon != WEAPON_EXPLOSIVE) {
+         if (m_currentWeapon != WEAPON_EXPLOSIVE && !m_grenadeRequested) {
             if (pev->weapons & (1 << WEAPON_EXPLOSIVE)) {
+               m_grenadeRequested = true;
                selectWeaponByName ("weapon_hegrenade");
             }
             else {
+               m_grenadeRequested = false;
+
                selectBestWeapon ();
                completeTask ();
 
@@ -4037,6 +4050,7 @@ void Bot::throwExplosive_ (void) {
          }
          else if (!(m_oldButtons & IN_ATTACK)) {
             pev->button |= IN_ATTACK;
+            m_grenadeRequested = false;
          }
       }
    }
@@ -4086,11 +4100,14 @@ void Bot::throwFlashbang_ (void) {
       auto grenade = correctGrenadeVelocity ("flashbang.mdl");
 
       if (engine.isNullEntity (grenade)) {
-         if (m_currentWeapon != WEAPON_FLASHBANG) {
+         if (m_currentWeapon != WEAPON_FLASHBANG  && !m_grenadeRequested) {
             if (pev->weapons & (1 << WEAPON_FLASHBANG)) {
+               m_grenadeRequested = true;
                selectWeaponByName ("weapon_flashbang");
             }
             else {
+               m_grenadeRequested = false;
+
                selectBestWeapon ();
                completeTask ();
 
@@ -4099,6 +4116,7 @@ void Bot::throwFlashbang_ (void) {
          }
          else if (!(m_oldButtons & IN_ATTACK)) {
             pev->button |= IN_ATTACK;
+            m_grenadeRequested = false;
          }
       }
    }
@@ -4132,12 +4150,16 @@ void Bot::throwSmoke_ (void) {
       return;
    }
 
-   if (m_currentWeapon != WEAPON_SMOKE) {
+   if (m_currentWeapon != WEAPON_SMOKE && !m_grenadeRequested) {
       if (pev->weapons & (1 << WEAPON_SMOKE)) {
+         m_grenadeRequested = true;
+
          selectWeaponByName ("weapon_smokegrenade");
          task ()->time = engine.timebase () + 1.2f;
       }
       else {
+         m_grenadeRequested = false;
+
          selectBestWeapon ();
          completeTask ();
 
@@ -4146,6 +4168,7 @@ void Bot::throwSmoke_ (void) {
    }
    else if (!(m_oldButtons & IN_ATTACK)) {
       pev->button |= IN_ATTACK;
+      m_grenadeRequested = false;
    }
    pev->button |= m_campButtons;
 }

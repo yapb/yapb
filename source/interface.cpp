@@ -847,7 +847,7 @@ void processBotConfigs (bool onlyMain) {
             }
             items[1].trim ("(;)");
 
-            for (int i = 0; i < cr::arrsize (chatterEventMap); i++) {
+            for (size_t i = 0; i < cr::arrsize (chatterEventMap); i++) {
                auto event = &chatterEventMap[i];
 
                if (stricmp (event->str, items[0].chars ()) == 0) {
@@ -2142,7 +2142,7 @@ void StartFrame (void) {
       }
    }
 
-   if (!engine.isDedicated () && !engine.isNullEntity (g_hostEntity) & g_waypointOn) {
+   if (g_waypointOn && !engine.isDedicated () && !engine.isNullEntity (g_hostEntity)) {
       waypoints.frame ();
    }
    bots.updateDeathMsgState (false);
@@ -2935,9 +2935,8 @@ Library *LoadCSBinary (void) {
 #endif
 
    // search the libraries inside game dlls directory
-   for (int i = 0; i < cr::arrsize (libs); i++) {
-      char path[256];
-      sprintf (path, "%s/dlls/%s", modname, libs[i]);
+   for (size_t i = 0; i < cr::arrsize (libs); i++) {
+      auto *path = format ("%s/dlls/%s", modname, libs[i]);
 
       // if we can't read file, skip it
       if (!File::exists (path)) {
@@ -2946,7 +2945,7 @@ Library *LoadCSBinary (void) {
 
       // special case, czero is always detected first, as it's has custom directory
       if (strcmp (modname, "czero") == 0) {
-         g_gameFlags |= GAME_CZERO;
+         g_gameFlags |= (GAME_CZERO | GAME_SUPPORT_BOT_VOICE | GAME_SUPPORT_SVC_PINGS);
 
          if (g_gameFlags & GAME_METAMOD) {
             return nullptr;

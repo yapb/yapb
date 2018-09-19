@@ -588,7 +588,7 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
          obstacleDistance = (tr.vecEndPos - source).lengthSq ();
       }
    }
-   float distance = cr::square (75.0f);
+   constexpr float distance = cr::square (75.0f);
 
    if (obstacleDistance > 0.0f) {
       while (penetratePower > 0) {

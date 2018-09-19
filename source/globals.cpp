@@ -139,9 +139,20 @@ WeaponSelect g_weaponSelect[NUM_WEAPONS + 1] = {
 void setupBotMenus (void) {
    int counter = 0;
 
+   auto buildKeys = [](int numKeys) {
+      int keys = 0;
+
+      for (int i = 0; i < numKeys; i++) {
+         keys |= (1 << i);
+      }
+      keys |= (1 << 9);
+
+      return keys;
+   };
+
    // bots main menu
    g_menus[counter] = {
-      BOT_MENU_MAIN, 0x2ff,
+      BOT_MENU_MAIN, buildKeys (4),
       "\\yMain Menu\\w\n\n"
       "1. Control Bots\n"
       "2. Features\n\n"
@@ -152,7 +163,7 @@ void setupBotMenus (void) {
 
    // bots features menu
    g_menus[++counter] = {
-      BOT_MENU_FEATURES, 0x25f,
+      BOT_MENU_FEATURES, buildKeys (5),
       "\\yBots Features\\w\n\n"
       "1. Weapon Mode Menu\n"
       "2. Waypoint Menu\n"
@@ -164,7 +175,7 @@ void setupBotMenus (void) {
 
    // bot control menu
    g_menus[++counter] = {
-      BOT_MENU_CONTROL, 0x2ff,
+      BOT_MENU_CONTROL, buildKeys (5),
       "\\yBots Control Menu\\w\n\n"
       "1. Add a Bot, Quick\n"
       "2. Add a Bot, Specified\n\n"
@@ -176,7 +187,7 @@ void setupBotMenus (void) {
 
    // weapon mode select menu
    g_menus[++counter] = {
-      BOT_MENU_WEAPON_MODE, 0x27f,
+      BOT_MENU_WEAPON_MODE, buildKeys (7),
       "\\yBots Weapon Mode\\w\n\n"
       "1. Knives only\n"
       "2. Pistols only\n"
@@ -190,7 +201,7 @@ void setupBotMenus (void) {
 
    // personality select menu
    g_menus[++counter] = {
-      BOT_MENU_PERSONALITY, 0x20f,
+      BOT_MENU_PERSONALITY, buildKeys (4),
       "\\yBots Personality\\w\n\n"
       "1. Random\n"
       "2. Normal\n"
@@ -201,7 +212,7 @@ void setupBotMenus (void) {
 
    // difficulty select menu
    g_menus[++counter] = {
-      BOT_MENU_DIFFICULTY, 0x23f,
+      BOT_MENU_DIFFICULTY, buildKeys (5),
       "\\yBots Difficulty Level\\w\n\n"
       "1. Newbie\n"
       "2. Average\n"
@@ -213,7 +224,7 @@ void setupBotMenus (void) {
 
    // team select menu
    g_menus[++counter] = {
-      BOT_MENU_TEAM_SELECT, 0x213,
+      BOT_MENU_TEAM_SELECT, buildKeys (5),
       "\\ySelect a team\\w\n\n"
       "1. Terrorist Force\n"
       "2. Counter-Terrorist Force\n\n"
@@ -223,7 +234,7 @@ void setupBotMenus (void) {
 
    // terrorist model select menu
    g_menus[++counter] = {
-      BOT_MENU_TERRORIST_SELECT, 0x21f,
+      BOT_MENU_TERRORIST_SELECT, buildKeys (5),
       "\\ySelect an appearance\\w\n\n"
       "1. Phoenix Connexion\n"
       "2. L337 Krew\n"
@@ -235,7 +246,7 @@ void setupBotMenus (void) {
 
    // counter-terrorist model select menu
    g_menus[++counter] = {
-      BOT_MENU_CT_SELECT, 0x21f,
+      BOT_MENU_CT_SELECT, buildKeys (5),
       "\\ySelect an appearance\\w\n\n"
       "1. Seal Team 6 (DEVGRU)\n"
       "2. German GSG-9\n"
@@ -247,7 +258,7 @@ void setupBotMenus (void) {
 
    // command menu
    g_menus[++counter] = {
-      BOT_MENU_COMMANDS, 0x23fu,
+      BOT_MENU_COMMANDS, buildKeys (4),
       "\\yBot Command Menu\\w\n\n"
       "1. Make Double Jump\n"
       "2. Finish Double Jump\n\n"
@@ -258,7 +269,7 @@ void setupBotMenus (void) {
 
    // main waypoint menu
    g_menus[++counter] = {
-      BOT_MENU_WAYPOINT_MAIN_PAGE1, 0x3ff,
+      BOT_MENU_WAYPOINT_MAIN_PAGE1, buildKeys (9),
       "\\yWaypoint Operations (Page 1)\\w\n\n"
       "1. Show/Hide waypoints\n"
       "2. Cache waypoint\n"
@@ -274,7 +285,7 @@ void setupBotMenus (void) {
 
    // main waypoint menu (page 2)
    g_menus[++counter] = {
-      BOT_MENU_WAYPOINT_MAIN_PAGE2, 0x3ff,
+      BOT_MENU_WAYPOINT_MAIN_PAGE2, buildKeys (9),
       "\\yWaypoint Operations (Page 2)\\w\n\n"
       "1. Waypoint stats\n"
       "2. Autowaypoint on/off\n"
@@ -290,7 +301,7 @@ void setupBotMenus (void) {
 
    // select waypoint radius menu
    g_menus[++counter] = {
-      BOT_MENU_WAYPOINT_RADIUS, 0x3ff,
+      BOT_MENU_WAYPOINT_RADIUS, buildKeys (9),
       "\\yWaypoint Radius\\w\n\n"
       "1. SetRadius 0\n"
       "2. SetRadius 8\n"
@@ -306,7 +317,7 @@ void setupBotMenus (void) {
 
    // waypoint add menu
    g_menus[++counter] = {
-      BOT_MENU_WAYPOINT_TYPE, 0x3ff,
+      BOT_MENU_WAYPOINT_TYPE, buildKeys (9),
       "\\yWaypoint Type\\w\n\n"
       "1. Normal\n"
       "\\r2. Terrorist Important\n"
@@ -322,7 +333,7 @@ void setupBotMenus (void) {
 
    // set waypoint flag menu
    g_menus[++counter] = {
-      BOT_MENU_WAYPOINT_FLAG, 0x2ff,
+      BOT_MENU_WAYPOINT_FLAG, buildKeys (5),
       "\\yToggle Waypoint Flags\\w\n\n"
       "1. Block with Hostage\n"
       "2. Terrorists Specific\n"
@@ -334,8 +345,7 @@ void setupBotMenus (void) {
 
    // auto-path max distance
    g_menus[++counter] = {
-      BOT_MENU_WAYPOINT_AUTOPATH,
-      0x27f,
+      BOT_MENU_WAYPOINT_AUTOPATH, buildKeys (7),
       "\\yAutoPath Distance\\w\n\n"
       "1. Distance 0\n"
       "2. Distance 100\n"
@@ -349,15 +359,13 @@ void setupBotMenus (void) {
 
    // path connections
    g_menus[++counter] = {
-      BOT_MENU_WAYPOINT_PATH,
-      0x207,
+      BOT_MENU_WAYPOINT_PATH, buildKeys (3),
       "\\yCreate Path (Choose Direction)\\w\n\n"
       "1. Outgoing Path\n"
       "2. Incoming Path\n"
       "3. Bidirectional (Both Ways)\n\n"
       "0. Exit"
    };
-
    const String &empty = "";
 
    // kick menus

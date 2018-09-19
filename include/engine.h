@@ -211,7 +211,7 @@ public:
 
    // gets custom engine argv for client command
    inline const char *botArgv (int num) {
-      return getField (m_arguments, num);
+      return getField (m_arguments, static_cast <size_t> (num));
    }
 
    // gets custom engine argc for client command
@@ -291,7 +291,7 @@ public:
 
    // static utility functions
 private:
-   const char *getField (const char *string, int id);
+   const char *getField (const char *string, size_t id);
 };
 
 // simplify access for console variables

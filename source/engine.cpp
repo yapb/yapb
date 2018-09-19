@@ -339,14 +339,14 @@ const char *Engine::getModName (void) {
    static char modname[256];
 
    g_engfuncs.pfnGetGameDir (modname);
-   int length = strlen (modname);
+   size_t length = strlen (modname);
 
-   int stop = length - 1;
+   size_t stop = length - 1;
    while ((modname[stop] == '\\' || modname[stop] == '/') && stop > 0) {
       stop--;
    }
 
-   int start = stop;
+   size_t start = stop;
    while (modname[start] != '\\' && modname[start] != '/' && start > 0) {
       start--;
    }
@@ -427,12 +427,12 @@ void Engine::execBotCmd (edict_t *ent, const char *fmt, ...) {
 
    m_isBotCommand = true;
 
-   int i, pos = 0;
-   int length = strlen (string);
+   size_t i, pos = 0;
+   size_t length = strlen (string);
 
    while (pos < length) {
-      int start = pos;
-      int stop = pos;
+      size_t start = pos;
+      size_t stop = pos;
 
       while (pos < length && string[pos] != ';') {
          pos++;
@@ -451,7 +451,7 @@ void Engine::execBotCmd (edict_t *ent, const char *fmt, ...) {
       m_arguments[i - start] = 0;
       pos++;
 
-      int index = 0;
+      size_t index = 0;
       m_argumentCount = 0;
 
       while (index < i - start) {
@@ -481,7 +481,7 @@ void Engine::execBotCmd (edict_t *ent, const char *fmt, ...) {
    m_argumentCount = 0;
 }
 
-const char *Engine::getField (const char *string, int id) {
+const char *Engine::getField (const char *string, size_t id) {
    // this function gets and returns a particular field in a string where several strings are concatenated
 
    const int IterBufMax = 4;
@@ -496,8 +496,8 @@ const char *Engine::getField (const char *string, int id) {
    char *ptr = arg[cr::clamp <int> (iter++, 0, IterBufMax - 1)];
    ptr[0] = 0;
 
-   int pos = 0, count = 0, start = 0, stop = 0;
-   int length = strlen (string);
+   size_t pos = 0, count = 0, start = 0, stop = 0;
+   size_t length = strlen (string);
 
    while (pos < length && count <= id) {
       while (pos < length && (string[pos] == ' ' || string[pos] == '\t')) {
@@ -523,7 +523,7 @@ const char *Engine::getField (const char *string, int id) {
       }
 
       if (count == id) {
-         int i = start;
+         size_t i = start;
 
          for (; i <= stop; i++) {
             ptr[i - start] = string[i];
@@ -660,7 +660,7 @@ void Engine::processMessages (void *ptr) {
    case NETMSG_VGUI:
       // this message is sent when a VGUI menu is displayed.
 
-      if (m_msgBlock.state == 0) {
+      if (bot != nullptr && m_msgBlock.state == 0) {
          switch (intVal) {
          case VMS_TEAM:
             bot->m_startAction = GAME_MSG_TEAM_SELECT;
@@ -678,7 +678,7 @@ void Engine::processMessages (void *ptr) {
       // this message is sent when a text menu is displayed.
 
       // ignore first 3 fields of message
-      if (m_msgBlock.state < 3) {
+      if (m_msgBlock.state < 3 || bot == nullptr) {
          break;
       }
 
@@ -758,7 +758,7 @@ void Engine::processMessages (void *ptr) {
       case 2:
          clip = intVal; // ammo currently in the clip for this weapon
 
-         if (id <= 31) {
+         if (bot != nullptr && id <= 31) {
             if (state != 0) {
                bot->m_currentWeapon = id;
             }
@@ -782,7 +782,9 @@ void Engine::processMessages (void *ptr) {
          break;
 
       case 1:
-         bot->m_ammo[index] = intVal; // store it away
+         if (bot != nullptr) {
+            bot->m_ammo[index] = intVal; // store it away
+         }
          break;
       }
       break;
@@ -798,7 +800,9 @@ void Engine::processMessages (void *ptr) {
          break;
 
       case 1:
-         bot->m_ammo[index] = intVal;
+         if (bot != nullptr) {
+            bot->m_ammo[index] = intVal;
+         }
          break;
       }
       break;
@@ -840,20 +844,22 @@ void Engine::processMessages (void *ptr) {
          break;
 
       case 1:
-         if (strcmp (strVal, "defuser") == 0) {
-            bot->m_hasDefuser = (enabled != 0);
-         }
-         else if (strcmp (strVal, "buyzone") == 0) {
-            bot->m_inBuyZone = (enabled != 0);
+         if (bot != nullptr) {
+            if (strcmp (strVal, "defuser") == 0) {
+               bot->m_hasDefuser = (enabled != 0);
+            }
+            else if (strcmp (strVal, "buyzone") == 0) {
+               bot->m_inBuyZone = (enabled != 0);
 
-            // try to equip in buyzone
-            bot->processBuyzoneEntering (BUYSTATE_PRIMARY_WEAPON);
-         }
-         else if (strcmp (strVal, "vipsafety") == 0) {
-            bot->m_inVIPZone = (enabled != 0);
-         }
-         else if (strcmp (strVal, "c4") == 0) {
-            bot->m_inBombZone = (enabled == 2);
+               // try to equip in buyzone
+               bot->processBuyzoneEntering (BUYSTATE_PRIMARY_WEAPON);
+            }
+            else if (strcmp (strVal, "vipsafety") == 0) {
+               bot->m_inVIPZone = (enabled != 0);
+            }
+            else if (strcmp (strVal, "c4") == 0) {
+               bot->m_inBombZone = (enabled == 2);
+            }
          }
          break;
       }
@@ -1032,7 +1038,7 @@ void Engine::processMessages (void *ptr) {
 
                if (notify != nullptr && notify->m_notKilled) {
                   notify->clearSearchNodes ();
-                  notify->resetTasks ();
+                  notify->clearTasks ();
 
                   if (yb_communication_type.integer () == 2 && rng.getInt (0, 100) < 55 && notify->m_team == TEAM_COUNTER) {
                      notify->pushChatterMessage (Chatter_WhereIsTheBomb);
@@ -1082,7 +1088,7 @@ void Engine::processMessages (void *ptr) {
       break;
 
    case NETMSG_BARTIME:
-      if (m_msgBlock.state == 0) {
+      if (bot != nullptr && m_msgBlock.state == 0) {
          if (intVal > 0) {
             bot->m_hasProgressBar = true; // the progress bar on a hud
          }

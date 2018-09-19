@@ -74,6 +74,12 @@ void BotManager::destroyKillerEntity (void) {
 }
 
 void BotManager::touchKillerEntity (Bot *bot) {
+
+   // bot is already dead.
+   if (!bot->m_notKilled) {
+      return;
+   }
+
    if (engine.isNullEntity (m_killerEntity)) {
       createKillerEntity ();
 
@@ -189,7 +195,7 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
       prefixed.format ("%s %s", yb_name_prefix.str (), resultName.chars ());
 
       // buffer has been modified, copy to real name
-      resultName = prefixed;
+      resultName = cr::move (prefixed);
    }
    bot = g_engfuncs.pfnCreateFakeClient (resultName.chars ());
 
@@ -547,7 +553,7 @@ void BotManager::kickBotByMenu (edict_t *ent, int selection) {
    auto searchMenu = [](MenuId id) {
       int menuIndex = 0;
 
-      for (; menuIndex < cr::arrsize (g_menus); menuIndex++) {
+      for (; menuIndex < BOT_MENU_TOTAL_MENUS; menuIndex++) {
          if (g_menus[menuIndex].id == id) {
             break;
          }
@@ -909,9 +915,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    m_wantedTeam = team;
    m_wantedClass = member;
 
-   // initialize a*
-   m_routes = new Route[waypoints.length () + 1];
-   processNewRound ();
+   newRound ();
 }
 
 void Bot::clearUsedName (void) {
@@ -932,10 +936,8 @@ Bot::~Bot (void) {
 
    clearUsedName ();
    clearSearchNodes ();
-   resetTasks ();
-
-   // clear a* paths
-   delete[] m_routes;
+   clearRoute ();
+   clearTasks ();
 }
 
 int BotManager::getHumansCount (bool ignoreSpectators) {
@@ -992,13 +994,14 @@ bool BotManager::isTeamStacked (int team) {
    return teamCount[team] + 1 > teamCount[team == TEAM_COUNTER ? TEAM_TERRORIST : TEAM_COUNTER] + limitTeams;
 }
 
-void Bot::processNewRound (void) {
+void Bot::newRound (void) {
    // this function initializes a bot after creation & at the start of each round
 
    int i = 0;
 
    // delete all allocated path nodes
    clearSearchNodes ();
+   clearRoute ();
 
    m_waypointOrigin.nullify ();
    m_destOrigin.nullify ();
@@ -1011,6 +1014,7 @@ void Bot::processNewRound (void) {
    m_loosedBombWptIndex = INVALID_WAYPOINT_INDEX;
    m_plantedBombWptIndex = INVALID_WAYPOINT_INDEX;
 
+   m_grenadeRequested = false;
    m_moveToC4 = false;
    m_duckDefuse = false;
    m_duckDefuseCheckTime = 0.0f;
@@ -1045,7 +1049,7 @@ void Bot::processNewRound (void) {
 
    // clear all states & tasks
    m_states = 0;
-   resetTasks ();
+   clearTasks ();
 
    m_isVIP = false;
    m_isLeader = false;
@@ -1207,7 +1211,7 @@ void Bot::processNewRound (void) {
    if (rng.getInt (0, 100) < 50) {
       pushChatterMessage (Chatter_NewRound);
    }
-   m_thinkInterval = (g_gameFlags & GAME_LEGACY) ? 0.0f : (1.0f / cr::clamp (yb_think_fps.flt (), 30.0f, 90.0f)) * rng.getFloat (0.95f, 1.05f);
+   m_thinkInterval = (g_gameFlags & (GAME_LEGACY | GAME_XASH_ENGINE)) ? 0.0f : (1.0f / cr::clamp (yb_think_fps.flt (), 30.0f, 90.0f)) * rng.getFloat (0.95f, 1.05f);
 }
 
 void Bot::kill (void) {

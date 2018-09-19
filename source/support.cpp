@@ -71,12 +71,12 @@ void showMenu (edict_t *ent, MenuId menu) {
       extern void setupBotMenus (void);
       setupBotMenus ();
     
-      for (int i = 0; i < cr::arrsize (g_menus); i++) {
+      for (int i = 0; i < BOT_MENU_TOTAL_MENUS; i++) {
          auto parsed = &g_menus[i];
-         const String &text = engine.translate (parsed->text.chars ());
+         const String &translated = engine.translate (parsed->text.chars ());
 
          // translate all the things
-         parsed->text = text;
+         parsed->text = translated;
 
          // make menu looks best
          if (!(g_gameFlags & GAME_LEGACY)) {
@@ -105,7 +105,7 @@ void showMenu (edict_t *ent, MenuId menu) {
    }
    int menuIndex = 0;
 
-   for (; menuIndex < cr::arrsize (g_menus); menuIndex++) {
+   for (; menuIndex < BOT_MENU_TOTAL_MENUS; menuIndex++) {
       if (g_menus[menuIndex].id == menu) {
          break;
       }
@@ -345,7 +345,7 @@ void initRound (void) {
       auto bot = bots.getBot (i);
 
       if (bot != nullptr) {
-         bot->processNewRound ();
+         bot->newRound ();
       }
       g_radioSelect[i] = 0;
    }
@@ -895,7 +895,7 @@ int getWeaponData (bool needString, const char *weaponAlias, int weaponIndex) {
 
    // if we need to return the string, find by weapon id
    if (needString && weaponIndex != -1) {
-      for (int i = 0; i < cr::arrsize (weaponTab); i++) {
+      for (size_t i = 0; i < cr::arrsize (weaponTab); i++) {
          if (weaponTab[i].weaponIndex == weaponIndex) { // is weapon id found?
             return MAKE_STRING (weaponTab[i].alias);
          }
@@ -904,7 +904,7 @@ int getWeaponData (bool needString, const char *weaponAlias, int weaponIndex) {
    }
 
    // else search weapon by name and return weapon id
-   for (int i = 0; i < cr::arrsize (weaponTab); i++) {
+   for (size_t i = 0; i < cr::arrsize (weaponTab); i++) {
       if (strncmp (weaponTab[i].alias, weaponAlias, strlen (weaponTab[i].alias)) == 0) {
          return weaponTab[i].weaponIndex;
       }

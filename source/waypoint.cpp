@@ -1913,7 +1913,8 @@ bool Waypoint::checkNodes (void) {
 
    // perform DFS instead of floyd-warshall, this shit speedup this process in a bit
    PathWalk walk;
-   bool visited[MAX_WAYPOINTS];
+   Array <bool> visited;
+   visited.reserve (m_numWaypoints);
 
    // first check incoming connectivity, initialize the "visited" table
    for (i = 0; i < m_numWaypoints; i++) {
@@ -1954,7 +1955,8 @@ bool Waypoint::checkNodes (void) {
    }
 
    // then check outgoing connectivity
-   IntArray outgoingPaths[MAX_WAYPOINTS]; // store incoming paths for speedup
+   Array <IntArray> outgoingPaths; // store incoming paths for speedup
+   outgoingPaths.reserve (m_numWaypoints);
 
    for (i = 0; i < m_numWaypoints; i++) {
       outgoingPaths[i].reserve (m_numWaypoints + 1);
@@ -2390,7 +2392,7 @@ WaypointDownloadError Waypoint::downloadWaypoint (void) {
    if (host == nullptr) {
       return WDE_SOCKET_ERROR;
    }
-   int socketHandle = socket (AF_INET, SOCK_STREAM, 0);
+   auto socketHandle = static_cast <int> (socket (AF_INET, SOCK_STREAM, 0));
 
    if (socketHandle < 0) {
       closeSocket (socketHandle);
@@ -2428,7 +2430,7 @@ WaypointDownloadError Waypoint::downloadWaypoint (void) {
    String request;
    request.format ("GET /wpdb/%s.pwf HTTP/1.0\r\nAccept: */*\r\nUser-Agent: YaPB/%s\r\nHost: %s\r\n\r\n", engine.getMapName (), PRODUCT_VERSION, yb_waypoint_autodl_host.str ());
 
-   if (send (socketHandle, request.chars (), request.length () + 1, 0) < 1) {
+   if (send (socketHandle, request.chars (), static_cast <int> (request.length () + 1), 0) < 1) {
       closeSocket (socketHandle);
       return WDE_SOCKET_ERROR;
    }
@@ -2495,6 +2497,8 @@ WaypointDownloadError Waypoint::downloadWaypoint (void) {
 }
 
 void Waypoint::initBuckets (void) {
+   m_numWaypoints = 0;
+
    for (int x = 0; x < MAX_WAYPOINT_BUCKET_MAX; x++) {
       for (int y = 0; y < MAX_WAYPOINT_BUCKET_MAX; y++) {
          for (int z = 0; z < MAX_WAYPOINT_BUCKET_MAX; z++) {

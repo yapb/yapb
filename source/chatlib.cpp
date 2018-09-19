@@ -17,23 +17,27 @@ void stripClanTags (char *buffer) {
    if (isEmptyStr (buffer)) {
       return;
    }
-   int nameLength = strlen (buffer);
+   size_t nameLength = strlen (buffer);
 
-   constexpr char *open[] = { "-=", "-[", "-]", "-}", "-{", "<[", "<]", "[-", "]-", "{-", "}-", "[[", "[", "{", "]", "}", "<", ">", "-", "|", "=", "+", "(", ")" };
-   constexpr char *close[] = { "=-", "]-", "[-", "{-", "}-", "]>", "[>", "-]", "-[", "-}", "-{", "]]", "]", "}", "[", "{", ">", "<", "-", "|", "=", "+", ")", "(" };
+   if (nameLength < 4) {
+      return;
+   }
+
+   constexpr const char *open[] = { "-=", "-[", "-]", "-}", "-{", "<[", "<]", "[-", "]-", "{-", "}-", "[[", "[", "{", "]", "}", "<", ">", "-", "|", "=", "+", "(", ")" };
+   constexpr const char *close[] = { "=-", "]-", "[-", "{-", "}-", "]>", "[>", "-]", "-[", "-}", "-{", "]]", "]", "}", "[", "{", ">", "<", "-", "|", "=", "+", ")", "(" };
 
    // for each known tag...
-   for (int i = 0; i < cr::arrsize (open); i++) {
-      int start = strstr (buffer, open[i]) - buffer; // look for a tag start
+   for (size_t i = 0; i < cr::arrsize (open); i++) {
+      size_t start = strstr (buffer, open[i]) - buffer; // look for a tag start
 
       // have we found a tag start?
-      if (start >= 0 && start < 32) {
-         int stop = strstr (buffer, close[i]) - buffer; // look for a tag stop
+      if (start < 32) {
+         size_t stop = strstr (buffer, close[i]) - buffer; // look for a tag stop
 
          // have we found a tag stop?
          if (stop > start && stop < 32) {
-            int tag = strlen (close[i]);
-            int j = start;
+            size_t tag = strlen (close[i]);
+            size_t j = start;
 
             for (; j < nameLength - (stop + tag - start); j++) {
                buffer[j] = buffer[j + (stop + tag - start)]; // overwrite the buffer with the stripped string
@@ -51,13 +55,13 @@ void stripClanTags (char *buffer) {
    String::trimChars (buffer); // if so, string is just a tag
 
    // strip just the tag part...
-   for (int i = 0; i < cr::arrsize (open); i++) {
-      int start = strstr (buffer, open[i]) - buffer; // look for a tag start
+   for (size_t i = 0; i < cr::arrsize (open); i++) {
+      size_t start = strstr (buffer, open[i]) - buffer; // look for a tag start
 
       // have we found a tag start?
-      if (start >= 0 && start < 32) {
-         int tag = strlen (open[i]);
-         int j = start;
+      if (start < 32) {
+         size_t tag = strlen (open[i]);
+         size_t j = start;
 
          for (; j < nameLength - tag; j++) {
             buffer[j] = buffer[j + tag]; // overwrite the buffer with the stripped string
@@ -66,7 +70,7 @@ void stripClanTags (char *buffer) {
          start = strstr (buffer, close[i]) - buffer; // look for a tag stop
 
          // have we found a tag stop ?
-         if (start >= 0 && start < 32) {
+         if (start < 32) {
             tag = strlen (close[i]);
             j = start;
 
@@ -97,7 +101,7 @@ char *humanizeName (char *name) {
    // sometimes switch name to lower characters
    // note: since we're using russian names written in english, we reduce this shit to 6 percent
    if (rng.getInt (1, 100) <= 6) {
-      for (int i = 0; i < static_cast <int> (strlen (outputName)); i++) {
+      for (size_t i = 0; i < strlen (outputName); i++) {
          outputName[i] = static_cast <char> (tolower (static_cast <int> (outputName[i]))); // to lower case
       }
    }
@@ -107,11 +111,11 @@ char *humanizeName (char *name) {
 void addChatErrors (char *buffer) {
    // this function humanize chat string to be more handwritten
 
-   int length = strlen (buffer); // get length of string
-   int i = 0;
+   size_t length = strlen (buffer); // get length of string
+   size_t i = 0;
 
    // sometimes switch text to lowercase
-   // note: since we're using russian chat written in english, we reduce this shit to 4 percent
+   // note: since we're using russian chat written in English, we reduce this shit to 4 percent
    if (rng.getInt (1, 100) <= 4) {
       for (i = 0; i < length; i++) {
          buffer[i] = static_cast <char> (tolower (static_cast <int> (buffer[i]))); // switch to lowercase
@@ -119,9 +123,11 @@ void addChatErrors (char *buffer) {
    }
 
    if (length > 15) {
+      size_t percentile = length / 2;
+
       // "length / 2" percent of time drop a character
-      if (rng.getInt (1, 100) < length / 2) {
-         int pos = rng.getInt (length / 8, length - length / 8); // chose random position in string
+      if (rng.getInt (1u, 100u) < percentile) {
+         size_t pos = rng.getInt (length / 8, length - length / 8); // chose random position in string
 
          for (i = pos; i < length - 1; i++) {
             buffer[i] = buffer[i + 1]; // overwrite the buffer with stripped string
@@ -131,8 +137,8 @@ void addChatErrors (char *buffer) {
       }
 
       // "length" / 4 precent of time swap character
-      if (rng.getInt (1, 100) < length / 4) {
-         int pos = rng.getInt (length / 8, 3 * length / 8); // choose random position in string
+      if (rng.getInt (1u, 100u) < percentile / 2) {
+         size_t pos = rng.getInt (length / 8, 3 * length / 8); // choose random position in string
          char ch = buffer[pos]; // swap characters
 
          buffer[pos] = buffer[pos + 1];
@@ -164,10 +170,10 @@ void Bot::prepareChatMessage (char *text) {
 
    while (pattern != nullptr) {
       // all replacement placeholders start with a %
-      pattern = strstr (textStart, "%");
+      pattern = strchr (textStart, '%');
 
       if (pattern != nullptr) {
-         int length = pattern - textStart;
+         size_t length = pattern - textStart;
 
          if (length > 0) {
             m_tempStrings = String (textStart, length);

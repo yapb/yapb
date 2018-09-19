@@ -1456,13 +1456,7 @@ void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= S
    m_chosenGoalIndex = srcIndex;
    m_goalValue = 0.0f;
 
-   for (int i = 0; i < waypoints.length (); i++) {
-      auto route = &m_routes[i];
-
-      route->g = route->f = 0.0f;
-      route->parent = INVALID_WAYPOINT_INDEX;
-      route->state = ROUTE_NEW;
-   }
+   clearRoute ();
 
    float (*gcalc) (int, int) = nullptr;
    float (*hcalc) (int, int, int) = nullptr;
@@ -1589,6 +1583,23 @@ void Bot::clearSearchNodes (void) {
    m_chosenGoalIndex = INVALID_WAYPOINT_INDEX;
 }
 
+void Bot::clearRoute (void) {
+   int maxWaypoints = waypoints.length ();
+   
+   if (m_routes.capacity () < static_cast <size_t> (waypoints.length ())) {
+      m_routes.reserve (maxWaypoints);
+   }
+
+   for (int i = 0; i < maxWaypoints; i++) {
+      auto route = &m_routes[i];
+
+      route->g = route->f = 0.0f;
+      route->parent = INVALID_WAYPOINT_INDEX;
+      route->state = ROUTE_NEW;
+   }
+   m_routes.clear ();
+}
+
 int Bot::searchAimingPoint (const Vector &to) {
    // return the most distant waypoint which is seen from the bot to the target and is within count
 
@@ -1632,7 +1643,7 @@ bool Bot::searchOptimalPoint (void) {
    int lessIndex[3] = { INVALID_WAYPOINT_INDEX, INVALID_WAYPOINT_INDEX , INVALID_WAYPOINT_INDEX };
 
    auto &bucket = waypoints.getWaypointsInBucket (pev->origin);
-   int numToSkip = cr::clamp (rng.getInt (0, bucket.length () - 1), 0, 5);
+   int numToSkip = cr::clamp (rng.getInt (0, static_cast <int> (bucket.length () - 1)), 0, 5);
 
    for (const int at : bucket) {
       bool skip = !!(at == m_currentWaypointIndex);
@@ -1666,7 +1677,7 @@ bool Bot::searchOptimalPoint (void) {
       }
 
       // check if waypoint is already used by another bot...
-      if (isOccupiedPoint (at)) {
+      if (g_timeRoundStart + 5.0f > engine.timebase () && isOccupiedPoint (at)) {
          busy = at;
          continue;
       }
