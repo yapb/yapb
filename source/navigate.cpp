@@ -2998,7 +2998,7 @@ void Bot::processLookAngles (void) {
    direction.clampAngles ();
 
    // lower skilled bot's have lower aiming
-   if (m_difficulty < 3) {
+   if (m_difficulty < 2) {
       updateLookAnglesNewbie (direction, delta);
       processBodyAngles ();
 
@@ -3047,10 +3047,10 @@ void Bot::updateLookAnglesNewbie (const Vector &direction, const float delta) {
    Vector spring (13.0f, 13.0f, 0.0f);
    Vector damperCoefficient (0.22f, 0.22f, 0.0f);
 
-   const float skill = 100.0f - m_difficulty * 25;
+   const float offset = cr::clamp (m_difficulty, 1, 4) * 25.0f;
 
-   Vector influence = Vector (0.25f, 0.17f, 0.0f) * skill / 100.f;
-   Vector randomization = Vector (2.0f, 0.18f, 0.0f) * skill / 100.f;
+   Vector influence = Vector (0.25f, 0.17f, 0.0f) * (100.0f - offset) / 100.f;
+   Vector randomization = Vector (2.0f, 0.18f, 0.0f) * (100.0f - offset) / 100.f;
 
    const float noTargetRatio = 0.3f;
    const float offsetDelay = 1.2f;
@@ -3061,11 +3061,11 @@ void Bot::updateLookAnglesNewbie (const Vector &direction, const float delta) {
    m_idealAngles = direction.make2D ();
    m_idealAngles.clampAngles ();
 
-   if (m_aimFlags & (AIM_ENEMY | AIM_ENTITY | AIM_GRENADE | AIM_LAST_ENEMY) || taskId () == TASK_SHOOTBREAKABLE) {
+   if (m_aimFlags & (AIM_ENEMY | AIM_ENTITY)) {
       m_playerTargetTime = engine.timebase ();
       m_randomizedIdealAngles = m_idealAngles;
 
-      stiffness = spring * (0.2f + (m_difficulty * 25) / 125.0f);
+      stiffness = spring * (0.2f + offset / 125.0f);
    }
    else {
       // is it time for bot to randomize the aim direction again (more often where moving) ?
@@ -3114,8 +3114,8 @@ void Bot::updateLookAnglesNewbie (const Vector &direction, const float delta) {
 
    // influence of y movement on x axis and vice versa (less influence than x on y since it's
    // easier and more natural for the bot to "move its mouse" horizontally than vertically)
-   m_aimSpeed.x += m_aimSpeed.y * influence.y;
-   m_aimSpeed.y += m_aimSpeed.x * influence.x;
+   m_aimSpeed.x += cr::clamp (m_aimSpeed.y * influence.y, -50.0f, 50.0f);
+   m_aimSpeed.y += cr::clamp (m_aimSpeed.x * influence.x, -200.0f, 200.0f);
 
    // move the aim cursor
    pev->v_angle = pev->v_angle + delta * Vector (m_aimSpeed.x, m_aimSpeed.y, 0.0f);

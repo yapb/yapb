@@ -1899,7 +1899,11 @@ void Bot::setConditions (void) {
          m_aimFlags |= AIM_LAST_ENEMY;
       }
    }
-   checkGrenadesThrow ();
+
+   // check for grenades depending on difficulty
+   if (rng.getInt (0, 100) < m_difficulty * 25) {
+      checkGrenadesThrow ();
+   }
 
    // check if there are items needing to be used/collected
    if (m_itemCheckTime < engine.timebase () || !engine.isNullEntity (m_pickupItem)) {
