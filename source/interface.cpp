@@ -973,6 +973,18 @@ void GameDLLInit (void) {
       engine.registerCmd ("meta", [](void) { engine.print ("You're launched standalone version of yapb. Metamod is not installed or not enabled!"); });
    }
 
+   // elite price is 1000$ on older versions of cs...
+   if (g_gameFlags & GAME_LEGACY) {
+      for (int i = 0; i < NUM_WEAPONS; i++) {
+         auto &weapon = g_weaponSelect[i];
+
+         if (weapon.id == WEAPON_ELITE) {
+            weapon.price = 1000;
+            break;
+         }
+      }
+   }
+
    if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
    }
