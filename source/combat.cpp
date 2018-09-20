@@ -1033,7 +1033,7 @@ void Bot::attackMovement (void) {
          m_moveSpeed = -pev->maxspeed;
       }
 
-      if (usesSniper ()) {
+      if (usesSniper () || !(m_visibility & (VISIBLE_BODY | VISIBLE_HEAD))) {
          m_fightStyle = FIGHT_STAY;
          m_lastFightStyleCheck = engine.timebase ();
       }

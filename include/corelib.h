@@ -290,7 +290,6 @@ public:
       m_divider = (static_cast <unsigned long long> (1)) << 32;
    }
 
-
    template <typename U> inline U getInt (U low, U high) {
       return static_cast <U> (random () * (static_cast <double> (high) - static_cast <double> (low) + 1.0) / m_divider + static_cast <double> (low));
    }
