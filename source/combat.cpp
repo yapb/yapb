@@ -403,8 +403,9 @@ Vector Bot::getBodyOffserError (float distance) {
 
    if (m_aimErrorTime < engine.timebase ()) {
       const float error = distance / (cr::clamp (m_difficulty, 1, 4) * 1000.0f);
+      Vector &maxs = m_enemy->v.maxs, &mins = m_enemy->v.mins;
 
-      m_aimLastError = Vector (rng.getFloat (m_enemy->v.mins.x * error, m_enemy->v.maxs.x * error), rng.getFloat (m_enemy->v.mins.y * error, m_enemy->v.maxs.y * error), rng.getFloat (m_enemy->v.mins.z * error, m_enemy->v.maxs.z * error));
+      m_aimLastError = Vector (rng.getFloat (mins.x * error, maxs.x * error), rng.getFloat (mins.y * error, maxs.y * error), rng.getFloat (mins.z * error, maxs.z * error));
       m_aimErrorTime = engine.timebase () + rng.getFloat (0.5f, 1.0f);
    }
    return m_aimLastError;
