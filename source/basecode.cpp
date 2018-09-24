@@ -123,7 +123,7 @@ void Bot::checkGrenadesThrow (void) {
    };
 
    // check if throwing a grenade is a good thing to do...
-   if (checkTasks || yb_ignore_enemies.boolean () || m_isUsingGrenade || m_isReloading || yb_jasonmode.boolean () || m_grenadeCheckTime >= engine.timebase ()) {
+   if (checkTasks || yb_ignore_enemies.boolean () || m_isUsingGrenade || m_grenadeRequested || m_isReloading || yb_jasonmode.boolean () || m_grenadeCheckTime >= engine.timebase ()) {
       clearThrowStates (m_states);
       return;
    }
@@ -186,13 +186,14 @@ void Bot::checkGrenadesThrow (void) {
             float radius = m_lastEnemy->v.velocity.length2D ();
             const Vector &pos = (m_lastEnemy->v.velocity * 0.5f).make2D () + m_lastEnemy->v.origin;
 
-            if (radius < 140.0f) {
-               radius = 140.0f;
+            if (radius < 164.0f) {
+               radius = 164.0f;
             }
             IntArray predicted = waypoints.searchRadius (radius, pos, 12);
 
             for (auto &predict : predicted) {
-               allowThrowing = TRUE;
+               allowThrowing = true;
+
                m_throw = waypoints[predict].origin;
 
                auto throwPos = calcThrow (eyePos (), m_throw);
@@ -225,7 +226,7 @@ void Bot::checkGrenadesThrow (void) {
          if (nearest != INVALID_WAYPOINT_INDEX) {
             m_throw = waypoints[nearest].origin;
 
-            if (numFriendsNear (m_throw, 148.0f) > 0) {
+            if (numFriendsNear (m_throw, 256.0f) > 0) {
                allowThrowing = false;
             }
          }

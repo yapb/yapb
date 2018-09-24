@@ -844,7 +844,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
 
    // should be set after client connect
    if (yb_avatar_display.boolean () && !steamId.empty ()) {
-      g_engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "*sid", const_cast <char *> (steamId.chars ()));
+      g_engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "*sid", steamId.chars ());
    }
    memset (&m_pingOffset, 0, sizeof (m_pingOffset));
    memset (&m_ping, 0, sizeof (m_ping));
