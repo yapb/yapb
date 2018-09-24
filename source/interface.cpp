@@ -1100,16 +1100,16 @@ void ClientDisconnect (edict_t *ent) {
    // listen server client disconnects, and we don't want to send him any sort of message then.
 
    int index = engine.indexOfEntity (ent) - 1;
-   assert (index >= 0 && index < MAX_ENGINE_PLAYERS);
 
-   Bot *bot = bots.getBot (index);
+   if (index >= 0 && index < MAX_ENGINE_PLAYERS) {
+      auto bot = bots.getBot (index);
 
-   // check if its a bot
-   if (bot != nullptr && bot->pev == &ent->v) {
-      bot->showChaterIcon (false);
-      bots.destroy (index);
+      // check if its a bot
+      if (bot != nullptr && bot->pev == &ent->v) {
+         bot->showChaterIcon (false);
+         bots.destroy (index);
+      }
    }
-
    if (g_gameFlags & GAME_METAMOD) {
       RETURN_META (MRES_IGNORED);
    }

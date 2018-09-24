@@ -231,7 +231,7 @@ public:
 
    // verify entity isn't null
    inline bool isNullEntity (const edict_t *ent) {
-      return !ent || !indexOfEntity (ent);
+      return !ent || !indexOfEntity (ent) || ent->free;
    }
 
    // get the wroldspawn entity
