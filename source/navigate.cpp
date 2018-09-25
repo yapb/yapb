@@ -1132,7 +1132,7 @@ bool Bot::processNavigation (void) {
    }
 
    // needs precise placement - check if we get past the point
-   if (desiredDistance < 20.0f && waypointDistance < 30.0f && (pev->origin + (pev->velocity * calcThinkInterval ()) - m_waypointOrigin).lengthSq () > cr::square (waypointDistance)) {
+   if (desiredDistance < 22.0f && waypointDistance < 30.0f && (pev->origin + (pev->velocity * calcThinkInterval ()) - m_waypointOrigin).lengthSq () > cr::square (waypointDistance)) {
       desiredDistance = waypointDistance + 1.0f;
    }
 

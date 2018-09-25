@@ -24,6 +24,8 @@
 
 #include <platform.h>
 
+#include <smmintrin.h>
+
 #ifdef PLATFORM_WIN32
    #include <direct.h>
 #else
@@ -69,7 +71,6 @@ constexpr float D2R = PI / 180.0f;
 constexpr float R2D = 180.0f / PI;
 
 namespace cmath {
-using ::atan2f;
 using ::ceilf;
 using ::log10f;
 }
@@ -156,8 +157,34 @@ static inline float tanf (const float value) {
 }
 
 static inline float atan2f (const float y, const float x) {
-   return cmath::atan2f (y, x);
+   auto atanf = [](const float x) {
+      const float sqr = square (x);
+      return x * (48.70107004404898384f + sqr * (49.5326263772254345f + sqr * 9.40604244231624f)) / (48.70107004404996166f + sqr * (65.7663163908956299f + sqr * (21.587934067020262f + sqr)));
+   };
+
+   const float ax = abs (x);
+   const float ay = abs (y);
+
+   if (ax < 1e-7f && ay < 1e-7f) {
+      return 0.0f;
+   }
+
+   if (ax > ay) {
+      if (x < 0.0f) {
+         if (y >= 0.0f) {
+            return atanf (y / x) + PI;
+         }
+         return atanf (y / x) - PI;
+      }
+      return atanf (y / x);
+   }
+
+   if (y < 0.0f) {
+      return atanf (-x / y) - PI_HALF;
+   }
+   return atanf (-x / y) + PI_HALF;
 }
+
 
 static inline float log10f (const float x) {
    return cmath::log10f (x);
