@@ -24,8 +24,6 @@
 
 #include <platform.h>
 
-#include <smmintrin.h>
-
 #ifdef PLATFORM_WIN32
    #include <direct.h>
 #else
