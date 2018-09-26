@@ -449,7 +449,7 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
    return 1; // command was handled by bot
 }
 
-void processBotConfigs (bool onlyMain) {
+void execBotConfigs (bool onlyMain) {
    static bool setMemoryPointers = true;
 
    if (setMemoryPointers) {
@@ -521,9 +521,10 @@ void processBotConfigs (bool onlyMain) {
    }
    KeywordFactory replies;
 
-   // fixes for crashing if configs couldn't be accessed
+   // reserve some space for chat
    g_chatFactory.reserve (CHAT_TOTAL);
-   g_chatterFactory.reserve (Chatter_Total);
+   g_chatterFactory.reserve (CHATTER_MAX);
+   g_botNames.reserve (64);
 
    // NAMING SYSTEM INITIALIZATION
    if (openConfig ("names.cfg", "Name configuration file not found.", &fp, true)) {
@@ -549,7 +550,7 @@ void processBotConfigs (bool onlyMain) {
          if (pair.length () > 1) {
             item.steamId = pair[1].trim ();
          }
-         g_botNames.push (item);
+         g_botNames.push (cr::move (item));
       }
       fp.close ();
    }
@@ -745,84 +746,82 @@ void processBotConfigs (bool onlyMain) {
 
    // CHATTER SYSTEM INITIALIZATION
    if ((g_gameFlags & GAME_SUPPORT_BOT_VOICE) && yb_communication_type.integer () == 2 && openConfig ("chatter.cfg", "Couldn't open chatter system configuration", &fp)) {
-      const float ChatterInfinity = MAX_CHATTER_REPEAT;
-
       struct EventMap {
          const char *str;
          int code;
          float repeat;
       } chatterEventMap[] = {
-         { "Radio_CoverMe", Radio_CoverMe, ChatterInfinity },
-         { "Radio_YouTakePoint", Radio_YouTakePoint, ChatterInfinity },
-         { "Radio_HoldPosition", Radio_HoldPosition, ChatterInfinity },
-         { "Radio_RegroupTeam", Radio_RegroupTeam, ChatterInfinity },
-         { "Radio_FollowMe", Radio_FollowMe, ChatterInfinity },
-         { "Radio_TakingFire", Radio_TakingFire, ChatterInfinity },
-         { "Radio_GoGoGo", Radio_GoGoGo, ChatterInfinity },
-         { "Radio_Fallback", Radio_Fallback, ChatterInfinity },
-         { "Radio_StickTogether", Radio_StickTogether, ChatterInfinity },
-         { "Radio_GetInPosition", Radio_GetInPosition, ChatterInfinity },
-         { "Radio_StormTheFront", Radio_StormTheFront, ChatterInfinity },
-         { "Radio_ReportTeam", Radio_ReportTeam, ChatterInfinity },
-         { "Radio_Affirmative", Radio_Affirmative, ChatterInfinity },
-         { "Radio_EnemySpotted", Radio_EnemySpotted, ChatterInfinity },
-         { "Radio_NeedBackup", Radio_NeedBackup, ChatterInfinity },
-         { "Radio_SectorClear", Radio_SectorClear, ChatterInfinity },
-         { "Radio_InPosition", Radio_InPosition, ChatterInfinity },
-         { "Radio_ReportingIn", Radio_ReportingIn, ChatterInfinity },
-         { "Radio_ShesGonnaBlow", Radio_ShesGonnaBlow, ChatterInfinity },
-         { "Radio_Negative", Radio_Negative, ChatterInfinity },
-         { "Radio_EnemyDown", Radio_EnemyDown, ChatterInfinity },
-         { "Chatter_DiePain", Chatter_DiePain, ChatterInfinity },
-         { "Chatter_GoingToPlantBomb", Chatter_GoingToPlantBomb, ChatterInfinity },
-         { "Chatter_GoingToGuardVIPSafety", Chatter_GoingToGuardVIPSafety, ChatterInfinity },
-         { "Chatter_RescuingHostages", Chatter_RescuingHostages, ChatterInfinity },
-         { "Chatter_TeamKill", Chatter_TeamKill, ChatterInfinity },
-         { "Chatter_GuardingVipSafety", Chatter_GuardingVipSafety, ChatterInfinity },
-         { "Chatter_PlantingC4", Chatter_PlantingC4, ChatterInfinity },
-         { "Chatter_InCombat", Chatter_InCombat,  ChatterInfinity },
-         { "Chatter_SeeksEnemy", Chatter_SeeksEnemy, ChatterInfinity },
-         { "Chatter_Nothing", Chatter_Nothing,  ChatterInfinity },
-         { "Chatter_EnemyDown", Chatter_EnemyDown, ChatterInfinity },
-         { "Chatter_UseHostage", Chatter_UseHostage, ChatterInfinity },
-         { "Chatter_WonTheRound", Chatter_WonTheRound, ChatterInfinity },
-         { "Chatter_QuicklyWonTheRound", Chatter_QuicklyWonTheRound, ChatterInfinity },
-         { "Chatter_NoEnemiesLeft", Chatter_NoEnemiesLeft, ChatterInfinity },
-         { "Chatter_FoundBombPlace", Chatter_FoundBombPlace, ChatterInfinity },
-         { "Chatter_WhereIsTheBomb", Chatter_WhereIsTheBomb, ChatterInfinity },
-         { "Chatter_DefendingBombSite", Chatter_DefendingBombSite, ChatterInfinity },
-         { "Chatter_BarelyDefused", Chatter_BarelyDefused, ChatterInfinity },
-         { "Chatter_NiceshotCommander", Chatter_NiceshotCommander, ChatterInfinity },
-         { "Chatter_ReportingIn", Chatter_ReportingIn, 10.0f },
-         { "Chatter_SpotTheBomber", Chatter_SpotTheBomber, 4.3f },
-         { "Chatter_VIPSpotted", Chatter_VIPSpotted, 5.3f },
-         { "Chatter_FriendlyFire", Chatter_FriendlyFire, 2.1f },
-         { "Chatter_GotBlinded", Chatter_GotBlinded, 5.0f },
-         { "Chatter_GuardDroppedC4", Chatter_GuardDroppedC4, 3.0f },
-         { "Chatter_DefusingC4", Chatter_DefusingC4, 3.0f },
-         { "Chatter_FoundC4", Chatter_FoundC4, 5.5f },
-         { "Chatter_ScaredEmotion", Chatter_ScaredEmotion, 6.1f },
-         { "Chatter_HeardEnemy", Chatter_ScaredEmotion, 12.8f },
-         { "Chatter_SniperWarning", Chatter_SniperWarning, 14.3f },
-         { "Chatter_SniperKilled", Chatter_SniperKilled, 2.1f },
-         { "Chatter_OneEnemyLeft", Chatter_OneEnemyLeft, 2.5f },
-         { "Chatter_TwoEnemiesLeft", Chatter_TwoEnemiesLeft, 2.5f },
-         { "Chatter_ThreeEnemiesLeft", Chatter_ThreeEnemiesLeft, 2.5f },
-         { "Chatter_NiceshotPall", Chatter_NiceshotPall, 2.0f },
-         { "Chatter_GoingToGuardHostages", Chatter_GoingToGuardHostages, 3.0f },
-         { "Chatter_GoingToGuardDoppedBomb", Chatter_GoingToGuardDoppedBomb, 3.0f },
-         { "Chatter_OnMyWay", Chatter_OnMyWay, 1.5f },
-         { "Chatter_LeadOnSir", Chatter_LeadOnSir, 5.0f },
-         { "Chatter_Pinned_Down", Chatter_Pinned_Down, 5.0f },
-         { "Chatter_GottaFindTheBomb", Chatter_GottaFindTheBomb, 3.0f },
-         { "Chatter_You_Heard_The_Man", Chatter_You_Heard_The_Man, 3.0f },
-         { "Chatter_Lost_The_Commander", Chatter_Lost_The_Commander, 4.5f },
-         { "Chatter_NewRound", Chatter_NewRound, 3.5f },
-         { "Chatter_CoverMe", Chatter_CoverMe, 3.5f },
-         { "Chatter_BehindSmoke", Chatter_BehindSmoke, 3.5f },
-         { "Chatter_BombSiteSecured", Chatter_BombSiteSecured, 3.5f },
-         { "Chatter_GoingToCamp", Chatter_GoingToCamp, 25.0f },
-         { "Chatter_Camp", Chatter_Camp, 25.0f },
+         { "Radio_CoverMe", RADIO_COVER_ME, MAX_CHATTER_REPEAT },
+         { "Radio_YouTakePoint", RADIO_YOU_TAKE_THE_POINT, MAX_CHATTER_REPEAT },
+         { "Radio_HoldPosition", RADIO_HOLD_THIS_POSITION, MAX_CHATTER_REPEAT },
+         { "Radio_RegroupTeam", RADIO_REGROUP_TEAM, MAX_CHATTER_REPEAT },
+         { "Radio_FollowMe", RADIO_FOLLOW_ME, MAX_CHATTER_REPEAT },
+         { "Radio_TakingFire", RADIO_TAKING_FIRE, MAX_CHATTER_REPEAT },
+         { "Radio_GoGoGo", RADIO_GO_GO_GO, MAX_CHATTER_REPEAT },
+         { "Radio_Fallback", RADIO_TEAM_FALLBACK, MAX_CHATTER_REPEAT },
+         { "Radio_StickTogether", RADIO_STICK_TOGETHER_TEAM, MAX_CHATTER_REPEAT },
+         { "Radio_GetInPosition", RADIO_GET_IN_POSITION, MAX_CHATTER_REPEAT },
+         { "Radio_StormTheFront", RADIO_STORM_THE_FRONT, MAX_CHATTER_REPEAT },
+         { "Radio_ReportTeam", RADIO_REPORT_TEAM, MAX_CHATTER_REPEAT },
+         { "Radio_Affirmative", RADIO_AFFIRMATIVE, MAX_CHATTER_REPEAT },
+         { "Radio_EnemySpotted", RADIO_ENEMY_SPOTTED, MAX_CHATTER_REPEAT },
+         { "Radio_NeedBackup", RADIO_NEED_BACKUP, MAX_CHATTER_REPEAT },
+         { "Radio_SectorClear", RADIO_SECTOR_CLEAR, MAX_CHATTER_REPEAT },
+         { "Radio_InPosition", RADIO_IN_POSITION, MAX_CHATTER_REPEAT },
+         { "Radio_ReportingIn", RADIO_REPORTING_IN, MAX_CHATTER_REPEAT },
+         { "Radio_ShesGonnaBlow", RADIO_SHES_GONNA_BLOW, MAX_CHATTER_REPEAT },
+         { "Radio_Negative", RADIO_NEGATIVE, MAX_CHATTER_REPEAT },
+         { "Radio_EnemyDown", RADIO_ENEMY_DOWN, MAX_CHATTER_REPEAT },
+         { "Chatter_DiePain", CHATTER_PAIN_DIED, MAX_CHATTER_REPEAT },
+         { "Chatter_GoingToPlantBomb", CHATTER_GOING_TO_PLANT_BOMB, MAX_CHATTER_REPEAT },
+         { "Chatter_GoingToGuardVIPSafety", CHATTER_GOING_TO_GUARD_VIP_SAFETY, MAX_CHATTER_REPEAT },
+         { "Chatter_RescuingHostages", CHATTER_RESCUING_HOSTAGES, MAX_CHATTER_REPEAT },
+         { "Chatter_TeamKill", CHATTER_TEAM_ATTACK, MAX_CHATTER_REPEAT },
+         { "Chatter_GuardingVipSafety", CHATTER_GUARDING_VIP_SAFETY, MAX_CHATTER_REPEAT },
+         { "Chatter_PlantingC4", CHATTER_PLANTING_BOMB, MAX_CHATTER_REPEAT },
+         { "Chatter_InCombat", CHATTER_IN_COMBAT,  MAX_CHATTER_REPEAT },
+         { "Chatter_SeeksEnemy", CHATTER_SEEK_ENEMY, MAX_CHATTER_REPEAT },
+         { "Chatter_Nothing", CHATTER_NOTHING,  MAX_CHATTER_REPEAT },
+         { "Chatter_EnemyDown", CHATTER_ENEMY_DOWN, MAX_CHATTER_REPEAT },
+         { "Chatter_UseHostage", CHATTER_USING_HOSTAGES, MAX_CHATTER_REPEAT },
+         { "Chatter_WonTheRound", CHATTER_WON_THE_ROUND, MAX_CHATTER_REPEAT },
+         { "Chatter_QuicklyWonTheRound", CHATTER_QUICK_WON_ROUND, MAX_CHATTER_REPEAT },
+         { "Chatter_NoEnemiesLeft", CHATTER_NO_ENEMIES_LEFT, MAX_CHATTER_REPEAT },
+         { "Chatter_FoundBombPlace", CHATTER_FOUND_BOMB_PLACE, MAX_CHATTER_REPEAT },
+         { "Chatter_WhereIsTheBomb", CHATTER_WHERE_IS_THE_BOMB, MAX_CHATTER_REPEAT },
+         { "Chatter_DefendingBombSite", CHATTER_DEFENDING_BOMBSITE, MAX_CHATTER_REPEAT },
+         { "Chatter_BarelyDefused", CHATTER_BARELY_DEFUSED, MAX_CHATTER_REPEAT },
+         { "Chatter_NiceshotCommander", CHATTER_NICESHOT_COMMANDER, MAX_CHATTER_REPEAT },
+         { "Chatter_ReportingIn", CHATTER_REPORTING_IN, 10.0f },
+         { "Chatter_SpotTheBomber", CHATTER_SPOT_THE_BOMBER, 4.3f },
+         { "Chatter_VIPSpotted", CHATTER_VIP_SPOTTED, 5.3f },
+         { "Chatter_FriendlyFire", CHATTER_FRIENDLY_FIRE, 2.1f },
+         { "Chatter_GotBlinded", CHATTER_BLINDED, 5.0f },
+         { "Chatter_GuardDroppedC4", CHATTER_GUARDING_DROPPED_BOMB, 3.0f },
+         { "Chatter_DefusingC4", CHATTER_DEFUSING_BOMB, 3.0f },
+         { "Chatter_FoundC4", CHATTER_FOUND_BOMB, 5.5f },
+         { "Chatter_ScaredEmotion", CHATTER_SCARED_EMOTE, 6.1f },
+         { "Chatter_HeardEnemy", CHATTER_SCARED_EMOTE, 12.8f },
+         { "Chatter_SniperWarning", CHATTER_SNIPER_WARNING, 14.3f },
+         { "Chatter_SniperKilled", CHATTER_SNIPER_KILLED, 2.1f },
+         { "Chatter_OneEnemyLeft", CHATTER_ONE_ENEMY_LEFT, 2.5f },
+         { "Chatter_TwoEnemiesLeft", CHATTER_TWO_ENEMIES_LEFT, 2.5f },
+         { "Chatter_ThreeEnemiesLeft", CHATTER_THREE_ENEMIES_LEFT, 2.5f },
+         { "Chatter_NiceshotPall", CHATTER_NICESHOT_PALL, 2.0f },
+         { "Chatter_GoingToGuardHostages", CHATTER_GOING_TO_GUARD_HOSTAGES, 3.0f },
+         { "Chatter_GoingToGuardDoppedBomb", CHATTER_GOING_TO_GUARD_DROPPED_BOMB, 3.0f },
+         { "Chatter_OnMyWay", CHATTER_ON_MY_WAY, 1.5f },
+         { "Chatter_LeadOnSir", CHATTER_LEAD_ON_SIR, 5.0f },
+         { "Chatter_Pinned_Down", CHATTER_PINNED_DOWN, 5.0f },
+         { "Chatter_GottaFindTheBomb", CHATTER_GOTTA_FIND_BOMB, 3.0f },
+         { "Chatter_You_Heard_The_Man", CHATTER_YOU_HEARD_THE_MAN, 3.0f },
+         { "Chatter_Lost_The_Commander", CHATTER_LOST_COMMANDER, 4.5f },
+         { "Chatter_NewRound", CHATTER_NEW_ROUND, 3.5f },
+         { "Chatter_CoverMe", CHATTER_COVER_ME, 3.5f },
+         { "Chatter_BehindSmoke", CHATTER_BEHIND_SMOKE, 3.5f },
+         { "Chatter_BombSiteSecured", CHATTER_BOMB_SITE_SECURED, 3.5f },
+         { "Chatter_GoingToCamp", CHATTER_GOING_TO_CAMP, 25.0f },
+         { "Chatter_Camp", CHATTER_CAMP, 25.0f },
       };
 
       while (fp.gets (lineBuffer, 511)) {
@@ -966,7 +965,7 @@ void GameDLLInit (void) {
    yb_version.set (format ("%d.%d.%d", PRODUCT_VERSION_DWORD_INTERNAL, buildNumber ()));
 
    // execute main config
-   processBotConfigs (true);
+   execBotConfigs (true);
 
    // register fake metamod command handler if we not! under mm
    if (!(g_gameFlags & GAME_METAMOD)) {
@@ -2022,7 +2021,7 @@ void ClientCommand (edict_t *ent) {
       if (radioCommand != 0) {
          radioCommand += 10 * (g_radioSelect[clientIndex] - 1);
 
-         if (radioCommand != Radio_Affirmative && radioCommand != Radio_Negative && radioCommand != Radio_ReportingIn) {
+         if (radioCommand != RADIO_AFFIRMATIVE && radioCommand != RADIO_NEGATIVE && radioCommand != RADIO_REPORTING_IN) {
             for (int i = 0; i < engine.maxClients (); i++) {
                Bot *bot = bots.getBot (i);
 
@@ -2056,7 +2055,7 @@ void ServerActivate (edict_t *pentEdictList, int edictCount, int clientMax) {
    // Once this function has been called, the server can be considered as "running".
 
    cleanupGarbage ();
-   processBotConfigs (false); // initialize all config files
+   execBotConfigs (false); // initialize all config files
 
    // do a level initialization
    engine.levelInitialize ();
@@ -2066,7 +2065,7 @@ void ServerActivate (edict_t *pentEdictList, int edictCount, int clientMax) {
    waypoints.load ();
 
    // execute main config
-   processBotConfigs (true);
+   execBotConfigs (true);
 
    if (File::exists (format ("%s/maps/%s_yapb.cfg", engine.getModName (), engine.getMapName ()))) {
       engine.execCmd ("exec maps/%s_yapb.cfg", engine.getMapName ());

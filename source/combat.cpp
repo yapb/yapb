@@ -285,7 +285,7 @@ bool Bot::lookupEnemies (void) {
       }
       else {
          if (m_seeEnemyTime + 3.0 < engine.timebase () && (m_hasC4 || hasHostage () || !engine.isNullEntity (m_targetEntity))) {
-            pushRadioMessage (Radio_EnemySpotted);
+            pushRadioMessage (RADIO_ENEMY_SPOTTED);
          }
          m_targetEntity = nullptr; // stop following when we see an enemy...
 
@@ -902,7 +902,7 @@ void Bot::fireWeapons (void) {
                   m_reloadState = RELOAD_PRIMARY;
                   m_reloadCheckTime = engine.timebase ();
 
-                  pushRadioMessage (Radio_NeedBackup);
+                  pushRadioMessage (RADIO_NEED_BACKUP);
                }
                return;
             }
@@ -1404,7 +1404,7 @@ void Bot::decideFollowUser (void) {
    }
    m_targetEntity = users.random ();
 
-   pushChatterMessage (Chatter_LeadOnSir);
+   pushChatterMessage (CHATTER_LEAD_ON_SIR);
    startTask (TASK_FOLLOWUSER, TASKPRI_FOLLOWUSER, INVALID_WAYPOINT_INDEX, 0.0f, true);
 }
 
@@ -1435,17 +1435,17 @@ void Bot::processTeamCommands (void) {
    // has teammates?
    if (memberNear) {
       if (m_personality == PERSONALITY_RUSHER && yb_communication_type.integer () == 2) {
-         pushRadioMessage (Radio_StormTheFront);
+         pushRadioMessage (RADIO_STORM_THE_FRONT);
       }
       else if (m_personality != PERSONALITY_RUSHER && yb_communication_type.integer () == 2) {
-         pushRadioMessage (Radio_Fallback);
+         pushRadioMessage (RADIO_TEAM_FALLBACK);
       }
    }
    else if (memberExists && yb_communication_type.integer () == 1) {
-      pushRadioMessage (Radio_TakingFire);
+      pushRadioMessage (RADIO_TAKING_FIRE);
    }
    else if (memberExists && yb_communication_type.integer () == 2) {
-      pushChatterMessage (Chatter_ScaredEmotion);
+      pushChatterMessage (CHATTER_SCARED_EMOTE);
    }
    m_timeTeamOrder = engine.timebase () + rng.getFloat (15.0f, 30.0f);
 }

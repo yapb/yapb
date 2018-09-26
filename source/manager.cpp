@@ -1124,7 +1124,7 @@ void Bot::newRound (void) {
 
    m_hostages.clear ();
 
-   for (i = 0; i < Chatter_Total; i++) {
+   for (i = 0; i < CHATTER_MAX; i++) {
       m_chatterTimes[i] = -1.0f;
    }
    m_isReloading = false;
@@ -1212,7 +1212,7 @@ void Bot::newRound (void) {
    startTask (TASK_NORMAL, TASKPRI_NORMAL, INVALID_WAYPOINT_INDEX, 0.0f, true);
 
    if (rng.getInt (0, 100) < 50) {
-      pushChatterMessage (Chatter_NewRound);
+      pushChatterMessage (CHATTER_NEW_ROUND);
    }
    m_thinkInterval = (g_gameFlags & (GAME_LEGACY | GAME_XASH_ENGINE)) ? 0.0f : (1.0f / cr::clamp (yb_think_fps.flt (), 30.0f, 90.0f)) * rng.getFloat (0.95f, 1.05f);
 }
@@ -1486,7 +1486,7 @@ void BotManager::selectLeaders (int team, bool reset) {
                bot->m_isLeader = true;
 
                if (rng.getInt (1, 100) < 50) {
-                  bot->pushRadioMessage (Radio_FollowMe);
+                  bot->pushRadioMessage (RADIO_FOLLOW_ME);
                   bot->m_campButtons = 0;
                }
             }
@@ -1500,7 +1500,7 @@ void BotManager::selectLeaders (int team, bool reset) {
             bot->m_isLeader = true;
 
             if (rng.getInt (1, 100) < 45) {
-               bot->pushRadioMessage (Radio_FollowMe);
+               bot->pushRadioMessage (RADIO_FOLLOW_ME);
             }
          }
          m_leaderChoosen[TEAM_TERRORIST] = true;
@@ -1518,10 +1518,10 @@ void BotManager::selectLeaders (int team, bool reset) {
                // terrorist carrying a bomb needs to have some company
                if (rng.getInt (1, 100) < 80) {
                   if (yb_communication_type.integer () == 2) {
-                     bot->pushChatterMessage (Chatter_GoingToPlantBomb);
+                     bot->pushChatterMessage (CHATTER_GOING_TO_PLANT_BOMB);
                   }
                   else {
-                     bot->pushChatterMessage (Radio_FollowMe);
+                     bot->pushChatterMessage (RADIO_FOLLOW_ME);
                   }
                   bot->m_campButtons = 0;
                }
@@ -1534,7 +1534,7 @@ void BotManager::selectLeaders (int team, bool reset) {
             bot->m_isLeader = true;
 
             if (rng.getInt (1, 100) < 30) {
-               bot->pushRadioMessage (Radio_FollowMe);
+               bot->pushRadioMessage (RADIO_FOLLOW_ME);
             }
          }
          m_leaderChoosen[TEAM_COUNTER] = true;
@@ -1547,7 +1547,7 @@ void BotManager::selectLeaders (int team, bool reset) {
          bot->m_isLeader = true;
 
          if (rng.getInt (1, 100) < 30) {
-            bot->pushRadioMessage (Radio_FollowMe);
+            bot->pushRadioMessage (RADIO_FOLLOW_ME);
          }
          m_leaderChoosen[team] = true;
       }
@@ -1559,7 +1559,7 @@ void BotManager::selectLeaders (int team, bool reset) {
          bot->m_isLeader = true;
 
          if (rng.getInt (1, 100) < (team == TEAM_TERRORIST ? 30 : 40)) {
-            bot->pushRadioMessage (Radio_FollowMe);
+            bot->pushRadioMessage (RADIO_FOLLOW_ME);
          }
          m_leaderChoosen[team] = true;
       }

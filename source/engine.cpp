@@ -1041,7 +1041,7 @@ void Engine::processMessages (void *ptr) {
                   notify->clearTasks ();
 
                   if (yb_communication_type.integer () == 2 && rng.getInt (0, 100) < 55 && notify->m_team == TEAM_COUNTER) {
-                     notify->pushChatterMessage (Chatter_WhereIsTheBomb);
+                     notify->pushChatterMessage (CHATTER_WHERE_IS_THE_BOMB);
                   }
                }
             }

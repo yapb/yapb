@@ -366,7 +366,7 @@ void Bot::avoidGrenades (void) {
             m_viewDistance = distance;
 
             if (rng.getInt (0, 100) < 45) {
-               pushChatterMessage (Chatter_BehindSmoke);
+               pushChatterMessage (CHATTER_BEHIND_SMOKE);
             }
          }
       }
@@ -671,7 +671,7 @@ void Bot::processPickups (void) {
                allowPickup = true;
                m_destOrigin = origin; // ensure we reached dropped bomb
 
-               pushChatterMessage (Chatter_FoundC4); // play info about that
+               pushChatterMessage (CHATTER_FOUND_BOMB); // play info about that
                clearSearchNodes ();
             }
             else if (pickupType == PICKUP_HOSTAGE) {
@@ -692,7 +692,7 @@ void Bot::processPickups (void) {
                   }
                   m_defendHostage = true;
 
-                  pushChatterMessage (Chatter_GoingToGuardHostages); // play info about that
+                  pushChatterMessage (CHATTER_GOING_TO_GUARD_HOSTAGES); // play info about that
                   return;
                }
             }
@@ -721,11 +721,11 @@ void Bot::processPickups (void) {
                         m_campButtons &= ~IN_DUCK;
                      }
                      if (rng.getInt (0, 100) < 90) {
-                        pushChatterMessage (Chatter_DefendingBombSite);
+                        pushChatterMessage (CHATTER_DEFENDING_BOMBSITE);
                      }
                   }
                   else {
-                     pushRadioMessage (Radio_ShesGonnaBlow); // issue an additional radio message
+                     pushRadioMessage (RADIO_SHES_GONNA_BLOW); // issue an additional radio message
                   }
                }
             }
@@ -759,7 +759,7 @@ void Bot::processPickups (void) {
                }
 
                if (rng.getInt (0, 100) < 90) {
-                  pushChatterMessage (Chatter_FoundBombPlace);
+                  pushChatterMessage (CHATTER_FOUND_BOMB_PLACE);
                }
 
                allowPickup = !isBombDefusing (origin) || m_hasProgressBar;
@@ -786,7 +786,7 @@ void Bot::processPickups (void) {
                   }
 
                   if (rng.getInt (0, 100) < 90) {
-                     pushChatterMessage (Chatter_DefendingBombSite);
+                     pushChatterMessage (CHATTER_DEFENDING_BOMBSITE);
                   }
                }
             }
@@ -808,7 +808,7 @@ void Bot::processPickups (void) {
                   }
                   m_defendedBomb = true;
 
-                  pushChatterMessage (Chatter_GoingToGuardDoppedBomb); // play info about that
+                  pushChatterMessage (CHATTER_GOING_TO_GUARD_DROPPED_BOMB); // play info about that
                   return;
                }
             }
@@ -938,14 +938,14 @@ void Bot::instantChatter (int type) {
    }
 
    // delay only report team
-   if (type == Radio_ReportTeam) {
+   if (type == RADIO_REPORT_TEAM) {
       if (m_timeRepotingInDelay < engine.timebase ()) {
          return;
       }
       m_timeRepotingInDelay = engine.timebase () + rng.getFloat (30.0f, 60.0f);
    }
    auto playbackSound = g_chatterFactory[type].random ();
-   auto painSound = g_chatterFactory[Chatter_DiePain].random ();
+   auto painSound = g_chatterFactory[CHATTER_PAIN_DIED].random ();
 
    if (m_notKilled) {
       showChaterIcon (true);
@@ -1095,11 +1095,11 @@ void Bot::checkMsgQueue (void) {
       // if last bot radio command (global) happened just a 3 seconds ago, delay response
       if (g_lastRadioTime[m_team] + 3.0f < engine.timebase ()) {
          // if same message like previous just do a yes/no
-         if (m_radioSelect != Radio_Affirmative && m_radioSelect != Radio_Negative) {
+         if (m_radioSelect != RADIO_AFFIRMATIVE && m_radioSelect != RADIO_NEGATIVE) {
             if (m_radioSelect == g_lastRadio[m_team] && g_lastRadioTime[m_team] + 1.5f > engine.timebase ())
                m_radioSelect = -1;
             else {
-               if (m_radioSelect != Radio_ReportingIn) {
+               if (m_radioSelect != RADIO_REPORTING_IN) {
                   g_lastRadio[m_team] = m_radioSelect;
                }
                else {
@@ -1119,7 +1119,7 @@ void Bot::checkMsgQueue (void) {
             }
          }
 
-         if (m_radioSelect == Radio_ReportingIn) {
+         if (m_radioSelect == RADIO_REPORTING_IN) {
             switch (taskId ()) {
             case TASK_NORMAL:
                if (task ()->data != INVALID_WAYPOINT_INDEX && rng.getInt (0, 100) < 70) {
@@ -1127,90 +1127,90 @@ void Bot::checkMsgQueue (void) {
 
                   if (path.flags & FLAG_GOAL) {
                      if ((g_mapFlags & MAP_DE) && m_team == TEAM_TERRORIST && m_hasC4) {
-                        instantChatter (Chatter_GoingToPlantBomb);
+                        instantChatter (CHATTER_GOING_TO_PLANT_BOMB);
                      }
                      else {
-                        instantChatter (Chatter_Nothing);
+                        instantChatter (CHATTER_NOTHING);
                      }
                   }
                   else if (path.flags & FLAG_RESCUE) {
-                     instantChatter (Chatter_RescuingHostages);
+                     instantChatter (CHATTER_RESCUING_HOSTAGES);
                   }
                   else if ((path.flags & FLAG_CAMP) && rng.getInt (0, 100) > 15) {
-                     instantChatter (Chatter_GoingToCamp);
+                     instantChatter (CHATTER_GOING_TO_CAMP);
                   }
                   else {
-                     instantChatter (Chatter_HearSomething);
+                     instantChatter (CHATTER_HEARD_NOISE);
                   }
                }
                else if (rng.getInt (0, 100) < 30) {
-                  instantChatter (Chatter_ReportingIn);
+                  instantChatter (CHATTER_REPORTING_IN);
                }
                break;
 
             case TASK_MOVETOPOSITION:
                if (rng.getInt (0, 100) < 20) {
-                  instantChatter (Chatter_GoingToCamp);
+                  instantChatter (CHATTER_GOING_TO_CAMP);
                }
                break;
 
             case TASK_CAMP:
                if (rng.getInt (0, 100) < 40) {
                   if (g_bombPlanted && m_team == TEAM_TERRORIST) {
-                     instantChatter (Chatter_GuardDroppedC4);
+                     instantChatter (CHATTER_GUARDING_DROPPED_BOMB);
                   }
                   else if (m_inVIPZone && m_team == TEAM_TERRORIST) {
-                     instantChatter (Chatter_GuardingVipSafety);
+                     instantChatter (CHATTER_GUARDING_VIP_SAFETY);
                   }
                   else {
-                     instantChatter (Chatter_Camp);
+                     instantChatter (CHATTER_CAMP);
                   }
                }
                break;
 
             case TASK_PLANTBOMB:
-               instantChatter (Chatter_PlantingC4);
+               instantChatter (CHATTER_PLANTING_BOMB);
                break;
 
             case TASK_DEFUSEBOMB:
-               instantChatter (Chatter_DefusingC4);
+               instantChatter (CHATTER_DEFUSING_BOMB);
                break;
 
             case TASK_ATTACK:
-               instantChatter (Chatter_InCombat);
+               instantChatter (CHATTER_IN_COMBAT);
                break;
 
             case TASK_HIDE:
             case TASK_SEEKCOVER:
-               instantChatter (Chatter_SeeksEnemy);
+               instantChatter (CHATTER_SEEK_ENEMY);
                break;
 
             default:
                if (rng.getInt (0, 100) < 50) {
-                  instantChatter (Chatter_Nothing);
+                  instantChatter (CHATTER_NOTHING);
                }
                break;
             }
          }
 
          if (m_radioSelect != -1) {
-            if ((m_radioSelect != Radio_ReportingIn && m_forceRadio) || yb_communication_type.integer () != 2 || g_chatterFactory[m_radioSelect].empty () || !(g_gameFlags & GAME_SUPPORT_BOT_VOICE)) {
-               if (m_radioSelect < Radio_GoGoGo) {
+            if ((m_radioSelect != RADIO_REPORTING_IN && m_forceRadio) || yb_communication_type.integer () != 2 || g_chatterFactory[m_radioSelect].empty () || !(g_gameFlags & GAME_SUPPORT_BOT_VOICE)) {
+               if (m_radioSelect < RADIO_GO_GO_GO) {
                   engine.execBotCmd (ent (), "radio1");
                }
-               else if (m_radioSelect < Radio_Affirmative) {
-                  m_radioSelect -= Radio_GoGoGo - 1;
+               else if (m_radioSelect < RADIO_AFFIRMATIVE) {
+                  m_radioSelect -= RADIO_GO_GO_GO - 1;
                   engine.execBotCmd (ent (), "radio2");
                }
                else {
-                  m_radioSelect -= Radio_Affirmative - 1;
+                  m_radioSelect -= RADIO_AFFIRMATIVE - 1;
                   engine.execBotCmd (ent (), "radio3");
                }
 
                // select correct menu item for this radio message
                engine.execBotCmd (ent (), "menuselect %d", m_radioSelect);
             }
-            else if (m_radioSelect != Radio_ReportingIn) {
+            else if (m_radioSelect != RADIO_REPORTING_IN) {
                instantChatter (m_radioSelect);
             }
          }
@@ -1820,37 +1820,37 @@ void Bot::setConditions (void) {
          }
 
          if (rng.getInt (1, 100) < 10) {
-            pushRadioMessage (Radio_EnemyDown);
+            pushRadioMessage (RADIO_ENEMY_DOWN);
          }
          else {
             if ((m_lastVictim->v.weapons & (1 << WEAPON_AWP)) || (m_lastVictim->v.weapons & (1 << WEAPON_SCOUT)) || (m_lastVictim->v.weapons & (1 << WEAPON_G3SG1)) || (m_lastVictim->v.weapons & (1 << WEAPON_SG550))) {
-               pushChatterMessage (Chatter_SniperKilled);
+               pushChatterMessage (CHATTER_SNIPER_KILLED);
             }
             else {
                switch (numEnemiesNear (pev->origin, 99999.0f)) {
                case 0:
                   if (rng.getInt (0, 100) < 50) {
-                     pushChatterMessage (Chatter_NoEnemiesLeft);
+                     pushChatterMessage (CHATTER_NO_ENEMIES_LEFT);
                   }
                   else {
-                     pushChatterMessage (Chatter_EnemyDown);
+                     pushChatterMessage (CHATTER_ENEMY_DOWN);
                   }
                   break;
 
                case 1:
-                  pushChatterMessage (Chatter_OneEnemyLeft);
+                  pushChatterMessage (CHATTER_ONE_ENEMY_LEFT);
                   break;
 
                case 2:
-                  pushChatterMessage (Chatter_TwoEnemiesLeft);
+                  pushChatterMessage (CHATTER_TWO_ENEMIES_LEFT);
                   break;
 
                case 3:
-                  pushChatterMessage (Chatter_ThreeEnemiesLeft);
+                  pushChatterMessage (CHATTER_THREE_ENEMIES_LEFT);
                   break;
 
                default:
-                  pushChatterMessage (Chatter_EnemyDown);
+                  pushChatterMessage (CHATTER_ENEMY_DOWN);
                }
             }
          }
@@ -1861,13 +1861,13 @@ void Bot::setConditions (void) {
             m_plantedBombWptIndex = locatePlantedC4 ();
 
             if (isOccupiedPoint (m_plantedBombWptIndex)) {
-               instantChatter (Chatter_BombSiteSecured);
+               instantChatter (CHATTER_BOMB_SITE_SECURED);
             }
          }
       }
       else {
          pushChatMessage (CHAT_TEAMKILL, true);
-         pushChatterMessage (Chatter_TeamKill);
+         pushChatterMessage (CHATTER_TEAM_ATTACK);
       }
       m_lastVictim = nullptr;
    }
@@ -2132,19 +2132,19 @@ void Bot::startTask (TaskID id, float desire, int data, float time, bool resume)
    // this is best place to handle some voice commands report team some info
    if (rng.getInt (0, 100) < 95) {
       if (tid == TASK_BLINDED) {
-         instantChatter (Chatter_GotBlinded);
+         instantChatter (CHATTER_BLINDED);
       }
       else if (tid == TASK_PLANTBOMB) {
-         instantChatter (Chatter_PlantingC4);
+         instantChatter (CHATTER_PLANTING_BOMB);
       }
    }
 
    if (rng.getInt (0, 100) < 80 && tid == TASK_CAMP) {
       if ((g_mapFlags & MAP_DE) && g_bombPlanted) {
-         pushChatterMessage (Chatter_GuardDroppedC4);
+         pushChatterMessage (CHATTER_GUARDING_DROPPED_BOMB);
       }
       else {
-         pushChatterMessage (Chatter_GoingToCamp);
+         pushChatterMessage (CHATTER_GOING_TO_CAMP);
       }
    }
 
@@ -2156,7 +2156,7 @@ void Bot::startTask (TaskID id, float desire, int data, float time, bool resume)
    }
 
    if (rng.getInt (0, 100) < 80 && tid == TASK_CAMP && m_team == TEAM_TERRORIST && m_inVIPZone) {
-      pushChatterMessage (Chatter_GoingToGuardVIPSafety);
+      pushChatterMessage (CHATTER_GOING_TO_GUARD_VIP_SAFETY);
    }
 }
 
@@ -2273,19 +2273,19 @@ void Bot::checkRadioQueue (void) {
    float distance = (m_radioEntity->v.origin - pev->origin).length ();
 
    // don't allow bot listen you if bot is busy
-   if ((taskId () == TASK_DEFUSEBOMB || taskId () == TASK_PLANTBOMB || hasHostage () || m_hasC4) && m_radioOrder != Radio_ReportTeam) {
+   if ((taskId () == TASK_DEFUSEBOMB || taskId () == TASK_PLANTBOMB || hasHostage () || m_hasC4) && m_radioOrder != RADIO_REPORT_TEAM) {
       m_radioOrder = 0;
       return;
    }
 
    switch (m_radioOrder) {
-   case Radio_CoverMe:
-   case Radio_FollowMe:
-   case Radio_StickTogether:
-   case Chatter_GoingToPlantBomb:
-   case Chatter_CoverMe:
+   case RADIO_COVER_ME:
+   case RADIO_FOLLOW_ME:
+   case RADIO_STICK_TOGETHER_TEAM:
+   case CHATTER_GOING_TO_PLANT_BOMB:
+   case CHATTER_COVER_ME:
       // check if line of sight to object is not blocked (i.e. visible)
-      if ((seesEntity (m_radioEntity->v.origin)) || (m_radioOrder == Radio_StickTogether)) {
+      if ((seesEntity (m_radioEntity->v.origin)) || (m_radioOrder == RADIO_STICK_TOGETHER_TEAM)) {
          if (engine.isNullEntity (m_targetEntity) && engine.isNullEntity (m_enemy) && rng.getInt (0, 100) < (m_personality == PERSONALITY_CAREFUL ? 80 : 20)) {
             int numFollowers = 0;
 
@@ -2308,7 +2308,7 @@ void Bot::checkRadioQueue (void) {
             }
 
             if (numFollowers < allowedFollowers) {
-               pushRadioMessage (Radio_Affirmative);
+               pushRadioMessage (RADIO_AFFIRMATIVE);
                m_targetEntity = m_radioEntity;
 
                // don't pause/camp/follow anymore
@@ -2333,21 +2333,21 @@ void Bot::checkRadioQueue (void) {
                   }
                }
             }
-            else if (m_radioOrder != Chatter_GoingToPlantBomb && rng.getInt (0, 100) < 15) {
-               pushRadioMessage (Radio_Negative);
+            else if (m_radioOrder != CHATTER_GOING_TO_PLANT_BOMB && rng.getInt (0, 100) < 15) {
+               pushRadioMessage (RADIO_NEGATIVE);
             }
          }
-         else if (m_radioOrder != Chatter_GoingToPlantBomb && rng.getInt (0, 100) < 25) {
-            pushRadioMessage (Radio_Negative);
+         else if (m_radioOrder != CHATTER_GOING_TO_PLANT_BOMB && rng.getInt (0, 100) < 25) {
+            pushRadioMessage (RADIO_NEGATIVE);
          }
       }
       break;
 
-   case Radio_HoldPosition:
+   case RADIO_HOLD_THIS_POSITION:
       if (!engine.isNullEntity (m_targetEntity)) {
          if (m_targetEntity == m_radioEntity) {
             m_targetEntity = nullptr;
-            pushRadioMessage (Radio_Affirmative);
+            pushRadioMessage (RADIO_AFFIRMATIVE);
 
             m_campButtons = 0;
 
@@ -2356,11 +2356,11 @@ void Bot::checkRadioQueue (void) {
       }
       break;
 
-   case Chatter_NewRound:
-      pushChatterMessage (Chatter_You_Heard_The_Man);
+   case CHATTER_NEW_ROUND:
+      pushChatterMessage (CHATTER_YOU_HEARD_THE_MAN);
       break;
 
-   case Radio_TakingFire:
+   case RADIO_TAKING_FIRE:
       if (engine.isNullEntity (m_targetEntity)) {
          if (engine.isNullEntity (m_enemy) && m_seeEnemyTime + 4.0f < engine.timebase ()) {
             // decrease fear levels to lower probability of bot seeking cover again
@@ -2371,29 +2371,29 @@ void Bot::checkRadioQueue (void) {
             }
 
             if (rng.getInt (0, 100) < 45 && yb_communication_type.integer () == 2) {
-               pushChatterMessage (Chatter_OnMyWay);
+               pushChatterMessage (CHATTER_ON_MY_WAY);
             }
-            else if (m_radioOrder == Radio_NeedBackup && yb_communication_type.integer () != 2) {
-               pushRadioMessage (Radio_Affirmative);
+            else if (m_radioOrder == RADIO_NEED_BACKUP && yb_communication_type.integer () != 2) {
+               pushRadioMessage (RADIO_AFFIRMATIVE);
             }
             tryHeadTowardRadioMessage ();
          }
          else if (rng.getInt (0, 100) < 25) {
-            pushRadioMessage (Radio_Negative);
+            pushRadioMessage (RADIO_NEGATIVE);
          }
       }
       break;
 
-   case Radio_YouTakePoint:
+   case RADIO_YOU_TAKE_THE_POINT:
       if (seesEntity (m_radioEntity->v.origin) && m_isLeader) {
-         pushRadioMessage (Radio_Affirmative);
+         pushRadioMessage (RADIO_AFFIRMATIVE);
       }
       break;
 
-   case Radio_EnemySpotted:
-   case Radio_NeedBackup:
-   case Chatter_ScaredEmotion:
-   case Chatter_Pinned_Down:
+   case RADIO_ENEMY_SPOTTED:
+   case RADIO_NEED_BACKUP:
+   case CHATTER_SCARED_EMOTE:
+   case CHATTER_PINNED_DOWN:
       if (((engine.isNullEntity (m_enemy) && seesEntity (m_radioEntity->v.origin)) || distance < 2048.0f || !m_moveToC4) && rng.getInt (0, 100) > 50 && m_seeEnemyTime + 4.0f < engine.timebase ()) {
          m_fearLevel -= 0.1f;
 
@@ -2402,25 +2402,25 @@ void Bot::checkRadioQueue (void) {
          }
 
          if (rng.getInt (0, 100) < 45 && yb_communication_type.integer () == 2) {
-            pushChatterMessage (Chatter_OnMyWay);
+            pushChatterMessage (CHATTER_ON_MY_WAY);
          }
-         else if (m_radioOrder == Radio_NeedBackup && yb_communication_type.integer () != 2) {
-            pushRadioMessage (Radio_Affirmative);
+         else if (m_radioOrder == RADIO_NEED_BACKUP && yb_communication_type.integer () != 2) {
+            pushRadioMessage (RADIO_AFFIRMATIVE);
          }
          tryHeadTowardRadioMessage ();
       }
-      else if (rng.getInt (0, 100) < 30 && m_radioOrder == Radio_NeedBackup) {
-         pushRadioMessage (Radio_Negative);
+      else if (rng.getInt (0, 100) < 30 && m_radioOrder == RADIO_NEED_BACKUP) {
+         pushRadioMessage (RADIO_NEGATIVE);
       }
       break;
 
-   case Radio_GoGoGo:
+   case RADIO_GO_GO_GO:
       if (m_radioEntity == m_targetEntity) {
          if (rng.getInt (0, 100) < 45 && yb_communication_type.integer () == 2) {
-            pushRadioMessage (Radio_Affirmative);
+            pushRadioMessage (RADIO_AFFIRMATIVE);
          }
-         else if (m_radioOrder == Radio_NeedBackup && yb_communication_type.integer () != 2) {
-            pushRadioMessage (Radio_Affirmative);
+         else if (m_radioOrder == RADIO_NEED_BACKUP && yb_communication_type.integer () != 2) {
+            pushRadioMessage (RADIO_AFFIRMATIVE);
          }
 
          m_targetEntity = nullptr;
@@ -2440,7 +2440,7 @@ void Bot::checkRadioQueue (void) {
                m_fearLevel = 0.0f;
             }
 
-            pushRadioMessage (Radio_Affirmative);
+            pushRadioMessage (RADIO_AFFIRMATIVE);
             // don't pause/camp anymore
             task ()->time = engine.timebase ();
 
@@ -2454,17 +2454,17 @@ void Bot::checkRadioQueue (void) {
          }
       }
       else if (!engine.isNullEntity (m_doubleJumpEntity)) {
-         pushRadioMessage (Radio_Affirmative);
+         pushRadioMessage (RADIO_AFFIRMATIVE);
          resetDoubleJump ();
       }
       else if (rng.getInt (0, 100) < 35) {
-         pushRadioMessage (Radio_Negative);
+         pushRadioMessage (RADIO_NEGATIVE);
       }
       break;
 
-   case Radio_ShesGonnaBlow:
+   case RADIO_SHES_GONNA_BLOW:
       if (engine.isNullEntity (m_enemy) && distance < 2048.0f && g_bombPlanted && m_team == TEAM_TERRORIST) {
-         pushRadioMessage (Radio_Affirmative);
+         pushRadioMessage (RADIO_AFFIRMATIVE);
 
          if (taskId () == TASK_CAMP) {
             clearTask (TASK_CAMP);
@@ -2473,11 +2473,11 @@ void Bot::checkRadioQueue (void) {
          startTask (TASK_ESCAPEFROMBOMB, TASKPRI_ESCAPEFROMBOMB, INVALID_WAYPOINT_INDEX, 0.0f, true);
       }
       else if (rng.getInt (0, 100) < 35) {
-         pushRadioMessage (Radio_Negative);
+         pushRadioMessage (RADIO_NEGATIVE);
       }
       break;
 
-   case Radio_RegroupTeam:
+   case RADIO_REGROUP_TEAM:
       // if no more enemies found AND bomb planted, switch to knife to get to bombplace faster
       if (m_team == TEAM_COUNTER && m_currentWeapon != WEAPON_KNIFE && m_numEnemiesLeft == 0 && g_bombPlanted && taskId () != TASK_DEFUSEBOMB) {
          selectWeaponByName ("weapon_knife");
@@ -2487,13 +2487,13 @@ void Bot::checkRadioQueue (void) {
          m_position = waypoints.getBombPos ();
          startTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, INVALID_WAYPOINT_INDEX, 0.0f, true);
 
-         pushRadioMessage (Radio_Affirmative);
+         pushRadioMessage (RADIO_AFFIRMATIVE);
       }
       break;
 
-   case Radio_StormTheFront:
+   case RADIO_STORM_THE_FRONT:
       if (((engine.isNullEntity (m_enemy) && seesEntity (m_radioEntity->v.origin)) || distance < 1024.0f) && rng.getInt (0, 100) > 50) {
-         pushRadioMessage (Radio_Affirmative);
+         pushRadioMessage (RADIO_AFFIRMATIVE);
 
          // don't pause/camp anymore
          TaskID taskID = taskId ();
@@ -2522,7 +2522,7 @@ void Bot::checkRadioQueue (void) {
       }
       break;
 
-   case Radio_Fallback:
+   case RADIO_TEAM_FALLBACK:
       if ((engine.isNullEntity (m_enemy) && seesEntity (m_radioEntity->v.origin)) || distance < 1024.0f) {
          m_fearLevel += 0.5f;
 
@@ -2574,13 +2574,13 @@ void Bot::checkRadioQueue (void) {
       }
       break;
 
-   case Radio_ReportTeam:
+   case RADIO_REPORT_TEAM:
       if (rng.getInt (0, 100) < 30) {
-         pushRadioMessage ((numEnemiesNear (pev->origin, 400.0f) == 0 && yb_communication_type.integer () != 2) ? Radio_SectorClear : Radio_ReportingIn);
+         pushRadioMessage ((numEnemiesNear (pev->origin, 400.0f) == 0 && yb_communication_type.integer () != 2) ? RADIO_SECTOR_CLEAR : RADIO_REPORTING_IN);
       }
       break;
 
-   case Radio_SectorClear:
+   case RADIO_SECTOR_CLEAR:
       // is bomb planted and it's a ct
       if (!g_bombPlanted) {
          break;
@@ -2608,7 +2608,7 @@ void Bot::checkRadioQueue (void) {
                // is he approaching this goal?
                if (task ()->data == bombPoint) {
                   task ()->data = INVALID_WAYPOINT_INDEX;
-                  pushRadioMessage (Radio_Affirmative);
+                  pushRadioMessage (RADIO_AFFIRMATIVE);
                }
             }
             waypoints.setVisited (bombPoint);
@@ -2617,9 +2617,9 @@ void Bot::checkRadioQueue (void) {
       }
       break;
 
-   case Radio_GetInPosition:
+   case RADIO_GET_IN_POSITION:
       if ((engine.isNullEntity (m_enemy) && seesEntity (m_radioEntity->v.origin)) || distance < 1024.0f) {
-         pushRadioMessage (Radio_Affirmative);
+         pushRadioMessage (RADIO_AFFIRMATIVE);
 
          if (taskId () == TASK_CAMP) {
             task ()->time = engine.timebase () + rng.getFloat (30.0f, 60.0f);
@@ -2989,7 +2989,7 @@ void Bot::normal_ (void) {
    }
 
    if (!g_bombPlanted && m_currentWaypointIndex != INVALID_WAYPOINT_INDEX && (m_currentPath->flags & FLAG_GOAL) && rng.getInt (0, 100) < 50 && numEnemiesNear (pev->origin, 650.0f) == 0) {
-      pushRadioMessage (Radio_SectorClear);
+      pushRadioMessage (RADIO_SECTOR_CLEAR);
    }
 
    // reached the destination (goal) waypoint?
@@ -3058,7 +3058,7 @@ void Bot::normal_ (void) {
 
                // tell the world we're camping
                if (rng.getInt (0, 100) < 40) {
-                  pushRadioMessage (Radio_InPosition);
+                  pushRadioMessage (RADIO_IN_POSITION);
                }
                m_moveToGoal = false;
                m_checkTerrain = false;
@@ -3093,7 +3093,7 @@ void Bot::normal_ (void) {
                else {
                   m_campButtons &= ~IN_DUCK;
                }
-               pushChatterMessage (Chatter_GoingToGuardVIPSafety); // play info about that
+               pushChatterMessage (CHATTER_GOING_TO_GUARD_VIP_SAFETY); // play info about that
             }
          }
          else if ((g_mapFlags & MAP_DE) && ((m_currentPath->flags & FLAG_GOAL) || m_inBombZone)) {
@@ -3101,8 +3101,8 @@ void Bot::normal_ (void) {
             if (m_hasC4) {
                if ((m_states & STATE_SEEING_ENEMY) && numFriendsNear (pev->origin, 768.0f) == 0) {
                   // request an help also
-                  pushRadioMessage (Radio_NeedBackup);
-                  instantChatter (Chatter_ScaredEmotion);
+                  pushRadioMessage (RADIO_NEED_BACKUP);
+                  instantChatter (CHATTER_SCARED_EMOTE);
 
                   startTask (TASK_CAMP, TASKPRI_CAMP, INVALID_WAYPOINT_INDEX, engine.timebase () + rng.getFloat (4.0f, 8.0f), true);
                }
@@ -3132,7 +3132,7 @@ void Bot::normal_ (void) {
                   else {
                      m_campButtons &= ~IN_DUCK;
                   }
-                  pushChatterMessage (Chatter_DefendingBombSite); // play info about that
+                  pushChatterMessage (CHATTER_DEFENDING_BOMBSITE); // play info about that
                }
             }
          }
@@ -3172,7 +3172,7 @@ void Bot::normal_ (void) {
    // bot hasn't seen anything in a long time and is asking his teammates to report in
    if (m_seeEnemyTime + rng.getFloat (45.0f, 80.0f) < engine.timebase () && rng.getInt (0, 100) < 30 && g_timeRoundStart + 20.0f < engine.timebase () && m_askCheckTime < engine.timebase ()) {
       m_askCheckTime = engine.timebase () + rng.getFloat (45.0f, 80.0f);
-      pushRadioMessage (Radio_ReportTeam);
+      pushRadioMessage (RADIO_REPORT_TEAM);
    }
 }
 
@@ -3691,7 +3691,7 @@ void Bot::plantBomb_ (void) {
 
       // tell teammates to move over here...
       if (numFriendsNear (pev->origin, 1200.0f) != 0) {
-         pushRadioMessage (Radio_NeedBackup);
+         pushRadioMessage (RADIO_NEED_BACKUP);
       }
       clearSearchNodes ();
       int index = getDefendPoint (pev->origin);
@@ -3740,14 +3740,14 @@ void Bot::bombDefuse_ (void) {
       if (rng.getInt (0, 100) < 50 && m_numFriendsLeft != 0) {
          if (timeToBlowUp <= 3.0) {
             if (yb_communication_type.integer () == 2) {
-               instantChatter (Chatter_BarelyDefused);
+               instantChatter (CHATTER_BARELY_DEFUSED);
             }
             else if (yb_communication_type.integer () == 1) {
-               pushRadioMessage (Radio_SectorClear);
+               pushRadioMessage (RADIO_SECTOR_CLEAR);
             }
          }
          else {
-            pushRadioMessage (Radio_SectorClear);
+            pushRadioMessage (RADIO_SECTOR_CLEAR);
          }
       }
    }
@@ -3765,7 +3765,7 @@ void Bot::bombDefuse_ (void) {
          }
 
          if (m_numFriendsLeft > friends) {
-            pushRadioMessage (Radio_NeedBackup);
+            pushRadioMessage (RADIO_NEED_BACKUP);
          }
       }
    }
@@ -3876,10 +3876,10 @@ void Bot::bombDefuse_ (void) {
 
       // notify team
       if (m_numFriendsLeft != 0) {
-         pushChatterMessage (Chatter_DefusingC4);
+         pushChatterMessage (CHATTER_DEFUSING_BOMB);
 
          if (numFriendsNear (pev->origin, 512.0f) < 2) {
-            pushRadioMessage (Radio_NeedBackup);
+            pushRadioMessage (RADIO_NEED_BACKUP);
          }
       }
    }
@@ -3933,7 +3933,7 @@ void Bot::followUser_ (void) {
             // stop following if we have been waiting too long
             m_targetEntity = nullptr;
 
-            pushRadioMessage (Radio_YouTakePoint);
+            pushRadioMessage (RADIO_YOU_TAKE_THE_POINT);
             completeTask ();
 
             return;
@@ -4433,11 +4433,11 @@ void Bot::pickupItem_ () {
       m_aimFlags |= AIM_ENTITY;
 
       if (m_team == TEAM_COUNTER && itemDistance < 80.0f) {
-         pushChatterMessage (Chatter_DefusingC4);
+         pushChatterMessage (CHATTER_DEFUSING_BOMB);
 
          // notify team of defusing
          if (m_numFriendsLeft < 3) {
-            pushRadioMessage (Radio_NeedBackup);
+            pushRadioMessage (RADIO_NEED_BACKUP);
          }
          m_moveToGoal = false;
          m_checkTerrain = false;
@@ -4469,7 +4469,7 @@ void Bot::pickupItem_ () {
             MDLL_Use (m_pickupItem, ent ());
 
             if (rng.getInt (0, 100) < 80) {
-               pushChatterMessage (Chatter_UseHostage);
+               pushChatterMessage (CHATTER_USING_HOSTAGES);
             }
             m_hostages.push (m_pickupItem);
             m_pickupItem = nullptr;
@@ -4726,28 +4726,28 @@ void Bot::ai (void) {
          int hasFriendNearby = numFriendsNear (pev->origin, 512.0f);
 
          if (!hasFriendNearby && rng.getInt (0, 100) < 45 && (m_enemy->v.weapons & (1 << WEAPON_C4))) {
-            pushChatterMessage (Chatter_SpotTheBomber);
+            pushChatterMessage (CHATTER_SPOT_THE_BOMBER);
          }
          else if (!hasFriendNearby && rng.getInt (0, 100) < 45 && m_team == TEAM_TERRORIST && isPlayerVIP (m_enemy)) {
-            pushChatterMessage (Chatter_VIPSpotted);
+            pushChatterMessage (CHATTER_VIP_SPOTTED);
          }
          else if (!hasFriendNearby && rng.getInt (0, 100) < 50 && engine.getTeam (m_enemy) != m_team && isGroupOfEnemies (m_enemy->v.origin, 2, 384)) {
-            pushChatterMessage (Chatter_ScaredEmotion);
+            pushChatterMessage (CHATTER_SCARED_EMOTE);
          }
          else if (!hasFriendNearby && rng.getInt (0, 100) < 40 && ((m_enemy->v.weapons & (1 << WEAPON_AWP)) || (m_enemy->v.weapons & (1 << WEAPON_SCOUT)) || (m_enemy->v.weapons & (1 << WEAPON_G3SG1)) || (m_enemy->v.weapons & (1 << WEAPON_SG550)))) {
-            pushChatterMessage (Chatter_SniperWarning);
+            pushChatterMessage (CHATTER_SNIPER_WARNING);
          }
 
          // if bot is trapped under shield yell for help !
          if (taskId () == TASK_CAMP && hasShield () && isShieldDrawn () && hasFriendNearby >= 2 && seesEnemy (m_enemy)) {
-            instantChatter (Chatter_Pinned_Down);
+            instantChatter (CHATTER_PINNED_DOWN);
          }
       }
 
       // if bomb planted warn teammates !
       if (g_canSayBombPlanted && g_bombPlanted && m_team == TEAM_COUNTER) {
          g_canSayBombPlanted = false;
-         pushChatterMessage (Chatter_GottaFindTheBomb);
+         pushChatterMessage (CHATTER_GOTTA_FIND_BOMB);
       }
    }
    Vector src, destination;
@@ -5068,7 +5068,7 @@ void Bot::processDamage (edict_t *inflictor, int damage, int armor, int bits) {
 
          pushChatMessage (CHAT_TEAMATTACK);
          processChatterMessage ("#Bot_TeamAttack");
-         pushChatterMessage (Chatter_FriendlyFire);
+         pushChatterMessage (CHATTER_FRIENDLY_FIRE);
       }
       else {
          // attacked by an enemy
@@ -5275,21 +5275,21 @@ void Bot::processChatterMessage (const char *tempMessage) {
 
    if ((m_team == TEAM_COUNTER && strcmp (tempMessage, "#CTs_Win") == 0) || (m_team == TEAM_TERRORIST && strcmp (tempMessage, "#Terrorists_Win") == 0)) {
       if (g_timeRoundMid > engine.timebase ()) {
-         pushChatterMessage (Chatter_QuicklyWonTheRound);
+         pushChatterMessage (CHATTER_QUICK_WON_ROUND);
       }
       else {
-         pushChatterMessage (Chatter_WonTheRound);
+         pushChatterMessage (CHATTER_WON_THE_ROUND);
       }
    }
 
    else if (strcmp (tempMessage, "#Bot_TeamAttack") == 0) {
-      pushChatterMessage (Chatter_FriendlyFire);
+      pushChatterMessage (CHATTER_FRIENDLY_FIRE);
    }
    else if (strcmp (tempMessage, "#Bot_NiceShotCommander") == 0) {
-      pushChatterMessage (Chatter_NiceshotCommander);
+      pushChatterMessage (CHATTER_NICESHOT_COMMANDER);
    }
    else if (strcmp (tempMessage, "#Bot_NiceShotPall") == 0) {
-      pushChatterMessage (Chatter_NiceshotPall);
+      pushChatterMessage (CHATTER_NICESHOT_PALL);
    }
 }
 
@@ -5720,7 +5720,7 @@ void Bot::processHearing (void) {
       m_states |= STATE_HEARING_ENEMY;
 
       if (rng.getInt (0, 100) < 15 && engine.isNullEntity (m_enemy) && engine.isNullEntity (m_lastEnemy) && m_seeEnemyTime + 7.0f < engine.timebase ()) {
-         pushChatterMessage (Chatter_HeardEnemy);
+         pushChatterMessage (CHATTER_HEARD_ENEMY);
       }
 
       // didn't bot already have an enemy ? take this one...

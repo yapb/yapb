@@ -539,9 +539,7 @@ private:
    void *m_ptr;
 
 public:
-   Library (const char *filename)
-      : m_ptr (nullptr) {
-
+   Library (const char *filename) : m_ptr (nullptr) {
       if (!filename) {
          return;
       }
@@ -605,9 +603,13 @@ public:
 };
 
 template <typename T> class Array {
+public:
+   static constexpr size_t INVALID_INDEX = static_cast <size_t> (-1);
+
 protected:
    T *m_data;
-   size_t m_capacity, m_length;
+   size_t m_capacity;
+   size_t m_length;
 
 public:
    Array (void) : m_data (nullptr), m_capacity (0), m_length (0) {
@@ -641,7 +643,7 @@ public:
       if (m_length + growSize < m_capacity) {
          return true;
       }
-      size_t maxSize = max <size_t> (m_capacity + 2, static_cast <size_t> (16));
+      size_t maxSize = max <size_t> (m_capacity + sizeof (T), static_cast <size_t> (16));
 
       while (m_length + growSize > maxSize) {
          maxSize *= 2;
@@ -1020,9 +1022,6 @@ private:
 };
 
 class String : private Array <char> {
-public:
-   static constexpr size_t INVALID_INDEX = static_cast <size_t> (-1);
-
 private:
    using Base = Array <char>;
 
@@ -1464,7 +1463,7 @@ public:
       if (exists (key)) {
          return false;
       }
-      getBucket (key).push (Pair <K, V> (key, val));
+      getBucket (key).push (move (Pair <K, V> (key, val)));
       return true;
    }
 

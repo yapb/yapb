@@ -1190,14 +1190,14 @@ bool Bot::processNavigation (void) {
 
             if (distance > 512.0f) {
                if (rng.getInt (0, 100) < 50 && !waypoints.isVisited (taskTarget)) {
-                  pushRadioMessage (Radio_SectorClear);
+                  pushRadioMessage (RADIO_SECTOR_CLEAR);
                }
                waypoints.setVisited (taskTarget); // doesn't hear so not a good goal
             }
          }
          else {
             if (rng.getInt (0, 100) < 50 && !waypoints.isVisited (taskTarget)) {
-               pushRadioMessage (Radio_SectorClear);
+               pushRadioMessage (RADIO_SECTOR_CLEAR);
             }
             waypoints.setVisited (taskTarget); // doesn't hear so not a good goal
          }
