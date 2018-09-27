@@ -1334,6 +1334,11 @@ int Bot::pickBestWeapon (int *vec, int count, int moneySave) {
    // this function picks best available weapon from random choice with money save
 
    if (yb_best_weapon_picker_type.integer () == 1) {
+
+      auto pick = [] (const float factor) -> float {
+         return (static_cast <int> (((unsigned int &) factor >> 23) & 0xff) - 127) * 0.3010299956639812f;
+      };
+
       float buyFactor = (m_moneyAmount - static_cast <float> (moneySave)) / (16000.0f - static_cast <float> (moneySave)) * 3.0f;
 
       if (buyFactor < 1.0f) {
@@ -1344,7 +1349,7 @@ int Bot::pickBestWeapon (int *vec, int count, int moneySave) {
       for (int *begin = vec, *end = vec + count - 1; begin < end; ++begin, --end) {
          cr::swap (*end, *begin);
       }
-      return vec[static_cast <int> (static_cast <float> (count - 1) * cr::log10f (rng.getFloat (1, cr::powf (10.0f, buyFactor))) / buyFactor + 0.5f)];
+      return vec[static_cast <int> (static_cast <float> (count - 1) * pick (rng.getFloat (1.0f, cr::powf (10.0f, buyFactor))) / buyFactor + 0.5f)];
    }
 
    int chance = 95;

@@ -20,7 +20,6 @@
 #include <float.h>
 #include <limits.h>
 #include <time.h>
-#include <math.h>
 
 #include <platform.h>
 
@@ -67,11 +66,6 @@ constexpr float PI_HALF = PI / 2;
 
 constexpr float D2R = PI / 180.0f;
 constexpr float R2D = 180.0f / PI;
-
-namespace cmath {
-using ::ceilf;
-using ::log10f;
-}
 
 // from metamod-p
 static inline bool checkptr (const void *ptr) {
@@ -183,12 +177,8 @@ static inline float atan2f (const float y, const float x) {
    return atanf (-x / y) + PI_HALF;
 }
 
-static inline float log10f (const float x) {
-   return cmath::log10f (x);
-}
-
 static inline float ceilf (const float x) {
-   return cmath::ceilf (x);
+   return static_cast <float> (65536 - static_cast <int> (65536.0f - x));
 }
 
 static inline void sincosf (const float rad, float &sine, float &cosine) {
@@ -581,7 +571,7 @@ public:
    }
 
    template <typename R> R handle (void) {
-      return (R)m_ptr;
+      return static_cast <R> (m_ptr);
    }
 
    inline bool isValid (void) const {

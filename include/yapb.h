@@ -12,7 +12,6 @@
 #include <extdll.h>
 #include <memory.h>
 #include <stdio.h>
-#include <math.h>
 #include <meta_api.h>
 
 using namespace cr::types;
