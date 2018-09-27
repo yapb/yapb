@@ -183,7 +183,6 @@ static inline float atan2f (const float y, const float x) {
    return atanf (-x / y) + PI_HALF;
 }
 
-
 static inline float log10f (const float x) {
    return cmath::log10f (x);
 }
@@ -255,7 +254,7 @@ template <typename T> static constexpr inline T &&forward (typename ClearRef <T>
    return static_cast <T &&> (type);
 }
 
-template <typename T> static inline void moveArray (T *dest, T *src, size_t length) {
+template <typename T> static inline void transfer (T *dest, T *src, size_t length) {
    for (size_t i = 0; i < length; i++) {
       dest[i] = move (src[i]);
    }
@@ -263,15 +262,17 @@ template <typename T> static inline void moveArray (T *dest, T *src, size_t leng
 
 namespace classes {
 
-template <typename T> class Singleton {
+class NonCopyable {
 protected:
-   Singleton (void) = default;
-   virtual ~Singleton (void) = default;
+   NonCopyable (void) = default;
+   ~NonCopyable (void) = default;
 
 private:
-   Singleton (const Singleton &) = delete;
-   Singleton &operator= (const Singleton &) = delete;
+   NonCopyable (const NonCopyable &) = delete;
+   NonCopyable &operator = (const NonCopyable &) = delete;
+};
 
+template <typename T> class Singleton : private NonCopyable {
 public:
    inline static T *ptr (void) {
       return &ref ();
@@ -324,7 +325,7 @@ public:
    }
 };
 
-class Vector {
+class Vector final {
 public:
    float x, y, z;
 
@@ -588,7 +589,7 @@ public:
    }
 };
 
-template <typename A, typename B> class Pair {
+template <typename A, typename B> class Pair final {
 public:
    A first;
    B second;
@@ -602,7 +603,7 @@ public:
    ~Pair (void) = default;
 };
 
-template <typename T> class Array {
+template <typename T> class Array : private NonCopyable {
 public:
    static constexpr size_t INVALID_INDEX = static_cast <size_t> (-1);
 
@@ -648,17 +649,22 @@ public:
       while (m_length + growSize > maxSize) {
          maxSize *= 2;
       }
+
+      if (maxSize >= INT_MAX / sizeof (T)) {
+         assert (!"Allocation Overflow!");
+         return false;
+      }
       auto buffer = new T[maxSize];
 
       if (m_data != nullptr) {
          if (maxSize < m_length) {
             m_length = maxSize;
          }
-         moveArray (buffer, m_data, m_length);
+         transfer (buffer, m_data, m_length);
          delete[] m_data;
       }
-      m_data = buffer;
-      m_capacity = maxSize;
+      m_data = move (buffer);
+      m_capacity = move (maxSize);
 
       return true;
    }
@@ -711,11 +717,10 @@ public:
    }
 
    bool insert (size_t index, T *objects, size_t count = 1) {
-      if (!objects || count < 1) {
+      if (!objects || !count) {
          return false;
       }
-      size_t newSize = m_length > index ? m_length : index;
-      newSize += count;
+      size_t newSize = (m_length > index ? m_length : index) + count;
 
       if (newSize >= m_capacity && !reserve (newSize)) {
          return false;
@@ -806,20 +811,20 @@ public:
 
       if (m_data != nullptr) {
          for (size_t i = 0; i < m_length; i++) {
-            moveArray (buffer, m_data);
+            transfer (buffer, m_data);
          }
          delete[] m_data;
       }
-      m_data = buffer;
-      m_capacity = m_length;
+      m_data = move (buffer);
+      m_capacity = move (m_length);
    }
 
    size_t index (T &item) {
       return &item - &m_data[0];
    }
 
-   T &pop (void) {
-      T &item = m_data[m_length - 1];
+   T pop (void) {
+      T item = move (m_data[m_length - 1]);
       erase (m_length - 1, 1);
 
       return item;
@@ -848,7 +853,7 @@ public:
       if (!reserve (other.m_length)) {
          return false;
       }
-      moveArray (m_data, other.m_data, other.m_length);
+      transfer (m_data, other.m_data, other.m_length);
       m_length = other.m_length;
 
       return true;
@@ -898,33 +903,29 @@ public:
    T *end (void) const {
       return m_data + m_length;
    }
-
-private:
-   Array (const Array &) = delete;
-   Array &operator = (const Array &) = delete;
 };
 
-template <typename A, typename B, size_t Capacity = 0> class BinaryHeap : private Array <Pair <A, B>> {
+template <typename A, typename B, size_t Capacity = 0> class BinaryHeap final : private Array <Pair <A, B>> {
 private:
-   using PairType = Pair <A, B>;
-   using Base = Array <PairType>;
+   using type = Pair <A, B>;
+   using base = Array <type>;
 
-   using Base::m_data;
-   using Base::m_length;
+   using base::m_data;
+   using base::m_length;
 
 public:
    BinaryHeap (void) {
-      Base::reserve (Capacity);
+      base::reserve (Capacity);
    }
-   BinaryHeap (BinaryHeap &&other) noexcept : Base (move (other)) { }
+   BinaryHeap (BinaryHeap &&other) noexcept : base (move (other)) { }
 
 public:
    void push (const A &first, const B &second) {
       push ({ first, second });
    }
 
-   void push (PairType &&pair) {
-      Base::push (forward <PairType> (pair));
+   void push (type &&pair) {
+      base::push (forward <type> (pair));
 
       if (length () > 1) {
          siftUp ();
@@ -935,12 +936,12 @@ public:
       assert (!empty ());
 
       if (length () == 1) {
-         return Base::pop ().first;
+         return base::pop ().first;
       }
-      PairType value = move (m_data[0]);
+      type value = move (m_data[0]);
 
-      m_data[0] = move (Base::back ());
-      Base::pop ();
+      m_data[0] = move (base::back ());
+      base::pop ();
 
       siftDown ();
       return value.first;
@@ -955,7 +956,7 @@ public:
    }
 
    inline void clear (void) {
-      Base::clear ();
+      base::clear ();
    }
 
    void siftUp (void) {
@@ -999,7 +1000,7 @@ public:
    }
 
    BinaryHeap &operator = (BinaryHeap &&other) noexcept {
-      Base::operator = (move (other));
+      base::operator = (move (other));
       return *this;
    }
 
@@ -1015,15 +1016,11 @@ private:
    static constexpr size_t getParent (size_t index) {
       return --index >> 1;
    }
-
-private:
-   BinaryHeap (const BinaryHeap &) = delete;
-   BinaryHeap &operator = (const BinaryHeap &) = delete;
 };
 
-class String : private Array <char> {
+class String final : private Array <char> {
 private:
-   using Base = Array <char>;
+   using base = Array <char>;
 
 private:
    bool isTrimChar (char chr, const char *chars) {
@@ -1039,7 +1036,7 @@ private:
 public:
 
    String (void) = default;
-   String (String &&other) noexcept : Base (move (other)) { }
+   String (String &&other) noexcept : base (move (other)) { }
    ~String (void) = default;
 
 public:
@@ -1051,7 +1048,7 @@ public:
       assign (str, length);
    }
 
-   String (const String &str, size_t length = 0) : Base () {
+   String (const String &str, size_t length = 0) : base () {
       assign (str.chars (), length);
    }
 
@@ -1105,7 +1102,7 @@ public:
    }
 
    size_t length (void) const {
-      return Base::length ();
+      return base::length ();
    }
 
    bool empty (void) const {
@@ -1113,7 +1110,7 @@ public:
    }
 
    void clear (void) {
-      Base::clear ();
+      base::clear ();
 
       if (m_data) {
          m_data[0] = '\0';
@@ -1121,16 +1118,16 @@ public:
    }
 
    void erase (size_t index, size_t count = 1) {
-      Base::erase (index, count);
+      base::erase (index, count);
       terminate ();
    }
 
    void reserve (size_t count) {
-      Base::reserve (count);
+      base::reserve (count);
    }
 
    void resize (size_t count) {
-      Base::resize (count);
+      base::resize (count);
       terminate ();
    }
 
@@ -1181,7 +1178,7 @@ public:
    }
 
    size_t insert (size_t at, const String &str) {
-      if (Base::insert (at, str.begin (), str.length ())) {
+      if (base::insert (at, str.begin (), str.length ())) {
          terminate ();
          return length ();
       }
@@ -1237,7 +1234,7 @@ public:
       }
       result.resize (count);
 
-      moveArray (&result[0], &m_data[start], count);
+      transfer (&result[0], &m_data[start], count);
       result[count] = '\0';
 
       return result;
@@ -1312,7 +1309,7 @@ public:
    }
 
    String &operator = (String &&other) noexcept {
-      Base::operator = (move (other));
+      base::operator = (move (other));
       return *this;
    }
 
@@ -1422,7 +1419,7 @@ template <typename K> struct IntHash {
    }
 };
 
-template <typename K, typename V, typename H = StringHash <K>, size_t I = 256> class HashMap {
+template <typename K, typename V, typename H = StringHash <K>, size_t I = 256> class HashMap final : private NonCopyable {
 public:
    using Bucket = Pair <K, V>;
 
@@ -1489,13 +1486,9 @@ public:
       static V ret;
       return ret;
    }
-
-private:
-   HashMap (const HashMap &) = delete;
-   HashMap &operator = (const HashMap &) = delete;
 };
 
-class File {
+class File : private NonCopyable {
 private:
    FILE *m_handle;
    size_t m_size;
@@ -1656,7 +1649,7 @@ public:
    }
 };
 
-class MemFile {
+class MemFile : private NonCopyable {
 private:
    size_t m_size;
    size_t m_pos;

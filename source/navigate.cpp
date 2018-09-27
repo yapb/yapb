@@ -1779,14 +1779,32 @@ float Bot::getReachTime (void) {
 void Bot::getValidPoint (void) {
    // checks if the last waypoint the bot was heading for is still valid
 
+   auto rechoiceGoal = [&] (void) {
+      if (m_rechoiceGoalCount > 1) {
+         int newGoal = searchGoal ();
+
+         m_prevGoalIndex = newGoal;
+         m_chosenGoalIndex = newGoal;
+         task ()->data = newGoal;
+
+         // do path finding if it's not the current waypoint
+         if (newGoal != m_currentWaypointIndex) {
+            searchPath (m_currentWaypointIndex, newGoal, m_pathType);
+         }
+         m_rechoiceGoalCount = 0;
+      }
+      else {
+         searchOptimalPoint ();
+         m_rechoiceGoalCount++;
+      }
+   };
+
    // if bot hasn't got a waypoint we need a new one anyway or if time to get there expired get new one as well
    if (m_currentWaypointIndex == INVALID_WAYPOINT_INDEX) {
       clearSearchNodes ();
-      searchOptimalPoint ();
+      rechoiceGoal ();
 
       m_waypointOrigin = m_currentPath->origin;
-
-      // FIXME: Do some error checks if we got a waypoint
    }
    else if (m_navTimeset + getReachTime () < engine.timebase () && engine.isNullEntity (m_enemy)) {
       if (m_team == TEAM_TERRORIST) {
@@ -1834,7 +1852,7 @@ void Bot::getValidPoint (void) {
          }
       }
       clearSearchNodes ();
-      searchOptimalPoint ();
+      rechoiceGoal ();
  
       m_waypointOrigin = m_currentPath->origin;
    }
@@ -3011,12 +3029,16 @@ void Bot::processLookAngles (void) {
 
       return;
    }
-   bool needPreciseAim = (m_aimFlags & (AIM_ENEMY | AIM_ENTITY | AIM_GRENADE) || taskId () == TASK_SHOOTBREAKABLE);
 
-   float accelerate = needPreciseAim ? 3800.0f : 3000.0f;
-   float stiffness = needPreciseAim ? 320.0f : 200.0f;
-   float damping = needPreciseAim ? 17.0f : 25.0f;
+   float accelerate = 3000.0f;
+   float stiffness = 200.0f;
+   float damping = 25.0f;
 
+   if ((m_aimFlags & (AIM_ENEMY | AIM_ENTITY | AIM_GRENADE)) && m_difficulty > 2) {
+      accelerate += 800.0f;
+      stiffness += 320.0f;
+      damping -= 8.0f;
+   }
    m_idealAngles = pev->v_angle;
 
    float angleDiffYaw = cr::angleDiff (direction.y, m_idealAngles.y);

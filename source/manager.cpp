@@ -347,7 +347,9 @@ void BotManager::maintainQuota (void) {
    // while creation process in process.
 
    if (waypoints.length () < 1 || waypoints.hasChanged ()) {
-      engine.centerPrint ("Map is not waypointed. Cannot create bot");
+      if (yb_quota.integer () > 0) {
+         engine.centerPrint ("Map is not waypointed. Cannot create bot");
+      }
       yb_quota.set (0);
       return;
    }
@@ -1025,6 +1027,7 @@ void Bot::newRound (void) {
    m_numFriendsLeft = 0;
    m_numEnemiesLeft = 0;
    m_oldButtons = pev->button;
+   m_rechoiceGoalCount = 0;
 
    m_avoid = nullptr;
    m_avoidTime = 0.0f;

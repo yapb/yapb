@@ -524,7 +524,7 @@ void execBotConfigs (bool onlyMain) {
    // reserve some space for chat
    g_chatFactory.reserve (CHAT_TOTAL);
    g_chatterFactory.reserve (CHATTER_MAX);
-   g_botNames.reserve (64);
+   g_botNames.reserve (CHATTER_MAX);
 
    // NAMING SYSTEM INITIALIZATION
    if (openConfig ("names.cfg", "Name configuration file not found.", &fp, true)) {
@@ -3047,6 +3047,9 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    if (g_gameFlags & GAME_METAMOD) {
       return; // we should stop the attempt for loading the real gamedll, since metamod handle this for us
    }
+   
+   extern ConVar yb_difficulty;
+   yb_difficulty.set (2);
 
 #ifdef LOAD_HARDFP
    const char *serverDLL = "libserver_hardfp.so";

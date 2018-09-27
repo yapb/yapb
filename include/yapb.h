@@ -524,7 +524,7 @@ constexpr int MAX_TEAM_COUNT = 2;
 constexpr int INVALID_WAYPOINT_INDEX = -1;
 
 constexpr int MAX_WAYPOINT_BUCKET_SIZE = static_cast <int> (MAX_WAYPOINTS * 0.65);
-constexpr int MAX_WAYPOINT_BUCKET_MAX = MAX_WAYPOINTS * 8 / MAX_WAYPOINT_BUCKET_SIZE;
+constexpr int MAX_WAYPOINT_BUCKET_MAX = MAX_WAYPOINTS * 8 / MAX_WAYPOINT_BUCKET_SIZE + 1;
 constexpr int MAX_WAYPOINT_BUCKET_WPTS = MAX_WAYPOINT_BUCKET_SIZE / MAX_WAYPOINT_BUCKET_MAX;
 
 // weapon masks
@@ -827,6 +827,7 @@ private:
    int m_oldButtons; // our old buttons
    int m_reloadState; // current reload state
    int m_voicePitch; // bot voice pitch
+   int m_rechoiceGoalCount; // multiple failed goals?
 
    bool m_duckDefuse; // should or not bot duck to defuse bomb
    float m_duckDefuseCheckTime; // time to check for ducking for defuse
