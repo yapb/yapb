@@ -3042,7 +3042,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    }
 
 #ifdef PLATFORM_ANDROID
-   g_gameFlags |= (GAME_LEGACY | GAME_XASH_ENGINE | GAME_MOBILITY | GAME_SUPPORT_BOT_VOICE);
+   g_gameFlags |= (GAME_XASH_ENGINE | GAME_MOBILITY | GAME_SUPPORT_BOT_VOICE);
 
    if (g_gameFlags & GAME_METAMOD) {
       return; // we should stop the attempt for loading the real gamedll, since metamod handle this for us
