@@ -20,7 +20,6 @@
 #include <float.h>
 #include <limits.h>
 #include <time.h>
-
 #include <platform.h>
 
 #ifdef PLATFORM_WIN32
@@ -35,6 +34,10 @@
    #define stricmp strcasecmp
 #else
    #define stricmp _stricmp
+#endif
+
+#ifdef PLATFORM_HAS_SSE2
+   #include <immintrin.h>
 #endif
 
 #undef min
@@ -181,9 +184,52 @@ static inline float ceilf (const float x) {
    return static_cast <float> (65536 - static_cast <int> (65536.0f - x));
 }
 
-static inline void sincosf (const float rad, float &sine, float &cosine) {
-   sine = sinf (rad);
-   cosine = cosf (rad);
+static inline void sincosf (const float x, const float y, const float z, float *sines, float *cosines) {
+   // this is the only place where sse2 stuff actually faster than chebyshev pads as we're can calculate 3 sines + 3 cosines
+   // using olny two calls instead of 6 calls to sin/cos with strandard functions
+
+#if defined (PLATFORM_HAS_SSE2)
+   auto rad = _mm_set_ps (x, y, z, 0.0f);
+
+   auto _mm_sin = [] (__m128 rad) -> __m128 {
+      static auto pi2 = _mm_set_ps1 (PI * 2);
+      static auto rp1 = _mm_set_ps1 (4.0f / PI);
+      static auto rp2 = _mm_set_ps1 (-4.0f / (PI * PI));
+      static auto val = _mm_cmpnlt_ps (rad, _mm_set_ps1 (PI));
+      static auto csi = _mm_castsi128_ps (_mm_set1_epi32 (0x80000000));
+
+      val = _mm_and_ps (val, pi2);
+      rad = _mm_sub_ps (rad, val);
+      val = _mm_cmpngt_ps (rad, _mm_set_ps1 (-PI));
+      val = _mm_and_ps (val, pi2);
+      rad = _mm_add_ps (rad, val);
+      val = _mm_mul_ps (_mm_andnot_ps (csi, rad), rp2);
+      val = _mm_add_ps (val, rp1);
+
+      auto si = _mm_mul_ps (val, rad);
+
+      val = _mm_mul_ps (_mm_andnot_ps (csi, si), si);
+      val = _mm_sub_ps (val, si);
+      val = _mm_mul_ps (val, _mm_set_ps1 (0.225f));
+
+      return _mm_add_ps (val, si);
+   };
+   static auto hpi = _mm_set_ps1 (PI_HALF);
+
+   auto s = _mm_sin (rad);
+   auto c = _mm_sin (_mm_add_ps (rad, hpi));
+
+   _mm_store_ps (sines, _mm_shuffle_ps (s, s, _MM_SHUFFLE (0, 1, 2, 3)));
+   _mm_store_ps (cosines, _mm_shuffle_ps (c, c, _MM_SHUFFLE (0, 1, 2, 3)));
+#else
+   sines[0] = sinf (x);
+   sines[1] = sinf (y);
+   sines[2] = sinf (z);
+
+   cosines[0] = cosf (x);
+   cosines[1] = cosf (y);
+   cosines[2] = cosf (z);
+#endif
 }
 
 constexpr bool fzero (const float entry) {
@@ -499,28 +545,30 @@ public:
    }
 
    inline void makeVectors (Vector *forward, Vector *right, Vector *upward) const {
-      float sinePitch = 0.0f, cosinePitch = 0.0f, sineYaw = 0.0f, cosineYaw = 0.0f, sineRoll = 0.0f, cosineRoll = 0.0f;
+      enum { pitch, yaw, roll, unused, max };
 
-      sincosf (deg2rad (x), sinePitch, cosinePitch); // compute the sine and cosine of the pitch component
-      sincosf (deg2rad (y), sineYaw, cosineYaw); // compute the sine and cosine of the yaw component
-      sincosf (deg2rad (z), sineRoll, cosineRoll); // compute the sine and cosine of the roll component
+      float sines[max] = { 0.0f, 0.0f, 0.0f, 0.0f };
+      float cosines[max] = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+      // compute the sine and cosine compontents
+      sincosf (deg2rad (x), deg2rad (y), deg2rad (y), sines, cosines);
 
       if (forward) {
-         forward->x = cosinePitch * cosineYaw;
-         forward->y = cosinePitch * sineYaw;
-         forward->z = -sinePitch;
+         forward->x = cosines[pitch] * cosines[yaw];
+         forward->y = cosines[pitch] * sines[yaw];
+         forward->z = -sines[pitch];
       }
 
       if (right) {
-         right->x = -sineRoll * sinePitch * cosineYaw + cosineRoll * sineYaw;
-         right->y = -sineRoll * sinePitch * sineYaw - cosineRoll * cosineYaw;
-         right->z = -sineRoll * cosinePitch;
+         right->x = -sines[roll] * sines[pitch] * cosines[yaw] + cosines[roll] * sines[yaw];
+         right->y = -sines[roll] * sines[pitch] * sines[yaw] - cosines[roll] * cosines[yaw];
+         right->z = -sines[roll] * cosines[pitch];
       }
 
       if (upward) {
-         upward->x = cosineRoll * sinePitch * cosineYaw + sineRoll * sineYaw;
-         upward->y = cosineRoll * sinePitch * sineYaw - sineRoll * cosineYaw;
-         upward->z = cosineRoll * cosinePitch;
+         upward->x = cosines[roll] * sines[pitch] * cosines[yaw] + sines[roll] * sines[yaw];
+         upward->y = cosines[roll] * sines[pitch] * sines[yaw] - sines[roll] * cosines[yaw];
+         upward->z = cosines[roll] * cosines[pitch];
       }
    }
 };

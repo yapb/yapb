@@ -317,7 +317,7 @@ void Bot::avoidIncomingPlayers (edict_t *touch) {
 bool Bot::doPlayerAvoidance (const Vector &normal) {
    // avoid collision entity, got it form official csbot
 
-   if (m_avoidTime> engine.timebase () && isAlive (m_avoid)) {
+   if (m_avoidTime > engine.timebase () && isAlive (m_avoid)) {
 
       Vector dir (cr::cosf (pev->v_angle.y), cr::sinf (pev->v_angle.y), 0.0f);
       Vector lat (-dir.y, dir.x, 0.0f);

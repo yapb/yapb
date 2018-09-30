@@ -14,11 +14,12 @@
    #define PLATFORM_LINUX
 #elif defined(__APPLE__)
    #define PLATFORM_OSX
-#elif defined(__ANDROID__)
-   #define PLATFORM_ANDROID
 #elif defined(_WIN32)
    #define PLATFORM_WIN32
 #endif
+
+// by default sse has everyone
+#define PLATFORM_HAS_SSE2
 
 // detects the compiler
 #if defined(_MSC_VER)
@@ -82,6 +83,12 @@
 
    #define STD_CALL /* */
 
+   // android is a linux with a special cases
+   // @todo: sse should be working ok on x86 android?
+   #if defined(__ANDROID__)
+      #define PLATFORM_ANDROID
+      #undef PLATFORM_HAS_SSE2
+   #endif
 #else
    #error "Platform unrecognized."
 #endif
