@@ -5,15 +5,14 @@ addons:
   apt:
     sources:
       - llvm-toolchain-trusty-7
-      - ubuntu-toolchain-r-test
-	  
+      - ubuntu-toolchain-r-test  
     packages:
       - libc6-dev-i386
       - linux-libc-dev
       - gcc-multilib
       - g++-multilib
       - clang-7
-	  - llvm-dev
+      - llvm-dev
 os:
   - linux
   - osx
