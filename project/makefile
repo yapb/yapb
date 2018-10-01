@@ -32,8 +32,8 @@ endif
 
 ifeq "$(OSX)" "true"
 	LIBRARY_EXT = dylib
-	COMPILER_FLAGS += -DOSX -D_OSX -mmacosx-version-min=10.7
-	LINKER_FLAGS += -dynamiclib -lstdc++ -mmacosx-version-min=10.7 -arch i386
+	COMPILER_FLAGS += -DOSX -D_OSX -mmacosx-version-min=10.9
+	LINKER_FLAGS += -dynamiclib -lstdc++ -mmacosx-version-min=10.9 -arch i386
 else
 	LIBRARY_EXT = so
 	COMPILER_FLAGS += -DLINUX -D_LINUX
