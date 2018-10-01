@@ -18,8 +18,7 @@ ifeq "$(DEBUG)" "true"
 	COMPILER_FLAGS += -D_DEBUG -DDEBUG -g3
 	BINARY_DIR = debug
 else
-	LINKER_FLAGS += -flto
-	COMPILER_FLAGS += -DNDEBUG -flto -pipe -O3 -msse2 -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden -nostdinc++
+	COMPILER_FLAGS += -DNDEBUG -pipe -O3 -msse2 -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden -nostdinc++
 	BINARY_DIR = release
 endif
 
