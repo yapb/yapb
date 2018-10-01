@@ -122,7 +122,7 @@ int Waypoint::getNearestNoBuckets (const Vector &origin, float minDistance, int 
 }
 
 int Waypoint::getEditorNeareset (void) {
-   if (!m_waypointsChanged) {
+   if (!g_waypointOn) {
       return INVALID_WAYPOINT_INDEX;
    }
    return getNearestNoBuckets (g_hostEntity->v.origin, 50.0f);
