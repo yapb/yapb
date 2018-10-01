@@ -5,6 +5,7 @@ addons:
   apt:
     sources:
       - llvm-toolchain-trusty-6.0
+      - ubuntu-toolchain-r-test
     packages:
       - libc6-dev-i386
       - linux-libc-dev
