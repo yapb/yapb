@@ -18,7 +18,8 @@ ifeq "$(DEBUG)" "true"
 	COMPILER_FLAGS += -D_DEBUG -DDEBUG -g3
 	BINARY_DIR = debug
 else
-	COMPILER_FLAGS += -DNDEBUG -pipe -O3 -ffast-math -msse2 -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden -nostdinc++
+	LINKER_FLAGS += -flto
+	COMPILER_FLAGS += -DNDEBUG -flto -pipe -O3 -msse2 -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden -nostdinc++
 	BINARY_DIR = release
 endif
 
@@ -31,8 +32,8 @@ endif
 
 ifeq "$(OSX)" "true"
 	LIBRARY_EXT = dylib
-	COMPILER_FLAGS += -DOSX -D_OSX
-	LINKER_FLAGS += -dynamiclib -lstdc++ -mmacosx-version-min=10.13 -arch i386
+	COMPILER_FLAGS += -DOSX -D_OSX -mmacosx-version-min=10.7
+	LINKER_FLAGS += -dynamiclib -lstdc++ -mmacosx-version-min=10.7 -arch i386
 else
 	LIBRARY_EXT = so
 	COMPILER_FLAGS += -DLINUX -D_LINUX

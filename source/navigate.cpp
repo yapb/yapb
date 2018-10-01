@@ -1902,7 +1902,7 @@ int Bot::getNearestPoint (void) {
 
    // worst case, take any waypoint...
    if (index == INVALID_WAYPOINT_INDEX) {
-      index = waypoints.getNearestFallback (pev->origin);
+      index = waypoints.getNearestNoBuckets (pev->origin);
    }
    return index;
 }

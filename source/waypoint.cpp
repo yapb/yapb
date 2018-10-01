@@ -22,6 +22,9 @@ void Waypoint::init (void) {
    m_learnPosition.nullify ();
    m_lastWaypoint.nullify ();
 
+   m_pathDisplayTime = 0.0f;
+   m_arrowDisplayTime = 0.0f;
+
    // have any waypoint path nodes been allocated yet?
    if (m_waypointPaths) {
       cleanupPathMemory ();
@@ -97,7 +100,7 @@ int Waypoint::getFarest (const Vector &origin, float maxDistance) {
    return index;
 }
 
-int Waypoint::getNearestFallback (const Vector &origin, float minDistance, int flags) {
+int Waypoint::getNearestNoBuckets (const Vector &origin, float minDistance, int flags) {
    // find the nearest waypoint to that origin and return the index
 
    // fallback and go thru wall the waypoints...
@@ -118,13 +121,20 @@ int Waypoint::getNearestFallback (const Vector &origin, float minDistance, int f
    return index;
 }
 
+int Waypoint::getEditorNeareset (void) {
+   if (!m_waypointsChanged) {
+      return INVALID_WAYPOINT_INDEX;
+   }
+   return getNearestNoBuckets (g_hostEntity->v.origin, 50.0f);
+}
+
 int Waypoint::getNearest (const Vector &origin, float minDistance, int flags) {
    // find the nearest waypoint to that origin and return the index
 
    auto &bucket = getWaypointsInBucket (origin);
 
    if (bucket.empty ()) {
-      return getNearestFallback (origin, minDistance, flags);
+      return getNearestNoBuckets (origin, minDistance, flags);
    }
    int index = INVALID_WAYPOINT_INDEX;
    minDistance = cr::square (minDistance);
@@ -150,7 +160,7 @@ IntArray Waypoint::searchRadius (float radius, const Vector &origin, int maxCoun
    auto &bucket = getWaypointsInBucket (origin);
 
    if (bucket.empty ()) {
-      result.push (getNearestFallback (origin, radius));
+      result.push (getNearestNoBuckets (origin, radius));
       return cr::move (result);
    }
    radius = cr::square (radius);
@@ -196,7 +206,7 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
 
    switch (flags) {
    case 6:
-      index = getNearest (g_hostEntity->v.origin, 50.0f);
+      index = getEditorNeareset ();
 
       if (index != INVALID_WAYPOINT_INDEX) {
          path = m_paths[index];
@@ -218,7 +228,7 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
       return;
 
    case 9:
-      index = getNearest (g_hostEntity->v.origin, 50.0f);
+      index = getEditorNeareset ();
 
       if (index != INVALID_WAYPOINT_INDEX && m_paths[index] != nullptr) {
          distance = (m_paths[index]->origin - g_hostEntity->v.origin).length ();
@@ -235,7 +245,7 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
       break;
 
    case 10:
-      index = getNearest (g_hostEntity->v.origin, 50.0f);
+      index = getEditorNeareset ();
 
       if (index != INVALID_WAYPOINT_INDEX && m_paths[index] != nullptr) {
          distance = (m_paths[index]->origin - g_hostEntity->v.origin).length ();
@@ -445,7 +455,7 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
    calculatePathRadius (index); // calculate the wayzone of this waypoint
 }
 
-void Waypoint::erase (void) {
+void Waypoint::erase (int target) {
    m_waypointsChanged = true;
 
    if (m_numWaypoints < 1) {
@@ -455,9 +465,9 @@ void Waypoint::erase (void) {
    if (bots.getBotCount () > 0) {
       bots.kickEveryone (true);
    }
-   int index = getNearest (g_hostEntity->v.origin, 50.0f);
+   int index = (target == INVALID_WAYPOINT_INDEX) ? getEditorNeareset () : target;
 
-   if (index < 0) {
+   if (index == INVALID_WAYPOINT_INDEX) {
       return;
    }
 
@@ -512,7 +522,7 @@ void Waypoint::erase (void) {
 void Waypoint::toggleFlags (int toggleFlag) {
    // this function allow manually changing flags
 
-   int index = getNearest (g_hostEntity->v.origin, 50.0f);
+   int index = getEditorNeareset ();
 
    if (index != INVALID_WAYPOINT_INDEX) {
       if (m_paths[index]->flags & toggleFlag) {
@@ -534,7 +544,7 @@ void Waypoint::toggleFlags (int toggleFlag) {
 void Waypoint::setRadius (int radius) {
    // this function allow manually setting the zone radius
 
-   int index = getNearest (g_hostEntity->v.origin, 50.0f);
+   int index = getEditorNeareset ();
 
    if (index != INVALID_WAYPOINT_INDEX) {
       m_paths[index]->radius = static_cast <float> (radius);
@@ -589,7 +599,7 @@ int Waypoint::getFacingIndex (void) {
 void Waypoint::pathCreate (char dir) {
    // this function allow player to manually create a path from one waypoint to another
 
-   int nodeFrom = getNearest (g_hostEntity->v.origin, 50.0f);
+   int nodeFrom = getEditorNeareset ();
 
    if (nodeFrom == INVALID_WAYPOINT_INDEX) {
       engine.centerPrint ("Unable to find nearest waypoint in 50 units");
@@ -632,7 +642,7 @@ void Waypoint::pathCreate (char dir) {
 void Waypoint::erasePath (void) {
    // this function allow player to manually remove a path from one waypoint to another
 
-   int nodeFrom = getNearest (g_hostEntity->v.origin, 50.0f);
+   int nodeFrom = getEditorNeareset ();
    int index = 0;
 
    if (nodeFrom == INVALID_WAYPOINT_INDEX) {
@@ -688,7 +698,7 @@ void Waypoint::erasePath (void) {
 }
 
 void Waypoint::cachePoint (void) {
-   int node = getNearest (g_hostEntity->v.origin, 50.0f);
+   int node = getEditorNeareset ();
 
    if (node == INVALID_WAYPOINT_INDEX) {
       m_cacheWaypointIndex = INVALID_WAYPOINT_INDEX;
@@ -1030,37 +1040,39 @@ bool Waypoint::load (void) {
    // save for faster access
    const char *map = engine.getMapName ();
 
+   // helper function
+   auto throwError = [&] (const char *fmt, ...) -> bool {
+      va_list ap;
+      va_start (ap, fmt);
+      vsnprintf (m_infoBuffer, MAX_PRINT_BUFFER - 1, fmt, ap);
+      va_end (ap);
+
+      logEntry (true, LL_ERROR, m_infoBuffer);
+
+      if (fp.isValid ()) {
+         fp.close ();
+      }
+      m_numWaypoints = 0;
+      m_waypointPaths = false;
+
+      return false;
+   };
+
    if (fp.isValid ()) {
       if (fp.read (&header, sizeof (header)) == 0) {
-         sprintf (m_infoBuffer, "%s.pwf - damaged waypoint file (unable to read header)", map);
-         logEntry (true, LL_ERROR, m_infoBuffer);
-
-         fp.close ();
-         return false;
+         return throwError ("%s.pwf - damaged waypoint file (unable to read header)", map);
       }
 
       if (strncmp (header.header, FH_WAYPOINT, strlen (FH_WAYPOINT)) == 0) {
          if (header.fileVersion != FV_WAYPOINT) {
-            sprintf (m_infoBuffer, "%s.pwf - incorrect waypoint file version (expected '%d' found '%ld')", map, FV_WAYPOINT, header.fileVersion);
-            logEntry (true, LL_ERROR, m_infoBuffer);
-
-            fp.close ();
-            return false;
+            return throwError ("%s.pwf - incorrect waypoint file version (expected '%d' found '%ld')", map, FV_WAYPOINT, header.fileVersion);
          }
          else if (!!stricmp (header.mapName, map)) {
-            sprintf (m_infoBuffer, "%s.pwf - hacked waypoint file, file name doesn't match waypoint header information (mapname: '%s', header: '%s')", map, map, header.mapName);
-            logEntry (true, LL_ERROR, m_infoBuffer);
-
-            fp.close ();
-            return false;
+            return throwError ("%s.pwf - hacked waypoint file, file name doesn't match waypoint header information (mapname: '%s', header: '%s')", map, map, header.mapName);
          }
          else {
             if (header.pointNumber == 0 || header.pointNumber > MAX_WAYPOINTS) {
-               sprintf (m_infoBuffer, "%s.pwf - waypoint file contains illegal number of waypoints (mapname: '%s', header: '%s')", map, map, header.mapName);
-               logEntry (true, LL_ERROR, m_infoBuffer);
-
-               fp.close ();
-               return false;
+               return throwError ("%s.pwf - waypoint file contains illegal number of waypoints (mapname: '%s', header: '%s')", map, map, header.mapName);
             }
 
             init ();
@@ -1070,20 +1082,12 @@ bool Waypoint::load (void) {
                m_paths[i] = new Path;
 
                if (fp.read (m_paths[i], sizeof (Path)) == 0) {
-                  sprintf (m_infoBuffer, "%s.pwf - truncated waypoint file (count: %d, need: %d)", map, i, m_numWaypoints);
-                  logEntry (true, LL_ERROR, m_infoBuffer);
-
-                  fp.close ();
-                  return false;
+                  return throwError ("%s.pwf - truncated waypoint file (count: %d, need: %d)", map, i, m_numWaypoints);
                }
 
                // more checks of waypoint quality
                if (m_paths[i]->pathNumber < 0 || m_paths[i]->pathNumber > m_numWaypoints) {
-                  sprintf (m_infoBuffer, "%s.pwf - bad waypoint file (path #%d index is out of bounds)", map, i);
-                  logEntry (true, LL_ERROR, m_infoBuffer);
-
-                  fp.close ();
-                  return false;
+                  return throwError ("%s.pwf - bad waypoint file (path #%d index is out of bounds)", map, i);
                }
                addToBucket (m_paths[i]->origin, i);
             }
@@ -1091,50 +1095,30 @@ bool Waypoint::load (void) {
          }
       }
       else {
-         sprintf (m_infoBuffer, "%s.pwf is not a yapb waypoint file (header found '%s' needed '%s'", map, header.header, FH_WAYPOINT);
-         logEntry (true, LL_ERROR, m_infoBuffer);
-
-         fp.close ();
-         return false;
+         return throwError ("%s.pwf is not a yapb waypoint file (header found '%s' needed '%s'", map, header.header, FH_WAYPOINT);
       }
       fp.close ();
    }
    else {
       if (yb_waypoint_autodl_enable.boolean ()) {
          logEntry (true, LL_DEFAULT, "%s.pwf does not exist, trying to download from waypoint database", map);
-         WaypointDownloadError status = downloadWaypoint ();
+         
+         switch (downloadWaypoint ()) {
+         case WDE_SOCKET_ERROR:
+            return throwError ("%s.pwf does not exist. Can't autodownload. Socket error.", map);
 
-         if (status == WDE_SOCKET_ERROR) {
-            sprintf (m_infoBuffer, "%s.pwf does not exist. Can't autodownload. Socket error.", map);
-            logEntry (true, LL_ERROR, m_infoBuffer);
+         case WDE_CONNECT_ERROR:
+            return throwError ("%s.pwf does not exist. Can't autodownload. Connection problems.", map);
 
-            yb_waypoint_autodl_enable.set (0);
+         case WDE_NOTFOUND_ERROR:
+            return throwError ("%s.pwf does not exist. Can't autodownload. Waypoint not available.", map);
 
-            return false;
-         }
-         else if (status == WDE_CONNECT_ERROR) {
-            sprintf (m_infoBuffer, "%s.pwf does not exist. Can't autodownload. Connection problems.", map);
-            logEntry (true, LL_ERROR, m_infoBuffer);
-
-            yb_waypoint_autodl_enable.set (0);
-
-            return false;
-         }
-         else if (status == WDE_NOTFOUND_ERROR) {
-            sprintf (m_infoBuffer, "%s.pwf does not exist. Can't autodownload. Waypoint not available.", map);
-            logEntry (true, LL_ERROR, m_infoBuffer);
-
-            return false;
-         }
-         else {
+         case WDE_NOERROR:
             logEntry (true, LL_DEFAULT, "%s.pwf was downloaded from waypoint database. Trying to load...", map);
             return load ();
          }
       }
-      sprintf (m_infoBuffer, "%s.pwf does not exist", map);
-      logEntry (true, LL_ERROR, m_infoBuffer);
-
-      return false;
+      return throwError ("%s.pwf does not exist", map);
    }
 
    if (strncmp (header.author, "official", 7) == 0) {
@@ -2190,7 +2174,7 @@ void Waypoint::addBasic (void) {
       m_isOnLadder = true;
 
       do {
-         if (getNearest (point, 50.0f) == INVALID_WAYPOINT_INDEX) {
+         if (getNearestNoBuckets (point, 50.0f) == INVALID_WAYPOINT_INDEX) {
             push (3, point);
          }
          point.z += 160;
@@ -2198,7 +2182,7 @@ void Waypoint::addBasic (void) {
 
       point = down + Vector (0.0f, 0.0f, 38.0f);
 
-      if (getNearest (point, 50.0f) == INVALID_WAYPOINT_INDEX) {
+      if (getNearestNoBuckets (point, 50.0f) == INVALID_WAYPOINT_INDEX) {
          push (3, point);
       }
       m_isOnLadder = false;
@@ -2210,7 +2194,7 @@ void Waypoint::addBasic (void) {
       while (!engine.isNullEntity (ent = g_engfuncs.pfnFindEntityByString (ent, "classname", entity))) {
          const Vector &pos = engine.getAbsPos (ent);
 
-         if (waypoints.getNearest (pos, 50.0f) == INVALID_WAYPOINT_INDEX) {
+         if (waypoints.getNearestNoBuckets (pos, 50.0f) == INVALID_WAYPOINT_INDEX) {
             waypoints.push (type, pos);
          }
       }
@@ -2330,9 +2314,6 @@ Waypoint::Waypoint (void) {
    m_loadTries = 0;
    m_numWaypoints = 0;
    m_isOnLadder = false;
-
-   m_pathDisplayTime = 0.0f;
-   m_arrowDisplayTime = 0.0f;
 
    m_terrorPoints.clear ();
    m_ctPoints.clear ();

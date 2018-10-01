@@ -296,12 +296,18 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
       // delete nearest to host edict waypoint
       else if (stricmp (arg1, "delete") == 0) {
          g_waypointOn = true; // turn waypoints on
-         waypoints.erase ();
+
+         if (!isEmptyStr (arg2)) {
+            waypoints.erase (atoi (arg2));
+         }
+         else {
+            waypoints.erase (INVALID_WAYPOINT_INDEX);
+         }
       }
 
       // save waypoint data into file on hard disk
       else if (stricmp (arg1, "save") == 0) {
-         const char *waypointSaveMessage = engine.translate ("Waypoints Saved");
+         const char *waypointSaveMessage = "Waypoints Saved";
 
          if (strcmp (arg2, "nocheck") == 0) {
             waypoints.save ();
@@ -1300,7 +1306,7 @@ void ClientCommand (edict_t *ent) {
 
             case 6:
                g_waypointOn = true;
-               waypoints.erase ();
+               waypoints.erase (INVALID_WAYPOINT_INDEX);
                showMenu (ent, BOT_MENU_WAYPOINT_MAIN_PAGE1);
 
                break;
@@ -3102,7 +3108,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       if (g_gameFlags & GAME_SUPPORT_SVC_PINGS) {
          gameVersionStr.append (" (SVC)");
       }
-      engine.print ("YaPB Bot has detect game version as Counter-Strike: %s", gameVersionStr.chars ());
+      engine.print ("[YAPB] Bot v%s.0.%d Loaded. Game detected as Counter-Strike: %s", PRODUCT_VERSION, buildNumber(), gameVersionStr.chars ());
 
       if (g_gameFlags & GAME_METAMOD) {
          return;

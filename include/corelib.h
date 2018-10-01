@@ -186,7 +186,7 @@ static inline float ceilf (const float x) {
 
 static inline void sincosf (const float x, const float y, const float z, float *sines, float *cosines) {
    // this is the only place where sse2 stuff actually faster than chebyshev pads as we're can calculate 3 sines + 3 cosines
-   // using olny two calls instead of 6 calls to sin/cos with strandard functions
+   // using only two sse calls instead of 6 calls to sin/cos with standard functions
 
 #if defined (PLATFORM_HAS_SSE2)
    auto rad = _mm_set_ps (x, y, z, 0.0f);

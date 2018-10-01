@@ -1462,11 +1462,12 @@ public:
    int getFacingIndex (void);
    int getFarest (const Vector &origin, float maxDistance = 32.0);
    int getNearest (const Vector &origin, float minDistance = 9999.0f, int flags = -1);
-   int getNearestFallback (const Vector &origin, float minDistance = 9999.0f, int flags = -1);
+   int getNearestNoBuckets (const Vector &origin, float minDistance = 9999.0f, int flags = -1);
+   int getEditorNeareset (void);
    IntArray searchRadius (float radius, const Vector &origin, int maxCount = -1);
 
    void push (int flags, const Vector &waypointOrigin = Vector::null ());
-   void erase (void);
+   void erase (int target);
    void toggleFlags (int toggleFlag);
    void setRadius (int radius);
    bool isConnected (int pointA, int pointB);
