@@ -1,31 +1,21 @@
 language: cpp
-dist: trusty
-
 addons:
   apt:
-    sources:
-      - llvm-toolchain-trusty-6.0
-      - ubuntu-toolchain-r-test
     packages:
-      - libc6-dev-i386
-      - linux-libc-dev
-      - gcc-multilib
-      - g++-multilib
-      - clang-6.0
-      - llvm-6.0-dev
-      
-
+    - libc6-dev-i386
+    - linux-libc-dev
+    - gcc-multilib
+    - g++-multilib
+    - llvm-dev
+compiler:
+  - clang
 os:
   - linux
   - osx
-  
 before_script:
-  - sed -i.bak "s/unspecified_hash/$(git rev-parse HEAD 2>/dev/null)/g;s/unspecified_author/$(git log --pretty="%ae" -1 2>/dev/null)/g;s/0000/$(git rev-list HEAD --count 2>/dev/null)/g" include/resource.h && rm include/resource.h.bak
-
+  - wget https://yapb.ru/ci/scripts/gitrev.sh && chmod a+x ./gitrev.sh && ./gitrev.sh
 script:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cd project && CC=clang-6.0 && make all; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then cd project && CC=clang && make all; fi
-
+  - cd project && CC=clang && make all
 after_success:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then curl --ftp-create-dirs -T ./release/yapb.so -u $FTP_USER:$FTP_PASS ftp://$FTP_HOST/project/release/yapb.so && curl --ftp-create-dirs -T ./debug/yapb.so -u $FTP_USER:$FTP_PASS ftp://$FTP_HOST/project/debug/yapb.so && curl -X GET "https://yapb.ru/agent/packager.php?key=$PACKAGER_KEY&os=linux"; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl --ftp-create-dirs -T ./release/yapb.dylib -u $FTP_USER:$FTP_PASS ftp://$FTP_HOST/project/release/yapb.dylib && curl --ftp-create-dirs -T ./debug/yapb.dylib -u $FTP_USER:$FTP_PASS ftp://$FTP_HOST/project/debug/yapb.dylib && curl -X GET "https://yapb.ru/agent/packager.php?key=$PACKAGER_KEY&os=osx"; fi
