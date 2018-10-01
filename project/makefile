@@ -11,7 +11,7 @@ PROJECT = yapb
 SOURCES = ../source
 OBJECTS = $(wildcard $(SOURCES)/*.cpp)
 
-COMPILER_FLAGS = -std=c++11 -m32 -Wall -Wextra -Werror -fno-exceptions -fno-rtti -DPOSIX
+COMPILER_FLAGS = -mtune=generic -std=c++11 -m32 -Wall -Wextra -Werror -fno-exceptions -fno-rtti -DPOSIX
 LINKER_FLAGS = -m32 -lm -ldl
 
 ifeq "$(DEBUG)" "true"
