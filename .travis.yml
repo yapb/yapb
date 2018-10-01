@@ -12,6 +12,9 @@ addons:
       - gcc-multilib
       - g++-multilib
       - clang-6.0
+      - llvm-6.0-dev
+      
+
 os:
   - linux
   - osx
