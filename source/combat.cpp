@@ -529,7 +529,7 @@ bool Bot::isFriendInLineOfFire (float distance) {
       auto hit = tr.pHit;
 
       // check valid range
-      if ( isAlive (hit) && engine.getTeam (hit) == m_team) {
+      if (isAlive (hit) && engine.getTeam (hit) == m_team) {
          return true;
       }
    }
