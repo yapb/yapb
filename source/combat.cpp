@@ -525,11 +525,11 @@ bool Bot::isFriendInLineOfFire (float distance) {
    engine.testLine (eyePos (), eyePos () + distance * pev->v_angle, TRACE_IGNORE_NONE, ent (), &tr);
 
    // check if we hit something
-   if (!engine.isNullEntity (tr.pHit)) {
-      int playerIndex = engine.indexOfEntity (tr.pHit) - 1;
+   if (isPlayer (tr.pHit) && tr.pHit != ent ()) {
+      auto hit = tr.pHit;
 
       // check valid range
-      if (playerIndex >= 0 && playerIndex < engine.maxClients () && g_clients[playerIndex].team == m_team && (g_clients[playerIndex].flags & CF_ALIVE)) {
+      if ( isAlive (hit) && engine.getTeam (hit) == m_team) {
          return true;
       }
    }

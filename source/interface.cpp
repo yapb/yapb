@@ -2768,7 +2768,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
    memset (functionTable, 0, sizeof (gamefuncs_t));
 
    if (!(g_gameFlags & GAME_METAMOD)) {
-      auto api_GetEntityAPI = g_gameLib->resolve<int (*) (gamefuncs_t *, int)> ("GetEntityAPI");
+      auto api_GetEntityAPI = g_gameLib->resolve <int (*) (gamefuncs_t *, int)> ("GetEntityAPI");
 
       // pass other DLLs engine callbacks to function table...
       if (api_GetEntityAPI (&g_functionTable, INTERFACE_VERSION) == 0) {
@@ -2823,7 +2823,7 @@ SHARED_LIBRARAY_EXPORT int GetNewDLLFunctions (newgamefuncs_t *functionTable, in
    // pass them too, else the DLL interfacing wouldn't be complete and the game possibly wouldn't
    // run properly.
 
-   auto api_GetNewDLLFunctions = g_gameLib->resolve<int (*) (newgamefuncs_t *, int *)> ("GetNewDLLFunctions");
+   auto api_GetNewDLLFunctions = g_gameLib->resolve <int (*) (newgamefuncs_t *, int *)> ("GetNewDLLFunctions");
 
    if (api_GetNewDLLFunctions == nullptr) {
       return FALSE;
@@ -2881,7 +2881,7 @@ SHARED_LIBRARAY_EXPORT int Server_GetBlendingInterface (int version, void **ppin
    // of the body move, which bones, which hitboxes and how) between the server and the game DLL.
    // some MODs can be using a different hitbox scheme than the standard one.
 
-   auto api_GetBlendingInterface = g_gameLib->resolve<int (*) (int, void **, void *, float(*)[3][4], float(*)[128][3][4])> ("Server_GetBlendingInterface");
+   auto api_GetBlendingInterface = g_gameLib->resolve <int (*) (int, void **, void *, float(*)[3][4], float(*)[128][3][4])> ("Server_GetBlendingInterface");
 
    if (api_GetBlendingInterface == nullptr) {
       return FALSE;
@@ -2985,7 +2985,7 @@ Library *LoadCSBinary (void) {
             return nullptr;
          }
          // detect if we're running modern game
-         auto entity = game->resolve<entity_func_t> ("weapon_famas");
+         auto entity = game->resolve <entity_func_t> ("weapon_famas");
 
          // detect xash engine
          if (g_engfuncs.pfnCVarGetPointer ("build") != nullptr) {
@@ -3117,7 +3117,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    
 #endif
 
-   auto api_GiveFnptrsToDll = g_gameLib->resolve<void(STD_CALL *) (enginefuncs_t *, globalvars_t *)> ("GiveFnptrsToDll");
+   auto api_GiveFnptrsToDll = g_gameLib->resolve <void (STD_CALL *) (enginefuncs_t *, globalvars_t *)> ("GiveFnptrsToDll");
 
    assert (api_GiveFnptrsToDll != nullptr);
    GetEngineFunctions (functionTable, nullptr);
@@ -3141,7 +3141,7 @@ DLL_ENTRYPOINT {
 
 void helper_LinkEntity (entity_func_t &addr, const char *name, entvars_t *pev) {
    if (addr == nullptr) {
-      addr = g_gameLib->resolve<entity_func_t> (name);
+      addr = g_gameLib->resolve <entity_func_t> (name);
    }
 
    if (addr == nullptr) {
