@@ -179,7 +179,7 @@ void Bot::checkGrenadesThrow (void) {
       // care about different grenades
       switch (grenadeToThrow) {
       case WEAPON_EXPLOSIVE:
-         if (numFriendsNear (m_lastEnemy->v.origin, 160.0f) > 0) {
+         if (numFriendsNear (m_lastEnemy->v.origin, 256.0f) > 0) {
             allowThrowing = false;
          }
          else {
@@ -189,10 +189,20 @@ void Bot::checkGrenadesThrow (void) {
             if (radius < 164.0f) {
                radius = 164.0f;
             }
-            IntArray predicted = waypoints.searchRadius (radius, pos, 12);
+            auto predicted = waypoints.searchRadius (radius, pos, 12);
 
-            for (auto &predict : predicted) {
+            if (predicted.empty ()) {
+               m_states &= ~STATE_THROW_HE;
+               break;
+            }
+
+            for (const auto predict : predicted) {
                allowThrowing = true;
+
+               if (!waypoints.exists (predict)) {
+                  allowThrowing = false;
+                  continue;
+               }
 
                m_throw = waypoints[predict].origin;
 
