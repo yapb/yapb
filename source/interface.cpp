@@ -3068,14 +3068,14 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 
    g_gameLib = new Library (gameDLLName);
 
-   if (!g_gameLib->IsLoaded ()) {
-      logEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gameDLLName, engine.GetModName ());
+   if (!g_gameLib->isValid ()) {
+      logEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gameDLLName, engine.getModName ());
       delete g_gameLib;
    }
 #else
    g_gameLib = LoadCSBinary ();
    {
-      if (g_gameLib == nullptr && !(g_gameFlags & GAME_METAMOD)) {
+      if (!g_gameLib && !(g_gameFlags & GAME_METAMOD)) {
          logEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", engine.getModName ());
          return;
       }
