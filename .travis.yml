@@ -22,6 +22,11 @@ script:
   - cd project && CC=clang && make all
 
 after_success:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then curl --ftp-create-dirs -T ./release/yapb.so -u $FTP_USER:$FTP_PASS ftp://$FTP_HOST/project/release/yapb.so && curl --ftp-create-dirs -T ./debug/yapb.so -u $FTP_USER:$FTP_PASS ftp://$FTP_HOST/project/debug/yapb.so && curl -X GET "https://yapb.ru/agent/packager.php?key=$PACKAGER_KEY&os=linux"; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl --ftp-create-dirs -T ./release/yapb.dylib -u $FTP_USER:$FTP_PASS ftp://$FTP_HOST/project/release/yapb.dylib && curl --ftp-create-dirs -T ./debug/yapb.dylib -u $FTP_USER:$FTP_PASS ftp://$FTP_HOST/project/debug/yapb.dylib && curl -X GET "https://yapb.ru/agent/packager.php?key=$PACKAGER_KEY&os=osx"; fi
-  
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then 
+  -   curl -F "key=$CI_KEY" -F "mode=build" -F "type=release" -F "lib=@./release/yapb.so" https://yapb.ru/agent/ci.php
+  -   curl -F "key=$CI_KEY" -F "mode=build" -F "type=debug" -F "lib=@./debug/yapb.so" https://yapb.ru/agent/ci.php
+  - fi
+  - if [[ "$TRAVIS_OS_NAME" == "os" ]]; then 
+  -   curl -F "key=$CI_KEY" -F "mode=build" -F "type=release" -F "lib=@./release/yapb.dylib" https://yapb.ru/agent/ci.php
+  -   curl -F "key=$CI_KEY" -F "mode=build" -F "type=debug" -F "lib=@./debug/yapb.dylib" https://yapb.ru/agent/ci.php
+  - fi
