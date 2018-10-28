@@ -4,27 +4,21 @@
 #
 # This software is licensed under the BSD-style license.
 # Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-#     https://yapb.jeefo.net/license
+#     https://yapb.ru/license
 #
 
 PROJECT = yapb
 SOURCES = ../source
 OBJECTS = $(wildcard $(SOURCES)/*.cpp)
 
-COMPILER_FLAGS = -std=c++11 -m32 -Wall -Werror -Wextra -fno-exceptions -fno-rtti
-LINKER_FLAGS = -m32 -lm -ldl
-
-ifeq "$(SSE_VERSION)" ""
-	COMPILER_SSE_VERSION = 2
-else
-	COMPILER_SSE_VERSION = $(SSE_VERSION)
-endif
+COMPILER_FLAGS = -mtune=generic -std=c++11 -m32 -Wall -Wextra -Werror -fno-exceptions -fno-rtti -DPOSIX
+LINKER_FLAGS = -m32
 
 ifeq "$(DEBUG)" "true"
 	COMPILER_FLAGS += -D_DEBUG -DDEBUG -g3
 	BINARY_DIR = debug
 else
-	COMPILER_FLAGS += -DNDEBUG -pipe -O2 -msse$(COMPILER_SSE_VERSION) -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden
+	COMPILER_FLAGS += -DNDEBUG -pipe -O3 -msse2 -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden -nostdinc++
 	BINARY_DIR = release
 endif
 
@@ -37,12 +31,12 @@ endif
 
 ifeq "$(OSX)" "true"
 	LIBRARY_EXT = dylib
-	COMPILER_FLAGS += -DOSX -D_OSX -DPOSIX
-	LINKER_FLAGS += -dynamiclib -lstdc++ -mmacosx-version-min=10.12 -arch i386
+	COMPILER_FLAGS += -DOSX -D_OSX -mmacosx-version-min=10.9
+	LINKER_FLAGS += -dynamiclib -lstdc++ -mmacosx-version-min=10.9 -arch i386
 else
 	LIBRARY_EXT = so
-	COMPILER_FLAGS += -DLINUX -D_LINUX -DPOSIX
-	LINKER_FLAGS += -shared -lsupc++
+	COMPILER_FLAGS += -DLINUX -D_LINUX
+	LINKER_FLAGS += -shared
 endif
 
 BINARY_OUTPUT = $(PROJECT).$(LIBRARY_EXT)
@@ -54,13 +48,11 @@ ifeq ($(findstring clang,$(COMPILER)),clang)
 else ifeq ($(findstring gcc,$(COMPILER)),gcc)
 	ifneq "$(OSX)" "false"
 		LINKER_FLAGS += -static-libgcc
-		COMPILER_FLAGS += -funroll-all-loops
+		COMPILER_FLAGS += -funroll-all-loops -Wno-implicit-fallthrough
 	endif
-else ifeq ($(findstring icpc,$(COMPILER)),icpc)
+else ifeq ($(findstring icc,$(COMPILER)),icc)
 	COMPILER_FLAGS += -funroll-all-loops -no-prec-div -no-inline-min-size -no-inline-max-size -wd11076 -wd11074
-	LINKER_FLAGS += -static-intel -no-intel-extensions
-else
-	$(error Compiler unrecognized. Specify CC.)
+	LINKER_FLAGS += -cxxlib-nostd -static-intel -no-intel-extensions
 endif
 
 OBJECTS_BIN := $(OBJECTS:%.cpp=$(BINARY_DIR)/%.o)

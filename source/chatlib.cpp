@@ -4,142 +4,141 @@
 //
 // This software is licensed under the BSD-style license.
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.jeefo.net/license
+//     https://yapb.ru/license
 //
 
-#include <core.h>
+#include <yapb.h>
 
 ConVar yb_chat ("yb_chat", "1");
 
-void StripTags (char *buffer)
-{
+void stripClanTags (char *buffer) {
    // this function strips 'clan' tags specified below in given string buffer
 
-   const char *tagOpen[] = {"-=", "-[", "-]", "-}", "-{", "<[", "<]", "[-", "]-", "{-", "}-", "[[", "[", "{", "]", "}", "<", ">", "-", "|", "=", "+", "(", ")"};
-   const char *tagClose[] = {"=-", "]-", "[-", "{-", "}-", "]>", "[>", "-]", "-[", "-}", "-{", "]]", "]", "}", "[", "{", ">", "<", "-", "|", "=", "+", ")", "("};
+   if (isEmptyStr (buffer)) {
+      return;
+   }
+   size_t nameLength = strlen (buffer);
 
-   int index, fieldStart, fieldStop, i;
-   int length = strlen (buffer); // get length of string
+   if (nameLength < 4) {
+      return;
+   }
 
-   // foreach known tag...
-   for (index = 0; index < ARRAYSIZE_HLSDK (tagOpen); index++)
-   {
-      fieldStart = strstr (buffer, tagOpen[index]) - buffer; // look for a tag start
+   constexpr const char *open[] = { "-=", "-[", "-]", "-}", "-{", "<[", "<]", "[-", "]-", "{-", "}-", "[[", "[", "{", "]", "}", "<", ">", "-", "|", "=", "+", "(", ")" };
+   constexpr const char *close[] = { "=-", "]-", "[-", "{-", "}-", "]>", "[>", "-]", "-[", "-}", "-{", "]]", "]", "}", "[", "{", ">", "<", "-", "|", "=", "+", ")", "(" };
+
+   // for each known tag...
+   for (size_t i = 0; i < cr::arrsize (open); i++) {
+      size_t start = strstr (buffer, open[i]) - buffer; // look for a tag start
 
       // have we found a tag start?
-      if (fieldStart >= 0 && fieldStart < 32)
-      {
-         fieldStop = strstr (buffer, tagClose[index]) - buffer; // look for a tag stop
+      if (start < 32) {
+         size_t stop = strstr (buffer, close[i]) - buffer; // look for a tag stop
 
          // have we found a tag stop?
-         if (fieldStop > fieldStart && fieldStop < 32)
-         {
-            int tagLength = strlen (tagClose[index]);
+         if (stop > start && stop < 32) {
+            size_t tag = strlen (close[i]);
+            size_t j = start;
 
-            for (i = fieldStart; i < length - (fieldStop + tagLength - fieldStart); i++)
-               buffer[i] = buffer[i + (fieldStop + tagLength - fieldStart)]; // overwrite the buffer with the stripped string
-            
-            buffer[i] = 0x0; // terminate the string
+            for (; j < nameLength - (stop + tag - start); j++) {
+               buffer[j] = buffer[j + (stop + tag - start)]; // overwrite the buffer with the stripped string
+            }
+            buffer[j] = '\0'; // terminate the string
          }
       }
    }
 
    // have we stripped too much (all the stuff)?
-   if (buffer[0] != '\0')
-   {
-      String::TrimExternalBuffer (buffer); // if so, string is just a tag
+   if (isEmptyStr (buffer)) {
+      String::trimChars (buffer);
+      return;
+   }
+   String::trimChars (buffer); // if so, string is just a tag
 
-      int tagLength = 0;
+   // strip just the tag part...
+   for (size_t i = 0; i < cr::arrsize (open); i++) {
+      size_t start = strstr (buffer, open[i]) - buffer; // look for a tag start
 
-      // strip just the tag part...
-      for (index = 0; index < ARRAYSIZE_HLSDK (tagOpen); index++)
-      {
-         fieldStart = strstr (buffer, tagOpen[index]) - buffer; // look for a tag start
+      // have we found a tag start?
+      if (start < 32) {
+         size_t tag = strlen (open[i]);
+         size_t j = start;
 
-         // have we found a tag start?
-         if (fieldStart >= 0 && fieldStart < 32)
-         {
-            tagLength = strlen (tagOpen[index]);
+         for (; j < nameLength - tag; j++) {
+            buffer[j] = buffer[j + tag]; // overwrite the buffer with the stripped string
+         }
+         buffer[j] = '\0'; // terminate the string
+         start = strstr (buffer, close[i]) - buffer; // look for a tag stop
 
-            for (i = fieldStart; i < length - tagLength; i++)
-               buffer[i] = buffer[i + tagLength]; // overwrite the buffer with the stripped string
+         // have we found a tag stop ?
+         if (start < 32) {
+            tag = strlen (close[i]);
+            j = start;
 
-            buffer[i] = 0x0; // terminate the string
-
-            fieldStart = strstr (buffer, tagClose[index]) - buffer; // look for a tag stop
-
-            // have we found a tag stop ?
-            if (fieldStart >= 0 && fieldStart < 32)
-            {
-               tagLength = strlen (tagClose[index]);
-
-               for (i = fieldStart; i < length - tagLength; i++)
-                  buffer[i] = buffer[i + tagLength]; // overwrite the buffer with the stripped string
-
-               buffer[i] = 0; // terminate the string
+            for (; j < nameLength - tag; j++) {
+               buffer[j] = buffer[j + tag]; // overwrite the buffer with the stripped string
             }
+            buffer[j] = 0; // terminate the string
          }
       }
    }
-   String::TrimExternalBuffer (buffer); // to finish, strip eventual blanks after and before the tag marks
+   String::trimChars (buffer); // to finish, strip eventual blanks after and before the tag marks
 }
 
-char *HumanizeName (char *name)
-{
+char *humanizeName (char *name) {
    // this function humanize player name (i.e. trim clan and switch to lower case (sometimes))
 
    static char outputName[64]; // create return name buffer
-   strncpy (outputName, name, SIZEOF_CHAR (outputName)); // copy name to new buffer
+   strncpy (outputName, name, cr::bufsize (outputName)); // copy name to new buffer
 
    // drop tag marks, 80 percent of time
-   if (Random.Int (1, 100) < 80)
-      StripTags (outputName);
-   else
-      String::TrimExternalBuffer (outputName);
+   if (rng.getInt (1, 100) < 80) {
+      stripClanTags (outputName);
+   }
+   else {
+      String::trimChars (outputName);
+   }
 
    // sometimes switch name to lower characters
    // note: since we're using russian names written in english, we reduce this shit to 6 percent
-   if (Random.Int (1, 100) <= 6)
-   {
-      for (int i = 0; i < static_cast <int> (strlen (outputName)); i++)
+   if (rng.getInt (1, 100) <= 6) {
+      for (size_t i = 0; i < strlen (outputName); i++) {
          outputName[i] = static_cast <char> (tolower (static_cast <int> (outputName[i]))); // to lower case
+      }
    }
    return &outputName[0]; // return terminated string
 }
 
-void HumanizeChat (char *buffer)
-{
+void addChatErrors (char *buffer) {
    // this function humanize chat string to be more handwritten
 
-   int length = strlen (buffer); // get length of string
-   int i = 0;
+   size_t length = strlen (buffer); // get length of string
+   size_t i = 0;
 
    // sometimes switch text to lowercase
-   // note: since we're using russian chat written in english, we reduce this shit to 4 percent
-   if (Random.Int (1, 100) <= 4)
-   {
-      for (i = 0; i < length; i++)
-         buffer[i] = static_cast <char> (tolower (static_cast <int> (buffer[i])));; // switch to lowercase
+   // note: since we're using russian chat written in English, we reduce this shit to 4 percent
+   if (rng.getInt (1, 100) <= 4) {
+      for (i = 0; i < length; i++) {
+         buffer[i] = static_cast <char> (tolower (static_cast <int> (buffer[i]))); // switch to lowercase
+      }
    }
 
-   if (length > 15)
-   {
+   if (length > 15) {
+      size_t percentile = length / 2;
+
       // "length / 2" percent of time drop a character
-      if (Random.Int (1, 100) < (length / 2))
-      {
-         int pos = Random.Int ((length / 8), length - (length / 8)); // chose random position in string
+      if (rng.getInt (1u, 100u) < percentile) {
+         size_t pos = rng.getInt (length / 8, length - length / 8); // chose random position in string
 
-         for (i = pos; i < length - 1; i++)
+         for (i = pos; i < length - 1; i++) {
             buffer[i] = buffer[i + 1]; // overwrite the buffer with stripped string
-
-         buffer[i] = 0x0; // terminate string;
+         }
+         buffer[i] = '\0'; // terminate string;
          length--; // update new string length
       }
 
       // "length" / 4 precent of time swap character
-      if (Random.Int (1, 100) < (length / 4))
-      {
-         int pos = Random.Int ((length / 8), ((3 * length) / 8)); // choose random position in string
+      if (rng.getInt (1u, 100u) < percentile / 2) {
+         size_t pos = rng.getInt (length / 8, 3 * length / 8); // choose random position in string
          char ch = buffer[pos]; // swap characters
 
          buffer[pos] = buffer[pos + 1];
@@ -149,304 +148,286 @@ void HumanizeChat (char *buffer)
    buffer[length] = 0; // terminate string
 }
 
-void Bot::PrepareChatMessage (char *text)
-{
+void Bot::prepareChatMessage (char *text) {
    // this function parses messages from the botchat, replaces keywords and converts names into a more human style
 
-   if (!yb_chat.GetBool () || IsNullString (text))
+   if (!yb_chat.boolean () || isEmptyStr (text)) {
       return;
-
-   #define ASSIGN_TALK_ENTITY() if (!engine.IsNullEntity (talkEntity)) strncat (m_tempStrings, HumanizeName (const_cast <char *> (STRING (talkEntity->v.netname))), SIZEOF_CHAR (m_tempStrings))
-
-   memset (&m_tempStrings, 0, sizeof (m_tempStrings));
+   }
+   m_tempStrings.clear ();
 
    char *textStart = text;
    char *pattern = text;
 
    edict_t *talkEntity = nullptr;
 
-   while (pattern != nullptr)
-   {
+   auto getHumanizedName = [] (edict_t *ent) {
+      if (!engine.isNullEntity (ent)) {
+         return const_cast <const char *> (humanizeName (const_cast <char *> (STRING (ent->v.netname))));
+      }
+      return "unknown";
+   };
+
+   while (pattern != nullptr) {
       // all replacement placeholders start with a %
-      pattern = strstr (textStart, "%");
+      pattern = strchr (textStart, '%');
 
-      if (pattern != nullptr)
-      {
-         int length = pattern - textStart;
+      if (pattern != nullptr) {
+         size_t length = pattern - textStart;
 
-         if (length > 0)
-            strncpy (m_tempStrings, textStart, length);
-
+         if (length > 0) {
+            m_tempStrings = String (textStart, length);
+         }
          pattern++;
 
          // player with most frags?
-         if (*pattern == 'f')
-         {
+         if (*pattern == 'f') {
             int highestFrags = -9000; // just pick some start value
             int index = 0;
 
-            for (int i = 0; i < engine.MaxClients (); i++)
-            {
+            for (int i = 0; i < engine.maxClients (); i++) {
                const Client &client = g_clients[i];
 
-               if (!(client.flags & CF_USED) || client.ent == GetEntity ())
+               if (!(client.flags & CF_USED) || client.ent == ent ()) {
                   continue;
-
+               }
                int frags = static_cast <int> (client.ent->v.frags);
 
-               if (frags > highestFrags)
-               {
+               if (frags > highestFrags) {
                   highestFrags = frags;
                   index = i;
                }
             }
             talkEntity = g_clients[index].ent;
-
-            ASSIGN_TALK_ENTITY ();
+            m_tempStrings += getHumanizedName (talkEntity);
          }
          // mapname?
-         else if (*pattern == 'm')
-            strncat (m_tempStrings, engine.GetMapName (), SIZEOF_CHAR (m_tempStrings));
+         else if (*pattern == 'm') {
+            m_tempStrings += engine.getMapName ();
+         }
          // roundtime?
-         else if (*pattern == 'r')
-         {
-            int time = static_cast <int> (g_timeRoundEnd - engine.Time ());
-            strncat (m_tempStrings, FormatBuffer ("%02d:%02d", time / 60, time % 60), SIZEOF_CHAR (m_tempStrings));
+         else if (*pattern == 'r') {
+            int time = static_cast <int> (g_timeRoundEnd - engine.timebase ());
+            m_tempStrings.formatAppend ("%02d:%02d", time / 60, time % 60);
          }
          // chat reply?
-         else if (*pattern == 's')
-         {
-            talkEntity = engine.EntityOfIndex (m_sayTextBuffer.entityIndex);
-            ASSIGN_TALK_ENTITY ();
+         else if (*pattern == 's') {
+            talkEntity = engine.entityOfIndex (m_sayTextBuffer.entityIndex);
+            m_tempStrings += getHumanizedName (talkEntity);
          }
          // teammate alive?
-         else if (*pattern == 't')
-         {
+         else if (*pattern == 't') {
             int i;
 
-            for (i = 0; i < engine.MaxClients (); i++)
-            {
+            for (i = 0; i < engine.maxClients (); i++) {
                const Client &client = g_clients[i];
 
-               if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == GetEntity ())
+               if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ()) {
                   continue;
-
+               }
                break;
             }
 
-            if (i < engine.MaxClients ())
-            {
-               if (!engine.IsNullEntity (pev->dmg_inflictor) && m_team == engine.GetTeam (pev->dmg_inflictor))
+            if (i < engine.maxClients ()) {
+               if (isPlayer (pev->dmg_inflictor) && m_team == engine.getTeam (pev->dmg_inflictor)) {
                   talkEntity = pev->dmg_inflictor;
-               else
+               }
+               else {
                   talkEntity = g_clients[i].ent;
-
-               ASSIGN_TALK_ENTITY ();
+               }
+               m_tempStrings += getHumanizedName (talkEntity);
             }
             else // no teammates alive...
             {
-               for (i = 0; i < engine.MaxClients (); i++)
-               {
+               for (i = 0; i < engine.maxClients (); i++) {
                   const Client &client = g_clients[i];
 
-                  if (!(client.flags & CF_USED) || client.team != m_team || client.ent == GetEntity ())
+                  if (!(client.flags & CF_USED) || client.team != m_team || client.ent == ent ()) {
                      continue;
-
+                  }
                   break;
                }
 
-               if (i < engine.MaxClients ())
-               {
+               if (i < engine.maxClients ()) {
                   talkEntity = g_clients[i].ent;
-
-                  ASSIGN_TALK_ENTITY ();
+                  m_tempStrings += getHumanizedName (talkEntity);
                }
             }
          }
-         else if (*pattern == 'e')
-         {
+         else if (*pattern == 'e') {
             int i;
 
-            for (i = 0; i < engine.MaxClients (); i++)
-            {
+            for (i = 0; i < engine.maxClients (); i++) {
                const Client &client = g_clients[i];
 
-               if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team == m_team || client.ent == GetEntity ())
+               if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team == m_team || client.ent == ent ()) {
                   continue;
-
+               }
                break;
             }
 
-            if (i < engine.MaxClients ())
-            {
+            if (i < engine.maxClients ()) {
                talkEntity = g_clients[i].ent;
-               ASSIGN_TALK_ENTITY ();
+               m_tempStrings += getHumanizedName (talkEntity);
             }
-            else // no teammates alive...
-            {
-               for (i = 0; i < engine.MaxClients (); i++)
-               {
+
+            // no teammates alive ?
+            else {
+               for (i = 0; i < engine.maxClients (); i++) {
                   const Client &client = g_clients[i];
 
-                  if (!(client.flags & CF_USED) || client.team == m_team || client.ent == GetEntity ())
+                  if (!(client.flags & CF_USED) || client.team == m_team || client.ent == ent ()) {
                      continue;
-
+                  }
                   break;
                }
-               if (i < engine.MaxClients ())
-               {
+               if (i < engine.maxClients ()) {
                   talkEntity = g_clients[i].ent;
-                  ASSIGN_TALK_ENTITY ();
+                  m_tempStrings += getHumanizedName (talkEntity);
                }
             }
          }
-         else if (*pattern == 'd')
-         {
-            if (g_gameFlags & GAME_CZERO)
-            {
-               if (Random.Int (1, 100) < 30)
-                  strcat (m_tempStrings, "CZ");
-               else
-                  strcat (m_tempStrings, "Condition Zero");
+         else if (*pattern == 'd') {
+            if (g_gameFlags & GAME_CZERO) {
+               if (rng.getInt (1, 100) < 30) {
+                  m_tempStrings += "CZ";
+               }
+               else {
+                  m_tempStrings += "Condition Zero";
+               }
             }
-            else if ((g_gameFlags & GAME_CSTRIKE16) || (g_gameFlags & GAME_LEGACY))
-            {
-               if (Random.Int (1, 100) < 30)
-                  strcat (m_tempStrings, "CS");
-               else
-                  strcat (m_tempStrings, "Counter-Strike");
+            else if ((g_gameFlags & GAME_CSTRIKE16) || (g_gameFlags & GAME_LEGACY)) {
+               if (rng.getInt (1, 100) < 30) {
+                  m_tempStrings += "CS";
+               }
+               else {
+                  m_tempStrings += "Counter-Strike";
+               }
             }
          }
-         else if (*pattern == 'v')
-         {
+         else if (*pattern == 'v') {
             talkEntity = m_lastVictim;
-            ASSIGN_TALK_ENTITY ();
+            m_tempStrings += getHumanizedName (talkEntity);
          }
          pattern++;
          textStart = pattern;
       }
    }
 
-   if (textStart != nullptr)
-   {
+   if (textStart != nullptr) {
       // let the bots make some mistakes...
       char tempString[160];
-      strncpy (tempString, textStart, SIZEOF_CHAR (tempString));
+      strncpy (tempString, textStart, cr::bufsize (tempString));
 
-      HumanizeChat (tempString);
-      strncat (m_tempStrings, tempString, SIZEOF_CHAR (m_tempStrings));
+      addChatErrors (tempString);
+      m_tempStrings += tempString;
    }
 }
 
-bool CheckKeywords (char *tempMessage, char *reply)
-{
-   // this function checks is string contain keyword, and generates relpy to it
+bool checkForKeywords (char *message, char *reply) {
+   // this function checks is string contain keyword, and generates reply to it
 
-   if (!yb_chat.GetBool () || IsNullString (tempMessage))
+   if (!yb_chat.boolean () || isEmptyStr (message)) {
       return false;
+   }
 
-   FOR_EACH_AE (g_replyFactory, i)
-   {
-      FOR_EACH_AE (g_replyFactory[i].keywords, j)
-      {
+   for (auto &factory : g_replyFactory) {
+      for (auto &keyword : factory.keywords) {
+
          // check is keyword has occurred in message
-         if (strstr (tempMessage, g_replyFactory[i].keywords[j].GetBuffer ()) != nullptr)
-         {
-            Array <String> &replies = g_replyFactory[i].usedReplies;
+         if (strstr (message, keyword.chars ()) != nullptr) {
+            StringArray &replies = factory.usedReplies;
 
-            if (replies.GetElementNumber () >= g_replyFactory[i].replies.GetElementNumber () / 2)
-               replies.RemoveAll ();
-
-            bool replyUsed = false;
-            const char *generatedReply = g_replyFactory[i].replies.GetRandomElement ();
-
-            // don't say this twice
-            FOR_EACH_AE (replies, k)
-            {
-               if (strstr (replies[k].GetBuffer (), generatedReply) != nullptr)
-                  replyUsed = true;
+            if (replies.length () >= factory.replies.length () / 2) {
+               replies.clear ();
             }
+            else if (!replies.empty ()) {
+               bool replyUsed = false;
+               const String &choosenReply = factory.replies.random ();
 
-            // reply not used, so use it
-            if (!replyUsed)
-            {
-               strcpy (reply, generatedReply); // update final buffer
-               replies.Push (generatedReply); //add to ignore list
+               // don't say this twice
+               for (auto &used : replies) {
+                  if (used.contains (choosenReply)) {
+                     replyUsed = true;
+                     break;
+                  }
+               }
 
-               return true;
+               // reply not used, so use it
+               if (!replyUsed) {
+                  strcpy (reply, choosenReply.chars ()); // update final buffer
+                  replies.push (choosenReply); // add to ignore list
+
+                  return true;
+               }
             }
          }
       }
    }
 
    // didn't find a keyword? 70% of the time use some universal reply
-   if (Random.Int (1, 100) < 70 && !g_chatFactory[CHAT_NOKW].IsEmpty ())
-   {
-      strcpy (reply, g_chatFactory[CHAT_NOKW].GetRandomElement ().GetBuffer ());
+   if (rng.getInt (1, 100) < 70 && !g_chatFactory[CHAT_NOKW].empty ()) {
+      strcpy (reply, g_chatFactory[CHAT_NOKW].random ().chars ());
       return true;
    }
    return false;
 }
 
-bool Bot::ParseChat (char *reply)
-{
+bool Bot::processChatKeywords (char *reply) {
    // this function parse chat buffer, and prepare buffer to keyword searching
 
    char tempMessage[512];
-   strcpy (tempMessage, m_sayTextBuffer.sayText); // copy to safe place
+   size_t maxLength = cr::bufsize (tempMessage);
+
+   strncpy (tempMessage, m_sayTextBuffer.sayText.chars (), maxLength); // copy to safe place
 
    // text to uppercase for keyword parsing
-   for (int i = 0; i < static_cast <int> (strlen (tempMessage)); i++)
-      tempMessage[i] = static_cast <char> (tolower (static_cast <int> (tempMessage[i])));
-
-   return CheckKeywords (tempMessage, reply);
+   for (size_t i = 0; i < maxLength; i++) {
+      tempMessage[i] = static_cast <char> (toupper (static_cast <int> (tempMessage[i])));
+   }
+   return checkForKeywords (tempMessage, reply);
 }
 
-bool Bot::RepliesToPlayer (void)
-{
+bool Bot::isReplyingToChat (void) {
    // this function sends reply to a player
 
-   if (m_sayTextBuffer.entityIndex != -1 && !IsNullString (m_sayTextBuffer.sayText))
-   {
+   if (m_sayTextBuffer.entityIndex != -1 && !m_sayTextBuffer.sayText.empty ()) {
       char text[256];
 
       // check is time to chat is good
-      if (m_sayTextBuffer.timeNextChat < engine.Time ())
-      {
-         if (Random.Int (1, 100) < m_sayTextBuffer.chatProbability + Random.Int (2, 10) && ParseChat (reinterpret_cast <char *> (&text)))
-         {
-            PrepareChatMessage (text);
-            PushMessageQueue (GAME_MSG_SAY_CMD);
+      if (m_sayTextBuffer.timeNextChat < engine.timebase ()) {
+         if (rng.getInt (1, 100) < m_sayTextBuffer.chatProbability + rng.getInt (15, 35) && processChatKeywords (reinterpret_cast <char *> (&text))) {
+            prepareChatMessage (text);
+            pushMsgQueue (GAME_MSG_SAY_CMD);
 
+  
             m_sayTextBuffer.entityIndex = -1;
-            m_sayTextBuffer.sayText[0] = 0x0;
-            m_sayTextBuffer.timeNextChat = engine.Time () + m_sayTextBuffer.chatDelay;
+            m_sayTextBuffer.timeNextChat = engine.timebase () + m_sayTextBuffer.chatDelay;
+            m_sayTextBuffer.sayText.clear ();
 
             return true;
          }
          m_sayTextBuffer.entityIndex = -1;
-         m_sayTextBuffer.sayText[0] = 0x0;
+         m_sayTextBuffer.sayText.clear ();
       }
    }
    return false;
 }
 
-void Bot::SayText (const char *text)
-{
+void Bot::say (const char *text) {
    // this function prints saytext message to all players
 
-   if (IsNullString (text))
+   if (isEmptyStr (text)) {
       return;
-
-   engine.IssueBotCommand (GetEntity (), "say \"%s\"", text);
+   }
+   engine.execBotCmd (ent (), "say \"%s\"", text);
 }
 
-void Bot::TeamSayText (const char *text)
-{
+void Bot::sayTeam (const char *text) {
    // this function prints saytext message only for teammates
 
-   if (IsNullString (text))
+   if (isEmptyStr (text)) {
       return;
-
-   engine.IssueBotCommand (GetEntity (), "say_team \"%s\"", text);
+   }
+   engine.execBotCmd (ent (), "say_team \"%s\"", text);
 }

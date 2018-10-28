@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -12,12 +12,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\compress.h" />
-    <ClInclude Include="..\include\core.h" />
+    <ClInclude Include="..\include\yapb.h" />
     <ClInclude Include="..\include\corelib.h" />
     <ClInclude Include="..\include\engine.h" />
     <ClInclude Include="..\include\engine\const.h" />
     <ClInclude Include="..\include\engine\eiface.h" />
-    <ClInclude Include="..\include\engine\enginecallback.h" />
     <ClInclude Include="..\include\engine\extdll.h" />
     <ClInclude Include="..\include\engine\meta_api.h" />
     <ClInclude Include="..\include\engine\progdefs.h" />
@@ -53,14 +52,14 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v140_xp</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
-    <PlatformToolset>v140_xp</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">

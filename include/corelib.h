@@ -4,592 +4,418 @@
 //
 // This software is licensed under the BSD-style license.
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.jeefo.net/license
+//     https://yapb.ru/license
+//
 //
 
 #pragma once
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include <ctype.h>
-#include <limits.h>
-#include <float.h>
-#include <time.h>
-#include <math.h>
 #include <assert.h>
-
+#include <ctype.h>
+#include <float.h>
+#include <limits.h>
+#include <time.h>
 #include <platform.h>
 
 #ifdef PLATFORM_WIN32
-#include <direct.h>
+   #include <direct.h>
 #else
-#include <sys/stat.h>
+   #include <sys/stat.h>
 #endif
 
-#ifdef ENABLE_SSE_INTRINSICS
-#include <emmintrin.h>
+#ifndef PLATFORM_WIN32
+   #define _unlink unlink
+   #define _mkdir(p) mkdir (p, 0777)
+   #define stricmp strcasecmp
+#else
+   #define stricmp _stricmp
 #endif
 
-//
-// Basic Types
-//
-typedef signed char int8;
-typedef signed short int16;
-typedef signed long int32;
-typedef unsigned char uint8;
-typedef unsigned short uint16;
-typedef unsigned long uint32;
+#ifdef PLATFORM_HAS_SSE2
+   #include <immintrin.h>
+#endif
 
-// Fast stricmp got somewhere from chromium
-static inline int A_stricmp (const char *str1, const char *str2, int length = -1)
-{
-   int iter = 0;
+#undef min
+#undef max
 
-   if (length == -1)
-      length = strlen (str1);
+// to remove ugly A_ prefixes
+namespace cr {
 
-   for (; iter < length; iter++)
-   {
-      if ((str1[iter] | 32) != (str2[iter] | 32))
-         break;
-   }
+namespace types {
 
-   if (iter != length)
-      return 1;
+using int8 = signed char;
+using int16 = signed short;
+using int32 = signed long;
+using uint8 = unsigned char;
+using uint16 = unsigned short;
+using uint32 = unsigned long;
 
-   return 0;
 }
 
-// Cross platform strdup
-static inline char *A_strdup (const char *str)
-{
-   return strcpy (new char[strlen (str) + 1], str);
-}
+using namespace cr::types;
 
-// From metamod-p
-static inline bool A_IsValidCodePointer (const void *ptr)
-{
+constexpr float ONEPSILON = 0.01f;
+constexpr float EQEPSILON = 0.001f;
+constexpr float FLEPSILON = 1.192092896e-07f;
+
+constexpr float PI = 3.141592653589793115997963468544185161590576171875f;
+constexpr float PI_RECIPROCAL = 1.0f / PI;
+constexpr float PI_HALF = PI / 2;
+
+constexpr float D2R = PI / 180.0f;
+constexpr float R2D = 180.0f / PI;
+
+// from metamod-p
+static inline bool checkptr (const void *ptr) {
 #ifdef PLATFORM_WIN32
    if (IsBadCodePtr (reinterpret_cast <FARPROC> (ptr)))
       return false;
 #endif
 
-   (void) (ptr);
-
-   // do not check on linux
+   (void)(ptr);
    return true;
 }
 
-#ifndef PLATFORM_WIN32
-#define _unlink(p) unlink (p)
-#define _mkdir(p) mkdir (p, 0777)
-#endif
-
-//
-// Title: Utility Classes Header
-//
-
-//
-// Function: Hash
-//  Hash template for <Map>, <HashTable>
-//
-template <typename T> unsigned int Hash (const T &);
-
-//
-// Function: Hash
-//  Hash for integer.
-//
-// Parameters:
-//  tag - Value that should be hashed.
-//
-// Returns:
-//  Hashed value.
-//
-template <typename T> unsigned int Hash (const int &tag)
-{
-   unsigned int key = (unsigned int) tag;
-
-   key += ~(key << 16);
-   key ^= (key >> 5);
-
-   key += (key << 3);
-   key ^= (key >> 13);
-
-   key += ~(key << 9);
-   key ^= (key >> 17);
-
-   return key;
+template <typename T, size_t N> constexpr size_t bufsize (const T (&)[N]) {
+   return N - 1;
 }
 
-//
-// Namespace: Math
-//  Some math utility functions.
-//
-namespace Math
-{
-   const float MATH_ONEPSILON = 0.01f;
-   const float MATH_EQEPSILON = 0.001f;
-   const float MATH_FLEPSILON = 1.192092896e-07f;
+template <typename T, size_t N> constexpr size_t arrsize (const T (&)[N]) {
+   return N;
+}
 
-   //
-   // Constant: MATH_PI
-   // Mathematical PI value.
-   //
-   const float MATH_PI = 3.141592653589793f;
+constexpr float square (const float value) {
+   return value * value;
+}
 
-   const float MATH_D2R = MATH_PI / 180.0f;
-   const float MATH_R2D = 180.0f / MATH_PI;
+template <typename T> constexpr T min (const T a, const T b) {
+   return a < b ? a : b;
+}
 
-#ifdef ENABLE_SSE_INTRINSICS
+template <typename T> constexpr T max (const T a, const T b) {
+   return a > b ? a : b;
+}
 
-   //
-   // Function: sse_abs
-   //
-   // mm version if abs
-   //
-   static inline __m128 sse_abs (__m128 val)
-   {
-      return _mm_andnot_ps (_mm_castsi128_ps (_mm_set1_epi32 (0x80000000)), val);
+template <typename T> constexpr T clamp (const T x, const T a, const T b) {
+   return min (max (x, a), b);
+}
+
+template <typename T> constexpr T abs (const T a) {
+   return a > 0 ? a : -a;
+}
+
+static inline float powf (const float x, const float y) {
+   union {
+      float d;
+      int x;
+   } res { x };
+
+   res.x = static_cast <int> (y * (res.x - 1064866805) + 1064866805);
+   return res.d;
+}
+
+static inline float sqrtf (const float value) {
+   return powf (value, 0.5f);
+}
+
+static inline float sinf (const float value) {
+   const signed long sign = static_cast <signed long> (value * PI_RECIPROCAL);
+   const float calc = (value - static_cast <float> (sign) * PI);
+
+   const float sqr = square (calc);
+   const float res = 1.00000000000000000000e+00f + sqr * (-1.66666671633720397949e-01f + sqr * (8.33333376795053482056e-03f + sqr * (-1.98412497411482036114e-04f +
+      sqr * (2.75565571428160183132e-06f + sqr * (-2.50368472620721149724e-08f + sqr * (1.58849267073435385100e-10f + sqr * -6.58925550841432672300e-13f))))));
+
+   return (sign & 1) ? -calc * res : value * res;
+}
+
+static inline float cosf (const float value) {
+   const signed long sign = static_cast <signed long> (value * PI_RECIPROCAL);
+   const float calc = (value - static_cast <float> (sign) * PI);
+
+   const float sqr = square (calc);
+   const float res = sqr * (-5.00000000000000000000e-01f + sqr * (4.16666641831398010254e-02f + sqr * (-1.38888671062886714935e-03f + sqr * (2.48006890615215525031e-05f +
+      sqr * (-2.75369927749125054106e-07f + sqr * (2.06207229069832465029e-09f + sqr * -9.77507137733812925262e-12f))))));
+
+   const float f = -1.00000000000000000000e+00f;
+
+   return (sign & 1) ? f - res : -f + res;
+}
+
+static inline float tanf (const float value) {
+   return sinf (value) / cosf (value);
+}
+
+static inline float atan2f (const float y, const float x) {
+   auto atanf = [](const float x) {
+      const float sqr = square (x);
+      return x * (48.70107004404898384f + sqr * (49.5326263772254345f + sqr * 9.40604244231624f)) / (48.70107004404996166f + sqr * (65.7663163908956299f + sqr * (21.587934067020262f + sqr)));
    };
 
-   //
-   // Function: sse_sine
-   //
-   // mm version if sine
-   //
-   static inline __m128 sse_sine (__m128 inp)
-   {
-      __m128 pi2 = _mm_set1_ps (MATH_PI * 2);
-      __m128 val = _mm_cmpnlt_ps (inp, _mm_set1_ps (MATH_PI));
+   const float ax = abs (x);
+   const float ay = abs (y);
+
+   if (ax < 1e-7f && ay < 1e-7f) {
+      return 0.0f;
+   }
+
+   if (ax > ay) {
+      if (x < 0.0f) {
+         if (y >= 0.0f) {
+            return atanf (y / x) + PI;
+         }
+         return atanf (y / x) - PI;
+      }
+      return atanf (y / x);
+   }
+
+   if (y < 0.0f) {
+      return atanf (-x / y) - PI_HALF;
+   }
+   return atanf (-x / y) + PI_HALF;
+}
+
+static inline float ceilf (const float x) {
+   return static_cast <float> (65536 - static_cast <int> (65536.0f - x));
+}
+
+static inline void sincosf (const float x, const float y, const float z, float *sines, float *cosines) {
+   // this is the only place where sse2 stuff actually faster than chebyshev pads as we're can calculate 3 sines + 3 cosines
+   // using only two sse calls instead of 6 calls to sin/cos with standard functions
+
+#if defined (PLATFORM_HAS_SSE2)
+   auto rad = _mm_set_ps (x, y, z, 0.0f);
+
+   auto _mm_sin = [] (__m128 rad) -> __m128 {
+      static auto pi2 = _mm_set_ps1 (PI * 2);
+      static auto rp1 = _mm_set_ps1 (4.0f / PI);
+      static auto rp2 = _mm_set_ps1 (-4.0f / (PI * PI));
+      static auto val = _mm_cmpnlt_ps (rad, _mm_set_ps1 (PI));
+      static auto csi = _mm_castsi128_ps (_mm_set1_epi32 (0x80000000));
 
       val = _mm_and_ps (val, pi2);
-      inp = _mm_sub_ps (inp, val);
-      val = _mm_cmpngt_ps (inp, _mm_set1_ps (-MATH_PI));
+      rad = _mm_sub_ps (rad, val);
+      val = _mm_cmpngt_ps (rad, _mm_set_ps1 (-PI));
       val = _mm_and_ps (val, pi2);
-      inp = _mm_add_ps (inp, val);
-      val = _mm_mul_ps (sse_abs (inp), _mm_set1_ps (-4.0f / (MATH_PI * MATH_PI)));
-      val = _mm_add_ps (val, _mm_set1_ps (4.0f / MATH_PI));
+      rad = _mm_add_ps (rad, val);
+      val = _mm_mul_ps (_mm_andnot_ps (csi, rad), rp2);
+      val = _mm_add_ps (val, rp1);
 
-      __m128 res = _mm_mul_ps (val, inp);
+      auto si = _mm_mul_ps (val, rad);
 
-      val = _mm_mul_ps (sse_abs (res), res);
-      val = _mm_sub_ps (val, res);
-      val = _mm_mul_ps (val, _mm_set1_ps (0.225f));
-      res = _mm_add_ps (val, res);
+      val = _mm_mul_ps (_mm_andnot_ps (csi, si), si);
+      val = _mm_sub_ps (val, si);
+      val = _mm_mul_ps (val, _mm_set_ps1 (0.225f));
 
-      return res;
-   }
-#endif
-   //
-   // Function: A_sqrtf
-   //
-   // SIMD version of sqrtf.
-   //
-   static inline float A_sqrtf (float value)
-   {
-#ifdef ENABLE_SSE_INTRINSICS
-      return _mm_cvtss_f32 (_mm_sqrt_ss (_mm_set1_ps (value)));
+      return _mm_add_ps (val, si);
+   };
+   static auto hpi = _mm_set_ps1 (PI_HALF);
+
+   auto s = _mm_sin (rad);
+   auto c = _mm_sin (_mm_add_ps (rad, hpi));
+
+   _mm_store_ps (sines, _mm_shuffle_ps (s, s, _MM_SHUFFLE (0, 1, 2, 3)));
+   _mm_store_ps (cosines, _mm_shuffle_ps (c, c, _MM_SHUFFLE (0, 1, 2, 3)));
 #else
-      return sqrtf (value);
+   sines[0] = sinf (x);
+   sines[1] = sinf (y);
+   sines[2] = sinf (z);
+
+   cosines[0] = cosf (x);
+   cosines[1] = cosf (y);
+   cosines[2] = cosf (z);
 #endif
-   }
+}
 
-   // own min/max implementation
-   template <typename T> static inline T A_min (T a, T b)
-   {
-      return a < b ? a : b;
-   }
+constexpr bool fzero (const float entry) {
+   return abs (entry) < ONEPSILON;
+}
 
-   template <typename T> static inline T A_max (T a, T b)
-   {
-      return a > b ? a : b;
-   }
+constexpr bool fequal (const float entry1, const float entry2) {
+   return abs (entry1 - entry2) < EQEPSILON;
+}
 
-   template <typename T> static inline T A_clamp (T x, T a, T b)
-   {
-      return A_min (A_max (x, a), b);
-   }
+constexpr float rad2deg (const float radian) {
+   return radian * R2D;
+}
 
-   static inline float F_clamp (float x, float a, float b)
-   {
-#ifdef ENABLE_SSE_INTRINSICS
-      return _mm_cvtss_f32 (_mm_min_ss (_mm_max_ss (_mm_set1_ps (x), _mm_set1_ps (a)), _mm_set1_ps (b)));
-#else
-      return A_clamp <float> (x, a, b);
-#endif
-   }
+constexpr float deg2rad (const float degree) {
+   return degree * D2R;
+}
 
-   //
-   // Function: A_sinf
-   //
-   // SIMD version of sinf.
-   //
-   static inline float A_sinf (float value)
-   {
-#ifdef ENABLE_SSE_INTRINSICS
-      return _mm_cvtss_f32 (sse_sine (_mm_set1_ps (value)));
-#else
-      return sinf (value);
-#endif
-   }
+constexpr float angleMod (const float angle) {
+   return 360.0f / 65536.0f * (static_cast <int> (angle * (65536.0f / 360.0f)) & 65535);
+}
 
-   //
-   // Function: A_cosf
-   //
-   // SIMD version of cosf.
-   //
-   static inline float A_cosf (float value)
-   {
-#ifdef ENABLE_SSE_INTRINSICS
-      return _mm_cvtss_f32 (sse_sine (_mm_set1_ps (value + MATH_PI / 2.0f)));
-#else
-      return cosf (value);
-#endif
-   }
+constexpr float angleNorm (const float angle) {
+   return 360.0f / 65536.0f * (static_cast <int> ((angle + 180.0f) * (65536.0f / 360.0f)) & 65535) - 180.0f;
+}
 
-   //
-   // Function: A_sincosf
-   //
-   // SIMD version of sincosf.
-   //
-   static inline void A_sincosf (float rad, float *sine, float *cosine)
-   {
-#ifdef ENABLE_SSE_INTRINSICS
-      __m128 m_sincos = sse_sine (_mm_set_ps (0.0f, 0.0f, rad + MATH_PI / 2.f, rad));
-      __m128 m_cos = _mm_shuffle_ps (m_sincos, m_sincos, _MM_SHUFFLE (0, 0, 0, 1));
+constexpr float angleDiff (const float dest, const float src) {
+   return angleNorm (dest - src);
+}
 
-      *sine = _mm_cvtss_f32 (m_sincos);
-      *cosine = _mm_cvtss_f32 (m_cos);
-#else
-      *sine = sinf (rad);
-      *cosine = cosf (rad);
-#endif
-   }
+template <typename T> struct ClearRef {
+   using Type = T;
+};
 
-   //
-   // Function: FltZero
-   // 
-   // Checks whether input entry float is zero.
-   //
-   // Parameters:
-   //   entry - Input float.
-   //
-   // Returns:
-   //   True if float is zero, false otherwise.
-   //
-   // See Also:
-   //   <FltEqual>
-   //
-   // Remarks:
-   //   This eliminates Intel C++ Compiler's warning about float equality/inquality.
-   //
-   static inline bool FltZero (float entry)
-   {
-      return fabsf (entry) < MATH_ONEPSILON;
-   }
+template <typename T> struct ClearRef <T &> {
+   using Type = T;
+};
 
-   //
-   // Function: FltEqual
-   // 
-   // Checks whether input floats are equal.
-   //
-   // Parameters:
-   //   entry1 - First entry float.
-   //   entry2 - Second entry float.
-   //
-   // Returns:
-   //   True if floats are equal, false otherwise.
-   //
-   // See Also:
-   //   <FltZero>
-   //
-   // Remarks:
-   //   This eliminates Intel C++ Compiler's warning about float equality/inquality.
-   //
-   static inline bool FltEqual (float entry1, float entry2)
-   {
-      return fabsf (entry1 - entry2) < MATH_EQEPSILON;
-   }
+template <typename T> struct ClearRef <T &&> {
+   using Type = T;
+};
 
-   //
-   // Function: RadianToDegree
-   // 
-   //  Converts radians to degrees.
-   //
-   // Parameters:
-   //   radian - Input radian.
-   //
-   // Returns:
-   //   Degree converted from radian.
-   //
-   // See Also:
-   //   <DegreeToRadian>
-   //
-   static inline float RadianToDegree (float radian)
-   {
-      return radian * MATH_R2D;
-   }
+template <typename T> static inline typename ClearRef <T>::Type &&move (T &&type) {
+   return static_cast <typename ClearRef <T>::Type &&> (type);
+}
 
-   //
-   // Function: DegreeToRadian
-   // 
-   // Converts degrees to radians.
-   //
-   // Parameters:
-   //   degree - Input degree.
-   //
-   // Returns:
-   //   Radian converted from degree.
-   //
-   // See Also:
-   //   <RadianToDegree>
-   //
-   static inline float DegreeToRadian (float degree)
-   {
-      return degree * MATH_D2R;
-   }
+template <typename T> static inline void swap (T &left, T &right) {
+   auto temp = move (left);
+   left = move (right);
+   right = move (temp);
+}
 
-   //
-   // Function: AngleMod
-   //
-   // Adds or subtracts 360.0f enough times need to given angle in order to set it into the range [0.0, 360.0f).
-   //
-   // Parameters:
-   //     angle - Input angle.
-   //
-   // Returns:
-   //   Resulting angle.
-   //
-   static inline float AngleMod (float angle)
-   {
-      return 360.0f / 65536.0f * (static_cast <int> (angle * (65536.0f / 360.0f)) & 65535);
-   }
+template <typename T> static constexpr inline T &&forward (typename ClearRef <T>::Type &type) noexcept {
+   return static_cast <T &&> (type);
+}
 
-   //
-   // Function: AngleNormalize
-   //
-   // Adds or subtracts 360.0f enough times need to given angle in order to set it into the range [-180.0, 180.0f).
-   //
-   // Parameters:
-   //     angle - Input angle.
-   //
-   // Returns:
-   //   Resulting angle.
-   //
-   static inline float AngleNormalize (float angle)
-   {
-      return 360.0f / 65536.0f * (static_cast <int> ((angle + 180.0f) * (65536.0f / 360.0f)) & 65535) - 180.0f;
-   }
+template <typename T> static constexpr inline T &&forward (typename ClearRef <T>::Type &&type) noexcept {
+   return static_cast <T &&> (type);
+}
 
-
-   //
-   // Function: SineCosine
-   //  Very fast platform-dependent sine and cosine calculation routine.
-   //
-   // Parameters:
-   //  rad - Input degree.
-   //  sin - Output for Sine.
-   //  cos - Output for Cosine.
-   //
-   static inline void SineCosine (float rad, float *sine, float *cosine)
-   {
-#if defined (__ANDROID__)
-      *sine = sinf (rad);
-      *cosine = cosf (rad);
-#else
-      A_sincosf (rad, sine, cosine);
-#endif
-   }
-
-   static inline float AngleDiff (float destAngle, float srcAngle)
-   {
-      return AngleNormalize (destAngle - srcAngle);
+template <typename T> static inline void transfer (T *dest, T *src, size_t length) {
+   for (size_t i = 0; i < length; i++) {
+      dest[i] = move (src[i]);
    }
 }
 
-//
-// Class: RandomSequenceOfUnique
-//  Random number generator used by the bot code.
-//  See: https://github.com/preshing/RandomSequence/
-//
-class RandomSequenceOfUnique
-{
+namespace classes {
+
+class NonCopyable {
+protected:
+   NonCopyable (void) = default;
+   ~NonCopyable (void) = default;
+
+private:
+   NonCopyable (const NonCopyable &) = delete;
+   NonCopyable &operator = (const NonCopyable &) = delete;
+};
+
+template <typename T> class Singleton : private NonCopyable {
+public:
+   inline static T *ptr (void) {
+      return &ref ();
+   }
+
+   inline static T &ref (void) {
+      static T ref;
+      return ref;
+   };
+};
+
+// see: https://github.com/preshing/RandomSequence/
+class RandomSequence : public Singleton <RandomSequence> {
 private:
    unsigned int m_index;
    unsigned int m_intermediateOffset;
    unsigned long long m_divider;
 
 private:
-   unsigned int PermuteQPR (unsigned int x)
-   {
-      static const unsigned int prime = 4294967291u;
+   unsigned int premute (unsigned int x) {
+      static constexpr unsigned int prime = 4294967291u;
 
-      if (x >= prime)
+      if (x >= prime) {
          return x;
-
-      unsigned int residue = (static_cast <unsigned long long> (x)* x) % prime;
-
+      }
+      const unsigned int residue = (static_cast <unsigned long long> (x) * x) % prime;
       return (x <= prime / 2) ? residue : prime - residue;
    }
 
-   unsigned int Random (void)
-   {
-      return PermuteQPR ((PermuteQPR (m_index++) + m_intermediateOffset) ^ 0x5bf03635);
+   unsigned int random (void) {
+      return premute ((premute (m_index++) + m_intermediateOffset) ^ 0x5bf03635);
    }
-public:
-   RandomSequenceOfUnique (void)
-   {
-      unsigned int seedBase = static_cast <unsigned int> (time (nullptr));
-      unsigned int seedOffset = seedBase + 1;
 
-      m_index = PermuteQPR (PermuteQPR (seedBase) + 0x682f0161);
-      m_intermediateOffset = PermuteQPR (PermuteQPR (seedOffset) + 0x46790905);
+public:
+   RandomSequence (void) {
+      const unsigned int seedBase = static_cast <unsigned int> (time (nullptr));
+      const unsigned int seedOffset = seedBase + 1;
+
+      m_index = premute (premute (seedBase) + 0x682f0161);
+      m_intermediateOffset = premute (premute (seedOffset) + 0x46790905);
       m_divider = (static_cast <unsigned long long> (1)) << 32;
    }
 
-   inline int Int (int low, int high)
-   {
-      return static_cast <int> (Random () * (static_cast <double> (high) - static_cast <double> (low) + 1.0) / m_divider + static_cast <double> (low));
+   template <typename U> inline U getInt (U low, U high) {
+      return static_cast <U> (random () * (static_cast <double> (high) - static_cast <double> (low) + 1.0) / m_divider + static_cast <double> (low));
    }
 
-   inline float Float (float low, float high)
-   {
-      return static_cast <float> (Random () * (static_cast <double> (high) - static_cast <double> (low)) / (m_divider - 1) + static_cast <double> (low));
+   inline float getFloat (float low, float high) {
+      return static_cast <float> (random () * (static_cast <double> (high) - static_cast <double> (low)) / (m_divider - 1) + static_cast <double> (low));
    }
 };
 
-//
-// Class: Vector
-// Standard 3-dimensional vector.
-//
-class Vector
-{
-   //
-   // Group: Variables.
-   //
+class Vector final {
 public:
-   //
-   // Variable: x,y,z
-   // X, Y and Z axis members.
-   //
    float x, y, z;
 
-   //
-   // Group: (Con/De)structors.
-   //
 public:
-   //
-   // Function: Vector
-   //
-   // Constructs Vector from float, and assign it's value to all axises.
-   //
-   // Parameters:
-   //     scaler - Value for axises.
-   //
-   inline Vector (float scaler = 0.0f) : x (scaler), y (scaler), z (scaler)
-   {
-   }
+   inline Vector (float scaler = 0.0f) : x (scaler), y (scaler), z (scaler) {}
+   inline Vector (float inputX, float inputY, float inputZ) : x (inputX), y (inputY), z (inputZ) {}
+   inline Vector (float *other) : x (other[0]), y (other[1]), z (other[2]) {}
+   inline Vector (const Vector &right) : x (right.x), y (right.y), z (right.z) {}
 
-   //
-   // Function: Vector
-   //
-   // Standard Vector Constructor.
-   //
-   // Parameters:
-   //     inputX - Input X axis.
-   //     inputY - Input Y axis.
-   //     inputZ - Input Z axis.
-   //
-   inline Vector (float inputX, float inputY, float inputZ) : x (inputX), y (inputY), z (inputZ)
-   {
-   }
-
-   //
-   // Function: Vector
-   //
-   // Constructs Vector from float pointer.
-   //
-   // Parameters:
-   //     other - Float pointer.
-   //
-   inline Vector (float *other) : x (other[0]), y (other[1]), z (other[2])
-   {
-   }
-
-   //
-   // Function: Vector
-   //
-   // Constructs Vector from another Vector.
-   //
-   // Parameters:
-   //   right - Other Vector, that should be assigned.
-   //
-   inline Vector (const Vector &right) : x (right.x), y (right.y), z (right.z)
-   {
-   }
-   //
-   // Group: Operators.
-   //
 public:
-   inline operator float * (void)
-   {
+   inline operator float * (void) {
       return &x;
    }
 
-   inline operator const float * (void) const
-   {
+   inline operator const float * (void) const {
       return &x;
    }
 
-
-   inline const Vector operator + (const Vector &right) const
-   {
+   inline const Vector operator+ (const Vector &right) const {
       return Vector (x + right.x, y + right.y, z + right.z);
    }
 
-   inline const Vector operator - (const Vector &right) const
-   {
+   inline const Vector operator- (const Vector &right) const {
       return Vector (x - right.x, y - right.y, z - right.z);
    }
 
-   inline const Vector operator - (void) const
-   {
+   inline const Vector operator- (void) const {
       return Vector (-x, -y, -z);
    }
 
-   friend inline const Vector operator * (const float vec, const Vector &right)
-   {
+   friend inline const Vector operator* (const float vec, const Vector &right) {
       return Vector (right.x * vec, right.y * vec, right.z * vec);
    }
 
-   inline const Vector operator * (float vec) const
-   {
+   inline const Vector operator* (float vec) const {
       return Vector (vec * x, vec * y, vec * z);
    }
 
-   inline const Vector operator / (float vec) const
-   {
+   inline const Vector operator/ (float vec) const {
       const float inv = 1 / vec;
       return Vector (inv * x, inv * y, inv * z);
    }
 
    // cross product
-   inline const Vector operator ^ (const Vector &right) const
-   {
+   inline const Vector operator^ (const Vector &right) const {
       return Vector (y * right.z - z * right.y, z * right.x - x * right.z, x * right.y - y * right.x);
    }
 
    // dot product
-   inline float operator | (const Vector &right) const
-   {
+   inline float operator| (const Vector &right) const {
       return x * right.x + y * right.y + z * right.z;
    }
 
-   inline const Vector &operator += (const Vector &right)
-   {
+   inline const Vector &operator+= (const Vector &right) {
       x += right.x;
       y += right.y;
       z += right.z;
@@ -597,8 +423,7 @@ public:
       return *this;
    }
 
-   inline const Vector &operator -= (const Vector &right)
-   {
+   inline const Vector &operator-= (const Vector &right) {
       x -= right.x;
       y -= right.y;
       z -= right.z;
@@ -606,8 +431,7 @@ public:
       return *this;
    }
 
-   inline const Vector &operator *= (float vec)
-   {
+   inline const Vector &operator*= (float vec) {
       x *= vec;
       y *= vec;
       z *= vec;
@@ -615,8 +439,7 @@ public:
       return *this;
    }
 
-   inline const Vector &operator /= (float vec)
-   {
+   inline const Vector &operator/= (float vec) {
       const float inv = 1 / vec;
 
       x *= inv;
@@ -626,3024 +449,1135 @@ public:
       return *this;
    }
 
-   inline bool operator == (const Vector &right) const
-   {
-      return Math::FltEqual (x, right.x) && Math::FltEqual (y, right.y) && Math::FltEqual (z, right.z);
+   inline bool operator== (const Vector &right) const {
+      return fequal (x, right.x) && fequal (y, right.y) && fequal (z, right.z);
    }
 
-   inline bool operator != (const Vector &right) const
-   {
-      return !Math::FltEqual (x, right.x) && !Math::FltEqual (y, right.y) && !Math::FltEqual (z, right.z);
+   inline bool operator!= (const Vector &right) const {
+      return !fequal (x, right.x) && !fequal (y, right.y) && !fequal (z, right.z);
    }
 
-   inline const Vector &operator = (const Vector &right)
-   {
+   inline const Vector &operator= (const Vector &right) {
       x = right.x;
       y = right.y;
       z = right.z;
 
       return *this;
    }
-   //
-   // Group: Functions.
-   //
+
 public:
-   //
-   // Function: GetLength
-   //
-   // Gets length (magnitude) of 3D vector.
-   //
-   // Returns:
-   //   Length (magnitude) of the 3D vector.
-   //
-   // See Also:
-   //   <GetLengthSquared>
-   //
-   inline float GetLength (void) const
-   {
-      return Math::A_sqrtf (x * x + y * y + z * z);
+   inline float length (void) const {
+      return sqrtf (x * x + y * y + z * z);
    }
 
-   //
-   // Function: GetLength2D
-   //
-   // Gets length (magnitude) of vector ignoring Z axis.
-   //
-   // Returns:
-   //   2D length (magnitude) of the vector.
-   //
-   // See Also:
-   //   <GetLengthSquared2D>
-   //
-   inline float GetLength2D (void) const
-   {
-      return Math::A_sqrtf (x * x + y * y);
+   inline float length2D (void) const {
+      return sqrtf (x * x + y * y);
    }
 
-   //
-   // Function: GetLengthSquared
-   //
-   // Gets squared length (magnitude) of 3D vector.
-   //
-   // Returns:
-   //   Squared length (magnitude) of the 3D vector.
-   //
-   // See Also:
-   //   <GetLength>
-   //
-   inline float GetLengthSquared (void) const
-   {
+   inline float lengthSq (void) const {
       return x * x + y * y + z * z;
    }
 
-   //
-   // Function: GetLengthSquared2D
-   //
-   // Gets squared length (magnitude) of vector ignoring Z axis.
-   //
-   // Returns:
-   //   2D squared length (magnitude) of the vector.
-   //
-   // See Also:
-   //   <GetLength2D>
-   //
-   inline float GetLengthSquared2D (void) const
-   {
-      return x * x + y * y;
-   }
-
-   //
-   // Function: Get2D
-   //
-   // Gets vector without Z axis.
-   //
-   // Returns:
-   //   2D vector from 3D vector.
-   //
-   inline Vector Get2D (void) const
-   {
+   inline Vector make2D (void) const {
       return Vector (x, y, 0.0f);
    }
 
-   //
-   // Function: Normalize
-   //
-   // Normalizes a vector.
-   //
-   // Returns:
-   //   The previous length of the 3D vector.
-   //
-   inline Vector Normalize (void) const
-   {
-      float length = GetLength () + static_cast <float> (Math::MATH_FLEPSILON);
+   inline Vector normalize (void) const {
+      float len = length () + static_cast <float> (FLEPSILON);
 
-      if (Math::FltZero (length))
-         return Vector (0, 0, 1.0f);
-
-      length = 1.0f / length;
-
-      return Vector (x * length, y * length, z * length);
+      if (fzero (len)) {
+         return Vector (0.0f, 0.0f, 1.0f);
+      }
+      len = 1.0f / len;
+      return Vector (x * len, y * len, z * len);
    }
 
-   //
-   // Function: Normalize
-   //
-   // Normalizes a 2D vector.
-   //
-   // Returns:
-   //   The previous length of the 2D vector.
-   //
-   inline Vector Normalize2D (void) const
-   {
-      float length = GetLength2D () + static_cast <float> (Math::MATH_FLEPSILON);
+   inline Vector normalize2D (void) const {
+      float len = length2D () + static_cast <float> (FLEPSILON);
 
-      if (Math::FltZero (length))
-         return Vector (0, 1.0, 0);
-
-      length = 1.0f / length;
-
-      return Vector (x * length, y * length, 0.0f);
+      if (fzero (len)) {
+         return Vector (0.0f, 1.0f, 0.0f);
+      }
+      len = 1.0f / len;
+      return Vector (x * len, y * len, 0.0f);
    }
 
-   //
-   // Function: IsZero
-   //
-   // Checks whether vector is null.
-   //
-   // Returns:
-   //   True if this vector is (0.0f, 0.0f, 0.0f) within tolerance, false otherwise.
-   //
-   inline bool IsZero (void) const
-   {
-      return Math::FltZero (x) && Math::FltZero (y) && Math::FltZero (z);
+   inline bool empty (void) const {
+      return fzero (x) && fzero (y) && fzero (z);
    }
 
-   //
-   // Function: GetNull
-   //
-   // Gets a nulled vector.
-   //
-   // Returns:
-   //   Nulled vector.
-   //
-   inline static const Vector &GetZero (void)
-   {
+   inline static const Vector &null (void) {
       static const Vector s_zero = Vector (0.0f, 0.0f, 0.0f);
       return s_zero;
    }
 
-   inline void Zero (void)
-   {
-      x = 0.0f;
-      y = 0.0f;
-      z = 0.0f;
+   inline void nullify (void) {
+      x = y = z = 0.0f;
    }
 
-   //
-   // Function: ClampAngles
-   //
-   // Clamps the angles (ignore Z component).
-   //
-   // Returns:
-   //   3D vector with clamped angles (ignore Z component).
-   //
-   inline Vector ClampAngles (void)
-   {
-      x = Math::AngleNormalize (x);
-      y = Math::AngleNormalize (y);
+   inline Vector clampAngles (void) {
+      x = angleNorm (x);
+      y = angleNorm (y);
       z = 0.0f;
 
       return *this;
    }
 
-   //
-   // Function: ToPitch
-   //
-   // Converts a spatial location determined by the vector passed into an absolute X angle (pitch) from the origin of the world.
-   //
-   // Returns:
-   //   Pitch angle.
-   //
-   inline float ToPitch (void) const
-   {
-      if (Math::FltZero (x) && Math::FltZero (y))
+   inline float toPitch (void) const {
+      if (fzero (x) && fzero (y)) {
          return 0.0f;
-
-      return Math::RadianToDegree (atan2f (z, GetLength2D ()));
+      }
+      return rad2deg (atan2f (z, length2D ()));
    }
 
-   //
-   // Function: ToYaw
-   //
-   // Converts a spatial location determined by the vector passed into an absolute Y angle (yaw) from the origin of the world.
-   //
-   // Returns:
-   //   Yaw angle.
-   //
-   inline float ToYaw (void) const
-   {
-      if (Math::FltZero (x) && Math::FltZero (y))
+   inline float toYaw (void) const {
+      if (fzero (x) && fzero (y)) {
          return 0.0f;
-
-      return Math::RadianToDegree (atan2f (y, x));
+      }
+      return rad2deg (atan2f (y, x));
    }
 
-   //
-   // Function: ToAngles
-   //
-   // Convert a spatial location determined by the vector passed in into constant absolute angles from the origin of the world.
-   //
-   // Returns:
-   //   Converted from vector, constant angles.
-   //
-   inline Vector ToAngles (void) const
-   {
-      // is the input vector absolutely vertical?
-      if (Math::FltZero (x) && Math::FltZero (y))
+   inline Vector toAngles (void) const {
+      if (fzero (x) && fzero (y)) {
          return Vector (z > 0.0f ? 90.0f : 270.0f, 0.0, 0.0f);
-
-      // else it's another sort of vector compute individually the pitch and yaw corresponding to this vector.
-      return Vector (Math::RadianToDegree (atan2f (z, GetLength2D ())), Math::RadianToDegree (atan2f (y, x)), 0.0f);
+      }
+      return Vector (rad2deg (atan2f (z, length2D ())), rad2deg (atan2f (y, x)), 0.0f);
    }
 
-   //
-   // Function: BuildVectors
-   // 
-   //  Builds a 3D referential from a view angle, that is to say, the relative "forward", "right" and "upward" direction 
-   //  that a player would have if he were facing this view angle. World angles are stored in Vector structs too, the 
-   //  "x" component corresponding to the X angle (horizontal angle), and the "y" component corresponding to the Y angle 
-   //  (vertical angle).
-   //
-   // Parameters:
-   //   forward - Forward referential vector.
-   //   right - Right referential vector.
-   //   upward - Upward referential vector.
-   //
-   inline void BuildVectors (Vector *forward, Vector *right, Vector *upward) const
-   {
-      float sinePitch = 0.0f, cosinePitch = 0.0f, sineYaw = 0.0f, cosineYaw = 0.0f, sineRoll = 0.0f, cosineRoll = 0.0f;
+   inline void makeVectors (Vector *forward, Vector *right, Vector *upward) const {
+      enum { pitch, yaw, roll, unused, max };
 
-      Math::SineCosine (Math::DegreeToRadian (x), &sinePitch, &cosinePitch); // compute the sine and cosine of the pitch component
-      Math::SineCosine (Math::DegreeToRadian (y), &sineYaw, &cosineYaw); // compute the sine and cosine of the yaw component
-      Math::SineCosine (Math::DegreeToRadian (z), &sineRoll, &cosineRoll); // compute the sine and cosine of the roll component
+      float sines[max] = { 0.0f, 0.0f, 0.0f, 0.0f };
+      float cosines[max] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-      if (forward != nullptr)
-      {
-         forward->x = cosinePitch * cosineYaw;
-         forward->y = cosinePitch * sineYaw;
-         forward->z = -sinePitch;
+      // compute the sine and cosine compontents
+      sincosf (deg2rad (x), deg2rad (y), deg2rad (y), sines, cosines);
+
+      if (forward) {
+         forward->x = cosines[pitch] * cosines[yaw];
+         forward->y = cosines[pitch] * sines[yaw];
+         forward->z = -sines[pitch];
       }
 
-      if (right != nullptr)
-      {
-         right->x = -sineRoll * sinePitch * cosineYaw + cosineRoll * sineYaw;
-         right->y = -sineRoll * sinePitch * sineYaw - cosineRoll * cosineYaw;
-         right->z = -sineRoll * cosinePitch;
+      if (right) {
+         right->x = -sines[roll] * sines[pitch] * cosines[yaw] + cosines[roll] * sines[yaw];
+         right->y = -sines[roll] * sines[pitch] * sines[yaw] - cosines[roll] * cosines[yaw];
+         right->z = -sines[roll] * cosines[pitch];
       }
 
-      if (upward != nullptr)
-      {
-         upward->x = cosineRoll * sinePitch * cosineYaw + sineRoll * sineYaw;
-         upward->y = cosineRoll * sinePitch * sineYaw - sineRoll * cosineYaw;
-         upward->z = cosineRoll * cosinePitch;
+      if (upward) {
+         upward->x = cosines[roll] * sines[pitch] * cosines[yaw] + sines[roll] * sines[yaw];
+         upward->y = cosines[roll] * sines[pitch] * sines[yaw] - sines[roll] * cosines[yaw];
+         upward->z = cosines[roll] * cosines[pitch];
       }
    }
 };
 
-//
-// Class: List
-//  Simple linked list container.
-//
-template <typename T> class List
-{
-public:
-   template <typename R> class Node
-   {
-   public:
-      Node <R> *m_next;
-      Node <R> *m_prev;
-      T *m_data;
-
-   public:
-      Node (void)
-      {
-         m_next = nullptr;
-         m_prev = nullptr;
-         m_data = nullptr;
-      }
-   };
-
+class Library {
 private:
-   Node <T> *m_first;
-   Node <T> *m_last;
-   int m_count;
+   void *m_ptr;
 
-//
-// Group: (Con/De)structors
 public:
-   List (void)
-   {
-      Destory ();
-   }
-
-   virtual ~List (void) { };
-
-//
-// Group: Functions
-//
-public:
-
-   //
-   // Function: Destory
-   //  Resets list to empty state by abandoning contents.
-   //
-   void Destory (void)
-   {
-      m_first = nullptr;
-      m_last = nullptr;
-      m_count = 0;
-   }
-
-   //
-   // Function: GetSize
-   //  Gets the number of elements in linked list.
-   //
-   // Returns:
-   //  Number of elements in list.
-   //
-   inline int GetSize (void) const
-   {
-      return m_count;
-   }
-
-   //
-   // Function: GetFirst
-   //  Gets the first list entry. nullptr in case list is empty.
-   //
-   // Returns:
-   //  First list entry.
-   //
-   inline T *GetFirst (void) const
-   {
-      if (m_first != nullptr)
-         return m_first->m_data;
-
-      return nullptr;
-   };
-
-   //
-   // Function: GetLast
-   //  Gets the last list entry. nullptr in case list is empty.
-   //
-   // Returns:
-   //  Last list entry.
-   //
-   inline T *GetLast (void) const
-   {
-      if (m_last != nullptr)
-        return m_last->m_data;
-
-      return nullptr;
-   };
-
-   //
-   // Function: GetNext
-   //  Gets the next element from linked list.
-   //
-   // Parameters:
-   //  current - Current node.
-   //
-   // Returns:
-   //  Node data.
-   //
-   T *GetNext (T *current)
-   {
-      if (current == nullptr)
-         return GetFirst ();
-
-      Node <T> *next = FindNode (current)->m_next;
-
-      if (next != nullptr)
-         return next->m_data;
-
-      return nullptr;
-   }
-
-   //
-   // Function: GetPrev
-   //  Gets the previous element from linked list.
-   //
-   // Parameters:
-   //  current - Current node.
-   //
-   // Returns:
-   //  Node data.
-   //
-   T *GetPrev (T *current)
-   {
-      if (current == nullptr)
-         return GetLast ();
-
-      Node <T> *prev = FindNode (current)->m_prev;
-
-      if (prev != nullptr)
-         return prev->m_prev;
-
-      return nullptr;
-   }
-
-   //
-   // Function: Link
-   //  Adds item to linked list.
-   //
-   // Parameters:
-   //  entry - Node that should be inserted in linked list.
-   //  next - Next node to be inserted into linked list.
-   //
-   // Returns:
-   //  Item if operation success, nullptr otherwise.
-   //
-   T *Link (T *entry, T *next = nullptr)
-   {
-      Node <T> *prevNode = nullptr;
-      Node <T> *nextNode = FindNode (next);
-      Node <T> *newNode = new Node <T> ();
-
-      newNode->m_data = entry;
-
-      if (nextNode  == nullptr)
-      {
-         prevNode = m_last;
-         m_last = newNode;
-      }
-      else
-      {
-         prevNode = nextNode->m_prev;
-         nextNode->m_prev = newNode;
-      }
-
-      if (prevNode == nullptr)
-         m_first = newNode;
-      else
-         prevNode->m_next = newNode;
-
-      newNode->m_next = nextNode;
-      newNode->m_prev = prevNode;
-
-      m_count++;
-
-      return entry;
-   }
-
-   //
-   // Function: Link
-   //  Adds item to linked list (as reference).
-   //
-   // Parameters:
-   //  entry - Node that should be inserted in linked list.
-   //  next - Next node to be inserted into linked list.
-   //
-   // Returns:
-   //  Item if operation success, nullptr otherwise.
-   //
-   T *Link (T &entry, T *next = nullptr)
-   {
-      T *newEntry = new T ();
-      *newEntry = entry;
-
-      return Link (newEntry, next);
-   }
-
-   //
-   // Function: Unlink
-   //  Removes element from linked list.
-   //
-   // Parameters:
-   //  entry - Element that should be moved out of list.  
-   //
-   void Unlink (T *entry)
-   {
-      Node <T> *entryNode = FindNode (entry);
-
-      if (entryNode == nullptr)
-         return;
-
-      if (entryNode->m_prev == nullptr)
-         m_first = entryNode->m_next;
-      else
-         entryNode->m_prev->m_next = entryNode->m_next;
-
-      if (entryNode->m_next == nullptr)
-         m_last = entryNode->m_prev;
-      else
-         entryNode->m_next->m_prev = entryNode->m_prev;
-
-      delete entryNode;
-      m_count--;
-   }
-
-   //
-   // Function: Allocate
-   //  Inserts item into linked list, and allocating it automatically.
-   //
-   // Parameters:
-   //  next - Optional next element.
-   //
-   // Returns:
-   //  Item that was inserted.
-   //
-   T *Allocate (T *next = nullptr)
-   {
-      T *entry = new T ();
-
-      return Link (entry, next);
-   }
-
-   //
-   // Function: Destory
-   //  Removes element from list, and destroys it.
-   //
-   // Parameters:
-   //  entry - Entry to perform operation on.
-   //
-   void Destory (T *entry)
-   {
-      Unlink (entry);
-      delete entry;
-   }
-
-   //
-   // Function: RemoveAll
-   //  Removes all elements from list, and destroys them.
-   //
-   void RemoveAll (void)
-   {
-      Node <T> *node = nullptr;
-
-      while ((node = GetIterator (node)) != nullptr)
-      {
-         Node <T> *nodeToKill = node;
-         node = node->m_prev;
-
-         free (nodeToKill->m_data);
-      }
-   }
-
-   //
-   // Function: FindNode
-   //  Find node by it's entry.
-   //
-   // Parameters:
-   //  entry - Entry to search.
-   //
-   // Returns:
-   //  Node pointer.
-   //
-   Node <T> *FindNode (T *entry)
-   {
-      Node <T> *iter = nullptr;
-
-      while ((iter = GetIterator (iter)) != nullptr)
-      {
-         if (iter->m_data == entry)
-            return iter;
-      }
-      return nullptr;
-   }
-
-   //
-   // Function: GetIterator
-   //  Utility node iterator.
-   //
-   // Parameters:
-   //  entry - Previous entry.
-   //
-   // Returns:
-   //  Node pointer.
-   //
-   Node <T> *GetIterator (Node <T> *entry = nullptr)
-   {
-      if (entry == nullptr)
-         return m_first;
-      
-      return entry->m_next;
-   }
-};
-
-//
-// Class: Array
-//  Universal template array container.
-//
-template <typename T> class Array
-{
-private:
-   T *m_elements;
-
-   int m_resizeStep;
-   int m_itemSize;
-   int m_itemCount;
-
-//
-// Group: (Con/De)structors
-//
-public:
-
-   //
-   // Function: Array
-   //  Default array constructor.
-   //
-   // Parameters:
-   //  resizeStep - Array resize step, when new items added, or old deleted.
-   //
-   Array (int resizeStep = 0)
-   {
-      m_elements = nullptr;
-      m_itemSize = 0;
-      m_itemCount = 0;
-      m_resizeStep = resizeStep;
-   }
-
-   //
-   // Function: Array
-   //  Array copying constructor.
-   //
-   // Parameters:
-   //  other - Other array that should be assigned to this one.
-   //
-   Array (const Array <T> &other)
-   {
-      m_elements = nullptr;
-      m_itemSize = 0;
-      m_itemCount = 0;
-      m_resizeStep = 0;
-
-      AssignFrom (other);
-   }
-
-   //
-   // Function: ~Array
-   //  Default array destructor.
-   //
-   virtual ~Array(void)
-   {
-      Destory ();
-   }
-
-//
-// Group: Functions
-//
-public:
-
-   //
-   // Function: Destory
-   //  Destroys array object, and all elements.
-   //
-   void Destory (void)
-   {
-      delete [] m_elements;
-
-      m_elements = nullptr;
-      m_itemSize = 0;
-      m_itemCount = 0;
-   }
-
-   //
-   // Function: SetSize
-   //  Sets the size of the array.
-   //
-   // Parameters:
-   //  newSize - Size to what array should be resized.
-   //  keepData - Keep exiting data, while resizing array or not.
-   //
-   // Returns:
-   //  True if operation succeeded, false otherwise.
-   //
-   bool SetSize (int newSize, bool keepData = true)
-   {
-      if (newSize == 0)
-      {
-         Destory ();
-         return true;
-      }
-
-      int checkSize = 0;
-
-      if (m_resizeStep != 0)
-         checkSize = m_itemCount + m_resizeStep;
-      else
-      {
-         checkSize = m_itemCount / 8;
-
-         if (checkSize < 4)
-            checkSize = 4;
-
-         if (checkSize > 1024)
-            checkSize = 1024;
-
-         checkSize += m_itemCount;
-      }
-
-      if (newSize > checkSize)
-         checkSize = newSize;
-
-      T *buffer = new T[checkSize];
-
-      if (keepData && m_elements != nullptr)
-      {
-         if (checkSize < m_itemCount)
-            m_itemCount = checkSize;
-
-         for (int i = 0; i < m_itemCount; i++)
-            buffer[i] = m_elements[i];
-      }
-      delete [] m_elements;
-
-      m_elements = buffer;
-      m_itemSize = checkSize;
-
-      return true;
-   }
-
-   //
-   // Function: GetSize
-   //  Gets allocated size of array.
-   //
-   // Returns:
-   //  Number of allocated items.
-   //
-   int GetSize (void) const
-   {
-      return m_itemSize;
-   }
-
-   //
-   // Function: GetElementNumber
-   //  Gets real number currently in array.
-   //
-   // Returns:
-   //  Number of elements.
-   //
-   int GetElementNumber (void) const
-   {
-      return m_itemCount;
-   }
-
-   //
-   // Function: SetEnlargeStep
-   //  Sets step, which used while resizing array data.
-   //
-   // Parameters:
-   //  resizeStep - Step that should be set.
-   //  
-   void SetEnlargeStep (int resizeStep = 0)
-   {
-      m_resizeStep = resizeStep;
-   }
-
-   //
-   // Function: GetEnlargeStep
-   //  Gets the current enlarge step.
-   //
-   // Returns:
-   //  Current resize step.
-   //
-   int GetEnlargeStep (void)
-   {
-      return m_resizeStep;
-   }
-
-   //
-   // Function: SetAt
-   //  Sets element data, at specified index.
-   //
-   // Parameters:
-   //  index - Index where object should be assigned.
-   //  object - Object that should be assigned.
-   //  enlarge - Checks whether array must be resized in case, allocated size + enlarge step is exceeded.
-   //
-   // Returns:
-   //  True if operation succeeded, false otherwise.
-   //
-   bool SetAt (int index, T object, bool enlarge = true)
-   {
-      if (index >= m_itemSize)
-      {
-         if (!enlarge || !SetSize (index + 1))
-            return false;
-      }
-      m_elements[index] = object;
-
-      if (index >= m_itemCount)
-         m_itemCount = index + 1;
-
-      return true;
-   }
-
-   //
-   // Function: GetAt
-   //  Gets element from specified index
-   //
-   // Parameters:
-   //  index - Element index to retrieve.
-   //
-   // Returns:
-   //  Element object.
-   //
-   T &GetAt (int index)
-   {
-      return m_elements[index];
-   }
-
-   //
-   // Function: GetAt
-   //  Gets element at specified index, and store it in reference object.
-   //
-   // Parameters:
-   //  index - Element index to retrieve.
-   //  object - Holder for element reference.
-   //
-   // Returns:
-   //  True if operation succeeded, false otherwise.
-   //
-   bool GetAt (int index, T &object)
-   {
-      if (index >= m_itemCount)
-         return false;
-
-      object = m_elements[index];
-      return true;
-   }
-
-   //
-   // Function: InsertAt
-   //  Inserts new element at specified index.
-   //
-   // Parameters:
-   //  index - Index where element should be inserted.
-   //  object - Object that should be inserted.
-   //  enlarge - Checks whether array must be resized in case, allocated size + enlarge step is exceeded.
-   //
-   // Returns:
-   //  True if operation succeeded, false otherwise.
-   //
-   bool InsertAt (int index, T object, bool enlarge = true)
-   {
-      return InsertAt (index, &object, 1, enlarge);
-   }
-
-   //
-   // Function: InsertAt
-   //  Inserts number of element at specified index.
-   //
-   // Parameters:
-   //  index - Index where element should be inserted.
-   //  objects - Pointer to object list.
-   //  count - Number of element to insert.
-   //  enlarge - Checks whether array must be resized in case, allocated size + enlarge step is exceeded.
-   //
-   // Returns:
-   //  True if operation succeeded, false otherwise.
-   //
-   bool InsertAt (int index, T *objects, int count = 1, bool enlarge = true)
-   {
-      if (objects == nullptr || count < 1)
-         return false;
-
-      int newSize = 0;
-
-      if (m_itemCount > index)
-         newSize = m_itemCount + count;
-      else
-         newSize = index + count;
-
-      if (newSize >= m_itemSize)
-      {
-         if (!enlarge || !SetSize (newSize))
-            return false;
-      }
-
-      if (index >= m_itemCount)
-      {
-         for (int i = 0; i < count; i++)
-            m_elements[i + index] = objects[i];
-
-         m_itemCount = newSize;
-      }
-      else
-      {
-         int i = 0;
-
-         for (i = m_itemCount; i > index; i--)
-            m_elements[i + count - 1] = m_elements[i - 1];
-
-         for (i = 0; i < count; i++)
-            m_elements[i + index] = objects[i];
-
-         m_itemCount += count;
-      }
-      return true;
-   }
-
-   //
-   // Function: InsertAt
-   //  Inserts other array reference into the our array.
-   //
-   // Parameters:
-   //  index - Index where element should be inserted.
-   //  objects - Pointer to object list.
-   //  count - Number of element to insert.
-   //  enlarge - Checks whether array must be resized in case, allocated size + enlarge step is exceeded.
-   //
-   // Returns:
-   //  True if operation succeeded, false otherwise.
-   //
-   bool InsertAt (int index, Array <T> &other, bool enlarge = true)
-   {
-      if (&other == this)
-         return false;
-
-      return InsertAt (index, other.m_elements, other.m_itemCount, enlarge);
-   }
-
-   //
-   // Function: RemoveAt
-   //  Removes elements from specified index.
-   //
-   // Parameters:
-   //  index - Index, where element should be removed.
-   //  count - Number of elements to remove.
-   //
-   // Returns:
-   //  True if operation succeeded, false otherwise.
-   //
-   bool RemoveAt (int index, int count = 1)
-   {
-      if (index + count > m_itemCount)
-         return false;
-
-      if (count < 1)
-         return true;
-
-      m_itemCount -= count;
-
-      for (int i = index; i < m_itemCount; i++)
-         m_elements[i] = m_elements[i + count];
-
-      return true;
-   }
-
-   //
-   // Function: Push
-   //  Appends element to the end of array.
-   //
-   // Parameters:
-   //  object - Object to append.
-   //  enlarge - Checks whether array must be resized in case, allocated size + enlarge step is exceeded.
-   //
-   // Returns:
-   //  True if operation succeeded, false otherwise.
-   //
-   bool Push (T object, bool enlarge = true)
-   {
-      return InsertAt (m_itemCount, &object, 1, enlarge);
-   }
-
-   //
-   // Function: Push
-   //  Appends number of elements to the end of array.
-   //
-   // Parameters:
-   //  objects - Pointer to object list.
-   //  count - Number of element to insert.
-   //  enlarge - Checks whether array must be resized in case, allocated size + enlarge step is exceeded.
-   //
-   // Returns:
-   //  True if operation succeeded, false otherwise.
-   //
-   bool Push (T *objects, int count = 1, bool enlarge = true)
-   {
-      return InsertAt (m_itemCount, objects, count, enlarge);
-   }
-
-   //
-   // Function: Push
-   //  Inserts other array reference into the our array.
-   //
-   // Parameters:
-   //  objects - Pointer to object list.
-   //  count - Number of element to insert.
-   //  enlarge - Checks whether array must be resized in case, allocated size + enlarge step is exceeded.
-   //
-   // Returns:
-   //  True if operation succeeded, false otherwise.
-   //
-   bool Push (Array <T> &other, bool enlarge = true)
-   {
-      if (&other == this)
-         return false;
-
-      return InsertAt (m_itemCount, other.m_elements, other.m_itemCount, enlarge);
-   }
-
-   //
-   // Function: GetData
-   //  Gets the pointer to all element in array.
-   //
-   // Returns:
-   //  Pointer to object list.
-   //
-   T *GetData (void)
-   {
-      return m_elements;
-   }
-
-   //
-   // Function: RemoveAll
-   //  Resets array, and removes all elements out of it.
-   // 
-   void RemoveAll (void)
-   {
-      m_itemCount = 0;
-      SetSize (m_itemCount);
-   }
-
-   //
-   // Function: IsEmpty
-   //  Checks whether element is empty.
-   //
-   // Returns:
-   //  True if element is empty, false otherwise.
-   //
-   inline bool IsEmpty (void)
-   {
-      return m_itemCount <= 0;
-   }
-
-   //
-   // Function: FreeExtra
-   //  Frees unused space.
-   //
-   void FreeSpace (bool destroyIfEmpty = true)
-   {
-      if (m_itemCount == 0)
-      {
-         if (destroyIfEmpty)
-            Destory ();
-
+   Library (const char *filename) : m_ptr (nullptr) {
+      if (!filename) {
          return;
       }
+      load (filename);
+   }
 
-      T *buffer = new T[m_itemCount];
-
-      if (m_elements != nullptr)
-      {
-         for (int i = 0; i < m_itemCount; i++)
-            buffer[i] = m_elements[i];
+   virtual ~Library (void) {
+      if (!isValid ()) {
+         return;
       }
-      delete [] m_elements;
-
-      m_elements = buffer;
-      m_itemSize = m_itemCount;
+#ifdef PLATFORM_WIN32
+      FreeLibrary ((HMODULE)m_ptr);
+#else
+      dlclose (m_ptr);
+#endif
    }
 
-   //
-   // Function: Pop
-   //  Pops element from array.
-   //
-   // Returns:
-   //  Object popped from the end of array.
-   //
-   T Pop (void)
-   {
-      T element = m_elements[m_itemCount - 1];
-      RemoveAt (m_itemCount - 1);
-
-      return element;
+public:
+   inline void *load (const char *filename) {
+#ifdef PLATFORM_WIN32
+      m_ptr = LoadLibrary (filename);
+#else
+      m_ptr = dlopen (filename, RTLD_NOW);
+#endif
+      return m_ptr;
    }
 
-   T &Last (void)
-   {
-      return m_elements[m_itemCount - 1];
+   template <typename R> R resolve (const char *function) {
+      if (!isValid ()) {
+         return nullptr;
+      }
+      return (R)
+#ifdef PLATFORM_WIN32
+         GetProcAddress (static_cast <HMODULE> (m_ptr), function);
+#else
+         dlsym (m_ptr, function);
+#endif
    }
 
-   bool GetLast (T &item)
-   {
-      if (m_itemCount <= 0)
-         return false;
-
-      item = m_elements[m_itemCount - 1];
-
-      return true;
+   template <typename R> R handle (void) {
+      return static_cast <R> (m_ptr);
    }
 
-   //
-   // Function: AssignFrom
-   //  Reassigns current array with specified one.
-   //
-   // Parameters:
-   //  other - Other array that should be assigned.
-   //
-   // Returns:
-   //  True if operation succeeded, false otherwise.
-   //
-   bool AssignFrom (const Array <T> &other)
-   {
-      if (&other == this)
-         return true;
-
-      if (!SetSize (other.m_itemCount, false))
-         return false;
-
-      for (int i = 0; i < other.m_itemCount; i++)
-         m_elements[i] = other.m_elements[i];
-
-      m_itemCount = other.m_itemCount;
-      m_resizeStep = other.m_resizeStep;
-
-      return true;
-   }
-
-   //
-   // Function: GetRandomElement
-   //  Gets the random element from the array.
-   //
-   // Returns:
-   //  Random element reference.
-   //
-   T &GetRandomElement (void) const
-   {
-      extern class RandomSequenceOfUnique Random;
-
-      return m_elements[Random.Int (0, m_itemCount - 1)];
-   }
-
-   Array <T> &operator = (const Array <T> &other)
-   {
-      AssignFrom (other);
-      return *this;
-   }
-
-   T &operator [] (int index)
-   {
-      if (index < m_itemSize && index >= m_itemCount)
-         m_itemCount = index + 1;
-
-      return GetAt (index);
+   inline bool isValid (void) const {
+      return m_ptr != nullptr;
    }
 };
 
-//
-// Class: Map
-//  Represents associative map container.
-//
-template <class K, class V> class Map
-{
+template <typename A, typename B> class Pair final {
 public:
-   struct MapItem
-   {
-      K key;
-      V value;
-   };
+   A first;
+   B second;
+
+public:
+   Pair (A a, B b) : first (a), second (b) {
+   }
+
+public:
+   Pair (void) = default;
+   ~Pair (void) = default;
+};
+
+template <typename T> class Array : private NonCopyable {
+public:
+   static constexpr size_t INVALID_INDEX = static_cast <size_t> (-1);
 
 protected:
-   struct HashItem
-   {
-   public:
-      int m_index;
-      HashItem *m_next;
+   T *m_data;
+   size_t m_capacity;
+   size_t m_length;
 
-   public:
-      HashItem (void) 
-      { 
-         m_next = nullptr;
-         m_index = 0;
+public:
+   Array (void) : m_data (nullptr), m_capacity (0), m_length (0) {
+   }
+
+   Array (Array &&other) noexcept {
+      m_data = other.m_data;
+      m_length = other.m_length;
+      m_capacity = other.m_capacity;
+
+      other.reset ();
+   }
+
+   virtual ~Array (void) {
+      destroy ();
+   }
+
+public:
+   void destroy (void) {
+      delete[] m_data;
+      reset ();
+   }
+
+   void reset (void) {
+      m_data = nullptr;
+      m_capacity = 0;
+      m_length = 0;
+   }
+
+   bool reserve (size_t growSize) {
+      if (m_length + growSize < m_capacity) {
+         return true;
+      }
+      size_t maxSize = max <size_t> (m_capacity + sizeof (T), static_cast <size_t> (16));
+
+      while (m_length + growSize > maxSize) {
+         maxSize *= 2;
       }
 
-      HashItem (int index, HashItem *next) 
-      { 
-         m_index = index;  
-         m_next = next; 
-      }
-   };
-
-   int m_hashSize;
-   HashItem **m_table;
-   Array <MapItem> m_mapTable;
-
-// Group: (Con/De)structors
-public:
-
-   //
-   // Function: Map
-   //  Default constructor for map container.
-   //
-   // Parameters:
-   //  hashSize - Initial hash size.
-   //
-   Map (int hashSize = 36)
-   {
-      m_hashSize = hashSize;
-      m_table = new HashItem *[hashSize];
-
-      for (int i = 0; i < hashSize; i++)
-         m_table[i] = 0;
-   }
-
-   //
-   // Function: ~Map
-   //  Default map container destructor.
-   //
-   // Parameters:
-   //  hashSize - Initial hash size.
-   //
-   virtual ~Map (void)
-   {
-      RemoveAll ();
-      delete [] m_table;
-   }
-
-// Group: Functions
-public:
-
-   //
-   // Function: IsExists
-   //  Checks whether specified element exists in container.
-   //
-   // Parameters:
-   //  keyName - Key that should be looked up.
-   //
-   // Returns:
-   //  True if key exists, false otherwise.
-   //
-   inline bool IsExists (const K &keyName) 
-   { 
-      return GetIndex (keyName, false) >= 0; 
-   }
-
-   //
-   // Function: SetupMap
-   //  Initializes map, if not initialized automatically.
-   //
-   // Parameters:
-   //  hashSize - Initial hash size.
-   //
-   inline void SetupMap (int hashSize)
-   {
-      m_hashSize = hashSize;
-      m_table = new HashItem *[hashSize];
-
-      for (int i = 0; i < hashSize; i++)
-         m_table[i] = 0;
-   }
-
-   //
-   // Function: IsEmpty
-   //  Checks whether map container is currently empty.
-   //
-   // Returns:
-   //  True if no elements exists, false otherwise.
-   //
-   inline bool IsEmpty (void) const 
-   { 
-      return m_mapTable.GetSize () == 0; 
-   }
-
-   //
-   // Function: GetSize
-   //  Retrieves size of the map container.
-   //
-   // Returns:
-   //  Number of elements currently in map container.
-   //
-   inline int GetSize (void) const 
-   { 
-      return m_mapTable.GetSize (); 
-   }
-
-   //
-   // Function: GetKey
-   //  Gets the key object, by it's index.
-   //
-   // Parameters:
-   //  index - Index of key.
-   //
-   // Returns:
-   //  Object containing the key.
-   //
-   inline const K &GetKey (int index) const 
-   { 
-      return m_mapTable[index].key; 
-   }
-
-   //
-   // Function: GetValue
-   //  Gets the constant value object, by it's index.
-   //
-   // Parameters:
-   //  index - Index of value.
-   //
-   // Returns:
-   //  Object containing the value.
-   //
-   inline const V &GetValue (int index) const 
-   {
-      return m_mapTable[index].value; 
-   }
-
-   // Function: GetValue
-   //  Gets the value object, by it's index.
-   //
-   // Parameters:
-   //  index - Index of value.
-   //
-   // Returns:
-   //  Object containing the value.
-   //
-   inline V &GetValue (int index) 
-   { 
-      return m_mapTable[index].value; 
-   }
-
-   //
-   // Function: GetElements
-   //  Gets the all elements of container.
-   //
-   // Returns:
-   //  Array of elements, containing inside container.
-   //
-   // See Also:
-   //  <Array>
-   //
-   inline Array <MapItem> &GetElements (void) 
-   { 
-      return m_mapTable; 
-   }
-
-   V &operator [] (const K &keyName)
-   {
-      int index = GetIndex (keyName, true);
-      return m_mapTable[index].value;
-   }
-
-   //
-   // Function: Find
-   //  Finds element by his key name.
-   //
-   // Parameters:
-   //  keyName - Key name to be searched.
-   //  element - Holder for element object.
-   //
-   // Returns:
-   //  True if element found, false otherwise.
-   //
-   bool Find (const K &keyName, V &element) const
-   {
-      int index = const_cast <Map <K, V> *> (this)->GetIndex (keyName, false);
-
-      if (index < 0)
+      if (maxSize >= INT_MAX / sizeof (T)) {
+         assert (!"Allocation Overflow!");
          return false;
+      }
+      auto buffer = new T[maxSize];
 
-      element = m_mapTable[index].value;
+      if (m_data != nullptr) {
+         if (maxSize < m_length) {
+            m_length = maxSize;
+         }
+         transfer (buffer, m_data, m_length);
+         delete[] m_data;
+      }
+      m_data = move (buffer);
+      m_capacity = move (maxSize);
+
       return true;
    }
 
-   //
-   // Function: Find
-   //  Finds element by his key name.
-   //
-   // Parameters:
-   //  keyName - Key name to be searched.
-   //  elementPtr - Holder for element pointer.
-   //
-   // Returns:
-   //  True if element found, false otherwise.
-   //
-   bool Find (const K &keyName, V *&elementPtr) const
-   {
-      int index = const_cast <Map <K, V> *> (this)->GetIndex (keyName, false);
+   bool resize (size_t newSize) {
+      bool res = reserve (newSize);
 
-      if (index < 0)
-         return false;
+      while (m_length < newSize) {
+         push (T ());
+      }
+      return res;
+   }
 
-      elementPtr = const_cast <V *> (&m_mapTable[index].value);
+   inline size_t length (void) const {
+      return m_length;
+   }
+
+   inline size_t capacity (void) const {
+      return m_capacity;
+   }
+
+   bool set (size_t index, T object) {
+      if (index >= m_capacity) {
+         if (!reserve (index + 2)) {
+            return false;
+         }
+      }
+      m_data[index] = forward <T> (object);
+
+      if (index >= m_length) {
+         m_length = index + 1;
+      }
       return true;
    }
 
-   //
-   // Function: Remove
-   //  Removes element from container.
-   //
-   // Parameters:
-   //  keyName - Key name of element, that should be removed.
-   //
-   // Returns:
-   //  True if key was removed successfully, false otherwise.
-   //
-   bool Remove (const K &keyName)
-   {
-      int hashId = Hash <K> (keyName) % m_hashSize;
-      HashItem *hashItem = m_table[hashId], *nextHash = 0;
-
-      while (hashItem != nullptr)
-      {
-         if (m_mapTable[hashItem->m_index].key == keyName)
-         {
-            if (nextHash == 0)
-               m_table[hashId] = hashItem->m_next;
-            else
-               nextHash->m_next = hashItem->m_next;
-
-            m_mapTable.RemoveAt (hashItem->m_index);
-            delete hashItem;
-
-            return true;
-         }
-         nextHash = hashItem;
-         hashItem = hashItem->m_next;
-      }
-      return false;
+   inline T &at (size_t index) {
+      return m_data[index];
    }
 
-   //
-   // Function: RemoveAll
-   //  Removes all elements from container.
-   //
-   void RemoveAll (void)
-   {
-      for (int i = m_hashSize; --i >= 0;)
-      {
-         HashItem *ptr = m_table[i];
-
-         while (ptr != nullptr)
-         {
-            HashItem *m_next = ptr->m_next;
-
-            delete ptr;
-            ptr = m_next;
-         }
-         m_table[i] = 0;
+   bool at (size_t index, T &object) {
+      if (index >= m_length) {
+         return false;
       }
-      m_mapTable.RemoveAll ();
+      object = m_data[index];
+      return true;
    }
 
-   //
-   // Function: GetIndex
-   //  Gets index of element.
-   //
-   // Parameters:
-   //  keyName - Key of element.
-   //  create - If true and no element found by a keyName, create new element.
-   //
-   // Returns:
-   //  Either found index, created index, or -1 in case of error.
-   //
-   int GetIndex (const K &keyName, bool create)
-   {
-      int hashId = Hash <K> (keyName) % m_hashSize;
+   bool insert (size_t index, T object) {
+      return insert (index, &object, 1);
+   }
 
-      for (HashItem *ptr = m_table[hashId]; ptr != nullptr; ptr = ptr->m_next)
-      {
-         if (m_mapTable[ptr->m_index].key == keyName)
-            return ptr->m_index;
+   bool insert (size_t index, T *objects, size_t count = 1) {
+      if (!objects || !count) {
+         return false;
+      }
+      size_t newSize = (m_length > index ? m_length : index) + count;
+
+      if (newSize >= m_capacity && !reserve (newSize)) {
+         return false;
       }
 
-      if (create)
-      {
-         int item = m_mapTable.GetSize ();
-         m_mapTable.SetSize (static_cast <int> (item + 1));
-
-         m_table[hashId] = new HashItem (item, m_table[hashId]);
-         m_mapTable[item].key = keyName;
-
-         return item;
+      if (index >= m_length) {
+         for (size_t i = 0; i < count; i++) {
+            m_data[i + index] = forward <T> (objects[i]);
+         }
+         m_length = newSize;
       }
-      return -1;
+      else {
+         size_t i = 0;
+
+         for (i = m_length; i > index; i--) {
+            m_data[i + count - 1] = move (m_data[i - 1]);
+         }
+         for (i = 0; i < count; i++) {
+            m_data[i + index] = forward <T> (objects[i]);
+         }
+         m_length += count;
+      }
+      return true;
+   }
+
+   bool insert (size_t at, Array &other) {
+      if (&other == this) {
+         return false;
+      }
+      return insert (at, other.m_data, other.m_length);
+   }
+
+   bool erase (size_t index, size_t count) {
+      if (index + count > m_capacity) {
+         return false;
+      }
+      m_length -= count;
+
+      for (size_t i = index; i < m_length; i++) {
+         m_data[i] = move (m_data[i + count]);
+      }
+      return true;
+   }
+
+   bool shift (void) {
+      return erase (0, 1);
+   }
+
+   bool unshift (T object) {
+      return insert (0, &object);
+   }
+
+   bool erase (T &item) {
+      return erase (index (item), 1);
+   }
+
+   bool push (T object) {
+      return insert (m_length, &object);
+   }
+
+   bool push (T *objects, size_t count) {
+      return insert (m_length, objects, count);
+   }
+
+   bool extend (Array &other) {
+      if (&other == this) {
+         return false;
+      }
+      return insert (m_length, other.m_data, other.m_length);
+   }
+
+   void clear (void) {
+      m_length = 0;
+   }
+
+   inline bool empty (void) const {
+      return m_length <= 0;
+   }
+
+   void shrink (bool destroyEmpty = true) {
+      if (!m_length) {
+         if (destroyEmpty) {
+            destroy ();
+         }
+         return;
+      }
+      T *buffer = new T[m_length];
+
+      if (m_data != nullptr) {
+         for (size_t i = 0; i < m_length; i++) {
+            transfer (buffer, m_data);
+         }
+         delete[] m_data;
+      }
+      m_data = move (buffer);
+      m_capacity = move (m_length);
+   }
+
+   size_t index (T &item) {
+      return &item - &m_data[0];
+   }
+
+   T pop (void) {
+      T item = move (m_data[m_length - 1]);
+      erase (m_length - 1, 1);
+
+      return item;
+   }
+
+   const T &back (void) const {
+      return m_data[m_length - 1];
+   }
+
+   T &back (void) {
+      return m_data[m_length - 1];
+   }
+
+   bool last (T &item) {
+      if (m_length <= 0) {
+         return false;
+      }
+      item = m_data[m_length - 1];
+      return true;
+   }
+
+   bool assign (const Array &other) {
+      if (&other == this) {
+         return true;
+      }
+      if (!reserve (other.m_length)) {
+         return false;
+      }
+      transfer (m_data, other.m_data, other.m_length);
+      m_length = other.m_length;
+
+      return true;
+   }
+
+   void reverse (void) {
+      for (size_t i = 0; i < m_length / 2; i++) {
+         swap (m_data[i], m_data[m_length - 1 - i]);
+      }
+   }
+
+   T &random (void) const {
+      return m_data[RandomSequence::ref ().getInt (0, static_cast <int> (m_length - 1))];
+   }
+
+   Array &operator = (Array &&other) noexcept {
+      destroy ();
+
+      m_data = other.m_data;
+      m_length = other.m_length;
+      m_capacity = other.m_capacity;
+
+      other.reset ();
+      return *this;
+   }
+
+   T &operator [] (size_t index) {
+      return at (index);
+   }
+
+   const T &operator [] (size_t index) const {
+      return at (index);
+   }
+
+   T *begin (void) {
+      return m_data;
+   }
+
+   T *begin (void) const {
+      return m_data;
+   }
+
+   T *end (void) {
+      return m_data + m_length;
+   }
+
+   T *end (void) const {
+      return m_data + m_length;
    }
 };
 
-//
-// Class: String
-//  Reference counted string class.
-//
-class String
-{
+template <typename A, typename B, size_t Capacity = 0> class BinaryHeap final : private Array <Pair <A, B>> {
 private:
-   char *m_bufferPtr;
-   int m_allocatedSize;
-   int m_stringLength;
+   using type = Pair <A, B>;
+   using base = Array <type>;
 
-//
-// Group: Private functions
-//
+   using base::m_data;
+   using base::m_length;
+
+public:
+   BinaryHeap (void) {
+      base::reserve (Capacity);
+   }
+   BinaryHeap (BinaryHeap &&other) noexcept : base (move (other)) { }
+
+public:
+   void push (const A &first, const B &second) {
+      push ({ first, second });
+   }
+
+   void push (type &&pair) {
+      base::push (forward <type> (pair));
+
+      if (length () > 1) {
+         siftUp ();
+      }
+   }
+
+   A pop (void) {
+      assert (!empty ());
+
+      if (length () == 1) {
+         return base::pop ().first;
+      }
+      type value = move (m_data[0]);
+
+      m_data[0] = move (base::back ());
+      base::pop ();
+
+      siftDown ();
+      return value.first;
+   }
+
+   inline bool empty (void) const {
+      return !length ();
+   }
+
+   inline size_t length (void) const {
+      return m_length;
+   }
+
+   inline void clear (void) {
+      base::clear ();
+   }
+
+   void siftUp (void) {
+      size_t child = m_length - 1;
+
+      while (child != 0) {
+         size_t parentIndex = getParent (child);
+
+         if (m_data[parentIndex].second <= m_data[child].second) {
+            break;
+         }
+         swap (m_data[child], m_data[parentIndex]);
+         child = parentIndex;
+      }
+   }
+
+   void siftDown (void) {
+      size_t parent = 0;
+      size_t leftIndex = getLeft (parent);
+
+      auto ref = move (m_data[parent]);
+
+      while (leftIndex < m_length) {
+         size_t rightIndex = getRight (parent);
+
+         if (rightIndex < m_length) {
+            if (m_data[rightIndex].second < m_data[leftIndex].second) {
+               leftIndex = rightIndex;
+            }
+         }
+
+         if (ref.second <= m_data[leftIndex].second) {
+            break;
+         }
+         m_data[parent] = move (m_data[leftIndex]);
+
+         parent = leftIndex;
+         leftIndex = getLeft (parent);
+      }
+      m_data[parent] = move (ref);
+   }
+
+   BinaryHeap &operator = (BinaryHeap &&other) noexcept {
+      base::operator = (move (other));
+      return *this;
+   }
+
 private:
-
-   //
-   // Function: UpdateBufferSize
-   //  Updates the buffer size.
-   //
-   // Parameters:
-   //  size - New size of buffer.
-   //
-   void UpdateBufferSize (int size)
-   {
-      if (size <= m_allocatedSize)
-         return;
-
-      m_allocatedSize = size + 16;
-      char *tempBuffer = new char[size + 1];
-
-      if (m_bufferPtr != nullptr)
-      {
-         strcpy (tempBuffer, m_bufferPtr);
-         tempBuffer[m_stringLength] = 0;
-
-         delete [] m_bufferPtr;
-      }
-      m_bufferPtr = tempBuffer;
-      m_allocatedSize = size;
+   static constexpr size_t getLeft (size_t index) {
+      return index << 1 | 1;
    }
 
-   //
-   // Function: MoveItems
-   //  Moves characters inside buffer pointer.
-   //
-   // Parameters:
-   //  destIndex - Destination index.
-   //  sourceIndex - Source index.
-   //
-   void MoveItems (int destIndex, int sourceIndex)
-   {
-      memmove (m_bufferPtr + destIndex, m_bufferPtr + sourceIndex, sizeof (char) *(m_stringLength - sourceIndex + 1));
+   static constexpr size_t getRight (size_t index) {
+      return ++index << 1;
    }
 
-   //
-   // Function: Initialize
-   //  Initializes string buffer.
-   //
-   // Parameters:
-   //  length - Initial length of string.
-   //
-   void Initialize (int length)
-   {
-      int freeSize = m_allocatedSize - m_stringLength - 1;
-
-      if (length <= freeSize)
-         return;
-
-      int delta = 4;
-
-      if (m_allocatedSize > 64)
-         delta = static_cast <int> (m_allocatedSize * 0.5);
-      else if (m_allocatedSize > 8)
-         delta = 16;
-
-      if (freeSize + delta < length)
-         delta = length - freeSize;
-
-      UpdateBufferSize (m_allocatedSize + delta);
+   static constexpr size_t getParent (size_t index) {
+      return --index >> 1;
    }
+};
 
-   //
-   // Function: CorrectIndex
-   //  Gets the correct string end index.
-   //
-   // Parameters:
-   //  index - Holder for index.
-   //
-   void CorrectIndex (int &index) const
-   {
-      if (index > m_stringLength)
-         index = m_stringLength;
-   }
+class String final : private Array <char> {
+private:
+   using base = Array <char>;
 
-   //
-   // Function: InsertSpace
-   //  Inserts space at specified location, with specified length.
-   //
-   // Parameters:
-   //  index - Location to insert space.
-   //  size - Size of space insert.
-   //
-   void InsertSpace (int &index, int size)
-   {
-      CorrectIndex (index);
-      Initialize (size);
-
-      MoveItems (index + size, index);
-   }
-
-   //
-   // Function: IsTrimChar
-   //  Checks whether input is trimming character.
-   //
-   // Parameters:
-   //  input - Input to check for.
-   //
-   // Returns:
-   //  True if it's a trim char, false otherwise.
-   //
-   bool IsTrimChar (char input)
-   {
-      return input == ' ' || input == '\t' || input == '\n';
-   }
-
-//
-// Group: (Con/De)structors
-//
-public:
-   String (void)
-   {
-      m_bufferPtr = nullptr;
-      m_allocatedSize = 0;
-      m_stringLength = 0;
-   }
-
-   ~String (void)
-   {
-      delete [] m_bufferPtr;
-   }
-
-   String (const char *bufferPtr)
-   {
-      m_bufferPtr = nullptr;
-      m_allocatedSize = 0;
-      m_stringLength = 0;
-
-      Assign (bufferPtr);
-   }
-
-   String (char input)
-   {
-      m_bufferPtr = nullptr;
-      m_allocatedSize = 0;
-      m_stringLength = 0;
-
-      Assign (input);
-   }
-
-   String (const String &inputString)
-   {
-      m_bufferPtr = nullptr;
-      m_allocatedSize = 0;
-      m_stringLength = 0;
-
-      Assign (inputString.GetBuffer ());
-   }
-
-//
-// Group: Functions
-//
-public:
-
-   //
-   // Function: GetBuffer
-   //  Gets the string buffer.
-   //
-   // Returns:
-   //  Pointer to buffer.
-   //
-   const char *GetBuffer (void)
-   {
-      if (m_bufferPtr == nullptr || *m_bufferPtr == 0x0)
-         return "";
-
-      return &m_bufferPtr[0];
-   }
-
-   //
-   // Function: GetBuffer
-   //  Gets the string buffer (constant).
-   //
-   // Returns:
-   //  Pointer to constant buffer.
-   //
-   const char *GetBuffer (void) const
-   {
-      if (m_bufferPtr == nullptr || *m_bufferPtr == 0x0)
-         return "";
-
-      return &m_bufferPtr[0];
-   }
-   
-   //
-   // Function: ToFloat
-   //  Gets the string as float, if possible.
-   //
-   // Returns:
-   //  Float value of string.
-   //
-   float ToFloat (void)
-   {
-      return static_cast <float> (atof (m_bufferPtr));
-   }
-
-   //
-   // Function: ToInt
-   //  Gets the string as integer, if possible.
-   //
-   // Returns:
-   //  Integer value of string.
-   //
-   int ToInt (void) const
-   {
-      return atoi (m_bufferPtr);
-   }
-
-   //
-   // Function: ReleaseBuffer
-   //  Terminates the string with null character.
-   //
-   void ReleaseBuffer (void)
-   {
-      ReleaseBuffer (strlen (m_bufferPtr));
-   }
-
-   //
-   // Function: ReleaseBuffer
-   //  Terminates the string with null character with specified buffer end.
-   //
-   // Parameters:
-   //  newLength - End of buffer.
-   //
-   void ReleaseBuffer (int newLength)
-   {
-      m_bufferPtr[newLength] = 0;
-      m_stringLength = newLength;
-   }
-
-   //
-   // Function: GetBuffer
-   //  Gets the buffer with specified length.
-   //
-   // Parameters:
-   //  minLength - Length to retrieve.
-   //
-   // Returns:
-   //  Pointer to string buffer.
-   //
-   char *GetBuffer (int minLength)
-   {
-      if (minLength >= m_allocatedSize)
-         UpdateBufferSize (minLength + 1);
-
-      return m_bufferPtr;
-   }
-
-   //
-   // Function: GetBufferSetLength
-   //  Gets the buffer with specified length, and terminates string with that length.
-   //
-   // Parameters:
-   //  minLength - Length to retrieve.
-   //
-   // Returns:
-   //  Pointer to string buffer.
-   //
-   char *GetBufferSetLength (int length)
-   {
-      char *buffer = GetBuffer (length);
-
-      m_stringLength = length;
-      m_bufferPtr[length] = 0;
-
-      return buffer;
-   }
-
-   //
-   // Function: Append
-   //  Appends the string to existing buffer.
-   //
-   // Parameters:
-   //  bufferPtr - String buffer to append.
-   //
-   void Append (const char *bufferPtr)
-   {
-      UpdateBufferSize (m_stringLength + strlen (bufferPtr) + 1);
-      strcat (m_bufferPtr, bufferPtr);
-
-      m_stringLength = strlen (m_bufferPtr);
-   }
-
-   //
-   // Function: Append
-   //  Appends the character to existing buffer.
-   //
-   // Parameters:
-   //  input - Character to append.
-   //
-   void Append (const char input)
-   {
-      UpdateBufferSize (m_stringLength + 2);
-
-      m_bufferPtr[m_stringLength] = input;
-      m_bufferPtr[m_stringLength++] = 0;
-   }
-
-   //
-   // Function: Append
-   //  Appends the string to existing buffer.
-   //
-   // Parameters:
-   //  inputString - String buffer to append.
-   //
-   void Append (const String &inputString)
-   {
-      const char *bufferPtr = inputString.GetBuffer ();
-      UpdateBufferSize (m_stringLength + strlen (bufferPtr));
-
-      strcat (m_bufferPtr, bufferPtr);
-      m_stringLength = strlen (m_bufferPtr);
-   }
-
-   //
-   // Function: AppendFormat
-   //  Appends the formatted string to existing buffer.
-   //
-   // Parameters:
-   //  fmt - Formatted, tring buffer to append.
-   //
-   void AppendFormat (const char *fmt, ...)
-   {
-      va_list ap;
-      char buffer[1024];
-
-      va_start (ap, fmt);
-      vsnprintf (buffer, sizeof (buffer) - 1, fmt, ap);
-      va_end (ap);
-
-      Append (buffer);
-   }
-
-   //
-   // Function: Assign
-   //  Assigns the string to existing buffer.
-   //
-   // Parameters:
-   //  inputString - String buffer to assign.
-   //
-   void Assign (const String &inputString)
-   {
-      Assign (inputString.GetBuffer ());
-   }
-
-   //
-   // Function: Assign
-   //  Assigns the character to existing buffer.
-   //
-   // Parameters:
-   //  input - Character to assign.
-   //
-   void Assign (char input)
-   {
-      char psz[2] = {input, 0};
-      Assign (psz);
-   }
-
-   //
-   // Function: Assign
-   //  Assigns the string to existing buffer.
-   //
-   // Parameters:
-   //  bufferPtr - String buffer to assign.
-   //
-   void Assign (const char *bufferPtr)
-   {
-      if (bufferPtr == nullptr)
-      {
-         UpdateBufferSize (1);
-         m_stringLength = 0;
-
-         return;
-      }
-      UpdateBufferSize (strlen (bufferPtr));
-
-      if (m_bufferPtr != nullptr)
-      {
-         strcpy (m_bufferPtr, bufferPtr);
-         m_stringLength = strlen (m_bufferPtr);
-      }
-      else
-         m_stringLength = 0;
-   }
-
-   //
-   // Function: Assign
-   //  Assigns the formatted string to existing buffer.
-   //
-   // Parameters:
-   //  fmt - Formatted string buffer to assign.
-   //
-   void AssignFormat (const char *fmt, ...)
-   {
-      va_list ap;
-      char buffer[1024];
-
-      va_start (ap, fmt);
-      vsnprintf (buffer, sizeof (buffer) - 1, fmt, ap);
-      va_end (ap);
-
-      Assign (buffer);
-   }
-
-   //
-   // Function: Empty
-   //  Empties the string.
-   //
-   void Empty (void)
-   {
-      if (m_bufferPtr != nullptr)
-      {
-         m_bufferPtr[0] = 0;
-         m_stringLength = 0;
-      }
-   }
-
-   //
-   // Function: IsEmpty
-   //  Checks whether string is empty.
-   //
-   // Returns:
-   //  True if string is empty, false otherwise.
-   //
-   bool IsEmpty (void) const
-   {
-      if (m_bufferPtr == nullptr || m_stringLength == 0)
-         return true;
-
+private:
+   bool isTrimChar (char chr, const char *chars) {
+      do {
+         if (*chars == chr) {
+            return true;
+         }
+         chars++;
+      } while (*chars);
       return false;
    }
 
-   //
-   // Function: GetLength
-   //  Gets the string length.
-   //
-   // Returns:
-   //  Length of string, 0 in case of error.
-   //
-   int GetLength (void) const
-   {
-      if (m_bufferPtr == nullptr)
-         return 0;
+public:
 
-      return m_stringLength;
+   String (void) = default;
+   String (String &&other) noexcept : base (move (other)) { }
+   ~String (void) = default;
+
+public:
+   String (const char chr) {
+      assign (chr);
    }
 
-   operator const char * (void) const
-   {
-      return GetBuffer ();
+   String (const char *str, size_t length = 0) {
+      assign (str, length);
    }
 
-   operator char * (void)
-   {
-      return const_cast <char *> (GetBuffer ());
-   }
-
-   operator int (void)
-   {
-      return ToInt ();
-   }
-
-   operator long (void)
-   {
-      return static_cast <long> (ToInt ());
-   }
-
-   operator float (void)
-   {
-      return ToFloat ();
-   }
-
-   operator double (void)
-   {
-      return static_cast <double> (ToFloat ());
-   }
-
-   friend String operator + (const String &s1, const String &s2)
-   {
-      String result (s1); 
-      result += s2; 
-      
-      return result;
-   }
-
-   friend String operator + (const String &holder, char ch)
-   {
-      String result (holder); 
-      result += ch; 
-      
-      return result;
-   }
-
-   friend String operator + (char ch, const String &holder)
-   {
-      String result (ch);
-      result += holder;
-      
-      return result;
-   }
-
-   friend String operator + (const String &holder, const char *str)
-   {
-      String result (holder);
-      result += str;
-      
-      return result;
-   }
-
-   friend String operator + (const char *str, const String &holder)
-   {
-      String result (const_cast <char *> (str));
-      result += holder;
-      
-      return result;
-   }
-
-   friend bool operator == (const String &s1, const String &s2)
-   {
-      return s1.Compare (s2) == 0;
-   }
-
-   friend bool operator < (const String &s1, const String &s2)
-   {
-      return s1.Compare (s2) < 0;
-   }
-
-   friend bool operator > (const String &s1, const String &s2)
-   {
-      return s1.Compare (s2) > 0;
-   }
-
-   friend bool operator == (const char *s1, const String &s2)
-   {
-      return s2.Compare (s1) == 0;
-   }
-
-   friend bool operator == (const String &s1, const char *s2)
-   {
-      return s1.Compare (s2) == 0;
-   }
-
-   friend bool operator != (const String &s1, const String &s2)
-   {
-      return s1.Compare (s2) != 0;
-   }
-
-   friend bool operator != (const char *s1, const String &s2)
-   {
-      return s2.Compare (s1) != 0;
-   }
-
-   friend bool operator != (const String &s1, const char *s2)
-   {
-      return s1.Compare (s2) != 0;
-   }
-
-   String &operator = (const String &inputString)
-   {
-      Assign (inputString);
-      return *this;
-   }
-
-   String &operator = (const char *bufferPtr)
-   {
-      Assign (bufferPtr);
-      return *this;
-   }
-
-   String &operator = (char input)
-   {
-      Assign (input);
-      return *this;
-   }
-
-   String &operator += (const String &inputString)
-   {
-      Append (inputString);
-      return *this;
-   }
-
-   String &operator += (const char *bufferPtr)
-   {
-      Append (bufferPtr);
-      return *this;
-   }
-
-   char operator [] (int index)
-   {
-      if (index > m_stringLength)
-         return -1;
-
-      return m_bufferPtr[index];
-   }
-
-   //
-   // Function: Mid
-   //  Gets the substring by specified bounds.
-   //
-   // Parameters:
-   //  startIndex - Start index to get from.
-   //  count - Number of characters to get.
-   //
-   // Returns:
-   //  Tokenized string.
-   //
-   String Mid (int startIndex, int count = -1)
-   {
-      String result;
-
-      if (startIndex >= m_stringLength || !m_bufferPtr)
-         return result;
-
-      if (count == -1)
-         count = m_stringLength - startIndex;
-      else if (startIndex+count >= m_stringLength)
-         count = m_stringLength - startIndex;
-
-      int i = 0, j = 0;
-      char *holder = new char[m_stringLength+1];
-
-      for (i = startIndex; i < startIndex + count; i++)
-         holder[j++] = m_bufferPtr[i];
-
-      holder[j] = 0;
-      result.Assign (holder);
-
-      delete [] holder;
-      return result;
-   }
-
-   //
-   // Function: Mid
-   //  Gets the substring by specified bounds.
-   //
-   // Parameters:
-   //  startIndex - Start index to get from.
-   //
-   // Returns:
-   //  Tokenized string.
-   //
-   String Mid (int startIndex)
-   {
-      return Mid (startIndex, m_stringLength - startIndex);
-   }
-
-   //
-   // Function: Left
-   //  Gets the string from left side.
-   //
-   // Parameters:
-   //  count - Number of characters to get.
-   //
-   // Returns:
-   //  Tokenized string.
-   //
-   String Left (int count)
-   {
-      return Mid (0, count);
-   }
-
-   //
-   // Function: Right
-   //  Gets the string from right side.
-   //
-   // Parameters:
-   //  count - Number of characters to get.
-   //
-   // Returns:
-   //  Tokenized string.
-   //
-   String Right (int count)
-   {
-      if (count > m_stringLength)
-         count = m_stringLength;
-
-      return Mid (m_stringLength - count, count);
-   }
-
-   //
-   // Function: ToUpper
-   //  Gets the string in upper case.
-   //
-   // Returns:
-   //  Upped sting.
-   //
-   String ToUpper (void)
-   {
-      String result;
-
-      for (int i = 0; i < GetLength (); i++)
-         result += static_cast <char> (toupper (static_cast <int> (m_bufferPtr[i])));
-
-      return result;
-   }
-
-   //
-   // Function: ToUpper
-   //  Gets the string in upper case.
-   //
-   // Returns:
-   //  Lowered sting.
-   //
-   String ToLower (void)
-   {
-      String result;
-
-      for (int i = 0; i < GetLength (); i++)
-         result += static_cast <char> (tolower (static_cast <int> (m_bufferPtr[i])));
-
-      return result;
-   }
-
-   //
-   // Function: ToReverse
-   //  Reverses the string.
-   //
-   // Returns:
-   //  Reversed string.
-   //
-   String ToReverse (void)
-   {
-      char *source = m_bufferPtr + GetLength () - 1;
-      char *dest = m_bufferPtr;
-
-      while (source > dest)
-      {
-         if (*source == *dest)
-         {
-            source--;
-            dest++;
-         }
-         else
-         {
-            char ch = *source;
-
-            *source-- = *dest;
-            *dest++ = ch;
-         }
-      }
-      return m_bufferPtr;
-   }
-
-   //
-   // Function: MakeUpper
-   //  Converts string to upper case.
-   //
-   void MakeUpper (void)
-   {
-      *this = ToUpper ();
-   }
-
-   //
-   // Function: MakeLower
-   //  Converts string to lower case.
-   //
-   void MakeLower (void)
-   {
-      *this = ToLower ();
-   }
-
-   //
-   // Function: MakeReverse
-   //  Converts string into reverse order.
-   //
-   void MakeReverse (void)
-   {
-      *this = ToReverse ();
-   }
-
-   //
-   // Function: Compare
-   //  Compares string with other string.
-   //
-   // Parameters:
-   //  string - String t compare with.
-   //
-   // Returns:
-   //  Zero if they are equal.
-   //
-   int Compare (const String &string) const
-   {
-      return strcmp (m_bufferPtr, string.m_bufferPtr);
-   }
-
-   //
-   // Function: Compare
-   //  Compares string with other string.
-   //
-   // Parameters:
-   //  str - String t compare with.
-   //
-   // Returns:
-   //  Zero if they are equal.
-   //
-   int Compare (const char *str) const
-   {
-      return strcmp (m_bufferPtr, str);
-   }
-
-   //
-   // Function: Collate
-   //  Collate the string.
-   //
-   // Parameters:
-   //  string - String to collate.
-   //
-   // Returns:
-   //  One on success.
-   //
-   int Collate (const String &string) const
-   {
-      return strcoll (m_bufferPtr, string.m_bufferPtr);
-   }
-
-   //
-   // Function: Find
-   //  Find the character.
-   //
-   // Parameters:
-   //  input - Character to search for.
-   //
-   // Returns:
-   //  Index of character.
-   //
-   int Find (char input) const
-   {
-      return Find (input, 0);
-   }
-
-   //
-   // Function: Find
-   //  Find the character.
-   //
-   // Parameters:
-   //  input - Character to search for.
-   //  startIndex - Start index to search from.
-   //
-   // Returns:
-   //  Index of character.
-   //
-   int Find (char input, int startIndex) const
-   {
-      char *str = m_bufferPtr + startIndex;
-
-      for (;;)
-      {
-         if (*str == input)
-            return str - m_bufferPtr;
-
-         if (*str == 0)
-            return -1;
-
-         str++;
-      }
-   }
-
-   //
-   // Function: Find
-   //  Tries to find string.
-   //
-   // Parameters:
-   //  string - String to search for.
-   //
-   // Returns:
-   //  Position of found string.
-   //
-   int Find (const String &string) const
-   {
-      return Find (string, 0);
-   }
-
-   //
-   // Function: Find
-   //  Tries to find string from specified index.
-   //
-   // Parameters:
-   //  string - String to search for.
-   //  startIndex - Index to start search from.
-   //
-   // Returns:
-   //  Position of found string.
-   //
-   int Find (const String &string, int startIndex) const
-   {
-      if (string.m_stringLength == 0)
-         return startIndex;
-
-      for (; startIndex < m_stringLength; startIndex++)
-      {
-         int j;
-
-         for (j = 0; j < string.m_stringLength && startIndex + j < m_stringLength; j++)
-         {
-            if (m_bufferPtr[startIndex + j] != string.m_bufferPtr[j])
-               break;
-         }
-
-         if (j == string.m_stringLength)
-            return startIndex;
-      }
-      return -1;
-   }
-
-   //
-   // Function: ReverseFind
-   //  Tries to find character in reverse order.
-   //
-   // Parameters:
-   //  ch - Character to search for.
-   //
-   // Returns:
-   //  Position of found character.
-   //
-   int ReverseFind (char ch)
-   {
-      if (m_stringLength == 0)
-         return -1;
-
-      char *str = m_bufferPtr + m_stringLength - 1;
-
-      for (;;)
-      {
-         if (*str == ch)
-            return str - m_bufferPtr;
-
-         if (str == m_bufferPtr)
-            return -1;
-         str--;
-      }
-   }
-
-   //
-   // Function: FindOneOf
-   //  Find one of occurrences of string.
-   //
-   // Parameters:
-   //  string - String to search for.
-   //
-   // Returns:
-   //  -1 in case of nothing is found, start of string in buffer otherwise.
-   //
-   int FindOneOf (const String &string)
-   {
-      for (int i = 0; i < m_stringLength; i++)
-      {
-         if (string.Find (m_bufferPtr[i]) >= 0)
-            return i;
-      }
-      return -1;
-   }
-
-   //
-   // Function: TrimRight
-   //  Trims string from right side.
-   //
-   // Returns:
-   //  Trimmed string.
-   //
-   String &TrimRight (void)
-   {
-      char *str = m_bufferPtr;
-      char *last = nullptr;
-
-      while (*str != 0)
-      {
-         if (IsTrimChar (*str))
-         {
-            if (last == nullptr)
-               last = str;
-         }
-         else
-            last = nullptr;
-         str++;
-      }
-
-      if (last != nullptr)
-         Delete (last - m_bufferPtr);
-
-      return *this;
-   }
-
-   //
-   // Function: TrimLeft
-   //  Trims string from left side.
-   //
-   // Returns:
-   //  Trimmed string.
-   //
-   String &TrimLeft (void)
-   {
-      char *str = m_bufferPtr;
-
-      while (IsTrimChar (*str))
-         str++;
-
-      if (str != m_bufferPtr)
-      {
-         int first = int (str - GetBuffer ());
-         char *buffer = GetBuffer (GetLength ());
-
-         str = buffer + first;
-         int length = GetLength () - first;
-
-         memmove (buffer, str, (length + 1) * sizeof (char));
-         ReleaseBuffer (length);
-      }
-      return *this;
-   }
-
-   //
-   // Function: Trim
-   //  Trims string from both sides.
-   //
-   // Returns:
-   //  Trimmed string.
-   //
-   String &Trim (void)
-   {
-      return TrimRight ().TrimLeft ();
-   }
-
-   //
-   // Function: TrimRight
-   //  Trims specified character at the right of the string.
-   //
-   // Parameters:
-   //  ch - Character to trim.
-   //
-   void TrimRight (char ch)
-   {
-      const char *str = m_bufferPtr;
-      const char *last = nullptr;
-
-      while (*str != 0)
-      {
-         if (*str == ch)
-         {
-            if (last == nullptr)
-               last = str;
-         }
-         else
-            last = nullptr;
-
-         str++;
-      }
-      if (last != nullptr)
-      {
-         int i = last - m_bufferPtr;
-         Delete (i, m_stringLength - i);
-      }
-   }
-
-   //
-   // Function: TrimLeft
-   //  Trims specified character at the left of the string.
-   //
-   // Parameters:
-   //  ch - Character to trim.
-   //
-   void TrimLeft (char ch)
-   {
-      char *str = m_bufferPtr;
-
-      while (ch == *str)
-         str++;
-
-      Delete (0, str - m_bufferPtr);
-   }
-
-   //
-   // Function: Insert
-   //  Inserts character at specified index.
-   //
-   // Parameters:
-   //  index - Position to insert string.
-   //  ch - Character to insert.
-   //
-   // Returns:
-   //  New string length.
-   //
-   int Insert (int index, char ch)
-   {
-      InsertSpace (index, 1);
-
-      m_bufferPtr[index] = ch;
-      m_stringLength++;
-
-      return m_stringLength;
-   }
-
-   //
-   // Function: Insert
-   //  Inserts string at specified index.
-   //
-   // Parameters:
-   //  index - Position to insert string.
-   //  string - Text to insert.
-   //
-   // Returns:
-   //  New string length.
-   //
-   int Insert (int index, const String &string)
-   {
-      CorrectIndex (index);
-
-      if (string.m_stringLength == 0)
-         return m_stringLength;
-
-      int numInsertChars = string.m_stringLength;
-      InsertSpace (index, numInsertChars);
-
-      for(int i = 0; i < numInsertChars; i++)
-         m_bufferPtr[index + i] = string[i];
-      m_stringLength += numInsertChars;
-
-      return m_stringLength;
-   }
-
-   //
-   // Function: Replace
-   //  Replaces old characters with new one.
-   //
-   // Parameters:
-   //  oldCharacter - Old character to replace.
-   //  newCharacter - New character to replace with.
-   //
-   // Returns:
-   //  Number of occurrences replaced.
-   //
-   int Replace (char oldCharacter, char newCharacter)
-   {
-      if (oldCharacter == newCharacter)
-         return 0;
-
-      static int num = 0;
-      int position = 0;
-
-      while (position < GetLength ())
-      {
-         position = Find (oldCharacter, position);
-
-         if (position < 0)
-            break;
-
-         m_bufferPtr[position] = newCharacter;
-
-         position++;
-         num++;
-      }
-      return num;
-   }
-
-   //
-   // Function: Replace
-   //  Replaces string in other string.
-   //
-   // Parameters:
-   //  oldString - Old string to replace.
-   //  newString - New string to replace with.
-   //
-   // Returns:
-   //  Number of characters replaced.
-   //
-   int Replace (const String &oldString, const String &newString)
-   {
-      if (oldString.m_stringLength == 0)
-         return 0;
-
-      if (newString.m_stringLength == 0)
-         return 0;
-
-      int oldLength = oldString.m_stringLength;
-      int newLength = newString.m_stringLength;
-
-      int num = 0;
-      int position = 0;
-
-      while (position < m_stringLength)
-      {
-         position = Find (oldString, position);
-
-         if (position < 0)
-            break;
-
-         Delete (position, oldLength);
-         Insert (position, newString);
-
-         position += newLength;
-         num++;
-      }
-      return num;
-   }
-
-   //
-   // Function: Delete
-   //  Deletes characters from string.
-   //
-   // Parameters:
-   //  index - Start of characters remove.
-   //  count - Number of characters to remove.
-   //
-   // Returns:
-   //  New string length.
-   //
-   int Delete (int index, int count = 1)
-   {
-      if (index + count > m_stringLength)
-         count = m_stringLength - index;
-
-      if (count > 0)
-      {
-         MoveItems (index, index + count);
-         m_stringLength -= count;
-      }
-      return m_stringLength;
-   }
-
-   //
-   // Function: TrimQuotes
-   //  Trims trailing quotes.
-   //
-   // Returns:
-   //  Trimmed string.
-   //
-   String TrimQuotes (void)
-   {
-      TrimRight ('\"');
-      TrimRight ('\'');
-
-      TrimLeft ('\"');
-      TrimLeft ('\'');
-
-      return *this;
-   }
-
-   //
-   // Function: Contains
-   //  Checks whether string contains something.
-   //
-   // Parameters:
-   //  what - String to check.
-   //
-   // Returns:
-   //  True if string exists, false otherwise.
-   //
-   bool Contains (const String &what)
-   {
-      return strstr (m_bufferPtr, what.m_bufferPtr) != nullptr;
-   }
-
-   //
-   // Function: Hash
-   //  Gets the string hash.
-   //
-   // Returns:
-   //  Hash of the string.
-   //
-   unsigned long Hash (void)
-   {
-      unsigned long hash = 0;
-      const char *ptr = m_bufferPtr;
-
-      while (*ptr)
-      {
-         hash = (hash << 5) + hash + (*ptr);
-         ptr++;
-      }
-      return hash;
-   }
-
-   //
-   // Function: Split
-   //  Splits string using string separator.
-   //
-   // Parameters:
-   //  separator - Separator to split with.
-   //
-   // Returns:
-   //  Array of slitted strings.
-   //
-   // See Also:
-   //  <Array>
-   //
-   Array <String> Split (const char *separator)
-   {
-      Array <String> holder;
-      int tokenLength, index = 0;
-
-      do
-      {
-         index += strspn (&m_bufferPtr[index], separator);
-         tokenLength = strcspn (&m_bufferPtr[index], separator);
-
-         if (tokenLength > 0)
-            holder.Push (Mid (index, tokenLength));
-
-         index += tokenLength;
-
-      } while (tokenLength > 0);
-
-      return holder;
-   }
-
-   //
-   // Function: Split
-   //  Splits string using character.
-   //
-   // Parameters:
-   //  separator - Separator to split with.
-   //
-   // Returns:
-   //  Array of slitted strings.
-   //
-   // See Also:
-   //  <Array>
-   //
-   Array <String> Split (char separator)
-   {
-      char sep[2];
-
-      sep[0] = separator;
-      sep[1] = 0x0;
-
-      return Split (sep);
+   String (const String &str, size_t length = 0) : base () {
+      assign (str.chars (), length);
    }
 
 public:
-   //
-   // Function: TrimExternalBuffer
-   //  Trims string from both sides.
-   //
-   // Returns:
-   //  None
-   //
-   static inline void TrimExternalBuffer (char *str)
-   {
-      int pos = 0;
+   String &assign (const char *str, size_t length = 0) {
+      length = length > 0 ? length : strlen (str);
+
+      clear ();
+      resize (length);
+
+      memcpy (m_data, str, length);
+      terminate ();
+
+      return *this;
+   }
+
+   String &assign (const String &str, size_t length = 0) {
+      return assign (str.chars (), length);
+   }
+
+   String &assign (const char chr) {
+      resize (2);
+      m_data[0] = chr;
+
+      return *this;
+   }
+
+   String &append (const char *str) {
+      if (empty ()) {
+         return assign (str);
+      }
+      const size_t maxLength = strlen (str) + 1;
+
+      resize (length () + maxLength);
+      strncat (m_data, str, maxLength);
+
+      return *this;
+   }
+
+   String &append (const String &str) {
+      return append (str.chars ());
+   }
+
+   String &append (const char chr) {
+      const char app[] = { chr, '\0' };
+      return append (app);
+   }
+
+   const char *chars (void) const {
+      return empty () ? "" : m_data;
+   }
+
+   size_t length (void) const {
+      return base::length ();
+   }
+
+   bool empty (void) const {
+      return !length ();
+   }
+
+   void clear (void) {
+      base::clear ();
+
+      if (m_data) {
+         m_data[0] = '\0';
+      }
+   }
+
+   void erase (size_t index, size_t count = 1) {
+      base::erase (index, count);
+      terminate ();
+   }
+
+   void reserve (size_t count) {
+      base::reserve (count);
+   }
+
+   void resize (size_t count) {
+      base::resize (count);
+      terminate ();
+   }
+
+   int32 toInt32 (void) const {
+      return atoi (chars ());
+   }
+
+   inline void terminate (void) {
+      m_data[m_length] = '\0';
+   }
+
+   inline char &at (size_t index) {
+      return m_data[index];
+   }
+
+   int32 compare (const String &what) const {
+      return strcmp (m_data, what.begin ());
+   }
+
+   int32 compare (const char *what) const {
+      return strcmp (begin (), what);
+   }
+
+   bool contains (const String &what) const {
+      return strstr (m_data, what.begin ()) != nullptr;
+   }
+
+   template <size_t BufferSize = 512> void format (const char *fmt, ...) {
+      va_list ap;
+      char buffer[BufferSize];
+
+      va_start (ap, fmt);
+      vsnprintf (buffer, bufsize (buffer), fmt, ap);
+      va_end (ap);
+
+      assign (buffer);
+   }
+
+   template <size_t BufferSize = 512> void formatAppend (const char *fmt, ...) {
+      va_list ap;
+      char buffer[BufferSize];
+
+      va_start (ap, fmt);
+      vsnprintf (buffer, bufsize (buffer), fmt, ap);
+      va_end (ap);
+
+      append (buffer);
+   }
+
+   size_t insert (size_t at, const String &str) {
+      if (base::insert (at, str.begin (), str.length ())) {
+         terminate ();
+         return length ();
+      }
+      return 0;
+   }
+
+   size_t find (const String &search, size_t pos) const {
+      if (pos > length ()) {
+         return INVALID_INDEX;
+      }
+      size_t len = search.length ();
+
+      for (size_t i = pos; len + i <= length (); i++) {
+         if (strncmp (m_data + i, search.chars (), len) == 0) {
+            return i;
+         }
+      }
+      return INVALID_INDEX;
+   }
+
+   size_t replace (const String &what, const String &to) {
+      if (!what.length () || !to.length ()) {
+         return 0;
+      }
+      size_t numReplaced = 0, posIndex = 0;
+
+      while (posIndex < length ()) {
+         posIndex = find (what, posIndex);
+
+         if (posIndex == INVALID_INDEX) {
+            break;
+         }
+         erase (posIndex, what.length ());
+         insert (posIndex, to);
+
+         posIndex += to.length ();
+         numReplaced++;
+      }
+      return numReplaced;
+   }
+
+   String substr (size_t start, size_t count = INVALID_INDEX) {
+      String result;
+
+      if (start >= length () || empty ()) {
+         return result;
+      }
+      if (count == INVALID_INDEX) {
+         count = length () - start;
+      }
+      else if (start + count >= length ()) {
+         count = length () - start;
+      }
+      result.resize (count);
+
+      transfer (&result[0], &m_data[start], count);
+      result[count] = '\0';
+
+      return result;
+   }
+
+   char &operator[] (size_t index) {
+      return at (index);
+   }
+
+   friend String operator + (const String &lhs, const String &rhs) {
+      return String (lhs).append (rhs);
+   }
+
+   friend String operator + (const String &lhs, char rhs) {
+      return String (lhs).append (rhs);
+   }
+
+   friend String operator + (char lhs, const String &rhs) {
+      return String (lhs).append (rhs);
+   }
+
+   friend String operator + (const String &lhs, const char *rhs) {
+      return String (lhs).append (rhs);
+   }
+
+   friend String operator + (const char *lhs, const String &rhs) {
+      return String (lhs).append (rhs);
+   }
+
+   friend bool operator == (const String &lhs, const String &rhs) {
+      return lhs.compare (rhs) == 0;
+   }
+
+   friend bool operator < (const String &lhs, const String &rhs) {
+      return lhs.compare (rhs) < 0;
+   }
+
+   friend bool operator > (const String &lhs, const String &rhs) {
+      return lhs.compare (rhs) > 0;
+   }
+
+   friend bool operator == (const char *lhs, const String &rhs) {
+      return rhs.compare (lhs) == 0;
+   }
+
+   friend bool operator == (const String &lhs, const char *rhs) {
+      return lhs.compare (rhs) == 0;
+   }
+
+   friend bool operator != (const String &lhs, const String &rhs) {
+      return lhs.compare (rhs) != 0;
+   }
+
+   friend bool operator != (const char *lhs, const String &rhs) {
+      return rhs.compare (lhs) != 0;
+   }
+
+   friend bool operator != (const String &lhs, const char *rhs) {
+      return lhs.compare (rhs) != 0;
+   }
+
+   String &operator = (const String &rhs) {
+      return assign (rhs);
+   }
+
+   String &operator = (const char *rhs) {
+      return assign (rhs);
+   }
+
+   String &operator = (char rhs) {
+      return assign (rhs);
+   }
+
+   String &operator = (String &&other) noexcept {
+      base::operator = (move (other));
+      return *this;
+   }
+
+   String &operator += (const String &rhs) {
+      return append (rhs);
+   }
+
+   String &operator += (const char *rhs) {
+      return append (rhs);
+   }
+
+   String &trimRight (const char *chars = "\r\n\t ") {
+      if (empty ()) {
+         return *this;
+      }
+      char *str = end () - 1;
+
+      while (*str != 0) {
+         if (isTrimChar (*str, chars)) {
+            erase (str - begin ());
+            str--;
+         }
+         else {
+            break;
+         }
+      }
+      return *this;
+   }
+
+   String &trimLeft (const char *chars = "\r\n\t ") {
+      if (empty ()) {
+         return *this;
+      }
+      char *str = begin ();
+
+      while (isTrimChar (*str, chars)) {
+         str++;
+      }
+
+      if (begin () != str) {
+         erase (0, str - begin ());
+      }
+      return *this;
+   }
+
+   String &trim (const char *chars = "\r\n\t ") {
+      return trimLeft (chars).trimRight (chars);
+   }
+
+   Array <String> split (const char *delimiter) {
+      Array <String> tokens;
+      size_t length, index = 0;
+
+      do {
+         index += strspn (&m_data[index], delimiter);
+         length = strcspn (&m_data[index], delimiter);
+
+         if (length > 0) {
+            tokens.push (move (substr (index, length)));
+         }
+         index += length;
+      } while (length > 0);
+
+      return tokens;
+   }
+
+public:
+   static void trimChars (char *str) {
+      size_t pos = 0;
       char *dest = str;
 
-      while (str[pos] <= ' ' && str[pos] > 0)
+      while (str[pos] <= ' ' && str[pos] > 0) {
          pos++;
+      }
 
-      while (str[pos])
-      {
+      while (str[pos]) {
          *(dest++) = str[pos];
          pos++;
       }
       *(dest--) = '\0';
 
-      while (dest >= str && *dest <= ' ' && *dest > 0)
+      while (dest >= str && *dest <= ' ' && *dest > 0) {
          *(dest--) = '\0';
+      }
    }
 };
 
-//
-// Class: File
-//  Simple STDIO file wrapper class.
-//
-class File
-{
-protected:
-   FILE *m_handle;
-   int m_fileSize;
+template <typename K> struct StringHash {
+   unsigned long operator () (const K &key) const {
+      char *str = const_cast <char *> (key.chars ());
+      size_t hash = key.length ();
 
-//
-// Group: (Con/De)structors
-//
+      while (*str++) {
+         hash = ((hash << 5) + hash) + *str;
+      }
+      return hash;
+   }
+};
+
+template <typename K> struct IntHash {
+   unsigned long operator () (K key) const {
+      key = ((key >> 16) ^ key) * 0x119de1f3;
+      key = ((key >> 16) ^ key) * 0x119de1f3;
+      key = (key >> 16) ^ key;
+
+      return key;
+   }
+};
+
+template <typename K, typename V, typename H = StringHash <K>, size_t I = 256> class HashMap final : private NonCopyable {
 public:
+   using Bucket = Pair <K, V>;
 
-   //
-   // Function: File
-   //  Default file class, constructor.
-   //
-   File (void)
-   {
-      m_handle = nullptr;
-      m_fileSize = 0;
+private:
+   Array <Bucket> m_buckets[I];
+   H m_hash;
+
+   Array <Bucket> &getBucket (const K &key) {
+      return m_buckets[m_hash (key) % I];
    }
 
-   //
-   // Function: File
-   //  Default file class, constructor, with file opening.
-   //
-   File (String fileName, String mode = "rt")
-   {
-      Open (fileName, mode);
+public:
+   HashMap (void) = default;
+   ~HashMap (void) = default;
+
+public:
+   bool exists (const K &key) {
+      return get (key, nullptr);
    }
 
-   //
-   // Function: ~File
-   //  Default file class, destructor.
-   //
-   ~File (void)
-   {
-      Close ();
+   bool get (const K &key, V *val) {
+      for (auto &entry : getBucket (key)) {
+         if (entry.first == key) {
+            if (val != nullptr) {
+               *val = entry.second;
+            }
+            return true;
+         }
+      }
+      return false;
    }
 
-   //
-   // Function: Open
-   //  Opens file and gets it's size.
-   //
-   // Parameters:
-   //  fileName - String containing file name.
-   //  mode - String containing open mode for file.
-   //
-   // Returns:
-   //  True if operation succeeded, false otherwise.
-   //
-   bool Open (const String &fileName, const String &mode)
-   {
-      if ((m_handle = fopen (fileName.GetBuffer (), mode.GetBuffer ())) == nullptr)
+   bool get (const K &key, V &val) {
+      return get (key, &val);
+   }
+
+   bool put (const K &key, const V &val) {
+      if (exists (key)) {
          return false;
+      }
+      getBucket (key).push (move (Pair <K, V> (key, val)));
+      return true;
+   }
 
+   bool erase (const K &key) {
+      auto &bucket = getBucket (key);
+
+      for (auto &entry : getBucket (key)) {
+         if (entry.first == key) {
+            bucket.erase (entry);
+            return true;
+         }
+      }
+      return false;
+   }
+
+public:
+   V &operator [] (const K &key) {
+      for (auto &entry : getBucket (key)) {
+         if (entry.first == key) {
+            return entry.second;
+         }
+      }
+      static V ret;
+      return ret;
+   }
+};
+
+class File : private NonCopyable {
+private:
+   FILE *m_handle;
+   size_t m_size;
+
+public:
+   File (void) : m_handle (nullptr), m_size (0) {}
+
+   File (const String &fileName, const String &mode = "rt") : m_handle (nullptr), m_size (0){
+      open (fileName, mode);
+   }
+
+   virtual ~File (void) {
+      close ();
+   }
+
+   bool open (const String &fileName, const String &mode) {
+      if ((m_handle = fopen (fileName.chars (), mode.chars ())) == nullptr) {
+         return false;
+      }
       fseek (m_handle, 0L, SEEK_END);
-      m_fileSize = ftell (m_handle);
+      m_size = ftell (m_handle);
       fseek (m_handle, 0L, SEEK_SET);
 
       return true;
    }
 
-   //
-   // Function: Close
-   //  Closes file, and destroys STDIO file object.
-   //
-   void Close (void)
-   {
-      if (m_handle != nullptr)
-      {
+   void close (void) {
+      if (m_handle != nullptr) {
          fclose (m_handle);
          m_handle = nullptr;
       }
-      m_fileSize = 0;
+      m_size = 0;
    }
 
-   //
-   // Function: Eof
-   //  Checks whether we reached end of file.
-   //
-   // Returns:
-   //  True if reached, false otherwise.
-   //
-   bool Eof (void)
-   {
-      assert (m_handle != nullptr);
+   bool eof (void) {
       return feof (m_handle) ? true : false;
    }
 
-   //
-   // Function: Flush
-   //  Flushes file stream.
-   //
-   // Returns:
-   //  True if operation succeeded, false otherwise.
-   //
-   bool Flush (void)
-   {
-      assert (m_handle != nullptr);
+   bool flush (void) {
       return fflush (m_handle) ? false : true;
    }
 
-   //
-   // Function: GetChar
-   //  Pops one character from the file stream.
-   //
-   // Returns:
-   //  Popped from stream character
-   //
-   int GetChar (void)
-   {
-      assert (m_handle != nullptr);
+   int getch (void) {
       return fgetc (m_handle);
    }
 
-   //
-   // Function: GetBuffer
-   //  Gets the single line, from the non-binary stream.
-   //
-   // Parameters:
-   //  buffer - Pointer to buffer, that should receive string.
-   //  count - Max. size of buffer.
-   //
-   // Returns:
-   //  Pointer to string containing popped line.
-   //
-   char *GetBuffer (char *buffer, int count)
-   {
-      assert (m_handle != nullptr);
+   char *gets (char *buffer, int count) {
       return fgets (buffer, count, m_handle);
    }
 
-   //
-   // Function: Printf
-   //  Puts formatted buffer, into stream.
-   //
-   // Parameters:
-   //  format - 
-   //
-   // Returns:
-   //  Number of bytes, that was written.
-   //
-   int Printf (const char *format, ...)
-   {
+   int writeFormat (const char *format, ...) {
       assert (m_handle != nullptr);
 
       va_list ap;
@@ -3651,519 +1585,232 @@ public:
       int written = vfprintf (m_handle, format, ap);
       va_end (ap);
 
-      if (written < 0)
+      if (written < 0) {
          return 0;
-
+      }
       return written;
    }
 
-   //
-   // Function: PutChar
-   //  Puts character into file stream.
-   //
-   // Parameters:
-   //  ch - Character that should be put into stream.
-   //
-   // Returns:
-   //  Character that was putted into the stream.
-   //
-   char PutChar (char ch)
-   {
-      assert (m_handle != nullptr);
+   char putch (char ch) {
       return static_cast <char> (fputc (ch, m_handle));
    }
 
-   //
-   // Function: PutString
-   //  Puts buffer into the file stream.
-   //
-   // Parameters:
-   //  buffer - Buffer that should be put, into stream.
-   //
-   // Returns:
-   //  True, if operation succeeded, false otherwise.
-   //
-   bool PutString (String buffer)
-   {
+   bool puts (const String &buffer) {
       assert (m_handle != nullptr);
 
-      if (fputs (buffer.GetBuffer (), m_handle) < 0)
+      if (fputs (buffer.chars (), m_handle) < 0) {
          return false;
-
+      }
       return true;
    }
 
-   //
-   // Function: Read
-   //  Reads buffer from file stream in binary format.
-   //
-   // Parameters:
-   //  buffer - Holder for read buffer.
-   //  size - Size of the buffer to read.
-   //  count - Number of buffer chunks to read.
-   //
-   // Returns:
-   //  Number of bytes red from file.
-   //
-   int Read (void *buffer, int size, int count = 1)
-   {
-      assert (m_handle != nullptr);
+   size_t read (void *buffer, size_t size, size_t count = 1) {
       return fread (buffer, size, count, m_handle);
    }
 
-   //
-   // Function: Write
-   //  Writes binary buffer into file stream.
-   //
-   // Parameters:
-   //  buffer - Buffer holder, that should be written into file stream.
-   //  size - Size of the buffer that should be written.
-   //  count - Number of buffer chunks to write.
-   //
-   // Returns:
-   //  Numbers of bytes written to file.
-   //
-   int Write (void *buffer, int size, int count = 1)
-   {
-      assert (m_handle != nullptr);
+   size_t write (void *buffer, size_t size, size_t count = 1) {
       return fwrite (buffer, size, count, m_handle);
    }
 
-   //
-   // Function: Seek
-   //  Seeks file stream with specified parameters.
-   //
-   // Parameters:
-   //  offset - Offset where cursor should be set.
-   //  origin - Type of offset set.
-   //
-   // Returns:
-   //  True if operation success, false otherwise.
-   //
-   bool Seek (long offset, int origin)
-   {
-      assert (m_handle != nullptr);
-
-      if (fseek (m_handle, offset, origin) != 0)
+   bool seek (long offset, int origin) {
+      if (fseek (m_handle, offset, origin) != 0) {
          return false;
-
+      }
       return true;
    }
 
-   //
-   // Function: Rewind
-   //  Rewinds the file stream.
-   //
-   void Rewind (void)
-   {
-      assert (m_handle != nullptr);
-      rewind (m_handle);
+   void rewind (void) {
+      ::rewind (m_handle);
    }
 
-   //
-   // Function: GetSize
-   //  Gets the file size of opened file stream.
-   //
-   // Returns:
-   //  Number of bytes in file.
-   //
-   int GetSize (void)
-   {
-      return m_fileSize;
+   size_t getSize (void) const {
+      return m_size;
    }
 
-   //
-   // Function: IsValid
-   //  Checks whether file stream is valid.
-   //
-   // Returns:
-   //  True if file stream valid, false otherwise.
-   //
-   bool IsValid (void)
-   {
+   bool isValid (void) const {
       return m_handle != nullptr;
    }
 
 public:
-   static inline bool Accessible (const String &filename)
-   {
+   static inline bool exists (const String &filename) {
       File fp;
 
-      if (fp.Open (filename, "rb"))
-      {
-         fp.Close ();
+      if (fp.open (filename, "rb")) {
+         fp.close ();
          return true;
       }
       return false;
    }
 
-   static inline void CreatePath (char *path)
-   {
-      for (char *ofs = path + 1; *ofs; ofs++)
-      {
-         if (*ofs == '/')
-         {
-            // create the directory
-            *ofs = 0;
+   static inline void pathCreate (char *path) {
+      for (char *str = path + 1; *str; str++) {
+         if (*str == '/') {
+            *str = 0;
             _mkdir (path);
-            *ofs = '/';
+            *str = '/';
          }
       }
       _mkdir (path);
    }
 };
 
-//
-// Class: MemoryFile
-//  Simple Memory file wrapper class. (RO)
-//
-class MemoryFile
-{
-public:
-   typedef uint8 *(*MF_Loader) (const char *, int *);
-   typedef void (*MF_Unloader) (uint8 *);
+class MemoryLoader : public Singleton <MemoryLoader> {
+private:
+   using Load = uint8 * (*) (const char *, int *);
+   using Unload = void (*) (void *);
+
+private:
+   Load m_load;
+   Unload m_unload;
 
 public:
-   static MF_Loader Loader;
-   static MF_Unloader Unloader;
+   MemoryLoader (void) = default;
+   ~MemoryLoader (void) = default;
 
-protected:
-   int m_size;
-   int m_pos;
+public:
+   void setup (Load load, Unload unload) {
+      m_load = load;
+      m_unload = unload;
+   }
+
+   uint8 *load (const char *name, int *size) {
+      if (m_load) {
+         return m_load (name, size);
+      }
+      return nullptr;
+   }
+
+   void unload (void *buffer) {
+      if (m_unload) {
+         m_unload (buffer);
+      }
+   }
+};
+
+class MemFile : private NonCopyable {
+private:
+   size_t m_size;
+   size_t m_pos;
    uint8 *m_buffer;
 
-   //
-   // Group: (Con/De)structors
-   //
 public:
+   MemFile (void) : m_size (0) , m_pos (0) , m_buffer (nullptr) {}
 
-   //
-   // Function: File
-   //  Default file class, constructor.
-   //
-   MemoryFile (void)
-   {
+   MemFile (const String &filename) : m_size (0) , m_pos (0) , m_buffer (nullptr) {
+      open (filename);
+   }
+
+   virtual ~MemFile (void) {
+      close ();
+   }
+
+   bool open (const String &filename) {
       m_size = 0;
       m_pos = 0;
+      m_buffer = MemoryLoader::ref ().load (filename.chars (), reinterpret_cast <int *> (&m_size));
 
-      m_buffer = nullptr;
-   }
-
-   //
-   // Function: File
-   //  Default file class, constructor, with file opening.
-   //
-   MemoryFile (const String &fileName)
-   {
-      m_size = 0;
-      m_pos = 0;
-
-      m_buffer = nullptr;
-
-      Open (fileName);
-   }
-
-   //
-   // Function: ~File
-   //  Default file class, destructor.
-   //
-   ~MemoryFile (void)
-   {
-      Close ();
-   }
-
-   //
-   // Function: Open
-   //  Opens file and gets it's size.
-   //
-   // Parameters:
-   //  fileName - String containing file name.
-   //
-   // Returns:
-   //  True if operation succeeded, false otherwise.
-   //
-   bool Open (const char *fileName)
-   {
-      if (!Loader)
+      if (!m_buffer) {
          return false;
-
-      m_size = 0;
-      m_pos = 0;
-
-      m_buffer = Loader (fileName, &m_size);
-
-      if (m_buffer == nullptr || m_size < 0)
-         return false;
-
+      }
       return true;
    }
 
-   //
-   // Function: Close
-   //  Closes file, and destroys STDIO file object.
-   //
-   void Close (void)
-   {
-      if (Unloader != nullptr)
-         Unloader (m_buffer);
+   void close (void) {
+      MemoryLoader::ref ().unload (m_buffer);
 
       m_size = 0;
       m_pos = 0;
-
       m_buffer = nullptr;
    }
 
-   //
-   // Function: GetChar
-   //  Pops one character from the file stream.
-   //
-   // Returns:
-   //  Popped from stream character
-   //
-   int GetChar (void)
-   {
-      if (m_buffer == nullptr || m_pos >= m_size)
+   int getch (void) {
+      if (!m_buffer || m_pos >= m_size) {
          return -1;
-
+      }
       int readCh = m_buffer[m_pos];
       m_pos++;
 
       return readCh;
    }
 
-   //
-   // Function: GetBuffer
-   //  Gets the single line, from the non-binary stream.
-   //
-   // Parameters:
-   //  buffer - Pointer to buffer, that should receive string.
-   //  count - Max. size of buffer.
-   //
-   // Returns:
-   //  Pointer to string containing popped line.
-   //
-   char *GetBuffer (char *buffer, int count)
-   {
-      if (m_buffer == nullptr || m_pos >= m_size)
+   char *gets (char *buffer, size_t count) {
+      if (!m_buffer || m_pos >= m_size) {
          return nullptr;
-
-      int start = m_pos;
-      int end = m_size - 1;
-      
-      if (m_size - m_pos > count - 1)
-         end = m_pos + count - 1;
-
-      while (m_pos < end)
-      {
-         if (m_buffer[m_pos] == 0x0a)
-            end = m_pos;
-
-         m_pos++;
       }
+      size_t index = 0;
+      buffer[0] = 0;
 
-      if (m_pos == start)
-         return nullptr;
+      for (; index < count - 1;) {
+         if (m_pos < m_size) {
+            buffer[index] = m_buffer[m_pos++];
 
-      int pos = start;
-
-      for (; pos <= end; pos++)
-         buffer[pos - start] = m_buffer[pos];
-
-      if (buffer[pos - start - 2] == 0x0d)
-      {
-         buffer[pos - start - 2] = '\n';
-         pos--;
+            if (buffer[index++] == '\n') {
+               break;
+            }
+         }
+         else {
+            break;
+         }
       }
-
-      if (buffer[pos - start - 1] == 0x0d || buffer[pos - start - 1] == 0x0a)
-         buffer[pos - start - 1] = '\n';
-
-      buffer[pos - start] = 0;
-
-      return buffer;
+      buffer[index] = 0;
+      return index ? buffer : nullptr;
    }
 
-   //
-   // Function: Read
-   //  Reads buffer from file stream in binary format.
-   //
-   // Parameters:
-   //  buffer - Holder for read buffer.
-   //  size - Size of the buffer to read.
-   //  count - Number of buffer chunks to read.
-   //
-   // Returns:
-   //  Number of bytes red from file.
-   //
-   int Read (void *buffer, int size, int count = 1)
-   {
-      if (!m_buffer|| m_pos >= m_size || buffer == nullptr || !size || !count)
+   size_t read (void *buffer, size_t size, size_t count = 1) {
+      if (!m_buffer || m_size <= m_pos || !buffer || !size || !count) {
          return 0;
-
-      int blocksRead = Math::A_min ((m_size - m_pos) / size, count) * size;
+      }
+      size_t blocksRead = size * count <= m_size - m_pos ? size * count : m_size - m_pos;
 
       memcpy (buffer, &m_buffer[m_pos], blocksRead);
       m_pos += blocksRead;
 
-      return blocksRead;
+      return blocksRead / size;
    }
 
-   //
-   // Function: Seek
-   //  Seeks file stream with specified parameters.
-   //
-   // Parameters:
-   //  offset - Offset where cursor should be set.
-   //  origin - Type of offset set.
-   //
-   // Returns:
-   //  True if operation success, false otherwise.
-   //
-   bool Seek (long offset, int origin)
-   {
-      if (m_buffer == nullptr || m_pos >= m_size)
+   bool seek (size_t offset, int origin) {
+      if (!m_buffer || m_pos >= m_size) {
          return false;
-
-      if (origin == SEEK_SET)
-      {
-         if (offset >= m_size)
+      }
+      if (origin == SEEK_SET) {
+         if (offset >= m_size) {
             return false;
-
+         }
          m_pos = offset;
       }
-      else if (origin == SEEK_END)
-      {
-         if (offset >= m_size)
+      else if (origin == SEEK_END) {
+         if (offset >= m_size) {
             return false;
-
+         }
          m_pos = m_size - offset;
       }
-      else
-      {
-         if (m_pos + offset >= m_size)
+      else {
+         if (m_pos + offset >= m_size) {
             return false;
-
+         }
          m_pos += offset;
       }
       return true;
    }
 
-   //
-   // Function: GetSize
-   //  Gets the file size of opened file stream.
-   //
-   // Returns:
-   //  Number of bytes in file.
-   //
-   int GetSize (void)
-   {
+   inline size_t getSize (void) const {
       return m_size;
    }
 
-   //
-   // Function: IsValid
-   //  Checks whether file stream is valid.
-   //
-   // Returns:
-   //  True if file stream valid, false otherwise.
-   //
-   bool IsValid (void)
-   {
-      return m_buffer != nullptr && m_size > 0;
+   bool isValid (void) const {
+      return m_buffer && m_size > 0;
    }
 };
 
-//
-// Type: StrVec
-//  Array of strings.
-//
-typedef Array <const String &> StrVec;
-
-#ifndef FORCEINLINE
-#define FORCEINLINE inline
-#endif
-
-//
-// Class: Singleton
-//  Implements no-copying singleton.
-//
-template <typename T> class Singleton
-{
-//
-// Group: (Con/De)structors
-//
-protected:
-
-   //
-   // Function: Singleton
-   //  Default singleton constructor.
-   //
-   Singleton (void) { }
-
-   //
-   // Function: ~Singleton
-   //  Default singleton destructor.
-   //
-   virtual ~Singleton (void) { }
-
-private:
-   Singleton (Singleton const &);
-   void operator = (Singleton const &);
-
-public:
-
-   //
-   // Function: GetObject
-   //  Gets the object of singleton.
-   //
-   // Returns:
-   //  Object pointer.
-   //  
-   //
-   static FORCEINLINE T *GetObject (void)
-   {
-      return &GetReference ();
-   }
-
-   //
-   // Function: GetObject
-   //  Gets the object of singleton as reference.
-   //
-   // Returns:
-   //  Object reference.
-   //  
-   //
-   static FORCEINLINE T &GetReference (void)
-   {
-      static T reference;
-      return reference;
-   };
-};
-//
-// Macro: IterateArray
-//  Utility macro for iterating arrays.
-//
-// Parameters:
-//  iteratorName - Name of the iterator.
-//  arrayName - Name of the array that should be iterated.
-//
-// See Also:
-//  <Array>
-//
-#define FOR_EACH_AE(arrayName, iteratorName) \
-   for (int iteratorName = 0; iteratorName != arrayName.GetElementNumber (); iteratorName++)
+}}
 
 
-//
-// Sizeof bounds
-//
-#define SIZEOF_CHAR(in) sizeof (in) - 1
+namespace cr {
+namespace types {
 
-//
-// Squared Length
-//
-#define GET_SQUARE(in) (in * in)
+using StringArray = cr::classes::Array <cr::classes::String>;
+using IntArray = cr::classes::Array <int>;
 
-//
-// Stringify a string
-#define STRINGIFY(str) (#str)
+}}
+
+

@@ -1,25 +1,24 @@
 /***
-*
-*   Copyright (c) 1999-2005, Valve Corporation. All rights reserved.
-*
-*   This product contains software technology licensed from Id 
-*   Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
-*   All Rights Reserved.
-*
-*   This source code contains proprietary and confidential information of
-*   Valve LLC and its suppliers.  Access to this code is restricted to
-*   persons who have executed a written SDK license with Valve.  Any access,
-*   use or distribution of this code by or to any unlicensed person is illegal.
-*
-****/
+ *
+ *   Copyright (c) 1999-2005, Valve Corporation. All rights reserved.
+ *
+ *   This product contains software technology licensed from Id
+ *   Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc.
+ *   All Rights Reserved.
+ *
+ *   This source code contains proprietary and confidential information of
+ *   Valve LLC and its suppliers.  Access to this code is restricted to
+ *   persons who have executed a written SDK license with Valve.  Any access,
+ *   use or distribution of this code by or to any unlicensed person is illegal.
+ *
+ ****/
 #ifndef PROGDEFS_H
 #define PROGDEFS_H
 #ifdef _WIN32
 #pragma once
 #endif
 
-typedef struct
-{
+typedef struct {
    float time;
    float frametime;
    float force_retouch;
@@ -53,9 +52,7 @@ typedef struct
    vec3_t vecLandmarkOffset;
 } globalvars_t;
 
-
-typedef struct entvars_s
-{
+typedef struct entvars_s {
    string_t classname;
    string_t globalname;
 
@@ -63,14 +60,14 @@ typedef struct entvars_s
    vec3_t oldorigin;
    vec3_t velocity;
    vec3_t basevelocity;
-   vec3_t clbasevelocity;        // Base velocity that was passed in to server physics so 
+   vec3_t clbasevelocity; // Base velocity that was passed in to server physics so
    // client can predict conveyors correctly.  Server zeroes it, so we need to store here, too.
    vec3_t movedir;
 
-   vec3_t angles;                 // Model angles
-   vec3_t avelocity;              // angle velocity (degrees per second)
-   vec3_t punchangle;           // auto-decaying view angle adjustment
-   vec3_t v_angle;              // Viewing angle (player only)
+   vec3_t angles; // Model angles
+   vec3_t avelocity; // angle velocity (degrees per second)
+   vec3_t punchangle; // auto-decaying view angle adjustment
+   vec3_t v_angle; // Viewing angle (player only)
 
    // For parametric entities
    vec3_t endpos;
@@ -78,7 +75,7 @@ typedef struct entvars_s
    float impacttime;
    float starttime;
 
-   int fixangle;                 // 0:nothing, 1:force view angles, 2:add avelocity
+   int fixangle; // 0:nothing, 1:force view angles, 2:add avelocity
    float idealpitch;
    float pitch_speed;
    float ideal_yaw;
@@ -87,14 +84,14 @@ typedef struct entvars_s
    int modelindex;
    string_t model;
 
-   int viewmodel;                 // player's viewmodel
-   int weaponmodel;              // what other players see
+   int viewmodel; // player's viewmodel
+   int weaponmodel; // what other players see
 
-   vec3_t absmin;                 // BB max translated to world coord
-   vec3_t absmax;                 // BB max translated to world coord
-   vec3_t mins;                 // local BB min
-   vec3_t maxs;                 // local BB max
-   vec3_t size;                 // maxs - mins
+   vec3_t absmin; // BB max translated to world coord
+   vec3_t absmax; // BB max translated to world coord
+   vec3_t mins; // local BB min
+   vec3_t maxs; // local BB max
+   vec3_t size; // maxs - mins
 
    float ltime;
    float nextthink;
@@ -103,23 +100,23 @@ typedef struct entvars_s
    int solid;
 
    int skin;
-   int body;                    // sub-model selection for studiomodels
+   int body; // sub-model selection for studiomodels
    int effects;
 
-   float gravity;                 // % of "normal" gravity
-   float friction;              // inverse elasticity of MOVETYPE_BOUNCE
+   float gravity; // % of "normal" gravity
+   float friction; // inverse elasticity of MOVETYPE_BOUNCE
 
    int light_level;
 
-   int sequence;                 // animation sequence
-   int gaitsequence;              // movement animation sequence for player (0 for none)
-   float frame;                 // % playback position in animation sequences (0..255)
-   float animtime;              // world time when frame was set
-   float framerate;              // animation playback rate (-8x to 8x)
-   uint8 controller[4];           // bone controller setting (0..255)
-   uint8 blending[2];              // blending amount between sub-sequences (0..255)
+   int sequence; // animation sequence
+   int gaitsequence; // movement animation sequence for player (0 for none)
+   float frame; // % playback position in animation sequences (0..255)
+   float animtime; // world time when frame was set
+   float framerate; // animation playback rate (-8x to 8x)
+   uint8 controller[4]; // bone controller setting (0..255)
+   uint8 blending[2]; // blending amount between sub-sequences (0..255)
 
-   float scale;                 // sprite rendering scale (0..255)
+   float scale; // sprite rendering scale (0..255)
 
    int rendermode;
    float renderamt;
@@ -128,26 +125,26 @@ typedef struct entvars_s
 
    float health;
    float frags;
-   int weapons;                 // bit mask for available weapons
+   int weapons; // bit mask for available weapons
    float takedamage;
 
    int deadflag;
-   vec3_t view_ofs;              // eye position
+   vec3_t view_ofs; // eye position
 
    int button;
    int impulse;
 
-   edict_t *chain;              // Entity pointer when linked into a linked list
+   edict_t *chain; // Entity pointer when linked into a linked list
    edict_t *dmg_inflictor;
    edict_t *enemy;
-   edict_t *aiment;              // entity pointer when MOVETYPE_FOLLOW
+   edict_t *aiment; // entity pointer when MOVETYPE_FOLLOW
    edict_t *owner;
    edict_t *groundentity;
 
    int spawnflags;
    int flags;
 
-   int colormap;                 // lowbyte topcolor, highbyte bottomcolor
+   int colormap; // lowbyte topcolor, highbyte bottomcolor
    int team;
 
    float max_health;

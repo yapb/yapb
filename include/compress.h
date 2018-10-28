@@ -4,84 +4,82 @@
 //
 // This software is licensed under the BSD-style license.
 // Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.jeefo.net/license
+//     https://yapb.ru/license
 //
 
 #pragma once
 
-const int N = 4096, F = 18, THRESHOLD = 2, NIL = N;
+static constexpr int MAXBUF = 4096, PADDING = 18, THRESHOLD = 2, NIL = MAXBUF;
 
-class Compressor
-{
+class Compress {
 protected:
-   unsigned long int m_textSize;
-   unsigned long int m_codeSize;
+   unsigned long int m_csize;
 
-   uint8 m_textBuffer[N + F - 1];
-   int m_matchPosition;
-   int m_matchLength;
+   uint8 m_buffer[MAXBUF + PADDING - 1];
+   int m_matchPos;
+   int m_matchLen;
 
-   int m_left[N + 1];
-   int m_right[N + 257];
-   int m_parent[N + 1];
+   int m_left[MAXBUF + 1];
+   int m_right[MAXBUF + 257];
+   int m_parent[MAXBUF + 1];
 
 private:
-   void InitTree (void)
-   {
-      for (int i = N + 1; i <= N + 256; i++)
+   void initTrees (void) {
+      for (int i = MAXBUF + 1; i <= MAXBUF + 256; i++) {
          m_right[i] = NIL;
+      }
 
-      for (int j = 0; j < N; j++)
+      for (int j = 0; j < MAXBUF; j++) {
          m_parent[j] = NIL;
+      }
    }
 
-   void InsertNode (int node)
-   {
+   void insert (int node) {
       int i;
 
       int compare = 1;
 
-      uint8 *key = &m_textBuffer[node];
-      int temp = N + 1 + key[0];
+      uint8 *key = &m_buffer[node];
+      int temp = MAXBUF + 1 + key[0];
 
       m_right[node] = m_left[node] = NIL;
-      m_matchLength = 0;
+      m_matchLen = 0;
 
-      for (;;)
-      {
-         if (compare >= 0)
-         {
-            if (m_right[temp] != NIL)
+      for (;;) {
+         if (compare >= 0) {
+            if (m_right[temp] != NIL) {
                temp = m_right[temp];
-            else
-            {
+            }
+            else {
                m_right[temp] = node;
                m_parent[node] = temp;
                return;
             }
          }
-         else
-         {
-            if (m_left[temp] != NIL)
+         else {
+            if (m_left[temp] != NIL) {
                temp = m_left[temp];
-            else
-            {
+            }
+            else {
                m_left[temp] = node;
                m_parent[node] = temp;
+
                return;
             }
          }
 
-         for (i = 1; i < F; i++)
-            if ((compare = key[i] - m_textBuffer[temp + i]) != 0)
+         for (i = 1; i < PADDING; i++) {
+            if ((compare = key[i] - m_buffer[temp + i]) != 0) {
                break;
+            }
+         }
 
-         if (i > m_matchLength)
-         {
-            m_matchPosition = temp;
-            
-            if ((m_matchLength = i) >= F)
+         if (i > m_matchLen) {
+            m_matchPos = temp;
+
+            if ((m_matchLen = i) >= PADDING) {
                break;
+            }
          }
       }
 
@@ -91,37 +89,35 @@ private:
       m_parent[m_left[temp]] = node;
       m_parent[m_right[temp]] = node;
 
-      if (m_right[m_parent[temp]] == temp)
+      if (m_right[m_parent[temp]] == temp) {
          m_right[m_parent[temp]] = node;
-      else
+      }
+      else {
          m_left[m_parent[temp]] = node;
-
+      }
       m_parent[temp] = NIL;
    }
 
-
-   void DeleteNode (int node)
-   {
+   void erase (int node) {
       int temp;
 
-      if (m_parent[node] == NIL)
+      if (m_parent[node] == NIL) {
          return; // not in tree
+      }
 
-      if (m_right[node] == NIL)
+      if (m_right[node] == NIL) {
          temp = m_left[node];
-
-      else if (m_left[node] == NIL) 
+      }
+      else if (m_left[node] == NIL) {
          temp = m_right[node];
-
-      else
-      {
+      }
+      else {
          temp = m_left[node];
 
-         if (m_right[temp] != NIL)
-         {
-            do
+         if (m_right[temp] != NIL) {
+            do {
                temp = m_right[temp];
-            while (m_right[temp] != NIL);
+            } while (m_right[temp] != NIL);
 
             m_right[m_parent[temp]] = m_left[temp];
             m_parent[m_left[temp]] = m_parent[temp];
@@ -132,240 +128,208 @@ private:
          m_right[temp] = m_right[node];
          m_parent[m_right[node]] = temp;
       }
-
       m_parent[temp] = m_parent[node];
 
-      if (m_right[m_parent[node]] == node)
+      if (m_right[m_parent[node]] == node) {
          m_right[m_parent[node]] = temp;
-      else
+      }
+      else {
          m_left[m_parent[node]] = temp;
-
+      }
       m_parent[node] = NIL;
    }
 
 public:
-   Compressor (void)
-   {
-      m_textSize = 0;
-      m_codeSize = 0;
-
-      m_matchPosition = 0;
-      m_matchLength = 0;
-
-      memset (m_textBuffer, 0, sizeof (m_textBuffer));
+   Compress (void) : m_csize (0), m_matchPos (0), m_matchLen (0) {
       memset (m_right, 0, sizeof (m_right));
       memset (m_left, 0, sizeof (m_left));
       memset (m_parent, 0, sizeof (m_parent));
+      memset (m_buffer, 0, sizeof (m_buffer));
    }
 
-   ~Compressor (void)
-   {
-      m_textSize = 0;
-      m_codeSize = 0;
+   ~Compress (void) = default;
 
-      m_matchPosition = 0;
-      m_matchLength = 0;
-
-      memset (m_textBuffer, 0, sizeof (m_textBuffer));
-      memset (m_right, 0, sizeof (m_right));
-      memset (m_left, 0, sizeof (m_left));
-      memset (m_parent, 0, sizeof (m_parent));
-   }
-
-   int InternalEncode (const char *fileName, uint8 *header, int headerSize, uint8 *buffer, int bufferSize)
-   {
-      int i, length, node, strPtr, lastMatchLength, codeBufferPtr, bufferPtr = 0;
-      uint8 codeBuffer[17], mask;
-
+   int encode_ (const char *fileName, uint8 *header, int headerSize, uint8 *buffer, int bufferSize) {
       File fp (fileName, "wb");
 
-      if (!fp.IsValid ())
+      if (!fp.isValid ()) {
          return -1;
+      }
+      int i, length, node, ptr, last, cbp, bp = 0;
+      uint8 cb[17] = {0, }, mask, bit;
 
-      uint8 bit;
+      fp.write (header, headerSize, 1);
+      initTrees ();
 
-      fp.Write (header, headerSize, 1);
-      InitTree ();
+      cb[0] = 0;
+      cbp = mask = 1;
+      ptr = 0;
+      node = MAXBUF - PADDING;
 
-      codeBuffer[0] = 0;
-      codeBufferPtr = mask = 1;
-      strPtr = 0;
-      node = N - F;
+      for (i = ptr; i < node; i++)
+         m_buffer[i] = ' ';
 
-      for (i = strPtr; i < node; i++)
-         m_textBuffer[i] = ' ';
-
-      for (length = 0; (length < F) && (bufferPtr < bufferSize); length++)
-      {
-         bit = buffer[bufferPtr++];
-         m_textBuffer[node + length] = bit;
+      for (length = 0; (length < PADDING) && (bp < bufferSize); length++) {
+         bit = buffer[bp++];
+         m_buffer[node + length] = bit;
       }
 
-      if ((m_textSize = length) == 0)
+      if (length == 0) {
          return -1;
+      }
 
-      for (i = 1; i <= F; i++)
-         InsertNode (node - i);
-      InsertNode (node);
+      for (i = 1; i <= PADDING; i++) {
+         insert (node - i);
+      }
+      insert (node);
 
-      do
-      {
-         if (m_matchLength > length)
-            m_matchLength = length;
-
-         if (m_matchLength <= THRESHOLD)
-         {
-            m_matchLength = 1;
-            codeBuffer[0] |= mask;
-            codeBuffer[codeBufferPtr++] = m_textBuffer[node];
+      do {
+         if (m_matchLen > length) {
+            m_matchLen = length;
          }
-         else
-         {
-            codeBuffer[codeBufferPtr++] = (uint8) m_matchPosition;
-            codeBuffer[codeBufferPtr++] = (uint8) (((m_matchPosition >> 4) & 0xf0) | (m_matchLength - (THRESHOLD + 1)));
+         if (m_matchLen <= THRESHOLD) {
+            m_matchLen = 1;
+
+            cb[0] |= mask;
+            cb[cbp++] = m_buffer[node];
          }
-
-         if ((mask  <<= 1) == 0)
-         {
-            for (i = 0; i < codeBufferPtr; i++)
-               fp.PutChar (codeBuffer[i]);
-
-            m_codeSize += codeBufferPtr;
-            codeBuffer[0] = 0;
-            codeBufferPtr = mask = 1;
-         }
-         lastMatchLength = m_matchLength;
-
-         for (i = 0; (i < lastMatchLength) && (bufferPtr < bufferSize); i++)
-         {
-            bit = buffer[bufferPtr++];
-            DeleteNode (strPtr);
-
-            m_textBuffer[strPtr] = bit;
-
-            if (strPtr < F - 1)
-               m_textBuffer[strPtr + N] = bit;
-
-            strPtr = (strPtr + 1) & (N - 1);
-            node = (node + 1) & (N - 1);
-            InsertNode (node);
+         else {
+            cb[cbp++] = (uint8) (m_matchPos & 0xff);
+            cb[cbp++] = (uint8) (((m_matchPos >> 4) & 0xf0) | (m_matchLen - (THRESHOLD + 1)));
          }
 
-         while (i++ < lastMatchLength)
-         {
-            DeleteNode (strPtr);
+         if ((mask <<= 1) == 0) {
+            for (i = 0; i < cbp; i++) {
+               fp.putch (cb[i]);
+            }
+            m_csize += cbp;
+            cb[0] = 0;
+            cbp = mask = 1;
+         }
+         last = m_matchLen;
 
-            strPtr = (strPtr + 1) & (N - 1);
-            node = (node + 1) & (N - 1);
+         for (i = 0; (i < last) && (bp < bufferSize); i++) {
+            bit = buffer[bp++];
+            erase (ptr);
 
-            if (length--)
-               InsertNode (node);
+            m_buffer[ptr] = bit;
+
+            if (ptr < PADDING - 1) {
+               m_buffer[ptr + MAXBUF] = bit;
+            }
+            ptr = (ptr + 1) & (MAXBUF - 1);
+            node = (node + 1) & (MAXBUF - 1);
+            insert (node);
+         }
+
+         while (i++ < last) {
+            erase (ptr);
+
+            ptr = (ptr + 1) & (MAXBUF - 1);
+            node = (node + 1) & (MAXBUF - 1);
+
+            if (length--) {
+               insert (node);
+            }
          }
       } while (length > 0);
 
-      if (codeBufferPtr > 1)
-      {
-         for (i = 0; i < codeBufferPtr; i++)
-            fp.PutChar (codeBuffer[i]);
-
-         m_codeSize += codeBufferPtr;
+      if (cbp > 1) {
+         for (i = 0; i < cbp; i++) {
+            fp.putch (cb[i]);
+         }
+         m_csize += cbp;
       }
-      fp.Close ();
+      fp.close ();
 
-      return m_codeSize;
+      return m_csize;
    }
 
-   int InternalDecode (const char *fileName, int headerSize, uint8 *buffer, int bufferSize)
-   {
+   int decode_ (const char *fileName, int headerSize, uint8 *buffer, int bufferSize) {
       int i, j, k, node;
       unsigned int flags;
-      int bufferPtr = 0;
+      int bp = 0;
 
       uint8 bit;
 
       File fp (fileName, "rb");
 
-      if (!fp.IsValid ())
+      if (!fp.isValid ()) {
          return -1;
+      }
+      fp.seek (headerSize, SEEK_SET);
 
-      fp.Seek (headerSize, SEEK_SET);
+      node = MAXBUF - PADDING;
 
-      node = N - F;
-      for (i = 0; i < node; i++)
-         m_textBuffer[i] = ' ';
-
+      for (i = 0; i < node; i++) {
+         m_buffer[i] = ' ';
+      }
       flags = 0;
 
-      for (;;)
-      {
-         if (((flags >>= 1) & 256) == 0)
-         {
-            int read = fp.GetChar ();
+      for (;;) {
+         if (((flags >>= 1) & 256) == 0) {
+            int read = fp.getch ();
 
-            if (read == EOF)
+            if (read == EOF) {
                break;
-
+            }
             bit = static_cast <uint8> (read);
-
             flags = bit | 0xff00;
-         } 
-
-         if (flags & 1)
-         {
-            int read = fp.GetChar ();
-
-            if (read == EOF)
-               break;
-
-            bit = static_cast <uint8> (read);
-            buffer[bufferPtr++] = bit;
-
-            if (bufferPtr > bufferSize)
-               return -1;
-
-            m_textBuffer[node++] = bit;
-            node &= (N - 1);
          }
-         else
-         {
-            if ((i = fp.GetChar ()) == EOF)
-               break;
 
-            if ((j = fp.GetChar ()) == EOF)
+         if (flags & 1) {
+            int read = fp.getch ();
+
+            if (read == EOF) {
                break;
+            }
+            bit = static_cast <uint8> (read);
+            buffer[bp++] = bit;
+
+            if (bp > bufferSize) {
+               return -1;
+            }
+            m_buffer[node++] = bit;
+            node &= (MAXBUF - 1);
+         }
+         else {
+            if ((i = fp.getch ()) == EOF) {
+               break;
+            }
+
+            if ((j = fp.getch ()) == EOF) {
+               break;
+            }
 
             i |= ((j & 0xf0) << 4);
             j = (j & 0x0f) + THRESHOLD;
 
-            for (k = 0; k <= j; k++)
-            {
-               bit = m_textBuffer[(i + k) & (N - 1)];
-               buffer[bufferPtr++] = bit;
+            for (k = 0; k <= j; k++) {
+               bit = m_buffer[(i + k) & (MAXBUF - 1)];
+               buffer[bp++] = bit;
 
-               if (bufferPtr > bufferSize)
+               if (bp > bufferSize) {
                   return -1;
-
-               m_textBuffer[node++] = bit;
-               node &= (N - 1);
+               }
+               m_buffer[node++] = bit;
+               node &= (MAXBUF - 1);
             }
          }
       }
-      fp.Close ();
+      fp.close ();
 
-      return bufferPtr;
+      return bp;
    }
 
    // external decoder
-   static int Uncompress (const char *fileName, int headerSize, uint8 *buffer, int bufferSize)
-   {
-      static Compressor compressor = Compressor ();
-      return compressor.InternalDecode (fileName, headerSize, buffer, bufferSize);
+   static int decode (const char *fileName, int headerSize, uint8 *buffer, int bufferSize) {
+      static Compress compressor;
+      return compressor.decode_ (fileName, headerSize, buffer, bufferSize);
    }
 
    // external encoder
-   static int Compress(const char *fileName, uint8 *header, int headerSize, uint8 *buffer, int bufferSize)
-   {
-      static Compressor compressor = Compressor ();
-      return compressor.InternalEncode (fileName, header, headerSize, buffer, bufferSize);
+   static int encode (const char *fileName, uint8 *header, int headerSize, uint8 *buffer, int bufferSize) {
+      static Compress compressor;
+      return compressor.encode_ (fileName, header, headerSize, buffer, bufferSize);
    }
 };

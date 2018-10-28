@@ -67,3 +67,4 @@ Icon
 *.json
 *.html
 *.settings
+*.sarif
