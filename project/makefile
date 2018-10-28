@@ -12,7 +12,7 @@ SOURCES = ../source
 OBJECTS = $(wildcard $(SOURCES)/*.cpp)
 
 COMPILER_FLAGS = -mtune=generic -std=c++11 -m32 -Wall -Wextra -Werror -fno-exceptions -fno-rtti -DPOSIX
-LINKER_FLAGS = -m32 -lm -ldl
+LINKER_FLAGS = -m32
 
 ifeq "$(DEBUG)" "true"
 	COMPILER_FLAGS += -D_DEBUG -DDEBUG -g3
