@@ -26,7 +26,7 @@ after_success:
   -   curl -F "key=$CI_KEY" -F "mode=build" -F "type=release" -F "lib=@./release/yapb.so" https://yapb.ru/agent/ci.php
   -   curl -F "key=$CI_KEY" -F "mode=build" -F "type=debug" -F "lib=@./debug/yapb.so" https://yapb.ru/agent/ci.php
   - fi
-  - if [[ "$TRAVIS_OS_NAME" == "os" ]]; then 
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
   -   curl -F "key=$CI_KEY" -F "mode=build" -F "type=release" -F "lib=@./release/yapb.dylib" https://yapb.ru/agent/ci.php
   -   curl -F "key=$CI_KEY" -F "mode=build" -F "type=debug" -F "lib=@./debug/yapb.dylib" https://yapb.ru/agent/ci.php
   - fi
