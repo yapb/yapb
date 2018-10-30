@@ -990,12 +990,14 @@ void Bot::pushRadioMessage (int message) {
    if (yb_communication_type.integer () == 0 || m_numFriendsLeft == 0) {
       return;
    }
+
    if (!(g_gameFlags & GAME_SUPPORT_BOT_VOICE) || g_chatterFactory[message].empty () || yb_communication_type.integer () != 2) {
       m_forceRadio = true; // use radio instead voice
    }
    else {
       m_forceRadio = false;
    }
+
    m_radioSelect = message;
    pushMsgQueue (GAME_MSG_RADIO);
 }
@@ -1346,7 +1348,13 @@ int Bot::pickBestWeapon (int *vec, int count, int moneySave) {
    if (yb_best_weapon_picker_type.integer () == 1) {
 
       auto pick = [] (const float factor) -> float {
-         return (static_cast <int> (((unsigned int &) factor >> 23) & 0xff) - 127) * 0.3010299956639812f;
+         union {
+            unsigned int u;
+            float f;
+         } cast;
+         cast.f = factor;
+
+         return (static_cast <int> ((cast.u >> 23) & 0xff) - 127) * 0.3010299956639812f;
       };
 
       float buyFactor = (m_moneyAmount - static_cast <float> (moneySave)) / (16000.0f - static_cast <float> (moneySave)) * 3.0f;
