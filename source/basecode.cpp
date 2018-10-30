@@ -768,7 +768,7 @@ void Bot::processPickups (void) {
                   return;
                }
 
-               if (rng.getInt (0, 100) < 90) {
+               if (rng.getInt (0, 100) < 70) {
                   pushChatterMessage (CHATTER_FOUND_BOMB_PLACE);
                }
 
@@ -1837,7 +1837,7 @@ void Bot::setConditions (void) {
          if (rng.getInt (1, 100) < 10) {
             pushRadioMessage (RADIO_ENEMY_DOWN);
          }
-         else {
+         else if (rng.getInt (1, 100) < 60) {
             if ((m_lastVictim->v.weapons & (1 << WEAPON_AWP)) || (m_lastVictim->v.weapons & (1 << WEAPON_SCOUT)) || (m_lastVictim->v.weapons & (1 << WEAPON_G3SG1)) || (m_lastVictim->v.weapons & (1 << WEAPON_SG550))) {
                pushChatterMessage (CHATTER_SNIPER_KILLED);
             }
@@ -3003,12 +3003,13 @@ void Bot::normal_ (void) {
       task ()->data = INVALID_WAYPOINT_INDEX;
    }
 
-   if (!g_bombPlanted && m_currentWaypointIndex != INVALID_WAYPOINT_INDEX && (m_currentPath->flags & FLAG_GOAL) && rng.getInt (0, 100) < 50 && numEnemiesNear (pev->origin, 650.0f) == 0) {
-      pushRadioMessage (RADIO_SECTOR_CLEAR);
-   }
-
    // reached the destination (goal) waypoint?
    if (processNavigation ()) {
+
+      // if we're reached the goal, and there is not enemies, notify the team
+      if (!g_bombPlanted && m_currentWaypointIndex != INVALID_WAYPOINT_INDEX && (m_currentPath->flags & FLAG_GOAL) && rng.getInt (0, 100) < 30 && numEnemiesNear (pev->origin, 650.0f) == 0) {
+         pushRadioMessage (RADIO_SECTOR_CLEAR);
+      }
       
       completeTask ();
       m_prevGoalIndex = INVALID_WAYPOINT_INDEX;
@@ -3185,9 +3186,19 @@ void Bot::normal_ (void) {
    }
 
    // bot hasn't seen anything in a long time and is asking his teammates to report in
-   if (m_seeEnemyTime + rng.getFloat (45.0f, 80.0f) < engine.timebase () && rng.getInt (0, 100) < 30 && g_timeRoundStart + 20.0f < engine.timebase () && m_askCheckTime < engine.timebase ()) {
-      m_askCheckTime = engine.timebase () + rng.getFloat (45.0f, 80.0f);
+   if (m_seeEnemyTime + rng.getFloat (45.0f, 80.0f) < engine.timebase () && g_lastRadio[m_team] != RADIO_REPORT_TEAM && rng.getInt (0, 100) < 30 && g_timeRoundStart + 20.0f < engine.timebase () && m_askCheckTime < engine.timebase () && numFriendsNear (pev->origin, 1024.0f) == 0) {
       pushRadioMessage (RADIO_REPORT_TEAM);
+
+      m_askCheckTime = engine.timebase () + rng.getFloat (45.0f, 80.0f);
+
+      // make sure everyone else will not ask next few moments
+      for (int i = 0; i < engine.maxClients (); i++) {
+         auto bot = bots.getBot (i);
+
+         if (bot && bot->m_notKilled) {
+            bot->m_askCheckTime = engine.timebase () + rng.getFloat (5.0f, 10.0f);
+         }
+      }
    }
 }
 
