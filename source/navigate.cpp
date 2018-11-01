@@ -1911,10 +1911,16 @@ int Bot::getBombPoint (void) {
    // this function finds the best goal (bomb) waypoint for CTs when searching for a planted bomb.
 
    auto &goals = waypoints.m_goalPoints;
-   auto bomb = isBombAudible ();
 
-   if (goals.empty () || bomb.empty ()) {
-      return rng.getInt (0, waypoints.length () - 1); // reliability check
+   auto bomb = waypoints.getBombPos ();
+   auto audible = isBombAudible ();
+
+   if (!audible.empty ()) {
+      m_bombSearchOverridden = true;
+      return waypoints.getNearest (audible, 80.0f);
+   }
+   else if (goals.empty ()) {
+      return waypoints.getNearest (bomb, 80.0f, FLAG_GOAL); // reliability check
    }
 
    // take the nearest to bomb waypoints instead of goal if close enough
