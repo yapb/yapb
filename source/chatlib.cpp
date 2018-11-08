@@ -336,17 +336,18 @@ bool checkForKeywords (char *message, char *reply) {
 
          // check is keyword has occurred in message
          if (strstr (message, keyword.chars ()) != nullptr) {
-            StringArray &replies = factory.usedReplies;
-
-            if (replies.length () >= factory.replies.length () / 2) {
-               replies.clear ();
+            StringArray &usedReplies = factory.usedReplies;
+            
+            if (usedReplies.length () >= factory.replies.length () / 2) {
+               usedReplies.clear ();
             }
-            else if (!replies.empty ()) {
+            
+            if (!factory.replies.empty ()) {
                bool replyUsed = false;
                const String &choosenReply = factory.replies.random ();
 
                // don't say this twice
-               for (auto &used : replies) {
+               for (auto &used : usedReplies) {
                   if (used.contains (choosenReply)) {
                      replyUsed = true;
                      break;
@@ -356,7 +357,7 @@ bool checkForKeywords (char *message, char *reply) {
                // reply not used, so use it
                if (!replyUsed) {
                   strcpy (reply, choosenReply.chars ()); // update final buffer
-                  replies.push (choosenReply); // add to ignore list
+                  usedReplies.push (choosenReply); // add to ignore list
 
                   return true;
                }
