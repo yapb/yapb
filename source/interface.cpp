@@ -504,16 +504,14 @@ void execBotConfigs (bool onlyMain) {
                if (cvar != nullptr) {
                   auto value = const_cast <char *> (keyval[1].trim ().trim ("\"").trim ().chars ());
 
-                  if (needsToIgnoreVar (ignore, key)) {
-                     if (!!stricmp (value, cvar->string)) {
-                        engine.print ("Bot CVAR '%s' is differs from stored in config (%s/%s). Ignoring.", cvar->name, cvar->string, value);
+                  if (needsToIgnoreVar (ignore, key) && !!stricmp (value, cvar->string)) {
+                     engine.print ("Bot CVAR '%s' differs from the stored in the config (%s/%s). Ignoring.", cvar->name, cvar->string, value);
 
-                        // ensure cvar will have old value
-                        g_engfuncs.pfnCvar_DirectSet (cvar, cvar->string);
-                     }
-                     else {
-                        g_engfuncs.pfnCvar_DirectSet (cvar, value);
-                     }
+                     // ensure cvar will have old value
+                     g_engfuncs.pfnCvar_DirectSet (cvar, cvar->string);
+                  }
+                  else {
+                     g_engfuncs.pfnCvar_DirectSet (cvar, value);
                   }
                }
                else
