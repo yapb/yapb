@@ -2203,16 +2203,16 @@ void StartFrame (void) {
          if (dmActive && freeForAll) {
             if (dmActive->value > 0.0f) {
                g_gameFlags |= GAME_CSDM;
-
-               if (freeForAll->value > 0.0f) {
-                  g_gameFlags |= GAME_CSDM_FFA;
-               }
-               else if (g_gameFlags & GAME_CSDM_FFA) {
-                  g_gameFlags &= ~GAME_CSDM_FFA;
-               }
             }
             else if (g_gameFlags & GAME_CSDM) {
                g_gameFlags &= ~GAME_CSDM;
+            }
+            
+            if (freeForAll->value > 0.0f) {
+               g_gameFlags |= GAME_CSDM_FFA;
+            }
+            else if (g_gameFlags & GAME_CSDM_FFA) {
+               g_gameFlags &= ~GAME_CSDM_FFA;
             }
          }
       }
