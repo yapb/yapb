@@ -1211,11 +1211,11 @@ void Bot::searchShortestPath (int srcIndex, int destIndex) {
    // this function finds the shortest path from source index to destination index
 
    if (!waypoints.exists (srcIndex)){
-      logEntry (true, LL_ERROR, "Pathfinder source path index not valid (%d)", srcIndex);
+      logEntry (false, LL_ERROR, "Pathfinder source path index not valid (%d)", srcIndex);
       return;
    }
    else if (!waypoints.exists (destIndex)) {
-      logEntry (true, LL_ERROR, "Pathfinder destination path index not valid (%d)", destIndex);
+      logEntry (false, LL_ERROR, "Pathfinder destination path index not valid (%d)", destIndex);
       return;
    }
    clearSearchNodes ();
@@ -1444,11 +1444,11 @@ void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= S
    // this function finds a path from srcIndex to destIndex
 
    if (!waypoints.exists (srcIndex)) {
-      logEntry (true, LL_ERROR, "Pathfinder source path index not valid (%d)", srcIndex);
+      logEntry (false, LL_ERROR, "Pathfinder source path index not valid (%d)", srcIndex);
       return;
    }
    else if (!waypoints.exists (destIndex)) {
-      logEntry (true, LL_ERROR, "Pathfinder destination path index not valid (%d)", destIndex);
+      logEntry (false, LL_ERROR, "Pathfinder destination path index not valid (%d)", destIndex);
       return;
    }
    clearSearchNodes ();
@@ -3040,7 +3040,7 @@ void Bot::processLookAngles (void) {
    float stiffness = 200.0f;
    float damping = 25.0f;
 
-   if ((m_aimFlags & (AIM_ENEMY | AIM_ENTITY | AIM_GRENADE)) && m_difficulty > 2) {
+   if ((m_aimFlags & (AIM_ENEMY | AIM_ENTITY | AIM_GRENADE)) && m_difficulty > 3) {
       accelerate += 800.0f;
       stiffness += 320.0f;
       damping -= 8.0f;

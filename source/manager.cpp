@@ -393,27 +393,17 @@ void BotManager::maintainQuota (void) {
    if (!engine.isDedicated () && !totalHumansInGame) {
       return;
    }
+
    int desiredBotCount = yb_quota.integer ();
    int botsInGame = getBotCount ();
 
-   bool halfRoundPassed = g_gameWelcomeSent && g_timeRoundMid > engine.timebase ();
-
    if (stricmp (yb_quota_mode.str (), "fill") == 0) {
-      if (halfRoundPassed) {
-         desiredBotCount = botsInGame;
-      }
-      else {
-         desiredBotCount = cr::max <int> (0, desiredBotCount - humanPlayersInGame);
-      }
+      botsInGame += humanPlayersInGame;
    }
    else if (stricmp (yb_quota_mode.str (), "match") == 0) {
-      if (halfRoundPassed) {
-         desiredBotCount = botsInGame;
-      }
-      else {
-         int quotaMatch = yb_quota_match.integer () == 0 ? yb_quota.integer () : yb_quota_match.integer ();
-         desiredBotCount = cr::max <int> (0, quotaMatch * humanPlayersInGame);
-      }
+      int detectQuotaMatch = yb_quota_match.integer () == 0 ? yb_quota.integer () : yb_quota_match.integer ();
+
+      desiredBotCount = cr::max <int> (0, detectQuotaMatch * humanPlayersInGame);
    }
 
    if (yb_join_after_player.boolean () && humanPlayersInGame == 0) {
