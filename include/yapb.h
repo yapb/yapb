@@ -481,9 +481,9 @@ const char FH_VISTABLE[] = "PODVIS!";
 const char FH_MATRIX[] = "PODMAT!";
 
 constexpr int FV_WAYPOINT = 7;
-constexpr int FV_EXPERIENCE = 3;
-constexpr int FV_VISTABLE = 2;
-constexpr int FV_MATRIX = 2;
+constexpr int FV_EXPERIENCE = 4;
+constexpr int FV_VISTABLE = 3;
+constexpr int FV_MATRIX = 3;
 
 // some hardcoded desire defines used to override calculated ones
 constexpr float TASKPRI_NORMAL = 35.0f;
@@ -512,7 +512,7 @@ constexpr int MAX_PATH_INDEX = 8;
 constexpr int MAX_DAMAGE_VALUE = 2040;
 constexpr int MAX_GOAL_VALUE = 2040;
 constexpr int MAX_KILL_HISTORY = 16;
-constexpr int MAX_WAYPOINTS = 1024;
+constexpr int MAX_WAYPOINTS = 3072;
 constexpr int MAX_ROUTE_LENGTH = MAX_WAYPOINTS / 2;
 constexpr int MAX_WEAPONS = 32;
 constexpr int NUM_WEAPONS = 26;

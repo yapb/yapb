@@ -884,7 +884,7 @@ void execBotConfigs (bool onlyMain) {
       }
       enum Lang { LANG_ORIGINAL, LANG_TRANSLATED, LANG_UNDEFINED } langState = static_cast <Lang> (LANG_UNDEFINED);
 
-      char buffer[1024] = { 0, };
+      char buffer[MAX_PRINT_BUFFER] = { 0, };
       Pair<String, String> lang;
 
       while (fp.gets (lineBuffer, 255)) {
@@ -917,11 +917,11 @@ void execBotConfigs (bool onlyMain) {
          else {
             switch (langState) {
             case LANG_ORIGINAL:
-               strncat (buffer, lineBuffer, 1024 - 1 - strlen (buffer));
+               strncat (buffer, lineBuffer, MAX_PRINT_BUFFER - 1 - strlen (buffer));
                break;
 
             case LANG_TRANSLATED:
-               strncat (buffer, lineBuffer, 1024 - 1 - strlen (buffer));
+               strncat (buffer, lineBuffer, MAX_PRINT_BUFFER - 1 - strlen (buffer));
                break;
 
             case LANG_UNDEFINED:
@@ -2723,7 +2723,7 @@ int pfnRegUserMsg (const char *name, int size) {
 
 void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...) {
    va_list ap;
-   char buffer[1024];
+   char buffer[MAX_PRINT_BUFFER];
 
    va_start (ap, format);
    vsnprintf (buffer, cr::bufsize (buffer), format, ap);

@@ -1925,7 +1925,7 @@ void Bot::setConditions (void) {
    }
 
    // check for grenades depending on difficulty
-   if (rng.getInt (0, 100) < m_difficulty * 25) {
+   if (rng.getInt (0, 100) < cr::max (25, m_difficulty * 25)) {
       checkGrenadesThrow ();
    }
 
@@ -5633,7 +5633,7 @@ void Bot::checkBurstMode (float distance) {
 }
 
 void Bot::checkSilencer (void) {
-   if (((m_currentWeapon == WEAPON_USP && m_difficulty < 2) || m_currentWeapon == WEAPON_M4A1) && !hasShield ()) {
+   if ((m_currentWeapon == WEAPON_USP || m_currentWeapon == WEAPON_M4A1) && !hasShield ()) {
       int prob = (m_personality == PERSONALITY_RUSHER ? 35 : 65);
 
       // aggressive bots don't like the silencer
