@@ -2913,7 +2913,7 @@ void Bot::frame (void) {
    if (g_bombPlanted && m_team == TEAM_COUNTER) {
       const Vector &bombPosition = waypoints.getBombPos ();
 
-      if (!m_hasProgressBar && taskId () != TASK_ESCAPEFROMBOMB && (pev->origin - bombPosition).length () < 700.0f && !isBombDefusing (bombPosition)) {
+      if (!m_hasProgressBar && taskId () != TASK_ESCAPEFROMBOMB && (pev->origin - bombPosition).lengthSq () < cr::square (1540.0f) && m_moveSpeed < pev->maxspeed && !isBombDefusing (bombPosition)) {
          clearTasks ();
       }
    }
