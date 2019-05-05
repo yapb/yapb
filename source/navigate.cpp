@@ -1917,15 +1917,15 @@ int Bot::getBombPoint (void) {
 
    if (!audible.empty ()) {
       m_bombSearchOverridden = true;
-      return waypoints.getNearest (audible, 80.0f);
+      return waypoints.getNearest (audible, 240.0f);
    }
    else if (goals.empty ()) {
-      return waypoints.getNearest (bomb, 80.0f, FLAG_GOAL); // reliability check
+      return waypoints.getNearest (bomb, 240.0f, FLAG_GOAL); // reliability check
    }
 
    // take the nearest to bomb waypoints instead of goal if close enough
    else if ((pev->origin - bomb).lengthSq () < cr::square (512.0f)) {
-      int waypoint = waypoints.getNearest (bomb, 80.0f);
+      int waypoint = waypoints.getNearest (bomb, 240.0f);
       m_bombSearchOverridden = true;
 
       if (waypoint != INVALID_WAYPOINT_INDEX) {
