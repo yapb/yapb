@@ -2910,7 +2910,7 @@ void Bot::frame (void) {
    m_numFriendsLeft = numFriendsNear (pev->origin, 99999.0f);
    m_numEnemiesLeft = numEnemiesNear (pev->origin, 99999.0f);
 
-   if (g_bombPlanted && m_team == TEAM_COUNTER) {
+   if (g_bombPlanted && m_team == TEAM_COUNTER && m_notKilled) {
       const Vector &bombPosition = waypoints.getBombPos ();
 
       if (!m_hasProgressBar && taskId () != TASK_ESCAPEFROMBOMB && (pev->origin - bombPosition).lengthSq () < cr::square (1540.0f) && m_moveSpeed < pev->maxspeed && !isBombDefusing (bombPosition)) {

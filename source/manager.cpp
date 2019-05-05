@@ -423,7 +423,7 @@ void BotManager::maintainQuota (void) {
       createRandom ();
    }
    else if (desiredBotCount < botsInGame) {
-      int ts, cts = 0;
+      int ts = 0, cts = 0;
       countTeamPlayers (ts, cts);
 
       if (ts > cts) {
