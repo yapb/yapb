@@ -423,7 +423,18 @@ void BotManager::maintainQuota (void) {
       createRandom ();
    }
    else if (desiredBotCount < botsInGame) {
-      kickRandom (false);
+      int ts, cts = 0;
+      countTeamPlayers (ts, cts);
+
+      if (ts > cts) {
+         kickRandom (false, TEAM_TERRORIST);
+      }
+      else if (ts < cts) {
+         kickRandom (false, TEAM_COUNTER);
+      }
+      else {
+         kickRandom (false, TEAM_UNASSIGNED);
+      }
    }
    m_quotaMaintainTime = engine.timebase () + 0.40f;
 }
@@ -590,22 +601,30 @@ void BotManager::kickBot (int index) {
    }
 }
 
-void BotManager::kickRandom (bool decQuota) {
+void BotManager::kickRandom (bool decQuota, Team fromTeam) {
    // this function removes random bot from server (only yapb's)
 
+   // if forTeam is unassigned, that means random team
    bool deadBotFound = false;
 
-   auto updateQuota = [&](void) {
+   auto updateQuota = [&] (void) {
       if (decQuota) {
          decrementQuota ();
       }
    };
 
+   auto belongsTeam = [&] (Bot *bot) {
+      if (fromTeam == TEAM_UNASSIGNED) {
+         return true;
+      }
+      return bot->m_team == fromTeam;
+   };
+
    // first try to kick the bot that is currently dead
    for (int i = 0; i < engine.maxClients (); i++) {
-      auto bot = bots.getBot (i);
+      auto bot = m_bots[i];
 
-      if (bot != nullptr && !bot->m_notKilled) // is this slot used?
+      if (bot && !bot->m_notKilled && belongsTeam (bot)) // is this slot used?
       {
          updateQuota ();
          bot->kick ();
@@ -625,9 +644,9 @@ void BotManager::kickRandom (bool decQuota) {
 
    // search bots in this team
    for (int i = 0; i < engine.maxClients (); i++) {
-      auto bot = bots.getBot (i);
+      auto bot = m_bots [i];
 
-      if (bot != nullptr && bot->pev->frags < score) {
+      if (bot && bot->pev->frags < score && belongsTeam (bot)) {
          index = i;
          score = bot->pev->frags;
       }
@@ -643,10 +662,12 @@ void BotManager::kickRandom (bool decQuota) {
 
    // worst case, just kick some random bot
    for (int i = 0; i < engine.maxClients (); i++) {
-      if (m_bots[i] != nullptr) // is this slot used?
+      auto bot = m_bots[i];
+
+      if (bot && belongsTeam (bot)) // is this slot used?
       {
          updateQuota ();
-         m_bots[i]->kick ();
+         bot->kick ();
 
          break;
       }
@@ -719,6 +740,21 @@ int BotManager::getBotCount (void) {
       }
    }
    return count;
+}
+
+void BotManager::countTeamPlayers (int &ts, int &cts) {
+   for (int i = 0; i < engine.maxClients (); i++) {
+      const Client &client = g_clients[i];
+
+      if (client.flags & CF_USED) {
+         if (client.team2 == TEAM_TERRORIST) {
+            ts++;
+         }
+         else if (client.team2 == TEAM_COUNTER) {
+            cts++;
+         }
+      }
+   }
 }
 
 Bot *BotManager::getHighfragBot (int team) {

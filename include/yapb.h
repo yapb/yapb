@@ -512,7 +512,7 @@ constexpr int MAX_PATH_INDEX = 8;
 constexpr int MAX_DAMAGE_VALUE = 2040;
 constexpr int MAX_GOAL_VALUE = 2040;
 constexpr int MAX_KILL_HISTORY = 16;
-constexpr int MAX_WAYPOINTS = 3072;
+constexpr int MAX_WAYPOINTS = 2048;
 constexpr int MAX_ROUTE_LENGTH = MAX_WAYPOINTS / 2;
 constexpr int MAX_WEAPONS = 32;
 constexpr int NUM_WEAPONS = 26;
@@ -1328,6 +1328,7 @@ public:
    int getHumansCount (bool ignoreSpectators = false);
    int getAliveHumansCount (void);
    int getBotCount (void);
+   void countTeamPlayers (int &ts, int &cts);
 
    void framePeriodic (void);
    void frame (void);
@@ -1347,7 +1348,7 @@ public:
    void serverFill (int selection, int personality = PERSONALITY_NORMAL, int difficulty = -1, int numToAdd = -1);
 
    void kickEveryone (bool instant = false,  bool zeroQuota = true);
-   void kickRandom (bool decQuota = true);
+   void kickRandom (bool decQuota = true, Team fromTeam = TEAM_UNASSIGNED);
    void kickBot (int index);
    void kickFromTeam (Team team, bool removeAll = false);
 
