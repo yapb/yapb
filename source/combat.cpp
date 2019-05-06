@@ -429,6 +429,9 @@ const Vector &Bot::getEnemyBodyOffset (void) {
    if ((m_visibility & VISIBLE_BODY) && !usesSniper () && distance > (m_difficulty > 2 ? 2000.0f : 1000.0f)) {
       m_visibility &= ~VISIBLE_HEAD;
    }
+   else if (distance < 800.0f && usesSniper ()) {
+      m_visibility &= ~VISIBLE_HEAD;
+   }
    Vector aimPos = m_enemy->v.origin;
 
    if (m_difficulty > 2 && !(m_visibility & VISIBLE_OTHER)) {
