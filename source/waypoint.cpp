@@ -568,32 +568,36 @@ bool Waypoint::isConnected (int pointA, int pointB) {
 int Waypoint::getFacingIndex (void) {
    // this function finds waypoint the user is pointing at.
 
-   int pointedIndex = INVALID_WAYPOINT_INDEX;
-   float viewCone[3] = {0.0f, 0.0f, 0.0f};
+   int indexToPoint = INVALID_WAYPOINT_INDEX;
+
+   Array <float> cones;
+   float maxCone = 0.0f;
 
    // find the waypoint the user is pointing at
    for (int i = 0; i < m_numWaypoints; i++) {
-      if ((m_paths[i]->origin - g_hostEntity->v.origin).lengthSq () > 250000.0f) {
+      auto path = m_paths[i];
+
+      if ((path->origin - g_hostEntity->v.origin).lengthSq () > cr::square (500.0f)) {
          continue;
       }
-      // get the current view cone
-      viewCone[0] = getShootingConeDeviation (g_hostEntity, m_paths[i]->origin);
-      Vector bound = m_paths[i]->origin - Vector (0.0f, 0.0f, (m_paths[i]->flags & FLAG_CROUCH) ? 8.0f : 15.0f);
+      cones.clear ();
 
-      // get the current view cone
-      viewCone[1] = getShootingConeDeviation (g_hostEntity, bound);
-      bound = m_paths[i]->origin + Vector (0.0f, 0.0f, (m_paths[i]->flags & FLAG_CROUCH) ? 8.0f : 15.0f);
-
-      // get the current view cone
-      viewCone[2] = getShootingConeDeviation (g_hostEntity, bound);
+      // get the current view cones
+      cones.push (getShootingConeDeviation (g_hostEntity, path->origin));
+      cones.push (getShootingConeDeviation (g_hostEntity, path->origin - Vector (0.0f, 0.0f, (path->flags & FLAG_CROUCH) ? 6.0f : 12.0f)));
+      cones.push (getShootingConeDeviation (g_hostEntity, path->origin - Vector (0.0f, 0.0f, (path->flags & FLAG_CROUCH) ? 12.0f : 24.0f)));
+      cones.push (getShootingConeDeviation (g_hostEntity, path->origin + Vector (0.0f, 0.0f, (path->flags & FLAG_CROUCH) ? 6.0f : 12.0f)));
+      cones.push (getShootingConeDeviation (g_hostEntity, path->origin + Vector (0.0f, 0.0f, (path->flags & FLAG_CROUCH) ? 12.0f : 24.0f)));
 
       // check if we can see it
-      if (viewCone[0] < 0.998f && viewCone[1] < 0.997f && viewCone[2] < 0.997f) {
-         continue;
+      for (auto &cone : cones) {
+         if (cone > 1.000f && cone > maxCone) {
+            maxCone = cone;
+            indexToPoint = i;
+         }
       }
-      pointedIndex = i;
    }
-   return pointedIndex;
+   return indexToPoint;
 }
 
 void Waypoint::pathCreate (char dir) {
@@ -1578,7 +1582,7 @@ void Waypoint::frame (void) {
             }
             else {
                nodeColor = Vector (0, 255, 0);
-            }
+            } 
 
             // colorize additional flags
             Vector nodeFlagColor = Vector (-1, -1, -1);
@@ -1596,16 +1600,21 @@ void Waypoint::frame (void) {
             else if (m_paths[i]->flags & FLAG_CF_ONLY) {
                nodeFlagColor = Vector (0, 0, 255);
             }
+            int nodeWidth = 14;
+
+            if (exists (m_facingAtIndex) && i == m_facingAtIndex) {
+               nodeWidth *= 2;
+            }
 
             // draw node without additional flags
             if (nodeFlagColor.x == -1) {
-               engine.drawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight), m_paths[i]->origin + Vector (0, 0, nodeHalfHeight), 15, 0, static_cast <int> (nodeColor.x), static_cast <int> (nodeColor.y), static_cast <int> (nodeColor.z), 250, 0, 10);
+               engine.drawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight), m_paths[i]->origin + Vector (0, 0, nodeHalfHeight), nodeWidth + 1, 0, static_cast <int> (nodeColor.x), static_cast <int> (nodeColor.y), static_cast <int> (nodeColor.z), 250, 0, 10);
             }
             
             // draw node with flags
             else {
-               engine.drawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight), m_paths[i]->origin - Vector (0, 0, nodeHalfHeight - nodeHeight * 0.75f), 14, 0, static_cast <int> (nodeColor.x), static_cast <int> (nodeColor.y), static_cast <int> (nodeColor.z), 250, 0, 10); // draw basic path
-               engine.drawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight - nodeHeight * 0.75f), m_paths[i]->origin + Vector (0, 0, nodeHalfHeight), 14, 0, static_cast <int> (nodeFlagColor.x), static_cast <int> (nodeFlagColor.y), static_cast <int> (nodeFlagColor.z), 250, 0, 10); // draw additional path
+               engine.drawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight), m_paths[i]->origin - Vector (0, 0, nodeHalfHeight - nodeHeight * 0.75f), nodeWidth, 0, static_cast <int> (nodeColor.x), static_cast <int> (nodeColor.y), static_cast <int> (nodeColor.z), 250, 0, 10); // draw basic path
+               engine.drawLine (g_hostEntity, m_paths[i]->origin - Vector (0, 0, nodeHalfHeight - nodeHeight * 0.75f), m_paths[i]->origin + Vector (0, 0, nodeHalfHeight), nodeWidth, 0, static_cast <int> (nodeFlagColor.x), static_cast <int> (nodeFlagColor.y), static_cast <int> (nodeFlagColor.z), 250, 0, 10); // draw additional path
             }
             m_waypointDisplayTime[i] = engine.timebase ();
          }
@@ -1691,25 +1700,25 @@ void Waypoint::frame (void) {
 
       // if radius is nonzero, draw a full circle
       if (path->radius > 0.0f) {
-         float squareRoot = cr::sqrtf (path->radius * path->radius * 0.5f);
+         float sqr = cr::sqrtf (path->radius * path->radius * 0.5f);
 
-         engine.drawLine (g_hostEntity, origin + Vector (path->radius, 0.0f, 0.0f), origin + Vector (squareRoot, -squareRoot, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
-         engine.drawLine (g_hostEntity, origin + Vector (squareRoot, -squareRoot, 0.0f), origin + Vector (0.0f, -path->radius, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
+         engine.drawLine (g_hostEntity, origin + Vector (path->radius, 0.0f, 0.0f), origin + Vector (sqr, -sqr, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
+         engine.drawLine (g_hostEntity, origin + Vector (sqr, -sqr, 0.0f), origin + Vector (0.0f, -path->radius, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
 
-         engine.drawLine (g_hostEntity, origin + Vector (0.0f, -path->radius, 0.0f), origin + Vector (-squareRoot, -squareRoot, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
-         engine.drawLine (g_hostEntity, origin + Vector (-squareRoot, -squareRoot, 0.0f), origin + Vector (-path->radius, 0.0f, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
+         engine.drawLine (g_hostEntity, origin + Vector (0.0f, -path->radius, 0.0f), origin + Vector (-sqr, -sqr, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
+         engine.drawLine (g_hostEntity, origin + Vector (-sqr, -sqr, 0.0f), origin + Vector (-path->radius, 0.0f, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
 
-         engine.drawLine (g_hostEntity, origin + Vector (-path->radius, 0.0f, 0.0f), origin + Vector (-squareRoot, squareRoot, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
-         engine.drawLine (g_hostEntity, origin + Vector (-squareRoot, squareRoot, 0.0f), origin + Vector (0.0f, path->radius, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
+         engine.drawLine (g_hostEntity, origin + Vector (-path->radius, 0.0f, 0.0f), origin + Vector (-sqr, sqr, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
+         engine.drawLine (g_hostEntity, origin + Vector (-sqr, sqr, 0.0f), origin + Vector (0.0f, path->radius, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
 
-         engine.drawLine (g_hostEntity, origin + Vector (0.0f, path->radius, 0.0f), origin + Vector (squareRoot, squareRoot, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
-         engine.drawLine (g_hostEntity, origin + Vector (squareRoot, squareRoot, 0.0f), origin + Vector (path->radius, 0.0f, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
+         engine.drawLine (g_hostEntity, origin + Vector (0.0f, path->radius, 0.0f), origin + Vector (sqr, sqr, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
+         engine.drawLine (g_hostEntity, origin + Vector (sqr, sqr, 0.0f), origin + Vector (path->radius, 0.0f, 0.0f), 5, 0, 0, 0, 255, 200, 0, 10);
       }
       else {
-         float squareRoot = cr::sqrtf (32.0f);
+         float sqr = cr::sqrtf (32.0f);
 
-         engine.drawLine (g_hostEntity, origin + Vector (squareRoot, -squareRoot, 0.0f), origin + Vector (-squareRoot, squareRoot, 0.0f), 5, 0, 255, 0, 0, 200, 0, 10);
-         engine.drawLine (g_hostEntity, origin + Vector (-squareRoot, -squareRoot, 0.0f), origin + Vector (squareRoot, squareRoot, 0.0f), 5, 0, 255, 0, 0, 200, 0, 10);
+         engine.drawLine (g_hostEntity, origin + Vector (sqr, -sqr, 0.0f), origin + Vector (-sqr, sqr, 0.0f), 5, 0, 255, 0, 0, 200, 0, 10);
+         engine.drawLine (g_hostEntity, origin + Vector (-sqr, -sqr, 0.0f), origin + Vector (sqr, sqr, 0.0f), 5, 0, 255, 0, 0, 200, 0, 10);
       }
 
       // draw the danger directions
