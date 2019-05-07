@@ -905,7 +905,9 @@ void Bot::fireWeapons (void) {
                   m_reloadState = RELOAD_PRIMARY;
                   m_reloadCheckTime = engine.timebase ();
 
-                  pushRadioMessage (RADIO_NEED_BACKUP);
+                  if (rng.getInt (0, 100) < cr::abs (m_difficulty * 25 - 100)) {
+                     pushRadioMessage (RADIO_NEED_BACKUP);
+                  }
                }
                return;
             }
