@@ -373,6 +373,15 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
                }
             }
          }
+         else {
+            int nearest = waypoints.getEditorNeareset (), totalCleared = 0;
+
+            if (waypoints.exists (nearest)) {
+               totalCleared += waypoints.removeUselessConnections (nearest);
+
+               engine.print ("Done. Waypoint %d had %d useless paths.", nearest, totalCleared);
+            }
+         }
       }
 
       // teleport player to specified waypoint
