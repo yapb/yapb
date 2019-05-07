@@ -3297,7 +3297,7 @@ void Bot::huntEnemy_ (void) {
       task ()->data = destIndex;
 
       if (destIndex != m_currentWaypointIndex) {
-         searchPath (m_currentWaypointIndex, destIndex, m_pathType);
+         searchPath (m_currentWaypointIndex, destIndex, SEARCH_PATH_FASTEST);
       }
    }
 
@@ -4008,7 +4008,7 @@ void Bot::followUser_ (void) {
          task ()->data = destIndex;
 
          // always take the shortest path
-         searchShortestPath (m_currentWaypointIndex, destIndex);
+         searchPath (m_currentWaypointIndex, destIndex, SEARCH_PATH_FASTEST);
       }
       else {
          m_targetEntity = nullptr;
@@ -4257,7 +4257,7 @@ void Bot::doublejump_ (void) {
          m_travelStartIndex = m_currentWaypointIndex;
 
          // always take the shortest path
-         searchShortestPath (m_currentWaypointIndex, destIndex);
+         searchPath (m_currentWaypointIndex, destIndex, SEARCH_PATH_FASTEST);
 
          if (m_currentWaypointIndex == destIndex) {
             m_jumpReady = true;
@@ -4331,7 +4331,7 @@ void Bot::escapeFromBomb_ (void) {
       m_prevGoalIndex = lastSelectedGoal;
       task ()->data = lastSelectedGoal;
 
-      searchShortestPath (m_currentWaypointIndex, lastSelectedGoal);
+      searchPath (m_currentWaypointIndex, lastSelectedGoal, SEARCH_PATH_FASTEST);
    }
 }
 
@@ -4668,7 +4668,7 @@ void Bot::checkSpawnConditions (void) {
    // this function is called instead of ai when buying finished, but freezetime is not yet left.
 
    // switch to knife if time to do this
-   if (m_checkKnifeSwitch && !m_checkWeaponSwitch && m_buyingFinished && m_spawnTime + rng.getFloat (4.0f, 6.5f) < engine.timebase ()) {
+   if (m_checkKnifeSwitch && !m_checkWeaponSwitch && m_buyingFinished && m_spawnTime + rng.getFloat (5.0f, 7.5f) < engine.timebase ()) {
       if (rng.getInt (1, 100) < 2 && yb_spraypaints.boolean ()) {
          startTask (TASK_SPRAY, TASKPRI_SPRAYLOGO, INVALID_WAYPOINT_INDEX, engine.timebase () + 1.0f, false);
       }
@@ -4690,7 +4690,7 @@ void Bot::checkSpawnConditions (void) {
    }
 
    // check if we already switched weapon mode
-   if (m_checkWeaponSwitch && m_buyingFinished && m_spawnTime + rng.getFloat (2.0f, 3.5f) < engine.timebase ()) {
+   if (m_checkWeaponSwitch && m_buyingFinished && m_spawnTime + rng.getFloat (3.0f, 4.5f) < engine.timebase ()) {
       if (hasShield () && isShieldDrawn ()) {
          pev->button |= IN_ATTACK2;
       }
@@ -4708,6 +4708,11 @@ void Bot::checkSpawnConditions (void) {
             }
             break;
          }
+      }
+
+      // movement in freezetime is disabled, so fire movement action if button was hit
+      if (pev->button & IN_ATTACK2) {
+         runMovement ();
       }
       m_checkWeaponSwitch = false;
    }
@@ -5637,8 +5642,7 @@ void Bot::checkSilencer (void) {
       int prob = (m_personality == PERSONALITY_RUSHER ? 35 : 65);
 
       // aggressive bots don't like the silencer
-      if (rng.getInt (1, 100) <= (m_currentWeapon == WEAPON_USP ? prob / 3 : prob)) {
-
+      if (rng.getInt (1, 100) < (m_currentWeapon == WEAPON_USP ? prob / 2 : prob)) {
          // is the silencer not attached...
          if (pev->weaponanim > 6) {
             pev->button |= IN_ATTACK2; // attach the silencer

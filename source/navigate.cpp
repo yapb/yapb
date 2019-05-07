@@ -167,13 +167,13 @@ int Bot::getGoalProcess (int tactic, IntArray *defensive, IntArray *offsensive) 
    {
       // force bomber to select closest goal, if round-start goal was reset by something
       if (m_hasC4 && g_timeRoundStart + 20.0f < engine.timebase ()) {
-         float minDist = 99999.0f;
+         float minDist = 9999999.0f;
          int count = 0;
 
          for (auto &point : waypoints.m_goalPoints) {
             float distance = (waypoints[point].origin - pev->origin).lengthSq ();
 
-            if (distance > 1024.0f) {
+            if (distance > cr::square (1024.0f)) {
                continue;
             }
             if (distance < minDist) {
@@ -1001,7 +1001,7 @@ bool Bot::processNavigation (void) {
                searchOptimalPoint ();
 
                if (waypoints.exists (m_prevWptIndex[2])) {
-                  searchShortestPath (m_currentWaypointIndex, m_prevWptIndex[2]);
+                  searchPath (m_currentWaypointIndex, m_prevWptIndex[2], SEARCH_PATH_FASTEST);
                }
                return false;
             }
