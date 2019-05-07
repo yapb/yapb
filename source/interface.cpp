@@ -161,6 +161,7 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
             engine.print ("%s wp cache\t - cache nearest waypoint.", self);
             engine.print ("%s wp teleport\t - teleport hostile to specified waypoint.", self);
             engine.print ("%s wp setradius\t - manually sets the wayzone radius for this waypoint.", self);
+            engine.print ("%s wp clean <nr/all>\t - cleans useless paths for specified or all waypoints.", self);
             engine.print ("%s path autodistance - opens menu for setting autopath maximum distance.", self);
             engine.print ("%s path cache\t - remember the nearest to player waypoint.", self);
             engine.print ("%s path create\t - opens menu for path creation.", self);
@@ -349,6 +350,29 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
       // remembers nearest waypoint
       else if (stricmp (arg1, "cache") == 0) {
          waypoints.cachePoint ();
+      }
+
+      // do a cleanup
+      else if (stricmp (arg1, "clean") == 0) {
+         if (!isEmptyStr (arg2)) {
+            if (stricmp (arg2, "all") == 0) {
+               int totalCleared = 0;
+
+               for (int i = 0; i < waypoints.length (); i++) {
+                  totalCleared += waypoints.removeUselessConnections (i, true);
+               }
+               engine.print ("Done. Processed %d waypoints. %d useless paths cleared.", totalCleared);
+            }
+            else {
+               int clearIndex = atoi (arg2), totalCleared = 0;
+
+               if (waypoints.exists (clearIndex)) {
+                  totalCleared += waypoints.removeUselessConnections (clearIndex);
+
+                  engine.print ("Done. Waypoint %d had %d useless paths.", clearIndex, totalCleared);
+               }
+            }
+         }
       }
 
       // teleport player to specified waypoint

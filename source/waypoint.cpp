@@ -39,6 +39,380 @@ void Waypoint::cleanupPathMemory (void) {
    }
 }
 
+int Waypoint::removeUselessConnections (int index, bool outputToConsole) {
+   // this function removes the useless paths connections from and to waypoint pointed by index. This is based on code from POD-bot MM from KWo
+
+   if (!exists (index)) {
+      return 0;
+   }
+   int numConnectionsFixed = 0;
+
+   if (bots.getBotCount () > 0) {
+      bots.kickEveryone (true);
+   }
+   const int INFINITE_DISTANCE = 99999;
+
+   auto printInfo = [&outputToConsole](const char *fmt, ...) {
+      if (!outputToConsole) {
+         return;
+      }
+      char buffer[MAX_PRINT_BUFFER];
+
+      va_list ap;
+      va_start (ap, fmt);
+      vsnprintf (buffer, MAX_PRINT_BUFFER - 1, fmt, ap);
+      va_end (ap);
+
+      engine.print (buffer);
+   };
+
+   struct Connection {
+      int index;
+      int number;
+      int distance;
+      float angles;
+
+   public:
+      Connection (void) {
+         reset ();
+      }
+
+   public:
+      void reset (void) {
+         index = INVALID_WAYPOINT_INDEX;
+         number = INVALID_WAYPOINT_INDEX;
+         distance = INFINITE_DISTANCE;
+         angles = 0.0f;
+      }
+   };
+
+   Connection sorted[MAX_PATH_INDEX];
+   Connection top;
+
+   for (int i = 0; i < MAX_PATH_INDEX; i++) {
+      auto &cur = sorted[i];
+
+      cur.number = i;
+      cur.index = m_paths[index]->index[i];
+      cur.distance = m_paths[index]->distances[i];
+
+      if (cur.index == INVALID_WAYPOINT_INDEX) {
+         cur.distance = INFINITE_DISTANCE;
+      }
+
+      if (cur.distance < top.distance) {
+         top.distance = m_paths[index]->distances[i];
+         top.number = i;
+         top.index = cur.index;
+      }
+   }
+
+   if (top.number == INVALID_WAYPOINT_INDEX) {
+      printInfo ("Cannot find path to the closest connected waypoint to waypoint number %d!\n", index);
+      return numConnectionsFixed;
+   }
+   bool sorting = false;
+
+   // sort paths from the closest waypoint to the farest away one...
+   do {
+      sorting = false;
+
+      for (int i = 0; i < MAX_PATH_INDEX - 1; i++) {
+         if (sorted[i].distance > sorted[i + 1].distance) {
+            cr::swap (sorted[i], sorted[i + 1]);
+            sorting = true;
+         }
+      }
+   } while (sorting);
+
+   // calculate angles related to the angle of the closeset connected waypoint
+   for (int i = 0; i < MAX_PATH_INDEX; i++) {
+      auto &cur = sorted[i];
+
+      if (cur.index == INVALID_WAYPOINT_INDEX) {
+         cur.distance = INFINITE_DISTANCE;
+         cur.angles = 360.0f;
+      }
+      else if (exists (cur.index)) {
+         cur.angles = ((m_paths[cur.index]->origin - m_paths[index]->origin).toAngles () - (m_paths[sorted[0].index]->origin - m_paths[index]->origin).toAngles ()).y;
+
+         if (cur.angles < 0.0f) {
+            cur.angles += 360.0f;
+         }
+      }
+   }
+
+   //  sort the paths from the lowest to the highest angle (related to the vector closest waypoint - checked index)...
+   do {
+      sorting = false;
+
+      for (int i = 0; i < MAX_PATH_INDEX - 1; i++) {
+         if (sorted[i].index != INVALID_WAYPOINT_INDEX && sorted[i].angles > sorted[i + 1].angles) {
+            cr::swap (sorted[i], sorted[i + 1]);
+            sorting = true;
+         }
+      }
+   } while (sorting);
+
+   // reset top state
+   top.reset ();
+
+   auto unassignPath = [&](const int id1, const int id2) {
+      m_waypointsChanged = true;
+
+      m_paths[id1]->index[id2] = INVALID_WAYPOINT_INDEX;
+      m_paths[id1]->distances[id2] = 0;
+      m_paths[id1]->connectionFlags[id2] = 0;
+      m_paths[id1]->connectionVelocity[id2].nullify ();
+
+      m_waypointsChanged = true;
+      g_waypointOn = true;
+
+      numConnectionsFixed++;
+   };
+
+   // check pass 0
+   auto inspect_p0 = [&](const int id, const auto &self) -> bool  {
+      if (id < 2) {
+         return false;
+      }
+      auto &cur = sorted[id], &prev = sorted[id - 1], &prev2 = sorted[id - 2];
+
+      if (cur.index == INVALID_WAYPOINT_INDEX || prev.index == INVALID_WAYPOINT_INDEX || prev2.index == INVALID_WAYPOINT_INDEX) {
+         return false;
+      }
+      
+      // store the highest index which should be tested later...
+      top.index = cur.index;
+      top.distance = cur.distance;
+      top.angles = cur.angles;
+
+      if (cur.angles - prev2.angles < 80.0f) {
+
+         // leave alone ladder connections and don't remove jump connections..
+         if (((m_paths[index]->flags & FLAG_LADDER) && (m_paths[prev.index]->flags & FLAG_LADDER)) || (m_paths[index]->connectionFlags[prev.number] & PATHFLAG_JUMP)) {
+            return false;
+         }
+
+         if ((cur.distance + prev2.distance) * 1.1f / 2.0f < static_cast <float> (prev.distance)) {
+            if (m_paths[index]->index[prev.number] == prev.index) {
+               printInfo ("Removing a useless (P.0.1) connection from index = %d to %d.", index, prev.index);
+
+               // unassign this path
+               unassignPath (index, prev.number);
+
+               for (int j = 0; j < MAX_PATH_INDEX; j++) {
+                  if (m_paths[prev.index]->index[j] == index && !(m_paths[prev.index]->connectionFlags[j] & PATHFLAG_JUMP)) {
+                     printInfo ("Removing a useless (P.0.2) connection from index = %d to %d.", prev.index, index);
+
+                     // unassign this path
+                     unassignPath (prev.index, j);
+                  }
+               }
+               prev.index = INVALID_WAYPOINT_INDEX;
+
+               for (int j = id - 1; j < MAX_PATH_INDEX - 1; j++) {
+                  sorted[j] = cr::move (sorted[j + 1]);
+               }
+               sorted[MAX_PATH_INDEX - 1].index = INVALID_WAYPOINT_INDEX;
+
+               // do a second check
+               return self (id, self);
+            }
+            else {
+               printInfo ("Failed to remove a useless (P.0) connection from index = %d to %d.", index, prev.index);
+               return false;
+            }
+         }
+      }
+      return true;
+   };
+
+
+   for (int i = 2; i < MAX_PATH_INDEX; i++) {
+      inspect_p0 (i, inspect_p0);
+   }
+
+   // check pass 1
+   if (exists (top.index) && exists (sorted[0].index) && exists (sorted[1].index)) {
+      if ((sorted[1].angles - top.angles < 80.0f || 360.0f - (sorted[1].angles - top.angles) < 80.0f) && (!(m_paths[sorted[0].index]->flags & FLAG_LADDER) || !(m_paths[index]->flags & FLAG_LADDER)) && !(m_paths[index]->connectionFlags[sorted[0].number] & PATHFLAG_JUMP)) {
+         if ((sorted[1].distance + top.distance) * 1.1f / 2.0f < static_cast <float> (sorted[0].distance)) {
+            if (m_paths[index]->index[sorted[0].number] == sorted[0].index) {
+               printInfo ("Removing a useless (P.1.1) connection from index = %d to %d.", index, sorted[0].index);
+
+               // unassign this path
+               unassignPath (index, sorted[0].number);
+
+               for (int j = 0; j < MAX_PATH_INDEX; j++) {
+                  if (m_paths[sorted[0].index]->index[j] == index && !(m_paths[sorted[0].index]->connectionFlags[j] & PATHFLAG_JUMP)) {
+                     printInfo ("Removing a useless (P.1.2) connection from index = %d to %d.", sorted[0].index, index);
+
+                     // unassign this path
+                     unassignPath (sorted[0].index, j);
+                  }
+               }
+               sorted[0].index = INVALID_WAYPOINT_INDEX;
+
+               for (int j = 0; j < MAX_PATH_INDEX - 1; j++) {
+                  sorted[j] = cr::move (sorted[j + 1]);
+               }
+               sorted[MAX_PATH_INDEX - 1].index = INVALID_WAYPOINT_INDEX;
+            }
+            else {
+               printInfo ("Failed to remove a useless (P.1) connection from index = %d to %d.", sorted[0].index, index);
+            }
+         }
+      }
+   }
+   top.reset ();
+
+   // check pass 2
+   auto inspect_p2 = [&](const int id, const auto &self) -> bool {
+      if (id < 1) {
+         return false;
+      }
+      auto &cur = sorted[id], &prev = sorted[id - 1];
+
+      if (cur.index == INVALID_WAYPOINT_INDEX || prev.index == INVALID_WAYPOINT_INDEX) {
+         return false;
+      }
+      
+      if (cur.angles - prev.angles < 40.0f) {
+         if (prev.distance < static_cast <float> (cur.distance * 1.1f)) {
+
+            // leave alone ladder connections and don't remove jump connections..
+            if (((m_paths[index]->flags & FLAG_LADDER) && (m_paths[cur.index]->flags & FLAG_LADDER)) || (m_paths[index]->connectionFlags[cur.number] & PATHFLAG_JUMP)) {
+               return false;
+            }
+
+            if (m_paths[index]->index[cur.number] == cur.index) {
+               printInfo ("Removing a useless (P.2.1) connection from index = %d to %d.", index, cur.index);
+
+               // unassign this path
+               unassignPath (index, cur.number);
+
+               for (int j = 0; j < MAX_PATH_INDEX; j++) {
+                  if (m_paths[cur.index]->index[j] == index && !(m_paths[cur.index]->connectionFlags[j] & PATHFLAG_JUMP)) {
+                     printInfo ("Removing a useless (P.2.2) connection from index = %d to %d.", cur.index, index);
+
+                     // unassign this path
+                     unassignPath (cur.index, j);
+                  }
+               }
+               cur.index = INVALID_WAYPOINT_INDEX;
+
+               for (int j = id - 1; j < MAX_PATH_INDEX - 1; j++) {
+                  sorted[j] = cr::move (sorted[j + 1]);
+               }
+               sorted[MAX_PATH_INDEX - 1].index = INVALID_WAYPOINT_INDEX;
+
+               // do a second check
+               return self (id, self);
+            }
+            else {
+               printInfo ("Failed to remove a useless (P.2) connection from index = %d to %d.", index, cur.index);
+            }
+         }
+         else if (cur.distance < static_cast <float> (prev.distance * 1.1f)) {
+            // leave alone ladder connections and don't remove jump connections..
+            if (((m_paths[index]->flags & FLAG_LADDER) && (m_paths[prev.index]->flags & FLAG_LADDER)) || (m_paths[index]->connectionFlags[prev.number] & PATHFLAG_JUMP)) {
+               return false;
+            }
+
+            if (m_paths[index]->index[prev.number] == prev.index) {
+               printInfo ("Removing a useless (P.2.3) connection from index = %d to %d.", index, prev.index);
+
+               // unassign this path
+               unassignPath (index, prev.number);
+
+               for (int j = 0; j < MAX_PATH_INDEX; j++) {
+                  if (m_paths[prev.index]->index[j] == index && !(m_paths[prev.index]->connectionFlags[j] & PATHFLAG_JUMP)) {
+                     printInfo ("Removing a useless (P.2.4) connection from index = %d to %d.", prev.index, index);
+
+                     // unassign this path
+                     unassignPath (prev.index, j);
+                  }
+               }
+               prev.index = INVALID_WAYPOINT_INDEX;
+
+               for (int j = id - 1; j < MAX_PATH_INDEX - 1; j++) {
+                  sorted[j] = cr::move (sorted[j + 1]);
+               }
+               sorted[MAX_PATH_INDEX - 1].index = INVALID_WAYPOINT_INDEX;
+
+               // do a second check
+               return self (id, self);
+            }
+            else {
+               printInfo ("Failed to remove a useless (P.2) connection from index = %d to %d.", index, prev.index);
+            }
+         }
+      }
+      else {
+         top = cur;
+      }
+      return true;
+   };
+
+   for (int i = 1; i < MAX_PATH_INDEX; i++) {
+      inspect_p2 (i, inspect_p2);
+   }
+
+   // check pass 3
+   if (exists (top.index) && exists (sorted[0].index)) {
+      if ((top.angles - sorted[0].angles < 40.0f || (360.0f - top.angles - sorted[0].angles) < 40.0f) && (!(m_paths[sorted[0].index]->flags & FLAG_LADDER) || !(m_paths[index]->flags & FLAG_LADDER)) && !(m_paths[index]->connectionFlags[sorted[0].number] & PATHFLAG_JUMP)) {
+         if (top.distance * 1.1f  < static_cast <float> (sorted[0].distance)) {
+            if (m_paths[index]->index[sorted[0].number] == sorted[0].index) {
+               printInfo ("Removing a useless (P.3.1) connection from index = %d to %d.", index, sorted[0].index);
+
+               // unassign this path
+               unassignPath (index, sorted[0].number);
+
+               for (int j = 0; j < MAX_PATH_INDEX; j++) {
+                  if (m_paths[sorted[0].index]->index[j] == index && !(m_paths[sorted[0].index]->connectionFlags[j] & PATHFLAG_JUMP)) {
+                     printInfo ("Removing a useless (P.3.2) connection from index = %d to %d.", sorted[0].index, index);
+
+                     // unassign this path
+                     unassignPath (sorted[0].index, j);
+                  }
+               }
+               sorted[0].index = INVALID_WAYPOINT_INDEX;
+
+               for (int j = 0; j < MAX_PATH_INDEX - 1; j++) {
+                  sorted[j] = cr::move (sorted[j + 1]);
+               }
+               sorted[MAX_PATH_INDEX - 1].index = INVALID_WAYPOINT_INDEX;
+            }
+            else {
+               printInfo ("Failed to remove a useless (P.3) connection from index = %d to %d.", sorted[0].index, index);
+            }
+         }
+         else if (sorted[0].distance * 1.1f < static_cast <float> (top.distance) && !(m_paths[index]->connectionFlags[top.number] & PATHFLAG_JUMP)) {
+            if (m_paths[index]->index[top.number] == top.index) {
+               printInfo ("Removing a useless (P.3.3) connection from index = %d to %d.", index, sorted[0].index);
+
+               // unassign this path
+               unassignPath (index, top.number);
+
+               for (int j = 0; j < MAX_PATH_INDEX; j++) {
+                  if (m_paths[top.index]->index[j] == index && !(m_paths[top.index]->connectionFlags[j] & PATHFLAG_JUMP)) {
+                     printInfo ("Removing a useless (P.3.4) connection from index = %d to %d.", sorted[0].index, index);
+
+                     // unassign this path
+                     unassignPath (top.index, j);
+                  }
+               }
+               sorted[0].index = INVALID_WAYPOINT_INDEX;
+            }
+            else {
+               printInfo ("Failed to remove a useless (P.3) connection from index = %d to %d.", sorted[0].index, index);
+            }
+         }
+      }
+   }
+   return numConnectionsFixed;
+}
+
 void Waypoint::addPath (int addIndex, int pathIndex, float distance) {
    if (!exists (addIndex) || !exists (pathIndex)) {
       return;
@@ -450,6 +824,7 @@ void Waypoint::push (int flags, const Vector &waypointOrigin) {
             addPath (i, index, distance);
          }
       }
+      removeUselessConnections (index, false);
    }
    engine.playSound (g_hostEntity, "weapons/xbow_hit1.wav");
    calculatePathRadius (index); // calculate the wayzone of this waypoint

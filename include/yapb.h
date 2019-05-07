@@ -445,7 +445,8 @@ enum WaypointFlag {
    FLAG_DOUBLEJUMP = (1 << 9), // bot help's another bot (requster) to get somewhere (using djump)
    FLAG_SNIPER = (1 << 28), // it's a specific sniper point
    FLAG_TF_ONLY = (1 << 29), // it's a specific terrorist point
-   FLAG_CF_ONLY = (1 << 30)  // it's a specific ct point
+   FLAG_CF_ONLY = (1 << 30),  // it's a specific ct point
+   FLAG_LOW_LIGHT = (1 << 31) // specifies that waypoints that have low amount of light (for flashlights)
 };
 
 // defines for waypoint connection flags field (16 bits are available)
@@ -1432,7 +1433,7 @@ private:
    float m_waypointDisplayTime[MAX_WAYPOINTS];
    int m_findWPIndex;
    int m_facingAtIndex;
-   char m_infoBuffer[256];
+   char m_infoBuffer[MAX_PRINT_BUFFER];
 
    int *m_distMatrix;
    int *m_pathMatrix;
@@ -1487,6 +1488,7 @@ public:
    bool load (void);
    void save (void);
    void cleanupPathMemory (void);
+   int removeUselessConnections (int index, bool outputToConsole = true);
 
    bool isReachable (Bot *bot, int index);
    bool isNodeReacheable (const Vector &src, const Vector &destination);

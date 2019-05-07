@@ -2427,7 +2427,7 @@ void Bot::checkRadioQueue (void) {
          if (rng.getInt (0, 100) < 45 && yb_communication_type.integer () == 2) {
             pushChatterMessage (CHATTER_ON_MY_WAY);
          }
-         else if (m_radioOrder == RADIO_NEED_BACKUP && yb_communication_type.integer () != 2) {
+         else if (m_radioOrder == RADIO_NEED_BACKUP && yb_communication_type.integer () != 2 && rng.getInt (0, 100) < 50) {
             pushRadioMessage (RADIO_AFFIRMATIVE);
          }
          tryHeadTowardRadioMessage ();
@@ -2891,7 +2891,7 @@ void Bot::frameThink (void) {
          m_voteMap = 0;
       }
    }
-   else if (m_notKilled && m_buyingFinished && !(pev->maxspeed < 10.0f && taskId () != TASK_PLANTBOMB && taskId () != TASK_DEFUSEBOMB) && !yb_freeze_bots.boolean () && !waypoints.hasChanged ()) {
+   else if (m_buyingFinished && !(pev->maxspeed < 10.0f && taskId () != TASK_PLANTBOMB && taskId () != TASK_DEFUSEBOMB) && !yb_freeze_bots.boolean () && !waypoints.hasChanged ()) {
       botMovement = true;
    }
    checkMsgQueue (); // check for pending messages
@@ -3015,7 +3015,7 @@ void Bot::normal_ (void) {
    if (processNavigation ()) {
 
       // if we're reached the goal, and there is not enemies, notify the team
-      if (!g_bombPlanted && m_currentWaypointIndex != INVALID_WAYPOINT_INDEX && (m_currentPath->flags & FLAG_GOAL) && rng.getInt (0, 100) < 30 && numEnemiesNear (pev->origin, 650.0f) == 0) {
+      if (!g_bombPlanted && m_currentWaypointIndex != INVALID_WAYPOINT_INDEX && (m_currentPath->flags & FLAG_GOAL) && rng.getInt (0, 100) < 15 && numEnemiesNear (pev->origin, 650.0f) == 0) {
          pushRadioMessage (RADIO_SECTOR_CLEAR);
       }
       
@@ -3194,7 +3194,7 @@ void Bot::normal_ (void) {
    }
 
    // bot hasn't seen anything in a long time and is asking his teammates to report in
-   if (m_seeEnemyTime + rng.getFloat (45.0f, 80.0f) < engine.timebase () && g_lastRadio[m_team] != RADIO_REPORT_TEAM && rng.getInt (0, 100) < 30 && g_timeRoundStart + 20.0f < engine.timebase () && m_askCheckTime < engine.timebase () && numFriendsNear (pev->origin, 1024.0f) == 0) {
+   if (yb_communication_type.integer () > 1 && m_seeEnemyTime + rng.getFloat (45.0f, 80.0f) < engine.timebase () && g_lastRadio[m_team] != RADIO_REPORT_TEAM && rng.getInt (0, 100) < 30 && g_timeRoundStart + 20.0f < engine.timebase () && m_askCheckTime < engine.timebase () && numFriendsNear (pev->origin, 1024.0f) == 0) {
       pushRadioMessage (RADIO_REPORT_TEAM);
 
       m_askCheckTime = engine.timebase () + rng.getFloat (45.0f, 80.0f);
