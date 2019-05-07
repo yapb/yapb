@@ -172,7 +172,7 @@ int Waypoint::removeUselessConnections (int index, bool outputToConsole) {
    };
 
    // check pass 0
-   auto inspect_p0 = [&](const int id, const auto &self) -> bool  {
+   auto inspect_p0 = [&](const int id) -> bool  {
       if (id < 2) {
          return false;
       }
@@ -217,7 +217,7 @@ int Waypoint::removeUselessConnections (int index, bool outputToConsole) {
                sorted[MAX_PATH_INDEX - 1].index = INVALID_WAYPOINT_INDEX;
 
                // do a second check
-               return self (id, self);
+               return true;
             }
             else {
                printInfo ("Failed to remove a useless (P.0) connection from index = %d to %d.", index, prev.index);
@@ -225,12 +225,12 @@ int Waypoint::removeUselessConnections (int index, bool outputToConsole) {
             }
          }
       }
-      return true;
+      return false;
    };
 
 
    for (int i = 2; i < MAX_PATH_INDEX; i++) {
-      inspect_p0 (i, inspect_p0);
+      while (inspect_p0 (i));
    }
 
    // check pass 1
@@ -267,7 +267,7 @@ int Waypoint::removeUselessConnections (int index, bool outputToConsole) {
    top.reset ();
 
    // check pass 2
-   auto inspect_p2 = [&](const int id, const auto &self) -> bool {
+   auto inspect_p2 = [&](const int id) -> bool {
       if (id < 1) {
          return false;
       }
@@ -305,9 +305,7 @@ int Waypoint::removeUselessConnections (int index, bool outputToConsole) {
                   sorted[j] = cr::move (sorted[j + 1]);
                }
                sorted[MAX_PATH_INDEX - 1].index = INVALID_WAYPOINT_INDEX;
-
-               // do a second check
-               return self (id, self);
+               return true;
             }
             else {
                printInfo ("Failed to remove a useless (P.2) connection from index = %d to %d.", index, cur.index);
@@ -341,7 +339,7 @@ int Waypoint::removeUselessConnections (int index, bool outputToConsole) {
                sorted[MAX_PATH_INDEX - 1].index = INVALID_WAYPOINT_INDEX;
 
                // do a second check
-               return self (id, self);
+               return true;
             }
             else {
                printInfo ("Failed to remove a useless (P.2) connection from index = %d to %d.", index, prev.index);
@@ -351,11 +349,11 @@ int Waypoint::removeUselessConnections (int index, bool outputToConsole) {
       else {
          top = cur;
       }
-      return true;
+      return false;
    };
 
    for (int i = 1; i < MAX_PATH_INDEX; i++) {
-      inspect_p2 (i, inspect_p2);
+      while (inspect_p2 (i));
    }
 
    // check pass 3

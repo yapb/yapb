@@ -361,7 +361,7 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
                for (int i = 0; i < waypoints.length (); i++) {
                   totalCleared += waypoints.removeUselessConnections (i, true);
                }
-               engine.print ("Done. Processed %d waypoints. %d useless paths cleared.", totalCleared);
+               engine.print ("Done. Processed %d waypoints. %d useless paths cleared.", waypoints.length (), totalCleared);
             }
             else {
                int clearIndex = atoi (arg2), totalCleared = 0;
