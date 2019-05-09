@@ -395,3 +395,43 @@ public:
       return cr::clamp <short> (static_cast <short> (value * scale), -32767, 32767);
    }
 };
+
+
+class LightMeasure final : public Singleton <LightMeasure> {
+private:
+   lightstyle_t m_lightstyle[MAX_LIGHTSTYLES];
+   int m_lightstyleValue[MAX_LIGHTSTYLEVALUE];
+   bool m_doAnimation;
+
+   SimpleColor m_point;
+   model_t *m_worldModel;
+
+public:
+   LightMeasure (void) : m_worldModel (nullptr), m_doAnimation (false) {
+      initializeLightstyles ();
+      m_point.reset ();
+   }
+
+public:
+   void initializeLightstyles (void);
+   void animateLight (void);
+
+   bool recursiveLightPoint (const mnode_t *node, const Vector &start, const Vector &end);
+   float getLightLevel (const Vector &point);
+
+public:
+   inline void resetWorldModel (void) {
+      m_worldModel = nullptr;
+   }
+
+   inline void setWorldModel (model_t *model) {
+      if (m_worldModel) {
+         return;
+      }
+      m_worldModel = model;
+   }
+
+   inline void enableAnimation (bool enable) {
+      m_doAnimation = enable;
+   }
+};

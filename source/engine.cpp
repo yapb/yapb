@@ -1103,3 +1103,145 @@ void Engine::processMessages (void *ptr) {
    }
    m_msgBlock.state++; // and finally update network message state
 }
+
+void LightMeasure::initializeLightstyles (void) {
+   // this function initializes lighting information...
+
+   // reset all light styles
+   for (int i = 0; i < MAX_LIGHTSTYLES; i++) {
+      m_lightstyle[i].length = 0;
+      m_lightstyle[i].map[0] = 0x0;
+   }
+
+   for (int i = 0; i < MAX_LIGHTSTYLEVALUE; i++) {
+      m_lightstyleValue[i] = 264;
+   }
+}
+
+void LightMeasure::animateLight (void) {
+   // this function performs light animations
+
+   if (!m_doAnimation) {
+      return;
+   }
+
+   // 'm' is normal light, 'a' is no light, 'z' is double bright
+   const int index = static_cast <int> (engine.timebase () * 10.0f);
+
+   for (int j = 0; j < MAX_LIGHTSTYLES; j++) {
+      if (!m_lightstyle[j].length) {
+         m_lightstyleValue[j] = 256;
+         continue;
+      }
+      int value = m_lightstyle[j].map[index % m_lightstyle[j].length] - 'a';
+      m_lightstyleValue[j] = value * 22;
+   }
+}
+
+inline bool LightMeasure::recursiveLightPoint (const mnode_t *node, const Vector &start, const Vector &end) {
+   if (node->contents < 0) {
+      return false;
+   }
+
+   // determine which side of the node plane our points are on, fixme: optimize for axial
+   auto plane = node->plane;
+
+   float front = (start | plane->normal) - plane->dist;
+   float back = (end | plane->normal) - plane->dist;
+
+   int side = front < 0.0f;
+
+   // if they're both on the same side of the plane, don't bother to split just check the appropriate child
+   if ((back < 0.0f) == side) {
+      return recursiveLightPoint (node->children[side], start, end);
+   }
+
+   // calculate mid point
+   float frac = front / (front - back);
+   auto mid = start + (end - start) * frac;
+
+   // go down front side
+   if (recursiveLightPoint (node->children[side], start, mid)) {
+      return true; // hit something
+   }
+
+   // blow it off if it doesn't split the plane...
+   if ((back < 0.0f) == side) {
+      return false; // didn't hit anything
+   }
+
+   // check for impact on this node
+   // lightspot = mid;
+   // lightplane = plane;
+   auto surf = reinterpret_cast <msurface_t *> (m_worldModel->surfaces) + node->firstsurface;
+
+   for (int i = 0; i < node->numsurfaces; i++, surf++) {
+      if (surf->flags & SURF_DRAWTILED) {
+         continue; // no lightmaps
+      }
+      auto tex = surf->texinfo;
+
+      // see where in lightmap space our intersection point is
+      int s = static_cast <int> ((mid | Vector (tex->vecs[0])) + tex->vecs[0][3]);
+      int t = static_cast <int> ((mid | Vector (tex->vecs[1])) + tex->vecs[1][3]);
+
+      // not in the bounds of our lightmap? punt...
+      if (s < surf->texturemins[0] || t < surf->texturemins[1]) {
+         continue;
+      }
+
+      // assuming a square lightmap (fixme: which ain't always the case), lets see if it lies in that rectangle. if not, punt...
+      int ds = s - surf->texturemins[0];
+      int dt = t - surf->texturemins[1];
+
+      if (ds > surf->extents[0] || dt > surf->extents[1]) {
+         continue;
+      }
+
+      if (!surf->samples) {
+         return true;
+      }
+      ds >>= 4;
+      dt >>= 4;
+
+      m_point.reset (); // reset point color.
+
+      int smax = (surf->extents[0] >> 4) + 1;
+      int tmax = (surf->extents[1] >> 4) + 1;
+      int size = smax * tmax;
+
+      auto lightmap = surf->samples + dt * smax + ds;
+
+      // compute the lightmap color at a particular point
+      for (int maps = 0u; maps < MAXLIGHTMAPS && surf->styles[maps] != 255u; ++maps) {
+         uint32 scale = m_lightstyleValue[surf->styles[maps]];
+
+         m_point.red += lightmap->r * scale;
+         m_point.green += lightmap->g * scale;
+         m_point.blue += lightmap->b * scale;
+
+         lightmap += size; // skip to next lightmap
+      }
+      m_point.red >>= 8u;
+      m_point.green >>= 8u;
+      m_point.blue >>= 8u;
+
+      return true;
+   }
+   return recursiveLightPoint (node->children[!side], mid, end); // go down back side
+}
+
+float LightMeasure::getLightLevel (const Vector &point) {
+   if (!m_worldModel) {
+      return 0.0f;
+   }
+
+   if (!m_worldModel->lightdata) {
+      return 255.0f;
+   }
+
+   Vector endPoint (point);
+   endPoint.z -= 2048.0f;
+
+   return recursiveLightPoint (m_worldModel->nodes, point, endPoint) == false ? 0.0f : 100 * cr::sqrtf (cr::min (75.0f, static_cast <float> (m_point.avg ())) / 75.0f);
+}

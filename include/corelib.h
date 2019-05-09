@@ -361,6 +361,20 @@ public:
    }
 };
 
+class SimpleColor final : private NonCopyable 
+{
+public:
+   int red, green, blue;
+
+   inline void reset (void) {
+      red = green = blue = 0;
+   }
+
+   inline const int avg (void) const { 
+      return (red + green + blue) / (sizeof (SimpleColor) / sizeof (int));
+   }
+};
+
 class Vector final {
 public:
    float x, y, z;
@@ -380,15 +394,15 @@ public:
       return &x;
    }
 
-   inline const Vector operator+ (const Vector &right) const {
+   inline const Vector operator + (const Vector &right) const {
       return Vector (x + right.x, y + right.y, z + right.z);
    }
 
-   inline const Vector operator- (const Vector &right) const {
+   inline const Vector operator - (const Vector &right) const {
       return Vector (x - right.x, y - right.y, z - right.z);
    }
 
-   inline const Vector operator- (void) const {
+   inline const Vector operator - (void) const {
       return Vector (-x, -y, -z);
    }
 
@@ -396,26 +410,26 @@ public:
       return Vector (right.x * vec, right.y * vec, right.z * vec);
    }
 
-   inline const Vector operator* (float vec) const {
+   inline const Vector operator * (float vec) const {
       return Vector (vec * x, vec * y, vec * z);
    }
 
-   inline const Vector operator/ (float vec) const {
+   inline const Vector operator / (float vec) const {
       const float inv = 1 / vec;
       return Vector (inv * x, inv * y, inv * z);
    }
 
    // cross product
-   inline const Vector operator^ (const Vector &right) const {
+   inline const Vector operator ^ (const Vector &right) const {
       return Vector (y * right.z - z * right.y, z * right.x - x * right.z, x * right.y - y * right.x);
    }
 
    // dot product
-   inline float operator| (const Vector &right) const {
+   inline float operator | (const Vector &right) const {
       return x * right.x + y * right.y + z * right.z;
    }
 
-   inline const Vector &operator+= (const Vector &right) {
+   inline const Vector &operator += (const Vector &right) {
       x += right.x;
       y += right.y;
       z += right.z;
@@ -423,7 +437,7 @@ public:
       return *this;
    }
 
-   inline const Vector &operator-= (const Vector &right) {
+   inline const Vector &operator -= (const Vector &right) {
       x -= right.x;
       y -= right.y;
       z -= right.z;
@@ -431,7 +445,7 @@ public:
       return *this;
    }
 
-   inline const Vector &operator*= (float vec) {
+   inline const Vector &operator *= (float vec) {
       x *= vec;
       y *= vec;
       z *= vec;
@@ -439,7 +453,7 @@ public:
       return *this;
    }
 
-   inline const Vector &operator/= (float vec) {
+   inline const Vector &operator /= (float vec) {
       const float inv = 1 / vec;
 
       x *= inv;
@@ -449,15 +463,15 @@ public:
       return *this;
    }
 
-   inline bool operator== (const Vector &right) const {
+   inline bool operator == (const Vector &right) const {
       return fequal (x, right.x) && fequal (y, right.y) && fequal (z, right.z);
    }
 
-   inline bool operator!= (const Vector &right) const {
+   inline bool operator != (const Vector &right) const {
       return !fequal (x, right.x) && !fequal (y, right.y) && !fequal (z, right.z);
    }
 
-   inline const Vector &operator= (const Vector &right) {
+   inline const Vector &operator = (const Vector &right) {
       x = right.x;
       y = right.y;
       z = right.z;

@@ -1367,6 +1367,22 @@ void Waypoint::initVisibility (void) {
    fp.close ();
 }
 
+void Waypoint::initLightLevels (void) {
+   // this function get's the light level for each waypoin on the map
+
+   // no waypoints ? no light levels, and only one-time init
+   if (!m_numWaypoints || !cr::fzero (m_waypointLightLevel[0])) {
+      return;
+   }
+   engine.print ("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1");
+   // update light levels for all waypoints
+   for (int i = 0; i < m_numWaypoints; i++) {
+      m_waypointLightLevel[i] = illum.getLightLevel (m_paths[i]->origin);
+   }
+   // disable lightstyle animations on finish (will be auto-enabled on mapchange)
+   illum.enableAnimation (false);
+}
+
 void Waypoint::initTypes (void) {
    m_terrorPoints.clear ();
    m_ctPoints.clear ();
@@ -1506,7 +1522,8 @@ bool Waypoint::load (void) {
    }
     
    for (int i = 0; i < m_numWaypoints; i++) {
-      m_waypointDisplayTime[i] = 0.0;
+      m_waypointDisplayTime[i] = 0.0f;
+      m_waypointLightLevel[i] = 0.0f;
    }
 
    initPathMatrix ();
@@ -2679,6 +2696,7 @@ Waypoint::Waypoint (void) {
    
    memset (m_visLUT, 0, sizeof (m_visLUT));
    memset (m_waypointDisplayTime, 0, sizeof (m_waypointDisplayTime));
+   memset (m_waypointLightLevel, 0, sizeof (m_waypointLightLevel));
    memset (m_infoBuffer, 0, sizeof (m_infoBuffer));
 
    m_waypointPaths = false;
