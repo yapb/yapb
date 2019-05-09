@@ -370,7 +370,7 @@ public:
       red = green = blue = 0;
    }
 
-   inline const int avg (void) const { 
+   inline int avg (void) const { 
       return (red + green + blue) / (sizeof (SimpleColor) / sizeof (int));
    }
 };

@@ -407,7 +407,7 @@ private:
    model_t *m_worldModel;
 
 public:
-   LightMeasure (void) : m_worldModel (nullptr), m_doAnimation (false) {
+   LightMeasure (void) : m_doAnimation (false), m_worldModel (nullptr) {
       initializeLightstyles ();
       m_point.reset ();
    }
