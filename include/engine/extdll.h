@@ -61,6 +61,7 @@ using namespace cr::types;
 
 #include "const.h"
 #include "progdefs.h"
+#include "model.h"
 
 #define MAX_ENT_LEAFS 48
 

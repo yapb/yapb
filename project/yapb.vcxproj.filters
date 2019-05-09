@@ -54,6 +54,9 @@
     <ClInclude Include="..\include\yapb.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\engine\model.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\chatlib.cpp">

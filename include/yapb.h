@@ -1431,6 +1431,7 @@ private:
    float m_pathDisplayTime;
    float m_arrowDisplayTime;
    float m_waypointDisplayTime[MAX_WAYPOINTS];
+   float m_waypointLightLevel[MAX_WAYPOINTS];
    int m_findWPIndex;
    int m_facingAtIndex;
    char m_infoBuffer[MAX_PRINT_BUFFER];
@@ -1458,6 +1459,7 @@ public:
    void initExperience (void);
    void initVisibility (void);
    void initTypes (void);
+   void initLightLevels (void);
 
    void addPath (int addIndex, int pathIndex, float distance);
 
@@ -1544,6 +1546,11 @@ public:
       return m_numWaypoints;
    }
 
+   // get the light level of waypoint
+   inline float getLightLevel (int id) const {
+      return m_waypointLightLevel[id];
+   }
+
    // free's socket handle
    void closeSocket (int sock);
 
@@ -1567,6 +1574,7 @@ static auto &waypoints = Waypoint::ref ();
 static auto &bots = BotManager::ref ();
 static auto &engine = Engine::ref ();
 static auto &rng = RandomSequence::ref ();
+static auto &illum = LightMeasure::ref ();
 
 // prototypes of bot functions...
 extern int getWeaponData (bool isString, const char *weaponAlias, int weaponIndex = -1);

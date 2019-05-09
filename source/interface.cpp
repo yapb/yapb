@@ -19,6 +19,7 @@ ConVar yb_version ("yb_version", PRODUCT_VERSION, VT_READONLY);
 ConVar mp_startmoney ("mp_startmoney", nullptr, VT_NOREGISTER, true, "800");
 
 int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *self) {
+
    // adding one bot with random parameters to random team
    if (stricmp (arg0, "addbot") == 0 || stricmp (arg0, "add") == 0) {
       bots.addbot (arg4, arg1, arg2, arg3, arg5, true);
@@ -350,6 +351,18 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
       // remembers nearest waypoint
       else if (stricmp (arg1, "cache") == 0) {
          waypoints.cachePoint ();
+      }
+
+      else if (stricmp (arg1, "glp") == 0) {
+  
+
+      for (int i = 0; i < waypoints.length (); i++) {
+
+
+         engine.print ("%d - %f", i, waypoints.getLightLevel (i));
+      }
+     
+      
       }
 
       // do a cleanup
@@ -2097,6 +2110,9 @@ void ServerActivate (edict_t *pentEdictList, int edictCount, int clientMax) {
    // do a level initialization
    engine.levelInitialize ();
 
+   // update worldmodel
+   illum.resetWorldModel ();
+
    // do level initialization stuff here...
    waypoints.init ();
    waypoints.load ();
@@ -2139,6 +2155,9 @@ void ServerDeactivate (void) {
    // set state to unprecached
    engine.setUnprecached ();
 
+   // enable lightstyle animations on level change
+   illum.enableAnimation (true);
+
    // xash is not kicking fakeclients on changelevel
    if (g_gameFlags & GAME_XASH_ENGINE) {
       bots.kickEveryone (true, false);
@@ -2163,6 +2182,9 @@ void StartFrame (void) {
 
    // run periodic update of bot states
    bots.frame ();
+
+   // update lightstyle animations
+   illum.animateLight ();
 
    // record some stats of all players on the server
    for (int i = 0; i < engine.maxClients (); i++) {
@@ -2228,6 +2250,9 @@ void StartFrame (void) {
          }
       }
       bots.calculatePingOffsets ();
+
+      // calculate light levels for all waypoints if needed
+      waypoints.initLightLevels ();
 
       if (g_gameFlags & GAME_METAMOD) {
          static auto dmActive = g_engfuncs.pfnCVarGetPointer ("csdm_active");
@@ -2786,7 +2811,7 @@ typedef void (*entity_func_t) (entvars_t *);
 gamedll_funcs_t gameDLLFunc;
 
 SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
-   // this function is called right after FuncPointers_t() by the engine in the game DLL (or
+   // this function is called right after GiveFnptrsToDll() by the engine in the game DLL (or
    // what it BELIEVES to be the game DLL), in order to copy the list of MOD functions that can
    // be called by the engine, into a memory block pointed to by the functionTable pointer
    // that is passed into this function (explanation comes straight from botman). This allows
@@ -2824,6 +2849,19 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
    functionTable->pfnStartFrame = StartFrame;
    functionTable->pfnUpdateClientData = UpdateClientData;
 
+   functionTable->pfnPM_Move = [] (playermove_t *playerMove, int server) {
+      // this is the player movement code clients run to predict things when the server can't update
+      // them often enough (or doesn't want to). The server runs exactly the same function for
+      // moving players. There is normally no distinction between them, else client-side prediction
+      // wouldn't work properly (and it doesn't work that well, already...)
+
+      illum.setWorldModel (playerMove->physents[0u].model);
+
+      if (g_gameFlags & GAME_METAMOD) {
+         RETURN_META (MRES_IGNORED);
+      }
+      g_functionTable.pfnPM_Move (playerMove, server);
+   };
    return TRUE;
 }
 
@@ -2861,7 +2899,7 @@ SHARED_LIBRARAY_EXPORT int GetNewDLLFunctions (newgamefuncs_t *functionTable, in
    }
 
    if (!api_GetNewDLLFunctions (functionTable, interfaceVersion)) {
-      logEntry (true, LL_FATAL, "GetNewDLLFunctions: ERROR - Not Initialized.");
+      logEntry (true, LL_ERROR, "GetNewDLLFunctions: ERROR - Not Initialized.");
       return FALSE;
    }
 
