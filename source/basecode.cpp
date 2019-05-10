@@ -1805,7 +1805,7 @@ void Bot::overrideConditions (void) {
    }
 
    // special handling, if we have a knife in our hands
-   if ((g_timeRoundStart + 6.0f > engine.timebase () || !hasAnyWeapons ()) && m_currentWeapon == WEAPON_KNIFE && isPlayer (m_enemy) && (taskId () != TASK_MOVETOPOSITION || task ()->desire != TASKPRI_HIDE)) {
+   if ((g_timeRoundStart + 6.0f > engine.timebase () || !hasAnyWeapons ()) && m_currentWeapon == WEAPON_KNIFE && isPlayer (m_enemy)) {
       float length = (pev->origin - m_enemy->v.origin).length2D ();
 
       // do waypoint movement if enemy is not reachable with a knife
@@ -1813,12 +1813,15 @@ void Bot::overrideConditions (void) {
          int nearestToEnemyPoint = waypoints.getNearest (m_enemy->v.origin);
 
          if (nearestToEnemyPoint != INVALID_WAYPOINT_INDEX && nearestToEnemyPoint != m_currentWaypointIndex && cr::abs (waypoints[nearestToEnemyPoint].origin.z - m_enemy->v.origin.z) < 16.0f) {
-            startTask (TASK_MOVETOPOSITION, TASKPRI_HIDE, nearestToEnemyPoint, engine.timebase () + rng.getFloat (5.0f, 10.0f), true);
+            float taskTime = engine.timebase () + length / pev->maxspeed * 0.5f;
 
+            if (taskId () != TASK_MOVETOPOSITION && task ()->desire != TASKPRI_HIDE) {
+               startTask (TASK_MOVETOPOSITION, TASKPRI_HIDE, nearestToEnemyPoint, taskTime, true);
+            }
             m_isEnemyReachable = false;
             m_enemy = nullptr;
 
-            m_enemyIgnoreTimer = engine.timebase () + length / pev->maxspeed * 0.5f;
+            m_enemyIgnoreTimer = taskTime;
          }
       }
    }
@@ -2886,6 +2889,25 @@ void Bot::checkDarkness (void) {
       }
    }
    m_checkDarkTime = engine.timebase ();
+}
+
+void Bot::checkParachute (void) {
+   static auto parachute = g_engfuncs.pfnCVarGetPointer ("sv_parachute");
+
+   // if no cvar or it's not enabled do not bother
+   if (parachute && parachute->value > 0.0f) {
+      if (isOnLadder () || pev->velocity.z > -50.0f || isOnFloor ()) {
+         m_fallDownTime = 0.0f;
+      }
+      else if (cr::fzero (m_fallDownTime)) {
+         m_fallDownTime = engine.timebase ();
+      }
+
+      // press use anyway
+      if (!cr::fzero (m_fallDownTime) && m_fallDownTime + 0.35f < engine.timebase ()) {
+         pev->button |= IN_USE;
+      }
+   }
 }
 
 void Bot::framePeriodic (void) {
@@ -4978,6 +5000,9 @@ void Bot::ai (void) {
          pev->button |= IN_MOVELEFT;
       }
    }
+
+   // check if need to use parachute
+   checkParachute ();
 
    // display some debugging thingy to host entity
    if (!engine.isNullEntity (g_hostEntity) && yb_debug.integer () >= 1) {

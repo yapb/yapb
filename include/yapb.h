@@ -949,6 +949,7 @@ private:
    void processPickups (void);
    void checkTerrain (float movedDistance, const Vector &dirNormal);
    void checkDarkness (void);
+   void checkParachute (void);
    bool doPlayerAvoidance (const Vector &normal);
 
    void getCampDir (Vector *dest);
@@ -1138,6 +1139,7 @@ public:
    edict_t *m_radioEntity; // pointer to entity issuing a radio command
    int m_radioOrder; // actual command
 
+   float m_fallDownTime; // time bot started to fall 
    float m_duckForJump; // is bot needed to duck for double jump
    float m_baseAgressionLevel; // base aggression level (on initializing)
    float m_baseFearLevel; // base fear level (on initializing)
