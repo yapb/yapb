@@ -201,6 +201,11 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
          engine.centerPrint ("You're dead, and have no access to this menu");
       }
    }
+   else if (stricmp (arg0, "glp") == 0) {
+      for (int i = 0; i < waypoints.length (); i++) {
+         engine.print ("%d - %f - %f", i, waypoints.getLightLevel (i), illum.getSkiesColor ());
+      }
+   }
 
    // waypoint manimupulation (really obsolete, can be edited through menu) (supported only on listen server)
    else if (stricmp (arg0, "waypoint") == 0 || stricmp (arg0, "wp") == 0 || stricmp (arg0, "wpt") == 0) {
@@ -351,18 +356,6 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
       // remembers nearest waypoint
       else if (stricmp (arg1, "cache") == 0) {
          waypoints.cachePoint ();
-      }
-
-      else if (stricmp (arg1, "glp") == 0) {
-  
-
-      for (int i = 0; i < waypoints.length (); i++) {
-
-
-         engine.print ("%d - %f", i, waypoints.getLightLevel (i));
-      }
-     
-      
       }
 
       // do a cleanup

@@ -409,6 +409,7 @@ private:
 public:
    LightMeasure (void) : m_doAnimation (false), m_worldModel (nullptr) {
       initializeLightstyles ();
+
       m_point.reset ();
    }
 
@@ -416,8 +417,11 @@ public:
    void initializeLightstyles (void);
    void animateLight (void);
 
-   bool recursiveLightPoint (const mnode_t *node, const Vector &start, const Vector &end);
    float getLightLevel (const Vector &point);
+   float getSkiesColor (void);
+
+private:
+   template <typename S, typename M> bool recursiveLightPoint (const M *node, const Vector &start, const Vector &end);
 
 public:
    inline void resetWorldModel (void) {

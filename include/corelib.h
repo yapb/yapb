@@ -371,7 +371,11 @@ public:
    }
 
    inline int avg (void) const { 
-      return (red + green + blue) / (sizeof (SimpleColor) / sizeof (int));
+      return sum () / (sizeof (SimpleColor) / sizeof (int));
+   }
+
+   inline int sum (void) const {
+      return red + green + blue;
    }
 };
 

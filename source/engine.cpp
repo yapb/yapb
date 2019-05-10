@@ -9,6 +9,10 @@
 
 #include <yapb.h>
 
+ConVar sv_skycolor_r ("sv_skycolor_r", nullptr, VT_NOREGISTER);
+ConVar sv_skycolor_g ("sv_skycolor_g", nullptr, VT_NOREGISTER);
+ConVar sv_skycolor_b ("sv_skycolor_b", nullptr, VT_NOREGISTER);
+
 Engine::Engine (void) {
    m_startEntity = nullptr;
    m_localEntity = nullptr;
@@ -1138,7 +1142,7 @@ void LightMeasure::animateLight (void) {
    }
 }
 
-inline bool LightMeasure::recursiveLightPoint (const mnode_t *node, const Vector &start, const Vector &end) {
+template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const M *node, const Vector &start, const Vector &end) {
    if (node->contents < 0) {
       return false;
    }
@@ -1153,7 +1157,7 @@ inline bool LightMeasure::recursiveLightPoint (const mnode_t *node, const Vector
 
    // if they're both on the same side of the plane, don't bother to split just check the appropriate child
    if ((back < 0.0f) == side) {
-      return recursiveLightPoint (node->children[side], start, end);
+      return recursiveLightPoint <S, M> (reinterpret_cast <M *> (node->children[side]), start, end);
    }
 
    // calculate mid point
@@ -1161,7 +1165,7 @@ inline bool LightMeasure::recursiveLightPoint (const mnode_t *node, const Vector
    auto mid = start + (end - start) * frac;
 
    // go down front side
-   if (recursiveLightPoint (node->children[side], start, mid)) {
+   if (recursiveLightPoint <S, M> (reinterpret_cast <M *> (node->children[side]), start, mid)) {
       return true; // hit something
    }
 
@@ -1173,7 +1177,7 @@ inline bool LightMeasure::recursiveLightPoint (const mnode_t *node, const Vector
    // check for impact on this node
    // lightspot = mid;
    // lightplane = plane;
-   auto surf = reinterpret_cast <msurface_t *> (m_worldModel->surfaces) + node->firstsurface;
+   auto surf = reinterpret_cast <S *> (m_worldModel->surfaces) + node->firstsurface;
 
    for (int i = 0; i < node->numsurfaces; i++, surf++) {
       if (surf->flags & SURF_DRAWTILED) {
@@ -1228,7 +1232,7 @@ inline bool LightMeasure::recursiveLightPoint (const mnode_t *node, const Vector
 
       return true;
    }
-   return recursiveLightPoint (node->children[!side], mid, end); // go down back side
+   return recursiveLightPoint <S, M> (reinterpret_cast <M *> (node->children[!side]), mid, end); // go down back side
 }
 
 float LightMeasure::getLightLevel (const Vector &point) {
@@ -1243,5 +1247,16 @@ float LightMeasure::getLightLevel (const Vector &point) {
    Vector endPoint (point);
    endPoint.z -= 2048.0f;
 
-   return recursiveLightPoint (m_worldModel->nodes, point, endPoint) == false ? 0.0f : 100 * cr::sqrtf (cr::min (75.0f, static_cast <float> (m_point.avg ())) / 75.0f);
+   // it's depends if we're are on dedicated or on listenserver
+   auto recursiveCheck = [&] (void) -> bool {
+      if (!engine.isDedicated () || (g_gameFlags & GAME_XASH_ENGINE)) {
+         return recursiveLightPoint <msurface_hw_t, mnode_hw_t> (reinterpret_cast <mnode_hw_t *> (m_worldModel->nodes), point, endPoint);
+      }
+      return recursiveLightPoint <msurface_t, mnode_t> (m_worldModel->nodes, point, endPoint);
+   };
+   return !recursiveCheck () ? 0.0f : 100 * cr::sqrtf (cr::min (75.0f, static_cast <float> (m_point.avg ())) / 75.0f);
+}
+
+float LightMeasure::getSkiesColor (void) {
+   return sv_skycolor_r.flt () + sv_skycolor_g.flt () + sv_skycolor_b.flt ();
 }
