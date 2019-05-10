@@ -1725,7 +1725,6 @@ void Bot::buyStuff (void) {
             else {
                engine.execBotCmd (ent (), "nvgs"); // use alias in steamcs
             }
-            engine.print ("%s bought googles", STRING (pev->netname));
          }
       }
       break;
