@@ -1202,6 +1202,7 @@ void Bot::newRound (void) {
    m_ignoreBuyDelay = false;
    m_hasC4 = false;
 
+   m_fallDownTime = 0.0f;
    m_shieldCheckTime = 0.0f;
    m_zoomCheckTime = 0.0f;
    m_strafeSetTime = 0.0f;
