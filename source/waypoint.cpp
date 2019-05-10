@@ -1370,10 +1370,6 @@ void Waypoint::initVisibility (void) {
 void Waypoint::initLightLevels (void) {
    // this function get's the light level for each waypoin on the map
 
-   // @todo: re-enable when working on flashlights
-   illum.enableAnimation (false);
-   return;
-#if 0
    // no waypoints ? no light levels, and only one-time init
    if (!m_numWaypoints || !cr::fzero (m_waypointLightLevel[0])) {
       return;
@@ -1385,7 +1381,6 @@ void Waypoint::initLightLevels (void) {
    }
    // disable lightstyle animations on finish (will be auto-enabled on mapchange)
    illum.enableAnimation (false);
-#endif
 }
 
 void Waypoint::initTypes (void) {
