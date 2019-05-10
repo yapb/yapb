@@ -31,8 +31,10 @@ ConVar yb_best_weapon_picker_type ("yb_best_weapon_picker_type", "1");
 
 // game console variables
 ConVar mp_c4timer ("mp_c4timer", nullptr, VT_NOREGISTER);
+ConVar mp_flashlight ("mp_flashlight", nullptr, VT_NOREGISTER);
 ConVar mp_buytime ("mp_buytime", nullptr, VT_NOREGISTER, true, "1");
 ConVar mp_footsteps ("mp_footsteps", nullptr, VT_NOREGISTER);
+
 ConVar sv_gravity ("sv_gravity", nullptr, VT_NOREGISTER);
 
 int Bot::getMsgQueue (void) {
@@ -1710,6 +1712,24 @@ void Bot::buyStuff (void) {
       }
       break;
 
+   case BUYSTATE_NIGHTVISION:
+      if (m_moneyAmount > 2500 && !m_hasNVG && rng.getInt (1, 100) < 30) {
+         float skyColor = illum.getSkyColor ();
+         float lightLevel = waypoints.getLightLevel (m_currentWaypointIndex);
+         
+         // if it's somewhat darkm do buy nightvision goggles
+         if ((skyColor >= 50.0f && lightLevel <= 15.0f) || (skyColor < 50.0f && lightLevel < 40.0f)) {
+            if (isOldGame) {
+               engine.execBotCmd (ent (), "buyequip;menuselect 7");
+            }
+            else {
+               engine.execBotCmd (ent (), "nvgs"); // use alias in steamcs
+            }
+            engine.print ("%s bought googles", STRING (pev->netname));
+         }
+      }
+      break;
+
    case BUYSTATE_AMMO: // buy enough primary & secondary ammo (do not check for money here)
       for (int i = 0; i <= 5; i++) {
          engine.execBotCmd (ent (), "buyammo%d", rng.getInt (1, 2)); // simulate human
@@ -2826,6 +2846,46 @@ void Bot::updateAimDir (void) {
    if (m_lookAt.empty ()) {
       m_lookAt = m_destOrigin;
    }
+}
+
+void Bot::checkDarkness (void) {
+
+   // do not check for darkness at the start of the round
+   if (m_spawnTime + 5.0f > engine.timebase () || !waypoints.exists (m_currentWaypointIndex)) {
+      return;
+   }
+
+   // do not check every frame
+   if (m_checkDarkTime + 2.5f > engine.timebase ()) {
+      return;
+   }
+
+   float lightLevel = waypoints.getLightLevel (m_currentWaypointIndex);
+   float skyColor = illum.getSkyColor ();
+
+   if (mp_flashlight.boolean () && !m_hasNVG) {
+      auto task = TaskID ();
+
+         if (!(pev->effects & EF_DIMLIGHT) && task != TASK_CAMP && task != TASK_ATTACK && m_heardSoundTime + 3.0f < engine.timebase () && m_flashLevel > 30.0f && ((skyColor > 50.0f && lightLevel < 10.0f) || (skyColor <= 50.0f && lightLevel < 40.0f))) {
+            pev->impulse = 100;
+         }
+         else if ((pev->effects & EF_DIMLIGHT) && (((lightLevel > 15.0f && skyColor > 50.0f) || (lightLevel > 45.0f && skyColor <= 50.0f)) || task == TASK_CAMP || task == TASK_ATTACK || m_flashLevel <= 0 || m_heardSoundTime + 3.0f >= engine.timebase ()))
+         {
+            pev->impulse = 100;
+         }
+   }
+   else if (m_hasNVG) {
+      if (pev->effects & EF_DIMLIGHT) {
+         pev->impulse = 100;
+      }
+      else if (!m_usesNVG && ((skyColor > 50.0f && lightLevel < 15.0f) || (skyColor <= 50.0f && lightLevel < 40.0f))) {
+         engine.execBotCmd (ent (), "nightvision");
+      }
+      else if (m_usesNVG  && ((lightLevel > 20.0f && skyColor > 50.0f) || (lightLevel > 45.0f && skyColor <= 50.0f))) {
+         engine.execBotCmd (ent (), "nightvision");
+      }
+   }
+   m_checkDarkTime = engine.timebase ();
 }
 
 void Bot::framePeriodic (void) {
@@ -4859,6 +4919,9 @@ void Bot::ai (void) {
    if (m_checkTerrain) {
       checkTerrain (movedDistance, dirNormal);
    }
+
+   // check the darkness
+   checkDarkness ();
 
    // must avoid a grenade?
    if (m_needAvoidGrenade != 0) {

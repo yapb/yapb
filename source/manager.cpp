@@ -1191,6 +1191,8 @@ void Bot::newRound (void) {
 
       m_currentWeapon = 0;
    }
+   m_flashLevel = 100.0f;
+   m_checkDarkTime = engine.timebase ();
 
    m_knifeAttackTime = engine.timebase () + rng.getFloat (1.3f, 2.6f);
    m_nextBuyTime = engine.timebase () + rng.getFloat (0.6f, 2.0f);

@@ -54,7 +54,11 @@ enum NetMsgId {
    NETMSG_SENDAUDIO = 17,
    NETMSG_SAYTEXT = 18,
    NETMSG_BOTVOICE = 19,
-   NETMSG_NUM = 21
+   NETMSG_NVGTOGGLE = 20,
+   NETMSG_FLASHBAT = 21,
+   NETMSG_FLASHLIGHT = 22,
+   NETMSG_ITEMSTATUS = 23,
+   NETMSG_NUM = 25
 };
 
 // variable reg pair
@@ -418,7 +422,7 @@ public:
    void animateLight (void);
 
    float getLightLevel (const Vector &point);
-   float getSkiesColor (void);
+   float getSkyColor (void);
 
 private:
    template <typename S, typename M> bool recursiveLightPoint (const M *node, const Vector &start, const Vector &end);

@@ -203,7 +203,7 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
    }
    else if (stricmp (arg0, "glp") == 0) {
       for (int i = 0; i < waypoints.length (); i++) {
-         engine.print ("%d - %f - %f", i, waypoints.getLightLevel (i), illum.getSkiesColor ());
+         engine.print ("%d - %f - %f", i, waypoints.getLightLevel (i), illum.getSkyColor ());
       }
    }
 
@@ -2428,23 +2428,32 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
    
    // store the message type in our own variables, since the GET_USER_MSG_ID () will just do a lot of strcmp()'s...
    if ((g_gameFlags & GAME_METAMOD) && engine.getMessageId (NETMSG_MONEY) == -1) {
-      engine.setMessageId (NETMSG_VGUI, GET_USER_MSG_ID (PLID, "VGUIMenu", nullptr));
-      engine.setMessageId (NETMSG_SHOWMENU, GET_USER_MSG_ID (PLID, "ShowMenu", nullptr));
-      engine.setMessageId (NETMSG_WEAPONLIST, GET_USER_MSG_ID (PLID, "WeaponList", nullptr));
-      engine.setMessageId (NETMSG_CURWEAPON, GET_USER_MSG_ID (PLID, "CurWeapon", nullptr));
-      engine.setMessageId (NETMSG_AMMOX, GET_USER_MSG_ID (PLID, "AmmoX", nullptr));
-      engine.setMessageId (NETMSG_AMMOPICKUP, GET_USER_MSG_ID (PLID, "AmmoPickup", nullptr));
-      engine.setMessageId (NETMSG_DAMAGE, GET_USER_MSG_ID (PLID, "Damage", nullptr));
-      engine.setMessageId (NETMSG_MONEY, GET_USER_MSG_ID (PLID, "Money", nullptr));
-      engine.setMessageId (NETMSG_STATUSICON, GET_USER_MSG_ID (PLID, "StatusIcon", nullptr));
-      engine.setMessageId (NETMSG_DEATH, GET_USER_MSG_ID (PLID, "DeathMsg", nullptr));
-      engine.setMessageId (NETMSG_SCREENFADE, GET_USER_MSG_ID (PLID, "ScreenFade", nullptr));
-      engine.setMessageId (NETMSG_HLTV, GET_USER_MSG_ID (PLID, "HLTV", nullptr));
-      engine.setMessageId (NETMSG_TEXTMSG, GET_USER_MSG_ID (PLID, "TextMsg", nullptr));
-      engine.setMessageId (NETMSG_TEAMINFO, GET_USER_MSG_ID (PLID, "TeamInfo", nullptr));
-      engine.setMessageId (NETMSG_BARTIME, GET_USER_MSG_ID (PLID, "BarTime", nullptr));
-      engine.setMessageId (NETMSG_SENDAUDIO, GET_USER_MSG_ID (PLID, "SendAudio", nullptr));
-      engine.setMessageId (NETMSG_SAYTEXT, GET_USER_MSG_ID (PLID, "SayText", nullptr));
+
+      auto setMsgId = [&] (const char *name, NetMsgId id) {
+         engine.setMessageId (id, GET_USER_MSG_ID (PLID, name, nullptr));
+      };
+
+      setMsgId ("VGUIMenu", NETMSG_VGUI);
+      setMsgId ("ShowMenu", NETMSG_SHOWMENU);
+      setMsgId ("WeaponList", NETMSG_WEAPONLIST);
+      setMsgId ("CurWeapon", NETMSG_CURWEAPON);
+      setMsgId ("AmmoX", NETMSG_AMMOX);
+      setMsgId ("AmmoPickup", NETMSG_AMMOPICKUP);
+      setMsgId ("Damage", NETMSG_DAMAGE);
+      setMsgId ("Money", NETMSG_MONEY);
+      setMsgId ("StatusIcon", NETMSG_STATUSICON);
+      setMsgId ("DeathMsg", NETMSG_DEATH);
+      setMsgId ("ScreenFade", NETMSG_SCREENFADE);
+      setMsgId ("HLTV", NETMSG_HLTV);
+      setMsgId ("TextMsg", NETMSG_TEXTMSG);
+      setMsgId ("TeamInfo", NETMSG_TEAMINFO);
+      setMsgId ("BarTime", NETMSG_BARTIME);
+      setMsgId ("SendAudio",  NETMSG_SENDAUDIO);
+      setMsgId ("SayText", NETMSG_SAYTEXT);
+      setMsgId ("FlashBat", NETMSG_FLASHBAT);
+      setMsgId ("Flashlight", NETMSG_FLASHLIGHT);
+      setMsgId ("NVGToggle", NETMSG_NVGTOGGLE);
+      setMsgId ("ItemStatus", NETMSG_ITEMSTATUS);
 
       if (g_gameFlags & GAME_SUPPORT_BOT_VOICE) {
          engine.setMessageId (NETMSG_BOTVOICE, GET_USER_MSG_ID (PLID, "BotVoice", nullptr));
@@ -2476,6 +2485,9 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
          engine.captureMessage (msgType, NETMSG_BARTIME);
          engine.captureMessage (msgType, NETMSG_TEXTMSG);
          engine.captureMessage (msgType, NETMSG_SHOWMENU);
+         engine.captureMessage (msgType, NETMSG_FLASHBAT);
+         engine.captureMessage (msgType, NETMSG_NVGTOGGLE);
+         engine.captureMessage (msgType, NETMSG_ITEMSTATUS);
       }
    }
    else if (msgDest == MSG_ALL) {
@@ -2768,6 +2780,18 @@ int pfnRegUserMsg (const char *name, int size) {
    }
    else if (strcmp (name, "BotVoice") == 0) {
       engine.setMessageId (NETMSG_BOTVOICE, message);
+   }
+   else if (strcmp (name, "NVGToggle") == 0) {
+      engine.setMessageId (NETMSG_NVGTOGGLE, message);
+   }
+   else if (strcmp (name, "FlashBat") == 0) {
+      engine.setMessageId (NETMSG_FLASHBAT, message);
+   }
+   else if (strcmp (name, "Flashlight") == 0) {
+      engine.setMessageId (NETMSG_FLASHLIGHT, message);
+   }
+   else if (strcmp (name, "ItemStatus") == 0) {
+      engine.setMessageId (NETMSG_ITEMSTATUS, message);
    }
    return message;
 }
