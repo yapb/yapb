@@ -361,8 +361,7 @@ public:
    }
 };
 
-class SimpleColor final : private NonCopyable 
-{
+class SimpleColor final : private NonCopyable {
 public:
    int red, green, blue;
 

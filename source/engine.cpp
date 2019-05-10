@@ -849,10 +849,7 @@ void Engine::processMessages (void *ptr) {
 
       case 1:
          if (bot != nullptr) {
-            if (strcmp (strVal, "defuser") == 0) {
-               bot->m_hasDefuser = (enabled != 0);
-            }
-            else if (strcmp (strVal, "buyzone") == 0) {
+            if (strcmp (strVal, "buyzone") == 0) {
                bot->m_inBuyZone = (enabled != 0);
 
                // try to equip in buyzone
@@ -1102,6 +1099,31 @@ void Engine::processMessages (void *ptr) {
       }
       break;
 
+   case NETMSG_ITEMSTATUS:
+      if (bot != nullptr && m_msgBlock.state == 0) {
+
+         enum ItemStatus {
+            IS_NIGHTVISION = (1 << 0),
+            IS_DEFUSEKIT = (1 << 1)
+         };
+
+         bot->m_hasNVG = (intVal & IS_NIGHTVISION) ? true : false;
+         bot->m_hasDefuser = (intVal & IS_DEFUSEKIT) ? true : false;
+      }
+      break;
+
+   case NETMSG_FLASHBAT:
+      if (bot != nullptr && m_msgBlock.state == 0) {
+         bot->m_flashLevel = static_cast <float> (intVal);
+      }
+      break;
+
+   case NETMSG_NVGTOGGLE:
+      if (bot != nullptr && m_msgBlock.state == 0) {
+         bot->m_usesNVG = intVal > 0;
+      }
+      break;
+
    default:
       logEntry (true, LL_FATAL, "Network message handler error. Call to unrecognized message id (%d).\n", m_msgBlock.msg);
    }
@@ -1257,6 +1279,6 @@ float LightMeasure::getLightLevel (const Vector &point) {
    return !recursiveCheck () ? 0.0f : 100 * cr::sqrtf (cr::min (75.0f, static_cast <float> (m_point.avg ())) / 75.0f);
 }
 
-float LightMeasure::getSkiesColor (void) {
-   return sv_skycolor_r.flt () + sv_skycolor_g.flt () + sv_skycolor_b.flt ();
+float LightMeasure::getSkyColor (void) {
+   return (sv_skycolor_r.flt () + sv_skycolor_g.flt () + sv_skycolor_b.flt ()) / 3;
 }

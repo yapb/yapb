@@ -287,6 +287,7 @@ enum BuyState {
    BUYSTATE_GRENADES,
    BUYSTATE_DEFUSER,
    BUYSTATE_AMMO,
+   BUYSTATE_NIGHTVISION,
    BUYSTATE_FINISHED
 };
 
@@ -947,6 +948,7 @@ private:
    void filterGoals (const IntArray &goals, int *result);
    void processPickups (void);
    void checkTerrain (float movedDistance, const Vector &dirNormal);
+   void checkDarkness (void);
    bool doPlayerAvoidance (const Vector &normal);
 
    void getCampDir (Vector *dest);
@@ -1109,20 +1111,24 @@ public:
 
    bool m_ignoreBuyDelay; // when reaching buyzone in the middle of the round don't do pauses
    bool m_inBombZone; // bot in the bomb zone or not
-   int m_buyState; // current Count in Buying
+   int m_buyState; // current count in buying
    float m_nextBuyTime; // next buy time
+   float m_checkDarkTime; // check for darkness time
 
    bool m_inBuyZone; // bot currently in buy zone
    bool m_inVIPZone; // bot in the vip satefy zone
    bool m_buyingFinished; // done with buying
    bool m_buyPending; // bot buy is pending
    bool m_hasDefuser; // does bot has defuser
+   bool m_hasNVG; // does bot has nightvision goggles
+   bool m_usesNVG; // does nightvision goggles turned on
    bool m_hasC4; // does bot has c4 bomb
    bool m_hasProgressBar; // has progress bar on a HUD
    bool m_jumpReady; // is double jump ready
    bool m_canChooseAimDirection; // can choose aiming direction
    float m_turnAwayFromFlashbang; // bot turned away from flashbang
 
+   float m_flashLevel; // flashlight level
    float m_blindTime; // time when bot is blinded
    float m_blindMoveSpeed; // mad speeds when bot is blind
    float m_blindSidemoveSpeed; // mad side move speeds when bot is blind
