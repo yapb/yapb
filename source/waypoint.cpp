@@ -840,7 +840,7 @@ void Waypoint::erase (int target) {
    }
    int index = (target == INVALID_WAYPOINT_INDEX) ? getEditorNeareset () : target;
 
-   if (index == INVALID_WAYPOINT_INDEX) {
+   if (!exists (index)) {
       return;
    }
 
