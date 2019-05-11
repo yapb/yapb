@@ -2917,7 +2917,7 @@ void Bot::framePeriodic (void) {
       // skip some frames
       m_thinkFps = engine.timebase () + m_thinkInterval;
    }
-   else {
+   else if (m_notKilled) {
       processLookAngles ();
    }
 }

@@ -507,7 +507,7 @@ void checkWelcome (void) {
       if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH_ENGINE))) {
          engine.execCmd ("speak \"%s\"", sentences.random ().chars ());
       }
-      engine.chatPrint ("----- %s v%s (Build: %u), {%s}, (c) %s, by %s (%s)-----", PRODUCT_NAME, PRODUCT_VERSION, buildNumber (), PRODUCT_DATE, PRODUCT_END_YEAR, PRODUCT_AUTHOR, PRODUCT_URL);
+      engine.chatPrint ("----- %s v%s (Build: %u), {%s}, (c) %s, by %s (%s)-----", PRODUCT_SHORT_NAME, PRODUCT_VERSION, buildNumber (), PRODUCT_DATE, PRODUCT_END_YEAR, PRODUCT_AUTHOR, PRODUCT_URL);
 
       MessageWriter (MSG_ONE, SVC_TEMPENTITY, Vector::null (), g_hostEntity)
          .writeByte (TE_TEXTMESSAGE)
@@ -527,7 +527,7 @@ void checkWelcome (void) {
          .writeShort (MessageWriter::fu16 (2.0f, 1 << 8))
          .writeShort (MessageWriter::fu16 (6.0f, 1 << 8))
          .writeShort (MessageWriter::fu16 (0.1f, 1 << 8))
-         .writeString (format ("\nServer is running YaPB v%s (Build: %u)\nDeveloped by %s\n\n%s", PRODUCT_VERSION, buildNumber (), PRODUCT_AUTHOR, waypoints.getAuthor ()));
+         .writeString (format ("\nServer is running %s v%s (Build: %u)\nDeveloped by %s\n\n%s", PRODUCT_SHORT_NAME, PRODUCT_VERSION, buildNumber (), PRODUCT_AUTHOR, waypoints.getAuthor ()));
 
       receiveTime = 0.0;
       messageSent = true;
@@ -594,7 +594,7 @@ void logEntry (bool outputToConsole, int logLevel, const char *format, ...) {
    time_t tickTime = time (&tickTime);
    tm *time = localtime (&tickTime);
 
-   fp.writeFormat ("%02d:%02d:%02d --> %s%s", time->tm_hour, time->tm_min, time->tm_sec, levelString, buffer);
+   fp.writeFormat ("%02d:%02d:%02d --> %s%s\n", time->tm_hour, time->tm_min, time->tm_sec, levelString, buffer);
    fp.close ();
 
    if (logLevel == LL_FATAL) {
