@@ -189,7 +189,7 @@ static inline void sincosf (const float x, const float y, const float z, float *
    // using only two sse calls instead of 6 calls to sin/cos with standard functions
 
 #if defined (PLATFORM_HAS_SSE2)
-   auto rad = _mm_set_ps (x, y, z, 0.0f);
+   auto inputSet = _mm_set_ps (x, y, z, 0.0f);
 
    auto _mm_sin = [] (__m128 rad) -> __m128 {
       static auto pi2 = _mm_set_ps1 (PI * 2);
@@ -216,8 +216,8 @@ static inline void sincosf (const float x, const float y, const float z, float *
    };
    static auto hpi = _mm_set_ps1 (PI_HALF);
 
-   auto s = _mm_sin (rad);
-   auto c = _mm_sin (_mm_add_ps (rad, hpi));
+   auto s = _mm_sin (inputSet);
+   auto c = _mm_sin (_mm_add_ps (inputSet, hpi));
 
    _mm_store_ps (sines, _mm_shuffle_ps (s, s, _MM_SHUFFLE (0, 1, 2, 3)));
    _mm_store_ps (cosines, _mm_shuffle_ps (c, c, _MM_SHUFFLE (0, 1, 2, 3)));
@@ -650,7 +650,7 @@ public:
    B second;
 
 public:
-   Pair (A a, B b) : first (a), second (b) {
+   Pair (const A &a, const B &b) : first (a), second (b) {
    }
 
 public:
@@ -852,7 +852,7 @@ public:
    }
 
    inline bool empty (void) const {
-      return m_length <= 0;
+      return m_length == 0;
    }
 
    void shrink (bool destroyEmpty = true) {
@@ -894,7 +894,7 @@ public:
    }
 
    bool last (T &item) {
-      if (m_length <= 0) {
+      if (m_length == 0) {
          return false;
       }
       item = m_data[m_length - 1];
@@ -1416,17 +1416,17 @@ public:
 
    Array <String> split (const char *delimiter) {
       Array <String> tokens;
-      size_t length, index = 0;
+      size_t len, index = 0;
 
       do {
          index += strspn (&m_data[index], delimiter);
-         length = strcspn (&m_data[index], delimiter);
+         len = strcspn (&m_data[index], delimiter);
 
-         if (length > 0) {
-            tokens.push (move (substr (index, length)));
+         if (len > 0) {
+            tokens.push (move (substr (index, len)));
          }
-         index += length;
-      } while (length > 0);
+         index += len;
+      } while (len > 0);
 
       return tokens;
    }
