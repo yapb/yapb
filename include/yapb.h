@@ -1357,7 +1357,7 @@ public:
    void serverFill (int selection, int personality = PERSONALITY_NORMAL, int difficulty = -1, int numToAdd = -1);
 
    void kickEveryone (bool instant = false,  bool zeroQuota = true);
-   void kickRandom (bool decQuota = true, Team fromTeam = TEAM_UNASSIGNED);
+   bool kickRandom (bool decQuota = true, Team fromTeam = TEAM_UNASSIGNED);
    void kickBot (int index);
    void kickFromTeam (Team team, bool removeAll = false);
 

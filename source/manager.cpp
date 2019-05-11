@@ -426,13 +426,20 @@ void BotManager::maintainQuota (void) {
       int ts = 0, cts = 0;
       countTeamPlayers (ts, cts);
 
+      bool isKicked = false;
+
       if (ts > cts) {
-         kickRandom (false, TEAM_TERRORIST);
+         isKicked = kickRandom (false, TEAM_TERRORIST);
       }
       else if (ts < cts) {
-         kickRandom (false, TEAM_COUNTER);
+         isKicked = kickRandom (false, TEAM_COUNTER);
       }
       else {
+         isKicked = kickRandom (false, TEAM_UNASSIGNED);
+      }
+
+      // if we can't kick player from correct team, just kick any random to keep quota control work
+      if (!isKicked) {
          kickRandom (false, TEAM_UNASSIGNED);
       }
    }
@@ -601,7 +608,7 @@ void BotManager::kickBot (int index) {
    }
 }
 
-void BotManager::kickRandom (bool decQuota, Team fromTeam) {
+bool BotManager::kickRandom (bool decQuota, Team fromTeam) {
    // this function removes random bot from server (only yapb's)
 
    // if forTeam is unassigned, that means random team
@@ -635,7 +642,7 @@ void BotManager::kickRandom (bool decQuota, Team fromTeam) {
    }
 
    if (deadBotFound) {
-      return;
+      return true;
    }
 
    // if no dead bots found try to find one with lowest amount of frags
@@ -657,7 +664,7 @@ void BotManager::kickRandom (bool decQuota, Team fromTeam) {
       updateQuota ();
       m_bots[index]->kick ();
 
-      return;
+      return true;
    }
 
    // worst case, just kick some random bot
@@ -669,9 +676,10 @@ void BotManager::kickRandom (bool decQuota, Team fromTeam) {
          updateQuota ();
          bot->kick ();
 
-         break;
+         return true;
       }
    }
+   return false;
 }
 
 void BotManager::setWeaponMode (int selection) {
@@ -1389,12 +1397,17 @@ void BotManager::calculatePingOffsets (void) {
          botPing = rng.getInt (30, 40);
       }
 
-      for (int j = 0; j < 2; j++) {
-         for (bot->m_pingOffset[j] = 0; bot->m_pingOffset[j] < 4; bot->m_pingOffset[j]++) {
-            if ((botPing - bot->m_pingOffset[j]) % 4 == 0) {
-               bot->m_ping[j] = (botPing - bot->m_pingOffset[j]) / 4;
-               break;
-            }
+      for (bot->m_pingOffset[0] = 0; bot->m_pingOffset[0] < 4; bot->m_pingOffset[0]++) {
+         if ((botPing - bot->m_pingOffset[0]) % 4 == 0) {
+            bot->m_ping[0] = (botPing - bot->m_pingOffset[0]) / 4;
+            break;
+         }
+      }
+
+      for (bot->m_pingOffset[1] = 0; bot->m_pingOffset[1] < 2; bot->m_pingOffset[1]++) {
+         if ((botPing - bot->m_pingOffset[1]) % 2 == 0) {
+            bot->m_ping[1] = (botPing - bot->m_pingOffset[1]) / 2;
+            break;
          }
       }
       bot->m_ping[2] = botPing;

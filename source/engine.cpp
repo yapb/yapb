@@ -1064,7 +1064,7 @@ void Engine::processMessages (void *ptr) {
          break;
 
       case 1:
-         if (playerIndex >= 0 && playerIndex <= maxClients ()) {
+         if (playerIndex > 0 && playerIndex <= maxClients ()) {
             int team = TEAM_UNASSIGNED;
 
             if (strVal[0] == 'U' && strVal[1] == 'N') {
@@ -1192,7 +1192,7 @@ template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const 
    }
 
    // blow it off if it doesn't split the plane...
-   if ((back < 0.0f) == side) {
+   if ((back < 0.0f) == !!side) {
       return false; // didn't hit anything
    }
 
