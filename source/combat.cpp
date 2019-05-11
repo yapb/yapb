@@ -429,7 +429,14 @@ const Vector &Bot::getEnemyBodyOffset (void) {
    if ((m_visibility & VISIBLE_BODY) && !usesSniper () && distance > (m_difficulty > 2 ? 2000.0f : 1000.0f)) {
       m_visibility &= ~VISIBLE_HEAD;
    }
+
+   // do not aim at head while close enough to enemy and having sniper
    else if (distance < 800.0f && usesSniper ()) {
+      m_visibility &= ~VISIBLE_HEAD;
+   }
+
+   // do not aim at head while enemy is soooo close enough to enemy when recoil aims at head automatically
+   else if (distance < MAX_SPRAY_DISTANCE) {
       m_visibility &= ~VISIBLE_HEAD;
    }
    Vector aimPos = m_enemy->v.origin;

@@ -71,7 +71,7 @@ int *g_weaponPrefs[] = {g_normalWeaponPrefs, g_rusherWeaponPrefs, g_carefulWeapo
 // metamod plugin information
 plugin_info_t Plugin_info = {
    META_INTERFACE_VERSION, // interface version
-   PRODUCT_NAME, // plugin name
+   PRODUCT_SHORT_NAME, // plugin name
    PRODUCT_VERSION, // plugin version
    PRODUCT_DATE, // date of creation
    PRODUCT_AUTHOR, // plugin author

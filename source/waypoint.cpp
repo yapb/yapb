@@ -2809,7 +2809,7 @@ WaypointDownloadError Waypoint::downloadWaypoint (void) {
    }
 
    String request;
-   request.format ("GET /wpdb/%s.pwf HTTP/1.0\r\nAccept: */*\r\nUser-Agent: YaPB/%s\r\nHost: %s\r\n\r\n", engine.getMapName (), PRODUCT_VERSION, yb_waypoint_autodl_host.str ());
+   request.format ("GET /wpdb/%s.pwf HTTP/1.0\r\nAccept: */*\r\nUser-Agent: %s/%s\r\nHost: %s\r\n\r\n", engine.getMapName (), PRODUCT_SHORT_NAME, PRODUCT_VERSION, yb_waypoint_autodl_host.str ());
 
    if (send (socketHandle, request.chars (), static_cast <int> (request.length () + 1), 0) < 1) {
       closeSocket (socketHandle);
