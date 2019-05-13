@@ -2868,13 +2868,13 @@ void Bot::checkDarkness (void) {
    if (mp_flashlight.boolean () && !m_hasNVG) {
       auto task = TaskID ();
 
-         if (!(pev->effects & EF_DIMLIGHT) && task != TASK_CAMP && task != TASK_ATTACK && m_heardSoundTime + 3.0f < engine.timebase () && m_flashLevel > 30.0f && ((skyColor > 50.0f && lightLevel < 10.0f) || (skyColor <= 50.0f && lightLevel < 40.0f))) {
-            pev->impulse = 100;
-         }
-         else if ((pev->effects & EF_DIMLIGHT) && (((lightLevel > 15.0f && skyColor > 50.0f) || (lightLevel > 45.0f && skyColor <= 50.0f)) || task == TASK_CAMP || task == TASK_ATTACK || m_flashLevel <= 0 || m_heardSoundTime + 3.0f >= engine.timebase ()))
-         {
-            pev->impulse = 100;
-         }
+      if (!(pev->effects & EF_DIMLIGHT) && task != TASK_CAMP && task != TASK_ATTACK && m_heardSoundTime + 3.0f < engine.timebase () && m_flashLevel > 30.0f && ((skyColor > 50.0f && lightLevel < 10.0f) || (skyColor <= 50.0f && lightLevel < 40.0f))) {
+         pev->impulse = 100;
+      }
+      else if ((pev->effects & EF_DIMLIGHT) && (((lightLevel > 15.0f && skyColor > 50.0f) || (lightLevel > 45.0f && skyColor <= 50.0f)) || task == TASK_CAMP || task == TASK_ATTACK || m_flashLevel <= 0 || m_heardSoundTime + 3.0f >= engine.timebase ()))
+      {
+         pev->impulse = 100;
+      }
    }
    else if (m_hasNVG) {
       if (pev->effects & EF_DIMLIGHT) {

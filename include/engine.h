@@ -99,6 +99,7 @@ struct LangComprarer {
 class Engine : public Singleton <Engine> {
 private:
    int m_drawModels[DRAW_NUM];
+   int m_spawnCount[TEAM_UNASSIGNED];
 
    // bot client command
    char m_arguments[256];
@@ -241,6 +242,11 @@ public:
    // get the wroldspawn entity
    inline edict_t *getStartEntity (void) {
       return m_startEntity;
+   }
+
+   // get spawn count for team
+   inline int getSpawnCount (int team) {
+      return m_spawnCount[team];
    }
 
    // gets the player team

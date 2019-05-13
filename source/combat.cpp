@@ -201,6 +201,8 @@ bool Bot::lookupEnemies (void) {
    edict_t *player, *newEnemy = nullptr;
    float nearestDistance = cr::square (m_viewDistance);
 
+   extern ConVar yb_whose_your_daddy;
+
    // clear suspected flag
    if (!engine.isNullEntity (m_enemy) && (m_states & STATE_SEEING_ENEMY)) {
       m_states &= ~STATE_SUSPECT_ENEMY;
@@ -272,8 +274,8 @@ bool Bot::lookupEnemies (void) {
       m_aimFlags |= AIM_ENEMY;
       m_states |= STATE_SEEING_ENEMY;
 
+      // if enemy is still visible and in field of view, keep it keep track of when we last saw an enemy
       if (newEnemy == m_enemy) {
-         // if enemy is still visible and in field of view, keep it keep track of when we last saw an enemy
          m_seeEnemyTime = engine.timebase ();
 
          // zero out reaction time
@@ -284,12 +286,12 @@ bool Bot::lookupEnemies (void) {
          return true;
       }
       else {
-         if (m_seeEnemyTime + 3.0 < engine.timebase () && (m_hasC4 || hasHostage () || !engine.isNullEntity (m_targetEntity))) {
+         if (m_seeEnemyTime + 3.0f < engine.timebase () && (m_hasC4 || hasHostage () || !engine.isNullEntity (m_targetEntity))) {
             pushRadioMessage (RADIO_ENEMY_SPOTTED);
          }
          m_targetEntity = nullptr; // stop following when we see an enemy...
 
-         if (rng.getInt (0, 100) < m_difficulty * 25) {
+         if (yb_whose_your_daddy.boolean ()) {
             m_enemySurpriseTime = m_actualReactionTime * 0.5f;
          }
          else {
