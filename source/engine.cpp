@@ -28,6 +28,7 @@ Engine::Engine (void) {
 
    memset (m_arguments, 0, sizeof (m_arguments));
    memset (m_drawModels, 0, sizeof (m_drawModels));
+   memset (m_spawnCount, 0, sizeof (m_spawnCount));
 
    m_cvars.clear ();
 }
@@ -69,6 +70,9 @@ void Engine::levelInitialize (void) {
    // this function precaches needed models and initialize class variables
 
    m_localEntity = nullptr;
+
+   m_spawnCount[TEAM_COUNTER] = 0;
+   m_spawnCount[TEAM_TERRORIST] = 0;
    
    // go thru the all entities on map, and do whatever we're want
    for (int i = 0; i < g_pGlobals->maxEntities; i++) {
@@ -101,6 +105,8 @@ void Engine::levelInitialize (void) {
          ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
          ent->v.renderamt = 127; // set its transparency amount
          ent->v.effects |= EF_NODRAW;
+
+         m_spawnCount[TEAM_COUNTER]++;
       }
       else if (strcmp (classname, "info_player_deathmatch") == 0) {
          g_engfuncs.pfnSetModel (ent, ENGINE_STR ("models/player/terror/terror.mdl"));
@@ -108,6 +114,8 @@ void Engine::levelInitialize (void) {
          ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
          ent->v.renderamt = 127; // set its transparency amount
          ent->v.effects |= EF_NODRAW;
+
+         m_spawnCount[TEAM_TERRORIST]++;
       }
 
       else if (strcmp (classname, "info_vip_start") == 0) {
@@ -1280,5 +1288,5 @@ float LightMeasure::getLightLevel (const Vector &point) {
 }
 
 float LightMeasure::getSkyColor (void) {
-   return (sv_skycolor_r.flt () + sv_skycolor_g.flt () + sv_skycolor_b.flt ()) / 3;
+   return sv_skycolor_r.flt () + sv_skycolor_g.flt () + sv_skycolor_b.flt ();
 }

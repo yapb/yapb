@@ -607,7 +607,7 @@ public:
          return;
       }
 #ifdef PLATFORM_WIN32
-      FreeLibrary ((HMODULE)m_ptr);
+      FreeLibrary (static_cast <HMODULE> (m_ptr));
 #else
       dlclose (m_ptr);
 #endif

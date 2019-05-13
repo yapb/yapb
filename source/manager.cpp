@@ -31,6 +31,7 @@ ConVar mp_autoteambalance ("mp_autoteambalance", nullptr, VT_NOREGISTER);
 BotManager::BotManager (void) {
    // this is a bot manager class constructor
 
+   m_lastDifficulty = 0;
    m_lastWinner = -1;
    m_deathMsgSent = false;
 
@@ -385,6 +386,10 @@ void BotManager::maintainQuota (void) {
    if (m_quotaMaintainTime > engine.timebase ()) {
       return;
    }
+   
+   // not a best place for this, but whatever
+   updateBotDifficulties ();
+
    yb_quota.set (cr::clamp <int> (yb_quota.integer (), 0, engine.maxClients ()));
 
    int totalHumansInGame = getHumansCount ();
@@ -417,9 +422,10 @@ void BotManager::maintainQuota (void) {
    else {
       desiredBotCount = cr::min <int> (desiredBotCount, maxClients - humanPlayersInGame);
    }
+   int maxSpawnCount = engine.getSpawnCount (TEAM_TERRORIST) + engine.getSpawnCount (TEAM_COUNTER);
 
    // add bots if necessary
-   if (desiredBotCount > botsInGame) {
+   if (desiredBotCount > botsInGame && botsInGame < maxSpawnCount) {
       createRandom ();
    }
    else if (desiredBotCount < botsInGame) {
@@ -822,6 +828,23 @@ void BotManager::updateTeamEconomics (int team, bool forceGoodEconomics) {
    // winner must buy something!
    if (m_lastWinner == team) {
       m_economicsGood[team] = true;
+   }
+}
+
+void BotManager::updateBotDifficulties (void) {
+   int difficulty = yb_difficulty.integer ();
+
+   if (difficulty != m_lastDifficulty) {
+
+      // sets new difficulty for all bots
+      for (int i = 0; i < engine.maxClients (); i++) {
+         auto bot = m_bots[i];
+
+         if (bot != nullptr) {
+            m_bots[i]->m_difficulty = difficulty;
+         }
+      }
+      m_lastDifficulty = difficulty;
    }
 }
 

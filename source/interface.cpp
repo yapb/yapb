@@ -2247,18 +2247,22 @@ void StartFrame (void) {
       // calculate light levels for all waypoints if needed
       waypoints.initLightLevels ();
 
-      if (g_gameFlags & GAME_METAMOD) {
+      if (g_gameFlags & (GAME_METAMOD | GAME_REGAMEDLL)) {
          static auto dmActive = g_engfuncs.pfnCVarGetPointer ("csdm_active");
          static auto freeForAll = g_engfuncs.pfnCVarGetPointer ("mp_freeforall");
 
-         if (dmActive && freeForAll) {
+         // csdm is only with amxx and metamod
+         if (dmActive) {
             if (dmActive->value > 0.0f) {
                g_gameFlags |= GAME_CSDM;
             }
             else if (g_gameFlags & GAME_CSDM) {
                g_gameFlags &= ~GAME_CSDM;
             }
-            
+         }
+
+         // but this can be provided by regamedll
+         if (freeForAll) {
             if (freeForAll->value > 0.0f) {
                g_gameFlags |= GAME_CSDM_FFA;
             }
@@ -3031,8 +3035,9 @@ SHARED_LIBRARAY_EXPORT void Meta_Init (void) {
 Library *LoadCSBinary (void) {
    const char *modname = engine.getModName ();
 
-   if (!modname)
+   if (!modname) {
       return nullptr;
+   }
 
 #if defined(PLATFORM_WIN32)
    const char *libs[] = {"mp.dll", "cs.dll"};
@@ -3041,6 +3046,22 @@ Library *LoadCSBinary (void) {
 #elif defined(PLATFORM_OSX)
    const char *libs[] = {"cs.dylib"};
 #endif
+
+   auto libCheck = [] (Library *lib, const char *modname, const char *dll) {
+      // try to load gamedll
+      if (!lib->isValid ()) {
+         logEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", dll, modname);
+
+         return false;
+      }
+      auto ent = lib->resolve <entity_func_t> ("trigger_random_unique");
+
+      // detect regamedll by addon entity they provide
+      if (ent != nullptr) {
+         g_gameFlags |= GAME_REGAMEDLL;
+      }
+      return true;
+   };
 
    // search the libraries inside game dlls directory
    for (size_t i = 0; i < cr::arrsize (libs); i++) {
@@ -3058,18 +3079,24 @@ Library *LoadCSBinary (void) {
          if (g_gameFlags & GAME_METAMOD) {
             return nullptr;
          }
-         return new Library (path);
-      }
-      else {
-         Library *game = new Library (path);
+         auto game = new Library (path);
 
-         // try to load gamedll
-         if (!game->isValid ()) {
-            logEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", libs[i], modname);
-
+         // verify dll is OK 
+         if (!libCheck (game, modname, libs[i])) {
             delete game;
             return nullptr;
          }
+         return game;
+      }
+      else {
+         auto game = new Library (path);
+
+         // verify dll is OK 
+         if (!libCheck (game, modname, libs[i])) {
+            delete game;
+            return nullptr;
+         }
+
          // detect if we're running modern game
          auto entity = game->resolve <entity_func_t> ("weapon_famas");
 
@@ -3159,8 +3186,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       delete g_gameLib;
    }
 #else
-   g_gameLib = LoadCSBinary ();
-   {
+   g_gameLib = LoadCSBinary (); {
       if (!g_gameLib && !(g_gameFlags & GAME_METAMOD)) {
          logEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", engine.getModName ());
          return;
@@ -3178,6 +3204,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       else if (g_gameFlags & GAME_CSTRIKE16) {
          gameVersionStr.assign ("v1.6");
       }
+
       if (g_gameFlags & GAME_XASH_ENGINE) {
          gameVersionStr.append (" @ Xash3D Engine");
 
@@ -3189,6 +3216,10 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 
       if (g_gameFlags & GAME_SUPPORT_BOT_VOICE) {
          gameVersionStr.append (" (BV)");
+      }
+
+      if (g_gameFlags & GAME_REGAMEDLL) {
+         gameVersionStr.append (" (RE)");
       }
 
       if (g_gameFlags & GAME_SUPPORT_SVC_PINGS) {
@@ -3357,6 +3388,7 @@ LINK_ENTITY (info_teleport_destination)
 LINK_ENTITY (info_vip_start)
 LINK_ENTITY (infodecal)
 LINK_ENTITY (item_airtank)
+LINK_ENTITY (item_airbox)
 LINK_ENTITY (item_antidote)
 LINK_ENTITY (item_assaultsuit)
 LINK_ENTITY (item_battery)
@@ -3382,6 +3414,8 @@ LINK_ENTITY (path_track)
 LINK_ENTITY (player)
 LINK_ENTITY (player_loadsaved)
 LINK_ENTITY (player_weaponstrip)
+LINK_ENTITY (point_clientcommand)
+LINK_ENTITY (point_servercommand)
 LINK_ENTITY (soundent)
 LINK_ENTITY (spark_shower)
 LINK_ENTITY (speaker)
@@ -3402,7 +3436,11 @@ LINK_ENTITY (trigger_monsterjump)
 LINK_ENTITY (trigger_multiple)
 LINK_ENTITY (trigger_once)
 LINK_ENTITY (trigger_push)
+LINK_ENTITY (trigger_random)
+LINK_ENTITY (trigger_random_time)
+LINK_ENTITY (trigger_random_unique)
 LINK_ENTITY (trigger_relay)
+LINK_ENTITY (trigger_setorigin)
 LINK_ENTITY (trigger_teleport)
 LINK_ENTITY (trigger_transition)
 LINK_ENTITY (weapon_ak47)

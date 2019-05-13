@@ -55,11 +55,12 @@ enum GameFlags {
    GAME_LEGACY = (1 << 3), // counter-strike 1.3-1.5 with/without steam
    GAME_MOBILITY = (1 << 4), // additional flag that bot is running on android (additional flag)
    GAME_OFFICIAL_CSBOT = (1 << 5), // additional flag that indicates official cs bots are in game
-   GAME_METAMOD = (1 << 6), // game running under metamod
+   GAME_METAMOD = (1 << 6), // game running under meta\mod
    GAME_CSDM = (1 << 7), // csdm mod currently in use
    GAME_CSDM_FFA = (1 << 8), // csdm mod with ffa mode
-   GAME_SUPPORT_SVC_PINGS = (1 << 9), // on that game version we can fake bots pings
-   GAME_SUPPORT_BOT_VOICE = (1 << 10) // on that game version we can use chatter
+   GAME_REGAMEDLL = (1 << 9), // server dll is a regamedll
+   GAME_SUPPORT_SVC_PINGS = (1 << 10), // on that game version we can fake bots pings
+   GAME_SUPPORT_BOT_VOICE = (1 << 11) // on that game version we can use chatter
 };
 
 // bot menu ids
@@ -1297,6 +1298,7 @@ private:
    float m_entityUpdateTime; // time to update intresting entities
 
    int m_lastWinner; // the team who won previous round
+   int m_lastDifficulty; // last bots difficulty
 
    bool m_leaderChoosen[MAX_TEAM_COUNT]; // is team leader choose theese round
    bool m_economicsGood[MAX_TEAM_COUNT]; // is team able to buy anything
@@ -1371,6 +1373,7 @@ public:
    void listBots (void);
    void setWeaponMode (int selection);
    void updateTeamEconomics (int team, bool setTrue = false);
+   void updateBotDifficulties (void);
 
    static void execGameEntity (entvars_t *vars);
 
