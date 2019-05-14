@@ -493,6 +493,27 @@ void Engine::execBotCmd (edict_t *ent, const char *fmt, ...) {
    m_argumentCount = 0;
 }
 
+bool Engine::isSoftwareRenderer (void) {
+
+   // xash always use "hw" structures
+   if (g_gameFlags & GAME_XASH_ENGINE) {
+      return false;
+   }
+
+   // dedicated server (except xash) always use "sw" structures
+   if (isDedicated ()) {
+      return true;
+   }
+
+   // and on only windows version you can use software-render engine. Linux, OSX always defaults to OpenGL
+#if defined (PLATFORM_WIN32)
+   static bool isSoftware = GetModuleHandleA ("sw");
+#else
+   static bool isSoftware = false;
+#endif
+   return isSoftware;
+}
+
 const char *Engine::getField (const char *string, size_t id) {
    // this function gets and returns a particular field in a string where several strings are concatenated
 
@@ -1279,7 +1300,7 @@ float LightMeasure::getLightLevel (const Vector &point) {
 
    // it's depends if we're are on dedicated or on listenserver
    auto recursiveCheck = [&] (void) -> bool {
-      if (!engine.isDedicated () || (g_gameFlags & GAME_XASH_ENGINE)) {
+      if (!engine.isSoftwareRenderer ()) {
          return recursiveLightPoint <msurface_hw_t, mnode_hw_t> (reinterpret_cast <mnode_hw_t *> (m_worldModel->nodes), point, endPoint);
       }
       return recursiveLightPoint <msurface_t, mnode_t> (m_worldModel->nodes, point, endPoint);

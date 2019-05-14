@@ -186,6 +186,9 @@ public:
    // do actual network message processing
    void processMessages (void *ptr);
 
+   // checks whether softwared rendering is enabled
+   bool isSoftwareRenderer (void);
+
    // public inlines
 public:
    // get the current time on server

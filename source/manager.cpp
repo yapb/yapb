@@ -841,7 +841,7 @@ void BotManager::updateBotDifficulties (void) {
          auto bot = m_bots[i];
 
          if (bot != nullptr) {
-            m_bots[i]->m_difficulty = difficulty;
+            bot->m_difficulty = difficulty;
          }
       }
       m_lastDifficulty = difficulty;
