@@ -3032,7 +3032,7 @@ SHARED_LIBRARAY_EXPORT void Meta_Init (void) {
    g_gameFlags |= GAME_METAMOD;
 }
 
-Library *LoadCSBinary (void) {
+Library *loadCSBinary (void) {
    const char *modname = engine.getModName ();
 
    if (!modname) {
@@ -3160,39 +3160,8 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       File::pathCreate (const_cast <char *> (format ("%s/addons/yapb/data/learned", mod)));
    }
 
-#ifdef PLATFORM_ANDROID
-   g_gameFlags |= (GAME_XASH_ENGINE | GAME_MOBILITY | GAME_SUPPORT_BOT_VOICE);
-
-   if (g_gameFlags & GAME_METAMOD) {
-      return; // we should stop the attempt for loading the real gamedll, since metamod handle this for us
-   }
-   
-   extern ConVar yb_difficulty;
-   yb_difficulty.set (2);
-
-#ifdef LOAD_HARDFP
-   const char *serverDLL = "libserver_hardfp.so";
-#else
-   const char *serverDLL = "libserver.so";
-#endif
-
-   char gameDLLName[256];
-   snprintf (gameDLLName, cr::bufsize (gameDLLName), "%s/%s", getenv ("XASH3D_GAMELIBDIR"), serverDLL);
-
-   g_gameLib = new Library (gameDLLName);
-
-   if (!g_gameLib->isValid ()) {
-      logEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gameDLLName, engine.getModName ());
-      delete g_gameLib;
-   }
-#else
-   g_gameLib = LoadCSBinary (); {
-      if (!g_gameLib && !(g_gameFlags & GAME_METAMOD)) {
-         logEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", engine.getModName ());
-         return;
-      }
-
-      // print game detection info
+   // print game detection info
+   auto printDetectedGame = [] (void) {
       String gameVersionStr;
 
       if (g_gameFlags & GAME_LEGACY) {
@@ -3216,7 +3185,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 
       if (g_gameFlags & GAME_SUPPORT_BOT_VOICE) {
          gameVersionStr.append (" (BV)");
-      }
+}
 
       if (g_gameFlags & GAME_REGAMEDLL) {
          gameVersionStr.append (" (RE)");
@@ -3225,13 +3194,48 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
       if (g_gameFlags & GAME_SUPPORT_SVC_PINGS) {
          gameVersionStr.append (" (SVC)");
       }
-      engine.print ("[YAPB] Bot v%s.0.%d Loaded. Game detected as Counter-Strike: %s", PRODUCT_VERSION, buildNumber(), gameVersionStr.chars ());
+      engine.print ("[YAPB] Bot v%s.0.%d Loaded. Game detected as Counter-Strike: %s", PRODUCT_VERSION, buildNumber (), gameVersionStr.chars ());
+   };
+
+#ifdef PLATFORM_ANDROID
+   g_gameFlags |= (GAME_XASH_ENGINE | GAME_MOBILITY | GAME_SUPPORT_BOT_VOICE | GAME_REGAMEDLL);
+
+   if (g_gameFlags & GAME_METAMOD) {
+      return; // we should stop the attempt for loading the real gamedll, since metamod handle this for us
+   }
+   
+   extern ConVar yb_difficulty;
+   yb_difficulty.set (2);
+
+#ifdef LOAD_HARDFP
+   const char *serverDLL = "libserver_hardfp.so";
+#else
+   const char *serverDLL = "libserver.so";
+#endif
+
+   char gameDLLName[256];
+   snprintf (gameDLLName, cr::bufsize (gameDLLName), "%s/%s", getenv ("XASH3D_GAMELIBDIR"), serverDLL);
+
+   g_gameLib = new Library (gameDLLName);
+
+   if (!g_gameLib->isValid ()) {
+      logEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gameDLLName, engine.getModName ());
+      delete g_gameLib;
+   }
+   printDetectedGame ();
+
+#else
+   g_gameLib = loadCSBinary (); {
+      if (!g_gameLib && !(g_gameFlags & GAME_METAMOD)) {
+         logEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", engine.getModName ());
+         return;
+      }
+      printDetectedGame ();
 
       if (g_gameFlags & GAME_METAMOD) {
          return;
       }
    }
-   
 #endif
 
    auto api_GiveFnptrsToDll = g_gameLib->resolve <void (STD_CALL *) (enginefuncs_t *, globalvars_t *)> ("GiveFnptrsToDll");
