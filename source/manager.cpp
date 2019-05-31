@@ -1098,7 +1098,7 @@ void Bot::newRound (void) {
 
    switch (m_personality) {
    case PERSONALITY_NORMAL:
-      m_pathType = rng.getInt (0, 100) > 50 ? SEARCH_PATH_SAFEST_FASTER : SEARCH_PATH_SAFEST;
+      m_pathType = rng.chance (50) ? SEARCH_PATH_SAFEST_FASTER : SEARCH_PATH_SAFEST;
       break;
 
    case PERSONALITY_RUSHER:
@@ -1274,7 +1274,7 @@ void Bot::newRound (void) {
    pushMsgQueue (GAME_MSG_PURCHASE);
    startTask (TASK_NORMAL, TASKPRI_NORMAL, INVALID_WAYPOINT_INDEX, 0.0f, true);
 
-   if (rng.getInt (0, 100) < 50) {
+   if (rng.chance (50)) {
       pushChatterMessage (CHATTER_NEW_ROUND);
    }
    m_thinkInterval = (g_gameFlags & (GAME_LEGACY | GAME_XASH_ENGINE)) ? 0.0f : (1.0f / cr::clamp (yb_think_fps.flt (), 30.0f, 90.0f)) * rng.getFloat (0.95f, 1.05f);
@@ -1366,7 +1366,7 @@ void Bot::processTeamJoin (void) {
       m_notStarted = false;
 
       // check for greeting other players, since we connected
-      if (rng.getInt (0, 100) < 20) {
+      if (rng.chance (20)) {
          pushChatMessage (CHAT_WELCOME);
       }
    }
@@ -1553,7 +1553,7 @@ void BotManager::selectLeaders (int team, bool reset) {
                // vip bot is the leader
                bot->m_isLeader = true;
 
-               if (rng.getInt (1, 100) < 50) {
+               if (rng.chance (50)) {
                   bot->pushRadioMessage (RADIO_FOLLOW_ME);
                   bot->m_campButtons = 0;
                }
@@ -1567,7 +1567,7 @@ void BotManager::selectLeaders (int team, bool reset) {
          if (bot != nullptr && bot->m_notKilled) {
             bot->m_isLeader = true;
 
-            if (rng.getInt (1, 100) < 45) {
+            if (rng.chance (45)) {
                bot->pushRadioMessage (RADIO_FOLLOW_ME);
             }
          }
@@ -1584,7 +1584,7 @@ void BotManager::selectLeaders (int team, bool reset) {
                bot->m_isLeader = true;
 
                // terrorist carrying a bomb needs to have some company
-               if (rng.getInt (1, 100) < 80) {
+               if (rng.chance (75)) {
                   if (yb_communication_type.integer () == 2) {
                      bot->pushChatterMessage (CHATTER_GOING_TO_PLANT_BOMB);
                   }
@@ -1601,7 +1601,7 @@ void BotManager::selectLeaders (int team, bool reset) {
          if (auto bot = bots.getHighfragBot (team)) {
             bot->m_isLeader = true;
 
-            if (rng.getInt (1, 100) < 30) {
+            if (rng.chance (30)) {
                bot->pushRadioMessage (RADIO_FOLLOW_ME);
             }
          }
@@ -1614,7 +1614,7 @@ void BotManager::selectLeaders (int team, bool reset) {
       if (!m_leaderChoosen[team] && bot) {
          bot->m_isLeader = true;
 
-         if (rng.getInt (1, 100) < 30) {
+         if (rng.chance (30)) {
             bot->pushRadioMessage (RADIO_FOLLOW_ME);
          }
          m_leaderChoosen[team] = true;
@@ -1626,7 +1626,7 @@ void BotManager::selectLeaders (int team, bool reset) {
       if (!m_leaderChoosen[team] && bot) {
          bot->m_isLeader = true;
 
-         if (rng.getInt (1, 100) < (team == TEAM_TERRORIST ? 30 : 40)) {
+         if (rng.chance (team == TEAM_TERRORIST ? 30 : 40)) {
             bot->pushRadioMessage (RADIO_FOLLOW_ME);
          }
          m_leaderChoosen[team] = true;

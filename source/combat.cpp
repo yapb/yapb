@@ -398,7 +398,7 @@ bool Bot::lookupEnemies (void) {
    return false;
 }
 
-Vector Bot::getBodyOffserError (float distance) {
+Vector Bot::getBodyOffsetError (float distance) {
    if (engine.isNullEntity (m_enemy)) {
       return Vector::null ();
    }
@@ -417,7 +417,7 @@ const Vector &Bot::getEnemyBodyOffset (void) {
    // the purpose of this function, is to make bot aiming not so ideal. it's mutate m_enemyOrigin enemy vector
    // returned from visibility check function.
 
-   auto headOffset = [] (edict_t *e) {
+   const auto headOffset = [] (edict_t *e) {
       return e->v.absmin.z + e->v.size.z * 0.81f;
    };
 
@@ -449,7 +449,7 @@ const Vector &Bot::getEnemyBodyOffset (void) {
 
    // if we only suspect an enemy behind a wall take the worst skill
    if (!m_visibility && (m_states & STATE_SUSPECT_ENEMY)) {
-      aimPos += getBodyOffserError (distance);
+      aimPos += getBodyOffsetError (distance);
    }
    else {
       // now take in account different parts of enemy body
@@ -457,7 +457,7 @@ const Vector &Bot::getEnemyBodyOffset (void) {
          int headshotFreq[5] = { 20, 40, 60, 80, 100 };
 
          // now check is our skill match to aim at head, else aim at enemy body
-         if ((rng.getInt (1, 100) < headshotFreq[m_difficulty]) || usesPistol ()) {
+         if (rng.chance (headshotFreq[m_difficulty]) || usesPistol ()) {
             aimPos.z = headOffset (m_enemy) + getEnemyBodyOffsetCorrection (distance);
          }
          else {
@@ -480,7 +480,7 @@ const Vector &Bot::getEnemyBodyOffset (void) {
 
    // add some error to unskilled bots
    if (m_difficulty < 3) {
-      m_enemyOrigin += getBodyOffserError (distance);
+      m_enemyOrigin += getBodyOffsetError (distance);
    }
    return m_enemyOrigin;
 }
@@ -796,7 +796,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
    if (distance < MAX_SPRAY_DISTANCE || m_blindTime > engine.timebase ()) {
       if (id == WEAPON_KNIFE) {
          if (distance < 64.0f) {
-            if (rng.getInt (1, 100) < 30 || hasShield ()) {
+            if (rng.chance (30) || hasShield ()) {
                pev->button |= IN_ATTACK; // use primary attack
             }
             else {
@@ -914,7 +914,7 @@ void Bot::fireWeapons (void) {
                   m_reloadState = RELOAD_PRIMARY;
                   m_reloadCheckTime = engine.timebase ();
 
-                  if (rng.getInt (0, 100) < cr::abs (m_difficulty * 25 - 100)) {
+                  if (rng.chance (cr::abs (m_difficulty * 25 - 100))) {
                      pushRadioMessage (RADIO_NEED_BACKUP);
                   }
                }
@@ -1080,7 +1080,7 @@ void Bot::attackMovement (void) {
       }
       else {
          if (m_lastFightStyleCheck + 3.0f < engine.timebase ()) {
-            if (rng.getInt (0, 100) < 50) {
+            if (rng.chance (50)) {
                m_fightStyle = FIGHT_STRAFE;
             }
             else {
@@ -1105,7 +1105,7 @@ void Bot::attackMovement (void) {
                m_combatStrafeDir = STRAFE_DIR_RIGHT;
             }
 
-            if (rng.getInt (1, 100) < 30) {
+            if (rng.chance (30)) {
                m_combatStrafeDir = (m_combatStrafeDir == STRAFE_DIR_LEFT ? STRAFE_DIR_RIGHT : STRAFE_DIR_LEFT);
             }
             m_strafeSetTime = engine.timebase () + rng.getFloat (0.5f, 3.0f);

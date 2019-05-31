@@ -91,7 +91,7 @@ char *humanizeName (char *name) {
    strncpy (outputName, name, cr::bufsize (outputName)); // copy name to new buffer
 
    // drop tag marks, 80 percent of time
-   if (rng.getInt (1, 100) < 80) {
+   if (rng.chance (80)) {
       stripClanTags (outputName);
    }
    else {
@@ -100,7 +100,7 @@ char *humanizeName (char *name) {
 
    // sometimes switch name to lower characters
    // note: since we're using russian names written in english, we reduce this shit to 6 percent
-   if (rng.getInt (1, 100) <= 6) {
+   if (rng.chance (7)) {
       for (size_t i = 0; i < strlen (outputName); i++) {
          outputName[i] = static_cast <char> (tolower (static_cast <int> (outputName[i]))); // to lower case
       }
@@ -116,7 +116,7 @@ void addChatErrors (char *buffer) {
 
    // sometimes switch text to lowercase
    // note: since we're using russian chat written in English, we reduce this shit to 4 percent
-   if (rng.getInt (1, 100) <= 4) {
+   if (rng.chance (5)) {
       for (i = 0; i < length; i++) {
          buffer[i] = static_cast <char> (tolower (static_cast <int> (buffer[i]))); // switch to lowercase
       }
@@ -289,7 +289,7 @@ void Bot::prepareChatMessage (char *text) {
          }
          else if (*pattern == 'd') {
             if (g_gameFlags & GAME_CZERO) {
-               if (rng.getInt (1, 100) < 30) {
+               if (rng.chance (30)) {
                   m_tempStrings += "CZ";
                }
                else {
@@ -297,7 +297,7 @@ void Bot::prepareChatMessage (char *text) {
                }
             }
             else if ((g_gameFlags & GAME_CSTRIKE16) || (g_gameFlags & GAME_LEGACY)) {
-               if (rng.getInt (1, 100) < 30) {
+               if (rng.chance (30)) {
                   m_tempStrings += "CS";
                }
                else {
@@ -367,7 +367,7 @@ bool checkForKeywords (char *message, char *reply) {
    }
 
    // didn't find a keyword? 70% of the time use some universal reply
-   if (rng.getInt (1, 100) < 70 && !g_chatFactory[CHAT_NOKW].empty ()) {
+   if (rng.chance (70) && !g_chatFactory[CHAT_NOKW].empty ()) {
       strcpy (reply, g_chatFactory[CHAT_NOKW].random ().chars ());
       return true;
    }
@@ -397,7 +397,7 @@ bool Bot::isReplyingToChat (void) {
 
       // check is time to chat is good
       if (m_sayTextBuffer.timeNextChat < engine.timebase ()) {
-         if (rng.getInt (1, 100) < m_sayTextBuffer.chatProbability + rng.getInt (15, 35) && processChatKeywords (reinterpret_cast <char *> (&text))) {
+         if (rng.chance (m_sayTextBuffer.chatProbability + rng.getInt (15, 35)) && processChatKeywords (reinterpret_cast <char *> (&text))) {
             prepareChatMessage (text);
             pushMsgQueue (GAME_MSG_SAY_CMD);
 

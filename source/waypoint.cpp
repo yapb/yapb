@@ -2840,9 +2840,9 @@ WaypointDownloadError Waypoint::downloadWaypoint (void) {
          break;
 
       case '\n':
-         if (symbolsInLine == 0)
+         if (symbolsInLine == 0) {
             finished = true;
-
+         }
          symbolsInLine = 0;
          break;
 

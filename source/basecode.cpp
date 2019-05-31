@@ -157,7 +157,7 @@ void Bot::checkGrenadesThrow (void) {
       else if (grenadeToThrow == WEAPON_SMOKE) {
          cancelProb = 5;
       }
-      if (rng.getInt (0, 100) < cancelProb) {
+      if (rng.chance (cancelProb)) {
          clearThrowStates (m_states);
          return;
       }
@@ -377,7 +377,7 @@ void Bot::avoidGrenades (void) {
          if (m_viewDistance > distance) {
             m_viewDistance = distance;
 
-            if (rng.getInt (0, 100) < 45) {
+            if (rng.chance (45)) {
                pushChatterMessage (CHATTER_BEHIND_SMOKE);
             }
          }
@@ -690,7 +690,7 @@ void Bot::processPickups (void) {
                m_itemIgnore = ent;
                allowPickup = false;
 
-               if (!m_defendHostage && m_difficulty > 2 && rng.getInt (0, 100) < 30 && m_timeCamping + 15.0f < engine.timebase ()) {
+               if (!m_defendHostage && m_difficulty > 2 && rng.chance (30) && m_timeCamping + 15.0f < engine.timebase ()) {
                   int index = getDefendPoint (origin);
 
                   startTask (TASK_CAMP, TASKPRI_CAMP, INVALID_WAYPOINT_INDEX, engine.timebase () + rng.getFloat (30.0f, 60.0f), true); // push camp task on to stack
@@ -732,7 +732,7 @@ void Bot::processPickups (void) {
                      else {
                         m_campButtons &= ~IN_DUCK;
                      }
-                     if (rng.getInt (0, 100) < 90) {
+                     if (rng.chance (90)) {
                         pushChatterMessage (CHATTER_DEFENDING_BOMBSITE);
                      }
                   }
@@ -770,7 +770,7 @@ void Bot::processPickups (void) {
                   return;
                }
 
-               if (rng.getInt (0, 100) < 70) {
+               if (rng.chance (70)) {
                   pushChatterMessage (CHATTER_FOUND_BOMB_PLACE);
                }
 
@@ -797,7 +797,7 @@ void Bot::processPickups (void) {
                      m_campButtons &= ~IN_DUCK;
                   }
 
-                  if (rng.getInt (0, 100) < 90) {
+                  if (rng.chance (85)) {
                      pushChatterMessage (CHATTER_DEFENDING_BOMBSITE);
                   }
                }
@@ -806,7 +806,7 @@ void Bot::processPickups (void) {
                m_itemIgnore = ent;
                allowPickup = false;
 
-               if (!m_defendedBomb && m_difficulty > 2 && rng.getInt (0, 100) < 75 && pev->health < 80) {
+               if (!m_defendedBomb && m_difficulty > 2 && rng.chance (75) && pev->health < 80) {
                   int index = getDefendPoint (origin);
 
                   startTask (TASK_CAMP, TASKPRI_CAMP, INVALID_WAYPOINT_INDEX, engine.timebase () + rng.getFloat (30.0f, 70.0f), true); // push camp task on to stack
@@ -1136,7 +1136,7 @@ void Bot::checkMsgQueue (void) {
          if (m_radioSelect == RADIO_REPORTING_IN) {
             switch (taskId ()) {
             case TASK_NORMAL:
-               if (task ()->data != INVALID_WAYPOINT_INDEX && rng.getInt (0, 100) < 70) {
+               if (task ()->data != INVALID_WAYPOINT_INDEX && rng.chance (70)) {
                   Path &path = waypoints[task ()->data];
 
                   if (path.flags & FLAG_GOAL) {
@@ -1150,26 +1150,26 @@ void Bot::checkMsgQueue (void) {
                   else if (path.flags & FLAG_RESCUE) {
                      instantChatter (CHATTER_RESCUING_HOSTAGES);
                   }
-                  else if ((path.flags & FLAG_CAMP) && rng.getInt (0, 100) > 15) {
+                  else if ((path.flags & FLAG_CAMP) && rng.chance (75)) {
                      instantChatter (CHATTER_GOING_TO_CAMP);
                   }
                   else {
                      instantChatter (CHATTER_HEARD_NOISE);
                   }
                }
-               else if (rng.getInt (0, 100) < 30) {
+               else if (rng.chance (30)) {
                   instantChatter (CHATTER_REPORTING_IN);
                }
                break;
 
             case TASK_MOVETOPOSITION:
-               if (rng.getInt (0, 100) < 20) {
+               if (rng.chance (2)) {
                   instantChatter (CHATTER_GOING_TO_CAMP);
                }
                break;
 
             case TASK_CAMP:
-               if (rng.getInt (0, 100) < 40) {
+               if (rng.chance (40)) {
                   if (g_bombPlanted && m_team == TEAM_TERRORIST) {
                      instantChatter (CHATTER_GUARDING_DROPPED_BOMB);
                   }
@@ -1200,7 +1200,7 @@ void Bot::checkMsgQueue (void) {
                break;
 
             default:
-               if (rng.getInt (0, 100) < 50) {
+               if (rng.chance (50)) {
                   instantChatter (CHATTER_NOTHING);
                }
                break;
@@ -1388,7 +1388,7 @@ int Bot::pickBestWeapon (int *vec, int count, int moneySave) {
       auto weapon = &g_weaponSelect[vec[i]];
 
       // if wea have enough money for weapon buy it
-      if (weapon->price + moneySave < m_moneyAmount + rng.getInt (50, 200) && rng.getInt (0, 100) < chance) {
+      if (weapon->price + moneySave < m_moneyAmount + rng.getInt (50, 200) && rng.chance (chance)) {
          return vec[i];
       }
    }
@@ -1682,19 +1682,19 @@ void Bot::buyStuff (void) {
       break;
 
    case BUYSTATE_GRENADES: // if bot has still some money, choose if bot should buy a grenade or not
-      if (rng.getInt (1, 100) < g_grenadeBuyPrecent[0] && m_moneyAmount >= 400 && !isWeaponRestricted (WEAPON_EXPLOSIVE)) {
+      if (rng.chance (g_grenadeBuyPrecent[0]) && m_moneyAmount >= 400 && !isWeaponRestricted (WEAPON_EXPLOSIVE)) {
          // buy a he grenade
          engine.execBotCmd (ent (), "buyequip");
          engine.execBotCmd (ent (), "menuselect 4");
       }
 
-      if (rng.getInt (1, 100) < g_grenadeBuyPrecent[1] && m_moneyAmount >= 300 && teamEcoValid && !isWeaponRestricted (WEAPON_FLASHBANG)) {
+      if (rng.chance (g_grenadeBuyPrecent[1]) && m_moneyAmount >= 300 && teamEcoValid && !isWeaponRestricted (WEAPON_FLASHBANG)) {
          // buy a concussion grenade, i.e., 'flashbang'
          engine.execBotCmd (ent (), "buyequip");
          engine.execBotCmd (ent (), "menuselect 3");
       }
 
-      if (rng.getInt (1, 100) < g_grenadeBuyPrecent[2] && m_moneyAmount >= 400 && teamEcoValid && !isWeaponRestricted (WEAPON_SMOKE)) {
+      if (rng.chance (g_grenadeBuyPrecent[2]) && m_moneyAmount >= 400 && teamEcoValid && !isWeaponRestricted (WEAPON_SMOKE)) {
          // buy a smoke grenade
          engine.execBotCmd (ent (), "buyequip");
          engine.execBotCmd (ent (), "menuselect 5");
@@ -1702,7 +1702,7 @@ void Bot::buyStuff (void) {
       break;
 
    case BUYSTATE_DEFUSER: // if bot is CT and we're on a bomb map, randomly buy the defuse kit
-      if ((g_mapFlags & MAP_DE) && m_team == TEAM_COUNTER && rng.getInt (1, 100) < 80 && m_moneyAmount > 200 && !isWeaponRestricted (WEAPON_DEFUSER)) {
+      if ((g_mapFlags & MAP_DE) && m_team == TEAM_COUNTER && rng.chance (80) && m_moneyAmount > 200 && !isWeaponRestricted (WEAPON_DEFUSER)) {
          if (isOldGame) {
             engine.execBotCmd (ent (), "buyequip;menuselect 6");
          }
@@ -1713,7 +1713,7 @@ void Bot::buyStuff (void) {
       break;
 
    case BUYSTATE_NIGHTVISION:
-      if (m_moneyAmount > 2500 && !m_hasNVG && rng.getInt (1, 100) < 30) {
+      if (m_moneyAmount > 2500 && !m_hasNVG && rng.chance (30)) {
          float skyColor = illum.getSkyColor ();
          float lightLevel = waypoints.getLightLevel (m_currentWaypointIndex);
          
@@ -1860,21 +1860,21 @@ void Bot::setConditions (void) {
             m_agressionLevel = 1.0f;
          }
 
-         if (rng.getInt (1, 100) < 10) {
+         if (rng.chance (10)) {
             pushChatMessage (CHAT_KILLING);
          }
 
-         if (rng.getInt (1, 100) < 10) {
+         if (rng.chance (10)) {
             pushRadioMessage (RADIO_ENEMY_DOWN);
          }
-         else if (rng.getInt (1, 100) < 60) {
+         else if (rng.chance (60)) {
             if ((m_lastVictim->v.weapons & (1 << WEAPON_AWP)) || (m_lastVictim->v.weapons & (1 << WEAPON_SCOUT)) || (m_lastVictim->v.weapons & (1 << WEAPON_G3SG1)) || (m_lastVictim->v.weapons & (1 << WEAPON_SG550))) {
                pushChatterMessage (CHATTER_SNIPER_KILLED);
             }
             else {
                switch (numEnemiesNear (pev->origin, 99999.0f)) {
                case 0:
-                  if (rng.getInt (0, 100) < 50) {
+                  if (rng.chance (50)) {
                      pushChatterMessage (CHATTER_NO_ENEMIES_LEFT);
                   }
                   else {
@@ -1947,7 +1947,7 @@ void Bot::setConditions (void) {
    }
 
    // check for grenades depending on difficulty
-   if (rng.getInt (0, 100) < cr::max (25, m_difficulty * 25)) {
+   if (rng.chance (cr::max (25, m_difficulty * 25))) {
       checkGrenadesThrow ();
    }
 
@@ -2175,7 +2175,7 @@ void Bot::startTask (TaskID id, float desire, int data, float time, bool resume)
    }
 
    // this is best place to handle some voice commands report team some info
-   if (rng.getInt (0, 100) < 95) {
+   if (rng.chance (90)) {
       if (tid == TASK_BLINDED) {
          instantChatter (CHATTER_BLINDED);
       }
@@ -2184,7 +2184,7 @@ void Bot::startTask (TaskID id, float desire, int data, float time, bool resume)
       }
    }
 
-   if (rng.getInt (0, 100) < 80 && tid == TASK_CAMP) {
+   if (rng.chance (80) && tid == TASK_CAMP) {
       if ((g_mapFlags & MAP_DE) && g_bombPlanted) {
          pushChatterMessage (CHATTER_GUARDING_DROPPED_BOMB);
       }
@@ -2200,7 +2200,7 @@ void Bot::startTask (TaskID id, float desire, int data, float time, bool resume)
       m_chosenGoalIndex = task ()->data;
    }
 
-   if (rng.getInt (0, 100) < 80 && tid == TASK_CAMP && m_team == TEAM_TERRORIST && m_inVIPZone) {
+   if (rng.chance (75) && tid == TASK_CAMP && m_team == TEAM_TERRORIST && m_inVIPZone) {
       pushChatterMessage (CHATTER_GOING_TO_GUARD_VIP_SAFETY);
    }
 }
@@ -2331,7 +2331,7 @@ void Bot::checkRadioQueue (void) {
    case CHATTER_COVER_ME:
       // check if line of sight to object is not blocked (i.e. visible)
       if ((seesEntity (m_radioEntity->v.origin)) || (m_radioOrder == RADIO_STICK_TOGETHER_TEAM)) {
-         if (engine.isNullEntity (m_targetEntity) && engine.isNullEntity (m_enemy) && rng.getInt (0, 100) < (m_personality == PERSONALITY_CAREFUL ? 80 : 20)) {
+         if (engine.isNullEntity (m_targetEntity) && engine.isNullEntity (m_enemy) && rng.chance (m_personality == PERSONALITY_CAREFUL ? 80 : 20)) {
             int numFollowers = 0;
 
             // Check if no more followers are allowed
@@ -2378,11 +2378,11 @@ void Bot::checkRadioQueue (void) {
                   }
                }
             }
-            else if (m_radioOrder != CHATTER_GOING_TO_PLANT_BOMB && rng.getInt (0, 100) < 15) {
+            else if (m_radioOrder != CHATTER_GOING_TO_PLANT_BOMB && rng.chance (15)) {
                pushRadioMessage (RADIO_NEGATIVE);
             }
          }
-         else if (m_radioOrder != CHATTER_GOING_TO_PLANT_BOMB && rng.getInt (0, 100) < 25) {
+         else if (m_radioOrder != CHATTER_GOING_TO_PLANT_BOMB && rng.chance (25)) {
             pushRadioMessage (RADIO_NEGATIVE);
          }
       }
@@ -2415,7 +2415,7 @@ void Bot::checkRadioQueue (void) {
                m_fearLevel = 0.0f;
             }
 
-            if (rng.getInt (0, 100) < 45 && yb_communication_type.integer () == 2) {
+            if (rng.chance (45) && yb_communication_type.integer () == 2) {
                pushChatterMessage (CHATTER_ON_MY_WAY);
             }
             else if (m_radioOrder == RADIO_NEED_BACKUP && yb_communication_type.integer () != 2) {
@@ -2423,7 +2423,7 @@ void Bot::checkRadioQueue (void) {
             }
             tryHeadTowardRadioMessage ();
          }
-         else if (rng.getInt (0, 100) < 25) {
+         else if (rng.chance (25)) {
             pushRadioMessage (RADIO_NEGATIVE);
          }
       }
@@ -2439,29 +2439,29 @@ void Bot::checkRadioQueue (void) {
    case RADIO_NEED_BACKUP:
    case CHATTER_SCARED_EMOTE:
    case CHATTER_PINNED_DOWN:
-      if (((engine.isNullEntity (m_enemy) && seesEntity (m_radioEntity->v.origin)) || distance < 2048.0f || !m_moveToC4) && rng.getInt (0, 100) > 50 && m_seeEnemyTime + 4.0f < engine.timebase ()) {
+      if (((engine.isNullEntity (m_enemy) && seesEntity (m_radioEntity->v.origin)) || distance < 2048.0f || !m_moveToC4) && rng.chance (50) && m_seeEnemyTime + 4.0f < engine.timebase ()) {
          m_fearLevel -= 0.1f;
 
          if (m_fearLevel < 0.0f) {
             m_fearLevel = 0.0f;
          }
 
-         if (rng.getInt (0, 100) < 45 && yb_communication_type.integer () == 2) {
+         if (rng.chance (45) && yb_communication_type.integer () == 2) {
             pushChatterMessage (CHATTER_ON_MY_WAY);
          }
-         else if (m_radioOrder == RADIO_NEED_BACKUP && yb_communication_type.integer () != 2 && rng.getInt (0, 100) < 50) {
+         else if (m_radioOrder == RADIO_NEED_BACKUP && yb_communication_type.integer () != 2 && rng.chance (50)) {
             pushRadioMessage (RADIO_AFFIRMATIVE);
          }
          tryHeadTowardRadioMessage ();
       }
-      else if (rng.getInt (0, 100) < 30 && m_radioOrder == RADIO_NEED_BACKUP) {
+      else if (rng.chance (30) && m_radioOrder == RADIO_NEED_BACKUP) {
          pushRadioMessage (RADIO_NEGATIVE);
       }
       break;
 
    case RADIO_GO_GO_GO:
       if (m_radioEntity == m_targetEntity) {
-         if (rng.getInt (0, 100) < 45 && yb_communication_type.integer () == 2) {
+         if (rng.chance (45) && yb_communication_type.integer () == 2) {
             pushRadioMessage (RADIO_AFFIRMATIVE);
          }
          else if (m_radioOrder == RADIO_NEED_BACKUP && yb_communication_type.integer () != 2) {
@@ -2502,7 +2502,7 @@ void Bot::checkRadioQueue (void) {
          pushRadioMessage (RADIO_AFFIRMATIVE);
          resetDoubleJump ();
       }
-      else if (rng.getInt (0, 100) < 35) {
+      else if (rng.chance (35)) {
          pushRadioMessage (RADIO_NEGATIVE);
       }
       break;
@@ -2517,7 +2517,7 @@ void Bot::checkRadioQueue (void) {
          m_targetEntity = nullptr;
          startTask (TASK_ESCAPEFROMBOMB, TASKPRI_ESCAPEFROMBOMB, INVALID_WAYPOINT_INDEX, 0.0f, true);
       }
-      else if (rng.getInt (0, 100) < 35) {
+      else if (rng.chance (35)) {
          pushRadioMessage (RADIO_NEGATIVE);
       }
       break;
@@ -2537,7 +2537,7 @@ void Bot::checkRadioQueue (void) {
       break;
 
    case RADIO_STORM_THE_FRONT:
-      if (((engine.isNullEntity (m_enemy) && seesEntity (m_radioEntity->v.origin)) || distance < 1024.0f) && rng.getInt (0, 100) > 50) {
+      if (((engine.isNullEntity (m_enemy) && seesEntity (m_radioEntity->v.origin)) || distance < 1024.0f) && rng.chance (50)) {
          pushRadioMessage (RADIO_AFFIRMATIVE);
 
          // don't pause/camp anymore
@@ -2620,7 +2620,7 @@ void Bot::checkRadioQueue (void) {
       break;
 
    case RADIO_REPORT_TEAM:
-      if (rng.getInt (0, 100) < 30) {
+      if (rng.chance (30)) {
          pushRadioMessage ((numEnemiesNear (pev->origin, 400.0f) == 0 && yb_communication_type.integer () != 2) ? RADIO_SECTOR_CLEAR : RADIO_REPORTING_IN);
       }
       break;
@@ -2729,7 +2729,7 @@ void Bot::tryHeadTowardRadioMessage (void) {
    if (taskID == TASK_MOVETOPOSITION || m_headedTime + 15.0f < engine.timebase () || !isAlive (m_radioEntity) || m_hasC4)
       return;
 
-   if ((isFakeClient (m_radioEntity) && rng.getInt (0, 100) < 25 && m_personality == PERSONALITY_NORMAL) || !(m_radioEntity->v.flags & FL_FAKECLIENT)) {
+   if ((isFakeClient (m_radioEntity) && rng.chance (25) && m_personality == PERSONALITY_NORMAL) || !(m_radioEntity->v.flags & FL_FAKECLIENT)) {
       if (taskID == TASK_PAUSE || taskID == TASK_CAMP) {
          task ()->time = engine.timebase ();
       }
@@ -3005,7 +3005,7 @@ void Bot::frame (void) {
    // bot chatting turned on?
    if (!m_notKilled && yb_chat.boolean () && m_lastChatTime + 10.0 < engine.timebase () && g_lastChatTime + 5.0f < engine.timebase () && !isReplyingToChat ()) {
       // say a text every now and then
-      if (rng.getInt (1, 1500) < 50) {
+      if (rng.chance (50)) {
          m_lastChatTime = engine.timebase ();
          g_lastChatTime = engine.timebase ();
 
@@ -3073,7 +3073,7 @@ void Bot::normal_ (void) {
 
    // bots rushing with knife, when have no enemy (thanks for idea to nicebot project)
    if (m_currentWeapon == WEAPON_KNIFE && (engine.isNullEntity (m_lastEnemy) || !isAlive (m_lastEnemy)) && engine.isNullEntity (m_enemy) && m_knifeAttackTime < engine.timebase () && !hasShield () && numFriendsNear (pev->origin, 96.0f) == 0) {
-      if (rng.getInt (0, 100) < 40) {
+      if (rng.chance (40)) {
          pev->button |= IN_ATTACK;
       }
       else {
@@ -3096,7 +3096,7 @@ void Bot::normal_ (void) {
    if (processNavigation ()) {
 
       // if we're reached the goal, and there is not enemies, notify the team
-      if (!g_bombPlanted && m_currentWaypointIndex != INVALID_WAYPOINT_INDEX && (m_currentPath->flags & FLAG_GOAL) && rng.getInt (0, 100) < 15 && numEnemiesNear (pev->origin, 650.0f) == 0) {
+      if (!g_bombPlanted && m_currentWaypointIndex != INVALID_WAYPOINT_INDEX && (m_currentPath->flags & FLAG_GOAL) && rng.chance (15) && numEnemiesNear (pev->origin, 650.0f) == 0) {
          pushRadioMessage (RADIO_SECTOR_CLEAR);
       }
       
@@ -3104,7 +3104,7 @@ void Bot::normal_ (void) {
       m_prevGoalIndex = INVALID_WAYPOINT_INDEX;
       
       // spray logo sometimes if allowed to do so
-      if (m_timeLogoSpray < engine.timebase () && yb_spraypaints.boolean () && rng.getInt (1, 100) < 60 && m_moveSpeed > getShiftSpeed () && engine.isNullEntity (m_pickupItem)) {
+      if (m_timeLogoSpray < engine.timebase () && yb_spraypaints.boolean () && rng.chance (60) && m_moveSpeed > getShiftSpeed () && engine.isNullEntity (m_pickupItem)) {
          if (!((g_mapFlags & MAP_DE) && g_bombPlanted && m_team == TEAM_COUNTER)) {
             startTask (TASK_SPRAY, TASKPRI_SPRAYLOGO, INVALID_WAYPOINT_INDEX, engine.timebase () + 1.0f, false);
          }
@@ -3162,7 +3162,7 @@ void Bot::normal_ (void) {
                m_campDirection = 0;
 
                // tell the world we're camping
-               if (rng.getInt (0, 100) < 40) {
+               if (rng.chance (40)) {
                   pushRadioMessage (RADIO_IN_POSITION);
                }
                m_moveToGoal = false;
@@ -3183,7 +3183,7 @@ void Bot::normal_ (void) {
                   m_hostages.clear ();
                }
             }
-            else if (m_team == TEAM_TERRORIST && rng.getInt (0, 100) < 75) {
+            else if (m_team == TEAM_TERRORIST && rng.chance (75)) {
                int index = getDefendPoint (m_currentPath->origin);
 
                startTask (TASK_CAMP, TASKPRI_CAMP, INVALID_WAYPOINT_INDEX, engine.timebase () + rng.getFloat (60.0f, 120.0f), true); // push camp task on to stack
@@ -3275,7 +3275,7 @@ void Bot::normal_ (void) {
    }
 
    // bot hasn't seen anything in a long time and is asking his teammates to report in
-   if (yb_communication_type.integer () > 1 && m_seeEnemyTime + rng.getFloat (45.0f, 80.0f) < engine.timebase () && g_lastRadio[m_team] != RADIO_REPORT_TEAM && rng.getInt (0, 100) < 30 && g_timeRoundStart + 20.0f < engine.timebase () && m_askCheckTime < engine.timebase () && numFriendsNear (pev->origin, 1024.0f) == 0) {
+   if (yb_communication_type.integer () > 1 && m_seeEnemyTime + rng.getFloat (45.0f, 80.0f) < engine.timebase () && g_lastRadio[m_team] != RADIO_REPORT_TEAM && rng.chance (30) && g_timeRoundStart + 20.0f < engine.timebase () && m_askCheckTime < engine.timebase () && numFriendsNear (pev->origin, 1024.0f) == 0) {
       pushRadioMessage (RADIO_REPORT_TEAM);
 
       m_askCheckTime = engine.timebase () + rng.getFloat (45.0f, 80.0f);
@@ -3852,7 +3852,7 @@ void Bot::bombDefuse_ (void) {
       defuseError = true;
       g_bombPlanted = false;
 
-      if (rng.getInt (0, 100) < 50 && m_numFriendsLeft != 0) {
+      if (m_numFriendsLeft != 0 && rng.chance (50)) {
          if (timeToBlowUp <= 3.0) {
             if (yb_communication_type.integer () == 2) {
                instantChatter (CHATTER_BARELY_DEFUSED);
@@ -4583,7 +4583,7 @@ void Bot::pickupItem_ () {
             // use game dll function to make sure the hostage is correctly 'used'
             MDLL_Use (m_pickupItem, ent ());
 
-            if (rng.getInt (0, 100) < 80) {
+            if (rng.chance (80)) {
                pushChatterMessage (CHATTER_USING_HOSTAGES);
             }
             m_hostages.push (m_pickupItem);
@@ -4754,7 +4754,7 @@ void Bot::checkSpawnConditions (void) {
          startTask (TASK_SPRAY, TASKPRI_SPRAYLOGO, INVALID_WAYPOINT_INDEX, engine.timebase () + 1.0f, false);
       }
 
-      if (m_difficulty >= 2 && rng.getInt (0, 100) < (m_personality == PERSONALITY_RUSHER ? 99 : 50) && !m_isReloading && (g_mapFlags & (MAP_CS | MAP_DE | MAP_ES | MAP_AS))) {
+      if (m_difficulty >= 2 && rng.chance (m_personality == PERSONALITY_RUSHER ? 99 : 50) && !m_isReloading && (g_mapFlags & (MAP_CS | MAP_DE | MAP_ES | MAP_AS))) {
          if (yb_jasonmode.boolean ()) {
             selectSecondary ();
             engine.execBotCmd (ent (), "drop");
@@ -4765,7 +4765,7 @@ void Bot::checkSpawnConditions (void) {
       }
       m_checkKnifeSwitch = false;
 
-      if (rng.getInt (0, 100) < yb_user_follow_percent.integer () && engine.isNullEntity (m_targetEntity) && !m_isLeader && !m_hasC4 && rng.getInt (0, 100) > 50) {
+      if (rng.chance (yb_user_follow_percent.integer ()) && engine.isNullEntity (m_targetEntity) && !m_isLeader && !m_hasC4 && rng.chance (50)) {
          decideFollowUser ();
       }
    }
@@ -4784,7 +4784,7 @@ void Bot::checkSpawnConditions (void) {
 
          case WEAPON_FAMAS:
          case WEAPON_GLOCK:
-            if (rng.getInt (0, 100) < 50) {
+            if (rng.chance (50)) {
                pev->button |= IN_ATTACK2;
             }
             break;
@@ -4845,16 +4845,16 @@ void Bot::ai (void) {
       if ((m_states & STATE_SEEING_ENEMY) && !engine.isNullEntity (m_enemy)) {
          int hasFriendNearby = numFriendsNear (pev->origin, 512.0f);
 
-         if (!hasFriendNearby && rng.getInt (0, 100) < 45 && (m_enemy->v.weapons & (1 << WEAPON_C4))) {
+         if (!hasFriendNearby && rng.chance (45) && (m_enemy->v.weapons & (1 << WEAPON_C4))) {
             pushChatterMessage (CHATTER_SPOT_THE_BOMBER);
          }
-         else if (!hasFriendNearby && rng.getInt (0, 100) < 45 && m_team == TEAM_TERRORIST && isPlayerVIP (m_enemy)) {
+         else if (!hasFriendNearby && rng.chance (45) && m_team == TEAM_TERRORIST && isPlayerVIP (m_enemy)) {
             pushChatterMessage (CHATTER_VIP_SPOTTED);
          }
-         else if (!hasFriendNearby && rng.getInt (0, 100) < 50 && engine.getTeam (m_enemy) != m_team && isGroupOfEnemies (m_enemy->v.origin, 2, 384)) {
+         else if (!hasFriendNearby && rng.chance (50) && engine.getTeam (m_enemy) != m_team && isGroupOfEnemies (m_enemy->v.origin, 2, 384)) {
             pushChatterMessage (CHATTER_SCARED_EMOTE);
          }
-         else if (!hasFriendNearby && rng.getInt (0, 100) < 40 && ((m_enemy->v.weapons & (1 << WEAPON_AWP)) || (m_enemy->v.weapons & (1 << WEAPON_SCOUT)) || (m_enemy->v.weapons & (1 << WEAPON_G3SG1)) || (m_enemy->v.weapons & (1 << WEAPON_SG550)))) {
+         else if (!hasFriendNearby && rng.chance (40) && ((m_enemy->v.weapons & (1 << WEAPON_AWP)) || (m_enemy->v.weapons & (1 << WEAPON_SCOUT)) || (m_enemy->v.weapons & (1 << WEAPON_G3SG1)) || (m_enemy->v.weapons & (1 << WEAPON_SG550)))) {
             pushChatterMessage (CHATTER_SNIPER_WARNING);
          }
 
@@ -5260,7 +5260,7 @@ void Bot::processBlind (int alpha) {
    m_blindMoveSpeed = -pev->maxspeed;
    m_blindSidemoveSpeed = 0.0f;
 
-   if (rng.getInt (0, 100) > 50) {
+   if (rng.chance (50)) {
       m_blindSidemoveSpeed = pev->maxspeed;
    }
    else {
@@ -5729,7 +5729,7 @@ void Bot::checkSilencer (void) {
       int prob = (m_personality == PERSONALITY_RUSHER ? 35 : 65);
 
       // aggressive bots don't like the silencer
-      if (rng.getInt (1, 100) < (m_currentWeapon == WEAPON_USP ? prob / 2 : prob)) {
+      if (rng.chance (m_currentWeapon == WEAPON_USP ? prob / 2 : prob)) {
          // is the silencer not attached...
          if (pev->weaponanim > 6) {
             pev->button |= IN_ATTACK2; // attach the silencer
@@ -5844,7 +5844,7 @@ void Bot::processHearing (void) {
       m_heardSoundTime = engine.timebase ();
       m_states |= STATE_HEARING_ENEMY;
 
-      if (rng.getInt (0, 100) < 15 && engine.isNullEntity (m_enemy) && engine.isNullEntity (m_lastEnemy) && m_seeEnemyTime + 7.0f < engine.timebase ()) {
+      if (rng.chance (15) && engine.isNullEntity (m_enemy) && engine.isNullEntity (m_lastEnemy) && m_seeEnemyTime + 7.0f < engine.timebase ()) {
          pushChatterMessage (CHATTER_HEARD_ENEMY);
       }
 
@@ -5934,9 +5934,9 @@ void Bot::processBuyzoneEntering (int buyState) {
 bool Bot::isBombDefusing (const Vector &bombOrigin) {
    // this function finds if somebody currently defusing the bomb.
 
-   if (!g_bombPlanted)
+   if (!g_bombPlanted) {
       return false;
-
+   }
    bool defusingInProgress = false;
 
    for (int i = 0; i < engine.maxClients (); i++) {

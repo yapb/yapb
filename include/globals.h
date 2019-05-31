@@ -46,10 +46,10 @@ extern int g_lastRadio[MAX_TEAM_COUNT];
 extern int g_storeAddbotVars[4];
 extern int *g_weaponPrefs[];
 
-extern Array<StringArray> g_chatFactory;
-extern Array<Array<ChatterItem>> g_chatterFactory;
-extern Array<BotName> g_botNames;
-extern Array<KeywordFactory> g_replyFactory;
+extern Array <StringArray> g_chatFactory;
+extern Array <Array <ChatterItem>> g_chatterFactory;
+extern Array <BotName> g_botNames;
+extern Array <KeywordFactory> g_replyFactory;
 
 extern WeaponSelect g_weaponSelect[NUM_WEAPONS + 1];
 extern WeaponProperty g_weaponDefs[MAX_WEAPONS + 1];
@@ -61,7 +61,7 @@ extern Task g_taskFilters[TASK_MAX];
 extern Experience *g_experienceData;
 
 extern edict_t *g_hostEntity;
-extern Library *g_gameLib;
+extern Library g_gameLib;
 
 extern gamefuncs_t g_functionTable;
 

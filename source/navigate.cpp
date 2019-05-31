@@ -1052,7 +1052,7 @@ bool Bot::processNavigation (void) {
          if ((engine.getAbsPos (tr.pHit) - pev->origin).lengthSq () < 2500.0f) {
             ignoreCollision (); // don't consider being stuck
 
-            if (rng.getInt (1, 100) < 50) {
+            if (rng.chance (50)) {
                // do not use door directrly under xash, or we will get failed assert in gamedll code
                if (g_gameFlags & GAME_XASH_ENGINE) {
                   pev->button |= IN_USE;
@@ -1189,14 +1189,14 @@ bool Bot::processNavigation (void) {
             float distance = (bombOrigin - waypoints[taskTarget].origin).length ();
 
             if (distance > 512.0f) {
-               if (rng.getInt (0, 100) < 50 && !waypoints.isVisited (taskTarget)) {
+               if (rng.chance (50) && !waypoints.isVisited (taskTarget)) {
                   pushRadioMessage (RADIO_SECTOR_CLEAR);
                }
                waypoints.setVisited (taskTarget); // doesn't hear so not a good goal
             }
          }
          else {
-            if (rng.getInt (0, 100) < 50 && !waypoints.isVisited (taskTarget)) {
+            if (rng.chance (50) && !waypoints.isVisited (taskTarget)) {
                pushRadioMessage (RADIO_SECTOR_CLEAR);
             }
             waypoints.setVisited (taskTarget); // doesn't hear so not a good goal
@@ -2301,7 +2301,7 @@ bool Bot::advanceMovement (void) {
                if (static_cast <float> (kills) == m_baseAgressionLevel) {
                   m_campButtons |= IN_DUCK;
                }
-               else if (rng.getInt (1, 100) > m_difficulty * 25) {
+               else if (rng.chance (m_difficulty * 25)) {
                   m_minSpeed = getShiftSpeed ();
                }
             }

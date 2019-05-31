@@ -359,6 +359,10 @@ public:
    inline float getFloat (float low, float high) {
       return static_cast <float> (random () * (static_cast <double> (high) - static_cast <double> (low)) / (m_divider - 1) + static_cast <double> (low));
    }
+
+   template <typename U> inline bool chance (const U max, const U maxChance = 100) {
+      return getInt <U> (0, maxChance) < max;
+   }
 };
 
 class SimpleColor final : private NonCopyable {
@@ -590,11 +594,13 @@ public:
    }
 };
 
-class Library {
+class Library final : private NonCopyable {
 private:
    void *m_ptr;
 
 public:
+   explicit Library (void) : m_ptr (nullptr) { }
+
    Library (const char *filename) : m_ptr (nullptr) {
       if (!filename) {
          return;
@@ -603,6 +609,20 @@ public:
    }
 
    virtual ~Library (void) {
+      unload ();
+   }
+
+public:
+   inline void *load (const char *filename) noexcept {
+#ifdef PLATFORM_WIN32
+      m_ptr = LoadLibrary (filename);
+#else
+      m_ptr = dlopen (filename, RTLD_NOW);
+#endif
+      return m_ptr;
+   }
+
+   inline void unload (void) noexcept {
       if (!isValid ()) {
          return;
       }
@@ -611,16 +631,6 @@ public:
 #else
       dlclose (m_ptr);
 #endif
-   }
-
-public:
-   inline void *load (const char *filename) {
-#ifdef PLATFORM_WIN32
-      m_ptr = LoadLibrary (filename);
-#else
-      m_ptr = dlopen (filename, RTLD_NOW);
-#endif
-      return m_ptr;
    }
 
    template <typename R> R resolve (const char *function) {
@@ -650,7 +660,7 @@ public:
    B second;
 
 public:
-   Pair (const A &a, const B &b) : first (a), second (b) {
+   Pair (const A &a, const B &b) : first (cr::move (a)), second (cr::move (b)) {
    }
 
 public:
@@ -865,9 +875,7 @@ public:
       T *buffer = new T[m_length];
 
       if (m_data != nullptr) {
-         for (size_t i = 0; i < m_length; i++) {
-            transfer (buffer, m_data);
-         }
+         transfer (buffer, m_data);
          delete[] m_data;
       }
       m_data = move (buffer);
@@ -1829,5 +1837,3 @@ using StringArray = cr::classes::Array <cr::classes::String>;
 using IntArray = cr::classes::Array <int>;
 
 }}
-
-
