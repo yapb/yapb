@@ -2845,7 +2845,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
    memset (functionTable, 0, sizeof (gamefuncs_t));
 
    if (!(g_gameFlags & GAME_METAMOD)) {
-      auto api_GetEntityAPI = g_gameLib->resolve <int (*) (gamefuncs_t *, int)> ("GetEntityAPI");
+      auto api_GetEntityAPI = g_gameLib.resolve <int (*) (gamefuncs_t *, int)> ("GetEntityAPI");
 
       // pass other DLLs engine callbacks to function table...
       if (api_GetEntityAPI (&g_functionTable, INTERFACE_VERSION) == 0) {
@@ -2913,7 +2913,7 @@ SHARED_LIBRARAY_EXPORT int GetNewDLLFunctions (newgamefuncs_t *functionTable, in
    // pass them too, else the DLL interfacing wouldn't be complete and the game possibly wouldn't
    // run properly.
 
-   auto api_GetNewDLLFunctions = g_gameLib->resolve <int (*) (newgamefuncs_t *, int *)> ("GetNewDLLFunctions");
+   auto api_GetNewDLLFunctions = g_gameLib.resolve <int (*) (newgamefuncs_t *, int *)> ("GetNewDLLFunctions");
 
    if (api_GetNewDLLFunctions == nullptr) {
       return FALSE;
@@ -2971,7 +2971,7 @@ SHARED_LIBRARAY_EXPORT int Server_GetBlendingInterface (int version, void **ppin
    // of the body move, which bones, which hitboxes and how) between the server and the game DLL.
    // some MODs can be using a different hitbox scheme than the standard one.
 
-   auto api_GetBlendingInterface = g_gameLib->resolve <int (*) (int, void **, void *, float(*)[3][4], float(*)[128][3][4])> ("Server_GetBlendingInterface");
+   auto api_GetBlendingInterface = g_gameLib.resolve <int (*) (int, void **, void *, float(*)[3][4], float(*)[128][3][4])> ("Server_GetBlendingInterface");
 
    if (api_GetBlendingInterface == nullptr) {
       return FALSE;
@@ -3032,11 +3032,11 @@ SHARED_LIBRARAY_EXPORT void Meta_Init (void) {
    g_gameFlags |= GAME_METAMOD;
 }
 
-Library *loadCSBinary (void) {
+bool loadCSBinary (void) {
    const char *modname = engine.getModName ();
 
    if (!modname) {
-      return nullptr;
+      return false;
    }
 
 #if defined(PLATFORM_WIN32)
@@ -3047,14 +3047,14 @@ Library *loadCSBinary (void) {
    const char *libs[] = {"cs.dylib"};
 #endif
 
-   auto libCheck = [] (Library *lib, const char *modname, const char *dll) {
+   auto libCheck = [] (const char *modname, const char *dll) {
       // try to load gamedll
-      if (!lib->isValid ()) {
+      if (!g_gameLib.isValid ()) {
          logEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", dll, modname);
 
          return false;
       }
-      auto ent = lib->resolve <entity_func_t> ("trigger_random_unique");
+      auto ent = g_gameLib.resolve <entity_func_t> ("trigger_random_unique");
 
       // detect regamedll by addon entity they provide
       if (ent != nullptr) {
@@ -3077,28 +3077,26 @@ Library *loadCSBinary (void) {
          g_gameFlags |= (GAME_CZERO | GAME_SUPPORT_BOT_VOICE | GAME_SUPPORT_SVC_PINGS);
 
          if (g_gameFlags & GAME_METAMOD) {
-            return nullptr;
+            return false;
          }
-         auto game = new Library (path);
+         g_gameLib.load (path);
 
          // verify dll is OK 
-         if (!libCheck (game, modname, libs[i])) {
-            delete game;
-            return nullptr;
+         if (!libCheck (modname, libs[i])) {
+            return false;
          }
-         return game;
+         return true;
       }
       else {
-         auto game = new Library (path);
+         g_gameLib.load (path);
 
          // verify dll is OK 
-         if (!libCheck (game, modname, libs[i])) {
-            delete game;
-            return nullptr;
+         if (!libCheck (modname, libs[i])) {
+            return false;
          }
 
          // detect if we're running modern game
-         auto entity = game->resolve <entity_func_t> ("weapon_famas");
+         auto entity = g_gameLib.resolve <entity_func_t> ("weapon_famas");
 
          // detect xash engine
          if (g_engfuncs.pfnCVarGetPointer ("build") != nullptr) {
@@ -3109,10 +3107,9 @@ Library *loadCSBinary (void) {
             }
 
             if (g_gameFlags & GAME_METAMOD) {
-               delete game;
-               return nullptr;
+               return false;
             }
-            return game;
+            return true;
          }
 
          if (entity != nullptr) {
@@ -3123,13 +3120,12 @@ Library *loadCSBinary (void) {
          }
 
          if (g_gameFlags & GAME_METAMOD) {
-            delete game;
-            return nullptr;
+            return false;
          }
-         return game;
+         return true;
       }
    }
-   return nullptr;
+   return false;
 }
 
 DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t *pGlobals) {
@@ -3225,21 +3221,22 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    printDetectedGame ();
 
 #else
-   g_gameLib = loadCSBinary (); {
-      if (!g_gameLib && !(g_gameFlags & GAME_METAMOD)) {
-         logEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", engine.getModName ());
-         return;
-      }
-      printDetectedGame ();
+   bool binaryLoaded = loadCSBinary ();
 
-      if (g_gameFlags & GAME_METAMOD) {
-         return;
-      }
+   if (!binaryLoaded && !(g_gameFlags & GAME_METAMOD)) {
+      logEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", engine.getModName ());
+      return;
    }
+   printDetectedGame ();
+
+   if (g_gameFlags & GAME_METAMOD) {
+      return;
+   }
+
 #endif
 
-   auto api_GiveFnptrsToDll = g_gameLib->resolve <void (STD_CALL *) (enginefuncs_t *, globalvars_t *)> ("GiveFnptrsToDll");
-
+   auto api_GiveFnptrsToDll = g_gameLib.resolve <void (STD_CALL *) (enginefuncs_t *, globalvars_t *)> ("GiveFnptrsToDll");
+   
    assert (api_GiveFnptrsToDll != nullptr);
    GetEngineFunctions (functionTable, nullptr);
 
@@ -3255,14 +3252,14 @@ DLL_ENTRYPOINT {
    // dynamic library detaching ??
    if (DLL_DETACHING) {
       cleanupGarbage (); // free everything that's freeable
-      delete g_gameLib; // if dynamic link library of mod is load, free it
+      g_gameLib.unload (); // if dynamic link library of mod is load, free it
    }
    DLL_RETENTRY; // the return data type is OS specific too
 }
 
 void helper_LinkEntity (entity_func_t &addr, const char *name, entvars_t *pev) {
    if (addr == nullptr) {
-      addr = g_gameLib->resolve <entity_func_t> (name);
+      addr = g_gameLib.resolve <entity_func_t> (name);
    }
 
    if (addr == nullptr) {

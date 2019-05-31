@@ -40,11 +40,11 @@ int g_highestDamageCT = 1;
 int g_highestDamageT = 1;
 int g_highestKills = 1;
 
-Array<StringArray> g_chatFactory;
-Array<Array<ChatterItem>> g_chatterFactory;
-Array<BotName> g_botNames;
-Array<KeywordFactory> g_replyFactory;
-Library *g_gameLib = nullptr;
+Array <StringArray> g_chatFactory;
+Array <Array <ChatterItem>> g_chatterFactory;
+Array <BotName> g_botNames;
+Array <KeywordFactory> g_replyFactory;
+Library g_gameLib;
 
 meta_globals_t *gpMetaGlobals = nullptr;
 gamedll_funcs_t *gpGamedllFuncs = nullptr;
