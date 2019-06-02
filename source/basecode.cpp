@@ -3728,6 +3728,10 @@ void Bot::hide_ (void) {
    pev->button |= m_campButtons;
    m_navTimeset = engine.timebase ();
 
+   if (!m_isReloading) {
+      checkReload ();
+   }
+
    // stop camping if time over or gets hurt by something else than bullets
    if (task ()->time < engine.timebase () || m_lastDamageType > 0) {
       completeTask ();

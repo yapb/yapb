@@ -2368,7 +2368,7 @@ bool Bot::advanceMovement (void) {
             }
 
             // is there a jump waypoint right ahead and do we need to draw out the light weapon ?
-            if (willJump && m_currentWeapon != WEAPON_KNIFE && m_currentWeapon != WEAPON_SCOUT && !m_isReloading && !usesPistol () && (jumpDistance > 210.0f || (dst.z - 32.0f > src.z && jumpDistance > 150.0f)) && !(m_states & (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY))) {
+            if (willJump && m_currentWeapon != WEAPON_KNIFE && m_currentWeapon != WEAPON_SCOUT && !m_isReloading && !usesPistol () && (jumpDistance > 200.0f || (dst.z - 32.0f > src.z && jumpDistance > 150.0f)) && !(m_states & (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY))) {
                selectWeaponByName ("weapon_knife"); // draw out the knife if we needed
             }
 
