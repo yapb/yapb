@@ -418,7 +418,7 @@ bool Bot::isReplyingToChat (void) {
 void Bot::say (const char *text) {
    // this function prints saytext message to all players
 
-   if (isEmptyStr (text)) {
+   if (isEmptyStr (text) || !yb_chat.boolean ()) {
       return;
    }
    engine.execBotCmd (ent (), "say \"%s\"", text);
@@ -427,7 +427,7 @@ void Bot::say (const char *text) {
 void Bot::sayTeam (const char *text) {
    // this function prints saytext message only for teammates
 
-   if (isEmptyStr (text)) {
+   if (isEmptyStr (text) || !yb_chat.boolean ()) {
       return;
    }
    engine.execBotCmd (ent (), "say_team \"%s\"", text);
