@@ -109,6 +109,10 @@ template <typename T> constexpr T abs (const T a) {
    return a > 0 ? a : -a;
 }
 
+template <typename T> constexpr T bit (const T a) {
+   return 1 << a;
+}
+
 static inline float powf (const float x, const float y) {
    union {
       float d;
@@ -766,6 +770,10 @@ public:
    }
 
    inline T &at (size_t index) {
+      return m_data[index];
+   }
+
+   inline const T &at (size_t index) const {
       return m_data[index];
    }
 

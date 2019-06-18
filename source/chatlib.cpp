@@ -11,147 +11,107 @@
 
 ConVar yb_chat ("yb_chat", "1");
 
-void stripClanTags (char *buffer) {
-   // this function strips 'clan' tags specified below in given string buffer
-
-   if (isEmptyStr (buffer)) {
-      return;
-   }
-   size_t nameLength = strlen (buffer);
-
-   if (nameLength < 4) {
-      return;
-   }
-
-   constexpr const char *open[] = { "-=", "-[", "-]", "-}", "-{", "<[", "<]", "[-", "]-", "{-", "}-", "[[", "[", "{", "]", "}", "<", ">", "-", "|", "=", "+", "(", ")" };
-   constexpr const char *close[] = { "=-", "]-", "[-", "{-", "}-", "]>", "[>", "-]", "-[", "-}", "-{", "]]", "]", "}", "[", "{", ">", "<", "-", "|", "=", "+", ")", "(" };
-
-   // for each known tag...
-   for (size_t i = 0; i < cr::arrsize (open); i++) {
-      size_t start = strstr (buffer, open[i]) - buffer; // look for a tag start
-
-      // have we found a tag start?
-      if (start < 32) {
-         size_t stop = strstr (buffer, close[i]) - buffer; // look for a tag stop
-
-         // have we found a tag stop?
-         if (stop > start && stop < 32) {
-            size_t tag = strlen (close[i]);
-            size_t j = start;
-
-            for (; j < nameLength - (stop + tag - start); j++) {
-               buffer[j] = buffer[j + (stop + tag - start)]; // overwrite the buffer with the stripped string
-            }
-            buffer[j] = '\0'; // terminate the string
-         }
-      }
-   }
-
-   // have we stripped too much (all the stuff)?
-   if (isEmptyStr (buffer)) {
-      String::trimChars (buffer);
-      return;
-   }
-   String::trimChars (buffer); // if so, string is just a tag
-
-   // strip just the tag part...
-   for (size_t i = 0; i < cr::arrsize (open); i++) {
-      size_t start = strstr (buffer, open[i]) - buffer; // look for a tag start
-
-      // have we found a tag start?
-      if (start < 32) {
-         size_t tag = strlen (open[i]);
-         size_t j = start;
-
-         for (; j < nameLength - tag; j++) {
-            buffer[j] = buffer[j + tag]; // overwrite the buffer with the stripped string
-         }
-         buffer[j] = '\0'; // terminate the string
-         start = strstr (buffer, close[i]) - buffer; // look for a tag stop
-
-         // have we found a tag stop ?
-         if (start < 32) {
-            tag = strlen (close[i]);
-            j = start;
-
-            for (; j < nameLength - tag; j++) {
-               buffer[j] = buffer[j + tag]; // overwrite the buffer with the stripped string
-            }
-            buffer[j] = 0; // terminate the string
-         }
-      }
-   }
-   String::trimChars (buffer); // to finish, strip eventual blanks after and before the tag marks
-}
-
-char *humanizeName (char *name) {
-   // this function humanize player name (i.e. trim clan and switch to lower case (sometimes))
-
-   static char outputName[64]; // create return name buffer
-   strncpy (outputName, name, cr::bufsize (outputName)); // copy name to new buffer
-
-   // drop tag marks, 80 percent of time
-   if (rng.chance (80)) {
-      stripClanTags (outputName);
-   }
-   else {
-      String::trimChars (outputName);
-   }
-
-   // sometimes switch name to lower characters
-   // note: since we're using russian names written in english, we reduce this shit to 6 percent
-   if (rng.chance (7)) {
-      for (size_t i = 0; i < strlen (outputName); i++) {
-         outputName[i] = static_cast <char> (tolower (static_cast <int> (outputName[i]))); // to lower case
-      }
-   }
-   return &outputName[0]; // return terminated string
-}
-
-void addChatErrors (char *buffer) {
-   // this function humanize chat string to be more handwritten
-
-   size_t length = strlen (buffer); // get length of string
-   size_t i = 0;
-
-   // sometimes switch text to lowercase
-   // note: since we're using russian chat written in English, we reduce this shit to 4 percent
-   if (rng.chance (5)) {
-      for (i = 0; i < length; i++) {
-         buffer[i] = static_cast <char> (tolower (static_cast <int> (buffer[i]))); // switch to lowercase
-      }
-   }
-
-   if (length > 15) {
-      size_t percentile = length / 2;
-
-      // "length / 2" percent of time drop a character
-      if (rng.getInt (1u, 100u) < percentile) {
-         size_t pos = rng.getInt (length / 8, length - length / 8); // chose random position in string
-
-         for (i = pos; i < length - 1; i++) {
-            buffer[i] = buffer[i + 1]; // overwrite the buffer with stripped string
-         }
-         buffer[i] = '\0'; // terminate string;
-         length--; // update new string length
-      }
-
-      // "length" / 4 precent of time swap character
-      if (rng.getInt (1u, 100u) < percentile / 2) {
-         size_t pos = rng.getInt (length / 8, 3 * length / 8); // choose random position in string
-         char ch = buffer[pos]; // swap characters
-
-         buffer[pos] = buffer[pos + 1];
-         buffer[pos + 1] = ch;
-      }
-   }
-   buffer[length] = 0; // terminate string
-}
-
 void Bot::prepareChatMessage (char *text) {
    // this function parses messages from the botchat, replaces keywords and converts names into a more human style
 
-   if (!yb_chat.boolean () || isEmptyStr (text)) {
+   auto humanizeName = [] (char *name) {
+      // this function humanize player name (i.e. trim clan and switch to lower case (sometimes))
+
+      auto stripClanTags = [] (char *buffer) {
+         // this function strips 'clan' tags specified below in given string buffer
+
+         if (util.isEmptyStr (buffer)) {
+            return;
+         }
+         size_t nameLength = strlen (buffer);
+
+         if (nameLength < 4) {
+            return;
+         }
+
+         constexpr const char *open[] = { "-=", "-[", "-]", "-}", "-{", "<[", "<]", "[-", "]-", "{-", "}-", "[[", "[", "{", "]", "}", "<", ">", "-", "|", "=", "+", "(", ")" };
+         constexpr const char *close[] = { "=-", "]-", "[-", "{-", "}-", "]>", "[>", "-]", "-[", "-}", "-{", "]]", "]", "}", "[", "{", ">", "<", "-", "|", "=", "+", ")", "(" };
+
+         // for each known tag...
+         for (size_t i = 0; i < cr::arrsize (open); i++) {
+            size_t start = strstr (buffer, open[i]) - buffer; // look for a tag start
+
+            // have we found a tag start?
+            if (start < 32) {
+               size_t stop = strstr (buffer, close[i]) - buffer; // look for a tag stop
+
+               // have we found a tag stop?
+               if (stop > start && stop < 32) {
+                  size_t tag = strlen (close[i]);
+                  size_t j = start;
+
+                  for (; j < nameLength - (stop + tag - start); j++) {
+                     buffer[j] = buffer[j + (stop + tag - start)]; // overwrite the buffer with the stripped string
+                  }
+                  buffer[j] = '\0'; // terminate the string
+               }
+            }
+         }
+
+         // have we stripped too much (all the stuff)?
+         if (util.isEmptyStr (buffer)) {
+            String::trimChars (buffer);
+            return;
+         }
+         String::trimChars (buffer); // if so, string is just a tag
+
+         // strip just the tag part...
+         for (size_t i = 0; i < cr::arrsize (open); i++) {
+            size_t start = strstr (buffer, open[i]) - buffer; // look for a tag start
+
+            // have we found a tag start?
+            if (start < 32) {
+               size_t tag = strlen (open[i]);
+               size_t j = start;
+
+               for (; j < nameLength - tag; j++) {
+                  buffer[j] = buffer[j + tag]; // overwrite the buffer with the stripped string
+               }
+               buffer[j] = '\0'; // terminate the string
+               start = strstr (buffer, close[i]) - buffer; // look for a tag stop
+
+               // have we found a tag stop ?
+               if (start < 32) {
+                  tag = strlen (close[i]);
+                  j = start;
+
+                  for (; j < nameLength - tag; j++) {
+                     buffer[j] = buffer[j + tag]; // overwrite the buffer with the stripped string
+                  }
+                  buffer[j] = 0; // terminate the string
+               }
+            }
+         }
+         String::trimChars (buffer); // to finish, strip eventual blanks after and before the tag marks
+      };
+
+      static char outputName[64]; // create return name buffer
+      strncpy (outputName, name, cr::bufsize (outputName)); // copy name to new buffer
+
+      // drop tag marks, 80 percent of time
+      if (rng.chance (80)) {
+         stripClanTags (outputName);
+      }
+      else {
+         String::trimChars (outputName);
+      }
+
+      // sometimes switch name to lower characters
+      // note: since we're using russian names written in english, we reduce this shit to 6 percent
+      if (rng.chance (7)) {
+         for (size_t i = 0; i < strlen (outputName); i++) {
+            outputName[i] = static_cast <char> (tolower (static_cast <int> (outputName[i]))); // to lower case
+         }
+      }
+      return &outputName[0]; // return terminated string
+   };
+
+   if (!yb_chat.boolean () || util.isEmptyStr (text)) {
       return;
    }
    m_tempStrings.clear ();
@@ -161,7 +121,7 @@ void Bot::prepareChatMessage (char *text) {
 
    edict_t *talkEntity = nullptr;
 
-   auto getHumanizedName = [] (edict_t *ent) {
+   auto getHumanizedName = [&humanizeName] (edict_t *ent) {
       if (!engine.isNullEntity (ent)) {
          return const_cast <const char *> (humanizeName (const_cast <char *> (STRING (ent->v.netname))));
       }
@@ -186,7 +146,7 @@ void Bot::prepareChatMessage (char *text) {
             int index = 0;
 
             for (int i = 0; i < engine.maxClients (); i++) {
-               const Client &client = g_clients[i];
+               const Client &client = util.getClient (i);
 
                if (!(client.flags & CF_USED) || client.ent == ent ()) {
                   continue;
@@ -198,7 +158,7 @@ void Bot::prepareChatMessage (char *text) {
                   index = i;
                }
             }
-            talkEntity = g_clients[index].ent;
+            talkEntity = util.getClient (index).ent;
             m_tempStrings += getHumanizedName (talkEntity);
          }
          // mapname?
@@ -207,8 +167,8 @@ void Bot::prepareChatMessage (char *text) {
          }
          // roundtime?
          else if (*pattern == 'r') {
-            int time = static_cast <int> (g_timeRoundEnd - engine.timebase ());
-            m_tempStrings.formatAppend ("%02d:%02d", time / 60, time % 60);
+            int time = static_cast <int> (bots.getRoundEndTime () - engine.timebase ());
+            m_tempStrings.formatAppend ("%02d:%02d", time / 60, cr::abs (time % 60));
          }
          // chat reply?
          else if (*pattern == 's') {
@@ -220,7 +180,7 @@ void Bot::prepareChatMessage (char *text) {
             int i;
 
             for (i = 0; i < engine.maxClients (); i++) {
-               const Client &client = g_clients[i];
+               const Client &client = util.getClient (i);
 
                if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ()) {
                   continue;
@@ -229,18 +189,18 @@ void Bot::prepareChatMessage (char *text) {
             }
 
             if (i < engine.maxClients ()) {
-               if (isPlayer (pev->dmg_inflictor) && m_team == engine.getTeam (pev->dmg_inflictor)) {
+               if (util.isPlayer (pev->dmg_inflictor) && m_team == engine.getTeam (pev->dmg_inflictor)) {
                   talkEntity = pev->dmg_inflictor;
                }
                else {
-                  talkEntity = g_clients[i].ent;
+                  talkEntity = util.getClient (i).ent;
                }
                m_tempStrings += getHumanizedName (talkEntity);
             }
             else // no teammates alive...
             {
                for (i = 0; i < engine.maxClients (); i++) {
-                  const Client &client = g_clients[i];
+                  const Client &client = util.getClient (i);
 
                   if (!(client.flags & CF_USED) || client.team != m_team || client.ent == ent ()) {
                      continue;
@@ -249,7 +209,7 @@ void Bot::prepareChatMessage (char *text) {
                }
 
                if (i < engine.maxClients ()) {
-                  talkEntity = g_clients[i].ent;
+                  talkEntity = util.getClient (i).ent;
                   m_tempStrings += getHumanizedName (talkEntity);
                }
             }
@@ -258,7 +218,7 @@ void Bot::prepareChatMessage (char *text) {
             int i;
 
             for (i = 0; i < engine.maxClients (); i++) {
-               const Client &client = g_clients[i];
+               const Client &client = util.getClient (i);
 
                if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team == m_team || client.ent == ent ()) {
                   continue;
@@ -267,14 +227,14 @@ void Bot::prepareChatMessage (char *text) {
             }
 
             if (i < engine.maxClients ()) {
-               talkEntity = g_clients[i].ent;
+               talkEntity = util.getClient (i).ent;
                m_tempStrings += getHumanizedName (talkEntity);
             }
 
             // no teammates alive ?
             else {
                for (i = 0; i < engine.maxClients (); i++) {
-                  const Client &client = g_clients[i];
+                  const Client &client = util.getClient (i);
 
                   if (!(client.flags & CF_USED) || client.team == m_team || client.ent == ent ()) {
                      continue;
@@ -282,13 +242,13 @@ void Bot::prepareChatMessage (char *text) {
                   break;
                }
                if (i < engine.maxClients ()) {
-                  talkEntity = g_clients[i].ent;
+                  talkEntity = util.getClient (i).ent;
                   m_tempStrings += getHumanizedName (talkEntity);
                }
             }
          }
          else if (*pattern == 'd') {
-            if (g_gameFlags & GAME_CZERO) {
+            if (engine.is (GAME_CZERO)) {
                if (rng.chance (30)) {
                   m_tempStrings += "CZ";
                }
@@ -296,7 +256,7 @@ void Bot::prepareChatMessage (char *text) {
                   m_tempStrings += "Condition Zero";
                }
             }
-            else if ((g_gameFlags & GAME_CSTRIKE16) || (g_gameFlags & GAME_LEGACY)) {
+            else if (engine.is (GAME_CSTRIKE16) || engine.is (GAME_LEGACY)) {
                if (rng.chance (30)) {
                   m_tempStrings += "CS";
                }
@@ -314,6 +274,46 @@ void Bot::prepareChatMessage (char *text) {
       }
    }
 
+   auto addChatErrors = [] (char *buffer) {
+      // this function humanize chat string to be more handwritten
+
+      size_t length = strlen (buffer); // get length of string
+      size_t i = 0;
+
+      // sometimes switch text to lowercase
+      // note: since we're using russian chat written in English, we reduce this shit to 4 percent
+      if (rng.chance (5)) {
+         for (i = 0; i < length; i++) {
+            buffer[i] = static_cast <char> (tolower (static_cast <int> (buffer[i]))); // switch to lowercase
+         }
+      }
+
+      if (length > 15) {
+         size_t percentile = length / 2;
+
+         // "length / 2" percent of time drop a character
+         if (rng.getInt (1u, 100u) < percentile) {
+            size_t pos = rng.getInt (length / 8, length - length / 8); // chose random position in string
+
+            for (i = pos; i < length - 1; i++) {
+               buffer[i] = buffer[i + 1]; // overwrite the buffer with stripped string
+            }
+            buffer[i] = '\0'; // terminate string;
+            length--; // update new string length
+         }
+
+         // "length" / 4 precent of time swap character
+         if (rng.getInt (1u, 100u) < percentile / 2) {
+            size_t pos = rng.getInt (length / 8, 3 * length / 8); // choose random position in string
+            char ch = buffer[pos]; // swap characters
+
+            buffer[pos] = buffer[pos + 1];
+            buffer[pos + 1] = ch;
+         }
+      }
+      buffer[length] = 0; // terminate string
+   };
+
    if (textStart != nullptr) {
       // let the bots make some mistakes...
       char tempString[160];
@@ -324,58 +324,59 @@ void Bot::prepareChatMessage (char *text) {
    }
 }
 
-bool checkForKeywords (char *message, char *reply) {
-   // this function checks is string contain keyword, and generates reply to it
+bool Bot::processChatKeywords (char *reply) {
+   // this function parse chat buffer, and prepare buffer to keyword searching
 
-   if (!yb_chat.boolean () || isEmptyStr (message)) {
-      return false;
-   }
+   auto checkForKeywords = [] (char *message, char *reply) -> bool {
+      // this function checks is string contain keyword, and generates reply to it
 
-   for (auto &factory : g_replyFactory) {
-      for (auto &keyword : factory.keywords) {
+      if (!yb_chat.boolean () || util.isEmptyStr (message)) {
+         return false;
+      }
 
-         // check is keyword has occurred in message
-         if (strstr (message, keyword.chars ()) != nullptr) {
-            StringArray &usedReplies = factory.usedReplies;
-            
-            if (usedReplies.length () >= factory.replies.length () / 2) {
-               usedReplies.clear ();
-            }
-            
-            if (!factory.replies.empty ()) {
-               bool replyUsed = false;
-               const String &choosenReply = factory.replies.random ();
+      for (auto &factory : conf.getReplies ()) {
+         for (auto &keyword : factory.keywords) {
 
-               // don't say this twice
-               for (auto &used : usedReplies) {
-                  if (used.contains (choosenReply)) {
-                     replyUsed = true;
-                     break;
-                  }
+            // check is keyword has occurred in message
+            if (strstr (message, keyword.chars ()) != nullptr) {
+               StringArray &usedReplies = factory.usedReplies;
+
+               if (usedReplies.length () >= factory.replies.length () / 2) {
+                  usedReplies.clear ();
                }
 
-               // reply not used, so use it
-               if (!replyUsed) {
-                  strcpy (reply, choosenReply.chars ()); // update final buffer
-                  usedReplies.push (choosenReply); // add to ignore list
+               if (!factory.replies.empty ()) {
+                  bool replyUsed = false;
+                  const String &choosenReply = factory.replies.random ();
 
-                  return true;
+                  // don't say this twice
+                  for (auto &used : usedReplies) {
+                     if (used.contains (choosenReply)) {
+                        replyUsed = true;
+                        break;
+                     }
+                  }
+
+                  // reply not used, so use it
+                  if (!replyUsed) {
+                     strcpy (reply, choosenReply.chars ()); // update final buffer
+                     usedReplies.push (choosenReply); // add to ignore list
+
+                     return true;
+                  }
                }
             }
          }
       }
-   }
+      auto &chat = conf.getChat ();
 
-   // didn't find a keyword? 70% of the time use some universal reply
-   if (rng.chance (70) && !g_chatFactory[CHAT_NOKW].empty ()) {
-      strcpy (reply, g_chatFactory[CHAT_NOKW].random ().chars ());
-      return true;
-   }
-   return false;
-}
-
-bool Bot::processChatKeywords (char *reply) {
-   // this function parse chat buffer, and prepare buffer to keyword searching
+      // didn't find a keyword? 70% of the time use some universal reply
+      if (rng.chance (70) && !chat[CHAT_NOKW].empty ()) {
+         strcpy (reply, chat[CHAT_NOKW].random ().chars ());
+         return true;
+      }
+      return false;
+   };
 
    char tempMessage[512];
    size_t maxLength = cr::bufsize (tempMessage);
@@ -418,7 +419,7 @@ bool Bot::isReplyingToChat (void) {
 void Bot::say (const char *text) {
    // this function prints saytext message to all players
 
-   if (isEmptyStr (text) || !yb_chat.boolean ()) {
+   if (util.isEmptyStr (text) || !yb_chat.boolean ()) {
       return;
    }
    engine.execBotCmd (ent (), "say \"%s\"", text);
@@ -427,7 +428,7 @@ void Bot::say (const char *text) {
 void Bot::sayTeam (const char *text) {
    // this function prints saytext message only for teammates
 
-   if (isEmptyStr (text) || !yb_chat.boolean ()) {
+   if (util.isEmptyStr (text) || !yb_chat.boolean ()) {
       return;
    }
    engine.execBotCmd (ent (), "say_team \"%s\"", text);

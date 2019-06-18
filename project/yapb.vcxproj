@@ -22,7 +22,6 @@
     <ClInclude Include="..\include\engine\meta_api.h" />
     <ClInclude Include="..\include\engine\progdefs.h" />
     <ClInclude Include="..\include\engine\util.h" />
-    <ClInclude Include="..\include\globals.h" />
     <ClInclude Include="..\include\platform.h" />
     <ClInclude Include="..\include\resource.h" />
   </ItemGroup>

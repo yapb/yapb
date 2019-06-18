@@ -21,9 +21,6 @@
     <ClInclude Include="..\include\corelib.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\globals.h">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\resource.h">
       <Filter>include</Filter>
     </ClInclude>

@@ -15,10 +15,10 @@ ConVar yb_debug_heuristic_type ("yb_debug_heuristic_type", "0");
 int Bot::searchGoal (void) {
 
    // chooses a destination (goal) waypoint for a bot
-   if (!g_bombPlanted && m_team == TEAM_TERRORIST && (g_mapFlags & MAP_DE)) {
+   if (!bots.isBombPlanted () && m_team == TEAM_TERRORIST && engine.mapIs (MAP_DE)) {
       edict_t *pent = nullptr;
 
-      while (!engine.isNullEntity (pent = g_engfuncs.pfnFindEntityByString (pent, "classname", "weaponbox"))) {
+      while (!engine.isNullEntity (pent = engfuncs.pfnFindEntityByString (pent, "classname", "weaponbox"))) {
          if (strcmp (STRING (pent->v.model), "models/w_backpack.mdl") == 0) {
             int index = waypoints.getNearest (engine.getAbsPos (pent));
 
@@ -77,14 +77,14 @@ int Bot::searchGoal (void) {
    offensive = m_agressionLevel * 100.0f;
    defensive = m_fearLevel * 100.0f;
 
-   if (g_mapFlags & (MAP_AS | MAP_CS)) {
+   if (engine.mapIs (MAP_AS | MAP_CS)) {
       if (m_team == TEAM_TERRORIST) {
          defensive += 25.0f;
          offensive -= 25.0f;
       }
       else if (m_team == TEAM_COUNTER) {
          // on hostage maps force more bots to save hostages
-         if (g_mapFlags & MAP_CS) {
+         if (engine.mapIs (MAP_CS)) {
             defensive -= 25.0f - m_difficulty * 0.5f;
             offensive += 25.0f + m_difficulty * 5.0f;
          }
@@ -94,11 +94,12 @@ int Bot::searchGoal (void) {
          }
       }
    }
-   else if ((g_mapFlags & MAP_DE) && m_team == TEAM_COUNTER) {
-      if (g_bombPlanted && taskId () != TASK_ESCAPEFROMBOMB && !waypoints.getBombPos ().empty ()) {
-         if (g_bombSayString) {
+   else if (engine.mapIs (MAP_DE) && m_team == TEAM_COUNTER) {
+      if (bots.isBombPlanted () && taskId () != TASK_ESCAPEFROMBOMB && !waypoints.getBombPos ().empty ()) {
+
+         if (bots.hasBombSay (BSS_NEED_TO_FIND_CHAT)) {
             pushChatMessage (CHAT_BOMBPLANT);
-            g_bombSayString = false;
+            bots.clearBombSay (BSS_NEED_TO_FIND_CHAT);
          }
          return m_chosenGoalIndex = getBombPoint ();
       }
@@ -109,9 +110,9 @@ int Bot::searchGoal (void) {
          defensive += 10.0f;
       }
    }
-   else if ((g_mapFlags & MAP_DE) && m_team == TEAM_TERRORIST && g_timeRoundStart + 10.0f < engine.timebase ()) {
+   else if (engine.mapIs (MAP_DE) && m_team == TEAM_TERRORIST && bots.getRoundStartTime () + 10.0f < engine.timebase ()) {
       // send some terrorists to guard planted bomb
-      if (!m_defendedBomb && g_bombPlanted && taskId () != TASK_ESCAPEFROMBOMB && getBombTimeleft () >= 15.0) {
+      if (!m_defendedBomb && bots.isBombPlanted () && taskId () != TASK_ESCAPEFROMBOMB && getBombTimeleft () >= 15.0) {
          return m_chosenGoalIndex = getDefendPoint (waypoints.getBombPos ());
       }
    }
@@ -166,7 +167,7 @@ int Bot::getGoalProcess (int tactic, IntArray *defensive, IntArray *offsensive) 
    else if (tactic == 3 && !waypoints.m_goalPoints.empty ()) // map goal waypoint
    {
       // force bomber to select closest goal, if round-start goal was reset by something
-      if (m_hasC4 && g_timeRoundStart + 20.0f < engine.timebase ()) {
+      if (m_hasC4 && bots.getRoundStartTime () + 20.0f < engine.timebase ()) {
          float minDist = 9999999.0f;
          int count = 0;
 
@@ -204,10 +205,10 @@ int Bot::getGoalProcess (int tactic, IntArray *defensive, IntArray *offsensive) 
    if (goalChoices[0] == INVALID_WAYPOINT_INDEX) {
       return m_chosenGoalIndex = rng.getInt (0, waypoints.length () - 1);
    }
-   bool isSorting = false;
+   bool sorting = false;
 
    do {
-      isSorting = false;
+      sorting = false;
 
       for (int i = 0; i < 3; i++) {
          int testIndex = goalChoices[i + 1];
@@ -216,17 +217,14 @@ int Bot::getGoalProcess (int tactic, IntArray *defensive, IntArray *offsensive) 
             break;
          }
 
-         int goal1 = m_team == TEAM_TERRORIST ? (g_experienceData + (m_currentWaypointIndex * waypoints.length ()) + goalChoices[i])->team0Value : (g_experienceData + (m_currentWaypointIndex * waypoints.length ()) + goalChoices[i])->team1Value;
-         int goal2 = m_team == TEAM_TERRORIST ? (g_experienceData + (m_currentWaypointIndex * waypoints.length ()) + goalChoices[i + 1])->team0Value : (g_experienceData + (m_currentWaypointIndex * waypoints.length ()) + goalChoices[i + 1])->team1Value;
-
-         if (goal1 < goal2) {
+         if (waypoints.getDangerValue (m_team, m_currentWaypointIndex, goalChoices[i]) < waypoints.getDangerValue (m_team, m_currentWaypointIndex, goalChoices[i + 1])) {
             goalChoices[i + 1] = goalChoices[i];
             goalChoices[i] = testIndex;
 
-            isSorting = true;
+            sorting = true;
          }
       }
-   } while (isSorting);
+   } while (sorting);
 
    return m_chosenGoalIndex = goalChoices[0]; // return and store goal
 }
@@ -317,7 +315,7 @@ void Bot::avoidIncomingPlayers (edict_t *touch) {
 bool Bot::doPlayerAvoidance (const Vector &normal) {
    // avoid collision entity, got it form official csbot
 
-   if (m_avoidTime > engine.timebase () && isAlive (m_avoid)) {
+   if (m_avoidTime > engine.timebase () && util.isAlive (m_avoid)) {
 
       Vector dir (cr::cosf (pev->v_angle.y), cr::sinf (pev->v_angle.y), 0.0f);
       Vector lat (-dir.y, dir.x, 0.0f);
@@ -436,10 +434,10 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                state[i + 1] = 0;
 
                // to start strafing, we have to first figure out if the target is on the left side or right side
-               makeVectors (m_moveAngles);
+               engine.makeVectors (m_moveAngles);
 
                Vector dirToPoint = (pev->origin - m_destOrigin).normalize2D ();
-               Vector rightSide = g_pGlobals->v_right.normalize2D ();
+               Vector rightSide = engine.vec.right.normalize2D ();
 
                bool dirRight = false;
                bool dirLeft = false;
@@ -452,10 +450,10 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                else {
                   dirLeft = true;
                }
-               const Vector &testDir = m_moveSpeed > 0.0f ? g_pGlobals->v_forward : -g_pGlobals->v_forward;
+               const Vector &testDir = m_moveSpeed > 0.0f ? engine.vec.forward : -engine.vec.forward;
 
                // now check which side is blocked
-               src = pev->origin + g_pGlobals->v_right * 32.0f;
+               src = pev->origin + engine.vec.right * 32.0f;
                dst = src + testDir * 32.0f;
 
                engine.testHull (src, dst, TRACE_IGNORE_MONSTERS, head_hull, ent (), &tr);
@@ -463,7 +461,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                if (tr.flFraction != 1.0f)
                   blockedRight = true;
 
-               src = pev->origin - g_pGlobals->v_right * 32.0f;
+               src = pev->origin - engine.vec.right * 32.0f;
                dst = src + testDir * 32.0f;
 
                engine.testHull (src, dst, TRACE_IGNORE_MONSTERS, head_hull, ent (), &tr);
@@ -509,16 +507,16 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                }
 
                if (seesEntity (m_destOrigin)) {
-                  makeVectors (m_moveAngles);
+                  engine.makeVectors (m_moveAngles);
 
                   src = eyePos ();
-                  src = src + g_pGlobals->v_right * 15.0f;
+                  src = src + engine.vec.right * 15.0f;
 
                   engine.testLine (src, m_destOrigin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
 
                   if (tr.flFraction >= 1.0f) {
                      src = eyePos ();
-                     src = src - g_pGlobals->v_right * 15.0f;
+                     src = src - engine.vec.right * 15.0f;
 
                      engine.testLine (src, m_destOrigin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
 
@@ -651,8 +649,8 @@ bool Bot::processNavigation (void) {
       
       // if wayzone radios non zero vary origin a bit depending on the body angles
       if (m_currentPath->radius > 0) {
-         makeVectors (Vector (pev->angles.x, cr::angleNorm (pev->angles.y + rng.getFloat (-90.0f, 90.0f)), 0.0f));
-         m_waypointOrigin = m_waypointOrigin + g_pGlobals->v_forward * rng.getFloat (0, m_currentPath->radius);
+         engine.makeVectors (Vector (pev->angles.x, cr::angleNorm (pev->angles.y + rng.getFloat (-90.0f, 90.0f)), 0.0f));
+         m_waypointOrigin = m_waypointOrigin + engine.vec.forward * rng.getFloat (0, m_currentPath->radius);
       }
       m_navTimeset = engine.timebase ();
    }
@@ -923,9 +921,7 @@ bool Bot::processNavigation (void) {
                bool liftUsed = false;
 
                // iterate though clients, and find if lift already used
-               for (int i = 0; i < engine.maxClients (); i++) {
-                  const Client &client = g_clients[i];
-
+               for (const auto &client : util.getClients ()) {
                   if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent () || engine.isNullEntity (client.ent->v.groundentity)) {
                      continue;
                   }
@@ -1044,7 +1040,7 @@ bool Bot::processNavigation (void) {
    }
 
    // check if we are going through a door...
-   if (g_mapFlags & MAP_HAS_DOORS) {
+   if (engine.mapIs (MAP_HAS_DOORS)) {
       engine.testLine (pev->origin, m_waypointOrigin, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
       if (!engine.isNullEntity (tr.pHit) && engine.isNullEntity (m_liftEntity) && strncmp (STRING (tr.pHit->v.classname), "func_door", 9) == 0) {
@@ -1054,7 +1050,7 @@ bool Bot::processNavigation (void) {
 
             if (rng.chance (50)) {
                // do not use door directrly under xash, or we will get failed assert in gamedll code
-               if (g_gameFlags & GAME_XASH_ENGINE) {
+               if (engine.is (GAME_XASH_ENGINE)) {
                   pev->button |= IN_USE;
                }
                else {
@@ -1084,7 +1080,7 @@ bool Bot::processNavigation (void) {
 
             edict_t *pent = nullptr;
 
-            if (m_tryOpenDoor++ > 2 && findNearestPlayer (reinterpret_cast <void **> (&pent), ent (), 256.0f, false, false, true, true, false)) {
+            if (m_tryOpenDoor++ > 2 && util.findNearestPlayer (reinterpret_cast <void **> (&pent), ent (), 256.0f, false, false, true, true, false)) {
                m_seeEnemyTime = engine.timebase () - 0.5f;
 
                m_states |= STATE_SEEING_ENEMY;
@@ -1137,41 +1133,22 @@ bool Bot::processNavigation (void) {
    }
 
    if (waypointDistance < desiredDistance) {
-      
+
       // did we reach a destination waypoint?
       if (task ()->data == m_currentWaypointIndex) {
-         // add goal values
          if (m_chosenGoalIndex != INVALID_WAYPOINT_INDEX) {
-            int16 waypointValue;
 
-            int startIndex = m_chosenGoalIndex;
-            int goalIndex = m_currentWaypointIndex;
+            // add goal values
+            int goalValue = waypoints.getDangerValue (m_team, m_chosenGoalIndex, m_currentWaypointIndex);
+            int addedValue = static_cast <int> (pev->health * 0.5f + m_goalValue * 0.5f);
 
-            if (m_team == TEAM_TERRORIST) {
-               waypointValue = (g_experienceData + (startIndex * waypoints.length ()) + goalIndex)->team0Value;
-               waypointValue += static_cast <int16> (pev->health * 0.5f);
-               waypointValue += static_cast <int16> (m_goalValue * 0.5f);
+            goalValue = cr::clamp (goalValue + addedValue, -MAX_GOAL_VALUE, MAX_GOAL_VALUE);
 
-               if (waypointValue < -MAX_GOAL_VALUE) {
-                  waypointValue = -MAX_GOAL_VALUE;
-               }
-               else if (waypointValue > MAX_GOAL_VALUE) {
-                  waypointValue = MAX_GOAL_VALUE;
-               }
-               (g_experienceData + (startIndex * waypoints.length ()) + goalIndex)->team0Value = waypointValue;
-            }
-            else {
-               waypointValue = (g_experienceData + (startIndex * waypoints.length ()) + goalIndex)->team1Value;
-               waypointValue += static_cast <int16> (pev->health * 0.5f);
-               waypointValue += static_cast <int16> (m_goalValue * 0.5f);
+            // update the experience for team
+            auto experience = waypoints.getRawExperience ();
 
-               if (waypointValue < -MAX_GOAL_VALUE) {
-                  waypointValue = -MAX_GOAL_VALUE;
-               }
-               else if (waypointValue > MAX_GOAL_VALUE) {
-                  waypointValue = MAX_GOAL_VALUE;
-               }
-               (g_experienceData + (startIndex * waypoints.length ()) + goalIndex)->team1Value = waypointValue;
+            if (experience) {
+               (experience + (m_chosenGoalIndex * waypoints.length ()) + m_currentWaypointIndex)->value[m_team] = goalValue;
             }
          }
          return true;
@@ -1181,7 +1158,7 @@ bool Bot::processNavigation (void) {
       }
       int taskTarget = task ()->data;
 
-      if ((g_mapFlags & MAP_DE) && g_bombPlanted && m_team == TEAM_COUNTER && taskId () != TASK_ESCAPEFROMBOMB && taskTarget != INVALID_WAYPOINT_INDEX) {
+      if (engine.mapIs (MAP_DE) && bots.isBombPlanted () && m_team == TEAM_COUNTER && taskId () != TASK_ESCAPEFROMBOMB && taskTarget != INVALID_WAYPOINT_INDEX) {
          const Vector &bombOrigin = isBombAudible ();
 
          // bot within 'hearable' bomb tick noises?
@@ -1211,11 +1188,11 @@ void Bot::searchShortestPath (int srcIndex, int destIndex) {
    // this function finds the shortest path from source index to destination index
 
    if (!waypoints.exists (srcIndex)){
-      logEntry (false, LL_ERROR, "Pathfinder source path index not valid (%d)", srcIndex);
+      util.logEntry (false, LL_ERROR, "Pathfinder source path index not valid (%d)", srcIndex);
       return;
    }
    else if (!waypoints.exists (destIndex)) {
-      logEntry (false, LL_ERROR, "Pathfinder destination path index not valid (%d)", destIndex);
+      util.logEntry (false, LL_ERROR, "Pathfinder destination path index not valid (%d)", destIndex);
       return;
    }
    clearSearchNodes ();
@@ -1238,217 +1215,220 @@ void Bot::searchShortestPath (int srcIndex, int destIndex) {
    }
 }
 
-float gfunctionKillsDistT (int currentIndex, int parentIndex) {
-   // least kills and number of nodes to goal for a team
-
-   if (parentIndex == INVALID_WAYPOINT_INDEX) {
-      return 0.0f;
-   }
-   float cost = static_cast <float> ((g_experienceData + (currentIndex * waypoints.length ()) + currentIndex)->team0Damage + g_highestDamageT);
-
-   Path &current = waypoints[currentIndex];
-
-   for (int i = 0; i < MAX_PATH_INDEX; i++) {
-      int neighbour = current.index[i];
-
-      if (neighbour != INVALID_WAYPOINT_INDEX) {
-         cost += (g_experienceData + (neighbour * waypoints.length ()) + neighbour)->team0Damage;
-      }
-   }
-
-   if (current.flags & FLAG_CROUCH) {
-      cost *= 1.5f;
-   }
-   return cost;
-}
-
-float gfunctionKillsDistCT (int currentIndex, int parentIndex) {
-   // least kills and number of nodes to goal for a team
-
-   if (parentIndex == INVALID_WAYPOINT_INDEX) {
-      return 0.0f;
-   }
-   float cost = static_cast <float> ((g_experienceData + (currentIndex * waypoints.length ()) + currentIndex)->team1Damage + g_highestDamageCT);
-
-   Path &current = waypoints[currentIndex];
-
-   for (int i = 0; i < MAX_PATH_INDEX; i++) {
-      int neighbour = current.index[i];
-
-      if (neighbour != INVALID_WAYPOINT_INDEX) {
-         cost += static_cast <int> ((g_experienceData + (neighbour * waypoints.length ()) + neighbour)->team1Damage);
-      }
-   }
-
-   if (current.flags & FLAG_CROUCH) {
-      cost *= 1.5f;
-
-   }
-   return cost;
-}
-
-float gfunctionKillsDistCTWithHostage (int currentIndex, int parentIndex) {
-   // least kills and number of nodes to goal for a team
-
-   Path &current = waypoints[currentIndex];
-
-   if (current.flags & FLAG_NOHOSTAGE) {
-      return 65355.0f;
-   }
-   else if (current.flags & (FLAG_CROUCH | FLAG_LADDER)) {
-      return gfunctionKillsDistCT (currentIndex, parentIndex) * 500.0f;
-   }
-   return gfunctionKillsDistCT (currentIndex, parentIndex);
-}
-
-float gfunctionKillsT (int currentIndex, int) {
-   // least kills to goal for a team
-
-   float cost = (g_experienceData + (currentIndex * waypoints.length ()) + currentIndex)->team0Damage;
-
-   Path &current = waypoints[currentIndex];
-
-   for (int i = 0; i < MAX_PATH_INDEX; i++) {
-      int neighbour = current.index[i];
-
-      if (neighbour != INVALID_WAYPOINT_INDEX) {
-         cost += (g_experienceData + (neighbour * waypoints.length ()) + neighbour)->team0Damage;
-      }
-   }
-
-   if (current.flags & FLAG_CROUCH) {
-      cost *= 1.5f;
-   }
-   return cost + 0.5f;
-}
-
-float gfunctionKillsCT (int currentIndex, int parentIndex) {
-   // least kills to goal for a team
-
-   if (parentIndex == INVALID_WAYPOINT_INDEX) {
-      return 0.0f;
-   }
-   float cost = (g_experienceData + (currentIndex * waypoints.length ()) + currentIndex)->team1Damage;
-
-   Path &current = waypoints[currentIndex];
-
-   for (int i = 0; i < MAX_PATH_INDEX; i++) {
-      int neighbour = current.index[i];
-
-      if (neighbour != INVALID_WAYPOINT_INDEX) {
-         cost += (g_experienceData + (neighbour * waypoints.length ()) + neighbour)->team1Damage;
-      }
-   }
-
-   if (current.flags & FLAG_CROUCH) {
-      cost *= 1.5f;
-   }
-   return cost + 0.5f;
-}
-
-float gfunctionKillsCTWithHostage (int currentIndex, int parentIndex) {
-   // least kills to goal for a team
-
-   if (parentIndex == INVALID_WAYPOINT_INDEX) {
-      return 0.0f;
-   }
-   Path &current = waypoints[currentIndex];
-
-   if (current.flags & FLAG_NOHOSTAGE) {
-      return 65355.0f;
-   }
-   else if (current.flags & (FLAG_CROUCH | FLAG_LADDER)) {
-      return gfunctionKillsDistCT (currentIndex, parentIndex) * 500.0f;
-   }
-   return gfunctionKillsCT (currentIndex, parentIndex);
-}
-
-float gfunctionPathDist (int currentIndex, int parentIndex) {
-   if (parentIndex == INVALID_WAYPOINT_INDEX) {
-      return 0.0f;
-   }
-   Path &parent = waypoints[parentIndex];
-   Path &current = waypoints[currentIndex];
-
-   for (int i = 0; i < MAX_PATH_INDEX; i++) {
-      if (parent.index[i] == currentIndex) {
-         // we don't like ladder or crouch point
-         if (current.flags & (FLAG_CROUCH | FLAG_LADDER)) {
-            return parent.distances[i] * 1.5f;
-         }
-         return static_cast <float> (parent.distances[i]);
-      }
-   }
-   return 65355.0f;
-}
-
-float gfunctionPathDistWithHostage (int currentIndex, int parentIndex) {
-   Path &current = waypoints[currentIndex];
-
-   if (current.flags & FLAG_NOHOSTAGE) {
-      return 65355.0f;
-   }
-   else if (current.flags & (FLAG_CROUCH | FLAG_LADDER)) {
-      return gfunctionPathDist (currentIndex, parentIndex) * 500.0f;
-   }
-   return gfunctionPathDist (currentIndex, parentIndex);
-}
-
-float hfunctionPathDist (int index, int, int goalIndex) {
-   // square distance heuristic
-
-   Path &start = waypoints[index];
-   Path &goal = waypoints[goalIndex];
-
-   float x = cr::abs (start.origin.x - goal.origin.x);
-   float y = cr::abs (start.origin.y - goal.origin.y);
-   float z = cr::abs (start.origin.z - goal.origin.z);
-
-   switch (yb_debug_heuristic_type.integer ()) {
-   case 0:
-   default:
-      return cr::max (cr::max (x, y), z); // chebyshev distance
-
-   case 1:
-      return x + y + z; // manhattan distance
-
-   case 2:
-      return 0.0f; // no heuristic
-
-   case 3:
-   case 4:
-      // euclidean based distance
-      float euclidean = cr::powf (cr::powf (x, 2.0f) + cr::powf (y, 2.0f) + cr::powf (z, 2.0f), 0.5f);
-
-      if (yb_debug_heuristic_type.integer () == 4) {
-         return 1000.0f * (cr::ceilf (euclidean) - euclidean);
-      }
-      return euclidean;
-   }
-}
-
-float hfunctionPathDistWithHostage (int index, int startIndex, int goalIndex) {
-   // square distance heuristic with hostages
-
-   if (waypoints[startIndex].flags & FLAG_NOHOSTAGE) {
-      return 65355.0f;
-   }
-   return hfunctionPathDist (index, startIndex, goalIndex);
-}
-
-float hfunctionNone (int index, int startIndex, int goalIndex) {
-   return hfunctionPathDist (index, startIndex, goalIndex) / 128.0f * 10.0f;
-}
-
 void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= SEARCH_PATH_FASTEST */) {
    // this function finds a path from srcIndex to destIndex
 
+   // least kills and number of nodes to goal for a team
+   auto gfunctionKillsDist = [] (int team, int currentIndex, int parentIndex) -> float {
+      if (parentIndex == INVALID_WAYPOINT_INDEX) {
+         return 0.0f;
+      }
+      float cost = static_cast <float> (waypoints.getDangerDamage (team, currentIndex, currentIndex) + waypoints.getHighestDamageForTeam (team));
+
+      Path &current = waypoints[currentIndex];
+
+      for (int i = 0; i < MAX_PATH_INDEX; i++) {
+         int neighbour = current.index[i];
+
+         if (neighbour != INVALID_WAYPOINT_INDEX) {
+            cost += static_cast <float> (waypoints.getDangerDamage (team, neighbour, neighbour));
+         }
+      }
+
+      if (current.flags & FLAG_CROUCH) {
+         cost *= 1.5f;
+      }
+      return cost;
+   };
+
+   // least kills and number of nodes to goal for a team
+   auto gfunctionKillsDistCTWithHostage = [&gfunctionKillsDist] (int team, int currentIndex, int parentIndex) -> float {
+      Path &current = waypoints[currentIndex];
+
+      if (current.flags & FLAG_NOHOSTAGE) {
+         return 65355.0f;
+      }
+      else if (current.flags & (FLAG_CROUCH | FLAG_LADDER)) {
+         return gfunctionKillsDist (team, currentIndex, parentIndex) * 500.0f;
+      }
+      return gfunctionKillsDist (team, currentIndex, parentIndex);
+   };
+
+   // least kills to goal for a team
+   auto gfunctionKills = [] (int team, int currentIndex, int) -> float {
+      float cost = static_cast <float> (waypoints.getDangerDamage (team, currentIndex, currentIndex));
+      Path &current = waypoints[currentIndex];
+
+      for (int i = 0; i < MAX_PATH_INDEX; i++) {
+         int neighbour = current.index[i];
+
+         if (neighbour != INVALID_WAYPOINT_INDEX) {
+            cost += static_cast <float> (waypoints.getDangerDamage (team, neighbour, neighbour));
+         }
+      }
+
+      if (current.flags & FLAG_CROUCH) {
+         cost *= 1.5f;
+      }
+      return cost + 0.5f;
+   };
+
+   // least kills to goal for a team
+   auto gfunctionKillsCTWithHostage = [&gfunctionKills] (int team, int currentIndex, int parentIndex) -> float {
+      if (parentIndex == INVALID_WAYPOINT_INDEX) {
+         return 0.0f;
+      }
+      Path &current = waypoints[currentIndex];
+
+      if (current.flags & FLAG_NOHOSTAGE) {
+         return 65355.0f;
+      }
+      else if (current.flags & (FLAG_CROUCH | FLAG_LADDER)) {
+         return gfunctionKills (team, currentIndex, parentIndex) * 500.0f;
+      }
+      return gfunctionKills (team, currentIndex, parentIndex);
+   };
+
+   auto gfunctionPathDist = [] (int, int currentIndex, int parentIndex) -> float {
+      if (parentIndex == INVALID_WAYPOINT_INDEX) {
+         return 0.0f;
+      }
+      Path &parent = waypoints[parentIndex];
+      Path &current = waypoints[currentIndex];
+
+      for (int i = 0; i < MAX_PATH_INDEX; i++) {
+         if (parent.index[i] == currentIndex) {
+            // we don't like ladder or crouch point
+            if (current.flags & (FLAG_CROUCH | FLAG_LADDER)) {
+               return parent.distances[i] * 1.5f;
+            }
+            return static_cast <float> (parent.distances[i]);
+         }
+      }
+      return 65355.0f;
+   };
+
+   auto gfunctionPathDistWithHostage = [&gfunctionPathDist] (int, int currentIndex, int parentIndex) -> float {
+      Path &current = waypoints[currentIndex];
+
+      if (current.flags & FLAG_NOHOSTAGE) {
+         return 65355.0f;
+      }
+      else if (current.flags & (FLAG_CROUCH | FLAG_LADDER)) {
+         return gfunctionPathDist (TEAM_UNASSIGNED, currentIndex, parentIndex) * 500.0f;
+      }
+      return gfunctionPathDist (TEAM_UNASSIGNED, currentIndex, parentIndex);
+   };
+
+   // square distance heuristic
+   auto hfunctionPathDist = [] (int index, int, int goalIndex) -> float {
+      Path &start = waypoints[index];
+      Path &goal = waypoints[goalIndex];
+
+      float x = cr::abs (start.origin.x - goal.origin.x);
+      float y = cr::abs (start.origin.y - goal.origin.y);
+      float z = cr::abs (start.origin.z - goal.origin.z);
+
+      switch (yb_debug_heuristic_type.integer ()) {
+      case 0:
+      default:
+         return cr::max (cr::max (x, y), z); // chebyshev distance
+
+      case 1:
+         return x + y + z; // manhattan distance
+
+      case 2:
+         return 0.0f; // no heuristic
+
+      case 3:
+      case 4:
+         // euclidean based distance
+         float euclidean = cr::powf (cr::powf (x, 2.0f) + cr::powf (y, 2.0f) + cr::powf (z, 2.0f), 0.5f);
+
+         if (yb_debug_heuristic_type.integer () == 4) {
+            return 1000.0f *(cr::ceilf (euclidean) - euclidean);
+         }
+         return euclidean;
+      }
+   };
+
+   // square distance heuristic with hostages
+   auto hfunctionPathDistWithHostage = [&hfunctionPathDist] (int index, int startIndex, int goalIndex) -> float {
+      if (waypoints[startIndex].flags & FLAG_NOHOSTAGE) {
+         return 65355.0f;
+      }
+      return hfunctionPathDist (index, startIndex, goalIndex);
+   };
+
+   // none heuristic
+   auto hfunctionNone = [&hfunctionPathDist] (int index, int startIndex, int goalIndex) -> float {
+      return hfunctionPathDist (index, startIndex, goalIndex) / 128.0f * 10.0f;
+   };
+
+   // get correct calculation for heuristic
+   auto calculate = [&] (bool hfun, int a, int b, int c) -> float {
+      if (pathType == SEARCH_PATH_SAFEST_FASTER) {
+         if (engine.mapIs (MAP_CS) && hasHostage ()) {
+            if (hfun) {
+               return hfunctionPathDistWithHostage (a, b, c);
+            }
+            else {
+               return gfunctionKillsDistCTWithHostage (a, b, c);
+            }
+         }
+         else {
+            if (hfun) {
+               return hfunctionPathDist (a, b, c);
+            }
+            else {
+               return gfunctionKillsDist (a, b, c);
+            }
+         }
+      }
+      else if (pathType == SEARCH_PATH_SAFEST) {
+         if (engine.mapIs (MAP_CS) && hasHostage ()) {
+            if (hfun) {
+               return hfunctionNone (a, b, c);
+            }
+            else {
+               return gfunctionKillsCTWithHostage (a, b, c);
+            }
+         }
+         else {
+            if (hfun) {
+               return hfunctionNone (a, b, c);
+            }
+            else {
+               return gfunctionKills (a, b, c);
+            }
+         }
+      }
+      else {
+         if (engine.mapIs (MAP_CS) && hasHostage ()) {
+            if (hfun) {
+               return hfunctionPathDistWithHostage (a, b, c);
+            }
+            else {
+               return gfunctionPathDistWithHostage (a, b, c);
+            }
+         }
+         else {
+            if (hfun) {
+               return hfunctionPathDist (a, b, c);
+            }
+            else {
+               return gfunctionPathDist (a, b, c);
+            }
+         }
+      }
+   };
+
    if (!waypoints.exists (srcIndex)) {
-      logEntry (false, LL_ERROR, "Pathfinder source path index not valid (%d)", srcIndex);
+      util.logEntry (false, LL_ERROR, "Pathfinder source path index not valid (%d)", srcIndex);
       return;
    }
    else if (!waypoints.exists (destIndex)) {
-      logEntry (false, LL_ERROR, "Pathfinder destination path index not valid (%d)", destIndex);
+      util.logEntry (false, LL_ERROR, "Pathfinder destination path index not valid (%d)", destIndex);
       return;
    }
    clearSearchNodes ();
@@ -1457,58 +1437,11 @@ void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= S
    m_goalValue = 0.0f;
 
    clearRoute ();
-
-   float (*gcalc) (int, int) = nullptr;
-   float (*hcalc) (int, int, int) = nullptr;
-
-   switch (pathType) {
-   default:
-   case SEARCH_PATH_FASTEST:
-      if ((g_mapFlags & MAP_CS) && hasHostage ()) {
-         gcalc = gfunctionPathDistWithHostage;
-         hcalc = hfunctionPathDistWithHostage;
-      }
-      else {
-         gcalc = gfunctionPathDist;
-         hcalc = hfunctionPathDist;
-      }
-      break;
-
-   case SEARCH_PATH_SAFEST_FASTER:
-      if (m_team == TEAM_TERRORIST) {
-         gcalc = gfunctionKillsDistT;
-         hcalc = hfunctionPathDist;
-      }
-      else if ((g_mapFlags & MAP_CS) && hasHostage ()) {
-         gcalc = gfunctionKillsDistCTWithHostage;
-         hcalc = hfunctionPathDistWithHostage;
-      }
-      else {
-         gcalc = gfunctionKillsDistCT;
-         hcalc = hfunctionPathDist;
-      }
-      break;
-
-   case SEARCH_PATH_SAFEST:
-      if (m_team == TEAM_TERRORIST) {
-         gcalc = gfunctionKillsT;
-         hcalc = hfunctionNone;
-      }
-      else if ((g_mapFlags & MAP_CS) && hasHostage ()) {
-         gcalc = gfunctionKillsCTWithHostage;
-         hcalc = hfunctionNone;
-      }
-      else {
-         gcalc = gfunctionKillsCT;
-         hcalc = hfunctionNone;
-      }
-      break;
-   }
    auto srcRoute = &m_routes[srcIndex];
 
    // put start node into open list
-   srcRoute->g = gcalc (srcIndex, INVALID_WAYPOINT_INDEX);
-   srcRoute->f = srcRoute->g + hcalc (srcIndex, srcIndex, destIndex);
+   srcRoute->g = calculate (false, m_team, srcIndex, INVALID_WAYPOINT_INDEX);
+   srcRoute->f = srcRoute->g + calculate (true, srcIndex, srcIndex, destIndex);
    srcRoute->state = ROUTE_OPEN;
 
    m_routeQue.clear ();
@@ -1520,7 +1453,7 @@ void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= S
 
       // safes us from bad waypoints...
       if (m_routeQue.length () >= MAX_ROUTE_LENGTH - 1) {
-         logEntry (true, LL_ERROR, "A* Search for bots \"%s\" has tried to build path with at least %d nodes. Seems to be waypoints are broken.", STRING (pev->netname), m_routeQue.length ());
+         util.logEntry (true, LL_ERROR, "A* Search for bots \"%s\" has tried to build path with at least %d nodes. Seems to be waypoints are broken.", STRING (pev->netname), m_routeQue.length ());
 
          // bail out to shortest path
          searchShortestPath (srcIndex, destIndex);
@@ -1559,8 +1492,8 @@ void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= S
          auto childRoute = &m_routes[currentChild];
 
          // calculate the F value as F = G + H
-         float g = curRoute->g + gcalc (currentChild, currentIndex);
-         float h = hcalc (currentChild, srcIndex, destIndex);
+         float g = curRoute->g + calculate (false, m_team, currentChild, currentIndex);
+         float h = calculate (true, currentChild, srcIndex, destIndex);
          float f = g + h;
 
          if (childRoute->state == ROUTE_NEW || childRoute->f > f) {
@@ -1667,7 +1600,7 @@ bool Bot::searchOptimalPoint (void) {
       }
 
       // cts with hostages should not pick waypoints with no hostage flag
-      if ((g_mapFlags & MAP_CS) && m_team == TEAM_COUNTER && (waypoints[at].flags & FLAG_NOHOSTAGE) && hasHostage ()) {
+      if (engine.mapIs (MAP_CS) && m_team == TEAM_COUNTER && (waypoints[at].flags & FLAG_NOHOSTAGE) && hasHostage ()) {
          continue;
       }
 
@@ -1677,7 +1610,7 @@ bool Bot::searchOptimalPoint (void) {
       }
 
       // check if waypoint is already used by another bot...
-      if (g_timeRoundStart + 5.0f > engine.timebase () && isOccupiedPoint (at)) {
+      if (bots.getRoundStartTime () + 5.0f > engine.timebase () && isOccupiedPoint (at)) {
          busy = at;
          continue;
       }
@@ -1807,50 +1740,28 @@ void Bot::getValidPoint (void) {
       m_waypointOrigin = m_currentPath->origin;
    }
    else if (m_navTimeset + getReachTime () < engine.timebase () && engine.isNullEntity (m_enemy)) {
-      if (m_team == TEAM_TERRORIST) {
-         int value = (g_experienceData + (m_currentWaypointIndex * waypoints.length ()) + m_currentWaypointIndex)->team0Damage;
-         value += 100;
+      auto experience = waypoints.getRawExperience ();
 
-         if (value > MAX_DAMAGE_VALUE) {
-            value = MAX_DAMAGE_VALUE;
-         }
-         (g_experienceData + (m_currentWaypointIndex * waypoints.length ()) + m_currentWaypointIndex)->team0Damage = static_cast <uint16> (value);
+      // increase danager for both teams
+      for (int team = TEAM_TERRORIST; team < MAX_TEAM_COUNT; team++) {
 
-         // affect nearby connected with victim waypoints
-         for (int i = 0; i < MAX_PATH_INDEX; i++) {
-            if (waypoints.exists (m_currentPath->index[i])) {
-               value = (g_experienceData + (m_currentPath->index[i] * waypoints.length ()) + m_currentPath->index[i])->team0Damage;
-               value += 2;
-
-               if (value > MAX_DAMAGE_VALUE) {
-                  value = MAX_DAMAGE_VALUE;
-               }
-               (g_experienceData + (m_currentPath->index[i] * waypoints.length ()) + m_currentPath->index[i])->team0Damage = static_cast <uint16> (value);
-            }
-         }
-      }
-      else {
-         int value = (g_experienceData + (m_currentWaypointIndex * waypoints.length ()) + m_currentWaypointIndex)->team1Damage;
-         value += 100;
-
-         if (value > MAX_DAMAGE_VALUE) {
-            value = MAX_DAMAGE_VALUE;
-         }
-         (g_experienceData + (m_currentWaypointIndex * waypoints.length ()) + m_currentWaypointIndex)->team1Damage = static_cast <uint16> (value);
+         int damageValue = waypoints.getDangerDamage (team, m_currentWaypointIndex, m_currentWaypointIndex);
+         damageValue = cr::clamp (damageValue + 100, 0, MAX_DAMAGE_VALUE);
 
          // affect nearby connected with victim waypoints
          for (int i = 0; i < MAX_PATH_INDEX; i++) {
-            if (waypoints.exists (m_currentPath->index[i])) {
-               value = (g_experienceData + (m_currentPath->index[i] * waypoints.length ()) + m_currentPath->index[i])->team1Damage;
-               value += 2;
+            int neighbour = m_currentPath->index[i];
 
-               if (value > MAX_DAMAGE_VALUE) {
-                  value = MAX_DAMAGE_VALUE;
-               }
-               (g_experienceData + (m_currentPath->index[i] * waypoints.length ()) + m_currentPath->index[i])->team1Damage = static_cast <uint16> (value);
+            if (waypoints.exists (neighbour)) {
+               int neighbourValue = waypoints.getDangerDamage (team, neighbour, neighbour);
+               neighbourValue = cr::clamp (neighbourValue + 100, 0, MAX_DAMAGE_VALUE);
+
+               (experience + (neighbour * waypoints.length ()) + neighbour)->damage[team] = neighbourValue;
             }
          }
+         (experience + (m_currentWaypointIndex * waypoints.length ()) + m_currentWaypointIndex)->damage[team] = damageValue;
       }
+
       clearSearchNodes ();
       rechoiceGoal ();
  
@@ -2014,26 +1925,18 @@ int Bot::getDefendPoint (const Vector &origin) {
    // use statistic if we have them
    for (int i = 0; i < MAX_PATH_INDEX; i++) {
       if (waypointIndex[i] != INVALID_WAYPOINT_INDEX) {
-         Experience *exp = (g_experienceData + (waypointIndex[i] * waypoints.length ()) + waypointIndex[i]);
-         int experience = INVALID_WAYPOINT_INDEX;
+         int experience = waypoints.getDangerDamage (m_team, waypointIndex[i], waypointIndex[i]);
+         experience = (experience * 100) / waypoints.getHighestDamageForTeam (m_team);
 
-         if (m_team == TEAM_TERRORIST) {
-            experience = exp->team0Damage;
-         }
-         else {
-            experience = exp->team1Damage;
-         }
-
-         experience = (experience * 100) / (m_team == TEAM_TERRORIST ? g_highestDamageT : g_highestDamageCT);
          minDistance[i] = (experience * 100) / 8192;
          minDistance[i] += experience;
       }
    }
-   bool isOrderChanged = false;
+   bool sorting = false;
 
    // sort results waypoints for farest distance
    do {
-      isOrderChanged = false;
+      sorting = false;
 
       // completely sort the data
       for (int i = 0; i < 3 && waypointIndex[i] != INVALID_WAYPOINT_INDEX && waypointIndex[i + 1] != INVALID_WAYPOINT_INDEX && minDistance[i] > minDistance[i + 1]; i++) {
@@ -2047,9 +1950,9 @@ int Bot::getDefendPoint (const Vector &origin) {
          minDistance[i] = minDistance[i + 1];
          minDistance[i + 1] = index;
 
-         isOrderChanged = true;
+         sorting = true;
       }
-   } while (isOrderChanged);
+   } while (sorting);
 
    if (waypointIndex[0] == INVALID_WAYPOINT_INDEX) {
       IntArray found;
@@ -2158,26 +2061,18 @@ int Bot::getCoverPoint (float maxDistance) {
    // use statistic if we have them
    for (int i = 0; i < MAX_PATH_INDEX; i++) {
       if (waypointIndex[i] != INVALID_WAYPOINT_INDEX) {
-         Experience *exp = (g_experienceData + (waypointIndex[i] * waypoints.length ()) + waypointIndex[i]);
-         int experience = INVALID_WAYPOINT_INDEX;
-
-         if (m_team == TEAM_TERRORIST) {
-            experience = exp->team0Damage;
-         }
-         else {
-            experience = exp->team1Damage;
-         }
+         int experience = waypoints.getDangerDamage (m_team, waypointIndex[i], waypointIndex[i]);
          experience = (experience * 100) / MAX_DAMAGE_VALUE;
 
          minDistance[i] = (experience * 100) / 8192;
          minDistance[i] += experience;
       }
    }
-   bool isOrderChanged;
+   bool sorting;
 
    // sort resulting waypoints for nearest distance
    do {
-      isOrderChanged = false;
+      sorting = false;
 
       for (int i = 0; i < 3 && waypointIndex[i] != INVALID_WAYPOINT_INDEX && waypointIndex[i + 1] != INVALID_WAYPOINT_INDEX && minDistance[i] > minDistance[i + 1]; i++) {
          int index = waypointIndex[i];
@@ -2189,9 +2084,9 @@ int Bot::getCoverPoint (float maxDistance) {
          minDistance[i] = minDistance[i + 1];
          minDistance[i + 1] = index;
 
-         isOrderChanged = true;
+         sorting = true;
       }
-   } while (isOrderChanged);
+   } while (sorting);
 
    TraceResult tr;
 
@@ -2267,21 +2162,14 @@ bool Bot::advanceMovement (void) {
          TaskID taskID = taskId ();
 
          // only if we in normal task and bomb is not planted
-         if (taskID == TASK_NORMAL && g_timeRoundMid + 5.0f < engine.timebase () && m_timeCamping + 5.0f < engine.timebase () && !g_bombPlanted && m_personality != PERSONALITY_RUSHER && !m_hasC4 && !m_isVIP && m_loosedBombWptIndex == INVALID_WAYPOINT_INDEX && !hasHostage ()) {
+         if (taskID == TASK_NORMAL && bots.getRoundMidTime () + 5.0f < engine.timebase () && m_timeCamping + 5.0f < engine.timebase () && !bots.isBombPlanted () && m_personality != PERSONALITY_RUSHER && !m_hasC4 && !m_isVIP && m_loosedBombWptIndex == INVALID_WAYPOINT_INDEX && !hasHostage ()) {
             m_campButtons = 0;
 
             const int nextIndex = m_path.next ();
-            float kills = 0;
-
-            if (m_team == TEAM_TERRORIST) {
-               kills = (g_experienceData + (nextIndex * waypoints.length ()) + nextIndex)->team0Damage;
-            }
-            else {
-               kills = (g_experienceData + (nextIndex * waypoints.length ()) + nextIndex)->team1Damage;
-            }
+            float kills = static_cast <float> (waypoints.getDangerDamage (m_team, nextIndex, nextIndex));
 
             // if damage done higher than one
-            if (kills > 1.0f && g_timeRoundMid > engine.timebase ()) {
+            if (kills > 1.0f && bots.getRoundMidTime () > engine.timebase ()) {
                switch (m_personality) {
                case PERSONALITY_NORMAL:
                   kills *= 0.33f;
@@ -2297,7 +2185,7 @@ bool Bot::advanceMovement (void) {
                   startTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, getDefendPoint (waypoints[nextIndex].origin), engine.timebase () + rng.getFloat (3.0f, 10.0f), true);
                }
             }
-            else if (g_botsCanPause && !isOnLadder () && !isInWater () && !m_currentTravelFlags && isOnFloor ()) {
+            else if (bots.canPause () && !isOnLadder () && !isInWater () && !m_currentTravelFlags && isOnFloor ()) {
                if (static_cast <float> (kills) == m_baseAgressionLevel) {
                   m_campButtons |= IN_DUCK;
                }
@@ -2393,8 +2281,8 @@ bool Bot::advanceMovement (void) {
 
    // if wayzone radius non zero vary origin a bit depending on the body angles
    if (m_currentPath->radius > 0.0f) {
-      makeVectors (Vector (pev->angles.x, cr::angleNorm (pev->angles.y + rng.getFloat (-90.0f, 90.0f)), 0.0f));
-      m_waypointOrigin = m_waypointOrigin + g_pGlobals->v_forward * rng.getFloat (0.0f, m_currentPath->radius);
+      engine.makeVectors (Vector (pev->angles.x, cr::angleNorm (pev->angles.y + rng.getFloat (-90.0f, 90.0f)), 0.0f));
+      m_waypointOrigin = m_waypointOrigin + engine.vec.forward * rng.getFloat (0.0f, m_currentPath->radius);
    }
 
    if (isOnLadder ()) {
@@ -2418,10 +2306,10 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
    Vector src = eyePos ();
    Vector forward = src + normal * 24.0f;
 
-   makeVectors (Vector (0.0f, pev->angles.y, 0.0f));
+   engine.makeVectors (Vector (0.0f, pev->angles.y, 0.0f));
 
    auto checkDoor = [] (TraceResult *tr) {
-      if (!(g_mapFlags & MAP_HAS_DOORS)) {
+      if (!engine.mapIs (MAP_HAS_DOORS)) {
          return false;
       }
       return tr->flFraction < 1.0f && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) != 0;
@@ -2432,7 +2320,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
 
    // check if the trace hit something...
    if (tr->flFraction < 1.0f) {
-      if ((g_mapFlags & MAP_HAS_DOORS) && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) == 0) {
+      if (engine.mapIs (MAP_HAS_DOORS) && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) == 0) {
          return false;
       }
       return true; // bot's head will hit something
@@ -2440,8 +2328,8 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
 
    // bot's head is clear, check at shoulder level...
    // trace from the bot's shoulder left diagonal forward to the right shoulder...
-   src = eyePos () + Vector (0.0f, 0.0f, -16.0f) - g_pGlobals->v_right * -16.0f;
-   forward = eyePos () + Vector (0.0f, 0.0f, -16.0f) + g_pGlobals->v_right * 16.0f + normal * 24.0f;
+   src = eyePos () + Vector (0.0f, 0.0f, -16.0f) - engine.vec.right * -16.0f;
+   forward = eyePos () + Vector (0.0f, 0.0f, -16.0f) + engine.vec.right * 16.0f + normal * 24.0f;
 
    engine.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
 
@@ -2452,8 +2340,8 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
 
    // bot's head is clear, check at shoulder level...
    // trace from the bot's shoulder right diagonal forward to the left shoulder...
-   src = eyePos () + Vector (0.0f, 0.0f, -16.0f) + g_pGlobals->v_right * 16.0f;
-   forward = eyePos () + Vector (0.0f, 0.0f, -16.0f) - g_pGlobals->v_right * -16.0f + normal * 24.0f;
+   src = eyePos () + Vector (0.0f, 0.0f, -16.0f) + engine.vec.right * 16.0f;
+   forward = eyePos () + Vector (0.0f, 0.0f, -16.0f) - engine.vec.right * -16.0f + normal * 24.0f;
 
    engine.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
 
@@ -2485,8 +2373,8 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
    }
    else {
       // trace from the left waist to the right forward waist pos
-      src = pev->origin + Vector (0.0f, 0.0f, -17.0f) - g_pGlobals->v_right * -16.0f;
-      forward = pev->origin + Vector (0.0f, 0.0f, -17.0f) + g_pGlobals->v_right * 16.0f + normal * 24.0f;
+      src = pev->origin + Vector (0.0f, 0.0f, -17.0f) - engine.vec.right * -16.0f;
+      forward = pev->origin + Vector (0.0f, 0.0f, -17.0f) + engine.vec.right * 16.0f + normal * 24.0f;
 
       // trace from the bot's waist straight forward...
       engine.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
@@ -2497,8 +2385,8 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       }
 
       // trace from the left waist to the right forward waist pos
-      src = pev->origin + Vector (0.0f, 0.0f, -17.0f) + g_pGlobals->v_right * 16.0f;
-      forward = pev->origin + Vector (0.0f, 0.0f, -17.0f) - g_pGlobals->v_right * -16.0f + normal * 24.0f;
+      src = pev->origin + Vector (0.0f, 0.0f, -17.0f) + engine.vec.right * 16.0f;
+      forward = pev->origin + Vector (0.0f, 0.0f, -17.0f) - engine.vec.right * -16.0f + normal * 24.0f;
 
       engine.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
 
@@ -2517,7 +2405,7 @@ bool Bot::canStrafeLeft (TraceResult *tr) {
    makeVectors (pev->v_angle);
 
    Vector src = pev->origin;
-   Vector left = src - g_pGlobals->v_right * -40.0f;
+   Vector left = src - engine.vec.right * -40.0f;
 
    // trace from the bot's waist straight left...
    TraceLine (src, left, true, ent (), tr);
@@ -2528,7 +2416,7 @@ bool Bot::canStrafeLeft (TraceResult *tr) {
    }
 
    src = left;
-   left = left + g_pGlobals->v_forward * 40.0f;
+   left = left + engine.vec.forward * 40.0f;
 
    // trace from the strafe pos straight forward...
    TraceLine (src, left, true, ent (), tr);
@@ -2546,7 +2434,7 @@ bool Bot::canStrafeRight (TraceResult *tr) {
    makeVectors (pev->v_angle);
 
    Vector src = pev->origin;
-   Vector right = src + g_pGlobals->v_right * 40.0f;
+   Vector right = src + engine.vec.right * 40.0f;
 
    // trace from the bot's waist straight right...
    TraceLine (src, right, true, ent (), tr);
@@ -2556,7 +2444,7 @@ bool Bot::canStrafeRight (TraceResult *tr) {
       return false; // bot's body will hit something
    }
    src = right;
-   right = right + g_pGlobals->v_forward * 40.0f;
+   right = right + engine.vec.forward * 40.0f;
 
    // trace from the strafe pos straight forward...
    TraceLine (src, right, true, ent (), tr);
@@ -2581,7 +2469,7 @@ bool Bot::canJumpUp (const Vector &normal) {
    }
 
    // convert current view angle to vectors for traceline math...
-   makeVectors (Vector (0.0f, pev->angles.y, 0.0f));
+   engine.makeVectors (Vector (0.0f, pev->angles.y, 0.0f));
 
    // check for normal jump height first...
    Vector src = pev->origin + Vector (0.0f, 0.0f, -36.0f + 45.0f);
@@ -2606,7 +2494,7 @@ bool Bot::canJumpUp (const Vector &normal) {
    }
 
    // now check same height to one side of the bot...
-   src = pev->origin + g_pGlobals->v_right * 16.0f + Vector (0.0f, 0.0f, -36.0f + 45.0f);
+   src = pev->origin + engine.vec.right * 16.0f + Vector (0.0f, 0.0f, -36.0f + 45.0f);
    dest = src + normal * 32.0f;
 
    // trace a line forward at maximum jump height...
@@ -2629,7 +2517,7 @@ bool Bot::canJumpUp (const Vector &normal) {
    }
 
    // now check same height on the other side of the bot...
-   src = pev->origin + (-g_pGlobals->v_right * 16.0f) + Vector (0.0f, 0.0f, -36.0f + 45.0f);
+   src = pev->origin + (-engine.vec.right * 16.0f) + Vector (0.0f, 0.0f, -36.0f + 45.0f);
    dest = src + normal * 32.0f;
 
    // trace a line forward at maximum jump height...
@@ -2677,7 +2565,7 @@ bool Bot::doneCanJumpUp (const Vector &normal) {
    }
 
    // now check same height to one side of the bot...
-   src = pev->origin + g_pGlobals->v_right * 16.0f + Vector (0.0f, 0.0f, -36.0f + 63.0f);
+   src = pev->origin + engine.vec.right * 16.0f + Vector (0.0f, 0.0f, -36.0f + 63.0f);
    dest = src + normal * 32.0f;
 
    // trace a line forward at maximum jump height...
@@ -2700,7 +2588,7 @@ bool Bot::doneCanJumpUp (const Vector &normal) {
    }
 
    // now check same height on the other side of the bot...
-   src = pev->origin + (-g_pGlobals->v_right * 16.0f) + Vector (0.0f, 0.0f, -36.0f + 63.0f);
+   src = pev->origin + (-engine.vec.right * 16.0f) + Vector (0.0f, 0.0f, -36.0f + 63.0f);
    dest = src + normal * 32.0f;
 
    // trace a line forward at maximum jump height...
@@ -2728,7 +2616,7 @@ bool Bot::canDuckUnder (const Vector &normal) {
    Vector baseHeight;
 
    // convert current view angle to vectors for TraceLine math...
-   makeVectors (Vector (0.0f, pev->angles.y, 0.0f));
+   engine.makeVectors (Vector (0.0f, pev->angles.y, 0.0f));
 
    // use center of the body first...
    if (pev->flags & FL_DUCKING) {
@@ -2750,7 +2638,7 @@ bool Bot::canDuckUnder (const Vector &normal) {
    }
 
    // now check same height to one side of the bot...
-   src = baseHeight + g_pGlobals->v_right * 16.0f;
+   src = baseHeight + engine.vec.right * 16.0f;
    dest = src + normal * 32.0f;
 
    // trace a line forward at duck height...
@@ -2762,7 +2650,7 @@ bool Bot::canDuckUnder (const Vector &normal) {
    }
 
    // now check same height on the other side of the bot...
-   src = baseHeight + (-g_pGlobals->v_right * 16.0f);
+   src = baseHeight + (-engine.vec.right * 16.0f);
    dest = src + normal * 32.0f;
 
    // trace a line forward at duck height...
@@ -2784,10 +2672,10 @@ bool Bot::isBlockedLeft (void) {
    makeVectors (pev->angles);
 
    // do a trace to the left...
-   engine.TestLine (pev->origin, g_pGlobals->v_forward * direction - g_pGlobals->v_right * 48.0f, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   engine.TestLine (pev->origin, engine.vec.forward * direction - engine.vec.right * 48.0f, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // check if the trace hit something...
-   if ((g_mapFlags & MAP_HAS_DOORS) && tr.flFraction < 1.0f && strncmp ("func_door", STRING (tr.pHit->v.classname), 9) != 0) {
+   if (engine.mapIs (MAP_HAS_DOORS) && tr.flFraction < 1.0f && strncmp ("func_door", STRING (tr.pHit->v.classname), 9) != 0) {
       return true; // bot's body will hit something
    }
    return false;
@@ -2803,10 +2691,10 @@ bool Bot::isBlockedRight (void) {
    makeVectors (pev->angles);
 
    // do a trace to the right...
-   engine.TestLine (pev->origin, pev->origin + g_pGlobals->v_forward * direction + g_pGlobals->v_right * 48.0f, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   engine.TestLine (pev->origin, pev->origin + engine.vec.forward * direction + engine.vec.right * 48.0f, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // check if the trace hit something...
-   if ((g_mapFlags & MAP_HAS_DOORS) && tr.flFraction < 1.0f && (strncmp ("func_door", STRING (tr.pHit->v.classname), 9) != 0)) {
+   if (engine.mapIs (MAP_HAS_DOORS) && tr.flFraction < 1.0f && (strncmp ("func_door", STRING (tr.pHit->v.classname), 9) != 0)) {
       return true; // bot's body will hit something
    }
    return false;
@@ -2816,9 +2704,9 @@ bool Bot::isBlockedRight (void) {
 
 bool Bot::checkWallOnLeft (void) {
    TraceResult tr;
-   makeVectors (pev->angles);
+   engine.makeVectors (pev->angles);
 
-   engine.testLine (pev->origin, pev->origin - g_pGlobals->v_right * 40.0f, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   engine.testLine (pev->origin, pev->origin - engine.vec.right * 40.0f, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // check if the trace hit something...
    if (tr.flFraction < 1.0f) {
@@ -2829,10 +2717,10 @@ bool Bot::checkWallOnLeft (void) {
 
 bool Bot::checkWallOnRight (void) {
    TraceResult tr;
-   makeVectors (pev->angles);
+   engine.makeVectors (pev->angles);
 
    // do a trace to the right...
-   engine.testLine (pev->origin, pev->origin + g_pGlobals->v_right * 40.0f, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   engine.testLine (pev->origin, pev->origin + engine.vec.right * 40.0f, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // check if the trace hit something...
    if (tr.flFraction < 1.0f) {
@@ -2848,7 +2736,7 @@ bool Bot::isDeadlyMove (const Vector &to) {
    TraceResult tr;
 
    Vector move ((to - botPos).toYaw (), 0.0f, 0.0f);
-   makeVectors (move);
+   engine.makeVectors (move);
 
    Vector direction = (to - botPos).normalize (); // 1 unit long
    Vector check = botPos;
@@ -3151,10 +3039,10 @@ void Bot::updateLookAnglesNewbie (const Vector &direction, const float delta) {
 }
 
 void Bot::setStrafeSpeed (const Vector &moveDir, float strafeSpeed) {
-   makeVectors (pev->angles);
+   engine.makeVectors (pev->angles);
 
    const Vector &los = (moveDir - pev->origin).normalize2D ();
-   float dot = los | g_pGlobals->v_forward.make2D ();
+   float dot = los | engine.vec.forward.make2D ();
 
    if (dot > 0.0f && !checkWallOnRight ()) {
       m_strafeSpeed = strafeSpeed;
@@ -3167,14 +3055,14 @@ void Bot::setStrafeSpeed (const Vector &moveDir, float strafeSpeed) {
 int Bot::locatePlantedC4 (void) {
    // this function tries to find planted c4 on the defuse scenario map and returns nearest to it waypoint
 
-   if (m_team != TEAM_TERRORIST || !(g_mapFlags & MAP_DE)) {
+   if (m_team != TEAM_TERRORIST || !engine.mapIs (MAP_DE)) {
       return INVALID_WAYPOINT_INDEX; // don't search for bomb if the player is CT, or it's not defusing bomb
    }
 
    edict_t *bombEntity = nullptr; // temporaly pointer to bomb
 
    // search the bomb on the map
-   while (!engine.isNullEntity (bombEntity = g_engfuncs.pfnFindEntityByString (bombEntity, "classname", "grenade"))) {
+   while (!engine.isNullEntity (bombEntity = engfuncs.pfnFindEntityByString (bombEntity, "classname", "grenade"))) {
       if (strcmp (STRING (bombEntity->v.model) + 9, "c4.mdl") == 0) {
          int nearestIndex = waypoints.getNearest (engine.getAbsPos (bombEntity));
 
@@ -3191,20 +3079,19 @@ bool Bot::isOccupiedPoint (int index) {
    if (!waypoints.exists (index)) {
       return true;
    }
-   for (int i = 0; i < engine.maxClients (); i++) {
-      const Client &client = g_clients[i];
 
+   for (const auto &client : util.getClients ()) {
       if (!(client.flags & (CF_USED | CF_ALIVE)) || client.team != m_team || client.ent == ent ()) {
          continue;
       }
-      auto bot = bots.getBot (i);
+      auto bot = bots.getBot (client.ent);
 
       if (bot == this) {
          continue;
       }
 
       if (bot != nullptr) {
-         int occupyId = getShootingConeDeviation (bot->ent (), pev->origin) >= 0.7f ? bot->m_prevWptIndex[0] : bot->m_currentWaypointIndex;
+         int occupyId = util.getShootingCone (bot->ent (), pev->origin) >= 0.7f ? bot->m_prevWptIndex[0] : bot->m_currentWaypointIndex;
 
          if (bot != nullptr) {
             if (index == occupyId) {
@@ -3225,14 +3112,14 @@ edict_t *Bot::getNearestButton (const char *targetName) {
    // this function tries to find nearest to current bot button, and returns pointer to
    // it's entity, also here must be specified the target, that button must open.
 
-   if (isEmptyStr (targetName)) {
+   if (util.isEmptyStr (targetName)) {
       return nullptr;
    }
    float nearestDistance = 99999.0f;
    edict_t *searchEntity = nullptr, *foundEntity = nullptr;
 
    // find the nearest button which can open our target
-   while (!engine.isNullEntity (searchEntity = g_engfuncs.pfnFindEntityByString (searchEntity, "target", targetName))) {
+   while (!engine.isNullEntity (searchEntity = engfuncs.pfnFindEntityByString (searchEntity, "target", targetName))) {
       const Vector &pos = engine.getAbsPos (searchEntity);
 
       // check if this place safe

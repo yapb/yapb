@@ -25,8 +25,14 @@ ConVar yb_difficulty ("yb_difficulty", "4");
 ConVar yb_latency_display ("yb_latency_display", "2");
 ConVar yb_avatar_display ("yb_avatar_display", "1");
 
+ConVar yb_language ("yb_language", "en");
+ConVar yb_ignore_cvars_on_changelevel ("yb_ignore_cvars_on_changelevel", "yb_quota,yb_autovacate");
+ConVar yb_display_menu_text ("yb_display_menu_text", "1");
+
 ConVar mp_limitteams ("mp_limitteams", nullptr, VT_NOREGISTER);
 ConVar mp_autoteambalance ("mp_autoteambalance", nullptr, VT_NOREGISTER);
+ConVar mp_roundtime ("mp_roundtime", nullptr, VT_NOREGISTER);
+ConVar mp_freezetime ("mp_freezetime", nullptr, VT_NOREGISTER, true, "0");
 
 BotManager::BotManager (void) {
    // this is a bot manager class constructor
@@ -47,6 +53,9 @@ BotManager::BotManager (void) {
 
    m_activeGrenades.reserve (16);
    m_intrestingEntities.reserve (128);
+   m_filters.reserve (TASK_MAX);
+
+   initFilters ();
 }
 
 BotManager::~BotManager (void) {
@@ -57,20 +66,20 @@ BotManager::~BotManager (void) {
 void BotManager::createKillerEntity (void) {
    // this function creates single trigger_hurt for using in Bot::Kill, to reduce lags, when killing all the bots
 
-   m_killerEntity = g_engfuncs.pfnCreateNamedEntity (MAKE_STRING ("trigger_hurt"));
+   m_killerEntity = engfuncs.pfnCreateNamedEntity (MAKE_STRING ("trigger_hurt"));
 
    m_killerEntity->v.dmg = 9999.0f;
    m_killerEntity->v.dmg_take = 1.0f;
    m_killerEntity->v.dmgtime = 2.0f;
    m_killerEntity->v.effects |= EF_NODRAW;
 
-   g_engfuncs.pfnSetOrigin (m_killerEntity, Vector (-99999.0f, -99999.0f, -99999.0f));
+   engfuncs.pfnSetOrigin (m_killerEntity, Vector (-99999.0f, -99999.0f, -99999.0f));
    MDLL_Spawn (m_killerEntity);
 }
 
 void BotManager::destroyKillerEntity (void) {
    if (!engine.isNullEntity (m_killerEntity)) {
-      g_engfuncs.pfnRemoveEntity (m_killerEntity);
+      engfuncs.pfnRemoveEntity (m_killerEntity);
    }
 }
 
@@ -89,14 +98,15 @@ void BotManager::touchKillerEntity (Bot *bot) {
          return;
       }
    }
+   const auto &prop = conf.getWeaponProp (bot->m_currentWeapon);
 
-   m_killerEntity->v.classname = MAKE_STRING (g_weaponDefs[bot->m_currentWeapon].className);
+   m_killerEntity->v.classname = MAKE_STRING (prop.classname);
    m_killerEntity->v.dmg_inflictor = bot->ent ();
 
    KeyValueData kv;
-   kv.szClassName = const_cast <char *> (g_weaponDefs[bot->m_currentWeapon].className);
+   kv.szClassName = const_cast <char *> (prop.classname);
    kv.szKeyName = "damagetype";
-   kv.szValue = const_cast <char *> (format ("%d", (1 << 4)));
+   kv.szValue = const_cast <char *> (util.format ("%d", cr::bit (4)));
    kv.fHandled = FALSE;
 
    MDLL_KeyValue (m_killerEntity, &kv);
@@ -109,7 +119,7 @@ extern "C" void player (entvars_t *pev);
 void BotManager::execGameEntity (entvars_t *vars) {
    // this function calls gamedll player() function, in case to create player entity in game
 
-   if (g_gameFlags & GAME_METAMOD) {
+   if (engine.is (GAME_METAMOD)) {
       CALL_GAME_ENTITY (PLID, "player", vars);
       return;
    }
@@ -166,39 +176,28 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
 
    // setup name
    if (name.empty ()) {
-      if (!g_botNames.empty ()) {
-         bool nameFound = false;
+      botName = conf.pickBotName ();
 
-         for (int i = 0; i < MAX_ENGINE_PLAYERS * 4; i++) {
-            if (nameFound) {
-               break;
-            }
-            botName = &g_botNames.random ();
-
-            if (botName->name.length () < 3 || botName->usedBy != 0) {
-               continue;
-            }
-            nameFound = true;
-
-            resultName = botName->name;
-            steamId = botName->steamId;
-         }
+      if (botName) {
+         resultName = botName->name;
+         steamId = botName->steamId;
       }
-      else
+      else {
          resultName.format ("yapb_%d.%d", rng.getInt (0, 10), rng.getInt (0, 10)); // just pick ugly random name
+      }
    }
    else {
       resultName = name;
    }
 
-   if (!isEmptyStr (yb_name_prefix.str ())) {
+   if (!util.isEmptyStr (yb_name_prefix.str ())) {
       String prefixed; // temp buffer for storing modified name
       prefixed.format ("%s %s", yb_name_prefix.str (), resultName.chars ());
 
       // buffer has been modified, copy to real name
       resultName = cr::move (prefixed);
    }
-   bot = g_engfuncs.pfnCreateFakeClient (resultName.chars ());
+   bot = engfuncs.pfnCreateFakeClient (resultName.chars ());
 
    if (engine.isNullEntity (bot)) {
       engine.centerPrint ("Maximum players reached (%d/%d). Unable to create Bot.", engine.maxClients (), engine.maxClients ());
@@ -268,7 +267,7 @@ Bot *BotManager::getAliveBot (void) {
       if (result.length () > 4) {
          break;
       }
-      if (m_bots[i] != nullptr && isAlive (m_bots[i]->ent ())) {
+      if (m_bots[i] != nullptr && util.isAlive (m_bots[i]->ent ())) {
          result.push (i);
       }
    }
@@ -303,7 +302,7 @@ void BotManager::frame (void) {
    }
 
    // select leader each team somewhere in round start
-   if (g_timeRoundStart + 5.0f > engine.timebase () && g_timeRoundStart + 10.0f < engine.timebase ()) {
+   if (m_timeRoundStart + 5.0f > engine.timebase () && m_timeRoundStart + 10.0f < engine.timebase ()) {
       for (int team = 0; team < MAX_TEAM_COUNT; team++) {
          selectLeaders (team, false);
       }
@@ -462,6 +461,37 @@ void BotManager::reset (void) {
    m_activeGrenades.clear ();
 }
 
+void BotManager::initFilters (void) {
+   // table with all available actions for the bots (filtered in & out in bot::setconditions) some of them have subactions included
+
+   m_filters.push ({ TASK_NORMAL, 0, INVALID_WAYPOINT_INDEX, 0.0f, true });
+   m_filters.push ({ TASK_PAUSE, 0, INVALID_WAYPOINT_INDEX, 0.0f, false });
+   m_filters.push ({ TASK_MOVETOPOSITION, 0, INVALID_WAYPOINT_INDEX, 0.0f, true });
+   m_filters.push ({ TASK_FOLLOWUSER, 0, INVALID_WAYPOINT_INDEX, 0.0f, true });
+   m_filters.push ({ TASK_PICKUPITEM, 0, INVALID_WAYPOINT_INDEX, 0.0f, true });
+   m_filters.push ({ TASK_CAMP, 0, INVALID_WAYPOINT_INDEX, 0.0f, true });
+   m_filters.push ({ TASK_PLANTBOMB, 0, INVALID_WAYPOINT_INDEX, 0.0f, false });
+   m_filters.push ({ TASK_DEFUSEBOMB, 0, INVALID_WAYPOINT_INDEX, 0.0f, false });
+   m_filters.push ({ TASK_ATTACK, 0, INVALID_WAYPOINT_INDEX, 0.0f, false });
+   m_filters.push ({ TASK_HUNTENEMY, 0, INVALID_WAYPOINT_INDEX, 0.0f, false });
+   m_filters.push ({ TASK_SEEKCOVER, 0, INVALID_WAYPOINT_INDEX, 0.0f, false });
+   m_filters.push ({ TASK_THROWHEGRENADE, 0, INVALID_WAYPOINT_INDEX, 0.0f, false });
+   m_filters.push ({ TASK_THROWFLASHBANG, 0, INVALID_WAYPOINT_INDEX, 0.0f, false });
+   m_filters.push ({ TASK_THROWSMOKE, 0, INVALID_WAYPOINT_INDEX, 0.0f, false });
+   m_filters.push ({ TASK_DOUBLEJUMP, 0, INVALID_WAYPOINT_INDEX, 0.0f, false });
+   m_filters.push ({ TASK_ESCAPEFROMBOMB, 0, INVALID_WAYPOINT_INDEX, 0.0f, false });
+   m_filters.push ({ TASK_SHOOTBREAKABLE, 0, INVALID_WAYPOINT_INDEX, 0.0f, false });
+   m_filters.push ({ TASK_HIDE, 0, INVALID_WAYPOINT_INDEX, 0.0f, false });
+   m_filters.push ({ TASK_BLINDED, 0, INVALID_WAYPOINT_INDEX, 0.0f, false });
+   m_filters.push ({ TASK_SPRAY, 0, INVALID_WAYPOINT_INDEX, 0.0f, false });
+}
+
+void BotManager::resetFilters (void) {
+   for (auto &task : m_filters) {
+      task.time = 0.0f;
+   }
+}
+
 void BotManager::decrementQuota (int by) {
    if (by != 0) {
       yb_quota.set (cr::clamp <int> (yb_quota.integer () - by, 0, yb_quota.integer ()));
@@ -539,56 +569,6 @@ void BotManager::kickFromTeam (Team team, bool removeAll) {
          }
       }
    }
-}
-
-void BotManager::kickBotByMenu (edict_t *ent, int selection) {
-   // this function displays remove bot menu to specified entity (this function show's only yapb's).
-
-   if (selection > 4 || selection < 1)
-      return;
-
-   String menus;
-   menus.format ("\\yBots Remove Menu (%d/4):\\w\n\n", selection);
-
-   int menuKeys = (selection == 4) ? (1 << 9) : ((1 << 8) | (1 << 9));
-   int menuKey = (selection - 1) * 8;
-
-   for (int i = menuKey; i < selection * 8; i++) {
-      auto bot = getBot (i);
-
-      if (bot != nullptr && (bot->pev->flags & FL_FAKECLIENT)) {
-         menuKeys |= 1 << (cr::abs (i - menuKey));
-         menus.formatAppend ("%1.1d. %s%s\n", i - menuKey + 1, STRING (bot->pev->netname), bot->m_team == TEAM_COUNTER ? " \\y(CT)\\w" : " \\r(T)\\w");
-      }
-      else {
-         menus.formatAppend ("\\d %1.1d. Not a Bot\\w\n", i - menuKey + 1);
-      }
-   }
-   menus.formatAppend ("\n%s 0. Back", (selection == 4) ? "" : " 9. More...\n");
-
-   // force to clear current menu
-   showMenu (ent, BOT_MENU_INVALID);
-
-   auto searchMenu = [](MenuId id) {
-      int menuIndex = 0;
-
-      for (; menuIndex < BOT_MENU_TOTAL_MENUS; menuIndex++) {
-         if (g_menus[menuIndex].id == id) {
-            break;
-         }
-      }
-      return &g_menus[menuIndex];
-   };
-
-   const unsigned int slots = menuKeys & static_cast <unsigned int> (-1);
-   MenuId id = static_cast <MenuId> (BOT_MENU_KICK_PAGE_1 - 1 + selection);
-
-   auto menu = searchMenu (id);
-
-   menu->slots = slots;
-   menu->text = menus;
-
-   showMenu (ent, id);
 }
 
 void BotManager::killAllBots (int team) {
@@ -691,7 +671,9 @@ bool BotManager::kickRandom (bool decQuota, Team fromTeam) {
 void BotManager::setWeaponMode (int selection) {
    // this function sets bots weapon mode
 
-   int tabMapStandart[7][NUM_WEAPONS] = {
+   selection--;
+
+   constexpr int std[7][NUM_WEAPONS] = {
       {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Knife only
       {-1, -1, -1, 2, 2, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Pistols only
       {-1, -1, -1, -1, -1, -1, -1, 2, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Shotgun only
@@ -701,7 +683,7 @@ void BotManager::setWeaponMode (int selection) {
       {-1, -1, -1, 2, 2, 0, 1, 2, 2, 2, 1, 2, 0, 2, 0, 0, 1, 0, 1, 1, 2, 2, 0, 1, 2, 1} // Standard
    };
 
-   int tabMapAS[7][NUM_WEAPONS] = {
+   constexpr int as[7][NUM_WEAPONS] = {
       {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Knife only
       {-1, -1, -1, 2, 2, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Pistols only
       {-1, -1, -1, -1, -1, -1, -1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Shotgun only
@@ -710,22 +692,19 @@ void BotManager::setWeaponMode (int selection) {
       {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, -1, 1, -1, -1}, // Snipers only
       {-1, -1, -1, 2, 2, 0, 1, 1, 1, 1, 1, 1, 0, 2, 0, -1, 1, 0, 1, 1, 0, 0, -1, 1, 1, 1} // Standard
    };
+   constexpr char modes[7][12] = {{"Knife"}, {"Pistol"}, {"Shotgun"}, {"Machine Gun"}, {"Rifle"}, {"Sniper"}, {"Standard"}};
+   
+   // get the raw weapons array
+   auto tab = conf.getRawWeapons ();
 
-   char modeName[7][12] = {{"Knife"}, {"Pistol"}, {"Shotgun"}, {"Machine Gun"}, {"Rifle"}, {"Sniper"}, {"Standard"}};
-   selection--;
-
+   // set the correct weapon mode
    for (int i = 0; i < NUM_WEAPONS; i++) {
-      g_weaponSelect[i].teamStandard = tabMapStandart[selection][i];
-      g_weaponSelect[i].teamAS = tabMapAS[selection][i];
+      tab[i].teamStandard = std[selection][i];
+      tab[i].teamAS = as[selection][i];
    }
+   yb_jasonmode.set (selection == 0 ? 1 : 0);
 
-   if (selection == 0) {
-      yb_jasonmode.set (1);
-   }
-   else {
-      yb_jasonmode.set (0);
-   }
-   engine.centerPrint ("%s weapon mode selected", &modeName[selection][0]);
+   engine.centerPrint ("%s weapon mode selected", &modes[selection][0]);
 }
 
 void BotManager::listBots (void) {
@@ -757,9 +736,7 @@ int BotManager::getBotCount (void) {
 }
 
 void BotManager::countTeamPlayers (int &ts, int &cts) {
-   for (int i = 0; i < engine.maxClients (); i++) {
-      const Client &client = g_clients[i];
-
+   for (const auto &client : util.getClients ()) {
       if (client.flags & CF_USED) {
          if (client.team2 == TEAM_TERRORIST) {
             ts++;
@@ -800,6 +777,7 @@ void BotManager::updateTeamEconomics (int team, bool forceGoodEconomics) {
       m_economicsGood[team] = true;
       return; // don't check economics while economics disable
    }
+   const int *econLimit = conf.getEconLimit ();
 
    int numPoorPlayers = 0;
    int numTeamPlayers = 0;
@@ -809,7 +787,7 @@ void BotManager::updateTeamEconomics (int team, bool forceGoodEconomics) {
       auto bot = m_bots[i];
 
       if (bot != nullptr && bot->m_team == team) {
-         if (bot->m_moneyAmount <= g_botBuyEconomyTable[0]) {
+         if (bot->m_moneyAmount <= econLimit[ECO_PRIMARY_GT]) {
             numPoorPlayers++;
          }
          numTeamPlayers++; // update count of team
@@ -873,7 +851,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    pev = &bot->v;
 
    if (bot->pvPrivateData != nullptr) {
-      g_engfuncs.pfnFreeEntPrivateData (bot);
+      engfuncs.pfnFreeEntPrivateData (bot);
    }
 
    bot->pvPrivateData = nullptr;
@@ -883,18 +861,18 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    BotManager::execGameEntity (&bot->v);
 
    // set all info buffer keys for this bot
-   char *buffer = g_engfuncs.pfnGetInfoKeyBuffer (bot);
-   g_engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "_vgui_menus", "0");
+   char *buffer = engfuncs.pfnGetInfoKeyBuffer (bot);
+   engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "_vgui_menus", "0");
 
-   if (!(g_gameFlags & GAME_LEGACY) && yb_latency_display.integer () == 1) {
-      g_engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "*bot", "1");
+   if (!(engine.is (GAME_LEGACY)) && yb_latency_display.integer () == 1) {
+      engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "*bot", "1");
    }
 
    char reject[256] = {0, };
-   MDLL_ClientConnect (bot, STRING (bot->v.netname), format ("127.0.0.%d", engine.indexOfEntity (bot) + 100), reject);
+   MDLL_ClientConnect (bot, STRING (bot->v.netname), util.format ("127.0.0.%d", engine.indexOfEntity (bot) + 100), reject);
 
-   if (!isEmptyStr (reject)) {
-      logEntry (true, LL_WARNING, "Server refused '%s' connection (%s)", STRING (bot->v.netname), reject);
+   if (!util.isEmptyStr (reject)) {
+      util.logEntry (true, LL_WARNING, "Server refused '%s' connection (%s)", STRING (bot->v.netname), reject);
       engine.execCmd ("kick \"%s\"", STRING (bot->v.netname)); // kick the bot player if the server refused it
 
       bot->v.flags |= FL_KILLME;
@@ -903,7 +881,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
 
    // should be set after client connect
    if (yb_avatar_display.boolean () && !steamId.empty ()) {
-      g_engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "*sid", steamId.chars ());
+      engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "*sid", steamId.chars ());
    }
    memset (&m_pingOffset, 0, sizeof (m_pingOffset));
    memset (&m_ping, 0, sizeof (m_ping));
@@ -926,7 +904,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    m_sayTextBuffer.chatProbability = rng.getInt (1, 100);
 
    m_notKilled = false;
-   m_weaponBurstMode = BM_OFF;
+   m_weaponBurstMode = BURST_OFF;
    m_difficulty = difficulty;
 
    if (difficulty < 0 || difficulty > 4) {
@@ -980,15 +958,6 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    newRound ();
 }
 
-void Bot::clearUsedName (void) {
-   for (auto &name : g_botNames) {
-      if (name.usedBy == index ()) {
-         name.usedBy = 0;
-         break;
-      }
-   }
-}
-
 float Bot::calcThinkInterval (void) {
    return cr::fzero (m_thinkInterval) ? m_frameInterval : m_thinkInterval;
 }
@@ -996,10 +965,11 @@ float Bot::calcThinkInterval (void) {
 Bot::~Bot (void) {
    // this is bot destructor
 
-   clearUsedName ();
    clearSearchNodes ();
    clearRoute ();
    clearTasks ();
+
+   conf.clearUsedName (this);
 }
 
 int BotManager::getHumansCount (bool ignoreSpectators) {
@@ -1007,10 +977,8 @@ int BotManager::getHumansCount (bool ignoreSpectators) {
 
    int count = 0;
 
-   for (int i = 0; i < engine.maxClients (); i++) {
-      const Client &client = g_clients[i];
-
-      if ((client.flags & CF_USED) && m_bots[i] == nullptr && !(client.ent->v.flags & FL_FAKECLIENT)) {
+   for (const auto &client : util.getClients ()) {
+      if ((client.flags & CF_USED) && getBot (client.ent) == nullptr && !(client.ent->v.flags & FL_FAKECLIENT)) {
          if (ignoreSpectators && client.team2 != TEAM_TERRORIST && client.team2 != TEAM_COUNTER) {
             continue;
          }
@@ -1025,10 +993,8 @@ int BotManager::getAliveHumansCount (void) {
 
    int count = 0;
 
-   for (int i = 0; i < engine.maxClients (); i++) {
-      const Client &client = g_clients[i];
-
-      if ((client.flags & (CF_USED | CF_ALIVE)) && m_bots[i] == nullptr && !(client.ent->v.flags & FL_FAKECLIENT)) {
+   for (const auto &client : util.getClients ()) {
+      if ((client.flags & (CF_USED | CF_ALIVE)) && getBot (client.ent) == nullptr && !(client.ent->v.flags & FL_FAKECLIENT)) {
          count++;
       }
    }
@@ -1046,9 +1012,7 @@ bool BotManager::isTeamStacked (int team) {
    }
    int teamCount[MAX_TEAM_COUNT] = { 0, };
 
-   for (int i = 0; i < engine.maxClients (); i++) {
-      const Client &client = g_clients[i];
-
+   for (const auto &client : util.getClients ()) {
       if ((client.flags & CF_USED) && client.team2 != TEAM_UNASSIGNED && client.team2 != TEAM_SPECTATOR) {
          teamCount[client.team2]++;
       }
@@ -1277,7 +1241,7 @@ void Bot::newRound (void) {
    if (rng.chance (50)) {
       pushChatterMessage (CHATTER_NEW_ROUND);
    }
-   m_thinkInterval = (g_gameFlags & (GAME_LEGACY | GAME_XASH_ENGINE)) ? 0.0f : (1.0f / cr::clamp (yb_think_fps.flt (), 30.0f, 90.0f)) * rng.getFloat (0.95f, 1.05f);
+   m_thinkInterval = engine.is (GAME_LEGACY | GAME_XASH_ENGINE) ? 0.0f : (1.0f / cr::clamp (yb_think_fps.flt (), 30.0f, 90.0f)) * rng.getFloat (0.95f, 1.05f);
 }
 
 void Bot::kill (void) {
@@ -1291,7 +1255,7 @@ void Bot::kick (void) {
    // this function kick off one bot from the server.
    auto username = STRING (pev->netname);
 
-   if (!(pev->flags & FL_FAKECLIENT) || isEmptyStr (username)) {
+   if (!(pev->flags & FL_FAKECLIENT) || util.isEmptyStr (username)) {
       return;
    }
    // clear fakeclient bit
@@ -1305,7 +1269,7 @@ void Bot::processTeamJoin (void) {
    // this function handles the selection of teams & class
 
    // cs prior beta 7.0 uses hud-based motd, so press fire once
-   if (g_gameFlags & GAME_LEGACY) {
+   if (engine.is (GAME_LEGACY)) {
       pev->button |= IN_ATTACK;
    }
 
@@ -1353,7 +1317,7 @@ void Bot::processTeamJoin (void) {
       m_startAction = GAME_MSG_NONE; // switch back to idle
 
       // czero has additional models
-      int maxChoice = (g_gameFlags & GAME_CZERO) ? 5 : 4;
+      int maxChoice = engine.is (GAME_CZERO) ? 5 : 4;
 
       if (m_wantedClass < 1 || m_wantedClass > maxChoice) {
          m_wantedClass = rng.getInt (1, maxChoice); // use random if invalid
@@ -1373,7 +1337,7 @@ void Bot::processTeamJoin (void) {
 }
 
 void BotManager::calculatePingOffsets (void) {
-   if (!(g_gameFlags & GAME_SUPPORT_SVC_PINGS) || yb_latency_display.integer () != 2) {
+   if (!engine.is (GAME_SUPPORT_SVC_PINGS) || yb_latency_display.integer () != 2) {
       return;
    }
    int averagePing = 0;
@@ -1382,13 +1346,13 @@ void BotManager::calculatePingOffsets (void) {
    for (int i = 0; i < engine.maxClients (); i++) {
       edict_t *ent = engine.entityOfIndex (i + 1);
 
-      if (!isPlayer (ent)) {
+      if (!util.isPlayer (ent)) {
          continue;
       }
       numHumans++;
 
       int ping, loss;
-      g_engfuncs.pfnGetPlayerStats (ent, &ping, &loss);
+      engfuncs.pfnGetPlayerStats (ent, &ping, &loss);
 
       if (ping < 0 || ping > 100) {
          ping = rng.getInt (3, 15);
@@ -1438,7 +1402,7 @@ void BotManager::calculatePingOffsets (void) {
 }
 
 void BotManager::sendPingOffsets (edict_t *to) {
-   if (!(g_gameFlags & GAME_SUPPORT_SVC_PINGS) || yb_latency_display.integer () != 2 || engine.isNullEntity (to) || (to->v.flags & FL_FAKECLIENT)) {
+   if (!engine.is (GAME_SUPPORT_SVC_PINGS) || yb_latency_display.integer () != 2 || engine.isNullEntity (to) || (to->v.flags & FL_FAKECLIENT)) {
       return;
    }
 
@@ -1472,8 +1436,8 @@ void BotManager::sendDeathMsgFix (void) {
    if (yb_latency_display.integer () == 2 && m_deathMsgSent) {
       m_deathMsgSent = false;
 
-      for (int i = 0; i < engine.maxClients (); i++) {
-         sendPingOffsets (g_clients[i].ent);
+      for (const auto &client : util.getClients ()) {
+         sendPingOffsets (client.ent);
       }
    }
 }
@@ -1488,7 +1452,7 @@ void BotManager::updateActiveGrenade (void) {
    m_activeGrenades.clear ();
 
    // search the map for any type of grenade
-   while (!engine.isNullEntity (grenade = g_engfuncs.pfnFindEntityByString (grenade, "classname", "grenade"))) {
+   while (!engine.isNullEntity (grenade = engfuncs.pfnFindEntityByString (grenade, "classname", "grenade"))) {
       // do not count c4 as a grenade
       if (strcmp (STRING (grenade->v.model) + 9, "c4.mdl") == 0) {
          continue;
@@ -1507,7 +1471,7 @@ void BotManager::updateIntrestingEntities (void) {
    m_intrestingEntities.clear ();
 
    // search the map for entities
-   for (int i = MAX_ENGINE_PLAYERS - 1; i < g_pGlobals->maxEntities; i++) {
+   for (int i = MAX_ENGINE_PLAYERS - 1; i < globals->maxEntities; i++) {
       auto ent = engine.entityOfIndex (i);
 
       // only valid drawn entities
@@ -1522,12 +1486,12 @@ void BotManager::updateIntrestingEntities (void) {
       }
 
       // pickup some csdm stuff if we're running csdm
-      if ((g_mapFlags & MAP_CS) && strncmp ("hostage", classname, 7) == 0) {
+      if (engine.mapIs (MAP_CS) && strncmp ("hostage", classname, 7) == 0) {
          m_intrestingEntities.push (ent);
       }
       
       // pickup some csdm stuff if we're running csdm
-      if ((g_gameFlags & GAME_CSDM) && strncmp ("csdm", classname, 4) == 0) {
+      if (engine.is (GAME_CSDM) && strncmp ("csdm", classname, 4) == 0) {
          m_intrestingEntities.push (ent);
       }
    }
@@ -1544,7 +1508,7 @@ void BotManager::selectLeaders (int team, bool reset) {
       return;
    }
 
-   if (g_mapFlags & MAP_AS) {
+   if (engine.mapIs (MAP_AS)) {
       if (team == TEAM_COUNTER && !m_leaderChoosen[TEAM_COUNTER]) {
          for (int i = 0; i < engine.maxClients (); i++) {
             auto bot = m_bots[i];
@@ -1574,7 +1538,7 @@ void BotManager::selectLeaders (int team, bool reset) {
          m_leaderChoosen[TEAM_TERRORIST] = true;
       }
    }
-   else if (g_mapFlags & MAP_DE) {
+   else if (engine.mapIs (MAP_DE)) {
       if (team == TEAM_TERRORIST && !m_leaderChoosen[TEAM_TERRORIST]) {
          for (int i = 0; i < engine.maxClients (); i++) {
             auto bot = m_bots[i];
@@ -1608,7 +1572,7 @@ void BotManager::selectLeaders (int team, bool reset) {
          m_leaderChoosen[TEAM_COUNTER] = true;
       }
    }
-   else if (g_mapFlags & (MAP_ES | MAP_KA | MAP_FY)) {
+   else if (engine.mapIs (MAP_ES | MAP_KA | MAP_FY)) {
       auto bot = bots.getHighfragBot (team);
 
       if (!m_leaderChoosen[team] && bot) {
@@ -1632,4 +1596,981 @@ void BotManager::selectLeaders (int team, bool reset) {
          m_leaderChoosen[team] = true;
       }
    }
+}
+
+void BotManager::initRound (void) {
+   // this is called at the start of each round
+
+   m_roundEnded = false;
+
+   // check team economics
+   for (int team = 0; team < MAX_TEAM_COUNT; team++) {
+      updateTeamEconomics (team);
+      selectLeaders (team, true);
+   }
+   reset ();
+
+   for (int i = 0; i < engine.maxClients (); i++) {
+      auto bot = getBot (i);
+
+      if (bot != nullptr) {
+         bot->newRound ();
+      }
+      util.getClient (i).radio = 0;
+   }
+   waypoints.setBombPos (true);
+   waypoints.clearVisited ();
+
+   m_bombSayStatus = 0;
+   m_timeBombPlanted = 0.0f;
+   m_plantSearchUpdateTime = 0.0f;
+
+   for (int i = 0; i < MAX_TEAM_COUNT; i++) {
+      m_lastRadioTime[i] = 0.0f;
+   }
+   m_botsCanPause = false;
+
+   resetFilters ();
+   waypoints.updateGlobalExperience (); // update experience data on round start
+
+   // calculate the round mid/end in world time
+   m_timeRoundStart = engine.timebase () + mp_freezetime.flt ();
+   m_timeRoundMid = m_timeRoundStart + mp_roundtime.flt () * 60.0f * 0.5f;
+   m_timeRoundEnd = m_timeRoundStart + mp_roundtime.flt () * 60.0f;
+}
+
+void BotManager::setBombPlanted (bool isPlanted) {
+   if (isPlanted) {
+      m_timeBombPlanted = engine.timebase ();
+   }
+   m_bombPlanted = isPlanted;
+}
+
+void Config::load (bool onlyMain) {
+   static bool setMemoryPointers = true;
+
+   if (setMemoryPointers) {
+      MemoryLoader::ref ().setup (engfuncs.pfnLoadFileForMe, engfuncs.pfnFreeFile);
+      setMemoryPointers = true;
+   }
+
+   auto isCommentLine = [] (const char *line) {
+      char ch = *line;
+      return ch == '#' || ch == '/' || ch == '\r' || ch == ';' || ch == 0 || ch == ' ';
+   };
+
+   MemFile fp;
+   char lineBuffer[512];
+
+   // this is does the same as exec of engine, but not overwriting values of cvars spcified in yb_ignore_cvars_on_changelevel
+   if (onlyMain) {
+      static bool firstLoad = true;
+
+      auto needsToIgnoreVar = [] (StringArray & list, const char *needle) {
+         for (auto &var : list) {
+            if (var == needle) {
+               return true;
+            }
+         }
+         return false;
+      };
+
+      if (util.openConfig ("yapb.cfg", "YaPB main config file is not found.", &fp, false)) {
+         while (fp.gets (lineBuffer, 255)) {
+            if (isCommentLine (lineBuffer)) {
+               continue;
+            }
+            if (firstLoad) {
+               engine.execCmd (lineBuffer);
+               continue;
+            }
+            auto keyval = String (lineBuffer).split (" ");
+
+            if (keyval.length () > 1) {
+               auto ignore = String (yb_ignore_cvars_on_changelevel.str ()).split (",");
+
+               auto key = keyval[0].trim ().chars ();
+               auto cvar = engfuncs.pfnCVarGetPointer (key);
+
+               if (cvar != nullptr) {
+                  auto value = const_cast <char *> (keyval[1].trim ().trim ("\"").trim ().chars ());
+
+                  if (needsToIgnoreVar (ignore, key) && !!stricmp (value, cvar->string)) {
+                     engine.print ("Bot CVAR '%s' differs from the stored in the config (%s/%s). Ignoring.", cvar->name, cvar->string, value);
+
+                     // ensure cvar will have old value
+                     engfuncs.pfnCvar_DirectSet (cvar, cvar->string);
+                  }
+                  else {
+                     engfuncs.pfnCvar_DirectSet (cvar, value);
+                  }
+               }
+               else
+                  engine.execCmd (lineBuffer);
+            }
+         }
+         fp.close ();
+      }
+      firstLoad = false;
+      return;
+   }
+   Keywords replies;
+
+   // reserve some space for chat
+   m_chat.reserve (CHAT_TOTAL);
+   m_chatter.reserve (CHATTER_MAX);
+   m_botNames.reserve (CHATTER_MAX);
+
+   // NAMING SYSTEM INITIALIZATION
+   if (util.openConfig ("names.cfg", "Name configuration file not found.", &fp, true)) {
+      m_botNames.clear ();
+
+      while (fp.gets (lineBuffer, 255)) {
+         if (isCommentLine (lineBuffer)) {
+            continue;
+         }
+         StringArray pair = String (lineBuffer).split ("\t\t");
+
+         if (pair.length () > 1) {
+            strncpy (lineBuffer, pair[0].trim ().chars (), cr::bufsize (lineBuffer));
+         }
+
+         String::trimChars (lineBuffer);
+         lineBuffer[32] = 0;
+
+         BotName item;
+         item.name = lineBuffer;
+         item.usedBy = 0;
+
+         if (pair.length () > 1) {
+            item.steamId = pair[1].trim ();
+         }
+         m_botNames.push (cr::move (item));
+      }
+      fp.close ();
+   }
+
+   // CHAT SYSTEM CONFIG INITIALIZATION
+   if (util.openConfig ("chat.cfg", "Chat file not found.", &fp, true)) {
+
+      int chatType = -1;
+
+      while (fp.gets (lineBuffer, 255)) {
+         if (isCommentLine (lineBuffer)) {
+            continue;
+         }
+         String section (lineBuffer, strlen (lineBuffer) - 1);
+         section.trim ();
+
+         if (section == "[KILLED]") {
+            chatType = 0;
+            continue;
+         }
+         else if (section == "[BOMBPLANT]") {
+            chatType = 1;
+            continue;
+         }
+         else if (section == "[DEADCHAT]") {
+            chatType = 2;
+            continue;
+         }
+         else if (section == "[REPLIES]") {
+            chatType = 3;
+            continue;
+         }
+         else if (section == "[UNKNOWN]") {
+            chatType = 4;
+            continue;
+         }
+         else if (section == "[TEAMATTACK]") {
+            chatType = 5;
+            continue;
+         }
+         else if (section == "[WELCOME]") {
+            chatType = 6;
+            continue;
+         }
+         else if (section == "[TEAMKILL]") {
+            chatType = 7;
+            continue;
+         }
+
+         if (chatType != 3) {
+            lineBuffer[79] = 0;
+         }
+
+         switch (chatType) {
+         case 0:
+            m_chat[CHAT_KILLING].push (lineBuffer);
+            break;
+
+         case 1:
+            m_chat[CHAT_BOMBPLANT].push (lineBuffer);
+            break;
+
+         case 2:
+            m_chat[CHAT_DEAD].push (lineBuffer);
+            break;
+
+         case 3:
+            if (strstr (lineBuffer, "@KEY") != nullptr) {
+               if (!replies.keywords.empty () && !replies.replies.empty ()) {
+                  m_replies.push (cr::forward <Keywords> (replies));
+                  replies.replies.clear ();
+               }
+
+               replies.keywords.clear ();
+               replies.keywords = String (&lineBuffer[4]).split (",");
+
+               for (auto &keywords : replies.keywords) {
+                  keywords.trim ().trim ("\"");
+               }
+            }
+            else if (!replies.keywords.empty ()) {
+               replies.replies.push (lineBuffer);
+            }
+            break;
+
+         case 4:
+            m_chat[CHAT_NOKW].push (lineBuffer);
+            break;
+
+         case 5:
+            m_chat[CHAT_TEAMATTACK].push (lineBuffer);
+            break;
+
+         case 6:
+            m_chat[CHAT_WELCOME].push (lineBuffer);
+            break;
+
+         case 7:
+            m_chat[CHAT_TEAMKILL].push (lineBuffer);
+            break;
+         }
+      }
+      fp.close ();
+   }
+   else {
+      extern ConVar yb_chat;
+      yb_chat.set (0);
+   }
+
+   // GENERAL DATA INITIALIZATION
+   if (util.openConfig ("general.cfg", "General configuration file not found. Loading defaults", &fp)) {
+      
+      auto badSyntax = [] (const String &name) {
+         util.logEntry (true, LL_ERROR, "%s entry in general config is not valid or malformed.", name.chars ());
+      };
+
+      while (fp.gets (lineBuffer, 255)) {
+         if (isCommentLine (lineBuffer)) {
+            continue;
+         }
+         auto pair = String (lineBuffer).split ("=");
+
+         if (pair.length () != 2) {
+            continue;
+         }
+
+         for (auto &trim : pair) {
+            trim.trim ();
+         }
+         auto splitted = pair[1].split (",");
+
+         if (pair[0] == "MapStandard") {
+            if (splitted.length () != NUM_WEAPONS) {
+               badSyntax (pair[0]);
+            }
+            else {
+               for (int i = 0; i < NUM_WEAPONS; i++) {
+                  m_weapons[i].teamStandard = splitted[i].toInt32 ();
+               }
+            }
+         }
+         else if (pair[0] == "MapAS") {
+            if (splitted.length () != NUM_WEAPONS) {
+               badSyntax (pair[0]);
+            }
+            else {
+               for (int i = 0; i < NUM_WEAPONS; i++) {
+                  m_weapons[i].teamAS = splitted[i].toInt32 ();
+               }
+            }
+         }
+         else if (pair[0] == "GrenadePercent") {
+            if (splitted.length () != 3) {
+               badSyntax (pair[0]);
+            }
+            else {
+               for (int i = 0; i < 3; i++) {
+                  m_grenadeBuyPrecent[i] = splitted[i].toInt32 ();
+               }
+            }
+         }
+         else if (pair[0] == "Economics") {
+            if (splitted.length () != 11) {
+               badSyntax (pair[0]);
+            }
+            else {
+               for (int i = 0; i < 11; i++) {
+                  m_botBuyEconomyTable[i] = splitted[i].toInt32 ();
+               }
+            }
+         }
+         else if (pair[0] == "PersonalityNormal") {
+            if (splitted.length () != NUM_WEAPONS) {
+               badSyntax (pair[0]);
+            }
+            else {
+               for (int i = 0; i < NUM_WEAPONS; i++) {
+                  m_normalWeaponPrefs[i] = splitted[i].toInt32 ();
+               }
+            }
+         }
+         else if (pair[0] == "PersonalityRusher") {
+            if (splitted.length () != NUM_WEAPONS) {
+               badSyntax (pair[0]);
+            }
+            else {
+               for (int i = 0; i < NUM_WEAPONS; i++) {
+                  m_rusherWeaponPrefs[i] = splitted[i].toInt32 ();
+               }
+            }
+         }
+         else if (pair[0] == "PersonalityCareful") {
+            if (splitted.length () != NUM_WEAPONS) {
+               badSyntax (pair[0]);
+            }
+            else {
+               for (int i = 0; i < NUM_WEAPONS; i++) {
+                  m_carefulWeaponPrefs[i] = splitted[i].toInt32 ();
+               }
+            }
+         }
+      }
+      fp.close ();
+   }
+
+   // CHATTER SYSTEM INITIALIZATION
+   if (engine.is (GAME_SUPPORT_BOT_VOICE) && yb_communication_type.integer () == 2 && util.openConfig ("chatter.cfg", "Couldn't open chatter system configuration", &fp)) {
+      struct EventMap {
+         const char *str;
+         int code;
+         float repeat;
+      } chatterEventMap[] = {
+         { "Radio_CoverMe", RADIO_COVER_ME, MAX_CHATTER_REPEAT },
+         { "Radio_YouTakePoint", RADIO_YOU_TAKE_THE_POINT, MAX_CHATTER_REPEAT },
+         { "Radio_HoldPosition", RADIO_HOLD_THIS_POSITION, 10.0f },
+         { "Radio_RegroupTeam", RADIO_REGROUP_TEAM, 10.0f },
+         { "Radio_FollowMe", RADIO_FOLLOW_ME, 15.0f },
+         { "Radio_TakingFire", RADIO_TAKING_FIRE, 5.0f },
+         { "Radio_GoGoGo", RADIO_GO_GO_GO, MAX_CHATTER_REPEAT },
+         { "Radio_Fallback", RADIO_TEAM_FALLBACK, MAX_CHATTER_REPEAT },
+         { "Radio_StickTogether", RADIO_STICK_TOGETHER_TEAM, MAX_CHATTER_REPEAT },
+         { "Radio_GetInPosition", RADIO_GET_IN_POSITION, MAX_CHATTER_REPEAT },
+         { "Radio_StormTheFront", RADIO_STORM_THE_FRONT, MAX_CHATTER_REPEAT },
+         { "Radio_ReportTeam", RADIO_REPORT_TEAM, MAX_CHATTER_REPEAT },
+         { "Radio_Affirmative", RADIO_AFFIRMATIVE, MAX_CHATTER_REPEAT },
+         { "Radio_EnemySpotted", RADIO_ENEMY_SPOTTED, 4.0f },
+         { "Radio_NeedBackup", RADIO_NEED_BACKUP, MAX_CHATTER_REPEAT },
+         { "Radio_SectorClear", RADIO_SECTOR_CLEAR, 10.0f },
+         { "Radio_InPosition", RADIO_IN_POSITION, 10.0f },
+         { "Radio_ReportingIn", RADIO_REPORTING_IN, MAX_CHATTER_REPEAT },
+         { "Radio_ShesGonnaBlow", RADIO_SHES_GONNA_BLOW, MAX_CHATTER_REPEAT },
+         { "Radio_Negative", RADIO_NEGATIVE, MAX_CHATTER_REPEAT },
+         { "Radio_EnemyDown", RADIO_ENEMY_DOWN, 10.0f },
+         { "Chatter_DiePain", CHATTER_PAIN_DIED, MAX_CHATTER_REPEAT },
+         { "Chatter_GoingToPlantBomb", CHATTER_GOING_TO_PLANT_BOMB, 5.0f },
+         { "Chatter_GoingToGuardVIPSafety", CHATTER_GOING_TO_GUARD_VIP_SAFETY, MAX_CHATTER_REPEAT },
+         { "Chatter_RescuingHostages", CHATTER_RESCUING_HOSTAGES, MAX_CHATTER_REPEAT },
+         { "Chatter_TeamKill", CHATTER_TEAM_ATTACK, MAX_CHATTER_REPEAT },
+         { "Chatter_GuardingVipSafety", CHATTER_GUARDING_VIP_SAFETY, MAX_CHATTER_REPEAT },
+         { "Chatter_PlantingC4", CHATTER_PLANTING_BOMB, 10.0f },
+         { "Chatter_InCombat", CHATTER_IN_COMBAT,  MAX_CHATTER_REPEAT },
+         { "Chatter_SeeksEnemy", CHATTER_SEEK_ENEMY, MAX_CHATTER_REPEAT },
+         { "Chatter_Nothing", CHATTER_NOTHING,  MAX_CHATTER_REPEAT },
+         { "Chatter_EnemyDown", CHATTER_ENEMY_DOWN, 10.0f },
+         { "Chatter_UseHostage", CHATTER_USING_HOSTAGES, MAX_CHATTER_REPEAT },
+         { "Chatter_WonTheRound", CHATTER_WON_THE_ROUND, MAX_CHATTER_REPEAT },
+         { "Chatter_QuicklyWonTheRound", CHATTER_QUICK_WON_ROUND, MAX_CHATTER_REPEAT },
+         { "Chatter_NoEnemiesLeft", CHATTER_NO_ENEMIES_LEFT, MAX_CHATTER_REPEAT },
+         { "Chatter_FoundBombPlace", CHATTER_FOUND_BOMB_PLACE, 15.0f },
+         { "Chatter_WhereIsTheBomb", CHATTER_WHERE_IS_THE_BOMB, MAX_CHATTER_REPEAT },
+         { "Chatter_DefendingBombSite", CHATTER_DEFENDING_BOMBSITE, MAX_CHATTER_REPEAT },
+         { "Chatter_BarelyDefused", CHATTER_BARELY_DEFUSED, MAX_CHATTER_REPEAT },
+         { "Chatter_NiceshotCommander", CHATTER_NICESHOT_COMMANDER, MAX_CHATTER_REPEAT },
+         { "Chatter_ReportingIn", CHATTER_REPORTING_IN, 10.0f },
+         { "Chatter_SpotTheBomber", CHATTER_SPOT_THE_BOMBER, 4.3f },
+         { "Chatter_VIPSpotted", CHATTER_VIP_SPOTTED, 5.3f },
+         { "Chatter_FriendlyFire", CHATTER_FRIENDLY_FIRE, 2.1f },
+         { "Chatter_GotBlinded", CHATTER_BLINDED, 5.0f },
+         { "Chatter_GuardDroppedC4", CHATTER_GUARDING_DROPPED_BOMB, 3.0f },
+         { "Chatter_DefusingC4", CHATTER_DEFUSING_BOMB, 3.0f },
+         { "Chatter_FoundC4", CHATTER_FOUND_BOMB, 5.5f },
+         { "Chatter_ScaredEmotion", CHATTER_SCARED_EMOTE, 6.1f },
+         { "Chatter_HeardEnemy", CHATTER_SCARED_EMOTE, 12.8f },
+         { "Chatter_SniperWarning", CHATTER_SNIPER_WARNING, 14.3f },
+         { "Chatter_SniperKilled", CHATTER_SNIPER_KILLED, 12.1f },
+         { "Chatter_OneEnemyLeft", CHATTER_ONE_ENEMY_LEFT, 12.5f },
+         { "Chatter_TwoEnemiesLeft", CHATTER_TWO_ENEMIES_LEFT, 12.5f },
+         { "Chatter_ThreeEnemiesLeft", CHATTER_THREE_ENEMIES_LEFT, 12.5f },
+         { "Chatter_NiceshotPall", CHATTER_NICESHOT_PALL, 2.0f },
+         { "Chatter_GoingToGuardHostages", CHATTER_GOING_TO_GUARD_HOSTAGES, 3.0f },
+         { "Chatter_GoingToGuardDoppedBomb", CHATTER_GOING_TO_GUARD_DROPPED_BOMB, 6.0f },
+         { "Chatter_OnMyWay", CHATTER_ON_MY_WAY, 1.5f },
+         { "Chatter_LeadOnSir", CHATTER_LEAD_ON_SIR, 5.0f },
+         { "Chatter_Pinned_Down", CHATTER_PINNED_DOWN, 5.0f },
+         { "Chatter_GottaFindTheBomb", CHATTER_GOTTA_FIND_BOMB, 3.0f },
+         { "Chatter_You_Heard_The_Man", CHATTER_YOU_HEARD_THE_MAN, 3.0f },
+         { "Chatter_Lost_The_Commander", CHATTER_LOST_COMMANDER, 4.5f },
+         { "Chatter_NewRound", CHATTER_NEW_ROUND, 3.5f },
+         { "Chatter_CoverMe", CHATTER_COVER_ME, 3.5f },
+         { "Chatter_BehindSmoke", CHATTER_BEHIND_SMOKE, 3.5f },
+         { "Chatter_BombSiteSecured", CHATTER_BOMB_SITE_SECURED, 3.5f },
+         { "Chatter_GoingToCamp", CHATTER_GOING_TO_CAMP, 25.0f },
+         { "Chatter_Camp", CHATTER_CAMP, 25.0f },
+      };
+
+      while (fp.gets (lineBuffer, 511)) {
+         if (isCommentLine (lineBuffer)) {
+            continue;
+         }
+
+         if (strncmp (lineBuffer, "RewritePath", 11) == 0) {
+            extern ConVar yb_chatter_path;
+            yb_chatter_path.set (String (&lineBuffer[12]).trim ().chars ());
+         }
+         else if (strncmp (lineBuffer, "Event", 5) == 0) {
+            auto items = String (&lineBuffer[6]).split ("=");
+
+            if (items.length () != 2) {
+               util.logEntry (true, LL_ERROR, "Error in chatter config file syntax... Please correct all errors.");
+               continue;
+            }
+
+            for (auto &item : items) {
+               item.trim ();
+            }
+            items[1].trim ("(;)");
+
+            for (size_t i = 0; i < cr::arrsize (chatterEventMap); i++) {
+               auto event = &chatterEventMap[i];
+
+               if (stricmp (event->str, items[0].chars ()) == 0) {
+                  // this does common work of parsing comma-separated chatter line
+                  auto sounds = items[1].split (",");
+
+                  for (auto &sound : sounds) {
+                     sound.trim ().trim ("\"");
+                     float duration = engine.getWaveLen (sound.chars ());
+
+                     if (duration > 0.0f) {
+                        m_chatter[event->code].push ({ sound, event->repeat, duration });
+                     }
+                  }
+                  sounds.clear ();
+               }
+            }
+         }
+      }
+      fp.close ();
+   }
+   else {
+      yb_communication_type.set (1);
+      util.logEntry (true, LL_DEFAULT, "Chatter Communication disabled.");
+   }
+
+   // LOCALIZER INITITALIZATION
+   if (!(engine.is (GAME_LEGACY)) && util.openConfig ("lang.cfg", "Specified language not found", &fp, true)) {
+      if (engine.isDedicated ()) {
+         return; // dedicated server will use only english translation
+      }
+      enum Lang { LANG_ORIGINAL, LANG_TRANSLATED, LANG_UNDEFINED } langState = static_cast <Lang> (LANG_UNDEFINED);
+
+      char buffer[MAX_PRINT_BUFFER] = { 0, };
+      Pair <String, String> lang;
+
+      while (fp.gets (lineBuffer, 255)) {
+         if (isCommentLine (lineBuffer)) {
+            continue;
+         }
+
+         if (strncmp (lineBuffer, "[ORIGINAL]", 10) == 0) {
+            langState = LANG_ORIGINAL;
+
+            if (buffer[0] != 0) {
+               lang.second = buffer;
+               lang.second.trim ();
+
+               buffer[0] = 0;
+            }
+
+            if (!lang.second.empty () && !lang.first.empty ()) {
+               engine.addTranslation (lang.first, lang.second);
+            }
+         }
+         else if (strncmp (lineBuffer, "[TRANSLATED]", 12) == 0) {
+
+            lang.first = buffer;
+            lang.first.trim ();
+
+            langState = LANG_TRANSLATED;
+            buffer[0] = 0;
+         }
+         else {
+            switch (langState) {
+            case LANG_ORIGINAL:
+               strncat (buffer, lineBuffer, MAX_PRINT_BUFFER - 1 - strlen (buffer));
+               break;
+
+            case LANG_TRANSLATED:
+               strncat (buffer, lineBuffer, MAX_PRINT_BUFFER - 1 - strlen (buffer));
+               break;
+
+            case LANG_UNDEFINED:
+               break;
+            }
+         }
+      }
+      fp.close ();
+   }
+   else if (engine.is (GAME_LEGACY)) {
+      util.logEntry (true, LL_DEFAULT, "Multilingual system disabled, due to your Counter-Strike Version!");
+   }
+   else if (strcmp (yb_language.str (), "en") != 0) {
+      util.logEntry (true, LL_ERROR, "Couldn't load language configuration");
+   }
+
+   // set personality weapon pointers here
+   m_weaponPrefs[PERSONALITY_NORMAL] = reinterpret_cast <int *> (&m_normalWeaponPrefs);
+   m_weaponPrefs[PERSONALITY_RUSHER] = reinterpret_cast <int *> (&m_rusherWeaponPrefs);
+   m_weaponPrefs[PERSONALITY_CAREFUL] = reinterpret_cast <int *> (&m_carefulWeaponPrefs);
+}
+
+BotName *Config::pickBotName (void) {
+   if (m_botNames.empty ()) {
+      return nullptr;
+   }
+
+   for (int i = 0; i < MAX_ENGINE_PLAYERS * 4; i++) {
+      auto botName = &m_botNames.random ();
+
+      if (botName->name.length () < 3 || botName->usedBy != 0) {
+         continue;
+      }
+      return botName;
+   }
+   return nullptr;
+}
+
+void Config::clearUsedName (Bot *bot) {
+   for (auto &name : m_botNames) {
+      if (name.usedBy == bot->index ()) {
+         name.usedBy = 0;
+         break;
+      }
+   }
+}
+
+void Config::initMenus (void) {
+   auto buildKeys = [] (int numKeys) -> int {
+      int keys = 0;
+
+      for (int i = 0; i < numKeys; i++) {
+         keys |= cr::bit (i);
+      }
+      keys |= cr::bit (9);
+
+      return keys;
+   };
+
+   // bots main menu
+   m_menus.push ({
+      BOT_MENU_MAIN, buildKeys (4),
+      "\\yMain Menu\\w\n\n"
+      "1. Control Bots\n"
+      "2. Features\n\n"
+      "3. Fill Server\n"
+      "4. End Round\n\n"
+      "0. Exit"
+   });
+
+   // bots features menu
+   m_menus.push ({
+      BOT_MENU_FEATURES, buildKeys (5),
+      "\\yBots Features\\w\n\n"
+      "1. Weapon Mode Menu\n"
+      "2. Waypoint Menu\n"
+      "3. Select Personality\n\n"
+      "4. Toggle Debug Mode\n"
+      "5. Command Menu\n\n"
+      "0. Exit"
+   });
+
+   // bot control menu
+   m_menus.push ({
+      BOT_MENU_CONTROL, buildKeys (5),
+      "\\yBots Control Menu\\w\n\n"
+      "1. Add a Bot, Quick\n"
+      "2. Add a Bot, Specified\n\n"
+      "3. Remove Random Bot\n"
+      "4. Remove All Bots\n\n"
+      "5. Remove Bot Menu\n\n"
+      "0. Exit"
+   });
+
+   // weapon mode select menu
+   m_menus.push ({
+      BOT_MENU_WEAPON_MODE, buildKeys (7),
+      "\\yBots Weapon Mode\\w\n\n"
+      "1. Knives only\n"
+      "2. Pistols only\n"
+      "3. Shotguns only\n"
+      "4. Machine Guns only\n"
+      "5. Rifles only\n"
+      "6. Sniper Weapons only\n"
+      "7. All Weapons\n\n"
+      "0. Exit"
+   });
+
+   // personality select menu
+   m_menus.push ({
+      BOT_MENU_PERSONALITY, buildKeys (4),
+      "\\yBots Personality\\w\n\n"
+      "1. Random\n"
+      "2. Normal\n"
+      "3. Aggressive\n"
+      "4. Careful\n\n"
+      "0. Exit"
+   });
+
+   // difficulty select menu
+   m_menus.push ({
+      BOT_MENU_DIFFICULTY, buildKeys (5),
+      "\\yBots Difficulty Level\\w\n\n"
+      "1. Newbie\n"
+      "2. Average\n"
+      "3. Normal\n"
+      "4. Professional\n"
+      "5. Godlike\n\n"
+      "0. Exit"
+   });
+
+   // team select menu
+   m_menus.push ({
+      BOT_MENU_TEAM_SELECT, buildKeys (5),
+      "\\ySelect a team\\w\n\n"
+      "1. Terrorist Force\n"
+      "2. Counter-Terrorist Force\n\n"
+      "5. Auto-select\n\n"
+      "0. Exit"
+   });
+
+   // terrorist model select menu
+   m_menus.push ({
+      BOT_MENU_TERRORIST_SELECT, buildKeys (5),
+      "\\ySelect an appearance\\w\n\n"
+      "1. Phoenix Connexion\n"
+      "2. L337 Krew\n"
+      "3. Arctic Avengers\n"
+      "4. Guerilla Warfare\n\n"
+      "5. Auto-select\n\n"
+      "0. Exit"
+   });
+
+   // counter-terrorist model select menu
+   m_menus.push ({
+      BOT_MENU_CT_SELECT, buildKeys (5),
+      "\\ySelect an appearance\\w\n\n"
+      "1. Seal Team 6 (DEVGRU)\n"
+      "2. German GSG-9\n"
+      "3. UK SAS\n"
+      "4. French GIGN\n\n"
+      "5. Auto-select\n\n"
+      "0. Exit"
+   });
+
+   // command menu
+   m_menus.push ({
+      BOT_MENU_COMMANDS, buildKeys (4),
+      "\\yBot Command Menu\\w\n\n"
+      "1. Make Double Jump\n"
+      "2. Finish Double Jump\n\n"
+      "3. Drop the C4 Bomb\n"
+      "4. Drop the Weapon\n\n"
+      "0. Exit"
+   });
+
+   // main waypoint menu
+   m_menus.push ({
+      BOT_MENU_WAYPOINT_MAIN_PAGE1, buildKeys (9),
+      "\\yWaypoint Operations (Page 1)\\w\n\n"
+      "1. Show/Hide waypoints\n"
+      "2. Cache waypoint\n"
+      "3. Create path\n"
+      "4. Delete path\n"
+      "5. Add waypoint\n"
+      "6. Delete waypoint\n"
+      "7. Set Autopath Distance\n"
+      "8. Set Radius\n\n"
+      "9. Next...\n\n"
+      "0. Exit"
+   });
+
+   // main waypoint menu (page 2)
+   m_menus.push ({
+      BOT_MENU_WAYPOINT_MAIN_PAGE2, buildKeys (9),
+      "\\yWaypoint Operations (Page 2)\\w\n\n"
+      "1. Waypoint stats\n"
+      "2. Autowaypoint on/off\n"
+      "3. Set flags\n"
+      "4. Save waypoints\n"
+      "5. Save without checking\n"
+      "6. Load waypoints\n"
+      "7. Check waypoints\n"
+      "8. Noclip cheat on/off\n\n"
+      "9. Previous...\n\n"
+      "0. Exit"
+   });
+
+   // select waypoint radius menu
+   m_menus.push ({
+      BOT_MENU_WAYPOINT_RADIUS, buildKeys (9),
+      "\\yWaypoint Radius\\w\n\n"
+      "1. SetRadius 0\n"
+      "2. SetRadius 8\n"
+      "3. SetRadius 16\n"
+      "4. SetRadius 32\n"
+      "5. SetRadius 48\n"
+      "6. SetRadius 64\n"
+      "7. SetRadius 80\n"
+      "8. SetRadius 96\n"
+      "9. SetRadius 128\n\n"
+      "0. Exit"
+   });
+
+   // waypoint add menu
+   m_menus.push ({
+      BOT_MENU_WAYPOINT_TYPE, buildKeys (9),
+      "\\yWaypoint Type\\w\n\n"
+      "1. Normal\n"
+      "\\r2. Terrorist Important\n"
+      "3. Counter-Terrorist Important\n"
+      "\\w4. Block with hostage / Ladder\n"
+      "\\y5. Rescue Zone\n"
+      "\\w6. Camping\n"
+      "7. Camp End\n"
+      "\\r8. Map Goal\n"
+      "\\w9. Jump\n\n"
+      "0. Exit"
+   });
+
+   // set waypoint flag menu
+   m_menus.push ({
+      BOT_MENU_WAYPOINT_FLAG, buildKeys (5),
+      "\\yToggle Waypoint Flags\\w\n\n"
+      "1. Block with Hostage\n"
+      "2. Terrorists Specific\n"
+      "3. CTs Specific\n"
+      "4. Use Elevator\n"
+      "5. Sniper Point (\\yFor Camp Points Only!\\w)\n\n"
+      "0. Exit"
+   });
+
+   // auto-path max distance
+   m_menus.push ({
+      BOT_MENU_WAYPOINT_AUTOPATH, buildKeys (7),
+      "\\yAutoPath Distance\\w\n\n"
+      "1. Distance 0\n"
+      "2. Distance 100\n"
+      "3. Distance 130\n"
+      "4. Distance 160\n"
+      "5. Distance 190\n"
+      "6. Distance 220\n"
+      "7. Distance 250 (Default)\n\n"
+      "0. Exit"
+   });
+
+   // path connections
+   m_menus.push ({
+      BOT_MENU_WAYPOINT_PATH, buildKeys (3),
+      "\\yCreate Path (Choose Direction)\\w\n\n"
+      "1. Outgoing Path\n"
+      "2. Incoming Path\n"
+      "3. Bidirectional (Both Ways)\n\n"
+      "0. Exit"
+   });
+   const String &empty = "";
+
+   // kick menus
+   m_menus.push ({ BOT_MENU_KICK_PAGE_1, 0x0, empty, });
+   m_menus.push ({ BOT_MENU_KICK_PAGE_2, 0x0, empty, });
+   m_menus.push ({ BOT_MENU_KICK_PAGE_3, 0x0, empty, });
+   m_menus.push ({ BOT_MENU_KICK_PAGE_4, 0x0, empty, });
+}
+
+void Config::kickBotByMenu (edict_t *ent, int selection) {
+   // this function displays remove bot menu to specified entity (this function show's only yapb's).
+
+   if (selection > 4 || selection < 1) {
+      return;
+   }
+
+   String menus;
+   menus.format ("\\yBots Remove Menu (%d/4):\\w\n\n", selection);
+
+   int menuKeys = (selection == 4) ? cr::bit (9) : (cr::bit (8) | cr::bit (9));
+   int menuKey = (selection - 1) * 8;
+
+   for (int i = menuKey; i < selection * 8; i++) {
+      auto bot = bots.getBot (i);
+
+      if (bot != nullptr && (bot->pev->flags & FL_FAKECLIENT)) {
+         menuKeys |= cr::bit (cr::abs (i - menuKey));
+         menus.formatAppend ("%1.1d. %s%s\n", i - menuKey + 1, STRING (bot->pev->netname), bot->m_team == TEAM_COUNTER ? " \\y(CT)\\w" : " \\r(T)\\w");
+      }
+      else {
+         menus.formatAppend ("\\d %1.1d. Not a Bot\\w\n", i - menuKey + 1);
+      }
+   }
+   menus.formatAppend ("\n%s 0. Back", (selection == 4) ? "" : " 9. More...\n");
+
+   // force to clear current menu
+   showMenu (ent, BOT_MENU_INVALID);
+
+   auto id = static_cast <MenuId> (BOT_MENU_KICK_PAGE_1 - 1 + selection);
+
+   for (auto &menu : m_menus) {
+      if (menu.id == id) {
+         menu.slots = menuKeys & static_cast <unsigned int> (-1);;
+         menu.text = menus;
+      }
+   }
+   showMenu (ent, id);
+}
+
+void Config::showMenu (edict_t *ent, MenuId menu) {
+   static bool s_menusParsed = false;
+
+   // make menus looks like we need only once
+   if (!s_menusParsed) {
+      initMenus ();
+
+      for (auto &parsed : m_menus) {
+         const String &translated = engine.translate (parsed.text.chars ());
+
+         // translate all the things
+         parsed.text = translated;
+
+         // make menu looks best
+         if (!(engine.is (GAME_LEGACY))) {
+            for (int j = 0; j < 10; j++) {
+               parsed.text.replace (util.format ("%d.", j), util.format ("\\r%d.\\w", j));
+            }
+         }
+      }
+      s_menusParsed = true;
+   }
+
+   if (!util.isPlayer (ent)) {
+      return;
+   }
+   Client &client = util.getClient (engine.indexOfEntity (ent) - 1);
+
+   if (menu == BOT_MENU_INVALID) {
+      MessageWriter (MSG_ONE_UNRELIABLE, engine.getMessageId (NETMSG_SHOWMENU), Vector::null (), ent)
+         .writeShort (0)
+         .writeChar (0)
+         .writeByte (0)
+         .writeString ("");
+
+      client.menu = menu;
+      return;
+   }
+   
+   for (auto &display : m_menus) {
+      if (display.id == menu) {
+         const char *text = (engine.is (GAME_XASH_ENGINE | GAME_MOBILITY) && !yb_display_menu_text.boolean ()) ? " " : display.text.chars ();
+         MessageWriter msg;
+
+         while (strlen (text) >= 64) {
+            msg.start (MSG_ONE_UNRELIABLE, engine.getMessageId (NETMSG_SHOWMENU), Vector::null (), ent)
+               .writeShort (display.slots)
+               .writeChar (-1)
+               .writeByte (1);
+
+            for (int i = 0; i < 64; i++) {
+               msg.writeChar (text[i]);
+            }
+            msg.end ();
+            text += 64;
+         }
+
+         MessageWriter (MSG_ONE_UNRELIABLE, engine.getMessageId (NETMSG_SHOWMENU), Vector::null (), ent)
+            .writeShort (display.slots)
+            .writeChar (-1)
+            .writeByte (0)
+            .writeString (text);
+
+         client.menu = menu;
+         engfuncs.pfnClientCommand (ent, "speak \"player/geiger1\"\n"); // Stops others from hearing menu sounds..
+      }
+   }
+}
+
+void Config::initWeapons (void) {
+   m_weapons.reserve (NUM_WEAPONS + 1);
+
+   // fill array with available weapons
+   m_weapons.push ({ WEAPON_KNIFE,      "weapon_knife",     "knife.mdl",     0,    0, -1, -1,  0,  0,  0,  0,  0,  0,   true  });
+   m_weapons.push ({ WEAPON_USP,        "weapon_usp",       "usp.mdl",       500,  1, -1, -1,  1,  1,  2,  2,  0,  12,  false });
+   m_weapons.push ({ WEAPON_GLOCK,      "weapon_glock18",   "glock18.mdl",   400,  1, -1, -1,  1,  2,  1,  1,  0,  20,  false });
+   m_weapons.push ({ WEAPON_DEAGLE,     "weapon_deagle",    "deagle.mdl",    650,  1,  2,  2,  1,  3,  4,  4,  2,  7,   false });
+   m_weapons.push ({ WEAPON_P228,       "weapon_p228",      "p228.mdl",      600,  1,  2,  2,  1,  4,  3,  3,  0,  13,  false });
+   m_weapons.push ({ WEAPON_ELITE,      "weapon_elite",     "elite.mdl",     800,  1,  0,  0,  1,  5,  5,  5,  0,  30,  false });
+   m_weapons.push ({ WEAPON_FIVESEVEN,  "weapon_fiveseven", "fiveseven.mdl", 750,  1,  1,  1,  1,  6,  5,  5,  0,  20,  false });
+   m_weapons.push ({ WEAPON_M3,         "weapon_m3",        "m3.mdl",        1700, 1,  2, -1,  2,  1,  1,  1,  0,  8,   false });
+   m_weapons.push ({ WEAPON_XM1014,     "weapon_xm1014",    "xm1014.mdl",    3000, 1,  2, -1,  2,  2,  2,  2,  0,  7,   false });
+   m_weapons.push ({ WEAPON_MP5,        "weapon_mp5navy",   "mp5.mdl",       1500, 1,  2,  1,  3,  1,  2,  2,  0,  30,  true  });
+   m_weapons.push ({ WEAPON_TMP,        "weapon_tmp",       "tmp.mdl",       1250, 1,  1,  1,  3,  2,  1,  1,  0,  30,  true  });
+   m_weapons.push ({ WEAPON_P90,        "weapon_p90",       "p90.mdl",       2350, 1,  2,  1,  3,  3,  4,  4,  0,  50,  true  });
+   m_weapons.push ({ WEAPON_MAC10,      "weapon_mac10",     "mac10.mdl",     1400, 1,  0,  0,  3,  4,  1,  1,  0,  30,  true  });
+   m_weapons.push ({ WEAPON_UMP45,      "weapon_ump45",     "ump45.mdl",     1700, 1,  2,  2,  3,  5,  3,  3,  0,  25,  true  });
+   m_weapons.push ({ WEAPON_AK47,       "weapon_ak47",      "ak47.mdl",      2500, 1,  0,  0,  4,  1,  2,  2,  2,  30,  true  });
+   m_weapons.push ({ WEAPON_SG552,      "weapon_sg552",     "sg552.mdl",     3500, 1,  0, -1,  4,  2,  4,  4,  2,  30,  true  });
+   m_weapons.push ({ WEAPON_M4A1,       "weapon_m4a1",      "m4a1.mdl",      3100, 1,  1,  1,  4,  3,  3,  3,  2,  30,  true  });
+   m_weapons.push ({ WEAPON_GALIL,      "weapon_galil",     "galil.mdl",     2000, 1,  0,  0,  4,  -1, 1,  1,  2,  35,  true  });
+   m_weapons.push ({ WEAPON_FAMAS,      "weapon_famas",     "famas.mdl",     2250, 1,  1,  1,  4,  -1, 1,  1,  2,  25,  true  });
+   m_weapons.push ({ WEAPON_AUG,        "weapon_aug",       "aug.mdl",       3500, 1,  1,  1,  4,  4,  4,  4,  2,  30,  true  });
+   m_weapons.push ({ WEAPON_SCOUT,      "weapon_scout",     "scout.mdl",     2750, 1,  2,  0,  4,  5,  3,  2,  3,  10,  false });
+   m_weapons.push ({ WEAPON_AWP,        "weapon_awp",       "awp.mdl",       4750, 1,  2,  0,  4,  6,  5,  6,  3,  10,  false });
+   m_weapons.push ({ WEAPON_G3SG1,      "weapon_g3sg1",     "g3sg1.mdl",     5000, 1,  0,  2,  4,  7,  6,  6,  3,  20,  false });
+   m_weapons.push ({ WEAPON_SG550,      "weapon_sg550",     "sg550.mdl",     4200, 1,  1,  1,  4,  8,  5,  5,  3,  30,  false });
+   m_weapons.push ({ WEAPON_M249,       "weapon_m249",      "m249.mdl",      5750, 1,  2,  1,  5,  1,  1,  1,  2,  100, true  });
+   m_weapons.push ({ WEAPON_SHIELD,     "weapon_shield",    "shield.mdl",    2200, 0,  1,  1,  8,  -1, 8,  8,  0,  0,   false });
+
+   // not needed actually, but cause too much refactoring for now. todo
+   m_weapons.push ({ 0,                 "",                 "",              0,    0,  0,  0,  0,   0, 0,  0,  0,  0,   false });
+}
+
+void Config::adjustWeaponPrices (void) {
+   // elite price is 1000$ on older versions of cs...
+   if (!(engine.is (GAME_LEGACY)))
+      return;
+
+   for (auto &weapon : m_weapons) {
+      if (weapon.id == WEAPON_ELITE) {
+         weapon.price = 1000;
+         break;
+      }
+   }
+}
+
+WeaponInfo &Config::findWeaponById (const int id) {
+   for (auto &weapon : m_weapons) {
+      if (weapon.id == id) {
+         return weapon;
+      }
+   }
+   return m_weapons.at (0);
 }

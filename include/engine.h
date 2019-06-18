@@ -10,22 +10,22 @@
 #pragma once
 
 // line draw
-enum DrawLineType {
+enum DrawLineType : int {
    DRAW_SIMPLE,
    DRAW_ARROW,
    DRAW_NUM
 };
 
 // trace ignore
-enum TraceIgnore {
+enum TraceIgnore : int {
    TRACE_IGNORE_NONE = 0,
-   TRACE_IGNORE_GLASS = (1 << 0),
-   TRACE_IGNORE_MONSTERS = (1 << 1),
+   TRACE_IGNORE_GLASS = cr::bit (0),
+   TRACE_IGNORE_MONSTERS = cr::bit (1),
    TRACE_IGNORE_EVERYTHING = TRACE_IGNORE_GLASS | TRACE_IGNORE_MONSTERS
 };
 
 // variable type
-enum VarType {
+enum VarType : int {
    VT_NORMAL = 0,
    VT_READONLY,
    VT_PASSWORD,
@@ -34,7 +34,7 @@ enum VarType {
 };
 
 // netmessage functions
-enum NetMsgId {
+enum NetMsgId : int {
    NETMSG_UNDEFINED = -1,
    NETMSG_VGUI = 1,
    NETMSG_SHOWMENU = 2,
@@ -61,6 +61,36 @@ enum NetMsgId {
    NETMSG_NUM = 25
 };
 
+// supported cs's
+enum GameFlags : int {
+   GAME_CSTRIKE16 = cr::bit (0), // counter-strike 1.6 and above
+   GAME_XASH_ENGINE = cr::bit (1), // counter-strike 1.6 under the xash engine (additional flag)
+   GAME_CZERO = cr::bit (2), // counter-strike: condition zero
+   GAME_LEGACY = cr::bit (3), // counter-strike 1.3-1.5 with/without steam
+   GAME_MOBILITY = cr::bit (4), // additional flag that bot is running on android (additional flag)
+   GAME_OFFICIAL_CSBOT = cr::bit (5), // additional flag that indicates official cs bots are in game
+   GAME_METAMOD = cr::bit (6), // game running under meta\mod
+   GAME_CSDM = cr::bit (7), // csdm mod currently in use
+   GAME_CSDM_FFA = cr::bit (8), // csdm mod with ffa mode
+   GAME_REGAMEDLL = cr::bit (9), // server dll is a regamedll
+   GAME_SUPPORT_SVC_PINGS = cr::bit (10), // on that game version we can fake bots pings
+   GAME_SUPPORT_BOT_VOICE = cr::bit (11) // on that game version we can use chatter
+};
+
+
+// defines map type
+enum MapFlags : int {
+   MAP_AS = cr::bit (0),
+   MAP_CS = cr::bit (1),
+   MAP_DE = cr::bit (2),
+   MAP_ES = cr::bit (3),
+   MAP_KA = cr::bit (4),
+   MAP_FY = cr::bit (5),
+
+   // additional flags
+   MAP_HAS_DOORS = cr::bit (6)
+};
+
 // variable reg pair
 struct VarPair {
    VarType type;
@@ -78,6 +108,14 @@ struct MessageBlock {
    int msg;
    int regMsgs[NETMSG_NUM];
 };
+
+// referentia vector info
+struct RefVector {
+   Vector forward, right, up;
+};
+
+// entity prototype
+using EntityFunction = void (*) (entvars_t *);
 
 // compare language
 struct LangComprarer {
@@ -112,8 +150,16 @@ private:
    Array <VarPair> m_cvars;
    HashMap <String, String, LangComprarer> m_language;
 
+   Library m_gameLib;
    MessageBlock m_msgBlock;
    bool m_precached;
+
+   int m_gameFlags;
+   int m_mapFlags;
+
+   float m_slowFrame; // per second updated frame
+public:
+   RefVector vec;
 
 public:
    Engine (void);
@@ -189,16 +235,28 @@ public:
    // checks whether softwared rendering is enabled
    bool isSoftwareRenderer (void);
 
+   // load the cs binary in non metamod mode
+   bool loadCSBinary (void);
+
+   // do post-load stuff
+   bool postload (void);
+
+   // detects if csdm mod is in use
+   void detectDeathmatch (void);
+
+   // executes stuff every 1 second
+   void slowFrame (void);
+
    // public inlines
 public:
    // get the current time on server
    inline float timebase (void) {
-      return g_pGlobals->time;
+      return globals->time;
    }
 
    // get "maxplayers" limit on server
    inline int maxClients (void) {
-      return g_pGlobals->maxClients;
+      return globals->maxClients;
    }
 
    // get the fakeclient command interface
@@ -253,10 +311,7 @@ public:
    }
 
    // gets the player team
-   inline int getTeam (edict_t *ent) {
-      extern Client g_clients[MAX_ENGINE_PLAYERS];
-      return g_clients[indexOfEntity (ent) - 1].team;
-   }
+   inline int getTeam (edict_t *ent);
 
    // adds translation pair from config
    inline void addTranslation (const String &original, const String &translated) {
@@ -302,6 +357,46 @@ public:
       m_precached = false;
    }
 
+   // gets the local entity (host edict)
+   inline edict_t *getLocalEntity (void) {
+      return m_localEntity;
+   }
+
+   // sets the local entity (host edict)
+   inline void setLocalEntity (edict_t *ent) {
+      m_localEntity = ent;
+   }
+
+   //  builds referential vector
+   inline void makeVectors (const Vector &in) {
+      in.makeVectors (&vec.forward, &vec.right, &vec.up);
+   }
+
+   // what kind of map we're running ?
+   inline const bool isMap (const int map) const {
+      return (m_mapFlags & map) == map;
+   }
+
+   // what kind of game engine / game dll / mod / tool we're running ?
+   inline const bool is (const int type) const {
+      return (m_gameFlags & type) == type;
+   }
+
+   // adds game flag
+   inline void addGameFlag (const int type) {
+      m_gameFlags |= type;
+   }
+
+   // gets the map type
+   inline const bool mapIs (const int type) const {
+      return (m_mapFlags & type) == type;
+   }
+
+   // get loaded gamelib
+   inline auto &getGameLib (void) {
+      return m_gameLib;
+   }
+
    // static utility functions
 private:
    const char *getField (const char *string, size_t id);
@@ -334,7 +429,7 @@ public:
    }
 
    inline void set (float val) const {
-      g_engfuncs.pfnCVarSetFloat (m_eptr->name, val);
+      engfuncs.pfnCVarSetFloat (m_eptr->name, val);
    }
 
    inline void set (int val) const {
@@ -342,7 +437,7 @@ public:
    }
 
    inline void set (const char *val) const {
-      g_engfuncs.pfnCvar_DirectSet (m_eptr, const_cast <char *> (val));
+      engfuncs.pfnCvar_DirectSet (m_eptr, const_cast <char *> (val));
    }
 };
 
@@ -366,36 +461,36 @@ public:
 
 public:
    MessageWriter &start (int dest, int type, const Vector &pos = Vector::null (), edict_t *to = nullptr) {
-      g_engfuncs.pfnMessageBegin (dest, type, pos, to);
+      engfuncs.pfnMessageBegin (dest, type, pos, to);
       return *this;
    }
 
    void end (void) {
-      g_engfuncs.pfnMessageEnd ();
+      engfuncs.pfnMessageEnd ();
    }
 
    MessageWriter &writeByte (int val) {
-      g_engfuncs.pfnWriteByte (val);
+      engfuncs.pfnWriteByte (val);
       return *this;
    }
 
    MessageWriter &writeChar (int val) {
-      g_engfuncs.pfnWriteChar (val);
+      engfuncs.pfnWriteChar (val);
       return *this;
    }
 
    MessageWriter &writeShort (int val) {
-      g_engfuncs.pfnWriteShort (val);
+      engfuncs.pfnWriteShort (val);
       return *this;
    }
 
    MessageWriter &writeCoord (float val) {
-      g_engfuncs.pfnWriteCoord (val);
+      engfuncs.pfnWriteCoord (val);
       return *this;
    }
 
    MessageWriter &writeString (const char *val) {
-      g_engfuncs.pfnWriteString (val);
+      engfuncs.pfnWriteString (val);
       return *this;
    }
 

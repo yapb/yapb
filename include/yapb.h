@@ -23,7 +23,7 @@ using namespace cr::classes;
 #include <time.h>
 
 // defines bots tasks
-enum TaskID {
+enum TaskID : int {
    TASK_NORMAL,
    TASK_PAUSE,
    TASK_MOVETOPOSITION,
@@ -47,24 +47,8 @@ enum TaskID {
    TASK_MAX
 };
 
-// supported cs's
-enum GameFlags {
-   GAME_CSTRIKE16 = (1 << 0), // counter-strike 1.6 and above
-   GAME_XASH_ENGINE = (1 << 1), // counter-strike 1.6 under the xash engine (additional flag)
-   GAME_CZERO = (1 << 2), // counter-strike: condition zero
-   GAME_LEGACY = (1 << 3), // counter-strike 1.3-1.5 with/without steam
-   GAME_MOBILITY = (1 << 4), // additional flag that bot is running on android (additional flag)
-   GAME_OFFICIAL_CSBOT = (1 << 5), // additional flag that indicates official cs bots are in game
-   GAME_METAMOD = (1 << 6), // game running under meta\mod
-   GAME_CSDM = (1 << 7), // csdm mod currently in use
-   GAME_CSDM_FFA = (1 << 8), // csdm mod with ffa mode
-   GAME_REGAMEDLL = (1 << 9), // server dll is a regamedll
-   GAME_SUPPORT_SVC_PINGS = (1 << 10), // on that game version we can fake bots pings
-   GAME_SUPPORT_BOT_VOICE = (1 << 11) // on that game version we can use chatter
-};
-
 // bot menu ids
-enum MenuId {
+enum MenuId : int {
    BOT_MENU_INVALID = 0,
    BOT_MENU_MAIN,
    BOT_MENU_FEATURES,
@@ -90,17 +74,23 @@ enum MenuId {
    BOT_MENU_TOTAL_MENUS
 };
 
+// bomb say string
+enum BombSayStr : int {
+   BSS_NEED_TO_FIND_CHAT = cr::bit (1),
+   BSS_NEED_TO_FIND_CHATTER = cr::bit (2)
+};
+
 // log levels
-enum LogLevel {
-   LL_DEFAULT = 1, // default log message
-   LL_WARNING = 2, // warning log message
-   LL_ERROR = 3, // error log message
-   LL_IGNORE = 4, // additional flag
-   LL_FATAL = 5  // fatal error log message (terminate the game!)
+enum LogLevel : int {
+   LL_DEFAULT = cr::bit (0), // default log message
+   LL_WARNING = cr::bit (1), // warning log message
+   LL_ERROR = cr::bit (2), // error log message
+   LL_IGNORE = cr::bit (3), // additional flag
+   LL_FATAL = cr::bit (4) // fatal error log message (terminate the game!)
 };
 
 // chat types id's
-enum ChatType {
+enum ChatType : int {
    CHAT_KILLING = 0, // id to kill chat array
    CHAT_DEAD, // id to dead chat array
    CHAT_BOMBPLANT, // id to bomb chat array
@@ -112,7 +102,7 @@ enum ChatType {
 };
 
 // personalities defines
-enum Personality {
+enum Personality : int {
    PERSONALITY_NORMAL = 0,
    PERSONALITY_RUSHER,
    PERSONALITY_CAREFUL
@@ -128,7 +118,7 @@ enum Difficulty : int {
 };
 
 // collision states
-enum CollisionState {
+enum CollisionState : int {
    COLLISION_NOTDECICED,
    COLLISION_PROBING,
    COLLISION_NOMOVE,
@@ -139,7 +129,7 @@ enum CollisionState {
 };
 
 // counter-strike team id's
-enum Team {
+enum Team : int {
    TEAM_TERRORIST = 0,
    TEAM_COUNTER,
    TEAM_SPECTATOR,
@@ -147,15 +137,15 @@ enum Team {
 };
 
 // client flags
-enum ClientFlags {
-   CF_USED = (1 << 0),
-   CF_ALIVE = (1 << 1),
-   CF_ADMIN = (1 << 2),
-   CF_ICON = (1 << 3)
+enum ClientFlags : int {
+   CF_USED = cr::bit (0),
+   CF_ALIVE = cr::bit (1),
+   CF_ADMIN = cr::bit (2),
+   CF_ICON = cr::bit (3)
 };
 
 // bot create status
-enum BotCreationResult {
+enum BotCreationResult : int {
    BOT_RESULT_CREATED,
    BOT_RESULT_MAX_PLAYERS_REACHED,
    BOT_RESULT_NAV_ERROR,
@@ -163,7 +153,7 @@ enum BotCreationResult {
 };
 
 // radio messages
-enum RadioMessage {
+enum RadioMessage : int {
    RADIO_COVER_ME = 1,
    RADIO_YOU_TAKE_THE_POINT = 2,
    RADIO_HOLD_THIS_POSITION = 3,
@@ -188,7 +178,7 @@ enum RadioMessage {
 };
 
 // chatter system (extending enum above, messages 30-39 is reserved)
-enum ChatterMessage {
+enum ChatterMessage : int {
    CHATTER_SPOT_THE_BOMBER = 40,
    CHATTER_FRIENDLY_FIRE,
    CHATTER_PAIN_DIED,
@@ -244,7 +234,7 @@ enum ChatterMessage {
 };
 
 // counter-strike weapon id's
-enum Weapon {
+enum Weapon : int {
    WEAPON_P228 = 1,
    WEAPON_SHIELD = 2,
    WEAPON_SCOUT = 3,
@@ -281,7 +271,7 @@ enum Weapon {
 };
 
 // buy counts
-enum BuyState {
+enum BuyState : int {
    BUYSTATE_PRIMARY_WEAPON = 0,
    BUYSTATE_ARMOR_VESTHELM,
    BUYSTATE_SECONDARY_WEAPON,
@@ -293,7 +283,7 @@ enum BuyState {
 };
 
 // economics limits
-enum EconomyLimit {
+enum EconomyLimit : int {
    ECO_PRIMARY_GT = 0,
    ECO_SMG_GT_CT,
    ECO_SMG_GT_TE,
@@ -308,7 +298,7 @@ enum EconomyLimit {
 };
 
 // defines for pickup items
-enum PickupType {
+enum PickupType : int {
    PICKUP_NONE,
    PICKUP_WEAPON,
    PICKUP_DROPPED_C4,
@@ -320,42 +310,42 @@ enum PickupType {
 };
 
 // fight style type
-enum FightStyle {
+enum FightStyle : int {
    FIGHT_NONE,
    FIGHT_STRAFE,
    FIGHT_STAY
 };
 
 // dodge type
-enum StrafeDir {
+enum StrafeDir : int {
    STRAFE_DIR_NONE,
    STRAFE_DIR_LEFT,
    STRAFE_DIR_RIGHT
 };
 
 // reload state
-enum ReloadState {
+enum ReloadState : int {
    RELOAD_NONE = 0, // no reload state currently
    RELOAD_PRIMARY = 1, // primary weapon reload state
    RELOAD_SECONDARY = 2  // secondary weapon reload state
 };
 
 // collision probes
-enum CollisionProbe {
-   PROBE_JUMP = (1 << 0), // probe jump when colliding
-   PROBE_DUCK = (1 << 1), // probe duck when colliding
-   PROBE_STRAFE = (1 << 2) // probe strafing when colliding
+enum CollisionProbe : int {
+   PROBE_JUMP = cr::bit (0), // probe jump when colliding
+   PROBE_DUCK = cr::bit (1), // probe duck when colliding
+   PROBE_STRAFE = cr::bit (2) // probe strafing when colliding
 };
 
 // vgui menus (since latest steam updates is obsolete, but left for old cs)
-enum VGuiMenu {
+enum VGuiMenu : int {
    VMS_TEAM = 2, // menu select team
    VMS_TF = 26, // terrorist select menu
    VMS_CT = 27  // ct select menu
 };
 
 // lift usage states
-enum LiftState {
+enum LiftState : int {
    LIFT_NO_NEARBY = 0,
    LIFT_LOOKING_BUTTON_OUTSIDE,
    LIFT_WAITING_FOR,
@@ -367,7 +357,7 @@ enum LiftState {
 };
 
 // wayponit auto-downloader
-enum WaypointDownloadError {
+enum WaypointDownloadError : int {
    WDE_SOCKET_ERROR,
    WDE_CONNECT_ERROR,
    WDE_NOTFOUND_ERROR,
@@ -375,7 +365,7 @@ enum WaypointDownloadError {
 };
 
 // game start messages for counter-strike...
-enum GameMessage {
+enum GameMessage : int {
    GAME_MSG_NONE = 1,
    GAME_MSG_TEAM_SELECT = 2,
    GAME_MSG_CLASS_SELECT = 3,
@@ -386,95 +376,88 @@ enum GameMessage {
 };
 
 // sensing states
-enum SensingState {
-   STATE_SEEING_ENEMY = (1 << 0), // seeing an enemy
-   STATE_HEARING_ENEMY = (1 << 1), // hearing an enemy
-   STATE_SUSPECT_ENEMY = (1 << 2), // suspect enemy behind obstacle
-   STATE_PICKUP_ITEM = (1 << 3), // pickup item nearby
-   STATE_THROW_HE = (1 << 4), // could throw he grenade
-   STATE_THROW_FB = (1 << 5), // could throw flashbang
-   STATE_THROW_SG = (1 << 6) // could throw smokegrenade
+enum SensingState : int {
+   STATE_SEEING_ENEMY = cr::bit (0), // seeing an enemy
+   STATE_HEARING_ENEMY = cr::bit (1), // hearing an enemy
+   STATE_SUSPECT_ENEMY = cr::bit (2), // suspect enemy behind obstacle
+   STATE_PICKUP_ITEM = cr::bit (3), // pickup item nearby
+   STATE_THROW_HE = cr::bit (4), // could throw he grenade
+   STATE_THROW_FB = cr::bit (5), // could throw flashbang
+   STATE_THROW_SG = cr::bit (6) // could throw smokegrenade
 };
 
 // positions to aim at
-enum AimPosition {
-   AIM_NAVPOINT = (1 << 0), // aim at nav point
-   AIM_CAMP = (1 << 1), // aim at camp vector
-   AIM_PREDICT_PATH = (1 << 2), // aim at predicted path
-   AIM_LAST_ENEMY = (1 << 3), // aim at last enemy
-   AIM_ENTITY = (1 << 4), // aim at entity like buttons, hostages
-   AIM_ENEMY = (1 << 5), // aim at enemy
-   AIM_GRENADE = (1 << 6), // aim for grenade throw
-   AIM_OVERRIDE = (1 << 7)  // overrides all others (blinded)
+enum AimPosition : int {
+   AIM_NAVPOINT = cr::bit (0), // aim at nav point
+   AIM_CAMP = cr::bit (1), // aim at camp vector
+   AIM_PREDICT_PATH = cr::bit (2), // aim at predicted path
+   AIM_LAST_ENEMY = cr::bit (3), // aim at last enemy
+   AIM_ENTITY = cr::bit (4), // aim at entity like buttons, hostages
+   AIM_ENEMY = cr::bit (5), // aim at enemy
+   AIM_GRENADE = cr::bit (6), // aim for grenade throw
+   AIM_OVERRIDE = cr::bit (7) // overrides all others (blinded)
 };
 
 // famas/glock burst mode status + m4a1/usp silencer
-enum BurstMode {
-   BM_ON = 1,
-   BM_OFF = 2
+enum BurstMode : int {
+   BURST_ON = cr::bit (0),
+   BURST_OFF = cr::bit (1)
 };
 
 // visibility flags
-enum Visibility {
-   VISIBLE_HEAD = (1 << 1),
-   VISIBLE_BODY = (1 << 2),
-   VISIBLE_OTHER = (1 << 3)
-};
-
-// defines map type
-enum MapFlags {
-   MAP_AS = (1 << 0),
-   MAP_CS = (1 << 1),
-   MAP_DE = (1 << 2),
-   MAP_ES = (1 << 3),
-   MAP_KA = (1 << 4),
-   MAP_FY = (1 << 5),
-
-   // additional flags
-   MAP_HAS_DOORS = (1 << 6)
+enum Visibility : int {
+   VISIBLE_HEAD = cr::bit (1),
+   VISIBLE_BODY = cr::bit (2),
+   VISIBLE_OTHER = cr::bit (3)
 };
 
 // defines for waypoint flags field (32 bits are available)
-enum WaypointFlag {
-   FLAG_LIFT = (1 << 1), // wait for lift to be down before approaching this waypoint
-   FLAG_CROUCH = (1 << 2), // must crouch to reach this waypoint
-   FLAG_CROSSING = (1 << 3), // a target waypoint
-   FLAG_GOAL = (1 << 4), // mission goal point (bomb, hostage etc.)
-   FLAG_LADDER = (1 << 5), // waypoint is on ladder
-   FLAG_RESCUE = (1 << 6), // waypoint is a hostage rescue point
-   FLAG_CAMP = (1 << 7), // waypoint is a camping point
-   FLAG_NOHOSTAGE = (1 << 8), // only use this waypoint if no hostage
-   FLAG_DOUBLEJUMP = (1 << 9), // bot help's another bot (requster) to get somewhere (using djump)
-   FLAG_SNIPER = (1 << 28), // it's a specific sniper point
-   FLAG_TF_ONLY = (1 << 29), // it's a specific terrorist point
-   FLAG_CF_ONLY = (1 << 30),  // it's a specific ct point
-   FLAG_LOW_LIGHT = (1 << 31) // specifies that waypoints that have low amount of light (for flashlights)
+enum WaypointFlag : int32 {
+   FLAG_LIFT = cr::bit (1), // wait for lift to be down before approaching this waypoint
+   FLAG_CROUCH = cr::bit (2), // must crouch to reach this waypoint
+   FLAG_CROSSING = cr::bit (3), // a target waypoint
+   FLAG_GOAL = cr::bit (4), // mission goal point (bomb, hostage etc.)
+   FLAG_LADDER = cr::bit (5), // waypoint is on ladder
+   FLAG_RESCUE = cr::bit (6), // waypoint is a hostage rescue point
+   FLAG_CAMP = cr::bit (7), // waypoint is a camping point
+   FLAG_NOHOSTAGE = cr::bit (8), // only use this waypoint if no hostage
+   FLAG_DOUBLEJUMP = cr::bit (9), // bot help's another bot (requster) to get somewhere (using djump)
+   FLAG_SNIPER = cr::bit (28), // it's a specific sniper point
+   FLAG_TF_ONLY = cr::bit (29), // it's a specific terrorist point
+   FLAG_CF_ONLY = cr::bit (30),  // it's a specific ct point
 };
 
 // defines for waypoint connection flags field (16 bits are available)
-enum PathFlag {
-   PATHFLAG_JUMP = (1 << 0) // must jump for this connection
+enum PathFlag : int {
+   PATHFLAG_JUMP = cr::bit (0) // must jump for this connection
 };
 
 // enum pathfind search type
-enum SearchPathType {
+enum SearchPathType : int {
    SEARCH_PATH_FASTEST = 0,
    SEARCH_PATH_SAFEST_FASTER,
    SEARCH_PATH_SAFEST
 };
 
 // defines waypoint connection types
-enum PathConnection {
+enum PathConnection : int {
    CONNECTION_OUTGOING = 0,
    CONNECTION_INCOMING,
    CONNECTION_BOTHWAYS
 };
 
 // a* route state
-enum RouteState {
-   ROUTE_OPEN,
+enum RouteState : int {
+   ROUTE_OPEN = 0,
    ROUTE_CLOSED,
    ROUTE_NEW
+};
+
+// waypoint edit states
+enum WaypointEditState : int {
+   WS_EDIT_ENABLED = cr::bit (1),
+   WS_EDIT_NOCLIP = cr::bit (2),
+   WS_EDIT_AUTO = cr::bit (3)
 };
 
 // bot known file headers
@@ -514,7 +497,6 @@ constexpr float MAX_CHATTER_REPEAT = 99.0f;
 constexpr int MAX_PATH_INDEX = 8;
 constexpr int MAX_DAMAGE_VALUE = 2040;
 constexpr int MAX_GOAL_VALUE = 2040;
-constexpr int MAX_KILL_HISTORY = 16;
 constexpr int MAX_WAYPOINTS = 2048;
 constexpr int MAX_ROUTE_LENGTH = MAX_WAYPOINTS / 2;
 constexpr int MAX_WEAPONS = 32;
@@ -541,7 +523,7 @@ struct Route {
 };
 
 // links keywords and replies together
-struct KeywordFactory {
+struct Keywords {
    StringArray keywords;
    StringArray replies;
    StringArray usedReplies;
@@ -570,10 +552,22 @@ struct ChatterItem {
    float duration;
 };
 
-struct WeaponSelect {
+// weapon properties structure
+struct WeaponProp {
+   char classname[64];
+   int ammo1; // ammo index for primary ammo
+   int ammo1Max; // max primary ammo
+   int slot; // HUD slot (0 based)
+   int pos; // slot position
+   int id; // weapon ID
+   int flags; // flags???
+};
+
+// weapon info structure
+struct WeaponInfo {
    int id; // the weapon id value
-   const char *weaponName; // name of the weapon when selecting it
-   const char *modelName; // model name to separate cs weapons
+   const char *name; // name of the weapon when selecting it
+   const char *model; // model name to separate cs weapons
    int price; // price when buying
    int minPrimaryAmmo; // minimum primary ammo
    int teamStandard; // used by team (number) (standard map)
@@ -583,6 +577,7 @@ struct WeaponSelect {
    int newBuySelectT; // for counter-strike v1.6
    int newBuySelectCT; // for counter-strike v1.6
    int penetratePower; // penetrate power
+   int maxClip; // max ammo in clip
    bool primaryFireHold; // hold down primary fire button to use?
 };
 
@@ -603,6 +598,7 @@ struct Client {
    int team; // bot team
    int team2; // real bot team in free for all mode (csdm)
    int flags; // client flags
+   int radio; // radio orders
 
    float hearingDistance; // distance this sound is heared
    float timeSoundLasting; // time sound is played/heared
@@ -613,20 +609,15 @@ struct Client {
 
 // experience data hold in memory while playing
 struct Experience {
-   uint16 team0Damage;
-   uint16 team1Damage;
-   int16 team0DangerIndex;
-   int16 team1DangerIndex;
-   int16 team0Value;
-   int16 team1Value;
+   int damage[MAX_TEAM_COUNT];
+   int index[MAX_TEAM_COUNT];
+   int value[MAX_TEAM_COUNT];
 };
 
 // experience data when saving/loading
 struct ExperienceSave {
-   uint8 team0Damage;
-   uint8 team1Damage;
-   int8 team0Value;
-   int8 team1Value;
+   uint8 damage[MAX_TEAM_COUNT];
+   int8 value[MAX_TEAM_COUNT];
 };
 
 // bot creation tab
@@ -637,17 +628,6 @@ struct CreateQueue {
    int member;
    int personality;
    String name;
-};
-
-// weapon properties structure
-struct WeaponProperty {
-   char className[64];
-   int ammo1; // ammo index for primary ammo
-   int ammo1Max; // max primary ammo
-   int slotID; // HUD slot (0 based)
-   int position; // slot position
-   int id; // weapon ID
-   int flags; // flags???
 };
 
 // define chatting collection structure
@@ -916,7 +896,6 @@ private:
    void checkMsgQueue (void);
    void checkRadioQueue (void);
    void checkReload (void);
-   int getMaxClip (int id);
    void avoidGrenades (void);
    void checkGrenadesThrow (void);
    void checkBurstMode (float distance);
@@ -954,7 +933,7 @@ private:
    bool doPlayerAvoidance (const Vector &normal);
 
    void getCampDir (Vector *dest);
-   void collectGoalExperience (int damage, int team);
+   void collectGoalExperience (int damage);
    void collectDataExperience (edict_t *attacker, int damage);
    int getMsgQueue (void);
    bool hasActiveGoal (void);
@@ -1250,9 +1229,7 @@ public:
    inline TaskID taskId (void) {
       return task ()->id;
    }
-
    void dropWeaponForUser (edict_t *user, bool discardC4);
-   void clearUsedName (void);
 
    void say (const char *text);
    void sayTeam (const char *text);
@@ -1286,27 +1263,45 @@ public:
 };
 
 // manager class
-class BotManager : public Singleton<BotManager> {
+class BotManager : public Singleton <BotManager> {
 private:
    Array <CreateQueue> m_creationTab; // bot creation tab
 
    Bot *m_bots[MAX_ENGINE_PLAYERS]; // all available bots
 
+   float m_timeRoundStart;
+   float m_timeRoundEnd;
+   float m_timeRoundMid;
+
    float m_maintainTime; // time to maintain bot creation
    float m_quotaMaintainTime; // time to maintain bot quota
    float m_grenadeUpdateTime; // time to update active grenades
    float m_entityUpdateTime; // time to update intresting entities
+   float m_plantSearchUpdateTime; // time to update for searching planted bomb
+   float m_lastChatTime; // global chat time timestamp
+   float m_timeBombPlanted; // time the bomb were planted
+   float m_lastRadioTime[MAX_TEAM_COUNT]; // global radio time
 
    int m_lastWinner; // the team who won previous round
    int m_lastDifficulty; // last bots difficulty
+   int m_bombSayStatus; // some bot is issued whine about bomb
+
+   int m_radioSelect[MAX_ENGINE_PLAYERS];
+   int m_lastRadio[MAX_TEAM_COUNT];
 
    bool m_leaderChoosen[MAX_TEAM_COUNT]; // is team leader choose theese round
    bool m_economicsGood[MAX_TEAM_COUNT]; // is team able to buy anything
    bool m_deathMsgSent; // for fake ping
 
+   bool m_bombPlanted;
+   bool m_botsCanPause;
+   bool m_roundEnded;
+
    Array <edict_t *> m_activeGrenades; // holds currently active grenades on the map
    Array <edict_t *> m_intrestingEntities;  // holds currently intresting entities on the map
+
    edict_t *m_killerEntity; // killer entity for bots
+   Array <Task> m_filters;
 
 protected:
    BotCreationResult create (const String &name, int difficulty, int personality, int team, int member);
@@ -1315,20 +1310,9 @@ public:
    BotManager (void);
    ~BotManager (void);
 
-   inline bool checkTeamEco (int team) {
-      return m_economicsGood[team];
-   }
-
+public:
    bool isTeamStacked (int team);
-
-   inline int getLastWinner (void) const {
-      return m_lastWinner;
-   }
-
-   inline void setLastWinner (int winner) {
-      m_lastWinner = winner;
-   }
-   void reset (void);
+   void setBombPlanted (bool isPlanted);
 
    int index (edict_t *ent);
    Bot *getBot (int index);
@@ -1350,10 +1334,6 @@ public:
 
    void destroy (void);
    void destroy (int index);
-
-   void createRandom (bool manual = false) {
-      addbot ("", -1, -1, -1, -1, manual);
-   }
    void addbot (const String &name, int difficulty, int personality, int team, int member, bool manual);
    void addbot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member, bool manual);
    void serverFill (int selection, int personality = PERSONALITY_NORMAL, int difficulty = -1, int numToAdd = -1);
@@ -1363,10 +1343,10 @@ public:
    void kickBot (int index);
    void kickFromTeam (Team team, bool removeAll = false);
 
-   void kickBotByMenu (edict_t *ent, int selection);
    void killAllBots (int team = -1);
    void maintainQuota (void);
    void initQuota (void);
+   void initRound (void);
    void decrementQuota (int by = 1);
    void selectLeaders (int team, bool reset);
 
@@ -1374,13 +1354,20 @@ public:
    void setWeaponMode (int selection);
    void updateTeamEconomics (int team, bool setTrue = false);
    void updateBotDifficulties (void);
+   void reset (void);
+   void initFilters (void);
+   void resetFilters (void);
 
-   static void execGameEntity (entvars_t *vars);
-
-   // grenades
    void updateActiveGrenade (void);
    void updateIntrestingEntities (void);
 
+   void calculatePingOffsets (void);
+   void sendPingOffsets (edict_t *to);
+   void sendDeathMsgFix (void);
+
+   static void execGameEntity (entvars_t *vars);
+
+public:
    inline Array <edict_t *> &searchActiveGrenades (void) {
       return m_activeGrenades;
    }
@@ -1397,19 +1384,110 @@ public:
       return !m_intrestingEntities.empty ();
    }
 
-public:
-   void calculatePingOffsets (void);
-   void sendPingOffsets (edict_t *to);
-   void sendDeathMsgFix (void);
+   inline bool checkTeamEco (int team) {
+      return m_economicsGood[team];
+   }
+
+   inline int getLastWinner (void) const {
+      return m_lastWinner;
+   }
+
+   inline void setLastWinner (int winner) {
+      m_lastWinner = winner;
+   }
+
+   // get the list of filters
+   inline Array <Task> &getFilters (void) {
+      return m_filters;
+   }
+
+   void createRandom (bool manual = false) {
+      addbot ("", -1, -1, -1, -1, manual);
+   }
 
    inline void updateDeathMsgState (bool sent) {
       m_deathMsgSent = sent;
    }
+
+   inline const bool isBombPlanted (void) {
+      return m_bombPlanted;
+   }
+
+   inline const float getTimeBombPlanted (void) const {
+      return m_timeBombPlanted;
+   }
+
+   inline const float getRoundStartTime (void) const {
+      return m_timeRoundStart;
+   }
+
+   inline const float getRoundMidTime (void) const {
+      return m_timeRoundMid;
+   }
+
+   inline const float getRoundEndTime (void) const {
+      return m_timeRoundEnd;
+   }
+
+   inline bool isRoundOver (void) const {
+      return m_roundEnded;
+   }
+
+   inline void setRoundOver (const bool over) {
+      m_roundEnded = over;
+   }
+
+   inline bool canPause (void) const {
+      return m_botsCanPause;
+   }
+
+   inline void setCanPause (const bool pause) {
+      m_botsCanPause = pause;
+   }
+
+   inline bool hasBombSay (int type) {
+      return (m_bombSayStatus & type) == type;
+   }
+
+   inline void clearBombSay (int type) {
+      m_bombSayStatus &= ~type;
+   }
+
+   inline void setPlantedBombSearchTimestamp (const float timestamp) {
+      m_plantSearchUpdateTime = timestamp;
+   }
+
+   inline const float getPlantedBombSearchTimestamp (void) const {
+      return m_plantSearchUpdateTime;
+   }
+
+   inline void setLastRadioTimestamp (const int team, const float timestamp) {
+      m_lastRadioTime[team] = timestamp;
+   }
+
+   inline const float getLastRadioTimestamp (const int team) const {
+      return m_lastRadioTime[team];
+   }
+
+   inline void setLastRadio (const int team, const int radio) {
+      m_lastRadio[team] = radio;
+   }
+
+   inline const int getLastRadio (const int team) const {
+      return m_lastRadio[team];
+   }
+
+   inline void setLastChatTimestamp (const float timestamp) {
+      m_lastChatTime = timestamp;
+   }
+
+   inline const float getLastChatTimestamp (void) const {
+      return m_lastChatTime;
+   }
 };
 
 // waypoint operation class
-class Waypoint : public Singleton<Waypoint> {
-
+class Waypoint : public Singleton <Waypoint> {
 public:
    friend class Bot;
 
@@ -1419,6 +1497,7 @@ private:
    };
 
    Path *m_paths[MAX_WAYPOINTS];
+   Experience *m_experience;
 
    bool m_waypointPaths;
    bool m_isOnLadder;
@@ -1431,18 +1510,24 @@ private:
    Vector m_learnPosition;
    Vector m_bombPos;
 
+   int m_editFlags;
    int m_numWaypoints;
    int m_loadTries;
    int m_cacheWaypointIndex;
    int m_lastJumpWaypoint;
    int m_visibilityIndex;
+   int m_killHistory;
+   int m_highestDamage[MAX_TEAM_COUNT];
+
    Vector m_lastWaypoint;
    uint8 m_visLUT[MAX_WAYPOINTS][MAX_WAYPOINTS / 4];
 
+   float m_autoPathDistance;
    float m_pathDisplayTime;
    float m_arrowDisplayTime;
    float m_waypointDisplayTime[MAX_WAYPOINTS];
    float m_waypointLightLevel[MAX_WAYPOINTS];
+
    int m_findWPIndex;
    int m_facingAtIndex;
    char m_infoBuffer[MAX_PRINT_BUFFER];
@@ -1466,6 +1551,7 @@ public:
    Waypoint (void);
    ~Waypoint (void);
 
+public:
    void init (void);
    void initExperience (void);
    void initVisibility (void);
@@ -1519,13 +1605,6 @@ public:
    int getPathDist (int srcIndex, int destIndex);
    const char *getInformation (int id);
 
-   char *getAuthor (void) {
-      return m_infoBuffer;
-   }
-   bool hasChanged (void) {
-      return m_waypointsChanged;
-   }
-
    void setSearchIndex (int index);
    void startLearnJump (void);
 
@@ -1535,8 +1614,62 @@ public:
 
    const char *getDataDirectory (bool isMemoryFile = false);
    const char *getWaypointFilename (bool isMemoryFile = false);
-
    void setBombPos (bool reset = false, const Vector &pos = Vector::null ());
+
+   void closeSocket (int sock);
+   WaypointDownloadError downloadWaypoint (void);
+
+   // initalize waypoint buckets
+   void initBuckets (void);
+
+   void addToBucket (const Vector &pos, int index);
+   void eraseFromBucket (const Vector &pos, int index);
+
+   Bucket locateBucket (const Vector &pos);
+   IntArray &getWaypointsInBucket (const Vector &pos);
+
+   void updateGlobalExperience (void);
+
+   int getDangerIndex (int team, int start, int goal);
+   int getDangerValue (int team, int start, int goal);
+   int getDangerDamage (int team, int start, int goal);
+
+public:
+   inline Experience *getRawExperience (void) {
+      return m_experience;
+   }
+
+   inline int getHighestDamageForTeam (int team) const {
+      return m_highestDamage[team];
+   }
+
+   inline void setHighestDamageForTeam (int team, int value) {
+      m_highestDamage[team] = value;
+   }
+
+   inline const char *getAuthor (void) const {
+      return m_infoBuffer;
+   }
+
+   inline bool hasChanged (void) const {
+      return m_waypointsChanged;
+   }
+
+   inline bool hasEditFlag (int flag) const {
+      return !!(m_editFlags & flag);
+   }
+
+   inline void setEditFlag (int flag) {
+      m_editFlags |= flag;
+   }
+
+   inline void clearEditFlag (int flag) {
+      m_editFlags &= ~flag;
+   }
+
+   inline void setAutoPathDistance (const float distance) {
+      m_autoPathDistance = distance;
+   }
 
    inline const Vector &getBombPos (void) {
       return m_bombPos;
@@ -1561,21 +1694,209 @@ public:
    inline float getLightLevel (int id) const {
       return m_waypointLightLevel[id];
    }
+};
 
-   // free's socket handle
-   void closeSocket (int sock);
+// mostly config stuff, and some stuff dealing with menus
+class Config final : public Singleton <Config> {
+private:
+   Array <StringArray> m_chat;
+   Array <Array <ChatterItem>> m_chatter;
+   Array <BotName> m_botNames;
+   Array <Keywords> m_replies;
+   Array <MenuText> m_menus;
+   Array <WeaponInfo> m_weapons;
 
-   // do actually downloading of waypoint file
-   WaypointDownloadError downloadWaypoint (void);
+   // weapon info gathered through engine messages
+   WeaponProp m_weaponProps[MAX_WEAPONS + 1];
 
-   // initalize waypoint buckets
-   void initBuckets (void);
+   // default tables for personality weapon preferences, overridden by general.cfg
+   int m_normalWeaponPrefs[NUM_WEAPONS] =       { 0, 2, 1, 4, 5, 6, 3, 12, 10, 24, 25, 13, 11, 8, 7, 22, 23, 18, 21, 17, 19, 15, 17, 9, 14, 16 };
+   int m_rusherWeaponPrefs[NUM_WEAPONS] =       { 0, 2, 1, 4, 5, 6, 3, 24, 19, 22, 23, 20, 21, 10, 12, 13, 7, 8, 11, 9, 18, 17, 19, 25, 15, 16 };
+   int m_carefulWeaponPrefs[NUM_WEAPONS] =      { 0, 2, 1, 4, 25, 6, 3, 7, 8, 12, 10, 13, 11, 9, 24, 18, 14, 17, 16, 15, 19, 20, 21, 22, 23, 5 };
+   int m_grenadeBuyPrecent[NUM_WEAPONS - 23] =  { 95, 85, 60 };
+   int m_botBuyEconomyTable[NUM_WEAPONS - 15] = { 1900, 2100, 2100, 4000, 6000, 7000, 16000, 1200, 800, 1000, 3000 };
+   int *m_weaponPrefs[3] =                      { m_normalWeaponPrefs, m_rusherWeaponPrefs, m_carefulWeaponPrefs };
 
-   void addToBucket (const Vector &pos, int index);
-   void eraseFromBucket (const Vector &pos, int index);
+public:
+   Config (void) = default;
+   ~Config (void) = default;
 
-   Bucket locateBucket (const Vector &pos);
-   IntArray &getWaypointsInBucket (const Vector &pos);
+public:
+
+   // load the configuration files
+   void load (bool onlyMain);
+
+   // picks random bot name
+   BotName *pickBotName (void);
+
+   // remove bot name from used list
+   void clearUsedName (Bot *bot);
+
+   // initializes menus (one-time-call)
+   void initMenus (void);
+
+   // kick bot menu
+   void kickBotByMenu (edict_t *ent, int selection);
+
+   // displays generic menu
+   void showMenu (edict_t *ent, MenuId menu);
+
+   // initialize weapon info
+   void initWeapons (void);
+
+   // fix weapon prices (ie for elite)
+   void adjustWeaponPrices (void);
+
+   WeaponInfo &findWeaponById (const int id);
+
+public:
+
+   // get the chat array
+   inline auto &getChat (void) {
+      return m_chat;
+   }
+
+   // get's the chatter array
+   inline auto &getChatter (void) {
+      return m_chatter;
+   }
+
+   // get's the replies array
+   inline auto &getReplies (void) {
+      return m_replies;
+   }
+
+   // get's the weapon info data
+   inline auto &getWeapons (void) {
+      return m_weapons;
+   }
+
+   // get's raw weapon info
+   inline auto getRawWeapons (void) {
+      return m_weapons.begin ();
+   }
+
+   // set's the weapon properties
+   inline void setWeaponProp (const WeaponProp &prop) {
+      m_weaponProps[prop.id] = prop;
+   }
+
+   // get's the weapons prop
+   inline const WeaponProp &getWeaponProp (const int id) const {
+      return m_weaponProps[id];
+   }
+
+   // get's weapon preferences for personality
+   inline const int *getWeaponPrefs (const int personality) const {
+      return m_weaponPrefs[personality];
+   }
+
+   // get economics value
+   inline const int *getEconLimit (void) const {
+      return m_botBuyEconomyTable;
+   }
+
+   // get's grenade buy percents
+   inline const bool chanceToBuyGrenade (const int grenadeType) const {
+      return RandomSequence::ref ().chance (m_grenadeBuyPrecent[grenadeType]);
+   }
+};
+
+class BotUtils final : public Singleton <BotUtils> {
+private:
+   bool m_needToSendWelcome;
+   float m_welcomeReceiveTime;
+   StringArray m_sentences;
+   Array <Client> m_clients;
+
+public:
+   BotUtils (void);
+   ~BotUtils (void) = default;
+
+public:
+   // need to send welcome message ?
+   void checkWelcome (void);
+
+   // gets the weapon alias as hlsting, maybe move to config...
+   int getWeaponAlias (bool isString, const char *weaponAlias, int weaponIndex = -1);
+
+   // gets the build number of bot
+   int buildNumber (void);
+
+   // gets the shooting cone deviation
+   float getShootingCone (edict_t *ent, const Vector &position);
+
+   // check if origin is visible from the entity side
+   bool isVisible (const Vector &origin, edict_t *ent);
+
+   // check if entity is alive
+   bool isAlive (edict_t *ent);
+
+   // check if origin is inside view cone of entity
+   bool isInViewCone (const Vector &origin, edict_t *ent);
+
+   // checks if entitiy is fakeclient
+   bool isFakeClient (edict_t *ent);
+
+   // check if entitiy is a player
+   bool isPlayer (edict_t *ent);
+
+   // check if entity is a vip
+   bool isPlayerVIP (edict_t *ent);
+
+   // opens config helper
+   bool openConfig (const char *fileName, const char *errorIfNotExists, MemFile *outFile, bool languageDependant = false);
+
+   // nearest player search helper
+   bool findNearestPlayer (void **holder, edict_t *to, float searchDistance = 4096.0, bool sameTeam = false, bool needBot = false, bool needAlive = false, bool needDrawn = false, bool needBotWithC4 = false);
+
+   // simple loggerfor  bots
+   void logEntry (bool outputToConsole, int logLevel, const char *format, ...);
+
+   // tracing decals for bots spraying logos
+   void traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIndex);
+
+   // attaches sound to client struct
+   void attachSoundsToClients (edict_t *ent, const char *sample, float volume);
+
+   // simulate sound for players
+   void simulateSoundUpdates (int playerIndex);
+
+   // simple format utility
+   const char *format (const char *format, ...);
+
+   // update stats on clients
+   void updateClients (void);
+
+public:
+
+   // re-show welcome after changelevel ?
+   inline void setNeedForWelcome (bool need) {
+      m_needToSendWelcome = need;
+   }
+
+   // get array of clients
+   inline auto &getClients (void) {
+      return m_clients;
+   }
+
+   // get clients as const-reference
+   inline const auto &getClients (void) const {
+      return m_clients;
+   }
+
+   // get sinle client as ref
+   inline auto &getClient (const int index) {
+      return m_clients[index];
+   }
+
+   // checks if string is not empty
+   inline bool isEmptyStr (const char *input) {
+      if (input == nullptr) {
+         return true;
+      }
+      return *input == '\0';
+   }
 };
 
 #include <engine.h>
@@ -1586,32 +1907,8 @@ static auto &bots = BotManager::ref ();
 static auto &engine = Engine::ref ();
 static auto &rng = RandomSequence::ref ();
 static auto &illum = LightMeasure::ref ();
-
-// prototypes of bot functions...
-extern int getWeaponData (bool isString, const char *weaponAlias, int weaponIndex = -1);
-extern int getWeaponPenetrationPower (int id);
-extern int buildNumber (void);
-extern float getShootingConeDeviation (edict_t *ent, const Vector &position);
-
-extern bool isVisible (const Vector &origin, edict_t *ent);
-extern bool isAlive (edict_t *ent);
-extern bool isInViewCone (const Vector &origin, edict_t *ent);
-extern bool isFakeClient (edict_t *ent);
-extern bool isPlayer (edict_t *ent);
-extern bool isPlayerVIP (edict_t *ent);
-extern bool openConfig (const char *fileName, const char *errorIfNotExists, MemFile *outFile, bool languageDependant = false);
-extern bool findNearestPlayer (void **holder, edict_t *to, float searchDistance = 4096.0, bool sameTeam = false, bool needBot = false, bool needAlive = false, bool needDrawn = false, bool needBotWithC4 = false);
-
-extern void cleanupGarbage (void);
-extern void initRound (void);
-extern void checkWelcome (void);
-extern void logEntry (bool outputToConsole, int logLevel, const char *format, ...);
-extern void showMenu (edict_t *ent, MenuId menu);
-extern void traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIndex);
-extern void attachSoundsToClients (edict_t *ent, const char *sample, float volume);
-extern void simulateSoundUpdates (int playerIndex);
-
-extern const char *format (const char *format, ...);
+static auto &conf = Config::ref ();
+static auto &util = BotUtils::ref ();
 
 // very global convars
 extern ConVar yb_jasonmode;
@@ -1619,13 +1916,8 @@ extern ConVar yb_communication_type;
 extern ConVar yb_ignore_enemies;
 
 #include <compress.h>
-#include <globals.h>
 #include <resource.h>
 
 inline int Bot::index (void) {
    return engine.indexOfEntity (ent ());
-}
-
-static inline void makeVectors (const Vector &in) {
-   in.makeVectors (&g_pGlobals->v_forward, &g_pGlobals->v_right, &g_pGlobals->v_up);
 }

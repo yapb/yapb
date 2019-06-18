@@ -9,13 +9,34 @@
 
 #include <yapb.h>
 
-ConVar yb_display_menu_text ("yb_display_menu_text", "1");
 ConVar yb_display_welcome_text ("yb_display_welcome_text", "1");
 
-ConVar mp_roundtime ("mp_roundtime", nullptr, VT_NOREGISTER);
-ConVar mp_freezetime ("mp_freezetime", nullptr, VT_NOREGISTER, true, "0");
+BotUtils::BotUtils (void) {
+   m_needToSendWelcome = false;
+   m_welcomeReceiveTime = 0.0f;
 
-const char *format (const char *format, ...) {
+   // add default messages
+   m_sentences.push ("hello user,communication is acquired");
+   m_sentences.push ("your presence is acknowledged");
+   m_sentences.push ("high man, your in command now");
+   m_sentences.push ("blast your hostile for good");
+   m_sentences.push ("high man, kill some idiot here");
+   m_sentences.push ("is there a doctor in the area");
+   m_sentences.push ("warning, experimental materials detected");
+   m_sentences.push ("high amigo, shoot some but");
+   m_sentences.push ("attention, hours of work software, detected");
+   m_sentences.push ("time for some bad ass explosion");
+   m_sentences.push ("bad ass son of a breach device activated");
+   m_sentences.push ("high, do not question this great service");
+   m_sentences.push ("engine is operative, hello and goodbye");
+   m_sentences.push ("high amigo, your administration has been great last day");
+   m_sentences.push ("attention, expect experimental armed hostile presence");
+   m_sentences.push ("warning, medical attention required");
+
+   m_clients.resize (MAX_ENGINE_PLAYERS + 1);
+}
+
+const char *BotUtils::format (const char *format, ...) {
    static char strBuffer[2][MAX_PRINT_BUFFER];
    static int rotator = 0;
 
@@ -32,25 +53,25 @@ const char *format (const char *format, ...) {
    return ptr;
 }
 
-bool isAlive (edict_t *ent) {
+bool BotUtils::isAlive (edict_t *ent) {
    if (engine.isNullEntity (ent)) {
       return false;
    }
    return ent->v.deadflag == DEAD_NO && ent->v.health > 0 && ent->v.movetype != MOVETYPE_NOCLIP;
 }
 
-float getShootingConeDeviation (edict_t *ent, const Vector &position) {
-   makeVectors (ent->v.v_angle);
+float BotUtils::getShootingCone (edict_t *ent, const Vector &position) {
+   engine.makeVectors (ent->v.v_angle);
 
    // he's facing it, he meant it
-   return g_pGlobals->v_forward | (position - (ent->v.origin + ent->v.view_ofs)).normalize ();
+   return engine.vec.forward | (position - (ent->v.origin + ent->v.view_ofs)).normalize ();
 }
 
-bool isInViewCone (const Vector &origin, edict_t *ent) {
-   return getShootingConeDeviation (ent, origin) >= cr::cosf (cr::deg2rad ((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f));
+bool BotUtils::isInViewCone (const Vector &origin, edict_t *ent) {
+   return getShootingCone (ent, origin) >= cr::cosf (cr::deg2rad ((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f));
 }
 
-bool isVisible (const Vector &origin, edict_t *ent) {
+bool BotUtils::isVisible (const Vector &origin, edict_t *ent) {
    if (engine.isNullEntity (ent)) {
       return false;
    }
@@ -63,81 +84,7 @@ bool isVisible (const Vector &origin, edict_t *ent) {
    return true;
 }
 
-void showMenu (edict_t *ent, MenuId menu) {
-   static bool s_menusParsed = false;
-
-   // make menus looks like we need only once
-   if (!s_menusParsed) {
-      extern void setupBotMenus (void);
-      setupBotMenus ();
-    
-      for (int i = 0; i < BOT_MENU_TOTAL_MENUS; i++) {
-         auto parsed = &g_menus[i];
-         const String &translated = engine.translate (parsed->text.chars ());
-
-         // translate all the things
-         parsed->text = translated;
-
-         // make menu looks best
-         if (!(g_gameFlags & GAME_LEGACY)) {
-            for (int j = 0; j < 10; j++) {
-               parsed->text.replace (format ("%d.", j), format ("\\r%d.\\w", j));
-            }
-         }
-      }
-      s_menusParsed = true;
-   }
-
-   if (!isPlayer (ent)) {
-      return;
-   }
-   Client &client = g_clients[engine.indexOfEntity (ent) - 1];
-
-   if (menu == BOT_MENU_INVALID) {
-      MessageWriter (MSG_ONE_UNRELIABLE, engine.getMessageId (NETMSG_SHOWMENU), Vector::null (), ent)
-         .writeShort (0)
-         .writeChar (0)
-         .writeByte (0)
-         .writeString ("");
-
-      client.menu = menu;
-      return;
-   }
-   int menuIndex = 0;
-
-   for (; menuIndex < BOT_MENU_TOTAL_MENUS; menuIndex++) {
-      if (g_menus[menuIndex].id == menu) {
-         break;
-      }
-   }
-   const auto &menuText = g_menus[menuIndex];
-   const char *text = ((g_gameFlags & (GAME_XASH_ENGINE | GAME_MOBILITY)) && !yb_display_menu_text.boolean ()) ? " " : menuText.text.chars ();
-   MessageWriter msg;
-
-   while (strlen (text) >= 64) {
-      msg.start (MSG_ONE_UNRELIABLE, engine.getMessageId (NETMSG_SHOWMENU), Vector::null (), ent)
-         .writeShort (menuText.slots)
-         .writeChar (-1)
-         .writeByte (1);
-
-      for (int i = 0; i < 64; i++) {
-         msg.writeChar (text[i]);
-      }
-      msg.end ();
-      text += 64;
-   }
-
-   MessageWriter (MSG_ONE_UNRELIABLE, engine.getMessageId (NETMSG_SHOWMENU), Vector::null (), ent)
-      .writeShort (menuText.slots)
-      .writeChar (-1)
-      .writeByte (0)
-      .writeString (text);
-
-   client.menu = menu;
-   g_engfuncs.pfnClientCommand (ent, "speak \"player/geiger1\"\n"); // Stops others from hearing menu sounds..
-}
-
-void traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIndex) {
+void BotUtils::traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIndex) {
    // this function draw spraypaint depending on the tracing results.
 
    static StringArray logotypes;
@@ -146,10 +93,10 @@ void traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIndex) {
       logotypes = String ("{biohaz;{graf003;{graf004;{graf005;{lambda06;{target;{hand1;{spit2;{bloodhand6;{foot_l;{foot_r").split (";");
    }
    int entityIndex = -1, message = TE_DECAL;
-   int decalIndex = g_engfuncs.pfnDecalIndex (logotypes[logotypeIndex].chars ());
+   int decalIndex = engfuncs.pfnDecalIndex (logotypes[logotypeIndex].chars ());
 
    if (decalIndex < 0) {
-      decalIndex = g_engfuncs.pfnDecalIndex ("{lambda06");
+      decalIndex = engfuncs.pfnDecalIndex ("{lambda06");
    }
 
    if (trace->flFraction == 1.0f) {
@@ -209,184 +156,7 @@ void traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIndex) {
    }
 }
 
-void cleanupGarbage (void) {
-   // this function free's all allocated memory
-   waypoints.init (); // frees waypoint data
-
-   delete[] g_experienceData;
-   g_experienceData = nullptr;
-}
-
-void updateGlobalExperience (void) {
-   // this function called after each end of the round to update knowledge about most dangerous waypoints for each team.
-
-   // no waypoints, no experience used or waypoints edited or being edited?
-   if (waypoints.length () < 1 || waypoints.hasChanged ()) {
-      return; // no action
-   }
-
-   uint16 maxDamage; // maximum damage
-   uint16 actDamage; // actual damage
-
-   int bestIndex; // best index to store
-   bool recalcKills = false;
-
-   // get the most dangerous waypoint for this position for terrorist team
-   for (int i = 0; i < waypoints.length (); i++) {
-      maxDamage = 0;
-      bestIndex = INVALID_WAYPOINT_INDEX;
-
-      for (int j = 0; j < waypoints.length (); j++) {
-         if (i == j) {
-            continue;
-         }
-         actDamage = (g_experienceData + (i * waypoints.length ()) + j)->team0Damage;
-
-         if (actDamage > maxDamage) {
-            maxDamage = actDamage;
-            bestIndex = j;
-         }
-      }
-
-      if (maxDamage > MAX_DAMAGE_VALUE) {
-         recalcKills = true;
-      }
-      (g_experienceData + (i * waypoints.length ()) + i)->team0DangerIndex = static_cast <short> (bestIndex);
-   }
-
-   // get the most dangerous waypoint for this position for counter-terrorist team
-   for (int i = 0; i < waypoints.length (); i++) {
-      maxDamage = 0;
-      bestIndex = INVALID_WAYPOINT_INDEX;
-
-      for (int j = 0; j < waypoints.length (); j++) {
-         if (i == j) {
-            continue;
-         }
-         actDamage = (g_experienceData + (i * waypoints.length ()) + j)->team1Damage;
-
-         if (actDamage > maxDamage) {
-            maxDamage = actDamage;
-            bestIndex = j;
-         }
-      }
-
-      if (maxDamage > MAX_DAMAGE_VALUE) {
-         recalcKills = true;
-      }
-      (g_experienceData + (i * waypoints.length ()) + i)->team1DangerIndex = static_cast <short> (bestIndex);
-   }
-
-   // adjust values if overflow is about to happen
-   if (recalcKills) {
-      for (int i = 0; i < waypoints.length (); i++) {
-         for (int j = 0; j < waypoints.length (); j++) {
-            if (i == j) {
-               continue;
-            }
-
-            int clip = (g_experienceData + (i * waypoints.length ()) + j)->team0Damage;
-            clip -= static_cast <int> (MAX_DAMAGE_VALUE * 0.5);
-
-            if (clip < 0) {
-               clip = 0;
-            }
-            (g_experienceData + (i * waypoints.length ()) + j)->team0Damage = static_cast <uint16> (clip);
-
-            clip = (g_experienceData + (i * waypoints.length ()) + j)->team1Damage;
-            clip -= static_cast <int> (MAX_DAMAGE_VALUE * 0.5);
-
-            if (clip < 0) {
-               clip = 0;
-            }
-            (g_experienceData + (i * waypoints.length ()) + j)->team1Damage = static_cast <uint16> (clip);
-         }
-      }
-   }
-   g_highestKills++;
-
-   int clip = g_highestDamageT - static_cast <int> (MAX_DAMAGE_VALUE * 0.5);
-
-   if (clip < 1) {
-      clip = 1;
-   }
-   g_highestDamageT = clip;
-
-   clip = (int)g_highestDamageCT - static_cast <int> (MAX_DAMAGE_VALUE * 0.5);
-
-   if (clip < 1) {
-      clip = 1;
-   }
-   g_highestDamageCT = clip;
-
-   if (g_highestKills == MAX_KILL_HISTORY) {
-      for (int i = 0; i < waypoints.length (); i++) {
-         (g_experienceData + (i * waypoints.length ()) + i)->team0Damage /= static_cast <uint16> (engine.maxClients () * 0.5);
-         (g_experienceData + (i * waypoints.length ()) + i)->team1Damage /= static_cast <uint16> (engine.maxClients () * 0.5);
-      }
-      g_highestKills = 1;
-   }
-}
-
-void initRound (void) {
-   // this is called at the start of each round
-
-   g_roundEnded = false;
-   g_canSayBombPlanted = true;
-
-   // check team economics
-   for (int team = 0; team < MAX_TEAM_COUNT; team++) {
-      bots.updateTeamEconomics (team);
-      bots.selectLeaders (team, true);
-   }
-   bots.reset ();
-
-   for (int i = 0; i < engine.maxClients (); i++) {
-      auto bot = bots.getBot (i);
-
-      if (bot != nullptr) {
-         bot->newRound ();
-      }
-      g_radioSelect[i] = 0;
-   }
-   waypoints.setBombPos (true);
-   waypoints.clearVisited ();
-
-   g_bombSayString = false;
-   g_timeBombPlanted = 0.0f;
-   g_timeNextBombUpdate = 0.0f;
-
-   for (int i = 0; i < MAX_TEAM_COUNT; i++) {
-      g_lastRadioTime[i] = 0.0f;
-   }
-   g_botsCanPause = false;
-
-   for (int i = 0; i < TASK_MAX; i++) {
-      g_taskFilters[i].time = 0.0f;
-   }
-   updateGlobalExperience (); // update experience data on round start
-
-   // calculate the round mid/end in world time
-   g_timeRoundStart = engine.timebase () + mp_freezetime.flt ();
-   g_timeRoundMid = g_timeRoundStart + mp_roundtime.flt () * 60.0f * 0.5f;
-   g_timeRoundEnd = g_timeRoundStart + mp_roundtime.flt () * 60.0f;
-}
-
-int getWeaponPenetrationPower (int id) {
-   // returns if weapon can pierce through a wall
-
-   int i = 0;
-
-   while (g_weaponSelect[i].id) {
-      if (g_weaponSelect[i].id == id) {
-         return g_weaponSelect[i].penetratePower;
-      }
-      i++;
-   }
-   return 0;
-}
-
-bool isPlayer (edict_t *ent) {
+bool BotUtils::isPlayer (edict_t *ent) {
    if (engine.isNullEntity (ent)) {
       return false;
    }
@@ -401,25 +171,25 @@ bool isPlayer (edict_t *ent) {
    return false;
 }
 
-bool isPlayerVIP (edict_t *ent) {
-   if (!(g_mapFlags & MAP_AS)) {
+bool BotUtils::isPlayerVIP (edict_t *ent) {
+   if (!engine.mapIs (MAP_AS)) {
       return false;
    }
 
    if (!isPlayer (ent)) {
       return false;
    }
-   return *(g_engfuncs.pfnInfoKeyValue (g_engfuncs.pfnGetInfoKeyBuffer (ent), "model")) == 'v';
+   return *(engfuncs.pfnInfoKeyValue (engfuncs.pfnGetInfoKeyBuffer (ent), "model")) == 'v';
 }
 
-bool isFakeClient (edict_t *ent) {
+bool BotUtils::isFakeClient (edict_t *ent) {
    if (bots.getBot (ent) != nullptr || (!engine.isNullEntity (ent) && (ent->v.flags & FL_FAKECLIENT))) {
       return true;
    }
    return false;
 }
 
-bool openConfig (const char *fileName, const char *errorIfNotExists, MemFile *outFile, bool languageDependant /*= false*/) {
+bool BotUtils::openConfig (const char *fileName, const char *errorIfNotExists, MemFile *outFile, bool languageDependant /*= false*/) {
    if (outFile->isValid ()) {
       outFile->close ();
    }
@@ -459,57 +229,31 @@ bool openConfig (const char *fileName, const char *errorIfNotExists, MemFile *ou
    return true;
 }
 
-void checkWelcome (void) {
+void BotUtils::checkWelcome (void) {
    // the purpose of this function, is  to send quick welcome message, to the listenserver entity.
 
-   if (engine.isDedicated ())
-      return;
-
-   static bool messageSent = !yb_display_welcome_text.boolean ();
-   static float receiveTime = 0.0f;
-
-   if (messageSent) {
+   if (engine.isDedicated () || !yb_display_welcome_text.boolean () || !m_needToSendWelcome) {
       return;
    }
+   m_welcomeReceiveTime = 0.0f;
 
-   if (g_gameFlags & GAME_LEGACY) {
-      g_gameWelcomeSent = true;
+   if (engine.is (GAME_LEGACY)) {
+      m_needToSendWelcome = true;
+      return;
+   }
+   bool needToSendMsg = (waypoints.length () > 0 ? m_needToSendWelcome : true);
+
+   if (isAlive (engine.getLocalEntity ()) && m_welcomeReceiveTime < 1.0 && needToSendMsg) {
+      m_welcomeReceiveTime = engine.timebase () + 4.0f; // receive welcome message in four seconds after game has commencing
    }
 
-   static StringArray sentences;
-
-   if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH_ENGINE)) && sentences.empty ()) {
-      // add default messages
-      sentences.push ("hello user,communication is acquired");
-      sentences.push ("your presence is acknowledged");
-      sentences.push ("high man, your in command now");
-      sentences.push ("blast your hostile for good");
-      sentences.push ("high man, kill some idiot here");
-      sentences.push ("is there a doctor in the area");
-      sentences.push ("warning, experimental materials detected");
-      sentences.push ("high amigo, shoot some but");
-      sentences.push ("attention, hours of work software, detected");
-      sentences.push ("time for some bad ass explosion");
-      sentences.push ("bad ass son of a breach device activated");
-      sentences.push ("high, do not question this great service");
-      sentences.push ("engine is operative, hello and goodbye");
-      sentences.push ("high amigo, your administration has been great last day");
-      sentences.push ("attention, expect experimental armed hostile presence");
-      sentences.push ("warning, medical attention required");
-   }
-   bool needToSendMsg = (waypoints.length () > 0 ? g_gameWelcomeSent : true);
-
-   if (isAlive (g_hostEntity) && receiveTime < 1.0 && needToSendMsg) {
-      receiveTime = engine.timebase () + 4.0f; // receive welcome message in four seconds after game has commencing
-   }
-
-   if (receiveTime > 0.0f && receiveTime < engine.timebase () && needToSendMsg) {
-      if (!(g_gameFlags & (GAME_MOBILITY | GAME_XASH_ENGINE))) {
-         engine.execCmd ("speak \"%s\"", sentences.random ().chars ());
+   if (m_welcomeReceiveTime > 0.0f && needToSendMsg) {
+      if (!engine.is (GAME_MOBILITY | GAME_XASH_ENGINE)) {
+         engine.execCmd ("speak \"%s\"", m_sentences.random ().chars ());
       }
       engine.chatPrint ("----- %s v%s (Build: %u), {%s}, (c) %s, by %s (%s)-----", PRODUCT_SHORT_NAME, PRODUCT_VERSION, buildNumber (), PRODUCT_DATE, PRODUCT_END_YEAR, PRODUCT_AUTHOR, PRODUCT_URL);
 
-      MessageWriter (MSG_ONE, SVC_TEMPENTITY, Vector::null (), g_hostEntity)
+      MessageWriter (MSG_ONE, SVC_TEMPENTITY, Vector::null (), engine.getLocalEntity ())
          .writeByte (TE_TEXTMESSAGE)
          .writeByte (1)
          .writeShort (MessageWriter::fs16 (-1, 1 << 13))
@@ -529,12 +273,12 @@ void checkWelcome (void) {
          .writeShort (MessageWriter::fu16 (0.1f, 1 << 8))
          .writeString (format ("\nServer is running %s v%s (Build: %u)\nDeveloped by %s\n\n%s", PRODUCT_SHORT_NAME, PRODUCT_VERSION, buildNumber (), PRODUCT_AUTHOR, waypoints.getAuthor ()));
 
-      receiveTime = 0.0;
-      messageSent = true;
+      m_welcomeReceiveTime = 0.0f;
+      m_needToSendWelcome = false;
    }
 }
 
-void logEntry (bool outputToConsole, int logLevel, const char *format, ...) {
+void BotUtils::logEntry (bool outputToConsole, int logLevel, const char *format, ...) {
    // this function logs a message to the message log file root directory.
 
    va_list ap;
@@ -599,7 +343,7 @@ void logEntry (bool outputToConsole, int logLevel, const char *format, ...) {
 
    if (logLevel == LL_FATAL) {
       bots.kickEveryone (true);
-      cleanupGarbage ();
+      waypoints.init ();
 
 #if defined(PLATFORM_WIN32)
       DestroyWindow (GetForegroundWindow ());
@@ -616,7 +360,7 @@ void logEntry (bool outputToConsole, int logLevel, const char *format, ...) {
    }
 }
 
-bool findNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool sameTeam, bool needBot, bool isAlive, bool needDrawn, bool needBotWithC4) {
+bool BotUtils::findNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool sameTeam, bool needBot, bool isAlive, bool needDrawn, bool needBotWithC4) {
    // this function finds nearest to to, player with set of parameters, like his
    // team, live status, search distance etc. if needBot is true, then pvHolder, will
    // be filled with bot pointer, else with edict pointer(!).
@@ -626,9 +370,7 @@ bool findNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
 
    int toTeam = engine.getTeam (to);
 
-   for (int i = 0; i < engine.maxClients (); i++) {
-      const Client &client = g_clients[i];
-
+   for (const auto &client : m_clients) {
       if (!(client.flags & CF_USED) || client.ent == to) {
          continue;
       }
@@ -657,7 +399,7 @@ bool findNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool
    return true;
 }
 
-void attachSoundsToClients (edict_t *ent, const char *sample, float volume) {
+void BotUtils::attachSoundsToClients (edict_t *ent, const char *sample, float volume) {
    // this function called by the sound hooking code (in emit_sound) enters the played sound into
    // the array associated with the entity
 
@@ -676,7 +418,7 @@ void attachSoundsToClients (edict_t *ent, const char *sample, float volume) {
 
       // loop through all players
       for (int i = 0; i < engine.maxClients (); i++) {
-         const Client &client = g_clients[i];
+         const Client &client = m_clients[i];
 
          if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE)) {
             continue;
@@ -695,7 +437,7 @@ void attachSoundsToClients (edict_t *ent, const char *sample, float volume) {
    if (index < 0 || index >= engine.maxClients ()) {
       return;
    }
-   Client &client = g_clients[index];
+   Client &client = m_clients[index];
 
    if (strncmp ("player/bhit_flesh", sample, 17) == 0 || strncmp ("player/headshot", sample, 15) == 0) {
       // hit/fall sound?
@@ -741,14 +483,14 @@ void attachSoundsToClients (edict_t *ent, const char *sample, float volume) {
    }
 }
 
-void simulateSoundUpdates (int playerIndex) {
+void BotUtils::simulateSoundUpdates (int playerIndex) {
    // this function tries to simulate playing of sounds to let the bots hear sounds which aren't
    // captured through server sound hooking
 
    if (playerIndex < 0 || playerIndex >= engine.maxClients ()) {
       return; // reliability check
    }
-   Client &client = g_clients[playerIndex];
+   Client &client = m_clients[playerIndex];
 
    float hearDistance = 0.0f;
    float timeSound = 0.0f;
@@ -806,7 +548,40 @@ void simulateSoundUpdates (int playerIndex) {
    }
 }
 
-int buildNumber (void) {
+void BotUtils::updateClients (void) {
+   // record some stats of all players on the server
+   for (int i = 0; i < engine.maxClients (); i++) {
+      edict_t *player = engine.entityOfIndex (i + 1);
+      Client &client = m_clients[i];
+
+      if (!engine.isNullEntity (player) && (player->v.flags & FL_CLIENT)) {
+         client.ent = player;
+         client.flags |= CF_USED;
+
+         if (util.isAlive (player)) {
+            client.flags |= CF_ALIVE;
+         }
+         else {
+            client.flags &= ~CF_ALIVE;
+         }
+
+         if (client.flags & CF_ALIVE) {
+            // keep the clipping mode enabled, or it can be turned off after new round has started
+            if (engine.getLocalEntity () == player && waypoints.hasEditFlag (WS_EDIT_NOCLIP)) {
+               engine.getLocalEntity ()->v.movetype = MOVETYPE_NOCLIP;
+            }
+            client.origin = player->v.origin;
+            simulateSoundUpdates (i);
+         }
+      }
+      else {
+         client.flags &= ~(CF_USED | CF_ALIVE);
+         client.ent = nullptr;
+      }
+   }
+}
+
+int BotUtils::buildNumber (void) {
    // this function generates build number from the compiler date macros
 
    static int buildNumber = 0;
@@ -848,7 +623,7 @@ int buildNumber (void) {
    return buildNumber;
 }
 
-int getWeaponData (bool needString, const char *weaponAlias, int weaponIndex) {
+int BotUtils::getWeaponAlias (bool needString, const char *weaponAlias, int weaponIndex) {
    // this function returning weapon id from the weapon alias and vice versa.
 
    // structure definition for weapon tab
