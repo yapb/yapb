@@ -1949,7 +1949,7 @@ public:
       set (buffer, at);
    }
 
-   inline const String &getName (void) const {
+   inline const String &getName (void) {
       return m_name;
    }
 
@@ -1961,11 +1961,11 @@ public:
       return m_values[at];
    }
 
-   inline const int getInt (const size_t at = 0) {
+   inline int getInt (const size_t at = 0) {
       return atoi (getString (at).chars ());
    }
 
-   inline const float getFloat (const size_t at = 0) {
+   inline float getFloat (const size_t at = 0) {
       return static_cast <float> (atof (getString (at).chars ()));
    }
 

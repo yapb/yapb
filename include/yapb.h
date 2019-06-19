@@ -461,10 +461,10 @@ enum WaypointEditState : int {
 };
 
 // bot known file headers
-const char FH_WAYPOINT[] = "PODWAY!";
-const char FH_EXPERIENCE[] = "PODEXP!";
-const char FH_VISTABLE[] = "PODVIS!";
-const char FH_MATRIX[] = "PODMAT!";
+constexpr char FH_WAYPOINT[] = "PODWAY!";
+constexpr char FH_EXPERIENCE[] = "PODEXP!";
+constexpr char FH_VISTABLE[] = "PODVIS!";
+constexpr char FH_MATRIX[] = "PODMAT!";
 
 constexpr int FV_WAYPOINT = 7;
 constexpr int FV_EXPERIENCE = 4;
@@ -1876,7 +1876,7 @@ public:
    }
 
    // get array of clients
-   inline auto &getClients (void) {
+   inline Array <Client> &getClients (void) {
       return m_clients;
    }
 
@@ -1886,7 +1886,7 @@ public:
    }
 
    // get sinle client as ref
-   inline auto &getClient (const int index) {
+   inline Client &getClient (const int index) {
       return m_clients[index];
    }
 
@@ -1904,7 +1904,7 @@ public:
 // expose bot super-globals
 static auto &waypoints = Waypoint::ref ();
 static auto &bots = BotManager::ref ();
-static auto &engine = Engine::ref ();
+static auto &game = Game::ref ();
 static auto &rng = RandomSequence::ref ();
 static auto &illum = LightMeasure::ref ();
 static auto &conf = Config::ref ();
@@ -1919,5 +1919,5 @@ extern ConVar yb_ignore_enemies;
 #include <resource.h>
 
 inline int Bot::index (void) {
-   return engine.indexOfEntity (ent ());
+   return game.indexOfEntity (ent ());
 }

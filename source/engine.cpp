@@ -13,7 +13,7 @@ ConVar sv_skycolor_r ("sv_skycolor_r", nullptr, VT_NOREGISTER);
 ConVar sv_skycolor_g ("sv_skycolor_g", nullptr, VT_NOREGISTER);
 ConVar sv_skycolor_b ("sv_skycolor_b", nullptr, VT_NOREGISTER);
 
-Engine::Engine (void) {
+Game::Game (void) {
    m_startEntity = nullptr;
    m_localEntity = nullptr;
 
@@ -37,7 +37,7 @@ Engine::Engine (void) {
    m_cvars.clear ();
 }
 
-Engine::~Engine (void) {
+Game::~Game (void) {
    resetMessages ();
 
    for (int i = 0; i < NETMSG_NUM; i++) {
@@ -45,7 +45,7 @@ Engine::~Engine (void) {
    }
 }
 
-void Engine::precache (void) {
+void Game::precache (void) {
    if (m_precached) {
       return;
    }
@@ -64,13 +64,13 @@ void Engine::precache (void) {
    m_mapFlags = 0; // reset map type as worldspawn is the first entity spawned
 
    // detect official csbots here, as they causing crash in linkent code when active for some reason
-   if (!(engine.is (GAME_LEGACY)) && engfuncs.pfnCVarGetPointer ("bot_stop") != nullptr) {
+   if (!(game.is (GAME_LEGACY)) && engfuncs.pfnCVarGetPointer ("bot_stop") != nullptr) {
       m_gameFlags |= GAME_OFFICIAL_CSBOT;
    }
    pushRegStackToEngine (true);
 }
 
-void Engine::levelInitialize (void) {
+void Game::levelInitialize (void) {
    // this function precaches needed models and initialize class variables
 
    m_spawnCount[TEAM_COUNTER] = 0;
@@ -82,7 +82,7 @@ void Engine::levelInitialize (void) {
       auto ent = engfuncs.pfnPEntityOfEntIndex (i);
 
       // only valid entities
-      if (engine.isNullEntity (ent) || ent->free || ent->v.classname == 0) {
+      if (game.isNullEntity (ent) || ent->free || ent->v.classname == 0) {
          continue;
       }
       auto classname = STRING (ent->v.classname);
@@ -94,7 +94,7 @@ void Engine::levelInitialize (void) {
          bots.initRound ();
       }
       else if (strcmp (classname, "player_weaponstrip") == 0) {
-         if ((engine.is (GAME_LEGACY)) && (STRING (ent->v.target))[0] == '\0') {
+         if ((game.is (GAME_LEGACY)) && (STRING (ent->v.target))[0] == '\0') {
             ent->v.target = ent->v.targetname = engfuncs.pfnAllocString ("fake");
          }
          else {
@@ -145,15 +145,15 @@ void Engine::levelInitialize (void) {
    }
 
    // next maps doesn't have map-specific entities, so determine it by name
-   if (strncmp (engine.getMapName (), "fy_", 3) == 0) {
+   if (strncmp (game.getMapName (), "fy_", 3) == 0) {
       m_mapFlags |= MAP_FY;
    }
-   else if (strncmp (engine.getMapName (), "ka_", 3) == 0) {
+   else if (strncmp (game.getMapName (), "ka_", 3) == 0) {
       m_mapFlags |= MAP_KA;
    }
 }
 
-void Engine::print (const char *fmt, ...) {
+void Game::print (const char *fmt, ...) {
    // this function outputs string into server console
 
    va_list ap;
@@ -167,7 +167,7 @@ void Engine::print (const char *fmt, ...) {
    engfuncs.pfnServerPrint (string);
 }
 
-void Engine::chatPrint (const char *fmt, ...) {
+void Game::chatPrint (const char *fmt, ...) {
    va_list ap;
    char string[MAX_PRINT_BUFFER];
 
@@ -186,7 +186,7 @@ void Engine::chatPrint (const char *fmt, ...) {
       .writeString (string);
 }
 
-void Engine::centerPrint (const char *fmt, ...) {
+void Game::centerPrint (const char *fmt, ...) {
    va_list ap;
    char string[MAX_PRINT_BUFFER];
 
@@ -205,7 +205,7 @@ void Engine::centerPrint (const char *fmt, ...) {
       .writeString (string);
 }
 
-void Engine::clientPrint (edict_t *ent, const char *fmt, ...) {
+void Game::clientPrint (edict_t *ent, const char *fmt, ...) {
    va_list ap;
    char string[MAX_PRINT_BUFFER];
 
@@ -221,7 +221,7 @@ void Engine::clientPrint (edict_t *ent, const char *fmt, ...) {
    engfuncs.pfnClientPrintf (ent, print_console, string);
 }
 
-void Engine::drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, int red, int green, int blue, int brightness, int speed, int life, DrawLineType type) {
+void Game::drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, int red, int green, int blue, int brightness, int speed, int life, DrawLineType type) {
    // this function draws a arrow visible from the client side of the player whose player entity
    // is pointed to by ent, from the vector location start to the vector location end,
    // which is supposed to last life tenths seconds, and having the color defined by RGB.
@@ -251,7 +251,7 @@ void Engine::drawLine (edict_t *ent, const Vector &start, const Vector &end, int
       .writeByte (speed); // speed
 }
 
-void Engine::testLine (const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult *ptr) {
+void Game::testLine (const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult *ptr) {
    // this function traces a line dot by dot, starting from vecStart in the direction of vecEnd,
    // ignoring or not monsters (depending on the value of IGNORE_MONSTERS, true or false), and stops
    // at the first obstacle encountered, returning the results of the trace in the TraceResult structure
@@ -272,7 +272,7 @@ void Engine::testLine (const Vector &start, const Vector &end, int ignoreFlags, 
    engfuncs.pfnTraceLine (start, end, engineFlags, ignoreEntity, ptr);
 }
 
-void Engine::testHull (const Vector &start, const Vector &end, int ignoreFlags, int hullNumber, edict_t *ignoreEntity, TraceResult *ptr) {
+void Game::testHull (const Vector &start, const Vector &end, int ignoreFlags, int hullNumber, edict_t *ignoreEntity, TraceResult *ptr) {
    // this function traces a hull dot by dot, starting from vecStart in the direction of vecEnd,
    // ignoring or not monsters (depending on the value of IGNORE_MONSTERS, true or
    // false), and stops at the first obstacle encountered, returning the results
@@ -287,7 +287,7 @@ void Engine::testHull (const Vector &start, const Vector &end, int ignoreFlags, 
    engfuncs.pfnTraceHull (start, end, !!(ignoreFlags & TRACE_IGNORE_MONSTERS), hullNumber, ignoreEntity, ptr);
 }
 
-float Engine::getWaveLen (const char *fileName) {
+float Game::getWaveLen (const char *fileName) {
    extern ConVar yb_chatter_path;
    const char *filePath = util.format ("%s/%s/%s.wav", getModName (), yb_chatter_path.str (), fileName);
 
@@ -298,7 +298,7 @@ float Engine::getWaveLen (const char *fileName) {
       return 0.0f;
    }
    // check if we have engine function for this
-   if (!engine.is (GAME_XASH_ENGINE) && engfuncs.pfnGetApproxWavePlayLen != nullptr) {
+   if (!game.is (GAME_XASH_ENGINE) && engfuncs.pfnGetApproxWavePlayLen != nullptr) {
       fp.close ();
       return engfuncs.pfnGetApproxWavePlayLen (filePath) / 1000.0f;
    }
@@ -340,14 +340,14 @@ float Engine::getWaveLen (const char *fileName) {
    return static_cast <float> (waveHdr.dataChunkLength) / static_cast <float> (waveHdr.bytesPerSecond);
 }
 
-bool Engine::isDedicated (void) {
+bool Game::isDedicated (void) {
    // return true if server is dedicated server, false otherwise
    static bool dedicated = engfuncs.pfnIsDedicatedServer () > 0;
 
    return dedicated;
 }
 
-const char *Engine::getModName (void) {
+const char *Game::getModName (void) {
    // this function returns mod name without path
 
    static char modname[256];
@@ -376,7 +376,7 @@ const char *Engine::getModName (void) {
    return &modname[0];
 }
 
-const char *Engine::getMapName (void) {
+const char *Game::getMapName (void) {
    // this function gets the map name and store it in the map_name global string variable.
 
    static char engineMap[256];
@@ -385,7 +385,7 @@ const char *Engine::getMapName (void) {
    return &engineMap[0];
 }
 
-Vector Engine::getAbsPos (edict_t *ent) {
+Vector Game::getAbsPos (edict_t *ent) {
    // this expanded function returns the vector origin of a bounded entity, assuming that any
    // entity that has a bounding box has its center at the center of the bounding box itself.
 
@@ -399,7 +399,7 @@ Vector Engine::getAbsPos (edict_t *ent) {
    return ent->v.origin;
 }
 
-void Engine::registerCmd (const char *command, void func (void)) {
+void Game::registerCmd (const char *command, void func (void)) {
    // this function tells the engine that a new server command is being declared, in addition
    // to the standard ones, whose name is command_name. The engine is thus supposed to be aware
    // that for every "command_name" server command it receives, it should call the function
@@ -412,11 +412,11 @@ void Engine::registerCmd (const char *command, void func (void)) {
    engfuncs.pfnAddServerCommand (const_cast <char *> (command), func);
 }
 
-void Engine::playSound (edict_t *ent, const char *sound) {
+void Game::playSound (edict_t *ent, const char *sound) {
    engfuncs.pfnEmitSound (ent, CHAN_WEAPON, sound, 1.0f, ATTN_NORM, 0, 100);
 }
 
-void Engine::execBotCmd (edict_t *ent, const char *fmt, ...) {
+void Game::execBotCmd (edict_t *ent, const char *fmt, ...) {
    // the purpose of this function is to provide fakeclients (bots) with the same client
    // command-scripting advantages (putting multiple commands in one line between semicolons)
    // as real players. It is an improved version of botman's FakeClientCommand, in which you
@@ -495,7 +495,7 @@ void Engine::execBotCmd (edict_t *ent, const char *fmt, ...) {
    m_argumentCount = 0;
 }
 
-bool Engine::isSoftwareRenderer (void) {
+bool Game::isSoftwareRenderer (void) {
 
    // xash always use "hw" structures
    if (is (GAME_XASH_ENGINE)) {
@@ -507,7 +507,7 @@ bool Engine::isSoftwareRenderer (void) {
       return true;
    }
 
-   // and on only windows version you can use software-render engine. Linux, OSX always defaults to OpenGL
+   // and on only windows version you can use software-render game. Linux, OSX always defaults to OpenGL
 #if defined (PLATFORM_WIN32)
    static bool isSoftware = GetModuleHandleA ("sw");
 #else
@@ -516,7 +516,7 @@ bool Engine::isSoftwareRenderer (void) {
    return isSoftware;
 }
 
-const char *Engine::getField (const char *string, size_t id) {
+const char *Game::getField (const char *string, size_t id) {
    // this function gets and returns a particular field in a string where several strings are concatenated
 
    const int IterBufMax = 4;
@@ -573,7 +573,7 @@ const char *Engine::getField (const char *string, size_t id) {
    return ptr;
 }
 
-void Engine::execCmd (const char *fmt, ...) {
+void Game::execCmd (const char *fmt, ...) {
    // this function asks the engine to execute a server command
 
    va_list ap;
@@ -588,7 +588,7 @@ void Engine::execCmd (const char *fmt, ...) {
    engfuncs.pfnServerCommand (string);
 }
 
-void Engine::pushVarToRegStack (const char *variable, const char *value, VarType varType, bool regMissing, const char *regVal, ConVar *self) {
+void Game::pushVarToRegStack (const char *variable, const char *value, VarType varType, bool regMissing, const char *regVal, ConVar *self) {
    // this function adds globally defined variable to registration stack
 
    VarPair pair;
@@ -618,7 +618,7 @@ void Engine::pushVarToRegStack (const char *variable, const char *value, VarType
    m_cvars.push (pair);
 }
 
-void Engine::pushRegStackToEngine (bool gameVars) {
+void Game::pushRegStackToEngine (bool gameVars) {
    // this function pushes all added global variables to engine registration
 
    for (auto &var : m_cvars) {
@@ -652,7 +652,7 @@ void Engine::pushRegStackToEngine (bool gameVars) {
    }
 }
 
-const char *Engine::translate (const char *input) {
+const char *Game::translate (const char *input) {
    // this function translate input string into needed language
 
    if (isDedicated ()) {
@@ -666,7 +666,7 @@ const char *Engine::translate (const char *input) {
    return input; // nothing found
 }
 
-void Engine::processMessages (void *ptr) {
+void Game::processMessages (void *ptr) {
    if (m_msgBlock.msg == NETMSG_UNDEFINED) {
       return;
    }
@@ -1112,7 +1112,7 @@ void Engine::processMessages (void *ptr) {
             auto &client = util.getClient (playerIndex - 1);
 
             client.team2 = team;
-            client.team = engine.is (GAME_CSDM_FFA) ? playerIndex : team;
+            client.team = game.is (GAME_CSDM_FFA) ? playerIndex : team;
          }
          break;
       }
@@ -1160,8 +1160,8 @@ void Engine::processMessages (void *ptr) {
    m_msgBlock.state++; // and finally update network message state
 }
 
-bool Engine::loadCSBinary (void) {
-   const char *modname = engine.getModName ();
+bool Game::loadCSBinary (void) {
+   const char *modname = game.getModName ();
 
    if (!modname) {
       return false;
@@ -1256,12 +1256,12 @@ bool Engine::loadCSBinary (void) {
    return false;
 }
 
-bool Engine::postload (void) {
+bool Game::postload (void) {
    // register our cvars
-   engine.pushRegStackToEngine ();
+   game.pushRegStackToEngine ();
 
    // ensure we're have all needed directories
-   const char *mod = engine.getModName ();
+   const char *mod = game.getModName ();
 
    // create the needed paths
    File::pathCreate (const_cast <char *> (util.format ("%s/addons/yapb/conf/lang", mod)));
@@ -1326,7 +1326,7 @@ bool Engine::postload (void) {
    m_gameLib.load (gameDLLName);
 
    if (!m_gameLib.isValid ()) {
-      util.logEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gameDLLName, engine.getModName ());
+      util.logEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gameDLLName, game.getModName ());
       return true;
    }
    printGame ();
@@ -1335,7 +1335,7 @@ bool Engine::postload (void) {
    bool binaryLoaded = loadCSBinary ();
 
    if (!binaryLoaded && !is (GAME_METAMOD)) {
-      util.logEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", engine.getModName ());
+      util.logEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", game.getModName ());
       return true;
    }
    printGame ();
@@ -1347,8 +1347,8 @@ bool Engine::postload (void) {
    return false;
 }
 
-void Engine::detectDeathmatch (void) {
-   if (!engine.is (GAME_METAMOD | GAME_REGAMEDLL)) {
+void Game::detectDeathmatch (void) {
+   if (!game.is (GAME_METAMOD | GAME_REGAMEDLL)) {
       return;
    }
    static auto dmActive = engfuncs.pfnCVarGetPointer ("csdm_active");
@@ -1375,8 +1375,8 @@ void Engine::detectDeathmatch (void) {
    }
 }
 
-void Engine::slowFrame (void) {
-   if (m_slowFrame > engine.timebase ()) {
+void Game::slowFrame (void) {
+   if (m_slowFrame > game.timebase ()) {
       return;
    }
    extern ConVar yb_password_key, yb_password;
@@ -1418,7 +1418,7 @@ void Engine::slowFrame (void) {
    m_slowFrame = timebase () + 1.0f;
 }
 
-inline int Engine::getTeam (edict_t *ent) {
+inline int Game::getTeam (edict_t *ent) {
    return util.getClient (indexOfEntity (ent) - 1).team;
 }
 
@@ -1444,7 +1444,7 @@ void LightMeasure::animateLight (void) {
    }
 
    // 'm' is normal light, 'a' is no light, 'z' is double bright
-   const int index = static_cast <int> (engine.timebase () * 10.0f);
+   const int index = static_cast <int> (game.timebase () * 10.0f);
 
    for (int j = 0; j < MAX_LIGHTSTYLES; j++) {
       if (!m_lightstyle[j].length) {
@@ -1563,7 +1563,7 @@ float LightMeasure::getLightLevel (const Vector &point) {
 
    // it's depends if we're are on dedicated or on listenserver
    auto recursiveCheck = [&] (void) -> bool {
-      if (!engine.isSoftwareRenderer ()) {
+      if (!game.isSoftwareRenderer ()) {
          return recursiveLightPoint <msurface_hw_t, mnode_hw_t> (reinterpret_cast <mnode_hw_t *> (m_worldModel->nodes), point, endPoint);
       }
       return recursiveLightPoint <msurface_t, mnode_t> (m_worldModel->nodes, point, endPoint);

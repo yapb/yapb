@@ -15,12 +15,12 @@ ConVar yb_debug_heuristic_type ("yb_debug_heuristic_type", "0");
 int Bot::searchGoal (void) {
 
    // chooses a destination (goal) waypoint for a bot
-   if (!bots.isBombPlanted () && m_team == TEAM_TERRORIST && engine.mapIs (MAP_DE)) {
+   if (!bots.isBombPlanted () && m_team == TEAM_TERRORIST && game.mapIs (MAP_DE)) {
       edict_t *pent = nullptr;
 
-      while (!engine.isNullEntity (pent = engfuncs.pfnFindEntityByString (pent, "classname", "weaponbox"))) {
+      while (!game.isNullEntity (pent = engfuncs.pfnFindEntityByString (pent, "classname", "weaponbox"))) {
          if (strcmp (STRING (pent->v.model), "models/w_backpack.mdl") == 0) {
-            int index = waypoints.getNearest (engine.getAbsPos (pent));
+            int index = waypoints.getNearest (game.getAbsPos (pent));
 
             if (waypoints.exists (index)) {
                return m_loosedBombWptIndex = index;
@@ -77,14 +77,14 @@ int Bot::searchGoal (void) {
    offensive = m_agressionLevel * 100.0f;
    defensive = m_fearLevel * 100.0f;
 
-   if (engine.mapIs (MAP_AS | MAP_CS)) {
+   if (game.mapIs (MAP_AS | MAP_CS)) {
       if (m_team == TEAM_TERRORIST) {
          defensive += 25.0f;
          offensive -= 25.0f;
       }
       else if (m_team == TEAM_COUNTER) {
          // on hostage maps force more bots to save hostages
-         if (engine.mapIs (MAP_CS)) {
+         if (game.mapIs (MAP_CS)) {
             defensive -= 25.0f - m_difficulty * 0.5f;
             offensive += 25.0f + m_difficulty * 5.0f;
          }
@@ -94,7 +94,7 @@ int Bot::searchGoal (void) {
          }
       }
    }
-   else if (engine.mapIs (MAP_DE) && m_team == TEAM_COUNTER) {
+   else if (game.mapIs (MAP_DE) && m_team == TEAM_COUNTER) {
       if (bots.isBombPlanted () && taskId () != TASK_ESCAPEFROMBOMB && !waypoints.getBombPos ().empty ()) {
 
          if (bots.hasBombSay (BSS_NEED_TO_FIND_CHAT)) {
@@ -110,7 +110,7 @@ int Bot::searchGoal (void) {
          defensive += 10.0f;
       }
    }
-   else if (engine.mapIs (MAP_DE) && m_team == TEAM_TERRORIST && bots.getRoundStartTime () + 10.0f < engine.timebase ()) {
+   else if (game.mapIs (MAP_DE) && m_team == TEAM_TERRORIST && bots.getRoundStartTime () + 10.0f < game.timebase ()) {
       // send some terrorists to guard planted bomb
       if (!m_defendedBomb && bots.isBombPlanted () && taskId () != TASK_ESCAPEFROMBOMB && getBombTimeleft () >= 15.0) {
          return m_chosenGoalIndex = getDefendPoint (waypoints.getBombPos ());
@@ -167,7 +167,7 @@ int Bot::getGoalProcess (int tactic, IntArray *defensive, IntArray *offsensive) 
    else if (tactic == 3 && !waypoints.m_goalPoints.empty ()) // map goal waypoint
    {
       // force bomber to select closest goal, if round-start goal was reset by something
-      if (m_hasC4 && bots.getRoundStartTime () + 20.0f < engine.timebase ()) {
+      if (m_hasC4 && bots.getRoundStartTime () + 20.0f < game.timebase ()) {
          float minDist = 9999999.0f;
          int count = 0;
 
@@ -279,8 +279,8 @@ void Bot::resetCollision (void) {
 void Bot::ignoreCollision (void) {
    resetCollision ();
 
-   m_prevTime = engine.timebase () + 1.2f;
-   m_lastCollTime = engine.timebase () + 1.5f;
+   m_prevTime = game.timebase () + 1.2f;
+   m_lastCollTime = game.timebase () + 1.5f;
    m_isStuck = false;
    m_checkTerrain = false;
    m_prevSpeed = m_moveSpeed;
@@ -294,28 +294,28 @@ void Bot::avoidIncomingPlayers (edict_t *touch) {
       return;
    }
 
-   int ownId = engine.indexOfEntity (ent ());
-   int otherId = engine.indexOfEntity (touch);
+   int ownId = game.indexOfEntity (ent ());
+   int otherId = game.indexOfEntity (touch);
 
    if (ownId < otherId) {
       return;
    }
    
    if (m_avoid) {
-      int currentId = engine.indexOfEntity (m_avoid);
+      int currentId = game.indexOfEntity (m_avoid);
 
       if (currentId < otherId) {
          return;
       }
    }
    m_avoid = touch;
-   m_avoidTime = engine.timebase () + 0.33f + calcThinkInterval ();
+   m_avoidTime = game.timebase () + 0.33f + calcThinkInterval ();
 }
 
 bool Bot::doPlayerAvoidance (const Vector &normal) {
    // avoid collision entity, got it form official csbot
 
-   if (m_avoidTime > engine.timebase () && util.isAlive (m_avoid)) {
+   if (m_avoidTime > game.timebase () && util.isAlive (m_avoid)) {
 
       Vector dir (cr::cosf (pev->v_angle.y), cr::sinf (pev->v_angle.y), 0.0f);
       Vector lat (-dir.y, dir.x, 0.0f);
@@ -359,15 +359,15 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
 
    // Standing still, no need to check?
    // FIXME: doesn't care for ladder movement (handled separately) should be included in some way
-   if ((m_moveSpeed >= 10.0f || m_strafeSpeed >= 10.0f) && m_lastCollTime < engine.timebase () && m_seeEnemyTime + 0.8f < engine.timebase () && taskId () != TASK_ATTACK) {
+   if ((m_moveSpeed >= 10.0f || m_strafeSpeed >= 10.0f) && m_lastCollTime < game.timebase () && m_seeEnemyTime + 0.8f < game.timebase () && taskId () != TASK_ATTACK) {
 
       // didn't we move enough previously?
       if (movedDistance < 2.0f && m_prevSpeed >= 20.0f) {
-         m_prevTime = engine.timebase (); // then consider being stuck
+         m_prevTime = game.timebase (); // then consider being stuck
          m_isStuck = true;
 
          if (cr::fzero (m_firstCollideTime)) {
-            m_firstCollideTime = engine.timebase () + 0.2f;
+            m_firstCollideTime = game.timebase () + 0.2f;
          }
       }
       // not stuck yet
@@ -375,9 +375,9 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
          // test if there's something ahead blocking the way
          if (cantMoveForward (dirNormal, &tr) && !isOnLadder ()) {
             if (m_firstCollideTime == 0.0f) {
-               m_firstCollideTime = engine.timebase () + 0.2f;
+               m_firstCollideTime = game.timebase () + 0.2f;
             }
-            else if (m_firstCollideTime <= engine.timebase ()) {
+            else if (m_firstCollideTime <= game.timebase ()) {
                m_isStuck = true;
             }
          }
@@ -388,7 +388,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
 
       // not stuck?
       if (!m_isStuck) {
-         if (m_probeTime + 0.5f < engine.timebase ()) {
+         if (m_probeTime + 0.5f < game.timebase ()) {
             resetCollision (); // reset collision memory if not being stuck for 0.5 secs
          }
          else {
@@ -415,7 +415,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
             bits |= (PROBE_JUMP | PROBE_STRAFE);
          }
          else {
-            bits |= (PROBE_STRAFE | (m_jumpStateTimer < engine.timebase () ? PROBE_JUMP : 0));
+            bits |= (PROBE_STRAFE | (m_jumpStateTimer < game.timebase () ? PROBE_JUMP : 0));
          }
 
          // collision check allowed if not flying through the air
@@ -434,10 +434,10 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                state[i + 1] = 0;
 
                // to start strafing, we have to first figure out if the target is on the left side or right side
-               engine.makeVectors (m_moveAngles);
+               game.makeVectors (m_moveAngles);
 
                Vector dirToPoint = (pev->origin - m_destOrigin).normalize2D ();
-               Vector rightSide = engine.vec.right.normalize2D ();
+               Vector rightSide = game.vec.right.normalize2D ();
 
                bool dirRight = false;
                bool dirLeft = false;
@@ -450,21 +450,21 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                else {
                   dirLeft = true;
                }
-               const Vector &testDir = m_moveSpeed > 0.0f ? engine.vec.forward : -engine.vec.forward;
+               const Vector &testDir = m_moveSpeed > 0.0f ? game.vec.forward : -game.vec.forward;
 
                // now check which side is blocked
-               src = pev->origin + engine.vec.right * 32.0f;
+               src = pev->origin + game.vec.right * 32.0f;
                dst = src + testDir * 32.0f;
 
-               engine.testHull (src, dst, TRACE_IGNORE_MONSTERS, head_hull, ent (), &tr);
+               game.testHull (src, dst, TRACE_IGNORE_MONSTERS, head_hull, ent (), &tr);
 
                if (tr.flFraction != 1.0f)
                   blockedRight = true;
 
-               src = pev->origin - engine.vec.right * 32.0f;
+               src = pev->origin - game.vec.right * 32.0f;
                dst = src + testDir * 32.0f;
 
-               engine.testHull (src, dst, TRACE_IGNORE_MONSTERS, head_hull, ent (), &tr);
+               game.testHull (src, dst, TRACE_IGNORE_MONSTERS, head_hull, ent (), &tr);
 
                if (tr.flFraction != 1.0f) {
                   blockedLeft = true;
@@ -507,18 +507,18 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                }
 
                if (seesEntity (m_destOrigin)) {
-                  engine.makeVectors (m_moveAngles);
+                  game.makeVectors (m_moveAngles);
 
                   src = eyePos ();
-                  src = src + engine.vec.right * 15.0f;
+                  src = src + game.vec.right * 15.0f;
 
-                  engine.testLine (src, m_destOrigin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
+                  game.testLine (src, m_destOrigin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
 
                   if (tr.flFraction >= 1.0f) {
                      src = eyePos ();
-                     src = src - engine.vec.right * 15.0f;
+                     src = src - game.vec.right * 15.0f;
 
-                     engine.testLine (src, m_destOrigin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
+                     game.testLine (src, m_destOrigin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
 
                      if (tr.flFraction >= 1.0f) {
                         state[i] += 5;
@@ -532,7 +532,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                   src = pev->origin + Vector (0.0f, 0.0f, -17.0f);
                }
                dst = src + dirNormal * 30.0f;
-               engine.testLine (src, dst, TRACE_IGNORE_EVERYTHING, ent (), &tr);
+               game.testLine (src, dst, TRACE_IGNORE_EVERYTHING, ent (), &tr);
 
                if (tr.flFraction != 1.0f) {
                   state[i] += 10;
@@ -587,8 +587,8 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                m_collideMoves[i] = state[i];
             }
 
-            m_collideTime = engine.timebase ();
-            m_probeTime = engine.timebase () + 0.5f;
+            m_collideTime = game.timebase ();
+            m_probeTime = game.timebase () + 0.5f;
             m_collisionProbeBits = bits;
             m_collisionState = COLLISION_PROBING;
             m_collStateIndex = 0;
@@ -596,12 +596,12 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
       }
 
       if (m_collisionState == COLLISION_PROBING) {
-         if (m_probeTime < engine.timebase ()) {
+         if (m_probeTime < game.timebase ()) {
             m_collStateIndex++;
-            m_probeTime = engine.timebase () + 0.5f;
+            m_probeTime = game.timebase () + 0.5f;
 
             if (m_collStateIndex > MAX_COLLIDE_MOVES) {
-               m_navTimeset = engine.timebase () - 5.0f;
+               m_navTimeset = game.timebase () - 5.0f;
                resetCollision ();
             }
          }
@@ -611,7 +611,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
             case COLLISION_JUMP:
                if (isOnFloor () || isInWater ()) {
                   pev->button |= IN_JUMP;
-                  m_jumpStateTimer = engine.timebase () + rng.getFloat (0.7f, 1.5f);
+                  m_jumpStateTimer = game.timebase () + rng.getFloat (0.7f, 1.5f);
                }
                break;
 
@@ -649,10 +649,10 @@ bool Bot::processNavigation (void) {
       
       // if wayzone radios non zero vary origin a bit depending on the body angles
       if (m_currentPath->radius > 0) {
-         engine.makeVectors (Vector (pev->angles.x, cr::angleNorm (pev->angles.y + rng.getFloat (-90.0f, 90.0f)), 0.0f));
-         m_waypointOrigin = m_waypointOrigin + engine.vec.forward * rng.getFloat (0, m_currentPath->radius);
+         game.makeVectors (Vector (pev->angles.x, cr::angleNorm (pev->angles.y + rng.getFloat (-90.0f, 90.0f)), 0.0f));
+         m_waypointOrigin = m_waypointOrigin + game.vec.forward * rng.getFloat (0, m_currentPath->radius);
       }
-      m_navTimeset = engine.timebase ();
+      m_navTimeset = game.timebase ();
    }
    m_destOrigin = m_waypointOrigin + pev->view_ofs;
 
@@ -701,35 +701,35 @@ bool Bot::processNavigation (void) {
       bool liftClosedDoorExists = false;
 
       // update waypoint time set
-      m_navTimeset = engine.timebase ();
+      m_navTimeset = game.timebase ();
 
       // trace line to door
-      engine.testLine (pev->origin, m_currentPath->origin, TRACE_IGNORE_EVERYTHING, ent (), &tr2);
+      game.testLine (pev->origin, m_currentPath->origin, TRACE_IGNORE_EVERYTHING, ent (), &tr2);
 
       if (tr2.flFraction < 1.0f && strcmp (STRING (tr2.pHit->v.classname), "func_door") == 0 && (m_liftState == LIFT_NO_NEARBY || m_liftState == LIFT_WAITING_FOR || m_liftState == LIFT_LOOKING_BUTTON_OUTSIDE) && pev->groundentity != tr2.pHit) {
          if (m_liftState == LIFT_NO_NEARBY) {
             m_liftState = LIFT_LOOKING_BUTTON_OUTSIDE;
-            m_liftUsageTime = engine.timebase () + 7.0f;
+            m_liftUsageTime = game.timebase () + 7.0f;
          }
          liftClosedDoorExists = true;
       }
 
       // trace line down
-      engine.testLine (m_currentPath->origin, m_currentPath->origin + Vector (0.0f, 0.0f, -50.0f), TRACE_IGNORE_EVERYTHING, ent (), &tr);
+      game.testLine (m_currentPath->origin, m_currentPath->origin + Vector (0.0f, 0.0f, -50.0f), TRACE_IGNORE_EVERYTHING, ent (), &tr);
 
       // if trace result shows us that it is a lift
-      if (!engine.isNullEntity (tr.pHit) && !m_path.empty () && (strcmp (STRING (tr.pHit->v.classname), "func_door") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_plat") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_train") == 0) && !liftClosedDoorExists) {
+      if (!game.isNullEntity (tr.pHit) && !m_path.empty () && (strcmp (STRING (tr.pHit->v.classname), "func_door") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_plat") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_train") == 0) && !liftClosedDoorExists) {
          if ((m_liftState == LIFT_NO_NEARBY || m_liftState == LIFT_WAITING_FOR || m_liftState == LIFT_LOOKING_BUTTON_OUTSIDE) && tr.pHit->v.velocity.z == 0.0f) {
             if (cr::abs (pev->origin.z - tr.vecEndPos.z) < 70.0f) {
                m_liftEntity = tr.pHit;
                m_liftState = LIFT_ENTERING_IN;
                m_liftTravelPos = m_currentPath->origin;
-               m_liftUsageTime = engine.timebase () + 5.0f;
+               m_liftUsageTime = game.timebase () + 5.0f;
             }
          }
          else if (m_liftState == LIFT_TRAVELING_BY) {
             m_liftState = LIFT_LEAVING;
-            m_liftUsageTime = engine.timebase () + 7.0f;
+            m_liftUsageTime = game.timebase () + 7.0f;
          }
       }
       else if (!m_path.empty ()) // no lift found at waypoint
@@ -738,14 +738,14 @@ bool Bot::processNavigation (void) {
             int nextNode = m_path.next ();
 
             if (waypoints.exists (nextNode) && (waypoints[nextNode].flags & FLAG_LIFT)) {
-               engine.testLine (m_currentPath->origin, waypoints[nextNode].origin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
+               game.testLine (m_currentPath->origin, waypoints[nextNode].origin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
 
-               if (!engine.isNullEntity (tr.pHit) && (strcmp (STRING (tr.pHit->v.classname), "func_door") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_plat") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_train") == 0)) {
+               if (!game.isNullEntity (tr.pHit) && (strcmp (STRING (tr.pHit->v.classname), "func_door") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_plat") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_train") == 0)) {
                   m_liftEntity = tr.pHit;
                }
             }
             m_liftState = LIFT_LOOKING_BUTTON_OUTSIDE;
-            m_liftUsageTime = engine.timebase () + 15.0f;
+            m_liftUsageTime = game.timebase () + 15.0f;
          }
       }
 
@@ -758,7 +758,7 @@ bool Bot::processNavigation (void) {
             m_moveSpeed = 0.0f;
             m_strafeSpeed = 0.0f;
 
-            m_navTimeset = engine.timebase ();
+            m_navTimeset = game.timebase ();
             m_aimFlags |= AIM_NAVPOINT;
 
             resetCollision ();
@@ -767,7 +767,7 @@ bool Bot::processNavigation (void) {
             bool needWaitForTeammate = false;
 
             // if some bot is following a bot going into lift - he should take the same lift to go
-            for (int i = 0; i < engine.maxClients (); i++) {
+            for (int i = 0; i < game.maxClients (); i++) {
                Bot *bot = bots.getBot (i);
 
                if (bot == nullptr || bot == this) {
@@ -791,11 +791,11 @@ bool Bot::processNavigation (void) {
 
             if (needWaitForTeammate) {
                m_liftState = LIFT_WAIT_FOR_TEAMMATES;
-               m_liftUsageTime = engine.timebase () + 8.0f;
+               m_liftUsageTime = game.timebase () + 8.0f;
             }
             else {
                m_liftState = LIFT_LOOKING_BUTTON_INSIDE;
-               m_liftUsageTime = engine.timebase () + 10.0f;
+               m_liftUsageTime = game.timebase () + 10.0f;
             }
          }
       }
@@ -805,7 +805,7 @@ bool Bot::processNavigation (void) {
          // need to wait our following teammate ?
          bool needWaitForTeammate = false;
 
-         for (int i = 0; i < engine.maxClients (); i++) {
+         for (int i = 0; i < game.maxClients (); i++) {
             Bot *bot = bots.getBot (i);
 
             if (bot == nullptr) {
@@ -830,7 +830,7 @@ bool Bot::processNavigation (void) {
                m_moveSpeed = 0.0f;
                m_strafeSpeed = 0.0f;
 
-               m_navTimeset = engine.timebase ();
+               m_navTimeset = game.timebase ();
                m_aimFlags |= AIM_NAVPOINT;
 
                resetCollision ();
@@ -838,9 +838,9 @@ bool Bot::processNavigation (void) {
          }
 
          // else we need to look for button
-         if (!needWaitForTeammate || m_liftUsageTime < engine.timebase ()) {
+         if (!needWaitForTeammate || m_liftUsageTime < game.timebase ()) {
             m_liftState = LIFT_LOOKING_BUTTON_INSIDE;
-            m_liftUsageTime = engine.timebase () + 10.0f;
+            m_liftUsageTime = game.timebase () + 10.0f;
          }
       }
 
@@ -849,25 +849,25 @@ bool Bot::processNavigation (void) {
          edict_t *button = getNearestButton (STRING (m_liftEntity->v.targetname));
 
          // got a valid button entity ?
-         if (!engine.isNullEntity (button) && pev->groundentity == m_liftEntity && m_buttonPushTime + 1.0f < engine.timebase () && m_liftEntity->v.velocity.z == 0.0f && isOnFloor ()) {
+         if (!game.isNullEntity (button) && pev->groundentity == m_liftEntity && m_buttonPushTime + 1.0f < game.timebase () && m_liftEntity->v.velocity.z == 0.0f && isOnFloor ()) {
             m_pickupItem = button;
             m_pickupType = PICKUP_BUTTON;
 
-            m_navTimeset = engine.timebase ();
+            m_navTimeset = game.timebase ();
          }
       }
 
       // is lift activated and bot is standing on it and lift is moving ?
       if (m_liftState == LIFT_LOOKING_BUTTON_INSIDE || m_liftState == LIFT_ENTERING_IN || m_liftState == LIFT_WAIT_FOR_TEAMMATES || m_liftState == LIFT_WAITING_FOR) {
-         if (pev->groundentity == m_liftEntity && m_liftEntity->v.velocity.z != 0.0f && isOnFloor () && ((waypoints[m_prevWptIndex[0]].flags & FLAG_LIFT) || !engine.isNullEntity (m_targetEntity))) {
+         if (pev->groundentity == m_liftEntity && m_liftEntity->v.velocity.z != 0.0f && isOnFloor () && ((waypoints[m_prevWptIndex[0]].flags & FLAG_LIFT) || !game.isNullEntity (m_targetEntity))) {
             m_liftState = LIFT_TRAVELING_BY;
-            m_liftUsageTime = engine.timebase () + 14.0f;
+            m_liftUsageTime = game.timebase () + 14.0f;
 
             if ((pev->origin - m_destOrigin).lengthSq () < 225.0f) {
                m_moveSpeed = 0.0f;
                m_strafeSpeed = 0.0f;
 
-               m_navTimeset = engine.timebase ();
+               m_navTimeset = game.timebase ();
                m_aimFlags |= AIM_NAVPOINT;
 
                resetCollision ();
@@ -883,7 +883,7 @@ bool Bot::processNavigation (void) {
             m_moveSpeed = 0.0f;
             m_strafeSpeed = 0.0f;
 
-            m_navTimeset = engine.timebase ();
+            m_navTimeset = game.timebase ();
             m_aimFlags |= AIM_NAVPOINT;
 
             resetCollision ();
@@ -894,7 +894,7 @@ bool Bot::processNavigation (void) {
       if (m_liftState == LIFT_LOOKING_BUTTON_OUTSIDE) {
 
          // button has been pressed, lift should come
-         if (m_buttonPushTime + 8.0f >= engine.timebase ()) {
+         if (m_buttonPushTime + 8.0f >= game.timebase ()) {
             if (waypoints.exists (m_prevWptIndex[0])) {
                m_destOrigin = waypoints[m_prevWptIndex[0]].origin;
             }
@@ -906,23 +906,23 @@ bool Bot::processNavigation (void) {
                m_moveSpeed = 0.0f;
                m_strafeSpeed = 0.0f;
 
-               m_navTimeset = engine.timebase ();
+               m_navTimeset = game.timebase ();
                m_aimFlags |= AIM_NAVPOINT;
 
                resetCollision ();
             }
          }
-         else if (!engine.isNullEntity (m_liftEntity)) {
+         else if (!game.isNullEntity (m_liftEntity)) {
             edict_t *button = getNearestButton (STRING (m_liftEntity->v.targetname));
 
             // if we got a valid button entity
-            if (!engine.isNullEntity (button)) {
+            if (!game.isNullEntity (button)) {
                // lift is already used ?
                bool liftUsed = false;
 
                // iterate though clients, and find if lift already used
                for (const auto &client : util.getClients ()) {
-                  if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent () || engine.isNullEntity (client.ent->v.groundentity)) {
+                  if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent () || game.isNullEntity (client.ent->v.groundentity)) {
                      continue;
                   }
 
@@ -951,13 +951,13 @@ bool Bot::processNavigation (void) {
                   m_pickupType = PICKUP_BUTTON;
                   m_liftState = LIFT_WAITING_FOR;
 
-                  m_navTimeset = engine.timebase ();
-                  m_liftUsageTime = engine.timebase () + 20.0f;
+                  m_navTimeset = game.timebase ();
+                  m_liftUsageTime = game.timebase () + 20.0f;
                }
             }
             else {
                m_liftState = LIFT_WAITING_FOR;
-               m_liftUsageTime = engine.timebase () + 15.0f;
+               m_liftUsageTime = game.timebase () + 15.0f;
             }
          }
       }
@@ -977,7 +977,7 @@ bool Bot::processNavigation (void) {
             m_moveSpeed = 0.0f;
             m_strafeSpeed = 0.0f;
 
-            m_navTimeset = engine.timebase ();
+            m_navTimeset = game.timebase ();
             m_aimFlags |= AIM_NAVPOINT;
 
             resetCollision ();
@@ -1005,12 +1005,12 @@ bool Bot::processNavigation (void) {
       }
    }
 
-   if (!engine.isNullEntity (m_liftEntity) && !(m_currentPath->flags & FLAG_LIFT)) {
+   if (!game.isNullEntity (m_liftEntity) && !(m_currentPath->flags & FLAG_LIFT)) {
       if (m_liftState == LIFT_TRAVELING_BY) {
          m_liftState = LIFT_LEAVING;
-         m_liftUsageTime = engine.timebase () + 10.0f;
+         m_liftUsageTime = game.timebase () + 10.0f;
       }
-      if (m_liftState == LIFT_LEAVING && m_liftUsageTime < engine.timebase () && pev->groundentity != m_liftEntity) {
+      if (m_liftState == LIFT_LEAVING && m_liftUsageTime < game.timebase () && pev->groundentity != m_liftEntity) {
          m_liftState = LIFT_NO_NEARBY;
          m_liftUsageTime = 0.0f;
 
@@ -1018,7 +1018,7 @@ bool Bot::processNavigation (void) {
       }
    }
 
-   if (m_liftUsageTime < engine.timebase () && m_liftUsageTime != 0.0f) {
+   if (m_liftUsageTime < game.timebase () && m_liftUsageTime != 0.0f) {
       m_liftEntity = nullptr;
       m_liftState = LIFT_NO_NEARBY;
       m_liftUsageTime = 0.0f;
@@ -1040,17 +1040,17 @@ bool Bot::processNavigation (void) {
    }
 
    // check if we are going through a door...
-   if (engine.mapIs (MAP_HAS_DOORS)) {
-      engine.testLine (pev->origin, m_waypointOrigin, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   if (game.mapIs (MAP_HAS_DOORS)) {
+      game.testLine (pev->origin, m_waypointOrigin, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
-      if (!engine.isNullEntity (tr.pHit) && engine.isNullEntity (m_liftEntity) && strncmp (STRING (tr.pHit->v.classname), "func_door", 9) == 0) {
+      if (!game.isNullEntity (tr.pHit) && game.isNullEntity (m_liftEntity) && strncmp (STRING (tr.pHit->v.classname), "func_door", 9) == 0) {
          // if the door is near enough...
-         if ((engine.getAbsPos (tr.pHit) - pev->origin).lengthSq () < 2500.0f) {
+         if ((game.getAbsPos (tr.pHit) - pev->origin).lengthSq () < 2500.0f) {
             ignoreCollision (); // don't consider being stuck
 
             if (rng.chance (50)) {
                // do not use door directrly under xash, or we will get failed assert in gamedll code
-               if (engine.is (GAME_XASH_ENGINE)) {
+               if (game.is (GAME_XASH_ENGINE)) {
                   pev->button |= IN_USE;
                }
                else {
@@ -1066,22 +1066,22 @@ bool Bot::processNavigation (void) {
          edict_t *button = getNearestButton (STRING (tr.pHit->v.targetname));
 
          // check if we got valid button
-         if (!engine.isNullEntity (button)) {
+         if (!game.isNullEntity (button)) {
             m_pickupItem = button;
             m_pickupType = PICKUP_BUTTON;
 
-            m_navTimeset = engine.timebase ();
+            m_navTimeset = game.timebase ();
          }
 
          // if bot hits the door, then it opens, so wait a bit to let it open safely
-         if (pev->velocity.length2D () < 2 && m_timeDoorOpen < engine.timebase ()) {
-            startTask (TASK_PAUSE, TASKPRI_PAUSE, INVALID_WAYPOINT_INDEX, engine.timebase () + 0.5f, false);
-            m_timeDoorOpen = engine.timebase () + 1.0f; // retry in 1 sec until door is open
+         if (pev->velocity.length2D () < 2 && m_timeDoorOpen < game.timebase ()) {
+            startTask (TASK_PAUSE, TASKPRI_PAUSE, INVALID_WAYPOINT_INDEX, game.timebase () + 0.5f, false);
+            m_timeDoorOpen = game.timebase () + 1.0f; // retry in 1 sec until door is open
 
             edict_t *pent = nullptr;
 
             if (m_tryOpenDoor++ > 2 && util.findNearestPlayer (reinterpret_cast <void **> (&pent), ent (), 256.0f, false, false, true, true, false)) {
-               m_seeEnemyTime = engine.timebase () - 0.5f;
+               m_seeEnemyTime = game.timebase () - 0.5f;
 
                m_states |= STATE_SEEING_ENEMY;
                m_aimFlags |= AIM_ENEMY;
@@ -1158,7 +1158,7 @@ bool Bot::processNavigation (void) {
       }
       int taskTarget = task ()->data;
 
-      if (engine.mapIs (MAP_DE) && bots.isBombPlanted () && m_team == TEAM_COUNTER && taskId () != TASK_ESCAPEFROMBOMB && taskTarget != INVALID_WAYPOINT_INDEX) {
+      if (game.mapIs (MAP_DE) && bots.isBombPlanted () && m_team == TEAM_COUNTER && taskId () != TASK_ESCAPEFROMBOMB && taskTarget != INVALID_WAYPOINT_INDEX) {
          const Vector &bombOrigin = isBombAudible ();
 
          // bot within 'hearable' bomb tick noises?
@@ -1368,7 +1368,7 @@ void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= S
    // get correct calculation for heuristic
    auto calculate = [&] (bool hfun, int a, int b, int c) -> float {
       if (pathType == SEARCH_PATH_SAFEST_FASTER) {
-         if (engine.mapIs (MAP_CS) && hasHostage ()) {
+         if (game.mapIs (MAP_CS) && hasHostage ()) {
             if (hfun) {
                return hfunctionPathDistWithHostage (a, b, c);
             }
@@ -1386,7 +1386,7 @@ void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= S
          }
       }
       else if (pathType == SEARCH_PATH_SAFEST) {
-         if (engine.mapIs (MAP_CS) && hasHostage ()) {
+         if (game.mapIs (MAP_CS) && hasHostage ()) {
             if (hfun) {
                return hfunctionNone (a, b, c);
             }
@@ -1404,7 +1404,7 @@ void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= S
          }
       }
       else {
-         if (engine.mapIs (MAP_CS) && hasHostage ()) {
+         if (game.mapIs (MAP_CS) && hasHostage ()) {
             if (hfun) {
                return hfunctionPathDistWithHostage (a, b, c);
             }
@@ -1600,7 +1600,7 @@ bool Bot::searchOptimalPoint (void) {
       }
 
       // cts with hostages should not pick waypoints with no hostage flag
-      if (engine.mapIs (MAP_CS) && m_team == TEAM_COUNTER && (waypoints[at].flags & FLAG_NOHOSTAGE) && hasHostage ()) {
+      if (game.mapIs (MAP_CS) && m_team == TEAM_COUNTER && (waypoints[at].flags & FLAG_NOHOSTAGE) && hasHostage ()) {
          continue;
       }
 
@@ -1610,7 +1610,7 @@ bool Bot::searchOptimalPoint (void) {
       }
 
       // check if waypoint is already used by another bot...
-      if (bots.getRoundStartTime () + 5.0f > engine.timebase () && isOccupiedPoint (at)) {
+      if (bots.getRoundStartTime () + 5.0f > game.timebase () && isOccupiedPoint (at)) {
          busy = at;
          continue;
       }
@@ -1739,7 +1739,7 @@ void Bot::getValidPoint (void) {
 
       m_waypointOrigin = m_currentPath->origin;
    }
-   else if (m_navTimeset + getReachTime () < engine.timebase () && engine.isNullEntity (m_enemy)) {
+   else if (m_navTimeset + getReachTime () < game.timebase () && game.isNullEntity (m_enemy)) {
       auto experience = waypoints.getRawExperience ();
 
       // increase danager for both teams
@@ -1779,7 +1779,7 @@ int Bot::changePointIndex (int index) {
    m_prevWptIndex[0] = m_currentWaypointIndex;
 
    m_currentWaypointIndex = index;
-   m_navTimeset = engine.timebase ();
+   m_navTimeset = game.timebase ();
 
    m_currentPath = &waypoints[index];
    m_waypointFlags = m_currentPath->flags;
@@ -1907,7 +1907,7 @@ int Bot::getDefendPoint (const Vector &origin) {
       if (distance > 512) {
          continue;
       }
-      engine.testLine (waypoints[i].origin, waypoints[posIndex].origin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
+      game.testLine (waypoints[i].origin, waypoints[posIndex].origin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
 
       // check if line not hit anything
       if (tr.flFraction != 1.0f) {
@@ -2093,7 +2093,7 @@ int Bot::getCoverPoint (float maxDistance) {
    // take the first one which isn't spotted by the enemy
    for (int i = 0; i < MAX_PATH_INDEX; i++) {
       if (waypointIndex[i] != INVALID_WAYPOINT_INDEX) {
-         engine.testLine (m_lastEnemyOrigin + Vector (0.0f, 0.0f, 36.0f), waypoints[waypointIndex[i]].origin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
+         game.testLine (m_lastEnemyOrigin + Vector (0.0f, 0.0f, 36.0f), waypoints[waypointIndex[i]].origin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
 
          if (tr.flFraction < 1.0f) {
             return waypointIndex[i];
@@ -2162,14 +2162,14 @@ bool Bot::advanceMovement (void) {
          TaskID taskID = taskId ();
 
          // only if we in normal task and bomb is not planted
-         if (taskID == TASK_NORMAL && bots.getRoundMidTime () + 5.0f < engine.timebase () && m_timeCamping + 5.0f < engine.timebase () && !bots.isBombPlanted () && m_personality != PERSONALITY_RUSHER && !m_hasC4 && !m_isVIP && m_loosedBombWptIndex == INVALID_WAYPOINT_INDEX && !hasHostage ()) {
+         if (taskID == TASK_NORMAL && bots.getRoundMidTime () + 5.0f < game.timebase () && m_timeCamping + 5.0f < game.timebase () && !bots.isBombPlanted () && m_personality != PERSONALITY_RUSHER && !m_hasC4 && !m_isVIP && m_loosedBombWptIndex == INVALID_WAYPOINT_INDEX && !hasHostage ()) {
             m_campButtons = 0;
 
             const int nextIndex = m_path.next ();
             float kills = static_cast <float> (waypoints.getDangerDamage (m_team, nextIndex, nextIndex));
 
             // if damage done higher than one
-            if (kills > 1.0f && bots.getRoundMidTime () > engine.timebase ()) {
+            if (kills > 1.0f && bots.getRoundMidTime () > game.timebase ()) {
                switch (m_personality) {
                case PERSONALITY_NORMAL:
                   kills *= 0.33f;
@@ -2181,8 +2181,8 @@ bool Bot::advanceMovement (void) {
                }
 
                if (m_baseAgressionLevel < kills && hasPrimaryWeapon ()) {
-                  startTask (TASK_CAMP, TASKPRI_CAMP, INVALID_WAYPOINT_INDEX, engine.timebase () + rng.getFloat (m_difficulty * 0.5f, static_cast <float> (m_difficulty)) * 5.0f, true);
-                  startTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, getDefendPoint (waypoints[nextIndex].origin), engine.timebase () + rng.getFloat (3.0f, 10.0f), true);
+                  startTask (TASK_CAMP, TASKPRI_CAMP, INVALID_WAYPOINT_INDEX, game.timebase () + rng.getFloat (m_difficulty * 0.5f, static_cast <float> (m_difficulty)) * 5.0f, true);
+                  startTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, getDefendPoint (waypoints[nextIndex].origin), game.timebase () + rng.getFloat (3.0f, 10.0f), true);
                }
             }
             else if (bots.canPause () && !isOnLadder () && !isInWater () && !m_currentTravelFlags && isOnFloor ()) {
@@ -2263,12 +2263,12 @@ bool Bot::advanceMovement (void) {
             // bot not already on ladder but will be soon?
             if ((waypoints[destIndex].flags & FLAG_LADDER) && !isOnLadder ()) {
                // get ladder waypoints used by other (first moving) bots
-               for (int c = 0; c < engine.maxClients (); c++) {
+               for (int c = 0; c < game.maxClients (); c++) {
                   Bot *otherBot = bots.getBot (c);
 
                   // if another bot uses this ladder, wait 3 secs
                   if (otherBot != nullptr && otherBot != this && otherBot->m_notKilled && otherBot->m_currentWaypointIndex == destIndex) {
-                     startTask (TASK_PAUSE, TASKPRI_PAUSE, INVALID_WAYPOINT_INDEX, engine.timebase () + 3.0f, false);
+                     startTask (TASK_PAUSE, TASKPRI_PAUSE, INVALID_WAYPOINT_INDEX, game.timebase () + 3.0f, false);
                      return true;
                   }
                }
@@ -2281,18 +2281,18 @@ bool Bot::advanceMovement (void) {
 
    // if wayzone radius non zero vary origin a bit depending on the body angles
    if (m_currentPath->radius > 0.0f) {
-      engine.makeVectors (Vector (pev->angles.x, cr::angleNorm (pev->angles.y + rng.getFloat (-90.0f, 90.0f)), 0.0f));
-      m_waypointOrigin = m_waypointOrigin + engine.vec.forward * rng.getFloat (0.0f, m_currentPath->radius);
+      game.makeVectors (Vector (pev->angles.x, cr::angleNorm (pev->angles.y + rng.getFloat (-90.0f, 90.0f)), 0.0f));
+      m_waypointOrigin = m_waypointOrigin + game.vec.forward * rng.getFloat (0.0f, m_currentPath->radius);
    }
 
    if (isOnLadder ()) {
-      engine.testLine (Vector (pev->origin.x, pev->origin.y, pev->absmin.z), m_waypointOrigin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
+      game.testLine (Vector (pev->origin.x, pev->origin.y, pev->absmin.z), m_waypointOrigin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
 
       if (tr.flFraction < 1.0f) {
          m_waypointOrigin = m_waypointOrigin + (pev->origin - m_waypointOrigin) * 0.5f + Vector (0.0f, 0.0f, 32.0f);
       }
    }
-   m_navTimeset = engine.timebase ();
+   m_navTimeset = game.timebase ();
 
    return true;
 }
@@ -2306,21 +2306,21 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
    Vector src = eyePos ();
    Vector forward = src + normal * 24.0f;
 
-   engine.makeVectors (Vector (0.0f, pev->angles.y, 0.0f));
+   game.makeVectors (Vector (0.0f, pev->angles.y, 0.0f));
 
    auto checkDoor = [] (TraceResult *tr) {
-      if (!engine.mapIs (MAP_HAS_DOORS)) {
+      if (!game.mapIs (MAP_HAS_DOORS)) {
          return false;
       }
       return tr->flFraction < 1.0f && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) != 0;
    };
 
    // trace from the bot's eyes straight forward...
-   engine.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
+   game.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
 
    // check if the trace hit something...
    if (tr->flFraction < 1.0f) {
-      if (engine.mapIs (MAP_HAS_DOORS) && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) == 0) {
+      if (game.mapIs (MAP_HAS_DOORS) && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) == 0) {
          return false;
       }
       return true; // bot's head will hit something
@@ -2328,10 +2328,10 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
 
    // bot's head is clear, check at shoulder level...
    // trace from the bot's shoulder left diagonal forward to the right shoulder...
-   src = eyePos () + Vector (0.0f, 0.0f, -16.0f) - engine.vec.right * -16.0f;
-   forward = eyePos () + Vector (0.0f, 0.0f, -16.0f) + engine.vec.right * 16.0f + normal * 24.0f;
+   src = eyePos () + Vector (0.0f, 0.0f, -16.0f) - game.vec.right * -16.0f;
+   forward = eyePos () + Vector (0.0f, 0.0f, -16.0f) + game.vec.right * 16.0f + normal * 24.0f;
 
-   engine.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
+   game.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
 
    // check if the trace hit something...
    if (checkDoor (tr)) {
@@ -2340,10 +2340,10 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
 
    // bot's head is clear, check at shoulder level...
    // trace from the bot's shoulder right diagonal forward to the left shoulder...
-   src = eyePos () + Vector (0.0f, 0.0f, -16.0f) + engine.vec.right * 16.0f;
-   forward = eyePos () + Vector (0.0f, 0.0f, -16.0f) - engine.vec.right * -16.0f + normal * 24.0f;
+   src = eyePos () + Vector (0.0f, 0.0f, -16.0f) + game.vec.right * 16.0f;
+   forward = eyePos () + Vector (0.0f, 0.0f, -16.0f) - game.vec.right * -16.0f + normal * 24.0f;
 
-   engine.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
+   game.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
 
    // check if the trace hit something...
    if (checkDoor (tr)) {
@@ -2355,7 +2355,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       src = pev->origin + Vector (0.0f, 0.0f, -19.0f + 19.0f);
       forward = src + Vector (0.0f, 0.0f, 10.0f) + normal * 24.0f;
 
-      engine.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
+      game.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
 
       // check if the trace hit something...
       if (checkDoor (tr)) {
@@ -2364,7 +2364,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       src = pev->origin;
       forward = src + normal * 24.0f;
 
-      engine.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
+      game.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
 
       // check if the trace hit something...
       if (checkDoor (tr)) {
@@ -2373,11 +2373,11 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
    }
    else {
       // trace from the left waist to the right forward waist pos
-      src = pev->origin + Vector (0.0f, 0.0f, -17.0f) - engine.vec.right * -16.0f;
-      forward = pev->origin + Vector (0.0f, 0.0f, -17.0f) + engine.vec.right * 16.0f + normal * 24.0f;
+      src = pev->origin + Vector (0.0f, 0.0f, -17.0f) - game.vec.right * -16.0f;
+      forward = pev->origin + Vector (0.0f, 0.0f, -17.0f) + game.vec.right * 16.0f + normal * 24.0f;
 
       // trace from the bot's waist straight forward...
-      engine.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
+      game.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
 
       // check if the trace hit something...
       if (checkDoor (tr)) {
@@ -2385,10 +2385,10 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       }
 
       // trace from the left waist to the right forward waist pos
-      src = pev->origin + Vector (0.0f, 0.0f, -17.0f) + engine.vec.right * 16.0f;
-      forward = pev->origin + Vector (0.0f, 0.0f, -17.0f) - engine.vec.right * -16.0f + normal * 24.0f;
+      src = pev->origin + Vector (0.0f, 0.0f, -17.0f) + game.vec.right * 16.0f;
+      forward = pev->origin + Vector (0.0f, 0.0f, -17.0f) - game.vec.right * -16.0f + normal * 24.0f;
 
-      engine.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
+      game.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
 
       // check if the trace hit something...
       if (checkDoor (tr)) {
@@ -2405,7 +2405,7 @@ bool Bot::canStrafeLeft (TraceResult *tr) {
    makeVectors (pev->v_angle);
 
    Vector src = pev->origin;
-   Vector left = src - engine.vec.right * -40.0f;
+   Vector left = src - game.vec.right * -40.0f;
 
    // trace from the bot's waist straight left...
    TraceLine (src, left, true, ent (), tr);
@@ -2416,7 +2416,7 @@ bool Bot::canStrafeLeft (TraceResult *tr) {
    }
 
    src = left;
-   left = left + engine.vec.forward * 40.0f;
+   left = left + game.vec.forward * 40.0f;
 
    // trace from the strafe pos straight forward...
    TraceLine (src, left, true, ent (), tr);
@@ -2434,7 +2434,7 @@ bool Bot::canStrafeRight (TraceResult *tr) {
    makeVectors (pev->v_angle);
 
    Vector src = pev->origin;
-   Vector right = src + engine.vec.right * 40.0f;
+   Vector right = src + game.vec.right * 40.0f;
 
    // trace from the bot's waist straight right...
    TraceLine (src, right, true, ent (), tr);
@@ -2444,7 +2444,7 @@ bool Bot::canStrafeRight (TraceResult *tr) {
       return false; // bot's body will hit something
    }
    src = right;
-   right = right + engine.vec.forward * 40.0f;
+   right = right + game.vec.forward * 40.0f;
 
    // trace from the strafe pos straight forward...
    TraceLine (src, right, true, ent (), tr);
@@ -2469,14 +2469,14 @@ bool Bot::canJumpUp (const Vector &normal) {
    }
 
    // convert current view angle to vectors for traceline math...
-   engine.makeVectors (Vector (0.0f, pev->angles.y, 0.0f));
+   game.makeVectors (Vector (0.0f, pev->angles.y, 0.0f));
 
    // check for normal jump height first...
    Vector src = pev->origin + Vector (0.0f, 0.0f, -36.0f + 45.0f);
    Vector dest = src + normal * 32.0f;
 
    // trace a line forward at maximum jump height...
-   engine.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    if (tr.flFraction < 1.0f) {
       return doneCanJumpUp (normal);
@@ -2486,7 +2486,7 @@ bool Bot::canJumpUp (const Vector &normal) {
       src = dest;
       dest.z = dest.z + 37.0f;
 
-      engine.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
+      game.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
       if (tr.flFraction < 1.0f) {
          return false;
@@ -2494,11 +2494,11 @@ bool Bot::canJumpUp (const Vector &normal) {
    }
 
    // now check same height to one side of the bot...
-   src = pev->origin + engine.vec.right * 16.0f + Vector (0.0f, 0.0f, -36.0f + 45.0f);
+   src = pev->origin + game.vec.right * 16.0f + Vector (0.0f, 0.0f, -36.0f + 45.0f);
    dest = src + normal * 32.0f;
 
    // trace a line forward at maximum jump height...
-   engine.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // if trace hit something, return false
    if (tr.flFraction < 1.0f) {
@@ -2509,7 +2509,7 @@ bool Bot::canJumpUp (const Vector &normal) {
    src = dest;
    dest.z = dest.z + 37.0f;
 
-   engine.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // if trace hit something, return false
    if (tr.flFraction < 1.0f) {
@@ -2517,11 +2517,11 @@ bool Bot::canJumpUp (const Vector &normal) {
    }
 
    // now check same height on the other side of the bot...
-   src = pev->origin + (-engine.vec.right * 16.0f) + Vector (0.0f, 0.0f, -36.0f + 45.0f);
+   src = pev->origin + (-game.vec.right * 16.0f) + Vector (0.0f, 0.0f, -36.0f + 45.0f);
    dest = src + normal * 32.0f;
 
    // trace a line forward at maximum jump height...
-   engine.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // if trace hit something, return false
    if (tr.flFraction < 1.0f) {
@@ -2532,7 +2532,7 @@ bool Bot::canJumpUp (const Vector &normal) {
    src = dest;
    dest.z = dest.z + 37.0f;
 
-   engine.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // if trace hit something, return false
    return tr.flFraction > 1.0f;
@@ -2546,7 +2546,7 @@ bool Bot::doneCanJumpUp (const Vector &normal) {
    TraceResult tr;
 
    // trace a line forward at maximum jump height...
-   engine.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    if (tr.flFraction < 1.0f) {
       return false;
@@ -2556,7 +2556,7 @@ bool Bot::doneCanJumpUp (const Vector &normal) {
       src = dest;
       dest.z = dest.z + 37.0f;
 
-      engine.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
+      game.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
       // if trace hit something, check duckjump
       if (tr.flFraction < 1.0f) {
@@ -2565,11 +2565,11 @@ bool Bot::doneCanJumpUp (const Vector &normal) {
    }
 
    // now check same height to one side of the bot...
-   src = pev->origin + engine.vec.right * 16.0f + Vector (0.0f, 0.0f, -36.0f + 63.0f);
+   src = pev->origin + game.vec.right * 16.0f + Vector (0.0f, 0.0f, -36.0f + 63.0f);
    dest = src + normal * 32.0f;
 
    // trace a line forward at maximum jump height...
-   engine.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // if trace hit something, return false
    if (tr.flFraction < 1.0f) {
@@ -2580,7 +2580,7 @@ bool Bot::doneCanJumpUp (const Vector &normal) {
    src = dest;
    dest.z = dest.z + 37.0f;
 
-   engine.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // if trace hit something, return false
    if (tr.flFraction < 1.0f) {
@@ -2588,11 +2588,11 @@ bool Bot::doneCanJumpUp (const Vector &normal) {
    }
 
    // now check same height on the other side of the bot...
-   src = pev->origin + (-engine.vec.right * 16.0f) + Vector (0.0f, 0.0f, -36.0f + 63.0f);
+   src = pev->origin + (-game.vec.right * 16.0f) + Vector (0.0f, 0.0f, -36.0f + 63.0f);
    dest = src + normal * 32.0f;
 
    // trace a line forward at maximum jump height...
-   engine.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // if trace hit something, return false
    if (tr.flFraction < 1.0f) {
@@ -2603,7 +2603,7 @@ bool Bot::doneCanJumpUp (const Vector &normal) {
    src = dest;
    dest.z = dest.z + 37.0f;
 
-   engine.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // if trace hit something, return false
    return tr.flFraction > 1.0f;
@@ -2616,7 +2616,7 @@ bool Bot::canDuckUnder (const Vector &normal) {
    Vector baseHeight;
 
    // convert current view angle to vectors for TraceLine math...
-   engine.makeVectors (Vector (0.0f, pev->angles.y, 0.0f));
+   game.makeVectors (Vector (0.0f, pev->angles.y, 0.0f));
 
    // use center of the body first...
    if (pev->flags & FL_DUCKING) {
@@ -2630,7 +2630,7 @@ bool Bot::canDuckUnder (const Vector &normal) {
    Vector dest = src + normal * 32.0f;
 
    // trace a line forward at duck height...
-   engine.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // if trace hit something, return false
    if (tr.flFraction < 1.0f) {
@@ -2638,11 +2638,11 @@ bool Bot::canDuckUnder (const Vector &normal) {
    }
 
    // now check same height to one side of the bot...
-   src = baseHeight + engine.vec.right * 16.0f;
+   src = baseHeight + game.vec.right * 16.0f;
    dest = src + normal * 32.0f;
 
    // trace a line forward at duck height...
-   engine.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // if trace hit something, return false
    if (tr.flFraction < 1.0f) {
@@ -2650,11 +2650,11 @@ bool Bot::canDuckUnder (const Vector &normal) {
    }
 
    // now check same height on the other side of the bot...
-   src = baseHeight + (-engine.vec.right * 16.0f);
+   src = baseHeight + (-game.vec.right * 16.0f);
    dest = src + normal * 32.0f;
 
    // trace a line forward at duck height...
-   engine.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.testLine (src, dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // if trace hit something, return false
    return tr.flFraction > 1.0f;
@@ -2672,10 +2672,10 @@ bool Bot::isBlockedLeft (void) {
    makeVectors (pev->angles);
 
    // do a trace to the left...
-   engine.TestLine (pev->origin, engine.vec.forward * direction - engine.vec.right * 48.0f, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.TestLine (pev->origin, game.vec.forward * direction - game.vec.right * 48.0f, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // check if the trace hit something...
-   if (engine.mapIs (MAP_HAS_DOORS) && tr.flFraction < 1.0f && strncmp ("func_door", STRING (tr.pHit->v.classname), 9) != 0) {
+   if (game.mapIs (MAP_HAS_DOORS) && tr.flFraction < 1.0f && strncmp ("func_door", STRING (tr.pHit->v.classname), 9) != 0) {
       return true; // bot's body will hit something
    }
    return false;
@@ -2691,10 +2691,10 @@ bool Bot::isBlockedRight (void) {
    makeVectors (pev->angles);
 
    // do a trace to the right...
-   engine.TestLine (pev->origin, pev->origin + engine.vec.forward * direction + engine.vec.right * 48.0f, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.TestLine (pev->origin, pev->origin + game.vec.forward * direction + game.vec.right * 48.0f, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // check if the trace hit something...
-   if (engine.mapIs (MAP_HAS_DOORS) && tr.flFraction < 1.0f && (strncmp ("func_door", STRING (tr.pHit->v.classname), 9) != 0)) {
+   if (game.mapIs (MAP_HAS_DOORS) && tr.flFraction < 1.0f && (strncmp ("func_door", STRING (tr.pHit->v.classname), 9) != 0)) {
       return true; // bot's body will hit something
    }
    return false;
@@ -2704,9 +2704,9 @@ bool Bot::isBlockedRight (void) {
 
 bool Bot::checkWallOnLeft (void) {
    TraceResult tr;
-   engine.makeVectors (pev->angles);
+   game.makeVectors (pev->angles);
 
-   engine.testLine (pev->origin, pev->origin - engine.vec.right * 40.0f, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.testLine (pev->origin, pev->origin - game.vec.right * 40.0f, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // check if the trace hit something...
    if (tr.flFraction < 1.0f) {
@@ -2717,10 +2717,10 @@ bool Bot::checkWallOnLeft (void) {
 
 bool Bot::checkWallOnRight (void) {
    TraceResult tr;
-   engine.makeVectors (pev->angles);
+   game.makeVectors (pev->angles);
 
    // do a trace to the right...
-   engine.testLine (pev->origin, pev->origin + engine.vec.right * 40.0f, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.testLine (pev->origin, pev->origin + game.vec.right * 40.0f, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    // check if the trace hit something...
    if (tr.flFraction < 1.0f) {
@@ -2736,7 +2736,7 @@ bool Bot::isDeadlyMove (const Vector &to) {
    TraceResult tr;
 
    Vector move ((to - botPos).toYaw (), 0.0f, 0.0f);
-   engine.makeVectors (move);
+   game.makeVectors (move);
 
    Vector direction = (to - botPos).normalize (); // 1 unit long
    Vector check = botPos;
@@ -2744,7 +2744,7 @@ bool Bot::isDeadlyMove (const Vector &to) {
 
    down.z = down.z - 1000.0f; // straight down 1000 units
 
-   engine.testHull (check, down, TRACE_IGNORE_MONSTERS, head_hull, ent (), &tr);
+   game.testHull (check, down, TRACE_IGNORE_MONSTERS, head_hull, ent (), &tr);
 
    if (tr.flFraction > 0.036f) { // we're not on ground anymore?
       tr.flFraction = 0.036f;
@@ -2759,7 +2759,7 @@ bool Bot::isDeadlyMove (const Vector &to) {
       down = check;
       down.z = down.z - 1000.0f; // straight down 1000 units
 
-      engine.testHull (check, down, TRACE_IGNORE_MONSTERS, head_hull, ent (), &tr);
+      game.testHull (check, down, TRACE_IGNORE_MONSTERS, head_hull, ent (), &tr);
 
       if (tr.fStartSolid) { // Wall blocking?
          return false;
@@ -2900,8 +2900,8 @@ void Bot::processBodyAngles (void) {
 }
 
 void Bot::processLookAngles (void) {
-   const float delta = cr::clamp (engine.timebase () - m_lookUpdateTime, cr::EQEPSILON, 0.05f);
-   m_lookUpdateTime = engine.timebase ();
+   const float delta = cr::clamp (game.timebase () - m_lookUpdateTime, cr::EQEPSILON, 0.05f);
+   m_lookUpdateTime = game.timebase ();
 
    // adjust all body and view angles to face an absolute vector
    Vector direction = (m_lookAt - eyePos ()).toAngles ();
@@ -2978,14 +2978,14 @@ void Bot::updateLookAnglesNewbie (const Vector &direction, const float delta) {
    m_idealAngles.clampAngles ();
 
    if (m_aimFlags & (AIM_ENEMY | AIM_ENTITY)) {
-      m_playerTargetTime = engine.timebase ();
+      m_playerTargetTime = game.timebase ();
       m_randomizedIdealAngles = m_idealAngles;
 
       stiffness = spring * (0.2f + offset / 125.0f);
    }
    else {
       // is it time for bot to randomize the aim direction again (more often where moving) ?
-      if (m_randomizeAnglesTime < engine.timebase () && ((pev->velocity.length () > 1.0f && m_angularDeviation.length () < 5.0f) || m_angularDeviation.length () < 1.0f)) {
+      if (m_randomizeAnglesTime < game.timebase () && ((pev->velocity.length () > 1.0f && m_angularDeviation.length () < 5.0f) || m_angularDeviation.length () < 1.0f)) {
          // is the bot standing still ?
          if (pev->velocity.length () < 1.0f) {
             randomize = randomization * 0.2f; // randomize less
@@ -2997,13 +2997,13 @@ void Bot::updateLookAnglesNewbie (const Vector &direction, const float delta) {
          m_randomizedIdealAngles = m_idealAngles + Vector (rng.getFloat (-randomize.x * 0.5f, randomize.x * 1.5f), rng.getFloat (-randomize.y, randomize.y), 0.0f);
 
          // set next time to do this
-         m_randomizeAnglesTime = engine.timebase () + rng.getFloat (0.4f, offsetDelay);
+         m_randomizeAnglesTime = game.timebase () + rng.getFloat (0.4f, offsetDelay);
       }
       float stiffnessMultiplier = noTargetRatio;
 
       // take in account whether the bot was targeting someone in the last N seconds
-      if (engine.timebase () - (m_playerTargetTime + offsetDelay) < noTargetRatio * 10.0f) {
-         stiffnessMultiplier = 1.0f - (engine.timebase () - m_timeLastFired) * 0.1f;
+      if (game.timebase () - (m_playerTargetTime + offsetDelay) < noTargetRatio * 10.0f) {
+         stiffnessMultiplier = 1.0f - (game.timebase () - m_timeLastFired) * 0.1f;
 
          // don't allow that stiffness multiplier less than zero
          if (stiffnessMultiplier < 0.0f) {
@@ -3039,10 +3039,10 @@ void Bot::updateLookAnglesNewbie (const Vector &direction, const float delta) {
 }
 
 void Bot::setStrafeSpeed (const Vector &moveDir, float strafeSpeed) {
-   engine.makeVectors (pev->angles);
+   game.makeVectors (pev->angles);
 
    const Vector &los = (moveDir - pev->origin).normalize2D ();
-   float dot = los | engine.vec.forward.make2D ();
+   float dot = los | game.vec.forward.make2D ();
 
    if (dot > 0.0f && !checkWallOnRight ()) {
       m_strafeSpeed = strafeSpeed;
@@ -3055,16 +3055,16 @@ void Bot::setStrafeSpeed (const Vector &moveDir, float strafeSpeed) {
 int Bot::locatePlantedC4 (void) {
    // this function tries to find planted c4 on the defuse scenario map and returns nearest to it waypoint
 
-   if (m_team != TEAM_TERRORIST || !engine.mapIs (MAP_DE)) {
+   if (m_team != TEAM_TERRORIST || !game.mapIs (MAP_DE)) {
       return INVALID_WAYPOINT_INDEX; // don't search for bomb if the player is CT, or it's not defusing bomb
    }
 
    edict_t *bombEntity = nullptr; // temporaly pointer to bomb
 
    // search the bomb on the map
-   while (!engine.isNullEntity (bombEntity = engfuncs.pfnFindEntityByString (bombEntity, "classname", "grenade"))) {
+   while (!game.isNullEntity (bombEntity = engfuncs.pfnFindEntityByString (bombEntity, "classname", "grenade"))) {
       if (strcmp (STRING (bombEntity->v.model) + 9, "c4.mdl") == 0) {
-         int nearestIndex = waypoints.getNearest (engine.getAbsPos (bombEntity));
+         int nearestIndex = waypoints.getNearest (game.getAbsPos (bombEntity));
 
          if (waypoints.exists (nearestIndex)) {
             return nearestIndex;
@@ -3119,8 +3119,8 @@ edict_t *Bot::getNearestButton (const char *targetName) {
    edict_t *searchEntity = nullptr, *foundEntity = nullptr;
 
    // find the nearest button which can open our target
-   while (!engine.isNullEntity (searchEntity = engfuncs.pfnFindEntityByString (searchEntity, "target", targetName))) {
-      const Vector &pos = engine.getAbsPos (searchEntity);
+   while (!game.isNullEntity (searchEntity = engfuncs.pfnFindEntityByString (searchEntity, "target", targetName))) {
+      const Vector &pos = game.getAbsPos (searchEntity);
 
       // check if this place safe
       if (!isDeadlyMove (pos)) {

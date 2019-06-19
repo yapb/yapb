@@ -122,7 +122,7 @@ void Bot::prepareChatMessage (char *text) {
    edict_t *talkEntity = nullptr;
 
    auto getHumanizedName = [&humanizeName] (edict_t *ent) {
-      if (!engine.isNullEntity (ent)) {
+      if (!game.isNullEntity (ent)) {
          return const_cast <const char *> (humanizeName (const_cast <char *> (STRING (ent->v.netname))));
       }
       return "unknown";
@@ -145,7 +145,7 @@ void Bot::prepareChatMessage (char *text) {
             int highestFrags = -9000; // just pick some start value
             int index = 0;
 
-            for (int i = 0; i < engine.maxClients (); i++) {
+            for (int i = 0; i < game.maxClients (); i++) {
                const Client &client = util.getClient (i);
 
                if (!(client.flags & CF_USED) || client.ent == ent ()) {
@@ -163,23 +163,23 @@ void Bot::prepareChatMessage (char *text) {
          }
          // mapname?
          else if (*pattern == 'm') {
-            m_tempStrings += engine.getMapName ();
+            m_tempStrings += game.getMapName ();
          }
          // roundtime?
          else if (*pattern == 'r') {
-            int time = static_cast <int> (bots.getRoundEndTime () - engine.timebase ());
+            int time = static_cast <int> (bots.getRoundEndTime () - game.timebase ());
             m_tempStrings.formatAppend ("%02d:%02d", time / 60, cr::abs (time % 60));
          }
          // chat reply?
          else if (*pattern == 's') {
-            talkEntity = engine.entityOfIndex (m_sayTextBuffer.entityIndex);
+            talkEntity = game.entityOfIndex (m_sayTextBuffer.entityIndex);
             m_tempStrings += getHumanizedName (talkEntity);
          }
          // teammate alive?
          else if (*pattern == 't') {
             int i;
 
-            for (i = 0; i < engine.maxClients (); i++) {
+            for (i = 0; i < game.maxClients (); i++) {
                const Client &client = util.getClient (i);
 
                if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ()) {
@@ -188,8 +188,8 @@ void Bot::prepareChatMessage (char *text) {
                break;
             }
 
-            if (i < engine.maxClients ()) {
-               if (util.isPlayer (pev->dmg_inflictor) && m_team == engine.getTeam (pev->dmg_inflictor)) {
+            if (i < game.maxClients ()) {
+               if (util.isPlayer (pev->dmg_inflictor) && m_team == game.getTeam (pev->dmg_inflictor)) {
                   talkEntity = pev->dmg_inflictor;
                }
                else {
@@ -199,7 +199,7 @@ void Bot::prepareChatMessage (char *text) {
             }
             else // no teammates alive...
             {
-               for (i = 0; i < engine.maxClients (); i++) {
+               for (i = 0; i < game.maxClients (); i++) {
                   const Client &client = util.getClient (i);
 
                   if (!(client.flags & CF_USED) || client.team != m_team || client.ent == ent ()) {
@@ -208,7 +208,7 @@ void Bot::prepareChatMessage (char *text) {
                   break;
                }
 
-               if (i < engine.maxClients ()) {
+               if (i < game.maxClients ()) {
                   talkEntity = util.getClient (i).ent;
                   m_tempStrings += getHumanizedName (talkEntity);
                }
@@ -217,7 +217,7 @@ void Bot::prepareChatMessage (char *text) {
          else if (*pattern == 'e') {
             int i;
 
-            for (i = 0; i < engine.maxClients (); i++) {
+            for (i = 0; i < game.maxClients (); i++) {
                const Client &client = util.getClient (i);
 
                if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team == m_team || client.ent == ent ()) {
@@ -226,14 +226,14 @@ void Bot::prepareChatMessage (char *text) {
                break;
             }
 
-            if (i < engine.maxClients ()) {
+            if (i < game.maxClients ()) {
                talkEntity = util.getClient (i).ent;
                m_tempStrings += getHumanizedName (talkEntity);
             }
 
             // no teammates alive ?
             else {
-               for (i = 0; i < engine.maxClients (); i++) {
+               for (i = 0; i < game.maxClients (); i++) {
                   const Client &client = util.getClient (i);
 
                   if (!(client.flags & CF_USED) || client.team == m_team || client.ent == ent ()) {
@@ -241,14 +241,14 @@ void Bot::prepareChatMessage (char *text) {
                   }
                   break;
                }
-               if (i < engine.maxClients ()) {
+               if (i < game.maxClients ()) {
                   talkEntity = util.getClient (i).ent;
                   m_tempStrings += getHumanizedName (talkEntity);
                }
             }
          }
          else if (*pattern == 'd') {
-            if (engine.is (GAME_CZERO)) {
+            if (game.is (GAME_CZERO)) {
                if (rng.chance (30)) {
                   m_tempStrings += "CZ";
                }
@@ -256,7 +256,7 @@ void Bot::prepareChatMessage (char *text) {
                   m_tempStrings += "Condition Zero";
                }
             }
-            else if (engine.is (GAME_CSTRIKE16) || engine.is (GAME_LEGACY)) {
+            else if (game.is (GAME_CSTRIKE16) || game.is (GAME_LEGACY)) {
                if (rng.chance (30)) {
                   m_tempStrings += "CS";
                }
@@ -397,14 +397,14 @@ bool Bot::isReplyingToChat (void) {
       char text[256];
 
       // check is time to chat is good
-      if (m_sayTextBuffer.timeNextChat < engine.timebase ()) {
+      if (m_sayTextBuffer.timeNextChat < game.timebase ()) {
          if (rng.chance (m_sayTextBuffer.chatProbability + rng.getInt (15, 35)) && processChatKeywords (reinterpret_cast <char *> (&text))) {
             prepareChatMessage (text);
             pushMsgQueue (GAME_MSG_SAY_CMD);
 
   
             m_sayTextBuffer.entityIndex = -1;
-            m_sayTextBuffer.timeNextChat = engine.timebase () + m_sayTextBuffer.chatDelay;
+            m_sayTextBuffer.timeNextChat = game.timebase () + m_sayTextBuffer.chatDelay;
             m_sayTextBuffer.sayText.clear ();
 
             return true;
@@ -422,7 +422,7 @@ void Bot::say (const char *text) {
    if (util.isEmptyStr (text) || !yb_chat.boolean ()) {
       return;
    }
-   engine.execBotCmd (ent (), "say \"%s\"", text);
+   game.execBotCmd (ent (), "say \"%s\"", text);
 }
 
 void Bot::sayTeam (const char *text) {
@@ -431,5 +431,5 @@ void Bot::sayTeam (const char *text) {
    if (util.isEmptyStr (text) || !yb_chat.boolean ()) {
       return;
    }
-   engine.execBotCmd (ent (), "say_team \"%s\"", text);
+   game.execBotCmd (ent (), "say_team \"%s\"", text);
 }

@@ -134,7 +134,7 @@ struct LangComprarer {
 };
 
 // provides utility functions to not call original engine (less call-cost)
-class Engine : public Singleton <Engine> {
+class Game : public Singleton <Game> {
 private:
    int m_drawModels[DRAW_NUM];
    int m_spawnCount[TEAM_UNASSIGNED];
@@ -162,8 +162,8 @@ public:
    RefVector vec;
 
 public:
-   Engine (void);
-   ~Engine (void);
+   Game (void);
+   ~Game (void);
 
 public:
    // precaches internal stuff
@@ -373,12 +373,12 @@ public:
    }
 
    // what kind of map we're running ?
-   inline const bool isMap (const int map) const {
+   inline bool isMap (const int map) const {
       return (m_mapFlags & map) == map;
    }
 
    // what kind of game engine / game dll / mod / tool we're running ?
-   inline const bool is (const int type) const {
+   inline bool is (const int type) const {
       return (m_gameFlags & type) == type;
    }
 
@@ -393,7 +393,7 @@ public:
    }
 
    // get loaded gamelib
-   inline auto &getGameLib (void) {
+   inline Library &getLib (void) {
       return m_gameLib;
    }
 
@@ -409,7 +409,7 @@ public:
 
 public:
    ConVar (const char *name, const char *initval, VarType type = VT_NOSERVER, bool regMissing = false, const char *regVal = nullptr) : m_eptr (nullptr) {
-      Engine::ref ().pushVarToRegStack (name, initval, type, regMissing, regVal, this);
+      Game::ref ().pushVarToRegStack (name, initval, type, regMissing, regVal, this);
    }
 
    inline bool boolean (void) const {

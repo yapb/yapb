@@ -89,7 +89,7 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
       if (selection >= 1 && selection <= 7)
          bots.setWeaponMode (selection);
       else
-         engine.clientPrint (ent, "Choose weapon from 1 to 7 range");
+         game.clientPrint (ent, "Choose weapon from 1 to 7 range");
    }
 
    // force all bots to vote to specified map
@@ -98,13 +98,13 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
          int nominatedMap = atoi (arg1);
 
          // loop through all players
-         for (int i = 0; i < engine.maxClients (); i++) {
+         for (int i = 0; i < game.maxClients (); i++) {
             Bot *bot = bots.getBot (i);
 
             if (bot != nullptr)
                bot->m_voteMap = nominatedMap;
          }
-         engine.clientPrint (ent, "All dead bots will vote for map #%d", nominatedMap);
+         game.clientPrint (ent, "All dead bots will vote for map #%d", nominatedMap);
       }
    }
 
@@ -118,63 +118,63 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
                            "Git Commit Author: %s\n"
                            "------------------------------------------------";
 
-      engine.clientPrint (ent, versionData, PRODUCT_NAME, PRODUCT_VERSION, util.buildNumber (), __DATE__, __TIME__, PRODUCT_GIT_HASH, PRODUCT_GIT_COMMIT_AUTHOR);
+      game.clientPrint (ent, versionData, PRODUCT_NAME, PRODUCT_VERSION, util.buildNumber (), __DATE__, __TIME__, PRODUCT_GIT_HASH, PRODUCT_GIT_COMMIT_AUTHOR);
    }
 
    // display some sort of help information
    else if (strcmp (arg0, "?") == 0 || strcmp (arg0, "help") == 0) {
-      engine.clientPrint (ent, "Bot Commands:");
-      engine.clientPrint (ent, "%s version\t - display version information.", self);
-      engine.clientPrint (ent, "%s add\t - create a bot in current game.", self);
-      engine.clientPrint (ent, "%s fill\t - fill the server with random bots.", self);
-      engine.clientPrint (ent, "%s kickall\t - disconnects all bots from current game.", self);
-      engine.clientPrint (ent, "%s killbots\t - kills all bots in current game.", self);
-      engine.clientPrint (ent, "%s kick\t - disconnect one random bot from game.", self);
-      engine.clientPrint (ent, "%s weaponmode\t - select bot weapon mode.", self);
-      engine.clientPrint (ent, "%s votemap\t - allows dead bots to vote for specific map.", self);
-      engine.clientPrint (ent, "%s cmenu\t - displaying bots command menu.", self);
+      game.clientPrint (ent, "Bot Commands:");
+      game.clientPrint (ent, "%s version\t - display version information.", self);
+      game.clientPrint (ent, "%s add\t - create a bot in current game.", self);
+      game.clientPrint (ent, "%s fill\t - fill the server with random bots.", self);
+      game.clientPrint (ent, "%s kickall\t - disconnects all bots from current game.", self);
+      game.clientPrint (ent, "%s killbots\t - kills all bots in current game.", self);
+      game.clientPrint (ent, "%s kick\t - disconnect one random bot from game.", self);
+      game.clientPrint (ent, "%s weaponmode\t - select bot weapon mode.", self);
+      game.clientPrint (ent, "%s votemap\t - allows dead bots to vote for specific map.", self);
+      game.clientPrint (ent, "%s cmenu\t - displaying bots command menu.", self);
 
       if (strcmp (arg1, "full") == 0 || strcmp (arg1, "?") == 0) {
-         engine.clientPrint (ent, "%s add_t\t - creates one random bot to terrorist team.", self);
-         engine.clientPrint (ent, "%s add_ct\t - creates one random bot to ct team.", self);
-         engine.clientPrint (ent, "%s kick_t\t - disconnect one random bot from terrorist team.", self);
-         engine.clientPrint (ent, "%s kick_ct\t - disconnect one random bot from ct team.", self);
-         engine.clientPrint (ent, "%s kill_t\t - kills all bots on terrorist team.", self);
-         engine.clientPrint (ent, "%s kill_ct\t - kills all bots on ct team.", self);
-         engine.clientPrint (ent, "%s list\t - display list of bots currently playing.", self);
-         engine.clientPrint (ent, "%s deletewp\t - erase waypoint file from hard disk (permanently).", self);
+         game.clientPrint (ent, "%s add_t\t - creates one random bot to terrorist team.", self);
+         game.clientPrint (ent, "%s add_ct\t - creates one random bot to ct team.", self);
+         game.clientPrint (ent, "%s kick_t\t - disconnect one random bot from terrorist team.", self);
+         game.clientPrint (ent, "%s kick_ct\t - disconnect one random bot from ct team.", self);
+         game.clientPrint (ent, "%s kill_t\t - kills all bots on terrorist team.", self);
+         game.clientPrint (ent, "%s kill_ct\t - kills all bots on ct team.", self);
+         game.clientPrint (ent, "%s list\t - display list of bots currently playing.", self);
+         game.clientPrint (ent, "%s deletewp\t - erase waypoint file from hard disk (permanently).", self);
 
-         if (!engine.isDedicated ()) {
-            engine.print ("%s autowp\t - toggle autowaypointing.", self);
-            engine.print ("%s wp\t - toggle waypoint showing.", self);
-            engine.print ("%s wp on noclip\t - enable noclip cheat", self);
-            engine.print ("%s wp save nocheck\t - save waypoints without checking.", self);
-            engine.print ("%s wp add\t - open menu for waypoint creation.", self);
-            engine.print ("%s wp delete\t - delete waypoint nearest to host edict.", self);
-            engine.print ("%s wp menu\t - open main waypoint menu.", self);
-            engine.print ("%s wp addbasic\t - creates basic waypoints on map.", self);
-            engine.print ("%s wp find\t - show direction to specified waypoint.", self);
-            engine.print ("%s wp load\t - load the waypoint file from hard disk.", self);
-            engine.print ("%s wp check\t - checks if all waypoints connections are valid.", self);
-            engine.print ("%s wp cache\t - cache nearest waypoint.", self);
-            engine.print ("%s wp teleport\t - teleport hostile to specified waypoint.", self);
-            engine.print ("%s wp setradius\t - manually sets the wayzone radius for this waypoint.", self);
-            engine.print ("%s wp clean <nr/all>\t - cleans useless paths for specified or all waypoints.", self);
-            engine.print ("%s path autodistance - opens menu for setting autopath maximum distance.", self);
-            engine.print ("%s path cache\t - remember the nearest to player waypoint.", self);
-            engine.print ("%s path create\t - opens menu for path creation.", self);
-            engine.print ("%s path delete\t - delete path from cached to nearest waypoint.", self);
-            engine.print ("%s path create_in\t - creating incoming path connection.", self);
-            engine.print ("%s path create_out\t - creating outgoing path connection.", self);
-            engine.print ("%s path create_both\t - creating both-ways path connection.", self);
-            engine.print ("%s exp save\t - save the experience data.", self);
+         if (!game.isDedicated ()) {
+            game.print ("%s autowp\t - toggle autowaypointing.", self);
+            game.print ("%s wp\t - toggle waypoint showing.", self);
+            game.print ("%s wp on noclip\t - enable noclip cheat", self);
+            game.print ("%s wp save nocheck\t - save waypoints without checking.", self);
+            game.print ("%s wp add\t - open menu for waypoint creation.", self);
+            game.print ("%s wp delete\t - delete waypoint nearest to host edict.", self);
+            game.print ("%s wp menu\t - open main waypoint menu.", self);
+            game.print ("%s wp addbasic\t - creates basic waypoints on map.", self);
+            game.print ("%s wp find\t - show direction to specified waypoint.", self);
+            game.print ("%s wp load\t - load the waypoint file from hard disk.", self);
+            game.print ("%s wp check\t - checks if all waypoints connections are valid.", self);
+            game.print ("%s wp cache\t - cache nearest waypoint.", self);
+            game.print ("%s wp teleport\t - teleport hostile to specified waypoint.", self);
+            game.print ("%s wp setradius\t - manually sets the wayzone radius for this waypoint.", self);
+            game.print ("%s wp clean <nr/all>\t - cleans useless paths for specified or all waypoints.", self);
+            game.print ("%s path autodistance - opens menu for setting autopath maximum distance.", self);
+            game.print ("%s path cache\t - remember the nearest to player waypoint.", self);
+            game.print ("%s path create\t - opens menu for path creation.", self);
+            game.print ("%s path delete\t - delete path from cached to nearest waypoint.", self);
+            game.print ("%s path create_in\t - creating incoming path connection.", self);
+            game.print ("%s path create_out\t - creating outgoing path connection.", self);
+            game.print ("%s path create_both\t - creating both-ways path connection.", self);
+            game.print ("%s exp save\t - save the experience data.", self);
          }
       }
    }
    else if (stricmp (arg0, "bot_takedamage") == 0 && !util.isEmptyStr (arg1)) {
       bool isOn = !!(atoi (arg1) == 1);
 
-      for (int i = 0; i < engine.maxClients (); i++) {
+      for (int i = 0; i < game.maxClients (); i++) {
          Bot *bot = bots.getBot (i);
 
          if (bot != nullptr) {
@@ -195,51 +195,51 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
       }
       else {
          conf.showMenu (ent, BOT_MENU_INVALID); // reset menu display
-         engine.centerPrint ("You're dead, and have no access to this menu");
+         game.centerPrint ("You're dead, and have no access to this menu");
       }
    }
    else if (stricmp (arg0, "glp") == 0) {
       for (int i = 0; i < waypoints.length (); i++) {
-         engine.print ("%d - %f - %f", i, waypoints.getLightLevel (i), illum.getSkyColor ());
+         game.print ("%d - %f - %f", i, waypoints.getLightLevel (i), illum.getSkyColor ());
       }
    }
 
    // waypoint manimupulation (really obsolete, can be edited through menu) (supported only on listen server)
    else if (stricmp (arg0, "waypoint") == 0 || stricmp (arg0, "wp") == 0 || stricmp (arg0, "wpt") == 0) {
-      if (engine.isDedicated () || engine.isNullEntity (engine.getLocalEntity ())) {
+      if (game.isDedicated () || game.isNullEntity (game.getLocalEntity ())) {
          return 2;
       }
 
       // enables or disable waypoint displaying
       if (stricmp (arg1, "on") == 0) {
          waypoints.setEditFlag (WS_EDIT_ENABLED);
-         engine.print ("Waypoint Editing Enabled");
+         game.print ("Waypoint Editing Enabled");
 
          // enables noclip cheat
          if (!util.isEmptyStr (arg2) && stricmp (arg2, "noclip") == 0) {
             if (waypoints.hasEditFlag (WS_EDIT_NOCLIP)) {
-               engine.getLocalEntity ()->v.movetype = MOVETYPE_WALK;
-               engine.print ("Noclip Cheat Disabled");
+               game.getLocalEntity ()->v.movetype = MOVETYPE_WALK;
+               game.print ("Noclip Cheat Disabled");
 
                waypoints.clearEditFlag (WS_EDIT_NOCLIP);
             }
             else {
-               engine.getLocalEntity ()->v.movetype = MOVETYPE_NOCLIP;
-               engine.print ("Noclip Cheat Enabled");
+               game.getLocalEntity ()->v.movetype = MOVETYPE_NOCLIP;
+               game.print ("Noclip Cheat Enabled");
 
                waypoints.setEditFlag (WS_EDIT_NOCLIP);
             }
          }
-         engine.execCmd ("yapb wp mdl on");
+         game.execCmd ("yapb wp mdl on");
       }
 
       // switching waypoint editing off
       else if (stricmp (arg1, "off") == 0) {
          waypoints.clearEditFlag (WS_EDIT_ENABLED | WS_EDIT_NOCLIP);
-         engine.getLocalEntity ()->v.movetype = MOVETYPE_WALK;
+         game.getLocalEntity ()->v.movetype = MOVETYPE_WALK;
 
-         engine.print ("Waypoint Editing Disabled");
-         engine.execCmd ("yapb wp mdl off");
+         game.print ("Waypoint Editing Disabled");
+         game.execCmd ("yapb wp mdl off");
       }
 
       // toggles displaying player models on spawn spots
@@ -248,7 +248,7 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
          auto toggleDraw = [] (bool draw, const String &stuff) {
             edict_t *ent = nullptr;
 
-            while (!engine.isNullEntity (ent = engfuncs.pfnFindEntityByString (ent, "classname", stuff.chars ()))) {
+            while (!game.isNullEntity (ent = engfuncs.pfnFindEntityByString (ent, "classname", stuff.chars ()))) {
                if (draw) {
                   ent->v.effects &= ~EF_NODRAW;
                }
@@ -268,9 +268,9 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
                toggleDraw (true, type);
             }
 
-            engine.execCmd ("mp_roundtime 9"); // reset round time to maximum
-            engine.execCmd ("mp_timelimit 0"); // disable the time limit
-            engine.execCmd ("mp_freezetime 0"); // disable freezetime
+            game.execCmd ("mp_roundtime 9"); // reset round time to maximum
+            game.execCmd ("mp_timelimit 0"); // disable the time limit
+            game.execCmd ("mp_freezetime 0"); // disable freezetime
          }
          else if (stricmp (arg2, "off") == 0) {
             for (auto &type : entities) {
@@ -287,13 +287,13 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
       // opens adding waypoint menu
       else if (stricmp (arg1, "add") == 0) {
          waypoints.setEditFlag (WS_EDIT_ENABLED); // turn waypoints on
-         conf.showMenu (engine.getLocalEntity (), BOT_MENU_WAYPOINT_TYPE);
+         conf.showMenu (game.getLocalEntity (), BOT_MENU_WAYPOINT_TYPE);
       }
 
       // creates basic waypoints on the map (ladder/spawn points/goals)
       else if (stricmp (arg1, "addbasic") == 0) {
          waypoints.addBasic ();
-         engine.centerPrint ("Basic waypoints was Created");
+         game.centerPrint ("Basic waypoints was Created");
       }
 
       // delete nearest to host edict waypoint
@@ -314,11 +314,11 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
 
          if (strcmp (arg2, "nocheck") == 0) {
             waypoints.save ();
-            engine.print (waypointSaveMessage);
+            game.print (waypointSaveMessage);
          }
          else if (waypoints.checkNodes ()) {
             waypoints.save ();
-            engine.print (waypointSaveMessage);
+            game.print (waypointSaveMessage);
          }
       }
 
@@ -330,18 +330,18 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
       // load all waypoints again (overrides all changes, that wasn't saved)
       else if (stricmp (arg1, "load") == 0) {
          if (waypoints.load ())
-            engine.print ("Waypoints loaded");
+            game.print ("Waypoints loaded");
       }
 
       // check all nodes for validation
       else if (stricmp (arg1, "check") == 0) {
          if (waypoints.checkNodes ())
-            engine.centerPrint ("Nodes work Fine");
+            game.centerPrint ("Nodes work Fine");
       }
 
       // opens menu for setting (removing) waypoint flags
       else if (stricmp (arg1, "flags") == 0) {
-         conf.showMenu (engine.getLocalEntity (), BOT_MENU_WAYPOINT_FLAG);
+         conf.showMenu (game.getLocalEntity (), BOT_MENU_WAYPOINT_FLAG);
       }
 
       // setting waypoint radius
@@ -363,7 +363,7 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
                for (int i = 0; i < waypoints.length (); i++) {
                   totalCleared += waypoints.removeUselessConnections (i, true);
                }
-               engine.print ("Done. Processed %d waypoints. %d useless paths cleared.", waypoints.length (), totalCleared);
+               game.print ("Done. Processed %d waypoints. %d useless paths cleared.", waypoints.length (), totalCleared);
             }
             else {
                int clearIndex = atoi (arg2), totalCleared = 0;
@@ -371,7 +371,7 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
                if (waypoints.exists (clearIndex)) {
                   totalCleared += waypoints.removeUselessConnections (clearIndex);
 
-                  engine.print ("Done. Waypoint %d had %d useless paths.", clearIndex, totalCleared);
+                  game.print ("Done. Waypoint %d had %d useless paths.", clearIndex, totalCleared);
                }
             }
          }
@@ -381,7 +381,7 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
             if (waypoints.exists (nearest)) {
                totalCleared += waypoints.removeUselessConnections (nearest);
 
-               engine.print ("Done. Waypoint %d had %d useless paths.", nearest, totalCleared);
+               game.print ("Done. Waypoint %d had %d useless paths.", nearest, totalCleared);
             }
          }
       }
@@ -393,8 +393,8 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
          if (waypoints.exists (teleportPoint)) {
             Path &path = waypoints[teleportPoint];
 
-            engfuncs.pfnSetOrigin (engine.getLocalEntity (), path.origin);
-            engine.print ("Player '%s' teleported to waypoint #%d (x:%.1f, y:%.1f, z:%.1f)", STRING (engine.getLocalEntity ()->v.netname), teleportPoint, path.origin.x, path.origin.y, path.origin.z); //-V807
+            engfuncs.pfnSetOrigin (game.getLocalEntity (), path.origin);
+            game.print ("Player '%s' teleported to waypoint #%d (x:%.1f, y:%.1f, z:%.1f)", STRING (game.getLocalEntity ()->v.netname), teleportPoint, path.origin.x, path.origin.y, path.origin.z); //-V807
             
             waypoints.setEditFlag (WS_EDIT_ENABLED | WS_EDIT_NOCLIP);
          }
@@ -402,24 +402,24 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
 
       // displays waypoint menu
       else if (stricmp (arg1, "menu") == 0) {
-         conf.showMenu (engine.getLocalEntity (), BOT_MENU_WAYPOINT_MAIN_PAGE1);
+         conf.showMenu (game.getLocalEntity (), BOT_MENU_WAYPOINT_MAIN_PAGE1);
       }
 
       // otherwise display waypoint current status
       else {
-         engine.print ("Waypoints are %s", waypoints.hasEditFlag (WS_EDIT_ENABLED) ? "Enabled" : "Disabled");
+         game.print ("Waypoints are %s", waypoints.hasEditFlag (WS_EDIT_ENABLED) ? "Enabled" : "Disabled");
       }
    }
 
    // path waypoint editing system (supported only on listen server)
    else if (stricmp (arg0, "pathwaypoint") == 0 || stricmp (arg0, "path") == 0 || stricmp (arg0, "pwp") == 0) {
-      if (engine.isDedicated () || engine.isNullEntity (engine.getLocalEntity ())) {
+      if (game.isDedicated () || game.isNullEntity (game.getLocalEntity ())) {
          return 2;
       }
 
       // opens path creation menu
       if (stricmp (arg1, "create") == 0) {
-         conf.showMenu (engine.getLocalEntity (), BOT_MENU_WAYPOINT_PATH);
+         conf.showMenu (game.getLocalEntity (), BOT_MENU_WAYPOINT_PATH);
       }
 
       // creates incoming path from the cached waypoint
@@ -444,13 +444,13 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
 
       // sets auto path maximum distance
       else if (stricmp (arg1, "autodistance") == 0) {
-         conf.showMenu (engine.getLocalEntity (), BOT_MENU_WAYPOINT_AUTOPATH);
+         conf.showMenu (game.getLocalEntity (), BOT_MENU_WAYPOINT_AUTOPATH);
       }
    }
 
    // automatic waypoint handling (supported only on listen server)
    else if (stricmp (arg0, "autowaypoint") == 0 || stricmp (arg0, "autowp") == 0) {
-      if (engine.isDedicated () || engine.isNullEntity (engine.getLocalEntity ())) {
+      if (game.isDedicated () || game.isNullEntity (game.getLocalEntity ())) {
          return 2;
       }
 
@@ -465,12 +465,12 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
       }
 
       // display status
-      engine.print ("Auto-Waypoint %s", waypoints.hasEditFlag (WS_EDIT_AUTO) ? "Enabled" : "Disabled");
+      game.print ("Auto-Waypoint %s", waypoints.hasEditFlag (WS_EDIT_AUTO) ? "Enabled" : "Disabled");
    }
 
    // experience system handling (supported only on listen server)
    else if (stricmp (arg0, "experience") == 0 || stricmp (arg0, "exp") == 0) {
-      if (engine.isDedicated () || engine.isNullEntity (engine.getLocalEntity ())) {
+      if (game.isDedicated () || game.isNullEntity (game.getLocalEntity ())) {
          return 2;
       }
 
@@ -479,7 +479,7 @@ int handleBotCommands (edict_t *ent, const char *arg0, const char *arg1, const c
          waypoints.saveExperience ();
          waypoints.saveVisibility ();
 
-         engine.print ("Experience tab saved");
+         game.print ("Experience tab saved");
       }
    }
    else {
@@ -498,15 +498,15 @@ void GameDLLInit (void) {
    // to register by the engine side the server commands we need to administrate our bots.
 
    auto commandHandler = [](void) {
-      if (handleBotCommands (engine.getLocalEntity (), util.isEmptyStr (engfuncs.pfnCmd_Argv (1)) ? "help" : engfuncs.pfnCmd_Argv (1), engfuncs.pfnCmd_Argv (2), engfuncs.pfnCmd_Argv (3), engfuncs.pfnCmd_Argv (4), engfuncs.pfnCmd_Argv (5), engfuncs.pfnCmd_Argv (6), engfuncs.pfnCmd_Argv (0)) == 0) {
-         engine.print ("Unknown command: %s", engfuncs.pfnCmd_Argv (1));
+      if (handleBotCommands (game.getLocalEntity (), util.isEmptyStr (engfuncs.pfnCmd_Argv (1)) ? "help" : engfuncs.pfnCmd_Argv (1), engfuncs.pfnCmd_Argv (2), engfuncs.pfnCmd_Argv (3), engfuncs.pfnCmd_Argv (4), engfuncs.pfnCmd_Argv (5), engfuncs.pfnCmd_Argv (6), engfuncs.pfnCmd_Argv (0)) == 0) {
+         game.print ("Unknown command: %s", engfuncs.pfnCmd_Argv (1));
       }
    };
    conf.initWeapons ();
 
    // register server command(s)
-   engine.registerCmd ("yapb", commandHandler);
-   engine.registerCmd ("yb", commandHandler);
+   game.registerCmd ("yapb", commandHandler);
+   game.registerCmd ("yb", commandHandler);
 
    // set correct version string
    yb_version.set (util.format ("%d.%d.%d", PRODUCT_VERSION_DWORD_INTERNAL, util.buildNumber ()));
@@ -515,12 +515,12 @@ void GameDLLInit (void) {
    conf.load (true);
 
    // register fake metamod command handler if we not! under mm
-   if (!(engine.is (GAME_METAMOD))) {
-      engine.registerCmd ("meta", [](void) { engine.print ("You're launched standalone version of yapb. Metamod is not installed or not enabled!"); });
+   if (!(game.is (GAME_METAMOD))) {
+      game.registerCmd ("meta", [](void) { game.print ("You're launched standalone version of yapb. Metamod is not installed or not enabled!"); });
    }
    conf.adjustWeaponPrices ();
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    dllapi.pfnGameInit ();
@@ -538,7 +538,7 @@ void Touch (edict_t *pentTouched, edict_t *pentOther) {
    // the two entities both have velocities, for example two players colliding, this function
    // is called twice, once for each entity moving.
 
-   if (!engine.isNullEntity (pentTouched) && (pentTouched->v.flags & FL_FAKECLIENT) && pentOther != engine.getStartEntity ()) {
+   if (!game.isNullEntity (pentTouched) && (pentTouched->v.flags & FL_FAKECLIENT) && pentOther != game.getStartEntity ()) {
       Bot *bot = bots.getBot (pentTouched);
 
       if (bot != nullptr && pentOther != bot->ent ()) {
@@ -552,7 +552,7 @@ void Touch (edict_t *pentTouched, edict_t *pentOther) {
       }
    }
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    dllapi.pfnTouch (pentTouched, pentOther);
@@ -564,9 +564,9 @@ int Spawn (edict_t *ent) {
    // Spawn() function is one of the functions any entity is supposed to have in the game DLL,
    // and any MOD is supposed to implement one for each of its entities.
 
-   engine.precache ();
+   game.precache ();
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META_VALUE (MRES_IGNORED, 0);
    }
    int result = dllapi.pfnSpawn (ent); // get result
@@ -580,11 +580,11 @@ int Spawn (edict_t *ent) {
 void UpdateClientData (const struct edict_s *ent, int sendweapons, struct clientdata_s *cd) {
    extern ConVar yb_latency_display;
 
-   if (engine.is (GAME_SUPPORT_SVC_PINGS) && yb_latency_display.integer () == 2) {
+   if (game.is (GAME_SUPPORT_SVC_PINGS) && yb_latency_display.integer () == 2) {
       bots.sendPingOffsets (const_cast <edict_t *> (ent));
    }
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    dllapi.pfnUpdateClientData (ent, sendweapons, cd);
@@ -613,10 +613,10 @@ int ClientConnect (edict_t *ent, const char *name, const char *addr, char reject
 
    // check if this client is the listen server client
    if (strcmp (addr, "loopback") == 0) {
-      engine.setLocalEntity (ent); // save the edict of the listen server client...
+      game.setLocalEntity (ent); // save the edict of the listen server client...
    }
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META_VALUE (MRES_IGNORED, 0);
    }
    return dllapi.pfnClientConnect (ent, name, addr, rejectReason);
@@ -634,7 +634,7 @@ void ClientDisconnect (edict_t *ent) {
    // to reset his entity pointer for safety. There are still a few server frames to go once a
    // listen server client disconnects, and we don't want to send him any sort of message then.
 
-   int index = engine.indexOfEntity (ent) - 1;
+   int index = game.indexOfEntity (ent) - 1;
 
    if (index >= 0 && index < MAX_ENGINE_PLAYERS) {
       auto bot = bots.getBot (index);
@@ -645,7 +645,7 @@ void ClientDisconnect (edict_t *ent) {
          bots.destroy (index);
       }
    }
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    dllapi.pfnClientDisconnect (ent);
@@ -657,12 +657,12 @@ void ClientUserInfoChanged (edict_t *ent, char *infobuffer) {
    // change their player model). But most commonly, this function is in charge of handling
    // team changes, recounting the teams population, etc...
 
-   if (engine.isDedicated () && !util.isFakeClient (ent)) {
+   if (game.isDedicated () && !util.isFakeClient (ent)) {
       const String &key = yb_password_key.str ();
       const String &password = yb_password.str ();
 
       if (!key.empty () && !password.empty ()) {
-         auto &client = util.getClient (engine.indexOfEntity (ent) - 1);
+         auto &client = util.getClient (game.indexOfEntity (ent) - 1);
 
          if (password == engfuncs.pfnInfoKeyValue (infobuffer, key.chars ())) {
             client.flags |= CF_ADMIN;
@@ -673,7 +673,7 @@ void ClientUserInfoChanged (edict_t *ent, char *infobuffer) {
       }
    }
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    dllapi.pfnClientUserInfoChanged (ent, infobuffer);
@@ -700,23 +700,23 @@ void ClientCommand (edict_t *ent) {
    static int fillServerTeam = 5;
    static bool fillCommand = false;
 
-   auto &issuer = util.getClient (engine.indexOfEntity (ent) - 1);
+   auto &issuer = util.getClient (game.indexOfEntity (ent) - 1);
 
-   if (!engine.isBotCmd () && (ent == engine.getLocalEntity () || (issuer.flags & CF_ADMIN))) {
+   if (!game.isBotCmd () && (ent == game.getLocalEntity () || (issuer.flags & CF_ADMIN))) {
       if (stricmp (command, "yapb") == 0 || stricmp (command, "yb") == 0) {
          int state = handleBotCommands (ent, util.isEmptyStr (arg1) ? "help" : arg1, engfuncs.pfnCmd_Argv (2), engfuncs.pfnCmd_Argv (3), engfuncs.pfnCmd_Argv (4), engfuncs.pfnCmd_Argv (5), engfuncs.pfnCmd_Argv (6), engfuncs.pfnCmd_Argv (0));
 
          switch (state) {
          case 0:
-            engine.clientPrint (ent, "Unknown command: %s", arg1);
+            game.clientPrint (ent, "Unknown command: %s", arg1);
             break;
 
          case 2:
-            engine.clientPrint (ent, "Command \"%s\", can only be executed from server console.", arg1);
+            game.clientPrint (ent, "Command \"%s\", can only be executed from server console.", arg1);
             break;
          }
 
-         if (engine.is (GAME_METAMOD)) {
+         if (game.is (GAME_METAMOD)) {
             RETURN_META (MRES_SUPERCEDE);
          }
          return;
@@ -758,7 +758,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -793,7 +793,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -804,10 +804,10 @@ void ClientCommand (edict_t *ent) {
             switch (selection) {
             case 1:
                if (waypoints.hasEditFlag (WS_EDIT_ENABLED)) {
-                  engine.execCmd ("yapb waypoint off");
+                  game.execCmd ("yapb waypoint off");
                }
                else {
-                  engine.execCmd ("yapb waypoint on");
+                  game.execCmd ("yapb waypoint on");
                }
                conf.showMenu (ent, BOT_MENU_WAYPOINT_MAIN_PAGE1);
                break;
@@ -865,7 +865,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -914,7 +914,7 @@ void ClientCommand (edict_t *ent) {
                      noHostagePoints++;
                   }
                }
-               engine.print ("Waypoints: %d - T Points: %d\n"
+               game.print ("Waypoints: %d - T Points: %d\n"
                               "CT Points: %d - Goal Points: %d\n"
                               "Rescue Points: %d - Camp Points: %d\n"
                               "Block Hostage Points: %d - Sniper Points: %d\n",
@@ -933,7 +933,7 @@ void ClientCommand (edict_t *ent) {
                   waypoints.setEditFlag (WS_EDIT_AUTO);
                }
 
-               engine.centerPrint ("Auto-Waypoint %s", waypoints.hasEditFlag (WS_EDIT_AUTO) ? "Enabled" : "Disabled");
+               game.centerPrint ("Auto-Waypoint %s", waypoints.hasEditFlag (WS_EDIT_AUTO) ? "Enabled" : "Disabled");
                conf.showMenu (ent, BOT_MENU_WAYPOINT_MAIN_PAGE2);
 
                break;
@@ -949,7 +949,7 @@ void ClientCommand (edict_t *ent) {
                   waypoints.save ();
                }
                else {
-                  engine.centerPrint ("Waypoint not saved\nThere are errors, see console");
+                  game.centerPrint ("Waypoint not saved\nThere are errors, see console");
                }
                conf.showMenu (ent, BOT_MENU_WAYPOINT_MAIN_PAGE2);
                break;
@@ -966,16 +966,16 @@ void ClientCommand (edict_t *ent) {
 
             case 7:
                if (waypoints.checkNodes ()) {
-                  engine.centerPrint ("Nodes works fine");
+                  game.centerPrint ("Nodes works fine");
                }
                else {
-                  engine.centerPrint ("There are errors, see console");
+                  game.centerPrint ("There are errors, see console");
                }
                conf.showMenu (ent, BOT_MENU_WAYPOINT_MAIN_PAGE2);
                break;
 
             case 8:
-               engine.execCmd ("yapb wp on noclip");
+               game.execCmd ("yapb wp on noclip");
                conf.showMenu (ent, BOT_MENU_WAYPOINT_MAIN_PAGE2);
                break;
 
@@ -984,7 +984,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1001,7 +1001,7 @@ void ClientCommand (edict_t *ent) {
                conf.showMenu (ent, BOT_MENU_WAYPOINT_RADIUS);
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1037,7 +1037,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1073,7 +1073,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1087,7 +1087,7 @@ void ClientCommand (edict_t *ent) {
                break;
 
             case 2:
-               conf.showMenu (ent, engine.isDedicated () ? BOT_MENU_FEATURES : BOT_MENU_WAYPOINT_MAIN_PAGE1);
+               conf.showMenu (ent, game.isDedicated () ? BOT_MENU_FEATURES : BOT_MENU_WAYPOINT_MAIN_PAGE1);
                break;
 
             case 3:
@@ -1107,7 +1107,7 @@ void ClientCommand (edict_t *ent) {
                }
                else {
                   conf.showMenu (ent, BOT_MENU_INVALID); // reset menu display
-                  engine.centerPrint ("You're dead, and have no access to this menu");
+                  game.centerPrint ("You're dead, and have no access to this menu");
                }
                break;
 
@@ -1116,7 +1116,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1154,7 +1154,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1171,14 +1171,14 @@ void ClientCommand (edict_t *ent) {
             }
 
             if (cr::fzero (result)) {
-               engine.centerPrint ("AutoPath disabled");
+               game.centerPrint ("AutoPath disabled");
             }
             else {
-               engine.centerPrint ("AutoPath maximum distance set to %.2f", result);
+               game.centerPrint ("AutoPath maximum distance set to %.2f", result);
             }
             conf.showMenu (ent, BOT_MENU_WAYPOINT_AUTOPATH);
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1207,7 +1207,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1244,7 +1244,7 @@ void ClientCommand (edict_t *ent) {
             }
             conf.showMenu (ent, BOT_MENU_PERSONALITY);
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1274,7 +1274,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1296,7 +1296,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1329,7 +1329,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1351,7 +1351,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1374,7 +1374,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1399,7 +1399,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1429,7 +1429,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1459,7 +1459,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1489,7 +1489,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1515,7 +1515,7 @@ void ClientCommand (edict_t *ent) {
                break;
             }
 
-            if (engine.is (GAME_METAMOD)) {
+            if (game.is (GAME_METAMOD)) {
                RETURN_META (MRES_SUPERCEDE);
             }
             return;
@@ -1523,7 +1523,7 @@ void ClientCommand (edict_t *ent) {
       }
    }
 
-   if (!engine.isBotCmd () && (stricmp (command, "say") == 0 || stricmp (command, "say_team") == 0)) {
+   if (!game.isBotCmd () && (stricmp (command, "say") == 0 || stricmp (command, "say_team") == 0)) {
       Bot *bot = nullptr;
 
       if (strcmp (arg1, "dropme") == 0 || strcmp (arg1, "dropc4") == 0) {
@@ -1537,7 +1537,7 @@ void ClientCommand (edict_t *ent) {
       int team = -1;
 
       if (strcmp (command, "say_team") == 0) {
-         team = engine.getTeam (ent);
+         team = game.getTeam (ent);
       }
 
       for (const auto &client : util.getClients ()) {
@@ -1547,17 +1547,17 @@ void ClientCommand (edict_t *ent) {
          Bot *target = bots.getBot (client.ent);
 
          if (target != nullptr) {
-            target->m_sayTextBuffer.entityIndex = engine.indexOfEntity (ent);
+            target->m_sayTextBuffer.entityIndex = game.indexOfEntity (ent);
 
             if (util.isEmptyStr (engfuncs.pfnCmd_Args ())) {
                continue;
             }
             target->m_sayTextBuffer.sayText = engfuncs.pfnCmd_Args ();
-            target->m_sayTextBuffer.timeNextChat = engine.timebase () + target->m_sayTextBuffer.chatDelay;
+            target->m_sayTextBuffer.timeNextChat = game.timebase () + target->m_sayTextBuffer.chatDelay;
          }
       }
    }
-   Client &radioTarget = util.getClient (engine.indexOfEntity (ent) - 1);
+   Client &radioTarget = util.getClient (game.indexOfEntity (ent) - 1);
 
    // check if this player alive, and issue something
    if ((radioTarget.flags & CF_ALIVE) && radioTarget.radio != 0 && strncmp (command, "menuselect", 10) == 0) {
@@ -1567,7 +1567,7 @@ void ClientCommand (edict_t *ent) {
          radioCommand += 10 * (radioTarget.radio - 1);
 
          if (radioCommand != RADIO_AFFIRMATIVE && radioCommand != RADIO_NEGATIVE && radioCommand != RADIO_REPORTING_IN) {
-            for (int i = 0; i < engine.maxClients (); i++) {
+            for (int i = 0; i < game.maxClients (); i++) {
                Bot *bot = bots.getBot (i);
 
                // validate bot
@@ -1577,7 +1577,7 @@ void ClientCommand (edict_t *ent) {
                }
             }
          }
-         bots.setLastRadioTimestamp (radioTarget.team, engine.timebase ());
+         bots.setLastRadioTimestamp (radioTarget.team, game.timebase ());
       }
       radioTarget.radio = 0;
    }
@@ -1585,7 +1585,7 @@ void ClientCommand (edict_t *ent) {
       radioTarget.radio = atoi (&command[5]);
    }
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    dllapi.pfnClientCommand (ent);
@@ -1602,7 +1602,7 @@ void ServerActivate (edict_t *pentEdictList, int edictCount, int clientMax) {
    conf.load (false); // initialize all config files
 
    // do a level initialization
-   engine.levelInitialize ();
+   game.levelInitialize ();
 
    // update worldmodel
    illum.resetWorldModel ();
@@ -1614,13 +1614,13 @@ void ServerActivate (edict_t *pentEdictList, int edictCount, int clientMax) {
    // execute main config
    conf.load (true);
 
-   if (File::exists (util.format ("%s/maps/%s_yapb.cfg", engine.getModName (), engine.getMapName ()))) {
-      engine.execCmd ("exec maps/%s_yapb.cfg", engine.getMapName ());
-      engine.print ("Executing Map-Specific config file");
+   if (File::exists (util.format ("%s/maps/%s_yapb.cfg", game.getModName (), game.getMapName ()))) {
+      game.execCmd ("exec maps/%s_yapb.cfg", game.getMapName ());
+      game.print ("Executing Map-Specific config file");
    }
    bots.initQuota ();
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    dllapi.pfnServerActivate (pentEdictList, edictCount, clientMax);
@@ -1647,7 +1647,7 @@ void ServerDeactivate (void) {
    bots.destroyKillerEntity ();
 
    // set state to unprecached
-   engine.setUnprecached ();
+   game.setUnprecached ();
 
    // enable lightstyle animations on level change
    illum.enableAnimation (true);
@@ -1656,20 +1656,20 @@ void ServerDeactivate (void) {
    util.setNeedForWelcome (false);
 
    // xash is not kicking fakeclients on changelevel
-   if (engine.is (GAME_XASH_ENGINE)) {
+   if (game.is (GAME_XASH_ENGINE)) {
       bots.kickEveryone (true, false);
       bots.destroy ();
    }
    waypoints.init ();
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    dllapi.pfnServerDeactivate ();
 }
 
 void StartFrame (void) {
-   // this function starts a video frame. It is called once per video frame by the engine. If
+   // this function starts a video frame. It is called once per video frame by the game. If
    // you run Half-Life at 90 fps, this function will then be called 90 times per second. By
    // placing a hook on it, we have a good place to do things that should be done continuously
    // during the game, for example making the bots think (yes, because no Think() function exists
@@ -1686,13 +1686,13 @@ void StartFrame (void) {
    // update some stats for clients
    util.updateClients ();
 
-   if (waypoints.hasEditFlag (WS_EDIT_ENABLED) && !engine.isDedicated () && !engine.isNullEntity (engine.getLocalEntity ())) {
+   if (waypoints.hasEditFlag (WS_EDIT_ENABLED) && !game.isDedicated () && !game.isNullEntity (game.getLocalEntity ())) {
       waypoints.frame ();
    }
    bots.updateDeathMsgState (false);
 
    // run stuff periodically
-   engine.slowFrame ();
+   game.slowFrame ();
 
    if (bots.getBotCount () > 0) {
       // keep track of grenades on map
@@ -1705,7 +1705,7 @@ void StartFrame (void) {
    // keep bot number up to date
    bots.maintainQuota ();
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    dllapi.pfnStartFrame ();
@@ -1716,7 +1716,7 @@ void StartFrame (void) {
 }
 
 void StartFrame_Post (void) {
-   // this function starts a video frame. It is called once per video frame by the engine. If
+   // this function starts a video frame. It is called once per video frame by the game. If
    // you run Half-Life at 90 fps, this function will then be called 90 times per second. By
    // placing a hook on it, we have a good place to do things that should be done continuously
    // during the game, for example making the bots think (yes, because no Think() function exists
@@ -1771,7 +1771,7 @@ void pfnChangeLevel (char *s1, char *s2) {
    waypoints.saveExperience ();
    waypoints.saveVisibility ();
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    engfuncs.pfnChangeLevel (s1, s2);
@@ -1779,11 +1779,11 @@ void pfnChangeLevel (char *s1, char *s2) {
 
 edict_t *pfnFindEntityByString (edict_t *edictStartSearchAfter, const char *field, const char *value) {
    // round starts in counter-strike 1.5
-   if ((engine.is (GAME_LEGACY)) && strcmp (value, "info_map_parameters") == 0) {
+   if ((game.is (GAME_LEGACY)) && strcmp (value, "info_map_parameters") == 0) {
       bots.initRound ();
    }
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META_VALUE (MRES_IGNORED, 0);
    }
    return engfuncs.pfnFindEntityByString (edictStartSearchAfter, field, value);
@@ -1802,7 +1802,7 @@ void pfnEmitSound (edict_t *entity, int channel, const char *sample, float volum
 
    util.attachSoundsToClients (entity, sample, volume);
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    engfuncs.pfnEmitSound (entity, channel, sample, volume, attenuation, flags, pitch);
@@ -1832,16 +1832,16 @@ void pfnClientCommand (edict_t *ent, char const *format, ...) {
 
    if (ent && (ent->v.flags & (FL_FAKECLIENT | FL_DORMANT))) {
       if (bots.getBot (ent)) {
-         engine.execBotCmd (ent, buffer);
+         game.execBotCmd (ent, buffer);
       }
 
-      if (engine.is (GAME_METAMOD)) {
+      if (game.is (GAME_METAMOD)) {
          RETURN_META (MRES_SUPERCEDE); // prevent bots to be forced to issue client commands
       }
       return;
    }
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    engfuncs.pfnClientCommand (ent, buffer);
@@ -1851,10 +1851,10 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
    // this function called each time a message is about to sent.
    
    // store the message type in our own variables, since the GET_USER_MSG_ID () will just do a lot of strcmp()'s...
-   if ((engine.is (GAME_METAMOD)) && engine.getMessageId (NETMSG_MONEY) == -1) {
+   if ((game.is (GAME_METAMOD)) && game.getMessageId (NETMSG_MONEY) == -1) {
 
       auto setMsgId = [&] (const char *name, NetMsgId id) {
-         engine.setMessageId (id, GET_USER_MSG_ID (PLID, name, nullptr));
+         game.setMessageId (id, GET_USER_MSG_ID (PLID, name, nullptr));
       };
 
       setMsgId ("VGUIMenu", NETMSG_VGUI);
@@ -1879,48 +1879,48 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
       setMsgId ("NVGToggle", NETMSG_NVGTOGGLE);
       setMsgId ("ItemStatus", NETMSG_ITEMSTATUS);
 
-      if (engine.is (GAME_SUPPORT_BOT_VOICE)) {
-         engine.setMessageId (NETMSG_BOTVOICE, GET_USER_MSG_ID (PLID, "BotVoice", nullptr));
+      if (game.is (GAME_SUPPORT_BOT_VOICE)) {
+         game.setMessageId (NETMSG_BOTVOICE, GET_USER_MSG_ID (PLID, "BotVoice", nullptr));
       }
    }
-   engine.resetMessages ();
+   game.resetMessages ();
 
-   if ((!engine.is (GAME_LEGACY) || engine.is (GAME_XASH_ENGINE)) && msgDest == MSG_SPEC && msgType == engine.getMessageId (NETMSG_HLTV)) {
-      engine.setCurrentMessageId (NETMSG_HLTV);
+   if ((!game.is (GAME_LEGACY) || game.is (GAME_XASH_ENGINE)) && msgDest == MSG_SPEC && msgType == game.getMessageId (NETMSG_HLTV)) {
+      game.setCurrentMessageId (NETMSG_HLTV);
    }
-   engine.captureMessage (msgType, NETMSG_WEAPONLIST);
+   game.captureMessage (msgType, NETMSG_WEAPONLIST);
 
-   if (!engine.isNullEntity (ed)) {
+   if (!game.isNullEntity (ed)) {
       int index = bots.index (ed);
 
       // is this message for a bot?
       if (index != -1 && !(ed->v.flags & FL_DORMANT)) {
-         engine.setCurrentMessageOwner (index);
+         game.setCurrentMessageOwner (index);
 
          // message handling is done in usermsg.cpp
-         engine.captureMessage (msgType, NETMSG_VGUI);
-         engine.captureMessage (msgType, NETMSG_CURWEAPON);
-         engine.captureMessage (msgType, NETMSG_AMMOX);
-         engine.captureMessage (msgType, NETMSG_AMMOPICKUP);
-         engine.captureMessage (msgType, NETMSG_DAMAGE);
-         engine.captureMessage (msgType, NETMSG_MONEY);
-         engine.captureMessage (msgType, NETMSG_STATUSICON);
-         engine.captureMessage (msgType, NETMSG_SCREENFADE);
-         engine.captureMessage (msgType, NETMSG_BARTIME);
-         engine.captureMessage (msgType, NETMSG_TEXTMSG);
-         engine.captureMessage (msgType, NETMSG_SHOWMENU);
-         engine.captureMessage (msgType, NETMSG_FLASHBAT);
-         engine.captureMessage (msgType, NETMSG_NVGTOGGLE);
-         engine.captureMessage (msgType, NETMSG_ITEMSTATUS);
+         game.captureMessage (msgType, NETMSG_VGUI);
+         game.captureMessage (msgType, NETMSG_CURWEAPON);
+         game.captureMessage (msgType, NETMSG_AMMOX);
+         game.captureMessage (msgType, NETMSG_AMMOPICKUP);
+         game.captureMessage (msgType, NETMSG_DAMAGE);
+         game.captureMessage (msgType, NETMSG_MONEY);
+         game.captureMessage (msgType, NETMSG_STATUSICON);
+         game.captureMessage (msgType, NETMSG_SCREENFADE);
+         game.captureMessage (msgType, NETMSG_BARTIME);
+         game.captureMessage (msgType, NETMSG_TEXTMSG);
+         game.captureMessage (msgType, NETMSG_SHOWMENU);
+         game.captureMessage (msgType, NETMSG_FLASHBAT);
+         game.captureMessage (msgType, NETMSG_NVGTOGGLE);
+         game.captureMessage (msgType, NETMSG_ITEMSTATUS);
       }
    }
    else if (msgDest == MSG_ALL) {
-      engine.captureMessage (msgType, NETMSG_TEAMINFO);
-      engine.captureMessage (msgType, NETMSG_DEATH);
-      engine.captureMessage (msgType, NETMSG_TEXTMSG);
+      game.captureMessage (msgType, NETMSG_TEAMINFO);
+      game.captureMessage (msgType, NETMSG_DEATH);
+      game.captureMessage (msgType, NETMSG_TEXTMSG);
 
       if (msgType == SVC_INTERMISSION) {
-         for (int i = 0; i < engine.maxClients (); i++) {
+         for (int i = 0; i < game.maxClients (); i++) {
             Bot *bot = bots.getBot (i);
 
             if (bot != nullptr) {
@@ -1930,16 +1930,16 @@ void pfnMessageBegin (int msgDest, int msgType, const float *origin, edict_t *ed
       }
    }
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    engfuncs.pfnMessageBegin (msgDest, msgType, origin, ed);
 }
 
 void pfnMessageEnd (void) {
-   engine.resetMessages ();
+   game.resetMessages ();
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    engfuncs.pfnMessageEnd ();
@@ -1957,9 +1957,9 @@ void pfnMessageEnd_Post (void) {
 
 void pfnWriteByte (int value) {
    // if this message is for a bot, call the client message function...
-   engine.processMessages ((void *)&value);
+   game.processMessages ((void *)&value);
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    engfuncs.pfnWriteByte (value);
@@ -1967,9 +1967,9 @@ void pfnWriteByte (int value) {
 
 void pfnWriteChar (int value) {
    // if this message is for a bot, call the client message function...
-   engine.processMessages ((void *)&value);
+   game.processMessages ((void *)&value);
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    engfuncs.pfnWriteChar (value);
@@ -1977,9 +1977,9 @@ void pfnWriteChar (int value) {
 
 void pfnWriteShort (int value) {
    // if this message is for a bot, call the client message function...
-   engine.processMessages ((void *)&value);
+   game.processMessages ((void *)&value);
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    engfuncs.pfnWriteShort (value);
@@ -1987,9 +1987,9 @@ void pfnWriteShort (int value) {
 
 void pfnWriteLong (int value) {
    // if this message is for a bot, call the client message function...
-   engine.processMessages ((void *)&value);
+   game.processMessages ((void *)&value);
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    engfuncs.pfnWriteLong (value);
@@ -1997,9 +1997,9 @@ void pfnWriteLong (int value) {
 
 void pfnWriteAngle (float value) {
    // if this message is for a bot, call the client message function...
-   engine.processMessages ((void *)&value);
+   game.processMessages ((void *)&value);
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    engfuncs.pfnWriteAngle (value);
@@ -2007,9 +2007,9 @@ void pfnWriteAngle (float value) {
 
 void pfnWriteCoord (float value) {
    // if this message is for a bot, call the client message function...
-   engine.processMessages ((void *)&value);
+   game.processMessages ((void *)&value);
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    engfuncs.pfnWriteCoord (value);
@@ -2017,9 +2017,9 @@ void pfnWriteCoord (float value) {
 
 void pfnWriteString (const char *sz) {
    // if this message is for a bot, call the client message function...
-   engine.processMessages ((void *)sz);
+   game.processMessages ((void *)sz);
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    engfuncs.pfnWriteString (sz);
@@ -2027,9 +2027,9 @@ void pfnWriteString (const char *sz) {
 
 void pfnWriteEntity (int value) {
    // if this message is for a bot, call the client message function...
-   engine.processMessages ((void *)&value);
+   game.processMessages ((void *)&value);
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    engfuncs.pfnWriteEntity (value);
@@ -2041,17 +2041,17 @@ int pfnCmd_Argc (void) {
    // implement a g_xgv string in the bot DLL for holding the bots' commands, and also keep
    // track of the argument count. Hence this hook not to let the engine ask an unexistent client
    // DLL for a command we are holding here. Of course, real clients commands are still retrieved
-   // the normal way, by asking the engine.
+   // the normal way, by asking the game.
 
    // is this a bot issuing that client command?
-   if (engine.isBotCmd ()) {
-      if (engine.is (GAME_METAMOD)) {
-         RETURN_META_VALUE (MRES_SUPERCEDE, engine.botArgc ());
+   if (game.isBotCmd ()) {
+      if (game.is (GAME_METAMOD)) {
+         RETURN_META_VALUE (MRES_SUPERCEDE, game.botArgc ());
       }
-      return engine.botArgc (); // if so, then return the argument count we know
+      return game.botArgc (); // if so, then return the argument count we know
    }
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META_VALUE (MRES_IGNORED, 0);
    }
    return engfuncs.pfnCmd_Argc (); // ask the engine how many arguments there are
@@ -2063,17 +2063,17 @@ const char *pfnCmd_Args (void) {
    // a g_xgv string in the bot DLL for holding the bots' commands, and also keep track of the
    // argument count. Hence this hook not to let the engine ask an unexistent client DLL for a
    // command we are holding here. Of course, real clients commands are still retrieved the
-   // normal way, by asking the engine.
+   // normal way, by asking the game.
 
    // is this a bot issuing that client command?
-   if (engine.isBotCmd ()) {
-      if (engine.is (GAME_METAMOD)) {
-         RETURN_META_VALUE (MRES_SUPERCEDE, engine.botArgs ());
+   if (game.isBotCmd ()) {
+      if (game.is (GAME_METAMOD)) {
+         RETURN_META_VALUE (MRES_SUPERCEDE, game.botArgs ());
       }
-      return engine.botArgs (); // else return the whole bot client command string we know
+      return game.botArgs (); // else return the whole bot client command string we know
    }
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META_VALUE (MRES_IGNORED, nullptr);
    }
    return engfuncs.pfnCmd_Args (); // ask the client command string to the engine
@@ -2085,17 +2085,17 @@ const char *pfnCmd_Argv (int argc) {
    // implement a g_xgv string in the bot DLL for holding the bots' commands, and also keep
    // track of the argument count. Hence this hook not to let the engine ask an unexistent client
    // DLL for a command we are holding here. Of course, real clients commands are still retrieved
-   // the normal way, by asking the engine.
+   // the normal way, by asking the game.
 
    // is this a bot issuing that client command?
-   if (engine.isBotCmd ()) {
-      if (engine.is (GAME_METAMOD)) {
-         RETURN_META_VALUE (MRES_SUPERCEDE, engine.botArgv (argc));
+   if (game.isBotCmd ()) {
+      if (game.is (GAME_METAMOD)) {
+         RETURN_META_VALUE (MRES_SUPERCEDE, game.botArgv (argc));
       }
-      return engine.botArgv (argc); // if so, then return the wanted argument we know
+      return game.botArgv (argc); // if so, then return the wanted argument we know
    }
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META_VALUE (MRES_IGNORED, nullptr);
    }
    return engfuncs.pfnCmd_Argv (argc); // ask the argument number "argc" to the engine
@@ -2109,13 +2109,13 @@ void pfnClientPrintf (edict_t *ent, PRINT_TYPE printType, const char *message) {
    // we know, right ? But since stupidity rules this world, we do a preventive check :)
 
    if (util.isFakeClient (ent)) {
-      if (engine.is (GAME_METAMOD)) {
+      if (game.is (GAME_METAMOD)) {
          RETURN_META (MRES_SUPERCEDE);
       }
       return;
    }
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    engfuncs.pfnClientPrintf (ent, printType, message);
@@ -2129,7 +2129,7 @@ void pfnSetClientMaxspeed (const edict_t *ent, float newMaxspeed) {
       bot->pev->maxspeed = newMaxspeed;
    }
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    engfuncs.pfnSetClientMaxspeed (ent, newMaxspeed);
@@ -2146,76 +2146,76 @@ int pfnRegUserMsg (const char *name, int size) {
    // using pfnMessageBegin (), it will know what message ID number to send, and the engine will
    // know what to do, only for non-metamod version
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META_VALUE (MRES_IGNORED, 0);
    }
    int message = engfuncs.pfnRegUserMsg (name, size);
 
    if (strcmp (name, "VGUIMenu") == 0) {
-      engine.setMessageId (NETMSG_VGUI, message);
+      game.setMessageId (NETMSG_VGUI, message);
    }
    else if (strcmp (name, "ShowMenu") == 0) {
-      engine.setMessageId (NETMSG_SHOWMENU, message);
+      game.setMessageId (NETMSG_SHOWMENU, message);
    }
    else if (strcmp (name, "WeaponList") == 0) {
-      engine.setMessageId (NETMSG_WEAPONLIST, message);
+      game.setMessageId (NETMSG_WEAPONLIST, message);
    }
    else if (strcmp (name, "CurWeapon") == 0) {
-      engine.setMessageId (NETMSG_CURWEAPON, message);
+      game.setMessageId (NETMSG_CURWEAPON, message);
    }
    else if (strcmp (name, "AmmoX") == 0) {
-      engine.setMessageId (NETMSG_AMMOX, message);
+      game.setMessageId (NETMSG_AMMOX, message);
    }
    else if (strcmp (name, "AmmoPickup") == 0) {
-      engine.setMessageId (NETMSG_AMMOPICKUP, message);
+      game.setMessageId (NETMSG_AMMOPICKUP, message);
    }
    else if (strcmp (name, "Damage") == 0) {
-      engine.setMessageId (NETMSG_DAMAGE, message);
+      game.setMessageId (NETMSG_DAMAGE, message);
    }
    else if (strcmp (name, "Money") == 0) {
-      engine.setMessageId (NETMSG_MONEY, message);
+      game.setMessageId (NETMSG_MONEY, message);
    }
    else if (strcmp (name, "StatusIcon") == 0) {
-      engine.setMessageId (NETMSG_STATUSICON, message);
+      game.setMessageId (NETMSG_STATUSICON, message);
    }
    else if (strcmp (name, "DeathMsg") == 0) {
-      engine.setMessageId (NETMSG_DEATH, message);
+      game.setMessageId (NETMSG_DEATH, message);
    }
    else if (strcmp (name, "ScreenFade") == 0) {
-      engine.setMessageId (NETMSG_SCREENFADE, message);
+      game.setMessageId (NETMSG_SCREENFADE, message);
    }
    else if (strcmp (name, "HLTV") == 0) {
-      engine.setMessageId (NETMSG_HLTV, message);
+      game.setMessageId (NETMSG_HLTV, message);
    }
    else if (strcmp (name, "TextMsg") == 0) {
-      engine.setMessageId (NETMSG_TEXTMSG, message);
+      game.setMessageId (NETMSG_TEXTMSG, message);
    }
    else if (strcmp (name, "TeamInfo") == 0) {
-      engine.setMessageId (NETMSG_TEAMINFO, message);
+      game.setMessageId (NETMSG_TEAMINFO, message);
    }
    else if (strcmp (name, "BarTime") == 0) {
-      engine.setMessageId (NETMSG_BARTIME, message);
+      game.setMessageId (NETMSG_BARTIME, message);
    }
    else if (strcmp (name, "SendAudio") == 0) {
-      engine.setMessageId (NETMSG_SENDAUDIO, message);
+      game.setMessageId (NETMSG_SENDAUDIO, message);
    }
    else if (strcmp (name, "SayText") == 0) {
-      engine.setMessageId (NETMSG_SAYTEXT, message);
+      game.setMessageId (NETMSG_SAYTEXT, message);
    }
    else if (strcmp (name, "BotVoice") == 0) {
-      engine.setMessageId (NETMSG_BOTVOICE, message);
+      game.setMessageId (NETMSG_BOTVOICE, message);
    }
    else if (strcmp (name, "NVGToggle") == 0) {
-      engine.setMessageId (NETMSG_NVGTOGGLE, message);
+      game.setMessageId (NETMSG_NVGTOGGLE, message);
    }
    else if (strcmp (name, "FlashBat") == 0) {
-      engine.setMessageId (NETMSG_FLASHBAT, message);
+      game.setMessageId (NETMSG_FLASHBAT, message);
    }
    else if (strcmp (name, "Flashlight") == 0) {
-      engine.setMessageId (NETMSG_FLASHLIGHT, message);
+      game.setMessageId (NETMSG_FLASHLIGHT, message);
    }
    else if (strcmp (name, "ItemStatus") == 0) {
-      engine.setMessageId (NETMSG_ITEMSTATUS, message);
+      game.setMessageId (NETMSG_ITEMSTATUS, message);
    }
    return message;
 }
@@ -2228,9 +2228,9 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...) {
    vsnprintf (buffer, cr::bufsize (buffer), format, ap);
    va_end (ap);
 
-   if (engine.mapIs (MAP_DE) && bots.isBombPlanted () && strstr (buffer, "_Defuse_") != nullptr) {
+   if (game.mapIs (MAP_DE) && bots.isBombPlanted () && strstr (buffer, "_Defuse_") != nullptr) {
       // notify all terrorists that CT is starting bomb defusing
-      for (int i = 0; i < engine.maxClients (); i++) {
+      for (int i = 0; i < game.maxClients (); i++) {
          Bot *bot = bots.getBot (i);
 
          if (bot != nullptr && bot->m_team == TEAM_TERRORIST && bot->m_notKilled) {
@@ -2242,7 +2242,7 @@ void pfnAlertMessage (ALERT_TYPE alertType, char *format, ...) {
       }
    }
 
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       RETURN_META (MRES_IGNORED);
    }
    engfuncs.pfnAlertMessage (alertType, buffer);
@@ -2264,8 +2264,8 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
 
    memset (functionTable, 0, sizeof (gamefuncs_t));
 
-   if (!(engine.is (GAME_METAMOD))) {
-      auto api_GetEntityAPI = engine.getGameLib ().resolve <int (*) (gamefuncs_t *, int)> ("GetEntityAPI");
+   if (!(game.is (GAME_METAMOD))) {
+      auto api_GetEntityAPI = game.getLib ().resolve <int (*) (gamefuncs_t *, int)> ("GetEntityAPI");
 
       // pass other DLLs engine callbacks to function table...
       if (api_GetEntityAPI (&dllapi, INTERFACE_VERSION) == 0) {
@@ -2298,7 +2298,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
 
       illum.setWorldModel (playerMove->physents[0u].model);
 
-      if (engine.is (GAME_METAMOD)) {
+      if (game.is (GAME_METAMOD)) {
          RETURN_META (MRES_IGNORED);
       }
       dllapi.pfnPM_Move (playerMove, server);
@@ -2333,7 +2333,7 @@ SHARED_LIBRARAY_EXPORT int GetNewDLLFunctions (newgamefuncs_t *functionTable, in
    // pass them too, else the DLL interfacing wouldn't be complete and the game possibly wouldn't
    // run properly.
 
-   auto api_GetNewDLLFunctions = engine.getGameLib ().resolve <int (*) (newgamefuncs_t *, int *)> ("GetNewDLLFunctions");
+   auto api_GetNewDLLFunctions = game.getLib ().resolve <int (*) (newgamefuncs_t *, int *)> ("GetNewDLLFunctions");
 
    if (api_GetNewDLLFunctions == nullptr) {
       return FALSE;
@@ -2349,7 +2349,7 @@ SHARED_LIBRARAY_EXPORT int GetNewDLLFunctions (newgamefuncs_t *functionTable, in
 }
 
 SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
-   if (engine.is (GAME_METAMOD)) {
+   if (game.is (GAME_METAMOD)) {
       memset (functionTable, 0, sizeof (enginefuncs_t));
    }
 
@@ -2391,7 +2391,7 @@ SHARED_LIBRARAY_EXPORT int Server_GetBlendingInterface (int version, void **ppin
    // of the body move, which bones, which hitboxes and how) between the server and the game DLL.
    // some MODs can be using a different hitbox scheme than the standard one.
 
-   auto api_GetBlendingInterface = engine.getGameLib ().resolve <int (*) (int, void **, void *, float(*)[3][4], float(*)[128][3][4])> ("Server_GetBlendingInterface");
+   auto api_GetBlendingInterface = game.getLib ().resolve <int (*) (int, void **, void *, float(*)[3][4], float(*)[128][3][4])> ("Server_GetBlendingInterface");
 
    if (api_GetBlendingInterface == nullptr) {
       return FALSE;
@@ -2449,11 +2449,11 @@ SHARED_LIBRARAY_EXPORT void Meta_Init (void) {
    // this function is called by metamod, before any other interface functions. Purpose of this
    // function to give plugin a chance to determine is plugin running under metamod or not.
 
-   engine.addGameFlag (GAME_METAMOD);
+   game.addGameFlag (GAME_METAMOD);
 }
 
 DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t *pGlobals) {
-   // this is the very first function that is called in the game DLL by the engine. Its purpose
+   // this is the very first function that is called in the game DLL by the game. Its purpose
    // is to set the functions interfacing up, by exchanging the functionTable function list
    // along with a pointer to the engine's global variables structure pGlobals, with the game
    // DLL. We can there decide if we want to load the normal game DLL just behind our bot DLL,
@@ -2464,14 +2464,14 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    // such if necessary. Nothing really bot-related is done in this function. The actual bot
    // initialization stuff will be done later, when we'll be certain to have a multilayer game.
 
-   // get the engine functions from the engine...
+   // get the engine functions from the game...
    memcpy (&engfuncs, functionTable, sizeof (enginefuncs_t));
    globals = pGlobals;
 
-   if (engine.postload ()) {
+   if (game.postload ()) {
       return;
    }
-   auto api_GiveFnptrsToDll = engine.getGameLib ().resolve <void (STD_CALL *) (enginefuncs_t *, globalvars_t *)> ("GiveFnptrsToDll");
+   auto api_GiveFnptrsToDll = game.getLib ().resolve <void (STD_CALL *) (enginefuncs_t *, globalvars_t *)> ("GiveFnptrsToDll");
    
    assert (api_GiveFnptrsToDll != nullptr);
    GetEngineFunctions (functionTable, nullptr);
@@ -2494,7 +2494,7 @@ DLL_ENTRYPOINT {
 
 void helper_LinkEntity (EntityFunction &addr, const char *name, entvars_t *pev) {
    if (addr == nullptr) {
-      addr = engine.getGameLib ().resolve <EntityFunction> (name);
+      addr = game.getLib ().resolve <EntityFunction> (name);
    }
 
    if (addr == nullptr) {

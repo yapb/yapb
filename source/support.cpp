@@ -54,17 +54,17 @@ const char *BotUtils::format (const char *format, ...) {
 }
 
 bool BotUtils::isAlive (edict_t *ent) {
-   if (engine.isNullEntity (ent)) {
+   if (game.isNullEntity (ent)) {
       return false;
    }
    return ent->v.deadflag == DEAD_NO && ent->v.health > 0 && ent->v.movetype != MOVETYPE_NOCLIP;
 }
 
 float BotUtils::getShootingCone (edict_t *ent, const Vector &position) {
-   engine.makeVectors (ent->v.v_angle);
+   game.makeVectors (ent->v.v_angle);
 
    // he's facing it, he meant it
-   return engine.vec.forward | (position - (ent->v.origin + ent->v.view_ofs)).normalize ();
+   return game.vec.forward | (position - (ent->v.origin + ent->v.view_ofs)).normalize ();
 }
 
 bool BotUtils::isInViewCone (const Vector &origin, edict_t *ent) {
@@ -72,11 +72,11 @@ bool BotUtils::isInViewCone (const Vector &origin, edict_t *ent) {
 }
 
 bool BotUtils::isVisible (const Vector &origin, edict_t *ent) {
-   if (engine.isNullEntity (ent)) {
+   if (game.isNullEntity (ent)) {
       return false;
    }
    TraceResult tr;
-   engine.testLine (ent->v.origin + ent->v.view_ofs, origin, TRACE_IGNORE_EVERYTHING, ent, &tr);
+   game.testLine (ent->v.origin + ent->v.view_ofs, origin, TRACE_IGNORE_EVERYTHING, ent, &tr);
 
    if (tr.flFraction != 1.0f) {
       return false;
@@ -102,9 +102,9 @@ void BotUtils::traceDecals (entvars_t *pev, TraceResult *trace, int logotypeInde
    if (trace->flFraction == 1.0f) {
       return;
    }
-   if (!engine.isNullEntity (trace->pHit)) {
+   if (!game.isNullEntity (trace->pHit)) {
       if (trace->pHit->v.solid == SOLID_BSP || trace->pHit->v.movetype == MOVETYPE_PUSHSTEP) {
-         entityIndex = engine.indexOfEntity (trace->pHit);
+         entityIndex = game.indexOfEntity (trace->pHit);
       }
       else {
          return;
@@ -132,11 +132,11 @@ void BotUtils::traceDecals (entvars_t *pev, TraceResult *trace, int logotypeInde
    if (logotypes[logotypeIndex].contains ("{")) {
       MessageWriter (MSG_BROADCAST, SVC_TEMPENTITY)
          .writeByte (TE_PLAYERDECAL)
-         .writeByte (engine.indexOfEntity (pev->pContainingEntity))
+         .writeByte (game.indexOfEntity (pev->pContainingEntity))
          .writeCoord (trace->vecEndPos.x)
          .writeCoord (trace->vecEndPos.y)
          .writeCoord (trace->vecEndPos.z)
-         .writeShort (static_cast <short> (engine.indexOfEntity (trace->pHit)))
+         .writeShort (static_cast <short> (game.indexOfEntity (trace->pHit)))
          .writeByte (decalIndex);
    }
    else {
@@ -157,7 +157,7 @@ void BotUtils::traceDecals (entvars_t *pev, TraceResult *trace, int logotypeInde
 }
 
 bool BotUtils::isPlayer (edict_t *ent) {
-   if (engine.isNullEntity (ent)) {
+   if (game.isNullEntity (ent)) {
       return false;
    }
 
@@ -172,7 +172,7 @@ bool BotUtils::isPlayer (edict_t *ent) {
 }
 
 bool BotUtils::isPlayerVIP (edict_t *ent) {
-   if (!engine.mapIs (MAP_AS)) {
+   if (!game.mapIs (MAP_AS)) {
       return false;
    }
 
@@ -183,7 +183,7 @@ bool BotUtils::isPlayerVIP (edict_t *ent) {
 }
 
 bool BotUtils::isFakeClient (edict_t *ent) {
-   if (bots.getBot (ent) != nullptr || (!engine.isNullEntity (ent) && (ent->v.flags & FL_FAKECLIENT))) {
+   if (bots.getBot (ent) != nullptr || (!game.isNullEntity (ent) && (ent->v.flags & FL_FAKECLIENT))) {
       return true;
    }
    return false;
@@ -232,28 +232,28 @@ bool BotUtils::openConfig (const char *fileName, const char *errorIfNotExists, M
 void BotUtils::checkWelcome (void) {
    // the purpose of this function, is  to send quick welcome message, to the listenserver entity.
 
-   if (engine.isDedicated () || !yb_display_welcome_text.boolean () || !m_needToSendWelcome) {
+   if (game.isDedicated () || !yb_display_welcome_text.boolean () || !m_needToSendWelcome) {
       return;
    }
    m_welcomeReceiveTime = 0.0f;
 
-   if (engine.is (GAME_LEGACY)) {
+   if (game.is (GAME_LEGACY)) {
       m_needToSendWelcome = true;
       return;
    }
    bool needToSendMsg = (waypoints.length () > 0 ? m_needToSendWelcome : true);
 
-   if (isAlive (engine.getLocalEntity ()) && m_welcomeReceiveTime < 1.0 && needToSendMsg) {
-      m_welcomeReceiveTime = engine.timebase () + 4.0f; // receive welcome message in four seconds after game has commencing
+   if (isAlive (game.getLocalEntity ()) && m_welcomeReceiveTime < 1.0 && needToSendMsg) {
+      m_welcomeReceiveTime = game.timebase () + 4.0f; // receive welcome message in four seconds after game has commencing
    }
 
    if (m_welcomeReceiveTime > 0.0f && needToSendMsg) {
-      if (!engine.is (GAME_MOBILITY | GAME_XASH_ENGINE)) {
-         engine.execCmd ("speak \"%s\"", m_sentences.random ().chars ());
+      if (!game.is (GAME_MOBILITY | GAME_XASH_ENGINE)) {
+         game.execCmd ("speak \"%s\"", m_sentences.random ().chars ());
       }
-      engine.chatPrint ("----- %s v%s (Build: %u), {%s}, (c) %s, by %s (%s)-----", PRODUCT_SHORT_NAME, PRODUCT_VERSION, buildNumber (), PRODUCT_DATE, PRODUCT_END_YEAR, PRODUCT_AUTHOR, PRODUCT_URL);
+      game.chatPrint ("----- %s v%s (Build: %u), {%s}, (c) %s, by %s (%s)-----", PRODUCT_SHORT_NAME, PRODUCT_VERSION, buildNumber (), PRODUCT_DATE, PRODUCT_END_YEAR, PRODUCT_AUTHOR, PRODUCT_URL);
 
-      MessageWriter (MSG_ONE, SVC_TEMPENTITY, Vector::null (), engine.getLocalEntity ())
+      MessageWriter (MSG_ONE, SVC_TEMPENTITY, Vector::null (), game.getLocalEntity ())
          .writeByte (TE_TEXTMESSAGE)
          .writeByte (1)
          .writeShort (MessageWriter::fs16 (-1, 1 << 13))
@@ -307,7 +307,7 @@ void BotUtils::logEntry (bool outputToConsole, int logLevel, const char *format,
    }
 
    if (outputToConsole) {
-      engine.print ("%s%s", levelString, buffer);
+      game.print ("%s%s", levelString, buffer);
    }
 
    // now check if logging disabled
@@ -368,7 +368,7 @@ bool BotUtils::findNearestPlayer (void **pvHolder, edict_t *to, float searchDist
    edict_t *survive = nullptr; // pointer to temporally & survive entity
    float nearestPlayer = 4096.0f; // nearest player
 
-   int toTeam = engine.getTeam (to);
+   int toTeam = game.getTeam (to);
 
    for (const auto &client : m_clients) {
       if (!(client.flags & CF_USED) || client.ent == to) {
@@ -386,7 +386,7 @@ bool BotUtils::findNearestPlayer (void **pvHolder, edict_t *to, float searchDist
       }
    }
 
-   if (engine.isNullEntity (survive))
+   if (game.isNullEntity (survive))
       return false; // nothing found
 
    // fill the holder
@@ -403,21 +403,21 @@ void BotUtils::attachSoundsToClients (edict_t *ent, const char *sample, float vo
    // this function called by the sound hooking code (in emit_sound) enters the played sound into
    // the array associated with the entity
 
-   if (engine.isNullEntity (ent) || isEmptyStr (sample)) {
+   if (game.isNullEntity (ent) || isEmptyStr (sample)) {
       return;
    }
-   const Vector &origin = engine.getAbsPos (ent);
+   const Vector &origin = game.getAbsPos (ent);
 
    if (origin.empty ()) {
       return;
    }
-   int index = engine.indexOfEntity (ent) - 1;
+   int index = game.indexOfEntity (ent) - 1;
 
-   if (index < 0 || index >= engine.maxClients ()) {
+   if (index < 0 || index >= game.maxClients ()) {
       float nearestDistance = 99999.0f;
 
       // loop through all players
-      for (int i = 0; i < engine.maxClients (); i++) {
+      for (int i = 0; i < game.maxClients (); i++) {
          const Client &client = m_clients[i];
 
          if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE)) {
@@ -434,7 +434,7 @@ void BotUtils::attachSoundsToClients (edict_t *ent, const char *sample, float vo
    }
 
    // in case of worst case
-   if (index < 0 || index >= engine.maxClients ()) {
+   if (index < 0 || index >= game.maxClients ()) {
       return;
    }
    Client &client = m_clients[index];
@@ -442,43 +442,43 @@ void BotUtils::attachSoundsToClients (edict_t *ent, const char *sample, float vo
    if (strncmp ("player/bhit_flesh", sample, 17) == 0 || strncmp ("player/headshot", sample, 15) == 0) {
       // hit/fall sound?
       client.hearingDistance = 768.0f * volume;
-      client.timeSoundLasting = engine.timebase () + 0.5f;
+      client.timeSoundLasting = game.timebase () + 0.5f;
       client.soundPos = origin;
    }
    else if (strncmp ("items/gunpickup", sample, 15) == 0) {
       // weapon pickup?
       client.hearingDistance = 768.0f * volume;
-      client.timeSoundLasting = engine.timebase () + 0.5f;
+      client.timeSoundLasting = game.timebase () + 0.5f;
       client.soundPos = origin;
    }
    else if (strncmp ("weapons/zoom", sample, 12) == 0) {
       // sniper zooming?
       client.hearingDistance = 512.0f * volume;
-      client.timeSoundLasting = engine.timebase () + 0.1f;
+      client.timeSoundLasting = game.timebase () + 0.1f;
       client.soundPos = origin;
    }
    else if (strncmp ("items/9mmclip", sample, 13) == 0) {
       // ammo pickup?
       client.hearingDistance = 512.0f * volume;
-      client.timeSoundLasting = engine.timebase () + 0.1f;
+      client.timeSoundLasting = game.timebase () + 0.1f;
       client.soundPos = origin;
    }
    else if (strncmp ("hostage/hos", sample, 11) == 0) {
       // CT used hostage?
       client.hearingDistance = 1024.0f * volume;
-      client.timeSoundLasting = engine.timebase () + 5.0f;
+      client.timeSoundLasting = game.timebase () + 5.0f;
       client.soundPos = origin;
    }
    else if (strncmp ("debris/bustmetal", sample, 16) == 0 || strncmp ("debris/bustglass", sample, 16) == 0) {
       // broke something?
       client.hearingDistance = 1024.0f * volume;
-      client.timeSoundLasting = engine.timebase () + 2.0f;
+      client.timeSoundLasting = game.timebase () + 2.0f;
       client.soundPos = origin;
    }
    else if (strncmp ("doors/doormove", sample, 14) == 0) {
       // someone opened a door
       client.hearingDistance = 1024.0f * volume;
-      client.timeSoundLasting = engine.timebase () + 3.0f;
+      client.timeSoundLasting = game.timebase () + 3.0f;
       client.soundPos = origin;
    }
 }
@@ -487,7 +487,7 @@ void BotUtils::simulateSoundUpdates (int playerIndex) {
    // this function tries to simulate playing of sounds to let the bots hear sounds which aren't
    // captured through server sound hooking
 
-   if (playerIndex < 0 || playerIndex >= engine.maxClients ()) {
+   if (playerIndex < 0 || playerIndex >= game.maxClients ()) {
       return; // reliability check
    }
    Client &client = m_clients[playerIndex];
@@ -498,23 +498,23 @@ void BotUtils::simulateSoundUpdates (int playerIndex) {
    if (client.ent->v.oldbuttons & IN_ATTACK) // pressed attack button?
    {
       hearDistance = 2048.0f;
-      timeSound = engine.timebase () + 0.3f;
+      timeSound = game.timebase () + 0.3f;
    }
    else if (client.ent->v.oldbuttons & IN_USE) // pressed used button?
    {
       hearDistance = 512.0f;
-      timeSound = engine.timebase () + 0.5f;
+      timeSound = game.timebase () + 0.5f;
    }
    else if (client.ent->v.oldbuttons & IN_RELOAD) // pressed reload button?
    {
       hearDistance = 512.0f;
-      timeSound = engine.timebase () + 0.5f;
+      timeSound = game.timebase () + 0.5f;
    }
    else if (client.ent->v.movetype == MOVETYPE_FLY) // uses ladder?
    {
       if (cr::abs (client.ent->v.velocity.z) > 50.0f) {
          hearDistance = 1024.0f;
-         timeSound = engine.timebase () + 0.3f;
+         timeSound = game.timebase () + 0.3f;
       }
    }
    else {
@@ -523,7 +523,7 @@ void BotUtils::simulateSoundUpdates (int playerIndex) {
       if (mp_footsteps.boolean ()) {
          // moves fast enough?
          hearDistance = 1280.0f * (client.ent->v.velocity.length2D () / 260.0f);
-         timeSound = engine.timebase () + 0.3f;
+         timeSound = game.timebase () + 0.3f;
       }
    }
 
@@ -532,7 +532,7 @@ void BotUtils::simulateSoundUpdates (int playerIndex) {
    }
 
    // some sound already associated
-   if (client.timeSoundLasting > engine.timebase ()) {
+   if (client.timeSoundLasting > game.timebase ()) {
       if (client.hearingDistance <= hearDistance) {
          // override it with new
          client.hearingDistance = hearDistance;
@@ -550,11 +550,11 @@ void BotUtils::simulateSoundUpdates (int playerIndex) {
 
 void BotUtils::updateClients (void) {
    // record some stats of all players on the server
-   for (int i = 0; i < engine.maxClients (); i++) {
-      edict_t *player = engine.entityOfIndex (i + 1);
+   for (int i = 0; i < game.maxClients (); i++) {
+      edict_t *player = game.entityOfIndex (i + 1);
       Client &client = m_clients[i];
 
-      if (!engine.isNullEntity (player) && (player->v.flags & FL_CLIENT)) {
+      if (!game.isNullEntity (player) && (player->v.flags & FL_CLIENT)) {
          client.ent = player;
          client.flags |= CF_USED;
 
@@ -567,8 +567,8 @@ void BotUtils::updateClients (void) {
 
          if (client.flags & CF_ALIVE) {
             // keep the clipping mode enabled, or it can be turned off after new round has started
-            if (engine.getLocalEntity () == player && waypoints.hasEditFlag (WS_EDIT_NOCLIP)) {
-               engine.getLocalEntity ()->v.movetype = MOVETYPE_NOCLIP;
+            if (game.getLocalEntity () == player && waypoints.hasEditFlag (WS_EDIT_NOCLIP)) {
+               game.getLocalEntity ()->v.movetype = MOVETYPE_NOCLIP;
             }
             client.origin = player->v.origin;
             simulateSoundUpdates (i);
