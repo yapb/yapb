@@ -1409,23 +1409,23 @@ public:
       m_deathMsgSent = sent;
    }
 
-   inline const bool isBombPlanted (void) {
+   inline bool isBombPlanted (void) const {
       return m_bombPlanted;
    }
 
-   inline const float getTimeBombPlanted (void) const {
+   inline float getTimeBombPlanted (void) const {
       return m_timeBombPlanted;
    }
 
-   inline const float getRoundStartTime (void) const {
+   inline float getRoundStartTime (void) const {
       return m_timeRoundStart;
    }
 
-   inline const float getRoundMidTime (void) const {
+   inline float getRoundMidTime (void) const {
       return m_timeRoundMid;
    }
 
-   inline const float getRoundEndTime (void) const {
+   inline float getRoundEndTime (void) const {
       return m_timeRoundEnd;
    }
 
@@ -1457,7 +1457,7 @@ public:
       m_plantSearchUpdateTime = timestamp;
    }
 
-   inline const float getPlantedBombSearchTimestamp (void) const {
+   inline float getPlantedBombSearchTimestamp (void) const {
       return m_plantSearchUpdateTime;
    }
 
@@ -1465,7 +1465,7 @@ public:
       m_lastRadioTime[team] = timestamp;
    }
 
-   inline const float getLastRadioTimestamp (const int team) const {
+   inline float getLastRadioTimestamp (const int team) const {
       return m_lastRadioTime[team];
    }
 
@@ -1473,7 +1473,7 @@ public:
       m_lastRadio[team] = radio;
    }
 
-   inline const int getLastRadio (const int team) const {
+   inline int getLastRadio (const int team) const {
       return m_lastRadio[team];
    }
 
@@ -1481,7 +1481,7 @@ public:
       m_lastChatTime = timestamp;
    }
 
-   inline const float getLastChatTimestamp (void) const {
+   inline float getLastChatTimestamp (void) const {
       return m_lastChatTime;
    }
 };
@@ -1752,27 +1752,27 @@ public:
 public:
 
    // get the chat array
-   inline auto &getChat (void) {
+   inline Array <StringArray> &getChat (void) {
       return m_chat;
    }
 
    // get's the chatter array
-   inline auto &getChatter (void) {
+   inline Array <Array <ChatterItem>> &getChatter (void) {
       return m_chatter;
    }
 
    // get's the replies array
-   inline auto &getReplies (void) {
+   inline Array <Keywords> &getReplies (void) {
       return m_replies;
    }
 
    // get's the weapon info data
-   inline auto &getWeapons (void) {
+   inline Array <WeaponInfo> &getWeapons (void) {
       return m_weapons;
    }
 
    // get's raw weapon info
-   inline auto getRawWeapons (void) {
+   inline WeaponInfo *getRawWeapons (void) {
       return m_weapons.begin ();
    }
 

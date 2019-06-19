@@ -1557,9 +1557,7 @@ void ClientCommand (edict_t *ent) {
          }
       }
    }
-
-   int clientIndex = engine.indexOfEntity (ent) - 1;
-   Client &radioTarget = util.getClient (clientIndex);
+   Client &radioTarget = util.getClient (engine.indexOfEntity (ent) - 1);
 
    // check if this player alive, and issue something
    if ((radioTarget.flags & CF_ALIVE) && radioTarget.radio != 0 && strncmp (command, "menuselect", 10) == 0) {
