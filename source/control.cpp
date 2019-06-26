@@ -310,7 +310,7 @@ int BotControl::cmdWaypointOn (void) {
    if (waypoints.hasEditFlag (WS_EDIT_ENABLED)) {
       extern ConVar mp_roundtime, mp_freezetime, mp_timelimit;
 
-      mp_roundtime.set (0);
+      mp_roundtime.set (9);
       mp_freezetime.set (0);
       mp_timelimit.set (0);
    }

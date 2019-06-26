@@ -70,19 +70,18 @@ void Game::precache (void) {
    pushRegStackToEngine (true);
 }
 
-void Game::levelInitialize (void) {
+void Game::levelInitialize (edict_t *ents, int max) {
    // this function precaches needed models and initialize class variables
 
    m_spawnCount[TEAM_COUNTER] = 0;
    m_spawnCount[TEAM_TERRORIST] = 0;
    
    // go thru the all entities on map, and do whatever we're want
-   for (int i = 0; i < globals->maxEntities; i++) {
-
-      auto ent = engfuncs.pfnPEntityOfEntIndex (i);
+   for (int i = 0; i < max; i++) {
+      auto ent = ents + i;
 
       // only valid entities
-      if (game.isNullEntity (ent) || ent->free || ent->v.classname == 0) {
+      if (!ent || ent->free || ent->v.classname == 0) {
          continue;
       }
       auto classname = STRING (ent->v.classname);
@@ -1139,6 +1138,10 @@ void Game::processMessages (void *ptr) {
       if (bot != nullptr && m_msgBlock.state == 0) {
          if (intVal > 0) {
             bot->m_hasProgressBar = true; // the progress bar on a hud
+
+            if (game.mapIs (MAP_DE) && bots.isBombPlanted () && bot->m_team == TEAM_COUNTER) {
+               bots.notifyBombDefuse ();
+            }
          }
          else if (intVal == 0) {
             bot->m_hasProgressBar = false; // no progress bar or disappeared
@@ -1412,12 +1415,12 @@ void Game::slowFrame (void) {
 
 void Game::beginMessage (edict_t *ent, int dest, int type) {
    // store the message type in our own variables, since the GET_USER_MSG_ID () will just do a lot of strcmp()'s...
-   if ((is (GAME_METAMOD)) && getMessageId (NETMSG_MONEY) == -1) {
+   if (is (GAME_METAMOD) && getMessageId (NETMSG_MONEY) == -1) {
 
       auto setMsgId = [&] (const char *name, NetMsgId id) {
          setMessageId (id, GET_USER_MSG_ID (PLID, name, nullptr));
       };
-
+      MessageBox (0, 0, 0, 0);
       setMsgId ("VGUIMenu", NETMSG_VGUI);
       setMsgId ("ShowMenu", NETMSG_SHOWMENU);
       setMsgId ("WeaponList", NETMSG_WEAPONLIST);
@@ -1444,9 +1447,8 @@ void Game::beginMessage (edict_t *ent, int dest, int type) {
          setMessageId (NETMSG_BOTVOICE, GET_USER_MSG_ID (PLID, "BotVoice", nullptr));
       }
    }
-   resetMessages ();
 
-   if ((!is (GAME_LEGACY) || is (GAME_XASH_ENGINE)) && dest == MSG_SPEC && dest == getMessageId (NETMSG_HLTV)) {
+   if ((!is (GAME_LEGACY) || is (GAME_XASH_ENGINE)) && dest == MSG_SPEC && type == getMessageId (NETMSG_HLTV)) {
       setCurrentMessageId (NETMSG_HLTV);
    }
    captureMessage (type, NETMSG_WEAPONLIST);

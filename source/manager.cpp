@@ -1511,6 +1511,21 @@ void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *en
    }
 }
 
+void BotManager::notifyBombDefuse (void) {
+   // notify all terrorists that CT is starting bomb defusing
+
+   for (int i = 0; i < game.maxClients (); i++) {
+      auto bot = bots.getBot (i);
+
+      if (bot && bot->m_team == TEAM_TERRORIST && bot->m_notKilled && bot->taskId () != TASK_MOVETOPOSITION) {
+         bot->clearSearchNodes ();
+
+         bot->m_position = waypoints.getBombPos ();
+         bot->startTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, INVALID_WAYPOINT_INDEX, 0.0f, true);
+      }
+   }
+}
+
 void BotManager::updateActiveGrenade (void) {
    if (m_grenadeUpdateTime > game.timebase ()) {
       return;

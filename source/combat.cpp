@@ -1143,7 +1143,7 @@ void Bot::attackMovement (void) {
             int enemyNearestIndex = waypoints.getNearest (m_enemy->v.origin);
 
             if (waypoints.isDuckVisible (m_currentWaypointIndex, enemyNearestIndex) && waypoints.isDuckVisible (enemyNearestIndex, m_currentWaypointIndex)) {
-               m_duckTime = game.timebase () + 0.75f;
+               m_duckTime = game.timebase () + 0.5f;
             }
          }
          m_moveSpeed = 0.0f;

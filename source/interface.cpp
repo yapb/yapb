@@ -33,6 +33,47 @@ plugin_info_t Plugin_info = {
    PT_ANYTIME, // when unloadable
 };
 
+namespace VariadicCallbacks {
+   void clientCommand (edict_t *ent, char const *format, ...) {
+      // this function forces the client whose player entity is ent to issue a client command.
+      // How it works is that clients all have a argv global string in their client DLL that
+      // stores the command string; if ever that string is filled with characters, the client DLL
+      // sends it to the engine as a command to be executed. When the engine has executed that
+      // command, this argv string is reset to zero. Here is somehow a curious implementation of
+      // ClientCommand: the engine sets the command it wants the client to issue in his argv, then
+      // the client DLL sends it back to the engine, the engine receives it then executes the
+      // command therein. Don't ask me why we need all this complicated crap. Anyhow since bots have
+      // no client DLL, be certain never to call this function upon a bot entity, else it will just
+      // make the server crash. Since hordes of uncautious, not to say stupid, programmers don't
+      // even imagine some players on their servers could be bots, this check is performed less than
+      // sometimes actually by their side, that's why we strongly recommend to check it here too. In
+      // case it's a bot asking for a client command, we handle it like we do for bot commands
+
+      va_list ap;
+      char buffer[MAX_PRINT_BUFFER];
+
+      va_start (ap, format);
+      _vsnprintf (buffer, cr::bufsize (buffer), format, ap);
+      va_end (ap);
+
+      if (ent && (ent->v.flags & (FL_FAKECLIENT | FL_DORMANT))) {
+         if (bots.getBot (ent)) {
+            game.execBotCmd (ent, buffer);
+         }
+
+         if (game.is (GAME_METAMOD)) {
+            RETURN_META (MRES_SUPERCEDE); // prevent bots to be forced to issue client commands
+         }
+         return;
+      }
+
+      if (game.is (GAME_METAMOD)) {
+         RETURN_META (MRES_IGNORED);
+      }
+      engfuncs.pfnClientCommand (ent, buffer);
+   }
+}
+
 SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
    // this function is called right after GiveFnptrsToDll() by the engine in the game DLL (or
    // what it BELIEVES to be the game DLL), in order to copy the list of MOD functions that can
@@ -207,7 +248,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       dllapi.pfnClientDisconnect (ent);
    };
 
-   functionTable->pfnClientUserInfoChanged = [] (edict_t * ent, char *infobuffer) {
+   functionTable->pfnClientUserInfoChanged = [] (edict_t  *ent, char *infobuffer) {
       // this function is called when a player changes model, or changes team. Occasionally it
       // enforces rules on these changes (for example, some MODs don't want to allow players to
       // change their player model). But most commonly, this function is in charge of handling
@@ -221,7 +262,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       dllapi.pfnClientUserInfoChanged (ent, infobuffer);
    };
 
-   functionTable->pfnClientCommand = [] (edict_t * ent) {
+   functionTable->pfnClientCommand = [] (edict_t *ent) {
       // this function is called whenever the client whose player entity is ent issues a client
       // command. How it works is that clients all have a global string in their client DLL that
       // stores the command string; if ever that string is filled with characters, the client DLL
@@ -250,7 +291,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       }
 
       // record stuff about radio and chat
-      bots.captureChatRadio (engfuncs.pfnCmd_Argv (0), engfuncs.pfnCmd_Argv (0), ent);
+      bots.captureChatRadio (engfuncs.pfnCmd_Argv (0), engfuncs.pfnCmd_Argv (1), ent);
 
       if (game.is (GAME_METAMOD)) {
          RETURN_META (MRES_IGNORED);
@@ -258,7 +299,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       dllapi.pfnClientCommand (ent);
    };
 
-   functionTable->pfnServerActivate = [] (edict_t * pentEdictList, int edictCount, int clientMax) {
+   functionTable->pfnServerActivate = [] (edict_t *pentEdictList, int edictCount, int clientMax) {
       // this function is called when the server has fully loaded and is about to manifest itself
       // on the network as such. Since a mapchange is actually a server shutdown followed by a
       // restart, this function is also called when a new map is being loaded. Hence it's the
@@ -270,7 +311,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       conf.load (false); // initialize all config files
 
       // do a level initialization
-      game.levelInitialize ();
+      game.levelInitialize (pentEdictList, edictCount);
 
       // update worldmodel
       illum.resetWorldModel ();
@@ -401,7 +442,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       // moving players. There is normally no distinction between them, else client-side prediction
       // wouldn't work properly (and it doesn't work that well, already...)
 
-      illum.setWorldModel (playerMove->physents[0u].model);
+      illum.setWorldModel (playerMove->physents[0].model);
 
       if (game.is (GAME_METAMOD)) {
          RETURN_META (MRES_IGNORED);
@@ -424,7 +465,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2_Post (gamefuncs_t *functionTable, int *
 
    memset (functionTable, 0, sizeof (gamefuncs_t));
 
-   functionTable->pfnSpawn = [] (edict_t * ent) {
+   functionTable->pfnSpawn = [] (edict_t *ent) {
       // this function asks the game DLL to spawn (i.e, give a physical existence in the virtual
       // world, in other words to 'display') the entity pointed to by ent in the game. The
       // Spawn() function is one of the functions any entity is supposed to have in the game DLL,
@@ -514,7 +555,7 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
       engfuncs.pfnChangeLevel (s1, s2);
    };
 
-   functionTable->pfnFindEntityByString = [] (edict_t * edictStartSearchAfter, const char *field, const char *value) {
+   functionTable->pfnFindEntityByString = [] (edict_t *edictStartSearchAfter, const char *field, const char *value) {
       // round starts in counter-strike 1.5
       if ((game.is (GAME_LEGACY)) && strcmp (value, "info_map_parameters") == 0) {
          bots.initRound ();
@@ -526,7 +567,7 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
       return engfuncs.pfnFindEntityByString (edictStartSearchAfter, field, value);
    };
 
-   functionTable->pfnEmitSound = [] (edict_t * entity, int channel, const char *sample, float volume, float attenuation, int flags, int pitch) {
+   functionTable->pfnEmitSound = [] (edict_t *entity, int channel, const char *sample, float volume, float attenuation, int flags, int pitch) {
       // this function tells the engine that the entity pointed to by "entity", is emitting a sound
       // which fileName is "sample", at level "channel" (CHAN_VOICE, etc...), with "volume" as
       // loudness multiplicator (normal volume VOL_NORM is 1.0), with a pitch of "pitch" (normal
@@ -545,46 +586,7 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
       engfuncs.pfnEmitSound (entity, channel, sample, volume, attenuation, flags, pitch);
    };
 
-   functionTable->pfnClientCommand = [] (edict_t * ent, char const *format, ...) {
-      // this function forces the client whose player entity is ent to issue a client command.
-      // How it works is that clients all have a argv global string in their client DLL that
-      // stores the command string; if ever that string is filled with characters, the client DLL
-      // sends it to the engine as a command to be executed. When the engine has executed that
-      // command, this argv string is reset to zero. Here is somehow a curious implementation of
-      // ClientCommand: the engine sets the command it wants the client to issue in his argv, then
-      // the client DLL sends it back to the engine, the engine receives it then executes the
-      // command therein. Don't ask me why we need all this complicated crap. Anyhow since bots have
-      // no client DLL, be certain never to call this function upon a bot entity, else it will just
-      // make the server crash. Since hordes of uncautious, not to say stupid, programmers don't
-      // even imagine some players on their servers could be bots, this check is performed less than
-      // sometimes actually by their side, that's why we strongly recommend to check it here too. In
-      // case it's a bot asking for a client command, we handle it like we do for bot commands
-
-      va_list ap;
-      char buffer[MAX_PRINT_BUFFER];
-
-      va_start (ap, format);
-      _vsnprintf (buffer, cr::bufsize (buffer), format, ap);
-      va_end (ap);
-
-      if (ent && (ent->v.flags & (FL_FAKECLIENT | FL_DORMANT))) {
-         if (bots.getBot (ent)) {
-            game.execBotCmd (ent, buffer);
-         }
-
-         if (game.is (GAME_METAMOD)) {
-            RETURN_META (MRES_SUPERCEDE); // prevent bots to be forced to issue client commands
-         }
-         return;
-      }
-
-      if (game.is (GAME_METAMOD)) {
-         RETURN_META (MRES_IGNORED);
-      }
-      engfuncs.pfnClientCommand (ent, buffer);
-   };
-
-   functionTable->pfnMessageBegin = [] (int msgDest, int msgType, const float *origin, edict_t * ed) {
+   functionTable->pfnMessageBegin = [] (int msgDest, int msgType, const float *origin, edict_t *ed) {
       // this function called each time a message is about to sent.
 
       game.beginMessage (ed, msgDest, msgType);
@@ -772,7 +774,7 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
       return message;
    };
 
-   functionTable->pfnClientPrintf = [] (edict_t * ent, PRINT_TYPE printType, const char *message) {
+   functionTable->pfnClientPrintf = [] (edict_t *ent, PRINT_TYPE printType, const char *message) {
       // this function prints the text message string pointed to by message by the client side of
       // the client entity pointed to by ent, in a manner depending of printType (print_console,
       // print_center or print_chat). Be certain never to try to feed a bot with this function,
@@ -858,7 +860,7 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
       return engfuncs.pfnCmd_Argc (); // ask the engine how many arguments there are
    };
 
-   functionTable->pfnSetClientMaxspeed = [] (const edict_t * ent, float newMaxspeed) {
+   functionTable->pfnSetClientMaxspeed = [] (const edict_t *ent, float newMaxspeed) {
       Bot *bot = bots.getBot (const_cast <edict_t *> (ent));
 
       // check wether it's not a bot
@@ -870,34 +872,6 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
          RETURN_META (MRES_IGNORED);
       }
       engfuncs.pfnSetClientMaxspeed (ent, newMaxspeed);
-   };
-
-   functionTable->pfnAlertMessage = [] (ALERT_TYPE alertType, char *format, ...) {
-      va_list ap;
-      char buffer[MAX_PRINT_BUFFER];
-
-      va_start (ap, format);
-      vsnprintf (buffer, cr::bufsize (buffer), format, ap);
-      va_end (ap);
-
-      if (game.mapIs (MAP_DE) && bots.isBombPlanted () && strstr (buffer, "_Defuse_") != nullptr) {
-         // notify all terrorists that CT is starting bomb defusing
-         for (int i = 0; i < game.maxClients (); i++) {
-            Bot *bot = bots.getBot (i);
-
-            if (bot != nullptr && bot->m_team == TEAM_TERRORIST && bot->m_notKilled) {
-               bot->clearSearchNodes ();
-
-               bot->m_position = waypoints.getBombPos ();
-               bot->startTask (TASK_MOVETOPOSITION, TASKPRI_MOVETOPOSITION, INVALID_WAYPOINT_INDEX, 0.0f, true);
-            }
-         }
-      }
-
-      if (game.is (GAME_METAMOD)) {
-         RETURN_META (MRES_IGNORED);
-      }
-      engfuncs.pfnAlertMessage (alertType, buffer);
    };
    return TRUE;
 }

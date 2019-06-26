@@ -414,6 +414,14 @@ enum Visibility : int {
    VISIBLE_OTHER = cr::bit (3)
 };
 
+// command handler status
+enum BotCommandStatus : int {
+   CMD_STATUS_HANDLED = 0, // command successfully handled 
+   CMD_STATUS_LISTENSERV, // command is only avaialble on listen server
+   CMD_STATUS_DENIED, // access to this command is denied
+   CMD_STATUS_BADFORMAT // wrong params
+};
+
 // defines for waypoint flags field (32 bits are available)
 enum WaypointFlag : int32 {
    FLAG_LIFT = cr::bit (1), // wait for lift to be down before approaching this waypoint
@@ -1280,8 +1288,6 @@ private:
    int m_lastWinner; // the team who won previous round
    int m_lastDifficulty; // last bots difficulty
    int m_bombSayStatus; // some bot is issued whine about bomb
-
-   int m_radioSelect[MAX_ENGINE_PLAYERS];
    int m_lastRadio[MAX_TEAM_COUNT];
 
    bool m_leaderChoosen[MAX_TEAM_COUNT]; // is team leader choose theese round
@@ -1353,6 +1359,7 @@ public:
    void sendPingOffsets (edict_t *to);
    void sendDeathMsgFix (void);
    void captureChatRadio (const char *cmd, const char *arg, edict_t *ent);
+   void notifyBombDefuse (void);
 
    static void execGameEntity (entvars_t *vars);
 
@@ -1533,7 +1540,7 @@ private:
    FloydMatrix *m_matrix;
 
 public:
-   bool m_redoneVisibility;
+   bool m_needsVisRebuild;
 
    Waypoint (void);
    ~Waypoint (void);
@@ -1877,14 +1884,6 @@ public:
       }
       return *input == '\0';
    }
-};
-
-// command handler status
-enum BotCommandStatus : int {
-   CMD_STATUS_HANDLED = 0, // command successfully handled 
-   CMD_STATUS_LISTENSERV, // command is only avaialble on listen server
-   CMD_STATUS_DENIED, // access to this command is denied
-   CMD_STATUS_BADFORMAT // wrong params
 };
 
 // bot command manager

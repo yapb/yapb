@@ -701,6 +701,12 @@ void Bot::processPickups (void) {
                }
 
                if (isOutOfBombTimer ()) {
+                  completeTask ();
+
+                  // then start escape from bomb immediate
+                  startTask (TASK_ESCAPEFROMBOMB, TASKPRI_ESCAPEFROMBOMB, INVALID_WAYPOINT_INDEX, 0.0f, true);
+
+                  // and no pickup
                   allowPickup = false;
                   return;
                }
@@ -2257,13 +2263,13 @@ bool Bot::lastEnemyShootable (void) {
 void Bot::checkRadioQueue (void) {
    // this function handling radio and reacting to it
 
-   float distance = (m_radioEntity->v.origin - pev->origin).length ();
 
    // don't allow bot listen you if bot is busy
    if ((taskId () == TASK_DEFUSEBOMB || taskId () == TASK_PLANTBOMB || hasHostage () || m_hasC4) && m_radioOrder != RADIO_REPORT_TEAM) {
       m_radioOrder = 0;
       return;
    }
+   float distance = (m_radioEntity->v.origin - pev->origin).length ();
 
    switch (m_radioOrder) {
    case RADIO_COVER_ME:
@@ -2272,7 +2278,7 @@ void Bot::checkRadioQueue (void) {
    case CHATTER_GOING_TO_PLANT_BOMB:
    case CHATTER_COVER_ME:
       // check if line of sight to object is not blocked (i.e. visible)
-      if ((seesEntity (m_radioEntity->v.origin)) || (m_radioOrder == RADIO_STICK_TOGETHER_TEAM)) {
+      if (seesEntity (m_radioEntity->v.origin) || m_radioOrder == RADIO_STICK_TOGETHER_TEAM) {
          if (game.isNullEntity (m_targetEntity) && game.isNullEntity (m_enemy) && rng.chance (m_personality == PERSONALITY_CAREFUL ? 80 : 20)) {
             int numFollowers = 0;
 
@@ -5835,7 +5841,7 @@ bool Bot::isBombDefusing (const Vector &bombOrigin) {
    bool defusingInProgress = false;
 
    for (const auto &client : util.getClients ()) {
-      Bot *bot = bots.getBot (client.ent);
+      auto bot = bots.getBot (client.ent);
 
       if (bot == nullptr || bot == this) {
          continue; // skip invalid bots

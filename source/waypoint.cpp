@@ -1249,7 +1249,7 @@ void Waypoint::loadExperience (void) {
 
 void Waypoint::loadVisibility (void) {
    m_visibilityIndex = 0;
-   m_redoneVisibility = true;
+   m_needsVisRebuild = true;
 
    if (m_numWaypoints <= 0) {
       return;
@@ -1258,7 +1258,7 @@ void Waypoint::loadVisibility (void) {
 
    // if loaded, do not recalculate visibility
    if (isLoaded) {
-      m_redoneVisibility = false;
+      m_needsVisRebuild = false;
    }
 }
 
@@ -1733,7 +1733,7 @@ bool Waypoint::isNodeReacheable (const Vector &src, const Vector &destination) {
 }
 
 void Waypoint::rebuildVisibility (void) {
-   if (!m_redoneVisibility) {
+   if (!m_needsVisRebuild) {
       return;
    }
 
@@ -1821,7 +1821,7 @@ void Waypoint::rebuildVisibility (void) {
       m_paths[m_visibilityIndex]->vis.crouch = crouchCount;
       m_paths[m_visibilityIndex]->vis.stand = standCount;
    }
-   m_redoneVisibility = false;
+   m_needsVisRebuild = false;
 }
 
 bool Waypoint::isVisible (int srcIndex, int destIndex) {
@@ -2627,7 +2627,7 @@ Waypoint::Waypoint (void) {
 
    m_waypointPaths = false;
    m_endJumpPoint = false;
-   m_redoneVisibility = false;
+   m_needsVisRebuild = false;
    m_learnJumpWaypoint = false;
    m_waypointsChanged = false;
    m_timeJumpStarted = 0.0f;

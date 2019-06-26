@@ -170,7 +170,7 @@ public:
    void precache (void);
 
    // initialize levels
-   void levelInitialize (void);
+   void levelInitialize (edict_t *ents, int max);
 
    // prints data to servers console
    void print (const char *fmt, ...);
@@ -317,7 +317,7 @@ public:
    }
 
    // gets the player team
-   inline int getTeam (edict_t *ent);
+   int getTeam (edict_t *ent);
 
    // adds translation pair from config
    inline void addTranslation (const String &original, const String &translated) {
