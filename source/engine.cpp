@@ -1420,7 +1420,6 @@ void Game::beginMessage (edict_t *ent, int dest, int type) {
       auto setMsgId = [&] (const char *name, NetMsgId id) {
          setMessageId (id, GET_USER_MSG_ID (PLID, name, nullptr));
       };
-      MessageBox (0, 0, 0, 0);
       setMsgId ("VGUIMenu", NETMSG_VGUI);
       setMsgId ("ShowMenu", NETMSG_SHOWMENU);
       setMsgId ("WeaponList", NETMSG_WEAPONLIST);
