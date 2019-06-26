@@ -164,6 +164,7 @@ void Game::print (const char *fmt, ...) {
    va_end (ap);
 
    strcat (string, "\n");
+
    engfuncs.pfnServerPrint (string);
 }
 
@@ -219,6 +220,22 @@ void Game::clientPrint (edict_t *ent, const char *fmt, ...) {
    }
    strcat (string, "\n");
    engfuncs.pfnClientPrintf (ent, print_console, string);
+}
+
+void Game::centerPrint (edict_t *ent, const char *fmt, ...) {
+   va_list ap;
+   char string[MAX_PRINT_BUFFER];
+
+   va_start (ap, fmt);
+   vsnprintf (string, cr::bufsize (string), translate (fmt), ap);
+   va_end (ap);
+
+   if (isNullEntity (ent)) {
+      print (string);
+      return;
+   }
+   strcat (string, "\n");
+   engfuncs.pfnClientPrintf (ent, print_center, string);
 }
 
 void Game::drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, int red, int green, int blue, int brightness, int speed, int life, DrawLineType type) {
@@ -1379,32 +1396,7 @@ void Game::slowFrame (void) {
    if (m_slowFrame > game.timebase ()) {
       return;
    }
-   extern ConVar yb_password_key, yb_password;
-
-   for (int i = 0; i < maxClients (); i++) {
-      edict_t *player = entityOfIndex (i + 1);
-
-      // code below is executed only on dedicated server
-      if (isDedicated () && !isNullEntity (player) && (player->v.flags & FL_CLIENT) && !(player->v.flags & FL_FAKECLIENT)) {
-         Client &client = util.getClient (i);
-
-         if (client.flags & CF_ADMIN) {
-            if (util.isEmptyStr (yb_password_key.str ()) && util.isEmptyStr (yb_password.str ())) {
-               client.flags &= ~CF_ADMIN;
-            }
-            else if (!!strcmp (yb_password.str (), engfuncs.pfnInfoKeyValue (engfuncs.pfnGetInfoKeyBuffer (client.ent), const_cast <char *> (yb_password_key.str ())))) {
-               client.flags &= ~CF_ADMIN;
-               print ("Player %s had lost remote access to yapb.", STRING (player->v.netname));
-            }
-         }
-         else if (!(client.flags & CF_ADMIN) && !util.isEmptyStr (yb_password_key.str ()) && !util.isEmptyStr (yb_password.str ())) {
-            if (strcmp (yb_password.str (), engfuncs.pfnInfoKeyValue (engfuncs.pfnGetInfoKeyBuffer (client.ent), const_cast <char *> (yb_password_key.str ()))) == 0) {
-               client.flags |= CF_ADMIN;
-               print ("Player %s had gained full remote access to yapb.", STRING (player->v.netname));
-            }
-         }
-      }
-   }
+   ctrl.maintainAdminRights ();
    bots.calculatePingOffsets ();
 
    // calculate light levels for all waypoints if needed
@@ -1418,7 +1410,92 @@ void Game::slowFrame (void) {
    m_slowFrame = timebase () + 1.0f;
 }
 
+void Game::beginMessage (edict_t *ent, int dest, int type) {
+   // store the message type in our own variables, since the GET_USER_MSG_ID () will just do a lot of strcmp()'s...
+   if ((is (GAME_METAMOD)) && getMessageId (NETMSG_MONEY) == -1) {
+
+      auto setMsgId = [&] (const char *name, NetMsgId id) {
+         setMessageId (id, GET_USER_MSG_ID (PLID, name, nullptr));
+      };
+
+      setMsgId ("VGUIMenu", NETMSG_VGUI);
+      setMsgId ("ShowMenu", NETMSG_SHOWMENU);
+      setMsgId ("WeaponList", NETMSG_WEAPONLIST);
+      setMsgId ("CurWeapon", NETMSG_CURWEAPON);
+      setMsgId ("AmmoX", NETMSG_AMMOX);
+      setMsgId ("AmmoPickup", NETMSG_AMMOPICKUP);
+      setMsgId ("Damage", NETMSG_DAMAGE);
+      setMsgId ("Money", NETMSG_MONEY);
+      setMsgId ("StatusIcon", NETMSG_STATUSICON);
+      setMsgId ("DeathMsg", NETMSG_DEATH);
+      setMsgId ("ScreenFade", NETMSG_SCREENFADE);
+      setMsgId ("HLTV", NETMSG_HLTV);
+      setMsgId ("TextMsg", NETMSG_TEXTMSG);
+      setMsgId ("TeamInfo", NETMSG_TEAMINFO);
+      setMsgId ("BarTime", NETMSG_BARTIME);
+      setMsgId ("SendAudio", NETMSG_SENDAUDIO);
+      setMsgId ("SayText", NETMSG_SAYTEXT);
+      setMsgId ("FlashBat", NETMSG_FLASHBAT);
+      setMsgId ("Flashlight", NETMSG_FLASHLIGHT);
+      setMsgId ("NVGToggle", NETMSG_NVGTOGGLE);
+      setMsgId ("ItemStatus", NETMSG_ITEMSTATUS);
+
+      if (is (GAME_SUPPORT_BOT_VOICE)) {
+         setMessageId (NETMSG_BOTVOICE, GET_USER_MSG_ID (PLID, "BotVoice", nullptr));
+      }
+   }
+   resetMessages ();
+
+   if ((!is (GAME_LEGACY) || is (GAME_XASH_ENGINE)) && dest == MSG_SPEC && dest == getMessageId (NETMSG_HLTV)) {
+      setCurrentMessageId (NETMSG_HLTV);
+   }
+   captureMessage (type, NETMSG_WEAPONLIST);
+
+   if (!isNullEntity (ent)) {
+      int index = bots.index (ent);
+
+      // is this message for a bot?
+      if (index != -1 && !(ent->v.flags & FL_DORMANT)) {
+         setCurrentMessageOwner (index);
+
+         // message handling is done in usermsg.cpp
+         captureMessage (type, NETMSG_VGUI);
+         captureMessage (type, NETMSG_CURWEAPON);
+         captureMessage (type, NETMSG_AMMOX);
+         captureMessage (type, NETMSG_AMMOPICKUP);
+         captureMessage (type, NETMSG_DAMAGE);
+         captureMessage (type, NETMSG_MONEY);
+         captureMessage (type, NETMSG_STATUSICON);
+         captureMessage (type, NETMSG_SCREENFADE);
+         captureMessage (type, NETMSG_BARTIME);
+         captureMessage (type, NETMSG_TEXTMSG);
+         captureMessage (type, NETMSG_SHOWMENU);
+         captureMessage (type, NETMSG_FLASHBAT);
+         captureMessage (type, NETMSG_NVGTOGGLE);
+         captureMessage (type, NETMSG_ITEMSTATUS);
+      }
+   }
+   else if (dest == MSG_ALL) {
+      captureMessage (type, NETMSG_TEAMINFO);
+      captureMessage (type, NETMSG_DEATH);
+      captureMessage (type, NETMSG_TEXTMSG);
+
+      if (type == SVC_INTERMISSION) {
+         for (int i = 0; i < game.maxClients (); i++) {
+            Bot *bot = bots.getBot (i);
+
+            if (bot != nullptr) {
+               bot->m_notKilled = false;
+            }
+         }
+      }
+   }
+}
+
 inline int Game::getTeam (edict_t *ent) {
+   if (game.isNullEntity (ent)) {
+      return TEAM_UNASSIGNED;
+   }
    return util.getClient (indexOfEntity (ent) - 1).team;
 }
 

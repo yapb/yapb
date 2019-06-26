@@ -18,6 +18,7 @@ ConVar yb_think_fps ("yb_think_fps", "30.0");
 
 ConVar yb_join_after_player ("yb_join_after_player", "0");
 ConVar yb_join_team ("yb_join_team", "any");
+ConVar yb_join_delay ("yb_join_delay", "5.0");
 
 ConVar yb_name_prefix ("yb_name_prefix", "");
 ConVar yb_difficulty ("yb_difficulty", "4");
@@ -27,11 +28,11 @@ ConVar yb_avatar_display ("yb_avatar_display", "1");
 
 ConVar yb_language ("yb_language", "en");
 ConVar yb_ignore_cvars_on_changelevel ("yb_ignore_cvars_on_changelevel", "yb_quota,yb_autovacate");
-ConVar yb_display_menu_text ("yb_display_menu_text", "1");
 
 ConVar mp_limitteams ("mp_limitteams", nullptr, VT_NOREGISTER);
 ConVar mp_autoteambalance ("mp_autoteambalance", nullptr, VT_NOREGISTER);
 ConVar mp_roundtime ("mp_roundtime", nullptr, VT_NOREGISTER);
+ConVar mp_timelimit ("mp_timelimit", nullptr, VT_NOREGISTER);
 ConVar mp_freezetime ("mp_freezetime", nullptr, VT_NOREGISTER, true, "0");
 
 BotManager::BotManager (void) {
@@ -278,14 +279,14 @@ Bot *BotManager::getAliveBot (void) {
    return nullptr;
 }
 
-void BotManager::framePeriodic (void) {
+void BotManager::slowFrame (void) {
    // this function calls think () function for all available at call moment bots
 
    for (int i = 0; i < game.maxClients (); i++) {
       auto bot = m_bots[i];
 
       if (bot != nullptr) {
-         bot->framePeriodic ();
+         bot->slowFrame ();
       }
    }
 }
@@ -501,8 +502,8 @@ void BotManager::decrementQuota (int by) {
 }
 
 void BotManager::initQuota (void) {
-   m_maintainTime = game.timebase () + 3.0f;
-   m_quotaMaintainTime = game.timebase () + 3.0f;
+   m_maintainTime = game.timebase () + yb_join_delay.flt ();
+   m_quotaMaintainTime = game.timebase () + yb_join_delay.flt ();
 
    m_creationTab.clear ();
 }
@@ -914,7 +915,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
 
    m_lastCommandTime = game.timebase () - 0.1f;
    m_frameInterval = game.timebase ();
-   m_timePeriodicUpdate = 0.0f;
+   m_slowFrameTimestamp = 0.0f;
 
    switch (personality) {
    case 1:
@@ -1439,6 +1440,74 @@ void BotManager::sendDeathMsgFix (void) {
       for (const auto &client : util.getClients ()) {
          sendPingOffsets (client.ent);
       }
+   }
+}
+
+void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *ent) {
+   if (game.isBotCmd ()) {
+      return;
+   }
+
+   if (stricmp (cmd, "say") == 0 || stricmp (cmd, "say_team") == 0) {
+      Bot *bot = nullptr;
+
+      if (strcmp (arg, "dropme") == 0 || strcmp (arg, "dropc4") == 0) {
+         if (util.findNearestPlayer (reinterpret_cast <void **> (&bot), ent, 300.0f, true, true, true)) {
+            bot->dropWeaponForUser (ent, util.isEmptyStr (strstr (arg, "c4")) ? false : true);
+         }
+         return;
+      }
+
+      bool alive = util.isAlive (ent);
+      int team = -1;
+
+      if (strcmp (cmd, "say_team") == 0) {
+         team = game.getTeam (ent);
+      }
+
+      for (const auto &client : util.getClients ()) {
+         if (!(client.flags & CF_USED) || team != client.team || alive != util.isAlive (client.ent)) {
+            continue;
+         }
+         auto target = bots.getBot (client.ent);
+
+         if (target != nullptr) {
+            target->m_sayTextBuffer.entityIndex = game.indexOfEntity (ent);
+
+            if (util.isEmptyStr (engfuncs.pfnCmd_Args ())) {
+               continue;
+            }
+            target->m_sayTextBuffer.sayText = engfuncs.pfnCmd_Args ();
+            target->m_sayTextBuffer.timeNextChat = game.timebase () + target->m_sayTextBuffer.chatDelay;
+         }
+      }
+   }
+   Client &radioTarget = util.getClient (game.indexOfEntity (ent) - 1);
+
+   // check if this player alive, and issue something
+   if ((radioTarget.flags & CF_ALIVE) && radioTarget.radio != 0 && strncmp (cmd, "menuselect", 10) == 0) {
+      int radioCommand = atoi (arg);
+
+      if (radioCommand != 0) {
+         radioCommand += 10 * (radioTarget.radio - 1);
+
+         if (radioCommand != RADIO_AFFIRMATIVE && radioCommand != RADIO_NEGATIVE && radioCommand != RADIO_REPORTING_IN) {
+            for (int i = 0; i < game.maxClients (); i++) {
+               auto bot = bots.getBot (i);
+
+               // validate bot
+               if (bot != nullptr && bot->m_team == radioTarget.team && ent != bot->ent () && bot->m_radioOrder == 0) {
+                  bot->m_radioOrder = radioCommand;
+                  bot->m_radioEntity = ent;
+               }
+            }
+         }
+         bots.setLastRadioTimestamp (radioTarget.team, game.timebase ());
+      }
+      radioTarget.radio = 0;
+   }
+   else if (strncmp (cmd, "radio", 5) == 0) {
+      radioTarget.radio = atoi (&cmd[5]);
    }
 }
 
@@ -2168,352 +2237,6 @@ void Config::clearUsedName (Bot *bot) {
       if (name.usedBy == bot->index ()) {
          name.usedBy = 0;
          break;
-      }
-   }
-}
-
-void Config::initMenus (void) {
-   auto buildKeys = [] (int numKeys) -> int {
-      int keys = 0;
-
-      for (int i = 0; i < numKeys; i++) {
-         keys |= cr::bit (i);
-      }
-      keys |= cr::bit (9);
-
-      return keys;
-   };
-
-   // bots main menu
-   m_menus.push ({
-      BOT_MENU_MAIN, buildKeys (4),
-      "\\yMain Menu\\w\n\n"
-      "1. Control Bots\n"
-      "2. Features\n\n"
-      "3. Fill Server\n"
-      "4. End Round\n\n"
-      "0. Exit"
-   });
-
-   // bots features menu
-   m_menus.push ({
-      BOT_MENU_FEATURES, buildKeys (5),
-      "\\yBots Features\\w\n\n"
-      "1. Weapon Mode Menu\n"
-      "2. Waypoint Menu\n"
-      "3. Select Personality\n\n"
-      "4. Toggle Debug Mode\n"
-      "5. Command Menu\n\n"
-      "0. Exit"
-   });
-
-   // bot control menu
-   m_menus.push ({
-      BOT_MENU_CONTROL, buildKeys (5),
-      "\\yBots Control Menu\\w\n\n"
-      "1. Add a Bot, Quick\n"
-      "2. Add a Bot, Specified\n\n"
-      "3. Remove Random Bot\n"
-      "4. Remove All Bots\n\n"
-      "5. Remove Bot Menu\n\n"
-      "0. Exit"
-   });
-
-   // weapon mode select menu
-   m_menus.push ({
-      BOT_MENU_WEAPON_MODE, buildKeys (7),
-      "\\yBots Weapon Mode\\w\n\n"
-      "1. Knives only\n"
-      "2. Pistols only\n"
-      "3. Shotguns only\n"
-      "4. Machine Guns only\n"
-      "5. Rifles only\n"
-      "6. Sniper Weapons only\n"
-      "7. All Weapons\n\n"
-      "0. Exit"
-   });
-
-   // personality select menu
-   m_menus.push ({
-      BOT_MENU_PERSONALITY, buildKeys (4),
-      "\\yBots Personality\\w\n\n"
-      "1. Random\n"
-      "2. Normal\n"
-      "3. Aggressive\n"
-      "4. Careful\n\n"
-      "0. Exit"
-   });
-
-   // difficulty select menu
-   m_menus.push ({
-      BOT_MENU_DIFFICULTY, buildKeys (5),
-      "\\yBots Difficulty Level\\w\n\n"
-      "1. Newbie\n"
-      "2. Average\n"
-      "3. Normal\n"
-      "4. Professional\n"
-      "5. Godlike\n\n"
-      "0. Exit"
-   });
-
-   // team select menu
-   m_menus.push ({
-      BOT_MENU_TEAM_SELECT, buildKeys (5),
-      "\\ySelect a team\\w\n\n"
-      "1. Terrorist Force\n"
-      "2. Counter-Terrorist Force\n\n"
-      "5. Auto-select\n\n"
-      "0. Exit"
-   });
-
-   // terrorist model select menu
-   m_menus.push ({
-      BOT_MENU_TERRORIST_SELECT, buildKeys (5),
-      "\\ySelect an appearance\\w\n\n"
-      "1. Phoenix Connexion\n"
-      "2. L337 Krew\n"
-      "3. Arctic Avengers\n"
-      "4. Guerilla Warfare\n\n"
-      "5. Auto-select\n\n"
-      "0. Exit"
-   });
-
-   // counter-terrorist model select menu
-   m_menus.push ({
-      BOT_MENU_CT_SELECT, buildKeys (5),
-      "\\ySelect an appearance\\w\n\n"
-      "1. Seal Team 6 (DEVGRU)\n"
-      "2. German GSG-9\n"
-      "3. UK SAS\n"
-      "4. French GIGN\n\n"
-      "5. Auto-select\n\n"
-      "0. Exit"
-   });
-
-   // command menu
-   m_menus.push ({
-      BOT_MENU_COMMANDS, buildKeys (4),
-      "\\yBot Command Menu\\w\n\n"
-      "1. Make Double Jump\n"
-      "2. Finish Double Jump\n\n"
-      "3. Drop the C4 Bomb\n"
-      "4. Drop the Weapon\n\n"
-      "0. Exit"
-   });
-
-   // main waypoint menu
-   m_menus.push ({
-      BOT_MENU_WAYPOINT_MAIN_PAGE1, buildKeys (9),
-      "\\yWaypoint Operations (Page 1)\\w\n\n"
-      "1. Show/Hide waypoints\n"
-      "2. Cache waypoint\n"
-      "3. Create path\n"
-      "4. Delete path\n"
-      "5. Add waypoint\n"
-      "6. Delete waypoint\n"
-      "7. Set Autopath Distance\n"
-      "8. Set Radius\n\n"
-      "9. Next...\n\n"
-      "0. Exit"
-   });
-
-   // main waypoint menu (page 2)
-   m_menus.push ({
-      BOT_MENU_WAYPOINT_MAIN_PAGE2, buildKeys (9),
-      "\\yWaypoint Operations (Page 2)\\w\n\n"
-      "1. Waypoint stats\n"
-      "2. Autowaypoint on/off\n"
-      "3. Set flags\n"
-      "4. Save waypoints\n"
-      "5. Save without checking\n"
-      "6. Load waypoints\n"
-      "7. Check waypoints\n"
-      "8. Noclip cheat on/off\n\n"
-      "9. Previous...\n\n"
-      "0. Exit"
-   });
-
-   // select waypoint radius menu
-   m_menus.push ({
-      BOT_MENU_WAYPOINT_RADIUS, buildKeys (9),
-      "\\yWaypoint Radius\\w\n\n"
-      "1. SetRadius 0\n"
-      "2. SetRadius 8\n"
-      "3. SetRadius 16\n"
-      "4. SetRadius 32\n"
-      "5. SetRadius 48\n"
-      "6. SetRadius 64\n"
-      "7. SetRadius 80\n"
-      "8. SetRadius 96\n"
-      "9. SetRadius 128\n\n"
-      "0. Exit"
-   });
-
-   // waypoint add menu
-   m_menus.push ({
-      BOT_MENU_WAYPOINT_TYPE, buildKeys (9),
-      "\\yWaypoint Type\\w\n\n"
-      "1. Normal\n"
-      "\\r2. Terrorist Important\n"
-      "3. Counter-Terrorist Important\n"
-      "\\w4. Block with hostage / Ladder\n"
-      "\\y5. Rescue Zone\n"
-      "\\w6. Camping\n"
-      "7. Camp End\n"
-      "\\r8. Map Goal\n"
-      "\\w9. Jump\n\n"
-      "0. Exit"
-   });
-
-   // set waypoint flag menu
-   m_menus.push ({
-      BOT_MENU_WAYPOINT_FLAG, buildKeys (5),
-      "\\yToggle Waypoint Flags\\w\n\n"
-      "1. Block with Hostage\n"
-      "2. Terrorists Specific\n"
-      "3. CTs Specific\n"
-      "4. Use Elevator\n"
-      "5. Sniper Point (\\yFor Camp Points Only!\\w)\n\n"
-      "0. Exit"
-   });
-
-   // auto-path max distance
-   m_menus.push ({
-      BOT_MENU_WAYPOINT_AUTOPATH, buildKeys (7),
-      "\\yAutoPath Distance\\w\n\n"
-      "1. Distance 0\n"
-      "2. Distance 100\n"
-      "3. Distance 130\n"
-      "4. Distance 160\n"
-      "5. Distance 190\n"
-      "6. Distance 220\n"
-      "7. Distance 250 (Default)\n\n"
-      "0. Exit"
-   });
-
-   // path connections
-   m_menus.push ({
-      BOT_MENU_WAYPOINT_PATH, buildKeys (3),
-      "\\yCreate Path (Choose Direction)\\w\n\n"
-      "1. Outgoing Path\n"
-      "2. Incoming Path\n"
-      "3. Bidirectional (Both Ways)\n\n"
-      "0. Exit"
-   });
-   const String &empty = "";
-
-   // kick menus
-   m_menus.push ({ BOT_MENU_KICK_PAGE_1, 0x0, empty, });
-   m_menus.push ({ BOT_MENU_KICK_PAGE_2, 0x0, empty, });
-   m_menus.push ({ BOT_MENU_KICK_PAGE_3, 0x0, empty, });
-   m_menus.push ({ BOT_MENU_KICK_PAGE_4, 0x0, empty, });
-}
-
-void Config::kickBotByMenu (edict_t *ent, int selection) {
-   // this function displays remove bot menu to specified entity (this function show's only yapb's).
-
-   if (selection > 4 || selection < 1) {
-      return;
-   }
-
-   String menus;
-   menus.format ("\\yBots Remove Menu (%d/4):\\w\n\n", selection);
-
-   int menuKeys = (selection == 4) ? cr::bit (9) : (cr::bit (8) | cr::bit (9));
-   int menuKey = (selection - 1) * 8;
-
-   for (int i = menuKey; i < selection * 8; i++) {
-      auto bot = bots.getBot (i);
-
-      if (bot != nullptr && (bot->pev->flags & FL_FAKECLIENT)) {
-         menuKeys |= cr::bit (cr::abs (i - menuKey));
-         menus.formatAppend ("%1.1d. %s%s\n", i - menuKey + 1, STRING (bot->pev->netname), bot->m_team == TEAM_COUNTER ? " \\y(CT)\\w" : " \\r(T)\\w");
-      }
-      else {
-         menus.formatAppend ("\\d %1.1d. Not a Bot\\w\n", i - menuKey + 1);
-      }
-   }
-   menus.formatAppend ("\n%s 0. Back", (selection == 4) ? "" : " 9. More...\n");
-
-   // force to clear current menu
-   showMenu (ent, BOT_MENU_INVALID);
-
-   auto id = static_cast <MenuId> (BOT_MENU_KICK_PAGE_1 - 1 + selection);
-
-   for (auto &menu : m_menus) {
-      if (menu.id == id) {
-         menu.slots = menuKeys & static_cast <unsigned int> (-1);;
-         menu.text = menus;
-      }
-   }
-   showMenu (ent, id);
-}
-
-void Config::showMenu (edict_t *ent, MenuId menu) {
-   static bool s_menusParsed = false;
-
-   // make menus looks like we need only once
-   if (!s_menusParsed) {
-      initMenus ();
-
-      for (auto &parsed : m_menus) {
-         const String &translated = game.translate (parsed.text.chars ());
-
-         // translate all the things
-         parsed.text = translated;
-
-         // make menu looks best
-         if (!(game.is (GAME_LEGACY))) {
-            for (int j = 0; j < 10; j++) {
-               parsed.text.replace (util.format ("%d.", j), util.format ("\\r%d.\\w", j));
-            }
-         }
-      }
-      s_menusParsed = true;
-   }
-
-   if (!util.isPlayer (ent)) {
-      return;
-   }
-   Client &client = util.getClient (game.indexOfEntity (ent) - 1);
-
-   if (menu == BOT_MENU_INVALID) {
-      MessageWriter (MSG_ONE_UNRELIABLE, game.getMessageId (NETMSG_SHOWMENU), Vector::null (), ent)
-         .writeShort (0)
-         .writeChar (0)
-         .writeByte (0)
-         .writeString ("");
-
-      client.menu = menu;
-      return;
-   }
-   
-   for (auto &display : m_menus) {
-      if (display.id == menu) {
-         const char *text = (game.is (GAME_XASH_ENGINE | GAME_MOBILITY) && !yb_display_menu_text.boolean ()) ? " " : display.text.chars ();
-         MessageWriter msg;
-
-         while (strlen (text) >= 64) {
-            msg.start (MSG_ONE_UNRELIABLE, game.getMessageId (NETMSG_SHOWMENU), Vector::null (), ent)
-               .writeShort (display.slots)
-               .writeChar (-1)
-               .writeByte (1);
-
-            for (int i = 0; i < 64; i++) {
-               msg.writeChar (text[i]);
-            }
-            msg.end ();
-            text += 64;
-         }
-
-         MessageWriter (MSG_ONE_UNRELIABLE, game.getMessageId (NETMSG_SHOWMENU), Vector::null (), ent)
-            .writeShort (display.slots)
-            .writeChar (-1)
-            .writeByte (0)
-            .writeString (text);
-
-         client.menu = menu;
-         engfuncs.pfnClientCommand (ent, "speak \"player/geiger1\"\n"); // Stops others from hearing menu sounds..
       }
    }
 }

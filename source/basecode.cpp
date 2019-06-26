@@ -33,6 +33,7 @@ ConVar yb_best_weapon_picker_type ("yb_best_weapon_picker_type", "1");
 ConVar mp_c4timer ("mp_c4timer", nullptr, VT_NOREGISTER);
 ConVar mp_flashlight ("mp_flashlight", nullptr, VT_NOREGISTER);
 ConVar mp_buytime ("mp_buytime", nullptr, VT_NOREGISTER, true, "1");
+ConVar mp_startmoney ("mp_startmoney", nullptr, VT_NOREGISTER, true, "800");
 ConVar mp_footsteps ("mp_footsteps", nullptr, VT_NOREGISTER);
 
 ConVar sv_gravity ("sv_gravity", nullptr, VT_NOREGISTER);
@@ -959,6 +960,8 @@ void Bot::pushChatterMessage (int message) {
 void Bot::checkMsgQueue (void) {
    // this function checks and executes pending messages
 
+   extern ConVar mp_freezetime;
+
    // no new message?
    if (m_actMessageIndex == m_pushMessageIndex) {
       return;
@@ -990,6 +993,12 @@ void Bot::checkMsgQueue (void) {
 
       m_buyPending = false;
       m_nextBuyTime = game.timebase () + rng.getFloat (0.5f, 1.3f);
+
+      // if freezetime is very low do not delay the buy process
+      if (mp_freezetime.flt () <= 1.0f) {
+         m_nextBuyTime = game.timebase ();
+         m_ignoreBuyDelay = true;
+      }
 
       // if bot buying is off then no need to buy
       if (!yb_botbuy.boolean ()) {
@@ -2763,7 +2772,7 @@ void Bot::updateAimDir (void) {
       if (m_canChooseAimDirection && m_currentWaypointIndex != INVALID_WAYPOINT_INDEX && !(m_currentPath->flags & FLAG_LADDER)) {
          int dangerIndex = waypoints.getDangerIndex (m_team, m_currentWaypointIndex, m_currentWaypointIndex);
 
-         if (waypoints.exists (dangerIndex)) {
+         if (waypoints.exists (dangerIndex) && waypoints.isVisible (m_currentWaypointIndex, dangerIndex)) {
             m_lookAt = waypoints[dangerIndex].origin;
          }
       }
@@ -2833,7 +2842,7 @@ void Bot::checkParachute (void) {
    }
 }
 
-void Bot::framePeriodic (void) {
+void Bot::slowFrame (void) {
    if (m_thinkFps <= game.timebase ()) {
       // execute delayed think
       frameThink ();
@@ -2908,7 +2917,7 @@ void Bot::frameThink (void) {
 }
 
 void Bot::frame (void) {
-   if (m_timePeriodicUpdate > game.timebase ()) {
+   if (m_slowFrameTimestamp > game.timebase ()) {
       return;
    }
 
@@ -2972,7 +2981,7 @@ void Bot::frame (void) {
       m_lastEnemy = nullptr;
       m_lastEnemyOrigin.nullify ();
    }
-   m_timePeriodicUpdate = game.timebase () + 0.5f;
+   m_slowFrameTimestamp = game.timebase () + 0.5f;
 }
 
 void Bot::normal_ (void) {
@@ -5219,19 +5228,12 @@ void Bot::collectGoalExperience (int damage) {
    if (waypoints.length () < 1 || waypoints.hasChanged () || m_chosenGoalIndex < 0 || m_prevGoalIndex < 0) {
       return;
    }
+   auto experience = waypoints.getRawExperience ();
 
    // only rate goal waypoint if bot died because of the damage
    // FIXME: could be done a lot better, however this cares most about damage done by sniping or really deadly weapons
-   if (pev->health - damage <= 0) {
-      int dangerValue = waypoints.getDangerValue (m_team, m_chosenGoalIndex, m_prevGoalIndex);
-      dangerValue = cr::clamp (dangerValue - static_cast <int> (pev->health / 20), -MAX_GOAL_VALUE, MAX_GOAL_VALUE);
-
-      auto experience = waypoints.getRawExperience ();
-      
-      // update the value
-      if (experience) {
-         (experience + (m_chosenGoalIndex * waypoints.length ()) + m_prevGoalIndex)->value[m_team] = dangerValue;
-      }
+   if (pev->health - damage <= 0 && experience) {
+      (experience + (m_chosenGoalIndex * waypoints.length ()) + m_prevGoalIndex)->value[m_team] = cr::clamp (waypoints.getDangerValue (m_team, m_chosenGoalIndex, m_prevGoalIndex) - static_cast <int> (pev->health / 20), -MAX_GOAL_VALUE, MAX_GOAL_VALUE);
    }
 }
 
@@ -5278,8 +5280,7 @@ void Bot::collectDataExperience (edict_t *attacker, int damage) {
    float updateDamage = util.isFakeClient (attacker) ? 10.0f : 7.0f;
 
    // store away the damage done
-   int damageValue = waypoints.getDangerDamage (m_team, victimIndex, attackerIndex);
-   damageValue = cr::clamp (damageValue + static_cast <int> (damage / updateDamage), 0, MAX_DAMAGE_VALUE);
+   int damageValue = cr::clamp (waypoints.getDangerDamage (m_team, victimIndex, attackerIndex) + static_cast <int> (damage / updateDamage), 0, MAX_DAMAGE_VALUE);
 
    if (damageValue > waypoints.getHighestDamageForTeam (m_team)) {
       waypoints.setHighestDamageForTeam (m_team, damageValue);

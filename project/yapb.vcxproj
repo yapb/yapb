@@ -31,7 +31,7 @@
     <ClCompile Include="..\source\engine.cpp" />
     <ClCompile Include="..\source\manager.cpp" />
     <ClCompile Include="..\source\chatlib.cpp" />
-    <ClCompile Include="..\source\globals.cpp" />
+    <ClCompile Include="..\source\control.cpp" />
     <ClCompile Include="..\source\interface.cpp" />
     <ClCompile Include="..\source\navigate.cpp" />
     <ClCompile Include="..\source\support.cpp" />

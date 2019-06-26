@@ -54,6 +54,7 @@ using int32 = signed long;
 using uint8 = unsigned char;
 using uint16 = unsigned short;
 using uint32 = unsigned long;
+using uint64 = unsigned long long;
 
 }
 
@@ -1089,7 +1090,12 @@ private:
    }
 };
 
+
+// some fast string class
 class String final : private Array <char> {
+public:
+   static constexpr size_t INVALID_INDEX = Array <char>::INVALID_INDEX;
+
 private:
    using base = Array <char>;
 
@@ -1106,7 +1112,9 @@ private:
 
 public:
 
-   String (void) = default;
+   String (void) {
+   }
+
    String (String &&other) noexcept : base (move (other)) { }
    ~String (void) = default;
 
@@ -1126,11 +1134,15 @@ public:
 public:
    String &assign (const char *str, size_t length = 0) {
       length = length > 0 ? length : strlen (str);
+
+      size_t count = 0;
       clear ();
 
-      while (*str) {
+      while (*str && count < length) {
          base::push (*str);
+
          str++;
+         count++;
       }
 
       if (!empty ()) {
@@ -1154,6 +1166,7 @@ public:
       if (empty ()) {
          return assign (str);
       }
+     
       while (*str) {
          base::push (*str);
          str++;
@@ -1210,6 +1223,10 @@ public:
       return atoi (chars ());
    }
 
+   float toFloat (void) const {
+      return static_cast <float> (atof (chars ()));
+   }
+
    inline void terminate (void) {
       m_data[m_length] = '\0';
    }
@@ -1223,7 +1240,7 @@ public:
    }
 
    int32 compare (const char *what) const {
-      return strcmp (begin (), what);
+      return strcmp (m_data, what);
    }
 
    bool contains (const String &what) const {
@@ -1640,20 +1657,6 @@ public:
       return fgets (buffer, count, m_handle);
    }
 
-   bool getLine (String &str, bool endsNewLine = false) {
-      char ch = 0;
-      str.clear ();
-
-      while ((ch = getch ()) != '\n' && ch != EOF) {
-         str.append (ch);
-      }
-
-      if (endsNewLine) {
-         str.append ('\n');
-      }
-      return !eof ();
-   }
-
    int writeFormat (const char *format, ...) {
       assert (m_handle != nullptr);
 
@@ -1833,20 +1836,6 @@ public:
       return index ? buffer : nullptr;
    }
 
-   bool getLine (String &str, bool endsNewLine = false) {
-      char ch = 0;
-      str.clear ();
-
-      while ((ch = getch ()) != '\n' && ch != EOF) {
-         str.append (ch);
-      }
-
-      if (endsNewLine) {
-         str.append ('\n');
-      }
-      return m_pos >= m_size;
-   }
-
    size_t read (void *buffer, size_t size, size_t count = 1) {
       if (!m_buffer || m_size <= m_pos || !buffer || !size || !count) {
          return 0;
@@ -1890,491 +1879,6 @@ public:
 
    bool isValid (void) const {
       return m_buffer && m_size > 0;
-   }
-};
-
-
-// holder for data for config files
-class Element final : private NonCopyable {
-public:
-   friend class ConfigFile;
-   using Group = Array <Element>;
-
-private:
-   String m_name;
-   Group m_childs;
-   Array <String> m_values;
-
-public:
-   Element (void) = default;
-   Element (const String &name) {
-      m_name = name;
-   }
-
-   Element (Element &&other) noexcept {
-      m_name = cr::move (other.m_name);
-      m_values = cr::move (other.m_values);
-      m_childs = cr::move (other.m_childs);
-   }
-
-private:
-   inline bool isNumeric (const String &value) const {
-      for (auto &ch : value) {
-         if (!isdigit (ch) && ch != '.' && ch != '-') {
-            return false;
-         }
-      }
-      return true;
-   }
-
-public:
-   inline void set (const String &value, const size_t at = 0) {
-      if (at >= m_values.length ()) {
-         m_values.resize (at + 1);
-      }
-      m_values[at] = value;
-   }
-
-   void set (const int value, const size_t at = 0) {
-      char buffer[12];
-      sprintf (buffer, "%d", value);
-
-      set (buffer, at);
-   }
-
-   void set (const float value, const size_t at = 0) {
-      char buffer[12];
-      sprintf (buffer, "%.2f", value);
-
-      set (buffer, at);
-   }
-
-   inline const String &getName (void) {
-      return m_name;
-   }
-
-   inline const String &getString (const size_t at = 0) {
-      if (at >= m_values.length ()) {
-         m_values.resize (at + 1);
-         m_values[at] = "";
-      }
-      return m_values[at];
-   }
-
-   inline int getInt (const size_t at = 0) {
-      return atoi (getString (at).chars ());
-   }
-
-   inline float getFloat (const size_t at = 0) {
-      return static_cast <float> (atof (getString (at).chars ()));
-   }
-
-   inline bool exists (const String &name) const {
-      for (auto &child : m_childs) {
-         if (child.m_name == name) {
-            return true;
-         }
-      }
-      return false;
-   }
-
-   inline void remove (const String &name) {
-      for (auto &child : m_childs) {
-         if (child.m_name == name) {
-            m_childs.erase (child);
-            return;
-         }
-      }
-   }
-
-   inline void clear (void) {
-      m_childs.clear ();
-   }
-
-   inline const Group &fetch (void) {
-      return m_childs;
-   }
-
-   inline void write (File &file, const size_t tabs = 0) {
-      if (!m_values.length () && !m_childs.length ()) {
-         return;
-      }
-
-      for (size_t i = 0; i < tabs; i++) {
-         file.putch (' ');
-      }
-      file.puts (m_name);
-      file.puts (" = ");
-
-      if (m_childs.length ()) {
-         file.puts ("{\n");
-
-         for (auto &element : m_childs) {
-            element.write (file, tabs + 3);
-         }
-
-         for (size_t i = 0; i < tabs; i++) {
-            file.putch (' ');
-         }
-
-         file.putch ('}');
-      }
-      else if (m_values.length () == 1) {
-         if (isNumeric (m_values[0])) {
-            file.puts (m_values[0]);
-            file.putch (';');
-         }
-         else {
-            file.putch ('\"');
-            file.puts (m_values[0]);
-            file.puts ("\";");
-         }
-      }
-      else {
-         file.putch ('[');
-
-         for (size_t i = 0; i < m_values.length (); i++) {
-            bool numeric = isNumeric (m_values[i]);
-
-            if (!numeric) {
-               file.putch ('\"');
-            }
-            file.puts (m_values[i]);
-
-            if (!numeric) {
-               file.putch ('\"');
-            }
-
-            if (i != m_values.length () - 1) {
-               file.puts (", ");
-            }
-         }
-         file.putch (']');
-      }
-      file.putch ('\n');
-   }
-
-public:
-   inline Element &operator = (Element &&other) noexcept {
-      m_name = cr::move (other.m_name);
-      m_values = cr::move (other.m_values);
-      m_childs = cr::move (other.m_childs);
-
-      return *this;
-   }
-
-   inline Element &operator [] (const String &name) {
-      for (auto &child : m_childs) {
-         if (child.m_name == name) {
-            return child;
-         }
-      }
-      m_childs.push (cr::move (Element (name)));
-      return m_childs.back ();
-   }
-
-   inline void operator = (const String &value) {
-      set (value);
-   }
-
-   inline void operator = (const int value) {
-      set (value);
-   }
-
-   inline void operator = (const float value) {
-      set (value);
-   }
-};
-
-// token holder for config parser
-class Token final : private NonCopyable {
-public:
-   String token;
-   size_t line;
-   size_t character;
-
-public:
-   Token (void) {
-      this->token = "";
-      this->line = 0;
-      this->character = 0;
-   }
-
-   Token (const String &token, const size_t line, const size_t character) {
-      this->token = token;
-      this->line = line;
-      this->character = character;
-   }
-
-   Token (Token &&other) noexcept {
-      token = cr::move (other.token);
-      line = other.line;
-      character = other.character;
-   }
-
-public:
-   Token &operator = (Token &&other) noexcept {
-      token = cr::move (other.token);
-      line = other.line;
-      character = other.character;
-
-      return *this;
-   }
-};
-
-// simple config file parser
-class ConfigFile final : private NonCopyable {
-public:
-   friend Element;
-
-private:
-   String m_delimeter = "'=;[]{},";
-   String m_error;
-   String m_input;
-   Element m_root;
-   size_t m_index;
-
-   Array <Token> m_tokens;
-   bool m_isString;
-   bool m_mask;
-
-private:
-   inline bool testMaskedString (const char c) {
-      if (m_isString && c == '\\') {
-         m_mask = !m_mask;
-
-         if (m_mask) {
-            return true;
-         }
-      }
-
-      if (!m_mask && (c == '"' || c == '\'')) {
-         m_isString = !m_isString;
-      }
-      m_mask = false;
-      return false;
-   }
-
-   inline bool parseAccept (const String &token) const {
-      return token == parseGetCurrent ();
-   }
-
-   inline void parseExpect (const String &token) {
-      if (token != parseGetCurrent ()) {
-         m_error.format ("Unexpected token, was \"%s\" expected \"%s\" @ %d:%d", parseGetCurrent ().chars (), token.chars (), m_tokens[m_index].line, m_tokens[m_index].character);
-         return;
-      }
-      parseNext ();
-   }
-
-   inline void parseNext (void) {
-      if (m_index < m_tokens.length () - 1) {
-         m_index++;
-      }
-   }
-
-   inline const String &parseGetCurrent (void) const {
-      return m_tokens[m_index].token;
-   }
-
-   inline void parseVariable (Element::Group &parent) {
-      if (m_tokens.empty ()) {
-         return;
-      }
-      Element element (parseGetCurrent ());
-
-      parseNext ();
-      parseExpect ("=");
-
-      if (parseAccept ("[")) {
-         parseArray (element);
-      }
-      else if (parseAccept ("{")) {
-         parseObject (element);
-      }
-      else {
-         element.m_values.push (parseGetCurrent ());
-
-         parseNext ();
-         parseExpect (";");
-      }
-      parent.push (cr::move (element));
-   }
-
-   inline void parseArray (Element &element) {
-      parseExpect ("[");
-
-      while (!parseAccept ("]") && !hasErrors ()) {
-         element.m_values.push (parseGetCurrent ());
-         parseNext ();
-
-         if (parseAccept (",")) {
-            parseNext ();
-         }
-
-         while (parseAccept (",")) {
-            element.m_values.push ("");
-            parseNext ();
-         }
-      }
-      parseExpect ("]");
-
-      if (parseAccept (";")) {
-         parseNext ();
-      }
-   }
-
-   inline void parseObject (Element &element) {
-      parseExpect ("{");
-
-      while (!parseAccept ("}") && !hasErrors ()) {
-         parseVariable (element.m_childs);
-      }
-      parseExpect ("}");
-
-      if (parseAccept (";")) {
-         parseNext ();
-      }
-   }
-
-   template <typename FileType> inline void process (FileType &file) {
-      String line;
-
-      m_input.assign ("");
-      m_isString = false;
-      m_mask = false;
-
-      while (file.getLine (line, true)) {
-         for (auto &ch : line) {
-            if (!m_isString && (ch == ' ' || ch == '\t')) {
-               continue;
-            }
-
-            if (!m_isString && ch == '#') {
-               break;
-            }
-            testMaskedString (ch);
-            m_input += ch;
-         }
-
-         if (m_isString) {
-            m_input += '\n';
-         }
-      }
-   }
-
-   inline void tokenize (void) {
-      m_tokens.clear ();
-
-      Token token;
-      m_isString = false;
-      m_mask = false;
-
-      for (auto &ch : m_input) {
-         if (testMaskedString (ch)) {
-            continue;
-         }
-
-         if (ch == '\n') {
-            token.line++;
-            token.character = 0;
-
-            continue;
-         }
-
-         if (!m_isString && m_delimeter.find (ch, 0) != Array <char>::INVALID_INDEX) {
-            auto &tok = token.token;
-
-            if (tok.length () && tok[0] == '\"' && tok[tok.length () - 1] == '\"') {
-               tok = tok.substr (1, tok.length () - 2);
-            }
-
-            if (!tok.empty ()) {
-               m_tokens.push (cr::move (token));
-               token.token.assign ("");
-            }
-            m_tokens.push (cr::move (Token (ch, token.line, token.character)));
-            continue;
-         }
-
-         token.token.append (ch);
-         token.character++;
-      }
-   }
-
-   inline void parse (void) {
-      if (m_tokens.empty ()) {
-         return;
-      }
-      m_index = 0;
-      m_root.clear ();
-
-      while (m_index != m_tokens.length () - 1) {
-         parseVariable (m_root.m_childs);
-      }
-   }
-
-public:
-   template <typename FileType> inline bool load (const String &path) {
-      FileType file (path, "rt");
-      return load <FileType> (file);
-   }
-
-   template <typename FileType> inline bool load (File &file) {
-      if (!file.isValid ()) {
-         return false;
-      }
-
-      process (file);
-      tokenize ();
-      parse ();
-
-      file.close ();
-      return true;
-   }
-
-   inline bool write (const String &path) {
-      File file (path, "wt");
-
-      if (!file.isValid ()) {
-         return false;
-      }
-
-      for (auto &element : m_root.m_childs) {
-         element.write (file);
-      }
-      file.close ();
-
-      return true;
-   }
-
-   inline bool exists (const String &name) const {
-      return m_root.exists (name);
-   }
-
-   inline void remove (const String &name) {
-      m_root.remove (name);
-   }
-
-   inline void clear (void) {
-      m_root.clear ();
-   }
-
-   inline const Element::Group &fetch (void) {
-      return m_root.m_childs;
-   }
-
-   inline bool hasErrors (void) {
-      return !m_error.empty ();
-   }
-
-   inline const String &getError (void) {
-      return m_error;
-   }
-
-public:
-   inline Element &operator [] (const String &name) {
-      return m_root[name];
    }
 };
 

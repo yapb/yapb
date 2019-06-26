@@ -927,13 +927,13 @@ void Waypoint::toggleFlags (int toggleFlag) {
    }
 }
 
-void Waypoint::setRadius (int radius) {
+void Waypoint::setRadius (int index, float radius) {
    // this function allow manually setting the zone radius
 
-   int index = getEditorNeareset ();
+   int node = exists (index) ? index : getEditorNeareset ();
 
-   if (index != INVALID_WAYPOINT_INDEX) {
-      m_paths[index]->radius = static_cast <float> (radius);
+   if (node != INVALID_WAYPOINT_INDEX) {
+      m_paths[node]->radius = static_cast <float> (radius);
 
       // play "done" sound...
       game.playSound (game.getLocalEntity (), "common/wpn_hudon.wav");
@@ -1087,8 +1087,8 @@ void Waypoint::erasePath (void) {
    game.centerPrint ("There is already no path on this waypoint");
 }
 
-void Waypoint::cachePoint (void) {
-   int node = getEditorNeareset ();
+void Waypoint::cachePoint (int index) {
+   int node = exists (index) ? index : getEditorNeareset ();
 
    if (node == INVALID_WAYPOINT_INDEX) {
       m_cacheWaypointIndex = INVALID_WAYPOINT_INDEX;
@@ -1197,48 +1197,20 @@ void Waypoint::calculatePathRadius (int index) {
 }
 
 void Waypoint::saveExperience (void) {
-   ExtensionHeader header;
-
    if (m_numWaypoints < 1 || m_waypointsChanged) {
       return;
    }
-
-   memset (header.header, 0, sizeof (header.header));
-   strcpy (header.header, FH_EXPERIENCE);
-
-   header.fileVersion = FV_EXPERIENCE;
-   header.pointNumber = m_numWaypoints;
-
-   auto saveData = new ExperienceSave[m_numWaypoints * m_numWaypoints];
-
-   for (int team = TEAM_TERRORIST; team < MAX_TEAM_COUNT; team++) {
-      for (int i = 0; i < m_numWaypoints; i++) {
-         for (int j = 0; j < m_numWaypoints; j++) {
-            (saveData + (i * m_numWaypoints) + j)->damage[team] = static_cast <uint8> ((m_experience + (i * m_numWaypoints) + j)->damage[team] >> 3);
-            (saveData + (i * m_numWaypoints) + j)->value[team] = static_cast <int8> ((m_experience + (i * m_numWaypoints) + j)->value[team] / 8);
-         }
-      }
-   }
-   int result = Compress::encode (util.format ("%slearned/%s.exp", getDataDirectory (), game.getMapName ()), reinterpret_cast <uint8 *> (&header), sizeof (ExtensionHeader), (uint8 *) saveData, m_numWaypoints * m_numWaypoints * sizeof (ExperienceSave));
-
-   delete[] saveData;
-
-   if (result == -1) {
-      util.logEntry (true, LL_ERROR, "Couldn't save experience data");
-      return;
-   }
+   saveExtFile ("exp", "Experience", FH_EXPERIENCE, FV_EXPERIENCE, reinterpret_cast <uint8 *> (m_experience), m_numWaypoints * m_numWaypoints * sizeof (Experience));
 }
 
-void Waypoint::initExperience (void) {
-   int i, j;
-
+void Waypoint::loadExperience (void) {
    delete[] m_experience;
    m_experience = nullptr;
 
    if (m_numWaypoints < 1) {
       return;
    }
-   m_experience = new Experience[m_numWaypoints * m_numWaypoints];
+   m_experience = new Experience[m_numWaypoints * m_numWaypoints + FastLZ::EXCESS];
 
    // reset highest recorded damage
    for (int team = TEAM_TERRORIST; team < MAX_TEAM_COUNT; team++) {
@@ -1247,133 +1219,166 @@ void Waypoint::initExperience (void) {
 
    // initialize table by hand to correct values, and NOT zero it out
    for (int team = TEAM_TERRORIST; team < MAX_TEAM_COUNT; team++) {
-      for (i = 0; i < m_numWaypoints; i++) {
-         for (j = 0; j < m_numWaypoints; j++) {
+      for (int i = 0; i < m_numWaypoints; i++) {
+         for (int j = 0; j < m_numWaypoints; j++) {
             (m_experience + (i * m_numWaypoints) + j)->index[team] = INVALID_WAYPOINT_INDEX;
             (m_experience + (i * m_numWaypoints) + j)->damage[team] = 0;
             (m_experience + (i * m_numWaypoints) + j)->value[team] = 0;
          }
       }
    }
-   File fp (util.format ("%slearned/%s.exp", getDataDirectory (), game.getMapName ()), "rb");
+   bool isLoaded = loadExtFile ("exp", "Experience", FH_EXPERIENCE, FV_EXPERIENCE, reinterpret_cast <uint8 *> (m_experience));
 
-   // if file exists, read the experience data from it
-   if (fp.isValid ()) {
-      ExtensionHeader header;
-      memset (&header, 0, sizeof (header));
+   // set's the highest damage if loaded ok
+   if (!isLoaded) {
+      return;
+   }
 
-      if (fp.read (&header, sizeof (header)) == 0) {
-         util.logEntry (true, LL_ERROR, "Experience data damaged (unable to read header)");
-
-         fp.close ();
-         return;
-      }
-      fp.close ();
-
-      if (strncmp (header.header, FH_EXPERIENCE, strlen (FH_EXPERIENCE)) == 0) {
-         if (header.fileVersion == FV_EXPERIENCE && header.pointNumber == m_numWaypoints) {
-            auto loadData = new ExperienceSave[m_numWaypoints * m_numWaypoints * sizeof (ExperienceSave)];
-
-            Compress::decode (util.format ("%slearned/%s.exp", getDataDirectory (), game.getMapName ()), sizeof (ExtensionHeader), reinterpret_cast <uint8 *> (loadData), m_numWaypoints * m_numWaypoints * sizeof (ExperienceSave));
-
-            for (int team = TEAM_TERRORIST; team < MAX_TEAM_COUNT; team++) {
-               for (i = 0; i < m_numWaypoints; i++) {
-                  for (j = 0; j < m_numWaypoints; j++) {
-                     if (i == j) {
-                        (m_experience + (i * m_numWaypoints) + j)->damage[team] = static_cast <uint16> ((loadData + (i * m_numWaypoints) + j)->damage[team]);
-    
-                        if ((m_experience + (i * m_numWaypoints) + j)->damage[team] > m_highestDamage[team]) {
-                           m_highestDamage[team] = (m_experience + (i * m_numWaypoints) + j)->damage[team];
-                        }
-                     }
-                     else {
-                        (m_experience + (i * m_numWaypoints) + j)->damage[team] = static_cast <uint16> ((loadData + (i * m_numWaypoints) + j)->damage[team]) << 3;
-                     }
-                     (m_experience + (i * m_numWaypoints) + j)->value[team] = static_cast <uint16> ((loadData + i * (m_numWaypoints) + j)->value[team]) * 8;
-                  }
+   for (int team = TEAM_TERRORIST; team < MAX_TEAM_COUNT; team++) {
+      for (int i = 0; i < m_numWaypoints; i++) {
+         for (int j = 0; j < m_numWaypoints; j++) {
+            if (i == j) {
+               if ((m_experience + (i * m_numWaypoints) + j)->damage[team] > m_highestDamage[team]) {
+                  m_highestDamage[team] = (m_experience + (i * m_numWaypoints) + j)->damage[team];
                }
             }
-            delete[] loadData;
-         }
-         else {
-            util.logEntry (true, LL_WARNING, "Experience data damaged (wrong version, or not for this map)");
          }
       }
+   }
+}
+
+void Waypoint::loadVisibility (void) {
+   m_visibilityIndex = 0;
+   m_redoneVisibility = true;
+
+   if (m_numWaypoints <= 0) {
+      return;
+   }
+   bool isLoaded = loadExtFile ("vis", "Visibility", FH_VISTABLE, FV_VISTABLE, reinterpret_cast <uint8 *> (m_visLUT));
+
+   // if loaded, do not recalculate visibility
+   if (isLoaded) {
+      m_redoneVisibility = false;
    }
 }
 
 void Waypoint::saveVisibility (void) {
-   if (m_numWaypoints == 0) {
+   if (m_numWaypoints < 1 || m_waypointsChanged) {
       return;
    }
-
-   ExtensionHeader header;
-   memset (&header, 0, sizeof (ExtensionHeader));
-
-   // parse header
-   memset (header.header, 0, sizeof (header.header));
-   strcpy (header.header, FH_VISTABLE);
-
-   header.fileVersion = FV_VISTABLE;
-   header.pointNumber = m_numWaypoints;
-
-   File fp (util.format ("%slearned/%s.vis", getDataDirectory (), game.getMapName ()), "wb");
-
-   if (!fp.isValid ()) {
-      util.logEntry (true, LL_ERROR, "Failed to open visibility table for writing");
-      return;
-   }
-   fp.close ();
-
-   Compress::encode (util.format ("%slearned/%s.vis", getDataDirectory (), game.getMapName ()), (uint8 *)&header, sizeof (ExtensionHeader), (uint8 *)m_visLUT, MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (uint8));
+   saveExtFile ("vis", "Visibility", FH_VISTABLE, FV_VISTABLE, reinterpret_cast <uint8 *> (m_visLUT), MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (uint8));
 }
 
-void Waypoint::initVisibility (void) {
-   if (m_numWaypoints == 0)
+void Waypoint::savePathMatrix (void) {
+   if (m_numWaypoints < 1) {
       return;
+   }
+   saveExtFile ("pmx", "Pathmatrix", FH_MATRIX, FV_MATRIX, reinterpret_cast <uint8 *> (m_matrix), m_numWaypoints * m_numWaypoints * sizeof (FloydMatrix));
+}
 
-   ExtensionHeader header;
+bool Waypoint::loadPathMatrix (void) {
+   if (m_numWaypoints <= 0) {
+      return false;
+   }
+   return loadExtFile ("pmx", "Pathmatrix", FH_MATRIX, FV_MATRIX, reinterpret_cast <uint8 *> (m_matrix));
+}
 
-   File fp (util.format ("%slearned/%s.vis", getDataDirectory (), game.getMapName ()), "rb");
-   m_redoneVisibility = false;
+bool Waypoint::saveExtFile (const char *ext, const char *type, const char *magic, const int version, uint8 *data, const int32 size) {
+   FastLZ lz;
+   bool dataSaved = false;
 
+   ExtHeader header;
+   header.pointNumber = m_numWaypoints;
+   header.fileVersion = version;
+   header.uncompressed = size;
+
+   strncpy (header.header, magic, strlen (magic));
+
+   uint8 *compressed = new uint8[header.uncompressed];
+   int compressedLength = lz.compress (reinterpret_cast <uint8 *> (data), header.uncompressed, compressed);
+
+   if (compressedLength > 0) {
+      File fp (util.format ("%slearned/%s.%s", getDataDirectory (), game.getMapName (), ext), "wb");
+
+      if (fp.isValid ()) {
+         header.compressed = compressedLength;
+
+         fp.write (&header, sizeof (ExtHeader));
+         fp.write (compressed, compressedLength);
+
+         fp.close ();
+      }
+      else {
+         util.logEntry (true, LL_ERROR, "Couldn't save %s data (unable to write the file)", type);
+         dataSaved = false;
+      }
+      game.print ("Successfully saved Bots %s data.", type);
+      dataSaved = true;
+   }
+   else {
+      util.logEntry (true, LL_ERROR, "Couldn't save %s data (unable to compress data)", type);
+      dataSaved = false;
+   }
+   delete[] compressed;
+
+   return dataSaved;
+}
+
+bool Waypoint::loadExtFile (const char *ext, const char *type, const char *magic, const int version, uint8 *data) {
+   File fp (util.format ("%slearned/%s.%s", getDataDirectory (), game.getMapName (), ext), "rb");
+
+   // if file exists, read the visibility data from it
    if (!fp.isValid ()) {
-      m_visibilityIndex = 0;
-      m_redoneVisibility = true;
-
-      util.logEntry (true, LL_DEFAULT, "Vistable doesn't exists, vistable will be rebuilded");
-      return;
+      return false;
    }
+   ExtHeader header;
 
-   // read the header of the file
-   if (fp.read (&header, sizeof (header)) == 0) {
-      util.logEntry (true, LL_ERROR, "Vistable damaged (unable to read header)");
-
-      fp.close ();
-      return;
-   }
-
-   if (strncmp (header.header, FH_VISTABLE, strlen (FH_VISTABLE)) != 0 || header.fileVersion != FV_VISTABLE || header.pointNumber != m_numWaypoints) {
-      m_visibilityIndex = 0;
-      m_redoneVisibility = true;
-
-      util.logEntry (true, LL_WARNING, "Visibility table damaged (wrong version, or not for this map), vistable will be rebuilded.");
+   if (fp.read (&header, sizeof (ExtHeader)) == 0) {
+      util.logEntry (true, LL_ERROR, "%s data damaged (unable to read header)", type);
       fp.close ();
 
-      return;
+      return false;
    }
-   int result = Compress::decode (util.format ("%slearned/%s.vis", getDataDirectory (), game.getMapName ()), sizeof (ExtensionHeader), (uint8 *)m_visLUT, MAX_WAYPOINTS * (MAX_WAYPOINTS / 4) * sizeof (uint8));
 
-   if (result == -1) {
-      m_visibilityIndex = 0;
-      m_redoneVisibility = true;
-
-      util.logEntry (true, LL_ERROR, "Failed to decode vistable, vistable will be rebuilded.");
+   if (!!strncmp (header.header, magic, strlen (magic))) {
+      util.logEntry (true, LL_ERROR, "%s data damaged (bad header '%s')", type, header.header);
       fp.close ();
 
-      return;
+      return false;
+   }
+
+   FastLZ lz;
+   bool dataLoaded = false;
+
+   // check the header
+   if (header.fileVersion == version && header.pointNumber == m_numWaypoints && header.compressed > 1) {
+      uint8 *compressed = new uint8[header.compressed];
+
+      if (fp.read (compressed, sizeof (uint8), header.compressed) == static_cast <size_t> (header.compressed)) {
+         int status = lz.uncompress (compressed, header.compressed, data, header.uncompressed);
+
+         if (status == FastLZ::UNCOMPRESS_RESULT_FAILED) {
+            util.logEntry (true, LL_ERROR, "%s data damaged (failed to decompress data)", type);
+            dataLoaded = false;
+         }
+         else {
+            game.print ("Successfully loaded the bots %s tables.", type);
+            dataLoaded = true;
+         }
+      }
+      else {
+         util.logEntry (true, LL_ERROR, "%s data damaged (unable to read compressed data)", type);
+         dataLoaded = false;
+      }
+      delete[] compressed;
+   }
+   else {
+      util.logEntry (true, LL_ERROR, "%s data damaged (wrong version, or not for this map)", type);
+      dataLoaded = false;
    }
    fp.close ();
+
+   return dataLoaded;
 }
 
 void Waypoint::initLightLevels (void) {
@@ -1542,8 +1547,8 @@ bool Waypoint::load (void) {
    m_pathDisplayTime = 0.0f;
    m_arrowDisplayTime = 0.0f;
 
-   initVisibility ();
-   initExperience ();
+   loadVisibility ();
+   loadExperience ();
 
    extern ConVar yb_debug_goal;
    yb_debug_goal.set (INVALID_WAYPOINT_INDEX);
@@ -2144,9 +2149,9 @@ void Waypoint::frame (void) {
 
          length += sprintf (&tempMessage[length],
                             "      Experience Info:\n"
-                            "      CT: %d / %d\n"
-                            "      T: %d / %d\n",
-                            dangerIndexCT, dangerIndexCT != INVALID_WAYPOINT_INDEX ? getDangerDamage (TEAM_COUNTER, nearestIndex, nearestIndex) : 0, dangerIndexT, dangerIndexT != INVALID_WAYPOINT_INDEX ? getDangerDamage (TEAM_TERRORIST, nearestIndex, nearestIndex) : 0);
+                            "      CT: %d / %d dmg\n"
+                            "      T: %d / %d dmg\n",
+                            dangerIndexCT, dangerIndexCT != INVALID_WAYPOINT_INDEX ? getDangerDamage (TEAM_COUNTER, nearestIndex, dangerIndexCT) : 0, dangerIndexT, dangerIndexT != INVALID_WAYPOINT_INDEX ? getDangerDamage (TEAM_TERRORIST, nearestIndex, dangerIndexT) : 0);
       }
 
       // check if we need to show the cached point index
@@ -2383,47 +2388,43 @@ bool Waypoint::checkNodes (void) {
 }
 
 void Waypoint::initPathMatrix (void) {
-   int i, j, k;
+   delete[] m_matrix;
+   m_matrix = nullptr;
 
-   delete[] m_distMatrix;
-   delete[] m_pathMatrix;
-
-   m_distMatrix = nullptr;
-   m_pathMatrix = nullptr;
-
-   m_distMatrix = new int[m_numWaypoints * m_numWaypoints];
-   m_pathMatrix = new int[m_numWaypoints * m_numWaypoints];
+   m_matrix = new FloydMatrix[m_numWaypoints * m_numWaypoints + FastLZ::EXCESS];
 
    if (loadPathMatrix ()) {
       return; // matrix loaded from file
    }
+   const int points = m_numWaypoints;
 
-   for (i = 0; i < m_numWaypoints; i++) {
-      for (j = 0; j < m_numWaypoints; j++) {
-         *(m_distMatrix + i * m_numWaypoints + j) = 999999;
-         *(m_pathMatrix + i * m_numWaypoints + j) = INVALID_WAYPOINT_INDEX;
+   for (int i = 0; i < points; i++) {
+      for (int j = 0; j < points; j++) {
+         (m_matrix + i * points + j)->dist = 999999;
+         (m_matrix + i * points + j)->index = INVALID_WAYPOINT_INDEX;
       }
    }
 
-   for (i = 0; i < m_numWaypoints; i++) {
-      for (j = 0; j < MAX_PATH_INDEX; j++) {
-         if (m_paths[i]->index[j] >= 0 && m_paths[i]->index[j] < m_numWaypoints) {
-            *(m_distMatrix + (i * m_numWaypoints) + m_paths[i]->index[j]) = m_paths[i]->distances[j];
-            *(m_pathMatrix + (i * m_numWaypoints) + m_paths[i]->index[j]) = m_paths[i]->index[j];
+   for (int i = 0; i < points; i++) {
+      for (int j = 0; j < MAX_PATH_INDEX; j++) {
+         if (!exists (m_paths[i]->index[j])) {
+            continue;
          }
+         (m_matrix + (i * points) + m_paths[i]->index[j])->dist = m_paths[i]->distances[j];
+         (m_matrix + (i * points) + m_paths[i]->index[j])->index = m_paths[i]->index[j];
       }
    }
 
-   for (i = 0; i < m_numWaypoints; i++) {
-      *(m_distMatrix + (i * m_numWaypoints) + i) = 0;
+   for (int i = 0; i < points; i++) {
+      (m_matrix + (i * points) + i)->dist = 0;
    }
 
-   for (k = 0; k < m_numWaypoints; k++) {
-      for (i = 0; i < m_numWaypoints; i++) {
-         for (j = 0; j < m_numWaypoints; j++) {
-            if (*(m_distMatrix + (i * m_numWaypoints) + k) + *(m_distMatrix + (k * m_numWaypoints) + j) < (*(m_distMatrix + (i * m_numWaypoints) + j))) {
-               *(m_distMatrix + (i * m_numWaypoints) + j) = *(m_distMatrix + (i * m_numWaypoints) + k) + *(m_distMatrix + (k * m_numWaypoints) + j);
-               *(m_pathMatrix + (i * m_numWaypoints) + j) = *(m_pathMatrix + (i * m_numWaypoints) + k);
+   for (int k = 0; k < points; k++) {
+      for (int i = 0; i < points; i++) {
+         for (int j = 0; j < points; j++) {
+            if ((m_matrix + (i * points) + k)->dist + (m_matrix + (k * points) + j)->dist < (m_matrix + (i * points) + j)->dist) {
+               (m_matrix + (i * points) + j)->dist = (m_matrix + (i * points) + k)->dist + (m_matrix + (k * points) + j)->dist;
+               (m_matrix + (i * points) + j)->index = (m_matrix + (i * points) + k)->index;
             }
          }
       }
@@ -2433,81 +2434,11 @@ void Waypoint::initPathMatrix (void) {
    savePathMatrix ();
 }
 
-void Waypoint::savePathMatrix (void) {
-   if (m_numWaypoints < 1 || m_waypointsChanged) {
-      return;
-   }
-
-   File fp (util.format ("%slearned/%s.pmt", getDataDirectory (), game.getMapName ()), "wb");
-
-   // unable to open file
-   if (!fp.isValid ()) {
-      util.logEntry (false, LL_FATAL, "Failed to open file for writing");
-      return;
-   }
-   ExtensionHeader header;
-
-   memset (header.header, 0, sizeof (header.header));
-   strcpy (header.header, FH_MATRIX);
-
-   header.fileVersion = FV_MATRIX;
-   header.pointNumber = m_numWaypoints;
-
-   // write header info
-   fp.write (&header, sizeof (ExtensionHeader));
-
-   // write path & distance matrix
-   fp.write (m_pathMatrix, sizeof (int), m_numWaypoints * m_numWaypoints);
-   fp.write (m_distMatrix, sizeof (int), m_numWaypoints * m_numWaypoints);
-
-   // and close the file
-   fp.close ();
-}
-
-bool Waypoint::loadPathMatrix (void) {
-   File fp (util.format ("%slearned/%s.pmt", getDataDirectory (), game.getMapName ()), "rb");
-
-   // file doesn't exists return false
-   if (!fp.isValid ()) {
-      return false;
-   }
-
-   ExtensionHeader header;
-   memset (&header, 0, sizeof (header));
-
-   // read number of waypoints
-   if (fp.read (&header, sizeof (ExtensionHeader)) == 0) {
-      fp.close ();
-      return false;
-   }
-
-   if (header.pointNumber != m_numWaypoints || header.fileVersion != FV_MATRIX) {
-      util.logEntry (true, LL_WARNING, "Pathmatrix damaged (wrong version, or not for this map). Pathmatrix will be rebuilt.");
-      fp.close ();
-
-      return false;
-   }
-
-   // read path & distance matrixes
-   if (fp.read (m_pathMatrix, sizeof (int), m_numWaypoints * m_numWaypoints) == 0) {
-      fp.close ();
-      return false;
-   }
-
-   if (fp.read (m_distMatrix, sizeof (int), m_numWaypoints * m_numWaypoints) == 0) {
-      fp.close ();
-      return false;
-   }
-   fp.close (); // and close the file
-
-   return true;
-}
-
 int Waypoint::getPathDist (int srcIndex, int destIndex) {
    if (!exists (srcIndex) || !exists (destIndex)) {
       return 1;
    }
-   return *(m_distMatrix + (srcIndex * m_numWaypoints) + destIndex);
+   return (m_matrix + (srcIndex * m_numWaypoints) + destIndex)->dist;
 }
 
 void Waypoint::setVisited (int index) {
@@ -2717,8 +2648,7 @@ Waypoint::Waypoint (void) {
    m_rescuePoints.clear ();
    m_sniperPoints.clear ();
 
-   m_distMatrix = nullptr;
-   m_pathMatrix = nullptr;
+   m_matrix = nullptr;
 
    for (int i = 0; i < MAX_WAYPOINTS; i++) {
       m_paths[i] = nullptr;
@@ -2726,11 +2656,10 @@ Waypoint::Waypoint (void) {
 }
 
 Waypoint::~Waypoint (void) {
-   delete[] m_distMatrix;
-   delete[] m_pathMatrix;
 
-   m_distMatrix = nullptr;
-   m_pathMatrix = nullptr;
+   // free floyd warshall
+   delete[] m_matrix;
+   m_matrix = nullptr;
 
    // free experience stuff
    delete[] m_experience;
@@ -2963,11 +2892,7 @@ void Waypoint::updateGlobalExperience (void) {
                if (i == j) {
                   continue;
                }
-
-               int clip = getDangerDamage (team, i, j);
-               clip = cr::clamp (clip - HALF_DAMAGE_VALUE, 0, MAX_DAMAGE_VALUE);
-
-               (m_experience + (i * m_numWaypoints) + j)->damage[team] = clip;
+               (m_experience + (i * m_numWaypoints) + j)->damage[team] = cr::clamp (getDangerDamage (team, i, j) - HALF_DAMAGE_VALUE, 0, MAX_DAMAGE_VALUE);
             }
          }
       }

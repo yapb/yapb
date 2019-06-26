@@ -1203,7 +1203,7 @@ void Bot::searchShortestPath (int srcIndex, int destIndex) {
    m_path.push (srcIndex);
 
    while (srcIndex != destIndex) {
-      srcIndex = *(waypoints.m_pathMatrix + (srcIndex * waypoints.length ()) + destIndex);
+      srcIndex = (waypoints.m_matrix + (srcIndex * waypoints.length ()) + destIndex)->index;
 
       if (srcIndex < 0) {
          m_prevGoalIndex = INVALID_WAYPOINT_INDEX;
@@ -1548,7 +1548,7 @@ int Bot::searchAimingPoint (const Vector &to) {
    }
  
    while (destIndex != m_currentWaypointIndex) {
-      destIndex = *(waypoints.m_pathMatrix + (destIndex * waypoints.length ()) + m_currentWaypointIndex);
+      destIndex = (waypoints.m_matrix + (destIndex * waypoints.length ()) + m_currentWaypointIndex)->index;
 
       if (destIndex < 0) {
          break;

@@ -22,6 +22,9 @@ using namespace cr::classes;
 #include <limits.h>
 #include <time.h>
 
+#include <compress.h>
+#include <resource.h>
+
 // defines bots tasks
 enum TaskID : int {
    TASK_NORMAL,
@@ -461,15 +464,15 @@ enum WaypointEditState : int {
 };
 
 // bot known file headers
-constexpr char FH_WAYPOINT[] = "PODWAY!";
-constexpr char FH_EXPERIENCE[] = "PODEXP!";
-constexpr char FH_VISTABLE[] = "PODVIS!";
-constexpr char FH_MATRIX[] = "PODMAT!";
+constexpr char FH_WAYPOINT[8] = "PODWAY!";
+constexpr char FH_EXPERIENCE[8] = "SKYEXP!";
+constexpr char FH_VISTABLE[8] = "SKYVIS!";
+constexpr char FH_MATRIX[8] = "SKYPMX!";
 
 constexpr int FV_WAYPOINT = 7;
-constexpr int FV_EXPERIENCE = 4;
-constexpr int FV_VISTABLE = 3;
-constexpr int FV_MATRIX = 3;
+constexpr int FV_EXPERIENCE = 5;
+constexpr int FV_VISTABLE = 4;
+constexpr int FV_MATRIX = 4;
 
 // some hardcoded desire defines used to override calculated ones
 constexpr float TASKPRI_NORMAL = 35.0f;
@@ -581,28 +584,18 @@ struct WeaponInfo {
    bool primaryFireHold; // hold down primary fire button to use?
 };
 
-// struct for menus
-struct MenuText {
-   MenuId id; // actual menu id
-   int slots; //  together bits for valid keys
-   String text; // ptr to actual string
-};
-
 // array of clients struct
 struct Client {
-   MenuId menu; // id to opened bot menu
    edict_t *ent; // pointer to actual edict
    Vector origin; // position in the world
    Vector soundPos; // position sound was played
-
    int team; // bot team
    int team2; // real bot team in free for all mode (csdm)
    int flags; // client flags
    int radio; // radio orders
-
+   int menu; // identifier to openen menu
    float hearingDistance; // distance this sound is heared
    float timeSoundLasting; // time sound is played/heared
-
    int iconFlags[MAX_ENGINE_PLAYERS]; // flag holding chatter icons
    float iconTimestamp[MAX_ENGINE_PLAYERS]; // timers for chatter icons
 };
@@ -612,12 +605,6 @@ struct Experience {
    int damage[MAX_TEAM_COUNT];
    int index[MAX_TEAM_COUNT];
    int value[MAX_TEAM_COUNT];
-};
-
-// experience data when saving/loading
-struct ExperienceSave {
-   uint8 damage[MAX_TEAM_COUNT];
-   int8 value[MAX_TEAM_COUNT];
 };
 
 // bot creation tab
@@ -650,10 +637,18 @@ struct WaypointHeader {
 };
 
 // general experience & vistable header information structure
-struct ExtensionHeader {
+struct ExtHeader {
    char header[8];
    int32 fileVersion;
    int32 pointNumber;
+   int32 compressed;
+   int32 uncompressed;
+};
+
+// floyd-warshall matrices
+struct FloydMatrix {
+   int dist;
+   int index;
 };
 
 // define general waypoint structure
@@ -1071,7 +1066,7 @@ public:
    Personality m_personality;
    float m_spawnTime; // time this bot spawned
    float m_timeTeamOrder; // time of last radio command
-   float m_timePeriodicUpdate; // time to per-second think
+   float m_slowFrameTimestamp; // time to per-second think
    float m_timeRepotingInDelay; // time to delay report-in
 
    bool m_isVIP; // bot is vip?
@@ -1198,7 +1193,7 @@ public:
    float calcThinkInterval (void);
 
    // the main function that decides intervals of running bot ai
-   void framePeriodic (void);
+   void slowFrame (void);
 
    /// the things that can be executed while skipping frames
    void frameThink (void);
@@ -1323,33 +1318,28 @@ public:
    int getHumansCount (bool ignoreSpectators = false);
    int getAliveHumansCount (void);
    int getBotCount (void);
+
    void countTeamPlayers (int &ts, int &cts);
-
-   void framePeriodic (void);
+   void slowFrame (void);
    void frame (void);
-
    void createKillerEntity (void);
    void destroyKillerEntity (void);
    void touchKillerEntity (Bot *bot);
-
    void destroy (void);
    void destroy (int index);
    void addbot (const String &name, int difficulty, int personality, int team, int member, bool manual);
    void addbot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member, bool manual);
    void serverFill (int selection, int personality = PERSONALITY_NORMAL, int difficulty = -1, int numToAdd = -1);
-
    void kickEveryone (bool instant = false,  bool zeroQuota = true);
    bool kickRandom (bool decQuota = true, Team fromTeam = TEAM_UNASSIGNED);
    void kickBot (int index);
    void kickFromTeam (Team team, bool removeAll = false);
-
    void killAllBots (int team = -1);
    void maintainQuota (void);
    void initQuota (void);
    void initRound (void);
    void decrementQuota (int by = 1);
    void selectLeaders (int team, bool reset);
-
    void listBots (void);
    void setWeaponMode (int selection);
    void updateTeamEconomics (int team, bool setTrue = false);
@@ -1357,13 +1347,12 @@ public:
    void reset (void);
    void initFilters (void);
    void resetFilters (void);
-
    void updateActiveGrenade (void);
    void updateIntrestingEntities (void);
-
    void calculatePingOffsets (void);
    void sendPingOffsets (edict_t *to);
    void sendDeathMsgFix (void);
+   void captureChatRadio (const char *cmd, const char *arg, edict_t *ent);
 
    static void execGameEntity (entvars_t *vars);
 
@@ -1532,9 +1521,6 @@ private:
    int m_facingAtIndex;
    char m_infoBuffer[MAX_PRINT_BUFFER];
 
-   int *m_distMatrix;
-   int *m_pathMatrix;
-
    IntArray m_terrorPoints;
    IntArray m_ctPoints;
    IntArray m_goalPoints;
@@ -1542,8 +1528,9 @@ private:
    IntArray m_sniperPoints;
    IntArray m_rescuePoints;
    IntArray m_visitedGoals;
-
    IntArray m_buckets[MAX_WAYPOINT_BUCKET_MAX][MAX_WAYPOINT_BUCKET_MAX][MAX_WAYPOINT_BUCKET_MAX];
+
+   FloydMatrix *m_matrix;
 
 public:
    bool m_redoneVisibility;
@@ -1553,8 +1540,8 @@ public:
 
 public:
    void init (void);
-   void initExperience (void);
-   void initVisibility (void);
+   void loadExperience (void);
+   void loadVisibility (void);
    void initTypes (void);
    void initLightLevels (void);
 
@@ -1570,13 +1557,13 @@ public:
    void push (int flags, const Vector &waypointOrigin = Vector::null ());
    void erase (int target);
    void toggleFlags (int toggleFlag);
-   void setRadius (int radius);
+   void setRadius (int index, float radius);
    bool isConnected (int pointA, int pointB);
    bool isConnected (int num);
    void rebuildVisibility (void);
    void pathCreate (char dir);
    void erasePath (void);
-   void cachePoint (void);
+   void cachePoint (int index);
 
    float calculateTravelTime (float maxSpeed, const Vector &src, const Vector &origin);
    bool isVisible (int srcIndex, int destIndex);
@@ -1601,6 +1588,9 @@ public:
    void initPathMatrix (void);
    void savePathMatrix (void);
    bool loadPathMatrix (void);
+
+   bool saveExtFile (const char *ext, const char *type, const char *magic, const int version, uint8 *data, const int32 size);
+   bool loadExtFile (const char *ext, const char *type, const char *magic, const int version, uint8 *data);
 
    int getPathDist (int srcIndex, int destIndex);
    const char *getInformation (int id);
@@ -1703,7 +1693,6 @@ private:
    Array <Array <ChatterItem>> m_chatter;
    Array <BotName> m_botNames;
    Array <Keywords> m_replies;
-   Array <MenuText> m_menus;
    Array <WeaponInfo> m_weapons;
 
    // weapon info gathered through engine messages
@@ -1731,15 +1720,6 @@ public:
 
    // remove bot name from used list
    void clearUsedName (Bot *bot);
-
-   // initializes menus (one-time-call)
-   void initMenus (void);
-
-   // kick bot menu
-   void kickBotByMenu (edict_t *ent, int selection);
-
-   // displays generic menu
-   void showMenu (edict_t *ent, MenuId menu);
 
    // initialize weapon info
    void initWeapons (void);
@@ -1787,17 +1767,17 @@ public:
    }
 
    // get's weapon preferences for personality
-   inline const int *getWeaponPrefs (const int personality) const {
+   inline int *getWeaponPrefs (const int personality) const {
       return m_weaponPrefs[personality];
    }
 
    // get economics value
-   inline const int *getEconLimit (void) const {
+   inline int *getEconLimit (void) {
       return m_botBuyEconomyTable;
    }
 
    // get's grenade buy percents
-   inline const bool chanceToBuyGrenade (const int grenadeType) const {
+   inline bool chanceToBuyGrenade (const int grenadeType) const {
       return RandomSequence::ref ().chance (m_grenadeBuyPrecent[grenadeType]);
    }
 };
@@ -1881,7 +1861,7 @@ public:
    }
 
    // get clients as const-reference
-   inline const auto &getClients (void) const {
+   inline const Array <Client> &getClients (void) const {
       return m_clients;
    }
 
@@ -1899,6 +1879,180 @@ public:
    }
 };
 
+// command handler status
+enum BotCommandStatus : int {
+   CMD_STATUS_HANDLED = 0, // command successfully handled 
+   CMD_STATUS_LISTENSERV, // command is only avaialble on listen server
+   CMD_STATUS_DENIED, // access to this command is denied
+   CMD_STATUS_BADFORMAT // wrong params
+};
+
+// bot command manager
+class BotControl final : public Singleton <BotControl> {
+public:
+   using Handler = int (BotControl::*) (void);
+   using MenuHandler = int (BotControl::*) (int);
+
+public:
+   // generic bot command
+   struct BotCmd {
+      String name, format, help;
+      Handler handler;
+   };
+
+   // single bot menu
+   struct Menu {
+      int ident, slots;
+      String text;
+      MenuHandler handler;
+   };
+
+private:
+   StringArray m_args;
+   Array <BotCmd> m_cmds;
+   Array <Menu> m_menus;
+
+   edict_t *m_ent;
+
+   bool m_isFromConsole;
+   bool m_isMenuFillCommand;
+   int m_menuServerFillTeam;
+   int m_interMenuData[4] = { 0, };
+
+public:
+   BotControl (void);
+   ~BotControl (void) = default;
+
+private:
+   int cmdAddBot (void);
+   int cmdKickBot (void);
+   int cmdKickBots (void);
+   int cmdKillBots (void);
+   int cmdFill (void);
+   int cmdVote (void);
+   int cmdWeaponMode (void);
+   int cmdVersion (void);
+   int cmdWaypointMenu (void);
+   int cmdMenu (void);
+   int cmdList (void);
+   int cmdWaypoint (void);
+   int cmdWaypointOn (void);
+   int cmdWaypointOff (void);
+   int cmdWaypointAdd (void);
+   int cmdWaypointAddBasic (void);
+   int cmdWaypointSave (void);
+   int cmdWaypointLoad (void);
+   int cmdWaypointErase (void);
+   int cmdWaypointDelete (void);
+   int cmdWaypointCheck (void);
+   int cmdWaypointCache (void);
+   int cmdWaypointClean (void);
+   int cmdWaypointSetRadius (void);
+   int cmdWaypointSetFlags (void);
+   int cmdWaypointTeleport (void);
+   int cmdWaypointPathCreate (void);
+   int cmdWaypointPathDelete (void);
+   int cmdWaypointPathSetAutoDistance (void);
+
+private:
+   int menuMain (int item);
+   int menuFeatures (int item);
+   int menuControl (int item);
+   int menuWeaponMode (int item);
+   int menuPersonality (int item);
+   int menuDifficulty (int item);
+   int menuTeamSelect (int item);
+   int menuClassSelect (int item);
+   int menuCommands (int item);
+   int menuWaypointPage1 (int item);
+   int menuWaypointPage2 (int item);
+   int menuWaypointRadius (int item);
+   int menuWaypointType (int item);
+   int menuWaypointFlag (int item);
+   int menuWaypointPath (int item);
+   int menuAutoPathDistance (int item);
+   int menuKickPage1 (int item);
+   int menuKickPage2 (int item);
+   int menuKickPage3 (int item);
+   int menuKickPage4 (int item);
+
+private:
+   void enableDrawModels (const bool enable);
+   void createMenus (void);
+
+public:
+   bool executeCommands (void);
+   bool executeMenus (void);
+   void showMenu (int id);
+   void kickBotByMenu (int page);
+   void msg (const char *fmt, ...);
+   void assignAdminRights (edict_t *ent, char *infobuffer);
+   void maintainAdminRights (void);
+
+public:
+   inline void setFromConsole (const bool console) {
+      m_isFromConsole = console;
+   }
+
+   inline void setArgs (StringArray args) {
+      m_args.assign (args);
+   }
+
+   inline void setIssuer (edict_t *ent) {
+      m_ent = ent;
+   }
+
+   inline void fixMissingArgs (size_t num) {
+      if (num < m_args.length ()) {
+         return;
+      }
+
+      do {
+         m_args.push ("");
+      } while (num--);
+   }
+
+   inline int getInt (size_t arg) const {
+      if (!hasArg (arg)) {
+         return false;
+      }
+      return m_args[arg].toInt32 ();
+   }
+
+   inline const String &getStr (size_t arg) {
+      static String empty ("empty");
+
+      if (!hasArg (arg) || m_args[arg].empty ()) {
+         return empty;
+      }
+      return m_args[arg];
+   }
+
+   inline bool hasArg (size_t arg) const {
+      return arg < m_args.length ();
+   }
+
+   inline StringArray collectArgs (void) {
+      StringArray args;
+
+      for (int i = 0; i < engfuncs.pfnCmd_Argc (); i++) {
+         args.push (engfuncs.pfnCmd_Argv (i));
+      }
+      return args;
+   }
+
+public:
+
+   // for the server commands
+   static void handleEngineCommands (void);
+
+   // for the client commands
+   bool handleClientCommands (edict_t *ent);
+
+   // for the client menu commands
+   bool handleMenuCommands (edict_t *ent);
+};
+
 #include <engine.h>
 
 // expose bot super-globals
@@ -1909,14 +2063,12 @@ static auto &rng = RandomSequence::ref ();
 static auto &illum = LightMeasure::ref ();
 static auto &conf = Config::ref ();
 static auto &util = BotUtils::ref ();
+static auto &ctrl = BotControl::ref ();
 
 // very global convars
 extern ConVar yb_jasonmode;
 extern ConVar yb_communication_type;
 extern ConVar yb_ignore_enemies;
-
-#include <compress.h>
-#include <resource.h>
 
 inline int Bot::index (void) {
    return game.indexOfEntity (ent ());

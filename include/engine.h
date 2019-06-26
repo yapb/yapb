@@ -181,6 +181,9 @@ public:
    // prints center message to all players
    void centerPrint (const char *fmt, ...);
 
+   // prints center message to specified player
+   void centerPrint (edict_t *ent, const char *fmt, ...);
+
    // prints message to client console
    void clientPrint (edict_t *ent, const char *fmt, ...);
 
@@ -246,6 +249,9 @@ public:
 
    // executes stuff every 1 second
    void slowFrame (void);
+
+   // begin message handler
+   void beginMessage (edict_t *ent, int dest, int type);
 
    // public inlines
 public:
@@ -388,7 +394,7 @@ public:
    }
 
    // gets the map type
-   inline const bool mapIs (const int type) const {
+   inline bool mapIs (const int type) const {
       return (m_mapFlags & type) == type;
    }
 
@@ -503,7 +509,6 @@ public:
       return cr::clamp <short> (static_cast <short> (value * scale), -32767, 32767);
    }
 };
-
 
 class LightMeasure final : public Singleton <LightMeasure> {
 private:

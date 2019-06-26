@@ -20,7 +20,7 @@ LOCAL_SRC_FILES := \
 	manager.cpp \
 	chatlib.cpp \
 	combat.cpp \
-	globals.cpp \
+	control.cpp \
 	engine.cpp \
 	interface.cpp \
 	navigate.cpp \
