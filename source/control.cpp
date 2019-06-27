@@ -1501,6 +1501,11 @@ void BotControl::showMenu (int id) {
    }
    Client &client = util.getClient (game.indexOfEntity (m_ent) - 1);
 
+   // do not show menus to invalid players
+   if (m_ent != game.getLocalEntity () && !(client.flags & CF_ADMIN)) {
+      return;
+   }
+
    if (id == BOT_MENU_INVALID) {
       MessageWriter (MSG_ONE_UNRELIABLE, game.getMessageId (NETMSG_SHOWMENU), Vector::null (), m_ent)
          .writeShort (0)

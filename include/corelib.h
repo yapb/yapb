@@ -1120,7 +1120,7 @@ public:
       assign (str, length);
    }
 
-   String (const String &str, size_t length = 0) {
+   String (const String &str, size_t length = 0) : base () {
       assign (str.chars (), length);
    }
 

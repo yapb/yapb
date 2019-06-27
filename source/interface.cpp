@@ -278,14 +278,14 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
 
       if (ctrl.handleClientCommands (ent)) {
          if (game.is (GAME_METAMOD)) {
-            RETURN_META (MRES_IGNORED);
+            RETURN_META (MRES_SUPERCEDE);
          }
          return;
       }
 
       else if (ctrl.handleMenuCommands (ent)) {
          if (game.is (GAME_METAMOD)) {
-            RETURN_META (MRES_IGNORED);
+            RETURN_META (MRES_SUPERCEDE);
          }
          return;
       }
