@@ -19,8 +19,8 @@ Game::Game (void) {
 
    resetMessages ();
 
-   for (int i = 0; i < NETMSG_NUM; i++) {
-      m_msgBlock.regMsgs[i] = NETMSG_UNDEFINED;
+   for (auto &msg : m_msgBlock.regMsgs) {
+      msg = NETMSG_UNDEFINED;
    }
    m_precached = false;
    m_isBotCommand = false;
@@ -39,10 +39,6 @@ Game::Game (void) {
 
 Game::~Game (void) {
    resetMessages ();
-
-   for (int i = 0; i < NETMSG_NUM; i++) {
-      m_msgBlock.regMsgs[i] = NETMSG_UNDEFINED;
-   }
 }
 
 void Game::precache (void) {
@@ -422,7 +418,7 @@ void Game::registerCmd (const char *command, void func (void)) {
    // pointed to by "function" in order to handle it.
 
    // check for hl pre 1.1.0.4, as it's doesn't have pfnAddServerCommand
-   if (!cr::checkptr (reinterpret_cast <const void *> (engfuncs.pfnAddServerCommand))) {
+   if (!cr::checkptr (reinterpret_cast <void *> (engfuncs.pfnAddServerCommand))) {
       util.logEntry (true, LL_FATAL, "YaPB's minimum HL engine version is 1.1.0.4 and minimum Counter-Strike is Beta 6.6. Please update your engine version.");
    }
    engfuncs.pfnAddServerCommand (const_cast <char *> (command), func);
@@ -1212,8 +1208,8 @@ bool Game::loadCSBinary (void) {
    };
 
    // search the libraries inside game dlls directory
-   for (size_t i = 0; i < cr::arrsize (libs); i++) {
-      auto *path = util.format ("%s/dlls/%s", modname, libs[i]);
+   for (const auto lib : libs) {
+      auto *path = util.format ("%s/dlls/%s", modname, lib);
 
       // if we can't read file, skip it
       if (!File::exists (path)) {
@@ -1230,7 +1226,7 @@ bool Game::loadCSBinary (void) {
          m_gameLib.load (path);
 
          // verify dll is OK 
-         if (!libCheck (modname, libs[i])) {
+         if (!libCheck (modname, lib)) {
             return false;
          }
          return true;
@@ -1239,7 +1235,7 @@ bool Game::loadCSBinary (void) {
          m_gameLib.load (path);
 
          // verify dll is OK 
-         if (!libCheck (modname, libs[i])) {
+         if (!libCheck (modname, lib)) {
             return false;
          }
 
@@ -1497,13 +1493,13 @@ void LightMeasure::initializeLightstyles (void) {
    // this function initializes lighting information...
 
    // reset all light styles
-   for (int i = 0; i < MAX_LIGHTSTYLES; i++) {
-      m_lightstyle[i].length = 0;
-      m_lightstyle[i].map[0] = 0x0;
+   for (auto &ls : m_lightstyle) {
+      ls.length = 0;
+      ls.map[0] = 0;
    }
 
-   for (int i = 0; i < MAX_LIGHTSTYLEVALUE; i++) {
-      m_lightstyleValue[i] = 264;
+   for (auto &lsv : m_lightstyleValue) {
+      lsv = 264;
    }
 }
 

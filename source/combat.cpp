@@ -653,8 +653,9 @@ bool Bot::throttleFiring (float distance) {
       return false;
    }
 
-   if (m_firePause > game.timebase ())
+   if (m_firePause > game.timebase ()) {
       return true;
+   }
 
    if ((m_aimFlags & AIM_ENEMY) && !m_enemyOrigin.empty ()) {
       if (util.getShootingCone (ent (), m_enemyOrigin) > 0.92f && isEnemyBehindShield (m_enemy)) {

@@ -555,9 +555,9 @@ void Bot::processPickups (void) {
             int primaryWeaponCarried = bestPrimaryCarried ();
             int secondaryWeaponCarried = bestSecondaryCarried ();
 
-            auto &primary = conf.getWeapons ()[primaryWeaponCarried];
-            auto &secondary = conf.getWeapons ()[secondaryWeaponCarried];
-
+            const auto &config = conf.getWeapons ();
+            const auto &primary = config[primaryWeaponCarried];
+            const auto &secondary = config[secondaryWeaponCarried];
             const auto &primaryProp = conf.getWeaponProp (primary.id);
             const auto &secondaryProp = conf.getWeaponProp (secondary.id);
 
@@ -682,7 +682,7 @@ void Bot::processPickups (void) {
                if (game.isNullEntity (ent) || ent->v.health <= 0) {
                   allowPickup = false; // never pickup dead hostage
                }
-               else
+               else {
                   for (int i = 0; i < game.maxClients (); i++) {
                      if ((bot = bots.getBot (i)) != nullptr && bot->m_notKilled) {
                         for (auto hostage : bot->m_hostages) {
@@ -693,6 +693,7 @@ void Bot::processPickups (void) {
                         }
                      }
                   }
+               }
             }
             else if (pickupType == PICKUP_PLANTED_C4) {
                if (util.isPlayer (m_enemy)) {
@@ -831,15 +832,15 @@ void Bot::getCampDir (Vector *dest) {
       int lookAtWaypoint = INVALID_WAYPOINT_INDEX;
       Path &path = waypoints[tempIndex];
 
-      for (int i = 0; i < MAX_PATH_INDEX; i++) {
-         if (path.index[i] == INVALID_WAYPOINT_INDEX) {
+      for (auto &index : path.index) {
+         if (index == INVALID_WAYPOINT_INDEX) {
             continue;
          }
-         float distance = static_cast <float> (waypoints.getPathDist (path.index[i], enemyIndex));
+         auto distance = static_cast <float> (waypoints.getPathDist (index, enemyIndex));
 
          if (distance < minDistance) {
             minDistance = distance;
-            lookAtWaypoint = path.index[i];
+            lookAtWaypoint = index;
          }
       }
 
@@ -1052,8 +1053,9 @@ void Bot::checkMsgQueue (void) {
       if (bots.getLastRadioTimestamp (m_team) + 3.0f < game.timebase ()) {
          // if same message like previous just do a yes/no
          if (m_radioSelect != RADIO_AFFIRMATIVE && m_radioSelect != RADIO_NEGATIVE) {
-            if (m_radioSelect == bots.getLastRadio (m_team) && bots.getLastRadioTimestamp (m_team) + 1.5f > game.timebase ())
+            if (m_radioSelect == bots.getLastRadio (m_team) && bots.getLastRadioTimestamp (m_team) + 1.5f > game.timebase ()) {
                m_radioSelect = -1;
+            }
             else {
                if (m_radioSelect != RADIO_REPORTING_IN) {
                   bots.setLastRadio (m_team, m_radioSelect);
@@ -2233,8 +2235,8 @@ bool Bot::reactOnEnemy (void) {
       }
       int enemyIndex = waypoints.getNearest (m_enemy->v.origin);
 
-      float lineDist = (m_enemy->v.origin - pev->origin).length ();
-      float pathDist = static_cast <float> (waypoints.getPathDist (ownIndex, enemyIndex));
+      auto lineDist = (m_enemy->v.origin - pev->origin).length ();
+      auto pathDist = static_cast <float> (waypoints.getPathDist (ownIndex, enemyIndex));
 
       if (pathDist - lineDist > 112.0f) {
          m_isEnemyReachable = false;
@@ -2672,8 +2674,9 @@ void Bot::checkRadioQueue (void) {
 void Bot::tryHeadTowardRadioMessage (void) {
    TaskID taskID = taskId ();
 
-   if (taskID == TASK_MOVETOPOSITION || m_headedTime + 15.0f < game.timebase () || !util.isAlive (m_radioEntity) || m_hasC4)
+   if (taskID == TASK_MOVETOPOSITION || m_headedTime + 15.0f < game.timebase () || !util.isAlive (m_radioEntity) || m_hasC4) {
       return;
+   }
 
    if ((util.isFakeClient (m_radioEntity) && rng.chance (25) && m_personality == PERSONALITY_NORMAL) || !(m_radioEntity->v.flags & FL_FAKECLIENT)) {
       if (taskID == TASK_PAUSE || taskID == TASK_CAMP) {
@@ -2936,8 +2939,6 @@ void Bot::frame (void) {
       }
    }
    checkSpawnConditions ();
-
-   extern ConVar yb_chat;
 
    // bot chatting turned on?
    if (!m_notKilled && yb_chat.boolean () && m_lastChatTime + 10.0 < game.timebase () && bots.getLastChatTimestamp () + 5.0f < game.timebase () && !isReplyingToChat ()) {
@@ -3243,9 +3244,9 @@ void Bot::spraypaint_ (void) {
       game.testLine (eyePos (), sprayOrigin, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
       // no wall in front?
-      if (tr.flFraction >= 1.0f)
+      if (tr.flFraction >= 1.0f) {
          sprayOrigin.z -= 128.0f;
-
+      }
       m_entity = sprayOrigin;
 
       if (task ()->time - 0.5f < game.timebase ()) {
@@ -3601,8 +3602,9 @@ void Bot::camp_ (void) {
             m_camp = waypoints[searchCampDir ()].origin;
          }
       }
-      else
+      else {
          m_camp = waypoints[searchCampDir ()].origin;
+      }
    }
    // press remembered crouch button
    pev->button |= m_campButtons;
@@ -3941,8 +3943,9 @@ void Bot::bombDefuse_ (void) {
          }
       }
    }
-   else
+   else {
       completeTask ();
+   }
 }
 
 void Bot::followUser_ (void) {
@@ -4189,8 +4192,9 @@ void Bot::throwSmoke_ (void) {
    Vector src = m_lastEnemyOrigin - pev->velocity;
 
    // predict where the enemy is in 0.5 secs
-   if (!game.isNullEntity (m_enemy))
+   if (!game.isNullEntity (m_enemy)) {
       src = src + m_enemy->v.velocity * 0.5f;
+   }
 
    m_grenade = (src - eyePos ()).normalize ();
 
@@ -5316,7 +5320,6 @@ void Bot::processChatterMessage (const char *tempMessage) {
 }
 
 void Bot::pushChatMessage (int type, bool isTeamSay) {
-   extern ConVar yb_chat;
    auto &chat = conf.getChat ();
 
    if (chat[type].empty () || !yb_chat.boolean ()) {

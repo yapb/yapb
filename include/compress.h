@@ -9,6 +9,7 @@
 
 #pragma once
 
+// see https://github.com/encode84/ulz/
 class FastLZ final : NonCopyable {
 public:
    static constexpr int EXCESS = 16;

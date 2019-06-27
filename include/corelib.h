@@ -56,7 +56,7 @@ using uint16 = unsigned short;
 using uint32 = unsigned long;
 using uint64 = unsigned long long;
 
-}
+};
 
 using namespace cr::types;
 
@@ -72,13 +72,14 @@ constexpr float D2R = PI / 180.0f;
 constexpr float R2D = 180.0f / PI;
 
 // from metamod-p
-static inline bool checkptr (const void *ptr) {
+static inline bool checkptr (void *ptr) {
 #ifdef PLATFORM_WIN32
-   if (IsBadCodePtr (reinterpret_cast <FARPROC> (ptr)))
+   if (IsBadCodePtr (reinterpret_cast <FARPROC> (ptr))) {
       return false;
+   }
+#else
+   (void) (ptr);
 #endif
-
-   (void)(ptr);
    return true;
 }
 
@@ -129,7 +130,7 @@ static inline float sqrtf (const float value) {
 }
 
 static inline float sinf (const float value) {
-   const signed long sign = static_cast <signed long> (value * PI_RECIPROCAL);
+   const auto sign = static_cast <signed long> (value * PI_RECIPROCAL);
    const float calc = (value - static_cast <float> (sign) * PI);
 
    const float sqr = square (calc);
@@ -140,7 +141,7 @@ static inline float sinf (const float value) {
 }
 
 static inline float cosf (const float value) {
-   const signed long sign = static_cast <signed long> (value * PI_RECIPROCAL);
+   const auto sign = static_cast <signed long> (value * PI_RECIPROCAL);
    const float calc = (value - static_cast <float> (sign) * PI);
 
    const float sqr = square (calc);
@@ -308,7 +309,7 @@ protected:
    NonCopyable (void) = default;
    ~NonCopyable (void) = default;
 
-private:
+public:
    NonCopyable (const NonCopyable &) = delete;
    NonCopyable &operator = (const NonCopyable &) = delete;
 };
@@ -349,8 +350,8 @@ private:
 
 public:
    RandomSequence (void) {
-      const unsigned int seedBase = static_cast <unsigned int> (time (nullptr));
-      const unsigned int seedOffset = seedBase + 1;
+      const auto seedBase = static_cast <unsigned int> (time (nullptr));
+      const auto seedOffset = seedBase + 1;
 
       m_index = premute (premute (seedBase) + 0x682f0161);
       m_intermediateOffset = premute (premute (seedOffset) + 0x46790905);
@@ -395,7 +396,7 @@ public:
    inline Vector (float scaler = 0.0f) : x (scaler), y (scaler), z (scaler) {}
    inline Vector (float inputX, float inputY, float inputZ) : x (inputX), y (inputY), z (inputZ) {}
    inline Vector (float *other) : x (other[0]), y (other[1]), z (other[2]) {}
-   inline Vector (const Vector &right) : x (right.x), y (right.y), z (right.z) {}
+   inline Vector (const Vector &right) = default;
 
 public:
    inline operator float * (void) {
@@ -406,33 +407,33 @@ public:
       return &x;
    }
 
-   inline const Vector operator + (const Vector &right) const {
+   inline Vector operator + (const Vector &right) const {
       return Vector (x + right.x, y + right.y, z + right.z);
    }
 
-   inline const Vector operator - (const Vector &right) const {
+   inline Vector operator - (const Vector &right) const {
       return Vector (x - right.x, y - right.y, z - right.z);
    }
 
-   inline const Vector operator - (void) const {
+   inline Vector operator - (void) const {
       return Vector (-x, -y, -z);
    }
 
-   friend inline const Vector operator* (const float vec, const Vector &right) {
+   friend inline Vector operator * (const float vec, const Vector &right) {
       return Vector (right.x * vec, right.y * vec, right.z * vec);
    }
 
-   inline const Vector operator * (float vec) const {
+   inline Vector operator * (float vec) const {
       return Vector (vec * x, vec * y, vec * z);
    }
 
-   inline const Vector operator / (float vec) const {
+   inline Vector operator / (float vec) const {
       const float inv = 1 / vec;
       return Vector (inv * x, inv * y, inv * z);
    }
 
    // cross product
-   inline const Vector operator ^ (const Vector &right) const {
+   inline Vector operator ^ (const Vector &right) const {
       return Vector (y * right.z - z * right.y, z * right.x - x * right.z, x * right.y - y * right.x);
    }
 
@@ -483,13 +484,7 @@ public:
       return !fequal (x, right.x) && !fequal (y, right.y) && !fequal (z, right.z);
    }
 
-   inline const Vector &operator = (const Vector &right) {
-      x = right.x;
-      y = right.y;
-      z = right.z;
-
-      return *this;
-   }
+   inline Vector &operator = (const Vector &right) = default;
 
 public:
    inline float length (void) const {
@@ -577,7 +572,7 @@ public:
       float cosines[max] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
       // compute the sine and cosine compontents
-      sincosf (deg2rad (x), deg2rad (y), deg2rad (y), sines, cosines);
+      sincosf (deg2rad (x), deg2rad (y), deg2rad (z), sines, cosines);
 
       if (forward) {
          forward->x = cosines[pitch] * cosines[yaw];
@@ -601,12 +596,12 @@ public:
 
 class Library final : private NonCopyable {
 private:
-   void *m_ptr;
+   void *m_ptr = nullptr;
 
 public:
-   explicit Library (void) : m_ptr (nullptr) { }
+   explicit Library (void) = default;
 
-   Library (const char *filename) : m_ptr (nullptr) {
+   Library (const char *filename) {
       if (!filename) {
          return;
       }
@@ -642,12 +637,13 @@ public:
       if (!isValid ()) {
          return nullptr;
       }
-      return (R)
+      return reinterpret_cast <R> (
 #ifdef PLATFORM_WIN32
-         GetProcAddress (static_cast <HMODULE> (m_ptr), function);
+         GetProcAddress (static_cast <HMODULE> (m_ptr), function)
 #else
-         dlsym (m_ptr, function);
+         dlsym (m_ptr, function)
 #endif
+      );
    }
 
    template <typename R> R handle (void) {
@@ -713,7 +709,7 @@ public:
       if (m_length + growSize < m_capacity) {
          return true;
       }
-      size_t maxSize = max <size_t> (m_capacity + sizeof (T), static_cast <size_t> (16));
+      auto maxSize = max <size_t> (m_capacity + sizeof (T), static_cast <size_t> (16));
 
       while (m_length + growSize > maxSize) {
          maxSize *= 2;
@@ -1124,7 +1120,7 @@ public:
       assign (str, length);
    }
 
-   String (const String &str, size_t length = 0) : base () {
+   String (const String &str, size_t length = 0) {
       assign (str.chars (), length);
    }
 
@@ -1594,17 +1590,16 @@ public:
 
 class File : private NonCopyable {
 private:
-   FILE *m_handle;
-   size_t m_size;
+   FILE *m_handle = nullptr;
+   size_t m_size = 0;
 
 public:
-   File (void) : m_handle (nullptr), m_size (0) {}
-
-   File (const String &fileName, const String &mode = "rt") : m_handle (nullptr), m_size (0){
+   File (void) = default;
+   File (const String &fileName, const String &mode = "rt") {
       open (fileName, mode);
    }
 
-   virtual ~File (void) {
+    ~File (void) {
       close ();
    }
 
@@ -1755,14 +1750,13 @@ public:
 
 class MemFile : private NonCopyable {
 private:
-   size_t m_size;
-   size_t m_pos;
-   uint8 *m_buffer;
+   size_t m_size = 0;
+   size_t m_pos = 0;
+   uint8 *m_buffer = nullptr;
 
 public:
-   MemFile (void) : m_size (0) , m_pos (0) , m_buffer (nullptr) {}
-
-   MemFile (const String &filename) : m_size (0) , m_pos (0) , m_buffer (nullptr) {
+   MemFile (void) = default;
+   MemFile (const String &filename)  {
       open (filename);
    }
 
@@ -1868,7 +1862,7 @@ public:
    }
 };
 
-}}
+}};
 
 namespace cr {
 namespace types {
@@ -1876,4 +1870,4 @@ namespace types {
 using StringArray = cr::classes::Array <cr::classes::String>;
 using IntArray = cr::classes::Array <int>;
 
-}}
+}};

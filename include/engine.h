@@ -514,15 +514,14 @@ class LightMeasure final : public Singleton <LightMeasure> {
 private:
    lightstyle_t m_lightstyle[MAX_LIGHTSTYLES];
    int m_lightstyleValue[MAX_LIGHTSTYLEVALUE];
-   bool m_doAnimation;
+   bool m_doAnimation = false;
 
    SimpleColor m_point;
-   model_t *m_worldModel;
+   model_t *m_worldModel = nullptr;
 
 public:
-   LightMeasure (void) : m_doAnimation (false), m_worldModel (nullptr) {
+   LightMeasure (void) {
       initializeLightstyles ();
-
       m_point.reset ();
    }
 

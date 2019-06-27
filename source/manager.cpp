@@ -159,11 +159,11 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
    }
 
    if (personality < PERSONALITY_NORMAL || personality > PERSONALITY_CAREFUL) {
-      if (rng.getInt (0, 100) < 50) {
+      if (rng.chance (5)) {
          personality = PERSONALITY_NORMAL;
       }
       else {
-         if (rng.getInt (0, 100) < 50) {
+         if (rng.chance (50)) {
             personality = PERSONALITY_RUSHER;
          }
          else {
@@ -767,14 +767,14 @@ Bot *BotManager::getHighfragBot (int team) {
    return getBot (bestIndex);
 }
 
-void BotManager::updateTeamEconomics (int team, bool forceGoodEconomics) {
+void BotManager::updateTeamEconomics (int team, bool setTrue) {
    // this function decides is players on specified team is able to buy primary weapons by calculating players
    // that have not enough money to buy primary (with economics), and if this result higher 80%, player is can't
    // buy primary weapons.
 
    extern ConVar yb_economics_rounds;
 
-   if (forceGoodEconomics || !yb_economics_rounds.boolean ()) {
+   if (setTrue || !yb_economics_rounds.boolean ()) {
       m_economicsGood[team] = true;
       return; // don't check economics while economics disable
    }
@@ -1691,6 +1691,8 @@ void BotManager::initRound (void) {
    for (int team = 0; team < MAX_TEAM_COUNT; team++) {
       updateTeamEconomics (team);
       selectLeaders (team, true);
+
+      m_lastRadioTime[team] = 0.0f;
    }
    reset ();
 
@@ -1708,10 +1710,6 @@ void BotManager::initRound (void) {
    m_bombSayStatus = 0;
    m_timeBombPlanted = 0.0f;
    m_plantSearchUpdateTime = 0.0f;
-
-   for (int i = 0; i < MAX_TEAM_COUNT; i++) {
-      m_lastRadioTime[i] = 0.0f;
-   }
    m_botsCanPause = false;
 
    resetFilters ();
@@ -1789,8 +1787,9 @@ void Config::load (bool onlyMain) {
                      engfuncs.pfnCvar_DirectSet (cvar, value);
                   }
                }
-               else
+               else {
                   game.execCmd (lineBuffer);
+               }
             }
          }
          fp.close ();
@@ -1935,7 +1934,6 @@ void Config::load (bool onlyMain) {
       fp.close ();
    }
    else {
-      extern ConVar yb_chat;
       yb_chat.set (0);
    }
 
@@ -2137,10 +2135,8 @@ void Config::load (bool onlyMain) {
             }
             items[1].trim ("(;)");
 
-            for (size_t i = 0; i < cr::arrsize (chatterEventMap); i++) {
-               auto event = &chatterEventMap[i];
-
-               if (stricmp (event->str, items[0].chars ()) == 0) {
+            for (auto &event : chatterEventMap) {
+               if (stricmp (event.str, items[0].chars ()) == 0) {
                   // this does common work of parsing comma-separated chatter line
                   auto sounds = items[1].split (",");
 
@@ -2149,7 +2145,7 @@ void Config::load (bool onlyMain) {
                      float duration = game.getWaveLen (sound.chars ());
 
                      if (duration > 0.0f) {
-                        m_chatter[event->code].push ({ sound, event->repeat, duration });
+                        m_chatter[event.code].push ({ sound, event.repeat, duration });
                      }
                   }
                   sounds.clear ();
@@ -2293,8 +2289,9 @@ void Config::initWeapons (void) {
 
 void Config::adjustWeaponPrices (void) {
    // elite price is 1000$ on older versions of cs...
-   if (!(game.is (GAME_LEGACY)))
+   if (!(game.is (GAME_LEGACY))) {
       return;
+   }
 
    for (auto &weapon : m_weapons) {
       if (weapon.id == WEAPON_ELITE) {

@@ -1,4 +1,4 @@
-//
+// 
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //

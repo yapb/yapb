@@ -1,4 +1,3 @@
-//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -216,11 +215,13 @@ bool BotUtils::openConfig (const char *fileName, const char *errorIfNotExists, M
          // unload and reopen file using MemoryFile
          outFile->open (langConfig);
       }
-      else
+      else {
          outFile->open (format ("%s/lang/en_%s", configDir, fileName));
+      }
    }
-   else
+   else {
       outFile->open (format ("%s/%s", configDir, fileName));
+   }
 
    if (!outFile->isValid ()) {
       logEntry (true, LL_ERROR, errorIfNotExists);
@@ -360,7 +361,7 @@ void BotUtils::logEntry (bool outputToConsole, int logLevel, const char *format,
    }
 }
 
-bool BotUtils::findNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool sameTeam, bool needBot, bool isAlive, bool needDrawn, bool needBotWithC4) {
+bool BotUtils::findNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool sameTeam, bool needBot, bool needAlive, bool needDrawn, bool needBotWithC4) {
    // this function finds nearest to to, player with set of parameters, like his
    // team, live status, search distance etc. if needBot is true, then pvHolder, will
    // be filled with bot pointer, else with edict pointer(!).
@@ -375,7 +376,7 @@ bool BotUtils::findNearestPlayer (void **pvHolder, edict_t *to, float searchDist
          continue;
       }
 
-      if ((sameTeam && client.team != toTeam) || (isAlive && !(client.flags & CF_ALIVE)) || (needBot && !isFakeClient (client.ent)) || (needDrawn && (client.ent->v.effects & EF_NODRAW)) || (needBotWithC4 && (client.ent->v.weapons & WEAPON_C4))) {
+      if ((sameTeam && client.team != toTeam) || (needAlive && !(client.flags & CF_ALIVE)) || (needBot && !isFakeClient (client.ent)) || (needDrawn && (client.ent->v.effects & EF_NODRAW)) || (needBotWithC4 && (client.ent->v.weapons & WEAPON_C4))) {
          continue; // filter players with parameters
       }
       float distance = (client.ent->v.origin - to->v.origin).length ();
@@ -386,8 +387,9 @@ bool BotUtils::findNearestPlayer (void **pvHolder, edict_t *to, float searchDist
       }
    }
 
-   if (game.isNullEntity (survive))
+   if (game.isNullEntity (survive)) {
       return false; // nothing found
+   }
 
    // fill the holder
    if (needBot) {
@@ -670,18 +672,18 @@ int BotUtils::getWeaponAlias (bool needString, const char *weaponAlias, int weap
 
    // if we need to return the string, find by weapon id
    if (needString && weaponIndex != -1) {
-      for (size_t i = 0; i < cr::arrsize (weaponTab); i++) {
-         if (weaponTab[i].weaponIndex == weaponIndex) { // is weapon id found?
-            return MAKE_STRING (weaponTab[i].alias);
+      for (auto &tab : weaponTab) {
+         if (tab.weaponIndex == weaponIndex) { // is weapon id found?
+            return MAKE_STRING (tab.alias);
          }
       }
       return MAKE_STRING ("(none)"); // return none
    }
 
    // else search weapon by name and return weapon id
-   for (size_t i = 0; i < cr::arrsize (weaponTab); i++) {
-      if (strncmp (weaponTab[i].alias, weaponAlias, strlen (weaponTab[i].alias)) == 0) {
-         return weaponTab[i].weaponIndex;
+   for (auto &tab : weaponTab) {
+      if (strncmp (tab.alias, weaponAlias, strlen (tab.alias)) == 0) {
+         return tab.weaponIndex;
       }
    }
    return -1; // no weapon was found return -1

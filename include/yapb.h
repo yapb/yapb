@@ -912,7 +912,7 @@ private:
    bool isEnemyThreat (void);
    void processLookAngles (void);
    void processBodyAngles (void);
-   void updateLookAnglesNewbie (const Vector &direction, const float delta);
+   void updateLookAnglesNewbie (const Vector &direction, float delta);
    void setIdealReactionTimers (bool actual = false);
    bool isWeaponRestricted (int weaponIndex);
    bool isWeaponRestrictedAMX (int weaponIndex);
@@ -922,7 +922,7 @@ private:
    bool checkBodyParts (edict_t *target, Vector *origin, uint8 *bodyPart);
    bool seesEnemy (edict_t *player, bool ignoreFOV = false);
 
-   edict_t *getNearestButton (const char *className);
+   edict_t *getNearestButton (const char *targetName);
    edict_t *lookupBreakable (void);
    int getCoverPoint (float maxDistance);
    int getDefendPoint (const Vector &origin);
@@ -1014,8 +1014,8 @@ private:
    bool isOutOfBombTimer (void);
 
    edict_t *correctGrenadeVelocity (const char *model);
-   Vector calcThrow (const Vector &spot1, const Vector &spot2);
-   Vector calcToss (const Vector &spot1, const Vector &spot2);
+   Vector calcThrow (const Vector &start, const Vector &stop);
+   Vector calcToss (const Vector &start, const Vector &stop);
    Vector isBombAudible (void);
 
    const Vector &getEnemyBodyOffset (void);
@@ -1222,7 +1222,7 @@ public:
    void processBreakables (edict_t *touch);
    void avoidIncomingPlayers (edict_t *touch);
 
-   void startTask (TaskID id, float desire, int data, float time, bool canContinue);
+   void startTask (TaskID id, float desire, int data, float time, bool resume);
    void clearTask (TaskID id);
    void filterTasks (void);
    void clearTasks (void);
@@ -1240,7 +1240,7 @@ public:
    void pushChatMessage (int type, bool isTeamSay = false);
    void pushRadioMessage (int message);
    void pushChatterMessage (int message);
-   void processChatterMessage (const char *sz);
+   void processChatterMessage (const char *tempMessage);
    void tryHeadTowardRadioMessage (void);
 
    void kill (void);
@@ -1565,7 +1565,7 @@ public:
    void toggleFlags (int toggleFlag);
    void setRadius (int index, float radius);
    bool isConnected (int pointA, int pointB);
-   bool isConnected (int num);
+   bool isConnected (int index);
    void rebuildVisibility (void);
    void pathCreate (char dir);
    void erasePath (void);
@@ -1595,8 +1595,8 @@ public:
    void savePathMatrix (void);
    bool loadPathMatrix (void);
 
-   bool saveExtFile (const char *ext, const char *type, const char *magic, const int version, uint8 *data, const int32 size);
-   bool loadExtFile (const char *ext, const char *type, const char *magic, const int version, uint8 *data);
+   bool saveExtFile (const char *ext, const char *type, const char *magic, int version, uint8 *data, int32 size);
+   bool loadExtFile (const char *ext, const char *type, const char *magic, int version, uint8 *data);
 
    int getPathDist (int srcIndex, int destIndex);
    const char *getInformation (int id);
@@ -1733,7 +1733,7 @@ public:
    // fix weapon prices (ie for elite)
    void adjustWeaponPrices (void);
 
-   WeaponInfo &findWeaponById (const int id);
+   WeaponInfo &findWeaponById (int id);
 
 public:
 
@@ -1768,12 +1768,12 @@ public:
    }
 
    // get's the weapons prop
-   inline const WeaponProp &getWeaponProp (const int id) const {
+   inline const WeaponProp &getWeaponProp (int id) const {
       return m_weaponProps[id];
    }
 
    // get's weapon preferences for personality
-   inline int *getWeaponPrefs (const int personality) const {
+   inline int *getWeaponPrefs (int personality) const {
       return m_weaponPrefs[personality];
    }
 
@@ -1804,7 +1804,7 @@ public:
    void checkWelcome (void);
 
    // gets the weapon alias as hlsting, maybe move to config...
-   int getWeaponAlias (bool isString, const char *weaponAlias, int weaponIndex = -1);
+   int getWeaponAlias (bool needString, const char *weaponAlias, int weaponIndex = -1);
 
    // gets the build number of bot
    int buildNumber (void);
@@ -1975,7 +1975,7 @@ private:
    int menuKickPage4 (int item);
 
 private:
-   void enableDrawModels (const bool enable);
+   void enableDrawModels (bool enable);
    void createMenus (void);
 
 public:
@@ -1992,7 +1992,7 @@ public:
       m_isFromConsole = console;
    }
 
-   void setArgs (StringArray args) {
+   void setArgs (const StringArray &args) {
       m_args.assign (args);
    }
 
@@ -2012,7 +2012,7 @@ public:
 
    int getInt (size_t arg) const {
       if (!hasArg (arg)) {
-         return false;
+         return 0;
       }
       return m_args[arg].toInt32 ();
    }
@@ -2067,6 +2067,7 @@ static auto &illum = LightMeasure::ref ();
 extern ConVar yb_jasonmode;
 extern ConVar yb_communication_type;
 extern ConVar yb_ignore_enemies;
+extern ConVar yb_chat;
 
 inline int Bot::index (void) {
    return game.indexOfEntity (ent ());

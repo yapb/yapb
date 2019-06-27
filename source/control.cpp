@@ -119,8 +119,9 @@ int BotControl::cmdVote (void) {
    for (int i = 0; i < game.maxClients (); i++) {
       auto bot = bots.getBot (i);
 
-      if (bot != nullptr)
+      if (bot != nullptr) {
          bot->m_voteMap = mapID;
+      }
    }
    msg ("All dead bots will vote for map #%d", mapID);
 
@@ -1698,7 +1699,7 @@ bool BotControl::handleMenuCommands (edict_t *ent) {
    return ctrl.executeMenus ();
 }
 
-void BotControl::enableDrawModels (const bool enable) {
+void BotControl::enableDrawModels (bool enable) {
    StringArray entities;
 
    entities.push ("info_player_start");

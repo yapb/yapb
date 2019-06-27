@@ -1,4 +1,4 @@
-//
+// 
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -187,9 +187,9 @@ int Bot::getGoalProcess (int tactic, IntArray *defensive, IntArray *offsensive) 
             }
          }
 
-         for (int i = 0; i < 4; i++) {
-            if (goalChoices[i] == INVALID_WAYPOINT_INDEX) {
-               goalChoices[i] = waypoints.m_goalPoints.random ();
+         for (auto &choice : goalChoices) {
+            if (choice == INVALID_WAYPOINT_INDEX) {
+               choice = waypoints.m_goalPoints.random ();
             }
          }
       }
@@ -271,8 +271,8 @@ void Bot::resetCollision (void) {
    m_collisionState = COLLISION_NOTDECICED;
    m_collStateIndex = 0;
 
-   for (int i = 0; i < MAX_COLLIDE_MOVES; i++) {
-      m_collideMoves[i] = 0;
+   for (auto &collideMove : m_collideMoves) {
+      collideMove = 0;
    }
 }
 
@@ -458,9 +458,9 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
 
                game.testHull (src, dst, TRACE_IGNORE_MONSTERS, head_hull, ent (), &tr);
 
-               if (tr.flFraction != 1.0f)
+               if (tr.flFraction != 1.0f) {
                   blockedRight = true;
-
+               }
                src = pev->origin - game.vec.right * 32.0f;
                dst = src + testDir * 32.0f;
 
@@ -1092,8 +1092,9 @@ bool Bot::processNavigation (void) {
 
                m_tryOpenDoor = 0;
             }
-            else
+            else {
                m_tryOpenDoor = 0;
+            }
          }
       }
    }
@@ -1120,8 +1121,8 @@ bool Bot::processNavigation (void) {
    }
 
    // check if waypoint has a special travelflag, so they need to be reached more precisely
-   for (int i = 0; i < MAX_PATH_INDEX; i++) {
-      if (m_currentPath->connectionFlags[i] != 0) {
+   for (auto &flag : m_currentPath->connectionFlags) {
+      if (flag != 0) {
          desiredDistance = 0.0f;
          break;
       }
@@ -1223,13 +1224,10 @@ void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= S
       if (parentIndex == INVALID_WAYPOINT_INDEX) {
          return 0.0f;
       }
-      float cost = static_cast <float> (waypoints.getDangerDamage (team, currentIndex, currentIndex) + waypoints.getHighestDamageForTeam (team));
-
+      auto cost = static_cast <float> (waypoints.getDangerDamage (team, currentIndex, currentIndex) + waypoints.getHighestDamageForTeam (team));
       Path &current = waypoints[currentIndex];
 
-      for (int i = 0; i < MAX_PATH_INDEX; i++) {
-         int neighbour = current.index[i];
-
+      for (auto &neighbour : current.index) {
          if (neighbour != INVALID_WAYPOINT_INDEX) {
             cost += static_cast <float> (waypoints.getDangerDamage (team, neighbour, neighbour));
          }
@@ -1256,12 +1254,10 @@ void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= S
 
    // least kills to goal for a team
    auto gfunctionKills = [] (int team, int currentIndex, int) -> float {
-      float cost = static_cast <float> (waypoints.getDangerDamage (team, currentIndex, currentIndex));
+      auto cost = static_cast <float> (waypoints.getDangerDamage (team, currentIndex, currentIndex));
       Path &current = waypoints[currentIndex];
 
-      for (int i = 0; i < MAX_PATH_INDEX; i++) {
-         int neighbour = current.index[i];
-
+      for (auto &neighbour : current.index) {
          if (neighbour != INVALID_WAYPOINT_INDEX) {
             cost += static_cast <float> (waypoints.getDangerDamage (team, neighbour, neighbour));
          }
@@ -1483,17 +1479,15 @@ void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= S
       curRoute->state = ROUTE_CLOSED;
 
       // now expand the current node
-      for (int i = 0; i < MAX_PATH_INDEX; i++) {
-         int currentChild = waypoints[currentIndex].index[i];
-
-         if (currentChild == INVALID_WAYPOINT_INDEX) {
+      for (auto &child : waypoints[currentIndex].index) {
+         if (child == INVALID_WAYPOINT_INDEX) {
             continue;
          }
-         auto childRoute = &m_routes[currentChild];
+         auto childRoute = &m_routes[child];
 
          // calculate the F value as F = G + H
-         float g = curRoute->g + calculate (false, m_team, currentChild, currentIndex);
-         float h = calculate (true, currentChild, srcIndex, destIndex);
+         float g = curRoute->g + calculate (false, m_team, child, currentIndex);
+         float h = calculate (true, child, srcIndex, destIndex);
          float f = g + h;
 
          if (childRoute->state == ROUTE_NEW || childRoute->f > f) {
@@ -1504,7 +1498,7 @@ void Bot::searchPath (int srcIndex, int destIndex, SearchPathType pathType /*= S
             childRoute->g = g;
             childRoute->f = f;
 
-            m_routeQue.push (currentChild, g);
+            m_routeQue.push (child, g);
          }
       }
    }
@@ -1749,9 +1743,7 @@ void Bot::getValidPoint (void) {
          damageValue = cr::clamp (damageValue + 100, 0, MAX_DAMAGE_VALUE);
 
          // affect nearby connected with victim waypoints
-         for (int i = 0; i < MAX_PATH_INDEX; i++) {
-            int neighbour = m_currentPath->index[i];
-
+         for (auto &neighbour : m_currentPath->index) {
             if (waypoints.exists (neighbour)) {
                int neighbourValue = waypoints.getDangerDamage (team, neighbour, neighbour);
                neighbourValue = cr::clamp (neighbourValue + 100, 0, MAX_DAMAGE_VALUE);
@@ -2011,9 +2003,9 @@ int Bot::getCoverPoint (float maxDistance) {
    }
 
    // now get enemies neigbouring points
-   for (int i = 0; i < MAX_PATH_INDEX; i++) {
-      if (waypoints[enemyIndex].index[i] != INVALID_WAYPOINT_INDEX) {
-         enemies.push (waypoints[enemyIndex].index[i]);
+   for (auto &index : waypoints[enemyIndex].index) {
+      if (index != INVALID_WAYPOINT_INDEX) {
+         enemies.push (index);
       }
    }
 
@@ -2091,12 +2083,12 @@ int Bot::getCoverPoint (float maxDistance) {
    TraceResult tr;
 
    // take the first one which isn't spotted by the enemy
-   for (int i = 0; i < MAX_PATH_INDEX; i++) {
-      if (waypointIndex[i] != INVALID_WAYPOINT_INDEX) {
-         game.testLine (m_lastEnemyOrigin + Vector (0.0f, 0.0f, 36.0f), waypoints[waypointIndex[i]].origin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
+   for (auto &index : waypointIndex) {
+      if (index != INVALID_WAYPOINT_INDEX) {
+         game.testLine (m_lastEnemyOrigin + Vector (0.0f, 0.0f, 36.0f), waypoints[index].origin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
 
          if (tr.flFraction < 1.0f) {
-            return waypointIndex[i];
+            return index;
          }
       }
    }
@@ -2119,18 +2111,16 @@ bool Bot::getNextBestPoint (void) {
       return false;
    }
 
-   for (int i = 0; i < MAX_PATH_INDEX; i++) {
-      int id = m_currentPath->index[i];
-
-      if (id != INVALID_WAYPOINT_INDEX && waypoints.isConnected (id, m_path.next ()) && waypoints.isConnected (m_currentWaypointIndex, id)) {
+   for (auto &index : m_currentPath->index) {
+      if (index != INVALID_WAYPOINT_INDEX && waypoints.isConnected (index, m_path.next ()) && waypoints.isConnected (m_currentWaypointIndex, index)) {
 
          // don't use ladder waypoints as alternative
-         if (waypoints[id].flags & FLAG_LADDER) {
+         if (waypoints[index].flags & FLAG_LADDER) {
             continue;
          }
 
-         if (!isOccupiedPoint (id)) {
-            m_path.first () = id;
+         if (!isOccupiedPoint (index)) {
+            m_path.first () = index;
             return true;
          }
       }
@@ -2166,7 +2156,7 @@ bool Bot::advanceMovement (void) {
             m_campButtons = 0;
 
             const int nextIndex = m_path.next ();
-            float kills = static_cast <float> (waypoints.getDangerDamage (m_team, nextIndex, nextIndex));
+            auto kills = static_cast <float> (waypoints.getDangerDamage (m_team, nextIndex, nextIndex));
 
             // if damage done higher than one
             if (kills > 1.0f && bots.getRoundMidTime () > game.timebase ()) {
@@ -2959,7 +2949,7 @@ void Bot::processLookAngles (void) {
    processBodyAngles ();
 }
 
-void Bot::updateLookAnglesNewbie (const Vector &direction, const float delta) {
+void Bot::updateLookAnglesNewbie (const Vector &direction, float delta) {
    Vector spring (13.0f, 13.0f, 0.0f);
    Vector damperCoefficient (0.22f, 0.22f, 0.0f);
 
