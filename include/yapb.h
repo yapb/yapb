@@ -596,7 +596,7 @@ struct WeaponInfo {
 struct Client {
    edict_t *ent; // pointer to actual edict
    Vector origin; // position in the world
-   Vector soundPos; // position sound was played
+   Vector sound; // position sound was played
    int team; // bot team
    int team2; // real bot team in free for all mode (csdm)
    int flags; // client flags
@@ -1512,7 +1512,6 @@ private:
    int m_cacheWaypointIndex;
    int m_lastJumpWaypoint;
    int m_visibilityIndex;
-   int m_killHistory;
    int m_highestDamage[MAX_TEAM_COUNT];
 
    Vector m_lastWaypoint;
@@ -1706,12 +1705,12 @@ private:
    WeaponProp m_weaponProps[MAX_WEAPONS + 1];
 
    // default tables for personality weapon preferences, overridden by general.cfg
-   int m_normalWeaponPrefs[NUM_WEAPONS] =       { 0, 2, 1, 4, 5, 6, 3, 12, 10, 24, 25, 13, 11, 8, 7, 22, 23, 18, 21, 17, 19, 15, 17, 9, 14, 16 };
-   int m_rusherWeaponPrefs[NUM_WEAPONS] =       { 0, 2, 1, 4, 5, 6, 3, 24, 19, 22, 23, 20, 21, 10, 12, 13, 7, 8, 11, 9, 18, 17, 19, 25, 15, 16 };
-   int m_carefulWeaponPrefs[NUM_WEAPONS] =      { 0, 2, 1, 4, 25, 6, 3, 7, 8, 12, 10, 13, 11, 9, 24, 18, 14, 17, 16, 15, 19, 20, 21, 22, 23, 5 };
-   int m_grenadeBuyPrecent[NUM_WEAPONS - 23] =  { 95, 85, 60 };
+   int m_normalWeaponPrefs[NUM_WEAPONS] = { 0, 2, 1, 4, 5, 6, 3, 12, 10, 24, 25, 13, 11, 8, 7, 22, 23, 18, 21, 17, 19, 15, 17, 9, 14, 16 };
+   int m_rusherWeaponPrefs[NUM_WEAPONS] = { 0, 2, 1, 4, 5, 6, 3, 24, 19, 22, 23, 20, 21, 10, 12, 13, 7, 8, 11, 9, 18, 17, 19, 25, 15, 16 };
+   int m_carefulWeaponPrefs[NUM_WEAPONS] = { 0, 2, 1, 4, 25, 6, 3, 7, 8, 12, 10, 13, 11, 9, 24, 18, 14, 17, 16, 15, 19, 20, 21, 22, 23, 5 };
+   int m_grenadeBuyPrecent[NUM_WEAPONS - 23] = { 95, 85, 60 };
    int m_botBuyEconomyTable[NUM_WEAPONS - 15] = { 1900, 2100, 2100, 4000, 6000, 7000, 16000, 1200, 800, 1000, 3000 };
-   int *m_weaponPrefs[3] =                      { m_normalWeaponPrefs, m_rusherWeaponPrefs, m_carefulWeaponPrefs };
+   int *m_weaponPrefs[3] = { m_normalWeaponPrefs, m_rusherWeaponPrefs, m_carefulWeaponPrefs };
 
 public:
    Config (void) = default;
@@ -1872,7 +1871,7 @@ public:
       return m_clients;
    }
 
-   // get sinle client as ref
+   // get single client as ref
    inline Client &getClient (const int index) {
       return m_clients[index];
    }
@@ -1989,19 +1988,19 @@ public:
    void maintainAdminRights (void);
 
 public:
-   inline void setFromConsole (const bool console) {
+   void setFromConsole (const bool console) {
       m_isFromConsole = console;
    }
 
-   inline void setArgs (StringArray args) {
+   void setArgs (StringArray args) {
       m_args.assign (args);
    }
 
-   inline void setIssuer (edict_t *ent) {
+   void setIssuer (edict_t *ent) {
       m_ent = ent;
    }
 
-   inline void fixMissingArgs (size_t num) {
+   void fixMissingArgs (size_t num) {
       if (num < m_args.length ()) {
          return;
       }
@@ -2011,14 +2010,14 @@ public:
       } while (num--);
    }
 
-   inline int getInt (size_t arg) const {
+   int getInt (size_t arg) const {
       if (!hasArg (arg)) {
          return false;
       }
       return m_args[arg].toInt32 ();
    }
 
-   inline const String &getStr (size_t arg) {
+   const String &getStr (size_t arg) {
       static String empty ("empty");
 
       if (!hasArg (arg) || m_args[arg].empty ()) {
@@ -2027,11 +2026,11 @@ public:
       return m_args[arg];
    }
 
-   inline bool hasArg (size_t arg) const {
+   bool hasArg (size_t arg) const {
       return arg < m_args.length ();
    }
 
-   inline StringArray collectArgs (void) {
+   StringArray collectArgs (void) {
       StringArray args;
 
       for (int i = 0; i < engfuncs.pfnCmd_Argc (); i++) {
@@ -2057,12 +2056,12 @@ public:
 // expose bot super-globals
 static auto &waypoints = Waypoint::ref ();
 static auto &bots = BotManager::ref ();
-static auto &game = Game::ref ();
 static auto &rng = RandomSequence::ref ();
-static auto &illum = LightMeasure::ref ();
 static auto &conf = Config::ref ();
 static auto &util = BotUtils::ref ();
 static auto &ctrl = BotControl::ref ();
+static auto &game = Game::ref ();
+static auto &illum = LightMeasure::ref ();
 
 // very global convars
 extern ConVar yb_jasonmode;
@@ -2071,4 +2070,11 @@ extern ConVar yb_ignore_enemies;
 
 inline int Bot::index (void) {
    return game.indexOfEntity (ent ());
+}
+
+inline int Game::getTeam (edict_t *ent) {
+   if (game.isNullEntity (ent)) {
+      return TEAM_UNASSIGNED;
+   }
+   return util.getClient (indexOfEntity (ent) - 1).team;
 }

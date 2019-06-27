@@ -222,7 +222,7 @@ int BotControl::cmdWaypoint (void) {
    if (descriptions.empty ()) {
 
       // separate function
-      auto addWaypointCommand = [&] (const String & cmd, const String & format, const String & help, Handler handler) -> void {
+      auto addWaypointCommand = [&] (const String &cmd, const String &format, const String &help, Handler handler) -> void {
          commands.put (cmd, { cmd, format, help, cr::forward <Handler> (handler) });
          descriptions.push (cmd);
       };
@@ -1364,9 +1364,9 @@ bool BotControl::executeCommands (void) {
       return false;
    }
 
-   auto aliasMatch = [] (String & test, const String & cmd, String & aliasName) -> bool {
+   auto aliasMatch = [] (String &test, const String &cmd, String &aliasName) -> bool {
       for (auto &alias : test.split ("|")) {
-         if (stricmp (alias.chars (), cmd.chars ()) == 0) {
+         if (alias == cmd) {
             aliasName = alias;
             return true;
          }
@@ -1653,7 +1653,7 @@ BotControl::BotControl (void) {
    m_isMenuFillCommand = false;
    m_menuServerFillTeam = 5;
 
-   auto addCommand = [&] (const String & cmd, const String & format, const String & help, Handler handler) -> void {
+   auto addCommand = [&] (const String &cmd, const String &format, const String &help, Handler handler) -> void {
       m_cmds.push ({ cmd, format, help, cr::forward <Handler> (handler) });
    };
 

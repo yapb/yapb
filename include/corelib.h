@@ -372,7 +372,7 @@ public:
 
 class SimpleColor final : private NonCopyable {
 public:
-   int red, green, blue;
+   int red = 0, green = 0, blue = 0;
 
    inline void reset (void) {
       red = green = blue = 0;
@@ -678,13 +678,12 @@ public:
    static constexpr size_t INVALID_INDEX = static_cast <size_t> (-1);
 
 protected:
-   T *m_data;
-   size_t m_capacity;
-   size_t m_length;
+   T *m_data = nullptr;
+   size_t m_capacity = 0;
+   size_t m_length = 0;
 
 public:
-   Array (void) : m_data (nullptr), m_capacity (0), m_length (0) {
-   }
+   Array (void) = default;
 
    Array (Array &&other) noexcept {
       m_data = other.m_data;
@@ -694,7 +693,7 @@ public:
       other.reset ();
    }
 
-   virtual ~Array (void) {
+   ~Array (void) {
       destroy ();
    }
 
@@ -748,11 +747,11 @@ public:
       return res;
    }
 
-   inline size_t length (void) const {
+   size_t length (void) const {
       return m_length;
    }
 
-   inline size_t capacity (void) const {
+   size_t capacity (void) const {
       return m_capacity;
    }
 
@@ -770,11 +769,11 @@ public:
       return true;
    }
 
-   inline T &at (size_t index) {
+   T &at (size_t index) {
       return m_data[index];
    }
 
-   inline const T &at (size_t index) const {
+   const T &at (size_t index) const {
       return m_data[index];
    }
 
@@ -870,7 +869,7 @@ public:
       m_length = 0;
    }
 
-   inline bool empty (void) const {
+   bool empty (void) const {
       return m_length == 0;
    }
 
@@ -1019,15 +1018,15 @@ public:
       return value.first;
    }
 
-   inline bool empty (void) const {
+   bool empty (void) const {
       return !length ();
    }
 
-   inline size_t length (void) const {
+   size_t length (void) const {
       return m_length;
    }
 
-   inline void clear (void) {
+   void clear (void) {
       base::clear ();
    }
 
@@ -1111,11 +1110,9 @@ private:
    }
 
 public:
-
-   String (void) {
-   }
-
    String (String &&other) noexcept : base (move (other)) { }
+
+   String (void) = default;
    ~String (void) = default;
 
 public:
@@ -1135,17 +1132,10 @@ public:
    String &assign (const char *str, size_t length = 0) {
       length = length > 0 ? length : strlen (str);
 
-      size_t count = 0;
-      clear ();
+      base::clear ();
+      base::reserve (length + 1);
 
-      while (*str && count < length) {
-         base::push (*str);
-
-         str++;
-         count++;
-      }
-
-      if (!empty ()) {
+      if (base::push (const_cast <char *> (str), length)) {
          terminate ();
       }
       return *this;
@@ -1166,13 +1156,9 @@ public:
       if (empty ()) {
          return assign (str);
       }
-     
-      while (*str) {
-         base::push (*str);
-         str++;
-      }
-      terminate ();
-
+      if (push (const_cast <char *> (str), strlen (str))) {
+         terminate ();
+      };
       return *this;
    }
 
@@ -1227,11 +1213,11 @@ public:
       return static_cast <float> (atof (chars ()));
    }
 
-   inline void terminate (void) {
+   void terminate (void) {
       m_data[m_length] = '\0';
    }
 
-   inline char &at (size_t index) {
+   char &at (size_t index) {
       return m_data[index];
    }
 
@@ -1873,7 +1859,7 @@ public:
       return true;
    }
 
-   inline size_t getSize (void) const {
+   size_t getSize (void) const {
       return m_size;
    }
 

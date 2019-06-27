@@ -1483,7 +1483,7 @@ void Game::beginMessage (edict_t *ent, int dest, int type) {
 
       if (type == SVC_INTERMISSION) {
          for (int i = 0; i < game.maxClients (); i++) {
-            Bot *bot = bots.getBot (i);
+            auto bot = bots.getBot (i);
 
             if (bot != nullptr) {
                bot->m_notKilled = false;
@@ -1491,13 +1491,6 @@ void Game::beginMessage (edict_t *ent, int dest, int type) {
          }
       }
    }
-}
-
-inline int Game::getTeam (edict_t *ent) {
-   if (game.isNullEntity (ent)) {
-      return TEAM_UNASSIGNED;
-   }
-   return util.getClient (indexOfEntity (ent) - 1).team;
 }
 
 void LightMeasure::initializeLightstyles (void) {

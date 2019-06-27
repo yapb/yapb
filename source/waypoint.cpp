@@ -36,7 +36,6 @@ void Waypoint::init (void) {
    for (int team = TEAM_TERRORIST; team < MAX_TEAM_COUNT; team++) {
       m_highestDamage[team] = 1;
    }
-   m_killHistory = 1;
 
    // free experience stuff
    delete[] m_experience;

@@ -2706,14 +2706,12 @@ void Bot::updateAimDir (void) {
 
       float throwDistance = (m_throw - pev->origin).length ();
       float coordCorrection = 0.0f;
-      float angleCorrection = 0.0f;
 
       if (throwDistance > 100.0f && throwDistance < 800.0f) {
-         angleCorrection = 0.0f;
          coordCorrection = 0.25f * (m_throw.z - pev->origin.z);
       }
       else if (throwDistance >= 800.0f) {
-         angleCorrection = 37.0f * (throwDistance - 800.0f) / 800.0f;
+         float angleCorrection = 37.0f * (throwDistance - 800.0f) / 800.0f;
 
          if (angleCorrection > 45.0f) {
             angleCorrection = 45.0f;
@@ -5716,7 +5714,7 @@ void Bot::processHearing (void) {
       if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.ent == ent () || client.team == m_team || client.timeSoundLasting < game.timebase ()) {
          continue;
       }
-      float distance = (client.soundPos - pev->origin).length ();
+      float distance = (client.sound - pev->origin).length ();
 
       if (distance > client.hearingDistance) {
          continue;

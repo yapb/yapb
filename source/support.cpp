@@ -443,43 +443,43 @@ void BotUtils::attachSoundsToClients (edict_t *ent, const char *sample, float vo
       // hit/fall sound?
       client.hearingDistance = 768.0f * volume;
       client.timeSoundLasting = game.timebase () + 0.5f;
-      client.soundPos = origin;
+      client.sound = origin;
    }
    else if (strncmp ("items/gunpickup", sample, 15) == 0) {
       // weapon pickup?
       client.hearingDistance = 768.0f * volume;
       client.timeSoundLasting = game.timebase () + 0.5f;
-      client.soundPos = origin;
+      client.sound = origin;
    }
    else if (strncmp ("weapons/zoom", sample, 12) == 0) {
       // sniper zooming?
       client.hearingDistance = 512.0f * volume;
       client.timeSoundLasting = game.timebase () + 0.1f;
-      client.soundPos = origin;
+      client.sound = origin;
    }
    else if (strncmp ("items/9mmclip", sample, 13) == 0) {
       // ammo pickup?
       client.hearingDistance = 512.0f * volume;
       client.timeSoundLasting = game.timebase () + 0.1f;
-      client.soundPos = origin;
+      client.sound = origin;
    }
    else if (strncmp ("hostage/hos", sample, 11) == 0) {
       // CT used hostage?
       client.hearingDistance = 1024.0f * volume;
       client.timeSoundLasting = game.timebase () + 5.0f;
-      client.soundPos = origin;
+      client.sound = origin;
    }
    else if (strncmp ("debris/bustmetal", sample, 16) == 0 || strncmp ("debris/bustglass", sample, 16) == 0) {
       // broke something?
       client.hearingDistance = 1024.0f * volume;
       client.timeSoundLasting = game.timebase () + 2.0f;
-      client.soundPos = origin;
+      client.sound = origin;
    }
    else if (strncmp ("doors/doormove", sample, 14) == 0) {
       // someone opened a door
       client.hearingDistance = 1024.0f * volume;
       client.timeSoundLasting = game.timebase () + 3.0f;
-      client.soundPos = origin;
+      client.sound = origin;
    }
 }
 
@@ -537,14 +537,14 @@ void BotUtils::simulateSoundUpdates (int playerIndex) {
          // override it with new
          client.hearingDistance = hearDistance;
          client.timeSoundLasting = timeSound;
-         client.soundPos = client.ent->v.origin;
+         client.sound = client.ent->v.origin;
       }
    }
    else {
       // just remember it
       client.hearingDistance = hearDistance;
       client.timeSoundLasting = timeSound;
-      client.soundPos = client.ent->v.origin;
+      client.sound = client.ent->v.origin;
    }
 }
 
