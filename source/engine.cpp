@@ -146,6 +146,9 @@ void Game::levelInitialize (edict_t *ents, int max) {
    else if (strncmp (game.getMapName (), "ka_", 3) == 0) {
       m_mapFlags |= MAP_KA;
    }
+
+   // reset some timers
+   m_slowFrame = 0.0f;
 }
 
 void Game::print (const char *fmt, ...) {
@@ -1395,6 +1398,7 @@ void Game::slowFrame (void) {
    if (m_slowFrame > game.timebase ()) {
       return;
    }
+   
    ctrl.maintainAdminRights ();
    bots.calculatePingOffsets ();
 

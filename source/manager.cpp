@@ -1367,9 +1367,9 @@ void BotManager::calculatePingOffsets (void) {
    else {
       averagePing = rng.getInt (30, 40);
    }
-
+   
    for (int i = 0; i < game.maxClients (); i++) {
-      Bot *bot = getBot (i);
+      auto bot = getBot (i);
 
       if (bot == nullptr) {
          continue;
@@ -1406,8 +1406,7 @@ void BotManager::sendPingOffsets (edict_t *to) {
    if (!game.is (GAME_SUPPORT_SVC_PINGS) || yb_latency_display.integer () != 2 || game.isNullEntity (to) || (to->v.flags & FL_FAKECLIENT)) {
       return;
    }
-
-   if (!(to->v.flags & FL_CLIENT) && !(((to->v.button & IN_SCORE) || !(to->v.oldbuttons & IN_SCORE)))) {
+   if (!(to->v.flags & FL_CLIENT) || !(((to->v.button & IN_SCORE) || (to->v.oldbuttons & IN_SCORE)))) {
       return;
    }
    MessageWriter msg;
@@ -1416,7 +1415,7 @@ void BotManager::sendPingOffsets (edict_t *to) {
    constexpr int SVC_PINGS = 17;
 
    for (int i = 0; i < game.maxClients (); i++) {
-      Bot *bot = m_bots[i];
+      auto bot = m_bots[i];
 
       if (bot == nullptr) {
          continue;
