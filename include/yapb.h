@@ -418,7 +418,6 @@ enum Visibility : int {
 enum BotCommandStatus : int {
    CMD_STATUS_HANDLED = 0, // command successfully handled 
    CMD_STATUS_LISTENSERV, // command is only avaialble on listen server
-   CMD_STATUS_DENIED, // access to this command is denied
    CMD_STATUS_BADFORMAT // wrong params
 };
 

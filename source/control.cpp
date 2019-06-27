@@ -1364,6 +1364,13 @@ bool BotControl::executeCommands (void) {
    if (m_args[0] != "yb" && m_args[0] != "yapb") {
       return false;
    }
+   Client &client = util.getClient (game.indexOfEntity (m_ent) - 1);
+
+   // do not allow to execute stuff for non admins
+   if (m_ent != game.getLocalEntity () && !(client.flags & CF_ADMIN)) {
+      msg ("Access to YaPB commands is restricted.");
+      return false;
+   }
 
    auto aliasMatch = [] (String &test, const String &cmd, String &aliasName) -> bool {
       for (auto &alias : test.split ("|")) {
@@ -1429,10 +1436,6 @@ bool BotControl::executeCommands (void) {
 
          case CMD_STATUS_LISTENSERV:
             msg ("Command \"%s %s\" is only available from the listenserver console.", root, alias);
-            break;
-
-         case CMD_STATUS_DENIED:
-            msg ("Access to command \"%s %s\" is denied by ACL.", root, alias);
             break;
 
          case CMD_STATUS_BADFORMAT:
