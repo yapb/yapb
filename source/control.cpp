@@ -1369,7 +1369,7 @@ bool BotControl::executeCommands (void) {
    // do not allow to execute stuff for non admins
    if (m_ent != game.getLocalEntity () && !(client.flags & CF_ADMIN)) {
       msg ("Access to YaPB commands is restricted.");
-      return false;
+      return true;
    }
 
    auto aliasMatch = [] (String &test, const String &cmd, String &aliasName) -> bool {
