@@ -555,6 +555,17 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
       engfuncs.pfnChangeLevel (s1, s2);
    };
 
+   functionTable->pfnLightStyle = [] (int style, char *val) {
+      // ths function update lightstyle for the bots
+
+      illum.updateLight (style, val);
+
+      if (game.is (GAME_METAMOD)) {
+         RETURN_META (MRES_IGNORED);
+      }
+      engfuncs.pfnLightStyle (style, val);
+   };
+
    functionTable->pfnFindEntityByString = [] (edict_t *edictStartSearchAfter, const char *field, const char *value) {
       // round starts in counter-strike 1.5
       if ((game.is (GAME_LEGACY)) && strcmp (value, "info_map_parameters") == 0) {

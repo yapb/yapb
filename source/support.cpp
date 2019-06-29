@@ -32,6 +32,29 @@ BotUtils::BotUtils (void) {
    m_sentences.push ("attention, expect experimental armed hostile presence");
    m_sentences.push ("warning, medical attention required");
 
+   m_tags.push ({ "[[", "]]" });
+   m_tags.push ({ "-=", "=-" });
+   m_tags.push ({ "-[", "]-" });
+   m_tags.push ({ "-]", "[-" });
+   m_tags.push ({ "-}", "{-" });
+   m_tags.push ({ "-{", "}-" });
+   m_tags.push ({ "<[", "]>" });
+   m_tags.push ({ "<]", "[>" });
+   m_tags.push ({ "[-", "-]" });
+   m_tags.push ({ "]-", "-[" });
+   m_tags.push ({ "{-", "-}" });
+   m_tags.push ({ "}-", "-{" });
+   m_tags.push ({ "[", "]" });
+   m_tags.push ({ "{", "}" });
+   m_tags.push ({ "<", "[" });
+   m_tags.push ({ ">", "<" });
+   m_tags.push ({ "-", "-" });
+   m_tags.push ({ "|", "|" });
+   m_tags.push ({ "=", "=" });
+   m_tags.push ({ "+", "+" });
+   m_tags.push ({ "(", ")" });
+   m_tags.push ({ ")", "(" });
+
    m_clients.resize (MAX_ENGINE_PLAYERS + 1);
 }
 
@@ -568,10 +591,6 @@ void BotUtils::updateClients (void) {
          }
 
          if (client.flags & CF_ALIVE) {
-            // keep the clipping mode enabled, or it can be turned off after new round has started
-            if (game.getLocalEntity () == player && waypoints.hasEditFlag (WS_EDIT_NOCLIP)) {
-               game.getLocalEntity ()->v.movetype = MOVETYPE_NOCLIP;
-            }
             client.origin = player->v.origin;
             simulateSoundUpdates (i);
          }

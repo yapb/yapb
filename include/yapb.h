@@ -728,7 +728,7 @@ private:
    Vector m_prevOrigin; // origin some frames before
 
    int m_messageQueue[32]; // stack for messages
-   String m_tempStrings; // space for strings (say text...)
+   String m_chatBuffer; // space for strings (say text...)
    int m_radioSelect; // radio entry
    float m_headedTime;
 
@@ -1047,7 +1047,7 @@ private:
    void selectWeaponById (int num);
 
    bool isEnemyBehindShield (edict_t *enemy);
-   bool processChatKeywords (char *reply);
+   bool checkChatKeywords (String &reply);
    bool isReplyingToChat (void);
    float getBombTimeleft (void);
    float getReachTime (void);
@@ -1212,7 +1212,7 @@ public:
    void newRound (void);
    void processBuyzoneEntering (int buyState);
    void pushMsgQueue (int message);
-   void prepareChatMessage (char *text);
+   void prepareChatMessage (const String &message);
    bool searchOptimalPoint (void);
    bool seesEntity (const Vector &dest, bool fromBody = false);
 
@@ -1793,6 +1793,7 @@ private:
    float m_welcomeReceiveTime;
    StringArray m_sentences;
    Array <Client> m_clients;
+   Array <Pair <String, String>> m_tags;
 
 public:
    BotUtils (void);
@@ -1852,6 +1853,18 @@ public:
 
    // update stats on clients
    void updateClients (void);
+
+   // chat helper to strip the clantags out of the string
+   void stripTags (String &line);
+
+   // chat helper to make player name more human-like
+   void humanizePlayerName (String &playerName);
+
+   // chat helper to add errors to the bot chat string
+   void addChatErrors (String &line);
+
+   // chat helper to find keywords for given string
+   bool checkKeywords (const String &line, String &reply);
 
 public:
 
@@ -2067,6 +2080,7 @@ extern ConVar yb_jasonmode;
 extern ConVar yb_communication_type;
 extern ConVar yb_ignore_enemies;
 extern ConVar yb_chat;
+extern ConVar yb_language;
 
 inline int Bot::index (void) {
    return game.indexOfEntity (ent ());

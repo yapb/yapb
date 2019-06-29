@@ -1894,6 +1894,11 @@ void Waypoint::frame (void) {
    }
    auto ent = game.getLocalEntity ();
 
+   // keep the clipping mode enabled, or it can be turned off after new round has started
+   if (waypoints.hasEditFlag (WS_EDIT_NOCLIP) && util.isAlive (ent)) {
+      ent->v.movetype = MOVETYPE_NOCLIP;
+   }
+
    float nearestDistance = 99999.0f;
    int nearestIndex = INVALID_WAYPOINT_INDEX;
 

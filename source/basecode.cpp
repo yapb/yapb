@@ -60,7 +60,7 @@ void Bot::pushMsgQueue (int message) {
          if (otherBot != nullptr && otherBot->pev != pev) {
             if (m_notKilled == otherBot->m_notKilled) {
                otherBot->m_sayTextBuffer.entityIndex = entityIndex;
-               otherBot->m_sayTextBuffer.sayText = m_tempStrings;
+               otherBot->m_sayTextBuffer.sayText = m_chatBuffer;
             }
             otherBot->m_sayTextBuffer.timeNextChat = game.timebase () + otherBot->m_sayTextBuffer.chatDelay;
          }
@@ -1183,12 +1183,12 @@ void Bot::checkMsgQueue (void) {
 
    // team independent saytext
    case GAME_MSG_SAY_CMD:
-      say (m_tempStrings.chars ());
+      say (m_chatBuffer.chars ());
       break;
 
    // team dependent saytext
    case GAME_MSG_SAY_TEAM_MSG:
-      sayTeam (m_tempStrings.chars ());
+      sayTeam (m_chatBuffer.chars ());
       break;
 
    default:

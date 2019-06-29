@@ -528,6 +528,7 @@ public:
 public:
    void initializeLightstyles (void);
    void animateLight (void);
+   void updateLight (int style, char *value);
 
    float getLightLevel (const Vector &point);
    float getSkyColor (void);

@@ -661,7 +661,7 @@ public:
    B second;
 
 public:
-   Pair (const A &a, const B &b) : first (cr::move (a)), second (cr::move (b)) {
+   Pair (const A &a, const B &b) : first (move (a)), second (move (b)) {
    }
 
 public:
@@ -924,6 +924,12 @@ public:
       m_length = other.m_length;
 
       return true;
+   }
+
+   void shuffle (void) {
+      for (size_t i = m_length; i >= 1; i--) {
+         swap (m_data[i - 1], m_data[RandomSequence::ref ().getInt (i, m_length - 2)]);
+      }
    }
 
    void reverse (void) {
@@ -1217,6 +1223,10 @@ public:
       return m_data[index];
    }
 
+   const char &at (size_t index) const {
+      return m_data[index];
+   }
+
    int32 compare (const String &what) const {
       return strcmp (m_data, what.begin ());
    }
@@ -1269,13 +1279,22 @@ public:
    }
 
    size_t find (const String &search, size_t pos) const {
-      if (pos > length ()) {
-         return INVALID_INDEX;
-      }
       size_t len = search.length ();
 
-      for (size_t i = pos; len + i <= length (); i++) {
-         if (strncmp (m_data + i, search.chars (), len) == 0) {
+      if (len > m_length || pos > m_length) {
+         return INVALID_INDEX;
+      }
+
+      for (size_t i = pos; i <= m_length - len; i++) {
+         size_t at = 0;
+
+         for (; search.m_data[at]; at++) {
+            if (m_data[i + at] != search.m_data[at]) {
+               break;
+            }
+         }
+
+         if (!search.m_data[at]) {
             return i;
          }
       }
@@ -1288,7 +1307,7 @@ public:
       }
       size_t numReplaced = 0, posIndex = 0;
 
-      while (posIndex < length ()) {
+      while (posIndex < m_length) {
          posIndex = find (what, posIndex);
 
          if (posIndex == INVALID_INDEX) {
@@ -1306,25 +1325,93 @@ public:
    String substr (size_t start, size_t count = INVALID_INDEX) {
       String result;
 
-      if (start >= length () || empty ()) {
-         return result;
+      if (start >= m_length || empty ()) {
+         return move (result);
       }
       if (count == INVALID_INDEX) {
-         count = length () - start;
+         count = m_length - start;
       }
-      else if (start + count >= length ()) {
-         count = length () - start;
+      else if (start + count >= m_length) {
+         count = m_length - start;
       }
       result.resize (count);
 
-      transfer (&result[0], &m_data[start], count);
+      // copy, not move
+      for (size_t i = 0; i < count; i++) {
+         result[i] = m_data[start + i];
+      }
       result[count] = '\0';
-
-      return result;
+      return move (result);
    }
 
-   char &operator[] (size_t index) {
-      return at (index);
+   String &trimRight (const char *chars = "\r\n\t ") {
+      if (empty ()) {
+         return *this;
+      }
+      char *str = end () - 1;
+
+      while (*str != 0) {
+         if (isTrimChar (*str, chars)) {
+            erase (str - begin ());
+            str--;
+         }
+         else {
+            break;
+         }
+      }
+      return *this;
+   }
+
+   String &trimLeft (const char *chars = "\r\n\t ") {
+      if (empty ()) {
+         return *this;
+      }
+      char *str = begin ();
+
+      while (isTrimChar (*str, chars)) {
+         str++;
+      }
+
+      if (begin () != str) {
+         erase (0, str - begin ());
+      }
+      return *this;
+   }
+
+   String &trim (const char *chars = "\r\n\t ") {
+      return trimLeft (chars).trimRight (chars);
+   }
+
+   Array <String> split (const String &delim) {
+      Array <String> tokens;
+      size_t prev = 0, pos = 0;
+
+      do {
+         pos = find (delim, prev);
+
+         if (pos == INVALID_INDEX) {
+            pos = m_length;
+         }
+         tokens.push (move (substr (prev, pos - prev)));
+
+         prev = pos + delim.length ();
+      } while (pos < m_length && prev < m_length);
+
+      return move (tokens);
+   }
+
+   String &lowercase (void) {
+      for (auto &ch : *this) {
+         ch = static_cast <char> (tolower (ch));
+      }
+      return *this;
+   }
+
+   String &uppercase (void) {
+      for (auto &ch : *this) {
+         ch = static_cast <char> (toupper (ch));
+      }
+      return *this;
    }
 
    friend String operator + (const String &lhs, const String &rhs) {
@@ -1404,59 +1491,12 @@ public:
       return append (rhs);
    }
 
-   String &trimRight (const char *chars = "\r\n\t ") {
-      if (empty ()) {
-         return *this;
-      }
-      char *str = end () - 1;
-
-      while (*str != 0) {
-         if (isTrimChar (*str, chars)) {
-            erase (str - begin ());
-            str--;
-         }
-         else {
-            break;
-         }
-      }
-      return *this;
+   char &operator [] (size_t index) {
+      return at (index);
    }
 
-   String &trimLeft (const char *chars = "\r\n\t ") {
-      if (empty ()) {
-         return *this;
-      }
-      char *str = begin ();
-
-      while (isTrimChar (*str, chars)) {
-         str++;
-      }
-
-      if (begin () != str) {
-         erase (0, str - begin ());
-      }
-      return *this;
-   }
-
-   String &trim (const char *chars = "\r\n\t ") {
-      return trimLeft (chars).trimRight (chars);
-   }
-
-   Array <String> split (const char *delimiter) {
-      Array <String> tokens;
-      size_t len, index = 0;
-
-      do {
-         index += strspn (&m_data[index], delimiter);
-         len = strcspn (&m_data[index], delimiter);
-
-         if (len > 0) {
-            tokens.push (move (substr (index, len)));
-         }
-         index += len;
-      } while (len > 0);
-
-      return tokens;
+   const char &operator [] (size_t index) const {
+      return at (index);
    }
 
 public:

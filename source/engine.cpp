@@ -1527,6 +1527,28 @@ void LightMeasure::animateLight (void) {
    }
 }
 
+void LightMeasure::updateLight (int style, char *value) {
+   if (!m_doAnimation) {
+      return;
+   }
+
+   if (style >= MAX_LIGHTSTYLES) {
+      return;
+   }
+
+   if (util.isEmptyStr (value)){
+      m_lightstyle[style].length = 0u;
+      m_lightstyle[style].map[0] = '\0';
+
+      return;
+   }
+   const auto copyLimit = sizeof (m_lightstyle[style].map) - sizeof ('\0');
+   strncpy (m_lightstyle[style].map, value, copyLimit);
+
+   m_lightstyle[style].map[copyLimit] = '\0';
+   m_lightstyle[style].length = strlen (m_lightstyle[style].map);
+}
+
 template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const M *node, const Vector &start, const Vector &end) {
    if (node->contents < 0) {
       return false;
@@ -1643,5 +1665,5 @@ float LightMeasure::getLightLevel (const Vector &point) {
 }
 
 float LightMeasure::getSkyColor (void) {
-   return sv_skycolor_r.flt () + sv_skycolor_g.flt () + sv_skycolor_b.flt ();
+   return sv_skycolor_r.flt () + sv_skycolor_g.flt () + sv_skycolor_b.flt () / 3;
 }

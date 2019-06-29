@@ -1930,6 +1930,10 @@ void Config::load (bool onlyMain) {
             break;
          }
       }
+
+      for (auto &item : m_chat) {
+         item.shuffle ();
+      }
       fp.close ();
    }
    else {
@@ -2134,7 +2138,7 @@ void Config::load (bool onlyMain) {
             }
             items[1].trim ("(;)");
 
-            for (auto &event : chatterEventMap) {
+            for (const auto &event : chatterEventMap) {
                if (stricmp (event.str, items[0].chars ()) == 0) {
                   // this does common work of parsing comma-separated chatter line
                   auto sounds = items[1].split (",");
