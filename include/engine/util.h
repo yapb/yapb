@@ -16,23 +16,24 @@
 #ifndef SDKUTIL_H
 #define SDKUTIL_H
 
-extern globalvars_t *g_pGlobals;
-extern enginefuncs_t g_engfuncs;
+extern globalvars_t *globals;
+extern enginefuncs_t engfuncs;
+extern gamefuncs_t dllapi;
 
 // Use this instead of ALLOC_STRING on constant strings
-#define STRING(offset) (const char *)(g_pGlobals->pStringBase + (int)offset)
+#define STRING(offset) (const char *)(globals->pStringBase + (int)offset)
 
 // form fwgs-hlsdk
 static inline int MAKE_STRING (const char *val) {
    long long ptrdiff = val - STRING (0);
 
    if (ptrdiff > INT_MAX || ptrdiff < INT_MIN) {
-      return g_engfuncs.pfnAllocString (val);
+      return engfuncs.pfnAllocString (val);
    }
    return static_cast <int> (ptrdiff);
 }
 
-#define ENGINE_STR(str) (const_cast <char *> (STRING (g_engfuncs.pfnAllocString (str))))
+#define ENGINE_STR(str) (const_cast <char *> (STRING (engfuncs.pfnAllocString (str))))
 
 // Dot products for view cone checking
 #define VIEW_FIELD_FULL (float)-1.0 // +-180 degrees

@@ -12,7 +12,7 @@
 // general product information
 #define PRODUCT_NAME "Yet Another POD-Bot"
 #define PRODUCT_SHORT_NAME "YaPB"
-#define PRODUCT_VERSION "2.10"
+#define PRODUCT_VERSION "2.91"
 #define PRODUCT_AUTHOR "YaPB Dev Team"
 #define PRODUCT_URL "https://yapb.ru/"
 #define PRODUCT_EMAIL "d@entix.io"
@@ -26,7 +26,7 @@
 #define PRODUCT_GIT_HASH "unspecified_hash"
 #define PRODUCT_GIT_COMMIT_AUTHOR "unspecified_author"
 #define PRODUCT_GIT_COMMIT_ID 0000
-#define PRODUCT_VERSION_DWORD_INTERNAL 2, 10
+#define PRODUCT_VERSION_DWORD_INTERNAL 2, 91
 #define PRODUCT_VERSION_DWORD PRODUCT_VERSION_DWORD_INTERNAL, PRODUCT_GIT_COMMIT_ID
 #define PRODUCT_SUPPORT_VERSION "Beta 6.6 - Condition Zero"
 #define PRODUCT_COMMENTS "http://github.com/jeefo/yapb/"

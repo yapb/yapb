@@ -112,7 +112,6 @@ typedef struct {
 
 extern gamedll_funcs_t *gpGamedllFuncs;
 extern mutil_funcs_t *gpMetaUtilFuncs;
-extern meta_globals_t *gpMetaGlobals;
 extern metamod_funcs_t gMetaFunctionTable;
 
 #define MDLL_FUNC gpGamedllFuncs->dllapi_table

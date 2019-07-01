@@ -54,8 +54,9 @@ using int32 = signed long;
 using uint8 = unsigned char;
 using uint16 = unsigned short;
 using uint32 = unsigned long;
+using uint64 = unsigned long long;
 
-}
+};
 
 using namespace cr::types;
 
@@ -71,13 +72,14 @@ constexpr float D2R = PI / 180.0f;
 constexpr float R2D = 180.0f / PI;
 
 // from metamod-p
-static inline bool checkptr (const void *ptr) {
+static inline bool checkptr (void *ptr) {
 #ifdef PLATFORM_WIN32
-   if (IsBadCodePtr (reinterpret_cast <FARPROC> (ptr)))
+   if (IsBadCodePtr (reinterpret_cast <FARPROC> (ptr))) {
       return false;
+   }
+#else
+   (void) (ptr);
 #endif
-
-   (void)(ptr);
    return true;
 }
 
@@ -109,6 +111,10 @@ template <typename T> constexpr T abs (const T a) {
    return a > 0 ? a : -a;
 }
 
+template <typename T> constexpr T bit (const T a) {
+   return 1 << a;
+}
+
 static inline float powf (const float x, const float y) {
    union {
       float d;
@@ -124,7 +130,7 @@ static inline float sqrtf (const float value) {
 }
 
 static inline float sinf (const float value) {
-   const signed long sign = static_cast <signed long> (value * PI_RECIPROCAL);
+   const auto sign = static_cast <signed long> (value * PI_RECIPROCAL);
    const float calc = (value - static_cast <float> (sign) * PI);
 
    const float sqr = square (calc);
@@ -135,7 +141,7 @@ static inline float sinf (const float value) {
 }
 
 static inline float cosf (const float value) {
-   const signed long sign = static_cast <signed long> (value * PI_RECIPROCAL);
+   const auto sign = static_cast <signed long> (value * PI_RECIPROCAL);
    const float calc = (value - static_cast <float> (sign) * PI);
 
    const float sqr = square (calc);
@@ -303,7 +309,7 @@ protected:
    NonCopyable (void) = default;
    ~NonCopyable (void) = default;
 
-private:
+public:
    NonCopyable (const NonCopyable &) = delete;
    NonCopyable &operator = (const NonCopyable &) = delete;
 };
@@ -323,33 +329,33 @@ public:
 // see: https://github.com/preshing/RandomSequence/
 class RandomSequence : public Singleton <RandomSequence> {
 private:
-   unsigned int m_index;
-   unsigned int m_intermediateOffset;
-   unsigned long long m_divider;
+   uint32 m_index;
+   uint32 m_intermediateOffset;
+   uint64 m_divider;
 
 private:
-   unsigned int premute (unsigned int x) {
-      static constexpr unsigned int prime = 4294967291u;
+   uint32 premute (uint32 x) {
+      static constexpr uint32 prime = 4294967291u;
 
       if (x >= prime) {
          return x;
       }
-      const unsigned int residue = (static_cast <unsigned long long> (x) * x) % prime;
+      const uint32 residue = (static_cast <unsigned long long> (x) * x) % prime;
       return (x <= prime / 2) ? residue : prime - residue;
    }
 
-   unsigned int random (void) {
+   uint32 random (void) {
       return premute ((premute (m_index++) + m_intermediateOffset) ^ 0x5bf03635);
    }
 
 public:
    RandomSequence (void) {
-      const unsigned int seedBase = static_cast <unsigned int> (time (nullptr));
-      const unsigned int seedOffset = seedBase + 1;
+      const auto seedBase = static_cast <uint32> (time (nullptr));
+      const auto seedOffset = seedBase + 1;
 
       m_index = premute (premute (seedBase) + 0x682f0161);
       m_intermediateOffset = premute (premute (seedOffset) + 0x46790905);
-      m_divider = (static_cast <unsigned long long> (1)) << 32;
+      m_divider = (static_cast <uint64> (1)) << 32;
    }
 
    template <typename U> inline U getInt (U low, U high) {
@@ -367,7 +373,7 @@ public:
 
 class SimpleColor final : private NonCopyable {
 public:
-   int red, green, blue;
+   int red = 0, green = 0, blue = 0;
 
    inline void reset (void) {
       red = green = blue = 0;
@@ -390,7 +396,7 @@ public:
    inline Vector (float scaler = 0.0f) : x (scaler), y (scaler), z (scaler) {}
    inline Vector (float inputX, float inputY, float inputZ) : x (inputX), y (inputY), z (inputZ) {}
    inline Vector (float *other) : x (other[0]), y (other[1]), z (other[2]) {}
-   inline Vector (const Vector &right) : x (right.x), y (right.y), z (right.z) {}
+   inline Vector (const Vector &right) = default;
 
 public:
    inline operator float * (void) {
@@ -401,33 +407,33 @@ public:
       return &x;
    }
 
-   inline const Vector operator + (const Vector &right) const {
+   inline Vector operator + (const Vector &right) const {
       return Vector (x + right.x, y + right.y, z + right.z);
    }
 
-   inline const Vector operator - (const Vector &right) const {
+   inline Vector operator - (const Vector &right) const {
       return Vector (x - right.x, y - right.y, z - right.z);
    }
 
-   inline const Vector operator - (void) const {
+   inline Vector operator - (void) const {
       return Vector (-x, -y, -z);
    }
 
-   friend inline const Vector operator* (const float vec, const Vector &right) {
+   friend inline Vector operator * (const float vec, const Vector &right) {
       return Vector (right.x * vec, right.y * vec, right.z * vec);
    }
 
-   inline const Vector operator * (float vec) const {
+   inline Vector operator * (float vec) const {
       return Vector (vec * x, vec * y, vec * z);
    }
 
-   inline const Vector operator / (float vec) const {
+   inline Vector operator / (float vec) const {
       const float inv = 1 / vec;
       return Vector (inv * x, inv * y, inv * z);
    }
 
    // cross product
-   inline const Vector operator ^ (const Vector &right) const {
+   inline Vector operator ^ (const Vector &right) const {
       return Vector (y * right.z - z * right.y, z * right.x - x * right.z, x * right.y - y * right.x);
    }
 
@@ -478,13 +484,7 @@ public:
       return !fequal (x, right.x) && !fequal (y, right.y) && !fequal (z, right.z);
    }
 
-   inline const Vector &operator = (const Vector &right) {
-      x = right.x;
-      y = right.y;
-      z = right.z;
-
-      return *this;
-   }
+   inline Vector &operator = (const Vector &right) = default;
 
 public:
    inline float length (void) const {
@@ -572,7 +572,7 @@ public:
       float cosines[max] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
       // compute the sine and cosine compontents
-      sincosf (deg2rad (x), deg2rad (y), deg2rad (y), sines, cosines);
+      sincosf (deg2rad (x), deg2rad (y), deg2rad (z), sines, cosines);
 
       if (forward) {
          forward->x = cosines[pitch] * cosines[yaw];
@@ -596,12 +596,12 @@ public:
 
 class Library final : private NonCopyable {
 private:
-   void *m_ptr;
+   void *m_ptr = nullptr;
 
 public:
-   explicit Library (void) : m_ptr (nullptr) { }
+   explicit Library (void) = default;
 
-   Library (const char *filename) : m_ptr (nullptr) {
+   Library (const char *filename) {
       if (!filename) {
          return;
       }
@@ -637,12 +637,13 @@ public:
       if (!isValid ()) {
          return nullptr;
       }
-      return (R)
+      return reinterpret_cast <R> (
 #ifdef PLATFORM_WIN32
-         GetProcAddress (static_cast <HMODULE> (m_ptr), function);
+         GetProcAddress (static_cast <HMODULE> (m_ptr), function)
 #else
-         dlsym (m_ptr, function);
+         dlsym (m_ptr, function)
 #endif
+      );
    }
 
    template <typename R> R handle (void) {
@@ -656,11 +657,11 @@ public:
 
 template <typename A, typename B> class Pair final {
 public:
-   A first;
-   B second;
+   A first = move (A ());
+   B second = move (B ());
 
 public:
-   Pair (const A &a, const B &b) : first (cr::move (a)), second (cr::move (b)) {
+   Pair (const A &a, const B &b) : first (move (a)), second (move (b)) {
    }
 
 public:
@@ -673,13 +674,12 @@ public:
    static constexpr size_t INVALID_INDEX = static_cast <size_t> (-1);
 
 protected:
-   T *m_data;
-   size_t m_capacity;
-   size_t m_length;
+   T *m_data = nullptr;
+   size_t m_capacity = 0;
+   size_t m_length = 0;
 
 public:
-   Array (void) : m_data (nullptr), m_capacity (0), m_length (0) {
-   }
+   Array (void) = default;
 
    Array (Array &&other) noexcept {
       m_data = other.m_data;
@@ -689,7 +689,7 @@ public:
       other.reset ();
    }
 
-   virtual ~Array (void) {
+   ~Array (void) {
       destroy ();
    }
 
@@ -709,7 +709,7 @@ public:
       if (m_length + growSize < m_capacity) {
          return true;
       }
-      size_t maxSize = max <size_t> (m_capacity + sizeof (T), static_cast <size_t> (16));
+      auto maxSize = max <size_t> (m_capacity + sizeof (T), static_cast <size_t> (16));
 
       while (m_length + growSize > maxSize) {
          maxSize *= 2;
@@ -738,16 +738,16 @@ public:
       bool res = reserve (newSize);
 
       while (m_length < newSize) {
-         push (T ());
+         push (move (T ()));
       }
       return res;
    }
 
-   inline size_t length (void) const {
+   size_t length (void) const {
       return m_length;
    }
 
-   inline size_t capacity (void) const {
+   size_t capacity (void) const {
       return m_capacity;
    }
 
@@ -765,7 +765,11 @@ public:
       return true;
    }
 
-   inline T &at (size_t index) {
+   T &at (size_t index) {
+      return m_data[index];
+   }
+
+   const T &at (size_t index) const {
       return m_data[index];
    }
 
@@ -861,7 +865,7 @@ public:
       m_length = 0;
    }
 
-   inline bool empty (void) const {
+   bool empty (void) const {
       return m_length == 0;
    }
 
@@ -920,6 +924,12 @@ public:
       m_length = other.m_length;
 
       return true;
+   }
+
+   void shuffle (void) {
+      for (size_t i = m_length; i >= 1; i--) {
+         swap (m_data[i - 1], m_data[RandomSequence::ref ().getInt (i, m_length - 2)]);
+      }
    }
 
    void reverse (void) {
@@ -1010,15 +1020,15 @@ public:
       return value.first;
    }
 
-   inline bool empty (void) const {
+   bool empty (void) const {
       return !length ();
    }
 
-   inline size_t length (void) const {
+   size_t length (void) const {
       return m_length;
    }
 
-   inline void clear (void) {
+   void clear (void) {
       base::clear ();
    }
 
@@ -1081,7 +1091,12 @@ private:
    }
 };
 
+
+// some fast string class
 class String final : private Array <char> {
+public:
+   static constexpr size_t INVALID_INDEX = Array <char>::INVALID_INDEX;
+
 private:
    using base = Array <char>;
 
@@ -1097,9 +1112,9 @@ private:
    }
 
 public:
+   String (String &&other) noexcept : base (move (other)) { }
 
    String (void) = default;
-   String (String &&other) noexcept : base (move (other)) { }
    ~String (void) = default;
 
 public:
@@ -1119,12 +1134,12 @@ public:
    String &assign (const char *str, size_t length = 0) {
       length = length > 0 ? length : strlen (str);
 
-      clear ();
-      resize (length);
+      base::clear ();
+      base::reserve (length + 1);
 
-      memcpy (m_data, str, length);
-      terminate ();
-
+      if (base::push (const_cast <char *> (str), length)) {
+         terminate ();
+      }
       return *this;
    }
 
@@ -1133,7 +1148,7 @@ public:
    }
 
    String &assign (const char chr) {
-      resize (2);
+      resize (1);
       m_data[0] = chr;
 
       return *this;
@@ -1143,11 +1158,9 @@ public:
       if (empty ()) {
          return assign (str);
       }
-      const size_t maxLength = strlen (str) + 1;
-
-      resize (length () + maxLength);
-      strncat (m_data, str, maxLength);
-
+      if (push (const_cast <char *> (str), strlen (str))) {
+         terminate ();
+      };
       return *this;
    }
 
@@ -1166,6 +1179,10 @@ public:
 
    size_t length (void) const {
       return base::length ();
+   }
+
+   size_t capacity (void) const {
+      return base::capacity ();
    }
 
    bool empty (void) const {
@@ -1198,11 +1215,19 @@ public:
       return atoi (chars ());
    }
 
-   inline void terminate (void) {
+   float toFloat (void) const {
+      return static_cast <float> (atof (chars ()));
+   }
+
+   void terminate (void) {
       m_data[m_length] = '\0';
    }
 
-   inline char &at (size_t index) {
+   char &at (size_t index) {
+      return m_data[index];
+   }
+
+   const char &at (size_t index) const {
       return m_data[index];
    }
 
@@ -1211,33 +1236,30 @@ public:
    }
 
    int32 compare (const char *what) const {
-      return strcmp (begin (), what);
+      return strcmp (m_data, what);
    }
 
    bool contains (const String &what) const {
       return strstr (m_data, what.begin ()) != nullptr;
    }
 
-   template <size_t BufferSize = 512> void format (const char *fmt, ...) {
-      va_list ap;
-      char buffer[BufferSize];
+   template <typename ...Args> void assign (const char *fmt, Args ...args) {
+      const size_t size = snprintf (nullptr, 0, fmt, args...);
 
-      va_start (ap, fmt);
-      vsnprintf (buffer, bufsize (buffer), fmt, ap);
-      va_end (ap);
+      reserve (size + 1);
+      resize (size);
 
-      assign (buffer);
+      snprintf (&m_data[0], size + 1, fmt, args...);
    }
 
-   template <size_t BufferSize = 512> void formatAppend (const char *fmt, ...) {
-      va_list ap;
-      char buffer[BufferSize];
+   template <typename ...Args> void append (const char *fmt, Args ...args) {
+      const size_t size = snprintf (nullptr, 0, fmt, args...) + m_length;
+      const size_t len = m_length;
 
-      va_start (ap, fmt);
-      vsnprintf (buffer, bufsize (buffer), fmt, ap);
-      va_end (ap);
+      reserve (size + 1);
+      resize (size);
 
-      append (buffer);
+      snprintf (&m_data[len], size + 1, fmt, args...);
    }
 
    size_t insert (size_t at, const String &str) {
@@ -1248,14 +1270,32 @@ public:
       return 0;
    }
 
-   size_t find (const String &search, size_t pos) const {
-      if (pos > length ()) {
-         return INVALID_INDEX;
+   size_t find (char val, size_t pos) const {
+      for (size_t i = pos; i < m_length; i++) {
+         if (m_data[i] == val) {
+            return i;
+         }
       }
+      return INVALID_INDEX;
+   }
+
+   size_t find (const String &search, size_t pos) const {
       size_t len = search.length ();
 
-      for (size_t i = pos; len + i <= length (); i++) {
-         if (strncmp (m_data + i, search.chars (), len) == 0) {
+      if (len > m_length || pos > m_length) {
+         return INVALID_INDEX;
+      }
+
+      for (size_t i = pos; i <= m_length - len; i++) {
+         size_t at = 0;
+
+         for (; search.m_data[at]; at++) {
+            if (m_data[i + at] != search.m_data[at]) {
+               break;
+            }
+         }
+
+         if (!search.m_data[at]) {
             return i;
          }
       }
@@ -1268,7 +1308,7 @@ public:
       }
       size_t numReplaced = 0, posIndex = 0;
 
-      while (posIndex < length ()) {
+      while (posIndex < m_length) {
          posIndex = find (what, posIndex);
 
          if (posIndex == INVALID_INDEX) {
@@ -1283,28 +1323,96 @@ public:
       return numReplaced;
    }
 
-   String substr (size_t start, size_t count = INVALID_INDEX) {
+   String substr (size_t start, size_t count = INVALID_INDEX) const {
       String result;
 
-      if (start >= length () || empty ()) {
-         return result;
+      if (start >= m_length || empty ()) {
+         return move (result);
       }
       if (count == INVALID_INDEX) {
-         count = length () - start;
+         count = m_length - start;
       }
-      else if (start + count >= length ()) {
-         count = length () - start;
+      else if (start + count >= m_length) {
+         count = m_length - start;
       }
       result.resize (count);
 
-      transfer (&result[0], &m_data[start], count);
+      // copy, not move
+      for (size_t i = 0; i < count; i++) {
+         result[i] = m_data[start + i];
+      }
       result[count] = '\0';
-
-      return result;
+      return move (result);
    }
 
-   char &operator[] (size_t index) {
-      return at (index);
+   String &rtrim (const char *chars = "\r\n\t ") {
+      if (empty ()) {
+         return *this;
+      }
+      char *str = end () - 1;
+
+      while (*str != 0) {
+         if (isTrimChar (*str, chars)) {
+            erase (str - begin ());
+            str--;
+         }
+         else {
+            break;
+         }
+      }
+      return *this;
+   }
+
+   String &ltrim (const char *chars = "\r\n\t ") {
+      if (empty ()) {
+         return *this;
+      }
+      char *str = begin ();
+
+      while (isTrimChar (*str, chars)) {
+         str++;
+      }
+
+      if (begin () != str) {
+         erase (0, str - begin ());
+      }
+      return *this;
+   }
+
+   String &trim (const char *chars = "\r\n\t ") {
+      return rtrim (chars).ltrim (chars);
+   }
+
+   Array <String> split (const String &delim) const {
+      Array <String> tokens;
+      size_t prev = 0, pos = 0;
+
+      do {
+         pos = find (delim, prev);
+
+         if (pos == INVALID_INDEX) {
+            pos = m_length;
+         }
+         tokens.push (move (substr (prev, pos - prev)));
+
+         prev = pos + delim.length ();
+      } while (pos < m_length && prev < m_length);
+
+      return move (tokens);
+   }
+
+   String &lowercase (void) {
+      for (auto &ch : *this) {
+         ch = static_cast <char> (tolower (ch));
+      }
+      return *this;
+   }
+
+   String &uppercase (void) {
+      for (auto &ch : *this) {
+         ch = static_cast <char> (toupper (ch));
+      }
+      return *this;
    }
 
    friend String operator + (const String &lhs, const String &rhs) {
@@ -1384,79 +1492,51 @@ public:
       return append (rhs);
    }
 
-   String &trimRight (const char *chars = "\r\n\t ") {
-      if (empty ()) {
-         return *this;
-      }
-      char *str = end () - 1;
-
-      while (*str != 0) {
-         if (isTrimChar (*str, chars)) {
-            erase (str - begin ());
-            str--;
-         }
-         else {
-            break;
-         }
-      }
-      return *this;
+   char &operator [] (size_t index) {
+      return at (index);
    }
 
-   String &trimLeft (const char *chars = "\r\n\t ") {
-      if (empty ()) {
-         return *this;
-      }
-      char *str = begin ();
-
-      while (isTrimChar (*str, chars)) {
-         str++;
-      }
-
-      if (begin () != str) {
-         erase (0, str - begin ());
-      }
-      return *this;
-   }
-
-   String &trim (const char *chars = "\r\n\t ") {
-      return trimLeft (chars).trimRight (chars);
-   }
-
-   Array <String> split (const char *delimiter) {
-      Array <String> tokens;
-      size_t len, index = 0;
-
-      do {
-         index += strspn (&m_data[index], delimiter);
-         len = strcspn (&m_data[index], delimiter);
-
-         if (len > 0) {
-            tokens.push (move (substr (index, len)));
-         }
-         index += len;
-      } while (len > 0);
-
-      return tokens;
+   const char &operator [] (size_t index) const {
+      return at (index);
    }
 
 public:
-   static void trimChars (char *str) {
-      size_t pos = 0;
-      char *dest = str;
-
-      while (str[pos] <= ' ' && str[pos] > 0) {
-         pos++;
+      char *begin (void) {
+         return base::begin ();
       }
 
-      while (str[pos]) {
-         *(dest++) = str[pos];
-         pos++;
+      char *begin (void) const {
+         return base::begin ();
       }
-      *(dest--) = '\0';
 
-      while (dest >= str && *dest <= ' ' && *dest > 0) {
-         *(dest--) = '\0';
+      char *end (void) {
+         return base::end ();
       }
+
+      char *end (void) const {
+         return base::end ();
+      }
+
+public:
+   static String join (const Array <String> &sequence, const String &delim, size_t start = 0) {
+      if (sequence.empty ()) {
+         return "";
+      }
+
+      if (sequence.length () == 1) {
+         return sequence.at (0);
+      }
+      String result;
+
+      for (size_t index = start; index < sequence.length (); index++) {
+         if (index != start) {
+            result += delim + sequence[index];
+         }
+         else {
+            result += sequence[index];
+         }
+      }
+      return move (result);
    }
 };
 
@@ -1553,17 +1633,16 @@ public:
 
 class File : private NonCopyable {
 private:
-   FILE *m_handle;
-   size_t m_size;
+   FILE *m_handle = nullptr;
+   size_t m_size = 0;
 
 public:
-   File (void) : m_handle (nullptr), m_size (0) {}
-
-   File (const String &fileName, const String &mode = "rt") : m_handle (nullptr), m_size (0){
+   File (void) = default;
+   File (const String &fileName, const String &mode = "rt") {
       open (fileName, mode);
    }
 
-   virtual ~File (void) {
+    ~File (void) {
       close ();
    }
 
@@ -1594,12 +1673,22 @@ public:
       return fflush (m_handle) ? false : true;
    }
 
-   int getch (void) {
-      return fgetc (m_handle);
+   char getch (void) {
+      return static_cast <char> (fgetc (m_handle));
    }
 
    char *gets (char *buffer, int count) {
       return fgets (buffer, count, m_handle);
+   }
+
+   bool getLine (String &line) {
+      line.clear ();
+      char ch;
+
+      while ((ch = getch ()) != '\n' && ch != EOF && !eof ()) {
+         line += ch;
+      }
+      return !eof ();
    }
 
    int writeFormat (const char *format, ...) {
@@ -1714,14 +1803,13 @@ public:
 
 class MemFile : private NonCopyable {
 private:
-   size_t m_size;
-   size_t m_pos;
-   uint8 *m_buffer;
+   size_t m_size = 0;
+   size_t m_pos = 0;
+   uint8 *m_buffer = nullptr;
 
 public:
-   MemFile (void) : m_size (0) , m_pos (0) , m_buffer (nullptr) {}
-
-   MemFile (const String &filename) : m_size (0) , m_pos (0) , m_buffer (nullptr) {
+   MemFile (void) = default;
+   MemFile (const String &filename)  {
       open (filename);
    }
 
@@ -1748,14 +1836,14 @@ public:
       m_buffer = nullptr;
    }
 
-   int getch (void) {
+   char getch (void) {
       if (!m_buffer || m_pos >= m_size) {
          return -1;
       }
       int readCh = m_buffer[m_pos];
       m_pos++;
 
-      return readCh;
+      return static_cast <char> (readCh);
    }
 
    char *gets (char *buffer, size_t count) {
@@ -1779,6 +1867,16 @@ public:
       }
       buffer[index] = 0;
       return index ? buffer : nullptr;
+   }
+
+   bool getLine (String &line) {
+      line.clear ();
+      char ch;
+
+      while ((ch = getch ()) != '\n' && ch != EOF && m_pos < m_size) {
+         line += ch;
+      }
+      return m_pos < m_size;
    }
 
    size_t read (void *buffer, size_t size, size_t count = 1) {
@@ -1818,7 +1916,7 @@ public:
       return true;
    }
 
-   inline size_t getSize (void) const {
+   size_t getSize (void) const {
       return m_size;
    }
 
@@ -1827,8 +1925,7 @@ public:
    }
 };
 
-}}
-
+}};
 
 namespace cr {
 namespace types {
@@ -1836,4 +1933,4 @@ namespace types {
 using StringArray = cr::classes::Array <cr::classes::String>;
 using IntArray = cr::classes::Array <int>;
 
-}}
+}};
