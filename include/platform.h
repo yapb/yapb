@@ -87,7 +87,10 @@
    // @todo: sse should be working ok on x86 android?
    #if defined(__ANDROID__)
       #define PLATFORM_ANDROID
-      #undef PLATFORM_HAS_SSE2
+      
+      #if defined (__arm__)  || defined (__aarch64__ )
+         #undef PLATFORM_HAS_SSE2
+      #endif
    #endif
 #else
    #error "Platform unrecognized."
