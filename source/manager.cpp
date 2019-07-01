@@ -1806,7 +1806,7 @@ void Config::load (bool onlyMain) {
    m_chatter.reserve (CHATTER_MAX);
    m_botNames.reserve (CHATTER_MAX);
 
-   // naming system initialization
+   // naming initialization
    if (util.openConfig ("names.cfg", "Name configuration file not found.", &fp, true)) {
       m_botNames.clear ();
 
@@ -1839,7 +1839,7 @@ void Config::load (bool onlyMain) {
       fp.close ();
    }
 
-   // chat system config initialization
+   // chat config initialization
    if (util.openConfig ("chat.cfg", "Chat file not found.", &fp, true)) {
       StringArray *chat = nullptr;
       Keywords replies;
@@ -1931,7 +1931,7 @@ void Config::load (bool onlyMain) {
       yb_chat.set (0);
    }
 
-   // GENERAL DATA INITIALIZATION
+   // weapon data initialization
    if (util.openConfig ("general.cfg", "General configuration file not found. Loading defaults", &fp)) {
       
       auto addWeaponEntries = [] (Array <WeaponInfo> &weapons, size_t max, bool as, const String &name, const StringArray &data) {
@@ -1950,7 +1950,7 @@ void Config::load (bool onlyMain) {
          }
       };
 
-      auto addIntEntries = [] (auto &to, size_t max, const String &name, const StringArray &data) {
+      auto addIntEntries = [] (int *to, size_t max, const String &name, const StringArray &data) {
          if (data.length () != max) {
             util.logEntry (true, LL_ERROR, "%s entry in weapons config is not valid or malformed.", name.chars ());
             return;
@@ -2000,12 +2000,11 @@ void Config::load (bool onlyMain) {
          else if (pair[0] == "PersonalityCareful") {
             addIntEntries (m_carefulWeaponPrefs, NUM_WEAPONS, pair[0], splitted);
          }
-
       }
       fp.close ();
    }
 
-   // chatter system initialization
+   // chatter initialization
    if (game.is (GAME_SUPPORT_BOT_VOICE) && yb_communication_type.integer () == 2 && util.openConfig ("chatter.cfg", "Couldn't open chatter system configuration", &fp)) {
       struct EventMap {
          String str;
