@@ -24,9 +24,8 @@ Game::Game (void) {
    }
    m_precached = false;
    m_isBotCommand = false;
-   m_argumentCount = 0;
+   m_botArgs.reserve (8);
 
-   memset (m_arguments, 0, sizeof (m_arguments));
    memset (m_drawModels, 0, sizeof (m_drawModels));
    memset (m_spawnCount, 0, sizeof (m_spawnCount));
 
@@ -448,66 +447,57 @@ void Game::execBotCmd (edict_t *ent, const char *fmt, ...) {
    vsnprintf (string, cr::bufsize (string), fmt, ap);
    va_end (ap);
 
-   if (util.isEmptyStr (string)) {
+   String str (string);
+
+   if (str.empty ()) {
       return;
    }
-   m_arguments[0] = '\0';
-   m_argumentCount = 0;
-
    m_isBotCommand = true;
+   m_botArgs.clear ();
 
-   size_t i, pos = 0;
-   size_t length = strlen (string);
+   // helper to parse single (not multi) command
+   auto parsePartArgs = [&] (String &args) {
+      args.trim ("\r\n\t\" "); // trim new lines
 
-   while (pos < length) {
-      size_t start = pos;
-      size_t stop = pos;
-
-      while (pos < length && string[pos] != ';') {
-         pos++;
+      // we're have empty commands?
+      if (args.empty ()) {
+         return;
       }
 
-      if (pos > 1 && string[pos - 1] == '\n') {
-         stop = pos - 2;
-      }
-      else {
-         stop = pos - 1;
-      }
+      // find first space
+      const size_t space = args.find (' ', 0);
 
-      for (i = start; i <= stop; i++) {
-         m_arguments[i - start] = string[i];
-      }
-      m_arguments[i - start] = 0;
-      pos++;
+      // if found space
+      if (space != String::INVALID_INDEX) {
+         const auto quote = space + 1; // check for quote next to space
 
-      size_t index = 0;
-      m_argumentCount = 0;
-
-      while (index < i - start) {
-         while (index < i - start && m_arguments[index] == ' ') {
-            index++;
-         }
-         if (m_arguments[index] == '"') {
-            index++;
-
-            while (index < i - start && m_arguments[index] != '"') {
-               index++;
-            }
-            index++;
+         // check if we're got a quoted string
+         if (quote < args.length () && args[quote] == '\"') {
+            m_botArgs.push (cr::move (args.substr (0, space))); // add command
+            m_botArgs.push (cr::move (args.substr (quote, args.length () - 1).trim ("\""))); // add string with trimmed quotes
          }
          else {
-            while (index < i - start && m_arguments[index] != ' ') {
-               index++;
+            for (auto &arg : args.split (" ")) {
+               m_botArgs.push (cr::move (arg));
             }
          }
-         m_argumentCount++;
+      }
+      else {
+         m_botArgs.push (cr::move (args)); // move all the part to args
       }
       MDLL_ClientCommand (ent);
+      m_botArgs.clear (); // clear space for next cmd 
+   };
+
+   if (str.find (';', 0) != String::INVALID_INDEX) {
+      for (auto &part : str.split (";")) {
+         parsePartArgs (part);
+      }
+   }
+   else {
+      parsePartArgs (str);
    }
    m_isBotCommand = false;
-
-   m_arguments[0] = '\0';
-   m_argumentCount = 0;
 }
 
 bool Game::isSoftwareRenderer (void) {
@@ -529,63 +519,6 @@ bool Game::isSoftwareRenderer (void) {
    static bool isSoftware = false;
 #endif
    return isSoftware;
-}
-
-const char *Game::getField (const char *string, size_t id) {
-   // this function gets and returns a particular field in a string where several strings are concatenated
-
-   const int IterBufMax = 4;
-
-   static char arg[IterBufMax][512];
-   static int iter = -1;
-
-   if (iter > IterBufMax - 1) {
-      iter = 0;
-   }
-
-   char *ptr = arg[cr::clamp <int> (iter++, 0, IterBufMax - 1)];
-   ptr[0] = 0;
-
-   size_t pos = 0, count = 0, start = 0, stop = 0;
-   size_t length = strlen (string);
-
-   while (pos < length && count <= id) {
-      while (pos < length && (string[pos] == ' ' || string[pos] == '\t')) {
-         pos++;
-      }
-      if (string[pos] == '"') {
-         pos++;
-         start = pos;
-
-         while (pos < length && string[pos] != '"') {
-            pos++;
-         }
-         stop = pos - 1;
-         pos++;
-      }
-      else {
-         start = pos;
-
-         while (pos < length && string[pos] != ' ' && string[pos] != '\t') {
-            pos++;
-         }
-         stop = pos - 1;
-      }
-
-      if (count == id) {
-         size_t i = start;
-
-         for (; i <= stop; i++) {
-            ptr[i - start] = string[i];
-         }
-         ptr[i - start] = 0;
-         break;
-      }
-      count++; // we have parsed one field more
-   }
-   String::trimChars (ptr);
-
-   return ptr;
 }
 
 void Game::execCmd (const char *fmt, ...) {
@@ -670,7 +603,7 @@ void Game::pushRegStackToEngine (bool gameVars) {
 const char *Game::translate (const char *input) {
    // this function translate input string into needed language
 
-   if (isDedicated ()) {
+   if (isDedicated () || !m_language.exists (input)) {
       return input;
    }
    static String result;

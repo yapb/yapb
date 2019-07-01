@@ -707,194 +707,221 @@ public:
 };
 
 // main bot class
-class Bot {
+class Bot final {
    friend class BotManager;
 
 private:
-   unsigned int m_states; // sensing bitstates
-
-   float m_moveSpeed; // current speed forward/backward
-   float m_strafeSpeed; // current speed sideways
-   float m_minSpeed; // minimum speed in normal mode
-   float m_oldCombatDesire; // holds old desire for filtering
-
-   bool m_isLeader; // bot is leader of his team
-   bool m_checkTerrain; // check for terrain
-   bool m_moveToC4; // ct is moving to bomb
-   bool m_grenadeRequested; // bot requested change to grenade
-
-   float m_prevTime; // time previously checked movement speed
-   float m_prevSpeed; // speed some frames before
-   Vector m_prevOrigin; // origin some frames before
+   uint32 m_states; // sensing bitstates
+   uint32 m_collideMoves[MAX_COLLIDE_MOVES]; // sorted array of movements
+   uint32 m_collisionProbeBits; // bits of possible collision moves
+   uint32 m_collStateIndex; // index into collide moves
+   uint32 m_aimFlags; // aiming conditions
+   uint32 m_currentTravelFlags; // connection flags like jumping
 
    int m_messageQueue[32]; // stack for messages
-   String m_chatBuffer; // space for strings (say text...)
-   int m_radioSelect; // radio entry
-   float m_headedTime;
-
-   edict_t *m_avoid; // avoid players on our way
-   float m_avoidTime; // time to avoid players around
-
-   float m_itemCheckTime; // time next search for items needs to be done
-   PickupType m_pickupType; // type of entity which needs to be used/picked up
-   Vector m_breakableOrigin; // origin of breakable
-
-   edict_t *m_pickupItem; // pointer to entity of item to use/pickup
-   edict_t *m_itemIgnore; // pointer to entity to ignore for pickup
-   edict_t *m_liftEntity; // pointer to lift entity
-   edict_t *m_breakableEntity; // pointer to breakable entity
-
-   float m_timeDoorOpen; // time to next door open check
-   float m_lastChatTime; // time bot last chatted
-   float m_timeLogoSpray; // time bot last spray logo
-   float m_knifeAttackTime; // time to rush with knife (at the beginning of the round)
-   bool m_defendedBomb; // defend action issued
-   bool m_defendHostage;
-
-   float m_askCheckTime; // time to ask team
-   float m_collideTime; // time last collision
-   float m_firstCollideTime; // time of first collision
-   float m_probeTime; // time of probing different moves
-   float m_lastCollTime; // time until next collision check
-   float m_jumpStateTimer; // timer for jumping collision check
-
-   unsigned int m_collisionProbeBits; // bits of possible collision moves
-   unsigned int m_collideMoves[MAX_COLLIDE_MOVES]; // sorted array of movements
-   unsigned int m_collStateIndex; // index into collide moves
-   CollisionState m_collisionState; // collision State
-
-   BinaryHeap <int, float, MAX_ROUTE_LENGTH> m_routeQue;
-   Array <Route> m_routes; // pointer
-   PathWalk m_path; // pointer to current node from path
-   Path *m_currentPath; // pointer to the current path waypoint
-
-   SearchPathType m_pathType; // which pathfinder to use
-   uint8 m_visibility; // visibility flags
-
-   int m_currentWaypointIndex; // current waypoint index
-   int m_travelStartIndex; // travel start index to double jump action
-   int m_prevWptIndex[5]; // previous waypoint indices from waypoint find
-   int m_waypointFlags; // current waypoint flags
-
-   int m_loosedBombWptIndex; // nearest to loosed bomb waypoint
-   int m_plantedBombWptIndex; // nearest to planted bomb waypoint
-
-   uint16 m_currentTravelFlags; // connection flags like jumping
-   bool m_jumpFinished; // has bot finished jumping
-   Vector m_desiredVelocity; // desired velocity for jump waypoints
-   float m_navTimeset; // time waypoint chosen by Bot
-
-   unsigned int m_aimFlags; // aiming conditions
-   Vector m_lookAt; // vector bot should look at
-   Vector m_throw; // origin of waypoint to throw grenades
-
-   Vector m_enemyOrigin; // target origin chosen for shooting
-   Vector m_grenade; // calculated vector for grenades
-   Vector m_entity; // origin of entities like buttons etc.
-   Vector m_camp; // aiming vector when camping.
-
-   float m_timeWaypointMove; // last time bot followed waypoints
-   bool m_wantsToFire; // bot needs consider firing
-   float m_shootAtDeadTime; // time to shoot at dying players
-   edict_t *m_avoidGrenade; // pointer to grenade entity to avoid
-   int m_needAvoidGrenade; // which direction to strafe away
-
-   float m_followWaitTime; // wait to follow time
-   edict_t *m_targetEntity; // the entity that the bot is trying to reach
-   Array <edict_t *> m_hostages; // pointer to used hostage entities
-
-   bool m_moveToGoal; // bot currently moving to goal??
-   bool m_isStuck; // bot is stuck
-   bool m_isReloading; // bot is reloading a gun
-   bool m_forceRadio; // should bot use radio anyway?
-
    int m_oldButtons; // our old buttons
    int m_reloadState; // current reload state
    int m_voicePitch; // bot voice pitch
    int m_rechoiceGoalCount; // multiple failed goals?
+   int m_loosedBombWptIndex; // nearest to loosed bomb waypoint
+   int m_plantedBombWptIndex; // nearest to planted bomb waypoint
+   int m_currentWaypointIndex; // current waypoint index
+   int m_travelStartIndex; // travel start index to double jump action
+   int m_prevWptIndex[5]; // previous waypoint indices from waypoint find
+   int m_waypointFlags; // current waypoint flags
+   int m_needAvoidGrenade; // which direction to strafe away
+   int m_campDirection; // camp Facing direction
+   int m_campButtons; // buttons to press while camping
+   int m_tryOpenDoor; // attempt's to open the door
+   int m_liftState; // state of lift handling
+   int m_radioSelect; // radio entry
+   int m_pingOffset[2];
+   int m_ping[3]; // bots pings in scoreboard
 
-   bool m_duckDefuse; // should or not bot duck to defuse bomb
+   float m_headedTime;
+   float m_prevTime; // time previously checked movement speed
+   float m_prevSpeed; // speed some frames before
+   float m_timeDoorOpen; // time to next door open check
+   float m_lastChatTime; // time bot last chatted
+   float m_timeLogoSpray; // time bot last spray logo
+   float m_knifeAttackTime; // time to rush with knife (at the beginning of the round)
    float m_duckDefuseCheckTime; // time to check for ducking for defuse
-
    float m_frameInterval; // bot's frame interval
    float m_lastCommandTime; // time bot last thinked
-
    float m_reloadCheckTime; // time to check reloading
    float m_zoomCheckTime; // time to check zoom again
    float m_shieldCheckTime; // time to check shiled drawing again
    float m_grenadeCheckTime; // time to check grenade usage
    float m_sniperStopTime; // bot switched to other weapon?
    float m_lastEquipTime; // last time we equipped in buyzone
-
-   bool m_checkKnifeSwitch; // is time to check switch to knife action
-   bool m_checkWeaponSwitch; // is time to check weapon switch
-   bool m_isUsingGrenade; // bot currently using grenade??
-   bool m_bombSearchOverridden; // use normal waypoint if applicable when near the bomb
-
-   StrafeDir m_combatStrafeDir; // direction to strafe
-   FightStyle m_fightStyle; // combat style to use
-   float m_lastFightStyleCheck; // time checked style
-   float m_strafeSetTime; // time strafe direction was set
-
-   float m_timeCamping; // time to camp
-   int m_campDirection; // camp Facing direction
-   float m_nextCampDirTime; // time next camp direction change
-   int m_campButtons; // buttons to press while camping
-   int m_tryOpenDoor; // attempt's to open the door
-   int m_liftState; // state of lift handling
-
    float m_duckTime; // time to duck
    float m_jumpTime; // time last jump happened
-   float m_chatterTimes[CHATTER_MAX]; // voice command timers
    float m_soundUpdateTime; // time to update the sound
    float m_heardSoundTime; // last time noise is heard
    float m_buttonPushTime; // time to push the button
    float m_liftUsageTime; // time to use lift
-
-   int m_pingOffset[2];
-   int m_ping[3]; // bots pings in scoreboard
-
-   Vector m_liftTravelPos; // lift travel position
-   Vector m_moveAngles; // bot move angles
-   Vector m_idealAngles; // angle wanted
-
+   float m_askCheckTime; // time to ask team
+   float m_collideTime; // time last collision
+   float m_firstCollideTime; // time of first collision
+   float m_probeTime; // time of probing different moves
+   float m_lastCollTime; // time until next collision check
+   float m_jumpStateTimer; // timer for jumping collision check
    float m_lookYawVel; // look yaw velocity
    float m_lookPitchVel; // look pitch velocity
    float m_lookUpdateTime; // lookangles update time
    float m_aimErrorTime; // time to update error vector
+   float m_nextCampDirTime; // time next camp direction change
+   float m_lastFightStyleCheck; // time checked style
+   float m_strafeSetTime; // time strafe direction was set
+   float m_randomizeAnglesTime; // time last randomized location
+   float m_playerTargetTime; // time last targeting
+   float m_timeCamping; // time to camp
+   float m_timeWaypointMove; // last time bot followed waypoints
+   float m_shootAtDeadTime; // time to shoot at dying players
+   float m_followWaitTime; // wait to follow time
+   float m_chatterTimes[CHATTER_MAX]; // chatter command timers
+   float m_navTimeset; // time waypoint chosen by Bot
+   float m_moveSpeed; // current speed forward/backward
+   float m_strafeSpeed; // current speed sideways
+   float m_minSpeed; // minimum speed in normal mode
+   float m_oldCombatDesire; // holds old desire for filtering
+   float m_avoidTime; // time to avoid players around
+   float m_itemCheckTime; // time next search for items needs to be done
 
+   bool m_moveToGoal; // bot currently moving to goal??
+   bool m_isStuck; // bot is stuck
+   bool m_isReloading; // bot is reloading a gun
+   bool m_forceRadio; // should bot use radio anyway?
+   bool m_defendedBomb; // defend action issued
+   bool m_defendHostage; // defend action issued
+   bool m_duckDefuse; // should or not bot duck to defuse bomb
+   bool m_checkKnifeSwitch; // is time to check switch to knife action
+   bool m_checkWeaponSwitch; // is time to check weapon switch
+   bool m_isUsingGrenade; // bot currently using grenade??
+   bool m_bombSearchOverridden; // use normal waypoint if applicable when near the bomb
+   bool m_wantsToFire; // bot needs consider firing
+   bool m_jumpFinished; // has bot finished jumping
+   bool m_isLeader; // bot is leader of his team
+   bool m_checkTerrain; // check for terrain
+   bool m_moveToC4; // ct is moving to bomb
+   bool m_grenadeRequested; // bot requested change to grenade
+
+   PickupType m_pickupType; // type of entity which needs to be used/picked up
+   PathWalk m_path; // pointer to current node from path
+   StrafeDir m_combatStrafeDir; // direction to strafe
+   FightStyle m_fightStyle; // combat style to use
+   CollisionState m_collisionState; // collision State
+   SearchPathType m_pathType; // which pathfinder to use
+   uint8 m_visibility; // visibility flags
+
+   edict_t *m_pickupItem; // pointer to entity of item to use/pickup
+   edict_t *m_itemIgnore; // pointer to entity to ignore for pickup
+   edict_t *m_liftEntity; // pointer to lift entity
+   edict_t *m_breakableEntity; // pointer to breakable entity
+   edict_t *m_targetEntity; // the entity that the bot is trying to reach
+   edict_t *m_avoidGrenade; // pointer to grenade entity to avoid
+   edict_t *m_avoid; // avoid players on our way
+
+   Vector m_liftTravelPos; // lift travel position
+   Vector m_moveAngles; // bot move angles
+   Vector m_idealAngles; // angle wanted
    Vector m_randomizedIdealAngles; // angle wanted with noise
    Vector m_angularDeviation; // angular deviation from current to ideal angles
    Vector m_aimSpeed; // aim speed calculated
    Vector m_aimLastError; // last calculated aim error
+   Vector m_prevOrigin; // origin some frames before
+   Vector m_lookAt; // vector bot should look at
+   Vector m_throw; // origin of waypoint to throw grenades
+   Vector m_enemyOrigin; // target origin chosen for shooting
+   Vector m_grenade; // calculated vector for grenades
+   Vector m_entity; // origin of entities like buttons etc.
+   Vector m_camp; // aiming vector when camping.
+   Vector m_desiredVelocity; // desired velocity for jump waypoints
+   Vector m_breakableOrigin; // origin of breakable
 
-   float m_randomizeAnglesTime; // time last randomized location
-   float m_playerTargetTime; // time last targeting
+   Array <edict_t *> m_hostages; // pointer to used hostage entities
+   Array <Route> m_routes; // pointer
 
-   void instantChatter (int type);
-   void ai (void);
-   void checkSpawnConditions (void);
-   void buyStuff (void);
+   BinaryHeap <int, float, MAX_ROUTE_LENGTH> m_routeQue;
+   Path *m_currentPath; // pointer to the current path waypoint
+   String m_chatBuffer; // space for strings (say text...)
+
+private:
+   int pickBestWeapon (int *vec, int count, int moneySave);
+   int getBombPoint (void);
+   int getCoverPoint (float maxDistance);
+   int getDefendPoint (const Vector &origin);
+   int searchGoal (void);
+   int getGoalProcess (int tactic, IntArray *defensive, IntArray *offsensive);
+   int getMsgQueue (void);
+   int bestPrimaryCarried (void);
+   int bestSecondaryCarried (void);
+   int bestGrenadeCarried (void);
+   int bestWeaponCarried (void);
+   int changePointIndex (int index);
+   int getNearestPoint (void);
+   int numEnemiesNear (const Vector &origin, float radius);
+   int numFriendsNear (const Vector &origin, float radius);
+   int searchCampDir (void);
+   int searchAimingPoint (const Vector &to);
+
+   float getBombTimeleft (void);
+   float getReachTime (void);
+   float isInFOV (const Vector &dest);
+   float getShiftSpeed (void);
+   float getEnemyBodyOffsetCorrection (float distance);
 
    bool canReplaceWeapon (void);
-   int pickBestWeapon (int *vec, int count, int moneySave);
-
    bool canDuckUnder (const Vector &normal);
    bool canJumpUp (const Vector &normal);
    bool doneCanJumpUp (const Vector &normal);
    bool cantMoveForward (const Vector &normal, TraceResult *tr);
-
-#ifdef DEAD_CODE
    bool canStrafeLeft (TraceResult *tr);
    bool canStrafeRight (TraceResult *tr);
-
    bool isBlockedLeft (void);
    bool isBlockedRight (void);
+   bool checkWallOnLeft (void);
+   bool checkWallOnRight (void);
+   bool updateNavigation (void);
+   bool isEnemyThreat (void);
+   bool isWeaponRestricted (int weaponIndex);
+   bool isWeaponRestrictedAMX (int weaponIndex);
+   bool isInViewCone (const Vector &origin);
+   bool checkBodyParts (edict_t *target, Vector *origin, uint8 *bodyPart);
+   bool seesEnemy (edict_t *player, bool ignoreFOV = false);
+   bool doPlayerAvoidance (const Vector &normal);
+   bool hasActiveGoal (void);
+   bool advanceMovement (void);
+   bool isBombDefusing (const Vector &bombOrigin);
+   bool isOccupiedPoint (int index);
+   bool seesItem (const Vector &dest, const char *itemName);
+   bool lastEnemyShootable (void);
+   bool isShootableBreakable (edict_t *ent);
+   bool rateGroundWeapon (edict_t *ent);
+   bool reactOnEnemy (void);
+   bool getNextBestPoint (void);
+   bool hasAnyWeapons (void);
+   bool isDeadlyMove (const Vector &to);
+   bool isOutOfBombTimer (void);
+   bool isWeaponBadAtDistance (int weaponIndex, float distance);
+   bool needToPauseFiring (float distance);
+   bool lookupEnemies (void);
+   bool isEnemyHidden (edict_t *enemy);
+   bool isFriendInLineOfFire (float distance);
+   bool isGroupOfEnemies (const Vector &location, int numEnemies = 1, float radius = 256.0f);
+   bool isPenetrableObstacle (const Vector &dest);
+   bool isPenetrableObstacle2 (const Vector &dest);
+   bool isEnemyBehindShield (edict_t *enemy);
+   bool checkChatKeywords (String &reply);
+   bool isReplyingToChat (void);
 
+   void instantChatter (int type);
+   void runAI (void);
+   void runMovement (void);
+   void checkSpawnConditions (void);
+   void buyStuff (void);
    void changePitch (float speed);
    void changeYaw (float speed);
-#endif
-
    void checkMsgQueue (void);
    void checkRadioQueue (void);
    void checkReload (void);
@@ -903,66 +930,45 @@ private:
    void checkBurstMode (float distance);
    void checkSilencer (void);
    void updateAimDir (void);
-   bool checkWallOnLeft (void);
-   bool checkWallOnRight (void);
-   int getBombPoint (void);
-
-   bool processNavigation (void);
-   bool isEnemyThreat (void);
-   void processLookAngles (void);
-   void processBodyAngles (void);
+   void updateLookAngles (void);
+   void updateBodyAngles (void);
    void updateLookAnglesNewbie (const Vector &direction, float delta);
    void setIdealReactionTimers (bool actual = false);
-   bool isWeaponRestricted (int weaponIndex);
-   bool isWeaponRestrictedAMX (int weaponIndex);
-
-   bool isInViewCone (const Vector &origin);
-   void processHearing (void);
-   bool checkBodyParts (edict_t *target, Vector *origin, uint8 *bodyPart);
-   bool seesEnemy (edict_t *player, bool ignoreFOV = false);
-
-   edict_t *getNearestButton (const char *targetName);
-   edict_t *lookupBreakable (void);
-   int getCoverPoint (float maxDistance);
-   int getDefendPoint (const Vector &origin);
-   int searchGoal (void);
-   int getGoalProcess (int tactic, IntArray *defensive, IntArray *offsensive);
-   void filterGoals (const IntArray &goals, int *result);
+   void updateHearing (void);
+   void postprocessGoals (const IntArray &goals, int *result);
    void processPickups (void);
    void checkTerrain (float movedDistance, const Vector &dirNormal);
    void checkDarkness (void);
    void checkParachute (void);
-   bool doPlayerAvoidance (const Vector &normal);
-
-   void getCampDir (Vector *dest);
+   void getCampDirection (Vector *dest);
    void collectGoalExperience (int damage);
    void collectDataExperience (edict_t *attacker, int damage);
-   int getMsgQueue (void);
-   bool hasActiveGoal (void);
-   bool advanceMovement (void);
-   float isInFOV (const Vector &dest);
-
-   bool isBombDefusing (const Vector &bombOrigin);
-   bool isOccupiedPoint (int index);
-
-   inline bool isOnLadder (void) {
-      return pev->movetype == MOVETYPE_FLY;
-   }
-
-   inline bool isOnFloor (void) {
-      return (pev->flags & (FL_ONGROUND | FL_PARTIALGROUND)) != 0;
-   }
-
-   inline bool isInWater (void) {
-      return pev->waterlevel >= 2;
-   }
-   float getShiftSpeed (void);
-
-   bool seesItem (const Vector &dest, const char *itemName);
-   bool lastEnemyShootable (void);
+   void searchShortestPath (int srcIndex, int destIndex);
+   void searchPath (int srcIndex, int destIndex, SearchPathType pathType = SEARCH_PATH_FASTEST);
+   void clearRoute (void);
+   void sayDebug (const char *format, ...);
+   void frame (void);
+   void resetCollision (void);
+   void ignoreCollision (void);
+   void setConditions (void);
+   void overrideConditions (void);
+   void updateEmotions (void);
+   void setStrafeSpeed (const Vector &moveDir, float strafeSpeed);
+   void updateTeamJoin (void);
+   void updateTeamCommands (void);
+   void decideFollowUser (void);
+   void attackMovement (void);
+   void getValidPoint (void);
+   void fireWeapons (void);
+   void selectWeapons (float distance, int index, int id, int choosen);
+   void focusEnemy (void);
+   void selectBestWeapon (void);
+   void selectSecondary (void);
+   void selectWeaponByName (const char *name);
+   void selectWeaponById (int num);
+   void completeTask (void);
    void processTasks (void);
 
-   // split big task list into separate functions
    void normal_ (void);
    void spraypaint_ (void);
    void huntEnemy_ (void);
@@ -984,120 +990,101 @@ private:
    void pickupItem_ (void);
    void shootBreakable_ (void);
 
-   bool isShootableBreakable (edict_t *ent);
-   bool rateGroundWeapon (edict_t *ent);
-   bool reactOnEnemy (void);
-   void resetCollision (void);
-   void ignoreCollision (void);
-   void setConditions (void);
-   void overrideConditions (void);
-   void updateEmotions (void);
-   void setStrafeSpeed (const Vector &moveDir, float strafeSpeed);
-   void processTeamJoin (void);
-   void completeTask (void);
-   bool getNextBestPoint (void);
-
-   int bestPrimaryCarried (void);
-   int bestSecondaryCarried (void);
-   int bestGrenadeCarried (void);
-   int bestWeaponCarried (void);
-   bool hasAnyWeapons (void);
-
-   void runMovement (void);
-   uint8 computeMsec (void);
-   void getValidPoint (void);
-
-   int changePointIndex (int index);
-   int getNearestPoint (void);
-   bool isDeadlyMove (const Vector &to);
-   bool isOutOfBombTimer (void);
-
+   edict_t *lookupButton (const char *targetName);
+   edict_t *lookupBreakable (void);
    edict_t *correctGrenadeVelocity (const char *model);
+
+   const Vector &getEnemyBodyOffset (void);
    Vector calcThrow (const Vector &start, const Vector &stop);
    Vector calcToss (const Vector &start, const Vector &stop);
    Vector isBombAudible (void);
-
-   const Vector &getEnemyBodyOffset (void);
    Vector getBodyOffsetError (float distance);
-   float getEnemyBodyOffsetCorrection (float distance);
 
-   void processTeamCommands (void);
-   void decideFollowUser (void);
-   void attackMovement (void);
-   bool isWeaponBadAtDistance (int weaponIndex, float distance);
-   bool throttleFiring (float distance);
-   bool lookupEnemies (void);
-   bool isEnemyHidden (edict_t *enemy);
-   void fireWeapons (void);
-   void selectWeapons (float distance, int index, int id, int choosen);
-   void focusEnemy (void);
+   uint8 computeMsec (void);
 
-   void selectBestWeapon (void);
-   void selectSecondary (void);
-   bool isFriendInLineOfFire (float distance);
-   bool isGroupOfEnemies (const Vector &location, int numEnemies = 1, float radius = 256.0f);
+private:
+   bool isOnLadder (void) const {
+      return pev->movetype == MOVETYPE_FLY;
+   }
 
-   bool isPenetrableObstacle (const Vector &dest);
-   bool isPenetrableObstacle2 (const Vector &dest);
+   bool isOnFloor (void) const {
+      return (pev->flags & (FL_ONGROUND | FL_PARTIALGROUND)) != 0;
+   }
 
-   int numEnemiesNear (const Vector &origin, float radius);
-   int numFriendsNear (const Vector &origin, float radius);
-
-   void selectWeaponByName (const char *name);
-   void selectWeaponById (int num);
-
-   bool isEnemyBehindShield (edict_t *enemy);
-   bool checkChatKeywords (String &reply);
-   bool isReplyingToChat (void);
-   float getBombTimeleft (void);
-   float getReachTime (void);
-
-   int searchCampDir (void);
-   int searchAimingPoint (const Vector &to);
-
-   void searchShortestPath (int srcIndex, int destIndex);
-   void searchPath (int srcIndex, int destIndex, SearchPathType pathType = SEARCH_PATH_FASTEST);
-   void clearRoute (void);
-   void sayDebug (const char *format, ...);
-   void frame (void);
+   bool isInWater (void) const {
+      return pev->waterlevel >= 2;
+   }
 
 public:
    entvars_t *pev;
 
    int m_wantedTeam; // player team bot wants select
    int m_wantedClass; // player model bot wants to select
-
-   int m_difficulty;
+   int m_difficulty; // bots hard level
    int m_moneyAmount; // amount of money in bot's bank
 
-   Personality m_personality;
    float m_spawnTime; // time this bot spawned
    float m_timeTeamOrder; // time of last radio command
    float m_slowFrameTimestamp; // time to per-second think
    float m_timeRepotingInDelay; // time to delay report-in
-
-   bool m_isVIP; // bot is vip?
+   float m_nextBuyTime; // next buy time
+   float m_checkDarkTime; // check for darkness time
+   float m_preventFlashing; // bot turned away from flashbang
+   float m_flashLevel; // flashlight level
+   float m_blindTime; // time when bot is blinded
+   float m_blindMoveSpeed; // mad speeds when bot is blind
+   float m_blindSidemoveSpeed; // mad side move speeds when bot is blind
+   float m_fallDownTime; // time bot started to fall 
+   float m_duckForJump; // is bot needed to duck for double jump
+   float m_baseAgressionLevel; // base aggression level (on initializing)
+   float m_baseFearLevel; // base fear level (on initializing)
+   float m_agressionLevel; // dynamic aggression level (in game)
+   float m_fearLevel; // dynamic fear level (in game)
+   float m_nextEmotionUpdate; // next time to sanitize emotions
+   float m_thinkFps; // skip some frames in bot thinking
+   float m_thinkInterval; // interval between frames
+   float m_goalValue; // ranking value for this waypoint
+   float m_viewDistance; // current view distance
+   float m_maxViewDistance; // maximum view distance
+   float m_retreatTime; // time to retreat?
+   float m_enemyUpdateTime; // time to check for new enemies
+   float m_enemyReachableTimer; // time to recheck if enemy reachable
+   float m_enemyIgnoreTimer; // ignore enemy for some time
+   float m_seeEnemyTime; // time bot sees enemy
+   float m_enemySurpriseTime; // time of surprise
+   float m_idealReactionTime; // time of base reaction
+   float m_actualReactionTime; // time of current reaction time
+   float m_timeNextTracking; // time waypoint index for tracking player is recalculated
+   float m_firePause; // time to pause firing
+   float m_shootTime; // time to shoot
+   float m_timeLastFired; // time to last firing
 
    int m_numEnemiesLeft; // number of enemies alive left on map
    int m_numFriendsLeft; // number of friend alive left on map
-
    int m_retryJoin; // retry count for chosing team/class
    int m_startAction; // team/class selection state
-
-   bool m_notKilled; // has the player been killed or has he just respawned
-   bool m_notStarted; // team/class not chosen yet
-
    int m_voteKickIndex; // index of player to vote against
    int m_lastVoteKick; // last index
    int m_voteMap; // number of map to vote for
    int m_logotypeIndex; // index for logotype
+   int m_buyState; // current count in buying
+   int m_blindButton; // buttons bot press, when blind
+   int m_radioOrder; // actual command
+   int m_actMessageIndex; // current processed message
+   int m_pushMessageIndex; // offset for next pushed message
+   int m_prevGoalIndex; // holds destination goal waypoint
+   int m_chosenGoalIndex; // used for experience, same as above
+   int m_lastDamageType; // stores last damage
+   int m_team; // bot team
+   int m_currentWeapon; // one current weapon for each bot
+   int m_ammoInClip[MAX_WEAPONS]; // ammo in clip for each weapons
+   int m_ammo[MAX_AMMO_SLOTS]; // total ammo amounts
 
+   bool m_isVIP; // bot is vip?
+   bool m_notKilled; // has the player been killed or has he just respawned
+   bool m_notStarted; // team/class not chosen yet
    bool m_ignoreBuyDelay; // when reaching buyzone in the middle of the round don't do pauses
    bool m_inBombZone; // bot in the bomb zone or not
-   int m_buyState; // current count in buying
-   float m_nextBuyTime; // next buy time
-   float m_checkDarkTime; // check for darkness time
-
    bool m_inBuyZone; // bot currently in buy zone
    bool m_inVIPZone; // bot in the vip satefy zone
    bool m_buyingFinished; // done with buying
@@ -1109,146 +1096,61 @@ public:
    bool m_hasProgressBar; // has progress bar on a HUD
    bool m_jumpReady; // is double jump ready
    bool m_canChooseAimDirection; // can choose aiming direction
-   float m_turnAwayFromFlashbang; // bot turned away from flashbang
-
-   float m_flashLevel; // flashlight level
-   float m_blindTime; // time when bot is blinded
-   float m_blindMoveSpeed; // mad speeds when bot is blind
-   float m_blindSidemoveSpeed; // mad side move speeds when bot is blind
-   int m_blindButton; // buttons bot press, when blind
+   bool m_isEnemyReachable; // direct line to enemy
 
    edict_t *m_doubleJumpEntity; // pointer to entity that request double jump
    edict_t *m_radioEntity; // pointer to entity issuing a radio command
-   int m_radioOrder; // actual command
-
-   float m_fallDownTime; // time bot started to fall 
-   float m_duckForJump; // is bot needed to duck for double jump
-   float m_baseAgressionLevel; // base aggression level (on initializing)
-   float m_baseFearLevel; // base fear level (on initializing)
-   float m_agressionLevel; // dynamic aggression level (in game)
-   float m_fearLevel; // dynamic fear level (in game)
-   float m_nextEmotionUpdate; // next time to sanitize emotions
-   float m_thinkFps; // skip some frames in bot thinking
-   float m_thinkInterval; // interval between frames
-
-   int m_actMessageIndex; // current processed message
-   int m_pushMessageIndex; // offset for next pushed message
-
-   int m_prevGoalIndex; // holds destination goal waypoint
-   int m_chosenGoalIndex; // used for experience, same as above
-   float m_goalValue; // ranking value for this waypoint
+   edict_t *m_enemy; // pointer to enemy entity
+   edict_t *m_lastEnemy; // pointer to last enemy entity
+   edict_t *m_lastVictim; // pointer to killed entity
+   edict_t *m_trackingEdict; // pointer to last tracked player when camping/hiding
 
    Vector m_waypointOrigin; // origin of waypoint
    Vector m_destOrigin; // origin of move destination
    Vector m_position; // position to move to in move to position task
    Vector m_doubleJumpOrigin; // origin of double jump
-
-   float m_viewDistance; // current view distance
-   float m_maxViewDistance; // maximum view distance
    Vector m_lastEnemyOrigin; // vector to last enemy origin
+  
    ChatCollection m_sayTextBuffer; // holds the index & the actual message of the last unprocessed text message of a player
    BurstMode m_weaponBurstMode; // bot using burst mode? (famas/glock18, but also silencer mode)
-
-   edict_t *m_enemy; // pointer to enemy entity
-   float m_retreatTime; // time to retreat?
-   float m_enemyUpdateTime; // time to check for new enemies
-   float m_enemyReachableTimer; // time to recheck if enemy reachable
-   float m_enemyIgnoreTimer; // ignore enemy for some time
-   bool m_isEnemyReachable; // direct line to enemy
-
-   float m_seeEnemyTime; // time bot sees enemy
-   float m_enemySurpriseTime; // time of surprise
-   float m_idealReactionTime; // time of base reaction
-   float m_actualReactionTime; // time of current reaction time
-
-   edict_t *m_lastEnemy; // pointer to last enemy entity
-   edict_t *m_lastVictim; // pointer to killed entity
-   edict_t *m_trackingEdict; // pointer to last tracked player when camping/hiding
-   float m_timeNextTracking; // time waypoint index for tracking player is recalculated
-
-   float m_firePause; // time to pause firing
-   float m_shootTime; // time to shoot
-   float m_timeLastFired; // time to last firing
-   int m_lastDamageType; // stores last damage
-
-   int m_currentWeapon; // one current weapon for each bot
-   int m_ammoInClip[MAX_WEAPONS]; // ammo in clip for each weapons
-   int m_ammo[MAX_AMMO_SLOTS]; // total ammo amounts
-   int m_team; // bot team
+   Personality m_personality; // bots type
    Array<Task> m_tasks;
 
+public:
    Bot (edict_t *bot, int difficulty, int personality, int team, int member, const String &steamId);
    ~Bot (void);
 
-   int ammo (void);
-   inline int ammoClip (void) {
-      return m_ammoInClip[m_currentWeapon];
-   }
-
-   inline edict_t *ent (void) {
-      return pev->pContainingEntity;
-   };
-   int index (void);
-
-   inline Vector centerPos (void) {
-      return (pev->absmax + pev->absmin) * 0.5;
-   };
-   inline Vector eyePos (void) {
-      return pev->origin + pev->view_ofs;
-   };
-
-   float calcThinkInterval (void);
-
-   // the main function that decides intervals of running bot ai
-   void slowFrame (void);
-
-   /// the things that can be executed while skipping frames
-   void frameThink (void);
-
+public:
+   void slowFrame (void); // the main function that decides intervals of running bot ai
+   void fastFrame (void); /// the things that can be executed while skipping frames
    void processBlind (int alpha);
    void processDamage (edict_t *inflictor, int damage, int armor, int bits);
-
    void showDebugOverlay (void);
    void newRound (void);
    void processBuyzoneEntering (int buyState);
    void pushMsgQueue (int message);
    void prepareChatMessage (const String &message);
-   bool searchOptimalPoint (void);
-   bool seesEntity (const Vector &dest, bool fromBody = false);
-
+   void checkForChat (void);
    void showChaterIcon (bool show);
    void clearSearchNodes (void);
    void processBreakables (edict_t *touch);
    void avoidIncomingPlayers (edict_t *touch);
-
    void startTask (TaskID id, float desire, int data, float time, bool resume);
    void clearTask (TaskID id);
    void filterTasks (void);
    void clearTasks (void);
-
-   Task *task (void);
-
-   inline TaskID taskId (void) {
-      return task ()->id;
-   }
    void dropWeaponForUser (edict_t *user, bool discardC4);
-
    void say (const char *text);
    void sayTeam (const char *text);
-
    void pushChatMessage (int type, bool isTeamSay = false);
    void pushRadioMessage (int message);
    void pushChatterMessage (int message);
    void processChatterMessage (const char *tempMessage);
    void tryHeadTowardRadioMessage (void);
-
    void kill (void);
    void kick (void);
-
    void resetDoubleJump (void);
    void startDoubleJump (edict_t *ent);
-
-   int locatePlantedC4 (void);
 
    bool hasHostage (void);
    bool usesRifle (void);
@@ -1262,19 +1164,44 @@ public:
    bool hasSecondaryWeapon (void);
    bool hasShield (void);
    bool isShieldDrawn (void);
+   bool searchOptimalPoint (void);
+   bool seesEntity (const Vector &dest, bool fromBody = false);
+
+   int index (void);
+   int getAmmo (void);
+   int getNearestToPlantedBomb (void);
+
+   float getFrameInterval (void);
+   Task *getTask (void);
+
+public:
+   inline int getAmmoInClip (void) const {
+      return m_ammoInClip[m_currentWeapon];
+   }
+   
+   inline Vector getCenter (void) const {
+      return (pev->absmax + pev->absmin) * 0.5;
+   };
+
+   inline Vector getEyesPos (void) const {
+      return pev->origin + pev->view_ofs;
+   };
+
+   inline TaskID taskId (void)  {
+      return getTask ()->id;
+   }
+
+   inline edict_t *ent (void) {
+      return pev->pContainingEntity;
+   };
 };
 
 // manager class
-class BotManager : public Singleton <BotManager> {
+class BotManager final : public Singleton <BotManager> {
 private:
-   Array <CreateQueue> m_creationTab; // bot creation tab
-
-   Bot *m_bots[MAX_ENGINE_PLAYERS]; // all available bots
-
    float m_timeRoundStart;
    float m_timeRoundEnd;
    float m_timeRoundMid;
-
    float m_maintainTime; // time to maintain bot creation
    float m_quotaMaintainTime; // time to maintain bot quota
    float m_grenadeUpdateTime; // time to update active grenades
@@ -1292,16 +1219,17 @@ private:
    bool m_leaderChoosen[MAX_TEAM_COUNT]; // is team leader choose theese round
    bool m_economicsGood[MAX_TEAM_COUNT]; // is team able to buy anything
    bool m_deathMsgSent; // for fake ping
-
    bool m_bombPlanted;
    bool m_botsCanPause;
    bool m_roundEnded;
 
    Array <edict_t *> m_activeGrenades; // holds currently active grenades on the map
    Array <edict_t *> m_intrestingEntities;  // holds currently intresting entities on the map
-
-   edict_t *m_killerEntity; // killer entity for bots
+   Array <CreateQueue> m_creationTab; // bot creation tab
    Array <Task> m_filters;
+
+   Bot *m_bots[MAX_ENGINE_PLAYERS]; // all available bots
+   edict_t *m_killerEntity; // killer entity for bots
 
 protected:
    BotCreationResult create (const String &name, int difficulty, int personality, int team, int member);
@@ -1311,19 +1239,17 @@ public:
    ~BotManager (void);
 
 public:
-   bool isTeamStacked (int team);
-   void setBombPlanted (bool isPlanted);
-
-   int index (edict_t *ent);
    Bot *getBot (int index);
    Bot *getBot (edict_t *ent);
    Bot *getAliveBot (void);
    Bot *getHighfragBot (int team);
 
+   int index (edict_t *ent);
    int getHumansCount (bool ignoreSpectators = false);
    int getAliveHumansCount (void);
    int getBotCount (void);
 
+   void setBombPlanted (bool isPlanted);
    void countTeamPlayers (int &ts, int &cts);
    void slowFrame (void);
    void frame (void);
@@ -1359,40 +1285,41 @@ public:
    void sendDeathMsgFix (void);
    void captureChatRadio (const char *cmd, const char *arg, edict_t *ent);
    void notifyBombDefuse (void);
+   void execGameEntity (entvars_t *vars);
 
-   static void execGameEntity (entvars_t *vars);
+   bool isTeamStacked (int team);
 
 public:
-   inline Array <edict_t *> &searchActiveGrenades (void) {
+   Array <edict_t *> &searchActiveGrenades (void) {
       return m_activeGrenades;
    }
 
-   inline Array <edict_t *> &searchIntrestingEntities (void) {
+   Array <edict_t *> &searchIntrestingEntities (void) {
       return m_intrestingEntities;
    }
 
-   inline bool hasActiveGrenades (void) {
+   bool hasActiveGrenades (void) const {
       return !m_activeGrenades.empty ();
    }
 
-   inline bool hasIntrestingEntities (void) {
+   bool hasIntrestingEntities (void) const {
       return !m_intrestingEntities.empty ();
    }
 
-   inline bool checkTeamEco (int team) {
+   bool checkTeamEco (int team) const {
       return m_economicsGood[team];
    }
 
-   inline int getLastWinner (void) const {
+   int getLastWinner (void) const {
       return m_lastWinner;
    }
 
-   inline void setLastWinner (int winner) {
+   void setLastWinner (int winner) {
       m_lastWinner = winner;
    }
 
    // get the list of filters
-   inline Array <Task> &getFilters (void) {
+   Array <Task> &getFilters (void) {
       return m_filters;
    }
 
@@ -1400,89 +1327,94 @@ public:
       addbot ("", -1, -1, -1, -1, manual);
    }
 
-   inline void updateDeathMsgState (bool sent) {
+   void updateDeathMsgState (bool sent) {
       m_deathMsgSent = sent;
    }
 
-   inline bool isBombPlanted (void) const {
+   bool isBombPlanted (void) const {
       return m_bombPlanted;
    }
 
-   inline float getTimeBombPlanted (void) const {
+   float getTimeBombPlanted (void) const {
       return m_timeBombPlanted;
    }
 
-   inline float getRoundStartTime (void) const {
+   float getRoundStartTime (void) const {
       return m_timeRoundStart;
    }
 
-   inline float getRoundMidTime (void) const {
+   float getRoundMidTime (void) const {
       return m_timeRoundMid;
    }
 
-   inline float getRoundEndTime (void) const {
+   float getRoundEndTime (void) const {
       return m_timeRoundEnd;
    }
 
-   inline bool isRoundOver (void) const {
+   bool isRoundOver (void) const {
       return m_roundEnded;
    }
 
-   inline void setRoundOver (const bool over) {
+   void setRoundOver (const bool over) {
       m_roundEnded = over;
    }
 
-   inline bool canPause (void) const {
+   bool canPause (void) const {
       return m_botsCanPause;
    }
 
-   inline void setCanPause (const bool pause) {
+   void setCanPause (const bool pause) {
       m_botsCanPause = pause;
    }
 
-   inline bool hasBombSay (int type) {
+   bool hasBombSay (int type) {
       return (m_bombSayStatus & type) == type;
    }
 
-   inline void clearBombSay (int type) {
+   void clearBombSay (int type) {
       m_bombSayStatus &= ~type;
    }
 
-   inline void setPlantedBombSearchTimestamp (const float timestamp) {
+   void setPlantedBombSearchTimestamp (const float timestamp) {
       m_plantSearchUpdateTime = timestamp;
    }
 
-   inline float getPlantedBombSearchTimestamp (void) const {
+   float getPlantedBombSearchTimestamp (void) const {
       return m_plantSearchUpdateTime;
    }
 
-   inline void setLastRadioTimestamp (const int team, const float timestamp) {
+   void setLastRadioTimestamp (const int team, const float timestamp) {
       m_lastRadioTime[team] = timestamp;
    }
 
-   inline float getLastRadioTimestamp (const int team) const {
+   float getLastRadioTimestamp (const int team) const {
       return m_lastRadioTime[team];
    }
 
-   inline void setLastRadio (const int team, const int radio) {
+   void setLastRadio (const int team, const int radio) {
       m_lastRadio[team] = radio;
    }
 
-   inline int getLastRadio (const int team) const {
+   int getLastRadio (const int team) const {
       return m_lastRadio[team];
    }
 
-   inline void setLastChatTimestamp (const float timestamp) {
+   void setLastChatTimestamp (const float timestamp) {
       m_lastChatTime = timestamp;
    }
 
-   inline float getLastChatTimestamp (void) const {
+   float getLastChatTimestamp (void) const {
       return m_lastChatTime;
+   }
+
+   // some bots are online ?
+   bool hasBotsOnline (void) {
+      return getBotCount () > 0;
    }
 };
 
 // waypoint operation class
-class Waypoint : public Singleton <Waypoint> {
+class Waypoint final : public Singleton <Waypoint> {
 public:
    friend class Bot;
 
@@ -1491,40 +1423,34 @@ private:
       int x, y, z;
    };
 
-   Path *m_paths[MAX_WAYPOINTS];
-   Experience *m_experience;
-
-   bool m_waypointPaths;
-   bool m_isOnLadder;
-   bool m_endJumpPoint;
-   bool m_learnJumpWaypoint;
-   bool m_waypointsChanged;
-   float m_timeJumpStarted;
-
-   Vector m_learnVelocity;
-   Vector m_learnPosition;
-   Vector m_bombPos;
-
    int m_editFlags;
    int m_numWaypoints;
    int m_loadTries;
    int m_cacheWaypointIndex;
    int m_lastJumpWaypoint;
    int m_visibilityIndex;
+   int m_findWPIndex;
+   int m_facingAtIndex;
    int m_highestDamage[MAX_TEAM_COUNT];
 
-   Vector m_lastWaypoint;
-   uint8 m_visLUT[MAX_WAYPOINTS][MAX_WAYPOINTS / 4];
-
+   float m_timeJumpStarted;
    float m_autoPathDistance;
    float m_pathDisplayTime;
    float m_arrowDisplayTime;
    float m_waypointDisplayTime[MAX_WAYPOINTS];
    float m_waypointLightLevel[MAX_WAYPOINTS];
 
-   int m_findWPIndex;
-   int m_facingAtIndex;
-   char m_infoBuffer[MAX_PRINT_BUFFER];
+   bool m_waypointPaths;
+   bool m_isOnLadder;
+   bool m_endJumpPoint;
+   bool m_learnJumpWaypoint;
+   bool m_waypointsChanged;
+   bool m_needsVisRebuild;
+
+   Vector m_learnVelocity;
+   Vector m_learnPosition;
+   Vector m_bombPos;
+   Vector m_lastWaypoint;
 
    IntArray m_terrorPoints;
    IntArray m_ctPoints;
@@ -1534,160 +1460,166 @@ private:
    IntArray m_rescuePoints;
    IntArray m_visitedGoals;
    IntArray m_buckets[MAX_WAYPOINT_BUCKET_MAX][MAX_WAYPOINT_BUCKET_MAX][MAX_WAYPOINT_BUCKET_MAX];
+   String m_tempInfo;
 
    FloydMatrix *m_matrix;
+   Experience *m_experience;
+   edict_t *m_editor;
+
+   Path *m_paths[MAX_WAYPOINTS];
+   uint8 m_visLUT[MAX_WAYPOINTS][MAX_WAYPOINTS / 4];
 
 public:
-   bool m_needsVisRebuild;
-
    Waypoint (void);
    ~Waypoint (void);
 
 public:
-   void init (void);
-   void loadExperience (void);
-   void loadVisibility (void);
-   void initTypes (void);
-   void initLightLevels (void);
-
-   void addPath (int addIndex, int pathIndex, float distance);
 
    int getFacingIndex (void);
    int getFarest (const Vector &origin, float maxDistance = 32.0);
    int getNearest (const Vector &origin, float minDistance = 9999.0f, int flags = -1);
    int getNearestNoBuckets (const Vector &origin, float minDistance = 9999.0f, int flags = -1);
    int getEditorNeareset (void);
-   IntArray searchRadius (float radius, const Vector &origin, int maxCount = -1);
+   int getDangerIndex (int team, int start, int goal);
+   int getDangerValue (int team, int start, int goal);
+   int getDangerDamage (int team, int start, int goal);
+   int getPathDist (int srcIndex, int destIndex);
+   int clearConnections (int index);
 
+   float calculateTravelTime (float maxSpeed, const Vector &src, const Vector &origin);
+
+   bool load (void);
+   bool isVisible (int srcIndex, int destIndex);
+   bool isStandVisible (int srcIndex, int destIndex);
+   bool isDuckVisible (int srcIndex, int destIndex);
+   bool isConnected (int pointA, int pointB);
+   bool isConnected (int index);
+   bool isReachable (Bot *bot, int index);
+   bool isNodeReacheable (const Vector &src, const Vector &destination);
+   bool checkNodes (void);
+   bool loadPathMatrix (void);
+   bool saveExtFile (const char *ext, const char *type, const char *magic, int version, uint8 *data, int32 size);
+   bool loadExtFile (const char *ext, const char *type, const char *magic, int version, uint8 *data);
+   bool isVisited (int index);
+
+   void save (void);
+   void init (void);
+   void frame (void);
+   void loadExperience (void);
+   void loadVisibility (void);
+   void initTypes (void);
+   void initLightLevels (void);
+   void addPath (int addIndex, int pathIndex, float distance);
    void push (int flags, const Vector &waypointOrigin = Vector::null ());
    void erase (int target);
    void toggleFlags (int toggleFlag);
    void setRadius (int index, float radius);
-   bool isConnected (int pointA, int pointB);
-   bool isConnected (int index);
    void rebuildVisibility (void);
    void pathCreate (char dir);
    void erasePath (void);
    void cachePoint (int index);
-
-   float calculateTravelTime (float maxSpeed, const Vector &src, const Vector &origin);
-   bool isVisible (int srcIndex, int destIndex);
-   bool isStandVisible (int srcIndex, int destIndex);
-   bool isDuckVisible (int srcIndex, int destIndex);
    void calculatePathRadius (int index);
-
-   bool load (void);
-   void save (void);
    void cleanupPathMemory (void);
-   int removeUselessConnections (int index, bool outputToConsole = true);
-
-   bool isReachable (Bot *bot, int index);
-   bool isNodeReacheable (const Vector &src, const Vector &destination);
-   void frame (void);
-   bool checkNodes (void);
    void saveExperience (void);
    void saveVisibility (void);
    void addBasic (void);
    void eraseFromDisk (void);
-
    void initPathMatrix (void);
    void savePathMatrix (void);
-   bool loadPathMatrix (void);
-
-   bool saveExtFile (const char *ext, const char *type, const char *magic, int version, uint8 *data, int32 size);
-   bool loadExtFile (const char *ext, const char *type, const char *magic, int version, uint8 *data);
-
-   int getPathDist (int srcIndex, int destIndex);
-   const char *getInformation (int id);
-
    void setSearchIndex (int index);
    void startLearnJump (void);
-
-   bool isVisited (int index);
    void setVisited (int index);
    void clearVisited (void);
+   void initBuckets (void);
+   void addToBucket (const Vector &pos, int index);
+   void eraseFromBucket (const Vector &pos, int index);
+   void setBombPos (bool reset = false, const Vector &pos = Vector::null ());
+   void closeSocket (int sock);
+   void updateGlobalExperience (void);
 
    const char *getDataDirectory (bool isMemoryFile = false);
    const char *getWaypointFilename (bool isMemoryFile = false);
-   void setBombPos (bool reset = false, const Vector &pos = Vector::null ());
 
-   void closeSocket (int sock);
    WaypointDownloadError downloadWaypoint (void);
-
-   // initalize waypoint buckets
-   void initBuckets (void);
-
-   void addToBucket (const Vector &pos, int index);
-   void eraseFromBucket (const Vector &pos, int index);
-
    Bucket locateBucket (const Vector &pos);
+
+   IntArray searchRadius (float radius, const Vector &origin, int maxCount = -1);
    IntArray &getWaypointsInBucket (const Vector &pos);
 
-   void updateGlobalExperience (void);
-
-   int getDangerIndex (int team, int start, int goal);
-   int getDangerValue (int team, int start, int goal);
-   int getDangerDamage (int team, int start, int goal);
-
 public:
-   inline Experience *getRawExperience (void) {
+   Experience *getRawExperience (void) {
       return m_experience;
    }
 
-   inline int getHighestDamageForTeam (int team) const {
+   int getHighestDamageForTeam (int team) const {
       return m_highestDamage[team];
    }
 
-   inline void setHighestDamageForTeam (int team, int value) {
+   void setHighestDamageForTeam (int team, int value) {
       m_highestDamage[team] = value;
    }
 
-   inline const char *getAuthor (void) const {
-      return m_infoBuffer;
+   const char *getAuthor (void) const {
+      return m_tempInfo.chars ();
    }
 
-   inline bool hasChanged (void) const {
+   bool hasChanged (void) const {
       return m_waypointsChanged;
    }
 
-   inline bool hasEditFlag (int flag) const {
+   bool hasEditFlag (int flag) const {
       return !!(m_editFlags & flag);
    }
 
-   inline void setEditFlag (int flag) {
+   void setEditFlag (int flag) {
       m_editFlags |= flag;
    }
 
-   inline void clearEditFlag (int flag) {
+   void clearEditFlag (int flag) {
       m_editFlags &= ~flag;
    }
 
-   inline void setAutoPathDistance (const float distance) {
+   void setAutoPathDistance (const float distance) {
       m_autoPathDistance = distance;
    }
 
-   inline const Vector &getBombPos (void) {
+   const Vector &getBombPos (void) const {
       return m_bombPos;
    }
 
    // access paths
-   inline Path &operator [] (int index) {
+   Path &operator [] (int index) {
       return *m_paths[index];
    }
 
    // check waypoints range
-   inline bool exists (int index) const {
+   bool exists (int index) const {
       return index >= 0 && index < m_numWaypoints;
    }
 
    // get real waypoint num
-   inline int length (void) const {
+   int length (void) const {
       return m_numWaypoints;
    }
 
    // get the light level of waypoint
-   inline float getLightLevel (int id) const {
+   float getLightLevel (int id) const {
       return m_waypointLightLevel[id];
+   }
+
+   // check if has editor
+   bool hasEditor (void) const {
+      return !!m_editor;
+   }
+
+   // set's the waypoint editor
+   void setEditor (edict_t *ent) {
+      m_editor = ent;
+   }
+
+   // get the current waypoint editor
+   edict_t *getEditor (void) {
+      return m_editor;
    }
 };
 
@@ -1737,52 +1669,52 @@ public:
 public:
 
    // get the chat array
-   inline Array <StringArray> &getChat (void) {
+   Array <StringArray> &getChat (void) {
       return m_chat;
    }
 
    // get's the chatter array
-   inline Array <Array <ChatterItem>> &getChatter (void) {
+   Array <Array <ChatterItem>> &getChatter (void) {
       return m_chatter;
    }
 
    // get's the replies array
-   inline Array <Keywords> &getReplies (void) {
+   Array <Keywords> &getReplies (void) {
       return m_replies;
    }
 
    // get's the weapon info data
-   inline Array <WeaponInfo> &getWeapons (void) {
+   Array <WeaponInfo> &getWeapons (void) {
       return m_weapons;
    }
 
    // get's raw weapon info
-   inline WeaponInfo *getRawWeapons (void) {
+   WeaponInfo *getRawWeapons (void) {
       return m_weapons.begin ();
    }
 
    // set's the weapon properties
-   inline void setWeaponProp (const WeaponProp &prop) {
+   void setWeaponProp (const WeaponProp &prop) {
       m_weaponProps[prop.id] = prop;
    }
 
    // get's the weapons prop
-   inline const WeaponProp &getWeaponProp (int id) const {
+   const WeaponProp &getWeaponProp (int id) const {
       return m_weaponProps[id];
    }
 
    // get's weapon preferences for personality
-   inline int *getWeaponPrefs (int personality) const {
+   int *getWeaponPrefs (int personality) const {
       return m_weaponPrefs[personality];
    }
 
    // get economics value
-   inline int *getEconLimit (void) {
+   int *getEconLimit (void) {
       return m_botBuyEconomyTable;
    }
 
    // get's grenade buy percents
-   inline bool chanceToBuyGrenade (const int grenadeType) const {
+   bool chanceToBuyGrenade (const int grenadeType) const {
       return RandomSequence::ref ().chance (m_grenadeBuyPrecent[grenadeType]);
    }
 };
@@ -1869,27 +1801,27 @@ public:
 public:
 
    // re-show welcome after changelevel ?
-   inline void setNeedForWelcome (bool need) {
+   void setNeedForWelcome (bool need) {
       m_needToSendWelcome = need;
    }
 
    // get array of clients
-   inline Array <Client> &getClients (void) {
+   Array <Client> &getClients (void) {
       return m_clients;
    }
 
    // get clients as const-reference
-   inline const Array <Client> &getClients (void) const {
+   const Array <Client> &getClients (void) const {
       return m_clients;
    }
 
    // get single client as ref
-   inline Client &getClient (const int index) {
+   Client &getClient (const int index) {
       return m_clients[index];
    }
 
    // checks if string is not empty
-   inline bool isEmptyStr (const char *input) {
+   bool isEmptyStr (const char *input) const {
       if (input == nullptr) {
          return true;
       }
@@ -1963,6 +1895,8 @@ private:
    int cmdWaypointPathCreate (void);
    int cmdWaypointPathDelete (void);
    int cmdWaypointPathSetAutoDistance (void);
+   int cmdWaypointAcquireEditor (void);
+   int cmdWaypointReleaseEditor (void);
 
 private:
    int menuMain (int item);

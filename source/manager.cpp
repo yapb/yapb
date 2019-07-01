@@ -136,17 +136,17 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
 
    // do not allow create bots when there is no waypoints
    if (!waypoints.length ()) {
-      game.centerPrint ("Map is not waypointed. Cannot create bot");
+      ctrl.msg ("Map is not waypointed. Cannot create bot");
       return BOT_RESULT_NAV_ERROR;
    }
 
    // don't allow creating bots with changed waypoints (distance tables are messed up)
    else if (waypoints.hasChanged ())  {
-      game.centerPrint ("Waypoints have been changed. Load waypoints again...");
+      ctrl.msg ("Waypoints have been changed. Load waypoints again...");
       return BOT_RESULT_NAV_ERROR;
    }
    else if (team != -1 && isTeamStacked (team - 1)) {
-      game.centerPrint ("Desired team is stacked. Unable to proceed with bot creation");
+      ctrl.msg ("Desired team is stacked. Unable to proceed with bot creation");
       return BOT_RESULT_TEAM_STACKED;
    }
    if (difficulty < 0 || difficulty > 4) {
@@ -184,7 +184,7 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
          steamId = botName->steamId;
       }
       else {
-         resultName.format ("yapb_%d.%d", rng.getInt (0, 10), rng.getInt (0, 10)); // just pick ugly random name
+         resultName.assign ("yapb_%d.%d", rng.getInt (0, 10), rng.getInt (0, 10)); // just pick ugly random name
       }
    }
    else {
@@ -193,7 +193,7 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
 
    if (!util.isEmptyStr (yb_name_prefix.str ())) {
       String prefixed; // temp buffer for storing modified name
-      prefixed.format ("%s %s", yb_name_prefix.str (), resultName.chars ());
+      prefixed.assign ("%s %s", yb_name_prefix.str (), resultName.chars ());
 
       // buffer has been modified, copy to real name
       resultName = cr::move (prefixed);
@@ -201,7 +201,7 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
    bot = engfuncs.pfnCreateFakeClient (resultName.chars ());
 
    if (game.isNullEntity (bot)) {
-      game.centerPrint ("Maximum players reached (%d/%d). Unable to create Bot.", game.maxClients (), game.maxClients ());
+      ctrl.msg ("Maximum players reached (%d/%d). Unable to create Bot.", game.maxClients (), game.maxClients ());
       return BOT_RESULT_MAX_PLAYERS_REACHED;
    }
    int index = game.indexOfEntity (bot) - 1;
@@ -218,7 +218,7 @@ BotCreationResult BotManager::create (const String &name, int difficulty, int pe
    if (botName != nullptr) {
       botName->usedBy = m_bots[index]->index ();
    }
-   game.print ("Connecting Bot...");
+   ctrl.msg ("Connecting Bot...");
 
    return BOT_RESULT_CREATED;
 }
@@ -349,7 +349,7 @@ void BotManager::maintainQuota (void) {
 
    if (waypoints.length () < 1 || waypoints.hasChanged ()) {
       if (yb_quota.integer () > 0) {
-         game.centerPrint ("Map is not waypointed. Cannot create bot");
+         ctrl.msg ("Map is not waypointed. Cannot create bot");
       }
       yb_quota.set (0);
       return;
@@ -374,7 +374,7 @@ void BotManager::maintainQuota (void) {
          yb_quota.set (getBotCount ());
       }
       else if (callResult == BOT_RESULT_TEAM_STACKED) {
-         game.print ("Could not add bot to the game: Team is stacked (to disable this check, set mp_limitteams and mp_autoteambalance to zero and restart the round)");
+         ctrl.msg ("Could not add bot to the game: Team is stacked (to disable this check, set mp_limitteams and mp_autoteambalance to zero and restart the round)");
 
          m_creationTab.clear ();
          yb_quota.set (getBotCount ());
@@ -423,6 +423,9 @@ void BotManager::maintainQuota (void) {
       desiredBotCount = cr::min <int> (desiredBotCount, maxClients - humanPlayersInGame);
    }
    int maxSpawnCount = game.getSpawnCount (TEAM_TERRORIST) + game.getSpawnCount (TEAM_COUNTER);
+
+   // sent message only to console from here
+   ctrl.setFromConsole (true);
 
    // add bots if necessary
    if (desiredBotCount > botsInGame && botsInGame < maxSpawnCount) {
@@ -531,13 +534,13 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
    for (int i = 0; i <= toAdd; i++) {
       addbot ("", difficulty, personality, selection, -1, true);
    }
-   game.centerPrint ("Fill Server with %s bots...", &teams[selection][0]);
+   ctrl.msg ("Fill Server with %s bots...", &teams[selection][0]);
 }
 
 void BotManager::kickEveryone (bool instant, bool zeroQuota) {
    // this function drops all bot clients from server (this function removes only yapb's)`q
 
-   game.centerPrint ("Bots are removed from server.");
+   ctrl.msg ("Bots are removed from server.");
 
    if (zeroQuota) {
       decrementQuota (0);
@@ -583,7 +586,7 @@ void BotManager::killAllBots (int team) {
          m_bots[i]->kill ();
       }
    }
-   game.centerPrint ("All Bots died !");
+   ctrl.msg ("All Bots died !");
 }
 
 void BotManager::kickBot (int index) {
@@ -705,20 +708,20 @@ void BotManager::setWeaponMode (int selection) {
    }
    yb_jasonmode.set (selection == 0 ? 1 : 0);
 
-   game.centerPrint ("%s weapon mode selected", &modes[selection][0]);
+   ctrl.msg ("%s weapon mode selected", &modes[selection][0]);
 }
 
 void BotManager::listBots (void) {
    // this function list's bots currently playing on the server
 
-   game.print ("%-3.5s %-9.13s %-17.18s %-3.4s %-3.4s %-3.4s", "index", "name", "personality", "team", "difficulty", "frags");
+   ctrl.msg ("%-3.5s %-9.13s %-17.18s %-3.4s %-3.4s %-3.4s", "index", "name", "personality", "team", "difficulty", "frags");
 
    for (int i = 0; i < game.maxClients (); i++) {
       Bot *bot = getBot (i);
 
       // is this player slot valid
       if (bot != nullptr) {
-         game.print ("[%-3.1d] %-9.13s %-17.18s %-3.4s %-3.1d %-3.1d", i, STRING (bot->pev->netname), bot->m_personality == PERSONALITY_RUSHER ? "rusher" : bot->m_personality == PERSONALITY_NORMAL ? "normal" : "careful", bot->m_team == TEAM_COUNTER ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags));
+         ctrl.msg ("[%-3.1d] %-9.13s %-17.18s %-3.4s %-3.1d %-3.1d", i, STRING (bot->pev->netname), bot->m_personality == PERSONALITY_RUSHER ? "rusher" : bot->m_personality == PERSONALITY_NORMAL ? "normal" : "careful", bot->m_team == TEAM_COUNTER ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags));
       }
    }
 }
@@ -859,7 +862,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    bot->v.frags = 0;
 
    // create the player entity by calling MOD's player function
-   BotManager::execGameEntity (&bot->v);
+   bots.execGameEntity (&bot->v);
 
    // set all info buffer keys for this bot
    char *buffer = engfuncs.pfnGetInfoKeyBuffer (bot);
@@ -959,7 +962,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
    newRound ();
 }
 
-float Bot::calcThinkInterval (void) {
+float Bot::getFrameInterval (void) {
    return cr::fzero (m_thinkInterval) ? m_frameInterval : m_thinkInterval;
 }
 
@@ -1083,7 +1086,7 @@ void Bot::newRound (void) {
    m_isLeader = false;
    m_hasProgressBar = false;
    m_canChooseAimDirection = true;
-   m_turnAwayFromFlashbang = 0.0f;
+   m_preventFlashing = 0.0f;
 
    m_timeTeamOrder = 0.0f;
    m_timeRepotingInDelay = rng.getFloat (40.0f, 240.0f);
@@ -1263,10 +1266,10 @@ void Bot::kick (void) {
    pev->flags &= ~FL_FAKECLIENT;
 
    game.execCmd ("kick \"%s\"", username);
-   game.centerPrint ("Bot '%s' kicked", username);
+   ctrl.msg ("Bot '%s' kicked", username);
 }
 
-void Bot::processTeamJoin (void) {
+void Bot::updateTeamJoin (void) {
    // this function handles the selection of teams & class
 
    // cs prior beta 7.0 uses hud-based motd, so press fire once
@@ -1287,7 +1290,7 @@ void Bot::processTeamJoin (void) {
       if (bots.isTeamStacked (m_wantedTeam - 1)) {
          m_retryJoin = 0;
 
-         game.print ("Could not add bot to the game: Team is stacked (to disable this check, set mp_limitteams and mp_autoteambalance to zero and restart the round).");
+         ctrl.msg ("Could not add bot to the game: Team is stacked (to disable this check, set mp_limitteams and mp_autoteambalance to zero and restart the round).");
          kick ();
 
          return;
@@ -1465,14 +1468,14 @@ void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *en
       }
 
       for (const auto &client : util.getClients ()) {
-         if (!(client.flags & CF_USED) || team != client.team || alive != util.isAlive (client.ent)) {
+         if (!(client.flags & CF_USED) || (team != -1 && team != client.team) || alive != util.isAlive (client.ent)) {
             continue;
          }
          auto target = bots.getBot (client.ent);
-
+         
          if (target != nullptr) {
             target->m_sayTextBuffer.entityIndex = game.indexOfEntity (ent);
-
+   
             if (util.isEmptyStr (engfuncs.pfnCmd_Args ())) {
                continue;
             }
@@ -1735,19 +1738,20 @@ void Config::load (bool onlyMain) {
       setMemoryPointers = true;
    }
 
-   auto isCommentLine = [] (const char *line) {
-      char ch = *line;
+   auto isCommentLine = [] (const String &line) {
+      char ch = line.at (0);
       return ch == '#' || ch == '/' || ch == '\r' || ch == ';' || ch == 0 || ch == ' ';
    };
-
    MemFile fp;
-   char lineBuffer[512];
+
+   String lineBuffer;
+   lineBuffer.reserve (512);
 
    // this is does the same as exec of engine, but not overwriting values of cvars spcified in yb_ignore_cvars_on_changelevel
    if (onlyMain) {
       static bool firstLoad = true;
 
-      auto needsToIgnoreVar = [] (StringArray & list, const char *needle) {
+      auto needsToIgnoreVar = [] (StringArray &list, const char *needle) {
          for (auto &var : list) {
             if (var == needle) {
                return true;
@@ -1757,15 +1761,15 @@ void Config::load (bool onlyMain) {
       };
 
       if (util.openConfig ("yapb.cfg", "YaPB main config file is not found.", &fp, false)) {
-         while (fp.gets (lineBuffer, 255)) {
+         while (fp.getLine (lineBuffer)) {
             if (isCommentLine (lineBuffer)) {
                continue;
             }
             if (firstLoad) {
-               game.execCmd (lineBuffer);
+               game.execCmd (lineBuffer.chars ());
                continue;
             }
-            auto keyval = String (lineBuffer).split (" ");
+            auto keyval = lineBuffer.split (" ");
 
             if (keyval.length () > 1) {
                auto ignore = String (yb_ignore_cvars_on_changelevel.str ()).split (",");
@@ -1787,7 +1791,7 @@ void Config::load (bool onlyMain) {
                   }
                }
                else {
-                  game.execCmd (lineBuffer);
+                  game.execCmd (lineBuffer.chars ());
                }
             }
          }
@@ -1796,142 +1800,129 @@ void Config::load (bool onlyMain) {
       firstLoad = false;
       return;
    }
-   Keywords replies;
-
+  
    // reserve some space for chat
    m_chat.reserve (CHAT_TOTAL);
    m_chatter.reserve (CHATTER_MAX);
    m_botNames.reserve (CHATTER_MAX);
 
-   // NAMING SYSTEM INITIALIZATION
+   // naming system initialization
    if (util.openConfig ("names.cfg", "Name configuration file not found.", &fp, true)) {
       m_botNames.clear ();
 
-      while (fp.gets (lineBuffer, 255)) {
+      while (fp.getLine (lineBuffer)) {
+         lineBuffer.trim ();
+
          if (isCommentLine (lineBuffer)) {
             continue;
          }
-         StringArray pair = String (lineBuffer).split ("\t\t");
+         auto steamIdPair = lineBuffer.split ("\t\t");
 
-         if (pair.length () > 1) {
-            strncpy (lineBuffer, pair[0].trim ().chars (), cr::bufsize (lineBuffer));
+         if (steamIdPair.length () > 1) {
+            lineBuffer = steamIdPair[0].trim ();
          }
 
-         String::trimChars (lineBuffer);
-         lineBuffer[32] = 0;
-
+         // max botname is 32 characters
+         if (lineBuffer.length () > 32) {
+            lineBuffer[32] = '\0';
+         }
          BotName item;
-         item.name = lineBuffer;
+
+         item.name = cr::move (lineBuffer);
          item.usedBy = 0;
 
-         if (pair.length () > 1) {
-            item.steamId = pair[1].trim ();
+         if (steamIdPair.length () > 1) {
+            item.steamId = steamIdPair[1].trim ();
          }
          m_botNames.push (cr::move (item));
       }
       fp.close ();
    }
 
-   // CHAT SYSTEM CONFIG INITIALIZATION
+   // chat system config initialization
    if (util.openConfig ("chat.cfg", "Chat file not found.", &fp, true)) {
+      StringArray *chat = nullptr;
+      Keywords replies;
 
-      int chatType = -1;
+      // clear all the stuff before loading new one
+      for (auto &item : m_chat) {
+         item.clear ();
+      }
+      m_replies.clear ();
 
-      while (fp.gets (lineBuffer, 255)) {
+      while (fp.getLine (lineBuffer)) {
+         lineBuffer.trim ();
+
          if (isCommentLine (lineBuffer)) {
             continue;
          }
-         String section (lineBuffer, strlen (lineBuffer) - 1);
-         section.trim ();
 
-         if (section == "[KILLED]") {
-            chatType = 0;
-            continue;
+         if (game.is (GAME_LEGACY)) {
+            lineBuffer[79] = '\0';
          }
-         else if (section == "[BOMBPLANT]") {
-            chatType = 1;
-            continue;
-         }
-         else if (section == "[DEADCHAT]") {
-            chatType = 2;
-            continue;
-         }
-         else if (section == "[REPLIES]") {
-            chatType = 3;
-            continue;
-         }
-         else if (section == "[UNKNOWN]") {
-            chatType = 4;
-            continue;
-         }
-         else if (section == "[TEAMATTACK]") {
-            chatType = 5;
-            continue;
-         }
-         else if (section == "[WELCOME]") {
-            chatType = 6;
-            continue;
-         }
-         else if (section == "[TEAMKILL]") {
-            chatType = 7;
-            continue;
+         else {
+            lineBuffer[255] = '\0';
          }
 
-         if (chatType != 3) {
-            lineBuffer[79] = 0;
+         if (lineBuffer == "[KILLED]") {
+            chat = &m_chat[CHAT_KILLING];
+            continue;
+         }
+         else if (lineBuffer == "[BOMBPLANT]") {
+            chat = &m_chat[CHAT_KILLING];
+            continue;
+         }
+         else if (lineBuffer == "[DEADCHAT]") {
+            chat = &m_chat[CHAT_DEAD];
+            continue;
+         }
+         else if (lineBuffer == "[REPLIES]") {
+            chat = nullptr;
+            continue;
+         }
+         else if (lineBuffer == "[UNKNOWN]") {
+            chat = &m_chat[CHAT_NOKW];
+            continue;
+         }
+         else if (lineBuffer == "[TEAMATTACK]") {
+            chat = &m_chat[CHAT_TEAMATTACK];
+            continue;
+         }
+         else if (lineBuffer == "[WELCOME]") {
+            chat = &m_chat[CHAT_WELCOME];
+            continue;
+         }
+         else if (lineBuffer == "[TEAMKILL]") {
+            chat = &m_chat[CHAT_TEAMKILL];
+            continue;
          }
 
-         switch (chatType) {
-         case 0:
-            m_chat[CHAT_KILLING].push (lineBuffer);
-            break;
-
-         case 1:
-            m_chat[CHAT_BOMBPLANT].push (lineBuffer);
-            break;
-
-         case 2:
-            m_chat[CHAT_DEAD].push (lineBuffer);
-            break;
-
-         case 3:
-            if (strstr (lineBuffer, "@KEY") != nullptr) {
+         if (chat != nullptr) {
+            chat->push (lineBuffer);
+         }
+         else {
+            if (lineBuffer.contains ("@KEY")) {
                if (!replies.keywords.empty () && !replies.replies.empty ()) {
                   m_replies.push (cr::forward <Keywords> (replies));
                   replies.replies.clear ();
                }
 
                replies.keywords.clear ();
-               replies.keywords = String (&lineBuffer[4]).split (",");
+               replies.keywords = lineBuffer.substr (4).split (",");
 
-               for (auto &keywords : replies.keywords) {
-                  keywords.trim ().trim ("\"");
+               for (auto &keyword : replies.keywords) {
+                  keyword.trim ().trim ("\"");
                }
             }
-            else if (!replies.keywords.empty ()) {
+            else if (!replies.keywords.empty () && !lineBuffer.empty ()) {
                replies.replies.push (lineBuffer);
             }
-            break;
-
-         case 4:
-            m_chat[CHAT_NOKW].push (lineBuffer);
-            break;
-
-         case 5:
-            m_chat[CHAT_TEAMATTACK].push (lineBuffer);
-            break;
-
-         case 6:
-            m_chat[CHAT_WELCOME].push (lineBuffer);
-            break;
-
-         case 7:
-            m_chat[CHAT_TEAMKILL].push (lineBuffer);
-            break;
          }
       }
 
+      // shuffle chat a bit
       for (auto &item : m_chat) {
+         item.shuffle ();
          item.shuffle ();
       }
       fp.close ();
@@ -1943,15 +1934,40 @@ void Config::load (bool onlyMain) {
    // GENERAL DATA INITIALIZATION
    if (util.openConfig ("general.cfg", "General configuration file not found. Loading defaults", &fp)) {
       
-      auto badSyntax = [] (const String &name) {
-         util.logEntry (true, LL_ERROR, "%s entry in general config is not valid or malformed.", name.chars ());
+      auto addWeaponEntries = [] (Array <WeaponInfo> &weapons, size_t max, bool as, const String &name, const StringArray &data) {
+         if (data.length () != max) {
+            util.logEntry (true, LL_ERROR, "%s entry in weapons config is not valid or malformed.", name.chars ());
+            return;
+         }
+
+         for (size_t i = 0; i < max; i++) {
+            if (as) {
+               weapons[i].teamAS = data[i].toInt32 ();
+            }
+            else {
+               weapons[i].teamStandard = data[i].toInt32 ();
+            }
+         }
       };
 
-      while (fp.gets (lineBuffer, 255)) {
+      auto addIntEntries = [] (auto &to, size_t max, const String &name, const StringArray &data) {
+         if (data.length () != max) {
+            util.logEntry (true, LL_ERROR, "%s entry in weapons config is not valid or malformed.", name.chars ());
+            return;
+         }
+
+         for (size_t i = 0; i < max; i++) {
+            to[i] = data[i].toInt32 ();
+         }
+      };
+
+      while (fp.getLine (lineBuffer)) {
+         lineBuffer.trim ();
+
          if (isCommentLine (lineBuffer)) {
             continue;
          }
-         auto pair = String (lineBuffer).split ("=");
+         auto pair = lineBuffer.split ("=");
 
          if (pair.length () != 2) {
             continue;
@@ -1963,83 +1979,36 @@ void Config::load (bool onlyMain) {
          auto splitted = pair[1].split (",");
 
          if (pair[0] == "MapStandard") {
-            if (splitted.length () != NUM_WEAPONS) {
-               badSyntax (pair[0]);
-            }
-            else {
-               for (int i = 0; i < NUM_WEAPONS; i++) {
-                  m_weapons[i].teamStandard = splitted[i].toInt32 ();
-               }
-            }
+            addWeaponEntries (m_weapons, NUM_WEAPONS, false, pair[0], splitted);
          }
          else if (pair[0] == "MapAS") {
-            if (splitted.length () != NUM_WEAPONS) {
-               badSyntax (pair[0]);
-            }
-            else {
-               for (int i = 0; i < NUM_WEAPONS; i++) {
-                  m_weapons[i].teamAS = splitted[i].toInt32 ();
-               }
-            }
+            addWeaponEntries (m_weapons, NUM_WEAPONS, true, pair[0], splitted);
          }
+
          else if (pair[0] == "GrenadePercent") {
-            if (splitted.length () != 3) {
-               badSyntax (pair[0]);
-            }
-            else {
-               for (int i = 0; i < 3; i++) {
-                  m_grenadeBuyPrecent[i] = splitted[i].toInt32 ();
-               }
-            }
+            addIntEntries (m_grenadeBuyPrecent, 3, pair[0], splitted);
          }
          else if (pair[0] == "Economics") {
-            if (splitted.length () != 11) {
-               badSyntax (pair[0]);
-            }
-            else {
-               for (int i = 0; i < 11; i++) {
-                  m_botBuyEconomyTable[i] = splitted[i].toInt32 ();
-               }
-            }
+            addIntEntries (m_botBuyEconomyTable, 11, pair[0], splitted);
          }
          else if (pair[0] == "PersonalityNormal") {
-            if (splitted.length () != NUM_WEAPONS) {
-               badSyntax (pair[0]);
-            }
-            else {
-               for (int i = 0; i < NUM_WEAPONS; i++) {
-                  m_normalWeaponPrefs[i] = splitted[i].toInt32 ();
-               }
-            }
+            addIntEntries (m_normalWeaponPrefs, NUM_WEAPONS, pair[0], splitted);
          }
          else if (pair[0] == "PersonalityRusher") {
-            if (splitted.length () != NUM_WEAPONS) {
-               badSyntax (pair[0]);
-            }
-            else {
-               for (int i = 0; i < NUM_WEAPONS; i++) {
-                  m_rusherWeaponPrefs[i] = splitted[i].toInt32 ();
-               }
-            }
+            addIntEntries (m_rusherWeaponPrefs, NUM_WEAPONS, pair[0], splitted);
          }
          else if (pair[0] == "PersonalityCareful") {
-            if (splitted.length () != NUM_WEAPONS) {
-               badSyntax (pair[0]);
-            }
-            else {
-               for (int i = 0; i < NUM_WEAPONS; i++) {
-                  m_carefulWeaponPrefs[i] = splitted[i].toInt32 ();
-               }
-            }
+            addIntEntries (m_carefulWeaponPrefs, NUM_WEAPONS, pair[0], splitted);
          }
+
       }
       fp.close ();
    }
 
-   // CHATTER SYSTEM INITIALIZATION
+   // chatter system initialization
    if (game.is (GAME_SUPPORT_BOT_VOICE) && yb_communication_type.integer () == 2 && util.openConfig ("chatter.cfg", "Couldn't open chatter system configuration", &fp)) {
       struct EventMap {
-         const char *str;
+         String str;
          int code;
          float repeat;
       } chatterEventMap[] = {
@@ -2116,17 +2085,19 @@ void Config::load (bool onlyMain) {
          { "Chatter_Camp", CHATTER_CAMP, 25.0f },
       };
 
-      while (fp.gets (lineBuffer, 511)) {
+      while (fp.getLine (lineBuffer)) {
+         lineBuffer.trim ();
+
          if (isCommentLine (lineBuffer)) {
             continue;
          }
+         extern ConVar yb_chatter_path;
 
-         if (strncmp (lineBuffer, "RewritePath", 11) == 0) {
-            extern ConVar yb_chatter_path;
-            yb_chatter_path.set (String (&lineBuffer[12]).trim ().chars ());
+         if (lineBuffer.substr (0, 11) == "RewritePath") {
+            yb_chatter_path.set (lineBuffer.substr (11).trim ().chars ());
          }
-         else if (strncmp (lineBuffer, "Event", 5) == 0) {
-            auto items = String (&lineBuffer[6]).split ("=");
+         else if (lineBuffer.substr (0, 5) == "Event") {
+            auto items = lineBuffer.substr (5).split ("=");
 
             if (items.length () != 2) {
                util.logEntry (true, LL_ERROR, "Error in chatter config file syntax... Please correct all errors.");
@@ -2139,7 +2110,7 @@ void Config::load (bool onlyMain) {
             items[1].trim ("(;)");
 
             for (const auto &event : chatterEventMap) {
-               if (stricmp (event.str, items[0].chars ()) == 0) {
+               if (event.str == items[0]) {
                   // this does common work of parsing comma-separated chatter line
                   auto sounds = items[1].split (",");
 
@@ -2163,51 +2134,50 @@ void Config::load (bool onlyMain) {
       util.logEntry (true, LL_DEFAULT, "Chatter Communication disabled.");
    }
 
-   // LOCALIZER INITITALIZATION
+   // localizer inititalization
    if (!(game.is (GAME_LEGACY)) && util.openConfig ("lang.cfg", "Specified language not found", &fp, true)) {
       if (game.isDedicated ()) {
          return; // dedicated server will use only english translation
       }
       enum Lang { LANG_ORIGINAL, LANG_TRANSLATED, LANG_UNDEFINED } langState = static_cast <Lang> (LANG_UNDEFINED);
 
-      char buffer[MAX_PRINT_BUFFER] = { 0, };
+      String temp;
       Pair <String, String> lang;
 
-      while (fp.gets (lineBuffer, 255)) {
+      while (fp.getLine (lineBuffer)) {
+         lineBuffer.trim ();
+
          if (isCommentLine (lineBuffer)) {
             continue;
          }
 
-         if (strncmp (lineBuffer, "[ORIGINAL]", 10) == 0) {
+         if (lineBuffer == "[ORIGINAL]") {
             langState = LANG_ORIGINAL;
 
-            if (buffer[0] != 0) {
-               lang.second = buffer;
+            if (!temp.empty ()) {
+               lang.second = cr::move (temp);
                lang.second.trim ();
-
-               buffer[0] = 0;
             }
 
             if (!lang.second.empty () && !lang.first.empty ()) {
                game.addTranslation (lang.first, lang.second);
             }
          }
-         else if (strncmp (lineBuffer, "[TRANSLATED]", 12) == 0) {
+         else if (lineBuffer == "[TRANSLATED]") {
 
-            lang.first = buffer;
+            lang.first = cr::move (temp);
             lang.first.trim ();
 
             langState = LANG_TRANSLATED;
-            buffer[0] = 0;
          }
          else {
             switch (langState) {
             case LANG_ORIGINAL:
-               strncat (buffer, lineBuffer, MAX_PRINT_BUFFER - 1 - strlen (buffer));
+               temp += lineBuffer;
                break;
 
             case LANG_TRANSLATED:
-               strncat (buffer, lineBuffer, MAX_PRINT_BUFFER - 1 - strlen (buffer));
+               temp += lineBuffer;
                break;
 
             case LANG_UNDEFINED:

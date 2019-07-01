@@ -185,7 +185,7 @@ void Bot::prepareChatMessage (const String &message) {
       int roundTimeSecs = static_cast <int> (bots.getRoundEndTime () - game.timebase ());
       
       String roundTime;
-      roundTime.format ("%02d:%02d", roundTimeSecs / 60, cr::abs (roundTimeSecs) % 60);
+      roundTime.assign ("%02d:%02d", roundTimeSecs / 60, cr::abs (roundTimeSecs) % 60);
 
       return cr::move (roundTime);
    };
@@ -289,7 +289,12 @@ void Bot::prepareChatMessage (const String &message) {
 
       // chat reply
    case 's':
-      m_chatBuffer.replace ("%s", humanizedName (util.getClient (m_sayTextBuffer.entityIndex)));
+      if (m_sayTextBuffer.entityIndex != -1) {
+         m_chatBuffer.replace ("%s", humanizedName (util.getClient (m_sayTextBuffer.entityIndex)));
+      }
+      else {
+         m_chatBuffer.replace ("%s", getHighfragPlayer ());
+      }
       break;
 
       // last bot victim
@@ -331,10 +336,9 @@ bool Bot::isReplyingToChat (void) {
 
       // check is time to chat is good
       if (m_sayTextBuffer.timeNextChat < game.timebase ()) {
-         if (rng.chance (m_sayTextBuffer.chatProbability + rng.getInt (15, 35)) && checkChatKeywords (message)) {
+         if (rng.chance (m_sayTextBuffer.chatProbability + rng.getInt (25, 45)) && checkChatKeywords (message)) {
             prepareChatMessage (message);
             pushMsgQueue (GAME_MSG_SAY_CMD);
-
   
             m_sayTextBuffer.entityIndex = -1;
             m_sayTextBuffer.timeNextChat = game.timebase () + m_sayTextBuffer.chatDelay;
@@ -347,6 +351,47 @@ bool Bot::isReplyingToChat (void) {
       }
    }
    return false;
+}
+
+void Bot::checkForChat (void) {
+
+
+   // bot chatting turned on?
+   if (!m_notKilled && yb_chat.boolean () && m_lastChatTime + 10.0 < game.timebase () && bots.getLastChatTimestamp () + 5.0f < game.timebase () && !isReplyingToChat ()) {
+      auto &chat = conf.getChat ();
+
+      // say a text every now and then
+      if (rng.chance (50)) {
+         m_lastChatTime = game.timebase ();
+         bots.setLastChatTimestamp (game.timebase ());
+
+         if (!chat[CHAT_DEAD].empty ()) {
+            const String &phrase = chat[CHAT_DEAD].random ();
+            bool sayBufferExists = false;
+
+            // search for last messages, sayed
+            for (auto &sentence : m_sayTextBuffer.lastUsedSentences) {
+               if (strncmp (sentence.chars (), phrase.chars (), sentence.length ()) == 0) {
+                  sayBufferExists = true;
+                  break;
+               }
+            }
+
+            if (!sayBufferExists) {
+               prepareChatMessage (phrase);
+               pushMsgQueue (GAME_MSG_SAY_CMD);
+
+               // add to ignore list
+               m_sayTextBuffer.lastUsedSentences.push (phrase);
+            }
+         }
+
+         // clear the used line buffer every now and then
+         if (static_cast <int> (m_sayTextBuffer.lastUsedSentences.length ()) > rng.getInt (4, 6)) {
+            m_sayTextBuffer.lastUsedSentences.clear ();
+         }
+      }
+   }
 }
 
 void Bot::say (const char *text) {

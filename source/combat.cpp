@@ -98,7 +98,7 @@ bool Bot::checkBodyParts (edict_t *target, Vector *origin, uint8 *bodyPart) {
    }
    TraceResult result;
 
-   Vector eyes = eyePos ();
+   Vector eyes = getEyesPos ();
    Vector spot = target->v.origin;
 
    *bodyPart = 0;
@@ -255,7 +255,7 @@ bool Bot::lookupEnemies (void) {
             }
          }
       }
-      m_enemyUpdateTime = game.timebase () + calcThinkInterval () * 30.0f;
+      m_enemyUpdateTime = game.timebase () + getFrameInterval () * 30.0f;
 
       if (game.isNullEntity (newEnemy) && !game.isNullEntity (shieldEnemy)) {
          newEnemy = shieldEnemy;
@@ -436,7 +436,7 @@ const Vector &Bot::getEnemyBodyOffset (void) {
    Vector aimPos = m_enemy->v.origin;
 
    if (m_difficulty > 2 && !(m_visibility & VISIBLE_OTHER)) {
-      aimPos = (m_enemy->v.velocity - pev->velocity) * calcThinkInterval () + aimPos;
+      aimPos = (m_enemy->v.velocity - pev->velocity) * getFrameInterval () + aimPos;
    }
 
    // if we only suspect an enemy behind a wall take the worst skill
@@ -526,7 +526,7 @@ bool Bot::isFriendInLineOfFire (float distance) {
    game.makeVectors (pev->v_angle);
 
    TraceResult tr;
-   game.testLine (eyePos (), eyePos () + distance * pev->v_angle, TRACE_IGNORE_NONE, ent (), &tr);
+   game.testLine (getEyesPos (), getEyesPos () + distance * pev->v_angle, TRACE_IGNORE_NONE, ent (), &tr);
 
    // check if we hit something
    if (util.isPlayer (tr.pHit) && tr.pHit != ent ()) {
@@ -574,7 +574,7 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
    TraceResult tr;
 
    float obstacleDistance = 0.0f;
-   game.testLine (eyePos (), dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.testLine (getEyesPos (), dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
 
    if (tr.fStartSolid) {
       const Vector &source = tr.vecEndPos;
@@ -614,7 +614,7 @@ bool Bot::isPenetrableObstacle2 (const Vector &dest) {
       return false;
    }
 
-   const Vector &source = eyePos ();
+   const Vector &source = getEyesPos ();
    const Vector &direction = (dest - source).normalize (); // 1 unit long
 
    int thikness = 0;
@@ -646,7 +646,7 @@ bool Bot::isPenetrableObstacle2 (const Vector &dest) {
    return false;
 }
 
-bool Bot::throttleFiring (float distance) {
+bool Bot::needToPauseFiring (float distance) {
    // returns true if bot needs to pause between firing to compensate for punchangle & weapon spread
 
    if (usesSniper ()) {
@@ -676,7 +676,7 @@ bool Bot::throttleFiring (float distance) {
    const float xPunch = cr::deg2rad (pev->punchangle.x);
    const float yPunch = cr::deg2rad (pev->punchangle.y);
 
-   float interval = calcThinkInterval ();
+   float interval = getFrameInterval ();
    float tolerance = (100.0f - m_difficulty * 25.0f) / 99.0f;
 
    // check if we need to compensate recoil
@@ -814,7 +814,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
       m_shootTime = game.timebase ();
    }
    else {
-      if (throttleFiring (distance)) {
+      if (needToPauseFiring (distance)) {
          return;
       }
 
@@ -846,7 +846,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
 
 void Bot::fireWeapons (void) {
    // this function will return true if weapon was fired, false otherwise
-   float distance = (m_lookAt - eyePos ()).length (); // how far away is the enemy?
+   float distance = (m_lookAt - getEyesPos ()).length (); // how far away is the enemy?
 
    // or if friend in line of fire, stop this too but do not update shoot time
    if (!game.isNullEntity (m_enemy)) {
@@ -961,7 +961,7 @@ void Bot::focusEnemy (void) {
    if (m_enemySurpriseTime > game.timebase () || game.isNullEntity (m_enemy)) {
       return;
    } 
-   float distance = (m_lookAt - eyePos ()).length2D (); // how far away is the enemy scum?
+   float distance = (m_lookAt - getEyesPos ()).length2D (); // how far away is the enemy scum?
 
    if (distance < 128.0f && !usesSniper ()) {
       if (m_currentWeapon == WEAPON_KNIFE) {
@@ -1006,9 +1006,9 @@ void Bot::attackMovement (void) {
    if (game.isNullEntity (m_enemy)) {
       return;
    }
-   float distance = (m_lookAt - eyePos ()).length2D (); // how far away is the enemy scum?
+   float distance = (m_lookAt - getEyesPos ()).length2D (); // how far away is the enemy scum?
 
-   if (m_timeWaypointMove + calcThinkInterval () + 0.5f < game.timebase ()) {
+   if (m_timeWaypointMove + getFrameInterval () + 0.5f < game.timebase ()) {
       int approach;
 
       if (m_currentWeapon == WEAPON_KNIFE) {
@@ -1170,7 +1170,7 @@ void Bot::attackMovement (void) {
    if (!isInWater () && !isOnLadder () && (m_moveSpeed > 0.0f || m_strafeSpeed >= 0.0f)) {
       game.makeVectors (pev->v_angle);
 
-      if (isDeadlyMove (pev->origin + (game.vec.forward * m_moveSpeed * 0.2f) + (game.vec.right * m_strafeSpeed * 0.2f) + (pev->velocity * calcThinkInterval ()))) {
+      if (isDeadlyMove (pev->origin + (game.vec.forward * m_moveSpeed * 0.2f) + (game.vec.right * m_strafeSpeed * 0.2f) + (pev->velocity * getFrameInterval ()))) {
          m_strafeSpeed = -m_strafeSpeed;
          m_moveSpeed = -m_moveSpeed;
 
@@ -1405,7 +1405,7 @@ void Bot::selectBestWeapon (void) {
       bool ammoLeft = false;
 
       // is the bot already holding this weapon and there is still ammo in clip?
-      if (tab[selectIndex].id == m_currentWeapon && (ammoClip () < 0 || ammoClip () >= tab[selectIndex].minPrimaryAmmo)) {
+      if (tab[selectIndex].id == m_currentWeapon && (getAmmoInClip () < 0 || getAmmoInClip () >= tab[selectIndex].minPrimaryAmmo)) {
          ammoLeft = true;
       }
       const auto &prop = conf.getWeaponProp (id);
@@ -1496,7 +1496,7 @@ void Bot::decideFollowUser (void) {
    startTask (TASK_FOLLOWUSER, TASKPRI_FOLLOWUSER, INVALID_WAYPOINT_INDEX, 0.0f, true);
 }
 
-void Bot::processTeamCommands (void) {
+void Bot::updateTeamCommands (void) {
    // prevent spamming
    if (m_timeTeamOrder > game.timebase () + 2.0f || game.is (GAME_CSDM_FFA) || !yb_communication_type.integer ()) {
       return;

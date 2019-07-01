@@ -326,36 +326,122 @@ public:
    };
 };
 
+// simple unique ptr implementation
+template <typename T, bool UnknownBound> class BaseUniquePtr : public NonCopyable {
+private:
+   T *m_ptr = nullptr;
+
+public:
+   BaseUniquePtr (void) = default;
+   explicit BaseUniquePtr (T *ptr) : m_ptr (ptr) { }
+
+   BaseUniquePtr (BaseUniquePtr &&other) noexcept : m_ptr (other.m_ptr) {
+      other.m_ptr = nullptr;
+   }
+
+   ~BaseUniquePtr (void) noexcept {
+      release ();
+   }
+
+public:
+   T *get (void) const noexcept {
+      return m_ptr;
+   }
+
+   T *release (void) noexcept {
+      T *ret = m_ptr;
+      m_ptr = nullptr;
+
+      return ret;
+   }
+   void reset (T *ptr = nullptr) noexcept {
+      release ();
+      m_ptr = ptr;
+   }
+
+private:
+   void release (void) noexcept {
+      if (m_ptr) {
+         if (UnknownBound) {
+            delete[] m_ptr;
+         }
+         else {
+            delete m_ptr;
+         }
+         m_ptr = nullptr;
+      }
+   }
+
+public:
+   BaseUniquePtr &operator = (BaseUniquePtr &&other) noexcept {
+      if (this != &other) {
+         release ();
+
+         m_ptr = other.m_ptr;
+         other.m_ptr = nullptr;
+      }
+      return *this;
+   }
+
+   BaseUniquePtr &operator = (decltype (nullptr)) noexcept {
+      release ();
+      return *this;
+   }
+
+   T &operator * (void) const noexcept {
+      return *m_ptr;
+   }
+
+   T *operator -> (void) const noexcept {
+      return m_ptr;
+   }
+
+   explicit operator bool (void) const noexcept {
+      return m_ptr != nullptr;
+   }
+
+   T &operator [] (size_t index) {
+      return m_ptr[index];
+   }
+
+   const T &operator [] (size_t index) const {
+      return m_ptr[index];
+   }
+};
+
+template <typename T> class UniquePtr : public BaseUniquePtr <T, false> { };
+template <typename T> class UniquePtr <T[]> : public BaseUniquePtr <T, true> { };
+
 // see: https://github.com/preshing/RandomSequence/
 class RandomSequence : public Singleton <RandomSequence> {
 private:
-   unsigned int m_index;
-   unsigned int m_intermediateOffset;
-   unsigned long long m_divider;
+   uint32 m_index;
+   uint32 m_intermediateOffset;
+   uint64 m_divider;
 
 private:
-   unsigned int premute (unsigned int x) {
-      static constexpr unsigned int prime = 4294967291u;
+   uint32 premute (uint32 x) {
+      static constexpr uint32 prime = 4294967291u;
 
       if (x >= prime) {
          return x;
       }
-      const unsigned int residue = (static_cast <unsigned long long> (x) * x) % prime;
+      const uint32 residue = (static_cast <unsigned long long> (x) * x) % prime;
       return (x <= prime / 2) ? residue : prime - residue;
    }
 
-   unsigned int random (void) {
+   uint32 random (void) {
       return premute ((premute (m_index++) + m_intermediateOffset) ^ 0x5bf03635);
    }
 
 public:
    RandomSequence (void) {
-      const auto seedBase = static_cast <unsigned int> (time (nullptr));
+      const auto seedBase = static_cast <uint32> (time (nullptr));
       const auto seedOffset = seedBase + 1;
 
       m_index = premute (premute (seedBase) + 0x682f0161);
       m_intermediateOffset = premute (premute (seedOffset) + 0x46790905);
-      m_divider = (static_cast <unsigned long long> (1)) << 32;
+      m_divider = (static_cast <uint64> (1)) << 32;
    }
 
    template <typename U> inline U getInt (U low, U high) {
@@ -657,8 +743,8 @@ public:
 
 template <typename A, typename B> class Pair final {
 public:
-   A first;
-   B second;
+   A first = move (A ());
+   B second = move (B ());
 
 public:
    Pair (const A &a, const B &b) : first (move (a)), second (move (b)) {
@@ -738,7 +824,7 @@ public:
       bool res = reserve (newSize);
 
       while (m_length < newSize) {
-         push (T ());
+         push (move (T ()));
       }
       return res;
    }
@@ -1181,6 +1267,10 @@ public:
       return base::length ();
    }
 
+   size_t capacity (void) const {
+      return base::capacity ();
+   }
+
    bool empty (void) const {
       return !length ();
    }
@@ -1239,26 +1329,23 @@ public:
       return strstr (m_data, what.begin ()) != nullptr;
    }
 
-   template <size_t BufferSize = 512> void format (const char *fmt, ...) {
-      va_list ap;
-      char buffer[BufferSize];
+   template <typename ...Args> void assign (const char *fmt, Args ...args) {
+      const size_t size = snprintf (nullptr, 0, fmt, args...);
 
-      va_start (ap, fmt);
-      vsnprintf (buffer, bufsize (buffer), fmt, ap);
-      va_end (ap);
+      reserve (size + 1);
+      resize (size);
 
-      assign (buffer);
+      snprintf (&m_data[0], size + 1, fmt, args...);
    }
 
-   template <size_t BufferSize = 512> void formatAppend (const char *fmt, ...) {
-      va_list ap;
-      char buffer[BufferSize];
+   template <typename ...Args> void append (const char *fmt, Args ...args) {
+      const size_t size = snprintf (nullptr, 0, fmt, args...) + m_length;
+      const size_t len = m_length;
 
-      va_start (ap, fmt);
-      vsnprintf (buffer, bufsize (buffer), fmt, ap);
-      va_end (ap);
+      reserve (size + 1);
+      resize (size);
 
-      append (buffer);
+      snprintf (&m_data[len], size + 1, fmt, args...);
    }
 
    size_t insert (size_t at, const String &str) {
@@ -1322,7 +1409,7 @@ public:
       return numReplaced;
    }
 
-   String substr (size_t start, size_t count = INVALID_INDEX) {
+   String substr (size_t start, size_t count = INVALID_INDEX) const {
       String result;
 
       if (start >= m_length || empty ()) {
@@ -1344,7 +1431,7 @@ public:
       return move (result);
    }
 
-   String &trimRight (const char *chars = "\r\n\t ") {
+   String &rtrim (const char *chars = "\r\n\t ") {
       if (empty ()) {
          return *this;
       }
@@ -1362,7 +1449,7 @@ public:
       return *this;
    }
 
-   String &trimLeft (const char *chars = "\r\n\t ") {
+   String &ltrim (const char *chars = "\r\n\t ") {
       if (empty ()) {
          return *this;
       }
@@ -1379,10 +1466,10 @@ public:
    }
 
    String &trim (const char *chars = "\r\n\t ") {
-      return trimLeft (chars).trimRight (chars);
+      return rtrim (chars).ltrim (chars);
    }
 
-   Array <String> split (const String &delim) {
+   Array <String> split (const String &delim) const {
       Array <String> tokens;
       size_t prev = 0, pos = 0;
 
@@ -1517,23 +1604,25 @@ public:
       }
 
 public:
-   static void trimChars (char *str) {
-      size_t pos = 0;
-      char *dest = str;
-
-      while (str[pos] <= ' ' && str[pos] > 0) {
-         pos++;
+   static String join (const Array <String> &sequence, const String &delim, size_t start = 0) {
+      if (sequence.empty ()) {
+         return "";
       }
 
-      while (str[pos]) {
-         *(dest++) = str[pos];
-         pos++;
+      if (sequence.length () == 1) {
+         return sequence.at (0);
       }
-      *(dest--) = '\0';
+      String result;
 
-      while (dest >= str && *dest <= ' ' && *dest > 0) {
-         *(dest--) = '\0';
+      for (size_t index = start; index < sequence.length (); index++) {
+         if (index != start) {
+            result += delim + sequence[index];
+         }
+         else {
+            result += sequence[index];
+         }
       }
+      return move (result);
    }
 };
 
@@ -1676,6 +1765,16 @@ public:
 
    char *gets (char *buffer, int count) {
       return fgets (buffer, count, m_handle);
+   }
+
+   bool getLine (String &line) {
+      line.clear ();
+      char ch;
+
+      while ((ch = getch ()) != '\n' && ch != EOF && !eof ()) {
+         line += ch;
+      }
+      return !eof ();
    }
 
    int writeFormat (const char *format, ...) {
@@ -1854,6 +1953,16 @@ public:
       }
       buffer[index] = 0;
       return index ? buffer : nullptr;
+   }
+
+   bool getLine (String &line) {
+      line.clear ();
+      char ch;
+
+      while ((ch = getch ()) != '\n' && ch != EOF && m_pos < m_size) {
+         line += ch;
+      }
+      return m_pos < m_size;
    }
 
    size_t read (void *buffer, size_t size, size_t count = 1) {

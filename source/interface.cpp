@@ -167,12 +167,12 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       // the two entities both have velocities, for example two players colliding, this function
       // is called twice, once for each entity moving.
 
-      if (!game.isNullEntity (pentTouched) && (pentTouched->v.flags & FL_FAKECLIENT) && pentOther != game.getStartEntity ()) {
+      if (!game.isNullEntity (pentTouched) && pentOther != game.getStartEntity ()) {
          Bot *bot = bots.getBot (pentTouched);
 
          if (bot != nullptr && pentOther != bot->ent ()) {
 
-            if (util.isPlayer (pentOther) && util.isAlive (pentOther)) {
+            if (util.isPlayer (pentOther)) {
                bot->avoidIncomingPlayers (pentOther);
             }
             else {
@@ -211,6 +211,11 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       // check if this client is the listen server client
       if (strcmp (addr, "loopback") == 0) {
          game.setLocalEntity (ent); // save the edict of the listen server client...
+
+         // if not dedicated set the default editor for waypoints
+         if (!game.isDedicated ()) {
+            waypoints.setEditor (ent);
+         }
       }
 
       if (game.is (GAME_METAMOD)) {
@@ -395,7 +400,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       // update some stats for clients
       util.updateClients ();
 
-      if (waypoints.hasEditFlag (WS_EDIT_ENABLED) && !game.isDedicated () && !game.isNullEntity (game.getLocalEntity ())) {
+      if (waypoints.hasEditFlag (WS_EDIT_ENABLED) && waypoints.hasEditor ()) {
          waypoints.frame ();
       }
       bots.updateDeathMsgState (false);
@@ -403,7 +408,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       // run stuff periodically
       game.slowFrame ();
 
-      if (bots.getBotCount () > 0) {
+      if (bots.hasBotsOnline ()) {
          // keep track of grenades on map
          bots.updateActiveGrenade ();
 
@@ -426,7 +431,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
    functionTable->pfnUpdateClientData = [] (const struct edict_s *ent, int sendweapons, struct clientdata_s *cd) {
       extern ConVar yb_latency_display;
 
-      if (game.is (GAME_SUPPORT_SVC_PINGS) && yb_latency_display.integer () == 2) {
+      if (game.is (GAME_SUPPORT_SVC_PINGS) && yb_latency_display.integer () == 2 && bots.hasBotsOnline ()) {
          bots.sendPingOffsets (const_cast <edict_t *> (ent));
       }
 

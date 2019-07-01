@@ -171,8 +171,9 @@ int BotControl::cmdWaypointMenu (void) {
    enum args { alias = 1, max };
 
    // waypoints is not supported on DS yet
-   if (game.isDedicated ()) {
-      return CMD_STATUS_LISTENSERV;
+   if (!waypoints.hasEditor ()) {
+      msg ("Unable to open waypoint editor without setting the editor player.");
+      return CMD_STATUS_HANDLED;
    }
    showMenu (BOT_MENU_WAYPOINT_MAIN_PAGE1);
 
@@ -207,13 +208,14 @@ int BotControl::cmdList (void) {
 int BotControl::cmdWaypoint (void) {
    enum args { root, alias, cmd, cmd2, max };
 
-   // waypoints is not supported on DS yet
-   if (game.isDedicated ()) {
-      return CMD_STATUS_LISTENSERV;
-   }
-
    // adding more args to args array, if not enough passed
    fixMissingArgs (max);
+
+   // waypoints is not supported on DS yet
+   if (game.isDedicated () && !waypoints.hasEditor () && getStr (cmd) != "acquire_editor") {
+      msg ("Unable to use waypoint edit commands without setting waypoint editor player. Please use \"waypoint acquire_editor\" to acquire rights for waypoint editing");
+      return CMD_STATUS_HANDLED;
+   }
 
    // should be moved to class?
    static HashMap <String, BotCmd> commands;
@@ -252,6 +254,12 @@ int BotControl::cmdWaypoint (void) {
       addWaypointCommand ("path_create_both", "path_create_both [noarguments]", "Opens and displays path creation menu.", &BotControl::cmdWaypointPathCreate);
       addWaypointCommand ("path_delete", "path_create_both [noarguments]", "Opens and displays path creation menu.", &BotControl::cmdWaypointPathDelete);
       addWaypointCommand ("path_set_autopath", "path_set_autoath [max_distance]", "Opens and displays path creation menu.", &BotControl::cmdWaypointPathSetAutoDistance);
+
+      // remote waypoint editing stuff
+      if (game.isDedicated ()) {
+         addWaypointCommand ("acquire_editor", "acquire_editor [max_distance]", "Acquires rights to edit waypoints on dedicated server.", &BotControl::cmdWaypointAcquireEditor);
+         addWaypointCommand ("release_editor", "acquire_editor [max_distance]", "Releases waypoint editing rights.", &BotControl::cmdWaypointAcquireEditor);
+      }
    }
    if (commands.exists (getStr (cmd))) {
       auto &item = commands[getStr (cmd)];
@@ -519,12 +527,12 @@ int BotControl::cmdWaypointClean (void) {
       int removed = 0;
 
       for (int i = 0; i < waypoints.length (); i++) {
-         removed += waypoints.removeUselessConnections (i);
+         removed += waypoints.clearConnections (i);
       }
       msg ("Done. Processed %d waypoints. %d useless paths was cleared.", waypoints.length (), removed);
    }
    else if (getStr (option) == "empty" || getStr (option) == "nearest") {
-      int removed = waypoints.removeUselessConnections (waypoints.getEditorNeareset ());
+      int removed = waypoints.clearConnections (waypoints.getEditorNeareset ());
 
       msg ("Done. Processed waypoint #%d. %d useless paths was cleared.", waypoints.getEditorNeareset (), removed);
    }
@@ -533,7 +541,7 @@ int BotControl::cmdWaypointClean (void) {
 
       // check for existence
       if (waypoints.exists (index)) {
-         int removed = waypoints.removeUselessConnections (index);
+         int removed = waypoints.clearConnections (index);
 
          msg ("Done. Processed waypoint #%d. %d useless paths was cleared.", index, removed);
       }
@@ -597,7 +605,7 @@ int BotControl::cmdWaypointTeleport (void) {
 
    // check for existence
    if (waypoints.exists (index)) {
-      engfuncs.pfnSetOrigin (game.getLocalEntity (), waypoints[index].origin);
+      engfuncs.pfnSetOrigin (waypoints.getEditor (), waypoints[index].origin);
 
       msg ("You have been teleported to waypoint #%d.", index);
 
@@ -663,6 +671,43 @@ int BotControl::cmdWaypointPathSetAutoDistance (void) {
    return CMD_STATUS_HANDLED;
 }
 
+int BotControl::cmdWaypointAcquireEditor (void) {
+   enum args { waypoint = 1, max };
+
+   // adding more args to args array, if not enough passed
+   fixMissingArgs (max);
+
+   if (game.isNullEntity (m_ent)) {
+      msg ("This command should not be executed from HLDS console.");
+      return CMD_STATUS_HANDLED;
+   }
+
+   if (waypoints.hasEditor ()) {
+      msg ("Sorry, players \"%s\" already acquired rights to edit waypoints on this server.", STRING (waypoints.getEditor ()->v.netname));
+      return CMD_STATUS_HANDLED;
+   }
+   waypoints.setEditor (m_ent);
+   msg ("You're acquired rights to edit waypoints on this server. You're now able to use waypoint commands.");
+
+   return CMD_STATUS_HANDLED;
+}
+
+int BotControl::cmdWaypointReleaseEditor (void) {
+   enum args { waypoint = 1, max };
+
+   // adding more args to args array, if not enough passed
+   fixMissingArgs (max);
+
+   if (!waypoints.hasEditor ()) {
+      msg ("No one is currently has rights to edit. Nothing to release.");
+      return CMD_STATUS_HANDLED;
+   }
+   waypoints.setEditor (nullptr);
+   msg ("Waypoint editor rights freed. You're now not able to use waypoint commands.");
+
+   return CMD_STATUS_HANDLED;
+}
+
 int BotControl::menuMain (int item) {
    showMenu (BOT_MENU_INVALID); // reset menu display
 
@@ -705,7 +750,7 @@ int BotControl::menuFeatures (int item) {
       break;
 
    case 2:
-      showMenu (game.isDedicated () ? BOT_MENU_FEATURES : BOT_MENU_WAYPOINT_MAIN_PAGE1);
+      showMenu (waypoints.hasEditor () ? BOT_MENU_WAYPOINT_MAIN_PAGE1 : BOT_MENU_FEATURES);
       break;
 
    case 3:
@@ -792,7 +837,22 @@ int BotControl::menuWeaponMode (int item) {
 }
 
 int BotControl::menuPersonality (int item) {
-   if (!m_isMenuFillCommand) {
+   if (m_isMenuFillCommand) {
+      showMenu (BOT_MENU_INVALID); // reset menu display
+
+      switch (item) {
+      case 1:
+      case 2:
+      case 3:
+      case 4:
+         bots.serverFill (m_menuServerFillTeam, item - 2, m_interMenuData[0]);
+         showMenu (BOT_MENU_INVALID);
+         break;
+
+      case 10:
+         showMenu (BOT_MENU_INVALID);
+         break;
+      }
       return CMD_STATUS_HANDLED;
    }
    showMenu (BOT_MENU_INVALID); // reset menu display
@@ -802,8 +862,8 @@ int BotControl::menuPersonality (int item) {
    case 2:
    case 3:
    case 4:
-      bots.serverFill (m_menuServerFillTeam, item - 2, m_interMenuData[0]);
-      showMenu (BOT_MENU_INVALID);
+      m_interMenuData[3] = item - 2;
+      showMenu (BOT_MENU_TEAM_SELECT);
       break;
 
    case 10:
@@ -848,13 +908,22 @@ int BotControl::menuDifficulty (int item) {
 
 int BotControl::menuTeamSelect (int item) {
    if (m_isMenuFillCommand) {
+      showMenu (BOT_MENU_INVALID); // reset menu display
+
+      if (item < 3) {
+         extern ConVar mp_limitteams, mp_autoteambalance;
+
+         // turn off cvars if specified team
+         mp_limitteams.set (0);
+         mp_autoteambalance.set (0);
+      }
+
       switch (item) {
       case 1:
       case 2:
-      case 3:
-      case 4:
-         bots.serverFill (m_menuServerFillTeam, item - 2, m_interMenuData[0]);
-         showMenu (BOT_MENU_INVALID);
+      case 5:
+         m_menuServerFillTeam = item;
+         showMenu (BOT_MENU_DIFFICULTY);
          break;
 
       case 10:
@@ -1392,9 +1461,9 @@ bool BotControl::executeCommands (void) {
             String aliases;
 
             for (auto &alias : item.name.split ("|")) {
-               aliases.formatAppend ("%s, ", alias.chars ());
+               aliases.append ("%s, ", alias.chars ());
             }
-            aliases.trimRight (", ");
+            aliases.rtrim (", ");
             msg ("Aliases: %s", aliases.chars ());
 
             return true;
@@ -1448,9 +1517,7 @@ bool BotControl::executeCommands (void) {
       }
    }
    msg ("Unrecognized command: %s", m_args[1].chars ());
-
-   //  not handled
-   return false;
+   return true;
 }
 
 bool BotControl::executeMenus (void) {
@@ -1458,11 +1525,6 @@ bool BotControl::executeMenus (void) {
       return false;
    }
    auto &issuer = util.getClient (game.indexOfEntity (m_ent) - 1);
-
-   // check if we are host entity or client with admin flag
-   if (m_ent != game.getLocalEntity () && !(issuer.flags & CF_ADMIN)) {
-      return false;
-   }
 
    // check if it's menu select, and some key pressed
    if (getStr (0) != "menuselect" || getStr (1).empty () || issuer.menu == BOT_MENU_INVALID) {
@@ -1503,11 +1565,6 @@ void BotControl::showMenu (int id) {
       return;
    }
    Client &client = util.getClient (game.indexOfEntity (m_ent) - 1);
-
-   // do not show menus to invalid players
-   if (m_ent != game.getLocalEntity () && !(client.flags & CF_ADMIN)) {
-      return;
-   }
 
    if (id == BOT_MENU_INVALID) {
       MessageWriter (MSG_ONE_UNRELIABLE, game.getMessageId (NETMSG_SHOWMENU), Vector::null (), m_ent)
@@ -1556,7 +1613,7 @@ void BotControl::kickBotByMenu (int page) {
    }
 
    String menus;
-   menus.format ("\\yBots Remove Menu (%d/4):\\w\n\n", page);
+   menus.assign ("\\yBots Remove Menu (%d/4):\\w\n\n", page);
 
    int menuKeys = (page == 4) ? cr::bit (9) : (cr::bit (8) | cr::bit (9));
    int menuKey = (page - 1) * 8;
@@ -1564,15 +1621,15 @@ void BotControl::kickBotByMenu (int page) {
    for (int i = menuKey; i < page * 8; i++) {
       auto bot = bots.getBot (i);
 
-      if (bot != nullptr && (bot->pev->flags & FL_FAKECLIENT)) {
+      if (bot != nullptr) {
          menuKeys |= cr::bit (cr::abs (i - menuKey));
-         menus.formatAppend ("%1.1d. %s%s\n", i - menuKey + 1, STRING (bot->pev->netname), bot->m_team == TEAM_COUNTER ? " \\y(CT)\\w" : " \\r(T)\\w");
+         menus.append ("%1.1d. %s%s\n", i - menuKey + 1, STRING (bot->pev->netname), bot->m_team == TEAM_COUNTER ? " \\y(CT)\\w" : " \\r(T)\\w");
       }
       else {
-         menus.formatAppend ("\\d %1.1d. Not a Bot\\w\n", i - menuKey + 1);
+         menus.append ("\\d %1.1d. Not a Bot\\w\n", i - menuKey + 1);
       }
    }
-   menus.formatAppend ("\n%s 0. Back", (page == 4) ? "" : " 9. More...\n");
+   menus.append ("\n%s 0. Back", (page == 4) ? "" : " 9. More...\n");
 
    // force to clear current menu
    showMenu (BOT_MENU_INVALID);
@@ -1598,11 +1655,17 @@ void BotControl::msg (const char *fmt, ...) {
    vsnprintf (buffer, cr::bufsize (buffer), fmt, ap);
    va_end (ap);
 
-   if (m_isFromConsole) {
+   if (game.isNullEntity (m_ent)) {
+      game.print (buffer);
+      return;
+   }
+
+   if (m_isFromConsole || strlen (buffer) > 48) {
       game.clientPrint (m_ent, buffer);
    }
    else {
       game.centerPrint (m_ent, buffer);
+      game.clientPrint (m_ent, buffer);
    }
 }
 

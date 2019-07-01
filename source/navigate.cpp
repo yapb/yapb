@@ -149,20 +149,20 @@ int Bot::getGoalProcess (int tactic, IntArray *defensive, IntArray *offsensive) 
    int goalChoices[4] = { INVALID_WAYPOINT_INDEX, INVALID_WAYPOINT_INDEX, INVALID_WAYPOINT_INDEX, INVALID_WAYPOINT_INDEX };
 
    if (tactic == 0 && !(*defensive).empty ()) { // careful goal
-      filterGoals (*defensive, goalChoices);
+      postprocessGoals (*defensive, goalChoices);
    }
    else if (tactic == 1 && !waypoints.m_campPoints.empty ()) // camp waypoint goal
    {
       // pickup sniper points if possible for sniping bots
       if (!waypoints.m_sniperPoints.empty () && usesSniper ()) {
-         filterGoals (waypoints.m_sniperPoints, goalChoices);
+         postprocessGoals (waypoints.m_sniperPoints, goalChoices);
       }
       else {
-         filterGoals (waypoints.m_campPoints, goalChoices);
+         postprocessGoals (waypoints.m_campPoints, goalChoices);
       }
    }
    else if (tactic == 2 && !(*offsensive).empty ()) { // offensive goal
-      filterGoals (*offsensive, goalChoices);
+      postprocessGoals (*offsensive, goalChoices);
    }
    else if (tactic == 3 && !waypoints.m_goalPoints.empty ()) // map goal waypoint
    {
@@ -194,7 +194,7 @@ int Bot::getGoalProcess (int tactic, IntArray *defensive, IntArray *offsensive) 
          }
       }
       else {
-         filterGoals (waypoints.m_goalPoints, goalChoices);
+         postprocessGoals (waypoints.m_goalPoints, goalChoices);
       }
    }
 
@@ -229,7 +229,7 @@ int Bot::getGoalProcess (int tactic, IntArray *defensive, IntArray *offsensive) 
    return m_chosenGoalIndex = goalChoices[0]; // return and store goal
 }
 
-void Bot::filterGoals (const IntArray &goals, int *result) {
+void Bot::postprocessGoals (const IntArray &goals, int *result) {
    // this function filters the goals, so new goal is not bot's old goal, and array of goals doesn't contains duplicate goals
 
    int searchCount = 0;
@@ -249,7 +249,7 @@ void Bot::filterGoals (const IntArray &goals, int *result) {
 }
 
 bool Bot::hasActiveGoal (void) {
-   int goal = task ()->data;
+   int goal = getTask ()->data;
 
    if (goal == INVALID_WAYPOINT_INDEX) { // not decided about a goal
       return false;
@@ -309,7 +309,7 @@ void Bot::avoidIncomingPlayers (edict_t *touch) {
       }
    }
    m_avoid = touch;
-   m_avoidTime = game.timebase () + 0.33f + calcThinkInterval ();
+   m_avoidTime = game.timebase () + 0.33f + getFrameInterval ();
 }
 
 bool Bot::doPlayerAvoidance (const Vector &normal) {
@@ -509,13 +509,13 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                if (seesEntity (m_destOrigin)) {
                   game.makeVectors (m_moveAngles);
 
-                  src = eyePos ();
+                  src = getEyesPos ();
                   src = src + game.vec.right * 15.0f;
 
                   game.testLine (src, m_destOrigin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
 
                   if (tr.flFraction >= 1.0f) {
-                     src = eyePos ();
+                     src = getEyesPos ();
                      src = src - game.vec.right * 15.0f;
 
                      game.testLine (src, m_destOrigin, TRACE_IGNORE_EVERYTHING, ent (), &tr);
@@ -637,7 +637,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
    doPlayerAvoidance (dirNormal);
 }
 
-bool Bot::processNavigation (void) {
+bool Bot::updateNavigation (void) {
    // this function is a main path navigation
 
    TraceResult tr, tr2;
@@ -846,7 +846,7 @@ bool Bot::processNavigation (void) {
 
       // bot is trying to find button inside a lift
       if (m_liftState == LIFT_LOOKING_BUTTON_INSIDE) {
-         edict_t *button = getNearestButton (STRING (m_liftEntity->v.targetname));
+         edict_t *button = lookupButton (STRING (m_liftEntity->v.targetname));
 
          // got a valid button entity ?
          if (!game.isNullEntity (button) && pev->groundentity == m_liftEntity && m_buttonPushTime + 1.0f < game.timebase () && m_liftEntity->v.velocity.z == 0.0f && isOnFloor ()) {
@@ -913,7 +913,7 @@ bool Bot::processNavigation (void) {
             }
          }
          else if (!game.isNullEntity (m_liftEntity)) {
-            edict_t *button = getNearestButton (STRING (m_liftEntity->v.targetname));
+            edict_t *button = lookupButton (STRING (m_liftEntity->v.targetname));
 
             // if we got a valid button entity
             if (!game.isNullEntity (button)) {
@@ -1063,7 +1063,7 @@ bool Bot::processNavigation (void) {
          m_aimFlags &= ~(AIM_LAST_ENEMY | AIM_PREDICT_PATH);
          m_canChooseAimDirection = false;
 
-         edict_t *button = getNearestButton (STRING (tr.pHit->v.targetname));
+         edict_t *button = lookupButton (STRING (tr.pHit->v.targetname));
 
          // check if we got valid button
          if (!game.isNullEntity (button)) {
@@ -1129,14 +1129,14 @@ bool Bot::processNavigation (void) {
    }
 
    // needs precise placement - check if we get past the point
-   if (desiredDistance < 22.0f && waypointDistance < 30.0f && (pev->origin + (pev->velocity * calcThinkInterval ()) - m_waypointOrigin).lengthSq () > cr::square (waypointDistance)) {
+   if (desiredDistance < 22.0f && waypointDistance < 30.0f && (pev->origin + (pev->velocity * getFrameInterval ()) - m_waypointOrigin).lengthSq () > cr::square (waypointDistance)) {
       desiredDistance = waypointDistance + 1.0f;
    }
 
    if (waypointDistance < desiredDistance) {
 
       // did we reach a destination waypoint?
-      if (task ()->data == m_currentWaypointIndex) {
+      if (getTask ()->data == m_currentWaypointIndex) {
          if (m_chosenGoalIndex != INVALID_WAYPOINT_INDEX) {
 
             // add goal values
@@ -1157,7 +1157,7 @@ bool Bot::processNavigation (void) {
       else if (m_path.empty ()) {
          return false;
       }
-      int taskTarget = task ()->data;
+      int taskTarget = getTask ()->data;
 
       if (game.mapIs (MAP_DE) && bots.isBombPlanted () && m_team == TEAM_COUNTER && taskId () != TASK_ESCAPEFROMBOMB && taskTarget != INVALID_WAYPOINT_INDEX) {
          const Vector &bombOrigin = isBombAudible ();
@@ -1208,7 +1208,7 @@ void Bot::searchShortestPath (int srcIndex, int destIndex) {
 
       if (srcIndex < 0) {
          m_prevGoalIndex = INVALID_WAYPOINT_INDEX;
-         task ()->data = INVALID_WAYPOINT_INDEX;
+         getTask ()->data = INVALID_WAYPOINT_INDEX;
 
          return;
       }
@@ -1712,7 +1712,7 @@ void Bot::getValidPoint (void) {
 
          m_prevGoalIndex = newGoal;
          m_chosenGoalIndex = newGoal;
-         task ()->data = newGoal;
+         getTask ()->data = newGoal;
 
          // do path finding if it's not the current waypoint
          if (newGoal != m_currentWaypointIndex) {
@@ -2192,7 +2192,7 @@ bool Bot::advanceMovement (void) {
                m_chosenGoalIndex = newGoal;
 
                // remember index
-               task ()->data = newGoal;
+               getTask ()->data = newGoal;
 
                // do path finding if it's not the current waypoint
                if (newGoal != m_currentWaypointIndex) {
@@ -2293,7 +2293,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
    // use some TraceLines to determine if anything is blocking the current path of the bot.
 
    // first do a trace from the bot's eyes forward...
-   Vector src = eyePos ();
+   Vector src = getEyesPos ();
    Vector forward = src + normal * 24.0f;
 
    game.makeVectors (Vector (0.0f, pev->angles.y, 0.0f));
@@ -2318,8 +2318,8 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
 
    // bot's head is clear, check at shoulder level...
    // trace from the bot's shoulder left diagonal forward to the right shoulder...
-   src = eyePos () + Vector (0.0f, 0.0f, -16.0f) - game.vec.right * -16.0f;
-   forward = eyePos () + Vector (0.0f, 0.0f, -16.0f) + game.vec.right * 16.0f + normal * 24.0f;
+   src = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) - game.vec.right * -16.0f;
+   forward = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) + game.vec.right * 16.0f + normal * 24.0f;
 
    game.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
 
@@ -2330,8 +2330,8 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
 
    // bot's head is clear, check at shoulder level...
    // trace from the bot's shoulder right diagonal forward to the left shoulder...
-   src = eyePos () + Vector (0.0f, 0.0f, -16.0f) + game.vec.right * 16.0f;
-   forward = eyePos () + Vector (0.0f, 0.0f, -16.0f) - game.vec.right * -16.0f + normal * 24.0f;
+   src = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) + game.vec.right * 16.0f;
+   forward = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) - game.vec.right * -16.0f + normal * 24.0f;
 
    game.testLine (src, forward, TRACE_IGNORE_MONSTERS, ent (), tr);
 
@@ -2881,7 +2881,7 @@ int Bot::searchCampDir (void) {
    return rng.getInt (0, waypoints.length () - 1);
 }
 
-void Bot::processBodyAngles (void) {
+void Bot::updateBodyAngles (void) {
    // set the body angles to point the gun correctly
    pev->angles.x = -pev->v_angle.x * (1.0f / 3.0f);
    pev->angles.y = pev->v_angle.y;
@@ -2889,12 +2889,12 @@ void Bot::processBodyAngles (void) {
    pev->angles.clampAngles ();
 }
 
-void Bot::processLookAngles (void) {
+void Bot::updateLookAngles (void) {
    const float delta = cr::clamp (game.timebase () - m_lookUpdateTime, cr::EQEPSILON, 0.05f);
    m_lookUpdateTime = game.timebase ();
 
    // adjust all body and view angles to face an absolute vector
-   Vector direction = (m_lookAt - eyePos ()).toAngles ();
+   Vector direction = (m_lookAt - getEyesPos ()).toAngles ();
    direction.x *= -1.0f; // invert for engine
 
    direction.clampAngles ();
@@ -2902,14 +2902,14 @@ void Bot::processLookAngles (void) {
    // lower skilled bot's have lower aiming
    if (m_difficulty < 2) {
       updateLookAnglesNewbie (direction, delta);
-      processBodyAngles ();
+      updateBodyAngles ();
 
       return;
    }
 
    if (m_difficulty > 3 && (m_aimFlags & AIM_ENEMY) && (m_wantsToFire || usesSniper ()) && yb_whose_your_daddy.boolean ()) {
       pev->v_angle = direction;
-      processBodyAngles ();
+      updateBodyAngles ();
 
       return;
    }
@@ -2946,7 +2946,7 @@ void Bot::processLookAngles (void) {
    pev->v_angle = m_idealAngles;
    pev->v_angle.clampAngles ();
 
-   processBodyAngles ();
+   updateBodyAngles ();
 }
 
 void Bot::updateLookAnglesNewbie (const Vector &direction, float delta) {
@@ -3042,7 +3042,7 @@ void Bot::setStrafeSpeed (const Vector &moveDir, float strafeSpeed) {
    }
 }
 
-int Bot::locatePlantedC4 (void) {
+int Bot::getNearestToPlantedBomb (void) {
    // this function tries to find planted c4 on the defuse scenario map and returns nearest to it waypoint
 
    if (m_team != TEAM_TERRORIST || !game.mapIs (MAP_DE)) {
@@ -3098,7 +3098,7 @@ bool Bot::isOccupiedPoint (int index) {
    return false;
 }
 
-edict_t *Bot::getNearestButton (const char *targetName) {
+edict_t *Bot::lookupButton (const char *targetName) {
    // this function tries to find nearest to current bot button, and returns pointer to
    // it's entity, also here must be specified the target, that button must open.
 

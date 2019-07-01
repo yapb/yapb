@@ -134,15 +134,14 @@ struct LangComprarer {
 };
 
 // provides utility functions to not call original engine (less call-cost)
-class Game : public Singleton <Game> {
+class Game final : public Singleton <Game> {
 private:
    int m_drawModels[DRAW_NUM];
    int m_spawnCount[TEAM_UNASSIGNED];
 
    // bot client command
-   char m_arguments[256];
    bool m_isBotCommand;
-   int m_argumentCount;
+   StringArray m_botArgs;
 
    edict_t *m_startEntity;
    edict_t *m_localEntity;
@@ -256,63 +255,63 @@ public:
    // public inlines
 public:
    // get the current time on server
-   inline float timebase (void) {
+   float timebase (void) const {
       return globals->time;
    }
 
    // get "maxplayers" limit on server
-   inline int maxClients (void) {
+   int maxClients (void) const  {
       return globals->maxClients;
    }
 
    // get the fakeclient command interface
-   inline bool isBotCmd (void) {
+   bool isBotCmd (void) const  {
       return m_isBotCommand;
    }
 
    // gets custom engine args for client command
-   inline const char *botArgs (void) {
-      if (strncmp ("say ", m_arguments, 4) == 0) {
-         return &m_arguments[4];
-      }
-      else if (strncmp ("say_team ", m_arguments, 9) == 0) {
-         return &m_arguments[9];
-      }
-      return m_arguments;
+   const char *botArgs (void) const {
+      static String args;
+      args = String::join (m_botArgs, " ", m_botArgs[0] == "say" || m_botArgs[0] == "say_team" ? 1 : 0);
+
+      return args.chars ();
    }
 
    // gets custom engine argv for client command
-   inline const char *botArgv (int num) {
-      return getField (m_arguments, static_cast <size_t> (num));
+   const char *botArgv (size_t index) const {
+      if (index >= m_botArgs.length ()) {
+         return "";
+      }
+      return m_botArgs[index].chars ();
    }
 
    // gets custom engine argc for client command
-   inline int botArgc (void) {
-      return m_argumentCount;
+   int botArgc (void) const {
+      return m_botArgs.length ();
    }
 
    // gets edict pointer out of entity index
-   inline edict_t *entityOfIndex (const int index) {
+   edict_t *entityOfIndex (const int index) {
       return static_cast <edict_t *> (m_startEntity + index);
    };
 
    // gets edict index out of it's pointer
-   inline int indexOfEntity (const edict_t *ent) {
+   int indexOfEntity (const edict_t *ent) {
       return static_cast <int> (ent - m_startEntity);
    };
 
    // verify entity isn't null
-   inline bool isNullEntity (const edict_t *ent) {
+   bool isNullEntity (const edict_t *ent) {
       return !ent || !indexOfEntity (ent) || ent->free;
    }
 
    // get the wroldspawn entity
-   inline edict_t *getStartEntity (void) {
+   edict_t *getStartEntity (void) {
       return m_startEntity;
    }
 
    // get spawn count for team
-   inline int getSpawnCount (int team) {
+   int getSpawnCount (int team) const {
       return m_spawnCount[team];
    }
 
@@ -320,92 +319,88 @@ public:
    int getTeam (edict_t *ent);
 
    // adds translation pair from config
-   inline void addTranslation (const String &original, const String &translated) {
+   void addTranslation (const String &original, const String &translated) {
       m_language.put (original, translated);
    }
 
    // resets the message capture mechanism
-   inline void resetMessages (void) {
+   void resetMessages (void) {
       m_msgBlock.msg = NETMSG_UNDEFINED;
       m_msgBlock.state = 0;
       m_msgBlock.bot = 0;
    };
 
    // sets the currently executed message
-   inline void setCurrentMessageId (int message) {
+   void setCurrentMessageId (int message) {
       m_msgBlock.msg = message;
    }
 
    // set the bot entity that receive this message
-   inline void setCurrentMessageOwner (int id) {
+   void setCurrentMessageOwner (int id) {
       m_msgBlock.bot = id;
    }
 
    // find registered message id
-   inline int getMessageId (int type) {
+   int getMessageId (int type) {
       return m_msgBlock.regMsgs[type];
    }
 
    // assigns message id for message type
-   inline void setMessageId (int type, int id) {
+   void setMessageId (int type, int id) {
       m_msgBlock.regMsgs[type] = id;
    }
 
    // tries to set needed message id
-   inline void captureMessage (int type, int msgId) {
+   void captureMessage (int type, int msgId) {
       if (type == m_msgBlock.regMsgs[msgId]) {
          setCurrentMessageId (msgId);
       }
    }
 
    // sets the precache to uninitialize
-   inline void setUnprecached (void) {
+   void setUnprecached (void) {
       m_precached = false;
    }
 
    // gets the local entity (host edict)
-   inline edict_t *getLocalEntity (void) {
+   edict_t *getLocalEntity (void) {
       return m_localEntity;
    }
 
    // sets the local entity (host edict)
-   inline void setLocalEntity (edict_t *ent) {
+   void setLocalEntity (edict_t *ent) {
       m_localEntity = ent;
    }
 
    //  builds referential vector
-   inline void makeVectors (const Vector &in) {
+   void makeVectors (const Vector &in) {
       in.makeVectors (&vec.forward, &vec.right, &vec.up);
    }
 
    // what kind of map we're running ?
-   inline bool isMap (const int map) const {
+   bool isMap (const int map) const {
       return (m_mapFlags & map) == map;
    }
 
    // what kind of game engine / game dll / mod / tool we're running ?
-   inline bool is (const int type) const {
+   bool is (const int type) const {
       return (m_gameFlags & type) == type;
    }
 
    // adds game flag
-   inline void addGameFlag (const int type) {
+   void addGameFlag (const int type) {
       m_gameFlags |= type;
    }
 
    // gets the map type
-   inline bool mapIs (const int type) const {
+   bool mapIs (const int type) const {
       return (m_mapFlags & type) == type;
    }
 
    // get loaded gamelib
-   inline Library &getLib (void) {
+   Library &getLib (void) {
       return m_gameLib;
    }
-
-   // static utility functions
-private:
-   const char *getField (const char *string, size_t id);
 };
 
 // simplify access for console variables
@@ -418,31 +413,31 @@ public:
       Game::ref ().pushVarToRegStack (name, initval, type, regMissing, regVal, this);
    }
 
-   inline bool boolean (void) const {
+   bool boolean (void) const {
       return m_eptr->value > 0.0f;
    }
 
-   inline int integer (void) const {
+   int integer (void) const {
       return static_cast <int> (m_eptr->value);
    }
 
-   inline float flt (void) const {
+   float flt (void) const {
       return m_eptr->value;
    }
 
-   inline const char *str (void) const {
+   const char *str (void) const {
       return m_eptr->string;
    }
 
-   inline void set (float val) const {
+   void set (float val) {
       engfuncs.pfnCVarSetFloat (m_eptr->name, val);
    }
 
-   inline void set (int val) const {
+   void set (int val) {
       set (static_cast <float> (val));
    }
 
-   inline void set (const char *val) const {
+   void set (const char *val) {
       engfuncs.pfnCvar_DirectSet (m_eptr, const_cast <char *> (val));
    }
 };
@@ -537,18 +532,18 @@ private:
    template <typename S, typename M> bool recursiveLightPoint (const M *node, const Vector &start, const Vector &end);
 
 public:
-   inline void resetWorldModel (void) {
+   void resetWorldModel (void) {
       m_worldModel = nullptr;
    }
 
-   inline void setWorldModel (model_t *model) {
+   void setWorldModel (model_t *model) {
       if (m_worldModel) {
          return;
       }
       m_worldModel = model;
    }
 
-   inline void enableAnimation (bool enable) {
+   void enableAnimation (bool enable) {
       m_doAnimation = enable;
    }
 };
