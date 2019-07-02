@@ -460,6 +460,9 @@ void BotManager::reset (void) {
    m_quotaMaintainTime = 0.0f;
    m_grenadeUpdateTime = 0.0f;
    m_entityUpdateTime = 0.0f;
+   m_plantSearchUpdateTime = 0.0f;
+   m_lastChatTime = 0.0f;
+   m_timeBombPlanted = 0.0f;
 
    m_intrestingEntities.clear ();
    m_activeGrenades.clear ();
@@ -905,7 +908,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member, c
 
    // assign how talkative this bot will be
    m_sayTextBuffer.chatDelay = rng.getFloat (3.8f, 10.0f);
-   m_sayTextBuffer.chatProbability = rng.getInt (1, 100);
+   m_sayTextBuffer.chatProbability = rng.getInt (10, 100);
 
    m_notKilled = false;
    m_weaponBurstMode = BURST_OFF;

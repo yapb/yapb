@@ -1246,7 +1246,7 @@ public:
    template <typename ...Args> void assign (const char *fmt, Args ...args) {
       const size_t size = snprintf (nullptr, 0, fmt, args...);
 
-      reserve (size + 1);
+      reserve (size + 2); // for null-terminator
       resize (size);
 
       snprintf (&m_data[0], size + 1, fmt, args...);
@@ -1256,7 +1256,7 @@ public:
       const size_t size = snprintf (nullptr, 0, fmt, args...) + m_length;
       const size_t len = m_length;
 
-      reserve (size + 1);
+      reserve (size + 2); // for null-terminator
       resize (size);
 
       snprintf (&m_data[len], size + 1, fmt, args...);
