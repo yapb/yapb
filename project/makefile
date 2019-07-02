@@ -44,6 +44,8 @@ BINARY_OUTPUT = $(PROJECT).$(LIBRARY_EXT)
 ifeq ($(findstring clang,$(COMPILER)),clang)
 	ifeq "$(OSX)" "false"
 		LINKER_FLAGS += -lgcc_eh
+	else
+		LINKER_FLAGS += -nostdlib++ -Wunused-command-line-argument
 	endif
 else ifeq ($(findstring gcc,$(COMPILER)),gcc)
 	ifneq "$(OSX)" "false"
