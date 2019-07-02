@@ -1,3 +1,4 @@
+//
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
 // Copyright (c) YaPB Development Team.
 //
@@ -1275,7 +1276,7 @@ bool Waypoint::saveExtFile (const char *ext, const char *type, const char *magic
    header.fileVersion = version;
    header.uncompressed = size;
 
-   strncpy (header.header, magic, strlen (magic));
+   strncpy (header.header, magic, cr::bufsize (header.header));
 
    auto compressed = new uint8[header.uncompressed];
    int compressedLength = lz.compress (reinterpret_cast <uint8 *> (data), header.uncompressed, compressed);
@@ -1294,9 +1295,8 @@ bool Waypoint::saveExtFile (const char *ext, const char *type, const char *magic
          dataSaved = true;
       }
       else {
-         util.logEntry (true, LL_ERROR, "Couldn't save %s data (unable to write the file)", type);
+         util.logEntry (true, LL_ERROR, "Couldn't save %s data (unable to write the file \"%s\")", type, util.format ("%slearned/%s.%s", getDataDirectory (), game.getMapName (), ext));
          dataSaved = false;
-
       }
    }
    else {
@@ -1324,7 +1324,7 @@ bool Waypoint::loadExtFile (const char *ext, const char *type, const char *magic
       return false;
    }
 
-   if (!!strncmp (header.header, magic, strlen (magic))) {
+   if (!!strncmp (header.header, magic, cr::bufsize (header.header))) {
       util.logEntry (true, LL_ERROR, "%s data damaged (bad header '%s')", type, header.header);
       fp.close ();
 
@@ -1459,7 +1459,7 @@ bool Waypoint::load (void) {
          return throwError ("%s.pwf - damaged waypoint file (unable to read header)", map);
       }
 
-      if (strncmp (header.header, FH_WAYPOINT, strlen (FH_WAYPOINT)) == 0) {
+      if (strncmp (header.header, FH_WAYPOINT, cr::bufsize (FH_WAYPOINT)) == 0) {
          if (header.fileVersion != FV_WAYPOINT) {
             return throwError ("%s.pwf - incorrect waypoint file version (expected '%d' found '%ld')", map, FV_WAYPOINT, header.fileVersion);
          }
@@ -2555,6 +2555,7 @@ void Waypoint::eraseFromDisk (void) {
 
 const char *Waypoint::getDataDirectory (bool isMemoryFile) {
    static String buffer;
+   buffer.clear ();
 
    if (isMemoryFile) {
       buffer.assign ("addons/yapb/data/");
