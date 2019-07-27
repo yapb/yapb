@@ -43,8 +43,6 @@ BINARY_OUTPUT = $(PROJECT).$(LIBRARY_EXT)
 
 ifeq ($(findstring clang,$(COMPILER)),clang)
 	ifeq "$(OSX)" "false"
-		LINKER_FLAGS += -lgcc_eh
-	else
 		ifeq "$(DEBUG)" "true"
 			LINKER_FLAGS += -lstdc++
 		else
