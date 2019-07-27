@@ -9,22 +9,21 @@
 
 #include <yapb.h>
 
-ConVar sv_skycolor_r ("sv_skycolor_r", nullptr, VT_NOREGISTER);
-ConVar sv_skycolor_g ("sv_skycolor_g", nullptr, VT_NOREGISTER);
-ConVar sv_skycolor_b ("sv_skycolor_b", nullptr, VT_NOREGISTER);
+ConVar sv_skycolor_r ("sv_skycolor_r", nullptr, Var::NoRegister);
+ConVar sv_skycolor_g ("sv_skycolor_g", nullptr, Var::NoRegister);
+ConVar sv_skycolor_b ("sv_skycolor_b", nullptr, Var::NoRegister);
 
-Game::Game (void) {
+Game::Game () {
    m_startEntity = nullptr;
    m_localEntity = nullptr;
 
    resetMessages ();
 
    for (auto &msg : m_msgBlock.regMsgs) {
-      msg = NETMSG_UNDEFINED;
+      msg = NetMsg::None;
    }
    m_precached = false;
    m_isBotCommand = false;
-   m_botArgs.reserve (8);
 
    memset (m_drawModels, 0, sizeof (m_drawModels));
    memset (m_spawnCount, 0, sizeof (m_spawnCount));
@@ -36,18 +35,18 @@ Game::Game (void) {
    m_cvars.clear ();
 }
 
-Game::~Game (void) {
+Game::~Game () {
    resetMessages ();
 }
 
-void Game::precache (void) {
+void Game::precache () {
    if (m_precached) {
       return;
    }
    m_precached = true;
 
-   m_drawModels[DRAW_SIMPLE] = engfuncs.pfnPrecacheModel (ENGINE_STR ("sprites/laserbeam.spr"));
-   m_drawModels[DRAW_ARROW] = engfuncs.pfnPrecacheModel (ENGINE_STR ("sprites/arrow1.spr"));
+   m_drawModels[DrawLine::Simple] = engfuncs.pfnPrecacheModel (ENGINE_STR ("sprites/laserbeam.spr"));
+   m_drawModels[DrawLine::Arrow] = engfuncs.pfnPrecacheModel (ENGINE_STR ("sprites/arrow1.spr"));
 
    engfuncs.pfnPrecacheSound (ENGINE_STR ("weapons/xbow_hit1.wav")); // waypoint add
    engfuncs.pfnPrecacheSound (ENGINE_STR ("weapons/mine_activate.wav")); // waypoint delete
@@ -58,21 +57,21 @@ void Game::precache (void) {
 
    m_mapFlags = 0; // reset map type as worldspawn is the first entity spawned
 
-   // detect official csbots here, as they causing crash in linkent code when active for some reason
-   if (!(game.is (GAME_LEGACY)) && engfuncs.pfnCVarGetPointer ("bot_stop") != nullptr) {
-      m_gameFlags |= GAME_OFFICIAL_CSBOT;
+   // detect official csbots here
+   if (!(is (GameFlags::Legacy)) && engfuncs.pfnCVarGetPointer ("bot_stop") != nullptr) {
+      m_gameFlags |= GameFlags::CSBot;
    }
-   pushRegStackToEngine (true);
+   registerCvars (true);
 }
 
 void Game::levelInitialize (edict_t *ents, int max) {
    // this function precaches needed models and initialize class variables
 
-   m_spawnCount[TEAM_COUNTER] = 0;
-   m_spawnCount[TEAM_TERRORIST] = 0;
+   m_spawnCount[Team::CT] = 0;
+   m_spawnCount[Team::Terrorist] = 0;
    
    // go thru the all entities on map, and do whatever we're want
-   for (int i = 0; i < max; i++) {
+   for (int i = 0; i < max; ++i) {
       auto ent = ents + i;
 
       // only valid entities
@@ -88,7 +87,7 @@ void Game::levelInitialize (edict_t *ents, int max) {
          bots.initRound ();
       }
       else if (strcmp (classname, "player_weaponstrip") == 0) {
-         if ((game.is (GAME_LEGACY)) && (STRING (ent->v.target))[0] == '\0') {
+         if ((is (GameFlags::Legacy)) && (STRING (ent->v.target))[0] == '\0') {
             ent->v.target = ent->v.targetname = engfuncs.pfnAllocString ("fake");
          }
          else {
@@ -102,7 +101,7 @@ void Game::levelInitialize (edict_t *ents, int max) {
          ent->v.renderamt = 127; // set its transparency amount
          ent->v.effects |= EF_NODRAW;
 
-         m_spawnCount[TEAM_COUNTER]++;
+         m_spawnCount[Team::CT]++;
       }
       else if (strcmp (classname, "info_player_deathmatch") == 0) {
          engfuncs.pfnSetModel (ent, ENGINE_STR ("models/player/terror/terror.mdl"));
@@ -111,7 +110,7 @@ void Game::levelInitialize (edict_t *ents, int max) {
          ent->v.renderamt = 127; // set its transparency amount
          ent->v.effects |= EF_NODRAW;
 
-         m_spawnCount[TEAM_TERRORIST]++;
+         m_spawnCount[Team::Terrorist]++;
       }
 
       else if (strcmp (classname, "info_vip_start") == 0) {
@@ -122,120 +121,35 @@ void Game::levelInitialize (edict_t *ents, int max) {
          ent->v.effects |= EF_NODRAW;
       }
       else if (strcmp (classname, "func_vip_safetyzone") == 0 || strcmp (classname, "info_vip_safetyzone") == 0) {
-         m_mapFlags |= MAP_AS; // assassination map
+         m_mapFlags |= MapFlags::Assassination; // assassination map
       }
       else if (strcmp (classname, "hostage_entity") == 0) {
-         m_mapFlags |= MAP_CS; // rescue map
+         m_mapFlags |= MapFlags::HostageRescue; // rescue map
       }
       else if (strcmp (classname, "func_bomb_target") == 0 || strcmp (classname, "info_bomb_target") == 0) {
-         m_mapFlags |= MAP_DE; // defusion map
+         m_mapFlags |= MapFlags::Demolition; // defusion map
       }
       else if (strcmp (classname, "func_escapezone") == 0) {
-         m_mapFlags |= MAP_ES;
+         m_mapFlags |= MapFlags::Escape;
       }
       else if (strncmp (classname, "func_door", 9) == 0) {
-         m_mapFlags |= MAP_HAS_DOORS;
+         m_mapFlags |= MapFlags::HasDoors;
       }
    }
 
    // next maps doesn't have map-specific entities, so determine it by name
-   if (strncmp (game.getMapName (), "fy_", 3) == 0) {
-      m_mapFlags |= MAP_FY;
+   if (strncmp (getMapName (), "fy_", 3) == 0) {
+      m_mapFlags |= MapFlags::Fun;
    }
-   else if (strncmp (game.getMapName (), "ka_", 3) == 0) {
-      m_mapFlags |= MAP_KA;
+   else if (strncmp (getMapName (), "ka_", 3) == 0) {
+      m_mapFlags |= MapFlags::KnifeArena;
    }
 
    // reset some timers
    m_slowFrame = 0.0f;
 }
 
-void Game::print (const char *fmt, ...) {
-   // this function outputs string into server console
-
-   va_list ap;
-   char string[MAX_PRINT_BUFFER];
-
-   va_start (ap, fmt);
-   vsnprintf (string, cr::bufsize (string), translate (fmt), ap);
-   va_end (ap);
-
-   strcat (string, "\n");
-
-   engfuncs.pfnServerPrint (string);
-}
-
-void Game::chatPrint (const char *fmt, ...) {
-   va_list ap;
-   char string[MAX_PRINT_BUFFER];
-
-   va_start (ap, fmt);
-   vsnprintf (string, cr::bufsize (string), translate (fmt), ap);
-   va_end (ap);
-
-   if (isDedicated ()) {
-      print (string);
-      return;
-   }
-   strcat (string, "\n");
-
-   MessageWriter (MSG_BROADCAST, getMessageId (NETMSG_TEXTMSG))
-      .writeByte (HUD_PRINTTALK)
-      .writeString (string);
-}
-
-void Game::centerPrint (const char *fmt, ...) {
-   va_list ap;
-   char string[MAX_PRINT_BUFFER];
-
-   va_start (ap, fmt);
-   vsnprintf (string, cr::bufsize (string), translate (fmt), ap);
-   va_end (ap);
-
-   if (isDedicated ()) {
-      print (string);
-      return;
-   }
-   strcat (string, "\n");
-
-   MessageWriter (MSG_BROADCAST, getMessageId (NETMSG_TEXTMSG))
-      .writeByte (HUD_PRINTCENTER)
-      .writeString (string);
-}
-
-void Game::clientPrint (edict_t *ent, const char *fmt, ...) {
-   va_list ap;
-   char string[MAX_PRINT_BUFFER];
-
-   va_start (ap, fmt);
-   vsnprintf (string, cr::bufsize (string), translate (fmt), ap);
-   va_end (ap);
-
-   if (isNullEntity (ent)) {
-      print (string);
-      return;
-   }
-   strcat (string, "\n");
-   engfuncs.pfnClientPrintf (ent, print_console, string);
-}
-
-void Game::centerPrint (edict_t *ent, const char *fmt, ...) {
-   va_list ap;
-   char string[MAX_PRINT_BUFFER];
-
-   va_start (ap, fmt);
-   vsnprintf (string, cr::bufsize (string), translate (fmt), ap);
-   va_end (ap);
-
-   if (isNullEntity (ent)) {
-      print (string);
-      return;
-   }
-   strcat (string, "\n");
-   engfuncs.pfnClientPrintf (ent, print_center, string);
-}
-
-void Game::drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, int red, int green, int blue, int brightness, int speed, int life, DrawLineType type) {
+void Game::drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, const Color &color, int brightness, int speed, int life, DrawLine type) {
    // this function draws a arrow visible from the client side of the player whose player entity
    // is pointed to by ent, from the vector location start to the vector location end,
    // which is supposed to last life tenths seconds, and having the color defined by RGB.
@@ -244,7 +158,7 @@ void Game::drawLine (edict_t *ent, const Vector &start, const Vector &end, int w
       return; // reliability check
    }
 
-   MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, Vector::null (), ent)
+   MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, nullvec, ent)
       .writeByte (TE_BEAMPOINTS)
       .writeCoord (end.x)
       .writeCoord (end.y)
@@ -258,9 +172,9 @@ void Game::drawLine (edict_t *ent, const Vector &start, const Vector &end, int w
       .writeByte (life) // life in 0.1's
       .writeByte (width) // width
       .writeByte (noise) // noise
-      .writeByte (red) // r, g, b
-      .writeByte (green) // r, g, b
-      .writeByte (blue) // r, g, b
+      .writeByte (color.red) // r, g, b
+      .writeByte (color.green) // r, g, b
+      .writeByte (color.blue) // r, g, b
       .writeByte (brightness) // brightness
       .writeByte (speed); // speed
 }
@@ -276,11 +190,11 @@ void Game::testLine (const Vector &start, const Vector &end, int ignoreFlags, ed
 
    int engineFlags = 0;
 
-   if (ignoreFlags & TRACE_IGNORE_MONSTERS) {
+   if (ignoreFlags & TraceIgnore::Monsters) {
       engineFlags = 1;
    }
 
-   if (ignoreFlags & TRACE_IGNORE_GLASS) {
+   if (ignoreFlags & TraceIgnore::Glass) {
       engineFlags |= 0x100;
    }
    engfuncs.pfnTraceLine (start, end, engineFlags, ignoreEntity, ptr);
@@ -298,21 +212,22 @@ void Game::testHull (const Vector &start, const Vector &end, int ignoreFlags, in
    // function allows to specify whether the trace starts "inside" an entity's polygonal model,
    // and if so, to specify that entity in ignoreEntity in order to ignore it as an obstacle.
 
-   engfuncs.pfnTraceHull (start, end, !!(ignoreFlags & TRACE_IGNORE_MONSTERS), hullNumber, ignoreEntity, ptr);
+   engfuncs.pfnTraceHull (start, end, !!(ignoreFlags & TraceIgnore::Monsters), hullNumber, ignoreEntity, ptr);
 }
 
 float Game::getWaveLen (const char *fileName) {
    extern ConVar yb_chatter_path;
-   const char *filePath = util.format ("%s/%s/%s.wav", getModName (), yb_chatter_path.str (), fileName);
+   const char *filePath = strings.format ("%s/%s/%s.wav", getModName (), yb_chatter_path.str (), fileName);
 
    File fp (filePath, "rb");
 
    // we're got valid handle?
-   if (!fp.isValid ()) {
+   if (!fp) {
       return 0.0f;
    }
+
    // check if we have engine function for this
-   if (!game.is (GAME_XASH_ENGINE) && engfuncs.pfnGetApproxWavePlayLen != nullptr) {
+   if (!is (GameFlags::Xash3D) && plat.checkPointer (engfuncs.pfnGetApproxWavePlayLen)) {
       fp.close ();
       return engfuncs.pfnGetApproxWavePlayLen (filePath) / 1000.0f;
    }
@@ -337,66 +252,56 @@ float Game::getWaveLen (const char *fileName) {
    memset (&waveHdr, 0, sizeof (waveHdr));
 
    if (fp.read (&waveHdr, sizeof (WavHeader)) == 0) {
-      util.logEntry (true, LL_ERROR, "Wave File %s - has wrong or unsupported format", filePath);
+      logger.error ("Wave File %s - has wrong or unsupported format", filePath);
       return 0.0f;
    }
 
    if (strncmp (waveHdr.chunkID, "WAVE", 4) != 0) {
-      util.logEntry (true, LL_ERROR, "Wave File %s - has wrong wave chunk id", filePath);
+      logger.error ("Wave File %s - has wrong wave chunk id", filePath);
       return 0.0f;
    }
    fp.close ();
 
    if (waveHdr.dataChunkLength == 0) {
-      util.logEntry (true, LL_ERROR, "Wave File %s - has zero length!", filePath);
+      logger.error ("Wave File %s - has zero length!", filePath);
       return 0.0f;
    }
    return static_cast <float> (waveHdr.dataChunkLength) / static_cast <float> (waveHdr.bytesPerSecond);
 }
 
-bool Game::isDedicated (void) {
+bool Game::isDedicated () {
    // return true if server is dedicated server, false otherwise
    static bool dedicated = engfuncs.pfnIsDedicatedServer () > 0;
 
    return dedicated;
 }
 
-const char *Game::getModName (void) {
+const char *Game::getModName () {
    // this function returns mod name without path
 
-   static char modname[256];
+   static String name;
 
-   engfuncs.pfnGetGameDir (modname);
-   size_t length = strlen (modname);
-
-   size_t stop = length - 1;
-   while ((modname[stop] == '\\' || modname[stop] == '/') && stop > 0) {
-      stop--;
+   if (!name.empty ()) {
+      return name.chars ();
    }
 
-   size_t start = stop;
-   while (modname[start] != '\\' && modname[start] != '/' && start > 0) {
-      start--;
-   }
+   char engineModName[256];
+   engfuncs.pfnGetGameDir (engineModName);
 
-   if (modname[start] == '\\' || modname[start] == '/') {
-      start++;
-   }
+   name = engineModName;
+   size_t slash = name.findLastOf ("\\/");
 
-   for (length = start; length <= stop; length++) {
-      modname[length - start] = modname[length];
+   if (slash != String::kInvalidIndex) {
+      name = name.substr (slash + 1);
    }
-   modname[length - start] = 0; // terminate the string
-   return &modname[0];
+   name = name.trim (" \\/");
+   return name.chars ();
 }
 
-const char *Game::getMapName (void) {
+const char *Game::getMapName () {
    // this function gets the map name and store it in the map_name global string variable.
 
-   static char engineMap[256];
-   strncpy (engineMap, STRING (globals->mapname), cr::bufsize (engineMap));
-
-   return &engineMap[0];
+   return strings.format ("%s", STRING (globals->mapname));
 }
 
 Vector Game::getAbsPos (edict_t *ent) {
@@ -404,50 +309,49 @@ Vector Game::getAbsPos (edict_t *ent) {
    // entity that has a bounding box has its center at the center of the bounding box itself.
 
    if (isNullEntity (ent)) {
-      return Vector::null ();
+      return nullvec;
    }
 
    if (ent->v.origin.empty ()) {
-      return ent->v.absmin + ent->v.size * 0.5f;
+      return (ent->v.absmin + ent->v.absmax) * 0.5f;
    }
    return ent->v.origin;
 }
 
-void Game::registerCmd (const char *command, void func (void)) {
+void Game::registerCmd (const char *command, void func ()) {
    // this function tells the engine that a new server command is being declared, in addition
    // to the standard ones, whose name is command_name. The engine is thus supposed to be aware
    // that for every "command_name" server command it receives, it should call the function
    // pointed to by "function" in order to handle it.
 
    // check for hl pre 1.1.0.4, as it's doesn't have pfnAddServerCommand
-   if (!cr::checkptr (reinterpret_cast <void *> (engfuncs.pfnAddServerCommand))) {
-      util.logEntry (true, LL_FATAL, "YaPB's minimum HL engine version is 1.1.0.4 and minimum Counter-Strike is Beta 6.6. Please update your engine version.");
+   if (!plat.checkPointer (engfuncs.pfnAddServerCommand)) {
+      logger.fatal ("YaPB's minimum HL engine version is 1.1.0.4 and minimum Counter-Strike is Beta 6.6. Please update your engine version.");
    }
    engfuncs.pfnAddServerCommand (const_cast <char *> (command), func);
 }
 
 void Game::playSound (edict_t *ent, const char *sound) {
+   if (isNullEntity (ent)) {
+      return;
+   }
    engfuncs.pfnEmitSound (ent, CHAN_WEAPON, sound, 1.0f, ATTN_NORM, 0, 100);
 }
 
-void Game::execBotCmd (edict_t *ent, const char *fmt, ...) {
+void Game::sendClientMessage (bool console, edict_t *ent, const char *message) {
+   // helper to sending the client message
+
+   MessageWriter (MSG_ONE, getMessageId (NetMsg::TextMsg), nullvec, ent)
+      .writeByte (console ? HUD_PRINTCONSOLE : HUD_PRINTCENTER)
+      .writeString (message);
+}
+
+void Game::prepareBotArgs (edict_t *ent, String str) {
    // the purpose of this function is to provide fakeclients (bots) with the same client
    // command-scripting advantages (putting multiple commands in one line between semicolons)
    // as real players. It is an improved version of botman's FakeClientCommand, in which you
    // supply directly the whole string as if you were typing it in the bot's "console". It
    // is supposed to work exactly like the pfnClientCommand (server-sided client command).
-
-   if (!util.isFakeClient (ent)) {
-      return;
-   }
-   va_list ap;
-   char string[256];
-
-   va_start (ap, fmt);
-   vsnprintf (string, cr::bufsize (string), fmt, ap);
-   va_end (ap);
-
-   String str (string);
 
    if (str.empty ()) {
       return;
@@ -468,7 +372,7 @@ void Game::execBotCmd (edict_t *ent, const char *fmt, ...) {
       const size_t space = args.find (' ', 0);
 
       // if found space
-      if (space != String::INVALID_INDEX) {
+      if (space != String::kInvalidIndex) {
          const auto quote = space + 1; // check for quote next to space
 
          // check if we're got a quoted string
@@ -489,7 +393,7 @@ void Game::execBotCmd (edict_t *ent, const char *fmt, ...) {
       m_botArgs.clear (); // clear space for next cmd 
    };
 
-   if (str.find (';', 0) != String::INVALID_INDEX) {
+   if (str.find (';', 0) != String::kInvalidIndex) {
       for (auto &part : str.split (";")) {
          parsePartArgs (part);
       }
@@ -500,10 +404,10 @@ void Game::execBotCmd (edict_t *ent, const char *fmt, ...) {
    m_isBotCommand = false;
 }
 
-bool Game::isSoftwareRenderer (void) {
+bool Game::isSoftwareRenderer () {
 
    // xash always use "hw" structures
-   if (is (GAME_XASH_ENGINE)) {
+   if (is (GameFlags::Xash3D)) {
       return false;
    }
 
@@ -513,49 +417,31 @@ bool Game::isSoftwareRenderer (void) {
    }
 
    // and on only windows version you can use software-render game. Linux, OSX always defaults to OpenGL
-#if defined (PLATFORM_WIN32)
-   static bool isSoftware = GetModuleHandleA ("sw");
-#else
-   static bool isSoftware = false;
-#endif
-   return isSoftware;
+   if (plat.isWindows) {
+      return plat.hasModule ("sw");
+   }
+   return true;
 }
 
-void Game::execCmd (const char *fmt, ...) {
-   // this function asks the engine to execute a server command
-
-   va_list ap;
-   char string[MAX_PRINT_BUFFER];
-
-   // concatenate all the arguments in one string
-   va_start (ap, fmt);
-   vsnprintf (string, cr::bufsize (string), fmt, ap);
-   va_end (ap);
-
-   strcat (string, "\n");
-   engfuncs.pfnServerCommand (string);
-}
-
-void Game::pushVarToRegStack (const char *variable, const char *value, VarType varType, bool regMissing, const char *regVal, ConVar *self) {
+void Game::addNewCvar (const char *variable, const char *value, Var varType, bool regMissing, const char *regVal, ConVar *self) {
    // this function adds globally defined variable to registration stack
 
-   VarPair pair;
-   memset (&pair, 0, sizeof (VarPair));
+   VarPair pair = {};
 
    pair.reg.name = const_cast <char *> (variable);
    pair.reg.string = const_cast <char *> (value);
-   pair.regMissing = regMissing;
-   pair.regVal = regVal;
+   pair.missing = regMissing;
+   pair.regval = regVal;
 
    int engineFlags = FCVAR_EXTDLL;
 
-   if (varType == VT_NORMAL) {
+   if (varType == Var::Normal) {
       engineFlags |= FCVAR_SERVER;
    }
-   else if (varType == VT_READONLY) {
+   else if (varType == Var::ReadOnly) {
       engineFlags |= FCVAR_SERVER | FCVAR_SPONLY | FCVAR_PRINTABLEONLY;
    }
-   else if (varType == VT_PASSWORD) {
+   else if (varType == Var::Password) {
       engineFlags |= FCVAR_PROTECTED;
    }
 
@@ -563,37 +449,46 @@ void Game::pushVarToRegStack (const char *variable, const char *value, VarType v
    pair.self = self;
    pair.type = varType;
 
-   m_cvars.push (pair);
+   m_cvars.push (cr::move (pair));
 }
 
-void Game::pushRegStackToEngine (bool gameVars) {
+void Game::registerCvars (bool gameVars) {
    // this function pushes all added global variables to engine registration
 
    for (auto &var : m_cvars) {
       ConVar &self = *var.self;
       cvar_t &reg = var.reg;
 
-      if (var.type != VT_NOREGISTER) {
-         self.m_eptr = engfuncs.pfnCVarGetPointer (reg.name);
+      if (var.type != Var::NoRegister) {
+         self.eptr = engfuncs.pfnCVarGetPointer (reg.name);
 
-         if (self.m_eptr == nullptr) {
-            engfuncs.pfnCVarRegister (&var.reg);
-            self.m_eptr = engfuncs.pfnCVarGetPointer (reg.name);
+         if (!self.eptr) {
+            static cvar_t reg_;
+
+            // fix metamod' memlocs not found
+            if (is (GameFlags::Metamod)) {
+               reg_ = var.reg;
+               engfuncs.pfnCVarRegister (&reg_);
+            }
+            else {
+               engfuncs.pfnCVarRegister (&var.reg);
+            }
+            self.eptr = engfuncs.pfnCVarGetPointer (reg.name);
          }
       }
       else if (gameVars) {
-         self.m_eptr = engfuncs.pfnCVarGetPointer (reg.name);
+         self.eptr = engfuncs.pfnCVarGetPointer (reg.name);
 
-         if (var.regMissing && self.m_eptr == nullptr) {
-            if (reg.string == nullptr && var.regVal != nullptr) {
-               reg.string = const_cast <char *> (var.regVal);
+         if (var.missing && !self.eptr) {
+            if (reg.string == nullptr && var.regval != nullptr) {
+               reg.string = const_cast <char *> (var.regval);
                reg.flags |= FCVAR_SERVER;
             }
             engfuncs.pfnCVarRegister (&var.reg);
-            self.m_eptr = engfuncs.pfnCVarGetPointer (reg.name);
+            self.eptr = engfuncs.pfnCVarGetPointer (reg.name);
          }
 
-         if (!self.m_eptr) {
+         if (!self.eptr) {
             print ("Got nullptr on cvar %s!", reg.name);
          }
       }
@@ -603,19 +498,19 @@ void Game::pushRegStackToEngine (bool gameVars) {
 const char *Game::translate (const char *input) {
    // this function translate input string into needed language
 
-   if (isDedicated () || !m_language.exists (input)) {
+   if (isDedicated ()) {
       return input;
    }
    static String result;
 
-   if (m_language.get (input, result)) {
+   if (m_language.find (input, result)) {
       return result.chars ();
    }
    return input; // nothing found
 }
 
 void Game::processMessages (void *ptr) {
-   if (m_msgBlock.msg == NETMSG_UNDEFINED) {
+   if (m_msgBlock.msg == NetMsg::None) {
       return;
    }
 
@@ -632,32 +527,32 @@ void Game::processMessages (void *ptr) {
    static WeaponProp weaponProp;
 
    // some widely used stuff
-   Bot *bot = bots.getBot (m_msgBlock.bot);
+   auto bot = bots[m_msgBlock.bot];
 
-   char *strVal = reinterpret_cast <char *> (ptr);
-   int intVal = *reinterpret_cast <int *> (ptr);
-   uint8 byteVal = *reinterpret_cast <uint8 *> (ptr);
+   auto strVal = reinterpret_cast <char *> (ptr);
+   auto intVal = *reinterpret_cast <int *> (ptr);
+   auto byteVal = *reinterpret_cast <uint8 *> (ptr);
 
    // now starts of network message execution
    switch (m_msgBlock.msg) {
-   case NETMSG_VGUI:
+   case NetMsg::VGUI:
       // this message is sent when a VGUI menu is displayed.
 
       if (bot != nullptr && m_msgBlock.state == 0) {
          switch (intVal) {
-         case VMS_TEAM:
-            bot->m_startAction = GAME_MSG_TEAM_SELECT;
+         case GuiMenu::TeamSelect:
+            bot->m_startAction = BotMsg::TeamSelect;
             break;
 
-         case VMS_TF:
-         case VMS_CT:
-            bot->m_startAction = GAME_MSG_CLASS_SELECT;
+         case GuiMenu::TerroristSelect:
+         case GuiMenu::CTSelect:
+            bot->m_startAction = BotMsg::ClassSelect;
             break;
          }
       }
       break;
 
-   case NETMSG_SHOWMENU:
+   case NetMsg::ShowMenu:
       // this message is sent when a text menu is displayed.
 
       // ignore first 3 fields of message
@@ -666,32 +561,32 @@ void Game::processMessages (void *ptr) {
       }
 
       if (strcmp (strVal, "#Team_Select") == 0) {
-         bot->m_startAction = GAME_MSG_TEAM_SELECT;
+         bot->m_startAction = BotMsg::TeamSelect;
       }
       else if (strcmp (strVal, "#Team_Select_Spect") == 0) {
-         bot->m_startAction = GAME_MSG_TEAM_SELECT;
+         bot->m_startAction = BotMsg::TeamSelect;
       }
       else if (strcmp (strVal, "#IG_Team_Select_Spect") == 0) {
-         bot->m_startAction = GAME_MSG_TEAM_SELECT;
+         bot->m_startAction = BotMsg::TeamSelect;
       }
       else if (strcmp (strVal, "#IG_Team_Select") == 0) {
-         bot->m_startAction = GAME_MSG_TEAM_SELECT;
+         bot->m_startAction = BotMsg::TeamSelect;
       }
       else if (strcmp (strVal, "#IG_VIP_Team_Select") == 0) {
-         bot->m_startAction = GAME_MSG_TEAM_SELECT;
+         bot->m_startAction = BotMsg::TeamSelect;
       }
       else if (strcmp (strVal, "#IG_VIP_Team_Select_Spect") == 0) {
-         bot->m_startAction = GAME_MSG_TEAM_SELECT;
+         bot->m_startAction = BotMsg::TeamSelect;
       }
       else if (strcmp (strVal, "#Terrorist_Select") == 0) {
-         bot->m_startAction = GAME_MSG_CLASS_SELECT;
+         bot->m_startAction = BotMsg::ClassSelect;
       }
       else if (strcmp (strVal, "#CT_Select") == 0) {
-         bot->m_startAction = GAME_MSG_CLASS_SELECT;
+         bot->m_startAction = BotMsg::ClassSelect;
       }
       break;
 
-   case NETMSG_WEAPONLIST:
+   case NetMsg::WeaponList:
       // this message is sent when a client joins the game. All of the weapons are sent with the weapon ID and information about what ammo is used.
 
       switch (m_msgBlock.state) {
@@ -726,7 +621,7 @@ void Game::processMessages (void *ptr) {
       }
       break;
 
-   case NETMSG_CURWEAPON:
+   case NetMsg::CurWeapon:
       // this message is sent when a weapon is selected (either by the bot chosing a weapon or by the server auto assigning the bot a weapon). In CS it's also called when Ammo is increased/decreased
 
       switch (m_msgBlock.state) {
@@ -756,7 +651,7 @@ void Game::processMessages (void *ptr) {
       }
       break;
 
-   case NETMSG_AMMOX:
+   case NetMsg::AmmoX:
       // this message is sent whenever ammo amounts are adjusted (up or down). NOTE: Logging reveals that CS uses it very unreliable!
 
       switch (m_msgBlock.state) {
@@ -772,7 +667,7 @@ void Game::processMessages (void *ptr) {
       }
       break;
 
-   case NETMSG_AMMOPICKUP:
+   case NetMsg::AmmoPickup:
       // this message is sent when the bot picks up some ammo (AmmoX messages are also sent so this message is probably
       // not really necessary except it allows the HUD to draw pictures of ammo that have been picked up.  The bots
       // don't really need pictures since they don't have any eyes anyway.
@@ -790,7 +685,7 @@ void Game::processMessages (void *ptr) {
       }
       break;
 
-   case NETMSG_DAMAGE:
+   case NetMsg::Damage:
       // this message gets sent when the bots are getting damaged.
 
       switch (m_msgBlock.state) {
@@ -812,7 +707,7 @@ void Game::processMessages (void *ptr) {
       }
       break;
 
-   case NETMSG_MONEY:
+   case NetMsg::Money:
       // this message gets sent when the bots money amount changes
 
       if (bot != nullptr && m_msgBlock.state == 0) {
@@ -820,7 +715,7 @@ void Game::processMessages (void *ptr) {
       }
       break;
 
-   case NETMSG_STATUSICON:
+   case NetMsg::StatusIcon:
       switch (m_msgBlock.state) {
       case 0:
          enabled = byteVal;
@@ -832,7 +727,7 @@ void Game::processMessages (void *ptr) {
                bot->m_inBuyZone = (enabled != 0);
 
                // try to equip in buyzone
-               bot->processBuyzoneEntering (BUYSTATE_PRIMARY_WEAPON);
+               bot->processBuyzoneEntering (BuyState::PrimaryWeapon);
             }
             else if (strcmp (strVal, "vipsafety") == 0) {
                bot->m_inVIPZone = (enabled != 0);
@@ -845,7 +740,7 @@ void Game::processMessages (void *ptr) {
       }
       break;
 
-   case NETMSG_DEATH: // this message sends on death
+   case NetMsg::DeathMsg: // this message sends on death
       switch (m_msgBlock.state) {
       case 0:
          killerIndex = intVal;
@@ -856,8 +751,6 @@ void Game::processMessages (void *ptr) {
          break;
 
       case 2:
-         bots.updateDeathMsgState (true);
-
          if (killerIndex != 0 && killerIndex != victimIndex) {
             edict_t *killer = entityOfIndex (killerIndex);
             edict_t *victim = entityOfIndex (victimIndex);
@@ -866,13 +759,11 @@ void Game::processMessages (void *ptr) {
                break;
             }
 
-            if (yb_communication_type.integer () == 2) {
+            if (yb_radio_mode.int_ () == 2) {
                // need to send congrats on well placed shot
-               for (int i = 0; i < maxClients (); i++) {
-                  Bot *notify = bots.getBot (i);
-
-                  if (notify != nullptr && notify->m_notKilled && killer != notify->ent () && notify->seesEntity (victim->v.origin) && getTeam (killer) == notify->m_team && getTeam (killer) != getTeam (victim)) {
-                     if (!bots.getBot (killer)) {
+               for (const auto &notify : bots) {
+                  if (notify->m_notKilled && killer != notify->ent () && notify->seesEntity (victim->v.origin) && getTeam (killer) == notify->m_team && getTeam (killer) != getTeam (victim)) {
+                     if (!bots[killer]) {
                         notify->processChatterMessage ("#Bot_NiceShotCommander");
                      }
                      else {
@@ -884,10 +775,8 @@ void Game::processMessages (void *ptr) {
             }
 
             // notice nearby to victim teammates, that attacker is near
-            for (int i = 0; i < maxClients (); i++) {
-               Bot *notify = bots.getBot (i);
-
-               if (notify != nullptr && notify->m_seeEnemyTime + 2.0f < timebase () && notify->m_notKilled && notify->m_team == getTeam (victim) && util.isVisible (killer->v.origin, notify->ent ()) && isNullEntity (notify->m_enemy) && getTeam (killer) != getTeam (victim)) {
+            for (const auto &notify : bots) {
+               if (notify->m_seeEnemyTime + 2.0f < timebase () && notify->m_notKilled && notify->m_team == getTeam (victim) && util.isVisible (killer->v.origin, notify->ent ()) && isNullEntity (notify->m_enemy) && getTeam (killer) != getTeam (victim)) {
                   notify->m_actualReactionTime = 0.0f;
                   notify->m_seeEnemyTime = timebase ();
                   notify->m_enemy = killer;
@@ -896,7 +785,7 @@ void Game::processMessages (void *ptr) {
                }
             }
 
-            Bot *notify = bots.getBot (killer);
+            auto notify = bots[killer];
 
             // is this message about a bot who killed somebody?
             if (notify != nullptr) {
@@ -904,10 +793,10 @@ void Game::processMessages (void *ptr) {
             }
             else // did a human kill a bot on his team?
             {
-               Bot *target = bots.getBot (victim);
+               auto target = bots[victim];
 
                if (target != nullptr) {
-                  if (getTeam (killer) == getTeam (victim)) {
+                  if (getTeam (killer) == target->m_team) {
                      target->m_voteKickIndex = killerIndex;
                   }
                   target->m_notKilled = false;
@@ -918,7 +807,7 @@ void Game::processMessages (void *ptr) {
       }
       break;
 
-   case NETMSG_SCREENFADE: // this message gets sent when the screen fades (flashbang)
+   case NetMsg::ScreenFade: // this message gets sent when the screen fades (flashbang)
       switch (m_msgBlock.state) {
       case 3:
          r = byteVal;
@@ -940,7 +829,7 @@ void Game::processMessages (void *ptr) {
       }
       break;
 
-   case NETMSG_HLTV: // round restart in steam cs
+   case NetMsg::HLTV: // round restart in steam cs
       switch (m_msgBlock.state) {
       case 0:
          numPlayers = intVal;
@@ -954,7 +843,7 @@ void Game::processMessages (void *ptr) {
       }
       break;
 
-   case NETMSG_TEXTMSG:
+   case NetMsg::TextMsg:
       if (m_msgBlock.state == 1) {
          if (strcmp (strVal, "#CTs_Win") == 0 ||
             strcmp (strVal, "#Bomb_Defused") == 0 ||
@@ -980,10 +869,10 @@ void Game::processMessages (void *ptr) {
             }
 
             if (strcmp (strVal, "#CTs_Win") == 0) {
-               bots.setLastWinner (TEAM_COUNTER); // update last winner for economics
+               bots.setLastWinner (Team::CT); // update last winner for economics
 
-               if (yb_communication_type.integer () == 2) {
-                  Bot *notify = bots.getAliveBot ();
+               if (yb_radio_mode.int_ () == 2) {
+                  Bot *notify = bots.findAliveBot ();
 
                   if (notify != nullptr && notify->m_notKilled) {
                      notify->processChatterMessage (strVal);
@@ -992,50 +881,48 @@ void Game::processMessages (void *ptr) {
             }
 
             if (strcmp (strVal, "#Game_will_restart_in") == 0) {
-               bots.updateTeamEconomics (TEAM_COUNTER, true);
-               bots.updateTeamEconomics (TEAM_TERRORIST, true);
+               bots.updateTeamEconomics (Team::CT, true);
+               bots.updateTeamEconomics (Team::Terrorist, true);
             }
 
             if (strcmp (strVal, "#Terrorists_Win") == 0) {
-               bots.setLastWinner (TEAM_TERRORIST); // update last winner for economics
+               bots.setLastWinner (Team::Terrorist); // update last winner for economics
 
-               if (yb_communication_type.integer () == 2) {
-                  Bot *notify = bots.getAliveBot ();
+               if (yb_radio_mode.int_ () == 2) {
+                  Bot *notify = bots.findAliveBot ();
 
                   if (notify != nullptr && notify->m_notKilled) {
                      notify->processChatterMessage (strVal);
                   }
                }
             }
-            waypoints.setBombPos (true);
+            graph.setBombPos (true);
          }
          else if (!bots.isBombPlanted () && strcmp (strVal, "#Bomb_Planted") == 0) {
             bots.setBombPlanted (true);
 
-            for (int i = 0; i < maxClients (); i++) {
-               Bot *notify = bots.getBot (i);
-
-               if (notify != nullptr && notify->m_notKilled) {
+            for (const auto &notify : bots) {
+               if (notify->m_notKilled) {
                   notify->clearSearchNodes ();
                   notify->clearTasks ();
 
-                  if (yb_communication_type.integer () == 2 && rng.chance (55) && notify->m_team == TEAM_COUNTER) {
-                     notify->pushChatterMessage (CHATTER_WHERE_IS_THE_BOMB);
+                  if (yb_radio_mode.int_ () == 2 && rg.chance (55) && notify->m_team == Team::CT) {
+                     notify->pushChatterMessage (Chatter::WhereIsTheC4);
                   }
                }
             }
-            waypoints.setBombPos ();
+            graph.setBombPos ();
          }
          else if (bot != nullptr && strcmp (strVal, "#Switch_To_BurstFire") == 0) {
-            bot->m_weaponBurstMode = BURST_ON;
+            bot->m_weaponBurstMode = BurstMode::On;
          }
          else if (bot != nullptr && strcmp (strVal, "#Switch_To_SemiAuto") == 0) {
-            bot->m_weaponBurstMode = BURST_OFF;
+            bot->m_weaponBurstMode = BurstMode::Off;
          }
       }
       break;
 
-   case NETMSG_TEAMINFO:
+   case NetMsg::TeamInfo:
       switch (m_msgBlock.state) {
       case 0:
          playerIndex = intVal;
@@ -1043,35 +930,35 @@ void Game::processMessages (void *ptr) {
 
       case 1:
          if (playerIndex > 0 && playerIndex <= maxClients ()) {
-            int team = TEAM_UNASSIGNED;
+            int team = Team::Unassigned;
 
             if (strVal[0] == 'U' && strVal[1] == 'N') {
-               team = TEAM_UNASSIGNED;
+               team = Team::Unassigned;
             }
             else if (strVal[0] == 'T' && strVal[1] == 'E') {
-               team = TEAM_TERRORIST;
+               team = Team::Terrorist;
             }
             else if (strVal[0] == 'C' && strVal[1] == 'T') {
-               team = TEAM_COUNTER;
+               team = Team::CT;
             }
             else if (strVal[0] == 'S' && strVal[1] == 'P') {
-               team = TEAM_SPECTATOR;
+               team = Team::Spectator;
             }
             auto &client = util.getClient (playerIndex - 1);
 
             client.team2 = team;
-            client.team = game.is (GAME_CSDM_FFA) ? playerIndex : team;
+            client.team = is (GameFlags::FreeForAll) ? playerIndex : team;
          }
          break;
       }
       break;
 
-   case NETMSG_BARTIME:
+   case NetMsg::BarTime:
       if (bot != nullptr && m_msgBlock.state == 0) {
          if (intVal > 0) {
             bot->m_hasProgressBar = true; // the progress bar on a hud
 
-            if (game.mapIs (MAP_DE) && bots.isBombPlanted () && bot->m_team == TEAM_COUNTER) {
+            if (mapIs (MapFlags::Demolition) && bots.isBombPlanted () && bot->m_team == Team::CT) {
                bots.notifyBombDefuse ();
             }
          }
@@ -1081,71 +968,68 @@ void Game::processMessages (void *ptr) {
       }
       break;
 
-   case NETMSG_ITEMSTATUS:
+   case NetMsg::ItemStatus:
       if (bot != nullptr && m_msgBlock.state == 0) {
-
-         enum ItemStatus {
-            IS_NIGHTVISION = (1 << 0),
-            IS_DEFUSEKIT = (1 << 1)
-         };
-
-         bot->m_hasNVG = (intVal & IS_NIGHTVISION) ? true : false;
-         bot->m_hasDefuser = (intVal & IS_DEFUSEKIT) ? true : false;
+         bot->m_hasNVG = (intVal & ItemStatus::Nightvision) ? true : false;
+         bot->m_hasDefuser = (intVal & ItemStatus::DefusalKit) ? true : false;
       }
       break;
 
-   case NETMSG_FLASHBAT:
+   case NetMsg::FlashBat:
       if (bot != nullptr && m_msgBlock.state == 0) {
          bot->m_flashLevel = static_cast <float> (intVal);
       }
       break;
 
-   case NETMSG_NVGTOGGLE:
+   case NetMsg::NVGToggle:
       if (bot != nullptr && m_msgBlock.state == 0) {
          bot->m_usesNVG = intVal > 0;
       }
       break;
 
    default:
-      util.logEntry (true, LL_FATAL, "Network message handler error. Call to unrecognized message id (%d).\n", m_msgBlock.msg);
+      logger.error ("Network message handler error. Call to unrecognized message id (%d).\n", m_msgBlock.msg);
    }
    m_msgBlock.state++; // and finally update network message state
 }
 
-bool Game::loadCSBinary (void) {
-   const char *modname = game.getModName ();
+bool Game::loadCSBinary () {
+   auto modname = getModName ();
 
    if (!modname) {
       return false;
    }
+   StringArray libs;
 
-#if defined(PLATFORM_WIN32)
-   const char *libs[] = { "mp.dll", "cs.dll" };
-#elif defined(PLATFORM_LINUX)
-   const char *libs[] = { "cs.so", "cs_i386.so" };
-#elif defined(PLATFORM_OSX)
-   const char *libs[] = { "cs.dylib" };
-#endif
+   if (plat.isWindows) {
+      libs.push ("mp.dll");
+      libs.push ("cs.dll");
+   }
+   else if (plat.isLinux) {
+      libs.push ("cs.so");
+      libs.push ("cs_i386.so");
+   }
+   else if (plat.isOSX) {
+      libs.push ("cs.dylib");
+   }
 
-   auto libCheck = [&] (const char *modname, const char *dll) {
+   auto libCheck = [&] (const String &mod, const String &dll) {
       // try to load gamedll
-      if (!m_gameLib.isValid ()) {
-         util.logEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", dll, modname);
-
-         return false;
+      if (!m_gameLib) {
+         logger.fatal ("Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", dll.chars (), mod.chars ());
       }
       auto ent = m_gameLib.resolve <EntityFunction> ("trigger_random_unique");
 
       // detect regamedll by addon entity they provide
       if (ent != nullptr) {
-         m_gameFlags |= GAME_REGAMEDLL;
+         m_gameFlags |= GameFlags::ReGameDLL;
       }
       return true;
    };
 
    // search the libraries inside game dlls directory
-   for (const auto lib : libs) {
-      auto *path = util.format ("%s/dlls/%s", modname, lib);
+   for (const auto &lib : libs) {
+      auto *path = strings.format ("%s/dlls/%s", modname, lib.chars ());
 
       // if we can't read file, skip it
       if (!File::exists (path)) {
@@ -1154,18 +1038,15 @@ bool Game::loadCSBinary (void) {
 
       // special case, czero is always detected first, as it's has custom directory
       if (strcmp (modname, "czero") == 0) {
-         m_gameFlags |= (GAME_CZERO | GAME_SUPPORT_BOT_VOICE | GAME_SUPPORT_SVC_PINGS);
+         m_gameFlags |= (GameFlags::ConditionZero | GameFlags::HasBotVoice | GameFlags::HasFakePings);
 
-         if (is (GAME_METAMOD)) {
+         if (is (GameFlags::Metamod)) {
             return false;
          }
          m_gameLib.load (path);
 
          // verify dll is OK 
-         if (!libCheck (modname, lib)) {
-            return false;
-         }
-         return true;
+         return libCheck (modname, lib);
       }
       else {
          m_gameLib.load (path);
@@ -1180,26 +1061,26 @@ bool Game::loadCSBinary (void) {
 
          // detect xash engine
          if (engfuncs.pfnCVarGetPointer ("build") != nullptr) {
-            m_gameFlags |= (GAME_LEGACY | GAME_XASH_ENGINE);
+            m_gameFlags |= (GameFlags::Legacy | GameFlags::Xash3D);
 
             if (entity != nullptr) {
-               m_gameFlags |= GAME_SUPPORT_BOT_VOICE;
+               m_gameFlags |= GameFlags::HasBotVoice;
             }
 
-            if (is (GAME_METAMOD)) {
+            if (is (GameFlags::Metamod)) {
                return false;
             }
             return true;
          }
 
          if (entity != nullptr) {
-            m_gameFlags |= (GAME_CSTRIKE16 | GAME_SUPPORT_BOT_VOICE | GAME_SUPPORT_SVC_PINGS);
+            m_gameFlags |= (GameFlags::Modern | GameFlags::HasBotVoice | GameFlags::HasFakePings);
          }
          else {
-            m_gameFlags |= GAME_LEGACY;
+            m_gameFlags |= GameFlags::Legacy;
          }
 
-         if (is (GAME_METAMOD)) {
+         if (is (GameFlags::Metamod)) {
             return false;
          }
          return true;
@@ -1208,99 +1089,88 @@ bool Game::loadCSBinary (void) {
    return false;
 }
 
-bool Game::postload (void) {
-   // register our cvars
-   game.pushRegStackToEngine ();
-
+bool Game::postload () {
    // ensure we're have all needed directories
-   const char *mod = game.getModName ();
+   const char *mod = getModName ();
 
    // create the needed paths
-   File::pathCreate (const_cast <char *> (util.format ("%s/addons/yapb/conf/lang", mod)));
-   File::pathCreate (const_cast <char *> (util.format ("%s/addons/yapb/data/learned", mod)));
+   File::createPath (strings.format ("%s/addons/yapb/conf/lang", mod));
+   File::createPath (strings.format ("%s/addons/yapb/data/learned", mod));
+   File::createPath (strings.format ("%s/addons/yapb/data/graph", mod));
+   File::createPath (strings.format ("%s/addons/yapb/data/logs", mod));
+
+   // set out user agent for http stuff
+   http.setUserAgent (strings.format ("%s/%s", PRODUCT_SHORT_NAME, PRODUCT_VERSION));
 
    // print game detection info
-   auto printGame = [&] (void) {
+   auto printGame = [&] () {
       String gameVersionStr;
 
-      if (is (GAME_LEGACY)) {
+      if (is (GameFlags::Legacy)) {
          gameVersionStr.assign ("Legacy");
       }
-      else if (is (GAME_CZERO)) {
+      else if (is (GameFlags::ConditionZero)) {
          gameVersionStr.assign ("Condition Zero");
       }
-      else if (is (GAME_CSTRIKE16)) {
+      else if (is (GameFlags::Modern)) {
          gameVersionStr.assign ("v1.6");
       }
 
-      if (is (GAME_XASH_ENGINE)) {
+      if (is (GameFlags::Xash3D)) {
          gameVersionStr.append (" @ Xash3D Engine");
 
-         if (is (GAME_MOBILITY)) {
+         if (is (GameFlags::Mobility)) {
             gameVersionStr.append (" Mobile");
          }
          gameVersionStr.replace ("Legacy", "1.6 Limited");
       }
 
-      if (is (GAME_SUPPORT_BOT_VOICE)) {
+      if (is (GameFlags::HasBotVoice)) {
          gameVersionStr.append (" (BV)");
       }
 
-      if (is (GAME_REGAMEDLL)) {
+      if (is (GameFlags::ReGameDLL)) {
          gameVersionStr.append (" (RE)");
       }
 
-      if (is (GAME_SUPPORT_SVC_PINGS)) {
+      if (is (GameFlags::HasFakePings)) {
          gameVersionStr.append (" (SVC)");
       }
       print ("[YAPB] Bot v%s.0.%d Loaded. Game detected as Counter-Strike: %s", PRODUCT_VERSION, util.buildNumber (), gameVersionStr.chars ());
    };
 
-#ifdef PLATFORM_ANDROID
-   m_gameFlags |= (GAME_XASH_ENGINE | GAME_MOBILITY | GAME_SUPPORT_BOT_VOICE | GAME_REGAMEDLL);
+   if (plat.isAndroid) {
+      m_gameFlags |= (GameFlags::Xash3D | GameFlags::Mobility | GameFlags::HasBotVoice | GameFlags::ReGameDLL);
 
-   if (is (GAME_METAMOD)) {
-      return true; // we should stop the attempt for loading the real gamedll, since metamod handle this for us
+      if (is (GameFlags::Metamod)) {
+         return true; // we should stop the attempt for loading the real gamedll, since metamod handle this for us
+      }
+      auto gamedll = strings.format ("%s/%s", getenv ("XASH3D_GAMELIBDIR"), plat.isAndroidHardFP ? "libserver_hardfp.so" : "libserver.so");
+
+      if (!m_gameLib.load (gamedll)) {
+         logger.fatal ("Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gamedll, getModName ());
+      }
+      printGame ();
+
    }
+   else {
+      bool binaryLoaded = loadCSBinary ();
 
-   extern ConVar yb_difficulty;
-   yb_difficulty.set (2);
+      if (!binaryLoaded && !is (GameFlags::Metamod)) {
+         logger.fatal ("Mod that you has started, not supported by this bot (gamedir: %s)", getModName ());
+      }
+      printGame ();
 
-#ifdef LOAD_HARDFP
-   const char *serverDLL = "libserver_hardfp.so";
-#else
-   const char *serverDLL = "libserver.so";
-#endif
-
-   char gameDLLName[256];
-   snprintf (gameDLLName, cr::bufsize (gameDLLName), "%s/%s", getenv ("XASH3D_GAMELIBDIR"), serverDLL);
-
-   m_gameLib.load (gameDLLName);
-
-   if (!m_gameLib.isValid ()) {
-      util.logEntry (true, LL_FATAL | LL_IGNORE, "Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gameDLLName, game.getModName ());
-      return true;
+      if (is (GameFlags::Metamod)) {
+         m_gameLib.unload ();
+         return true;
+      }
    }
-   printGame ();
-
-#else
-   bool binaryLoaded = loadCSBinary ();
-
-   if (!binaryLoaded && !is (GAME_METAMOD)) {
-      util.logEntry (true, LL_FATAL | LL_IGNORE, "Mod that you has started, not supported by this bot (gamedir: %s)", game.getModName ());
-      return true;
-   }
-   printGame ();
-
-   if (is (GAME_METAMOD)) {
-      return true;
-   }
-#endif
    return false;
 }
 
-void Game::detectDeathmatch (void) {
-   if (!game.is (GAME_METAMOD | GAME_REGAMEDLL)) {
+void Game::detectDeathmatch () {
+   if (!is (GameFlags::Metamod | GameFlags::ReGameDLL)) {
       return;
    }
    static auto dmActive = engfuncs.pfnCVarGetPointer ("csdm_active");
@@ -1309,34 +1179,38 @@ void Game::detectDeathmatch (void) {
    // csdm is only with amxx and metamod
    if (dmActive) {
       if (dmActive->value > 0.0f) {
-         m_gameFlags |= GAME_CSDM;
+         m_gameFlags |= GameFlags::CSDM;
       }
-      else if (is (GAME_CSDM)) {
-         m_gameFlags &= ~GAME_CSDM;
+      else if (is (GameFlags::CSDM)) {
+         m_gameFlags &= ~GameFlags::CSDM;
       }
    }
 
    // but this can be provided by regamedll
    if (freeForAll) {
       if (freeForAll->value > 0.0f) {
-         m_gameFlags |= GAME_CSDM_FFA;
+         m_gameFlags |= GameFlags::FreeForAll;
       }
-      else if (is (GAME_CSDM_FFA)) {
-         m_gameFlags &= ~GAME_CSDM_FFA;
+      else if (is (GameFlags::FreeForAll)) {
+         m_gameFlags &= ~GameFlags::FreeForAll;
       }
    }
 }
 
-void Game::slowFrame (void) {
-   if (m_slowFrame > game.timebase ()) {
+void Game::slowFrame () {
+   if (m_slowFrame > timebase ()) {
       return;
    }
-   
    ctrl.maintainAdminRights ();
-   bots.calculatePingOffsets ();
 
    // calculate light levels for all waypoints if needed
-   waypoints.initLightLevels ();
+   graph.initLightLevels ();
+
+   // update bot difficulties to newly selected from cvar
+   bots.updateBotDifficulties ();
+
+   // update client pings
+   util.calculatePings ();
 
    // detect csdm
    detectDeathmatch ();
@@ -1348,85 +1222,81 @@ void Game::slowFrame (void) {
 
 void Game::beginMessage (edict_t *ent, int dest, int type) {
    // store the message type in our own variables, since the GET_USER_MSG_ID () will just do a lot of strcmp()'s...
-   if (is (GAME_METAMOD) && getMessageId (NETMSG_MONEY) == -1) {
+   if (is (GameFlags::Metamod) && getMessageId (NetMsg::Money) == -1) {
 
-      auto setMsgId = [&] (const char *name, NetMsgId id) {
+      auto setMsgId = [&] (const char *name, NetMsg id) {
          setMessageId (id, GET_USER_MSG_ID (PLID, name, nullptr));
       };
-      setMsgId ("VGUIMenu", NETMSG_VGUI);
-      setMsgId ("ShowMenu", NETMSG_SHOWMENU);
-      setMsgId ("WeaponList", NETMSG_WEAPONLIST);
-      setMsgId ("CurWeapon", NETMSG_CURWEAPON);
-      setMsgId ("AmmoX", NETMSG_AMMOX);
-      setMsgId ("AmmoPickup", NETMSG_AMMOPICKUP);
-      setMsgId ("Damage", NETMSG_DAMAGE);
-      setMsgId ("Money", NETMSG_MONEY);
-      setMsgId ("StatusIcon", NETMSG_STATUSICON);
-      setMsgId ("DeathMsg", NETMSG_DEATH);
-      setMsgId ("ScreenFade", NETMSG_SCREENFADE);
-      setMsgId ("HLTV", NETMSG_HLTV);
-      setMsgId ("TextMsg", NETMSG_TEXTMSG);
-      setMsgId ("TeamInfo", NETMSG_TEAMINFO);
-      setMsgId ("BarTime", NETMSG_BARTIME);
-      setMsgId ("SendAudio", NETMSG_SENDAUDIO);
-      setMsgId ("SayText", NETMSG_SAYTEXT);
-      setMsgId ("FlashBat", NETMSG_FLASHBAT);
-      setMsgId ("Flashlight", NETMSG_FLASHLIGHT);
-      setMsgId ("NVGToggle", NETMSG_NVGTOGGLE);
-      setMsgId ("ItemStatus", NETMSG_ITEMSTATUS);
+      setMsgId ("VGUIMenu", NetMsg::VGUI);
+      setMsgId ("ShowMenu", NetMsg::ShowMenu);
+      setMsgId ("WeaponList", NetMsg::WeaponList);
+      setMsgId ("CurWeapon", NetMsg::CurWeapon);
+      setMsgId ("AmmoX", NetMsg::AmmoX);
+      setMsgId ("AmmoPickup", NetMsg::AmmoPickup);
+      setMsgId ("Damage", NetMsg::Damage);
+      setMsgId ("Money", NetMsg::Money);
+      setMsgId ("StatusIcon", NetMsg::StatusIcon);
+      setMsgId ("DeathMsg", NetMsg::DeathMsg);
+      setMsgId ("ScreenFade", NetMsg::ScreenFade);
+      setMsgId ("HLTV", NetMsg::HLTV);
+      setMsgId ("TextMsg", NetMsg::TextMsg);
+      setMsgId ("TeamInfo", NetMsg::TeamInfo);
+      setMsgId ("BarTime", NetMsg::BarTime);
+      setMsgId ("SendAudio", NetMsg::SendAudio);
+      setMsgId ("SayText", NetMsg::SayText);
+      setMsgId ("FlashBat", NetMsg::FlashBat);
+      setMsgId ("Flashlight", NetMsg::Fashlight);
+      setMsgId ("NVGToggle", NetMsg::NVGToggle);
+      setMsgId ("ItemStatus", NetMsg::ItemStatus);
 
-      if (is (GAME_SUPPORT_BOT_VOICE)) {
-         setMessageId (NETMSG_BOTVOICE, GET_USER_MSG_ID (PLID, "BotVoice", nullptr));
+      if (is (GameFlags::HasBotVoice)) {
+         setMessageId (NetMsg::BotVoice, GET_USER_MSG_ID (PLID, "BotVoice", nullptr));
       }
    }
 
-   if ((!is (GAME_LEGACY) || is (GAME_XASH_ENGINE)) && dest == MSG_SPEC && type == getMessageId (NETMSG_HLTV)) {
-      setCurrentMessageId (NETMSG_HLTV);
+   if ((!is (GameFlags::Legacy) || is (GameFlags::Xash3D)) && dest == MSG_SPEC && type == getMessageId (NetMsg::HLTV)) {
+      setCurrentMessageId (NetMsg::HLTV);
    }
-   captureMessage (type, NETMSG_WEAPONLIST);
+   captureMessage (type, NetMsg::WeaponList);
 
-   if (!isNullEntity (ent)) {
-      int index = bots.index (ent);
+   if (!isNullEntity (ent) && !(ent->v.flags & FL_DORMANT)) {
+      auto bot = bots[ent];
 
       // is this message for a bot?
-      if (index != -1 && !(ent->v.flags & FL_DORMANT)) {
-         setCurrentMessageOwner (index);
+      if (bot != nullptr) {
+         setCurrentMessageOwner (bot->index ());
 
          // message handling is done in usermsg.cpp
-         captureMessage (type, NETMSG_VGUI);
-         captureMessage (type, NETMSG_CURWEAPON);
-         captureMessage (type, NETMSG_AMMOX);
-         captureMessage (type, NETMSG_AMMOPICKUP);
-         captureMessage (type, NETMSG_DAMAGE);
-         captureMessage (type, NETMSG_MONEY);
-         captureMessage (type, NETMSG_STATUSICON);
-         captureMessage (type, NETMSG_SCREENFADE);
-         captureMessage (type, NETMSG_BARTIME);
-         captureMessage (type, NETMSG_TEXTMSG);
-         captureMessage (type, NETMSG_SHOWMENU);
-         captureMessage (type, NETMSG_FLASHBAT);
-         captureMessage (type, NETMSG_NVGTOGGLE);
-         captureMessage (type, NETMSG_ITEMSTATUS);
+         captureMessage (type, NetMsg::VGUI);
+         captureMessage (type, NetMsg::CurWeapon);
+         captureMessage (type, NetMsg::AmmoX);
+         captureMessage (type, NetMsg::AmmoPickup);
+         captureMessage (type, NetMsg::Damage);
+         captureMessage (type, NetMsg::Money);
+         captureMessage (type, NetMsg::StatusIcon);
+         captureMessage (type, NetMsg::ScreenFade);
+         captureMessage (type, NetMsg::BarTime);
+         captureMessage (type, NetMsg::TextMsg);
+         captureMessage (type, NetMsg::ShowMenu);
+         captureMessage (type, NetMsg::FlashBat);
+         captureMessage (type, NetMsg::NVGToggle);
+         captureMessage (type, NetMsg::ItemStatus);
       }
    }
    else if (dest == MSG_ALL) {
-      captureMessage (type, NETMSG_TEAMINFO);
-      captureMessage (type, NETMSG_DEATH);
-      captureMessage (type, NETMSG_TEXTMSG);
+      captureMessage (type, NetMsg::TeamInfo);
+      captureMessage (type, NetMsg::DeathMsg);
+      captureMessage (type, NetMsg::TextMsg);
 
       if (type == SVC_INTERMISSION) {
-         for (int i = 0; i < game.maxClients (); i++) {
-            auto bot = bots.getBot (i);
-
-            if (bot != nullptr) {
-               bot->m_notKilled = false;
-            }
+         for (const auto &bot : bots) {
+            bot->m_notKilled = false;
          }
       }
    }
 }
 
-void LightMeasure::initializeLightstyles (void) {
+void LightMeasure::initializeLightstyles () {
    // this function initializes lighting information...
 
    // reset all light styles
@@ -1440,7 +1310,7 @@ void LightMeasure::initializeLightstyles (void) {
    }
 }
 
-void LightMeasure::animateLight (void) {
+void LightMeasure::animateLight () {
    // this function performs light animations
 
    if (!m_doAnimation) {
@@ -1450,7 +1320,7 @@ void LightMeasure::animateLight (void) {
    // 'm' is normal light, 'a' is no light, 'z' is double bright
    const int index = static_cast <int> (game.timebase () * 10.0f);
 
-   for (int j = 0; j < MAX_LIGHTSTYLES; j++) {
+   for (int j = 0; j < MAX_LIGHTSTYLES; ++j) {
       if (!m_lightstyle[j].length) {
          m_lightstyleValue[j] = 256;
          continue;
@@ -1483,7 +1353,7 @@ void LightMeasure::updateLight (int style, char *value) {
 }
 
 template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const M *node, const Vector &start, const Vector &end) {
-   if (node->contents < 0) {
+   if (!node || node->contents < 0) {
       return false;
    }
 
@@ -1519,7 +1389,7 @@ template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const 
    // lightplane = plane;
    auto surf = reinterpret_cast <S *> (m_worldModel->surfaces) + node->firstsurface;
 
-   for (int i = 0; i < node->numsurfaces; i++, surf++) {
+   for (int i = 0; i < node->numsurfaces; ++i, ++surf) {
       if (surf->flags & SURF_DRAWTILED) {
          continue; // no lightmaps
       }
@@ -1576,6 +1446,10 @@ template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const 
 }
 
 float LightMeasure::getLightLevel (const Vector &point) {
+   if (game.is (GameFlags::Legacy) && !game.is (GameFlags::Xash3D)) {
+      return 0.0f;
+   }
+
    if (!m_worldModel) {
       return 0.0f;
    }
@@ -1588,7 +1462,7 @@ float LightMeasure::getLightLevel (const Vector &point) {
    endPoint.z -= 2048.0f;
 
    // it's depends if we're are on dedicated or on listenserver
-   auto recursiveCheck = [&] (void) -> bool {
+   auto recursiveCheck = [&] () -> bool {
       if (!game.isSoftwareRenderer ()) {
          return recursiveLightPoint <msurface_hw_t, mnode_hw_t> (reinterpret_cast <mnode_hw_t *> (m_worldModel->nodes), point, endPoint);
       }
@@ -1597,6 +1471,6 @@ float LightMeasure::getLightLevel (const Vector &point) {
    return !recursiveCheck () ? 0.0f : 100 * cr::sqrtf (cr::min (75.0f, static_cast <float> (m_point.avg ())) / 75.0f);
 }
 
-float LightMeasure::getSkyColor (void) {
-   return sv_skycolor_r.flt () + sv_skycolor_g.flt () + sv_skycolor_b.flt () / 3;
+float LightMeasure::getSkyColor () {
+   return static_cast <float> (Color (sv_skycolor_r.int_ (), sv_skycolor_g.int_ (), sv_skycolor_b.int_ ()).avg ());
 }

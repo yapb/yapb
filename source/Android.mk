@@ -1,7 +1,6 @@
 LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
-
 include $(XASH3D_CONFIG)
 
 LOCAL_MODULE := yapb
@@ -25,9 +24,10 @@ LOCAL_SRC_FILES := \
 	interface.cpp \
 	navigate.cpp \
 	support.cpp \
-	waypoint.cpp \
+	graph.cpp \
 
-LOCAL_CFLAGS += -O2 -std=c++11 -DLINUX -D_LINUX -DPOSIX -pipe -fno-strict-aliasing -Wall -Werror
+LOCAL_CFLAGS += -O3 -std=c++11 -DLINUX -D_LINUX -DPOSIX -pipe -fno-strict-aliasing -Wall -Werror -Wno-array-bounds
 LOCAL_CPPFLAGS += -fno-exceptions -fno-rtti
+LOCAL_LDLIBS := -llog
 
 include $(BUILD_SHARED_LIBRARY)

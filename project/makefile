@@ -11,18 +11,19 @@ PROJECT = yapb
 SOURCES = ../source
 OBJECTS = $(wildcard $(SOURCES)/*.cpp)
 
-COMPILER_FLAGS = -mtune=generic -std=c++11 -m32 -Wall -Wextra -Werror -fno-exceptions -fno-rtti -DPOSIX
-LINKER_FLAGS = -m32
+COMPILER_FLAGS = -std=c++11 -m32 -Wall -Wextra -Werror -fno-exceptions -fno-rtti
+LINKER_FLAGS = -m32 -ldl
 
 ifeq "$(DEBUG)" "true"
-	COMPILER_FLAGS += -D_DEBUG -DDEBUG -g3
+	COMPILER_FLAGS += -g3 -DCR_DEBUG
 	BINARY_DIR = debug
 else
-	COMPILER_FLAGS += -DNDEBUG -pipe -O3 -msse2 -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden -nostdinc++
+	COMPILER_FLAGS += -pipe -O3 -march=core2 -msse2 -mfpmath=sse -ffast-math -fno-builtin -fno-threadsafe-statics -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden
 	BINARY_DIR = release
+	LINKER_FLAGS += -static-libgcc
 endif
 
-INCLUDE = -I../include -I../include/engine
+INCLUDE = -I../include
 COMPILER = $(CC)
 
 ifeq "$(shell uname -s)" "Darwin"
@@ -31,11 +32,10 @@ endif
 
 ifeq "$(OSX)" "true"
 	LIBRARY_EXT = dylib
-	COMPILER_FLAGS += -DOSX -D_OSX -mmacosx-version-min=10.9
+	COMPILER_FLAGS += -mmacosx-version-min=10.9
 	LINKER_FLAGS += -dynamiclib -lstdc++ -mmacosx-version-min=10.9 -arch i386
 else
 	LIBRARY_EXT = so
-	COMPILER_FLAGS += -DLINUX -D_LINUX
 	LINKER_FLAGS += -shared
 endif
 
@@ -45,16 +45,26 @@ ifeq ($(findstring clang,$(COMPILER)),clang)
 	ifeq "$(OSX)" "false"
 		LINKER_FLAGS += -lgcc_eh
 	else
-		LINKER_FLAGS += -nostdlib++ -Wunused-command-line-argument
+		ifeq "$(DEBUG)" "true"
+			LINKER_FLAGS += -lstdc++
+		else
+			LINKER_FLAGS += -nostdlib++ -Wunused-command-line-argument -fuse-ld=lld -Wl,-z,notext --no-undefined
+		endif
 	endif
 else ifeq ($(findstring gcc,$(COMPILER)),gcc)
 	ifneq "$(OSX)" "false"
-		LINKER_FLAGS += -static-libgcc
-		COMPILER_FLAGS += -funroll-all-loops -Wno-implicit-fallthrough
+		ifneq "$(DEBUG)" "true"
+			LINKER_FLAGS += -Wl,--no-undefined -flto=thin
+			COMPILER_FLAGS += -funroll-all-loops -flto=thin
+		endif
 	endif
 else ifeq ($(findstring icc,$(COMPILER)),icc)
-	COMPILER_FLAGS += -funroll-all-loops -no-prec-div -no-inline-min-size -no-inline-max-size -wd11076 -wd11074
-	LINKER_FLAGS += -cxxlib-nostd -static-intel -no-intel-extensions
+	LINKER_FLAGS += -static-intel -no-intel-extensions
+
+	ifneq "$(DEBUG)" "true"
+		COMPILER_FLAGS += -funroll-all-loops -ipo -wd11076 -wd11074
+		LINKER_FLAGS += -cxxlib-nostd -Wl,--no-undefined,-z,notext,--gc-sections -ipo 
+	endif
 endif
 
 OBJECTS_BIN := $(OBJECTS:%.cpp=$(BINARY_DIR)/%.o)
@@ -78,6 +88,7 @@ debug:
 all:
 	$(MAKE) compile DEBUG=true
 	$(MAKE) compile DEBUG=false
+
 clean:
 	rm -rf release/*.o
 	rm -rf release/$(BINARY_OUTPUT)

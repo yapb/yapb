@@ -9,62 +9,69 @@
 
 #pragma once
 
+#include <crlib/cr-array.h>
+
+CR_NAMESPACE_BEGIN
+
 // see https://github.com/encode84/ulz/
-class FastLZ final : NonCopyable {
+class ULZ final : DenyCopying {
 public:
-   static constexpr int EXCESS = 16;
-   static constexpr int WINDOW_BITS = 17;
-   static constexpr int WINDOW_SIZE = cr::bit (WINDOW_BITS);
-   static constexpr int WINDOW_MASK = WINDOW_SIZE - 1;
-
-   static constexpr int MIN_MATCH = 4;
-   static constexpr int MAX_CHAIN = cr::bit (5);
-
-   static constexpr int HASH_BITS = 19;
-   static constexpr int HASH_SIZE = cr::bit (HASH_BITS);
-   static constexpr int NIL = -1;
-   static constexpr int UNCOMPRESS_RESULT_FAILED = -1;
+   enum : int32 {
+      Excess = 16,
+      UncompressFailure = -1
+   };
 
 private:
-   int *m_hashTable;
-   int *m_prevTable;
+   enum : int32 {
+      WindowBits = 17,
+      WindowSize = cr::bit (WindowBits),
+      WindowMask = WindowSize - 1,
+
+      MinMatch = 4,
+      MaxChain = cr::bit (5),
+
+      HashBits = 19,
+      HashLength = cr::bit (HashBits),
+      EmptyHash = -1,
+   };
+
+
+private:
+   Array <int32, ReservePolicy::PlusOne> m_hashTable;
+   Array <int32, ReservePolicy::PlusOne> m_prevTable;
 
 public:
-   FastLZ (void) {
-      m_hashTable = new int[HASH_SIZE];
-      m_prevTable = new int[WINDOW_SIZE];
+   ULZ () {
+      m_hashTable.resize (HashLength);
+      m_prevTable.resize (WindowSize);
    }
-
-   ~FastLZ (void) {
-      delete [] m_hashTable;
-      delete [] m_prevTable;
-   }
+   ~ULZ () = default;
 
 public:
-   int compress (uint8 *in, int inLength, uint8 *out) {
-      for (int i = 0; i < HASH_SIZE; i++) {
-         m_hashTable[i] = NIL;
+   int32 compress (uint8 *in, int32 inputLength, uint8 *out) {
+      for (auto &htb : m_hashTable) {
+         htb = EmptyHash;
       }
       uint8 *op = out;
 
-      int anchor = 0;
-      int cur = 0;
+      int32 anchor = 0;
+      int32 cur = 0;
 
-      while (cur < inLength) {
-         const int maxMatch = inLength - cur;
+      while (cur < inputLength) {
+         const int32 maxMatch = inputLength - cur;
 
-         int bestLength = 0;
-         int dist = 0;
+         int32 bestLength = 0;
+         int32 dist = 0;
 
-         if (maxMatch >= MIN_MATCH) {
-            const int limit = cr::max (cur - WINDOW_SIZE, NIL);
+         if (maxMatch >= MinMatch) {
+            const int32 limit = cr::max <int32> (cur - WindowSize, EmptyHash);
 
-            int chainLength = MAX_CHAIN;
-            int lookup = m_hashTable[hash32 (&in[cur])];
+            int32 chainLength = MaxChain;
+            int32 lookup = m_hashTable[hash32 (&in[cur])];
 
             while (lookup > limit) {
                if (in[lookup + bestLength] == in[cur + bestLength] && load32 (&in[lookup]) == load32 (&in[cur])) {
-                  int length = MIN_MATCH;
+                  int32 length = MinMatch;
 
                   while (length < maxMatch && in[lookup + length] == in[cur + length]) {
                      length++;
@@ -83,31 +90,31 @@ public:
                if (--chainLength == 0) {
                   break;
                }
-               lookup = m_prevTable[lookup & WINDOW_MASK];
+               lookup = m_prevTable[lookup & WindowMask];
             }
          }
 
-         if (bestLength == MIN_MATCH && (cur - anchor) >= (7 + 128)) {
+         if (bestLength == MinMatch && (cur - anchor) >= (7 + 128)) {
             bestLength = 0;
          }
 
-         if (bestLength >= MIN_MATCH && bestLength < maxMatch && (cur - anchor) != 6) {
-            const int next = cur + 1;
-            const int targetLength = bestLength + 1;
-            const int limit = cr::max (next - WINDOW_SIZE, NIL);
+         if (bestLength >= MinMatch && bestLength < maxMatch && (cur - anchor) != 6) {
+            const int32 next = cur + 1;
+            const int32 target = bestLength + 1;
+            const int32 limit = cr::max <int32> (next - WindowSize, EmptyHash);
 
-            int chainLength = MAX_CHAIN;
-            int lookup = m_hashTable[hash32 (&in[next])];
+            int32 chainLength = MaxChain;
+            int32 lookup = m_hashTable[hash32 (&in[next])];
 
             while (lookup > limit) {
                if (in[lookup + bestLength] == in[next + bestLength] && load32 (&in[lookup]) == load32 (&in[next])) {
-                  int length = MIN_MATCH;
+                  int32 length = MinMatch;
 
-                  while (length < targetLength && in[lookup + length] == in[next + length]) {
+                  while (length < target && in[lookup + length] == in[next + length]) {
                      length++;
                   }
 
-                  if (length == targetLength) {
+                  if (length == target) {
                      bestLength = 0;
                      break;
                   }
@@ -116,16 +123,16 @@ public:
                if (--chainLength == 0) {
                   break;
                }
-               lookup = m_prevTable[lookup & WINDOW_MASK];
+               lookup = m_prevTable[lookup & WindowMask];
             }
          }
 
-         if (bestLength >= MIN_MATCH) {
-            const int length = bestLength - MIN_MATCH;
-            const int token = ((dist >> 12) & 16) + cr::min (length, 15);
+         if (bestLength >= MinMatch) {
+            const int32 length = bestLength - MinMatch;
+            const int32 token = ((dist >> 12) & 16) + cr::min <int32> (length, 15);
 
             if (anchor != cur) {
-               const int run = cur - anchor;
+               const int32 run = cur - anchor;
 
                if (run >= 7) {
                   add (op, (7 << 5) + token);
@@ -150,7 +157,7 @@ public:
             while (bestLength-- != 0) {
                const uint32 hash = hash32 (&in[cur]);
 
-               m_prevTable[cur & WINDOW_MASK] = m_hashTable[hash];
+               m_prevTable[cur & WindowMask] = m_hashTable[hash];
                m_hashTable[hash] = cur++;
             }
             anchor = cur;
@@ -158,13 +165,13 @@ public:
          else {
             const uint32 hash = hash32 (&in[cur]);
 
-            m_prevTable[cur & WINDOW_MASK] = m_hashTable[hash];
+            m_prevTable[cur & WindowMask] = m_hashTable[hash];
             m_hashTable[hash] = cur++;
          }
       }
 
       if (anchor != cur) {
-         const int run = cur - anchor;
+         const int32 run = cur - anchor;
 
          if (run >= 7) {
             add (op, 7 << 5);
@@ -179,25 +186,25 @@ public:
       return op - out;
    }
 
-   int uncompress (uint8 *in, int inLength, uint8 *out, int outLength) {
+   int32 uncompress (uint8 *in, int32 inputLength, uint8 *out, int32 outLength) {
       uint8 *op = out;
       uint8 *ip = in;
 
       const uint8 *opEnd = op + outLength;
-      const uint8 *ipEnd = ip + inLength;
+      const uint8 *ipEnd = ip + inputLength;
 
       while (ip < ipEnd) {
-         const int token = *ip++;
+         const int32 token = *ip++;
 
          if (token >= 32) {
-            int run = token >> 5;
+            int32 run = token >> 5;
 
             if (run == 7) {
                run += decode (ip);
             }
 
             if ((opEnd - op) < run || (ipEnd - ip) < run) {
-               return UNCOMPRESS_RESULT_FAILED;
+               return UncompressFailure;
             }
             copy (op, ip, run);
 
@@ -208,22 +215,22 @@ public:
                break;
             }
          }
-         int length = (token & 15) + MIN_MATCH;
+         int32 length = (token & 15) + MinMatch;
 
-         if (length == (15 + MIN_MATCH)) {
+         if (length == (15 + MinMatch)) {
             length += decode (ip);
          }
 
          if ((opEnd - op) < length) {
-            return UNCOMPRESS_RESULT_FAILED;
+            return UncompressFailure;
          }
-         const int dist = ((token & 16) << 12) + load16 (ip);
+         const int32 dist = ((token & 16) << 12) + load16 (ip);
          ip += 2;
 
          uint8 *cp = op - dist;
 
          if ((op - out) < dist) {
-            return UNCOMPRESS_RESULT_FAILED;
+            return UncompressFailure;
          }
 
          if (dist >= 8) {
@@ -232,7 +239,7 @@ public:
          }
          else
          {
-            for (int i = 0; i < 4; i++) {
+            for (int32 i = 0; i < 4; ++i) {
                *op++ = *cp++;
             }
 
@@ -241,7 +248,7 @@ public:
             }
          }
       }
-      return (ip == ipEnd) ? op - out : UNCOMPRESS_RESULT_FAILED;
+      return static_cast <int32> (ip == ipEnd) ? static_cast <int32> (op - out) : UncompressFailure;
    }
 
 private:
@@ -253,7 +260,7 @@ private:
       return *reinterpret_cast <const uint32 *> (ptr);
    }
 
-   inline void store16 (void *ptr, int val) {
+   inline void store16 (void *ptr, int32 val) {
       *reinterpret_cast <uint16 *> (ptr) = static_cast <uint16> (val);
    }
 
@@ -262,18 +269,18 @@ private:
    }
 
    inline uint32 hash32 (void *ptr) {
-      return (load32 (ptr) * 0x9E3779B9) >> (32 - HASH_BITS);
+      return (load32 (ptr) * 0x9E3779B9) >> (32 - HashBits);
    }
 
-   inline void copy (uint8 *dst, uint8 *src, int count) {
+   inline void copy (uint8 *dst, uint8 *src, int32 count) {
       copy64 (dst, src);
 
-      for (int i = 8; i < count; i += 8) {
+      for (int32 i = 8; i < count; i += 8) {
          copy64 (dst + i, src + i);
       }
    }
 
-   inline void add (uint8 *&dst, int val) {
+   inline void add (uint8 *&dst, int32 val) {
       *dst++ = static_cast <uint8> (val);
    }
 
@@ -290,7 +297,7 @@ private:
    inline uint32 decode (uint8 *&ptr) {
       uint32 val = 0;
 
-      for (int i = 0; i <= 21; i += 7) {
+      for (int32 i = 0; i <= 21; i += 7) {
          const uint32 cur = *ptr++;
          val += cur << i;
 
@@ -301,3 +308,7 @@ private:
       return val;
    }
 };
+
+
+
+CR_NAMESPACE_END

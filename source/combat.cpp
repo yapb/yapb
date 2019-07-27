@@ -13,13 +13,13 @@ ConVar yb_shoots_thru_walls ("yb_shoots_thru_walls", "2");
 ConVar yb_ignore_enemies ("yb_ignore_enemies", "0");
 ConVar yb_check_enemy_rendering ("yb_check_enemy_rendering", "0");
 
-ConVar mp_friendlyfire ("mp_friendlyfire", nullptr, VT_NOREGISTER);
+ConVar mp_friendlyfire ("mp_friendlyfire", nullptr, Var::NoRegister);
 
 int Bot::numFriendsNear (const Vector &origin, float radius) {
    int count = 0;
 
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ()) {
+      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team != m_team || client.ent == ent ()) {
          continue;
       }
 
@@ -34,7 +34,7 @@ int Bot::numEnemiesNear (const Vector &origin, float radius) {
    int count = 0;
 
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team == m_team) {
+      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team == m_team) {
          continue;
       }
 
@@ -46,12 +46,12 @@ int Bot::numEnemiesNear (const Vector &origin, float radius) {
 }
 
 bool Bot::isEnemyHidden (edict_t *enemy) {
-   if (!yb_check_enemy_rendering.boolean () || game.isNullEntity (enemy)) {
+   if (!yb_check_enemy_rendering.bool_ () || game.isNullEntity (enemy)) {
       return false;
    }
    entvars_t &v = enemy->v;
 
-   bool enemyHasGun = (v.weapons & WEAPON_PRIMARY) || (v.weapons & WEAPON_SECONDARY);
+   bool enemyHasGun = (v.weapons & kPrimaryWeaponMask) || (v.weapons & kSecondaryWeaponMask);
    bool enemyGunfire = (v.button & IN_ATTACK) || (v.oldbuttons & IN_ATTACK);
 
    if ((v.renderfx == kRenderFxExplode || (v.effects & EF_NODRAW)) && (!enemyGunfire || !enemyHasGun)) {
@@ -92,7 +92,7 @@ bool Bot::checkBodyParts (edict_t *target, Vector *origin, uint8 *bodyPart) {
 
    if (isEnemyHidden (target)) {
       *bodyPart = 0;
-      origin->nullify ();
+      origin->clear ();
 
       return false;
    }
@@ -103,19 +103,19 @@ bool Bot::checkBodyParts (edict_t *target, Vector *origin, uint8 *bodyPart) {
 
    *bodyPart = 0;
 
-   game.testLine (eyes, spot, TRACE_IGNORE_EVERYTHING, ent (), &result);
+   game.testLine (eyes, spot, TraceIgnore::Everything, ent (), &result);
 
    if (result.flFraction >= 1.0f) {
-      *bodyPart |= VISIBLE_BODY;
+      *bodyPart |= Visibility::Body;
       *origin = result.vecEndPos;
    }
 
    // check top of head
    spot.z += 25.0f;
-   game.testLine (eyes, spot, TRACE_IGNORE_EVERYTHING, ent (), &result);
+   game.testLine (eyes, spot, TraceIgnore::Everything, ent (), &result);
 
    if (result.flFraction >= 1.0f) {
-      *bodyPart |= VISIBLE_HEAD;
+      *bodyPart |= Visibility::Head;
       *origin = result.vecEndPos;
    }
 
@@ -132,35 +132,35 @@ bool Bot::checkBodyParts (edict_t *target, Vector *origin, uint8 *bodyPart) {
    else {
       spot.z = target->v.origin.z - standFeet;
    }
-   game.testLine (eyes, spot, TRACE_IGNORE_EVERYTHING, ent (), &result);
+   game.testLine (eyes, spot, TraceIgnore::Everything, ent (), &result);
 
    if (result.flFraction >= 1.0f) {
-      *bodyPart |= VISIBLE_OTHER;
+      *bodyPart |= Visibility::Other;
       *origin = result.vecEndPos;
 
       return true;
    }
 
    const float edgeOffset = 13.0f;
-   Vector dir = (target->v.origin - pev->origin).normalize2D ();
+   Vector dir = (target->v.origin - pev->origin).normalize2d ();
 
    Vector perp (-dir.y, dir.x, 0.0f);
    spot = target->v.origin + Vector (perp.x * edgeOffset, perp.y * edgeOffset, 0);
 
-   game.testLine (eyes, spot, TRACE_IGNORE_EVERYTHING, ent (), &result);
+   game.testLine (eyes, spot, TraceIgnore::Everything, ent (), &result);
 
    if (result.flFraction >= 1.0f) {
-      *bodyPart |= VISIBLE_OTHER;
+      *bodyPart |= Visibility::Other;
       *origin = result.vecEndPos;
 
       return true;
    }
    spot = target->v.origin - Vector (perp.x * edgeOffset, perp.y * edgeOffset, 0);
 
-   game.testLine (eyes, spot, TRACE_IGNORE_EVERYTHING, ent (), &result);
+   game.testLine (eyes, spot, TraceIgnore::Everything, ent (), &result);
 
    if (result.flFraction >= 1.0f) {
-      *bodyPart |= VISIBLE_OTHER;
+      *bodyPart |= Visibility::Other;
       *origin = result.vecEndPos;
 
       return true;
@@ -187,11 +187,11 @@ bool Bot::seesEnemy (edict_t *player, bool ignoreFOV) {
    return false;
 }
 
-bool Bot::lookupEnemies (void) {
+bool Bot::lookupEnemies () {
    // this function tries to find the best suitable enemy for the bot
 
    // do not search for enemies while we're blinded, or shooting disabled by user
-   if (m_enemyIgnoreTimer > game.timebase () || m_blindTime > game.timebase () || yb_ignore_enemies.boolean ()) {
+   if (m_enemyIgnoreTimer > game.timebase () || m_blindTime > game.timebase () || yb_ignore_enemies.bool_ ()) {
       return false;
    }
    edict_t *player, *newEnemy = nullptr;
@@ -200,15 +200,15 @@ bool Bot::lookupEnemies (void) {
    extern ConVar yb_whose_your_daddy;
 
    // clear suspected flag
-   if (!game.isNullEntity (m_enemy) && (m_states & STATE_SEEING_ENEMY)) {
-      m_states &= ~STATE_SUSPECT_ENEMY;
+   if (!game.isNullEntity (m_enemy) && (m_states & Sense::SeeingEnemy)) {
+      m_states &= ~Sense::SuspectEnemy;
    }
    else if (game.isNullEntity (m_enemy) && m_seeEnemyTime + 1.0f > game.timebase () && util.isAlive (m_lastEnemy)) {
-      m_states |= STATE_SUSPECT_ENEMY;
-      m_aimFlags |= AIM_LAST_ENEMY;
+      m_states |= Sense::SuspectEnemy;
+      m_aimFlags |= AimFlags::LastEnemy;
    }
    m_visibility = 0;
-   m_enemyOrigin.nullify ();
+   m_enemyOrigin= nullvec;
 
    if (!game.isNullEntity (m_enemy)) {
       player = m_enemy;
@@ -227,7 +227,7 @@ bool Bot::lookupEnemies (void) {
 
       // search the world for players...
       for (const auto &client : util.getClients ()) {
-         if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team == m_team || client.ent == ent ()) {
+         if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team == m_team || client.ent == ent ()) {
             continue;
          }
          player = client.ent;
@@ -249,7 +249,7 @@ bool Bot::lookupEnemies (void) {
                newEnemy = player;
 
                // aim VIP first on AS maps...
-               if (util.isPlayerVIP (newEnemy)) {
+               if (game.is (MapFlags::Assassination) && util.isPlayerVIP (newEnemy)) {
                   break;
                }
             }
@@ -265,8 +265,8 @@ bool Bot::lookupEnemies (void) {
    if (util.isPlayer (newEnemy)) {
       bots.setCanPause (true);
 
-      m_aimFlags |= AIM_ENEMY;
-      m_states |= STATE_SEEING_ENEMY;
+      m_aimFlags |= AimFlags::Enemy;
+      m_states |= Sense::SeeingEnemy;
 
       // if enemy is still visible and in field of view, keep it keep track of when we last saw an enemy
       if (newEnemy == m_enemy) {
@@ -281,11 +281,11 @@ bool Bot::lookupEnemies (void) {
       }
       else {
          if (m_seeEnemyTime + 3.0f < game.timebase () && (m_hasC4 || hasHostage () || !game.isNullEntity (m_targetEntity))) {
-            pushRadioMessage (RADIO_ENEMY_SPOTTED);
+            pushRadioMessage (Radio::EnemySpotted);
          }
          m_targetEntity = nullptr; // stop following when we see an enemy...
 
-         if (yb_whose_your_daddy.boolean ()) {
+         if (yb_whose_your_daddy.bool_ ()) {
             m_enemySurpriseTime = m_actualReactionTime * 0.5f;
          }
          else {
@@ -312,18 +312,17 @@ bool Bot::lookupEnemies (void) {
          }
 
          // now alarm all teammates who see this bot & don't have an actual enemy of the bots enemy should simulate human players seeing a teammate firing
-         for (const auto &client : util.getClients ()) {
-            if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ()) {
+         for (const auto &other : bots) {
+            if (!other->m_notKilled || other->m_team != m_team || other.get () == this) {
                continue;
             }
-            Bot *other = bots.getBot (client.ent);
 
-            if (other != nullptr && other->m_seeEnemyTime + 2.0f < game.timebase () && game.isNullEntity (other->m_lastEnemy) && util.isVisible (pev->origin, other->ent ()) && other->isInViewCone (pev->origin)) {
+            if (other->m_seeEnemyTime + 2.0f < game.timebase () && game.isNullEntity (other->m_lastEnemy) && util.isVisible (pev->origin, other->ent ()) && other->isInViewCone (pev->origin)) {
                other->m_lastEnemy = newEnemy;
                other->m_lastEnemyOrigin = m_lastEnemyOrigin;
                other->m_seeEnemyTime = game.timebase ();
-               other->m_states |= (STATE_SUSPECT_ENEMY | STATE_HEARING_ENEMY);
-               other->m_aimFlags |= AIM_LAST_ENEMY;
+               other->m_states |= (Sense::SuspectEnemy | Sense::HearingEnemy);
+               other->m_aimFlags |= AimFlags::LastEnemy;
             }
          }
          return true;
@@ -341,7 +340,7 @@ bool Bot::lookupEnemies (void) {
             if (!usesSniper ()) {
                m_shootAtDeadTime = game.timebase () + 0.4f;
                m_actualReactionTime = 0.0f;
-               m_states |= STATE_SUSPECT_ENEMY;
+               m_states |= Sense::SuspectEnemy;
 
                return true;
             }
@@ -349,7 +348,7 @@ bool Bot::lookupEnemies (void) {
          }
          else if (m_shootAtDeadTime > game.timebase ()) {
             m_actualReactionTime = 0.0f;
-            m_states |= STATE_SUSPECT_ENEMY;
+            m_states |= Sense::SuspectEnemy;
 
             return true;
          }
@@ -357,11 +356,11 @@ bool Bot::lookupEnemies (void) {
       }
 
       // if no enemy visible check if last one shoot able through wall
-      if (yb_shoots_thru_walls.boolean () && m_difficulty >= 2 && isPenetrableObstacle (newEnemy->v.origin)) {
+      if (yb_shoots_thru_walls.bool_ () && m_difficulty >= 2 && isPenetrableObstacle (newEnemy->v.origin)) {
          m_seeEnemyTime = game.timebase ();
 
-         m_states |= STATE_SUSPECT_ENEMY;
-         m_aimFlags |= AIM_LAST_ENEMY;
+         m_states |= Sense::SuspectEnemy;
+         m_aimFlags |= AimFlags::LastEnemy;
 
          m_enemy = newEnemy;
          m_lastEnemy = newEnemy;
@@ -372,9 +371,9 @@ bool Bot::lookupEnemies (void) {
    }
 
    // check if bots should reload...
-   if ((m_aimFlags <= AIM_PREDICT_PATH && m_seeEnemyTime + 3.0f < game.timebase () && !(m_states & (STATE_SEEING_ENEMY | STATE_HEARING_ENEMY)) && game.isNullEntity (m_lastEnemy) && game.isNullEntity (m_enemy) && taskId () != TASK_SHOOTBREAKABLE && taskId () != TASK_PLANTBOMB && taskId () != TASK_DEFUSEBOMB) || bots.isRoundOver ()) {
+   if ((m_aimFlags <= AimFlags::PredictPath && m_seeEnemyTime + 3.0f < game.timebase () && !(m_states & (Sense::SeeingEnemy | Sense::HearingEnemy)) && game.isNullEntity (m_lastEnemy) && game.isNullEntity (m_enemy) && getCurrentTaskId () != Task::ShootBreakable && getCurrentTaskId () != Task::PlantBomb && getCurrentTaskId () != Task::DefuseBomb) || bots.isRoundOver ()) {
       if (!m_reloadState) {
-         m_reloadState = RELOAD_PRIMARY;
+         m_reloadState = Reload::Primary;
       }
    }
 
@@ -392,20 +391,20 @@ bool Bot::lookupEnemies (void) {
 
 Vector Bot::getBodyOffsetError (float distance) {
    if (game.isNullEntity (m_enemy)) {
-      return Vector::null ();
+      return nullvec;
    }
 
    if (m_aimErrorTime < game.timebase ()) {
       const float error = distance / (cr::clamp (m_difficulty, 1, 4) * 1000.0f);
       Vector &maxs = m_enemy->v.maxs, &mins = m_enemy->v.mins;
 
-      m_aimLastError = Vector (rng.getFloat (mins.x * error, maxs.x * error), rng.getFloat (mins.y * error, maxs.y * error), rng.getFloat (mins.z * error, maxs.z * error));
-      m_aimErrorTime = game.timebase () + rng.getFloat (0.5f, 1.0f);
+      m_aimLastError = Vector (rg.float_ (mins.x * error, maxs.x * error), rg.float_ (mins.y * error, maxs.y * error), rg.float_ (mins.z * error, maxs.z * error));
+      m_aimErrorTime = game.timebase () + rg.float_ (0.5f, 1.0f);
    }
    return m_aimLastError;
 }
 
-const Vector &Bot::getEnemyBodyOffset (void) {
+const Vector &Bot::getEnemyBodyOffset () {
    // the purpose of this function, is to make bot aiming not so ideal. it's mutate m_enemyOrigin enemy vector
    // returned from visibility check function.
 
@@ -420,49 +419,49 @@ const Vector &Bot::getEnemyBodyOffset (void) {
    float distance = (m_enemy->v.origin - pev->origin).length ();
 
    // do not aim at head, at long distance (only if not using sniper weapon)
-   if ((m_visibility & VISIBLE_BODY) && !usesSniper () && distance > (m_difficulty > 2 ? 2000.0f : 1000.0f)) {
-      m_visibility &= ~VISIBLE_HEAD;
+   if ((m_visibility & Visibility::Body) && !usesSniper () && distance > (m_difficulty > 2 ? 2000.0f : 1000.0f)) {
+      m_visibility &= ~Visibility::Head;
    }
 
    // do not aim at head while close enough to enemy and having sniper
    else if (distance < 800.0f && usesSniper ()) {
-      m_visibility &= ~VISIBLE_HEAD;
+      m_visibility &= ~Visibility::Head;
    }
 
    // do not aim at head while enemy is soooo close enough to enemy when recoil aims at head automatically
-   else if (distance < MAX_SPRAY_DISTANCE) {
-      m_visibility &= ~VISIBLE_HEAD;
+   else if (distance < kSprayDistance) {
+      m_visibility &= ~Visibility::Head;
    }
    Vector aimPos = m_enemy->v.origin;
 
-   if (m_difficulty > 2 && !(m_visibility & VISIBLE_OTHER)) {
+   if (m_difficulty > 2 && !(m_visibility & Visibility::Other)) {
       aimPos = (m_enemy->v.velocity - pev->velocity) * getFrameInterval () + aimPos;
    }
 
    // if we only suspect an enemy behind a wall take the worst skill
-   if (!m_visibility && (m_states & STATE_SUSPECT_ENEMY)) {
+   if (!m_visibility && (m_states & Sense::SuspectEnemy)) {
       aimPos += getBodyOffsetError (distance);
    }
    else {
       // now take in account different parts of enemy body
-      if (m_visibility & (VISIBLE_HEAD | VISIBLE_BODY)) {
+      if (m_visibility & (Visibility::Head | Visibility::Body)) {
          int headshotFreq[5] = { 20, 40, 60, 80, 100 };
 
          // now check is our skill match to aim at head, else aim at enemy body
-         if (rng.chance (headshotFreq[m_difficulty]) || usesPistol ()) {
+         if (rg.chance (headshotFreq[m_difficulty]) || usesPistol ()) {
             aimPos.z = headOffset (m_enemy) + getEnemyBodyOffsetCorrection (distance);
          }
          else {
             aimPos.z += getEnemyBodyOffsetCorrection (distance);
          }
       }
-      else if (m_visibility & VISIBLE_BODY) {
+      else if (m_visibility & Visibility::Body) {
          aimPos.z += getEnemyBodyOffsetCorrection (distance);
       }
-      else if (m_visibility & VISIBLE_OTHER) {
+      else if (m_visibility & Visibility::Other) {
          aimPos = m_enemyOrigin;
       }
-      else if (m_visibility & VISIBLE_HEAD) {
+      else if (m_visibility & Visibility::Head) {
          aimPos.z = headOffset (m_enemy) + getEnemyBodyOffsetCorrection (distance);
       }
    }
@@ -484,15 +483,15 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
 
    bool zoomableRifle = usesZoomableRifle ();
    bool submachine = usesSubmachine ();
-   bool shotgun = (m_currentWeapon == WEAPON_XM1014 || m_currentWeapon == WEAPON_M3);
-   bool m249 = m_currentWeapon == WEAPON_M249;
+   bool shotgun = (m_currentWeapon == Weapon::XM1014 || m_currentWeapon == Weapon::M3);
+   bool m249 = m_currentWeapon == Weapon::M249;
 
    float result = -2.0f;
 
-   if (distance < MAX_SPRAY_DISTANCE) {
+   if (distance < kSprayDistance) {
       return -9.0f;
    }
-   else if (distance >= MAX_SPRAY_DISTANCE_X2) {
+   else if (distance >= kDoubleSprayDistance) {
       if (sniper) {
          result = 0.18f;
       }
@@ -520,13 +519,13 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
 
 bool Bot::isFriendInLineOfFire (float distance) {
    // bot can't hurt teammates, if friendly fire is not enabled...
-   if (!mp_friendlyfire.boolean () || game.is (GAME_CSDM)) {
+   if (!mp_friendlyfire.bool_ () || game.is (GameFlags::CSDM)) {
       return false;
    }
    game.makeVectors (pev->v_angle);
 
    TraceResult tr;
-   game.testLine (getEyesPos (), getEyesPos () + distance * pev->v_angle, TRACE_IGNORE_NONE, ent (), &tr);
+   game.testLine (getEyesPos (), getEyesPos () + distance * pev->v_angle, TraceIgnore::None, ent (), &tr);
 
    // check if we hit something
    if (util.isPlayer (tr.pHit) && tr.pHit != ent ()) {
@@ -540,7 +539,7 @@ bool Bot::isFriendInLineOfFire (float distance) {
 
    // search the world for players
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ()) {
+      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team != m_team || client.ent == ent ()) {
          continue;
       }
       edict_t *pent = client.ent;
@@ -559,7 +558,7 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
    // this function returns true if enemy can be shoot through some obstacle, false otherwise.
    // credits goes to Immortal_BLG
 
-   if (yb_shoots_thru_walls.integer () == 2) {
+   if (yb_shoots_thru_walls.int_ () == 2) {
       return isPenetrableObstacle2 (dest);
    }
 
@@ -574,11 +573,11 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
    TraceResult tr;
 
    float obstacleDistance = 0.0f;
-   game.testLine (getEyesPos (), dest, TRACE_IGNORE_MONSTERS, ent (), &tr);
+   game.testLine (getEyesPos (), dest, TraceIgnore::Monsters, ent (), &tr);
 
    if (tr.fStartSolid) {
       const Vector &source = tr.vecEndPos;
-      game.testLine (dest, source, TRACE_IGNORE_MONSTERS, ent (), &tr);
+      game.testLine (dest, source, TraceIgnore::Monsters, ent (), &tr);
 
       if (tr.flFraction != 1.0f) {
          if ((tr.vecEndPos - dest).lengthSq () > cr::square (800.0f)) {
@@ -591,7 +590,7 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
          obstacleDistance = (tr.vecEndPos - source).lengthSq ();
       }
    }
-   constexpr float distance = cr::square (75.0f);
+   const float distance = cr::square (75.0f);
 
    if (obstacleDistance > 0.0f) {
       while (penetratePower > 0) {
@@ -623,7 +622,7 @@ bool Bot::isPenetrableObstacle2 (const Vector &dest) {
    Vector point;
    TraceResult tr;
 
-   game.testLine (source, dest, TRACE_IGNORE_EVERYTHING, ent (), &tr);
+   game.testLine (source, dest, TraceIgnore::Everything, ent (), &tr);
 
    while (tr.flFraction != 1.0f && numHits < 3) {
       numHits++;
@@ -635,7 +634,7 @@ bool Bot::isPenetrableObstacle2 (const Vector &dest) {
          point = point + direction;
          thikness++;
       }
-      game.testLine (point, dest, TRACE_IGNORE_EVERYTHING, ent (), &tr);
+      game.testLine (point, dest, TraceIgnore::Everything, ent (), &tr);
    }
 
    if (numHits < 3 && thikness < 98) {
@@ -657,24 +656,24 @@ bool Bot::needToPauseFiring (float distance) {
       return true;
    }
 
-   if ((m_aimFlags & AIM_ENEMY) && !m_enemyOrigin.empty ()) {
+   if ((m_aimFlags & AimFlags::Enemy) && !m_enemyOrigin.empty ()) {
       if (util.getShootingCone (ent (), m_enemyOrigin) > 0.92f && isEnemyBehindShield (m_enemy)) {
          return true;
       }
    }
    float offset = 5.0f;
 
-   if (distance < MAX_SPRAY_DISTANCE * 0.5f) {
+   if (distance < kSprayDistance * 0.5f) {
       return false;
    }
-   else if (distance < MAX_SPRAY_DISTANCE) {
+   else if (distance < kSprayDistance) {
       offset = 12.0f;
    }
-   else if (distance < MAX_SPRAY_DISTANCE_X2) {
+   else if (distance < kDoubleSprayDistance) {
       offset = 10.0f;
    }
-   const float xPunch = cr::deg2rad (pev->punchangle.x);
-   const float yPunch = cr::deg2rad (pev->punchangle.y);
+   const float xPunch = cr::degreesToRadians (pev->punchangle.x);
+   const float yPunch = cr::degreesToRadians (pev->punchangle.y);
 
    float interval = getFrameInterval ();
    float tolerance = (100.0f - m_difficulty * 25.0f) / 99.0f;
@@ -682,7 +681,7 @@ bool Bot::needToPauseFiring (float distance) {
    // check if we need to compensate recoil
    if (cr::tanf (cr::sqrtf (cr::abs (xPunch * xPunch) + cr::abs (yPunch * yPunch))) * distance > offset + 30.0f + tolerance) {
       if (m_firePause < game.timebase ()) {
-         m_firePause = rng.getFloat (0.5f, 0.5f + 0.3f * tolerance);
+         m_firePause = rg.float_ (0.5f, 0.5f + 0.3f * tolerance);
       }
       m_firePause -= interval;
       m_firePause += game.timebase ();
@@ -697,7 +696,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
 
    // we want to fire weapon, don't reload now
    if (!m_isReloading) {
-      m_reloadState = RELOAD_NONE;
+      m_reloadState = Reload::None;
       m_reloadCheckTime = game.timebase () + 3.0f;
    }
 
@@ -728,7 +727,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
    // if we're have a glock or famas vary burst fire mode
    checkBurstMode (distance);
 
-   if (hasShield () && m_shieldCheckTime < game.timebase () && taskId () != TASK_CAMP) // better shield gun usage
+   if (hasShield () && m_shieldCheckTime < game.timebase () && getCurrentTaskId () != Task::Camp) // better shield gun usage
    {
       if (distance >= 750.0f && !isShieldDrawn ()) {
          pev->button |= IN_ATTACK2; // draw the shield
@@ -773,7 +772,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
    }
 
    // we're should stand still before firing sniper weapons, else sniping is useless..
-   if (usesSniper () && (m_states & (STATE_SEEING_ENEMY | STATE_SUSPECT_ENEMY)) && !m_isReloading && pev->velocity.lengthSq () > 0.0f) {
+   if (usesSniper () && (m_states & (Sense::SeeingEnemy | Sense::SuspectEnemy)) && !m_isReloading && pev->velocity.lengthSq () > 0.0f) {
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
       m_navTimeset = game.timebase ();
@@ -785,10 +784,10 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
    }
 
    // need to care for burst fire?
-   if (distance < MAX_SPRAY_DISTANCE || m_blindTime > game.timebase ()) {
-      if (id == WEAPON_KNIFE) {
+   if (distance < kSprayDistance || m_blindTime > game.timebase ()) {
+      if (id == Weapon::Knife) {
          if (distance < 64.0f) {
-            if (rng.chance (30) || hasShield ()) {
+            if (rg.chance (30) || hasShield ()) {
                pev->button |= IN_ATTACK; // use primary attack
             }
             else {
@@ -819,7 +818,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
       }
 
       // don't attack with knife over long distance
-      if (id == WEAPON_KNIFE) {
+      if (id == Weapon::Knife) {
          m_shootTime = game.timebase ();
          return;
       }
@@ -838,20 +837,20 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
 
          const int offset = cr::abs <int> (m_difficulty * 25 / 20 - 5);
 
-         m_shootTime = game.timebase () + 0.1f + rng.getFloat (minDelay[offset], maxDelay[offset]);
+         m_shootTime = game.timebase () + 0.1f + rg.float_ (minDelay[offset], maxDelay[offset]);
          m_zoomCheckTime = game.timebase ();
       }
    }
 }
 
-void Bot::fireWeapons (void) {
+void Bot::fireWeapons () {
    // this function will return true if weapon was fired, false otherwise
    float distance = (m_lookAt - getEyesPos ()).length (); // how far away is the enemy?
 
    // or if friend in line of fire, stop this too but do not update shoot time
    if (!game.isNullEntity (m_enemy)) {
       if (isFriendInLineOfFire (distance)) {
-         m_fightStyle = FIGHT_STRAFE;
+         m_fightStyle = Fight::Strafe;
          m_lastFightStyleCheck = game.timebase ();
 
          return;
@@ -860,11 +859,11 @@ void Bot::fireWeapons (void) {
    auto tab = conf.getRawWeapons ();
    edict_t *enemy = m_enemy;
 
-   int selectId = WEAPON_KNIFE, selectIndex = 0, choosenWeapon = 0;
+   int selectId = Weapon::Knife, selectIndex = 0, choosenWeapon = 0;
    int weapons = pev->weapons;
 
    // if jason mode use knife only
-   if (yb_jasonmode.boolean ()) {
+   if (yb_jasonmode.bool_ ()) {
       selectWeapons (distance, selectIndex, selectId, choosenWeapon);
       return;
    }
@@ -878,7 +877,7 @@ void Bot::fireWeapons (void) {
    // loop through all the weapons until terminator is found...
    while (tab[selectIndex].id) {
       // is the bot carrying this weapon?
-      if (weapons & (1 << tab[selectIndex].id)) {
+      if (weapons & cr::bit (tab[selectIndex].id)) {
 
          // is enough ammo available to fire AND check is better to use pistol in our current situation...
          if (m_ammoInClip[tab[selectIndex].id] > 0 && !isWeaponBadAtDistance (selectIndex, distance)) {
@@ -898,18 +897,18 @@ void Bot::fireWeapons (void) {
          int id = tab[selectIndex].id;
 
          // is the bot carrying this weapon?
-         if (weapons & (1 << id)) {
+         if (weapons & cr::bit (id)) {
             const auto &prop = conf.getWeaponProp (id);
 
             if (prop.ammo1 != -1 && prop.ammo1 < 32 && m_ammo[prop.ammo1] >= tab[selectIndex].minPrimaryAmmo) {
                // available ammo found, reload weapon
-               if (m_reloadState == RELOAD_NONE || m_reloadCheckTime > game.timebase ()) {
+               if (m_reloadState == Reload::None || m_reloadCheckTime > game.timebase ()) {
                   m_isReloading = true;
-                  m_reloadState = RELOAD_PRIMARY;
+                  m_reloadState = Reload::Primary;
                   m_reloadCheckTime = game.timebase ();
 
-                  if (rng.chance (cr::abs (m_difficulty * 25 - 100))) {
-                     pushRadioMessage (RADIO_NEED_BACKUP);
+                  if (rg.chance (cr::abs (m_difficulty * 25 - 100))) {
+                     pushRadioMessage (Radio::NeedBackup);
                   }
                }
                return;
@@ -917,7 +916,7 @@ void Bot::fireWeapons (void) {
          }
          selectIndex++;
       }
-      selectId = WEAPON_KNIFE; // no available ammo, use knife!
+      selectId = Weapon::Knife; // no available ammo, use knife!
    }
    selectWeapons (distance, selectIndex, selectId, choosenWeapon);
 }
@@ -933,7 +932,7 @@ bool Bot::isWeaponBadAtDistance (int weaponIndex, float distance) {
    }
    int wid = info[weaponIndex].id;
 
-   if (wid == WEAPON_KNIFE) {
+   if (wid == Weapon::Knife) {
       return false;
    }
 
@@ -943,28 +942,28 @@ bool Bot::isWeaponBadAtDistance (int weaponIndex, float distance) {
    }
 
    // better use pistol in short range distances, when using sniper weapons
-   if ((wid == WEAPON_SCOUT || wid == WEAPON_AWP || wid == WEAPON_G3SG1 || wid == WEAPON_SG550) && distance < 450.0f) {
+   if ((wid == Weapon::Scout || wid == Weapon::AWP || wid == Weapon::G3SG1 || wid == Weapon::SG550) && distance < 450.0f) {
       return true;
    }
 
    // shotguns is too inaccurate at long distances, so weapon is bad
-   if ((wid == WEAPON_M3 || wid == WEAPON_XM1014) && distance > 750.0f) {
+   if ((wid == Weapon::M3 || wid == Weapon::XM1014) && distance > 750.0f) {
       return true;
    }
    return false;
 }
 
-void Bot::focusEnemy (void) {
+void Bot::focusEnemy () {
    // aim for the head and/or body
    m_lookAt = getEnemyBodyOffset ();
 
    if (m_enemySurpriseTime > game.timebase () || game.isNullEntity (m_enemy)) {
       return;
    } 
-   float distance = (m_lookAt - getEyesPos ()).length2D (); // how far away is the enemy scum?
+   float distance = (m_lookAt - getEyesPos ()).length2d (); // how far away is the enemy scum?
 
    if (distance < 128.0f && !usesSniper ()) {
-      if (m_currentWeapon == WEAPON_KNIFE) {
+      if (m_currentWeapon == Weapon::Knife) {
          if (distance < 80.0f) {
             m_wantsToFire = true;
          }
@@ -1001,20 +1000,20 @@ void Bot::focusEnemy (void) {
    }
 }
 
-void Bot::attackMovement (void) {
+void Bot::attackMovement () {
    // no enemy? no need to do strafing
    if (game.isNullEntity (m_enemy)) {
       return;
    }
-   float distance = (m_lookAt - getEyesPos ()).length2D (); // how far away is the enemy scum?
+   float distance = (m_lookAt - getEyesPos ()).length2d (); // how far away is the enemy scum?
 
-   if (m_timeWaypointMove + getFrameInterval () + 0.5f < game.timebase ()) {
+   if (m_lastUsedNodesTime + getFrameInterval () + 0.5f < game.timebase ()) {
       int approach;
 
-      if (m_currentWeapon == WEAPON_KNIFE) {
+      if (m_currentWeapon == Weapon::Knife) {
          approach = 100;
       }
-      else if ((m_states & STATE_SUSPECT_ENEMY) && !(m_states & STATE_SEEING_ENEMY)) {
+      else if ((m_states & Sense::SuspectEnemy) && !(m_states & Sense::SeeingEnemy)) {
          approach = 49;
       }
       else if (m_isReloading || m_isVIP) {
@@ -1029,9 +1028,9 @@ void Bot::attackMovement (void) {
       }
 
       // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
-      if ((m_states & STATE_SEEING_ENEMY) && approach < 30 && !bots.isBombPlanted () && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
+      if ((m_states & Sense::SeeingEnemy) && approach < 30 && !bots.isBombPlanted () && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
          m_moveSpeed = -pev->maxspeed;
-         startTask (TASK_SEEKCOVER, TASKPRI_SEEKCOVER, INVALID_WAYPOINT_INDEX, 0.0f, true);
+         startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, true);
       }
       else if (approach < 50) {
          m_moveSpeed = 0.0f;
@@ -1040,35 +1039,35 @@ void Bot::attackMovement (void) {
          m_moveSpeed = pev->maxspeed;
       }
 
-      if (distance < 96.0f && m_currentWeapon != WEAPON_KNIFE) {
+      if (distance < 96.0f && m_currentWeapon != Weapon::Knife) {
          m_moveSpeed = -pev->maxspeed;
       }
 
-      if (usesSniper () || !(m_visibility & (VISIBLE_BODY | VISIBLE_HEAD))) {
-         m_fightStyle = FIGHT_STAY;
+      if (usesSniper () || !(m_visibility & (Visibility::Body | Visibility::Head))) {
+         m_fightStyle = Fight::Stay;
          m_lastFightStyleCheck = game.timebase ();
       }
       else if (usesRifle () || usesSubmachine ()) {
          if (m_lastFightStyleCheck + 3.0f < game.timebase ()) {
-            int rand = rng.getInt (1, 100);
+            int rand = rg.int_ (1, 100);
 
             if (distance < 450.0f) {
-               m_fightStyle = FIGHT_STRAFE;
+               m_fightStyle = Fight::Strafe;
             }
             else if (distance < 1024.0f) {
                if (rand < (usesSubmachine () ? 50 : 30)) {
-                  m_fightStyle = FIGHT_STRAFE;
+                  m_fightStyle = Fight::Strafe;
                }
                else {
-                  m_fightStyle = FIGHT_STAY;
+                  m_fightStyle = Fight::Stay;
                }
             }
             else {
                if (rand < (usesSubmachine () ? 80 : 93)) {
-                  m_fightStyle = FIGHT_STAY;
+                  m_fightStyle = Fight::Stay;
                }
                else {
-                  m_fightStyle = FIGHT_STRAFE;
+                  m_fightStyle = Fight::Strafe;
                }
             }
             m_lastFightStyleCheck = game.timebase ();
@@ -1076,45 +1075,45 @@ void Bot::attackMovement (void) {
       }
       else {
          if (m_lastFightStyleCheck + 3.0f < game.timebase ()) {
-            if (rng.chance (50)) {
-               m_fightStyle = FIGHT_STRAFE;
+            if (rg.chance (50)) {
+               m_fightStyle = Fight::Strafe;
             }
             else {
-               m_fightStyle = FIGHT_STAY;
+               m_fightStyle = Fight::Stay;
             }
             m_lastFightStyleCheck = game.timebase ();
          }
       }
 
-      if (m_fightStyle == FIGHT_STRAFE || ((pev->button & IN_RELOAD) || m_isReloading) || (usesPistol () && distance < 400.0f) || m_currentWeapon == WEAPON_KNIFE) {
+      if (m_fightStyle == Fight::Strafe || ((pev->button & IN_RELOAD) || m_isReloading) || (usesPistol () && distance < 400.0f) || m_currentWeapon == Weapon::Knife) {
          if (m_strafeSetTime < game.timebase ()) {
 
             // to start strafing, we have to first figure out if the target is on the left side or right side
             game.makeVectors (m_enemy->v.v_angle);
 
-            const Vector &dirToPoint = (pev->origin - m_enemy->v.origin).normalize2D ();
-            const Vector &rightSide = game.vec.right.normalize2D ();
+            const Vector &dirToPoint = (pev->origin - m_enemy->v.origin).normalize2d ();
+            const Vector &rightSide = game.vec.right.normalize2d ();
 
             if ((dirToPoint | rightSide) < 0) {
-               m_combatStrafeDir = STRAFE_DIR_LEFT;
+               m_combatStrafeDir = Dodge::Left;
             }
             else {
-               m_combatStrafeDir = STRAFE_DIR_RIGHT;
+               m_combatStrafeDir = Dodge::Right;
             }
 
-            if (rng.chance (30)) {
-               m_combatStrafeDir = (m_combatStrafeDir == STRAFE_DIR_LEFT ? STRAFE_DIR_RIGHT : STRAFE_DIR_LEFT);
+            if (rg.chance (30)) {
+               m_combatStrafeDir = (m_combatStrafeDir == Dodge::Left ? Dodge::Right : Dodge::Left);
             }
-            m_strafeSetTime = game.timebase () + rng.getFloat (0.5f, 3.0f);
+            m_strafeSetTime = game.timebase () + rg.float_ (0.5f, 3.0f);
          }
 
-         if (m_combatStrafeDir == STRAFE_DIR_RIGHT) {
+         if (m_combatStrafeDir == Dodge::Right) {
             if (!checkWallOnLeft ()) {
                m_strafeSpeed = -pev->maxspeed;
             }
             else {
-               m_combatStrafeDir = STRAFE_DIR_LEFT;
-               m_strafeSetTime = game.timebase () + rng.getFloat (0.8f, 1.3f);
+               m_combatStrafeDir = Dodge::Left;
+               m_strafeSetTime = game.timebase () + rg.float_ (0.8f, 1.3f);
             }
          }
          else {
@@ -1122,28 +1121,28 @@ void Bot::attackMovement (void) {
                m_strafeSpeed = pev->maxspeed;
             }
             else {
-               m_combatStrafeDir = STRAFE_DIR_RIGHT;
-               m_strafeSetTime = game.timebase () + rng.getFloat (0.8f, 1.3f);
+               m_combatStrafeDir = Dodge::Right;
+               m_strafeSetTime = game.timebase () + rg.float_ (0.8f, 1.3f);
             }
          }
 
-         if (m_difficulty >= 3 && (m_jumpTime + 5.0f < game.timebase () && isOnFloor () && rng.getInt (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.length2D () > 120.0f) && !usesSniper ()) {
+         if (m_difficulty >= 3 && (m_jumpTime + 5.0f < game.timebase () && isOnFloor () && rg.int_ (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.length2d () > 120.0f) && !usesSniper ()) {
             pev->button |= IN_JUMP;
          }
 
-         if (m_moveSpeed > 0.0f && distance > 100.0f && m_currentWeapon != WEAPON_KNIFE) {
+         if (m_moveSpeed > 0.0f && distance > 100.0f && m_currentWeapon != Weapon::Knife) {
             m_moveSpeed = 0.0f;
          }
 
-         if (m_currentWeapon == WEAPON_KNIFE) {
+         if (m_currentWeapon == Weapon::Knife) {
             m_strafeSpeed = 0.0f;
          }
       }
-      else if (m_fightStyle == FIGHT_STAY) {
-         if ((m_visibility & (VISIBLE_HEAD | VISIBLE_BODY)) && !(m_visibility & VISIBLE_OTHER) && taskId () != TASK_SEEKCOVER && taskId () != TASK_HUNTENEMY) {
-            int enemyNearestIndex = waypoints.getNearest (m_enemy->v.origin);
+      else if (m_fightStyle == Fight::Stay) {
+         if ((m_visibility & (Visibility::Head | Visibility::Body)) && !(m_visibility & Visibility::Other) && getCurrentTaskId () != Task::SeekCover && getCurrentTaskId () != Task::Hunt) {
+            int enemyNearestIndex = graph.getNearest (m_enemy->v.origin);
 
-            if (waypoints.isDuckVisible (m_currentWaypointIndex, enemyNearestIndex) && waypoints.isDuckVisible (enemyNearestIndex, m_currentWaypointIndex)) {
+            if (graph.isDuckVisible (m_currentNodeIndex, enemyNearestIndex) && graph.isDuckVisible (enemyNearestIndex, m_currentNodeIndex)) {
                m_duckTime = game.timebase () + 0.5f;
             }
          }
@@ -1158,7 +1157,7 @@ void Bot::attackMovement (void) {
       m_strafeSpeed = 0.0f;
    }
 
-   if (m_moveSpeed > 0.0f && m_currentWeapon != WEAPON_KNIFE) {
+   if (m_moveSpeed > 0.0f && m_currentWeapon != Weapon::Knife) {
       m_moveSpeed = getShiftSpeed ();
    }
 
@@ -1180,25 +1179,25 @@ void Bot::attackMovement (void) {
    ignoreCollision ();
 }
 
-bool Bot::hasPrimaryWeapon (void) {
+bool Bot::hasPrimaryWeapon () {
    // this function returns returns true, if bot has a primary weapon
 
-   return (pev->weapons & WEAPON_PRIMARY) != 0;
+   return (pev->weapons & kPrimaryWeaponMask) != 0;
 }
 
-bool Bot::hasSecondaryWeapon (void) {
+bool Bot::hasSecondaryWeapon () {
    // this function returns returns true, if bot has a secondary weapon
 
-   return (pev->weapons & WEAPON_SECONDARY) != 0;
+   return (pev->weapons & kSecondaryWeaponMask) != 0;
 }
 
-bool Bot::hasShield (void) {
+bool Bot::hasShield () {
    // this function returns true, if bot has a tactical shield
 
    return strncmp (STRING (pev->viewmodel), "models/shield/v_shield_", 23) == 0;
 }
 
-bool Bot::isShieldDrawn (void) {
+bool Bot::isShieldDrawn () {
    // this function returns true, is the tactical shield is drawn
 
    if (!hasShield ()) {
@@ -1215,7 +1214,7 @@ bool Bot::isEnemyBehindShield (edict_t *enemy) {
    }
 
    // check if enemy has shield and this shield is drawn
-   if (strncmp (STRING (enemy->v.viewmodel), "models/shield/v_shield_", 23) == 0 && (enemy->v.weaponanim == 6 || enemy->v.weaponanim == 7)) {
+   if ((enemy->v.weaponanim == 6 || enemy->v.weaponanim == 7) && strncmp (STRING (enemy->v.viewmodel), "models/shield/v_shield_", 23) == 0) {
       if (util.isInViewCone (pev->origin, enemy)) {
          return true;
       }
@@ -1223,13 +1222,13 @@ bool Bot::isEnemyBehindShield (edict_t *enemy) {
    return false;
 }
 
-bool Bot::usesSniper (void) {
+bool Bot::usesSniper () {
    // this function returns true, if returns if bot is using a sniper rifle
 
-   return m_currentWeapon == WEAPON_AWP || m_currentWeapon == WEAPON_G3SG1 || m_currentWeapon == WEAPON_SCOUT || m_currentWeapon == WEAPON_SG550;
+   return m_currentWeapon == Weapon::AWP || m_currentWeapon == Weapon::G3SG1 || m_currentWeapon == Weapon::Scout || m_currentWeapon == Weapon::SG550;
 }
 
-bool Bot::usesRifle (void) {
+bool Bot::usesRifle () {
    auto tab = conf.getRawWeapons ();
    int count = 0;
 
@@ -1247,7 +1246,7 @@ bool Bot::usesRifle (void) {
    return false;
 }
 
-bool Bot::usesPistol (void) {
+bool Bot::usesPistol () {
    auto tab = conf.getRawWeapons ();
    int count = 0;
 
@@ -1266,23 +1265,23 @@ bool Bot::usesPistol (void) {
    return false;
 }
 
-bool Bot::usesCampGun (void) {
+bool Bot::usesCampGun () {
    return usesSubmachine () || usesRifle () || usesSniper ();
 }
 
-bool Bot::usesSubmachine (void) {
-   return m_currentWeapon == WEAPON_MP5 || m_currentWeapon == WEAPON_TMP || m_currentWeapon == WEAPON_P90 || m_currentWeapon == WEAPON_MAC10 || m_currentWeapon == WEAPON_UMP45;
+bool Bot::usesSubmachine () {
+   return m_currentWeapon == Weapon::MP5 || m_currentWeapon == Weapon::TMP || m_currentWeapon == Weapon::P90 || m_currentWeapon == Weapon::MAC10 || m_currentWeapon == Weapon::UMP45;
 }
 
-bool Bot::usesZoomableRifle (void) {
-   return m_currentWeapon == WEAPON_AUG || m_currentWeapon == WEAPON_SG552;
+bool Bot::usesZoomableRifle () {
+   return m_currentWeapon == Weapon::AUG || m_currentWeapon == Weapon::SG552;
 }
 
-bool Bot::usesBadWeapon (void) {
-   return m_currentWeapon == WEAPON_XM1014 || m_currentWeapon == WEAPON_M3 || m_currentWeapon == WEAPON_UMP45 || m_currentWeapon == WEAPON_MAC10 || m_currentWeapon == WEAPON_TMP || m_currentWeapon == WEAPON_P90;
+bool Bot::usesBadWeapon () {
+   return m_currentWeapon == Weapon::XM1014 || m_currentWeapon == Weapon::M3 || m_currentWeapon == Weapon::UMP45 || m_currentWeapon == Weapon::MAC10 || m_currentWeapon == Weapon::TMP || m_currentWeapon == Weapon::P90;
 }
 
-int Bot::bestPrimaryCarried (void) {
+int Bot::bestPrimaryCarried () {
    // this function returns the best weapon of this bot (based on personality prefs)
 
    const int *pref = conf.getWeaponPrefs (m_personality);
@@ -1294,11 +1293,11 @@ int Bot::bestPrimaryCarried (void) {
 
    // take the shield in account
    if (hasShield ()) {
-      weapons |= (1 << WEAPON_SHIELD);
+      weapons |= cr::bit (Weapon::Shield);
    }
 
-   for (int i = 0; i < NUM_WEAPONS; i++) {
-      if (weapons & (1 << weaponTab[*pref].id)) {
+   for (int i = 0; i < kNumWeapons; ++i) {
+      if (weapons & cr::bit (weaponTab[*pref].id)) {
          weaponIndex = i;
       }
       pref++;
@@ -1306,7 +1305,7 @@ int Bot::bestPrimaryCarried (void) {
    return weaponIndex;
 }
 
-int Bot::bestSecondaryCarried (void) {
+int Bot::bestSecondaryCarried () {
    // this function returns the best secondary weapon of this bot (based on personality prefs)
 
    const int *pref = conf.getWeaponPrefs (m_personality);
@@ -1316,14 +1315,14 @@ int Bot::bestSecondaryCarried (void) {
 
    // take the shield in account
    if (hasShield ()) {
-      weapons |= (1 << WEAPON_SHIELD);
+      weapons |= cr::bit (Weapon::Shield);
    }
    auto tab = conf.getRawWeapons ();
 
-   for (int i = 0; i < NUM_WEAPONS; i++) {
+   for (int i = 0; i < kNumWeapons; ++i) {
       int id = tab[*pref].id;
 
-      if ((weapons & (1 << tab[*pref].id)) && (id == WEAPON_USP || id == WEAPON_GLOCK || id == WEAPON_DEAGLE || id == WEAPON_P228 || id == WEAPON_ELITE || id == WEAPON_FIVESEVEN)) {
+      if ((weapons & cr::bit (tab[*pref].id)) && (id == Weapon::USP || id == Weapon::Glock18 || id == Weapon::Deagle || id == Weapon::P228 || id == Weapon::Elite || id == Weapon::FiveSeven)) {
          weaponIndex = i;
          break;
       }
@@ -1332,15 +1331,15 @@ int Bot::bestSecondaryCarried (void) {
    return weaponIndex;
 }
 
-int Bot::bestGrenadeCarried (void) {
-   if (pev->weapons & (1 << WEAPON_EXPLOSIVE)) {
-      return WEAPON_EXPLOSIVE;
+int Bot::bestGrenadeCarried () {
+   if (pev->weapons & cr::bit (Weapon::Explosive)) {
+      return Weapon::Explosive;
    }
-   else if (pev->weapons & (1 << WEAPON_SMOKE)) {
-      return WEAPON_SMOKE;
+   else if (pev->weapons & cr::bit (Weapon::Smoke)) {
+      return Weapon::Smoke;
    }
-   else if (pev->weapons & (1 << WEAPON_FLASHBANG)) {
-      return WEAPON_FLASHBANG;
+   else if (pev->weapons & cr::bit (Weapon::Flashbang)) {
+      return Weapon::Flashbang;
    }
    return -1;
 }
@@ -1353,7 +1352,7 @@ bool Bot::rateGroundWeapon (edict_t *ent) {
    const int *pref = conf.getWeaponPrefs (m_personality);
    auto tab = conf.getRawWeapons ();
 
-   for (int i = 0; i < NUM_WEAPONS; i++) {
+   for (int i = 0; i < kNumWeapons; ++i) {
       if (strcmp (tab[*pref].model, STRING (ent->v.model) + 9) == 0) {
          groundIndex = i;
          break;
@@ -1371,15 +1370,15 @@ bool Bot::rateGroundWeapon (edict_t *ent) {
    return groundIndex > hasWeapon;
 }
 
-bool Bot::hasAnyWeapons (void) {
-   return (pev->weapons & (WEAPON_PRIMARY | WEAPON_SECONDARY));
+bool Bot::hasAnyWeapons () {
+   return (pev->weapons & (kPrimaryWeaponMask | kSecondaryWeaponMask));
 }
 
-void Bot::selectBestWeapon (void) {
+void Bot::selectBestWeapon () {
    // this function chooses best weapon, from weapons that bot currently own, and change
    // current weapon to best one.
 
-   if (yb_jasonmode.boolean ()) {
+   if (yb_jasonmode.bool_ ()) {
       // if knife mode activated, force bot to use knife
       selectWeaponByName ("weapon_knife");
       return;
@@ -1396,7 +1395,7 @@ void Bot::selectBestWeapon (void) {
    // loop through all the weapons until terminator is found...
    while (tab[selectIndex].id) {
       // is the bot NOT carrying this weapon?
-      if (!(pev->weapons & (1 << tab[selectIndex].id))) {
+      if (!(pev->weapons & cr::bit (tab[selectIndex].id))) {
          selectIndex++; // skip to next weapon
          continue;
       }
@@ -1421,7 +1420,7 @@ void Bot::selectBestWeapon (void) {
       selectIndex++;
    }
 
-   chosenWeaponIndex %= NUM_WEAPONS + 1;
+   chosenWeaponIndex %= kNumWeapons + 1;
    selectIndex = chosenWeaponIndex;
 
    int id = tab[selectIndex].id;
@@ -1431,19 +1430,19 @@ void Bot::selectBestWeapon (void) {
       selectWeaponByName (tab[selectIndex].name);
    }
    m_isReloading = false;
-   m_reloadState = RELOAD_NONE;
+   m_reloadState = Reload::None;
 }
 
-void Bot::selectSecondary (void) {
+void Bot::selectSecondary () {
    int oldWeapons = pev->weapons;
 
-   pev->weapons &= ~WEAPON_PRIMARY;
+   pev->weapons &= ~kPrimaryWeaponMask;
    selectBestWeapon ();
 
    pev->weapons = oldWeapons;
 }
 
-int Bot::bestWeaponCarried (void) {
+int Bot::bestWeaponCarried () {
    auto tab = conf.getRawWeapons ();
 
    int weapons = pev->weapons;
@@ -1453,32 +1452,32 @@ int Bot::bestWeaponCarried (void) {
    // loop through all the weapons until terminator is found...
    while (tab->id) {
       // is the bot carrying this weapon?
-      if (weapons & (1 << tab->id)) {
+      if (weapons & cr::bit (tab->id)) {
          num = i;
       }
-      i++;
+      ++i;
       tab++;
    }
    return num;
 }
 
 void Bot::selectWeaponByName (const char *name) {
-   game.execBotCmd (ent (), name);
+   game.botCommand (ent (), name);
 }
 
 void Bot::selectWeaponById (int num) {
    auto tab = conf.getRawWeapons ();
 
-   game.execBotCmd (ent (), tab[num].name);
+   game.botCommand (ent (), tab[num].name);
 }
 
-void Bot::decideFollowUser (void) {
+void Bot::decideFollowUser () {
    // this function forces bot to follow user
-   Array<edict_t *> users;
+   Array <edict_t *> users;
 
    // search friends near us
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ()) {
+      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team != m_team || client.ent == ent ()) {
          continue;
       }
 
@@ -1492,13 +1491,13 @@ void Bot::decideFollowUser (void) {
    }
    m_targetEntity = users.random ();
 
-   pushChatterMessage (CHATTER_LEAD_ON_SIR);
-   startTask (TASK_FOLLOWUSER, TASKPRI_FOLLOWUSER, INVALID_WAYPOINT_INDEX, 0.0f, true);
+   pushChatterMessage (Chatter::LeadOnSir);
+   startTask (Task::FollowUser, TaskPri::FollowUser, kInvalidNodeIndex, 0.0f, true);
 }
 
-void Bot::updateTeamCommands (void) {
+void Bot::updateTeamCommands () {
    // prevent spamming
-   if (m_timeTeamOrder > game.timebase () + 2.0f || game.is (GAME_CSDM_FFA) || !yb_communication_type.integer ()) {
+   if (m_timeTeamOrder > game.timebase () + 2.0f || game.is (GameFlags::FreeForAll) || !yb_radio_mode.int_ ()) {
       return;
    }
 
@@ -1507,7 +1506,7 @@ void Bot::updateTeamCommands (void) {
 
    // search teammates seen by this bot
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.team != m_team || client.ent == ent ()) {
+      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team != m_team || client.ent == ent ()) {
          continue;
       }
       memberExists = true;
@@ -1520,20 +1519,20 @@ void Bot::updateTeamCommands (void) {
 
    // has teammates?
    if (memberNear) {
-      if (m_personality == PERSONALITY_RUSHER && yb_communication_type.integer () == 2) {
-         pushRadioMessage (RADIO_STORM_THE_FRONT);
+      if (m_personality == Personality::Rusher && yb_radio_mode.int_ () == 2) {
+         pushRadioMessage (Radio::StormTheFront);
       }
-      else if (m_personality != PERSONALITY_RUSHER && yb_communication_type.integer () == 2) {
-         pushRadioMessage (RADIO_TEAM_FALLBACK);
+      else if (m_personality != Personality::Rusher && yb_radio_mode.int_ () == 2) {
+         pushRadioMessage (Radio::TeamFallback);
       }
    }
-   else if (memberExists && yb_communication_type.integer () == 1) {
-      pushRadioMessage (RADIO_TAKING_FIRE);
+   else if (memberExists && yb_radio_mode.int_ () == 1) {
+      pushRadioMessage (Radio::TakingFireNeedAssistance);
    }
-   else if (memberExists && yb_communication_type.integer () == 2) {
-      pushChatterMessage (CHATTER_SCARED_EMOTE);
+   else if (memberExists && yb_radio_mode.int_ () == 2) {
+      pushChatterMessage (Chatter::ScaredEmotion);
    }
-   m_timeTeamOrder = game.timebase () + rng.getFloat (15.0f, 30.0f);
+   m_timeTeamOrder = game.timebase () + rg.float_ (15.0f, 30.0f);
 }
 
 bool Bot::isGroupOfEnemies (const Vector &location, int numEnemies, float radius) {
@@ -1541,7 +1540,7 @@ bool Bot::isGroupOfEnemies (const Vector &location, int numEnemies, float radius
 
    // search the world for enemy players...
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE) || client.ent == ent ()) {
+      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.ent == ent ()) {
          continue;
       }
 
@@ -1559,38 +1558,38 @@ bool Bot::isGroupOfEnemies (const Vector &location, int numEnemies, float radius
    return false;
 }
 
-void Bot::checkReload (void) {
+void Bot::checkReload () {
    // check the reload state
-   if (taskId () == TASK_PLANTBOMB || taskId () == TASK_DEFUSEBOMB || taskId () == TASK_PICKUPITEM || taskId () == TASK_THROWFLASHBANG || taskId () == TASK_THROWSMOKE || m_isUsingGrenade) {
-      m_reloadState = RELOAD_NONE;
+   if (getCurrentTaskId () == Task::PlantBomb || getCurrentTaskId () == Task::DefuseBomb || getCurrentTaskId () == Task::PickupItem || getCurrentTaskId () == Task::ThrowFlashbang || getCurrentTaskId () == Task::ThrowSmoke || m_isUsingGrenade) {
+      m_reloadState = Reload::None;
       return;
    }
 
    m_isReloading = false; // update reloading status
    m_reloadCheckTime = game.timebase () + 3.0f;
 
-   if (m_reloadState != RELOAD_NONE) {
+   if (m_reloadState != Reload::None) {
       int weaponIndex = 0;
       int weapons = pev->weapons;
 
-      if (m_reloadState == RELOAD_PRIMARY) {
-         weapons &= WEAPON_PRIMARY;
+      if (m_reloadState == Reload::Primary) {
+         weapons &= kPrimaryWeaponMask;
       }
-      else if (m_reloadState == RELOAD_SECONDARY) {
-         weapons &= WEAPON_SECONDARY;
+      else if (m_reloadState == Reload::Secondary) {
+         weapons &= kSecondaryWeaponMask;
       }
 
       if (weapons == 0) {
          m_reloadState++;
 
-         if (m_reloadState > RELOAD_SECONDARY) {
-            m_reloadState = RELOAD_NONE;
+         if (m_reloadState > Reload::Secondary) {
+            m_reloadState = Reload::None;
          }
          return;
       }
 
-      for (int i = 1; i < MAX_WEAPONS; i++) {
-         if (weapons & (1 << i)) {
+      for (int i = 1; i < kMaxWeapons; ++i) {
+         if (weapons & cr::bit (i)) {
             weaponIndex = i;
             break;
          }
@@ -1603,21 +1602,21 @@ void Bot::checkReload (void) {
          }
          pev->button &= ~IN_ATTACK;
 
-         if ((m_oldButtons & IN_RELOAD) == RELOAD_NONE) {
+         if ((m_oldButtons & IN_RELOAD) == Reload::None) {
             pev->button |= IN_RELOAD; // press reload button
          }
          m_isReloading = true;
       }
       else {
          // if we have enemy don't reload next weapon
-         if ((m_states & (STATE_SEEING_ENEMY | STATE_HEARING_ENEMY)) || m_seeEnemyTime + 5.0f > game.timebase ()) {
-            m_reloadState = RELOAD_NONE;
+         if ((m_states & (Sense::SeeingEnemy | Sense::HearingEnemy)) || m_seeEnemyTime + 5.0f > game.timebase ()) {
+            m_reloadState = Reload::None;
             return;
          }
          m_reloadState++;
 
-         if (m_reloadState > RELOAD_SECONDARY) {
-            m_reloadState = RELOAD_NONE;
+         if (m_reloadState > Reload::Secondary) {
+            m_reloadState = Reload::None;
          }
          return;
       }

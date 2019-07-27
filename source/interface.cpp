@@ -9,7 +9,7 @@
 
 #include <yapb.h>
 
-ConVar yb_version ("yb_version", PRODUCT_VERSION, VT_READONLY);
+ConVar yb_version ("yb_version", PRODUCT_VERSION, Var::ReadOnly);
 
 gamefuncs_t dllapi;
 enginefuncs_t engfuncs;
@@ -33,7 +33,7 @@ plugin_info_t Plugin_info = {
    PT_ANYTIME, // when unloadable
 };
 
-namespace VariadicCallbacks {
+namespace variadic {
    void clientCommand (edict_t *ent, char const *format, ...) {
       // this function forces the client whose player entity is ent to issue a client command.
       // How it works is that clients all have a argv global string in their client DLL that
@@ -50,31 +50,31 @@ namespace VariadicCallbacks {
       // case it's a bot asking for a client command, we handle it like we do for bot commands
 
       va_list ap;
-      char buffer[MAX_PRINT_BUFFER];
+      auto buffer = strings.chars ();
 
       va_start (ap, format);
-      _vsnprintf (buffer, cr::bufsize (buffer), format, ap);
+      _vsnprintf (buffer, StringBuffer::StaticBufferSize, format, ap);
       va_end (ap);
 
       if (ent && (ent->v.flags & (FL_FAKECLIENT | FL_DORMANT))) {
-         if (bots.getBot (ent)) {
-            game.execBotCmd (ent, buffer);
+         if (bots[ent]) {
+            game.botCommand (ent, buffer);
          }
 
-         if (game.is (GAME_METAMOD)) {
+         if (game.is (GameFlags::Metamod)) {
             RETURN_META (MRES_SUPERCEDE); // prevent bots to be forced to issue client commands
          }
          return;
       }
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       engfuncs.pfnClientCommand (ent, buffer);
    }
 }
 
-SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
+CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
    // this function is called right after GiveFnptrsToDll() by the engine in the game DLL (or
    // what it BELIEVES to be the game DLL), in order to copy the list of MOD functions that can
    // be called by the engine, into a memory block pointed to by the functionTable pointer
@@ -87,13 +87,12 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
 
    memset (functionTable, 0, sizeof (gamefuncs_t));
 
-   if (!(game.is (GAME_METAMOD))) {
-      auto api_GetEntityAPI = game.getLib ().resolve <int (*) (gamefuncs_t *, int)> ("GetEntityAPI");
+   if (!(game.is (GameFlags::Metamod))) {
+      auto api_GetEntityAPI = game.lib ().resolve <int (*) (gamefuncs_t *, int)> ("GetEntityAPI");
 
       // pass other DLLs engine callbacks to function table...
-      if (api_GetEntityAPI (&dllapi, INTERFACE_VERSION) == 0) {
-         util.logEntry (true, LL_FATAL, "GetEntityAPI2: ERROR - Not Initialized.");
-         return FALSE; // error initializing function table!!!
+      if (!api_GetEntityAPI || api_GetEntityAPI (&dllapi, INTERFACE_VERSION) == 0) {
+         logger.fatal ("Could not resolve symbol \"%s\" in the game dll.", "GetEntityAPI");
       }
       dllfuncs.dllapi_table = &dllapi;
       gpGamedllFuncs = &dllfuncs;
@@ -101,7 +100,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       memcpy (functionTable, &dllapi, sizeof (gamefuncs_t));
    }
 
-   functionTable->pfnGameInit = [] (void) {
+   functionTable->pfnGameInit = [] () {
       // this function is a one-time call, and appears to be the second function called in the
       // DLL after GiveFntprsToDll() has been called. Its purpose is to tell the MOD DLL to
       // initialize the game before the engine actually hooks into it with its video frames and
@@ -110,6 +109,14 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       // server is enabled. Here is a good place to do our own game session initialization, and
       // to register by the engine side the server commands we need to administrate our bots.
 
+      // register bot cvars
+      game.registerCvars ();
+
+      // register logger
+      logger.initialize (strings.format ("%slogs/yapb.log", graph.getDataDirectory (false)), [] (const char *msg) {
+         game.print (msg);
+         });
+
       conf.initWeapons ();
 
       // register server command(s)
@@ -117,20 +124,20 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       game.registerCmd ("yb", BotControl::handleEngineCommands);
 
       // set correct version string
-      yb_version.set (util.format ("%d.%d.%d", PRODUCT_VERSION_DWORD_INTERNAL, util.buildNumber ()));
+      yb_version.set (strings.format ("%d.%d.%d", PRODUCT_VERSION_DWORD_INTERNAL, util.buildNumber ()));
 
       // execute main config
-      conf.load (true);
+      conf.loadMainConfig ();
 
       // register fake metamod command handler if we not! under mm
-      if (!(game.is (GAME_METAMOD))) {
-         game.registerCmd ("meta", [] (void) {
+      if (!(game.is (GameFlags::Metamod))) {
+         game.registerCmd ("meta", [] () {
             game.print ("You're launched standalone version of yapb. Metamod is not installed or not enabled!");
             });
       }
       conf.adjustWeaponPrices ();
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       dllapi.pfnGameInit ();
@@ -144,7 +151,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
 
       game.precache ();
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META_VALUE (MRES_IGNORED, 0);
       }
       int result = dllapi.pfnSpawn (ent); // get result
@@ -168,7 +175,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       // is called twice, once for each entity moving.
 
       if (!game.isNullEntity (pentTouched) && pentOther != game.getStartEntity ()) {
-         Bot *bot = bots.getBot (pentTouched);
+         auto bot = bots[pentTouched];
 
          if (bot != nullptr && pentOther != bot->ent ()) {
 
@@ -181,7 +188,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
          }
       }
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       dllapi.pfnTouch (pentTouched, pentOther);
@@ -212,13 +219,13 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       if (strcmp (addr, "loopback") == 0) {
          game.setLocalEntity (ent); // save the edict of the listen server client...
 
-         // if not dedicated set the default editor for waypoints
+         // if not dedicated set the default editor for graph
          if (!game.isDedicated ()) {
-            waypoints.setEditor (ent);
+            graph.setEditor (ent);
          }
       }
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META_VALUE (MRES_IGNORED, 0);
       }
       return dllapi.pfnClientConnect (ent, name, addr, rejectReason);
@@ -236,18 +243,18 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       // to reset his entity pointer for safety. There are still a few server frames to go once a
       // listen server client disconnects, and we don't want to send him any sort of message then.
 
-      int index = game.indexOfEntity (ent) - 1;
-
-      if (index >= 0 && index < MAX_ENGINE_PLAYERS) {
-         auto bot = bots.getBot (index);
-
-         // check if its a bot
-         if (bot != nullptr && bot->pev == &ent->v) {
+      for (auto &bot : bots) {
+         if (bot->pev == &ent->v) {
             bot->showChaterIcon (false);
-            bots.destroy (index);
+
+            conf.clearUsedName (bot.get ()); // clear the bot name
+            bots.erase (bot.get ()); // remove the bot from bots array
+
+            break;
          }
       }
-      if (game.is (GAME_METAMOD)) {
+
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       dllapi.pfnClientDisconnect (ent);
@@ -261,7 +268,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
 
       ctrl.assignAdminRights (ent, infobuffer);
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       dllapi.pfnClientUserInfoChanged (ent, infobuffer);
@@ -282,14 +289,14 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       // clients. Hence it can lack of commenting a bit, since this code is very subject to change.
 
       if (ctrl.handleClientCommands (ent)) {
-         if (game.is (GAME_METAMOD)) {
+         if (game.is (GameFlags::Metamod)) {
             RETURN_META (MRES_SUPERCEDE);
          }
          return;
       }
 
       else if (ctrl.handleMenuCommands (ent)) {
-         if (game.is (GAME_METAMOD)) {
+         if (game.is (GameFlags::Metamod)) {
             RETURN_META (MRES_SUPERCEDE);
          }
          return;
@@ -298,7 +305,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       // record stuff about radio and chat
       bots.captureChatRadio (engfuncs.pfnCmd_Argv (0), engfuncs.pfnCmd_Argv (1), ent);
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       dllapi.pfnClientCommand (ent);
@@ -312,8 +319,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       // loading the bot profiles, and drawing the world map (ie, filling the navigation hashtable).
       // Once this function has been called, the server can be considered as "running".
 
-      bots.destroy ();
-      conf.load (false); // initialize all config files
+      conf.loadConfigs (); // initialize all config files
 
       // do a level initialization
       game.levelInitialize (pentEdictList, edictCount);
@@ -322,27 +328,26 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       illum.resetWorldModel ();
 
       // do level initialization stuff here...
-      waypoints.init ();
-      waypoints.load ();
+      graph.loadGraphData ();
 
       // execute main config
-      conf.load (true);
+      conf.loadMainConfig ();
 
-      if (File::exists (util.format ("%s/maps/%s_yapb.cfg", game.getModName (), game.getMapName ()))) {
-         game.execCmd ("exec maps/%s_yapb.cfg", game.getMapName ());
+      if (File::exists (strings.format ("%s/maps/%s_yapb.cfg", game.getModName (), game.getMapName ()))) {
+         game.serverCommand ("exec maps/%s_yapb.cfg", game.getMapName ());
          game.print ("Executing Map-Specific config file");
       }
       bots.initQuota ();
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       dllapi.pfnServerActivate (pentEdictList, edictCount, clientMax);
 
-      waypoints.rebuildVisibility ();
+      graph.rebuildVisibility ();
    };
 
-   functionTable->pfnServerDeactivate = [] (void) {
+   functionTable->pfnServerDeactivate = [] () {
       // this function is called when the server is shutting down. A particular note about map
       // changes: changing the map means shutting down the server and starting a new one. Of course
       // this process is transparent to the user, but either in single player when the hero reaches
@@ -354,8 +359,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       // the loading of new bots and the new BSP data parsing there.
 
       // save collected experience on shutdown
-      waypoints.saveExperience ();
-      waypoints.saveVisibility ();
+      graph.savePractice ();
 
       // destroy global killer entity
       bots.destroyKillerEntity ();
@@ -370,19 +374,21 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       util.setNeedForWelcome (false);
 
       // xash is not kicking fakeclients on changelevel
-      if (game.is (GAME_XASH_ENGINE)) {
+      if (game.is (GameFlags::Xash3D)) {
          bots.kickEveryone (true, false);
-         bots.destroy ();
       }
-      waypoints.init ();
+      graph.initGraph ();
 
-      if (game.is (GAME_METAMOD)) {
+      // clear all the bots
+      bots.destroy ();
+
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       dllapi.pfnServerDeactivate ();
    };
 
-   functionTable->pfnStartFrame = [] (void) {
+   functionTable->pfnStartFrame = [] () {
       // this function starts a video frame. It is called once per video frame by the game. If
       // you run Half-Life at 90 fps, this function will then be called 90 times per second. By
       // placing a hook on it, we have a good place to do things that should be done continuously
@@ -400,10 +406,9 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       // update some stats for clients
       util.updateClients ();
 
-      if (waypoints.hasEditFlag (WS_EDIT_ENABLED) && waypoints.hasEditor ()) {
-         waypoints.frame ();
+      if (graph.hasEditFlag (GraphEdit::On) && graph.hasEditor ()) {
+         graph.frame ();
       }
-      bots.updateDeathMsgState (false);
 
       // run stuff periodically
       game.slowFrame ();
@@ -419,7 +424,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       // keep bot number up to date
       bots.maintainQuota ();
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       dllapi.pfnStartFrame ();
@@ -428,17 +433,24 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       bots.slowFrame ();
    };
 
-   functionTable->pfnUpdateClientData = [] (const struct edict_s *ent, int sendweapons, struct clientdata_s *cd) {
-      extern ConVar yb_latency_display;
+   functionTable->pfnCmdStart = [] (const edict_t *player, usercmd_t *cmd, unsigned int random_seed) {
+      auto ent = const_cast <edict_t *> (player);
 
-      if (game.is (GAME_SUPPORT_SVC_PINGS) && yb_latency_display.integer () == 2 && bots.hasBotsOnline ()) {
-         bots.sendPingOffsets (const_cast <edict_t *> (ent));
+      // if we're handle pings for bots and clients, clear IN_SCORE button so SV_ShouldUpdatePing engine function return false
+      // and SV_EmitPings will not overwrite our results
+      if (game.is (GameFlags::HasFakePings) && yb_show_latency.int_ () == 2) {
+         if ((cmd->buttons & IN_SCORE) || (ent->v.oldbuttons & IN_SCORE)) {
+            cmd->buttons &= ~IN_SCORE;
+
+            // send our version of pings
+            util.sendPings (ent);
+         }
       }
-
-      if (game.is (GAME_METAMOD)) {
+      
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
-      dllapi.pfnUpdateClientData (ent, sendweapons, cd);
+      dllapi.pfnCmdStart (player, cmd, random_seed);
    };
 
    functionTable->pfnPM_Move = [] (playermove_t *playerMove, int server) {
@@ -449,7 +461,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
 
       illum.setWorldModel (playerMove->physents[0].model);
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       dllapi.pfnPM_Move (playerMove, server);
@@ -457,8 +469,8 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
    return TRUE;
 }
 
-SHARED_LIBRARAY_EXPORT int GetEntityAPI2_Post (gamefuncs_t *functionTable, int *) {
-   // this function is called right after FuncPointers_t() by the engine in the game DLL (or
+CR_EXPORT int GetEntityAPI2_Post (gamefuncs_t *table, int *) {
+   // this function is called right after GiveFnptrsToDll() by the engine in the game DLL (or
    // what it BELIEVES to be the game DLL), in order to copy the list of MOD functions that can
    // be called by the engine, into a memory block pointed to by the functionTable pointer
    // that is passed into this function (explanation comes straight from botman). This allows
@@ -468,9 +480,9 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2_Post (gamefuncs_t *functionTable, int *
    // engine, and then calls the MOD DLL's version of GetEntityAPI to get the REAL gamedll
    // functions this time (to use in the bot code). Post version, called only by metamod.
 
-   memset (functionTable, 0, sizeof (gamefuncs_t));
+   memset (table, 0, sizeof (gamefuncs_t));
 
-   functionTable->pfnSpawn = [] (edict_t *ent) {
+   table->pfnSpawn = [] (edict_t *ent) {
       // this function asks the game DLL to spawn (i.e, give a physical existence in the virtual
       // world, in other words to 'display') the entity pointed to by ent in the game. The
       // Spawn() function is one of the functions any entity is supposed to have in the game DLL,
@@ -484,7 +496,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2_Post (gamefuncs_t *functionTable, int *
       RETURN_META_VALUE (MRES_IGNORED, 0);
    };
 
-   functionTable->pfnStartFrame = [] (void) {
+   table->pfnStartFrame = [] () {
       // this function starts a video frame. It is called once per video frame by the game. If
       // you run Half-Life at 90 fps, this function will then be called 90 times per second. By
       // placing a hook on it, we have a good place to do things that should be done continuously
@@ -496,7 +508,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2_Post (gamefuncs_t *functionTable, int *
       RETURN_META (MRES_IGNORED);
    };
 
-   functionTable->pfnServerActivate = [] (edict_t *, int, int) {
+   table->pfnServerActivate = [] (edict_t *, int, int) {
       // this function is called when the server has fully loaded and is about to manifest itself
       // on the network as such. Since a mapchange is actually a server shutdown followed by a
       // restart, this function is also called when a new map is being loaded. Hence it's the
@@ -505,7 +517,7 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2_Post (gamefuncs_t *functionTable, int *
       // Once this function has been called, the server can be considered as "running". Post version
       // called only by metamod.
 
-      waypoints.rebuildVisibility ();
+      graph.rebuildVisibility ();
 
       RETURN_META (MRES_IGNORED);
    };
@@ -513,21 +525,21 @@ SHARED_LIBRARAY_EXPORT int GetEntityAPI2_Post (gamefuncs_t *functionTable, int *
    return TRUE;
 }
 
-SHARED_LIBRARAY_EXPORT int GetNewDLLFunctions (newgamefuncs_t *functionTable, int *interfaceVersion) {
+CR_EXPORT int GetNewDLLFunctions (newgamefuncs_t *functionTable, int *interfaceVersion) {
    // it appears that an extra function table has been added in the engine to gamedll interface
    // since the date where the first enginefuncs table standard was frozen. These ones are
    // facultative and we don't hook them, but since some MODs might be featuring it, we have to
    // pass them too, else the DLL interfacing wouldn't be complete and the game possibly wouldn't
    // run properly.
 
-   auto api_GetNewDLLFunctions = game.getLib ().resolve <int (*) (newgamefuncs_t *, int *)> ("GetNewDLLFunctions");
+   auto api_GetNewDLLFunctions = game.lib ().resolve <int (*) (newgamefuncs_t *, int *)> (__FUNCTION__);
 
    if (api_GetNewDLLFunctions == nullptr) {
       return FALSE;
    }
 
-   if (!api_GetNewDLLFunctions (functionTable, interfaceVersion)) {
-      util.logEntry (true, LL_ERROR, "GetNewDLLFunctions: ERROR - Not Initialized.");
+   if (!api_GetNewDLLFunctions || !api_GetNewDLLFunctions (functionTable, interfaceVersion)) {
+      logger.error ("Could not resolve symbol \"%s\" in the game dll. Continuing...", __FUNCTION__);
       return FALSE;
    }
 
@@ -535,8 +547,8 @@ SHARED_LIBRARAY_EXPORT int GetNewDLLFunctions (newgamefuncs_t *functionTable, in
    return TRUE;
 }
 
-SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
-   if (game.is (GAME_METAMOD)) {
+CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
+   if (game.is (GameFlags::Metamod)) {
       memset (functionTable, 0, sizeof (enginefuncs_t));
    }
 
@@ -551,10 +563,9 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
       // spawn point named "tr_2lm".
 
       // save collected experience on map change
-      waypoints.saveExperience ();
-      waypoints.saveVisibility ();
+      graph.savePractice ();
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       engfuncs.pfnChangeLevel (s1, s2);
@@ -565,7 +576,7 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
 
       illum.updateLight (style, val);
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       engfuncs.pfnLightStyle (style, val);
@@ -573,11 +584,11 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
 
    functionTable->pfnFindEntityByString = [] (edict_t *edictStartSearchAfter, const char *field, const char *value) {
       // round starts in counter-strike 1.5
-      if ((game.is (GAME_LEGACY)) && strcmp (value, "info_map_parameters") == 0) {
+      if ((game.is (GameFlags::Legacy)) && strcmp (value, "info_map_parameters") == 0) {
          bots.initRound ();
       }
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META_VALUE (MRES_IGNORED, static_cast <edict_t *> (nullptr));
       }
       return engfuncs.pfnFindEntityByString (edictStartSearchAfter, field, value);
@@ -596,7 +607,7 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
 
       util.attachSoundsToClients (entity, sample, volume);
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       engfuncs.pfnEmitSound (entity, channel, sample, volume, attenuation, flags, pitch);
@@ -607,29 +618,26 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
 
       game.beginMessage (ed, msgDest, msgType);
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       engfuncs.pfnMessageBegin (msgDest, msgType, origin, ed);
    };
 
-   functionTable->pfnMessageEnd = [] (void) {
+   functionTable->pfnMessageEnd = [] () {
       game.resetMessages ();
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       engfuncs.pfnMessageEnd ();
-
-      // send latency fix
-      bots.sendDeathMsgFix ();
    };
 
    functionTable->pfnWriteByte = [] (int value) {
       // if this message is for a bot, call the client message function...
-      game.processMessages ((void *) &value);
+      game.processMessages (reinterpret_cast <void *> (&value));
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       engfuncs.pfnWriteByte (value);
@@ -637,9 +645,9 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
 
    functionTable->pfnWriteChar = [] (int value) {
       // if this message is for a bot, call the client message function...
-      game.processMessages ((void *) &value);
+      game.processMessages (reinterpret_cast <void *> (&value));
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       engfuncs.pfnWriteChar (value);
@@ -647,9 +655,9 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
 
    functionTable->pfnWriteShort = [] (int value) {
       // if this message is for a bot, call the client message function...
-      game.processMessages ((void *) &value);
+      game.processMessages (reinterpret_cast <void *> (&value));
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       engfuncs.pfnWriteShort (value);
@@ -657,9 +665,9 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
 
    functionTable->pfnWriteLong = [] (int value) {
       // if this message is for a bot, call the client message function...
-      game.processMessages ((void *) &value);
+      game.processMessages (reinterpret_cast <void *> (&value));
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       engfuncs.pfnWriteLong (value);
@@ -667,9 +675,9 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
 
    functionTable->pfnWriteAngle = [] (float value) {
       // if this message is for a bot, call the client message function...
-      game.processMessages ((void *) &value);
+      game.processMessages (reinterpret_cast <void *> (&value));
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       engfuncs.pfnWriteAngle (value);
@@ -677,9 +685,9 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
 
    functionTable->pfnWriteCoord = [] (float value) {
       // if this message is for a bot, call the client message function...
-      game.processMessages ((void *) &value);
+      game.processMessages (reinterpret_cast <void *> (&value));
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       engfuncs.pfnWriteCoord (value);
@@ -687,9 +695,9 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
 
    functionTable->pfnWriteString = [] (const char *sz) {
       // if this message is for a bot, call the client message function...
-      game.processMessages ((void *) sz);
+      game.processMessages (reinterpret_cast <void *> (const_cast <char *> (sz)));
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       engfuncs.pfnWriteString (sz);
@@ -697,9 +705,9 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
 
    functionTable->pfnWriteEntity = [] (int value) {
       // if this message is for a bot, call the client message function...
-      game.processMessages ((void *) &value);
+      game.processMessages (reinterpret_cast <void *> (&value));
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       engfuncs.pfnWriteEntity (value);
@@ -716,76 +724,76 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
       // using pfnMessageBegin (), it will know what message ID number to send, and the engine will
       // know what to do, only for non-metamod version
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META_VALUE (MRES_IGNORED, 0);
       }
       int message = engfuncs.pfnRegUserMsg (name, size);
 
       if (strcmp (name, "VGUIMenu") == 0) {
-         game.setMessageId (NETMSG_VGUI, message);
+         game.setMessageId (NetMsg::VGUI, message);
       }
       else if (strcmp (name, "ShowMenu") == 0) {
-         game.setMessageId (NETMSG_SHOWMENU, message);
+         game.setMessageId (NetMsg::ShowMenu, message);
       }
       else if (strcmp (name, "WeaponList") == 0) {
-         game.setMessageId (NETMSG_WEAPONLIST, message);
+         game.setMessageId (NetMsg::WeaponList, message);
       }
       else if (strcmp (name, "CurWeapon") == 0) {
-         game.setMessageId (NETMSG_CURWEAPON, message);
+         game.setMessageId (NetMsg::CurWeapon, message);
       }
       else if (strcmp (name, "AmmoX") == 0) {
-         game.setMessageId (NETMSG_AMMOX, message);
+         game.setMessageId (NetMsg::AmmoX, message);
       }
       else if (strcmp (name, "AmmoPickup") == 0) {
-         game.setMessageId (NETMSG_AMMOPICKUP, message);
+         game.setMessageId (NetMsg::AmmoPickup, message);
       }
       else if (strcmp (name, "Damage") == 0) {
-         game.setMessageId (NETMSG_DAMAGE, message);
+         game.setMessageId (NetMsg::Damage, message);
       }
       else if (strcmp (name, "Money") == 0) {
-         game.setMessageId (NETMSG_MONEY, message);
+         game.setMessageId (NetMsg::Money, message);
       }
       else if (strcmp (name, "StatusIcon") == 0) {
-         game.setMessageId (NETMSG_STATUSICON, message);
+         game.setMessageId (NetMsg::StatusIcon, message);
       }
       else if (strcmp (name, "DeathMsg") == 0) {
-         game.setMessageId (NETMSG_DEATH, message);
+         game.setMessageId (NetMsg::DeathMsg, message);
       }
       else if (strcmp (name, "ScreenFade") == 0) {
-         game.setMessageId (NETMSG_SCREENFADE, message);
+         game.setMessageId (NetMsg::ScreenFade, message);
       }
       else if (strcmp (name, "HLTV") == 0) {
-         game.setMessageId (NETMSG_HLTV, message);
+         game.setMessageId (NetMsg::HLTV, message);
       }
       else if (strcmp (name, "TextMsg") == 0) {
-         game.setMessageId (NETMSG_TEXTMSG, message);
+         game.setMessageId (NetMsg::TextMsg, message);
       }
       else if (strcmp (name, "TeamInfo") == 0) {
-         game.setMessageId (NETMSG_TEAMINFO, message);
+         game.setMessageId (NetMsg::TeamInfo, message);
       }
       else if (strcmp (name, "BarTime") == 0) {
-         game.setMessageId (NETMSG_BARTIME, message);
+         game.setMessageId (NetMsg::BarTime, message);
       }
       else if (strcmp (name, "SendAudio") == 0) {
-         game.setMessageId (NETMSG_SENDAUDIO, message);
+         game.setMessageId (NetMsg::SendAudio, message);
       }
       else if (strcmp (name, "SayText") == 0) {
-         game.setMessageId (NETMSG_SAYTEXT, message);
+         game.setMessageId (NetMsg::SayText, message);
       }
       else if (strcmp (name, "BotVoice") == 0) {
-         game.setMessageId (NETMSG_BOTVOICE, message);
+         game.setMessageId (NetMsg::BotVoice, message);
       }
       else if (strcmp (name, "NVGToggle") == 0) {
-         game.setMessageId (NETMSG_NVGTOGGLE, message);
+         game.setMessageId (NetMsg::NVGToggle, message);
       }
       else if (strcmp (name, "FlashBat") == 0) {
-         game.setMessageId (NETMSG_FLASHBAT, message);
+         game.setMessageId (NetMsg::FlashBat, message);
       }
       else if (strcmp (name, "Flashlight") == 0) {
-         game.setMessageId (NETMSG_FLASHLIGHT, message);
+         game.setMessageId (NetMsg::Fashlight, message);
       }
       else if (strcmp (name, "ItemStatus") == 0) {
-         game.setMessageId (NETMSG_ITEMSTATUS, message);
+         game.setMessageId (NetMsg::ItemStatus, message);
       }
       return message;
    };
@@ -798,19 +806,19 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
       // we know, right ? But since stupidity rules this world, we do a preventive check :)
 
       if (util.isFakeClient (ent)) {
-         if (game.is (GAME_METAMOD)) {
+         if (game.is (GameFlags::Metamod)) {
             RETURN_META (MRES_SUPERCEDE);
          }
          return;
       }
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       engfuncs.pfnClientPrintf (ent, printType, message);
    };
 
-   functionTable->pfnCmd_Args = [] (void) {
+   functionTable->pfnCmd_Args = [] () {
       // this function returns a pointer to the whole current client command string. Since bots
       // have no client DLL and we may want a bot to execute a client command, we had to implement
       // a argv string in the bot DLL for holding the bots' commands, and also keep track of the
@@ -820,13 +828,13 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
 
       // is this a bot issuing that client command?
       if (game.isBotCmd ()) {
-         if (game.is (GAME_METAMOD)) {
+         if (game.is (GameFlags::Metamod)) {
             RETURN_META_VALUE (MRES_SUPERCEDE, game.botArgs ());
          }
          return game.botArgs (); // else return the whole bot client command string we know
       }
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META_VALUE (MRES_IGNORED, static_cast <const char *> (nullptr));
       }
       return engfuncs.pfnCmd_Args (); // ask the client command string to the engine
@@ -842,19 +850,19 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
 
       // is this a bot issuing that client command?
       if (game.isBotCmd ()) {
-         if (game.is (GAME_METAMOD)) {
+         if (game.is (GameFlags::Metamod)) {
             RETURN_META_VALUE (MRES_SUPERCEDE, game.botArgv (argc));
          }
          return game.botArgv (argc); // if so, then return the wanted argument we know
       }
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META_VALUE (MRES_IGNORED, static_cast <const char *> (nullptr));
       }
       return engfuncs.pfnCmd_Argv (argc); // ask the argument number "argc" to the engine
    };
 
-   functionTable->pfnCmd_Argc = [] (void) {
+   functionTable->pfnCmd_Argc = [] () {
       // this function returns the number of arguments the current client command string has. Since
       // bots have no client DLL and we may want a bot to execute a client command, we had to
       // implement a argv string in the bot DLL for holding the bots' commands, and also keep
@@ -864,61 +872,52 @@ SHARED_LIBRARAY_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int
 
       // is this a bot issuing that client command?
       if (game.isBotCmd ()) {
-         if (game.is (GAME_METAMOD)) {
+         if (game.is (GameFlags::Metamod)) {
             RETURN_META_VALUE (MRES_SUPERCEDE, game.botArgc ());
          }
          return game.botArgc (); // if so, then return the argument count we know
       }
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META_VALUE (MRES_IGNORED, 0);
       }
       return engfuncs.pfnCmd_Argc (); // ask the engine how many arguments there are
    };
 
    functionTable->pfnSetClientMaxspeed = [] (const edict_t *ent, float newMaxspeed) {
-      Bot *bot = bots.getBot (const_cast <edict_t *> (ent));
+      auto bot = bots[const_cast <edict_t *> (ent)];
 
       // check wether it's not a bot
       if (bot != nullptr) {
          bot->pev->maxspeed = newMaxspeed;
       }
 
-      if (game.is (GAME_METAMOD)) {
+      if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
       engfuncs.pfnSetClientMaxspeed (ent, newMaxspeed);
    };
+
+   functionTable->pfnClientCommand = variadic::clientCommand;
+
    return TRUE;
 }
 
-SHARED_LIBRARAY_EXPORT int GetEngineFunctions_Post (enginefuncs_t *functionTable, int *) {
-
-   memset (functionTable, 0, sizeof (enginefuncs_t));
-
-   functionTable->pfnMessageEnd = [] (void) {
-      // send latency fix
-      bots.sendDeathMsgFix ();
-
-      RETURN_META (MRES_IGNORED);
-   };
-   return TRUE;
-}
-
-SHARED_LIBRARAY_EXPORT int Server_GetBlendingInterface (int version, void **ppinterface, void *pstudio, float (*rotationmatrix)[3][4], float (*bonetransform)[128][3][4]) {
+CR_EXPORT int Server_GetBlendingInterface (int version, void **ppinterface, void *pstudio, float (*rotationmatrix)[3][4], float (*bonetransform)[128][3][4]) {
    // this function synchronizes the studio model animation blending interface (i.e, what parts
    // of the body move, which bones, which hitboxes and how) between the server and the game DLL.
    // some MODs can be using a different hitbox scheme than the standard one.
 
-   auto api_GetBlendingInterface = game.getLib ().resolve <int (*) (int, void **, void *, float(*)[3][4], float(*)[128][3][4])> ("Server_GetBlendingInterface");
+   auto api_GetBlendingInterface = game.lib ().resolve <int (*) (int, void **, void *, float(*)[3][4], float(*)[128][3][4])> (__FUNCTION__);
 
-   if (api_GetBlendingInterface == nullptr) {
+   if (!api_GetBlendingInterface) {
+      logger.error ("Could not resolve symbol \"%s\" in the game dll. Continuing...", __FUNCTION__);
       return FALSE;
    }
    return api_GetBlendingInterface (version, ppinterface, pstudio, rotationmatrix, bonetransform);
 }
 
-SHARED_LIBRARAY_EXPORT int Meta_Query (char *, plugin_info_t **pPlugInfo, mutil_funcs_t *pMetaUtilFuncs) {
+CR_EXPORT int Meta_Query (char *, plugin_info_t **pPlugInfo, mutil_funcs_t *pMetaUtilFuncs) {
    // this function is the first function ever called by metamod in the plugin DLL. Its purpose
    // is for metamod to retrieve basic information about the plugin, such as its meta-interface
    // version, for ensuring compatibility with the current version of the running metamod.
@@ -929,7 +928,7 @@ SHARED_LIBRARAY_EXPORT int Meta_Query (char *, plugin_info_t **pPlugInfo, mutil_
    return TRUE; // tell metamod this plugin looks safe
 }
 
-SHARED_LIBRARAY_EXPORT int Meta_Attach (PLUG_LOADTIME, metamod_funcs_t *functionTable, meta_globals_t *pMGlobals, gamedll_funcs_t *pGamedllFuncs) {
+CR_EXPORT int Meta_Attach (PLUG_LOADTIME, metamod_funcs_t *functionTable, meta_globals_t *pMGlobals, gamedll_funcs_t *pGamedllFuncs) {
    // this function is called when metamod attempts to load the plugin. Since it's the place
    // where we can tell if the plugin will be allowed to run or not, we wait until here to make
    // our initialization stuff, like registering CVARs and dedicated server commands.
@@ -943,7 +942,7 @@ SHARED_LIBRARAY_EXPORT int Meta_Attach (PLUG_LOADTIME, metamod_funcs_t *function
       nullptr, // pfnGetNewDLLFunctions ()
       nullptr, // pfnGetNewDLLFunctions_Post ()
       GetEngineFunctions, // pfnGetEngineFunctions ()
-      GetEngineFunctions_Post, // pfnGetEngineFunctions_Post ()
+      nullptr, // pfnGetEngineFunctions_Post ()
    };
 
    // keep track of the pointers to engine function tables metamod gives us
@@ -954,22 +953,43 @@ SHARED_LIBRARAY_EXPORT int Meta_Attach (PLUG_LOADTIME, metamod_funcs_t *function
    return TRUE; // returning true enables metamod to attach this plugin
 }
 
-SHARED_LIBRARAY_EXPORT int Meta_Detach (PLUG_LOADTIME, PL_UNLOAD_REASON) {
+CR_EXPORT int Meta_Detach (PLUG_LOADTIME, PL_UNLOAD_REASON) {
    // this function is called when metamod unloads the plugin. A basic check is made in order
    // to prevent unloading the plugin if its processing should not be interrupted.
 
    bots.kickEveryone (true); // kick all bots off this server
-   waypoints.init ();
+
+   // save collected experience on shutdown
+   graph.savePractice ();
 
    return TRUE;
 }
 
-SHARED_LIBRARAY_EXPORT void Meta_Init (void) {
+CR_EXPORT void Meta_Init () {
    // this function is called by metamod, before any other interface functions. Purpose of this
    // function to give plugin a chance to determine is plugin running under metamod or not.
 
-   game.addGameFlag (GAME_METAMOD);
+   game.addGameFlag (GameFlags::Metamod);
 }
+
+// games GiveFnptrsToDll is a bit tricky
+#if defined(CR_WINDOWS)
+#  if defined(CR_CXX_MSVC) || defined (CR_CXX_MSVC)
+#     if defined (CR_ARCH_X86)
+#        pragma comment(linker, "/EXPORT:GiveFnptrsToDll=_GiveFnptrsToDll@8,@1")
+#     endif
+#     pragma comment(linker, "/SECTION:.data,RW")
+#  endif
+#  define DLL_STDCALL __stdcall
+#  if defined(CR_CXX_MSVC) && !defined(CR_ARCH_X64)
+#     define DLL_GIVEFNPTRSTODLL extern "C" void DLL_STDCALL
+#  elif defined(CR_CXX_CLANG) || defined(CR_ARCH_X64)
+#     define DLL_GIVEFNPTRSTODLL CR_EXPORT void DLL_STDCALL
+#  endif
+#elif defined(CR_LINUX) || defined (CR_OSX) || defined (CR_ANDROID)
+#  define DLL_GIVEFNPTRSTODLL CR_EXPORT void
+#  define DLL_STDCALL
+#endif
 
 DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t *pGlobals) {
    // this is the very first function that is called in the game DLL by the game. Its purpose
@@ -990,30 +1010,22 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    if (game.postload ()) {
       return;
    }
-   auto api_GiveFnptrsToDll = game.getLib ().resolve <void (STD_CALL *) (enginefuncs_t *, globalvars_t *)> ("GiveFnptrsToDll");
-   
-   assert (api_GiveFnptrsToDll != nullptr);
+   auto api_GiveFnptrsToDll = game.lib ().resolve <void (DLL_STDCALL *) (enginefuncs_t *, globalvars_t *)> (__FUNCTION__);
+
+   if (!api_GiveFnptrsToDll) {
+      logger.fatal ("Could not resolve symbol \"%s\" in the game dll.", __FUNCTION__);
+   }
    GetEngineFunctions (functionTable, nullptr);
 
    // give the engine functions to the other DLL...
-   api_GiveFnptrsToDll (functionTable, pGlobals);
-}
-
-DLL_ENTRYPOINT {
-   // dynamic library entry point, can be used for uninitialization stuff. NOT for initializing
-   // anything because if you ever attempt to wander outside the scope of this function on a
-   // DLL attach, LoadLibrary() will simply fail. And you can't do I/Os here either.
-
-   // dynamic library detaching ??
-   if (DLL_DETACHING) {
-      waypoints.init (); // free everything that's freeable
+   if (api_GiveFnptrsToDll) {
+      api_GiveFnptrsToDll (functionTable, pGlobals);
    }
-   DLL_RETENTRY; // the return data type is OS specific too
 }
 
 void helper_LinkEntity (EntityFunction &addr, const char *name, entvars_t *pev) {
    if (addr == nullptr) {
-      addr = game.getLib ().resolve <EntityFunction> (name);
+      addr = game.lib ().resolve <EntityFunction> (name);
    }
 
    if (addr == nullptr) {
@@ -1022,10 +1034,10 @@ void helper_LinkEntity (EntityFunction &addr, const char *name, entvars_t *pev) 
    addr (pev);
 }
 
-#define LINK_ENTITY(entityName)                              \
-   SHARED_LIBRARAY_EXPORT void entityName (entvars_t *pev) { \
-      static EntityFunction addr;                             \
-      helper_LinkEntity (addr, #entityName, pev);            \
+#define LINK_ENTITY(entityName)                    \
+   CR_EXPORT void entityName (entvars_t *pev) {    \
+      static EntityFunction addr;                  \
+      helper_LinkEntity (addr, #entityName, pev);  \
    }
 
 // entities in counter-strike...

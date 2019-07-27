@@ -11,10 +11,29 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\compress.h" />
+    <ClInclude Include="..\include\crlib\cr-alloc.h" />
+    <ClInclude Include="..\include\crlib\cr-array.h" />
+    <ClInclude Include="..\include\crlib\cr-basic.h" />
+    <ClInclude Include="..\include\crlib\cr-binheap.h" />
+    <ClInclude Include="..\include\crlib\cr-color.h" />
+    <ClInclude Include="..\include\crlib\cr-complete.h" />
+    <ClInclude Include="..\include\crlib\cr-dict.h" />
+    <ClInclude Include="..\include\crlib\cr-files.h" />
+    <ClInclude Include="..\include\crlib\cr-http.h" />
+    <ClInclude Include="..\include\crlib\cr-lambda.h" />
+    <ClInclude Include="..\include\crlib\cr-library.h" />
+    <ClInclude Include="..\include\crlib\cr-logger.h" />
+    <ClInclude Include="..\include\crlib\cr-math.h" />
+    <ClInclude Include="..\include\crlib\cr-movable.h" />
+    <ClInclude Include="..\include\crlib\cr-platform.h" />
+    <ClInclude Include="..\include\crlib\cr-random.h" />
+    <ClInclude Include="..\include\crlib\cr-string.h" />
+    <ClInclude Include="..\include\crlib\cr-twin.h" />
+    <ClInclude Include="..\include\crlib\cr-ulz.h" />
+    <ClInclude Include="..\include\crlib\cr-uniqueptr.h" />
+    <ClInclude Include="..\include\crlib\cr-vector.h" />
     <ClInclude Include="..\include\engine\model.h" />
     <ClInclude Include="..\include\yapb.h" />
-    <ClInclude Include="..\include\corelib.h" />
     <ClInclude Include="..\include\engine.h" />
     <ClInclude Include="..\include\engine\const.h" />
     <ClInclude Include="..\include\engine\eiface.h" />
@@ -22,7 +41,6 @@
     <ClInclude Include="..\include\engine\meta_api.h" />
     <ClInclude Include="..\include\engine\progdefs.h" />
     <ClInclude Include="..\include\engine\util.h" />
-    <ClInclude Include="..\include\platform.h" />
     <ClInclude Include="..\include\resource.h" />
   </ItemGroup>
   <ItemGroup>
@@ -35,12 +53,13 @@
     <ClCompile Include="..\source\interface.cpp" />
     <ClCompile Include="..\source\navigate.cpp" />
     <ClCompile Include="..\source\support.cpp" />
-    <ClCompile Include="..\source\waypoint.cpp" />
+    <ClCompile Include="..\source\graph.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="yapb.rc" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\source\Android.mk" />
     <None Include="makefile" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -108,7 +127,7 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\include\engine;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PrecompiledHeader />
@@ -181,7 +200,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <EnableFiberSafeOptimizations>false</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>..\mmgr;..\include\engine;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>false</ExceptionHandling>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
