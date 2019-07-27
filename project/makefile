@@ -20,7 +20,6 @@ ifeq "$(DEBUG)" "true"
 else
 	COMPILER_FLAGS += -pipe -O3 -march=core2 -msse2 -mfpmath=sse -ffast-math -fno-builtin -fno-threadsafe-statics -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden
 	BINARY_DIR = release
-	LINKER_FLAGS += -static-libgcc
 endif
 
 INCLUDE = -I../include
@@ -46,13 +45,13 @@ ifeq ($(findstring clang,$(COMPILER)),clang)
 		ifeq "$(DEBUG)" "true"
 			LINKER_FLAGS += -lstdc++
 		else
-			LINKER_FLAGS += -nostdlib++ -Wunused-command-line-argument -fuse-ld=lld -Wl,-z,notext --no-undefined
+			LINKER_FLAGS += -static-libgcc -nostdlib++ -Wunused-command-line-argument -fuse-ld=lld -Wl,-z,notext --no-undefined
 		endif
 	endif
 else ifeq ($(findstring gcc,$(COMPILER)),gcc)
 	ifneq "$(OSX)" "false"
 		ifneq "$(DEBUG)" "true"
-			LINKER_FLAGS += -Wl,--no-undefined -flto=thin
+			LINKER_FLAGS += -static-libgcc -Wl,--no-undefined -flto=thin
 			COMPILER_FLAGS += -funroll-all-loops -flto=thin
 		endif
 	endif
@@ -61,7 +60,7 @@ else ifeq ($(findstring icc,$(COMPILER)),icc)
 
 	ifneq "$(DEBUG)" "true"
 		COMPILER_FLAGS += -funroll-all-loops -ipo -wd11076 -wd11074
-		LINKER_FLAGS += -cxxlib-nostd -Wl,--no-undefined,-z,notext,--gc-sections -ipo 
+		LINKER_FLAGS += -static-libgcc -cxxlib-nostd -Wl,--no-undefined,-z,notext,--gc-sections -ipo 
 	endif
 endif
 
