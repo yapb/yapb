@@ -10,7 +10,7 @@
 
 ConVar yb_display_welcome_text ("yb_display_welcome_text", "1");
 
-BotUtils::BotUtils (void) {
+BotUtils::BotUtils () {
    m_needToSendWelcome = false;
    m_welcomeReceiveTime = 0.0f;
 
@@ -32,47 +32,30 @@ BotUtils::BotUtils (void) {
    m_sentences.push ("attention, expect experimental armed hostile presence");
    m_sentences.push ("warning, medical attention required");
 
-   m_tags.push ({ "[[", "]]" });
-   m_tags.push ({ "-=", "=-" });
-   m_tags.push ({ "-[", "]-" });
-   m_tags.push ({ "-]", "[-" });
-   m_tags.push ({ "-}", "{-" });
-   m_tags.push ({ "-{", "}-" });
-   m_tags.push ({ "<[", "]>" });
-   m_tags.push ({ "<]", "[>" });
-   m_tags.push ({ "[-", "-]" });
-   m_tags.push ({ "]-", "-[" });
-   m_tags.push ({ "{-", "-}" });
-   m_tags.push ({ "}-", "-{" });
-   m_tags.push ({ "[", "]" });
-   m_tags.push ({ "{", "}" });
-   m_tags.push ({ "<", "[" });
-   m_tags.push ({ ">", "<" });
-   m_tags.push ({ "-", "-" });
-   m_tags.push ({ "|", "|" });
-   m_tags.push ({ "=", "=" });
-   m_tags.push ({ "+", "+" });
-   m_tags.push ({ "(", ")" });
-   m_tags.push ({ ")", "(" });
+   m_tags.emplace ("[[", "]]");
+   m_tags.emplace ("-=", "=-");
+   m_tags.emplace ("-[", "]-");
+   m_tags.emplace ("-]", "[-");
+   m_tags.emplace ("-}", "{-");
+   m_tags.emplace ("-{", "}-");
+   m_tags.emplace ("<[", "]>");
+   m_tags.emplace ("<]", "[>");
+   m_tags.emplace ("[-", "-]");
+   m_tags.emplace ("]-", "-[");
+   m_tags.emplace ("{-", "-}");
+   m_tags.emplace ("}-", "-{");
+   m_tags.emplace ("[", "]");
+   m_tags.emplace ("{", "}");
+   m_tags.emplace ("<", "[");
+   m_tags.emplace (">", "<");
+   m_tags.emplace ("-", "-");
+   m_tags.emplace ("|", "|");
+   m_tags.emplace ("=", "=");
+   m_tags.emplace ("+", "+");
+   m_tags.emplace ("(", ")");
+   m_tags.emplace (")", "(");
 
-   m_clients.resize (MAX_ENGINE_PLAYERS + 1);
-}
-
-const char *BotUtils::format (const char *format, ...) {
-   static char strBuffer[2][MAX_PRINT_BUFFER];
-   static int rotator = 0;
-
-   if (format == nullptr) {
-      return strBuffer[rotator];
-   }
-   static char *ptr = strBuffer[rotator ^= 1];
-
-   va_list ap;
-   va_start (ap, format);
-   vsnprintf (ptr, MAX_PRINT_BUFFER - 1, format, ap);
-   va_end (ap);
-
-   return ptr;
+   m_clients.resize (kGameMaxPlayers + 1);
 }
 
 bool BotUtils::isAlive (edict_t *ent) {
@@ -90,7 +73,7 @@ float BotUtils::getShootingCone (edict_t *ent, const Vector &position) {
 }
 
 bool BotUtils::isInViewCone (const Vector &origin, edict_t *ent) {
-   return getShootingCone (ent, origin) >= cr::cosf (cr::deg2rad ((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f));
+   return getShootingCone (ent, origin) >= cr::cosf (cr::degreesToRadians ((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f));
 }
 
 bool BotUtils::isVisible (const Vector &origin, edict_t *ent) {
@@ -98,7 +81,7 @@ bool BotUtils::isVisible (const Vector &origin, edict_t *ent) {
       return false;
    }
    TraceResult tr;
-   game.testLine (ent->v.origin + ent->v.view_ofs, origin, TRACE_IGNORE_EVERYTHING, ent, &tr);
+   game.testLine (ent->v.origin + ent->v.view_ofs, origin, TraceIgnore::Everything, ent, &tr);
 
    if (tr.flFraction != 1.0f) {
       return false;
@@ -109,13 +92,10 @@ bool BotUtils::isVisible (const Vector &origin, edict_t *ent) {
 void BotUtils::traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIndex) {
    // this function draw spraypaint depending on the tracing results.
 
-   static StringArray logotypes;
+   auto logo = conf.getRandomLogoName (logotypeIndex);
 
-   if (logotypes.empty ()) {
-      logotypes = String ("{biohaz;{graf003;{graf004;{graf005;{lambda06;{target;{hand1;{spit2;{bloodhand6;{foot_l;{foot_r").split (";");
-   }
    int entityIndex = -1, message = TE_DECAL;
-   int decalIndex = engfuncs.pfnDecalIndex (logotypes[logotypeIndex].chars ());
+   int decalIndex = engfuncs.pfnDecalIndex (logo.chars ());
 
    if (decalIndex < 0) {
       decalIndex = engfuncs.pfnDecalIndex ("{lambda06");
@@ -151,7 +131,7 @@ void BotUtils::traceDecals (entvars_t *pev, TraceResult *trace, int logotypeInde
       }
    }
 
-   if (logotypes[logotypeIndex].contains ("{")) {
+   if (logo.startsWith ("{")) {
       MessageWriter (MSG_BROADCAST, SVC_TEMPENTITY)
          .writeByte (TE_PLAYERDECAL)
          .writeByte (game.indexOfEntity (pev->pContainingEntity))
@@ -187,14 +167,14 @@ bool BotUtils::isPlayer (edict_t *ent) {
       return false;
    }
 
-   if ((ent->v.flags & (FL_CLIENT | FL_FAKECLIENT)) || bots.getBot (ent) != nullptr) {
+   if ((ent->v.flags & (FL_CLIENT | FL_FAKECLIENT)) || bots[ent] != nullptr) {
       return !isEmptyStr (STRING (ent->v.netname));
    }
    return false;
 }
 
 bool BotUtils::isPlayerVIP (edict_t *ent) {
-   if (!game.mapIs (MAP_AS)) {
+   if (!game.mapIs (MapFlags::Assassination)) {
       return false;
    }
 
@@ -205,14 +185,14 @@ bool BotUtils::isPlayerVIP (edict_t *ent) {
 }
 
 bool BotUtils::isFakeClient (edict_t *ent) {
-   if (bots.getBot (ent) != nullptr || (!game.isNullEntity (ent) && (ent->v.flags & FL_FAKECLIENT))) {
+   if (bots[ent] != nullptr || (!game.isNullEntity (ent) && (ent->v.flags & FL_FAKECLIENT))) {
       return true;
    }
    return false;
 }
 
 bool BotUtils::openConfig (const char *fileName, const char *errorIfNotExists, MemFile *outFile, bool languageDependant /*= false*/) {
-   if (outFile->isValid ()) {
+   if (*outFile) {
       outFile->close ();
    }
 
@@ -225,162 +205,72 @@ bool BotUtils::openConfig (const char *fileName, const char *errorIfNotExists, M
       if (strcmp (fileName, "lang.cfg") == 0 && strcmp (yb_language.str (), "en") == 0) {
          return false;
       }
-      const char *langConfig = format ("%s/lang/%s_%s", configDir, yb_language.str (), fileName);
-
-      // check file existence
-      int size = 0;
-      uint8 *buffer = nullptr;
+      auto langConfig = strings.format ("%s/lang/%s_%s", configDir, yb_language.str (), fileName);
 
       // check is file is exists for this language
-      if ((buffer = MemoryLoader::ref ().load (langConfig, &size)) != nullptr) {
-         MemoryLoader::ref ().unload (buffer);
-
-         // unload and reopen file using MemoryFile
-         outFile->open (langConfig);
-      }
-      else {
-         outFile->open (format ("%s/lang/en_%s", configDir, fileName));
+      if (!outFile->open (langConfig)) {
+         outFile->open (strings.format ("%s/lang/en_%s", configDir, fileName));
       }
    }
    else {
-      outFile->open (format ("%s/%s", configDir, fileName));
+      outFile->open (strings.format ("%s/%s", configDir, fileName));
    }
 
-   if (!outFile->isValid ()) {
-      logEntry (true, LL_ERROR, errorIfNotExists);
+   if (!*outFile) {
+      logger.error (errorIfNotExists);
       return false;
    }
    return true;
 }
 
-void BotUtils::checkWelcome (void) {
+void BotUtils::checkWelcome () {
    // the purpose of this function, is  to send quick welcome message, to the listenserver entity.
 
-   if (game.isDedicated () || !yb_display_welcome_text.boolean () || !m_needToSendWelcome) {
+   if (game.isDedicated () || !yb_display_welcome_text.bool_ () || !m_needToSendWelcome) {
       return;
    }
    m_welcomeReceiveTime = 0.0f;
 
-   if (game.is (GAME_LEGACY)) {
-      m_needToSendWelcome = true;
-      return;
-   }
-   bool needToSendMsg = (waypoints.length () > 0 ? m_needToSendWelcome : true);
 
-   if (isAlive (game.getLocalEntity ()) && m_welcomeReceiveTime < 1.0 && needToSendMsg) {
+   bool needToSendMsg = (graph.length () > 0 ? m_needToSendWelcome : true);
+   auto receiveEntity = game.getLocalEntity ();
+
+   if (isAlive (receiveEntity) && m_welcomeReceiveTime < 1.0 && needToSendMsg) {
       m_welcomeReceiveTime = game.timebase () + 4.0f; // receive welcome message in four seconds after game has commencing
    }
 
-   if (m_welcomeReceiveTime > 0.0f && needToSendMsg) {
-      if (!game.is (GAME_MOBILITY | GAME_XASH_ENGINE)) {
-         game.execCmd ("speak \"%s\"", m_sentences.random ().chars ());
-      }
-      game.chatPrint ("----- %s v%s (Build: %u), {%s}, (c) %s, by %s (%s)-----", PRODUCT_SHORT_NAME, PRODUCT_VERSION, buildNumber (), PRODUCT_DATE, PRODUCT_END_YEAR, PRODUCT_AUTHOR, PRODUCT_URL);
 
-      MessageWriter (MSG_ONE, SVC_TEMPENTITY, Vector::null (), game.getLocalEntity ())
+   if (m_welcomeReceiveTime > 0.0f && needToSendMsg) {
+      if (!game.is (GameFlags::Mobility | GameFlags::Xash3D)) {
+         game.serverCommand ("speak \"%s\"", m_sentences.random ().chars ());
+      }
+
+      MessageWriter (MSG_ONE, game.getMessageId (NetMsg::TextMsg), nullvec, receiveEntity)
+         .writeByte (HUD_PRINTTALK)
+         .writeString (strings.format ("----- %s v%s (Build: %u), {%s}, (c) %s, by %s (%s)-----", PRODUCT_SHORT_NAME, PRODUCT_VERSION, buildNumber (), PRODUCT_DATE, PRODUCT_END_YEAR, PRODUCT_AUTHOR, PRODUCT_URL));
+
+      MessageWriter (MSG_ONE, SVC_TEMPENTITY, nullvec, receiveEntity)
          .writeByte (TE_TEXTMESSAGE)
          .writeByte (1)
-         .writeShort (MessageWriter::fs16 (-1, 1 << 13))
-         .writeShort (MessageWriter::fs16 (-1, 1 << 13))
+         .writeShort (MessageWriter::fs16 (-1.0f, 13.0f))
+         .writeShort (MessageWriter::fs16 (-1.0f, 13.0f))
          .writeByte (2)
-         .writeByte (rng.getInt (33, 255))
-         .writeByte (rng.getInt (33, 255))
-         .writeByte (rng.getInt (33, 255))
+         .writeByte (rg.int_ (33, 255))
+         .writeByte (rg.int_ (33, 255))
+         .writeByte (rg.int_ (33, 255))
          .writeByte (0)
-         .writeByte (rng.getInt (230, 255))
-         .writeByte (rng.getInt (230, 255))
-         .writeByte (rng.getInt (230, 255))
+         .writeByte (rg.int_ (230, 255))
+         .writeByte (rg.int_ (230, 255))
+         .writeByte (rg.int_ (230, 255))
          .writeByte (200)
-         .writeShort (MessageWriter::fu16 (0.0078125f, 1 << 8))
-         .writeShort (MessageWriter::fu16 (2.0f, 1 << 8))
-         .writeShort (MessageWriter::fu16 (6.0f, 1 << 8))
-         .writeShort (MessageWriter::fu16 (0.1f, 1 << 8))
-         .writeString (format ("\nServer is running %s v%s (Build: %u)\nDeveloped by %s\n\n%s", PRODUCT_SHORT_NAME, PRODUCT_VERSION, buildNumber (), PRODUCT_AUTHOR, waypoints.getAuthor ()));
+         .writeShort (MessageWriter::fu16 (0.0078125f, 8.0f))
+         .writeShort (MessageWriter::fu16 (2.0f, 8.0f))
+         .writeShort (MessageWriter::fu16 (6.0f, 8.0f))
+         .writeShort (MessageWriter::fu16 (0.1f, 8.0f))
+         .writeString (strings.format ("\nServer is running %s v%s (Build: %u)\nDeveloped by %s\n\n%s", PRODUCT_SHORT_NAME, PRODUCT_VERSION, buildNumber (), PRODUCT_AUTHOR, graph.getAuthor ()));
 
       m_welcomeReceiveTime = 0.0f;
       m_needToSendWelcome = false;
-   }
-}
-
-void BotUtils::logEntry (bool outputToConsole, int logLevel, const char *format, ...) {
-   // this function logs a message to the message log file root directory.
-
-   va_list ap;
-   char buffer[MAX_PRINT_BUFFER] = { 0, }, levelString[32] = { 0, };
-
-   va_start (ap, format);
-   vsnprintf (buffer, cr::bufsize (buffer), format, ap);
-   va_end (ap);
-
-   switch (logLevel) {
-   case LL_DEFAULT:
-      strcpy (levelString, "LOG: ");
-      break;
-
-   case LL_WARNING:
-      strcpy (levelString, "WARN: ");
-      break;
-
-   case LL_ERROR:
-      strcpy (levelString, "ERROR: ");
-      break;
-
-   case LL_FATAL:
-      strcpy (levelString, "FATAL: ");
-      break;
-   }
-
-   if (outputToConsole) {
-      game.print ("%s%s", levelString, buffer);
-   }
-
-   // now check if logging disabled
-   if (!(logLevel & LL_IGNORE)) {
-      extern ConVar yb_debug;
-
-      if (logLevel == LL_DEFAULT && yb_debug.integer () < 3) {
-         return; // no log, default logging is disabled
-      }
-
-      if (logLevel == LL_WARNING && yb_debug.integer () < 2) {
-         return; // no log, warning logging is disabled
-      }
-
-      if (logLevel == LL_ERROR && yb_debug.integer () < 1) {
-         return; // no log, error logging is disabled
-      }
-   }
-
-   // open file in a standard stream
-   File fp ("yapb.txt", "at");
-
-   // check if we got a valid handle
-   if (!fp.isValid ()) {
-      return;
-   }
-
-   time_t tickTime = time (&tickTime);
-   tm *time = localtime (&tickTime);
-
-   fp.writeFormat ("%02d:%02d:%02d --> %s%s\n", time->tm_hour, time->tm_min, time->tm_sec, levelString, buffer);
-   fp.close ();
-
-   if (logLevel == LL_FATAL) {
-      bots.kickEveryone (true);
-      waypoints.init ();
-
-#if defined(PLATFORM_WIN32)
-      DestroyWindow (GetForegroundWindow ());
-      MessageBoxA (GetActiveWindow (), buffer, "YaPB Error", MB_ICONSTOP);
-#else
-      printf ("%s\n", buffer);
-#endif
-
-#if defined(PLATFORM_WIN32)
-      _exit (1);
-#else
-      exit (1);
-#endif
    }
 }
 
@@ -395,11 +285,11 @@ bool BotUtils::findNearestPlayer (void **pvHolder, edict_t *to, float searchDist
    int toTeam = game.getTeam (to);
 
    for (const auto &client : m_clients) {
-      if (!(client.flags & CF_USED) || client.ent == to) {
+      if (!(client.flags & ClientFlags::Used) || client.ent == to) {
          continue;
       }
 
-      if ((sameTeam && client.team != toTeam) || (needAlive && !(client.flags & CF_ALIVE)) || (needBot && !isFakeClient (client.ent)) || (needDrawn && (client.ent->v.effects & EF_NODRAW)) || (needBotWithC4 && (client.ent->v.weapons & WEAPON_C4))) {
+      if ((sameTeam && client.team != toTeam) || (needAlive && !(client.flags & ClientFlags::Alive)) || (needBot && !isFakeClient (client.ent)) || (needDrawn && (client.ent->v.effects & EF_NODRAW)) || (needBotWithC4 && (client.ent->v.weapons & Weapon::C4))) {
          continue; // filter players with parameters
       }
       float distance = (client.ent->v.origin - to->v.origin).length ();
@@ -416,7 +306,7 @@ bool BotUtils::findNearestPlayer (void **pvHolder, edict_t *to, float searchDist
 
    // fill the holder
    if (needBot) {
-      *pvHolder = reinterpret_cast <void *> (bots.getBot (survive));
+      *pvHolder = reinterpret_cast <void *> (bots[survive]);
    }
    else {
       *pvHolder = reinterpret_cast <void *> (survive);
@@ -436,16 +326,16 @@ void BotUtils::attachSoundsToClients (edict_t *ent, const char *sample, float vo
    if (origin.empty ()) {
       return;
    }
-   int index = game.indexOfEntity (ent) - 1;
+   int index = game.indexOfPlayer (ent);
 
    if (index < 0 || index >= game.maxClients ()) {
       float nearestDistance = 99999.0f;
 
       // loop through all players
-      for (int i = 0; i < game.maxClients (); i++) {
+      for (int i = 0; i < game.maxClients (); ++i) {
          const Client &client = m_clients[i];
 
-         if (!(client.flags & CF_USED) || !(client.flags & CF_ALIVE)) {
+         if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive)) {
             continue;
          }
          float distance = (client.origin - origin).length ();
@@ -545,9 +435,9 @@ void BotUtils::simulateSoundUpdates (int playerIndex) {
    else {
       extern ConVar mp_footsteps;
 
-      if (mp_footsteps.boolean ()) {
+      if (mp_footsteps.bool_ ()) {
          // moves fast enough?
-         hearDistance = 1280.0f * (client.ent->v.velocity.length2D () / 260.0f);
+         hearDistance = 1280.0f * (client.ent->v.velocity.length2d () / 260.0f);
          timeSound = game.timebase () + 0.3f;
       }
    }
@@ -573,36 +463,129 @@ void BotUtils::simulateSoundUpdates (int playerIndex) {
    }
 }
 
-void BotUtils::updateClients (void) {
+void BotUtils::updateClients () {
+
    // record some stats of all players on the server
-   for (int i = 0; i < game.maxClients (); i++) {
-      edict_t *player = game.entityOfIndex (i + 1);
+   for (int i = 0; i < game.maxClients (); ++i) {
+      edict_t *player = game.playerOfIndex (i);
       Client &client = m_clients[i];
 
       if (!game.isNullEntity (player) && (player->v.flags & FL_CLIENT)) {
          client.ent = player;
-         client.flags |= CF_USED;
+         client.flags |= ClientFlags::Used;
 
          if (util.isAlive (player)) {
-            client.flags |= CF_ALIVE;
+            client.flags |= ClientFlags::Alive;
          }
          else {
-            client.flags &= ~CF_ALIVE;
+            client.flags &= ~ClientFlags::Alive;
          }
 
-         if (client.flags & CF_ALIVE) {
+         if (client.flags & ClientFlags::Alive) {
             client.origin = player->v.origin;
             simulateSoundUpdates (i);
          }
       }
       else {
-         client.flags &= ~(CF_USED | CF_ALIVE);
+         client.flags &= ~(ClientFlags::Used | ClientFlags::Alive);
          client.ent = nullptr;
       }
    }
 }
 
-int BotUtils::buildNumber (void) {
+int BotUtils::getPingBitmask (edict_t *ent, int loss, int ping) {
+   // this function generats bitmask for SVC_PINGS engine message. See SV_EmitPings from engine for details
+
+   const auto emit = [] (int s0, int s1, int s2) {
+      return (s0 & (cr::bit (s1) - 1)) << s2;
+   };
+   return emit (loss, 7, 18) | emit (ping, 12, 6) | emit (game.indexOfPlayer (ent), 5, 1) | 1;
+}
+
+void BotUtils::calculatePings () {
+   if (!game.is (GameFlags::HasFakePings) || yb_show_latency.int_ () != 2) {
+      return;
+   }
+
+   Twin <int, int> average { 0, 0 };
+   int numHumans = 0;
+
+   // first get average ping on server, and store real client pings
+   for (auto &client : m_clients) {
+      if (!(client.flags & ClientFlags::Used) || isFakeClient (client.ent)) {
+         continue;
+      }
+      int ping, loss;
+      engfuncs.pfnGetPlayerStats (client.ent, &ping, &loss);
+
+      // store normal client ping
+      client.ping = getPingBitmask (client.ent, loss, ping > 0 ? ping / 2 : rg.int_ (8, 16)); // getting player ping sometimes fails
+      client.pingUpdate = true; // force resend ping
+
+      numHumans++;
+
+      average.first += ping;
+      average.second += loss;
+   }
+
+   if (numHumans > 0) {
+      average.first /= numHumans;
+      average.second /= numHumans;
+   }
+   else {
+      average.first = rg.int_ (30, 40);
+      average.second = rg.int_ (5, 10);
+   }
+
+   // now calculate bot ping based on average from players
+   for (auto &client : m_clients) {
+      if (!(client.flags & ClientFlags::Used)) {
+         continue;
+      }
+      auto bot = bots[client.ent];
+
+      // we're only intrested in bots here
+      if (!bot) {
+         continue;
+      }
+      int part = static_cast <int> (average.first * 0.2f);
+
+      int botPing = bot->m_basePing + rg.int_ (average.first - part, average.first + part) + rg.int_ (bot->m_difficulty / 2, bot->m_difficulty);
+      int botLoss = rg.int_ (average.second / 2, average.second);
+
+      client.ping = getPingBitmask (client.ent, botLoss, botPing);
+      client.pingUpdate = true; // force resend ping
+   }
+}
+
+void BotUtils::sendPings (edict_t *to) {
+   MessageWriter msg;
+
+   // missing from sdk
+   constexpr int kGamePingSVC = 17;
+   
+   for (auto &client : m_clients) {
+      if (!(client.flags & ClientFlags::Used)) {
+         continue;
+      }
+      if (!client.pingUpdate) {
+         continue;
+      }
+      client.pingUpdate = false;
+
+      // no ping, no fun
+      if (!client.ping) {
+         client.ping = getPingBitmask (client.ent, rg.int_ (5, 10), rg.int_ (15, 40));
+      }
+
+      msg.start (MSG_ONE_UNRELIABLE, kGamePingSVC, nullvec, to)
+         .writeLong (client.ping)
+         .end ();
+   }
+   return;
+}
+
+int BotUtils::buildNumber () {
    // this function generates build number from the compiler date macros
 
    static int buildNumber = 0;
@@ -624,7 +607,7 @@ int BotUtils::buildNumber (void) {
    int i = 0;
 
    // go through all months, and calculate, days since year start
-   for (i = 0; i < 11; i++) {
+   for (i = 0; i < 11; ++i) {
       if (strncmp (&date[0], months[i], 3) == 0) {
          break; // found current month break
       }
@@ -655,38 +638,38 @@ int BotUtils::getWeaponAlias (bool needString, const char *weaponAlias, int weap
 
    // weapon enumeration
    WeaponTab_t weaponTab[] = {
-      {WEAPON_USP, "usp"}, // HK USP .45 Tactical
-      {WEAPON_GLOCK, "glock"}, // Glock18 Select Fire
-      {WEAPON_DEAGLE, "deagle"}, // Desert Eagle .50AE
-      {WEAPON_P228, "p228"}, // SIG P228
-      {WEAPON_ELITE, "elite"}, // Dual Beretta 96G Elite
-      {WEAPON_FIVESEVEN, "fn57"}, // FN Five-Seven
-      {WEAPON_M3, "m3"}, // Benelli M3 Super90
-      {WEAPON_XM1014, "xm1014"}, // Benelli XM1014
-      {WEAPON_MP5, "mp5"}, // HK MP5-Navy
-      {WEAPON_TMP, "tmp"}, // Steyr Tactical Machine Pistol
-      {WEAPON_P90, "p90"}, // FN P90
-      {WEAPON_MAC10, "mac10"}, // Ingram MAC-10
-      {WEAPON_UMP45, "ump45"}, // HK UMP45
-      {WEAPON_AK47, "ak47"}, // Automat Kalashnikov AK-47
-      {WEAPON_GALIL, "galil"}, // IMI Galil
-      {WEAPON_FAMAS, "famas"}, // GIAT FAMAS
-      {WEAPON_SG552, "sg552"}, // Sig SG-552 Commando
-      {WEAPON_M4A1, "m4a1"}, // Colt M4A1 Carbine
-      {WEAPON_AUG, "aug"}, // Steyr Aug
-      {WEAPON_SCOUT, "scout"}, // Steyr Scout
-      {WEAPON_AWP, "awp"}, // AI Arctic Warfare/Magnum
-      {WEAPON_G3SG1, "g3sg1"}, // HK G3/SG-1 Sniper Rifle
-      {WEAPON_SG550, "sg550"}, // Sig SG-550 Sniper
-      {WEAPON_M249, "m249"}, // FN M249 Para
-      {WEAPON_FLASHBANG, "flash"}, // Concussion Grenade
-      {WEAPON_EXPLOSIVE, "hegren"}, // High-Explosive Grenade
-      {WEAPON_SMOKE, "sgren"}, // Smoke Grenade
-      {WEAPON_ARMOR, "vest"}, // Kevlar Vest
-      {WEAPON_ARMORHELM, "vesthelm"}, // Kevlar Vest and Helmet
-      {WEAPON_DEFUSER, "defuser"}, // Defuser Kit
-      {WEAPON_SHIELD, "shield"}, // Tactical Shield
-      {WEAPON_KNIFE, "knife"} // Knife
+      {Weapon::USP, "usp"}, // HK USP .45 Tactical
+      {Weapon::Glock18, "glock"}, // Glock18 Select Fire
+      {Weapon::Deagle, "deagle"}, // Desert Eagle .50AE
+      {Weapon::P228, "p228"}, // SIG P228
+      {Weapon::Elite, "elite"}, // Dual Beretta 96G Elite
+      {Weapon::FiveSeven, "fn57"}, // FN Five-Seven
+      {Weapon::M3, "m3"}, // Benelli M3 Super90
+      {Weapon::XM1014, "xm1014"}, // Benelli XM1014
+      {Weapon::MP5, "mp5"}, // HK MP5-Navy
+      {Weapon::TMP, "tmp"}, // Steyr Tactical Machine Pistol
+      {Weapon::P90, "p90"}, // FN P90
+      {Weapon::MAC10, "mac10"}, // Ingram MAC-10
+      {Weapon::UMP45, "ump45"}, // HK UMP45
+      {Weapon::AK47, "ak47"}, // Automat Kalashnikov AK-47
+      {Weapon::Galil, "galil"}, // IMI Galil
+      {Weapon::Famas, "famas"}, // GIAT FAMAS
+      {Weapon::SG552, "sg552"}, // Sig SG-552 Commando
+      {Weapon::M4A1, "m4a1"}, // Colt M4A1 Carbine
+      {Weapon::AUG, "aug"}, // Steyr Aug
+      {Weapon::Scout, "scout"}, // Steyr Scout
+      {Weapon::AWP, "awp"}, // AI Arctic Warfare/Magnum
+      {Weapon::G3SG1, "g3sg1"}, // HK G3/SG-1 Sniper Rifle
+      {Weapon::SG550, "sg550"}, // Sig SG-550 Sniper
+      {Weapon::M249, "m249"}, // FN M249 Para
+      {Weapon::Flashbang, "flash"}, // Concussion Grenade
+      {Weapon::Explosive, "hegren"}, // High-Explosive Grenade
+      {Weapon::Smoke, "sgren"}, // Smoke Grenade
+      {Weapon::Armor, "vest"}, // Kevlar Vest
+      {Weapon::ArmorHelm, "vesthelm"}, // Kevlar Vest and Helmet
+      {Weapon::Defuser, "defuser"}, // Defuser Kit
+      {Weapon::Shield, "shield"}, // Tactical Shield
+      {Weapon::Knife, "knife"} // Knife
    };
 
    // if we need to return the string, find by weapon id

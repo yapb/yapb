@@ -24,6 +24,7 @@ extern gamefuncs_t dllapi;
 #define STRING(offset) (const char *)(globals->pStringBase + (int)offset)
 
 // form fwgs-hlsdk
+#if defined (CR_ARCH_X64)
 static inline int MAKE_STRING (const char *val) {
    long long ptrdiff = val - STRING (0);
 
@@ -32,6 +33,9 @@ static inline int MAKE_STRING (const char *val) {
    }
    return static_cast <int> (ptrdiff);
 }
+#else 
+#define MAKE_STRING(str)	((uint64)(str) - (uint64)(STRING(0)))
+#endif
 
 #define ENGINE_STR(str) (const_cast <char *> (STRING (engfuncs.pfnAllocString (str))))
 
@@ -93,17 +97,17 @@ typedef struct hudtextparms_s {
 #define PUSH_BLOCK_ONLY_X 1
 #define PUSH_BLOCK_ONLY_Y 2
 
-#define VEC_HULL_MIN Vector (-16, -16, -36)
-#define VEC_HULL_MAX Vector (16, 16, 36)
-#define VEC_HUMAN_HULL_MIN Vector (-16, -16, 0)
-#define VEC_HUMAN_HULL_MAX Vector (16, 16, 72)
-#define VEC_HUMAN_HULL_DUCK Vector (16, 16, 36)
+#define VEC_HULL_MIN Vector(-16, -16, -36)
+#define VEC_HULL_MAX Vector(16, 16, 36)
+#define VEC_HUMAN_HULL_MIN Vector(-16, -16, 0)
+#define VEC_HUMAN_HULL_MAX Vector(16, 16, 72)
+#define VEC_HUMAN_HULL_DUCK Vector(16, 16, 36)
 
-#define VEC_VIEW Vector (0, 0, 28)
+#define VEC_VIEW Vector(0, 0, 28)
 
-#define VEC_DUCK_HULL_MIN Vector (-16, -16, -18)
-#define VEC_DUCK_HULL_MAX Vector (16, 16, 18)
-#define VEC_DUCK_VIEW Vector (0, 0, 12)
+#define VEC_DUCK_HULL_MIN Vector(-16, -16, -18)
+#define VEC_DUCK_HULL_MAX Vector(16, 16, 18)
+#define VEC_DUCK_VIEW Vector(0, 0, 12)
 
 #define SVC_TEMPENTITY 23
 #define SVC_CENTERPRINT 26

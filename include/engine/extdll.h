@@ -54,9 +54,9 @@ typedef int func_t; //
 typedef int string_t; // from engine's pr_comp.h;
 typedef float vec_t; // needed before including progdefs.h
 
-#include "corelib.h"
+#include <crlib/cr-vector.h>
 
-typedef cr::classes::Vector vec3_t;
+typedef cr::Vector vec3_t;
 using namespace cr::types;
 
 #include "const.h"

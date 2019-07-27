@@ -13,14 +13,11 @@
     <Filter Include="include\engine">
       <UniqueIdentifier>{f98ff5ec-055a-46cd-b5b1-462ef4c1c73e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\crlib">
+      <UniqueIdentifier>{76a583d1-8f55-451b-8516-2f7cce4d1875}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\compress.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\corelib.h">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\resource.h">
       <Filter>include</Filter>
     </ClInclude>
@@ -42,9 +39,6 @@
     <ClInclude Include="..\include\engine\util.h">
       <Filter>include\engine</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\platform.h">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\engine.h">
       <Filter>include</Filter>
     </ClInclude>
@@ -53,6 +47,69 @@
     </ClInclude>
     <ClInclude Include="..\include\engine\model.h">
       <Filter>include\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-alloc.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-array.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-basic.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-binheap.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-complete.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-dict.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-files.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-http.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-lambda.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-library.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-logger.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-math.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-movable.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-platform.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-random.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-string.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-twin.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-ulz.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-uniqueptr.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-vector.h">
+      <Filter>include\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\crlib\cr-color.h">
+      <Filter>include\crlib</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -68,9 +125,6 @@
     <ClCompile Include="..\source\support.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="..\source\waypoint.cpp">
-      <Filter>source</Filter>
-    </ClCompile>
     <ClCompile Include="..\source\manager.cpp">
       <Filter>source</Filter>
     </ClCompile>
@@ -80,10 +134,13 @@
     <ClCompile Include="..\source\engine.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="..\source\control.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
     <ClCompile Include="..\source\basecode.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="..\source\control.cpp">
+    <ClCompile Include="..\source\graph.cpp">
       <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
@@ -94,6 +151,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="makefile">
+      <Filter>project</Filter>
+    </None>
+    <None Include="..\source\Android.mk">
       <Filter>project</Filter>
     </None>
   </ItemGroup>

@@ -10,95 +10,91 @@
 #pragma once
 
 // line draw
-enum DrawLineType : int {
-   DRAW_SIMPLE,
-   DRAW_ARROW,
-   DRAW_NUM
-};
+CR_DECLARE_SCOPED_ENUM (DrawLine,
+   Simple,
+   Arrow,
+   Count
+);
 
 // trace ignore
-enum TraceIgnore : int {
-   TRACE_IGNORE_NONE = 0,
-   TRACE_IGNORE_GLASS = cr::bit (0),
-   TRACE_IGNORE_MONSTERS = cr::bit (1),
-   TRACE_IGNORE_EVERYTHING = TRACE_IGNORE_GLASS | TRACE_IGNORE_MONSTERS
-};
+CR_DECLARE_SCOPED_ENUM (TraceIgnore,
+   None = 0,
+   Glass = cr::bit (0),
+   Monsters = cr::bit (1),
+   Everything = Glass | Monsters
+);
 
 // variable type
-enum VarType : int {
-   VT_NORMAL = 0,
-   VT_READONLY,
-   VT_PASSWORD,
-   VT_NOSERVER,
-   VT_NOREGISTER
-};
+CR_DECLARE_SCOPED_ENUM (Var,
+   Normal = 0,
+   ReadOnly,
+   Password,
+   NoServer,
+   NoRegister
+);
 
 // netmessage functions
-enum NetMsgId : int {
-   NETMSG_UNDEFINED = -1,
-   NETMSG_VGUI = 1,
-   NETMSG_SHOWMENU = 2,
-   NETMSG_WEAPONLIST = 3,
-   NETMSG_CURWEAPON = 4,
-   NETMSG_AMMOX = 5,
-   NETMSG_AMMOPICKUP = 6,
-   NETMSG_DAMAGE = 7,
-   NETMSG_MONEY = 8,
-   NETMSG_STATUSICON = 9,
-   NETMSG_DEATH = 10,
-   NETMSG_SCREENFADE = 11,
-   NETMSG_HLTV = 12,
-   NETMSG_TEXTMSG = 13,
-   NETMSG_TEAMINFO = 14,
-   NETMSG_BARTIME = 15,
-   NETMSG_SENDAUDIO = 17,
-   NETMSG_SAYTEXT = 18,
-   NETMSG_BOTVOICE = 19,
-   NETMSG_NVGTOGGLE = 20,
-   NETMSG_FLASHBAT = 21,
-   NETMSG_FLASHLIGHT = 22,
-   NETMSG_ITEMSTATUS = 23,
-   NETMSG_NUM = 25
-};
+CR_DECLARE_SCOPED_ENUM (NetMsg,
+   None = -1,
+   VGUI = 1,
+   ShowMenu = 2,
+   WeaponList = 3,
+   CurWeapon = 4,
+   AmmoX = 5,
+   AmmoPickup = 6,
+   Damage = 7,
+   Money = 8,
+   StatusIcon = 9,
+   DeathMsg = 10,
+   ScreenFade = 11,
+   HLTV = 12,
+   TextMsg = 13,
+   TeamInfo = 14,
+   BarTime = 15,
+   SendAudio = 17,
+   SayText = 18,
+   BotVoice = 19,
+   NVGToggle = 20,
+   FlashBat = 21,
+   Fashlight = 22,
+   ItemStatus = 23,
+   Count = 25
+);
 
 // supported cs's
-enum GameFlags : int {
-   GAME_CSTRIKE16 = cr::bit (0), // counter-strike 1.6 and above
-   GAME_XASH_ENGINE = cr::bit (1), // counter-strike 1.6 under the xash engine (additional flag)
-   GAME_CZERO = cr::bit (2), // counter-strike: condition zero
-   GAME_LEGACY = cr::bit (3), // counter-strike 1.3-1.5 with/without steam
-   GAME_MOBILITY = cr::bit (4), // additional flag that bot is running on android (additional flag)
-   GAME_OFFICIAL_CSBOT = cr::bit (5), // additional flag that indicates official cs bots are in game
-   GAME_METAMOD = cr::bit (6), // game running under meta\mod
-   GAME_CSDM = cr::bit (7), // csdm mod currently in use
-   GAME_CSDM_FFA = cr::bit (8), // csdm mod with ffa mode
-   GAME_REGAMEDLL = cr::bit (9), // server dll is a regamedll
-   GAME_SUPPORT_SVC_PINGS = cr::bit (10), // on that game version we can fake bots pings
-   GAME_SUPPORT_BOT_VOICE = cr::bit (11) // on that game version we can use chatter
-};
-
+CR_DECLARE_SCOPED_ENUM (GameFlags,
+   Modern = cr::bit (0), // counter-strike 1.6 and above
+   Xash3D = cr::bit (1), // counter-strike 1.6 under the xash engine (additional flag)
+   ConditionZero = cr::bit (2), // counter-strike: condition zero
+   Legacy = cr::bit (3), // counter-strike 1.3-1.5 with/without steam
+   Mobility = cr::bit (4), // additional flag that bot is running on android (additional flag)
+   CSBot = cr::bit (5), // additional flag that indicates official cs bots are in game
+   Metamod = cr::bit (6), // game running under meta\mod
+   CSDM = cr::bit (7), // csdm mod currently in use
+   FreeForAll = cr::bit (8), // csdm mod with ffa mode
+   ReGameDLL = cr::bit (9), // server dll is a regamedll
+   HasFakePings = cr::bit (10), // on that game version we can fake bots pings
+   HasBotVoice = cr::bit (11) // on that game version we can use chatter
+);
 
 // defines map type
-enum MapFlags : int {
-   MAP_AS = cr::bit (0),
-   MAP_CS = cr::bit (1),
-   MAP_DE = cr::bit (2),
-   MAP_ES = cr::bit (3),
-   MAP_KA = cr::bit (4),
-   MAP_FY = cr::bit (5),
-
-   // additional flags
-   MAP_HAS_DOORS = cr::bit (6)
-};
+CR_DECLARE_SCOPED_ENUM (MapFlags,
+   Assassination = cr::bit (0),
+   HostageRescue = cr::bit (1),
+   Demolition = cr::bit (2),
+   Escape = cr::bit (3),
+   KnifeArena = cr::bit (4),
+   Fun = cr::bit (5),
+   HasDoors = cr::bit (10) // additional flags
+);
 
 // variable reg pair
 struct VarPair {
-   VarType type;
+   Var type;
    cvar_t reg;
+   bool missing;
+   const char *regval;
    class ConVar *self;
-
-   bool regMissing;
-   const char *regVal;
 };
 
 // network message block
@@ -106,7 +102,7 @@ struct MessageBlock {
    int bot;
    int state;
    int msg;
-   int regMsgs[NETMSG_NUM];
+   int regMsgs[NetMsg::Count];
 };
 
 // referentia vector info
@@ -117,14 +113,14 @@ struct RefVector {
 // entity prototype
 using EntityFunction = void (*) (entvars_t *);
 
-// compare language
-struct LangComprarer {
-   size_t operator () (const String &key) const {
-      char *str = const_cast <char *> (key.chars ());
-      size_t hash = key.length ();
+// language hasher
+struct HashLangString {
+   uint32 operator () (const String &key) const {
+      auto str = reinterpret_cast <uint8 *> (const_cast <char *> (key.chars ()));
+      uint32 hash = 0;
 
       while (*str++) {
-         if (!isalpha (*str)) {
+         if (!isalnum (*str)) {
             continue;
          }
          hash = ((*str << 5) + hash) + *str;
@@ -136,8 +132,8 @@ struct LangComprarer {
 // provides utility functions to not call original engine (less call-cost)
 class Game final : public Singleton <Game> {
 private:
-   int m_drawModels[DRAW_NUM];
-   int m_spawnCount[TEAM_UNASSIGNED];
+   int m_drawModels[DrawLine::Count];
+   int m_spawnCount[Team::Unassigned];
 
    // bot client command
    bool m_isBotCommand;
@@ -147,9 +143,9 @@ private:
    edict_t *m_localEntity;
 
    Array <VarPair> m_cvars;
-   HashMap <String, String, LangComprarer> m_language;
+   Dictionary <String, String, HashLangString> m_language;
 
-   Library m_gameLib;
+   SharedLibrary m_gameLib;
    MessageBlock m_msgBlock;
    bool m_precached;
 
@@ -161,33 +157,18 @@ public:
    RefVector vec;
 
 public:
-   Game (void);
-   ~Game (void);
+   Game ();
+   ~Game ();
 
 public:
    // precaches internal stuff
-   void precache (void);
+   void precache ();
 
    // initialize levels
    void levelInitialize (edict_t *ents, int max);
 
-   // prints data to servers console
-   void print (const char *fmt, ...);
-
-   // prints chat message to all players
-   void chatPrint (const char *fmt, ...);
-
-   // prints center message to all players
-   void centerPrint (const char *fmt, ...);
-
-   // prints center message to specified player
-   void centerPrint (edict_t *ent, const char *fmt, ...);
-
-   // prints message to client console
-   void clientPrint (edict_t *ent, const char *fmt, ...);
-
    // display world line
-   void drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, int red, int green, int blue, int brightness, int speed, int life, DrawLineType type = DRAW_SIMPLE);
+   void drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, const Color &color, int brightness, int speed, int life, DrawLine type = DrawLine::Simple);
 
    // test line
    void testLine (const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult *ptr);
@@ -199,34 +180,31 @@ public:
    float getWaveLen (const char *fileName);
 
    // we are on dedicated server ?
-   bool isDedicated (void);
+   bool isDedicated ();
 
    // get stripped down mod name
-   const char *getModName (void);
+   const char *getModName ();
 
    // get the valid mapname
-   const char *getMapName (void);
+   const char *getMapName ();
 
    // get the "any" entity origin
    Vector getAbsPos (edict_t *ent);
 
-   // send server command
-   void execCmd (const char *fmt, ...);
-
    // registers a server command
-   void registerCmd (const char *command, void func (void));
+   void registerCmd (const char *command, void func_ ());
 
    // play's sound to client
    void playSound (edict_t *ent, const char *sound);
 
    // sends bot command
-   void execBotCmd (edict_t *ent, const char *fmt, ...);
+   void prepareBotArgs (edict_t *ent, String str);
 
    // adds cvar to registration stack
-   void pushVarToRegStack (const char *variable, const char *value, VarType varType, bool regMissing, const char *regVal, ConVar *self);
+   void addNewCvar (const char *variable, const char *value, Var varType, bool regMissing, const char *regVal, class ConVar *self);
 
    // sends local registration stack for engine registration
-   void pushRegStackToEngine (bool gameVars = false);
+   void registerCvars (bool gameVars = false);
 
    // translates bot message into needed language
    const char *translate (const char *input);
@@ -235,19 +213,19 @@ public:
    void processMessages (void *ptr);
 
    // checks whether softwared rendering is enabled
-   bool isSoftwareRenderer (void);
+   bool isSoftwareRenderer ();
 
    // load the cs binary in non metamod mode
-   bool loadCSBinary (void);
+   bool loadCSBinary ();
 
    // do post-load stuff
-   bool postload (void);
+   bool postload ();
 
    // detects if csdm mod is in use
-   void detectDeathmatch (void);
+   void detectDeathmatch ();
 
    // executes stuff every 1 second
-   void slowFrame (void);
+   void slowFrame ();
 
    // begin message handler
    void beginMessage (edict_t *ent, int dest, int type);
@@ -255,26 +233,23 @@ public:
    // public inlines
 public:
    // get the current time on server
-   float timebase (void) const {
+   float timebase () const {
       return globals->time;
    }
 
    // get "maxplayers" limit on server
-   int maxClients (void) const  {
+   int maxClients () const  {
       return globals->maxClients;
    }
 
    // get the fakeclient command interface
-   bool isBotCmd (void) const  {
+   bool isBotCmd () const  {
       return m_isBotCommand;
    }
 
    // gets custom engine args for client command
-   const char *botArgs (void) const {
-      static String args;
-      args = String::join (m_botArgs, " ", m_botArgs[0] == "say" || m_botArgs[0] == "say_team" ? 1 : 0);
-
-      return args.chars ();
+   const char *botArgs () const {
+      return strings.format (String::join (m_botArgs, " ", m_botArgs[0] == "say" || m_botArgs[0] == "say_team" ? 1 : 0).chars ());
    }
 
    // gets custom engine argv for client command
@@ -286,7 +261,7 @@ public:
    }
 
    // gets custom engine argc for client command
-   int botArgc (void) const {
+   int botArgc () const {
       return m_botArgs.length ();
    }
 
@@ -295,10 +270,20 @@ public:
       return static_cast <edict_t *> (m_startEntity + index);
    };
 
+   // gets edict pointer out of entity index (player)
+   edict_t *playerOfIndex (const int index) {
+      return entityOfIndex (index) + 1;
+   };
+
    // gets edict index out of it's pointer
    int indexOfEntity (const edict_t *ent) {
       return static_cast <int> (ent - m_startEntity);
    };
+
+   // gets edict index of it's pointer (player)
+   int indexOfPlayer (const edict_t *ent) {
+      return indexOfEntity (ent) - 1;
+   }
 
    // verify entity isn't null
    bool isNullEntity (const edict_t *ent) {
@@ -306,7 +291,7 @@ public:
    }
 
    // get the wroldspawn entity
-   edict_t *getStartEntity (void) {
+   edict_t *getStartEntity () {
       return m_startEntity;
    }
 
@@ -320,12 +305,17 @@ public:
 
    // adds translation pair from config
    void addTranslation (const String &original, const String &translated) {
-      m_language.put (original, translated);
+      m_language.push (original, translated);
+   }
+
+   // clear the translation table
+   void clearTranslation () {
+      m_language.clear ();
    }
 
    // resets the message capture mechanism
-   void resetMessages (void) {
-      m_msgBlock.msg = NETMSG_UNDEFINED;
+   void resetMessages () {
+      m_msgBlock.msg = NetMsg::None;
       m_msgBlock.state = 0;
       m_msgBlock.bot = 0;
    };
@@ -358,12 +348,12 @@ public:
    }
 
    // sets the precache to uninitialize
-   void setUnprecached (void) {
+   void setUnprecached () {
       m_precached = false;
    }
 
    // gets the local entity (host edict)
-   edict_t *getLocalEntity (void) {
+   edict_t *getLocalEntity () {
       return m_localEntity;
    }
 
@@ -374,17 +364,12 @@ public:
 
    //  builds referential vector
    void makeVectors (const Vector &in) {
-      in.makeVectors (&vec.forward, &vec.right, &vec.up);
-   }
-
-   // what kind of map we're running ?
-   bool isMap (const int map) const {
-      return (m_mapFlags & map) == map;
+      in.buildVectors (&vec.forward, &vec.right, &vec.up);
    }
 
    // what kind of game engine / game dll / mod / tool we're running ?
    bool is (const int type) const {
-      return (m_gameFlags & type) == type;
+      return !!(m_gameFlags & type);
    }
 
    // adds game flag
@@ -394,43 +379,79 @@ public:
 
    // gets the map type
    bool mapIs (const int type) const {
-      return (m_mapFlags & type) == type;
+      return !!(m_mapFlags & type);
    }
 
    // get loaded gamelib
-   Library &getLib (void) {
+   const SharedLibrary &lib () {
       return m_gameLib;
+   }
+
+   // helper to sending the client message
+   void sendClientMessage (bool console, edict_t *ent, const char *message);
+
+   // send server command
+   template <typename ...Args> void serverCommand (const char *fmt, Args ...args) {
+      engfuncs.pfnServerCommand (strncat (strings.format (fmt, cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
+   }
+
+   // send a bot command
+   template <typename ...Args> void botCommand (edict_t *ent, const char *fmt, Args ...args) {
+      prepareBotArgs (ent, strings.format (fmt, cr::forward <Args> (args)...));
+   }
+
+   // prints data to servers console
+   template <typename ...Args> void print (const char *fmt, Args ...args) {
+      engfuncs.pfnServerPrint (strncat (strings.format (translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
+   }
+
+   // prints center message to specified player
+   template <typename ...Args> void clientPrint (edict_t *ent, const char *fmt, Args ...args) {
+      if (isNullEntity (ent)) {
+         print (fmt, cr::forward <Args> (args)...);
+         return;
+      }
+      sendClientMessage (true, ent, strncat (strings.format (translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
+   }
+
+   // prints message to client console
+   template <typename ...Args> void centerPrint (edict_t *ent, const char *fmt, Args ...args) {
+      if (isNullEntity (ent)) {
+         print (fmt, cr::forward <Args> (args)...);
+         return;
+      }
+      sendClientMessage (false, ent, strncat (strings.format (translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
    }
 };
 
 // simplify access for console variables
 class ConVar {
 public:
-   cvar_t *m_eptr;
+   cvar_t *eptr;
 
 public:
-   ConVar (const char *name, const char *initval, VarType type = VT_NOSERVER, bool regMissing = false, const char *regVal = nullptr) : m_eptr (nullptr) {
-      Game::ref ().pushVarToRegStack (name, initval, type, regMissing, regVal, this);
+   ConVar (const char *name, const char *initval, Var type = Var::NoServer, bool regMissing = false, const char *regVal = nullptr) : eptr (nullptr) {
+      Game::get ().addNewCvar (name, initval, type, regMissing, regVal, this);
    }
 
-   bool boolean (void) const {
-      return m_eptr->value > 0.0f;
+   bool bool_ () const {
+      return eptr->value > 0.0f;
    }
 
-   int integer (void) const {
-      return static_cast <int> (m_eptr->value);
+   int int_ () const {
+      return static_cast <int> (eptr->value);
    }
 
-   float flt (void) const {
-      return m_eptr->value;
+   float float_ () const {
+      return eptr->value;
    }
 
-   const char *str (void) const {
-      return m_eptr->string;
+   const char *str () const {
+      return eptr->string;
    }
 
    void set (float val) {
-      engfuncs.pfnCVarSetFloat (m_eptr->name, val);
+      engfuncs.pfnCVarSetFloat (eptr->name, val);
    }
 
    void set (int val) {
@@ -438,7 +459,7 @@ public:
    }
 
    void set (const char *val) {
-      engfuncs.pfnCvar_DirectSet (m_eptr, const_cast <char *> (val));
+      engfuncs.pfnCvar_DirectSet (eptr, const_cast <char *> (val));
    }
 };
 
@@ -447,31 +468,36 @@ private:
    bool m_autoDestruct { false };
 
 public:
-   MessageWriter (void) = default;
+   MessageWriter () = default;
 
-   MessageWriter (int dest, int type, const Vector &pos = Vector::null (), edict_t *to = nullptr) {
+   MessageWriter (int dest, int type, const Vector &pos = nullvec, edict_t *to = nullptr) {
       start (dest, type, pos, to);
       m_autoDestruct = true;
    }
 
-   virtual ~MessageWriter (void) {
+   ~MessageWriter () {
       if (m_autoDestruct) {
          end ();
       }
    }
 
 public:
-   MessageWriter &start (int dest, int type, const Vector &pos = Vector::null (), edict_t *to = nullptr) {
+   MessageWriter &start (int dest, int type, const Vector &pos = nullvec, edict_t *to = nullptr) {
       engfuncs.pfnMessageBegin (dest, type, pos, to);
       return *this;
    }
 
-   void end (void) {
+   void end () {
       engfuncs.pfnMessageEnd ();
    }
 
    MessageWriter &writeByte (int val) {
       engfuncs.pfnWriteByte (val);
+      return *this;
+   }
+
+   MessageWriter &writeLong (int val) {
+      engfuncs.pfnWriteLong (val);
       return *this;
    }
 
@@ -497,11 +523,11 @@ public:
 
 public:
    static inline uint16 fu16 (float value, float scale) {
-      return cr::clamp <uint16> (static_cast <uint16> (value * scale), 0, 0xffff);
+      return cr::clamp <uint16> (static_cast <uint16> (value * cr::bit (static_cast <short> (scale))), 0, 0xffff);
    }
 
    static inline short fs16 (float value, float scale) {
-      return cr::clamp <short> (static_cast <short> (value * scale), -32767, 32767);
+      return cr::clamp <short> (static_cast <short> (value * cr::bit (static_cast <short> (scale))), -32767, 32767);
    }
 };
 
@@ -511,28 +537,28 @@ private:
    int m_lightstyleValue[MAX_LIGHTSTYLEVALUE];
    bool m_doAnimation = false;
 
-   SimpleColor m_point;
+   Color m_point;
    model_t *m_worldModel = nullptr;
 
 public:
-   LightMeasure (void) {
+   LightMeasure () {
       initializeLightstyles ();
       m_point.reset ();
    }
 
 public:
-   void initializeLightstyles (void);
-   void animateLight (void);
+   void initializeLightstyles ();
+   void animateLight ();
    void updateLight (int style, char *value);
 
    float getLightLevel (const Vector &point);
-   float getSkyColor (void);
+   float getSkyColor ();
 
 private:
    template <typename S, typename M> bool recursiveLightPoint (const M *node, const Vector &start, const Vector &end);
 
 public:
-   void resetWorldModel (void) {
+   void resetWorldModel () {
       m_worldModel = nullptr;
    }
 
