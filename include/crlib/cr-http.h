@@ -56,7 +56,7 @@ public:
 #if defined(CR_WINDOWS)
       WSADATA wsa;
 
-      if (WSAStartup (MAKEWORD (1, 1), &wsa) != 0) {
+      if (WSAStartup (MAKEWORD (2, 2), &wsa) != 0) {
          logger.error ("Unable to inialize sockets.");
       }
 #endif
@@ -93,11 +93,11 @@ public:
       };
       auto timeouts = getTimeouts ();
 
-      if (setsockopt (m_socket, SOL_SOCKET, SO_RCVTIMEO, timeouts.first, timeouts.second) < 1) {
+      if (setsockopt (m_socket, SOL_SOCKET, SO_RCVTIMEO, timeouts.first, timeouts.second) == -1) {
          logger.error ("Unable to set SO_RCVTIMEO.");
       }
 
-      if (setsockopt (m_socket, SOL_SOCKET, SO_SNDTIMEO, timeouts.first, timeouts.second) < 1) {
+      if (setsockopt (m_socket, SOL_SOCKET, SO_SNDTIMEO, timeouts.first, timeouts.second) == -1) {
          logger.error ("Unable to set SO_SNDTIMEO.");
       }
 
