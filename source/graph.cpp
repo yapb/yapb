@@ -870,6 +870,10 @@ void BotGraph::setRadius (int index, float radius) {
 bool BotGraph::isConnected (int a, int b) {
    // this function checks if node A has a connection to node B
 
+   if (!exists (a) || !exists (b)) {
+      return false;
+   }
+
    for (const auto &link : m_paths[a].links) {
       if (link.index == b) {
          return true;
@@ -1541,7 +1545,7 @@ template <typename U> bool BotGraph::loadStorage (const String &ext, const Strin
       if (tryReload ()) {
          return true;
       }
-      return bailout ("Damaged %s (filename: '%s'). Version number differs (got: '%d', need: '%d').", name.chars (), filename.chars (), hdr.length, hdr.version, version);
+      return bailout ("Damaged %s (filename: '%s'). Version number differs (got: '%d', need: '%d').", name.chars (), filename.chars (), hdr.version, version);
    }
 
    // check the storage type

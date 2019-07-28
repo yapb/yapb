@@ -93,8 +93,13 @@ public:
       };
       auto timeouts = getTimeouts ();
 
-      setsockopt (m_socket, SOL_SOCKET, SO_RCVTIMEO, timeouts.first, timeouts.second);
-      setsockopt (m_socket, SOL_SOCKET, SO_SNDTIMEO, timeouts.first, timeouts.second);
+      if (setsockopt (m_socket, SOL_SOCKET, SO_RCVTIMEO, timeouts.first, timeouts.second) < 1) {
+         logger.error ("Unable to set SO_RCVTIMEO.");
+      }
+
+      if (setsockopt (m_socket, SOL_SOCKET, SO_SNDTIMEO, timeouts.first, timeouts.second) < 1) {
+         logger.error ("Unable to set SO_SNDTIMEO.");
+      }
 
       sockaddr_in dest;
       memset (&dest, 0, sizeof (dest));

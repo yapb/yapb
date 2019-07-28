@@ -1762,9 +1762,9 @@ void Bot::setConditions () {
          // if no more enemies found AND bomb planted, switch to knife to get to bombplace faster
          if (m_team == Team::CT && m_currentWeapon != Weapon::Knife && m_numEnemiesLeft == 0 && bots.isBombPlanted ()) {
             selectWeaponByName ("weapon_knife");
-            m_plantedBombWptIndex = getNearestToPlantedBomb ();
+            m_plantedBombNodeIndex = getNearestToPlantedBomb ();
 
-            if (isOccupiedPoint (m_plantedBombWptIndex)) {
+            if (isOccupiedPoint (m_plantedBombNodeIndex)) {
                pushChatterMessage (Chatter::BombsiteSecured);
             }
          }
@@ -3304,7 +3304,7 @@ void Bot::seekCover_ () {
 
       // chosen waypoint is a camp waypoint?
       if (m_path->flags & NodeFlag::Camp) {
-         // use the existing camp wpt prefs
+         // use the existing camp node prefs
          if (m_path->flags & NodeFlag::Crouch) {
             m_campButtons = IN_DUCK;
          }

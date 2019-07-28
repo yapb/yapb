@@ -21,7 +21,7 @@ int BotControl::cmdAddBot () {
 
    // this is duplicate error as in main bot creation code, but not to be silent
    if (!graph.length () || graph.hasChanged ()) {
-      ctrl.msg ("There is not graph found or graph is changed. Cannot create bot.");
+      ctrl.msg ("There is no graph found or graph is changed. Cannot create bot.");
       return BotCommandResult::Handled;
    }
 
