@@ -59,6 +59,7 @@ CR_NAMESPACE_END
 #  include <direct.h>
 #else
 #  include <unistd.h>
+#  include <strings.h>
 #  include <sys/stat.h>
 #endif
 
@@ -149,7 +150,7 @@ struct Platform : public Singleton <Platform> {
 #if defined(CR_WINDOWS)
       return _stricmp (str1, str2) == 0;
 #else
-      return strcasecmp (str1, str2) == 0;
+      return ::strcasecmp (str1, str2) == 0;
 #endif
    }
 
