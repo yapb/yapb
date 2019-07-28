@@ -2605,7 +2605,7 @@ void BotGraph::eraseFromDisk () {
 
    for (const auto &item : forErase) {
       if (File::exists (item)) {
-         plat.removeDirectory (item.chars ());
+         plat.removeFile (item.chars ());
          game.print ("File %s, has been deleted from the hard disk", item.chars ());
       }
       else {
