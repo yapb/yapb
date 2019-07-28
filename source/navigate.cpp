@@ -23,7 +23,7 @@ int Bot::findBestGoal () {
             int index = graph.getNearest (game.getAbsPos (pent));
 
             if (graph.exists (index)) {
-               return m_loosedBombWptIndex = index;
+               return m_loosedBombNodeIndex = index;
             }
             break;
          }
@@ -46,32 +46,32 @@ int Bot::findBestGoal () {
    float backoffDesire = 0.0f;
    float tacticChoice = 0.0f;
 
-   IntArray *offensiveWpts = nullptr;
-   IntArray *defensiveWpts = nullptr;
+   IntArray *offensiveNodes = nullptr;
+   IntArray *defensiveNodes = nullptr;
 
    switch (m_team) {
    case Team::Terrorist:
-      offensiveWpts = &graph.m_ctPoints;
-      defensiveWpts = &graph.m_terrorPoints;
+      offensiveNodes = &graph.m_ctPoints;
+      defensiveNodes = &graph.m_terrorPoints;
       break;
 
    case Team::CT:
    default:
-      offensiveWpts = &graph.m_terrorPoints;
-      defensiveWpts = &graph.m_ctPoints;
+      offensiveNodes = &graph.m_terrorPoints;
+      defensiveNodes = &graph.m_ctPoints;
       break;
    }
 
    // terrorist carrying the C4?
    if (m_hasC4 || m_isVIP) {
       tactic = 3;
-      return findGoalPost (tactic, defensiveWpts, offensiveWpts);
+      return findGoalPost (tactic, defensiveNodes, offensiveNodes);
    }
    else if (m_team == Team::CT && hasHostage ()) {
       tactic = 2;
-      offensiveWpts = &graph.m_rescuePoints;
+      offensiveNodes = &graph.m_rescuePoints;
 
-      return findGoalPost (tactic, defensiveWpts, offensiveWpts);
+      return findGoalPost (tactic, defensiveNodes, offensiveNodes);
    }
 
    offensive = m_agressionLevel * 100.0f;
@@ -142,7 +142,7 @@ int Bot::findBestGoal () {
    if (goalDesire > tacticChoice) {
       tactic = 3;
    }
-   return findGoalPost (tactic, defensiveWpts, offensiveWpts);
+   return findGoalPost (tactic, defensiveNodes, offensiveNodes);
 }
 
 int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offsensive) {
@@ -837,7 +837,7 @@ bool Bot::updateNavigation () {
 
       // is lift activated and bot is standing on it and lift is moving ?
       if (m_liftState == LiftState::LookingButtonInside || m_liftState == LiftState::EnteringIn || m_liftState == LiftState::WaitingForTeammates || m_liftState == LiftState::WaitingFor) {
-         if (pev->groundentity == m_liftEntity && m_liftEntity->v.velocity.z != 0.0f && isOnFloor () && ((graph[m_prevWptIndex[0]].flags & NodeFlag::Lift) || !game.isNullEntity (m_targetEntity))) {
+         if (pev->groundentity == m_liftEntity && m_liftEntity->v.velocity.z != 0.0f && isOnFloor () && ((graph[m_previousNodes[0]].flags & NodeFlag::Lift) || !game.isNullEntity (m_targetEntity))) {
             m_liftState = LiftState::TravelingBy;
             m_liftUsageTime = game.timebase () + 14.0f;
 
@@ -873,8 +873,8 @@ bool Bot::updateNavigation () {
 
          // button has been pressed, lift should come
          if (m_buttonPushTime + 8.0f >= game.timebase ()) {
-            if (graph.exists (m_prevWptIndex[0])) {
-               m_destOrigin = graph[m_prevWptIndex[0]].origin;
+            if (graph.exists (m_previousNodes[0])) {
+               m_destOrigin = graph[m_previousNodes[0]].origin;
             }
             else {
                m_destOrigin = pev->origin;
@@ -912,8 +912,8 @@ bool Bot::updateNavigation () {
 
                // lift is currently used
                if (liftUsed) {
-                  if (graph.exists (m_prevWptIndex[0])) {
-                     m_destOrigin = graph[m_prevWptIndex[0]].origin;
+                  if (graph.exists (m_previousNodes[0])) {
+                     m_destOrigin = graph[m_previousNodes[0]].origin;
                   }
                   else {
                      m_destOrigin = button->v.origin;
@@ -942,12 +942,12 @@ bool Bot::updateNavigation () {
 
       // bot is waiting for lift
       if (m_liftState == LiftState::WaitingFor) {
-         if (graph.exists (m_prevWptIndex[0])) {
-            if (!(graph[m_prevWptIndex[0]].flags & NodeFlag::Lift)) {
-               m_destOrigin = graph[m_prevWptIndex[0]].origin;
+         if (graph.exists (m_previousNodes[0])) {
+            if (!(graph[m_previousNodes[0]].flags & NodeFlag::Lift)) {
+               m_destOrigin = graph[m_previousNodes[0]].origin;
             }
-            else if (graph.exists (m_prevWptIndex[1])) {
-               m_destOrigin = graph[m_prevWptIndex[1]].origin;
+            else if (graph.exists (m_previousNodes[1])) {
+               m_destOrigin = graph[m_previousNodes[1]].origin;
             }
          }
 
@@ -965,8 +965,8 @@ bool Bot::updateNavigation () {
       // if bot is waiting for lift, or going to it
       if (m_liftState == LiftState::WaitingFor || m_liftState == LiftState::EnteringIn) {
          // bot fall down somewhere inside the lift's groove :)
-         if (pev->groundentity != m_liftEntity && graph.exists (m_prevWptIndex[0])) {
-            if ((graph[m_prevWptIndex[0]].flags & NodeFlag::Lift) && (m_path->origin.z - pev->origin.z) > 50.0f && (graph[m_prevWptIndex[0]].origin.z - pev->origin.z) > 50.0f) {
+         if (pev->groundentity != m_liftEntity && graph.exists (m_previousNodes[0])) {
+            if ((graph[m_previousNodes[0]].flags & NodeFlag::Lift) && (m_path->origin.z - pev->origin.z) > 50.0f && (graph[m_previousNodes[0]].origin.z - pev->origin.z) > 50.0f) {
                m_liftState = LiftState::None;
                m_liftEntity = nullptr;
                m_liftUsageTime = 0.0f;
@@ -974,8 +974,8 @@ bool Bot::updateNavigation () {
                clearSearchNodes ();
                findBestNearestNode ();
 
-               if (graph.exists (m_prevWptIndex[2])) {
-                  findPath (m_currentNodeIndex, m_prevWptIndex[2], FindPath::Fast);
+               if (graph.exists (m_previousNodes[2])) {
+                  findPath (m_currentNodeIndex, m_previousNodes[2], FindPath::Fast);
                }
                return false;
             }
@@ -1003,9 +1003,9 @@ bool Bot::updateNavigation () {
 
       clearSearchNodes ();
 
-      if (graph.exists (m_prevWptIndex[0])) {
-         if (!(graph[m_prevWptIndex[0]].flags & NodeFlag::Lift)) {
-            changePointIndex (m_prevWptIndex[0]);
+      if (graph.exists (m_previousNodes[0])) {
+         if (!(graph[m_previousNodes[0]].flags & NodeFlag::Lift)) {
+            changePointIndex (m_previousNodes[0]);
          }
          else {
             findBestNearestNode ();
@@ -1078,7 +1078,7 @@ bool Bot::updateNavigation () {
    }
    float desiredDistance = 0.0f;
 
-   // initialize the radius for a special node type, where the wpt is considered to be reached
+   // initialize the radius for a special node type, where the node is considered to be reached
    if (m_path->flags & NodeFlag::Lift) {
       desiredDistance = 50.0f;
    }
@@ -1552,7 +1552,7 @@ bool Bot::findBestNearestNode () {
 
       // skip current and recent previous nodes
       for (int j = 0; j < numToSkip; ++j) {
-         if (at == m_prevWptIndex[j]) {
+         if (at == m_previousNodes[j]) {
             skip = true;
             break;
          }
@@ -1650,8 +1650,8 @@ float Bot::getReachTime () {
    }
 
    // calculate 'real' time that we need to get from one node to another
-   if (graph.exists (m_currentNodeIndex) && graph.exists (m_prevWptIndex[0])) {
-      float distance = (graph[m_prevWptIndex[0]].origin - graph[m_currentNodeIndex].origin).length ();
+   if (graph.exists (m_currentNodeIndex) && graph.exists (m_previousNodes[0])) {
+      float distance = (graph[m_previousNodes[0]].origin - graph[m_currentNodeIndex].origin).length ();
 
       // caclulate estimated time
       if (pev->maxspeed <= 0.0f) {
@@ -1732,10 +1732,10 @@ int Bot::changePointIndex (int index) {
    if (index == kInvalidNodeIndex) {
       return 0;
    }
-   m_prevWptIndex[4] = m_prevWptIndex[3];
-   m_prevWptIndex[3] = m_prevWptIndex[2];
-   m_prevWptIndex[2] = m_prevWptIndex[1];
-   m_prevWptIndex[0] = m_currentNodeIndex;
+   m_previousNodes[4] = m_previousNodes[3];
+   m_previousNodes[3] = m_previousNodes[2];
+   m_previousNodes[2] = m_previousNodes[1];
+   m_previousNodes[0] = m_currentNodeIndex;
 
    m_currentNodeIndex = index;
    m_navTimeset = game.timebase ();
@@ -2105,7 +2105,7 @@ bool Bot::advanceMovement () {
          Task taskID = getCurrentTaskId ();
 
          // only if we in normal task and bomb is not planted
-         if (taskID == Task::Normal && bots.getRoundMidTime () + 5.0f < game.timebase () && m_timeCamping + 5.0f < game.timebase () && !bots.isBombPlanted () && m_personality != Personality::Rusher && !m_hasC4 && !m_isVIP && m_loosedBombWptIndex == kInvalidNodeIndex && !hasHostage ()) {
+         if (taskID == Task::Normal && bots.getRoundMidTime () + 5.0f < game.timebase () && m_timeCamping + 5.0f < game.timebase () && !bots.isBombPlanted () && m_personality != Personality::Rusher && !m_hasC4 && !m_isVIP && m_loosedBombNodeIndex == kInvalidNodeIndex && !hasHostage ()) {
             m_campButtons = 0;
 
             const int nextIndex = m_pathWalk.next ();
@@ -3031,7 +3031,7 @@ bool Bot::isOccupiedPoint (int index) {
       }
 
       if (bot != nullptr) {
-         int occupyId = util.getShootingCone (bot->ent (), pev->origin) >= 0.7f ? bot->m_prevWptIndex[0] : bot->m_currentNodeIndex;
+         int occupyId = util.getShootingCone (bot->ent (), pev->origin) >= 0.7f ? bot->m_previousNodes[0] : bot->m_currentNodeIndex;
 
          if (bot != nullptr) {
             if (index == occupyId) {

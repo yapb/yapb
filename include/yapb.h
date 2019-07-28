@@ -784,11 +784,11 @@ private:
    int m_reloadState; // current reload state
    int m_voicePitch; // bot voice pitch
    int m_rechoiceGoalCount; // multiple failed goals?
-   int m_loosedBombWptIndex; // nearest to loosed bomb node
-   int m_plantedBombWptIndex; // nearest to planted bomb node
+   int m_loosedBombNodeIndex; // nearest to loosed bomb node
+   int m_plantedBombNodeIndex; // nearest to planted bomb node
    int m_currentNodeIndex; // current node index
    int m_travelStartIndex; // travel start index to double jump action
-   int m_prevWptIndex[5]; // previous node indices from node find
+   int m_previousNodes[5]; // previous node indices from node find
    int m_pathFlags; // current node flags
    int m_needAvoidGrenade; // which direction to strafe away
    int m_campDirection; // camp Facing direction
@@ -1450,11 +1450,16 @@ public:
    }
 
    void setLastRadioTimestamp (const int team, const float timestamp) {
-      m_lastRadioTime[team] = timestamp;
+      if (team == Team::CT || team == Team::Terrorist) {
+         m_lastRadioTime[team] = timestamp;
+      }
    }
 
    float getLastRadioTimestamp (const int team) const {
-      return m_lastRadioTime[team];
+      if (team == Team::CT || team == Team::Terrorist) {
+         return m_lastRadioTime[team];
+      }
+      return 0.0f;
    }
 
    void setLastRadio (const int team, const int radio) {

@@ -40,6 +40,15 @@ BotManager::BotManager () {
    m_lastDifficulty = 0;
    m_lastWinner = -1;
 
+   m_timeRoundStart = 0.0f;
+   m_timeRoundMid = 0.0f;
+   m_timeRoundEnd = 0.0f;
+
+   m_bombPlanted = false;
+   m_botsCanPause = false;
+
+   m_bombSayStatus = BombPlantedSay::ChatSay | BombPlantedSay::Chatter;
+
    for (int i = 0; i < kGameTeamNum; ++i) {
       m_leaderChoosen[i] = false;
       m_economicsGood[i] = true;
@@ -305,7 +314,7 @@ void BotManager::maintainQuota () {
 
    if (graph.length () < 1 || graph.hasChanged ()) {
       if (yb_quota.int_ () > 0) {
-         ctrl.msg ("There is not graph found. Cannot create bot");
+         ctrl.msg ("There is no graph found. Cannot create bot.");
       }
       yb_quota.set (0);
       return;
@@ -414,6 +423,7 @@ void BotManager::reset () {
    m_plantSearchUpdateTime = 0.0f;
    m_lastChatTime = 0.0f;
    m_timeBombPlanted = 0.0f;
+   m_bombSayStatus = BombPlantedSay::ChatSay | BombPlantedSay::Chatter;
 
    m_intrestingEntities.clear ();
    m_activeGrenades.clear ();
@@ -956,8 +966,8 @@ void Bot::newRound () {
    m_currentNodeIndex = kInvalidNodeIndex;
    m_prevGoalIndex = kInvalidNodeIndex;
    m_chosenGoalIndex = kInvalidNodeIndex;
-   m_loosedBombWptIndex = kInvalidNodeIndex;
-   m_plantedBombWptIndex = kInvalidNodeIndex;
+   m_loosedBombNodeIndex = kInvalidNodeIndex;
+   m_plantedBombNodeIndex = kInvalidNodeIndex;
 
    m_grenadeRequested = false;
    m_moveToC4 = false;
@@ -973,7 +983,7 @@ void Bot::newRound () {
    m_avoidTime = 0.0f;
 
    for (i = 0; i < 5; ++i) {
-      m_prevWptIndex[i] = kInvalidNodeIndex;
+      m_previousNodes[i] = kInvalidNodeIndex;
    }
    m_navTimeset = game.timebase ();
    m_team = game.getTeam (ent ());
