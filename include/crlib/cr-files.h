@@ -85,14 +85,14 @@ public:
 
    template <typename ...Args> size_t puts (const char *fmt, Args ...args) {
       if (!*this) {
-         return false;
+         return 0;
       }
       return fprintf (m_handle, fmt, cr::forward <Args> (args)...);
    }
 
    bool puts (const String &buffer) {
       if (!*this) {
-         return false;
+         return 0;
       }
       if (fputs (buffer.chars (), m_handle) < 0) {
          return false;

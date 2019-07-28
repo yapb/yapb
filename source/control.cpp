@@ -1653,7 +1653,7 @@ void BotControl::showMenu (int id) {
 
    for (auto &display : m_menus) {
       if (display.ident == id) {
-         const char *text = (game.is (GameFlags::Xash3D | GameFlags::Mobility) && !yb_display_menu_text.bool_ ()) ? " " : display.text.chars ();
+         auto text = (game.is (GameFlags::Xash3D | GameFlags::Mobility) && !yb_display_menu_text.bool_ ()) ? " " : display.text.chars ();
          MessageWriter msg;
 
          while (strlen (text) >= 64) {

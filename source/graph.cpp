@@ -1310,7 +1310,7 @@ bool BotGraph::convertOldFormat () {
          if (header.fileVersion != StorageVersion::Podbot) {
             return false;
          }
-         else if (!!stricmp (header.mapName, map)) {
+         else if (!plat.caseStrMatch (header.mapName, map)) {
             return false;
          }
          else {

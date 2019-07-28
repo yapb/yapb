@@ -363,10 +363,10 @@ void BotManager::maintainQuota () {
    int desiredBotCount = yb_quota.int_ ();
    int botsInGame = getBotCount ();
 
-   if (stricmp (yb_quota_mode.str (), "fill") == 0) {
+   if (plat.caseStrMatch (yb_quota_mode.str (), "fill")) {
       botsInGame += humanPlayersInGame;
    }
-   else if (stricmp (yb_quota_mode.str (), "match") == 0) {
+   else if (plat.caseStrMatch (yb_quota_mode.str (), "match")) {
       int detectQuotaMatch = yb_quota_match.int_ () == 0 ? yb_quota.int_ () : yb_quota_match.int_ ();
 
       desiredBotCount = cr::max <int> (0, detectQuotaMatch * humanPlayersInGame);
@@ -1269,7 +1269,7 @@ void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *en
       return;
    }
 
-   if (stricmp (cmd, "say") == 0 || stricmp (cmd, "say_team") == 0) {
+   if (plat.caseStrMatch (cmd, "say") || plat.caseStrMatch (cmd, "say_team")) {
       if (strcmp (arg, "dropme") == 0 || strcmp (arg, "dropc4") == 0) {
          Bot *bot = nullptr;
 
@@ -1605,7 +1605,7 @@ void BotConfig::loadMainConfig () {
             if (cvar != nullptr) {
                auto value = const_cast <char *> (keyval[1].trim ().trim ("\"").trim ().chars ());
 
-               if (needsToIgnoreVar (ignore, key) && !!stricmp (value, cvar->string)) {
+               if (needsToIgnoreVar (ignore, key) && !plat.caseStrMatch (value, cvar->string)) {
                   game.print ("Bot CVAR '%s' differs from the stored in the config (%s/%s). Ignoring.", cvar->name, cvar->string, value);
 
                   // ensure cvar will have old value
@@ -2112,7 +2112,7 @@ void BotConfig::initWeapons () {
    // fill array with available weapons
    m_weapons.emplace (Weapon::Knife,      "weapon_knife",     "knife.mdl",     0,    0, -1, -1,  0,  0,  0,  0,  0,  0,   true  );
    m_weapons.emplace (Weapon::USP,        "weapon_usp",       "usp.mdl",       500,  1, -1, -1,  1,  1,  2,  2,  0,  12,  false );
-   m_weapons.emplace (Weapon::Glock18,      "weapon_glock18",   "glock18.mdl",   400,  1, -1, -1,  1,  2,  1,  1,  0,  20,  false );
+   m_weapons.emplace (Weapon::Glock18,    "weapon_glock18",   "glock18.mdl",   400,  1, -1, -1,  1,  2,  1,  1,  0,  20,  false );
    m_weapons.emplace (Weapon::Deagle,     "weapon_deagle",    "deagle.mdl",    650,  1,  2,  2,  1,  3,  4,  4,  2,  7,   false );
    m_weapons.emplace (Weapon::P228,       "weapon_p228",      "p228.mdl",      600,  1,  2,  2,  1,  4,  3,  3,  0,  13,  false );
    m_weapons.emplace (Weapon::Elite,      "weapon_elite",     "elite.mdl",     800,  1,  0,  0,  1,  5,  5,  5,  0,  30,  false );
