@@ -129,7 +129,7 @@ struct Platform : public Singleton <Platform> {
       return !!result;
    }
 
-   bool removeDirectory (const char *dir) {
+   bool removeFile (const char *dir) {
 #if defined(CR_WINDOWS)
       _unlink (dir);
 #else
