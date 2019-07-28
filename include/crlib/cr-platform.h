@@ -57,11 +57,9 @@ CR_NAMESPACE_END
 
 #if defined(CR_WINDOWS)
 #  include <direct.h>
-#  define stricmp _stricmp
 #else
 #  include <unistd.h>
 #  include <sys/stat.h>
-#  define stricmp strcasecmp
 #endif
 
 #include <assert.h>
@@ -144,6 +142,14 @@ struct Platform : public Singleton <Platform> {
 #else
       (void) (mod);
       return true;
+#endif
+   }
+
+   bool caseStrMatch (const char *str1, const char *str2) {
+#if defined(CR_WINDOWS)
+      return _stricmp (str1, str2) == 0;
+#else
+      return strcasecmp (str1, str2) == 0;
 #endif
    }
 
