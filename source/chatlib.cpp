@@ -231,13 +231,13 @@ void Bot::prepareChatMessage (const String &message) {
             return humanizedName (game.indexOfPlayer (client.ent));
          }
       }
-      return "UnknowPA";
+      return getHighfragPlayer ();
    };
    size_t replaceCounter = 0;
 
    while (replaceCounter < 6 && (pos = m_chatBuffer.find ('%')) != String::kInvalidIndex) {
       // found one, let's do replace
-      switch (message[pos + 1]) {
+      switch (m_chatBuffer[pos + 1]) {
 
          // the highest frag player
       case 'f':

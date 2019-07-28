@@ -1105,6 +1105,7 @@ bool Game::postload () {
    // print game detection info
    auto printGame = [&] () {
       String gameVersionStr;
+      StringArray gameVersionFlags;
 
       if (is (GameFlags::Legacy)) {
          gameVersionStr.assign ("Legacy");
@@ -1126,17 +1127,21 @@ bool Game::postload () {
       }
 
       if (is (GameFlags::HasBotVoice)) {
-         gameVersionStr.append (" (BV)");
+         gameVersionFlags.push ("BotVoice");
       }
 
       if (is (GameFlags::ReGameDLL)) {
-         gameVersionStr.append (" (RE)");
+         gameVersionFlags.push ("ReGameDLL");
       }
 
       if (is (GameFlags::HasFakePings)) {
-         gameVersionStr.append (" (SVC)");
+         gameVersionFlags.push ("FakePing");
       }
-      print ("[YAPB] Bot v%s.0.%d Loaded. Game detected as Counter-Strike: %s", PRODUCT_VERSION, util.buildNumber (), gameVersionStr.chars ());
+
+      if (is (GameFlags::Metamod)) {
+         gameVersionFlags.push ("Metamod");
+      }
+      print ("%s v%s.0.%d successfully loaded for game: Counter-Strike %s (%s).\n", PRODUCT_SHORT_NAME, PRODUCT_VERSION, util.buildNumber (), gameVersionStr.chars (), String::join (gameVersionFlags, ", ").chars ());
    };
 
    if (plat.isAndroid) {
