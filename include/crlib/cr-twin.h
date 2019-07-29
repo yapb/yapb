@@ -50,16 +50,8 @@ public:
       return a.second < b.second;
    }
 
-   friend bool operator <= (const Twin &a, const Twin &b) {
-      return a.second <= b.second;
-   }
-
    friend bool operator > (const Twin &a, const Twin &b) {
       return b.second < a.second;
-   }
-
-   friend bool operator >= (const Twin &a, const Twin &b) {
-      return b.second <= a.second;
    }
 };
 

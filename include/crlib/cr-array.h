@@ -14,23 +14,29 @@
 #include <crlib/cr-movable.h>
 #include <crlib/cr-random.h>
 
+#include <initializer_list>
+
 // policy to reserve memory
 CR_DECLARE_SCOPED_ENUM (ReservePolicy,
-   MultipleByTwo,
-   PlusOne
+   Mutiple,
+   Single,
 );
 
 CR_NAMESPACE_BEGIN
 
 // simple array class like std::vector
-template <typename T, ReservePolicy R = ReservePolicy::MultipleByTwo> class Array : public DenyCopying {
+template <typename T, ReservePolicy R = ReservePolicy::Mutiple, size_t S = 0> class Array : public DenyCopying {
 public:
    T *m_data = nullptr;
    size_t m_capacity = 0;
    size_t m_length = 0;
 
 public:
-   explicit Array () = default;
+   explicit Array () {
+      if (fix (S > 0)) {
+         reserve (S);
+      }
+   }
 
    Array (const size_t amount) {
       reserve (amount);
@@ -42,6 +48,12 @@ public:
       m_capacity = rhs.m_capacity;
 
       rhs.reset ();
+   }
+
+   Array (std::initializer_list <T> list) {
+      for (const auto &elem : list) {
+         push (elem);
+      }
    }
 
    ~Array () {
@@ -79,9 +91,9 @@ public:
       if (m_length + amount < m_capacity) {
          return true;
       }
-      auto capacity = m_capacity ? m_capacity : 8;
+      auto capacity = m_capacity ? m_capacity : 12;
 
-      if (cr::fix (R == ReservePolicy::MultipleByTwo)) {
+      if (cr::fix (R == ReservePolicy::Mutiple)) {
          while (m_length + amount > capacity) {
             capacity *= 2;
          }
@@ -110,10 +122,10 @@ public:
          if (!ensure (amount)) {
             return false;
          }
-         size_t pushLength = amount - m_length;
+         size_t resizeLength = amount - m_length;
 
-         for (size_t i = 0; i < pushLength; ++i) {
-            push (T ());
+         while (resizeLength--) {
+            emplace ();
          }
       }
       return true;
@@ -192,6 +204,9 @@ public:
    bool erase (const size_t index, const size_t count) {
       if (index + count > m_capacity) {
          return false;
+      }
+      for (size_t i = m_length; i < m_length + count; i++) {
+         alloc.destruct (&m_data[i]);
       }
       m_length -= count;
 
@@ -385,6 +400,9 @@ public:
       return m_data + m_length;
    }
 };
+
+// small array (with minimal reserve policy, something like fixed array, but still able to grow, by default allocates 64 elements)
+template <typename T> using SmallArray = Array <T, ReservePolicy::Single, 64>;
 
 CR_NAMESPACE_END
 

@@ -84,35 +84,39 @@ public:
 private:
    void percolateUp (size_t index) {
       while (index != 0) {
-         size_t parent = this->parent (index);
+         size_t parentIndex = parent (index);
 
-         if (m_data[parent] <= m_data[index]) {
+         if (m_data[parentIndex] > m_data[index]) {
+            cr::swap (m_data[index], m_data[parentIndex]);
+            index = parentIndex;
+         }
+         else {
             break;
          }
-         cr::swap (m_data[index], m_data[parent]);
-         index = parent;
       }
    }
 
    void percolateDown (size_t index) {
-      while (this->left (index) < m_data.length ()) {
-         size_t best = this->left (index);
+      while (hasLeft (index)) {
+         size_t bestIndex = left (index);
 
-         if (this->right (index) < m_data.length ()) {
-            size_t right_index = this->right (index);
+         if (hasRight (index)) {
+            size_t rightIndex = right (index);
 
-            if (m_data[right_index] < m_data[best]) {
-               best = right_index;
+            if (m_data[rightIndex] < m_data[bestIndex]) {
+               bestIndex = rightIndex;
             }
          }
 
-         if (m_data[index] <= m_data[best]) {
+         if (m_data[index] > m_data[bestIndex]) {
+            cr::swap (m_data[index], m_data[bestIndex]);
+
+            index = bestIndex;
+            bestIndex = left (index);
+         }
+         else {
             break;
          }
-         cr::swap (m_data[index], m_data[best]);
-
-         index = best;
-         best = this->left (index);
       }
    }
 
@@ -125,16 +129,24 @@ private:
    }
 
 private:
+   static constexpr size_t parent (size_t index) {
+      return (index - 1) / 2;
+   }
+
    static constexpr size_t left (size_t index) {
-      return index << 1 | 1;
+      return (index * 2) + 1;
    }
 
    static constexpr size_t right (size_t index) {
-      return ++index << 1;
+      return (index * 2) + 2;
    }
 
-   static constexpr size_t parent (size_t index) {
-      return --index >> 1;
+   bool hasLeft (size_t index) const {
+      return left (index) < m_data.length ();
+   }
+
+   bool hasRight (size_t index) const {
+      return right (index) < m_data.length ();
    }
 };
 

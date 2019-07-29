@@ -1357,7 +1357,7 @@ bool BotGraph::convertOldFormat () {
    return true;
 }
 
-template <typename U> bool BotGraph::saveStorage (const String &ext, const String &name, StorageOption options, StorageVersion version, const Array <U, ReservePolicy::PlusOne> &data, uint8 *blob) {
+template <typename U> bool BotGraph::saveStorage (const String &ext, const String &name, StorageOption options, StorageVersion version, const SmallArray <U> &data, uint8 *blob) {
    bool isGraph = (ext == "graph");
 
    String filename;
@@ -1387,7 +1387,7 @@ template <typename U> bool BotGraph::saveStorage (const String &ext, const Strin
    ULZ lz;
 
    size_t rawLength = data.length () * sizeof (U);
-   Array <uint8, ReservePolicy::PlusOne> compressed (rawLength + sizeof (uint8) * ULZ::Excess);
+   SmallArray <uint8> compressed (rawLength + sizeof (uint8) * ULZ::Excess);
 
    // try to compress
    auto compressedLength = lz.compress (reinterpret_cast <uint8 *> (data.data ()), rawLength, reinterpret_cast <uint8 *> (compressed.data ()));
@@ -1421,7 +1421,7 @@ template <typename U> bool BotGraph::saveStorage (const String &ext, const Strin
    return true;
 }
 
-template <typename U> bool BotGraph::loadStorage (const String &ext, const String &name, StorageOption options, StorageVersion version, Array <U, ReservePolicy::PlusOne> &data, uint8 *blob, int32 *outOptions) {
+template <typename U> bool BotGraph::loadStorage (const String &ext, const String &name, StorageOption options, StorageVersion version, SmallArray <U> &data, uint8 *blob, int32 *outOptions) {
    String filename;
    filename.assignf ("%s.%s", game.getMapName (), ext.chars ()).lowercase ();
 
@@ -1552,7 +1552,7 @@ template <typename U> bool BotGraph::loadStorage (const String &ext, const Strin
    if ((hdr.options & options) != options) {
       return bailout ("Incorrect storage format for %s (filename: '%s').", name.chars (), filename.chars ());
    }
-   Array <uint8, ReservePolicy::PlusOne> compressed (hdr.compressed + sizeof (uint8) * ULZ::Excess);
+   SmallArray <uint8> compressed (hdr.compressed + sizeof (uint8) * ULZ::Excess);
 
    // graph is not resized upon load
    if (isGraph) {
@@ -2741,7 +2741,7 @@ BotGraph::Bucket BotGraph::locateBucket (const Vector &pos) {
    };
 }
 
-const Array <int32, ReservePolicy::PlusOne> &BotGraph::getNodesInBucket (const Vector &pos) {
+const SmallArray <int32> &BotGraph::getNodesInBucket (const Vector &pos) {
    const auto &bucket = locateBucket (pos);
    return m_buckets[bucket.x][bucket.y][bucket.z];
 }

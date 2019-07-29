@@ -37,8 +37,8 @@ private:
 
 
 private:
-   Array <int32, ReservePolicy::PlusOne> m_hashTable;
-   Array <int32, ReservePolicy::PlusOne> m_prevTable;
+   SmallArray <int32> m_hashTable;
+   SmallArray <int32> m_prevTable;
 
 public:
    ULZ () {

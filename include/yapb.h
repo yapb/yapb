@@ -1296,10 +1296,11 @@ private:
 
    Array <edict_t *> m_activeGrenades; // holds currently active grenades on the map
    Array <edict_t *> m_intrestingEntities;  // holds currently intresting entities on the map
-   Array <CreateQueue> m_creationTab; // bot creation tab
-   Array <BotTask> m_filters; // task filters
 
-   Array <UniqueBot> m_bots; // all available bots
+   SmallArray <CreateQueue> m_creationTab; // bot creation tab
+   SmallArray <BotTask> m_filters; // task filters
+   SmallArray <UniqueBot> m_bots; // all available bots
+
    edict_t *m_killerEntity; // killer entity for bots
 
 protected:
@@ -1389,7 +1390,7 @@ public:
    }
 
    // get the list of filters
-   Array <BotTask> &getFilters () {
+   SmallArray <BotTask> &getFilters () {
       return m_filters;
    }
 
@@ -1552,11 +1553,11 @@ private:
    IntArray m_rescuePoints;
    IntArray m_visitedGoals;
 
-   Array <int32, ReservePolicy::PlusOne> m_buckets[kMaxBucketsInsidePos][kMaxBucketsInsidePos][kMaxBucketsInsidePos];
-   Array <Matrix, ReservePolicy::PlusOne> m_matrix;
-   Array <Practice, ReservePolicy::PlusOne> m_practice;
-   Array <Path, ReservePolicy::PlusOne> m_paths;
-   Array <uint8, ReservePolicy::PlusOne> m_vistable;
+   SmallArray <int32> m_buckets[kMaxBucketsInsidePos][kMaxBucketsInsidePos][kMaxBucketsInsidePos];
+   SmallArray <Matrix> m_matrix;
+   SmallArray <Practice> m_practice;
+   SmallArray <Path> m_paths;
+   SmallArray <uint8> m_vistable;
 
    String m_tempStrings;
    edict_t *m_editor;
@@ -1595,8 +1596,8 @@ public:
    bool saveGraphData ();
    bool loadGraphData ();
 
-   template <typename U> bool saveStorage (const String &ext, const String &name, StorageOption options, StorageVersion version, const Array <U, ReservePolicy::PlusOne> &data, uint8 *blob);
-   template <typename U> bool loadStorage (const String &ext, const String &name, StorageOption options, StorageVersion version, Array <U, ReservePolicy::PlusOne> &data, uint8 *blob, int32 *outOptions);
+   template <typename U> bool saveStorage (const String &ext, const String &name, StorageOption options, StorageVersion version, const SmallArray <U> &data, uint8 *blob);
+   template <typename U> bool loadStorage (const String &ext, const String &name, StorageOption options, StorageVersion version, SmallArray <U> &data, uint8 *blob, int32 *outOptions);
 
    void saveOldFormat ();
    void initGraph ();
@@ -1641,7 +1642,7 @@ public:
 
    Bucket locateBucket (const Vector &pos);
    IntArray searchRadius (float radius, const Vector &origin, int maxCount = -1);
-   const Array <int32, ReservePolicy::PlusOne> &getNodesInBucket (const Vector &pos);
+   const SmallArray <int32> &getNodesInBucket (const Vector &pos);
 
 public:
    int getHighestDamageForTeam (int team) const {
@@ -1719,19 +1720,18 @@ private:
 
    Array <BotName> m_botNames;
    Array <Keywords> m_replies;
-   Array <WeaponInfo> m_weapons;
-   Array <WeaponProp> m_weaponProps;
+   SmallArray <WeaponInfo> m_weapons;
+   SmallArray <WeaponProp> m_weaponProps;
 
    StringArray m_logos;
    StringArray m_avatars;
 
    // default tables for personality weapon preferences, overridden by general.cfg
-   int m_normalWeaponPrefs[kNumWeapons] = { 0, 2, 1, 4, 5, 6, 3, 12, 10, 24, 25, 13, 11, 8, 7, 22, 23, 18, 21, 17, 19, 15, 17, 9, 14, 16 };
-   int m_rusherWeaponPrefs[kNumWeapons] = { 0, 2, 1, 4, 5, 6, 3, 24, 19, 22, 23, 20, 21, 10, 12, 13, 7, 8, 11, 9, 18, 17, 19, 25, 15, 16 };
-   int m_carefulWeaponPrefs[kNumWeapons] = { 0, 2, 1, 4, 25, 6, 3, 7, 8, 12, 10, 13, 11, 9, 24, 18, 14, 17, 16, 15, 19, 20, 21, 22, 23, 5 };
-   int m_grenadeBuyPrecent[kNumWeapons - 23] = { 95, 85, 60 };
-   int m_botBuyEconomyTable[kNumWeapons - 15] = { 1900, 2100, 2100, 4000, 6000, 7000, 16000, 1200, 800, 1000, 3000 };
-   int *m_weaponPrefs[3] = { m_normalWeaponPrefs, m_rusherWeaponPrefs, m_carefulWeaponPrefs };
+   SmallArray <int32> m_normalWeaponPrefs = { 0, 2, 1, 4, 5, 6, 3, 12, 10, 24, 25, 13, 11, 8, 7, 22, 23, 18, 21, 17, 19, 15, 17, 9, 14, 16 };
+   SmallArray <int32> m_rusherWeaponPrefs = { 0, 2, 1, 4, 5, 6, 3, 24, 19, 22, 23, 20, 21, 10, 12, 13, 7, 8, 11, 9, 18, 17, 19, 25, 15, 16 };
+   SmallArray <int32> m_carefulWeaponPrefs = { 0, 2, 1, 4, 25, 6, 3, 7, 8, 12, 10, 13, 11, 9, 24, 18, 14, 17, 16, 15, 19, 20, 21, 22, 23, 5 };
+   SmallArray <int32> m_botBuyEconomyTable = { 1900, 2100, 2100, 4000, 6000, 7000, 16000, 1200, 800, 1000, 3000 };
+   SmallArray <int32> m_grenadeBuyPrecent = { 95, 85, 60 };
 
 public:
    BotConfig ();
@@ -1822,7 +1822,7 @@ public:
    }
 
    // get's the weapon info data
-   Array <WeaponInfo> &getWeapons () {
+   SmallArray <WeaponInfo> &getWeapons () {
       return m_weapons;
    }
 
@@ -1842,13 +1842,23 @@ public:
    }
 
    // get's weapon preferences for personality
-   int *getWeaponPrefs (int personality) const {
-      return m_weaponPrefs[personality];
+   int32 *getWeaponPrefs (int personality) const {
+      switch (personality) {
+      case Personality::Normal:
+      default:
+         return m_normalWeaponPrefs.data ();
+
+      case Personality::Rusher:
+         return m_rusherWeaponPrefs.data ();
+
+      case Personality::Careful:
+         return m_carefulWeaponPrefs.data ();
+      }
    }
 
    // get economics value
-   int *getEconLimit () {
-      return m_botBuyEconomyTable;
+   int32 *getEconLimit () {
+      return m_botBuyEconomyTable.data ();
    }
 
    // get's grenade buy percents
@@ -1881,8 +1891,8 @@ private:
    float m_welcomeReceiveTime;
 
    StringArray m_sentences;
-   Array <Client> m_clients;
-   Array <Twin <String, String>> m_tags;
+   SmallArray <Client> m_clients;
+   SmallArray <Twin <String, String>> m_tags;
 
 public:
    BotUtils ();
@@ -1966,12 +1976,12 @@ public:
    }
 
    // get array of clients
-   Array <Client> &getClients () {
+   SmallArray <Client> &getClients () {
       return m_clients;
    }
 
    // get clients as const-reference
-   const Array <Client> &getClients () const {
+   const SmallArray <Client> &getClients () const {
       return m_clients;
    }
 
@@ -2146,7 +2156,7 @@ public:
       m_args.clear ();
 
       for (int i = 0; i < engfuncs.pfnCmd_Argc (); i++) {
-         m_args.push (engfuncs.pfnCmd_Argv (i));
+         m_args.emplace (engfuncs.pfnCmd_Argv (i));
       }
    }
 

@@ -275,7 +275,7 @@ public:
 
          return false;
       }
-      Array <uint8, ReservePolicy::PlusOne> buffer (m_chunkSize);
+      SmallArray <uint8> buffer (m_chunkSize);
       m_code = parseResponseHeader (buffer.data ());
 
       if (m_code != HttpClientResult::OK) {
@@ -379,7 +379,7 @@ public:
 
          return false;
       }
-      Array <uint8, ReservePolicy::PlusOne> buffer (m_chunkSize);
+      SmallArray <uint8> buffer (m_chunkSize);
       int32 length = 0;
 
       for (;;) {
