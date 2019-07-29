@@ -18,14 +18,14 @@
 
 // policy to reserve memory
 CR_DECLARE_SCOPED_ENUM (ReservePolicy,
-   Mutiple,
+   Multiple,
    Single,
 );
 
 CR_NAMESPACE_BEGIN
 
 // simple array class like std::vector
-template <typename T, ReservePolicy R = ReservePolicy::Mutiple, size_t S = 0> class Array : public DenyCopying {
+template <typename T, ReservePolicy R = ReservePolicy::Multiple, size_t S = 0> class Array : public DenyCopying {
 public:
    T *m_data = nullptr;
    size_t m_capacity = 0;
@@ -93,7 +93,7 @@ public:
       }
       auto capacity = m_capacity ? m_capacity : 12;
 
-      if (cr::fix (R == ReservePolicy::Mutiple)) {
+      if (cr::fix (R == ReservePolicy::Multiple)) {
          while (m_length + amount > capacity) {
             capacity *= 2;
          }
