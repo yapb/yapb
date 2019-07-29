@@ -266,7 +266,7 @@ public:
    template <typename ...Args> String &assignf (const char *fmt, Args ...args) {
       const size_t size = snprintf (nullptr, 0, fmt, args...);
 
-      Array <char, ReservePolicy::PlusOne> buffer (size + 1);
+      SmallArray <char> buffer (size + 1);
       snprintf (buffer.data (), size + 1, fmt, cr::forward <Args> (args)...);
 
       return assign (buffer.data ());
@@ -278,7 +278,7 @@ public:
       }
       const size_t size = snprintf (nullptr, 0, fmt, args...) + length ();
 
-      Array <char, ReservePolicy::PlusOne> buffer (size + 1);
+      SmallArray <char> buffer (size + 1);
       snprintf (buffer.data (), size + 1, fmt, cr::forward <Args> (args)...);
 
       return append (buffer.data ());

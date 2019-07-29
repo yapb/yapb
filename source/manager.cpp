@@ -1660,13 +1660,16 @@ void BotConfig::loadNamesConfig () {
 void BotConfig::loadWeaponsConfig () {
    setupMemoryFiles ();
 
-   auto addWeaponEntries = [] (Array <WeaponInfo> &weapons, size_t max, bool as, const String &name, const StringArray &data) {
-      if (data.length () != max) {
-         logger.error ("%s entry in weapons config is not valid or malformed.", name.chars ());
+   auto addWeaponEntries = [] (SmallArray <WeaponInfo> &weapons, bool as, const String &name, const StringArray &data) {
+
+      // we're have null terminator element in weapons array...
+      if (data.length () + 1 != weapons.length ()) {
+         logger.error ("%s entry in weapons config is not valid or malformed (%d/%d).", name.chars (), data.length (), weapons.length ());
+
          return;
       }
 
-      for (size_t i = 0; i < max; ++i) {
+      for (size_t i = 0; i < data.length (); ++i) {
          if (as) {
             weapons[i].teamAS = data[i].int_ ();
          }
@@ -1676,13 +1679,13 @@ void BotConfig::loadWeaponsConfig () {
       }
    };
 
-   auto addIntEntries = [] (int *to, size_t max, const String &name, const StringArray &data) {
-      if (data.length () != max) {
-         logger.error ("%s entry in weapons config is not valid or malformed.", name.chars ());
+   auto addIntEntries = [] (SmallArray <int32> &to, const String &name, const StringArray &data) {
+      if (data.length () != to.length ()) {
+         logger.error ("%s entry in weapons config is not valid or malformed (%d/%d).", name.chars (), data.length (), to.length ());
          return;
       }
 
-      for (size_t i = 0; i < max; ++i) {
+      for (size_t i = 0; i < to.length (); ++i) {
          to[i] = data[i].int_ ();
       }
    };
@@ -1709,35 +1712,30 @@ void BotConfig::loadWeaponsConfig () {
          auto splitted = pair[1].split (",");
 
          if (pair[0].startsWith ("MapStandard")) {
-            addWeaponEntries (m_weapons, kNumWeapons, false, pair[0], splitted);
+            addWeaponEntries (m_weapons, false, pair[0], splitted);
          }
          else if (pair[0].startsWith ("MapAS")) {
-            addWeaponEntries (m_weapons, kNumWeapons, true, pair[0], splitted);
+            addWeaponEntries (m_weapons, true, pair[0], splitted);
          }
 
          else if (pair[0].startsWith ("GrenadePercent")) {
-            addIntEntries (m_grenadeBuyPrecent, 3, pair[0], splitted);
+            addIntEntries (m_grenadeBuyPrecent, pair[0], splitted);
          }
          else if (pair[0].startsWith ("Economics")) {
-            addIntEntries (m_botBuyEconomyTable, 11, pair[0], splitted);
+            addIntEntries (m_botBuyEconomyTable, pair[0], splitted);
          }
          else if (pair[0].startsWith ("PersonalityNormal")) {
-            addIntEntries (m_normalWeaponPrefs, kNumWeapons, pair[0], splitted);
+            addIntEntries (m_normalWeaponPrefs, pair[0], splitted);
          }
          else if (pair[0].startsWith ("PersonalityRusher")) {
-            addIntEntries (m_rusherWeaponPrefs, kNumWeapons, pair[0], splitted);
+            addIntEntries (m_rusherWeaponPrefs, pair[0], splitted);
          }
          else if (pair[0].startsWith ("PersonalityCareful")) {
-            addIntEntries (m_carefulWeaponPrefs, kNumWeapons, pair[0], splitted);
+            addIntEntries (m_carefulWeaponPrefs, pair[0], splitted);
          }
       }
       file.close ();
    }
-
-   // set personality weapon pointers here
-   m_weaponPrefs[Personality::Normal] = reinterpret_cast <int *> (&m_normalWeaponPrefs);
-   m_weaponPrefs[Personality::Rusher] = reinterpret_cast <int *> (&m_rusherWeaponPrefs);
-   m_weaponPrefs[Personality::Careful] = reinterpret_cast <int *> (&m_carefulWeaponPrefs);
 }
 
 void BotConfig::loadChatterConfig () {
