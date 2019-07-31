@@ -27,6 +27,7 @@
 #include <crlib/cr-random.h>
 #include <crlib/cr-ulz.h>
 #include <crlib/cr-color.h>
+#include <crlib/cr-hook.h>
 
 CR_NAMESPACE_BEGIN
 

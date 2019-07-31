@@ -169,5 +169,4 @@ public:
    }
 };
 
-
 CR_NAMESPACE_END

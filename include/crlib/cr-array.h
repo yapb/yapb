@@ -205,7 +205,7 @@ public:
       if (index + count > m_capacity) {
          return false;
       }
-      for (size_t i = m_length; i < m_length + count; i++) {
+      for (size_t i = index; i < index + count; i++) {
          alloc.destruct (&m_data[i]);
       }
       m_length -= count;

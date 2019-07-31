@@ -111,9 +111,6 @@ void BotManager::touchKillerEntity (Bot *bot) {
    MDLL_Touch (m_killerEntity, bot->ent ());
 }
 
-// it's already defined in interface.cpp
-extern "C" void player (entvars_t *pev);
-
 void BotManager::execGameEntity (entvars_t *vars) {
    // this function calls gamedll player() function, in case to create player entity in game
 
@@ -121,7 +118,7 @@ void BotManager::execGameEntity (entvars_t *vars) {
       CALL_GAME_ENTITY (PLID, "player", vars);
       return;
    }
-   player (vars);
+   ents.getPlayerFunction () (vars);
 }
 
 void BotManager::forEach (ForEachBot handler) {
@@ -682,6 +679,23 @@ int BotManager::getBotCount () {
    return m_bots.length ();
 }
 
+float BotManager::getConnectionTime (int botId) {
+   // this function get's fake bot player time.
+
+   for (const auto &bot : m_bots) {
+      if (bot->index () == botId) {
+         auto current = plat.seconds ();
+
+         if (current - bot->m_joinServerTime > bot->m_playServerTime || current - bot->m_joinServerTime <= 0) {
+            bot->m_playServerTime = 60.0f * rg.float_ (30.0f, 240.0f);
+            bot->m_joinServerTime = current - bot->m_playServerTime *  rg.float_ (0.2f, 0.8f);
+         }
+         return current - bot->m_joinServerTime;
+      }
+   }
+   return 0.0f;
+}
+
 Twin <int, int> BotManager::countTeamPlayers () {
    int ts = 0, cts = 0;
 
@@ -845,6 +859,10 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
    m_lastCommandTime = game.timebase () - 0.1f;
    m_frameInterval = game.timebase ();
    m_slowFrameTimestamp = 0.0f;
+
+   // stuff from jk_botti
+   m_playServerTime = 60.0f * rg.float_ (30.0f, 240.0f);
+   m_joinServerTime = plat.seconds () - m_playServerTime * rg.float_ (0.2f, 0.8f);
 
    switch (personality) {
    case 1:

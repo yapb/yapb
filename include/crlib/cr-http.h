@@ -20,14 +20,13 @@
 #  include <netinet/in.h>
 #  include <sys/socket.h>
 #  include <sys/types.h>
+#  include <sys/uio.h> 
 #  include <arpa/inet.h>
 #  include <unistd.h>
 #  include <errno.h>
 #  include <netdb.h>
 #  include <fcntl.h>
 #elif defined (CR_WINDOWS)
-#  define WIN32_LEAN_AND_MEAN 
-#  include <windows.h>
 #  include <winsock2.h>
 #endif
 
@@ -137,6 +136,30 @@ public:
 
    template <typename U> int32 recv (U *buffer, int32 length) {
       return ::recv (m_socket, reinterpret_cast <char *> (buffer), length, 0);
+   }
+
+public:
+   static int32 CR_STDCALL sendto (int socket, const void *message, size_t length, int flags, const struct sockaddr *dest, int32 destLength) {
+#if defined (CR_WINDOWS)
+      WSABUF buffer = { length, const_cast <char *> (reinterpret_cast <const char *> (message)) };
+      DWORD sendLength = 0;
+
+      if (WSASendTo (socket, &buffer, 1, &sendLength, flags, dest, destLength, NULL, NULL) == SOCKET_ERROR) {
+         errno = WSAGetLastError ();
+         return -1;
+      }
+      return static_cast <int32> (sendLength);
+#else
+      iovec iov = { const_cast <void *> (message), length };
+      msghdr msg = { 0, };
+
+      msg.msg_name = reinterpret_cast <void *> (const_cast <struct sockaddr *> (dest));
+      msg.msg_namelen = destLength;
+      msg.msg_iov = &iov;
+      msg.msg_iovlen = 1;
+
+      return sendmsg (socket, &msg, flags);
+#endif
    }
 };
 

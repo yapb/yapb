@@ -165,7 +165,7 @@ public:
    void precache ();
 
    // initialize levels
-   void levelInitialize (edict_t *ents, int max);
+   void levelInitialize (edict_t *entities, int max);
 
    // display world line
    void drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, const Color &color, int brightness, int speed, int life, DrawLine type = DrawLine::Simple);
@@ -304,8 +304,8 @@ public:
    int getTeam (edict_t *ent);
 
    // adds translation pair from config
-   void addTranslation (const String &original, const String &translated) {
-      m_language.push (original, translated);
+   void addTranslation (const String &m_origBytes, const String &translated) {
+      m_language.push (m_origBytes, translated);
    }
 
    // clear the translation table
@@ -571,5 +571,133 @@ public:
 
    void enableAnimation (bool enable) {
       m_doAnimation = enable;
+   }
+};
+
+// simple handler for parsing and rewriting queries (fake queries)
+class QueryBuffer {
+   SmallArray <uint8> m_buffer;
+   size_t m_cursor;
+
+public:
+   QueryBuffer (const uint8 *msg, size_t length, size_t shift) : m_cursor (0) {
+      m_buffer.insert (0, msg, length);
+      m_cursor += shift;
+   }
+
+public:
+   template <typename T> T read () {
+      T result;
+      auto size = sizeof (T);
+
+      if (m_cursor + size > m_buffer.length ()) {
+         return 0;
+      }
+
+      memcpy (&result, m_buffer.data () + m_cursor, size);
+      m_cursor += size;
+
+      return result;
+   }
+
+   // must be called right after read
+   template <typename T> void write (T value) {
+      auto size = sizeof (value);
+      memcpy (m_buffer.data () + m_cursor - size, &value, size);
+   }
+
+   template <typename T> void skip () {
+      auto size = sizeof (T);
+
+      if (m_cursor + size > m_buffer.length ()) {
+         return;
+      }
+      m_cursor += size;
+   }
+
+   void skipString () {
+      if (m_buffer.length () < m_cursor) {
+         return;
+      }
+      for (; m_cursor < m_buffer.length () && m_buffer[m_cursor] != '\0'; ++m_cursor) { }
+      ++m_cursor;
+   }
+
+   void shiftToEnd () {
+      m_cursor = m_buffer.length ();
+   }
+
+public:
+   Twin <const uint8 *, size_t> data () {
+      return { m_buffer.data (), m_buffer.length () };
+   }
+};
+
+// for android
+#if defined (CR_ANDROID)
+   extern "C" void player (entvars_t *pev);
+#endif
+
+class DynamicEntityLink : public Singleton <DynamicEntityLink> {
+private:
+#if defined (CR_WINDOWS)
+#  define CastType HMODULE
+#  define LookupSymbol GetProcAddress
+#else
+#  define CastType void *
+#  define LookupSymbol dlsym
+#endif
+
+private:
+   using Handle = void *;
+   using Name = const char *;
+
+private:
+   template <typename K> struct FunctionHash {
+      uint32 operator () (Name key) const {
+         char *str = const_cast <char *> (key);
+         uint32 hash = 0;
+
+         while (*str++) {
+            hash = ((hash << 5) + hash) + *str;
+         }
+         return hash;
+      }
+   };
+
+private:
+   SharedLibrary m_self;
+   SimpleHook m_dlsym;
+   Dictionary <Name, Handle, FunctionHash <Name>> m_exports;
+
+public:
+   DynamicEntityLink () = default;
+
+   ~DynamicEntityLink () {
+      m_dlsym.disable ();
+   }
+public:
+   Handle search (Handle module, Name function);
+
+public:
+   void initialize () {
+      if (plat.isAndroid) {
+         return;
+      }
+      m_dlsym.patch (reinterpret_cast <void *> (&LookupSymbol), reinterpret_cast <void *> (&DynamicEntityLink::replacement));
+      m_self.locate (&engfuncs);
+   }
+
+   EntityFunction getPlayerFunction () {
+#if defined (CR_ANDROID)
+      return player;
+#else
+      return reinterpret_cast <EntityFunction> (search (Game::get ().lib ().handle (), "player"));
+#endif
+   }
+
+public:
+   static Handle CR_STDCALL replacement (Handle module, Name function) {
+      return DynamicEntityLink::get ().search (module, function);
    }
 };

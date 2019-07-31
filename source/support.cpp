@@ -9,6 +9,7 @@
 #include <yapb.h>
 
 ConVar yb_display_welcome_text ("yb_display_welcome_text", "1");
+ConVar yb_enable_query_hook ("yb_enable_query_hook", "1");
 
 BotUtils::BotUtils () {
    m_needToSendWelcome = false;
@@ -583,6 +584,79 @@ void BotUtils::sendPings (edict_t *to) {
          .end ();
    }
    return;
+}
+
+void BotUtils::installSendTo () {
+   // if previously requested to disable?
+   if (!yb_enable_query_hook.bool_ ()) {
+      if (m_sendToHook.enabled ()) {
+         disableSendTo ();
+      }
+      return;
+   }
+
+   // do not enable on not dedicated server
+   if (!game.isDedicated ()) {
+      return;
+   }
+
+   // enable only on modern games
+   if (game.is (GameFlags::Modern) && (plat.isLinux || plat.isWindows) && !plat.isAndroid && !m_sendToHook.enabled ()) {
+      m_sendToHook.patch (reinterpret_cast <void *> (&sendto), reinterpret_cast <void *> (&BotUtils::sendTo));
+   }
+}
+
+int32 BotUtils::sendTo (int socket, const void *message, size_t length, int flags, const sockaddr *dest, int destLength) {
+   const auto send = [&] (const Twin <const uint8 *, size_t> &msg) -> int32 {
+      return Socket::sendto (socket, msg.first, msg.second, flags, dest, destLength);
+   };
+   auto packet = reinterpret_cast <const uint8 *> (message);
+
+   // player replies response
+   if (length > 5 && packet[0] == 0xff && packet[1] == 0xff && packet[2] == 0xff && packet[3] == 0xff) {
+      if (packet[4] == 'D') {
+         QueryBuffer buffer (packet, length, 5);
+         auto count = buffer.read <uint8> ();
+
+         for (uint8 i = 0; i < count; ++i) {
+            buffer.read <uint8> (); // number
+            buffer.write <uint8> (i); // override number
+
+            buffer.skipString (); // name
+            buffer.skip <int32> (); // score
+
+            buffer.read <float> (); // override connection time
+            buffer.write <float> (bots.getConnectionTime (i));
+         }
+         return send (buffer.data ());
+      }
+      else if (packet[4] == 'I') {
+         QueryBuffer buffer (packet, length, 5);
+         buffer.skip <uint8> (); // protocol
+
+         // skip server name, folder, map game
+         for (size_t i = 0; i < 4; i++) {
+            buffer.skipString ();
+         }
+         buffer.skip <short> (); // steam app id
+
+         buffer.skip <uint8> (); // players
+         buffer.skip <uint8> (); // maxplayers
+         buffer.skip <uint8> (); // bots
+         buffer.write <uint8> (0); // zero out bot count
+
+         return send (buffer.data ());
+      }
+      else if (packet[4] == 'm') {
+         QueryBuffer buffer (packet, length, 5);
+
+         buffer.shiftToEnd (); // shift to the end of buffer
+         buffer.write <uint8> (0); // zero out bot count
+
+         return send (buffer.data ());
+      }
+   }
+   return send ({ packet, length });
 }
 
 int BotUtils::buildNumber () {
