@@ -30,8 +30,8 @@ private:
    uint32 m_origFunc;
    uint32 m_hookFunc;
 
-   uint8 m_origBytes[CodeLength];
-   uint8 m_hookBytes[CodeLength];
+   uint8 m_origBytes[CodeLength] {};
+   uint8 m_hookBytes[CodeLength] {};
 
 private:
    void setPageSize () {
@@ -64,7 +64,7 @@ private:
    }
 
 public:
-   SimpleHook () : m_patched (false), m_origFunc (0), m_hookFunc (0), m_pageSize (0) {
+   SimpleHook () : m_patched (false), m_pageSize (0), m_origFunc (0), m_hookFunc (0) {
       setPageSize ();
    }
 

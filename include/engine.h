@@ -304,8 +304,8 @@ public:
    int getTeam (edict_t *ent);
 
    // adds translation pair from config
-   void addTranslation (const String &m_origBytes, const String &translated) {
-      m_language.push (m_origBytes, translated);
+   void addTranslation (const String &original, const String &translated) {
+      m_language.push (original, translated);
    }
 
    // clear the translation table

@@ -151,7 +151,7 @@ public:
       return static_cast <int32> (sendLength);
 #else
       iovec iov = { const_cast <void *> (message), length };
-      msghdr msg = { 0, };
+      msghdr msg {};
 
       msg.msg_name = reinterpret_cast <void *> (const_cast <struct sockaddr *> (dest));
       msg.msg_namelen = destLength;
