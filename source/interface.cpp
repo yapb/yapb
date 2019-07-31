@@ -903,12 +903,13 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
    return TRUE;
 }
 
-CR_EXPORT int Server_GetBlendingInterface (int version, void **ppinterface, void *pstudio, float (*rotationmatrix)[3][4], float (*bonetransform)[128][3][4]) {
+#if defined (CR_ANDROID)
+CR_EXPORT int Server_GetBlendingInterface (int version, struct sv_blending_interface_s **ppinterface, struct engine_studio_api_s *pstudio, float *rotationmatrix, float *bonetransform) {
    // this function synchronizes the studio model animation blending interface (i.e, what parts
    // of the body move, which bones, which hitboxes and how) between the server and the game DLL.
    // some MODs can be using a different hitbox scheme than the standard one.
 
-   auto api_GetBlendingInterface = game.lib ().resolve <int (*) (int, void **, void *, float(*)[3][4], float(*)[128][3][4])> (__FUNCTION__);
+   auto api_GetBlendingInterface = game.lib ().resolve <int (*) (int, struct sv_blending_interface_s **, struct engine_studio_api_s *, float *, float *)> (__FUNCTION__);
 
    if (!api_GetBlendingInterface) {
       logger.error ("Could not resolve symbol \"%s\" in the game dll. Continuing...", __FUNCTION__);
@@ -916,6 +917,7 @@ CR_EXPORT int Server_GetBlendingInterface (int version, void **ppinterface, void
    }
    return api_GetBlendingInterface (version, ppinterface, pstudio, rotationmatrix, bonetransform);
 }
+#endif
 
 CR_EXPORT int Meta_Query (char *, plugin_info_t **pPlugInfo, mutil_funcs_t *pMetaUtilFuncs) {
    // this function is the first function ever called by metamod in the plugin DLL. Its purpose
