@@ -64,7 +64,7 @@ void Game::precache () {
    registerCvars (true);
 }
 
-void Game::levelInitialize (edict_t *ents, int max) {
+void Game::levelInitialize (edict_t *entities, int max) {
    // this function precaches needed models and initialize class variables
 
    m_spawnCount[Team::CT] = 0;
@@ -72,7 +72,7 @@ void Game::levelInitialize (edict_t *ents, int max) {
    
    // go thru the all entities on map, and do whatever we're want
    for (int i = 0; i < max; ++i) {
-      auto ent = ents + i;
+      auto ent = entities + i;
 
       // only valid entities
       if (!ent || ent->free || ent->v.classname == 0) {
@@ -85,6 +85,9 @@ void Game::levelInitialize (edict_t *ents, int max) {
 
          // initialize some structures
          bots.initRound ();
+
+         // install the sendto hook to fake queries
+         util.installSendTo ();
       }
       else if (strcmp (classname, "player_weaponstrip") == 0) {
          if ((is (GameFlags::Legacy)) && (STRING (ent->v.target))[0] == '\0') {
@@ -1478,4 +1481,42 @@ float LightMeasure::getLightLevel (const Vector &point) {
 
 float LightMeasure::getSkyColor () {
    return static_cast <float> (Color (sv_skycolor_r.int_ (), sv_skycolor_g.int_ (), sv_skycolor_b.int_ ()).avg ());
+}
+
+DynamicEntityLink::Handle DynamicEntityLink::search (Handle module, Name function) {
+   const auto lookup = [&] (Handle handle) {
+      Handle ret = nullptr;
+
+      if (m_dlsym.disable ()) {
+         ret = LookupSymbol (reinterpret_cast <CastType> (handle), function);
+         m_dlsym.enable ();
+      }
+      return ret;
+   };
+   static const auto &gamedll = game.lib ();
+   static const auto &yapb = m_self;
+
+   // if requested module is yapb, put in cache the looked up symbol
+   if (yapb.handle () == module) {
+      if (m_exports.exists (function)) {
+         return m_exports[function];
+      }
+      auto address = lookup (yapb.handle ());
+
+      if (!address) {
+         auto gameAddress = lookup (gamedll.handle ());
+
+         if (gameAddress) {
+            m_exports[function] = gameAddress;
+         }
+      }
+      else {
+         m_exports[function] = address;
+      }
+
+      if (m_exports.exists (function)) {
+         return m_exports[function];
+      }
+   }
+   return lookup (module);
 }

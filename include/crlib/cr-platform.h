@@ -34,11 +34,13 @@ CR_NAMESPACE_BEGIN
 #  define CR_CXX_CLANG
 #endif
 
-// configure export macros
+// configure macroses
 #if defined(CR_WINDOWS)
 #  define CR_EXPORT extern "C" __declspec (dllexport)
+#  define CR_STDCALL __stdcall
 #elif defined(CR_LINUX) || defined(CR_OSX)
 #  define CR_EXPORT extern "C" __attribute__((visibility("default")))
+#  define CR_STDCALL
 #else
 #  error "Can't configure export macros. Compiler unrecognized."
 #endif
@@ -56,11 +58,14 @@ CR_NAMESPACE_BEGIN
 CR_NAMESPACE_END
 
 #if defined(CR_WINDOWS)
+#  define WIN32_LEAN_AND_MEAN 
+#  include <windows.h>
 #  include <direct.h>
 #else
 #  include <unistd.h>
 #  include <strings.h>
 #  include <sys/stat.h>
+#  include <sys/time.h>
 #endif
 
 #include <assert.h>
@@ -151,6 +156,25 @@ struct Platform : public Singleton <Platform> {
       return _stricmp (str1, str2) == 0;
 #else
       return ::strcasecmp (str1, str2) == 0;
+#endif
+   }
+
+   float seconds () {
+#if defined(CR_WINDOWS)
+      LARGE_INTEGER count, freq;
+
+      count.QuadPart = 0;
+      freq.QuadPart = 0;
+
+      QueryPerformanceFrequency (&freq);
+      QueryPerformanceCounter (&count);
+
+      return static_cast <float> (count.QuadPart) / static_cast <float> (freq.QuadPart);
+#else
+      timeval tv;
+      gettimeofday (&tv, NULL);
+
+      return static_cast <float> (tv.tv_sec) + (static_cast <float> (tv.tv_usec)) / 1000000.0;
 #endif
    }
 

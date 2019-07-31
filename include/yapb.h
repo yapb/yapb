@@ -8,7 +8,7 @@
 //
 
 #pragma once
-
+#define _CRTDBG_MAP_ALLOC
 #include <engine/extdll.h>
 #include <engine/meta_api.h>
 
@@ -846,6 +846,8 @@ private:
    float m_oldCombatDesire; // holds old desire for filtering
    float m_avoidTime; // time to avoid players around
    float m_itemCheckTime; // time next search for items needs to be done
+   float m_joinServerTime; // time when bot joined the game
+   float m_playServerTime; // time bot spent in the game
 
    bool m_moveToGoal; // bot currently moving to goal??
    bool m_isStuck; // bot is stuck
@@ -1322,6 +1324,7 @@ public:
    int getHumansCount (bool ignoreSpectators = false);
    int getAliveHumansCount ();
    int getBotCount ();
+   float getConnectionTime (int botId);
 
    void setBombPlanted (bool isPlanted);
    void slowFrame ();
@@ -1894,6 +1897,8 @@ private:
    SmallArray <Client> m_clients;
    SmallArray <Twin <String, String>> m_tags;
 
+   SimpleHook m_sendToHook;
+
 public:
    BotUtils ();
    ~BotUtils () = default;
@@ -1968,6 +1973,9 @@ public:
    // send modified pings to all the clients
    void sendPings (edict_t *to);
 
+   // installs the sendto function intreception
+   void installSendTo ();
+
 public:
 
    // re-show welcome after changelevel ?
@@ -1990,6 +1998,16 @@ public:
       return m_clients[index];
    }
 
+   // disables send hook
+   bool disableSendTo () {
+      return m_sendToHook.disable ();
+   }
+
+   // enables send hook
+   bool enableSendTo () {
+      return m_sendToHook.enable ();
+   }
+
    // checks if string is not empty
    bool isEmptyStr (const char *input) const {
       if (input == nullptr) {
@@ -1997,6 +2015,9 @@ public:
       }
       return *input == '\0';
    }
+
+public:
+   static int32 CR_STDCALL sendTo (int socket, const void *message, size_t length, int flags, const struct sockaddr *dest, int destLength);
 };
 
 // bot command manager
@@ -2185,6 +2206,7 @@ static auto &util = BotUtils::get ();
 static auto &ctrl = BotControl::get ();
 static auto &game = Game::get ();
 static auto &illum = LightMeasure::get ();
+static auto &ents = DynamicEntityLink::get ();
 
 // very global convars
 extern ConVar yb_jasonmode;

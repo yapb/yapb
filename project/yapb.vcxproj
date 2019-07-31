@@ -19,6 +19,7 @@
     <ClInclude Include="..\include\crlib\cr-complete.h" />
     <ClInclude Include="..\include\crlib\cr-dict.h" />
     <ClInclude Include="..\include\crlib\cr-files.h" />
+    <ClInclude Include="..\include\crlib\cr-hook.h" />
     <ClInclude Include="..\include\crlib\cr-http.h" />
     <ClInclude Include="..\include\crlib\cr-lambda.h" />
     <ClInclude Include="..\include\crlib\cr-library.h" />
@@ -44,6 +45,7 @@
     <ClInclude Include="..\include\resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\source\android.cpp" />
     <ClCompile Include="..\source\basecode.cpp" />
     <ClCompile Include="..\source\combat.cpp" />
     <ClCompile Include="..\source\engine.cpp" />

@@ -46,11 +46,34 @@ public:
    }
 
 public:
-   inline bool load (const String &file) noexcept {
-#ifdef CR_WINDOWS
+   bool load (const String &file) noexcept {
+#if defined (CR_WINDOWS)
       m_handle = LoadLibraryA (file.chars ());
 #else
       m_handle = dlopen (file.chars (), RTLD_NOW);
+#endif
+      return m_handle != nullptr;
+   }
+
+   bool locate (void *address) {
+#if defined (CR_WINDOWS)
+      MEMORY_BASIC_INFORMATION mbi;
+
+      if (!VirtualQuery (address, &mbi, sizeof (mbi))) {
+         return false;
+      }
+
+      if (mbi.State != MEM_COMMIT) {
+         return false;
+      }
+      m_handle = reinterpret_cast <void *> (mbi.AllocationBase);
+#else
+      Dl_info dli;
+      memset (&dli, 0, sizeof (dli));
+
+      if (dladdr (address, &dli)) {
+         return load (dli.dli_fname);
+      }
 #endif
       return m_handle != nullptr;
    }
@@ -59,11 +82,12 @@ public:
       if (!*this) {
          return;
       }
-#ifdef CR_WINDOWS
+#if defined (CR_WINDOWS)
       FreeLibrary (static_cast <HMODULE> (m_handle));
 #else
       dlclose (m_handle);
 #endif
+      m_handle = nullptr;
    }
 
    template <typename R> R resolve (const char *function) const {
@@ -72,12 +96,16 @@ public:
       }
 
       return reinterpret_cast <R> (
-#ifdef CR_WINDOWS
+#if defined (CR_WINDOWS)
          GetProcAddress (static_cast <HMODULE> (m_handle), function)
 #else
          dlsym (m_handle, function)
 #endif
          );
+   }
+
+   void *handle () const {
+      return m_handle;
    }
 
 public:
