@@ -566,7 +566,7 @@ void BotUtils::sendPings (edict_t *to) {
    constexpr int kGamePingSVC = 17;
    
    for (auto &client : m_clients) {
-      if (!(client.flags & ClientFlags::Used)) {
+      if (!(client.flags & ClientFlags::Used) || client.ent == game.getLocalEntity ()) {
          continue;
       }
       if (!client.pingUpdate) {

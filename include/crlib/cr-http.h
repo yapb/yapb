@@ -41,7 +41,7 @@ CR_DECLARE_SCOPED_ENUM (HttpClientResult,
    Undefined,
    NoLocalFile = -1,
    LocalFileExists = -2
-);
+)
 
 CR_NAMESPACE_BEGIN
 
@@ -193,7 +193,7 @@ namespace detail {
          return result;
       }
    };
-};
+}
 
 // simple http client for downloading/uploading files only
 class HttpClient final : public Singleton <HttpClient> {

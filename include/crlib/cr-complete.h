@@ -34,7 +34,7 @@ CR_NAMESPACE_BEGIN
 namespace types {
    using StringArray = Array <String>;
    using IntArray = Array <int>;
-};
+}
 
 using namespace cr::types;
 

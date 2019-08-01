@@ -83,7 +83,7 @@ inline float cosf (const float value) {
 inline float atanf (const float x) {
    const float sqr = cr::square (x);
    return x * (48.70107004404898384f + sqr * (49.5326263772254345f + sqr * 9.40604244231624f)) / (48.70107004404996166f + sqr * (65.7663163908956299f + sqr * (21.587934067020262f + sqr)));
-};
+}
 
 inline float atan2f (const float y, const float x) {
    const float ax = cr::abs (x);

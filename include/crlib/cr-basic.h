@@ -41,7 +41,7 @@ using uint8 = unsigned char;
 using uint16 = unsigned short;
 using uint32 = unsigned int;
 using uint64 = unsigned long long;
-};
+}
 
 // make types available for our own use
 using namespace cr::types;
@@ -114,13 +114,13 @@ public:
             __VA_ARGS__                                      \
          };                                                  \
       };                                                     \
-   };                                                        \
+   }                                                         \
    CR_NAMESPACE_END                                          \
    using enumName = ::cr::enums::_##enumName::Type;          \
 
 // same as above, but with int32 type
 #define CR_DECLARE_SCOPED_ENUM(enumName, ...)                  \
-   CR_DECLARE_SCOPED_ENUM_TYPE(enumName, int32, __VA_ARGS__);  \
+   CR_DECLARE_SCOPED_ENUM_TYPE(enumName, int32, __VA_ARGS__)   \
 
 CR_NAMESPACE_END
 

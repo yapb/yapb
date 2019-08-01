@@ -14,7 +14,7 @@ CR_DECLARE_SCOPED_ENUM (DrawLine,
    Simple,
    Arrow,
    Count
-);
+)
 
 // trace ignore
 CR_DECLARE_SCOPED_ENUM (TraceIgnore,
@@ -22,7 +22,7 @@ CR_DECLARE_SCOPED_ENUM (TraceIgnore,
    Glass = cr::bit (0),
    Monsters = cr::bit (1),
    Everything = Glass | Monsters
-);
+)
 
 // variable type
 CR_DECLARE_SCOPED_ENUM (Var,
@@ -31,7 +31,7 @@ CR_DECLARE_SCOPED_ENUM (Var,
    Password,
    NoServer,
    NoRegister
-);
+)
 
 // netmessage functions
 CR_DECLARE_SCOPED_ENUM (NetMsg,
@@ -59,7 +59,7 @@ CR_DECLARE_SCOPED_ENUM (NetMsg,
    Fashlight = 22,
    ItemStatus = 23,
    Count = 25
-);
+)
 
 // supported cs's
 CR_DECLARE_SCOPED_ENUM (GameFlags,
@@ -75,7 +75,7 @@ CR_DECLARE_SCOPED_ENUM (GameFlags,
    ReGameDLL = cr::bit (9), // server dll is a regamedll
    HasFakePings = cr::bit (10), // on that game version we can fake bots pings
    HasBotVoice = cr::bit (11) // on that game version we can use chatter
-);
+)
 
 // defines map type
 CR_DECLARE_SCOPED_ENUM (MapFlags,
@@ -86,7 +86,7 @@ CR_DECLARE_SCOPED_ENUM (MapFlags,
    KnifeArena = cr::bit (4),
    Fun = cr::bit (5),
    HasDoors = cr::bit (10) // additional flags
-);
+)
 
 // variable reg pair
 struct VarPair {

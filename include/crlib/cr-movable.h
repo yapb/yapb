@@ -23,7 +23,7 @@ namespace detail {
    template <typename T> struct ClearRef <T &&> {
       using Type = T;
    };
-};
+}
 
 template <typename T> typename detail::ClearRef <T>::Type constexpr &&move (T &&type) noexcept {
    return static_cast <typename detail::ClearRef <T>::Type &&> (type);
