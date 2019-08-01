@@ -316,7 +316,7 @@ Vector Game::getAbsPos (edict_t *ent) {
    }
 
    if (ent->v.origin.empty ()) {
-      return (ent->v.absmin + ent->v.absmax) * 0.5f;
+      return ent->v.absmin + (ent->v.size * 0.5);
    }
    return ent->v.origin;
 }
@@ -423,13 +423,13 @@ bool Game::isSoftwareRenderer () {
    if (plat.isWindows) {
       return plat.hasModule ("sw");
    }
-   return true;
+   return false;
 }
 
 void Game::addNewCvar (const char *variable, const char *value, Var varType, bool regMissing, const char *regVal, ConVar *self) {
    // this function adds globally defined variable to registration stack
 
-   VarPair pair = {};
+   VarPair pair {};
 
    pair.reg.name = const_cast <char *> (variable);
    pair.reg.string = const_cast <char *> (value);

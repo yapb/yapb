@@ -20,7 +20,7 @@
 CR_DECLARE_SCOPED_ENUM (ReservePolicy,
    Multiple,
    Single,
-);
+)
 
 CR_NAMESPACE_BEGIN
 

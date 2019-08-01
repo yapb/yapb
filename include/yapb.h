@@ -41,7 +41,7 @@ CR_DECLARE_SCOPED_ENUM (Task,
    Hide,
    Blind,
    Spraypaint,
-);
+)
 
 // bot menu ids
 CR_DECLARE_SCOPED_ENUM (Menu,
@@ -67,13 +67,13 @@ CR_DECLARE_SCOPED_ENUM (Menu,
    KickPage2,
    KickPage3,
    KickPage4,
-);
+)
 
 // bomb say string
 CR_DECLARE_SCOPED_ENUM (BombPlantedSay,
   ChatSay = cr::bit (1),
   Chatter = cr::bit (2)
-);
+)
 
 // chat types id's
 CR_DECLARE_SCOPED_ENUM (Chat,
@@ -85,7 +85,7 @@ CR_DECLARE_SCOPED_ENUM (Chat,
    Hello, // id to welcome chat array
    NoKeyword, // id to no keyword chat array
    Count // number for array
-);
+)
 
 // personalities defines
 CR_DECLARE_SCOPED_ENUM (Personality,
@@ -93,7 +93,7 @@ CR_DECLARE_SCOPED_ENUM (Personality,
    Rusher,
    Careful,
    Invalid = -1
-);
+)
 
 // bot difficulties
 CR_DECLARE_SCOPED_ENUM (Difficulty,
@@ -103,7 +103,7 @@ CR_DECLARE_SCOPED_ENUM (Difficulty,
    Hard,
    Extreme,
    Invalid = -1
-);
+)
 
 // collision states
 CR_DECLARE_SCOPED_ENUM (CollisionState,
@@ -114,7 +114,7 @@ CR_DECLARE_SCOPED_ENUM (CollisionState,
    Duck,
    StrafeLeft,
    StrafeRight
-);
+)
 
 // counter-strike team id's
 CR_DECLARE_SCOPED_ENUM (Team,
@@ -123,13 +123,13 @@ CR_DECLARE_SCOPED_ENUM (Team,
    Spectator,
    Unassigned,
    Invalid = -1
-);
+)
 
 // item status for StatusIcon message
 CR_DECLARE_SCOPED_ENUM (ItemStatus,
    Nightvision = cr::bit (0),
    DefusalKit = cr::bit (1)
-);
+)
 
 // client flags
 CR_DECLARE_SCOPED_ENUM (ClientFlags,
@@ -137,7 +137,7 @@ CR_DECLARE_SCOPED_ENUM (ClientFlags,
    Alive = cr::bit (1),
    Admin = cr::bit (2),
    Icon = cr::bit (3)
-);
+)
 
 // bot create status
 CR_DECLARE_SCOPED_ENUM (BotCreateResult,
@@ -145,7 +145,7 @@ CR_DECLARE_SCOPED_ENUM (BotCreateResult,
    MaxPlayersReached,
    GraphError,
    TeamStacked
-);
+)
 
 // radio messages
 CR_DECLARE_SCOPED_ENUM (Radio,
@@ -170,7 +170,7 @@ CR_DECLARE_SCOPED_ENUM (Radio,
    ShesGonnaBlow = 27,
    Negative = 28,
    EnemyDown = 29
-);
+)
 
 // chatter system (extending enum above, messages 30-39 is reserved)
 CR_DECLARE_SCOPED_ENUM (Chatter,
@@ -226,7 +226,7 @@ CR_DECLARE_SCOPED_ENUM (Chatter,
    BehindSmoke,
    BombsiteSecured,
    Count
-);
+)
 
 // counter-strike weapon id's
 CR_DECLARE_SCOPED_ENUM (Weapon,
@@ -263,7 +263,7 @@ CR_DECLARE_SCOPED_ENUM (Weapon,
    Armor = 31,
    ArmorHelm = 32,
    Defuser = 33
-);
+)
 
 // buy counts
 CR_DECLARE_SCOPED_ENUM (BuyState,
@@ -275,7 +275,7 @@ CR_DECLARE_SCOPED_ENUM (BuyState,
    Ammo,
    NightVision,
    Done
-);
+)
 
 // economics limits
 CR_DECLARE_SCOPED_ENUM (EcoLimit,
@@ -290,7 +290,7 @@ CR_DECLARE_SCOPED_ENUM (EcoLimit,
    ProstockRusher,
    ProstockCareful,
    ShieldGreater
-);
+)
 
 // defines for pickup items
 CR_DECLARE_SCOPED_ENUM (Pickup,
@@ -302,42 +302,42 @@ CR_DECLARE_SCOPED_ENUM (Pickup,
    Button,
    Shield,
    DefusalKit
-);
+)
 
 // fight style type
 CR_DECLARE_SCOPED_ENUM (Fight,
    None = 0,
    Strafe,
    Stay
-);
+)
 
 // dodge type
 CR_DECLARE_SCOPED_ENUM (Dodge,
    None = 0,
    Left,
    Right
-);
+)
 
 // reload state
 CR_DECLARE_SCOPED_ENUM (Reload,
    None = 0, // no reload state currently
    Primary, // primary weapon reload state
    Secondary  // secondary weapon reload state
-);
+)
 
 // collision probes
 CR_DECLARE_SCOPED_ENUM (CollisionProbe,
    Jump = cr::bit (0), // probe jump when colliding
    Duck = cr::bit (1), // probe duck when colliding
    Strafe = cr::bit (2) // probe strafing when colliding
-);
+)
 
 // vgui menus (since latest steam updates is obsolete, but left for old cs)
 CR_DECLARE_SCOPED_ENUM (GuiMenu,
    TeamSelect = 2, // menu select team
    TerroristSelect = 26, // terrorist select menu
    CTSelect = 27  // ct select menu
-);
+)
 
 // lift usage states
 CR_DECLARE_SCOPED_ENUM (LiftState,
@@ -349,7 +349,7 @@ CR_DECLARE_SCOPED_ENUM (LiftState,
    LookingButtonInside,
    TravelingBy,
    Leaving
-);
+)
 
 // game start messages for counter-strike...
 CR_DECLARE_SCOPED_ENUM (BotMsg,
@@ -360,7 +360,7 @@ CR_DECLARE_SCOPED_ENUM (BotMsg,
    Radio = 200,
    Say = 10000,
    SayTeam = 10001
-);
+)
 
 // sensing states
 CR_DECLARE_SCOPED_ENUM (Sense,
@@ -371,7 +371,7 @@ CR_DECLARE_SCOPED_ENUM (Sense,
    ThrowExplosive = cr::bit (4), // could throw he grenade
    ThrowFlashbang = cr::bit (5), // could throw flashbang
    ThrowSmoke = cr::bit (6) // could throw smokegrenade
-);
+)
 
 // positions to aim at
 CR_DECLARE_SCOPED_ENUM (AimFlags,
@@ -383,27 +383,27 @@ CR_DECLARE_SCOPED_ENUM (AimFlags,
    Enemy = cr::bit (5), // aim at enemy
    Grenade = cr::bit (6), // aim for grenade throw
    Override = cr::bit (7) // overrides all others (blinded)
-);
+)
 
 // famas/glock burst mode status + m4a1/usp silencer
 CR_DECLARE_SCOPED_ENUM (BurstMode,
    On = cr::bit (0),
    Off = cr::bit (1)
-);
+)
 
 // visibility flags
 CR_DECLARE_SCOPED_ENUM (Visibility,
    Head = cr::bit (1),
    Body = cr::bit (2),
    Other = cr::bit (3)
-);
+)
 
 // command handler status
 CR_DECLARE_SCOPED_ENUM (BotCommandResult,
    Handled = 0, // command successfully handled 
    ListenServer, // command is only avaialble on listen server
    BadFormat // wrong params
-);
+)
 
 // defines for nodes flags field (32 bits are available)
 CR_DECLARE_SCOPED_ENUM (NodeFlag,
@@ -419,45 +419,45 @@ CR_DECLARE_SCOPED_ENUM (NodeFlag,
    Sniper = cr::bit (28), // it's a specific sniper point
    TerroristOnly = cr::bit (29), // it's a specific terrorist point
    CTOnly = cr::bit (30),  // it's a specific ct point
-);
+)
 
 // defines for node connection flags field (16 bits are available)
 CR_DECLARE_SCOPED_ENUM_TYPE (PathFlag, uint16,
    Jump = cr::bit (0) // must jump for this connection
-);
+)
 
 // enum pathfind search type
 CR_DECLARE_SCOPED_ENUM (FindPath,
    Fast = 0,
    Optimal,
    Safe
-);
+)
 
 // defines node connection types
 CR_DECLARE_SCOPED_ENUM (PathConnection,
    Outgoing = 0,
    Incoming,
    Bidirectional
-);
+)
 
 // defines node add commands
 CR_DECLARE_SCOPED_ENUM (GraphAdd,
    Normal = 0,
-);
+)
 
 // a* route state
 CR_DECLARE_SCOPED_ENUM (RouteState,
    Open = 0,
    Closed,
    New
-);
+)
 
 // node edit states
 CR_DECLARE_SCOPED_ENUM (GraphEdit,
    On = cr::bit (1),
    Noclip = cr::bit (2),
    Auto = cr::bit (3)
-);
+)
 
 CR_DECLARE_SCOPED_ENUM (StorageOption,
    Practice = cr::bit (0), // this is practice (experience) file
@@ -467,7 +467,7 @@ CR_DECLARE_SCOPED_ENUM (StorageOption,
    Official = cr::bit (4), // this is additional flag for graph indicates graph are official
    Recovered = cr::bit (5), // this is additional flag indicates graph converted from podbot and was bad
    Author = cr::bit (6) // this is additional flag indicates that there's author info
-);
+)
 
 CR_DECLARE_SCOPED_ENUM (StorageVersion,
    Graph = 1,
@@ -475,7 +475,7 @@ CR_DECLARE_SCOPED_ENUM (StorageVersion,
    Vistable = 1,
    Matrix = 1,
    Podbot = 7
-);
+)
 
 // some hardcoded desire defines used to override calculated ones
 namespace TaskPri {

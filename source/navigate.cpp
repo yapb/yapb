@@ -285,7 +285,7 @@ void Bot::ignoreCollision () {
 void Bot::avoidIncomingPlayers (edict_t *touch) {
    auto task = getCurrentTaskId ();
 
-   if (task == Task::PlantBomb || task == Task::DefuseBomb || task == Task::Camp || m_moveSpeed <= 100.0f) {
+   if (task == Task::PlantBomb || task == Task::DefuseBomb || task == Task::Camp || m_moveSpeed <= 100.0f || m_avoidTime > game.timebase ()) {
       return;
    }
 
@@ -1540,13 +1540,13 @@ bool Bot::findBestNearestNode () {
    int lessIndex[3] = { kInvalidNodeIndex, kInvalidNodeIndex , kInvalidNodeIndex };
 
    auto &bucket = graph.getNodesInBucket (pev->origin);
-   int numToSkip = cr::clamp (rg.int_ (0, static_cast <int> (bucket.length () - 1)), 0, 5);
+   int numToSkip = cr::clamp (rg.int_ (0, 3), 0, static_cast <int> (bucket.length () / 2));
 
    for (const int at : bucket) {
       bool skip = !!(at == m_currentNodeIndex);
 
       // skip the current node, if any
-      if (skip) {
+      if (skip && numToSkip > 0) {
          continue;
       }
 
@@ -1568,13 +1568,18 @@ bool Bot::findBestNearestNode () {
          continue;
       }
 
+	  // check we're have link to it
+      if (m_currentNodeIndex != kInvalidNodeIndex && !graph.isConnected (m_currentNodeIndex, at)) {
+         continue;
+      }
+
       // ignore non-reacheable nodes...
       if (!graph.isReachable (this, at)) {
          continue;
       }
 
       // check if node is already used by another bot...
-      if (bots.getRoundStartTime () + 5.0f > game.timebase () && isOccupiedPoint (at)) {
+      if (bots.getRoundStartTime () + 5.0f < game.timebase () && isOccupiedPoint (at)) {
          busy = at;
          continue;
       }
@@ -2072,7 +2077,7 @@ bool Bot::selectBestNextNode () {
             continue;
          }
 
-         if (!isOccupiedPoint (link.index)) {
+         if (!isOccupiedPoint (link.index) && graph[link.index].origin.z <= graph[m_currentNodeIndex].origin.z + 10.0f) {
             m_pathWalk.first () = link.index;
             return true;
          }
@@ -3033,15 +3038,13 @@ bool Bot::isOccupiedPoint (int index) {
       if (bot != nullptr) {
          int occupyId = util.getShootingCone (bot->ent (), pev->origin) >= 0.7f ? bot->m_previousNodes[0] : bot->m_currentNodeIndex;
 
-         if (bot != nullptr) {
-            if (index == occupyId) {
-               return true;
-            }
+         if (index == occupyId) {
+            return true;
          }
       }
       float length = (graph[index].origin - client.origin).lengthSq ();
 
-      if (length < cr::clamp (graph[index].radius, cr::square (32.0f), cr::square (90.0f))) {
+      if (length < cr::clamp (graph[index].radius, cr::square (64.0f), cr::square (120.0f))) {
          return true;
       }
    }
