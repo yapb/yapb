@@ -79,12 +79,6 @@ CR_NAMESPACE_BEGIN
 
 // helper struct for platform detection
 struct Platform : public Singleton <Platform> {
-#if defined (CR_WINDOWS)
-   using LocaleHandle = _locale_t;
-#else
-   using LocaleHandle = locale_t;
-#endif
-
    bool isWindows = false;
    bool isLinux = false;
    bool isOSX = false;
