@@ -234,7 +234,7 @@ public:
          return kEOF;
       }
       auto ch = m_data[m_pos];
-      m_pos++;
+      ++m_pos;
 
       return static_cast <char> (ch);
    }

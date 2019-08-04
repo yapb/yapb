@@ -1172,31 +1172,31 @@ int BotControl::menuGraphPage2 (int item) {
          Path &path = graph[i];
 
          if (path.flags & NodeFlag::TerroristOnly) {
-            terrPoints++;
+            ++terrPoints;
          }
 
          if (path.flags & NodeFlag::CTOnly) {
-            ctPoints++;
+            ++ctPoints;
          }
 
          if (path.flags & NodeFlag::Goal) {
-            goalPoints++;
+            ++goalPoints;
          }
 
          if (path.flags & NodeFlag::Rescue) {
-            rescuePoints++;
+            ++rescuePoints;
          }
 
          if (path.flags & NodeFlag::Camp) {
-            campPoints++;
+            ++campPoints;
          }
 
          if (path.flags & NodeFlag::Sniper) {
-            sniperPoints++;
+            ++sniperPoints;
          }
 
          if (path.flags & NodeFlag::NoHostage) {
-            noHostagePoints++;
+            ++noHostagePoints;
          }
       }
       msg ("Nodes: %d - T Points: %d\n"
@@ -1620,7 +1620,7 @@ void BotControl::showMenu (int id) {
    // make menus looks like we need only once
    if (!s_menusParsed) {
       for (auto &parsed : m_menus) {
-         const String &translated = game.translate (parsed.text.chars ());
+         const String &translated = conf.translate (parsed.text.chars ());
 
          // translate all the things
          parsed.text = translated;

@@ -165,12 +165,12 @@ void Bot::checkGrenadesThrow () {
 
    // don't throw grenades at anything that isn't on the ground!
    if (!(m_lastEnemy->v.flags & FL_ONGROUND) && !m_lastEnemy->v.waterlevel && m_lastEnemyOrigin.z > pev->absmax.z) {
-      distance = 9999.0f;
+      distance = kInfiniteDistance;
    }
 
    // too high to throw?
    if (m_lastEnemy->v.origin.z > pev->origin.z + 500.0f) {
-      distance = 9999.0f;
+      distance = kInfiniteDistance;
    }
 
    // enemy within a good throw distance?
@@ -823,7 +823,7 @@ void Bot::getCampDirection (Vector *dest) {
       if (tempIndex == kInvalidNodeIndex || enemyIndex == kInvalidNodeIndex) {
          return;
       }
-      float minDistance = 99999.0f;
+      float minDistance = kInfiniteDistance;
 
       int lookAtWaypoint = kInvalidNodeIndex;
       Path &path = graph[tempIndex];
@@ -1288,7 +1288,7 @@ void Bot::buyStuff () {
             assert (*pref < kNumWeapons);
 
             selectedWeapon = &tab[*pref];
-            count++;
+            ++count;
 
             if (selectedWeapon->buyGroup == 1) {
                continue;
@@ -1474,7 +1474,7 @@ void Bot::buyStuff () {
             assert (*pref < kNumWeapons);
 
             selectedWeapon = &tab[*pref];
-            count++;
+            ++count;
 
             if (selectedWeapon->buyGroup != 1) {
                continue;
@@ -1609,7 +1609,7 @@ void Bot::buyStuff () {
       break;
    }
 
-   m_buyState++;
+   ++m_buyState;
    pushMsgQueue (BotMsg::Buy);
 }
 
@@ -1731,7 +1731,7 @@ void Bot::setConditions () {
                pushChatterMessage (Chatter::SniperKilled);
             }
             else {
-               switch (numEnemiesNear (pev->origin, 99999.0f)) {
+               switch (numEnemiesNear (pev->origin, kInfiniteDistance)) {
                case 0:
                   if (rg.chance (50)) {
                      pushChatterMessage (Chatter::NoEnemiesLeft);
@@ -2198,7 +2198,7 @@ void Bot::checkRadioQueue () {
             for (const auto &bot : bots) {
                if (bot->m_notKilled) {
                   if (bot->m_targetEntity == m_radioEntity) {
-                     numFollowers++;
+                     ++numFollowers;
                   }
                }
             }
@@ -2450,7 +2450,7 @@ void Bot::checkRadioQueue () {
 
             // if bot has no enemy
             if (m_lastEnemyOrigin.empty ()) {
-               float nearestDistance = 99999.0f;
+               float nearestDistance = kInfiniteDistance;
 
                // take nearest enemy to ordering player
                for (const auto &client : util.getClients ()) {
@@ -2556,7 +2556,7 @@ void Bot::checkRadioQueue () {
 
       // check if it's a ct command
       if (game.getTeam (m_radioEntity) == Team::CT && m_team == Team::CT && util.isFakeClient (m_radioEntity) && bots.getPlantedBombSearchTimestamp () < game.timebase ()) {
-         float minDistance = 99999.0f;
+         float minDistance = kInfiniteDistance;
          int bombPoint = kInvalidNodeIndex;
 
          // find nearest bomb waypoint to player
@@ -2605,7 +2605,7 @@ void Bot::checkRadioQueue () {
 
             // if bot has no enemy
             if (m_lastEnemyOrigin.empty ()) {
-               float nearestDistance = 99999.0f;
+               float nearestDistance = kInfiniteDistance;
 
                // take nearest enemy to ordering player
                for (const auto &client : util.getClients ()) {
@@ -2767,15 +2767,15 @@ void Bot::updateAimDir () {
 void Bot::checkDarkness () {
 
    // do not check for darkness at the start of the round
-   if (m_spawnTime + 5.0f > game.timebase () || !graph.exists (m_currentNodeIndex)) {
+   if (m_spawnTime + 5.0f > game.timebase () || !graph.exists (m_currentNodeIndex) || cr::fzero (m_path->light)) {
       return;
    }
 
    // do not check every frame
-   if (m_checkDarkTime + 2.5f > game.timebase ()) {
+   if (m_checkDarkTime + 5.0f > game.timebase ()) {
       return;
    }
-   float skyColor = illum.getSkyColor ();
+   auto skyColor = illum.getSkyColor ();
 
    if (mp_flashlight.bool_ () && !m_hasNVG) {
       auto task = Task ();
@@ -2873,7 +2873,7 @@ void Bot::fastFrame () {
          }
          edict_t *killer = game.entityOfIndex (m_lastVoteKick);
 
-         killer->v.frags++;
+         ++killer->v.frags;
          MDLL_ClientKill (killer);
       }
 
@@ -2898,8 +2898,8 @@ void Bot::frame () {
    if (m_slowFrameTimestamp > game.timebase ()) {
       return;
    }
-   m_numFriendsLeft = numFriendsNear (pev->origin, 99999.0f);
-   m_numEnemiesLeft = numEnemiesNear (pev->origin, 99999.0f);
+   m_numFriendsLeft = numFriendsNear (pev->origin, kInfiniteDistance);
+   m_numEnemiesLeft = numEnemiesNear (pev->origin, kInfiniteDistance);
 
    if (bots.isBombPlanted () && m_team == Team::CT && m_notKilled) {
       const Vector &bombPosition = graph.getBombPos ();
@@ -3521,7 +3521,7 @@ void Bot::camp_ () {
                   campPoints[numFoundPoints] = i;
                   distances[numFoundPoints] = distance;
 
-                  numFoundPoints++;
+                  ++numFoundPoints;
                }
             }
          }
@@ -4261,7 +4261,7 @@ void Bot::escapeFromBomb_ () {
    else if (!hasActiveGoal ()) {
       clearSearchNodes ();
 
-      int lastSelectedGoal = kInvalidNodeIndex, minPathDistance = 99999;
+      int lastSelectedGoal = kInvalidNodeIndex, minPathDistance = kInfiniteDistanceLong;
       float safeRadius = rg.float_ (1248.0f, 2048.0f);
 
       for (int i = 0; i < graph.length (); ++i) {
@@ -5627,13 +5627,20 @@ bool Bot::isOutOfBombTimer () {
 
 void Bot::updateHearing () {
    int hearEnemyIndex = kInvalidNodeIndex;
-   float minDistance = 99999.0f;
+   float minDistance = kInfiniteDistance;
+
+   // setup potential visibility set from engine
+   auto set = game.getVisibilitySet (this, false);
 
    // loop through all enemy clients to check for hearable stuff
    for (int i = 0; i < game.maxClients (); ++i) {
       const Client &client = util.getClient (i);
 
       if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.ent == ent () || client.team == m_team || client.timeSoundLasting < game.timebase ()) {
+         continue;
+      }
+
+      if (!game.checkVisibility (client.ent, set)) {
          continue;
       }
       float distance = (client.sound - pev->origin).length ();

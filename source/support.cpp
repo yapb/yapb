@@ -330,7 +330,7 @@ void BotUtils::attachSoundsToClients (edict_t *ent, const char *sample, float vo
    int index = game.indexOfPlayer (ent);
 
    if (index < 0 || index >= game.maxClients ()) {
-      float nearestDistance = 99999.0f;
+      float nearestDistance = kInfiniteDistance;
 
       // loop through all players
       for (int i = 0; i < game.maxClients (); ++i) {
@@ -523,7 +523,7 @@ void BotUtils::calculatePings () {
       client.ping = getPingBitmask (client.ent, loss, ping > 0 ? ping / 2 : rg.int_ (8, 16)); // getting player ping sometimes fails
       client.pingUpdate = true; // force resend ping
 
-      numHumans++;
+      ++numHumans;
 
       average.first += ping;
       average.second += loss;
@@ -578,7 +578,7 @@ void BotUtils::sendPings (edict_t *to) {
       if (!client.ping) {
          client.ping = getPingBitmask (client.ent, rg.int_ (5, 10), rg.int_ (15, 40));
       }
-
+      
       msg.start (MSG_ONE_UNRELIABLE, kGamePingSVC, nullvec, to)
          .writeLong (client.ping)
          .end ();
@@ -635,7 +635,7 @@ int32 BotUtils::sendTo (int socket, const void *message, size_t length, int flag
          buffer.skip <uint8> (); // protocol
 
          // skip server name, folder, map game
-         for (size_t i = 0; i < 4; i++) {
+         for (size_t i = 0; i < 4; ++i) {
             buffer.skipString ();
          }
          buffer.skip <short> (); // steam app id

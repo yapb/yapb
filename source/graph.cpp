@@ -51,7 +51,6 @@ int BotGraph::clearConnections (int index) {
    if (bots.hasBotsOnline ()) {
       bots.kickEveryone (true);
    }
-   const int kInfiniteDistance = 99999;
 
    struct Connection {
       int index;
@@ -68,7 +67,7 @@ int BotGraph::clearConnections (int index) {
       void reset () {
          index = kInvalidNodeIndex;
          number = kInvalidNodeIndex;
-         distance = kInfiniteDistance;
+         distance = kInfiniteDistanceLong;
          angles = 0.0f;
       }
    };
@@ -86,7 +85,7 @@ int BotGraph::clearConnections (int index) {
       cur.distance = link.distance;
 
       if (cur.index == kInvalidNodeIndex) {
-         cur.distance = kInfiniteDistance;
+         cur.distance = kInfiniteDistanceLong;
       }
 
       if (cur.distance < top.distance) {
@@ -117,7 +116,7 @@ int BotGraph::clearConnections (int index) {
    // calculate angles related to the angle of the closeset connected node
    for (auto &cur : sorted) {
       if (cur.index == kInvalidNodeIndex) {
-         cur.distance = kInfiniteDistance;
+         cur.distance = kInfiniteDistanceLong;
          cur.angles = 360.0f;
       }
       else if (exists (cur.index)) {
@@ -415,7 +414,7 @@ void BotGraph::addPath (int addIndex, int pathIndex, float distance) {
    }
 
    // there wasn't any free space. try exchanging it with a long-distance path
-   int maxDistance = -9999;
+   int maxDistance = -kInfiniteDistanceLong;
    int slot = kInvalidNodeIndex;
 
    for (int i = 0; i < kMaxNodeLinks; ++i) {
@@ -710,7 +709,7 @@ void BotGraph::add (int type, const Vector &pos) {
 
    // Ladder nodes need careful connections
    if (path->flags & NodeFlag::Ladder) {
-      float minDistance = 9999.0f;
+      float minDistance = kInfiniteDistance;
       int destIndex = kInvalidNodeIndex;
 
       TraceResult tr;
@@ -1960,7 +1959,7 @@ void BotGraph::frame () {
       m_editor->v.movetype = MOVETYPE_NOCLIP;
    }
 
-   float nearestDistance = 99999.0f;
+   float nearestDistance = kInfiniteDistance;
    int nearestIndex = kInvalidNodeIndex;
 
    // check if it's time to add jump node
@@ -2011,7 +2010,7 @@ void BotGraph::frame () {
    m_facingAtIndex = getFacingIndex ();
 
    // reset the minimal distance changed before
-   nearestDistance = 999999.0f;
+   nearestDistance = kInfiniteDistance;
 
    // now iterate through all nodes in a map, and draw required ones
    for (auto &path : m_paths) {
@@ -2234,8 +2233,8 @@ void BotGraph::frame () {
 
       // show the information about that point
       graphMessage.assignf ("\n\n\n\n    Graph Information:\n\n"
-                              "      Node %d of %d, Radius: %.1f\n"
-                              "      Flags: %s\n\n", nearestIndex, m_paths.length () - 1, path.radius, getFlagsAsStr (nearestIndex));
+                              "      Node %d of %d, Radius: %.1f, Light: %.1f\n"
+                              "      Flags: %s\n\n", nearestIndex, m_paths.length () - 1, path.radius, path.light, getFlagsAsStr (nearestIndex));
 
       // if node is not changed display experience also
       if (!m_hasChanged) {

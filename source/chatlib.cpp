@@ -256,12 +256,7 @@ void Bot::prepareChatMessage (const String &message) {
 
          // chat reply
       case 's':
-         if (m_sayTextBuffer.entityIndex != -1) {
-            m_chatBuffer.replace ("%s", humanizedName (m_sayTextBuffer.entityIndex));
-         }
-         else {
-            m_chatBuffer.replace ("%s", getHighfragPlayer ());
-         }
+         m_chatBuffer.replace ("%s", m_sayTextBuffer.entityIndex != -1 ? humanizedName (m_sayTextBuffer.entityIndex) : getHighfragPlayer ());
          break;
 
          // last bot victim
@@ -284,7 +279,7 @@ void Bot::prepareChatMessage (const String &message) {
          m_chatBuffer.replace ("%e", getPlayerAlive (true));
          break;
       };
-      replaceCounter++;
+      ++replaceCounter;
    }
    finishPreparation ();
 }
@@ -292,8 +287,7 @@ void Bot::prepareChatMessage (const String &message) {
 bool Bot::checkChatKeywords (String &reply) {
    // this function parse chat buffer, and prepare buffer to keyword searching
 
-   String message = m_sayTextBuffer.sayText;
-   return util.checkKeywords (message.uppercase (), reply);
+   return util.checkKeywords (utf8tools.strToUpper (m_sayTextBuffer.sayText), reply);
 }
 
 bool Bot::isReplyingToChat () {
