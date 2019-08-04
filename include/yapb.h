@@ -501,11 +501,13 @@ namespace TaskPri {
 constexpr char kPodbotMagic[8] = "PODWAY!";
 constexpr int32 kStorageMagic = 0x59415042;
 
+constexpr float kInfiniteDistance = 9999999.0f;
 constexpr float kGrenadeCheckTime = 2.15f;
 constexpr float kSprayDistance = 260.0f;
 constexpr float kDoubleSprayDistance = kSprayDistance * 2;
 constexpr float kMaxChatterRepeatInteval = 99.0f;
 
+constexpr int kInfiniteDistanceLong = static_cast <int> (kInfiniteDistance);
 constexpr int kMaxNodeLinks = 8;
 constexpr int kMaxPracticeDamageValue = 2040;
 constexpr int kMaxPracticeGoalValue = 2040;
@@ -1298,6 +1300,7 @@ private:
 
    Array <edict_t *> m_activeGrenades; // holds currently active grenades on the map
    Array <edict_t *> m_intrestingEntities;  // holds currently intresting entities on the map
+   
 
    SmallArray <CreateQueue> m_creationTab; // bot creation tab
    SmallArray <BotTask> m_filters; // task filters
@@ -1360,7 +1363,7 @@ public:
    void execGameEntity (entvars_t *vars);
    void forEach (ForEachBot handler);
    void erase (Bot *bot);
-   
+
    bool isTeamStacked (int team);
 
 public:
@@ -1573,8 +1576,8 @@ public:
 
    int getFacingIndex ();
    int getFarest (const Vector &origin, float maxDistance = 32.0);
-   int getNearest (const Vector &origin, float minDistance = 9999.0f, int flags = -1);
-   int getNearestNoBuckets (const Vector &origin, float minDistance = 9999.0f, int flags = -1);
+   int getNearest (const Vector &origin, float minDistance = kInfiniteDistance, int flags = -1);
+   int getNearestNoBuckets (const Vector &origin, float minDistance = kInfiniteDistance, int flags = -1);
    int getEditorNeareset ();
    int getDangerIndex (int team, int start, int goal);
    int getDangerValue (int team, int start, int goal);
@@ -1715,6 +1718,22 @@ public:
    }
 };
 
+// language hasher
+struct HashLangString {
+   uint32 operator () (const String &key) const {
+      auto str = reinterpret_cast <uint8 *> (const_cast <char *> (key.chars ()));
+      uint32 hash = 0;
+
+      while (*str++) {
+         if (!isalnum (*str)) {
+            continue;
+         }
+         hash = ((*str << 5) + hash) + *str;
+      }
+      return hash;
+   }
+};
+
 // mostly config stuff, and some stuff dealing with menus
 class BotConfig final : public Singleton <BotConfig> {
 private:
@@ -1728,6 +1747,8 @@ private:
 
    StringArray m_logos;
    StringArray m_avatars;
+
+   Dictionary <String, String, HashLangString> m_language;
 
    // default tables for personality weapon preferences, overridden by general.cfg
    SmallArray <int32> m_normalWeaponPrefs = { 0, 2, 1, 4, 5, 6, 3, 12, 10, 24, 25, 13, 11, 8, 7, 22, 23, 18, 21, 17, 19, 15, 17, 9, 14, 16 };
@@ -1784,7 +1805,11 @@ public:
    // fix weapon prices (ie for elite)
    void adjustWeaponPrices ();
 
+   // find weapon info by weaponi d
    WeaponInfo &findWeaponById (int id);
+
+   // translates bot message into needed language
+   const char *translate (const char *input);
 
 private:
    bool isCommentLine (const String &line) {
@@ -2176,7 +2201,7 @@ public:
    void collectArgs () {
       m_args.clear ();
 
-      for (int i = 0; i < engfuncs.pfnCmd_Argc (); i++) {
+      for (int i = 0; i < engfuncs.pfnCmd_Argc (); ++i) {
          m_args.emplace (engfuncs.pfnCmd_Argv (i));
       }
    }
@@ -2196,17 +2221,15 @@ public:
    bool handleMenuCommands (edict_t *ent);
 };
 
-#include <engine.h>
-
 // expose bot super-globals
 static auto &graph = BotGraph::get ();
 static auto &bots = BotManager::get ();
 static auto &conf = BotConfig::get ();
 static auto &util = BotUtils::get ();
 static auto &ctrl = BotControl::get ();
-static auto &game = Game::get ();
-static auto &illum = LightMeasure::get ();
-static auto &ents = DynamicEntityLink::get ();
+
+// include game-related stuff
+#include <engine.h>
 
 // very global convars
 extern ConVar yb_jasonmode;
@@ -2215,6 +2238,7 @@ extern ConVar yb_ignore_enemies;
 extern ConVar yb_chat;
 extern ConVar yb_language;
 extern ConVar yb_show_latency;
+extern ConVar yb_enable_query_hook;
 
 inline int Game::getTeam (edict_t *ent) {
    if (game.isNullEntity (ent)) {

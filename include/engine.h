@@ -113,22 +113,6 @@ struct RefVector {
 // entity prototype
 using EntityFunction = void (*) (entvars_t *);
 
-// language hasher
-struct HashLangString {
-   uint32 operator () (const String &key) const {
-      auto str = reinterpret_cast <uint8 *> (const_cast <char *> (key.chars ()));
-      uint32 hash = 0;
-
-      while (*str++) {
-         if (!isalnum (*str)) {
-            continue;
-         }
-         hash = ((*str << 5) + hash) + *str;
-      }
-      return hash;
-   }
-};
-
 // provides utility functions to not call original engine (less call-cost)
 class Game final : public Singleton <Game> {
 private:
@@ -143,16 +127,15 @@ private:
    edict_t *m_localEntity;
 
    Array <VarPair> m_cvars;
-   Dictionary <String, String, HashLangString> m_language;
-
    SharedLibrary m_gameLib;
    MessageBlock m_msgBlock;
-   bool m_precached;
 
+   bool m_precached;
    int m_gameFlags;
    int m_mapFlags;
 
    float m_slowFrame; // per second updated frame
+
 public:
    RefVector vec;
 
@@ -205,9 +188,6 @@ public:
 
    // sends local registration stack for engine registration
    void registerCvars (bool gameVars = false);
-
-   // translates bot message into needed language
-   const char *translate (const char *input);
 
    // do actual network message processing
    void processMessages (void *ptr);
@@ -303,16 +283,6 @@ public:
    // gets the player team
    int getTeam (edict_t *ent);
 
-   // adds translation pair from config
-   void addTranslation (const String &original, const String &translated) {
-      m_language.push (original, translated);
-   }
-
-   // clear the translation table
-   void clearTranslation () {
-      m_language.clear ();
-   }
-
    // resets the message capture mechanism
    void resetMessages () {
       m_msgBlock.msg = NetMsg::None;
@@ -367,6 +337,12 @@ public:
       in.buildVectors (&vec.forward, &vec.right, &vec.up);
    }
 
+   // check the engine visibility wrapper
+   bool checkVisibility (edict_t *ent, uint8 *set);
+
+   // get pvs/pas visibility set
+   uint8 *getVisibilitySet (Bot *bot, bool pvs);
+
    // what kind of game engine / game dll / mod / tool we're running ?
    bool is (const int type) const {
       return !!(m_gameFlags & type);
@@ -402,7 +378,7 @@ public:
 
    // prints data to servers console
    template <typename ...Args> void print (const char *fmt, Args ...args) {
-      engfuncs.pfnServerPrint (strncat (strings.format (translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
+      engfuncs.pfnServerPrint (strncat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
    }
 
    // prints center message to specified player
@@ -411,7 +387,7 @@ public:
          print (fmt, cr::forward <Args> (args)...);
          return;
       }
-      sendClientMessage (true, ent, strncat (strings.format (translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
+      sendClientMessage (true, ent, strncat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
    }
 
    // prints message to client console
@@ -420,7 +396,7 @@ public:
          print (fmt, cr::forward <Args> (args)...);
          return;
       }
-      sendClientMessage (false, ent, strncat (strings.format (translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
+      sendClientMessage (false, ent, strncat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
    }
 };
 
@@ -523,11 +499,11 @@ public:
 
 public:
    static inline uint16 fu16 (float value, float scale) {
-      return cr::clamp <uint16> (static_cast <uint16> (value * cr::bit (static_cast <short> (scale))), 0, 0xffff);
+      return cr::clamp <uint16> (static_cast <uint16> (value * cr::bit (static_cast <short> (scale))), 0, USHRT_MAX);
    }
 
    static inline short fs16 (float value, float scale) {
-      return cr::clamp <short> (static_cast <short> (value * cr::bit (static_cast <short> (scale))), -32767, 32767);
+      return cr::clamp <short> (static_cast <short> (value * cr::bit (static_cast <short> (scale))), -SHRT_MAX, SHRT_MAX);
    }
 };
 
@@ -701,3 +677,8 @@ public:
       return DynamicEntityLink::get ().search (module, function);
    }
 };
+
+// expose globals
+static auto &game = Game::get ();
+static auto &illum = LightMeasure::get ();
+static auto &ents = DynamicEntityLink::get ();

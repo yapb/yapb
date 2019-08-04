@@ -104,7 +104,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
          ent->v.renderamt = 127; // set its transparency amount
          ent->v.effects |= EF_NODRAW;
 
-         m_spawnCount[Team::CT]++;
+         ++m_spawnCount[Team::CT];
       }
       else if (strcmp (classname, "info_player_deathmatch") == 0) {
          engfuncs.pfnSetModel (ent, ENGINE_STR ("models/player/terror/terror.mdl"));
@@ -113,7 +113,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
          ent->v.renderamt = 127; // set its transparency amount
          ent->v.effects |= EF_NODRAW;
 
-         m_spawnCount[Team::Terrorist]++;
+         ++m_spawnCount[Team::Terrorist];
       }
 
       else if (strcmp (classname, "info_vip_start") == 0) {
@@ -341,6 +341,49 @@ void Game::playSound (edict_t *ent, const char *sound) {
    engfuncs.pfnEmitSound (ent, CHAN_WEAPON, sound, 1.0f, ATTN_NORM, 0, 100);
 }
 
+bool Game::checkVisibility (edict_t *ent, uint8 *set) {
+   if (!set) {
+      return true;
+   }
+
+   if (ent->headnode < 0) {
+      for (int i = 0; i < ent->num_leafs; ++i) {
+         auto leaf = ent->leafnums[i];
+
+         if (set[leaf >> 3] & cr::bit (leaf & 7)) {
+            return true;
+         }
+      }
+      return false;
+   }
+
+   for (int i = 0; i < 48; ++i) {
+      auto leaf = ent->leafnums[i];
+      if (leaf == -1) {
+         break;
+      }
+
+      if (set[leaf >> 3] & cr::bit (leaf & 7)) {
+         return true;
+      }
+   }
+   return engfuncs.pfnCheckVisibility (ent, set) > 0;
+}
+
+uint8 *Game::getVisibilitySet (Bot *bot, bool pvs) {
+   if (is (GameFlags::Xash3D)) {
+      return nullptr;
+   }
+   auto eyes = bot->getEyesPos ();
+
+   if (bot->pev->flags & FL_DUCKING) {
+      eyes += VEC_HULL_MIN - VEC_DUCK_HULL_MIN;
+   }
+   float org[3] { eyes.x, eyes.y, eyes.z };
+
+   return pvs ? engfuncs.pfnSetFatPVS (org) : engfuncs.pfnSetFatPAS (org);
+}
+
 void Game::sendClientMessage (bool console, edict_t *ent, const char *message) {
    // helper to sending the client message
 
@@ -496,20 +539,6 @@ void Game::registerCvars (bool gameVars) {
          }
       }
    }
-}
-
-const char *Game::translate (const char *input) {
-   // this function translate input string into needed language
-
-   if (isDedicated ()) {
-      return input;
-   }
-   static String result;
-
-   if (m_language.find (input, result)) {
-      return result.chars ();
-   }
-   return input; // nothing found
 }
 
 void Game::processMessages (void *ptr) {
@@ -993,7 +1022,7 @@ void Game::processMessages (void *ptr) {
    default:
       logger.error ("Network message handler error. Call to unrecognized message id (%d).\n", m_msgBlock.msg);
    }
-   m_msgBlock.state++; // and finally update network message state
+   ++m_msgBlock.state; // and finally update network message state
 }
 
 bool Game::loadCSBinary () {
@@ -1029,16 +1058,16 @@ bool Game::loadCSBinary () {
       }
       return true;
    };
-
+   
    // search the libraries inside game dlls directory
    for (const auto &lib : libs) {
-      auto *path = strings.format ("%s/dlls/%s", modname, lib.chars ());
+      auto path = strings.format ("%s/dlls/%s", modname, lib.chars ());
 
       // if we can't read file, skip it
       if (!File::exists (path)) {
          continue;
       }
-
+      
       // special case, czero is always detected first, as it's has custom directory
       if (strcmp (modname, "czero") == 0) {
          m_gameFlags |= (GameFlags::ConditionZero | GameFlags::HasBotVoice | GameFlags::HasFakePings);
@@ -1075,7 +1104,7 @@ bool Game::loadCSBinary () {
             }
             return true;
          }
-
+         
          if (entity != nullptr) {
             m_gameFlags |= (GameFlags::Modern | GameFlags::HasBotVoice | GameFlags::HasFakePings);
          }
@@ -1211,14 +1240,14 @@ void Game::slowFrame () {
    }
    ctrl.maintainAdminRights ();
 
-   // calculate light levels for all waypoints if needed
-   graph.initLightLevels ();
-
    // update bot difficulties to newly selected from cvar
    bots.updateBotDifficulties ();
 
    // update client pings
    util.calculatePings ();
+
+   // initialize light levels
+   graph.initLightLevels ();
 
    // detect csdm
    detectDeathmatch ();

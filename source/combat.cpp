@@ -24,7 +24,7 @@ int Bot::numFriendsNear (const Vector &origin, float radius) {
       }
 
       if ((client.origin - origin).lengthSq () < cr::square (radius)) {
-         count++;
+         ++count;
       }
    }
    return count;
@@ -39,7 +39,7 @@ int Bot::numEnemiesNear (const Vector &origin, float radius) {
       }
 
       if ((client.origin - origin).lengthSq () < cr::square (radius)) {
-         count++;
+         ++count;
       }
    }
    return count;
@@ -210,6 +210,9 @@ bool Bot::lookupEnemies () {
    m_visibility = 0;
    m_enemyOrigin= nullvec;
 
+   // setup potential visibility set from engine
+   auto set = game.getVisibilitySet (this, true);
+
    if (!game.isNullEntity (m_enemy)) {
       player = m_enemy;
 
@@ -232,7 +235,13 @@ bool Bot::lookupEnemies () {
          }
          player = client.ent;
 
-         if ((player->v.button & (IN_ATTACK | IN_ATTACK2)) && m_viewDistance < m_maxViewDistance) {
+         // check the engine PVS
+         if (!game.checkVisibility (player, set)) {
+            continue;
+         }
+
+         // extra skill player can see thru smoke... if beeing attacked
+         if ((player->v.button & (IN_ATTACK | IN_ATTACK2)) && m_viewDistance < m_maxViewDistance && yb_whose_your_daddy.bool_ ()) {
             nearestDistance = cr::square (m_maxViewDistance);
          }
 
@@ -625,14 +634,14 @@ bool Bot::isPenetrableObstacle2 (const Vector &dest) {
    game.testLine (source, dest, TraceIgnore::Everything, ent (), &tr);
 
    while (tr.flFraction != 1.0f && numHits < 3) {
-      numHits++;
-      thikness++;
+      ++numHits;
+      ++thikness;
 
       point = tr.vecEndPos + direction;
 
       while (engfuncs.pfnPointContents (point) == CONTENTS_SOLID && thikness < 98) {
          point = point + direction;
-         thikness++;
+         ++thikness;
       }
       game.testLine (point, dest, TraceIgnore::Everything, ent (), &tr);
    }
@@ -720,7 +729,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
          if (tab[choosen].id == id) {
             break;
          }
-         choosen++;
+         ++choosen;
       }
    }
 
@@ -884,7 +893,7 @@ void Bot::fireWeapons () {
             choosenWeapon = selectIndex;
          }
       }
-      selectIndex++;
+      ++selectIndex;
    }
    selectId = tab[choosenWeapon].id;
 
@@ -914,7 +923,7 @@ void Bot::fireWeapons () {
                return;
             }
          }
-         selectIndex++;
+         ++selectIndex;
       }
       selectId = Weapon::Knife; // no available ammo, use knife!
    }
@@ -1236,8 +1245,8 @@ bool Bot::usesRifle () {
       if (m_currentWeapon == tab->id) {
          break;
       }
-      tab++;
-      count++;
+      ++tab;
+      ++count;
    }
 
    if (tab->id && count > 13) {
@@ -1255,8 +1264,8 @@ bool Bot::usesPistol () {
       if (m_currentWeapon == tab->id) {
          break;
       }
-      tab++;
-      count++;
+      ++tab;
+      ++count;
    }
 
    if (tab->id && count < 7) {
@@ -1300,7 +1309,7 @@ int Bot::bestPrimaryCarried () {
       if (weapons & cr::bit (weaponTab[*pref].id)) {
          weaponIndex = i;
       }
-      pref++;
+      ++pref;
    }
    return weaponIndex;
 }
@@ -1326,7 +1335,7 @@ int Bot::bestSecondaryCarried () {
          weaponIndex = i;
          break;
       }
-      pref++;
+      ++pref;
    }
    return weaponIndex;
 }
@@ -1357,7 +1366,7 @@ bool Bot::rateGroundWeapon (edict_t *ent) {
          groundIndex = i;
          break;
       }
-      pref++;
+      ++pref;
    }
    int hasWeapon = 0;
 
@@ -1396,7 +1405,7 @@ void Bot::selectBestWeapon () {
    while (tab[selectIndex].id) {
       // is the bot NOT carrying this weapon?
       if (!(pev->weapons & cr::bit (tab[selectIndex].id))) {
-         selectIndex++; // skip to next weapon
+         ++selectIndex; // skip to next weapon
          continue;
       }
 
@@ -1417,7 +1426,7 @@ void Bot::selectBestWeapon () {
       if (ammoLeft) {
          chosenWeaponIndex = selectIndex;
       }
-      selectIndex++;
+      ++selectIndex;
    }
 
    chosenWeaponIndex %= kNumWeapons + 1;
@@ -1456,7 +1465,7 @@ int Bot::bestWeaponCarried () {
          num = i;
       }
       ++i;
-      tab++;
+      ++tab;
    }
    return num;
 }
@@ -1580,7 +1589,7 @@ void Bot::checkReload () {
       }
 
       if (weapons == 0) {
-         m_reloadState++;
+         ++m_reloadState;
 
          if (m_reloadState > Reload::Secondary) {
             m_reloadState = Reload::None;
@@ -1613,7 +1622,7 @@ void Bot::checkReload () {
             m_reloadState = Reload::None;
             return;
          }
-         m_reloadState++;
+         ++m_reloadState;
 
          if (m_reloadState > Reload::Secondary) {
             m_reloadState = Reload::None;

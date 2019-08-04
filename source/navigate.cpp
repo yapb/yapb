@@ -168,7 +168,7 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offsensive) {
    {
       // force bomber to select closest goal, if round-start goal was reset by something
       if (m_hasC4 && bots.getRoundStartTime () + 20.0f < game.timebase ()) {
-         float minDist = 9999999.0f;
+         float minDist = kInfiniteDistance;
          int count = 0;
 
          for (auto &point : graph.m_goalPoints) {
@@ -236,7 +236,7 @@ void Bot::postprocessGoals (const IntArray &goals, int *result) {
          if (index > 0) {
             index--;
          }
-         searchCount++;
+         ++searchCount;
          continue;
       }
       result[index] = rand;
@@ -350,9 +350,6 @@ bool Bot::doPlayerAvoidance (const Vector &normal) {
 void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
    m_isStuck = false;
    
-   if (doPlayerAvoidance (dirNormal) || m_avoidTime > game.timebase ()) {
-      return;
-   }
    TraceResult tr;
 
    // Standing still, no need to check?
@@ -624,6 +621,11 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
             }
          }
       }
+   }
+
+   // avoid players if not already stuck
+   if (!m_isStuck) {
+      doPlayerAvoidance (dirNormal);
    }
 }
 
@@ -1536,7 +1538,7 @@ bool Bot::findBestNearestNode () {
 
    int busy = kInvalidNodeIndex;
 
-   float lessDist[3] = { 9999.0f, 9999.0f , 9999.0f };
+   float lessDist[3] = { kInfiniteDistance, kInfiniteDistance, kInfiniteDistance };
    int lessIndex[3] = { kInvalidNodeIndex, kInvalidNodeIndex , kInvalidNodeIndex };
 
    auto &bucket = graph.getNodesInBucket (pev->origin);
@@ -1695,7 +1697,7 @@ void Bot::findValidNode () {
       }
       else {
          findBestNearestNode ();
-         m_rechoiceGoalCount++;
+         ++m_rechoiceGoalCount;
       }
    };
 
@@ -1809,7 +1811,7 @@ int Bot::findBombNode () {
    }
 
    int goal = 0, count = 0;
-   float lastDistance = 999999.0f;
+   float lastDistance = kInfiniteDistance;
 
    // find nearest goal node either to bomb (if "heard" or player)
    for (auto &point : goals) {
@@ -2811,7 +2813,7 @@ int Bot::findCampingDirection () {
          distTab[count] = (pev->origin - path.origin).lengthSq ();
          visibility[count] = path.vis.crouch + path.vis.stand;
 
-         count++;
+         ++count;
       }
       else {
          float distance = (pev->origin - path.origin).lengthSq ();
@@ -3029,6 +3031,11 @@ bool Bot::isOccupiedPoint (int index) {
       if (!(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || client.team != m_team || client.ent == ent ()) {
          continue;
       }
+
+      // do not check clients far away from us
+      if ((pev->origin - client.origin).lengthSq () > cr::square (320.0f)) {
+         continue;
+      }
       auto bot = bots[client.ent];
 
       if (bot == this) {
@@ -3058,7 +3065,7 @@ edict_t *Bot::lookupButton (const char *targetName) {
    if (util.isEmptyStr (targetName)) {
       return nullptr;
    }
-   float nearestDistance = 99999.0f;
+   float nearestDistance = kInfiniteDistance;
    edict_t *searchEntity = nullptr, *foundEntity = nullptr;
 
    // find the nearest button which can open our target

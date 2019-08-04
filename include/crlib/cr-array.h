@@ -205,7 +205,7 @@ public:
       if (index + count > m_capacity) {
          return false;
       }
-      for (size_t i = index; i < index + count; i++) {
+      for (size_t i = index; i < index + count; ++i) {
          alloc.destruct (&m_data[i]);
       }
       m_length -= count;
@@ -233,7 +233,7 @@ public:
          return false;
       }
       alloc.construct (&m_data[m_length], cr::forward <U> (object));
-      m_length++;
+      ++m_length;
 
       return true;
    }
@@ -243,7 +243,7 @@ public:
          return false;
       }
       alloc.construct (&m_data[m_length], cr::forward <Args> (args)...);
-      m_length++;
+      ++m_length;
 
       return true;
    }

@@ -236,10 +236,10 @@ private:
             break;
 
          default:
-            symbols++;
+            ++symbols;
             break;
          }
-         pos++;
+         ++pos;
       }
       String response (reinterpret_cast <const char *> (buffer));
       size_t responseCodeStart = response.find ("HTTP/1.1");

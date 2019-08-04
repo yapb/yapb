@@ -66,12 +66,12 @@ void BotManager::createKillerEntity () {
 
    m_killerEntity = engfuncs.pfnCreateNamedEntity (MAKE_STRING ("trigger_hurt"));
 
-   m_killerEntity->v.dmg = 9999.0f;
+   m_killerEntity->v.dmg = kInfiniteDistance;
    m_killerEntity->v.dmg_take = 1.0f;
    m_killerEntity->v.dmgtime = 2.0f;
    m_killerEntity->v.effects |= EF_NODRAW;
 
-   engfuncs.pfnSetOrigin (m_killerEntity, Vector (-99999.0f, -99999.0f, -99999.0f));
+   engfuncs.pfnSetOrigin (m_killerEntity, Vector (-kInfiniteDistance, -kInfiniteDistance, -kInfiniteDistance));
    MDLL_Spawn (m_killerEntity);
 }
 
@@ -224,12 +224,13 @@ Bot *BotManager::findBotByIndex (int index) {
    if (index < 0 || index >= kGameMaxPlayers) {
       return nullptr;
    }
+
    for (const auto &bot : m_bots) {
       if (bot->m_index == index) {
          return bot.get ();
       }
    }
-   return nullptr; // no bot
+   return nullptr; // no bot``
 }
 
 Bot *BotManager::findBotByEntity (edict_t *ent) {
@@ -501,11 +502,9 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
 void BotManager::kickEveryone (bool instant, bool zeroQuota) {
    // this function drops all bot clients from server (this function removes only yapb's)`q
 
-   if (!hasBotsOnline () || !yb_quota.bool_ ()) {
-      return;
+   if (yb_quota.bool_ ()) {
+      ctrl.msg ("Bots are removed from server.");
    }
-
-   ctrl.msg ("Bots are removed from server.");
 
    if (zeroQuota) {
       decrementQuota (0);
@@ -592,7 +591,7 @@ bool BotManager::kickRandom (bool decQuota, Team fromTeam) {
 
    // if no dead bots found try to find one with lowest amount of frags
    Bot *selected = nullptr;
-   float score = 9999.0f;
+   float score = kInfiniteDistance;
 
    // search bots in this team
    for (const auto &bot : m_bots) {
@@ -702,10 +701,10 @@ Twin <int, int> BotManager::countTeamPlayers () {
    for (const auto &client : util.getClients ()) {
       if (client.flags & ClientFlags::Used) {
          if (client.team2 == Team::Terrorist) {
-            ts++;
+            ++ts;
          }
          else if (client.team2 == Team::CT) {
-            cts++;
+            ++cts;
          }
       }
    }
@@ -748,9 +747,9 @@ void BotManager::updateTeamEconomics (int team, bool setTrue) {
    for (const auto &bot : m_bots) {
       if (bot->m_team == team) {
          if (bot->m_moneyAmount <= econLimit[EcoLimit::PrimaryGreater]) {
-            numPoorPlayers++;
+            ++numPoorPlayers;
          }
-         numTeamPlayers++; // update count of team
+         ++numTeamPlayers; // update count of team
       }
    }
    m_economicsGood[team] = true;
@@ -920,7 +919,7 @@ int BotManager::getHumansCount (bool ignoreSpectators) {
          if (ignoreSpectators && client.team2 != Team::Terrorist && client.team2 != Team::CT) {
             continue;
          }
-         count++;
+         ++count;
       }
    }
    return count;
@@ -933,7 +932,7 @@ int BotManager::getAliveHumansCount () {
 
    for (const auto &client : util.getClients ()) {
       if ((client.flags & (ClientFlags::Used | ClientFlags::Alive)) && bots[client.ent] == nullptr && !(client.ent->v.flags & FL_FAKECLIENT)) {
-         count++;
+         ++count;
       }
    }
    return count;
@@ -952,7 +951,7 @@ bool BotManager::isTeamStacked (int team) {
 
    for (const auto &client : util.getClients ()) {
       if ((client.flags & ClientFlags::Used) && client.team2 != Team::Unassigned && client.team2 != Team::Spectator) {
-         teamCount[client.team2]++;
+         ++teamCount[client.team2];
       }
    }
    return teamCount[team] + 1 > teamCount[team == Team::CT ? Team::Terrorist : Team::CT] + limitTeams;
@@ -1036,7 +1035,7 @@ void Bot::newRound () {
    m_askCheckTime = rg.float_ (30.0f, 90.0f);
    m_minSpeed = 260.0f;
    m_prevSpeed = 0.0f;
-   m_prevOrigin = Vector (9999.0f, 9999.0f, 9999.0f);
+   m_prevOrigin = Vector (kInfiniteDistance, kInfiniteDistance, kInfiniteDistance);
    m_prevTime = game.timebase ();
    m_lookUpdateTime = game.timebase ();
    m_aimErrorTime = game.timebase ();
@@ -1962,9 +1961,11 @@ void BotConfig::loadChatConfig () {
                   keywords.clear ();
                   replies.clear ();
                }
-
                keywords.clear ();
-               keywords = cr::move (line.substr (4).split (","));
+
+               for (const auto &key : line.substr (4).split (",")) {
+                  keywords.emplace (utf8tools.strToUpper (key));
+               }
 
                for (auto &keyword : keywords) {
                   keyword.trim ().trim ("\"");
@@ -2007,7 +2008,7 @@ void BotConfig::loadLanguageConfig () {
       Twin <String, String> lang;
 
       // clear all the translations before new load
-      game.clearTranslation ();
+      m_language.clear ();
 
       while (file.getLine (line)) {
          if (isCommentLine (line)) {
@@ -2020,7 +2021,7 @@ void BotConfig::loadLanguageConfig () {
             }
 
             if (!lang.second.empty () && !lang.first.empty ()) {
-               game.addTranslation (lang.first.trim (), lang.second.trim ());
+               m_language.push (lang.first.trim (), lang.second.trim ());
             }
          }
          else if (line.startsWith ("[TRANSLATED]") && !temp.empty ()) {
@@ -2178,4 +2179,19 @@ WeaponInfo &BotConfig::findWeaponById (const int id) {
       }
    }
    return m_weapons.at (0);
+}
+
+
+const char *BotConfig::translate (const char *input) {
+   // this function translate input string into needed language
+
+   if (game.isDedicated ()) {
+      return input;
+   }
+   static String result;
+
+   if (m_language.find (input, result)) {
+      return result.chars ();
+   }
+   return input; // nothing found
 }

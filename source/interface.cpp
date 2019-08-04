@@ -423,7 +423,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
 
       // keep bot number up to date
       bots.maintainQuota ();
-
+      
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
@@ -435,7 +435,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
 
    functionTable->pfnCmdStart = [] (const edict_t *player, usercmd_t *cmd, unsigned int random_seed) {
       auto ent = const_cast <edict_t *> (player);
-
+      
       // if we're handle pings for bots and clients, clear IN_SCORE button so SV_ShouldUpdatePing engine function return false
       // and SV_EmitPings will not overwrite our results
       if (game.is (GameFlags::HasFakePings) && yb_show_latency.int_ () == 2) {
@@ -533,10 +533,6 @@ CR_EXPORT int GetNewDLLFunctions (newgamefuncs_t *functionTable, int *interfaceV
    // run properly.
 
    auto api_GetNewDLLFunctions = game.lib ().resolve <int (*) (newgamefuncs_t *, int *)> (__FUNCTION__);
-
-   if (api_GetNewDLLFunctions == nullptr) {
-      return FALSE;
-   }
 
    if (!api_GetNewDLLFunctions || !api_GetNewDLLFunctions (functionTable, interfaceVersion)) {
       logger.error ("Could not resolve symbol \"%s\" in the game dll. Continuing...", __FUNCTION__);

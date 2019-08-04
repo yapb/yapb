@@ -74,7 +74,7 @@ public:
                   int32 length = MinMatch;
 
                   while (length < maxMatch && in[lookup + length] == in[cur + length]) {
-                     length++;
+                     ++length;
                   }
 
                   if (length > bestLength) {
@@ -111,7 +111,7 @@ public:
                   int32 length = MinMatch;
 
                   while (length < target && in[lookup + length] == in[next + length]) {
-                     length++;
+                     ++length;
                   }
 
                   if (length == target) {
