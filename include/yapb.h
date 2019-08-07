@@ -1301,7 +1301,6 @@ private:
    Array <edict_t *> m_activeGrenades; // holds currently active grenades on the map
    Array <edict_t *> m_intrestingEntities;  // holds currently intresting entities on the map
    
-
    SmallArray <CreateQueue> m_creationTab; // bot creation tab
    SmallArray <BotTask> m_filters; // task filters
    SmallArray <UniqueBot> m_bots; // all available bots
@@ -1640,7 +1639,7 @@ public:
    void setDangerValue (int team, int start, int goal, int value);
    void setDangerDamage (int team, int start, int goal, int value);
    void convertFromPOD (Path &path, const PODPath &pod);
-   void converToPOD (const Path &path, PODPath &pod);
+   void convertToPOD (const Path &path, PODPath &pod);
    void convertCampDirection (Path &path);
 
    const char *getDataDirectory (bool isMemoryFile = false);

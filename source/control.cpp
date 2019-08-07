@@ -147,7 +147,7 @@ int BotControl::cmdWeaponMode () {
    modes.push ("smg", 4);
    modes.push ("rifle", 5);
    modes.push ("sniper", 6);
-   modes.push ("stanard", 7);
+   modes.push ("standard", 7);
 
    auto mode = getStr (type);
 

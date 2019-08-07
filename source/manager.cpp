@@ -138,7 +138,7 @@ BotCreateResult BotManager::create (const String &name, int difficulty, int pers
 
    // do not allow create bots when there is no graph
    if (!graph.length ()) {
-      ctrl.msg ("There is not graph found. Cannot create bot.");
+      ctrl.msg ("There is no graph found. Cannot create bot.");
       return BotCreateResult::GraphError;
    }
 
