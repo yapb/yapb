@@ -928,7 +928,7 @@ void BotGraph::pathCreate (char dir) {
          nodeTo = m_cacheNodeIndex;
       }
       else {
-         ctrl.msg ("Unable to find destination node");
+         ctrl.msg ("Unable to find destination node.");
          return;
       }
    }
@@ -972,7 +972,7 @@ void BotGraph::erasePath () {
          nodeTo = m_cacheNodeIndex;
       }
       else {
-         ctrl.msg ("Unable to find destination node");
+         ctrl.msg ("Unable to find destination node.");
          return;
       }
    }
@@ -999,7 +999,7 @@ void BotGraph::erasePath () {
          return;
       }
    }
-   ctrl.msg ("There is already no path on this node");
+   ctrl.msg ("There is already no path on this node.");
 }
 
 void BotGraph::cachePoint (int index) {
@@ -1667,7 +1667,7 @@ void BotGraph::saveOldFormat () {
       // save the node paths...
       for (const auto &path : m_paths) {
          PODPath pod {};
-         converToPOD (path, pod);
+         convertToPOD (path, pod);
 
          fp.write (&pod, sizeof (PODPath));
       }
@@ -2839,7 +2839,7 @@ void BotGraph::convertFromPOD (Path &path, const PODPath &pod) {
    path.vis.crouch = pod.vis.crouch;
 }
 
-void BotGraph::converToPOD (const Path &path, PODPath &pod) {
+void BotGraph::convertToPOD (const Path &path, PODPath &pod) {
    pod = {};
 
    pod.number = path.number;
