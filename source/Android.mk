@@ -17,6 +17,7 @@ LOCAL_EXPORT_C_INCLUDES := $(LOCAL_C_INCLUDES)
 LOCAL_SRC_FILES := \
 	basecode.cpp \
 	manager.cpp \
+	message.cpp \
 	chatlib.cpp \
 	combat.cpp \
 	control.cpp \

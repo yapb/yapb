@@ -11,6 +11,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\config.h" />
+    <ClInclude Include="..\include\control.h" />
     <ClInclude Include="..\include\crlib\cr-alloc.h" />
     <ClInclude Include="..\include\crlib\cr-array.h" />
     <ClInclude Include="..\include\crlib\cr-basic.h" />
@@ -34,6 +36,10 @@
     <ClInclude Include="..\include\crlib\cr-uniqueptr.h" />
     <ClInclude Include="..\include\crlib\cr-vector.h" />
     <ClInclude Include="..\include\engine\model.h" />
+    <ClInclude Include="..\include\graph.h" />
+    <ClInclude Include="..\include\manager.h" />
+    <ClInclude Include="..\include\message.h" />
+    <ClInclude Include="..\include\utils.h" />
     <ClInclude Include="..\include\yapb.h" />
     <ClInclude Include="..\include\engine.h" />
     <ClInclude Include="..\include\engine\const.h" />
@@ -53,6 +59,7 @@
     <ClCompile Include="..\source\chatlib.cpp" />
     <ClCompile Include="..\source\control.cpp" />
     <ClCompile Include="..\source\interface.cpp" />
+    <ClCompile Include="..\source\message.cpp" />
     <ClCompile Include="..\source\navigate.cpp" />
     <ClCompile Include="..\source\support.cpp" />
     <ClCompile Include="..\source\graph.cpp" />

@@ -358,7 +358,7 @@ void Bot::checkForChat () {
 void Bot::say (const char *text) {
    // this function prints saytext message to all players
 
-   if (util.isEmptyStr (text) || !yb_chat.bool_ ()) {
+   if (strings.isEmpty (text) || !yb_chat.bool_ ()) {
       return;
    }
    game.botCommand (ent (), "say \"%s\"", text);
@@ -367,7 +367,7 @@ void Bot::say (const char *text) {
 void Bot::sayTeam (const char *text) {
    // this function prints saytext message only for teammates
 
-   if (util.isEmptyStr (text) || !yb_chat.bool_ ()) {
+   if (strings.isEmpty (text) || !yb_chat.bool_ ()) {
       return;
    }
    game.botCommand (ent (), "say_team \"%s\"", text);

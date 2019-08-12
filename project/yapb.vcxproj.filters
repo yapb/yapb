@@ -114,6 +114,24 @@
     <ClInclude Include="..\include\crlib\cr-hook.h">
       <Filter>include\crlib</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\config.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\graph.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\manager.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\utils.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\control.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\message.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\chatlib.cpp">
@@ -147,6 +165,9 @@
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="..\source\android.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\message.cpp">
       <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>

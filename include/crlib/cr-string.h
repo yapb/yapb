@@ -862,6 +862,14 @@ public:
 
       return buffer;
    }
+
+   // checks if string is not empty
+   bool isEmpty (const char *input) const {
+      if (input == nullptr) {
+         return true;
+      }
+      return *input == '\0';
+   }
 };
 
 // expose global string pool
@@ -1082,14 +1090,19 @@ public:
 
    String strToUpper (const String &in) {
       String result (in);
+
       auto ptr = const_cast <char *> (result.chars ());
-
       int32 len = 0;
-      wchar_t wide;
 
-      while (*ptr && len < static_cast <int32> (result.length ())) {
+      while (*ptr) {
+         wchar_t wide = 0;
+
          multiByteToWideChar (&wide, ptr);
-         ptr += wideCharToMultiByte (ptr, toUpper (wide));
+         len += wideCharToMultiByte (ptr, toUpper (wide));
+
+         if (static_cast <size_t> (len) >= result.length ()) {
+            break;
+         }
       }
       return result;
    }

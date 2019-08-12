@@ -50,7 +50,7 @@ public:
       rhs.reset ();
    }
 
-   Array (std::initializer_list <T> list) {
+   Array (const std::initializer_list <T> &list) {
       for (const auto &elem : list) {
          push (elem);
       }

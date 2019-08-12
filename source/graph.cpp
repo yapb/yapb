@@ -1037,18 +1037,18 @@ void BotGraph::calculatePathRadius (int index) {
 
    for (float scanDistance = 32.0f; scanDistance < 128.0f; scanDistance += 16.0f) {
       start = path.origin;
-      game.makeVectors (nullvec);
+      auto null = nullvec;
 
-      direction = game.vec.forward * scanDistance;
+      direction = null.forward () * scanDistance;
       direction = direction.angles ();
 
       path.radius = scanDistance;
 
       for (float circleRadius = 0.0f; circleRadius < 360.0f; circleRadius += 20.0f) {
-         game.makeVectors (direction);
+         const auto &forward = direction.forward ();
 
-         Vector radiusStart = start + game.vec.forward * scanDistance;
-         Vector radiusEnd = start + game.vec.forward * scanDistance;
+         Vector radiusStart = start + forward * scanDistance;
+         Vector radiusEnd = start + forward * scanDistance;
 
          game.testHull (radiusStart, radiusEnd, TraceIgnore::Monsters, head_hull, nullptr, &tr);
 
@@ -1067,7 +1067,7 @@ void BotGraph::calculatePathRadius (int index) {
             break;
          }
 
-         Vector dropStart = start + game.vec.forward * scanDistance;
+         Vector dropStart = start + forward * scanDistance;
          Vector dropEnd = dropStart - Vector (0.0f, 0.0f, scanDistance + 60.0f);
 
          game.testHull (dropStart, dropEnd, TraceIgnore::Monsters, head_hull, nullptr, &tr);
@@ -1078,7 +1078,7 @@ void BotGraph::calculatePathRadius (int index) {
 
             break;
          }
-         dropStart = start - game.vec.forward * scanDistance;
+         dropStart = start - forward * scanDistance;
          dropEnd = dropStart - Vector (0.0f, 0.0f, scanDistance + 60.0f);
 
          game.testHull (dropStart, dropEnd, TraceIgnore::Monsters, head_hull, nullptr, &tr);
@@ -1680,7 +1680,7 @@ void BotGraph::saveOldFormat () {
 
 const char *BotGraph::getOldFormatGraphName (bool isMemoryFile) {
    static String buffer;
-   buffer.assignf ("%s%s%s.pwf", getDataDirectory (isMemoryFile), util.isEmptyStr (yb_graph_subfolder.str ()) ? "" : yb_graph_subfolder.str (), game.getMapName ());
+   buffer.assignf ("%s%s%s.pwf", getDataDirectory (isMemoryFile), strings.isEmpty (yb_graph_subfolder.str ()) ? "" : yb_graph_subfolder.str (), game.getMapName ());
 
    if (File::exists (buffer)) {
       return buffer.chars ();
@@ -1692,49 +1692,6 @@ float BotGraph::calculateTravelTime (float maxSpeed, const Vector &src, const Ve
    // this function returns 2D traveltime to a position
 
    return (origin - src).length2d () / maxSpeed;
-}
-
-bool BotGraph::isReachable (Bot *bot, int index) {
-   // this function return whether bot able to reach index node or not, depending on several factors.
-
-   if (!bot || !exists (index)) {
-      return false;
-   }
-   const Vector &src = bot->pev->origin;
-   const Vector &dst = m_paths[index].origin;
-
-   // is the destination close enough?
-   if ((dst - src).lengthSq () >= cr::square (320.0f)) {
-      return false;
-   }
-   float ladderDist = (dst - src).length2d ();
-
-   TraceResult tr;
-   game.testLine (src, dst, TraceIgnore::Monsters, bot->ent (), &tr);
-
-   // if node is visible from current position (even behind head)...
-   if (tr.flFraction >= 1.0f) {
-
-      // it's should be not a problem to reach node inside water...
-      if (bot->pev->waterlevel == 2 || bot->pev->waterlevel == 3) {
-         return true;
-      }
-
-      // check for ladder
-      bool nonLadder = !(m_paths[index].flags & NodeFlag::Ladder) || ladderDist > 16.0f;
-
-      // is dest node higher than src? (62 is max jump height)
-      if (nonLadder && dst.z > src.z + 62.0f) {
-         return false; // can't reach this one
-      }
-
-      // is dest node lower than src?
-      if (nonLadder && dst.z < src.z - 100.0f) {
-         return false; // can't reach this one
-      }
-      return true;
-   }
-   return false;
 }
 
 bool BotGraph::isNodeReacheable (const Vector &src, const Vector &destination) {
@@ -2135,13 +2092,9 @@ void BotGraph::frame () {
          if (path.flags & NodeFlag::Crouch) {
             height = 18.0f;
          }
-         const Vector &source = Vector (path.origin.x, path.origin.y, path.origin.z + height); // source
-
-         game.makeVectors (Vector (path.start.x, path.start.y, 0));
-         const Vector &start = path.origin + game.vec.forward * 500.0f; // camp start
-
-         game.makeVectors (Vector (path.end.x, path.end.y, 0));
-         const Vector &end = path.origin + game.vec.forward * 500.0f; // camp end
+         const auto &source = Vector (path.origin.x, path.origin.y, path.origin.z + height); // source
+         const auto &start = path.origin + Vector (path.start.x, path.start.y, 0.0f).forward () * 500.0f; // camp start
+         const auto &end = path.origin + Vector (path.end.x, path.end.y, 0.0f).forward () * 500.0f; // camp end
          
          // draw it now
          game.drawLine (m_editor, source, start, 10, 0, Color (255, 0, 0), 200, 0, 10);

@@ -1641,7 +1641,7 @@ void BotControl::showMenu (int id) {
    Client &client = util.getClient (game.indexOfPlayer (m_ent));
 
    if (id == Menu::None) {
-      MessageWriter (MSG_ONE_UNRELIABLE, game.getMessageId (NetMsg::ShowMenu), nullvec, m_ent)
+      MessageWriter (MSG_ONE_UNRELIABLE, msgs.id (NetMsg::ShowMenu), nullvec, m_ent)
          .writeShort (0)
          .writeChar (0)
          .writeByte (0)
@@ -1657,7 +1657,7 @@ void BotControl::showMenu (int id) {
          MessageWriter msg;
 
          while (strlen (text) >= 64) {
-            msg.start (MSG_ONE_UNRELIABLE, game.getMessageId (NetMsg::ShowMenu), nullvec, m_ent)
+            msg.start (MSG_ONE_UNRELIABLE, msgs.id (NetMsg::ShowMenu), nullvec, m_ent)
                .writeShort (display.slots)
                .writeChar (-1)
                .writeByte (1);
@@ -1669,7 +1669,7 @@ void BotControl::showMenu (int id) {
             text += 64;
          }
 
-         MessageWriter (MSG_ONE_UNRELIABLE, game.getMessageId (NetMsg::ShowMenu), nullvec, m_ent)
+         MessageWriter (MSG_ONE_UNRELIABLE, msgs.id (NetMsg::ShowMenu), nullvec, m_ent)
             .writeShort (display.slots)
             .writeChar (-1)
             .writeByte (0)
@@ -1753,7 +1753,7 @@ void BotControl::maintainAdminRights () {
          Client &client = util.getClient (i);
 
          if (client.flags & ClientFlags::Admin) {
-            if (util.isEmptyStr (yb_password_key.str ()) && util.isEmptyStr (yb_password.str ())) {
+            if (strings.isEmpty (yb_password_key.str ()) && strings.isEmpty (yb_password.str ())) {
                client.flags &= ~ClientFlags::Admin;
             }
             else if (!!strcmp (yb_password.str (), engfuncs.pfnInfoKeyValue (engfuncs.pfnGetInfoKeyBuffer (client.ent), const_cast <char *> (yb_password_key.str ())))) {
@@ -1761,7 +1761,7 @@ void BotControl::maintainAdminRights () {
                game.print ("Player %s had lost remote access to %s.", STRING (player->v.netname), PRODUCT_SHORT_NAME);
             }
          }
-         else if (!(client.flags & ClientFlags::Admin) && !util.isEmptyStr (yb_password_key.str ()) && !util.isEmptyStr (yb_password.str ())) {
+         else if (!(client.flags & ClientFlags::Admin) && !strings.isEmpty (yb_password_key.str ()) && !strings.isEmpty (yb_password.str ())) {
             if (strcmp (yb_password.str (), engfuncs.pfnInfoKeyValue (engfuncs.pfnGetInfoKeyBuffer (client.ent), const_cast <char *> (yb_password_key.str ()))) == 0) {
                client.flags |= ClientFlags::Admin;
                game.print ("Player %s had gained full remote access to %s.", STRING (player->v.netname), PRODUCT_SHORT_NAME);

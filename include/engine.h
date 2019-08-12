@@ -33,34 +33,6 @@ CR_DECLARE_SCOPED_ENUM (Var,
    NoRegister
 )
 
-// netmessage functions
-CR_DECLARE_SCOPED_ENUM (NetMsg,
-   None = -1,
-   VGUI = 1,
-   ShowMenu = 2,
-   WeaponList = 3,
-   CurWeapon = 4,
-   AmmoX = 5,
-   AmmoPickup = 6,
-   Damage = 7,
-   Money = 8,
-   StatusIcon = 9,
-   DeathMsg = 10,
-   ScreenFade = 11,
-   HLTV = 12,
-   TextMsg = 13,
-   TeamInfo = 14,
-   BarTime = 15,
-   SendAudio = 17,
-   SayText = 18,
-   BotVoice = 19,
-   NVGToggle = 20,
-   FlashBat = 21,
-   Fashlight = 22,
-   ItemStatus = 23,
-   Count = 25
-)
-
 // supported cs's
 CR_DECLARE_SCOPED_ENUM (GameFlags,
    Modern = cr::bit (0), // counter-strike 1.6 and above
@@ -97,19 +69,6 @@ struct VarPair {
    class ConVar *self;
 };
 
-// network message block
-struct MessageBlock {
-   int bot;
-   int state;
-   int msg;
-   int regMsgs[NetMsg::Count];
-};
-
-// referentia vector info
-struct RefVector {
-   Vector forward, right, up;
-};
-
 // entity prototype
 using EntityFunction = void (*) (entvars_t *);
 
@@ -126,9 +85,8 @@ private:
    edict_t *m_startEntity;
    edict_t *m_localEntity;
 
-   Array <VarPair> m_cvars;
+   SmallArray <VarPair> m_cvars;
    SharedLibrary m_gameLib;
-   MessageBlock m_msgBlock;
 
    bool m_precached;
    int m_gameFlags;
@@ -137,11 +95,8 @@ private:
    float m_slowFrame; // per second updated frame
 
 public:
-   RefVector vec;
-
-public:
    Game ();
-   ~Game ();
+   ~Game () = default;
 
 public:
    // precaches internal stuff
@@ -189,9 +144,6 @@ public:
    // sends local registration stack for engine registration
    void registerCvars (bool gameVars = false);
 
-   // do actual network message processing
-   void processMessages (void *ptr);
-
    // checks whether softwared rendering is enabled
    bool isSoftwareRenderer ();
 
@@ -206,9 +158,6 @@ public:
 
    // executes stuff every 1 second
    void slowFrame ();
-
-   // begin message handler
-   void beginMessage (edict_t *ent, int dest, int type);
 
    // public inlines
 public:
@@ -281,40 +230,11 @@ public:
    }
 
    // gets the player team
-   int getTeam (edict_t *ent);
-
-   // resets the message capture mechanism
-   void resetMessages () {
-      m_msgBlock.msg = NetMsg::None;
-      m_msgBlock.state = 0;
-      m_msgBlock.bot = 0;
-   };
-
-   // sets the currently executed message
-   void setCurrentMessageId (int message) {
-      m_msgBlock.msg = message;
-   }
-
-   // set the bot entity that receive this message
-   void setCurrentMessageOwner (int id) {
-      m_msgBlock.bot = id;
-   }
-
-   // find registered message id
-   int getMessageId (int type) {
-      return m_msgBlock.regMsgs[type];
-   }
-
-   // assigns message id for message type
-   void setMessageId (int type, int id) {
-      m_msgBlock.regMsgs[type] = id;
-   }
-
-   // tries to set needed message id
-   void captureMessage (int type, int msgId) {
-      if (type == m_msgBlock.regMsgs[msgId]) {
-         setCurrentMessageId (msgId);
+   int getTeam (edict_t *ent) {
+      if (isNullEntity (ent)) {
+         return Team::Unassigned;
       }
+      return util.getClient (indexOfPlayer (ent)).team;
    }
 
    // sets the precache to uninitialize
@@ -330,11 +250,6 @@ public:
    // sets the local entity (host edict)
    void setLocalEntity (edict_t *ent) {
       m_localEntity = ent;
-   }
-
-   //  builds referential vector
-   void makeVectors (const Vector &in) {
-      in.buildVectors (&vec.forward, &vec.right, &vec.up);
    }
 
    // check the engine visibility wrapper
@@ -401,7 +316,7 @@ public:
 };
 
 // simplify access for console variables
-class ConVar {
+class ConVar final {
 public:
    cvar_t *eptr;
 
@@ -439,7 +354,7 @@ public:
    }
 };
 
-class MessageWriter {
+class MessageWriter final {
 private:
    bool m_autoDestruct { false };
 
