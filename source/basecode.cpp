@@ -354,10 +354,8 @@ void Bot::avoidGrenades () {
             float distanceMoved = ((pent->v.origin + pent->v.velocity * getFrameInterval ()) - pev->origin).length ();
 
             if (distanceMoved < distance && distance < 500.0f) {
-               game.makeVectors (pev->v_angle);
-
-               const Vector &dirToPoint = (pev->origin - pent->v.origin).normalize2d ();
-               const Vector &rightSide = game.vec.right.normalize2d ();
+               const auto &dirToPoint = (pev->origin - pent->v.origin).normalize2d ();
+               const auto &rightSide = pev->v_angle.right ().normalize2d ();
 
                if ((dirToPoint | rightSide) > 0.0f) {
                   m_needAvoidGrenade = -1;
@@ -854,7 +852,7 @@ void Bot::showChaterIcon (bool show) {
    }
 
    auto sendBotVoice = [](bool show, edict_t *ent, int ownId) {
-      MessageWriter (MSG_ONE, game.getMessageId (NetMsg::BotVoice), nullvec, ent) // begin message
+      MessageWriter (MSG_ONE, msgs.id (NetMsg::BotVoice), nullvec, ent) // begin message
          .writeByte (show) // switch on/off
          .writeByte (ownId);
    };
@@ -897,7 +895,7 @@ void Bot::instantChatter (int type) {
       if (!(client.flags & ClientFlags::Used) || (client.ent->v.flags & FL_FAKECLIENT) || client.team != m_team) {
          continue;
       }
-      msg.start (MSG_ONE, game.getMessageId (NetMsg::SendAudio), nullvec, client.ent); // begin message
+      msg.start (MSG_ONE, msgs.id (NetMsg::SendAudio), nullvec, client.ent); // begin message
       msg.writeByte (ownIndex);
 
       if (pev->deadflag & DEAD_DYING) {
@@ -1107,7 +1105,7 @@ void Bot::checkMsgQueue () {
 bool Bot::isWeaponRestricted (int weaponIndex) {
    // this function checks for weapon restrictions.
 
-   if (util.isEmptyStr (yb_restricted_weapons.str ())) {
+   if (strings.isEmpty (yb_restricted_weapons.str ())) {
       return isWeaponRestrictedAMX (weaponIndex); // no banned weapons
    }
    auto bannedWeapons = String (yb_restricted_weapons.str ()).split (";");
@@ -1130,7 +1128,7 @@ bool Bot::isWeaponRestrictedAMX (int weaponIndex) {
    if (cr::bit (weaponIndex) & (kPrimaryWeaponMask | kSecondaryWeaponMask | Weapon::Shield)) {
       const char *restrictedWeapons = engfuncs.pfnCVarGetString ("amx_restrweapons");
 
-      if (util.isEmptyStr (restrictedWeapons)) {
+      if (strings.isEmpty (restrictedWeapons)) {
          return false;
       }
       int indices[] = {4, 25, 20, -1, 8, -1, 12, 19, -1, 5, 6, 13, 23, 17, 18, 1, 2, 21, 9, 24, 7, 16, 10, 22, -1, 3, 15, 14, 0, 11};
@@ -1149,7 +1147,7 @@ bool Bot::isWeaponRestrictedAMX (int weaponIndex) {
    else {
       const char *restrictedEquipment = engfuncs.pfnCVarGetString ("amx_restrequipammo");
 
-      if (util.isEmptyStr (restrictedEquipment)) {
+      if (strings.isEmpty (restrictedEquipment)) {
          return false;
       }
       int indices[] = {-1, -1, -1, 3, -1, -1, -1, -1, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2, -1, -1, -1, -1, -1, 0, 1, 5};
@@ -1176,7 +1174,7 @@ bool Bot::canReplaceWeapon () {
       return false;
    }
 
-   if (!util.isEmptyStr (yb_restricted_weapons.str ())) {
+   if (!strings.isEmpty (yb_restricted_weapons.str ())) {
       auto bannedWeapons = String (yb_restricted_weapons.str ()).split (";");
 
       // check if its banned
@@ -1435,10 +1433,10 @@ void Bot::buyStuff () {
             }
             else {
                if (m_team == Team::Terrorist) {
-                  game.botCommand (ent (), "menuselect %d", selectedWeapon->newBuySelectT);
+                  game.botCommand (ent (), "menuselect %d", selectedWeapon->buySelectT);
                }
                else {
-                  game.botCommand (ent (), "menuselect %d", selectedWeapon->newBuySelectCT);
+                  game.botCommand (ent (), "menuselect %d", selectedWeapon->buySelectCT);
                }
             }
          }
@@ -1529,10 +1527,10 @@ void Bot::buyStuff () {
             } 
             else {
                if (m_team == Team::Terrorist) {
-                  game.botCommand (ent (), "menuselect %d", selectedWeapon->newBuySelectT);
+                  game.botCommand (ent (), "menuselect %d", selectedWeapon->buySelectT);
                }
                else {
-                  game.botCommand (ent (), "menuselect %d", selectedWeapon->newBuySelectCT);
+                  game.botCommand (ent (), "menuselect %d", selectedWeapon->buySelectCT);
                }
             }
          }
@@ -2346,9 +2344,7 @@ void Bot::checkRadioQueue () {
             getTask ()->time = game.timebase ();
 
             m_targetEntity = nullptr;
-            game.makeVectors (m_radioEntity->v.v_angle);
-
-            m_position = m_radioEntity->v.origin + game.vec.forward * rg.float_ (1024.0f, 2048.0f);
+            m_position = m_radioEntity->v.origin + m_radioEntity->v.v_angle.forward () * rg.float_ (1024.0f, 2048.0f);
 
             clearSearchNodes ();
             startTask (Task::MoveToPosition, TaskPri::MoveToPosition, kInvalidNodeIndex, 0.0f, true);
@@ -2403,9 +2399,7 @@ void Bot::checkRadioQueue () {
             getTask ()->time = game.timebase ();
          }
          m_targetEntity = nullptr;
-
-         game.makeVectors (m_radioEntity->v.v_angle);
-         m_position = m_radioEntity->v.origin + game.vec.forward * rg.float_ (1024.0f, 2048.0f);
+         m_position = m_radioEntity->v.origin + m_radioEntity->v.v_angle.forward () * rg.float_ (1024.0f, 2048.0f);
 
          clearSearchNodes ();
          startTask (Task::MoveToPosition, TaskPri::MoveToPosition, kInvalidNodeIndex, 0.0f, true);
@@ -3030,14 +3024,10 @@ void Bot::normal_ () {
                if (!(m_states & (Sense::SeeingEnemy | Sense::HearingEnemy)) && !m_reloadState) {
                   m_reloadState = Reload::Primary;
                }
-               game.makeVectors (pev->v_angle);
-
                m_timeCamping = game.timebase () + rg.float_ (10.0f, 25.0f);
                startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, m_timeCamping, true);
 
-               game.makeVectors (m_path->start);
-
-               m_camp = m_path->origin + game.vec.forward * 500.0f;;
+               m_camp = m_path->origin + m_path->start.forward () * 500.0f;;
                m_aimFlags |= AimFlags::Camp;
                m_campDirection = 0;
 
@@ -3174,8 +3164,8 @@ void Bot::spraypaint_ () {
 
    // bot didn't spray this round?
    if (m_timeLogoSpray < game.timebase () && getTask ()->time > game.timebase ()) {
-      game.makeVectors (pev->v_angle);
-      Vector sprayOrigin = getEyesPos () + game.vec.forward * 128.0f;
+      const auto &forward = pev->v_angle.forward ();
+      Vector sprayOrigin = getEyesPos () + forward * 128.0f;
 
       TraceResult tr;
       game.testLine (getEyesPos (), sprayOrigin, TraceIgnore::Monsters, ent (), &tr);
@@ -3189,7 +3179,7 @@ void Bot::spraypaint_ () {
       if (getTask ()->time - 0.5f < game.timebase ()) {
          // emit spraycan sound
          engfuncs.pfnEmitSound (ent (), CHAN_VOICE, "player/sprayer.wav", 1.0f, ATTN_NORM, 0, 100);
-         game.testLine (getEyesPos (), getEyesPos () + game.vec.forward * 128.0f, TraceIgnore::Monsters, ent (), &tr);
+         game.testLine (getEyesPos (), getEyesPos () + forward * 128.0f, TraceIgnore::Monsters, ent (), &tr);
 
          // paint the actual logo decal
          util.traceDecals (pev, &tr, m_logotypeIndex);
@@ -3407,8 +3397,7 @@ void Bot::pause_ () {
       if (m_moveSpeed < -pev->maxspeed) {
          m_moveSpeed = -pev->maxspeed;
       }
-      game.makeVectors (pev->v_angle);
-      m_camp = getEyesPos () + game.vec.forward * 500.0f;
+      m_camp = getEyesPos () + pev->v_angle.forward () * 500.0f;
 
       m_aimFlags |= AimFlags::Override;
       m_wantsToFire = true;
@@ -3889,10 +3878,8 @@ void Bot::followUser_ () {
    }
 
    if (m_targetEntity->v.button & IN_ATTACK) {
-      game.makeVectors (m_targetEntity->v.v_angle);
-
       TraceResult tr;
-      game.testLine (m_targetEntity->v.origin + m_targetEntity->v.view_ofs, game.vec.forward * 500.0f, TraceIgnore::Everything, ent (), &tr);
+      game.testLine (m_targetEntity->v.origin + m_targetEntity->v.view_ofs, m_targetEntity->v.v_angle.forward () * 500.0f, TraceIgnore::Everything, ent (), &tr);
 
       if (!game.isNullEntity (tr.pHit) && util.isPlayer (tr.pHit) && game.getTeam (tr.pHit) != m_team) {
          m_targetEntity = nullptr;
@@ -4181,10 +4168,8 @@ void Bot::doublejump_ () {
       else if (inJump && !(m_oldButtons & IN_JUMP)) {
          pev->button |= IN_JUMP;
       }
-      game.makeVectors (Vector (0.0f, pev->angles.y, 0.0f));
-
-      Vector src = pev->origin + Vector (0.0f, 0.0f, 45.0f);
-      Vector dest = src + game.vec.up * 256.0f;
+      const auto &src = pev->origin + Vector (0.0f, 0.0f, 45.0f);
+      const auto &dest = src + Vector (0.0f, pev->angles.y, 0.0f).upward () * 256.0f;
 
       TraceResult tr;
       game.testLine (src, dest, TraceIgnore::None, ent (), &tr);
@@ -4739,7 +4724,7 @@ void Bot::runAI () {
          }
 
          // if bot is trapped under shield yell for help !
-         if (getCurrentTaskId () == Task::Camp && hasShield () && isShieldDrawn () && hasFriendNearby >= 2 && seesEnemy (m_enemy)) {
+         if (getCurrentTaskId () == Task::Camp && hasShield () && isShieldDrawn () && hasFriendNearby >= 2) {
             pushChatterMessage (Chatter::PinnedDown);
          }
       }
@@ -5014,16 +4999,12 @@ void Bot::showDebugOverlay () {
          // blue = ideal angles
          // red = view angles
          game.drawLine (game.getLocalEntity (), getEyesPos (), m_destOrigin, 10, 0, Color (0, 255, 0), 250, 5, 1, DrawLine::Arrow);
-
-         game.makeVectors (m_idealAngles);
-         game.drawLine (game.getLocalEntity (), getEyesPos () - Vector (0.0f, 0.0f, 16.0f), getEyesPos () + game.vec.forward * 300.0f, 10, 0, Color (0, 0, 255), 250, 5, 1, DrawLine::Arrow);
-
-         game.makeVectors (pev->v_angle);
-         game.drawLine (game.getLocalEntity (), getEyesPos () - Vector (0.0f, 0.0f, 32.0f), getEyesPos () + game.vec.forward * 300.0f, 10, 0, Color (255, 0, 0), 250, 5, 1, DrawLine::Arrow);
+         game.drawLine (game.getLocalEntity (), getEyesPos () - Vector (0.0f, 0.0f, 16.0f), getEyesPos () + m_idealAngles.forward () * 300.0f, 10, 0, Color (0, 0, 255), 250, 5, 1, DrawLine::Arrow);
+         game.drawLine (game.getLocalEntity (), getEyesPos () - Vector (0.0f, 0.0f, 32.0f), getEyesPos () + pev->v_angle.forward () * 300.0f, 10, 0, Color (255, 0, 0), 250, 5, 1, DrawLine::Arrow);
 
          // now draw line from source to destination
-         for (size_t i = 0; i < m_pathWalk.length () && i + 1 < m_pathWalk.length (); ++i) {
-            game.drawLine (game.getLocalEntity (), graph[m_pathWalk[i]].origin, graph[m_pathWalk[i + 1]].origin, 15, 0, Color (255, 100, 55), 200, 5, 1, DrawLine::Arrow);
+         for (size_t i = m_pathWalk.cursor (); i < m_pathWalk.length () && i + 1 < m_pathWalk.length (); ++i) {
+            game.drawLine (game.getLocalEntity (), graph[m_pathWalk.at (i)].origin, graph[m_pathWalk.at (i + 1)].origin, 15, 0, Color (255, 100, 55), 200, 5, 1, DrawLine::Arrow);
          }
       }
    }
@@ -5109,7 +5090,7 @@ void Bot::processDamage (edict_t *inflictor, int damage, int armor, int bits) {
    // hurt by unusual damage like drowning or gas
    else {
       // leave the camping/hiding position
-      if (!graph.isReachable (this, graph.getNearest (m_destOrigin))) {
+      if (!isReachableNode (graph.getNearest (m_destOrigin))) {
          clearSearchNodes ();
          findBestNearestNode ();
       }
@@ -5705,7 +5686,7 @@ void Bot::updateHearing () {
       extern ConVar yb_shoots_thru_walls;
 
       // check if heard enemy can be seen
-      if (checkBodyParts (player, &m_enemyOrigin, &m_visibility)) {
+      if (checkBodyParts (player)) {
          m_enemy = player;
          m_lastEnemy = player;
          m_lastEnemyOrigin = m_enemyOrigin;

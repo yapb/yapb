@@ -612,7 +612,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
    functionTable->pfnMessageBegin = [] (int msgDest, int msgType, const float *origin, edict_t *ed) {
       // this function called each time a message is about to sent.
 
-      game.beginMessage (ed, msgDest, msgType);
+      msgs.start (ed, msgDest, msgType);
 
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
@@ -621,7 +621,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
    };
 
    functionTable->pfnMessageEnd = [] () {
-      game.resetMessages ();
+      msgs.stop ();
 
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
@@ -631,7 +631,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
 
    functionTable->pfnWriteByte = [] (int value) {
       // if this message is for a bot, call the client message function...
-      game.processMessages (reinterpret_cast <void *> (&value));
+      msgs.collect (value);
 
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
@@ -641,7 +641,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
 
    functionTable->pfnWriteChar = [] (int value) {
       // if this message is for a bot, call the client message function...
-      game.processMessages (reinterpret_cast <void *> (&value));
+      msgs.collect (value);
 
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
@@ -651,7 +651,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
 
    functionTable->pfnWriteShort = [] (int value) {
       // if this message is for a bot, call the client message function...
-      game.processMessages (reinterpret_cast <void *> (&value));
+      msgs.collect (value);
 
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
@@ -661,7 +661,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
 
    functionTable->pfnWriteLong = [] (int value) {
       // if this message is for a bot, call the client message function...
-      game.processMessages (reinterpret_cast <void *> (&value));
+      msgs.collect (value);
 
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
@@ -671,7 +671,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
 
    functionTable->pfnWriteAngle = [] (float value) {
       // if this message is for a bot, call the client message function...
-      game.processMessages (reinterpret_cast <void *> (&value));
+      msgs.collect (value);
 
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
@@ -681,7 +681,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
 
    functionTable->pfnWriteCoord = [] (float value) {
       // if this message is for a bot, call the client message function...
-      game.processMessages (reinterpret_cast <void *> (&value));
+      msgs.collect (value);
 
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
@@ -691,7 +691,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
 
    functionTable->pfnWriteString = [] (const char *sz) {
       // if this message is for a bot, call the client message function...
-      game.processMessages (reinterpret_cast <void *> (const_cast <char *> (sz)));
+      msgs.collect (sz);
 
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
@@ -701,7 +701,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
 
    functionTable->pfnWriteEntity = [] (int value) {
       // if this message is for a bot, call the client message function...
-      game.processMessages (reinterpret_cast <void *> (&value));
+      msgs.collect (value);
 
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
@@ -720,76 +720,13 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       // using pfnMessageBegin (), it will know what message ID number to send, and the engine will
       // know what to do, only for non-metamod version
 
-      if (game.is (GameFlags::Metamod)) {
-         RETURN_META_VALUE (MRES_IGNORED, 0);
-      }
       int message = engfuncs.pfnRegUserMsg (name, size);
 
-      if (strcmp (name, "VGUIMenu") == 0) {
-         game.setMessageId (NetMsg::VGUI, message);
-      }
-      else if (strcmp (name, "ShowMenu") == 0) {
-         game.setMessageId (NetMsg::ShowMenu, message);
-      }
-      else if (strcmp (name, "WeaponList") == 0) {
-         game.setMessageId (NetMsg::WeaponList, message);
-      }
-      else if (strcmp (name, "CurWeapon") == 0) {
-         game.setMessageId (NetMsg::CurWeapon, message);
-      }
-      else if (strcmp (name, "AmmoX") == 0) {
-         game.setMessageId (NetMsg::AmmoX, message);
-      }
-      else if (strcmp (name, "AmmoPickup") == 0) {
-         game.setMessageId (NetMsg::AmmoPickup, message);
-      }
-      else if (strcmp (name, "Damage") == 0) {
-         game.setMessageId (NetMsg::Damage, message);
-      }
-      else if (strcmp (name, "Money") == 0) {
-         game.setMessageId (NetMsg::Money, message);
-      }
-      else if (strcmp (name, "StatusIcon") == 0) {
-         game.setMessageId (NetMsg::StatusIcon, message);
-      }
-      else if (strcmp (name, "DeathMsg") == 0) {
-         game.setMessageId (NetMsg::DeathMsg, message);
-      }
-      else if (strcmp (name, "ScreenFade") == 0) {
-         game.setMessageId (NetMsg::ScreenFade, message);
-      }
-      else if (strcmp (name, "HLTV") == 0) {
-         game.setMessageId (NetMsg::HLTV, message);
-      }
-      else if (strcmp (name, "TextMsg") == 0) {
-         game.setMessageId (NetMsg::TextMsg, message);
-      }
-      else if (strcmp (name, "TeamInfo") == 0) {
-         game.setMessageId (NetMsg::TeamInfo, message);
-      }
-      else if (strcmp (name, "BarTime") == 0) {
-         game.setMessageId (NetMsg::BarTime, message);
-      }
-      else if (strcmp (name, "SendAudio") == 0) {
-         game.setMessageId (NetMsg::SendAudio, message);
-      }
-      else if (strcmp (name, "SayText") == 0) {
-         game.setMessageId (NetMsg::SayText, message);
-      }
-      else if (strcmp (name, "BotVoice") == 0) {
-         game.setMessageId (NetMsg::BotVoice, message);
-      }
-      else if (strcmp (name, "NVGToggle") == 0) {
-         game.setMessageId (NetMsg::NVGToggle, message);
-      }
-      else if (strcmp (name, "FlashBat") == 0) {
-         game.setMessageId (NetMsg::FlashBat, message);
-      }
-      else if (strcmp (name, "Flashlight") == 0) {
-         game.setMessageId (NetMsg::Fashlight, message);
-      }
-      else if (strcmp (name, "ItemStatus") == 0) {
-         game.setMessageId (NetMsg::ItemStatus, message);
+      // register message for our needs
+      msgs.registerMessage (name, message);
+
+      if (game.is (GameFlags::Metamod)) {
+         RETURN_META_VALUE (MRES_SUPERCEDE, message);
       }
       return message;
    };

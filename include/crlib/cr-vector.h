@@ -160,8 +160,8 @@ public:
    }
 
    static const Vector &null () {
-      static const auto s_zero = Vector (0.0f, 0.0f, 0.0f);
-      return s_zero;
+      static const Vector &s_null {};
+      return s_null;
    }
 
    void clear () {
@@ -223,6 +223,27 @@ public:
          upward->y = cosines[roll] * sines[pitch] * sines[yaw] - sines[roll] * cosines[yaw];
          upward->z = cosines[roll] * cosines[pitch];
       }
+   }
+
+   const Vector &forward () {
+      static Vector s_fwd {};
+      buildVectors (&s_fwd, nullptr, nullptr);
+
+      return s_fwd;
+   }
+
+   const Vector &upward () {
+      static Vector s_up {};
+      buildVectors (nullptr, nullptr, &s_up);
+
+      return s_up;
+   }
+
+   const Vector &right () {
+      static Vector s_right {};
+      buildVectors (nullptr, &s_right, nullptr);
+
+      return s_right;
    }
 };
 

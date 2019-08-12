@@ -98,11 +98,11 @@ void BotManager::touchKillerEntity (Bot *bot) {
    }
    const auto &prop = conf.getWeaponProp (bot->m_currentWeapon);
 
-   m_killerEntity->v.classname = MAKE_STRING (prop.classname);
+   m_killerEntity->v.classname = MAKE_STRING (prop.classname.chars ());
    m_killerEntity->v.dmg_inflictor = bot->ent ();
 
    KeyValueData kv;
-   kv.szClassName = const_cast <char *> (prop.classname);
+   kv.szClassName = const_cast <char *> (prop.classname.chars ());
    kv.szKeyName = "damagetype";
    kv.szValue = const_cast <char *> (strings.format ("%d", cr::bit (4)));
    kv.fHandled = FALSE;
@@ -191,7 +191,7 @@ BotCreateResult BotManager::create (const String &name, int difficulty, int pers
       resultName = name;
    }
 
-   if (!util.isEmptyStr (yb_name_prefix.str ())) {
+   if (!strings.isEmpty (yb_name_prefix.str ())) {
       String prefixed; // temp buffer for storing modified name
       prefixed.assignf ("%s %s", yb_name_prefix.str (), resultName.chars ());
 
@@ -664,10 +664,10 @@ void BotManager::setWeaponMode (int selection) {
 void BotManager::listBots () {
    // this function list's bots currently playing on the server
 
-   ctrl.msg ("%-3.5s\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.4s\t%-3.4s", "index", "name", "personality", "team", "difficulty", "frags");
+   ctrl.msg ("%-3.5s\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.4s\t%-3.4s\t%-3.5s", "index", "name", "personality", "team", "difficulty", "frags", "alive");
 
    for (const auto &bot : bots) {;
-      ctrl.msg ("[%-3.1d]\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d", bot->index (), STRING (bot->pev->netname), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful", bot->m_team == Team::CT ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags));
+      ctrl.msg ("[%-3.1d]\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s", bot->index (), STRING (bot->pev->netname), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful", bot->m_team == Team::CT ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_notKilled ? "yes" : "no");
    }
    ctrl.msg ("%d bots", m_bots.length ());
 }
@@ -825,7 +825,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
    char reject[256] = {0, };
    MDLL_ClientConnect (bot, STRING (bot->v.netname), strings.format ("127.0.0.%d", clientIndex + 100), reject);
 
-   if (!util.isEmptyStr (reject)) {
+   if (!strings.isEmpty (reject)) {
       logger.error ("Server refused '%s' connection (%s)", STRING (bot->v.netname), reject);
       game.serverCommand ("kick \"%s\"", STRING (bot->v.netname)); // kick the bot player if the server refused it
 
@@ -958,10 +958,67 @@ bool BotManager::isTeamStacked (int team) {
 }
 
 void BotManager::erase (Bot *bot) {
-   for (const auto &e : m_bots) {
+   for (auto &e : m_bots) {
       if (e.get () == bot) {
+         e.reset ();
          m_bots.remove (e); // remove from bots array
+
          break;
+      }
+   }
+}
+
+void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
+   auto killerTeam = game.getTeam (killer);
+   auto victimTeam = game.getTeam (victim);
+
+   if (yb_radio_mode.int_ () == 2) {
+      // need to send congrats on well placed shot
+      for (const auto &notify : bots) {
+         if (notify->m_notKilled && killerTeam == notify->m_team && killerTeam != victimTeam && killer != notify->ent () && notify->seesEntity (victim->v.origin)) {
+            if (!(killer->v.flags & FL_FAKECLIENT)) {
+               notify->processChatterMessage ("#Bot_NiceShotCommander");
+            }
+            else {
+               notify->processChatterMessage ("#Bot_NiceShotPall");
+            }
+            break;
+         }
+      }
+   }
+   Bot *killerBot = nullptr;
+   Bot *victimBot = nullptr;
+
+   // notice nearby to victim teammates, that attacker is near
+   for (const auto &notify : bots) {
+      if (notify->m_seeEnemyTime + 2.0f < game.timebase () && notify->m_notKilled && notify->m_team == victimTeam && game.isNullEntity (notify->m_enemy) && killerTeam != victimTeam && util.isVisible (killer->v.origin, notify->ent ())) {
+         notify->m_actualReactionTime = 0.0f;
+         notify->m_seeEnemyTime = game.timebase ();
+         notify->m_enemy = killer;
+         notify->m_lastEnemy = killer;
+         notify->m_lastEnemyOrigin = killer->v.origin;
+      }
+
+      if (notify->ent () == killer) {
+         killerBot = notify.get ();
+      }
+      else if (notify->ent () == victim) {
+         victimBot = notify.get ();
+      }
+   }
+
+   // is this message about a bot who killed somebody?
+   if (killerBot != nullptr) {
+      killerBot->m_lastVictim = victim;
+   }
+
+   // did a human kill a bot on his team?
+   else  {
+      if (victimBot != nullptr) {
+         if (killerTeam == victimBot->m_team) {
+            victimBot->m_voteKickIndex = game.indexOfEntity (killer);
+         }
+         victimBot->m_notKilled = false;
       }
    }
 }
@@ -1200,7 +1257,7 @@ void Bot::kick () {
    // this function kick off one bot from the server.
    auto username = STRING (pev->netname);
 
-   if (!(pev->flags & FL_FAKECLIENT) || util.isEmptyStr (username)) {
+   if (!(pev->flags & FL_FAKECLIENT) || strings.isEmpty (username)) {
       return;
    }
    // clear fakeclient bit
@@ -1291,7 +1348,7 @@ void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *en
          Bot *bot = nullptr;
 
          if (util.findNearestPlayer (reinterpret_cast <void **> (&bot), ent, 300.0f, true, true, true)) {
-            bot->dropWeaponForUser (ent, util.isEmptyStr (strstr (arg, "c4")) ? false : true);
+            bot->dropWeaponForUser (ent, strings.isEmpty (strstr (arg, "c4")) ? false : true);
          }
          return;
       }
@@ -1312,7 +1369,7 @@ void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *en
          if (target != nullptr) {
             target->m_sayTextBuffer.entityIndex = game.indexOfPlayer (ent);
    
-            if (util.isEmptyStr (engfuncs.pfnCmd_Args ())) {
+            if (strings.isEmpty (engfuncs.pfnCmd_Args ())) {
                continue;
             }
             target->m_sayTextBuffer.sayText = engfuncs.pfnCmd_Args ();

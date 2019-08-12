@@ -67,10 +67,7 @@ bool BotUtils::isAlive (edict_t *ent) {
 }
 
 float BotUtils::getShootingCone (edict_t *ent, const Vector &position) {
-   game.makeVectors (ent->v.v_angle);
-
-   // he's facing it, he meant it
-   return game.vec.forward | (position - (ent->v.origin + ent->v.view_ofs)).normalize ();
+   return ent->v.v_angle.forward () | (position - (ent->v.origin + ent->v.view_ofs)).normalize (); // he's facing it, he meant it
 }
 
 bool BotUtils::isInViewCone (const Vector &origin, edict_t *ent) {
@@ -169,7 +166,7 @@ bool BotUtils::isPlayer (edict_t *ent) {
    }
 
    if ((ent->v.flags & (FL_CLIENT | FL_FAKECLIENT)) || bots[ent] != nullptr) {
-      return !isEmptyStr (STRING (ent->v.netname));
+      return !strings.isEmpty (STRING (ent->v.netname));
    }
    return false;
 }
@@ -246,7 +243,7 @@ void BotUtils::checkWelcome () {
          game.serverCommand ("speak \"%s\"", m_sentences.random ().chars ());
       }
 
-      MessageWriter (MSG_ONE, game.getMessageId (NetMsg::TextMsg), nullvec, receiveEntity)
+      MessageWriter (MSG_ONE, msgs.id (NetMsg::TextMsg), nullvec, receiveEntity)
          .writeByte (HUD_PRINTTALK)
          .writeString (strings.format ("----- %s v%s (Build: %u), {%s}, (c) %s, by %s (%s)-----", PRODUCT_SHORT_NAME, PRODUCT_VERSION, buildNumber (), PRODUCT_DATE, PRODUCT_END_YEAR, PRODUCT_AUTHOR, PRODUCT_URL));
 
@@ -319,7 +316,7 @@ void BotUtils::attachSoundsToClients (edict_t *ent, const char *sample, float vo
    // this function called by the sound hooking code (in emit_sound) enters the played sound into
    // the array associated with the entity
 
-   if (game.isNullEntity (ent) || isEmptyStr (sample)) {
+   if (game.isNullEntity (ent) || strings.isEmpty (sample)) {
       return;
    }
    const Vector &origin = game.getAbsPos (ent);

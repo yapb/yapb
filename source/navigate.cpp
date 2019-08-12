@@ -322,6 +322,11 @@ bool Bot::doPlayerAvoidance (const Vector &normal) {
 
       if (toProj > c) {
          m_moveSpeed = -pev->maxspeed;
+
+         if (m_avoid->v.button & IN_DUCK) {
+            m_moveSpeed = pev->maxspeed;
+            pev->button |= IN_JUMP;
+         }
          return true;
       }
       else if (toProj < -c) {
@@ -331,12 +336,12 @@ bool Bot::doPlayerAvoidance (const Vector &normal) {
 
       if (latProj >= c) {
          pev->button |= IN_MOVELEFT;
-         setStrafeSpeed (normal, pev->maxspeed);
+         setStrafeSpeed (normal, -pev->maxspeed);
          return true;
       }
       else if (latProj <= -c) {
          pev->button |= IN_MOVERIGHT;
-         setStrafeSpeed (normal, -pev->maxspeed);
+         setStrafeSpeed (normal, pev->maxspeed);
          return true;
       }
       return false;
@@ -349,7 +354,11 @@ bool Bot::doPlayerAvoidance (const Vector &normal) {
 
 void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
    m_isStuck = false;
-   
+
+   // if avoiding someone do not consider stuck
+   if (doPlayerAvoidance (dirNormal)) {
+      return;
+   }
    TraceResult tr;
 
    // Standing still, no need to check?
@@ -429,10 +438,11 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                state[i + 1] = 0;
 
                // to start strafing, we have to first figure out if the target is on the left side or right side
-               game.makeVectors (m_moveAngles);
+               Vector right, forward;
+               m_moveAngles.buildVectors (&forward, &right, nullptr);
 
                Vector dirToPoint = (pev->origin - m_destOrigin).normalize2d ();
-               Vector rightSide = game.vec.right.normalize2d ();
+               Vector rightSide = right.normalize2d ();
 
                bool dirRight = false;
                bool dirLeft = false;
@@ -445,10 +455,10 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                else {
                   dirLeft = true;
                }
-               const Vector &testDir = m_moveSpeed > 0.0f ? game.vec.forward : -game.vec.forward;
+               const Vector &testDir = m_moveSpeed > 0.0f ? forward : -forward;
 
                // now check which side is blocked
-               src = pev->origin + game.vec.right * 32.0f;
+               src = pev->origin + right * 32.0f;
                dst = src + testDir * 32.0f;
 
                game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
@@ -456,7 +466,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                if (tr.flFraction != 1.0f) {
                   blockedRight = true;
                }
-               src = pev->origin - game.vec.right * 32.0f;
+               src = pev->origin - right * 32.0f;
                dst = src + testDir * 32.0f;
 
                game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
@@ -502,16 +512,16 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                }
 
                if (seesEntity (m_destOrigin)) {
-                  game.makeVectors (m_moveAngles);
+                  const auto &right = m_moveAngles.right ();
 
                   src = getEyesPos ();
-                  src = src + game.vec.right * 15.0f;
+                  src = src + right * 15.0f;
 
                   game.testLine (src, m_destOrigin, TraceIgnore::Everything, ent (), &tr);
 
                   if (tr.flFraction >= 1.0f) {
                      src = getEyesPos ();
-                     src = src - game.vec.right * 15.0f;
+                     src = src - right * 15.0f;
 
                      game.testLine (src, m_destOrigin, TraceIgnore::Everything, ent (), &tr);
 
@@ -622,11 +632,6 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
          }
       }
    }
-
-   // avoid players if not already stuck
-   if (!m_isStuck) {
-      doPlayerAvoidance (dirNormal);
-   }
 }
 
 bool Bot::updateNavigation () {
@@ -640,9 +645,8 @@ bool Bot::updateNavigation () {
       m_pathOrigin = m_path->origin;
       
       // if wayzone radios non zero vary origin a bit depending on the body angles
-      if (m_path->radius > 0) {
-         game.makeVectors (Vector (pev->angles.x, cr::normalizeAngles (pev->angles.y + rg.float_ (-90.0f, 90.0f)), 0.0f));
-         m_pathOrigin = m_pathOrigin + game.vec.forward * rg.float_ (0, m_path->radius);
+      if (m_path->radius > 0.0f) {
+         m_pathOrigin = m_pathOrigin + Vector (pev->angles.x, cr::normalizeAngles (pev->angles.y + rg.float_ (-90.0f, 90.0f)), 0.0f).forward () * rg.float_ (0, m_path->radius);
       }
       m_navTimeset = game.timebase ();
    }
@@ -1093,11 +1097,13 @@ bool Bot::updateNavigation () {
    else if (m_currentTravelFlags & PathFlag::Jump) {
       desiredDistance = 0.0f;
    }
-   else if (isOccupiedPoint (m_currentNodeIndex)) {
-      desiredDistance = 120.0f;
-   }
    else {
       desiredDistance = m_path->radius;
+   }
+
+   // if desired distance is big enough and used by someone, increase desired radius by twice, and mark it as reached...
+   if (desiredDistance >= m_path->radius && isOccupiedPoint (m_currentNodeIndex)) {
+      desiredDistance *= 2.0f;
    }
 
    // check if node has a special travelflag, so they need to be reached more precisely
@@ -1201,7 +1207,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
          return 0.0f;
       }
       auto cost = static_cast <float> (graph.getDangerDamage (team, currentIndex, currentIndex) + graph.getHighestDamageForTeam (team));
-      Path &current = graph[currentIndex];
+      const auto &current = graph[currentIndex];
 
       for (auto &neighbour : current.links) {
          if (neighbour.index != kInvalidNodeIndex) {
@@ -1217,7 +1223,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
 
    // least kills and number of nodes to goal for a team
    auto gfunctionKillsDistCTWithHostage = [&gfunctionKillsDist] (int team, int currentIndex, int parentIndex) -> float {
-      Path &current = graph[currentIndex];
+      const auto &current = graph[currentIndex];
 
       if (current.flags & NodeFlag::NoHostage) {
          return 65355.0f;
@@ -1231,7 +1237,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
    // least kills to goal for a team
    auto gfunctionKills = [] (int team, int currentIndex, int) -> float {
       auto cost = static_cast <float> (graph.getDangerDamage (team, currentIndex, currentIndex));
-      Path &current = graph[currentIndex];
+      const auto &current = graph[currentIndex];
 
       for (auto &neighbour : current.links) {
          if (neighbour.index != kInvalidNodeIndex) {
@@ -1250,7 +1256,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
       if (parentIndex == kInvalidNodeIndex) {
          return 0.0f;
       }
-      Path &current = graph[currentIndex];
+      const auto &current = graph[currentIndex];
 
       if (current.flags & NodeFlag::NoHostage) {
          return 65355.0f;
@@ -1265,8 +1271,8 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
       if (parentIndex == kInvalidNodeIndex) {
          return 0.0f;
       }
-      Path &parent = graph[parentIndex];
-      Path &current = graph[currentIndex];
+      const auto &parent = graph[parentIndex];
+      const auto &current = graph[currentIndex];
 
       for (const auto &link : parent.links) {
          if (link.index == currentIndex) {
@@ -1281,7 +1287,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
    };
 
    auto gfunctionPathDistWithHostage = [&gfunctionPathDist] (int, int currentIndex, int parentIndex) -> float {
-      Path &current = graph[currentIndex];
+      const auto &current = graph[currentIndex];
 
       if (current.flags & NodeFlag::NoHostage) {
          return 65355.0f;
@@ -1294,8 +1300,8 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
 
    // square distance heuristic
    auto hfunctionPathDist = [] (int index, int, int goalIndex) -> float {
-      Path &start = graph[index];
-      Path &goal = graph[goalIndex];
+      const auto &start = graph[index];
+      const auto &goal = graph[goalIndex];
 
       float x = cr::abs (start.origin.x - goal.origin.x);
       float y = cr::abs (start.origin.y - goal.origin.y);
@@ -1442,7 +1448,9 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
 
          } while (currentIndex != kInvalidNodeIndex);
 
+         // reverse path for path follower
          m_pathWalk.reverse ();
+
          return;
       }
       auto curRoute = &m_routes[currentIndex];
@@ -1576,7 +1584,7 @@ bool Bot::findBestNearestNode () {
       }
 
       // ignore non-reacheable nodes...
-      if (!graph.isReachable (this, at)) {
+      if (!isReachableNode (at)) {
          continue;
       }
 
@@ -1770,7 +1778,7 @@ int Bot::findNearestNode () {
       if (distance < minimum) {
 
          // if bot doing navigation, make sure node really visible and not too high
-         if ((m_currentNodeIndex != kInvalidNodeIndex && graph.isVisible (m_currentNodeIndex, at)) || graph.isReachable (this, at)) {
+         if ((m_currentNodeIndex != kInvalidNodeIndex && graph.isVisible (m_currentNodeIndex, at)) || isReachableNode (at)) {
             index = at;
             minimum = distance;
          }
@@ -2229,8 +2237,7 @@ bool Bot::advanceMovement () {
 
    // if wayzone radius non zero vary origin a bit depending on the body angles
    if (m_path->radius > 0.0f) {
-      game.makeVectors (Vector (pev->angles.x, cr::normalizeAngles (pev->angles.y + rg.float_ (-90.0f, 90.0f)), 0.0f));
-      m_pathOrigin = m_pathOrigin + game.vec.forward * rg.float_ (0.0f, m_path->radius);
+      m_pathOrigin = m_pathOrigin + Vector (pev->angles.x, cr::normalizeAngles (pev->angles.y + rg.float_ (-90.0f, 90.0f)), 0.0f).forward () * rg.float_ (0.0f, m_path->radius);
    }
 
    if (isOnLadder ()) {
@@ -2254,7 +2261,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
    Vector src = getEyesPos ();
    Vector forward = src + normal * 24.0f;
 
-   game.makeVectors (Vector (0.0f, pev->angles.y, 0.0f));
+   const auto &right = Vector (0.0f, pev->angles.y, 0.0f).right ();
 
    auto checkDoor = [] (TraceResult *tr) {
       if (!game.mapIs (MapFlags::HasDoors)) {
@@ -2276,8 +2283,8 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
 
    // bot's head is clear, check at shoulder level...
    // trace from the bot's shoulder left diagonal forward to the right shoulder...
-   src = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) - game.vec.right * -16.0f;
-   forward = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) + game.vec.right * 16.0f + normal * 24.0f;
+   src = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) - right * -16.0f;
+   forward = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) + right * 16.0f + normal * 24.0f;
 
    game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
 
@@ -2288,8 +2295,8 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
 
    // bot's head is clear, check at shoulder level...
    // trace from the bot's shoulder right diagonal forward to the left shoulder...
-   src = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) + game.vec.right * 16.0f;
-   forward = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) - game.vec.right * -16.0f + normal * 24.0f;
+   src = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) + right * 16.0f;
+   forward = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) - right * -16.0f + normal * 24.0f;
 
    game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
 
@@ -2321,8 +2328,8 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
    }
    else {
       // trace from the left waist to the right forward waist pos
-      src = pev->origin + Vector (0.0f, 0.0f, -17.0f) - game.vec.right * -16.0f;
-      forward = pev->origin + Vector (0.0f, 0.0f, -17.0f) + game.vec.right * 16.0f + normal * 24.0f;
+      src = pev->origin + Vector (0.0f, 0.0f, -17.0f) - right * -16.0f;
+      forward = pev->origin + Vector (0.0f, 0.0f, -17.0f) + right * 16.0f + normal * 24.0f;
 
       // trace from the bot's waist straight forward...
       game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
@@ -2333,8 +2340,8 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       }
 
       // trace from the left waist to the right forward waist pos
-      src = pev->origin + Vector (0.0f, 0.0f, -17.0f) + game.vec.right * 16.0f;
-      forward = pev->origin + Vector (0.0f, 0.0f, -17.0f) - game.vec.right * -16.0f + normal * 24.0f;
+      src = pev->origin + Vector (0.0f, 0.0f, -17.0f) + right * 16.0f;
+      forward = pev->origin + Vector (0.0f, 0.0f, -17.0f) - right * -16.0f + normal * 24.0f;
 
       game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
 
@@ -2346,28 +2353,28 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
    return false; // bot can move forward, return false
 }
 
-#ifdef DEAD_CODE
 bool Bot::canStrafeLeft (TraceResult *tr) {
    // this function checks if bot can move sideways
 
-   makeVectors (pev->v_angle);
+   Vector right, forward;
+   pev->v_angle.buildVectors (&forward, &right, nullptr);
 
    Vector src = pev->origin;
-   Vector left = src - game.vec.right * -40.0f;
+   Vector dest = src - right * -40.0f;
 
    // trace from the bot's waist straight left...
-   TraceLine (src, left, true, ent (), tr);
+   game.testLine (src, dest, TraceIgnore::Monsters, ent (), tr);
 
    // check if the trace hit something...
    if (tr->flFraction < 1.0f) {
       return false; // bot's body will hit something
    }
 
-   src = left;
-   left = left + game.vec.forward * 40.0f;
+   src = dest;
+   dest = dest + forward * 40.0f;
 
    // trace from the strafe pos straight forward...
-   TraceLine (src, left, true, ent (), tr);
+   game.testLine (src, dest, TraceIgnore::Monsters, ent (), tr);
 
    // check if the trace hit something...
    if (tr->flFraction < 1.0f) {
@@ -2379,23 +2386,24 @@ bool Bot::canStrafeLeft (TraceResult *tr) {
 bool Bot::canStrafeRight (TraceResult *tr) {
    // this function checks if bot can move sideways
 
-   makeVectors (pev->v_angle);
+   Vector right, forward;
+   pev->v_angle.buildVectors (&forward, &right, nullptr);
 
    Vector src = pev->origin;
-   Vector right = src + game.vec.right * 40.0f;
+   Vector dest = src + right * 40.0f;
 
    // trace from the bot's waist straight right...
-   TraceLine (src, right, true, ent (), tr);
+   game.testLine (src, dest, TraceIgnore::Monsters, ent (), tr);
 
    // check if the trace hit something...
    if (tr->flFraction < 1.0f) {
       return false; // bot's body will hit something
    }
-   src = right;
-   right = right + game.vec.forward * 40.0f;
+   src = dest;
+   dest = dest + forward * 40.0f;
 
    // trace from the strafe pos straight forward...
-   TraceLine (src, right, true, ent (), tr);
+   game.testLine (src, dest, TraceIgnore::Monsters, ent (), tr);
 
    // check if the trace hit something...
    if (tr->flFraction < 1.0f) {
@@ -2403,8 +2411,6 @@ bool Bot::canStrafeRight (TraceResult *tr) {
    }
    return true;
 }
-
-#endif
 
 bool Bot::canJumpUp (const Vector &normal) {
    // this function check if bot can jump over some obstacle
@@ -2415,9 +2421,7 @@ bool Bot::canJumpUp (const Vector &normal) {
    if (!isOnFloor () && (isOnLadder () || !isInWater ())) {
       return false;
    }
-
-   // convert current view angle to vectors for traceline math...
-   game.makeVectors (Vector (0.0f, pev->angles.y, 0.0f));
+   const auto &right = Vector (0.0f, pev->angles.y, 0.0f).right (); // convert current view angle to vectors for traceline math...
 
    // check for normal jump height first...
    Vector src = pev->origin + Vector (0.0f, 0.0f, -36.0f + 45.0f);
@@ -2427,7 +2431,7 @@ bool Bot::canJumpUp (const Vector &normal) {
    game.testLine (src, dest, TraceIgnore::Monsters, ent (), &tr);
 
    if (tr.flFraction < 1.0f) {
-      return doneCanJumpUp (normal);
+      return doneCanJumpUp (normal, right);
    }
    else {
       // now trace from jump height upward to check for obstructions...
@@ -2442,7 +2446,7 @@ bool Bot::canJumpUp (const Vector &normal) {
    }
 
    // now check same height to one side of the bot...
-   src = pev->origin + game.vec.right * 16.0f + Vector (0.0f, 0.0f, -36.0f + 45.0f);
+   src = pev->origin + right * 16.0f + Vector (0.0f, 0.0f, -36.0f + 45.0f);
    dest = src + normal * 32.0f;
 
    // trace a line forward at maximum jump height...
@@ -2450,7 +2454,7 @@ bool Bot::canJumpUp (const Vector &normal) {
 
    // if trace hit something, return false
    if (tr.flFraction < 1.0f) {
-      return doneCanJumpUp (normal);
+      return doneCanJumpUp (normal, right);
    }
 
    // now trace from jump height upward to check for obstructions...
@@ -2465,7 +2469,7 @@ bool Bot::canJumpUp (const Vector &normal) {
    }
 
    // now check same height on the other side of the bot...
-   src = pev->origin + (-game.vec.right * 16.0f) + Vector (0.0f, 0.0f, -36.0f + 45.0f);
+   src = pev->origin + (-right * 16.0f) + Vector (0.0f, 0.0f, -36.0f + 45.0f);
    dest = src + normal * 32.0f;
 
    // trace a line forward at maximum jump height...
@@ -2473,7 +2477,7 @@ bool Bot::canJumpUp (const Vector &normal) {
 
    // if trace hit something, return false
    if (tr.flFraction < 1.0f) {
-      return doneCanJumpUp (normal);
+      return doneCanJumpUp (normal, right);
    }
 
    // now trace from jump height upward to check for obstructions...
@@ -2486,7 +2490,7 @@ bool Bot::canJumpUp (const Vector &normal) {
    return tr.flFraction > 1.0f;
 }
 
-bool Bot::doneCanJumpUp (const Vector &normal) {
+bool Bot::doneCanJumpUp (const Vector &normal, const Vector &right) {
    // use center of the body first... maximum duck jump height is 62, so check one unit above that (63)
    Vector src = pev->origin + Vector (0.0f, 0.0f, -36.0f + 63.0f);
    Vector dest = src + normal * 32.0f;
@@ -2513,7 +2517,7 @@ bool Bot::doneCanJumpUp (const Vector &normal) {
    }
 
    // now check same height to one side of the bot...
-   src = pev->origin + game.vec.right * 16.0f + Vector (0.0f, 0.0f, -36.0f + 63.0f);
+   src = pev->origin + right * 16.0f + Vector (0.0f, 0.0f, -36.0f + 63.0f);
    dest = src + normal * 32.0f;
 
    // trace a line forward at maximum jump height...
@@ -2536,7 +2540,7 @@ bool Bot::doneCanJumpUp (const Vector &normal) {
    }
 
    // now check same height on the other side of the bot...
-   src = pev->origin + (-game.vec.right * 16.0f) + Vector (0.0f, 0.0f, -36.0f + 63.0f);
+   src = pev->origin + (-right * 16.0f) + Vector (0.0f, 0.0f, -36.0f + 63.0f);
    dest = src + normal * 32.0f;
 
    // trace a line forward at maximum jump height...
@@ -2563,9 +2567,6 @@ bool Bot::canDuckUnder (const Vector &normal) {
    TraceResult tr;
    Vector baseHeight;
 
-   // convert current view angle to vectors for TraceLine math...
-   game.makeVectors (Vector (0.0f, pev->angles.y, 0.0f));
-
    // use center of the body first...
    if (pev->flags & FL_DUCKING) {
       baseHeight = pev->origin + Vector (0.0f, 0.0f, -17.0f);
@@ -2585,8 +2586,11 @@ bool Bot::canDuckUnder (const Vector &normal) {
       return false;
    }
 
+   // convert current view angle to vectors for TraceLine math...
+   const auto &right = Vector (0.0f, pev->angles.y, 0.0f).right ();
+
    // now check same height to one side of the bot...
-   src = baseHeight + game.vec.right * 16.0f;
+   src = baseHeight + right * 16.0f;
    dest = src + normal * 32.0f;
 
    // trace a line forward at duck height...
@@ -2598,7 +2602,7 @@ bool Bot::canDuckUnder (const Vector &normal) {
    }
 
    // now check same height on the other side of the bot...
-   src = baseHeight + (-game.vec.right * 16.0f);
+   src = baseHeight + (-right * 16.0f);
    dest = src + normal * 32.0f;
 
    // trace a line forward at duck height...
@@ -2608,19 +2612,18 @@ bool Bot::canDuckUnder (const Vector &normal) {
    return tr.flFraction > 1.0f;
 }
 
-#ifdef DEAD_CODE
-
 bool Bot::isBlockedLeft () {
    TraceResult tr;
-   int direction = 48;
+   float direction = 48.0f;
 
    if (m_moveSpeed < 0.0f) {
-      direction = -48;
+      direction = -48.0f;
    }
-   makeVectors (pev->angles);
+   Vector right, forward;
+   pev->angles.buildVectors (&forward, &right, nullptr);
 
    // do a trace to the left...
-   game.TestLine (pev->origin, game.vec.forward * direction - game.vec.right * 48.0f, TraceIgnore::Monsters, ent (), &tr);
+   game.testLine (pev->origin, forward * direction - right * 48.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
    if (game.mapIs (MapFlags::HasDoors) && tr.flFraction < 1.0f && strncmp ("func_door", STRING (tr.pHit->v.classname), 9) != 0) {
@@ -2631,15 +2634,16 @@ bool Bot::isBlockedLeft () {
 
 bool Bot::isBlockedRight () {
    TraceResult tr;
-   int direction = 48;
+   float direction = 48.0f;
 
-   if (m_moveSpeed < 0) {
-      direction = -48;
+   if (m_moveSpeed < 0.0f) {
+      direction = -48.0f;
    }
-   makeVectors (pev->angles);
+   Vector right, forward;
+   pev->angles.buildVectors (&forward, &right, nullptr);
 
    // do a trace to the right...
-   game.TestLine (pev->origin, pev->origin + game.vec.forward * direction + game.vec.right * 48.0f, TraceIgnore::Monsters, ent (), &tr);
+   game.testLine (pev->origin, pev->origin + forward * direction + right * 48.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
    if (game.mapIs (MapFlags::HasDoors) && tr.flFraction < 1.0f && (strncmp ("func_door", STRING (tr.pHit->v.classname), 9) != 0)) {
@@ -2648,13 +2652,9 @@ bool Bot::isBlockedRight () {
    return false;
 }
 
-#endif
-
 bool Bot::checkWallOnLeft () {
    TraceResult tr;
-   game.makeVectors (pev->angles);
-
-   game.testLine (pev->origin, pev->origin - game.vec.right * 40.0f, TraceIgnore::Monsters, ent (), &tr);
+   game.testLine (pev->origin, pev->origin - pev->angles.right () * 40.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
    if (tr.flFraction < 1.0f) {
@@ -2665,10 +2665,9 @@ bool Bot::checkWallOnLeft () {
 
 bool Bot::checkWallOnRight () {
    TraceResult tr;
-   game.makeVectors (pev->angles);
 
    // do a trace to the right...
-   game.testLine (pev->origin, pev->origin + game.vec.right * 40.0f, TraceIgnore::Monsters, ent (), &tr);
+   game.testLine (pev->origin, pev->origin + pev->angles.right () * 40.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
    if (tr.flFraction < 1.0f) {
@@ -2680,17 +2679,11 @@ bool Bot::checkWallOnRight () {
 bool Bot::isDeadlyMove (const Vector &to) {
    // this function eturns if given location would hurt Bot with falling damage
 
-   Vector botPos = pev->origin;
    TraceResult tr;
+   const auto &direction = (to - pev->origin).normalize (); // 1 unit long
 
-   Vector move ((to - botPos).yaw (), 0.0f, 0.0f);
-   game.makeVectors (move);
-
-   Vector direction = (to - botPos).normalize (); // 1 unit long
-   Vector check = botPos;
-   Vector down = botPos;
-
-   down.z = down.z - 1000.0f; // straight down 1000 units
+   Vector check = to, down = to;
+   down.z -= 1000.0f; // straight down 1000 units
 
    game.testHull (check, down, TraceIgnore::Monsters, head_hull, ent (), &tr);
 
@@ -2701,20 +2694,26 @@ bool Bot::isDeadlyMove (const Vector &to) {
    float lastHeight = tr.flFraction * 1000.0f; // height from ground
    float distance = (to - check).length (); // distance from goal
 
-   while (distance > 16.0f) {
-      check = check + direction * 16.0f; // move 10 units closer to the goal...
+   if (distance <= 30.0f && lastHeight > 150.0f) {
+      return true;
+   }
+
+   while (distance > 30.0f) {
+      check = check + direction * 30.0f; // move 10 units closer to the goal...
 
       down = check;
-      down.z = down.z - 1000.0f; // straight down 1000 units
+      down.z -= 1000.0f; // straight down 1000 units
 
       game.testHull (check, down, TraceIgnore::Monsters, head_hull, ent (), &tr);
 
-      if (tr.fStartSolid) { // Wall blocking?
+      // wall blocking?
+      if (tr.fStartSolid) { 
          return false;
       }
       float height = tr.flFraction * 1000.0f; // height from ground
 
-      if (lastHeight < height - 100.0f) {// Drops more than 100 Units?
+      // drops more than 150 units?
+      if (lastHeight < height - 150.0f) {
          return true;
       }
       lastHeight = height;
@@ -2986,10 +2985,8 @@ void Bot::updateLookAnglesNewbie (const Vector &direction, float delta) {
 }
 
 void Bot::setStrafeSpeed (const Vector &moveDir, float strafeSpeed) {
-   game.makeVectors (pev->angles);
-
    const Vector &los = (moveDir - pev->origin).normalize2d ();
-   float dot = los | game.vec.forward.get2d ();
+   float dot = los | pev->angles.forward ().get2d ();
 
    if (dot > 0.0f && !checkWallOnRight ()) {
       m_strafeSpeed = strafeSpeed;
@@ -3062,7 +3059,7 @@ edict_t *Bot::lookupButton (const char *targetName) {
    // this function tries to find nearest to current bot button, and returns pointer to
    // it's entity, also here must be specified the target, that button must open.
 
-   if (util.isEmptyStr (targetName)) {
+   if (strings.isEmpty (targetName)) {
       return nullptr;
    }
    float nearestDistance = kInfiniteDistance;
@@ -3084,4 +3081,48 @@ edict_t *Bot::lookupButton (const char *targetName) {
       }
    }
    return foundEntity;
+}
+
+
+bool Bot::isReachableNode (int index) {
+   // this function return whether bot able to reach index node or not, depending on several factors.
+
+   if (!graph.exists (index)) {
+      return false;
+   }
+   const Vector &src = pev->origin;
+   const Vector &dst = graph[index].origin;
+
+   // is the destination close enough?
+   if ((dst - src).lengthSq () >= cr::square (320.0f)) {
+      return false;
+   }
+   float ladderDist = (dst - src).length2d ();
+
+   TraceResult tr;
+   game.testLine (src, dst, TraceIgnore::Monsters, ent (), &tr);
+
+   // if node is visible from current position (even behind head)...
+   if (tr.flFraction >= 1.0f) {
+
+      // it's should be not a problem to reach node inside water...
+      if (pev->waterlevel == 2 || pev->waterlevel == 3) {
+         return true;
+      }
+
+      // check for ladder
+      bool nonLadder = !(graph[index].flags & NodeFlag::Ladder) || ladderDist > 16.0f;
+
+      // is dest node higher than src? (62 is max jump height)
+      if (nonLadder && dst.z > src.z + 62.0f) {
+         return false; // can't reach this one
+      }
+
+      // is dest node lower than src?
+      if (nonLadder && dst.z < src.z - 100.0f) {
+         return false; // can't reach this one
+      }
+      return true;
+   }
+   return false;
 }

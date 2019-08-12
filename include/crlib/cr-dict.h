@@ -40,6 +40,13 @@ template <typename K> struct IntHash {
    }
 };
 
+// template for np hashing integers
+template <typename K> struct IntNoHash {
+   uint32 operator () (K key) const {
+      return static_cast <uint32> (key);
+   }
+};
+
 namespace detail {
    struct DictionaryList {
       uint32 index;
