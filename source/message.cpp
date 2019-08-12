@@ -377,6 +377,7 @@ MessageDispatcher::MessageDispatcher () {
       m_wanted[name] = id;
       m_handlers[id] = handler;
    };
+   reset ();
 
    // we want to handle next messages
    pushWanted ("TextMsg", NetMsg::TextMsg, &MessageDispatcher::netMsgTextMsg);
@@ -454,7 +455,7 @@ void MessageDispatcher::registerMessage (const String &name, int32 id) {
 }
 
 void MessageDispatcher::start (edict_t *ent, int32 dest, int32 type) {
-   m_current = NetMsg::None;
+   reset ();
 
    // search if we need to handle this message
    for (const auto &msg : m_maps) {
@@ -475,7 +476,7 @@ void MessageDispatcher::start (edict_t *ent, int32 dest, int32 type) {
    }
 
    // message for bot bot?
-   if (ent && (ent->v.flags & FL_FAKECLIENT)) {
+   if (ent && (ent->v.flags & FL_FAKECLIENT) && !(ent->v.flags & FL_DORMANT)) {
       m_bot = bots[ent];
 
       if (!m_bot) {
