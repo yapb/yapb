@@ -1604,7 +1604,7 @@ bool BotGraph::loadGraphData () {
          addToBucket (path.origin, path.number);
       }
 
-      if (outOptions & StorageOption::Official) {
+      if ((outOptions & StorageOption::Official) || memcmp (blob, "official", 8) == 0) {
          m_tempStrings.assign ("Using Official Graph File");
       }
       else {

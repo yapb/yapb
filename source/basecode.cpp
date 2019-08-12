@@ -644,7 +644,7 @@ void Bot::updatePickups () {
                   m_defendedBomb = true;
 
                   int index = findDefendNode (origin);
-                  Path &path = graph[index];
+                  const Path &path = graph[index];
 
                   float bombTimer = mp_c4timer.float_ ();
                   float timeMidBlowup = bots.getTimeBombPlanted () + (bombTimer * 0.5f + bombTimer * 0.25f) - graph.calculateTravelTime (pev->maxspeed, pev->origin, path.origin);
@@ -717,7 +717,7 @@ void Bot::updatePickups () {
                   m_defendedBomb = true;
 
                   int index = findDefendNode (origin);
-                  Path &path = graph[index];
+                  const Path &path = graph[index];
 
                   float timeToExplode = bots.getTimeBombPlanted () + mp_c4timer.float_ () - graph.calculateTravelTime (pev->maxspeed, pev->origin, path.origin);
 
@@ -824,7 +824,7 @@ void Bot::getCampDirection (Vector *dest) {
       float minDistance = kInfiniteDistance;
 
       int lookAtWaypoint = kInvalidNodeIndex;
-      Path &path = graph[tempIndex];
+      const Path &path = graph[tempIndex];
 
       for (auto &link : path.links) {
          if (link.index == kInvalidNodeIndex) {
@@ -2472,7 +2472,7 @@ void Bot::checkRadioQueue () {
       switch (getCurrentTaskId ()) {
       case Task::Normal:
          if (getTask ()->data != kInvalidNodeIndex && rg.chance (70)) {
-            Path &path = graph[getTask ()->data];
+            const Path &path = graph[getTask ()->data];
 
             if (path.flags & NodeFlag::Goal) {
                if (game.mapIs (MapFlags::Demolition) && m_team == Team::Terrorist && m_hasC4) {
@@ -5003,7 +5003,7 @@ void Bot::showDebugOverlay () {
          game.drawLine (game.getLocalEntity (), getEyesPos () - Vector (0.0f, 0.0f, 32.0f), getEyesPos () + pev->v_angle.forward () * 300.0f, 10, 0, Color (255, 0, 0), 250, 5, 1, DrawLine::Arrow);
 
          // now draw line from source to destination
-         for (size_t i = m_pathWalk.cursor (); i < m_pathWalk.length () && i + 1 < m_pathWalk.length (); ++i) {
+         for (size_t i = 0; i < m_pathWalk.length () && i + 1 < m_pathWalk.length (); ++i) {
             game.drawLine (game.getLocalEntity (), graph[m_pathWalk.at (i)].origin, graph[m_pathWalk.at (i + 1)].origin, 15, 0, Color (255, 100, 55), 200, 5, 1, DrawLine::Arrow);
          }
       }

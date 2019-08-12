@@ -180,11 +180,11 @@ public:
 
 public:
    int32 &next () {
-      return at (m_cursor + 1);
+      return at (1);
    }
 
    int32 &first () {
-      return at (m_cursor);
+      return at (0);
    }
 
    int32 &last () {
@@ -192,7 +192,7 @@ public:
    }
 
    int32 &at (size_t index) {
-      return m_storage.at (index);
+      return m_storage.at (m_cursor + index);
    }
 
    void shift () {
@@ -208,10 +208,6 @@ public:
          return 0;
       }
       return m_storage.length () - m_cursor;
-   }
-
-   size_t cursor () const {
-      return m_cursor;
    }
 
    bool hasNext () const {
