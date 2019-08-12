@@ -142,6 +142,13 @@ public:
    int32 id (NetMsg msg) const {
       return m_maps[msg];
    }
+
+private:
+   void reset () {
+      m_current = NetMsg::None;
+      m_bot = nullptr;
+      m_broadcast = false;
+   }
 };
 
 static auto &msgs = MessageDispatcher::get ();
