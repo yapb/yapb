@@ -494,25 +494,23 @@ struct WeaponInfo {
    bool primaryFireHold; // hold down primary fire button to use?
 
 public:
-   WeaponInfo (int id, const char *name, const char *model, int price, int minPriAmmo, int teamStd,
-      int teamAs, int buyGroup, int buySelect, int buySelectT, int buySelectCT, int penetratePower, 
-      int maxClip, bool fireHold) {
-
-      this->id = id;
-      this->name = name;
-      this->model = model;
-      this->price = price;
-      this->minPrimaryAmmo = minPriAmmo;
-      this->teamStandard = teamStd;
-      this->teamAS = teamAs;
-      this->buyGroup = buyGroup;
-      this->buySelect = buySelect;
-      this->buySelectCT = buySelectCT;
-      this->buySelectT = buySelectT;
-      this->penetratePower = penetratePower;
-      this->maxClip = maxClip;
-      this->primaryFireHold = fireHold;
-   }
+   WeaponInfo (int id, 
+      const char *name,
+      const char *model,
+      int price,
+      int minPriAmmo,
+      int teamStd,
+      int teamAs,
+      int buyGroup,
+      int buySelect,
+      int buySelectT,
+      int buySelectCT, 
+      int penetratePower,
+      int maxClip,
+      bool fireHold) :  id (id), name (name), model (model), price (price), minPrimaryAmmo (minPriAmmo), teamStandard (teamStd), 
+      teamAS (teamAs), buyGroup (buyGroup), buySelect (buySelect), buySelectT (buySelectT), buySelectCT (buySelectCT),
+      penetratePower (penetratePower), maxClip (maxClip), primaryFireHold (fireHold)
+   { }
 };
 
 // array of clients struct

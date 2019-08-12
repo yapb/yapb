@@ -128,8 +128,8 @@ void MessageDispatcher::netMsgWeaponList () {
       return;
    }
 
-   // register prop
-   WeaponProp prop {
+   // store away this weapon with it's ammo information...
+   conf.getWeaponProp (m_args[id].long_) = {
       m_args[classname].chars_,
       m_args[ammo_index_1].long_,
       m_args[max_ammo_1].long_,
@@ -138,7 +138,6 @@ void MessageDispatcher::netMsgWeaponList () {
       m_args[id].long_,
       m_args[flags].long_
    };
-   conf.setWeaponProp (cr::move (prop)); // store away this weapon with it's ammo information...
 }
 
 void MessageDispatcher::netMsgCurWeapon () {
@@ -454,7 +453,7 @@ void MessageDispatcher::registerMessage (const String &name, int32 id) {
    m_maps[m_wanted[name]] = id; // add message from engine RegUserMsg
 }
 
-void MessageDispatcher::start (edict_t *ent, int32 dest, int32 type) {
+void MessageDispatcher::start (edict_t *ent, int32 type) {
    reset ();
 
    // search if we need to handle this message
@@ -470,13 +469,8 @@ void MessageDispatcher::start (edict_t *ent, int32 dest, int32 type) {
       return;
    }
 
-   // broadcast message ?
-   if (dest == MSG_ALL || dest == MSG_SPEC || dest == MSG_BROADCAST) {
-      m_broadcast = true;
-   }
-
    // message for bot bot?
-   if (ent && (ent->v.flags & FL_FAKECLIENT) && !(ent->v.flags & FL_DORMANT)) {
+   if (!game.isNullEntity (ent) && !(ent->v.flags & FL_DORMANT)) {
       m_bot = bots[ent];
 
       if (!m_bot) {

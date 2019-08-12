@@ -87,8 +87,6 @@ private:
    Dictionary <String, int32> m_teamInfoCache; // cache for teaminfo message
 
 private:
-   bool m_broadcast; // message for all players
-
    Bot *m_bot; // owner of a message
    NetMsg m_current; // ongoing message id
 
@@ -124,7 +122,7 @@ public:
 
 public:
    void registerMessage (const String &name, int32 id);
-   void start (edict_t *ent, int32 dest, int32 type);
+   void start (edict_t *ent, int32 type);
    void stop ();
 
 public:
@@ -147,7 +145,6 @@ private:
    void reset () {
       m_current = NetMsg::None;
       m_bot = nullptr;
-      m_broadcast = false;
    }
 };
 

@@ -2196,8 +2196,8 @@ bool Bot::advanceMovement () {
             if (m_pathWalk.hasNext ()) {
                auto nextIndex = m_pathWalk.next ();
 
-               Path &path = graph[destIndex];
-               Path &next = graph[nextIndex];
+               const Path &path = graph[destIndex];
+               const Path &next = graph[nextIndex];
 
                for (const auto &link : path.links) {
                   if (link.index == nextIndex && (link.flags & PathFlag::Jump)) {
@@ -2804,7 +2804,7 @@ int Bot::findCampingDirection () {
       if (currentNode == i || !graph.isVisible (currentNode, i)) {
          continue;
       }
-      Path &path = graph[i];
+      const Path &path = graph[i];
 
       if (count < 3) {
          indices[count] = i;

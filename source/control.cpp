@@ -1169,7 +1169,7 @@ int BotControl::menuGraphPage2 (int item) {
       int noHostagePoints = 0;
 
       for (int i = 0; i < graph.length (); ++i) {
-         Path &path = graph[i];
+         const Path &path = graph[i];
 
          if (path.flags & NodeFlag::TerroristOnly) {
             ++terrPoints;

@@ -170,13 +170,8 @@ public:
       return m_weapons.begin ();
    }
 
-   // set's the weapon properties
-   void setWeaponProp (WeaponProp prop) {
-      m_weaponProps[prop.id] = cr::move (prop);
-   }
-
    // get's the weapons prop
-   const WeaponProp &getWeaponProp (int id) const {
+   WeaponProp &getWeaponProp (int id) {
       return m_weaponProps[id];
    }
 

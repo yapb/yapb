@@ -612,7 +612,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
    functionTable->pfnMessageBegin = [] (int msgDest, int msgType, const float *origin, edict_t *ed) {
       // this function called each time a message is about to sent.
 
-      msgs.start (ed, msgDest, msgType);
+      msgs.start (ed, msgType);
 
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
