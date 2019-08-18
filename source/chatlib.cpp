@@ -19,11 +19,11 @@ void BotUtils::stripTags (String &line) {
    for (const auto &tag : m_tags) {
       const size_t start = line.find (tag.first, 0);
 
-      if (start != String::kInvalidIndex) {
+      if (start != String::InvalidIndex) {
          const size_t end = line.find (tag.second, start);
          const size_t diff = end - start;
 
-         if (end != String::kInvalidIndex && end > start && diff < 32 && diff > 4) {
+         if (end != String::InvalidIndex && end > start && diff < 32 && diff > 2) {
             line.erase (start, diff + tag.second.length ());
             break;
          }
@@ -84,7 +84,7 @@ bool BotUtils::checkKeywords (const String &line, String &reply) {
       for (const auto &keyword : factory.keywords) {
 
          // check is keyword has occurred in message
-         if (line.find (keyword) != String::kInvalidIndex) {
+         if (line.find (keyword) != String::InvalidIndex) {
             StringArray &usedReplies = factory.usedReplies;
 
             if (usedReplies.length () >= factory.replies.length () / 4) {
@@ -140,7 +140,7 @@ void Bot::prepareChatMessage (const String &message) {
    size_t pos = message.find ('%');
 
    // nothing found, bail out
-   if (pos == String::kInvalidIndex || pos >= message.length ()) {
+   if (pos == String::InvalidIndex || pos >= message.length ()) {
       finishPreparation ();
       return;
    }
@@ -181,7 +181,7 @@ void Bot::prepareChatMessage (const String &message) {
 
    // get roundtime
    auto getRoundTime = [] () -> String {
-      auto roundTimeSecs = static_cast <int> (bots.getRoundEndTime () - game.timebase ());
+      auto roundTimeSecs = static_cast <int> (bots.getRoundEndTime () - game.time ());
       
       String roundTime;
       roundTime.assignf ("%02d:%02d", cr::clamp (roundTimeSecs / 60, 0, 59), cr::clamp (cr::abs (roundTimeSecs % 60), 0, 59));
@@ -235,7 +235,7 @@ void Bot::prepareChatMessage (const String &message) {
    };
    size_t replaceCounter = 0;
 
-   while (replaceCounter < 6 && (pos = m_chatBuffer.find ('%')) != String::kInvalidIndex) {
+   while (replaceCounter < 6 && (pos = m_chatBuffer.find ('%')) != String::InvalidIndex) {
       // found one, let's do replace
       switch (m_chatBuffer[pos + 1]) {
 
@@ -295,7 +295,7 @@ bool Bot::isReplyingToChat () {
 
    if (m_sayTextBuffer.entityIndex != -1 && !m_sayTextBuffer.sayText.empty ()) {
       // check is time to chat is good
-      if (m_sayTextBuffer.timeNextChat < game.timebase () + rg.float_ (m_sayTextBuffer.chatDelay / 2, m_sayTextBuffer.chatDelay)) {
+      if (m_sayTextBuffer.timeNextChat < game.time () + rg.float_ (m_sayTextBuffer.chatDelay / 2, m_sayTextBuffer.chatDelay)) {
          String replyText;
 
          if (rg.chance (m_sayTextBuffer.chatProbability + rg.int_ (20, 50)) && checkChatKeywords (replyText)) {
@@ -303,7 +303,7 @@ bool Bot::isReplyingToChat () {
             pushMsgQueue (BotMsg::Say);
   
             m_sayTextBuffer.entityIndex = -1;
-            m_sayTextBuffer.timeNextChat = game.timebase () + m_sayTextBuffer.chatDelay;
+            m_sayTextBuffer.timeNextChat = game.time () + m_sayTextBuffer.chatDelay;
             m_sayTextBuffer.sayText.clear ();
 
             return true;
@@ -323,7 +323,7 @@ void Bot::checkForChat () {
    }
 
    // bot chatting turned on?
-   if (m_lastChatTime + rg.float_ (6.0f, 10.0f) < game.timebase () && bots.getLastChatTimestamp () + rg.float_ (2.5f, 5.0f) < game.timebase () && !isReplyingToChat ()) {
+   if (m_lastChatTime + rg.float_ (6.0f, 10.0f) < game.time () && bots.getLastChatTimestamp () + rg.float_ (2.5f, 5.0f) < game.time () && !isReplyingToChat ()) {
       if (conf.hasChatBank (Chat::Dead)) {
          const auto &phrase = conf.pickRandomFromChatBank (Chat::Dead);
          bool sayBufferExists = false;
@@ -340,8 +340,8 @@ void Bot::checkForChat () {
             prepareChatMessage (phrase);
             pushMsgQueue (BotMsg::Say);
  
-            m_lastChatTime = game.timebase ();
-            bots.setLastChatTimestamp (game.timebase ());
+            m_lastChatTime = game.time ();
+            bots.setLastChatTimestamp (game.time ());
 
             // add to ignore list
             m_sayTextBuffer.lastUsedSentences.push (phrase);

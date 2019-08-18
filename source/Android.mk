@@ -22,7 +22,7 @@ LOCAL_SRC_FILES := \
 	combat.cpp \
 	control.cpp \
 	engine.cpp \
-	interface.cpp \
+	linkage.cpp \
 	navigate.cpp \
 	support.cpp \
 	graph.cpp \

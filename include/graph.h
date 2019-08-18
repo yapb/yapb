@@ -323,7 +323,7 @@ public:
    void initNodesTypes ();
    void initLightLevels ();
    void addPath (int addIndex, int pathIndex, float distance);
-   void add (int type, const Vector &pos = nullvec);
+   void add (int type, const Vector &pos = nullptr);
    void erase (int target);
    void toggleFlags (int toggleFlag);
    void setRadius (int index, float radius);
@@ -344,7 +344,7 @@ public:
    void initBuckets ();
    void addToBucket (const Vector &pos, int index);
    void eraseFromBucket (const Vector &pos, int index);
-   void setBombPos (bool reset = false, const Vector &pos = nullvec);
+   void setBombPos (bool reset = false, const Vector &pos = nullptr);
    void updateGlobalPractice ();
    void unassignPath (int from, int to);
    void setDangerValue (int team, int start, int goal, int value);

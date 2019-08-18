@@ -57,8 +57,15 @@ CR_DECLARE_SCOPED_ENUM (MapFlags,
    Escape = cr::bit (3),
    KnifeArena = cr::bit (4),
    Fun = cr::bit (5),
-   HasDoors = cr::bit (10) // additional flags
+   HasDoors = cr::bit (10), // additional flags
+   HasButtons = cr::bit (11) // map has buttons
 )
+
+// recursive entity search
+CR_DECLARE_SCOPED_ENUM (EntitySearchResult,
+   Continue,
+   Break
+);
 
 // variable reg pair
 struct VarPair {
@@ -74,6 +81,9 @@ using EntityFunction = void (*) (entvars_t *);
 
 // provides utility functions to not call original engine (less call-cost)
 class Game final : public Singleton <Game> {
+public:
+   using EntitySearch = Lambda <EntitySearchResult (edict_t *)>;
+
 private:
    int m_drawModels[DrawLine::Count];
    int m_spawnCount[Team::Unassigned];
@@ -130,7 +140,7 @@ public:
    Vector getAbsPos (edict_t *ent);
 
    // registers a server command
-   void registerCmd (const char *command, void func_ ());
+   void registerEngineCommand (const char *command, void func_ ());
 
    // play's sound to client
    void playSound (edict_t *ent, const char *sound);
@@ -159,10 +169,16 @@ public:
    // executes stuff every 1 second
    void slowFrame ();
 
+   // search entities by variable field
+   void searchEntities (const String &field, const String &value, EntitySearch functor);
+
+   // search entities in sphere
+   void searchEntities (const Vector &position, const float radius, EntitySearch functor);
+
    // public inlines
 public:
    // get the current time on server
-   float timebase () const {
+   float time () const {
       return globals->time;
    }
 
@@ -361,7 +377,7 @@ private:
 public:
    MessageWriter () = default;
 
-   MessageWriter (int dest, int type, const Vector &pos = nullvec, edict_t *to = nullptr) {
+   MessageWriter (int dest, int type, const Vector &pos = nullptr, edict_t *to = nullptr) {
       start (dest, type, pos, to);
       m_autoDestruct = true;
    }
@@ -373,7 +389,7 @@ public:
    }
 
 public:
-   MessageWriter &start (int dest, int type, const Vector &pos = nullvec, edict_t *to = nullptr) {
+   MessageWriter &start (int dest, int type, const Vector &pos = nullptr, edict_t *to = nullptr) {
       engfuncs.pfnMessageBegin (dest, type, pos, to);
       return *this;
    }

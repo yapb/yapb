@@ -19,9 +19,9 @@ void BotGraph::initGraph () {
    m_loadAttempts = 0;
    m_editFlags = 0;
 
-   m_learnVelocity= nullvec;
-   m_learnPosition= nullvec;
-   m_lastNode= nullvec;
+   m_learnVelocity= nullptr;
+   m_learnPosition= nullptr;
+   m_lastNode= nullptr;
 
    m_pathDisplayTime = 0.0f;
    m_arrowDisplayTime = 0.0f;
@@ -540,7 +540,7 @@ void BotGraph::add (int type, const Vector &pos) {
    Path *path = nullptr;
 
    bool addNewNode = true;
-   Vector newOrigin = pos == nullvec ? m_editor->v.origin : pos;
+   Vector newOrigin = pos.empty () ? m_editor->v.origin : pos;
 
    if (bots.hasBotsOnline ()) {
       bots.kickEveryone (true);
@@ -624,8 +624,8 @@ void BotGraph::add (int type, const Vector &pos) {
       path->origin = newOrigin;
       addToBucket (newOrigin, index);
 
-      path->start = nullvec;
-      path->end = nullvec;
+      path->start = nullptr;
+      path->end = nullptr;
       
       path->display = 0.0f;
       path->light = 0.0f;
@@ -634,7 +634,7 @@ void BotGraph::add (int type, const Vector &pos) {
          link.index = kInvalidNodeIndex;
          link.distance = 0;
          link.flags = 0;
-         link.velocity = nullvec;
+         link.velocity = nullptr;
       }
       
 
@@ -804,7 +804,7 @@ void BotGraph::erase (int target) {
             link.index = kInvalidNodeIndex;
             link.flags = 0;
             link.distance = 0;
-            link.velocity = nullvec;
+            link.velocity = nullptr;
          }
       }
    }
@@ -1037,9 +1037,8 @@ void BotGraph::calculatePathRadius (int index) {
 
    for (float scanDistance = 32.0f; scanDistance < 128.0f; scanDistance += 16.0f) {
       start = path.origin;
-      auto null = nullvec;
 
-      direction = null.forward () * scanDistance;
+      direction = Vector (0.0f, 0.0f, 0.0f).forward () * scanDistance;
       direction = direction.angles ();
 
       path.radius = scanDistance;
@@ -1925,7 +1924,7 @@ void BotGraph::frame () {
          if (m_editor->v.button & IN_JUMP) {
             add (9);
             
-            m_timeJumpStarted = game.timebase ();
+            m_timeJumpStarted = game.time ();
             m_endJumpPoint = true;
          }
          else {
@@ -1933,7 +1932,7 @@ void BotGraph::frame () {
             m_learnPosition = m_editor->v.origin;
          }
       }
-      else if (((m_editor->v.flags & FL_ONGROUND) || m_editor->v.movetype == MOVETYPE_FLY) && m_timeJumpStarted + 0.1f < game.timebase () && m_endJumpPoint) {
+      else if (((m_editor->v.flags & FL_ONGROUND) || m_editor->v.movetype == MOVETYPE_FLY) && m_timeJumpStarted + 0.1f < game.time () && m_endJumpPoint) {
          add (10);
 
          m_jumpLearnNode = false;
@@ -1946,7 +1945,7 @@ void BotGraph::frame () {
       // find the distance from the last used node
       float distance = (m_lastNode - m_editor->v.origin).lengthSq ();
 
-      if (distance > 16384.0f) {
+      if (distance > cr::square (128.0f)) {
          // check that no other reachable nodes are nearby...
          for (const auto &path : m_paths) {
             if (isNodeReacheable (m_editor->v.origin, path.origin)) {
@@ -1981,7 +1980,7 @@ void BotGraph::frame () {
             nearestDistance = distance;
          }
 
-         if (path.display + 0.8f < game.timebase ()) {
+         if (path.display + 0.8f < game.time ()) {
             float nodeHeight = 0.0f;
 
             // check the node height
@@ -2045,7 +2044,7 @@ void BotGraph::frame () {
                game.drawLine (m_editor, path.origin - Vector (0, 0, nodeHalfHeight), path.origin - Vector (0, 0, nodeHalfHeight - nodeHeight * 0.75f), nodeWidth, 0, nodeColor, 250, 0, 10); // draw basic path
                game.drawLine (m_editor, path.origin - Vector (0, 0, nodeHalfHeight - nodeHeight * 0.75f), path.origin + Vector (0, 0, nodeHalfHeight), nodeWidth, 0, nodeFlagColor, 250, 0, 10); // draw additional path
             }
-            path.display = game.timebase ();
+            path.display = game.time ();
          }
       }
    }
@@ -2057,7 +2056,7 @@ void BotGraph::frame () {
    // draw arrow to a some importaint nodes
    if (exists (m_findWPIndex) || exists (m_cacheNodeIndex) || exists (m_facingAtIndex)) {
       // check for drawing code
-      if (m_arrowDisplayTime + 0.5f < game.timebase ()) {
+      if (m_arrowDisplayTime + 0.5f < game.time ()) {
 
          // finding node - pink arrow
          if (m_findWPIndex != kInvalidNodeIndex) {
@@ -2073,7 +2072,7 @@ void BotGraph::frame () {
          if (m_facingAtIndex != kInvalidNodeIndex) {
             game.drawLine (m_editor, m_editor->v.origin, m_paths[m_facingAtIndex].origin, 10, 0, Color (255, 255, 255), 200, 0, 5, DrawLine::Arrow);
          }
-         m_arrowDisplayTime = game.timebase ();
+         m_arrowDisplayTime = game.time ();
       }
    }
 
@@ -2081,8 +2080,8 @@ void BotGraph::frame () {
    auto &path = m_paths[nearestIndex];
 
    // draw a paths, camplines and danger directions for nearest node
-   if (nearestDistance <= 56.0f && m_pathDisplayTime <= game.timebase ()) {
-      m_pathDisplayTime = game.timebase () + 1.0f;
+   if (nearestDistance <= 56.0f && m_pathDisplayTime <= game.time ()) {
+      m_pathDisplayTime = game.time () + 1.0f;
 
       // draw the camplines
       if (path.flags & NodeFlag::Camp) {
@@ -2214,7 +2213,7 @@ void BotGraph::frame () {
       }
 
       // draw entire message
-      MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, nullvec, m_editor)
+      MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, nullptr, m_editor)
          .writeByte (TE_TEXTMESSAGE)
          .writeByte (4) // channel
          .writeShort (MessageWriter::fs16 (0.0f, 13.0f)) // x
@@ -2293,7 +2292,7 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
       }
 
       if (path.flags & NodeFlag::Camp) {
-         if (path.end == nullvec) {
+         if (path.end.empty ()) {
             ctrl.msg ("Node %d Camp-Endposition not set!", path.number);
             return false;
          }
@@ -2463,10 +2462,8 @@ bool BotGraph::isVisited (int index) {
 void BotGraph::addBasic () {
    // this function creates basic node types on map
 
-   edict_t *ent = nullptr;
-
    // first of all, if map contains ladder points, create it
-   while (!game.isNullEntity (ent = engfuncs.pfnFindEntityByString (ent, "classname", "func_ladder"))) {
+   game.searchEntities ("classname", "func_ladder", [&] (edict_t *ent) {
       Vector ladderLeft = ent->v.absmin;
       Vector ladderRight = ent->v.absmax;
       ladderLeft.z = ladderRight.z;
@@ -2474,7 +2471,7 @@ void BotGraph::addBasic () {
       TraceResult tr;
       Vector up, down, front, back;
 
-      Vector diff = ((ladderLeft - ladderRight) ^ Vector (0.0f, 0.0f, 0.0f)).normalize () * 15.0f;
+      const Vector &diff = ((ladderLeft - ladderRight) ^ Vector (0.0f, 0.0f, 0.0f)).normalize () * 15.0f;
       front = back = game.getAbsPos (ent);
 
       front = front + diff; // front
@@ -2509,18 +2506,19 @@ void BotGraph::addBasic () {
          add (3, point);
       }
       m_isOnLadder = false;
-   }
 
-   auto autoCreateForEntity = [](int type, const char *entity) {
-      edict_t *ent = nullptr;
+      return EntitySearchResult::Continue;
+   });
 
-      while (!game.isNullEntity (ent = engfuncs.pfnFindEntityByString (ent, "classname", entity))) {
+   auto autoCreateForEntity = [] (int type, const char *entity) {
+      game.searchEntities ("classname", entity, [&] (edict_t *ent) {
          const Vector &pos = game.getAbsPos (ent);
 
          if (graph.getNearestNoBuckets (pos, 50.0f) == kInvalidNodeIndex) {
             graph.add (type, pos);
          }
-      }
+         return EntitySearchResult::Continue;
+      });
    };
 
    autoCreateForEntity (0, "info_player_deathmatch"); // then terrortist spawnpoints
@@ -2583,7 +2581,7 @@ void BotGraph::setBombPos (bool reset, const Vector &pos) {
    // this function stores the bomb position as a vector
 
    if (reset) {
-      m_bombPos= nullvec;
+      m_bombPos= nullptr;
       bots.setBombPlanted (false);
 
       return;
@@ -2593,14 +2591,14 @@ void BotGraph::setBombPos (bool reset, const Vector &pos) {
       m_bombPos = pos;
       return;
    }
-   edict_t *ent = nullptr;
-
-   while (!game.isNullEntity (ent = engfuncs.pfnFindEntityByString (ent, "classname", "grenade"))) {
+   
+   game.searchEntities ("classname", "grenade", [&] (edict_t *ent) {
       if (strcmp (STRING (ent->v.model) + 9, "c4.mdl") == 0) {
          m_bombPos = game.getAbsPos (ent);
-         break;
+         return EntitySearchResult::Break;
       }
-   }
+      return EntitySearchResult::Continue;
+   });
 }
 
 void BotGraph::startLearnJump () {
@@ -2760,7 +2758,7 @@ void BotGraph::unassignPath (int from, int to) {
    link.index = kInvalidNodeIndex;
    link.distance = 0;
    link.flags = 0;
-   link.velocity = nullvec;
+   link.velocity = nullptr;
 
    setEditFlag (GraphEdit::On);
    m_hasChanged = true;

@@ -81,7 +81,6 @@ public:
    float getConnectionTime (int botId);
 
    void setBombPlanted (bool isPlanted);
-   void slowFrame ();
    void frame ();
    void createKillerEntity ();
    void destroyKillerEntity ();
@@ -91,7 +90,6 @@ public:
    void addbot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member, bool manual);
    void serverFill (int selection, int personality = Personality::Normal, int difficulty = -1, int numToAdd = -1);
    void kickEveryone (bool instant = false, bool zeroQuota = true);
-   bool kickRandom (bool decQuota = true, Team fromTeam = Team::Unassigned);
    void kickBot (int index);
    void kickFromTeam (Team team, bool removeAll = false);
    void killAllBots (int team = -1);
@@ -117,6 +115,7 @@ public:
    void handleDeath (edict_t *killer, edict_t *victim);
 
    bool isTeamStacked (int team);
+   bool kickRandom (bool decQuota = true, Team fromTeam = Team::Unassigned);
 
 public:
    Array <edict_t *> &searchActiveGrenades () {

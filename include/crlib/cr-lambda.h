@@ -14,10 +14,14 @@
 
 CR_NAMESPACE_BEGIN
 
-static constexpr uint32 kLambdaSmallBufferSize = sizeof (void *) * 16;
-
 template <typename> class Lambda;
 template <typename R, typename ...Args> class Lambda <R (Args...)> {
+private:
+   enum : uint32 {
+      LamdaSmallBufferLength = sizeof (void *) * 16
+   };
+
+private:
    class LambdaFunctorWrapper {
    public:
       LambdaFunctorWrapper () = default;
@@ -69,7 +73,7 @@ template <typename R, typename ...Args> class Lambda <R (Args...)> {
 
    union {
       UniquePtr <LambdaFunctorWrapper> m_functor;
-      uint8 m_small[kLambdaSmallBufferSize];
+      uint8 m_small[LamdaSmallBufferLength];
    };
 
    bool m_smallObject;
@@ -118,7 +122,7 @@ public:
    }
 
    template <typename F> Lambda (F function) {
-      if (cr::fix (sizeof (function) > kLambdaSmallBufferSize)) {
+      if (cr::fix (sizeof (function) > LamdaSmallBufferLength)) {
          m_smallObject = false;
          new (m_small) UniquePtr <LambdaFunctorWrapper> (createUniqueBase <LambdaFunctor <F>, LambdaFunctorWrapper> (cr::move (function)));
       }

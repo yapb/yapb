@@ -26,15 +26,15 @@ int BotControl::cmdAddBot () {
    }
 
    // if team is specified, modify args to set team
-   if (m_args[alias].find ("_ct", 0) != String::kInvalidIndex) {
+   if (m_args[alias].find ("_ct", 0) != String::InvalidIndex) {
       m_args.set (team, "2");
    }
-   else if (m_args[alias].find ("_t", 0) != String::kInvalidIndex) {
+   else if (m_args[alias].find ("_t", 0) != String::InvalidIndex) {
       m_args.set (team, "1");
    }
 
    // if highskilled bot is requsted set personality to rusher and maxout difficulty
-   if (m_args[alias].find ("hs", 0) != String::kInvalidIndex) {
+   if (m_args[alias].find ("hs", 0) != String::InvalidIndex) {
       m_args.set (difficulty, "4");
       m_args.set (personality, "1");
    }
@@ -50,10 +50,10 @@ int BotControl::cmdKickBot () {
    fixMissingArgs (max);
 
    // if team is specified, kick from specified tram
-   if (m_args[alias].find ("_ct", 0) != String::kInvalidIndex || getInt (team) == 2 || getStr (team) == "ct") {
+   if (m_args[alias].find ("_ct", 0) != String::InvalidIndex || getInt (team) == 2 || getStr (team) == "ct") {
       bots.kickFromTeam (Team::CT);
    }
-   else if (m_args[alias].find ("_t", 0) != String::kInvalidIndex || getInt (team) == 1 || getStr (team) == "t") {
+   else if (m_args[alias].find ("_t", 0) != String::InvalidIndex || getInt (team) == 1 || getStr (team) == "t") {
       bots.kickFromTeam (Team::Terrorist);
    }
    else {
@@ -84,10 +84,10 @@ int BotControl::cmdKillBots () {
    fixMissingArgs (max);
 
    // if team is specified, kick from specified tram
-   if (m_args[alias].find ("_ct", 0) != String::kInvalidIndex || getInt (team) == 2 || getStr (team) == "ct") {
+   if (m_args[alias].find ("_ct", 0) != String::InvalidIndex || getInt (team) == 2 || getStr (team) == "ct") {
       bots.killAllBots (Team::CT);
    }
-   else if (m_args[alias].find ("_t", 0) != String::kInvalidIndex || getInt (team) == 1 || getStr (team) == "t") {
+   else if (m_args[alias].find ("_t", 0) != String::InvalidIndex || getInt (team) == 1 || getStr (team) == "t") {
       bots.killAllBots (Team::Terrorist);
    }
    else {
@@ -638,13 +638,13 @@ int BotControl::cmdNodePathCreate () {
    graph.setEditFlag (GraphEdit::On);
 
    // choose the direction for path creation
-   if (m_args[cmd].find ("_both", 0) != String::kInvalidIndex) {
+   if (m_args[cmd].find ("_both", 0) != String::InvalidIndex) {
       graph.pathCreate (PathConnection::Bidirectional);
    }
-   else if (m_args[cmd].find ("_in", 0) != String::kInvalidIndex) {
+   else if (m_args[cmd].find ("_in", 0) != String::InvalidIndex) {
       graph.pathCreate (PathConnection::Incoming);
    }
-   else if (m_args[cmd].find ("_out", 0) != String::kInvalidIndex) {
+   else if (m_args[cmd].find ("_out", 0) != String::InvalidIndex) {
       graph.pathCreate (PathConnection::Outgoing);
    }
    else {
@@ -1052,17 +1052,20 @@ int BotControl::menuClassSelect (int item) {
 
 int BotControl::menuCommands (int item) {
    showMenu (Menu::None); // reset menu display
-   Bot *bot = nullptr;
+   Bot *nearest = nullptr;
 
    switch (item) {
    case 1:
    case 2:
-      if (util.findNearestPlayer (reinterpret_cast <void **> (&bot), m_ent, 600.0f, true, true, true) && bot->m_hasC4 && !bot->hasHostage ()) {
+      if (util.findNearestPlayer (reinterpret_cast <void **> (&m_djump), m_ent, 600.0f, true, true, true, true, false) && !m_djump->m_hasC4 && !m_djump->hasHostage ()) {
          if (item == 1) {
-            bot->startDoubleJump (m_ent);
+            m_djump->startDoubleJump (m_ent);
          }
          else {
-            bot->resetDoubleJump ();
+            if (m_djump) {
+               m_djump->resetDoubleJump ();
+               m_djump = nullptr;
+            }
          }
       }
       showMenu (Menu::Commands);
@@ -1070,8 +1073,8 @@ int BotControl::menuCommands (int item) {
 
    case 3:
    case 4:
-      if (util.findNearestPlayer (reinterpret_cast <void **> (&bot), m_ent, 600.0f, true, true, true, true, item == 4 ? false : true)) {
-         bot->dropWeaponForUser (m_ent, item == 4 ? false : true);
+      if (util.findNearestPlayer (reinterpret_cast <void **> (&nearest), m_ent, 600.0f, true, true, true, true, item == 4 ? false : true)) {
+         nearest->dropWeaponForUser (m_ent, item == 4 ? false : true);
       }
       showMenu (Menu::Commands);
       break;
@@ -1641,7 +1644,7 @@ void BotControl::showMenu (int id) {
    Client &client = util.getClient (game.indexOfPlayer (m_ent));
 
    if (id == Menu::None) {
-      MessageWriter (MSG_ONE_UNRELIABLE, msgs.id (NetMsg::ShowMenu), nullvec, m_ent)
+      MessageWriter (MSG_ONE_UNRELIABLE, msgs.id (NetMsg::ShowMenu), nullptr, m_ent)
          .writeShort (0)
          .writeChar (0)
          .writeByte (0)
@@ -1657,7 +1660,7 @@ void BotControl::showMenu (int id) {
          MessageWriter msg;
 
          while (strlen (text) >= 64) {
-            msg.start (MSG_ONE_UNRELIABLE, msgs.id (NetMsg::ShowMenu), nullvec, m_ent)
+            msg.start (MSG_ONE_UNRELIABLE, msgs.id (NetMsg::ShowMenu), nullptr, m_ent)
                .writeShort (display.slots)
                .writeChar (-1)
                .writeByte (1);
@@ -1669,7 +1672,7 @@ void BotControl::showMenu (int id) {
             text += 64;
          }
 
-         MessageWriter (MSG_ONE_UNRELIABLE, msgs.id (NetMsg::ShowMenu), nullvec, m_ent)
+         MessageWriter (MSG_ONE_UNRELIABLE, msgs.id (NetMsg::ShowMenu), nullptr, m_ent)
             .writeShort (display.slots)
             .writeChar (-1)
             .writeByte (0)
@@ -1773,6 +1776,8 @@ void BotControl::maintainAdminRights () {
 
 BotControl::BotControl () {
    m_ent = nullptr;
+   m_djump = nullptr;
+
    m_isFromConsole = false;
    m_isMenuFillCommand = false;
    m_rapidOutput = false;
@@ -1789,22 +1794,22 @@ BotControl::BotControl () {
    m_cmds.emplace ("version/ver/about", "version [no arguments]", "Displays version information about bot build.", &BotControl::cmdVersion);
    m_cmds.emplace ("graphmenu/wpmenu/wptmenu", "graphmenu [noarguments]", "Opens and displays bots graph edtior.", &BotControl::cmdNodeMenu);
    m_cmds.emplace ("list/listbots", "list [noarguments]", "Lists the bots currently playing on server.", &BotControl::cmdList);
-   m_cmds.emplace ("graph/wp/wpt/waypoint", "graph [help]", "Handles graph operations.", &BotControl::cmdNode);
+   m_cmds.emplace ("graph/g/wp/wpt/waypoint", "graph [help]", "Handles graph operations.", &BotControl::cmdNode);
 
    // declare the menus
    createMenus ();
 }
 
 void BotControl::handleEngineCommands () {
-   ctrl.collectArgs ();
-   ctrl.setIssuer (game.getLocalEntity ());
+   collectArgs ();
+   setIssuer (game.getLocalEntity ());
 
-   ctrl.setFromConsole (true);
-   ctrl.executeCommands ();
+   setFromConsole (true);
+   executeCommands ();
 }
 
 bool BotControl::handleClientCommands (edict_t *ent) {
-   ctrl.collectArgs ();
+   collectArgs ();
    setIssuer (ent);
 
    setFromConsole (true);
@@ -1812,7 +1817,7 @@ bool BotControl::handleClientCommands (edict_t *ent) {
 }
 
 bool BotControl::handleMenuCommands (edict_t *ent) {
-   ctrl.collectArgs ();
+   collectArgs ();
    setIssuer (ent);
 
    setFromConsole (false);
@@ -1827,16 +1832,15 @@ void BotControl::enableDrawModels (bool enable) {
    entities.push ("info_vip_start");
 
    for (auto &entity : entities) {
-      edict_t *ent = nullptr;
-
-      while (!game.isNullEntity (ent = engfuncs.pfnFindEntityByString (ent, "classname", entity.chars ()))) {
+      game.searchEntities ("classname", entity, [&enable] (edict_t *ent) {
          if (enable) {
             ent->v.effects &= ~EF_NODRAW;
          }
          else {
             ent->v.effects |= EF_NODRAW;
          }
-      }
+         return EntitySearchResult::Continue;
+      });
    }
 }
 

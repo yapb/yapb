@@ -67,7 +67,9 @@ namespace detail {
 // basic dictionary
 template <class K, class V, class H = StringHash <K>, size_t HashSize = 36> class Dictionary final : public DenyCopying {
 public:
-   static constexpr size_t kInvalidIndex = static_cast <size_t> (-1);
+   enum : size_t {
+      InvalidIndex = static_cast <size_t> (-1)
+   };
 
 private:
    Array <detail::DictionaryList *> m_table;
@@ -105,7 +107,7 @@ private:
 
          return created;
       }
-      return kInvalidIndex;
+      return InvalidIndex;
    }
 
    size_t findIndex (const K &key) const {
@@ -126,7 +128,7 @@ public:
 
 public:
    bool exists (const K &key) const {
-      return findIndex (key) != kInvalidIndex;
+      return findIndex (key) != InvalidIndex;
    }
 
    bool empty () const {
@@ -140,7 +142,7 @@ public:
    bool find (const K &key, V &value) const {
       size_t index = findIndex (key);
 
-      if (index == kInvalidIndex) {
+      if (index == InvalidIndex) {
          return false;
       }
       value = m_buckets[index].value;

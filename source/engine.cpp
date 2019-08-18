@@ -129,6 +129,9 @@ void Game::levelInitialize (edict_t *entities, int max) {
       else if (strncmp (classname, "func_door", 9) == 0) {
          m_mapFlags |= MapFlags::HasDoors;
       }
+      else if (strncmp (classname, "func_button", 11) == 0) {
+         m_mapFlags |= MapFlags::HasButtons;
+      }
    }
 
    // next maps doesn't have map-specific entities, so determine it by name
@@ -152,7 +155,7 @@ void Game::drawLine (edict_t *ent, const Vector &start, const Vector &end, int w
       return; // reliability check
    }
 
-   MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, nullvec, ent)
+   MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, nullptr, ent)
       .writeByte (TE_BEAMPOINTS)
       .writeCoord (end.x)
       .writeCoord (end.y)
@@ -285,7 +288,7 @@ const char *Game::getModName () {
    name = engineModName;
    size_t slash = name.findLastOf ("\\/");
 
-   if (slash != String::kInvalidIndex) {
+   if (slash != String::InvalidIndex) {
       name = name.substr (slash + 1);
    }
    name = name.trim (" \\/");
@@ -303,7 +306,7 @@ Vector Game::getAbsPos (edict_t *ent) {
    // entity that has a bounding box has its center at the center of the bounding box itself.
 
    if (isNullEntity (ent)) {
-      return nullvec;
+      return nullptr;
    }
 
    if (ent->v.origin.empty ()) {
@@ -312,7 +315,7 @@ Vector Game::getAbsPos (edict_t *ent) {
    return ent->v.origin;
 }
 
-void Game::registerCmd (const char *command, void func ()) {
+void Game::registerEngineCommand (const char *command, void func ()) {
    // this function tells the engine that a new server command is being declared, in addition
    // to the standard ones, whose name is command_name. The engine is thus supposed to be aware
    // that for every "command_name" server command it receives, it should call the function
@@ -378,7 +381,7 @@ uint8 *Game::getVisibilitySet (Bot *bot, bool pvs) {
 void Game::sendClientMessage (bool console, edict_t *ent, const char *message) {
    // helper to sending the client message
 
-   MessageWriter (MSG_ONE, msgs.id (NetMsg::TextMsg), nullvec, ent)
+   MessageWriter (MSG_ONE, msgs.id (NetMsg::TextMsg), nullptr, ent)
       .writeByte (console ? HUD_PRINTCONSOLE : HUD_PRINTCENTER)
       .writeString (message);
 }
@@ -409,7 +412,7 @@ void Game::prepareBotArgs (edict_t *ent, String str) {
       const size_t space = args.find (' ', 0);
 
       // if found space
-      if (space != String::kInvalidIndex) {
+      if (space != String::InvalidIndex) {
          const auto quote = space + 1; // check for quote next to space
 
          // check if we're got a quoted string
@@ -430,7 +433,7 @@ void Game::prepareBotArgs (edict_t *ent, String str) {
       m_botArgs.clear (); // clear space for next cmd 
    };
 
-   if (str.find (';', 0) != String::kInvalidIndex) {
+   if (str.find (';', 0) != String::InvalidIndex) {
       for (auto &part : str.split (";")) {
          parsePartArgs (part);
       }
@@ -629,20 +632,40 @@ bool Game::loadCSBinary () {
 }
 
 bool Game::postload () {
-   // ensure we're have all needed directories
-   const char *mod = getModName ();
 
-   // create the needed paths
-   File::createPath (strings.format ("%s/addons/yapb/conf/lang", mod));
-   File::createPath (strings.format ("%s/addons/yapb/data/learned", mod));
-   File::createPath (strings.format ("%s/addons/yapb/data/graph", mod));
-   File::createPath (strings.format ("%s/addons/yapb/data/logs", mod));
+   // ensure we're have all needed directories
+   for (const auto &dir : StringArray { "conf/lang", "data/learned", "data/graph", "data/logs" }) {
+      File::createPath (strings.format ("%s/addons/yapb/%s", getModName (), dir.chars ()));
+   }
 
    // set out user agent for http stuff
    http.setUserAgent (strings.format ("%s/%s", PRODUCT_SHORT_NAME, PRODUCT_VERSION));
 
+   // register bot cvars
+   game.registerCvars ();
+
+
+   // register server command(s)
+   registerEngineCommand ("yapb", [] () {
+      ctrl.handleEngineCommands ();
+      });
+
+   registerEngineCommand ("yb", [] () {
+      ctrl.handleEngineCommands ();
+      });
+   
+   // register fake metamod command handler if we not! under mm
+   if (!(game.is (GameFlags::Metamod))) {
+      game.registerEngineCommand ("meta", [] () {
+         game.print ("You're launched standalone version of %s. Metamod is not installed or not enabled!", PRODUCT_SHORT_NAME);
+      });
+   }
+
+   // initialize weapons
+   conf.initWeapons ();
+
    // print game detection info
-   auto printGame = [&] () {
+   auto displayCSVersion = [&] () {
       String gameVersionStr;
       StringArray gameVersionFlags;
 
@@ -694,7 +717,7 @@ bool Game::postload () {
       if (!m_gameLib.load (gamedll)) {
          logger.fatal ("Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gamedll, getModName ());
       }
-      printGame ();
+      displayCSVersion ();
 
    }
    else {
@@ -703,7 +726,7 @@ bool Game::postload () {
       if (!binaryLoaded && !is (GameFlags::Metamod)) {
          logger.fatal ("Mod that you has started, not supported by this bot (gamedir: %s)", getModName ());
       }
-      printGame ();
+      displayCSVersion ();
 
       if (is (GameFlags::Metamod)) {
          m_gameLib.unload ();
@@ -742,7 +765,7 @@ void Game::detectDeathmatch () {
 }
 
 void Game::slowFrame () {
-   if (m_slowFrame > timebase ()) {
+   if (m_slowFrame > time ()) {
       return;
    }
    ctrl.maintainAdminRights ();
@@ -761,7 +784,36 @@ void Game::slowFrame () {
 
    // display welcome message
    util.checkWelcome ();
-   m_slowFrame = timebase () + 1.0f;
+   m_slowFrame = time () + 1.0f;
+}
+
+void Game::searchEntities (const String &field, const String &value, EntitySearch functor) {
+   edict_t *ent = nullptr;
+
+   while (!game.isNullEntity (ent = engfuncs.pfnFindEntityByString (ent, field.chars (), value.chars ()))) {
+      if ((ent->v.flags & EF_NODRAW) || (ent->v.flags & FL_CLIENT)) {
+         continue;
+      }
+
+      if (functor (ent) == EntitySearchResult::Break) {
+         break;
+      }
+   }
+}
+
+void Game::searchEntities (const Vector &position, const float radius, EntitySearch functor) {
+   edict_t *ent = nullptr;
+   const Vector &pos = position.empty () ? m_startEntity->v.origin : position;
+
+   while (!game.isNullEntity (ent = engfuncs.pfnFindEntityInSphere (ent, pos, radius))) {
+      if ((ent->v.flags & EF_NODRAW) || (ent->v.flags & FL_CLIENT)) {
+         continue;
+      }
+
+      if (functor (ent) == EntitySearchResult::Break) {
+         break;
+      }
+   }
 }
 
 void LightMeasure::initializeLightstyles () {
@@ -786,7 +838,7 @@ void LightMeasure::animateLight () {
    }
 
    // 'm' is normal light, 'a' is no light, 'z' is double bright
-   const int index = static_cast <int> (game.timebase () * 10.0f);
+   const int index = static_cast <int> (game.time () * 10.0f);
 
    for (int j = 0; j < MAX_LIGHTSTYLES; ++j) {
       if (!m_lightstyle[j].length) {

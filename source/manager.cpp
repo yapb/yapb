@@ -250,23 +250,15 @@ Bot *BotManager::findAliveBot () {
    return nullptr;
 }
 
-void BotManager::slowFrame () {
-   // this function calls showframe function for all available at call moment bots
-
-   for (const auto &bot : m_bots) {
-      bot->slowFrame ();
-   }
-}
-
 void BotManager::frame () {
-   // this function calls periodic frame function for all available at call moment bots
+   // this function calls showframe function for all available at call moment bots
 
    for (const auto &bot : m_bots) {
       bot->frame ();
    }
 
    // select leader each team somewhere in round start
-   if (m_timeRoundStart + 5.0f > game.timebase () && m_timeRoundStart + 10.0f < game.timebase ()) {
+   if (m_timeRoundStart + 5.0f > game.time () && m_timeRoundStart + 10.0f < game.time ()) {
       for (int team = 0; team < kGameTeamNum; ++team) {
          selectLeaders (team, false);
       }
@@ -319,7 +311,7 @@ void BotManager::maintainQuota () {
    }
 
    // bot's creation update
-   if (!m_creationTab.empty () && m_maintainTime < game.timebase ()) {
+   if (!m_creationTab.empty () && m_maintainTime < game.time ()) {
       const CreateQueue &last = m_creationTab.pop ();
       const BotCreateResult callResult = create (last.name, last.difficulty, last.personality, last.team, last.member);
 
@@ -342,11 +334,11 @@ void BotManager::maintainQuota () {
          m_creationTab.clear ();
          yb_quota.set (getBotCount ());
       }
-      m_maintainTime = game.timebase () + 0.10f;
+      m_maintainTime = game.time () + 0.10f;
    }
 
    // now keep bot number up to date
-   if (m_quotaMaintainTime > game.timebase ()) {
+   if (m_quotaMaintainTime > game.time ()) {
       return;
    }
    yb_quota.set (cr::clamp <int> (yb_quota.int_ (), 0, game.maxClients ()));
@@ -410,7 +402,7 @@ void BotManager::maintainQuota () {
          kickRandom (false, Team::Unassigned);
       }
    }
-   m_quotaMaintainTime = game.timebase () + 0.40f;
+   m_quotaMaintainTime = game.time () + 0.40f;
 }
 
 void BotManager::reset () {
@@ -467,8 +459,8 @@ void BotManager::decrementQuota (int by) {
 }
 
 void BotManager::initQuota () {
-   m_maintainTime = game.timebase () + yb_join_delay.float_ ();
-   m_quotaMaintainTime = game.timebase () + yb_join_delay.float_ ();
+   m_maintainTime = game.time () + yb_join_delay.float_ ();
+   m_quotaMaintainTime = game.time () + yb_join_delay.float_ ();
 
    m_creationTab.clear ();
 }
@@ -855,8 +847,8 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
    m_difficulty = cr::clamp (difficulty, 0, 4);
    m_basePing = rg.int_ (7, 14);
 
-   m_lastCommandTime = game.timebase () - 0.1f;
-   m_frameInterval = game.timebase ();
+   m_lastCommandTime = game.time () - 0.1f;
+   m_frameInterval = game.time ();
    m_slowFrameTimestamp = 0.0f;
 
    // stuff from jk_botti
@@ -892,7 +884,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
    // copy them over to the temp level variables
    m_agressionLevel = m_baseAgressionLevel;
    m_fearLevel = m_baseFearLevel;
-   m_nextEmotionUpdate = game.timebase () + 0.5f;
+   m_nextEmotionUpdate = game.time () + 0.5f;
 
    // just to be sure
    m_actMessageIndex = 0;
@@ -906,7 +898,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
 }
 
 float Bot::getFrameInterval () {
-   return cr::fzero (m_thinkInterval) ? m_frameInterval : m_thinkInterval;
+   return m_frameInterval;
 }
 
 int BotManager::getHumansCount (bool ignoreSpectators) {
@@ -977,10 +969,10 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
       for (const auto &notify : bots) {
          if (notify->m_notKilled && killerTeam == notify->m_team && killerTeam != victimTeam && killer != notify->ent () && notify->seesEntity (victim->v.origin)) {
             if (!(killer->v.flags & FL_FAKECLIENT)) {
-               notify->processChatterMessage ("#Bot_NiceShotCommander");
+               notify->handleChatter ("#Bot_NiceShotCommander");
             }
             else {
-               notify->processChatterMessage ("#Bot_NiceShotPall");
+               notify->handleChatter ("#Bot_NiceShotPall");
             }
             break;
          }
@@ -991,9 +983,9 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
 
    // notice nearby to victim teammates, that attacker is near
    for (const auto &notify : bots) {
-      if (notify->m_seeEnemyTime + 2.0f < game.timebase () && notify->m_notKilled && notify->m_team == victimTeam && game.isNullEntity (notify->m_enemy) && killerTeam != victimTeam && util.isVisible (killer->v.origin, notify->ent ())) {
+      if (notify->m_seeEnemyTime + 2.0f < game.time () && notify->m_notKilled && notify->m_team == victimTeam && game.isNullEntity (notify->m_enemy) && killerTeam != victimTeam && util.isVisible (killer->v.origin, notify->ent ())) {
          notify->m_actualReactionTime = 0.0f;
-         notify->m_seeEnemyTime = game.timebase ();
+         notify->m_seeEnemyTime = game.time ();
          notify->m_enemy = killer;
          notify->m_lastEnemy = killer;
          notify->m_lastEnemyOrigin = killer->v.origin;
@@ -1032,11 +1024,11 @@ void Bot::newRound () {
    clearSearchNodes ();
    clearRoute ();
 
-   m_pathOrigin= nullvec;
-   m_destOrigin= nullvec;
+   m_pathOrigin= nullptr;
+   m_destOrigin= nullptr;
    m_path = nullptr;
    m_currentTravelFlags = 0;
-   m_desiredVelocity= nullvec;
+   m_desiredVelocity= nullptr;
    m_currentNodeIndex = kInvalidNodeIndex;
    m_prevGoalIndex = kInvalidNodeIndex;
    m_chosenGoalIndex = kInvalidNodeIndex;
@@ -1053,13 +1045,10 @@ void Bot::newRound () {
    m_oldButtons = pev->button;
    m_rechoiceGoalCount = 0;
 
-   m_avoid = nullptr;
-   m_avoidTime = 0.0f;
-
    for (i = 0; i < 5; ++i) {
       m_previousNodes[i] = kInvalidNodeIndex;
    }
-   m_navTimeset = game.timebase ();
+   m_navTimeset = game.time ();
    m_team = game.getTeam (ent ());
    m_isVIP = false;
 
@@ -1093,9 +1082,9 @@ void Bot::newRound () {
    m_minSpeed = 260.0f;
    m_prevSpeed = 0.0f;
    m_prevOrigin = Vector (kInfiniteDistance, kInfiniteDistance, kInfiniteDistance);
-   m_prevTime = game.timebase ();
-   m_lookUpdateTime = game.timebase ();
-   m_aimErrorTime = game.timebase ();
+   m_prevTime = game.time ();
+   m_lookUpdateTime = game.time ();
+   m_aimErrorTime = game.time ();
 
    m_viewDistance = 4096.0f;
    m_maxViewDistance = 4096.0f;
@@ -1106,7 +1095,7 @@ void Bot::newRound () {
    m_itemCheckTime = 0.0f;
 
    m_breakableEntity = nullptr;
-   m_breakableOrigin= nullvec;
+   m_breakableOrigin= nullptr;
    m_timeDoorOpen = 0.0f;
 
    resetCollision ();
@@ -1115,7 +1104,7 @@ void Bot::newRound () {
    m_enemy = nullptr;
    m_lastVictim = nullptr;
    m_lastEnemy = nullptr;
-   m_lastEnemyOrigin= nullvec;
+   m_lastEnemyOrigin= nullptr;
    m_trackingEdict = nullptr;
    m_timeNextTracking = 0.0f;
 
@@ -1139,9 +1128,9 @@ void Bot::newRound () {
    m_aimFlags = 0;
    m_liftState = 0;
 
-   m_aimLastError= nullvec;
-   m_position= nullvec;
-   m_liftTravelPos= nullvec;
+   m_aimLastError= nullptr;
+   m_position= nullptr;
+   m_liftTravelPos= nullptr;
 
    setIdealReactionTimers (true);
 
@@ -1157,8 +1146,8 @@ void Bot::newRound () {
    m_reloadState = Reload::None;
 
    m_reloadCheckTime = 0.0f;
-   m_shootTime = game.timebase ();
-   m_playerTargetTime = game.timebase ();
+   m_shootTime = game.time ();
+   m_playerTargetTime = game.time ();
    m_firePause = 0.0f;
    m_timeLastFired = 0.0f;
 
@@ -1174,7 +1163,7 @@ void Bot::newRound () {
    m_jumpFinished = false;
    m_isStuck = false;
 
-   m_sayTextBuffer.timeNextChat = game.timebase ();
+   m_sayTextBuffer.timeNextChat = game.time ();
    m_sayTextBuffer.entityIndex = -1;
    m_sayTextBuffer.sayText.clear ();
 
@@ -1189,10 +1178,10 @@ void Bot::newRound () {
       m_currentWeapon = 0;
    }
    m_flashLevel = 100.0f;
-   m_checkDarkTime = game.timebase ();
+   m_checkDarkTime = game.time ();
 
-   m_knifeAttackTime = game.timebase () + rg.float_ (1.3f, 2.6f);
-   m_nextBuyTime = game.timebase () + rg.float_ (0.6f, 2.0f);
+   m_knifeAttackTime = game.time () + rg.float_ (1.3f, 2.6f);
+   m_nextBuyTime = game.time () + rg.float_ (0.6f, 2.0f);
 
    m_buyPending = false;
    m_inBombZone = false;
@@ -1217,9 +1206,9 @@ void Bot::newRound () {
    m_defendHostage = false;
    m_headedTime = 0.0f;
 
-   m_timeLogoSpray = game.timebase () + rg.float_ (5.0f, 30.0f);
-   m_spawnTime = game.timebase ();
-   m_lastChatTime = game.timebase ();
+   m_timeLogoSpray = game.time () + rg.float_ (5.0f, 30.0f);
+   m_spawnTime = game.time ();
+   m_lastChatTime = game.time ();
 
    m_timeCamping = 0.0f;
    m_campDirection = 0;
@@ -1227,7 +1216,7 @@ void Bot::newRound () {
    m_campButtons = 0;
 
    m_soundUpdateTime = 0.0f;
-   m_heardSoundTime = game.timebase ();
+   m_heardSoundTime = game.time ();
 
    // clear its message queue
    for (i = 0; i < 32; ++i) {
@@ -1243,7 +1232,8 @@ void Bot::newRound () {
    if (rg.chance (50)) {
       pushChatterMessage (Chatter::NewRound);
    }
-   m_thinkInterval = game.is (GameFlags::Legacy | GameFlags::Xash3D) ? 0.0f : (1.0f / cr::clamp (yb_think_fps.float_ (), 30.0f, 90.0f)) * rg.float_ (0.95f, 1.05f);
+   m_updateInterval = game.is (GameFlags::Legacy | GameFlags::Xash3D) ? 0.0f : (1.0f / cr::clamp (yb_think_fps.float_ (), 30.0f, 60.0f));
+   m_viewUpdateInterval = 1.0f / 30.0f;
 }
 
 void Bot::kill () {
@@ -1344,15 +1334,6 @@ void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *en
    }
 
    if (plat.caseStrMatch (cmd, "say") || plat.caseStrMatch (cmd, "say_team")) {
-      if (strcmp (arg, "dropme") == 0 || strcmp (arg, "dropc4") == 0) {
-         Bot *bot = nullptr;
-
-         if (util.findNearestPlayer (reinterpret_cast <void **> (&bot), ent, 300.0f, true, true, true)) {
-            bot->dropWeaponForUser (ent, strings.isEmpty (strstr (arg, "c4")) ? false : true);
-         }
-         return;
-      }
-
       bool alive = util.isAlive (ent);
       int team = -1;
 
@@ -1373,7 +1354,7 @@ void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *en
                continue;
             }
             target->m_sayTextBuffer.sayText = engfuncs.pfnCmd_Args ();
-            target->m_sayTextBuffer.timeNextChat = game.timebase () + target->m_sayTextBuffer.chatDelay;
+            target->m_sayTextBuffer.timeNextChat = game.time () + target->m_sayTextBuffer.chatDelay;
          }
       }
    }
@@ -1396,7 +1377,7 @@ void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *en
                }
             }
          }
-         bots.setLastRadioTimestamp (target.team, game.timebase ());
+         bots.setLastRadioTimestamp (target.team, game.time ());
       }
       target.radio = 0;
    }
@@ -1419,59 +1400,61 @@ void BotManager::notifyBombDefuse () {
 }
 
 void BotManager::updateActiveGrenade () {
-   if (m_grenadeUpdateTime > game.timebase ()) {
+   if (m_grenadeUpdateTime > game.time ()) {
       return;
    }
-   edict_t *grenade = nullptr;
-
-   // clear previously stored grenades
-   m_activeGrenades.clear ();
+   m_activeGrenades.clear (); // clear previously stored grenades
 
    // search the map for any type of grenade
-   while (!game.isNullEntity (grenade = engfuncs.pfnFindEntityByString (grenade, "classname", "grenade"))) {
+   game.searchEntities ("classname", "grenade", [&] (edict_t *e) {
       // do not count c4 as a grenade
-      if (strcmp (STRING (grenade->v.model) + 9, "c4.mdl") == 0) {
-         continue;
+      if (strcmp (STRING (e->v.model) + 9, "c4.mdl") == 0) { 
+         return EntitySearchResult::Continue;
       }
-      m_activeGrenades.push (grenade);
-   }
-   m_grenadeUpdateTime = game.timebase () + 0.213f;
+      m_activeGrenades.push (e);
+
+      // continue iteration
+      return EntitySearchResult::Continue;
+   });
+   m_grenadeUpdateTime = game.time () + 0.25f;
 }
 
 void BotManager::updateIntrestingEntities () {
-   if (m_entityUpdateTime > game.timebase ()) {
+   if (m_entityUpdateTime > game.time ()) {
       return;
    }
 
    // clear previously stored entities
    m_intrestingEntities.clear ();
 
-   // search the map for entities
-   for (int i = kGameMaxPlayers - 1; i < globals->maxEntities; ++i) {
-      auto ent = game.entityOfIndex (i);
+   // search the map for any type of grenade
+   game.searchEntities (nullptr, kInfiniteDistance, [&] (edict_t *e) {
+      auto classname = STRING (e->v.classname);
 
-      // only valid drawn entities
-      if (game.isNullEntity (ent) || ent->free || ent->v.classname == 0 || (ent->v.effects & EF_NODRAW)) {
-         continue;
-      }
-      auto classname = STRING (ent->v.classname);
-   
       // search for grenades, weaponboxes, weapons, items and armoury entities
       if (strncmp ("weapon", classname, 6) == 0 || strncmp ("grenade", classname, 7) == 0 || strncmp ("item", classname, 4) == 0 || strncmp ("armoury", classname, 7) == 0) {
-         m_intrestingEntities.push (ent);
+         m_intrestingEntities.push (e);
       }
 
       // pickup some csdm stuff if we're running csdm
       if (game.mapIs (MapFlags::HostageRescue) && strncmp ("hostage", classname, 7) == 0) {
-         m_intrestingEntities.push (ent);
+         m_intrestingEntities.push (e);
       }
-      
+
+      // add buttons
+      if (game.mapIs (MapFlags::HasButtons) && strncmp ("func_button", classname, 11) == 0) {
+         m_intrestingEntities.push (e);
+      }
+
       // pickup some csdm stuff if we're running csdm
       if (game.is (GameFlags::CSDM) && strncmp ("csdm", classname, 4) == 0) {
-         m_intrestingEntities.push (ent);
+         m_intrestingEntities.push (e);
       }
-   }
-   m_entityUpdateTime = game.timebase () + 0.5f;
+
+      // continue iteration
+      return EntitySearchResult::Continue;
+   });
+   m_entityUpdateTime = game.time () + 0.5f;
 }
 
 void BotManager::selectLeaders (int team, bool reset) {
@@ -1606,14 +1589,14 @@ void BotManager::initRound () {
    graph.updateGlobalPractice (); // update experience data on round start
 
    // calculate the round mid/end in world time
-   m_timeRoundStart = game.timebase () + mp_freezetime.float_ ();
+   m_timeRoundStart = game.time () + mp_freezetime.float_ ();
    m_timeRoundMid = m_timeRoundStart + mp_roundtime.float_ () * 60.0f * 0.5f;
    m_timeRoundEnd = m_timeRoundStart + mp_roundtime.float_ () * 60.0f;
 }
 
 void BotManager::setBombPlanted (bool isPlanted) {
    if (isPlanted) {
-      m_timeBombPlanted = game.timebase ();
+      m_timeBombPlanted = game.time ();
    }
    m_bombPlanted = isPlanted;
 }
@@ -1680,6 +1663,12 @@ void BotConfig::loadMainConfig () {
                auto value = const_cast <char *> (keyval[1].trim ().trim ("\"").trim ().chars ());
 
                if (needsToIgnoreVar (ignore, key) && !plat.caseStrMatch (value, cvar->string)) {
+
+                  // preserve quota number if it's zero
+                  if (plat.caseStrMatch (cvar->name, "yb_quota") && yb_quota.int_ () <= 0) {
+                     engfuncs.pfnCvar_DirectSet (cvar, value);
+                     continue;
+                  }
                   game.print ("Bot CVAR '%s' differs from the stored in the config (%s/%s). Ignoring.", cvar->name, cvar->string, value);
 
                   // ensure cvar will have old value
@@ -2183,6 +2172,8 @@ void BotConfig::clearUsedName (Bot *bot) {
 }
 
 void BotConfig::initWeapons () {
+   m_weapons.clear ();
+
    // fill array with available weapons
    m_weapons.emplace (Weapon::Knife,      "weapon_knife",     "knife.mdl",     0,    0, -1, -1,  0,  0,  0,  0,  0,  0,   true  );
    m_weapons.emplace (Weapon::USP,        "weapon_usp",       "usp.mdl",       500,  1, -1, -1,  1,  1,  2,  2,  0,  12,  false );
