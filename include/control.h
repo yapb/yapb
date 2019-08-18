@@ -49,6 +49,7 @@ private:
    Array <BotMenu> m_menus;
 
    edict_t *m_ent;
+   Bot *m_djump;
 
    bool m_isFromConsole;
    bool m_rapidOutput;
@@ -183,7 +184,7 @@ public:
 public:
 
    // for the server commands
-   static void handleEngineCommands ();
+   void handleEngineCommands ();
 
    // for the client commands
    bool handleClientCommands (edict_t *ent);

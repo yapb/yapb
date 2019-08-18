@@ -9,6 +9,18 @@
 
 #pragma once
 
+// noise types
+CR_DECLARE_SCOPED_ENUM (Noise,
+   NeedHandle = cr::bit (0),
+   HitFall = cr::bit (1),
+   Pickup = cr::bit (2),
+   Zoom = cr::bit (3),
+   Ammo = cr::bit (4),
+   Hostage = cr::bit (5),
+   Broke = cr::bit (6),
+   Door = cr::bit (7)
+)
+
 class BotUtils final : public Singleton <BotUtils> {
 private:
    bool m_needToSendWelcome;
@@ -18,6 +30,7 @@ private:
    SmallArray <Client> m_clients;
    SmallArray <Twin <String, String>> m_tags;
 
+   Dictionary <String, int32> m_noiseCache;
    SimpleHook m_sendToHook;
 
 public:
@@ -65,10 +78,10 @@ public:
    void traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIndex);
 
    // attaches sound to client struct
-   void attachSoundsToClients (edict_t *ent, const char *sample, float volume);
+   void listenNoise (edict_t *ent, const String &sample, float volume);
 
    // simulate sound for players
-   void simulateSoundUpdates (int playerIndex);
+   void simulateNoise (int playerIndex);
 
    // update stats on clients
    void updateClients ();

@@ -109,32 +109,16 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       // server is enabled. Here is a good place to do our own game session initialization, and
       // to register by the engine side the server commands we need to administrate our bots.
 
-      // register bot cvars
-      game.registerCvars ();
-
       // register logger
       logger.initialize (strings.format ("%slogs/yapb.log", graph.getDataDirectory (false)), [] (const char *msg) {
          game.print (msg);
       });
-
-      conf.initWeapons ();
-
-      // register server command(s)
-      game.registerCmd ("yapb", BotControl::handleEngineCommands);
-      game.registerCmd ("yb", BotControl::handleEngineCommands);
 
       // set correct version string
       yb_version.set (strings.format ("%d.%d.%d", PRODUCT_VERSION_DWORD_INTERNAL, util.buildNumber ()));
 
       // execute main config
       conf.loadMainConfig ();
-
-      // register fake metamod command handler if we not! under mm
-      if (!(game.is (GameFlags::Metamod))) {
-         game.registerCmd ("meta", [] () {
-            game.print ("You're launched standalone version of yapb. Metamod is not installed or not enabled!");
-            });
-      }
       conf.adjustWeaponPrices ();
 
       if (game.is (GameFlags::Metamod)) {
@@ -177,14 +161,8 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       if (!game.isNullEntity (pentTouched) && pentOther != game.getStartEntity ()) {
          auto bot = bots[pentTouched];
 
-         if (bot != nullptr && pentOther != bot->ent ()) {
-
-            if (util.isPlayer (pentOther)) {
-               bot->avoidIncomingPlayers (pentOther);
-            }
-            else {
-               bot->processBreakables (pentOther);
-            }
+         if (bot && pentOther != bot->ent () && !util.isPlayer (pentOther)) {
+            bot->checkBreakable (pentOther);
          }
       }
 
@@ -397,9 +375,6 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       // for example if a new player joins the server, we should disconnect a bot, and if the
       // player population decreases, we should fill the server with other bots.
 
-      // run periodic update of bot states
-      bots.frame ();
-
       // update lightstyle animations
       illum.animateLight ();
 
@@ -430,7 +405,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       dllapi.pfnStartFrame ();
 
       // run the bot ai
-      bots.slowFrame ();
+      bots.frame ();
    };
 
    functionTable->pfnCmdStart = [] (const edict_t *player, usercmd_t *cmd, unsigned int random_seed) {
@@ -504,7 +479,8 @@ CR_EXPORT int GetEntityAPI2_Post (gamefuncs_t *table, int *) {
       // for the bots by the MOD side, remember).  Post version called only by metamod.
 
       // run the bot ai
-      bots.slowFrame ();
+      bots.frame ();
+
       RETURN_META (MRES_IGNORED);
    };
 
@@ -578,17 +554,19 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       engfuncs.pfnLightStyle (style, val);
    };
 
-   functionTable->pfnFindEntityByString = [] (edict_t *edictStartSearchAfter, const char *field, const char *value) {
-      // round starts in counter-strike 1.5
-      if ((game.is (GameFlags::Legacy)) && strcmp (value, "info_map_parameters") == 0) {
-         bots.initRound ();
-      }
+   if (game.is (GameFlags::Legacy)) {
+      functionTable->pfnFindEntityByString = [] (edict_t *edictStartSearchAfter, const char *field, const char *value) {
+         // round starts in counter-strike 1.5
+         if (strcmp (value, "info_map_parameters") == 0) {
+            bots.initRound ();
+         }
 
-      if (game.is (GameFlags::Metamod)) {
-         RETURN_META_VALUE (MRES_IGNORED, static_cast <edict_t *> (nullptr));
-      }
-      return engfuncs.pfnFindEntityByString (edictStartSearchAfter, field, value);
-   };
+         if (game.is (GameFlags::Metamod)) {
+            RETURN_META_VALUE (MRES_IGNORED, static_cast <edict_t *> (nullptr));
+         }
+         return engfuncs.pfnFindEntityByString (edictStartSearchAfter, field, value);
+      };
+   }
 
    functionTable->pfnEmitSound = [] (edict_t *entity, int channel, const char *sample, float volume, float attenuation, int flags, int pitch) {
       // this function tells the engine that the entity pointed to by "entity", is emitting a sound
@@ -601,7 +579,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       // SoundAttachToThreat() to bring the sound to the ears of the bots. Since bots have no client DLL
       // to handle this for them, such a job has to be done manually.
 
-      util.attachSoundsToClients (entity, sample, volume);
+      util.listenNoise (entity, sample, volume);
 
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
@@ -863,7 +841,7 @@ CR_EXPORT int Meta_Query (char *, plugin_info_t **pPlugInfo, mutil_funcs_t *pMet
    return TRUE; // tell metamod this plugin looks safe
 }
 
-CR_EXPORT int Meta_Attach (PLUG_LOADTIME, metamod_funcs_t *functionTable, meta_globals_t *pMGlobals, gamedll_funcs_t *pGamedllFuncs) {
+CR_EXPORT int Meta_Attach (PLUG_LOADTIME now, metamod_funcs_t *functionTable, meta_globals_t *pMGlobals, gamedll_funcs_t *pGamedllFuncs) {
    // this function is called when metamod attempts to load the plugin. Since it's the place
    // where we can tell if the plugin will be allowed to run or not, we wait until here to make
    // our initialization stuff, like registering CVARs and dedicated server commands.
@@ -880,6 +858,11 @@ CR_EXPORT int Meta_Attach (PLUG_LOADTIME, metamod_funcs_t *functionTable, meta_g
       nullptr, // pfnGetEngineFunctions_Post ()
    };
 
+   if (now > Plugin_info.loadable) {
+      logger.error ("%s: plugin NOT attaching (can't load plugin right now)", Plugin_info.name);
+      return FALSE; // returning FALSE prevents metamod from attaching this plugin
+   }
+
    // keep track of the pointers to engine function tables metamod gives us
    gpMetaGlobals = pMGlobals;
    memcpy (functionTable, &metamodFunctionTable, sizeof (metamod_funcs_t));
@@ -888,10 +871,14 @@ CR_EXPORT int Meta_Attach (PLUG_LOADTIME, metamod_funcs_t *functionTable, meta_g
    return TRUE; // returning true enables metamod to attach this plugin
 }
 
-CR_EXPORT int Meta_Detach (PLUG_LOADTIME, PL_UNLOAD_REASON) {
+CR_EXPORT int Meta_Detach (PLUG_LOADTIME now, PL_UNLOAD_REASON reason) {
    // this function is called when metamod unloads the plugin. A basic check is made in order
    // to prevent unloading the plugin if its processing should not be interrupted.
 
+   if (now > Plugin_info.unloadable && reason != PNL_CMD_FORCED) {
+      logger.error ("%s: plugin NOT detaching (can't unload plugin right now)", Plugin_info.name);
+      return FALSE; // returning FALSE prevents metamod from unloading this plugin
+   }
    bots.kickEveryone (true); // kick all bots off this server
 
    // save collected experience on shutdown

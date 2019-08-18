@@ -178,12 +178,12 @@ namespace detail {
          }
          size_t protocol = uri.find ("://");
 
-         if (protocol != String::kInvalidIndex) {
+         if (protocol != String::InvalidIndex) {
             result.protocol = uri.substr (0, protocol);
 
             size_t host = uri.find ("/", protocol + 3);
 
-            if (host != String::kInvalidIndex) {
+            if (host != String::InvalidIndex) {
                result.path = uri.substr (host + 1);
                result.host = uri.substr (protocol + 3, host - protocol - 3);
 
@@ -244,7 +244,7 @@ private:
       String response (reinterpret_cast <const char *> (buffer));
       size_t responseCodeStart = response.find ("HTTP/1.1");
 
-      if (responseCodeStart != String::kInvalidIndex) {
+      if (responseCodeStart != String::InvalidIndex) {
          String respCode = response.substr (responseCodeStart + 9, 3).trim ();
 
          if (respCode == "200") {
@@ -369,7 +369,7 @@ public:
       String boundaryName = localPath;
       size_t boundarySlash = localPath.findLastOf ("\\/");
 
-      if (boundarySlash != String::kInvalidIndex) {
+      if (boundarySlash != String::InvalidIndex) {
          boundaryName = localPath.substr (boundarySlash + 1);
       }
       const String &kBoundary = "---crlib_upload_boundary_1337";

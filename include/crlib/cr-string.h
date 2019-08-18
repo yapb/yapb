@@ -23,10 +23,15 @@ CR_NAMESPACE_BEGIN
 // small-string optimized string class, sso stuff based on: https://github.com/elliotgoodrich/SSO-23/
 class String final  {
 public:
-   static constexpr size_t kInvalidIndex = static_cast <size_t> (-1);
+   enum : size_t {
+      InvalidIndex = static_cast <size_t> (-1)
+   };
 
 private:
-   static constexpr size_t kExcessSpace = 32;
+   enum : size_t {
+      ExcessSpace = 32,
+      CharBit = CHAR_BIT
+   };
 
 private:
    using Length = Twin <size_t, size_t>;
@@ -34,7 +39,7 @@ private:
 private:
    union Data {
       struct Big {
-         char excess[kExcessSpace - sizeof (char *) - 2 * sizeof (size_t)];
+         char excess[ExcessSpace - sizeof (char *) - 2 * sizeof (size_t)];
          char *ptr;
          size_t length;
          size_t capacity;
@@ -47,7 +52,9 @@ private:
    } m_data;
 
 private:
-   static size_t const kSmallCapacity = sizeof (typename Data::Big) / sizeof (char) - 1;
+   enum : size_t {
+      SmallCapacity = sizeof (typename Data::Big) / sizeof (char) - 1
+   };
 
 public:
    explicit String () {
@@ -89,7 +96,7 @@ private:
    }
 
    template <size_t N> static bool getMostSignificantBit (uint8 byte) {
-      return byte & cr::bit (CHAR_BIT - N - 1);
+      return byte & cr::bit (CharBit - N - 1);
    }
 
    template <size_t N> static void setLeastSignificantBit (uint8 &byte, bool bit) {
@@ -103,10 +110,10 @@ private:
 
    template <size_t N> static void setMostSignificantBit (uint8 &byte, bool bit) {
       if (bit) {
-         byte |= cr::bit (CHAR_BIT - N - 1);
+         byte |= cr::bit (CharBit - N - 1);
       }
       else {
-         byte &= ~cr::bit (CHAR_BIT - N - 1);
+         byte &= ~cr::bit (CharBit - N - 1);
       }
    }
 
@@ -144,7 +151,7 @@ private:
    }
 
    void setLength (size_t amount, size_t capacity) {
-      if (amount <= kSmallCapacity) {
+      if (amount <= SmallCapacity) {
          endString (m_data.small.str, amount);
          setSmallLength (static_cast <uint8> (amount));
       }
@@ -159,11 +166,11 @@ private:
    }
 
    void setSmallLength (uint8 length) {
-      m_data.small.length = static_cast <char> (kSmallCapacity - length) << 2;
+      m_data.small.length = static_cast <char> (SmallCapacity - length) << 2;
    }
 
    size_t getSmallLength () const {
-      return kSmallCapacity - ((m_data.small.length >> 2) & 63u);
+      return SmallCapacity - ((m_data.small.length >> 2) & 63u);
    }
 
    void setDataNonSmall (size_t length, size_t capacity) {
@@ -208,14 +215,14 @@ public:
    String &assign (const char *str, size_t length = 0) {
       length = length > 0 ? length : strlen (str);
 
-      if (length <= kSmallCapacity) {
+      if (length <= SmallCapacity) {
          moveString (m_data.small.str, str, length);
 
          endString (m_data.small.str, length);
          setSmallLength (static_cast <uint8> (length));
       }
       else {
-         auto capacity = cr::max (kSmallCapacity * 2, length);
+         auto capacity = cr::max (SmallCapacity * 2, length);
          m_data.big.ptr = alloc.allocate <char> (capacity + 1);
 
          if (m_data.big.ptr) {
@@ -287,7 +294,7 @@ public:
    void resize (size_t amount) {
       size_t oldLength = length ();
 
-      if (amount <= kSmallCapacity) {
+      if (amount <= SmallCapacity) {
          if (!isSmall ()) {
             auto ptr = m_data.big.ptr;
 
@@ -300,7 +307,7 @@ public:
          size_t newCapacity = 0;
 
          if (isSmall ()) {
-            newCapacity = cr::max (amount, kSmallCapacity * 2);
+            newCapacity = cr::max (amount, SmallCapacity * 2);
             auto ptr = alloc.allocate <char> (newCapacity + 1);
 
             moveString (ptr, m_data.small.str, cr::min (oldLength, amount));
@@ -369,7 +376,7 @@ public:
             return i;
          }
       }
-      return kInvalidIndex;
+      return InvalidIndex;
    }
 
    size_t find (const String &pattern, size_t start = 0) const {
@@ -377,7 +384,7 @@ public:
       const size_t dataLength = length ();
 
       if (patternLength > dataLength || start > dataLength) {
-         return kInvalidIndex;
+         return InvalidIndex;
       }
 
       for (size_t i = start; i <= dataLength - patternLength; ++i) {
@@ -393,7 +400,7 @@ public:
             return i;
          }
       }
-      return kInvalidIndex;
+      return InvalidIndex;
    }
 
    size_t rfind (char pattern) const {
@@ -402,7 +409,7 @@ public:
             return i;
          }
       }
-      return kInvalidIndex;
+      return InvalidIndex;
    }
 
    size_t rfind (const String &pattern) const {
@@ -410,7 +417,7 @@ public:
       const size_t dataLength = length ();
 
       if (patternLength > dataLength) {
-         return kInvalidIndex;
+         return InvalidIndex;
       }
       bool match = true;
 
@@ -428,7 +435,7 @@ public:
             return i;
          }
       }
-      return kInvalidIndex;
+      return InvalidIndex;
    }
 
    size_t findFirstOf (const String &pattern, size_t start = 0) const {
@@ -442,7 +449,7 @@ public:
             }
          }
       }
-      return kInvalidIndex;
+      return InvalidIndex;
    }
 
    size_t findLastOf (const String &pattern) const {
@@ -456,7 +463,7 @@ public:
             }
          }
       }
-      return kInvalidIndex;
+      return InvalidIndex;
    }
 
    size_t findFirstNotOf (const String &pattern, size_t start = 0) const {
@@ -479,7 +486,7 @@ public:
             return i;
          }
       }
-      return kInvalidIndex;
+      return InvalidIndex;
    }
 
    size_t findLastNotOf (const String &pattern) const {
@@ -501,9 +508,8 @@ public:
             return i;
          }
       }
-      return kInvalidIndex;
+      return InvalidIndex;
    }
-
 
    size_t countChar (char ch) const {
       size_t count = 0;
@@ -533,10 +539,10 @@ public:
       return count;
    }
 
-   String substr (size_t start, size_t count = kInvalidIndex) const {
+   String substr (size_t start, size_t count = InvalidIndex) const {
       start = cr::min (start, length ());
 
-      if (count == kInvalidIndex) {
+      if (count == InvalidIndex) {
          count = length ();
       }
       return String (data () + start, cr::min (count, length () - start));
@@ -551,7 +557,7 @@ public:
       while (pos < length ()) {
          pos = find (needle, pos);
 
-         if (pos == kInvalidIndex) {
+         if (pos == InvalidIndex) {
             break;
          }
          erase (pos, needle.length ());
@@ -581,7 +587,7 @@ public:
       Array <String> tokens;
       size_t prev = 0, pos = 0;
 
-      while ((pos = find (delim, pos)) != kInvalidIndex) {
+      while ((pos = find (delim, pos)) != InvalidIndex) {
          tokens.push (substr (prev, pos - prev));
          prev = ++pos;
       }
@@ -641,7 +647,7 @@ public:
    }
 
    bool contains (const String &rhs) const {
-      return find (rhs) != kInvalidIndex;
+      return find (rhs) != InvalidIndex;
    }
 
    String &lowercase () {
@@ -670,7 +676,7 @@ public:
       size_t begin = length ();
 
       for (size_t i = 0; i < begin; ++i) {
-         if (characters.find (at (i)) == kInvalidIndex) {
+         if (characters.find (at (i)) == InvalidIndex) {
             begin = i;
             break;
          }
@@ -682,7 +688,7 @@ public:
       size_t end = 0;
 
       for (size_t i = length (); i > 0; --i) {
-         if (characters.find (at (i - 1)) == kInvalidIndex) {
+         if (characters.find (at (i - 1)) == InvalidIndex) {
             end = i;
             break;
          }

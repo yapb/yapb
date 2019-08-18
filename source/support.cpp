@@ -56,6 +56,17 @@ BotUtils::BotUtils () {
    m_tags.emplace ("(", ")");
    m_tags.emplace (")", "(");
 
+   // register noise cache
+   m_noiseCache["player/bhit"] = Noise::NeedHandle | Noise::HitFall;
+   m_noiseCache["player/head"] = Noise::NeedHandle | Noise::HitFall;
+   m_noiseCache["items/gunpi"] = Noise::NeedHandle | Noise::Pickup;
+   m_noiseCache["items/9mmcl"] = Noise::NeedHandle | Noise::Ammo;
+   m_noiseCache["weapons/zoo"] = Noise::NeedHandle | Noise::Zoom;
+   m_noiseCache["hostage/hos"] = Noise::NeedHandle | Noise::Hostage;
+   m_noiseCache["debris/bust"] = Noise::NeedHandle | Noise::Broke;
+   m_noiseCache["debris/bust"] = Noise::NeedHandle | Noise::Broke;
+   m_noiseCache["doors/doorm"] = Noise::NeedHandle | Noise::Door;
+
    m_clients.resize (kGameMaxPlayers + 1);
 }
 
@@ -234,7 +245,7 @@ void BotUtils::checkWelcome () {
    auto receiveEntity = game.getLocalEntity ();
 
    if (isAlive (receiveEntity) && m_welcomeReceiveTime < 1.0 && needToSendMsg) {
-      m_welcomeReceiveTime = game.timebase () + 4.0f; // receive welcome message in four seconds after game has commencing
+      m_welcomeReceiveTime = game.time () + 4.0f; // receive welcome message in four seconds after game has commencing
    }
 
 
@@ -243,11 +254,11 @@ void BotUtils::checkWelcome () {
          game.serverCommand ("speak \"%s\"", m_sentences.random ().chars ());
       }
 
-      MessageWriter (MSG_ONE, msgs.id (NetMsg::TextMsg), nullvec, receiveEntity)
+      MessageWriter (MSG_ONE, msgs.id (NetMsg::TextMsg), nullptr, receiveEntity)
          .writeByte (HUD_PRINTTALK)
          .writeString (strings.format ("----- %s v%s (Build: %u), {%s}, (c) %s, by %s (%s)-----", PRODUCT_SHORT_NAME, PRODUCT_VERSION, buildNumber (), PRODUCT_DATE, PRODUCT_END_YEAR, PRODUCT_AUTHOR, PRODUCT_URL));
 
-      MessageWriter (MSG_ONE, SVC_TEMPENTITY, nullvec, receiveEntity)
+      MessageWriter (MSG_ONE, SVC_TEMPENTITY, nullptr, receiveEntity)
          .writeByte (TE_TEXTMESSAGE)
          .writeByte (1)
          .writeShort (MessageWriter::fs16 (-1.0f, 13.0f))
@@ -312,91 +323,96 @@ bool BotUtils::findNearestPlayer (void **pvHolder, edict_t *to, float searchDist
    return true;
 }
 
-void BotUtils::attachSoundsToClients (edict_t *ent, const char *sample, float volume) {
-   // this function called by the sound hooking code (in emit_sound) enters the played sound into
-   // the array associated with the entity
+void BotUtils::listenNoise (edict_t *ent, const String &sample, float volume) {
+   // this function called by the sound hooking code (in emit_sound) enters the played sound into  the array associated with the entity
 
-   if (game.isNullEntity (ent) || strings.isEmpty (sample)) {
+   if (game.isNullEntity (ent) || sample.empty ()) {
       return;
    }
    const Vector &origin = game.getAbsPos (ent);
 
+   // something wrong with sound...
    if (origin.empty ()) {
       return;
    }
-   int index = game.indexOfPlayer (ent);
+   auto noise = m_noiseCache[sample.substr (0, 11)];
 
-   if (index < 0 || index >= game.maxClients ()) {
-      float nearestDistance = kInfiniteDistance;
+   // we're not handling theese
+   if (!(noise & Noise::NeedHandle)) {
+      return;
+   }
+
+   // find nearest player to sound origin
+   auto findNearbyClient = [&origin] () {
+      float nearest = kInfiniteDistance;
+      Client *result = nullptr;
 
       // loop through all players
-      for (int i = 0; i < game.maxClients (); ++i) {
-         const Client &client = m_clients[i];
-
+      for (auto &client : util.getClients ()) {
          if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive)) {
             continue;
          }
-         float distance = (client.origin - origin).length ();
+         auto distance = (client.origin - origin).lengthSq ();
 
          // now find nearest player
-         if (distance < nearestDistance) {
-            index = i;
-            nearestDistance = distance;
+         if (distance < nearest) {
+            result = &client;
+            nearest = distance;
          }
       }
-   }
+      return result;
+   };
+   auto client = findNearbyClient ();
 
-   // in case of worst case
-   if (index < 0 || index >= game.maxClients ()) {
+   // update noise stats
+   auto registerNoise = [&origin, &client, &volume] (float distance, float lasting) {
+      client->hearingDistance = distance * volume;
+      client->timeSoundLasting = game.time () + lasting;
+      client->sound = origin;
+   };
+
+   // client wasn't found
+   if (!client) {
       return;
    }
-   Client &client = m_clients[index];
 
-   if (strncmp ("player/bhit_flesh", sample, 17) == 0 || strncmp ("player/headshot", sample, 15) == 0) {
-      // hit/fall sound?
-      client.hearingDistance = 768.0f * volume;
-      client.timeSoundLasting = game.timebase () + 0.5f;
-      client.sound = origin;
+   // hit/fall sound?
+   if (noise & Noise::HitFall) {
+      registerNoise (768.0f, 0.52f);
    }
-   else if (strncmp ("items/gunpickup", sample, 15) == 0) {
-      // weapon pickup?
-      client.hearingDistance = 768.0f * volume;
-      client.timeSoundLasting = game.timebase () + 0.5f;
-      client.sound = origin;
+
+   // weapon pickup?
+   else if (noise & Noise::Pickup) {
+      registerNoise (768.0f, 0.45f);
    }
-   else if (strncmp ("weapons/zoom", sample, 12) == 0) {
-      // sniper zooming?
-      client.hearingDistance = 512.0f * volume;
-      client.timeSoundLasting = game.timebase () + 0.1f;
-      client.sound = origin;
+
+   // sniper zooming?
+   else if (noise & Noise::Zoom) {
+      registerNoise (512.0f, 0.10f);
    }
-   else if (strncmp ("items/9mmclip", sample, 13) == 0) {
-      // ammo pickup?
-      client.hearingDistance = 512.0f * volume;
-      client.timeSoundLasting = game.timebase () + 0.1f;
-      client.sound = origin;
+
+   // ammo pickup?
+   else if (noise & Noise::Ammo) {
+      registerNoise (512.0f, 0.25f);
    }
-   else if (strncmp ("hostage/hos", sample, 11) == 0) {
-      // CT used hostage?
-      client.hearingDistance = 1024.0f * volume;
-      client.timeSoundLasting = game.timebase () + 5.0f;
-      client.sound = origin;
+
+   // ct used hostage?
+   else if (noise & Noise::Hostage) {
+      registerNoise (1024.0f, 5.00f);
    }
-   else if (strncmp ("debris/bustmetal", sample, 16) == 0 || strncmp ("debris/bustglass", sample, 16) == 0) {
-      // broke something?
-      client.hearingDistance = 1024.0f * volume;
-      client.timeSoundLasting = game.timebase () + 2.0f;
-      client.sound = origin;
+
+   // broke something?
+   else if (noise & Noise::Broke) {
+      registerNoise (1024.0f, 2.00f);
    }
-   else if (strncmp ("doors/doormove", sample, 14) == 0) {
-      // someone opened a door
-      client.hearingDistance = 1024.0f * volume;
-      client.timeSoundLasting = game.timebase () + 3.0f;
-      client.sound = origin;
+
+   // someone opened a door
+   else if (noise & Noise::Door) {
+      registerNoise (1024.0f, 3.00f);
    }
 }
 
-void BotUtils::simulateSoundUpdates (int playerIndex) {
+void BotUtils::simulateNoise (int playerIndex) {
    // this function tries to simulate playing of sounds to let the bots hear sounds which aren't
    // captured through server sound hooking
 
@@ -407,27 +423,28 @@ void BotUtils::simulateSoundUpdates (int playerIndex) {
 
    float hearDistance = 0.0f;
    float timeSound = 0.0f;
+   auto buttons = client.ent->v.button | client.ent->v.oldbuttons;
 
-   if (client.ent->v.oldbuttons & IN_ATTACK) // pressed attack button?
+   if (buttons & IN_ATTACK) // pressed attack button?
    {
       hearDistance = 2048.0f;
-      timeSound = game.timebase () + 0.3f;
+      timeSound = game.time () + 0.3f;
    }
-   else if (client.ent->v.oldbuttons & IN_USE) // pressed used button?
+   else if (buttons & IN_USE) // pressed used button?
    {
       hearDistance = 512.0f;
-      timeSound = game.timebase () + 0.5f;
+      timeSound = game.time () + 0.5f;
    }
-   else if (client.ent->v.oldbuttons & IN_RELOAD) // pressed reload button?
+   else if (buttons & IN_RELOAD) // pressed reload button?
    {
       hearDistance = 512.0f;
-      timeSound = game.timebase () + 0.5f;
+      timeSound = game.time () + 0.5f;
    }
    else if (client.ent->v.movetype == MOVETYPE_FLY) // uses ladder?
    {
       if (cr::abs (client.ent->v.velocity.z) > 50.0f) {
          hearDistance = 1024.0f;
-         timeSound = game.timebase () + 0.3f;
+         timeSound = game.time () + 0.3f;
       }
    }
    else {
@@ -436,7 +453,7 @@ void BotUtils::simulateSoundUpdates (int playerIndex) {
       if (mp_footsteps.bool_ ()) {
          // moves fast enough?
          hearDistance = 1280.0f * (client.ent->v.velocity.length2d () / 260.0f);
-         timeSound = game.timebase () + 0.3f;
+         timeSound = game.time () + 0.3f;
       }
    }
 
@@ -445,7 +462,7 @@ void BotUtils::simulateSoundUpdates (int playerIndex) {
    }
 
    // some sound already associated
-   if (client.timeSoundLasting > game.timebase ()) {
+   if (client.timeSoundLasting > game.time ()) {
       if (client.hearingDistance <= hearDistance) {
          // override it with new
          client.hearingDistance = hearDistance;
@@ -481,7 +498,7 @@ void BotUtils::updateClients () {
 
          if (client.flags & ClientFlags::Alive) {
             client.origin = player->v.origin;
-            simulateSoundUpdates (i);
+            simulateNoise (i);
          }
       }
       else {
@@ -576,7 +593,7 @@ void BotUtils::sendPings (edict_t *to) {
          client.ping = getPingBitmask (client.ent, rg.int_ (5, 10), rg.int_ (15, 40));
       }
       
-      msg.start (MSG_ONE_UNRELIABLE, kGamePingSVC, nullvec, to)
+      msg.start (MSG_ONE_UNRELIABLE, kGamePingSVC, nullptr, to)
          .writeLong (client.ping)
          .end ();
    }

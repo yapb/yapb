@@ -219,6 +219,5 @@ public:
    }
 };
 
-
 // explose global
 static auto &conf = BotConfig::get ();

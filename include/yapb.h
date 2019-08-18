@@ -524,10 +524,10 @@ struct Client {
    int radio; // radio orders
    int menu; // identifier to openen menu
    int ping; // when bot latency is enabled, client ping stored here
-   float hearingDistance; // distance this sound is heared
-   float timeSoundLasting; // time sound is played/heared
    int iconFlags[kGameMaxPlayers]; // flag holding chatter icons
    float iconTimestamp[kGameMaxPlayers]; // timers for chatter icons
+   float hearingDistance; // distance this sound is heared
+   float timeSoundLasting; // time sound is played/heared
    bool pingUpdate; // update ping ?
 };
 
@@ -622,7 +622,6 @@ private:
    float m_strafeSpeed; // current speed sideways
    float m_minSpeed; // minimum speed in normal mode
    float m_oldCombatDesire; // holds old desire for filtering
-   float m_avoidTime; // time to avoid players around
    float m_itemCheckTime; // time next search for items needs to be done
    float m_joinServerTime; // time when bot joined the game
    float m_playServerTime; // time bot spent in the game
@@ -659,7 +658,6 @@ private:
    edict_t *m_breakableEntity; // pointer to breakable entity
    edict_t *m_targetEntity; // the entity that the bot is trying to reach
    edict_t *m_avoidGrenade; // pointer to grenade entity to avoid
-   edict_t *m_avoid; // avoid players on our way
 
    Vector m_liftTravelPos; // lift travel position
    Vector m_moveAngles; // bot move angles
@@ -732,7 +730,7 @@ private:
    bool hasActiveGoal ();
    bool advanceMovement ();
    bool isBombDefusing (const Vector &bombOrigin);
-   bool isOccupiedPoint (int index);
+   bool isOccupiedNode (int index);
    bool seesItem (const Vector &dest, const char *itemName);
    bool lastEnemyShootable ();
    bool isShootableBreakable (edict_t *ent);
@@ -754,9 +752,11 @@ private:
    bool checkChatKeywords (String &reply);
    bool isReplyingToChat ();
    bool isReachableNode (int index);
+   bool updateLiftHandling ();
+   bool updateLiftStates ();
 
    void instantChatter (int type);
-   void runAI ();
+   void update ();
    void runMovement ();
    void checkSpawnConditions ();
    void buyStuff ();
@@ -808,6 +808,7 @@ private:
    void selectWeaponById (int num);
    void completeTask ();
    void executeTasks ();
+   void trackEnemies ();
 
    void normal_ ();
    void spraypaint_ ();
@@ -881,8 +882,10 @@ public:
    float m_agressionLevel; // dynamic aggression level (in game)
    float m_fearLevel; // dynamic fear level (in game)
    float m_nextEmotionUpdate; // next time to sanitize emotions
-   float m_thinkFps; // skip some frames in bot thinking
-   float m_thinkInterval; // interval between frames
+   float m_updateTime; // skip some frames in bot thinking
+   float m_updateInterval; // interval between frames
+   float m_viewFps; // time to update  bots vision
+   float m_viewUpdateInterval; // interval to update bot vision
    float m_goalValue; // ranking value for this node
    float m_viewDistance; // current view distance
    float m_maxViewDistance; // maximum view distance
@@ -962,20 +965,18 @@ public:
    ~Bot () = default;
 
 public:
-   void slowFrame (); // the main Lambda that decides intervals of running bot ai
-   void fastFrame (); /// the things that can be executed while skipping frames
-   void processBlind (int alpha);
-   void processDamage (edict_t *inflictor, int damage, int armor, int bits);
+   void logic (); /// the things that can be executed while skipping frames
+   void takeBlind (int alpha);
+   void takeDamage (edict_t *inflictor, int damage, int armor, int bits);
    void showDebugOverlay ();
    void newRound ();
-   void processBuyzoneEntering (int buyState);
+   void enteredBuyZone (int buyState);
    void pushMsgQueue (int message);
    void prepareChatMessage (const String &message);
    void checkForChat ();
    void showChaterIcon (bool show);
    void clearSearchNodes ();
-   void processBreakables (edict_t *touch);
-   void avoidIncomingPlayers (edict_t *touch);
+   void checkBreakable (edict_t *touch);
    void startTask (Task id, float desire, int data, float time, bool resume);
    void clearTask (Task id);
    void filterTasks ();
@@ -986,7 +987,7 @@ public:
    void pushChatMessage (int type, bool isTeamSay = false);
    void pushRadioMessage (int message);
    void pushChatterMessage (int message);
-   void processChatterMessage (const char *tempMessage);
+   void handleChatter (const char *tempMessage);
    void tryHeadTowardRadioMessage ();
    void kill ();
    void kick ();

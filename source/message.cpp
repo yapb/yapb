@@ -23,7 +23,7 @@ void MessageDispatcher::netMsgTextMsg () {
          auto notify = bots.findAliveBot ();
 
          if (notify && notify->m_notKilled) {
-            notify->processChatterMessage (m_args[msg].chars_);
+            notify->handleChatter (m_args[msg].chars_);
 
          }
       }
@@ -52,6 +52,14 @@ void MessageDispatcher::netMsgTextMsg () {
    else if (cached & TextMsgCache::RestartRound) {
       bots.updateTeamEconomics (Team::CT, true);
       bots.updateTeamEconomics (Team::Terrorist, true);
+
+      extern ConVar mp_startmoney;
+
+      // set balance for all players
+      bots.forEach ([] (Bot *bot) {
+         bot->m_moneyAmount = mp_startmoney.int_ ();
+         return false;
+      });
    }
    else if (cached & TextMsgCache::TerroristWin) {
       bots.setLastWinner (Team::Terrorist); // update last winner for economics
@@ -157,7 +165,7 @@ void MessageDispatcher::netMsgCurWeapon () {
 
       // ammo amount decreased ? must have fired a bullet...
       if (m_args[id].long_ == m_bot->m_currentWeapon && m_bot->m_ammoInClip[m_args[id].long_] > m_args[clip].long_) {
-         m_bot->m_timeLastFired = game.timebase (); // remember the last bullet time
+         m_bot->m_timeLastFired = game.time (); // remember the last bullet time
       }
       m_bot->m_ammoInClip[m_args[id].long_] = m_args[clip].long_;
    }
@@ -201,7 +209,7 @@ void MessageDispatcher::netMsgDamage () {
    
    // handle damage if any
    if (m_args[armor].long_ > 0 || m_args[health].long_) {
-      m_bot->processDamage (m_bot->pev->dmg_inflictor, m_args[health].long_, m_args[armor].long_, m_args[bits].long_);
+      m_bot->takeDamage (m_bot->pev->dmg_inflictor, m_args[health].long_, m_args[armor].long_, m_args[bits].long_);
    }
 }
 
@@ -237,7 +245,7 @@ void MessageDispatcher::netMsgStatusIcon () {
       m_bot->m_inBuyZone = (m_args[enabled].long_ != 0);
 
       // try to equip in buyzone
-      m_bot->processBuyzoneEntering (BuyState::PrimaryWeapon);
+      m_bot->enteredBuyZone (BuyState::PrimaryWeapon);
    }
    else if (cached & StatusIconCache::VipSafety) {
       m_bot->m_inVIPZone = (m_args[enabled].long_ != 0);
@@ -278,7 +286,7 @@ void MessageDispatcher::netMsgScreenFade () {
    
    // screen completely faded ?
    if (m_args[r].long_ >= 255 && m_args[g].long_ >= 255 && m_args[b].long_ >= 255 && m_args[alpha].long_ > 170) {
-      m_bot->processBlind (m_args[alpha].long_);
+      m_bot->takeBlind (m_args[alpha].long_);
    }
 }
 

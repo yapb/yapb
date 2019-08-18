@@ -137,9 +137,6 @@
     <ClCompile Include="..\source\chatlib.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="..\source\interface.cpp">
-      <Filter>source</Filter>
-    </ClCompile>
     <ClCompile Include="..\source\navigate.cpp">
       <Filter>source</Filter>
     </ClCompile>
@@ -168,6 +165,9 @@
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="..\source\message.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\linkage.cpp">
       <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
