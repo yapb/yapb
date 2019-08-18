@@ -1162,7 +1162,7 @@ void Bot::attackMovement () {
    }
 
    if (m_fightStyle == Fight::Stay || (m_duckTime > game.time () || m_sniperStopTime > game.time ())) {
-      if (m_moveSpeed > 0.0f) {
+      if (m_moveSpeed > 0.0f && m_currentWeapon != Weapon::Knife) {
          m_moveSpeed = 0.0f;
       }
    }
