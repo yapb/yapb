@@ -884,8 +884,6 @@ public:
    float m_nextEmotionUpdate; // next time to sanitize emotions
    float m_updateTime; // skip some frames in bot thinking
    float m_updateInterval; // interval between frames
-   float m_viewFps; // time to update  bots vision
-   float m_viewUpdateInterval; // interval to update bot vision
    float m_goalValue; // ranking value for this node
    float m_viewDistance; // current view distance
    float m_maxViewDistance; // maximum view distance
