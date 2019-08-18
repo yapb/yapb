@@ -1233,7 +1233,6 @@ void Bot::newRound () {
       pushChatterMessage (Chatter::NewRound);
    }
    m_updateInterval = game.is (GameFlags::Legacy | GameFlags::Xash3D) ? 0.0f : (1.0f / cr::clamp (yb_think_fps.float_ (), 30.0f, 60.0f));
-   m_viewUpdateInterval = 1.0f / 30.0f;
 }
 
 void Bot::kill () {
