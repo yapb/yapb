@@ -9,7 +9,7 @@
 
 #include <yapb.h>
 
-ConVar yb_chat ("yb_chat", "1");
+ConVar yb_chat ("yb_chat", "1", "Enables or disables bots chat functionality.");
 
 void BotUtils::stripTags (String &line) {
    if (line.empty ()) {
@@ -23,9 +23,9 @@ void BotUtils::stripTags (String &line) {
          const size_t end = line.find (tag.second, start);
          const size_t diff = end - start;
 
-         if (end != String::InvalidIndex && end > start && diff < 32 && diff > 2) {
+         if (end != String::InvalidIndex && end > start && diff < 32 && diff > 1) {
             line.erase (start, diff + tag.second.length ());
-            break;
+            continue;
          }
       }
    }

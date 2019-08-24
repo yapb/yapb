@@ -66,6 +66,9 @@ namespace detail {
 
 // basic dictionary
 template <class K, class V, class H = StringHash <K>, size_t HashSize = 36> class Dictionary final : public DenyCopying {
+private:
+   using DictBucket = detail::DictionaryBucket <K, V>;
+
 public:
    enum : size_t {
       InvalidIndex = static_cast <size_t> (-1)
@@ -73,7 +76,7 @@ public:
 
 private:
    Array <detail::DictionaryList *> m_table;
-   Array <detail::DictionaryBucket <K, V>> m_buckets;
+   Array <DictBucket> m_buckets;
    H m_hasher;
 
 private:
@@ -226,19 +229,19 @@ public:
 
    // for range-based loops
 public:
-   detail::DictionaryBucket <K, V> *begin () {
+   DictBucket *begin () {
       return m_buckets.begin ();
    }
 
-   detail::DictionaryBucket <K, V> *begin () const {
+   DictBucket *begin () const {
       return m_buckets.begin ();
    }
 
-   detail::DictionaryBucket <K, V> *end () {
+   DictBucket *end () {
       return m_buckets.end ();
    }
 
-   detail::DictionaryBucket <K, V> *end () const {
+   DictBucket *end () const {
       return m_buckets.end ();
    }
 };

@@ -37,10 +37,13 @@ void MessageDispatcher::netMsgTextMsg () {
       return;
    }
 
-   // reset bomb position
-   if (game.mapIs (MapFlags::Demolition)) {
-      graph.setBombPos (true);
-   }
+
+   // reset bomb position for all the bots
+   const auto resetBombPosition = [] () -> void {
+      if (game.mapIs (MapFlags::Demolition)) {
+         graph.setBombOrigin (true);
+      }
+   };
 
    if (cached & TextMsgCache::Commencing) {
       util.setNeedForWelcome (true);
@@ -48,6 +51,8 @@ void MessageDispatcher::netMsgTextMsg () {
    else if (cached & TextMsgCache::CounterWin) {
       bots.setLastWinner (Team::CT); // update last winner for economics
       dispatchChatterMessage ();
+
+      resetBombPosition ();
    }
    else if (cached & TextMsgCache::RestartRound) {
       bots.updateTeamEconomics (Team::CT, true);
@@ -60,10 +65,14 @@ void MessageDispatcher::netMsgTextMsg () {
          bot->m_moneyAmount = mp_startmoney.int_ ();
          return false;
       });
+
+      resetBombPosition ();
    }
    else if (cached & TextMsgCache::TerroristWin) {
       bots.setLastWinner (Team::Terrorist); // update last winner for economics
       dispatchChatterMessage ();
+
+      resetBombPosition ();
    }
    else if ((cached & TextMsgCache::BombPlanted) && !bots.isBombPlanted ()) {
       bots.setBombPlanted (true);
@@ -78,7 +87,7 @@ void MessageDispatcher::netMsgTextMsg () {
             }
          }
       }
-      graph.setBombPos ();
+      graph.setBombOrigin ();
    }
 
    // check for burst fire message

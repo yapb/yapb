@@ -259,7 +259,7 @@ private:
 
    Vector m_learnVelocity;
    Vector m_learnPosition;
-   Vector m_bombPos;
+   Vector m_bombOrigin;
    Vector m_lastNode;
 
    IntArray m_terrorPoints;
@@ -344,7 +344,7 @@ public:
    void initBuckets ();
    void addToBucket (const Vector &pos, int index);
    void eraseFromBucket (const Vector &pos, int index);
-   void setBombPos (bool reset = false, const Vector &pos = nullptr);
+   void setBombOrigin (bool reset = false, const Vector &pos = nullptr);
    void updateGlobalPractice ();
    void unassignPath (int from, int to);
    void setDangerValue (int team, int start, int goal, int value);
@@ -393,8 +393,8 @@ public:
       m_autoPathDistance = distance;
    }
 
-   const Vector &getBombPos () const {
-      return m_bombPos;
+   const Vector &getBombOrigin () const {
+      return m_bombOrigin;
    }
 
    // access paths

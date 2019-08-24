@@ -268,13 +268,13 @@ CR_DECLARE_SCOPED_ENUM (Weapon,
 // buy counts
 CR_DECLARE_SCOPED_ENUM (BuyState,
    PrimaryWeapon = 0,
-   ArmorVestHelm ,
-   SecondaryWeapon,
-   Grenades,
-   DefusalKit,
-   Ammo,
-   NightVision,
-   Done
+ArmorVestHelm,
+SecondaryWeapon,
+Grenades,
+DefusalKit,
+Ammo,
+NightVision,
+Done
 )
 
 // economics limits
@@ -284,7 +284,7 @@ CR_DECLARE_SCOPED_ENUM (EcoLimit,
    SmgTEGreater,
    ShotgunGreater,
    ShotgunLess,
-   HeavyGreater ,
+   HeavyGreater,
    HeavyLess,
    ProstockNormal,
    ProstockRusher,
@@ -513,11 +513,17 @@ public:
    { }
 };
 
+// clients noise
+struct ClientNoise {
+   Vector pos;
+   float dist;
+   float last;
+};
+
 // array of clients struct
 struct Client {
    edict_t *ent; // pointer to actual edict
    Vector origin; // position in the world
-   Vector sound; // position sound was played
    int team; // bot team
    int team2; // real bot team in free for all mode (csdm)
    int flags; // client flags
@@ -526,9 +532,8 @@ struct Client {
    int ping; // when bot latency is enabled, client ping stored here
    int iconFlags[kGameMaxPlayers]; // flag holding chatter icons
    float iconTimestamp[kGameMaxPlayers]; // timers for chatter icons
-   float hearingDistance; // distance this sound is heared
-   float timeSoundLasting; // time sound is played/heared
    bool pingUpdate; // update ping ?
+   ClientNoise noise;
 };
 
 // define chatting collection structure
@@ -733,7 +738,6 @@ private:
    bool isOccupiedNode (int index);
    bool seesItem (const Vector &dest, const char *itemName);
    bool lastEnemyShootable ();
-   bool isShootableBreakable (edict_t *ent);
    bool rateGroundWeapon (edict_t *ent);
    bool reactOnEnemy ();
    bool selectBestNextNode ();
@@ -975,6 +979,7 @@ public:
    void showChaterIcon (bool show);
    void clearSearchNodes ();
    void checkBreakable (edict_t *touch);
+   void checkBreablesAround ();
    void startTask (Task id, float desire, int data, float time, bool resume);
    void clearTask (Task id);
    void filterTasks ();

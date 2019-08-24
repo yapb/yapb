@@ -8,8 +8,8 @@
 
 #include <yapb.h>
 
-ConVar yb_display_welcome_text ("yb_display_welcome_text", "1");
-ConVar yb_enable_query_hook ("yb_enable_query_hook", "1");
+ConVar yb_display_welcome_text ("yb_display_welcome_text", "1", "Enables or disables showing welcome message to host entity on game start.");
+ConVar yb_enable_query_hook ("yb_enable_query_hook", "1", "Enables or disabled fake server queries response, that shows bots as real players in server browser.");
 
 BotUtils::BotUtils () {
    m_needToSendWelcome = false;
@@ -329,7 +329,7 @@ void BotUtils::listenNoise (edict_t *ent, const String &sample, float volume) {
    if (game.isNullEntity (ent) || sample.empty ()) {
       return;
    }
-   const Vector &origin = game.getAbsPos (ent);
+   const Vector &origin = game.getEntityWorldOrigin (ent);
 
    // something wrong with sound...
    if (origin.empty ()) {
@@ -366,9 +366,9 @@ void BotUtils::listenNoise (edict_t *ent, const String &sample, float volume) {
 
    // update noise stats
    auto registerNoise = [&origin, &client, &volume] (float distance, float lasting) {
-      client->hearingDistance = distance * volume;
-      client->timeSoundLasting = game.time () + lasting;
-      client->sound = origin;
+      client->noise.dist = distance * volume;
+      client->noise.last = game.time () + lasting;
+      client->noise.pos = origin;
    };
 
    // client wasn't found
@@ -398,7 +398,7 @@ void BotUtils::listenNoise (edict_t *ent, const String &sample, float volume) {
 
    // ct used hostage?
    else if (noise & Noise::Hostage) {
-      registerNoise (1024.0f, 5.00f);
+      registerNoise (1024.0f, 5.00);
    }
 
    // broke something?
@@ -420,31 +420,33 @@ void BotUtils::simulateNoise (int playerIndex) {
       return; // reliability check
    }
    Client &client = m_clients[playerIndex];
+   ClientNoise noise {};
 
-   float hearDistance = 0.0f;
-   float timeSound = 0.0f;
    auto buttons = client.ent->v.button | client.ent->v.oldbuttons;
 
-   if (buttons & IN_ATTACK) // pressed attack button?
-   {
-      hearDistance = 2048.0f;
-      timeSound = game.time () + 0.3f;
+   // pressed attack button?
+   if (buttons & IN_ATTACK) {
+      noise.dist = 2048.0f;
+      noise.last = game.time () + 0.3f;
    }
-   else if (buttons & IN_USE) // pressed used button?
-   {
-      hearDistance = 512.0f;
-      timeSound = game.time () + 0.5f;
+
+   // pressed used button?
+   else if (buttons & IN_USE) {
+      noise.dist = 512.0f;
+      noise.last = game.time () + 0.5f;
    }
-   else if (buttons & IN_RELOAD) // pressed reload button?
-   {
-      hearDistance = 512.0f;
-      timeSound = game.time () + 0.5f;
+
+   // pressed reload button?
+   else if (buttons & IN_RELOAD)  {
+      noise.dist = 512.0f;
+      noise.last = game.time () + 0.5f;
    }
-   else if (client.ent->v.movetype == MOVETYPE_FLY) // uses ladder?
-   {
+
+   // uses ladder?
+   else if (client.ent->v.movetype == MOVETYPE_FLY) {
       if (cr::abs (client.ent->v.velocity.z) > 50.0f) {
-         hearDistance = 1024.0f;
-         timeSound = game.time () + 0.3f;
+         noise.dist = 1024.0f;
+         noise.last = game.time () + 0.3f;
       }
    }
    else {
@@ -452,29 +454,29 @@ void BotUtils::simulateNoise (int playerIndex) {
 
       if (mp_footsteps.bool_ ()) {
          // moves fast enough?
-         hearDistance = 1280.0f * (client.ent->v.velocity.length2d () / 260.0f);
-         timeSound = game.time () + 0.3f;
+         noise.dist = 1280.0f * (client.ent->v.velocity.length2d () / 260.0f);
+         noise.last = game.time () + 0.3f;
       }
    }
 
-   if (hearDistance <= 0.0) {
+   if (noise.dist <= 0.0) {
       return; // didn't issue sound?
    }
 
    // some sound already associated
-   if (client.timeSoundLasting > game.time ()) {
-      if (client.hearingDistance <= hearDistance) {
+   if (client.noise.last > game.time ()) {
+      if (client.noise.dist <= noise.dist) {
          // override it with new
-         client.hearingDistance = hearDistance;
-         client.timeSoundLasting = timeSound;
-         client.sound = client.ent->v.origin;
+         client.noise.dist = noise.dist;
+         client.noise.last = noise.last;
+         client.noise.pos = client.ent->v.origin;
       }
    }
-   else {
+   else if (!cr::fzero (noise.last)) {
       // just remember it
-      client.hearingDistance = hearDistance;
-      client.timeSoundLasting = timeSound;
-      client.sound = client.ent->v.origin;
+      client.noise.dist = noise.dist;
+      client.noise.last = noise.last;
+      client.noise.pos = client.ent->v.origin;
    }
 }
 
@@ -615,7 +617,7 @@ void BotUtils::installSendTo () {
    }
 
    // enable only on modern games
-   if (game.is (GameFlags::Modern) && (plat.isLinux || plat.isWindows) && !plat.isAndroid && !m_sendToHook.enabled ()) {
+   if (game.is (GameFlags::Modern) && (plat.isLinux || plat.isWindows) && !plat.isArm && !m_sendToHook.enabled ()) {
       m_sendToHook.patch (reinterpret_cast <void *> (&sendto), reinterpret_cast <void *> (&BotUtils::sendTo));
    }
 }

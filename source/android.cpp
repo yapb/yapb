@@ -10,7 +10,7 @@
 #include <yapb.h>
 
 // until hook code will be compatible with ARM, it's here
-#if defined (CR_ANDROID)
+#if defined (CR_ANDROID) && defined(CR_ARCH_ARM)
 void android_LinkEntity (EntityFunction &addr, const char *name, entvars_t *pev) {
    if (!addr) {
       addr = game.lib ().resolve <EntityFunction> (name);

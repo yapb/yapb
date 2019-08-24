@@ -60,6 +60,9 @@ void Game::levelInitialize (edict_t *entities, int max) {
 
    m_spawnCount[Team::CT] = 0;
    m_spawnCount[Team::Terrorist] = 0;
+
+   // clear all breakables before initialization
+   m_breakables.clear ();
    
    // go thru the all entities on map, and do whatever we're want
    for (int i = 0; i < max; ++i) {
@@ -131,6 +134,9 @@ void Game::levelInitialize (edict_t *entities, int max) {
       }
       else if (strncmp (classname, "func_button", 11) == 0) {
          m_mapFlags |= MapFlags::HasButtons;
+      }
+      else if (isShootableBreakable (ent)) {
+         m_breakables.push (ent);
       }
    }
 
@@ -301,7 +307,7 @@ const char *Game::getMapName () {
    return strings.format ("%s", STRING (globals->mapname));
 }
 
-Vector Game::getAbsPos (edict_t *ent) {
+Vector Game::getEntityWorldOrigin (edict_t *ent) {
    // this expanded function returns the vector origin of a bounded entity, assuming that any
    // entity that has a bounding box has its center at the center of the bounding box itself.
 
@@ -463,33 +469,59 @@ bool Game::isSoftwareRenderer () {
    return false;
 }
 
-void Game::addNewCvar (const char *variable, const char *value, Var varType, bool regMissing, const char *regVal, ConVar *self) {
+void Game::addNewCvar (const char *name, const char *value, const char *info, bool bounded, float min, float max, Var varType, bool missingAction, const char *regval, ConVar *self) {
    // this function adds globally defined variable to registration stack
 
-   VarPair pair {};
+   VarPair pair;
 
-   pair.reg.name = const_cast <char *> (variable);
+   pair.reg.name = const_cast <char *> (name);
    pair.reg.string = const_cast <char *> (value);
-   pair.missing = regMissing;
-   pair.regval = regVal;
+   pair.missing = missingAction;
+   pair.regval = regval;
+   pair.info = info;
+   pair.bounded = bounded;
 
-   int engineFlags = FCVAR_EXTDLL;
+   if (bounded) {
+      pair.min = min;
+      pair.max = max;
+      pair.initial = static_cast <float> (atof (value));
+   }
+
+   auto eflags = FCVAR_EXTDLL;
 
    if (varType == Var::Normal) {
-      engineFlags |= FCVAR_SERVER;
+      eflags |= FCVAR_SERVER;
    }
    else if (varType == Var::ReadOnly) {
-      engineFlags |= FCVAR_SERVER | FCVAR_SPONLY | FCVAR_PRINTABLEONLY;
+      eflags |= FCVAR_SERVER | FCVAR_SPONLY | FCVAR_PRINTABLEONLY;
    }
    else if (varType == Var::Password) {
-      engineFlags |= FCVAR_PROTECTED;
+      eflags |= FCVAR_PROTECTED;
    }
 
-   pair.reg.flags = engineFlags;
+   pair.reg.flags = eflags;
    pair.self = self;
    pair.type = varType;
 
    m_cvars.push (cr::move (pair));
+}
+
+void Game::checkCvarsBounds () {
+   for (const auto &var : m_cvars) {
+      if (!var.bounded || !var.self) {
+         continue;
+      }
+      auto value = var.self->float_ ();
+      auto str = var.self->str ();
+
+      // check the bounds and set default if out of bounds
+      if (value > var.max || value < var.min || (!strings.isEmpty (str) && isalpha (*str))) {
+         var.self->set (var.initial);
+
+         // notify about that
+         ctrl.msg ("Bogus value for cvar '%s', min is '%.1f' and max is '%.1f', and we're got '%s', value reverted to default '%.1f'.", var.reg.name, var.min, var.max, str, var.initial);
+      }
+   }
 }
 
 void Game::registerCvars (bool gameVars) {
@@ -500,9 +532,9 @@ void Game::registerCvars (bool gameVars) {
       cvar_t &reg = var.reg;
 
       if (var.type != Var::NoRegister) {
-         self.eptr = engfuncs.pfnCVarGetPointer (reg.name);
+         self.ptr = engfuncs.pfnCVarGetPointer (reg.name);
 
-         if (!self.eptr) {
+         if (!self.ptr) {
             static cvar_t reg_;
 
             // fix metamod' memlocs not found
@@ -513,22 +545,22 @@ void Game::registerCvars (bool gameVars) {
             else {
                engfuncs.pfnCVarRegister (&var.reg);
             }
-            self.eptr = engfuncs.pfnCVarGetPointer (reg.name);
+            self.ptr = engfuncs.pfnCVarGetPointer (reg.name);
          }
       }
       else if (gameVars) {
-         self.eptr = engfuncs.pfnCVarGetPointer (reg.name);
+         self.ptr = engfuncs.pfnCVarGetPointer (reg.name);
 
-         if (var.missing && !self.eptr) {
+         if (var.missing && !self.ptr) {
             if (reg.string == nullptr && var.regval != nullptr) {
                reg.string = const_cast <char *> (var.regval);
                reg.flags |= FCVAR_SERVER;
             }
             engfuncs.pfnCVarRegister (&var.reg);
-            self.eptr = engfuncs.pfnCVarGetPointer (reg.name);
+            self.ptr = engfuncs.pfnCVarGetPointer (reg.name);
          }
 
-         if (!self.eptr) {
+         if (!self.ptr) {
             print ("Got nullptr on cvar %s!", reg.name);
          }
       }
@@ -644,7 +676,6 @@ bool Game::postload () {
    // register bot cvars
    game.registerCvars ();
 
-
    // register server command(s)
    registerEngineCommand ("yapb", [] () {
       ctrl.handleEngineCommands ();
@@ -718,7 +749,6 @@ bool Game::postload () {
          logger.fatal ("Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gamedll, getModName ());
       }
       displayCSVersion ();
-
    }
    else {
       bool binaryLoaded = loadCSBinary ();
@@ -782,6 +812,9 @@ void Game::slowFrame () {
    // detect csdm
    detectDeathmatch ();
 
+   // check the cvar bounds
+   checkCvarsBounds ();
+
    // display welcome message
    util.checkWelcome ();
    m_slowFrame = time () + 1.0f;
@@ -814,6 +847,18 @@ void Game::searchEntities (const Vector &position, const float radius, EntitySea
          break;
       }
    }
+}
+
+bool Game::isShootableBreakable (edict_t *ent) {
+   if (isNullEntity (ent)) {
+      return false;
+   }
+   auto classname = STRING (ent->v.classname);
+
+   if (strcmp (classname, "func_breakable") == 0 || (strcmp (classname, "func_pushable") == 0 && (ent->v.spawnflags & SF_PUSH_BREAKABLE))) {
+      return ent->v.takedamage != DAMAGE_NO && ent->v.impulse <= 0 && !(ent->v.flags & FL_WORLDBRUSH) && !(ent->v.spawnflags & SF_BREAK_TRIGGER_ONLY) && ent->v.health < 500.0f;
+   }
+   return false;
 }
 
 void LightMeasure::initializeLightstyles () {
