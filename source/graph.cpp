@@ -9,9 +9,8 @@
 
 #include <yapb.h>
 
-ConVar yb_graph_subfolder ("yb_graph_subfolder", "");
-ConVar yb_graph_fixcamp ("yb_graph_fixcamp", "1");
-ConVar yb_graph_url ("yb_graph_url", "http://graph.yapb.ru");
+ConVar yb_graph_fixcamp ("yb_graph_fixcamp", "1", "Specifies whether bot should not 'fix' camp directions of camp waypoints when loading old PWF format.");
+ConVar yb_graph_url ("yb_graph_url", "http://graph.yapb.ru", "Specifies the URL from bots will be able to download graph in case of missing local one.", false);
 
 void BotGraph::initGraph () {
    // this function initialize the graph structures..
@@ -20,7 +19,7 @@ void BotGraph::initGraph () {
    m_editFlags = 0;
 
    m_learnVelocity= nullptr;
-   m_learnPosition= nullptr;
+   m_learnPosition = nullptr;
    m_lastNode= nullptr;
 
    m_pathDisplayTime = 0.0f;
@@ -1679,7 +1678,7 @@ void BotGraph::saveOldFormat () {
 
 const char *BotGraph::getOldFormatGraphName (bool isMemoryFile) {
    static String buffer;
-   buffer.assignf ("%s%s%s.pwf", getDataDirectory (isMemoryFile), strings.isEmpty (yb_graph_subfolder.str ()) ? "" : yb_graph_subfolder.str (), game.getMapName ());
+   buffer.assignf ("%s%s.pwf", getDataDirectory (isMemoryFile), game.getMapName ());
 
    if (File::exists (buffer)) {
       return buffer.chars ();
@@ -2472,7 +2471,7 @@ void BotGraph::addBasic () {
       Vector up, down, front, back;
 
       const Vector &diff = ((ladderLeft - ladderRight) ^ Vector (0.0f, 0.0f, 0.0f)).normalize () * 15.0f;
-      front = back = game.getAbsPos (ent);
+      front = back = game.getEntityWorldOrigin (ent);
 
       front = front + diff; // front
       back = back - diff; // back
@@ -2512,7 +2511,7 @@ void BotGraph::addBasic () {
 
    auto autoCreateForEntity = [] (int type, const char *entity) {
       game.searchEntities ("classname", entity, [&] (edict_t *ent) {
-         const Vector &pos = game.getAbsPos (ent);
+         const Vector &pos = game.getEntityWorldOrigin (ent);
 
          if (graph.getNearestNoBuckets (pos, 50.0f) == kInvalidNodeIndex) {
             graph.add (type, pos);
@@ -2577,24 +2576,24 @@ const char *BotGraph::getDataDirectory (bool isMemoryFile) {
    return buffer.chars ();
 }
 
-void BotGraph::setBombPos (bool reset, const Vector &pos) {
+void BotGraph::setBombOrigin (bool reset, const Vector &pos) {
    // this function stores the bomb position as a vector
 
    if (reset) {
-      m_bombPos= nullptr;
+      m_bombOrigin = nullptr;
       bots.setBombPlanted (false);
 
       return;
    }
 
    if (!pos.empty ()) {
-      m_bombPos = pos;
+      m_bombOrigin = pos;
       return;
    }
    
    game.searchEntities ("classname", "grenade", [&] (edict_t *ent) {
       if (strcmp (STRING (ent->v.model) + 9, "c4.mdl") == 0) {
-         m_bombPos = game.getAbsPos (ent);
+         m_bombOrigin = game.getEntityWorldOrigin (ent);
          return EntitySearchResult::Break;
       }
       return EntitySearchResult::Continue;

@@ -90,11 +90,11 @@ public:
       return fprintf (m_handle, fmt, cr::forward <Args> (args)...);
    }
 
-   bool puts (const String &buffer) {
+   bool puts (const char *buffer) {
       if (!*this) {
          return 0;
       }
-      if (fputs (buffer.chars (), m_handle) < 0) {
+      if (fputs (buffer, m_handle) < 0) {
          return false;
       }
       return true;

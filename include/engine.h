@@ -74,6 +74,9 @@ struct VarPair {
    bool missing;
    const char *regval;
    class ConVar *self;
+   String info;
+   float initial, min, max;
+   bool bounded;
 };
 
 // entity prototype
@@ -95,6 +98,7 @@ private:
    edict_t *m_startEntity;
    edict_t *m_localEntity;
 
+   Array <edict_t *> m_breakables;
    SmallArray <VarPair> m_cvars;
    SharedLibrary m_gameLib;
 
@@ -137,10 +141,10 @@ public:
    const char *getMapName ();
 
    // get the "any" entity origin
-   Vector getAbsPos (edict_t *ent);
+   Vector getEntityWorldOrigin (edict_t *ent);
 
    // registers a server command
-   void registerEngineCommand (const char *command, void func_ ());
+   void registerEngineCommand (const char *command, void func ());
 
    // play's sound to client
    void playSound (edict_t *ent, const char *sound);
@@ -149,7 +153,10 @@ public:
    void prepareBotArgs (edict_t *ent, String str);
 
    // adds cvar to registration stack
-   void addNewCvar (const char *variable, const char *value, Var varType, bool regMissing, const char *regVal, class ConVar *self);
+   void addNewCvar (const char *name, const char *value, const char *info, bool bounded, float min, float max, Var varType, bool missingAction, const char *regval, class ConVar *self);
+
+   // check the cvar bounds
+   void checkCvarsBounds ();
 
    // sends local registration stack for engine registration
    void registerCvars (bool gameVars = false);
@@ -174,6 +181,9 @@ public:
 
    // search entities in sphere
    void searchEntities (const Vector &position, const float radius, EntitySearch functor);
+
+   // this function is checking that pointed by ent pointer obstacle, can be destroyed
+   bool isShootableBreakable (edict_t *ent);
 
    // public inlines
 public:
@@ -294,6 +304,21 @@ public:
       return m_gameLib;
    }
 
+   // get registered cvars list
+   const SmallArray <VarPair> &getCvars () {
+      return m_cvars;
+   }
+
+   // check if map has breakables
+   const Array <edict_t *> &getBreakables () {
+      return m_breakables;
+   }
+
+   // map has breakables ?
+   bool hasBreakables () const {
+      return !m_breakables.empty ();
+   }
+
    // helper to sending the client message
    void sendClientMessage (bool console, edict_t *ent, const char *message);
 
@@ -332,33 +357,41 @@ public:
 };
 
 // simplify access for console variables
-class ConVar final {
+class ConVar final : public DenyCopying {
 public:
-   cvar_t *eptr;
+   cvar_t *ptr;
 
 public:
-   ConVar (const char *name, const char *initval, Var type = Var::NoServer, bool regMissing = false, const char *regVal = nullptr) : eptr (nullptr) {
-      Game::get ().addNewCvar (name, initval, type, regMissing, regVal, this);
+   ConVar () = delete;
+   ~ConVar () = default;
+
+public:
+   ConVar (const char *name, const char *initval, Var type = Var::NoServer, bool regMissing = false, const char *regVal = nullptr) : ptr (nullptr) {
+      Game::get ().addNewCvar (name, initval, "", false, 0.0f, 0.0f, type, regMissing, regVal, this);
+   }
+
+   ConVar (const char *name, const char *initval, const char *info, bool bounded = true, float min = 0.0f, float max = 1.0f, Var type = Var::NoServer, bool regMissing = false, const char *regVal = nullptr) : ptr (nullptr) {
+      Game::get ().addNewCvar (name, initval, info, bounded, min, max, type, regMissing, regVal, this);
    }
 
    bool bool_ () const {
-      return eptr->value > 0.0f;
+      return ptr->value > 0.0f;
    }
 
    int int_ () const {
-      return static_cast <int> (eptr->value);
+      return static_cast <int> (ptr->value);
    }
 
    float float_ () const {
-      return eptr->value;
+      return ptr->value;
    }
 
    const char *str () const {
-      return eptr->string;
+      return ptr->string;
    }
 
    void set (float val) {
-      engfuncs.pfnCVarSetFloat (eptr->name, val);
+      engfuncs.pfnCVarSetFloat (ptr->name, val);
    }
 
    void set (int val) {
@@ -366,7 +399,7 @@ public:
    }
 
    void set (const char *val) {
-      engfuncs.pfnCvar_DirectSet (eptr, const_cast <char *> (val));
+      engfuncs.pfnCvar_DirectSet (ptr, const_cast <char *> (val));
    }
 };
 
@@ -541,7 +574,7 @@ public:
 };
 
 // for android
-#if defined (CR_ANDROID)
+#if defined (CR_ANDROID) && defined(CR_ARCH_ARM)
    extern "C" void player (entvars_t *pev);
 #endif
 
@@ -588,7 +621,7 @@ public:
 
 public:
    void initialize () {
-      if (plat.isAndroid) {
+      if (plat.isArm) {
          return;
       }
       m_dlsym.patch (reinterpret_cast <void *> (&LookupSymbol), reinterpret_cast <void *> (&DynamicEntityLink::replacement));
@@ -596,7 +629,7 @@ public:
    }
 
    EntityFunction getPlayerFunction () {
-#if defined (CR_ANDROID)
+#if defined (CR_ANDROID) && defined(CR_ARCH_ARM)
       return player;
 #else
       return reinterpret_cast <EntityFunction> (search (Game::get ().lib ().handle (), "player"));

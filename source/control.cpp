@@ -9,9 +9,9 @@
 
 #include <yapb.h>
 
-ConVar yb_display_menu_text ("yb_display_menu_text", "1");
-ConVar yb_password ("yb_password", "", Var::Password);
-ConVar yb_password_key ("yb_password_key", "_ybpw");
+ConVar yb_display_menu_text ("yb_display_menu_text", "1", "Enables or disables display menu text, when players asks for menu. Useful only for Android.");
+ConVar yb_password ("yb_password", "", "The value (password) for the setinfo key, if user set's correct password, he's gains access to bot commands and menus.", false, 0.0f, 0.0f, Var::Password);
+ConVar yb_password_key ("yb_password_key", "_ybpw", "The name of setinfo key used to store password to bot commands and menus", false);
 
 int BotControl::cmdAddBot () {
    enum args { alias = 1, difficulty, personality, team, model, name, max };
@@ -161,9 +161,25 @@ int BotControl::cmdWeaponMode () {
 }
 
 int BotControl::cmdVersion () {
+   auto hash = String (PRODUCT_GIT_HASH).substr (0, 8);
+   auto author = String (PRODUCT_GIT_COMMIT_AUTHOR);
+
+   // if no hash specified, set local one
+   if (hash.startsWith ("unspe")) {
+      hash = "local";
+   }
+
+   // if no commit author, set local one
+   if (author.startsWith ("unspe")) {
+      author = PRODUCT_EMAIL;
+   }
+
    msg ("%s v%s (build %u)", PRODUCT_NAME, PRODUCT_VERSION, util.buildNumber ());
-   msg ("  compiled: %s %s by %s", __DATE__, __TIME__, PRODUCT_GIT_COMMIT_AUTHOR);
-   msg ("  commit: %scommit/%s", PRODUCT_COMMENTS, PRODUCT_GIT_HASH);
+   msg ("  compiled: %s %s by %s", __DATE__, __TIME__, author.chars ());
+
+   if (!hash.startsWith ("local")) {
+      msg ("  commit: %scommit/%s", PRODUCT_COMMENTS, hash.chars ());
+   }
    msg ("  url: %s", PRODUCT_URL);
 
    return BotCommandResult::Handled;
@@ -204,6 +220,84 @@ int BotControl::cmdList () {
    enum args { alias = 1, max };
 
    bots.listBots ();
+   return BotCommandResult::Handled;
+}
+
+int BotControl::cmdCvars () {
+   enum args { alias = 1, pattern, max };
+
+   // adding more args to args array, if not enough passed
+   fixMissingArgs (max);
+
+   const auto &match = getStr (pattern);
+   const bool isSave = match == "save";
+
+   File cfg;
+
+   // if save requested, dump cvars to yapb.cfg
+   if (isSave) {
+      cfg.open (strings.format ("%s/addons/yapb/conf/yapb.cfg", game.getModName ()), "wt");
+
+      cfg.puts ("// Configuration file for %s\n\n", PRODUCT_SHORT_NAME);
+   }
+
+   for (const auto &cvar : game.getCvars ()) {
+      if (cvar.info.empty ()) {
+         continue;
+      }
+
+      if (!isSave && match != "empty" && !strstr (cvar.reg.name, match.chars ())) {
+         continue;
+      }
+
+      // float value ?
+      bool isFloat = !strings.isEmpty (cvar.self->str ()) && strstr (cvar.self->str (), ".");
+
+      if (isSave) {
+         cfg.puts ("//\n");
+         cfg.puts ("// %s\n", String::join (cvar.info.split ("\n"), "\n//  ").chars ());
+         cfg.puts ("// ---\n");
+
+         if (cvar.bounded) {
+            if (isFloat) {
+               cfg.puts ("// Default: \"%.1f\", Min: \"%.1f\", Max: \"%.1f\"\n", cvar.initial, cvar.min, cvar.max);
+            }
+            else {
+               cfg.puts ("// Default: \"%i\", Min: \"%i\", Max: \"%i\"\n", static_cast <int> (cvar.initial), static_cast <int> (cvar.min), static_cast <int> (cvar.max));
+            }
+         }
+         else {
+            cfg.puts ("// Default: \"%s\"\n", cvar.self->str ());
+         }
+         cfg.puts ("// \n");
+
+         if (cvar.bounded) {
+            if (isFloat) {
+               cfg.puts ("%s \"%.1f\"\n", cvar.reg.name, cvar.self->float_ ());
+            }
+            else {
+               cfg.puts ("%s \"%i\"\n", cvar.reg.name, cvar.self->int_ ());
+            }
+         }
+         else {
+            cfg.puts ("%s \"%s\"\n", cvar.reg.name, cvar.self->str ());
+         }
+         cfg.puts ("\n");
+      }
+      else {
+         game.print ("cvar: %s", cvar.reg.name);
+         game.print ("info: %s", cvar.info.chars ());
+
+         game.print (" ");
+      }
+   }
+
+   if (isSave) {
+      ctrl.msg ("Bots cvars has been written to file.");
+
+
+      cfg.close ();
+   }
    return BotCommandResult::Handled;
 }
 
@@ -1698,7 +1792,8 @@ void BotControl::kickBotByMenu (int page) {
    for (int i = menuKey; i < page * 8; ++i) {
       auto bot = bots[i];
 
-      if (bot != nullptr) {
+      // check for fakeclient bit, since we're clear it upon kick, but actual bot struct destroyed after client disconnected
+      if (bot != nullptr && (bot->pev->flags & FL_FAKECLIENT)) {
          menuKeys |= cr::bit (cr::abs (i - menuKey));
          menus.appendf ("%1.1d. %s%s\n", i - menuKey + 1, STRING (bot->pev->netname), bot->m_team == Team::CT ? " \\y(CT)\\w" : " \\r(T)\\w");
       }
@@ -1795,6 +1890,7 @@ BotControl::BotControl () {
    m_cmds.emplace ("graphmenu/wpmenu/wptmenu", "graphmenu [noarguments]", "Opens and displays bots graph edtior.", &BotControl::cmdNodeMenu);
    m_cmds.emplace ("list/listbots", "list [noarguments]", "Lists the bots currently playing on server.", &BotControl::cmdList);
    m_cmds.emplace ("graph/g/wp/wpt/waypoint", "graph [help]", "Handles graph operations.", &BotControl::cmdNode);
+   m_cmds.emplace ("cvars", "cvars [save|cvar]", "Display all the cvars with their descriptions.", &BotControl::cmdCvars);
 
    // declare the menus
    createMenus ();

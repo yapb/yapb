@@ -51,6 +51,13 @@ CR_NAMESPACE_BEGIN
 #  define CR_ARCH_X86
 #endif
 
+#if defined(__arm__)
+#  define CR_ARCH_ARM
+#  if defined(__aarch64__)
+#     define CR_ARCH_ARM64
+#  endif
+#endif 
+
 #if (defined(CR_ARCH_X86) || defined(CR_ARCH_X64)) && !defined(CR_DEBUG)
 #  define CR_HAS_SSE2
 #endif
@@ -85,6 +92,7 @@ struct Platform : public Singleton <Platform> {
    bool isAndroid = false;
    bool isAndroidHardFP = false;
    bool isX64 = false;
+   bool isArm = false;
 
    Platform () {
 #if defined(CR_WINDOWS)
@@ -94,21 +102,26 @@ struct Platform : public Singleton <Platform> {
 #if defined(CR_ANDROID)
       isAndroid = true;
 
-#     if defined (CR_ANDROID_HARD_FP)
+#  if defined (CR_ANDROID_HARD_FP)
          isAndroidHardFP = true;
-#     endif
+#  endif
 #endif
 
 #if defined(CR_LINUX)
       isLinux = true;
 #endif
 
-#if defined (CR_OSX)
+#if defined(CR_OSX)
       isOSX = true;
 #endif
 
-#if defined (CR_ARCH_X64)
+#if defined(CR_ARCH_X64) || defined(CR_ARCH_ARM64)
       isX64 = true;
+#endif
+
+#if defined(CR_ARCH_ARM)
+      isArm = true;
+      isAndroid = true;
 #endif
    }
 

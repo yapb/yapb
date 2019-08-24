@@ -9,8 +9,8 @@
 
 #include <yapb.h>
 
-ConVar yb_whose_your_daddy ("yb_whose_your_daddy", "0");
-ConVar yb_debug_heuristic_type ("yb_debug_heuristic_type", "4");
+ConVar yb_whose_your_daddy ("yb_whose_your_daddy", "0", "Enables or disables extra hard difficulty for bots.");
+ConVar yb_debug_heuristic_type ("yb_debug_heuristic_type", "4", "Selects the heuristic function mode. For debug purposes only.", true, 0.0f, 4.0f);
 
 int Bot::findBestGoal () {
 
@@ -20,7 +20,7 @@ int Bot::findBestGoal () {
 
       game.searchEntities ("classname", "weaponbox", [&] (edict_t *ent) {
          if (strcmp (STRING (ent->v.model), "models/w_backpack.mdl") == 0) {
-            result = graph.getNearest (game.getAbsPos (ent));
+            result = graph.getNearest (game.getEntityWorldOrigin (ent));
 
             if (graph.exists (result)) {
                return EntitySearchResult::Break;
@@ -100,7 +100,7 @@ int Bot::findBestGoal () {
       }
    }
    else if (game.mapIs (MapFlags::Demolition) && m_team == Team::CT) {
-      if (bots.isBombPlanted () && getCurrentTaskId () != Task::EscapeFromBomb && !graph.getBombPos ().empty ()) {
+      if (bots.isBombPlanted () && getCurrentTaskId () != Task::EscapeFromBomb && !graph.getBombOrigin ().empty ()) {
 
          if (bots.hasBombSay (BombPlantedSay::ChatSay)) {
             pushChatMessage (Chat::Plant);
@@ -118,7 +118,7 @@ int Bot::findBestGoal () {
    else if (game.mapIs (MapFlags::Demolition) && m_team == Team::Terrorist && bots.getRoundStartTime () + 10.0f < game.time ()) {
       // send some terrorists to guard planted bomb
       if (!m_defendedBomb && bots.isBombPlanted () && getCurrentTaskId () != Task::EscapeFromBomb && getBombTimeleft () >= 15.0) {
-         return m_chosenGoalIndex = graph.getNearest (graph.getBombPos ());
+         return m_chosenGoalIndex = graph.getNearest (graph.getBombOrigin ());
       }
    }
 
@@ -710,7 +710,7 @@ bool Bot::updateNavigation () {
 
       if (!game.isNullEntity (tr.pHit) && game.isNullEntity (m_liftEntity) && strncmp (STRING (tr.pHit->v.classname), "func_door", 9) == 0) {
          // if the door is near enough...
-         if ((game.getAbsPos (tr.pHit) - pev->origin).lengthSq () < 2500.0f) {
+         if ((game.getEntityWorldOrigin (tr.pHit) - pev->origin).lengthSq () < 2500.0f) {
             ignoreCollision (); // don't consider being stuck
 
             if (rg.chance (50)) {
@@ -858,6 +858,8 @@ bool Bot::updateLiftHandling () {
 
       m_navTimeset = game.time ();
       m_aimFlags |= AimFlags::Nav;
+
+      pev->button &= ~(IN_FORWARD | IN_BACK | IN_MOVELEFT | IN_MOVERIGHT);
 
       ignoreCollision ();
    };
@@ -1783,7 +1785,7 @@ int Bot::findBombNode () {
 
    auto &goals = graph.m_goalPoints;
 
-   auto bomb = graph.getBombPos ();
+   auto bomb = graph.getBombOrigin ();
    auto audible = isBombAudible ();
 
    if (!audible.empty ()) {
@@ -2326,8 +2328,8 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       }
 
       // trace from the left waist to the right forward waist pos
-      src = pev->origin + Vector (0.0f, 0.0f, -17.0f) + right * 16.0f;
-      forward = pev->origin + Vector (0.0f, 0.0f, -17.0f) - right * -16.0f + normal * 24.0f;
+      src = pev->origin + Vector (0.0f, 0.0f, -24.0f) + right * 16.0f;
+      forward = pev->origin + Vector (0.0f, 0.0f, -24.0f) - right * -16.0f + normal * 24.0f;
 
       game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
 
@@ -2834,7 +2836,7 @@ void Bot::updateBodyAngles () {
 
 void Bot::updateLookAngles () {
    
-   const float delta = cr::clamp (game.time () - m_lookUpdateTime, cr::kFloatEqualEpsilon, 0.03333f);
+   const float delta = cr::clamp (game.time () - m_lookUpdateTime, cr::kFloatEqualEpsilon, 1.0f / 30.0f);
    m_lookUpdateTime = game.time ();
 
    // adjust all body and view angles to face an absolute vector
@@ -2994,7 +2996,7 @@ int Bot::getNearestToPlantedBomb () {
    // search the bomb on the map
    game.searchEntities ("classname", "grenade", [&result] (edict_t *ent) {
       if (strcmp (STRING (ent->v.model) + 9, "c4.mdl") == 0) {
-         result = graph.getNearest (game.getAbsPos (ent));
+         result = graph.getNearest (game.getEntityWorldOrigin (ent));
 
          if (graph.exists (result)) {
             return EntitySearchResult::Break;
@@ -3053,7 +3055,7 @@ edict_t *Bot::lookupButton (const char *targetName) {
 
    // find the nearest button which can open our target
    game.searchEntities ("target", targetName, [&] (edict_t *ent) {
-      const Vector &pos = game.getAbsPos (ent);
+      const Vector &pos = game.getEntityWorldOrigin (ent);
 
       // check if this place safe
       if (!isDeadlyMove (pos)) {

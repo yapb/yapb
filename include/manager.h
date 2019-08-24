@@ -118,11 +118,11 @@ public:
    bool kickRandom (bool decQuota = true, Team fromTeam = Team::Unassigned);
 
 public:
-   Array <edict_t *> &searchActiveGrenades () {
+   const Array <edict_t *> &searchActiveGrenades () {
       return m_activeGrenades;
    }
 
-   Array <edict_t *> &searchIntrestingEntities () {
+   const Array <edict_t *> &searchIntrestingEntities () {
       return m_intrestingEntities;
    }
 

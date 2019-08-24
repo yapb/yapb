@@ -74,6 +74,9 @@ public:
 
 public:
    bool patch (void *address, void *replacement) {
+      if (plat.isArm) {
+         return false;
+      }
       uint8 *ptr = reinterpret_cast <uint8 *> (address);
 
       while (*reinterpret_cast <uint16 *> (ptr) == 0x25ff) {

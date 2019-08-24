@@ -9,9 +9,9 @@
 
 #include <yapb.h>
 
-ConVar yb_shoots_thru_walls ("yb_shoots_thru_walls", "2");
-ConVar yb_ignore_enemies ("yb_ignore_enemies", "0");
-ConVar yb_check_enemy_rendering ("yb_check_enemy_rendering", "0");
+ConVar yb_shoots_thru_walls ("yb_shoots_thru_walls", "2", "Specifies whether bots able to fire at enemies behind the wall, if they hearing or suspecting them.", true, 0.0f, 3.0f);
+ConVar yb_ignore_enemies ("yb_ignore_enemies", "0", "Enables or disables searching world for enemies.");
+ConVar yb_check_enemy_rendering ("yb_check_enemy_rendering", "0", "Enables or disables checking enemy rendering flags. Useful for some mods.");
 
 ConVar mp_friendlyfire ("mp_friendlyfire", nullptr, Var::NoRegister);
 
@@ -218,7 +218,7 @@ bool Bot::lookupEnemies () {
       m_aimFlags |= AimFlags::LastEnemy;
    }
    m_enemyParts = Visibility::None;
-   m_enemyOrigin= nullptr;
+   m_enemyOrigin = nullptr;
 
    if (!game.isNullEntity (m_enemy)) {
       player = m_enemy;
@@ -447,7 +447,7 @@ const Vector &Bot::getEnemyBodyOffset () {
    Vector aimPos = m_enemy->v.origin;
 
    if (m_difficulty > 2) {
-      aimPos += (m_enemy->v.velocity - pev->velocity) * (getFrameInterval () * 1.75f);
+      aimPos += (m_enemy->v.velocity - pev->velocity) * (getFrameInterval () * 1.25f);
    }
 
    // if we only suspect an enemy behind a wall take the worst skill
@@ -455,7 +455,7 @@ const Vector &Bot::getEnemyBodyOffset () {
       aimPos += getBodyOffsetError (distance);
    }
    else {
-      bool useBody = !usesPistol () && distance > kSprayDistance && distance < 2048.0f;
+      bool useBody = !usesPistol () && distance >= kSprayDistance && distance < 3072.0f;
 
       // now take in account different parts of enemy body
       if (m_enemyParts & (Visibility::Head | Visibility::Body)) {
@@ -506,10 +506,7 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
 
    float result = -2.0f;
 
-   if (distance < kSprayDistance) {
-      return -16.0f;
-   }
-   else if (distance >= kDoubleSprayDistance) {
+   if (distance >= kDoubleSprayDistance) {
       if (sniper) {
          result = 0.18f;
       }
@@ -523,7 +520,7 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
          result = 1.5f;
       }
       else if (rifle) {
-         result = 1.0f;
+         result = -1.0f;
       }
       else if (m249) {
          result = -5.5f;
@@ -844,7 +841,9 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
          pev->button |= IN_ATTACK; // use primary attack
       }
       else {
-         pev->button |= IN_ATTACK;
+         if ((m_oldButtons & IN_ATTACK) == 0) {
+            pev->button |= IN_ATTACK;
+         }
 
          const float minDelay[] = { 0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.6f };
          const float maxDelay[] = { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.7f };
@@ -916,6 +915,7 @@ void Bot::fireWeapons () {
             const auto &prop = conf.getWeaponProp (id);
 
             if (prop.ammo1 != -1 && prop.ammo1 < 32 && m_ammo[prop.ammo1] >= tab[selectIndex].minPrimaryAmmo) {
+
                // available ammo found, reload weapon
                if (m_reloadState == Reload::None || m_reloadCheckTime > game.time ()) {
                   m_isReloading = true;

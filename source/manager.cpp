@@ -9,24 +9,25 @@
 
 #include <yapb.h>
 
-ConVar yb_autovacate ("yb_autovacate", "1");
+ConVar yb_autovacate ("yb_autovacate", "1", "Kick bots to automatically make room for human players.");
 
-ConVar yb_quota ("yb_quota", "0", Var::Normal);
-ConVar yb_quota_mode ("yb_quota_mode", "normal");
-ConVar yb_quota_match ("yb_quota_match", "0");
-ConVar yb_think_fps ("yb_think_fps", "30.0");
+ConVar yb_quota ("yb_quota", "0", "Specifies the number bots to be added to the game.", true, 0.0f, static_cast <float> (kGameMaxPlayers));
+ConVar yb_quota_mode ("yb_quota_mode", "normal", "Specifies the type of quota.\nAllowed values: 'normal', 'fill', and 'match'.\nIf 'fill', the server will adjust bots to keep N players in the game, where N is yb_quota.\nIf 'match', the server will maintain a 1:N ratio of humans to bots, where N is yb_quota_match.", false);
+ConVar yb_quota_match ("yb_quota_match", "0", "Number of players to match if yb_quota_mode set to 'match'", true, 0.0f, static_cast <float> (kGameMaxPlayers));
+ConVar yb_think_fps ("yb_think_fps", "30.0", "Specifies hou many times per second bot code will run.", true, 30.0f, 90.0f);
 
-ConVar yb_join_after_player ("yb_join_after_player", "0");
-ConVar yb_join_team ("yb_join_team", "any");
-ConVar yb_join_delay ("yb_join_delay", "5.0");
+ConVar yb_join_after_player ("yb_join_after_player", "0", "Sepcifies whether bots should join server, only when at least one human player in game.");
+ConVar yb_join_team ("yb_join_team", "any", "Forces all bots to join team specified here.", false);
+ConVar yb_join_delay ("yb_join_delay", "5.0", "Specifies after how many seconds bots should start to join the game after the changelevel.", true, 0.0f, 30.0f);
 
-ConVar yb_name_prefix ("yb_name_prefix", "");
-ConVar yb_difficulty ("yb_difficulty", "4");
+ConVar yb_name_prefix ("yb_name_prefix", "", "All the bot names will be prefixed with string specified with this cvar.", false);
+ConVar yb_difficulty ("yb_difficulty", "4", "All bots difficulty level. Chaning at runtime will affect already created bots.", true, 0.0f, 4.0f);
 
-ConVar yb_show_avatars ("yb_show_avatars", "1");
-ConVar yb_show_latency ("yb_show_latency", "2");
-ConVar yb_language ("yb_language", "en");
-ConVar yb_ignore_cvars_on_changelevel ("yb_ignore_cvars_on_changelevel", "yb_quota,yb_autovacate");
+ConVar yb_show_avatars ("yb_show_avatars", "1", "Enables or disabels displaying bot avatars in front of their names in scoreboard. Note, that is currently you can see only avatars of your steam friends.");
+ConVar yb_show_latency ("yb_show_latency", "2", "Enables latency display in scoreboard.\nAllowed values: '0', '1', '2'.\nIf '0', there is nothing displayed.\nIf '1', there is a 'BOT' is displayed.\nIf '2' fake ping is displayed.", true, 0.0f, 2.0f);
+
+ConVar yb_language ("yb_language", "en", "Specifies the language for bot messages and menus.", false);
+ConVar yb_ignore_cvars_on_changelevel ("yb_ignore_cvars_on_changelevel", "yb_quota,yb_autovacate", "Specifies comma separated list of bot cvars, that will not be overriten by config on changelevel.", false);
 
 ConVar mp_limitteams ("mp_limitteams", nullptr, Var::NoRegister);
 ConVar mp_autoteambalance ("mp_autoteambalance", nullptr, Var::NoRegister);
@@ -1024,8 +1025,9 @@ void Bot::newRound () {
    clearSearchNodes ();
    clearRoute ();
 
-   m_pathOrigin= nullptr;
-   m_destOrigin= nullptr;
+   m_pathOrigin = nullptr;
+   m_destOrigin = nullptr;
+
    m_path = nullptr;
    m_currentTravelFlags = 0;
    m_desiredVelocity= nullptr;
@@ -1095,7 +1097,7 @@ void Bot::newRound () {
    m_itemCheckTime = 0.0f;
 
    m_breakableEntity = nullptr;
-   m_breakableOrigin= nullptr;
+   m_breakableOrigin = nullptr;
    m_timeDoorOpen = 0.0f;
 
    resetCollision ();
@@ -1104,7 +1106,7 @@ void Bot::newRound () {
    m_enemy = nullptr;
    m_lastVictim = nullptr;
    m_lastEnemy = nullptr;
-   m_lastEnemyOrigin= nullptr;
+   m_lastEnemyOrigin = nullptr;
    m_trackingEdict = nullptr;
    m_timeNextTracking = 0.0f;
 
@@ -1129,8 +1131,8 @@ void Bot::newRound () {
    m_liftState = 0;
 
    m_aimLastError= nullptr;
-   m_position= nullptr;
-   m_liftTravelPos= nullptr;
+   m_position = nullptr;
+   m_liftTravelPos = nullptr;
 
    setIdealReactionTimers (true);
 
@@ -1392,7 +1394,7 @@ void BotManager::notifyBombDefuse () {
       if (bot->m_team == Team::Terrorist && bot->m_notKilled && bot->getCurrentTaskId () != Task::MoveToPosition) {
          bot->clearSearchNodes ();
 
-         bot->m_position = graph.getBombPos ();
+         bot->m_position = graph.getBombOrigin ();
          bot->startTask (Task::MoveToPosition, TaskPri::MoveToPosition, kInvalidNodeIndex, 0.0f, true);
       }
    }
@@ -1576,7 +1578,7 @@ void BotManager::initRound () {
       client.radio = 0;
    }
 
-   graph.setBombPos (true);
+   graph.setBombOrigin (true);
    graph.clearVisited ();
 
    m_bombSayStatus = BombPlantedSay::ChatSay | BombPlantedSay::Chatter;
@@ -1687,8 +1689,8 @@ void BotConfig::loadMainConfig () {
    firstLoad = false;
 
    // android is abit hard to play, lower the difficulty by default
-   if (plat.isAndroid && yb_difficulty.int_ () > 2) {
-      yb_difficulty.set (2);
+   if (plat.isAndroid && yb_difficulty.int_ () > 3) {
+      yb_difficulty.set (3);
    }
    return;
 }
@@ -1808,6 +1810,8 @@ void BotConfig::loadChatterConfig () {
 
    // chatter initialization
    if (game.is (GameFlags::HasBotVoice) && yb_radio_mode.int_ () == 2 && util.openConfig ("chatter.cfg", "Couldn't open chatter system configuration", &file)) {
+      m_chatter.clear ();
+
       struct EventMap {
          String str;
          int code;
@@ -1827,10 +1831,10 @@ void BotConfig::loadChatterConfig () {
          { "Radio_ReportTeam", Radio::ReportInTeam, kMaxChatterRepeatInteval },
          { "Radio_Affirmative", Radio::RogerThat, kMaxChatterRepeatInteval },
          { "Radio_EnemySpotted", Radio::EnemySpotted, 4.0f },
-         { "Radio_NeedBackup", Radio::NeedBackup, kMaxChatterRepeatInteval },
+         { "Radio_NeedBackup", Radio::NeedBackup, 5.0f },
          { "Radio_SectorClear", Radio::SectorClear, 10.0f },
          { "Radio_InPosition", Radio::ImInPosition, 10.0f },
-         { "Radio_ReportingIn", Radio::ReportingIn, kMaxChatterRepeatInteval },
+         { "Radio_ReportingIn", Radio::ReportingIn, 3.0f },
          { "Radio_ShesGonnaBlow", Radio::ShesGonnaBlow, kMaxChatterRepeatInteval },
          { "Radio_Negative", Radio::Negative, kMaxChatterRepeatInteval },
          { "Radio_EnemyDown", Radio::EnemyDown, 10.0f },
@@ -1853,7 +1857,7 @@ void BotConfig::loadChatterConfig () {
          { "Chatter_WhereIsTheBomb", Chatter::WhereIsTheC4, kMaxChatterRepeatInteval },
          { "Chatter_DefendingBombSite", Chatter::DefendingBombsite, kMaxChatterRepeatInteval },
          { "Chatter_BarelyDefused", Chatter::BarelyDefused, kMaxChatterRepeatInteval },
-         { "Chatter_NiceshotCommander", Chatter::NiceShotCommander, kMaxChatterRepeatInteval },
+         { "Chatter_NiceshotCommander", Chatter::NiceShotCommander, 10.0f },
          { "Chatter_ReportingIn", Chatter::ReportingIn, 10.0f },
          { "Chatter_SpotTheBomber", Chatter::SpotTheBomber, 4.3f },
          { "Chatter_VIPSpotted", Chatter::VIPSpotted, 5.3f },
