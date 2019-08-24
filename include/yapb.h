@@ -268,13 +268,13 @@ CR_DECLARE_SCOPED_ENUM (Weapon,
 // buy counts
 CR_DECLARE_SCOPED_ENUM (BuyState,
    PrimaryWeapon = 0,
-ArmorVestHelm,
-SecondaryWeapon,
-Grenades,
-DefusalKit,
-Ammo,
-NightVision,
-Done
+   ArmorVestHelm,
+   SecondaryWeapon,
+   Grenades,
+   DefusalKit,
+   Ammo,
+   NightVision,
+   Done
 )
 
 // economics limits
@@ -979,7 +979,7 @@ public:
    void showChaterIcon (bool show);
    void clearSearchNodes ();
    void checkBreakable (edict_t *touch);
-   void checkBreablesAround ();
+   void checkBreakablesAround ();
    void startTask (Task id, float desire, int data, float time, bool resume);
    void clearTask (Task id);
    void filterTasks ();

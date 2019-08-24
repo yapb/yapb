@@ -70,7 +70,7 @@ public:
             int32 lookup = m_hashTable[hash32 (&in[cur])];
 
             while (lookup > limit) {
-               if (in[lookup + bestLength] == in[cur + bestLength] && load32 (&in[lookup]) == load32 (&in[cur])) {
+               if (in[lookup + bestLength] == in[cur + bestLength] && load <uint32> (&in[lookup]) == load <uint32> (&in[cur])) {
                   int32 length = MinMatch;
 
                   while (length < maxMatch && in[lookup + length] == in[cur + length]) {
@@ -107,7 +107,7 @@ public:
             int32 lookup = m_hashTable[hash32 (&in[next])];
 
             while (lookup > limit) {
-               if (in[lookup + bestLength] == in[next + bestLength] && load32 (&in[lookup]) == load32 (&in[next])) {
+               if (in[lookup + bestLength] == in[next + bestLength] && load <uint32> (&in[lookup]) == load <uint32> (&in[next])) {
                   int32 length = MinMatch;
 
                   while (length < target && in[lookup + length] == in[next + length]) {
@@ -224,7 +224,7 @@ public:
          if ((opEnd - op) < length) {
             return UncompressFailure;
          }
-         const auto dist = ((token & 16) << 12) + load16 (ip);
+         const auto dist = ((token & 16) << 12) + load <uint16> (ip);
          ip += 2;
 
          auto cp = op - dist;
@@ -251,16 +251,9 @@ public:
    }
 
 private:
-   uint16 load16 (void *ptr) {
-      uint16 ret;
-      memcpy (&ret, ptr, sizeof (uint16));
-
-      return ret;
-   }
-
-   uint32 load32 (void *ptr) {
-      uint32 ret;
-      memcpy (&ret, ptr, sizeof (uint32));
+   template <typename U> U load (void *ptr) {
+      U ret;
+      memcpy (&ret, ptr, sizeof (U));
 
       return ret;
    }
@@ -274,7 +267,7 @@ private:
    }
 
    uint32 hash32 (void *ptr) {
-      return (load32 (ptr) * 0x9e3779b9) >> (32 - HashBits);
+      return (load <uint32> (ptr) * 0x9e3779b9) >> (32 - HashBits);
    }
 
    void copy (uint8 *dst, uint8 *src, int32 count) {

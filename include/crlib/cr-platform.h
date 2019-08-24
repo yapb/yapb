@@ -212,5 +212,4 @@ struct Platform : public Singleton <Platform> {
 // expose platform singleton
 static auto &plat = Platform::get ();
 
-
 CR_NAMESPACE_END
