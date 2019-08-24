@@ -398,7 +398,7 @@ void Bot::checkBreakable (edict_t *touch) {
    startTask (Task::ShootBreakable, TaskPri::ShootBreakable, kInvalidNodeIndex, 0.0f, false);
 }
 
-void Bot::checkBreablesAround () {
+void Bot::checkBreakablesAround () {
    if (!yb_destroy_breakables_around.bool_ () || m_currentWeapon == Weapon::Knife || rg.chance (25) || !game.hasBreakables () || m_seeEnemyTime + 4.0f > game.time () || !game.isNullEntity (m_enemy) || !hasPrimaryWeapon ()) {
       return;
    }
@@ -2282,7 +2282,6 @@ void Bot::checkRadioQueue () {
             pushRadioMessage (Radio::RogerThat);
 
             m_campButtons = 0;
-
             startTask (Task::Pause, TaskPri::Pause, kInvalidNodeIndex, game.time () + rg.float_ (30.0f, 60.0f), false);
          }
       }
@@ -2875,7 +2874,7 @@ void Bot::frame () {
 
    checkSpawnConditions ();
    checkForChat ();
-   checkBreablesAround ();
+   checkBreakablesAround ();
 
    if (game.is (GameFlags::HasBotVoice)) {
       showChaterIcon (false); // end voice feedback
@@ -3753,7 +3752,7 @@ void Bot::bombDefuse_ () {
    bool defuseError = false;
 
    // exception: bomb has been defused
-   if (bombPos.empty () || game.isNullEntity (m_pickupItem)) {
+   if (bombPos.empty () || !pickupExists) {
       defuseError = true;
 
       if (m_numFriendsLeft != 0 && rg.chance (50)) {
