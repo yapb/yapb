@@ -1496,7 +1496,7 @@ void Bot::buyStuff () {
       break;
 
    case BuyState::SecondaryWeapon: // if bot has still some money, buy a better secondary weapon
-      if (isPistolMode || (isFirstRound && hasDefaultPistols) || (hasDefaultPistols && bots.getLastWinner () != m_team) || (hasPrimaryWeapon () && hasDefaultPistols) && m_moneyAmount > rg.int_ (7500, 9000)) {
+      if (isPistolMode || (isFirstRound && hasDefaultPistols) || (hasDefaultPistols && bots.getLastWinner () != m_team) || (hasPrimaryWeapon () && hasDefaultPistols && m_moneyAmount > rg.int_ (7500, 9000))) {
          do {
             pref--;
 
