@@ -9,6 +9,8 @@
 
 #include <yapb.h>
 
+ConVar yb_csdm_mode ("yb_csdm_mode", "0", "Enables or disables CSDM / FFA mode for bots.\nAllowed values: '0', '1', '2', '3'.\nIf '0', CSDM / FFA mode is auto-detected.\nIf '1', CSDM mode is enabled, but FFA is disabled.\nIf '2' CSDM and FFA mode is enabled.\nIf '3' CSDM and FFA mode is disabled.", true, 0.0f, 3.0f);
+
 ConVar sv_skycolor_r ("sv_skycolor_r", nullptr, Var::NoRegister);
 ConVar sv_skycolor_g ("sv_skycolor_g", nullptr, Var::NoRegister);
 ConVar sv_skycolor_b ("sv_skycolor_b", nullptr, Var::NoRegister);
@@ -766,10 +768,34 @@ bool Game::postload () {
    return false;
 }
 
-void Game::detectDeathmatch () {
+void Game::applyGameModes () {
    if (!is (GameFlags::Metamod | GameFlags::ReGameDLL)) {
       return;
    }
+
+   // handle cvar cases
+   switch (yb_csdm_mode.int_ ()) {
+   default:
+   case 0:
+      break;
+
+   // force CSDM mode
+   case 1:
+      m_gameFlags |= GameFlags::CSDM;
+      m_gameFlags &= ~GameFlags::FreeForAll;
+      return;
+
+   // force CSDM FFA mode
+   case 2:
+      m_gameFlags |= GameFlags::CSDM | GameFlags::FreeForAll;
+      return;
+
+   // force disable everything
+   case 3:
+      m_gameFlags &= ~(GameFlags::CSDM | GameFlags::FreeForAll);
+      return;
+   }
+
    static auto dmActive = engfuncs.pfnCVarGetPointer ("csdm_active");
    static auto freeForAll = engfuncs.pfnCVarGetPointer ("mp_freeforall");
 
@@ -810,7 +836,7 @@ void Game::slowFrame () {
    graph.initLightLevels ();
 
    // detect csdm
-   detectDeathmatch ();
+   applyGameModes ();
 
    // check the cvar bounds
    checkCvarsBounds ();

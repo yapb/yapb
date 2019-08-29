@@ -1295,11 +1295,14 @@ void Bot::buyStuff () {
    const int *pref = conf.getWeaponPrefs (m_personality) + kNumWeapons;
    auto tab = conf.getRawWeapons ();
 
-   bool isPistolMode = tab[25].teamStandard == -1 && tab[3].teamStandard == 2;
-   bool teamEcoValid = bots.checkTeamEco (m_team);
+   const bool isPistolMode = tab[25].teamStandard == -1 && tab[3].teamStandard == 2;
+   const bool teamEcoValid = bots.checkTeamEco (m_team);
 
    // do this, because xash engine is not capable to run all the features goldsrc, but we have cs 1.6 on it, so buy table must be the same
-   bool isOldGame = game.is (GameFlags::Legacy) && !game.is (GameFlags::Xash3D);
+   const bool isOldGame = game.is (GameFlags::Legacy) && !game.is (GameFlags::Xash3D);
+
+   const bool hasDefaultPistols = (pev->weapons & (cr::bit (Weapon::USP) | cr::bit (Weapon::Glock18)));
+   const bool isFirstRound = m_moneyAmount == mp_startmoney.int_ ();
 
    switch (m_buyState) {
    case BuyState::PrimaryWeapon: // if no primary weapon and bot has some money, buy a primary weapon
@@ -1493,7 +1496,7 @@ void Bot::buyStuff () {
       break;
 
    case BuyState::SecondaryWeapon: // if bot has still some money, buy a better secondary weapon
-      if (isPistolMode || (hasPrimaryWeapon () && (pev->weapons & (cr::bit (Weapon::USP) | cr::bit (Weapon::Glock18))) && m_moneyAmount > rg.int_ (7500, 9000))) {
+      if (isPistolMode || (isFirstRound && hasDefaultPistols) || (hasDefaultPistols && bots.getLastWinner () != m_team) || (hasPrimaryWeapon () && hasDefaultPistols) && m_moneyAmount > rg.int_ (7500, 9000)) {
          do {
             pref--;
 

@@ -121,7 +121,7 @@ public:
    ~MessageDispatcher () = default;
 
 public:
-   void registerMessage (const String &name, int32 id);
+   int32 add (const String &name, int32 id);
    void start (edict_t *ent, int32 type);
    void stop ();
 

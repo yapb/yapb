@@ -74,7 +74,7 @@ namespace variadic {
    }
 }
 
-CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
+CR_EXPORT int GetEntityAPI2 (gamefuncs_t *table, int *) {
    // this function is called right after GiveFnptrsToDll() by the engine in the game DLL (or
    // what it BELIEVES to be the game DLL), in order to copy the list of MOD functions that can
    // be called by the engine, into a memory block pointed to by the functionTable pointer
@@ -85,7 +85,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
    // engine, and then calls the MOD DLL's version of GetEntityAPI to get the REAL gamedll
    // functions this time (to use in the bot code).
 
-   memset (functionTable, 0, sizeof (gamefuncs_t));
+   memset (table, 0, sizeof (gamefuncs_t));
 
    if (!(game.is (GameFlags::Metamod))) {
       auto api_GetEntityAPI = game.lib ().resolve <int (*) (gamefuncs_t *, int)> ("GetEntityAPI");
@@ -97,10 +97,10 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       dllfuncs.dllapi_table = &dllapi;
       gpGamedllFuncs = &dllfuncs;
 
-      memcpy (functionTable, &dllapi, sizeof (gamefuncs_t));
+      memcpy (table, &dllapi, sizeof (gamefuncs_t));
    }
 
-   functionTable->pfnGameInit = [] () {
+   table->pfnGameInit = [] () {
       // this function is a one-time call, and appears to be the second function called in the
       // DLL after GiveFntprsToDll() has been called. Its purpose is to tell the MOD DLL to
       // initialize the game before the engine actually hooks into it with its video frames and
@@ -127,7 +127,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       dllapi.pfnGameInit ();
    };
 
-   functionTable->pfnSpawn = [] (edict_t *ent) {
+   table->pfnSpawn = [] (edict_t *ent) {
       // this function asks the game DLL to spawn (i.e, give a physical existence in the virtual
       // world, in other words to 'display') the entity pointed to by ent in the game. The
       // Spawn() function is one of the functions any entity is supposed to have in the game DLL,
@@ -146,7 +146,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       return result;
    };
 
-   functionTable->pfnTouch = [] (edict_t *pentTouched, edict_t *pentOther) {
+   table->pfnTouch = [] (edict_t *pentTouched, edict_t *pentOther) {
       // this function is called when two entities' bounding boxes enter in collision. For example,
       // when a player walks upon a gun, the player entity bounding box collides to the gun entity
       // bounding box, and the result is that this function is called. It is used by the game for
@@ -161,7 +161,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       if (!game.isNullEntity (pentTouched) && pentOther != game.getStartEntity ()) {
          auto bot = bots[pentTouched];
 
-         if (bot && pentOther != bot->ent () && !util.isPlayer (pentOther)) {
+         if (bot && game.isShootableBreakable (pentOther)) {
             bot->checkBreakable (pentOther);
          }
       }
@@ -172,7 +172,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       dllapi.pfnTouch (pentTouched, pentOther);
    };
 
-   functionTable->pfnClientConnect = [] (edict_t *ent, const char *name, const char *addr, char rejectReason[128]) {
+   table->pfnClientConnect = [] (edict_t *ent, const char *name, const char *addr, char rejectReason[128]) {
       // this function is called in order to tell the MOD DLL that a client attempts to connect the
       // game. The entity pointer of this client is ent, the name under which he connects is
       // pointed to by the pszName pointer, and its IP address string is pointed by the pszAddress
@@ -209,7 +209,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       return dllapi.pfnClientConnect (ent, name, addr, rejectReason);
    };
 
-   functionTable->pfnClientDisconnect = [] (edict_t *ent) {
+   table->pfnClientDisconnect = [] (edict_t *ent) {
       // this function is called whenever a client is VOLUNTARILY disconnected from the server,
       // either because the client dropped the connection, or because the server dropped him from
       // the game (latency timeout). The effect is the freeing of a client slot on the server. Note
@@ -238,7 +238,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       dllapi.pfnClientDisconnect (ent);
    };
 
-   functionTable->pfnClientUserInfoChanged = [] (edict_t  *ent, char *infobuffer) {
+   table->pfnClientUserInfoChanged = [] (edict_t  *ent, char *infobuffer) {
       // this function is called when a player changes model, or changes team. Occasionally it
       // enforces rules on these changes (for example, some MODs don't want to allow players to
       // change their player model). But most commonly, this function is in charge of handling
@@ -252,7 +252,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       dllapi.pfnClientUserInfoChanged (ent, infobuffer);
    };
 
-   functionTable->pfnClientCommand = [] (edict_t *ent) {
+   table->pfnClientCommand = [] (edict_t *ent) {
       // this function is called whenever the client whose player entity is ent issues a client
       // command. How it works is that clients all have a global string in their client DLL that
       // stores the command string; if ever that string is filled with characters, the client DLL
@@ -289,7 +289,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       dllapi.pfnClientCommand (ent);
    };
 
-   functionTable->pfnServerActivate = [] (edict_t *pentEdictList, int edictCount, int clientMax) {
+   table->pfnServerActivate = [] (edict_t *pentEdictList, int edictCount, int clientMax) {
       // this function is called when the server has fully loaded and is about to manifest itself
       // on the network as such. Since a mapchange is actually a server shutdown followed by a
       // restart, this function is also called when a new map is being loaded. Hence it's the
@@ -325,7 +325,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       graph.rebuildVisibility ();
    };
 
-   functionTable->pfnServerDeactivate = [] () {
+   table->pfnServerDeactivate = [] () {
       // this function is called when the server is shutting down. A particular note about map
       // changes: changing the map means shutting down the server and starting a new one. Of course
       // this process is transparent to the user, but either in single player when the hero reaches
@@ -366,7 +366,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       dllapi.pfnServerDeactivate ();
    };
 
-   functionTable->pfnStartFrame = [] () {
+   table->pfnStartFrame = [] () {
       // this function starts a video frame. It is called once per video frame by the game. If
       // you run Half-Life at 90 fps, this function will then be called 90 times per second. By
       // placing a hook on it, we have a good place to do things that should be done continuously
@@ -408,7 +408,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       bots.frame ();
    };
 
-   functionTable->pfnCmdStart = [] (const edict_t *player, usercmd_t *cmd, unsigned int random_seed) {
+   table->pfnCmdStart = [] (const edict_t *player, usercmd_t *cmd, unsigned int random_seed) {
       auto ent = const_cast <edict_t *> (player);
       
       // if we're handle pings for bots and clients, clear IN_SCORE button so SV_ShouldUpdatePing engine function return false
@@ -428,7 +428,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
       dllapi.pfnCmdStart (player, cmd, random_seed);
    };
 
-   functionTable->pfnPM_Move = [] (playermove_t *playerMove, int server) {
+   table->pfnPM_Move = [] (playermove_t *playerMove, int server) {
       // this is the player movement code clients run to predict things when the server can't update
       // them often enough (or doesn't want to). The server runs exactly the same function for
       // moving players. There is normally no distinction between them, else client-side prediction
@@ -444,7 +444,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *functionTable, int *) {
    return TRUE;
 }
 
-CR_EXPORT int GetEntityAPI2_Post (gamefuncs_t *table, int *) {
+CR_LINKAGE_C int GetEntityAPI2_Post (gamefuncs_t *table, int *) {
    // this function is called right after GiveFnptrsToDll() by the engine in the game DLL (or
    // what it BELIEVES to be the game DLL), in order to copy the list of MOD functions that can
    // be called by the engine, into a memory block pointed to by the functionTable pointer
@@ -468,7 +468,7 @@ CR_EXPORT int GetEntityAPI2_Post (gamefuncs_t *table, int *) {
       if (ent->v.rendermode == kRenderTransTexture) {
          ent->v.flags &= ~FL_WORLDBRUSH; // clear the FL_WORLDBRUSH flag out of transparent ents
       }
-      RETURN_META_VALUE (MRES_IGNORED, 0);
+      RETURN_META_VALUE (MRES_HANDLED, 0);
    };
 
    table->pfnStartFrame = [] () {
@@ -501,30 +501,12 @@ CR_EXPORT int GetEntityAPI2_Post (gamefuncs_t *table, int *) {
    return TRUE;
 }
 
-CR_EXPORT int GetNewDLLFunctions (newgamefuncs_t *functionTable, int *interfaceVersion) {
-   // it appears that an extra function table has been added in the engine to gamedll interface
-   // since the date where the first enginefuncs table standard was frozen. These ones are
-   // facultative and we don't hook them, but since some MODs might be featuring it, we have to
-   // pass them too, else the DLL interfacing wouldn't be complete and the game possibly wouldn't
-   // run properly.
-
-   auto api_GetNewDLLFunctions = game.lib ().resolve <int (*) (newgamefuncs_t *, int *)> (__FUNCTION__);
-
-   if (!api_GetNewDLLFunctions || !api_GetNewDLLFunctions (functionTable, interfaceVersion)) {
-      logger.error ("Could not resolve symbol \"%s\" in the game dll. Continuing...", __FUNCTION__);
-      return FALSE;
-   }
-
-   dllfuncs.newapi_table = functionTable;
-   return TRUE;
-}
-
-CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
+CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
    if (game.is (GameFlags::Metamod)) {
-      memset (functionTable, 0, sizeof (enginefuncs_t));
+      memset (table, 0, sizeof (enginefuncs_t));
    }
 
-   functionTable->pfnChangeLevel = [] (char *s1, char *s2) {
+   table->pfnChangeLevel = [] (char *s1, char *s2) {
       // the purpose of this function is to ask the engine to shutdown the server and restart a
       // new one running the map whose name is s1. It is used ONLY IN SINGLE PLAYER MODE and is
       // transparent to the user, because it saves the player state and equipment and restores it
@@ -543,7 +525,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       engfuncs.pfnChangeLevel (s1, s2);
    };
 
-   functionTable->pfnLightStyle = [] (int style, char *val) {
+   table->pfnLightStyle = [] (int style, char *val) {
       // ths function update lightstyle for the bots
 
       illum.updateLight (style, val);
@@ -555,7 +537,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
    };
 
    if (game.is (GameFlags::Legacy)) {
-      functionTable->pfnFindEntityByString = [] (edict_t *edictStartSearchAfter, const char *field, const char *value) {
+      table->pfnFindEntityByString = [] (edict_t *edictStartSearchAfter, const char *field, const char *value) {
          // round starts in counter-strike 1.5
          if (strcmp (value, "info_map_parameters") == 0) {
             bots.initRound ();
@@ -568,7 +550,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       };
    }
 
-   functionTable->pfnEmitSound = [] (edict_t *entity, int channel, const char *sample, float volume, float attenuation, int flags, int pitch) {
+   table->pfnEmitSound = [] (edict_t *entity, int channel, const char *sample, float volume, float attenuation, int flags, int pitch) {
       // this function tells the engine that the entity pointed to by "entity", is emitting a sound
       // which fileName is "sample", at level "channel" (CHAN_VOICE, etc...), with "volume" as
       // loudness multiplicator (normal volume VOL_NORM is 1.0), with a pitch of "pitch" (normal
@@ -587,7 +569,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       engfuncs.pfnEmitSound (entity, channel, sample, volume, attenuation, flags, pitch);
    };
 
-   functionTable->pfnMessageBegin = [] (int msgDest, int msgType, const float *origin, edict_t *ed) {
+   table->pfnMessageBegin = [] (int msgDest, int msgType, const float *origin, edict_t *ed) {
       // this function called each time a message is about to sent.
 
       msgs.start (ed, msgType);
@@ -598,16 +580,16 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       engfuncs.pfnMessageBegin (msgDest, msgType, origin, ed);
    };
 
-   functionTable->pfnMessageEnd = [] () {
-      msgs.stop ();
+   if (!game.is (GameFlags::Metamod)) {
+      table->pfnMessageEnd = [] () {
+         engfuncs.pfnMessageEnd ();
 
-      if (game.is (GameFlags::Metamod)) {
-         RETURN_META (MRES_IGNORED);
-      }
-      engfuncs.pfnMessageEnd ();
-   };
+         // this allows us to send messages right in handler code
+         msgs.stop ();
+      };
+   }
 
-   functionTable->pfnWriteByte = [] (int value) {
+   table->pfnWriteByte = [] (int value) {
       // if this message is for a bot, call the client message function...
       msgs.collect (value);
 
@@ -617,7 +599,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       engfuncs.pfnWriteByte (value);
    };
 
-   functionTable->pfnWriteChar = [] (int value) {
+   table->pfnWriteChar = [] (int value) {
       // if this message is for a bot, call the client message function...
       msgs.collect (value);
 
@@ -627,7 +609,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       engfuncs.pfnWriteChar (value);
    };
 
-   functionTable->pfnWriteShort = [] (int value) {
+   table->pfnWriteShort = [] (int value) {
       // if this message is for a bot, call the client message function...
       msgs.collect (value);
 
@@ -637,7 +619,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       engfuncs.pfnWriteShort (value);
    };
 
-   functionTable->pfnWriteLong = [] (int value) {
+   table->pfnWriteLong = [] (int value) {
       // if this message is for a bot, call the client message function...
       msgs.collect (value);
 
@@ -647,7 +629,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       engfuncs.pfnWriteLong (value);
    };
 
-   functionTable->pfnWriteAngle = [] (float value) {
+   table->pfnWriteAngle = [] (float value) {
       // if this message is for a bot, call the client message function...
       msgs.collect (value);
 
@@ -657,7 +639,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       engfuncs.pfnWriteAngle (value);
    };
 
-   functionTable->pfnWriteCoord = [] (float value) {
+   table->pfnWriteCoord = [] (float value) {
       // if this message is for a bot, call the client message function...
       msgs.collect (value);
 
@@ -667,7 +649,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       engfuncs.pfnWriteCoord (value);
    };
 
-   functionTable->pfnWriteString = [] (const char *sz) {
+   table->pfnWriteString = [] (const char *sz) {
       // if this message is for a bot, call the client message function...
       msgs.collect (sz);
 
@@ -677,7 +659,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       engfuncs.pfnWriteString (sz);
    };
 
-   functionTable->pfnWriteEntity = [] (int value) {
+   table->pfnWriteEntity = [] (int value) {
       // if this message is for a bot, call the client message function...
       msgs.collect (value);
 
@@ -687,29 +669,23 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       engfuncs.pfnWriteEntity (value);
    };
 
-   functionTable->pfnRegUserMsg = [] (const char *name, int size) {
-      // this function registers a "user message" by the engine side. User messages are network
-      // messages the game DLL asks the engine to send to clients. Since many MODs have completely
-      // different client features (Counter-Strike has a radar and a timer, for example), network
-      // messages just can't be the same for every MOD. Hence here the MOD DLL tells the engine,
-      // "Hey, you have to know that I use a network message whose name is pszName and it is size
-      // packets long". The engine books it, and returns the ID number under which he recorded that
-      // custom message. Thus every time the MOD DLL will be wanting to send a message named pszName
-      // using pfnMessageBegin (), it will know what message ID number to send, and the engine will
-      // know what to do, only for non-metamod version
+   if (!game.is (GameFlags::Metamod)) {
+      table->pfnRegUserMsg = [] (const char *name, int size) {
+         // this function registers a "user message" by the engine side. User messages are network
+         // messages the game DLL asks the engine to send to clients. Since many MODs have completely
+         // different client features (Counter-Strike has a radar and a timer, for example), network
+         // messages just can't be the same for every MOD. Hence here the MOD DLL tells the engine,
+         // "Hey, you have to know that I use a network message whose name is pszName and it is size
+         // packets long". The engine books it, and returns the ID number under which he recorded that
+         // custom message. Thus every time the MOD DLL will be wanting to send a message named pszName
+         // using pfnMessageBegin (), it will know what message ID number to send, and the engine will
+         // know what to do, only for non-metamod version
 
-      int message = engfuncs.pfnRegUserMsg (name, size);
+         return msgs.add (name, engfuncs.pfnRegUserMsg (name, size)); // return privously registered message
+      };
+   }
 
-      // register message for our needs
-      msgs.registerMessage (name, message);
-
-      if (game.is (GameFlags::Metamod)) {
-         RETURN_META_VALUE (MRES_SUPERCEDE, message);
-      }
-      return message;
-   };
-
-   functionTable->pfnClientPrintf = [] (edict_t *ent, PRINT_TYPE printType, const char *message) {
+   table->pfnClientPrintf = [] (edict_t *ent, PRINT_TYPE printType, const char *message) {
       // this function prints the text message string pointed to by message by the client side of
       // the client entity pointed to by ent, in a manner depending of printType (print_console,
       // print_center or print_chat). Be certain never to try to feed a bot with this function,
@@ -729,7 +705,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       engfuncs.pfnClientPrintf (ent, printType, message);
    };
 
-   functionTable->pfnCmd_Args = [] () {
+   table->pfnCmd_Args = [] () {
       // this function returns a pointer to the whole current client command string. Since bots
       // have no client DLL and we may want a bot to execute a client command, we had to implement
       // a argv string in the bot DLL for holding the bots' commands, and also keep track of the
@@ -751,7 +727,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       return engfuncs.pfnCmd_Args (); // ask the client command string to the engine
    };
 
-   functionTable->pfnCmd_Argv = [] (int argc) {
+   table->pfnCmd_Argv = [] (int argc) {
       // this function returns a pointer to a certain argument of the current client command. Since
       // bots have no client DLL and we may want a bot to execute a client command, we had to
       // implement a argv string in the bot DLL for holding the bots' commands, and also keep
@@ -773,7 +749,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       return engfuncs.pfnCmd_Argv (argc); // ask the argument number "argc" to the engine
    };
 
-   functionTable->pfnCmd_Argc = [] () {
+   table->pfnCmd_Argc = [] () {
       // this function returns the number of arguments the current client command string has. Since
       // bots have no client DLL and we may want a bot to execute a client command, we had to
       // implement a argv string in the bot DLL for holding the bots' commands, and also keep
@@ -795,7 +771,7 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       return engfuncs.pfnCmd_Argc (); // ask the engine how many arguments there are
    };
 
-   functionTable->pfnSetClientMaxspeed = [] (const edict_t *ent, float newMaxspeed) {
+   table->pfnSetClientMaxspeed = [] (const edict_t *ent, float newMaxspeed) {
       auto bot = bots[const_cast <edict_t *> (ent)];
 
       // check wether it's not a bot
@@ -809,26 +785,57 @@ CR_EXPORT int GetEngineFunctions (enginefuncs_t *functionTable, int *) {
       engfuncs.pfnSetClientMaxspeed (ent, newMaxspeed);
    };
 
-   functionTable->pfnClientCommand = variadic::clientCommand;
+   table->pfnClientCommand = variadic::clientCommand;
 
    return TRUE;
 }
 
-#if defined (CR_ANDROID)
-CR_EXPORT int Server_GetBlendingInterface (int version, struct sv_blending_interface_s **ppinterface, struct engine_studio_api_s *pstudio, float *rotationmatrix, float *bonetransform) {
-   // this function synchronizes the studio model animation blending interface (i.e, what parts
-   // of the body move, which bones, which hitboxes and how) between the server and the game DLL.
-   // some MODs can be using a different hitbox scheme than the standard one.
+CR_EXPORT int GetNewDLLFunctions (newgamefuncs_t *table, int *interfaceVersion) {
+   // it appears that an extra function table has been added in the engine to gamedll interface
+   // since the date where the first enginefuncs table standard was frozen. These ones are
+   // facultative and we don't hook them, but since some MODs might be featuring it, we have to
+   // pass them too, else the DLL interfacing wouldn't be complete and the game possibly wouldn't
+   // run properly.
 
-   auto api_GetBlendingInterface = game.lib ().resolve <int (*) (int, struct sv_blending_interface_s **, struct engine_studio_api_s *, float *, float *)> (__FUNCTION__);
+   auto api_GetNewDLLFunctions = game.lib ().resolve <int (*) (newgamefuncs_t *, int *)> (__FUNCTION__);
 
-   if (!api_GetBlendingInterface) {
+   if (!api_GetNewDLLFunctions || !api_GetNewDLLFunctions (table, interfaceVersion)) {
       logger.error ("Could not resolve symbol \"%s\" in the game dll. Continuing...", __FUNCTION__);
       return FALSE;
    }
-   return api_GetBlendingInterface (version, ppinterface, pstudio, rotationmatrix, bonetransform);
+
+   dllfuncs.newapi_table = table;
+   return TRUE;
 }
-#endif
+
+CR_LINKAGE_C int GetEngineFunctions_Post (enginefuncs_t *table, int *) {
+   memset (table, 0, sizeof (enginefuncs_t));
+
+   table->pfnMessageEnd = [] () {
+      msgs.stop (); // this allows us to send messages right in handler code
+
+      RETURN_META (MRES_IGNORED);
+   };
+   
+   table->pfnRegUserMsg = [] (const char *name, int) {
+      // this function registers a "user message" by the engine side. User messages are network
+      // messages the game DLL asks the engine to send to clients. Since many MODs have completely
+      // different client features (Counter-Strike has a radar and a timer, for example), network
+      // messages just can't be the same for every MOD. Hence here the MOD DLL tells the engine,
+      // "Hey, you have to know that I use a network message whose name is pszName and it is size
+      // packets long". The engine books it, and returns the ID number under which he recorded that
+      // custom message. Thus every time the MOD DLL will be wanting to send a message named pszName
+      // using pfnMessageBegin (), it will know what message ID number to send, and the engine will
+      // know what to do, only for non-metamod version
+
+      // register message for our needs
+      msgs.add (name, META_RESULT_ORIG_RET (int));
+
+      RETURN_META_VALUE (MRES_IGNORED, 0);
+   };
+
+   return TRUE;
+}
 
 CR_EXPORT int Meta_Query (char *, plugin_info_t **pPlugInfo, mutil_funcs_t *pMetaUtilFuncs) {
    // this function is the first function ever called by metamod in the plugin DLL. Its purpose
@@ -855,7 +862,7 @@ CR_EXPORT int Meta_Attach (PLUG_LOADTIME now, metamod_funcs_t *functionTable, me
       nullptr, // pfnGetNewDLLFunctions ()
       nullptr, // pfnGetNewDLLFunctions_Post ()
       GetEngineFunctions, // pfnGetEngineFunctions ()
-      nullptr, // pfnGetEngineFunctions_Post ()
+      GetEngineFunctions_Post, // pfnGetEngineFunctions_Post ()
    };
 
    if (now > Plugin_info.loadable) {
@@ -904,7 +911,7 @@ CR_EXPORT void Meta_Init () {
 #     pragma comment(linker, "/SECTION:.data,RW")
 #  endif
 #  if defined(CR_CXX_MSVC) && !defined(CR_ARCH_X64)
-#     define DLL_GIVEFNPTRSTODLL extern "C" void CR_STDCALL
+#     define DLL_GIVEFNPTRSTODLL CR_LINKAGE_C void CR_STDCALL
 #  elif defined(CR_CXX_CLANG) || defined(CR_ARCH_X64)
 #     define DLL_GIVEFNPTRSTODLL CR_EXPORT void CR_STDCALL
 #  endif
