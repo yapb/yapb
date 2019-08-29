@@ -77,14 +77,6 @@ bool BotUtils::isAlive (edict_t *ent) {
    return ent->v.deadflag == DEAD_NO && ent->v.health > 0 && ent->v.movetype != MOVETYPE_NOCLIP;
 }
 
-float BotUtils::getShootingCone (edict_t *ent, const Vector &position) {
-   return ent->v.v_angle.forward () | (position - (ent->v.origin + ent->v.view_ofs)).normalize (); // he's facing it, he meant it
-}
-
-bool BotUtils::isInViewCone (const Vector &origin, edict_t *ent) {
-   return getShootingCone (ent, origin) >= cr::cosf (cr::degreesToRadians ((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f));
-}
-
 bool BotUtils::isVisible (const Vector &origin, edict_t *ent) {
    if (game.isNullEntity (ent)) {
       return false;

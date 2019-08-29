@@ -532,6 +532,8 @@ IntArray BotGraph::searchRadius (float radius, const Vector &origin, int maxCoun
 }
 
 void BotGraph::add (int type, const Vector &pos) {
+   // @todo: remove type magic numbers
+
    if (game.isNullEntity (m_editor)) {
       return;
    }
@@ -547,6 +549,22 @@ void BotGraph::add (int type, const Vector &pos) {
    m_hasChanged = true;
 
    switch (type) {
+   case 5:
+      index = getEditorNeareset ();
+
+      if (index != kInvalidNodeIndex) {
+         path = &m_paths[index];
+
+         if (path->flags & NodeFlag::Camp) {
+            path->start = m_editor->v.v_angle.get2d ();
+
+            // play "done" sound...
+            game.playSound (m_editor, "common/wpn_hudon.wav");
+            return;
+         }
+      }
+      break;
+
    case 6:
       index = getEditorNeareset ();
 
@@ -607,6 +625,14 @@ void BotGraph::add (int type, const Vector &pos) {
    }
 
    if (addNewNode) {
+      auto nearest = getEditorNeareset ();
+
+      // do not allow to place waypoints "inside" waypoints, make at leat 10 units range
+      if (exists (nearest) && (m_paths[nearest].origin - newOrigin).lengthSq () < cr::square (10.0f)) {
+         ctrl.msg ("Can't add node. It's way to near to %d node. Please move some units anywhere.", nearest);
+         return;
+      }
+
       // need to remove limit?
       if (m_paths.length () >= kMaxNodes) {
          return;
@@ -879,33 +905,57 @@ bool BotGraph::isConnected (int a, int b) {
 }
 
 int BotGraph::getFacingIndex () {
-   // this function finds node the user is pointing at.
+   // this function finds node the user is pointing at. big thanks to podbot_mm for this stuff
 
    int indexToPoint = kInvalidNodeIndex;
 
-   Array <float> cones;
+   Array <float> cones (5);
    float maxCone = 0.0f;
 
+   // list of around waypoints
+   auto around = searchRadius (500.0f, m_editor->v.origin);
+
    // find the node the user is pointing at
-   for (const auto &path : m_paths) {
-      if ((path.origin - m_editor->v.origin).lengthSq () > cr::square (500.0f)) {
-         continue;
-      }
+   for (const auto &node : around) {
+      const auto &path = m_paths[node];
+
       cones.clear ();
+
+      // is crouch node?
+      bool crouchNode = !!(path.flags & NodeFlag::Crouch);
 
       // get the current view cones
       cones.push (util.getShootingCone (m_editor, path.origin));
-      cones.push (util.getShootingCone (m_editor, path.origin - Vector (0.0f, 0.0f, (path.flags & NodeFlag::Crouch) ? 6.0f : 12.0f)));
-      cones.push (util.getShootingCone (m_editor, path.origin - Vector (0.0f, 0.0f, (path.flags & NodeFlag::Crouch) ? 12.0f : 24.0f)));
-      cones.push (util.getShootingCone (m_editor, path.origin + Vector (0.0f, 0.0f, (path.flags & NodeFlag::Crouch) ? 6.0f : 12.0f)));
-      cones.push (util.getShootingCone (m_editor, path.origin + Vector (0.0f, 0.0f, (path.flags & NodeFlag::Crouch) ? 12.0f : 24.0f)));
+      cones.push (util.getShootingCone (m_editor, path.origin - Vector (0.0f, 0.0f, crouchNode ? 6.0f : 12.0f)));
+      cones.push (util.getShootingCone (m_editor, path.origin - Vector (0.0f, 0.0f, crouchNode ? 12.0f : 24.0f)));
+      cones.push (util.getShootingCone (m_editor, path.origin + Vector (0.0f, 0.0f, crouchNode ? 6.0f : 12.0f)));
+      cones.push (util.getShootingCone (m_editor, path.origin + Vector (0.0f, 0.0f, crouchNode ? 12.0f : 24.0f)));
 
-      // check if we can see it
-      for (auto &cone : cones) {
-         if (cone > 1.000f && cone > maxCone) {
-            maxCone = cone;
-            indexToPoint = path.number;
+      constexpr float minCone = 0.9992f;
+
+      // break if cone is bad
+      if (cones[0] < minCone && cones[1] < minCone && cones[2] < minCone && cones[3] < minCone && cones[4] < minCone) {
+         continue;
+      }
+
+      // check whe're we're looking
+      if (cones[0] > maxCone || cones[1] > maxCone || cones[2] > maxCone || cones[3] > maxCone || cones[4] > maxCone) {
+         if (cones[0] > cones[1] && cones[0] > cones[3]) {
+            maxCone = cones[0];
          }
+         else if (cones[1] > cones[0] && cones[1] > cones[2]) {
+            maxCone = cones[1];
+         }
+         else if (cones[2] > cones[1] && cones[2] > cones[4]) {
+            maxCone = cones[2];
+         }
+         else if (cones[3] > cones[0] && cones[3] > cones[4]) {
+            maxCone = cones[3];
+         }
+         else if (cones[4] > cones[3] && cones[4] > cones[2]) {
+            maxCone = cones[4];
+         }
+         indexToPoint = path.number;
       }
    }
    return indexToPoint;
@@ -958,7 +1008,6 @@ void BotGraph::erasePath () {
    // this function allow player to manually remove a path from one node to another
 
    int nodeFrom = getEditorNeareset ();
-   int index = 0;
 
    if (nodeFrom == kInvalidNodeIndex) {
       ctrl.msg ("Unable to find nearest node in 50 units.");
@@ -976,9 +1025,19 @@ void BotGraph::erasePath () {
       }
    }
 
+   // helper
+   auto destroy = [] (PathLink &link) -> void {
+      link.index = kInvalidNodeIndex;
+      link.distance = 0;
+      link.flags = 0;
+      link.velocity = nullptr;
+   };
+
+   game.print ("trying delete f = %d to %d", nodeFrom, nodeTo);
+
    for (auto &link : m_paths[nodeFrom].links) {
       if (link.index == nodeTo) {
-         unassignPath (nodeFrom, index);
+         destroy (link);
          game.playSound (m_editor, "weapons/mine_activate.wav");
 
          return;
@@ -986,13 +1045,11 @@ void BotGraph::erasePath () {
    }
 
    // not found this way ? check for incoming connections then
-   index = nodeFrom;
-   nodeFrom = nodeTo;
-   nodeTo = index;
+   cr::swap (nodeFrom, nodeTo);
 
    for (auto &link : m_paths[nodeFrom].links) {
       if (link.index == nodeTo) {
-         unassignPath (nodeFrom, index);
+         destroy (link);
          game.playSound (m_editor, "weapons/mine_activate.wav");
 
          return;
@@ -2160,7 +2217,7 @@ void BotGraph::frame () {
       }
 
       auto getFlagsAsStr = [&] (int index) {
-         auto &path = m_paths[index];
+         const auto &path = m_paths[index];
          bool jumpPoint = false;
 
          // iterate through connections and find, if it's a jump path
@@ -2179,13 +2236,23 @@ void BotGraph::frame () {
          return buffer.chars ();
       };
 
+      auto pathOriginStr = [&] (int index) {
+         const auto &path = m_paths[index];
+
+         static String buffer;
+         buffer.assignf ("(%.1f, %.1f, %.1f)", path.origin.x, path.origin.y, path.origin.z);
+
+         return buffer.chars ();
+      };
+
       // display some information
       String graphMessage;
 
       // show the information about that point
       graphMessage.assignf ("\n\n\n\n    Graph Information:\n\n"
                               "      Node %d of %d, Radius: %.1f, Light: %.1f\n"
-                              "      Flags: %s\n\n", nearestIndex, m_paths.length () - 1, path.radius, path.light, getFlagsAsStr (nearestIndex));
+                              "      Flags: %s\n"
+                              "      Origin: %s\n\n", nearestIndex, m_paths.length () - 1, path.radius, path.light, getFlagsAsStr (nearestIndex), pathOriginStr (nearestIndex));
 
       // if node is not changed display experience also
       if (!m_hasChanged) {
@@ -2201,14 +2268,16 @@ void BotGraph::frame () {
       if (m_cacheNodeIndex != kInvalidNodeIndex) {
          graphMessage.appendf ("\n    Cached Node Information:\n\n"
                                        "      Node %d of %d, Radius: %.1f\n"
-                                       "      Flags: %s\n", m_cacheNodeIndex, m_paths.length (), m_paths[m_cacheNodeIndex].radius, getFlagsAsStr (m_cacheNodeIndex));
+                                       "      Flags: %s\n"
+                                       "      Origin: %s\n", m_cacheNodeIndex, m_paths.length () - 1, m_paths[m_cacheNodeIndex].radius, getFlagsAsStr (m_cacheNodeIndex), pathOriginStr (m_cacheNodeIndex));
       }
 
       // check if we need to show the facing point index
       if (m_facingAtIndex != kInvalidNodeIndex) {
          graphMessage.appendf ("\n    Facing Node Information:\n\n"
                                        "      Node %d of %d, Radius: %.1f\n"
-                                       "      Flags: %s\n", m_facingAtIndex, m_paths.length (), m_paths[m_facingAtIndex].radius, getFlagsAsStr (m_facingAtIndex));
+                                       "      Flags: %s\n"
+                                       "      Origin: %s\n", m_facingAtIndex, m_paths.length () - 1, m_paths[m_facingAtIndex].radius, getFlagsAsStr (m_facingAtIndex), pathOriginStr (m_facingAtIndex));
       }
 
       // draw entire message
