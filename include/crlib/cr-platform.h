@@ -35,11 +35,13 @@ CR_NAMESPACE_BEGIN
 #endif
 
 // configure macroses
+#define CR_LINKAGE_C extern "C"
+
 #if defined(CR_WINDOWS)
-#  define CR_EXPORT extern "C" __declspec (dllexport)
+#  define CR_EXPORT CR_LINKAGE_C __declspec (dllexport)
 #  define CR_STDCALL __stdcall
 #elif defined(CR_LINUX) || defined(CR_OSX)
-#  define CR_EXPORT extern "C" __attribute__((visibility("default")))
+#  define CR_EXPORT CR_LINKAGE_C __attribute__((visibility("default")))
 #  define CR_STDCALL
 #else
 #  error "Can't configure export macros. Compiler unrecognized."

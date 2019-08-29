@@ -463,11 +463,13 @@ MessageDispatcher::MessageDispatcher () {
    m_teamInfoCache["CT"] = Team::CT;
 }
 
-void MessageDispatcher::registerMessage (const String &name, int32 id) {
+int32 MessageDispatcher::add (const String &name, int32 id) {
    if (!m_wanted.exists (name)) {
-      return;
+      return id;
    }
-   m_maps[m_wanted[name]] = id; // add message from engine RegUserMsg
+   m_maps[m_wanted[name]] = id; // add message from engine regusermsg
+
+   return id;
 }
 
 void MessageDispatcher::start (edict_t *ent, int32 type) {

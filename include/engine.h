@@ -171,7 +171,7 @@ public:
    bool postload ();
 
    // detects if csdm mod is in use
-   void detectDeathmatch ();
+   void applyGameModes ();
 
    // executes stuff every 1 second
    void slowFrame ();
