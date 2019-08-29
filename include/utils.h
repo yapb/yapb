@@ -47,17 +47,11 @@ public:
    // gets the build number of bot
    int buildNumber ();
 
-   // gets the shooting cone deviation
-   float getShootingCone (edict_t *ent, const Vector &position);
-
    // check if origin is visible from the entity side
    bool isVisible (const Vector &origin, edict_t *ent);
 
    // check if entity is alive
    bool isAlive (edict_t *ent);
-
-   // check if origin is inside view cone of entity
-   bool isInViewCone (const Vector &origin, edict_t *ent);
 
    // checks if entitiy is fakeclient
    bool isFakeClient (edict_t *ent);
@@ -140,6 +134,16 @@ public:
    // enables send hook
    bool enableSendTo () {
       return m_sendToHook.enable ();
+   }
+
+   // gets the shooting cone deviation
+   float getShootingCone (edict_t *ent, const Vector &position) {
+      return ent->v.v_angle.forward () | (position - (ent->v.origin + ent->v.view_ofs)).normalize (); // he's facing it, he meant it
+   }
+
+   // check if origin is inside view cone of entity
+   bool isInViewCone (const Vector &origin, edict_t *ent) {
+      return getShootingCone (ent, origin) >= cr::cosf (cr::degreesToRadians ((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f));
    }
 
 public:
