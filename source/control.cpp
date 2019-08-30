@@ -909,7 +909,7 @@ int BotControl::cmdNodeIterateCamp () {
       m_campPoints.clear ();
    }
    else if (op == "next") {
-      if (m_campPointsIndex < m_campPoints.length ()) {
+      if (m_campPointsIndex < static_cast <int> (m_campPoints.length ())) {
          Vector origin = graph[m_campPoints[m_campPointsIndex]].origin;
 
          if (graph[m_campPoints[m_campPointsIndex]].flags & NodeFlag::Crouch) {
