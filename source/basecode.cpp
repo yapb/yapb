@@ -2777,13 +2777,18 @@ void Bot::updateAimDir () {
       m_lookAt = m_camp;
    }
    else if (flags & AimFlags::Nav) {
-      m_lookAt = m_destOrigin;
+      if (m_moveToGoal && !m_isStuck && m_currentNodeIndex != kInvalidNodeIndex && !(m_path->flags & NodeFlag::Ladder) && m_pathWalk.hasNext () && (pev->origin - m_destOrigin).lengthSq () < cr::square (52.0f)) {
+         m_lookAt = graph[m_pathWalk.next ()].origin + pev->view_ofs;
+      }
+      else {
+         m_lookAt = m_destOrigin;
+      }
 
       if (m_canChooseAimDirection && m_currentNodeIndex != kInvalidNodeIndex && !(m_path->flags & NodeFlag::Ladder)) {
          int dangerIndex = graph.getDangerIndex (m_team, m_currentNodeIndex, m_currentNodeIndex);
 
          if (graph.exists (dangerIndex) && graph.isVisible (m_currentNodeIndex, dangerIndex)) {
-            m_lookAt = graph[dangerIndex].origin;
+            m_lookAt = graph[dangerIndex].origin + pev->view_ofs;
          }
       }
    }
