@@ -918,10 +918,10 @@ int BotControl::cmdNodeIterateCamp () {
 
          // go to next
          m_campIterator.shift ();
-      }
-      else {
-         m_campIterator.clear ();
-         msg ("Finished iterating camp spots.");
+
+         if (m_campIterator.empty ()) {
+            msg ("Finished iterating camp spots.");
+         }
       }
    }
    else if (op == "begin") {
