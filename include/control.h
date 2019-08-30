@@ -47,6 +47,7 @@ private:
    StringArray m_args;
    Array <BotCmd> m_cmds;
    Array <BotMenu> m_menus;
+   IntArray m_campPoints;
 
    edict_t *m_ent;
    Bot *m_djump;
@@ -54,6 +55,8 @@ private:
    bool m_isFromConsole;
    bool m_rapidOutput;
    bool m_isMenuFillCommand;
+
+   int m_campPointsIndex;
    int m_menuServerFillTeam;
    int m_interMenuData[4] = { 0, };
 
@@ -95,6 +98,7 @@ private:
    int cmdNodeAcquireEditor ();
    int cmdNodeReleaseEditor ();
    int cmdNodeUpload ();
+   int cmdNodeIterateCamp ();
 
 private:
    int menuMain (int item);

@@ -354,6 +354,9 @@ int BotControl::cmdNode () {
       pushGraphCmd ("path_delete", "path_create_both [noarguments]", "Opens and displays path creation menu.", &BotControl::cmdNodePathDelete);
       pushGraphCmd ("path_set_autopath", "path_set_autoath [max_distance]", "Opens and displays path creation menu.", &BotControl::cmdNodePathSetAutoDistance);
 
+      // camp points iterator
+      pushGraphCmd ("iterate_camp", "iterate_camp [begin|end|next]", "Allows to go through all camp points on map.", &BotControl::cmdNodeIterateCamp);
+
       // remote graph editing stuff
       if (game.isDedicated ()) {
          pushGraphCmd ("acquire_editor", "acquire_editor [max_distance]", "Acquires rights to edit graph on dedicated server.", &BotControl::cmdNodeAcquireEditor);
@@ -872,6 +875,63 @@ int BotControl::cmdNodeUpload () {
          msg ("your files, and they are not passed sanity checks. Sorry...");
       }
       msg ("\n");
+   }
+   return BotCommandResult::Handled;
+}
+
+int BotControl::cmdNodeIterateCamp () {
+   enum args { graph_cmd = 1, cmd, option, max };
+
+   // adding more args to args array, if not enough passed
+   fixMissingArgs (max);
+
+   // turn graph on
+   graph.setEditFlag (GraphEdit::On);
+
+   // get the option descriping operation
+   auto op = getStr (option);
+
+   if (op != "begin" && op != "end" && op != "next") {
+      return BotCommandResult::BadFormat;
+   }
+
+   if ((op == "next" || op == "end") && m_campPointsIndex == kInvalidNodeIndex) {
+      msg ("Before calling for 'next' / 'end' camp point, you should hit 'begin'.");
+      return BotCommandResult::Handled;
+   }
+   else if (op == "begin" && m_campPointsIndex != kInvalidNodeIndex) {
+      msg ("Before calling for 'begin' camp point, you should hit 'end'.");
+      return BotCommandResult::Handled;
+   }
+   
+   if (op == "end") {
+      m_campPointsIndex = kInvalidNodeIndex;
+      m_campPoints.clear ();
+   }
+   else if (op == "next") {
+      if (m_campPointsIndex < m_campPoints.length ()) {
+         Vector origin = graph[m_campPoints[m_campPointsIndex]].origin;
+
+         if (graph[m_campPoints[m_campPointsIndex]].flags & NodeFlag::Crouch) {
+            origin.z += 23.0f;
+         }
+         engfuncs.pfnSetOrigin (m_ent, origin);
+      }
+      else {
+         m_campPoints.clear ();
+         m_campPointsIndex = kInvalidNodeIndex;
+
+         msg ("Finished iterating camp spots.");
+      }
+      ++m_campPointsIndex;
+   }
+   else if (op == "begin") {
+      for (int i = 0; i < graph.length (); ++i) {
+         if (graph[i].flags & NodeFlag::Camp) {
+            m_campPoints.push (i);
+         }
+      }
+      m_campPointsIndex = 0;
    }
    return BotCommandResult::Handled;
 }
@@ -1877,6 +1937,7 @@ BotControl::BotControl () {
    m_isMenuFillCommand = false;
    m_rapidOutput = false;
    m_menuServerFillTeam = 5;
+   m_campPointsIndex = kInvalidNodeIndex;
 
    m_cmds.emplace ("add/addbot/add_ct/addbot_ct/add_t/addbot_t/addhs/addhs_t/addhs_ct", "add [difficulty[personality[team[model[name]]]]]", "Adding specific bot into the game.", &BotControl::cmdAddBot);
    m_cmds.emplace ("kick/kickone/kick_ct/kick_t/kickbot_ct/kickbot_t", "kick [team]", "Kicks off the random bot from the game.", &BotControl::cmdKickBot);
