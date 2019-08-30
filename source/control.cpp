@@ -895,43 +895,42 @@ int BotControl::cmdNodeIterateCamp () {
       return BotCommandResult::BadFormat;
    }
 
-   if ((op == "next" || op == "end") && m_campPointsIndex == kInvalidNodeIndex) {
+   if ((op == "next" || op == "end") && m_campIterator.empty ()) {
       msg ("Before calling for 'next' / 'end' camp point, you should hit 'begin'.");
       return BotCommandResult::Handled;
    }
-   else if (op == "begin" && m_campPointsIndex != kInvalidNodeIndex) {
+   else if (op == "begin" && !m_campIterator.empty ()) {
       msg ("Before calling for 'begin' camp point, you should hit 'end'.");
       return BotCommandResult::Handled;
    }
    
    if (op == "end") {
-      m_campPointsIndex = kInvalidNodeIndex;
-      m_campPoints.clear ();
+      m_campIterator.clear ();
    }
    else if (op == "next") {
-      if (m_campPointsIndex < static_cast <int> (m_campPoints.length ())) {
-         Vector origin = graph[m_campPoints[m_campPointsIndex]].origin;
+      if (!m_campIterator.empty ()) {
+         Vector origin = graph[m_campIterator.first ()].origin;
 
-         if (graph[m_campPoints[m_campPointsIndex]].flags & NodeFlag::Crouch) {
+         if (graph[m_campIterator.first ()].flags & NodeFlag::Crouch) {
             origin.z += 23.0f;
          }
          engfuncs.pfnSetOrigin (m_ent, origin);
+
+         // go to next
+         m_campIterator.shift ();
       }
       else {
-         m_campPoints.clear ();
-         m_campPointsIndex = kInvalidNodeIndex;
-
+         m_campIterator.clear ();
          msg ("Finished iterating camp spots.");
       }
-      ++m_campPointsIndex;
    }
    else if (op == "begin") {
       for (int i = 0; i < graph.length (); ++i) {
          if (graph[i].flags & NodeFlag::Camp) {
-            m_campPoints.push (i);
+            m_campIterator.push (i);
          }
       }
-      m_campPointsIndex = 0;
+      msg ("Ready for iteration. Type 'next' to go to first camp node.");
    }
    return BotCommandResult::Handled;
 }
@@ -1937,7 +1936,6 @@ BotControl::BotControl () {
    m_isMenuFillCommand = false;
    m_rapidOutput = false;
    m_menuServerFillTeam = 5;
-   m_campPointsIndex = kInvalidNodeIndex;
 
    m_cmds.emplace ("add/addbot/add_ct/addbot_ct/add_t/addbot_t/addhs/addhs_t/addhs_ct", "add [difficulty[personality[team[model[name]]]]]", "Adding specific bot into the game.", &BotControl::cmdAddBot);
    m_cmds.emplace ("kick/kickone/kick_ct/kick_t/kickbot_ct/kickbot_t", "kick [team]", "Kicks off the random bot from the game.", &BotControl::cmdKickBot);

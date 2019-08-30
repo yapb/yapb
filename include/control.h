@@ -47,7 +47,7 @@ private:
    StringArray m_args;
    Array <BotCmd> m_cmds;
    Array <BotMenu> m_menus;
-   IntArray m_campPoints;
+   IntArray m_campIterator;
 
    edict_t *m_ent;
    Bot *m_djump;
@@ -56,7 +56,6 @@ private:
    bool m_rapidOutput;
    bool m_isMenuFillCommand;
 
-   int m_campPointsIndex;
    int m_menuServerFillTeam;
    int m_interMenuData[4] = { 0, };
 
