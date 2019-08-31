@@ -905,60 +905,48 @@ bool BotGraph::isConnected (int a, int b) {
 }
 
 int BotGraph::getFacingIndex () {
-   // this function finds node the user is pointing at. big thanks to podbot_mm for this stuff
+   // find the waypoint the user is pointing at
 
-   int indexToPoint = kInvalidNodeIndex;
+   Twin <int32, float> result { kInvalidNodeIndex, 5.32f };
+   auto nearestNode = getEditorNeareset ();
 
-   Array <float> cones (5);
-   float maxCone = 0.0f;
+   // check bounds from eyes of editor
+   const auto &editorEyes = m_editor->v.origin + m_editor->v.view_ofs;
 
-   // list of around waypoints
-   auto around = searchRadius (500.0f, m_editor->v.origin);
+   for (const auto &path : m_paths) {
 
-   // find the node the user is pointing at
-   for (const auto &node : around) {
-      const auto &path = m_paths[node];
-
-      cones.clear ();
-
-      // is crouch node?
-      bool crouchNode = !!(path.flags & NodeFlag::Crouch);
-
-      // get the current view cones
-      cones.push (util.getShootingCone (m_editor, path.origin));
-      cones.push (util.getShootingCone (m_editor, path.origin - Vector (0.0f, 0.0f, crouchNode ? 6.0f : 12.0f)));
-      cones.push (util.getShootingCone (m_editor, path.origin - Vector (0.0f, 0.0f, crouchNode ? 12.0f : 24.0f)));
-      cones.push (util.getShootingCone (m_editor, path.origin + Vector (0.0f, 0.0f, crouchNode ? 6.0f : 12.0f)));
-      cones.push (util.getShootingCone (m_editor, path.origin + Vector (0.0f, 0.0f, crouchNode ? 12.0f : 24.0f)));
-
-      constexpr float minCone = 0.9992f;
-
-      // break if cone is bad
-      if (cones[0] < minCone && cones[1] < minCone && cones[2] < minCone && cones[3] < minCone && cones[4] < minCone) {
+      // skip nearest waypoint to editor, since this used mostly for adding / removing paths
+      if (path.number == nearestNode) {
          continue;
       }
 
-      // check whe're we're looking
-      if (cones[0] > maxCone || cones[1] > maxCone || cones[2] > maxCone || cones[3] > maxCone || cones[4] > maxCone) {
-         if (cones[0] > cones[1] && cones[0] > cones[3]) {
-            maxCone = cones[0];
-         }
-         else if (cones[1] > cones[0] && cones[1] > cones[2]) {
-            maxCone = cones[1];
-         }
-         else if (cones[2] > cones[1] && cones[2] > cones[4]) {
-            maxCone = cones[2];
-         }
-         else if (cones[3] > cones[0] && cones[3] > cones[4]) {
-            maxCone = cones[3];
-         }
-         else if (cones[4] > cones[3] && cones[4] > cones[2]) {
-            maxCone = cones[4];
-         }
-         indexToPoint = path.number;
+      const auto &to = path.origin - m_editor->v.origin;
+      auto angles = (to.angles () - m_editor->v.v_angle).clampAngles ();
+
+      // skip the waypoints that are too far away from us, and we're not looking at them directly
+      if (to.lengthSq () > cr::square (500.0f) || cr::abs (angles.y) > result.second) {
+         continue;
       }
+     
+      // check if visible, (we're not using visiblity tables here, as they not valid at time of waypoint editing)
+      TraceResult tr;
+      game.testLine (editorEyes, path.origin, TraceIgnore::Everything, m_editor, &tr);
+
+      if (!cr::fequal (tr.flFraction, 1.0f)) {
+         continue;
+      }
+      const float bestAngle = angles.y;
+
+      angles = -m_editor->v.v_angle;
+      angles.x = -angles.x;
+      angles = (angles + ((path.origin - Vector (0.0f, 0.0f, (path.flags & NodeFlag::Crouch) ? 17.0f : 34.0f)) - editorEyes).angles ()).clampAngles ();
+
+      if (angles.x > 0.0f) {
+         continue;
+      }
+      result = { path.number, bestAngle };
    }
-   return indexToPoint;
+   return result.first;
 }
 
 void BotGraph::pathCreate (char dir) {
