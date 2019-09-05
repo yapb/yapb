@@ -198,7 +198,9 @@ namespace detail {
 // simple http client for downloading/uploading files only
 class HttpClient final : public Singleton <HttpClient> {
 private:
-   static constexpr int32 kMaxRecvErrors = 12;
+   enum : int32 {
+      MaxReceiveErrors = 12
+   };
 
 private:
    Socket m_socket;
@@ -218,7 +220,7 @@ private:
       // prase response header
       while (!isFinished && pos < m_chunkSize) {
          if (m_socket.recv (&buffer[pos], 1) < 1) {
-            if (++errors > kMaxRecvErrors) {
+            if (++errors > MaxReceiveErrors) {
                isFinished = true;
             }
             else {

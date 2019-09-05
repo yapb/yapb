@@ -10,7 +10,7 @@
 #include <yapb.h>
 
 ConVar yb_whose_your_daddy ("yb_whose_your_daddy", "0", "Enables or disables extra hard difficulty for bots.");
-ConVar yb_debug_heuristic_type ("yb_debug_heuristic_type", "4", "Selects the heuristic function mode. For debug purposes only.", true, 0.0f, 4.0f);
+ConVar yb_debug_heuristic_type ("yb_debug_heuristic_type", "0", "Selects the heuristic function mode. For debug purposes only.", true, 0.0f, 4.0f);
 
 int Bot::findBestGoal () {
 
@@ -745,7 +745,7 @@ bool Bot::updateNavigation () {
 
             edict_t *pent = nullptr;
 
-            if (m_tryOpenDoor++ > 2 && util.findNearestPlayer (reinterpret_cast <void **> (&pent), ent (), 256.0f, false, false, true, true, false)) {
+            if (++m_tryOpenDoor > 2 && util.findNearestPlayer (reinterpret_cast <void **> (&pent), ent (), 256.0f, false, false, true, true, false)) {
                m_seeEnemyTime = game.time () - 0.5f;
 
                m_states |= Sense::SeeingEnemy;
