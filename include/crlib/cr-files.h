@@ -192,7 +192,9 @@ public:
 
 class MemFile final : public DenyCopying {
 private:
-   static constexpr char kEOF = static_cast <char> (-1);
+   enum : char {
+      Eof = static_cast <char> (-1)
+   };
 
 private:
    uint8 *m_data = nullptr;
@@ -231,7 +233,7 @@ public:
 
    char getChar () {
       if (!m_data || m_pos >= m_length) {
-         return kEOF;
+         return Eof;
       }
       auto ch = m_data[m_pos];
       ++m_pos;
@@ -266,7 +268,7 @@ public:
       line.clear ();
       char ch;
       
-      while ((ch = getChar ()) != kEOF) {
+      while ((ch = getChar ()) != Eof) {
          line += ch;
 
          if (ch == '\n') {
