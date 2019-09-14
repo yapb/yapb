@@ -65,7 +65,7 @@ CR_DECLARE_SCOPED_ENUM (MapFlags,
 CR_DECLARE_SCOPED_ENUM (EntitySearchResult,
    Continue,
    Break
-);
+)
 
 // variable reg pair
 struct VarPair {
@@ -81,6 +81,31 @@ struct VarPair {
 
 // entity prototype
 using EntityFunction = void (*) (entvars_t *);
+
+// rehlds has this fixed, but original hlds doesn't allocate string space  passed to precache* argument, so game will crash when unloading module using metamod
+class EngineWrap final : public DenyCopying {
+public:
+   EngineWrap () = default;
+   ~EngineWrap () = default;
+
+private:
+   const char *allocStr (const char *str) const {
+      return STRING (engfuncs.pfnAllocString (str));
+   }
+
+public:
+   int32 precacheModel (const char *model) const {
+      return engfuncs.pfnPrecacheModel (allocStr (model));
+   }
+
+   int32 precacheSound (const char *sound) const {
+      return engfuncs.pfnPrecacheSound (allocStr (sound));
+   }
+
+   void setModel (edict_t *ent, const char *model) {
+      engfuncs.pfnSetModel (ent, allocStr (model));
+   }
+};
 
 // provides utility functions to not call original engine (less call-cost)
 class Game final : public Singleton <Game> {
@@ -101,6 +126,7 @@ private:
    Array <edict_t *> m_breakables;
    SmallArray <VarPair> m_cvars;
    SharedLibrary m_gameLib;
+   EngineWrap m_engineWrap;
 
    bool m_precached;
    int m_gameFlags;
@@ -621,7 +647,7 @@ public:
 
 public:
    void initialize () {
-      if (plat.isArm) {
+      if (plat.arm) {
          return;
       }
       m_dlsym.patch (reinterpret_cast <void *> (&LookupSymbol), reinterpret_cast <void *> (&DynamicEntityLink::replacement));

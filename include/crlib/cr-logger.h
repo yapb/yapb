@@ -14,11 +14,6 @@
 #include <crlib/cr-files.h>
 #include <crlib/cr-lambda.h>
 
-#if defined (CR_WINDOWS)
-#  define WIN32_LEAN_AND_MEAN 
-#  include <windows.h>
-#endif
-
 CR_NAMESPACE_BEGIN
 
 class SimpleLogger final : public Singleton <SimpleLogger> {

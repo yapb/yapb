@@ -100,7 +100,7 @@ bool Bot::seesItem (const Vector &destination, const char *itemName) {
 
    // check if line of sight to object is not blocked (i.e. visible)
    if (tr.flFraction != 1.0f) {
-      return strcmp (STRING (tr.pHit->v.classname), itemName) == 0;
+      return strcmp (tr.pHit->v.classname.chars (), itemName) == 0;
    }
    return true;
 }
@@ -330,7 +330,7 @@ void Bot::avoidGrenades () {
       if (!seesEntity (pent->v.origin) && isInFOV (pent->v.origin - getEyesPos ()) > pev->fov * 0.5f) {
          continue;
       }
-      auto model = STRING (pent->v.model) + 9;
+      auto model = pent->v.model.chars () + 9;
 
       if (m_preventFlashing < game.time () && m_personality == Personality::Rusher && m_difficulty == 4 && strcmp (model, "flashbang.mdl") == 0) {
          // don't look at flash bang
@@ -500,7 +500,7 @@ void Bot::updatePickups () {
          }
          
          if (ent == pickupItem) {
-            if (seesItem (origin, STRING (ent->v.classname))) {
+            if (seesItem (origin, ent->v.classname.chars ())) {
                itemExists = true;
             }
             
@@ -538,8 +538,8 @@ void Bot::updatePickups () {
          continue;
       }
 
-      auto classname = STRING (ent->v.classname);
-      auto model = STRING (ent->v.model) + 9;
+      auto classname = ent->v.classname.chars ();
+      auto model = ent->v.model.chars () + 9;
 
       // check if line of sight to object is not blocked (i.e. visible)
       if (seesItem (origin, classname)) {
@@ -1089,19 +1089,19 @@ void Bot::checkMsgQueue () {
          if (m_radioSelect != -1) {
             if ((m_radioSelect != Radio::ReportingIn && m_forceRadio) || yb_radio_mode.int_ () != 2 || !conf.hasChatterBank (m_radioSelect) || !game.is (GameFlags::HasBotVoice)) {
                if (m_radioSelect < Radio::GoGoGo) {
-                  game.botCommand (ent (), "radio1");
+                  issueCommand ("radio1");
                }
                else if (m_radioSelect < Radio::RogerThat) {
                   m_radioSelect -= Radio::GoGoGo - 1;
-                  game.botCommand (ent (), "radio2");
+                  issueCommand ("radio2");
                }
                else {
                   m_radioSelect -= Radio::RogerThat - 1;
-                  game.botCommand (ent (), "radio3");
+                  issueCommand ("radio3");
                }
 
                // select correct menu item for this radio message
-               game.botCommand (ent (), "menuselect %d", m_radioSelect);
+               issueCommand ("menuselect %d", m_radioSelect);
             }
             else if (m_radioSelect != Radio::ReportingIn) {
                instantChatter (m_radioSelect);
@@ -1136,13 +1136,12 @@ bool Bot::isWeaponRestricted (int weaponIndex) {
    if (strings.isEmpty (yb_restricted_weapons.str ())) {
       return isWeaponRestrictedAMX (weaponIndex); // no banned weapons
    }
-   auto bannedWeapons = String (yb_restricted_weapons.str ()).split (";");
+   const auto &bannedWeapons = String (yb_restricted_weapons.str ()).split (";");
+   const auto &alias = util.weaponIdToAlias (weaponIndex);
 
-   for (auto &ban : bannedWeapons) {
-      const char *banned = STRING (util.getWeaponAlias (true, nullptr, weaponIndex));
-
+   for (const auto &ban : bannedWeapons) {
       // check is this weapon is banned
-      if (strncmp (ban.chars (), banned, ban.length ()) == 0) {
+      if (ban == alias) {
          return true;
       }
    }
@@ -1154,7 +1153,7 @@ bool Bot::isWeaponRestrictedAMX (int weaponIndex) {
 
    // check for weapon restrictions
    if (cr::bit (weaponIndex) & (kPrimaryWeaponMask | kSecondaryWeaponMask | Weapon::Shield)) {
-      const char *restrictedWeapons = engfuncs.pfnCVarGetString ("amx_restrweapons");
+      auto restrictedWeapons = engfuncs.pfnCVarGetString ("amx_restrweapons");
 
       if (strings.isEmpty (restrictedWeapons)) {
          return false;
@@ -1173,7 +1172,7 @@ bool Bot::isWeaponRestrictedAMX (int weaponIndex) {
 
    // check for equipment restrictions
    else {
-      const char *restrictedEquipment = engfuncs.pfnCVarGetString ("amx_restrequipammo");
+      auto restrictedEquipment = engfuncs.pfnCVarGetString ("amx_restrequipammo");
 
       if (strings.isEmpty (restrictedEquipment)) {
          return false;
@@ -1202,17 +1201,6 @@ bool Bot::canReplaceWeapon () {
       return false;
    }
 
-   if (!strings.isEmpty (yb_restricted_weapons.str ())) {
-      auto bannedWeapons = String (yb_restricted_weapons.str ()).split (";");
-
-      // check if its banned
-      for (auto &ban : bannedWeapons) {
-         if (m_currentWeapon == util.getWeaponAlias (false, ban.chars ())) {
-            return true;
-         }
-      }
-   }
-
    if (m_currentWeapon == Weapon::Scout && m_moneyAmount > 5000) {
       return true;
    }
@@ -1222,7 +1210,7 @@ bool Bot::canReplaceWeapon () {
    else if ((m_currentWeapon == Weapon::M3 || m_currentWeapon == Weapon::XM1014) && m_moneyAmount > 4000) {
       return true;
    }
-   return false;
+   return isWeaponRestricted (m_currentWeapon);
 }
 
 int Bot::pickBestWeapon (int *vec, int count, int moneySave) {
@@ -1458,17 +1446,17 @@ void Bot::buyStuff () {
          }
 
          if (selectedWeapon != nullptr) {
-            game.botCommand (ent (), "buy;menuselect %d", selectedWeapon->buyGroup);
+            issueCommand ("buy;menuselect %d", selectedWeapon->buyGroup);
 
             if (isOldGame) {
-               game.botCommand (ent (), "menuselect %d", selectedWeapon->buySelect);
+               issueCommand ("menuselect %d", selectedWeapon->buySelect);
             }
             else {
                if (m_team == Team::Terrorist) {
-                  game.botCommand (ent (), "menuselect %d", selectedWeapon->buySelectT);
+                  issueCommand ("menuselect %d", selectedWeapon->buySelectT);
                }
                else {
-                  game.botCommand (ent (), "menuselect %d", selectedWeapon->buySelectCT);
+                  issueCommand ("menuselect %d", selectedWeapon->buySelectCT);
                }
             }
          }
@@ -1487,10 +1475,10 @@ void Bot::buyStuff () {
       if (pev->armorvalue < rg.int_ (50, 80) && (isPistolMode || (teamEcoValid && hasPrimaryWeapon ()))) {
          // if bot is rich, buy kevlar + helmet, else buy a single kevlar
          if (m_moneyAmount > 1500 && !isWeaponRestricted (Weapon::ArmorHelm)) {
-            game.botCommand (ent (), "buyequip;menuselect 2");
+            issueCommand ("buyequip;menuselect 2");
          }
          else if (!isWeaponRestricted (Weapon::Armor)) {
-            game.botCommand (ent (), "buyequip;menuselect 1");
+            issueCommand ("buyequip;menuselect 1");
          }
       }
       break;
@@ -1552,17 +1540,17 @@ void Bot::buyStuff () {
          }
 
          if (selectedWeapon != nullptr) {
-            game.botCommand (ent (), "buy;menuselect %d", selectedWeapon->buyGroup);
+            issueCommand ("buy;menuselect %d", selectedWeapon->buyGroup);
 
             if (isOldGame) {
-               game.botCommand (ent (), "menuselect %d", selectedWeapon->buySelect);
+               issueCommand ("menuselect %d", selectedWeapon->buySelect);
             } 
             else {
                if (m_team == Team::Terrorist) {
-                  game.botCommand (ent (), "menuselect %d", selectedWeapon->buySelectT);
+                  issueCommand ("menuselect %d", selectedWeapon->buySelectT);
                }
                else {
-                  game.botCommand (ent (), "menuselect %d", selectedWeapon->buySelectCT);
+                  issueCommand ("menuselect %d", selectedWeapon->buySelectCT);
                }
             }
          }
@@ -1573,30 +1561,30 @@ void Bot::buyStuff () {
 
        // buy a he grenade
       if (conf.chanceToBuyGrenade (0) && m_moneyAmount >= 400 && !isWeaponRestricted (Weapon::Explosive)) {
-         game.botCommand (ent (), "buyequip");
-         game.botCommand (ent (), "menuselect 4");
+         issueCommand ("buyequip");
+         issueCommand ("menuselect 4");
       }
 
       // buy a concussion grenade, i.e., 'flashbang'
       if (conf.chanceToBuyGrenade (1) && m_moneyAmount >= 300 && teamEcoValid && !isWeaponRestricted (Weapon::Flashbang)) {
-         game.botCommand (ent (), "buyequip");
-         game.botCommand (ent (), "menuselect 3");
+         issueCommand ("buyequip");
+         issueCommand ("menuselect 3");
       }
 
       // buy a smoke grenade
       if (conf.chanceToBuyGrenade (2) && m_moneyAmount >= 400 && teamEcoValid && !isWeaponRestricted (Weapon::Smoke)) {
-         game.botCommand (ent (), "buyequip");
-         game.botCommand (ent (), "menuselect 5");
+         issueCommand ("buyequip");
+         issueCommand ("menuselect 5");
       }
       break;
 
    case BuyState::DefusalKit: // if bot is CT and we're on a bomb map, randomly buy the defuse kit
       if (game.mapIs (MapFlags::Demolition) && m_team == Team::CT && rg.chance (80) && m_moneyAmount > 200 && !isWeaponRestricted (Weapon::Defuser)) {
          if (isOldGame) {
-            game.botCommand (ent (), "buyequip;menuselect 6");
+            issueCommand ("buyequip;menuselect 6");
          }
          else {
-            game.botCommand (ent (), "defuser"); // use alias in steamcs
+            issueCommand ("defuser"); // use alias in steamcs
          }
       }
       break;
@@ -1609,10 +1597,10 @@ void Bot::buyStuff () {
          // if it's somewhat darkm do buy nightvision goggles
          if ((skyColor >= 50.0f && lightLevel <= 15.0f) || (skyColor < 50.0f && lightLevel < 40.0f)) {
             if (isOldGame) {
-               game.botCommand (ent (), "buyequip;menuselect 7");
+               issueCommand ("buyequip;menuselect 7");
             }
             else {
-               game.botCommand (ent (), "nvgs"); // use alias in steamcs
+               issueCommand ("nvgs"); // use alias in steamcs
             }
          }
       }
@@ -1620,16 +1608,16 @@ void Bot::buyStuff () {
 
    case BuyState::Ammo: // buy enough primary & secondary ammo (do not check for money here)
       for (int i = 0; i <= 5; ++i) {
-         game.botCommand (ent (), "buyammo%d", rg.int_ (1, 2)); // simulate human
+         issueCommand ("buyammo%d", rg.int_ (1, 2)); // simulate human
       }
 
       // buy enough secondary ammo
       if (hasPrimaryWeapon ()) {
-         game.botCommand (ent (), "buy;menuselect 7");
+         issueCommand ("buy;menuselect 7");
       }
 
       // buy enough primary ammo
-      game.botCommand (ent (), "buy;menuselect 6");
+      issueCommand ("buy;menuselect 6");
 
       // try to reload secondary weapon
       if (m_reloadState != Reload::Primary) {
@@ -2827,10 +2815,10 @@ void Bot::checkDarkness () {
          pev->impulse = 100;
       }
       else if (!m_usesNVG && ((skyColor > 50.0f && m_path->light < 15.0f) || (skyColor <= 50.0f && m_path->light < 40.0f))) {
-         game.botCommand (ent (), "nightvision");
+         issueCommand ("nightvision");
       }
       else if (m_usesNVG  && ((m_path->light > 20.0f && skyColor > 50.0f) || (m_path->light > 45.0f && skyColor <= 50.0f))) {
-         game.botCommand (ent (), "nightvision");
+         issueCommand ("nightvision");
       }
    }
    m_checkDarkTime = game.time ();
@@ -2926,7 +2914,7 @@ void Bot::update () {
    else if (!m_notKilled) {
        // we got a teamkiller? vote him away...
       if (m_voteKickIndex != m_lastVoteKick && yb_tkpunish.bool_ ()) {
-         game.botCommand (ent (), "vote %d", m_voteKickIndex);
+         issueCommand ("vote %d", m_voteKickIndex);
          m_lastVoteKick = m_voteKickIndex;
 
          // if bot tk punishment is enabled slay the tk
@@ -2941,7 +2929,7 @@ void Bot::update () {
 
       // host wants us to kick someone
       else if (m_voteMap != 0) {
-         game.botCommand (ent (), "votemap %d", m_voteMap);
+         issueCommand ("votemap %d", m_voteMap);
          m_voteMap = 0;
       }
    }
@@ -4386,7 +4374,7 @@ void Bot::pickupItem_ () {
          auto &info = conf.getWeapons ();
 
          for (index = 0; index < 7; ++index) {
-            if (strcmp (info[index].model, STRING (m_pickupItem->v.model) + 9) == 0) {
+            if (strcmp (info[index].model, m_pickupItem->v.model.chars () + 9) == 0) {
                break;
             }
          }
@@ -4403,10 +4391,10 @@ void Bot::pickupItem_ () {
 
             if (wid > 0) {
                selectWeaponById (wid);
-               game.botCommand (ent (), "drop");
+               issueCommand ("drop");
 
                if (hasShield ()) {
-                  game.botCommand (ent (), "drop"); // discard both shield and pistol
+                  issueCommand ("drop"); // discard both shield and pistol
                }
             }
             enteredBuyZone (BuyState::PrimaryWeapon);
@@ -4417,7 +4405,7 @@ void Bot::pickupItem_ () {
             
             if (wid == Weapon::Shield || wid > 6 || hasShield ()) {
                selectWeaponById (wid);
-               game.botCommand (ent (), "drop");
+               issueCommand ("drop");
             }
 
             if (!wid) {
@@ -4448,7 +4436,7 @@ void Bot::pickupItem_ () {
 
          if (wid > 6) {
             selectWeaponById (wid);
-            game.botCommand (ent (), "drop");
+            issueCommand ("drop");
          }
       }
       break;
@@ -4666,7 +4654,7 @@ void Bot::checkSpawnConditions () {
       if (m_difficulty >= 2 && rg.chance (m_personality == Personality::Rusher ? 99 : 50) && !m_isReloading && game.mapIs (MapFlags::HostageRescue | MapFlags::Demolition | MapFlags::Escape | MapFlags::Assassination)) {
          if (yb_jasonmode.bool_ ()) {
             selectSecondary ();
-            game.botCommand (ent (), "drop");
+            issueCommand ("drop");
          }
          else {
             selectWeaponByName ("weapon_knife");
@@ -4944,9 +4932,9 @@ void Bot::showDebugOverlay () {
       static float timeDebugUpdate = 0.0f;
       static int index, goal, taskID;
 
-      static Dictionary <int, String, IntHash <int>> tasks;
-      static Dictionary <int, String, IntHash <int>> personalities;
-      static Dictionary <int, String, IntHash <int>> flags;
+      static Dictionary <int32, String, IntHash <int32>> tasks;
+      static Dictionary <int32, String, IntHash <int32>> personalities;
+      static Dictionary <int32, String, IntHash <int32>> flags;
 
       if (tasks.empty ()) {
          tasks.push (Task::Normal, "Normal");
@@ -4993,15 +4981,15 @@ void Bot::showDebugOverlay () {
             String enemy = "(none)";
 
             if (!game.isNullEntity (m_enemy)) {
-               enemy = STRING (m_enemy->v.netname);
+               enemy = m_enemy->v.netname.chars ();
             }
             else if (!game.isNullEntity (m_lastEnemy)) {
-               enemy.assignf ("%s (L)", STRING (m_lastEnemy->v.netname));
+               enemy.assignf ("%s (L)", m_lastEnemy->v.netname.chars ());
             }
             String pickup = "(none)";
 
             if (!game.isNullEntity (m_pickupItem)) {
-               pickup = STRING (m_pickupItem->v.netname);
+               pickup = m_pickupItem->v.netname.chars ();
             }
             String aimFlags;
 
@@ -5012,10 +5000,10 @@ void Bot::showDebugOverlay () {
                   aimFlags.appendf (" %s", flags[cr::bit (i)].chars ());
                }
             }
-            String weapon = STRING (util.getWeaponAlias (true, nullptr, m_currentWeapon));
+            const String &weapon = util.weaponIdToAlias (m_currentWeapon);
 
             String debugData;
-            debugData.assignf ("\n\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\nItem: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\nSP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\nEnemy=%s Pickup=%s Type=%s\n", STRING (pev->netname), pev->health, pev->armorvalue, taskID, tasks[taskID].chars (), getTask ()->desire, weapon.chars (), getAmmoInClip (), getAmmo (), m_isReloading ? " (R)" : "", m_moneyAmount, aimFlags.trim ().chars (), m_moveSpeed, m_strafeSpeed, index, m_prevGoalIndex, goal, m_navTimeset - game.time (), pev->movetype, enemy.chars (), pickup.chars (), personalities[m_personality].chars ());
+            debugData.assignf ("\n\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\nItem: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\nSP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\nEnemy=%s Pickup=%s Type=%s\n", pev->netname.chars (), pev->health, pev->armorvalue, taskID, tasks[taskID].chars (), getTask ()->desire, weapon.chars (), getAmmoInClip (), getAmmo (), m_isReloading ? " (R)" : "", m_moneyAmount, aimFlags.trim ().chars (), m_moveSpeed, m_strafeSpeed, index, m_prevGoalIndex, goal, m_navTimeset - game.time (), pev->movetype, enemy.chars (), pickup.chars (), personalities[m_personality].chars ());
 
             MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, nullptr, game.getLocalEntity ())
                .writeByte (TE_TEXTMESSAGE)
@@ -5288,11 +5276,11 @@ void Bot::dropWeaponForUser (edict_t *user, bool discardC4) {
 
       if (discardC4) {
          selectWeaponByName ("weapon_c4");
-         game.botCommand (ent (), "drop");
+         issueCommand ("drop");
       }
       else {
          selectBestWeapon ();
-         game.botCommand (ent (), "drop");
+         issueCommand ("drop");
       }
 
       m_pickupItem = nullptr;
@@ -5317,7 +5305,7 @@ void Bot::startDoubleJump (edict_t *ent) {
    m_doubleJumpEntity = ent;
 
    startTask (Task::DoubleJump, TaskPri::DoubleJump, kInvalidNodeIndex, game.time (), true);
-   sayTeam (strings.format ("Ok %s, i will help you!", STRING (ent->v.netname)));
+   sayTeam (strings.format ("Ok %s, i will help you!", ent->v.netname.chars ()));
 }
 
 void Bot::resetDoubleJump () {
@@ -5330,7 +5318,7 @@ void Bot::resetDoubleJump () {
    m_jumpReady = false;
 }
 
-void Bot::sayDebug (const char *format, ...) {
+void Bot::debugMsgInternal (const char *str) {
    if (game.isDedicated ()) {
       return;
    }
@@ -5339,15 +5327,8 @@ void Bot::sayDebug (const char *format, ...) {
    if (level <= 2) {
       return;
    }
-   va_list ap;
-   auto result = strings.chars ();
-
-   va_start (ap, format);
-   vsnprintf (result, StringBuffer::StaticBufferSize, format, ap);
-   va_end (ap);
-
    String printBuf;
-   printBuf.assignf ("%s: %s", STRING (pev->netname), result);
+   printBuf.assignf ("%s: %s", pev->netname.chars (), str);
 
    bool playMessage = false;
 
@@ -5462,7 +5443,7 @@ edict_t *Bot::correctGrenadeVelocity (const char *model) {
    edict_t *result = nullptr;
 
    game.searchEntities ("classname", "grenade", [&] (edict_t *ent) {
-      if (ent->v.owner == this->ent () && strcmp (STRING (ent->v.model) + 9, model) == 0) {
+      if (ent->v.owner == this->ent () && strcmp (ent->v.model.chars () + 9, model) == 0) {
          result = ent;
 
          // set the correct velocity for the grenade

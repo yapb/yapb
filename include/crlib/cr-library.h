@@ -18,11 +18,7 @@
 #  include <fcntl.h>
 #  include <sys/stat.h>
 #  include <unistd.h>
-#elif defined (CR_WINDOWS)
-#  define WIN32_LEAN_AND_MEAN 
-#  include <windows.h>
 #endif
-
 
 CR_NAMESPACE_BEGIN
 
@@ -47,6 +43,10 @@ public:
 
 public:
    bool load (const String &file) noexcept {
+      if (*this) {
+         unload ();
+      }
+
 #if defined (CR_WINDOWS)
       m_handle = LoadLibraryA (file.chars ());
 #else

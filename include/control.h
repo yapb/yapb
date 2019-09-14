@@ -207,7 +207,7 @@ template <typename ...Args> inline void BotControl::msg (const char *fmt, Args .
       return;
    }
 
-   if (m_isFromConsole || strlen (result) > 48) {
+   if (m_isFromConsole || strlen (result) > 56) {
       game.clientPrint (m_ent, result);
    }
    else {

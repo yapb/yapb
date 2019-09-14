@@ -790,7 +790,7 @@ int BotControl::cmdNodeAcquireEditor () {
    }
 
    if (graph.hasEditor ()) {
-      msg ("Sorry, players \"%s\" already acquired rights to edit graph on this server.", STRING (graph.getEditor ()->v.netname));
+      msg ("Sorry, players \"%s\" already acquired rights to edit graph on this server.", graph.getEditor ()->v.netname.chars ());
       return BotCommandResult::Handled;
    }
    graph.setEditor (m_ent);
@@ -1854,7 +1854,7 @@ void BotControl::kickBotByMenu (int page) {
       // check for fakeclient bit, since we're clear it upon kick, but actual bot struct destroyed after client disconnected
       if (bot != nullptr && (bot->pev->flags & FL_FAKECLIENT)) {
          menuKeys |= cr::bit (cr::abs (i - menuKey));
-         menus.appendf ("%1.1d. %s%s\n", i - menuKey + 1, STRING (bot->pev->netname), bot->m_team == Team::CT ? " \\y(CT)\\w" : " \\r(T)\\w");
+         menus.appendf ("%1.1d. %s%s\n", i - menuKey + 1, bot->pev->netname.chars (), bot->m_team == Team::CT ? " \\y(CT)\\w" : " \\r(T)\\w");
       }
       else {
          menus.appendf ("\\d %1.1d. Not a Bot\\w\n", i - menuKey + 1);
@@ -1915,13 +1915,13 @@ void BotControl::maintainAdminRights () {
             }
             else if (!!strcmp (yb_password.str (), engfuncs.pfnInfoKeyValue (engfuncs.pfnGetInfoKeyBuffer (client.ent), const_cast <char *> (yb_password_key.str ())))) {
                client.flags &= ~ClientFlags::Admin;
-               game.print ("Player %s had lost remote access to %s.", STRING (player->v.netname), PRODUCT_SHORT_NAME);
+               game.print ("Player %s had lost remote access to %s.", player->v.netname.chars (), PRODUCT_SHORT_NAME);
             }
          }
          else if (!(client.flags & ClientFlags::Admin) && !strings.isEmpty (yb_password_key.str ()) && !strings.isEmpty (yb_password.str ())) {
             if (strcmp (yb_password.str (), engfuncs.pfnInfoKeyValue (engfuncs.pfnGetInfoKeyBuffer (client.ent), const_cast <char *> (yb_password_key.str ()))) == 0) {
                client.flags |= ClientFlags::Admin;
-               game.print ("Player %s had gained full remote access to %s.", STRING (player->v.netname), PRODUCT_SHORT_NAME);
+               game.print ("Player %s had gained full remote access to %s.", player->v.netname.chars (), PRODUCT_SHORT_NAME);
             }
          }
       }

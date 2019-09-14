@@ -18,23 +18,6 @@
 #ifndef MODEL_H
 #define MODEL_H
 
-typedef vec_t vec2_t[2];
-typedef vec_t vec4_t[4];
-
-typedef int qboolean;
-typedef unsigned char byte;
-
-#define VERTEXSIZE 7
-#define MAXLIGHTMAPS 4
-#define NUM_AMBIENTS 4
-#define MAX_MAP_HULLS 4
-#define MAX_PHYSINFO_STRING 256
-#define MAX_PHYSENTS 600
-#define MAX_MOVEENTS 64
-#define MAX_LIGHTSTYLES 64
-#define MAX_LIGHTSTYLEVALUE 256
-#define SURF_DRAWTILED 0x20
-
 typedef struct mplane_s {
    vec3_t normal;
    float dist;

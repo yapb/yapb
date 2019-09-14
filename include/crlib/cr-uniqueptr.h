@@ -21,12 +21,15 @@ private:
 
 public:
    UniquePtr () = default;
+
    explicit UniquePtr (T *ptr) : m_ptr (ptr)
    { }
 
-   UniquePtr (UniquePtr &&rhs) noexcept : m_ptr (rhs.m_ptr) {
-      rhs.m_ptr = nullptr;
-   }
+   UniquePtr (UniquePtr &&rhs) noexcept : m_ptr (rhs.release ())
+   { }
+
+   template <typename U> UniquePtr (UniquePtr <U> &&rhs) noexcept : m_ptr (rhs.release ())
+   { }
 
    ~UniquePtr () {
       destroy ();
@@ -60,10 +63,14 @@ private:
 public:
    UniquePtr &operator = (UniquePtr &&rhs) noexcept {
       if (this != &rhs) {
-         destroy ();
+         reset (rhs.release ());
+      }
+      return *this;
+   }
 
-         m_ptr = rhs.m_ptr;
-         rhs.m_ptr = nullptr;
+   template <typename U> UniquePtr &operator = (UniquePtr <U> &&rhs) noexcept {
+      if (this != &rhs) {
+         reset (rhs.release ());
       }
       return *this;
    }
@@ -87,13 +94,8 @@ public:
 };
 
 // create unique
-template <typename T, typename... Args> UniquePtr <T> createUnique (Args &&... args) {
+template <typename T, typename... Args> UniquePtr <T> makeUnique (Args &&... args) {
    return UniquePtr <T> (alloc.create <T> (cr::forward <Args> (args)...));
-}
-
-// create unique (base class)
-template <typename D, typename B, typename... Args> UniquePtr <B> createUniqueBase (Args &&... args) {
-   return UniquePtr <B> (alloc.create <D> (cr::forward <Args> (args)...));
 }
 
 CR_NAMESPACE_END

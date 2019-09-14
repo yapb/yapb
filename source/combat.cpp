@@ -1196,7 +1196,7 @@ bool Bot::hasSecondaryWeapon () {
 bool Bot::hasShield () {
    // this function returns true, if bot has a tactical shield
 
-   return strncmp (STRING (pev->viewmodel), "models/shield/v_shield_", 23) == 0;
+   return strncmp (pev->viewmodel.chars (), "models/shield/v_shield_", 23) == 0;
 }
 
 bool Bot::isShieldDrawn () {
@@ -1216,7 +1216,7 @@ bool Bot::isEnemyBehindShield (edict_t *enemy) {
    }
 
    // check if enemy has shield and this shield is drawn
-   if ((enemy->v.weaponanim == 6 || enemy->v.weaponanim == 7) && strncmp (STRING (enemy->v.viewmodel), "models/shield/v_shield_", 23) == 0) {
+   if ((enemy->v.weaponanim == 6 || enemy->v.weaponanim == 7) && strncmp (enemy->v.viewmodel.chars (), "models/shield/v_shield_", 23) == 0) {
       if (util.isInViewCone (pev->origin, enemy)) {
          return true;
       }
@@ -1355,7 +1355,7 @@ bool Bot::rateGroundWeapon (edict_t *ent) {
    auto tab = conf.getRawWeapons ();
 
    for (int i = 0; i < kNumWeapons; ++i) {
-      if (strcmp (tab[*pref].model, STRING (ent->v.model) + 9) == 0) {
+      if (strcmp (tab[*pref].model, ent->v.model.chars () + 9) == 0) {
          groundIndex = i;
          break;
       }
@@ -1464,13 +1464,13 @@ int Bot::bestWeaponCarried () {
 }
 
 void Bot::selectWeaponByName (const char *name) {
-   game.botCommand (ent (), name);
+   issueCommand (name);
 }
 
 void Bot::selectWeaponById (int num) {
    auto tab = conf.getRawWeapons ();
 
-   game.botCommand (ent (), tab[num].name);
+   issueCommand (tab[num].name);
 }
 
 void Bot::decideFollowUser () {

@@ -20,6 +20,38 @@
 
 CR_NAMESPACE_BEGIN
 
+namespace detail {
+   template <typename T> uint8 &getMostSignificantByte (T &object) {
+      return *(reinterpret_cast <uint8 *> (&object) + sizeof (object) - 1);
+   }
+
+   template <size_t N> bool getLeastSignificantBit (uint8 byte) {
+      return byte & cr::bit (N);
+   }
+
+   template <size_t N> bool getMostSignificantBit (uint8 byte) {
+      return byte & cr::bit (CHAR_BIT - N - 1);
+   }
+
+   template <size_t N> void setLeastSignificantBit (uint8 &byte, bool bit) {
+      if (bit) {
+         byte |= cr::bit (N);
+      }
+      else {
+         byte &= ~cr::bit (N);
+      }
+   }
+
+   template <size_t N> void setMostSignificantBit (uint8 &byte, bool bit) {
+      if (bit) {
+         byte |= cr::bit (CHAR_BIT - N - 1);
+      }
+      else {
+         byte &= ~cr::bit (CHAR_BIT - N - 1);
+      }
+   }
+}
+
 // small-string optimized string class, sso stuff based on: https://github.com/elliotgoodrich/SSO-23/
 class String final  {
 public:
@@ -30,7 +62,6 @@ public:
 private:
    enum : size_t {
       ExcessSpace = 32,
-      CharBit = CHAR_BIT
    };
 
 private:
@@ -77,8 +108,7 @@ public:
       assign (ch);
    }
 
-   String (String &&rhs) noexcept {
-      m_data = rhs.m_data;
+   String (String &&rhs) noexcept : m_data (rhs.m_data) {
       rhs.setMoved ();
    }
 
@@ -87,35 +117,6 @@ public:
    }
 
 private:
-   template <typename T> static uint8 &getMostSignificantByte (T &object) {
-      return *(reinterpret_cast <uint8 *> (&object) + sizeof (object) - 1);
-   }
-
-   template <size_t N> static bool getLeastSignificantBit (uint8 byte) {
-      return byte & cr::bit (N);
-   }
-
-   template <size_t N> static bool getMostSignificantBit (uint8 byte) {
-      return byte & cr::bit (CharBit - N - 1);
-   }
-
-   template <size_t N> static void setLeastSignificantBit (uint8 &byte, bool bit) {
-      if (bit) {
-         byte |= cr::bit (N);
-      }
-      else {
-         byte &= ~cr::bit (N);
-      }
-   }
-
-   template <size_t N> static void setMostSignificantBit (uint8 &byte, bool bit) {
-      if (bit) {
-         byte |= cr::bit (CharBit - N - 1);
-      }
-      else {
-         byte &= ~cr::bit (CharBit - N - 1);
-      }
-   }
 
    void destroy () {
       if (!isSmall ()) {
@@ -162,7 +163,7 @@ private:
    }
 
    bool isSmall () const  {
-      return !getLeastSignificantBit <0> (m_data.small.length) && !getLeastSignificantBit <1> (m_data.small.length);
+      return !detail::getLeastSignificantBit <0> (m_data.small.length) && !detail::getLeastSignificantBit <1> (m_data.small.length);
    }
 
    void setSmallLength (uint8 length) {
@@ -174,18 +175,18 @@ private:
    }
 
    void setDataNonSmall (size_t length, size_t capacity) {
-      uint8 &lengthHighByte = getMostSignificantByte (length);
-      uint8 &capacityHighByte = getMostSignificantByte (capacity);
+      uint8 &lengthHighByte = detail::getMostSignificantByte (length);
+      uint8 &capacityHighByte = detail::getMostSignificantByte (capacity);
 
-      const bool lengthHasHighBit = getMostSignificantBit <0> (lengthHighByte);
-      const bool capacityHasHighBit = getMostSignificantBit <0> (capacityHighByte);
-      const bool capacityHasSecHighBit = getMostSignificantBit <1> (capacityHighByte);
+      const bool lengthHasHighBit = detail::getMostSignificantBit <0> (lengthHighByte);
+      const bool capacityHasHighBit = detail::getMostSignificantBit <0> (capacityHighByte);
+      const bool capacityHasSecHighBit = detail::getMostSignificantBit <1> (capacityHighByte);
 
-      setMostSignificantBit <0> (lengthHighByte, capacityHasSecHighBit);
+      detail::setMostSignificantBit <0> (lengthHighByte, capacityHasSecHighBit);
 
       capacityHighByte <<= 2;
-      setLeastSignificantBit <0> (capacityHighByte, capacityHasHighBit);
-      setLeastSignificantBit <1> (capacityHighByte, !lengthHasHighBit);
+      detail::setLeastSignificantBit <0> (capacityHighByte, capacityHasHighBit);
+      detail::setLeastSignificantBit <1> (capacityHighByte, !lengthHasHighBit);
 
       m_data.big.length = length;
       m_data.big.capacity = capacity;
@@ -195,18 +196,18 @@ private:
       size_t length = m_data.big.length;
       size_t capacity = m_data.big.capacity;
 
-      uint8 &lengthHighByte = getMostSignificantByte (length);
-      uint8 &capacityHighByte = getMostSignificantByte (capacity);
+      uint8 &lengthHighByte = detail::getMostSignificantByte (length);
+      uint8 &capacityHighByte = detail::getMostSignificantByte (capacity);
 
-      const bool capacityHasHighBit = getLeastSignificantBit <0> (capacityHighByte);
-      const bool lengthHasHighBit = !getLeastSignificantBit <1> (capacityHighByte);
-      const bool capacityHasSecHighBit = getMostSignificantBit <0> (lengthHighByte);
+      const bool capacityHasHighBit = detail::getLeastSignificantBit <0> (capacityHighByte);
+      const bool lengthHasHighBit = !detail::getLeastSignificantBit <1> (capacityHighByte);
+      const bool capacityHasSecHighBit = detail::getMostSignificantBit <0> (lengthHighByte);
 
-      setMostSignificantBit <0> (lengthHighByte, lengthHasHighBit);
+      detail::setMostSignificantBit <0> (lengthHighByte, lengthHasHighBit);
 
       capacityHighByte >>= 2;
-      setMostSignificantBit <0> (capacityHighByte, capacityHasHighBit);
-      setMostSignificantBit <1> (capacityHighByte, capacityHasSecHighBit);
+      detail::setMostSignificantBit <0> (capacityHighByte, capacityHasHighBit);
+      detail::setMostSignificantBit <1> (capacityHighByte, capacityHasSecHighBit);
 
       return { length, capacity };
    }

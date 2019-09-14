@@ -67,6 +67,40 @@ BotUtils::BotUtils () {
    m_noiseCache["debris/bust"] = Noise::NeedHandle | Noise::Broke;
    m_noiseCache["doors/doorm"] = Noise::NeedHandle | Noise::Door;
 
+   // register weapon aliases
+   m_weaponAlias.push (Weapon::USP, "usp"); // HK USP .45 Tactical
+   m_weaponAlias.push (Weapon::Glock18, "glock"); // Glock18 Select Fire
+   m_weaponAlias.push (Weapon::Deagle, "deagle"); // Desert Eagle .50AE
+   m_weaponAlias.push (Weapon::P228, "p228"); // SIG P228
+   m_weaponAlias.push (Weapon::Elite, "elite"); // Dual Beretta 96G Elite
+   m_weaponAlias.push (Weapon::FiveSeven, "fn57"); // FN Five-Seven
+   m_weaponAlias.push (Weapon::M3, "m3"); // Benelli M3 Super90
+   m_weaponAlias.push (Weapon::XM1014, "xm1014"); // Benelli XM1014
+   m_weaponAlias.push (Weapon::MP5, "mp5"); // HK MP5-Navy
+   m_weaponAlias.push (Weapon::TMP, "tmp"); // Steyr Tactical Machine Pistol
+   m_weaponAlias.push (Weapon::P90, "p90"); // FN P90
+   m_weaponAlias.push (Weapon::MAC10, "mac10"); // Ingram MAC-10
+   m_weaponAlias.push (Weapon::UMP45, "ump45"); // HK UMP45
+   m_weaponAlias.push (Weapon::AK47, "ak47"); // Automat Kalashnikov AK-47
+   m_weaponAlias.push (Weapon::Galil, "galil"); // IMI Galil
+   m_weaponAlias.push (Weapon::Famas, "famas"); // GIAT FAMAS
+   m_weaponAlias.push (Weapon::SG552, "sg552"); // Sig SG-552 Commando
+   m_weaponAlias.push (Weapon::M4A1, "m4a1"); // Colt M4A1 Carbine
+   m_weaponAlias.push (Weapon::AUG, "aug"); // Steyr Aug
+   m_weaponAlias.push (Weapon::Scout, "scout"); // Steyr Scout
+   m_weaponAlias.push (Weapon::AWP, "awp"); // AI Arctic Warfare/Magnum
+   m_weaponAlias.push (Weapon::G3SG1, "g3sg1"); // HK G3/SG-1 Sniper Rifle
+   m_weaponAlias.push (Weapon::SG550, "sg550"); // Sig SG-550 Sniper
+   m_weaponAlias.push (Weapon::M249, "m249"); // FN M249 Para
+   m_weaponAlias.push (Weapon::Flashbang, "flash"); // Concussion Grenade
+   m_weaponAlias.push (Weapon::Explosive, "hegren"); // High-Explosive Grenade
+   m_weaponAlias.push (Weapon::Smoke, "sgren"); // Smoke Grenade
+   m_weaponAlias.push (Weapon::Armor, "vest"); // Kevlar Vest
+   m_weaponAlias.push (Weapon::ArmorHelm, "vesthelm"); // Kevlar Vest and Helmet
+   m_weaponAlias.push (Weapon::Defuser, "defuser"); // Defuser Kit
+   m_weaponAlias.push (Weapon::Shield, "shield"); // Tactical Shield
+   m_weaponAlias.push (Weapon::Knife, "knife"); // Knife
+
    m_clients.resize (kGameMaxPlayers + 1);
 }
 
@@ -169,7 +203,7 @@ bool BotUtils::isPlayer (edict_t *ent) {
    }
 
    if ((ent->v.flags & (FL_CLIENT | FL_FAKECLIENT)) || bots[ent] != nullptr) {
-      return !strings.isEmpty (STRING (ent->v.netname));
+      return !strings.isEmpty (ent->v.netname.chars ());
    }
    return false;
 }
@@ -609,7 +643,7 @@ void BotUtils::installSendTo () {
    }
 
    // enable only on modern games
-   if (game.is (GameFlags::Modern) && (plat.isLinux || plat.isWindows) && !plat.isArm && !m_sendToHook.enabled ()) {
+   if (game.is (GameFlags::Modern) && (plat.linux || plat.win32) && !plat.arm && !m_sendToHook.enabled ()) {
       m_sendToHook.patch (reinterpret_cast <void *> (&sendto), reinterpret_cast <void *> (&BotUtils::sendTo));
    }
 }
@@ -709,66 +743,11 @@ int BotUtils::buildNumber () {
    return buildNumber;
 }
 
-int BotUtils::getWeaponAlias (bool needString, const char *weaponAlias, int weaponIndex) {
-   // this function returning weapon id from the weapon alias and vice versa.
+const String &BotUtils::weaponIdToAlias (const int32 id) {
+   static const String &none = "none";
 
-   // structure definition for weapon tab
-   struct WeaponTab_t {
-      Weapon weaponIndex; // weapon id
-      const char *alias; // weapon alias
-   };
-
-   // weapon enumeration
-   WeaponTab_t weaponTab[] = {
-      {Weapon::USP, "usp"}, // HK USP .45 Tactical
-      {Weapon::Glock18, "glock"}, // Glock18 Select Fire
-      {Weapon::Deagle, "deagle"}, // Desert Eagle .50AE
-      {Weapon::P228, "p228"}, // SIG P228
-      {Weapon::Elite, "elite"}, // Dual Beretta 96G Elite
-      {Weapon::FiveSeven, "fn57"}, // FN Five-Seven
-      {Weapon::M3, "m3"}, // Benelli M3 Super90
-      {Weapon::XM1014, "xm1014"}, // Benelli XM1014
-      {Weapon::MP5, "mp5"}, // HK MP5-Navy
-      {Weapon::TMP, "tmp"}, // Steyr Tactical Machine Pistol
-      {Weapon::P90, "p90"}, // FN P90
-      {Weapon::MAC10, "mac10"}, // Ingram MAC-10
-      {Weapon::UMP45, "ump45"}, // HK UMP45
-      {Weapon::AK47, "ak47"}, // Automat Kalashnikov AK-47
-      {Weapon::Galil, "galil"}, // IMI Galil
-      {Weapon::Famas, "famas"}, // GIAT FAMAS
-      {Weapon::SG552, "sg552"}, // Sig SG-552 Commando
-      {Weapon::M4A1, "m4a1"}, // Colt M4A1 Carbine
-      {Weapon::AUG, "aug"}, // Steyr Aug
-      {Weapon::Scout, "scout"}, // Steyr Scout
-      {Weapon::AWP, "awp"}, // AI Arctic Warfare/Magnum
-      {Weapon::G3SG1, "g3sg1"}, // HK G3/SG-1 Sniper Rifle
-      {Weapon::SG550, "sg550"}, // Sig SG-550 Sniper
-      {Weapon::M249, "m249"}, // FN M249 Para
-      {Weapon::Flashbang, "flash"}, // Concussion Grenade
-      {Weapon::Explosive, "hegren"}, // High-Explosive Grenade
-      {Weapon::Smoke, "sgren"}, // Smoke Grenade
-      {Weapon::Armor, "vest"}, // Kevlar Vest
-      {Weapon::ArmorHelm, "vesthelm"}, // Kevlar Vest and Helmet
-      {Weapon::Defuser, "defuser"}, // Defuser Kit
-      {Weapon::Shield, "shield"}, // Tactical Shield
-      {Weapon::Knife, "knife"} // Knife
-   };
-
-   // if we need to return the string, find by weapon id
-   if (needString && weaponIndex != -1) {
-      for (auto &tab : weaponTab) {
-         if (tab.weaponIndex == weaponIndex) { // is weapon id found?
-            return MAKE_STRING (tab.alias);
-         }
-      }
-      return MAKE_STRING ("(none)"); // return none
+   if (m_weaponAlias.exists (id)) {
+      return m_weaponAlias[id];
    }
-
-   // else search weapon by name and return weapon id
-   for (auto &tab : weaponTab) {
-      if (strncmp (tab.alias, weaponAlias, strlen (tab.alias)) == 0) {
-         return tab.weaponIndex;
-      }
-   }
-   return -1; // no weapon was found return -1
+   return none;
 }

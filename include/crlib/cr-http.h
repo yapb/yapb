@@ -374,19 +374,19 @@ public:
       if (boundarySlash != String::InvalidIndex) {
          boundaryName = localPath.substr (boundarySlash + 1);
       }
-      const String &kBoundary = "---crlib_upload_boundary_1337";
+      const String &boundaryLine = "---crlib_upload_boundary_1337";
 
       String request, start, end;
-      start.appendf ("--%s\r\n", kBoundary.chars ());
+      start.appendf ("--%s\r\n", boundaryLine.chars ());
       start.appendf ("Content-Disposition: form-data; name='file'; filename='%s'\r\n", boundaryName.chars ());
       start.append ("Content-Type: application/octet-stream\r\n\r\n");
 
-      end.appendf ("\r\n--%s--\r\n\r\n", kBoundary.chars ());
+      end.appendf ("\r\n--%s--\r\n\r\n", boundaryLine.chars ());
 
       request.appendf ("POST /%s HTTP/1.1\r\n", uri.path.chars ());
       request.appendf ("Host: %s\r\n", uri.host.chars ());
       request.appendf ("User-Agent: %s\r\n", m_userAgent.chars ());
-      request.appendf ("Content-Type: multipart/form-data; boundary=%s\r\n", kBoundary.chars ());
+      request.appendf ("Content-Type: multipart/form-data; boundary=%s\r\n", boundaryLine.chars ());
       request.appendf ("Content-Length: %d\r\n\r\n", file.length () + start.length () + end.length ());
 
       // send the main request

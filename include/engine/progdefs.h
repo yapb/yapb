@@ -12,11 +12,7 @@
  *   use or distribution of this code by or to any unlicensed person is illegal.
  *
  ****/
-#ifndef PROGDEFS_H
-#define PROGDEFS_H
-#ifdef _WIN32
 #pragma once
-#endif
 
 typedef struct {
    float time;
@@ -84,8 +80,8 @@ typedef struct entvars_s {
    int modelindex;
    string_t model;
 
-   int viewmodel; // player's viewmodel
-   int weaponmodel; // what other players see
+   string_t viewmodel; // player's viewmodel
+   string_t weaponmodel; // what other players see
 
    vec3_t absmin; // BB max translated to world coord
    vec3_t absmax; // BB max translated to world coord
@@ -216,4 +212,3 @@ typedef struct entvars_s {
    edict_t *euser4;
 } entvars_t;
 
-#endif

@@ -13,14 +13,12 @@
 #define CR_NAMESPACE_BEGIN namespace cr {
 #define CR_NAMESPACE_END }
 
-// undef base max
-#if defined (max) 
-#  undef max
-#endif
-
-// undef base min
-#if defined (min) 
-#  undef min
+// disable microsoft deprecation warning
+#if defined (_MSC_VER)
+#  if !defined (_CRT_SECURE_NO_DEPRECATE)
+#     define _CRT_SECURE_NO_DEPRECATE
+#     define _WINSOCK_DEPRECATED_NO_WARNINGS
+#  endif
 #endif
 
 #include <stdio.h>
@@ -34,13 +32,13 @@ CR_NAMESPACE_BEGIN
 // some useful type definitions
 //
 namespace types {
-using int8 = signed char;
-using int16 = signed short;
-using int32 = signed int;
-using uint8 = unsigned char;
-using uint16 = unsigned short;
-using uint32 = unsigned int;
-using uint64 = unsigned long long;
+   using int8 = signed char;
+   using int16 = signed short;
+   using int32 = signed int;
+   using uint8 = unsigned char;
+   using uint16 = unsigned short;
+   using uint32 = unsigned int;
+   using uint64 = unsigned long long;
 }
 
 // make types available for our own use

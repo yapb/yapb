@@ -38,15 +38,17 @@ void Game::precache () {
    }
    m_precached = true;
 
-   m_drawModels[DrawLine::Simple] = engfuncs.pfnPrecacheModel (ENGINE_STR ("sprites/laserbeam.spr"));
-   m_drawModels[DrawLine::Arrow] = engfuncs.pfnPrecacheModel (ENGINE_STR ("sprites/arrow1.spr"));
+   
 
-   engfuncs.pfnPrecacheSound (ENGINE_STR ("weapons/xbow_hit1.wav")); // waypoint add
-   engfuncs.pfnPrecacheSound (ENGINE_STR ("weapons/mine_activate.wav")); // waypoint delete
-   engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_hudoff.wav")); // path add/delete start
-   engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_hudon.wav")); // path add/delete done
-   engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_moveselect.wav")); // path add/delete cancel
-   engfuncs.pfnPrecacheSound (ENGINE_STR ("common/wpn_denyselect.wav")); // path add/delete error
+   m_drawModels[DrawLine::Simple] = m_engineWrap.precacheModel ("sprites/laserbeam.spr");
+   m_drawModels[DrawLine::Arrow] = m_engineWrap.precacheModel ("sprites/arrow1.spr");
+
+   m_engineWrap.precacheSound ("weapons/xbow_hit1.wav"); // waypoint add
+   m_engineWrap.precacheSound ("weapons/mine_activate.wav"); // waypoint delete
+   m_engineWrap.precacheSound ("common/wpn_hudoff.wav"); // path add/delete start
+   m_engineWrap.precacheSound ("common/wpn_hudon.wav"); // path add/delete done
+   m_engineWrap.precacheSound ("common/wpn_moveselect.wav"); // path add/delete cancel
+   m_engineWrap.precacheSound ("common/wpn_denyselect.wav"); // path add/delete error
 
    m_mapFlags = 0; // reset map type as worldspawn is the first entity spawned
 
@@ -74,7 +76,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
       if (!ent || ent->free || ent->v.classname == 0) {
          continue;
       }
-      auto classname = STRING (ent->v.classname);
+      auto classname = ent->v.classname.chars ();
 
       if (strcmp (classname, "worldspawn") == 0) {
          m_startEntity = ent;
@@ -86,7 +88,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
          util.installSendTo ();
       }
       else if (strcmp (classname, "player_weaponstrip") == 0) {
-         if ((is (GameFlags::Legacy)) && (STRING (ent->v.target))[0] == '\0') {
+         if (is (GameFlags::Legacy) && ent->v.target.chars ()[0] == '\0') {
             ent->v.target = ent->v.targetname = engfuncs.pfnAllocString ("fake");
          }
          else {
@@ -94,7 +96,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
          }
       }
       else if (strcmp (classname, "info_player_start") == 0) {
-         engfuncs.pfnSetModel (ent, ENGINE_STR ("models/player/urban/urban.mdl"));
+         m_engineWrap.setModel (ent, "models/player/urban/urban.mdl");
 
          ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
          ent->v.renderamt = 127; // set its transparency amount
@@ -103,7 +105,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
          ++m_spawnCount[Team::CT];
       }
       else if (strcmp (classname, "info_player_deathmatch") == 0) {
-         engfuncs.pfnSetModel (ent, ENGINE_STR ("models/player/terror/terror.mdl"));
+         m_engineWrap.setModel (ent, "models/player/terror/terror.mdl");
 
          ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
          ent->v.renderamt = 127; // set its transparency amount
@@ -113,7 +115,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
       }
 
       else if (strcmp (classname, "info_vip_start") == 0) {
-         engfuncs.pfnSetModel (ent, ENGINE_STR ("models/player/vip/vip.mdl"));
+         m_engineWrap.setModel (ent, "models/player/vip/vip.mdl");
 
          ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
          ent->v.renderamt = 127; // set its transparency amount
@@ -306,7 +308,7 @@ const char *Game::getModName () {
 const char *Game::getMapName () {
    // this function gets the map name and store it in the map_name global string variable.
 
-   return strings.format ("%s", STRING (globals->mapname));
+   return strings.format ("%s", globals->mapname.chars ());
 }
 
 Vector Game::getEntityWorldOrigin (edict_t *ent) {
@@ -465,7 +467,7 @@ bool Game::isSoftwareRenderer () {
    }
 
    // and on only windows version you can use software-render game. Linux, OSX always defaults to OpenGL
-   if (plat.isWindows) {
+   if (plat.win32) {
       return plat.hasModule ("sw");
    }
    return false;
@@ -577,15 +579,15 @@ bool Game::loadCSBinary () {
    }
    StringArray libs;
 
-   if (plat.isWindows) {
+   if (plat.win32) {
       libs.push ("mp.dll");
       libs.push ("cs.dll");
    }
-   else if (plat.isLinux) {
+   else if (plat.linux) {
       libs.push ("cs.so");
       libs.push ("cs_i386.so");
    }
-   else if (plat.isOSX) {
+   else if (plat.osx) {
       libs.push ("cs.dylib");
    }
 
@@ -739,13 +741,13 @@ bool Game::postload () {
       print ("%s v%s.0.%d successfully loaded for game: Counter-Strike %s (%s).\n", PRODUCT_SHORT_NAME, PRODUCT_VERSION, util.buildNumber (), gameVersionStr.chars (), String::join (gameVersionFlags, ", ").chars ());
    };
 
-   if (plat.isAndroid) {
+   if (plat.android) {
       m_gameFlags |= (GameFlags::Xash3D | GameFlags::Mobility | GameFlags::HasBotVoice | GameFlags::ReGameDLL);
 
       if (is (GameFlags::Metamod)) {
          return true; // we should stop the attempt for loading the real gamedll, since metamod handle this for us
       }
-      auto gamedll = strings.format ("%s/%s", getenv ("XASH3D_GAMELIBDIR"), plat.isAndroidHardFP ? "libserver_hardfp.so" : "libserver.so");
+      auto gamedll = strings.format ("%s/%s", getenv ("XASH3D_GAMELIBDIR"), plat.hfp ? "libserver_hardfp.so" : "libserver.so");
 
       if (!m_gameLib.load (gamedll)) {
          logger.fatal ("Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gamedll, getModName ());
@@ -879,9 +881,8 @@ bool Game::isShootableBreakable (edict_t *ent) {
    if (isNullEntity (ent)) {
       return false;
    }
-   auto classname = STRING (ent->v.classname);
 
-   if (strcmp (classname, "func_breakable") == 0 || (strcmp (classname, "func_pushable") == 0 && (ent->v.spawnflags & SF_PUSH_BREAKABLE))) {
+   if (strcmp (ent->v.classname.chars (), "func_breakable") == 0 || (strcmp (ent->v.classname.chars (), "func_pushable") == 0 && (ent->v.spawnflags & SF_PUSH_BREAKABLE))) {
       return ent->v.takedamage != DAMAGE_NO && ent->v.impulse <= 0 && !(ent->v.flags & FL_WORLDBRUSH) && !(ent->v.spawnflags & SF_BREAK_TRIGGER_ONLY) && ent->v.health < 500.0f;
    }
    return false;

@@ -47,12 +47,16 @@ BotManager::BotManager () {
 
    m_bombPlanted = false;
    m_botsCanPause = false;
+   m_roundEnded = false;
 
    m_bombSayStatus = BombPlantedSay::ChatSay | BombPlantedSay::Chatter;
 
    for (int i = 0; i < kGameTeamNum; ++i) {
       m_leaderChoosen[i] = false;
       m_economicsGood[i] = true;
+
+      m_lastRadioTime[i] = 0.0f;
+      m_lastRadio[i] = -1;
    }
    reset ();
 
@@ -106,7 +110,7 @@ void BotManager::touchKillerEntity (Bot *bot) {
    kv.szClassName = const_cast <char *> (prop.classname.chars ());
    kv.szKeyName = "damagetype";
    kv.szValue = const_cast <char *> (strings.format ("%d", cr::bit (4)));
-   kv.fHandled = FALSE;
+   kv.fHandled = false;
 
    MDLL_KeyValue (m_killerEntity, &kv);
    MDLL_Touch (m_killerEntity, bot->ent ());
@@ -205,7 +209,7 @@ BotCreateResult BotManager::create (const String &name, int difficulty, int pers
       ctrl.msg ("Maximum players reached (%d/%d). Unable to create Bot.", game.maxClients (), game.maxClients ());
       return BotCreateResult::MaxPlayersReached;
    }
-   auto object = cr::createUnique <Bot> (bot, difficulty, personality, team, member);
+   auto object = cr::makeUnique <Bot> (bot, difficulty, personality, team, member);
    auto index = object->index ();
 
    // assign owner of bot name
@@ -660,7 +664,7 @@ void BotManager::listBots () {
    ctrl.msg ("%-3.5s\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.4s\t%-3.4s\t%-3.5s", "index", "name", "personality", "team", "difficulty", "frags", "alive");
 
    for (const auto &bot : bots) {;
-      ctrl.msg ("[%-3.1d]\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s", bot->index (), STRING (bot->pev->netname), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful", bot->m_team == Team::CT ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_notKilled ? "yes" : "no");
+      ctrl.msg ("[%-3.1d]\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s", bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful", bot->m_team == Team::CT ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_notKilled ? "yes" : "no");
    }
    ctrl.msg ("%d bots", m_bots.length ());
 }
@@ -816,11 +820,11 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
    }
 
    char reject[256] = {0, };
-   MDLL_ClientConnect (bot, STRING (bot->v.netname), strings.format ("127.0.0.%d", clientIndex + 100), reject);
+   MDLL_ClientConnect (bot, bot->v.netname.chars (), strings.format ("127.0.0.%d", clientIndex + 100), reject);
 
    if (!strings.isEmpty (reject)) {
-      logger.error ("Server refused '%s' connection (%s)", STRING (bot->v.netname), reject);
-      game.serverCommand ("kick \"%s\"", STRING (bot->v.netname)); // kick the bot player if the server refused it
+      logger.error ("Server refused '%s' connection (%s)", bot->v.netname.chars (), reject);
+      game.serverCommand ("kick \"%s\"", bot->v.netname.chars ()); // kick the bot player if the server refused it
 
       bot->v.flags |= FL_KILLME;
       return;
@@ -1246,7 +1250,7 @@ void Bot::kill () {
 
 void Bot::kick () {
    // this function kick off one bot from the server.
-   auto username = STRING (pev->netname);
+   auto username = pev->netname.chars ();
 
    if (!(pev->flags & FL_FAKECLIENT) || strings.isEmpty (username)) {
       return;
@@ -1304,7 +1308,7 @@ void Bot::updateTeamJoin () {
       }
 
       // select the team the bot wishes to join...
-      game.botCommand (ent (), "menuselect %d", m_wantedTeam);
+      issueCommand ("menuselect %d", m_wantedTeam);
    }
    else if (m_startAction == BotMsg::ClassSelect) {
       m_startAction = BotMsg::None; // switch back to idle
@@ -1317,7 +1321,7 @@ void Bot::updateTeamJoin () {
       }
 
       // select the class the bot wishes to use...
-      game.botCommand (ent (), "menuselect %d", m_wantedClass);
+      issueCommand ("menuselect %d", m_wantedClass);
 
       // bot has now joined the game (doesn't need to be started)
       m_notStarted = false;
@@ -1409,7 +1413,7 @@ void BotManager::updateActiveGrenade () {
    // search the map for any type of grenade
    game.searchEntities ("classname", "grenade", [&] (edict_t *e) {
       // do not count c4 as a grenade
-      if (strcmp (STRING (e->v.model) + 9, "c4.mdl") == 0) { 
+      if (strcmp (e->v.model.chars () + 9, "c4.mdl") == 0) { 
          return EntitySearchResult::Continue;
       }
       m_activeGrenades.push (e);
@@ -1430,7 +1434,7 @@ void BotManager::updateIntrestingEntities () {
 
    // search the map for any type of grenade
    game.searchEntities (nullptr, kInfiniteDistance, [&] (edict_t *e) {
-      auto classname = STRING (e->v.classname);
+      auto classname = e->v.classname.chars ();
 
       // search for grenades, weaponboxes, weapons, items and armoury entities
       if (strncmp ("weapon", classname, 6) == 0 || strncmp ("grenade", classname, 7) == 0 || strncmp ("item", classname, 4) == 0 || strncmp ("armoury", classname, 7) == 0) {
@@ -1689,7 +1693,7 @@ void BotConfig::loadMainConfig () {
    firstLoad = false;
 
    // android is abit hard to play, lower the difficulty by default
-   if (plat.isAndroid && yb_difficulty.int_ () > 3) {
+   if (plat.android && yb_difficulty.int_ () > 3) {
       yb_difficulty.set (3);
    }
    return;

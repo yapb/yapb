@@ -12,22 +12,7 @@
  *   use or distribution of this code by or to any unlicensed person is illegal.
  *
  ****/
-#ifndef EIFACE_H
-#define EIFACE_H
-
-#define INTERFACE_VERSION 140
-
-#include <stdio.h>
-
-#define FCVAR_ARCHIVE (1 << 0) // set to cause it to be saved to vars.rc
-#define FCVAR_USERINFO (1 << 1) // changes the client's info string
-#define FCVAR_SERVER (1 << 2) // notifies players when changed
-#define FCVAR_EXTDLL (1 << 3) // defined by external DLL
-#define FCVAR_CLIENTDLL (1 << 4) // defined by the client dll
-#define FCVAR_PROTECTED (1 << 5) // It's a server cvar, but we don't send the data since it's a password, etc.  Sends 1 if it's not bland/zero, 0 otherwise as value
-#define FCVAR_SPONLY (1 << 6) // This cvar cannot be changed by clients connected to a multiplayer server.
-#define FCVAR_PRINTABLEONLY (1 << 7) // This cvar's string cannot contain unprintable characters ( e.g., used for player name etc ).
-#define FCVAR_UNLOGGED (1 << 8) // If this is a FCVAR_SERVER, don't log changes to the log file / console if we are creating a log
+#pragma once
 
 struct cvar_t {
    char *name;
@@ -37,39 +22,18 @@ struct cvar_t {
    cvar_t *next;
 };
 
-//
-// Defines entity interface between engine and DLLs.
-// This header file included by engine files and DLL files.
-//
-// Before including this header, DLLs must:
-//        include progdefs.h
-// This is conveniently done for them in extdll.h
-//
-
-#ifdef _WIN32
-#define DLLEXPORT __stdcall
-#else
-#define DLLEXPORT /* */
-#endif
-
-typedef enum {
-   at_notice,
-   at_console, // same as at_notice, but forces a ConPrintf, not a message box
-   at_aiconsole, // same as at_console, but only shown if developer level is 2!
-   at_warning,
-   at_error,
-   at_logged // Server print to console ( only in multiplayer games ).
-} ALERT_TYPE;
-
-// 4-22-98  JOHN: added for use in pfnClientPrintf
-typedef enum { print_console, print_center, print_chat } PRINT_TYPE;
-
-// For integrity checking of content on clients
-typedef enum {
-   force_exactfile, // File on client must exactly match server's file
-   force_model_samebounds, // For model files only, the geometry must fit in the same bbox
-   force_model_specifybounds // For model files only, the geometry must fit in the specified bbox
-} FORCE_TYPE;
+typedef struct hudtextparms_s {
+   float x;
+   float y;
+   int effect;
+   uint8 r1, g1, b1, a1;
+   uint8 r2, g2, b2, a2;
+   float fadeinTime;
+   float fadeoutTime;
+   float holdTime;
+   float fxTime;
+   int channel;
+} hudtextparms_t;
 
 // Returned by TraceLine
 typedef struct {
@@ -109,8 +73,8 @@ typedef uint32 CRC32_t;
 // Engine hands this to DLLs for functionality callbacks
 
 typedef struct enginefuncs_s {
-   int (*pfnPrecacheModel) (char *s);
-   int (*pfnPrecacheSound) (char *s);
+   int (*pfnPrecacheModel) (const char *s);
+   int (*pfnPrecacheSound) (const char *s);
    void (*pfnSetModel) (edict_t *e, const char *m);
    int (*pfnModelIndex) (const char *m);
    int (*pfnModelFrames) (int modelIndex);
@@ -375,9 +339,6 @@ typedef struct {
    int (*pfnAllowLagCompensation) ();
 } gamefuncs_t;
 
-// Current version.
-#define NEWGAMEDLLFUNCS_VERSION 1
-
 typedef struct {
    // Called right before the object's memory is freed.
    // Calls its destructor.
@@ -388,5 +349,3 @@ typedef struct {
    void (*pfnCvarValue) (const edict_t *pEnt, const char *value);
    void (*pfnCvarValue2) (const edict_t *pEnt, int requestID, const char *cvarName, const char *value);
 } newgamefuncs_t;
-
-#endif /* EIFACE_H */
