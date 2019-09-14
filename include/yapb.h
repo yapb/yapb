@@ -10,7 +10,7 @@
 #pragma once
 
 #include <engine/extdll.h>
-#include <engine/meta_api.h>
+#include <engine/metamod.h>
 
 #include <crlib/cr-complete.h>
 
@@ -790,7 +790,7 @@ private:
    void findShortestPath (int srcIndex, int destIndex);
    void findPath (int srcIndex, int destIndex, FindPath pathType = FindPath::Fast);
    void clearRoute ();
-   void sayDebug (const char *format, ...);
+   void debugMsgInternal (const char *str);
    void frame ();
    void resetCollision ();
    void ignoreCollision ();
@@ -1039,13 +1039,23 @@ public:
       return pev->pContainingEntity;
    };
 
+   // bots array index
    int index () const {
       return m_index;
    }
 
+   // entity index with worldspawn shift
    int entindex () const {
       return m_index + 1;
    }
+
+   // prints debug message
+   template <typename ...Args> void debugMsg (const char *fmt, Args ...args) {
+      debugMsgInternal (strings.format (fmt, cr::forward <Args> (args)...));
+   }
+
+   // execute client command helper
+   template <typename ...Args> void issueCommand (const char *fmt, Args ...args);
 };
 
 #include <config.h>
@@ -1063,3 +1073,8 @@ extern ConVar yb_chat;
 extern ConVar yb_language;
 extern ConVar yb_show_latency;
 extern ConVar yb_enable_query_hook;
+
+// execute client command helper
+template <typename ...Args> void Bot::issueCommand (const char * fmt, Args ...args) {
+   game.botCommand (ent (), strings.format (fmt, cr::forward <Args> (args)...));
+}

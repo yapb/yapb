@@ -19,6 +19,24 @@
 // This header file included by engine files and DLL files.
 // Most came from server.h
 
+#define INTERFACE_VERSION 140
+
+// Dot products for view cone checking
+#define VIEW_FIELD_FULL (float)-1.0 // +-180 degrees
+#define VIEW_FIELD_WIDE (float)-0.7 // +-135 degrees 0.1 // +-85 degrees, used for full FOV checks
+#define VIEW_FIELD_NARROW (float)0.7 // +-45 degrees, more narrow check used to set up ranged attacks
+#define VIEW_FIELD_ULTRA_NARROW (float)0.9 // +-25 degrees, more narrow check used to set up ranged attacks
+
+#define FCVAR_ARCHIVE (1 << 0) // set to cause it to be saved to vars.rc
+#define FCVAR_USERINFO (1 << 1) // changes the client's info string
+#define FCVAR_SERVER (1 << 2) // notifies players when changed
+#define FCVAR_EXTDLL (1 << 3) // defined by external DLL
+#define FCVAR_CLIENTDLL (1 << 4) // defined by the client dll
+#define FCVAR_PROTECTED (1 << 5) // It's a server cvar, but we don't send the data since it's a password, etc.  Sends 1 if it's not bland/zero, 0 otherwise as value
+#define FCVAR_SPONLY (1 << 6) // This cvar cannot be changed by clients connected to a multiplayer server.
+#define FCVAR_PRINTABLEONLY (1 << 7) // This cvar's string cannot contain unprintable characters ( e.g., used for player name etc ).
+#define FCVAR_UNLOGGED (1 << 8) // If this is a FCVAR_SERVER, don't log changes to the log file / console if we are creating a log
+
 // edict->flags
 #define FL_FLY (1 << 0) // Changes the SV_Movestep() behavior to not need to be on ground
 #define FL_SWIM (1 << 1) // Changes the SV_Movestep() behavior to not need to be on ground (but stay in water)
@@ -667,6 +685,122 @@
 #define TE_BOUNCE_SHELL 1
 #define TE_BOUNCE_SHOTSHELL 2
 
+#define MAX_ENT_LEAFS 48
+
+#define MAX_WEAPON_SLOTS 5 // hud item selection slots
+#define MAX_ITEM_TYPES 6 // hud item selection slots
+
+#define MAX_ITEMS 5 // hard coded item types
+
+#define HIDEHUD_WEAPONS (1 << 0)
+#define HIDEHUD_FLASHLIGHT (1 << 1)
+#define HIDEHUD_ALL (1 << 2)
+#define HIDEHUD_HEALTH (1 << 3)
+
+#define MAX_AMMO_TYPES 32 // ???
+#define MAX_AMMO_SLOTS 32 // not really slots
+
+#define HUD_PRINTNOTIFY 1
+#define HUD_PRINTCONSOLE 2
+#define HUD_PRINTTALK 3
+#define HUD_PRINTCENTER 4
+
+#define WEAPON_SUIT 31
+
+#define VERTEXSIZE 7
+#define MAXLIGHTMAPS 4
+#define NUM_AMBIENTS 4
+#define MAX_MAP_HULLS 4
+#define MAX_PHYSINFO_STRING 256
+#define MAX_PHYSENTS 600
+#define MAX_MOVEENTS 64
+#define MAX_LIGHTSTYLES 64
+#define MAX_LIGHTSTYLEVALUE 256
+#define SURF_DRAWTILED 0x20
+
+
+#define AMBIENT_SOUND_STATIC 0 // medium radius attenuation
+#define AMBIENT_SOUND_EVERYWHERE 1
+#define AMBIENT_SOUND_SMALLRADIUS 2
+#define AMBIENT_SOUND_MEDIUMRADIUS 4
+#define AMBIENT_SOUND_LARGERADIUS 8
+#define AMBIENT_SOUND_START_SILENT 16
+#define AMBIENT_SOUND_NOT_LOOPING 32
+
+#define SPEAKER_START_SILENT 1 // wait for trigger 'on' to start announcements
+
+#define SND_SPAWNING (1 << 8) // duplicated in protocol.h we're spawing, used in some cases for ambients
+#define SND_STOP (1 << 5) // duplicated in protocol.h stop sound
+#define SND_CHANGE_VOL (1 << 6) // duplicated in protocol.h change sound vol
+#define SND_CHANGE_PITCH (1 << 7) // duplicated in protocol.h change sound pitch
+
+#define LFO_SQUARE 1
+#define LFO_TRIANGLE 2
+#define LFO_RANDOM 3
+
+// func_rotating
+#define SF_BRUSH_ROTATE_Y_AXIS 0
+#define SF_BRUSH_ROTATE_INSTANT 1
+#define SF_BRUSH_ROTATE_BACKWARDS 2
+#define SF_BRUSH_ROTATE_Z_AXIS 4
+#define SF_BRUSH_ROTATE_X_AXIS 8
+#define SF_PENDULUM_AUTO_RETURN 16
+#define SF_PENDULUM_PASSABLE 32
+
+#define SF_BRUSH_ROTATE_SMALLRADIUS 128
+#define SF_BRUSH_ROTATE_MEDIUMRADIUS 256
+#define SF_BRUSH_ROTATE_LARGERADIUS 512
+
+#define PUSH_BLOCK_ONLY_X 1
+#define PUSH_BLOCK_ONLY_Y 2
+
+#define VEC_HULL_MIN Vector(-16, -16, -36)
+#define VEC_HULL_MAX Vector(16, 16, 36)
+#define VEC_HUMAN_HULL_MIN Vector(-16, -16, 0)
+#define VEC_HUMAN_HULL_MAX Vector(16, 16, 72)
+#define VEC_HUMAN_HULL_DUCK Vector(16, 16, 36)
+
+#define VEC_VIEW Vector(0, 0, 28)
+
+#define VEC_DUCK_HULL_MIN Vector(-16, -16, -18)
+#define VEC_DUCK_HULL_MAX Vector(16, 16, 18)
+#define VEC_DUCK_VIEW Vector(0, 0, 12)
+
+#define SVC_TEMPENTITY 23
+#define SVC_CENTERPRINT 26
+#define SVC_INTERMISSION 30
+#define SVC_CDTRACK 32
+#define SVC_WEAPONANIM 35
+#define SVC_ROOMTYPE 37
+#define SVC_DIRECTOR 51
+
+// triggers
+#define SF_TRIGGER_ALLOWMONSTERS 1 // monsters allowed to fire this trigger
+#define SF_TRIGGER_NOCLIENTS 2 // players not allowed to fire this trigger
+#define SF_TRIGGER_PUSHABLES 4 // only pushables can fire this trigger
+
+// func breakable
+#define SF_BREAK_TRIGGER_ONLY 1 // may only be broken by trigger
+#define SF_BREAK_TOUCH 2 // can be 'crashed through' by running player (plate glass)
+#define SF_BREAK_PRESSURE 4 // can be broken by a player standing on it
+#define SF_BREAK_CROWBAR 256 // instant break if hit with crowbar
+
+// func_pushable (it's also func_breakable, so don't collide with those flags)
+#define SF_PUSH_BREAKABLE 128
+
+#define SF_LIGHT_START_OFF 1
+
+#define SPAWNFLAG_NOMESSAGE 1
+#define SPAWNFLAG_NOTOUCH 1
+#define SPAWNFLAG_DROIDONLY 4
+
+#define SPAWNFLAG_USEONLY 1 // can't be touched, must be used (buttons)
+
+#define TELE_PLAYER_ONLY 1
+#define TELE_SILENT 2
+
+#define SF_TRIG_PUSH_ONCE 1
+
 // Rendering constants
 enum {
    kRenderNormal, // src
@@ -701,29 +835,46 @@ enum {
    kRenderFxClampMinScale // Keep this sprite from getting very small (SPRITES only!)
 };
 
-typedef int func_t;
-typedef int string_t;
+typedef enum {
+   ignore_monsters = 1,
+   dont_ignore_monsters = 0,
+   missile = 2
+} IGNORE_MONSTERS;
 
-typedef struct link_s {
-   struct link_s *prev, *next;
-} link_t;
+typedef enum { 
+   ignore_glass = 1,
+   dont_ignore_glass = 0
+} IGNORE_GLASS;
 
-typedef struct edict_s edict_t;
+typedef enum {
+   point_hull = 0,
+   human_hull = 1,
+   large_hull = 2,
+   head_hull = 3
+} HULL;
 
-typedef struct {
-   vec3_t normal;
-   float dist;
-} plane_t;
+typedef enum {
+   at_notice,
+   at_console, // same as at_notice, but forces a ConPrintf, not a message box
+   at_aiconsole, // same as at_console, but only shown if developer level is 2!
+   at_warning,
+   at_error,
+   at_logged // Server print to console ( only in multiplayer games ).
+} ALERT_TYPE;
 
-typedef struct {
-   int allsolid; // if true, plane is not valid
-   int startsolid; // if true, the initial point was in a solid area
-   int inopen, inwater;
-   float fraction; // time completed, 1.0 = didn't hit anything
-   vec3_t endpos; // final position
-   plane_t plane; // surface normal at impact
-   edict_t *ent; // entity the surface is on
-   int hitgroup; // 0 == generic, non zero is specific body part
-} trace_t;
+// 4-22-98  JOHN: added for use in pfnClientPrintf
+typedef enum {
+   print_console,
+   print_center,
+   print_chat
+} PRINT_TYPE;
+
+// For integrity checking of content on clients
+typedef enum {
+   force_exactfile, // File on client must exactly match server's file
+   force_model_samebounds, // For model files only, the geometry must fit in the same bbox
+   force_model_specifybounds // For model files only, the geometry must fit in the specified bbox
+} FORCE_TYPE;
+
 
 #endif

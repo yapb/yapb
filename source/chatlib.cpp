@@ -152,7 +152,7 @@ void Bot::prepareChatMessage (const String &message) {
       if (!util.isPlayer (ent)) {
          return "unknown";
       }
-      String playerName = STRING (ent->v.netname);
+      String playerName = ent->v.netname.chars ();
       util.humanizePlayerName (playerName);
 
       return playerName;
@@ -361,7 +361,7 @@ void Bot::say (const char *text) {
    if (strings.isEmpty (text) || !yb_chat.bool_ ()) {
       return;
    }
-   game.botCommand (ent (), "say \"%s\"", text);
+   issueCommand ("say \"%s\"", text);
 }
 
 void Bot::sayTeam (const char *text) {
@@ -370,5 +370,5 @@ void Bot::sayTeam (const char *text) {
    if (strings.isEmpty (text) || !yb_chat.bool_ ()) {
       return;
    }
-   game.botCommand (ent (), "say_team \"%s\"", text);
+   issueCommand ("say_team \"%s\"", text);
 }

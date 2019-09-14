@@ -1098,7 +1098,7 @@ void BotGraph::calculatePathRadius (int index) {
          if (tr.flFraction < 1.0f) {
             game.testLine (radiusStart, radiusEnd, TraceIgnore::Monsters, nullptr, &tr);
 
-            if (strncmp ("func_door", STRING (tr.pHit->v.classname), 9) == 0) {
+            if (strncmp ("func_door", tr.pHit->v.classname.chars (), 9) == 0) {
                path.radius = 0.0f;
                wayBlocked = true;
 
@@ -1676,7 +1676,7 @@ bool BotGraph::saveGraphData () {
       options |= StorageOption::Recovered;
    }
    else if (!game.isNullEntity (m_editor)) {
-      author = STRING (m_editor->v.netname);
+      author = m_editor->v.netname.chars ();
    }
    else {
       author = "YAPB";
@@ -1691,9 +1691,10 @@ bool BotGraph::saveGraphData () {
 }
 
 void BotGraph::saveOldFormat () {
-   PODGraphHeader header;
+   PODGraphHeader header {};
+
    strcpy (header.header, kPodbotMagic);
-   strncpy (header.author, STRING (m_editor->v.netname), cr::bufsize (header.author));
+   strncpy (header.author, m_editor->v.netname.chars (), cr::bufsize (header.author));
    strncpy (header.mapName, game.getMapName (), cr::bufsize (header.mapName));
 
    header.mapName[31] = 0;
@@ -1750,7 +1751,7 @@ bool BotGraph::isNodeReacheable (const Vector &src, const Vector &destination) {
    // check if we go through a func_illusionary, in which case return false
    game.testHull (src, destination, TraceIgnore::Monsters, head_hull, m_editor, &tr);
 
-   if (!game.isNullEntity (tr.pHit) && strcmp ("func_illusionary", STRING (tr.pHit->v.classname)) == 0) {
+   if (!game.isNullEntity (tr.pHit) && strcmp ("func_illusionary", tr.pHit->v.classname.chars ()) == 0) {
       return false; // don't add pathnodes through func_illusionaries
    }
 
@@ -1758,9 +1759,9 @@ bool BotGraph::isNodeReacheable (const Vector &src, const Vector &destination) {
    game.testLine (src, destination, TraceIgnore::Monsters, m_editor, &tr);
 
    // if node is visible from current position (even behind head)...
-   if (tr.flFraction >= 1.0f || strncmp ("func_door", STRING (tr.pHit->v.classname), 9) == 0) {
+   if (tr.flFraction >= 1.0f || strncmp ("func_door", tr.pHit->v.classname.chars (), 9) == 0) {
       // if it's a door check if nothing blocks behind
-      if (strncmp ("func_door", STRING (tr.pHit->v.classname), 9) == 0) {
+      if (strncmp ("func_door", tr.pHit->v.classname.chars (), 9) == 0) {
          game.testLine (tr.vecEndPos, destination, TraceIgnore::Monsters, tr.pHit, &tr);
 
          if (tr.flFraction < 1.0f) {
@@ -2649,7 +2650,7 @@ void BotGraph::setBombOrigin (bool reset, const Vector &pos) {
    }
    
    game.searchEntities ("classname", "grenade", [&] (edict_t *ent) {
-      if (strcmp (STRING (ent->v.model) + 9, "c4.mdl") == 0) {
+      if (strcmp (ent->v.model.chars () + 9, "c4.mdl") == 0) {
          m_bombOrigin = game.getEntityWorldOrigin (ent);
          return EntitySearchResult::Break;
       }

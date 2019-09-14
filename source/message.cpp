@@ -507,3 +507,25 @@ void MessageDispatcher::stop () {
    (this->*m_handlers[m_current]) ();
    m_current = NetMsg::None;
 }
+
+void MessageDispatcher::ensureMessages () {
+   // we're getting messages ids in regusermsg for metamod, but when we're unloaded, we're lost our ids on next 'meta load'.
+   // this function tries to associate appropriate message ids.
+
+   // check if we're have one
+   if (m_maps.exists (NetMsg::Money)) {
+      return;
+   }
+
+   // re-register our message
+   for (const auto &msg : m_wanted) {
+      add (msg.key, GET_USER_MSG_ID (PLID, msg.key.chars (), nullptr));
+   }
+}
+
+int32 MessageDispatcher::id (NetMsg msg) {
+   if (game.is (GameFlags::Metamod)) {
+      ensureMessages ();
+   }
+   return m_maps[msg];
+}

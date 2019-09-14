@@ -16,54 +16,58 @@
 #ifndef EXTDLL_H
 #define EXTDLL_H
 
-#ifdef _MSC_VER
-/* disable deprecation warnings concerning unsafe CRT functions */
-#if !defined _CRT_SECURE_NO_DEPRECATE
-#define _CRT_SECURE_NO_DEPRECATE
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
-#endif
-#endif
-
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOWINRES
-#define NOSERVICE
-#define NOMCX
-#define NOIME
-#include "windows.h"
-#include "winsock2.h"
-#else // _WIN32
-#define FALSE 0
-#define TRUE (!FALSE)
-#define MAX_PATH PATH_MAX
-#include <limits.h>
-#include <stdarg.h>
-#ifndef min
-#define min(a, b) (((a) < (b)) ? (a) : (b))
-#endif
-#ifndef max
-#define max(a, b) (((a) > (b)) ? (a) : (b))
-#define _vsnprintf(a, b, c, d) vsnprintf (a, b, c, d)
-#endif
-#endif //_WIN32
-
-#include "stdio.h"
-#include "stdlib.h"
 
 typedef int func_t; //
-typedef int string_t; // from engine's pr_comp.h;
 typedef float vec_t; // needed before including progdefs.h
+typedef vec_t vec2_t[2];
+typedef vec_t vec4_t[4];
+typedef int qboolean;
+typedef unsigned char byte;
 
 #include <crlib/cr-vector.h>
 
+// idea from regamedll
+class string_t final {
+private:
+   int offset;
+
+public:
+   explicit string_t () : offset (0) { }
+   string_t (int offset) : offset (offset) { }
+
+   ~string_t () = default;
+
+public:
+   const char *chars () const;
+
+public:
+   operator int () const {
+      return offset;
+   }
+
+   string_t &operator = (const string_t &rhs) {
+      offset = rhs.offset;
+      return *this;
+   }
+};
+
 typedef cr::Vector vec3_t;
 using namespace cr::types;
+
+typedef struct edict_s edict_t;
 
 #include "const.h"
 #include "progdefs.h"
 #include "model.h"
 
-#define MAX_ENT_LEAFS 48
+typedef struct link_s {
+   struct link_s *prev, *next;
+} link_t;
+
+typedef struct {
+   vec3_t normal;
+   float dist;
+} plane_t;
 
 struct edict_s {
    int free;
@@ -79,24 +83,29 @@ struct edict_s {
 
 #include "eiface.h"
 
-#define MAX_WEAPON_SLOTS 5 // hud item selection slots
-#define MAX_ITEM_TYPES 6 // hud item selection slots
+extern globalvars_t *globals;
+extern enginefuncs_t engfuncs;
+extern gamefuncs_t dllapi;
 
-#define MAX_ITEMS 5 // hard coded item types
+// Use this instead of ALLOC_STRING on constant strings
+#define STRING(offset) (const char *)(globals->pStringBase + (int)offset)
 
-#define HIDEHUD_WEAPONS (1 << 0)
-#define HIDEHUD_FLASHLIGHT (1 << 1)
-#define HIDEHUD_ALL (1 << 2)
-#define HIDEHUD_HEALTH (1 << 3)
+// form fwgs-hlsdk
+#if defined (CR_ARCH_X64)
+static inline int MAKE_STRING (const char *val) {
+   long long ptrdiff = val - STRING (0);
 
-#define MAX_AMMO_TYPES 32 // ???
-#define MAX_AMMO_SLOTS 32 // not really slots
+   if (ptrdiff > INT_MAX || ptrdiff < INT_MIN) {
+      return engfuncs.pfnAllocString (val);
+   }
+   return static_cast <int> (ptrdiff);
+}
+#else 
+#define MAKE_STRING(str)	((uint64)(str) - (uint64)(STRING(0)))
+#endif
 
-#define HUD_PRINTNOTIFY 1
-#define HUD_PRINTCONSOLE 2
-#define HUD_PRINTTALK 3
-#define HUD_PRINTCENTER 4
-
-#define WEAPON_SUIT 31
+inline const char *string_t::chars () const {
+   return STRING (offset);
+}
 
 #endif // EXTDLL_H

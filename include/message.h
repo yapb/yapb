@@ -122,8 +122,11 @@ public:
 
 public:
    int32 add (const String &name, int32 id);
+   int32 id (NetMsg msg);
+
    void start (edict_t *ent, int32 type);
    void stop ();
+   void ensureMessages ();
 
 public:
    template <typename T> void collect (const T &value) {
@@ -135,10 +138,6 @@ public:
 
    void stopCollection () {
       m_current = NetMsg::None;
-   }
-
-   int32 id (NetMsg msg) const {
-      return m_maps[msg];
    }
 
 private:

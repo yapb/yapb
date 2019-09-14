@@ -19,7 +19,7 @@ int Bot::findBestGoal () {
       int result = kInvalidNodeIndex;
 
       game.searchEntities ("classname", "weaponbox", [&] (edict_t *ent) {
-         if (strcmp (STRING (ent->v.model), "models/w_backpack.mdl") == 0) {
+         if (strcmp (ent->v.model.chars () + 9, "backpack.mdl") == 0) {
             result = graph.getNearest (game.getEntityWorldOrigin (ent));
 
             if (graph.exists (result)) {
@@ -708,7 +708,7 @@ bool Bot::updateNavigation () {
    if (game.mapIs (MapFlags::HasDoors)) {
       game.testLine (pev->origin, m_pathOrigin, TraceIgnore::Monsters, ent (), &tr);
 
-      if (!game.isNullEntity (tr.pHit) && game.isNullEntity (m_liftEntity) && strncmp (STRING (tr.pHit->v.classname), "func_door", 9) == 0) {
+      if (!game.isNullEntity (tr.pHit) && game.isNullEntity (m_liftEntity) && strncmp (tr.pHit->v.classname.chars (), "func_door", 9) == 0) {
          // if the door is near enough...
          if ((game.getEntityWorldOrigin (tr.pHit) - pev->origin).lengthSq () < 2500.0f) {
             ignoreCollision (); // don't consider being stuck
@@ -728,7 +728,7 @@ bool Bot::updateNavigation () {
          m_aimFlags &= ~(AimFlags::LastEnemy | AimFlags::PredictPath);
          m_canChooseAimDirection = false;
 
-         auto button = lookupButton (STRING (tr.pHit->v.targetname));
+         auto button = lookupButton (tr.pHit->v.targetname.chars ());
 
          // check if we got valid button
          if (!game.isNullEntity (button)) {
@@ -849,7 +849,7 @@ bool Bot::updateLiftHandling () {
    // update node time set
    m_navTimeset = game.time ();
 
-   TraceResult tr, tr2;
+   TraceResult tr;
 
    // wait for something about for lift
    auto wait = [&] () {
@@ -865,9 +865,9 @@ bool Bot::updateLiftHandling () {
    };
 
    // trace line to door
-   game.testLine (pev->origin, m_path->origin, TraceIgnore::Everything, ent (), &tr2);
+   game.testLine (pev->origin, m_path->origin, TraceIgnore::Everything, ent (), &tr);
 
-   if (tr2.flFraction < 1.0f && strcmp (STRING (tr2.pHit->v.classname), "func_door") == 0 && (m_liftState == LiftState::None || m_liftState == LiftState::WaitingFor || m_liftState == LiftState::LookingButtonOutside) && pev->groundentity != tr2.pHit) {
+   if (tr.flFraction < 1.0f && strcmp (tr.pHit->v.classname.chars (), "func_door") == 0 && (m_liftState == LiftState::None || m_liftState == LiftState::WaitingFor || m_liftState == LiftState::LookingButtonOutside) && pev->groundentity != tr.pHit) {
       if (m_liftState == LiftState::None) {
          m_liftState = LiftState::LookingButtonOutside;
          m_liftUsageTime = game.time () + 7.0f;
@@ -879,8 +879,8 @@ bool Bot::updateLiftHandling () {
    game.testLine (m_path->origin, m_path->origin + Vector (0.0f, 0.0f, -50.0f), TraceIgnore::Everything, ent (), &tr);
 
    // if trace result shows us that it is a lift
-   if (!game.isNullEntity (tr.pHit) && !m_pathWalk.empty () && (strcmp (STRING (tr.pHit->v.classname), "func_door") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_plat") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_train") == 0) && !liftClosedDoorExists) {
-      if ((m_liftState == LiftState::None || m_liftState == LiftState::WaitingFor || m_liftState == LiftState::LookingButtonOutside) && tr.pHit->v.velocity.z == 0.0f) {
+   if (!game.isNullEntity (tr.pHit) && !m_pathWalk.empty () && (strcmp (tr.pHit->v.classname.chars (), "func_door") == 0 || strcmp (tr.pHit->v.classname.chars (), "func_plat") == 0 || strcmp (tr.pHit->v.classname.chars (), "func_train") == 0) && !liftClosedDoorExists) {
+      if ((m_liftState == LiftState::None || m_liftState == LiftState::WaitingFor || m_liftState == LiftState::LookingButtonOutside) && cr::fzero (tr.pHit->v.velocity.z)) {
          if (cr::abs (pev->origin.z - tr.vecEndPos.z) < 70.0f) {
             m_liftEntity = tr.pHit;
             m_liftState = LiftState::EnteringIn;
@@ -901,7 +901,7 @@ bool Bot::updateLiftHandling () {
          if (graph.exists (nextNode) && (graph[nextNode].flags & NodeFlag::Lift)) {
             game.testLine (m_path->origin, graph[nextNode].origin, TraceIgnore::Everything, ent (), &tr);
 
-            if (!game.isNullEntity (tr.pHit) && (strcmp (STRING (tr.pHit->v.classname), "func_door") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_plat") == 0 || strcmp (STRING (tr.pHit->v.classname), "func_train") == 0)) {
+            if (!game.isNullEntity (tr.pHit) && (strcmp (tr.pHit->v.classname.chars (), "func_door") == 0 || strcmp (tr.pHit->v.classname.chars (), "func_plat") == 0 || strcmp (tr.pHit->v.classname.chars (), "func_train") == 0)) {
                m_liftEntity = tr.pHit;
             }
          }
@@ -983,7 +983,7 @@ bool Bot::updateLiftHandling () {
 
    // bot is trying to find button inside a lift
    if (m_liftState == LiftState::LookingButtonInside) {
-      auto button = lookupButton (STRING (m_liftEntity->v.targetname));
+      auto button = lookupButton (m_liftEntity->v.targetname.chars ());
 
       // got a valid button entity ?
       if (!game.isNullEntity (button) && pev->groundentity == m_liftEntity && m_buttonPushTime + 1.0f < game.time () && m_liftEntity->v.velocity.z == 0.0f && isOnFloor ()) {
@@ -1032,7 +1032,7 @@ bool Bot::updateLiftHandling () {
          }
       }
       else if (!game.isNullEntity (m_liftEntity)) {
-        auto button = lookupButton (STRING (m_liftEntity->v.targetname));
+        auto button = lookupButton (m_liftEntity->v.targetname.chars ());
 
          // if we got a valid button entity
          if (!game.isNullEntity (button)) {
@@ -1331,63 +1331,40 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
       return hfunctionPathDist (index, startIndex, goalIndex) / 128.0f * 10.0f;
    };
 
+   // holders for heuristic functions
+   Lambda <float (int, int, int)> gcalc, hcalc;
+
    // get correct calculation for heuristic
-   auto calculate = [&] (bool hfun, int a, int b, int c) -> float {
-      if (pathType == FindPath::Optimal) {
-         if (game.mapIs (MapFlags::HostageRescue) && hasHostage ()) {
-            if (hfun) {
-               return hfunctionPathDistWithHostage (a, b, c);
-            }
-            else {
-               return gfunctionKillsDistCTWithHostage (a, b, c);
-            }
-         }
-         else {
-            if (hfun) {
-               return hfunctionPathDist (a, b, c);
-            }
-            else {
-               return gfunctionKillsDist (a, b, c);
-            }
-         }
-      }
-      else if (pathType == FindPath::Safe) {
-         if (game.mapIs (MapFlags::HostageRescue) && hasHostage ()) {
-            if (hfun) {
-               return hfunctionNone (a, b, c);
-            }
-            else {
-               return gfunctionKillsCTWithHostage (a, b, c);
-            }
-         }
-         else {
-            if (hfun) {
-               return hfunctionNone (a, b, c);
-            }
-            else {
-               return gfunctionKills (a, b, c);
-            }
-         }
+   if (pathType == FindPath::Optimal) {
+      if (game.mapIs (MapFlags::HostageRescue) && hasHostage ()) {
+         hcalc = hfunctionPathDistWithHostage;
+         gcalc = gfunctionKillsDistCTWithHostage;
       }
       else {
-         if (game.mapIs (MapFlags::HostageRescue) && hasHostage ()) {
-            if (hfun) {
-               return hfunctionPathDistWithHostage (a, b, c);
-            }
-            else {
-               return gfunctionPathDistWithHostage (a, b, c);
-            }
-         }
-         else {
-            if (hfun) {
-               return hfunctionPathDist (a, b, c);
-            }
-            else {
-               return gfunctionPathDist (a, b, c);
-            }
-         }
+         hcalc = hfunctionPathDist;
+         gcalc = gfunctionKillsDist;
       }
-   };
+   }
+   else if (pathType == FindPath::Safe) {
+      if (game.mapIs (MapFlags::HostageRescue) && hasHostage ()) {
+         hcalc = hfunctionNone;
+         gcalc = gfunctionKillsCTWithHostage;
+      }
+      else {
+         hcalc = hfunctionNone;
+         gcalc = gfunctionKills;
+      }
+   }
+   else {
+      if (game.mapIs (MapFlags::HostageRescue) && hasHostage ()) {
+         hcalc = hfunctionPathDistWithHostage;
+         gcalc = gfunctionPathDistWithHostage;
+      }
+      else {
+         hcalc = hfunctionPathDist;
+         gcalc = gfunctionPathDist;
+      }
+   }
 
    if (!graph.exists (srcIndex)) {
       logger.error ("Pathfinder source path index not valid (%d)", srcIndex);
@@ -1406,8 +1383,8 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
    auto srcRoute = &m_routes[srcIndex];
 
    // put start node into open list
-   srcRoute->g = calculate (false, m_team, srcIndex, kInvalidNodeIndex);
-   srcRoute->f = srcRoute->g + calculate (true, srcIndex, srcIndex, destIndex);
+   srcRoute->g = gcalc (m_team, srcIndex, kInvalidNodeIndex);
+   srcRoute->f = srcRoute->g + hcalc (srcIndex, srcIndex, destIndex);
    srcRoute->state = RouteState::Open;
 
    m_routeQue.clear ();
@@ -1419,7 +1396,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
 
       // safes us from bad graph...
       if (m_routeQue.length () >= kMaxRouteLength - 1) {
-         logger.error ("A* Search for bots \"%s\" has tried to build path with at least %d nodes. Seems to be graph is broken.", STRING (pev->netname), m_routeQue.length ());
+         logger.error ("A* Search for bot \"%s\" has tried to build path with at least %d nodes. Seems to be graph is broken.", pev->netname.chars (), m_routeQue.length ());
 
          // bail out to shortest path
          findShortestPath (srcIndex, destIndex);
@@ -1458,8 +1435,8 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
          auto childRoute = &m_routes[child.index];
 
          // calculate the F value as F = G + H
-         float g = curRoute->g + calculate (false, m_team, child.index, currentIndex);
-         float h = calculate (true, child.index, srcIndex, destIndex);
+         float g = curRoute->g + gcalc (m_team, child.index, currentIndex);
+         float h = hcalc (child.index, srcIndex, destIndex);
          float f = g + h;
 
          if (childRoute->state == RouteState::New || childRoute->f > f) {
@@ -1474,6 +1451,9 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
          }
       }
    }
+   logger.error ("A* Search for bot \"%s\" has failed. Falling back to shortest-path algorithm. Seems to be graph is broken.", pev->netname.chars ());
+
+   // fallback to shortest path
    findShortestPath (srcIndex, destIndex); // A* found no path, try floyd pathfinder instead
 }
 
@@ -2098,6 +2078,22 @@ bool Bot::advanceMovement () {
    m_pathWalk.shift (); // advance in list
    m_currentTravelFlags = 0; // reset travel flags (jumping etc)
    
+   // helper to change bot's goal
+   auto changeNextGoal = [&] {
+      int newGoal = findBestGoal ();
+
+      m_prevGoalIndex = newGoal;
+      m_chosenGoalIndex = newGoal;
+
+      // remember index
+      getTask ()->data = newGoal;
+
+      // do path finding if it's not the current node
+      if (newGoal != m_currentNodeIndex) {
+         findPath (m_currentNodeIndex, newGoal, m_pathType);
+      }
+   };
+
    // we're not at the end of the list?
    if (!m_pathWalk.empty ()) {
       // if in between a route, postprocess the node (find better alternatives)...
@@ -2142,21 +2138,14 @@ bool Bot::advanceMovement () {
 
             // force terrorist bot to plant bomb
             if (m_inBombZone && !m_hasProgressBar && m_hasC4) {
-               int newGoal = findBestGoal ();
-
-               m_prevGoalIndex = newGoal;
-               m_chosenGoalIndex = newGoal;
-
-               // remember index
-               getTask ()->data = newGoal;
-
-               // do path finding if it's not the current node
-               if (newGoal != m_currentNodeIndex) {
-                  findPath (m_currentNodeIndex, newGoal, m_pathType);
-               }
+               changeNextGoal ();
                return false;
             }
          }
+      }
+      else if (m_pathWalk.hasNext () && m_pathWalk.next () == m_pathWalk.last () && isOccupiedNode (m_pathWalk.last ())) {
+         changeNextGoal ();
+         return false;
       }
 
       if (!m_pathWalk.empty ()) {
@@ -2192,7 +2181,7 @@ bool Bot::advanceMovement () {
                      src = path.origin;
                      dst = next.origin;
 
-                     jumpDistance = (src - dst).length ();
+                     jumpDistance = (path.origin - next.origin).length ();
                      willJump = true;
 
                      break;
@@ -2255,7 +2244,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       if (!game.mapIs (MapFlags::HasDoors)) {
          return false;
       }
-      return tr->flFraction < 1.0f && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) != 0;
+      return tr->flFraction < 1.0f && strncmp ("func_door", tr->pHit->v.classname.chars (), 9) != 0;
    };
 
    // trace from the bot's eyes straight forward...
@@ -2263,7 +2252,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
 
    // check if the trace hit something...
    if (tr->flFraction < 1.0f) {
-      if (game.mapIs (MapFlags::HasDoors) && strncmp ("func_door", STRING (tr->pHit->v.classname), 9) == 0) {
+      if (game.mapIs (MapFlags::HasDoors) && strncmp ("func_door", tr->pHit->v.classname.chars (), 9) == 0) {
          return false;
       }
       return true; // bot's head will hit something
@@ -2614,7 +2603,7 @@ bool Bot::isBlockedLeft () {
    game.testLine (pev->origin, forward * direction - right * 48.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
-   if (game.mapIs (MapFlags::HasDoors) && tr.flFraction < 1.0f && strncmp ("func_door", STRING (tr.pHit->v.classname), 9) != 0) {
+   if (game.mapIs (MapFlags::HasDoors) && tr.flFraction < 1.0f && strncmp ("func_door", tr.pHit->v.classname.chars (), 9) != 0) {
       return true; // bot's body will hit something
    }
    return false;
@@ -2634,7 +2623,7 @@ bool Bot::isBlockedRight () {
    game.testLine (pev->origin, pev->origin + forward * direction + right * 48.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
-   if (game.mapIs (MapFlags::HasDoors) && tr.flFraction < 1.0f && (strncmp ("func_door", STRING (tr.pHit->v.classname), 9) != 0)) {
+   if (game.mapIs (MapFlags::HasDoors) && tr.flFraction < 1.0f && (strncmp ("func_door", tr.pHit->v.classname.chars (), 9) != 0)) {
       return true; // bot's body will hit something
    }
    return false;
@@ -2995,7 +2984,7 @@ int Bot::getNearestToPlantedBomb () {
 
    // search the bomb on the map
    game.searchEntities ("classname", "grenade", [&result] (edict_t *ent) {
-      if (strcmp (STRING (ent->v.model) + 9, "c4.mdl") == 0) {
+      if (strcmp (ent->v.model.chars () + 9, "c4.mdl") == 0) {
          result = graph.getNearest (game.getEntityWorldOrigin (ent));
 
          if (graph.exists (result)) {

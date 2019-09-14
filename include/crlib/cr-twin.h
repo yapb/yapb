@@ -15,7 +15,7 @@
 CR_NAMESPACE_BEGIN
 
 // simple pair (twin)
-template <typename A, typename B> class Twin {
+template <typename A, typename B> class Twin final {
 public:
    A first;
    B second;
@@ -54,14 +54,5 @@ public:
       return b.second < a.second;
    }
 };
-
-// creating pairs
-template <typename A, typename B> constexpr Twin <A, B> makeTwin (A &&a, B &&b) {
-   return Twin <A, B> (cr::forward <A> (a), cr::forward <B> (b));
-}
-
-template <typename A, typename B> constexpr Twin <A, B> makeTwin (const A &a, const B &b) {
-   return Twin <A, B> (a, b);
-}
 
 CR_NAMESPACE_END

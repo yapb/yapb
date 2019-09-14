@@ -67,7 +67,7 @@ private:
       }
 
       UniquePtr <LambdaFunctorWrapper> clone () const override {
-         return createUniqueBase <LambdaFunctor <T>, LambdaFunctorWrapper> (m_callable);
+         return makeUnique <LambdaFunctor <T>> (m_callable);
       }
    };
 
@@ -93,7 +93,7 @@ private:
    }
 
 public:
-   Lambda () noexcept : Lambda (nullptr) 
+   explicit Lambda () noexcept : Lambda (nullptr) 
    { }
 
    Lambda (decltype (nullptr)) noexcept : m_functor (nullptr), m_smallObject (false)
@@ -124,7 +124,7 @@ public:
    template <typename F> Lambda (F function) {
       if (cr::fix (sizeof (function) > LamdaSmallBufferLength)) {
          m_smallObject = false;
-         new (m_small) UniquePtr <LambdaFunctorWrapper> (createUniqueBase <LambdaFunctor <F>, LambdaFunctorWrapper> (cr::move (function)));
+         new (m_small) UniquePtr <LambdaFunctorWrapper> (makeUnique <LambdaFunctor <F>> (cr::move (function)));
       }
       else {
          m_smallObject = true;

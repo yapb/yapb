@@ -30,6 +30,7 @@ private:
    SmallArray <Client> m_clients;
    SmallArray <Twin <String, String>> m_tags;
 
+   Dictionary <int32, String, IntNoHash <int32>> m_weaponAlias;
    Dictionary <String, int32> m_noiseCache;
    SimpleHook m_sendToHook;
 
@@ -41,8 +42,8 @@ public:
    // need to send welcome message ?
    void checkWelcome ();
 
-   // gets the weapon alias as hlsting, maybe move to config...
-   int getWeaponAlias (bool needString, const char *weaponAlias, int weaponIndex = -1);
+   // converts weapon id to alias name
+   const String &weaponIdToAlias (const int32 id);
 
    // gets the build number of bot
    int buildNumber ();

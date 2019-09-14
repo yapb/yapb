@@ -41,10 +41,11 @@ private:
    SmallArray <int32> m_prevTable;
 
 public:
-   ULZ () {
+   explicit ULZ () {
       m_hashTable.resize (HashLength);
       m_prevTable.resize (WindowSize);
    }
+
    ~ULZ () = default;
 
 public:

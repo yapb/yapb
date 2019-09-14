@@ -35,6 +35,10 @@ public:
 public:
 
    bool open (const String &file, const String &mode) {
+      if (*this) {
+         close ();
+      }
+
       if ((m_handle = fopen (file.chars (), mode.chars ())) == nullptr) {
          return false;
       }

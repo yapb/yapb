@@ -20,15 +20,25 @@ CR_NAMESPACE_BEGIN
 class SimpleHook : DenyCopying {
 private:
    enum : uint32 {
-      CodeLength = 12
+#if defined (CR_ARCH_X64)
+      CodeLength = 14
+#else 
+      CodeLength = 6
+#endif
    };
+
+#if defined (CR_ARCH_X64)
+   using uint = uint64;
+#else
+   using uint = uint32;
+#endif
 
 private:
    bool m_patched;
 
-   uint32 m_pageSize;
-   uint32 m_origFunc;
-   uint32 m_hookFunc;
+   uint m_pageSize;
+   uint m_origFunc;
+   uint m_hookFunc;
 
    uint8 m_origBytes[CodeLength] {};
    uint8 m_hookBytes[CodeLength] {};
@@ -43,11 +53,13 @@ private:
 #else 
       m_pageSize = sysconf (_SC_PAGESIZE);
 #endif
-   }
+}
 
-   inline void *align (void *address) {
+#if !defined (CR_WINDOWS)
+   void *align (void *address) {
       return reinterpret_cast <void *> ((reinterpret_cast <long> (address) & ~(m_pageSize - 1)));
    }
+#endif
 
    bool unprotect () {
       auto orig = reinterpret_cast <void *> (m_origFunc);
@@ -74,25 +86,36 @@ public:
 
 public:
    bool patch (void *address, void *replacement) {
-      if (plat.isArm) {
+      const uint16 jmp = 0x25ff;
+
+      if (plat.arm) {
          return false;
       }
-      uint8 *ptr = reinterpret_cast <uint8 *> (address);
+      auto ptr = reinterpret_cast <uint8 *> (address);
 
-      while (*reinterpret_cast <uint16 *> (ptr) == 0x25ff) {
-         ptr = **reinterpret_cast <uint8 * **> ((ptr + 2));
+      while (*reinterpret_cast <uint16 *> (ptr) == jmp) {
+         ptr = **reinterpret_cast <uint8 * **> (ptr + 2);
       }
-      m_origFunc = reinterpret_cast <uint32> (ptr);
+      m_origFunc = reinterpret_cast <uint> (address);
 
       if (!m_origFunc) {
          return false;
       }
-      m_hookFunc = reinterpret_cast <uint32> (replacement);
+      m_hookFunc = reinterpret_cast <uint> (replacement);
 
-      m_hookBytes[0] = 0x68;
-      m_hookBytes[5] = 0xc3;
+      if (plat.x64) {
+         const uint16 nop = 0x00000000;
 
-      *reinterpret_cast <uint32 *> (&m_hookBytes[1]) = m_hookFunc;
+         memcpy (&m_hookBytes[0], &jmp, sizeof (uint16));
+         memcpy (&m_hookBytes[2], &nop, sizeof (uint16));
+         memcpy (&m_hookBytes[6], &replacement, sizeof (uint));
+      }
+      else {
+         m_hookBytes[0] = 0x68;
+         m_hookBytes[5] = 0xc3;
+
+         memcpy (&m_hookBytes[1], &m_hookFunc, sizeof (uint));
+      }
 
       if (unprotect ()) {
          memcpy (m_origBytes, reinterpret_cast <void *> (m_origFunc), CodeLength);
@@ -130,6 +153,6 @@ public:
    bool enabled () const {
       return m_patched;
    }
-};
+   };
 
 CR_NAMESPACE_END

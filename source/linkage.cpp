@@ -53,12 +53,14 @@ namespace variadic {
       auto buffer = strings.chars ();
 
       va_start (ap, format);
-      _vsnprintf (buffer, StringBuffer::StaticBufferSize, format, ap);
+      vsnprintf (buffer, StringBuffer::StaticBufferSize, format, ap);
       va_end (ap);
 
       if (ent && (ent->v.flags & (FL_FAKECLIENT | FL_DORMANT))) {
-         if (bots[ent]) {
-            game.botCommand (ent, buffer);
+         auto bot = bots[ent];
+
+         if (bot) {
+            bot->issueCommand (buffer);
          }
 
          if (game.is (GameFlags::Metamod)) {
@@ -441,7 +443,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *table, int *) {
       }
       dllapi.pfnPM_Move (playerMove, server);
    };
-   return TRUE;
+   return true;
 }
 
 CR_LINKAGE_C int GetEntityAPI2_Post (gamefuncs_t *table, int *) {
@@ -498,7 +500,7 @@ CR_LINKAGE_C int GetEntityAPI2_Post (gamefuncs_t *table, int *) {
       RETURN_META (MRES_IGNORED);
    };
 
-   return TRUE;
+   return true;
 }
 
 CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
@@ -787,7 +789,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
 
    table->pfnClientCommand = variadic::clientCommand;
 
-   return TRUE;
+   return true;
 }
 
 CR_EXPORT int GetNewDLLFunctions (newgamefuncs_t *table, int *interfaceVersion) {
@@ -801,11 +803,11 @@ CR_EXPORT int GetNewDLLFunctions (newgamefuncs_t *table, int *interfaceVersion) 
 
    if (!api_GetNewDLLFunctions || !api_GetNewDLLFunctions (table, interfaceVersion)) {
       logger.error ("Could not resolve symbol \"%s\" in the game dll. Continuing...", __FUNCTION__);
-      return FALSE;
+      return false;
    }
 
    dllfuncs.newapi_table = table;
-   return TRUE;
+   return true;
 }
 
 CR_LINKAGE_C int GetEngineFunctions_Post (enginefuncs_t *table, int *) {
@@ -834,7 +836,7 @@ CR_LINKAGE_C int GetEngineFunctions_Post (enginefuncs_t *table, int *) {
       RETURN_META_VALUE (MRES_IGNORED, 0);
    };
 
-   return TRUE;
+   return true;
 }
 
 CR_EXPORT int Meta_Query (char *, plugin_info_t **pPlugInfo, mutil_funcs_t *pMetaUtilFuncs) {
@@ -845,7 +847,7 @@ CR_EXPORT int Meta_Query (char *, plugin_info_t **pPlugInfo, mutil_funcs_t *pMet
    gpMetaUtilFuncs = pMetaUtilFuncs;
    *pPlugInfo = &Plugin_info;
 
-   return TRUE; // tell metamod this plugin looks safe
+   return true; // tell metamod this plugin looks safe
 }
 
 CR_EXPORT int Meta_Attach (PLUG_LOADTIME now, metamod_funcs_t *functionTable, meta_globals_t *pMGlobals, gamedll_funcs_t *pGamedllFuncs) {
@@ -867,7 +869,7 @@ CR_EXPORT int Meta_Attach (PLUG_LOADTIME now, metamod_funcs_t *functionTable, me
 
    if (now > Plugin_info.loadable) {
       logger.error ("%s: plugin NOT attaching (can't load plugin right now)", Plugin_info.name);
-      return FALSE; // returning FALSE prevents metamod from attaching this plugin
+      return false; // returning FALSE prevents metamod from attaching this plugin
    }
 
    // keep track of the pointers to engine function tables metamod gives us
@@ -875,7 +877,7 @@ CR_EXPORT int Meta_Attach (PLUG_LOADTIME now, metamod_funcs_t *functionTable, me
    memcpy (functionTable, &metamodFunctionTable, sizeof (metamod_funcs_t));
    gpGamedllFuncs = pGamedllFuncs;
 
-   return TRUE; // returning true enables metamod to attach this plugin
+   return true; // returning true enables metamod to attach this plugin
 }
 
 CR_EXPORT int Meta_Detach (PLUG_LOADTIME now, PL_UNLOAD_REASON reason) {
@@ -884,7 +886,7 @@ CR_EXPORT int Meta_Detach (PLUG_LOADTIME now, PL_UNLOAD_REASON reason) {
 
    if (now > Plugin_info.unloadable && reason != PNL_CMD_FORCED) {
       logger.error ("%s: plugin NOT detaching (can't unload plugin right now)", Plugin_info.name);
-      return FALSE; // returning FALSE prevents metamod from unloading this plugin
+      return false; // returning FALSE prevents metamod from unloading this plugin
    }
    bots.kickEveryone (true); // kick all bots off this server
 
@@ -892,7 +894,7 @@ CR_EXPORT int Meta_Detach (PLUG_LOADTIME now, PL_UNLOAD_REASON reason) {
    graph.savePractice ();
    util.disableSendTo ();
 
-   return TRUE;
+   return true;
 }
 
 CR_EXPORT void Meta_Init () {

@@ -21,7 +21,7 @@ CR_EXPORT int Server_GetBlendingInterface (int version, struct sv_blending_inter
 
    if (!api_GetBlendingInterface) {
       logger.error ("Could not resolve symbol \"%s\" in the game dll. Continuing...", __FUNCTION__);
-      return FALSE;
+      return false;
    }
    return api_GetBlendingInterface (version, ppinterface, pstudio, rotationmatrix, bonetransform);
 }

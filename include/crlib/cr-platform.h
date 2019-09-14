@@ -70,6 +70,15 @@ CR_NAMESPACE_END
 #  define WIN32_LEAN_AND_MEAN 
 #  include <windows.h>
 #  include <direct.h>
+
+#  if defined (max) 
+#     undef max
+#  endif
+
+#  if defined (min) 
+#     undef min
+#  endif
+
 #else
 #  include <unistd.h>
 #  include <strings.h>
@@ -77,8 +86,10 @@ CR_NAMESPACE_END
 #  include <sys/time.h>
 #endif
 
+#include <stdio.h>
 #include <assert.h>
 #include <locale.h>
+#include <stdarg.h>
 
 #if defined (CR_ANDROID)
 #  include <android/log.h>
@@ -88,42 +99,42 @@ CR_NAMESPACE_BEGIN
 
 // helper struct for platform detection
 struct Platform : public Singleton <Platform> {
-   bool isWindows = false;
-   bool isLinux = false;
-   bool isOSX = false;
-   bool isAndroid = false;
-   bool isAndroidHardFP = false;
-   bool isX64 = false;
-   bool isArm = false;
+   bool win32 = false;
+   bool linux = false;
+   bool osx = false;
+   bool android = false;
+   bool hfp = false;
+   bool x64 = false;
+   bool arm = false;
 
    Platform () {
 #if defined(CR_WINDOWS)
-      isWindows = true;
+      win32 = true;
 #endif
 
 #if defined(CR_ANDROID)
-      isAndroid = true;
+      android = true;
 
 #  if defined (CR_ANDROID_HARD_FP)
-         isAndroidHardFP = true;
+         hfp = true;
 #  endif
 #endif
 
 #if defined(CR_LINUX)
-      isLinux = true;
+      linux = true;
 #endif
 
 #if defined(CR_OSX)
-      isOSX = true;
+      osx = true;
 #endif
 
 #if defined(CR_ARCH_X64) || defined(CR_ARCH_ARM64)
-      isX64 = true;
+      x64 = true;
 #endif
 
 #if defined(CR_ARCH_ARM)
-      isArm = true;
-      isAndroid = true;
+      arm = true;
+      android = true;
 #endif
    }
 

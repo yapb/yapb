@@ -19,7 +19,7 @@ CR_NAMESPACE_BEGIN
 // template for hashing our string
 template <typename K> struct StringHash {
    uint32 operator () (const K &key) const {
-      char *str = const_cast <char *> (key.chars ());
+      auto str = const_cast <char *> (key.chars ());
       uint32 hash = 0;
 
       while (*str++) {
@@ -68,6 +68,7 @@ namespace detail {
 template <class K, class V, class H = StringHash <K>, size_t HashSize = 36> class Dictionary final : public DenyCopying {
 private:
    using DictBucket = detail::DictionaryBucket <K, V>;
+   using DictList = detail::DictionaryList;
 
 public:
    enum : size_t {
@@ -75,7 +76,7 @@ public:
    };
 
 private:
-   Array <detail::DictionaryList *> m_table;
+   Array <DictList *> m_table;
    Array <DictBucket> m_buckets;
    H m_hasher;
 
@@ -98,7 +99,7 @@ private:
          size_t created = m_buckets.length ();
          m_buckets.resize (created + 1);
 
-         auto allocated = alloc.allocate <detail::DictionaryList> ();
+         auto allocated = alloc.allocate <DictList> ();
 
          allocated->index = created;
          allocated->next = m_table[pos];
@@ -163,7 +164,7 @@ public:
       auto pos = hashed % m_table.length ();
       auto *bucket = m_table[pos];
 
-      detail::DictionaryList *next = nullptr;
+      DictList *next = nullptr;
 
       while (bucket != nullptr) {
          if (m_buckets[bucket->index].hash == hashed) {
