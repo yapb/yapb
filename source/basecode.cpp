@@ -1834,7 +1834,6 @@ void Bot::setConditions () {
 
    // check if there are items needing to be used/collected
    if (m_itemCheckTime < game.time () || !game.isNullEntity (m_pickupItem)) {
- 
       updatePickups ();
       m_itemCheckTime = game.time () + 0.5f;
    }
@@ -4735,7 +4734,9 @@ void Bot::logic () {
    }
 
    // do all sensing, calculate/filter all actions here
-   setConditions ();
+   if (canRunHeavyWeight ()) {
+      setConditions ();
+   }
 
    // some stuff required by by chatter engine
    if (yb_radio_mode.int_ () == 2) {
@@ -5502,6 +5503,17 @@ uint8 Bot::computeMsec () {
    // estimate msec to use for this command based on time passed from the previous command
 
    return static_cast <uint8> ((game.time () - m_lastCommandTime) * 1000.0f);
+}
+
+bool Bot::canRunHeavyWeight () {
+   constexpr auto interval = 1.0f / 10.0f;
+
+   if (m_heavyTimestamp + interval < game.time ()) {
+      m_heavyTimestamp = game.time ();
+
+      return true;
+   }
+   return false;
 }
 
 void Bot::runMovement () {

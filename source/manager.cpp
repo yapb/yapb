@@ -854,6 +854,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
 
    m_lastCommandTime = game.time () - 0.1f;
    m_frameInterval = game.time ();
+   m_heavyTimestamp = game.time ();
    m_slowFrameTimestamp = 0.0f;
 
    // stuff from jk_botti
