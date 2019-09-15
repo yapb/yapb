@@ -96,6 +96,7 @@ bool Bot::checkBodyParts (edict_t *target) {
 
       return false;
    }
+
    TraceResult result;
    auto eyes = getEyesPos ();
 

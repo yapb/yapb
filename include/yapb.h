@@ -582,6 +582,7 @@ private:
 
    float m_headedTime;
    float m_prevTime; // time previously checked movement speed
+   float m_heavyTimestamp; // is it time to execute heavy-weight functions
    float m_prevSpeed; // speed some frames before
    float m_timeDoorOpen; // time to next door open check
    float m_lastChatTime; // time bot last chatted
@@ -758,6 +759,7 @@ private:
    bool isReachableNode (int index);
    bool updateLiftHandling ();
    bool updateLiftStates ();
+   bool canRunHeavyWeight ();
 
    void instantChatter (int type);
    void update ();
