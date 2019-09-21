@@ -84,6 +84,7 @@ public:
       m_socket = static_cast <int> (socket (result->ai_family, result->ai_socktype, 0));
 
       if (m_socket < 0) {
+         freeaddrinfo (result);
          return false;
       }
 
