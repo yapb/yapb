@@ -893,6 +893,9 @@ CR_EXPORT int Meta_Detach (PLUG_LOADTIME now, PL_UNLOAD_REASON reason) {
    graph.savePractice ();
    util.disableSendTo ();
 
+   // make sure all stuff cleared
+   bots.destroy ();
+
    return true;
 }
 

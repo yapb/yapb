@@ -19,7 +19,6 @@ ifeq "$(DEBUG)" "true"
 else
 	COMPILER_FLAGS += -pipe -O3 -march=core2 -msse2 -mfpmath=sse -fno-builtin -fno-threadsafe-statics -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden
 	BINARY_DIR = release
-	LINKER_FLAGS += -static-libgcc
 endif
 
 INCLUDE = -I../include
@@ -35,15 +34,13 @@ ifeq "$(OSX)" "true"
 	LINKER_FLAGS += -dynamiclib -lstdc++ -mmacosx-version-min=10.9 -arch i386
 else
 	LIBRARY_EXT = so
-	LINKER_FLAGS += -shared
+	LINKER_FLAGS += -shared -static-libgcc
 endif
 
 BINARY_OUTPUT = $(PROJECT).$(LIBRARY_EXT)
 
 ifeq ($(findstring clang,$(COMPILER)),clang)
-	ifeq "$(OSX)" "false"
-		LINKER_FLAGS += -lgcc_eh
-	else
+	ifneq "$(OSX)" "false"
 		ifeq "$(DEBUG)" "true"
 			LINKER_FLAGS += -lstdc++
 		else
