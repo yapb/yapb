@@ -1,10 +1,9 @@
 //
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #pragma once
@@ -350,7 +349,7 @@ public:
 
    // send server command
    template <typename ...Args> void serverCommand (const char *fmt, Args ...args) {
-      engfuncs.pfnServerCommand (strncat (strings.format (fmt, cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
+      engfuncs.pfnServerCommand (strings.concat (strings.format (fmt, cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
    }
 
    // send a bot command
@@ -360,7 +359,7 @@ public:
 
    // prints data to servers console
    template <typename ...Args> void print (const char *fmt, Args ...args) {
-      engfuncs.pfnServerPrint (strncat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
+      engfuncs.pfnServerPrint (strings.concat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
    }
 
    // prints center message to specified player
@@ -369,7 +368,7 @@ public:
          print (fmt, cr::forward <Args> (args)...);
          return;
       }
-      sendClientMessage (true, ent, strncat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
+      sendClientMessage (true, ent, strings.concat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
    }
 
    // prints message to client console
@@ -378,7 +377,7 @@ public:
          print (fmt, cr::forward <Args> (args)...);
          return;
       }
-      sendClientMessage (false, ent, strncat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
+      sendClientMessage (false, ent, strings.concat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
    }
 };
 
@@ -535,6 +534,10 @@ public:
       m_worldModel = model;
    }
 
+   model_t *getWorldModel () const {
+      return m_worldModel;
+   }
+
    void enableAnimation (bool enable) {
       m_doAnimation = enable;
    }
@@ -607,11 +610,11 @@ public:
 class DynamicEntityLink : public Singleton <DynamicEntityLink> {
 private:
 #if defined (CR_WINDOWS)
-#  define CastType HMODULE
-#  define LookupSymbol GetProcAddress
+#  define MODULE_HANDLE HMODULE
+#  define MODULE_SYMBOL GetProcAddress
 #else
-#  define CastType void *
-#  define LookupSymbol dlsym
+#  define MODULE_HANDLE void *
+#  define MODULE_SYMBOL dlsym
 #endif
 
 private:
@@ -650,7 +653,7 @@ public:
       if (plat.arm) {
          return;
       }
-      m_dlsym.patch (reinterpret_cast <void *> (&LookupSymbol), reinterpret_cast <void *> (&DynamicEntityLink::replacement));
+      m_dlsym.patch (reinterpret_cast <void *> (&MODULE_SYMBOL), reinterpret_cast <void *> (&DynamicEntityLink::replacement));
       m_self.locate (&engfuncs);
    }
 

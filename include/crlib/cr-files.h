@@ -1,10 +1,9 @@
 //
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #pragma once
@@ -32,14 +31,10 @@ public:
    ~File () {
       close ();
    }
+
 public:
-
    bool open (const String &file, const String &mode) {
-      if (*this) {
-         close ();
-      }
-
-      if ((m_handle = fopen (file.chars (), mode.chars ())) == nullptr) {
+      if (!openFile (file, mode)) {
          return false;
       }
       fseek (m_handle, 0L, SEEK_END);
@@ -156,6 +151,20 @@ public:
          }
       }
       plat.createDirectory (path);
+   }
+
+private:
+   bool openFile (const String &filename, const String &mode) {
+      if (*this) {
+         close ();
+      }
+
+#if defined (CR_WINDOWS)
+      fopen_s (&m_handle, filename.chars (), mode.chars ());
+#else
+      m_handle = fopen (filename.chars (), mode.chars ());
+#endif
+      return m_handle != nullptr;
    }
 };
 

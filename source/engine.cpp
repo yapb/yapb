@@ -1,10 +1,9 @@
 //
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #include <yapb.h>
@@ -22,8 +21,8 @@ Game::Game () {
    m_precached = false;
    m_isBotCommand = false;
 
-   memset (m_drawModels, 0, sizeof (m_drawModels));
-   memset (m_spawnCount, 0, sizeof (m_spawnCount));
+   plat.bzero (m_drawModels, sizeof (m_drawModels));
+   plat.bzero (m_spawnCount, sizeof (m_spawnCount));
 
    m_gameFlags = 0;
    m_mapFlags = 0;
@@ -88,7 +87,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
          util.installSendTo ();
       }
       else if (strcmp (classname, "player_weaponstrip") == 0) {
-         if (is (GameFlags::Legacy) && ent->v.target.chars ()[0] == '\0') {
+         if (is (GameFlags::Legacy) && strings.isEmpty (ent->v.target.chars ())) {
             ent->v.target = ent->v.targetname = engfuncs.pfnAllocString ("fake");
          }
          else {
@@ -256,7 +255,7 @@ float Game::getWaveLen (const char *fileName) {
       unsigned long dataChunkLength;
    } waveHdr;
 
-   memset (&waveHdr, 0, sizeof (waveHdr));
+   plat.bzero (&waveHdr, sizeof (waveHdr));
 
    if (fp.read (&waveHdr, sizeof (WavHeader)) == 0) {
       logger.error ("Wave File %s - has wrong or unsupported format", filePath);
@@ -465,6 +464,20 @@ bool Game::isSoftwareRenderer () {
    if (isDedicated ()) {
       return true;
    }
+   auto model = illum.getWorldModel ();
+
+   if (model->nodes[0].parent != nullptr) {
+      return false;
+   }
+   const auto child = model->nodes[0].children[0];
+
+   if (child < model->nodes || child > model->nodes + model->numnodes) {
+      return false;
+   }
+
+   if (child->parent != &model->nodes[0]) {
+      return false;
+   }
 
    // and on only windows version you can use software-render game. Linux, OSX always defaults to OpenGL
    if (plat.win32) {
@@ -476,7 +489,7 @@ bool Game::isSoftwareRenderer () {
 void Game::addNewCvar (const char *name, const char *value, const char *info, bool bounded, float min, float max, Var varType, bool missingAction, const char *regval, ConVar *self) {
    // this function adds globally defined variable to registration stack
 
-   VarPair pair;
+   VarPair pair {};
 
    pair.reg.name = const_cast <char *> (name);
    pair.reg.string = const_cast <char *> (value);
@@ -747,7 +760,7 @@ bool Game::postload () {
       if (is (GameFlags::Metamod)) {
          return true; // we should stop the attempt for loading the real gamedll, since metamod handle this for us
       }
-      auto gamedll = strings.format ("%s/%s", getenv ("XASH3D_GAMELIBDIR"), plat.hfp ? "libserver_hardfp.so" : "libserver.so");
+      auto gamedll = strings.format ("%s/%s", plat.env ("XASH3D_GAMELIBDIR"), plat.hfp ? "libserver_hardfp.so" : "libserver.so");
 
       if (!m_gameLib.load (gamedll)) {
          logger.fatal ("Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gamedll, getModName ());
@@ -938,7 +951,7 @@ void LightMeasure::updateLight (int style, char *value) {
       return;
    }
    const auto copyLimit = sizeof (m_lightstyle[style].map) - sizeof ('\0');
-   strncpy (m_lightstyle[style].map, value, copyLimit);
+   strings.copy (m_lightstyle[style].map, value, copyLimit);
 
    m_lightstyle[style].map[copyLimit] = '\0';
    m_lightstyle[style].length = strlen (m_lightstyle[style].map);
@@ -1072,7 +1085,7 @@ DynamicEntityLink::Handle DynamicEntityLink::search (Handle module, Name functio
       Handle ret = nullptr;
 
       if (m_dlsym.disable ()) {
-         ret = LookupSymbol (reinterpret_cast <CastType> (handle), function);
+         ret = MODULE_SYMBOL (reinterpret_cast <MODULE_HANDLE> (handle), function);
          m_dlsym.enable ();
       }
       return ret;

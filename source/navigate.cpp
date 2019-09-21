@@ -1,10 +1,9 @@
-// 
-// Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
+//
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #include <yapb.h>
@@ -19,7 +18,7 @@ int Bot::findBestGoal () {
       int result = kInvalidNodeIndex;
 
       game.searchEntities ("classname", "weaponbox", [&] (edict_t *ent) {
-         if (strcmp (ent->v.model.chars () + 9, "backpack.mdl") == 0) {
+         if (strcmp (ent->v.model.chars (9), "backpack.mdl") == 0) {
             result = graph.getNearest (game.getEntityWorldOrigin (ent));
 
             if (graph.exists (result)) {
@@ -361,7 +360,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
    m_isStuck = false;
 
    // if avoiding someone do not consider stuck
-   TraceResult tr;
+   TraceResult tr {};
    doPlayerAvoidance (dirNormal);
 
    // Standing still, no need to check?
@@ -702,7 +701,7 @@ bool Bot::updateNavigation () {
          return false;
       }
    }
-   TraceResult tr;
+   TraceResult tr {};
 
    // check if we are going through a door...
    if (game.mapIs (MapFlags::HasDoors)) {
@@ -849,7 +848,7 @@ bool Bot::updateLiftHandling () {
    // update node time set
    m_navTimeset = game.time ();
 
-   TraceResult tr;
+   TraceResult tr {};
 
    // wait for something about for lift
    auto wait = [&] () {
@@ -867,7 +866,7 @@ bool Bot::updateLiftHandling () {
    // trace line to door
    game.testLine (pev->origin, m_path->origin, TraceIgnore::Everything, ent (), &tr);
 
-   if (tr.flFraction < 1.0f && strcmp (tr.pHit->v.classname.chars (), "func_door") == 0 && (m_liftState == LiftState::None || m_liftState == LiftState::WaitingFor || m_liftState == LiftState::LookingButtonOutside) && pev->groundentity != tr.pHit) {
+   if (tr.flFraction < 1.0f && tr.pHit && strcmp (tr.pHit->v.classname.chars (), "func_door") == 0 && (m_liftState == LiftState::None || m_liftState == LiftState::WaitingFor || m_liftState == LiftState::LookingButtonOutside) && pev->groundentity != tr.pHit) {
       if (m_liftState == LiftState::None) {
          m_liftState = LiftState::LookingButtonOutside;
          m_liftUsageTime = game.time () + 7.0f;
@@ -1817,7 +1816,7 @@ int Bot::findDefendNode (const Vector &origin) {
    if (m_currentNodeIndex == kInvalidNodeIndex) {
       m_currentNodeIndex = changePointIndex (findNearestNode ());
    }
-   TraceResult tr;
+   TraceResult tr {};
 
    int nodeIndex[kMaxNodeLinks];
    int minDistance[kMaxNodeLinks];
@@ -2016,7 +2015,7 @@ int Bot::findCoverNode (float maxDistance) {
       }
    } while (sorting);
 
-   TraceResult tr;
+   TraceResult tr {};
 
    // take the first one which isn't spotted by the enemy
    for (const auto &index : nodeIndex) {
@@ -2073,7 +2072,7 @@ bool Bot::advanceMovement () {
    if (m_pathWalk.empty ()) {
       return false;
    }
-   TraceResult tr;
+   TraceResult tr {};
    
    m_pathWalk.shift (); // advance in list
    m_currentTravelFlags = 0; // reset travel flags (jumping etc)
@@ -2392,7 +2391,7 @@ bool Bot::canStrafeRight (TraceResult *tr) {
 bool Bot::canJumpUp (const Vector &normal) {
    // this function check if bot can jump over some obstacle
 
-   TraceResult tr;
+   TraceResult tr {};
 
    // can't jump if not on ground and not on ladder/swimming
    if (!isOnFloor () && (isOnLadder () || !isInWater ())) {
@@ -2472,7 +2471,7 @@ bool Bot::doneCanJumpUp (const Vector &normal, const Vector &right) {
    Vector src = pev->origin + Vector (0.0f, 0.0f, -36.0f + 63.0f);
    Vector dest = src + normal * 32.0f;
 
-   TraceResult tr;
+   TraceResult tr {};
 
    // trace a line forward at maximum jump height...
    game.testLine (src, dest, TraceIgnore::Monsters, ent (), &tr);
@@ -2541,7 +2540,7 @@ bool Bot::doneCanJumpUp (const Vector &normal, const Vector &right) {
 bool Bot::canDuckUnder (const Vector &normal) {
    // this function check if bot can duck under obstacle
 
-   TraceResult tr;
+   TraceResult tr {};
    Vector baseHeight;
 
    // use center of the body first...
@@ -2590,7 +2589,7 @@ bool Bot::canDuckUnder (const Vector &normal) {
 }
 
 bool Bot::isBlockedLeft () {
-   TraceResult tr;
+   TraceResult tr {};
    float direction = 48.0f;
 
    if (m_moveSpeed < 0.0f) {
@@ -2603,14 +2602,14 @@ bool Bot::isBlockedLeft () {
    game.testLine (pev->origin, forward * direction - right * 48.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
-   if (game.mapIs (MapFlags::HasDoors) && tr.flFraction < 1.0f && strncmp ("func_door", tr.pHit->v.classname.chars (), 9) != 0) {
+   if (game.mapIs (MapFlags::HasDoors) && tr.flFraction < 1.0f && tr.pHit && strncmp ("func_door", tr.pHit->v.classname.chars (), 9) != 0) {
       return true; // bot's body will hit something
    }
    return false;
 }
 
 bool Bot::isBlockedRight () {
-   TraceResult tr;
+   TraceResult tr {};
    float direction = 48.0f;
 
    if (m_moveSpeed < 0.0f) {
@@ -2623,14 +2622,14 @@ bool Bot::isBlockedRight () {
    game.testLine (pev->origin, pev->origin + forward * direction + right * 48.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
-   if (game.mapIs (MapFlags::HasDoors) && tr.flFraction < 1.0f && (strncmp ("func_door", tr.pHit->v.classname.chars (), 9) != 0)) {
+   if (game.mapIs (MapFlags::HasDoors) && tr.flFraction < 1.0f && tr.pHit && strncmp ("func_door", tr.pHit->v.classname.chars (), 9) != 0) {
       return true; // bot's body will hit something
    }
    return false;
 }
 
 bool Bot::checkWallOnLeft () {
-   TraceResult tr;
+   TraceResult tr {};
    game.testLine (pev->origin, pev->origin - pev->angles.right () * 40.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
@@ -2641,7 +2640,7 @@ bool Bot::checkWallOnLeft () {
 }
 
 bool Bot::checkWallOnRight () {
-   TraceResult tr;
+   TraceResult tr {};
 
    // do a trace to the right...
    game.testLine (pev->origin, pev->origin + pev->angles.right () * 40.0f, TraceIgnore::Monsters, ent (), &tr);
@@ -2656,7 +2655,7 @@ bool Bot::checkWallOnRight () {
 bool Bot::isDeadlyMove (const Vector &to) {
    // this function eturns if given location would hurt Bot with falling damage
 
-   TraceResult tr;
+   TraceResult tr {};
    const auto &direction = (to - pev->origin).normalize (); // 1 unit long
 
    Vector check = to, down = to;
@@ -2984,7 +2983,7 @@ int Bot::getNearestToPlantedBomb () {
 
    // search the bomb on the map
    game.searchEntities ("classname", "grenade", [&result] (edict_t *ent) {
-      if (strcmp (ent->v.model.chars () + 9, "c4.mdl") == 0) {
+      if (strcmp (ent->v.model.chars (9), "c4.mdl") == 0) {
          result = graph.getNearest (game.getEntityWorldOrigin (ent));
 
          if (graph.exists (result)) {
@@ -3077,7 +3076,7 @@ bool Bot::isReachableNode (int index) {
    }
    float ladderDist = (dst - src).length2d ();
 
-   TraceResult tr;
+   TraceResult tr {};
    game.testLine (src, dst, TraceIgnore::Monsters, ent (), &tr);
 
    // if node is visible from current position (even behind head)...

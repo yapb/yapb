@@ -1,9 +1,9 @@
-// Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
+//
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #include <yapb.h>
@@ -115,7 +115,7 @@ bool BotUtils::isVisible (const Vector &origin, edict_t *ent) {
    if (game.isNullEntity (ent)) {
       return false;
    }
-   TraceResult tr;
+   TraceResult tr {};
    game.testLine (ent->v.origin + ent->v.view_ofs, origin, TraceIgnore::Everything, ent, &tr);
 
    if (tr.flFraction != 1.0f) {

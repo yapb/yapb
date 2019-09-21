@@ -1,10 +1,9 @@
 //
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #pragma once
@@ -33,11 +32,7 @@ public:
 
       // calloc on linux with debug enabled doesn't always zero out memory
 #if defined (CR_DEBUG) && !defined (CR_WINDOWS)
-      auto *zeroing = reinterpret_cast <uint8 *> (ptr);
-
-      for (size_t i = 0; i < length; ++i) {
-         zeroing[i] = 0;
-      }
+      plat.bzero (ptr);
 #endif
       return ptr;
    }

@@ -1,10 +1,9 @@
 //
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #include <yapb.h>
@@ -16,18 +15,6 @@ void MessageDispatcher::netMsgTextMsg () {
    if (m_args.length () < min) {
       return;
    }
-
-   // bots chatter notification
-   const auto dispatchChatterMessage = [&] () -> void {
-      if (yb_radio_mode.int_ () == 2) {
-         auto notify = bots.findAliveBot ();
-
-         if (notify && notify->m_notKilled) {
-            notify->handleChatter (m_args[msg].chars_);
-
-         }
-      }
-   };
 
    // lookup cached message
    auto cached = m_textMsgCache[m_args[msg].chars_];
@@ -50,8 +37,6 @@ void MessageDispatcher::netMsgTextMsg () {
    }
    else if (cached & TextMsgCache::CounterWin) {
       bots.setLastWinner (Team::CT); // update last winner for economics
-      dispatchChatterMessage ();
-
       resetBombPosition ();
    }
    else if (cached & TextMsgCache::RestartRound) {
@@ -70,8 +55,6 @@ void MessageDispatcher::netMsgTextMsg () {
    }
    else if (cached & TextMsgCache::TerroristWin) {
       bots.setLastWinner (Team::Terrorist); // update last winner for economics
-      dispatchChatterMessage ();
-
       resetBombPosition ();
    }
    else if ((cached & TextMsgCache::BombPlanted) && !bots.isBombPlanted ()) {

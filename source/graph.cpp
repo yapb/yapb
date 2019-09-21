@@ -1,10 +1,9 @@
 //
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #include <yapb.h>
@@ -637,7 +636,7 @@ void BotGraph::add (int type, const Vector &pos) {
       if (m_paths.length () >= kMaxNodes) {
          return;
       }
-      m_paths.push (Path ());
+      m_paths.push (Path {});
 
       index = m_paths.length () - 1;
       path = &m_paths[index];
@@ -737,7 +736,7 @@ void BotGraph::add (int type, const Vector &pos) {
       float minDistance = kInfiniteDistance;
       int destIndex = kInvalidNodeIndex;
 
-      TraceResult tr;
+      TraceResult tr {};
 
       // calculate all the paths to this new node
       for (const auto &calc : m_paths) {
@@ -929,7 +928,7 @@ int BotGraph::getFacingIndex () {
       }
      
       // check if visible, (we're not using visiblity tables here, as they not valid at time of waypoint editing)
-      TraceResult tr;
+      TraceResult tr {};
       game.testLine (editorEyes, path.origin, TraceIgnore::Everything, m_editor, &tr);
 
       if (!cr::fequal (tr.flFraction, 1.0f)) {
@@ -1076,7 +1075,7 @@ void BotGraph::calculatePathRadius (int index) {
          return;
       }
    }
-   TraceResult tr;
+   TraceResult tr {};
    bool wayBlocked = false;
 
    for (float scanDistance = 32.0f; scanDistance < 128.0f; scanDistance += 16.0f) {
@@ -1098,7 +1097,7 @@ void BotGraph::calculatePathRadius (int index) {
          if (tr.flFraction < 1.0f) {
             game.testLine (radiusStart, radiusEnd, TraceIgnore::Monsters, nullptr, &tr);
 
-            if (strncmp ("func_door", tr.pHit->v.classname.chars (), 9) == 0) {
+            if (tr.pHit && strncmp ("func_door", tr.pHit->v.classname.chars (), 9) == 0) {
                path.radius = 0.0f;
                wayBlocked = true;
 
@@ -1336,7 +1335,7 @@ bool BotGraph::convertOldFormat () {
    MemFile fp (getOldFormatGraphName (true));
  
    PODGraphHeader header;
-   memset (&header, 0, sizeof (header));
+   plat.bzero (&header, sizeof (header));
 
    // save for faster access
    const char *map = game.getMapName ();
@@ -1350,7 +1349,7 @@ bool BotGraph::convertOldFormat () {
          if (header.fileVersion != StorageVersion::Podbot) {
             return false;
          }
-         else if (!plat.caseStrMatch (header.mapName, map)) {
+         else if (!strings.matches (header.mapName, map)) {
             return false;
          }
          else {
@@ -1693,9 +1692,9 @@ bool BotGraph::saveGraphData () {
 void BotGraph::saveOldFormat () {
    PODGraphHeader header {};
 
-   strcpy (header.header, kPodbotMagic);
-   strncpy (header.author, m_editor->v.netname.chars (), cr::bufsize (header.author));
-   strncpy (header.mapName, game.getMapName (), cr::bufsize (header.mapName));
+   strings.copy (header.header, kPodbotMagic, sizeof (kPodbotMagic));
+   strings.copy (header.author, m_editor->v.netname.chars (), cr::bufsize (header.author));
+   strings.copy (header.mapName, game.getMapName (), cr::bufsize (header.mapName));
 
    header.mapName[31] = 0;
    header.fileVersion = StorageVersion::Podbot;
@@ -1739,7 +1738,7 @@ float BotGraph::calculateTravelTime (float maxSpeed, const Vector &src, const Ve
 }
 
 bool BotGraph::isNodeReacheable (const Vector &src, const Vector &destination) {
-   TraceResult tr;
+   TraceResult tr {};
 
    float distance = (destination - src).length ();
 
@@ -1751,7 +1750,7 @@ bool BotGraph::isNodeReacheable (const Vector &src, const Vector &destination) {
    // check if we go through a func_illusionary, in which case return false
    game.testHull (src, destination, TraceIgnore::Monsters, head_hull, m_editor, &tr);
 
-   if (!game.isNullEntity (tr.pHit) && strcmp ("func_illusionary", tr.pHit->v.classname.chars ()) == 0) {
+   if (tr.pHit && strcmp ("func_illusionary", tr.pHit->v.classname.chars ()) == 0) {
       return false; // don't add pathnodes through func_illusionaries
    }
 
@@ -1759,7 +1758,7 @@ bool BotGraph::isNodeReacheable (const Vector &src, const Vector &destination) {
    game.testLine (src, destination, TraceIgnore::Monsters, m_editor, &tr);
 
    // if node is visible from current position (even behind head)...
-   if (tr.flFraction >= 1.0f || strncmp ("func_door", tr.pHit->v.classname.chars (), 9) == 0) {
+   if (tr.flFraction >= 1.0f || (tr.pHit && strncmp ("func_door", tr.pHit->v.classname.chars (), 9) == 0)) {
       // if it's a door check if nothing blocks behind
       if (strncmp ("func_door", tr.pHit->v.classname.chars (), 9) == 0) {
          game.testLine (tr.vecEndPos, destination, TraceIgnore::Monsters, tr.pHit, &tr);
@@ -1827,7 +1826,7 @@ void BotGraph::rebuildVisibility () {
       return;
    }
 
-   TraceResult tr;
+   TraceResult tr {};
    uint8 res, shift;
 
    for (const auto &vis : m_paths) {
@@ -2525,7 +2524,7 @@ void BotGraph::addBasic () {
       Vector ladderRight = ent->v.absmax;
       ladderLeft.z = ladderRight.z;
 
-      TraceResult tr;
+      TraceResult tr {};
       Vector up, down, front, back;
 
       const Vector &diff = ((ladderLeft - ladderRight) ^ Vector (0.0f, 0.0f, 0.0f)).normalize () * 15.0f;
@@ -2650,7 +2649,7 @@ void BotGraph::setBombOrigin (bool reset, const Vector &pos) {
    }
    
    game.searchEntities ("classname", "grenade", [&] (edict_t *ent) {
-      if (strcmp (ent->v.model.chars () + 9, "c4.mdl") == 0) {
+      if (strcmp (ent->v.model.chars (9), "c4.mdl") == 0) {
          m_bombOrigin = game.getEntityWorldOrigin (ent);
          return EntitySearchResult::Break;
       }
@@ -2674,7 +2673,7 @@ void BotGraph::setSearchIndex (int index) {
 }
 
 BotGraph::BotGraph () {
-   memset (m_highestDamage, 0, sizeof (m_highestDamage));
+   plat.bzero (m_highestDamage, sizeof (m_highestDamage));
 
    m_endJumpPoint = false;
    m_needsVisRebuild = false;

@@ -38,7 +38,7 @@ public:
    ~string_t () = default;
 
 public:
-   const char *chars () const;
+   const char *chars (size_t shift = 0) const;
 
 public:
    operator int () const {
@@ -104,8 +104,8 @@ static inline int MAKE_STRING (const char *val) {
 #define MAKE_STRING(str)	((uint64)(str) - (uint64)(STRING(0)))
 #endif
 
-inline const char *string_t::chars () const {
-   return STRING (offset);
+inline const char *string_t::chars (size_t shift) const {
+   return STRING (offset) + shift;
 }
 
 #endif // EXTDLL_H

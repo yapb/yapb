@@ -1,10 +1,9 @@
 //
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #pragma once
@@ -113,6 +112,7 @@ public:
    void forEach (ForEachBot handler);
    void erase (Bot *bot);
    void handleDeath (edict_t *killer, edict_t *victim);
+   void setLastWinner (int winner);
 
    bool isTeamStacked (int team);
    bool kickRandom (bool decQuota = true, Team fromTeam = Team::Unassigned);
@@ -140,10 +140,6 @@ public:
 
    int getLastWinner () const {
       return m_lastWinner;
-   }
-
-   void setLastWinner (int winner) {
-      m_lastWinner = winner;
    }
 
    // get the list of filters

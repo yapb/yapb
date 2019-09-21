@@ -1,10 +1,9 @@
 //
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #pragma once
@@ -37,10 +36,19 @@ private:
          return;
       }
       time_t ticks = time (&ticks);
-      auto tm = localtime (&ticks);
+      tm *timeinfo = nullptr;
+
+#if defined (CR_WINDOWS)
+      tm get;
+
+      localtime_s (&get, &ticks);
+      timeinfo = &get;
+#else
+      timeinfo = localtime (&ticks);
+#endif
 
       auto timebuf = strings.chars ();
-      strftime (timebuf, StringBuffer::StaticBufferSize, "%Y-%m-%d %H:%M:%S", tm);
+      strftime (timebuf, StringBuffer::StaticBufferSize, "%Y-%m-%d %H:%M:%S", timeinfo);
 
       m_handle.puts ("%s (%s): %s\n", timebuf, level, msg);
    }

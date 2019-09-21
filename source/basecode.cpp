@@ -1,10 +1,9 @@
 //
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #include <yapb.h>
@@ -93,20 +92,20 @@ bool Bot::isInViewCone (const Vector &origin) {
 }
 
 bool Bot::seesItem (const Vector &destination, const char *itemName) {
-   TraceResult tr;
+   TraceResult tr {};
 
    // trace a line from bot's eyes to destination..
    game.testLine (getEyesPos (), destination, TraceIgnore::Monsters, ent (), &tr);
 
    // check if line of sight to object is not blocked (i.e. visible)
-   if (tr.flFraction != 1.0f) {
+   if (tr.flFraction != 1.0f && tr.pHit) {
       return strcmp (tr.pHit->v.classname.chars (), itemName) == 0;
    }
    return true;
 }
 
 bool Bot::seesEntity (const Vector &dest, bool fromBody) {
-   TraceResult tr;
+   TraceResult tr {};
 
    // trace a line from bot's eyes to destination...
    game.testLine (fromBody ? pev->origin : getEyesPos (), dest, TraceIgnore::Everything, ent (), &tr);
@@ -330,7 +329,7 @@ void Bot::avoidGrenades () {
       if (!seesEntity (pent->v.origin) && isInFOV (pent->v.origin - getEyesPos ()) > pev->fov * 0.5f) {
          continue;
       }
-      auto model = pent->v.model.chars () + 9;
+      auto model = pent->v.model.chars (9);
 
       if (m_preventFlashing < game.time () && m_personality == Personality::Rusher && m_difficulty == 4 && strcmp (model, "flashbang.mdl") == 0) {
          // don't look at flash bang
@@ -428,7 +427,7 @@ void Bot::checkBreakablesAround () {
 edict_t *Bot::lookupBreakable () {
    // this function checks if bot is blocked by a shoot able breakable in his moving direction
 
-   TraceResult tr;
+   TraceResult tr {};
    game.testLine (pev->origin, pev->origin + (m_destOrigin - pev->origin).normalize () * 72.0f, TraceIgnore::None, ent (), &tr);
 
    if (tr.flFraction != 1.0f) {
@@ -539,7 +538,7 @@ void Bot::updatePickups () {
       }
 
       auto classname = ent->v.classname.chars ();
-      auto model = ent->v.model.chars () + 9;
+      auto model = ent->v.model.chars (9);
 
       // check if line of sight to object is not blocked (i.e. visible)
       if (seesItem (origin, classname)) {
@@ -830,7 +829,7 @@ void Bot::getCampDirection (Vector *dest) {
    // this function check if view on last enemy position is blocked - replace with better vector then
    // mostly used for getting a good camping direction vector if not camping on a camp waypoint
 
-   TraceResult tr;
+   TraceResult tr {};
    const Vector &src = getEyesPos ();
 
    game.testLine (src, *dest, TraceIgnore::Monsters, ent (), &tr);
@@ -1484,7 +1483,7 @@ void Bot::buyStuff () {
       break;
 
    case BuyState::SecondaryWeapon: // if bot has still some money, buy a better secondary weapon
-      if (isPistolMode || (isFirstRound && hasDefaultPistols) || (hasDefaultPistols && bots.getLastWinner () == m_team && m_moneyAmount > rg.int_ (3500, 4500)) || (hasPrimaryWeapon () && hasDefaultPistols && m_moneyAmount > rg.int_ (7500, 9000))) {
+      if (isPistolMode || (isFirstRound && hasDefaultPistols) || (hasDefaultPistols && bots.getLastWinner () == m_team && m_moneyAmount > rg.int_ (2000, 3000)) || (hasPrimaryWeapon () && hasDefaultPistols && m_moneyAmount > rg.int_ (7500, 9000))) {
          do {
             pref--;
 
@@ -2031,6 +2030,8 @@ void Bot::clearTasks () {
 }
 
 void Bot::startTask (Task id, float desire, int data, float time, bool resume) {
+   static const auto &filter = bots.getFilters ();
+
    for (auto &task : m_tasks) {
       if (task.id == id) {
          if (!cr::fequal (task.desire, desire)) {
@@ -2039,7 +2040,7 @@ void Bot::startTask (Task id, float desire, int data, float time, bool resume) {
          return;
       }
    }
-   m_tasks.emplace (id, desire, data, time, resume);
+   m_tasks.emplace (filter[id].func, id, desire, data, time, resume);
 
    clearSearchNodes ();
    ignoreCollision ();
@@ -2056,21 +2057,27 @@ void Bot::startTask (Task id, float desire, int data, float time, bool resume) {
    }
 
    // this is best place to handle some voice commands report team some info
-   if (rg.chance (90)) {
-      if (tid == Task::Blind) {
-         pushChatterMessage (Chatter::Blind);
+   if (yb_radio_mode.int_ () > 1) {
+      if (rg.chance (90)) {
+         if (tid == Task::Blind) {
+            pushChatterMessage (Chatter::Blind);
+         }
+         else if (tid == Task::PlantBomb) {
+            pushChatterMessage (Chatter::PlantingBomb);
+         }
       }
-      else if (tid == Task::PlantBomb) {
-         pushChatterMessage (Chatter::PlantingBomb);
-      }
-   }
 
-   if (rg.chance (25) && tid == Task::Camp) {
-      if (game.mapIs (MapFlags::Demolition) && bots.isBombPlanted ()) {
-         pushChatterMessage (Chatter::GuardingDroppedC4);
+      if (rg.chance (25) && tid == Task::Camp) {
+         if (game.mapIs (MapFlags::Demolition) && bots.isBombPlanted ()) {
+            pushChatterMessage (Chatter::GuardingDroppedC4);
+         }
+         else {
+            pushChatterMessage (Chatter::GoingToCamp);
+         }
       }
-      else {
-         pushChatterMessage (Chatter::GoingToCamp);
+
+      if (rg.chance (75) && tid == Task::Camp && m_team == Team::Terrorist && m_inVIPZone) {
+         pushChatterMessage (Chatter::GoingToGuardVIPSafety);
       }
    }
 
@@ -2080,15 +2087,11 @@ void Bot::startTask (Task id, float desire, int data, float time, bool resume) {
    else {
       m_chosenGoalIndex = getTask ()->data;
    }
-
-   if (rg.chance (75) && tid == Task::Camp && m_team == Team::Terrorist && m_inVIPZone) {
-      pushChatterMessage (Chatter::GoingToGuardVIPSafety);
-   }
 }
 
 BotTask *Bot::getTask () {
    if (m_tasks.empty ()) {
-      m_tasks.emplace (Task::Normal, TaskPri::Normal, kInvalidNodeIndex, 0.0f, true);
+      startTask (Task::Normal, TaskPri::Normal, kInvalidNodeIndex, 0.0f, true);
    }
    return &m_tasks.last ();
 }
@@ -3200,7 +3203,7 @@ void Bot::spraypaint_ () {
       const auto &forward = pev->v_angle.forward ();
       Vector sprayOrigin = getEyesPos () + forward * 128.0f;
 
-      TraceResult tr;
+      TraceResult tr {};
       game.testLine (getEyesPos (), sprayOrigin, TraceIgnore::Monsters, ent (), &tr);
 
       // no wall in front?
@@ -3732,7 +3735,7 @@ void Bot::plantBomb_ () {
    }
 }
 
-void Bot::bombDefuse_ () {
+void Bot::defuseBomb_ () {
    float fullDefuseTime = m_hasDefuser ? 7.0f : 12.0f;
    float timeToBlowUp = getBombTimeleft ();
    float defuseRemainingTime = fullDefuseTime;
@@ -3908,7 +3911,7 @@ void Bot::followUser_ () {
    }
 
    if (m_targetEntity->v.button & IN_ATTACK) {
-      TraceResult tr;
+      TraceResult tr {};
       game.testLine (m_targetEntity->v.origin + m_targetEntity->v.view_ofs, m_targetEntity->v.v_angle.forward () * 500.0f, TraceIgnore::Everything, ent (), &tr);
 
       if (!game.isNullEntity (tr.pHit) && util.isPlayer (tr.pHit) && game.getTeam (tr.pHit) != m_team) {
@@ -4201,7 +4204,7 @@ void Bot::doublejump_ () {
       const auto &src = pev->origin + Vector (0.0f, 0.0f, 45.0f);
       const auto &dest = src + Vector (0.0f, pev->angles.y, 0.0f).upward () * 256.0f;
 
-      TraceResult tr;
+      TraceResult tr {};
       game.testLine (src, dest, TraceIgnore::None, ent (), &tr);
 
       if (tr.flFraction < 1.0f && tr.pHit == m_doubleJumpEntity && inJump) {
@@ -4373,7 +4376,7 @@ void Bot::pickupItem_ () {
          auto &info = conf.getWeapons ();
 
          for (index = 0; index < 7; ++index) {
-            if (strcmp (info[index].model, m_pickupItem->v.model.chars () + 9) == 0) {
+            if (strcmp (info[index].model, m_pickupItem->v.model.chars (9)) == 0) {
                break;
             }
          }
@@ -4536,108 +4539,15 @@ void Bot::pickupItem_ () {
 void Bot::executeTasks () {
    // this is core function that handle task execution
 
-   switch (getCurrentTaskId ()) {
-   // normal task
-   default:
-   case Task::Normal:
-      normal_ ();
-      break;
+   auto func = getTask ()->func;
 
-   // bot sprays messy logos all over the place...
-   case Task::Spraypaint:
-      spraypaint_ ();
-      break;
-
-   // hunt down enemy
-   case Task::Hunt:
-      huntEnemy_ ();
-      break;
-
-   // bot seeks cover from enemy
-   case Task::SeekCover:
-      seekCover_ ();
-      break;
-
-   // plain attacking
-   case Task::Attack:
-      attackEnemy_ ();
-      break;
-
-   // Bot is pausing
-   case Task::Pause:
-      pause_ ();
-      break;
-
-   // blinded (flashbanged) behaviour
-   case Task::Blind:
-      blind_ ();
-      break;
-
-   // camping behaviour
-   case Task::Camp:
-      camp_ ();
-      break;
-
-   // hiding behaviour
-   case Task::Hide:
-      hide_ ();
-      break;
-
-   // moves to a position specified in position has a higher priority than task_normal
-   case Task::MoveToPosition:
-      moveToPos_ ();
-      break;
-
-   // planting the bomb right now
-   case Task::PlantBomb:
-      plantBomb_ ();
-      break;
-
-   // bomb defusing behaviour
-   case Task::DefuseBomb:
-      bombDefuse_ ();
-      break;
-
-   // follow user behaviour
-   case Task::FollowUser:
-      followUser_ ();
-      break;
-
-   // HE grenade throw behaviour
-   case Task::ThrowExplosive:
-      throwExplosive_ ();
-      break;
-
-   // flashbang throw behavior (basically the same code like for HE's)
-   case Task::ThrowFlashbang:
-      throwFlashbang_ ();
-      break;
-
-   // smoke grenade throw behavior
-   // a bit different to the others because it mostly tries to throw the sg on the ground
-   case Task::ThrowSmoke:
-      throwSmoke_ ();
-      break;
-
-   // bot helps human player (or other bot) to get somewhere
-   case Task::DoubleJump:
-      doublejump_ ();
-      break;
-
-   // escape from bomb behaviour
-   case Task::EscapeFromBomb:
-      escapeFromBomb_ ();
-      break;
-
-   // shooting breakables in the way action
-   case Task::ShootBreakable:
-      shootBreakable_ ();
-      break;
-
-   // picking up items and stuff behaviour
-   case Task::PickupItem:
-      pickupItem_ ();
-      break;
+   // run the current task
+   if (func != nullptr) {
+      (this->*func) ();
+   }
+   else {
+      logger.error ("Missing callback function of Task %d.", getCurrentTaskId ());
+      kick (); // drop the player, as it's fatal for bot
    }
 }
 
@@ -4736,6 +4646,9 @@ void Bot::logic () {
    // do all sensing, calculate/filter all actions here
    if (canRunHeavyWeight ()) {
       setConditions ();
+   }
+   else if (!game.isNullEntity (m_enemy)) {
+      trackEnemies ();
    }
 
    // some stuff required by by chatter engine
@@ -5086,7 +4999,6 @@ void Bot::takeDamage (edict_t *inflictor, int damage, int armor, int bits) {
          m_enemyOrigin = m_enemy->v.origin;
 
          pushChatMessage (Chat::TeamAttack);
-         handleChatter ("#Bot_TeamAttack");
          pushChatterMessage (Chatter::FriendlyFire);
       }
       else {
@@ -5235,29 +5147,6 @@ void Bot::updatePracticeDamage (edict_t *attacker, int damage) {
    graph.setDangerDamage (m_team, victimIndex, attackerIndex, damageValue);
 }
 
-void Bot::handleChatter (const char *tempMessage) {
-   // this function is added to prevent engine crashes with: 'Message XX started, before message XX ended', or something.
-
-   if ((m_team == Team::CT && strcmp (tempMessage, "#CTs_Win") == 0) || (m_team == Team::Terrorist && strcmp (tempMessage, "#Terrorists_Win") == 0)) {
-      if (bots.getRoundMidTime () > game.time ()) {
-         pushChatterMessage (Chatter::QuickWonRound);
-      }
-      else {
-         pushChatterMessage (Chatter::WonTheRound);
-      }
-   }
-
-   else if (strcmp (tempMessage, "#Bot_TeamAttack") == 0) {
-      pushChatterMessage (Chatter::FriendlyFire);
-   }
-   else if (strcmp (tempMessage, "#Bot_NiceShotCommander") == 0) {
-      pushChatterMessage (Chatter::NiceShotCommander);
-   }
-   else if (strcmp (tempMessage, "#Bot_NiceShotPall") == 0) {
-      pushChatterMessage (Chatter::NiceShotPall);
-   }
-}
-
 void Bot::pushChatMessage (int type, bool isTeamSay) {
    if (!conf.hasChatBank (type) || !yb_chat.bool_ ()) {
       return;
@@ -5352,7 +5241,7 @@ Vector Bot::calcToss (const Vector &start, const Vector &stop) {
    // this function returns the velocity at which an object should looped from start to land near end.
    // returns null vector if toss is not feasible.
 
-   TraceResult tr;
+   TraceResult tr {};
    float gravity = sv_gravity.float_ () * 0.55f;
 
    Vector end = stop - pev->velocity;
@@ -5364,7 +5253,7 @@ Vector Bot::calcToss (const Vector &start, const Vector &stop) {
    Vector midPoint = start + (end - start) * 0.5f;
    game.testHull (midPoint, midPoint + Vector (0.0f, 0.0f, 500.0f), TraceIgnore::Monsters, head_hull, ent (), &tr);
 
-   if (tr.flFraction < 1.0f) {
+   if (tr.flFraction < 1.0f && tr.pHit) {
       midPoint = tr.vecEndPos;
       midPoint.z = tr.pHit->v.absmin.z - 1.0f;
    }
@@ -5406,7 +5295,7 @@ Vector Bot::calcThrow (const Vector &start, const Vector &stop) {
    // returns null vector if throw is not feasible.
 
    Vector velocity = stop - start;
-   TraceResult tr;
+   TraceResult tr {};
 
    float gravity = sv_gravity.float_ () * 0.55f;
    float time = velocity.length () / 195.0f;
@@ -5444,7 +5333,7 @@ edict_t *Bot::correctGrenadeVelocity (const char *model) {
    edict_t *result = nullptr;
 
    game.searchEntities ("classname", "grenade", [&] (edict_t *ent) {
-      if (ent->v.owner == this->ent () && strcmp (ent->v.model.chars () + 9, model) == 0) {
+      if (ent->v.owner == this->ent () && strcmp (ent->v.model.chars (9), model) == 0) {
          result = ent;
 
          // set the correct velocity for the grenade

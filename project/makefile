@@ -1,25 +1,25 @@
 #
 # Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-# Copyright (c) YaPB Development Team.
+# Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
 #
-# This software is licensed under the BSD-style license.
-# Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-#     https://yapb.ru/license
+# This software is licensed under the MIT license.
+# Additional exceptions apply. For full license details, see LICENSE.txt
 #
 
 PROJECT = yapb
 SOURCES = ../source
 OBJECTS = $(wildcard $(SOURCES)/*.cpp)
 
-COMPILER_FLAGS = -std=c++11 -m32 -Wall -Wextra -Werror -fno-exceptions -fno-rtti -pedantic
+COMPILER_FLAGS = -std=c++11 -m32 -Wall -Wextra -Werror -fno-exceptions -fno-rtti
 LINKER_FLAGS = -m32 -ldl
 
 ifeq "$(DEBUG)" "true"
 	COMPILER_FLAGS += -g3 -DCR_DEBUG
 	BINARY_DIR = debug
 else
-	COMPILER_FLAGS += -pipe -O2 -march=core2 -msse2 -mfpmath=sse -ffast-math -fno-builtin -fno-threadsafe-statics -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden
+	COMPILER_FLAGS += -pipe -O3 -march=core2 -msse2 -mfpmath=sse -fno-builtin -fno-threadsafe-statics -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden
 	BINARY_DIR = release
+	LINKER_FLAGS += -static-libgcc
 endif
 
 INCLUDE = -I../include
@@ -42,16 +42,18 @@ BINARY_OUTPUT = $(PROJECT).$(LIBRARY_EXT)
 
 ifeq ($(findstring clang,$(COMPILER)),clang)
 	ifeq "$(OSX)" "false"
+		LINKER_FLAGS += -lgcc_eh
+	else
 		ifeq "$(DEBUG)" "true"
 			LINKER_FLAGS += -lstdc++
 		else
-			LINKER_FLAGS += -static-libgcc -nostdlib++ -Wunused-command-line-argument -fuse-ld=lld -Wl,-z,notext --no-undefined
+			LINKER_FLAGS += -nostdlib++ -Wunused-command-line-argument -fuse-ld=lld -Wl,-z,notext --no-undefined
 		endif
 	endif
 else ifeq ($(findstring gcc,$(COMPILER)),gcc)
 	ifneq "$(OSX)" "false"
 		ifneq "$(DEBUG)" "true"
-			LINKER_FLAGS += -static-libgcc -Wl,--no-undefined -flto=thin
+			LINKER_FLAGS += -Wl,--no-undefined -flto=thin
 			COMPILER_FLAGS += -funroll-all-loops -flto=thin
 		endif
 	endif
@@ -60,7 +62,7 @@ else ifeq ($(findstring icc,$(COMPILER)),icc)
 
 	ifneq "$(DEBUG)" "true"
 		COMPILER_FLAGS += -funroll-all-loops -ipo -wd11076 -wd11074
-		LINKER_FLAGS += -static-libgcc -cxxlib-nostd -Wl,--no-undefined,-z,notext,--gc-sections -ipo 
+		LINKER_FLAGS += -cxxlib-nostd -Wl,--no-undefined,-z,notext,--gc-sections -ipo 
 	endif
 endif
 

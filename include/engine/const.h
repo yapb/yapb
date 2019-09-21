@@ -12,6 +12,7 @@
  *   use or distribution of this code by or to any unlicensed person is illegal.
  *
  ****/
+
 #ifndef CONST_H
 #define CONST_H
 //

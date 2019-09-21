@@ -1,10 +1,9 @@
 //
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #pragma once
@@ -12,14 +11,6 @@
 // our global namaespace
 #define CR_NAMESPACE_BEGIN namespace cr {
 #define CR_NAMESPACE_END }
-
-// disable microsoft deprecation warning
-#if defined (_MSC_VER)
-#  if !defined (_CRT_SECURE_NO_DEPRECATE)
-#     define _CRT_SECURE_NO_DEPRECATE
-#     define _WINSOCK_DEPRECATED_NO_WARNINGS
-#  endif
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
