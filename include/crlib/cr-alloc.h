@@ -32,7 +32,7 @@ public:
 
       // calloc on linux with debug enabled doesn't always zero out memory
 #if defined (CR_DEBUG) && !defined (CR_WINDOWS)
-      plat.bzero (ptr);
+      plat.bzero (ptr, length);
 #endif
       return ptr;
    }
