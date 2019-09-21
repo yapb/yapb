@@ -1,10 +1,9 @@
 //
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #pragma once
@@ -28,6 +27,7 @@
 #  include <fcntl.h>
 #elif defined (CR_WINDOWS)
 #  include <winsock2.h>
+#  include <ws2tcpip.h>
 #endif
 
 // status codes for http client
@@ -71,12 +71,17 @@ public:
 
 public:
    bool connect (const String &hostname) {
-      auto host = gethostbyname (hostname.chars ());
+      addrinfo  hints, *result = nullptr;
+      plat.bzero (&hints, sizeof (hints));
 
-      if (!host) {
+      hints.ai_flags = AI_NUMERICSERV;
+      hints.ai_family = AF_INET;
+      hints.ai_socktype = SOCK_STREAM;
+
+      if (getaddrinfo (hostname.chars (), "80", &hints, &result) != 0) {
          return false;
       }
-      m_socket = static_cast <int> (socket (AF_INET, SOCK_STREAM, 0));
+      m_socket = static_cast <int> (socket (result->ai_family, result->ai_socktype, 0));
 
       if (m_socket < 0) {
          return false;
@@ -93,24 +98,21 @@ public:
       auto timeouts = getTimeouts ();
 
       if (setsockopt (m_socket, SOL_SOCKET, SO_RCVTIMEO, timeouts.first, timeouts.second) == -1) {
-         logger.error ("Unable to set SO_RCVTIMEO.");
+         logger.message ("Unable to set SO_RCVTIMEO.");
       }
 
       if (setsockopt (m_socket, SOL_SOCKET, SO_SNDTIMEO, timeouts.first, timeouts.second) == -1) {
-         logger.error ("Unable to set SO_SNDTIMEO.");
+         logger.message ("Unable to set SO_SNDTIMEO.");
       }
 
-      sockaddr_in dest;
-      memset (&dest, 0, sizeof (dest));
-
-      dest.sin_family = AF_INET;
-      dest.sin_port = htons (80);
-      dest.sin_addr.s_addr = inet_addr (inet_ntoa (*(reinterpret_cast <in_addr *> (host->h_addr))));
-
-      if (::connect (m_socket, reinterpret_cast <sockaddr *> (&dest), static_cast <int> (sizeof (dest))) == -1) {
+      if (::connect (m_socket, result->ai_addr, static_cast <decltype (result->ai_addrlen)> (result->ai_addrlen)) == -1) {
          disconnect ();
+         freeaddrinfo (result);
+         
          return false;
       }
+      freeaddrinfo (result);
+
       return true;
    }
 

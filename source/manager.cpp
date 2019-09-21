@@ -1,10 +1,9 @@
 //
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #include <yapb.h>
@@ -273,7 +272,7 @@ void BotManager::frame () {
 void BotManager::addbot (const String &name, int difficulty, int personality, int team, int member, bool manual) {
    // this function putting bot creation process to queue to prevent engine crashes
 
-   CreateQueue create;
+   CreateQueue create {};
 
    // fill the holder
    create.name = name;
@@ -290,7 +289,7 @@ void BotManager::addbot (const String &name, int difficulty, int personality, in
 void BotManager::addbot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member, bool manual) {
    // this function is same as the function above, but accept as parameters string instead of integers
 
-   CreateQueue create;
+   CreateQueue create {};
    const String &any = "*";
 
    create.name = (name.empty () || name == any) ? String ("\0") : name;
@@ -358,10 +357,10 @@ void BotManager::maintainQuota () {
    int desiredBotCount = yb_quota.int_ ();
    int botsInGame = getBotCount ();
 
-   if (plat.caseStrMatch (yb_quota_mode.str (), "fill")) {
+   if (strings.matches (yb_quota_mode.str (), "fill")) {
       botsInGame += humanPlayersInGame;
    }
-   else if (plat.caseStrMatch (yb_quota_mode.str (), "match")) {
+   else if (strings.matches (yb_quota_mode.str (), "match")) {
       int detectQuotaMatch = yb_quota_match.int_ () == 0 ? yb_quota.int_ () : yb_quota_match.int_ ();
 
       desiredBotCount = cr::max <int> (0, detectQuotaMatch * humanPlayersInGame);
@@ -427,26 +426,26 @@ void BotManager::reset () {
 void BotManager::initFilters () {
    // table with all available actions for the bots (filtered in & out in bot::setconditions) some of them have subactions included
 
-   m_filters.emplace (Task::Normal, 0.0f, kInvalidNodeIndex, 0.0f, true);
-   m_filters.emplace (Task::Pause, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (Task::MoveToPosition, 0.0f, kInvalidNodeIndex, 0.0f, true);
-   m_filters.emplace (Task::FollowUser, 0.0f, kInvalidNodeIndex, 0.0f, true);
-   m_filters.emplace (Task::PickupItem, 0.0f, kInvalidNodeIndex, 0.0f, true);
-   m_filters.emplace (Task::Camp, 0.0f, kInvalidNodeIndex, 0.0f, true);
-   m_filters.emplace (Task::PlantBomb, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (Task::DefuseBomb, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (Task::Attack, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (Task::Hunt, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (Task::SeekCover, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (Task::ThrowExplosive, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (Task::ThrowFlashbang, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (Task::ThrowSmoke, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (Task::DoubleJump, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (Task::EscapeFromBomb, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (Task::ShootBreakable, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (Task::Hide, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (Task::Blind, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (Task::Spraypaint, 0.0f, kInvalidNodeIndex, 0.0f, false);
+   m_filters.emplace (&Bot::normal_, Task::Normal, 0.0f, kInvalidNodeIndex, 0.0f, true);
+   m_filters.emplace (&Bot::pause_, Task::Pause, 0.0f, kInvalidNodeIndex, 0.0f, false);
+   m_filters.emplace (&Bot::moveToPos_, Task::MoveToPosition, 0.0f, kInvalidNodeIndex, 0.0f, true);
+   m_filters.emplace (&Bot::followUser_, Task::FollowUser, 0.0f, kInvalidNodeIndex, 0.0f, true);
+   m_filters.emplace (&Bot::pickupItem_, Task::PickupItem, 0.0f, kInvalidNodeIndex, 0.0f, true);
+   m_filters.emplace (&Bot::camp_, Task::Camp, 0.0f, kInvalidNodeIndex, 0.0f, true);
+   m_filters.emplace (&Bot::plantBomb_, Task::PlantBomb, 0.0f, kInvalidNodeIndex, 0.0f, false);
+   m_filters.emplace (&Bot::defuseBomb_, Task::DefuseBomb, 0.0f, kInvalidNodeIndex, 0.0f, false);
+   m_filters.emplace (&Bot::attackEnemy_, Task::Attack, 0.0f, kInvalidNodeIndex, 0.0f, false);
+   m_filters.emplace (&Bot::huntEnemy_, Task::Hunt, 0.0f, kInvalidNodeIndex, 0.0f, false);
+   m_filters.emplace (&Bot::seekCover_, Task::SeekCover, 0.0f, kInvalidNodeIndex, 0.0f, false);
+   m_filters.emplace (&Bot::throwExplosive_, Task::ThrowExplosive, 0.0f, kInvalidNodeIndex, 0.0f, false);
+   m_filters.emplace (&Bot::throwFlashbang_, Task::ThrowFlashbang, 0.0f, kInvalidNodeIndex, 0.0f, false);
+   m_filters.emplace (&Bot::throwSmoke_, Task::ThrowSmoke, 0.0f, kInvalidNodeIndex, 0.0f, false);
+   m_filters.emplace (&Bot::doublejump_, Task::DoubleJump, 0.0f, kInvalidNodeIndex, 0.0f, false);
+   m_filters.emplace (&Bot::escapeFromBomb_, Task::EscapeFromBomb, 0.0f, kInvalidNodeIndex, 0.0f, false);
+   m_filters.emplace (&Bot::shootBreakable_, Task::ShootBreakable, 0.0f, kInvalidNodeIndex, 0.0f, false);
+   m_filters.emplace (&Bot::hide_, Task::Hide, 0.0f, kInvalidNodeIndex, 0.0f, false);
+   m_filters.emplace (&Bot::blind_, Task::Blind, 0.0f, kInvalidNodeIndex, 0.0f, false);
+   m_filters.emplace (&Bot::spraypaint_, Task::Spraypaint, 0.0f, kInvalidNodeIndex, 0.0f, false);
 }
 
 void BotManager::resetFilters () {
@@ -619,6 +618,26 @@ bool BotManager::kickRandom (bool decQuota, Team fromTeam) {
    return false;
 }
 
+ void BotManager::setLastWinner (int winner) {
+   m_lastWinner = winner;
+
+   if (yb_radio_mode.int_ () != 2) {
+      return;
+   }
+   auto notify = findAliveBot ();
+
+   if (notify) {
+      if (notify->m_team == winner) {
+         if (getRoundMidTime () > game.time ()) {
+            notify->pushChatterMessage (Chatter::QuickWonRound);
+         }
+         else {
+            notify->pushChatterMessage (Chatter::WonTheRound);
+         }
+      }
+   }
+}
+
 void BotManager::setWeaponMode (int selection) {
    // this function sets bots weapon mode
 
@@ -785,12 +804,13 @@ void BotManager::destroy () {
 }
 
 Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
-   // this function does core operation of creating bot, it's called by CreateBot (),
+   // this function does core operation of creating bot, it's called by addbot (),
    // when bot setup completed, (this is a bot class constructor)
 
-   int clientIndex = game.indexOfEntity (bot);
+   // we're not initializing all the variables in bot class, so do an ugly thing... memset this
+   plat.bzero (this, sizeof (*this));
 
-   memset (reinterpret_cast <void *> (this), 0, sizeof (*this));
+   int clientIndex = game.indexOfEntity (bot);
    pev = &bot->v;
 
    if (bot->pvPrivateData != nullptr) {
@@ -881,8 +901,8 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
       break;
    }
 
-   memset (&m_ammoInClip, 0, sizeof (m_ammoInClip));
-   memset (&m_ammo, 0, sizeof (m_ammo));
+   plat.bzero (&m_ammoInClip, sizeof (m_ammoInClip));
+   plat.bzero (&m_ammo, sizeof (m_ammo));
 
    m_currentWeapon = 0; // current weapon is not assigned at start
    m_voicePitch = rg.int_ (80, 115); // assign voice pitch
@@ -975,10 +995,10 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
       for (const auto &notify : bots) {
          if (notify->m_notKilled && killerTeam == notify->m_team && killerTeam != victimTeam && killer != notify->ent () && notify->seesEntity (victim->v.origin)) {
             if (!(killer->v.flags & FL_FAKECLIENT)) {
-               notify->handleChatter ("#Bot_NiceShotCommander");
+               notify->pushChatterMessage (Chatter::NiceShotCommander);
             }
             else {
-               notify->handleChatter ("#Bot_NiceShotPall");
+               notify->pushChatterMessage (Chatter::NiceShotPall);
             }
             break;
          }
@@ -1179,8 +1199,8 @@ void Bot::newRound () {
 
    // if bot died, clear all weapon stuff and force buying again
    if (!m_notKilled) {
-      memset (&m_ammoInClip, 0, sizeof (m_ammoInClip));
-      memset (&m_ammo, 0, sizeof (m_ammo));
+      plat.bzero (&m_ammoInClip, sizeof (m_ammoInClip));
+      plat.bzero (&m_ammo, sizeof (m_ammo));
 
       m_currentWeapon = 0;
    }
@@ -1339,7 +1359,7 @@ void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *en
       return;
    }
 
-   if (plat.caseStrMatch (cmd, "say") || plat.caseStrMatch (cmd, "say_team")) {
+   if (strings.matches (cmd, "say") || strings.matches (cmd, "say_team")) {
       bool alive = util.isAlive (ent);
       int team = -1;
 
@@ -1414,7 +1434,7 @@ void BotManager::updateActiveGrenade () {
    // search the map for any type of grenade
    game.searchEntities ("classname", "grenade", [&] (edict_t *e) {
       // do not count c4 as a grenade
-      if (strcmp (e->v.model.chars () + 9, "c4.mdl") == 0) { 
+      if (strcmp (e->v.model.chars (9), "c4.mdl") == 0) { 
          return EntitySearchResult::Continue;
       }
       m_activeGrenades.push (e);
@@ -1668,10 +1688,10 @@ void BotConfig::loadMainConfig () {
             if (cvar != nullptr) {
                auto value = const_cast <char *> (keyval[1].trim ().trim ("\"").trim ().chars ());
 
-               if (needsToIgnoreVar (ignore, key) && !plat.caseStrMatch (value, cvar->string)) {
+               if (needsToIgnoreVar (ignore, key) && !strings.matches (value, cvar->string)) {
 
                   // preserve quota number if it's zero
-                  if (plat.caseStrMatch (cvar->name, "yb_quota") && yb_quota.int_ () <= 0) {
+                  if (strings.matches (cvar->name, "yb_quota") && yb_quota.int_ () <= 0) {
                      engfuncs.pfnCvar_DirectSet (cvar, value);
                      continue;
                   }

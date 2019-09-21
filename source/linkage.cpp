@@ -1,10 +1,9 @@
-// 
-// Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
+//
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #include <yapb.h>
@@ -87,7 +86,7 @@ CR_EXPORT int GetEntityAPI2 (gamefuncs_t *table, int *) {
    // engine, and then calls the MOD DLL's version of GetEntityAPI to get the REAL gamedll
    // functions this time (to use in the bot code).
 
-   memset (table, 0, sizeof (gamefuncs_t));
+   plat.bzero (table, sizeof (gamefuncs_t));
 
    if (!(game.is (GameFlags::Metamod))) {
       auto api_GetEntityAPI = game.lib ().resolve <int (*) (gamefuncs_t *, int)> ("GetEntityAPI");
@@ -457,7 +456,7 @@ CR_LINKAGE_C int GetEntityAPI2_Post (gamefuncs_t *table, int *) {
    // engine, and then calls the MOD DLL's version of GetEntityAPI to get the REAL gamedll
    // functions this time (to use in the bot code). Post version, called only by metamod.
 
-   memset (table, 0, sizeof (gamefuncs_t));
+   plat.bzero (table, sizeof (gamefuncs_t));
 
    table->pfnSpawn = [] (edict_t *ent) {
       // this function asks the game DLL to spawn (i.e, give a physical existence in the virtual
@@ -505,7 +504,7 @@ CR_LINKAGE_C int GetEntityAPI2_Post (gamefuncs_t *table, int *) {
 
 CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
    if (game.is (GameFlags::Metamod)) {
-      memset (table, 0, sizeof (enginefuncs_t));
+      plat.bzero (table, sizeof (enginefuncs_t));
    }
 
    table->pfnChangeLevel = [] (char *s1, char *s2) {
@@ -811,7 +810,7 @@ CR_EXPORT int GetNewDLLFunctions (newgamefuncs_t *table, int *interfaceVersion) 
 }
 
 CR_LINKAGE_C int GetEngineFunctions_Post (enginefuncs_t *table, int *) {
-   memset (table, 0, sizeof (enginefuncs_t));
+   plat.bzero (table, sizeof (enginefuncs_t));
 
    table->pfnMessageEnd = [] () {
       msgs.stop (); // this allows us to send messages right in handler code

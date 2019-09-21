@@ -1,10 +1,9 @@
 //
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #pragma once
@@ -88,7 +87,7 @@ private:
    };
 
 public:
-   explicit String () {
+   String () {
       reset ();
       assign ("", 0);
    }
@@ -849,33 +848,59 @@ public:
    ~StringBuffer () = default;
 
 public:
-   char *chars () {
+   char *chars () noexcept {
       if (++m_rotate >= RotationCount) {
          m_rotate = 0;
       }
       return m_data[cr::clamp <size_t> (m_rotate, 0, RotationCount)];
    }
 
-   template <typename U, typename ...Args> U *format (const U *fmt, Args ...args) {
+   template <typename U, typename ...Args> U *format (const U *fmt, Args ...args) noexcept {
       auto buffer = Singleton <StringBuffer>::get ().chars ();
       snprintf (buffer, StaticBufferSize, fmt, args...);
 
       return buffer;
    }
 
-   template <typename U> U *format (const U *fmt) {
+   template <typename U> U *format (const U *fmt) noexcept {
       auto buffer = Singleton <StringBuffer>::get ().chars ();
-      strncpy (buffer, fmt, StaticBufferSize);
+      copy (buffer, fmt, StaticBufferSize);
 
       return buffer;
    }
 
    // checks if string is not empty
-   bool isEmpty (const char *input) const {
+   bool isEmpty (const char *input) const noexcept {
       if (input == nullptr) {
          return true;
       }
       return *input == '\0';
+   }
+
+   bool matches (const char *str1, const char *str2) noexcept {
+#if defined(CR_WINDOWS)
+      return _stricmp (str1, str2) == 0;
+#else
+      return ::strcasecmp (str1, str2) == 0;
+#endif
+   }
+
+   template <typename U> U *copy (U *dst, const U *src, size_t len) noexcept {
+#if defined(CR_WINDOWS)
+      strncpy_s (dst, len, src, len - 1);
+      return dst;
+#else
+      return strncpy (dst, src, len);
+#endif
+   }
+
+   template <typename U> U *concat (U *dst, const U *src, size_t len) noexcept {
+#if defined(CR_WINDOWS)
+      strncat_s (dst, len, src, len - 1);
+      return dst;
+#else
+      return strncat (dst, src, len);
+#endif
    }
 };
 

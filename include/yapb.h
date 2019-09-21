@@ -1,10 +1,9 @@
 //
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #pragma once
@@ -18,6 +17,11 @@
 using namespace cr;
 
 #include <resource.h>
+
+// forwards
+class Bot;
+class BotGraph;
+class BotManager;
 
 // defines bots tasks
 CR_DECLARE_SCOPED_ENUM (Task,
@@ -455,6 +459,10 @@ public:
 
 // tasks definition
 struct BotTask {
+   using Function = void (Bot::*) ();
+
+public:
+   Function func; // corresponding exec function in bot class
    Task id; // major task/action carried out
    float desire; // desire (filled in) for this task
    int data; // additional data (node index)
@@ -462,7 +470,7 @@ struct BotTask {
    bool resume; // if task can be continued if interrupted
 
 public:
-   BotTask (Task id, float desire, int data, float time, bool resume) : id (id), desire (desire), data (data), time (time), resume (resume) { }
+   BotTask (Function func, Task id, float desire, int data, float time, bool resume) : func (func), id (id), desire (desire), data (data), time (time), resume (resume) { }
 };
 
 // weapon properties structure
@@ -827,7 +835,7 @@ private:
    void hide_ ();
    void moveToPos_ ();
    void plantBomb_ ();
-   void bombDefuse_ ();
+   void defuseBomb_ ();
    void followUser_ ();
    void throwExplosive_ ();
    void throwFlashbang_ ();
@@ -992,7 +1000,6 @@ public:
    void pushChatMessage (int type, bool isTeamSay = false);
    void pushRadioMessage (int message);
    void pushChatterMessage (int message);
-   void handleChatter (const char *tempMessage);
    void tryHeadTowardRadioMessage ();
    void kill ();
    void kick ();

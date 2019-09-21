@@ -1,10 +1,9 @@
 //
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #include <yapb.h>
@@ -97,7 +96,7 @@ bool Bot::checkBodyParts (edict_t *target) {
       return false;
    }
 
-   TraceResult result;
+   TraceResult result {};
    auto eyes = getEyesPos ();
 
    auto spot = target->v.origin;
@@ -539,7 +538,7 @@ bool Bot::isFriendInLineOfFire (float distance) {
       return false;
    }
 
-   TraceResult tr;
+   TraceResult tr {};
    game.testLine (getEyesPos (), getEyesPos () + distance * pev->v_angle.normalize (), TraceIgnore::None, ent (), &tr);
 
    // check if we hit something
@@ -582,7 +581,7 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
    if (penetratePower == 0) {
       return false;
    }
-   TraceResult tr;
+   TraceResult tr {};
 
    float obstacleDistance = 0.0f;
    game.testLine (getEyesPos (), dest, TraceIgnore::Monsters, ent (), &tr);
@@ -632,7 +631,7 @@ bool Bot::isPenetrableObstacle2 (const Vector &dest) {
    int numHits = 0;
 
    Vector point;
-   TraceResult tr;
+   TraceResult tr {};
 
    game.testLine (source, dest, TraceIgnore::Everything, ent (), &tr);
 
@@ -1197,7 +1196,7 @@ bool Bot::hasSecondaryWeapon () {
 bool Bot::hasShield () {
    // this function returns true, if bot has a tactical shield
 
-   return strncmp (pev->viewmodel.chars (), "models/shield/v_shield_", 23) == 0;
+   return strncmp (pev->viewmodel.chars (14), "v_shield_", 9) == 0;
 }
 
 bool Bot::isShieldDrawn () {
@@ -1217,7 +1216,7 @@ bool Bot::isEnemyBehindShield (edict_t *enemy) {
    }
 
    // check if enemy has shield and this shield is drawn
-   if ((enemy->v.weaponanim == 6 || enemy->v.weaponanim == 7) && strncmp (enemy->v.viewmodel.chars (), "models/shield/v_shield_", 23) == 0) {
+   if ((enemy->v.weaponanim == 6 || enemy->v.weaponanim == 7) && strncmp (enemy->v.viewmodel.chars (14), "v_shield_", 9) == 0) {
       if (util.isInViewCone (pev->origin, enemy)) {
          return true;
       }
@@ -1356,7 +1355,7 @@ bool Bot::rateGroundWeapon (edict_t *ent) {
    auto tab = conf.getRawWeapons ();
 
    for (int i = 0; i < kNumWeapons; ++i) {
-      if (strcmp (tab[*pref].model, ent->v.model.chars () + 9) == 0) {
+      if (strcmp (tab[*pref].model, ent->v.model.chars (9)) == 0) {
          groundIndex = i;
          break;
       }

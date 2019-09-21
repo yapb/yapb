@@ -1,10 +1,9 @@
 //
 // Yet Another POD-Bot, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright (c) YaPB Development Team.
+// Copyright (c) Yet Another POD-Bot Contributors <yapb@entix.io>.
 //
-// This software is licensed under the BSD-style license.
-// Additional exceptions apply. For full license details, see LICENSE.txt or visit:
-//     https://yapb.ru/license
+// This software is licensed under the MIT license.
+// Additional exceptions apply. For full license details, see LICENSE.txt
 //
 
 #pragma once
@@ -89,6 +88,7 @@ CR_NAMESPACE_END
 #include <stdio.h>
 #include <assert.h>
 #include <locale.h>
+#include <string.h>
 #include <stdarg.h>
 
 #if defined (CR_ANDROID)
@@ -96,6 +96,8 @@ CR_NAMESPACE_END
 #endif
 
 CR_NAMESPACE_BEGIN
+
+class String;
 
 // helper struct for platform detection
 struct Platform : public Singleton <Platform> {
@@ -178,14 +180,6 @@ struct Platform : public Singleton <Platform> {
 #endif
    }
 
-   bool caseStrMatch (const char *str1, const char *str2) {
-#if defined(CR_WINDOWS)
-      return _stricmp (str1, str2) == 0;
-#else
-      return ::strcasecmp (str1, str2) == 0;
-#endif
-   }
-
    float seconds () {
 #if defined(CR_WINDOWS)
       LARGE_INTEGER count, freq;
@@ -213,12 +207,41 @@ struct Platform : public Singleton <Platform> {
 #endif
 
 #if defined(CR_WINDOWS)
-      if (msg) {
-         DestroyWindow (GetForegroundWindow ());
-         MessageBoxA (GetActiveWindow (), msg, "crlib.fatal", MB_ICONSTOP);
-      }
+      DestroyWindow (GetForegroundWindow ());
+      MessageBoxA (GetActiveWindow (), msg, "crlib.fatal", MB_ICONSTOP);
 #endif
       ::abort ();
+   }
+
+   // anologue of memset
+   template <typename U> void bzero (U *ptr, size_t len) noexcept {
+#if defined (CR_WINDOWS)
+      memset (ptr, 0, len);
+#else
+      auto zeroing = reinterpret_cast <uint8 *> (ptr);
+
+      for (size_t i = 0; i < len; ++i) {
+         zeroing[i] = 0;
+      }
+#endif
+   }
+
+   const char *env (const char *var) {
+      static char result[256];
+      bzero (result, sizeof (result));
+
+#if defined(CR_WINDOWS)
+      char *buffer = nullptr;
+      size_t size = 0;
+
+      if (_dupenv_s (&buffer, &size, var) == 0 && buffer != nullptr) {
+         strncpy_s (result, buffer, sizeof (result));
+         free (buffer);
+      }
+#else
+      strncpy (result, getenv (var), cr::bufsize (result));
+#endif
+      return result;
    }
 };
 
