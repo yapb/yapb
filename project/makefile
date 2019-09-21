@@ -10,7 +10,7 @@ PROJECT = yapb
 SOURCES = ../source
 OBJECTS = $(wildcard $(SOURCES)/*.cpp)
 
-COMPILER_FLAGS = -std=c++11 -m32 -Wall -Wextra -Werror -fno-exceptions -fno-rtti
+COMPILER_FLAGS = -std=c++11 -m32 -Wall -Wextra -Werror -fno-exceptions -fno-rtti -pedantic
 LINKER_FLAGS = -m32 -ldl
 
 ifeq "$(DEBUG)" "true"
@@ -53,8 +53,8 @@ ifeq ($(findstring clang,$(COMPILER)),clang)
 else ifeq ($(findstring gcc,$(COMPILER)),gcc)
 	ifneq "$(OSX)" "false"
 		ifneq "$(DEBUG)" "true"
-			LINKER_FLAGS += -Wl,--no-undefined -flto=thin
-			COMPILER_FLAGS += -funroll-all-loops -flto=thin
+			LINKER_FLAGS += -Wl,--no-undefined
+			COMPILER_FLAGS += -funroll-all-loops
 		endif
 	endif
 else ifeq ($(findstring icc,$(COMPILER)),icc)
