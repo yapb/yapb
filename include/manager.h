@@ -9,7 +9,7 @@
 #pragma once
 
 // bot creation tab
-struct CreateQueue {
+struct BotRequest {
    bool manual;
    int difficulty;
    int team;
@@ -52,7 +52,7 @@ private:
    Array <edict_t *> m_activeGrenades; // holds currently active grenades on the map
    Array <edict_t *> m_intrestingEntities;  // holds currently intresting entities on the map
 
-   SmallArray <CreateQueue> m_creationTab; // bot creation tab
+   SmallArray <BotRequest> m_addRequests; // bot creation tab
    SmallArray <BotTask> m_filters; // task filters
    SmallArray <UniqueBot> m_bots; // all available bots
 

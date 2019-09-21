@@ -59,7 +59,7 @@ BotManager::BotManager () {
    }
    reset ();
 
-   m_creationTab.clear ();
+   m_addRequests.clear ();
    m_killerEntity = nullptr;
 
    initFilters ();
@@ -272,34 +272,34 @@ void BotManager::frame () {
 void BotManager::addbot (const String &name, int difficulty, int personality, int team, int member, bool manual) {
    // this function putting bot creation process to queue to prevent engine crashes
 
-   CreateQueue create {};
+   BotRequest request {};
 
    // fill the holder
-   create.name = name;
-   create.difficulty = difficulty;
-   create.personality = personality;
-   create.team = team;
-   create.member = member;
-   create.manual = manual;
+   request.name = name;
+   request.difficulty = difficulty;
+   request.personality = personality;
+   request.team = team;
+   request.member = member;
+   request.manual = manual;
 
    // put to queue
-   m_creationTab.push (cr::move (create));
+   m_addRequests.push (cr::move (request));
 }
 
 void BotManager::addbot (const String &name, const String &difficulty, const String &personality, const String &team, const String &member, bool manual) {
    // this function is same as the function above, but accept as parameters string instead of integers
 
-   CreateQueue create {};
+   BotRequest request {};
    const String &any = "*";
 
-   create.name = (name.empty () || name == any) ? String ("\0") : name;
-   create.difficulty = (difficulty.empty () || difficulty == any) ? -1 : difficulty.int_ ();
-   create.team = (team.empty () || team == any) ? -1 : team.int_ ();
-   create.member = (member.empty () || member == any) ? -1 : member.int_ ();
-   create.personality = (personality.empty () || personality == any) ? -1 : personality.int_ ();
-   create.manual = manual;
+   request.name = (name.empty () || name == any) ? String ("\0") : name;
+   request.difficulty = (difficulty.empty () || difficulty == any) ? -1 : difficulty.int_ ();
+   request.team = (team.empty () || team == any) ? -1 : team.int_ ();
+   request.member = (member.empty () || member == any) ? -1 : member.int_ ();
+   request.personality = (personality.empty () || personality == any) ? -1 : personality.int_ ();
+   request.manual = manual;
 
-   m_creationTab.push (cr::move (create));
+   m_addRequests.push (cr::move (request));
 }
 
 void BotManager::maintainQuota () {
@@ -315,8 +315,8 @@ void BotManager::maintainQuota () {
    }
 
    // bot's creation update
-   if (!m_creationTab.empty () && m_maintainTime < game.time ()) {
-      const CreateQueue &last = m_creationTab.pop ();
+   if (!m_addRequests.empty () && m_maintainTime < game.time ()) {
+      const BotRequest &last = m_addRequests.pop ();
       const BotCreateResult callResult = create (last.name, last.difficulty, last.personality, last.team, last.member);
 
       if (last.manual) {
@@ -325,17 +325,17 @@ void BotManager::maintainQuota () {
 
       // check the result of creation
       if (callResult == BotCreateResult::GraphError) {
-         m_creationTab.clear (); // something wrong with graph, reset tab of creation
+         m_addRequests.clear (); // something wrong with graph, reset tab of creation
          yb_quota.set (0); // reset quota
       }
       else if (callResult == BotCreateResult::MaxPlayersReached) {
-         m_creationTab.clear (); // maximum players reached, so set quota to maximum players
+         m_addRequests.clear (); // maximum players reached, so set quota to maximum players
          yb_quota.set (getBotCount ());
       }
       else if (callResult == BotCreateResult::TeamStacked) {
          ctrl.msg ("Could not add bot to the game: Team is stacked (to disable this check, set mp_limitteams and mp_autoteambalance to zero and restart the round)");
 
-         m_creationTab.clear ();
+         m_addRequests.clear ();
          yb_quota.set (getBotCount ());
       }
       m_maintainTime = game.time () + 0.10f;
@@ -466,7 +466,7 @@ void BotManager::initQuota () {
    m_maintainTime = game.time () + yb_join_delay.float_ ();
    m_quotaMaintainTime = game.time () + yb_join_delay.float_ ();
 
-   m_creationTab.clear ();
+   m_addRequests.clear ();
 }
 
 void BotManager::serverFill (int selection, int personality, int difficulty, int numToAdd) {
@@ -511,7 +511,7 @@ void BotManager::kickEveryone (bool instant, bool zeroQuota) {
          bot->kick ();
       }
    }
-   m_creationTab.clear ();
+   m_addRequests.clear ();
 }
 
 void BotManager::kickFromTeam (Team team, bool removeAll) {
