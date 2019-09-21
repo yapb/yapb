@@ -40,7 +40,7 @@ endif
 BINARY_OUTPUT = $(PROJECT).$(LIBRARY_EXT)
 
 ifeq ($(findstring clang,$(COMPILER)),clang)
-	ifneq "$(OSX)" "false"
+	ifneq "$(OSX)" "true"
 		ifeq "$(DEBUG)" "true"
 			LINKER_FLAGS += -lstdc++
 		else
@@ -48,7 +48,7 @@ ifeq ($(findstring clang,$(COMPILER)),clang)
 		endif
 	endif
 else ifeq ($(findstring gcc,$(COMPILER)),gcc)
-	ifneq "$(OSX)" "false"
+	ifneq "$(OSX)" "true"
 		ifneq "$(DEBUG)" "true"
 			LINKER_FLAGS += -Wl,--no-undefined
 			COMPILER_FLAGS += -funroll-all-loops
