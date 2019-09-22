@@ -1111,6 +1111,7 @@ void Bot::newRound () {
    m_prevOrigin = Vector (kInfiniteDistance, kInfiniteDistance, kInfiniteDistance);
    m_prevTime = game.time ();
    m_lookUpdateTime = game.time ();
+   m_changeViewTime = game.time () + (rg.chance (25) ? mp_freezetime.float_ () : 0.0f);
    m_aimErrorTime = game.time ();
 
    m_viewDistance = 4096.0f;

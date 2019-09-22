@@ -639,6 +639,7 @@ private:
    float m_itemCheckTime; // time next search for items needs to be done
    float m_joinServerTime; // time when bot joined the game
    float m_playServerTime; // time bot spent in the game
+   float m_changeViewTime; // timestamp to change look at while at freezetime
 
    bool m_moveToGoal; // bot currently moving to goal??
    bool m_isStuck; // bot is stuck
@@ -823,6 +824,7 @@ private:
    void completeTask ();
    void executeTasks ();
    void trackEnemies ();
+   void choiceFreezetimeEntity ();
 
    void normal_ ();
    void spraypaint_ ();

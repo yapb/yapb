@@ -646,7 +646,7 @@ void Bot::updatePickups () {
                m_itemIgnore = ent;
                allowPickup = false;
 
-               if (!m_defendHostage && m_difficulty > 2 && rg.chance (30) && m_timeCamping + 15.0f < game.time ()) {
+               if (!m_defendHostage && m_personality != Personality::Rusher && m_difficulty > 2 && rg.chance (15) && m_timeCamping + 15.0f < game.time ()) {
                   int index = findDefendNode (origin);
 
                   startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.float_ (30.0f, 60.0f), true); // push camp task on to stack
@@ -769,7 +769,7 @@ void Bot::updatePickups () {
                m_itemIgnore = ent;
                allowPickup = false;
 
-               if (!m_defendedBomb && m_difficulty > 2 && rg.chance (75) && pev->health < 80) {
+               if (!m_defendedBomb && m_difficulty > 2 && rg.chance (75) && pev->health < 60) {
                   int index = findDefendNode (origin);
 
                   startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.float_ (30.0f, 70.0f), true); // push camp task on to stack
@@ -2943,10 +2943,39 @@ void Bot::update () {
    if (botMovement) {
       logic (); // execute main code
    }
+   else if (pev->maxspeed < 10.0f) {
+      choiceFreezetimeEntity ();
+   }
    runMovement ();
 
    // delay next execution
    m_updateTime = game.time () + m_updateInterval;
+}
+
+void Bot::choiceFreezetimeEntity () {
+   if (m_changeViewTime > game.time ()) {
+      return;
+   }
+
+   if (rg.chance (15)) {
+      pev->button |= IN_JUMP;
+   }
+   Array <Bot *> teammates;
+
+   for (const auto &bot : bots) {
+      if (bot->m_notKilled && bot->m_team == m_team && seesEntity (bot->pev->origin) && bot.get () != this) {
+         teammates.push (bot.get ());
+      }
+   }
+
+   if (!teammates.empty ()) {
+      auto bot = teammates.random ();
+
+      if (bot) {
+         m_lookAt = bot->pev->origin + bot->pev->view_ofs;
+      }
+   }
+   m_changeViewTime = game.time () + rg.float_ (1.25, 2.0f);
 }
 
 void Bot::normal_ () {
