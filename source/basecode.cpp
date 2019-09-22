@@ -3904,7 +3904,7 @@ void Bot::defuseBomb_ () {
    }
 
    // we are defusing bomb
-   if (m_hasProgressBar || (m_oldButtons & IN_USE)) {
+   if (m_hasProgressBar || pickupExists || (m_oldButtons & IN_USE)) {
       pev->button |= IN_USE;
 
       m_reloadState = Reload::None;
