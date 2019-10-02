@@ -88,7 +88,7 @@ public:
 // singleton for objects
 template <typename T> struct Singleton : private DenyCopying {
 public:
-   static inline T &get () {
+   static T &get () {
       static T ref_;
       return ref_;
    };

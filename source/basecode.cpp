@@ -391,7 +391,7 @@ void Bot::checkBreakable (edict_t *touch) {
    m_breakableEntity = lookupBreakable ();
 
    if (game.isNullEntity (m_breakableEntity)) {
-      return;
+return;
    }
    m_campButtons = pev->button & IN_DUCK;
    startTask (Task::ShootBreakable, TaskPri::ShootBreakable, kInvalidNodeIndex, 0.0f, false);
@@ -459,7 +459,7 @@ void Bot::setIdealReactionTimers (bool actual) {
    static struct ReactionTime {
       float min;
       float max;
-   } reactionTimers[] = {{0.8f, 1.0f}, {0.4f, 0.6f}, {0.2f, 0.4f}, {0.1f, 0.3f}, {0.0f, 0.1f}};
+   } reactionTimers[] = { { 0.8f, 1.0f }, { 0.4f, 0.6f }, { 0.2f, 0.4f }, { 0.1f, 0.3f }, { 0.0f, 0.1f } };
 
    const ReactionTime &reaction = reactionTimers[m_difficulty];
 
@@ -474,7 +474,7 @@ void Bot::setIdealReactionTimers (bool actual) {
 
 void Bot::updatePickups () {
    // this function finds Items to collect or use in the near of a bot
-  
+
    // don't try to pickup anything while on ladder or trying to escape from bomb...
    if (isOnLadder () || getCurrentTaskId () == Task::EscapeFromBomb || yb_jasonmode.bool_ () || !bots.hasIntrestingEntities ()) {
       m_pickupItem = nullptr;
@@ -485,12 +485,17 @@ void Bot::updatePickups () {
 
    auto &intresting = bots.searchIntrestingEntities ();
    const float radius = cr::square (320.0f);
-   
+
    if (!game.isNullEntity (m_pickupItem)) {
       bool itemExists = false;
       auto pickupItem = m_pickupItem;
-      
+
       for (auto &ent : intresting) {
+
+         // in the periods of updating intresting entities we can get fake ones, that already were picked up, so double check if drawn
+         if (ent->v.effects & EF_NODRAW) {
+            continue;
+         }
          const Vector &origin = game.getEntityWorldOrigin (ent);
 
          // too far from us ?
@@ -502,7 +507,6 @@ void Bot::updatePickups () {
             if (seesItem (origin, ent->v.classname.chars ())) {
                itemExists = true;
             }
-            
             break;
          }
       }
@@ -511,13 +515,12 @@ void Bot::updatePickups () {
          return;
       }
       else {
-         
          m_pickupItem = nullptr;
          m_pickupType = Pickup::None;
       }
    }
-
    edict_t *pickupItem = nullptr;
+
    Pickup pickupType = Pickup::None;
    Vector pickupPos = nullptr;
 
@@ -527,7 +530,7 @@ void Bot::updatePickups () {
    for (const auto &ent : intresting) {
       bool allowPickup = false; // assume can't use it until known otherwise
       
-      if (ent == m_itemIgnore) {
+      if ((ent->v.effects & EF_NODRAW) || ent == m_itemIgnore || cr::abs (ent->v.origin.z - pev->origin.z) > 96.0f) {
          continue; // someone owns this weapon or it hasn't respawned yet
       }
       const Vector &origin = game.getEntityWorldOrigin (ent);
@@ -536,6 +539,7 @@ void Bot::updatePickups () {
       if ((pev->origin - origin).lengthSq () > radius) {
          continue;
       }
+
 
       auto classname = ent->v.classname.chars ();
       auto model = ent->v.model.chars (9);
@@ -4230,6 +4234,7 @@ void Bot::doublejump_ () {
       else if (inJump && !(m_oldButtons & IN_JUMP)) {
          pev->button |= IN_JUMP;
       }
+
       const auto &src = pev->origin + Vector (0.0f, 0.0f, 45.0f);
       const auto &dest = src + Vector (0.0f, pev->angles.y, 0.0f).upward () * 256.0f;
 
@@ -4260,9 +4265,10 @@ void Bot::doublejump_ () {
 
       if (graph.exists (destIndex)) {
          m_prevGoalIndex = destIndex;
-         getTask ()->data = destIndex;
          m_travelStartIndex = m_currentNodeIndex;
 
+         getTask ()->data = destIndex;
+         
          // always take the shortest path
          findPath (m_currentNodeIndex, destIndex, FindPath::Fast);
 
@@ -4932,7 +4938,7 @@ void Bot::showDebugOverlay () {
             String pickup = "(none)";
 
             if (!game.isNullEntity (m_pickupItem)) {
-               pickup = m_pickupItem->v.netname.chars ();
+               pickup = m_pickupItem->v.classname.chars ();
             }
             String aimFlags;
 
