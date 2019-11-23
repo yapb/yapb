@@ -391,7 +391,7 @@ void Bot::checkBreakable (edict_t *touch) {
    m_breakableEntity = lookupBreakable ();
 
    if (game.isNullEntity (m_breakableEntity)) {
-return;
+      return;
    }
    m_campButtons = pev->button & IN_DUCK;
    startTask (Task::ShootBreakable, TaskPri::ShootBreakable, kInvalidNodeIndex, 0.0f, false);
@@ -3038,7 +3038,7 @@ void Bot::normal_ () {
       m_prevGoalIndex = kInvalidNodeIndex;
       
       // spray logo sometimes if allowed to do so
-      if (m_timeLogoSpray < game.time () && yb_spraypaints.bool_ () && rg.chance (60) && m_moveSpeed > getShiftSpeed () && game.isNullEntity (m_pickupItem)) {
+      if (!(m_states & (Sense::SeeingEnemy | Sense::SuspectEnemy)) && m_seeEnemyTime + 5.0f < game.time () && !m_reloadState && m_timeLogoSpray < game.time () && yb_spraypaints.bool_ () && rg.chance (50) && m_moveSpeed > getShiftSpeed () && game.isNullEntity (m_pickupItem)) {
          if (!(game.mapIs (MapFlags::Demolition) && bots.isBombPlanted () && m_team == Team::CT)) {
             startTask (Task::Spraypaint, TaskPri::Spraypaint, kInvalidNodeIndex, game.time () + 1.0f, false);
          }

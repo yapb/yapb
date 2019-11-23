@@ -11,7 +11,7 @@
 ConVar yb_shoots_thru_walls ("yb_shoots_thru_walls", "2", "Specifies whether bots able to fire at enemies behind the wall, if they hearing or suspecting them.", true, 0.0f, 3.0f);
 ConVar yb_ignore_enemies ("yb_ignore_enemies", "0", "Enables or disables searching world for enemies.");
 ConVar yb_check_enemy_rendering ("yb_check_enemy_rendering", "0", "Enables or disables checking enemy rendering flags. Useful for some mods.");
-
+ConVar yb_stab_close_enemies ("yb_stab_close_enemies", "1", "Enables or disables bot ability to stab the enemy with knife if bot is in good condition.");
 ConVar mp_friendlyfire ("mp_friendlyfire", nullptr, Var::NoRegister);
 
 int Bot::numFriendsNear (const Vector &origin, float radius) {
@@ -883,7 +883,7 @@ void Bot::fireWeapons () {
    }
 
    // use knife if near and good difficulty (l33t dude!)
-   if (m_difficulty >= 3 && pev->health > 80.0f && !game.isNullEntity (enemy) && pev->health >= enemy->v.health && distance < 100.0f && !isOnLadder () && !isGroupOfEnemies (pev->origin)) {
+   if (yb_stab_close_enemies.bool_ () && m_difficulty >= 3 && pev->health > 80.0f && !game.isNullEntity (enemy) && pev->health >= enemy->v.health && distance < 100.0f && !isOnLadder () && !isGroupOfEnemies (pev->origin)) {
       selectWeapons (distance, selectIndex, selectId, choosenWeapon);
       return;
    }
