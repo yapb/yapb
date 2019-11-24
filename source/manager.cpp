@@ -9,6 +9,7 @@
 #include <yapb.h>
 
 ConVar yb_autovacate ("yb_autovacate", "1", "Kick bots to automatically make room for human players.");
+ConVar yb_bind_menu_key ("yb_bind_menu_key", "=", "Bind's specified key for openining bots menu.", false);
 
 ConVar yb_quota ("yb_quota", "0", "Specifies the number bots to be added to the game.", true, 0.0f, static_cast <float> (kGameMaxPlayers));
 ConVar yb_quota_mode ("yb_quota_mode", "normal", "Specifies the type of quota.\nAllowed values: 'normal', 'fill', and 'match'.\nIf 'fill', the server will adjust bots to keep N players in the game, where N is yb_quota.\nIf 'match', the server will maintain a 1:N ratio of humans to bots, where N is yb_quota_match.", false);
@@ -1718,7 +1719,11 @@ void BotConfig::loadMainConfig () {
    if (plat.android && yb_difficulty.int_ () > 3) {
       yb_difficulty.set (3);
    }
-   return;
+
+   // bind the correct menu key for bot menu...
+   if (!game.isDedicated () && !strings.isEmpty (yb_bind_menu_key.str ())) {
+      game.serverCommand ("bind \"%s\" \"yb menu\"", yb_bind_menu_key.str ());
+   }
 }
 
 void BotConfig::loadNamesConfig () {
