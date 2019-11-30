@@ -124,7 +124,7 @@ int BotControl::cmdVote () {
    for (const auto &bot : bots) {
       bot->m_voteMap = mapID;
    }
-   msg ("All dead bots will vote for map #%d", mapID);
+   msg ("All dead bots will vote for map #%d.", mapID);
 
    return BotCommandResult::Handled;
 }
@@ -292,9 +292,7 @@ int BotControl::cmdCvars () {
    }
 
    if (isSave) {
-      ctrl.msg ("Bots cvars has been written to file.");
-
-
+      msg ("Bots cvars has been written to file.");
       cfg.close ();
    }
    return BotCommandResult::Handled;
@@ -567,10 +565,10 @@ int BotControl::cmdNodeDelete () {
       // check for existence
       if (graph.exists (index)) {
          graph.erase (index);
-         msg ("Node #%d has beed deleted.", index);
+         msg ("Node %d has beed deleted.", index);
       }
       else {
-         msg ("Could not delete node #%d.", index);
+         msg ("Could not delete node %d.", index);
       }
    }
    return BotCommandResult::Handled;
@@ -610,10 +608,10 @@ int BotControl::cmdNodeCache () {
       // check for existence
       if (graph.exists (index)) {
          graph.cachePoint (index);
-         msg ("Node #%d has been put into the memory.", index);
+         msg ("Node %d has been put into the memory.", index);
       }
       else {
-         msg ("Could not put node #%d into the memory.", index);
+         msg ("Could not put node %d into the memory.", index);
       }
    }
    return BotCommandResult::Handled;
@@ -640,7 +638,7 @@ int BotControl::cmdNodeClean () {
    else if (getStr (option) == "empty" || getStr (option) == "nearest") {
       int removed = graph.clearConnections (graph.getEditorNeareset ());
 
-      msg ("Done. Processed node #%d. %d useless paths was cleared.", graph.getEditorNeareset (), removed);
+      msg ("Done. Processed node %d. %d useless paths was cleared.", graph.getEditorNeareset (), removed);
    }
    else {
       int index = getInt (option);
@@ -649,10 +647,10 @@ int BotControl::cmdNodeClean () {
       if (graph.exists (index)) {
          int removed = graph.clearConnections (index);
 
-         msg ("Done. Processed node #%d. %d useless paths was cleared.", index, removed);
+         msg ("Done. Processed node %d. %d useless paths was cleared.", index, removed);
       }
       else {
-         msg ("Could not process node #%d clearance.", index);
+         msg ("Could not process node %d clearance.", index);
       }
    }
    return BotCommandResult::Handled;
@@ -679,7 +677,7 @@ int BotControl::cmdNodeSetRadius () {
    float value = getStr (radius).float_ ();
 
    graph.setRadius (radiusIndex, value);
-   msg ("Node #%d has been set to radius %.2f.", radiusIndex, value);
+   msg ("Node %d has been set to radius %.2f.", radiusIndex, value);
 
    return BotCommandResult::Handled;
 }
@@ -713,13 +711,13 @@ int BotControl::cmdNodeTeleport () {
    if (graph.exists (index)) {
       engfuncs.pfnSetOrigin (graph.getEditor (), graph[index].origin);
 
-      msg ("You have been teleported to node #%d.", index);
+      msg ("You have been teleported to node %d.", index);
 
       // turn graph on
       graph.setEditFlag (GraphEdit::On | GraphEdit::Noclip);
    }
    else {
-      msg ("Could not teleport to node #%d.", index);
+      msg ("Could not teleport to node %d.", index);
    }
    return BotCommandResult::Handled;
 }

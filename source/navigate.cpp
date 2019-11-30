@@ -1158,11 +1158,11 @@ void Bot::findShortestPath (int srcIndex, int destIndex) {
    // this function finds the shortest path from source index to destination index
 
    if (!graph.exists (srcIndex)){
-      logger.error ("Pathfinder source path index not valid (%d)", srcIndex);
+      logger.error ("Pathfinder source path index not valid (%d).", srcIndex);
       return;
    }
    else if (!graph.exists (destIndex)) {
-      logger.error ("Pathfinder destination path index not valid (%d)", destIndex);
+      logger.error ("Pathfinder destination path index not valid (%d).", destIndex);
       return;
    }
    clearSearchNodes ();
@@ -1366,11 +1366,11 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
    }
 
    if (!graph.exists (srcIndex)) {
-      logger.error ("Pathfinder source path index not valid (%d)", srcIndex);
+      logger.error ("Pathfinder source path index not valid (%d).", srcIndex);
       return;
    }
    else if (!graph.exists (destIndex)) {
-      logger.error ("Pathfinder destination path index not valid (%d)", destIndex);
+      logger.error ("Pathfinder destination path index not valid (%d).", destIndex);
       return;
    }
    clearSearchNodes ();
@@ -2698,19 +2698,17 @@ bool Bot::isDeadlyMove (const Vector &to) {
    return false;
 }
 
-#ifdef DEAD_CODE
-
 void Bot::changePitch (float speed) {
    // this function turns a bot towards its ideal_pitch
 
-   float idealPitch = AngleNormalize (pev->idealpitch);
-   float curent = AngleNormalize (pev->v_angle.x);
+   float idealPitch = cr::normalizeAngles (pev->idealpitch);
+   float curent = cr::normalizeAngles (pev->v_angle.x);
 
    // turn from the current v_angle pitch to the idealpitch by selecting
    // the quickest way to turn to face that direction
 
    // find the difference in the curent and ideal angle
-   float normalizePitch = AngleNormalize (idealPitch - curent);
+   float normalizePitch = cr::normalizeAngles (idealPitch - curent);
 
    if (normalizePitch > 0.0f) {
       if (normalizePitch > speed) {
@@ -2723,7 +2721,7 @@ void Bot::changePitch (float speed) {
       }
    }
 
-   pev->v_angle.x = AngleNormalize (curent + normalizePitch);
+   pev->v_angle.x = cr::normalizeAngles (curent + normalizePitch);
 
    if (pev->v_angle.x > 89.9f) {
       pev->v_angle.x = 89.9f;
@@ -2738,14 +2736,14 @@ void Bot::changePitch (float speed) {
 void Bot::changeYaw (float speed) {
    // this function turns a bot towards its ideal_yaw
 
-   float idealPitch = AngleNormalize (pev->ideal_yaw);
-   float curent = AngleNormalize (pev->v_angle.y);
+   float idealPitch = cr::normalizeAngles (pev->ideal_yaw);
+   float curent = cr::normalizeAngles (pev->v_angle.y);
 
    // turn from the current v_angle yaw to the ideal_yaw by selecting
    // the quickest way to turn to face that direction
 
    // find the difference in the curent and ideal angle
-   float normalizePitch = AngleNormalize (idealPitch - curent);
+   float normalizePitch = cr::normalizeAngles (idealPitch - curent);
 
    if (normalizePitch > 0.0f) {
       if (normalizePitch > speed) {
@@ -2757,11 +2755,9 @@ void Bot::changeYaw (float speed) {
          normalizePitch = -speed;
       }
    }
-   pev->v_angle.y = AngleNormalize (curent + normalizePitch);
+   pev->v_angle.y = cr::normalizeAngles (curent + normalizePitch);
    pev->angles.y = pev->v_angle.y;
 }
-
-#endif
 
 int Bot::findCampingDirection () {
    // find a good node to look at when camping

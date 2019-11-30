@@ -493,7 +493,7 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
    for (int i = 0; i <= toAdd; ++i) {
       addbot ("", difficulty, personality, selection, -1, true);
    }
-   ctrl.msg ("Fill Server with %s bots...", &teams[selection][0]);
+   ctrl.msg ("Fill server with %s bots...", &teams[selection][0]);
 }
 
 void BotManager::kickEveryone (bool instant, bool zeroQuota) {
@@ -539,7 +539,7 @@ void BotManager::killAllBots (int team) {
       }
       bot->kill ();
    }
-   ctrl.msg ("All Bots died !");
+   ctrl.msg ("All bots died...");
 }
 
 void BotManager::kickBot (int index) {
@@ -675,7 +675,7 @@ void BotManager::setWeaponMode (int selection) {
    }
    yb_jasonmode.set (selection == 0 ? 1 : 0);
 
-   ctrl.msg ("%s weapon mode selected", &modes[selection][0]);
+   ctrl.msg ("%s weapon mode selected.", &modes[selection][0]);
 }
 
 void BotManager::listBots () {
@@ -1282,7 +1282,7 @@ void Bot::kick () {
    pev->flags &= ~FL_FAKECLIENT;
 
    game.serverCommand ("kick \"%s\"", username);
-   ctrl.msg ("Bot '%s' kicked", username);
+   ctrl.msg ("Bot '%s' kicked.", username);
 }
 
 void Bot::updateTeamJoin () {
@@ -2075,7 +2075,7 @@ void BotConfig::loadLanguageConfig () {
    if (game.isDedicated () || game.is (GameFlags::Legacy)) {
 
       if (game.is (GameFlags::Legacy)) {
-         logger.message ("Bots multilingual system disabled, due to your Counter-Strike Version!");
+         logger.message ("Bots multilingual system disabled, due to your Counter-Strike version!");
       }
       return; // dedicated server will use only english translation
    }

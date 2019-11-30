@@ -94,7 +94,7 @@ int BotGraph::clearConnections (int index) {
    }
 
    if (top.number == kInvalidNodeIndex) {
-      ctrl.msg ("Cannot find path to the closest connected node to node number %d!\n", index);
+      ctrl.msg ("Cannot find path to the closest connected node to node number %d.", index);
       return numFixedLinks;
    }
    bool sorting = false;
@@ -395,7 +395,7 @@ void BotGraph::addPath (int addIndex, int pathIndex, float distance) {
    // don't allow paths get connected twice
    for (const auto &link : path.links) {
       if (link.index == pathIndex) {
-         ctrl.msg ("Denied path creation from %d to %d (path already exists)", addIndex, pathIndex);
+         ctrl.msg ("Denied path creation from %d to %d (path already exists).", addIndex, pathIndex);
          return;
       }
    }
@@ -406,7 +406,7 @@ void BotGraph::addPath (int addIndex, int pathIndex, float distance) {
          link.index = static_cast <int16> (pathIndex);
          link.distance = cr::abs (static_cast <int> (distance));
 
-         ctrl.msg ("Path added from %d to %d", addIndex, pathIndex);
+         ctrl.msg ("Path added from %d to %d.", addIndex, pathIndex);
          return;
       }
    }
@@ -423,7 +423,7 @@ void BotGraph::addPath (int addIndex, int pathIndex, float distance) {
    }
 
    if (slot != kInvalidNodeIndex) {
-      ctrl.msg ("Path added from %d to %d", addIndex, pathIndex);
+      ctrl.msg ("Path added from %d to %d.", addIndex, pathIndex);
 
       path.links[slot].index = static_cast <int16> (pathIndex);
       path.links[slot].distance = cr::abs (static_cast <int> (distance));
@@ -571,7 +571,7 @@ void BotGraph::add (int type, const Vector &pos) {
          path = &m_paths[index];
 
          if (!(path->flags & NodeFlag::Camp)) {
-            ctrl.msg ("This is not Camping Node");
+            ctrl.msg ("This is not camping node.");
             return;
          }
          path->end = m_editor->v.v_angle.get2d ();
@@ -864,7 +864,7 @@ void BotGraph::toggleFlags (int toggleFlag) {
       }
       else if (!(m_paths[index].flags & toggleFlag)) {
          if (toggleFlag == NodeFlag::Sniper && !(m_paths[index].flags & NodeFlag::Camp)) {
-            ctrl.msg ("Cannot assign sniper flag to node #%d. This is not camp node.", index);
+            ctrl.msg ("Cannot assign sniper flag to node %d. This is not camp node.", index);
             return;
          }
          m_paths[index].flags |= toggleFlag;
@@ -954,7 +954,7 @@ void BotGraph::pathCreate (char dir) {
    int nodeFrom = getEditorNeareset ();
 
    if (nodeFrom == kInvalidNodeIndex) {
-      ctrl.msg ("Unable to find nearest node in 50 units");
+      ctrl.msg ("Unable to find nearest node in 50 units.");
       return;
    }
    int nodeTo = m_facingAtIndex;
@@ -970,7 +970,7 @@ void BotGraph::pathCreate (char dir) {
    }
 
    if (nodeTo == nodeFrom) {
-      ctrl.msg ("Unable to connect node with itself");
+      ctrl.msg ("Unable to connect node with itself.");
       return;
    }
 
@@ -1053,7 +1053,7 @@ void BotGraph::cachePoint (int index) {
       return;
    }
    m_cacheNodeIndex = node;
-   ctrl.msg ("Node #%d has been put into memory.", m_cacheNodeIndex);
+   ctrl.msg ("Node %d has been put into memory.", m_cacheNodeIndex);
 }
 
 void BotGraph::calculatePathRadius (int index) {
@@ -1401,7 +1401,7 @@ template <typename U> bool BotGraph::saveStorage (const String &ext, const Strin
    filename.assignf ("%s.%s", game.getMapName (), ext.chars ());
 
    if (data.empty ()) {
-      logger.error ("Unable to save %s file. Empty data. (filename: '%s')", name.chars (), filename.chars ());
+      logger.error ("Unable to save %s file. Empty data. (filename: '%s').", name.chars (), filename.chars ());
       return false;
    }
    else if (isGraph) {
@@ -1416,7 +1416,7 @@ template <typename U> bool BotGraph::saveStorage (const String &ext, const Strin
 
    // no open no fun
    if (!file) {
-      logger.error ("Unable to open %s file for writing (filename: '%s')", name.chars (), filename.chars ());
+      logger.error ("Unable to open %s file for writing (filename: '%s').", name.chars (), filename.chars ());
       file.close ();
 
       return false;
@@ -1449,7 +1449,7 @@ template <typename U> bool BotGraph::saveStorage (const String &ext, const Strin
       game.print ("Successfully saved Bots %s data.", name.chars ());
    }
    else {
-      logger.error ("Unable to compress %s data (filename: '%s')", name.chars (), filename.chars ());
+      logger.error ("Unable to compress %s data (filename: '%s').", name.chars (), filename.chars ());
       file.close ();
 
       return false;
@@ -1521,7 +1521,7 @@ template <typename U> bool BotGraph::loadStorage (const String &ext, const Strin
          return true;
       }
       else {
-         game.print ("Can't download '%s'. from '%s' to '%s'... (%d)", filename.chars (), fromDownload, toDownload, http.getLastStatusCode ());
+         game.print ("Can't download '%s'. from '%s' to '%s'... (%d).", filename.chars (), fromDownload, toDownload, http.getLastStatusCode ());
       }
       return false;
    };
@@ -2323,14 +2323,14 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
       int connections = 0;
 
       if (path.number != static_cast <int> (m_paths.index (path))) {
-         ctrl.msg ("Node %d path differs from index %d!", path.number, m_paths.index (path));
+         ctrl.msg ("Node %d path differs from index %d.", path.number, m_paths.index (path));
          break;
       }
 
       for (const auto &test : path.links) {
          if (test.index != kInvalidNodeIndex) {
             if (test.index > length ()) {
-               ctrl.msg ("Node %d connected with invalid Node #%d!", path.number, test.index);
+               ctrl.msg ("Node %d connected with invalid node %d.", path.number, test.index);
                return false;
             }
             ++connections;
@@ -2340,14 +2340,14 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
 
       if (connections == 0) {
          if (!isConnected (path.number)) {
-            ctrl.msg ("Node %d isn't connected with any other Node!", path.number);
+            ctrl.msg ("Node %d isn't connected with any other node.", path.number);
             return false;
          }
       }
 
       if (path.flags & NodeFlag::Camp) {
          if (path.end.empty ()) {
-            ctrl.msg ("Node %d Camp-Endposition not set!", path.number);
+            ctrl.msg ("Node %d camp-endposition not set.", path.number);
             return false;
          }
       }
@@ -2367,13 +2367,13 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
       for (const auto &test : path.links) {
          if (test.index != kInvalidNodeIndex) {
             if (!exists (test.index)) {
-               ctrl.msg ("Node %d - Pathindex %d out of Range!", path.number, test.index);
+               ctrl.msg ("Node %d path index %d out of range.", path.number, test.index);
                teleport (path);
 
                return false;
             }
             else if (test.index == path.number) {
-               ctrl.msg ("Node %d - Pathindex %d points to itself!", path.number, test.index);
+               ctrl.msg ("Node %d path index %d points to itself.", path.number, test.index);
                teleport (path);
 
                return false;
@@ -2384,20 +2384,20 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
 
    if (game.mapIs (MapFlags::HostageRescue)) {
       if (rescuePoints == 0) {
-         ctrl.msg ("You didn't set a Rescue Point!");
+         ctrl.msg ("You didn't set a rescue point.");
          return false;
       }
    }
    if (terrPoints == 0) {
-      ctrl.msg ("You didn't set any Terrorist Important Point!");
+      ctrl.msg ("You didn't set any terrorist important point.");
       return false;
    }
    else if (ctPoints == 0) {
-      ctrl.msg ("You didn't set any CT Important Point!");
+      ctrl.msg ("You didn't set any CT important point.");
       return false;
    }
    else if (goalPoints == 0) {
-      ctrl.msg ("You didn't set any Goal Point!");
+      ctrl.msg ("You didn't set any goal point.");
       return false;
    }
 
@@ -2432,7 +2432,7 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
 
    for (const auto &path : m_paths) {
       if (!visited[path.number]) {
-         ctrl.msg ("Path broken from Node #0 to Node #%d!", path.number);
+         ctrl.msg ("Path broken from node 0 to node %d.", path.number);
          teleport (path);
 
          return false;
@@ -2475,7 +2475,7 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
    
    for (const auto &path : m_paths) {
       if (!visited[path.number]) {
-         ctrl.msg ("Path broken from Node #%d to Node #0!", path.number);
+         ctrl.msg ("Path broken from node %d to node 0.", path.number);
          teleport (path);
 
          return false;
@@ -2663,7 +2663,7 @@ void BotGraph::setSearchIndex (int index) {
    m_findWPIndex = index;
 
    if (exists (m_findWPIndex)) {
-      ctrl.msg ("Showing Direction to Node #%d", m_findWPIndex);
+      ctrl.msg ("Showing direction to node %d.", m_findWPIndex);
    }
    else {
       m_findWPIndex = kInvalidNodeIndex;

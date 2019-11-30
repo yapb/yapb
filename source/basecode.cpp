@@ -3559,7 +3559,7 @@ void Bot::camp_ () {
 
          for (int i = 0; i < graph.length (); ++i) {
             // skip invisible waypoints or current waypoint
-            if (!graph.isVisible (m_currentNodeIndex, i) || (i == m_currentNodeIndex)) {
+            if (!graph.isVisible (m_currentNodeIndex, i) || i == m_currentNodeIndex) {
                continue;
             }
             const Vector &dotB = (graph[i].origin - pev->origin).normalize2d ();
