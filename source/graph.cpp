@@ -1020,8 +1020,6 @@ void BotGraph::erasePath () {
       link.velocity = nullptr;
    };
 
-   game.print ("trying delete f = %d to %d", nodeFrom, nodeTo);
-
    for (auto &link : m_paths[nodeFrom].links) {
       if (link.index == nodeTo) {
          destroy (link);

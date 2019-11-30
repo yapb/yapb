@@ -152,6 +152,6 @@ public:
    bool enabled () const {
       return m_patched;
    }
-   };
+};
 
 CR_NAMESPACE_END
