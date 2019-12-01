@@ -116,7 +116,6 @@ private:
    int m_spawnCount[Team::Unassigned];
 
    // bot client command
-   bool m_isBotCommand;
    StringArray m_botArgs;
 
    edict_t *m_startEntity;
@@ -224,7 +223,7 @@ public:
 
    // get the fakeclient command interface
    bool isBotCmd () const  {
-      return m_isBotCommand;
+      return !m_botArgs.empty ();
    }
 
    // gets custom engine args for client command

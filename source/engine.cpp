@@ -19,7 +19,6 @@ Game::Game () {
    m_localEntity = nullptr;
 
    m_precached = false;
-   m_isBotCommand = false;
 
    plat.bzero (m_drawModels, sizeof (m_drawModels));
    plat.bzero (m_spawnCount, sizeof (m_spawnCount));
@@ -405,8 +404,6 @@ void Game::prepareBotArgs (edict_t *ent, String str) {
    if (str.empty ()) {
       return;
    }
-   m_isBotCommand = true;
-   m_botArgs.clear ();
 
    // helper to parse single (not multi) command
    auto parsePartArgs = [&] (String &args) {
@@ -430,7 +427,7 @@ void Game::prepareBotArgs (edict_t *ent, String str) {
             m_botArgs.push (cr::move (args.substr (quote, args.length () - 1).trim ("\""))); // add string with trimmed quotes
          }
          else {
-            for (auto &arg : args.split (" ")) {
+            for (auto &&arg : args.split (" ")) {
                m_botArgs.push (cr::move (arg));
             }
          }
@@ -439,18 +436,19 @@ void Game::prepareBotArgs (edict_t *ent, String str) {
          m_botArgs.push (cr::move (args)); // move all the part to args
       }
       MDLL_ClientCommand (ent);
-      m_botArgs.clear (); // clear space for next cmd 
+
+      // clear space for next cmd 
+      m_botArgs.clear ();
    };
 
    if (str.find (';', 0) != String::InvalidIndex) {
-      for (auto &part : str.split (";")) {
+      for (auto &&part : str.split (";")) {
          parsePartArgs (part);
       }
    }
    else {
       parsePartArgs (str);
    }
-   m_isBotCommand = false;
 }
 
 bool Game::isSoftwareRenderer () {
