@@ -848,6 +848,9 @@ void Game::slowFrame () {
    // initialize light levels
    graph.initLightLevels ();
 
+   // initialize corridors
+   graph.initNarrowPlaces ();
+
    // detect csdm
    applyGameModes ();
 

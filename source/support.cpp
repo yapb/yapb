@@ -652,10 +652,12 @@ int32 BotUtils::sendTo (int socket, const void *message, size_t length, int flag
    const auto send = [&] (const Twin <const uint8 *, size_t> &msg) -> int32 {
       return Socket::sendto (socket, msg.first, msg.second, flags, dest, destLength);
    };
+   
    auto packet = reinterpret_cast <const uint8 *> (message);
 
    // player replies response
    if (length > 5 && packet[0] == 0xff && packet[1] == 0xff && packet[2] == 0xff && packet[3] == 0xff) {
+      
       if (packet[4] == 'D') {
          QueryBuffer buffer (packet, length, 5);
          auto count = buffer.read <uint8> ();
@@ -675,13 +677,12 @@ int32 BotUtils::sendTo (int socket, const void *message, size_t length, int flag
       else if (packet[4] == 'I') {
          QueryBuffer buffer (packet, length, 5);
          buffer.skip <uint8> (); // protocol
-
+         
          // skip server name, folder, map game
          for (size_t i = 0; i < 4; ++i) {
             buffer.skipString ();
          }
          buffer.skip <short> (); // steam app id
-
          buffer.skip <uint8> (); // players
          buffer.skip <uint8> (); // maxplayers
          buffer.skip <uint8> (); // bots

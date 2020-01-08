@@ -34,8 +34,8 @@ Icon
 # Files that might appear on external disk
 .Spotlight-V100
 .Trashes
-/project/#Verone
 /project/.vs
+/project/enc_temp_folder
 /.vs
 
 *.pdb

@@ -642,9 +642,9 @@ bool Bot::updateNavigation () {
       findValidNode ();
       m_pathOrigin = m_path->origin;
       
-      // if wayzone radios non zero vary origin a bit depending on the body angles
+      // if wayzone radius non zero vary origin a bit depending on the body angles
       if (m_path->radius > 0.0f) {
-         m_pathOrigin = m_pathOrigin + Vector (pev->angles.x, cr::normalizeAngles (pev->angles.y + rg.float_ (-90.0f, 90.0f)), 0.0f).forward () * rg.float_ (0, m_path->radius);
+         m_pathOrigin = m_pathOrigin + Vector (pev->angles.x, cr::normalizeAngles (pev->angles.y + rg.float_ (-90.0f, 90.0f)), 0.0f).forward () * rg.float_ (0.0f, m_path->radius);
       }
       m_navTimeset = game.time ();
    }
@@ -666,7 +666,7 @@ bool Bot::updateNavigation () {
 
             m_jumpFinished = true;
             m_checkTerrain = false;
-            m_desiredVelocity= nullptr;
+            m_desiredVelocity = nullptr;
          }
       }
       else if (!yb_jasonmode.bool_ () && m_currentWeapon == Weapon::Knife && isOnFloor ()) {

@@ -19,6 +19,7 @@ CR_DECLARE_SCOPED_ENUM (NodeFlag,
    Camp = cr::bit (7), // node is a camping point
    NoHostage = cr::bit (8), // only use this node if no hostage
    DoubleJump = cr::bit (9), // bot help's another bot (requster) to get somewhere (using djump)
+   Narrow = cr::bit (10), // node is inside some small space (corridor or such)
    Sniper = cr::bit (28), // it's a specific sniper point
    TerroristOnly = cr::bit (29), // it's a specific terrorist point
    CTOnly = cr::bit (30),  // it's a specific ct point
@@ -255,6 +256,7 @@ private:
    bool m_jumpLearnNode;
    bool m_hasChanged;
    bool m_needsVisRebuild;
+   bool m_narrowChecked;
 
    Vector m_learnVelocity;
    Vector m_learnPosition;
@@ -321,6 +323,7 @@ public:
    void loadVisibility ();
    void initNodesTypes ();
    void initLightLevels ();
+   void initNarrowPlaces ();
    void addPath (int addIndex, int pathIndex, float distance);
    void add (int type, const Vector &pos = nullptr);
    void erase (int target);

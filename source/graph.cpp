@@ -17,14 +17,15 @@ void BotGraph::initGraph () {
    m_loadAttempts = 0;
    m_editFlags = 0;
 
-   m_learnVelocity= nullptr;
+   m_learnVelocity = nullptr;
    m_learnPosition = nullptr;
-   m_lastNode= nullptr;
+   m_lastNode = nullptr;
 
    m_pathDisplayTime = 0.0f;
    m_arrowDisplayTime = 0.0f;
    m_autoPathDistance = 250.0f;
    m_hasChanged = false;
+   m_narrowChecked = false;
 
    // reset highest recorded damage
    for (int team = Team::Terrorist; team < kGameTeamNum; ++team) {
@@ -1296,6 +1297,83 @@ void BotGraph::initLightLevels () {
    }
    // disable lightstyle animations on finish (will be auto-enabled on mapchange)
    illum.enableAnimation (false);
+
+}
+
+void BotGraph::initNarrowPlaces () {
+   // this function checks all nodes if they are inside narrow places. this is used to prevent
+   // bots to track hidden enemies in narrow places and prevent bots from throwing flashbangs or
+   // other grenades inside bad places.
+
+   // no nodes ? 
+   if (m_paths.empty () || m_narrowChecked) {
+      return;
+   }
+   TraceResult tr;
+
+   const auto distance = 178.0f;
+   const auto worldspawn = game.getStartEntity ();
+   const auto offset = Vector (0.0f, 0.0f, 16.0f);
+
+   // check olny paths that have not too much connections
+   for (auto &path : m_paths) {
+
+      // skip any goals and camp points
+      if (path.flags & (NodeFlag::Camp | NodeFlag::Goal)) {
+         continue;
+      }
+      int linkCount = 0;
+
+      for (const auto &link : path.links) {
+         if (link.index == kInvalidNodeIndex || link.index == path.number) {
+            continue;
+         }
+
+         if (++linkCount > kMaxNodeLinks / 2) {
+            break;
+         }
+      }
+
+      // skip nodes with too much connections, this indicated we're not in narrow place
+      if (linkCount > kMaxNodeLinks / 2) {
+         continue;
+      }
+      int accumWeight = 0;
+
+      // we could use this one!
+      for (const auto &link : path.links) {
+         if (link.index == kInvalidNodeIndex || link.index == path.number) {
+            continue;
+         }
+         const Vector &ang = ((path.origin - m_paths[link.index].origin).normalize () * distance).angles ();
+
+         Vector forward, right, upward;
+         ang.angleVectors (&forward, &right, &upward);
+
+         // helper lambda
+         auto directionCheck = [&] (const Vector &to, int weight) {
+            game.testLine (path.origin + offset, to, TraceIgnore::None, nullptr, &tr);
+
+            // check if we're hit worldspawn entity
+            if (tr.pHit == worldspawn && tr.flFraction < 1.0f) {
+               accumWeight += weight;
+            }
+         };
+         directionCheck (-forward * distance, 1);
+
+         directionCheck (right * distance, 1);
+         directionCheck (-right * distance, 1);
+
+         directionCheck (upward * distance, 1);
+      }
+      path.flags &= ~NodeFlag::Narrow;
+
+      if (accumWeight > 1) {
+         path.flags |= NodeFlag::Narrow;
+      }
+      accumWeight = 0;
+   }
+   m_narrowChecked = true;
 }
 
 void BotGraph::initNodesTypes () {
@@ -1336,7 +1414,8 @@ bool BotGraph::convertOldFormat () {
    plat.bzero (&header, sizeof (header));
 
    // save for faster access
-   const char *map = game.getMapName ();
+   auto map = game.getMapName ();
+
    if (fp) {
 
       if (fp.read (&header, sizeof (header)) == 0) {
@@ -2216,7 +2295,7 @@ void BotGraph::frame () {
          }
 
          static String buffer;
-         buffer.assignf ("%s%s%s%s%s%s%s%s%s%s%s%s%s%s", (path.flags == 0 && !jumpPoint) ? " (none)" : "", (path.flags & NodeFlag::Lift) ? " LIFT" : "", (path.flags & NodeFlag::Crouch) ? " CROUCH" : "", (path.flags & NodeFlag::Crossing) ? " CROSSING" : "", (path.flags & NodeFlag::Camp) ? " CAMP" : "", (path.flags & NodeFlag::TerroristOnly) ? " TERRORIST" : "", (path.flags & NodeFlag::CTOnly) ? " CT" : "", (path.flags & NodeFlag::Sniper) ? " SNIPER" : "", (path.flags & NodeFlag::Goal) ? " GOAL" : "", (path.flags & NodeFlag::Ladder) ? " LADDER" : "", (path.flags & NodeFlag::Rescue) ? " RESCUE" : "", (path.flags & NodeFlag::DoubleJump) ? " JUMPHELP" : "", (path.flags & NodeFlag::NoHostage) ? " NOHOSTAGE" : "", jumpPoint ? " JUMP" : "");
+         buffer.assignf ("%s%s%s%s%s%s%s%s%s%s%s%s%s", (path.flags == 0 && !jumpPoint) ? " (none)" : "", (path.flags & NodeFlag::Lift) ? " LIFT" : "", (path.flags & NodeFlag::Crouch) ? " CROUCH" : "", (path.flags & NodeFlag::Camp) ? " CAMP" : "", (path.flags & NodeFlag::TerroristOnly) ? " TERRORIST" : "", (path.flags & NodeFlag::CTOnly) ? " CT" : "", (path.flags & NodeFlag::Sniper) ? " SNIPER" : "", (path.flags & NodeFlag::Goal) ? " GOAL" : "", (path.flags & NodeFlag::Ladder) ? " LADDER" : "", (path.flags & NodeFlag::Rescue) ? " RESCUE" : "", (path.flags & NodeFlag::DoubleJump) ? " JUMPHELP" : "", (path.flags & NodeFlag::NoHostage) ? " NOHOSTAGE" : "", jumpPoint ? " JUMP" : "");
 
          // return the message buffer
          return buffer.chars ();

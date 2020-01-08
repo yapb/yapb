@@ -529,6 +529,9 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
          result = -4.5f;
       }
    }
+   else {
+      result = -5.6f;
+   }
    return result;
 }
 

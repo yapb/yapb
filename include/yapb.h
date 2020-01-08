@@ -872,6 +872,10 @@ private:
       return pev->waterlevel >= 2;
    }
 
+   bool isInNarrowPlace () const {
+      return (m_pathFlags & NodeFlag::Narrow);
+   }
+
 public:
    entvars_t *pev;
 

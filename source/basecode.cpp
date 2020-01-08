@@ -117,14 +117,14 @@ bool Bot::seesEntity (const Vector &dest, bool fromBody) {
 void Bot::checkGrenadesThrow () {
 
    // do not check cancel if we have grenade in out hands
-   bool checkTasks = getCurrentTaskId () == Task::PlantBomb || getCurrentTaskId () == Task::DefuseBomb;
+   bool preventibleTasks = getCurrentTaskId () == Task::PlantBomb || getCurrentTaskId () == Task::DefuseBomb;
 
    auto clearThrowStates = [] (uint32 &states) {
       states &= ~(Sense::ThrowExplosive | Sense::ThrowFlashbang | Sense::ThrowSmoke);
    };
 
    // check if throwing a grenade is a good thing to do...
-   if (checkTasks || yb_ignore_enemies.bool_ () || m_isUsingGrenade || m_grenadeRequested || m_isReloading || yb_jasonmode.bool_ () || m_grenadeCheckTime >= game.time ()) {
+   if (preventibleTasks || isInNarrowPlace () || yb_ignore_enemies.bool_ () || m_isUsingGrenade || m_grenadeRequested || m_isReloading || yb_jasonmode.bool_ () || m_grenadeCheckTime >= game.time ()) {
       clearThrowStates (m_states);
       return;
    }
@@ -2692,12 +2692,16 @@ void Bot::updateAimDir () {
 
    // don't allow bot to look at danger positions under certain circumstances
    if (!(flags & (AimFlags::Grenade | AimFlags::Enemy | AimFlags::Entity))) {
-      if (isOnLadder () || isInWater () || (m_pathFlags & NodeFlag::Ladder) || (m_currentTravelFlags & PathFlag::Jump)) {
+
+      // check if narrow place and we're duck, do not predict enemies in that situation
+      const bool duckedInNarrowPlace = isInNarrowPlace () && ((m_pathFlags & NodeFlag::Crouch) || (pev->button & IN_DUCK));
+
+      if (duckedInNarrowPlace || isOnLadder () || isInWater () || (m_pathFlags & NodeFlag::Ladder) || (m_currentTravelFlags & PathFlag::Jump)) {
          flags &= ~(AimFlags::LastEnemy | AimFlags::PredictPath);
          m_canChooseAimDirection = false;
       }
    }
-
+   
    if (flags & AimFlags::Override) {
       m_lookAt = m_camp;
    }
@@ -2761,6 +2765,7 @@ void Bot::updateAimDir () {
             if (!m_camp.empty ()) {
                m_lookAt = m_camp;
             }
+            m_timeNextTracking = game.time () + 2.5f;
          }
       }
       else {
@@ -2771,8 +2776,15 @@ void Bot::updateAimDir () {
       m_lookAt = m_camp;
    }
    else if (flags & AimFlags::Nav) {
-      if (m_moveToGoal && !m_isStuck && m_currentNodeIndex != kInvalidNodeIndex && !(m_path->flags & NodeFlag::Ladder) && m_pathWalk.hasNext () && (pev->origin - m_destOrigin).lengthSq () < cr::square (52.0f)) {
-         m_lookAt = graph[m_pathWalk.next ()].origin + pev->view_ofs;
+      if (m_moveToGoal && !m_isStuck && !(pev->button & IN_DUCK) && m_currentNodeIndex != kInvalidNodeIndex && !(m_path->flags & (NodeFlag::Ladder | NodeFlag::Crouch)) && m_pathWalk.hasNext () && (pev->origin - m_destOrigin).lengthSq () < cr::square (52.0f)) {
+         int nextPath = m_pathWalk.next ();
+
+         if (graph.isVisible (m_currentNodeIndex, nextPath)) {
+            m_lookAt = graph[nextPath].origin + pev->view_ofs;
+         }
+         else {
+            m_lookAt = m_destOrigin;
+         }
       }
       else {
          m_lookAt = m_destOrigin;
