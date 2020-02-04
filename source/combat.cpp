@@ -945,7 +945,7 @@ bool Bot::isWeaponBadAtDistance (int weaponIndex, float distance) {
 
    auto &info = conf.getWeapons ();
 
-   if (m_difficulty < 2) {
+   if (m_difficulty < 2 || !hasSecondaryWeapon ()) {
       return false;
    }
    int wid = info[weaponIndex].id;

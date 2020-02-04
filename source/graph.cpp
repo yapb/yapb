@@ -2673,16 +2673,18 @@ void BotGraph::eraseFromDisk () {
    // this function removes graph file from the hard disk
 
    StringArray forErase;
-   const char *map = game.getMapName ();
+
+   auto map = game.getMapName ();
+   auto data = getDataDirectory ();
 
    bots.kickEveryone (true);
 
    // if we're delete graph, delete all corresponding to it files
-   forErase.push (strings.format ("%s%s.pwf", getDataDirectory (), map)); // graph itself
-   forErase.push (strings.format ("%slearned/%s.exp", getDataDirectory (), map)); // corresponding to practice
-   forErase.push (strings.format ("%slearned/%s.vis", getDataDirectory (), map)); // corresponding to vistable
-   forErase.push (strings.format ("%slearned/%s.pmx", getDataDirectory (), map)); // corresponding to matrix
-   forErase.push (strings.format ("%sgraph/%s.graph", getDataDirectory (), map)); // new format graph
+   forErase.push (strings.format ("%s%s.pwf", data, map)); // graph itself
+   forErase.push (strings.format ("%slearned/%s.exp", data, map)); // corresponding to practice
+   forErase.push (strings.format ("%slearned/%s.vis", data, map)); // corresponding to vistable
+   forErase.push (strings.format ("%slearned/%s.pmx", data, map)); // corresponding to matrix
+   forErase.push (strings.format ("%sgraph/%s.graph", data, map)); // new format graph
 
    for (const auto &item : forErase) {
       if (File::exists (item)) {

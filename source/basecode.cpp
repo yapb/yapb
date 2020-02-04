@@ -2176,7 +2176,7 @@ bool Bot::reactOnEnemy () {
       auto lineDist = (m_enemy->v.origin - pev->origin).length ();
       auto pathDist = static_cast <float> (graph.getPathDist (ownIndex, enemyIndex));
 
-      if (pathDist - lineDist > 112.0f) {
+      if (pathDist - lineDist > 112.0f || isOnLadder ()) {
          m_isEnemyReachable = false;
       }
       else {
@@ -3444,11 +3444,6 @@ void Bot::attackEnemy_ () {
 
    if (!game.isNullEntity (m_enemy)) {
       ignoreCollision ();
-
-      if (isOnLadder ()) {
-         pev->button |= IN_JUMP;
-         clearSearchNodes ();
-      }
       attackMovement ();
 
       if (m_currentWeapon == Weapon::Knife && !m_lastEnemyOrigin.empty ()) {
