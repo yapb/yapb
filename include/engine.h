@@ -671,6 +671,6 @@ public:
 };
 
 // expose globals
-static auto &game = Game::get ();
-static auto &illum = LightMeasure::get ();
-static auto &ents = DynamicEntityLink::get ();
+CR_EXPOSE_GLOBAL_SINGLETON (Game, game);
+CR_EXPOSE_GLOBAL_SINGLETON (LightMeasure, illum);
+CR_EXPOSE_GLOBAL_SINGLETON (DynamicEntityLink, ents);

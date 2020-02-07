@@ -1473,7 +1473,7 @@ bool BotGraph::convertOldFormat () {
    return true;
 }
 
-template <typename U> bool BotGraph::saveStorage (const String &ext, const String &name, StorageOption options, StorageVersion version, const SmallArray <U> &data, uint8 *blob) {
+template <typename U> bool BotGraph::saveStorage (const String &ext, const String &name, StorageOption options, StorageVersion version, const SmallArray <U> &data, ExtenHeader *exten) {
    bool isGraph = (ext == "graph");
 
    String filename;
@@ -1521,9 +1521,9 @@ template <typename U> bool BotGraph::saveStorage (const String &ext, const Strin
       file.write (&hdr, sizeof (StorageHeader));
       file.write (compressed.data (), sizeof (uint8), compressedLength);
 
-      // add creator
-      if ((options & StorageOption::Author) && blob != nullptr) {
-         file.write (blob, sizeof (uint8), 64);
+      // add extension
+      if ((options & StorageOption::Exten) && exten != nullptr) {
+         file.write (exten, sizeof (ExtenHeader));
       }
       game.print ("Successfully saved Bots %s data.", name.chars ());
    }
@@ -1537,7 +1537,7 @@ template <typename U> bool BotGraph::saveStorage (const String &ext, const Strin
    return true;
 }
 
-template <typename U> bool BotGraph::loadStorage (const String &ext, const String &name, StorageOption options, StorageVersion version, SmallArray <U> &data, uint8 *blob, int32 *outOptions) {
+template <typename U> bool BotGraph::loadStorage (const String &ext, const String &name, StorageOption options, StorageVersion version, SmallArray <U> &data, ExtenHeader *exten, int32 *outOptions) {
    String filename;
    filename.assignf ("%s.%s", game.getMapName (), ext.chars ()).lowercase ();
 
@@ -1614,11 +1614,11 @@ template <typename U> bool BotGraph::loadStorage (const String &ext, const Strin
       }
 
       if (download ()) {
-         return loadStorage <U> (ext, name, options, version, data, blob, outOptions);
+         return loadStorage <U> (ext, name, options, version, data, exten, outOptions);
       }
       
       if (convertOldFormat ()) {
-         return loadStorage <U> (ext, name, options, version, data, blob, outOptions);
+         return loadStorage <U> (ext, name, options, version, data, exten, outOptions);
       }
       return false;
    };
@@ -1690,8 +1690,8 @@ template <typename U> bool BotGraph::loadStorage (const String &ext, const Strin
          }
 
          // author of graph.. save
-         if ((hdr.options & StorageOption::Author) && blob != nullptr) {
-            file.read (blob, sizeof (uint8), 64);
+         if ((hdr.options & StorageOption::Exten) && exten != nullptr) {
+            file.read (exten, sizeof (ExtenHeader));
          }
          game.print ("Successfully loaded Bots %s data (%d/%.2fMB).", name.chars (), data.length (), static_cast <float> (data.capacity () * sizeof (U)) / 1024.0f / 1024.0f);
          file.close ();
@@ -1706,13 +1706,13 @@ template <typename U> bool BotGraph::loadStorage (const String &ext, const Strin
 }
 
 bool BotGraph::loadGraphData () {
-   uint8 blob[64];
+   ExtenHeader exten {};
    int32 outOptions = 0;
 
    m_paths.clear ();
 
    // check if loaded
-   bool dataLoaded = loadStorage <Path> ("graph", "Graph", StorageOption::Graph, StorageVersion::Graph, m_paths, reinterpret_cast <uint8 *> (blob), &outOptions);
+   bool dataLoaded = loadStorage <Path> ("graph", "Graph", StorageOption::Graph, StorageVersion::Graph, m_paths, &exten, &outOptions);
 
    if (dataLoaded) {
       initGraph ();
@@ -1723,17 +1723,24 @@ bool BotGraph::loadGraphData () {
          addToBucket (path.origin, path.number);
       }
 
-      if ((outOptions & StorageOption::Official) || memcmp (blob, "official", 8) == 0) {
-         m_tempStrings.assign ("Using Official Graph File");
+      if ((outOptions & StorageOption::Official) || strncmp (exten.author, "official", 8) == 0 || strlen (exten.author) < 2) {
+         m_tempStrings.assign ("Using Official Navigation Graph");
       }
       else {
-         m_tempStrings.assignf ("Using Graph File By: %s", blob);
+         m_tempStrings.assignf ("Navigation Graph Authord By: %s", exten.author);
       }
       initNodesTypes ();
       loadPathMatrix ();
       loadVisibility ();
       loadPractice ();
 
+      if (exten.mapSize > 0) {
+         int mapSize = engfuncs.pfnGetFileSize (strings.format ("maps/%s.bsp", game.getMapName ()));
+
+         if (mapSize != exten.mapSize) {
+            game.print ("Warning: Graph data is probably not for this map. Please check bots behaviour.");
+         }
+      }
       extern ConVar yb_debug_goal;
       yb_debug_goal.set (kInvalidNodeIndex);
 
@@ -1743,7 +1750,7 @@ bool BotGraph::loadGraphData () {
 }
 
 bool BotGraph::saveGraphData () {
-   auto options = StorageOption::Graph | StorageOption::Author;
+   auto options = StorageOption::Graph | StorageOption::Exten;
    String author;
 
    if (game.isNullEntity (m_editor) && !m_tempStrings.empty ()) {
@@ -1757,13 +1764,17 @@ bool BotGraph::saveGraphData () {
    else {
       author = "YAPB";
    }
-   author.resize (64);
-      
+
    // mark as official
    if (author.startsWith ("YAPB")) {
       options |= StorageOption::Official;
    }
-   return saveStorage <Path> ("graph", "Graph", static_cast <StorageOption> (options), StorageVersion::Graph, m_paths, reinterpret_cast <uint8 *> (author.begin ()));
+
+   ExtenHeader exten {};
+   strings.copy (exten.author, author.chars (), cr::bufsize (exten.author));
+   exten.mapSize = engfuncs.pfnGetFileSize (strings.format ("maps/%s.bsp", game.getMapName ()));
+
+   return saveStorage <Path> ("graph", "Graph", static_cast <StorageOption> (options), StorageVersion::Graph, m_paths, &exten);
 }
 
 void BotGraph::saveOldFormat () {
@@ -2673,16 +2684,18 @@ void BotGraph::eraseFromDisk () {
    // this function removes graph file from the hard disk
 
    StringArray forErase;
-   const char *map = game.getMapName ();
+
+   auto map = game.getMapName ();
+   auto data = getDataDirectory ();
 
    bots.kickEveryone (true);
 
    // if we're delete graph, delete all corresponding to it files
-   forErase.push (strings.format ("%s%s.pwf", getDataDirectory (), map)); // graph itself
-   forErase.push (strings.format ("%slearned/%s.exp", getDataDirectory (), map)); // corresponding to practice
-   forErase.push (strings.format ("%slearned/%s.vis", getDataDirectory (), map)); // corresponding to vistable
-   forErase.push (strings.format ("%slearned/%s.pmx", getDataDirectory (), map)); // corresponding to matrix
-   forErase.push (strings.format ("%sgraph/%s.graph", getDataDirectory (), map)); // new format graph
+   forErase.push (strings.format ("%s%s.pwf", data, map)); // graph itself
+   forErase.push (strings.format ("%slearned/%s.exp", data, map)); // corresponding to practice
+   forErase.push (strings.format ("%slearned/%s.vis", data, map)); // corresponding to vistable
+   forErase.push (strings.format ("%slearned/%s.pmx", data, map)); // corresponding to matrix
+   forErase.push (strings.format ("%sgraph/%s.graph", data, map)); // new format graph
 
    for (const auto &item : forErase) {
       if (File::exists (item)) {

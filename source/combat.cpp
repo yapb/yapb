@@ -917,7 +917,7 @@ void Bot::fireWeapons () {
          if (weapons & cr::bit (id)) {
             const auto &prop = conf.getWeaponProp (id);
 
-            if (prop.ammo1 != -1 && prop.ammo1 < 32 && m_ammo[prop.ammo1] >= tab[selectIndex].minPrimaryAmmo) {
+            if (prop.ammo1 != -1 && prop.ammo1 < kMaxWeapons && m_ammo[prop.ammo1] >= tab[selectIndex].minPrimaryAmmo) {
 
                // available ammo found, reload weapon
                if (m_reloadState == Reload::None || m_reloadCheckTime > game.time ()) {
@@ -945,7 +945,7 @@ bool Bot::isWeaponBadAtDistance (int weaponIndex, float distance) {
 
    auto &info = conf.getWeapons ();
 
-   if (m_difficulty < 2) {
+   if (m_difficulty < 2 || !hasSecondaryWeapon ()) {
       return false;
    }
    int wid = info[weaponIndex].id;
@@ -1415,7 +1415,7 @@ void Bot::selectBestWeapon () {
       const auto &prop = conf.getWeaponProp (id);
 
       // is no ammo required for this weapon OR enough ammo available to fire
-      if (prop.ammo1 < 0 || (prop.ammo1 < 32 && m_ammo[prop.ammo1] >= tab[selectIndex].minPrimaryAmmo)) {
+      if (prop.ammo1 < 0 || (prop.ammo1 < kMaxWeapons && m_ammo[prop.ammo1] >= tab[selectIndex].minPrimaryAmmo)) {
          ammoLeft = true;
       }
 
@@ -1607,7 +1607,7 @@ void Bot::checkReload () {
       }
       const auto &prop = conf.getWeaponProp (weaponIndex);
 
-      if (m_ammoInClip[weaponIndex] < conf.findWeaponById (weaponIndex).maxClip * 0.8f && prop.ammo1 != -1 && prop.ammo1 < 32 && m_ammo[prop.ammo1] > 0) {
+      if (m_ammoInClip[weaponIndex] < conf.findWeaponById (weaponIndex).maxClip * 0.8f && prop.ammo1 != -1 && prop.ammo1 < kMaxWeapons && m_ammo[prop.ammo1] > 0) {
          if (m_currentWeapon != weaponIndex) {
             selectWeaponByName (prop.classname.chars ());
          }

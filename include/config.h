@@ -219,4 +219,4 @@ public:
 };
 
 // explose global
-static auto &conf = BotConfig::get ();
+CR_EXPOSE_GLOBAL_SINGLETON (BotConfig, conf);

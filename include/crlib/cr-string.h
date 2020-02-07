@@ -905,7 +905,7 @@ public:
 };
 
 // expose global string pool
-static auto &strings = StringBuffer::get ();
+CR_EXPOSE_GLOBAL_SINGLETON (StringBuffer, strings);
 
 // some limited utf8 stuff
 class Utf8Tools : public Singleton <Utf8Tools> {
@@ -1141,6 +1141,6 @@ public:
 };
 
 // expose global utf8 tools 
-static auto &utf8tools = Utf8Tools::get ();
+CR_EXPOSE_GLOBAL_SINGLETON (Utf8Tools, utf8tools);
 
 CR_NAMESPACE_END

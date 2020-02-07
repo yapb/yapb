@@ -111,6 +111,10 @@ public:
 #define CR_DECLARE_SCOPED_ENUM(enumName, ...)                  \
    CR_DECLARE_SCOPED_ENUM_TYPE(enumName, int32, __VA_ARGS__)   \
 
+// exposes global variable from class singleton
+#define CR_EXPOSE_GLOBAL_SINGLETON(className, variable) \
+   static auto &variable = className::get ()            \
+
 CR_NAMESPACE_END
 
 // platform-dependant-stuff

@@ -151,4 +151,4 @@ public:
 };
 
 // explose global
-static auto &util = BotUtils::get ();
+CR_EXPOSE_GLOBAL_SINGLETON (BotUtils, util);

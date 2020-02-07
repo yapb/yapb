@@ -216,4 +216,4 @@ template <typename ...Args> inline void BotControl::msg (const char *fmt, Args .
 }
 
 // explose global
-static auto &ctrl = BotControl::get ();
+CR_EXPOSE_GLOBAL_SINGLETON (BotControl, ctrl);

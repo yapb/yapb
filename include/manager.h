@@ -29,6 +29,7 @@ private:
    float m_timeRoundEnd;
    float m_timeRoundMid;
 
+   float m_autoKillCheckTime; // time to kill all the bots ?
    float m_maintainTime; // time to maintain bot creation
    float m_quotaMaintainTime; // time to maintain bot quota
    float m_grenadeUpdateTime; // time to update active grenades
@@ -47,7 +48,7 @@ private:
    bool m_economicsGood[kGameTeamNum]; // is team able to buy anything
    bool m_bombPlanted;
    bool m_botsCanPause;
-   bool m_roundEnded;
+   bool m_roundOver;
 
    Array <edict_t *> m_activeGrenades; // holds currently active grenades on the map
    Array <edict_t *> m_intrestingEntities;  // holds currently intresting entities on the map
@@ -93,6 +94,7 @@ public:
    void kickFromTeam (Team team, bool removeAll = false);
    void killAllBots (int team = -1);
    void maintainQuota ();
+   void maintainAutoKill ();
    void initQuota ();
    void initRound ();
    void decrementQuota (int by = 1);
@@ -172,11 +174,7 @@ public:
    }
 
    bool isRoundOver () const {
-      return m_roundEnded;
-   }
-
-   void setRoundOver (const bool over) {
-      m_roundEnded = over;
+      return m_roundOver;
    }
 
    bool canPause () const {
@@ -265,4 +263,4 @@ public:
 };
 
 // explose global
-static auto &bots = BotManager::get ();
+CR_EXPOSE_GLOBAL_SINGLETON (BotManager, bots);

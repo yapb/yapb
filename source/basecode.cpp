@@ -484,7 +484,7 @@ void Bot::updatePickups () {
    }
 
    auto &intresting = bots.searchIntrestingEntities ();
-   const float radius = cr::square (320.0f);
+   const float radius = cr::square (399.0f);
 
    if (!game.isNullEntity (m_pickupItem)) {
       bool itemExists = false;
@@ -2176,7 +2176,7 @@ bool Bot::reactOnEnemy () {
       auto lineDist = (m_enemy->v.origin - pev->origin).length ();
       auto pathDist = static_cast <float> (graph.getPathDist (ownIndex, enemyIndex));
 
-      if (pathDist - lineDist > 112.0f) {
+      if (pathDist - lineDist > 112.0f || isOnLadder ()) {
          m_isEnemyReachable = false;
       }
       else {
@@ -3444,11 +3444,6 @@ void Bot::attackEnemy_ () {
 
    if (!game.isNullEntity (m_enemy)) {
       ignoreCollision ();
-
-      if (isOnLadder ()) {
-         pev->button |= IN_JUMP;
-         clearSearchNodes ();
-      }
       attackMovement ();
 
       if (m_currentWeapon == Weapon::Knife && !m_lastEnemyOrigin.empty ()) {
@@ -3796,7 +3791,17 @@ void Bot::defuseBomb_ () {
 
    // exception: bomb has been defused
    if (bombPos.empty () || !pickupExists) {
-      defuseError = true;
+
+      // fix for stupid behaviour of CT's when bot is defused
+      for (const auto &bot : bots) {
+         if (bot->m_team == m_team && bot->m_notKilled) {
+            auto defendPoint = graph.getFarest (bot->pev->origin);
+
+            startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.float_ (30.0f, 60.0f), true); // push camp task on to stack
+            startTask (Task::MoveToPosition, TaskPri::MoveToPosition, defendPoint, game.time () + rg.float_ (3.0f, 6.0f), true); // push move command
+         }
+      }
+      graph.setBombOrigin (true);
 
       if (m_numFriendsLeft != 0 && rg.chance (50)) {
          if (timeToBlowUp <= 3.0) {
@@ -3811,6 +3816,7 @@ void Bot::defuseBomb_ () {
             pushRadioMessage (Radio::SectorClear);
          }
       }
+      return;
    }
    else if (defuseRemainingTime > timeToBlowUp) {
       defuseError = true;
@@ -3833,17 +3839,16 @@ void Bot::defuseBomb_ () {
 
    // one of exceptions is thrown. finish task.
    if (defuseError) {
-      m_checkTerrain = true;
-      m_moveToGoal = true;
-
-      m_destOrigin = nullptr;
       m_entity = nullptr;
 
       m_pickupItem = nullptr;
       m_pickupType = Pickup::None;
 
       selectBestWeapon ();
+      resetCollision ();
+
       completeTask ();
+
       return;
    }
 

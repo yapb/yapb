@@ -15,6 +15,7 @@ ConVar yb_quota ("yb_quota", "0", "Specifies the number bots to be added to the 
 ConVar yb_quota_mode ("yb_quota_mode", "normal", "Specifies the type of quota.\nAllowed values: 'normal', 'fill', and 'match'.\nIf 'fill', the server will adjust bots to keep N players in the game, where N is yb_quota.\nIf 'match', the server will maintain a 1:N ratio of humans to bots, where N is yb_quota_match.", false);
 ConVar yb_quota_match ("yb_quota_match", "0", "Number of players to match if yb_quota_mode set to 'match'", true, 0.0f, static_cast <float> (kGameMaxPlayers));
 ConVar yb_think_fps ("yb_think_fps", "30.0", "Specifies hou many times per second bot code will run.", true, 30.0f, 90.0f);
+ConVar yb_autokill_delay ("yb_autokill_delay", "0.0", "Specifies amount of time in seconds when bots will be killed if no humans left alive.", true, 0.0f, 90.0f);
 
 ConVar yb_join_after_player ("yb_join_after_player", "0", "Sepcifies whether bots should join server, only when at least one human player in game.");
 ConVar yb_join_team ("yb_join_team", "any", "Forces all bots to join team specified here.", false);
@@ -45,9 +46,11 @@ BotManager::BotManager () {
    m_timeRoundMid = 0.0f;
    m_timeRoundEnd = 0.0f;
 
+   m_autoKillCheckTime = 0.0f;
+
    m_bombPlanted = false;
    m_botsCanPause = false;
-   m_roundEnded = false;
+   m_roundOver = false;
 
    m_bombSayStatus = BombPlantedSay::ChatSay | BombPlantedSay::Chatter;
 
@@ -67,7 +70,7 @@ BotManager::BotManager () {
 }
 
 void BotManager::createKillerEntity () {
-   // this function creates single trigger_hurt for using in Bot::Kill, to reduce lags, when killing all the bots
+   // this function creates single trigger_hurt for using in Bot::kill, to reduce lags, when killing all the bots
 
    m_killerEntity = engfuncs.pfnCreateNamedEntity (MAKE_STRING ("trigger_hurt"));
 
@@ -410,6 +413,52 @@ void BotManager::maintainQuota () {
    m_quotaMaintainTime = game.time () + 0.40f;
 }
 
+void BotManager::maintainAutoKill () {
+   const float killDelay = yb_autokill_delay.float_ ();
+
+   if (killDelay < 1.0f || m_roundOver) {
+      return;
+   }
+
+   // check if we're reached the delay, so kill out bots
+   if (!cr::fzero (m_autoKillCheckTime) && m_autoKillCheckTime < game.time ()) {
+      killAllBots ();
+      m_autoKillCheckTime = 0.0f;
+
+      return;
+   }
+
+   int aliveBots = 0;
+
+   // do not interrupt bomb-defuse scenario
+   if (game.mapIs (MapFlags::Demolition) && isBombPlanted ()) {
+      return;
+   }
+   int totalHumans = getHumansCount (true); // we're ignore spectators intentionally 
+
+   // if we're have no humans in teams do not bother to proceed
+   if (!totalHumans) {
+      return;
+   }
+   
+   for (const auto &bot : m_bots) {
+      if (bot->m_notKilled) {
+         ++aliveBots;
+
+         // do not interrupt assassination scenario, if vip is a bot
+         if (game.is (MapFlags::Assassination) && util.isPlayerVIP (bot->ent ())) {
+            return;
+         }
+      }
+   }
+   int aliveHumans = getAliveHumansCount ();
+
+   // check if we're have no alive players and some alive bots, and start autokill timer
+   if (!aliveHumans && aliveBots > 0 && cr::fzero (m_autoKillCheckTime)) {
+      m_autoKillCheckTime = game.time () + killDelay;
+   }
+}
+
 void BotManager::reset () {
    m_maintainTime = 0.0f;
    m_quotaMaintainTime = 0.0f;
@@ -621,6 +670,7 @@ bool BotManager::kickRandom (bool decQuota, Team fromTeam) {
 
  void BotManager::setLastWinner (int winner) {
    m_lastWinner = winner;
+   m_roundOver = true;
 
    if (yb_radio_mode.int_ () != 2) {
       return;
@@ -702,7 +752,7 @@ float BotManager::getConnectionTime (int botId) {
       if (bot->index () == botId) {
          auto current = plat.seconds ();
 
-         if (current - bot->m_joinServerTime > bot->m_playServerTime || current - bot->m_joinServerTime <= 0) {
+         if (current - bot->m_joinServerTime > bot->m_playServerTime || current - bot->m_joinServerTime <= 0.0f) {
             bot->m_playServerTime = 60.0f * rg.float_ (30.0f, 240.0f);
             bot->m_joinServerTime = current - bot->m_playServerTime *  rg.float_ (0.2f, 0.8f);
          }
@@ -950,7 +1000,7 @@ int BotManager::getAliveHumansCount () {
    int count = 0;
 
    for (const auto &client : util.getClients ()) {
-      if ((client.flags & (ClientFlags::Used | ClientFlags::Alive)) && bots[client.ent] == nullptr && !(client.ent->v.flags & FL_FAKECLIENT)) {
+      if ((client.flags & ClientFlags::Alive) && bots[client.ent] == nullptr && !(client.ent->v.flags & FL_FAKECLIENT)) {
          ++count;
       }
    }
@@ -1288,6 +1338,10 @@ void Bot::kick () {
 void Bot::updateTeamJoin () {
    // this function handles the selection of teams & class
 
+   if (!m_notStarted) {
+      return;
+   }
+
    // cs prior beta 7.0 uses hud-based motd, so press fire once
    if (game.is (GameFlags::Legacy)) {
       pev->button |= IN_ATTACK;
@@ -1302,8 +1356,8 @@ void Bot::updateTeamJoin () {
    }
 
    // if bot was unable to join team, and no menus popups, check for stacked team
-   if (m_startAction == BotMsg::None && ++m_retryJoin > 3) {
-      if (bots.isTeamStacked (m_wantedTeam - 1)) {
+   if (m_startAction == BotMsg::None) {
+      if (++m_retryJoin > 3 && bots.isTeamStacked (m_wantedTeam - 1)) {
          m_retryJoin = 0;
 
          ctrl.msg ("Could not add bot to the game: Team is stacked (to disable this check, set mp_limitteams and mp_autoteambalance to zero and restart the round).");
@@ -1416,6 +1470,10 @@ void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *en
 
 void BotManager::notifyBombDefuse () {
    // notify all terrorists that CT is starting bomb defusing
+
+   if (!isBombPlanted ()) {
+      return;
+   }
 
    for (const auto &bot : bots) {
       if (bot->m_team == Team::Terrorist && bot->m_notKilled && bot->getCurrentTaskId () != Task::MoveToPosition) {
@@ -1584,7 +1642,7 @@ void BotManager::selectLeaders (int team, bool reset) {
 void BotManager::initRound () {
    // this is called at the start of each round
 
-   m_roundEnded = false;
+   m_roundOver = false;
 
    // check team economics
    for (int team = 0; team < kGameTeamNum; ++team) {
@@ -1611,6 +1669,7 @@ void BotManager::initRound () {
    m_bombSayStatus = BombPlantedSay::ChatSay | BombPlantedSay::Chatter;
    m_timeBombPlanted = 0.0f;
    m_plantSearchUpdateTime = 0.0f;
+   m_autoKillCheckTime = 0.0f;
    m_botsCanPause = false;
 
    resetFilters ();

@@ -96,6 +96,6 @@ public:
 };
 
 // expose global instance
-static auto &logger = SimpleLogger::get ();
+CR_EXPOSE_GLOBAL_SINGLETON (SimpleLogger, logger);
 
 CR_NAMESPACE_END

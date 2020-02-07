@@ -60,6 +60,6 @@ public:
 };
 
 // expose global random generator
-static auto &rg = Random::get ();
+CR_EXPOSE_GLOBAL_SINGLETON (Random, rg);
 
 CR_NAMESPACE_END

@@ -68,6 +68,6 @@ public:
    }
 };
 
-static auto &alloc = Allocator::get ();
+CR_EXPOSE_GLOBAL_SINGLETON (Allocator, alloc);
 
 CR_NAMESPACE_END

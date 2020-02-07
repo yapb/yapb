@@ -146,4 +146,4 @@ private:
    }
 };
 
-static auto &msgs = MessageDispatcher::get ();
+CR_EXPOSE_GLOBAL_SINGLETON (MessageDispatcher, msgs);

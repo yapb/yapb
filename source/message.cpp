@@ -24,7 +24,6 @@ void MessageDispatcher::netMsgTextMsg () {
       return;
    }
 
-
    // reset bomb position for all the bots
    const auto resetBombPosition = [] () -> void {
       if (game.mapIs (MapFlags::Demolition)) {
@@ -115,7 +114,12 @@ void MessageDispatcher::netMsgShowMenu () {
    if (m_args.length () < min || !m_bot) {
       return;
    }
-   m_bot->m_startAction = m_showMenuCache[m_args[menu].chars_];
+   auto cached = m_showMenuCache[m_args[menu].chars_];
+
+   // only assign if non-zero
+   if (cached > 0) {
+      m_bot->m_startAction = cached;
+   }
 }
 
 void MessageDispatcher::netMsgWeaponList () {

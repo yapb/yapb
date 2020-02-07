@@ -246,6 +246,6 @@ struct Platform : public Singleton <Platform> {
 };
 
 // expose platform singleton
-static auto &plat = Platform::get ();
+CR_EXPOSE_GLOBAL_SINGLETON (Platform, plat);
 
 CR_NAMESPACE_END

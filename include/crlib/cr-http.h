@@ -453,6 +453,6 @@ public:
 };
 
 // expose global http client
-static auto &http = HttpClient::get ();
+CR_EXPOSE_GLOBAL_SINGLETON (HttpClient, http);
 
 CR_NAMESPACE_END

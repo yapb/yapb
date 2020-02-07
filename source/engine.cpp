@@ -36,8 +36,6 @@ void Game::precache () {
    }
    m_precached = true;
 
-   
-
    m_drawModels[DrawLine::Simple] = m_engineWrap.precacheModel ("sprites/laserbeam.spr");
    m_drawModels[DrawLine::Arrow] = m_engineWrap.precacheModel ("sprites/arrow1.spr");
 
@@ -841,6 +839,9 @@ void Game::slowFrame () {
 
    // update bot difficulties to newly selected from cvar
    bots.updateBotDifficulties ();
+
+   // check if we're need to autokill bots
+   bots.maintainAutoKill ();
 
    // update client pings
    util.calculatePings ();

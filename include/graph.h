@@ -71,7 +71,7 @@ CR_DECLARE_SCOPED_ENUM (StorageOption,
    Graph = cr::bit (3), // this is a node graph data
    Official = cr::bit (4), // this is additional flag for graph indicates graph are official
    Recovered = cr::bit (5), // this is additional flag indicates graph converted from podbot and was bad
-   Author = cr::bit (6) // this is additional flag indicates that there's author info
+   Exten = cr::bit (6) // this is additional flag indicates that there's extension info
 )
 
 // storage header versions
@@ -110,6 +110,12 @@ struct StorageHeader {
    int32 length;
    int32 compressed;
    int32 uncompressed;
+};
+
+// extension header for graph information
+struct ExtenHeader {
+   char author[32];
+   int32 mapSize;
 };
 
 // general waypoint header information structure
@@ -313,8 +319,8 @@ public:
    bool saveGraphData ();
    bool loadGraphData ();
 
-   template <typename U> bool saveStorage (const String &ext, const String &name, StorageOption options, StorageVersion version, const SmallArray <U> &data, uint8 *blob);
-   template <typename U> bool loadStorage (const String &ext, const String &name, StorageOption options, StorageVersion version, SmallArray <U> &data, uint8 *blob, int32 *outOptions);
+   template <typename U> bool saveStorage (const String &ext, const String &name, StorageOption options, StorageVersion version, const SmallArray <U> &data, ExtenHeader *exten);
+   template <typename U> bool loadStorage (const String &ext, const String &name, StorageOption options, StorageVersion version, SmallArray <U> &data, ExtenHeader *exten, int32 *outOptions);
 
    void saveOldFormat ();
    void initGraph ();
@@ -431,4 +437,4 @@ public:
 };
 
 // explose global
-static auto &graph = BotGraph::get ();
+CR_EXPOSE_GLOBAL_SINGLETON (BotGraph, graph);
