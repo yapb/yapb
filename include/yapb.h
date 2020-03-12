@@ -406,7 +406,9 @@ namespace TaskPri {
 
 // storage file magic
 constexpr char kPodbotMagic[8] = "PODWAY!";
+
 constexpr int32 kStorageMagic = 0x59415042;
+constexpr int32 kStorageMagicUB = 0x544f4255; // storage magic for ubot-data files
 
 constexpr float kInfiniteDistance = 9999999.0f;
 constexpr float kGrenadeCheckTime = 2.15f;

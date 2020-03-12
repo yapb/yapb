@@ -66,8 +66,8 @@ private:
 #if defined (CR_WINDOWS)
       DWORD oldProt;
 
-      FlushInstructionCache (GetCurrentProcess (), orig, m_pageSize);
-      return VirtualProtect (orig, m_pageSize, PAGE_EXECUTE_READWRITE, &oldProt);
+      FlushInstructionCache (GetCurrentProcess (), orig, CodeLength);
+      return VirtualProtect (orig, CodeLength, PAGE_EXECUTE_READWRITE, &oldProt);
 #else 
       auto aligned = align (orig);
       return !mprotect (aligned, m_pageSize, PROT_READ | PROT_WRITE | PROT_EXEC);

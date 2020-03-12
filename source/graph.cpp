@@ -1636,7 +1636,7 @@ template <typename U> bool BotGraph::loadStorage (const String &ext, const Strin
    file.read (&hdr, sizeof (StorageHeader));
 
    // check the magic
-   if (hdr.magic != kStorageMagic) {
+   if (hdr.magic != kStorageMagic && hdr.magic != kStorageMagicUB) {
       if (tryReload ()) {
          return true;
       }
