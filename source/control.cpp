@@ -832,7 +832,7 @@ int BotControl::cmdNodeUpload () {
 
    // try to upload the file
    if (http.uploadFile ("http://upload.ubot.su/", strings.format ("%sgraph/%s.graph", graph.getDataDirectory (false), game.getMapName ()))) {
-      msg ("Graph file was successfully validated and uploaded to the Ubot S3 storage (%s).", product.download);
+      msg ("Graph file was successfully validated and uploaded to the Ubot S3 storage (https://dl.ubot.su/).");
       msg ("It will be available for download for all Ubot and YaPB users in a few minutes");
       msg ("\n");
       msg ("Thank you.");
@@ -851,7 +851,7 @@ int BotControl::cmdNodeUpload () {
       else {
          status.assignf ("%d", code);
       }
-      msg ("Something went wrong with uploading. Come back later. (%s)", status);
+      msg ("Something went wrong with uploading. Come back later. (%s)", status.chars ());
       msg ("\n");
 
       if (code == HttpClientResult::Forbidden) {
