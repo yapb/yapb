@@ -813,20 +813,14 @@ int BotControl::cmdNodeReleaseEditor () {
 }
 
 int BotControl::cmdNodeUpload () {
-   enum args { graph_cmd = 1, cmd, id, max };
-
-   // adding more args to args array, if not enough passed
-   fixMissingArgs (max);
-
-   if (!hasArg (id)) {
-      return BotCommandResult::BadFormat;
-   }
+   enum args { graph_cmd = 1, cmd };
 
    // do not allow to upload bad graph
    if (!graph.checkNodes (false)) {
       msg ("Sorry, unable to upload graph file that contains errors. Please type \"wp check\" to verify graph consistency.");
       return BotCommandResult::BadFormat;
    }
+
    msg ("\n");
    msg ("WARNING!");
    msg ("Graph uploaded to graph database in synchronous mode. That means if graph is big enough");
@@ -836,14 +830,10 @@ int BotControl::cmdNodeUpload () {
    // six seconds is enough?
    http.setTimeout (6);
 
-   extern ConVar yb_graph_url;
-
    // try to upload the file
-   if (http.uploadFile (strings.format ("%s/", yb_graph_url.str ()), strings.format ("%sgraph/%s.graph", graph.getDataDirectory (false), game.getMapName ()))) {
-      msg ("Graph file was uploaded and Issue Request has been created for review.");
-      msg ("As soon as database administrator review your upload request, your graph will");
-      msg ("be available to download for all YaPB users. You can check your issue request at:");
-      msg ("URL: https://github.com/jeefo/yapb-graph/issues");
+   if (http.uploadFile ("http://upload.ubot.su/", strings.format ("%sgraph/%s.graph", graph.getDataDirectory (false), game.getMapName ()))) {
+      msg ("Graph file was successfully validated and uploaded to the Ubot S3 storage (%s).", product.download);
+      msg ("It will be available for download for all Ubot and YaPB users in a few minutes");
       msg ("\n");
       msg ("Thank you.");
       msg ("\n");
@@ -861,14 +851,15 @@ int BotControl::cmdNodeUpload () {
       else {
          status.assignf ("%d", code);
       }
-      msg ("Something went wrong with uploading. Come back later. (%s)", status.chars ());
+      msg ("Something went wrong with uploading. Come back later. (%s)", status);
       msg ("\n");
+
       if (code == HttpClientResult::Forbidden) {
          msg ("You should create issue-request manually for this graph");
          msg ("as it's already exists in database, can't overwrite. Sorry...");
       }
       else {
-         msg ("There is an internal error, or somethingis totally wrong with");
+         msg ("There is an internal error, or something is totally wrong with");
          msg ("your files, and they are not passed sanity checks. Sorry...");
       }
       msg ("\n");
