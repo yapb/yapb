@@ -1,6 +1,6 @@
 //
 // CRLib - Simple library for STL replacement in private projects.
-// Copyright Â© 2020 YaPB Development Team <team@yapb.ru>.
+// Copyright © 2020 YaPB Development Team <team@yapb.ru>.
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
 #include <crlib/cr-basic.h>
 #include <crlib/cr-alloc.h>
 #include <crlib/cr-movable.h>
-#include <crlib/cr-twin.h>
 #include <crlib/cr-uniqueptr.h>
 #include <crlib/cr-array.h>
 
@@ -504,7 +503,7 @@ public:
    }
 
    StringRef str () const {
-      return StringRef (chars_.get (), length_);
+      return { chars_.get (), length_ };
    }
 
 public:
@@ -824,8 +823,8 @@ public:
    };
 
 private:
-   char m_data[RotationCount + 1][StaticBufferSize] {};
-   size_t m_rotate = 0;
+   char data_[RotationCount + 1][StaticBufferSize] {};
+   size_t rotate_ = 0;
 
 public:
    StringBuffer () = default;
@@ -833,24 +832,24 @@ public:
 
 public:
    char *chars () noexcept {
-      if (++m_rotate >= RotationCount) {
-         m_rotate = 0;
+      if (++rotate_ >= RotationCount) {
+         rotate_ = 0;
       }
-      auto result = m_data[cr::clamp <size_t> (m_rotate, 0, RotationCount)];
+      auto result = data_[cr::clamp <size_t> (rotate_, 0, RotationCount)];
       result[0] = kNullChar;
 
       return result;
    }
 
    template <typename U, typename ...Args> U *format (const U *fmt, Args &&...args) noexcept {
-      auto buffer = Singleton <StringBuffer>::instance ().chars ();
+      auto buffer = Singleton <StringBuffer>::instance ()->chars ();
       fmtwrap.exec (buffer, StaticBufferSize, fmt, args...);
 
       return buffer;
    }
 
    template <typename U> U *format (const U *fmt) noexcept {
-      auto buffer = Singleton <StringBuffer>::instance ().chars ();
+      auto buffer = Singleton <StringBuffer>::instance ()->chars ();
       copy (buffer, fmt, StaticBufferSize);
 
       return buffer;
@@ -918,7 +917,7 @@ private:
    };
 
 private:
-   Utf8CaseTable m_toUpperTable[Utf8MaxChars] = {
+   Utf8CaseTable upperTable_[Utf8MaxChars] = {
       { 0x0061, 0x0041 }, { 0x0062, 0x0042 }, { 0x0063, 0x0043 }, { 0x0064, 0x0044 }, { 0x0065, 0x0045 }, { 0x0066, 0x0046 }, { 0x0067, 0x0047 }, { 0x0068, 0x0048 },
       { 0x0069, 0x0049 }, { 0x006a, 0x004a }, { 0x006b, 0x004b }, { 0x006c, 0x004c }, { 0x006d, 0x004d }, { 0x006e, 0x004e }, { 0x006f, 0x004f }, { 0x0070, 0x0050 },
       { 0x0071, 0x0051 }, { 0x0072, 0x0052 }, { 0x0073, 0x0053 }, { 0x0074, 0x0054 }, { 0x0075, 0x0055 }, { 0x0076, 0x0056 }, { 0x0077, 0x0057 }, { 0x0078, 0x0058 },
@@ -1011,16 +1010,16 @@ private:
    };
 
 private:
-   SmallArray <Utf8Table> m_utfTable;
+   SmallArray <Utf8Table> utfTable_;
 
 private:
    void buildTable () {
-      m_utfTable.emplace (0x80, 0x00, 0 * 6, 0x7f, 0); // 1 byte sequence
-      m_utfTable.emplace (0xe0, 0xc0, 1 * 6, 0x7ff, 0x80); // 2 byte sequence
-      m_utfTable.emplace (0xf0, 0xe0, 2 * 6, 0xffff, 0x800); // 3 byte sequence
-      m_utfTable.emplace (0xf8, 0xf0, 3 * 6, 0x1fffff, 0x10000); // 4 byte sequence
-      m_utfTable.emplace (0xfc, 0xf8, 4 * 6, 0x3ffffff, 0x200000); // 5 byte sequence
-      m_utfTable.emplace (0xfe, 0xfc, 5 * 6, 0x7fffffff, 0x4000000); // 6 byte sequence
+      utfTable_.emplace (0x80, 0x00, 0 * 6, 0x7f, 0); // 1 byte sequence
+      utfTable_.emplace (0xe0, 0xc0, 1 * 6, 0x7ff, 0x80); // 2 byte sequence
+      utfTable_.emplace (0xf0, 0xe0, 2 * 6, 0xffff, 0x800); // 3 byte sequence
+      utfTable_.emplace (0xf8, 0xf0, 3 * 6, 0x1fffff, 0x10000); // 4 byte sequence
+      utfTable_.emplace (0xfc, 0xf8, 4 * 6, 0x3ffffff, 0x200000); // 5 byte sequence
+      utfTable_.emplace (0xfe, 0xfc, 5 * 6, 0x7fffffff, 0x4000000); // 6 byte sequence
    }
 
    int32 multiByteToWideChar (wchar_t *wide, const char *mbs) {
@@ -1029,7 +1028,7 @@ private:
       auto ch = *mbs;
       auto lval = static_cast <int> (ch);
 
-      for (const auto &table : m_utfTable) {
+      for (const auto &table : utfTable_) {
          len++;
 
          if ((ch & table.cmask) == table.cval) {
@@ -1059,7 +1058,7 @@ private:
       long lmask = wide;
       int32 len = 0;
 
-      for (const auto &table : m_utfTable) {
+      for (const auto &table : utfTable_) {
          len++;
 
          if (lmask <= table.lmask) {
@@ -1092,10 +1091,10 @@ public:
 
       while (bottom <= top) {
          const auto mid = (bottom + top) / 2;
-         wchar_t cur = static_cast <wchar_t> (m_toUpperTable[mid].from);
+         auto cur = static_cast <wchar_t> (upperTable_[mid].from);
 
          if (ch == cur) {
-            return static_cast <wchar_t> (m_toUpperTable[mid].to);
+            return static_cast <wchar_t> (upperTable_[mid].to);
          }
          if (ch > cur) {
             bottom = mid + 1;

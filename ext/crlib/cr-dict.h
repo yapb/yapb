@@ -1,6 +1,6 @@
 //
 // CRLib - Simple library for STL replacement in private projects.
-// Copyright Â© 2020 YaPB Development Team <team@yapb.ru>.
+// Copyright © 2020 YaPB Development Team <team@yapb.ru>.
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -96,38 +96,38 @@ public:
    };
 
 private:
-   Array <DictList *> m_table;
-   Array <DictBucket> m_buckets{};
-   H m_hasher;
+   Array <DictList *> contents_;
+   Array <DictBucket> buckets_;
+   H hashFunction_;
 
 private:
    uint32 hash (const K &key) const {
-      return m_hasher (key);
+      return hashFunction_ (key);
    }
 
    size_t find (const K &key, bool allocate) {
       auto hashed = hash (key);
-      auto pos = hashed % m_table.length ();
+      auto pos = hashed % contents_.length ();
 
-      for (auto bucket = m_table[pos]; bucket != nullptr; bucket = bucket->next) {
-         if (m_buckets[bucket->index].hash == hashed) {
+      for (auto bucket = contents_[pos]; bucket != nullptr; bucket = bucket->next) {
+         if (buckets_[bucket->index].hash == hashed) {
             return bucket->index;
          }
       }
 
       if (allocate) {
-         size_t created = m_buckets.length ();
-         m_buckets.resize (created + 1);
+         size_t created = buckets_.length ();
+         buckets_.resize (created + 1);
 
          auto allocated = alloc.allocate <DictList> ();
 
          allocated->index = static_cast <int32> (created);
-         allocated->next = m_table[pos];
+         allocated->next = contents_[pos];
 
-         m_table[pos] = allocated;
+         contents_[pos] = allocated;
 
-         m_buckets[created].key = key;
-         m_buckets[created].hash = hashed;
+         buckets_[created].key = key;
+         buckets_[created].hash = hashed;
 
          return created;
       }
@@ -143,7 +143,7 @@ public:
       reset ();
    }
 
-   Dictionary (Dictionary &&rhs) noexcept : m_table (cr::move (rhs.m_table)), m_buckets (cr::move (rhs.m_buckets)), m_hasher (cr::move (rhs.m_hasher))
+   Dictionary (Dictionary &&rhs) noexcept : contents_ (cr::move (rhs.contents_)), buckets_ (cr::move (rhs.buckets_)), hashFunction_ (cr::move (rhs.hashFunction_))
    { }
 
    ~Dictionary () {
@@ -156,11 +156,11 @@ public:
    }
 
    bool empty () const {
-      return m_buckets.empty ();
+      return buckets_.empty ();
    }
 
    size_t length () const {
-      return m_buckets.length ();
+      return buckets_.length ();
    }
 
    bool find (const K &key, V &value) const {
@@ -169,7 +169,7 @@ public:
       if (index == InvalidIndex) {
          return false;
       }
-      value = m_buckets[index].value;
+      value = buckets_[index].value;
       return true;
    }
 
@@ -181,20 +181,20 @@ public:
    bool remove (const K &key) {
       auto hashed = hash (key);
 
-      auto pos = hashed % m_table.length ();
-      auto *bucket = m_table[pos];
+      auto pos = hashed % contents_.length ();
+      auto *bucket = contents_[pos];
 
       DictList *next = nullptr;
 
       while (bucket != nullptr) {
-         if (m_buckets[bucket->index].hash == hashed) {
+         if (buckets_[bucket->index].hash == hashed) {
             if (!next) {
-               m_table[pos] = bucket->next;
+               contents_[pos] = bucket->next;
             }
             else {
                next->next = bucket->next;
             }
-            m_buckets.erase (bucket->index, 1);
+            buckets_.erase (bucket->index, 1);
 
             alloc.deallocate (bucket);
             bucket = nullptr;
@@ -208,7 +208,7 @@ public:
    }
 
    void clear () {
-      for (auto object : m_table) {
+      for (auto object : contents_) {
          while (object != nullptr) {
             auto next = object->next;
 
@@ -216,34 +216,34 @@ public:
             object = next;
          }
       }
-      m_table.clear ();
-      m_buckets.clear ();
+      contents_.clear ();
+      buckets_.clear ();
 
       reset ();
    }
 
    void reset () {
-      m_table.resize (HashSize);
+      contents_.resize (HashSize);
 
       for (size_t i = 0; i < HashSize; ++i) {
-         m_table[i] = nullptr;
+         contents_[i] = nullptr;
       }
    }
 
 public:
    V &operator [] (const K &key) {
-      return m_buckets[find (key, true)].value;
+      return buckets_[find (key, true)].value;
    }
 
    const V &operator [] (const K &key) const {
-      return m_buckets[findIndex (key)].value;
+      return buckets_[findIndex (key)].value;
    }
 
    Dictionary &operator = (Dictionary &&rhs) noexcept {
       if (this != &rhs) {
-         m_table = cr::move (rhs.m_table);
-         m_buckets = cr::move (rhs.m_buckets);
-         m_hasher = cr::move (rhs.m_hasher);
+         contents_ = cr::move (rhs.contents_);
+         buckets_ = cr::move (rhs.buckets_);
+         hashFunction_ = cr::move (rhs.hashFunction_);
       }
       return *this;
    }
@@ -251,19 +251,19 @@ public:
    // for range-based loops
 public:
    DictBucket *begin () {
-      return m_buckets.begin ();
+      return buckets_.begin ();
    }
 
    DictBucket *begin () const {
-      return m_buckets.begin ();
+      return buckets_.begin ();
    }
 
    DictBucket *end () {
-      return m_buckets.end ();
+      return buckets_.end ();
    }
 
    DictBucket *end () const {
-      return m_buckets.end ();
+      return buckets_.end ();
    }
 };
 

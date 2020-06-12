@@ -1,6 +1,6 @@
 //
 // CRLib - Simple library for STL replacement in private projects.
-// Copyright Â© 2020 YaPB Development Team <team@yapb.ru>.
+// Copyright © 2020 YaPB Development Team <team@yapb.ru>.
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -33,9 +33,9 @@ CR_NAMESPACE_BEGIN
 // simple array class like std::vector
 template <typename T, ReservePolicy R = ReservePolicy::Multiple, size_t S = 0> class Array : public DenyCopying {
 private:
-   T *m_data {};
-   size_t m_capacity {};
-   size_t m_length {};
+   T *contents_ {};
+   size_t capacity_ {};
+   size_t length_ {};
 
 public:
    explicit Array () {
@@ -49,9 +49,9 @@ public:
    }
 
    Array (Array &&rhs) noexcept {
-      m_data = rhs.m_data;
-      m_length = rhs.m_length;
-      m_capacity = rhs.m_capacity;
+      contents_ = rhs.contents_;
+      length_ = rhs.length_;
+      capacity_ = rhs.capacity_;
 
       rhs.reset ();
    }
@@ -68,8 +68,8 @@ public:
 
 private:
    void destructElements () noexcept {
-      for (size_t i = 0; i < m_length; ++i) {
-         alloc.destruct (&m_data[i]);
+      for (size_t i = 0; i < length_; ++i) {
+         alloc.destruct (&contents_[i]);
       }
    }
 
@@ -82,55 +82,55 @@ private:
 
    void destroy () {
       destructElements ();
-      alloc.deallocate (m_data);
+      alloc.deallocate (contents_);
    }
 
    void reset () {
-      m_data = nullptr;
-      m_capacity = 0;
-      m_length = 0;
+      contents_ = nullptr;
+      capacity_ = 0;
+      length_ = 0;
    }
 
 
 public:
    bool reserve (const size_t amount) {
-      if (m_length + amount < m_capacity) {
+      if (length_ + amount < capacity_) {
          return true;
       }
-      auto capacity = m_capacity ? m_capacity : 12;
+      auto capacity = capacity_ ? capacity_ : 12;
 
       if (cr::fix (R == ReservePolicy::Multiple)) {
-         while (m_length + amount > capacity) {
+         while (length_ + amount > capacity) {
             capacity *= 2;
          }
       }
       else {
-         capacity = amount + m_capacity + 1;
+         capacity = amount + capacity_ + 1;
       }
       auto data = alloc.allocate <T> (capacity);
 
-      if (m_data) {
-         transferElements (data, m_data, m_length);
-         alloc.deallocate (m_data);
+      if (contents_) {
+         transferElements (data, contents_, length_);
+         alloc.deallocate (contents_);
       }
 
-      m_data = data;
-      m_capacity = capacity;
+      contents_ = data;
+      capacity_ = capacity;
 
       return true;
    }
 
    bool resize (const size_t amount) {
-      if (amount < m_length) {
-         while (amount < m_length) {
+      if (amount < length_) {
+         while (amount < length_) {
             discard ();
          }
       }
-      else if (amount > m_length) {
+      else if (amount > length_) {
          if (!ensure (amount)) {
             return false;
          }
-         size_t resizeLength = amount - m_length;
+         size_t resizeLength = amount - length_;
 
          while (resizeLength--) {
             emplace ();
@@ -140,30 +140,30 @@ public:
    }
 
    bool ensure (const size_t amount) {
-      if (amount <= m_length) {
+      if (amount <= length_) {
          return true;
       }
-      return reserve (amount - m_length);
+      return reserve (amount - length_);
    }
 
    template <typename U = size_t> U length () const {
-      return static_cast <U> (m_length);
+      return static_cast <U> (length_);
    }
 
    size_t capacity () const {
-      return m_capacity;
+      return capacity_;
    }
 
    template <typename U> bool set (size_t index, U &&object) {
-      if (index >= m_capacity) {
+      if (index >= capacity_) {
          if (!reserve (index + 1)) {
             return false;
          }
       }
-      alloc.construct (&m_data[index], cr::forward <U> (object));
+      alloc.construct (&contents_[index], cr::forward <U> (object));
 
-      if (index >= m_length) {
-         m_length = index + 1;
+      if (index >= length_) {
+         length_ = index + 1;
       }
       return true;
    }
@@ -176,28 +176,28 @@ public:
       if (!objects || !count) {
          return false;
       }
-      const size_t capacity = (m_length > index ? m_length : index) + count;
+      const size_t capacity = (length_ > index ? length_ : index) + count;
 
-      if (capacity >= m_capacity && !reserve (capacity)) {
+      if (capacity >= capacity_ && !reserve (capacity)) {
          return false;
       }
 
-      if (index >= m_length) {
+      if (index >= length_) {
          for (size_t i = 0; i < count; ++i) {
-            alloc.construct (&m_data[i + index], cr::forward <U> (objects[i]));
+            alloc.construct (&contents_[i + index], cr::forward <U> (objects[i]));
          }
-         m_length = capacity;
+         length_ = capacity;
       }
       else {
          size_t i = 0;
 
-         for (i = m_length; i > index; --i) {
-            m_data[i + count - 1] = cr::move (m_data[i - 1]);
+         for (i = length_; i > index; --i) {
+            contents_[i + count - 1] = cr::move (contents_[i - 1]);
          }
          for (i = 0; i < count; ++i) {
-            alloc.construct (&m_data[i + index], cr::forward <U> (objects[i]));
+            alloc.construct (&contents_[i + index], cr::forward <U> (objects[i]));
          }
-         m_length += count;
+         length_ += count;
       }
       return true;
    }
@@ -206,20 +206,20 @@ public:
       if (&rhs == this) {
          return false;
       }
-      return insert (at, &rhs.m_data[0], rhs.m_length);
+      return insert (at, &rhs.contents_[0], rhs.length_);
    }
 
    bool erase (const size_t index, const size_t count) {
-      if (index + count > m_capacity) {
+      if (index + count > capacity_) {
          return false;
       }
       for (size_t i = index; i < index + count; ++i) {
-         alloc.destruct (&m_data[i]);
+         alloc.destruct (&contents_[i]);
       }
-      m_length -= count;
+      length_ -= count;
 
-      for (size_t i = index; i < m_length; ++i) {
-         m_data[i] = cr::move (m_data[i + count]);
+      for (size_t i = index; i < length_; ++i) {
+         contents_[i] = cr::move (contents_[i + count]);
       }
       return true;
    }
@@ -240,8 +240,8 @@ public:
       if (!reserve (1)) {
          return false;
       }
-      alloc.construct (&m_data[m_length], cr::forward <U> (object));
-      ++m_length;
+      alloc.construct (&contents_[length_], cr::forward <U> (object));
+      ++length_;
 
       return true;
    }
@@ -250,41 +250,41 @@ public:
       if (!reserve (1)) {
          return false;
       }
-      alloc.construct (&m_data[m_length], cr::forward <Args> (args)...);
-      ++m_length;
+      alloc.construct (&contents_[length_], cr::forward <Args> (args)...);
+      ++length_;
 
       return true;
    }
 
    T pop () {
-      auto object = cr::move (m_data[m_length - 1]);
+      auto object = cr::move (contents_[length_ - 1]);
       discard ();
 
       return object;
    }
 
    void discard () {
-      erase (m_length - 1, 1);
+      erase (length_ - 1, 1);
    }
 
    size_t index (const T &object) const {
-      return &object - &m_data[0];
+      return &object - &contents_[0];
    }
 
    void shuffle () {
-      for (size_t i = m_length; i >= 1; --i) {
-         cr::swap (m_data[i - 1], m_data[rg.int_ (i, m_length - 2)]);
+      for (size_t i = length_; i >= 1; --i) {
+         cr::swap (contents_[i - 1], contents_[rg.int_ (i, length_ - 2)]);
       }
    }
 
    void reverse () {
-      for (size_t i = 0; i < m_length / 2; ++i) {
-         cr::swap (m_data[i], m_data[m_length - 1 - i]);
+      for (size_t i = 0; i < length_ / 2; ++i) {
+         cr::swap (contents_[i], contents_[length_ - 1 - i]);
       }
    }
 
    template <typename U> bool extend (U &&rhs) {
-      if (m_length == 0) {
+      if (length_ == 0) {
          *this = cr::move (rhs);
       }
       else {
@@ -304,67 +304,67 @@ public:
 
    void clear () {
       destructElements ();
-      m_length = 0;
+      length_ = 0;
    }
 
    bool empty () const {
-      return m_length == 0;
+      return length_ == 0;
    }
 
    bool shrink () {
-      if (m_length == m_capacity || !m_length) {
+      if (length_ == capacity_ || !length_) {
          return false;
       }
 
-      auto data = alloc.allocate <T> (m_length);
-      transferElements (data, m_data, m_length);
+      auto data = alloc.allocate <T> (length_);
+      transferElements (data, contents_, length_);
 
-      alloc.deallocate (m_data);
+      alloc.deallocate (contents_);
 
-      m_data = data;
-      m_capacity = m_length;
+      contents_ = data;
+      capacity_ = length_;
 
       return true;
    }
 
    const T &at (size_t index) const {
-      return m_data[index];
+      return contents_[index];
    }
 
    T &at (size_t index) {
-      return m_data[index];
+      return contents_[index];
    }
 
    const T &first () const {
-      return m_data[0];
+      return contents_[0];
    }
 
    T &first () {
-      return m_data[0];
+      return contents_[0];
    }
 
    T &last () {
-      return m_data[m_length - 1];
+      return contents_[length_ - 1];
    }
 
    const T &last () const {
-      return m_data[m_length - 1];
+      return contents_[length_ - 1];
    }
 
    const T &random () const {
-      return m_data[rg.int_ <size_t> (0, m_length - 1)];
+      return contents_[rg.int_ <size_t> (0, length_ - 1)];
    }
 
    T &random () {
-      return m_data[rg.int_ <size_t> (0u, m_length - 1u)];
+      return contents_[rg.int_ <size_t> (0u, length_ - 1u)];
    }
 
    T *data () {
-      return m_data;
+      return contents_;
    }
 
    T *data () const {
-      return m_data;
+      return contents_;
    }
 
 public:
@@ -372,9 +372,9 @@ public:
       if (this != &rhs) {
          destroy ();
 
-         m_data = rhs.m_data;
-         m_length = rhs.m_length;
-         m_capacity = rhs.m_capacity;
+         contents_ = rhs.contents_;
+         length_ = rhs.length_;
+         capacity_ = rhs.capacity_;
 
          rhs.reset ();
       }
@@ -393,19 +393,19 @@ public:
    // for range-based loops
 public:
    T *begin () {
-      return m_data;
+      return contents_;
    }
 
    T *begin () const {
-      return m_data;
+      return contents_;
    }
 
    T *end () {
-      return m_data + m_length;
+      return contents_ + length_;
    }
 
    T *end () const {
-      return m_data + m_length;
+      return contents_ + length_;
    }
 };
 
