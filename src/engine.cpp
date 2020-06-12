@@ -15,7 +15,7 @@
 
 #include <yapb.h>
 
-ConVar cv_csdm_mode ("ub_csdm_mode", "0", "Enables or disables CSDM / FFA mode for bots.\nAllowed values: '0', '1', '2', '3'.\nIf '0', CSDM / FFA mode is auto-detected.\nIf '1', CSDM mode is enabled, but FFA is disabled.\nIf '2' CSDM and FFA mode is enabled.\nIf '3' CSDM and FFA mode is disabled.", true, 0.0f, 3.0f);
+ConVar cv_csdm_mode ("yb_csdm_mode", "0", "Enables or disables CSDM / FFA mode for bots.\nAllowed values: '0', '1', '2', '3'.\nIf '0', CSDM / FFA mode is auto-detected.\nIf '1', CSDM mode is enabled, but FFA is disabled.\nIf '2' CSDM and FFA mode is enabled.\nIf '3' CSDM and FFA mode is disabled.", true, 0.0f, 3.0f);
 
 ConVar sv_skycolor_r ("sv_skycolor_r", nullptr, Var::GameRef);
 ConVar sv_skycolor_g ("sv_skycolor_g", nullptr, Var::GameRef);

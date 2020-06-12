@@ -15,8 +15,8 @@
 
 #include <yapb.h>
 
-ConVar cv_whose_your_daddy ("ub_whose_your_daddy", "0", "Enables or disables extra hard difficulty for bots.");
-ConVar cv_debug_heuristic_type ("ub_debug_heuristic_type", "0", "Selects the heuristic function mode. For debug purposes only.", true, 0.0f, 4.0f);
+ConVar cv_whose_your_daddy ("yb_whose_your_daddy", "0", "Enables or disables extra hard difficulty for bots.");
+ConVar cv_debug_heuristic_type ("yb_debug_heuristic_type", "0", "Selects the heuristic function mode. For debug purposes only.", true, 0.0f, 4.0f);
 
 int Bot::findBestGoal () {
 

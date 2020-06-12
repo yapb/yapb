@@ -15,27 +15,27 @@
 
 #include <yapb.h>
 
-ConVar cv_autovacate ("ub_autovacate", "1", "Kick bots to automatically make room for human players.");
-ConVar cv_bind_menu_key ("ub_bind_menu_key", "=", "Bind's specified key for opening bots menu.", false);
+ConVar cv_autovacate ("yb_autovacate", "1", "Kick bots to automatically make room for human players.");
+ConVar cv_bind_menu_key ("yb_bind_menu_key", "=", "Bind's specified key for opening bots menu.", false);
 
-ConVar cv_quota ("ub_quota", "0", "Specifies the number bots to be added to the game.", true, 0.0f, static_cast <float> (kGameMaxPlayers));
-ConVar cv_quota_mode ("ub_quota_mode", "normal", "Specifies the type of quota.\nAllowed values: 'normal', 'fill', and 'match'.\nIf 'fill', the server will adjust bots to keep N players in the game, where N is ub_quota.\nIf 'match', the server will maintain a 1:N ratio of humans to bots, where N is ub_quota_match.", false);
-ConVar cv_quota_match ("ub_quota_match", "0", "Number of players to match if ub_quota_mode set to 'match'", true, 0.0f, static_cast <float> (kGameMaxPlayers));
-ConVar cv_think_fps ("ub_think_fps", "30.0", "Specifies how many times per second bot code will run.", true, 30.0f, 90.0f);
-ConVar cv_autokill_delay ("ub_autokill_delay", "0.0", "Specifies amount of time in seconds when bots will be killed if no humans left alive.", true, 0.0f, 90.0f);
+ConVar cv_quota ("yb_quota", "0", "Specifies the number bots to be added to the game.", true, 0.0f, static_cast <float> (kGameMaxPlayers));
+ConVar cv_quota_mode ("yb_quota_mode", "normal", "Specifies the type of quota.\nAllowed values: 'normal', 'fill', and 'match'.\nIf 'fill', the server will adjust bots to keep N players in the game, where N is yb_quota.\nIf 'match', the server will maintain a 1:N ratio of humans to bots, where N is yb_quota_match.", false);
+ConVar cv_quota_match ("yb_quota_match", "0", "Number of players to match if yb_quota_mode set to 'match'", true, 0.0f, static_cast <float> (kGameMaxPlayers));
+ConVar cv_think_fps ("yb_think_fps", "30.0", "Specifies how many times per second bot code will run.", true, 30.0f, 90.0f);
+ConVar cv_autokill_delay ("yb_autokill_delay", "0.0", "Specifies amount of time in seconds when bots will be killed if no humans left alive.", true, 0.0f, 90.0f);
 
-ConVar cv_join_after_player ("ub_join_after_player", "0", "Specifies whether bots should join server, only when at least one human player in game.");
-ConVar cv_join_team ("ub_join_team", "any", "Forces all bots to join team specified here.", false);
-ConVar cv_join_delay ("ub_join_delay", "5.0", "Specifies after how many seconds bots should start to join the game after the changelevel.", true, 0.0f, 30.0f);
+ConVar cv_join_after_player ("yb_join_after_player", "0", "Specifies whether bots should join server, only when at least one human player in game.");
+ConVar cv_join_team ("yb_join_team", "any", "Forces all bots to join team specified here.", false);
+ConVar cv_join_delay ("yb_join_delay", "5.0", "Specifies after how many seconds bots should start to join the game after the changelevel.", true, 0.0f, 30.0f);
 
-ConVar cv_name_prefix ("ub_name_prefix", "", "All the bot names will be prefixed with string specified with this cvar.", false);
-ConVar cv_difficulty ("ub_difficulty", "4", "All bots difficulty level. Changing at runtime will affect already created bots.", true, 0.0f, 4.0f);
+ConVar cv_name_prefix ("yb_name_prefix", "", "All the bot names will be prefixed with string specified with this cvar.", false);
+ConVar cv_difficulty ("yb_difficulty", "4", "All bots difficulty level. Changing at runtime will affect already created bots.", true, 0.0f, 4.0f);
 
-ConVar cv_show_avatars ("ub_show_avatars", "1", "Enables or disabels displaying bot avatars in front of their names in scoreboard. Note, that is currently you can see only avatars of your steam friends.");
-ConVar cv_show_latency ("ub_show_latency", "2", "Enables latency display in scoreboard.\nAllowed values: '0', '1', '2'.\nIf '0', there is nothing displayed.\nIf '1', there is a 'BOT' is displayed.\nIf '2' fake ping is displayed.", true, 0.0f, 2.0f);
+ConVar cv_show_avatars ("yb_show_avatars", "1", "Enables or disabels displaying bot avatars in front of their names in scoreboard. Note, that is currently you can see only avatars of your steam friends.");
+ConVar cv_show_latency ("yb_show_latency", "2", "Enables latency display in scoreboard.\nAllowed values: '0', '1', '2'.\nIf '0', there is nothing displayed.\nIf '1', there is a 'BOT' is displayed.\nIf '2' fake ping is displayed.", true, 0.0f, 2.0f);
 
-ConVar cv_language ("ub_language", "en", "Specifies the language for bot messages and menus.", false);
-ConVar cv_ignore_cvars_on_changelevel ("ub_ignore_cvars_on_changelevel", "ub_quota,ub_autovacate", "Specifies comma separated list of bot cvars, that will not be overriten by config on changelevel.", false);
+ConVar cv_language ("yb_language", "en", "Specifies the language for bot messages and menus.", false);
+ConVar cv_ignore_cvars_on_changelevel ("yb_ignore_cvars_on_changelevel", "yb_quota,yb_autovacate", "Specifies comma separated list of bot cvars, that will not be overriten by config on changelevel.", false);
 
 ConVar mp_limitteams ("mp_limitteams", nullptr, Var::GameRef);
 ConVar mp_autoteambalance ("mp_autoteambalance", nullptr, Var::GameRef);
@@ -1763,7 +1763,7 @@ void BotConfig::loadMainConfig () {
                if (needsToIgnoreVar (ignore, key) && !strings.matches (value, cvar->string)) {
 
                   // preserve quota number if it's zero
-                  if (strings.matches (cvar->name, "ub_quota") && cv_quota.int_ () <= 0) {
+                  if (strings.matches (cvar->name, "yb_quota") && cv_quota.int_ () <= 0) {
                      engfuncs.pfnCvar_DirectSet (cvar, value);
                      continue;
                   }

@@ -41,7 +41,7 @@ public:
    const StringRef author { "YaPB Development Team" };
    const StringRef email { "team@yapb.ru" };
    const StringRef url { "https://yapb.ru/" };
-   const StringRef download { "http://data.yapb.ru/" };
+   const StringRef download { "yapb.ru" };
    const StringRef folder { "yapb" };
    const StringRef logtag { "YB" };
    const StringRef dtime { __DATE__ " " __TIME__ };

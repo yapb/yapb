@@ -15,10 +15,10 @@
 
 #include <yapb.h>
 
-ConVar cv_shoots_thru_walls ("ub_shoots_thru_walls", "2", "Specifies whether bots able to fire at enemies behind the wall, if they hearing or suspecting them.", true, 0.0f, 3.0f);
-ConVar cv_ignore_enemies ("ub_ignore_enemies", "0", "Enables or disables searching world for enemies.");
-ConVar cv_check_enemy_rendering ("ub_check_enemy_rendering", "0", "Enables or disables checking enemy rendering flags. Useful for some mods.");
-ConVar cv_stab_close_enemies ("ub_stab_close_enemies", "1", "Enables or disables bot ability to stab the enemy with knife if bot is in good condition.");
+ConVar cv_shoots_thru_walls ("yb_shoots_thru_walls", "2", "Specifies whether bots able to fire at enemies behind the wall, if they hearing or suspecting them.", true, 0.0f, 3.0f);
+ConVar cv_ignore_enemies ("yb_ignore_enemies", "0", "Enables or disables searching world for enemies.");
+ConVar cv_check_enemy_rendering ("yb_check_enemy_rendering", "0", "Enables or disables checking enemy rendering flags. Useful for some mods.");
+ConVar cv_stab_close_enemies ("yb_stab_close_enemies", "1", "Enables or disables bot ability to stab the enemy with knife if bot is in good condition.");
 
 ConVar mp_friendlyfire ("mp_friendlyfire", nullptr, Var::GameRef);
 
