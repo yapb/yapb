@@ -20,6 +20,7 @@
 #include <crlib/cr-string.h>
 #include <crlib/cr-files.h>
 #include <crlib/cr-logger.h>
+#include <crlib/cr-twin.h>
 #include <crlib/cr-platform.h>
 
 #if defined (CR_LINUX) || defined (CR_OSX)
@@ -36,6 +37,8 @@
 #  include <winsock2.h>
 #  include <ws2tcpip.h>
 #endif
+
+// TODO: make this work with real HTTP responses
 
 // status codes for http client
 CR_DECLARE_SCOPED_ENUM (HttpClientResult,
