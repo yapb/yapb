@@ -1,0 +1,288 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\ext\crlib\crlib\cr-alloc.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-array.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-basic.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-binheap.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-color.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-complete.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-dict.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-files.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-hook.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-http.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-lambda.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-library.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-logger.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-math.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-movable.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-platform.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-random.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-string.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-twin.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-ulz.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-uniqueptr.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-vector.h" />
+    <ClInclude Include="..\ext\sdk\sdk\const.h" />
+    <ClInclude Include="..\ext\sdk\sdk\eiface.h" />
+    <ClInclude Include="..\ext\sdk\sdk\extdll.h" />
+    <ClInclude Include="..\ext\sdk\sdk\metamod.h" />
+    <ClInclude Include="..\ext\sdk\sdk\meta_api.h" />
+    <ClInclude Include="..\ext\sdk\sdk\model.h" />
+    <ClInclude Include="..\ext\sdk\sdk\progdefs.h" />
+    <ClInclude Include="..\ext\sdk\sdk\util.h" />
+    <ClInclude Include="..\inc\config.h" />
+    <ClInclude Include="..\inc\control.h" />
+    <ClInclude Include="..\inc\engine.h" />
+    <ClInclude Include="..\inc\graph.h" />
+    <ClInclude Include="..\inc\manager.h" />
+    <ClInclude Include="..\inc\message.h" />
+    <ClInclude Include="..\inc\product.h" />
+    <ClInclude Include="..\inc\support.h" />
+    <ClInclude Include="..\inc\yapb.h" />
+    <ClInclude Include="..\inc\version.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\android.cpp" />
+    <ClCompile Include="..\src\botlib.cpp" />
+    <ClCompile Include="..\src\chatlib.cpp" />
+    <ClCompile Include="..\src\combat.cpp" />
+    <ClCompile Include="..\src\control.cpp" />
+    <ClCompile Include="..\src\engine.cpp" />
+    <ClCompile Include="..\src\graph.cpp" />
+    <ClCompile Include="..\src\linkage.cpp" />
+    <ClCompile Include="..\src\manager.cpp" />
+    <ClCompile Include="..\src\message.cpp" />
+    <ClCompile Include="..\src\navigate.cpp" />
+    <ClCompile Include="..\src\support.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="yapb.rc">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\inc\version.h.in" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{C232645A-3B99-48F4-A1F3-F20CF0A9568B}</ProjectGuid>
+    <RootNamespace>yapb</RootNamespace>
+    <TargetPlatformVersion>8.1</TargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v142</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <PlatformToolset>v142</PlatformToolset>
+    <EnableASAN>false</EnableASAN>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>12.0.21005.1</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>.\debug\</OutDir>
+    <IntDir>.\debug\inf\</IntDir>
+    <IgnoreImportLibrary>true</IgnoreImportLibrary>
+    <LinkIncremental>true</LinkIncremental>
+    <EmbedManifest>false</EmbedManifest>
+    <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>.\release\</OutDir>
+    <IntDir>.\release\inf\</IntDir>
+    <IgnoreImportLibrary>false</IgnoreImportLibrary>
+    <LinkIncremental>false</LinkIncremental>
+    <GenerateManifest>false</GenerateManifest>
+    <EmbedManifest>false</EmbedManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+    <CustomBuildStep>
+      <Command />
+    </CustomBuildStep>
+    <Midl>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TargetEnvironment>Win32</TargetEnvironment>
+      <TypeLibraryName>./debug/yapb.tlb</TypeLibraryName>
+      <HeaderFileName />
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\vc;..\inc;..\ext;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader />
+      <PrecompiledHeaderFile>yapb.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>.\debug\inf\yapb.pch</PrecompiledHeaderOutputFile>
+      <ExpandAttributedSource>false</ExpandAttributedSource>
+      <AssemblerOutput>AssemblyAndSourceCode</AssemblerOutput>
+      <AssemblerListingLocation>.\debug\asm\</AssemblerListingLocation>
+      <ObjectFileName>.\debug\obj\</ObjectFileName>
+      <ProgramDataBaseFileName>.\debug\inf</ProgramDataBaseFileName>
+      <BrowseInformation />
+      <BrowseInformationFile />
+      <WarningLevel>Level4</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <CompileAs>Default</CompileAs>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <StringPooling>false</StringPooling>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <DisableLanguageExtensions>false</DisableLanguageExtensions>
+      <LanguageStandard>Default</LanguageStandard>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <PreLinkEvent>
+      <Command />
+    </PreLinkEvent>
+    <Link>
+      <OutputFile>.\debug\yapb.dll</OutputFile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <ProgramDatabaseFile>.\debug\inf\yapb.pdb</ProgramDatabaseFile>
+      <GenerateMapFile>true</GenerateMapFile>
+      <MapFileName>.\debug\inf\yapb.map</MapFileName>
+      <MapExports>true</MapExports>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>false</OptimizeReferences>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <DataExecutionPrevention />
+      <ImportLibrary>.\debug\inf\yapb.lib</ImportLibrary>
+      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+    </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+    <CustomBuildStep>
+      <Command />
+    </CustomBuildStep>
+    <Midl>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TargetEnvironment>Win32</TargetEnvironment>
+      <TypeLibraryName>.\Release/yapb.tlb</TypeLibraryName>
+      <HeaderFileName />
+    </Midl>
+    <ClCompile>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <EnableFiberSafeOptimizations>false</EnableFiberSafeOptimizations>
+      <AdditionalIncludeDirectories>..\vc;..\inc;..\ext;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExceptionHandling>false</ExceptionHandling>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>.\release\inf\yapb.pch</PrecompiledHeaderOutputFile>
+      <AssemblerListingLocation>.\release\asm\</AssemblerListingLocation>
+      <ProgramDataBaseFileName>.\release\inf\</ProgramDataBaseFileName>
+      <WarningLevel>Level4</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <InterproceduralOptimization>MultiFile</InterproceduralOptimization>
+      <FlushDenormalResultsToZero>true</FlushDenormalResultsToZero>
+      <Parallelization>false</Parallelization>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <Optimization>Full</Optimization>
+      <GenerateAlternateCodePaths>AVXI</GenerateAlternateCodePaths>
+      <UseProcessorExtensions>AVXI</UseProcessorExtensions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <PrecompiledHeaderOutputFileDirectory />
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OmitFramePointers>true</OmitFramePointers>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <StringPooling>true</StringPooling>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+      <ResourceOutputFileName>$(IntDir)%(Filename).res</ResourceOutputFileName>
+    </ResourceCompile>
+    <PreLinkEvent>
+      <Command />
+    </PreLinkEvent>
+    <ProjectReference>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+    </ProjectReference>
+    <Link>
+      <OutputFile>.\release\yapb.dll</OutputFile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <DelayLoadDLLs>user32.dll;ws2_32.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateMapFile>false</GenerateMapFile>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <SetChecksum>false</SetChecksum>
+      <DataExecutionPrevention />
+      <ImportLibrary>.\release\inf\yapb.lib</ImportLibrary>
+      <TargetMachine>MachineX86</TargetMachine>
+      <MinimumRequiredVersion />
+      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <ImageHasSafeExceptionHandlers>
+      </ImageHasSafeExceptionHandlers>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <FullProgramDatabaseFile>true</FullProgramDatabaseFile>
+      <ShowProgress>NotSet</ShowProgress>
+    </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
