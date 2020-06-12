@@ -15,8 +15,8 @@
 
 #include <yapb.h>
 
-ConVar cv_graph_fixcamp ("ub_graph_fixcamp", "1", "Specifies whether bot should not 'fix' camp directions of camp waypoints when loading old PWF format.");
-ConVar cv_graph_url ("ub_graph_url", product.download.chars (), "Specifies the URL from bots will be able to download graph in case of missing local one.", false, 0.0f, 0.0f);
+ConVar cv_graph_fixcamp ("yb_graph_fixcamp", "1", "Specifies whether bot should not 'fix' camp directions of camp waypoints when loading old PWF format.");
+ConVar cv_graph_url ("yb_graph_url", product.download.chars (), "Specifies the URL from bots will be able to download graph in case of missing local one.", false, 0.0f, 0.0f);
 
 void BotGraph::initGraph () {
    // this function initialize the graph structures..
@@ -1585,8 +1585,13 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
 
    // downloader for graph
    auto download = [&] () -> bool {
+      auto downloadAddress = cv_graph_url.str ();
+
+      if (strings.isEmpty (downloadAddress)) {
+         return false;
+      }
       auto toDownload = strings.format ("%sgraph/%s", getDataDirectory (false), filename);
-      auto fromDownload = strings.format ("%s/graph/%s", cv_graph_url.str (), filename);
+      auto fromDownload = strings.format ("http://%s/graph/%s", downloadAddress, filename);
 
       // try to download
       if (http.downloadFile (fromDownload, toDownload))  {

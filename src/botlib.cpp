@@ -15,26 +15,26 @@
 
 #include <yapb.h>
 
-ConVar cv_debug ("ub_debug", "0", "Enables or disables useful messages about bot states. Not required for end users.", true, 0.0f, 4.0f);
-ConVar cv_debug_goal ("ub_debug_goal", "-1", "Forces all alive bots to build path and go to the specified here graph node.", true, -1.0f, kMaxNodes);
-ConVar cv_user_follow_percent ("ub_user_follow_percent", "20", "Specifies the percent of bots, than can follow leader on each round start.", true, 0.0f, 100.0f);
-ConVar cv_user_max_followers ("ub_user_max_followers", "1", "Specifies how many bots can follow a single user.", true, 0.0f, static_cast <float> (kGameMaxPlayers / 2));
+ConVar cv_debug ("yb_debug", "0", "Enables or disables useful messages about bot states. Not required for end users.", true, 0.0f, 4.0f);
+ConVar cv_debug_goal ("yb_debug_goal", "-1", "Forces all alive bots to build path and go to the specified here graph node.", true, -1.0f, kMaxNodes);
+ConVar cv_user_follow_percent ("yb_user_follow_percent", "20", "Specifies the percent of bots, than can follow leader on each round start.", true, 0.0f, 100.0f);
+ConVar cv_user_max_followers ("yb_user_max_followers", "1", "Specifies how many bots can follow a single user.", true, 0.0f, static_cast <float> (kGameMaxPlayers / 2));
 
-ConVar cv_jasonmode ("ub_jasonmode", "0", "If enabled, all bots will be forced only the knife, skipping weapon buying routines.");
-ConVar cv_radio_mode ("ub_radio_mode", "2", "Allows bots to use radio or chattter.\nAllowed values: '0', '1', '2'.\nIf '0', radio and chatter is disabled.\nIf '1', only radio allowed.\nIf '2' chatter and radio allowed.", true, 0.0f, 2.0f);
+ConVar cv_jasonmode ("yb_jasonmode", "0", "If enabled, all bots will be forced only the knife, skipping weapon buying routines.");
+ConVar cv_radio_mode ("yb_radio_mode", "2", "Allows bots to use radio or chattter.\nAllowed values: '0', '1', '2'.\nIf '0', radio and chatter is disabled.\nIf '1', only radio allowed.\nIf '2' chatter and radio allowed.", true, 0.0f, 2.0f);
 
-ConVar cv_economics_rounds ("ub_economics_rounds", "1", "Specifies whether bots able to use team economics, like do not buy any weapons for whole team to keep money for better guns.");
-ConVar cv_walking_allowed ("ub_walking_allowed", "1", "Specifies whether bots able to use 'shift' if they thinks that enemy is near.");
-ConVar cv_camping_allowed ("ub_camping_allowed", "1", "Allows or disallows bots to camp. Doesn't affects bomb/hostage defending tasks");
+ConVar cv_economics_rounds ("yb_economics_rounds", "1", "Specifies whether bots able to use team economics, like do not buy any weapons for whole team to keep money for better guns.");
+ConVar cv_walking_allowed ("yb_walking_allowed", "1", "Specifies whether bots able to use 'shift' if they thinks that enemy is near.");
+ConVar cv_camping_allowed ("yb_camping_allowed", "1", "Allows or disallows bots to camp. Doesn't affects bomb/hostage defending tasks");
 
-ConVar cv_tkpunish ("ub_tkpunish", "1", "Allows or disallows bots to take revenge of teamkillers / team attacks.");
-ConVar cv_freeze_bots ("ub_freeze_bots", "0", "If enabled the bots think function is disabled, so bots will not move anywhere from their spawn spots.");
-ConVar cv_spraypaints ("ub_spraypaints", "1", "Allows or disallows the use of spay paints.");
-ConVar cv_botbuy ("ub_botbuy", "1", "Allows or disallows bots weapon buying routines.");
-ConVar cv_destroy_breakables_around ("ub_destroy_breakables_around", "1", "Allows bots to destroy breakables around him, even without touching with them.");
+ConVar cv_tkpunish ("yb_tkpunish", "1", "Allows or disallows bots to take revenge of teamkillers / team attacks.");
+ConVar cv_freeze_bots ("yb_freeze_bots", "0", "If enabled the bots think function is disabled, so bots will not move anywhere from their spawn spots.");
+ConVar cv_spraypaints ("yb_spraypaints", "1", "Allows or disallows the use of spay paints.");
+ConVar cv_botbuy ("yb_botbuy", "1", "Allows or disallows bots weapon buying routines.");
+ConVar cv_destroy_breakables_around ("yb_destroy_breakables_around", "1", "Allows bots to destroy breakables around him, even without touching with them.");
 
-ConVar cv_chatter_path ("ub_chatter_path", "sound/radio/bot", "Specifies the paths for the bot chatter sound files.", false);
-ConVar cv_restricted_weapons ("ub_restricted_weapons", "", "Specifies semicolon separated list of weapons that are not allowed to buy / pickup.", false);
+ConVar cv_chatter_path ("yb_chatter_path", "sound/radio/bot", "Specifies the paths for the bot chatter sound files.", false);
+ConVar cv_restricted_weapons ("yb_restricted_weapons", "", "Specifies semicolon separated list of weapons that are not allowed to buy / pickup.", false);
 
 // game console variables
 ConVar mp_c4timer ("mp_c4timer", nullptr, Var::GameRef);

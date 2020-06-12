@@ -15,7 +15,7 @@
 
 #include <yapb.h>
 
-ConVar cv_chat ("ub_chat", "1", "Enables or disables bots chat functionality.");
+ConVar cv_chat ("yb_chat", "1", "Enables or disables bots chat functionality.");
 
 void BotSupport::stripTags (String &line) {
    if (line.empty ()) {
