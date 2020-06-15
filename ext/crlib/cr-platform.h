@@ -97,6 +97,11 @@ CR_NAMESPACE_BEGIN
 #  pragma warning (disable : 11074 11075) // remarks about inlining bla-bla-bla
 #endif
 
+// msvc provides us placement new by default
+#if defined (CR_CXX_MSVC)
+#  define __PLACEMENT_NEW_INLINE 1
+#endif
+
 CR_NAMESPACE_END
 
 #if defined(CR_WINDOWS)

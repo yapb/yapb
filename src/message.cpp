@@ -389,35 +389,35 @@ void MessageDispatcher::netMsgFlashBat () {
 MessageDispatcher::MessageDispatcher () {
 
    // register wanted message
-   auto pushWanted = [&] (StringRef name, NetMsg id, MsgFunc handler) -> void {
+   auto addWanted = [&] (StringRef name, NetMsg id, MsgFunc handler) -> void {
       m_wanted[name] = id;
       m_handlers[id] = handler;
    };
    reset ();
 
    // we want to handle next messages
-   pushWanted ("TextMsg", NetMsg::TextMsg, &MessageDispatcher::netMsgTextMsg);
-   pushWanted ("VGUIMenu", NetMsg::VGUIMenu, &MessageDispatcher::netMsgVGUIMenu);
-   pushWanted ("ShowMenu", NetMsg::ShowMenu, &MessageDispatcher::netMsgShowMenu);
-   pushWanted ("WeaponList", NetMsg::WeaponList, &MessageDispatcher::netMsgWeaponList);
-   pushWanted ("CurWeapon", NetMsg::CurWeapon, &MessageDispatcher::netMsgCurWeapon);
-   pushWanted ("AmmoX", NetMsg::AmmoX, &MessageDispatcher::netMsgAmmoX);
-   pushWanted ("AmmoPickup", NetMsg::AmmoPickup, &MessageDispatcher::netMsgAmmoPickup);
-   pushWanted ("Damage", NetMsg::Damage, &MessageDispatcher::netMsgDamage);
-   pushWanted ("Money", NetMsg::Money, &MessageDispatcher::netMsgMoney);
-   pushWanted ("StatusIcon", NetMsg::StatusIcon, &MessageDispatcher::netMsgStatusIcon);
-   pushWanted ("DeathMsg", NetMsg::DeathMsg, &MessageDispatcher::netMsgDeathMsg);
-   pushWanted ("ScreenFade", NetMsg::ScreenFade, &MessageDispatcher::netMsgScreenFade);
-   pushWanted ("HLTV", NetMsg::HLTV, &MessageDispatcher::netMsgHLTV);
-   pushWanted ("TeamInfo", NetMsg::TeamInfo, &MessageDispatcher::netMsgTeamInfo);
-   pushWanted ("BarTime", NetMsg::BarTime, &MessageDispatcher::netMsgBarTime);
-   pushWanted ("ItemStatus", NetMsg::ItemStatus, &MessageDispatcher::netMsgItemStatus);
-   pushWanted ("NVGToggle", NetMsg::NVGToggle, &MessageDispatcher::netMsgNVGToggle);
-   pushWanted ("FlashBat", NetMsg::FlashBat, &MessageDispatcher::netMsgFlashBat);
+   addWanted ("TextMsg", NetMsg::TextMsg, &MessageDispatcher::netMsgTextMsg);
+   addWanted ("VGUIMenu", NetMsg::VGUIMenu, &MessageDispatcher::netMsgVGUIMenu);
+   addWanted ("ShowMenu", NetMsg::ShowMenu, &MessageDispatcher::netMsgShowMenu);
+   addWanted ("WeaponList", NetMsg::WeaponList, &MessageDispatcher::netMsgWeaponList);
+   addWanted ("CurWeapon", NetMsg::CurWeapon, &MessageDispatcher::netMsgCurWeapon);
+   addWanted ("AmmoX", NetMsg::AmmoX, &MessageDispatcher::netMsgAmmoX);
+   addWanted ("AmmoPickup", NetMsg::AmmoPickup, &MessageDispatcher::netMsgAmmoPickup);
+   addWanted ("Damage", NetMsg::Damage, &MessageDispatcher::netMsgDamage);
+   addWanted ("Money", NetMsg::Money, &MessageDispatcher::netMsgMoney);
+   addWanted ("StatusIcon", NetMsg::StatusIcon, &MessageDispatcher::netMsgStatusIcon);
+   addWanted ("DeathMsg", NetMsg::DeathMsg, &MessageDispatcher::netMsgDeathMsg);
+   addWanted ("ScreenFade", NetMsg::ScreenFade, &MessageDispatcher::netMsgScreenFade);
+   addWanted ("HLTV", NetMsg::HLTV, &MessageDispatcher::netMsgHLTV);
+   addWanted ("TeamInfo", NetMsg::TeamInfo, &MessageDispatcher::netMsgTeamInfo);
+   addWanted ("BarTime", NetMsg::BarTime, &MessageDispatcher::netMsgBarTime);
+   addWanted ("ItemStatus", NetMsg::ItemStatus, &MessageDispatcher::netMsgItemStatus);
+   addWanted ("NVGToggle", NetMsg::NVGToggle, &MessageDispatcher::netMsgNVGToggle);
+   addWanted ("FlashBat", NetMsg::FlashBat, &MessageDispatcher::netMsgFlashBat);
 
    // we're need next messages IDs but we're won't handle them, so they will be removed from wanted list as soon as they get engine IDs
-   pushWanted ("BotVoice", NetMsg::BotVoice, nullptr);
-   pushWanted ("SendAudio", NetMsg::SendAudio, nullptr);
+   addWanted ("BotVoice", NetMsg::BotVoice, nullptr);
+   addWanted ("SendAudio", NetMsg::SendAudio, nullptr);
 
    // register text msg cache
    m_textMsgCache["#CTs_Win"] = TextMsgCache::NeedHandle | TextMsgCache::CounterWin;
@@ -464,10 +464,12 @@ MessageDispatcher::MessageDispatcher () {
 }
 
 int32 MessageDispatcher::add (StringRef name, int32 id) {
-   if (!m_wanted.exists (name)) {
+   if (!m_wanted.has (name)) {
       return id;
    }
+
    m_maps[m_wanted[name]] = id; // add message from engine regusermsg
+   m_reverseMap[id] = m_wanted[name]; // add message from engine regusermsg
 
    return id;
 }
@@ -475,12 +477,14 @@ int32 MessageDispatcher::add (StringRef name, int32 id) {
 void MessageDispatcher::start (edict_t *ent, int32 type) {
    reset ();
 
+   if (game.is (GameFlags::Metamod)) {
+      ensureMessages ();
+   }
+
    // search if we need to handle this message
-   for (const auto &msg : m_maps) {
-      if (msg.value == type && m_handlers[msg.key]) {
-         m_current = msg.key;
-         break;
-      }
+   if (m_reverseMap.has (type)) {
+      auto msg = m_reverseMap[type];
+      m_current = m_handlers[msg] ? msg : NetMsg::None;
    }
 
    // no messagem no processing
@@ -513,19 +517,16 @@ void MessageDispatcher::ensureMessages () {
    // this function tries to associate appropriate message ids.
 
    // check if we're have one
-   if (m_maps.exists (NetMsg::Money)) {
+   if (m_maps.has (NetMsg::Money)) {
       return;
    }
 
    // re-register our message
-   for (const auto &msg : m_wanted) {
-      add (msg.key, GET_USER_MSG_ID (PLID, msg.key.chars (), nullptr));
-   }
+   m_wanted.foreach ([&] (const String &key, const int32 &) {
+      add (key, GET_USER_MSG_ID (PLID, key.chars (), nullptr));
+   });
 }
 
 int32 MessageDispatcher::id (NetMsg msg) {
-   if (game.is (GameFlags::Metamod)) {
-      ensureMessages ();
-   }
    return m_maps[msg];
 }

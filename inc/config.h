@@ -73,8 +73,8 @@ private:
    StringArray m_logos;
    StringArray m_avatars;
 
-   Dictionary <String, String, HashLangString> m_language;
-   Dictionary <int32, DifficultyData, IntNoHash <int32>> m_difficulty;
+   HashMap <String, String, HashLangString> m_language;
+   HashMap <int32, DifficultyData> m_difficulty;
 
    // default tables for personality weapon preferences, overridden by weapon.cfg
    SmallArray <int32> m_normalWeaponPrefs = { 0, 2, 1, 4, 5, 6, 3, 12, 10, 24, 25, 13, 11, 8, 7, 22, 23, 18, 21, 17, 19, 15, 17, 9, 14, 16 };

@@ -629,22 +629,9 @@ private:
 #endif
 
 private:
-   template <typename K> struct CharHash {
-      uint32 operator () (const char *key) const {
-         auto str = const_cast <char *> (key);
-         uint32 hash = 0;
-
-         while (*str++) {
-            hash = ((hash << 5) + hash) + *str;
-         }
-         return hash;
-      }
-   };
-
-private:
    SharedLibrary m_self;
    SimpleHook m_dlsym;
-   Dictionary <const char *, SharedLibrary::Handle, CharHash <const char *>> m_exports;
+   HashMap <StringRef, SharedLibrary::Handle> m_exports;
 
 public:
    EntityLinkage () = default;

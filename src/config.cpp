@@ -495,7 +495,7 @@ void BotConfig::loadLanguageConfig () {
             }
 
             if (!lang.second.empty () && !lang.first.empty ()) {
-               m_language.push (lang.first.trim (), lang.second.trim ());
+               m_language[lang.first.trim ()] = lang.second.trim ();
             }
          }
          else if (line.startsWith ("[TRANSLATED]") && !temp.empty ()) {
@@ -756,11 +756,9 @@ const char *BotConfig::translate (StringRef input) {
    if (game.isDedicated ()) {
       return input.chars ();
    }
-   static String result;
-   result.clear ();
 
-   if (m_language.find (input, result)) {
-      return result.chars ();
+   if (m_language.has (input)) {
+      return m_language[input.chars ()].chars ();
    }
    return input.chars (); // nothing found
 }

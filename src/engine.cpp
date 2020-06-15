@@ -1161,21 +1161,21 @@ SharedLibrary::Handle EntityLinkage::lookup (SharedLibrary::Handle module, const
    if (self.handle () != module) {
       return resolve (module);
    }
+
+   if (m_exports.has (function)) {
+      return m_exports[function];
+   }
    auto botAddr = resolve (self.handle ());
 
    if (!botAddr) {
       auto gameAddr = resolve (gamedll.handle ());
 
       if (gameAddr) {
-         m_exports[function] = gameAddr;
+         return m_exports[function] = gameAddr;
       }
    }
    else {
-      m_exports[function] = botAddr;
-   }
-
-   if (m_exports.exists (function)) {
-      return m_exports[function];
+      return m_exports[function] = botAddr;
    }
    return nullptr;
 }
