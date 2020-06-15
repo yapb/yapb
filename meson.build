@@ -221,6 +221,7 @@ sourceFiles = files (
     'src/botlib.cpp',
     'src/chatlib.cpp',
     'src/combat.cpp',
+    'src/config.cpp',
     'src/control.cpp',
     'src/engine.cpp',
     'src/graph.cpp',
