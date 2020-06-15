@@ -127,20 +127,20 @@ int BotControl::cmdWeaponMode () {
    if (!hasArg (type)) {
       return BotCommandResult::BadFormat;
    }
-   Dictionary <String, int> modes;
+   HashMap <String, int> modes;
 
-   modes.push ("kinfe", 1);
-   modes.push ("pistol", 2);
-   modes.push ("shotgun", 3);
-   modes.push ("smg", 4);
-   modes.push ("rifle", 5);
-   modes.push ("sniper", 6);
-   modes.push ("standard", 7);
+   modes["kinfe"] = 1;
+   modes["pistol"] = 2;
+   modes["shotgun"] = 3;
+   modes["smg"] = 4;
+   modes["rifle"] = 5;
+   modes["sniper"] = 6;
+   modes["standard"] = 7;
 
    auto mode = strValue (type);
 
    // check if selected mode exists
-   if (!modes.exists (mode)) {
+   if (!modes.has (mode)) {
       return BotCommandResult::BadFormat;
    }
    bots.setWeaponMode (modes[mode]);
@@ -276,7 +276,7 @@ int BotControl::cmdNode () {
    }
 
    // should be moved to class?
-   static Dictionary <String, BotCmd> commands;
+   static HashMap <String, BotCmd> commands;
    static StringArray descriptions;
 
    // fill only once
@@ -286,7 +286,7 @@ int BotControl::cmdNode () {
       auto addGraphCmd = [&] (String cmd, String format, String help, Handler handler) -> void {
          BotCmd botCmd { cmd, cr::move (format), cr::move (help), cr::move (handler) };
 
-         commands.push (cmd, cr::move (botCmd));
+         commands[cmd] = cr::move (botCmd);
          descriptions.push (cmd);
       };
 
@@ -325,7 +325,7 @@ int BotControl::cmdNode () {
          addGraphCmd ("release_editor", "acquire_editor", "Releases graph editing rights.", &BotControl::cmdNodeAcquireEditor);
       }
    }
-   if (commands.exists (strValue (cmd))) {
+   if (commands.has (strValue (cmd))) {
       auto item = commands[strValue (cmd)];
 
       // graph have only bad format return status
@@ -336,7 +336,7 @@ int BotControl::cmdNode () {
       }
    }
    else {
-      if (strValue (cmd) == "help" && hasArg (cmd2) && commands.exists (strValue (cmd2))) {
+      if (strValue (cmd) == "help" && hasArg (cmd2) && commands.has (strValue (cmd2))) {
          auto &item = commands[strValue (cmd2)];
 
          msg ("Command: \"%s %s %s\"\nFormat: %s\nHelp: %s", m_args[root], m_args[alias], item.name, item.format, item.help);

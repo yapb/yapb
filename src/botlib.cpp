@@ -4938,45 +4938,45 @@ void Bot::showDebugOverlay () {
    static float timeDebugUpdate = 0.0f;
    static int index, goal, taskID;
 
-   static Dictionary <int32, String, IntHash <int32>> tasks;
-   static Dictionary <int32, String, IntHash <int32>> personalities;
-   static Dictionary <int32, String, IntHash <int32>> flags;
+   static HashMap <int32, String> tasks;
+   static HashMap <int32, String> personalities;
+   static HashMap <int32, String> flags;
 
    if (tasks.empty ()) {
-      tasks.push (Task::Normal, "Normal");
-      tasks.push (Task::Pause, "Pause");
-      tasks.push (Task::MoveToPosition, "Move");
-      tasks.push (Task::FollowUser, "Follow");
-      tasks.push (Task::PickupItem, "Pickup");
-      tasks.push (Task::Camp, "Camp");
-      tasks.push (Task::PlantBomb, "PlantBomb");
-      tasks.push (Task::DefuseBomb, "DefuseBomb");
-      tasks.push (Task::Attack, "Attack");
-      tasks.push (Task::Hunt, "Hunt");
-      tasks.push (Task::SeekCover, "SeekCover");
-      tasks.push (Task::ThrowExplosive, "ThrowHE");
-      tasks.push (Task::ThrowFlashbang, "ThrowFL");
-      tasks.push (Task::ThrowSmoke, "ThrowSG");
-      tasks.push (Task::DoubleJump, "DoubleJump");
-      tasks.push (Task::EscapeFromBomb, "EscapeFromBomb");
-      tasks.push (Task::ShootBreakable, "DestroyBreakable");
-      tasks.push (Task::Hide, "Hide");
-      tasks.push (Task::Blind, "Blind");
-      tasks.push (Task::Spraypaint, "Spray");
+      tasks[Task::Normal] = "Normal";
+      tasks[Task::Pause] = "Pause";
+      tasks[Task::MoveToPosition] = "Move";
+      tasks[Task::FollowUser] = "Follow";
+      tasks[Task::PickupItem] = "Pickup";
+      tasks[Task::Camp] = "Camp";
+      tasks[Task::PlantBomb] = "PlantBomb";
+      tasks[Task::DefuseBomb] = "DefuseBomb";
+      tasks[Task::Attack] = "Attack";
+      tasks[Task::Hunt] = "Hunt";
+      tasks[Task::SeekCover] = "SeekCover";
+      tasks[Task::ThrowExplosive] = "ThrowHE";
+      tasks[Task::ThrowFlashbang] = "ThrowFL";
+      tasks[Task::ThrowSmoke] = "ThrowSG";
+      tasks[Task::DoubleJump] = "DoubleJump";
+      tasks[Task::EscapeFromBomb] = "EscapeFromBomb";
+      tasks[Task::ShootBreakable] = "DestroyBreakable";
+      tasks[Task::Hide] = "Hide";
+      tasks[Task::Blind] = "Blind";
+      tasks[Task::Spraypaint] = "Spray";
 
-      personalities.push (Personality::Rusher, "Rusher");
-      personalities.push (Personality::Normal, "Normal");
-      personalities.push (Personality::Careful, "Careful");
+      personalities[Personality::Rusher] = "Rusher";
+      personalities[Personality::Normal] = "Normal";
+      personalities[Personality::Careful] = "Careful";
 
-      flags.push (AimFlags::Nav, "Nav");
-      flags.push (AimFlags::Camp, "Camp");
-      flags.push (AimFlags::PredictPath, "Predict");
-      flags.push (AimFlags::LastEnemy, "LastEnemy");
-      flags.push (AimFlags::Entity, "Entity");
-      flags.push (AimFlags::Enemy, "Enemy");
-      flags.push (AimFlags::Grenade, "Grenade");
-      flags.push (AimFlags::Override, "Override");
-      flags.push (AimFlags::Danger, "Danger");
+      flags[AimFlags::Nav] = "Nav";
+      flags[AimFlags::Camp] = "Camp";
+      flags[AimFlags::PredictPath] = "Predict";
+      flags[AimFlags::LastEnemy] = "LastEnemy";
+      flags[AimFlags::Entity] = "Entity";
+      flags[AimFlags::Enemy] = "Enemy";
+      flags[AimFlags::Grenade] = "Grenade";
+      flags[AimFlags::Override] = "Override";
+      flags[AimFlags::Danger] = "Danger";
    }
 
    if (m_tasks.empty ()) {
@@ -5401,11 +5401,13 @@ Vector Bot::calcThrow (const Vector &start, const Vector &stop) {
    else if (time > 2.0f) {
       time = 1.2f;
    }
+   float half = time * 0.5f;
+
    velocity = velocity * (1.0f / time);
-   velocity.z += gravity * time * 0.5f;
+   velocity.z += gravity * half;
 
    Vector apex = start + (stop - start) * 0.5f;
-   apex.z += 0.5f * gravity * (time * 0.5f) * (time * 0.5f);
+   apex.z += 0.5f * gravity * half * half;
 
    game.testHull (start, apex, TraceIgnore::None, head_hull, ent (), &tr);
 

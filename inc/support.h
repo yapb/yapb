@@ -36,8 +36,8 @@ private:
    SmallArray <Client> m_clients;
    SmallArray <Twin <String, String>> m_tags;
 
-   Dictionary <int32, String, IntNoHash <int32>> m_weaponAlias;
-   Dictionary <String, int32> m_noiseCache;
+   HashMap <int32, String> m_weaponAlias;
+   HashMap <String, int32> m_noiseCache;
    SimpleHook m_sendToHook;
 
 public:

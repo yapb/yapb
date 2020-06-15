@@ -22,9 +22,10 @@
 
 CR_NAMESPACE_BEGIN
 
-// template for hashing our string
-template <typename K> struct StringHash {
-   uint32 operator () (const K &key) const {
+template <typename T> struct Hash;
+
+template <> struct Hash <String> {
+   uint32 operator () (const String &key) const noexcept {
       auto str = const_cast <char *> (key.chars ());
       uint32 hash = 0;
 
@@ -35,9 +36,32 @@ template <typename K> struct StringHash {
    }
 };
 
-// template for hashing integers
-template <typename K> struct IntHash {
-   uint32 operator () (K key) const {
+template <> struct Hash <StringRef> {
+   uint32 operator () (const StringRef &key) const noexcept {
+      auto str = const_cast <char *> (key.chars ());
+      uint32 hash = 0;
+
+      while (*str++) {
+         hash = ((hash << 5) + hash) + *str;
+      }
+      return hash;
+   }
+};
+
+template <> struct Hash <const char *> {
+   uint32 operator () (const char *key) const noexcept {
+      auto str = const_cast <char *> (key);
+      uint32 hash = 0;
+
+      while (*str++) {
+         hash = ((hash << 5) + hash) + *str;
+      }
+      return hash;
+   }
+};
+
+template <> struct Hash <int32> {
+   uint32 operator () (int32 key) const noexcept {
       key = ((key >> 16) ^ key) * 0x119de1f3;
       key = ((key >> 16) ^ key) * 0x119de1f3;
       key = (key >> 16) ^ key;
@@ -46,224 +70,183 @@ template <typename K> struct IntHash {
    }
 };
 
-// template for np hashing integers
-template <typename K> struct IntNoHash {
-   uint32 operator () (K key) const {
+template <typename T> struct EmptyHash {
+   uint32 operator () (T key) const noexcept {
       return static_cast <uint32> (key);
    }
 };
 
 namespace detail {
-   struct DictionaryList {
-      uint32 index;
-      DictionaryList *next;
-   };
-
-   template <typename K, typename V> struct DictionaryBucket {
-      uint32 hash = static_cast <uint32> (-1);
+   template <typename K, typename V> struct HashEntry final : DenyCopying {
+   public:
       K key {};
       V value {};
+      bool used { false };
 
    public:
-      DictionaryBucket () = default;
-      ~DictionaryBucket () = default;
+      HashEntry () = default;
+      ~HashEntry () = default;
 
    public:
-      DictionaryBucket (DictionaryBucket &&rhs) noexcept : hash (rhs.hash), key (cr::move (rhs.key)), value (cr::move (rhs.value))
+      HashEntry (HashEntry &&rhs) noexcept : used (rhs.used), key (cr::move (rhs.key)), value (cr::move (rhs.value))
       { }
 
    public:
-      DictionaryBucket &operator = (DictionaryBucket &&rhs) noexcept {
+      HashEntry &operator = (HashEntry &&rhs) noexcept {
          if (this != &rhs) {
             key = cr::move (rhs.key);
             value = cr::move (rhs.value);
-            hash = rhs.hash;
+            used = rhs.used;
          }
          return *this;
       }
    };
 }
 
-// basic dictionary
-template <class K, class V, class H = StringHash <K>, size_t HashSize = 36> class Dictionary final : public DenyCopying {
+template <typename K, typename V, typename H = Hash <K>> class HashMap final : public DenyCopying {
+public:
+   using Entries = detail::HashEntry <K, V> [];
+
 private:
-   using DictBucket = detail::DictionaryBucket <K, V>;
-   using DictList = detail::DictionaryList;
+   size_t capacity_ {};
+   size_t length_ {};
+   H hash_;
+
+   UniquePtr <Entries> contents_;
 
 public:
-   enum : size_t {
-      InvalidIndex = static_cast <size_t> (-1)
-   };
-
-private:
-   Array <DictList *> contents_;
-   Array <DictBucket> buckets_;
-   H hashFunction_;
-
-private:
-   uint32 hash (const K &key) const {
-      return hashFunction_ (key);
+   explicit HashMap (const size_t capacity = 3) : capacity_ (capacity), length_ (0) {
+      contents_ = cr::makeUnique <Entries> (capacity);
    }
 
-   size_t find (const K &key, bool allocate) {
-      auto hashed = hash (key);
-      auto pos = hashed % contents_.length ();
-
-      for (auto bucket = contents_[pos]; bucket != nullptr; bucket = bucket->next) {
-         if (buckets_[bucket->index].hash == hashed) {
-            return bucket->index;
-         }
-      }
-
-      if (allocate) {
-         size_t created = buckets_.length ();
-         buckets_.resize (created + 1);
-
-         auto allocated = alloc.allocate <DictList> ();
-
-         allocated->index = static_cast <int32> (created);
-         allocated->next = contents_[pos];
-
-         contents_[pos] = allocated;
-
-         buckets_[created].key = key;
-         buckets_[created].hash = hashed;
-
-         return created;
-      }
-      return InvalidIndex;
-   }
-
-   size_t findIndex (const K &key) const {
-      return const_cast <Dictionary *> (this)->find (key, false);
-   }
-
-public:
-   explicit Dictionary () {
-      reset ();
-   }
-
-   Dictionary (Dictionary &&rhs) noexcept : contents_ (cr::move (rhs.contents_)), buckets_ (cr::move (rhs.buckets_)), hashFunction_ (cr::move (rhs.hashFunction_))
+   HashMap (HashMap &&rhs) noexcept : contents_ (cr::move (rhs.contents_)), hash_ (cr::move (rhs.hash_)), capacity_ (rhs.capacity_), length_ (rhs.length_)
    { }
 
-   ~Dictionary () {
-      clear ();
+   ~HashMap () = default;
+
+private:
+   size_t getIndex (const K &key, size_t length) const {
+      return hash_ (key) % length;
+   }
+
+   void rehash () {
+      auto capacity = (capacity_ << 1);
+      auto contents = cr::makeUnique <Entries> (capacity);
+
+      for (size_t i = 0; i < capacity_; ++i) {
+         if (contents_[i].used) {
+            auto result = put (contents_[i].key, contents, capacity);
+            contents[result.second].value = cr::move (contents_[i].value);
+         }
+      }
+      contents_ = cr::move (contents);
+      capacity_ = capacity;
+   }
+
+   Twin <bool, size_t> put (const K &key, UniquePtr <Entries> &contents, const size_t capacity) {
+      size_t index = getIndex (key, capacity);
+
+      for (size_t i = 0; i < capacity; ++i) {
+         if (!contents[index].used) {
+            contents[index].key = key;
+            contents[index].used = true;
+
+            return { true, index };
+         }
+
+         if (contents[index].key == key) {
+            return { false, index };
+         }
+         index++;
+
+         if (index == capacity) {
+            index = 0;
+         }
+      }
+      return { false, 0 };
    }
 
 public:
-   bool exists (const K &key) const {
-      return findIndex (key) != InvalidIndex;
-   }
-
    bool empty () const {
-      return buckets_.empty ();
+      return !length_;
    }
 
    size_t length () const {
-      return buckets_.length ();
+      return length_;
    }
 
-   bool find (const K &key, V &value) const {
-      size_t index = findIndex (key);
-
-      if (index == InvalidIndex) {
+   bool has (const K &key) const  {
+      if (empty ()) {
          return false;
       }
-      value = buckets_[index].value;
-      return true;
-   }
+      size_t index = getIndex (key, capacity_);
 
-   template <typename U> bool push (const K &key, U &&value) {
-      operator [] (key) = cr::forward <U> (value);
-      return true;
-   }
-
-   bool remove (const K &key) {
-      auto hashed = hash (key);
-
-      auto pos = hashed % contents_.length ();
-      auto *bucket = contents_[pos];
-
-      DictList *next = nullptr;
-
-      while (bucket != nullptr) {
-         if (buckets_[bucket->index].hash == hashed) {
-            if (!next) {
-               contents_[pos] = bucket->next;
-            }
-            else {
-               next->next = bucket->next;
-            }
-            buckets_.erase (bucket->index, 1);
-
-            alloc.deallocate (bucket);
-            bucket = nullptr;
-
+      for (size_t i = 0; i < capacity_; ++i) {
+         if (contents_[index].used && contents_[index].key == key) {
             return true;
          }
-         next = bucket;
-         bucket = bucket->next;
+         if (++index == capacity_) {
+            break;
+         }
       }
       return false;
    }
 
-   void clear () {
-      for (auto object : contents_) {
-         while (object != nullptr) {
-            auto next = object->next;
+   void erase (const K &key) {
+      size_t index = getIndex (key, capacity_);
 
-            alloc.deallocate (object);
-            object = next;
+      for (size_t i = 0; i < capacity_; ++i) {
+         if (contents_[index].used && contents_[index].key == key) {
+            contents_[index].used = false;
+            --length_;
+
+            break;
+         }
+         if (++index == capacity_) {
+            break;
          }
       }
-      contents_.clear ();
-      buckets_.clear ();
-
-      reset ();
    }
 
-   void reset () {
-      contents_.resize (HashSize);
+   void clear () {
+      length_ = 0;
 
-      for (size_t i = 0; i < HashSize; ++i) {
-         contents_[i] = nullptr;
+      for (size_t i = 0; i < capacity_; ++i) {
+         contents_[i].used = false;
+      }
+      rehash ();
+   }
+
+   void foreach (Lambda <void (const K &, const V &)> callback) {
+      for (size_t i = 0; i < capacity_; ++i) {
+         if (contents_[i].used) {
+            callback (contents_[i].key, contents_[i].value);
+         }
       }
    }
 
 public:
    V &operator [] (const K &key) {
-      return buckets_[find (key, true)].value;
+      if ((length_ << 1) > capacity_) {
+         rehash ();
+      }
+      auto result = put (key, contents_, capacity_);
+
+      if (result.first) {
+         ++length_;
+      }
+      return contents_[result.second].value;
    }
 
-   const V &operator [] (const K &key) const {
-      return buckets_[findIndex (key)].value;
-   }
-
-   Dictionary &operator = (Dictionary &&rhs) noexcept {
+   HashMap &operator = (HashMap &&rhs) noexcept {
       if (this != &rhs) {
          contents_ = cr::move (rhs.contents_);
-         buckets_ = cr::move (rhs.buckets_);
-         hashFunction_ = cr::move (rhs.hashFunction_);
+         hash_ = cr::move (rhs.hash_);
+
+         length_ = rhs.length_;
+         capacity_ = rhs.capacity_;
       }
       return *this;
-   }
-
-   // for range-based loops
-public:
-   DictBucket *begin () {
-      return buckets_.begin ();
-   }
-
-   DictBucket *begin () const {
-      return buckets_.begin ();
-   }
-
-   DictBucket *end () {
-      return buckets_.end ();
-   }
-
-   DictBucket *end () const {
-      return buckets_.end ();
    }
 };
 
