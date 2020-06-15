@@ -119,6 +119,9 @@ public:
    // load bots difficulty config
    void loadDifficultyConfig ();
 
+   // loads bots map-specific config
+   void loadMapSpecificConfig ();
+
    // sets memfile to use engine functions
    void setupMemoryFiles ();
 

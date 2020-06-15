@@ -171,7 +171,7 @@ public:
    bool isDedicated ();
 
    // get stripped down mod name
-   const char *getModName ();
+   const char *getRunningModName ();
 
    // get the valid mapname
    const char *getMapName ();

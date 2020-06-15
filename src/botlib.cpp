@@ -840,7 +840,7 @@ void Bot::updatePickups () {
       const float highOffset = (m_pickupType == Pickup::Hostage || m_pickupType == Pickup::PlantedC4) ? 50.0f : 20.0f;
 
       // check if item is too high to reach, check if getting the item would hurt bot
-      if (!game.isNullEntity (m_pickupItem) && pickupPos.z > getEyesPos ().z + highOffset || isDeadlyMove (pickupPos)) {
+      if (pickupPos.z > getEyesPos ().z + highOffset || isDeadlyMove (pickupPos)) {
          m_itemIgnore = m_pickupItem;
          m_pickupItem = nullptr;
          m_pickupType = Pickup::None;

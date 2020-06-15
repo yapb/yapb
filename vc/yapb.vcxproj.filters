@@ -179,6 +179,9 @@
     <ClCompile Include="..\src\support.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\config.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="yapb.rc">

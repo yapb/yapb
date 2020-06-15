@@ -309,10 +309,10 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       // execute main config
       conf.loadMainConfig ();
 
-      if (File::exists (strings.format ("%s/maps/%s_%s.cfg", game.getModName (), game.getMapName (), product.folder))) {
-         game.serverCommand ("exec maps/%s_%s.cfg", game.getMapName (), product.folder);
-         game.print ("Executing Map-Specific config file");
-      }
+      // load map-specific config
+      conf.loadMapSpecificConfig ();
+
+      // initialize quota management
       bots.initQuota ();
 
       if (game.is (GameFlags::Metamod)) {

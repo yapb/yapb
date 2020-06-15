@@ -204,7 +204,7 @@ int BotControl::cmdCvars () {
 
    // if save requested, dump cvars to yapb.cfg
    if (isSave) {
-      cfg.open (strings.format ("%s/addons/%s/conf/%s.cfg", game.getModName (), product.folder, product.folder), "wt");
+      cfg.open (strings.format ("%s/addons/%s/conf/%s.cfg", game.getRunningModName (), product.folder, product.folder), "wt");
       cfg.puts ("// Configuration file for %s\n\n", product.name);
    }
 
@@ -1550,6 +1550,12 @@ bool BotControl::executeCommands () {
    if (m_args.empty ()) {
       return false;
    }
+   const auto &prefix = m_args[0];
+
+   // no handling if not for us
+   if (prefix != "yb" && prefix != "yapb") {
+      return false;
+   }
    Client &client = util.getClient (game.indexOfPlayer (m_ent));
 
    // do not allow to execute stuff for non admins
@@ -1557,7 +1563,6 @@ bool BotControl::executeCommands () {
       msg ("Access to %s commands is restricted.", product.name);
       return true;
    }
-   const auto &prefix = m_args[0];
 
    auto aliasMatch = [] (String &test, const String &cmd, String &aliasName) -> bool {
       for (auto &alias : test.split ("/")) {
