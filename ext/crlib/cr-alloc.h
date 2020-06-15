@@ -15,11 +15,14 @@
 
 #pragma once
 
-#include <new>
-
 #include <crlib/cr-basic.h>
 #include <crlib/cr-movable.h>
 #include <crlib/cr-platform.h>
+
+// provide placment new to avoid stdc++ <new> header
+inline void *operator new (const size_t, void *ptr) noexcept {
+   return ptr;
+}
 
 CR_NAMESPACE_BEGIN
 
@@ -31,12 +34,12 @@ public:
 
 public:
    template <typename T> T *allocate (const size_t length = 1) {
-      auto ptr = reinterpret_cast <T *> (malloc (length * sizeof (T)));
+      auto memory = reinterpret_cast <T *> (malloc (length * sizeof (T)));
 
-      if (!ptr) {
+      if (!memory) {
          plat.abort ();
       }
-      return ptr;
+      return memory;
    }
 
    template <typename T> void deallocate (T *memory) {
@@ -55,10 +58,10 @@ public:
 
 public:
    template <typename T, typename ...Args> T *create (Args &&...args) {
-      auto d = allocate <T> ();
-      new (d) T (cr::forward <Args> (args)...);
+      auto memory = allocate <T> ();
+      new (memory) T (cr::forward <Args> (args)...);
 
-      return d;
+      return memory;
    }
 
    template <typename T> T *createArray (const size_t amount) {
