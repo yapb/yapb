@@ -2719,7 +2719,7 @@ const char *BotGraph::getDataDirectory (bool isMemoryFile) {
       buffer.assignf ("addons/%s/data/", product.folder);
    }
    else {
-      buffer.assignf ("%s/addons/%s/data/", game.getModName (), product.folder);
+      buffer.assignf ("%s/addons/%s/data/", game.getRunningModName (), product.folder);
    }
    return buffer.chars ();
 }

@@ -57,6 +57,7 @@
     <ClCompile Include="..\src\botlib.cpp" />
     <ClCompile Include="..\src\chatlib.cpp" />
     <ClCompile Include="..\src\combat.cpp" />
+    <ClCompile Include="..\src\config.cpp" />
     <ClCompile Include="..\src\control.cpp" />
     <ClCompile Include="..\src\engine.cpp" />
     <ClCompile Include="..\src\graph.cpp" />

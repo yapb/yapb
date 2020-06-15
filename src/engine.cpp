@@ -257,7 +257,7 @@ void Game::testHull (const Vector &start, const Vector &end, int ignoreFlags, in
 }
 
 float Game::getWaveLen (const char *fileName) {
-   auto filePath = strings.format ("%s/%s/%s.wav", getModName (), cv_chatter_path.str (), fileName);
+   auto filePath = strings.format ("%s/%s/%s.wav", getRunningModName (), cv_chatter_path.str (), fileName);
 
    File fp (filePath, "rb");
 
@@ -316,7 +316,7 @@ bool Game::isDedicated () {
    return dedicated;
 }
 
-const char *Game::getModName () {
+const char *Game::getRunningModName () {
    // this function returns mod name without path
 
    static String name;
@@ -631,7 +631,7 @@ void Game::registerCvars (bool gameVars) {
 }
 
 bool Game::loadCSBinary () {
-   auto modname = getModName ();
+   auto modname = getRunningModName ();
 
    if (!modname) {
       return false;
@@ -735,7 +735,7 @@ bool Game::postload () {
 
    // ensure we're have all needed directories
    for (const auto &dir : StringArray { "conf/lang", "data/train", "data/graph", "data/logs" }) {
-      File::createPath (strings.format ("%s/addons/%s/%s", getModName (), product.folder, dir));
+      File::createPath (strings.format ("%s/addons/%s/%s", getRunningModName (), product.folder, dir));
    }
 
    // set out user agent for http stuff
@@ -815,7 +815,7 @@ bool Game::postload () {
       auto gamedll = strings.format ("%s/%s", plat.env ("XASH3D_GAMELIBDIR"), plat.hfp ? "libserver_hardfp.so" : "libserver.so");
 
       if (!m_gameLib.load (gamedll)) {
-         logger.fatal ("Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gamedll, getModName ());
+         logger.fatal ("Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gamedll, getRunningModName ());
       }
       displayCSVersion ();
    }
@@ -823,7 +823,7 @@ bool Game::postload () {
       bool binaryLoaded = loadCSBinary ();
 
       if (!binaryLoaded && !is (GameFlags::Metamod)) {
-         logger.fatal ("Mod that you has started, not supported by this bot (gamedir: %s)", getModName ());
+         logger.fatal ("Mod that you has started, not supported by this bot (gamedir: %s)", getRunningModName ());
       }
       displayCSVersion ();
 

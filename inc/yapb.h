@@ -1141,6 +1141,8 @@ extern ConVar cv_show_latency;
 extern ConVar cv_enable_query_hook;
 extern ConVar cv_whose_your_daddy;
 extern ConVar cv_chatter_path;
+extern ConVar cv_quota;
+extern ConVar cv_difficulty;
 
 // execute client command helper
 template <typename ...Args> void Bot::issueCommand (const char *fmt, Args &&...args) {
