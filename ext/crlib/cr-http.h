@@ -38,19 +38,81 @@
 #  include <ws2tcpip.h>
 #endif
 
-// TODO: make this work with real HTTP responses
-
 // status codes for http client
 CR_DECLARE_SCOPED_ENUM (HttpClientResult,
-   OK = 0,
-   NotFound,
-   Forbidden,
-   SocketError,
-   ConnectError,
-   HttpOnly,
-   Undefined,
-   NoLocalFile = -1,
-   LocalFileExists = -2
+   Continue = 100,
+   SwitchingProtocol = 101,
+   Processing = 102,
+   EarlyHints = 103,
+
+   Ok = 200,
+   Created = 201,
+   Accepted = 202,
+   NonAuthoritativeInformation = 203,
+   NoContent = 204,
+   ResetContent = 205,
+   PartialContent = 206,
+   MultiStatus = 207,
+   AlreadyReported = 208,
+   ImUsed = 226,
+
+   MultipleChoice = 300,
+   MovedPermanently = 301,
+   Found = 302,
+   SeeOther = 303,
+   NotModified = 304,
+   UseProxy = 305,
+   TemporaryRedirect = 307,
+   PermanentRedirect = 308,
+
+   BadRequest = 400,
+   Unauthorized = 401,
+   PaymentRequired = 402,
+   Forbidden = 403,
+   NotFound = 404,
+   MethodNotAllowed = 405,
+   NotAcceptable = 406,
+   ProxyAuthenticationRequired = 407,
+   RequestTimeout = 408,
+   Conflict = 409,
+   Gone = 410,
+   LengthRequired = 411,
+   PreconditionFailed = 412,
+   PayloadTooLarge = 413,
+   UriTooLong = 414,
+   UnsupportedMediaType = 415,
+   RangeNotSatisfiable = 416,
+   ExpectationFailed = 417,
+   ImaTeapot = 418,
+   MisdirectedRequest = 421,
+   UnprocessableEntity = 422,
+   Locked = 423,
+   FailedDependency = 424,
+   TooEarly = 425,
+   UpgradeRequired = 426,
+   PreconditionRequired = 428,
+   TooManyRequests = 429,
+   RequestHeaderFieldsTooLarge = 431,
+   UnavailableForLegalReasons = 451,
+
+   InternalServerError = 500,
+   NotImplemented = 501,
+   BadGateway = 502,
+   ServiceUnavailable = 503,
+   GatewayTimeout = 504,
+   HttpVersionNotSupported = 505,
+   VariantAlsoNegotiates = 506,
+   InsufficientStorage = 507,
+   LoopDetected = 508,
+   NotExtended = 510,
+   NetworkAuthenticationRequired = 511,
+
+   SocketError = -1,
+   ConnectError = -2,
+   HttpOnly = -3,
+   Undefined  = -4,
+   NoLocalFile = -5,
+   LocalFileExists = -6
 )
 
 CR_NAMESPACE_BEGIN
@@ -81,7 +143,7 @@ public:
 
 public:
    bool connect (StringRef hostname) {
-      addrinfo  hints, *result = nullptr;
+      addrinfo  hints {}, *result = nullptr;
       plat.bzero (&hints, sizeof (hints));
 
       constexpr auto NumericServ = 0x00000008;
@@ -265,15 +327,7 @@ private:
          String respCode = response.substr (responseCodeStart + 9, 3);
          respCode.trim ();
 
-         if (respCode == "200") {
-            return HttpClientResult::OK;
-         }
-         else if (respCode == "403") {
-            return HttpClientResult::Forbidden;
-         }
-         else if (respCode == "404") {
-            return HttpClientResult::NotFound;
-         }
+         return static_cast <HttpClientResult> (respCode.int_ ());
       }
       return HttpClientResult::NotFound;
    }
@@ -319,7 +373,7 @@ public:
       SmallArray <uint8> buffer (chunkSize_);
       statusCode_ = parseResponseHeader (buffer.data ());
 
-      if (statusCode_ != HttpClientResult::OK) {
+      if (statusCode_ != HttpClientResult::Ok) {
          socket_.disconnect ();
          return false;
       }
@@ -349,7 +403,7 @@ public:
       file.close ();
 
       socket_.disconnect ();
-      statusCode_ = HttpClientResult::OK;
+      statusCode_ = HttpClientResult::Ok;
 
       return true;
    }
@@ -444,7 +498,7 @@ public:
       statusCode_ = parseResponseHeader (buffer.data ());
       socket_.disconnect ();
 
-      return statusCode_ == HttpClientResult::OK;
+      return statusCode_ == HttpClientResult::Ok;
    }
 
 public:

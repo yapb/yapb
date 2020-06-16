@@ -71,7 +71,7 @@ public:
          int32 dist = 0;
 
          if (maxMatch >= MinMatch) {
-            const int32 limit = cr::max <int32> (cur - WindowSize, EmptyHash);
+            const auto limit = cr::max <int32> (cur - WindowSize, EmptyHash);
 
             int32 chainLength = MaxChain;
             int32 lookup = hashTable_[hash32 (&in[cur])];
