@@ -270,7 +270,7 @@ int BotControl::cmdNode () {
    enum args { root, alias, cmd, cmd2 };
 
    // graph editor supported only with editor
-   if (game.isDedicated () && !graph.hasEditor () && strValue (cmd) != "acquire_editor") {
+   if (game.isDedicated () && !graph.hasEditor () && strValue (cmd) != "acquire_editor" && strValue (cmd) != "upload") {
       msg ("Unable to use graph edit commands without setting graph editor player. Please use \"graph acquire_editor\" to acquire rights for graph editing.");
       return BotCommandResult::Handled;
    }

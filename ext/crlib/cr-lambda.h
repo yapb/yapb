@@ -79,7 +79,7 @@ private:
 
    union {
       UniquePtr <LambdaFunctorWrapper> functor_;
-      uint8 small_[LamdaSmallBufferLength];
+      uint8 small_[LamdaSmallBufferLength] { };
    };
 
    bool ssoObject_ = false;
