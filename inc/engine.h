@@ -653,7 +653,7 @@ public:
    }
 
 public:
-   static SharedLibrary::Handle CR_STDCALL replacement (SharedLibrary::Handle module, const char *function) {
+   static SharedLibrary::Handle CR_STDCALL CR_STDCALL replacement (SharedLibrary::Handle module, const char *function) {
       return EntityLinkage::instance ().lookup (module, function);
    }
 };

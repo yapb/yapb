@@ -179,7 +179,7 @@ void BotConfig::loadWeaponsConfig () {
    MemFile file;
 
    // weapon data initialization
-   if (util.openConfig ("weapon.cfg", "Weapon configuration file not found. Loading defaults", &file)) {
+   if (util.openConfig ("weapon.cfg", "Weapon configuration file not found. Loading defaults.", &file)) {
       while (file.getLine (line)) {
          line.trim ();
 
@@ -583,7 +583,7 @@ void BotConfig::loadDifficultyConfig () {
    };
 
    // avatars inititalization
-   if (util.openConfig ("difficulty.cfg", "Difficulty config file not found. Defaults loaded.", &file)) {
+   if (util.openConfig ("difficulty.cfg", "Difficulty config file not found. Loading defaults.", &file)) {
 
       while (file.getLine (line)) {
          if (isCommentLine (line)) {

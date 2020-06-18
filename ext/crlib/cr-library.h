@@ -59,7 +59,7 @@ public:
 #if defined (CR_WINDOWS)
       handle_ = LoadLibraryA (file.chars ());
 #else
-      handle_ = dlopen (file.chars (), RTLD_LAZY);
+      handle_ = dlopen (file.chars (), RTLD_NOW | RTLD_DEEPBIND | RTLD_LOCAL);
 #endif
       return handle_ != nullptr;
    }

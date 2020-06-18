@@ -421,21 +421,21 @@ MessageDispatcher::MessageDispatcher () {
 
    // register text msg cache
    m_textMsgCache["#CTs_Win"] = TextMsgCache::NeedHandle | TextMsgCache::CounterWin;
-   m_textMsgCache["#Bomb_Defused"] = TextMsgCache::NeedHandle;
+   m_textMsgCache["#Bomb_Defused"] = TextMsgCache::NeedHandle | TextMsgCache::CounterWin;
    m_textMsgCache["#Bomb_Planted"] = TextMsgCache::NeedHandle | TextMsgCache::BombPlanted;
    m_textMsgCache["#Terrorists_Win"] = TextMsgCache::NeedHandle | TextMsgCache::TerroristWin;
-   m_textMsgCache["#Round_Draw"] = TextMsgCache::NeedHandle;
-   m_textMsgCache["#All_Hostages_Rescued"] = TextMsgCache::NeedHandle;
-   m_textMsgCache["#Target_Saved"] = TextMsgCache::NeedHandle;
-   m_textMsgCache["#Hostages_Not_Rescued"] = TextMsgCache::NeedHandle;
-   m_textMsgCache["#Terrorists_Not_Escaped"] = TextMsgCache::NeedHandle;
-   m_textMsgCache["#VIP_Not_Escaped"] = TextMsgCache::NeedHandle;
-   m_textMsgCache["#Escaping_Terrorists_Neutralized"] = TextMsgCache::NeedHandle;
-   m_textMsgCache["#VIP_Assassinated"] = TextMsgCache::NeedHandle;
-   m_textMsgCache["#VIP_Escaped"] = TextMsgCache::NeedHandle;
-   m_textMsgCache["#Terrorists_Escaped"] = TextMsgCache::NeedHandle;
-   m_textMsgCache["#CTs_PreventEscape"] = TextMsgCache::NeedHandle;
-   m_textMsgCache["#Target_Bombed"] = TextMsgCache::NeedHandle;
+   m_textMsgCache["#Round_Draw"] = TextMsgCache::NeedHandle | TextMsgCache::RestartRound;
+   m_textMsgCache["#All_Hostages_Rescued"] = TextMsgCache::NeedHandle | TextMsgCache::CounterWin;
+   m_textMsgCache["#Target_Saved"] = TextMsgCache::NeedHandle | TextMsgCache::CounterWin;
+   m_textMsgCache["#Hostages_Not_Rescued"] = TextMsgCache::NeedHandle | TextMsgCache::TerroristWin;
+   m_textMsgCache["#Terrorists_Not_Escaped"] = TextMsgCache::NeedHandle | TextMsgCache::CounterWin;
+   m_textMsgCache["#VIP_Not_Escaped"] = TextMsgCache::NeedHandle | TextMsgCache::TerroristWin;
+   m_textMsgCache["#Escaping_Terrorists_Neutralized"] = TextMsgCache::NeedHandle | TextMsgCache::CounterWin;
+   m_textMsgCache["#VIP_Assassinated"] = TextMsgCache::NeedHandle | TextMsgCache::TerroristWin;
+   m_textMsgCache["#VIP_Escaped"] = TextMsgCache::NeedHandle | TextMsgCache::CounterWin;
+   m_textMsgCache["#Terrorists_Escaped"] = TextMsgCache::NeedHandle | TextMsgCache::TerroristWin;
+   m_textMsgCache["#CTs_PreventEscape"] = TextMsgCache::NeedHandle | TextMsgCache::CounterWin;
+   m_textMsgCache["#Target_Bombed"] = TextMsgCache::NeedHandle | TextMsgCache::TerroristWin;
    m_textMsgCache["#Game_Commencing"] = TextMsgCache::NeedHandle | TextMsgCache::Commencing;
    m_textMsgCache["#Game_will_restart_in"] = TextMsgCache::NeedHandle | TextMsgCache::RestartRound;
    m_textMsgCache["#Switch_To_BurstFire"] = TextMsgCache::NeedHandle | TextMsgCache::BurstOn;

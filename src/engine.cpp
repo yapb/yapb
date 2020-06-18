@@ -1145,30 +1145,25 @@ float LightMeasure::getSkyColor () {
 }
 
 SharedLibrary::Handle EntityLinkage::lookup (SharedLibrary::Handle module, const char *function) {
+   static const auto &gamedll = game.lib ().handle ();
+   static const auto &self = m_self.handle ();
+
    const auto resolve = [&] (SharedLibrary::Handle handle) {
       return reinterpret_cast <SharedLibrary::Handle> (m_dlsym.call <decltype (HOOK_FUNCTION)> (static_cast <HOOK_CAST> (handle), function));
    };
 
-   // skip any ordinals requests on windows
-   if (plat.win32 && (static_cast <uint16> (reinterpret_cast <uint32> (function) >> 16) & 0xffff) == 0) {
-      return resolve (module);
-   }
-
-   static const auto &gamedll = game.lib ();
-   static const auto &self = m_self;
-
    // if requested module is yapb module, put in cache the looked up symbol
-   if (self.handle () != module) {
+   if (self != module || (plat.win32 && (static_cast <uint16> (reinterpret_cast <uint32> (function) >> 16) & 0xffff) == 0)) {
       return resolve (module);
    }
 
    if (m_exports.has (function)) {
       return m_exports[function];
    }
-   auto botAddr = resolve (self.handle ());
+   auto botAddr = resolve (self);
 
    if (!botAddr) {
-      auto gameAddr = resolve (gamedll.handle ());
+      auto gameAddr = resolve (gamedll);
 
       if (gameAddr) {
          return m_exports[function] = gameAddr;

@@ -90,10 +90,6 @@ public:
       hookedBytes_ = makeUnique <uint8 []> (CodeLength);
    }
 
-   ~SimpleHook () {
-      disable ();
-   }
-
 public:
    bool patch (void *address, void *replacement) {
       constexpr uint16 jmp = 0x25ff;
