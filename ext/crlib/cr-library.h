@@ -58,6 +58,8 @@ public:
 
 #if defined (CR_WINDOWS)
       handle_ = LoadLibraryA (file.chars ());
+#elif defined (CR_OSX)
+      handle_ = dlopen (file.chars (), RTLD_NOW | RTLD_LOCAL);
 #else
       handle_ = dlopen (file.chars (), RTLD_NOW | RTLD_DEEPBIND | RTLD_LOCAL);
 #endif
