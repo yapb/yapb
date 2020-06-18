@@ -171,7 +171,7 @@ public:
       for (size_t i = start; i <= length_ - pattern.length (); ++i) {
          size_t index = 0;
 
-         for (; chars_[index] && index < pattern.length (); ++index) {
+         for (; index < pattern.length () && chars_[index]; ++index) {
             if (chars_[i + index] != pattern[index]) {
                break;
             }
