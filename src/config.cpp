@@ -495,7 +495,7 @@ void BotConfig::loadLanguageConfig () {
             }
 
             if (!lang.second.empty () && !lang.first.empty ()) {
-               m_language[lang.first.trim ()] = lang.second.trim ();
+               m_language[hashLangString (lang.first.trim ().chars ())] = lang.second;
             }
          }
          else if (line.startsWith ("[TRANSLATED]") && !temp.empty ()) {
@@ -756,9 +756,23 @@ const char *BotConfig::translate (StringRef input) {
    if (game.isDedicated ()) {
       return input.chars ();
    }
+   auto hash = hashLangString (input.chars ());
 
-   if (m_language.has (input)) {
-      return m_language[input.chars ()].chars ();
+   if (m_language.has (hash)) {
+      return m_language[hash].chars ();
    }
    return input.chars (); // nothing found
+}
+
+uint32 BotConfig::hashLangString (const char *input) {
+   auto str = reinterpret_cast <uint8 *> (const_cast <char *> (input));
+   uint32 hash = 0;
+
+   while (*str++) {
+      if (!isalnum (*str)) {
+         continue;
+      }
+      hash = ((*str << 5) + hash) + *str;
+   }
+   return hash;
 }

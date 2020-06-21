@@ -35,22 +35,6 @@ public:
    ChatterItem (StringRef name, float repeat, float duration) : name (name), repeat (repeat), duration (duration) { }
 };
 
-// language hasher
-struct HashLangString {
-   uint32 operator () (const String &key) const {
-      auto str = reinterpret_cast <uint8 *> (const_cast <char *> (key.chars ()));
-      uint32 hash = 0;
-
-      while (*str++) {
-         if (!isalnum (*str)) {
-            continue;
-         }
-         hash = ((*str << 5) + hash) + *str;
-      }
-      return hash;
-   }
-};
-
 // mostly config stuff, and some stuff dealing with menus
 class BotConfig final : public Singleton <BotConfig> {
 public:
@@ -73,7 +57,7 @@ private:
    StringArray m_logos;
    StringArray m_avatars;
 
-   HashMap <String, String, HashLangString> m_language;
+   HashMap <uint32, String, Hash <int32>> m_language;
    HashMap <int32, DifficultyData> m_difficulty;
 
    // default tables for personality weapon preferences, overridden by weapon.cfg
@@ -148,8 +132,11 @@ private:
       if (line.empty ()) {
          return true;
       }
-      return line.substr (0, 1).findFirstOf ("#/; \n\r") != String::InvalidIndex;
+      return line.substr (0, 1).findFirstOf ("#/;") != String::InvalidIndex;
    };
+
+   // hash the lang string, only the letters
+   uint32 hashLangString (const char *input);
 
 public:
 
