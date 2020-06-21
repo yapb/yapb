@@ -1144,12 +1144,12 @@ float LightMeasure::getSkyColor () {
    return static_cast <float> (Color (sv_skycolor_r.int_ (), sv_skycolor_g.int_ (), sv_skycolor_b.int_ ()).avg ());
 }
 
-SharedLibrary::Handle EntityLinkage::lookup (SharedLibrary::Handle module, const char *function) {
+DETOUR_RETURN EntityLinkage::lookup (SharedLibrary::Handle module, const char *function) {
    static const auto &gamedll = game.lib ().handle ();
    static const auto &self = m_self.handle ();
 
    const auto resolve = [&] (SharedLibrary::Handle handle) {
-      return reinterpret_cast <SharedLibrary::Handle> (m_dlsym.call <decltype (HOOK_FUNCTION)> (static_cast <HOOK_CAST> (handle), function));
+      return reinterpret_cast <DETOUR_RETURN> (m_dlsym (static_cast <DETOUR_HANDLE> (handle), function));
    };
 
    // if requested module is yapb module, put in cache the looked up symbol
@@ -1180,6 +1180,6 @@ void EntityLinkage::initialize () {
       return;
    }
 
-   m_dlsym.patch (reinterpret_cast <SharedLibrary::Handle> (&HOOK_FUNCTION), reinterpret_cast <SharedLibrary::Handle> (&EntityLinkage::replacement));
+   m_dlsym.install (reinterpret_cast <void  *> (EntityLinkage::replacement), true);
    m_self.locate (&engfuncs);
 }

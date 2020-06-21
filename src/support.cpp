@@ -305,7 +305,7 @@ void BotSupport::checkWelcome () {
          .writeShort (MessageWriter::fu16 (2.0f, 8.0f))
          .writeShort (MessageWriter::fu16 (6.0f, 8.0f))
          .writeShort (MessageWriter::fu16 (0.1f, 8.0f))
-         .writeString (strings.format ("\nHello! You are playing with %s v%s (Build: %s)\nDevised by %s\n\n%s", product.name, product.version, product.build.count, product.author, graph.getAuthor ()));
+         .writeString (strings.format ("\nHello! You are playing with %s v%s (Revision: %s)\nDevised by %s\n\n%s", product.name, product.version, product.build.count, product.author, graph.getAuthor ()));
 
       m_welcomeReceiveTime = 0.0f;
       m_needToSendWelcome = false;
@@ -634,7 +634,7 @@ void BotSupport::sendPings (edict_t *to) {
 void BotSupport::installSendTo () {
    // if previously requested to disable?
    if (!cv_enable_query_hook.bool_ ()) {
-      if (m_sendToHook.enabled ()) {
+      if (m_sendToDetour.detoured ()) {
          disableSendTo ();
       }
       return;
@@ -646,8 +646,8 @@ void BotSupport::installSendTo () {
    }
 
    // enable only on modern games
-   if (game.is (GameFlags::Modern) && (plat.linux || plat.win32) && !plat.arm && !m_sendToHook.enabled ()) {
-      m_sendToHook.patch (reinterpret_cast <void *> (&sendto), reinterpret_cast <void *> (&BotSupport::sendTo));
+   if (game.is (GameFlags::Modern) && (plat.linux || plat.win32) && !plat.arm && !m_sendToDetour.detoured ()) {
+      m_sendToDetour.install (reinterpret_cast <void *> (BotSupport::sendTo), true);
    }
 }
 

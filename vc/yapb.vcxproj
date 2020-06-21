@@ -17,9 +17,9 @@
     <ClInclude Include="..\ext\crlib\cr-binheap.h" />
     <ClInclude Include="..\ext\crlib\cr-color.h" />
     <ClInclude Include="..\ext\crlib\cr-complete.h" />
-    <ClInclude Include="..\ext\crlib\cr-dict.h" />
+    <ClInclude Include="..\ext\crlib\cr-hashmap.h" />
     <ClInclude Include="..\ext\crlib\cr-files.h" />
-    <ClInclude Include="..\ext\crlib\cr-hook.h" />
+    <ClInclude Include="..\ext\crlib\cr-detour.h" />
     <ClInclude Include="..\ext\crlib\cr-http.h" />
     <ClInclude Include="..\ext\crlib\cr-lambda.h" />
     <ClInclude Include="..\ext\crlib\cr-library.h" />
@@ -88,12 +88,14 @@
     <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <WholeProgramOptimization>true</WholeProgramOptimization>
+    <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
     <PlatformToolset>v142</PlatformToolset>
     <EnableASAN>false</EnableASAN>
+    <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -159,7 +161,7 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <CompileAs>Default</CompileAs>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
       <StringPooling>false</StringPooling>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>

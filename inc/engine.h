@@ -621,27 +621,26 @@ public:
 class EntityLinkage : public Singleton <EntityLinkage> {
 private:
 #if defined (CR_WINDOWS)
-#  define HOOK_FUNCTION GetProcAddress
-#  define HOOK_CAST HMODULE
+#  define DETOUR_FUNCTION GetProcAddress
+#  define DETOUR_RETURN FARPROC
+#  define DETOUR_HANDLE HMODULE
 #else
-#  define HOOK_FUNCTION dlsym
-#  define HOOK_CAST SharedLibrary::Handle
+#  define DETOUR_FUNCTION dlsym
+#  define DETOUR_RETURN SharedLibrary::Handle
+#  define DETOUR_HANDLE SharedLibrary::Handle
 #endif
 
 private:
    SharedLibrary m_self;
-   SimpleHook m_dlsym;
-   HashMap <StringRef, SharedLibrary::Handle> m_exports;
+   Detour <decltype (DETOUR_FUNCTION)> m_dlsym { "kernel32.dll", "GetProcAddress", DETOUR_FUNCTION };
+   HashMap <StringRef, DETOUR_RETURN> m_exports;
 
 public:
    EntityLinkage () = default;
 
-   ~EntityLinkage () {
-      m_dlsym.disable ();
-   }
 public:
    void initialize ();
-   SharedLibrary::Handle lookup (SharedLibrary::Handle module, const char *function);
+   DETOUR_RETURN lookup (SharedLibrary::Handle module, const char *function);
 
 public:
    void callPlayerFunction (edict_t *ent) {
@@ -653,7 +652,7 @@ public:
    }
 
 public:
-   static SharedLibrary::Handle CR_STDCALL CR_STDCALL replacement (SharedLibrary::Handle module, const char *function) {
+   static DETOUR_RETURN CR_STDCALL replacement (SharedLibrary::Handle module, const char *function) {
       return EntityLinkage::instance ().lookup (module, function);
    }
 };

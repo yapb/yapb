@@ -38,7 +38,7 @@ private:
 
    HashMap <int32, String> m_weaponAlias;
    HashMap <String, int32> m_noiseCache;
-   SimpleHook m_sendToHook;
+   Detour <decltype (sendto)> m_sendToDetour { "ws2_32.dll", "sendto", sendto };
 
 public:
    BotSupport ();
@@ -134,12 +134,7 @@ public:
 
    // disables send hook
    bool disableSendTo () {
-      return m_sendToHook.disable ();
-   }
-
-   // enables send hook
-   bool enableSendTo () {
-      return m_sendToHook.enable ();
+      return m_sendToDetour.restore ();
    }
 
    // gets the shooting cone deviation

@@ -93,13 +93,7 @@
     <ClInclude Include="..\ext\crlib\cr-complete.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\cr-dict.h">
-      <Filter>inc\ext\crlib</Filter>
-    </ClInclude>
     <ClInclude Include="..\ext\crlib\cr-files.h">
-      <Filter>inc\ext\crlib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\ext\crlib\cr-hook.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
     <ClInclude Include="..\ext\crlib\cr-http.h">
@@ -139,6 +133,12 @@
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
     <ClInclude Include="..\ext\crlib\cr-vector.h">
+      <Filter>inc\ext\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ext\crlib\cr-detour.h">
+      <Filter>inc\ext\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ext\crlib\cr-hashmap.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
   </ItemGroup>

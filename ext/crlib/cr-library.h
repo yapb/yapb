@@ -118,7 +118,7 @@ public:
    }
 
 public:
-  template <typename R> static inline  R CR_STDCALL getSymbol (Handle module, const char *function) {
+  template <typename R> static inline R CR_STDCALL getSymbol (Handle module, const char *function) {
       return reinterpret_cast <R> (
 #if defined (CR_WINDOWS)
          GetProcAddress (static_cast <HMODULE> (module), function)

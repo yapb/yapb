@@ -24,7 +24,7 @@
 #include <math.h>
 
 // avoid linking to GLIBC_2.27
-#if defined (CR_LINUX) && !defined (CR_CXX_INTEL) && defined (CR_ARCH_X86)
+#if defined (CR_LINUX) && !defined (CR_CXX_INTEL)
    __asm__ (".symver powf,powf@GLIBC_2.0");
 #endif
 
