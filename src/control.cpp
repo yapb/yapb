@@ -129,7 +129,7 @@ int BotControl::cmdWeaponMode () {
    }
    HashMap <String, int> modes;
 
-   modes["kinfe"] = 1;
+   modes["knife"] = 1;
    modes["pistol"] = 2;
    modes["shotgun"] = 3;
    modes["smg"] = 4;

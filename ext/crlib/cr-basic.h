@@ -127,7 +127,7 @@ public:
 
 // exposes global variable from class singleton
 #define CR_EXPOSE_GLOBAL_SINGLETON(className, variable)  \
-   static auto &variable = className::instance ()        \
+   static auto &variable { className::instance () }      \
 
 CR_NAMESPACE_END
 
