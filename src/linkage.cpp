@@ -409,10 +409,9 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
    table->pfnCmdStart = [] (const edict_t *player, usercmd_t *cmd, unsigned int random_seed) {
       auto ent = const_cast <edict_t *> (player);
       
-      // if we're handle pings for bots and clients, clear IN_SCORE button so SV_ShouldUpdatePing engine function return false
-      // and SV_EmitPings will not overwrite our results
+      // if we're handle pings for bots and clients, clear IN_SCORE button so SV_ShouldUpdatePing engine function return false, and SV_EmitPings will not overwrite our results
       if (game.is (GameFlags::HasFakePings) && cv_show_latency.int_ () == 2) {
-         if ((cmd->buttons & IN_SCORE) || (ent->v.oldbuttons & IN_SCORE)) {
+         if (cmd->buttons & IN_SCORE) {
             cmd->buttons &= ~IN_SCORE;
 
             // send our version of pings

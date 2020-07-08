@@ -436,6 +436,8 @@ void Game::prepareBotArgs (edict_t *ent, String str) {
    // supply directly the whole string as if you were typing it in the bot's "console". It
    // is supposed to work exactly like the pfnClientCommand (server-sided client command).
 
+   m_botArgs.clear (); // always clear args
+
    if (str.empty ()) {
       return;
    }

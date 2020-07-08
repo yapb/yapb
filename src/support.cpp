@@ -596,7 +596,7 @@ void BotSupport::calculatePings () {
       }
       int part = static_cast <int> (average.first * 0.2f);
 
-      int botPing = bot->m_basePing + rg.int_ (average.first - part, average.first + part) + rg.int_ (bot->m_difficulty / 2, bot->m_difficulty);
+      int botPing = bot->index () / 2 + bot->m_basePing + rg.int_ (average.first - part, average.first + part) + rg.int_ (bot->m_difficulty / 2, bot->m_difficulty);
       int botLoss = rg.int_ (average.second / 2, average.second);
 
       client.ping = getPingBitmask (client.ent, botLoss, botPing);

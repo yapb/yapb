@@ -329,6 +329,13 @@ void MessageDispatcher::netMsgTeamInfo () {
    // update player team
    client.team2 = m_teamInfoCache[m_args[team].chars_]; // update real team
    client.team = game.is (GameFlags::FreeForAll) ? m_args[index].long_ : client.team2;
+
+   auto bot = bots[client.ent];
+
+   // clear the routes so we're have no error in pathfinding in case team info update (respawn/change team) 
+   if (bot) {
+      bot->clearSearchNodes ();
+   }
 }
 
 void MessageDispatcher::netMsgBarTime () {
