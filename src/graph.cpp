@@ -16,7 +16,7 @@
 #include <yapb.h>
 
 ConVar cv_graph_fixcamp ("yb_graph_fixcamp", "1", "Specifies whether bot should not 'fix' camp directions of camp waypoints when loading old PWF format.");
-ConVar cv_graph_url ("yb_graph_url", product.download.chars (), "Specifies the URL from bots will be able to download graph in case of missing local one.", false, 0.0f, 0.0f);
+ConVar cv_graph_url ("yb_graph_url", product.download.chars (), "Specifies the URL from bots will be able to download graph in case of missing local one. Set to empty, if no downloads needed.", false, 0.0f, 0.0f);
 
 void BotGraph::initGraph () {
    // this function initialize the graph structures..
@@ -1316,6 +1316,13 @@ void BotGraph::initNarrowPlaces () {
    if (m_paths.empty () || m_narrowChecked) {
       return;
    }
+   constexpr int32 kNarrowPlacesMinGraphVersion = 2;
+
+   // if version 2 or higher, narrow places already initialized and saved into file
+   if (m_version >= kNarrowPlacesMinGraphVersion) {
+      m_narrowChecked = true;
+      return;
+   }
    TraceResult tr;
 
    const auto distance = 178.0f;
@@ -1518,13 +1525,11 @@ template <typename U> bool BotGraph::saveStorage (StringRef ext, StringRef name,
 
       return false;
    }
-   ULZ lz;
-
    int32 rawLength = data.template length <int32> () * sizeof (U);
    SmallArray <uint8> compressed (rawLength + sizeof (uint8) * ULZ::Excess);
 
    // try to compress
-   auto compressedLength = lz.compress (reinterpret_cast <uint8 *> (data.data ()), rawLength, reinterpret_cast <uint8 *> (compressed.data ()));
+   auto compressedLength = ulz.compress (reinterpret_cast <uint8 *> (data.data ()), rawLength, reinterpret_cast <uint8 *> (compressed.data ()));
 
    if (compressedLength > 0) {
       StorageHeader hdr {};
@@ -1585,11 +1590,11 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
 
    // downloader for graph
    auto download = [&] () -> bool {
-      auto downloadAddress = cv_graph_url.str ();
-
-      if (strings.isEmpty (downloadAddress)) {
+      if (!graph.canDownload ()) {
          return false;
       }
+      auto downloadAddress = cv_graph_url.str ();
+
       auto toDownload = strings.format ("%sgraph/%s", getDataDirectory (false), filename);
       auto fromDownload = strings.format ("http://%s/graph/%s", downloadAddress, filename);
 
@@ -1599,7 +1604,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
          return true;
       }
       else {
-         game.print ("Can't download '%s'. from '%s' to '%s'... (%d).", filename, fromDownload, toDownload, http.getLastStatusCode ());
+         game.print ("Can't download '%s' from '%s' to '%s'... (%d).", filename, fromDownload, toDownload, http.getLastStatusCode ());
       }
       return false;
    };
@@ -1656,11 +1661,16 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
    }
 
    // check the version
-   if (hdr.version != version) {
+   if (hdr.version > version) {
       if (tryReload ()) {
          return true;
       }
       return raiseLoadingError (isGraph, file, "Damaged %s (filename: '%s'). Version number differs (got: '%d', need: '%d').", name, filename, hdr.version, version);
+   }
+
+   // save graph version
+   if (isGraph) {
+      m_version = hdr.version;
    }
 
    // check the storage type
@@ -1676,10 +1686,9 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
 
    // read compressed data
    if (file.read (compressed.data (), sizeof (uint8), hdr.compressed) == static_cast <size_t> (hdr.compressed)) {
-      ULZ lz;
 
       // try to uncompress
-      if (lz.uncompress (compressed.data (), hdr.compressed, reinterpret_cast <uint8 *> (data.data ()), hdr.uncompressed) == ULZ::UncompressFailure) {
+      if (ulz.uncompress (compressed.data (), hdr.compressed, reinterpret_cast <uint8 *> (data.data ()), hdr.uncompressed) == ULZ::UncompressFailure) {
          return raiseLoadingError (isGraph, file, "Unable to decompress ULZ data for %s (filename: '%s').", name, filename);
       }
       else {
@@ -1692,7 +1701,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
          if ((hdr.options & StorageOption::Exten) && exten != nullptr) {
             file.read (exten, sizeof (ExtenHeader));
          }
-         game.print ("Successfully loaded Bots %s data (%d/%.2fMB).", name, m_paths.length (), static_cast <float> (data.capacity () * sizeof (U)) / 1024.0f / 1024.0f);
+         game.print ("Successfully loaded Bots %s data v%d.0 (%d/%.2fMB).", name, hdr.version, m_paths.length (), static_cast <float> (data.capacity () * sizeof (U)) / 1024.0f / 1024.0f);
          file.close ();
 
          return true;
@@ -1747,6 +1756,10 @@ bool BotGraph::loadGraphData () {
    return false;
 }
 
+bool BotGraph::canDownload () {
+   return !strings.isEmpty (cv_graph_url.str ());
+}
+
 bool BotGraph::saveGraphData () {
    auto options = StorageOption::Graph | StorageOption::Exten;
    String author;
@@ -1754,7 +1767,9 @@ bool BotGraph::saveGraphData () {
    if (game.isNullEntity (m_editor) && !m_tempStrings.empty ()) {
       author = m_tempStrings;
 
-      options |= StorageOption::Recovered;
+      if (!game.isDedicated ()) {
+         options |= StorageOption::Recovered;
+      }
    }
    else if (!game.isNullEntity (m_editor)) {
       author = m_editor->v.netname.chars ();
@@ -1771,6 +1786,10 @@ bool BotGraph::saveGraphData () {
    ExtenHeader exten {};
    strings.copy (exten.author, author.chars (), cr::bufsize (exten.author));
    exten.mapSize = engfuncs.pfnGetFileSize (strings.format ("maps/%s.bsp", game.getMapName ()));
+
+   // ensure narrow places saved into file
+   m_narrowChecked = false;
+   initNarrowPlaces ();
 
    return saveStorage <Path> ("graph", "Graph", static_cast <StorageOption> (options), StorageVersion::Graph, m_paths, &exten);
 }
@@ -2798,8 +2817,10 @@ BotGraph::BotGraph () {
    m_rescuePoints.clear ();
    m_sniperPoints.clear ();
 
+   m_version = StorageVersion::Graph;
    m_loadAttempts = 0;
    m_editFlags = 0;
+
    m_pathDisplayTime = 0.0f;
    m_arrowDisplayTime = 0.0f;
    m_autoPathDistance = 250.0f;

@@ -2940,6 +2940,8 @@ void Bot::frame () {
 }
 
 void Bot::update () {
+   pev->flags |= FL_FAKECLIENT; // restore fake client bit
+
    pev->button = 0;
 
    m_moveSpeed = 0.0f;

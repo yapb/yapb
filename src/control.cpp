@@ -269,8 +269,25 @@ int BotControl::cmdCvars () {
 int BotControl::cmdNode () {
    enum args { root, alias, cmd, cmd2 };
 
+   static Array <StringRef> allowedOnDedicatedServer {
+      "acquire_editor",
+      "upload",
+      "save",
+      "load"
+   };
+
+   // check if cmd is allowed on dedicated server
+   auto isAllowedOnDedicatedServer = [] (StringRef str) -> bool {
+      for (const auto &test : allowedOnDedicatedServer) {
+         if (test == str) {
+            return true;
+         }
+      }
+      return false;
+   };
+
    // graph editor supported only with editor
-   if (game.isDedicated () && !graph.hasEditor () && strValue (cmd) != "acquire_editor" && strValue (cmd) != "upload") {
+   if (game.isDedicated () && !graph.hasEditor () && !isAllowedOnDedicatedServer (strValue (cmd))) {
       msg ("Unable to use graph edit commands without setting graph editor player. Please use \"graph acquire_editor\" to acquire rights for graph editing.");
       return BotCommandResult::Handled;
    }
@@ -738,7 +755,7 @@ int BotControl::cmdNodeUpload () {
    http.setTimeout (6);
 
    // try to upload the file
-   if (http.uploadFile ("http://yapb.ru/graph", strings.format ("%sgraph/%s.graph", graph.getDataDirectory (false), game.getMapName ()))) {
+   if (http.uploadFile (strings.format ("http://%s/graph", product.download), strings.format ("%sgraph/%s.graph", graph.getDataDirectory (false), game.getMapName ()))) {
       msg ("Graph file was successfully validated and uploaded to the YaPB Graph DB (%s).", product.download);
       msg ("It will be available for download for all YaPB users in a few minutes.");
       msg ("\n");

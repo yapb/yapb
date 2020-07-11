@@ -70,7 +70,7 @@ cdata.set ('commitCount', run_command ('git', 'rev-list', '--count', 'HEAD').std
 cdata.set ('commitAuthor', run_command ('git', 'log', '--pretty="%ae"', '-1').stdout ().strip ())
 
 cdata.set ('buildVersion', buildVersion)
-cdata.set ('buildMachine', run_command ('hostname').stdout ().strip ())
+cdata.set ('buildMachine', run_command ('hostname', '-f').stdout ().strip ())
 cdata.set ('buildCompiler', compilerId + ' ' + compilerVersion)
 
 configure_file (input: 'inc/version.h.in', output: 'version.build.h', configuration: cdata)

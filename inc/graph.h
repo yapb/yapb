@@ -83,7 +83,7 @@ CR_DECLARE_SCOPED_ENUM (StorageOption,
 
 // storage header versions
 CR_DECLARE_SCOPED_ENUM (StorageVersion,
-   Graph = 1,
+   Graph = 2,
    Practice = 1,
    Vistable = 1,
    Matrix = 1,
@@ -251,6 +251,7 @@ private:
       int x, y, z;
    };
 
+   int m_version;
    int m_editFlags;
    int m_loadAttempts;
    int m_cacheNodeIndex;
@@ -325,6 +326,7 @@ public:
 
    bool saveGraphData ();
    bool loadGraphData ();
+   bool canDownload ();
 
    template <typename U> bool saveStorage (StringRef ext, StringRef name, StorageOption options, StorageVersion version, const SmallArray <U> &data, ExtenHeader *exten);
    template <typename U> bool loadStorage (StringRef ext, StringRef name, StorageOption options, StorageVersion version, SmallArray <U> &data, ExtenHeader *exten, int32 *outOptions);

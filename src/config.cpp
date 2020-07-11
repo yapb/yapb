@@ -586,7 +586,7 @@ void BotConfig::loadDifficultyConfig () {
    if (util.openConfig ("difficulty.cfg", "Difficulty config file not found. Loading defaults.", &file)) {
 
       while (file.getLine (line)) {
-         if (isCommentLine (line)) {
+         if (isCommentLine (line) || line.length () < 3) {
             continue;
          }
          auto items = line.split ("=");

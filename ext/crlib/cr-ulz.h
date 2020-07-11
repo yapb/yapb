@@ -20,7 +20,7 @@
 CR_NAMESPACE_BEGIN
 
 // see https://github.com/encode84/ulz/
-class ULZ final : DenyCopying {
+class ULZ final : public Singleton <ULZ> {
 public:
    enum : int32 {
       Excess = 16,
@@ -313,5 +313,8 @@ private:
       return val;
    }
 };
+
+// expose global ulz object
+CR_EXPOSE_GLOBAL_SINGLETON (ULZ, ulz);
 
 CR_NAMESPACE_END
