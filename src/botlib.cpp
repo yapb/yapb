@@ -2977,7 +2977,7 @@ void Bot::update () {
          if (cv_tkpunish.int_ () != 2 || util.isFakeClient (game.entityOfIndex (m_voteKickIndex))) {
             return;
          }
-         edict_t *killer = game.entityOfIndex (m_lastVoteKick);
+         auto killer = game.entityOfIndex (m_lastVoteKick);
 
          ++killer->v.frags;
          MDLL_ClientKill (killer);

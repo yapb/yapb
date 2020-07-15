@@ -91,6 +91,7 @@ void BotManager::createKillerEntity () {
 void BotManager::destroyKillerEntity () {
    if (!game.isNullEntity (m_killerEntity)) {
       engfuncs.pfnRemoveEntity (m_killerEntity);
+      m_killerEntity = nullptr;
    }
 }
 
