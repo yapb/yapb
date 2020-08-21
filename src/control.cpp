@@ -619,10 +619,7 @@ int BotControl::cmdNodeSetRadius () {
    else {
       radiusIndex = intValue (index);
    }
-   float value = strValue (radius).float_ ();
-
-   graph.setRadius (radiusIndex, value);
-   msg ("Node %d has been set to radius %.2f.", radiusIndex, value);
+   graph.setRadius (radiusIndex, strValue (radius).float_ ());
 
    return BotCommandResult::Handled;
 }
@@ -1282,8 +1279,13 @@ int BotControl::menuGraphPage2 (int item) {
       else {
          graph.setEditFlag (GraphEdit::Auto);
       }
-      msg ("Auto-Add-Nodes %s", graph.hasEditFlag (GraphEdit::Auto) ? "Enabled" : "Disabled");
 
+      if (graph.hasEditFlag (GraphEdit::Auto)) {
+         msg ("Enabled auto nodes placement.");
+      }
+      else {
+         msg ("Disabled auto nodes placement.");
+      }
       showMenu (Menu::NodeMainPage2);
       break;
 
@@ -1756,8 +1758,13 @@ void BotControl::kickBotByMenu (int page) {
       return;
    }
 
+   static StringRef headerTitle = conf.translate ("Bots Remove Menu");
+   static StringRef notABot = conf.translate ("Not a Bot");
+   static StringRef backKey = conf.translate ("Back");
+   static StringRef moreKey = conf.translate ("More");
+
    String menus;
-   menus.assignf ("\\yBots Remove Menu (%d/4):\\w\n\n", page);
+   menus.assignf ("\\y%s (%d/4):\\w\n\n", headerTitle, page);
 
    int menuKeys = (page == 4) ? cr::bit (9) : (cr::bit (8) | cr::bit (9));
    int menuKey = (page - 1) * 8;
@@ -1771,10 +1778,10 @@ void BotControl::kickBotByMenu (int page) {
          menus.appendf ("%1.1d. %s%s\n", i - menuKey + 1, bot->pev->netname.chars (), bot->m_team == Team::CT ? " \\y(CT)\\w" : " \\r(T)\\w");
       }
       else {
-         menus.appendf ("\\d %1.1d. Not a Bot\\w\n", i - menuKey + 1);
+         menus.appendf ("\\d %1.1d. %s\\w\n", i - menuKey + 1, notABot);
       }
    }
-   menus.appendf ("\n%s 0. Back", (page == 4) ? "" : " 9. More...\n");
+   menus.appendf ("\n%s 0. %s", (page == 4) ? "" : strings.format (" 9. %s...\n", moreKey), backKey);
 
    // force to clear current menu
    showMenu (Menu::None);

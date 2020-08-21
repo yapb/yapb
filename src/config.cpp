@@ -495,7 +495,7 @@ void BotConfig::loadLanguageConfig () {
             }
 
             if (!lang.second.empty () && !lang.first.empty ()) {
-               m_language[hashLangString (lang.first.trim ().chars ())] = lang.second;
+               m_language[hashLangString (lang.first.trim ().chars ())] = lang.second.trim ();
             }
          }
          else if (line.startsWith ("[TRANSLATED]") && !temp.empty ()) {

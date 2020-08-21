@@ -893,6 +893,7 @@ void BotGraph::setRadius (int index, float radius) {
 
       // play "done" sound...
       game.playSound (m_editor, "common/wpn_hudon.wav");
+      ctrl.msg ("Node %d has been set to radius %.2f.", node, radius);
    }
 }
 
