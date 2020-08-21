@@ -194,8 +194,6 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
    if (name.empty ()) {
       botName = conf.pickBotName ();
 
-      game.print ("PICKED NAME: %s", botName->name);
-
       if (botName) {
          resultName = botName->name;
       }
