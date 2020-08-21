@@ -1323,8 +1323,19 @@ int BotControl::menuGraphPage2 (int item) {
       break;
 
    case 8:
-      graph.setEditFlag (GraphEdit::On | GraphEdit::Noclip);
+      graph.setEditFlag (GraphEdit::On);
+
+      if (graph.hasEditFlag (GraphEdit::Noclip)) {
+         graph.clearEditFlag (GraphEdit::Noclip);
+      }
+      else {
+         graph.setEditFlag (GraphEdit::Noclip);
+      }
       showMenu (Menu::NodeMainPage2);
+
+      // update editor movetype based on flag
+      m_ent->v.movetype = graph.hasEditFlag (GraphEdit::Noclip) ? MOVETYPE_NOCLIP : MOVETYPE_WALK;
+
       break;
 
    case 9:
