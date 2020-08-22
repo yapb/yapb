@@ -244,7 +244,7 @@ Bot *BotManager::findBotByIndex (int index) {
          return bot.get ();
       }
    }
-   return nullptr; // no bot``
+   return nullptr; // no bot
 }
 
 Bot *BotManager::findBotByEntity (edict_t *ent) {

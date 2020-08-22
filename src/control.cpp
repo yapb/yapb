@@ -356,12 +356,12 @@ int BotControl::cmdNode () {
       if (strValue (cmd) == "help" && hasArg (cmd2) && commands.has (strValue (cmd2))) {
          auto &item = commands[strValue (cmd2)];
 
-         msg ("Command: \"%s %s %s\"\nFormat: %s\nHelp: %s", m_args[root], m_args[alias], item.name, item.format, item.help);
+         msg ("Command: \"%s %s %s\"\nFormat: %s\nHelp: %s", m_args[root], m_args[alias], item.name, item.format, conf.translate (item.help));
       }
       else {
          for (auto &desc : descriptions) {
             auto &item = commands[desc];
-            msg ("   %s - %s", item.name, item.help);
+            msg ("   %s - %s", item.name, conf.translate (item.help));
          }
          msg ("Currently Graph Status %s", graph.hasEditFlag (GraphEdit::On) ? "Enabled" : "Disabled");
       }
@@ -1609,7 +1609,7 @@ bool BotControl::executeCommands () {
    if (hasArg (1) && m_args[1] == "help") {
       for (auto &item : m_cmds) {
          if (aliasMatch (item.name, m_args[2], cmd)) {
-            msg ("Command: \"%s %s\"\nFormat: %s\nHelp: %s", prefix, cmd, item.format, item.help);
+            msg ("Command: \"%s %s\"\nFormat: %s\nHelp: %s", prefix, cmd, item.format, conf.translate (item.help));
             msg ("Aliases: %s", String::join (item.name.split ("/"), ", "));
 
             return true;
@@ -1632,7 +1632,7 @@ bool BotControl::executeCommands () {
       msg ("valid commands are: ");
 
       for (auto &item : m_cmds) {
-         msg ("   %s - %s", item.name.split ("/")[0], item.help);
+         msg ("   %s - %s", item.name.split ("/")[0], conf.translate (item.help));
       }
       return true;
    }
