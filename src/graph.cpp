@@ -1065,6 +1065,17 @@ void BotGraph::cachePoint (int index) {
    ctrl.msg ("Node %d has been put into memory.", m_cacheNodeIndex);
 }
 
+void BotGraph::setAutoPathDistance (const float distance) {
+   m_autoPathDistance = distance;
+
+   if (cr::fzero (distance)) {
+      ctrl.msg ("Autopathing is now disabled.");
+   }
+   else {
+      ctrl.msg ("Autopath distance is set to %.2f.", distance);
+   }
+}
+
 void BotGraph::calculatePathRadius (int index) {
    // calculate "wayzones" for the nearest node  (meaning a dynamic distance area to vary node origin)
 

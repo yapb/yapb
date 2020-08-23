@@ -370,6 +370,7 @@ public:
    void convertFromPOD (Path &path, const PODPath &pod);
    void convertToPOD (const Path &path, PODPath &pod);
    void convertCampDirection (Path &path);
+   void setAutoPathDistance (const float distance);
 
    const char *getDataDirectory (bool isMemoryFile = false);
    const char *getOldFormatGraphName (bool isMemoryFile = false);
@@ -405,10 +406,6 @@ public:
 
    void clearEditFlag (int flag) {
       m_editFlags &= ~flag;
-   }
-
-   void setAutoPathDistance (const float distance) {
-      m_autoPathDistance = distance;
    }
 
    const Vector &getBombOrigin () const {

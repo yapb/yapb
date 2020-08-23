@@ -1428,21 +1428,20 @@ int BotControl::menuAutoPathDistance (int item) {
    showMenu (Menu::None); // reset menu display
 
    constexpr float distances[] = { 0.0f, 100.0f, 130.0f, 160.0f, 190.0f, 220.0f, 250.0f };
-   float result = 0.0f;
 
    if (item >= 1 && item <= 7) {
-      result = distances[item - 1];
-      graph.setAutoPathDistance (result);
+      graph.setAutoPathDistance (distances[item - 1]);
    }
 
-   if (cr::fzero (result)) {
-      msg ("Autopathing is now disabled.");
-   }
-   else {
-      msg ("Autopath distance is set to %.2f.", result);
-   }
-   showMenu (Menu::NodeAutoPath);
+   switch (item) {
+   default:
+      showMenu (Menu::NodeAutoPath);
+      break;
 
+   case 10:
+      showMenu (Menu::None);
+      break;
+   }
    return BotCommandResult::Handled;
 }
 
