@@ -310,7 +310,7 @@ int BotControl::cmdNode () {
       // add graph commands
       addGraphCmd ("on", "on [display|auto|noclip|models]", "Enables displaying of graph, nodes, noclip cheat", &BotControl::cmdNodeOn);
       addGraphCmd ("off", "off [display|auto|noclip|models]", "Disables displaying of graph, auto adding nodes, noclip cheat", &BotControl::cmdNodeOff);
-      addGraphCmd ("menu", "menu [noarguments]", "Opens and displays bots graph edtior.", &BotControl::cmdNodeMenu);
+      addGraphCmd ("menu", "menu [noarguments]", "Opens and displays bots graph editor.", &BotControl::cmdNodeMenu);
       addGraphCmd ("add", "add [noarguments]", "Opens and displays graph node add menu.", &BotControl::cmdNodeAdd);
       addGraphCmd ("addbasic", "menu [noarguments]", "Adds basic nodes such as player spawn points, goals and ladders.", &BotControl::cmdNodeAddBasic);
       addGraphCmd ("save", "save [noarguments]", "Save graph file to disk.", &BotControl::cmdNodeSave);
