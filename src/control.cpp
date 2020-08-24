@@ -253,7 +253,7 @@ int BotControl::cmdCvars () {
       }
       else {
          game.print ("cvar: %s", cvar.reg.name);
-         game.print ("info: %s", cvar.info);
+         game.print ("info: %s", conf.translate (cvar.info));
 
          game.print (" ");
       }
