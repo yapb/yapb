@@ -327,11 +327,11 @@ int BotControl::cmdNode () {
 
       // add path commands
       addGraphCmd ("path_create", "path_create [noarguments]", "Opens and displays path creation menu.", &BotControl::cmdNodePathCreate);
-      addGraphCmd ("path_create_in", "path_create_in [noarguments]", "Opens and displays path creation menu.", &BotControl::cmdNodePathCreate);
-      addGraphCmd ("path_create_out", "path_create_out [noarguments]", "Opens and displays path creation menu.", &BotControl::cmdNodePathCreate);
-      addGraphCmd ("path_create_both", "path_create_both [noarguments]", "Opens and displays path creation menu.", &BotControl::cmdNodePathCreate);
-      addGraphCmd ("path_delete", "path_create_both [noarguments]", "Opens and displays path deletion menu.", &BotControl::cmdNodePathDelete);
-      addGraphCmd ("path_set_autopath", "path_set_autopath [max_distance]", "Opens and displays path creation menu.", &BotControl::cmdNodePathSetAutoDistance);
+      addGraphCmd ("path_create_in", "path_create_in [noarguments]", "Creates incoming path connection from faced to nearest graph.", &BotControl::cmdNodePathCreate);
+      addGraphCmd ("path_create_out", "path_create_out [noarguments]", "Creates outgoing path connection from faced to nearest graph.", &BotControl::cmdNodePathCreate);
+      addGraphCmd ("path_create_both", "path_create_both [noarguments]", "Creates both-ways path connection from faced to nearest graph.", &BotControl::cmdNodePathCreate);
+      addGraphCmd ("path_delete", "path_delete [noarguments]", "Deletes path from faced to nearest graph.", &BotControl::cmdNodePathDelete);
+      addGraphCmd ("path_set_autopath", "path_set_autopath [max_distance]", "Opens menu for setting autopath maximum distance.", &BotControl::cmdNodePathSetAutoDistance);
 
       // camp points iterator
       addGraphCmd ("iterate_camp", "iterate_camp [begin|end|next]", "Allows to go through all camp points on map.", &BotControl::cmdNodeIterateCamp);
@@ -522,7 +522,7 @@ int BotControl::cmdNodeDelete () {
       // check for existence
       if (graph.exists (index)) {
          graph.erase (index);
-         msg ("Node %d has beed deleted.", index);
+         msg ("Node %d has been deleted.", index);
       }
       else {
          msg ("Could not delete node %d.", index);
