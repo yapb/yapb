@@ -1262,10 +1262,9 @@ int BotControl::menuGraphPage2 (int item) {
          }
       }
       msg ("Nodes: %d - T Points: %d\n"
-         "CT Points: %d - Goal Points: %d\n"
-         "Rescue Points: %d - Camp Points: %d\n"
-         "Block Hostage Points: %d - Sniper Points: %d\n",
-         graph.length (), terrPoints, ctPoints, goalPoints, rescuePoints, campPoints, noHostagePoints, sniperPoints);
+           "CT Points: %d - Goal Points: %d", graph.length (), terrPoints, ctPoints, goalPoints); 
+      msg ("Rescue Points: %d - Camp Points: %d\n"
+           "Block Hostage Points: %d - Sniper Points: %d\n", rescuePoints, campPoints, noHostagePoints, sniperPoints);
 
       showMenu (Menu::NodeMainPage2);
    } break;
