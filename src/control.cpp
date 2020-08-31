@@ -325,6 +325,7 @@ int BotControl::cmdNode () {
       addGraphCmd ("flags", "flags [noarguments]", "Open and displays menu for modifying flags for nearest point.", &BotControl::cmdNodeSetFlags);
       addGraphCmd ("teleport", "teleport [index]", "Teleports player to specified node index.", &BotControl::cmdNodeTeleport);
       addGraphCmd ("upload", "upload [id]", "Uploads created graph to graph database.", &BotControl::cmdNodeUpload);
+      addGraphCmd ("stats", "[noarguments]", "Shows the stats about node types on the map.", &BotControl::cmdNodeShowStats);
 
       // add path commands
       addGraphCmd ("path_create", "path_create [noarguments]", "Opens and displays path creation menu.", &BotControl::cmdNodePathCreate);
@@ -842,6 +843,14 @@ int BotControl::cmdNodeIterateCamp () {
    return BotCommandResult::Handled;
 }
 
+int BotControl::cmdNodeShowStats () {
+   enum args { graph_cmd = 1 };
+
+   graph.showStats ();
+
+   return BotCommandResult::Handled;
+}
+
 int BotControl::menuMain (int item) {
    showMenu (Menu::None); // reset menu display
 
@@ -1222,54 +1231,11 @@ int BotControl::menuGraphPage2 (int item) {
    showMenu (Menu::None); // reset menu display
 
    switch (item) {
-   case 1: {
-      int terrPoints = 0;
-      int ctPoints = 0;
-      int goalPoints = 0;
-      int rescuePoints = 0;
-      int campPoints = 0;
-      int sniperPoints = 0;
-      int noHostagePoints = 0;
-
-      for (int i = 0; i < graph.length (); ++i) {
-         const Path &path = graph[i];
-
-         if (path.flags & NodeFlag::TerroristOnly) {
-            ++terrPoints;
-         }
-
-         if (path.flags & NodeFlag::CTOnly) {
-            ++ctPoints;
-         }
-
-         if (path.flags & NodeFlag::Goal) {
-            ++goalPoints;
-         }
-
-         if (path.flags & NodeFlag::Rescue) {
-            ++rescuePoints;
-         }
-
-         if (path.flags & NodeFlag::Camp) {
-            ++campPoints;
-         }
-
-         if (path.flags & NodeFlag::Sniper) {
-            ++sniperPoints;
-         }
-
-         if (path.flags & NodeFlag::NoHostage) {
-            ++noHostagePoints;
-         }
-      }
-      msg ("Nodes: %d - T Points: %d\n"
-         "CT Points: %d - Goal Points: %d\n"
-         "Rescue Points: %d - Camp Points: %d\n"
-         "Block Hostage Points: %d - Sniper Points: %d\n",
-         graph.length (), terrPoints, ctPoints, goalPoints, rescuePoints, campPoints, noHostagePoints, sniperPoints);
-
+   case 1: 
+      graph.showStats ();
       showMenu (Menu::NodeMainPage2);
-   } break;
+
+      break;
 
    case 2:
       graph.setEditFlag (GraphEdit::On);

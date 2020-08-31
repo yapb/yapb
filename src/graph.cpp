@@ -1076,6 +1076,51 @@ void BotGraph::setAutoPathDistance (const float distance) {
    }
 }
 
+void BotGraph::showStats () {
+   int terrPoints = 0;
+   int ctPoints = 0;
+   int goalPoints = 0;
+   int rescuePoints = 0;
+   int campPoints = 0;
+   int sniperPoints = 0;
+   int noHostagePoints = 0;
+
+   for (const auto &path : m_paths) {
+      if (path.flags & NodeFlag::TerroristOnly) {
+         ++terrPoints;
+      }
+
+      if (path.flags & NodeFlag::CTOnly) {
+         ++ctPoints;
+      }
+
+      if (path.flags & NodeFlag::Goal) {
+         ++goalPoints;
+      }
+
+      if (path.flags & NodeFlag::Rescue) {
+         ++rescuePoints;
+      }
+
+      if (path.flags & NodeFlag::Camp) {
+         ++campPoints;
+      }
+
+      if (path.flags & NodeFlag::Sniper) {
+         ++sniperPoints;
+      }
+
+      if (path.flags & NodeFlag::NoHostage) {
+         ++noHostagePoints;
+      }
+   }
+
+   ctrl.msg ("Nodes: %d - T Points: %d", m_paths.length (), terrPoints);
+   ctrl.msg ("CT Points: %d - Goal Points: %d", ctPoints, goalPoints);
+   ctrl.msg ("Rescue Points: %d - Camp Points: %d", rescuePoints, campPoints);
+   ctrl.msg ("Block Hostage Points: %d - Sniper Points: %d", noHostagePoints, sniperPoints);
+}
+
 void BotGraph::calculatePathRadius (int index) {
    // calculate "wayzones" for the nearest node  (meaning a dynamic distance area to vary node origin)
 

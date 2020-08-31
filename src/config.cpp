@@ -766,13 +766,21 @@ const char *BotConfig::translate (StringRef input) {
 
 uint32 BotConfig::hashLangString (const char *input) {
    auto str = reinterpret_cast <uint8 *> (const_cast <char *> (input));
-   uint32 hash = 0;
+   uint32_t hash = 0;
 
-   while (*str++) {
+   for (; *str; ++str) {
       if (!isalnum (*str)) {
          continue;
       }
-      hash = ((*str << 5) + hash) + *str;
+
+      hash += *str;
+      hash += (hash << 10);
+      hash ^= (hash >> 6);
    }
+
+   hash += (hash << 3);
+   hash ^= (hash >> 11);
+   hash += (hash << 15);
+
    return hash;
 }

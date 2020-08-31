@@ -104,6 +104,7 @@ private:
    int cmdNodeReleaseEditor ();
    int cmdNodeUpload ();
    int cmdNodeIterateCamp ();
+   int cmdNodeShowStats ();
 
 private:
    int menuMain (int item);

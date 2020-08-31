@@ -371,6 +371,7 @@ public:
    void convertToPOD (const Path &path, PODPath &pod);
    void convertCampDirection (Path &path);
    void setAutoPathDistance (const float distance);
+   void showStats ();
 
    const char *getDataDirectory (bool isMemoryFile = false);
    const char *getOldFormatGraphName (bool isMemoryFile = false);
