@@ -273,7 +273,8 @@ int BotControl::cmdNode () {
       "acquire_editor",
       "upload",
       "save",
-      "load"
+      "load",
+      "help"
    };
 
    // check if cmd is allowed on dedicated server
@@ -1606,16 +1607,32 @@ bool BotControl::executeCommands () {
 
    // give some help
    if (hasArg (1) && m_args[1] == "help") {
-      for (auto &item : m_cmds) {
-         if (aliasMatch (item.name, m_args[2], cmd)) {
-            msg ("Command: \"%s %s\"\nFormat: %s\nHelp: %s", prefix, cmd, item.format, conf.translate (item.help));
-            msg ("Aliases: %s", String::join (item.name.split ("/"), ", "));
+      const auto hasSecondArg = hasArg (2);
 
-            return true;
+      for (auto &item : m_cmds) {
+         if (!hasSecondArg) {
+            cmd = item.name.split ("/")[0];
+         }
+
+         if ((hasSecondArg && aliasMatch (item.name, m_args[2], cmd)) || !hasSecondArg) {
+            msg ("Command: \"%s %s\"\nFormat: %s\nHelp: %s", prefix, cmd, item.format, conf.translate (item.help));
+
+            auto aliases = item.name.split ("/");
+
+            if (aliases.length () > 1) {
+               msg ("Aliases: %s", String::join (aliases, ", "));
+            }
+
+            if (hasSecondArg) {
+               return true;
+            }
+            else {
+               msg ("\n");
+            }
          }
       }
 
-      if (m_args[2].empty ()) {
+      if (!hasSecondArg) {
          return true;
       }
       else {
