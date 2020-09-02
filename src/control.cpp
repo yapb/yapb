@@ -351,7 +351,9 @@ int BotControl::cmdNode () {
       int status = (this->*item.handler) ();
 
       if (status == BotCommandResult::BadFormat) {
-         msg ("Incorrect usage of \"%s %s %s\" command. Correct usage is:\n\n\t%s\n\nPlease use correct format.", m_args[root], m_args[alias], item.name, item.format);
+         msg ("Incorrect usage of \"%s %s %s\" command. Correct usage is:", m_args[root], m_args[alias], item.name);
+         msg ("\n\t%s\n", item.format);
+         msg ("Please use correct format.");
       }
    }
    else {
@@ -1632,7 +1634,9 @@ bool BotControl::executeCommands () {
             break;
 
          case BotCommandResult::BadFormat:
-            msg ("Incorrect usage of \"%s %s\" command. Correct usage is:\n\n\t%s\n\nPlease type \"%s help %s\" to get more information.", prefix, cmd, item.format, prefix, cmd);
+            msg ("Incorrect usage of \"%s %s\" command. Correct usage is:", prefix, cmd);
+            msg ("\n\t%s\n", item.format);
+            msg ("Please type \"%s help %s\" to get more information.", prefix, cmd);
             break;
          }
 
