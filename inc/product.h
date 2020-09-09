@@ -37,7 +37,7 @@ public:
 
 public:
    const StringRef name { "YaPB" };
-   const StringRef year { __DATE__ + 8 };
+   const StringRef year { __DATE__ + 7 };
    const StringRef author { "YaPB Development Team" };
    const StringRef email { "team@yapb.ru" };
    const StringRef url { "https://yapb.ru/" };
