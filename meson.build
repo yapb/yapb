@@ -17,7 +17,7 @@ project (
     'yapb',
     'cpp',
     
-    version: '4.0.0',
+    version: '4.0',
     license: 'GPL',
     
     default_options: [
