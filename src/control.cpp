@@ -1549,7 +1549,7 @@ bool BotControl::executeCommands () {
    const auto &prefix = m_args[0];
 
    // no handling if not for us
-   if (prefix != "yb" && prefix != "yapb") {
+   if (prefix != product.cmdPri && prefix != product.cmdSec) {
       return false;
    }
    Client &client = util.getClient (game.indexOfPlayer (m_ent));

@@ -198,7 +198,7 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
          resultName = botName->name;
       }
       else {
-         resultName.assignf ("yapb_%d.%d", rg.int_ (100, 10000), rg.int_ (100, 10000)); // just pick ugly random name
+         resultName.assignf ("%s_%d.%d", product.folder, rg.int_ (100, 10000), rg.int_ (100, 10000)); // just pick ugly random name
       }
    }
    else {

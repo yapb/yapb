@@ -58,7 +58,7 @@ void BotConfig::loadMainConfig () {
    MemFile file;
 
    // this is does the same as exec of engine, but not overwriting values of cvars spcified in cv_ignore_cvars_on_changelevel
-   if (util.openConfig ("yapb.cfg", "YaPB main config file is not found.", &file, false)) {
+   if (util.openConfig (strings.format ("%s.cfg", product.folder), "Bot main config file is not found.", &file, false)) {
       while (file.getLine (line)) {
          line.trim ();
 

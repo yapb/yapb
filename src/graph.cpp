@@ -1832,11 +1832,11 @@ bool BotGraph::saveGraphData () {
       author = m_editor->v.netname.chars ();
    }
    else {
-      author = "YAPB";
+      author = product.name;
    }
 
    // mark as official
-   if (author.startsWith ("YAPB")) {
+   if (author.startsWith (product.name)) {
       options |= StorageOption::Official;
    }
 

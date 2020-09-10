@@ -747,7 +747,7 @@ bool Game::postload () {
    game.registerCvars ();
 
    // handle prefixes
-   static StringArray prefixes = { "yb", "yapb" };
+   static StringArray prefixes = { product.cmdPri, product.cmdSec };
 
    // register all our handlers
    for (const auto &prefix : prefixes) {
