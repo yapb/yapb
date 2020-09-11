@@ -1064,7 +1064,7 @@ void Bot::checkMsgQueue () {
 
       // prevent terrorists from buying on es maps
       if (game.mapIs (MapFlags::Escape) && m_team == Team::Terrorist) {
-         m_buyState = 6;
+         m_buyState = BuyState::Done;;
       }
 
       // prevent teams from buying on fun maps

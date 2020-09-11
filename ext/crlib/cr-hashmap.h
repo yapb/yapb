@@ -26,37 +26,19 @@ template <typename T> struct Hash;
 
 template <> struct Hash <String> {
    uint32 operator () (const String &key) const noexcept {
-      auto str = const_cast <char *> (key.chars ());
-      uint32 hash = 0;
-
-      while (*str++) {
-         hash = ((hash << 5) + hash) + *str;
-      }
-      return hash;
+      return key.hash ();
    }
 };
 
 template <> struct Hash <StringRef> {
    uint32 operator () (const StringRef &key) const noexcept {
-      auto str = const_cast <char *> (key.chars ());
-      uint32 hash = 0;
-
-      while (*str++) {
-         hash = ((hash << 5) + hash) + *str;
-      }
-      return hash;
+      return key.hash ();
    }
 };
 
 template <> struct Hash <const char *> {
    uint32 operator () (const char *key) const noexcept {
-      auto str = const_cast <char *> (key);
-      uint32 hash = 0;
-
-      while (*str++) {
-         hash = ((hash << 5) + hash) + *str;
-      }
-      return hash;
+      return StringRef::fnv1a32 (key);
    }
 };
 

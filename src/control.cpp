@@ -360,7 +360,9 @@ int BotControl::cmdNode () {
       if (strValue (cmd) == "help" && hasArg (cmd2) && commands.has (strValue (cmd2))) {
          auto &item = commands[strValue (cmd2)];
 
-         msg ("Command: \"%s %s %s\"\nFormat: %s\nHelp: %s", m_args[root], m_args[alias], item.name, item.format, conf.translate (item.help));
+         msg ("Command: \"%s %s %s\"", m_args[root], m_args[alias], item.name);
+         msg ("Format: %s", item.format);
+         msg ("Help: %s", conf.translate (item.help));
       }
       else {
          for (auto &desc : descriptions) {
@@ -1583,7 +1585,9 @@ bool BotControl::executeCommands () {
          }
 
          if ((hasSecondArg && aliasMatch (item.name, m_args[2], cmd)) || !hasSecondArg) {
-            msg ("Command: \"%s %s\"\nFormat: %s\nHelp: %s", prefix, cmd, item.format, conf.translate (item.help));
+            msg ("Command: \"%s %s\"", prefix, cmd);
+            msg ("Format: %s", item.format);
+            msg ("Help: %s", conf.translate (item.help));
 
             auto aliases = item.name.split ("/");
 

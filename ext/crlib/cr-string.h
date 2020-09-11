@@ -59,14 +59,13 @@ CR_EXPOSE_GLOBAL_SINGLETON (SNPrintfWrap, fmtwrap);
 // simple non-owning string class like std::string_view
 class StringRef {
 private:
-   static constexpr size_t strLength (const char *cstr) {
-      size_t length = 0;
+   static constexpr size_t len (const char *str) noexcept {
+      return !*str ? 0 : 1 + len (str + 1);
+   }
 
-      while (*cstr != kNullChar) {
-         length++;
-         cstr++;
-      }
-      return length;
+public:
+   static constexpr uint32 fnv1a32 (const char *str, uint32 hash = 0x811c9dc5) {
+      return !*str ? hash : fnv1a32 (str + 1, (hash ^ static_cast <uint8> (*str)) * 0x01000193);
    }
 
 public:
@@ -81,7 +80,7 @@ private:
 public:
    constexpr StringRef () noexcept = default;
 
-   constexpr StringRef (const char *chars) : chars_ (chars), length_ (chars ? strLength (chars) : 0)
+   constexpr StringRef (const char *chars) : chars_ (chars), length_ (chars ? len (chars) : 0)
    { }
 
    constexpr StringRef (const char *chars, size_t length) : chars_ (chars), length_ (length)
@@ -131,6 +130,10 @@ public:
 
    constexpr bool equals (const StringRef &rhs) const {
       return *this == rhs;
+   }
+
+   constexpr uint32 hash () const {
+      return fnv1a32 (chars ());
    }
 
 public:
@@ -606,6 +609,10 @@ public:
    }
 
 public:
+   uint32 hash () const {
+      return str ().hash ();
+   }
+
    bool contains (StringRef rhs) const {
       return str ().contains (rhs);
    }

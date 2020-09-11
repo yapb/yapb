@@ -764,23 +764,17 @@ const char *BotConfig::translate (StringRef input) {
    return input.chars (); // nothing found
 }
 
-uint32 BotConfig::hashLangString (const char *input) {
-   auto str = reinterpret_cast <uint8 *> (const_cast <char *> (input));
-   uint32_t hash = 0;
+uint32 BotConfig::hashLangString (StringRef str) {
+   auto test = [] (const char ch) {
+      return  (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z');
+   };
+   String res;
 
-   for (; *str; ++str) {
-      if (!isalnum (*str)) {
+   for (const auto &ch : str) {
+      if (!test (ch)) {
          continue;
       }
-
-      hash += *str;
-      hash += (hash << 10);
-      hash ^= (hash >> 6);
+      res += ch;
    }
-
-   hash += (hash << 3);
-   hash ^= (hash >> 11);
-   hash += (hash << 15);
-
-   return hash;
+   return res.empty () ? 0 : res.hash ();
 }

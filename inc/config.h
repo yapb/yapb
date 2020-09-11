@@ -136,7 +136,7 @@ private:
    };
 
    // hash the lang string, only the letters
-   uint32 hashLangString (const char *input);
+   uint32 hashLangString (StringRef str);
 
 public:
 
