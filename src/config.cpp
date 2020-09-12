@@ -696,35 +696,35 @@ void BotConfig::initWeapons () {
    m_weapons.clear ();
 
    // fill array with available weapons
-   m_weapons.emplace (Weapon::Knife, "weapon_knife", "knife.mdl", 0, 0, -1, -1, 0, 0, 0, 0, 0, 0, true);
-   m_weapons.emplace (Weapon::USP, "weapon_usp", "usp.mdl", 500, 1, -1, -1, 1, 1, 2, 2, 0, 12, false);
-   m_weapons.emplace (Weapon::Glock18, "weapon_glock18", "glock18.mdl", 400, 1, -1, -1, 1, 2, 1, 1, 0, 20, false);
-   m_weapons.emplace (Weapon::Deagle, "weapon_deagle", "deagle.mdl", 650, 1, 2, 2, 1, 3, 4, 4, 2, 7, false);
-   m_weapons.emplace (Weapon::P228, "weapon_p228", "p228.mdl", 600, 1, 2, 2, 1, 4, 3, 3, 0, 13, false);
-   m_weapons.emplace (Weapon::Elite, "weapon_elite", "elite.mdl", 800, 1, 0, 0, 1, 5, 5, 5, 0, 30, false);
-   m_weapons.emplace (Weapon::FiveSeven, "weapon_fiveseven", "fiveseven.mdl", 750, 1, 1, 1, 1, 6, 5, 5, 0, 20, false);
-   m_weapons.emplace (Weapon::M3, "weapon_m3", "m3.mdl", 1700, 1, 2, -1, 2, 1, 1, 1, 0, 8, false);
-   m_weapons.emplace (Weapon::XM1014, "weapon_xm1014", "xm1014.mdl", 3000, 1, 2, -1, 2, 2, 2, 2, 0, 7, false);
-   m_weapons.emplace (Weapon::MP5, "weapon_mp5navy", "mp5.mdl", 1500, 1, 2, 1, 3, 1, 2, 2, 0, 30, true);
-   m_weapons.emplace (Weapon::TMP, "weapon_tmp", "tmp.mdl", 1250, 1, 1, 1, 3, 2, 1, 1, 0, 30, true);
-   m_weapons.emplace (Weapon::P90, "weapon_p90", "p90.mdl", 2350, 1, 2, 1, 3, 3, 4, 4, 0, 50, true);
-   m_weapons.emplace (Weapon::MAC10, "weapon_mac10", "mac10.mdl", 1400, 1, 0, 0, 3, 4, 1, 1, 0, 30, true);
-   m_weapons.emplace (Weapon::UMP45, "weapon_ump45", "ump45.mdl", 1700, 1, 2, 2, 3, 5, 3, 3, 0, 25, true);
-   m_weapons.emplace (Weapon::AK47, "weapon_ak47", "ak47.mdl", 2500, 1, 0, 0, 4, 1, 2, 2, 2, 30, true);
-   m_weapons.emplace (Weapon::SG552, "weapon_sg552", "sg552.mdl", 3500, 1, 0, -1, 4, 2, 4, 4, 2, 30, true);
-   m_weapons.emplace (Weapon::M4A1, "weapon_m4a1", "m4a1.mdl", 3100, 1, 1, 1, 4, 3, 3, 3, 2, 30, true);
-   m_weapons.emplace (Weapon::Galil, "weapon_galil", "galil.mdl", 2000, 1, 0, 0, 4, -1, 1, 1, 2, 35, true);
-   m_weapons.emplace (Weapon::Famas, "weapon_famas", "famas.mdl", 2250, 1, 1, 1, 4, -1, 1, 1, 2, 25, true);
-   m_weapons.emplace (Weapon::AUG, "weapon_aug", "aug.mdl", 3500, 1, 1, 1, 4, 4, 4, 4, 2, 30, true);
-   m_weapons.emplace (Weapon::Scout, "weapon_scout", "scout.mdl", 2750, 1, 2, 0, 4, 5, 3, 2, 3, 10, false);
-   m_weapons.emplace (Weapon::AWP, "weapon_awp", "awp.mdl", 4750, 1, 2, 0, 4, 6, 5, 6, 3, 10, false);
-   m_weapons.emplace (Weapon::G3SG1, "weapon_g3sg1", "g3sg1.mdl", 5000, 1, 0, 2, 4, 7, 6, 6, 3, 20, false);
-   m_weapons.emplace (Weapon::SG550, "weapon_sg550", "sg550.mdl", 4200, 1, 1, 1, 4, 8, 5, 5, 3, 30, false);
-   m_weapons.emplace (Weapon::M249, "weapon_m249", "m249.mdl", 5750, 1, 2, 1, 5, 1, 1, 1, 2, 100, true);
-   m_weapons.emplace (Weapon::Shield, "weapon_shield", "shield.mdl", 2200, 0, 1, 1, 8, -1, 8, 8, 0, 0, false);
+   m_weapons.emplace (Weapon::Knife, "weapon_knife", "knife.mdl", 0, 0, -1, -1, 0, 0, 0, 0, 0, 0, WeaponType::Melee, true);
+   m_weapons.emplace (Weapon::USP, "weapon_usp", "usp.mdl", 500, 1, -1, -1, 1, 1, 2, 2, 0, 12, WeaponType::Pistol, false);
+   m_weapons.emplace (Weapon::Glock18, "weapon_glock18", "glock18.mdl", 400, 1, -1, -1, 1, 2, 1, 1, 0, 20, WeaponType::Pistol, false);
+   m_weapons.emplace (Weapon::Deagle, "weapon_deagle", "deagle.mdl", 650, 1, 2, 2, 1, 3, 4, 4, 2, 7, WeaponType::Pistol, false);
+   m_weapons.emplace (Weapon::P228, "weapon_p228", "p228.mdl", 600, 1, 2, 2, 1, 4, 3, 3, 0, 13, WeaponType::Pistol, false);
+   m_weapons.emplace (Weapon::Elite, "weapon_elite", "elite.mdl", 800, 1, 0, 0, 1, 5, 5, 5, 0, 30, WeaponType::Pistol, false);
+   m_weapons.emplace (Weapon::FiveSeven, "weapon_fiveseven", "fiveseven.mdl", 750, 1, 1, 1, 1, 6, 5, 5, 0, 20, WeaponType::Pistol, false);
+   m_weapons.emplace (Weapon::M3, "weapon_m3", "m3.mdl", 1700, 1, 2, -1, 2, 1, 1, 1, 0, 8, WeaponType::Shotgun, false);
+   m_weapons.emplace (Weapon::XM1014, "weapon_xm1014", "xm1014.mdl", 3000, 1, 2, -1, 2, 2, 2, 2, 0, 7, WeaponType::Shotgun, false);
+   m_weapons.emplace (Weapon::MP5, "weapon_mp5navy", "mp5.mdl", 1500, 1, 2, 1, 3, 1, 2, 2, 0, 30, WeaponType::SMG, true);
+   m_weapons.emplace (Weapon::TMP, "weapon_tmp", "tmp.mdl", 1250, 1, 1, 1, 3, 2, 1, 1, 0, 30, WeaponType::SMG, true);
+   m_weapons.emplace (Weapon::P90, "weapon_p90", "p90.mdl", 2350, 1, 2, 1, 3, 3, 4, 4, 0, 50, WeaponType::SMG, true);
+   m_weapons.emplace (Weapon::MAC10, "weapon_mac10", "mac10.mdl", 1400, 1, 0, 0, 3, 4, 1, 1, 0, 30, WeaponType::SMG, true);
+   m_weapons.emplace (Weapon::UMP45, "weapon_ump45", "ump45.mdl", 1700, 1, 2, 2, 3, 5, 3, 3, 0, 25, WeaponType::SMG, true);
+   m_weapons.emplace (Weapon::AK47, "weapon_ak47", "ak47.mdl", 2500, 1, 0, 0, 4, 1, 2, 2, 2, 30, WeaponType::Rifle, true);
+   m_weapons.emplace (Weapon::SG552, "weapon_sg552", "sg552.mdl", 3500, 1, 0, -1, 4, 2, 4, 4, 2, 30, WeaponType::ZoomRifle, true);
+   m_weapons.emplace (Weapon::M4A1, "weapon_m4a1", "m4a1.mdl", 3100, 1, 1, 1, 4, 3, 3, 3, 2, 30, WeaponType::Rifle, true);
+   m_weapons.emplace (Weapon::Galil, "weapon_galil", "galil.mdl", 2000, 1, 0, 0, 4, -1, 1, 1, 2, 35, WeaponType::Rifle, true);
+   m_weapons.emplace (Weapon::Famas, "weapon_famas", "famas.mdl", 2250, 1, 1, 1, 4, -1, 1, 1, 2, 25, WeaponType::Rifle, true);
+   m_weapons.emplace (Weapon::AUG, "weapon_aug", "aug.mdl", 3500, 1, 1, 1, 4, 4, 4, 4, 2, 30, WeaponType::ZoomRifle, true);
+   m_weapons.emplace (Weapon::Scout, "weapon_scout", "scout.mdl", 2750, 1, 2, 0, 4, 5, 3, 2, 3, 10, WeaponType::Sniper, false);
+   m_weapons.emplace (Weapon::AWP, "weapon_awp", "awp.mdl", 4750, 1, 2, 0, 4, 6, 5, 6, 3, 10, WeaponType::Sniper, false);
+   m_weapons.emplace (Weapon::G3SG1, "weapon_g3sg1", "g3sg1.mdl", 5000, 1, 0, 2, 4, 7, 6, 6, 3, 20, WeaponType::Sniper, false);
+   m_weapons.emplace (Weapon::SG550, "weapon_sg550", "sg550.mdl", 4200, 1, 1, 1, 4, 8, 5, 5, 3, 30, WeaponType::Sniper, false);
+   m_weapons.emplace (Weapon::M249, "weapon_m249", "m249.mdl", 5750, 1, 2, 1, 5, 1, 1, 1, 2, 100, WeaponType::Heavy, true);
+   m_weapons.emplace (Weapon::Shield, "weapon_shield", "shield.mdl", 2200, 0, 1, 1, 8, -1, 8, 8, 0, 0, WeaponType::Pistol, false);
 
    // not needed actually, but cause too much refactoring for now. todo
-   m_weapons.emplace (0, "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, false);
+   m_weapons.emplace (0, "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WeaponType::None, false);
 }
 
 void BotConfig::adjustWeaponPrices () {

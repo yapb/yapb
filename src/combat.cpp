@@ -461,27 +461,20 @@ const Vector &Bot::getEnemyBodyOffset () {
       aimPos += getBodyOffsetError (distance);
    }
    else {
-      
-
+     
       // now take in account different parts of enemy body
       if (m_enemyParts & (Visibility::Head | Visibility::Body)) {
-         // forced to use body?
-         bool useBody = !usesPistol () && distance >= kSprayDistance && distance < 3072.0f;
 
          // now check is our skill match to aim at head, else aim at enemy body
-         if (rg.chance (conf.getDifficultyTweaks (m_difficulty)->headshotPct) && !useBody) {
+         if (rg.chance (conf.getDifficultyTweaks (m_difficulty)->headshotPct)) {
             aimPos.z = headOffset (m_enemy) + getEnemyBodyOffsetCorrection (distance);
          }
          else {
-            aimPos.z += getEnemyBodyOffsetCorrection (distance);
-
-            if (useBody) {
-               aimPos.z += 4.5f;
-            }
+            aimPos.z += 3.5f;
          }
       }
       else if (m_enemyParts & Visibility::Body) {
-         aimPos.z += getEnemyBodyOffsetCorrection (distance);
+         aimPos.z += 3.5f;
       }
       else if (m_enemyParts & Visibility::Other) {
          aimPos = m_enemyOrigin;
@@ -502,44 +495,41 @@ const Vector &Bot::getEnemyBodyOffset () {
 }
 
 float Bot::getEnemyBodyOffsetCorrection (float distance) {
-   bool sniper = usesSniper ();
-   bool pistol = usesPistol ();
-   bool rifle = usesRifle ();
+   enum DistanceIndex {
+      Long, Middle, Short
+   };
 
-   bool zoomableRifle = usesZoomableRifle ();
-   bool submachine = usesSubmachine ();
-   bool shotgun = (m_currentWeapon == Weapon::XM1014 || m_currentWeapon == Weapon::M3);
-   bool m249 = m_currentWeapon == Weapon::M249;
+   static float offsetRanges[9][3] = {
+      { 0.0f,  0.0f,  0.0f }, // none
+      { 0.0f,  0.0f,  0.0f }, // melee
+      { 6.5f,  6.5f,  4.5f }, // pistol
+      { 9.5f,  9.0f, -5.0f }, // shotgun
+      { 4.5f,  3.5f, -5.0f }, // zoomrifle
+      { 5.5f,  1.0f, -4.5f }, // rifle
+      { 5.5f,  3.5f, -4.5f }, // smg
+      { 3.5f,  3.5f,  4.5f }, // sniper
+      { 2.5f, -2.0f, -6.0f }  // heavy
+   };
 
-   float result = -2.0f;
-
-   if (distance >= kDoubleSprayDistance) {
-      if (sniper) {
-         result = 0.18f;
-      }
-      else if (zoomableRifle) {
-         result = 1.5f;
-      }
-      else if (pistol) {
-         result = 2.5f;
-      }
-      else if (submachine) {
-         result = 1.5f;
-      }
-      else if (rifle) {
-         result = -1.0f;
-      }
-      else if (m249) {
-         result = -5.5f;
-      }
-      else if (shotgun) {
-         result = -4.5f;
-      }
+   // only highskilled bots do that 
+   if (m_difficulty < Difficulty::Normal) {
+      return 0.0f;
    }
-   else {
-      result = -5.6f;
+
+   // default distance index is short
+   int32 distanceIndex = DistanceIndex::Short;
+
+   // set distance index appropriate to distance
+   if (distance < 3072.0f && distance > kDoubleSprayDistance) {
+      distanceIndex = DistanceIndex::Long;
    }
-   return result;
+   else if (distance > kSprayDistance && distance <= kDoubleSprayDistance) {
+      distanceIndex = DistanceIndex::Middle;
+   }
+   else if (distance < kSprayDistance) {
+      distanceIndex = DistanceIndex::Short;
+   }
+   return offsetRanges[m_weaponType][distanceIndex];
 }
 
 bool Bot::isFriendInLineOfFire (float distance) {
@@ -967,12 +957,12 @@ bool Bot::isWeaponBadAtDistance (int weaponIndex, float distance) {
    }
 
    // better use pistol in short range distances, when using sniper weapons
-   if ((wid == Weapon::Scout || wid == Weapon::AWP || wid == Weapon::G3SG1 || wid == Weapon::SG550) && distance < 450.0f) {
+   if (m_weaponType == WeaponType::Sniper && distance < 450.0f) {
       return true;
    }
 
    // shotguns is too inaccurate at long distances, so weapon is bad
-   if ((wid == Weapon::M3 || wid == Weapon::XM1014) && distance > 750.0f) {
+   if (m_weaponType == WeaponType::Shotgun && distance > 750.0f) {
       return true;
    }
    return false;
@@ -992,7 +982,7 @@ void Bot::focusEnemy () {
    float distance = (m_lookAt - getEyesPos ()).length2d (); // how far away is the enemy scum?
 
    if (distance < 128.0f && !usesSniper ()) {
-      if (m_currentWeapon == Weapon::Knife) {
+      if (usesKnife ()) {
          if (distance < 80.0f) {
             m_wantsToFire = true;
          }
@@ -1039,7 +1029,7 @@ void Bot::attackMovement () {
    if (m_lastUsedNodesTime + getFrameInterval () + 0.5f < game.time ()) {
       int approach;
 
-      if (m_currentWeapon == Weapon::Knife) {
+      if (usesKnife ()) {
          approach = 100;
       }
       else if ((m_states & Sense::SuspectEnemy) && !(m_states & Sense::SeeingEnemy)) {
@@ -1068,7 +1058,7 @@ void Bot::attackMovement () {
          m_moveSpeed = pev->maxspeed;
       }
 
-      if (distance < 96.0f && m_currentWeapon != Weapon::Knife) {
+      if (distance < 96.0f && !usesKnife ()) {
          m_moveSpeed = -pev->maxspeed;
       }
 
@@ -1106,7 +1096,7 @@ void Bot::attackMovement () {
          m_fightStyle = Fight::Strafe;
       }
 
-      if (m_fightStyle == Fight::Strafe || ((pev->button & IN_RELOAD) || m_isReloading) || (usesPistol () && distance < 400.0f) || m_currentWeapon == Weapon::Knife) {
+      if (m_fightStyle == Fight::Strafe || ((pev->button & IN_RELOAD) || m_isReloading) || (usesPistol () && distance < 400.0f) || usesKnife ()) {
          if (m_strafeSetTime < game.time ()) {
 
             // to start strafing, we have to first figure out if the target is on the left side or right side
@@ -1149,11 +1139,11 @@ void Bot::attackMovement () {
             pev->button |= IN_JUMP;
          }
 
-         if (m_moveSpeed > 0.0f && distance > 100.0f && m_currentWeapon != Weapon::Knife) {
+         if (m_moveSpeed > 0.0f && distance > 100.0f && !usesKnife ()) {
             m_moveSpeed = 0.0f;
          }
 
-         if (m_currentWeapon == Weapon::Knife) {
+         if (usesKnife ()) {
             m_strafeSpeed = 0.0f;
          }
       }
@@ -1172,7 +1162,7 @@ void Bot::attackMovement () {
    }
 
    if (m_fightStyle == Fight::Stay || (m_duckTime > game.time () || m_sniperStopTime > game.time ())) {
-      if (m_moveSpeed > 0.0f && m_currentWeapon != Weapon::Knife) {
+      if (m_moveSpeed > 0.0f && !usesKnife ()) {
          m_moveSpeed = 0.0f;
       }
    }
@@ -1237,60 +1227,43 @@ bool Bot::isEnemyBehindShield (edict_t *enemy) {
 bool Bot::usesSniper () {
    // this function returns true, if returns if bot is using a sniper rifle
 
-   return m_currentWeapon == Weapon::AWP || m_currentWeapon == Weapon::G3SG1 || m_currentWeapon == Weapon::Scout || m_currentWeapon == Weapon::SG550;
+   return m_weaponType == WeaponType::Sniper;
 }
 
 bool Bot::usesRifle () {
-   auto tab = conf.getRawWeapons ();
-   int count = 0;
-
-   while (tab->id) {
-      if (m_currentWeapon == tab->id) {
-         break;
-      }
-      tab++;
-      count++;
-   }
-
-   if (tab->id && count > 13) {
-      return true;
-   }
-   return false;
-}
-
-bool Bot::usesPistol () {
-   auto tab = conf.getRawWeapons ();
-   int count = 0;
-
-   // loop through all the weapons until terminator is found
-   while (tab->id) {
-      if (m_currentWeapon == tab->id) {
-         break;
-      }
-      tab++;
-      count++;
-   }
-
-   if (tab->id && count < 7) {
-      return true;
-   }
-   return false;
-}
-
-bool Bot::usesCampGun () {
-   return usesSubmachine () || usesRifle () || usesSniper ();
-}
-
-bool Bot::usesSubmachine () {
-   return m_currentWeapon == Weapon::MP5 || m_currentWeapon == Weapon::TMP || m_currentWeapon == Weapon::P90 || m_currentWeapon == Weapon::MAC10 || m_currentWeapon == Weapon::UMP45;
+   return usesZoomableRifle () || m_weaponType == WeaponType::Rifle;
 }
 
 bool Bot::usesZoomableRifle () {
-   return m_currentWeapon == Weapon::AUG || m_currentWeapon == Weapon::SG552;
+   return m_weaponType == WeaponType::ZoomRifle;
+}
+
+bool Bot::usesPistol () {
+   return m_weaponType == WeaponType::Pistol;
+}
+
+bool Bot::usesSubmachine () {
+   return m_weaponType == WeaponType::SMG;;
+}
+
+bool Bot::usesShotgun () {
+   return m_weaponType == WeaponType::Shotgun;
+}
+
+bool Bot::usesHeavy () {
+   return m_weaponType == WeaponType::Heavy;
 }
 
 bool Bot::usesBadWeapon () {
-   return m_currentWeapon == Weapon::XM1014 || m_currentWeapon == Weapon::M3 || m_currentWeapon == Weapon::UMP45 || m_currentWeapon == Weapon::MAC10 || m_currentWeapon == Weapon::TMP || m_currentWeapon == Weapon::P90;
+   return usesShotgun () || m_currentWeapon == Weapon::UMP45 || m_currentWeapon == Weapon::MAC10 || m_currentWeapon == Weapon::TMP;
+}
+
+bool Bot::usesCampGun () {
+   return usesSubmachine () || usesRifle () || usesSniper () || usesHeavy ();
+}
+
+bool Bot::usesKnife (){
+   return m_weaponType == WeaponType::Melee;
 }
 
 int Bot::bestPrimaryCarried () {
@@ -1301,7 +1274,7 @@ int Bot::bestPrimaryCarried () {
    int weaponIndex = 0;
    int weapons = pev->weapons;
 
-   auto &weaponTab = conf.getWeapons ();
+   const auto &tab = conf.getWeapons ();
 
    // take the shield in account
    if (hasShield ()) {
@@ -1309,7 +1282,7 @@ int Bot::bestPrimaryCarried () {
    }
 
    for (int i = 0; i < kNumWeapons; ++i) {
-      if (weapons & cr::bit (weaponTab[*pref].id)) {
+      if (weapons & cr::bit (tab[*pref].id)) {
          weaponIndex = i;
       }
       pref++;
@@ -1329,7 +1302,7 @@ int Bot::bestSecondaryCarried () {
    if (hasShield ()) {
       weapons |= cr::bit (Weapon::Shield);
    }
-   auto tab = conf.getRawWeapons ();
+   const auto tab = conf.getRawWeapons ();
 
    for (int i = 0; i < kNumWeapons; ++i) {
       int id = tab[*pref].id;

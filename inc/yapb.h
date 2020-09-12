@@ -239,6 +239,19 @@ CR_DECLARE_SCOPED_ENUM (Chatter,
    Count
 )
 
+// counter strike weapon classes (types)
+CR_DECLARE_SCOPED_ENUM (WeaponType,
+   None,
+   Melee,
+   Pistol,
+   Shotgun,
+   ZoomRifle,
+   Rifle,
+   SMG,
+   Sniper,
+   Heavy
+)
+
 // counter-strike weapon id's
 CR_DECLARE_SCOPED_ENUM (Weapon,
    P228 = 1,
@@ -524,6 +537,7 @@ struct WeaponInfo {
    int buySelectCT; // for counter-strike v1.6
    int penetratePower; // penetrate power
    int maxClip; // max ammo in clip
+   int type; // weapon class
    bool primaryFireHold; // hold down primary fire button to use?
 
 public:
@@ -540,9 +554,10 @@ public:
       int buySelectCT, 
       int penetratePower,
       int maxClip,
+      int type,
       bool fireHold) :  id (id), name (name), model (model), price (price), minPrimaryAmmo (minPriAmmo), teamStandard (teamStd), 
       teamAS (teamAs), buyGroup (buyGroup), buySelect (buySelect), buySelectT (buySelectT), buySelectCT (buySelectCT),
-      penetratePower (penetratePower), maxClip (maxClip), primaryFireHold (fireHold)
+      penetratePower (penetratePower), maxClip (maxClip), type (type), primaryFireHold (fireHold)
    { }
 };
 
@@ -980,6 +995,7 @@ public:
    int m_lastDamageType; // stores last damage
    int m_team; // bot team
    int m_currentWeapon; // one current weapon for each bot
+   int m_weaponType; // current weapon type
    int m_ammoInClip[kMaxWeapons]; // ammo in clip for each weapons
    int m_ammo[MAX_AMMO_SLOTS]; // total ammo amounts
 
@@ -1025,6 +1041,7 @@ public:
 
 public:
    void logic (); /// the things that can be executed while skipping frames
+   void spawned ();
    void takeBlind (int alpha);
    void takeDamage (edict_t *inflictor, int damage, int armor, int bits);
    void showDebugOverlay ();
@@ -1057,9 +1074,12 @@ public:
    bool usesPistol ();
    bool usesSniper ();
    bool usesSubmachine ();
+   bool usesShotgun ();
+   bool usesHeavy ();
    bool usesZoomableRifle ();
    bool usesBadWeapon ();
    bool usesCampGun ();
+   bool usesKnife ();
    bool hasPrimaryWeapon ();
    bool hasSecondaryWeapon ();
    bool hasShield ();

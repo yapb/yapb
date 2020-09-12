@@ -409,18 +409,25 @@ void Bot::checkBreakable (edict_t *touch) {
 }
 
 void Bot::checkBreakablesAround () {
-   if (!cv_destroy_breakables_around.bool_ () || m_currentWeapon == Weapon::Knife || rg.chance (25) || !game.hasBreakables () || m_seeEnemyTime + 4.0f > game.time () || !game.isNullEntity (m_enemy) || !hasPrimaryWeapon ()) {
+   if (!cv_destroy_breakables_around.bool_ () || usesKnife () || rg.chance (25) || !game.hasBreakables () || m_seeEnemyTime + 4.0f > game.time () || !game.isNullEntity (m_enemy) || !hasPrimaryWeapon ()) {
       return;
    }
 
-   // check if we're have some breakbles in 450 units range
+   // check if we're have some breakbles in 400 units range
    for (const auto &breakable : game.getBreakables ()) {
       if (!game.isShootableBreakable (breakable)) {
          continue;
       }
       const auto &origin = game.getEntityWorldOrigin (breakable);
+      const auto lengthToObstacle = (origin - pev->origin).lengthSq ();
 
-      if ((origin - pev->origin).lengthSq () > cr::square (450.0f)) {
+      // too far, skip it
+      if (lengthToObstacle > cr::square (400.0f)) {
+         continue;
+      }
+
+      // too close, skip it
+      if (lengthToObstacle < cr::square (100.0f)) {
          continue;
       }
 
@@ -605,11 +612,12 @@ void Bot::updatePickups () {
                allowPickup = false;
             }
             else if (!m_isVIP && primaryWeaponCarried >= 7 && (m_ammo[primary.id] > 0.3 * primaryProp.ammo1Max) && strncmp (model, "w_", 2) == 0) {
+               auto weaponType = conf.getWeaponType (primaryWeaponCarried);
                
-               const bool isSniperRifle = primaryWeaponCarried == Weapon::AWP || primaryWeaponCarried == Weapon::G3SG1 || primaryWeaponCarried == Weapon::SG550;
-               const bool isSubmachine = primaryWeaponCarried == Weapon::MP5 || primaryWeaponCarried == Weapon::TMP || primaryWeaponCarried == Weapon::P90 || primaryWeaponCarried == Weapon::MAC10 || primaryWeaponCarried == Weapon::UMP45;
-               const bool isShotgun = primaryWeaponCarried == Weapon::M3;
-               const bool isRifle = primaryWeaponCarried == Weapon::Famas || primaryWeaponCarried == Weapon::AK47 || primaryWeaponCarried == Weapon::M4A1 || primaryWeaponCarried == Weapon::Galil || primaryWeaponCarried == Weapon::AUG || primaryWeaponCarried == Weapon::SG552;
+               const bool isSniperRifle = weaponType == WeaponType::Sniper;
+               const bool isSubmachine = weaponType == WeaponType::SMG;
+               const bool isShotgun = weaponType == WeaponType::Shotgun;
+               const bool isRifle = weaponType == WeaponType::Rifle || weaponType == WeaponType::ZoomRifle;
 
                if (strcmp (model, "w_9mmarclip.mdl") == 0 && !isRifle) {
                   allowPickup = false;
@@ -762,7 +770,7 @@ void Bot::updatePickups () {
                   m_defendedBomb = true;
 
                   int index = findDefendNode (origin);
-                  const Path &path = graph[index];
+                  const auto &path = graph[index];
 
                   float timeToExplode = bots.getTimeBombPlanted () + mp_c4timer.float_ () - graph.calculateTravelTime (pev->maxspeed, pev->origin, path.origin);
 
@@ -1232,7 +1240,7 @@ bool Bot::canReplaceWeapon () {
    else if (m_currentWeapon == Weapon::MP5 && m_moneyAmount > 6000) {
       return true;
    }
-   else if ((m_currentWeapon == Weapon::M3 || m_currentWeapon == Weapon::XM1014) && m_moneyAmount > 4000) {
+   else if (usesShotgun () && m_moneyAmount > 4000) {
       return true;
    }
    return isWeaponRestricted (m_currentWeapon);
@@ -1689,7 +1697,7 @@ void Bot::updateEmotions () {
 
 void Bot::overrideConditions () {
 
-   if (m_currentWeapon != Weapon::Knife && m_difficulty > Difficulty::Normal && ((m_aimFlags & AimFlags::Enemy) || (m_states & Sense::SeeingEnemy)) && !cv_jasonmode.bool_ () && getCurrentTaskId () != Task::Camp && getCurrentTaskId () != Task::SeekCover && !isOnLadder ()) {
+   if (!usesKnife () && m_difficulty > Difficulty::Normal && ((m_aimFlags & AimFlags::Enemy) || (m_states & Sense::SeeingEnemy)) && !cv_jasonmode.bool_ () && getCurrentTaskId () != Task::Camp && getCurrentTaskId () != Task::SeekCover && !isOnLadder ()) {
       m_moveToGoal = false; // don't move to goal
       m_navTimeset = game.time ();
 
@@ -1707,7 +1715,7 @@ void Bot::overrideConditions () {
    }
 
    // special handling, if we have a knife in our hands
-   if ((bots.getRoundStartTime () + 6.0f > game.time () || !hasAnyWeapons ()) && m_currentWeapon == Weapon::Knife && util.isPlayer (m_enemy)) {
+   if ((bots.getRoundStartTime () + 6.0f > game.time () || !hasAnyWeapons ()) && usesKnife () && util.isPlayer (m_enemy)) {
       float length = (pev->origin - m_enemy->v.origin).length2d ();
 
       // do waypoint movement if enemy is not reachable with a knife
@@ -1808,7 +1816,7 @@ void Bot::setConditions () {
          }
 
          // if no more enemies found AND bomb planted, switch to knife to get to bombplace faster
-         if (m_team == Team::CT && m_currentWeapon != Weapon::Knife && m_numEnemiesLeft == 0 && bots.isBombPlanted ()) {
+         if (m_team == Team::CT && !usesKnife () && m_numEnemiesLeft == 0 && bots.isBombPlanted ()) {
             selectWeaponByName ("weapon_knife");
             m_plantedBombNodeIndex = getNearestToPlantedBomb ();
 
@@ -1945,7 +1953,7 @@ void Bot::filterTasks () {
          }
          bool lowAmmo = m_ammoInClip[m_currentWeapon] < conf.findWeaponById (m_currentWeapon).maxClip * 0.18f;
 
-         if (bots.isBombPlanted () || m_isStuck || m_currentWeapon == Weapon::Knife) {
+         if (bots.isBombPlanted () || m_isStuck || usesKnife ()) {
             ratio /= 3.0f; // reduce the seek cover desire if bomb is planted
          }
          else if (m_isVIP || m_isReloading || (lowAmmo && usesSniper ())) {
@@ -2427,7 +2435,7 @@ void Bot::checkRadioQueue () {
 
    case Radio::RegroupTeam:
       // if no more enemies found AND bomb planted, switch to knife to get to bombplace faster
-      if (m_team == Team::CT && m_currentWeapon != Weapon::Knife && m_numEnemiesLeft == 0 && bots.isBombPlanted () && getCurrentTaskId () != Task::DefuseBomb) {
+      if (m_team == Team::CT && !usesKnife () && m_numEnemiesLeft == 0 && bots.isBombPlanted () && getCurrentTaskId () != Task::DefuseBomb) {
          selectWeaponByName ("weapon_knife");
 
          clearSearchNodes ();
@@ -3055,7 +3063,7 @@ void Bot::normal_ () {
    }
 
    // bots rushing with knife, when have no enemy (thanks for idea to nicebot project)
-   if (m_currentWeapon == Weapon::Knife && (game.isNullEntity (m_lastEnemy) || !util.isAlive (m_lastEnemy)) && game.isNullEntity (m_enemy) && m_knifeAttackTime < game.time () && !hasShield () && numFriendsNear (pev->origin, 96.0f) == 0) {
+   if (usesKnife () && (game.isNullEntity (m_lastEnemy) || !util.isAlive (m_lastEnemy)) && game.isNullEntity (m_enemy) && m_knifeAttackTime < game.time () && !hasShield () && numFriendsNear (pev->origin, 96.0f) == 0) {
       if (rg.chance (40)) {
          pev->button |= IN_ATTACK;
       }
@@ -3233,7 +3241,12 @@ void Bot::normal_ () {
       ignoreCollision ();
 
       // did we already decide about a goal before?
-      int destIndex = getTask ()->data != kInvalidNodeIndex ? getTask ()->data : findBestGoal ();
+      auto destIndex = graph.exists (getTask ()->data) ? getTask ()->data : findBestGoal ();
+
+      // check for existance (this is failover, for i.e. csdm, this should be not true with normal gameplay, only when spawned outside of waypointed area)
+      if (!graph.exists (destIndex)) {
+         destIndex = graph.getFarest (pev->origin, 512.0f);
+      }
 
       m_prevGoalIndex = destIndex;
 
@@ -3483,7 +3496,7 @@ void Bot::attackEnemy_ () {
       ignoreCollision ();
       attackMovement ();
 
-      if (m_currentWeapon == Weapon::Knife && !m_lastEnemyOrigin.empty ()) {
+      if (usesKnife () && !m_lastEnemyOrigin.empty ()) {
          m_destOrigin = m_lastEnemyOrigin;
       }
    }
@@ -4348,7 +4361,7 @@ void Bot::escapeFromBomb_ () {
       pev->button |= IN_ATTACK2;
    }
 
-   if (m_currentWeapon != Weapon::Knife && m_numEnemiesLeft == 0) {
+   if (!usesKnife () && m_numEnemiesLeft == 0) {
       selectWeaponByName ("weapon_knife");
    }
 
@@ -4423,7 +4436,7 @@ void Bot::shootBreakable_ () {
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
 
-      if (m_currentWeapon == Weapon::Knife) {
+      if (usesKnife ()) {
          selectBestWeapon ();
       }
       m_wantsToFire = true;
@@ -4919,6 +4932,12 @@ void Bot::logic () {
    m_lastDamageType = -1; // reset damage
 }
 
+void Bot::spawned () {
+   if (game.is (GameFlags::CSDM)) {
+      newRound ();
+   }
+}
+
 void Bot::showDebugOverlay () {
    bool displayDebugOverlay = false;
 
@@ -5050,7 +5069,6 @@ void Bot::showDebugOverlay () {
    for (size_t i = 0; i < m_pathWalk.length () && i + 1 < m_pathWalk.length (); ++i) {
       game.drawLine (game.getLocalEntity (), graph[m_pathWalk.at (i)].origin, graph[m_pathWalk.at (i + 1)].origin, 15, 0, { 255, 100, 55 }, 200, 5, 1, DrawLine::Arrow);
    }
-   
 }
 
 bool Bot::hasHostage () {

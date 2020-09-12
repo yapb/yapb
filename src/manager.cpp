@@ -958,6 +958,8 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
    plat.bzero (&m_ammo, sizeof (m_ammo));
 
    m_currentWeapon = 0; // current weapon is not assigned at start
+   m_weaponType = WeaponType::None; // current weapon type is not assigned at start
+
    m_voicePitch = rg.int_ (80, 115); // assign voice pitch
 
    // copy them over to the temp level variables
@@ -1255,6 +1257,7 @@ void Bot::newRound () {
       plat.bzero (&m_ammo, sizeof (m_ammo));
 
       m_currentWeapon = 0;
+      m_weaponType = 0;
    }
    m_flashLevel = 100.0f;
    m_checkDarkTime = game.time ();

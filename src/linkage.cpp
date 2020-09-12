@@ -133,6 +133,12 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       // Spawn() function is one of the functions any entity is supposed to have in the game DLL,
       // and any MOD is supposed to implement one for each of its entities.
 
+      auto bot = bots[ent];
+
+      if (bot) {
+         bot->spawned ();
+      }
+
       if (game.is (GameFlags::Metamod)) {
          RETURN_META_VALUE (MRES_IGNORED, 0);
       }
@@ -954,3 +960,4 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 
 // add linkents for android
 #include "android.cpp"
+

@@ -166,6 +166,7 @@ void MessageDispatcher::netMsgCurWeapon () {
    if (m_args[id].long_ < kMaxWeapons) {
       if (m_args[state].long_ != 0) {
          m_bot->m_currentWeapon = m_args[id].long_;
+         m_bot->m_weaponType = conf.getWeaponType (m_args[id].long_);
       }
 
       // ammo amount decreased ? must have fired a bullet...
@@ -329,13 +330,6 @@ void MessageDispatcher::netMsgTeamInfo () {
    // update player team
    client.team2 = m_teamInfoCache[m_args[team].chars_]; // update real team
    client.team = game.is (GameFlags::FreeForAll) ? m_args[index].long_ : client.team2;
-
-   auto bot = bots[client.ent];
-
-   // clear the routes so we're have no error in pathfinding in case team info update (respawn/change team) 
-   if (bot) {
-      bot->clearSearchNodes ();
-   }
 }
 
 void MessageDispatcher::netMsgBarTime () {

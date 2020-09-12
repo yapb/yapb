@@ -185,6 +185,16 @@ public:
       return m_weaponProps[id];
    }
 
+   // get's weapons type by id
+   int32 getWeaponType (int id) const {
+      for (const auto &weapon : m_weapons) {
+         if (weapon.id == id) {
+            return weapon.type;
+         }
+      }
+      return WeaponType::None;
+   }
+
    // get's weapon preferences for personality
    int32 *getWeaponPrefs (int personality) const {
       switch (personality) {

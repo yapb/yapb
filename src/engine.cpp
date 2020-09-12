@@ -137,6 +137,11 @@ void Game::levelInitialize (edict_t *entities, int max) {
       }
       else if (strcmp (classname, "func_escapezone") == 0) {
          m_mapFlags |= MapFlags::Escape;
+
+         // strange thing on some ES maps, where hostage entity present there
+         if (m_mapFlags & MapFlags::HostageRescue) {
+            m_mapFlags &= ~MapFlags::HostageRescue;
+         }
       }
       else if (strncmp (classname, "func_door", 9) == 0) {
          m_mapFlags |= MapFlags::HasDoors;
@@ -366,7 +371,7 @@ void Game::registerEngineCommand (const char *command, void func ()) {
 
    // check for hl pre 1.1.0.4, as it's doesn't have pfnAddServerCommand
    if (!plat.checkPointer (engfuncs.pfnAddServerCommand)) {
-      logger.fatal ("%s's minimum HL engine version is 1.1.0.6 and minimum Counter-Strike is Beta 7.1. Please update your engine / game version.", product.name);
+      logger.fatal ("%s's minimum HL engine version is 1.1.0.4 and minimum Counter-Strike is Beta 6.5. Please update your engine / game version.", product.name);
    }
    engfuncs.pfnAddServerCommand (const_cast <char *> (command), func);
 }

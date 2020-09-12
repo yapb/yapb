@@ -676,7 +676,7 @@ bool Bot::updateNavigation () {
             m_desiredVelocity = nullptr;
          }
       }
-      else if (!cv_jasonmode.bool_ () && m_currentWeapon == Weapon::Knife && isOnFloor ()) {
+      else if (!cv_jasonmode.bool_ () && usesKnife () && isOnFloor ()) {
          selectBestWeapon ();
       }
    }
@@ -1176,11 +1176,11 @@ void Bot::findShortestPath (int srcIndex, int destIndex) {
    // this function finds the shortest path from source index to destination index
 
    if (!graph.exists (srcIndex)){
-      logger.error ("Pathfinder source path index not valid (%d).", srcIndex);
+      logger.error ("%s source path index not valid (%d).", __FUNCTION__, srcIndex);
       return;
    }
    else if (!graph.exists (destIndex)) {
-      logger.error ("Pathfinder destination path index not valid (%d).", destIndex);
+      logger.error ("%s destination path index not valid (%d).", __FUNCTION__, destIndex);
       return;
    }
    clearSearchNodes ();
@@ -1329,7 +1329,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
          float euclidean = cr::powf (cr::powf (x, 2.0f) + cr::powf (y, 2.0f) + cr::powf (z, 2.0f), 0.5f);
 
          if (cv_debug_heuristic_type.int_ () == 4) {
-            return 1000.0f *(cr::ceilf (euclidean) - euclidean);
+            return 1000.0f * (cr::ceilf (euclidean) - euclidean);
          }
          return euclidean;
       }
@@ -1348,8 +1348,18 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
       return hfunctionPathDist (index, startIndex, goalIndex) / 128.0f * 10.0f;
    };
 
+   if (!graph.exists (srcIndex)) {
+      logger.error ("%s source path index not valid (%d).", __FUNCTION__, srcIndex);
+      return;
+   }
+   else if (!graph.exists (destIndex)) {
+
+      logger.error ("%s destination path index not valid (%d).", __FUNCTION__, destIndex);
+      return;
+   }
+
    // holders for heuristic functions
-   Lambda <float (int, int, int)> gcalc, hcalc;
+   static Lambda <float (int, int, int)> gcalc, hcalc;
 
    // get correct calculation for heuristic
    if (pathType == FindPath::Optimal) {
@@ -1381,15 +1391,6 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
          hcalc = hfunctionPathDist;
          gcalc = gfunctionPathDist;
       }
-   }
-
-   if (!graph.exists (srcIndex)) {
-      logger.error ("Pathfinder source path index not valid (%d).", srcIndex);
-      return;
-   }
-   else if (!graph.exists (destIndex)) {
-      logger.error ("Pathfinder destination path index not valid (%d).", destIndex);
-      return;
    }
    clearSearchNodes ();
 
@@ -2182,7 +2183,7 @@ bool Bot::advanceMovement () {
             }
 
             // is there a jump node right ahead and do we need to draw out the light weapon ?
-            if (willJump && m_currentWeapon != Weapon::Knife && m_currentWeapon != Weapon::Scout && !m_isReloading && !usesPistol () && (jumpDistance > 200.0f || (dst.z - 32.0f > src.z && jumpDistance > 150.0f)) && !(m_states & (Sense::SeeingEnemy | Sense::SuspectEnemy))) {
+            if (willJump && !usesKnife () && m_currentWeapon != Weapon::Scout && !m_isReloading && !usesPistol () && (jumpDistance > 200.0f || (dst.z - 32.0f > src.z && jumpDistance > 150.0f)) && !(m_states & (Sense::SeeingEnemy | Sense::SuspectEnemy))) {
                selectWeaponByName ("weapon_knife"); // draw out the knife if we needed
             }
 
@@ -2206,7 +2207,7 @@ bool Bot::advanceMovement () {
 
    // if wayzone radius non zero vary origin a bit depending on the body angles
    if (m_path->radius > 0.0f) {
-      m_pathOrigin = m_pathOrigin + Vector (pev->angles.x, cr::normalizeAngles (pev->angles.y + rg.float_ (-90.0f, 90.0f)), 0.0f).forward () * rg.float_ (0.0f, m_path->radius);
+      m_pathOrigin += Vector (pev->angles.x, cr::normalizeAngles (pev->angles.y + rg.float_ (-90.0f, 90.0f)), 0.0f).forward () * rg.float_ (0.0f, m_path->radius);
    }
 
    if (isOnLadder ()) {
