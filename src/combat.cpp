@@ -945,9 +945,9 @@ bool Bot::isWeaponBadAtDistance (int weaponIndex, float distance) {
    if (m_difficulty < Difficulty::Normal || !hasSecondaryWeapon ()) {
       return false;
    }
-   int wid = info[weaponIndex].id;
+   auto weaponType = info[weaponIndex].type;
 
-   if (wid == Weapon::Knife) {
+   if (weaponType == WeaponType::Melee) {
       return false;
    }
 
@@ -957,12 +957,12 @@ bool Bot::isWeaponBadAtDistance (int weaponIndex, float distance) {
    }
 
    // better use pistol in short range distances, when using sniper weapons
-   if (m_weaponType == WeaponType::Sniper && distance < 450.0f) {
+   if (weaponType == WeaponType::Sniper && distance < 450.0f) {
       return true;
    }
 
    // shotguns is too inaccurate at long distances, so weapon is bad
-   if (m_weaponType == WeaponType::Shotgun && distance > 750.0f) {
+   if (weaponType == WeaponType::Shotgun && distance > 750.0f) {
       return true;
    }
    return false;
