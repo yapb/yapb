@@ -108,7 +108,7 @@ bool BotSupport::checkKeywords (StringRef line, String &reply) {
                      break;
                   }
                }
-
+               
                // reply not used, so use it
                if (!replyUsed) {
                   reply.assign (choosenReply); // update final buffer
@@ -304,7 +304,7 @@ bool Bot::isReplyingToChat () {
       if (m_sayTextBuffer.timeNextChat < game.time () + rg.float_ (m_sayTextBuffer.chatDelay / 2, m_sayTextBuffer.chatDelay)) {
          String replyText;
 
-         if (rg.chance (m_sayTextBuffer.chatProbability + rg.int_ (20, 50)) && checkChatKeywords (replyText)) {
+         if (rg.chance (m_sayTextBuffer.chatProbability + rg.int_ (40, 70)) && checkChatKeywords (replyText)) {
             prepareChatMessage (replyText);
             pushMsgQueue (BotMsg::Say);
   

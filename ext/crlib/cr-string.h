@@ -1129,7 +1129,7 @@ public:
             break;
          }
       }
-      return result;
+      return result.uppercase ();
    }
 };
 
