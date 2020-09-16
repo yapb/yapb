@@ -1313,7 +1313,7 @@ void Bot::buyStuff () {
    auto tab = conf.getRawWeapons ();
 
    const bool isPistolMode = tab[25].teamStandard == -1 && tab[3].teamStandard == 2;
-   const bool teamEcoValid = bots.checkTeamEco (m_team);
+   const bool teamHasGoodEconomics = bots.checkTeamEco (m_team);
 
    // do this, because xash engine is not capable to run all the features goldsrc, but we have cs 1.6 on it, so buy table must be the same
    const bool isOldGame = game.is (GameFlags::Legacy) && !game.is (GameFlags::Xash3D);
@@ -1323,7 +1323,7 @@ void Bot::buyStuff () {
 
    switch (m_buyState) {
    case BuyState::PrimaryWeapon: // if no primary weapon and bot has some money, buy a primary weapon
-      if ((!hasShield () && !hasPrimaryWeapon () && teamEcoValid) || (teamEcoValid && canReplaceWeapon ())) {
+      if ((!hasShield () && !hasPrimaryWeapon () && teamHasGoodEconomics) || (teamHasGoodEconomics && canReplaceWeapon ())) {
          int moneySave = 0;
 
          do {
@@ -1501,7 +1501,7 @@ void Bot::buyStuff () {
       break;
 
    case BuyState::ArmorVestHelm: // if armor is damaged and bot has some money, buy some armor
-      if (pev->armorvalue < rg.int_ (50, 80) && (isPistolMode || (teamEcoValid && hasPrimaryWeapon ()))) {
+      if (pev->armorvalue < rg.int_ (50, 80) && teamHasGoodEconomics && (isPistolMode || (teamHasGoodEconomics && hasPrimaryWeapon ()))) {
          // if bot is rich, buy kevlar + helmet, else buy a single kevlar
          if (m_moneyAmount > 1500 && !isWeaponRestricted (Weapon::ArmorHelm)) {
             issueCommand ("buyequip;menuselect 2");
@@ -1609,22 +1609,24 @@ void Bot::buyStuff () {
 
    case BuyState::Grenades: // if bot has still some money, choose if bot should buy a grenade or not
 
-       // buy a he grenade
-      if (conf.chanceToBuyGrenade (0) && m_moneyAmount >= 400 && !isWeaponRestricted (Weapon::Explosive)) {
-         issueCommand ("buyequip");
-         issueCommand ("menuselect 4");
-      }
+      if (teamHasGoodEconomics) {
+         // buy a he grenade
+         if (conf.chanceToBuyGrenade (0) && m_moneyAmount >= 400 && !isWeaponRestricted (Weapon::Explosive)) {
+            issueCommand ("buyequip");
+            issueCommand ("menuselect 4");
+         }
 
-      // buy a concussion grenade, i.e., 'flashbang'
-      if (conf.chanceToBuyGrenade (1) && m_moneyAmount >= 300 && teamEcoValid && !isWeaponRestricted (Weapon::Flashbang)) {
-         issueCommand ("buyequip");
-         issueCommand ("menuselect 3");
-      }
+         // buy a concussion grenade, i.e., 'flashbang'
+         if (conf.chanceToBuyGrenade (1) && m_moneyAmount >= 300 && teamHasGoodEconomics && !isWeaponRestricted (Weapon::Flashbang)) {
+            issueCommand ("buyequip");
+            issueCommand ("menuselect 3");
+         }
 
-      // buy a smoke grenade
-      if (conf.chanceToBuyGrenade (2) && m_moneyAmount >= 400 && teamEcoValid && !isWeaponRestricted (Weapon::Smoke)) {
-         issueCommand ("buyequip");
-         issueCommand ("menuselect 5");
+         // buy a smoke grenade
+         if (conf.chanceToBuyGrenade (2) && m_moneyAmount >= 400 && teamHasGoodEconomics && !isWeaponRestricted (Weapon::Smoke)) {
+            issueCommand ("buyequip");
+            issueCommand ("menuselect 5");
+         }
       }
       break;
 
@@ -1640,7 +1642,7 @@ void Bot::buyStuff () {
       break;
 
    case BuyState::NightVision:
-      if (m_moneyAmount > 2500 && !m_hasNVG && rg.chance (30) && m_path) {
+      if (teamHasGoodEconomics && m_moneyAmount > 2500 && !m_hasNVG && rg.chance (30) && m_path) {
          float skyColor = illum.getSkyColor ();
          float lightLevel = m_path->light;
 
