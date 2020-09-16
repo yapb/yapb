@@ -17,6 +17,7 @@
     <ClInclude Include="..\ext\crlib\cr-binheap.h" />
     <ClInclude Include="..\ext\crlib\cr-color.h" />
     <ClInclude Include="..\ext\crlib\cr-complete.h" />
+    <ClInclude Include="..\ext\crlib\cr-deque.h" />
     <ClInclude Include="..\ext\crlib\cr-hashmap.h" />
     <ClInclude Include="..\ext\crlib\cr-files.h" />
     <ClInclude Include="..\ext\crlib\cr-detour.h" />

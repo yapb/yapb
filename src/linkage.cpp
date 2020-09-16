@@ -960,4 +960,3 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 
 // add linkents for android
 #include "android.cpp"
-

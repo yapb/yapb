@@ -26,9 +26,13 @@ ConVar cv_autokill_delay ("yb_autokill_delay", "0.0", "Specifies amount of time 
 ConVar cv_join_after_player ("yb_join_after_player", "0", "Specifies whether bots should join server, only when at least one human player in game.");
 ConVar cv_join_team ("yb_join_team", "any", "Forces all bots to join team specified here.", false);
 ConVar cv_join_delay ("yb_join_delay", "5.0", "Specifies after how many seconds bots should start to join the game after the changelevel.", true, 0.0f, 30.0f);
-
 ConVar cv_name_prefix ("yb_name_prefix", "", "All the bot names will be prefixed with string specified with this cvar.", false);
+
 ConVar cv_difficulty ("yb_difficulty", "4", "All bots difficulty level. Changing at runtime will affect already created bots.", true, 0.0f, 4.0f);
+
+ConVar cv_difficulty_min ("yb_difficulty_min", "-1", "Lower bound of random difficulty on bot creation. Only affects newly created bots. -1 means yb_difficulty only used.", true, -1.0f, 4.0f);
+ConVar cv_difficulty_max ("yb_difficulty_max", "-1", "Upper bound of random difficulty on bot creation. Only affects newly created bots. -1 means yb_difficulty only used.", true, -1.0f, 4.0f);
+ConVar cv_difficulty_auto ("yb_difficulty_auto", "0", "Enables each bot balances own difficulty based kd-ratio of team.", true, 0.0f, 1.0f);
 
 ConVar cv_show_avatars ("yb_show_avatars", "1", "Enables or disabels displaying bot avatars in front of their names in scoreboard. Note, that is currently you can see only avatars of your steam friends.");
 ConVar cv_show_latency ("yb_show_latency", "2", "Enables latency display in scoreboard.\nAllowed values: '0', '1', '2'.\nIf '0', there is nothing displayed.\nIf '1', there is a 'BOT' is displayed.\nIf '2' fake ping is displayed.", true, 0.0f, 2.0f);
@@ -187,7 +191,6 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
          }
       }
    }
-
    BotName *botName = nullptr;
 
    // setup name
@@ -765,6 +768,27 @@ float BotManager::getConnectTime (int botId, float original) {
    return original;
 }
 
+float BotManager::getAverageTeamKPD (bool calcForBots) {
+   Twin <float, int32> calc {};
+
+   for (const auto &client : util.getClients ()) {
+      if (!(client.flags & ClientFlags::Used)) {
+         continue;
+      }
+      auto bot = bots[client.ent];
+
+      if ((calcForBots && bot) || (!calcForBots && !bot)) {
+         calc.first += client.ent->v.frags;
+         calc.second++;
+      }
+   }
+
+   if (calc.second > 0) {
+      return calc.first / calc.second;
+   }
+   return 0.0f;
+}
+
 Twin <int, int> BotManager::countTeamPlayers () {
    int ts = 0, cts = 0;
 
@@ -839,7 +863,11 @@ void BotManager::updateTeamEconomics (int team, bool setTrue) {
 }
 
 void BotManager::updateBotDifficulties () {
-   int difficulty = cv_difficulty.int_ ();
+   // if min/max difficulty is specified  this should not have effect
+   if (cv_difficulty_min.int_ () != Difficulty::Invalid || cv_difficulty_max.int_ () != Difficulty::Invalid || cv_difficulty_auto.bool_ ()) {
+      return;
+   }
+   auto difficulty = cv_difficulty.int_ ();
 
    if (difficulty != m_lastDifficulty) {
 
@@ -848,6 +876,35 @@ void BotManager::updateBotDifficulties () {
          bot->m_difficulty = difficulty;
       }
       m_lastDifficulty = difficulty;
+   }
+}
+
+void BotManager::balanceBotDifficulties () {
+   extern ConVar cv_whose_your_daddy;
+
+   // with nightmare difficulty, there is no balance
+   if (cv_whose_your_daddy.bool_ ()) {
+      return;
+   }
+   // difficulty chaning once per round (time)
+   auto updateDifficulty = [] (Bot *bot, int32 offset) {
+      bot->m_difficulty = cr::clamp (static_cast <Difficulty> (bot->m_difficulty + offset), Difficulty::Noob, Difficulty::Expert);
+   };
+
+   auto ratioPlayer = getAverageTeamKPD (false);
+   auto ratioBots = getAverageTeamKPD (true);
+
+   // calculate for each the bot
+   for (auto &bot : m_bots) {
+      float score = bot->m_kpdRatio;
+
+      // if kd ratio is going to go to low, we need to try to set higher difficulty
+      if (score < 0.8 || (score <= 1.2 && ratioBots < ratioPlayer)) {
+         updateDifficulty (bot.get (), +1);
+      }
+      else if (score > 4.0f || (score >= 2.5 && ratioBots > ratioPlayer)) {
+         updateDifficulty (bot.get (), -1);
+      }
    }
 }
 
@@ -922,13 +979,25 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
 
    m_notKilled = false;
    m_weaponBurstMode = BurstMode::Off;
-   m_difficulty = cr::clamp (difficulty, 0, 4);
+   m_difficulty = cr::clamp (static_cast <Difficulty> (difficulty), Difficulty::Noob, Difficulty::Expert);
+
+   auto minDifficulty = cv_difficulty_min.int_ ();
+   auto maxDifficulty = cv_difficulty_max.int_ ();
+
+   // if we're have min/max difficulty specified, choose value from they
+   if (minDifficulty != Difficulty::Invalid && maxDifficulty != Difficulty::Invalid) {
+      if (maxDifficulty > minDifficulty) {
+         cr::swap (maxDifficulty, minDifficulty);
+      }
+      m_difficulty = rg.int_ (minDifficulty, maxDifficulty);
+   }
    m_basePing = rg.int_ (7, 14);
 
    m_lastCommandTime = game.time () - 0.1f;
    m_frameInterval = game.time ();
    m_heavyTimestamp = game.time ();
    m_slowFrameTimestamp = 0.0f;
+   m_kpdRatio = 0.0f;
 
    // stuff from jk_botti
    m_playServerTime = 60.0f * rg.float_ (30.0f, 240.0f);
@@ -968,8 +1037,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
    m_nextEmotionUpdate = game.time () + 0.5f;
 
    // just to be sure
-   m_actMessageIndex = 0;
-   m_pushMessageIndex = 0;
+   m_msgQueue.clear ();
 
    // assign team and class
    m_wantedTeam = team;
@@ -1304,9 +1372,7 @@ void Bot::newRound () {
    for (auto &msg : m_messageQueue) {
       msg = BotMsg::None;
    }
-
-   m_actMessageIndex = 0;
-   m_pushMessageIndex = 0;
+   m_msgQueue.clear ();
 
    // clear last trace
    for (auto i = 0; i < TraceChannel::Num; ++i) {
@@ -1690,6 +1756,11 @@ void BotManager::initRound () {
    m_timeRoundStart = game.time () + mp_freezetime.float_ ();
    m_timeRoundMid = m_timeRoundStart + mp_roundtime.float_ () * 60.0f * 0.5f;
    m_timeRoundEnd = m_timeRoundStart + mp_roundtime.float_ () * 60.0f;
+
+   // update difficulty balance, if needed
+   if (cv_difficulty_auto.bool_ ()) {
+      balanceBotDifficulties ();
+   }
 }
 
 void BotManager::setBombPlanted (bool isPlanted) {

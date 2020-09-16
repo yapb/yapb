@@ -413,4 +413,3 @@ public:
 template <typename T> using SmallArray = Array <T, ReservePolicy::Single, 64>;
 
 CR_NAMESPACE_END
-

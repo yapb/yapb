@@ -38,7 +38,8 @@ CR_DECLARE_SCOPED_ENUM (NetMsg,
    NVGToggle = 19,
    FlashBat = 20,
    Fashlight = 21,
-   ItemStatus = 22
+   ItemStatus = 22,
+   ScoreInfo = 23
 )
 
 // vgui menus (since latest steam updates is obsolete, but left for old cs)
@@ -124,6 +125,7 @@ private:
    void netMsgItemStatus ();
    void netMsgNVGToggle ();
    void netMsgFlashBat ();
+   void netMsgScoreInfo ();
 
 public:
    MessageDispatcher ();

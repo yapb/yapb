@@ -760,7 +760,6 @@ private:
    int findDefendNode (const Vector &origin);
    int findBestGoal ();
    int findGoalPost (int tactic, IntArray *defensive, IntArray *offsensive);
-   int getMsgQueue ();
    int bestPrimaryCarried ();
    int bestSecondaryCarried ();
    int bestGrenadeCarried ();
@@ -975,6 +974,8 @@ public:
    float m_firePause; // time to pause firing
    float m_shootTime; // time to shoot
    float m_timeLastFired; // time to last firing
+   float m_difficultyChange; // time when auto-difficulty was last applied to this bot
+   float m_kpdRatio; // kill per death ratio
 
    int m_basePing; // base ping for bot
    int m_numEnemiesLeft; // number of enemies alive left on map
@@ -988,8 +989,6 @@ public:
    int m_buyState; // current count in buying
    int m_blindButton; // buttons bot press, when blind
    int m_radioOrder; // actual command
-   int m_actMessageIndex; // current processed message
-   int m_pushMessageIndex; // offset for next pushed message
    int m_prevGoalIndex; // holds destination goal node
    int m_chosenGoalIndex; // used for experience, same as above
    int m_lastDamageType; // stores last damage
@@ -1034,6 +1033,7 @@ public:
    BurstMode m_weaponBurstMode; // bot using burst mode? (famas/glock18, but also silencer mode)
    Personality m_personality; // bots type
    Array <BotTask> m_tasks;
+   Deque <int32> m_msgQueue;
 
 public:
    Bot (edict_t *bot, int difficulty, int personality, int team, int member);

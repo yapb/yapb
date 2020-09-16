@@ -45,15 +45,6 @@ ConVar mp_footsteps ("mp_footsteps", nullptr, Var::GameRef);
 
 ConVar sv_gravity ("sv_gravity", nullptr, Var::GameRef);
 
-int Bot::getMsgQueue () {
-   // this function get the current message from the bots message queue
-
-   int message = m_messageQueue[m_actMessageIndex++];
-   m_actMessageIndex &= 0x1f; // wraparound
-
-   return message;
-}
-
 void Bot::pushMsgQueue (int message) {
    // this function put a message into the bot message queue
 
@@ -71,8 +62,7 @@ void Bot::pushMsgQueue (int message) {
          }
       }
    }
-   m_messageQueue[m_pushMessageIndex++] = message;
-   m_pushMessageIndex &= 0x1f; // wraparound
+   m_msgQueue.emplaceLast (message);
 }
 
 float Bot::isInFOV (const Vector &destination) {
@@ -1016,11 +1006,12 @@ void Bot::checkMsgQueue () {
    extern ConVar mp_freezetime;
 
    // no new message?
-   if (m_actMessageIndex == m_pushMessageIndex) {
+   if (m_msgQueue.empty ()) {
       return;
    }
-   // get message from stack
-   int state = getMsgQueue ();
+
+   // get message from deque
+   auto state = m_msgQueue.popFront ();
 
    // nothing to do?
    if (state == BotMsg::None || (state == BotMsg::Radio && game.is (GameFlags::FreeForAll))) {
@@ -1072,7 +1063,7 @@ void Bot::checkMsgQueue () {
 
       // prevent terrorists from buying on es maps
       if (game.mapIs (MapFlags::Escape) && m_team == Team::Terrorist) {
-         m_buyState = BuyState::Done;;
+         m_buyState = BuyState::Done;
       }
 
       // prevent teams from buying on fun maps
@@ -1184,20 +1175,25 @@ bool Bot::isWeaponRestricted (int weaponIndex) {
 bool Bot::isWeaponRestrictedAMX (int weaponIndex) {
    // this function checks restriction set by AMX Mod, this function code is courtesy of KWo.
 
+   if (!game.is (GameFlags::Metamod)) {
+      return false;
+   }
+
+
    // check for weapon restrictions
    if (cr::bit (weaponIndex) & (kPrimaryWeaponMask | kSecondaryWeaponMask | Weapon::Shield)) {
-      auto restrictedWeapons = engfuncs.pfnCVarGetString ("amx_restrweapons");
+      auto restrictedWeapons = game.findCvar ("amx_restrweapons");
 
-      if (strings.isEmpty (restrictedWeapons)) {
+      if (restrictedWeapons.empty ()) {
          return false;
       }
-      int indices[] = {4, 25, 20, -1, 8, -1, 12, 19, -1, 5, 6, 13, 23, 17, 18, 1, 2, 21, 9, 24, 7, 16, 10, 22, -1, 3, 15, 14, 0, 11};
+      constexpr int indices[] = {4, 25, 20, -1, 8, -1, 12, 19, -1, 5, 6, 13, 23, 17, 18, 1, 2, 21, 9, 24, 7, 16, 10, 22, -1, 3, 15, 14, 0, 11};
 
       // find the weapon index
       int index = indices[weaponIndex - 1];
 
       // validate index range
-      if (index < 0 || index >= static_cast <int> (strlen (restrictedWeapons))) {
+      if (index < 0 || index >= static_cast <int> (restrictedWeapons.length ())) {
          return false;
       }
       return restrictedWeapons[index] != '0';
@@ -1205,18 +1201,18 @@ bool Bot::isWeaponRestrictedAMX (int weaponIndex) {
 
    // check for equipment restrictions
    else {
-      auto restrictedEquipment = engfuncs.pfnCVarGetString ("amx_restrequipammo");
+      auto restrictedEquipment = game.findCvar ("amx_restrequipammo");
 
-      if (strings.isEmpty (restrictedEquipment)) {
+      if (restrictedEquipment.empty ()) {
          return false;
       }
-      int indices[] = {-1, -1, -1, 3, -1, -1, -1, -1, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2, -1, -1, -1, -1, -1, 0, 1, 5};
+      constexpr int indices[] = {-1, -1, -1, 3, -1, -1, -1, -1, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2, -1, -1, -1, -1, -1, 0, 1, 5};
 
       // find the weapon index
       int index = indices[weaponIndex - 1];
 
       // validate index range
-      if (index < 0 || index >= static_cast <int> (strlen (restrictedEquipment))) {
+      if (index < 0 || index >= static_cast <int> (restrictedEquipment.length ())) {
          return false;
       }
       return restrictedEquipment[index] != '0';
@@ -1517,7 +1513,7 @@ void Bot::buyStuff () {
       break;
 
    case BuyState::SecondaryWeapon: // if bot has still some money, buy a better secondary weapon
-      if (isPistolMode || (isFirstRound && hasDefaultPistols) || (hasDefaultPistols && bots.getLastWinner () == m_team && m_moneyAmount > rg.int_ (2000, 3000)) || (hasPrimaryWeapon () && hasDefaultPistols && m_moneyAmount > rg.int_ (7500, 9000))) {
+      if (isPistolMode || (isFirstRound && hasDefaultPistols && rg.chance (50)) || (hasDefaultPistols && bots.getLastWinner () == m_team && m_moneyAmount > rg.int_ (2000, 3000)) || (hasPrimaryWeapon () && hasDefaultPistols && m_moneyAmount > rg.int_ (7500, 9000))) {
          do {
             pref--;
 
@@ -1952,11 +1948,12 @@ void Bot::filterTasks () {
             ratio = timeHeard * 0.1f;
          }
          bool lowAmmo = m_ammoInClip[m_currentWeapon] < conf.findWeaponById (m_currentWeapon).maxClip * 0.18f;
+         bool sniping = m_sniperStopTime <= game.time () && lowAmmo;
 
          if (bots.isBombPlanted () || m_isStuck || usesKnife ()) {
             ratio /= 3.0f; // reduce the seek cover desire if bomb is planted
          }
-         else if (m_isVIP || m_isReloading || (lowAmmo && usesSniper ())) {
+         else if (m_isVIP || m_isReloading || (sniping && usesSniper ())) {
             ratio *= 3.0f; // triple the seek cover desire if bot is VIP or reloading
          }
          else {
@@ -3000,7 +2997,7 @@ void Bot::update () {
    else if (m_buyingFinished && !(pev->maxspeed < 10.0f && getCurrentTaskId () != Task::PlantBomb && getCurrentTaskId () != Task::DefuseBomb) && !cv_freeze_bots.bool_ () && !graph.hasChanged ()) {
       botMovement = true;
    }
-   checkMsgQueue (); // check for pending messages
+   checkMsgQueue ();
 
    if (botMovement) {
       logic (); // execute main code
@@ -3147,7 +3144,7 @@ void Bot::normal_ () {
                m_timeCamping = game.time () + rg.float_ (10.0f, 25.0f);
                startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, m_timeCamping, true);
 
-               m_camp = m_path->origin + m_path->start.forward () * 500.0f;;
+               m_camp = m_path->origin + m_path->start.forward () * 500.0f;
                m_aimFlags |= AimFlags::Camp;
                m_campDirection = 0;
 
@@ -5796,32 +5793,34 @@ bool Bot::isBombDefusing (const Vector &bombOrigin) {
       return false;
    }
    bool defusingInProgress = false;
+   constexpr auto distanceToBomb = cr::square (140.0f);
 
    for (const auto &client : util.getClients ()) {
       auto bot = bots[client.ent];
+      auto bombDistance = (client.ent->v.origin - bombOrigin).lengthSq ();
 
-      if (bot == nullptr || bot == this || !bot->m_notKilled) {
-         continue; // skip invalid bots
-      }
-
-      if (m_team != bot->m_team || bot->getCurrentTaskId () == Task::EscapeFromBomb) {
-         continue; // skip other mess
-      }
-      float bombDistance = (client.ent->v.origin - bombOrigin).lengthSq ();
-
-      if (bombDistance < cr::square (140.0f) && (bot->getCurrentTaskId () == Task::DefuseBomb || bot->m_hasProgressBar)) {
-         defusingInProgress = true;
-         break;
-      }
-
-      // take in account peoples too
-      if (defusingInProgress || !(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team != m_team || util.isFakeClient (client.ent)) {
+      if (bot && !bot->m_notKilled) {
+         if (m_team != bot->m_team || bot->getCurrentTaskId () == Task::EscapeFromBomb) {
+            continue; // skip other mess
+         }
+         
+         // if close enough, mark as progressing
+         if (bombDistance < distanceToBomb && (bot->getCurrentTaskId () == Task::DefuseBomb || bot->m_hasProgressBar)) {
+            defusingInProgress = true;
+            break;
+         }
          continue;
       }
 
-      if (bombDistance < cr::square (140.0f) && ((client.ent->v.button | client.ent->v.oldbuttons) & IN_USE)) {
-         defusingInProgress = true;
-         break;
+      // take in account peoples too
+      if ((client.flags & ClientFlags::Used) && (client.flags & ClientFlags::Alive) && client.team == m_team) {
+
+         // if close enough, mark as progressing
+         if (bombDistance < distanceToBomb && ((client.ent->v.button | client.ent->v.oldbuttons) & IN_USE)) {
+            defusingInProgress = true;
+            break;
+         }
+         continue;
       }
    }
    return defusingInProgress;

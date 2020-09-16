@@ -355,6 +355,11 @@ public:
       return !m_breakables.empty ();
    }
 
+   // find variable value by variable name
+   StringRef findCvar (StringRef name) {
+      return engfuncs.pfnCVarGetString (name.chars ());
+   }
+
    // helper to sending the client message
    void sendClientMessage (bool console, edict_t *ent, const char *message);
 

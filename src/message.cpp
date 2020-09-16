@@ -332,6 +332,26 @@ void MessageDispatcher::netMsgTeamInfo () {
    client.team = game.is (GameFlags::FreeForAll) ? m_args[index].long_ : client.team2;
 }
 
+void MessageDispatcher::netMsgScoreInfo () {
+   // this message gets sent when scoreboard info is update, we're use it to track k-d ratio
+
+   enum args { index = 0, score = 1, deaths = 2, class_id = 3, team_id = 4, min = 5 };
+
+   // check the minimum states
+   if (m_args.length () < min) {
+      return;
+   }
+   auto &client = util.getClient (m_args[index].long_ - 1);
+
+   // get the bot in this msg
+   auto bot = bots[client.ent];
+
+   // if we're have bot, set the kd ratio
+   if (bot != nullptr) {
+      bot->m_kpdRatio = bot->pev->frags / cr::max <long> (m_args[deaths].long_, 1);
+   }
+}
+
 void MessageDispatcher::netMsgBarTime () {
    enum args { enabled = 0, min = 1 };
 
@@ -415,6 +435,7 @@ MessageDispatcher::MessageDispatcher () {
    addWanted ("ItemStatus", NetMsg::ItemStatus, &MessageDispatcher::netMsgItemStatus);
    addWanted ("NVGToggle", NetMsg::NVGToggle, &MessageDispatcher::netMsgNVGToggle);
    addWanted ("FlashBat", NetMsg::FlashBat, &MessageDispatcher::netMsgFlashBat);
+   addWanted ("ScoreInfo", NetMsg::ScoreInfo, &MessageDispatcher::netMsgScoreInfo);
 
    // we're need next messages IDs but we're won't handle them, so they will be removed from wanted list as soon as they get engine IDs
    addWanted ("BotVoice", NetMsg::BotVoice, nullptr);

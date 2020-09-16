@@ -117,6 +117,7 @@ public:
    int getAliveHumansCount ();
 
    float getConnectTime (int botId, float original);
+   float getAverageTeamKPD (bool calcForBots);
 
    void setBombPlanted (bool isPlanted);
    void frame ();
@@ -142,6 +143,7 @@ public:
    void setWeaponMode (int selection);
    void updateTeamEconomics (int team, bool setTrue = false);
    void updateBotDifficulties ();
+   void balanceBotDifficulties ();
    void reset ();
    void initFilters ();
    void resetFilters ();

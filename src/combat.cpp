@@ -505,7 +505,7 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
       { 6.5f,  6.5f,  4.5f }, // pistol
       { 9.5f,  9.0f, -5.0f }, // shotgun
       { 4.5f,  3.5f, -5.0f }, // zoomrifle
-      { 5.5f,  1.0f, -4.5f }, // rifle
+      { 4.5f,  1.0f, -4.5f }, // rifle
       { 5.5f,  3.5f, -4.5f }, // smg
       { 3.5f,  3.5f,  4.5f }, // sniper
       { 2.5f, -2.0f, -6.0f }  // heavy
@@ -1243,7 +1243,7 @@ bool Bot::usesPistol () {
 }
 
 bool Bot::usesSubmachine () {
-   return m_weaponType == WeaponType::SMG;;
+   return m_weaponType == WeaponType::SMG;
 }
 
 bool Bot::usesShotgun () {

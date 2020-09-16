@@ -186,7 +186,23 @@ public:
       detour_ = nullptr;
    }
 
+private:
+   class DetourSwitch final {
+   private:
+      Detour <T> *detour_;
+
+   public:
+      DetourSwitch (Detour *detour) : detour_ (detour) {
+         detour_->restore ();
+      }
+
+      ~DetourSwitch () {
+         detour_->detour ();
+      }
+   };
+
 public:
+   
    void install (void *detour, const bool enable = false) {
       if (!original_) {
          return;
@@ -228,11 +244,8 @@ public:
    }
 
    template <typename... Args > decltype (auto) operator () (Args &&...args) {
-      restore ();
-      auto res = reinterpret_cast <T *> (original_) (args...);
-      detour ();
-
-      return res;
+      DetourSwitch sw (this);
+      return reinterpret_cast <T *> (original_) (args...);
    }
 };
 
