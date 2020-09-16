@@ -5798,8 +5798,12 @@ bool Bot::isBombDefusing (const Vector &bombOrigin) {
    constexpr auto distanceToBomb = cr::square (140.0f);
 
    for (const auto &client : util.getClients ()) {
+      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive)) {
+         continue;
+      }
+
       auto bot = bots[client.ent];
-      auto bombDistance = (client.ent->v.origin - bombOrigin).lengthSq ();
+      auto bombDistance = (client.origin - bombOrigin).lengthSq ();
 
       if (bot && !bot->m_notKilled) {
          if (m_team != bot->m_team || bot->getCurrentTaskId () == Task::EscapeFromBomb) {
@@ -5815,7 +5819,7 @@ bool Bot::isBombDefusing (const Vector &bombOrigin) {
       }
 
       // take in account peoples too
-      if ((client.flags & ClientFlags::Used) && (client.flags & ClientFlags::Alive) && client.team == m_team) {
+      if (client.team == m_team) {
 
          // if close enough, mark as progressing
          if (bombDistance < distanceToBomb && ((client.ent->v.button | client.ent->v.oldbuttons) & IN_USE)) {
