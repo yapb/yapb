@@ -91,7 +91,7 @@ private:
    void destroy () {
       auto destruct = [&] (size_t start, size_t end) {
          for (size_t i = start; i < end; ++i) {
-            cr::alloc.destruct (&contents_[i]);
+            alloc.destruct (&contents_[i]);
          }
       };
 
@@ -108,7 +108,8 @@ private:
    void reset () {
       contents_ = nullptr;
       capacity_ = 0;
-      index_ = {};
+
+      clear ();
    }
 
 public:
@@ -134,18 +135,18 @@ public:
    template <typename U> void emplaceLast (U &&object) {
       auto rear = pickRearIndex ();
 
-      cr::alloc.construct (&contents_[index_.second], cr::forward <U> (object));
+      alloc.construct (&contents_[index_.second], cr::forward <U> (object));
       index_.second = rear;
    }
 
    template <typename U> void emplaceFront (U &&object) {
       index_.first = pickFrontIndex ();
 
-      cr::alloc.construct (&contents_[index_.first], cr::forward <U> (object));
+      alloc.construct (&contents_[index_.first], cr::forward <U> (object));
    }
 
    void discardFront () {
-      cr::alloc.destruct (&contents_[index_.first]);
+      alloc.destruct (&contents_[index_.first]);
 
       if (index_.first == capacity_ - 1) {
          index_.first = 0;
@@ -162,21 +163,21 @@ public:
       else {
          index_.second--;
       }
-      cr::alloc.destruct (&contents_[index_.second]);
+      alloc.destruct (&contents_[index_.second]);
    }
 
    T popFront () {
-      auto first (front ());
+      auto object (front ());
       discardFront ();
 
-      return first;
+      return object;
    }
 
    T popLast () {
-      auto last (last ());
+      auto object (last ());
       discardLast ();
 
-      return last;
+      return object;
    }
 
 public:
