@@ -173,7 +173,7 @@ public:
    }
 
    T popLast () {
-      auto last (back ());
+      auto last (last ());
       discardLast ();
 
       return last;
