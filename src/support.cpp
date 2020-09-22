@@ -31,7 +31,6 @@ BotSupport::BotSupport () {
    m_sentences.push ("is there a doctor in the area");
    m_sentences.push ("warning, experimental materials detected");
    m_sentences.push ("high amigo, shoot some but");
-   m_sentences.push ("attention, hours of work software, detected");
    m_sentences.push ("time for some bad ass explosion");
    m_sentences.push ("bad ass son of a breach device activated");
    m_sentences.push ("high, do not question this great service");
