@@ -628,7 +628,7 @@ void Bot::updatePickups () {
             else if (m_isVIP || !rateGroundWeapon (ent)) {
                allowPickup = false;
             }
-            else if (strcmp (model, "medkit.mdl") == 0 && pev->health >= 100.0f) {
+            else if (strcmp (model, "medkit.mdl") == 0 && m_healthValue >= 100.0f) {
                allowPickup = false;
             }
             else if ((strcmp (model, "kevlar.mdl") == 0 || strcmp (model, "battery.mdl") == 0) && pev->armorvalue >= 100.0f) {
@@ -792,7 +792,7 @@ void Bot::updatePickups () {
                m_itemIgnore = ent;
                allowPickup = false;
 
-               if (!m_defendedBomb && m_difficulty >= Difficulty::Normal && rg.chance (75) && pev->health < 60) {
+               if (!m_defendedBomb && m_difficulty >= Difficulty::Normal && rg.chance (75) && m_healthValue < 60) {
                   int index = findDefendNode (origin);
 
                   startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.float_ (30.0f, 70.0f), true); // push camp task on to stack
@@ -1931,7 +1931,7 @@ void Bot::filterTasks () {
 
    // calculate desires to seek cover or hunt
    if (util.isPlayer (m_lastEnemy) && !m_lastEnemyOrigin.empty () && !m_hasC4) {
-      float retreatLevel = (100.0f - (pev->health > 50.0f ? 100.0f : pev->health)) * tempFear; // retreat level depends on bot health
+      float retreatLevel = (100.0f - (m_healthValue > 50.0f ? 100.0f : m_healthValue)) * tempFear; // retreat level depends on bot health
 
       if (m_numEnemiesLeft > m_numFriendsLeft / 2 && m_retreatTime < game.time () && m_seeEnemyTime - rg.float_ (2.0f, 4.0f) < game.time ()) {
 
@@ -2958,6 +2958,7 @@ void Bot::update () {
    m_canChooseAimDirection = true;
    m_notKilled = util.isAlive (ent ());
    m_team = game.getTeam (ent ());
+   m_healthValue = cr::clamp (pev->health, 0.0f, 100.0f);
 
    if (game.mapIs (MapFlags::Assassination) && !m_isVIP) {
       m_isVIP = util.isPlayerVIP (ent ());
@@ -5033,7 +5034,7 @@ void Bot::showDebugOverlay () {
       auto weapon = util.weaponIdToAlias (m_currentWeapon);
 
       String debugData;
-      debugData.assignf ("\n\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\nItem: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\nSP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\nEnemy=%s Pickup=%s Type=%s\n", pev->netname.chars (), pev->health, pev->armorvalue, taskID, tasks[taskID], getTask ()->desire, weapon, getAmmoInClip (), getAmmo (), m_isReloading ? " (R)" : "", m_moneyAmount, aimFlags.trim (), m_moveSpeed, m_strafeSpeed, index, m_prevGoalIndex, goal, m_navTimeset - game.time (), pev->movetype, enemy, pickup, personalities[m_personality]);
+      debugData.assignf ("\n\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\nItem: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\nSP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\nEnemy=%s Pickup=%s Type=%s\n", pev->netname.chars (), m_healthValue, pev->armorvalue, taskID, tasks[taskID], getTask ()->desire, weapon, getAmmoInClip (), getAmmo (), m_isReloading ? " (R)" : "", m_moneyAmount, aimFlags.trim (), m_moveSpeed, m_strafeSpeed, index, m_prevGoalIndex, goal, m_navTimeset - game.time (), pev->movetype, enemy, pickup, personalities[m_personality]);
 
       MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, nullptr, game.getLocalEntity ())
          .writeByte (TE_TEXTMESSAGE)
@@ -5117,7 +5118,7 @@ void Bot::takeDamage (edict_t *inflictor, int damage, int armor, int bits) {
       }
       else {
          // attacked by an enemy
-         if (pev->health > 60.0f) {
+         if (m_healthValue > 60.0f) {
             m_agressionLevel += 0.1f;
 
             if (m_agressionLevel > 1.0f) {
@@ -5186,7 +5187,7 @@ void Bot::takeBlind (int alpha) {
       m_blindSidemoveSpeed = -pev->maxspeed;
    }
 
-   if (pev->health < 85.0f) {
+   if (m_healthValue < 85.0f) {
       m_blindMoveSpeed = -pev->maxspeed;
    }
    else if (m_personality == Personality::Careful) {
@@ -5208,8 +5209,8 @@ void Bot::updatePracticeValue (int damage) {
 
    // only rate goal waypoint if bot died because of the damage
    // FIXME: could be done a lot better, however this cares most about damage done by sniping or really deadly weapons
-   if (pev->health - damage <= 0) {
-      graph.setDangerValue (m_team, m_chosenGoalIndex, m_prevGoalIndex, cr::clamp (graph.getDangerValue (m_team, m_chosenGoalIndex, m_prevGoalIndex) - static_cast <int> (pev->health / 20), -kMaxPracticeGoalValue, kMaxPracticeGoalValue));
+   if (m_healthValue - damage <= 0) {
+      graph.setDangerValue (m_team, m_chosenGoalIndex, m_prevGoalIndex, cr::clamp (graph.getDangerValue (m_team, m_chosenGoalIndex, m_prevGoalIndex) - static_cast <int> (m_healthValue / 20), -kMaxPracticeGoalValue, kMaxPracticeGoalValue));
    }
 }
 
@@ -5245,7 +5246,7 @@ void Bot::updatePracticeDamage (edict_t *attacker, int damage) {
       victimIndex = findNearestNode ();
    }
 
-   if (pev->health > 20.0f) {
+   if (m_healthValue > 20.0f) {
       if (victimTeam == Team::Terrorist || victimTeam == Team::CT) {
          graph.setDangerDamage (victimIndex, victimIndex, victimIndex, cr::clamp (graph.getDangerDamage (victimTeam, victimIndex, victimIndex), 0, kMaxPracticeDamageValue));
       }

@@ -1035,6 +1035,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
    m_agressionLevel = m_baseAgressionLevel;
    m_fearLevel = m_baseFearLevel;
    m_nextEmotionUpdate = game.time () + 0.5f;
+   m_healthValue = bot->v.health;
 
    // just to be sure
    m_msgQueue.clear ();

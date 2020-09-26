@@ -883,7 +883,7 @@ void Bot::fireWeapons () {
    }
 
    // use knife if near and good difficulty (l33t dude!)
-   if (cv_stab_close_enemies.bool_ () && m_difficulty >= Difficulty::Hard && pev->health > 80.0f && !game.isNullEntity (enemy) && pev->health >= enemy->v.health && distance < 100.0f && !isOnLadder () && !isGroupOfEnemies (pev->origin)) {
+   if (cv_stab_close_enemies.bool_ () && m_difficulty >= Difficulty::Hard && m_healthValue > 80.0f && !game.isNullEntity (enemy) && m_healthValue >= enemy->v.health && distance < 100.0f && !isOnLadder () && !isGroupOfEnemies (pev->origin)) {
       selectWeapons (distance, selectIndex, selectId, choosenWeapon);
       return;
    }
@@ -1039,7 +1039,7 @@ void Bot::attackMovement () {
          approach = 29;
       }
       else {
-         approach = static_cast <int> (pev->health * m_agressionLevel);
+         approach = static_cast <int> (m_healthValue * m_agressionLevel);
 
          if (usesSniper () && approach > 49) {
             approach = 49;

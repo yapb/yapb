@@ -820,7 +820,7 @@ bool Bot::updateNavigation () {
 
             // add goal values
             int goalValue = graph.getDangerValue (m_team, m_chosenGoalIndex, m_currentNodeIndex);
-            int addedValue = static_cast <int> (pev->health * 0.5f + m_goalValue * 0.5f);
+            int addedValue = static_cast <int> (m_healthValue * 0.5f + m_goalValue * 0.5f);
 
             goalValue = cr::clamp (goalValue + addedValue, -kMaxPracticeGoalValue, kMaxPracticeGoalValue);
 
@@ -1416,8 +1416,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
       if (m_routeQue.length () >= kMaxRouteLength - 1) {
          logger.error ("A* Search for bot \"%s\" has tried to build path with at least %d nodes. Seems to be graph is broken.", pev->netname.chars (), m_routeQue.length ());
 
-         // bail out to shortest path
-         findShortestPath (srcIndex, destIndex);
+         kick (); // kick the bot off...
          return;
       }
 

@@ -976,6 +976,7 @@ public:
    float m_timeLastFired; // time to last firing
    float m_difficultyChange; // time when auto-difficulty was last applied to this bot
    float m_kpdRatio; // kill per death ratio
+   float m_healthValue; // clamped bot health 
 
    int m_basePing; // base ping for bot
    int m_numEnemiesLeft; // number of enemies alive left on map

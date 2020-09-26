@@ -754,9 +754,6 @@ int BotControl::cmdNodeUpload () {
    msg ("you may notice the game freezes a bit during upload and issue request creation. Please, be patient.");
    msg ("\n");
 
-   // six seconds is enough?
-   http.setTimeout (6);
-
    // try to upload the file
    if (http.uploadFile (strings.format ("http://%s/graph", product.download), strings.format ("%sgraph/%s.graph", graph.getDataDirectory (false), game.getMapName ()))) {
       msg ("Graph file was successfully validated and uploaded to the YaPB Graph DB (%s).", product.download);

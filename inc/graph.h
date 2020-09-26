@@ -333,7 +333,7 @@ public:
    template <typename ...Args> bool raiseLoadingError (bool isGraph, MemFile &file, const char *fmt, Args &&...args);
 
    void saveOldFormat ();
-   void initGraph ();
+   void reset ();
    void frame ();
    void loadPractice ();
    void loadVisibility ();

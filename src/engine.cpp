@@ -448,7 +448,7 @@ void Game::prepareBotArgs (edict_t *ent, String str) {
    }
 
    // helper to parse single (not multi) command
-   auto parsePartArgs = [&] (String &args) {
+   auto parsePartArgs = [& ] (String &args) {
       args.trim ("\r\n\t\" "); // trim new lines
 
       // we're have empty commands?
@@ -465,17 +465,17 @@ void Game::prepareBotArgs (edict_t *ent, String str) {
 
          // check if we're got a quoted string
          if (quote < args.length () && args[quote] == '\"') {
-            m_botArgs.push (cr::move (args.substr (0, space))); // add command
-            m_botArgs.push (cr::move (args.substr (quote, args.length () - 1).trim ("\""))); // add string with trimmed quotes
+            m_botArgs.emplace (args.substr (0, space)); // add command
+            m_botArgs.emplace (args.substr (quote, args.length () - 1).trim ("\"")); // add string with trimmed quotes
          }
          else {
             for (auto &&arg : args.split (" ")) {
-               m_botArgs.push (cr::move (arg));
+               m_botArgs.emplace (arg);
             }
          }
       }
       else {
-         m_botArgs.push (cr::move (args)); // move all the part to args
+         m_botArgs.emplace (args); // move all the part to args
       }
       MDLL_ClientCommand (ent);
 

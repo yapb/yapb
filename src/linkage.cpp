@@ -62,7 +62,7 @@ namespace variadic {
       vsnprintf (buffer, StringBuffer::StaticBufferSize, format, ap);
       va_end (ap);
 
-      if (ent && (ent->v.flags & (FL_FAKECLIENT | FL_DORMANT))) {
+      if (util.isFakeClient (ent)) {
          auto bot = bots[ent];
 
          if (bot) {
@@ -359,7 +359,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       if (game.is (GameFlags::Xash3D)) {
          bots.kickEveryone (true, false);
       }
-      graph.initGraph ();
+      graph.reset ();
 
       // clear all the bots
       bots.destroy ();

@@ -22,6 +22,8 @@
 #include <crlib/cr-logger.h>
 #include <crlib/cr-twin.h>
 #include <crlib/cr-platform.h>
+#include <crlib/cr-uniqueptr.h>
+#include <crlib/cr-random.h>
 
 #if defined (CR_LINUX) || defined (CR_OSX)
 #  include <netinet/in.h>
@@ -110,12 +112,58 @@ CR_DECLARE_SCOPED_ENUM (HttpClientResult,
    SocketError = -1,
    ConnectError = -2,
    HttpOnly = -3,
-   Undefined  = -4,
+   Undefined = -4,
    NoLocalFile = -5,
    LocalFileExists = -6
 )
 
 CR_NAMESPACE_BEGIN
+
+
+namespace detail {
+
+   // simple http uri omitting query-string and port
+   struct HttpUri {
+      String path, protocol, host;
+
+   public:
+      static HttpUri parse (StringRef uri) {
+         HttpUri result;
+
+         if (uri.empty ()) {
+            return result;
+         }
+         size_t protocol = uri.find ("://");
+
+         if (protocol != String::InvalidIndex) {
+            result.protocol = uri.substr (0, protocol);
+
+            size_t hostIndex = uri.find ("/", protocol + 3);
+
+            if (hostIndex != String::InvalidIndex) {
+               result.path = uri.substr (hostIndex + 1);
+               result.host = uri.substr (protocol + 3, hostIndex - protocol - 3);
+
+               return result;
+            }
+         }
+         return result;
+      }
+   };
+
+   struct SocketInit {
+   public:
+      static void start () {
+#if defined(CR_WINDOWS)
+         WSADATA wsa;
+
+         if (WSAStartup (MAKEWORD (2, 2), &wsa) != 0) {
+            logger.error ("Unable to inialize sockets.");
+         }
+#endif
+      }
+   };
+}
 
 class Socket final : public DenyCopying {
 private:
@@ -123,23 +171,12 @@ private:
    uint32 timeout_;
 
 public:
-   Socket () : socket_ (-1), timeout_ (2) {
-#if defined(CR_WINDOWS)
-      WSADATA wsa;
-
-      if (WSAStartup (MAKEWORD (2, 2), &wsa) != 0) {
-         logger.error ("Unable to inialize sockets.");
-      }
-#endif
-   }
+   Socket () : socket_ (-1), timeout_ (2)
+   { }
 
    ~Socket () {
       disconnect ();
-#if defined (CR_WINDOWS)
-      WSACleanup ();
-#endif
    }
-
 
 public:
    bool connect (StringRef hostname) {
@@ -162,7 +199,7 @@ public:
          return false;
       }
 
-      auto getTimeouts = [&] () -> Twin <char *, int32> {
+      auto getTimeouts = [&]() -> Twin <char *, int32> {
 #if defined (CR_WINDOWS)
          DWORD tv = timeout_ * 1000;
 #else
@@ -183,7 +220,7 @@ public:
       if (::connect (socket_, result->ai_addr, static_cast <int32> (result->ai_addrlen)) == -1) {
          disconnect ();
          freeaddrinfo (result);
-         
+
          return false;
       }
       freeaddrinfo (result);
@@ -240,63 +277,34 @@ public:
    }
 };
 
-namespace detail {
-
-   // simple http uri omitting query-string and port
-   struct HttpUri {
-      String path, protocol, host;
-
-   public:
-      static HttpUri parse (StringRef uri) {
-         HttpUri result;
-
-         if (uri.empty ()) {
-            return result;
-         }
-         size_t protocol = uri.find ("://");
-
-         if (protocol != String::InvalidIndex) {
-            result.protocol = uri.substr (0, protocol);
-
-            size_t hostIndex = uri.find ("/", protocol + 3);
-
-            if (hostIndex != String::InvalidIndex) {
-               result.path = uri.substr (hostIndex + 1);
-               result.host = uri.substr (protocol + 3, hostIndex - protocol - 3);
-
-               return result;
-            }
-         }
-         return result;
-      }
-   };
-}
-
 // simple http client for downloading/uploading files only
 class HttpClient final : public Singleton <HttpClient> {
 private:
    enum : int32 {
-      MaxReceiveErrors = 12
+      MaxReceiveErrors = 12,
+      DefaultSocketTimeout = 32
    };
 
 private:
-   Socket socket_;
    String userAgent_ = "crlib";
    HttpClientResult statusCode_ = HttpClientResult::Undefined;
    int32 chunkSize_ = 4096;
 
 public:
-   HttpClient () = default;
+   HttpClient () {
+      detail::SocketInit::start ();
+   }
+
    ~HttpClient () = default;
 
 private:
-   HttpClientResult parseResponseHeader (uint8 *buffer) {
+   HttpClientResult parseResponseHeader (Socket *socket, uint8 *buffer) {
       bool isFinished = false;
       int32 pos = 0, symbols = 0, errors = 0;
 
       // prase response header
       while (!isFinished && pos < chunkSize_) {
-         if (socket_.recv (&buffer[pos], 1) < 1) {
+         if (socket->recv (&buffer[pos], 1) < 1) {
             if (++errors > MaxReceiveErrors) {
                isFinished = true;
             }
@@ -335,24 +343,24 @@ private:
 public:
 
    // simple blocked download
-   bool downloadFile (StringRef url, StringRef localPath) {
-      if (File::exists (localPath.chars ())) {
+   bool downloadFile (StringRef url, StringRef localPath, int32 timeout = DefaultSocketTimeout) {
+      if (File::exists (localPath)) {
          statusCode_ = HttpClientResult::LocalFileExists;
          return false;
       }
       auto uri = detail::HttpUri::parse (url);
+      auto socket = cr::makeUnique <Socket> ();
 
       // no https...
       if (uri.protocol == "https") {
          statusCode_ = HttpClientResult::HttpOnly;
          return false;
       }
+      socket->setTimeout (timeout);
 
       // unable to connect...
-      if (!socket_.connect (uri.host)) {
+      if (!socket->connect (uri.host)) {
          statusCode_ = HttpClientResult::ConnectError;
-         socket_.disconnect ();
-
          return false;
       }
 
@@ -364,17 +372,15 @@ public:
       request.appendf ("User-Agent: %s\r\n", userAgent_);
       request.appendf ("Host: %s\r\n\r\n", uri.host);
 
-      if (socket_.send (request.chars (), static_cast <int32> (request.length ())) < 1) {
+      if (socket->send (request.chars (), static_cast <int32> (request.length ())) < 1) {
          statusCode_ = HttpClientResult::SocketError;
-         socket_.disconnect ();
 
          return false;
       }
       SmallArray <uint8> buffer (chunkSize_);
-      statusCode_ = parseResponseHeader (buffer.data ());
+      statusCode_ = parseResponseHeader (socket.get (), buffer.data ());
 
       if (statusCode_ != HttpClientResult::Ok) {
-         socket_.disconnect ();
          return false;
       }
 
@@ -383,15 +389,13 @@ public:
 
       if (!file) {
          statusCode_ = HttpClientResult::Undefined;
-         socket_.disconnect ();
-
          return false;
       }
       int32 length = 0;
       int32 errors = 0;
 
       for (;;) {
-         length = socket_.recv (buffer.data (), chunkSize_);
+         length = socket->recv (buffer.data (), chunkSize_);
 
          if (length > 0) {
             file.write (buffer.data (), length);
@@ -400,32 +404,29 @@ public:
             break;
          }
       }
-      file.close ();
-
-      socket_.disconnect ();
       statusCode_ = HttpClientResult::Ok;
 
       return true;
    }
 
-   bool uploadFile (StringRef url, StringRef localPath) {
-      if (!File::exists (localPath.chars ())) {
+   bool uploadFile (StringRef url, StringRef localPath, const int32 timeout = DefaultSocketTimeout) {
+      if (!File::exists (localPath)) {
          statusCode_ = HttpClientResult::NoLocalFile;
          return false;
       }
       auto uri = detail::HttpUri::parse (url);
+      auto socket = cr::makeUnique <Socket> ();
 
       // no https...
       if (uri.protocol == "https") {
          statusCode_ = HttpClientResult::HttpOnly;
          return false;
       }
+      socket->setTimeout (timeout);
 
       // unable to connect...
-      if (!socket_.connect (uri.host)) {
+      if (!socket->connect (uri.host)) {
          statusCode_ = HttpClientResult::ConnectError;
-         socket_.disconnect ();
-
          return false;
       }
 
@@ -434,8 +435,6 @@ public:
 
       if (!file) {
          statusCode_ = HttpClientResult::Undefined;
-         socket_.disconnect ();
-
          return false;
       }
       String boundaryName = localPath;
@@ -444,7 +443,7 @@ public:
       if (boundarySlash != String::InvalidIndex) {
          boundaryName = localPath.substr (boundarySlash + 1);
       }
-      StringRef boundaryLine = "---crlib_upload_boundary_1337";
+      StringRef boundaryLine = strings.format ("---crlib_upload_boundary_%d%d%d%d", rg.int_ (0, 9), rg.int_ (0, 9), rg.int_ (0, 9), rg.int_ (0, 9));
 
       String request, start, end;
       start.appendf ("--%s\r\n", boundaryLine);
@@ -460,17 +459,14 @@ public:
       request.appendf ("Content-Length: %d\r\n\r\n", file.length () + start.length () + end.length ());
 
       // send the main request
-      if (socket_.send (request.chars (), static_cast <int32> (request.length ())) < 1) {
+      if (socket->send (request.chars (), static_cast <int32> (request.length ())) < 1) {
          statusCode_ = HttpClientResult::SocketError;
-         socket_.disconnect ();
-
          return false;
       }
 
       // send boundary start
-      if (socket_.send (start.chars (), static_cast <int32> (start.length ())) < 1) {
+      if (socket->send (start.chars (), static_cast <int32> (start.length ())) < 1) {
          statusCode_ = HttpClientResult::SocketError;
-         socket_.disconnect ();
 
          return false;
       }
@@ -481,7 +477,7 @@ public:
          length = static_cast <int32> (file.read (buffer.data (), 1, chunkSize_));
 
          if (length > 0) {
-            socket_.send (buffer.data (), length);
+            socket->send (buffer.data (), length);
          }
          else {
             break;
@@ -489,14 +485,11 @@ public:
       }
 
       // send boundary end
-      if (socket_.send (end.chars (), static_cast <int32> (end.length ())) < 1) {
+      if (socket->send (end.chars (), static_cast <int32> (end.length ())) < 1) {
          statusCode_ = HttpClientResult::SocketError;
-         socket_.disconnect ();
-
          return false;
       }
-      statusCode_ = parseResponseHeader (buffer.data ());
-      socket_.disconnect ();
+      statusCode_ = parseResponseHeader (socket.get (), buffer.data ());
 
       return statusCode_ == HttpClientResult::Ok;
    }
@@ -512,10 +505,6 @@ public:
 
    void setChunkSize (int32 chunkSize) {
       chunkSize_ = chunkSize;
-   }
-
-   void setTimeout (uint32 timeout) {
-      socket_.setTimeout (timeout);
    }
 };
 

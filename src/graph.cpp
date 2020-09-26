@@ -18,7 +18,7 @@
 ConVar cv_graph_fixcamp ("yb_graph_fixcamp", "1", "Specifies whether bot should not 'fix' camp directions of camp waypoints when loading old PWF format.");
 ConVar cv_graph_url ("yb_graph_url", product.download.chars (), "Specifies the URL from bots will be able to download graph in case of missing local one. Set to empty, if no downloads needed.", false, 0.0f, 0.0f);
 
-void BotGraph::initGraph () {
+void BotGraph::reset () {
    // this function initialize the graph structures..
 
    m_loadAttempts = 0;
@@ -1515,7 +1515,7 @@ bool BotGraph::convertOldFormat () {
             if (header.pointNumber == 0 || header.pointNumber > kMaxNodes) {
                return false;
             }
-            initGraph ();
+            reset ();
             m_paths.clear ();
 
             for (int i = 0; i < header.pointNumber; ++i) {
@@ -1578,8 +1578,6 @@ template <typename U> bool BotGraph::saveStorage (StringRef ext, StringRef name,
    // no open no fun
    if (!file) {
       logger.error ("Unable to open %s file for writing (filename: '%s').", name, filename);
-      file.close ();
-
       return false;
    }
    int32 rawLength = data.template length <int32> () * sizeof (U);
@@ -1609,11 +1607,8 @@ template <typename U> bool BotGraph::saveStorage (StringRef ext, StringRef name,
    }
    else {
       logger.error ("Unable to compress %s data (filename: '%s').", name, filename);
-      file.close ();
-
       return false;
    }
-   file.close ();
    return true;
 }
 
@@ -1758,7 +1753,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
          if ((hdr.options & StorageOption::Exten) && exten != nullptr) {
             file.read (exten, sizeof (ExtenHeader));
          }
-         game.print ("Successfully loaded Bots %s data v%d.0 (%d/%.2fMB).", name, hdr.version, m_paths.length (), static_cast <float> (data.capacity () * sizeof (U)) / 1024.0f / 1024.0f);
+         game.print ("Successfully loaded Bots %s data v%d (%d/%.2fMB).", name, hdr.version, m_paths.length (), static_cast <float> (data.capacity () * sizeof (U)) / 1024.0f / 1024.0f);
          file.close ();
 
          return true;
@@ -1779,7 +1774,7 @@ bool BotGraph::loadGraphData () {
    bool dataLoaded = loadStorage <Path> ("graph", "Graph", StorageOption::Graph, StorageVersion::Graph, m_paths, &exten, &outOptions);
 
    if (dataLoaded) {
-      initGraph ();
+      reset ();
       initBuckets ();
 
       // add data to buckets
@@ -2783,7 +2778,7 @@ void BotGraph::eraseFromDisk () {
          logger.error ("Unable to open %s", item);
       }
    }
-   initGraph (); // reintialize points
+   reset (); // reintialize points
    m_paths.clear ();
 }
 
