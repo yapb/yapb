@@ -1573,7 +1573,7 @@ bool BotControl::executeCommands () {
    String cmd;
 
    // give some help
-   if (hasArg (1) && m_args[1] == "help") {
+   if (hasArg (1) && strValue (1) == "help") {
       const auto hasSecondArg = hasArg (2);
 
       for (auto &item : m_cmds) {
@@ -1581,7 +1581,7 @@ bool BotControl::executeCommands () {
             cmd = item.name.split ("/")[0];
          }
 
-         if ((hasSecondArg && aliasMatch (item.name, m_args[2], cmd)) || !hasSecondArg) {
+         if (!hasSecondArg || aliasMatch (item.name, strValue (2), cmd)) {
             msg ("Command: \"%s %s\"", prefix, cmd);
             msg ("Format: %s", item.format);
             msg ("Help: %s", conf.translate (item.help));
@@ -1605,7 +1605,7 @@ bool BotControl::executeCommands () {
          return true;
       }
       else {
-         msg ("No help found for \"%s\"", m_args[2]);
+         msg ("No help found for \"%s\"", strValue (2));
       }
       return true;
    }

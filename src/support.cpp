@@ -292,13 +292,13 @@ void BotSupport::checkWelcome () {
          .writeShort (MessageWriter::fs16 (-1.0f, 13.0f))
          .writeShort (MessageWriter::fs16 (-1.0f, 13.0f))
          .writeByte (2)
-         .writeByte (rg.int_ (33, 255))
-         .writeByte (rg.int_ (33, 255))
-         .writeByte (rg.int_ (33, 255))
+         .writeByte (rg.get (33, 255))
+         .writeByte (rg.get (33, 255))
+         .writeByte (rg.get (33, 255))
          .writeByte (0)
-         .writeByte (rg.int_ (230, 255))
-         .writeByte (rg.int_ (230, 255))
-         .writeByte (rg.int_ (230, 255))
+         .writeByte (rg.get (230, 255))
+         .writeByte (rg.get (230, 255))
+         .writeByte (rg.get (230, 255))
          .writeByte (200)
          .writeShort (MessageWriter::fu16 (0.0078125f, 8.0f))
          .writeShort (MessageWriter::fu16 (2.0f, 8.0f))
@@ -564,7 +564,7 @@ void BotSupport::calculatePings () {
       engfuncs.pfnGetPlayerStats (client.ent, &ping, &loss);
 
       // store normal client ping
-      client.ping = getPingBitmask (client.ent, loss, ping > 0 ? ping / 2 : rg.int_ (8, 16)); // getting player ping sometimes fails
+      client.ping = getPingBitmask (client.ent, loss, ping > 0 ? ping / 2 : rg.get (8, 16)); // getting player ping sometimes fails
       client.pingUpdate = true; // force resend ping
 
       ++numHumans;
@@ -578,8 +578,8 @@ void BotSupport::calculatePings () {
       average.second /= numHumans;
    }
    else {
-      average.first = rg.int_ (30, 40);
-      average.second = rg.int_ (5, 10);
+      average.first = rg.get (30, 40);
+      average.second = rg.get (5, 10);
    }
 
    // now calculate bot ping based on average from players
@@ -595,14 +595,14 @@ void BotSupport::calculatePings () {
       }
       int part = static_cast <int> (average.first * 0.2f);
 
-      int botPing = bot->m_basePing + rg.int_ (average.first - part, average.first + part) + rg.int_ (bot->m_difficulty / 2, bot->m_difficulty);
-      int botLoss = rg.int_ (average.second / 2, average.second);
+      int botPing = bot->m_basePing + rg.get (average.first - part, average.first + part) + rg.get (bot->m_difficulty / 2, bot->m_difficulty);
+      int botLoss = rg.get (average.second / 2, average.second);
 
       if (botPing <= 5) {
-         botPing = rg.int_ (10, 23);
+         botPing = rg.get (10, 23);
       }
       else if (botPing > 70) {
-         botPing = rg.int_ (30, 40);
+         botPing = rg.get (30, 40);
       }
 
       client.ping = getPingBitmask (client.ent, botLoss, botPing);
@@ -627,7 +627,7 @@ void BotSupport::sendPings (edict_t *to) {
 
       // no ping, no fun
       if (!client.ping) {
-         client.ping = getPingBitmask (client.ent, rg.int_ (5, 10), rg.int_ (15, 40));
+         client.ping = getPingBitmask (client.ent, rg.get (5, 10), rg.get (15, 40));
       }
       
       msg.start (MSG_ONE_UNRELIABLE, kGamePingSVC, nullptr, to)

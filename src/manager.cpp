@@ -173,7 +173,7 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
       difficulty = cv_difficulty.int_ ();
 
       if (difficulty < 0 || difficulty > 4) {
-         difficulty = rg.int_ (3, 4);
+         difficulty = rg.get (3, 4);
          cv_difficulty.set (difficulty);
       }
    }
@@ -201,7 +201,7 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
          resultName = botName->name;
       }
       else {
-         resultName.assignf ("%s_%d.%d", product.folder, rg.int_ (100, 10000), rg.int_ (100, 10000)); // just pick ugly random name
+         resultName.assignf ("%s_%d.%d", product.folder, rg.get (100, 10000), rg.get (100, 10000)); // just pick ugly random name
       }
    }
    else {
@@ -756,13 +756,7 @@ float BotManager::getConnectTime (int botId, float original) {
 
    for (const auto &bot : m_bots) {
       if (bot->entindex () == botId) {
-         auto current = plat.seconds ();
-
-         if (current - bot->m_joinServerTime > bot->m_playServerTime || current - bot->m_joinServerTime <= 0.0f) {
-            bot->m_playServerTime = 60.0f * rg.float_ (30.0f, 240.0f);
-            bot->m_joinServerTime = current - bot->m_playServerTime *  rg.float_ (0.2f, 0.8f);
-         }
-         return current - bot->m_joinServerTime;
+         return bot->getConnectionTime ();
       }
    }
    return original;
@@ -974,8 +968,8 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
    m_logotypeIndex = conf.getRandomLogoIndex ();
 
    // assign how talkative this bot will be
-   m_sayTextBuffer.chatDelay = rg.float_ (3.8f, 10.0f);
-   m_sayTextBuffer.chatProbability = rg.int_ (10, 100);
+   m_sayTextBuffer.chatDelay = rg.get (3.8f, 10.0f);
+   m_sayTextBuffer.chatProbability = rg.get (10, 100);
 
    m_notKilled = false;
    m_weaponBurstMode = BurstMode::Off;
@@ -989,9 +983,9 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
       if (maxDifficulty > minDifficulty) {
          cr::swap (maxDifficulty, minDifficulty);
       }
-      m_difficulty = rg.int_ (minDifficulty, maxDifficulty);
+      m_difficulty = rg.get (minDifficulty, maxDifficulty);
    }
-   m_basePing = rg.int_ (7, 14);
+   m_basePing = rg.get (7, 14);
 
    m_lastCommandTime = game.time () - 0.1f;
    m_frameInterval = game.time ();
@@ -1000,26 +994,26 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
    m_kpdRatio = 0.0f;
 
    // stuff from jk_botti
-   m_playServerTime = 60.0f * rg.float_ (30.0f, 240.0f);
-   m_joinServerTime = plat.seconds () - m_playServerTime * rg.float_ (0.2f, 0.8f);
+   m_playServerTime = 60.0f * rg.get (30.0f, 240.0f);
+   m_joinServerTime = plat.seconds () - m_playServerTime * rg.get (0.2f, 0.8f);
 
    switch (personality) {
    case 1:
       m_personality = Personality::Rusher;
-      m_baseAgressionLevel = rg.float_ (0.7f, 1.0f);
-      m_baseFearLevel = rg.float_ (0.0f, 0.4f);
+      m_baseAgressionLevel = rg.get (0.7f, 1.0f);
+      m_baseFearLevel = rg.get (0.0f, 0.4f);
       break;
 
    case 2:
       m_personality = Personality::Careful;
-      m_baseAgressionLevel = rg.float_ (0.2f, 0.5f);
-      m_baseFearLevel = rg.float_ (0.7f, 1.0f);
+      m_baseAgressionLevel = rg.get (0.2f, 0.5f);
+      m_baseFearLevel = rg.get (0.7f, 1.0f);
       break;
 
    default:
       m_personality = Personality::Normal;
-      m_baseAgressionLevel = rg.float_ (0.4f, 0.7f);
-      m_baseFearLevel = rg.float_ (0.4f, 0.7f);
+      m_baseAgressionLevel = rg.get (0.4f, 0.7f);
+      m_baseFearLevel = rg.get (0.4f, 0.7f);
       break;
    }
 
@@ -1029,7 +1023,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
    m_currentWeapon = 0; // current weapon is not assigned at start
    m_weaponType = WeaponType::None; // current weapon type is not assigned at start
 
-   m_voicePitch = rg.int_ (80, 115); // assign voice pitch
+   m_voicePitch = rg.get (80, 115); // assign voice pitch
 
    // copy them over to the temp level variables
    m_agressionLevel = m_baseAgressionLevel;
@@ -1049,6 +1043,16 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
 
 float Bot::getFrameInterval () {
    return m_frameInterval;
+}
+
+float Bot::getConnectionTime () {
+   auto current = plat.seconds ();
+
+   if (current - m_joinServerTime > m_playServerTime || current - m_joinServerTime <= 0.0f) {
+      m_playServerTime = 60.0f * rg.get (30.0f, 240.0f);
+      m_joinServerTime = current - m_playServerTime * rg.get (0.2f, 0.8f);
+   }
+   return current - m_joinServerTime;
 }
 
 int BotManager::getHumansCount (bool ignoreSpectators) {
@@ -1227,7 +1231,7 @@ void Bot::newRound () {
    m_preventFlashing = 0.0f;
 
    m_timeTeamOrder = 0.0f;
-   m_askCheckTime = rg.float_ (30.0f, 90.0f);
+   m_askCheckTime = rg.get (30.0f, 90.0f);
    m_minSpeed = 260.0f;
    m_prevSpeed = 0.0f;
    m_prevOrigin = Vector (kInfiniteDistance, kInfiniteDistance, kInfiniteDistance);
@@ -1331,8 +1335,8 @@ void Bot::newRound () {
    m_flashLevel = 100.0f;
    m_checkDarkTime = game.time ();
 
-   m_knifeAttackTime = game.time () + rg.float_ (1.3f, 2.6f);
-   m_nextBuyTime = game.time () + rg.float_ (0.6f, 2.0f);
+   m_knifeAttackTime = game.time () + rg.get (1.3f, 2.6f);
+   m_nextBuyTime = game.time () + rg.get (0.6f, 2.0f);
 
    m_buyPending = false;
    m_inBombZone = false;
@@ -1357,7 +1361,7 @@ void Bot::newRound () {
    m_defendHostage = false;
    m_headedTime = 0.0f;
 
-   m_timeLogoSpray = game.time () + rg.float_ (5.0f, 30.0f);
+   m_timeLogoSpray = game.time () + rg.get (5.0f, 30.0f);
    m_spawnTime = game.time ();
    m_lastChatTime = game.time ();
 
@@ -1475,7 +1479,7 @@ void Bot::updateTeamJoin () {
       int maxChoice = game.is (GameFlags::ConditionZero) ? 5 : 4;
 
       if (m_wantedClass < 1 || m_wantedClass > maxChoice) {
-         m_wantedClass = rg.int_ (1, maxChoice); // use random if invalid
+         m_wantedClass = rg.get (1, maxChoice); // use random if invalid
       }
 
       // select the class the bot wishes to use...

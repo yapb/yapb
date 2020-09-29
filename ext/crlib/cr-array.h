@@ -272,8 +272,10 @@ public:
    }
 
    void shuffle () {
-      for (size_t i = length_; i >= 1; --i) {
-         cr::swap (contents_[i - 1], contents_[rg.int_ (i, length_ - 2)]);
+      int32 shuffleLength = length <int32> ();
+
+      for (int32 i = shuffleLength; i >= 1; --i) {
+         cr::swap (contents_[i - 1], contents_[rg.get (i, shuffleLength - 2)]);
       }
    }
 
@@ -352,11 +354,11 @@ public:
    }
 
    const T &random () const {
-      return contents_[rg.int_ <size_t> (0, length_ - 1)];
+      return contents_[rg.get (0, length <int32> () - 1)];
    }
 
    T &random () {
-      return contents_[rg.int_ <size_t> (0u, length_ - 1u)];
+      return contents_[rg.get (0, length <int32> () - 1)];
    }
 
    T *data () {

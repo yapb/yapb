@@ -53,8 +53,6 @@ public:
    SimdWrap (__m128 m) : m (m)
    { }
 
-
-
 public:
    SimdWrap normalize () {
       return { _mm_div_ps (m, _mm_sqrt_ps (wrap_dp_sse2 (m, m))) };

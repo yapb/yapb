@@ -128,10 +128,10 @@ int Bot::findBestGoal () {
       }
    }
 
-   goalDesire = rg.float_ (0.0f, 100.0f) + offensive;
-   forwardDesire = rg.float_ (0.0f, 100.0f) + offensive;
-   campDesire = rg.float_ (0.0f, 100.0f) + defensive;
-   backoffDesire = rg.float_ (0.0f, 100.0f) + defensive;
+   goalDesire = rg.get (0.0f, 100.0f) + offensive;
+   forwardDesire = rg.get (0.0f, 100.0f) + offensive;
+   campDesire = rg.get (0.0f, 100.0f) + defensive;
+   backoffDesire = rg.get (0.0f, 100.0f) + defensive;
 
    if (!usesCampGun ()) {
       campDesire *= 0.5f;
@@ -214,7 +214,7 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offsensive) {
    }
 
    if (goalChoices[0] == kInvalidNodeIndex) {
-      return m_chosenGoalIndex = rg.int_ (0, graph.length () - 1);
+      return m_chosenGoalIndex = rg.get (0, graph.length () - 1);
    }
 
    bool sorting = false;
@@ -651,7 +651,7 @@ bool Bot::updateNavigation () {
       
       // if graph node radius non zero vary origin a bit depending on the body angles
       if (m_path->radius > 0.0f) {
-         m_pathOrigin += Vector (pev->angles.x, cr::normalizeAngles (pev->angles.y + rg.float_ (-90.0f, 90.0f)), 0.0f).forward () * rg.float_ (0.0f, m_path->radius);
+         m_pathOrigin += Vector (pev->angles.x, cr::normalizeAngles (pev->angles.y + rg.get (-90.0f, 90.0f)), 0.0f).forward () * rg.get (0.0f, m_path->radius);
       }
       m_navTimeset = game.time ();
    }
@@ -1535,7 +1535,7 @@ bool Bot::findBestNearestNode () {
    int lessIndex[3] = { kInvalidNodeIndex, kInvalidNodeIndex , kInvalidNodeIndex };
 
    auto &bucket = graph.getNodesInBucket (pev->origin);
-   int numToSkip = cr::clamp (rg.int_ (0, 3), 0, static_cast <int> (bucket.length () / 2));
+   int numToSkip = cr::clamp (rg.get (0, 3), 0, static_cast <int> (bucket.length () / 2));
 
    for (const int at : bucket) {
       bool skip = !!(at == m_currentNodeIndex);
@@ -1611,10 +1611,10 @@ bool Bot::findBestNearestNode () {
 
    // choice from found
    if (lessIndex[2] != kInvalidNodeIndex) {
-      index = rg.int_ (0, 2);
+      index = rg.get (0, 2);
    }
    else if (lessIndex[1] != kInvalidNodeIndex) {
-      index = rg.int_ (0, 1);
+      index = rg.get (0, 1);
    }
    else if (lessIndex[0] != kInvalidNodeIndex) {
       index = 0;
@@ -1828,7 +1828,7 @@ int Bot::findDefendNode (const Vector &origin) {
 
    // some of points not found, return random one
    if (srcIndex == kInvalidNodeIndex || posIndex == kInvalidNodeIndex) {
-      return rg.int_ (0, graph.length () - 1);
+      return rg.get (0, graph.length () - 1);
    }
 
    // find the best node now
@@ -1895,7 +1895,7 @@ int Bot::findDefendNode (const Vector &origin) {
       }
 
       if (found.empty ()) {
-         return rg.int_ (0, graph.length () - 1); // most worst case, since there a evil error in nodes
+         return rg.get (0, graph.length () - 1); // most worst case, since there a evil error in nodes
       }
       return found.random ();
    }
@@ -1906,7 +1906,7 @@ int Bot::findDefendNode (const Vector &origin) {
          break;
       }
    }
-   return nodeIndex[rg.int_ (0, (index -1) / 2)];
+   return nodeIndex[rg.get (0, (index -1) / 2)];
 }
 
 int Bot::findCoverNode (float maxDistance) {
@@ -2119,8 +2119,8 @@ bool Bot::advanceMovement () {
                }
 
                if (m_baseAgressionLevel < kills && hasPrimaryWeapon ()) {
-                  startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.float_ (static_cast <float> (m_difficulty / 2), static_cast <float> (m_difficulty)) * 5.0f, true);
-                  startTask (Task::MoveToPosition, TaskPri::MoveToPosition, findDefendNode (graph[nextIndex].origin), game.time () + rg.float_ (3.0f, 10.0f), true);
+                  startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (static_cast <float> (m_difficulty / 2), static_cast <float> (m_difficulty)) * 5.0f, true);
+                  startTask (Task::MoveToPosition, TaskPri::MoveToPosition, findDefendNode (graph[nextIndex].origin), game.time () + rg.get (3.0f, 10.0f), true);
                }
             }
             else if (bots.canPause () && !isOnLadder () && !isInWater () && !m_currentTravelFlags && isOnFloor ()) {
@@ -2206,7 +2206,7 @@ bool Bot::advanceMovement () {
 
    // if wayzone radius non zero vary origin a bit depending on the body angles
    if (m_path->radius > 0.0f) {
-      m_pathOrigin += Vector (pev->angles.x, cr::normalizeAngles (pev->angles.y + rg.float_ (-90.0f, 90.0f)), 0.0f).forward () * rg.float_ (0.0f, m_path->radius);
+      m_pathOrigin += Vector (pev->angles.x, cr::normalizeAngles (pev->angles.y + rg.get (-90.0f, 90.0f)), 0.0f).forward () * rg.get (0.0f, m_path->radius);
    }
 
    if (isOnLadder ()) {
@@ -2799,9 +2799,9 @@ int Bot::findCampingDirection () {
    count--;
 
    if (count >= 0) {
-      return indices[rg.int_ (0, count)];
+      return indices[rg.get (0, count)];
    }
-   return rg.int_ (0, graph.length () - 1);
+   return rg.get (0, graph.length () - 1);
 }
 
 void Bot::updateBodyAngles () {
@@ -2910,10 +2910,10 @@ void Bot::updateLookAnglesNewbie (const Vector &direction, float delta) {
             randomize = randomization;
          }
          // randomize targeted location bit (slightly towards the ground)
-         m_randomizedIdealAngles = m_idealAngles + Vector (rg.float_ (-randomize.x * 0.5f, randomize.x * 1.5f), rg.float_ (-randomize.y, randomize.y), 0.0f);
+         m_randomizedIdealAngles = m_idealAngles + Vector (rg.get (-randomize.x * 0.5f, randomize.x * 1.5f), rg.get (-randomize.y, randomize.y), 0.0f);
 
          // set next time to do this
-         m_randomizeAnglesTime = game.time () + rg.float_ (0.4f, offsetDelay);
+         m_randomizeAnglesTime = game.time () + rg.get (0.4f, offsetDelay);
       }
       float stiffnessMultiplier = noTargetRatio;
 

@@ -421,8 +421,8 @@ Vector Bot::getBodyOffsetError (float distance) {
       const float error = distance / (cr::clamp (m_difficulty, 1, 3) * 1000.0f);
       Vector &maxs = m_enemy->v.maxs, &mins = m_enemy->v.mins;
 
-      m_aimLastError = Vector (rg.float_ (mins.x * error, maxs.x * error), rg.float_ (mins.y * error, maxs.y * error), rg.float_ (mins.z * error, maxs.z * error));
-      m_aimErrorTime = game.time () + rg.float_ (0.5f, 1.0f);
+      m_aimLastError = Vector (rg.get (mins.x * error, maxs.x * error), rg.get (mins.y * error, maxs.y * error), rg.get (mins.z * error, maxs.z * error));
+      m_aimErrorTime = game.time () + rg.get (0.5f, 1.0f);
    }
    return m_aimLastError;
 }
@@ -525,9 +525,6 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
    }
    else if (distance > kSprayDistance && distance <= kDoubleSprayDistance) {
       distanceIndex = DistanceIndex::Middle;
-   }
-   else if (distance < kSprayDistance) {
-      distanceIndex = DistanceIndex::Short;
    }
    return offsetRanges[m_weaponType][distanceIndex];
 }
@@ -692,7 +689,7 @@ bool Bot::needToPauseFiring (float distance) {
    // check if we need to compensate recoil
    if (cr::tanf (cr::sqrtf (cr::abs (xPunch * xPunch) + cr::abs (yPunch * yPunch))) * distance > offset + 30.0f + tolerance) {
       if (m_firePause < game.time ()) {
-         m_firePause = rg.float_ (0.65f, 0.65f + 0.3f * tolerance);
+         m_firePause = rg.get (0.65f, 0.65f + 0.3f * tolerance);
       }
       m_firePause -= interval;
       m_firePause += game.time ();
@@ -850,7 +847,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
 
          const int offset = cr::abs <int> (m_difficulty * 25 / 20 - 5);
 
-         m_shootTime = game.time () + 0.1f + rg.float_ (minDelay[offset], maxDelay[offset]);
+         m_shootTime = game.time () + 0.1f + rg.get (minDelay[offset], maxDelay[offset]);
          m_zoomCheckTime = game.time ();
       }
    }
@@ -922,7 +919,7 @@ void Bot::fireWeapons () {
                   m_reloadState = Reload::Primary;
                   m_reloadCheckTime = game.time ();
 
-                  if (rg.chance (cr::abs (m_difficulty * 25 - 100)) && rg.chance (5)) {
+                  if (rg.chance (cr::abs (m_difficulty * 25 - 100)) && rg.chance (15)) {
                      pushRadioMessage (Radio::NeedBackup);
                   }
                }
@@ -1068,7 +1065,7 @@ void Bot::attackMovement () {
       }
       else if (usesRifle () || usesSubmachine ()) {
          if (m_lastFightStyleCheck + 3.0f < game.time ()) {
-            int rand = rg.int_ (1, 100);
+            int rand = rg.get (1, 100);
 
             if (distance < 450.0f) {
                m_fightStyle = Fight::Strafe;
@@ -1113,7 +1110,7 @@ void Bot::attackMovement () {
             if (rg.chance (30)) {
                m_combatStrafeDir = (m_combatStrafeDir == Dodge::Left ? Dodge::Right : Dodge::Left);
             }
-            m_strafeSetTime = game.time () + rg.float_ (0.5f, 3.0f);
+            m_strafeSetTime = game.time () + rg.get (0.5f, 3.0f);
          }
 
          if (m_combatStrafeDir == Dodge::Right) {
@@ -1122,7 +1119,7 @@ void Bot::attackMovement () {
             }
             else {
                m_combatStrafeDir = Dodge::Left;
-               m_strafeSetTime = game.time () + rg.float_ (0.8f, 1.1f);
+               m_strafeSetTime = game.time () + rg.get (0.8f, 1.1f);
             }
          }
          else {
@@ -1131,11 +1128,11 @@ void Bot::attackMovement () {
             }
             else {
                m_combatStrafeDir = Dodge::Right;
-               m_strafeSetTime = game.time () + rg.float_ (0.8f, 1.1f);
+               m_strafeSetTime = game.time () + rg.get (0.8f, 1.1f);
             }
          }
 
-         if (m_difficulty >= Difficulty::Hard && (m_jumpTime + 5.0f < game.time () && isOnFloor () && rg.int_ (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.length2d () > 120.0f) && !usesSniper ()) {
+         if (m_difficulty >= Difficulty::Hard && (m_jumpTime + 5.0f < game.time () && isOnFloor () && rg.get (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.length2d () > 120.0f) && !usesSniper ()) {
             pev->button |= IN_JUMP;
          }
 
@@ -1517,7 +1514,7 @@ void Bot::updateTeamCommands () {
    else if (memberExists && cv_radio_mode.int_ () == 2) {
       pushChatterMessage (Chatter::ScaredEmotion);
    }
-   m_timeTeamOrder = game.time () + rg.float_ (15.0f, 30.0f);
+   m_timeTeamOrder = game.time () + rg.get (15.0f, 30.0f);
 }
 
 bool Bot::isGroupOfEnemies (const Vector &location, int numEnemies, float radius) {

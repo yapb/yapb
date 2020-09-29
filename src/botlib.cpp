@@ -338,7 +338,7 @@ void Bot::avoidGrenades () {
             pev->v_angle.y = cr::normalizeAngles ((game.getEntityWorldOrigin (pent) - getEyesPos ()).angles ().y + 180.0f);
 
             m_canChooseAimDirection = false;
-            m_preventFlashing = game.time () + rg.float_ (1.0f, 2.0f);
+            m_preventFlashing = game.time () + rg.get (1.0f, 2.0f);
          }
       }
       else if (strcmp (model, "hegrenade.mdl") == 0) {
@@ -480,7 +480,7 @@ void Bot::setIdealReactionTimers (bool actual) {
 
       return;
    }
-   m_idealReactionTime = rg.float_ (tweak->reaction[0], tweak->reaction[1]);
+   m_idealReactionTime = rg.get (tweak->reaction[0], tweak->reaction[1]);
 }
 
 void Bot::updatePickups () {
@@ -667,8 +667,8 @@ void Bot::updatePickups () {
                if (!m_defendHostage && m_personality != Personality::Rusher && m_difficulty > Difficulty::Normal && rg.chance (15) && m_timeCamping + 15.0f < game.time ()) {
                   int index = findDefendNode (origin);
 
-                  startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.float_ (30.0f, 60.0f), true); // push camp task on to stack
-                  startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg.float_ (3.0f, 6.0f), true); // push move command
+                  startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (30.0f, 60.0f), true); // push camp task on to stack
+                  startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg.get (3.0f, 6.0f), true); // push move command
 
                   if (graph[index].vis.crouch <= graph[index].vis.stand) {
                      m_campButtons |= IN_DUCK;
@@ -795,8 +795,8 @@ void Bot::updatePickups () {
                if (!m_defendedBomb && m_difficulty >= Difficulty::Normal && rg.chance (75) && m_healthValue < 60) {
                   int index = findDefendNode (origin);
 
-                  startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.float_ (30.0f, 70.0f), true); // push camp task on to stack
-                  startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg.float_ (10.0f, 30.0f), true); // push move command
+                  startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (30.0f, 70.0f), true); // push camp task on to stack
+                  startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg.get (10.0f, 30.0f), true); // push move command
 
                   if (graph[index].vis.crouch <= graph[index].vis.stand) {
                      m_campButtons |= IN_DUCK;
@@ -1036,7 +1036,7 @@ void Bot::checkMsgQueue () {
       }
 
       m_buyPending = false;
-      m_nextBuyTime = game.time () + rg.float_ (0.5f, 1.3f);
+      m_nextBuyTime = game.time () + rg.get (0.5f, 1.3f);
 
       // if freezetime is very low do not delay the buy process
       if (mp_freezetime.float_ () <= 1.0f) {
@@ -1268,7 +1268,7 @@ int Bot::pickBestWeapon (int *vec, int count, int moneySave) {
       for (int *begin = vec, *end = vec + count - 1; begin < end; ++begin, --end) {
          cr::swap (*end, *begin);
       }
-      return vec[static_cast <int> (static_cast <float> (count - 1) * pick (rg.float_ (1.0f, cr::powf (10.0f, buyFactor))) / buyFactor + 0.5f)];
+      return vec[static_cast <int> (static_cast <float> (count - 1) * pick (rg.get (1.0f, cr::powf (10.0f, buyFactor))) / buyFactor + 0.5f)];
    }
 
    int chance = 95;
@@ -1288,11 +1288,11 @@ int Bot::pickBestWeapon (int *vec, int count, int moneySave) {
       auto &weapon = info[vec[i]];
 
       // if wea have enough money for weapon buy it
-      if (weapon.price + moneySave < m_moneyAmount + rg.int_ (50, 200) && rg.chance (chance)) {
+      if (weapon.price + moneySave < m_moneyAmount + rg.get (50, 200) && rg.chance (chance)) {
          return vec[i];
       }
    }
-   return vec[rg.int_ (0, count - 1)];
+   return vec[rg.get (0, count - 1)];
 }
 
 void Bot::buyStuff () {
@@ -1302,7 +1302,7 @@ void Bot::buyStuff () {
    m_nextBuyTime = game.time ();
 
    if (!m_ignoreBuyDelay) {
-      m_nextBuyTime += rg.float_ (0.3f, 0.5f);
+      m_nextBuyTime += rg.get (0.3f, 0.5f);
    }
 
    int count = 0, weaponCount = 0;
@@ -1445,7 +1445,7 @@ void Bot::buyStuff () {
             }
 
             // save money for grenade for example?
-            moneySave = rg.int_ (500, 1000);
+            moneySave = rg.get (500, 1000);
 
             if (bots.getLastWinner () == m_team) {
                moneySave = 0;
@@ -1501,7 +1501,7 @@ void Bot::buyStuff () {
       break;
 
    case BuyState::ArmorVestHelm: // if armor is damaged and bot has some money, buy some armor
-      if (pev->armorvalue < rg.int_ (50, 80) && teamHasGoodEconomics && (isPistolMode || (teamHasGoodEconomics && hasPrimaryWeapon ()))) {
+      if (pev->armorvalue < rg.get (50, 80) && teamHasGoodEconomics && (isPistolMode || (teamHasGoodEconomics && hasPrimaryWeapon ()))) {
          // if bot is rich, buy kevlar + helmet, else buy a single kevlar
          if (m_moneyAmount > 1500 && !isWeaponRestricted (Weapon::ArmorHelm)) {
             issueCommand ("buyequip;menuselect 2");
@@ -1513,7 +1513,7 @@ void Bot::buyStuff () {
       break;
 
    case BuyState::SecondaryWeapon: // if bot has still some money, buy a better secondary weapon
-      if (isPistolMode || (isFirstRound && hasDefaultPistols && rg.chance (50)) || (hasDefaultPistols && bots.getLastWinner () == m_team && m_moneyAmount > rg.int_ (2000, 3000)) || (hasPrimaryWeapon () && hasDefaultPistols && m_moneyAmount > rg.int_ (7500, 9000))) {
+      if (isPistolMode || (isFirstRound && hasDefaultPistols && rg.chance (50)) || (hasDefaultPistols && bots.getLastWinner () == m_team && m_moneyAmount > rg.get (2000, 3000)) || (hasPrimaryWeapon () && hasDefaultPistols && m_moneyAmount > rg.get (7500, 9000))) {
          do {
             pref--;
 
@@ -1545,7 +1545,7 @@ void Bot::buyStuff () {
                continue;
             }
 
-            if (selectedWeapon->price <= (m_moneyAmount - rg.int_ (100, 200))) {
+            if (selectedWeapon->price <= (m_moneyAmount - rg.get (100, 200))) {
                choices[weaponCount++] = *pref;
             }
 
@@ -1557,7 +1557,7 @@ void Bot::buyStuff () {
 
             // choose randomly from the best ones...
             if (weaponCount > 1) {
-               chosenWeapon = pickBestWeapon (choices, weaponCount, rg.int_ (100, 200));
+               chosenWeapon = pickBestWeapon (choices, weaponCount, rg.get (100, 200));
             }
             else {
                chosenWeapon = choices[weaponCount - 1];
@@ -1589,7 +1589,7 @@ void Bot::buyStuff () {
 
    case BuyState::Ammo: // buy enough primary & secondary ammo (do not check for money here)
       for (int i = 0; i <= 5; ++i) {
-         issueCommand ("buyammo%d", rg.int_ (1, 2)); // simulate human
+         issueCommand ("buyammo%d", rg.get (1, 2)); // simulate human
       }
 
       // buy enough secondary ammo
@@ -1617,13 +1617,13 @@ void Bot::buyStuff () {
          }
 
          // buy a concussion grenade, i.e., 'flashbang'
-         if (conf.chanceToBuyGrenade (1) && m_moneyAmount >= 300 && teamHasGoodEconomics && !isWeaponRestricted (Weapon::Flashbang)) {
+         if (conf.chanceToBuyGrenade (1) && m_moneyAmount >= 300 && !isWeaponRestricted (Weapon::Flashbang)) {
             issueCommand ("buyequip");
             issueCommand ("menuselect 3");
          }
 
          // buy a smoke grenade
-         if (conf.chanceToBuyGrenade (2) && m_moneyAmount >= 400 && teamHasGoodEconomics && !isWeaponRestricted (Weapon::Smoke)) {
+         if (conf.chanceToBuyGrenade (2) && m_moneyAmount >= 400 && !isWeaponRestricted (Weapon::Smoke)) {
             issueCommand ("buyequip");
             issueCommand ("menuselect 5");
          }
@@ -1933,13 +1933,13 @@ void Bot::filterTasks () {
    if (util.isPlayer (m_lastEnemy) && !m_lastEnemyOrigin.empty () && !m_hasC4) {
       float retreatLevel = (100.0f - (m_healthValue > 50.0f ? 100.0f : m_healthValue)) * tempFear; // retreat level depends on bot health
 
-      if (m_numEnemiesLeft > m_numFriendsLeft / 2 && m_retreatTime < game.time () && m_seeEnemyTime - rg.float_ (2.0f, 4.0f) < game.time ()) {
+      if (m_numEnemiesLeft > m_numFriendsLeft / 2 && m_retreatTime < game.time () && m_seeEnemyTime - rg.get (2.0f, 4.0f) < game.time ()) {
 
          float timeSeen = m_seeEnemyTime - game.time ();
          float timeHeard = m_heardSoundTime - game.time ();
          float ratio = 0.0f;
 
-         m_retreatTime = game.time () + rg.float_ (3.0f, 15.0f);
+         m_retreatTime = game.time () + rg.get (3.0f, 15.0f);
 
          if (timeSeen > timeHeard) {
             timeSeen += 10.0f;
@@ -2291,11 +2291,11 @@ void Bot::checkRadioQueue () {
                   }
                }
             }
-            else if (m_radioOrder != Chatter::GoingToPlantBomb && rg.chance (15)) {
+            else if (m_radioOrder != Chatter::GoingToPlantBomb && rg.chance (25)) {
                pushRadioMessage (Radio::Negative);
             }
          }
-         else if (m_radioOrder != Chatter::GoingToPlantBomb && rg.chance (25)) {
+         else if (m_radioOrder != Chatter::GoingToPlantBomb && rg.chance (35)) {
             pushRadioMessage (Radio::Negative);
          }
       }
@@ -2308,7 +2308,7 @@ void Bot::checkRadioQueue () {
             pushRadioMessage (Radio::RogerThat);
 
             m_campButtons = 0;
-            startTask (Task::Pause, TaskPri::Pause, kInvalidNodeIndex, game.time () + rg.float_ (30.0f, 60.0f), false);
+            startTask (Task::Pause, TaskPri::Pause, kInvalidNodeIndex, game.time () + rg.get (30.0f, 60.0f), false);
          }
       }
       break;
@@ -2402,7 +2402,7 @@ void Bot::checkRadioQueue () {
             getTask ()->time = game.time ();
 
             m_targetEntity = nullptr;
-            m_position = m_radioEntity->v.origin + m_radioEntity->v.v_angle.forward () * rg.float_ (1024.0f, 2048.0f);
+            m_position = m_radioEntity->v.origin + m_radioEntity->v.v_angle.forward () * rg.get (1024.0f, 2048.0f);
 
             clearSearchNodes ();
             startTask (Task::MoveToPosition, TaskPri::MoveToPosition, kInvalidNodeIndex, 0.0f, true);
@@ -2457,7 +2457,7 @@ void Bot::checkRadioQueue () {
             getTask ()->time = game.time ();
          }
          m_targetEntity = nullptr;
-         m_position = m_radioEntity->v.origin + m_radioEntity->v.v_angle.forward () * rg.float_ (1024.0f, 2048.0f);
+         m_position = m_radioEntity->v.origin + m_radioEntity->v.v_angle.forward () * rg.get (1024.0f, 2048.0f);
 
          clearSearchNodes ();
          startTask (Task::MoveToPosition, TaskPri::MoveToPosition, kInvalidNodeIndex, 0.0f, true);
@@ -2488,7 +2488,7 @@ void Bot::checkRadioQueue () {
             m_agressionLevel = 0.0f;
          }
          if (getCurrentTaskId () == Task::Camp) {
-            getTask ()->time += rg.float_ (10.0f, 15.0f);
+            getTask ()->time += rg.get (10.0f, 15.0f);
          }
          else {
             // don't pause/camp anymore
@@ -2642,7 +2642,7 @@ void Bot::checkRadioQueue () {
          pushRadioMessage (Radio::RogerThat);
 
          if (getCurrentTaskId () == Task::Camp) {
-            getTask ()->time = game.time () + rg.float_ (30.0f, 60.0f);
+            getTask ()->time = game.time () + rg.get (30.0f, 60.0f);
          }
          else {
             // don't pause anymore
@@ -2680,9 +2680,9 @@ void Bot::checkRadioQueue () {
             int index = findDefendNode (m_radioEntity->v.origin);
 
             // push camp task on to stack
-            startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.float_ (30.0f, 60.0f), true);
+            startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (30.0f, 60.0f), true);
             // push move command
-            startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg.float_ (30.0f, 60.0f), true);
+            startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg.get (30.0f, 60.0f), true);
 
             if (graph[index].vis.crouch <= graph[index].vis.stand) {
                m_campButtons |= IN_DUCK;
@@ -2808,7 +2808,7 @@ void Bot::updateAimDir () {
          auto radius = graph[index].radius;
 
          if (radius > 0.0f) {
-            return Vector (pev->angles.x, cr::normalizeAngles (pev->angles.y + rg.float_ (-90.0f, 90.0f)), 0.0f).forward () * rg.float_ (2.0f, 4.0);
+            return Vector (pev->angles.x, cr::normalizeAngles (pev->angles.y + rg.get (-90.0f, 90.0f)), 0.0f).forward () * rg.get (2.0f, 4.0f);
          }
          return nullptr;
       };
@@ -3037,7 +3037,7 @@ void Bot::choiceFreezetimeEntity () {
          m_lookAt = bot->pev->origin + bot->pev->view_ofs;
       }
    }
-   m_changeViewTime = game.time () + rg.float_ (1.25, 2.0f);
+   m_changeViewTime = game.time () + rg.get (1.25f, 2.0f);
 }
 
 void Bot::normal_ () {
@@ -3070,7 +3070,7 @@ void Bot::normal_ () {
       else {
          pev->button |= IN_ATTACK2;
       }
-      m_knifeAttackTime = game.time () + rg.float_ (2.5f, 6.0f);
+      m_knifeAttackTime = game.time () + rg.get (2.5f, 6.0f);
    }
    const auto &prop = conf.getWeaponProp (m_currentWeapon);
 
@@ -3144,7 +3144,7 @@ void Bot::normal_ () {
                if (!(m_states & (Sense::SeeingEnemy | Sense::HearingEnemy)) && !m_reloadState) {
                   m_reloadState = Reload::Primary;
                }
-               m_timeCamping = game.time () + rg.float_ (10.0f, 25.0f);
+               m_timeCamping = game.time () + rg.get (10.0f, 25.0f);
                startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, m_timeCamping, true);
 
                m_camp = m_path->origin + m_path->start.forward () * 500.0f;
@@ -3176,8 +3176,8 @@ void Bot::normal_ () {
             else if (m_team == Team::Terrorist && rg.chance (75)) {
                int index = findDefendNode (m_path->origin);
 
-               startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.float_ (60.0f, 120.0f), true); // push camp task on to stack
-               startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg.float_ (5.0f, 10.0f), true); // push move command
+               startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (60.0f, 120.0f), true); // push camp task on to stack
+               startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg.get (5.0f, 10.0f), true); // push move command
 
                auto &path = graph[index];
 
@@ -3199,7 +3199,7 @@ void Bot::normal_ () {
                   pushRadioMessage (Radio::NeedBackup);
                   pushChatterMessage (Chatter::ScaredEmotion);
 
-                  startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.float_ (4.0f, 8.0f), true);
+                  startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (4.0f, 8.0f), true);
                }
                else {
                   startTask (Task::PlantBomb, TaskPri::PlantBomb, kInvalidNodeIndex, 0.0f, false);
@@ -3209,14 +3209,14 @@ void Bot::normal_ () {
                if (!bots.isBombPlanted () && numFriendsNear (pev->origin, 210.0f) < 4) {
                   int index = findDefendNode (m_path->origin);
 
-                  float campTime = rg.float_ (25.0f, 40.f);
+                  float campTime = rg.get (25.0f, 40.f);
 
                   // rusher bots don't like to camp too much
                   if (m_personality == Personality::Rusher) {
                      campTime *= 0.5f;
                   }
                   startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + campTime, true); // push camp task on to stack
-                  startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg.float_ (5.0f, 11.0f), true); // push move command
+                  startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg.get (5.0f, 11.0f), true); // push move command
 
                   auto &path = graph[index];
 
@@ -3277,15 +3277,15 @@ void Bot::normal_ () {
    }
 
    // bot hasn't seen anything in a long time and is asking his teammates to report in
-   if (cv_radio_mode.int_ () > 1 && m_seeEnemyTime + rg.float_ (45.0f, 80.0f) < game.time () && bots.getLastRadio (m_team) != Radio::ReportInTeam && rg.chance (15) && bots.getRoundStartTime () + 20.0f < game.time () && m_askCheckTime < game.time () && numFriendsNear (pev->origin, 1024.0f) == 0) {
+   if (cv_radio_mode.int_ () > 1 && bots.getLastRadio (m_team) != Radio::ReportInTeam && bots.getRoundStartTime () + 20.0f < game.time () && m_askCheckTime < game.time () && rg.chance (15) && m_seeEnemyTime + rg.get (45.0f, 80.0f) < game.time () && numFriendsNear (pev->origin, 1024.0f) == 0) {
       pushRadioMessage (Radio::ReportInTeam);
 
-      m_askCheckTime = game.time () + rg.float_ (45.0f, 80.0f);
+      m_askCheckTime = game.time () + rg.get (45.0f, 80.0f);
 
       // make sure everyone else will not ask next few moments
       for (const auto &bot : bots) {
          if (bot->m_notKilled) {
-            bot->m_askCheckTime = game.time () + rg.float_ (5.0f, 30.0f);
+            bot->m_askCheckTime = game.time () + rg.get (5.0f, 30.0f);
          }
       }
    }
@@ -3315,7 +3315,7 @@ void Bot::spraypaint_ () {
 
          // paint the actual logo decal
          util.traceDecals (pev, &tr, m_logotypeIndex);
-         m_timeLogoSpray = game.time () + rg.float_ (60.0f, 90.0f);
+         m_timeLogoSpray = game.time () + rg.get (60.0f, 90.0f);
       }
    }
    else {
@@ -3416,7 +3416,7 @@ void Bot::seekCover_ () {
       m_prevGoalIndex = kInvalidNodeIndex;
 
       // start hide task
-      startTask (Task::Hide, TaskPri::Hide, kInvalidNodeIndex, game.time () + rg.float_ (3.0f, 12.0f), false);
+      startTask (Task::Hide, TaskPri::Hide, kInvalidNodeIndex, game.time () + rg.get (3.0f, 12.0f), false);
       Vector dest = m_lastEnemyOrigin;
 
       // get a valid look direction
@@ -3470,7 +3470,7 @@ void Bot::seekCover_ () {
          destIndex = findCoverNode (usesSniper () ? 256.0f : 512.0f);
 
          if (destIndex == kInvalidNodeIndex) {
-            m_retreatTime = game.time () + rg.float_ (5.0f, 10.0f);
+            m_retreatTime = game.time () + rg.get (5.0f, 10.0f);
             m_prevGoalIndex = kInvalidNodeIndex;
 
             completeTask ();
@@ -3589,7 +3589,7 @@ void Bot::camp_ () {
    findValidNode ();
 
    if (m_nextCampDirTime < game.time ()) {
-      m_nextCampDirTime = game.time () + rg.float_ (2.0f, 5.0f);
+      m_nextCampDirTime = game.time () + rg.get (2.0f, 5.0f);
 
       if (m_path->flags & NodeFlag::Camp) {
          Vector dest;
@@ -3644,7 +3644,7 @@ void Bot::camp_ () {
          }
 
          if (--numFoundPoints >= 0) {
-            m_camp = graph[campPoints[rg.int_ (0, numFoundPoints)]].origin;
+            m_camp = graph[campPoints[rg.get (0, numFoundPoints)]].origin;
          }
          else {
             m_camp = graph[findCampingDirection ()].origin;
@@ -3843,8 +3843,8 @@ void Bot::defuseBomb_ () {
          if (bot->m_team == m_team && bot->m_notKilled) {
             auto defendPoint = graph.getFarest (bot->pev->origin);
 
-            startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.float_ (30.0f, 60.0f), true); // push camp task on to stack
-            startTask (Task::MoveToPosition, TaskPri::MoveToPosition, defendPoint, game.time () + rg.float_ (3.0f, 6.0f), true); // push move command
+            startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (30.0f, 60.0f), true); // push camp task on to stack
+            startTask (Task::MoveToPosition, TaskPri::MoveToPosition, defendPoint, game.time () + rg.get (3.0f, 6.0f), true); // push move command
          }
       }
       graph.setBombOrigin (true);
@@ -4310,7 +4310,7 @@ void Bot::doublejump_ () {
       game.testLine (src, dest, TraceIgnore::None, ent (), &tr);
 
       if (tr.flFraction < 1.0f && tr.pHit == m_doubleJumpEntity && inJump) {
-         m_duckForJump = game.time () + rg.float_ (3.0f, 5.0f);
+         m_duckForJump = game.time () + rg.get (3.0f, 5.0f);
          getTask ()->time = game.time ();
       }
       return;
@@ -4383,7 +4383,7 @@ void Bot::escapeFromBomb_ () {
       clearSearchNodes ();
 
       int lastSelectedGoal = kInvalidNodeIndex, minPathDistance = kInfiniteDistanceLong;
-      float safeRadius = rg.float_ (1513.0f, 2048.0f);
+      float safeRadius = rg.get (1513.0f, 2048.0f);
 
       for (int i = 0; i < graph.length (); ++i) {
          if ((graph[i].origin - graph.getBombOrigin ()).length () < safeRadius || isOccupiedNode (i)) {
@@ -4658,8 +4658,8 @@ void Bot::checkSpawnConditions () {
    // this function is called instead of ai when buying finished, but freezetime is not yet left.
 
    // switch to knife if time to do this
-   if (m_checkKnifeSwitch && m_buyingFinished && m_spawnTime + rg.float_ (5.0f, 7.5f) < game.time ()) {
-      if (rg.int_ (1, 100) < 2 && cv_spraypaints.bool_ ()) {
+   if (m_checkKnifeSwitch && m_buyingFinished && m_spawnTime + rg.get (5.0f, 7.5f) < game.time ()) {
+      if (rg.get (1, 100) < 2 && cv_spraypaints.bool_ ()) {
          startTask (Task::Spraypaint, TaskPri::Spraypaint, kInvalidNodeIndex, game.time () + 1.0f, false);
       }
 
@@ -4680,7 +4680,7 @@ void Bot::checkSpawnConditions () {
    }
 
    // check if we already switched weapon mode
-   if (m_checkWeaponSwitch && m_buyingFinished && m_spawnTime + rg.float_ (3.0f, 4.5f) < game.time ()) {
+   if (m_checkWeaponSwitch && m_buyingFinished && m_spawnTime + rg.get (3.0f, 4.5f) < game.time ()) {
       if (hasShield () && isShieldDrawn ()) {
          pev->button |= IN_ATTACK2;
       }
@@ -5161,7 +5161,7 @@ void Bot::takeBlind (int alpha) {
    // this function gets called by network message handler, when screenfade message get's send
    // it's used to make bot blind from the grenade.
 
-   m_maxViewDistance = rg.float_ (10.0f, 20.0f);
+   m_maxViewDistance = rg.get (10.0f, 20.0f);
    m_blindTime = game.time () + static_cast <float> (alpha - 200) / 16.0f;
 
    if (m_blindTime < game.time ()) {
@@ -5776,7 +5776,7 @@ void Bot::enteredBuyZone (int buyState) {
    const int *econLimit = conf.getEconLimit ();
 
    // if bot is in buy zone, try to buy ammo for this weapon...
-   if (m_seeEnemyTime + 12.0f < game.time () && m_lastEquipTime + 15.0f < game.time () && m_inBuyZone && (bots.getRoundStartTime () + rg.float_ (10.0f, 20.0f) + mp_buytime.float_ () < game.time ()) && !bots.isBombPlanted () && m_moneyAmount > econLimit[EcoLimit::PrimaryGreater]) {
+   if (m_seeEnemyTime + 12.0f < game.time () && m_lastEquipTime + 15.0f < game.time () && m_inBuyZone && (bots.getRoundStartTime () + rg.get (10.0f, 20.0f) + mp_buytime.float_ () < game.time ()) && !bots.isBombPlanted () && m_moneyAmount > econLimit[EcoLimit::PrimaryGreater]) {
       m_ignoreBuyDelay = true;
       m_buyingFinished = false;
       m_buyState = buyState;

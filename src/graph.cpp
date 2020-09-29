@@ -1152,8 +1152,8 @@ void BotGraph::calculatePathRadius (int index) {
       for (float circleRadius = 0.0f; circleRadius < 360.0f; circleRadius += 20.0f) {
          const auto &forward = direction.forward ();
 
-         Vector radiusStart = start + forward * scanDistance;
-         Vector radiusEnd = start + forward * scanDistance;
+         auto radiusStart = start + forward * scanDistance;
+         auto radiusEnd = start + forward * scanDistance;
 
          game.testHull (radiusStart, radiusEnd, TraceIgnore::Monsters, head_hull, nullptr, &tr);
 
@@ -1172,8 +1172,8 @@ void BotGraph::calculatePathRadius (int index) {
             break;
          }
 
-         Vector dropStart = start + forward * scanDistance;
-         Vector dropEnd = dropStart - Vector (0.0f, 0.0f, scanDistance + 60.0f);
+         auto dropStart = start + forward * scanDistance;
+         auto dropEnd = dropStart - Vector (0.0f, 0.0f, scanDistance + 60.0f);
 
          game.testHull (dropStart, dropEnd, TraceIgnore::Monsters, head_hull, nullptr, &tr);
 

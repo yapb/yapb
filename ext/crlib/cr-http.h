@@ -443,7 +443,7 @@ public:
       if (boundarySlash != String::InvalidIndex) {
          boundaryName = localPath.substr (boundarySlash + 1);
       }
-      StringRef boundaryLine = strings.format ("---crlib_upload_boundary_%d%d%d%d", rg.int_ (0, 9), rg.int_ (0, 9), rg.int_ (0, 9), rg.int_ (0, 9));
+      StringRef boundaryLine = strings.format ("---crlib_upload_boundary_%d%d%d%d", rg.get (0, 9), rg.get (0, 9), rg.get (0, 9), rg.get (0, 9));
 
       String request, start, end;
       start.appendf ("--%s\r\n", boundaryLine);

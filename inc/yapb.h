@@ -1093,6 +1093,7 @@ public:
    int getNearestToPlantedBomb ();
 
    float getFrameInterval ();
+   float getConnectionTime ();
    BotTask *getTask ();
 
 public:

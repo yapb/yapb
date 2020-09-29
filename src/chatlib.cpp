@@ -61,19 +61,19 @@ void BotSupport::addChatErrors (String &line) {
    if (rg.chance (8) && strcmp (cv_language.str (), "en") == 0) {
       line.lowercase ();
    }
-   auto length = line.length ();
+   auto length = static_cast <int32> (line.length ());
 
    if (length > 15) {
-      size_t percentile = line.length () / 2;
+      auto percentile = length / 2;
 
       // "length / 2" percent of time drop a character
       if (rg.chance (percentile)) {
-         line.erase (rg.int_ (length / 8, length - length / 8), 1);
+         line.erase (rg.get (length / 8, length - length / 8), 1);
       }
 
       // "length" / 4 precent of time swap character
       if (rg.chance (percentile / 2)) {
-         size_t pos = rg.int_ (length / 8, 3 * length / 8); // choose random position in string
+         size_t pos = rg.get (length / 8, 3 * length / 8); // choose random position in string
          cr::swap (line[pos], line[pos + 1]);
       }
    }
@@ -301,10 +301,10 @@ bool Bot::isReplyingToChat () {
 
    if (m_sayTextBuffer.entityIndex != -1 && !m_sayTextBuffer.sayText.empty ()) {
       // check is time to chat is good
-      if (m_sayTextBuffer.timeNextChat < game.time () + rg.float_ (m_sayTextBuffer.chatDelay / 2, m_sayTextBuffer.chatDelay)) {
+      if (m_sayTextBuffer.timeNextChat < game.time () + rg.get (m_sayTextBuffer.chatDelay / 2, m_sayTextBuffer.chatDelay)) {
          String replyText;
 
-         if (rg.chance (m_sayTextBuffer.chatProbability + rg.int_ (40, 70)) && checkChatKeywords (replyText)) {
+         if (rg.chance (m_sayTextBuffer.chatProbability + rg.get (40, 70)) && checkChatKeywords (replyText)) {
             prepareChatMessage (replyText);
             pushMsgQueue (BotMsg::Say);
   
@@ -329,7 +329,7 @@ void Bot::checkForChat () {
    }
 
    // bot chatting turned on?
-   if (m_lastChatTime + rg.float_ (6.0f, 10.0f) < game.time () && bots.getLastChatTimestamp () + rg.float_ (2.5f, 5.0f) < game.time () && !isReplyingToChat ()) {
+   if (m_lastChatTime + rg.get (6.0f, 10.0f) < game.time () && bots.getLastChatTimestamp () + rg.get (2.5f, 5.0f) < game.time () && !isReplyingToChat ()) {
       if (conf.hasChatBank (Chat::Dead)) {
          StringRef phrase = conf.pickRandomFromChatBank (Chat::Dead);
          bool sayBufferExists = false;
@@ -355,7 +355,7 @@ void Bot::checkForChat () {
       }
 
       // clear the used line buffer every now and then
-      if (static_cast <int> (m_sayTextBuffer.lastUsedSentences.length ()) > rg.int_ (4, 6)) {
+      if (static_cast <int> (m_sayTextBuffer.lastUsedSentences.length ()) > rg.get (4, 6)) {
          m_sayTextBuffer.lastUsedSentences.clear ();
       }
    }
