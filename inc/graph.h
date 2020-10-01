@@ -389,8 +389,8 @@ public:
       m_highestDamage[team] = value;
    }
 
-   const char *getAuthor () const {
-      return m_tempStrings.chars ();
+   StringRef getAuthor () const {
+      return m_tempStrings;
    }
 
    bool hasChanged () const {

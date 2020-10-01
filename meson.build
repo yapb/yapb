@@ -86,7 +86,7 @@ if isCLang or isGCC or (isIntel and not isWindows)
     ]
     
     if isOptimize
-        flagsCompiler += '-msse3'
+        flagsCompiler += '-msse2'
         
         if (isCLang or isGCC) and not isDarwin
             flagsCompiler += '-flto'
@@ -138,7 +138,7 @@ if isLinux or isDarwin
     else
         flagsCompiler += [
             '-mtune=generic',
-            '-msse3',
+            '-msse2',
             '-mfpmath=sse',
             '-fno-builtin',
             '-funroll-loops',

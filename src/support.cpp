@@ -281,6 +281,12 @@ void BotSupport::checkWelcome () {
       if (!game.is (GameFlags::Mobility | GameFlags::Xash3D)) {
          game.serverCommand ("speak \"%s\"", m_sentences.random ());
       }
+      String authorStr = "Official Navigation Graph";
+      StringRef graphAuthor = graph.getAuthor ();
+
+      if (!graphAuthor.startsWith (product.folder)) {
+         authorStr.assignf ("Navigation Graph by: %s", graphAuthor);
+      }
 
       MessageWriter (MSG_ONE, msgs.id (NetMsg::TextMsg), nullptr, receiveEntity)
          .writeByte (HUD_PRINTTALK)
@@ -304,7 +310,7 @@ void BotSupport::checkWelcome () {
          .writeShort (MessageWriter::fu16 (2.0f, 8.0f))
          .writeShort (MessageWriter::fu16 (6.0f, 8.0f))
          .writeShort (MessageWriter::fu16 (0.1f, 8.0f))
-         .writeString (strings.format ("\nHello! You are playing with %s v%s (Revision: %s)\nDevised by %s\n\n%s", product.name, product.version, product.build.count, product.author, graph.getAuthor ()));
+         .writeString (strings.format ("\nHello! You are playing with %s v%s (Revision: %s)\nDevised by %s\n\n%s", product.name, product.version, product.build.count, product.author, authorStr));
 
       m_welcomeReceiveTime = 0.0f;
       m_needToSendWelcome = false;

@@ -1783,10 +1783,10 @@ bool BotGraph::loadGraphData () {
       }
 
       if ((outOptions & StorageOption::Official) || strncmp (exten.author, "official", 8) == 0 || strlen (exten.author) < 2) {
-         m_tempStrings.assign ("Using Official Navigation Graph");
+         m_tempStrings.assign (product.folder);
       }
       else {
-         m_tempStrings.assignf ("Navigation Graph Authored By: %s", exten.author);
+         m_tempStrings.assign (exten.author);
       }
       initNodesTypes ();
       loadPathMatrix ();
@@ -2853,6 +2853,7 @@ BotGraph::BotGraph () {
    m_needsVisRebuild = false;
    m_jumpLearnNode = false;
    m_hasChanged = false;
+   m_narrowChecked = false;
    m_timeJumpStarted = 0.0f;
 
    m_lastJumpNode = kInvalidNodeIndex;
