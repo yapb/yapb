@@ -20,7 +20,7 @@ struct BotRequest {
    bool manual;
    int difficulty;
    int team;
-   int member;
+   int skin;
    int personality;
    String name;
 };
@@ -98,7 +98,7 @@ private:
    FrustumData m_frustumData {};
 
 protected:
-   BotCreateResult create (StringRef name, int difficulty, int personality, int team, int member);
+   BotCreateResult create (StringRef name, int difficulty, int personality, int team, int skin);
 
 public:
    BotManager ();
@@ -125,8 +125,8 @@ public:
    void destroyKillerEntity ();
    void touchKillerEntity (Bot *bot);
    void destroy ();
-   void addbot (StringRef name, int difficulty, int personality, int team, int member, bool manual);
-   void addbot (StringRef name, StringRef difficulty, StringRef personality, StringRef team, StringRef member, bool manual);
+   void addbot (StringRef name, int difficulty, int personality, int team, int skin, bool manual);
+   void addbot (StringRef name, StringRef difficulty, StringRef personality, StringRef team, StringRef skin, bool manual);
    void serverFill (int selection, int personality = Personality::Normal, int difficulty = -1, int numToAdd = -1);
    void kickEveryone (bool instant = false, bool zeroQuota = true);
    void kickBot (int index);

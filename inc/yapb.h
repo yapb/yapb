@@ -936,7 +936,7 @@ public:
 
    int m_index; // saved bot index
    int m_wantedTeam; // player team bot wants select
-   int m_wantedClass; // player model bot wants to select
+   int m_wantedSkin; // player model bot wants to select
    int m_difficulty; // bots hard level
    int m_moneyAmount; // amount of money in bot's bank
 
@@ -1037,7 +1037,7 @@ public:
    Deque <int32> m_msgQueue;
 
 public:
-   Bot (edict_t *bot, int difficulty, int personality, int team, int member);
+   Bot (edict_t *bot, int difficulty, int personality, int team, int skin);
    ~Bot () = default;
 
 public:

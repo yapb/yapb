@@ -37,6 +37,12 @@ ConVar cv_difficulty_auto ("yb_difficulty_auto", "0", "Enables each bot balances
 ConVar cv_show_avatars ("yb_show_avatars", "1", "Enables or disabels displaying bot avatars in front of their names in scoreboard. Note, that is currently you can see only avatars of your steam friends.");
 ConVar cv_show_latency ("yb_show_latency", "2", "Enables latency display in scoreboard.\nAllowed values: '0', '1', '2'.\nIf '0', there is nothing displayed.\nIf '1', there is a 'BOT' is displayed.\nIf '2' fake ping is displayed.", true, 0.0f, 2.0f);
 
+ConVar cv_botskin_t ("yb_botskin_t", "0", "Specifies the bots wanted skin for Terrorist team", true, 0.0f, 5.0f);
+ConVar cv_botskin_ct ("yb_botskin_ct", "0", "Specifies the bots wanted skin for CT team", true, 0.0f, 5.0f);
+
+ConVar cv_ping_base_min ("yb_ping_base_min", "7", "Lower bound for base bot ping shown in scoreboard upon creation.", true, 0.0f, 100.0f);
+ConVar cv_ping_base_max ("yb_ping_base_max", "34", "Upper bound for base bot ping shown in scoreboard upon creation.", true, 0.0f, 100.0f);
+
 ConVar cv_language ("yb_language", "en", "Specifies the language for bot messages and menus.", false);
 
 ConVar mp_limitteams ("mp_limitteams", nullptr, Var::GameRef);
@@ -147,7 +153,7 @@ void BotManager::forEach (ForEachBot handler) {
    }
 }
 
-BotCreateResult BotManager::create (StringRef name, int difficulty, int personality, int team, int member) {
+BotCreateResult BotManager::create (StringRef name, int difficulty, int personality, int team, int skin) {
    // this function completely prepares bot entity (edict) for creation, creates team, difficulty, sets named etc, and
    // then sends result to bot constructor
 
@@ -221,7 +227,7 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
       ctrl.msg ("Maximum players reached (%d/%d). Unable to create Bot.", game.maxClients (), game.maxClients ());
       return BotCreateResult::MaxPlayersReached;
    }
-   auto object = cr::makeUnique <Bot> (bot, difficulty, personality, team, member);
+   auto object = cr::makeUnique <Bot> (bot, difficulty, personality, team, skin);
    auto index = object->index ();
 
    // assign owner of bot name
@@ -275,7 +281,7 @@ void BotManager::frame () {
    }
 }
 
-void BotManager::addbot (StringRef name, int difficulty, int personality, int team, int member, bool manual) {
+void BotManager::addbot (StringRef name, int difficulty, int personality, int team, int skin, bool manual) {
    // this function putting bot creation process to queue to prevent engine crashes
 
    BotRequest request {};
@@ -285,14 +291,14 @@ void BotManager::addbot (StringRef name, int difficulty, int personality, int te
    request.difficulty = difficulty;
    request.personality = personality;
    request.team = team;
-   request.member = member;
+   request.skin = skin;
    request.manual = manual;
 
    // put to queue
    m_addRequests.push (cr::move (request));
 }
 
-void BotManager::addbot (StringRef name, StringRef difficulty, StringRef personality, StringRef team, StringRef member, bool manual) {
+void BotManager::addbot (StringRef name, StringRef difficulty, StringRef personality, StringRef team, StringRef skin, bool manual) {
    // this function is same as the function above, but accept as parameters string instead of integers
 
    BotRequest request {};
@@ -301,7 +307,7 @@ void BotManager::addbot (StringRef name, StringRef difficulty, StringRef persona
    request.name = (name.empty () || name == any) ? StringRef ("\0") : name;
    request.difficulty = (difficulty.empty () || difficulty == any) ? -1 : difficulty.int_ ();
    request.team = (team.empty () || team == any) ? -1 : team.int_ ();
-   request.member = (member.empty () || member == any) ? -1 : member.int_ ();
+   request.skin = (skin.empty () || skin == any) ? -1 : skin.int_ ();
    request.personality = (personality.empty () || personality == any) ? -1 : personality.int_ ();
    request.manual = manual;
 
@@ -323,7 +329,7 @@ void BotManager::maintainQuota () {
    // bot's creation update
    if (!m_addRequests.empty () && m_maintainTime < game.time ()) {
       const BotRequest &last = m_addRequests.pop ();
-      const BotCreateResult callResult = create (last.name, last.difficulty, last.personality, last.team, last.member);
+      const BotCreateResult callResult = create (last.name, last.difficulty, last.personality, last.team, last.skin);
 
       if (last.manual) {
          cv_quota.set (cv_quota.int_ () + 1);
@@ -908,7 +914,7 @@ void BotManager::destroy () {
    m_bots.clear ();
 }
 
-Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
+Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    // this function does core operation of creating bot, it's called by addbot (),
    // when bot setup completed, (this is a bot class constructor)
 
@@ -985,7 +991,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
       }
       m_difficulty = rg.get (minDifficulty, maxDifficulty);
    }
-   m_basePing = rg.get (7, 14);
+   m_basePing = rg.get (cv_ping_base_min.int_ (), cv_ping_base_max.int_ ());
 
    m_lastCommandTime = game.time () - 0.1f;
    m_frameInterval = game.time ();
@@ -1036,7 +1042,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int member) {
 
    // assign team and class
    m_wantedTeam = team;
-   m_wantedClass = member;
+   m_wantedSkin = skin;
 
    newRound ();
 }
@@ -1466,7 +1472,20 @@ void Bot::updateTeamJoin () {
       }
 
       if (m_wantedTeam != 1 && m_wantedTeam != 2) {
-         m_wantedTeam = 5;
+         auto players = bots.countTeamPlayers ();
+
+         // balance the team upon creation, we can't use game auto select (5) from now, as we use enforced skins belows
+         // due to we don't know the team bot selected, and TeamInfo messages still shows us we're spectators..
+
+         if (players.first > players.second) {
+            m_wantedTeam = 2;
+         }
+         else if (players.first < players.second) {
+            m_wantedTeam = 1;
+         }
+         else {
+            m_wantedTeam = rg.get (1, 2);
+         }
       }
 
       // select the team the bot wishes to join...
@@ -1476,14 +1495,30 @@ void Bot::updateTeamJoin () {
       m_startAction = BotMsg::None; // switch back to idle
 
       // czero has additional models
-      int maxChoice = game.is (GameFlags::ConditionZero) ? 5 : 4;
+      auto maxChoice = game.is (GameFlags::ConditionZero) ? 5 : 4;
+      auto enforcedSkin = 0;
 
-      if (m_wantedClass < 1 || m_wantedClass > maxChoice) {
-         m_wantedClass = rg.get (1, maxChoice); // use random if invalid
+      // setup enforced skin based on selected team
+      if (m_wantedTeam == 1 || m_team == Team::Terrorist) {
+         enforcedSkin = cv_botskin_t.int_ ();
+      }
+      else if (m_wantedTeam == 2 || m_team == Team::CT) {
+         enforcedSkin = cv_botskin_ct.int_ ();
+      }
+      enforcedSkin = cr::clamp (enforcedSkin, 0, maxChoice);
+
+      // try to choice manually
+      if (m_wantedSkin < 1 || m_wantedSkin > maxChoice) {
+         m_wantedSkin = rg.get (1, maxChoice); // use random if invalid
+      }
+
+      // and set enforced if any
+      if (enforcedSkin > 0) {
+         m_wantedSkin = enforcedSkin;
       }
 
       // select the class the bot wishes to use...
-      issueCommand ("menuselect %d", m_wantedClass);
+      issueCommand ("menuselect %d", m_wantedSkin);
 
       // bot has now joined the game (doesn't need to be started)
       m_notStarted = false;
