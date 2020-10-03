@@ -581,6 +581,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
 
             do {
                sorting = false;
+
                for (i = 0; i < 3; ++i) {
                   if (state[i + kMaxCollideMoves] < state[i + kMaxCollideMoves + 1]) {
                      cr::swap (state[i], state[i + 1]);
@@ -591,8 +592,8 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                }
             } while (sorting);
 
-            for (i = 0; i < kMaxCollideMoves; ++i) {
-               m_collideMoves[i] = state[i];
+            for (int j = 0; j < kMaxCollideMoves; ++j) {
+               m_collideMoves[j] = state[j];
             }
 
             m_collideTime = game.time ();

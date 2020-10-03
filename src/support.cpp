@@ -691,11 +691,11 @@ int32 BotSupport::sendTo (int socket, const void *message, size_t length, int fl
 
          for (uint8 i = 0; i < count; ++i) {
             buffer.skip <uint8> (); // number
-            buffer.skipString (); // name
+            auto name = buffer.readString (); // name
             buffer.skip <int32> (); // score
 
             auto ctime = buffer.read <float> (); // override connection time
-            buffer.write <float> (bots.getConnectTime (i, ctime));
+            buffer.write <float> (bots.getConnectTime (name, ctime));
          }
          return send (buffer.data ());
       }

@@ -27,9 +27,6 @@ Game::Game () {
 
    m_precached = false;
 
-   plat.bzero (m_drawModels, sizeof (m_drawModels));
-   plat.bzero (m_spawnCount, sizeof (m_spawnCount));
-
    m_gameFlags = 0;
    m_mapFlags = 0;
    m_slowFrame = 0.0;

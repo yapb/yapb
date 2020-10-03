@@ -757,11 +757,11 @@ void BotManager::listBots () {
    ctrl.msg ("%d bots", m_bots.length ());
 }
 
-float BotManager::getConnectTime (int botId, float original) {
+float BotManager::getConnectTime (StringRef name, float original) {
    // this function get's fake bot player time.
 
    for (const auto &bot : m_bots) {
-      if (bot->entindex () == botId) {
+      if (name == bot->pev->netname.chars ()) {
          return bot->getConnectionTime ();
       }
    }

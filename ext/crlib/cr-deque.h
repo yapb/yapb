@@ -113,7 +113,7 @@ private:
    }
 
 public:
-   explicit Deque () : contents_ (nullptr), capacity_ (0)
+   explicit Deque () : capacity_ (0), contents_ (nullptr)
    { }
 
    Deque (Deque &&rhs) : contents_ (cr::move (rhs.contents_)), capacity_ (rhs.capacity_) {

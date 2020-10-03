@@ -102,6 +102,11 @@ CR_NAMESPACE_BEGIN
 #  define __PLACEMENT_NEW_INLINE 1
 #endif
 
+// disabled gcc warnings
+#if defined (CR_CXX_GCC)
+#  pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif
+
 CR_NAMESPACE_END
 
 #if defined(CR_WINDOWS)

@@ -870,7 +870,7 @@ void BotGraph::toggleFlags (int toggleFlag) {
       if (m_paths[index].flags & toggleFlag) {
          m_paths[index].flags &= ~toggleFlag;
       }
-      else if (!(m_paths[index].flags & toggleFlag)) {
+      else {
          if (toggleFlag == NodeFlag::Sniper && !(m_paths[index].flags & NodeFlag::Camp)) {
             ctrl.msg ("Cannot assign sniper flag to node %d. This is not camp node.", index);
             return;
@@ -2277,12 +2277,12 @@ void BotGraph::frame () {
       }
    }
 
-   // create path pointer for faster access
-   auto &path = m_paths[nearestIndex];
-
    // draw a paths, camplines and danger directions for nearest node
    if (nearestDistance <= 56.0f && m_pathDisplayTime <= game.time ()) {
       m_pathDisplayTime = game.time () + 1.0f;
+
+      // create path pointer for faster access
+      auto &path = m_paths[nearestIndex];
 
       // draw the camplines
       if (path.flags & NodeFlag::Camp) {
@@ -2940,10 +2940,9 @@ void BotGraph::updateGlobalPractice () {
    // get the most dangerous node for this position for both teams
    for (int team = Team::Terrorist; team < kGameTeamNum; ++team) {
       int bestIndex = kInvalidNodeIndex; // best index to store
-      int maxDamage = 0;
-
+      
       for (int i = 0; i < length (); ++i) {
-         maxDamage = 0;
+         int maxDamage = 0;
          bestIndex = kInvalidNodeIndex;
 
          for (int j = 0; j < length (); ++j) {

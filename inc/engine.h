@@ -120,8 +120,8 @@ public:
    using EntitySearch = Lambda <EntitySearchResult (edict_t *)>;
 
 private:
-   int m_drawModels[DrawLine::Count];
-   int m_spawnCount[Team::Unassigned];
+   int m_drawModels[DrawLine::Count] { };
+   int m_spawnCount[Team::Unassigned] { };
 
    // bot client command
    StringArray m_botArgs;
@@ -606,6 +606,21 @@ public:
       }
       for (; m_cursor < m_buffer.length () && m_buffer[m_cursor] != kNullChar; ++m_cursor) { }
       ++m_cursor;
+   }
+
+
+   String readString () {
+      if (m_buffer.length () < m_cursor) {
+         return "";
+      }
+      String out;
+
+      for (; m_cursor < m_buffer.length () && m_buffer[m_cursor] != kNullChar; ++m_cursor) {
+         out += m_buffer[m_cursor];
+      }
+      ++m_cursor;
+
+      return out;
    }
 
    void shiftToEnd () {

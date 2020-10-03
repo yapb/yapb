@@ -45,7 +45,7 @@ buildVersion = meson.project_version ()
 compilerId = buildCompiler.get_id ()
 compilerVersion = buildCompiler.version ()
 
-isOptimize = get_option ('buildtype') == 'release'
+isOptimize = get_option ('buildtype') == 'release' or get_option ('buildtype') == 'debugoptimized'
 isVC = compilerId == 'msvc' or compilerId == 'intel-cl' or compilerId == 'clang-cl'
 isGCC = compilerId == 'gcc'
 isIntel = compilerId == 'intel' or compilerId == 'intel-cl'
@@ -82,7 +82,11 @@ if isCLang or isGCC or (isIntel and not isWindows)
         '-m32',
         '-fno-threadsafe-statics',
         '-fno-exceptions',
-        '-fno-rtti',
+        '-fno-rtti'
+    ]
+    
+    flagsCompiler += [
+        '-pedantic'
     ]
     
     if isOptimize
@@ -132,7 +136,6 @@ if isLinux or isDarwin
         flagsCompiler += [
             '-g3',
             '-ggdb',
-            '-O3',
             '-DCR_DEBUG'
         ]
     else

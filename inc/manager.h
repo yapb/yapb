@@ -116,7 +116,7 @@ public:
    int getHumansCount (bool ignoreSpectators = false);
    int getAliveHumansCount ();
 
-   float getConnectTime (int botId, float original);
+   float getConnectTime (StringRef name, float original);
    float getAverageTeamKPD (bool calcForBots);
 
    void setBombPlanted (bool isPlanted);
