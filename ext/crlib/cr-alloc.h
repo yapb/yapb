@@ -34,7 +34,7 @@ public:
 
 public:
    template <typename T> T *allocate (const size_t length = 1) {
-      auto memory = reinterpret_cast <T *> (malloc (cr::max (1u, length * sizeof (T))));
+      auto memory = reinterpret_cast <T *> (malloc (cr::max <size_t> (1u, length * sizeof (T))));
 
       if (!memory) {
          plat.abort ();
