@@ -745,6 +745,9 @@ bool Game::postload () {
    // set out user agent for http stuff
    http.setUserAgent (strings.format ("%s/%s", product.name, product.version));
 
+   // set the app name
+   plat.setAppName (product.name.chars ());
+
    // register bot cvars
    game.registerCvars ();
 

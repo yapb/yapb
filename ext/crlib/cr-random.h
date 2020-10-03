@@ -15,7 +15,6 @@
 
 #pragma once
 
-#include <time.h>
 #include <crlib/cr-basic.h>
 
 CR_NAMESPACE_BEGIN

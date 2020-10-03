@@ -38,13 +38,11 @@ void BotConfig::loadConfigs () {
    loadDifficultyConfig ();
 }
 
-void BotConfig::loadMainConfig () {
+void BotConfig::loadMainConfig (bool isFirstLoad) {
    if (game.is (GameFlags::Legacy) && !game.is (GameFlags::Xash3D)) {
       util.setNeedForWelcome (true);
    }
    setupMemoryFiles ();
-
-   static bool firstLoad = true;
 
    auto needsToIgnoreVar = [](StringArray &list, const char *needle) {
       for (const auto &var : list) {
@@ -66,7 +64,7 @@ void BotConfig::loadMainConfig () {
             continue;
          }
 
-         if (firstLoad) {
+         if (isFirstLoad) {
             game.serverCommand (line.chars ());
             continue;
          }
@@ -104,7 +102,6 @@ void BotConfig::loadMainConfig () {
       }
       file.close ();
    }
-   firstLoad = false;
 
    // android is abit hard to play, lower the difficulty by default
    if (plat.android && cv_difficulty.int_ () > 3) {

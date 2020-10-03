@@ -43,19 +43,16 @@ private:
          return;
       }
       time_t ticks = time (&ticks);
-      tm *timeinfo = nullptr;
+      tm timeinfo {};
 
 #if defined (CR_WINDOWS)
-      tm get;
-
-      localtime_s (&get, &ticks);
-      timeinfo = &get;
+      localtime_s (&timeinfo, &ticks);
 #else
-      timeinfo = localtime (&ticks);
+      localtime_r (&ticks, &timeinfo);
 #endif
 
       auto timebuf = strings.chars ();
-      strftime (timebuf, StringBuffer::StaticBufferSize, "%Y-%m-%d %H:%M:%S", timeinfo);
+      strftime (timebuf, StringBuffer::StaticBufferSize, "%Y-%m-%d %H:%M:%S", &timeinfo);
 
       handle_.puts ("%s (%s): %s\n", timebuf, level, msg);
    }

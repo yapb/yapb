@@ -118,7 +118,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       // to register by the engine side the server commands we need to administrate our bots.
 
       // execute main config
-      conf.loadMainConfig ();
+      conf.loadMainConfig (true);
       conf.adjustWeaponPrices ();
 
       if (game.is (GameFlags::Metamod)) {
@@ -448,7 +448,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
 }
 
 CR_LINKAGE_C int GetEntityAPI_Post (gamefuncs_t *table, int) {
-   // this function is called right after GiveFnptrsToDll() by the engine in the game DLL (or
+   // this function is called right after ssToDll() by the engine in the game DLL (or
    // what it BELIEVES to be the game DLL), in order to copy the list of MOD functions that can
    // be called by the engine, into a memory block pointed to by the functionTable pointer
    // that is passed into this function (explanation comes straight from botman). This allows

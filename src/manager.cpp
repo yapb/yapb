@@ -17,7 +17,7 @@
 
 ConVar cv_autovacate ("yb_autovacate", "1", "Kick bots to automatically make room for human players.");
 
-ConVar cv_quota ("yb_quota", "0", "Specifies the number bots to be added to the game.", true, 0.0f, static_cast <float> (kGameMaxPlayers));
+ConVar cv_quota ("yb_quota", "9", "Specifies the number bots to be added to the game.", true, 0.0f, static_cast <float> (kGameMaxPlayers));
 ConVar cv_quota_mode ("yb_quota_mode", "normal", "Specifies the type of quota.\nAllowed values: 'normal', 'fill', and 'match'.\nIf 'fill', the server will adjust bots to keep N players in the game, where N is yb_quota.\nIf 'match', the server will maintain a 1:N ratio of humans to bots, where N is yb_quota_match.", false);
 ConVar cv_quota_match ("yb_quota_match", "0", "Number of players to match if yb_quota_mode set to 'match'", true, 0.0f, static_cast <float> (kGameMaxPlayers));
 ConVar cv_think_fps ("yb_think_fps", "30.0", "Specifies how many times per second bot code will run.", true, 30.0f, 90.0f);
@@ -37,8 +37,8 @@ ConVar cv_difficulty_auto ("yb_difficulty_auto", "0", "Enables each bot balances
 ConVar cv_show_avatars ("yb_show_avatars", "1", "Enables or disabels displaying bot avatars in front of their names in scoreboard. Note, that is currently you can see only avatars of your steam friends.");
 ConVar cv_show_latency ("yb_show_latency", "2", "Enables latency display in scoreboard.\nAllowed values: '0', '1', '2'.\nIf '0', there is nothing displayed.\nIf '1', there is a 'BOT' is displayed.\nIf '2' fake ping is displayed.", true, 0.0f, 2.0f);
 
-ConVar cv_botskin_t ("yb_botskin_t", "0", "Specifies the bots wanted skin for Terrorist team", true, 0.0f, 5.0f);
-ConVar cv_botskin_ct ("yb_botskin_ct", "0", "Specifies the bots wanted skin for CT team", true, 0.0f, 5.0f);
+ConVar cv_botskin_t ("yb_botskin_t", "0", "Specifies the bots wanted skin for Terrorist team.", true, 0.0f, 5.0f);
+ConVar cv_botskin_ct ("yb_botskin_ct", "0", "Specifies the bots wanted skin for CT team.", true, 0.0f, 5.0f);
 
 ConVar cv_ping_base_min ("yb_ping_base_min", "7", "Lower bound for base bot ping shown in scoreboard upon creation.", true, 0.0f, 100.0f);
 ConVar cv_ping_base_max ("yb_ping_base_max", "34", "Upper bound for base bot ping shown in scoreboard upon creation.", true, 0.0f, 100.0f);

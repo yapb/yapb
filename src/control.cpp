@@ -17,7 +17,7 @@
 
 ConVar cv_display_menu_text ("yb_display_menu_text", "1", "Enables or disables display menu text, when players asks for menu. Useful only for Android.");
 ConVar cv_password ("yb_password", "", "The value (password) for the setinfo key, if user set's correct password, he's gains access to bot commands and menus.", false, 0.0f, 0.0f, Var::Password);
-ConVar cv_password_key ("yb_password_key", "_ubpw", "The name of setinfo key used to store password to bot commands and menus.", false);
+ConVar cv_password_key ("yb_password_key", "_ybpw", "The name of setinfo key used to store password to bot commands and menus.", false);
 
 int BotControl::cmdAddBot () {
    enum args { alias = 1, difficulty, personality, team, model, name, max };

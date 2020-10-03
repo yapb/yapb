@@ -77,7 +77,7 @@ public:
    void loadConfigs ();
 
    // loads main config file
-   void loadMainConfig ();
+   void loadMainConfig (bool isFirstLoad = false);
 
    // loads bot names
    void loadNamesConfig ();

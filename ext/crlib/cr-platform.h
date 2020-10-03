@@ -139,6 +139,8 @@ CR_NAMESPACE_END
 #  include <android/log.h>
 #endif
 
+#include <time.h>
+
 CR_NAMESPACE_BEGIN
 
 // helper struct for platform detection
@@ -150,6 +152,8 @@ struct Platform : public Singleton <Platform> {
    bool hfp = false;
    bool x64 = false;
    bool arm = false;
+
+   char appName[64] = {};
 
    Platform () {
 #if defined(CR_WINDOWS)
@@ -180,6 +184,11 @@ struct Platform : public Singleton <Platform> {
       arm = true;
       android = true;
 #endif
+   }
+
+   // set the app name
+   void setAppName (const char *name) {
+      snprintf (appName, cr::bufsize (appName), "%s", name);
    }
 
    // helper platform-dependant functions
@@ -232,12 +241,14 @@ struct Platform : public Singleton <Platform> {
       QueryPerformanceFrequency (&freq);
       QueryPerformanceCounter (&count);
 
-      return static_cast <float> (count.QuadPart) / static_cast <float> (freq.QuadPart);
+      return static_cast <float> (count.QuadPart / freq.QuadPart);
 #else
       timeval tv;
-      gettimeofday (&tv, NULL);
+      gettimeofday (&tv, nullptr);
 
-      return static_cast <float> (tv.tv_sec) + (static_cast <float> (tv.tv_usec)) / 1000000.0;
+      static auto startTime = tv.tv_sec;
+
+      return static_cast <float> (tv.tv_sec - startTime);
 #endif
    }
 
@@ -245,12 +256,12 @@ struct Platform : public Singleton <Platform> {
       fprintf (stderr, "%s\n", msg);
 
 #if defined (CR_ANDROID)
-      __android_log_write (ANDROID_LOG_ERROR, "crlib.fatal", msg);
+      __android_log_write (ANDROID_LOG_ERROR, appName, msg);
 #endif
 
 #if defined(CR_WINDOWS)
       DestroyWindow (GetForegroundWindow ());
-      MessageBoxA (GetActiveWindow (), msg, "crlib.fatal", MB_ICONSTOP);
+      MessageBoxA (GetActiveWindow (), msg, appName, MB_ICONSTOP);
 #endif
       ::abort ();
    }
