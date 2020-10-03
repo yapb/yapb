@@ -85,9 +85,11 @@ if isCLang or isGCC or (isIntel and not isWindows)
         '-fno-rtti'
     ]
     
-    flagsCompiler += [
-        '-pedantic'
-    ]
+    if not isDarwin
+       flagsCompiler += [
+           '-pedantic'
+       ]
+    endif
     
     if isOptimize
         flagsCompiler += '-msse2'
