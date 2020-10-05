@@ -94,15 +94,9 @@ if isCLang or isGCC or (isIntel and not isWindows)
     if isOptimize
         flagsCompiler += '-msse2'
         
-        if (isCLang or isGCC) and not isDarwin
+        if isCLang and not isDarwin
             flagsCompiler += '-flto'
             flagsLinker += '-flto'
-            
-            if isGCC
-                flagsCompiler += [
-                    '-fgraphite-identity'
-                ]
-            endif
         endif
     endif
     
