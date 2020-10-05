@@ -738,7 +738,7 @@ bool Game::postload () {
    });
 
    // ensure we're have all needed directories
-   for (const auto &dir : StringArray { "conf/lang", "data/train", "data/graph", "data/logs" }) {
+   for (const auto &dir : StringArray { "conf/lang", "data/train", "data/graph", "data/logs", "data/pwf" }) {
       File::createPath (strings.format ("%s/addons/%s/%s", getRunningModName (), product.folder, dir));
    }
 

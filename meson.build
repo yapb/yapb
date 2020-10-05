@@ -149,7 +149,6 @@ if isLinux or isDarwin
         
         if isIntel 
             flagsCompiler += [
-                '-funroll-all-loops',
                 '-ipo',
                 '-wd11076', 
                 '-wd11074'
@@ -174,7 +173,6 @@ if isLinux or isDarwin
                 '--no-undefined'
             ]
         elif isGCC and not isDarwin
-            flagsCompiler += '-funroll-all-loops'
             flagsLinker += '-Wl,--no-undefined'
         endif
     endif

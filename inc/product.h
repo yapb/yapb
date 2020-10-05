@@ -46,7 +46,7 @@ public:
    const StringRef logtag { "YB" };
    const StringRef dtime { __DATE__ " " __TIME__ };
    const StringRef date { __DATE__ };
-   const StringRef version { MODULE_BOT_VERSION };
+   const StringRef version { MODULE_BOT_VERSION "." MODULE_BUILD_COUNT };
    const StringRef cmdPri { "yb" };
    const StringRef cmdSec { "yapb" };
 };

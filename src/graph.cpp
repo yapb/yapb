@@ -1880,12 +1880,12 @@ void BotGraph::saveOldFormat () {
 
 const char *BotGraph::getOldFormatGraphName (bool isMemoryFile) {
    static String buffer;
-   buffer.assignf ("%s%s.pwf", getDataDirectory (isMemoryFile), game.getMapName ());
+   buffer.assignf ("%s/pwf/%s.pwf", getDataDirectory (isMemoryFile), game.getMapName ());
 
    if (File::exists (buffer)) {
       return buffer.chars ();
    }
-   return strings.format ("%s%s.pwf", getDataDirectory (isMemoryFile), game.getMapName ());
+   return strings.format ("%s/pwf/%s.pwf", getDataDirectory (isMemoryFile), game.getMapName ());
 }
 
 float BotGraph::calculateTravelTime (float maxSpeed, const Vector &src, const Vector &origin) {
@@ -2763,7 +2763,7 @@ void BotGraph::eraseFromDisk () {
    bots.kickEveryone (true);
 
    // if we're delete graph, delete all corresponding to it files
-   forErase.push (strings.format ("%s%s.pwf", data, map)); // graph itself
+   forErase.push (strings.format ("%spwf/%s.pwf", data, map)); // graph itself
    forErase.push (strings.format ("%strain/%s.exp", data, map)); // corresponding to practice
    forErase.push (strings.format ("%strain/%s.vis", data, map)); // corresponding to vistable
    forErase.push (strings.format ("%strain/%s.pmx", data, map)); // corresponding to matrix
