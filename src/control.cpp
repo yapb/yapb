@@ -151,7 +151,7 @@ int BotControl::cmdWeaponMode () {
 int BotControl::cmdVersion () {
    auto &build = product.build;
 
-   msg ("%s v%s.%s (ID %s)", product.name, product.version, build.count, build.id);
+   msg ("%s v%s (ID %s)", product.name, product.version, build.id);
    msg ("   by %s (%s)", product.author, product.email);
    msg ("   %s", product.url);
    msg ("compiled: %s on %s with %s", product.dtime, build.machine, build.compiler);

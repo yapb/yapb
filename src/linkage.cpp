@@ -15,7 +15,7 @@
 
 #include <yapb.h>
 
-ConVar cv_version ("yb_version", strings.format ("%s.%s", product.version, product.build.count), Var::ReadOnly);
+ConVar cv_version ("yb_version", product.version.chars (), Var::ReadOnly);
 
 gamefuncs_t dllapi;
 enginefuncs_t engfuncs;

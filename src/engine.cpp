@@ -810,7 +810,7 @@ bool Game::postload () {
       if (is (GameFlags::Metamod)) {
          gameVersionFlags.push ("Metamod");
       }
-      print ("\n%s v%s.%s successfully loaded for game: Counter-Strike %s.\n\tFlags: %s.\n", product.name, product.version, product.build.count, gameVersionStr, gameVersionFlags.empty () ? "None" : String::join (gameVersionFlags, ", "));
+      print ("\n%s v%s successfully loaded for game: Counter-Strike %s.\n\tFlags: %s.\n", product.name, product.version, gameVersionStr, gameVersionFlags.empty () ? "None" : String::join (gameVersionFlags, ", "));
    };
 
    if (plat.android) {

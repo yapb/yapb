@@ -290,7 +290,7 @@ void BotSupport::checkWelcome () {
 
       MessageWriter (MSG_ONE, msgs.id (NetMsg::TextMsg), nullptr, receiveEntity)
          .writeByte (HUD_PRINTTALK)
-         .writeString (strings.format ("----- %s v%s (Build: %s), {%s}, (c) %s, by %s (%s)-----", product.name, product.version, product.build.count, product.date, product.year, product.author, product.url));
+         .writeString (strings.format ("----- %s v%s {%s}, (c) %s, by %s (%s)-----", product.name, product.version, product.date, product.year, product.author, product.url));
 
       MessageWriter (MSG_ONE, SVC_TEMPENTITY, nullptr, receiveEntity)
          .writeByte (TE_TEXTMESSAGE)
@@ -310,7 +310,7 @@ void BotSupport::checkWelcome () {
          .writeShort (MessageWriter::fu16 (2.0f, 8.0f))
          .writeShort (MessageWriter::fu16 (6.0f, 8.0f))
          .writeShort (MessageWriter::fu16 (0.1f, 8.0f))
-         .writeString (strings.format ("\nHello! You are playing with %s v%s (Revision: %s)\nDevised by %s\n\n%s", product.name, product.version, product.build.count, product.author, authorStr));
+         .writeString (strings.format ("\nHello! You are playing with %s v%s\nDevised by %s\n\n%s", product.name, product.version, product.author, authorStr));
 
       m_welcomeReceiveTime = 0.0f;
       m_needToSendWelcome = false;
