@@ -324,8 +324,8 @@ int BotControl::cmdNode () {
       addGraphCmd ("setradius", "setradius [radius] [nearest|index]", "Sets the radius for node.", &BotControl::cmdNodeSetRadius);
       addGraphCmd ("flags", "flags [noarguments]", "Open and displays menu for modifying flags for nearest point.", &BotControl::cmdNodeSetFlags);
       addGraphCmd ("teleport", "teleport [index]", "Teleports player to specified node index.", &BotControl::cmdNodeTeleport);
-      addGraphCmd ("upload", "upload [id]", "Uploads created graph to graph database.", &BotControl::cmdNodeUpload);
-      addGraphCmd ("stats", "[noarguments]", "Shows the stats about node types on the map.", &BotControl::cmdNodeShowStats);
+      addGraphCmd ("upload", "upload", "Uploads created graph to graph database.", &BotControl::cmdNodeUpload);
+      addGraphCmd ("stats", "stats [noarguments]", "Shows the stats about node types on the map.", &BotControl::cmdNodeShowStats);
 
       // add path commands
       addGraphCmd ("path_create", "path_create [noarguments]", "Opens and displays path creation menu.", &BotControl::cmdNodePathCreate);
@@ -340,8 +340,8 @@ int BotControl::cmdNode () {
 
       // remote graph editing stuff
       if (game.isDedicated ()) {
-         addGraphCmd ("acquire_editor", "acquire_editor", "Acquires rights to edit graph on dedicated server.", &BotControl::cmdNodeAcquireEditor);
-         addGraphCmd ("release_editor", "acquire_editor", "Releases graph editing rights.", &BotControl::cmdNodeReleaseEditor);
+         addGraphCmd ("acquire_editor", "acquire_edito [noarguments]r", "Acquires rights to edit graph on dedicated server.", &BotControl::cmdNodeAcquireEditor);
+         addGraphCmd ("release_editor", "release_editor [noarguments]", "Releases graph editing rights.", &BotControl::cmdNodeReleaseEditor);
       }
    }
    if (commands.has (strValue (cmd))) {
