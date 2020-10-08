@@ -341,7 +341,7 @@ int BotControl::cmdNode () {
       // remote graph editing stuff
       if (game.isDedicated ()) {
          addGraphCmd ("acquire_editor", "acquire_editor", "Acquires rights to edit graph on dedicated server.", &BotControl::cmdNodeAcquireEditor);
-         addGraphCmd ("release_editor", "acquire_editor", "Releases graph editing rights.", &BotControl::cmdNodeAcquireEditor);
+         addGraphCmd ("release_editor", "acquire_editor", "Releases graph editing rights.", &BotControl::cmdNodeReleaseEditor);
       }
    }
    if (commands.has (strValue (cmd))) {
