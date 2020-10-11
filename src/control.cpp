@@ -176,7 +176,7 @@ int BotControl::cmdMenu () {
    enum args { alias = 1, cmd };
 
    // reset the current menu
-   showMenu (Menu::None);
+   closeMenu ();
 
    if (strValue (cmd) == "cmd" && util.isAlive (m_ent)) {
       showMenu (Menu::Commands);
@@ -754,8 +754,11 @@ int BotControl::cmdNodeUpload () {
    msg ("you may notice the game freezes a bit during upload and issue request creation. Please, be patient.");
    msg ("\n");
 
+   // upload everytime in lowercase
+   String mapName = game.getMapName ();
+
    // try to upload the file
-   if (http.uploadFile (strings.format ("http://%s/graph", product.download), strings.format ("%sgraph/%s.graph", graph.getDataDirectory (false), game.getMapName ()))) {
+   if (http.uploadFile (strings.format ("http://%s/graph", product.download), strings.format ("%sgraph/%s.graph", graph.getDataDirectory (false), mapName.lowercase ()))) {
       msg ("Graph file was successfully validated and uploaded to the YaPB Graph DB (%s).", product.download);
       msg ("It will be available for download for all YaPB users in a few minutes.");
       msg ("\n");
@@ -853,7 +856,7 @@ int BotControl::cmdNodeShowStats () {
 }
 
 int BotControl::menuMain (int item) {
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
 
    switch (item) {
    case 1:
@@ -875,7 +878,7 @@ int BotControl::menuMain (int item) {
       break;
 
    case 10:
-      showMenu (Menu::None);
+      closeMenu ();
       break;
 
    default:
@@ -886,7 +889,7 @@ int BotControl::menuMain (int item) {
 }
 
 int BotControl::menuFeatures (int item) {
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
 
    switch (item) {
    case 1:
@@ -913,20 +916,20 @@ int BotControl::menuFeatures (int item) {
          showMenu (Menu::Commands);
       }
       else {
-         showMenu (Menu::None); // reset menu display
+         closeMenu (); // reset menu display
          msg ("You're dead, and have no access to this menu");
       }
       break;
 
    case 10:
-      showMenu (Menu::None);
+      closeMenu ();
       break;
    }
    return BotCommandResult::Handled;
 }
 
 int BotControl::menuControl (int item) {
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
 
    switch (item) {
    case 1:
@@ -952,14 +955,14 @@ int BotControl::menuControl (int item) {
       break;
 
    case 10:
-      showMenu (Menu::None);
+      closeMenu ();
       break;
    }
    return BotCommandResult::Handled;
 }
 
 int BotControl::menuWeaponMode (int item) {
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
 
    switch (item) {
    case 1:
@@ -974,7 +977,7 @@ int BotControl::menuWeaponMode (int item) {
       break;
 
    case 10:
-      showMenu (Menu::None);
+      closeMenu ();
       break;
    }
    return BotCommandResult::Handled;
@@ -982,7 +985,7 @@ int BotControl::menuWeaponMode (int item) {
 
 int BotControl::menuPersonality (int item) {
    if (m_isMenuFillCommand) {
-      showMenu (Menu::None); // reset menu display
+      closeMenu (); // reset menu display
 
       switch (item) {
       case 1:
@@ -990,16 +993,16 @@ int BotControl::menuPersonality (int item) {
       case 3:
       case 4:
          bots.serverFill (m_menuServerFillTeam, item - 2, m_interMenuData[0]);
-         showMenu (Menu::None);
+         closeMenu ();
          break;
 
       case 10:
-         showMenu (Menu::None);
+         closeMenu ();
          break;
       }
       return BotCommandResult::Handled;
    }
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
 
    switch (item) {
    case 1:
@@ -1011,14 +1014,14 @@ int BotControl::menuPersonality (int item) {
       break;
 
    case 10:
-      showMenu (Menu::None);
+      closeMenu ();
       break;
    }
    return BotCommandResult::Handled;
 }
 
 int BotControl::menuDifficulty (int item) {
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
 
    switch (item) {
    case 1:
@@ -1042,7 +1045,7 @@ int BotControl::menuDifficulty (int item) {
       break;
 
    case 10:
-      showMenu (Menu::None);
+      closeMenu ();
       break;
    }
    showMenu (Menu::Personality);
@@ -1052,7 +1055,7 @@ int BotControl::menuDifficulty (int item) {
 
 int BotControl::menuTeamSelect (int item) {
    if (m_isMenuFillCommand) {
-      showMenu (Menu::None); // reset menu display
+      closeMenu (); // reset menu display
 
       if (item < 3) {
          extern ConVar mp_limitteams, mp_autoteambalance;
@@ -1071,12 +1074,12 @@ int BotControl::menuTeamSelect (int item) {
          break;
 
       case 10:
-         showMenu (Menu::None);
+         closeMenu ();
          break;
       }
       return BotCommandResult::Handled;
    }
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
 
    switch (item) {
    case 1:
@@ -1094,14 +1097,14 @@ int BotControl::menuTeamSelect (int item) {
       break;
 
    case 10:
-      showMenu (Menu::None);
+      closeMenu ();
       break;
    }
    return BotCommandResult::Handled;
 }
 
 int BotControl::menuClassSelect (int item) {
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
 
    switch (item) {
    case 1:
@@ -1114,14 +1117,14 @@ int BotControl::menuClassSelect (int item) {
       break;
 
    case 10:
-      showMenu (Menu::None);
+      closeMenu ();
       break;
    }
    return BotCommandResult::Handled;
 }
 
 int BotControl::menuCommands (int item) {
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
    Bot *nearest = nullptr;
 
    switch (item) {
@@ -1150,14 +1153,14 @@ int BotControl::menuCommands (int item) {
       break;
 
    case 10:
-      showMenu (Menu::None);
+      closeMenu ();
       break;
    }
    return BotCommandResult::Handled;
 }
 
 int BotControl::menuGraphPage1 (int item) {
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
 
    switch (item) {
    case 1:
@@ -1222,14 +1225,14 @@ int BotControl::menuGraphPage1 (int item) {
       break;
 
    case 10:
-      showMenu (Menu::None);
+      closeMenu ();
       break;
    }
    return BotCommandResult::Handled;
 }
 
 int BotControl::menuGraphPage2 (int item) {
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
 
    switch (item) {
    case 1: 
@@ -1316,7 +1319,7 @@ int BotControl::menuGraphPage2 (int item) {
 }
 
 int BotControl::menuGraphRadius (int item) {
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
    graph.setEditFlag (GraphEdit::On); // turn graph on in case
 
    constexpr float radius[] = { 0.0f, 8.0f, 16.0f, 32.0f, 48.0f, 64.0f, 80.0f, 96.0f, 128.0f };
@@ -1329,7 +1332,7 @@ int BotControl::menuGraphRadius (int item) {
 }
 
 int BotControl::menuGraphType (int item) {
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
 
    switch (item) {
    case 1:
@@ -1354,14 +1357,14 @@ int BotControl::menuGraphType (int item) {
       break;
 
    case 10:
-      showMenu (Menu::None);
+      closeMenu ();
       break;
    }
    return BotCommandResult::Handled;
 }
 
 int BotControl::menuGraphFlag (int item) {
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
 
    switch (item) {
    case 1:
@@ -1393,7 +1396,7 @@ int BotControl::menuGraphFlag (int item) {
 }
 
 int BotControl::menuAutoPathDistance (int item) {
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
 
    constexpr float distances[] = { 0.0f, 100.0f, 130.0f, 160.0f, 190.0f, 220.0f, 250.0f };
 
@@ -1407,14 +1410,14 @@ int BotControl::menuAutoPathDistance (int item) {
       break;
 
    case 10:
-      showMenu (Menu::None);
+      closeMenu ();
       break;
    }
    return BotCommandResult::Handled;
 }
 
 int BotControl::menuKickPage1 (int item) {
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
 
    switch (item) {
    case 1:
@@ -1441,7 +1444,7 @@ int BotControl::menuKickPage1 (int item) {
 }
 
 int BotControl::menuKickPage2 (int item) {
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
 
    switch (item) {
    case 1:
@@ -1468,7 +1471,7 @@ int BotControl::menuKickPage2 (int item) {
 }
 
 int BotControl::menuKickPage3 (int item) {
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
 
    switch (item) {
    case 1:
@@ -1495,7 +1498,7 @@ int BotControl::menuKickPage3 (int item) {
 }
 
 int BotControl::menuKickPage4 (int item) {
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
 
    switch (item) {
    case 1:
@@ -1518,7 +1521,7 @@ int BotControl::menuKickPage4 (int item) {
 }
 
 int BotControl::menuGraphPath (int item) {
-   showMenu (Menu::None); // reset menu display
+   closeMenu (); // reset menu display
 
    switch (item) {
    case 1:
@@ -1537,7 +1540,7 @@ int BotControl::menuGraphPath (int item) {
       break;
 
    case 10:
-      showMenu (Menu::None);
+      closeMenu ();
       break;
    }
    return BotCommandResult::Handled;
@@ -1674,10 +1677,10 @@ bool BotControl::executeMenus () {
 }
 
 void BotControl::showMenu (int id) {
-   static bool s_menusParsed = false;
+   static bool menusParsed = false;
 
    // make menus looks like we need only once
-   if (!s_menusParsed) {
+   if (!menusParsed) {
       for (auto &parsed : m_menus) {
          StringRef translated = conf.translate (parsed.text);
 
@@ -1691,53 +1694,62 @@ void BotControl::showMenu (int id) {
             }
          }
       }
-      s_menusParsed = true;
+      menusParsed = true;
    }
 
    if (!util.isPlayer (m_ent)) {
       return;
    }
-   Client &client = util.getClient (game.indexOfPlayer (m_ent));
+   auto &client = util.getClient (game.indexOfPlayer (m_ent));
+   constexpr size_t maxMenuSentLength = 140;
 
-   if (id == Menu::None) {
-      MessageWriter (MSG_ONE_UNRELIABLE, msgs.id (NetMsg::ShowMenu), nullptr, m_ent)
-         .writeShort (0)
-         .writeChar (0)
-         .writeByte (0)
-         .writeString ("");
-
-      client.menu = id;
-      return;
-   }
-
-   for (auto &display : m_menus) {
+   for (const auto &display : m_menus) {
       if (display.ident == id) {
-         auto text = (game.is (GameFlags::Xash3D | GameFlags::Mobility) && !cv_display_menu_text.bool_ ()) ? " " : display.text.chars ();
-         MessageWriter msg;
+         StringRef text = (game.is (GameFlags::Xash3D | GameFlags::Mobility) && !cv_display_menu_text.bool_ ()) ? " " : display.text.chars ();
 
-         while (strlen (text) >= 64) {
-            msg.start (MSG_ONE_UNRELIABLE, msgs.id (NetMsg::ShowMenu), nullptr, m_ent)
+         size_t sentLength = 0;
+         size_t leftLength = text.length ();
+
+         String buffer = (leftLength > maxMenuSentLength) ? text.substr (0, maxMenuSentLength) : text;
+
+         do {
+            leftLength -= buffer.length ();
+
+            MessageWriter (MSG_ONE, msgs.id (NetMsg::ShowMenu), nullptr, m_ent)
                .writeShort (display.slots)
                .writeChar (-1)
-               .writeByte (1);
+               .writeByte (leftLength > 0 ? HLTrue : HLFalse)
+               .writeString (buffer.chars ());
 
-            for (int i = 0; i < 64; ++i) {
-               msg.writeChar (text[i]);
-            }
-            msg.end ();
-            text += 64;
-         }
+            sentLength += buffer.length ();
+            buffer = text.substr (sentLength, (leftLength > maxMenuSentLength) ? maxMenuSentLength : StringRef::InvalidIndex);
 
-         MessageWriter (MSG_ONE_UNRELIABLE, msgs.id (NetMsg::ShowMenu), nullptr, m_ent)
-            .writeShort (display.slots)
-            .writeChar (-1)
-            .writeByte (0)
-            .writeString (text);
+         } while (leftLength > 0);
 
          client.menu = id;
          engfuncs.pfnClientCommand (m_ent, "speak \"player/geiger1\"\n"); // Stops others from hearing menu sounds..
       }
    }
+}
+
+void BotControl::closeMenu () {
+   if (!util.isPlayer (m_ent)) {
+      return;
+   }
+   auto &client = util.getClient (game.indexOfPlayer (m_ent));
+
+   // do not reset menu if already none
+   if (client.menu == Menu::None) {
+      return;
+   }
+
+   MessageWriter (MSG_ONE, msgs.id (NetMsg::ShowMenu), nullptr, m_ent)
+      .writeShort (0)
+      .writeChar (0)
+      .writeByte (0)
+      .writeString ("");
+
+   client.menu = Menu::None;
 }
 
 void BotControl::kickBotByMenu (int page) {
@@ -1771,7 +1783,7 @@ void BotControl::kickBotByMenu (int page) {
    menus.appendf ("\n%s 0. %s", (page == 4) ? "" : strings.format (" 9. %s...\n", moreKey), backKey);
 
    // force to clear current menu
-   showMenu (Menu::None);
+   closeMenu ();
 
    auto id = Menu::KickPage1 - 1 + page;
 

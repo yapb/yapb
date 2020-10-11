@@ -137,6 +137,8 @@ public:
    bool executeMenus ();
 
    void showMenu (int id);
+   void closeMenu ();
+
    void kickBotByMenu (int page);
    void assignAdminRights (edict_t *ent, char *infobuffer);
    void maintainAdminRights ();

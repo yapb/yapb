@@ -1559,7 +1559,7 @@ template <typename U> bool BotGraph::saveStorage (StringRef ext, StringRef name,
    bool isGraph = !!(options & StorageOption::Graph);
 
    String filename;
-   filename.assignf ("%s.%s", game.getMapName (), ext);
+   filename.assignf ("%s.%s", game.getMapName (), ext).lowercase ();
 
    if (data.empty ()) {
       logger.error ("Unable to save %s file. Empty data. (filename: '%s').", name, filename);
