@@ -252,10 +252,10 @@ int BotControl::cmdCvars () {
          cfg.puts ("\n");
       }
       else {
-         game.print ("cvar: %s", cvar.reg.name);
-         game.print ("info: %s", conf.translate (cvar.info));
+         msg ("cvar: %s", cvar.reg.name);
+         msg ("info: %s", conf.translate (cvar.info));
 
-         game.print (" ");
+         msg (" ");
       }
    }
 
@@ -1701,33 +1701,38 @@ void BotControl::showMenu (int id) {
       return;
    }
    auto &client = util.getClient (game.indexOfPlayer (m_ent));
+   
+
+   auto sendMenu = [&](int32 slots, bool last, StringRef text) {
+      MessageWriter (MSG_ONE, msgs.id (NetMsg::ShowMenu), nullptr, m_ent)
+         .writeShort (slots)
+         .writeChar (-1)
+         .writeByte (last ? HLFalse : HLTrue)
+         .writeString (text.chars ());
+   };
    constexpr size_t maxMenuSentLength = 140;
 
    for (const auto &display : m_menus) {
       if (display.ident == id) {
-         StringRef text = (game.is (GameFlags::Xash3D | GameFlags::Mobility) && !cv_display_menu_text.bool_ ()) ? " " : display.text.chars ();
+         String text = (game.is (GameFlags::Xash3D | GameFlags::Mobility) && !cv_display_menu_text.bool_ ()) ? " " : display.text.chars ();
 
-         size_t sentLength = 0;
-         size_t leftLength = text.length ();
+         // split if needed
+         if (text.length () > maxMenuSentLength) {
+            auto chunks = text.split (maxMenuSentLength);
 
-         String buffer = (leftLength > maxMenuSentLength) ? text.substr (0, maxMenuSentLength) : text;
-
-         do {
-            leftLength -= buffer.length ();
-
-            MessageWriter (MSG_ONE, msgs.id (NetMsg::ShowMenu), nullptr, m_ent)
-               .writeShort (display.slots)
-               .writeChar (-1)
-               .writeByte (leftLength > 0 ? HLTrue : HLFalse)
-               .writeString (buffer.chars ());
-
-            sentLength += buffer.length ();
-            buffer = text.substr (sentLength, (leftLength > maxMenuSentLength) ? maxMenuSentLength : StringRef::InvalidIndex);
-
-         } while (leftLength > 0);
+            // send in chunks
+            for (size_t i = 0; i < chunks.length (); ++i) {
+               sendMenu (display.slots, i == chunks.length () - 1, chunks[i]);
+            }
+         }
+         else {
+            sendMenu (display.slots, true, text);
+         }
 
          client.menu = id;
-         engfuncs.pfnClientCommand (m_ent, "speak \"player/geiger1\"\n"); // Stops others from hearing menu sounds..
+         engfuncs.pfnClientCommand (m_ent, "speak \"player/geiger1\"\n"); // stops others from hearing menu sounds..
+
+         break;
       }
    }
 }
@@ -1822,27 +1827,28 @@ void BotControl::maintainAdminRights () {
       return;
    }
 
-   for (int i = 0; i < game.maxClients (); ++i) {
-      edict_t *player = game.playerOfIndex (i);
+   StringRef key = cv_password_key.str ();
+   StringRef password = cv_password.str ();
 
-      // code below is executed only on dedicated server
-      if (util.isPlayer (player) && !util.isFakeClient (player)) {
-         Client &client = util.getClient (i);
+   for (auto &client : util.getClients ()) {
+      if (!(client.flags & ClientFlags::Used) || util.isFakeClient (client.ent)) {
+         continue;
+      }
+      auto ent = client.ent;
 
-         if (client.flags & ClientFlags::Admin) {
-            if (strings.isEmpty (cv_password_key.str ()) && strings.isEmpty (cv_password.str ())) {
-               client.flags &= ~ClientFlags::Admin;
-            }
-            else if (!!strcmp (cv_password.str (), engfuncs.pfnInfoKeyValue (engfuncs.pfnGetInfoKeyBuffer (client.ent), const_cast <char *> (cv_password_key.str ())))) {
-               client.flags &= ~ClientFlags::Admin;
-               game.print ("Player %s had lost remote access to %s.", player->v.netname.chars (), product.name);
-            }
+      if (client.flags & ClientFlags::Admin) {
+         if (key.empty () || password.empty ()) {
+            client.flags &= ~ClientFlags::Admin;
          }
-         else if (!(client.flags & ClientFlags::Admin) && !strings.isEmpty (cv_password_key.str ()) && !strings.isEmpty (cv_password.str ())) {
-            if (strcmp (cv_password.str (), engfuncs.pfnInfoKeyValue (engfuncs.pfnGetInfoKeyBuffer (client.ent), const_cast <char *> (cv_password_key.str ()))) == 0) {
-               client.flags |= ClientFlags::Admin;
-               game.print ("Player %s had gained full remote access to %s.", player->v.netname.chars (), product.name);
-            }
+         else if (password != engfuncs.pfnInfoKeyValue (engfuncs.pfnGetInfoKeyBuffer (ent), key.chars ())) {
+            client.flags &= ~ClientFlags::Admin;
+            ctrl.msg ("Player %s had lost remote access to %s.", ent->v.netname.chars (), product.name);
+         }
+      }
+      else if (!(client.flags & ClientFlags::Admin) && !key.empty () && !password.empty ()) {
+         if (password == engfuncs.pfnInfoKeyValue (engfuncs.pfnGetInfoKeyBuffer (ent), key.chars ())) {
+            client.flags |= ClientFlags::Admin;
+            ctrl.msg ("Player %s had gained full remote access to %s.", ent->v.netname.chars (), product.name);
          }
       }
    }

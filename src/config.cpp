@@ -19,6 +19,8 @@ ConVar cv_bind_menu_key ("yb_bind_menu_key", "=", "Bind's specified key for open
 ConVar cv_ignore_cvars_on_changelevel ("yb_ignore_cvars_on_changelevel", "yb_quota,yb_autovacate", "Specifies comma separated list of bot cvars, that will not be overriten by config on changelevel.", false);
 
 BotConfig::BotConfig () {
+   m_enableTranslation = true;
+
    m_chat.resize (Chat::Count);
    m_chatter.resize (Chatter::Count);
 
@@ -86,7 +88,7 @@ void BotConfig::loadMainConfig (bool isFirstLoad) {
                      engfuncs.pfnCvar_DirectSet (cvar, value);
                      continue;
                   }
-                  game.print ("Bot CVAR '%s' differs from the stored in the config (%s/%s). Ignoring.", cvar->name, cvar->string, value);
+                  ctrl.msg ("Bot CVAR '%s' differs from the stored in the config (%s/%s). Ignoring.", cvar->name, cvar->string, value);
 
                   // ensure cvar will have old value
                   engfuncs.pfnCvar_DirectSet (cvar, cvar->string);
@@ -618,7 +620,7 @@ void BotConfig::loadMapSpecificConfig () {
    if (File::exists (strings.format ("%s/%s", game.getRunningModName (), mapSpecificConfig))) {
       game.serverCommand ("exec %s", mapSpecificConfig);
 
-      game.print ("Executed map-specific config: %s", mapSpecificConfig);
+      ctrl.msg ("Executed map-specific config: %s", mapSpecificConfig);
    }
 }
 
@@ -747,7 +749,7 @@ WeaponInfo &BotConfig::findWeaponById (const int id) {
 const char *BotConfig::translate (StringRef input) {
    // this function translate input string into needed language
 
-   if (game.isDedicated ()) {
+   if (!m_enableTranslation) {
       return input.chars ();
    }
    auto hash = hashLangString (input.chars ());

@@ -361,7 +361,10 @@ public:
    }
 
    // helper to sending the client message
-   void sendClientMessage (bool console, edict_t *ent, const char *message);
+   void sendClientMessage (bool console, edict_t *ent, StringRef message);
+   
+   // helper to sending the server message
+   void sendServerMessage (StringRef message);
 
    // send server command
    template <typename ...Args> void serverCommand (const char *fmt, Args &&...args) {
@@ -375,7 +378,7 @@ public:
 
    // prints data to servers console
    template <typename ...Args> void print (const char *fmt, Args &&...args) {
-      engfuncs.pfnServerPrint (strings.concat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
+      sendServerMessage (strings.concat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
    }
 
    // prints center message to specified player

@@ -1547,7 +1547,7 @@ bool BotGraph::convertOldFormat () {
 
    // save new format in case loaded older one
    if (!m_paths.empty ()) {
-      game.print ("Converting old PWF to new format Graph.");
+      ctrl.msg ("Converting old PWF to new format Graph.");
 
       m_tempStrings = header.author;
       return saveGraphData ();
@@ -1603,7 +1603,7 @@ template <typename U> bool BotGraph::saveStorage (StringRef ext, StringRef name,
       if ((options & StorageOption::Exten) && exten != nullptr) {
          file.write (exten, sizeof (ExtenHeader));
       }
-      game.print ("Successfully saved Bots %s data.", name);
+      ctrl.msg ("Successfully saved Bots %s data.", name);
    }
    else {
       logger.error ("Unable to compress %s data (filename: '%s').", name, filename);
@@ -1652,11 +1652,11 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
 
       // try to download
       if (http.downloadFile (fromDownload, toDownload))  {
-         game.print ("%s file '%s' successfully downloaded. Processing...", name, filename);
+         ctrl.msg ("%s file '%s' successfully downloaded. Processing...", name, filename);
          return true;
       }
       else {
-         game.print ("Can't download '%s' from '%s' to '%s'... (%d).", filename, fromDownload, toDownload, http.getLastStatusCode ());
+         ctrl.msg ("Can't download '%s' from '%s' to '%s'... (%d).", filename, fromDownload, toDownload, http.getLastStatusCode ());
       }
       return false;
    };
@@ -1753,7 +1753,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
          if ((hdr.options & StorageOption::Exten) && exten != nullptr) {
             file.read (exten, sizeof (ExtenHeader));
          }
-         game.print ("Successfully loaded Bots %s data v%d (%d/%.2fMB).", name, hdr.version, m_paths.length (), static_cast <float> (data.capacity () * sizeof (U)) / 1024.0f / 1024.0f);
+         ctrl.msg ("Successfully loaded Bots %s data v%d (%d/%.2fMB).", name, hdr.version, m_paths.length (), static_cast <float> (data.capacity () * sizeof (U)) / 1024.0f / 1024.0f);
          file.close ();
 
          return true;
@@ -1797,7 +1797,7 @@ bool BotGraph::loadGraphData () {
          int mapSize = engfuncs.pfnGetFileSize (strings.format ("maps/%s.bsp", game.getMapName ()));
 
          if (mapSize != exten.mapSize) {
-            game.print ("Warning: Graph data is probably not for this map. Please check bots behaviour.");
+            ctrl.msg ("Warning: Graph data is probably not for this map. Please check bots behaviour.");
          }
       }
       extern ConVar cv_debug_goal;
@@ -2772,7 +2772,7 @@ void BotGraph::eraseFromDisk () {
    for (const auto &item : forErase) {
       if (File::exists (item)) {
          plat.removeFile (item.chars ());
-         game.print ("File %s, has been deleted from the hard disk", item);
+         ctrl.msg ("File %s, has been deleted from the hard disk", item);
       }
       else {
          logger.error ("Unable to open %s", item);

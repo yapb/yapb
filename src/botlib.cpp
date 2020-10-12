@@ -5347,7 +5347,7 @@ void Bot::debugMsgInternal (const char *str) {
       logger.message (printBuf.chars ());
    }
    if (playMessage) {
-      game.print (printBuf.chars ());
+      ctrl.msg (printBuf.chars ());
       sendToChat (printBuf, false);
    }
 }

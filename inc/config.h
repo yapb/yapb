@@ -67,6 +67,8 @@ private:
    SmallArray <int32> m_botBuyEconomyTable = { 1900, 2100, 2100, 4000, 6000, 7000, 16000, 1200, 800, 1000, 3000 };
    SmallArray <int32> m_grenadeBuyPrecent = { 95, 85, 60 };
 
+   bool m_enableTranslation; // enable or disables translated output
+
 public:
    BotConfig ();
    ~BotConfig () = default;
@@ -139,6 +141,11 @@ private:
    uint32 hashLangString (StringRef str);
 
 public:
+
+   // enables messages translation
+   void enableTranslation (bool enable) {
+      m_enableTranslation = enable;
+   }
 
    // checks whether chat banks contains messages
    bool hasChatBank (int chatType) const {

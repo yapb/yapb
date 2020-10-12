@@ -423,12 +423,54 @@ uint8 *Game::getVisibilitySet (Bot *bot, bool pvs) {
    return pvs ? engfuncs.pfnSetFatPVS (org) : engfuncs.pfnSetFatPAS (org);
 }
 
-void Game::sendClientMessage (bool console, edict_t *ent, const char *message) {
+void Game::sendClientMessage (bool console, edict_t *ent, StringRef message) {
    // helper to sending the client message
 
-   MessageWriter (MSG_ONE, msgs.id (NetMsg::TextMsg), nullptr, ent)
-      .writeByte (console ? HUD_PRINTCONSOLE : HUD_PRINTCENTER)
-      .writeString (message);
+   // do not send messages to fakeclients
+   if (!util.isPlayer (ent) || util.isFakeClient (ent)) {
+      return;
+   }
+
+   // used to split messages
+   auto sendTextMsg = [&console, &ent] (StringRef text) {
+      MessageWriter (MSG_ONE, msgs.id (NetMsg::TextMsg), nullptr, ent)
+         .writeByte (console ? HUD_PRINTCONSOLE : HUD_PRINTCENTER)
+         .writeString (text.chars ());
+   };
+   
+   // do not excess limit
+   constexpr size_t maxSendLength = 125;
+
+   // split up the string into chunks if needed (maybe check if it's multibyte?)
+   if (message.length () > maxSendLength) {
+      auto chunks = message.split (maxSendLength);
+
+      // send in chunks
+      for (size_t i = 0; i < chunks.length (); ++i) {
+         sendTextMsg (chunks[i]);
+      }
+      return;
+   }
+   sendTextMsg (message);
+}
+
+void Game::sendServerMessage (StringRef message) {
+   // helper to sending the client message
+
+   // do not excess limit
+   constexpr size_t maxSendLength = 250;
+
+   // split up the string into chunks if needed (maybe check if it's multibyte?)
+   if (message.length () > maxSendLength) {
+      auto chunks = message.split (maxSendLength);
+
+      // send in chunks
+      for (size_t i = 0; i < chunks.length (); ++i) {
+         engfuncs.pfnServerPrint (chunks[i].chars ());
+      }
+      return;
+   }
+   engfuncs.pfnServerPrint (message.chars ());
 }
 
 void Game::prepareBotArgs (edict_t *ent, String str) {
@@ -810,7 +852,7 @@ bool Game::postload () {
       if (is (GameFlags::Metamod)) {
          gameVersionFlags.push ("Metamod");
       }
-      print ("\n%s v%s successfully loaded for game: Counter-Strike %s.\n\tFlags: %s.\n", product.name, product.version, gameVersionStr, gameVersionFlags.empty () ? "None" : String::join (gameVersionFlags, ", "));
+      ctrl.msg ("\n%s v%s successfully loaded for game: Counter-Strike %s.\n\tFlags: %s.\n", product.name, product.version, gameVersionStr, gameVersionFlags.empty () ? "None" : String::join (gameVersionFlags, ", "));
    };
 
    if (plat.android) {

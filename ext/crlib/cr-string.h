@@ -327,6 +327,15 @@ public:
       return tokens;
    }
 
+   template <typename U = StringRef> constexpr Array <U> split (size_t maxLength) const {
+      Array <U> tokens;
+
+      for (size_t i = 0; i < length (); i += maxLength) {
+         tokens.emplace (substr (i, maxLength));
+      }
+      return tokens;
+   }
+
 public:
    constexpr const char *begin () const {
       return chars_;
@@ -671,6 +680,10 @@ public:
 
    Array <String> split (StringRef delim) const {
       return str ().split <String> (delim);
+   }
+
+   Array <String> split (size_t maxLength) const {
+      return str ().split <String> (maxLength);
    }
 
 public:

@@ -199,11 +199,22 @@ public:
 
 // global heloer for sending message to correct channel
 template <typename ...Args> inline void BotControl::msg (const char *fmt, Args &&...args) {
+   const bool isDedicated = game.isDedicated () && game.isNullEntity (m_ent);
+
+   // disable translation if we're sending to server console
+   if (isDedicated) {
+      conf.enableTranslation (false);
+   }
    auto result = strings.format (conf.translate (fmt), cr::forward <Args> (args)...);
 
    // if no receiver or many message have to appear, just print to server console
    if (game.isNullEntity (m_ent) || m_rapidOutput) {
-      game.print (result);
+      game.print (result); // print the info
+
+      // enable translation aftetwards
+      if (isDedicated) {
+         conf.enableTranslation (true);
+      }
       return;
    }
 
