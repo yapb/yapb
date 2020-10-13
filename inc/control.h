@@ -22,6 +22,12 @@ CR_DECLARE_SCOPED_ENUM (BotCommandResult,
    BadFormat // wrong params
 )
 
+// print queue destination
+CR_DECLARE_SCOPED_ENUM (PrintQueueDestination,
+   ServerConsole, // use server console
+   ClientConsole // use client console
+);
+
 // bot command manager
 class BotControl final : public Singleton <BotControl> {
 public:
@@ -36,7 +42,9 @@ public:
 
    public:
       BotCmd () = default;
-      BotCmd (StringRef name, StringRef format, StringRef help, Handler handler) : name (name), format (format), help (help), handler (cr::move (handler)) { }
+
+      BotCmd (StringRef name, StringRef format, StringRef help, Handler handler) : name (name), format (format), help (help), handler (cr::move (handler)) 
+      { }
    };
 
    // single bot menu
@@ -46,13 +54,27 @@ public:
       MenuHandler handler;
 
    public:
-      BotMenu (int ident, int slots, StringRef text, MenuHandler handler) : ident (ident), slots (slots), text (text), handler (cr::move (handler)) { }
+      BotMenu (int ident, int slots, StringRef text, MenuHandler handler) : ident (ident), slots (slots), text (text), handler (cr::move (handler))
+      { }
+   };
+
+   // queued text message to prevent overflow with rapid output
+   struct PrintQueue {
+      int32 destination;
+      String text;
+
+   public:
+      PrintQueue () = default;
+
+      PrintQueue (int32 destination, StringRef text) : destination (destination), text (text) 
+      { }
    };
 
 private:
    StringArray m_args;
    Array <BotCmd> m_cmds;
    Array <BotMenu> m_menus;
+   Deque <PrintQueue> m_printQueue;
    IntArray m_campIterator;
 
    edict_t *m_ent;
@@ -64,6 +86,8 @@ private:
 
    int m_menuServerFillTeam;
    int m_interMenuData[4] = { 0, };
+
+   float m_printQueueFlushTimestamp {};
 
 public:
    BotControl ();
@@ -142,6 +166,7 @@ public:
    void kickBotByMenu (int page);
    void assignAdminRights (edict_t *ent, char *infobuffer);
    void maintainAdminRights ();
+   void flushPrintQueue ();
 
 public:
    void setFromConsole (bool console) {
@@ -208,8 +233,14 @@ template <typename ...Args> inline void BotControl::msg (const char *fmt, Args &
    auto result = strings.format (conf.translate (fmt), cr::forward <Args> (args)...);
 
    // if no receiver or many message have to appear, just print to server console
-   if (game.isNullEntity (m_ent) || m_rapidOutput) {
-      game.print (result); // print the info
+   if (game.isNullEntity (m_ent)) {
+
+      if (m_rapidOutput) {
+         m_printQueue.emplaceLast (PrintQueueDestination::ServerConsole, result);
+      }
+      else {
+         game.print (result); // print the info
+      }
 
       // enable translation aftetwards
       if (isDedicated) {
@@ -218,8 +249,13 @@ template <typename ...Args> inline void BotControl::msg (const char *fmt, Args &
       return;
    }
 
-   if (m_isFromConsole || strlen (result) > 56) {
-      game.clientPrint (m_ent, result);
+   if (m_isFromConsole || strlen (result) > 56 || m_rapidOutput) {
+      if (m_rapidOutput) {
+         m_printQueue.emplaceLast (PrintQueueDestination::ClientConsole, result);
+      }
+      else {
+         game.clientPrint (m_ent, result);
+      }
    }
    else {
       game.centerPrint (m_ent, result);

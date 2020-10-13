@@ -207,6 +207,9 @@ int BotControl::cmdCvars () {
       cfg.open (strings.format ("%s/addons/%s/conf/%s.cfg", game.getRunningModName (), product.folder, product.folder), "wt");
       cfg.puts ("// Configuration file for %s\n\n", product.name);
    }
+   else {
+      ctrl.setRapidOutput (true);
+   }
 
    for (const auto &cvar : game.getCvars ()) {
       if (cvar.info.empty ()) {
@@ -258,6 +261,7 @@ int BotControl::cmdCvars () {
          msg (" ");
       }
    }
+   ctrl.setRapidOutput (false);
 
    if (isSave) {
       msg ("Bots cvars has been written to file.");
@@ -1854,6 +1858,22 @@ void BotControl::maintainAdminRights () {
    }
 }
 
+void BotControl::flushPrintQueue () {
+   if (m_printQueueFlushTimestamp > game.time () || m_printQueue.empty ()) {
+      return;
+   }
+   auto printable = m_printQueue.popFront ();
+
+   // send to needed destination
+   if (printable.destination == PrintQueueDestination::ServerConsole) {
+      game.print (printable.text.chars ());
+   }
+   else if (!game.isNullEntity (m_ent)) {
+      game.clientPrint (m_ent, printable.text.chars ());
+   }
+   m_printQueueFlushTimestamp = game.time () + 0.05f;
+}
+
 BotControl::BotControl () {
    m_ent = nullptr;
    m_djump = nullptr;
@@ -1862,6 +1882,7 @@ BotControl::BotControl () {
    m_isMenuFillCommand = false;
    m_rapidOutput = false;
    m_menuServerFillTeam = 5;
+   m_printQueueFlushTimestamp = 0.0f;
 
    m_cmds.emplace ("add/addbot/add_ct/addbot_ct/add_t/addbot_t/addhs/addhs_t/addhs_ct", "add [difficulty[personality[team[model[name]]]]]", "Adding specific bot into the game.", &BotControl::cmdAddBot);
    m_cmds.emplace ("kick/kickone/kick_ct/kick_t/kickbot_ct/kickbot_t", "kick [team]", "Kicks off the random bot from the game.", &BotControl::cmdKickBot);

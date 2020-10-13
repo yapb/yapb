@@ -132,17 +132,16 @@ public:
       return index_.first == index_.second;
    }
 
-   template <typename U> void emplaceLast (U &&object) {
+   template <typename ...Args> void emplaceLast (Args &&...args) {
       auto rear = pickRearIndex ();
 
-      alloc.construct (&contents_[index_.second], cr::forward <U> (object));
+      alloc.construct (&contents_[index_.second], cr::forward <Args> (args)...);
       index_.second = rear;
    }
 
-   template <typename U> void emplaceFront (U &&object) {
+   template <typename ...Args> void emplaceFront (Args &&...args) {
       index_.first = pickFrontIndex ();
-
-      alloc.construct (&contents_[index_.first], cr::forward <U> (object));
+      alloc.construct (&contents_[index_.first], cr::forward <Args> (args)...);
    }
 
    void discardFront () {

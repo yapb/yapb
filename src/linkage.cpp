@@ -406,6 +406,9 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
 
       // keep bot number up to date
       bots.maintainQuota ();
+
+      // flush print queue to users
+      ctrl.flushPrintQueue ();
       
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);

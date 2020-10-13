@@ -430,6 +430,7 @@ void Game::sendClientMessage (bool console, edict_t *ent, StringRef message) {
    if (!util.isPlayer (ent) || util.isFakeClient (ent)) {
       return;
    }
+   const String &buffer = message;
 
    // used to split messages
    auto sendTextMsg = [&console, &ent] (StringRef text) {
@@ -439,19 +440,19 @@ void Game::sendClientMessage (bool console, edict_t *ent, StringRef message) {
    };
    
    // do not excess limit
-   constexpr size_t maxSendLength = 125;
+   constexpr size_t maxSendLength = 187;
 
    // split up the string into chunks if needed (maybe check if it's multibyte?)
-   if (message.length () > maxSendLength) {
-      auto chunks = message.split (maxSendLength);
-
+   if (buffer.length () > maxSendLength) {
+      auto chunks = buffer.split (maxSendLength);
+     
       // send in chunks
       for (size_t i = 0; i < chunks.length (); ++i) {
          sendTextMsg (chunks[i]);
       }
       return;
    }
-   sendTextMsg (message);
+   sendTextMsg (buffer);
 }
 
 void Game::sendServerMessage (StringRef message) {
