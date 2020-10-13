@@ -822,6 +822,7 @@ private:
    bool updateLiftStates ();
    bool canRunHeavyWeight ();
 
+   void markStale ();
    void instantChatter (int type);
    void update ();
    void runMovement ();

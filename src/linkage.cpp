@@ -55,6 +55,13 @@ namespace variadic {
       // sometimes actually by their side, that's why we strongly recommend to check it here too. In
       // case it's a bot asking for a client command, we handle it like we do for bot commands
 
+      if (game.isNullEntity (ent)) {
+         if (game.is (GameFlags::Metamod)) {
+            RETURN_META (MRES_SUPERCEDE);
+         }
+         return;
+      }
+
       va_list ap;
       auto buffer = strings.chars ();
 
@@ -62,7 +69,7 @@ namespace variadic {
       vsnprintf (buffer, StringBuffer::StaticBufferSize, format, ap);
       va_end (ap);
 
-      if (util.isFakeClient (ent)) {
+      if (util.isFakeClient (ent) || (ent->v.flags & FL_DORMANT)) {
          auto bot = bots[ent];
 
          if (bot) {
@@ -227,9 +234,6 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
 
       for (auto &bot : bots) {
          if (bot->pev == &ent->v) {
-            bot->showChaterIcon (false);
-
-            conf.clearUsedName (bot.get ()); // clear the bot name
             bots.erase (bot.get ()); // remove the bot from bots array
 
             break;

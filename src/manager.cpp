@@ -1112,6 +1112,11 @@ bool BotManager::isTeamStacked (int team) {
 void BotManager::erase (Bot *bot) {
    for (auto &e : m_bots) {
       if (e.get () == bot) {
+         bot->showChaterIcon (false);
+         bot->markStale ();
+
+         conf.clearUsedName (bot); // clear the bot name
+
          e.reset ();
          m_bots.remove (e); // remove from bots array
 
@@ -1418,12 +1423,18 @@ void Bot::kick () {
    if (!(pev->flags & FL_CLIENT) || strings.isEmpty (username)) {
       return;
    }
-
-   // clear fakeclient bit
-   pev->flags &= ~FL_FAKECLIENT;
+   markStale ();
 
    game.serverCommand ("kick \"%s\"", username);
    ctrl.msg ("Bot '%s' kicked.", username);
+}
+
+void Bot::markStale () {
+   // clear fakeclient bit
+   pev->flags &= ~FL_FAKECLIENT;
+
+   // make as not receiveing any messages
+   pev->flags |= FL_DORMANT;
 }
 
 void Bot::updateTeamJoin () {
