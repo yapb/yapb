@@ -440,7 +440,7 @@ void Game::sendClientMessage (bool console, edict_t *ent, StringRef message) {
    };
    
    // do not excess limit
-   constexpr size_t maxSendLength = 187;
+   constexpr size_t maxSendLength = 125;
 
    // split up the string into chunks if needed (maybe check if it's multibyte?)
    if (buffer.length () > maxSendLength) {
@@ -459,7 +459,7 @@ void Game::sendServerMessage (StringRef message) {
    // helper to sending the client message
 
    // do not excess limit
-   constexpr size_t maxSendLength = 250;
+   constexpr size_t maxSendLength = 175;
 
    // split up the string into chunks if needed (maybe check if it's multibyte?)
    if (message.length () > maxSendLength) {
