@@ -982,11 +982,11 @@ void Bot::pushChatterMessage (int message) {
    }
    bool sendMessage = false;
 
-   const float messageRepeat = conf.getChatterMessageRepeatInterval (message);
-   float &messageTimer = m_chatterTimes[message];
+   auto messageRepeat = conf.getChatterMessageRepeatInterval (message);
+   auto &messageTimer = m_chatterTimes[message];
 
    if (messageTimer < game.time () || cr::fequal (messageTimer, kMaxChatterRepeatInteval)) {
-      if (!cr::fequal (messageTimer, kMaxChatterRepeatInteval) && !cr::fequal (messageRepeat, kMaxChatterRepeatInteval)) {
+      if (!cr::fequal (messageRepeat, kMaxChatterRepeatInteval)) {
          messageTimer = game.time () + messageRepeat;
       }
       sendMessage = true;
@@ -1830,16 +1830,19 @@ void Bot::setConditions () {
       m_lastVictim = nullptr;
    }
 
+   auto clearLastEnemy = [&] () {
+      m_lastEnemyOrigin = nullptr;
+      m_lastEnemy = nullptr;
+   };
+
    // check if our current enemy is still valid
    if (!game.isNullEntity (m_lastEnemy)) {
       if (!util.isAlive (m_lastEnemy) && m_shootAtDeadTime < game.time ()) {
-         m_lastEnemyOrigin = nullptr;
-         m_lastEnemy = nullptr;
+         clearLastEnemy ();
       }
    }
    else {
-      m_lastEnemyOrigin = nullptr;
-      m_lastEnemy = nullptr;
+      clearLastEnemy ();
    }
 
    // don't listen if seeing enemy, just checked for sounds or being blinded (because its inhuman)
@@ -4800,7 +4803,7 @@ void Bot::logic () {
    updateLookAngles (); // and turn to chosen aim direction
 
    // the bots wants to fire at something?
-   if (m_wantsToFire && !m_isUsingGrenade && m_shootTime <= game.time ()) {
+   if (m_shootAtDeadTime > game.time () || (m_wantsToFire && !m_isUsingGrenade && m_shootTime <= game.time ())) {
       fireWeapons (); // if bot didn't fire a bullet try again next frame
    }
 

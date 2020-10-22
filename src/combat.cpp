@@ -359,9 +359,9 @@ bool Bot::lookupEnemies () {
          m_enemy = nullptr;
 
          // shoot at dying players if no new enemy to give some more human-like illusion
-         if (m_seeEnemyTime + 0.3f > game.time ()) {
+         if (m_seeEnemyTime + 0.1f > game.time ()) {
             if (!usesSniper ()) {
-               m_shootAtDeadTime = game.time () + 0.4f;
+               m_shootAtDeadTime = game.time () + cr::clamp (m_agressionLevel * 1.25f, 0.45f, 1.05f);
                m_actualReactionTime = 0.0f;
                m_states |= Sense::SuspectEnemy;
 
@@ -369,6 +369,7 @@ bool Bot::lookupEnemies () {
             }
             return false;
          }
+         
          else if (m_shootAtDeadTime > game.time ()) {
             m_actualReactionTime = 0.0f;
             m_states |= Sense::SuspectEnemy;
@@ -422,7 +423,7 @@ Vector Bot::getBodyOffsetError (float distance) {
       Vector &maxs = m_enemy->v.maxs, &mins = m_enemy->v.mins;
 
       m_aimLastError = Vector (rg.get (mins.x * error, maxs.x * error), rg.get (mins.y * error, maxs.y * error), rg.get (mins.z * error, maxs.z * error));
-      m_aimErrorTime = game.time () + rg.get (0.5f, 1.0f);
+      m_aimErrorTime = game.time () + rg.get (1.0f, 1.2f);
    }
    return m_aimLastError;
 }
@@ -461,7 +462,8 @@ const Vector &Bot::getEnemyBodyOffset () {
       aimPos += getBodyOffsetError (distance);
    }
    else {
-     
+      const float highOffset = m_difficulty > Difficulty::Normal ? 3.5f : 0.0f;
+
       // now take in account different parts of enemy body
       if (m_enemyParts & (Visibility::Head | Visibility::Body)) {
 
@@ -470,11 +472,11 @@ const Vector &Bot::getEnemyBodyOffset () {
             aimPos.z = headOffset (m_enemy) + getEnemyBodyOffsetCorrection (distance);
          }
          else {
-            aimPos.z += 3.5f;
+            aimPos.z += highOffset;
          }
       }
       else if (m_enemyParts & Visibility::Body) {
-         aimPos.z += 3.5f;
+         aimPos.z += highOffset;
       }
       else if (m_enemyParts & Visibility::Other) {
          aimPos = m_enemyOrigin;
@@ -502,7 +504,7 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
    static float offsetRanges[9][3] = {
       { 0.0f,  0.0f,  0.0f }, // none
       { 0.0f,  0.0f,  0.0f }, // melee
-      { 6.5f,  6.5f,  4.5f }, // pistol
+      { 6.5f,  6.5f,  1.5f }, // pistol
       { 9.5f,  9.0f, -5.0f }, // shotgun
       { 4.5f,  3.5f, -5.0f }, // zoomrifle
       { 4.5f,  1.0f, -4.5f }, // rifle
@@ -780,7 +782,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
    }
 
    // we're should stand still before firing sniper weapons, else sniping is useless..
-   if (usesSniper () && (m_aimFlags & (AimFlags::Enemy | AimFlags::LastEnemy)) && !m_isReloading && pev->velocity.lengthSq () > 0.0f) {
+   if (usesSniper () && (m_aimFlags & (AimFlags::Enemy | AimFlags::LastEnemy)) && !m_isReloading && pev->velocity.lengthSq () > 0.0f && getCurrentTaskId () != Task::SeekCover) {
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
       m_navTimeset = game.time ();

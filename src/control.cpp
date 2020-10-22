@@ -474,6 +474,11 @@ int BotControl::cmdNodeSave () {
       msg ("All nodes has been saved and written to disk (IGNORING QUALITY CONTROL).");
    }
    else if (strValue (option) == "old") {
+      if (graph.length () >= 1024) {
+         msg ("Unable to save POD-Bot Format waypoint file. Number of nodes exceeds 1024.");
+
+         return BotCommandResult::Handled;
+      }
       graph.saveOldFormat ();
 
       msg ("All nodes has been saved and written to disk (POD-Bot Format (.pwf)).");
