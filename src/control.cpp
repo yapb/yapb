@@ -255,7 +255,7 @@ int BotControl::cmdCvars () {
          cfg.puts ("\n");
       }
       else {
-         msg ("cvar: %s", cvar.reg.name);
+         msg ("name: %s", cvar.reg.name);
          msg ("info: %s", conf.translate (cvar.info));
 
          msg (" ");
