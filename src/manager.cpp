@@ -1,16 +1,8 @@
 //
 // YaPB - Counter-Strike Bot based on PODBot by Markus Klinge.
-// Copyright © 2004-2020 YaPB Development Team <team@yapb.ru>.
+// Copyright © 2004-2020 YaPB Project <yapb@jeefo.net>.
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
+// SPDX-License-Identifier: MIT
 //
 
 #include <yapb.h>
@@ -295,7 +287,7 @@ void BotManager::addbot (StringRef name, int difficulty, int personality, int te
    request.manual = manual;
 
    // put to queue
-   m_addRequests.push (cr::move (request));
+   m_addRequests.emplaceLast (cr::move (request));
 }
 
 void BotManager::addbot (StringRef name, StringRef difficulty, StringRef personality, StringRef team, StringRef skin, bool manual) {
@@ -311,7 +303,7 @@ void BotManager::addbot (StringRef name, StringRef difficulty, StringRef persona
    request.personality = (personality.empty () || personality == any) ? -1 : personality.int_ ();
    request.manual = manual;
 
-   m_addRequests.push (cr::move (request));
+   m_addRequests.emplaceLast (cr::move (request));
 }
 
 void BotManager::maintainQuota () {
@@ -328,23 +320,23 @@ void BotManager::maintainQuota () {
 
    // bot's creation update
    if (!m_addRequests.empty () && m_maintainTime < game.time ()) {
-      const BotRequest &last = m_addRequests.pop ();
-      const BotCreateResult callResult = create (last.name, last.difficulty, last.personality, last.team, last.skin);
+      const BotRequest &request = m_addRequests.popFront ();
+      const BotCreateResult createResult = create (request.name, request.difficulty, request.personality, request.team, request.skin);
 
-      if (last.manual) {
+      if (request.manual) {
          cv_quota.set (cv_quota.int_ () + 1);
       }
 
       // check the result of creation
-      if (callResult == BotCreateResult::GraphError) {
+      if (createResult == BotCreateResult::GraphError) {
          m_addRequests.clear (); // something wrong with graph, reset tab of creation
          cv_quota.set (0); // reset quota
       }
-      else if (callResult == BotCreateResult::MaxPlayersReached) {
+      else if (createResult == BotCreateResult::MaxPlayersReached) {
          m_addRequests.clear (); // maximum players reached, so set quota to maximum players
          cv_quota.set (getBotCount ());
       }
-      else if (callResult == BotCreateResult::TeamStacked) {
+      else if (createResult == BotCreateResult::TeamStacked) {
          ctrl.msg ("Could not add bot to the game: Team is stacked (to disable this check, set mp_limitteams and mp_autoteambalance to zero and restart the round)");
 
          m_addRequests.clear ();

@@ -1,16 +1,8 @@
 //
 // YaPB - Counter-Strike Bot based on PODBot by Markus Klinge.
-// Copyright © 2004-2020 YaPB Development Team <team@yapb.ru>.
+// Copyright © 2004-2020 YaPB Project <yapb@jeefo.net>.
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
+// SPDX-License-Identifier: MIT
 //
 
 #pragma once
@@ -60,7 +52,7 @@ public:
 
    // queued text message to prevent overflow with rapid output
    struct PrintQueue {
-      int32 destination;
+      int32 destination {};
       String text;
 
    public:
@@ -83,6 +75,7 @@ private:
    bool m_isFromConsole;
    bool m_rapidOutput;
    bool m_isMenuFillCommand;
+   bool m_ignoreTranslate;
 
    int m_menuServerFillTeam;
    int m_interMenuData[4] = { 0, };
@@ -199,6 +192,10 @@ public:
       return arg < m_args.length ();
    }
 
+   bool ignoreTranslate () const {
+      return m_ignoreTranslate;
+   }
+
    void collectArgs () {
       m_args.clear ();
 
@@ -224,12 +221,8 @@ public:
 
 // global heloer for sending message to correct channel
 template <typename ...Args> inline void BotControl::msg (const char *fmt, Args &&...args) {
-   const bool isDedicated = game.isDedicated () && game.isNullEntity (m_ent);
+   m_ignoreTranslate = game.isDedicated () && game.isNullEntity (m_ent);
 
-   // disable translation if we're sending to server console
-   if (isDedicated) {
-      conf.enableTranslation (false);
-   }
    auto result = strings.format (conf.translate (fmt), cr::forward <Args> (args)...);
 
    // if no receiver or many message have to appear, just print to server console
@@ -240,11 +233,6 @@ template <typename ...Args> inline void BotControl::msg (const char *fmt, Args &
       }
       else {
          game.print (result); // print the info
-      }
-
-      // enable translation aftetwards
-      if (isDedicated) {
-         conf.enableTranslation (true);
       }
       return;
    }

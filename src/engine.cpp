@@ -1,16 +1,8 @@
 //
 // YaPB - Counter-Strike Bot based on PODBot by Markus Klinge.
-// Copyright © 2004-2020 YaPB Development Team <team@yapb.ru>.
+// Copyright © 2004-2020 YaPB Project <yapb@jeefo.net>.
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
+// SPDX-License-Identifier: MIT
 //
 
 #include <yapb.h>
@@ -29,7 +21,7 @@ Game::Game () {
 
    m_gameFlags = 0;
    m_mapFlags = 0;
-   m_slowFrame = 0.0;
+   m_slowFrame = 0.0f;
 
    m_cvars.clear ();
 }
@@ -378,6 +370,21 @@ void Game::playSound (edict_t *ent, const char *sound) {
       return;
    }
    engfuncs.pfnEmitSound (ent, CHAN_WEAPON, sound, 1.0f, ATTN_NORM, 0, 100);
+}
+
+void Game::setPlayerStartDrawModels () {
+   HashMap <String, String> models;
+
+   models["info_player_start"] = "models/player/urban/urban.mdl";
+   models["info_player_deathmatch"] = "models/player/terror/terror.mdl";
+   models["info_vip_start"] = "models/player/vip/vip.mdl";
+
+   models.foreach ([&] (const String &key, const String &val) {
+      game.searchEntities ("classname", key, [&] (edict_t *ent) {
+         m_engineWrap.setModel (ent, val.chars ());
+         return EntitySearchResult::Continue;
+      });
+   });
 }
 
 bool Game::checkVisibility (edict_t *ent, uint8 *set) {

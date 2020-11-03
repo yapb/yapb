@@ -1,23 +1,15 @@
 //
 // YaPB - Counter-Strike Bot based on PODBot by Markus Klinge.
-// Copyright © 2004-2020 YaPB Development Team <team@yapb.ru>.
+// Copyright © 2004-2020 YaPB Project <yapb@jeefo.net>.
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
+// SPDX-License-Identifier: MIT
 //
 
 #pragma once
 
 // botname structure definition
 struct BotName {
-   String name = "";
+   String name;
    int usedBy = -1;
 
 public:
@@ -66,8 +58,6 @@ private:
    SmallArray <int32> m_carefulWeaponPrefs = { 0, 2, 1, 4, 25, 6, 3, 7, 8, 12, 10, 13, 11, 9, 24, 18, 14, 17, 16, 15, 19, 20, 21, 22, 23, 5 };
    SmallArray <int32> m_botBuyEconomyTable = { 1900, 2100, 2100, 4000, 6000, 7000, 16000, 1200, 800, 1000, 3000 };
    SmallArray <int32> m_grenadeBuyPrecent = { 95, 85, 60 };
-
-   bool m_enableTranslation; // enable or disables translated output
 
 public:
    BotConfig ();
@@ -141,11 +131,6 @@ private:
    uint32 hashLangString (StringRef str);
 
 public:
-
-   // enables messages translation
-   void enableTranslation (bool enable) {
-      m_enableTranslation = enable;
-   }
 
    // checks whether chat banks contains messages
    bool hasChatBank (int chatType) const {

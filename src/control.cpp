@@ -1,16 +1,8 @@
 //
 // YaPB - Counter-Strike Bot based on PODBot by Markus Klinge.
-// Copyright © 2004-2020 YaPB Development Team <team@yapb.ru>.
+// Copyright © 2004-2020 YaPB Project <yapb@jeefo.net>.
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
+// SPDX-License-Identifier: MIT
 //
 
 #include <yapb.h>
@@ -824,7 +816,7 @@ int BotControl::cmdNodeIterateCamp () {
       msg ("Before calling for 'begin' camp point, you should hit 'end'.");
       return BotCommandResult::Handled;
    }
-   
+
    if (op == "end") {
       m_campIterator.clear ();
    }
@@ -1203,7 +1195,7 @@ int BotControl::menuGraphPage1 (int item) {
    case 4:
       graph.setEditFlag (GraphEdit::On);
       graph.erasePath ();
-      
+
       showMenu (Menu::NodeMainPage1);
       break;
 
@@ -1244,7 +1236,7 @@ int BotControl::menuGraphPage2 (int item) {
    closeMenu (); // reset menu display
 
    switch (item) {
-   case 1: 
+   case 1:
       graph.showStats ();
       showMenu (Menu::NodeMainPage2);
 
@@ -1696,7 +1688,7 @@ void BotControl::showMenu (int id) {
          // translate all the things
          parsed.text = translated;
 
-          // make menu looks best
+         // make menu looks best
          if (!(game.is (GameFlags::Legacy))) {
             for (int j = 0; j < 10; ++j) {
                parsed.text.replace (strings.format ("%d.", j), strings.format ("\\r%d.\\w", j));
@@ -1710,7 +1702,7 @@ void BotControl::showMenu (int id) {
       return;
    }
    auto &client = util.getClient (game.indexOfPlayer (m_ent));
-   
+
 
    auto sendMenu = [&](int32 slots, bool last, StringRef text) {
       MessageWriter (MSG_ONE, msgs.id (NetMsg::ShowMenu), nullptr, m_ent)
@@ -1883,6 +1875,7 @@ BotControl::BotControl () {
    m_ent = nullptr;
    m_djump = nullptr;
 
+   m_ignoreTranslate = false;
    m_isFromConsole = false;
    m_isMenuFillCommand = false;
    m_rapidOutput = false;
@@ -1938,6 +1931,10 @@ void BotControl::enableDrawModels (bool enable) {
    entities.push ("info_player_deathmatch");
    entities.push ("info_vip_start");
 
+   if (enable) {
+      game.setPlayerStartDrawModels ();
+   }
+
    for (auto &entity : entities) {
       game.searchEntities ("classname", entity, [&enable] (edict_t *ent) {
          if (enable) {
@@ -1947,7 +1944,7 @@ void BotControl::enableDrawModels (bool enable) {
             ent->v.effects |= EF_NODRAW;
          }
          return EntitySearchResult::Continue;
-      });
+         });
    }
 }
 

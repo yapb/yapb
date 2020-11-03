@@ -1,16 +1,8 @@
 //
 // YaPB - Counter-Strike Bot based on PODBot by Markus Klinge.
-// Copyright © 2004-2020 YaPB Development Team <team@yapb.ru>.
+// Copyright © 2004-2020 YaPB Project <yapb@jeefo.net>.
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
+// SPDX-License-Identifier: MIT
 //
 
 #pragma once
@@ -38,8 +30,8 @@ public:
 public:
    StringRef name { "YaPB" };
    StringRef year { __DATE__ + 7 };
-   StringRef author { "YaPB Development Team" };
-   StringRef email { "team@yapb.ru" };
+   StringRef author { "YaPB Project" };
+   StringRef email { "yapb@jeefo.net" };
    StringRef url { "https://yapb.ru/" };
    StringRef download { "yapb.ru" };
    StringRef folder { "yapb" };
