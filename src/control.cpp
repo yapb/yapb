@@ -325,10 +325,10 @@ int BotControl::cmdNode () {
 
       // add path commands
       addGraphCmd ("path_create", "path_create [noarguments]", "Opens and displays path creation menu.", &BotControl::cmdNodePathCreate);
-      addGraphCmd ("path_create_in", "path_create_in [noarguments]", "Creates incoming path connection from faced to nearest graph.", &BotControl::cmdNodePathCreate);
-      addGraphCmd ("path_create_out", "path_create_out [noarguments]", "Creates outgoing path connection from faced to nearest graph.", &BotControl::cmdNodePathCreate);
-      addGraphCmd ("path_create_both", "path_create_both [noarguments]", "Creates both-ways path connection from faced to nearest graph.", &BotControl::cmdNodePathCreate);
-      addGraphCmd ("path_delete", "path_delete [noarguments]", "Deletes path from faced to nearest graph.", &BotControl::cmdNodePathDelete);
+      addGraphCmd ("path_create_in", "path_create_in [noarguments]", "Creates incoming path connection from faced to nearest node.", &BotControl::cmdNodePathCreate);
+      addGraphCmd ("path_create_out", "path_create_out [noarguments]", "Creates outgoing path connection from nearest to faced node.", &BotControl::cmdNodePathCreate);
+      addGraphCmd ("path_create_both", "path_create_both [noarguments]", "Creates both-ways path connection between faced and nearest node.", &BotControl::cmdNodePathCreate);
+      addGraphCmd ("path_delete", "path_delete [noarguments]", "Deletes path from nearest to faced node.", &BotControl::cmdNodePathDelete);
       addGraphCmd ("path_set_autopath", "path_set_autopath [max_distance]", "Opens menu for setting autopath maximum distance.", &BotControl::cmdNodePathSetAutoDistance);
 
       // camp points iterator
@@ -336,7 +336,7 @@ int BotControl::cmdNode () {
 
       // remote graph editing stuff
       if (game.isDedicated ()) {
-         addGraphCmd ("acquire_editor", "acquire_edito [noarguments]r", "Acquires rights to edit graph on dedicated server.", &BotControl::cmdNodeAcquireEditor);
+         addGraphCmd ("acquire_editor", "acquire_editor [noarguments]", "Acquires rights to edit graph on dedicated server.", &BotControl::cmdNodeAcquireEditor);
          addGraphCmd ("release_editor", "release_editor [noarguments]", "Releases graph editing rights.", &BotControl::cmdNodeReleaseEditor);
       }
    }
@@ -1882,16 +1882,16 @@ BotControl::BotControl () {
    m_menuServerFillTeam = 5;
    m_printQueueFlushTimestamp = 0.0f;
 
-   m_cmds.emplace ("add/addbot/add_ct/addbot_ct/add_t/addbot_t/addhs/addhs_t/addhs_ct", "add [difficulty[personality[team[model[name]]]]]", "Adding specific bot into the game.", &BotControl::cmdAddBot);
+   m_cmds.emplace ("add/addbot/add_ct/addbot_ct/add_t/addbot_t/addhs/addhs_t/addhs_ct", "add [difficulty] [personality] [team] [model] [name]", "Adding specific bot into the game.", &BotControl::cmdAddBot);
    m_cmds.emplace ("kick/kickone/kick_ct/kick_t/kickbot_ct/kickbot_t", "kick [team]", "Kicks off the random bot from the game.", &BotControl::cmdKickBot);
    m_cmds.emplace ("removebots/kickbots/kickall", "removebots [instant]", "Kicks all the bots from the game.", &BotControl::cmdKickBots);
    m_cmds.emplace ("kill/killbots/killall/kill_ct/kill_t", "kill [team]", "Kills the specified team / all the bots.", &BotControl::cmdKillBots);
-   m_cmds.emplace ("fill/fillserver", "fill [team[count[difficulty[pesonality]]]]", "Fill the server (add bots) with specified parameters.", &BotControl::cmdFill);
+   m_cmds.emplace ("fill/fillserver", "fill [team] [count] [difficulty] [pesonality]", "Fill the server (add bots) with specified parameters.", &BotControl::cmdFill);
    m_cmds.emplace ("vote/votemap", "vote [map_id]", "Forces all the bot to vote to specified map.", &BotControl::cmdVote);
    m_cmds.emplace ("weapons/weaponmode", "weapons [knife|pistol|shotgun|smg|rifle|sniper|standard]", "Sets the bots weapon mode to use", &BotControl::cmdWeaponMode);
    m_cmds.emplace ("menu/botmenu", "menu [cmd]", "Opens the main bot menu, or command menu if specified.", &BotControl::cmdMenu);
    m_cmds.emplace ("version/ver/about", "version [no arguments]", "Displays version information about bot build.", &BotControl::cmdVersion);
-   m_cmds.emplace ("graphmenu/wpmenu/wptmenu", "graphmenu [noarguments]", "Opens and displays bots graph edtior.", &BotControl::cmdNodeMenu);
+   m_cmds.emplace ("graphmenu/wpmenu/wptmenu", "graphmenu [noarguments]", "Opens and displays bots graph editor.", &BotControl::cmdNodeMenu);
    m_cmds.emplace ("list/listbots", "list [noarguments]", "Lists the bots currently playing on server.", &BotControl::cmdList);
    m_cmds.emplace ("graph/g/wp/wpt/waypoint", "graph [help]", "Handles graph operations.", &BotControl::cmdNode);
    m_cmds.emplace ("cvars", "cvars [save|cvar]", "Display all the cvars with their descriptions.", &BotControl::cmdCvars);
