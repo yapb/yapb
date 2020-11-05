@@ -9,6 +9,14 @@
 
 // module interface implementation
 class YaPBModule : public IYaPBModule, public Singleton <YaPBModule> {
+private:
+   Bot *getBot (int index) {
+      if (index < 1) {
+         return nullptr;
+      }
+      return bots[game.playerOfIndex (index - 1)];
+   }
+
 public:
    // get the bot version string
    virtual const char *getBotVersion () override {
@@ -22,13 +30,13 @@ public:
 
    // checks whether specified players is a yapb bot
    virtual bool isBot (int entity) override {
-      return bots[entity] != nullptr;
+      return getBot (entity) != nullptr;
    }
 
    // gets the node nearest to origin
-   virtual int getNearestNode (const Vector &origin) override {
+   virtual int getNearestNode (float *origin) override {
       if (graph.length () > 0) {
-         return graph.getNearest (origin);
+         return graph.getNearestNoBuckets (origin);
       }
       return kInvalidNodeIndex;
    }
@@ -48,7 +56,7 @@ public:
 
    // get the bots current active node
    virtual int getCurrentNodeId (int entity) override {
-      auto bot = bots[entity];
+      auto bot = getBot (entity);
 
       if (bot) {
          return bot->getCurrentNodeIndex ();
@@ -61,7 +69,7 @@ public:
       if (!graph.exists (node)) {
          return;
       }
-      auto bot = bots[entity];
+      auto bot = getBot (entity);
 
       if (bot) {
          return bot->sendBotToOrigin (graph[node].origin);
@@ -70,7 +78,7 @@ public:
 
    // force bot to go to selected origin
    virtual void setBotGoalOrigin (int entity, float *origin) {
-      auto bot = bots[entity];
+      auto bot = getBot (entity);
 
       if (bot) {
          return bot->sendBotToOrigin (origin);

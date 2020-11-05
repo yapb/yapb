@@ -23,7 +23,7 @@ public:
    virtual bool isBot (int entity) = 0;
 
    // gets the node nearest to origin
-   virtual int getNearestNode (const Vector &origin) = 0;
+   virtual int getNearestNode (float *origin) = 0;
 
    // checks wether node is valid
    virtual bool isNodeValid (int node) = 0;
