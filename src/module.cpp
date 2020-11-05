@@ -8,7 +8,7 @@
 #include <yapb.h>
 
 // module interface implementation
-class YaPBModule : public IYaPBModule, public Singleton <YaPBModule> {
+class YaPBModule : public IYaPBModule {
 private:
    Bot *getBot (int index) {
       if (index < 1) {
@@ -25,7 +25,7 @@ public:
 
    // checks if bots are currently in game
    virtual bool isBotsInGame () override {
-      return bots.getBotCount () > 0 ;
+      return bots.getBotCount () > 0;
    }
 
    // checks whether specified players is a yapb bot
@@ -65,7 +65,7 @@ public:
    }
 
    // force bot to go to the selected node
-   virtual void setBotGoal (int entity, int node) {
+   virtual void setBotGoal (int entity, int node) override {
       if (!graph.exists (node)) {
          return;
       }
@@ -77,7 +77,7 @@ public:
    }
 
    // force bot to go to selected origin
-   virtual void setBotGoalOrigin (int entity, float *origin) {
+   virtual void setBotGoalOrigin (int entity, float *origin) override {
       auto bot = getBot (entity);
 
       if (bot) {
@@ -86,12 +86,12 @@ public:
    }
 };
 
-CR_EXPOSE_GLOBAL_SINGLETON (YaPBModule, botModule);
-
 // export all the stuff, maybe add versioned interface ?
 CR_EXPORT IYaPBModule *GetBotAPI (int version) {
    if (version != kYaPBModuleVersion) {
       return nullptr;
    }
+   static YaPBModule botModule;
+
    return &botModule;
 }
