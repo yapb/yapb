@@ -48,6 +48,7 @@
     <ClInclude Include="..\inc\graph.h" />
     <ClInclude Include="..\inc\manager.h" />
     <ClInclude Include="..\inc\message.h" />
+    <ClInclude Include="..\inc\module.h" />
     <ClInclude Include="..\inc\product.h" />
     <ClInclude Include="..\inc\support.h" />
     <ClInclude Include="..\inc\yapb.h" />
@@ -65,6 +66,7 @@
     <ClCompile Include="..\src\linkage.cpp" />
     <ClCompile Include="..\src\manager.cpp" />
     <ClCompile Include="..\src\message.cpp" />
+    <ClCompile Include="..\src\module.cpp" />
     <ClCompile Include="..\src\navigate.cpp" />
     <ClCompile Include="..\src\support.cpp" />
   </ItemGroup>
