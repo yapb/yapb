@@ -144,6 +144,9 @@
     <ClInclude Include="..\ext\crlib\cr-deque.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
+    <ClInclude Include="..\inc\module.h">
+      <Filter>inc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\android.cpp">
@@ -183,6 +186,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\config.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\module.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

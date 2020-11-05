@@ -5308,6 +5308,17 @@ void Bot::startDoubleJump (edict_t *ent) {
    sendToChat (strings.format ("Ok %s, i will help you!", ent->v.netname.chars ()), true);
 }
 
+void Bot::sendBotToOrigin (const Vector &origin) {
+   clearSearchNodes ();
+   clearTask (Task::MoveToPosition); // remove any move tasks
+
+   m_position = origin;
+   startTask (Task::MoveToPosition, TaskPri::MoveToPosition, kInvalidNodeIndex, 0.0f, true);
+
+   m_chosenGoalIndex = graph.getNearest (origin);
+   getTask ()->data = m_chosenGoalIndex;
+}
+
 void Bot::resetDoubleJump () {
    completeTask ();
 

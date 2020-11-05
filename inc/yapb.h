@@ -16,6 +16,7 @@
 using namespace cr;
 
 #include <product.h>
+#include <module.h>
 
 // forwards
 class Bot;
@@ -1062,6 +1063,7 @@ public:
    void kick ();
    void resetDoubleJump ();
    void startDoubleJump (edict_t *ent);
+   void sendBotToOrigin (const Vector &origin);
 
    bool hasHostage ();
    bool usesRifle ();
@@ -1118,6 +1120,11 @@ public:
    // entity index with worldspawn shift
    int entindex () const {
       return m_index + 1;
+   }
+
+   // get the current node index 
+   int getCurrentNodeIndex () const {
+      return m_currentNodeIndex;
    }
 
    // set the last bot trace result

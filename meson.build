@@ -216,6 +216,7 @@ sourceFiles = files (
     'src/graph.cpp',
     'src/linkage.cpp',
     'src/manager.cpp',
+    'src/module.cpp',
     'src/message.cpp',
     'src/navigate.cpp',
     'src/support.cpp'
