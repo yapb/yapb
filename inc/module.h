@@ -13,6 +13,9 @@ constexpr int kYaPBModuleVersion = 1;
 // basic module interface, if you need to additional stuff, please post an issue
 class IYaPBModule {
 public:
+   virtual ~IYaPBModule () = default;
+
+public:
    // get the bot version string
    virtual const char *getBotVersion () = 0;
 
