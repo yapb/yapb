@@ -2820,7 +2820,7 @@ void Bot::updateLookAngles () {
    direction.clampAngles ();
 
    // lower skilled bot's have lower aiming
-   if (m_difficulty < Difficulty::Normal) {
+   if (m_difficulty == Difficulty::Noob) {
       updateLookAnglesNewbie (direction, delta);
       updateBodyAngles ();
 
