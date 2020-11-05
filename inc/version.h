@@ -14,6 +14,6 @@
 #define MODULE_BUILD_MACHINE "localhost"
 #define MODULE_BUILD_COMPILER "unknown"
 
-#define MODULE_BOT_VERSION "4.0"
+#define MODULE_BOT_VERSION "4.1"
 #define MODULE_BOT_VERSION_FILE 4,0,0,000
 #define MODULE_BOT_BUILD_ID "0:0"
