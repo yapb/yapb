@@ -79,16 +79,31 @@ if isCLang or isGCC or (isIntel and not isWindows)
     
     if not isDarwin
        flagsCompiler += [
-           '-pedantic'
+           '-pedantic',
        ]
     endif
     
     if isOptimize
-        flagsCompiler += '-msse2'
+        flagsCompiler += '-msse3'
         
-        if isCLang and not isDarwin
-            flagsCompiler += '-flto'
-            flagsLinker += '-flto'
+        if isCLang or isGCC and not isDarwin
+            flagsCompiler += [
+                '-flto',
+                '-fdata-sections',
+                '-ffunction-sections'
+            ]
+            
+            if isGCC
+                flagsCompiler += '-fgraphite-identity'
+            endif
+            
+            flagsLinker += [
+                '-flto',
+                '-flto-partition=none',
+                '-s',
+                '-Wl,--version-script=../version_script.lds',
+                '-Wl,--gc-sections'
+            ]
         endif
     endif
     
@@ -129,7 +144,7 @@ if isLinux or isDarwin
     else
         flagsCompiler += [
             '-mtune=generic',
-            '-msse2',
+            '-msse3',
             '-mfpmath=sse',
             '-fno-builtin',
             '-funroll-loops',
@@ -235,7 +250,7 @@ if isWindows and not isCLang
 endif
 
 shared_library (
-    'yapb', 
+    meson.project_name (), 
     sourceFiles,
     include_directories: includes,
     

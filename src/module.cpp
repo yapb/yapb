@@ -26,7 +26,7 @@ private:
 public:
    // get the bot version string
    virtual const char *getBotVersion () override {
-      return product.version.chars ();
+      return MODULE_BOT_VERSION "." MODULE_BUILD_COUNT;
    }
 
    // checks if bots are currently in game
@@ -82,6 +82,7 @@ public:
       }
    }
 
+   // get's the bot current goal node
    virtual int getBotGoal (int entity) override {
       auto bot = getBot (entity);
 

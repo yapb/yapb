@@ -99,6 +99,11 @@ CR_NAMESPACE_BEGIN
 #  pragma GCC diagnostic ignored "-Wignored-attributes"
 #endif
 
+// avoid linking to GLIBC_2.27
+#if defined (CR_LINUX) && !defined (CR_CXX_INTEL)
+   __asm__ (".symver powf, powf@GLIBC_2.0");
+#endif
+
 CR_NAMESPACE_END
 
 #if defined(CR_WINDOWS)
