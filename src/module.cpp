@@ -12,6 +12,9 @@ class YaPBModule : public IYaPBModule {
 public:
    virtual ~YaPBModule () override = default;
 
+public:
+   CR_DECLARE_DESTRUCTOR ();
+
 private:
    Bot *getBot (int index) {
       if (index < 1) {
@@ -39,7 +42,7 @@ public:
    // gets the node nearest to origin
    virtual int getNearestNode (float *origin) override {
       if (graph.length () > 0) {
-         return graph.getNearest (origin);
+         return graph.getNearestNoBuckets (origin);
       }
       return kInvalidNodeIndex;
    }
@@ -77,6 +80,15 @@ public:
       if (bot) {
          return bot->sendBotToOrigin (graph[node].origin);
       }
+   }
+
+   virtual int getBotGoal (int entity) override {
+      auto bot = getBot (entity);
+
+      if (bot) {
+         return bot->m_chosenGoalIndex == kInvalidNodeIndex ? bot->getTask ()->data : bot->m_chosenGoalIndex;
+      }
+      return kInvalidNodeIndex;
    }
 
    // force bot to go to selected origin

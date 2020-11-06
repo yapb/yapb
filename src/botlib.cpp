@@ -5309,14 +5309,12 @@ void Bot::startDoubleJump (edict_t *ent) {
 }
 
 void Bot::sendBotToOrigin (const Vector &origin) {
-   clearSearchNodes ();
-   clearTask (Task::MoveToPosition); // remove any move tasks
-
    m_position = origin;
-   startTask (Task::MoveToPosition, TaskPri::MoveToPosition, kInvalidNodeIndex, 0.0f, true);
+   m_chosenGoalIndex = graph.getNearestNoBuckets (origin);
 
-   m_chosenGoalIndex = graph.getNearest (origin);
    getTask ()->data = m_chosenGoalIndex;
+
+   startTask (Task::MoveToPosition, TaskPri::Hide, m_chosenGoalIndex, 0.0f, true);
 }
 
 void Bot::resetDoubleJump () {

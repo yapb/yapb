@@ -33,9 +33,7 @@ private:
       virtual UniquePtr <LambdaFunctorWrapper> clone () const = 0;
 
    public:
-      void operator delete (void *ptr) {
-         alloc.deallocate (ptr);
-      }
+      CR_DECLARE_DESTRUCTOR ();
    };
 
    template <typename T> class LambdaFunctor : public LambdaFunctorWrapper {

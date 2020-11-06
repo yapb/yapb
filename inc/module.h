@@ -40,6 +40,9 @@ public:
    // force bot to go to the selected node
    virtual void setBotGoal (int entity, int node) = 0;
 
+   // get's the bot current goal node
+   virtual int getBotGoal (int entity) = 0;
+
    // force bot to go to selected origin
    virtual void setBotGoalOrigin (int entity, float *origin) = 0;
 

@@ -84,4 +84,10 @@ template <typename T> T &Singleton <T>::instance () {
    return *instance_;
 }
 
+// declare destructor for pure-virtual classes
+#define CR_DECLARE_DESTRUCTOR()        \
+   void operator delete (void *ptr) {  \
+      alloc.deallocate (ptr);          \
+   }                                   \
+
 CR_NAMESPACE_END
