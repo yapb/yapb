@@ -9,6 +9,9 @@
 
 // module interface implementation
 class YaPBModule : public IYaPBModule {
+public:
+   virtual ~YaPBModule () override = default;
+
 private:
    Bot *getBot (int index) {
       if (index < 1) {
@@ -36,7 +39,7 @@ public:
    // gets the node nearest to origin
    virtual int getNearestNode (float *origin) override {
       if (graph.length () > 0) {
-         return graph.getNearestNoBuckets (origin);
+         return graph.getNearest (origin);
       }
       return kInvalidNodeIndex;
    }
@@ -83,6 +86,19 @@ public:
       if (bot) {
          return bot->sendBotToOrigin (origin);
       }
+   }
+
+   // checks whether graph nodes is available on map
+   virtual bool hasGraph () override {
+      return graph.length () > 0;
+   }
+
+   // get's the graph node flags
+   virtual int getNodeFlags (int node) override {
+      if (graph.length () > 0 && graph.exists (node)) {
+         return graph[node].flags;
+      }
+      return 0;
    }
 };
 

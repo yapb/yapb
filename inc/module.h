@@ -42,4 +42,10 @@ public:
 
    // force bot to go to selected origin
    virtual void setBotGoalOrigin (int entity, float *origin) = 0;
+
+   // checks whether graph nodes is available on map
+   virtual bool hasGraph () = 0;
+
+   // get's the graph node flags
+   virtual int getNodeFlags (int node) = 0;
 };
