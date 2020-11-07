@@ -138,6 +138,9 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
          bot->spawned ();
       }
 
+      // precache everything
+      game.precache ();
+
       if (game.is (GameFlags::Metamod)) {
          RETURN_META_VALUE (MRES_IGNORED, 0);
       }
@@ -289,7 +292,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       dllapi.pfnClientCommand (ent);
    };
 
-   table->pfnServerActivate = [] (edict_t *pentEdictList, int edictCount, int clientMax) {
+   table->pfnServerActivate = [] (edict_t *edictList, int edictCount, int clientMax) {
       // this function is called when the server has fully loaded and is about to manifest itself
       // on the network as such. Since a mapchange is actually a server shutdown followed by a
       // restart, this function is also called when a new map is being loaded. Hence it's the
@@ -297,32 +300,13 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       // loading the bot profiles, and drawing the world map (ie, filling the navigation hashtable).
       // Once this function has been called, the server can be considered as "running".
 
-      conf.loadConfigs (); // initialize all config files
-
-      // do a level initialization
-      game.levelInitialize (pentEdictList, edictCount);
-
-      // update worldmodel
-      illum.resetWorldModel ();
-
-      // do level initialization stuff here...
-      graph.loadGraphData ();
-
-      // execute main config
-      conf.loadMainConfig ();
-
-      // load map-specific config
-      conf.loadMapSpecificConfig ();
-
-      // initialize quota management
-      bots.initQuota ();
-
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
-      dllapi.pfnServerActivate (pentEdictList, edictCount, clientMax);
+      dllapi.pfnServerActivate (edictList, edictCount, clientMax);
 
-      graph.rebuildVisibility ();
+      // do a level initialization
+      game.levelInitialize (edictList, edictCount);
    };
 
    table->pfnServerDeactivate = [] () {
@@ -364,6 +348,9 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
          RETURN_META (MRES_IGNORED);
       }
       dllapi.pfnServerDeactivate ();
+
+      // refill export table
+      ents.clearExportTable ();
    };
 
    table->pfnStartFrame = [] () {
@@ -486,7 +473,7 @@ CR_LINKAGE_C int GetEntityAPI_Post (gamefuncs_t *table, int) {
       RETURN_META (MRES_IGNORED);
    };
 
-   table->pfnServerActivate = [] (edict_t *, int, int) {
+   table->pfnServerActivate = [] (edict_t *edictList, int edictCount, int) {
       // this function is called when the server has fully loaded and is about to manifest itself
       // on the network as such. Since a mapchange is actually a server shutdown followed by a
       // restart, this function is also called when a new map is being loaded. Hence it's the
@@ -495,7 +482,8 @@ CR_LINKAGE_C int GetEntityAPI_Post (gamefuncs_t *table, int) {
       // Once this function has been called, the server can be considered as "running". Post version
       // called only by metamod.
 
-      graph.rebuildVisibility ();
+      // do a level initialization
+      game.levelInitialize (edictList, edictCount);
 
       RETURN_META (MRES_IGNORED);
    };

@@ -54,6 +54,8 @@ BotManager::BotManager () {
    m_timeRoundEnd = 0.0f;
 
    m_autoKillCheckTime = 0.0f;
+   m_maintainTime = 0.0f;
+   m_quotaMaintainTime = 0.0f;
 
    m_bombPlanted = false;
    m_botsCanPause = false;
@@ -470,8 +472,6 @@ void BotManager::maintainAutoKill () {
 }
 
 void BotManager::reset () {
-   m_maintainTime = 0.0f;
-   m_quotaMaintainTime = 0.0f;
    m_grenadeUpdateTime = 0.0f;
    m_entityUpdateTime = 0.0f;
    m_plantSearchUpdateTime = 0.0f;

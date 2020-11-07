@@ -60,8 +60,29 @@ void Game::levelInitialize (edict_t *entities, int max) {
    // clear all breakables before initialization
    m_breakables.clear ();
 
-   // precache everything
-   precache ();
+   // initialize all config files
+   conf.loadConfigs (); 
+
+   // update worldmodel
+   illum.resetWorldModel ();
+
+   // do level initialization stuff here...
+   graph.loadGraphData ();
+
+   // execute main config
+   conf.loadMainConfig ();
+
+   // load map-specific config
+   conf.loadMapSpecificConfig ();
+
+   // initialize quota management
+   bots.initQuota ();
+
+   // rebuild vistable if needed
+   graph.rebuildVisibility ();
+
+   // install the sendto hook to fake queries
+   util.installSendTo ();
    
    // go thru the all entities on map, and do whatever we're want
    for (int i = 0; i < max; ++i) {
@@ -75,12 +96,6 @@ void Game::levelInitialize (edict_t *entities, int max) {
 
       if (strcmp (classname, "worldspawn") == 0) {
          m_startEntity = ent;
-
-         // initialize some structures
-         bots.initRound ();
-
-         // install the sendto hook to fake queries
-         util.installSendTo ();
       }
       else if (strcmp (classname, "player_weaponstrip") == 0) {
          if (is (GameFlags::Legacy) && strings.isEmpty (ent->v.target.chars ())) {
@@ -90,9 +105,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
             engfuncs.pfnRemoveEntity (ent);
          }
       }
-      else if (strcmp (classname, "info_player_start") == 0) {
-         m_engineWrap.setModel (ent, "models/player/urban/urban.mdl");
-
+      else if (strcmp (classname, "info_player_start") == 0 || strcmp (classname, "info_vip_start") == 0) {
          ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
          ent->v.renderamt = 127; // set its transparency amount
          ent->v.effects |= EF_NODRAW;
@@ -100,20 +113,11 @@ void Game::levelInitialize (edict_t *entities, int max) {
          ++m_spawnCount[Team::CT];
       }
       else if (strcmp (classname, "info_player_deathmatch") == 0) {
-         m_engineWrap.setModel (ent, "models/player/terror/terror.mdl");
-
          ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
          ent->v.renderamt = 127; // set its transparency amount
          ent->v.effects |= EF_NODRAW;
 
          ++m_spawnCount[Team::Terrorist];
-      }
-      else if (strcmp (classname, "info_vip_start") == 0) {
-         m_engineWrap.setModel (ent, "models/player/vip/vip.mdl");
-
-         ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
-         ent->v.renderamt = 127; // set its transparency amount
-         ent->v.effects |= EF_NODRAW;
       }
       else if (strcmp (classname, "func_vip_safetyzone") == 0 || strcmp (classname, "info_vip_safetyzone") == 0) {
          m_mapFlags |= MapFlags::Assassination; // assassination map

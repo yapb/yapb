@@ -673,6 +673,11 @@ public:
    static DETOUR_RETURN CR_STDCALL replacement (SharedLibrary::Handle module, const char *function) {
       return EntityLinkage::instance ().lookup (module, function);
    }
+
+public:
+   void clearExportTable () {
+      m_exports.clear ();
+   }
 };
 
 // expose globals
