@@ -49,7 +49,7 @@ private:
    StringArray m_logos;
    StringArray m_avatars;
 
-   HashMap <uint32, String, Hash <int32>> m_language { 256 };
+   HashMap <uint32, String, Hash <int32>> m_language;
    HashMap <int32, DifficultyData> m_difficulty;
 
    // default tables for personality weapon preferences, overridden by weapon.cfg

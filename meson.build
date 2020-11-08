@@ -95,11 +95,11 @@ if isCLang or isGCC or (isIntel and not isWindows)
             
             if isGCC
                 flagsCompiler += '-fgraphite-identity'
+                flagsLinker += '-flto-partition=none'
             endif
             
             flagsLinker += [
                 '-flto',
-                '-flto-partition=none',
                 '-s',
                 '-Wl,--version-script=../version_script.lds',
                 '-Wl,--gc-sections'
