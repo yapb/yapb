@@ -118,6 +118,7 @@ void BotManager::touchKillerEntity (Bot *bot) {
 
    m_killerEntity->v.classname = MAKE_STRING (prop.classname.chars ());
    m_killerEntity->v.dmg_inflictor = bot->ent ();
+   m_killerEntity->v.dmg = (bot->pev->health + bot->pev->armorvalue) * 4.0f;
 
    KeyValueData kv;
    kv.szClassName = const_cast <char *> (prop.classname.chars ());
