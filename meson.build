@@ -10,7 +10,7 @@ project (
     'cpp',
     
     version: '4.1',
-    license: 'GPL',
+    license: 'MIT',
     
     default_options: [
         'buildtype=release',
@@ -33,6 +33,7 @@ find_program ('hostname', required: true)
 buildCompiler = meson.get_compiler ('cpp')
 buildSystem = host_machine.system ()
 buildVersion = meson.project_version ()
+buildCount = run_command ('git', 'rev-list', '--count', 'HEAD').stdout ().strip ()
 
 compilerId = buildCompiler.get_id ()
 compilerVersion = buildCompiler.version ()
@@ -46,8 +47,8 @@ isWindows = buildSystem == 'windows'
 isLinux = buildSystem == 'linux'
 isDarwin = buildSystem == 'darwin'
 
-flagsLinker = []
-flagsCompiler = []
+ldflags = []
+ccflags = []
 
 cdata = configuration_data()
 
@@ -58,19 +59,19 @@ else
 endif
 
 cdata.set ('commitHash', run_command ('git', 'rev-parse', '--short', 'HEAD').stdout ().strip ())
-cdata.set ('commitCount', run_command ('git', 'rev-list', '--count', 'HEAD').stdout ().strip ())
 cdata.set ('commitAuthor', run_command ('git', 'log', '--pretty="%ae"', '-1').stdout ().strip ())
 
+cdata.set ('commitCount', buildCount)
 cdata.set ('buildVersion', buildVersion)
 cdata.set ('buildMachine', run_command ('hostname', '-f').stdout ().strip ())
 cdata.set ('buildCompiler', compilerId + ' ' + compilerVersion)
 
 configure_file (input: 'inc/version.h.in', output: 'version.build.h', configuration: cdata)
 
-flagsCompiler += '-DVERSION_GENERATED'
+ccflags += '-DVERSION_GENERATED'
 
 if isCLang or isGCC or (isIntel and not isWindows)
-    flagsCompiler += [
+    ccflags += [
         '-m32',
         '-fno-threadsafe-statics',
         '-fno-exceptions',
@@ -78,29 +79,28 @@ if isCLang or isGCC or (isIntel and not isWindows)
     ]
     
     if not isDarwin
-       flagsCompiler += [
+       ccflags += [
            '-pedantic',
        ]
     endif
     
     if isOptimize
-        flagsCompiler += '-msse3'
+        ccflags += '-msse3'
         
-        if isCLang or isGCC and not isDarwin
-            flagsCompiler += [
+        if (isCLang or isGCC) and not isDarwin
+            ccflags += [
                 '-flto',
                 '-fdata-sections',
                 '-ffunction-sections'
             ]
             
             if isGCC
-                flagsCompiler += '-fgraphite-identity'
-                flagsLinker += '-flto-partition=none'
+                ccflags += '-fgraphite-identity'
+                ldflags += '-flto-partition=none'
             endif
             
-            flagsLinker += [
+            ldflags += [
                 '-flto',
-                '-s',
                 '-Wl,--version-script=../version_script.lds',
                 '-Wl,--gc-sections'
             ]
@@ -108,7 +108,7 @@ if isCLang or isGCC or (isIntel and not isWindows)
     endif
     
     if isLinux
-        flagsLinker += [
+        ldflags += [
             '-m32',
             '-lm',
             '-ldl'
@@ -117,7 +117,7 @@ if isCLang or isGCC or (isIntel and not isWindows)
 endif
 
 if isIntel and (isLinux or isDarwin)
-    flagsLinker += [
+    ldflags += [
         '-static-intel',
         '-no-intel-extensions'
     ]
@@ -125,24 +125,24 @@ endif
 
 if isLinux or isDarwin
     if isDarwin
-        flagsCompiler += '-mmacosx-version-min=10.9'
-        flagsLinker += [
+        ccflags += '-mmacosx-version-min=10.9'
+        ldflags += [
             '-dynamiclib',
             '-lstdc++',
             '-mmacosx-version-min=10.9'
         ]
     else
-        flagsLinker += '-static-libgcc'
+        ldflags += '-static-libgcc'
     endif
     
     if not isOptimize
-        flagsCompiler += [
+        ccflags += [
             '-g3',
             '-ggdb',
             '-DCR_DEBUG'
         ]
     else
-        flagsCompiler += [
+        ccflags += [
             '-mtune=generic',
             '-msse3',
             '-mfpmath=sse',
@@ -155,13 +155,13 @@ if isLinux or isDarwin
         ]
         
         if isIntel 
-            flagsCompiler += [
+            ccflags += [
                 '-ipo',
                 '-wd11076', 
                 '-wd11074'
             ]
             
-            flagsLinker += [
+            ldflags += [
                 '-cxxlib-nostd',
                 '-Wl,--no-undefined,-z,notext,--gc-sections',
                 '-ipo'
@@ -170,57 +170,57 @@ if isLinux or isDarwin
              llvmLinker = find_program ('lld', required: false)
              
             if llvmLinker.found() == true
-                flagsLinker += '-fuse-ld=' + llvmLinker.path ().split ('/')[-1]
+                ldflags += '-fuse-ld=' + llvmLinker.path ().split ('/')[-1]
             endif
             
-            flagsLinker += [
+            ldflags += [
                 '-nostdlib++',
                 '-Wunused-command-line-argument',
                 '-Wl,-z,notext',
                 '--no-undefined'
             ]
         elif isGCC and not isDarwin
-            flagsLinker += '-Wl,--no-undefined'
+            ldflags += '-Wl,--no-undefined'
         endif
     endif
 endif
 
 if isWindows and (isVC or isIntel)
-    flagsLinker += [
+    ldflags += [
         '/MACHINE:X86',
         'user32.lib',
         'ws2_32.lib'
     ]
     
-    flagsCompiler += [
+    ccflags += [
         '/TP'
     ]
     
     if isOptimize
-        flagsCompiler += '/GL'
-        flagsLinker += '/LTCG'
+        ccflags += '/GL'
+        ldflags += '/LTCG'
     endif
     
 elif isWindows and (isCLang or isGCC)
     if isCLang
-        flagsLinker += '-Wl,/MACHINE:X86'
+        ldflags += '-Wl,/MACHINE:X86'
     else
-        flagsLinker += [
+        ldflags += [
             '-static-libgcc',
             '-Wl,--add-stdcall-alias'
         ]
     endif
     
-    flagsLinker += [
+    ldflags += [
         '-luser32',
         '-lws2_32'
     ]
 endif
 
-add_global_arguments (flagsCompiler, language: 'cpp')
-add_global_link_arguments (flagsLinker, language: 'cpp')
+add_global_arguments (ccflags, language: 'cpp')
+add_global_link_arguments (ldflags, language: 'cpp')
 
-sourceFiles = files (
+sources = files (
     'src/android.cpp',
     'src/botlib.cpp',
     'src/chatlib.cpp',
@@ -242,17 +242,20 @@ includes = include_directories ([
 ], is_system: true)
 
 if isWindows and not isCLang
-    sourceFiles += import('windows').compile_resources (
+    sources += import('windows').compile_resources (
         'vc/yapb.rc', 
         include_directories: includes, 
-        args: '-DVERSION_GENERATED'
+        args: ['-DVERSION_GENERATED']
     )
 endif
 
 shared_library (
     meson.project_name (), 
-    sourceFiles,
+    sources,
     include_directories: includes,
     
     gnu_symbol_visibility: 'hidden',
     name_prefix: '')
+
+run_target ('package',
+   command : ['python', meson.source_root() + '/package.py', '@0@.@1@'.format (buildVersion, buildCount)])
