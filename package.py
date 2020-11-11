@@ -212,7 +212,7 @@ class BotRelease (object):
 				
 	def uploadGithub (self): 
 		gh = Github (os.environ["GITHUB_TOKEN"])
-		repo = gh.get_repo ("yapb/test")
+		repo = gh.get_repo ("yapb/yapb")
 		
 		self.createRelease (repo, self.version)
 			
