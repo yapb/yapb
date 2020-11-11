@@ -67,16 +67,16 @@ class BotRelease (object):
 		print ("Downloading graphs: ")
 		
 		files = ['as_oilrig', 'cs_747', 'cs_estate', 'cs_assault', 'cs_office',
-      'cs_italy', 'cs_havana', 'cs_siege', 'cs_backalley', 'cs_militia',
-      'cs_downed_cz', 'cs_havana_cz', 'cs_italy_cz', 'cs_militia_cz',
-      'cs_office_cz', 'de_airstrip_cz', 'de_aztec_cz', 'de_cbble_cz',
-      'de_chateau_cz', 'de_corruption_cz', 'de_dust_cz', 'de_dust2_cz',
-      'de_fastline_cz', 'de_inferno_cz', 'de_piranesi_cz', 'de_prodigy_cz',
-      'de_sienna_cz', 'de_stadium_cz', 'de_tides_cz', 'de_torn_cz',
-      'de_truth_cz', 'de_vostok_cz', 'de_inferno', 'de_aztec', 'de_dust',
-      'de_dust2', 'de_torn', 'de_storm', 'de_airstrip', 'de_piranesi',
-      'de_prodigy', 'de_chateau', 'de_cbble', 'de_nuke', 'de_survivor',
-      'de_vertigo', 'de_train']
+			'cs_italy', 'cs_havana', 'cs_siege', 'cs_backalley', 'cs_militia',
+			'cs_downed_cz', 'cs_havana_cz', 'cs_italy_cz', 'cs_militia_cz',
+			'cs_office_cz', 'de_airstrip_cz', 'de_aztec_cz', 'de_cbble_cz',
+			'de_chateau_cz', 'de_corruption_cz', 'de_dust_cz', 'de_dust2_cz',
+			'de_fastline_cz', 'de_inferno_cz', 'de_piranesi_cz', 'de_prodigy_cz',
+			'de_sienna_cz', 'de_stadium_cz', 'de_tides_cz', 'de_torn_cz',
+			'de_truth_cz', 'de_vostok_cz', 'de_inferno', 'de_aztec', 'de_dust',
+			'de_dust2', 'de_torn', 'de_storm', 'de_airstrip', 'de_piranesi',
+			'de_prodigy', 'de_chateau', 'de_cbble', 'de_nuke', 'de_survivor',
+			'de_vertigo', 'de_train']
 		
 		for file in files:
 			print (" " + file)
