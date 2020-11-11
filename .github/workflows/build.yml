@@ -1,0 +1,46 @@
+name: YaPB Build
+
+on: [push, pull_request]
+
+jobs:
+  linux:
+    name: Full Build
+    runs-on: self-hosted
+    
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Setup Meson
+        shell: bash
+        run: | 
+           meson setup build_x86_win32 --cross-file=/actions/meson/linux-mingw-w64-32bit.txt
+           meson setup build_x86_macos --cross-file=/actions/meson/darwin-clang-32bit.txt
+           meson setup build_x86_linux
+             
+      - name: Build Bot
+        shell: bash
+        run: |
+          ninja -C build_x86_win32 -v
+          ninja -C build_x86_macos -v
+          ninja -C build_x86_linux -v
+          
+      - name: Build Package
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          meson setup dist
+          ninja -C dist package
+          ls -la dist/yapb-*
+          
+      - uses: actions/upload-artifact@v2
+        name: Upload Artifacts
+        with:
+          name: yapb.zip
+          path: |
+            build_x86_win32/yapb.dll
+            build_x86_linux/yapb.so
+            build_x86_macos/yapb.dylib
+  
