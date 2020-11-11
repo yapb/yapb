@@ -8,6 +8,12 @@ jobs:
     runs-on: self-hosted
     
     steps:
+      - name: Runner Cleanup
+        shell: bash
+        run: |
+          echo "Cleaning up previous run"
+          rm -rf "${{ github.workspace }}/*"
+          
       - uses: actions/checkout@v2
         with:
           submodules: true
