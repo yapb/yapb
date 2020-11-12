@@ -759,7 +759,7 @@ int BotControl::cmdNodeUpload () {
    String mapName = game.getMapName ();
 
    // try to upload the file
-   if (http.uploadFile (strings.format ("http://%s/graph", product.download), strings.format ("%sgraph/%s.graph", graph.getDataDirectory (false), mapName.lowercase ()))) {
+   if (http.uploadFile ("http://yapb.ru/upload", strings.format ("%sgraph/%s.graph", graph.getDataDirectory (false), mapName.lowercase ()))) {
       msg ("Graph file was successfully validated and uploaded to the YaPB Graph DB (%s).", product.download);
       msg ("It will be available for download for all YaPB users in a few minutes.");
       msg ("\n");
