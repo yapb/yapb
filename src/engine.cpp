@@ -825,48 +825,6 @@ bool Game::postload () {
    // initialize weapons
    conf.initWeapons ();
 
-   // print game detection info
-   auto displayCSVersion = [&] () {
-      String gameVersionStr;
-      StringArray gameVersionFlags;
-
-      if (is (GameFlags::Legacy)) {
-         gameVersionStr.assign ("Legacy");
-      }
-      else if (is (GameFlags::ConditionZero)) {
-         gameVersionStr.assign ("Condition Zero");
-      }
-      else if (is (GameFlags::Modern)) {
-         gameVersionStr.assign ("v1.6");
-      }
-
-      if (is (GameFlags::Xash3D)) {
-         gameVersionStr.append (" @ Xash3D Engine");
-
-         if (is (GameFlags::Mobility)) {
-            gameVersionStr.append (" Mobile");
-         }
-         gameVersionStr.replace ("Legacy", "1.6 Limited");
-      }
-
-      if (is (GameFlags::HasBotVoice)) {
-         gameVersionFlags.push ("BotVoice");
-      }
-
-      if (is (GameFlags::ReGameDLL)) {
-         gameVersionFlags.push ("ReGameDLL");
-      }
-
-      if (is (GameFlags::HasFakePings)) {
-         gameVersionFlags.push ("FakePing");
-      }
-
-      if (is (GameFlags::Metamod)) {
-         gameVersionFlags.push ("Metamod");
-      }
-      ctrl.msg ("\n%s v%s successfully loaded for game: Counter-Strike %s.\n\tFlags: %s.\n", product.name, product.version, gameVersionStr, gameVersionFlags.empty () ? "None" : String::join (gameVersionFlags, ", "));
-   };
-
    if (plat.android) {
       m_gameFlags |= (GameFlags::Xash3D | GameFlags::Mobility | GameFlags::HasBotVoice | GameFlags::ReGameDLL);
 
@@ -878,7 +836,6 @@ bool Game::postload () {
       if (!m_gameLib.load (gamedll)) {
          logger.fatal ("Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gamedll, getRunningModName ());
       }
-      displayCSVersion ();
    }
    else {
       bool binaryLoaded = loadCSBinary ();
@@ -886,7 +843,6 @@ bool Game::postload () {
       if (!binaryLoaded && !is (GameFlags::Metamod)) {
          logger.fatal ("Mod that you has started, not supported by this bot (gamedir: %s)", getRunningModName ());
       }
-      displayCSVersion ();
 
       if (is (GameFlags::Metamod)) {
          m_gameLib.unload ();
@@ -1024,6 +980,47 @@ bool Game::isShootableBreakable (edict_t *ent) {
       return !cr::fequal (ent->v.takedamage, DAMAGE_NO) && ent->v.impulse <= 0 && !(ent->v.flags & FL_WORLDBRUSH) && !(ent->v.spawnflags & SF_BREAK_TRIGGER_ONLY) && ent->v.health < 500.0f;
    }
    return false;
+}
+
+void Game::printBotVersion () {
+   String gameVersionStr;
+   StringArray gameVersionFlags;
+
+   if (is (GameFlags::Legacy)) {
+      gameVersionStr.assign ("Legacy");
+   }
+   else if (is (GameFlags::ConditionZero)) {
+      gameVersionStr.assign ("Condition Zero");
+   }
+   else if (is (GameFlags::Modern)) {
+      gameVersionStr.assign ("v1.6");
+   }
+
+   if (is (GameFlags::Xash3D)) {
+      gameVersionStr.append (" @ Xash3D Engine");
+
+      if (is (GameFlags::Mobility)) {
+         gameVersionStr.append (" Mobile");
+      }
+      gameVersionStr.replace ("Legacy", "1.6 Limited");
+   }
+
+   if (is (GameFlags::HasBotVoice)) {
+      gameVersionFlags.push ("BotVoice");
+   }
+
+   if (is (GameFlags::ReGameDLL)) {
+      gameVersionFlags.push ("ReGameDLL");
+   }
+
+   if (is (GameFlags::HasFakePings)) {
+      gameVersionFlags.push ("FakePing");
+   }
+
+   if (is (GameFlags::Metamod)) {
+      gameVersionFlags.push ("Metamod");
+   }
+   ctrl.msg ("\n%s v%s successfully loaded for game: Counter-Strike %s.\n\tFlags: %s.\n", product.name, product.version, gameVersionStr, gameVersionFlags.empty () ? "None" : String::join (gameVersionFlags, ", "));
 }
 
 void LightMeasure::initializeLightstyles () {
@@ -1203,44 +1200,4 @@ float LightMeasure::getLightLevel (const Vector &point) {
 
 float LightMeasure::getSkyColor () {
    return static_cast <float> (Color (sv_skycolor_r.int_ (), sv_skycolor_g.int_ (), sv_skycolor_b.int_ ()).avg ());
-}
-
-DETOUR_RETURN EntityLinkage::lookup (SharedLibrary::Handle module, const char *function) {
-   static const auto &gamedll = game.lib ().handle ();
-   static const auto &self = m_self.handle ();
-
-   const auto resolve = [&] (SharedLibrary::Handle handle) {
-      return reinterpret_cast <DETOUR_RETURN> (m_dlsym (static_cast <DETOUR_HANDLE> (handle), function));
-   };
-
-   // if requested module is yapb module, put in cache the looked up symbol
-   if (self != module || (plat.win32 && (static_cast <uint16> (reinterpret_cast <uint32> (function) >> 16) & 0xffff) == 0)) {
-      return resolve (module);
-   }
-
-   if (m_exports.has (function)) {
-      return m_exports[function];
-   }
-   auto botAddr = resolve (self);
-
-   if (!botAddr) {
-      auto gameAddr = resolve (gamedll);
-
-      if (gameAddr) {
-         return m_exports[function] = gameAddr;
-      }
-   }
-   else {
-      return m_exports[function] = botAddr;
-   }
-   return nullptr;
-}
-
-void EntityLinkage::initialize () {
-   if (plat.arm) {
-      return;
-   }
-
-   m_dlsym.install (reinterpret_cast <void  *> (EntityLinkage::replacement), true);
-   m_self.locate (&engfuncs);
 }

@@ -197,7 +197,15 @@ if isWindows and (isVC or isIntel)
     ]
     
     if isOptimize
-        ccflags += '/GL'
+        ccflags += [
+            '/GL',
+            '/arch:SSE2',
+            '/GS-',
+            '/Ob2',
+            '/Oy',
+            '/Oi'
+        ]
+        
         ldflags += '/LTCG'
     endif
     

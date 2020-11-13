@@ -8,12 +8,6 @@ jobs:
     runs-on: self-hosted
     
     steps:
-      - name: Runner Cleanup
-        shell: bash
-        run: |
-          echo "Cleaning up previous run"
-          rm -rf "${{ github.workspace }}/*"
-          
       - uses: actions/checkout@v2
         with:
           submodules: true
@@ -22,9 +16,9 @@ jobs:
       - name: Setup Meson
         shell: bash
         run: | 
-           meson setup build_x86_win32 --cross-file=/actions/meson/linux-mingw-w64-32bit.txt
+           meson setup build_x86_win32 --cross-file=/actions/meson/windows-msvc-32bit.txt -Db_vscrt=mt
            meson setup build_x86_macos --cross-file=/actions/meson/darwin-clang-32bit.txt
-           meson setup build_x86_linux
+           CXX=clang meson setup build_x86_linux
              
       - name: Build Bot
         shell: bash

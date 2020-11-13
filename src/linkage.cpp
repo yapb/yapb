@@ -120,6 +120,9 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       conf.loadMainConfig (true);
       conf.adjustWeaponPrices ();
 
+      // print info about dll
+      game.printBotVersion ();
+
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
@@ -793,7 +796,6 @@ CR_EXPORT int GetNewDLLFunctions (newgamefuncs_t *table, int *interfaceVersion) 
       logger.error ("Could not resolve symbol \"%s\" in the game dll. Continuing...", __FUNCTION__);
       return HLFalse;
    }
-
    dllfuncs.newapi_table = table;
    return HLTrue;
 }
@@ -943,6 +945,46 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
 
    // give the engine functions to the other DLL...
    api_GiveFnptrsToDll (functionTable, glob);
+}
+
+DETOUR_RETURN EntityLinkage::lookup (SharedLibrary::Handle module, const char *function) {
+   static const auto &gamedll = game.lib ().handle ();
+   static const auto &self = m_self.handle ();
+
+   const auto resolve = [&] (SharedLibrary::Handle handle) {
+      return reinterpret_cast <DETOUR_RETURN> (m_dlsym (static_cast <DETOUR_HANDLE> (handle), function));
+   };
+
+   // if requested module is yapb module, put in cache the looked up symbol
+   if (self != module || (plat.win32 && (static_cast <uint16> (reinterpret_cast <uint32> (function) >> 16) & 0xffff) == 0)) {
+      return resolve (module);
+   }
+
+   if (m_exports.has (function)) {
+      return m_exports[function];
+   }
+   auto botAddr = resolve (self);
+
+   if (!botAddr) {
+      auto gameAddr = resolve (gamedll);
+
+      if (gameAddr) {
+         return m_exports[function] = gameAddr;
+      }
+   }
+   else {
+      return m_exports[function] = botAddr;
+   }
+   return nullptr;
+}
+
+void EntityLinkage::initialize () {
+   if (plat.arm) {
+      return;
+   }
+
+   m_dlsym.install (reinterpret_cast <void *> (EntityLinkage::replacement), true);
+   m_self.locate (&engfuncs);
 }
 
 // add linkents for android

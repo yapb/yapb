@@ -4,6 +4,7 @@ YAPB_ABI_1.0 {
       GiveFnptrsToDll;
       GetBotAPI;
       GetEntityAPI;
+      GetNewDLLFunctions;
    local: 
       *;
 };
