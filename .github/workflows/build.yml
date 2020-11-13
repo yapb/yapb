@@ -34,7 +34,6 @@ jobs:
         run: |
           meson setup dist
           ninja -C dist package
-          ls -la dist/yapb-*
           
       - uses: actions/upload-artifact@v2
         name: Upload Artifacts
