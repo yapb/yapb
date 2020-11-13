@@ -56,7 +56,7 @@ class BotRelease (object):
 			
 	def getGraph (self, name):
 		file = os.path.join (self.botDir, 'data', 'graph', "{}.graph".format (name))
-		url = "https://yapb.ru/files/graph/{}.graph".format (name);
+		url = "http://graph.yapb.ru/graph/{}.graph".format (name);
 		
 		if os.path.exists (file):
 			return
