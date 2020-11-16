@@ -19,21 +19,38 @@ public:
    using PrintFunction = Lambda <void (const char *)>;
 
 private:
-   File handle_;
+   String filename_;
    PrintFunction printFun_;
 
 public:
    SimpleLogger () = default;
+   ~SimpleLogger () = default;
 
-   ~SimpleLogger () {
-      handle_.close ();
-   }
+public:
+   class LogFile final {
+   private:
+      File handle_;
+
+   public:
+      LogFile (StringRef filename) {
+         handle_.open (filename, "at");
+      }
+
+      ~LogFile () {
+         handle_.close ();
+      }
+
+   public:
+      void print (StringRef msg) {
+         if (!handle_) {
+            return;
+         }
+         handle_.puts (msg.chars ());
+      }
+   };
 
 private:
    void logToFile (const char *level, const char *msg) {
-      if (!handle_) {
-         return;
-      }
       time_t ticks = time (&ticks);
       tm timeinfo {};
 
@@ -46,7 +63,8 @@ private:
       auto timebuf = strings.chars ();
       strftime (timebuf, StringBuffer::StaticBufferSize, "%Y-%m-%d %H:%M:%S", &timeinfo);
 
-      handle_.puts ("%s (%s): %s\n", timebuf, level, msg);
+      LogFile lf (filename_);
+      lf.print (strings.format ("%s (%s): %s\n", timebuf, level, msg));
    }
 
 public:
@@ -83,11 +101,8 @@ public:
 
 public:
    void initialize (StringRef filename, PrintFunction printFunction) {
-      if (handle_) {
-         handle_.close ();
-      }
       printFun_ = cr::move (printFunction);
-      handle_.open (filename, "at");
+      filename_ = filename;
    }
 };
 

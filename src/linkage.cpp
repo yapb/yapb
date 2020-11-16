@@ -899,7 +899,7 @@ CR_EXPORT void Meta_Init () {
 
 // games GiveFnptrsToDll is a bit tricky
 #if defined(CR_WINDOWS)
-#  if defined(CR_CXX_MSVC) || defined (CR_CXX_CLANG)
+#  if defined(CR_CXX_MSVC) || (defined(CR_CXX_CLANG) && !defined(CR_CXX_GCC))
 #     if defined (CR_ARCH_X86)
 #        pragma comment(linker, "/EXPORT:GiveFnptrsToDll=_GiveFnptrsToDll@8,@1")
 #     endif

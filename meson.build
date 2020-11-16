@@ -215,7 +215,7 @@ elif isWindows and (isCLang or isGCC)
     else
         ldflags += [
             '-static-libgcc',
-            '-Wl,--add-stdcall-alias'
+            '-Wl,--kill-at'
         ]
     endif
     

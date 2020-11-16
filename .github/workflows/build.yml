@@ -1,4 +1,4 @@
-name: YaPB Build
+name: YaPB
 
 on: [push, pull_request]
 
