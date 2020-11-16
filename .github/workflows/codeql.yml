@@ -29,6 +29,8 @@ jobs:
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v1
+      env:
+        LIB: lib32
       with:
         languages: ${{ matrix.language }}
 
