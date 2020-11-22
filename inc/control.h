@@ -33,7 +33,7 @@ public:
       Handler handler = nullptr;
 
    public:
-      BotCmd () = default;
+      explicit BotCmd () = default;
 
       BotCmd (StringRef name, StringRef format, StringRef help, Handler handler) : name (name), format (format), help (help), handler (cr::move (handler)) 
       { }
@@ -46,7 +46,7 @@ public:
       MenuHandler handler;
 
    public:
-      BotMenu (int ident, int slots, StringRef text, MenuHandler handler) : ident (ident), slots (slots), text (text), handler (cr::move (handler))
+      explicit BotMenu (int ident, int slots, StringRef text, MenuHandler handler) : ident (ident), slots (slots), text (text), handler (cr::move (handler))
       { }
    };
 
@@ -56,7 +56,7 @@ public:
       String text;
 
    public:
-      PrintQueue () = default;
+     explicit PrintQueue () = default;
 
       PrintQueue (int32 destination, StringRef text) : destination (destination), text (text) 
       { }

@@ -11,7 +11,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\ext\crlib\cr-alloc.h" />
     <ClInclude Include="..\ext\crlib\cr-array.h" />
     <ClInclude Include="..\ext\crlib\cr-basic.h" />
     <ClInclude Include="..\ext\crlib\cr-binheap.h" />
@@ -26,7 +25,9 @@
     <ClInclude Include="..\ext\crlib\cr-library.h" />
     <ClInclude Include="..\ext\crlib\cr-logger.h" />
     <ClInclude Include="..\ext\crlib\cr-math.h" />
+    <ClInclude Include="..\ext\crlib\cr-memory.h" />
     <ClInclude Include="..\ext\crlib\cr-movable.h" />
+    <ClInclude Include="..\ext\crlib\cr-override.h" />
     <ClInclude Include="..\ext\crlib\cr-platform.h" />
     <ClInclude Include="..\ext\crlib\cr-random.h" />
     <ClInclude Include="..\ext\crlib\cr-string.h" />
@@ -97,8 +98,8 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
     <PlatformToolset>v142</PlatformToolset>
-    <EnableASAN>false</EnableASAN>
     <UseDebugLibraries>false</UseDebugLibraries>
+    <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -162,9 +163,8 @@
       <BrowseInformationFile />
       <WarningLevel>Level4</WarningLevel>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <CompileAs>Default</CompileAs>
-      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
       <StringPooling>false</StringPooling>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>

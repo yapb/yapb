@@ -177,7 +177,9 @@ struct PODPath {
 class PathWalk final : public DenyCopying {
 private:
    size_t m_cursor = 0;
-   Array <int, ReservePolicy::Single, kMaxRouteLength> m_storage;
+   size_t m_length = 0;
+
+   UniquePtr <int32[]> m_path;
 
 public:
    explicit PathWalk () = default;
@@ -193,11 +195,11 @@ public:
    }
 
    int32 &last () {
-      return m_storage.last ();
+      return at (length () - 1);
    }
 
    int32 &at (size_t index) {
-      return m_storage.at (m_cursor + index);
+      return m_path[m_cursor + index];
    }
 
    void shift () {
@@ -205,31 +207,39 @@ public:
    }
 
    void reverse () {
-      m_storage.reverse ();
+      for (size_t i = 0; i < m_length / 2; ++i) {
+         cr::swap (m_path[i], m_path[m_length - 1 - i]);
+      }
    }
 
    size_t length () const {
-      if (m_cursor > m_storage.length ()) {
+      if (m_cursor >= m_length) {
          return 0;
       }
-      return m_storage.length () - m_cursor;
+      return m_length - m_cursor;
    }
 
    bool hasNext () const {
-      return m_cursor < m_storage.length ();
+      return length () > m_cursor;
    }
 
    bool empty () const {
       return !length ();
    }
 
-   void push (int node) {
-      m_storage.push (node);
+   void add (int32 node) {
+      m_path[m_length++] = node;
    }
 
    void clear () {
       m_cursor = 0;
-      m_storage.clear ();
+      m_length = 0;
+
+      m_path[0] = 0;
+   }
+
+   void init (size_t length) {
+      m_path = cr::makeUnique <int32 []> (length);
    }
 };
 
@@ -250,7 +260,7 @@ private:
    int m_lastJumpNode;
    int m_findWPIndex;
    int m_facingAtIndex;
-   int m_highestDamage[kGameTeamNum];
+   int m_highestDamage[kGameTeamNum] {};
 
    float m_timeJumpStarted;
    float m_autoPathDistance;
@@ -373,6 +383,10 @@ public:
    const SmallArray <int32> &getNodesInBucket (const Vector &pos);
 
 public:
+   size_t getMaxRouteLength () const {
+      return m_paths.length () / 2;
+   }
+
    int getHighestDamageForTeam (int team) const {
       return m_highestDamage[team];
    }

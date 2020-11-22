@@ -140,35 +140,10 @@ private:
    }
 
 public:
+   Detour () = default;
+
    Detour (StringRef module, StringRef name, T *address) {
-      savedBytes_.resize (jmpBuffer_.length ());
-
-#if !defined (CR_WINDOWS)
-      (void) module;
-      (void) name;
-
-      auto search = reinterpret_cast <uint8 *> (address);
-
-      while (*reinterpret_cast <uint16 *> (search) == 0x25ff) {
-         search = **reinterpret_cast <uint8 ***> (search + 2);
-      }
-
-      original_ = search;
-      pageSize_ = static_cast <unsigned long> (sysconf (_SC_PAGE_SIZE));
-#else
-      auto handle = GetModuleHandleA (module.chars ());
-
-      if (!handle) {
-         original_ = reinterpret_cast <void *> (address);
-         return;
-      }
-      original_ = reinterpret_cast <void *> (GetProcAddress (handle, name.chars ()));
-
-      if (!original_) {
-         original_ = reinterpret_cast <void *> (address);
-         return;
-      }
-#endif
+      initialize (module, name, address);
    }
 
    ~Detour () {
@@ -194,7 +169,37 @@ private:
    };
 
 public:
-   
+   void initialize (StringRef module, StringRef name, T *address) {
+      savedBytes_.resize (jmpBuffer_.length ());
+
+#if !defined (CR_WINDOWS)
+      (void) module;
+      (void) name;
+
+      auto ptr = reinterpret_cast <uint8 *> (address);
+
+      while (*reinterpret_cast <uint16 *> (ptr) == 0x25ff) {
+         ptr = **reinterpret_cast <uint8 ***> (ptr + 2);
+      }
+
+      original_ = ptr;
+      pageSize_ = static_cast <unsigned long> (sysconf (_SC_PAGE_SIZE));
+#else
+      auto handle = GetModuleHandleA (module.chars ());
+
+      if (!handle) {
+         original_ = reinterpret_cast <void *> (address);
+         return;
+      }
+      original_ = reinterpret_cast <void *> (GetProcAddress (handle, name.chars ()));
+
+      if (!original_) {
+         original_ = reinterpret_cast <void *> (address);
+         return;
+      }
+#endif
+   }
+
    void install (void *detour, const bool enable = false) {
       if (!original_) {
          return;

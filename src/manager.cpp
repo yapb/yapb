@@ -914,6 +914,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    // we're not initializing all the variables in bot class, so do an ugly thing... memset this
    plat.bzero (this, sizeof (*this));
 
+
    int clientIndex = game.indexOfEntity (bot);
    pev = &bot->v;
 
@@ -1033,6 +1034,9 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    // just to be sure
    m_msgQueue.clear ();
 
+   // init path walker
+   m_pathWalk.init (graph.getMaxRouteLength ());
+
    // assign team and class
    m_wantedTeam = team;
    m_wantedSkin = skin;
@@ -1104,18 +1108,18 @@ bool BotManager::isTeamStacked (int team) {
 
 void BotManager::erase (Bot *bot) {
    for (auto &e : m_bots) {
-      if (e.get () == bot) {
-         bot->showChaterIcon (false);
-         bot->markStale ();
-
-         conf.clearUsedName (bot); // clear the bot name
-
-         e.reset ();
-         m_bots.remove (e); // remove from bots array
-
-         break;
+      if (e.get () != bot) {
+         continue;
       }
+      bot->markStale ();
+
+      auto index = m_bots.index (e);
+      e.reset ();
+
+      m_bots.erase (index, 1); // remove from bots array
+      break;
    }
+   
 }
 
 void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
@@ -1423,6 +1427,11 @@ void Bot::kick () {
 }
 
 void Bot::markStale () {
+   showChaterIcon (false);
+
+   // clear the bot name
+   conf.clearUsedName (this); 
+
    // clear fakeclient bit
    pev->flags &= ~FL_FAKECLIENT;
 

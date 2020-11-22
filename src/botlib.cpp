@@ -193,7 +193,6 @@ void Bot::checkGrenadesThrow () {
                   allowThrowing = false;
                   continue;
                }
-
                m_throw = graph[predict].origin;
 
                auto throwPos = calcThrow (getEyesPos (), m_throw);
@@ -4068,7 +4067,7 @@ void Bot::followUser_ () {
       clearSearchNodes ();
 
       int destIndex = graph.getNearest (m_targetEntity->v.origin);
-      IntArray points = graph.searchRadius (200.0f, m_targetEntity->v.origin);
+      auto points = graph.searchRadius (200.0f, m_targetEntity->v.origin);
 
       for (auto &newIndex : points) {
          // if waypoint not yet used, assign it as dest

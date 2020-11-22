@@ -10,6 +10,7 @@
 ConVar cv_version ("yb_version", product.version.chars (), Var::ReadOnly);
 
 gamefuncs_t dllapi;
+newgamefuncs_t newapi;
 enginefuncs_t engfuncs;
 gamedll_funcs_t dllfuncs;
 
@@ -499,6 +500,17 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       plat.bzero (table, sizeof (enginefuncs_t));
    }
 
+   if (ents.isWorkaroundNeeded () && !game.is (GameFlags::Metamod)) {
+      table->pfnCreateNamedEntity = [] (int classname) -> edict_t * {
+
+         if (ents.isPaused ()) {
+            ents.enable ();
+            ents.setPaused (false);
+         }
+         return engfuncs.pfnCreateNamedEntity (classname);
+      };
+   }
+
    table->pfnChangeLevel = [] (char *s1, char *s2) {
       // the purpose of this function is to ask the engine to shutdown the server and restart a
       // new one running the map whose name is s1. It is used ONLY IN SINGLE PLAYER MODE and is
@@ -790,13 +802,33 @@ CR_EXPORT int GetNewDLLFunctions (newgamefuncs_t *table, int *interfaceVersion) 
    // pass them too, else the DLL interfacing wouldn't be complete and the game possibly wouldn't
    // run properly.
 
-   auto api_GetNewDLLFunctions = game.lib ().resolve <decltype (&GetNewDLLFunctions)> (__FUNCTION__);
+   plat.bzero (table, sizeof (newgamefuncs_t));
 
-   if (!api_GetNewDLLFunctions || !api_GetNewDLLFunctions (table, interfaceVersion)) {
-      logger.error ("Could not resolve symbol \"%s\" in the game dll. Continuing...", __FUNCTION__);
-      return HLFalse;
+   if (!(game.is (GameFlags::Metamod))) {
+      auto api_GetEntityAPI = game.lib ().resolve <decltype (&GetNewDLLFunctions)> (__FUNCTION__);
+
+      // pass other DLLs engine callbacks to function table...
+      if (!api_GetEntityAPI || api_GetEntityAPI (&newapi, interfaceVersion) == 0) {
+         logger.error ("Could not resolve symbol \"%s\" in the game dll.", __FUNCTION__);
+      }
+      dllfuncs.newapi_table = &newapi;
+
+      memcpy (table, &newapi, sizeof (newgamefuncs_t));
    }
-   dllfuncs.newapi_table = table;
+
+   table->pfnOnFreeEntPrivateData = [] (edict_t *ent) {
+      for (auto &bot : bots) {
+         if (bot->m_enemy == ent) {
+            bot->m_enemy = nullptr;
+            bot->m_lastEnemy = nullptr;
+         }
+      }
+
+      if (game.is (GameFlags::Metamod)) {
+         RETURN_META (MRES_IGNORED);
+      }
+      newapi.pfnOnFreeEntPrivateData (ent);
+   };
    return HLTrue;
 }
 
@@ -851,7 +883,7 @@ CR_EXPORT int Meta_Attach (PLUG_LOADTIME now, metamod_funcs_t *functionTable, me
       GetEntityAPI_Post, // pfnGetEntityAPI_Post ()
       nullptr, // pfnGetEntityAPI2 ()
       nullptr, // pfnGetEntityAPI2_Post ()
-      nullptr, // pfnGetNewDLLFunctions ()
+      GetNewDLLFunctions, // pfnGetNewDLLFunctions ()
       nullptr, // pfnGetNewDLLFunctions_Post ()
       GetEngineFunctions, // pfnGetEngineFunctions ()
       GetEngineFunctions_Post, // pfnGetEngineFunctions_Post ()
@@ -947,13 +979,22 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    api_GiveFnptrsToDll (functionTable, glob);
 }
 
-DETOUR_RETURN EntityLinkage::lookup (SharedLibrary::Handle module, const char *function) {
+DLSYM_RETURN EntityLinkage::lookup (SharedLibrary::Handle module, const char *function) {
    static const auto &gamedll = game.lib ().handle ();
    static const auto &self = m_self.handle ();
 
    const auto resolve = [&] (SharedLibrary::Handle handle) {
-      return reinterpret_cast <DETOUR_RETURN> (m_dlsym (static_cast <DETOUR_HANDLE> (handle), function));
+      return reinterpret_cast <DLSYM_RETURN> (m_dlsym (static_cast <DLSYM_HANDLE> (handle), function));
    };
+
+   if (ents.isWorkaroundNeeded () && !strcmp (function, "CreateInterface")) {
+      ents.setPaused (true);
+      auto ret = resolve (module);
+
+      ents.disable ();
+
+      return ret;
+   }
 
    // if requested module is yapb module, put in cache the looked up symbol
    if (self != module || (plat.win32 && (static_cast <uint16> (reinterpret_cast <uint32> (function) >> 16) & 0xffff) == 0)) {
@@ -979,13 +1020,18 @@ DETOUR_RETURN EntityLinkage::lookup (SharedLibrary::Handle module, const char *f
 }
 
 void EntityLinkage::initialize () {
-   if (plat.arm) {
+   if (plat.arm || game.is (GameFlags::Metamod)) {
       return;
    }
 
+   m_dlsym.initialize ("kernel32.dll", "GetProcAddress", DLSYM_FUNCTION);
    m_dlsym.install (reinterpret_cast <void *> (EntityLinkage::replacement), true);
+
    m_self.locate (&engfuncs);
 }
 
 // add linkents for android
 #include "android.cpp"
+
+// override new/delete globally, need to be included in .cpp file
+#include <crlib/cr-override.h>

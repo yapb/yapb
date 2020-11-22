@@ -180,8 +180,8 @@ private:
    FreeFunction freeFun_ = nullptr;
 
 public:
-   inline MemFileStorage () = default;
-   inline ~MemFileStorage () = default;
+   explicit MemFileStorage () = default;
+   ~MemFileStorage () = default;
 
 public:
    void initizalize (LoadFunction loader, FreeFunction unloader) {
@@ -212,14 +212,14 @@ public:
          return nullptr;
       }
       *size = static_cast <int> (file.length ());
-      auto data = alloc.allocate <uint8> (*size);
+      auto data = Memory::get <uint8> (*size);
 
       file.read (data, *size);
       return data;
    }
 
    static void defaultUnload (void *buffer) {
-      alloc.deallocate (buffer);
+      Memory::release (buffer);
    }
 
    static String loadToString (StringRef filename) {

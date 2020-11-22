@@ -453,7 +453,6 @@ constexpr int kMaxNodeLinks = 8;
 constexpr int kMaxPracticeDamageValue = 2040;
 constexpr int kMaxPracticeGoalValue = 2040;
 constexpr int kMaxNodes = 2048;
-constexpr int kMaxRouteLength = kMaxNodes / 2;
 constexpr int kMaxWeapons = 32;
 constexpr int kNumWeapons = 26;
 constexpr int kMaxCollideMoves = 3;

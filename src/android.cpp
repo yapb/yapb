@@ -24,7 +24,7 @@ CR_EXPORT int Server_GetBlendingInterface (int version, struct sv_blending_inter
    return api_GetBlendingInterface (version, ppinterface, pstudio, rotationmatrix, bonetransform);
 }
 
-void android_LinkEntity (EntityFunction &addr, const char *name, entvars_t *pev) {
+void forwardEntity_helper (EntityFunction &addr, const char *name, entvars_t *pev) {
    if (!addr) {
       addr = game.lib ().resolve <EntityFunction> (name);
    }
@@ -37,7 +37,7 @@ void android_LinkEntity (EntityFunction &addr, const char *name, entvars_t *pev)
 #define LINK_ENTITY(entityName)                     \
    CR_EXPORT void entityName (entvars_t *pev) {     \
       static EntityFunction addr;                   \
-      android_LinkEntity (addr, #entityName, pev);  \
+      forwardEntity_helper (addr, __FUNCTION__, pev);  \
    }
 #else
 #define LINK_ENTITY(entityName)
@@ -142,6 +142,7 @@ LINK_ENTITY (game_team_master)
 LINK_ENTITY (game_team_set)
 LINK_ENTITY (game_text)
 LINK_ENTITY (game_zone_player)
+LINK_ENTITY (gib)
 LINK_ENTITY (gibshooter)
 LINK_ENTITY (grenade)
 LINK_ENTITY (hostage_entity)

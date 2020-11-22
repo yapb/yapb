@@ -12,9 +12,6 @@ class YaPBModule : public IYaPBModule {
 public:
    virtual ~YaPBModule () override = default;
 
-public:
-   CR_DECLARE_DESTRUCTOR ();
-
 private:
    Bot *getBot (int index) {
       if (index < 1) {

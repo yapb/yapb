@@ -36,11 +36,13 @@ template <> struct Hash <const char *> {
 
 template <> struct Hash <int32> {
    uint32 operator () (int32 key) const noexcept {
-      key = ((key >> 16) ^ key) * 0x119de1f3;
-      key = ((key >> 16) ^ key) * 0x119de1f3;
-      key = (key >> 16) ^ key;
+      auto result = static_cast <uint32> (key);
 
-      return key;
+      result = ((result >> 16) ^ result) * 0x119de1f3;
+      result = ((result >> 16) ^ result) * 0x119de1f3;
+      result = (result >> 16) ^ result;
+
+      return result;
    }
 };
 

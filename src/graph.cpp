@@ -51,10 +51,10 @@ int BotGraph::clearConnections (int index) {
    }
 
    struct Connection {
-      int index;
-      int number;
-      int distance;
-      float angles;
+      int index {};
+      int number {};
+      int distance {};
+      float angles {};
 
    public:
       Connection () {
@@ -514,7 +514,7 @@ IntArray BotGraph::searchRadius (float radius, const Vector &origin, int maxCoun
 
    if (bucket.empty ()) {
       result.push (getNearestNoBuckets (origin, radius));
-      return cr::move (result);
+      return result;
    }
    radius = cr::square (radius);
 
@@ -527,7 +527,7 @@ IntArray BotGraph::searchRadius (float radius, const Vector &origin, int maxCoun
          result.push (at);
       }
    }
-   return cr::move (result);
+   return result;
 }
 
 void BotGraph::add (int type, const Vector &pos) {
@@ -2564,7 +2564,7 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
    for (auto &visit : visited) {
       visit = false;
    }
-   walk.push (0); // always check from node number 0
+   walk.add (0); // always check from node number 0
 
    while (!walk.empty ()) {
       // pop a node from the stack
@@ -2579,7 +2579,7 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
          // skip this node as it's already visited
          if (exists (index) && !visited[index]) {
             visited[index] = true;
-            walk.push (index);
+            walk.add (index);
          }
       }
    }
@@ -2612,7 +2612,7 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
       visit = false;
    }
    walk.clear ();
-   walk.push (0); // always check from node number 0
+   walk.add (0); // always check from node number 0
 
    while (!walk.empty ()) {
       const int current = walk.first (); // pop a node from the stack
@@ -2623,7 +2623,7 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
             continue; // skip this node as it's already visited
          }
          visited[outgoing] = true;
-         walk.push (outgoing);
+         walk.add (outgoing);
       }
    }
    
@@ -2756,7 +2756,7 @@ void BotGraph::eraseFromDisk () {
 
    // if we're delete graph, delete all corresponding to it files
    forErase.push (strings.format ("%spwf/%s.pwf", data, map)); // graph itself
-   forErase.push (strings.format ("%strain/%s.exp", data, map)); // corresponding to practice
+   forErase.push (strings.format ("%strain/%s.prc", data, map)); // corresponding to practice
    forErase.push (strings.format ("%strain/%s.vis", data, map)); // corresponding to vistable
    forErase.push (strings.format ("%strain/%s.pmx", data, map)); // corresponding to matrix
    forErase.push (strings.format ("%sgraph/%s.graph", data, map)); // new format graph
@@ -2839,8 +2839,6 @@ void BotGraph::setSearchIndex (int index) {
 }
 
 BotGraph::BotGraph () {
-   plat.bzero (m_highestDamage, sizeof (m_highestDamage));
-
    m_endJumpPoint = false;
    m_needsVisRebuild = false;
    m_jumpLearnNode = false;

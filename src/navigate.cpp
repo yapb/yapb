@@ -601,7 +601,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
             m_collStateIndex++;
             m_probeTime = game.time () + 0.5f;
 
-            if (m_collStateIndex > kMaxCollideMoves) {
+            if (m_collStateIndex >= kMaxCollideMoves) {
                m_navTimeset = game.time () - 5.0f;
                resetCollision ();
             }
@@ -1181,7 +1181,7 @@ void Bot::findShortestPath (int srcIndex, int destIndex) {
    m_chosenGoalIndex = srcIndex;
    m_goalValue = 0.0f;
 
-   m_pathWalk.push (srcIndex);
+   m_pathWalk.add (srcIndex);
 
    while (srcIndex != destIndex) {
       srcIndex = (graph.m_matrix.data () + (srcIndex * graph.length ()) + destIndex)->index;
@@ -1192,7 +1192,7 @@ void Bot::findShortestPath (int srcIndex, int destIndex) {
 
          return;
       }
-      m_pathWalk.push (srcIndex);
+      m_pathWalk.add (srcIndex);
    }
 }
 
@@ -1406,7 +1406,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
       int currentIndex = m_routeQue.pop ().first;
 
       // safes us from bad graph...
-      if (m_routeQue.length () >= kMaxRouteLength - 1) {
+      if (m_routeQue.length () >= graph.getMaxRouteLength () - 1) {
          logger.error ("A* Search for bot \"%s\" has tried to build path with at least %d nodes. Seems to be graph is broken.", pev->netname.chars (), m_routeQue.length ());
 
          kick (); // kick the bot off...
@@ -1418,7 +1418,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
 
          // build the complete path
          do {
-            m_pathWalk.push (currentIndex);
+            m_pathWalk.add (currentIndex);
             currentIndex = m_routes[currentIndex].parent;
 
          } while (currentIndex != kInvalidNodeIndex);

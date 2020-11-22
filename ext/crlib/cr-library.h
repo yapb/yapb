@@ -27,6 +27,7 @@ public:
 
 private:
    Handle handle_ = nullptr;
+   bool unloadable_ = true;
 
 public:
    explicit SharedLibrary () = default;
@@ -43,22 +44,28 @@ public:
    }
 
 public:
-   bool load (StringRef file) noexcept {
+   bool load (StringRef file, bool unloadable = true) noexcept {
       if (*this) {
          unload ();
       }
+      unloadable_ = unloadable;
 
 #if defined (CR_WINDOWS)
       handle_ = LoadLibraryA (file.chars ());
-#elif defined (CR_OSX)
-      handle_ = dlopen (file.chars (), RTLD_NOW | RTLD_LOCAL);
 #else
-      handle_ = dlopen (file.chars (), RTLD_NOW | RTLD_DEEPBIND | RTLD_LOCAL);
+      auto loadFlags = RTLD_NOW | RTLD_LOCAL;
+
+#if defined (CR_LINUX) && !defined (__SANITIZE_ADDRESS__)
+      loadFlags |= RTLD_DEEPBIND;
+#endif
+      handle_ = dlopen (file.chars (), loadFlags);
 #endif
       return handle_ != nullptr;
    }
 
    bool locate (Handle address) {
+      unloadable_ = false;
+
 #if defined (CR_WINDOWS)
       MEMORY_BASIC_INFORMATION mbi;
 
@@ -75,16 +82,17 @@ public:
       plat.bzero (&dli, sizeof (dli));
 
       if (dladdr (address, &dli)) {
-         return load (dli.dli_fname);
+         return load (dli.dli_fname, false);
       }
 #endif
       return handle_ != nullptr;
    }
 
    void unload () noexcept {
-      if (!*this) {
+      if (!handle_ || !unloadable_) {
          return;
       }
+
 #if defined (CR_WINDOWS)
       FreeLibrary (static_cast <HMODULE> (handle_));
 #else

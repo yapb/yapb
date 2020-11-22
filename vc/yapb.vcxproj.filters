@@ -75,9 +75,6 @@
     <ClInclude Include="..\ext\hlsdk\util.h">
       <Filter>inc\ext\hlsdk</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\cr-alloc.h">
-      <Filter>inc\ext\crlib</Filter>
-    </ClInclude>
     <ClInclude Include="..\ext\crlib\cr-array.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
@@ -146,6 +143,12 @@
     </ClInclude>
     <ClInclude Include="..\inc\module.h">
       <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ext\crlib\cr-memory.h">
+      <Filter>inc\ext\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ext\crlib\cr-override.h">
+      <Filter>inc\ext\crlib</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

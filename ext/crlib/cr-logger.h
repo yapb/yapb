@@ -23,7 +23,7 @@ private:
    PrintFunction printFun_;
 
 public:
-   SimpleLogger () = default;
+   explicit SimpleLogger () = default;
    ~SimpleLogger () = default;
 
 public:
