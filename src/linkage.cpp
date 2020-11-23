@@ -997,7 +997,7 @@ DLSYM_RETURN EntityLinkage::lookup (SharedLibrary::Handle module, const char *fu
    }
 
    // if requested module is yapb module, put in cache the looked up symbol
-   if (self != module || (plat.win32 && (static_cast <uint16> (reinterpret_cast <uint32> (function) >> 16) & 0xffff) == 0)) {
+   if (self != module || (plat.win && (static_cast <uint16> (reinterpret_cast <unsigned long> (function) >> 16) & 0xffff) == 0)) {
       return resolve (module);
    }
 

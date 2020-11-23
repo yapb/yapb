@@ -571,7 +571,7 @@ bool Game::isSoftwareRenderer () {
    }
 
    // and on only windows version you can use software-render game. Linux, OSX always defaults to OpenGL
-   if (plat.win32) {
+   if (plat.win) {
       return plat.hasModule ("sw");
    }
    return false;
@@ -696,11 +696,11 @@ bool Game::loadCSBinary () {
    }
    StringArray libs;
 
-   if (plat.win32) {
+   if (plat.win) {
       libs.push ("mp.dll");
       libs.push ("cs.dll");
    }
-   else if (plat.linux) {
+   else if (plat.nix) {
       libs.push ("cs.so");
       libs.push ("cs_i386.so");
    }

@@ -650,7 +650,7 @@ void BotSupport::installSendTo () {
    }
 
    // enable only on modern games
-   if (game.is (GameFlags::Modern) && (plat.linux || plat.win32) && !plat.arm && !m_sendToDetour.detoured ()) {
+   if (game.is (GameFlags::Modern) && (plat.nix || plat.win) && !plat.arm && !m_sendToDetour.detoured ()) {
       m_sendToDetour.install (reinterpret_cast <void *> (BotSupport::sendTo), true);
    }
 }

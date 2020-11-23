@@ -142,8 +142,8 @@ CR_NAMESPACE_BEGIN
 
 // helper struct for platform detection
 struct Platform : public Singleton <Platform> {
-   bool win32 = false;
-   bool linux = false;
+   bool win = false;
+   bool nix = false;
    bool osx = false;
    bool android = false;
    bool hfp = false;
@@ -154,7 +154,7 @@ struct Platform : public Singleton <Platform> {
 
    Platform () {
 #if defined(CR_WINDOWS)
-      win32 = true;
+      win = true;
 #endif
 
 #if defined(CR_ANDROID)
@@ -166,7 +166,7 @@ struct Platform : public Singleton <Platform> {
 #endif
 
 #if defined(CR_LINUX)
-      linux = true;
+      nix = true;
 #endif
 
 #if defined(CR_OSX)

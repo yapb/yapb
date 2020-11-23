@@ -770,7 +770,11 @@ float BotManager::getAverageTeamKPD (bool calcForBots) {
       }
       auto bot = bots[client.ent];
 
-      if ((calcForBots && bot) || (!calcForBots && !bot)) {
+      if (calcForBots && bot) {
+         calc.first += client.ent->v.frags;
+         calc.second++;
+      }
+      else if (!calcForBots && !bot) {
          calc.first += client.ent->v.frags;
          calc.second++;
       }

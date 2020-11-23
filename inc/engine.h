@@ -709,7 +709,7 @@ public:
    }
 
    bool isWorkaroundNeeded () {
-      return !plat.win32 && !Game::instance ().isDedicated ();
+      return !plat.win && !Game::instance ().isDedicated ();
    }
 };
 

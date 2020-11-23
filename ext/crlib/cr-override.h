@@ -10,11 +10,11 @@
 #include <crlib/cr-memory.h>
 #include <crlib/cr-platform.h>
 
-void *operator new (size_t size)  noexcept {
+void *operator new (size_t size) {
    return cr::Memory::get <void *> (size);
 }
 
-void *operator new [] (size_t size) noexcept {
+void *operator new [] (size_t size) {
    return cr::Memory::get <void *> (size);
 }
 
