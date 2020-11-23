@@ -8,7 +8,7 @@
 #pragma once
 
 #include <crlib/cr-basic.h>
-#include <crlib/cr-alloc.h>
+#include <crlib/cr-memory.h>
 #include <crlib/cr-movable.h>
 #include <crlib/cr-random.h>
 
@@ -61,20 +61,20 @@ public:
 private:
    void destructElements () noexcept {
       for (size_t i = 0; i < length_; ++i) {
-         alloc.destruct (&contents_[i]);
+         Memory::destruct (&contents_[i]);
       }
    }
 
    void transferElements (T *dest, T *src, size_t length) noexcept {
       for (size_t i = 0; i < length; ++i) {
-         alloc.construct (&dest[i], cr::move (src[i]));
-         alloc.destruct (&src[i]);
+         Memory::construct (&dest[i], cr::move (src[i]));
+         Memory::destruct (&src[i]);
       }
    }
 
    void destroy () {
       destructElements ();
-      alloc.deallocate (contents_);
+      Memory::release (contents_);
    }
 
    void reset () {
@@ -82,7 +82,6 @@ private:
       capacity_ = 0;
       length_ = 0;
    }
-
 
 public:
    bool reserve (const size_t amount) {
@@ -99,11 +98,11 @@ public:
       else {
          capacity = amount + capacity_ + 1;
       }
-      auto data = alloc.allocate <T> (capacity);
+      auto data = Memory::get <T> (capacity);
 
       if (contents_) {
          transferElements (data, contents_, length_);
-         alloc.deallocate (contents_);
+         Memory::release (contents_);
       }
 
       contents_ = data;
@@ -152,7 +151,7 @@ public:
             return false;
          }
       }
-      alloc.construct (&contents_[index], cr::forward <U> (object));
+      Memory::construct (&contents_[index], cr::forward <U> (object));
 
       if (index >= length_) {
          length_ = index + 1;
@@ -176,7 +175,7 @@ public:
 
       if (index >= length_) {
          for (size_t i = 0; i < count; ++i) {
-            alloc.construct (&contents_[i + index], cr::forward <U> (objects[i]));
+            Memory::construct (&contents_[i + index], cr::forward <U> (objects[i]));
          }
          length_ = capacity;
       }
@@ -187,7 +186,7 @@ public:
             contents_[i + count - 1] = cr::move (contents_[i - 1]);
          }
          for (i = 0; i < count; ++i) {
-            alloc.construct (&contents_[i + index], cr::forward <U> (objects[i]));
+            Memory::construct (&contents_[i + index], cr::forward <U> (objects[i]));
          }
          length_ += count;
       }
@@ -206,7 +205,7 @@ public:
          return false;
       }
       for (size_t i = index; i < index + count; ++i) {
-         alloc.destruct (&contents_[i]);
+         Memory::destruct (&contents_[i]);
       }
       length_ -= count;
 
@@ -232,7 +231,7 @@ public:
       if (!reserve (1)) {
          return false;
       }
-      alloc.construct (&contents_[length_], cr::forward <U> (object));
+      Memory::construct (&contents_[length_], cr::forward <U> (object));
       ++length_;
 
       return true;
@@ -242,7 +241,7 @@ public:
       if (!reserve (1)) {
          return false;
       }
-      alloc.construct (&contents_[length_], cr::forward <Args> (args)...);
+      Memory::construct (&contents_[length_], cr::forward <Args> (args)...);
       ++length_;
 
       return true;
@@ -310,10 +309,10 @@ public:
          return false;
       }
 
-      auto data = alloc.allocate <T> (length_);
+      auto data = Memory::get <T> (length_);
       transferElements (data, contents_, length_);
 
-      alloc.deallocate (contents_);
+      Memory::release (contents_);
 
       contents_ = data;
       capacity_ = length_;

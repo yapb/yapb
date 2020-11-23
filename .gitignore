@@ -1,6 +1,7 @@
 *.dll
 *.so
 *.user
+*.json
 
 vc/release
 vc/debug

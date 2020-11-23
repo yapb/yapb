@@ -642,26 +642,29 @@ public:
 class EntityLinkage : public Singleton <EntityLinkage> {
 private:
 #if defined (CR_WINDOWS)
-#  define DETOUR_FUNCTION GetProcAddress
-#  define DETOUR_RETURN FARPROC
-#  define DETOUR_HANDLE HMODULE
+#  define DLSYM_FUNCTION GetProcAddress
+#  define DLSYM_RETURN FARPROC
+#  define DLSYM_HANDLE HMODULE
 #else
-#  define DETOUR_FUNCTION dlsym
-#  define DETOUR_RETURN SharedLibrary::Handle
-#  define DETOUR_HANDLE SharedLibrary::Handle
+#  define DLSYM_FUNCTION dlsym
+#  define DLSYM_RETURN SharedLibrary::Handle
+#  define DLSYM_HANDLE SharedLibrary::Handle
 #endif
 
 private:
+   bool m_paused { false };
+
+   Detour <decltype (DLSYM_FUNCTION)> m_dlsym;
+   HashMap <StringRef, DLSYM_RETURN> m_exports;
+
    SharedLibrary m_self;
-   Detour <decltype (DETOUR_FUNCTION)> m_dlsym { "kernel32.dll", "GetProcAddress", DETOUR_FUNCTION };
-   HashMap <StringRef, DETOUR_RETURN> m_exports;
 
 public:
    EntityLinkage () = default;
 
 public:
    void initialize ();
-   DETOUR_RETURN lookup (SharedLibrary::Handle module, const char *function);
+   DLSYM_RETURN lookup (SharedLibrary::Handle module, const char *function);
 
 public:
    void callPlayerFunction (edict_t *ent) {
@@ -673,13 +676,40 @@ public:
    }
 
 public:
-   static DETOUR_RETURN CR_STDCALL replacement (SharedLibrary::Handle module, const char *function) {
+   void enable () {
+      if (m_dlsym.detoured ()) {
+         return;
+      }
+      m_dlsym.detour ();
+   }
+
+   void disable () {
+      if (!m_dlsym.detoured ()) {
+         return;
+      }
+      m_dlsym.restore ();
+   }
+
+   void setPaused (bool what) {
+      m_paused = what;
+   }
+
+   bool isPaused () const {
+      return m_paused;
+   }
+
+public:
+   static DLSYM_RETURN CR_STDCALL replacement (SharedLibrary::Handle module, const char *function) {
       return EntityLinkage::instance ().lookup (module, function);
    }
 
 public:
    void clearExportTable () {
       m_exports.clear ();
+   }
+
+   bool isWorkaroundNeeded () {
+      return !plat.win && !Game::instance ().isDedicated ();
    }
 };
 

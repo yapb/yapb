@@ -8,7 +8,7 @@
 #pragma once
 
 #include <crlib/cr-basic.h>
-#include <crlib/cr-alloc.h>
+#include <crlib/cr-memory.h>
 #include <crlib/cr-movable.h>
 
 CR_NAMESPACE_BEGIN
@@ -53,7 +53,7 @@ public:
 
 private:
    void destroy () {
-      alloc.destroy (ptr_);
+      delete ptr_;
       ptr_ = nullptr;
    }
 
@@ -129,7 +129,7 @@ public:
 
 private:
    void destroy () {
-      alloc.destroy (ptr_);
+      delete[] ptr_;
       ptr_ = nullptr;
    }
 
@@ -156,6 +156,7 @@ public:
    T &operator [] (size_t index) {
       return ptr_[index];
    }
+
    const T &operator [] (size_t index) const {
       return ptr_[index];
    }
@@ -192,11 +193,12 @@ namespace detail {
 }
 
 template <typename T, typename... Args> typename detail::UniqueIf <T>::SingleObject makeUnique (Args &&... args) {
-   return UniquePtr <T> (alloc.create <T> (cr::forward <Args> (args)...));
+   return UniquePtr <T> (new T (cr::forward <Args> (args)...));
 }
 
 template <typename T> typename detail::UniqueIf <T>::UnknownBound makeUnique (size_t size) {
-   return UniquePtr <T> (alloc.createArray <typename detail::ClearExtent <T>::Type> (size));
+   using Type = typename detail::ClearExtent <T>::Type;
+   return UniquePtr<T> (new Type[size] ());
 }
 
 template <typename T, typename... Args> typename detail::UniqueIf <T>::KnownBound makeUnique (Args &&...) = delete;

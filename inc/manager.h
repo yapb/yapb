@@ -61,20 +61,20 @@ private:
    float m_autoKillCheckTime; // time to kill all the bots ?
    float m_maintainTime; // time to maintain bot creation
    float m_quotaMaintainTime; // time to maintain bot quota
-   float m_grenadeUpdateTime; // time to update active grenades
-   float m_entityUpdateTime; // time to update intresting entities
-   float m_plantSearchUpdateTime; // time to update for searching planted bomb
-   float m_lastChatTime; // global chat time timestamp
-   float m_timeBombPlanted; // time the bomb were planted
-   float m_lastRadioTime[kGameTeamNum]; // global radio time
+   float m_grenadeUpdateTime {}; // time to update active grenades
+   float m_entityUpdateTime {}; // time to update intresting entities
+   float m_plantSearchUpdateTime {}; // time to update for searching planted bomb
+   float m_lastChatTime {}; // global chat time timestamp
+   float m_timeBombPlanted {}; // time the bomb were planted
+   float m_lastRadioTime[kGameTeamNum] {}; // global radio time
 
    int m_lastWinner; // the team who won previous round
    int m_lastDifficulty; // last bots difficulty
    int m_bombSayStatus; // some bot is issued whine about bomb
-   int m_lastRadio[kGameTeamNum]; // last radio message for team
+   int m_lastRadio[kGameTeamNum] {}; // last radio message for team
 
-   bool m_leaderChoosen[kGameTeamNum]; // is team leader choose theese round
-   bool m_economicsGood[kGameTeamNum]; // is team able to buy anything
+   bool m_leaderChoosen[kGameTeamNum] {}; // is team leader choose theese round
+   bool m_economicsGood[kGameTeamNum] {}; // is team able to buy anything
    bool m_bombPlanted;
    bool m_botsCanPause;
    bool m_roundOver;

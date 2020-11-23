@@ -18,7 +18,7 @@ private:
    uint64 state_ { static_cast <uint64> (time (nullptr)) };
 
 public:
-   Random () = default;
+   explicit Random () = default;
    ~Random () = default;
 
 private:

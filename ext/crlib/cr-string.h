@@ -11,7 +11,7 @@
 #include <ctype.h>
 
 #include <crlib/cr-basic.h>
-#include <crlib/cr-alloc.h>
+#include <crlib/cr-memory.h>
 #include <crlib/cr-movable.h>
 #include <crlib/cr-uniqueptr.h>
 #include <crlib/cr-array.h>
@@ -420,7 +420,13 @@ public:
       length = calcLength (str, length);
 
       resize (length);
-      memcpy (&chars_[0], str, length);
+
+      if (str) {
+         memcpy (&chars_[0], str, length);
+      }
+      else {
+         chars_[0] = kNullChar;
+      }
 
       length_ = length;
       chars_[length_] = kNullChar;

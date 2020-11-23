@@ -92,7 +92,10 @@ protected:
    { }
 
 public:
-   static T &instance (); // implemented in cr-alloc.h
+   static T &instance () {
+      static T __instance {};
+      return __instance;
+   }
 
 public:
    T *operator -> () {

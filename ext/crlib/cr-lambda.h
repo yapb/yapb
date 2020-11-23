@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <crlib/cr-alloc.h>
+#include <crlib/cr-memory.h>
 #include <crlib/cr-uniqueptr.h>
 
 CR_NAMESPACE_BEGIN
@@ -31,9 +31,6 @@ private:
 
       virtual R invoke (Args &&...) = 0;
       virtual UniquePtr <LambdaFunctorWrapper> clone () const = 0;
-
-   public:
-      CR_DECLARE_DESTRUCTOR ();
    };
 
    template <typename T> class LambdaFunctor : public LambdaFunctorWrapper {

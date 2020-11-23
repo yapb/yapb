@@ -10,7 +10,7 @@
 #include <stdio.h>
 
 #include <crlib/cr-basic.h>
-#include <crlib/cr-alloc.h>
+#include <crlib/cr-memory.h>
 #include <crlib/cr-array.h>
 #include <crlib/cr-deque.h>
 #include <crlib/cr-binheap.h>

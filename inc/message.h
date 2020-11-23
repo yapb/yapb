@@ -70,13 +70,13 @@ private:
    struct Args {
       union {
          float float_;
-         long long_;
+         int32 long_;
          const char *chars_;
       };
 
    public:
       Args (float value) : float_ (value) { }
-      Args (int value) : long_ (value) { }
+      Args (int32 value) : long_ (value) { }
       Args (const char *value) : chars_ (value) { }
    };
 
