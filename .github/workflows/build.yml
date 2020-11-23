@@ -35,6 +35,7 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
         run: |
           meson setup dist
           ninja -C dist package
