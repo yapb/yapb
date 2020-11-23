@@ -1243,7 +1243,7 @@ int Bot::pickBestWeapon (int *vec, int count, int moneySave) {
          union {
             unsigned int u;
             float f;
-         } cast;
+         } cast {};
          cast.f = factor;
 
          return (static_cast <int> ((cast.u >> 23) & 0xff) - 127) * 0.3010299956639812f;
