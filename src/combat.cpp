@@ -10,6 +10,7 @@
 ConVar cv_shoots_thru_walls ("yb_shoots_thru_walls", "2", "Specifies whether bots able to fire at enemies behind the wall, if they hearing or suspecting them.", true, 0.0f, 2.0f);
 ConVar cv_ignore_enemies ("yb_ignore_enemies", "0", "Enables or disables searching world for enemies.");
 ConVar cv_check_enemy_rendering ("yb_check_enemy_rendering", "0", "Enables or disables checking enemy rendering flags. Useful for some mods.");
+ConVar cv_check_enemy_invincibility ("yb_check_enemy_invincibility", "0", "Enables or disables checking enemy invincibility. Useful for some mods.");
 ConVar cv_stab_close_enemies ("yb_stab_close_enemies", "1", "Enables or disables bot ability to stab the enemy with knife if bot is in good condition.");
 
 ConVar mp_friendlyfire ("mp_friendlyfire", nullptr, Var::GameRef);
@@ -86,10 +87,31 @@ bool Bot::isEnemyHidden (edict_t *enemy) {
    return false;
 }
 
+bool Bot::isEnemyInvincible (edict_t *enemy) {
+   if (!cv_check_enemy_invincibility.bool_ () || game.isNullEntity (enemy)) {
+      return false;
+   }
+   entvars_t &v = enemy->v;
+
+   if (v.solid < SOLID_BBOX) {
+      return true;
+   }
+
+   if (v.flags & FL_GODMODE) {
+      return true;
+   }
+
+   if (cr::fequal (v.takedamage, DAMAGE_NO)) {
+      return true;
+   }
+
+   return false;
+}
+
 bool Bot::checkBodyParts (edict_t *target) {
    // this function checks visibility of a bot target.
 
-   if (isEnemyHidden (target)) {
+   if (isEnemyHidden (target) || isEnemyInvincible (target)) {
       m_enemyParts = Visibility::None;
       m_enemyOrigin = nullptr;
 
