@@ -222,7 +222,7 @@ bool BotSupport::isMonster (edict_t *ent) {
 }
 
 bool BotSupport::isItem (edict_t *ent) {
-   return strncmp (ent->v.classname.chars (), "item", 4) == 0;
+   return !!(strstr (ent->v.classname.chars(), "item_"));
 }
 
 bool BotSupport::isPlayerVIP (edict_t *ent) {
