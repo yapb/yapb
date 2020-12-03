@@ -28,7 +28,7 @@ ConVar cv_destroy_breakables_around ("yb_destroy_breakables_around", "1", "Allow
 ConVar cv_chatter_path ("yb_chatter_path", "sound/radio/bot", "Specifies the paths for the bot chatter sound files.", false);
 ConVar cv_restricted_weapons ("yb_restricted_weapons", "", "Specifies semicolon separated list of weapons that are not allowed to buy / pickup.", false);
 
-ConVar cv_attack_monsters ("yb_attack_monsters", "0", "Allows or disallows bots to take attack monsters.");
+ConVar cv_attack_monsters ("yb_attack_monsters", "0", "Allows or disallows bots to attack monsters.");
 ConVar cv_pickup_custom_items ("yb_pickup_custom_items", "0", "Allows or disallows bots to pickup custom items.");
 
 // game console variables
