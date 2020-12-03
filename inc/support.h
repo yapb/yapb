@@ -55,6 +55,12 @@ public:
    // check if entitiy is a player
    bool isPlayer (edict_t *ent);
 
+   // check if entitiy is a monster
+   bool isMonster (edict_t *ent);
+
+   // check if entitiy is a item
+   bool isItem (edict_t *ent);
+
    // check if entity is a vip
    bool isPlayerVIP (edict_t *ent);
 

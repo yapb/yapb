@@ -28,6 +28,9 @@ ConVar cv_destroy_breakables_around ("yb_destroy_breakables_around", "1", "Allow
 ConVar cv_chatter_path ("yb_chatter_path", "sound/radio/bot", "Specifies the paths for the bot chatter sound files.", false);
 ConVar cv_restricted_weapons ("yb_restricted_weapons", "", "Specifies semicolon separated list of weapons that are not allowed to buy / pickup.", false);
 
+ConVar cv_attack_monsters ("yb_attack_monsters", "0", "Allows or disallows bots to take attack monsters.");
+ConVar cv_pickup_custom_items ("yb_pickup_custom_items", "0", "Allows or disallows bots to pickup custom items.");
+
 // game console variables
 ConVar mp_c4timer ("mp_c4timer", nullptr, Var::GameRef);
 ConVar mp_flashlight ("mp_flashlight", nullptr, Var::GameRef);
@@ -572,6 +575,10 @@ void Bot::updatePickups () {
          else if (strncmp ("grenade", classname, 7) == 0 && strcmp (model, "c4.mdl") == 0) {
             allowPickup = true;
             pickupType = Pickup::PlantedC4;
+         }
+         else if (cv_pickup_custom_items.bool_ () && util.isItem(ent) && strncmp ("item_thighpack", classname, 14) != 0) {
+            allowPickup = true;
+            pickupType = Pickup::None;
          }
       }
       
@@ -1690,7 +1697,7 @@ void Bot::overrideConditions () {
       m_moveToGoal = false; // don't move to goal
       m_navTimeset = game.time ();
 
-      if (util.isPlayer (m_enemy)) {
+      if (util.isPlayer (m_enemy) || (cv_attack_monsters.bool_ () && util.isMonster (m_enemy))) {
          attackMovement ();
       }
    }
@@ -1704,7 +1711,7 @@ void Bot::overrideConditions () {
    }
 
    // special handling, if we have a knife in our hands
-   if ((bots.getRoundStartTime () + 6.0f > game.time () || !hasAnyWeapons ()) && usesKnife () && util.isPlayer (m_enemy)) {
+   if ((bots.getRoundStartTime () + 6.0f > game.time () || !hasAnyWeapons ()) && usesKnife () && (util.isPlayer (m_enemy) || (cv_attack_monsters.bool_ () && util.isMonster (m_enemy)))) {
       float length = (pev->origin - m_enemy->v.origin).length2d ();
 
       // do waypoint movement if enemy is not reachable with a knife
@@ -5096,8 +5103,8 @@ void Bot::takeDamage (edict_t *inflictor, int damage, int armor, int bits) {
    m_lastDamageType = bits;
    updatePracticeValue (damage);
 
-   if (util.isPlayer (inflictor)) {
-      if (cv_tkpunish.bool_ () && game.getTeam (inflictor) == m_team && !util.isFakeClient (inflictor)) {
+   if (util.isPlayer (inflictor) || (cv_attack_monsters.bool_ () && util.isMonster (inflictor))) {
+      if (!util.isMonster (inflictor) && cv_tkpunish.bool_ () && game.getTeam (inflictor) == m_team && !util.isFakeClient (inflictor)) {
          // alright, die you teamkiller!!!
          m_actualReactionTime = 0.0f;
          m_seeEnemyTime = game.time ();

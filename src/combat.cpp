@@ -234,6 +234,30 @@ bool Bot::lookupEnemies () {
       // ignore shielded enemies, while we have real one
       edict_t *shieldEnemy = nullptr;
 
+      if (cv_attack_monsters. bool_()) {
+         // search the world for monsters...
+         for (const auto &intresting : bots.getIntrestingEntities ()) {
+            if (!util.isMonster(intresting)) {
+               continue;
+            }
+
+            // check the engine PVS
+            if (!isEnemyInFrustum (intresting) || !game.checkVisibility (intresting, set)) {
+               continue;
+            }
+
+            // see if bot can see the monster...
+            if (seesEnemy (intresting)) {
+               float distance = (intresting->v.origin - pev->origin).lengthSq ();
+
+               if (distance * 0.7f < nearestDistance) {
+                  nearestDistance = distance;
+                  newEnemy = intresting;
+               }
+            }
+         }
+      }
+
       // search the world for players...
       for (const auto &client : util.getClients ()) {
          if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team == m_team || client.ent == ent () || !client.ent) {
@@ -277,7 +301,7 @@ bool Bot::lookupEnemies () {
       }
    }
 
-   if (util.isPlayer (newEnemy)) {
+   if (util.isPlayer (newEnemy) || (cv_attack_monsters.bool_ () && util.isMonster (newEnemy))) {
       bots.setCanPause (true);
 
       m_aimFlags |= AimFlags::Enemy;

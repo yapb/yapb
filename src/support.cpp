@@ -205,6 +205,26 @@ bool BotSupport::isPlayer (edict_t *ent) {
    return false;
 }
 
+bool BotSupport::isMonster (edict_t *ent) {
+   if (game.isNullEntity (ent)) {
+      return false;
+   }
+
+   if (~ent->v.flags & FL_MONSTER) {
+      return false;
+   }
+
+   if (strncmp ("hostage", ent->v.classname.chars(), 7) == 0) {
+      return false;
+   }
+
+   return true;
+}
+
+bool BotSupport::isItem (edict_t *ent) {
+   return !!(strstr (ent->v.classname.chars(), "item"));
+}
+
 bool BotSupport::isPlayerVIP (edict_t *ent) {
    if (!game.mapIs (MapFlags::Assassination)) {
       return false;

@@ -1164,6 +1164,8 @@ extern ConVar cv_whose_your_daddy;
 extern ConVar cv_chatter_path;
 extern ConVar cv_quota;
 extern ConVar cv_difficulty;
+extern ConVar cv_attack_monsters;
+extern ConVar cv_pickup_custom_items;
 
 // execute client command helper
 template <typename ...Args> void Bot::issueCommand (const char *fmt, Args &&...args) {

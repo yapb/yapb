@@ -1652,7 +1652,7 @@ void BotManager::updateIntrestingEntities () {
       auto classname = e->v.classname.chars ();
       
       // search for grenades, weaponboxes, weapons, items and armoury entities
-      if (strncmp ("weaponbox", classname, 9) == 0 || strncmp ("grenade", classname, 7) == 0 || strncmp ("item", classname, 4) == 0 || strncmp ("armoury", classname, 7) == 0) {
+      if (strncmp ("weaponbox", classname, 9) == 0 || strncmp ("grenade", classname, 7) == 0 || util.isItem (e) || strncmp ("armoury", classname, 7) == 0) {
          m_intrestingEntities.push (e);
       }
 
@@ -1668,6 +1668,10 @@ void BotManager::updateIntrestingEntities () {
 
       // pickup some csdm stuff if we're running csdm
       if (game.is (GameFlags::CSDM) && strncmp ("csdm", classname, 4) == 0) {
+         m_intrestingEntities.push (e);
+      }
+
+      if (cv_attack_monsters.bool_ () && util.isMonster (e)) {
          m_intrestingEntities.push (e);
       }
 
