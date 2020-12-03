@@ -256,10 +256,10 @@ bool Bot::lookupEnemies () {
       // ignore shielded enemies, while we have real one
       edict_t *shieldEnemy = nullptr;
 
-      if (cv_attack_monsters. bool_()) {
+      if (cv_attack_monsters.bool_ ()) {
          // search the world for monsters...
          for (const auto &intresting : bots.getIntrestingEntities ()) {
-            if (!util.isMonster(intresting)) {
+            if (!util.isMonster (intresting)) {
                continue;
             }
 

@@ -576,7 +576,7 @@ void Bot::updatePickups () {
             allowPickup = true;
             pickupType = Pickup::PlantedC4;
          }
-         else if (cv_pickup_custom_items.bool_ () && util.isItem(ent) && strncmp ("item_thighpack", classname, 14) != 0) {
+         else if (cv_pickup_custom_items.bool_ () && util.isItem (ent) && strncmp ("item_thighpack", classname, 14) != 0) {
             allowPickup = true;
             pickupType = Pickup::None;
          }
