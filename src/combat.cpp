@@ -457,10 +457,14 @@ Vector Bot::getBodyOffsetError (float distance) {
    }
 
    if (m_aimErrorTime < game.time ()) {
-      const float error = distance / (cr::clamp (m_difficulty, 1, 3) * 1000.0f);
+      const float hitError = distance / (cr::clamp (m_difficulty, 1, 3) * 1000.0f);
       Vector &maxs = m_enemy->v.maxs, &mins = m_enemy->v.mins;
 
-      m_aimLastError = Vector (rg.get (mins.x * error, maxs.x * error), rg.get (mins.y * error, maxs.y * error), rg.get (mins.z * error, maxs.z * error));
+      m_aimLastError = Vector (rg.get (mins.x * hitError, maxs.x * hitError), rg.get (mins.y * hitError, maxs.y * hitError), rg.get (mins.z * hitError, maxs.z * hitError));
+
+      Vector &aimError = conf.getDifficultyTweaks (m_difficulty) ->aimError;
+      m_aimLastError += Vector (rg.get (-aimError.x, aimError.x), rg.get (-aimError.y, aimError.y), rg.get (-aimError.z, aimError.z));
+
       m_aimErrorTime = game.time () + rg.get (1.0f, 1.2f);
    }
    return m_aimLastError;

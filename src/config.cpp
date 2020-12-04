@@ -1,6 +1,6 @@
 //
 // YaPB - Counter-Strike Bot based on PODBot by Markus Klinge.
-// Copyright © 2004-2020 YaPB Project <yapb@jeefo.net>.
+// Copyright ï¿½ 2004-2020 YaPB Project <yapb@jeefo.net>.
 //
 // SPDX-License-Identifier: MIT
 //
@@ -529,27 +529,27 @@ void BotConfig::loadDifficultyConfig () {
 
    // initialize defaults
    m_difficulty[Difficulty::Noob] = {
-      { 0.8f, 1.0f }, 5, 0, 0
+      { 0.8f, 1.0f }, 5, 0, 0, { 30.0f, 30.0f, 40.0f }
    };
 
    m_difficulty[Difficulty::Easy] = {
-      { 0.6f, 0.8f }, 30, 10, 10
+      { 0.6f, 0.8f }, 30, 10, 10, { 15.0f, 15.0f, 24.0f }
    };
 
    m_difficulty[Difficulty::Normal] = {
-      { 0.4f, 0.6f }, 50, 30, 40
+      { 0.4f, 0.6f }, 50, 30, 40, { 5.0f, 5.0f, 10.0f }
    };
 
    m_difficulty[Difficulty::Hard] = {
-      { 0.2f, 0.4f }, 75, 60, 70
+      { 0.2f, 0.4f }, 75, 60, 70, { 0.0f, 0.0f, 0.0f }
    };
 
    m_difficulty[Difficulty::Expert] = {
-      {  0.1f, 0.2f }, 100, 90, 90
+      {  0.1f, 0.2f }, 100, 90, 90, { 0.0f, 0.0f, 0.0f }
    };
 
-   // currently, mindelay, maxdelay, headprob, seenthruprob, heardthruprob
-   constexpr uint32 kMaxDifficultyValues = 5;
+   // currently, mindelay, maxdelay, headprob, seenthruprob, heardthruprob, aimErrorX, aimErrorY, aimErrorZ
+   constexpr uint32 kMaxDifficultyValues = 8;
 
    // helper for parsing each level
    auto parseLevel = [&] (int32 level, StringRef data) {
@@ -566,6 +566,7 @@ void BotConfig::loadDifficultyConfig () {
       diff->headshotPct = values[2].int_ ();
       diff->seenThruPct = values[3].int_ ();
       diff->hearThruPct = values[4].int_ ();
+      diff->aimError = Vector( values[5].float_ (), values[6].float_ (), values[7].float_ ());
    };
 
    // avatars inititalization
