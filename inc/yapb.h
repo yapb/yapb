@@ -765,6 +765,7 @@ private:
    float isInFOV (const Vector &dest);
    float getShiftSpeed ();
    float getEnemyBodyOffsetCorrection (float distance);
+   float calculateScaleFactor(edict_t *ent);
 
    bool canReplaceWeapon ();
    bool canDuckUnder (const Vector &normal);
