@@ -210,6 +210,10 @@ void Game::testLine (const Vector &start, const Vector &end, int ignoreFlags, ed
    engfuncs.pfnTraceLine (start, end, engineFlags, ignoreEntity, ptr);
 }
 
+void Game::testModel (const Vector &start, const Vector &end, int hullNumber, edict_t *entToHit, TraceResult *ptr) {
+   engfuncs.pfnTraceModel (start, end, hullNumber, entToHit, ptr);
+}
+
 bool Game::testLineChannel (TraceChannel channel, const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult *ptr) {
    // this function traces a line dot by dot, starting from vecStart in the direction of vecEnd,
    // ignoring or not monsters (depending on the value of IGNORE_MONSTERS, true or false), and stops

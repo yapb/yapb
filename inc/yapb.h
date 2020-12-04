@@ -814,6 +814,7 @@ private:
    bool updateLiftHandling ();
    bool updateLiftStates ();
    bool canRunHeavyWeight ();
+   bool isEnemyInSight (Vector &endPos);
 
    void markStale ();
    void instantChatter (int type);

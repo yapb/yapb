@@ -495,36 +495,38 @@ const Vector &Bot::getEnemyBodyOffset () {
    }
    Vector aimPos = m_enemy->v.origin;
 
-   if (m_difficulty > Difficulty::Normal) {
-      aimPos += (m_enemy->v.velocity - pev->velocity) * (getFrameInterval () * 1.25f);
-   }
+   if (!isEnemyInSight(aimPos)) {
+      if (m_difficulty > Difficulty::Normal) {
+         aimPos += (m_enemy->v.velocity - pev->velocity) * (getFrameInterval () * 1.25f);
+      }
 
-   // if we only suspect an enemy behind a wall take the worst skill
-   if (!m_enemyParts && (m_states & Sense::SuspectEnemy)) {
-      aimPos += getBodyOffsetError (distance);
-   }
-   else {
-      const float highOffset = m_difficulty > Difficulty::Normal ? 3.5f : 0.0f;
+      // if we only suspect an enemy behind a wall take the worst skill
+      if (!m_enemyParts && (m_states & Sense::SuspectEnemy)) {
+         aimPos += getBodyOffsetError (distance);
+      }
+      else {
+         const float highOffset = m_difficulty > Difficulty::Normal ? 3.5f : 0.0f;
 
-      // now take in account different parts of enemy body
-      if (m_enemyParts & (Visibility::Head | Visibility::Body)) {
+         // now take in account different parts of enemy body
+         if (m_enemyParts & (Visibility::Head | Visibility::Body)) {
 
-         // now check is our skill match to aim at head, else aim at enemy body
-         if (rg.chance (conf.getDifficultyTweaks (m_difficulty)->headshotPct)) {
-            aimPos.z = headOffset (m_enemy) + getEnemyBodyOffsetCorrection (distance);
+            // now check is our skill match to aim at head, else aim at enemy body
+            if (rg.chance (conf.getDifficultyTweaks (m_difficulty)->headshotPct)) {
+               aimPos.z = headOffset (m_enemy) + getEnemyBodyOffsetCorrection (distance);
+            }
+            else {
+               aimPos.z += highOffset;
+            }
          }
-         else {
+         else if (m_enemyParts & Visibility::Body) {
             aimPos.z += highOffset;
          }
-      }
-      else if (m_enemyParts & Visibility::Body) {
-         aimPos.z += highOffset;
-      }
-      else if (m_enemyParts & Visibility::Other) {
-         aimPos = m_enemyOrigin;
-      }
-      else if (m_enemyParts & Visibility::Head) {
-         aimPos.z = headOffset (m_enemy) + getEnemyBodyOffsetCorrection (distance);
+         else if (m_enemyParts & Visibility::Other) {
+            aimPos = m_enemyOrigin;
+         }
+         else if (m_enemyParts & Visibility::Head) {
+            aimPos.z = headOffset (m_enemy) + getEnemyBodyOffsetCorrection (distance);
+         }
       }
    }
 
@@ -1653,4 +1655,16 @@ void Bot::checkReload () {
          return;
       }
    }
+}
+
+bool Bot::isEnemyInSight(Vector &endPos)
+{
+   TraceResult aimHitTr {};
+   game.testModel (getEyesPos (), getEyesPos () + pev->v_angle.forward () * kInfiniteDistance, 0, m_enemy, &aimHitTr);
+   if (aimHitTr.pHit != m_enemy) {
+       return false;
+   }
+
+   endPos = aimHitTr.vecEndPos;
+   return true;
 }
