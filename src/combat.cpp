@@ -273,7 +273,7 @@ bool Bot::lookupEnemies () {
             // see if bot can see the monster...
             if (seesEnemy (intresting)) {
                // higher priority for big monsters
-               float scaleFactor = (1.0f / calculateScaleFactor(intresting));
+               float scaleFactor = (1.0f / calculateScaleFactor (intresting));
                float distance = (intresting->v.origin - pev->origin).lengthSq () * scaleFactor;
 
                if (distance * 0.7f < nearestDistance) {
@@ -1655,7 +1655,7 @@ void Bot::checkReload () {
    }
 }
 
-float Bot::calculateScaleFactor(edict_t *ent) {
+float Bot::calculateScaleFactor (edict_t *ent) {
    Vector entSize = ent->v.maxs - ent->v.mins;
    float entArea = 2 * (entSize.x * entSize.y + entSize.y * entSize.z + entSize.x * entSize.z);
 
