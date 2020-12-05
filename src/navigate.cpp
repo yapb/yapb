@@ -2662,7 +2662,7 @@ bool Bot::isDeadlyMove (const Vector &to) {
    }
 
    while (distance > 30.0f) {
-      check = check + direction * 30.0f; // move 10 units closer to the goal...
+      check = check - direction * 30.0f; // move 10 units closer to the goal...
 
       down = check;
       down.z -= 1000.0f; // straight down 1000 units
