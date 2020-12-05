@@ -503,7 +503,7 @@ const Vector &Bot::getEnemyBodyOffset () {
    if (!m_enemyParts && (m_states & Sense::SuspectEnemy)) {
       aimPos += getBodyOffsetError (distance);
    }
-   else {
+   else if (util.isPlayer(m_enemy)) {
       const float highOffset = m_difficulty > Difficulty::Normal ? 3.5f : 0.0f;
 
       // now take in account different parts of enemy body
