@@ -57,20 +57,25 @@ private:
       auto capacity = capacity_ ? capacity_ * 2 : 8;
       auto contents = Memory::get <T> (sizeof (T) * capacity);
 
+      auto transfer = [] (T &dst, T &src) {
+         Memory::construct (&dst, cr::move (src));
+         Memory::destruct (&src);
+      };
+
       if (index_.first < index_.second) {
          for (size_t i = 0; i < index_.second - index_.first; ++i) {
-            contents[i] = cr::move (contents_[index_.first + i]);
+            transfer (contents[i], contents_[index_.first + i]);
          }
          index_.second = index_.second - index_.first;
          index_.first = 0;
       }
       else {
          for (size_t i = 0; i < capacity_ - index_.first; ++i) {
-            contents[i] = cr::move (contents_[index_.first + i]);
+            transfer (contents[i], contents_[index_.first + i]);
          }
 
          for (size_t i = 0; i < index_.second; ++i) {
-            contents[capacity_ - index_.first + i] = cr::move (contents_[i]);
+            transfer (contents[capacity_ - index_.first + i], contents_[i]);
          }
          index_.second = index_.second + (capacity_ - index_.first);
          index_.first = 0;
@@ -109,7 +114,7 @@ public:
    explicit Deque () : capacity_ (0), contents_ (nullptr)
    { }
 
-   Deque (Deque &&rhs) : contents_ (cr::move (rhs.contents_)), capacity_ (rhs.capacity_) {
+   Deque (Deque &&rhs) : contents_ (rhs.contents_), capacity_ (rhs.capacity_) {
       index_.first (rhs.index_.first);
       index_.second (rhs.index_.second);
 
@@ -211,7 +216,7 @@ public:
    Deque &operator = (Deque &&rhs) {
       destroy ();
 
-      contents_ = cr::move (rhs.contents_);
+      contents_ = rhs.contents_;
       capacity_ = rhs.capacity_;
 
       index_.first = rhs.index_.first;
