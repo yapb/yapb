@@ -133,12 +133,14 @@ bool Bot::checkBodyParts (edict_t *target) {
    }
 
    // check top of head
-   spot.z += 25.0f;
-   game.testLine (eyes, spot, TraceIgnore::Everything, self, &result);
+   if (util.isPlayer (target)) {
+      spot.z += 25.0f;
+      game.testLine (eyes, spot, TraceIgnore::Everything, self, &result);
 
-   if (result.flFraction >= 1.0f) {
-      m_enemyParts |= Visibility::Head;
-      m_enemyOrigin = result.vecEndPos;
+      if (result.flFraction >= 1.0f) {
+         m_enemyParts |= Visibility::Head;
+         m_enemyOrigin = result.vecEndPos;
+      }
    }
 
    if (m_enemyParts != 0) {
@@ -270,7 +272,9 @@ bool Bot::lookupEnemies () {
 
             // see if bot can see the monster...
             if (seesEnemy (intresting)) {
-               float distance = (intresting->v.origin - pev->origin).lengthSq ();
+               // higher priority for big monsters
+               float scaleFactor = (1.0f / calculateScaleFactor (intresting));
+               float distance = (intresting->v.origin - pev->origin).lengthSq () * scaleFactor;
 
                if (distance * 0.7f < nearestDistance) {
                   nearestDistance = distance;
@@ -499,7 +503,7 @@ const Vector &Bot::getEnemyBodyOffset () {
    if (!m_enemyParts && (m_states & Sense::SuspectEnemy)) {
       aimPos += getBodyOffsetError (distance);
    }
-   else {
+   else if (util.isPlayer (m_enemy)) {
       const float highOffset = m_difficulty > Difficulty::Normal ? 3.5f : 0.0f;
 
       // now take in account different parts of enemy body
@@ -1649,4 +1653,14 @@ void Bot::checkReload () {
          return;
       }
    }
+}
+
+float Bot::calculateScaleFactor (edict_t *ent) {
+   Vector entSize = ent->v.maxs - ent->v.mins;
+   float entArea = 2 * (entSize.x * entSize.y + entSize.y * entSize.z + entSize.x * entSize.z);
+
+   Vector botSize = pev->maxs - pev->mins;
+   float botArea = 2 * (botSize.x * botSize.y + botSize.y * botSize.z + botSize.x * botSize.z);
+
+   return entArea / botArea;
 }
