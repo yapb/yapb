@@ -5,6 +5,8 @@
 // SPDX-License-Identifier: MIT
 //
 
+#include <crlib/cr-complete.h>
+
 #pragma once
 
 // botname structure definition
@@ -35,6 +37,7 @@ public:
       int32 headshotPct {};
       int32 seenThruPct {};
       int32 hearThruPct {};
+      cr::Vector aimError;
    };
 
 private:

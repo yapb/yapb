@@ -150,6 +150,9 @@ public:
    // test line
    void testLine (const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult *ptr);
 
+   // test model
+   void testModel (const Vector &start, const Vector &end, int hullNumber, edict_t *entToHit, TraceResult *ptr);
+
    // trace line with channel, but allows us to store last traceline bot has fired, saving us some cpu cycles
    bool testLineChannel (TraceChannel channel, const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult *ptr);
 
