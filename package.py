@@ -12,7 +12,7 @@ import pathlib, shutil
 import zipfile, tarfile
 import datetime, calendar
 
-#from github import Github
+from github import Github
 
 class BotRelease (object):
    def __init__(self):
