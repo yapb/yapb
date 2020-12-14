@@ -673,7 +673,7 @@ void BotConfig::setupMemoryFiles () {
    static bool setMemoryPointers = true;
 
    auto wrapLoadFile = [] (const char *filename, int *length) {
-       return engfuncs.pfnLoadFileForMe (filename, length);
+      return engfuncs.pfnLoadFileForMe (filename, length);
    };
 
    auto wrapFreeFile = [] (void *buffer) {
