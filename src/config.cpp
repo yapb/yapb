@@ -1,6 +1,6 @@
 //
 // YaPB - Counter-Strike Bot based on PODBot by Markus Klinge.
-// Copyright © 2004-2020 YaPB Project <yapb@jeefo.net>.
+// Copyright Â© 2004-2020 YaPB Project <yapb@jeefo.net>.
 //
 // SPDX-License-Identifier: MIT
 //
@@ -28,6 +28,7 @@ void BotConfig::loadConfigs () {
    loadLogosConfig ();
    loadAvatarsConfig ();
    loadDifficultyConfig ();
+   loadCustomConfig ();
 }
 
 void BotConfig::loadMainConfig (bool isFirstLoad) {
@@ -614,6 +615,38 @@ void BotConfig::loadMapSpecificConfig () {
    }
 }
 
+void BotConfig::loadCustomConfig () {
+   String line;
+   MemFile file;
+
+   m_custom["C4ModelName"] = "c4.mdl";
+   m_custom["AMXParachuteCvar"] = "sv_parachute";
+
+   // custom inititalization
+   if (util.openConfig ("custom.cfg", "Custom config file not found. Loading defaults.", &file)) {
+      m_custom.clear ();
+
+      while (file.getLine (line)) {
+         line.trim ();
+
+         if (isCommentLine (line)) {
+            continue;
+         }
+         auto values = line.split ("=");
+
+         if (values.length () != 2) {
+            logger.error ("Bad configuration for custom.cfg");
+            return;
+         }
+         auto kv = Twin <String, String> (values[0].trim (), values[1].trim ());
+
+         if (!kv.first.empty () && !kv.second.empty ()) {
+            m_custom[kv.first] = kv.second;
+         }
+      }
+   }
+}
+
 void BotConfig::loadLogosConfig () {
    setupMemoryFiles ();
 
@@ -640,7 +673,7 @@ void BotConfig::setupMemoryFiles () {
    static bool setMemoryPointers = true;
 
    auto wrapLoadFile = [] (const char *filename, int *length) {
-      return engfuncs.pfnLoadFileForMe (filename, length);
+       return engfuncs.pfnLoadFileForMe (filename, length);
    };
 
    auto wrapFreeFile = [] (void *buffer) {
@@ -748,6 +781,14 @@ const char *BotConfig::translate (StringRef input) {
       return m_language[hash].chars ();
    }
    return input.chars (); // nothing found
+}
+
+void BotConfig::showCustomValues () {
+   game.print ("Current values for custom config items:");
+
+   m_custom.foreach ([&](const String &key, const String &val) {
+      game.print ("  %s = %s", key, val);
+   });
 }
 
 uint32 BotConfig::hashLangString (StringRef str) {

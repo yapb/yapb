@@ -17,7 +17,7 @@ int Bot::findBestGoal () {
       int result = kInvalidNodeIndex;
 
       game.searchEntities ("classname", "weaponbox", [&] (edict_t *ent) {
-         if (strcmp (ent->v.model.chars (9), "backpack.mdl") == 0) {
+         if (util.isModel (ent, "backpack.mdl")) {
             result = graph.getNearest (game.getEntityWorldOrigin (ent));
 
             if (graph.exists (result)) {
@@ -2965,11 +2965,13 @@ int Bot::getNearestToPlantedBomb () {
    if (!game.mapIs (MapFlags::Demolition)) {
       return kInvalidNodeIndex; // don't search for bomb if the player is CT, or it's not defusing bomb
    }
-   int result = kInvalidNodeIndex;
+
+   auto bombModel = conf.getBombModelName ();
+   auto result = kInvalidNodeIndex;
 
    // search the bomb on the map
-   game.searchEntities ("classname", "grenade", [&result] (edict_t *ent) {
-      if (strcmp (ent->v.model.chars (9), "c4.mdl") == 0) {
+   game.searchEntities ("classname", "grenade", [&result, &bombModel] (edict_t *ent) {
+      if (util.isModel (ent, bombModel)) {
          result = graph.getNearest (game.getEntityWorldOrigin (ent));
 
          if (graph.exists (result)) {

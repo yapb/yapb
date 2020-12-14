@@ -51,6 +51,7 @@ private:
 
    HashMap <uint32, String, Hash <int32>> m_language;
    HashMap <int32, DifficultyData> m_difficulty;
+   HashMap <String, String> m_custom;
 
    // default tables for personality weapon preferences, overridden by weapon.cfg
    SmallArray <int32> m_normalWeaponPrefs = { 0, 2, 1, 4, 5, 6, 3, 12, 10, 24, 25, 13, 11, 8, 7, 22, 23, 18, 21, 17, 19, 15, 17, 9, 14, 16 };
@@ -98,6 +99,9 @@ public:
    // loads bots map-specific config
    void loadMapSpecificConfig ();
 
+   // loads custom config
+   void loadCustomConfig ();
+
    // sets memfile to use engine functions
    void setupMemoryFiles ();
 
@@ -118,6 +122,9 @@ public:
 
    // translates bot message into needed language
    const char *translate (StringRef input);
+
+   // display current custom values
+   void showCustomValues ();
 
 private:
    bool isCommentLine (StringRef line) const {
@@ -236,6 +243,21 @@ public:
    // get random name by index
    StringRef getRandomLogoName (int index) {
       return m_logos[index];
+   }
+
+   // get custom value
+   StringRef fetchCustom (StringRef name) {
+      if (m_custom.has (name)) {
+         return m_custom[name];
+      }
+      SimpleLogger::instance ().error ("Trying to fetch uknonwn custom variable: %s", name);
+
+      return "";
+   }
+
+   // simple accessor to c4 model name
+   StringRef getBombModelName () {
+      return fetchCustom ("C4ModelName");
    }
 };
 

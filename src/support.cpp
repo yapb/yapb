@@ -687,6 +687,10 @@ bool BotSupport::isObjectInsidePlane (FrustumPlane &plane, const Vector &center,
    return isPointInsidePlane (top) || isPointInsidePlane (bottom);
 }
 
+bool BotSupport::isModel (const edict_t *ent, StringRef model) {
+   return model == ent->v.model.chars (9);
+}
+
 int32 BotSupport::sendTo (int socket, const void *message, size_t length, int flags, const sockaddr *dest, int destLength) {
    const auto send = [&] (const Twin <const uint8 *, size_t> &msg) -> int32 {
       return Socket::sendto (socket, msg.first, msg.second, flags, dest, destLength);

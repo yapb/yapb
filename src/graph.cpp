@@ -2806,9 +2806,10 @@ void BotGraph::setBombOrigin (bool reset, const Vector &pos) {
       return;
    }
    bool wasFound = false;
+   auto bombModel = conf.getBombModelName ();
    
    game.searchEntities ("classname", "grenade", [&] (edict_t *ent) {
-      if (strcmp (ent->v.model.chars (9), "c4.mdl") == 0) {
+      if (util.isModel (ent, bombModel)) {
          m_bombOrigin = game.getEntityWorldOrigin (ent);
          wasFound = true;
 

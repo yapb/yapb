@@ -99,6 +99,7 @@ private:
    int cmdMenu ();
    int cmdList ();
    int cmdCvars ();
+   int cmdShowCustom ();
    int cmdNode ();
    int cmdNodeOn ();
    int cmdNodeOff ();
