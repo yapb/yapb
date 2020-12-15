@@ -339,7 +339,6 @@ public:
    bool downloadFile (StringRef url, StringRef localPath, int32 timeout = DefaultSocketTimeout) {
       if (plat.win && !initialized_) {
          plat.abort ("Sockets not initialized.");
-         return false;
       }
 
       if (File::exists (localPath)) {
@@ -410,7 +409,6 @@ public:
    bool uploadFile (StringRef url, StringRef localPath, const int32 timeout = DefaultSocketTimeout) {
       if (plat.win && !initialized_) {
          plat.abort ("Sockets not initialized.");
-         return false;
       }
 
       if (!File::exists (localPath)) {
