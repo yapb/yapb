@@ -572,7 +572,7 @@ void Bot::updatePickups () {
             allowPickup = true;
             pickupType = Pickup::DefusalKit;
          }
-         else if (strncmp ("grenade", classname, 7) == 0 && strcmp (model, "c4.mdl") == 0) {
+         else if (strncmp ("grenade", classname, 7) == 0 && conf.getBombModelName () == model) {
             allowPickup = true;
             pickupType = Pickup::PlantedC4;
          }
@@ -2888,7 +2888,7 @@ void Bot::checkDarkness () {
 }
 
 void Bot::checkParachute () {
-   static auto parachute = engfuncs.pfnCVarGetPointer ("sv_parachute");
+   static auto parachute = engfuncs.pfnCVarGetPointer (conf.fetchCustom ("AMXParachuteCvar").chars ());
 
    // if no cvar or it's not enabled do not bother
    if (parachute && parachute->value > 0.0f) {
@@ -5460,7 +5460,7 @@ edict_t *Bot::correctGrenadeVelocity (const char *model) {
    edict_t *result = nullptr;
 
    game.searchEntities ("classname", "grenade", [&] (edict_t *ent) {
-      if (ent->v.owner == this->ent () && strcmp (ent->v.model.chars (9), model) == 0) {
+      if (ent->v.owner == this->ent () && util.isModel (ent, model)) {
          result = ent;
 
          // set the correct velocity for the grenade

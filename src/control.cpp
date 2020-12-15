@@ -262,6 +262,14 @@ int BotControl::cmdCvars () {
    return BotCommandResult::Handled;
 }
 
+int BotControl::cmdShowCustom () {
+   enum args { alias = 1 };
+
+   conf.showCustomValues ();
+
+   return BotCommandResult::Handled;
+}
+
 int BotControl::cmdNode () {
    enum args { root, alias, cmd, cmd2 };
 
@@ -1895,6 +1903,7 @@ BotControl::BotControl () {
    m_cmds.emplace ("list/listbots", "list [noarguments]", "Lists the bots currently playing on server.", &BotControl::cmdList);
    m_cmds.emplace ("graph/g/wp/wpt/waypoint", "graph [help]", "Handles graph operations.", &BotControl::cmdNode);
    m_cmds.emplace ("cvars", "cvars [save|cvar]", "Display all the cvars with their descriptions.", &BotControl::cmdCvars);
+   m_cmds.emplace ("show_custom", "show_custom [noarguments]", "Show's the curent values from custom.cfg.", &BotControl::cmdShowCustom);
 
    // declare the menus
    createMenus ();

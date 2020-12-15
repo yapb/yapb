@@ -1628,10 +1628,13 @@ void BotManager::updateActiveGrenade () {
    }
    m_activeGrenades.clear (); // clear previously stored grenades
 
+   // need to ignore bomb model in active grenades...
+   auto bombModel = conf.getBombModelName ();
+
    // search the map for any type of grenade
    game.searchEntities ("classname", "grenade", [&] (edict_t *e) {
       // do not count c4 as a grenade
-      if (strcmp (e->v.model.chars (9), "c4.mdl") != 0) { 
+      if (!util.isModel (e, bombModel)) {
          m_activeGrenades.push (e);
       }
       return EntitySearchResult::Continue; // continue iteration

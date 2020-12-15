@@ -799,6 +799,9 @@ bool Game::postload () {
    // set out user agent for http stuff
    http.setUserAgent (strings.format ("%s/%s", product.name, product.version));
 
+   // startup the sockets
+   http.startup ();
+
    // set the app name
    plat.setAppName (product.name.chars ());
 

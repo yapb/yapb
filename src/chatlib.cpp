@@ -144,7 +144,7 @@ void Bot::prepareChatMessage (StringRef message) {
    }
 
    // get the humanized name out of client
-   auto humanizedName = [] (int index) -> StringRef {
+   auto humanizedName = [] (int index) -> String {
       auto ent = game.playerOfIndex (index);
 
       if (!util.isPlayer (ent)) {
@@ -157,7 +157,7 @@ void Bot::prepareChatMessage (StringRef message) {
    };
 
    // find highfrag player
-   auto getHighfragPlayer = [&] () -> StringRef {
+   auto getHighfragPlayer = [&] () -> String {
       int highestFrags = -1;
       int index = 0;
 
@@ -178,7 +178,7 @@ void Bot::prepareChatMessage (StringRef message) {
    };
 
    // get roundtime
-   auto getRoundTime = [] () -> StringRef {
+   auto getRoundTime = [] () -> String {
       auto roundTimeSecs = static_cast <int> (bots.getRoundEndTime () - game.time ());
       
       String roundTime;
@@ -188,12 +188,12 @@ void Bot::prepareChatMessage (StringRef message) {
    };
 
    // get bot's victim
-   auto getMyVictim = [&] () -> StringRef {;
+   auto getMyVictim = [&] () -> String {;
       return humanizedName (game.indexOfPlayer (m_lastVictim));
    };
 
    // get the game name alias
-   auto getGameName = [] () -> StringRef {
+   auto getGameName = [] () -> String {
       String gameName;
 
       if (game.is (GameFlags::ConditionZero)) {
@@ -216,7 +216,7 @@ void Bot::prepareChatMessage (StringRef message) {
    };
 
    // get enemy or teammate alive
-   auto getPlayerAlive = [&] (bool needsEnemy) -> StringRef {
+   auto getPlayerAlive = [&] (bool needsEnemy) -> String {
       for (const auto &client : util.getClients ()) {
          if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.ent == ent ()) {
             continue;

@@ -111,7 +111,6 @@ CR_DECLARE_SCOPED_ENUM (HttpClientResult,
 
 CR_NAMESPACE_BEGIN
 
-
 namespace detail {
 
    // simple http uri omitting query-string and port
@@ -281,12 +280,10 @@ private:
    String userAgent_ = "crlib";
    HttpClientResult statusCode_ = HttpClientResult::Undefined;
    int32 chunkSize_ = 4096;
+   bool initialized_ = false;
 
 public:
-   HttpClient () {
-      detail::SocketInit::start ();
-   }
-
+   HttpClient () = default;
    ~HttpClient () = default;
 
 private:
@@ -333,9 +330,17 @@ private:
    }
 
 public:
+   void startup () {
+      detail::SocketInit::start ();
+      initialized_ = true;
+   }
 
    // simple blocked download
    bool downloadFile (StringRef url, StringRef localPath, int32 timeout = DefaultSocketTimeout) {
+      if (plat.win && !initialized_) {
+         plat.abort ("Sockets not initialized.");
+      }
+
       if (File::exists (localPath)) {
          statusCode_ = HttpClientResult::LocalFileExists;
          return false;
@@ -402,6 +407,10 @@ public:
    }
 
    bool uploadFile (StringRef url, StringRef localPath, const int32 timeout = DefaultSocketTimeout) {
+      if (plat.win && !initialized_) {
+         plat.abort ("Sockets not initialized.");
+      }
+
       if (!File::exists (localPath)) {
          statusCode_ = HttpClientResult::NoLocalFile;
          return false;
