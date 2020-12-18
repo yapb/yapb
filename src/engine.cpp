@@ -802,9 +802,6 @@ bool Game::postload () {
    // startup the sockets on windows
    http.startup ();
 
-   // startup the sockets
-   http.startup ();
-
    // set the app name
    plat.setAppName (product.name.chars ());
 
