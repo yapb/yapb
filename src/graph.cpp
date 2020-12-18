@@ -2557,6 +2557,8 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
 
    // perform DFS instead of floyd-warshall, this shit speedup this process in a bit
    PathWalk walk;
+   walk.init (m_paths.length ());
+
    Array <bool> visited;
    visited.resize (m_paths.length ());
 
