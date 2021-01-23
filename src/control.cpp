@@ -1688,6 +1688,10 @@ bool BotControl::executeMenus () {
 void BotControl::showMenu (int id) {
    static bool menusParsed = false;
 
+   // Temp fix: bot menu ignores translation on a dedicated server.
+   // Need to update m_ignoreTranslate. I guess it was unexpectedly changed to true somewhere else when m_ent is null.
+   m_ignoreTranslate = game.isDedicated() && game.isNullEntity(m_ent);
+   
    // make menus looks like we need only once
    if (!menusParsed) {
       for (auto &parsed : m_menus) {
