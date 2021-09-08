@@ -66,7 +66,7 @@ class CodeSign (object):
       sign.append ("-i")
       sign.append (self.url)
       sign.append ("-h")
-      sign.append ("sha256")
+      sign.append ("sha384")
       sign.append ("-t")
       sign.append ("http://timestamp.sectigo.com")
       sign.append ("-in")
