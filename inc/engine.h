@@ -643,10 +643,12 @@ class EntityLinkage : public Singleton <EntityLinkage> {
 private:
 #if defined (CR_WINDOWS)
 #  define DLSYM_FUNCTION GetProcAddress
+#  define DLCLOSE_FUNCTION FreeLibrary
 #  define DLSYM_RETURN FARPROC
 #  define DLSYM_HANDLE HMODULE
 #else
 #  define DLSYM_FUNCTION dlsym
+#  define DLCLOSE_FUNCTION dlclose
 #  define DLSYM_RETURN SharedLibrary::Handle
 #  define DLSYM_HANDLE SharedLibrary::Handle
 #endif
@@ -655,6 +657,7 @@ private:
    bool m_paused { false };
 
    Detour <decltype (DLSYM_FUNCTION)> m_dlsym;
+   Detour <decltype (DLCLOSE_FUNCTION)> m_dlclose;
    HashMap <StringRef, DLSYM_RETURN> m_exports;
 
    SharedLibrary m_self;
@@ -665,6 +668,15 @@ public:
 public:
    void initialize ();
    DLSYM_RETURN lookup (SharedLibrary::Handle module, const char *function);
+
+   int close (DLSYM_HANDLE module) {
+      if (m_self.handle () == module) {
+         disable ();
+
+         return  m_dlclose (module);
+      }
+      return m_dlclose (module);
+   }
 
 public:
    void callPlayerFunction (edict_t *ent) {
@@ -699,16 +711,20 @@ public:
    }
 
 public:
-   static DLSYM_RETURN CR_STDCALL replacement (SharedLibrary::Handle module, const char *function) {
+   static DLSYM_RETURN CR_STDCALL lookupHandler (SharedLibrary::Handle module, const char *function) {
       return EntityLinkage::instance ().lookup (module, function);
    }
 
+   static int CR_STDCALL closeHandler (DLSYM_HANDLE module) {
+      return EntityLinkage::instance ().close (module);
+   }
+
 public:
-   void clearExportTable () {
+   void flush () {
       m_exports.clear ();
    }
 
-   bool isWorkaroundNeeded () {
+   bool needsBypass () const {
       return !plat.win && !Game::instance ().isDedicated ();
    }
 };

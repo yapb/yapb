@@ -22,55 +22,59 @@ project (
       'strip=true',
       'optimization=3',
       'default_library=static',
-      'cpp_eh=none'
+      'cpp_eh=none',
+      'b_vscrt=static_from_buildtype'
    ],
-   meson_version: '>=0.48.0')
+   meson_version: '>=0.56.0')
 
 find_program ('ninja', required: true)
 find_program ('git', required: true)
 find_program ('hostname', required: true)
 
-buildCompiler = meson.get_compiler ('cpp')
-buildSystem = host_machine.system ()
-buildVersion = meson.project_version ()
-buildCount = run_command ('git', 'rev-list', '--count', 'HEAD').stdout ().strip ()
+cpp = meson.get_compiler ('cpp')
+sys = host_machine.system ()
+version = meson.project_version ()
+count = run_command ('git', 'rev-list', '--count', 'HEAD').stdout ().strip ()
 
-compilerId = buildCompiler.get_id ()
-compilerVersion = buildCompiler.version ()
+cpp_id = cpp.get_id ()
+cpp_version = cpp.version ()
 
-isOptimize = get_option ('buildtype') == 'release' or get_option ('buildtype') == 'debugoptimized'
-isVC = compilerId == 'msvc' or compilerId == 'intel-cl' or compilerId == 'clang-cl'
-isGCC = compilerId == 'gcc'
-isIntel = compilerId == 'intel' or compilerId == 'intel-cl'
-isCLang = compilerId == 'clang'
-isWindows = buildSystem == 'windows'
-isLinux = buildSystem == 'linux'
-isDarwin = buildSystem == 'darwin'
+optmize = get_option ('buildtype') == 'release' or get_option ('buildtype') == 'debugoptimized'
+
+msvc = cpp_id == 'msvc' or cpp_id == 'clang-cl'
+gcc = cpp_id == 'gcc'
+clang = cpp_id == 'clang'
+
+win32 = sys == 'windows'
+linux = sys == 'linux'
+mac = sys == 'darwin'
 
 ldflags = []
 ccflags = []
 
 cdata = configuration_data()
 
-if isWindows
-   cdata.set ('buildVersionWin',  ','.join (buildVersion.split ('.')))
+if win32
+   cdata.set ('version_win',  ','.join (version.split ('.')))
+   cdata.set ('machine', run_command ('hostname').stdout ().strip ())
 else
-   cdata.set ('buildVersionWin', buildVersion)
+   cdata.set ('version_win', version)
+   cdata.set ('machine', run_command ('hostname', '-f').stdout ().strip ())
 endif
 
-cdata.set ('commitHash', run_command ('git', 'rev-parse', '--short', 'HEAD').stdout ().strip ())
-cdata.set ('commitAuthor', run_command ('git', 'log', '--pretty="%ae"', '-1').stdout ().strip ())
+cdata.set ('hash', run_command ('git', 'rev-parse', '--short', 'HEAD').stdout ().strip ())
+cdata.set ('author', run_command ('git', 'log', '--pretty="%ae"', '-1').stdout ().strip ())
 
-cdata.set ('commitCount', buildCount)
-cdata.set ('buildVersion', buildVersion)
-cdata.set ('buildMachine', run_command ('hostname', '-f').stdout ().strip ())
-cdata.set ('buildCompiler', compilerId + ' ' + compilerVersion)
+cdata.set ('count', count)
+cdata.set ('version', version)
+
+cdata.set ('compiler', cpp_id + ' ' + cpp_version)
 
 configure_file (input: 'inc/version.h.in', output: 'version.build.h', configuration: cdata)
 
 ccflags += '-DVERSION_GENERATED'
 
-if isCLang or isGCC or (isIntel and not isWindows)
+if clang or gcc
    ccflags += [
       '-m32',
       '-fno-threadsafe-statics',
@@ -78,36 +82,32 @@ if isCLang or isGCC or (isIntel and not isWindows)
       '-fno-rtti'
    ]
     
-   if not isDarwin
+   if not mac
       ccflags += [
          '-pedantic',
       ]
    endif
-    
-   if isOptimize
-      ccflags += '-msse3'
-        
-      if (isCLang or isGCC) and not isDarwin
+   
+   if optmize
+      if (clang or gcc) and not mac
          ccflags += [
             '-flto',
             '-fdata-sections',
             '-ffunction-sections'
          ]
             
-         if isGCC
+         if gcc
             ccflags += '-fgraphite-identity'
             ldflags += '-flto-partition=none'
          endif
             
          ldflags += [
-            '-flto',
-            '-Wl,--version-script=../version_script.lds',
-            '-Wl,--gc-sections'
+            '-flto'
          ]
       endif
    endif
     
-   if isLinux
+   if linux
       ldflags += [
          '-m32',
          '-lm',
@@ -116,18 +116,10 @@ if isCLang or isGCC or (isIntel and not isWindows)
    endif
 endif
 
-if isIntel and (isLinux or isDarwin)
-   ldflags += [
-      '-static-intel',
-      '-no-intel-extensions'
-   ]
-endif
-
-if isLinux or isDarwin
-   if isDarwin
+if linux or mac or (win32 and (gcc or clang))
+   if mac
       ccflags += '-mmacosx-version-min=10.9'
       ldflags += [
-         '-dynamiclib',
          '-lstdc++',
          '-mmacosx-version-min=10.9'
       ]
@@ -135,7 +127,7 @@ if isLinux or isDarwin
       ldflags += '-static-libgcc'
    endif
     
-   if not isOptimize
+   if not optmize
       ccflags += [
          '-g3',
          '-ggdb',
@@ -144,7 +136,7 @@ if isLinux or isDarwin
    else
       ccflags += [
          '-mtune=generic',
-         '-msse3',
+         '-msse2',
          '-mfpmath=sse',
          '-fno-builtin',
          '-funroll-loops',
@@ -154,38 +146,24 @@ if isLinux or isDarwin
          '-fvisibility-inlines-hidden'
       ]
         
-      if isIntel 
-         ccflags += [
-            '-ipo',
-            '-wd11076', 
-            '-wd11074'
-         ]
+      if clang and not mac
+         lld = find_program ('lld', required: false)
             
-         ldflags += [
-            '-cxxlib-nostd',
-            '-Wl,--no-undefined,-z,notext,--gc-sections',
-             '-ipo'
-         ]
-         elif isCLang and not isDarwin
-            llvmLinker = find_program ('lld', required: false)
-             
-            if llvmLinker.found() == true
-               ldflags += '-fuse-ld=' + llvmLinker.path ().split ('/')[-1]
-            endif
-            
-            ldflags += [
-               '-nostdlib++',
-               '-Wunused-command-line-argument',
-               '-Wl,-z,notext',
-               '--no-undefined'
-            ]
-         elif isGCC and not isDarwin
-            ldflags += '-Wl,--no-undefined'
+         if lld.found () == true
+            ldflags += '-fuse-ld=' + lld.full_path ().split ('/')[-1]
          endif
+         
+         ldflags += [
+            '-nostdlib++',
+            '-Wunused-command-line-argument'
+         ]
+      elif gcc and not mac
+         ldflags += '-Wl,--no-undefined'
+      endif
    endif
 endif
 
-if isWindows and (isVC or isIntel)
+if win32 and msvc
    ldflags += [
       '/MACHINE:X86',
       'user32.lib',
@@ -193,32 +171,34 @@ if isWindows and (isVC or isIntel)
    ]
     
    ccflags += [
-      '/TP'
+      '/TP',
+	  '/D _WIN32_WINNT=0x0501',
+	  '/D _USING_V110_SDK71_',
+	  '/Zc:threadSafeInit-'
    ]
     
-   if isOptimize
+   if optmize
       ccflags += [
          '/GL',
-         '/arch:SSE2',
          '/GS-',
          '/Ob2',
          '/Oy',
-         '/Oi'
+         '/Oi',
+         '/Ot',
+         '/fp:precise',
+         '/GF'
       ]
-      ldflags += '/LTCG'
-   endif
-    
-elif isWindows and (isCLang or isGCC)
-   if isCLang
-      ldflags += '-Wl,/MACHINE:X86'
-   else
       ldflags += [
-         '-static-libgcc',
-         '-Wl,--kill-at'
-      ]
+		 '/LTCG',
+		 'delayimp.lib',
+		 '/DELAYLOAD:user32.dll',
+		 '/SUBSYSTEM:WINDOWS,5.01',
+	  ]
    endif
     
+elif win32 and (clang or gcc)
    ldflags += [
+      '-Wl,--kill-at',
       '-luser32',
       '-lws2_32'
    ]
@@ -228,7 +208,6 @@ add_global_arguments (ccflags, language: 'cpp')
 add_global_link_arguments (ldflags, language: 'cpp')
 
 sources = files (
-   'src/android.cpp',
    'src/botlib.cpp',
    'src/chatlib.cpp',
    'src/combat.cpp',
@@ -245,10 +224,10 @@ sources = files (
 )
 
 includes = include_directories ([
-   '.', 'inc', 'ext',
+   '.', 'inc', 'ext', 'ext/crlib'
 ], is_system: true)
 
-if isWindows and not isCLang
+if win32
    sources += import('windows').compile_resources (
       'vc/yapb.rc', 
       include_directories: includes, 
@@ -260,9 +239,8 @@ shared_library (
    meson.project_name (), 
    sources,
    include_directories: includes,
-
    gnu_symbol_visibility: 'hidden',
    name_prefix: '')
 
 run_target ('package',
-   command : ['python', meson.source_root() + '/package.py', '@0@.@1@'.format (buildVersion, buildCount)])
+   command: ['python3', meson.project_source_root () + '/package.py', '@0@.@1@'.format (version, count)])

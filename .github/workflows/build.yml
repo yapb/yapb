@@ -1,51 +1,154 @@
-name: YaPB
+name: build
 
-on:	
-  push:	
-    branches: [master]	
-  pull_request:	
+on:
+  push:
     branches: [master]
+    paths-ignore:
+      - '**.md'
+
+  pull_request:
+    types: [opened, reopened, synchronize]
+  release:
+    types: [published]
 
 jobs:
-  linux:
-    name: Full Build
-    runs-on: self-hosted
-    
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            bin: yapb.dll
+            name: windows
+
+          - os: ubuntu-latest
+            bin: yapb.so
+            name: linux
+            clang: 12
+
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout Repository
+        uses: actions/checkout@v2
         with:
-          submodules: true
           fetch-depth: 0
+          submodules: true
+
+      - name: Setup Windows x86
+        if: startsWith (runner.os, 'windows')
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64_x86
+
+      - name: Setup Linux x86
+        if: startsWith (runner.os, 'linux')
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc-multilib g++-multilib libstdc++6 lib32stdc++6 \
+            libc6-dev libc6-dev-i386 linux-libc-dev linux-libc-dev:i386 
+
+          echo "CXX=clang-${{ matrix.clang }}" >> $GITHUB_ENV
+          echo "CXX_LD=lld-${{ matrix.clang }}" >> $GITHUB_ENV
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
 
       - name: Setup Meson
-        shell: bash
-        run: | 
-           meson setup build_x86_win32 --cross-file=/actions/meson/windows-msvc-32bit.txt -Db_vscrt=mt
-           meson setup build_x86_macos --cross-file=/actions/meson/darwin-clang-32bit.txt
-           CXX=clang meson setup build_x86_linux
-             
-      - name: Build Bot
-        shell: bash
         run: |
-          ninja -C build_x86_win32 -v
-          ninja -C build_x86_macos -v
-          ninja -C build_x86_linux -v
-          
-      - name: Build Package
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+          python -m pip install --upgrade meson ninja
+
+      - name: Configure Build
+        run: |
+          meson setup build
+
+      - name: Compile Source
+        run: |
+          meson compile -v -C build
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.bin }}
+          path: build/${{ matrix.bin }}
+  
+  macos:
+    name: macos
+    runs-on: ubuntu-latest
+    container: j4sdk/macross-x86:latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - name: Configure Build
+        run: |
+          CXX_LD=/opt/osxcross/target/bin/i386-apple-darwin15-ld meson setup build --cross-file=x86-darwin
+
+      - name: Compile Source
+        run: |
+          meson compile -v -C build
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: yapb.dylib
+          path: build/yapb.dylib
+
+  publish:
+    if: |
+      github.event_name == 'release' &&
+      github.event.action == 'published'
+
+    name: publish
+    runs-on: ubuntu-latest
+    needs: [build, macos]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - name: Install Signing Tools
+        run: |
+          sudo apt-get update && sudo apt-get upgrade -y
+          sudo apt-get install -y --no-install-recommends osslsigncode
+
+      - name: Get Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: artifacts
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Setup Meson
+        run: |
+          python -m pip install --upgrade meson ninja urllib3
+
+      - name: Create Packages
         run: |
           meson setup dist
           ninja -C dist package
-          
-      - uses: actions/upload-artifact@v2
-        name: Upload Artifacts
+        env:
+          CS_CERTIFICATE: ${{ secrets.CS_CERTIFICATE }}
+          CS_CERTIFICATE_PASSWORD: ${{ secrets.CS_CERTIFICATE_PASSWORD }}
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          name: yapb.zip
-          path: |
-            build_x86_win32/yapb.dll
-            build_x86_linux/yapb.so
-            build_x86_macos/yapb.dylib
-  
+          files: pkg/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.API_TOKEN }}

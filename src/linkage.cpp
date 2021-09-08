@@ -354,7 +354,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       dllapi.pfnServerDeactivate ();
 
       // refill export table
-      ents.clearExportTable ();
+      ents.flush ();
    };
 
    table->pfnStartFrame = [] () {
@@ -500,7 +500,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       plat.bzero (table, sizeof (enginefuncs_t));
    }
 
-   if (ents.isWorkaroundNeeded () && !game.is (GameFlags::Metamod)) {
+   if (ents.needsBypass () && !game.is (GameFlags::Metamod)) {
       table->pfnCreateNamedEntity = [] (int classname) -> edict_t * {
 
          if (ents.isPaused ()) {
@@ -987,7 +987,7 @@ DLSYM_RETURN EntityLinkage::lookup (SharedLibrary::Handle module, const char *fu
       return reinterpret_cast <DLSYM_RETURN> (m_dlsym (static_cast <DLSYM_HANDLE> (handle), function));
    };
 
-   if (ents.isWorkaroundNeeded () && !strcmp (function, "CreateInterface")) {
+   if (ents.needsBypass () && !strcmp (function, "CreateInterface")) {
       ents.setPaused (true);
       auto ret = resolve (module);
 
@@ -1025,8 +1025,12 @@ void EntityLinkage::initialize () {
    }
 
    m_dlsym.initialize ("kernel32.dll", "GetProcAddress", DLSYM_FUNCTION);
-   m_dlsym.install (reinterpret_cast <void *> (EntityLinkage::replacement), true);
+   m_dlsym.install (reinterpret_cast <void *> (EntityLinkage::lookupHandler), true);
 
+   if (needsBypass ()) {
+      m_dlclose.initialize ("kernel32.dll", "FreeLibrary", DLCLOSE_FUNCTION);
+      m_dlclose.install (reinterpret_cast <void *> (EntityLinkage::closeHandler), true);
+   }
    m_self.locate (&engfuncs);
 }
 

@@ -1147,12 +1147,12 @@ public:
    template <typename ...Args> void issueCommand (const char *fmt, Args &&...args);
 };
 
-#include <config.h>
-#include <support.h>
-#include <message.h>
-#include <engine.h>
-#include <manager.h>
-#include <control.h>
+#include "config.h"
+#include "support.h"
+#include "message.h"
+#include "engine.h"
+#include "manager.h"
+#include "control.h"
 
 // very global convars
 extern ConVar cv_jasonmode;
