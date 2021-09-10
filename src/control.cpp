@@ -1690,6 +1690,8 @@ void BotControl::showMenu (int id) {
 
    // make menus looks like we need only once
    if (!menusParsed) {
+      m_ignoreTranslate = false; // always translate menus
+
       for (auto &parsed : m_menus) {
          StringRef translated = conf.translate (parsed.text);
 
@@ -1710,7 +1712,6 @@ void BotControl::showMenu (int id) {
       return;
    }
    auto &client = util.getClient (game.indexOfPlayer (m_ent));
-
 
    auto sendMenu = [&](int32 slots, bool last, StringRef text) {
       MessageWriter (MSG_ONE, msgs.id (NetMsg::ShowMenu), nullptr, m_ent)
