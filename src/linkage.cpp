@@ -943,7 +943,7 @@ CR_EXPORT void Meta_Init () {
 #  elif defined(CR_CXX_CLANG) || defined(CR_CXX_GCC) || defined(CR_ARCH_X64)
 #     define DLL_GIVEFNPTRSTODLL CR_EXPORT void CR_STDCALL
 #  endif
-#elif defined(CR_LINUX) || defined (CR_OSX) || defined (CR_ANDROID)
+#else
 #  define DLL_GIVEFNPTRSTODLL CR_EXPORT void
 #endif
 

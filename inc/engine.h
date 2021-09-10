@@ -635,7 +635,7 @@ public:
 };
 
 // for android
-#if defined (CR_ANDROID) && defined(CR_ARCH_ARM)
+#if defined (CR_ARCH_ARM)
    extern "C" void player (entvars_t *);
 #endif
 
@@ -680,7 +680,7 @@ public:
 
 public:
    void callPlayerFunction (edict_t *ent) {
-#if defined (CR_ANDROID) && defined (CR_ARCH_ARM)
+#if defined (CR_ARCH_ARM)
       player (&ent->v);
 #else
       reinterpret_cast <EntityFunction> (lookup (Game::instance ().lib ().handle (), "player")) (&ent->v);

@@ -559,7 +559,7 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
 void BotManager::kickEveryone (bool instant, bool zeroQuota) {
    // this function drops all bot clients from server (this function removes only yapb's)
 
-   if (cv_quota.bool_ ()) {
+   if (cv_quota.bool_ () && getBotCount () > 0) {
       ctrl.msg ("Bots are removed from server.");
    }
 

@@ -8,7 +8,7 @@
 #include <yapb.h>
 
 // until hook code will be compatible with ARM, it's here
-#if defined (CR_ANDROID) && defined(CR_ARCH_ARM)
+#if defined(CR_ARCH_ARM)
 
 CR_EXPORT int Server_GetBlendingInterface (int version, struct sv_blending_interface_s **ppinterface, struct engine_studio_api_s *pstudio, float *rotationmatrix, float *bonetransform) {
    // this function synchronizes the studio model animation blending interface (i.e, what parts

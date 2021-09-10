@@ -254,6 +254,32 @@ void Game::testHull (const Vector &start, const Vector &end, int ignoreFlags, in
    engfuncs.pfnTraceHull (start, end, !!(ignoreFlags & TraceIgnore::Monsters), hullNumber, ignoreEntity, ptr);
 }
 
+// helper class for reading wave header
+class WaveEndianessHelper : public DenyCopying {
+private:
+#if defined (CR_ARCH_CPU_BIG_ENDIAN)
+   bool little { false };
+#else
+   bool little { true };
+#endif
+
+public:
+   uint16_t read16 (uint16_t value) {
+      return little ? value : static_cast <uint16_t> ((value >> 8) | (value << 8));
+   }
+
+   uint32_t read32 (uint32_t value) {
+      return little ? value : (((value & 0x000000ff) << 24) | ((value & 0x0000ff00) << 8) | ((value & 0x00ff0000) >> 8) | ((value & 0xff000000) >> 24));
+   }
+
+   bool isWave (char *format) {
+      if (little && memcmp (format, "WAVE", 4) == 0) {
+         return true;
+      }
+      return *reinterpret_cast <uint32_t *> (format) == 0x57415645;
+   }
+};
+
 float Game::getWaveLen (const char *fileName) {
    auto filePath = strings.format ("%s/%s/%s.wav", getRunningModName (), cv_chatter_path.str (), fileName);
 
@@ -264,47 +290,41 @@ float Game::getWaveLen (const char *fileName) {
       return 0.0f;
    }
 
-   // check if we have engine function for this
-   if (!is (GameFlags::Xash3D) && plat.checkPointer (engfuncs.pfnGetApproxWavePlayLen)) {
-      fp.close ();
-      return engfuncs.pfnGetApproxWavePlayLen (filePath) / 1000.0f;
-   }
-
    // else fuck with manual search
    struct WavHeader {
-      char riffChunkId[4];
-      unsigned long packageSize;
-      char chunkID[4];
-      char formatChunkId[4];
-      unsigned long formatChunkLength;
-      uint16 dummy;
-      uint16 channels;
-      unsigned long sampleRate;
-      unsigned long bytesPerSecond;
-      uint16 bytesPerSample;
-      uint16 bitsPerSample;
+      char riff[4];
+      uint32_t chunkSize;
+      char wave[4];
+      char fmt[4];
+      uint32_t subchunk1Size;
+      uint16_t audioFormat;
+      uint16_t numChannels;
+      uint32_t sampleRate;
+      uint32_t byteRate;
+      uint16_t blockAlign;
+      uint16_t bitsPerSample;
       char dataChunkId[4];
-      unsigned long dataChunkLength;
-   } waveHdr {};
+      uint32_t dataChunkLength;
+   } header {};
 
-   plat.bzero (&waveHdr, sizeof (waveHdr));
+   WaveEndianessHelper weh;
 
-   if (fp.read (&waveHdr, sizeof (WavHeader)) == 0) {
+   if (fp.read (&header, sizeof (WavHeader)) == 0) {
       logger.error ("Wave File %s - has wrong or unsupported format", filePath);
       return 0.0f;
    }
    fp.close ();
 
-   if (strncmp (waveHdr.chunkID, "WAVE", 4) != 0) {
+   if (!weh.isWave (header.wave)) {
       logger.error ("Wave File %s - has wrong wave chunk id", filePath);
       return 0.0f;
    }
 
-   if (waveHdr.dataChunkLength == 0) {
+   if (weh.read32 (header.dataChunkLength) == 0) {
       logger.error ("Wave File %s - has zero length!", filePath);
       return 0.0f;
    }
-   return static_cast <float> (waveHdr.dataChunkLength) / static_cast <float> (waveHdr.bytesPerSecond);
+   return 1.0f * weh.read32 (header.dataChunkLength) / (weh.read16 (header.bitsPerSample) / 8) / weh.read16 (header.numChannels) / weh.read32 (header.sampleRate);
 }
 
 bool Game::isDedicated () {

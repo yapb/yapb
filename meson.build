@@ -23,7 +23,8 @@ project (
       'optimization=3',
       'default_library=static',
       'cpp_eh=none',
-      'b_vscrt=static_from_buildtype'
+      'b_vscrt=static_from_buildtype',
+      'b_lto=true'
    ],
    meson_version: '>=0.56.0')
 
@@ -33,6 +34,7 @@ find_program ('hostname', required: true)
 
 cpp = meson.get_compiler ('cpp')
 sys = host_machine.system ()
+target = build_machine.cpu_family ()
 version = meson.project_version ()
 count = run_command ('git', 'rev-list', '--count', 'HEAD').stdout ().strip ()
 
@@ -48,6 +50,7 @@ clang = cpp_id == 'clang'
 win32 = sys == 'windows'
 linux = sys == 'linux'
 mac = sys == 'darwin'
+aarch64 = target == 'aarch64'
 
 ldflags = []
 ccflags = []
@@ -76,11 +79,14 @@ ccflags += '-DVERSION_GENERATED'
 
 if clang or gcc
    ccflags += [
-      '-m32',
       '-fno-threadsafe-statics',
       '-fno-exceptions',
       '-fno-rtti'
    ]
+
+   if not aarch64
+      ccflags += '-m32'
+   endif
     
    if not mac
       ccflags += [
@@ -90,31 +96,35 @@ if clang or gcc
    
    if optmize
       if (clang or gcc) and not mac
-         ccflags += [
-            '-flto',
-            '-fdata-sections',
-            '-ffunction-sections'
-         ]
-            
+         if not aarch64
+            ccflags += [
+               '-fdata-sections',
+               '-ffunction-sections'
+            ]
+         endif
+
          if gcc
             ccflags += '-fgraphite-identity'
             ldflags += '-flto-partition=none'
          endif
-            
-         ldflags += [
-            '-flto',
-            '-Wl,--version-script=../ldscript.lds',
-            '-Wl,--gc-sections'
-         ]
+
+         if not aarch64
+            ldflags += [
+               '-Wl,--version-script=../ldscript.lds',
+               '-Wl,--gc-sections'
+            ]
+         endif
       endif
    endif
     
    if linux
       ldflags += [
-         '-m32',
          '-lm',
          '-ldl'
       ]
+      if not aarch64
+         ldflags += '-m32'
+      endif
    endif
 endif
 
@@ -138,8 +148,6 @@ if linux or mac or (win32 and (gcc or clang))
    else
       ccflags += [
          '-mtune=generic',
-         '-msse2',
-         '-mfpmath=sse',
          '-fno-builtin',
          '-funroll-loops',
          '-fomit-frame-pointer',
@@ -147,7 +155,14 @@ if linux or mac or (win32 and (gcc or clang))
          '-fvisibility=hidden',
          '-fvisibility-inlines-hidden'
       ]
-        
+
+      if not aarch64
+         ccflags += [
+            '-msse2',
+            '-mfpmath=sse',
+         ]
+      endif
+
       if clang and not mac
          lld = find_program ('lld', required: false)
             
