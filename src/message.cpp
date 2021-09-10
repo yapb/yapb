@@ -134,15 +134,15 @@ void MessageDispatcher::netMsgWeaponList () {
    }
 
    // store away this weapon with it's ammo information...
-   conf.getWeaponProp (m_args[id].long_) = {
-      m_args[classname].chars_,
-      m_args[ammo_index_1].long_,
-      m_args[max_ammo_1].long_,
-      m_args[slot].long_,
-      m_args[slot_pos].long_,
-      m_args[id].long_,
-      m_args[flags].long_
-   };
+   auto &prop = conf.getWeaponProp (m_args[id].long_);
+
+   prop.classname = m_args[classname].chars_;
+   prop.ammo1 = m_args[ammo_index_1].long_;
+   prop.ammo1Max = m_args[max_ammo_1].long_;
+   prop.slot = m_args[slot].long_;
+   prop.pos = m_args[slot_pos].long_;
+   prop.id = m_args[id].long_;
+   prop.flags = m_args[flags].long_;
 }
 
 void MessageDispatcher::netMsgCurWeapon () {

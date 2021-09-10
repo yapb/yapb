@@ -1612,6 +1612,9 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
    bool isGraph = !!(options & StorageOption::Graph);
    MemFile file (strings.format ("%s%s/%s", getDataDirectory (true), isGraph ? "graph" : "train", filename)); // open the file
 
+   data.clear ();
+   data.shrink ();
+
    // resize data to fit the stuff
    auto resizeData = [&] (const size_t length) {
       data.resize (length); // for non-graph data the graph should be already loaded
@@ -1759,8 +1762,6 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
 bool BotGraph::loadGraphData () {
    ExtenHeader exten {};
    int32 outOptions = 0;
-
-   m_paths.clear ();
 
    // check if loaded
    bool dataLoaded = loadStorage <Path> ("graph", "Graph", StorageOption::Graph, StorageVersion::Graph, m_paths, &exten, &outOptions);

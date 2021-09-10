@@ -102,7 +102,9 @@ if clang or gcc
          endif
             
          ldflags += [
-            '-flto'
+            '-flto',
+            '-Wl,--version-script=../ldscript.lds',
+            '-Wl,--gc-sections'
          ]
       endif
    endif

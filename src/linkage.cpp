@@ -805,30 +805,31 @@ CR_EXPORT int GetNewDLLFunctions (newgamefuncs_t *table, int *interfaceVersion) 
    plat.bzero (table, sizeof (newgamefuncs_t));
 
    if (!(game.is (GameFlags::Metamod))) {
-      auto api_GetEntityAPI = game.lib ().resolve <decltype (&GetNewDLLFunctions)> (__FUNCTION__);
+      auto api_GetNewDLLFunctions = game.lib ().resolve <decltype (&GetNewDLLFunctions)> (__FUNCTION__);
 
       // pass other DLLs engine callbacks to function table...
-      if (!api_GetEntityAPI || api_GetEntityAPI (&newapi, interfaceVersion) == 0) {
+      if (!api_GetNewDLLFunctions || api_GetNewDLLFunctions (&newapi, interfaceVersion) == 0) {
          logger.error ("Could not resolve symbol \"%s\" in the game dll.", __FUNCTION__);
       }
       dllfuncs.newapi_table = &newapi;
-
       memcpy (table, &newapi, sizeof (newgamefuncs_t));
    }
 
-   table->pfnOnFreeEntPrivateData = [] (edict_t *ent) {
-      for (auto &bot : bots) {
-         if (bot->m_enemy == ent) {
-            bot->m_enemy = nullptr;
-            bot->m_lastEnemy = nullptr;
+   if (!game.is (GameFlags::Legacy)) {
+      table->pfnOnFreeEntPrivateData = [] (edict_t *ent) {
+         for (auto &bot : bots) {
+            if (bot->m_enemy == ent) {
+               bot->m_enemy = nullptr;
+               bot->m_lastEnemy = nullptr;
+            }
          }
-      }
 
-      if (game.is (GameFlags::Metamod)) {
-         RETURN_META (MRES_IGNORED);
-      }
-      newapi.pfnOnFreeEntPrivateData (ent);
-   };
+         if (game.is (GameFlags::Metamod)) {
+            RETURN_META (MRES_IGNORED);
+         }
+         newapi.pfnOnFreeEntPrivateData (ent);
+      };
+   }
    return HLTrue;
 }
 
@@ -946,7 +947,7 @@ CR_EXPORT void Meta_Init () {
 #  define DLL_GIVEFNPTRSTODLL CR_EXPORT void
 #endif
 
-DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t *glob) {
+DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *table, globalvars_t *glob) {
    // this is the very first function that is called in the game DLL by the game. Its purpose
    // is to set the functions interfacing up, by exchanging the functionTable function list
    // along with a pointer to the engine's global variables structure pGlobals, with the game
@@ -959,7 +960,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    // initialization stuff will be done later, when we'll be certain to have a multilayer game.
 
    // get the engine functions from the game...
-   memcpy (&engfuncs, functionTable, sizeof (enginefuncs_t));
+   memcpy (&engfuncs, table, sizeof (enginefuncs_t));
    globals = glob;
 
    if (game.postload ()) {
@@ -970,13 +971,13 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *functionTable, globalvars_t 
    if (!api_GiveFnptrsToDll) {
       logger.fatal ("Could not resolve symbol \"%s\" in the game dll.", __FUNCTION__);
    }
-   GetEngineFunctions (functionTable, nullptr);
+   GetEngineFunctions (table, nullptr);
 
    // initialize dynamic linkents
    ents.initialize ();
 
    // give the engine functions to the other DLL...
-   api_GiveFnptrsToDll (functionTable, glob);
+   api_GiveFnptrsToDll (table, glob);
 }
 
 DLSYM_RETURN EntityLinkage::lookup (SharedLibrary::Handle module, const char *function) {

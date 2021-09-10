@@ -11,30 +11,30 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\ext\crlib\cr-array.h" />
-    <ClInclude Include="..\ext\crlib\cr-basic.h" />
-    <ClInclude Include="..\ext\crlib\cr-binheap.h" />
-    <ClInclude Include="..\ext\crlib\cr-color.h" />
-    <ClInclude Include="..\ext\crlib\cr-complete.h" />
-    <ClInclude Include="..\ext\crlib\cr-deque.h" />
-    <ClInclude Include="..\ext\crlib\cr-hashmap.h" />
-    <ClInclude Include="..\ext\crlib\cr-files.h" />
-    <ClInclude Include="..\ext\crlib\cr-detour.h" />
-    <ClInclude Include="..\ext\crlib\cr-http.h" />
-    <ClInclude Include="..\ext\crlib\cr-lambda.h" />
-    <ClInclude Include="..\ext\crlib\cr-library.h" />
-    <ClInclude Include="..\ext\crlib\cr-logger.h" />
-    <ClInclude Include="..\ext\crlib\cr-math.h" />
-    <ClInclude Include="..\ext\crlib\cr-memory.h" />
-    <ClInclude Include="..\ext\crlib\cr-movable.h" />
-    <ClInclude Include="..\ext\crlib\cr-override.h" />
-    <ClInclude Include="..\ext\crlib\cr-platform.h" />
-    <ClInclude Include="..\ext\crlib\cr-random.h" />
-    <ClInclude Include="..\ext\crlib\cr-string.h" />
-    <ClInclude Include="..\ext\crlib\cr-twin.h" />
-    <ClInclude Include="..\ext\crlib\cr-ulz.h" />
-    <ClInclude Include="..\ext\crlib\cr-uniqueptr.h" />
-    <ClInclude Include="..\ext\crlib\cr-vector.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-array.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-basic.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-binheap.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-color.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-complete.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-deque.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-detour.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-files.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-hashmap.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-http.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-lambda.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-library.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-logger.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-math.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-memory.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-movable.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-override.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-platform.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-random.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-string.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-twin.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-ulz.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-uniqueptr.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cr-vector.h" />
     <ClInclude Include="..\ext\hlsdk\const.h" />
     <ClInclude Include="..\ext\hlsdk\eiface.h" />
     <ClInclude Include="..\ext\hlsdk\extdll.h" />
@@ -169,7 +169,7 @@
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <LanguageStandard>Default</LanguageStandard>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -249,6 +249,7 @@
       <StringPooling>true</StringPooling>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <FunctionLevelLinking>true</FunctionLevelLinking>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>

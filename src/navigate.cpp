@@ -2993,49 +2993,52 @@ bool Bot::isOccupiedNode (int index, bool needZeroVelocity) {
          continue;
       }
 
+      // just in case, if something happend, and we're not updated yet
+      if (!util.isAlive (client.ent)) {
+         continue;
+      }
+
       // do not check clients far away from us
       if ((pev->origin - client.origin).lengthSq () > cr::square (320.0f)) {
          continue;
       }
 
-
       if (needZeroVelocity && client.ent->v.velocity.length2d () > 0.0f) {
          continue;
       }
-      auto bot = bots[client.ent];
+      auto length = (graph[index].origin - client.origin).lengthSq ();
 
-      if (bot == this) {
-         continue;
-      }
-
-      if (bot != nullptr) {
-         int occupyId = util.getShootingCone (bot->ent (), pev->origin) >= 0.7f ? bot->m_previousNodes[0] : bot->m_currentNodeIndex;
-
-         if (index == occupyId) {
-            return true;
-         }
-      }
-      float length = (graph[index].origin - client.origin).lengthSq ();
-
-      if (length < cr::clamp (graph[index].radius, cr::square (90.0f), cr::square (120.0f))) {
+      if (length < cr::clamp (cr::square (graph[index].radius), cr::square (60.0f), cr::square (90.0f))) {
          return true;
       }
+#if 0 // too cpu hungry, disabled temporary
+      auto bot = bots[client.ent];
+
+      if (bot == nullptr || bot == this || !bot->m_notKilled) {
+         continue;
+      }
+      auto occupyId = util.getShootingCone (bot->ent (), pev->origin) >= 0.7f ? bot->m_previousNodes[0] : bot->m_currentNodeIndex;
+
+      if (index == occupyId) {
+         return true;
+      }
+#endif
    }
    return false;
 }
 
-edict_t *Bot::lookupButton (const char *targetName) {
+edict_t *Bot::lookupButton (const char *target) {
    // this function tries to find nearest to current bot button, and returns pointer to
    // it's entity, also here must be specified the target, that button must open.
 
-   if (strings.isEmpty (targetName)) {
+   if (strings.isEmpty (target)) {
       return nullptr;
    }
    float nearest = kInfiniteDistance;
    edict_t *result = nullptr;
 
    // find the nearest button which can open our target
-   game.searchEntities ("target", targetName, [&] (edict_t *ent) {
+   game.searchEntities ("target", target, [&] (edict_t *ent) {
       const Vector &pos = game.getEntityWorldOrigin (ent);
 
       // check if this place safe

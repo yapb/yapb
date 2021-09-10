@@ -457,7 +457,7 @@ void BotConfig::loadLanguageConfig () {
    setupMemoryFiles ();
 
    if (game.is (GameFlags::Legacy)) {
-      logger.message ("Bots multilingual system disabled, due to your Counter-Strike version!");
+      logger.message ("Bots multilingual system disabled.");
       return; // dedicated server will use only english translation
    }
    String line;

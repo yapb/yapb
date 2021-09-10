@@ -897,7 +897,7 @@ private:
    void pickupItem_ ();
    void shootBreakable_ ();
 
-   edict_t *lookupButton (const char *targetName);
+   edict_t *lookupButton (const char *target);
    edict_t *lookupBreakable ();
    edict_t *correctGrenadeVelocity (const char *model);
 

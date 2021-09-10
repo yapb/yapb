@@ -238,9 +238,7 @@ typedef struct enginefuncs_s {
    void (*pfnQueryClientCVarValue) (const edict_t *player, const char *cvarName);
    void (*pfnQueryClientCVarValue2) (const edict_t *player, const char *cvarName, int requestID);
    int (*pfnCheckParm) (const char *pchCmdLineToken, char **ppnext);
-#ifdef EIFACE_2019
    edict_t *(*pfnPEntityOfEntIndexAllEntities) (int iEntIndex);
-#endif
 } enginefuncs_t;
 
 // Passed to pfnKeyValue
