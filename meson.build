@@ -24,7 +24,8 @@ project (
       'default_library=static',
       'cpp_eh=none',
       'b_vscrt=static_from_buildtype',
-      'b_lto=true'
+      'b_lto=true',
+      'b_lundef=false',
    ],
    meson_version: '>=0.56.0')
 
@@ -34,7 +35,7 @@ find_program ('hostname', required: true)
 
 cpp = meson.get_compiler ('cpp')
 sys = host_machine.system ()
-target = host_machine.cpu_family ()
+target = build_machine.cpu_family ()
 version = meson.project_version ()
 count = run_command ('git', 'rev-list', '--count', 'HEAD').stdout ().strip ()
 
@@ -96,7 +97,7 @@ if clang or gcc
    
    if optmize
       if (clang or gcc) and not mac
-         if not aarch64
+         if not aarch64 and not (clang and win32)
             ccflags += [
                '-fdata-sections',
                '-ffunction-sections'
@@ -108,7 +109,7 @@ if clang or gcc
             ldflags += '-flto-partition=none'
          endif
 
-         if not aarch64
+         if not aarch64 and not (clang and win32)
             ldflags += [
                '-Wl,--version-script=../ldscript.lds',
                '-Wl,--gc-sections'
@@ -219,6 +220,11 @@ elif win32 and (clang or gcc)
       '-luser32',
       '-lws2_32'
    ]
+
+   if clang
+      ldflags += '-Wl,/MACHINE:X86'
+      ccflags += '-Wl,/MACHINE:X86'
+   endif
 endif
 
 add_global_arguments (ccflags, language: 'cpp')
