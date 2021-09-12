@@ -10,7 +10,7 @@
 #include <hlsdk/extdll.h>
 #include <hlsdk/metamod.h>
 
-#include <crlib/cr-complete.h>
+#include <crlib/crlib.h>
 
 // use all the cr-library
 using namespace cr;

@@ -1039,4 +1039,4 @@ void EntityLinkage::initialize () {
 #include "android.cpp"
 
 // override new/delete globally, need to be included in .cpp file
-#include <crlib/cr-override.h>
+#include <crlib/override.h>

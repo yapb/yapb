@@ -24,8 +24,8 @@ typedef vec_t vec4_t[4];
 typedef int qboolean;
 typedef unsigned char byte;
 
-#include <crlib/cr-vector.h>
-#include <crlib/cr-string.h>
+#include <crlib/vector.h>
+#include <crlib/string.h>
 
 // idea from regamedll
 class string_t final : public cr::DenyCopying {

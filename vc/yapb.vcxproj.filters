@@ -78,83 +78,80 @@
     <ClInclude Include="..\inc\module.h">
       <Filter>inc</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-array.h">
+    <ClInclude Include="..\ext\crlib\crlib\array.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-basic.h">
+    <ClInclude Include="..\ext\crlib\crlib\basic.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-binheap.h">
+    <ClInclude Include="..\ext\crlib\crlib\binheap.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-color.h">
+    <ClInclude Include="..\ext\crlib\crlib\color.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-complete.h">
+    <ClInclude Include="..\ext\crlib\crlib\crlib.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-deque.h">
+    <ClInclude Include="..\ext\crlib\crlib\deque.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-detour.h">
+    <ClInclude Include="..\ext\crlib\crlib\detour.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-files.h">
+    <ClInclude Include="..\ext\crlib\crlib\files.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-hashmap.h">
+    <ClInclude Include="..\ext\crlib\crlib\hashmap.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-http.h">
+    <ClInclude Include="..\ext\crlib\crlib\http.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-lambda.h">
+    <ClInclude Include="..\ext\crlib\crlib\lambda.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-library.h">
+    <ClInclude Include="..\ext\crlib\crlib\library.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-logger.h">
+    <ClInclude Include="..\ext\crlib\crlib\logger.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-math.h">
+    <ClInclude Include="..\ext\crlib\crlib\math.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-memory.h">
+    <ClInclude Include="..\ext\crlib\crlib\memory.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-movable.h">
+    <ClInclude Include="..\ext\crlib\crlib\movable.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-override.h">
+    <ClInclude Include="..\ext\crlib\crlib\override.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-platform.h">
+    <ClInclude Include="..\ext\crlib\crlib\platform.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-random.h">
+    <ClInclude Include="..\ext\crlib\crlib\random.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-string.h">
+    <ClInclude Include="..\ext\crlib\crlib\string.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-twin.h">
+    <ClInclude Include="..\ext\crlib\crlib\twin.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-ulz.h">
+    <ClInclude Include="..\ext\crlib\crlib\ulz.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-uniqueptr.h">
+    <ClInclude Include="..\ext\crlib\crlib\uniqueptr.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\cr-vector.h">
+    <ClInclude Include="..\ext\crlib\crlib\vector.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\android.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\botlib.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -192,6 +189,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\module.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
