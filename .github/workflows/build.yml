@@ -16,20 +16,20 @@ jobs:
     strategy:
       matrix:
         include:
-          - type: windows
-            bin: yapb.dll
-            opts: meson setup build --cross-file=x86-windows
-
-          - type: linux
+          - name: linux-x86
             bin: yapb.so
             opts: CXX=gcc-11 CXX_LD=gold meson setup build
 
-          - type: macos
+          - name: windows-x86
+            bin: yapb.dll
+            opts: meson setup build --cross-file=x86-windows
+
+          - name: macos-x86
             bin: yapb.dylib
             opts: meson setup build --cross-file=x86-darwin
 
+    name: ${{ matrix.name }}
 
-    name: ${{ matrix.type }}
     runs-on: ubuntu-latest
     container: j4sdk/x86-buildtools:latest
 
@@ -53,6 +53,33 @@ jobs:
         with:
           name: ${{ matrix.bin }}
           path: build/${{ matrix.bin }}
+
+  linux-aarch64:
+    name: linux-aarch64
+
+    runs-on: self-hosted
+    continue-on-error: true
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - name: Configure Build
+        run: |
+          CXX=clang-12 CXX_LD=lld meson setup build
+
+      - name: Compile Source
+        run: |
+          meson compile -v -C build
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: yapb.aarch64.so
+          path: build/yapb.so
 
   publish:
     if: |

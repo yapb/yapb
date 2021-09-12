@@ -19,13 +19,12 @@ project (
       'warning_level=3',
       'werror=true',
       'backend=ninja',
-      'strip=true',
       'optimization=3',
       'default_library=static',
       'cpp_eh=none',
       'b_vscrt=static_from_buildtype',
       'b_lto=true',
-      'b_lundef=false',
+      'b_lundef=true',
    ],
    meson_version: '>=0.56.0')
 
