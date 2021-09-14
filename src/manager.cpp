@@ -1217,20 +1217,7 @@ void Bot::newRound () {
    m_team = game.getTeam (ent ());
    m_isVIP = false;
 
-   switch (m_personality) {
-   default:
-   case Personality::Normal:
-      m_pathType = rg.chance (50) ? FindPath::Optimal : FindPath::Safe;
-      break;
-
-   case Personality::Rusher:
-      m_pathType = FindPath::Fast;
-      break;
-
-   case Personality::Careful:
-      m_pathType = FindPath::Safe;
-      break;
-   }
+   resetPathSearchType ();
 
    // clear all states & tasks
    m_states = 0;
@@ -1390,6 +1377,7 @@ void Bot::newRound () {
       msg = BotMsg::None;
    }
    m_msgQueue.clear ();
+   m_goalHistory.clear ();
 
    // clear last trace
    for (auto i = 0; i < TraceChannel::Num; ++i) {
@@ -1408,6 +1396,23 @@ void Bot::newRound () {
       pushChatterMessage (Chatter::NewRound);
    }
    m_updateInterval = game.is (GameFlags::Legacy | GameFlags::Xash3D) ? 0.0f : (1.0f / cr::clamp (cv_think_fps.float_ (), 30.0f, 60.0f));
+}
+
+void Bot::resetPathSearchType () {
+   switch (m_personality) {
+   default:
+   case Personality::Normal:
+      m_pathType = rg.chance (50) ? FindPath::Optimal : FindPath::Safe;
+      break;
+
+   case Personality::Rusher:
+      m_pathType = rg.chance (75) ? FindPath::Fast : FindPath::Optimal;
+      break;
+
+   case Personality::Careful:
+      m_pathType = rg.chance (75) ? FindPath::Safe : FindPath::Optimal;
+      break;
+   }
 }
 
 void Bot::kill () {

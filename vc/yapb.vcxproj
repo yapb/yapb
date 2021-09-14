@@ -30,6 +30,7 @@
     <ClInclude Include="..\ext\crlib\crlib\override.h" />
     <ClInclude Include="..\ext\crlib\crlib\platform.h" />
     <ClInclude Include="..\ext\crlib\crlib\random.h" />
+    <ClInclude Include="..\ext\crlib\crlib\simd.h" />
     <ClInclude Include="..\ext\crlib\crlib\string.h" />
     <ClInclude Include="..\ext\crlib\crlib\twin.h" />
     <ClInclude Include="..\ext\crlib\crlib\ulz.h" />
@@ -89,7 +90,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>ClangCL</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <EnableASAN>false</EnableASAN>
@@ -97,7 +98,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>ClangCL</PlatformToolset>
     <UseDebugLibraries>false</UseDebugLibraries>
     <EnableASAN>false</EnableASAN>
   </PropertyGroup>
@@ -155,7 +156,7 @@
       <PrecompiledHeaderFile>yapb.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>.\debug\inf\yapb.pch</PrecompiledHeaderOutputFile>
       <ExpandAttributedSource>false</ExpandAttributedSource>
-      <AssemblerOutput>AssemblyAndSourceCode</AssemblerOutput>
+      <AssemblerOutput>NoListing</AssemblerOutput>
       <AssemblerListingLocation>.\debug\asm\</AssemblerListingLocation>
       <ObjectFileName>.\debug\obj\</ObjectFileName>
       <ProgramDataBaseFileName>.\debug\inf</ProgramDataBaseFileName>
@@ -170,6 +171,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <LanguageStandard>stdcpp14</LanguageStandard>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -231,12 +233,12 @@
       <ProgramDataBaseFileName>.\release\inf\</ProgramDataBaseFileName>
       <WarningLevel>Level4</WarningLevel>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <DebugInformationFormat>None</DebugInformationFormat>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CompileAs>CompileAsCpp</CompileAs>
       <InterproceduralOptimization>MultiFile</InterproceduralOptimization>
       <FlushDenormalResultsToZero>true</FlushDenormalResultsToZero>
       <Parallelization>false</Parallelization>
-      <FloatingPointModel>Fast</FloatingPointModel>
+      <FloatingPointModel>Precise</FloatingPointModel>
       <Optimization>Full</Optimization>
       <GenerateAlternateCodePaths>AVXI</GenerateAlternateCodePaths>
       <UseProcessorExtensions>AVXI</UseProcessorExtensions>
@@ -266,7 +268,7 @@
       <OutputFile>.\release\yapb.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DelayLoadDLLs>user32.dll;ws2_32.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
       <GenerateMapFile>false</GenerateMapFile>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>

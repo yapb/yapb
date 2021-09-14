@@ -736,6 +736,7 @@ private:
 
    Array <edict_t *> m_hostages; // pointer to used hostage entities
    Array <Route> m_routes; // pointer
+   Array <int32> m_goalHistory; // history of selected goals
 
    BinaryHeap <RouteTwin> m_routeQue;
    Path *m_path {}; // pointer to the current path node
@@ -812,6 +813,7 @@ private:
    bool checkChatKeywords (String &reply);
    bool isReplyingToChat ();
    bool isReachableNode (int index);
+   bool isBannedNode (int index);
    bool updateLiftHandling ();
    bool updateLiftStates ();
    bool canRunHeavyWeight ();
@@ -872,7 +874,7 @@ private:
    void selectWeaponById (int num);
 
    void completeTask ();
-   void executeTasks ();
+   void tasks ();
    void trackEnemies ();
    void choiceFreezetimeEntity ();
 
@@ -1042,6 +1044,7 @@ public:
    void takeDamage (edict_t *inflictor, int damage, int armor, int bits);
    void showDebugOverlay ();
    void newRound ();
+   void resetPathSearchType ();
    void enteredBuyZone (int buyState);
    void pushMsgQueue (int message);
    void prepareChatMessage (StringRef message);

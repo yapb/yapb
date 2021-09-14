@@ -29,7 +29,7 @@ public:
 
 public:
    StringRef name { "YaPB" };
-   StringRef year { __DATE__ + 7 };
+   StringRef year { &__DATE__[7] };
    StringRef author { "YaPB Project" };
    StringRef email { "yapb@jeefo.net" };
    StringRef url { "https://yapb.ru/" };

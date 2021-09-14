@@ -1246,17 +1246,7 @@ int Bot::pickBestWeapon (int *vec, int count, int moneySave) {
    bool needMoreRandomWeapon = (m_personality == Personality::Careful) || (rg.chance (25) && m_personality == Personality::Normal);
 
    if (needMoreRandomWeapon) {
-      auto pick = [] (const float factor) -> float {
-         union {
-            unsigned int u;
-            float f;
-         } cast {};
-         cast.f = factor;
-
-         return (static_cast <int> ((cast.u >> 23) & 0xff) - 127) * 0.3010299956639812f;
-      };
-
-      float buyFactor = (m_moneyAmount - static_cast <float> (moneySave)) / (16000.0f - static_cast <float> (moneySave)) * 3.0f;
+      auto buyFactor = (m_moneyAmount - static_cast <float> (moneySave)) / (16000.0f - static_cast <float> (moneySave)) * 3.0f;
 
       if (buyFactor < 1.0f) {
          buyFactor = 1.0f;
@@ -1266,7 +1256,7 @@ int Bot::pickBestWeapon (int *vec, int count, int moneySave) {
       for (int *begin = vec, *end = vec + count - 1; begin < end; ++begin, --end) {
          cr::swap (*end, *begin);
       }
-      return vec[static_cast <int> (static_cast <float> (count - 1) * pick (rg.get (1.0f, cr::powf (10.0f, buyFactor))) / buyFactor + 0.5f)];
+      return vec[static_cast <int> (static_cast <float> (count - 1) * cr::log10 (rg.get (1.0f, cr::powf (10.0f, buyFactor))) / buyFactor + 0.5f)];
    }
 
    int chance = 95;
@@ -3242,13 +3232,13 @@ void Bot::normal_ () {
       ignoreCollision ();
 
       // did we already decide about a goal before?
-      auto destIndex = graph.exists (getTask ()->data) ? getTask ()->data : findBestGoal ();
+      auto currIndex = getTask ()->data;
+      auto destIndex = graph.exists (currIndex) && !isBannedNode (currIndex) ? currIndex : findBestGoal ();
 
       // check for existance (this is failover, for i.e. csdm, this should be not true with normal gameplay, only when spawned outside of waypointed area)
       if (!graph.exists (destIndex)) {
          destIndex = graph.getFarest (pev->origin, 512.0f);
       }
-
       m_prevGoalIndex = destIndex;
 
       // remember index
@@ -3258,7 +3248,7 @@ void Bot::normal_ () {
 
       // override with fast path
       if (game.mapIs (MapFlags::Demolition) && bots.isBombPlanted ()) {
-         pathSearchType = FindPath::Fast;
+         pathSearchType = rg.chance (60) ? FindPath::Fast : FindPath::Optimal;
       }
 
       // do pathfinding if it's not the current waypoint
@@ -4640,7 +4630,7 @@ void Bot::pickupItem_ () {
    }
 }
 
-void Bot::executeTasks () {
+void Bot::tasks () {
    // this is core function that handle task execution
 
    auto func = getTask ()->func;
@@ -4796,7 +4786,7 @@ void Bot::logic () {
    avoidGrenades (); // avoid flyings grenades
    m_isUsingGrenade = false;
 
-   executeTasks (); // execute current task
+   tasks (); // execute current task
    updateAimDir (); // choose aim direction
    updateLookAngles (); // and turn to chosen aim direction
 

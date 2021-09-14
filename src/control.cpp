@@ -1565,7 +1565,7 @@ bool BotControl::executeCommands () {
    if (prefix != product.cmdPri && prefix != product.cmdSec) {
       return false;
    }
-   Client &client = util.getClient (game.indexOfPlayer (m_ent));
+   auto &client = util.getClient (game.indexOfPlayer (m_ent));
 
    // do not allow to execute stuff for non admins
    if (m_ent != game.getLocalEntity () && !(client.flags & ClientFlags::Admin)) {

@@ -161,15 +161,11 @@ if linux or mac or (win32 and (gcc or clang))
             '-msse2',
             '-mfpmath=sse',
          ]
+      else
+         ccflags += '-march=armv8-a+fp+simd'
       endif
 
       if clang and not mac
-         lld = find_program ('lld', required: false)
-            
-         if lld.found () == true
-            ldflags += '-fuse-ld=' + lld.full_path ().split ('/')[-1]
-         endif
-         
          ldflags += [
             '-nostdlib++',
             '-Wunused-command-line-argument'

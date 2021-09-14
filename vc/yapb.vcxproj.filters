@@ -150,6 +150,9 @@
     <ClInclude Include="..\ext\crlib\crlib\vector.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
+    <ClInclude Include="..\ext\crlib\crlib\simd.h">
+      <Filter>inc\ext\crlib</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\botlib.cpp">

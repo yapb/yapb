@@ -12,6 +12,11 @@ ConVar cv_debug_heuristic_type ("yb_debug_heuristic_type", "0", "Selects the heu
 
 int Bot::findBestGoal () {
 
+   auto pushToHistroy = [&] (int32 goal) -> int32 {
+      m_goalHistory.push (goal);
+      return goal;
+   };
+
    // chooses a destination (goal) node for a bot
    if (!bots.isBombPlanted () && m_team == Team::Terrorist && game.mapIs (MapFlags::Demolition)) {
       int result = kInvalidNodeIndex;
@@ -116,7 +121,7 @@ int Bot::findBestGoal () {
    else if (game.mapIs (MapFlags::Demolition) && m_team == Team::Terrorist && bots.getRoundStartTime () + 10.0f < game.time ()) {
       // send some terrorists to guard planted bomb
       if (!m_defendedBomb && bots.isBombPlanted () && getCurrentTaskId () != Task::EscapeFromBomb && getBombTimeleft () >= 15.0) {
-         return m_chosenGoalIndex = graph.getNearest (graph.getBombOrigin ());
+         return pushToHistroy (m_chosenGoalIndex = graph.getNearest (graph.getBombOrigin ()));
       }
    }
 
@@ -145,7 +150,7 @@ int Bot::findBestGoal () {
    if (goalDesire > tacticChoice) {
       tactic = 3;
    }
-   return findGoalPost (tactic, defensiveNodes, offensiveNodes);
+   return pushToHistroy (findGoalPost (tactic, defensiveNodes, offensiveNodes));
 }
 
 int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offsensive) {
@@ -234,16 +239,16 @@ void Bot::postprocessGoals (const IntArray &goals, int result[]) {
    int searchCount = 0;
 
    for (int index = 0; index < 4; ++index) {
-      int rand = goals.random ();
+      auto goal = goals.random ();
 
-      if (searchCount <= 8 && (m_prevGoalIndex == rand || ((result[0] == rand || result[1] == rand || result[2] == rand || result[3] == rand) && goals.length () > 4)) && !isOccupiedNode (rand)) {
+      if (searchCount <= 8 && (isBannedNode (goal) || m_prevGoalIndex == goal || ((result[0] == goal || result[1] == goal || result[2] == goal || result[3] == goal) && goals.length () > 4)) && !isOccupiedNode (goal)) {
          if (index > 0) {
             index--;
          }
          ++searchCount;
          continue;
       }
-      result[index] = rand;
+      result[index] = goal;
    }
 }
 
@@ -1562,7 +1567,7 @@ bool Bot::findBestNearestNode () {
       }
 
       // ignore non-reacheable nodes...
-      if (!isReachableNode (at)) {
+      if (!isReachableNode (at) || isBannedNode (at)) {
          continue;
       }
 
@@ -1623,6 +1628,7 @@ bool Bot::findBestNearestNode () {
    if (selected == kInvalidNodeIndex) {
       selected = findNearestNode ();
    }
+   m_goalHistory.push (selected);
    changePointIndex (selected);
 
    return true;
@@ -3101,6 +3107,15 @@ bool Bot::isReachableNode (int index) {
          return false; // can't reach this one
       }
       return true;
+   }
+   return false;
+}
+
+bool Bot::isBannedNode (int index) {
+   for (const auto &node : m_goalHistory) {
+      if (node == index) {
+         return true;
+      }
    }
    return false;
 }
