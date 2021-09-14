@@ -69,7 +69,7 @@ jobs:
 
       - name: Configure Build
         run: |
-          CXX=clang-12 CXX_LD=lld meson setup build
+          CXX=clang-12 CXX_LD=lld-12 meson setup build
 
       - name: Compile Source
         run: |
