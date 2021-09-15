@@ -1399,18 +1399,20 @@ void Bot::newRound () {
 }
 
 void Bot::resetPathSearchType () {
+   const auto morale = m_fearLevel > m_agressionLevel ? rg.chance (30) : rg.chance (70);
+
    switch (m_personality) {
    default:
    case Personality::Normal:
-      m_pathType = rg.chance (50) ? FindPath::Optimal : FindPath::Safe;
+      m_pathType = morale ? FindPath::Optimal : FindPath::Safe;
       break;
 
    case Personality::Rusher:
-      m_pathType = rg.chance (75) ? FindPath::Fast : FindPath::Optimal;
+      m_pathType = morale ? FindPath::Fast : FindPath::Optimal;
       break;
 
    case Personality::Careful:
-      m_pathType = rg.chance (75) ? FindPath::Safe : FindPath::Optimal;
+      m_pathType = morale ? FindPath::Optimal : FindPath::Safe;
       break;
    }
 }

@@ -582,7 +582,7 @@ void BotSupport::calculatePings () {
       engfuncs.pfnGetPlayerStats (client.ent, &ping, &loss);
 
       // store normal client ping
-      client.ping = getPingBitmask (client.ent, loss, ping > 0 ? ping / 2 : rg.get (8, 16)); // getting player ping sometimes fails
+      client.ping = getPingBitmask (client.ent, loss, ping > 0 ? ping : rg.get (8, 16)); // getting player ping sometimes fails
       client.pingUpdate = true; // force resend ping
 
       ++numHumans;
