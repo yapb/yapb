@@ -407,18 +407,29 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       
       // if we're handle pings for bots and clients, clear IN_SCORE button so SV_ShouldUpdatePing engine function return false, and SV_EmitPings will not overwrite our results
       if (game.is (GameFlags::HasFakePings) && cv_show_latency.int_ () == 2) {
-         if (cmd->buttons & IN_SCORE) {
+         if (!util.isFakeClient (ent) && (ent->v.oldbuttons | ent->v.button | cmd->buttons) & IN_SCORE) {
             cmd->buttons &= ~IN_SCORE;
-
-            // send our version of pings
-            util.sendPings (ent);
          }
       }
       
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
-      dllapi.pfnCmdStart (player, cmd, random_seed);
+      dllapi.pfnCmdStart (ent, cmd, random_seed);
+   };
+
+   table->pfnUpdateClientData = [] (const struct edict_s *player, int sendweapons, struct clientdata_s *cd) {
+      auto ent = const_cast <edict_t *> (player);
+
+      if (game.is (GameFlags::HasFakePings) && cv_show_latency.int_ () == 2) {
+         if (!util.isFakeClient (ent) && (ent->v.oldbuttons | ent->v.button) & IN_SCORE) {
+            util.sendPings (ent);
+         }
+      }
+      if (game.is (GameFlags::Metamod)) {
+         RETURN_META (MRES_IGNORED);
+      }
+      dllapi.pfnUpdateClientData (ent, sendweapons, cd);
    };
 
    table->pfnPM_Move = [] (playermove_t *playerMove, int server) {

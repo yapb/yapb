@@ -21,7 +21,8 @@ Game::Game () {
 
    m_gameFlags = 0;
    m_mapFlags = 0;
-   m_slowFrame = 0.0f;
+   m_oneSecondFrame = 0.0f;
+   m_halfSecondFrame = 0.0f;
 
    m_cvars.clear ();
 }
@@ -156,7 +157,8 @@ void Game::levelInitialize (edict_t *entities, int max) {
    }
 
    // reset some timers
-   m_slowFrame = 0.0f;
+   m_oneSecondFrame = 0.0f;
+   m_halfSecondFrame = 0.0f;
 }
 
 void Game::drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, const Color &color, int brightness, int speed, int life, DrawLine type) {
@@ -928,7 +930,19 @@ void Game::applyGameModes () {
 }
 
 void Game::slowFrame () {
-   if (m_slowFrame > time ()) {
+   const auto nextUpdate = cr::clamp (75.0f * globals->frametime, 0.5f, 1.0f);
+
+   // run something that is should run more
+   if (m_halfSecondFrame < time ()) {
+
+      // refresh bomb origin in case some plugin moved it out
+      graph.setBombOrigin ();
+
+      // update next update time
+      m_halfSecondFrame = nextUpdate * 0.25f + time ();
+   }
+
+   if (m_oneSecondFrame > time ()) {
       return;
    }
    ctrl.maintainAdminRights ();
@@ -939,11 +953,11 @@ void Game::slowFrame () {
    // check if we're need to autokill bots
    bots.maintainAutoKill ();
 
+      // update client pings
+   util.calculatePings ();
+
    // maintain leaders selection upon round start
    bots.maintainLeaders ();
-
-   // update client pings
-   util.calculatePings ();
 
    // initialize light levels
    graph.initLightLevels ();
@@ -957,12 +971,11 @@ void Game::slowFrame () {
    // check the cvar bounds
    checkCvarsBounds ();
 
-   // refresh bomb origin in case some plugin moved it out
-   graph.setBombOrigin ();
-
    // display welcome message
    util.checkWelcome ();
-   m_slowFrame = time () + 1.0f;
+
+   // update next update time
+   m_oneSecondFrame = nextUpdate + time ();
 }
 
 void Game::searchEntities (StringRef field, StringRef value, EntitySearch functor) {

@@ -131,7 +131,8 @@ private:
    int m_gameFlags {};
    int m_mapFlags {};
 
-   float m_slowFrame; // per second updated frame
+   float m_oneSecondFrame; // per second updated
+   float m_halfSecondFrame; // per half second update
 
 public:
    Game ();
