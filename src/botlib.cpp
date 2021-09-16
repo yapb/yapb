@@ -329,7 +329,7 @@ void Bot::avoidGrenades () {
       if (m_preventFlashing < game.time () && m_personality == Personality::Rusher && m_difficulty == Difficulty::Expert && strcmp (model, "flashbang.mdl") == 0) {
          // don't look at flash bang
          if (!(m_states & Sense::SeeingEnemy)) {
-            pev->v_angle.y = cr::normalizeAngles ((game.getEntityWorldOrigin (pent) - getEyesPos ()).angles ().y + 180.0f);
+            pev->v_angle.y = cr::normalizeAngles ((game.getEntityOrigin (pent) - getEyesPos ()).angles ().y + 180.0f);
 
             m_canChooseAimDirection = false;
             m_preventFlashing = game.time () + rg.get (1.0f, 2.0f);
@@ -402,7 +402,7 @@ void Bot::checkBreakablesAround () {
       if (!game.isShootableBreakable (breakable)) {
          continue;
       }
-      const auto &origin = game.getEntityWorldOrigin (breakable);
+      const auto &origin = game.getEntityOrigin (breakable);
       const auto lengthToObstacle = (origin - pev->origin).lengthSq ();
 
       // too far, skip it
@@ -437,7 +437,7 @@ edict_t *Bot::lookupBreakable () {
 
       // check if this isn't a triggered (bomb) breakable and if it takes damage. if true, shoot the crap!
       if (game.isShootableBreakable (ent)) {
-         m_breakableOrigin = game.getEntityWorldOrigin (ent);
+         m_breakableOrigin = game.getEntityOrigin (ent);
          return ent;
       }
    }
@@ -447,7 +447,7 @@ edict_t *Bot::lookupBreakable () {
       auto ent = tr.pHit;
 
       if (game.isShootableBreakable (ent)) {
-         m_breakableOrigin = game.getEntityWorldOrigin (ent);
+         m_breakableOrigin = game.getEntityOrigin (ent);
          return ent;
       }
    }
@@ -501,7 +501,7 @@ void Bot::updatePickups () {
          if (ent->v.effects & EF_NODRAW) {
             continue;
          }
-         const Vector &origin = game.getEntityWorldOrigin (ent);
+         const Vector &origin = game.getEntityOrigin (ent);
 
          // too far from us ?
          if ((pev->origin - origin).lengthSq () > radius) {
@@ -536,7 +536,7 @@ void Bot::updatePickups () {
       bool allowPickup = false; // assume can't use it until known otherwise
 
       // get the entity origin
-      const auto &origin = game.getEntityWorldOrigin (ent);
+      const auto &origin = game.getEntityOrigin (ent);
      
       if ((ent->v.effects & EF_NODRAW) || ent == m_itemIgnore || cr::abs (origin.z - pev->origin.z) > 96.0f) {
          continue; // someone owns this weapon or it hasn't respawned yet
@@ -734,7 +734,6 @@ void Bot::updatePickups () {
             }
             else if (pickupType == Pickup::PlantedC4) {
                if (util.isAlive (m_enemy)) {
-                  allowPickup = false;
                   return;
                }
 
@@ -743,9 +742,6 @@ void Bot::updatePickups () {
 
                   // then start escape from bomb immediate
                   startTask (Task::EscapeFromBomb, TaskPri::EscapeFromBomb, kInvalidNodeIndex, 0.0f, true);
-
-                  // and no pickup
-                  allowPickup = false;
                   return;
                }
 
@@ -931,8 +927,8 @@ void Bot::instantChatter (int type) {
       return;
    }
 
-   auto playbackSound = conf.pickRandomFromChatterBank (type);
-   auto painSound = conf.pickRandomFromChatterBank (Chatter::DiePain);
+   const auto &playbackSound = conf.pickRandomFromChatterBank (type);
+   const auto &painSound = conf.pickRandomFromChatterBank (Chatter::DiePain);
 
    if (m_notKilled) {
       showChaterIcon (true);
@@ -1000,8 +996,6 @@ void Bot::pushChatterMessage (int message) {
 
 void Bot::checkMsgQueue () {
    // this function checks and executes pending messages
-
-   extern ConVar mp_freezetime;
 
    // no new message?
    if (m_msgQueue.empty ()) {
@@ -1294,7 +1288,7 @@ void Bot::buyStuff () {
    }
 
    int count = 0, weaponCount = 0;
-   int choices[kNumWeapons];
+   int choices[kNumWeapons] {};
 
    // select the priority tab for this personality
    const int *pref = conf.getWeaponPrefs (m_personality) + kNumWeapons;
@@ -1896,7 +1890,7 @@ void Bot::filterTasks () {
          filter[Task::PickupItem].desire = 50.0f; // always pickup button
       }
       else {
-         float distance = (500.0f - (game.getEntityWorldOrigin (m_pickupItem) - pev->origin).length ()) * 0.2f;
+         float distance = (500.0f - (game.getEntityOrigin (m_pickupItem) - pev->origin).length ()) * 0.2f;
 
          if (distance > 50.0f) {
             distance = 50.0f;
@@ -4448,7 +4442,7 @@ void Bot::pickupItem_ () {
 
       return;
    }
-   const Vector &dest = game.getEntityWorldOrigin (m_pickupItem);
+   const Vector &dest = game.getEntityOrigin (m_pickupItem);
 
    m_destOrigin = dest;
    m_entity = dest;
@@ -4948,7 +4942,7 @@ void Bot::showDebugOverlay () {
       return;
    }
    static float timeDebugUpdate = 0.0f;
-   static int index, goal, taskID;
+   static int index = kInvalidNodeIndex, goal = kInvalidNodeIndex, taskID = 0;
 
    static HashMap <int32, String> tasks;
    static HashMap <int32, String> personalities;
@@ -5526,7 +5520,7 @@ bool Bot::canSkipNextTrace (TraceChannel channel) {
    // for optmization purposes skip every second traceline fired, this doesn't affect ai
    // behaviour too much, but saves alot of cpu cycles.
 
-   constexpr auto kSkipTrace = 3;
+   constexpr auto kSkipTrace = 4;
 
    // check if we're have to skip
    if ((++m_traceSkip[channel] % kSkipTrace) == 0) {
@@ -5743,7 +5737,6 @@ void Bot::updateHearing () {
             }
          }
       }
-      extern ConVar cv_shoots_thru_walls;
 
       // check if heard enemy can be seen
       if (checkBodyParts (player)) {

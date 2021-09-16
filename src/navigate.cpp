@@ -23,7 +23,7 @@ int Bot::findBestGoal () {
 
       game.searchEntities ("classname", "weaponbox", [&] (edict_t *ent) {
          if (util.isModel (ent, "backpack.mdl")) {
-            result = graph.getNearest (game.getEntityWorldOrigin (ent));
+            result = graph.getNearest (game.getEntityOrigin (ent));
 
             if (graph.exists (result)) {
                return EntitySearchResult::Break;
@@ -429,7 +429,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
 
          // collision check allowed if not flying through the air
          if (isOnFloor () || isOnLadder () || isInWater ()) {
-            int state[kMaxCollideMoves * 2 + 1];
+            int state[kMaxCollideMoves * 2 + 1] {};
             int i = 0;
 
             Vector src {}, dst {};
@@ -714,7 +714,7 @@ bool Bot::updateNavigation () {
 
       if (!game.isNullEntity (tr.pHit) && game.isNullEntity (m_liftEntity) && strncmp (tr.pHit->v.classname.chars (), "func_door", 9) == 0) {
          // if the door is near enough...
-         if ((game.getEntityWorldOrigin (tr.pHit) - pev->origin).lengthSq () < 2500.0f) {
+         if ((game.getEntityOrigin (tr.pHit) - pev->origin).lengthSq () < 2500.0f) {
             ignoreCollision (); // don't consider being stuck
 
             if (rg.chance (50)) {
@@ -1814,8 +1814,8 @@ int Bot::findDefendNode (const Vector &origin) {
    }
    TraceResult tr {};
 
-   int nodeIndex[kMaxNodeLinks];
-   int minDistance[kMaxNodeLinks];
+   int nodeIndex[kMaxNodeLinks] {};
+   int minDistance[kMaxNodeLinks] {};
 
    for (int i = 0; i < kMaxNodeLinks; ++i) {
       nodeIndex[i] = kInvalidNodeIndex;
@@ -1927,8 +1927,8 @@ int Bot::findCoverNode (float maxDistance) {
 
    IntArray enemies;
 
-   int nodeIndex[kMaxNodeLinks];
-   int minDistance[kMaxNodeLinks];
+   int nodeIndex[kMaxNodeLinks] {};
+   int minDistance[kMaxNodeLinks] {};
 
    for (int i = 0; i < kMaxNodeLinks; ++i) {
       nodeIndex[i] = kInvalidNodeIndex;
@@ -1997,7 +1997,7 @@ int Bot::findCoverNode (float maxDistance) {
          minDistance[i] += practice;
       }
    }
-   bool sorting;
+   bool sorting = false;
 
    // sort resulting nodes for nearest distance
    do {
@@ -2240,7 +2240,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
    };
 
    // trace from the bot's eyes straight forward...
-   traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), tr);
+   traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), *tr);
 
    // check if the trace hit something...
    if (tr->flFraction < 1.0f) {
@@ -2255,7 +2255,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
    src = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) - right * -16.0f;
    forward = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) + right * 16.0f + normal * 24.0f;
 
-   traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), tr);
+   traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), *tr);
 
    // check if the trace hit something...
    if (checkDoor (tr)) {
@@ -2267,7 +2267,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
    src = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) + right * 16.0f;
    forward = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) - right * -16.0f + normal * 24.0f;
 
-   traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), tr);
+   traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), *tr);
 
    // check if the trace hit something...
    if (checkDoor (tr)) {
@@ -2279,7 +2279,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       src = pev->origin + Vector (0.0f, 0.0f, -19.0f + 19.0f);
       forward = src + Vector (0.0f, 0.0f, 10.0f) + normal * 24.0f;
 
-      traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), tr);
+      traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), *tr);
 
       // check if the trace hit something...
       if (checkDoor (tr)) {
@@ -2288,7 +2288,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       src = pev->origin;
       forward = src + normal * 24.0f;
 
-      traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), tr);
+      traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), *tr);
 
       // check if the trace hit something...
       if (checkDoor (tr)) {
@@ -2301,7 +2301,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       forward = pev->origin + Vector (0.0f, 0.0f, -17.0f) + right * 16.0f + normal * 24.0f;
 
       // trace from the bot's waist straight forward...
-      traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), tr);
+      traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), *tr);
 
       // check if the trace hit something...
       if (checkDoor (tr)) {
@@ -2312,7 +2312,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       src = pev->origin + Vector (0.0f, 0.0f, -24.0f) + right * 16.0f;
       forward = pev->origin + Vector (0.0f, 0.0f, -24.0f) - right * -16.0f + normal * 24.0f;
 
-      traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), tr);
+      traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), *tr);
 
       // check if the trace hit something...
       if (checkDoor (tr)) {
@@ -2759,9 +2759,9 @@ int Bot::findCampingDirection () {
       m_currentNodeIndex = changePointIndex (findNearestNode ());
    }
 
-   int count = 0, indices[3];
-   float distTab[3];
-   uint16 visibility[3];
+   int count = 0, indices[3] {};
+   float distTab[3] {};
+   uint16 visibility[3] {};
 
    int currentNode = m_currentNodeIndex;
 
@@ -2978,7 +2978,7 @@ int Bot::getNearestToPlantedBomb () {
    // search the bomb on the map
    game.searchEntities ("classname", "grenade", [&result, &bombModel] (edict_t *ent) {
       if (util.isModel (ent, bombModel)) {
-         result = graph.getNearest (game.getEntityWorldOrigin (ent));
+         result = graph.getNearest (game.getEntityOrigin (ent));
 
          if (graph.exists (result)) {
             return EntitySearchResult::Break;
@@ -3045,7 +3045,7 @@ edict_t *Bot::lookupButton (const char *target) {
 
    // find the nearest button which can open our target
    game.searchEntities ("target", target, [&] (edict_t *ent) {
-      const Vector &pos = game.getEntityWorldOrigin (ent);
+      const Vector &pos = game.getEntityOrigin (ent);
 
       // check if this place safe
       if (!isDeadlyMove (pos)) {

@@ -152,7 +152,7 @@ public:
    void testLine (const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult *ptr);
 
    // trace line with channel, but allows us to store last traceline bot has fired, saving us some cpu cycles
-   bool testLineChannel (TraceChannel channel, const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult *ptr);
+   bool testLineChannel (TraceChannel channel, const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult &result);
 
    // test line
    void testHull (const Vector &start, const Vector &end, int ignoreFlags, int hullNumber, edict_t *ignoreEntity, TraceResult *ptr);
@@ -170,7 +170,7 @@ public:
    const char *getMapName ();
 
    // get the "any" entity origin
-   Vector getEntityWorldOrigin (edict_t *ent);
+   Vector getEntityOrigin (edict_t *ent);
 
    // registers a server command
    void registerEngineCommand (const char *command, void func ());
@@ -574,7 +574,7 @@ public:
 
 public:
    template <typename T> T read () {
-      T result;
+      T result {};
       auto size = sizeof (T);
 
       if (m_cursor + size > m_buffer.length ()) {

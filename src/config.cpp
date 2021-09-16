@@ -335,7 +335,7 @@ void BotConfig::loadChatterConfig () {
 
                   for (auto &sound : sounds) {
                      sound.trim ().trim ("\"");
-                     float duration = game.getWaveLen (sound.chars ());
+                     auto duration = game.getWaveLen (sound.chars ());
 
                      if (duration > 0.0f) {
                         m_chatter[event.code].emplace (cr::move (sound), event.repeat, duration);
@@ -582,7 +582,7 @@ void BotConfig::loadDifficultyConfig () {
             logger.error ("Error in difficulty config file syntax... Please correct all errors.");
             continue;
          }
-         auto key = items[0].trim ();
+         const auto &key = items[0].trim ();
 
          // get our keys
          if (key == "Noob") {

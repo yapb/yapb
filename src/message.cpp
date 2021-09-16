@@ -41,8 +41,6 @@ void MessageDispatcher::netMsgTextMsg () {
       bots.updateTeamEconomics (Team::CT, true);
       bots.updateTeamEconomics (Team::Terrorist, true);
 
-      extern ConVar mp_startmoney;
-
       // set balance for all players
       bots.forEach ([] (Bot *bot) {
          bot->m_moneyAmount = mp_startmoney.int_ ();

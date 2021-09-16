@@ -370,12 +370,12 @@ bool BotSupport::findNearestPlayer (void **pvHolder, edict_t *to, float searchDi
 }
 
 void BotSupport::listenNoise (edict_t *ent, StringRef sample, float volume) {
-   // this function called by the sound hooking code (in emit_sound) enters the played sound into  the array associated with the entity
+   // this function called by the sound hooking code (in emit_sound) enters the played sound into the array associated with the entity
 
    if (game.isNullEntity (ent) || sample.empty ()) {
       return;
    }
-   const Vector &origin = game.getEntityWorldOrigin (ent);
+   const auto &origin = game.getEntityOrigin (ent);
 
    // something wrong with sound...
    if (origin.empty ()) {
@@ -496,8 +496,6 @@ void BotSupport::simulateNoise (int playerIndex) {
       }
    }
    else {
-      extern ConVar mp_footsteps;
-
       if (mp_footsteps.bool_ ()) {
          // moves fast enough?
          noise.dist = 1280.0f * (client.ent->v.velocity.length2d () / 260.0f);
@@ -688,7 +686,7 @@ bool BotSupport::isObjectInsidePlane (FrustumPlane &plane, const Vector &center,
 }
 
 bool BotSupport::isModel (const edict_t *ent, StringRef model) {
-   return model == ent->v.model.chars (9);
+   return model.startsWith (ent->v.model.chars (9));
 }
 
 int32 BotSupport::sendTo (int socket, const void *message, size_t length, int flags, const sockaddr *dest, int destLength) {

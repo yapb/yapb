@@ -1137,8 +1137,8 @@ public:
    }
 
    // get the bot last trace result
-   TraceResult *getLastTraceResult (TraceChannel channel) {
-      return &m_lastTrace[channel];
+   TraceResult &getLastTraceResult (TraceChannel channel) {
+      return m_lastTrace[channel];
    }
 
    // prints debug message
@@ -1171,6 +1171,18 @@ extern ConVar cv_quota;
 extern ConVar cv_difficulty;
 extern ConVar cv_attack_monsters;
 extern ConVar cv_pickup_custom_items;
+extern ConVar cv_economics_rounds;
+extern ConVar cv_shoots_thru_walls;
+extern ConVar cv_debug;
+extern ConVar cv_debug_goal;
+
+extern ConVar mp_freezetime;
+extern ConVar mp_roundtime;
+extern ConVar mp_timelimit;
+extern ConVar mp_limitteams;
+extern ConVar mp_autoteambalance;
+extern ConVar mp_footsteps;
+extern ConVar mp_startmoney;
 
 // execute client command helper
 template <typename ...Args> void Bot::issueCommand (const char *fmt, Args &&...args) {

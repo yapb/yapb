@@ -156,7 +156,7 @@ bool Bot::checkBodyParts (edict_t *target) {
    else {
       spot.z = target->v.origin.z - standFeet;
    }
-   game.testLineChannel (TraceChannel::Enemy, eyes, spot, TraceIgnore::Everything, self, &result);
+   game.testLineChannel (TraceChannel::Enemy, eyes, spot, TraceIgnore::Everything, self, result);
 
    if (result.flFraction >= 1.0f) {
       m_enemyParts |= Visibility::Other;
@@ -171,7 +171,7 @@ bool Bot::checkBodyParts (edict_t *target) {
    Vector perp (-dir.y, dir.x, 0.0f);
    spot = target->v.origin + Vector (perp.x * edgeOffset, perp.y * edgeOffset, 0);
 
-   game.testLineChannel (TraceChannel::Enemy, eyes, spot, TraceIgnore::Everything, self, &result);
+   game.testLineChannel (TraceChannel::Enemy, eyes, spot, TraceIgnore::Everything, self, result);
 
    if (result.flFraction >= 1.0f) {
       m_enemyParts |= Visibility::Other;
@@ -181,7 +181,7 @@ bool Bot::checkBodyParts (edict_t *target) {
    }
    spot = target->v.origin - Vector (perp.x * edgeOffset, perp.y * edgeOffset, 0);
 
-   game.testLineChannel (TraceChannel::Enemy, eyes, spot, TraceIgnore::Everything, self, &result);
+   game.testLineChannel (TraceChannel::Enemy, eyes, spot, TraceIgnore::Everything, self, result);
 
    if (result.flFraction >= 1.0f) {
       m_enemyParts |= Visibility::Other;
@@ -326,8 +326,8 @@ bool Bot::lookupEnemies () {
          newEnemy = shieldEnemy;
       }
    }
-
-   if (util.isPlayer (newEnemy) || (cv_attack_monsters.bool_ () && util.isMonster (newEnemy))) {
+   
+   if (newEnemy != nullptr && (util.isPlayer (newEnemy) || (cv_attack_monsters.bool_ () && util.isMonster (newEnemy)))) {
       bots.setCanPause (true);
 
       m_aimFlags |= AimFlags::Enemy;
@@ -924,7 +924,7 @@ void Bot::fireWeapons () {
    }
 
    // use knife if near and good difficulty (l33t dude!)
-   if (cv_stab_close_enemies.bool_ () && m_difficulty >= Difficulty::Hard && m_healthValue > 80.0f && !game.isNullEntity (enemy) && m_healthValue >= enemy->v.health && distance < 100.0f && !isOnLadder () && !isGroupOfEnemies (pev->origin)) {
+   if (cv_stab_close_enemies.bool_ () && m_difficulty >= Difficulty::Normal && m_healthValue > 80.0f && !game.isNullEntity (enemy) && m_healthValue >= enemy->v.health && distance < 100.0f && !isOnLadder () && !isGroupOfEnemies (pev->origin)) {
       selectWeapons (distance, selectIndex, selectId, choosenWeapon);
       return;
    }

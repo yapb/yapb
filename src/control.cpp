@@ -349,7 +349,7 @@ int BotControl::cmdNode () {
       }
    }
    if (commands.has (strValue (cmd))) {
-      auto item = commands[strValue (cmd)];
+      const auto &item = commands[strValue (cmd)];
 
       // graph have only bad format return status
       int status = (this->*item.handler) ();
@@ -405,8 +405,6 @@ int BotControl::cmdNodeOn () {
    }
 
    if (graph.hasEditFlag (GraphEdit::On)) {
-      extern ConVar mp_roundtime, mp_freezetime, mp_timelimit;
-
       mp_roundtime.set (9);
       mp_freezetime.set (0);
       mp_timelimit.set (0);
@@ -914,7 +912,6 @@ int BotControl::menuFeatures (int item) {
       break;
 
    case 4:
-      extern ConVar cv_debug;
       cv_debug.set (cv_debug.int_ () ^ 1);
 
       showMenu (Menu::Features);
@@ -1067,8 +1064,6 @@ int BotControl::menuTeamSelect (int item) {
       closeMenu (); // reset menu display
 
       if (item < 3) {
-         extern ConVar mp_limitteams, mp_autoteambalance;
-
          // turn off cvars if specified team
          mp_limitteams.set (0);
          mp_autoteambalance.set (0);

@@ -212,7 +212,7 @@ void Game::testLine (const Vector &start, const Vector &end, int ignoreFlags, ed
    engfuncs.pfnTraceLine (start, end, engineFlags, ignoreEntity, ptr);
 }
 
-bool Game::testLineChannel (TraceChannel channel, const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult *ptr) {
+bool Game::testLineChannel (TraceChannel channel, const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult &result) {
    // this function traces a line dot by dot, starting from vecStart in the direction of vecEnd,
    // ignoring or not monsters (depending on the value of IGNORE_MONSTERS, true or false), and stops
    // at the first obstacle encountered, returning the results of the trace in the TraceResult structure
@@ -225,17 +225,17 @@ bool Game::testLineChannel (TraceChannel channel, const Vector &start, const Vec
 
    // check if bot is firing trace line
    if (bot && bot->canSkipNextTrace (channel)) {
-      ptr = bot->getLastTraceResult (channel); // set the result from bot stored one
+      result = bot->getLastTraceResult (channel); // set the result from bot stored one
 
       // current call is skipped
       return true;
    }
    else {
-      testLine (start, end, ignoreFlags, ignoreEntity, ptr);
+      testLine (start, end, ignoreFlags, ignoreEntity, &result);
 
       // if we're still reaching here, save the last trace result
       if (bot) {
-         bot->setLastTraceResult (channel, ptr);
+         bot->setLastTraceResult (channel, &result);
       }
    }
    return false;
@@ -326,7 +326,13 @@ float Game::getWaveLen (const char *fileName) {
       logger.error ("Wave File %s - has zero length!", filePath);
       return 0.0f;
    }
-   return 1.0f * weh.read32 (header.dataChunkLength) / (weh.read16 (header.bitsPerSample) / 8) / weh.read16 (header.numChannels) / weh.read32 (header.sampleRate);
+
+   auto length = static_cast <float> (weh.read32 (header.dataChunkLength));
+   auto bps = static_cast <float> (weh.read16 (header.bitsPerSample)) / 8;
+   auto channels = static_cast <float> (weh.read16 (header.numChannels));
+   auto rate = static_cast <float> (weh.read32 (header.sampleRate));
+
+   return length / bps / channels / rate;
 }
 
 bool Game::isDedicated () {
@@ -364,7 +370,7 @@ const char *Game::getMapName () {
    return strings.format ("%s", globals->mapname.chars ());
 }
 
-Vector Game::getEntityWorldOrigin (edict_t *ent) {
+Vector Game::getEntityOrigin (edict_t *ent) {
    // this expanded function returns the vector origin of a bounded entity, assuming that any
    // entity that has a bounding box has its center at the center of the bounding box itself.
 

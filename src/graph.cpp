@@ -1133,15 +1133,15 @@ void BotGraph::calculatePathRadius (int index) {
    TraceResult tr {};
    bool wayBlocked = false;
 
-   for (float scanDistance = 32.0f; scanDistance < 128.0f; scanDistance += 16.0f) {
+   for (int32 scanDistance = 32; scanDistance < 128; scanDistance += 16) {
       start = path.origin;
 
       direction = Vector (0.0f, 0.0f, 0.0f).forward () * scanDistance;
       direction = direction.angles ();
 
-      path.radius = scanDistance;
+      path.radius = static_cast <float> (scanDistance);
 
-      for (float circleRadius = 0.0f; circleRadius < 360.0f; circleRadius += 20.0f) {
+      for (int32 circleRadius = 0; circleRadius < 360; circleRadius += 20) {
          const auto &forward = direction.forward ();
 
          auto radiusStart = start + forward * scanDistance;
@@ -1195,7 +1195,7 @@ void BotGraph::calculatePathRadius (int index) {
 
             break;
          }
-         direction.y = cr::normalizeAngles (direction.y + circleRadius);
+         direction.y = cr::normalizeAngles (direction.y + static_cast <float> (circleRadius));
       }
 
       if (wayBlocked) {
@@ -1445,7 +1445,6 @@ void BotGraph::initNarrowPlaces () {
       if (accumWeight > 1) {
          path.flags |= NodeFlag::Narrow;
       }
-      accumWeight = 0;
    }
    m_narrowChecked = true;
 }
@@ -1793,7 +1792,6 @@ bool BotGraph::loadGraphData () {
             ctrl.msg ("Warning: Graph data is probably not for this map. Please check bots behaviour.");
          }
       }
-      extern ConVar cv_debug_goal;
       cv_debug_goal.set (kInvalidNodeIndex);
 
       return true;
@@ -2683,7 +2681,7 @@ void BotGraph::addBasic () {
       Vector up, down, front, back;
 
       const Vector &diff = ((ladderLeft - ladderRight) ^ Vector (0.0f, 0.0f, 0.0f)).normalize () * 15.0f;
-      front = back = game.getEntityWorldOrigin (ent);
+      front = back = game.getEntityOrigin (ent);
 
       front = front + diff; // front
       back = back - diff; // back
@@ -2723,7 +2721,7 @@ void BotGraph::addBasic () {
 
    auto autoCreateForEntity = [] (int type, const char *entity) {
       game.searchEntities ("classname", entity, [&] (edict_t *ent) {
-         const Vector &pos = game.getEntityWorldOrigin (ent);
+         const Vector &pos = game.getEntityOrigin (ent);
 
          if (graph.getNearestNoBuckets (pos, 50.0f) == kInvalidNodeIndex) {
             graph.add (type, pos);
@@ -2813,7 +2811,7 @@ void BotGraph::setBombOrigin (bool reset, const Vector &pos) {
    
    game.searchEntities ("classname", "grenade", [&] (edict_t *ent) {
       if (util.isModel (ent, bombModel)) {
-         m_bombOrigin = game.getEntityWorldOrigin (ent);
+         m_bombOrigin = game.getEntityOrigin (ent);
          wasFound = true;
 
          return EntitySearchResult::Break;

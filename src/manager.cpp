@@ -120,7 +120,7 @@ void BotManager::touchKillerEntity (Bot *bot) {
    m_killerEntity->v.dmg_inflictor = bot->ent ();
    m_killerEntity->v.dmg = (bot->pev->health + bot->pev->armorvalue) * 4.0f;
 
-   KeyValueData kv;
+   KeyValueData kv {};
    kv.szClassName = const_cast <char *> (prop.classname.chars ());
    kv.szKeyName = "damagetype";
    kv.szValue = const_cast <char *> (strings.format ("%d", cr::bit (4)));
@@ -297,7 +297,7 @@ void BotManager::addbot (StringRef name, StringRef difficulty, StringRef persona
    // this function is same as the function above, but accept as parameters string instead of integers
 
    BotRequest request {};
-   StringRef any = "*";
+   static StringRef any = "*";
 
    request.name = (name.empty () || name == any) ? StringRef ("\0") : name;
    request.difficulty = (difficulty.empty () || difficulty == any) ? -1 : difficulty.int_ ();
@@ -306,7 +306,7 @@ void BotManager::addbot (StringRef name, StringRef difficulty, StringRef persona
    request.personality = (personality.empty () || personality == any) ? -1 : personality.int_ ();
    request.manual = manual;
 
-   m_addRequests.emplaceLast (cr::move (request));
+   addbot (request.name, request.difficulty, request.personality, request.team, request.skin, request.manual);
 }
 
 void BotManager::maintainQuota () {
@@ -394,8 +394,7 @@ void BotManager::maintainQuota () {
       createRandom ();
    }
    else if (desiredBotCount < botsInGame) {
-      auto tp = countTeamPlayers ();
-
+      const auto &tp = countTeamPlayers ();
       bool isKicked = false;
 
       if (tp.first > tp.second) {
@@ -754,7 +753,7 @@ float BotManager::getConnectTime (StringRef name, float original) {
    // this function get's fake bot player time.
 
    for (const auto &bot : m_bots) {
-      if (name == bot->pev->netname.chars ()) {
+      if (name.startsWith (bot->pev->netname.chars ())) {
          return bot->getConnectionTime ();
       }
    }
@@ -823,8 +822,6 @@ void BotManager::updateTeamEconomics (int team, bool setTrue) {
    // that have not enough money to buy primary (with economics), and if this result higher 80%, player is can't
    // buy primary weapons.
 
-   extern ConVar cv_economics_rounds;
-
    if (setTrue || !cv_economics_rounds.bool_ ()) {
       m_economicsGood[team] = true;
       return; // don't check economics while economics disable
@@ -877,8 +874,6 @@ void BotManager::updateBotDifficulties () {
 }
 
 void BotManager::balanceBotDifficulties () {
-   extern ConVar cv_whose_your_daddy;
-
    // with nightmare difficulty, there is no balance
    if (cv_whose_your_daddy.bool_ ()) {
       return;
@@ -917,7 +912,6 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
 
    // we're not initializing all the variables in bot class, so do an ugly thing... memset this
    plat.bzero (this, sizeof (*this));
-
 
    int clientIndex = game.indexOfEntity (bot);
    pev = &bot->v;
@@ -1496,7 +1490,7 @@ void Bot::updateTeamJoin () {
       }
 
       if (m_wantedTeam != 1 && m_wantedTeam != 2) {
-         auto players = bots.countTeamPlayers ();
+         const auto &players = bots.countTeamPlayers ();
 
          // balance the team upon creation, we can't use game auto select (5) from now, as we use enforced skins belows
          // due to we don't know the team bot selected, and TeamInfo messages still shows us we're spectators..
