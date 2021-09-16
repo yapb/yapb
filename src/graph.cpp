@@ -1134,18 +1134,19 @@ void BotGraph::calculatePathRadius (int index) {
    bool wayBlocked = false;
 
    for (int32 scanDistance = 32; scanDistance < 128; scanDistance += 16) {
+      auto scan = static_cast <float> (scanDistance);
       start = path.origin;
 
-      direction = Vector (0.0f, 0.0f, 0.0f).forward () * scanDistance;
+      direction = Vector (0.0f, 0.0f, 0.0f).forward () * scan;
       direction = direction.angles ();
 
-      path.radius = static_cast <float> (scanDistance);
+      path.radius = scan;
 
       for (int32 circleRadius = 0; circleRadius < 360; circleRadius += 20) {
          const auto &forward = direction.forward ();
 
-         auto radiusStart = start + forward * scanDistance;
-         auto radiusEnd = start + forward * scanDistance;
+         auto radiusStart = start + forward * scan;
+         auto radiusEnd = start + forward * scan;
 
          game.testHull (radiusStart, radiusEnd, TraceIgnore::Monsters, head_hull, nullptr, &tr);
 
@@ -1164,8 +1165,8 @@ void BotGraph::calculatePathRadius (int index) {
             break;
          }
 
-         auto dropStart = start + forward * scanDistance;
-         auto dropEnd = dropStart - Vector (0.0f, 0.0f, scanDistance + 60.0f);
+         auto dropStart = start + forward * scan;
+         auto dropEnd = dropStart - Vector (0.0f, 0.0f, scan + 60.0f);
 
          game.testHull (dropStart, dropEnd, TraceIgnore::Monsters, head_hull, nullptr, &tr);
 
@@ -1175,8 +1176,8 @@ void BotGraph::calculatePathRadius (int index) {
 
             break;
          }
-         dropStart = start - forward * scanDistance;
-         dropEnd = dropStart - Vector (0.0f, 0.0f, scanDistance + 60.0f);
+         dropStart = start - forward * scan;
+         dropEnd = dropStart - Vector (0.0f, 0.0f, scan + 60.0f);
 
          game.testHull (dropStart, dropEnd, TraceIgnore::Monsters, head_hull, nullptr, &tr);
 
