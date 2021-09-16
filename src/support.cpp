@@ -581,8 +581,6 @@ void BotSupport::calculatePings () {
 
       // store normal client ping
       client.ping = getPingBitmask (client.ent, loss, ping > 0 ? ping : rg.get (8, 16)); // getting player ping sometimes fails
-      client.pingUpdate = true; // force resend ping
-
       ++numHumans;
 
       average.first += ping;
@@ -620,13 +618,11 @@ void BotSupport::calculatePings () {
       else if (botPing > 70) {
          botPing = rg.get (30, 40);
       }
-
       client.ping = getPingBitmask (client.ent, botLoss, botPing);
-      client.pingUpdate = true; // force resend ping
    }
 }
 
-void BotSupport::sendPings (edict_t *to) {
+void BotSupport::emitPings (edict_t *to) {
    MessageWriter msg;
 
    // missing from sdk
@@ -636,10 +632,6 @@ void BotSupport::sendPings (edict_t *to) {
       if (!(client.flags & ClientFlags::Used) || client.ent == game.getLocalEntity ()) {
          continue;
       }
-      if (!client.pingUpdate) {
-         continue;
-      }
-      client.pingUpdate = false;
 
       // no ping, no fun
       if (!client.ping) {

@@ -409,6 +409,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       if (game.is (GameFlags::HasFakePings) && cv_show_latency.int_ () == 2) {
          if (!util.isFakeClient (ent) && (ent->v.oldbuttons | ent->v.button | cmd->buttons) & IN_SCORE) {
             cmd->buttons &= ~IN_SCORE;
+            util.emitPings (ent);
          }
       }
       
@@ -418,32 +419,18 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       dllapi.pfnCmdStart (ent, cmd, random_seed);
    };
 
-   table->pfnUpdateClientData = [] (const struct edict_s *player, int sendweapons, struct clientdata_s *cd) {
-      auto ent = const_cast <edict_t *> (player);
-
-      if (game.is (GameFlags::HasFakePings) && cv_show_latency.int_ () == 2) {
-         if (!util.isFakeClient (ent) && (ent->v.oldbuttons | ent->v.button) & IN_SCORE) {
-            util.sendPings (ent);
-         }
-      }
-      if (game.is (GameFlags::Metamod)) {
-         RETURN_META (MRES_IGNORED);
-      }
-      dllapi.pfnUpdateClientData (ent, sendweapons, cd);
-   };
-
-   table->pfnPM_Move = [] (playermove_t *playerMove, int server) {
+   table->pfnPM_Move = [] (playermove_t *pm, int server) {
       // this is the player movement code clients run to predict things when the server can't update
       // them often enough (or doesn't want to). The server runs exactly the same function for
       // moving players. There is normally no distinction between them, else client-side prediction
       // wouldn't work properly (and it doesn't work that well, already...)
 
-      illum.setWorldModel (playerMove->physents[0].model);
+      illum.setWorldModel (pm->physents[0].model);
 
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
-      dllapi.pfnPM_Move (playerMove, server);
+      dllapi.pfnPM_Move (pm, server);
    };
    return HLTrue;
 }

@@ -579,7 +579,6 @@ struct Client {
    int ping; // when bot latency is enabled, client ping stored here
    int iconFlags[kGameMaxPlayers]; // flag holding chatter icons
    float iconTimestamp[kGameMaxPlayers]; // timers for chatter icons
-   bool pingUpdate; // update ping ?
    ClientNoise noise;
 };
 

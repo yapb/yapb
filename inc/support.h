@@ -101,7 +101,7 @@ public:
    void calculatePings ();
 
    // send modified pings to all the clients
-   void sendPings (edict_t *to);
+   void emitPings (edict_t *to);
 
    // installs the sendto function intreception
    void installSendTo ();
