@@ -548,8 +548,8 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
       { 0.0f,  0.0f,  0.0f }, // melee
       { 2.5f,  1.5f,  0.2f }, // pistol
       { 6.5f,  2.0f, -9.9f }, // shotgun
-      { 0.5f, -3.5f, -8.0f }, // zoomrifle
-      { 0.5f, -3.5f, -8.5f }, // rifle
+      { 0.5f, -3.5f, -9.0f }, // zoomrifle
+      { 0.5f, -3.5f, -9.5f }, // rifle
       { 2.5f,  0.5f, -4.5f }, // smg
       { 0.5f,  0.5f,  1.5f }, // sniper
       { 1.5f, -2.0f, -9.0f }  // heavy

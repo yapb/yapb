@@ -1841,7 +1841,7 @@ int Bot::findDefendNode (const Vector &origin) {
       int distance = graph.getPathDist (srcIndex, i);
 
       // skip wayponts with distance more than 512 units
-      if (distance > 512) {
+      if (distance > 1024) {
          continue;
       }
       game.testLine (graph[i].origin, graph[posIndex].origin, TraceIgnore::Everything, ent (), &tr);
