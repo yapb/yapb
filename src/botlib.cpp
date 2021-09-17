@@ -3227,11 +3227,15 @@ void Bot::normal_ () {
 
       // did we already decide about a goal before?
       auto currIndex = getTask ()->data;
-      auto destIndex = graph.exists (currIndex) && !isBannedNode (currIndex) ? currIndex : findBestGoal ();
+      auto destIndex = graph.exists (currIndex) && !isBannedNode (currIndex) && m_prevGoalIndex != currIndex ? currIndex : findBestGoal ();
 
       // check for existance (this is failover, for i.e. csdm, this should be not true with normal gameplay, only when spawned outside of waypointed area)
       if (!graph.exists (destIndex)) {
          destIndex = graph.getFarest (pev->origin, 512.0f);
+      }
+
+      if (m_prevGoalIndex == currIndex && !(graph[currIndex].flags & NodeFlag::Goal)) {
+         m_goalHistory.push (currIndex);
       }
       m_prevGoalIndex = destIndex;
 
@@ -5520,7 +5524,7 @@ bool Bot::canSkipNextTrace (TraceChannel channel) {
    // for optmization purposes skip every second traceline fired, this doesn't affect ai
    // behaviour too much, but saves alot of cpu cycles.
 
-   constexpr auto kSkipTrace = 4;
+   constexpr auto kSkipTrace = 3;
 
    // check if we're have to skip
    if ((++m_traceSkip[channel] % kSkipTrace) == 0) {

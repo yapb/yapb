@@ -403,7 +403,7 @@ bool Bot::lookupEnemies () {
          // shoot at dying players if no new enemy to give some more human-like illusion
          if (m_seeEnemyTime + 0.1f > game.time ()) {
             if (!usesSniper ()) {
-               m_shootAtDeadTime = game.time () + cr::clamp (m_agressionLevel * 1.25f, 0.45f, 1.05f);
+               m_shootAtDeadTime = game.time () + cr::clamp (m_agressionLevel * 1.25f, 0.45f, 0.60f);
                m_actualReactionTime = 0.0f;
                m_states |= Sense::SuspectEnemy;
 
@@ -504,7 +504,7 @@ const Vector &Bot::getEnemyBodyOffset () {
       aimPos += getBodyOffsetError (distance);
    }
    else if (util.isPlayer (m_enemy)) {
-      const float highOffset = m_difficulty > Difficulty::Normal ? 3.5f : 0.0f;
+      const float highOffset = m_difficulty > Difficulty::Normal ? 1.5f : 0.0f;
 
       // now take in account different parts of enemy body
       if (m_enemyParts & (Visibility::Head | Visibility::Body)) {
@@ -546,13 +546,13 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
    static float offsetRanges[9][3] = {
       { 0.0f,  0.0f,  0.0f }, // none
       { 0.0f,  0.0f,  0.0f }, // melee
-      { 6.5f,  6.5f,  1.5f }, // pistol
-      { 9.5f,  9.0f, -5.0f }, // shotgun
-      { 4.5f,  3.5f, -5.0f }, // zoomrifle
-      { 4.5f,  1.0f, -4.5f }, // rifle
-      { 5.5f,  3.5f, -4.5f }, // smg
-      { 3.5f,  3.5f,  4.5f }, // sniper
-      { 2.5f, -2.0f, -6.0f }  // heavy
+      { 2.5f,  1.5f,  0.2f }, // pistol
+      { 6.5f,  2.0f, -9.9f }, // shotgun
+      { 0.5f, -3.5f, -8.0f }, // zoomrifle
+      { 0.5f, -3.5f, -8.5f }, // rifle
+      { 2.5f,  0.5f, -4.5f }, // smg
+      { 0.5f,  0.5f,  1.5f }, // sniper
+      { 1.5f, -2.0f, -9.0f }  // heavy
    };
 
    // only highskilled bots do that 
@@ -561,10 +561,10 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
    }
 
    // default distance index is short
-   int32 distanceIndex = DistanceIndex::Short;
+   auto distanceIndex = DistanceIndex::Short;
 
    // set distance index appropriate to distance
-   if (distance < 3072.0f && distance > kDoubleSprayDistance) {
+   if (distance < 2048.0f && distance > kDoubleSprayDistance) {
       distanceIndex = DistanceIndex::Long;
    }
    else if (distance > kSprayDistance && distance <= kDoubleSprayDistance) {
