@@ -23,7 +23,7 @@ int Bot::numFriendsNear (const Vector &origin, float radius) {
          continue;
       }
 
-      if ((client.origin - origin).lengthSq () < cr::square (radius)) {
+      if (client.origin.distanceSq (origin) < cr::square (radius)) {
          count++;
       }
    }
@@ -38,7 +38,7 @@ int Bot::numEnemiesNear (const Vector &origin, float radius) {
          continue;
       }
 
-      if ((client.origin - origin).lengthSq () < cr::square (radius)) {
+      if (client.origin.distanceSq (origin) < cr::square (radius)) {
          count++;
       }
    }
@@ -246,7 +246,7 @@ bool Bot::lookupEnemies () {
       player = m_enemy;
 
       // is player is alive
-      if (m_enemyUpdateTime > game.time () && (m_enemy->v.origin - pev->origin).lengthSq () < nearestDistance && util.isAlive (player) && seesEnemy (player)) {
+      if (m_enemyUpdateTime > game.time () && m_enemy->v.origin.distanceSq (pev->origin) < nearestDistance && util.isAlive (player) && seesEnemy (player)) {
          newEnemy = player;
       }
    }
@@ -274,7 +274,7 @@ bool Bot::lookupEnemies () {
             if (seesEnemy (intresting)) {
                // higher priority for big monsters
                float scaleFactor = (1.0f / calculateScaleFactor (intresting));
-               float distance = (intresting->v.origin - pev->origin).lengthSq () * scaleFactor;
+               float distance = intresting->v.origin.distanceSq (pev->origin) * scaleFactor;
 
                if (distance * 0.7f < nearestDistance) {
                   nearestDistance = distance;
@@ -307,7 +307,7 @@ bool Bot::lookupEnemies () {
                shieldEnemy = player;
                continue;
             }
-            float distance = (player->v.origin - pev->origin).lengthSq ();
+            float distance = player->v.origin.distanceSq (pev->origin);
 
             if (distance * 0.7f < nearestDistance) {
                nearestDistance = distance;
@@ -482,7 +482,7 @@ const Vector &Bot::getEnemyBodyOffset () {
    if (!m_enemyParts) {
       return m_enemyOrigin;
    }
-   float distance = (m_enemy->v.origin - pev->origin).length ();
+   float distance = m_enemy->v.origin.distance (pev->origin);
 
    // do not aim at head, at long distance (only if not using sniper weapon)
    if ((m_enemyParts & Visibility::Body) && !usesSniper () && distance > (m_difficulty > Difficulty::Normal ? 2000.0f : 1000.0f)) {
@@ -597,7 +597,7 @@ bool Bot::isFriendInLineOfFire (float distance) {
       if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team != m_team || client.ent == ent ()) {
          continue;
       }
-      auto friendDistance = (client.ent->v.origin - pev->origin).lengthSq ();
+      auto friendDistance = client.ent->v.origin.distanceSq (pev->origin);
 
       if (friendDistance <= distance && util.getShootingCone (ent (), client.ent->v.origin) > friendDistance / (friendDistance + 1089.0f)) {
          return true;
@@ -632,14 +632,14 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
       game.testLine (dest, source, TraceIgnore::Monsters, ent (), &tr);
 
       if (!cr::fequal (tr.flFraction, 1.0f)) {
-         if ((tr.vecEndPos - dest).lengthSq () > cr::square (800.0f)) {
+         if (tr.vecEndPos.distanceSq (dest) > cr::square (800.0f)) {
             return false;
          }
 
          if (tr.vecEndPos.z >= dest.z + 200.0f) {
             return false;
          }
-         obstacleDistance = (tr.vecEndPos - source).lengthSq ();
+         obstacleDistance = tr.vecEndPos.distanceSq (source);
       }
    }
    const float distance = cr::square (75.0f);
@@ -690,7 +690,7 @@ bool Bot::isPenetrableObstacle2 (const Vector &dest) {
    }
 
    if (numHits < 3 && thikness < 98) {
-      if ((dest - point).lengthSq () < 13143.0f) {
+      if (dest.distanceSq (point) < 13143.0f) {
          return true;
       }
    }
@@ -900,7 +900,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
 void Bot::fireWeapons () {
    // this function will return true if weapon was fired, false otherwise
 
-   float distance = (m_lookAt - getEyesPos ()).length (); // how far away is the enemy?
+   float distance = m_lookAt.distance (getEyesPos ()); // how far away is the enemy?
 
    // or if friend in line of fire, stop this too but do not update shoot time
    if (!game.isNullEntity (m_enemy)) {
@@ -1020,7 +1020,7 @@ void Bot::focusEnemy () {
    if (m_enemySurpriseTime > game.time ()) {
       return;
    } 
-   float distance = (m_lookAt - getEyesPos ()).length2d (); // how far away is the enemy scum?
+   float distance = m_lookAt.distance2d (getEyesPos ()); // how far away is the enemy scum?
 
    if (distance < 128.0f && !usesSniper ()) {
       if (usesKnife ()) {
@@ -1065,7 +1065,7 @@ void Bot::attackMovement () {
    if (game.isNullEntity (m_enemy)) {
       return;
    }
-   float distance = (m_lookAt - getEyesPos ()).length2d (); // how far away is the enemy scum?
+   float distance = m_lookAt.distance2d (getEyesPos ()); // how far away is the enemy scum?
 
    if (m_lastUsedNodesTime + getFrameInterval () + 0.5f < game.time ()) {
       int approach;
@@ -1570,7 +1570,7 @@ bool Bot::isGroupOfEnemies (const Vector &location, int numEnemies, float radius
          continue;
       }
 
-      if ((client.ent->v.origin - location).lengthSq () < cr::square (radius)) {
+      if (client.ent->v.origin.distanceSq (location) < cr::square (radius)) {
          // don't target our teammates...
          if (client.team == m_team) {
             return false;

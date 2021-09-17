@@ -180,7 +180,7 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offsensive) {
          int count = 0;
 
          for (auto &point : graph.m_goalPoints) {
-            float distance = (graph[point].origin - pev->origin).lengthSq ();
+            float distance = graph[point].origin.distanceSq (pev->origin);
 
             if (distance > cr::square (1024.0f)) {
                continue;
@@ -312,7 +312,7 @@ bool Bot::doPlayerAvoidance (const Vector &normal) {
       if (client.team != m_team || client.ent == ent ()) {
          continue;
       }
-      auto nearest = (client.ent->v.origin - pev->origin).lengthSq ();
+      auto nearest = client.ent->v.origin.distanceSq (pev->origin);
 
       if (nearest < cr::square (pev->maxspeed) && nearest < distance) {
          hindrance = client.ent;
@@ -335,8 +335,8 @@ bool Bot::doPlayerAvoidance (const Vector &normal) {
    predict += right * m_strafeSpeed * interval;
    predict += pev->velocity * interval;
 
-   auto movedDistance = (hindrance->v.origin - predict).lengthSq ();
-   auto nextFrameDistance = ((hindrance->v.origin + hindrance->v.velocity * interval) - pev->origin).lengthSq ();
+   auto movedDistance = hindrance->v.origin.distanceSq (predict);
+   auto nextFrameDistance = pev->origin.distanceSq (hindrance->v.origin + hindrance->v.velocity * interval);
 
    // is player that near now or in future that we need to steer away?
    if (movedDistance <= cr::square (48.0f) || (distance <= cr::square (56.0f) && nextFrameDistance < distance)) {
@@ -655,7 +655,7 @@ bool Bot::updateNavigation () {
    }
    m_destOrigin = m_pathOrigin + pev->view_ofs;
 
-   float nodeDistance = (pev->origin - m_pathOrigin).length ();
+   float nodeDistance = pev->origin.distance (m_pathOrigin);
 
    // this node has additional travel flags - care about them
    if (m_currentTravelFlags & PathFlag::Jump) {
@@ -714,7 +714,7 @@ bool Bot::updateNavigation () {
 
       if (!game.isNullEntity (tr.pHit) && game.isNullEntity (m_liftEntity) && strncmp (tr.pHit->v.classname.chars (), "func_door", 9) == 0) {
          // if the door is near enough...
-         if ((game.getEntityOrigin (tr.pHit) - pev->origin).lengthSq () < 2500.0f) {
+         if (pev->origin.distanceSq (game.getEntityOrigin (tr.pHit)) < 2500.0f) {
             ignoreCollision (); // don't consider being stuck
 
             if (rg.chance (50)) {
@@ -795,7 +795,7 @@ bool Bot::updateNavigation () {
    }
    
    // needs precise placement - check if we get past the point
-   if (desiredDistance < 22.0f && nodeDistance < 30.0f && (pev->origin + (pev->velocity * getFrameInterval ()) - m_pathOrigin).lengthSq () >= cr::square (nodeDistance)) {
+   if (desiredDistance < 22.0f && nodeDistance < 30.0f && m_pathOrigin.distanceSq (pev->origin + pev->velocity * getFrameInterval ()) >= cr::square (nodeDistance)) {
       desiredDistance = nodeDistance + 1.0f;
    }
 
@@ -837,7 +837,7 @@ bool Bot::updateNavigation () {
 
          // bot within 'hearable' bomb tick noises?
          if (!bombOrigin.empty ()) {
-            float distance = (bombOrigin - graph[taskTarget].origin).length ();
+            float distance = bombOrigin.distance (graph[taskTarget].origin);
 
             if (distance > 512.0f) {
                if (rg.chance (50) && !graph.isVisited (taskTarget)) {
@@ -930,7 +930,7 @@ bool Bot::updateLiftHandling () {
       m_destOrigin = m_liftTravelPos;
 
       // check if we enough to destination
-      if ((pev->origin - m_destOrigin).lengthSq () < cr::square (20.0f)) {
+      if (pev->origin.distanceSq (m_destOrigin) < cr::square (20.0f)) {
          wait ();
 
          // need to wait our following teammate ?
@@ -984,7 +984,7 @@ bool Bot::updateLiftHandling () {
       if (needWaitForTeammate) {
          m_destOrigin = m_liftTravelPos;
 
-         if ((pev->origin - m_destOrigin).lengthSq () < cr::square (20.0f)) {
+         if (pev->origin.distanceSq (m_destOrigin) < cr::square (20.0f)) {
             wait ();
          }
       }
@@ -1015,7 +1015,7 @@ bool Bot::updateLiftHandling () {
          m_liftState = LiftState::TravelingBy;
          m_liftUsageTime = game.time () + 14.0f;
 
-         if ((pev->origin - m_destOrigin).lengthSq () < cr::square (20.0f)) {
+         if (pev->origin.distanceSq (m_destOrigin) < cr::square (20.0f)) {
             wait ();
          }
       }
@@ -1025,7 +1025,7 @@ bool Bot::updateLiftHandling () {
    if (m_liftState == LiftState::TravelingBy) {
       m_destOrigin = Vector (m_liftTravelPos.x, m_liftTravelPos.y, pev->origin.z);
 
-      if ((pev->origin - m_destOrigin).lengthSq () < cr::square (20.0f)) {
+      if (pev->origin.distanceSq (m_destOrigin) < cr::square (20.0f)) {
          wait ();
       }
    }
@@ -1042,7 +1042,7 @@ bool Bot::updateLiftHandling () {
             m_destOrigin = pev->origin;
          }
 
-         if ((pev->origin - m_destOrigin).lengthSq () < cr::square (20.0f)) {
+         if (pev->origin.distanceSq (m_destOrigin) < cr::square (20.0f)) {
             wait ();
          }
       }
@@ -1075,7 +1075,7 @@ bool Bot::updateLiftHandling () {
                   m_destOrigin = button->v.origin;
                }
 
-               if ((pev->origin - m_destOrigin).lengthSq () < cr::square (20.0f)) {
+               if (pev->origin.distanceSq (m_destOrigin) < cr::square (20.0f)) {
                   wait ();
                }
             }
@@ -1106,7 +1106,7 @@ bool Bot::updateLiftHandling () {
          }
       }
 
-      if ((pev->origin - m_destOrigin).lengthSq () < cr::square (20.0f)) {
+      if (pev->origin.distanceSq (m_destOrigin) < cr::square (20.0f)) {
          wait ();
       }
    }
@@ -1578,7 +1578,7 @@ bool Bot::findBestNearestNode () {
       }
 
       // if we're still here, find some close nodes
-      float distance = (pev->origin - graph[at].origin).lengthSq ();
+      float distance = pev->origin.distanceSq (graph[at].origin);
 
       if (distance < lessDist[0]) {
          lessDist[2] = lessDist[1];
@@ -1650,7 +1650,7 @@ float Bot::getReachTime () {
 
    // calculate 'real' time that we need to get from one node to another
    if (graph.exists (m_currentNodeIndex) && graph.exists (m_previousNodes[0])) {
-      float distance = (graph[m_previousNodes[0]].origin - graph[m_currentNodeIndex].origin).length ();
+      float distance = graph[m_previousNodes[0]].origin.distance (graph[m_currentNodeIndex].origin);
 
       // caclulate estimated time
       if (pev->maxspeed <= 0.0f) {
@@ -1735,7 +1735,7 @@ int Bot::findNearestNode () {
       if (at == m_currentNodeIndex) {
          continue;
       }
-      float distance = (graph[at].origin - pev->origin).lengthSq ();
+      float distance = graph[at].origin.distanceSq (pev->origin);
 
       if (distance < minimum) {
 
@@ -1763,7 +1763,7 @@ int Bot::findBombNode () {
    const auto &audible = isBombAudible ();
 
    // take the nearest to bomb nodes instead of goal if close enough
-   if ((pev->origin - bomb).lengthSq () < cr::square (96.0f)) {
+   if (pev->origin.distanceSq (bomb) < cr::square (96.0f)) {
       int node = graph.getNearest (bomb, 420.0f);
 
       m_bombSearchOverridden = true;
@@ -1786,7 +1786,7 @@ int Bot::findBombNode () {
 
    // find nearest goal node either to bomb (if "heard" or player)
    for (auto &point : goals) {
-      float distance = (graph[point].origin - bomb).lengthSq ();
+      float distance = bomb.distanceSq (graph[point].origin);
 
       // check if we got more close distance
       if (distance < lastDistance) {
@@ -1888,7 +1888,7 @@ int Bot::findDefendNode (const Vector &origin) {
       IntArray found;
 
       for (int i = 0; i < graph.length (); ++i) {
-         if ((graph[i].origin - origin).lengthSq () <= cr::square (1248.0f) && !graph.isVisible (i, posIndex) && !isOccupiedNode (i)) {
+         if (origin.distanceSq (graph[i].origin) <= cr::square (1248.0f) && !graph.isVisible (i, posIndex) && !isOccupiedNode (i)) {
             found.push (i);
          }
       }
@@ -1911,7 +1911,7 @@ int Bot::findDefendNode (const Vector &origin) {
 int Bot::findCoverNode (float maxDistance) {
    // this function tries to find a good cover node if bot wants to hide
 
-   const float enemyMax = (m_lastEnemyOrigin - pev->origin).length ();
+   const float enemyMax = m_lastEnemyOrigin.distance (pev->origin);
 
    // do not move to a position near to the enemy
    if (maxDistance > enemyMax) {
@@ -2172,7 +2172,7 @@ bool Bot::advanceMovement () {
                      src = path.origin;
                      dst = next.origin;
 
-                     jumpDistance = (path.origin - next.origin).length ();
+                     jumpDistance = path.origin.distance (next.origin);
                      willJump = true;
 
                      break;
@@ -2661,7 +2661,7 @@ bool Bot::isDeadlyMove (const Vector &to) {
    }
 
    float lastHeight = tr.flFraction * 1000.0f; // height from ground
-   float distance = (to - check).length (); // distance from goal
+   float distance = to.distance (check); // distance from goal
 
    if (distance <= 30.0f && lastHeight > 150.0f) {
       return true;
@@ -2686,7 +2686,7 @@ bool Bot::isDeadlyMove (const Vector &to) {
          return true;
       }
       lastHeight = height;
-      distance = (to - check).length (); // distance from goal
+      distance = to.distance (check); // distance from goal
    }
    return false;
 }
@@ -2774,13 +2774,13 @@ int Bot::findCampingDirection () {
       if (count < 3) {
          indices[count] = i;
 
-         distTab[count] = (pev->origin - path.origin).lengthSq ();
+         distTab[count] = pev->origin.distanceSq (path.origin);
          visibility[count] = path.vis.crouch + path.vis.stand;
 
          ++count;
       }
       else {
-         float distance = (pev->origin - path.origin).lengthSq ();
+         float distance = pev->origin.distanceSq (path.origin);
          uint16 visBits = path.vis.crouch + path.vis.stand;
 
          for (int j = 0; j < 3; ++j) {
@@ -3005,14 +3005,14 @@ bool Bot::isOccupiedNode (int index, bool needZeroVelocity) {
       }
 
       // do not check clients far away from us
-      if ((pev->origin - client.origin).lengthSq () > cr::square (320.0f)) {
+      if (pev->origin.distanceSq (client.origin) > cr::square (320.0f)) {
          continue;
       }
 
       if (needZeroVelocity && client.ent->v.velocity.length2d () > 0.0f) {
          continue;
       }
-      auto length = (graph[index].origin - client.origin).lengthSq ();
+      auto length = client.origin.distanceSq (graph[index].origin);
 
       if (length < cr::clamp (cr::square (graph[index].radius), cr::square (60.0f), cr::square (90.0f))) {
          return true;
@@ -3049,7 +3049,7 @@ edict_t *Bot::lookupButton (const char *target) {
 
       // check if this place safe
       if (!isDeadlyMove (pos)) {
-         float distance = (pev->origin - pos).lengthSq ();
+         float distance = pev->origin.distanceSq (pos);
 
          // check if we got more close button
          if (distance <= nearest) {
@@ -3073,7 +3073,7 @@ bool Bot::isReachableNode (int index) {
    const Vector &dst = graph[index].origin;
 
    // is the destination close enough?
-   if ((dst - src).lengthSq () >= cr::square (320.0f)) {
+   if (dst.distanceSq (src) >= cr::square (320.0f)) {
       return false;
    }
 
@@ -3081,7 +3081,7 @@ bool Bot::isReachableNode (int index) {
    if (isOccupiedNode (index, true)) {
       return true;
    }
-   float ladderDist = (dst - src).length2d ();
+   float ladderDist = dst.distance2d (src);
 
    TraceResult tr {};
    game.testLine (src, dst, TraceIgnore::Monsters, ent (), &tr);

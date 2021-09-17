@@ -437,7 +437,7 @@ int BotGraph::getFarest (const Vector &origin, float maxDistance) {
    maxDistance = cr::square (maxDistance);
 
    for (const auto &path : m_paths) {
-      float distance = (path.origin - origin).lengthSq ();
+      float distance = path.origin.distanceSq (origin);
 
       if (distance > maxDistance) {
          index = path.number;
@@ -458,7 +458,7 @@ int BotGraph::getNearestNoBuckets (const Vector &origin, float minDistance, int 
       if (flags != -1 && !(path.flags & flags)) {
          continue; // if flag not -1 and node has no this flag, skip node
       }
-      float distance = (path.origin - origin).lengthSq ();
+      float distance = path.origin.distanceSq (origin);
 
       if (distance < minDistance) {
          index = path.number;
@@ -491,7 +491,7 @@ int BotGraph::getNearest (const Vector &origin, float minDistance, int flags) {
       if (flags != -1 && !(m_paths[at].flags & flags)) {
          continue; // if flag not -1 and node has no this flag, skip node
       }
-      float distance = (m_paths[at].origin - origin).lengthSq ();
+      float distance = origin.distanceSq (m_paths[at].origin);
 
       if (distance < minDistanceSq) {
          index = at;
@@ -523,7 +523,7 @@ IntArray BotGraph::searchRadius (float radius, const Vector &origin, int maxCoun
          break;
       }
 
-      if ((m_paths[at].origin - origin).lengthSq () < radius) {
+      if (origin.distanceSq (m_paths[at].origin) < radius) {
          result.push (at);
       }
    }
@@ -585,7 +585,7 @@ void BotGraph::add (int type, const Vector &pos) {
       index = getEditorNeareset ();
 
       if (index != kInvalidNodeIndex && m_paths[index].number >= 0) {
-         float distance = (m_paths[index].origin - m_editor->v.origin).length ();
+         float distance = m_editor->v.origin.distance (m_paths[index].origin);
 
          if (distance < 50.0f) {
             addNewNode = false;
@@ -603,7 +603,7 @@ void BotGraph::add (int type, const Vector &pos) {
       index = getEditorNeareset ();
 
       if (index != kInvalidNodeIndex && m_paths[index].number >= 0) {
-         float distance = (m_paths[index].origin - m_editor->v.origin).length ();
+         float distance = m_editor->v.origin.distance (m_paths[index].origin);
 
          if (distance < 50.0f) {
             addNewNode = false;
@@ -627,7 +627,7 @@ void BotGraph::add (int type, const Vector &pos) {
       auto nearest = getEditorNeareset ();
 
       // do not allow to place waypoints "inside" waypoints, make at leat 10 units range
-      if (exists (nearest) && (m_paths[nearest].origin - newOrigin).lengthSq () < cr::square (10.0f)) {
+      if (exists (nearest) && newOrigin.distanceSq (m_paths[nearest].origin) < cr::square (10.0f)) {
          ctrl.msg ("Can't add node. It's way to near to %d node. Please move some units anywhere.", nearest);
          return;
       }
@@ -670,7 +670,7 @@ void BotGraph::add (int type, const Vector &pos) {
       m_lastJumpNode = index;
    }
    else if (type == 10) {
-      float distance = (m_paths[m_lastJumpNode].origin - m_editor->v.origin).length ();
+      float distance = m_paths[m_lastJumpNode].origin.distance (m_editor->v.origin);
       addPath (m_lastJumpNode, index, distance);
 
       for (auto &link : m_paths[m_lastJumpNode].links) {
@@ -750,7 +750,7 @@ void BotGraph::add (int type, const Vector &pos) {
             game.testLine (newOrigin, calc.origin, TraceIgnore::Monsters, m_editor, &tr);
 
             if (cr::fequal (tr.flFraction, 1.0f) && cr::abs (newOrigin.x - calc.origin.x) < 64.0f && cr::abs (newOrigin.y - calc.origin.y) < 64.0f && cr::abs (newOrigin.z - calc.origin.z) < m_autoPathDistance) {
-               float distance = (calc.origin - newOrigin).length ();
+               float distance = newOrigin.distance (calc.origin);
 
                addPath (index, calc.number, distance);
                addPath (calc.number, index, distance);
@@ -759,7 +759,7 @@ void BotGraph::add (int type, const Vector &pos) {
          else {
             // check if the node is reachable from the new one
             if (isNodeReacheable (newOrigin, calc.origin) || isNodeReacheable (calc.origin, newOrigin)) {
-               float distance = (calc.origin - newOrigin).length ();
+               float distance = newOrigin.distance (calc.origin);
 
                if (distance < minDistance) {
                   destIndex = calc.number;
@@ -772,12 +772,12 @@ void BotGraph::add (int type, const Vector &pos) {
       if (exists (destIndex)) {
          // check if the node is reachable from the new one (one-way)
          if (isNodeReacheable (newOrigin, m_paths[destIndex].origin)) {
-            addPath (index, destIndex, (m_paths[destIndex].origin - newOrigin).length ());
+            addPath (index, destIndex, newOrigin.distance (m_paths[destIndex].origin));
          }
 
          // check if the new one is reachable from the node (other way)
          if (isNodeReacheable (m_paths[destIndex].origin, newOrigin)) {
-            addPath (destIndex, index, (m_paths[destIndex].origin - newOrigin).length ());
+            addPath (destIndex, index, newOrigin.distance (m_paths[destIndex].origin));
          }
       }
    }
@@ -790,12 +790,12 @@ void BotGraph::add (int type, const Vector &pos) {
 
          // check if the node is reachable from the new one (one-way)
          if (isNodeReacheable (newOrigin, calc.origin)) {
-            addPath (index, calc.number, (calc.origin - newOrigin).length ());
+            addPath (index, calc.number, calc.origin.distance (newOrigin));
          }
 
          // check if the new one is reachable from the node (other way)
          if (isNodeReacheable (calc.origin, newOrigin)) {
-            addPath (calc.number, index, (calc.origin - newOrigin).length ());
+            addPath (calc.number, index, calc.origin.distance (newOrigin));
          }
       }
       clearConnections (index);
@@ -975,7 +975,7 @@ void BotGraph::pathCreate (char dir) {
       return;
    }
 
-   float distance = (m_paths[nodeTo].origin - m_paths[nodeFrom].origin).length ();
+   float distance = m_paths[nodeFrom].origin.distance (m_paths[nodeTo].origin);
 
    if (dir == PathConnection::Outgoing) {
       addPath (nodeFrom, nodeTo, distance);
@@ -1883,13 +1883,13 @@ const char *BotGraph::getOldFormatGraphName (bool isMemoryFile) {
 float BotGraph::calculateTravelTime (float maxSpeed, const Vector &src, const Vector &origin) {
    // this function returns 2D traveltime to a position
 
-   return (origin - src).length2d () / maxSpeed;
+   return origin.distance2d (src) / maxSpeed;
 }
 
 bool BotGraph::isNodeReacheable (const Vector &src, const Vector &destination) {
    TraceResult tr {};
 
-   float distance = (destination - src).length ();
+   float distance = destination.distance (src);
 
    // is the destination not close enough?
    if (distance > m_autoPathDistance) {
@@ -1945,7 +1945,7 @@ bool BotGraph::isNodeReacheable (const Vector &src, const Vector &destination) {
       game.testLine (check, down, TraceIgnore::Monsters, m_editor, &tr);
 
       float lastHeight = tr.flFraction * 1000.0f; // height from ground
-      distance = (destination - check).length (); // distance from goal
+      distance = destination.distance (check); // distance from goal
 
       while (distance > 10.0f) {
          // move 10 units closer to the goal...
@@ -1963,7 +1963,7 @@ bool BotGraph::isNodeReacheable (const Vector &src, const Vector &destination) {
             return false; // can't get there without jumping...
          }
          lastHeight = height;
-         distance = (destination - check).length (); // distance from goal
+         distance = destination.distance (check); // distance from goal
       }
       return true;
    }
@@ -2136,13 +2136,13 @@ void BotGraph::frame () {
    // check if it's a auto-add-node mode enabled
    if (hasEditFlag (GraphEdit::Auto) && (m_editor->v.flags & (FL_ONGROUND | FL_PARTIALGROUND))) {
       // find the distance from the last used node
-      float distance = (m_lastNode - m_editor->v.origin).lengthSq ();
+      float distance = m_lastNode.distanceSq (m_editor->v.origin);
 
       if (distance > cr::square (128.0f)) {
          // check that no other reachable nodes are nearby...
          for (const auto &path : m_paths) {
             if (isNodeReacheable (m_editor->v.origin, path.origin)) {
-               distance = (path.origin - m_editor->v.origin).lengthSq ();
+               distance = path.origin.distanceSq (m_editor->v.origin);
 
                if (distance < nearestDistance) {
                   nearestDistance = distance;
@@ -2163,7 +2163,7 @@ void BotGraph::frame () {
 
    // now iterate through all nodes in a map, and draw required ones
    for (auto &path : m_paths) {
-      float distance = (path.origin - m_editor->v.origin).length ();
+      float distance = path.origin.distance (m_editor->v.origin);
 
       // check if node is whitin a distance, and is visible
       if (distance < 512.0f && ((util.isVisible (path.origin, m_editor) && util.isInViewCone (path.origin, m_editor)) || !util.isAlive (m_editor) || distance < 128.0f)) {

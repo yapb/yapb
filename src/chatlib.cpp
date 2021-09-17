@@ -8,6 +8,7 @@
 #include <yapb.h>
 
 ConVar cv_chat ("yb_chat", "1", "Enables or disables bots chat functionality.");
+ConVar cv_chat_percent ("yb_chat_percent", "30", "Chances bot will send random dead chat when killed.", true, 0.0f, 100.0f);
 
 void BotSupport::stripTags (String &line) {
    if (line.empty ()) {
@@ -316,7 +317,7 @@ bool Bot::isReplyingToChat () {
 void Bot::checkForChat () {
 
    // say a text every now and then
-   if (rg.chance (30) || m_notKilled || !cv_chat.bool_ ()) {
+   if (rg.chance (cv_chat_percent.int_ ()) || m_notKilled || !cv_chat.bool_ ()) {
       return;
    }
 
