@@ -43,11 +43,6 @@ CR_DECLARE_SCOPED_ENUM (PathConnection,
    Bidirectional
 )
 
-// defines node add commands
-CR_DECLARE_SCOPED_ENUM (GraphAdd,
-   Normal = 0,
-)
-
 // a* route state
 CR_DECLARE_SCOPED_ENUM (RouteState,
    Open = 0,
@@ -92,6 +87,20 @@ CR_DECLARE_SCOPED_ENUM (LiftState,
    LookingButtonInside,
    TravelingBy,
    Leaving
+)
+
+// node add flags
+CR_DECLARE_SCOPED_ENUM (NodeAddFlag,
+   Normal = 0,
+   TOnly = 1,
+   CTOnly = 2,
+   NoHostage = 3,
+   Rescue = 4,
+   Camp = 5,
+   CampEnd = 6,
+   JumpStart = 9,
+   JumpEnd = 10,
+   Goal = 100
 )
 
 // a* route
