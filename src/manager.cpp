@@ -1829,6 +1829,11 @@ void BotManager::initRound () {
 }
 
 void BotManager::setBombPlanted (bool isPlanted) {
+   if (cv_ignore_objectives.bool_ ()) {
+      m_bombPlanted = false;
+      return;
+   }
+
    if (isPlanted) {
       m_timeBombPlanted = game.time ();
    }

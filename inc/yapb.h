@@ -1160,6 +1160,7 @@ public:
 extern ConVar cv_jasonmode;
 extern ConVar cv_radio_mode;
 extern ConVar cv_ignore_enemies;
+extern ConVar cv_ignore_objectives;
 extern ConVar cv_chat;
 extern ConVar cv_language;
 extern ConVar cv_show_latency;

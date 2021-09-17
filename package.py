@@ -6,9 +6,8 @@
 # SPDX-License-Identifier: MIT
 # 
 
-from genericpath import isdir
 import os, sys, subprocess, base64
-import locale, urllib3
+import urllib3
 import pathlib, shutil
 import zipfile, tarfile
 import datetime, calendar
@@ -132,7 +131,7 @@ class BotRelease (object):
       
    def make_directories (self):
       dirs = [
-         "bin", 
+         "bin",
          os.path.join ("data", "pwf"),
          os.path.join ("data", "train"),
          os.path.join ("data", "graph"),
@@ -173,7 +172,7 @@ class BotRelease (object):
          self.get_graph_file (file)
 
    def unlink_binaries (self):
-      libs = ["yapb.so", "yapb.dll", "yapb.dylib"]
+      libs = ["yapb.so", "yapb.arm64.so", "yapb.dll", "yapb.dylib"]
       
       for lib in libs:
          path = os.path.join (self.bot_dir, "bin", lib)
@@ -194,34 +193,34 @@ class BotRelease (object):
 
    def compress_directory (self, path, handle):
       length = len (path) + 1
-      empty_dirs = []  
+      empty_dirs = []
       
       for root, dirs, files in os.walk (path):
-         empty_dirs.extend ([dir for dir in dirs if os.listdir (os.path.join (root, dir)) == []])  
+         empty_dirs.extend ([dir for dir in dirs if os.listdir (os.path.join (root, dir)) == []]) 
          
          for file in files:
             file_path = os.path.join (root, file)
             handle.write (file_path, file_path[length:])
             
-         for dir in empty_dirs:  
+         for dir in empty_dirs:
             dir_path = os.path.join (root, dir)
             
-            zif = zipfile.ZipInfo (dir_path[length:] + "/")  
-            handle.writestr (zif, "")  
+            zif = zipfile.ZipInfo (dir_path[length:] + "/")
+            handle.writestr (zif, "")
             
          empty_dirs = []
 
-   def create_zip (self, dir): 
+   def create_zip (self, dir):
       zf = zipfile.ZipFile (dir, "w", zipfile.ZIP_DEFLATED, compresslevel=9)
       zf.comment = bytes (self.version, encoding = "ascii")
       
       self.compress_directory (self.work_dir, zf)
       zf.close ()
    
-   def convert_zip_txz (self, zip, txz):
+   def convert_zip_txz (self, zfn, txz):
       timeshift = int ((datetime.datetime.now () - datetime.datetime.utcnow ()).total_seconds ())
       
-      with zipfile.ZipFile (zip) as zipf:
+      with zipfile.ZipFile (zfn) as zipf:
          with tarfile.open (txz, "w:xz") as tarf:
             for zif in zipf.infolist ():
                tif = tarfile.TarInfo (name = zif.filename)
@@ -230,9 +229,9 @@ class BotRelease (object):
                
                tarf.addfile (tarinfo = tif, fileobj = zipf.open (zif.filename))
                
-      os.remove (zip)
+      os.remove (zfn)
 
-   def install_binary (self, ext):
+   def install_binary (self, ext, unlink_existing = True):
       lib = "yapb.{}".format (ext)
       binary = os.path.join (self.artifacts, lib)
 
@@ -240,10 +239,12 @@ class BotRelease (object):
          binary = os.path.join (binary, lib)
       
       if not os.path.exists (binary):
-         print ("Packaging failed for {}. Skipping...", lib)
+         print ("Packaging failed for {}. Skipping...".format (lib))
          return False
          
-      self.unlink_binaries ()
+      if unlink_existing:
+         self.unlink_binaries ()
+
       self.copy_binary (binary)
 
       return True
@@ -259,16 +260,19 @@ class BotRelease (object):
       
       print ("Generating Win32 EXE")
 
-      with open ("botsetup.exe", "rb") as sfx, open (self.pkg_win32, "rb") as zip, open (self.pkg_win32_sfx, "wb") as exe:
+      with open ("botsetup.exe", "rb") as sfx, open (self.pkg_win32, "rb") as zfn, open (self.pkg_win32_sfx, "wb") as exe:
          exe.write (sfx.read ())
-         exe.write (zip.read ())
+         exe.write (zfn.read ())
 
       self.sign_binary (self.pkg_win32_sfx)
       
    def create_pkg_linux (self):
       print ("Generating Linux TXZ")
-      
-      if not self.install_binary ("so"):
+
+      self.unlink_binaries ()
+      self.install_binary ("arm64.so")
+
+      if not self.install_binary ("so", False):
          return
       
       tmp_file = "tmp.zip"

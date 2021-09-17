@@ -52,7 +52,7 @@ jobs:
 
   windows:
     name: windows-x86
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
       - name: Checkout Repository
@@ -60,6 +60,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: true
+          
       - name: Setup MSBuild
         uses: ilammy/msvc-dev-cmd@v1
         with:
@@ -103,12 +104,16 @@ jobs:
       - name: Compile Source
         run: |
           meson compile -v -C build
+          
+      - name: Rename Binary
+        run: |
+          mv build/yapb.so build/yapb.arm64.so
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: yapb.aarch64.so
-          path: build/yapb.so
+          name: yapb.arm64.so
+          path: build/yapb.arm64.so
 
   publish:
     if: |

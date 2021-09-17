@@ -30,6 +30,7 @@ ConVar cv_restricted_weapons ("yb_restricted_weapons", "", "Specifies semicolon 
 
 ConVar cv_attack_monsters ("yb_attack_monsters", "0", "Allows or disallows bots to attack monsters.");
 ConVar cv_pickup_custom_items ("yb_pickup_custom_items", "0", "Allows or disallows bots to pickup custom items.");
+ConVar cv_ignore_objectives ("yb_ignore_objectives", "0", "Allows or disallows bots to do map objectives, i.e. plant/defuse bombs, and saves hostages");
 
 // game console variables
 ConVar mp_c4timer ("mp_c4timer", nullptr, Var::GameRef);
@@ -2951,6 +2952,10 @@ void Bot::update () {
 
    if (m_team == Team::Terrorist && game.mapIs (MapFlags::Demolition)) {
       m_hasC4 = !!(pev->weapons & cr::bit (Weapon::C4));
+
+      if (m_hasC4 && cv_ignore_objectives.bool_ ()) {
+         m_hasC4 = false;
+      }
    }
 
    // is bot movement enabled
@@ -3153,7 +3158,7 @@ void Bot::normal_ () {
          if (game.mapIs (MapFlags::HostageRescue)) {
             // CT Bot has some hostages following?
             if (m_team == Team::CT && hasHostage ()) {
-               // and reached a Rescue Point?
+               // and reached a rescue point?
                if (m_path->flags & NodeFlag::Rescue) {
                   m_hostages.clear ();
                }
@@ -5061,6 +5066,10 @@ void Bot::showDebugOverlay () {
 }
 
 bool Bot::hasHostage () {
+   if (cv_ignore_objectives.bool_ ()) {
+      return false;
+   }
+
    for (auto hostage : m_hostages) {
       if (!game.isNullEntity (hostage)) {
 
