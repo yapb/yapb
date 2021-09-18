@@ -1208,7 +1208,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
    // this function finds a path from srcIndex to destIndex
 
    auto dangerFactor = [&] () -> float {
-      return rg.get (cv_path_danger_factor_min.float_ (), cv_path_danger_factor_max.float_ ()) * 2.0f / m_difficulty;
+      return rg.get (cv_path_danger_factor_min.float_ (), cv_path_danger_factor_max.float_ ()) * 2.0f / cr::clamp (m_difficulty, 1, 3);
    };
 
    // least kills and number of nodes to goal for a team
