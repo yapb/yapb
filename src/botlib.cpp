@@ -3242,7 +3242,7 @@ void Bot::normal_ () {
          destIndex = graph.getFarest (pev->origin, 512.0f);
       }
 
-      if (m_prevGoalIndex == currIndex && !(graph[currIndex].flags & NodeFlag::Goal)) {
+      if (!graph.exists (cv_debug_goal.int_ ()) && m_prevGoalIndex == currIndex && !(graph[currIndex].flags & NodeFlag::Goal)) {
          m_goalHistory.push (currIndex);
       }
       m_prevGoalIndex = destIndex;

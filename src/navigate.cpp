@@ -8,7 +8,10 @@
 #include <yapb.h>
 
 ConVar cv_whose_your_daddy ("yb_whose_your_daddy", "0", "Enables or disables extra hard difficulty for bots.");
-ConVar cv_debug_heuristic_type ("yb_debug_heuristic_type", "0", "Selects the heuristic function mode. For debug purposes only.", true, 0.0f, 4.0f);
+ConVar cv_path_heuristic_mode ("yb_path_heuristic_mode", "4", "Selects the heuristic function mode. For debug purposes only.", true, 0.0f, 4.0f);
+
+ConVar cv_path_danger_factor_min ("yb_path_danger_factor_min", "200", "Lower bound of danger factor that used to add additional danger to path based on practice.", true, 100.0f, 2400.0f);
+ConVar cv_path_danger_factor_max ("yb_path_danger_factor_max", "400", "Upper bound of danger factor that used to add additional danger to path based on practice.", true, 200.0f, 4800.0f);
 
 int Bot::findBestGoal () {
 
@@ -1204,8 +1207,12 @@ void Bot::findShortestPath (int srcIndex, int destIndex) {
 void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath::Fast */) {
    // this function finds a path from srcIndex to destIndex
 
+   auto dangerFactor = [&] () -> float {
+      return rg.get (cv_path_danger_factor_min.float_ (), cv_path_danger_factor_max.float_ ()) * 2.0f / m_difficulty;
+   };
+
    // least kills and number of nodes to goal for a team
-   auto gfunctionKillsDist = [] (int team, int currentIndex, int parentIndex) -> float {
+   auto gfunctionKillsDist = [&dangerFactor] (int team, int currentIndex, int parentIndex) -> float {
       if (parentIndex == kInvalidNodeIndex) {
          return 0.0f;
       }
@@ -1221,7 +1228,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
       if (current.flags & NodeFlag::Crouch) {
          cost *= 1.5f;
       }
-      return cost;
+      return cost + dangerFactor ();
    };
 
    // least kills and number of nodes to goal for a team
@@ -1238,7 +1245,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
    };
 
    // least kills to goal for a team
-   auto gfunctionKills = [] (int team, int currentIndex, int) -> float {
+   auto gfunctionKills = [&dangerFactor] (int team, int currentIndex, int) -> float {
       auto cost = static_cast <float> (graph.getDangerDamage (team, currentIndex, currentIndex));
       const auto &current = graph[currentIndex];
 
@@ -1251,7 +1258,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
       if (current.flags & NodeFlag::Crouch) {
          cost *= 1.5f;
       }
-      return cost + 0.5f;
+      return cost + dangerFactor () + 1.0f;
    };
 
    // least kills to goal for a team
@@ -1310,7 +1317,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
       float y = cr::abs (start.origin.y - goal.origin.y);
       float z = cr::abs (start.origin.z - goal.origin.z);
 
-      switch (cv_debug_heuristic_type.int_ ()) {
+      switch (cv_path_heuristic_mode.int_ ()) {
       case 0:
       default:
          return cr::max (cr::max (x, y), z); // chebyshev distance
@@ -1326,7 +1333,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
          // euclidean based distance
          float euclidean = cr::powf (cr::powf (x, 2.0f) + cr::powf (y, 2.0f) + cr::powf (z, 2.0f), 0.5f);
 
-         if (cv_debug_heuristic_type.int_ () == 4) {
+         if (cv_path_heuristic_mode.int_ () == 4) {
             return 1000.0f * (cr::ceilf (euclidean) - euclidean);
          }
          return euclidean;
@@ -1343,7 +1350,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
 
    // none heuristic
    auto hfunctionNone = [&hfunctionPathDist] (int index, int startIndex, int goalIndex) -> float {
-      return hfunctionPathDist (index, startIndex, goalIndex) / 128.0f * 10.0f;
+      return hfunctionPathDist (index, startIndex, goalIndex) / (128.0f * 10.0f);
    };
 
    if (!graph.exists (srcIndex)) {
@@ -3112,6 +3119,9 @@ bool Bot::isReachableNode (int index) {
 }
 
 bool Bot::isBannedNode (int index) {
+   if (graph.exists (cv_debug_goal.int_ ())) {
+      return false;
+   }
    for (const auto &node : m_goalHistory) {
       if (node == index) {
          return true;
