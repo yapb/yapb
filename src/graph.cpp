@@ -386,6 +386,15 @@ int BotGraph::clearConnections (int index) {
    return numFixedLinks;
 }
 
+int BotGraph::getBspSize () {
+   MemFile file (strings.format ("maps/%s.bsp", game.getMapName ()));
+
+   if (file) {
+      return static_cast <int> (file.length ());
+   }
+   return 0;
+}
+
 void BotGraph::addPath (int addIndex, int pathIndex, float distance) {
    if (!exists (addIndex) || !exists (pathIndex)) {
       return;
@@ -1787,7 +1796,7 @@ bool BotGraph::loadGraphData () {
       loadPractice ();
 
       if (exten.mapSize > 0) {
-         int mapSize = engfuncs.pfnGetFileSize (strings.format ("maps/%s.bsp", game.getMapName ()));
+         int mapSize = getBspSize ();
 
          if (mapSize != exten.mapSize) {
             ctrl.msg ("Warning: Graph data is probably not for this map. Please check bots behaviour.");
@@ -1829,7 +1838,7 @@ bool BotGraph::saveGraphData () {
 
    ExtenHeader exten {};
    strings.copy (exten.author, author.chars (), cr::bufsize (exten.author));
-   exten.mapSize = engfuncs.pfnGetFileSize (strings.format ("maps/%s.bsp", game.getMapName ()));
+   exten.mapSize = getBspSize ();
 
    // ensure narrow places saved into file
    m_narrowChecked = false;

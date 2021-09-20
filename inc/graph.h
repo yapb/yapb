@@ -321,6 +321,7 @@ public:
    int getDangerDamage (int team, int start, int goal);
    int getPathDist (int srcIndex, int destIndex);
    int clearConnections (int index);
+   int getBspSize ();
 
    float calculateTravelTime (float maxSpeed, const Vector &src, const Vector &origin);
 
