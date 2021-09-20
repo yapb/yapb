@@ -347,7 +347,7 @@ bool BotSupport::findNearestPlayer (void **pvHolder, edict_t *to, float searchDi
       if ((sameTeam && client.team != toTeam) || (needAlive && !(client.flags & ClientFlags::Alive)) || (needBot && !isFakeClient (client.ent)) || (needDrawn && (client.ent->v.effects & EF_NODRAW)) || (needBotWithC4 && (client.ent->v.weapons & Weapon::C4))) {
          continue; // filter players with parameters
       }
-      float distance = (client.ent->v.origin - to->v.origin).length ();
+      float distance = client.ent->v.origin.distance (to->v.origin);
 
       if (distance < nearestPlayer && distance < searchDistance) {
          nearestPlayer = distance;
@@ -398,7 +398,7 @@ void BotSupport::listenNoise (edict_t *ent, StringRef sample, float volume) {
          if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive)) {
             continue;
          }
-         auto distance = (client.origin - origin).lengthSq ();
+         auto distance = client.origin.distanceSq (origin);
 
          // now find nearest player
          if (distance < nearest) {

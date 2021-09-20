@@ -1351,7 +1351,7 @@ int BotControl::menuGraphType (int item) {
       break;
 
    case 8:
-      graph.add (100);
+      graph.add (NodeAddFlag::Goal);
       showMenu (Menu::NodeType);
       break;
 
