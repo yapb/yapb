@@ -298,6 +298,10 @@ bool Bot::doPlayerAvoidance (const Vector &normal) {
    edict_t *hindrance = nullptr;
    float distance = cr::square (300.0f);
 
+   if (getCurrentTaskId () == Task::Attack || getCurrentTaskId () == Task::SeekCover || isOnLadder ()) {
+      return false;
+   }
+
    // find nearest player to bot
    for (const auto &client : util.getClients ()) {
 
@@ -327,7 +331,7 @@ bool Bot::doPlayerAvoidance (const Vector &normal) {
    if (!hindrance) {
       return false;
    }
-   const float interval = getFrameInterval ();
+   const float interval = getFrameInterval () * 4.0f;
 
    // use our movement angles, try to predict where we should be next frame
    Vector right, forward;
@@ -352,13 +356,11 @@ bool Bot::doPlayerAvoidance (const Vector &normal) {
       else {
          setStrafeSpeed (normal, -pev->maxspeed);
       }
-
-#if 0
       if (distance < cr::square (56.0f)) {
-         if ((dir | forward.get2d ()) < 0.0f)
+         if ((dir | forward.get2d ()) < 0.0f) {
             m_moveSpeed = -pev->maxspeed;
+         }
       }
-#endif
       return true;
    }
    return false;
@@ -368,9 +370,12 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
 
    // if avoiding someone do not consider stuck
    TraceResult tr {};
-   doPlayerAvoidance (dirNormal);
+   m_isStuck = doPlayerAvoidance (dirNormal);
 
-   m_isStuck = false;
+   if (m_isStuck) {
+      resetCollision ();
+      return;
+   }
 
    // Standing still, no need to check?
    // FIXME: doesn't care for ladder movement (handled separately) should be included in some way

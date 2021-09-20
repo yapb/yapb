@@ -2759,11 +2759,10 @@ void BotGraph::eraseFromDisk () {
    // this function removes graph file from the hard disk
 
    StringArray forErase;
+   bots.kickEveryone (true);
 
    auto map = game.getMapName ();
    auto data = getDataDirectory ();
-
-   bots.kickEveryone (true);
 
    // if we're delete graph, delete all corresponding to it files
    forErase.push (strings.format ("%spwf/%s.pwf", data, map)); // graph itself
