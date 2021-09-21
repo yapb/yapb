@@ -28,6 +28,7 @@ ConVar cv_difficulty_auto ("yb_difficulty_auto", "0", "Enables each bot balances
 
 ConVar cv_show_avatars ("yb_show_avatars", "1", "Enables or disabels displaying bot avatars in front of their names in scoreboard. Note, that is currently you can see only avatars of your steam friends.");
 ConVar cv_show_latency ("yb_show_latency", "2", "Enables latency display in scoreboard.\nAllowed values: '0', '1', '2'.\nIf '0', there is nothing displayed.\nIf '1', there is a 'BOT' is displayed.\nIf '2' fake ping is displayed.", true, 0.0f, 2.0f);
+ConVar cv_save_bots_names ("yb_save_bots_names", "1", "Allows to save bot names upon changelevel, so bot names will be the same after a map change", true, 0.0f, 1.0f);
 
 ConVar cv_botskin_t ("yb_botskin_t", "0", "Specifies the bots wanted skin for Terrorist team.", true, 0.0f, 5.0f);
 ConVar cv_botskin_ct ("yb_botskin_ct", "0", "Specifies the bots wanted skin for CT team.", true, 0.0f, 5.0f);
@@ -289,6 +290,11 @@ void BotManager::addbot (StringRef name, int difficulty, int personality, int te
    request.skin = skin;
    request.manual = manual;
 
+   // restore the bot name
+   if (cv_save_bots_names.bool_ () && name.empty () && !m_saveBotNames.empty ()) {
+      request.name = m_saveBotNames.popFront ();
+   }
+
    // put to queue
    m_addRequests.emplaceLast (cr::move (request));
 }
@@ -410,6 +416,12 @@ void BotManager::maintainQuota () {
       // if we can't kick player from correct team, just kick any random to keep quota control work
       if (!isKicked) {
          kickRandom (false, Team::Unassigned);
+      }
+   }
+   else {
+      // clear the saved names when quota balancing ended
+      if (cv_save_bots_names.bool_ () && !m_saveBotNames.empty ()) {
+         m_saveBotNames.clear ();
       }
    }
    m_quotaMaintainTime = game.time () + 0.40f;
@@ -546,8 +558,7 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
       selection = 5;
    }
    char teams[6][12] = {"", {"Terrorists"}, {"CTs"}, "", "", {"Random"}, };
-
-   int toAdd = numToAdd == -1 ? maxClients - (getHumansCount () + getBotCount ()) : numToAdd;
+   auto toAdd = numToAdd == -1 ? maxClients - (getHumansCount () + getBotCount ()) : numToAdd;
 
    for (int i = 0; i <= toAdd; ++i) {
       addbot ("", difficulty, personality, selection, -1, true);
@@ -558,12 +569,17 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
 void BotManager::kickEveryone (bool instant, bool zeroQuota) {
    // this function drops all bot clients from server (this function removes only yapb's)
 
-   if (cv_quota.bool_ () && getBotCount () > 0) {
+   if (cv_quota.bool_ () && hasBotsOnline ()) {
       ctrl.msg ("Bots are removed from server.");
    }
 
    if (zeroQuota) {
       decrementQuota (0);
+   }
+
+   // if everyone is kicked, clear the saved bot names
+   if (cv_save_bots_names.bool_ () && !m_saveBotNames.empty ()) {
+      m_saveBotNames.clear ();
    }
 
    if (instant) {
@@ -1108,6 +1124,10 @@ void BotManager::erase (Bot *bot) {
    for (auto &e : m_bots) {
       if (e.get () != bot) {
          continue;
+      }
+
+      if (cv_save_bots_names.bool_ ()) {
+         m_saveBotNames.emplaceLast (bot->pev->netname.chars ());
       }
       bot->markStale ();
 

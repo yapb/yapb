@@ -339,10 +339,6 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       // send message on new map
       util.setNeedForWelcome (false);
 
-      // xash is not kicking fakeclients on changelevel
-      if (game.is (GameFlags::Xash3D)) {
-         bots.kickEveryone (true, false);
-      }
       graph.reset ();
 
       // clear all the bots
@@ -508,25 +504,6 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
          return engfuncs.pfnCreateNamedEntity (classname);
       };
    }
-
-   table->pfnChangeLevel = [] (char *s1, char *s2) {
-      // the purpose of this function is to ask the engine to shutdown the server and restart a
-      // new one running the map whose name is s1. It is used ONLY IN SINGLE PLAYER MODE and is
-      // transparent to the user, because it saves the player state and equipment and restores it
-      // back in the new level. The "changelevel trigger point" in the old level is linked to the
-      // new level's spawn point using the s2 string, which is formatted as follows: "trigger_name
-      // to spawnpoint_name", without spaces (for example, "tr_1atotr_2lm" would tell the engine
-      // the player has reached the trigger point "tr_1a" and has to spawn in the next level on the
-      // spawn point named "tr_2lm".
-
-      // save collected experience on map change
-      graph.savePractice ();
-
-      if (game.is (GameFlags::Metamod)) {
-         RETURN_META (MRES_IGNORED);
-      }
-      engfuncs.pfnChangeLevel (s1, s2);
-   };
 
    table->pfnLightStyle = [] (int style, char *val) {
       // ths function update lightstyle for the bots
