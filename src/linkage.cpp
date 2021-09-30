@@ -948,11 +948,54 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *table, globalvars_t *glob) {
    }
    GetEngineFunctions (table, nullptr);
 
-   // initialize dynamic linkents
-   ents.initialize ();
+   // initialize dynamic linkents (no memory hacking with xash3d)
+   if (!game.is (GameFlags::Xash3D)) {
+      ents.initialize ();
+   }
 
    // give the engine functions to the other DLL...
    api_GiveFnptrsToDll (table, glob);
+}
+
+CR_EXPORT int Server_GetBlendingInterface (int version, struct sv_blending_interface_s **ppinterface, struct engine_studio_api_s *pstudio, float *rotationmatrix, float *bonetransform) {
+   // this function synchronizes the studio model animation blending interface (i.e, what parts
+   // of the body move, which bones, which hitboxes and how) between the server and the game DLL.
+   // some MODs can be using a different hitbox scheme than the standard one.
+
+   auto api_GetBlendingInterface = game.lib ().resolve <decltype (&Server_GetBlendingInterface)> (__FUNCTION__);
+
+   if (!api_GetBlendingInterface) {
+      logger.error ("Could not resolve symbol \"%s\" in the game dll. Continuing...", __FUNCTION__);
+      return HLFalse;
+   }
+   return api_GetBlendingInterface (version, ppinterface, pstudio, rotationmatrix, bonetransform);
+}
+
+CR_EXPORT int Server_GetPhysicsInterface (int version, server_physics_api_t *physics_api, physics_interface_t *table) {
+   // this function handle the custom xash3d physics interface, that we're uses just for resolving
+   // entities between game and engine.
+
+   if (!table || !physics_api || version != SV_PHYSICS_INTERFACE_VERSION) 	{
+      return HLFalse;
+   }
+   table->version = SV_PHYSICS_INTERFACE_VERSION;
+
+   table->SV_CreateEntity = [] (edict_t *ent, const char *name) -> int {
+      auto func = game.lib ().resolve <EntityFunction> (name); // lookup symbol in game dll
+
+      // found one in game dll ?
+      if (func) {
+         func (&ent->v);
+         return HLTrue;
+
+      }
+      return -1;
+   };
+
+   table->SV_PhysicsEntity = [] (edict_t *) -> int {
+      return HLFalse;
+   };
+   return HLTrue;
 }
 
 DLSYM_RETURN EntityLinkage::lookup (SharedLibrary::Handle module, const char *function) {
@@ -995,6 +1038,24 @@ DLSYM_RETURN EntityLinkage::lookup (SharedLibrary::Handle module, const char *fu
    return nullptr;
 }
 
+void EntityLinkage::callPlayerFunction (edict_t *ent) {
+   EntityFunction playerFunction = nullptr;
+
+   if (game.is (GameFlags::Xash3D)) {
+      playerFunction = game.lib ().resolve <EntityFunction> ("player");
+   }
+   else {
+      playerFunction = reinterpret_cast <EntityFunction> (lookup (game.lib ().handle (), "player"));
+   }
+   
+   if (!playerFunction) {
+      logger.fatal ("Cannot resolve player () function in gamedll.");
+   }
+   else {
+      playerFunction (&ent->v);
+   }
+}
+
 void EntityLinkage::initialize () {
    if (plat.arm || game.is (GameFlags::Metamod)) {
       return;
@@ -1011,7 +1072,7 @@ void EntityLinkage::initialize () {
 }
 
 // add linkents for android
-#include "android.cpp"
+#include "entities.cpp"
 
 // override new/delete globally, need to be included in .cpp file
 #include <crlib/override.h>

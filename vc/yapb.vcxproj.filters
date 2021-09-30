@@ -194,7 +194,7 @@
     <ClCompile Include="..\src\module.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\android.cpp">
+    <ClCompile Include="..\src\entities.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

@@ -9,6 +9,7 @@
 
 #include <hlsdk/extdll.h>
 #include <hlsdk/metamod.h>
+#include <hlsdk/physint.h>
 
 #include <crlib/crlib.h>
 

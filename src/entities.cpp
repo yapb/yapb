@@ -7,23 +7,11 @@
 
 #include <yapb.h>
 
-// until hook code will be compatible with ARM, it's here
-#if defined(CR_ARCH_ARM)
-
-CR_EXPORT int Server_GetBlendingInterface (int version, struct sv_blending_interface_s **ppinterface, struct engine_studio_api_s *pstudio, float *rotationmatrix, float *bonetransform) {
-   // this function synchronizes the studio model animation blending interface (i.e, what parts
-   // of the body move, which bones, which hitboxes and how) between the server and the game DLL.
-   // some MODs can be using a different hitbox scheme than the standard one.
-
-   auto api_GetBlendingInterface = game.lib ().resolve <decltype (&Server_GetBlendingInterface)> (__FUNCTION__);
-
-   if (!api_GetBlendingInterface) {
-      logger.error ("Could not resolve symbol \"%s\" in the game dll. Continuing...", __FUNCTION__);
-      return false;
-   }
-   return api_GetBlendingInterface (version, ppinterface, pstudio, rotationmatrix, bonetransform);
-}
-
+// on other tran win32/linux platforms i.e. arm we're using xash3d engine to run which exposes
+// nice interface to handle with linkents. if ever rehlds or hlds engine will ever run on ARM or
+// other platforms, and you wan't to run bot on it without metamod, consider enabling LINKENT_STATIC_THUNKS
+// when compiling the bot, to get it supported.
+#if defined(LINKENT_STATIC_THUNKS)
 void forwardEntity_helper (EntityFunction &addr, const char *name, entvars_t *pev) {
    if (!addr) {
       addr = game.lib ().resolve <EntityFunction> (name);
@@ -34,14 +22,11 @@ void forwardEntity_helper (EntityFunction &addr, const char *name, entvars_t *pe
    addr (pev);
 }
 
-#define LINK_ENTITY(entityName)                     \
-   CR_EXPORT void entityName (entvars_t *pev) {     \
-      static EntityFunction addr;                   \
+#define LINK_ENTITY(entityName)                        \
+   CR_EXPORT void entityName (entvars_t *pev) {        \
+      static EntityFunction addr;                      \
       forwardEntity_helper (addr, __FUNCTION__, pev);  \
    }
-#else
-#define LINK_ENTITY(entityName)
-#endif
 
 // entities in counter-strike...
 LINK_ENTITY (DelayedUse)
@@ -248,3 +233,5 @@ LINK_ENTITY (weapon_xm1014)
 LINK_ENTITY (weaponbox)
 LINK_ENTITY (world_items)
 LINK_ENTITY (worldspawn)
+
+#endif

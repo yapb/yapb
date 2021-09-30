@@ -671,6 +671,17 @@ void Game::checkCvarsBounds () {
          ctrl.msg ("Bogus value for cvar '%s', min is '%.1f' and max is '%.1f', and we're got '%s', value reverted to default '%.1f'.", var.reg.name, var.min, var.max, str, var.initial);
       }
    }
+
+   // special case for xash3d, by default engine is not calling startframe if no players on server, but our quota management and bot adding
+   // mechanism assumes that starframe is called even if no players on server, so, set the xash3d's sv_forcesimulating cvar to 1 in case it's not
+   if (is (GameFlags::Xash3D)) {
+      static cvar_t *sv_forcesimulating = engfuncs.pfnCVarGetPointer ("sv_forcesimulating");
+
+      if (sv_forcesimulating && sv_forcesimulating->value != 1.0f) {
+         game.print ("Force-enable Xash3D sv_forcesimulating cvar.");
+         engfuncs.pfnCVarSetFloat ("sv_forcesimulating", 1.0f);
+      }
+   }
 }
 
 void Game::registerCvars (bool gameVars) {

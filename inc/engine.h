@@ -442,7 +442,7 @@ public:
    }
 
    void set (const char *val) {
-      engfuncs.pfnCvar_DirectSet (ptr, const_cast <char *> (val));
+      engfuncs.pfnCvar_DirectSet (ptr, val);
    }
 };
 
@@ -635,11 +635,6 @@ public:
    }
 };
 
-// for android
-#if defined (CR_ARCH_ARM)
-   extern "C" void player (entvars_t *);
-#endif
-
 class EntityLinkage : public Singleton <EntityLinkage> {
 private:
 #if defined (CR_WINDOWS)
@@ -680,13 +675,7 @@ public:
    }
 
 public:
-   void callPlayerFunction (edict_t *ent) {
-#if defined (CR_ARCH_ARM)
-      player (&ent->v);
-#else
-      reinterpret_cast <EntityFunction> (lookup (Game::instance ().lib ().handle (), "player")) (&ent->v);
-#endif
-   }
+   void callPlayerFunction (edict_t *ent);
 
 public:
    void enable () {

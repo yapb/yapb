@@ -57,7 +57,7 @@
     <ClInclude Include="..\inc\version.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\android.cpp" />
+    <ClCompile Include="..\src\entities.cpp" />
     <ClCompile Include="..\src\botlib.cpp" />
     <ClCompile Include="..\src\chatlib.cpp" />
     <ClCompile Include="..\src\combat.cpp" />
