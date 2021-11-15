@@ -113,7 +113,7 @@ class BotRelease (object):
       self.version = sys.argv[1]
       self.artifacts = 'artifacts'
 
-      self.cs = CodeSign ("YaPB", "https://yapb.ru/")
+      self.cs = CodeSign ("YaPB", "https://yapb.jeefo.net/")
 
       if self.cs.has ():
          print ("Code Signing Enabled")

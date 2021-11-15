@@ -27,6 +27,7 @@ ConVar cv_freeze_bots ("yb_freeze_bots", "0", "If enabled the bots think functio
 ConVar cv_spraypaints ("yb_spraypaints", "1", "Allows or disallows the use of spay paints.");
 ConVar cv_botbuy ("yb_botbuy", "1", "Allows or disallows bots weapon buying routines.");
 ConVar cv_destroy_breakables_around ("yb_destroy_breakables_around", "1", "Allows bots to destroy breakables around him, even without touching with them.");
+ConVar cv_object_pickup_radius ("yb_object_pickup_radius", "450.0", "The radius on which bot searches world for new objects, items, and weapons.", true, 64.0f, 1024.0f);
 
 ConVar cv_chatter_path ("yb_chatter_path", "sound/radio/bot", "Specifies the paths for the bot chatter sound files.", false);
 ConVar cv_restricted_weapons ("yb_restricted_weapons", "", "Specifies semicolon separated list of weapons that are not allowed to buy / pickup.", false);
@@ -493,7 +494,7 @@ void Bot::updatePickups () {
    }
 
    const auto &intresting = bots.getIntrestingEntities ();
-   const float radius = cr::square (500.0f);
+   const float radius = cr::square (cv_object_pickup_radius.float_ ());
 
    if (!game.isNullEntity (m_pickupItem)) {
       bool itemExists = false;
