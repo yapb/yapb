@@ -278,7 +278,8 @@ int BotControl::cmdNode () {
       "upload",
       "save",
       "load",
-      "help"
+      "help",
+      "erase"
    };
 
    // check if cmd is allowed on dedicated server
