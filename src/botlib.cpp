@@ -95,7 +95,7 @@ bool Bot::seesItem (const Vector &destination, const char *classname) {
    game.testLine (getEyesPos (), destination, TraceIgnore::None, ent (), &tr);
 
    // check if line of sight to object is not blocked (i.e. visible)
-   if (tr.flFraction >= 0.95f && tr.pHit && tr.pHit != game.getStartEntity ()) {
+   if (tr.flFraction < 1.0f && tr.pHit) {
       return strcmp (tr.pHit->v.classname.chars (), classname) == 0;
    }
    return true;
@@ -557,7 +557,7 @@ void Bot::updatePickups () {
 
       // check if line of sight to object is not blocked (i.e. visible)
       if (seesItem (origin, classname)) {
-         if (strncmp ("hostage_entity", classname, 14) == 0) {
+         if (strncmp ("hostage_entity", classname, 14) == 0 || strncmp ("monster_scientist", classname, 17) == 0) {
             allowPickup = true;
             pickupType = Pickup::Hostage;
          }
@@ -732,6 +732,17 @@ void Bot::updatePickups () {
                               allowPickup = false;
                               break;
                            }
+                        }
+                     }
+                  }
+
+                  // don't steal hostage from human teammate (hack)
+                  if (allowPickup) {
+                     for (auto &client : util.getClients ()) {
+                        if ((client.flags & ClientFlags::Used) && !(client.ent->v.flags & FL_FAKECLIENT) && (client.flags & ClientFlags::Alive) &&
+                            client.team == m_team && client.ent->v.origin.distanceSq (ent->v.origin) <= cr::square (240.0f)) {
+                           allowPickup = false;
+                           break;
                         }
                      }
                   }
@@ -3056,16 +3067,6 @@ void Bot::normal_ () {
       return;
    }
 
-   // bots rushing with knife, when have no enemy (thanks for idea to nicebot project)
-   if (usesKnife () && (game.isNullEntity (m_lastEnemy) || !util.isAlive (m_lastEnemy)) && game.isNullEntity (m_enemy) && m_knifeAttackTime < game.time () && !hasShield () && numFriendsNear (pev->origin, 96.0f) == 0) {
-      if (rg.chance (40)) {
-         pev->button |= IN_ATTACK;
-      }
-      else {
-         pev->button |= IN_ATTACK2;
-      }
-      m_knifeAttackTime = game.time () + rg.get (2.5f, 6.0f);
-   }
    const auto &prop = conf.getWeaponProp (m_currentWeapon);
 
    if (m_reloadState == Reload::None && getAmmo () != 0 && getAmmoInClip () < 5 && prop.ammo1 != -1) {
@@ -4588,6 +4589,61 @@ void Bot::pickupItem_ () {
             }
             m_hostages.push (m_pickupItem);
             m_pickupItem = nullptr;
+            completeTask ();
+
+            float minDistance = kInfiniteDistance;
+            int nearestHostageNodeIndex = kInvalidNodeIndex;
+
+            // find the nearest 'unused' hostage within the area
+            game.searchEntities (pev->origin, 768.0f, [&] (edict_t *ent) {
+               auto classname = ent->v.classname.chars ();
+
+               if (strncmp ("hostage_entity", classname, 14) != 0 && strncmp ("monster_scientist", classname, 17) != 0) {
+                  return EntitySearchResult::Continue;
+               }
+
+               // check if hostage is dead
+               if (game.isNullEntity (ent) || ent->v.health <= 0) {
+                  return EntitySearchResult::Continue;
+               }
+
+               // check if hostage is with a bot
+               for (const auto &other : bots) {
+                  if (other->m_notKilled) {
+                     for (const auto &hostage : other->m_hostages) {
+                        if (hostage == ent) {
+                           return EntitySearchResult::Continue;
+                        }
+                     }
+                  }
+               }
+
+               // check if hostage is with a human teammate (hack)
+               for (auto &client : util.getClients ()) {
+                  if ((client.flags & ClientFlags::Used) && !(client.ent->v.flags & FL_FAKECLIENT) && (client.flags & ClientFlags::Alive) &&
+                      client.team == m_team && client.ent->v.origin.distanceSq (ent->v.origin) <= cr::square (240.0f)) {
+                     return EntitySearchResult::Continue;
+                  }
+               }
+
+               int hostageNodeIndex = graph.getNearest (ent->v.origin);
+
+               if (graph.exists (hostageNodeIndex)) {
+                  float distance = graph[hostageNodeIndex].origin.distanceSq (pev->origin);
+
+                  if (distance < minDistance) {
+                     minDistance = distance;
+                     nearestHostageNodeIndex = hostageNodeIndex;
+                  }
+               }
+
+               return EntitySearchResult::Continue;
+            });
+
+            if (nearestHostageNodeIndex != kInvalidNodeIndex) {
+                clearTask (Task::MoveToPosition); // remove any move tasks
+                startTask (Task::MoveToPosition, TaskPri::MoveToPosition, nearestHostageNodeIndex, 0.0f, true);
+            }
          }
          ignoreCollision (); // also don't consider being stuck
       }
@@ -5074,7 +5130,7 @@ bool Bot::hasHostage () {
       return false;
    }
 
-   for (auto hostage : m_hostages) {
+   for (auto &hostage : m_hostages) {
       if (!game.isNullEntity (hostage)) {
 
          // don't care about dead hostages

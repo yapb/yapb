@@ -123,7 +123,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
       else if (strcmp (classname, "func_vip_safetyzone") == 0 || strcmp (classname, "info_vip_safetyzone") == 0) {
          m_mapFlags |= MapFlags::Assassination; // assassination map
       }
-      else if (strcmp (classname, "hostage_entity") == 0) {
+      else if (strcmp (classname, "hostage_entity") == 0 || strcmp (classname, "monster_scientist") == 0) {
          m_mapFlags |= MapFlags::HostageRescue; // rescue map
       }
       else if (strcmp (classname, "func_bomb_target") == 0 || strcmp (classname, "info_bomb_target") == 0) {

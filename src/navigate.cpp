@@ -79,9 +79,7 @@ int Bot::findBestGoal () {
       return findGoalPost (tactic, defensiveNodes, offensiveNodes);
    }
    else if (m_team == Team::CT && hasHostage ()) {
-      tactic = 2;
-      offensiveNodes = &graph.m_rescuePoints;
-
+      tactic = 4;
       return findGoalPost (tactic, defensiveNodes, offensiveNodes);
    }
 
@@ -206,6 +204,31 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offsensive) {
       }
       else {
          postprocessGoals (graph.m_goalPoints, goalChoices);
+      }
+   }
+   else if (tactic == 4 && !graph.m_rescuePoints.empty ()) // rescue goal
+   {
+      // force ct with hostage(s) to select closest rescue goal
+      float minDist = kInfiniteDistance;
+      int count = 0;
+
+      for (auto &point : graph.m_rescuePoints) {
+         float distance = graph[point].origin.distanceSq (pev->origin);
+
+         if (distance < minDist) {
+            goalChoices[count] = point;
+
+            if (++count > 3) {
+               count = 0;
+            }
+            minDist = distance;
+         }
+      }
+
+      for (auto &choice : goalChoices) {
+         if (choice == kInvalidNodeIndex) {
+             choice = graph.m_rescuePoints.random ();
+         }
       }
    }
 

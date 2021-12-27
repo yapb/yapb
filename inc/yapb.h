@@ -638,7 +638,6 @@ private:
    float m_timeDoorOpen {}; // time to next door open check
    float m_lastChatTime {}; // time bot last chatted
    float m_timeLogoSpray {}; // time bot last spray logo
-   float m_knifeAttackTime {}; // time to rush with knife (at the beginning of the round)
    float m_duckDefuseCheckTime {}; // time to check for ducking for defuse
    float m_frameInterval; // bot's frame interval
    float m_lastCommandTime; // time bot last thinked
