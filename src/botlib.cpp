@@ -35,6 +35,7 @@ ConVar cv_restricted_weapons ("yb_restricted_weapons", "", "Specifies semicolon 
 ConVar cv_attack_monsters ("yb_attack_monsters", "0", "Allows or disallows bots to attack monsters.");
 ConVar cv_pickup_custom_items ("yb_pickup_custom_items", "0", "Allows or disallows bots to pickup custom items.");
 ConVar cv_ignore_objectives ("yb_ignore_objectives", "0", "Allows or disallows bots to do map objectives, i.e. plant/defuse bombs, and saves hostages.");
+ConVar cv_random_knife_attacks ("yb_random_knife_attacks", "1", "Allows or disallows the ability for random knife attacks when bot is rushing and no enemy is nearby.");
 
 // game console variables
 ConVar mp_c4timer ("mp_c4timer", nullptr, Var::GameRef);
@@ -3067,6 +3068,16 @@ void Bot::normal_ () {
       return;
    }
 
+   // bots rushing with knife, when have no enemy (thanks for idea to nicebot project)
+   if (cv_random_knife_attacks.bool_ () && usesKnife () && (game.isNullEntity (m_lastEnemy) || !util.isAlive (m_lastEnemy)) && game.isNullEntity (m_enemy) && m_knifeAttackTime < game.time () && !hasShield () && numFriendsNear (pev->origin, 96.0f) == 0) {
+      if (rg.chance (40)) {
+         pev->button |= IN_ATTACK;
+      }
+      else {
+         pev->button |= IN_ATTACK2;
+      }
+      m_knifeAttackTime = game.time () + rg.get (2.5f, 6.0f);
+   }
    const auto &prop = conf.getWeaponProp (m_currentWeapon);
 
    if (m_reloadState == Reload::None && getAmmo () != 0 && getAmmoInClip () < 5 && prop.ammo1 != -1) {

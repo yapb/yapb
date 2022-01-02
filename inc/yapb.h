@@ -638,6 +638,7 @@ private:
    float m_timeDoorOpen {}; // time to next door open check
    float m_lastChatTime {}; // time bot last chatted
    float m_timeLogoSpray {}; // time bot last spray logo
+   float m_knifeAttackTime {}; // time to rush with knife (at the beginning of the round)
    float m_duckDefuseCheckTime {}; // time to check for ducking for defuse
    float m_frameInterval; // bot's frame interval
    float m_lastCommandTime; // time bot last thinked
@@ -1176,6 +1177,7 @@ extern ConVar cv_shoots_thru_walls;
 extern ConVar cv_debug;
 extern ConVar cv_debug_goal;
 extern ConVar cv_save_bots_names;
+extern ConVar cv_random_knife_attacks;
 
 extern ConVar mp_freezetime;
 extern ConVar mp_roundtime;

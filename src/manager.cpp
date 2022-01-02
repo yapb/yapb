@@ -1348,6 +1348,7 @@ void Bot::newRound () {
    m_flashLevel = 100.0f;
    m_checkDarkTime = game.time ();
 
+   m_knifeAttackTime = game.time () + rg.get (1.3f, 2.6f);
    m_nextBuyTime = game.time () + rg.get (0.6f, 2.0f);
 
    m_buyPending = false;
