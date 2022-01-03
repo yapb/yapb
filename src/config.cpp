@@ -7,7 +7,7 @@
 
 #include <yapb.h>
 
-ConVar cv_bind_menu_key ("yb_bind_menu_key", "=", "Bind's specified key for opening bots menu.", false);
+ConVar cv_bind_menu_key ("yb_bind_menu_key", "=", "Binds specified key for opening bots menu.", false);
 ConVar cv_ignore_cvars_on_changelevel ("yb_ignore_cvars_on_changelevel", "yb_quota,yb_autovacate", "Specifies comma separated list of bot cvars, that will not be overriten by config on changelevel.", false);
 
 BotConfig::BotConfig () {
