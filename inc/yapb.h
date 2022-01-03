@@ -1177,6 +1177,7 @@ extern ConVar cv_shoots_thru_walls;
 extern ConVar cv_debug;
 extern ConVar cv_debug_goal;
 extern ConVar cv_save_bots_names;
+extern ConVar cv_random_knife_attacks;
 
 extern ConVar mp_freezetime;
 extern ConVar mp_roundtime;

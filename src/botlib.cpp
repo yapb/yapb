@@ -35,6 +35,7 @@ ConVar cv_restricted_weapons ("yb_restricted_weapons", "", "Specifies semicolon 
 ConVar cv_attack_monsters ("yb_attack_monsters", "0", "Allows or disallows bots to attack monsters.");
 ConVar cv_pickup_custom_items ("yb_pickup_custom_items", "0", "Allows or disallows bots to pickup custom items.");
 ConVar cv_ignore_objectives ("yb_ignore_objectives", "0", "Allows or disallows bots to do map objectives, i.e. plant/defuse bombs, and saves hostages.");
+ConVar cv_random_knife_attacks ("yb_random_knife_attacks", "1", "Allows or disallows the ability for random knife attacks when bot is rushing and no enemy is nearby.");
 
 // game console variables
 ConVar mp_c4timer ("mp_c4timer", nullptr, Var::GameRef);
@@ -95,7 +96,7 @@ bool Bot::seesItem (const Vector &destination, const char *classname) {
    game.testLine (getEyesPos (), destination, TraceIgnore::None, ent (), &tr);
 
    // check if line of sight to object is not blocked (i.e. visible)
-   if (tr.flFraction >= 0.95f && tr.pHit && tr.pHit != game.getStartEntity ()) {
+   if (tr.flFraction < 1.0f && tr.pHit) {
       return strcmp (tr.pHit->v.classname.chars (), classname) == 0;
    }
    return true;
@@ -557,7 +558,7 @@ void Bot::updatePickups () {
 
       // check if line of sight to object is not blocked (i.e. visible)
       if (seesItem (origin, classname)) {
-         if (strncmp ("hostage_entity", classname, 14) == 0) {
+         if (strncmp ("hostage_entity", classname, 14) == 0 || strncmp ("monster_scientist", classname, 17) == 0) {
             allowPickup = true;
             pickupType = Pickup::Hostage;
          }
@@ -732,6 +733,17 @@ void Bot::updatePickups () {
                               allowPickup = false;
                               break;
                            }
+                        }
+                     }
+                  }
+
+                  // don't steal hostage from human teammate (hack)
+                  if (allowPickup) {
+                     for (auto &client : util.getClients ()) {
+                        if ((client.flags & ClientFlags::Used) && !(client.ent->v.flags & FL_FAKECLIENT) && (client.flags & ClientFlags::Alive) &&
+                            client.team == m_team && client.ent->v.origin.distanceSq (ent->v.origin) <= cr::square (240.0f)) {
+                           allowPickup = false;
+                           break;
                         }
                      }
                   }
@@ -3057,7 +3069,7 @@ void Bot::normal_ () {
    }
 
    // bots rushing with knife, when have no enemy (thanks for idea to nicebot project)
-   if (usesKnife () && (game.isNullEntity (m_lastEnemy) || !util.isAlive (m_lastEnemy)) && game.isNullEntity (m_enemy) && m_knifeAttackTime < game.time () && !hasShield () && numFriendsNear (pev->origin, 96.0f) == 0) {
+   if (cv_random_knife_attacks.bool_ () && usesKnife () && (game.isNullEntity (m_lastEnemy) || !util.isAlive (m_lastEnemy)) && game.isNullEntity (m_enemy) && m_knifeAttackTime < game.time () && !hasShield () && numFriendsNear (pev->origin, 96.0f) == 0) {
       if (rg.chance (40)) {
          pev->button |= IN_ATTACK;
       }
@@ -4588,6 +4600,61 @@ void Bot::pickupItem_ () {
             }
             m_hostages.push (m_pickupItem);
             m_pickupItem = nullptr;
+            completeTask ();
+
+            float minDistance = kInfiniteDistance;
+            int nearestHostageNodeIndex = kInvalidNodeIndex;
+
+            // find the nearest 'unused' hostage within the area
+            game.searchEntities (pev->origin, 768.0f, [&] (edict_t *ent) {
+               auto classname = ent->v.classname.chars ();
+
+               if (strncmp ("hostage_entity", classname, 14) != 0 && strncmp ("monster_scientist", classname, 17) != 0) {
+                  return EntitySearchResult::Continue;
+               }
+
+               // check if hostage is dead
+               if (game.isNullEntity (ent) || ent->v.health <= 0) {
+                  return EntitySearchResult::Continue;
+               }
+
+               // check if hostage is with a bot
+               for (const auto &other : bots) {
+                  if (other->m_notKilled) {
+                     for (const auto &hostage : other->m_hostages) {
+                        if (hostage == ent) {
+                           return EntitySearchResult::Continue;
+                        }
+                     }
+                  }
+               }
+
+               // check if hostage is with a human teammate (hack)
+               for (auto &client : util.getClients ()) {
+                  if ((client.flags & ClientFlags::Used) && !(client.ent->v.flags & FL_FAKECLIENT) && (client.flags & ClientFlags::Alive) &&
+                      client.team == m_team && client.ent->v.origin.distanceSq (ent->v.origin) <= cr::square (240.0f)) {
+                     return EntitySearchResult::Continue;
+                  }
+               }
+
+               int hostageNodeIndex = graph.getNearest (ent->v.origin);
+
+               if (graph.exists (hostageNodeIndex)) {
+                  float distance = graph[hostageNodeIndex].origin.distanceSq (pev->origin);
+
+                  if (distance < minDistance) {
+                     minDistance = distance;
+                     nearestHostageNodeIndex = hostageNodeIndex;
+                  }
+               }
+
+               return EntitySearchResult::Continue;
+            });
+
+            if (nearestHostageNodeIndex != kInvalidNodeIndex) {
+                clearTask (Task::MoveToPosition); // remove any move tasks
+                startTask (Task::MoveToPosition, TaskPri::MoveToPosition, nearestHostageNodeIndex, 0.0f, true);
+            }
          }
          ignoreCollision (); // also don't consider being stuck
       }
@@ -5074,7 +5141,7 @@ bool Bot::hasHostage () {
       return false;
    }
 
-   for (auto hostage : m_hostages) {
+   for (auto &hostage : m_hostages) {
       if (!game.isNullEntity (hostage)) {
 
          // don't care about dead hostages

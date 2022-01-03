@@ -2751,6 +2751,7 @@ void BotGraph::addBasic () {
    autoCreateForEntity (NodeAddFlag::Goal, "func_bomb_target"); // bombspot zone
    autoCreateForEntity (NodeAddFlag::Goal, "info_bomb_target"); // bombspot zone (same as above)
    autoCreateForEntity (NodeAddFlag::Goal, "hostage_entity"); // hostage entities
+   autoCreateForEntity (NodeAddFlag::Goal, "monster_scientist"); // hostage entities (same as above)
    autoCreateForEntity (NodeAddFlag::Goal, "func_vip_safetyzone"); // vip rescue (safety) zone
    autoCreateForEntity (NodeAddFlag::Goal, "func_escapezone"); // terrorist escape zone
 }
