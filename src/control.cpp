@@ -8,7 +8,7 @@
 #include <yapb.h>
 
 ConVar cv_display_menu_text ("yb_display_menu_text", "1", "Enables or disables display menu text, when players asks for menu. Useful only for Android.");
-ConVar cv_password ("yb_password", "", "The value (password) for the setinfo key, if user set's correct password, he's gains access to bot commands and menus.", false, 0.0f, 0.0f, Var::Password);
+ConVar cv_password ("yb_password", "", "The value (password) for the setinfo key, if user sets correct password, he's gains access to bot commands and menus.", false, 0.0f, 0.0f, Var::Password);
 ConVar cv_password_key ("yb_password_key", "_ybpw", "The name of setinfo key used to store password to bot commands and menus.", false);
 
 int BotControl::cmdAddBot () {
@@ -526,7 +526,7 @@ int BotControl::cmdNodeDelete () {
    // turn graph on
    graph.setEditFlag (GraphEdit::On);
 
-   // if "neareset" or nothing passed delete neareset, else delete by index
+   // if "nearest" or nothing passed delete nearest, else delete by index
    if (strValue (nearest).empty () || strValue (nearest) == "nearest") {
       graph.erase (kInvalidNodeIndex);
    }
@@ -700,7 +700,7 @@ int BotControl::cmdNodePathDelete () {
    // turn graph on
    graph.setEditFlag (GraphEdit::On);
 
-   // delete the patch
+   // delete the path
    graph.erasePath ();
 
    return BotCommandResult::Handled;
