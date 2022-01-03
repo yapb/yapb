@@ -33,7 +33,7 @@ public:
    StringRef author { "YaPB Project" };
    StringRef email { "yapb@jeefo.net" };
    StringRef url { "https://yapb.jeefo.net/" };
-   StringRef download { "graph.yapb.ru" };
+   StringRef download { "yapb.jeefo.net" };
    StringRef folder { "yapb" };
    StringRef logtag { "YB" };
    StringRef dtime { __DATE__ " " __TIME__ };
