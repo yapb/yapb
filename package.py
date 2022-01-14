@@ -150,7 +150,7 @@ class BotRelease (object):
          
    def get_graph_file (self, name):
       file = os.path.join (self.bot_dir, "data", "graph", "{}.graph".format (name))
-      url = "http://gs.yapb.jeefo.net/graph/{}.graph".format (name)
+      url = "http://yapb.jeefo.net/graph/{}.graph".format (name)
       
       if os.path.exists (file):
          return
