@@ -161,7 +161,7 @@ class BotRelease (object):
       print ("Downloading graphs: ")
       
       default_list = "default.graph.txt"
-      self.http_pull ("http://graph.yapb.ru/DEFAULT.txt", default_list)
+      self.http_pull ("https://gs.yapb.jeefo.net//DEFAULT.txt", default_list)
 
       with open (default_list) as file:
          files = [line.rstrip () for line in file.readlines ()]
