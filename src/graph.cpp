@@ -673,7 +673,7 @@ void BotGraph::add (int type, const Vector &pos) {
       }
 
       // autosave nodes here and there
-      if (++m_autoSaveCount > cv_graph_auto_save_count.int_ ()) {
+      if (cv_graph_auto_save_count.bool_ () && ++m_autoSaveCount > cv_graph_auto_save_count.int_ ()) {
          if (saveGraphData ()) {
             ctrl.msg ("Nodes has been autosaved...");
          }
