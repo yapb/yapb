@@ -2399,9 +2399,10 @@ void BotGraph::frame () {
 
       // show the information about that point
       graphMessage.assignf ("\n\n\n\n    Graph Information:\n\n"
+                              "      Map: %s @ %s\n"
                               "      Node %d of %d, Radius: %.1f, Light: %.1f\n"
                               "      Flags: %s\n"
-                              "      Origin: %s\n\n", nearestIndex, m_paths.length () - 1, path.radius, path.light, getFlagsAsStr (nearestIndex), pathOriginStr (nearestIndex));
+                              "      Origin: %s\n\n", game.getMapName (), util.getCurrentDateTime (), nearestIndex, m_paths.length () - 1, path.radius, path.light, getFlagsAsStr (nearestIndex), pathOriginStr (nearestIndex));
 
       // if node is not changed display experience also
       if (!m_hasChanged) {

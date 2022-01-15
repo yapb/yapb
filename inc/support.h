@@ -112,6 +112,9 @@ public:
    // checks if same model ommiting the models directory
    bool isModel (const edict_t *ent, StringRef model);
 
+   // get the current date and time as string
+   String getCurrentDateTime ();
+
 public:
 
    // re-show welcome after changelevel ?

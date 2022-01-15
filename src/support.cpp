@@ -681,6 +681,18 @@ bool BotSupport::isModel (const edict_t *ent, StringRef model) {
    return model.startsWith (ent->v.model.chars (9));
 }
 
+String BotSupport::getCurrentDateTime () {
+   time_t ticks = time (&ticks);
+   tm timeinfo {};
+
+   plat.loctime (&timeinfo, &ticks);
+
+   auto timebuf = strings.chars ();
+   strftime (timebuf, StringBuffer::StaticBufferSize, "%d-%m-%Y %H:%M:%S", &timeinfo);
+
+   return String (timebuf);
+}
+
 int32 BotSupport::sendTo (int socket, const void *message, size_t length, int flags, const sockaddr *dest, int destLength) {
    const auto send = [&] (const Twin <const uint8 *, size_t> &msg) -> int32 {
       return Socket::sendto (socket, msg.first, msg.second, flags, dest, destLength);

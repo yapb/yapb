@@ -473,7 +473,7 @@ void Game::sendClientMessage (bool console, edict_t *ent, StringRef message) {
 
    // used to split messages
    auto sendTextMsg = [&console, &ent] (StringRef text) {
-      MessageWriter (MSG_ONE, msgs.id (NetMsg::TextMsg), nullptr, ent)
+      MessageWriter (MSG_ONE_UNRELIABLE, msgs.id (NetMsg::TextMsg), nullptr, ent)
          .writeByte (console ? HUD_PRINTCONSOLE : HUD_PRINTCENTER)
          .writeString (text.chars ());
    };
