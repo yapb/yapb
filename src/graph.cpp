@@ -9,12 +9,14 @@
 
 ConVar cv_graph_fixcamp ("yb_graph_fixcamp", "1", "Specifies whether bot should not 'fix' camp directions of camp waypoints when loading old PWF format.");
 ConVar cv_graph_url ("yb_graph_url", product.download.chars (), "Specifies the URL from bots will be able to download graph in case of missing local one. Set to empty, if no downloads needed.", false, 0.0f, 0.0f);
+ConVar cv_graph_auto_save_count ("yb_graph_auto_save_count", "15", "Every N graph nodes placed on map, the graph will be saved automatically (without checks).", true, 5.0f, kMaxNodes);
 
 void BotGraph::reset () {
    // this function initialize the graph structures..
 
    m_loadAttempts = 0;
    m_editFlags = 0;
+   m_autoSaveCount = 0;
 
    m_learnVelocity = nullptr;
    m_learnPosition = nullptr;
@@ -645,7 +647,7 @@ void BotGraph::add (int type, const Vector &pos) {
       if (m_paths.length () >= kMaxNodes) {
          return;
       }
-      m_paths.push (Path {});
+      m_paths.emplace ();
 
       index = length () - 1;
       path = &m_paths[index];
@@ -669,8 +671,18 @@ void BotGraph::add (int type, const Vector &pos) {
          link.flags = 0;
          link.velocity = nullptr;
       }
-      
 
+      // autosave nodes here and there
+      if (++m_autoSaveCount > cv_graph_auto_save_count.int_ ()) {
+         if (saveGraphData ()) {
+            ctrl.msg ("Nodes has been autosaved...");
+         }
+         else {
+            ctrl.msg ("Can't autosave garph data...");
+         }
+         m_autoSaveCount = 0;
+      }
+      
       // store the last used node for the auto node code...
       m_lastNode = m_editor->v.origin;
    }

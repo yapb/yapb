@@ -270,6 +270,7 @@ private:
    int m_findWPIndex;
    int m_facingAtIndex;
    int m_highestDamage[kGameTeamNum] {};
+   int m_autoSaveCount;
 
    float m_timeJumpStarted;
    float m_autoPathDistance;
