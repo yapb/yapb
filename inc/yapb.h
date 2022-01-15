@@ -71,7 +71,7 @@ CR_DECLARE_SCOPED_ENUM (Menu,
    KickPage1,
    KickPage2,
    KickPage3,
-   KickPage4,
+   KickPage4
 )
 
 // bomb say string

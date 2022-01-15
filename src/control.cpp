@@ -1675,7 +1675,7 @@ bool BotControl::executeMenus () {
    // let's get handle
    for (auto &menu : m_menus) {
       if (menu.ident == issuer.menu) {
-         return (this->*menu.handler) (strValue (1).int_ ());
+         return (this->*menu.handler) (strValue (1).int_ ()) == BotCommandResult::Handled;
       }
    }
    return false;
