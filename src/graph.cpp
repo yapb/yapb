@@ -678,7 +678,7 @@ void BotGraph::add (int type, const Vector &pos) {
             ctrl.msg ("Nodes has been autosaved...");
          }
          else {
-            ctrl.msg ("Can't autosave garph data...");
+            ctrl.msg ("Can't autosave graph data...");
          }
          m_autoSaveCount = 0;
       }
