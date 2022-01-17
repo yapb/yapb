@@ -2334,7 +2334,7 @@ void BotGraph::frame () {
       // now look for oneway incoming connections
       for (const auto &connected : m_paths) {
          if (isConnected (connected.number, path.number) && !isConnected (path.number, connected.number)) {
-            game.drawLine (m_editor, path.origin, connected.origin, 5, 0, { 0, 192, 96 }, 200, 0, 10);
+            game.drawLine (m_editor, path.origin, connected.origin, 5, 0, { 255, 255, 255 }, 200, 0, 10);
          }
       }
 
