@@ -385,7 +385,7 @@ void BotConfig::loadChatConfig () {
             continue;
          }
          else if (line.startsWith ("[BOMBPLANT]")) {
-            chat = &m_chat[Chat::Kill];
+            chat = &m_chat[Chat::Plant];
             continue;
          }
          else if (line.startsWith ("[DEADCHAT]")) {
