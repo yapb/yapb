@@ -629,7 +629,7 @@ void BotSupport::emitPings (edict_t *to) {
    constexpr int kGamePingSVC = 17;
    
    for (auto &client : m_clients) {
-      if (!(client.flags & ClientFlags::Used) || client.ent == game.getLocalEntity ()) {
+      if (!(client.flags & ClientFlags::Used) || client.ent == game.getLocalEntity () || !bots[client.ent]) {
          continue;
       }
 
