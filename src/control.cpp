@@ -564,8 +564,6 @@ int BotControl::cmdNodeCache () {
    // if "neareset" or nothing passed delete neareset, else delete by index
    if (strValue (nearest).empty () || strValue (nearest) == "nearest") {
       graph.cachePoint (kInvalidNodeIndex);
-
-      msg ("Nearest node has been put into the memory.");
    }
    else {
       int index = intValue (nearest);
@@ -573,10 +571,6 @@ int BotControl::cmdNodeCache () {
       // check for existence
       if (graph.exists (index)) {
          graph.cachePoint (index);
-         msg ("Node %d has been put into the memory.", index);
-      }
-      else {
-         msg ("Could not put node %d into the memory.", index);
       }
    }
    return BotCommandResult::Handled;

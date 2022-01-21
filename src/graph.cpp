@@ -9,7 +9,8 @@
 
 ConVar cv_graph_fixcamp ("yb_graph_fixcamp", "1", "Specifies whether bot should not 'fix' camp directions of camp waypoints when loading old PWF format.");
 ConVar cv_graph_url ("yb_graph_url", product.download.chars (), "Specifies the URL from bots will be able to download graph in case of missing local one. Set to empty, if no downloads needed.", false, 0.0f, 0.0f);
-ConVar cv_graph_auto_save_count ("yb_graph_auto_save_count", "15", "Every N graph nodes placed on map, the graph will be saved automatically (without checks).", true, 5.0f, kMaxNodes);
+ConVar cv_graph_auto_save_count ("yb_graph_auto_save_cout", "15", "Every N graph nodes placed on map, the graph will be saved automatically (without checks).", true, 5.0f, kMaxNodes);
+ConVar cv_graph_draw_distance ("yb_graph_draw_distance", "400", "Maximum distance to draw graph nodes from editor viewport.", true, 64.0f, 512.0f);
 
 void BotGraph::reset () {
    // this function initialize the graph structures..
@@ -2187,14 +2188,14 @@ void BotGraph::frame () {
       float distance = path.origin.distance (m_editor->v.origin);
 
       // check if node is whitin a distance, and is visible
-      if (distance < 512.0f && ((util.isVisible (path.origin, m_editor) && util.isInViewCone (path.origin, m_editor)) || !util.isAlive (m_editor) || distance < 128.0f)) {
+      if (distance < cv_graph_draw_distance.float_ () && ((util.isVisible (path.origin, m_editor) && util.isInViewCone (path.origin, m_editor)) || !util.isAlive (m_editor) || distance < 64.0f)) {
          // check the distance
          if (distance < nearestDistance) {
             nearestIndex = path.number;
             nearestDistance = distance;
          }
 
-         if (path.display + 0.8f < game.time ()) {
+         if (path.display + 1.0f < game.time ()) {
             float nodeHeight = 0.0f;
 
             // check the node height
@@ -2291,8 +2292,8 @@ void BotGraph::frame () {
    }
 
    // draw a paths, camplines and danger directions for nearest node
-   if (nearestDistance <= 56.0f && m_pathDisplayTime <= game.time ()) {
-      m_pathDisplayTime = game.time () + 1.0f;
+   if (nearestDistance <= 56.0f && m_pathDisplayTime < game.time ()) {
+      m_pathDisplayTime = game.time () + 0.96f;
 
       // create path pointer for faster access
       auto &path = m_paths[nearestIndex];
@@ -2345,7 +2346,7 @@ void BotGraph::frame () {
       // if radius is nonzero, draw a full circle
       if (path.radius > 0.0f) {
          float sqr = cr::sqrtf (cr::square (path.radius) * 0.5f);
-
+         
          game.drawLine (m_editor, origin + Vector (path.radius, 0.0f, 0.0f), origin + Vector (sqr, -sqr, 0.0f), 5, 0, radiusColor, 200, 0, 10);
          game.drawLine (m_editor, origin + Vector (sqr, -sqr, 0.0f), origin + Vector (0.0f, -path.radius, 0.0f), 5, 0, radiusColor, 200, 0, 10);
 
@@ -2373,9 +2374,38 @@ void BotGraph::frame () {
             game.drawLine (m_editor, path.origin, m_paths[dangerIndex].origin, 15, 0, { 255, 0, 0 }, 200, 0, 10, DrawLine::Arrow); // draw a red arrow to this index's danger point
          }
       }
+      static int channel = 0;
 
-      auto getFlagsAsStr = [&] (int index) -> StringRef {
-         const auto &path = m_paths[index];
+      auto sendHudMessage = [] (Color color, float x, float y, edict_t *to, StringRef text) {
+         MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, nullptr, to)
+            .writeByte (TE_TEXTMESSAGE)
+            .writeByte (channel++ & 0xff) // channel
+            .writeShort (MessageWriter::fs16 (x, 13.0f)) // x
+            .writeShort (MessageWriter::fs16 (y, 13.0f)) // y
+            .writeByte (0) // effect
+            .writeByte (color.red) // r1
+            .writeByte (color.green) // g1
+            .writeByte (color.blue) // b1
+            .writeByte (1) // a1
+            .writeByte (color.red) // r2
+            .writeByte (color.green) // g2
+            .writeByte (color.blue) // b2
+            .writeByte (1) // a2
+            .writeShort (0) // fadeintime
+            .writeShort (0) // fadeouttime
+            .writeShort (MessageWriter::fu16 (1.0f, 8.0f)) // holdtime
+            .writeString (text.chars ());
+
+         if (channel > 3) {
+            channel = 0;
+         }
+      };
+
+      // very helpful stuff..
+      auto getNodeData = [&] (StringRef type, int node) -> String {
+         String message, flags;
+
+         const auto &path = m_paths[node];
          bool jumpPoint = false;
 
          // iterate through connections and find, if it's a jump path
@@ -2386,81 +2416,49 @@ void BotGraph::frame () {
                jumpPoint = true;
             }
          }
+         flags.assignf ("%s%s%s%s%s%s%s%s%s%s%s%s", (path.flags & NodeFlag::Lift) ? " LIFT" : "", (path.flags & NodeFlag::Crouch) ? " CROUCH" : "", (path.flags & NodeFlag::Camp) ? " CAMP" : "", (path.flags & NodeFlag::TerroristOnly) ? " TERRORIST" : "", (path.flags & NodeFlag::CTOnly) ? " CT" : "", (path.flags & NodeFlag::Sniper) ? " SNIPER" : "", (path.flags & NodeFlag::Goal) ? " GOAL" : "", (path.flags & NodeFlag::Ladder) ? " LADDER" : "", (path.flags & NodeFlag::Rescue) ? " RESCUE" : "", (path.flags & NodeFlag::DoubleJump) ? " JUMPHELP" : "", (path.flags & NodeFlag::NoHostage) ? " NOHOSTAGE" : "", jumpPoint ? " JUMP" : "");
 
-         static String buffer;
-         buffer.assignf ("%s%s%s%s%s%s%s%s%s%s%s%s", (path.flags & NodeFlag::Lift) ? " LIFT" : "", (path.flags & NodeFlag::Crouch) ? " CROUCH" : "", (path.flags & NodeFlag::Camp) ? " CAMP" : "", (path.flags & NodeFlag::TerroristOnly) ? " TERRORIST" : "", (path.flags & NodeFlag::CTOnly) ? " CT" : "", (path.flags & NodeFlag::Sniper) ? " SNIPER" : "", (path.flags & NodeFlag::Goal) ? " GOAL" : "", (path.flags & NodeFlag::Ladder) ? " LADDER" : "", (path.flags & NodeFlag::Rescue) ? " RESCUE" : "", (path.flags & NodeFlag::DoubleJump) ? " JUMPHELP" : "", (path.flags & NodeFlag::NoHostage) ? " NOHOSTAGE" : "", jumpPoint ? " JUMP" : "");
-
-         if (buffer.empty ()) {
-            buffer.assign ("(none)");
+         if (flags.empty ()) {
+            flags.assign ("(none)");
          }
-         // return the message buffer
-         return buffer;
-      };
 
-      auto pathOriginStr = [&] (int index) -> StringRef {
-         const auto &path = m_paths[index];
-
-         static String buffer;
-         buffer.assignf ("(%.1f, %.1f, %.1f)", path.origin.x, path.origin.y, path.origin.z);
-
-         return buffer;
+         // show the information about that point
+         message.assignf ("      %s node:\n"
+                          "       Node %d of %d, Radius: %.1f, Light: %.1f\n"
+                          "       Flags: %s\n"
+                          "       Origin: (%.1f, %.1f, %.1f)\n", type, node, m_paths.length () - 1, path.radius, path.light, flags, path.origin.x, path.origin.y, path.origin.z);
+         return message;
       };
 
       // display some information
-      String graphMessage;
+      sendHudMessage ({ 255, 255, 255 }, 0.0f, 0.025f, m_editor, getNodeData ("Current", nearestIndex));
 
-      // show the information about that point
-      graphMessage.assignf ("\n\n\n\n    Graph Information:\n\n"
-                              "      Map: %s @ %s\n"
-                              "      Node %d of %d, Radius: %.1f, Light: %.1f\n"
-                              "      Flags: %s\n"
-                              "      Origin: %s\n\n", game.getMapName (), util.getCurrentDateTime (), nearestIndex, m_paths.length () - 1, path.radius, path.light, getFlagsAsStr (nearestIndex), pathOriginStr (nearestIndex));
+      // check if we need to show the cached point index
+      if (m_cacheNodeIndex != kInvalidNodeIndex) {
+         sendHudMessage ({ 255, 255, 255 }, 0.28f, 0.16f, m_editor, getNodeData ("Cached", m_cacheNodeIndex));
+      }
+
+      // check if we need to show the facing point index
+      if (m_facingAtIndex != kInvalidNodeIndex) {
+         sendHudMessage ({ 255, 255, 255 }, 0.28f, 0.025f, m_editor, getNodeData ("Facing", m_facingAtIndex));
+      }
+      String timeMessage = strings.format ("      Map: %s, Time: %s\n", game.getMapName (), util.getCurrentDateTime ());
 
       // if node is not changed display experience also
       if (!m_hasChanged) {
          int dangerIndexCT = getDangerIndex (Team::CT, nearestIndex, nearestIndex);
          int dangerIndexT = getDangerIndex (Team::Terrorist, nearestIndex, nearestIndex);
 
-         graphMessage.appendf ("      Experience Info:\n"
-                                       "      CT: %d / %d dmg\n"
-                                       "      T: %d / %d dmg\n", dangerIndexCT, dangerIndexCT != kInvalidNodeIndex ? getDangerDamage (Team::CT, nearestIndex, dangerIndexCT) : 0, dangerIndexT, dangerIndexT != kInvalidNodeIndex ? getDangerDamage (Team::Terrorist, nearestIndex, dangerIndexT) : 0);
-      }
+         String practice;
+         practice.assignf ("      Node practice data (index / damage):\n"
+                          "       CT: %d / %d\n"
+                          "       T:  %d / %d\n\n", dangerIndexCT, dangerIndexCT != kInvalidNodeIndex ? getDangerDamage (Team::CT, nearestIndex, dangerIndexCT) : 0, dangerIndexT, dangerIndexT != kInvalidNodeIndex ? getDangerDamage (Team::Terrorist, nearestIndex, dangerIndexT) : 0);
 
-      // check if we need to show the cached point index
-      if (m_cacheNodeIndex != kInvalidNodeIndex) {
-         graphMessage.appendf ("\n    Cached Node Information:\n\n"
-                                       "      Node %d of %d, Radius: %.1f\n"
-                                       "      Flags: %s\n"
-                                       "      Origin: %s\n", m_cacheNodeIndex, m_paths.length () - 1, m_paths[m_cacheNodeIndex].radius, getFlagsAsStr (m_cacheNodeIndex), pathOriginStr (m_cacheNodeIndex));
+         sendHudMessage ({ 255, 255, 255 }, 0.0f, 0.16f, m_editor, practice + timeMessage);
       }
-
-      // check if we need to show the facing point index
-      if (m_facingAtIndex != kInvalidNodeIndex) {
-         graphMessage.appendf ("\n    Facing Node Information:\n\n"
-                                       "      Node %d of %d, Radius: %.1f\n"
-                                       "      Flags: %s\n"
-                                       "      Origin: %s\n", m_facingAtIndex, m_paths.length () - 1, m_paths[m_facingAtIndex].radius, getFlagsAsStr (m_facingAtIndex), pathOriginStr (m_facingAtIndex));
+      else {
+         sendHudMessage ({ 255, 255, 255 }, 0.0f, 0.16f, m_editor, timeMessage);
       }
-
-      // draw entire message
-      MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, nullptr, m_editor)
-         .writeByte (TE_TEXTMESSAGE)
-         .writeByte (4) // channel
-         .writeShort (MessageWriter::fs16 (0.0f, 13.0f)) // x
-         .writeShort (MessageWriter::fs16 (0.0f, 13.0f)) // y
-         .writeByte (0) // effect
-         .writeByte (255) // r1
-         .writeByte (255) // g1
-         .writeByte (255) // b1
-         .writeByte (1) // a1
-         .writeByte (255) // r2
-         .writeByte (255) // g2
-         .writeByte (255) // b2
-         .writeByte (255) // a2
-         .writeShort (0) // fadeintime
-         .writeShort (0) // fadeouttime
-         .writeShort (MessageWriter::fu16 (1.1f, 8.0f)) // holdtime
-         .writeString (graphMessage.chars ());
    }
 }
 
