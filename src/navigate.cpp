@@ -125,6 +125,16 @@ int Bot::findBestGoal () {
          return pushToHistroy (m_chosenGoalIndex = graph.getNearest (graph.getBombOrigin ()));
       }
    }
+   else if (game.mapIs (MapFlags::Escape)) {
+      if (m_team == Team::Terrorist) {
+         offensive += 25.0f;
+         defensive -= 25.0f;
+      }
+      else if (m_team == Team::CT) {
+         offensive -= 25.0f;
+         defensive += 25.0f;
+      }
+   }
 
    goalDesire = rg.get (0.0f, 100.0f) + offensive;
    forwardDesire = rg.get (0.0f, 100.0f) + offensive;
