@@ -239,6 +239,11 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
          }
       }
 
+      // clear the graph editor upon disconnect
+      if (ent == graph.getEditor ()) {
+         graph.setEditor (nullptr);
+      }
+
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
