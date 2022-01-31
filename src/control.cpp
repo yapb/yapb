@@ -893,13 +893,20 @@ int BotControl::menuMain (int item) {
 int BotControl::menuFeatures (int item) {
    closeMenu (); // reset menu display
 
+   auto autoAcquireEditorRights = [&] () {
+      if (!graph.hasEditor ()) {
+         graph.setEditor (m_ent);
+      }
+      return graph.hasEditor () && graph.getEditor () == m_ent ? Menu::NodeMainPage1 : Menu::Features;
+   };
+
    switch (item) {
    case 1:
       showMenu (Menu::WeaponMode);
       break;
 
    case 2:
-      showMenu (graph.hasEditor () ? Menu::NodeMainPage1 : Menu::Features);
+      showMenu (autoAcquireEditorRights ());
       break;
 
    case 3:
