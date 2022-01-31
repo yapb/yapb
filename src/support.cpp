@@ -627,9 +627,13 @@ void BotSupport::emitPings (edict_t *to) {
 
    // missing from sdk
    constexpr int kGamePingSVC = 17;
+
+   auto isThirdpartyBot = [] (edict_t *ent) {
+      return !bots[ent] && (ent->v.flags & FL_FAKECLIENT);
+   };
    
    for (auto &client : m_clients) {
-      if (!(client.flags & ClientFlags::Used) || client.ent == game.getLocalEntity () || !bots[client.ent]) {
+      if (!(client.flags & ClientFlags::Used) || client.ent == game.getLocalEntity () || isThirdpartyBot (client.ent)) {
          continue;
       }
 
