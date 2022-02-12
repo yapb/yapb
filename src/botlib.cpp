@@ -3054,18 +3054,9 @@ void Bot::normal_ () {
    // user forced a waypoint as a goal?
    if (debugGoal != kInvalidNodeIndex && getTask ()->data != debugGoal) {
       clearSearchNodes ();
+
       getTask ()->data = debugGoal;
-   }
-   
-   // stand still if reached debug goal
-   else if (m_currentNodeIndex == debugGoal) {
-      pev->button = 0;
-      ignoreCollision ();
-
-      m_moveSpeed = 0.0;
-      m_strafeSpeed = 0.0f;
-
-      return;
+      m_chosenGoalIndex = debugGoal;
    }
 
    // bots rushing with knife, when have no enemy (thanks for idea to nicebot project)

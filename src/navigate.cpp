@@ -823,6 +823,9 @@ bool Bot::updateNavigation () {
    else if (m_currentTravelFlags & PathFlag::Jump) {
       desiredDistance = 0.0f;
    }
+   else if (m_path->number == cv_debug_goal.int_ ()) {
+      desiredDistance = 0.0f;
+   }
    else {
       desiredDistance = m_path->radius;
    }
