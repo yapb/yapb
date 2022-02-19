@@ -844,7 +844,11 @@ int BotControl::cmdNodeIterateCamp () {
             m_campIterator.push (i);
          }
       }
-      msg ("Ready for iteration. Type 'next' to go to first camp node.");
+      if (!m_campIterator.empty ()) {
+         msg ("Ready for iteration. Type 'next' to go to first camp node.");
+         return BotCommandResult::Handled;
+      }
+      msg ("Unable to begin iteration, camp points is not set.");
    }
    return BotCommandResult::Handled;
 }
