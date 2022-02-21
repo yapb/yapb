@@ -2760,6 +2760,11 @@ void Bot::updateAimDir () {
    }
    else if (flags & AimFlags::Entity) {
       m_lookAt = m_entity;
+
+      // do not look at hostages legs
+      if (m_pickupType == Pickup::Hostage) {
+         m_lookAt.z += 48.0f;
+      }
    }
    else if (flags & AimFlags::LastEnemy) {
       m_lookAt = m_lastEnemyOrigin;
@@ -4591,6 +4596,7 @@ void Bot::pickupItem_ () {
             }
             m_hostages.push (m_pickupItem);
             m_pickupItem = nullptr;
+
             completeTask ();
 
             float minDistance = kInfiniteDistance;
