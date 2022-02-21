@@ -613,19 +613,19 @@ void Bot::updatePickups () {
                const bool isShotgun = weaponType == WeaponType::Shotgun;
                const bool isRifle = weaponType == WeaponType::Rifle || weaponType == WeaponType::ZoomRifle;
 
-               if (strcmp (model, "w_9mmarclip.mdl") == 0 && !isRifle) {
+               if (!isRifle && strcmp (model, "w_9mmarclip.mdl") == 0) {
                   allowPickup = false;
                }
-               else if (strcmp (model, "w_shotbox.mdl") == 0 && !isShotgun) {
+               else if (!isShotgun && strcmp (model, "w_shotbox.mdl") == 0) {
                   allowPickup = false;
                }
-               else if (strcmp (model, "w_9mmclip.mdl") == 0 && !isSubmachine) {
+               else if (!isSubmachine && strcmp (model, "w_9mmclip.mdl") == 0) {
                   allowPickup = false;
                }
-               else if (strcmp (model, "w_crossbow_clip.mdl") == 0 && !isSniperRifle) {
+               else if (!isSniperRifle && strcmp (model, "w_crossbow_clip.mdl") == 0) {
                   allowPickup = false;
                }
-               else if (strcmp (model, "w_chainammo.mdl") == 0 && primaryWeaponCarried != Weapon::M249) {
+               else if (primaryWeaponCarried != Weapon::M249 && strcmp (model, "w_chainammo.mdl") == 0) {
                   allowPickup = false;
                }
             }
@@ -4513,13 +4513,14 @@ void Bot::pickupItem_ () {
          else {
             // primary weapon
             int wid = bestWeaponCarried ();
+            bool niceWeapon = rateGroundWeapon (m_pickupItem);
             
-            if (wid == Weapon::Shield || wid > 6 || hasShield ()) {
+            if ((wid == Weapon::Shield || wid > 6 || hasShield ()) && niceWeapon) {
                selectWeaponById (wid);
                issueCommand ("drop");
             }
 
-            if (!wid) {
+            if (!wid || !niceWeapon) {
                m_itemIgnore = m_pickupItem;
                m_pickupItem = nullptr;
                m_pickupType = Pickup::None;
