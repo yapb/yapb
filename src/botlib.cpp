@@ -632,19 +632,19 @@ void Bot::updatePickups () {
             else if (m_isVIP || !rateGroundWeapon (ent)) {
                allowPickup = false;
             }
-            else if (strcmp (model, "medkit.mdl") == 0 && m_healthValue >= 100.0f) {
+            else if (m_healthValue >= 100.0f && strcmp (model, "medkit.mdl") == 0) {
                allowPickup = false;
             }
-            else if ((strcmp (model, "kevlar.mdl") == 0 || strcmp (model, "battery.mdl") == 0) && pev->armorvalue >= 100.0f) {
+            else if (pev->armorvalue >= 100.0f && (strcmp (model, "kevlar.mdl") == 0 || strcmp (model, "battery.mdl") == 0)) {
                allowPickup = false;
             }
-            else if (strcmp (model, "flashbang.mdl") == 0 && (pev->weapons & cr::bit (Weapon::Flashbang))) {
+            else if ((pev->weapons & cr::bit (Weapon::Flashbang)) && strcmp (model, "flashbang.mdl") == 0) {
                allowPickup = false;
             }
-            else if (strcmp (model, "hegrenade.mdl") == 0 && (pev->weapons & cr::bit (Weapon::Explosive))) {
+            else if ((pev->weapons & cr::bit (Weapon::Explosive)) && strcmp (model, "hegrenade.mdl") == 0) {
                allowPickup = false;
             }
-            else if (strcmp (model, "smokegrenade.mdl") == 0 && (pev->weapons & cr::bit (Weapon::Smoke))) {
+            else if ((pev->weapons & cr::bit (Weapon::Smoke)) && strcmp (model, "smokegrenade.mdl") == 0) {
                allowPickup = false;
             }
          }
