@@ -1263,6 +1263,8 @@ void Bot::newRound () {
 
    m_breakableEntity = nullptr;
    m_breakableOrigin = nullptr;
+   m_lastBreakable = nullptr;
+
    m_timeDoorOpen = 0.0f;
 
    resetCollision ();
@@ -1283,6 +1285,7 @@ void Bot::newRound () {
    m_shootAtDeadTime = 0.0f;
    m_oldCombatDesire = 0.0f;
    m_liftUsageTime = 0.0f;
+   m_breakableTime = 0.0f;
 
    m_avoidGrenade = nullptr;
    m_needAvoidGrenade = 0;
@@ -1392,6 +1395,7 @@ void Bot::newRound () {
    }
    m_msgQueue.clear ();
    m_goalHistory.clear ();
+   m_ignoredBreakable.clear ();
 
    // clear last trace
    for (auto i = 0; i < TraceChannel::Num; ++i) {

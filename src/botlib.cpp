@@ -399,15 +399,31 @@ void Bot::checkBreakable (edict_t *touch) {
 }
 
 void Bot::checkBreakablesAround () {
-   if (!cv_destroy_breakables_around.bool_ () || usesKnife () || rg.chance (25) || !game.hasBreakables () || m_seeEnemyTime + 4.0f > game.time () || !game.isNullEntity (m_enemy) || !hasPrimaryWeapon ()) {
+   if (!m_buyingFinished || !cv_destroy_breakables_around.bool_ () || usesKnife () || rg.chance (25) || !game.hasBreakables () || m_seeEnemyTime + 4.0f > game.time () || !game.isNullEntity (m_enemy) || !hasPrimaryWeapon ()) {
       return;
    }
 
    // check if we're have some breakbles in 400 units range
    for (const auto &breakable : game.getBreakables ()) {
+      bool ignoreBreakable = false;
+
+      // check if it's blacklisted
+      for (const auto &ignored : m_ignoredBreakable) {
+         if (ignored == breakable) {
+            ignoreBreakable = true;
+            break;
+         }
+      }
+
+      // keep searching
+      if (ignoreBreakable) {
+         continue;
+      }
+
       if (!game.isShootableBreakable (breakable)) {
          continue;
       }
+
       const auto &origin = game.getEntityOrigin (breakable);
       const auto lengthToObstacle = origin.distanceSq (pev->origin);
 
@@ -421,7 +437,23 @@ void Bot::checkBreakablesAround () {
          continue;
       }
 
+      // maybe time to give up?
+      if (m_lastBreakable == breakable && m_breakableTime + 1.0f < game.time ()) {
+         m_ignoredBreakable.emplace (breakable);
+
+         m_breakableOrigin = nullptr;
+         m_lastBreakable = nullptr;
+         m_breakableEntity = nullptr;
+
+         continue;
+      }
+
       if (isInFOV (origin - getEyesPos ()) < pev->fov && seesEntity (origin)) {
+         if (m_breakableEntity != breakable) {
+            m_breakableTime = game.time ();
+            m_lastBreakable = breakable;
+         }
+
          m_breakableOrigin = origin;
          m_breakableEntity = breakable;
          m_campButtons = pev->button & IN_DUCK;

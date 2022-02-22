@@ -682,6 +682,7 @@ private:
    float m_joinServerTime; // time when bot joined the game
    float m_playServerTime; // time bot spent in the game
    float m_changeViewTime {}; // timestamp to change look at while at freezetime
+   float m_breakableTime {}; // breakeble acquired time
 
    bool m_moveToGoal {}; // bot currently moving to goal??
    bool m_isStuck {}; // bot is stuck
@@ -714,6 +715,7 @@ private:
    edict_t *m_itemIgnore {}; // pointer to entity to ignore for pickup
    edict_t *m_liftEntity {}; // pointer to lift entity
    edict_t *m_breakableEntity {}; // pointer to breakable entity
+   edict_t *m_lastBreakable {}; // last acquired breakable
    edict_t *m_targetEntity {}; // the entity that the bot is trying to reach
    edict_t *m_avoidGrenade {}; // pointer to grenade entity to avoid
 
@@ -734,6 +736,7 @@ private:
    Vector m_desiredVelocity; // desired velocity for jump nodes
    Vector m_breakableOrigin; // origin of breakable
 
+   Array <edict_t *> m_ignoredBreakable; // list of ignored breakables
    Array <edict_t *> m_hostages; // pointer to used hostage entities
    Array <Route> m_routes; // pointer
    Array <int32> m_goalHistory; // history of selected goals
