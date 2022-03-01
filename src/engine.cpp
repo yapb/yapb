@@ -84,6 +84,9 @@ void Game::levelInitialize (edict_t *entities, int max) {
 
    // install the sendto hook to fake queries
    util.installSendTo ();
+
+   // flush any print queue
+   ctrl.resetFlushTimestamp ();
    
    // go thru the all entities on map, and do whatever we're want
    for (int i = 0; i < max; ++i) {

@@ -175,6 +175,10 @@ public:
       m_ent = ent;
    }
 
+   void resetFlushTimestamp () {
+      m_printQueueFlushTimestamp = 0.0f;
+   }
+
    int intValue (size_t arg) const {
       if (!hasArg (arg)) {
          return 0;
