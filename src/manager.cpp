@@ -28,7 +28,7 @@ ConVar cv_difficulty_auto ("yb_difficulty_auto", "0", "Enables each bot balances
 
 ConVar cv_show_avatars ("yb_show_avatars", "1", "Enables or disables displaying bot avatars in front of their names in scoreboard. Note, that is currently you can see only avatars of your steam friends.");
 ConVar cv_show_latency ("yb_show_latency", "2", "Enables latency display in scoreboard.\nAllowed values: '0', '1', '2'.\nIf '0', there is nothing displayed.\nIf '1', there is a 'BOT' is displayed.\nIf '2' fake ping is displayed.", true, 0.0f, 2.0f);
-ConVar cv_save_bots_names ("yb_save_bots_names", "1", "Allows to save bot names upon changelevel, so bot names will be the same after a map change", true, 0.0f, 1.0f);
+ConVar cv_save_bots_names ("yb_save_bots_names", "1", "Allows to save bot names upon changelevel, so bot names will be the same after a map change.", true, 0.0f, 1.0f);
 
 ConVar cv_botskin_t ("yb_botskin_t", "0", "Specifies the bots wanted skin for Terrorist team.", true, 0.0f, 5.0f);
 ConVar cv_botskin_ct ("yb_botskin_ct", "0", "Specifies the bots wanted skin for CT team.", true, 0.0f, 5.0f);
@@ -209,8 +209,14 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
    else {
       resultName = name;
    }
+   const bool hasNamePrefix = !strings.isEmpty (cv_name_prefix.str ());
 
-   if (!strings.isEmpty (cv_name_prefix.str ())) {
+   // disable save bots names if prefix is enabled
+   if (hasNamePrefix && cv_save_bots_names.bool_ ()) {
+      cv_save_bots_names.set (0);
+   }
+
+   if (hasNamePrefix) {
       String prefixed; // temp buffer for storing modified name
       prefixed.assignf ("%s %s", cv_name_prefix.str (), resultName);
 
