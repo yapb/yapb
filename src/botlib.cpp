@@ -5378,11 +5378,11 @@ void Bot::dropWeaponForUser (edict_t *user, bool discardC4) {
       m_aimFlags |= AimFlags::Entity;
       m_lookAt = user->v.origin;
 
-      if (discardC4) {
+      if (discardC4 && m_hasC4) {
          selectWeaponByName ("weapon_c4");
          issueCommand ("drop");
       }
-      else {
+      else if (!discardC4) {
          selectBestWeapon ();
          issueCommand ("drop");
       }
