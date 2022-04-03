@@ -1785,7 +1785,7 @@ void BotManager::selectLeaders (int team, bool reset) {
          m_leaderChoosen[Team::CT] = true;
       }
    }
-   else if (game.mapIs (MapFlags::Escape | MapFlags::KnifeArena | MapFlags::Fun)) {
+   else if (game.mapIs (MapFlags::Escape | MapFlags::KnifeArena | MapFlags::FightYard)) {
       auto bot = bots.findHighestFragBot (team);
 
       if (!m_leaderChoosen[team] && bot) {

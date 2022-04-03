@@ -153,7 +153,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
 
    // next maps doesn't have map-specific entities, so determine it by name
    if (strncmp (getMapName (), "fy_", 3) == 0) {
-      m_mapFlags |= MapFlags::Fun;
+      m_mapFlags |= MapFlags::FightYard;
    }
    else if (strncmp (getMapName (), "ka_", 3) == 0) {
       m_mapFlags |= MapFlags::KnifeArena;

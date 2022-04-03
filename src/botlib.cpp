@@ -1108,7 +1108,7 @@ void Bot::checkMsgQueue () {
       }
 
       // prevent teams from buying on fun maps
-      if (game.mapIs (MapFlags::KnifeArena | MapFlags::Fun)) {
+      if (game.mapIs (MapFlags::KnifeArena)) {
          m_buyState = BuyState::Done;
 
          if (game.mapIs (MapFlags::KnifeArena)) {
