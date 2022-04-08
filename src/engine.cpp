@@ -105,7 +105,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
          if (is (GameFlags::Legacy) && strings.isEmpty (ent->v.target.chars ())) {
             ent->v.target = ent->v.targetname = engfuncs.pfnAllocString ("fake");
          }
-         else {
+         else if (!is (GameFlags::ReGameDLL)) {
             engfuncs.pfnRemoveEntity (ent);
          }
       }
