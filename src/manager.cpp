@@ -1354,7 +1354,7 @@ void Bot::newRound () {
       m_currentWeapon = 0;
       m_weaponType = 0;
    }
-   m_flashLevel = 100.0f;
+   m_flashLevel = 100;
    m_checkDarkTime = game.time ();
 
    m_knifeAttackTime = game.time () + rg.get (1.3f, 2.6f);

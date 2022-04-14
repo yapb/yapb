@@ -2891,7 +2891,7 @@ void Bot::updateAimDir () {
 void Bot::checkDarkness () {
 
    // do not check for darkness at the start of the round
-   if (m_spawnTime + 5.0f > game.time () || !graph.exists (m_currentNodeIndex) || cr::fzero (m_path->light)) {
+   if (m_spawnTime + 5.0f > game.time () || !graph.exists (m_currentNodeIndex)) {
       return;
    }
 
@@ -2900,19 +2900,20 @@ void Bot::checkDarkness () {
       return;
    }
    auto skyColor = illum.getSkyColor ();
+   auto flashOn = (pev->effects & EF_DIMLIGHT);
 
    if (mp_flashlight.bool_ () && !m_hasNVG) {
       auto task = Task ();
 
-      if (!(pev->effects & EF_DIMLIGHT) && task != Task::Camp && task != Task::Attack && m_heardSoundTime + 3.0f < game.time () && m_flashLevel > 30.0f && ((skyColor > 50.0f && m_path->light < 10.0f) || (skyColor <= 50.0f && m_path->light < 40.0f))) {
+      if (!flashOn && task != Task::Camp && task != Task::Attack && m_heardSoundTime + 3.0f < game.time () && m_flashLevel > 30 && ((skyColor > 50.0f && m_path->light < 10.0f) || (skyColor <= 50.0f && m_path->light < 40.0f))) {
          pev->impulse = 100;
       }
-      else if ((pev->effects & EF_DIMLIGHT) && (((m_path->light > 15.0f && skyColor > 50.0f) || (m_path->light > 45.0f && skyColor <= 50.0f)) || task == Task::Camp || task == Task::Attack || m_flashLevel <= 0 || m_heardSoundTime + 3.0f >= game.time ())) {
+      else if (flashOn && (((m_path->light > 15.0f && skyColor > 50.0f) || (m_path->light > 45.0f && skyColor <= 50.0f)) || task == Task::Camp || task == Task::Attack || m_flashLevel <= 0 || m_heardSoundTime + 3.0f >= game.time ())) {
          pev->impulse = 100;
       }
    }
    else if (m_hasNVG) {
-      if (pev->effects & EF_DIMLIGHT) {
+      if (flashOn) {
          pev->impulse = 100;
       }
       else if (!m_usesNVG && ((skyColor > 50.0f && m_path->light < 15.0f) || (skyColor <= 50.0f && m_path->light < 40.0f))) {

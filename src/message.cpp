@@ -394,7 +394,7 @@ void MessageDispatcher::netMsgFlashBat () {
    if (m_args.length () < min || !m_bot) {
       return;
    }
-   m_bot->m_flashLevel = m_args[value].float_;
+   m_bot->m_flashLevel = m_args[value].long_;
 }
 
 MessageDispatcher::MessageDispatcher () {
