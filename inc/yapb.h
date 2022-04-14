@@ -946,7 +946,6 @@ public:
    float m_nextBuyTime {}; // next buy time
    float m_checkDarkTime {}; // check for darkness time
    float m_preventFlashing {}; // bot turned away from flashbang
-   float m_flashLevel {}; // flashlight level
    float m_blindTime {}; // time when bot is blinded
    float m_blindMoveSpeed {}; // mad speeds when bot is blind
    float m_blindSidemoveSpeed {}; // mad side move speeds when bot is blind
@@ -978,6 +977,7 @@ public:
    float m_kpdRatio; // kill per death ratio
    float m_healthValue; // clamped bot health 
 
+   int m_flashLevel {}; // flashlight level
    int m_basePing; // base ping for bot
    int m_numEnemiesLeft {}; // number of enemies alive left on map
    int m_numFriendsLeft {}; // number of friend alive left on map
