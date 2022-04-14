@@ -286,9 +286,9 @@ public:
 };
 
 float Game::getWaveLen (const char *fileName) {
-   auto filePath = strings.format ("%s/%s/%s.wav", getRunningModName (), cv_chatter_path.str (), fileName);
+   auto filePath = strings.format ("%s/%s.wav", cv_chatter_path.str (), fileName);
 
-   File fp (filePath, "rb");
+   MemFile fp (filePath);
 
    // we're got valid handle?
    if (!fp) {
