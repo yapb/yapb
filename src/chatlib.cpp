@@ -317,12 +317,12 @@ bool Bot::isReplyingToChat () {
 void Bot::checkForChat () {
 
    // say a text every now and then
-   if (rg.chance (cv_chat_percent.int_ ()) || m_notKilled || !cv_chat.bool_ ()) {
+   if (m_notKilled || !cv_chat.bool_ ()) {
       return;
    }
 
    // bot chatting turned on?
-   if (m_lastChatTime + rg.get (6.0f, 10.0f) < game.time () && bots.getLastChatTimestamp () + rg.get (2.5f, 5.0f) < game.time () && !isReplyingToChat ()) {
+   if (rg.chance (cv_chat_percent.int_ ()) && m_lastChatTime + rg.get (6.0f, 10.0f) < game.time () && bots.getLastChatTimestamp () + rg.get (2.5f, 5.0f) < game.time () && !isReplyingToChat ()) {
       if (conf.hasChatBank (Chat::Dead)) {
          StringRef phrase = conf.pickRandomFromChatBank (Chat::Dead);
          bool sayBufferExists = false;
