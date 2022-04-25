@@ -2368,10 +2368,14 @@ void BotGraph::frame () {
 
       // draw the danger directions
       if (!m_hasChanged) {
-         int dangerIndex = getDangerIndex (game.getTeam (m_editor), nearestIndex, nearestIndex);
+         int dangerIndexT = getDangerIndex (Team::Terrorist, nearestIndex, nearestIndex);
+         int dangerIndexCT = getDangerIndex (Team::CT, nearestIndex, nearestIndex);
 
-         if (exists (dangerIndex)) {
-            game.drawLine (m_editor, path.origin, m_paths[dangerIndex].origin, 15, 0, { 255, 0, 0 }, 200, 0, 10, DrawLine::Arrow); // draw a red arrow to this index's danger point
+         if (exists (dangerIndexT)) {
+            game.drawLine (m_editor, path.origin, m_paths[dangerIndexT].origin, 15, 0, { 255, 0, 0 }, 200, 0, 10, DrawLine::Arrow); // draw a red arrow to this index's danger point
+         }
+         if (exists (dangerIndexCT)) {
+            game.drawLine (m_editor, path.origin, m_paths[dangerIndexCT].origin, 15, 0, { 0, 0, 255 }, 200, 0, 10, DrawLine::Arrow); // draw a blue arrow to this index's danger point
          }
       }
       static int channel = 0;
