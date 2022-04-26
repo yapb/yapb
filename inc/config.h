@@ -250,7 +250,7 @@ public:
       if (m_custom.has (name)) {
          return m_custom[name];
       }
-      SimpleLogger::instance ().error ("Trying to fetch uknonwn custom variable: %s", name);
+      SimpleLogger::instance ().error ("Trying to fetch unknown custom variable: %s", name);
 
       return "";
    }
@@ -261,5 +261,5 @@ public:
    }
 };
 
-// explose global
+// expose global
 CR_EXPOSE_GLOBAL_SINGLETON (BotConfig, conf);
