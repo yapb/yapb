@@ -34,6 +34,7 @@ ConVar cv_restricted_weapons ("yb_restricted_weapons", "", "Specifies semicolon 
 
 ConVar cv_attack_monsters ("yb_attack_monsters", "0", "Allows or disallows bots to attack monsters.");
 ConVar cv_pickup_custom_items ("yb_pickup_custom_items", "0", "Allows or disallows bots to pickup custom items.");
+ConVar cv_pickup_best ("yb_pickup_best", "1", "Allows or disallows bots to pickup best weapons.");
 ConVar cv_ignore_objectives ("yb_ignore_objectives", "0", "Allows or disallows bots to do map objectives, i.e. plant/defuse bombs, and saves hostages.");
 ConVar cv_random_knife_attacks ("yb_random_knife_attacks", "1", "Allows or disallows the ability for random knife attacks when bot is rushing and no enemy is nearby.");
 
@@ -519,7 +520,7 @@ void Bot::updatePickups () {
    // this function finds Items to collect or use in the near of a bot
 
    // don't try to pickup anything while on ladder or trying to escape from bomb...
-   if (isOnLadder () || getCurrentTaskId () == Task::EscapeFromBomb || cv_jasonmode.bool_ () || !bots.hasIntrestingEntities ()) {
+   if (isOnLadder () || getCurrentTaskId () == Task::EscapeFromBomb || !cv_pickup_best.bool_ () || cv_jasonmode.bool_ () || !bots.hasIntrestingEntities ()) {
       m_pickupItem = nullptr;
       m_pickupType = Pickup::None;
 
