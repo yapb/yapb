@@ -658,8 +658,6 @@ void BotGraph::add (int type, const Vector &pos) {
 
       // store the origin (location) of this node
       path->origin = newOrigin;
-      addToBucket (newOrigin, index);
-
       path->start = nullptr;
       path->end = nullptr;
       
@@ -869,7 +867,6 @@ void BotGraph::erase (int target) {
          }
       }
    }
-   eraseFromBucket (path.origin, index);
    m_paths.remove (path);
 
    game.playSound (m_editor, "weapons/mine_activate.wav");
