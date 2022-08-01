@@ -331,14 +331,30 @@ void MessageDispatcher::netMsgScoreInfo () {
    if (m_args.length () < min) {
       return;
    }
-   auto &client = util.getClient (m_args[index].long_ - 1);
-
-   // get the bot in this msg
-   auto bot = bots[client.ent];
+   auto bot = pickBot (index);
 
    // if we're have bot, set the kd ratio
    if (bot != nullptr) {
       bot->m_kpdRatio = bot->pev->frags / cr::max <long> (m_args[deaths].long_, 1);
+   }
+}
+
+void MessageDispatcher::netMsgScoreAttrib () {
+   // this message updates the scoreboard attribute for the specified player
+
+   enum args { index = 0, flags = 1, min = 2 };
+
+   // check the minimum states
+   if (m_args.length () < min) {
+      return;
+   }
+   auto bot = pickBot (index);
+
+   // if we're have bot, set the vip state
+   if (bot != nullptr) {
+      constexpr int32 kPlayerIsVIP = cr::bit (2);
+
+      bot->m_isVIP = !!(m_args[flags].long_ & kPlayerIsVIP);
    }
 }
 
@@ -426,6 +442,7 @@ MessageDispatcher::MessageDispatcher () {
    addWanted ("NVGToggle", NetMsg::NVGToggle, &MessageDispatcher::netMsgNVGToggle);
    addWanted ("FlashBat", NetMsg::FlashBat, &MessageDispatcher::netMsgFlashBat);
    addWanted ("ScoreInfo", NetMsg::ScoreInfo, &MessageDispatcher::netMsgScoreInfo);
+   addWanted ("ScoreAttrib", NetMsg::ScoreAttrib, &MessageDispatcher::netMsgScoreAttrib);
 
    // we're need next messages IDs but we're won't handle them, so they will be removed from wanted list as soon as they get engine IDs
    addWanted ("BotVoice", NetMsg::BotVoice, nullptr);
@@ -541,4 +558,11 @@ void MessageDispatcher::ensureMessages () {
 
 int32 MessageDispatcher::id (NetMsg msg) {
    return m_maps[msg];
+}
+
+Bot *MessageDispatcher::pickBot (int32 index) {
+   const auto &client = util.getClient (m_args[index].long_ - 1);
+
+   // get the bot in this msg
+   return bots[client.ent];
 }

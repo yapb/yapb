@@ -1235,7 +1235,6 @@ void Bot::newRound () {
 
    m_navTimeset = game.time ();
    m_team = game.getTeam (ent ());
-   m_isVIP = false;
 
    resetPathSearchType ();
 
@@ -1243,7 +1242,6 @@ void Bot::newRound () {
    m_states = 0;
    clearTasks ();
 
-   m_isVIP = false;
    m_isLeader = false;
    m_hasProgressBar = false;
    m_canChooseAimDirection = true;

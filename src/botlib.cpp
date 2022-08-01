@@ -3001,10 +3001,6 @@ void Bot::update () {
    m_team = game.getTeam (ent ());
    m_healthValue = cr::clamp (pev->health, 0.0f, 100.0f);
 
-   if (game.mapIs (MapFlags::Assassination) && !m_isVIP) {
-      m_isVIP = util.isPlayerVIP (ent ());
-   }
-
    if (m_team == Team::Terrorist && game.mapIs (MapFlags::Demolition)) {
       m_hasC4 = !!(pev->weapons & cr::bit (Weapon::C4));
 
