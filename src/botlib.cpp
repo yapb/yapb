@@ -2216,7 +2216,7 @@ bool Bot::isEnemyThreat () {
    }
 
    // if enemy is near or facing us directly
-   if (m_enemy->v.origin.distanceSq (pev->origin) < cr::square (256.0f) || isInViewCone (m_enemy->v.origin)) {
+   if (m_enemy->v.origin.distanceSq (pev->origin) < cr::square (256.0f) || (!usesKnife () && isInViewCone (m_enemy->v.origin))) {
       return true;
    }
    return false;
