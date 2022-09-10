@@ -36,7 +36,7 @@ cpp = meson.get_compiler ('cpp')
 sys = host_machine.system ()
 target = build_machine.cpu_family ()
 version = meson.project_version ()
-count = run_command ('git', 'rev-list', '--count', 'HEAD').stdout ().strip ()
+count = run_command ('git', 'rev-list', '--count', 'HEAD', check: false).stdout ().strip ()
 
 cpp_id = cpp.get_id ()
 cpp_version = cpp.version ()
@@ -59,14 +59,14 @@ cdata = configuration_data()
 
 if win32
    cdata.set ('version_win',  ','.join (version.split ('.')))
-   cdata.set ('machine', run_command ('hostname').stdout ().strip ())
+   cdata.set ('machine', run_command ('hostname', check: false).stdout ().strip ())
 else
    cdata.set ('version_win', version)
-   cdata.set ('machine', run_command ('hostname', '-f').stdout ().strip ())
+   cdata.set ('machine', run_command ('hostname', '-f', check: false).stdout ().strip ())
 endif
 
-cdata.set ('hash', run_command ('git', 'rev-parse', '--short', 'HEAD').stdout ().strip ())
-cdata.set ('author', run_command ('git', 'log', '--pretty="%ae"', '-1').stdout ().strip ())
+cdata.set ('hash', run_command ('git', 'rev-parse', '--short', 'HEAD', check: false).stdout ().strip ())
+cdata.set ('author', run_command ('git', 'log', '--pretty="%ae"', '-1', check: false).stdout ().strip ())
 
 cdata.set ('count', count)
 cdata.set ('version', version)
