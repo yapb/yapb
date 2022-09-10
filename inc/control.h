@@ -217,6 +217,9 @@ public:
    // for the server commands
    void handleEngineCommands ();
 
+   // wrapper for menus and commands
+   bool handleClientSideCommandsWrapper (edict_t *ent, bool isMenus);
+
    // for the client commands
    bool handleClientCommands (edict_t *ent);
 
