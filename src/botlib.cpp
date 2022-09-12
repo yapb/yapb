@@ -3687,10 +3687,12 @@ void Bot::camp_ () {
          }
       }
       else {
-         int lastEnemyNearestIndex = graph.getNearest (m_lastEnemy->v.origin);
-         
-         if (!game.isNullEntity (m_lastEnemy) && util.isAlive (m_lastEnemy) && rg.get (1, 3) == 1 && graph.isVisible (m_currentNodeIndex, lastEnemyNearestIndex)) {
-            m_camp = graph[lastEnemyNearestIndex].origin;
+         if (!game.isNullEntity (m_lastEnemy)) {
+            auto lastEnemyNearestIndex = graph.getNearest (m_lastEnemy->v.origin);
+
+            if (!util.isAlive (m_lastEnemy) && rg.get (1, 3) == 1 && graph.isVisible (m_currentNodeIndex, lastEnemyNearestIndex)) {
+               m_camp = graph[lastEnemyNearestIndex].origin;
+            }
          }
          else {
             m_camp = graph[findCampingDirection ()].origin;
