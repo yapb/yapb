@@ -2325,14 +2325,14 @@ void BotGraph::frame () {
             game.drawLine (m_editor, path.origin, m_paths[link.index].origin, 5, 0, { 255, 255, 0 }, 200, 0, 10);
          }
          else { // oneway connection
-            game.drawLine (m_editor, path.origin, m_paths[link.index].origin, 5, 0, { 50, 250, 25 }, 200, 0, 10);
+            game.drawLine (m_editor, path.origin, m_paths[link.index].origin, 5, 0, { 255, 255, 255 }, 200, 0, 10);
          }
       }
 
       // now look for oneway incoming connections
       for (const auto &connected : m_paths) {
          if (isConnected (connected.number, path.number) && !isConnected (path.number, connected.number)) {
-            game.drawLine (m_editor, path.origin, connected.origin, 5, 0, { 255, 255, 255 }, 200, 0, 10);
+            game.drawLine (m_editor, path.origin, connected.origin, 5, 0, { 0, 192, 96 }, 200, 0, 10);
          }
       }
 
