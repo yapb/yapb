@@ -123,6 +123,7 @@ private:
    int cmdNodeUpload ();
    int cmdNodeIterateCamp ();
    int cmdNodeShowStats ();
+   int cmdNodeFileInfo ();
 
 private:
    int menuMain (int item);

@@ -70,7 +70,7 @@ CR_DECLARE_SCOPED_ENUM (StorageOption,
 
 // storage header versions
 CR_DECLARE_SCOPED_ENUM (StorageVersion,
-   Graph = 2,
+   Graph = 3,
    Practice = 1,
    Vistable = 1,
    Matrix = 1,
@@ -122,8 +122,9 @@ struct StorageHeader {
 
 // extension header for graph information
 struct ExtenHeader {
-   char author[32];
-   int32 mapSize;
+   char author[32]; // original author of graph
+   int32 mapSize; // bsp size for checksumming map consitency
+   char modified[32]; // by whom modified
 };
 
 // general waypoint header information structure
@@ -262,7 +263,6 @@ private:
       int x, y, z;
    };
 
-   int m_version;
    int m_editFlags;
    int m_loadAttempts;
    int m_cacheNodeIndex;
@@ -303,7 +303,12 @@ private:
    SmallArray <Path> m_paths;
    SmallArray <uint8> m_vistable;
 
-   String m_tempStrings;
+   String m_graphAuthor;
+   String m_graphModified;
+
+   ExtenHeader m_extenHeader {};
+   StorageHeader m_graphHeader {};
+
    edict_t *m_editor;
 
 public:
@@ -385,6 +390,7 @@ public:
    void convertCampDirection (Path &path);
    void setAutoPathDistance (const float distance);
    void showStats ();
+   void showFileInfo ();
 
    const char *getDataDirectory (bool isMemoryFile = false);
    const char *getOldFormatGraphName (bool isMemoryFile = false);
@@ -407,7 +413,11 @@ public:
    }
 
    StringRef getAuthor () const {
-      return m_tempStrings;
+      return m_graphAuthor;
+   }
+
+   StringRef getModifiedBy () const {
+      return m_graphModified;
    }
 
    bool hasChanged () const {
@@ -473,7 +483,7 @@ template <typename ...Args> bool BotGraph::raiseLoadingError (bool isGraph, MemF
    if (isGraph) {
       bots.kickEveryone (true);
 
-      m_tempStrings = result;
+      m_graphAuthor = result;
       m_paths.clear ();
    }
    file.close ();

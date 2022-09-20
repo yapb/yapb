@@ -294,10 +294,16 @@ void BotSupport::checkWelcome () {
          game.serverCommand ("speak \"%s\"", m_sentences.random ());
       }
       String authorStr = "Official Navigation Graph";
+
       StringRef graphAuthor = graph.getAuthor ();
+      StringRef graphModified = graph.getModifiedBy ();
 
       if (!graphAuthor.startsWith (product.folder)) {
          authorStr.assignf ("Navigation Graph by: %s", graphAuthor);
+
+         if (!graphModified.empty ()) {
+            authorStr.appendf (" (Modified by: %s)", graphModified);
+         }
       }
 
       MessageWriter (MSG_ONE, msgs.id (NetMsg::TextMsg), nullptr, receiveEntity)
