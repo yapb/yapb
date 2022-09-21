@@ -1796,7 +1796,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
                   strings.copy (m_extenHeader.modified, exten->modified, cr::bufsize (exten->modified));
                }
                else {
-                  strings.copy (m_extenHeader.modified, "(none)", cr::bufsize (exten->author));
+                  strings.copy (m_extenHeader.modified, "(none)", cr::bufsize (exten->modified));
                }
                m_extenHeader.mapSize = exten->mapSize;
             }
@@ -1890,7 +1890,7 @@ bool BotGraph::saveGraphData () {
 
    ExtenHeader exten {};
 
-   // only modified the author if no author currenlty assigned in graph file
+   // only modify the author if no author currenlty assigned to graph file
    if (m_graphAuthor.empty ()) {
       strings.copy (exten.author, author.chars (), cr::bufsize (exten.author));
    }

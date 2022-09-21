@@ -123,7 +123,7 @@ struct StorageHeader {
 // extension header for graph information
 struct ExtenHeader {
    char author[32]; // original author of graph
-   int32 mapSize; // bsp size for checksumming map consitency
+   int32 mapSize; // bsp size for checksumming map consistency
    char modified[32]; // by whom modified
 };
 
