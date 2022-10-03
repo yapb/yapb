@@ -70,7 +70,7 @@ CR_DECLARE_SCOPED_ENUM (StorageOption,
 
 // storage header versions
 CR_DECLARE_SCOPED_ENUM (StorageVersion,
-   Graph = 3,
+   Graph = 2,
    Practice = 1,
    Vistable = 1,
    Matrix = 1,

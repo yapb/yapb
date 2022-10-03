@@ -1744,10 +1744,10 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
    }
 
    // check the version
-   if (hdr.version > version) {
-      if (tryReload ()) {
-         return true;
-      }
+   if (hdr.version > version && isGraph) {
+       ctrl.msg ("Graph version mismatch %s (filename: '%s'). Version number differs (got: '%d', need: '%d') Please, upgrade %s.", name, filename, hdr.version, version, product.name);
+   }
+   else if (hdr.version > version && !isGraph) {
       return raiseLoadingError (isGraph, file, "Damaged %s (filename: '%s'). Version number differs (got: '%d', need: '%d').", name, filename, hdr.version, version);
    }
 
@@ -1782,17 +1782,13 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
 
          // author of graph.. save
          if ((hdr.options & StorageOption::Exten) && exten != nullptr) {
-            size_t extenSize = sizeof (ExtenHeader);
-
-            if (hdr.version < 3) {
-               extenSize -= sizeof (char[32]); // modified by
-            }
-            file.read (exten, extenSize);
+            auto extenSize = sizeof (ExtenHeader);
+            auto actuallyRead = file.read (exten, extenSize) * extenSize;
 
             if (isGraph) {
                strings.copy (m_extenHeader.author, exten->author, cr::bufsize (exten->author));
 
-               if (hdr.version > 2) {
+               if (extenSize <= actuallyRead) {
                   strings.copy (m_extenHeader.modified, exten->modified, cr::bufsize (exten->modified));
                }
                else {
@@ -1837,8 +1833,9 @@ bool BotGraph::loadGraphData () {
       else {
          m_graphAuthor.assign (exten.author);
       }
+      StringRef modified = exten.modified;
 
-      if (m_graphHeader.version > 2) {
+      if (!modified.empty () && !modified.contains ("(none)")) {
          m_graphModified.assign (exten.modified);
       }
 
