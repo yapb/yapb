@@ -33,6 +33,9 @@ void BotGraph::reset () {
    for (int team = Team::Terrorist; team < kGameTeamNum; ++team) {
       m_highestDamage[team] = 1;
    }
+
+   m_graphAuthor.clear ();
+   m_graphModified.clear ();
 }
 
 int BotGraph::clearConnections (int index) {
