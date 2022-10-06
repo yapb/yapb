@@ -1739,7 +1739,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
    }
 
    // check the count
-   if (hdr.length == 0 || hdr.length > kMaxNodes) {
+   if (hdr.length == 0 || hdr.length > kMaxNodes || hdr.length < kMaxNodeLinks) {
       if (tryReload ()) {
          return true;
       }
@@ -1831,7 +1831,7 @@ bool BotGraph::loadGraphData () {
       }
 
       if ((outOptions & StorageOption::Official) || strncmp (exten.author, "official", 8) == 0 || strlen (exten.author) < 2) {
-         m_graphAuthor.assign (product.folder);
+         m_graphAuthor.assign (product.name);
       }
       else {
          m_graphAuthor.assign (exten.author);
@@ -1867,40 +1867,39 @@ bool BotGraph::canDownload () {
 
 bool BotGraph::saveGraphData () {
    auto options = StorageOption::Graph | StorageOption::Exten;
-   String author;
+   String editorName;
 
    if (game.isNullEntity (m_editor) && !m_graphAuthor.empty ()) {
-      author = m_graphAuthor;
+      editorName = m_graphAuthor;
 
       if (!game.isDedicated ()) {
          options |= StorageOption::Recovered;
       }
    }
    else if (!game.isNullEntity (m_editor)) {
-      author = m_editor->v.netname.chars ();
+      editorName = m_editor->v.netname.chars ();
    }
    else {
-      author = product.name;
+      editorName = product.name;
    }
 
    // mark as official
-   if (author.startsWith (product.name)) {
+   if (editorName.startsWith (product.name)) {
       options |= StorageOption::Official;
    }
-
    ExtenHeader exten {};
 
    // only modify the author if no author currenlty assigned to graph file
-   if (m_graphAuthor.empty ()) {
-      strings.copy (exten.author, author.chars (), cr::bufsize (exten.author));
+   if (m_graphAuthor.empty () || strings.isEmpty (m_extenHeader.author)) {
+      strings.copy (exten.author, editorName.chars (), cr::bufsize (exten.author));
    }
    else {
       strings.copy (exten.author, m_extenHeader.author, cr::bufsize (exten.author));
    }
 
    // only update modified by, if name differs
-   if (m_graphAuthor != author && strncmp (m_extenHeader.author, m_extenHeader.modified, cr::bufsize (m_extenHeader.author)) != 0) {
-      strings.copy (exten.modified, author.chars (), cr::bufsize (exten.author));
+   if (m_graphAuthor != editorName && !strings.isEmpty (m_extenHeader.author)) {
+      strings.copy (exten.modified, editorName.chars (), cr::bufsize (exten.author));
    }
    exten.mapSize = getBspSize ();
 

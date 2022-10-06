@@ -1404,6 +1404,12 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
       return;
    }
 
+   // astar needs some nodes to work with
+   if (graph.length () < kMaxNodeLinks) {
+      logger.error ("A* Search for bot \"%s\" has failed due to too small number of nodes (%d). Seems to be graph is broken.", pev->netname.chars (), graph.length ());
+      return;
+   }
+
    // holders for heuristic functions
    static Lambda <float (int, int, int)> gcalc, hcalc;
 
