@@ -1898,7 +1898,10 @@ bool BotGraph::saveGraphData () {
       strings.copy (exten.author, m_extenHeader.author, cr::bufsize (exten.author));
    }
 
-   strings.copy (exten.modified, author.chars (), cr::bufsize (exten.author)); // always update modified by
+   // only update modified by, if name differs
+   if (m_graphAuthor != author && strncmp (m_extenHeader.author, m_extenHeader.modified, cr::bufsize (m_extenHeader.author)) != 0) {
+      strings.copy (exten.modified, author.chars (), cr::bufsize (exten.author));
+   }
    exten.mapSize = getBspSize ();
 
    // ensure narrow places saved into file
