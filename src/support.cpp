@@ -298,7 +298,7 @@ void BotSupport::checkWelcome () {
       StringRef graphAuthor = graph.getAuthor ();
       StringRef graphModified = graph.getModifiedBy ();
 
-      if (!graphAuthor.startsWith (product.folder)) {
+      if (!graphAuthor.startsWith (product.name)) {
          authorStr.assignf ("Navigation Graph by: %s", graphAuthor);
 
          if (!graphModified.empty ()) {
