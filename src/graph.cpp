@@ -1793,7 +1793,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
 
                if (extenSize <= actuallyRead) {
                   // write modified by, only if the name is different
-                  if (strncmp (m_extenHeader.author, exten->modified, cr::bufsize (m_extenHeader.author)) != 0) {
+                  if (!strings.isEmpty (m_extenHeader.author) && strncmp (m_extenHeader.author, exten->modified, cr::bufsize (m_extenHeader.author)) != 0) {
                      strings.copy (m_extenHeader.modified, exten->modified, cr::bufsize (exten->modified));
                   }
                }
