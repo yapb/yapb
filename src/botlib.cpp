@@ -3687,10 +3687,10 @@ void Bot::camp_ () {
          }
       }
       else {
-         if (!game.isNullEntity (m_lastEnemy)) {
+         if ((!game.isNullEntity (m_lastEnemy) && !m_lastEnemyOrigin.empty ()) || util.isAlive (m_lastEnemy)) {
             auto lastEnemyNearestIndex = graph.getNearest (m_lastEnemy->v.origin);
 
-            if (!util.isAlive (m_lastEnemy) && rg.get (1, 3) == 1 && graph.isVisible (m_currentNodeIndex, lastEnemyNearestIndex)) {
+            if (lastEnemyNearestIndex != kInvalidNodeIndex && graph.isVisible (m_currentNodeIndex, lastEnemyNearestIndex)) {
                m_camp = graph[lastEnemyNearestIndex].origin;
             }
          }
