@@ -3688,7 +3688,7 @@ void Bot::camp_ () {
       }
       else {
          if ((!game.isNullEntity (m_lastEnemy) && !m_lastEnemyOrigin.empty ()) || util.isAlive (m_lastEnemy)) {
-            auto lastEnemyNearestIndex = graph.getNearest (m_lastEnemy->v.origin);
+            auto lastEnemyNearestIndex = findAimingNode (m_lastEnemyOrigin);
 
             if (lastEnemyNearestIndex != kInvalidNodeIndex && graph.isVisible (m_currentNodeIndex, lastEnemyNearestIndex)) {
                m_camp = graph[lastEnemyNearestIndex].origin;
