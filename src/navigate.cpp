@@ -1794,7 +1794,7 @@ int Bot::findNearestNode () {
       if (distance < minimum) {
 
          // if bot doing navigation, make sure node really visible and not too high
-         if ((m_currentNodeIndex != kInvalidNodeIndex && graph.isVisible (m_currentNodeIndex, at)) || isReachableNode (at)) {
+         if ((m_currentNodeIndex != kInvalidNodeIndex && graph.isVisible (m_currentNodeIndex, at) && graph.isVisible (at, m_currentNodeIndex)) || isReachableNode (at)) {
             index = at;
             minimum = distance;
          }
@@ -3138,10 +3138,10 @@ bool Bot::isReachableNode (int index) {
    float ladderDist = dst.distance2d (src);
 
    TraceResult tr {};
-   game.testLine (src, dst, TraceIgnore::Monsters, ent (), &tr);
+   game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
 
    // if node is visible from current position (even behind head)...
-   if (tr.flFraction >= 1.0f) {
+   if (tr.flFraction >= 1.0f && !tr.fStartSolid) {
 
       // it's should be not a problem to reach node inside water...
       if (pev->waterlevel == 2 || pev->waterlevel == 3) {
