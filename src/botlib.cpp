@@ -520,7 +520,7 @@ void Bot::updatePickups () {
    // this function finds Items to collect or use in the near of a bot
 
    // don't try to pickup anything while on ladder or trying to escape from bomb...
-   if (isOnLadder () || getCurrentTaskId () == Task::EscapeFromBomb || !cv_pickup_best.bool_ () || cv_jasonmode.bool_ () || !bots.hasIntrestingEntities ()) {
+   if (isOnLadder () || getCurrentTaskId () == Task::EscapeFromBomb || !cv_pickup_best.bool_ () || cv_jasonmode.bool_ () || m_seeEnemyTime + 5.0f > game.time () || !game.isNullEntity (m_enemy) || !bots.hasIntrestingEntities ()) {
       m_pickupItem = nullptr;
       m_pickupType = Pickup::None;
 
@@ -2003,7 +2003,7 @@ void Bot::filterTasks () {
       }
    
       // if half of the round is over, allow hunting
-      if (getCurrentTaskId () != Task::EscapeFromBomb && game.isNullEntity (m_enemy) && bots.getRoundMidTime () < game.time () && !m_isUsingGrenade && m_currentNodeIndex != graph.getNearest (m_lastEnemyOrigin) && m_personality != Personality::Careful && !cv_ignore_enemies.bool_ ()) {
+      if (getCurrentTaskId () != Task::EscapeFromBomb && game.isNullEntity (m_enemy) && !m_isVIP && bots.getRoundMidTime () < game.time () && !hasHostage () && !m_isUsingGrenade && m_currentNodeIndex != graph.getNearest (m_lastEnemyOrigin) && m_personality != Personality::Careful && !cv_ignore_enemies.bool_ ()) {
          float desireLevel = 4096.0f - ((1.0f - tempAgression) * m_lastEnemyOrigin.distance (pev->origin));
 
          desireLevel = (100.0f * desireLevel) / 4096.0f;
