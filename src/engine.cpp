@@ -1032,8 +1032,10 @@ bool Game::isShootableBreakable (edict_t *ent) {
       return false;
    }
 
-   if (strcmp (ent->v.classname.chars (), "func_breakable") == 0 || (strcmp (ent->v.classname.chars (), "func_pushable") == 0 && (ent->v.spawnflags & SF_PUSH_BREAKABLE))) {
-      return !cr::fequal (ent->v.takedamage, DAMAGE_NO) && ent->v.impulse <= 0 && !(ent->v.flags & FL_WORLDBRUSH) && !(ent->v.spawnflags & SF_BREAK_TRIGGER_ONLY) && ent->v.health < 500.0f;
+   if (strcmp (ent->v.classname.chars (), "func_breakable") == 0 || (strcmp (ent->v.classname.chars (), "func_pushable") == 0 && (ent->v.spawnflags & SF_PUSH_BREAKABLE)) || (strcmp (ent->v.classname.chars (), "func_wall") == 0 && ent->v.health < 500.0f)) {
+      if (ent->v.takedamage != DAMAGE_NO && ent->v.impulse <= 0 && !(ent->v.flags & FL_WORLDBRUSH) && !(ent->v.spawnflags & SF_BREAK_TRIGGER_ONLY)) {
+         return (ent->v.movetype == MOVETYPE_PUSH || ent->v.movetype == MOVETYPE_PUSHSTEP);
+      }
    }
    return false;
 }
