@@ -10,7 +10,7 @@
 ConVar cv_graph_fixcamp ("yb_graph_fixcamp", "1", "Specifies whether bot should not 'fix' camp directions of camp waypoints when loading old PWF format.");
 ConVar cv_graph_url ("yb_graph_url", product.download.chars (), "Specifies the URL from bots will be able to download graph in case of missing local one. Set to empty, if no downloads needed.", false, 0.0f, 0.0f);
 ConVar cv_graph_auto_save_count ("yb_graph_auto_save_count", "15", "Every N graph nodes placed on map, the graph will be saved automatically (without checks).", true, 0.0f, kMaxNodes);
-ConVar cv_graph_draw_distance ("yb_graph_draw_distance", "400", "Maximum distance to draw graph nodes from editor viewport.", true, 64.0f, 512.0f);
+ConVar cv_graph_draw_distance ("yb_graph_draw_distance", "400", "Maximum distance to draw graph nodes from editor viewport.", true, 64.0f, 3072.0f);
 
 void BotGraph::reset () {
    // this function initialize the graph structures..
