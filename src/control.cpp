@@ -333,6 +333,7 @@ int BotControl::cmdNode () {
       addGraphCmd ("upload", "upload", "Uploads created graph to graph database.", &BotControl::cmdNodeUpload);
       addGraphCmd ("stats", "stats [noarguments]", "Shows the stats about node types on the map.", &BotControl::cmdNodeShowStats);
       addGraphCmd ("fileinfo", "fileinfo [noarguments]", "Shows basic information about graph file.", &BotControl::cmdNodeFileInfo);
+      addGraphCmd ("adjust_height", "adjust_height [height offset]", "Modifies all the graph nodes height (z-component) with specified offset.", &BotControl::cmdAdjustHeight);
 
       // add path commands
       addGraphCmd ("path_create", "path_create [noarguments]", "Opens and displays path creation menu.", &BotControl::cmdNodePathCreate);
@@ -864,6 +865,21 @@ int BotControl::cmdNodeShowStats () {
 int BotControl::cmdNodeFileInfo () {
    graph.showFileInfo ();
 
+   return BotCommandResult::Handled;
+}
+
+int BotControl::cmdAdjustHeight() {
+   enum args { graph_cmd = 1, cmd, offset };
+
+   if (!hasArg (offset)) {
+      return BotCommandResult::BadFormat;
+   }
+   auto heightOffset = floatValue (offset);
+
+   // adjust the height for all the nodes (negative values possible)
+   for (int i = 0; i < graph.length (); ++i) {
+      graph[i].origin.z += heightOffset;
+   }
    return BotCommandResult::Handled;
 }
 

@@ -124,6 +124,7 @@ private:
    int cmdNodeIterateCamp ();
    int cmdNodeShowStats ();
    int cmdNodeFileInfo ();
+   int cmdAdjustHeight ();
 
 private:
    int menuMain (int item);
@@ -185,6 +186,13 @@ public:
          return 0;
       }
       return m_args[arg].int_ ();
+   }
+
+   float floatValue (size_t arg) const {
+      if (!hasArg (arg)) {
+         return 0.0f;
+      }
+      return m_args[arg].float_ ();
    }
 
    StringRef strValue (size_t arg) {
