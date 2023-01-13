@@ -721,17 +721,98 @@ bool Bot::updateNavigation () {
    }
 
    if (m_path->flags & NodeFlag::Ladder) {
-      if (m_pathOrigin.z >= (pev->origin.z + 16.0f)) {
-         m_pathOrigin = m_path->origin + Vector (0.0f, 0.0f, 16.0f);
-      }
-      else if (m_pathOrigin.z < pev->origin.z + 16.0f && !isOnLadder () && isOnFloor () && !(pev->flags & FL_DUCKING)) {
-         m_moveSpeed = nodeDistance;
-
-         if (m_moveSpeed < 150.0f) {
-            m_moveSpeed = 150.0f;
+      if (!m_pathWalk.empty ()) {
+         if (m_pathWalk.hasNext ()) {
+            if (graph[m_pathWalk.next ()].flags & NodeFlag::Ladder || isOnLadder ()) {
+               m_path->radius = 17.0f;
+            }
          }
-         else if (m_moveSpeed > pev->maxspeed) {
-            m_moveSpeed = pev->maxspeed;
+      }
+      
+	   if (!(graph[m_previousNodes[0]].flags & NodeFlag::Ladder)) {
+         if (cr::abs (m_pathOrigin.z - pev->origin.z) > 5.0f) {
+            m_pathOrigin.z += pev->origin.z - m_pathOrigin.z;
+         }
+         if (m_pathOrigin.z > (pev->origin.z + 16.0f)) {
+            m_pathOrigin = m_path->origin - Vector (0.0f, 0.0f, 16.0f);
+         }
+         if (m_pathOrigin.z < (pev->origin.z - 16.0f)) {
+            m_pathOrigin = m_path->origin + Vector (0.0f, 0.0f, 16.0f);
+         }
+      }
+      m_destOrigin = m_pathOrigin;
+	  
+      // special detection if someone is using the ladder (to prevent to have bots-towers on ladders)
+      for (const auto &client : util.getClients ()) {
+         if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || (client.ent->v.movetype != MOVETYPE_FLY) || client.ent == nullptr || client.ent == ent ()) {
+            continue;
+         }
+         TraceResult tr {};
+         bool foundGround = false;
+         int previousNode = 0;
+
+         // more than likely someone is already using our ladder...
+         if (client.ent->v.origin.distance (m_path->origin) < 40.0f) {
+            if ((client.team != m_team || game.is (GameFlags::FreeForAll)) && !cv_ignore_enemies.bool_ ()) {
+               game.testLine (getEyesPos (), client.ent->v.origin, TraceIgnore::Monsters, ent (), &tr);
+
+               // bot found an enemy on his ladder - he should see him...
+               if (tr.pHit == client.ent) {
+                  m_enemy = client.ent;
+                  m_lastEnemy = client.ent;
+                  m_lastEnemyOrigin = client.ent->v.origin;
+                  m_enemyParts = Visibility::None;
+                  m_enemyParts = Visibility::Head;
+                  m_enemyParts = Visibility::Body;
+                  m_states |= Sense::SeeingEnemy;
+                  m_seeEnemyTime = game.time ();
+                  break;
+               }
+            }
+            else {
+               if (graph.exists (m_previousNodes[0])) {
+                  getEyesPos () = graph[m_previousNodes[0]].origin;
+               }
+               else {
+                  game.testHull (getEyesPos (), m_path->origin, TraceIgnore::Monsters, pev->flags & FL_DUCKING ? head_hull : human_hull, ent (), &tr);
+
+                  // someone is above or below us
+                  // and is using the ladder already
+                  if (tr.pHit == client.ent && cr::abs (pev->origin.z - client.ent->v.origin.z) > 15.0f && (client.ent->v.movetype == MOVETYPE_FLY)) {
+                     if (graph.exists (m_previousNodes[0])) {
+                        if (!(graph[m_previousNodes[0]].flags & NodeFlag::Ladder)) {
+                           foundGround = true;
+                           previousNode = m_previousNodes[0];
+                        }
+                        else if (graph.exists (m_previousNodes[1])) {
+                           if (!(graph[m_previousNodes[1]].flags & NodeFlag::Ladder)) {
+                              foundGround = true;
+                              previousNode = m_previousNodes[1];
+                           }
+                           else if (graph.exists (m_previousNodes[2])) {
+                              if (!(graph[m_previousNodes[2]].flags & NodeFlag::Ladder)) {
+                                 foundGround = true;
+                                 previousNode = m_previousNodes[2];
+                              }
+                              else if (graph.exists (m_previousNodes[3])) {
+                                 if (!(graph[m_previousNodes[3]].flags & NodeFlag::Ladder)) {
+                                    foundGround = true;
+                                    previousNode = m_previousNodes[3];
+                                 }
+                              }
+                           }
+                        }
+                     }
+                     if (foundGround) {
+                        if (getCurrentTaskId () != Task::MoveToPosition || !cr::fequal (getTask ()->desire, TaskPri::PlantBomb)) {
+                           m_currentNodeIndex = m_previousNodes[0];
+                           startTask (Task::MoveToPosition, TaskPri::PlantBomb, previousNode, 0.0f, true);
+                        }
+                        break;
+                     }
+                  }
+               }
+            }
          }
       }
    }
