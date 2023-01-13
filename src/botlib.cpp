@@ -2831,9 +2831,9 @@ void Bot::updateAimDir () {
          else {
             m_aimFlags &= ~AimFlags::PredictPath;
 
-            m_lookAt = m_destOrigin;
-            m_timeNextTracking = game.time () + 1.5f;
-            m_trackingEdict = nullptr;
+            if (!m_camp.empty ()) {
+               m_lookAt = m_camp;
+            }
          }
       }
       else {
@@ -4929,12 +4929,43 @@ void Bot::logic () {
    if (m_moveToGoal) {
       findValidNode ();
 
+      bool prevLadder = false;
+
+      if (graph.exists (m_previousNodes[0])) {
+         if (graph[m_previousNodes[0]].flags & NodeFlag::Ladder) {
+            prevLadder = true;
+         }
+      }
+      
       // press duck button if we need to
       if ((m_path->flags & NodeFlag::Crouch) && !(m_path->flags & (NodeFlag::Camp | NodeFlag::Goal))) {
          pev->button |= IN_DUCK;
       }
       m_lastUsedNodesTime = game.time ();
 
+      // press jump button if we need to leave the ladder
+      if (!(m_path->flags & NodeFlag::Ladder) && prevLadder && isOnFloor () && isOnLadder () && m_moveSpeed > 50.0f && pev->velocity.length () < 50.0f) {
+         pev->button |= IN_JUMP;
+         m_jumpTime = game.time () + 1.0f;
+      }
+      
+      if (m_path->flags & NodeFlag::Ladder) {
+         if (m_pathOrigin.z < pev->origin.z + 16.0f && !isOnLadder () && isOnFloor () && !(pev->flags & FL_DUCKING)) {
+            if (!prevLadder) {
+               m_moveSpeed = pev->origin.distance (m_pathOrigin);
+            }
+            else {
+               m_moveSpeed = 150.0f;
+            }
+            if (m_moveSpeed < 150.0f) {
+               m_moveSpeed = 150.0f;
+            }
+            else if (m_moveSpeed > pev->maxspeed) {
+               m_moveSpeed = pev->maxspeed;
+            }
+         }
+      }
+      
       // special movement for swimming here
       if (isInWater ()) {
          // check if we need to go forward or back press the correct buttons
@@ -4998,7 +5029,7 @@ void Bot::logic () {
    }
 
    if (m_jumpTime + 0.85f > game.time ()) {
-      if (!isOnFloor () && !isInWater ()) {
+      if (!isOnFloor () && !isInWater () && !isOnLadder ()) {
          pev->button |= IN_DUCK;
       }
    }
@@ -5702,7 +5733,7 @@ void Bot::checkBurstMode (float distance) {
 }
 
 void Bot::checkSilencer () {
-   if ((m_currentWeapon == Weapon::USP || m_currentWeapon == Weapon::M4A1) && !hasShield ()) {
+   if ((m_currentWeapon == Weapon::USP || m_currentWeapon == Weapon::M4A1) && !hasShield () && game.isNullEntity (m_enemy)) {
       int prob = (m_personality == Personality::Rusher ? 35 : 65);
 
       // aggressive bots don't like the silencer
