@@ -2264,10 +2264,7 @@ void BotGraph::frame () {
             Color nodeColor { -1, -1, -1 };
 
             // colorize all other nodes
-            if (path.flags & NodeFlag::Camp) {
-               nodeColor = { 0, 255, 255 };
-            }
-            else if (path.flags & NodeFlag::Goal) {
+            if (path.flags & NodeFlag::Goal) {
                nodeColor = { 128, 0, 255 };
             }
             else if (path.flags & NodeFlag::Ladder) {
@@ -2275,6 +2272,23 @@ void BotGraph::frame () {
             }
             else if (path.flags & NodeFlag::Rescue) {
                nodeColor = { 255, 255, 255 };
+            }
+            else if (path.flags & NodeFlag::Camp) {
+               if (path.flags & NodeFlag::TerroristOnly) {
+                  nodeColor = { 255, 160, 160 };
+               }
+               else if (path.flags & NodeFlag::CTOnly) {
+                  nodeColor = { 255, 160, 255 };
+               }
+               else {
+                  nodeColor = { 0, 255, 255 };
+               }
+            }
+            else if (path.flags & NodeFlag::TerroristOnly) {
+               nodeColor = { 255, 0, 0 };
+            }
+            else if (path.flags & NodeFlag::CTOnly) {
+               nodeColor = { 0, 0, 255 };
             }
             else {
                nodeColor = { 0, 255, 0 };
@@ -2290,11 +2304,8 @@ void BotGraph::frame () {
             else if (path.flags & NodeFlag::NoHostage) {
                nodeFlagColor = { 255, 255, 255 };
             }
-            else if (path.flags & NodeFlag::TerroristOnly) {
-               nodeFlagColor = { 255, 0, 0 };
-            }
-            else if (path.flags & NodeFlag::CTOnly) {
-               nodeFlagColor = { 0, 0, 255 };
+            else if (path.flags & NodeFlag::Lift) {
+               nodeFlagColor = { 255, 0, 255 };
             }
             int nodeWidth = 14;
 
@@ -2381,14 +2392,14 @@ void BotGraph::frame () {
             game.drawLine (m_editor, path.origin, m_paths[link.index].origin, 5, 0, { 255, 255, 0 }, 200, 0, 10);
          }
          else { // oneway connection
-            game.drawLine (m_editor, path.origin, m_paths[link.index].origin, 5, 0, { 50, 250, 25 }, 200, 0, 10);
+            game.drawLine (m_editor, path.origin, m_paths[link.index].origin, 5, 0, { 255, 255, 255 }, 200, 0, 10);
          }
       }
 
       // now look for oneway incoming connections
       for (const auto &connected : m_paths) {
          if (isConnected (connected.number, path.number) && !isConnected (path.number, connected.number)) {
-            game.drawLine (m_editor, path.origin, connected.origin, 5, 0, { 255, 255, 255 }, 200, 0, 10);
+            game.drawLine (m_editor, path.origin, connected.origin, 5, 0, { 0, 192, 96 }, 200, 0, 10);
          }
       }
 
