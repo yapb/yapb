@@ -761,59 +761,55 @@ bool Bot::updateNavigation () {
                   m_enemy = client.ent;
                   m_lastEnemy = client.ent;
                   m_lastEnemyOrigin = client.ent->v.origin;
+
                   m_enemyParts = Visibility::None;
-                  m_enemyParts = Visibility::Head;
-                  m_enemyParts = Visibility::Body;
+                  m_enemyParts |= (Visibility::Head | Visibility::Body);
+   
                   m_states |= Sense::SeeingEnemy;
                   m_seeEnemyTime = game.time ();
                   break;
                }
             }
             else {
-               if (graph.exists (m_previousNodes[0])) {
-                  getEyesPos () = graph[m_previousNodes[0]].origin;
-               }
-               else {
-                  game.testHull (getEyesPos (), m_path->origin, TraceIgnore::Monsters, pev->flags & FL_DUCKING ? head_hull : human_hull, ent (), &tr);
+               game.testHull (getEyesPos (), m_path->origin, TraceIgnore::Monsters, pev->flags & FL_DUCKING ? head_hull : human_hull, ent (), &tr);
 
-                  // someone is above or below us
-                  // and is using the ladder already
-                  if (tr.pHit == client.ent && cr::abs (pev->origin.z - client.ent->v.origin.z) > 15.0f && (client.ent->v.movetype == MOVETYPE_FLY)) {
-                     if (graph.exists (m_previousNodes[0])) {
-                        if (!(graph[m_previousNodes[0]].flags & NodeFlag::Ladder)) {
+               // someone is above or below us and is using the ladder already
+               if (tr.pHit == client.ent && cr::abs (pev->origin.z - client.ent->v.origin.z) > 15.0f && (client.ent->v.movetype == MOVETYPE_FLY)) {
+                  if (graph.exists (m_previousNodes[0])) {
+                     if (!(graph[m_previousNodes[0]].flags & NodeFlag::Ladder)) {
+                        foundGround = true;
+                        previousNode = m_previousNodes[0];
+                     }
+                     else if (graph.exists (m_previousNodes[1])) {
+                        if (!(graph[m_previousNodes[1]].flags & NodeFlag::Ladder)) {
                            foundGround = true;
-                           previousNode = m_previousNodes[0];
+                           previousNode = m_previousNodes[1];
                         }
-                        else if (graph.exists (m_previousNodes[1])) {
-                           if (!(graph[m_previousNodes[1]].flags & NodeFlag::Ladder)) {
+                        else if (graph.exists (m_previousNodes[2])) {
+                           if (!(graph[m_previousNodes[2]].flags & NodeFlag::Ladder)) {
                               foundGround = true;
-                              previousNode = m_previousNodes[1];
+                              previousNode = m_previousNodes[2];
                            }
-                           else if (graph.exists (m_previousNodes[2])) {
-                              if (!(graph[m_previousNodes[2]].flags & NodeFlag::Ladder)) {
+                           else if (graph.exists (m_previousNodes[3])) {
+                              if (!(graph[m_previousNodes[3]].flags & NodeFlag::Ladder)) {
                                  foundGround = true;
-                                 previousNode = m_previousNodes[2];
-                              }
-                              else if (graph.exists (m_previousNodes[3])) {
-                                 if (!(graph[m_previousNodes[3]].flags & NodeFlag::Ladder)) {
-                                    foundGround = true;
-                                    previousNode = m_previousNodes[3];
-                                 }
+                                 previousNode = m_previousNodes[3];
                               }
                            }
                         }
                      }
-                     if (foundGround) {
-                        if (getCurrentTaskId () != Task::MoveToPosition || !cr::fequal (getTask ()->desire, TaskPri::PlantBomb)) {
-                           m_currentNodeIndex = m_previousNodes[0];
-                           startTask (Task::MoveToPosition, TaskPri::PlantBomb, previousNode, 0.0f, true);
-                        }
-                        break;
+                  }
+                  if (foundGround) {
+                     if (getCurrentTaskId () != Task::MoveToPosition || !cr::fequal (getTask ()->desire, TaskPri::PlantBomb)) {
+                        m_currentNodeIndex = m_previousNodes[0];
+                        startTask (Task::MoveToPosition, TaskPri::PlantBomb, previousNode, 0.0f, true);
                      }
+                     break;
                   }
                }
             }
          }
+         
       }
    }
 
