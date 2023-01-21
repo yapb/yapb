@@ -321,7 +321,7 @@ public:
    int getFarest (const Vector &origin, float maxDistance = 32.0);
    int getNearest (const Vector &origin, float minDistance = kInfiniteDistance, int flags = -1);
    int getNearestNoBuckets (const Vector &origin, float minDistance = kInfiniteDistance, int flags = -1);
-   int getEditorNeareset ();
+   int getEditorNearest ();
    int getDangerIndex (int team, int start, int goal);
    int getDangerValue (int team, int start, int goal);
    int getDangerDamage (int team, int start, int goal);

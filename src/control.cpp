@@ -564,7 +564,7 @@ int BotControl::cmdNodeCache () {
    // turn graph on
    graph.setEditFlag (GraphEdit::On);
 
-   // if "neareset" or nothing passed delete neareset, else delete by index
+   // if "nearest" or nothing passed delete nearest, else delete by index
    if (strValue (nearest).empty () || strValue (nearest) == "nearest") {
       graph.cachePoint (kInvalidNodeIndex);
    }
@@ -595,9 +595,9 @@ int BotControl::cmdNodeClean () {
       msg ("Done. Processed %d nodes. %d useless paths was cleared.", graph.length (), removed);
    }
    else if (strValue (option).empty () || strValue (option) == "nearest") {
-      int removed = graph.clearConnections (graph.getEditorNeareset ());
+      int removed = graph.clearConnections (graph.getEditorNearest ());
 
-      msg ("Done. Processed node %d. %d useless paths was cleared.", graph.getEditorNeareset (), removed);
+      msg ("Done. Processed node %d. %d useless paths was cleared.", graph.getEditorNearest (), removed);
    }
    else {
       int index = intValue (option);
@@ -625,7 +625,7 @@ int BotControl::cmdNodeSetRadius () {
    int radiusIndex = kInvalidNodeIndex;
 
    if (strValue (index).empty () || strValue (index) == "nearest") {
-      radiusIndex = graph.getEditorNeareset ();
+      radiusIndex = graph.getEditorNearest ();
    }
    else {
       radiusIndex = intValue (index);
@@ -1268,9 +1268,7 @@ int BotControl::menuGraphPage2 (int item) {
 
    switch (item) {
    case 1:
-      graph.showStats ();
-      showMenu (Menu::NodeMainPage2);
-
+      showMenu (Menu::NodeDebug);
       break;
 
    case 2:
@@ -1395,8 +1393,52 @@ int BotControl::menuGraphType (int item) {
    return BotCommandResult::Handled;
 }
 
+int BotControl::menuGraphDebug (int item) {
+   closeMenu (); // reset menu display
+
+   switch (item) {
+   case 1:
+      graph.setEditFlag (GraphEdit::On);
+
+      cv_debug_goal.set (graph.getEditorNearest ());
+      if (cv_debug_goal.int_ () != kInvalidNodeIndex) {
+         msg ("Debug goal is set to %d node.", cv_debug_goal.int_ ());
+      }
+      else {
+         msg ("Cannot find the node. Debug goal is disabled.");
+      }
+      showMenu (Menu::NodeDebug);
+      break;
+
+   case 2:
+      graph.setEditFlag (GraphEdit::On);
+
+      cv_debug_goal.set (graph.getFacingIndex ());
+      if (cv_debug_goal.int_ () != kInvalidNodeIndex) {
+         msg ("Debug goal is set to %d node.", cv_debug_goal.int_ ());
+      }
+      else {
+         msg ("Cannot find the node. Debug goal is disabled.");
+      }
+      showMenu (Menu::NodeDebug);
+      break;
+
+   case 3:
+      cv_debug_goal.set (kInvalidNodeIndex);
+      msg ("Debug goal is disabled.");
+      showMenu (Menu::NodeDebug);
+      break;
+
+   case 10:
+      closeMenu ();
+      break;
+   }
+   return BotCommandResult::Handled;
+}
+
 int BotControl::menuGraphFlag (int item) {
    closeMenu (); // reset menu display
+   int nearest = graph.getEditorNearest ();
 
    switch (item) {
    case 1:
@@ -1405,12 +1447,24 @@ int BotControl::menuGraphFlag (int item) {
       break;
 
    case 2:
-      graph.toggleFlags (NodeFlag::TerroristOnly);
+      if (graph[nearest].flags == NodeFlag::CTOnly) {
+         graph.toggleFlags (NodeFlag::CTOnly);
+         graph.toggleFlags (NodeFlag::TerroristOnly);
+      }
+      else {
+         graph.toggleFlags (NodeFlag::TerroristOnly);
+      }
       showMenu (Menu::NodeFlag);
       break;
 
    case 3:
-      graph.toggleFlags (NodeFlag::CTOnly);
+      if (graph[nearest].flags == NodeFlag::TerroristOnly) {
+         graph.toggleFlags (NodeFlag::TerroristOnly);
+         graph.toggleFlags (NodeFlag::CTOnly);
+      }
+      else {
+         graph.toggleFlags (NodeFlag::CTOnly);
+      }
       showMenu (Menu::NodeFlag);
       break;
 
@@ -1422,6 +1476,60 @@ int BotControl::menuGraphFlag (int item) {
    case 5:
       graph.toggleFlags (NodeFlag::Sniper);
       showMenu (Menu::NodeFlag);
+      break;
+   
+   case 6:
+      graph.toggleFlags (NodeFlag::Goal);
+      showMenu (Menu::NodeFlag);
+      break;
+   
+   case 7:
+      graph.toggleFlags (NodeFlag::Rescue);
+      showMenu (Menu::NodeFlag);
+      break;
+
+   case 8:
+      if (graph[nearest].flags != NodeFlag::Crouch) {
+         graph.toggleFlags (NodeFlag::Crouch);
+         graph[nearest].origin.z += -18.0f;
+      }
+      else {
+         graph.toggleFlags (NodeFlag::Crouch);
+         graph[nearest].origin.z += 18.0f;
+      }
+      
+      showMenu (Menu::NodeFlag);
+      break;
+   
+   case 9:
+      // if the node doesn't have a camp flag, set it and open the camp directions selection menu
+      if (graph[nearest].flags != NodeFlag::Camp) {
+         graph.toggleFlags (NodeFlag::Camp);
+         showMenu (Menu::CampDirections);
+         break;
+      }
+      // otherwise remove the flag, and don't show the camp directions selection menu
+      else {
+         graph.toggleFlags (NodeFlag::Camp);
+         showMenu (Menu::NodeFlag);
+         break;
+      }
+   }
+   return BotCommandResult::Handled;
+}
+
+int BotControl::menuCampDirections (int item) {
+   closeMenu (); // reset menu display
+
+   switch (item) {
+   case 1:
+      graph.add (NodeAddFlag::Camp);
+      showMenu (Menu::CampDirections);
+      break;
+
+   case 2:
+      graph.add (NodeAddFlag::CampEnd);
+      showMenu (Menu::CampDirections);
       break;
    }
    return BotCommandResult::Handled;
@@ -2140,7 +2248,7 @@ void BotControl::createMenus () {
    m_menus.emplace (
       Menu::NodeMainPage2, keys (9),
       "\\yWaypoint Operations (Page 2)\\w\n\n"
-      "1. Waypoint stats\n"
+      "1. Debug goal\n"
       "2. Autowaypoint on/off\n"
       "3. Set flags\n"
       "4. Save waypoints\n"
@@ -2183,18 +2291,41 @@ void BotControl::createMenus () {
       "\\w9. Jump\n\n"
       "0. Exit",
       &BotControl::menuGraphType);
+   
+   // debug goal menu
+   m_menus.emplace (
+      Menu::NodeDebug, keys (3),
+      "\\yDebug goal\\w\n\n"
+      "1. Debug nearest node\n"
+      "2. Debug facing node\n"
+      "3. Stop debugging\n\n"
+      "0. Exit",
+      &BotControl::menuGraphDebug);
 
    // set waypoint flag menu
    m_menus.emplace (
-      Menu::NodeFlag, keys (5),
+      Menu::NodeFlag, keys (9),
       "\\yToggle Waypoint Flags\\w\n\n"
       "1. Block with Hostage\n"
       "2. Terrorists Specific\n"
       "3. CTs Specific\n"
       "4. Use Elevator\n"
-      "5. Sniper Point (\\yFor Camp Points Only!\\w)\n\n"
+      "5. Sniper Point (\\yFor Camp Points Only!\\w)\n"
+      "6. Map Goal\n"
+      "7. Rescue Zone\n"
+      "8. Crouch Down\n"
+      "9. Camp Point\n\n"
       "0. Exit",
       &BotControl::menuGraphFlag);
+   
+   // set camp directions menu
+   m_menus.emplace (
+      Menu::CampDirections, keys (2),
+      "\\ySet Camp Point directions\\w\n\n"
+      "1. Camp Start\n"
+      "2. Camp End\n\n"
+      "0. Exit",
+      &BotControl::menuCampDirections);
 
    // auto-path max distance
    m_menus.emplace (

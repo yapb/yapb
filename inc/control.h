@@ -140,8 +140,10 @@ private:
    int menuGraphPage2 (int item);
    int menuGraphRadius (int item);
    int menuGraphType (int item);
+   int menuGraphDebug (int item);
    int menuGraphFlag (int item);
    int menuGraphPath (int item);
+   int menuCampDirections (int item);
    int menuAutoPathDistance (int item);
    int menuKickPage1 (int item);
    int menuKickPage2 (int item);
