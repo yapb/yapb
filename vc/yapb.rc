@@ -1,6 +1,6 @@
 //
 // YaPB - Counter-Strike Bot based on PODBot by Markus Klinge.
-// Copyright © 2004-2022 YaPB Project <yapb@jeefo.net>.
+// Copyright © 2004-2023 YaPB Project <yapb@jeefo.net>.
 //
 // SPDX-License-Identifier: MIT
 //
@@ -24,7 +24,7 @@ FILETYPE 0x2 {
       BLOCK "040904E4" {   
          VALUE "CompanyName",       "YaPB Project"                                                                  "\0"
          VALUE "FileDescription",   "YaPB v" MODULE_BOT_VERSION "." MODULE_BUILD_COUNT  " - The Counter-Strike Bot" "\0"
-         VALUE "LegalCopyright",    "Copyright \251 2022 YaPB Project"                                              "\0"
+         VALUE "LegalCopyright",    "Copyright \251 2023 YaPB Project"                                              "\0"
          VALUE "OriginalFilename",  "yapb.dll"                                                                      "\0"
          VALUE "ProductName",       "YaPB"                                                                          "\0"
          VALUE "InternalName",      "YaPB DLL"                                                                      "\0"
