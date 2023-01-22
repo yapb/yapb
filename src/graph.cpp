@@ -1,6 +1,6 @@
 //
 // YaPB - Counter-Strike Bot based on PODBot by Markus Klinge.
-// Copyright © 2004-2022 YaPB Project <yapb@jeefo.net>.
+// Copyright © 2004-2023 YaPB Project <yapb@jeefo.net>.
 //
 // SPDX-License-Identifier: MIT
 //
@@ -483,7 +483,7 @@ int BotGraph::getNearestNoBuckets (const Vector &origin, float minDistance, int 
    return index;
 }
 
-int BotGraph::getEditorNeareset () {
+int BotGraph::getEditorNearest () {
    if (!hasEditFlag (GraphEdit::On)) {
       return kInvalidNodeIndex;
    }
@@ -564,7 +564,7 @@ void BotGraph::add (int type, const Vector &pos) {
 
    switch (type) {
    case NodeAddFlag::Camp:
-      index = getEditorNeareset ();
+      index = getEditorNearest ();
 
       if (index != kInvalidNodeIndex) {
          path = &m_paths[index];
@@ -580,7 +580,7 @@ void BotGraph::add (int type, const Vector &pos) {
       break;
 
    case NodeAddFlag::CampEnd:
-      index = getEditorNeareset ();
+      index = getEditorNearest ();
 
       if (index != kInvalidNodeIndex) {
          path = &m_paths[index];
@@ -597,7 +597,7 @@ void BotGraph::add (int type, const Vector &pos) {
       return;
 
    case NodeAddFlag::JumpStart:
-      index = getEditorNeareset ();
+      index = getEditorNearest ();
 
       if (index != kInvalidNodeIndex && m_paths[index].number >= 0) {
          float distance = m_editor->v.origin.distance (m_paths[index].origin);
@@ -615,7 +615,7 @@ void BotGraph::add (int type, const Vector &pos) {
       break;
 
    case NodeAddFlag::JumpEnd:
-      index = getEditorNeareset ();
+      index = getEditorNearest ();
 
       if (index != kInvalidNodeIndex && m_paths[index].number >= 0) {
          float distance = m_editor->v.origin.distance (m_paths[index].origin);
@@ -639,7 +639,7 @@ void BotGraph::add (int type, const Vector &pos) {
    }
 
    if (addNewNode) {
-      auto nearest = getEditorNeareset ();
+      auto nearest = getEditorNearest ();
 
       // do not allow to place waypoints "inside" waypoints, make at leat 10 units range
       if (exists (nearest) && newOrigin.distanceSq (m_paths[nearest].origin) < cr::square (10.0f)) {
@@ -837,7 +837,7 @@ void BotGraph::erase (int target) {
    if (bots.hasBotsOnline ()) {
       bots.kickEveryone (true);
    }
-   const int index = (target == kInvalidNodeIndex) ? getEditorNeareset () : target;
+   const int index = (target == kInvalidNodeIndex) ? getEditorNearest () : target;
 
    if (!exists (index)) {
       return;
@@ -878,7 +878,7 @@ void BotGraph::erase (int target) {
 void BotGraph::toggleFlags (int toggleFlag) {
    // this function allow manually changing flags
 
-   int index = getEditorNeareset ();
+   int index = getEditorNearest ();
 
    if (index != kInvalidNodeIndex) {
       if (m_paths[index].flags & toggleFlag) {
@@ -900,7 +900,7 @@ void BotGraph::toggleFlags (int toggleFlag) {
 void BotGraph::setRadius (int index, float radius) {
    // this function allow manually setting the zone radius
 
-   int node = exists (index) ? index : getEditorNeareset ();
+   int node = exists (index) ? index : getEditorNearest ();
 
    if (node != kInvalidNodeIndex) {
       m_paths[node].radius = static_cast <float> (radius);
@@ -930,7 +930,7 @@ int BotGraph::getFacingIndex () {
    // find the waypoint the user is pointing at
 
    Twin <int32, float> result { kInvalidNodeIndex, 5.32f };
-   auto nearestNode = getEditorNeareset ();
+   auto nearestNode = getEditorNearest ();
 
    // check bounds from eyes of editor
    const auto &editorEyes = m_editor->v.origin + m_editor->v.view_ofs;
@@ -974,7 +974,7 @@ int BotGraph::getFacingIndex () {
 void BotGraph::pathCreate (char dir) {
    // this function allow player to manually create a path from one node to another
 
-   int nodeFrom = getEditorNeareset ();
+   int nodeFrom = getEditorNearest ();
 
    if (nodeFrom == kInvalidNodeIndex) {
       ctrl.msg ("Unable to find nearest node in 50 units.");
@@ -1017,7 +1017,7 @@ void BotGraph::pathCreate (char dir) {
 void BotGraph::erasePath () {
    // this function allow player to manually remove a path from one node to another
 
-   int nodeFrom = getEditorNeareset ();
+   int nodeFrom = getEditorNearest ();
 
    if (nodeFrom == kInvalidNodeIndex) {
       ctrl.msg ("Unable to find nearest node in 50 units.");
@@ -1067,7 +1067,7 @@ void BotGraph::erasePath () {
 }
 
 void BotGraph::cachePoint (int index) {
-   int node = exists (index) ? index : getEditorNeareset ();
+   int node = exists (index) ? index : getEditorNearest ();
 
    if (node == kInvalidNodeIndex) {
       m_cacheNodeIndex = kInvalidNodeIndex;

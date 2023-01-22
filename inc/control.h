@@ -1,6 +1,6 @@
 //
 // YaPB - Counter-Strike Bot based on PODBot by Markus Klinge.
-// Copyright © 2004-2022 YaPB Project <yapb@jeefo.net>.
+// Copyright © 2004-2023 YaPB Project <yapb@jeefo.net>.
 //
 // SPDX-License-Identifier: MIT
 //
@@ -140,8 +140,10 @@ private:
    int menuGraphPage2 (int item);
    int menuGraphRadius (int item);
    int menuGraphType (int item);
+   int menuGraphDebug (int item);
    int menuGraphFlag (int item);
    int menuGraphPath (int item);
+   int menuCampDirections (int item);
    int menuAutoPathDistance (int item);
    int menuKickPage1 (int item);
    int menuKickPage2 (int item);
