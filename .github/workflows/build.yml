@@ -52,7 +52,7 @@ jobs:
 
   windows:
     name: windows-x86
-    runs-on: windows-2023
+    runs-on: windows-2022
 
     steps:
       - name: Checkout Repository
