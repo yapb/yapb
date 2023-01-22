@@ -1402,7 +1402,7 @@ int BotControl::menuGraphDebug (int item) {
 
       cv_debug_goal.set (graph.getEditorNearest ());
       if (cv_debug_goal.int_ () != kInvalidNodeIndex) {
-         msg ("Debug goal is set to %d node.", cv_debug_goal.int_ ());
+         msg ("Debug goal is set to node %d.", cv_debug_goal.int_ ());
       }
       else {
          msg ("Cannot find the node. Debug goal is disabled.");
@@ -1415,7 +1415,7 @@ int BotControl::menuGraphDebug (int item) {
 
       cv_debug_goal.set (graph.getFacingIndex ());
       if (cv_debug_goal.int_ () != kInvalidNodeIndex) {
-         msg ("Debug goal is set to %d node.", cv_debug_goal.int_ ());
+         msg ("Debug goal is set to node %d.", cv_debug_goal.int_ ());
       }
       else {
          msg ("Cannot find the node. Debug goal is disabled.");
