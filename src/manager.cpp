@@ -1195,6 +1195,11 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
       if (victimBot != nullptr) {
          if (killerTeam == victimBot->m_team) {
             victimBot->m_voteKickIndex = game.indexOfEntity (killer);
+            for (const auto &notify : bots) {
+               if (notify->seesEntity (victim->v.origin)) {
+               notify->pushChatterMessage (Chatter::TeamKill);
+               }
+            }
          }
          victimBot->m_notKilled = false;
       }
@@ -1314,7 +1319,7 @@ void Bot::newRound () {
    m_hostages.clear ();
 
    for (auto &timer : m_chatterTimes) {
-      timer = kMaxChatterRepeatInteval;
+      timer = kMaxChatterRepeatInterval;
    }
 
    m_isReloading = false;
