@@ -190,6 +190,7 @@ CR_DECLARE_SCOPED_ENUM (Chatter,
    GoingToCamp,
    HeardNoise,
    TeamAttack,
+   TeamKill,
    ReportingIn,
    GuardingDroppedC4,
    Camping,
@@ -449,7 +450,7 @@ constexpr float kInfiniteDistance = 9999999.0f;
 constexpr float kGrenadeCheckTime = 2.15f;
 constexpr float kSprayDistance = 260.0f;
 constexpr float kDoubleSprayDistance = kSprayDistance * 2;
-constexpr float kMaxChatterRepeatInteval = 99.0f;
+constexpr float kMaxChatterRepeatInterval = 99.0f;
 
 constexpr int kInfiniteDistanceLong = static_cast <int> (kInfiniteDistance);
 constexpr int kMaxNodeLinks = 8;

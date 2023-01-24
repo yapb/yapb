@@ -1029,8 +1029,8 @@ void Bot::pushChatterMessage (int message) {
    auto messageRepeat = conf.getChatterMessageRepeatInterval (message);
    auto &messageTimer = m_chatterTimes[message];
 
-   if (messageTimer < game.time () || cr::fequal (messageTimer, kMaxChatterRepeatInteval)) {
-      if (!cr::fequal (messageRepeat, kMaxChatterRepeatInteval)) {
+   if (messageTimer < game.time () || cr::fequal (messageTimer, kMaxChatterRepeatInterval)) {
+      if (!cr::fequal (messageRepeat, kMaxChatterRepeatInterval)) {
          messageTimer = game.time () + messageRepeat;
       }
       sendMessage = true;
