@@ -91,7 +91,7 @@ int BotControl::cmdFill () {
    if (!hasArg (team)) {
       return BotCommandResult::BadFormat;
    }
-   bots.serverFill (intValue (team), hasArg (personality) ? intValue (personality) : -1, hasArg (difficulty) ? intValue (difficulty) : -1, hasArg (count) ? intValue (count) : -1);
+   bots.serverFill (intValue (team), hasArg (personality) ? intValue (personality) : -1, hasArg (difficulty) ? intValue (difficulty) : -1, hasArg (count) ? intValue (count) - 1 : -1);
 
    return BotCommandResult::Handled;
 }
@@ -2030,7 +2030,7 @@ BotControl::BotControl () {
    m_cmds.emplace ("kick/kickone/kick_ct/kick_t/kickbot_ct/kickbot_t", "kick [team]", "Kicks off the random bot from the game.", &BotControl::cmdKickBot);
    m_cmds.emplace ("removebots/kickbots/kickall", "removebots [instant]", "Kicks all the bots from the game.", &BotControl::cmdKickBots);
    m_cmds.emplace ("kill/killbots/killall/kill_ct/kill_t", "kill [team]", "Kills the specified team / all the bots.", &BotControl::cmdKillBots);
-   m_cmds.emplace ("fill/fillserver", "fill [team] [count] [difficulty] [pesonality]", "Fill the server (add bots) with specified parameters.", &BotControl::cmdFill);
+   m_cmds.emplace ("fill/fillserver", "fill [team] [count] [difficulty] [personality]", "Fill the server (add bots) with specified parameters.", &BotControl::cmdFill);
    m_cmds.emplace ("vote/votemap", "vote [map_id]", "Forces all the bot to vote to specified map.", &BotControl::cmdVote);
    m_cmds.emplace ("weapons/weaponmode", "weapons [knife|pistol|shotgun|smg|rifle|sniper|standard]", "Sets the bots weapon mode to use", &BotControl::cmdWeaponMode);
    m_cmds.emplace ("menu/botmenu", "menu [cmd]", "Opens the main bot menu, or command menu if specified.", &BotControl::cmdMenu);
