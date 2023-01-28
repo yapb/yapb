@@ -9,7 +9,7 @@ project (
    'yapb',
    'cpp',
     
-   version: '4.2',
+   version: '4.3',
    license: 'MIT',
     
    default_options: [
