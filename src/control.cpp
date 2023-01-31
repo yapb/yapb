@@ -1503,8 +1503,13 @@ int BotControl::menuGraphFlag (int item) {
    
    case 9:
       // if the node doesn't have a camp flag, set it and open the camp directions selection menu
-      if (graph[nearest].flags == !(NodeFlag::Crossing && NodeFlag::Camp)) {
+      if (!(graph[nearest].flags & NodeFlag::Crossing) && !(graph[nearest].flags & NodeFlag::Camp)) {
          graph.toggleFlags (NodeFlag::Crossing);
+         graph.toggleFlags (NodeFlag::Camp);
+         showMenu (Menu::CampDirections);
+         break;
+      }
+      else if ((graph[nearest].flags & NodeFlag::Crossing) && !(graph[nearest].flags & NodeFlag::Camp)) {
          graph.toggleFlags (NodeFlag::Camp);
          showMenu (Menu::CampDirections);
          break;
