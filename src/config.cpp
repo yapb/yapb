@@ -711,6 +711,15 @@ void BotConfig::clearUsedName (Bot *bot) {
    }
 }
 
+void BotConfig::setBotNameUsed(const int index, StringRef name) {
+   for (auto &bn : m_botNames) {
+      if (bn.name == name) {
+         bn.usedBy = index;
+         break;
+      }
+   }
+}
+
 void BotConfig::initWeapons () {
    m_weapons.clear ();
 

@@ -236,6 +236,9 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
    if (botName != nullptr) {
       botName->usedBy = index; // save by who name is used
    }
+   else {
+      conf.setBotNameUsed(index, resultName);
+   }
    m_bots.push (cr::move (object));
 
    ctrl.msg ("Connecting Bot...");

@@ -111,6 +111,9 @@ public:
    // remove bot name from used list
    void clearUsedName (Bot *bot);
 
+   // set the bot names as used
+   void setBotNameUsed(const int index, StringRef name);
+
    // initialize weapon info
    void initWeapons ();
 
