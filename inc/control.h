@@ -220,6 +220,10 @@ public:
       }
    }
 
+   edict_t *getIssuer() {
+      return m_ent;
+   }
+
    // global heloer for sending message to correct channel
    template <typename ...Args> void msg (const char *fmt, Args &&...args);
 

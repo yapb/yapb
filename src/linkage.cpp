@@ -244,6 +244,11 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
          graph.setEditor (nullptr);
       }
 
+      // clear issuer for the menus and commands
+      if (ent == ctrl.getIssuer ()) {
+         ctrl.setIssuer (nullptr);
+      }
+
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
@@ -344,6 +349,10 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       // send message on new map
       util.setNeedForWelcome (false);
 
+      // clear local entity
+      game.setLocalEntity (nullptr);
+
+      // reset graph state
       graph.reset ();
 
       // clear all the bots
