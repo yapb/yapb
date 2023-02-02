@@ -2061,10 +2061,6 @@ void BotControl::handleEngineCommands () {
 }
 
 bool BotControl::handleClientSideCommandsWrapper (edict_t *ent, bool isMenus) {
-   if (ent && (ent->v.flags & FL_FAKECLIENT)) {
-      return false;
-   }
-
    collectArgs ();
    setIssuer (ent);
 
