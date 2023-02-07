@@ -1123,6 +1123,9 @@ int BotControl::menuTeamSelect (int item) {
          m_interMenuData[2] = item;
          bots.addbot ("", m_interMenuData[0], m_interMenuData[3], m_interMenuData[1], m_interMenuData[2], true);
       }
+      else if (game.is (GameFlags::ConditionZero)) {
+         showMenu (item == 1 ? Menu::TerroristSelectCZ : Menu::CTSelectCZ);
+      }
       else {
          showMenu (item == 1 ? Menu::TerroristSelect : Menu::CTSelect);
       }
@@ -1144,6 +1147,7 @@ int BotControl::menuClassSelect (int item) {
    case 3:
    case 4:
    case 5:
+   case 6:
       m_interMenuData[2] = item;
       bots.addbot ("", m_interMenuData[0], m_interMenuData[3], m_interMenuData[1], m_interMenuData[2], true);
       break;
@@ -2214,6 +2218,32 @@ void BotControl::createMenus () {
       "3. UK SAS\n"
       "4. French GIGN\n\n"
       "5. Auto-select\n\n"
+      "0. Exit",
+      &BotControl::menuClassSelect);
+
+   // condition zero terrorist model select menu
+   m_menus.emplace (
+      Menu::TerroristSelectCZ, keys (6),
+      "\\ySelect an appearance\\w\n\n"
+      "1. Phoenix Connexion\n"
+      "2. L337 Krew\n"
+      "3. Arctic Avengers\n"
+      "4. Guerilla Warfare\n"
+      "5. Midwest Militia\n\n"
+      "6. Auto-select\n\n"
+      "0. Exit",
+      &BotControl::menuClassSelect);
+
+   // condition zero counter-terrorist model select menu
+   m_menus.emplace (
+      Menu::CTSelectCZ, keys (6),
+      "\\ySelect an appearance\\w\n\n"
+      "1. Seal Team 6 (DEVGRU)\n"
+      "2. German GSG-9\n"
+      "3. UK SAS\n"
+      "4. French GIGN\n"
+      "5. Russian Spetsnaz\n\n"
+      "6. Auto-select\n\n"
       "0. Exit",
       &BotControl::menuClassSelect);
 
