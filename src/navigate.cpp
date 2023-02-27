@@ -729,15 +729,17 @@ bool Bot::updateNavigation () {
          }
       }
       
-	   if (!(graph[m_previousNodes[0]].flags & NodeFlag::Ladder)) {
-         if (cr::abs (m_pathOrigin.z - pev->origin.z) > 5.0f) {
-            m_pathOrigin.z += pev->origin.z - m_pathOrigin.z;
-         }
-         if (m_pathOrigin.z > (pev->origin.z + 16.0f)) {
-            m_pathOrigin = m_path->origin - Vector (0.0f, 0.0f, 16.0f);
-         }
-         if (m_pathOrigin.z < (pev->origin.z - 16.0f)) {
-            m_pathOrigin = m_path->origin + Vector (0.0f, 0.0f, 16.0f);
+      if (graph.exists (m_previousNodes[0])) {
+	      if (!(graph[m_previousNodes[0]].flags & NodeFlag::Ladder)) {
+            if (cr::abs (m_pathOrigin.z - pev->origin.z) > 5.0f) {
+               m_pathOrigin.z += pev->origin.z - m_pathOrigin.z;
+            }
+            if (m_pathOrigin.z > (pev->origin.z + 16.0f)) {
+               m_pathOrigin = m_path->origin + Vector (0.0f, 0.0f, 16.0f);
+            }
+            if (m_pathOrigin.z < (pev->origin.z - 16.0f)) {
+               m_pathOrigin = m_path->origin - Vector (0.0f, 0.0f, 16.0f);
+            }
          }
       }
       m_destOrigin = m_pathOrigin;
@@ -809,7 +811,6 @@ bool Bot::updateNavigation () {
                }
             }
          }
-         
       }
    }
 
@@ -1875,6 +1876,15 @@ int Bot::findNearestNode () {
             index = at;
             minimum = distance;
          }
+         else {
+            TraceResult tr;
+            game.testLine (getEyesPos (), graph[at].origin, TraceIgnore::Monsters, ent (), &tr);
+
+            if (tr.flFraction >= 1.0f && !tr.fStartSolid) {
+               index = at;
+               minimum = distance;
+            }
+         }
       }
    }
 
@@ -2049,8 +2059,8 @@ int Bot::findCoverNode (float maxDistance) {
       maxDistance = enemyMax;
    }
 
-   if (maxDistance < 300.0f) {
-      maxDistance = 300.0f;
+   if (maxDistance < 500.0f) {
+      maxDistance = 500.0f;
    }
 
    int srcIndex = m_currentNodeIndex;
@@ -3215,10 +3225,10 @@ bool Bot::isReachableNode (int index) {
    float ladderDist = dst.distance2d (src);
 
    TraceResult tr {};
-   game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
+   game.testLine (src, dst, TraceIgnore::Monsters, ent (), &tr);
 
    // if node is visible from current position (even behind head)...
-   if (tr.flFraction >= 1.0f && !tr.fStartSolid) {
+   if (tr.flFraction >= 1.0f) {
 
       // it's should be not a problem to reach node inside water...
       if (pev->waterlevel == 2 || pev->waterlevel == 3) {
