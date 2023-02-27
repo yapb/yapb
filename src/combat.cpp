@@ -1141,7 +1141,7 @@ void Bot::attackMovement () {
          m_fightStyle = Fight::Strafe;
       }
       
-      if (m_difficulty >= Difficulty::Normal && m_fightStyle == Fight::Strafe || ((pev->button & IN_RELOAD) || m_isReloading) || (usesPistol () && distance < 768.0f) || usesKnife ()) {
+      if ((m_difficulty >= Difficulty::Normal && m_fightStyle == Fight::Strafe) || ((pev->button & IN_RELOAD) || m_isReloading) || (usesPistol () && distance < 768.0f) || usesKnife ()) {
          if (m_strafeSetTime < game.time ()) {
 
             // to start strafing, we have to first figure out if the target is on the left side or right side
