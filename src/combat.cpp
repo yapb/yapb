@@ -1103,7 +1103,7 @@ void Bot::attackMovement () {
          m_moveSpeed = -pev->maxspeed;
       }
 
-      if (usesSniper () || !(m_enemyParts & (Visibility::Body | Visibility::Head))) {
+      if (usesSniper ()) {
          m_fightStyle = Fight::Stay;
          m_lastFightStyleCheck = game.time ();
       }
@@ -1111,7 +1111,7 @@ void Bot::attackMovement () {
          if (m_lastFightStyleCheck + 3.0f < game.time ()) {
             int rand = rg.get (1, 100);
 
-            if (distance < 450.0f) {
+            if (distance < 768.0f) {
                m_fightStyle = Fight::Strafe;
             }
             else if (distance < 1024.0f) {
@@ -1137,7 +1137,11 @@ void Bot::attackMovement () {
          m_fightStyle = Fight::Strafe;
       }
 
-      if (m_fightStyle == Fight::Strafe || ((pev->button & IN_RELOAD) || m_isReloading) || (usesPistol () && distance < 400.0f) || usesKnife ()) {
+      if (isInViewCone (m_enemy->v.origin) && usesKnife ()) {
+         m_fightStyle = Fight::Strafe;
+      }
+      
+      if ((m_difficulty >= Difficulty::Normal && m_fightStyle == Fight::Strafe) || ((pev->button & IN_RELOAD) || m_isReloading) || (usesPistol () && distance < 768.0f) || usesKnife ()) {
          if (m_strafeSetTime < game.time ()) {
 
             // to start strafing, we have to first figure out if the target is on the left side or right side
@@ -1176,20 +1180,12 @@ void Bot::attackMovement () {
             }
          }
 
-         if (m_difficulty >= Difficulty::Hard && (m_jumpTime + 5.0f < game.time () && isOnFloor () && rg.get (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.length2d () > 120.0f) && !usesSniper ()) {
+         if (m_difficulty >= Difficulty::Hard && (m_jumpTime + 5.0f < game.time () && isOnFloor () && rg.get (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.length2d () > 150.0f) && !usesSniper ()) {
             pev->button |= IN_JUMP;
-         }
-
-         if (m_moveSpeed > 0.0f && distance > 100.0f && !usesKnife ()) {
-            m_moveSpeed = 0.0f;
-         }
-
-         if (usesKnife ()) {
-            m_strafeSpeed = 0.0f;
          }
       }
       else if (m_fightStyle == Fight::Stay) {
-         if ((m_enemyParts & (Visibility::Head | Visibility::Body)) && !(m_enemyParts & Visibility::Other) && getCurrentTaskId () != Task::SeekCover && getCurrentTaskId () != Task::Hunt) {
+         if ((m_enemyParts & (Visibility::Head | Visibility::Body)) && getCurrentTaskId () != Task::SeekCover && getCurrentTaskId () != Task::Hunt) {
             int enemyNearestIndex = graph.getNearest (m_enemy->v.origin);
 
             if (graph.isDuckVisible (m_currentNodeIndex, enemyNearestIndex) && graph.isDuckVisible (enemyNearestIndex, m_currentNodeIndex)) {
@@ -1202,9 +1198,11 @@ void Bot::attackMovement () {
       }
    }
 
-   if (m_fightStyle == Fight::Stay || (m_duckTime > game.time () || m_sniperStopTime > game.time ())) {
-      if (m_moveSpeed > 0.0f && !usesKnife ()) {
-         m_moveSpeed = 0.0f;
+   if (m_difficulty >= Difficulty::Hard && isOnFloor () && (m_duckTime < game.time ())) {
+      if (distance < 768.0f) {
+         if (rg.get (0, 1000) < 10 && pev->velocity.length2d () > 150.0f && isInViewCone (m_enemy->v.origin)) {
+            pev->button |= IN_JUMP;
+         }
       }
    }
 
