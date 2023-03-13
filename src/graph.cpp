@@ -1565,25 +1565,33 @@ bool BotGraph::convertOldFormat () {
                // add to node array
                m_paths.push (cr::move (path));
             }
+            fp.close();
+
+               // save new format in case loaded older one
+            if (!m_paths.empty()) {
+               ctrl.msg("Converting old PWF to new format Graph.");
+
+               m_graphAuthor = header.author;
+
+               // clean editor so graph will be saved with header's author
+               auto editor = m_editor;
+               m_editor = nullptr;
+
+               auto result = saveGraphData();
+               m_editor = editor;
+
+               return result;
+            }
          }
       }
       else {
          return false;
       }
-      fp.close ();
    }
    else {
       return false;
    }
-
-   // save new format in case loaded older one
-   if (!m_paths.empty ()) {
-      ctrl.msg ("Converting old PWF to new format Graph.");
-
-      m_graphAuthor = header.author;
-      return saveGraphData ();
-   }
-   return true;
+   return false;
 }
 
 template <typename U> bool BotGraph::saveStorage (StringRef ext, StringRef name, StorageOption options, StorageVersion version, const SmallArray <U> &data, ExtenHeader *exten) {
