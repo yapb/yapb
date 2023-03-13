@@ -101,7 +101,7 @@ bool BotSupport::checkKeywords (StringRef line, String &reply) {
                      break;
                   }
                }
-               
+
                // reply not used, so use it
                if (!replyUsed) {
                   reply.assign (choosenReply); // update final buffer
@@ -181,7 +181,7 @@ void Bot::prepareChatMessage (StringRef message) {
    // get roundtime
    auto getRoundTime = [] () -> String {
       auto roundTimeSecs = static_cast <int> (bots.getRoundEndTime () - game.time ());
-      
+
       String roundTime;
       roundTime.assignf ("%02d:%02d", cr::clamp (roundTimeSecs / 60, 0, 59), cr::clamp (cr::abs (roundTimeSecs % 60), 0, 59));
 
@@ -190,7 +190,7 @@ void Bot::prepareChatMessage (StringRef message) {
 
    // get bot's victim
    auto getMyVictim = [&] () -> String {;
-      return humanizedName (game.indexOfPlayer (m_lastVictim));
+   return humanizedName (game.indexOfPlayer (m_lastVictim));
    };
 
    // get the game name alias
@@ -300,7 +300,7 @@ bool Bot::isReplyingToChat () {
          if (rg.chance (m_sayTextBuffer.chatProbability + rg.get (40, 70)) && checkChatKeywords (replyText)) {
             prepareChatMessage (replyText);
             pushMsgQueue (BotMsg::Say);
-  
+
             m_sayTextBuffer.entityIndex = -1;
             m_sayTextBuffer.timeNextChat = game.time () + m_sayTextBuffer.chatDelay;
             m_sayTextBuffer.sayText.clear ();
@@ -338,7 +338,7 @@ void Bot::checkForChat () {
          if (!sayBufferExists) {
             prepareChatMessage (phrase);
             pushMsgQueue (BotMsg::Say);
- 
+
             m_lastChatTime = game.time ();
             bots.setLastChatTimestamp (game.time ());
 

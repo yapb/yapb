@@ -326,7 +326,7 @@ bool Bot::lookupEnemies () {
          newEnemy = shieldEnemy;
       }
    }
-   
+
    if (newEnemy != nullptr && (util.isPlayer (newEnemy) || (cv_attack_monsters.bool_ () && util.isMonster (newEnemy)))) {
       bots.setCanPause (true);
 
@@ -411,7 +411,7 @@ bool Bot::lookupEnemies () {
             }
             return false;
          }
-         
+
          else if (m_shootAtDeadTime > game.time ()) {
             m_actualReactionTime = 0.0f;
             m_states |= Sense::SuspectEnemy;
@@ -791,7 +791,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
    }
 
    // is the bot holding a sniper rifle?
-   if (usesSniper () && m_zoomCheckTime < game.time ())  {
+   if (usesSniper () && m_zoomCheckTime < game.time ()) {
       // should the bot switch to the long-range zoom?
       if (distance > 1500.0f && pev->fov >= 40.0f) {
          pev->button |= IN_ATTACK2;
@@ -810,7 +810,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
    }
 
    // else is the bot holding a zoomable rifle?
-   else if (m_difficulty < Difficulty::Hard && usesZoomableRifle () && m_zoomCheckTime < game.time ())  {
+   else if (m_difficulty < Difficulty::Hard && usesZoomableRifle () && m_zoomCheckTime < game.time ()) {
       // should the bot switch to zoomed mode?
       if (distance > 800.0f && pev->fov >= 90.0f) {
          pev->button |= IN_ATTACK2;
@@ -1019,7 +1019,7 @@ void Bot::focusEnemy () {
 
    if (m_enemySurpriseTime > game.time ()) {
       return;
-   } 
+   }
    float distance = m_lookAt.distance2d (getEyesPos ()); // how far away is the enemy scum?
 
    if (distance < 128.0f && !usesSniper ()) {
@@ -1303,7 +1303,7 @@ bool Bot::usesCampGun () {
    return usesSubmachine () || usesRifle () || usesSniper () || usesHeavy ();
 }
 
-bool Bot::usesKnife (){
+bool Bot::usesKnife () {
    return m_weaponType == WeaponType::Melee;
 }
 
@@ -1311,7 +1311,7 @@ int Bot::bestPrimaryCarried () {
    // this function returns the best weapon of this bot (based on personality prefs)
 
    const int *pref = conf.getWeaponPrefs (m_personality);
-   
+
    int weaponIndex = 0;
    int weapons = pev->weapons;
 

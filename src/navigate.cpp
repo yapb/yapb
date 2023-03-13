@@ -237,7 +237,7 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offsensive) {
 
       for (auto &choice : goalChoices) {
          if (choice == kInvalidNodeIndex) {
-             choice = graph.m_rescuePoints.random ();
+            choice = graph.m_rescuePoints.random ();
          }
       }
    }
@@ -369,7 +369,7 @@ bool Bot::doPlayerAvoidance (const Vector &normal) {
    // use our movement angles, try to predict where we should be next frame
    Vector right, forward;
    m_moveAngles.angleVectors (&forward, &right, nullptr);
-      
+
    Vector predict = pev->origin + forward * m_moveSpeed * interval;
 
    predict += right * m_strafeSpeed * interval;
@@ -597,8 +597,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
             ++i;
 
 #if 0
-            if (bits & CollisionProbe::Duck)
-            {
+            if (bits & CollisionProbe::Duck) {
                state[i] = 0;
 
                if (canDuckUnder (dirNormal)) {
@@ -611,7 +610,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
             }
             else
 #endif
-            state[i] = 0;
+               state[i] = 0;
             ++i;
 
             // weighted all possible moves, now sort them to start with most probable
@@ -687,7 +686,7 @@ bool Bot::updateNavigation () {
    if (m_currentNodeIndex == kInvalidNodeIndex) {
       findValidNode ();
       m_pathOrigin = m_path->origin;
-      
+
       // if graph node radius non zero vary origin a bit depending on the body angles
       if (m_path->radius > 0.0f) {
          m_pathOrigin += Vector (pev->angles.x, cr::normalizeAngles (pev->angles.y + rg.get (-90.0f, 90.0f)), 0.0f).forward () * rg.get (0.0f, m_path->radius);
@@ -728,8 +727,8 @@ bool Bot::updateNavigation () {
             }
          }
       }
-      
-	   if (!(graph[m_previousNodes[0]].flags & NodeFlag::Ladder)) {
+
+      if (!(graph[m_previousNodes[0]].flags & NodeFlag::Ladder)) {
          if (cr::abs (m_pathOrigin.z - pev->origin.z) > 5.0f) {
             m_pathOrigin.z += pev->origin.z - m_pathOrigin.z;
          }
@@ -741,7 +740,7 @@ bool Bot::updateNavigation () {
          }
       }
       m_destOrigin = m_pathOrigin;
-	  
+
       // special detection if someone is using the ladder (to prevent to have bots-towers on ladders)
       for (const auto &client : util.getClients ()) {
          if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || (client.ent->v.movetype != MOVETYPE_FLY) || client.ent == nullptr || client.ent == ent ()) {
@@ -764,7 +763,7 @@ bool Bot::updateNavigation () {
 
                   m_enemyParts = Visibility::None;
                   m_enemyParts |= (Visibility::Head | Visibility::Body);
-   
+
                   m_states |= Sense::SeeingEnemy;
                   m_seeEnemyTime = game.time ();
                   break;
@@ -809,7 +808,7 @@ bool Bot::updateNavigation () {
                }
             }
          }
-         
+
       }
    }
 
@@ -914,7 +913,7 @@ bool Bot::updateNavigation () {
          break;
       }
    }
-   
+
    // needs precise placement - check if we get past the point
    if (desiredDistance < 22.0f && nodeDistance < 30.0f && m_pathOrigin.distanceSq (pev->origin + pev->velocity * getFrameInterval ()) >= cr::square (nodeDistance)) {
       desiredDistance = nodeDistance + 1.0f;
@@ -1168,7 +1167,7 @@ bool Bot::updateLiftHandling () {
          }
       }
       else if (!game.isNullEntity (m_liftEntity)) {
-        auto button = lookupButton (m_liftEntity->v.targetname.chars ());
+         auto button = lookupButton (m_liftEntity->v.targetname.chars ());
 
          // if we got a valid button entity
          if (!game.isNullEntity (button)) {
@@ -1294,7 +1293,7 @@ bool Bot::updateLiftStates () {
 void Bot::findShortestPath (int srcIndex, int destIndex) {
    // this function finds the shortest path from source index to destination index
 
-   if (!graph.exists (srcIndex)){
+   if (!graph.exists (srcIndex)) {
       logger.error ("%s source path index not valid (%d).", __FUNCTION__, srcIndex);
       return;
    }
@@ -1634,7 +1633,7 @@ int Bot::findAimingNode (const Vector &to) {
    if (destIndex == kInvalidNodeIndex) {
       return kInvalidNodeIndex;
    }
- 
+
    while (destIndex != m_currentNodeIndex) {
       destIndex = (graph.m_matrix.data () + (destIndex * graph.length ()) + m_currentNodeIndex)->index;
 
@@ -1692,7 +1691,7 @@ bool Bot::findBestNearestNode () {
          continue;
       }
 
-	  // check we're have link to it
+      // check we're have link to it
       if (m_currentNodeIndex != kInvalidNodeIndex && !graph.isConnected (m_currentNodeIndex, at)) {
          continue;
       }
@@ -1767,7 +1766,7 @@ bool Bot::findBestNearestNode () {
 
 float Bot::getReachTime () {
    auto task = getCurrentTaskId ();
-   float estimatedTime = 0.0f; 
+   float estimatedTime = 0.0f;
 
    switch (task) {
    case Task::Pause:
@@ -2036,7 +2035,7 @@ int Bot::findDefendNode (const Vector &origin) {
          break;
       }
    }
-   return nodeIndex[rg.get (0, (index -1) / 2)];
+   return nodeIndex[rg.get (0, (index - 1) / 2)];
 }
 
 int Bot::findCoverNode (float maxDistance) {
@@ -2194,16 +2193,16 @@ bool Bot::advanceMovement () {
    // advances in our pathfinding list and sets the appropiate destination origins for this bot
 
    findValidNode (); // check if old nodes is still reliable
-   
+
    // no nodes from pathfinding?
    if (m_pathWalk.empty ()) {
       return false;
    }
    TraceResult tr {};
-   
+
    m_pathWalk.shift (); // advance in list
    m_currentTravelFlags = 0; // reset travel flags (jumping etc)
-   
+
    // helper to change bot's goal
    auto changeNextGoal = [&] {
       int newGoal = findBestGoal ();
@@ -2807,7 +2806,7 @@ bool Bot::isDeadlyMove (const Vector &to) {
       game.testHull (check, down, TraceIgnore::Monsters, head_hull, ent (), &tr);
 
       // wall blocking?
-      if (tr.fStartSolid) { 
+      if (tr.fStartSolid) {
          return false;
       }
       float height = tr.flFraction * 1000.0f; // height from ground
@@ -2946,7 +2945,7 @@ void Bot::updateBodyAngles () {
 }
 
 void Bot::updateLookAngles () {
-   
+
    const float delta = cr::clamp (game.time () - m_lookUpdateTime, cr::kFloatEqualEpsilon, 1.0f / 30.0f);
    m_lookUpdateTime = game.time ();
 

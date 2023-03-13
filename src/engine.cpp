@@ -62,7 +62,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
    m_breakables.clear ();
 
    // initialize all config files
-   conf.loadConfigs (); 
+   conf.loadConfigs ();
 
    // update worldmodel
    illum.resetWorldModel ();
@@ -87,7 +87,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
 
    // flush any print queue
    ctrl.resetFlushTimestamp ();
-   
+
    // go thru the all entities on map, and do whatever we're want
    for (int i = 0; i < max; ++i) {
       auto ent = entities + i;
@@ -480,14 +480,14 @@ void Game::sendClientMessage (bool console, edict_t *ent, StringRef message) {
          .writeByte (console ? HUD_PRINTCONSOLE : HUD_PRINTCENTER)
          .writeString (text.chars ());
    };
-   
+
    // do not excess limit
    constexpr size_t maxSendLength = 125;
 
    // split up the string into chunks if needed (maybe check if it's multibyte?)
    if (buffer.length () > maxSendLength) {
       auto chunks = buffer.split (maxSendLength);
-     
+
       // send in chunks
       for (size_t i = 0; i < chunks.length (); ++i) {
          sendTextMsg (chunks[i]);
@@ -530,7 +530,7 @@ void Game::prepareBotArgs (edict_t *ent, String str) {
    }
 
    // helper to parse single (not multi) command
-   auto parsePartArgs = [& ] (String &args) {
+   auto parsePartArgs = [&] (String &args) {
       args.trim ("\r\n\t\" "); // trim new lines
 
       // we're have empty commands?
@@ -763,7 +763,7 @@ bool Game::loadCSBinary () {
       }
       return true;
    };
-   
+
    // search the libraries inside game dlls directory
    for (const auto &lib : libs) {
       auto path = strings.format ("%s/dlls/%s", modname, lib);
@@ -772,7 +772,7 @@ bool Game::loadCSBinary () {
       if (!File::exists (path)) {
          continue;
       }
-      
+
       // special case, czero is always detected first, as it's has custom directory
       if (strcmp (modname, "czero") == 0) {
          m_gameFlags |= (GameFlags::ConditionZero | GameFlags::HasBotVoice | GameFlags::HasFakePings);
@@ -809,7 +809,7 @@ bool Game::loadCSBinary () {
             }
             return true;
          }
-         
+
          if (entity != nullptr) {
             m_gameFlags |= (GameFlags::Modern | GameFlags::HasBotVoice | GameFlags::HasFakePings);
          }
@@ -908,18 +908,18 @@ void Game::applyGameModes () {
    case 0:
       break;
 
-   // force CSDM mode
+      // force CSDM mode
    case 1:
       m_gameFlags |= GameFlags::CSDM;
       m_gameFlags &= ~GameFlags::FreeForAll;
       return;
 
-   // force CSDM FFA mode
+      // force CSDM FFA mode
    case 2:
       m_gameFlags |= GameFlags::CSDM | GameFlags::FreeForAll;
       return;
 
-   // force disable everything
+      // force disable everything
    case 3:
       m_gameFlags &= ~(GameFlags::CSDM | GameFlags::FreeForAll);
       return;
@@ -973,7 +973,7 @@ void Game::slowFrame () {
    // check if we're need to autokill bots
    bots.maintainAutoKill ();
 
-      // update client pings
+   // update client pings
    util.calculatePings ();
 
    // maintain leaders selection upon round start
@@ -1124,7 +1124,7 @@ void LightMeasure::updateLight (int style, char *value) {
       return;
    }
 
-   if (strings.isEmpty (value)){
+   if (strings.isEmpty (value)) {
       m_lightstyle[style].length = 0u;
       m_lightstyle[style].map[0] = kNullChar;
 

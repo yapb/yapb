@@ -206,7 +206,7 @@ void MessageDispatcher::netMsgDamage () {
    if (m_args.length () < min || !m_bot) {
       return;
    }
-   
+
    // handle damage if any
    if (m_args[armor].long_ > 0 || m_args[health].long_) {
       m_bot->takeDamage (m_bot->pev->dmg_inflictor, m_args[health].long_, m_args[armor].long_, m_args[bits].long_);
@@ -283,7 +283,7 @@ void MessageDispatcher::netMsgScreenFade () {
    if (m_args.length () < min || !m_bot) {
       return;
    }
-   
+
    // screen completely faded ?
    if (m_args[r].long_ >= 255 && m_args[g].long_ >= 255 && m_args[b].long_ >= 255 && m_args[alpha].long_ > 170) {
       m_bot->takeBlind (m_args[alpha].long_);

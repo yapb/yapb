@@ -177,11 +177,11 @@ void BotSupport::traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIn
       MessageWriter msg;
 
       msg.start (MSG_BROADCAST, SVC_TEMPENTITY)
-      .writeByte (message)
-      .writeCoord (trace->vecEndPos.x)
-      .writeCoord (trace->vecEndPos.y)
-      .writeCoord (trace->vecEndPos.z)
-      .writeByte (decalIndex);
+         .writeByte (message)
+         .writeCoord (trace->vecEndPos.x)
+         .writeCoord (trace->vecEndPos.y)
+         .writeCoord (trace->vecEndPos.z)
+         .writeByte (decalIndex);
 
       if (entityIndex) {
          msg.writeShort (entityIndex);
@@ -222,7 +222,7 @@ bool BotSupport::isMonster (edict_t *ent) {
 }
 
 bool BotSupport::isItem (edict_t *ent) {
-   return !!(strstr (ent->v.classname.chars(), "item_"));
+   return !!(strstr (ent->v.classname.chars (), "item_"));
 }
 
 bool BotSupport::isPlayerVIP (edict_t *ent) {
@@ -489,7 +489,7 @@ void BotSupport::simulateNoise (int playerIndex) {
    }
 
    // pressed reload button?
-   else if (buttons & IN_RELOAD)  {
+   else if (buttons & IN_RELOAD) {
       noise.dist = 512.0f;
       noise.last = game.time () + 0.5f;
    }
@@ -637,7 +637,7 @@ void BotSupport::emitPings (edict_t *to) {
    auto isThirdpartyBot = [] (edict_t *ent) {
       return !bots[ent] && (ent->v.flags & FL_FAKECLIENT);
    };
-   
+
    for (auto &client : m_clients) {
       if (!(client.flags & ClientFlags::Used) || client.ent == game.getLocalEntity () || isThirdpartyBot (client.ent)) {
          continue;
@@ -647,7 +647,7 @@ void BotSupport::emitPings (edict_t *to) {
       if (!client.ping) {
          client.ping = getPingBitmask (client.ent, rg.get (5, 10), rg.get (15, 40));
       }
-      
+
       msg.start (MSG_ONE_UNRELIABLE, kGamePingSVC, nullptr, to)
          .writeLong (client.ping)
          .end ();
@@ -676,7 +676,7 @@ void BotSupport::installSendTo () {
 }
 
 bool BotSupport::isObjectInsidePlane (FrustumPlane &plane, const Vector &center, float height, float radius) {
-   auto isPointInsidePlane = [&](const Vector &point) -> bool {
+   auto isPointInsidePlane = [&] (const Vector &point) -> bool {
       return plane.result + (plane.normal | point) >= 0.0f;
    };
 
@@ -707,12 +707,12 @@ int32 BotSupport::sendTo (int socket, const void *message, size_t length, int fl
    const auto send = [&] (const Twin <const uint8 *, size_t> &msg) -> int32 {
       return Socket::sendto (socket, msg.first, msg.second, flags, dest, destLength);
    };
-   
+
    auto packet = reinterpret_cast <const uint8 *> (message);
 
    // player replies response
    if (length > 5 && packet[0] == 0xff && packet[1] == 0xff && packet[2] == 0xff && packet[3] == 0xff) {
-      
+
       if (packet[4] == 'D') {
          QueryBuffer buffer (packet, length, 5);
          auto count = buffer.read <uint8> ();
@@ -730,7 +730,7 @@ int32 BotSupport::sendTo (int socket, const void *message, size_t length, int fl
       else if (packet[4] == 'I') {
          QueryBuffer buffer (packet, length, 5);
          buffer.skip <uint8> (); // protocol
-         
+
          // skip server name, folder, map game
          for (size_t i = 0; i < 4; ++i) {
             buffer.skipString ();

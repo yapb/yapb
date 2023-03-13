@@ -14,7 +14,7 @@ struct BotName {
 
 public:
    BotName () = default;
-   BotName (StringRef name, int usedBy) : name (name), usedBy (usedBy) { }
+   BotName (StringRef name, int usedBy) : name (name), usedBy (usedBy) {}
 };
 
 // voice config structure definition
@@ -24,7 +24,7 @@ struct ChatterItem {
    float duration;
 
 public:
-   ChatterItem (StringRef name, float repeat, float duration) : name (name), repeat (repeat), duration (duration) { }
+   ChatterItem (StringRef name, float repeat, float duration) : name (name), repeat (repeat), duration (duration) {}
 };
 
 // mostly config stuff, and some stuff dealing with menus
@@ -112,7 +112,7 @@ public:
    void clearUsedName (Bot *bot);
 
    // set the bot names as used
-   void setBotNameUsed(const int index, StringRef name);
+   void setBotNameUsed (const int index, StringRef name);
 
    // initialize weapon info
    void initWeapons ();

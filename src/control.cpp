@@ -868,7 +868,7 @@ int BotControl::cmdNodeFileInfo () {
    return BotCommandResult::Handled;
 }
 
-int BotControl::cmdAdjustHeight() {
+int BotControl::cmdAdjustHeight () {
    enum args { graph_cmd = 1, cmd, offset };
 
    if (!hasArg (offset)) {
@@ -1481,12 +1481,12 @@ int BotControl::menuGraphFlag (int item) {
       graph.toggleFlags (NodeFlag::Sniper);
       showMenu (Menu::NodeFlag);
       break;
-   
+
    case 6:
       graph.toggleFlags (NodeFlag::Goal);
       showMenu (Menu::NodeFlag);
       break;
-   
+
    case 7:
       graph.toggleFlags (NodeFlag::Rescue);
       showMenu (Menu::NodeFlag);
@@ -1501,10 +1501,10 @@ int BotControl::menuGraphFlag (int item) {
          graph.toggleFlags (NodeFlag::Crouch);
          graph[nearest].origin.z += 18.0f;
       }
-      
+
       showMenu (Menu::NodeFlag);
       break;
-   
+
    case 9:
       // if the node doesn't have a camp flag, set it and open the camp directions selection menu
       if (!(graph[nearest].flags & NodeFlag::Camp)) {
@@ -1852,7 +1852,7 @@ void BotControl::showMenu (int id) {
    }
    auto &client = util.getClient (game.indexOfPlayer (m_ent));
 
-   auto sendMenu = [&](int32 slots, bool last, StringRef text) {
+   auto sendMenu = [&] (int32 slots, bool last, StringRef text) {
       MessageWriter (MSG_ONE, msgs.id (NetMsg::ShowMenu), nullptr, m_ent)
          .writeShort (slots)
          .writeChar (-1)
@@ -2098,7 +2098,7 @@ void BotControl::enableDrawModels (bool enable) {
             ent->v.effects |= EF_NODRAW;
          }
          return EntitySearchResult::Continue;
-         });
+      });
    }
 }
 
@@ -2321,7 +2321,7 @@ void BotControl::createMenus () {
       "\\w9. Jump\n\n"
       "0. Exit",
       &BotControl::menuGraphType);
-   
+
    // debug goal menu
    m_menus.emplace (
       Menu::NodeDebug, keys (3),
@@ -2347,7 +2347,7 @@ void BotControl::createMenus () {
       "9. Camp Point\n\n"
       "0. Exit",
       &BotControl::menuGraphFlag);
-   
+
    // set camp directions menu
    m_menus.emplace (
       Menu::CampDirections, keys (2),

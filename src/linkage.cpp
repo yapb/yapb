@@ -32,54 +32,52 @@ plugin_info_t Plugin_info = {
    PT_ANYTIME, // when unloadable
 };
 
-namespace variadic {
-   void clientCommand (edict_t *ent, char const *format, ...) {
-      // this function forces the client whose player entity is ent to issue a client command.
-      // How it works is that clients all have a argv global string in their client DLL that
-      // stores the command string; if ever that string is filled with characters, the client DLL
-      // sends it to the engine as a command to be executed. When the engine has executed that
-      // command, this argv string is reset to zero. Here is somehow a curious implementation of
-      // ClientCommand: the engine sets the command it wants the client to issue in his argv, then
-      // the client DLL sends it back to the engine, the engine receives it then executes the
-      // command therein. Don't ask me why we need all this complicated crap. Anyhow since bots have
-      // no client DLL, be certain never to call this function upon a bot entity, else it will just
-      // make the server crash. Since hordes of uncautious, not to say stupid, programmers don't
-      // even imagine some players on their servers could be bots, this check is performed less than
-      // sometimes actually by their side, that's why we strongly recommend to check it here too. In
-      // case it's a bot asking for a client command, we handle it like we do for bot commands
+void hook_ClientCommand (edict_t *ent, char const *format, ...) {
+   // this function forces the client whose player entity is ent to issue a client command.
+   // How it works is that clients all have a argv global string in their client DLL that
+   // stores the command string; if ever that string is filled with characters, the client DLL
+   // sends it to the engine as a command to be executed. When the engine has executed that
+   // command, this argv string is reset to zero. Here is somehow a curious implementation of
+   // ClientCommand: the engine sets the command it wants the client to issue in his argv, then
+   // the client DLL sends it back to the engine, the engine receives it then executes the
+   // command therein. Don't ask me why we need all this complicated crap. Anyhow since bots have
+   // no client DLL, be certain never to call this function upon a bot entity, else it will just
+   // make the server crash. Since hordes of uncautious, not to say stupid, programmers don't
+   // even imagine some players on their servers could be bots, this check is performed less than
+   // sometimes actually by their side, that's why we strongly recommend to check it here too. In
+   // case it's a bot asking for a client command, we handle it like we do for bot commands
 
-      if (game.isNullEntity (ent)) {
-         if (game.is (GameFlags::Metamod)) {
-            RETURN_META (MRES_SUPERCEDE);
-         }
-         return;
+   if (game.isNullEntity (ent)) {
+      if (game.is (GameFlags::Metamod)) {
+         RETURN_META (MRES_SUPERCEDE);
       }
+      return;
+   }
 
-      va_list ap;
-      auto buffer = strings.chars ();
+   va_list ap;
+   auto buffer = strings.chars ();
 
-      va_start (ap, format);
-      vsnprintf (buffer, StringBuffer::StaticBufferSize, format, ap);
-      va_end (ap);
+   va_start (ap, format);
+   vsnprintf (buffer, StringBuffer::StaticBufferSize, format, ap);
+   va_end (ap);
 
-      if (util.isFakeClient (ent) || (ent->v.flags & FL_DORMANT)) {
-         auto bot = bots[ent];
+   if (util.isFakeClient (ent) || (ent->v.flags & FL_DORMANT)) {
+      auto bot = bots[ent];
 
-         if (bot) {
-            bot->issueCommand (buffer);
-         }
-
-         if (game.is (GameFlags::Metamod)) {
-            RETURN_META (MRES_SUPERCEDE); // prevent bots to be forced to issue client commands
-         }
-         return;
+      if (bot) {
+         bot->issueCommand (buffer);
       }
 
       if (game.is (GameFlags::Metamod)) {
-         RETURN_META (MRES_IGNORED);
+         RETURN_META (MRES_SUPERCEDE); // prevent bots to be forced to issue client commands
       }
-      engfuncs.pfnClientCommand (ent, buffer);
+      return;
    }
+
+   if (game.is (GameFlags::Metamod)) {
+      RETURN_META (MRES_IGNORED);
+   }
+   engfuncs.pfnClientCommand (ent, buffer);
 }
 
 CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
@@ -255,7 +253,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       dllapi.pfnClientDisconnect (ent);
    };
 
-   table->pfnClientUserInfoChanged = [] (edict_t  *ent, char *infobuffer) {
+   table->pfnClientUserInfoChanged = [] (edict_t *ent, char *infobuffer) {
       // this function is called when a player changes model, or changes team. Occasionally it
       // enforces rules on these changes (for example, some MODs don't want to allow players to
       // change their player model). But most commonly, this function is in charge of handling
@@ -402,7 +400,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
 
       // flush print queue to users
       ctrl.flushPrintQueue ();
-      
+
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
@@ -414,7 +412,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
 
    table->pfnCmdStart = [] (const edict_t *player, usercmd_t *cmd, unsigned int random_seed) {
       auto ent = const_cast <edict_t *> (player);
-      
+
       // if we're handle pings for bots and clients, clear IN_SCORE button so SV_ShouldUpdatePing engine function return false, and SV_EmitPings will not overwrite our results
       if (game.is (GameFlags::HasFakePings) && cv_show_latency.int_ () == 2) {
          if (!util.isFakeClient (ent) && (ent->v.oldbuttons | ent->v.button | cmd->buttons) & IN_SCORE) {
@@ -422,7 +420,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
             util.emitPings (ent);
          }
       }
-      
+
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }
@@ -509,7 +507,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
    }
 
    if (ents.needsBypass () && !game.is (GameFlags::Metamod)) {
-      table->pfnCreateNamedEntity = [] (int classname) -> edict_t * {
+      table->pfnCreateNamedEntity = [] (int classname) -> edict_t *{
 
          if (ents.isPaused ()) {
             ents.enable ();
@@ -779,7 +777,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       engfuncs.pfnSetClientMaxspeed (ent, newMaxspeed);
    };
 
-   table->pfnClientCommand = variadic::clientCommand;
+   table->pfnClientCommand = hook_ClientCommand;
 
    return HLTrue;
 }
@@ -830,7 +828,7 @@ CR_LINKAGE_C int GetEngineFunctions_Post (enginefuncs_t *table, int *) {
 
       RETURN_META (MRES_IGNORED);
    };
-   
+
    table->pfnRegUserMsg = [] (const char *name, int) {
       // this function registers a "user message" by the engine side. User messages are network
       // messages the game DLL asks the engine to send to clients. Since many MODs have completely
@@ -989,7 +987,7 @@ CR_EXPORT int Server_GetPhysicsInterface (int version, server_physics_api_t *phy
    // this function handle the custom xash3d physics interface, that we're uses just for resolving
    // entities between game and engine.
 
-   if (!table || !physics_api || version != SV_PHYSICS_INTERFACE_VERSION) 	{
+   if (!table || !physics_api || version != SV_PHYSICS_INTERFACE_VERSION) {
       return HLFalse;
    }
    table->version = SV_PHYSICS_INTERFACE_VERSION;
@@ -1061,7 +1059,7 @@ void EntityLinkage::callPlayerFunction (edict_t *ent) {
    else {
       playerFunction = reinterpret_cast <EntityFunction> (lookup (game.lib ().handle (), "player"));
    }
-   
+
    if (!playerFunction) {
       logger.fatal ("Cannot resolve player () function in gamedll.");
    }

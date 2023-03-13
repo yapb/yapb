@@ -209,7 +209,7 @@ int BotGraph::clearConnections (int index) {
 
 
    for (int i = 2; i < kMaxNodeLinks; ++i) {
-      while (inspect_p0 (i)) { }
+      while (inspect_p0 (i)) {}
    }
 
    // check pass 1
@@ -332,7 +332,7 @@ int BotGraph::clearConnections (int index) {
    };
 
    for (int i = 1; i < kMaxNodeLinks; ++i) {
-      while (inspect_p2 (i)) { }
+      while (inspect_p2 (i)) {}
    }
 
    // check pass 3
@@ -663,7 +663,7 @@ void BotGraph::add (int type, const Vector &pos) {
       path->origin = newOrigin;
       path->start = nullptr;
       path->end = nullptr;
-      
+
       path->display = 0.0f;
       path->light = 0.0f;
 
@@ -684,7 +684,7 @@ void BotGraph::add (int type, const Vector &pos) {
          }
          m_autoSaveCount = 0;
       }
-      
+
       // store the last used node for the auto node code...
       m_lastNode = m_editor->v.origin;
    }
@@ -949,7 +949,7 @@ int BotGraph::getFacingIndex () {
       if (to.lengthSq () > cr::square (500.0f) || cr::abs (angles.y) > result.second) {
          continue;
       }
-     
+
       // check if visible, (we're not using visiblity tables here, as they not valid at time of waypoint editing)
       TraceResult tr {};
       game.testLine (editorEyes, path.origin, TraceIgnore::Everything, m_editor, &tr);
@@ -1253,7 +1253,7 @@ void BotGraph::loadPractice () {
    if (m_paths.empty ()) {
       return;
    }
-   
+
    // reset highest recorded damage
    for (int team = Team::Terrorist; team < kGameTeamNum; ++team) {
       m_highestDamage[team] = 1;
@@ -1522,7 +1522,7 @@ void BotGraph::initNodesTypes () {
 
 bool BotGraph::convertOldFormat () {
    MemFile fp (getOldFormatGraphName (true));
- 
+
    PODGraphHeader header {};
    plat.bzero (&header, sizeof (header));
 
@@ -1557,7 +1557,7 @@ bool BotGraph::convertOldFormat () {
                   return false;
                }
                convertFromPOD (path, podpath);
-   
+
                // more checks of node quality
                if (path.number < 0 || path.number > header.pointNumber) {
                   return false;
@@ -1565,11 +1565,11 @@ bool BotGraph::convertOldFormat () {
                // add to node array
                m_paths.push (cr::move (path));
             }
-            fp.close();
+            fp.close ();
 
-               // save new format in case loaded older one
-            if (!m_paths.empty()) {
-               ctrl.msg("Converting old PWF to new format Graph.");
+            // save new format in case loaded older one
+            if (!m_paths.empty ()) {
+               ctrl.msg ("Converting old PWF to new format Graph.");
 
                m_graphAuthor = header.author;
 
@@ -1577,7 +1577,7 @@ bool BotGraph::convertOldFormat () {
                auto editor = m_editor;
                m_editor = nullptr;
 
-               auto result = saveGraphData();
+               auto result = saveGraphData ();
                m_editor = editor;
 
                return result;
@@ -1634,7 +1634,7 @@ template <typename U> bool BotGraph::saveStorage (StringRef ext, StringRef name,
       hdr.length = length ();
       hdr.compressed = compressedLength;
       hdr.uncompressed = rawLength;
-        
+
       file.write (&hdr, sizeof (StorageHeader));
       file.write (compressed.data (), sizeof (uint8), compressedLength);
 
@@ -1693,7 +1693,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
       auto fromDownload = strings.format ("http://%s/graph/%s", downloadAddress, filename);
 
       // try to download
-      if (http.downloadFile (fromDownload, toDownload))  {
+      if (http.downloadFile (fromDownload, toDownload)) {
          ctrl.msg ("%s file '%s' successfully downloaded. Processing...", name, filename);
          return true;
       }
@@ -1714,7 +1714,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
       if (download ()) {
          return loadStorage <U> (ext, name, options, version, data, exten, outOptions);
       }
-      
+
       if (convertOldFormat ()) {
          return loadStorage <U> (ext, name, options, version, data, exten, outOptions);
       }
@@ -1756,7 +1756,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
 
    // check the version
    if (hdr.version > version && isGraph) {
-       ctrl.msg ("Graph version mismatch %s (filename: '%s'). Version number differs (got: '%d', need: '%d') Please, upgrade %s.", name, filename, hdr.version, version, product.name);
+      ctrl.msg ("Graph version mismatch %s (filename: '%s'). Version number differs (got: '%d', need: '%d') Please, upgrade %s.", name, filename, hdr.version, version, product.name);
    }
    else if (hdr.version > version && !isGraph) {
       return raiseLoadingError (isGraph, file, "Damaged %s (filename: '%s'). Version number differs (got: '%d', need: '%d').", name, filename, hdr.version, version);
@@ -1786,7 +1786,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
          return raiseLoadingError (isGraph, file, "Unable to decompress ULZ data for %s (filename: '%s').", name, filename);
       }
       else {
-         
+
          if (outOptions) {
             outOptions = &hdr.options;
          }
@@ -2199,7 +2199,7 @@ void BotGraph::frame () {
       if (!m_endJumpPoint) {
          if (m_editor->v.button & IN_JUMP) {
             add (NodeAddFlag::JumpStart);
-            
+
             m_timeJumpStarted = game.time ();
             m_endJumpPoint = true;
          }
@@ -2300,7 +2300,7 @@ void BotGraph::frame () {
             }
             else {
                nodeColor = { 0, 255, 0 };
-            } 
+            }
 
             // colorize additional flags
             Color nodeFlagColor { -1, -1, -1 };
@@ -2325,7 +2325,7 @@ void BotGraph::frame () {
             if (nodeFlagColor.red == -1) {
                game.drawLine (m_editor, path.origin - Vector (0, 0, nodeHalfHeight), path.origin + Vector (0, 0, nodeHalfHeight), nodeWidth + 1, 0, nodeColor, 250, 0, 10);
             }
-            
+
             // draw node with flags
             else {
                game.drawLine (m_editor, path.origin - Vector (0, 0, nodeHalfHeight), path.origin - Vector (0, 0, nodeHalfHeight - nodeHeight * 0.75f), nodeWidth, 0, nodeColor, 250, 0, 10); // draw basic path
@@ -2381,7 +2381,7 @@ void BotGraph::frame () {
          const auto &source = Vector (path.origin.x, path.origin.y, path.origin.z + height); // source
          const auto &start = path.origin + Vector (path.start.x, path.start.y, 0.0f).forward () * 500.0f; // camp start
          const auto &end = path.origin + Vector (path.end.x, path.end.y, 0.0f).forward () * 500.0f; // camp end
-         
+
          // draw it now
          game.drawLine (m_editor, source, start, 10, 0, { 255, 0, 0 }, 200, 0, 10);
          game.drawLine (m_editor, source, end, 10, 0, { 255, 0, 0 }, 200, 0, 10);
@@ -2418,7 +2418,7 @@ void BotGraph::frame () {
       // if radius is nonzero, draw a full circle
       if (path.radius > 0.0f) {
          float sqr = cr::sqrtf (cr::square (path.radius) * 0.5f);
-         
+
          game.drawLine (m_editor, origin + Vector (path.radius, 0.0f, 0.0f), origin + Vector (sqr, -sqr, 0.0f), 5, 0, radiusColor, 200, 0, 10);
          game.drawLine (m_editor, origin + Vector (sqr, -sqr, 0.0f), origin + Vector (0.0f, -path.radius, 0.0f), 5, 0, radiusColor, 200, 0, 10);
 
@@ -2527,8 +2527,8 @@ void BotGraph::frame () {
 
          String practice;
          practice.assignf ("      Node practice data (index / damage):\n"
-                          "       CT: %d / %d\n"
-                          "       T:  %d / %d\n\n", dangerIndexCT, dangerIndexCT != kInvalidNodeIndex ? getDangerDamage (Team::CT, nearestIndex, dangerIndexCT) : 0, dangerIndexT, dangerIndexT != kInvalidNodeIndex ? getDangerDamage (Team::Terrorist, nearestIndex, dangerIndexT) : 0);
+                           "       CT: %d / %d\n"
+                           "       T:  %d / %d\n\n", dangerIndexCT, dangerIndexCT != kInvalidNodeIndex ? getDangerDamage (Team::CT, nearestIndex, dangerIndexCT) : 0, dangerIndexT, dangerIndexT != kInvalidNodeIndex ? getDangerDamage (Team::Terrorist, nearestIndex, dangerIndexT) : 0);
 
          sendHudMessage ({ 255, 255, 255 }, 0.0f, 0.16f, m_editor, practice + timeMessage);
       }
@@ -2695,7 +2695,7 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
    Array <IntArray> outgoingPaths; // store incoming paths for speedup
    outgoingPaths.resize (m_paths.length ());
 
-   for (const auto &path: m_paths) {
+   for (const auto &path : m_paths) {
       outgoingPaths[path.number].resize (m_paths.length () + 1);
 
       for (const auto &link : path.links) {
@@ -2724,7 +2724,7 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
          walk.add (outgoing);
       }
    }
-   
+
    for (const auto &path : m_paths) {
       if (!visited[path.number]) {
          ctrl.msg ("Path broken from node %d to node 0.", path.number);
@@ -2905,7 +2905,7 @@ void BotGraph::setBombOrigin (bool reset, const Vector &pos) {
    }
    bool wasFound = false;
    auto bombModel = conf.getBombModelName ();
-   
+
    game.searchEntities ("classname", "grenade", [&] (edict_t *ent) {
       if (util.isModel (ent, bombModel)) {
          m_bombOrigin = game.getEntityOrigin (ent);
@@ -3028,7 +3028,7 @@ void BotGraph::updateGlobalPractice () {
    // get the most dangerous node for this position for both teams
    for (int team = Team::Terrorist; team < kGameTeamNum; ++team) {
       int bestIndex = kInvalidNodeIndex; // best index to store
-      
+
       for (int i = 0; i < length (); ++i) {
          int maxDamage = 0;
          bestIndex = kInvalidNodeIndex;
@@ -3068,7 +3068,7 @@ void BotGraph::updateGlobalPractice () {
    }
 
    for (int team = Team::Terrorist; team < kGameTeamNum; ++team) {
-      m_highestDamage[team] = cr::clamp (m_highestDamage [team] - kHalfDamageVal, 1, kMaxPracticeDamageValue);
+      m_highestDamage[team] = cr::clamp (m_highestDamage[team] - kHalfDamageVal, 1, kMaxPracticeDamageValue);
    }
 }
 

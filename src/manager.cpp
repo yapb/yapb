@@ -163,7 +163,7 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
    }
 
    // don't allow creating bots with changed graph (distance tables are messed up)
-   else if (graph.hasChanged ())  {
+   else if (graph.hasChanged ()) {
       ctrl.msg ("Graph has been changed. Load graph again...");
       return BotCreateResult::GraphError;
    }
@@ -237,7 +237,7 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
       botName->usedBy = index; // save by who name is used
    }
    else {
-      conf.setBotNameUsed(index, resultName);
+      conf.setBotNameUsed (index, resultName);
    }
    m_bots.push (cr::move (object));
 
@@ -473,7 +473,7 @@ void BotManager::maintainAutoKill () {
    if (!totalHumans) {
       return;
    }
-   
+
    for (const auto &bot : m_bots) {
       if (bot->m_notKilled) {
          ++aliveBots;
@@ -566,7 +566,7 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
    else {
       selection = 5;
    }
-   char teams[6][12] = {"", {"Terrorists"}, {"CTs"}, "", "", {"Random"}, };
+   char teams[6][12] = { "", {"Terrorists"}, {"CTs"}, "", "", {"Random"}, };
    auto toAdd = numToAdd == -1 ? maxClients - (getHumansCount () + getBotCount ()) : numToAdd;
 
    for (int i = 0; i <= toAdd; ++i) {
@@ -703,7 +703,7 @@ bool BotManager::kickRandom (bool decQuota, Team fromTeam) {
    return false;
 }
 
- void BotManager::setLastWinner (int winner) {
+void BotManager::setLastWinner (int winner) {
    m_lastWinner = winner;
    m_roundOver = true;
 
@@ -748,8 +748,8 @@ void BotManager::setWeaponMode (int selection) {
       {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, -1, 1, -1, -1}, // Snipers only
       {-1, -1, -1, 2, 2, 0, 1, 1, 1, 1, 1, 1, 0, 2, 0, -1, 1, 0, 1, 1, 0, 0, -1, 1, 1, 1} // Standard
    };
-   constexpr char modes[7][12] = {{"Knife"}, {"Pistol"}, {"Shotgun"}, {"Machine Gun"}, {"Rifle"}, {"Sniper"}, {"Standard"}};
-   
+   constexpr char modes[7][12] = { {"Knife"}, {"Pistol"}, {"Shotgun"}, {"Machine Gun"}, {"Rifle"}, {"Sniper"}, {"Standard"} };
+
    // get the raw weapons array
    auto tab = conf.getRawWeapons ();
 
@@ -768,7 +768,8 @@ void BotManager::listBots () {
 
    ctrl.msg ("%-3.5s\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.4s\t%-3.4s\t%-3.5s", "index", "name", "personality", "team", "difficulty", "frags", "alive");
 
-   for (const auto &bot : bots) {;
+   for (const auto &bot : bots) {
+      ;
       ctrl.msg ("[%-3.1d]\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s", bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful", bot->m_team == Team::CT ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_notKilled ? "yes" : "no");
    }
    ctrl.msg ("%d bots", m_bots.length ());
@@ -966,7 +967,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
       }
    }
 
-   char reject[256] = {0, };
+   char reject[256] = { 0, };
    MDLL_ClientConnect (bot, bot->v.netname.chars (), strings.format ("127.0.0.%d", clientIndex + 100), reject);
 
    if (!strings.isEmpty (reject)) {
@@ -1146,7 +1147,7 @@ void BotManager::erase (Bot *bot) {
       m_bots.erase (index, 1); // remove from bots array
       break;
    }
-   
+
 }
 
 void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
@@ -1194,13 +1195,13 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
    }
 
    // did a human kill a bot on his team?
-   else  {
+   else {
       if (victimBot != nullptr) {
          if (killerTeam == victimBot->m_team) {
             victimBot->m_voteKickIndex = game.indexOfEntity (killer);
             for (const auto &notify : bots) {
                if (notify->seesEntity (victim->v.origin)) {
-               notify->pushChatterMessage (Chatter::TeamKill);
+                  notify->pushChatterMessage (Chatter::TeamKill);
                }
             }
          }
@@ -1221,7 +1222,7 @@ void Bot::newRound () {
 
    m_path = nullptr;
    m_currentTravelFlags = 0;
-   m_desiredVelocity= nullptr;
+   m_desiredVelocity = nullptr;
    m_currentNodeIndex = kInvalidNodeIndex;
    m_prevGoalIndex = kInvalidNodeIndex;
    m_chosenGoalIndex = kInvalidNodeIndex;
@@ -1310,7 +1311,7 @@ void Bot::newRound () {
    m_aimFlags = 0;
    m_liftState = 0;
 
-   m_aimLastError= nullptr;
+   m_aimLastError = nullptr;
    m_position = nullptr;
    m_liftTravelPos = nullptr;
 
@@ -1414,7 +1415,7 @@ void Bot::newRound () {
       m_lastTrace[i] = {};
       m_traceSkip[i] = 0;
    }
-   
+
    // and put buying into its message queue
    pushMsgQueue (BotMsg::Buy);
    startTask (Task::Normal, TaskPri::Normal, kInvalidNodeIndex, 0.0f, true);
@@ -1457,7 +1458,7 @@ void Bot::kill () {
 void Bot::kick () {
    // this function kick off one bot from the server.
    auto username = pev->netname.chars ();
- 
+
    if (!(pev->flags & FL_CLIENT) || strings.isEmpty (username)) {
       return;
    }
@@ -1471,7 +1472,7 @@ void Bot::markStale () {
    showChaterIcon (false);
 
    // clear the bot name
-   conf.clearUsedName (this); 
+   conf.clearUsedName (this);
 
    // clear fakeclient bit
    pev->flags &= ~FL_FAKECLIENT;
@@ -1602,10 +1603,10 @@ void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *en
             continue;
          }
          auto target = bots[client.ent];
-         
+
          if (target != nullptr) {
             target->m_sayTextBuffer.entityIndex = game.indexOfPlayer (ent);
-   
+
             if (strings.isEmpty (engfuncs.pfnCmd_Args ())) {
                continue;
             }
@@ -1690,7 +1691,7 @@ void BotManager::updateIntrestingEntities () {
    // search the map for any type of grenade
    game.searchEntities (nullptr, kInfiniteDistance, [&] (edict_t *e) {
       auto classname = e->v.classname.chars ();
-      
+
       // search for grenades, weaponboxes, weapons, items and armoury entities
       if (strncmp ("weaponbox", classname, 9) == 0 || strncmp ("grenade", classname, 7) == 0 || util.isItem (e) || strncmp ("armoury", classname, 7) == 0) {
          m_intrestingEntities.push (e);

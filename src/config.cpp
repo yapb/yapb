@@ -37,7 +37,7 @@ void BotConfig::loadMainConfig (bool isFirstLoad) {
    }
    setupMemoryFiles ();
 
-   auto needsToIgnoreVar = [](StringArray &list, const char *needle) {
+   auto needsToIgnoreVar = [] (StringArray &list, const char *needle) {
       for (const auto &var : list) {
          if (var == needle) {
             return true;
@@ -136,7 +136,7 @@ void BotConfig::loadNamesConfig () {
 void BotConfig::loadWeaponsConfig () {
    setupMemoryFiles ();
 
-   auto addWeaponEntries = [](SmallArray <WeaponInfo> &weapons, bool as, StringRef name, const StringArray &data) {
+   auto addWeaponEntries = [] (SmallArray <WeaponInfo> &weapons, bool as, StringRef name, const StringArray &data) {
 
       // we're have null terminator element in weapons array...
       if (data.length () + 1 != weapons.length ()) {
@@ -155,7 +155,7 @@ void BotConfig::loadWeaponsConfig () {
       }
    };
 
-   auto addIntEntries = [](SmallArray <int32> &to, StringRef name, const StringArray &data) {
+   auto addIntEntries = [] (SmallArray <int32> &to, StringRef name, const StringArray &data) {
       if (data.length () != to.length ()) {
          logger.error ("%s entry in weapons config is not valid or malformed (%d/%d).", name, data.length (), to.length ());
          return;
@@ -711,7 +711,7 @@ void BotConfig::clearUsedName (Bot *bot) {
    }
 }
 
-void BotConfig::setBotNameUsed(const int index, StringRef name) {
+void BotConfig::setBotNameUsed (const int index, StringRef name) {
    for (auto &bn : m_botNames) {
       if (bn.name == name) {
          bn.usedBy = index;
@@ -795,7 +795,7 @@ const char *BotConfig::translate (StringRef input) {
 void BotConfig::showCustomValues () {
    game.print ("Current values for custom config items:");
 
-   m_custom.foreach ([&](const String &key, const String &val) {
+   m_custom.foreach ([&] (const String &key, const String &val) {
       game.print ("  %s = %s", key, val);
    });
 }
