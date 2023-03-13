@@ -8,6 +8,7 @@
 #include <yapb.h>
 
 ConVar cv_csdm_mode ("yb_csdm_mode", "0", "Enables or disables CSDM / FFA mode for bots.\nAllowed values: '0', '1', '2', '3'.\nIf '0', CSDM / FFA mode is auto-detected.\nIf '1', CSDM mode is enabled, but FFA is disabled.\nIf '2', CSDM and FFA mode is enabled.\nIf '3', CSDM and FFA mode is disabled.", true, 0.0f, 3.0f);
+ConVar cv_breakable_health_limit ("yb_breakable_health_limit", "500.0", "Specifies the maximum health of breakable object, that bot will consider to destroy.", true, 1.0f, 3000.0);
 
 ConVar sv_skycolor_r ("sv_skycolor_r", nullptr, Var::GameRef);
 ConVar sv_skycolor_g ("sv_skycolor_g", nullptr, Var::GameRef);
@@ -1031,8 +1032,9 @@ bool Game::isShootableBreakable (edict_t *ent) {
    if (isNullEntity (ent)) {
       return false;
    }
+   auto limit = cv_breakable_health_limit.float_ ();
 
-   if (strcmp (ent->v.classname.chars (), "func_breakable") == 0 || (strcmp (ent->v.classname.chars (), "func_pushable") == 0 && (ent->v.spawnflags & SF_PUSH_BREAKABLE)) || (strcmp (ent->v.classname.chars (), "func_wall") == 0 && ent->v.health < 500.0f)) {
+   if ((strcmp (ent->v.classname.chars (), "func_breakable") == 0 && ent->v.health < limit) || (strcmp (ent->v.classname.chars (), "func_pushable") == 0 && (ent->v.spawnflags & SF_PUSH_BREAKABLE) && ent->v.health < limit) || (strcmp (ent->v.classname.chars (), "func_wall") == 0 && ent->v.health < limit)) {
       if (ent->v.takedamage != DAMAGE_NO && ent->v.impulse <= 0 && !(ent->v.flags & FL_WORLDBRUSH) && !(ent->v.spawnflags & SF_BREAK_TRIGGER_ONLY)) {
          return (ent->v.movetype == MOVETYPE_PUSH || ent->v.movetype == MOVETYPE_PUSHSTEP);
       }

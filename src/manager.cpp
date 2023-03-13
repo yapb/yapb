@@ -37,6 +37,9 @@ ConVar cv_botskin_ct ("yb_botskin_ct", "0", "Specifies the bots wanted skin for 
 ConVar cv_ping_base_min ("yb_ping_base_min", "7", "Lower bound for base bot ping shown in scoreboard upon creation.", true, 0.0f, 100.0f);
 ConVar cv_ping_base_max ("yb_ping_base_max", "34", "Upper bound for base bot ping shown in scoreboard upon creation.", true, 0.0f, 100.0f);
 
+ConVar cv_quota_adding_interval ("yb_quota_adding_interval", "0.10", "Interval in which bots are added to the game.", true, 0.10f, 1.0f);
+ConVar cv_quota_maintain_interval ("yb_quota_maintain_interval", "0.40", "Interval on which overall bot quota are checked.", true, 0.40f, 2.0f);
+
 ConVar cv_language ("yb_language", "en", "Specifies the language for bot messages and menus.", false);
 
 ConVar mp_limitteams ("mp_limitteams", nullptr, Var::GameRef);
@@ -361,7 +364,7 @@ void BotManager::maintainQuota () {
          m_addRequests.clear ();
          cv_quota.set (getBotCount ());
       }
-      m_maintainTime = game.time () + 0.10f;
+      m_maintainTime = game.time () + cv_quota_adding_interval.float_ ();
    }
 
    // now keep bot number up to date
@@ -439,7 +442,7 @@ void BotManager::maintainQuota () {
          m_saveBotNames.clear ();
       }
    }
-   m_quotaMaintainTime = game.time () + 0.40f;
+   m_quotaMaintainTime = game.time () + cv_quota_maintain_interval.float_ ();
 }
 
 void BotManager::maintainLeaders () {

@@ -27,7 +27,9 @@ ConVar cv_freeze_bots ("yb_freeze_bots", "0", "If enabled, the bots think functi
 ConVar cv_spraypaints ("yb_spraypaints", "1", "Allows or disallows the use of spray paints.");
 ConVar cv_botbuy ("yb_botbuy", "1", "Allows or disallows bots weapon buying routines.");
 ConVar cv_destroy_breakables_around ("yb_destroy_breakables_around", "1", "Allows bots to destroy breakables around him, even without touching with them.");
+
 ConVar cv_object_pickup_radius ("yb_object_pickup_radius", "450.0", "The radius on which bot searches world for new objects, items, and weapons.", true, 64.0f, 1024.0f);
+ConVar cv_object_destroy_radius ("yb_object_destroy_radius", "400.0", "The radius on which bot destroy breakables around him, when not touching with them.", true, 64.0f, 1024.0f);
 
 ConVar cv_chatter_path ("yb_chatter_path", "sound/radio/bot", "Specifies the paths for the bot chatter sound files.", false);
 ConVar cv_restricted_weapons ("yb_restricted_weapons", "", "Specifies semicolon separated list of weapons that are not allowed to buy / pickup.", false);
@@ -403,6 +405,7 @@ void Bot::checkBreakablesAround () {
    if (!m_buyingFinished || !cv_destroy_breakables_around.bool_ () || usesKnife () || rg.chance (25) || !game.hasBreakables () || m_seeEnemyTime + 4.0f > game.time () || !game.isNullEntity (m_enemy) || !hasPrimaryWeapon ()) {
       return;
    }
+   auto radius = cv_object_destroy_radius.float_ ();
 
    // check if we're have some breakbles in 400 units range
    for (const auto &breakable : game.getBreakables ()) {
@@ -429,7 +432,7 @@ void Bot::checkBreakablesAround () {
       const auto lengthToObstacle = origin.distanceSq (pev->origin);
 
       // too far, skip it
-      if (lengthToObstacle > cr::square (400.0f)) {
+      if (lengthToObstacle > cr::square (radius)) {
          continue;
       }
 
