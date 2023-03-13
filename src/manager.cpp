@@ -8,6 +8,7 @@
 #include <yapb.h>
 
 ConVar cv_autovacate ("yb_autovacate", "1", "Kick bots to automatically make room for human players.");
+ConVar cv_kick_after_player_connect ("yb_kick_after_player_connect", "1", "Kick the bot immediately when a human player joins the server (yb_autovacate must be enabled).");
 
 ConVar cv_quota ("yb_quota", "9", "Specifies the number bots to be added to the game.", true, 0.0f, static_cast <float> (kGameMaxPlayers));
 ConVar cv_quota_mode ("yb_quota_mode", "normal", "Specifies the type of quota.\nAllowed values: 'normal', 'fill', and 'match'.\nIf 'fill', the server will adjust bots to keep N players in the game, where N is yb_quota.\nIf 'match', the server will maintain a 1:N ratio of humans to bots, where N is yb_quota_match.", false);
@@ -394,7 +395,12 @@ void BotManager::maintainQuota () {
    int maxClients = game.maxClients ();
 
    if (cv_autovacate.bool_ ()) {
-      desiredBotCount = cr::min <int> (desiredBotCount, maxClients - (humanPlayersInGame + 1));
+      if (cv_kick_after_player_connect.bool_ ()) {
+         desiredBotCount = cr::min <int> (desiredBotCount, maxClients - (totalHumansInGame + 1));
+      }
+      else {
+         desiredBotCount = cr::min <int> (desiredBotCount, maxClients - (humanPlayersInGame + 1));
+      }
    }
    else {
       desiredBotCount = cr::min <int> (desiredBotCount, maxClients - humanPlayersInGame);
