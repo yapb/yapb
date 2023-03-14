@@ -1874,6 +1874,15 @@ int Bot::findNearestNode () {
             index = at;
             minimum = distance;
          }
+         else {
+            TraceResult tr {};
+            game.testHull (getEyesPos (), graph[at].origin, TraceIgnore::Monsters, head_hull, ent (), &tr);
+
+            if (tr.flFraction >= 1.0f && !tr.fStartSolid) {
+               index = at;
+               minimum = distance;
+            }
+         }
       }
    }
 
