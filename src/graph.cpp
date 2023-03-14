@@ -2286,7 +2286,7 @@ void BotGraph::frame () {
                   nodeColor = { 255, 160, 160 };
                }
                else if (path.flags & NodeFlag::CTOnly) {
-                  nodeColor = { 255, 160, 255 };
+                  nodeColor = { 160, 160, 255 };
                }
                else {
                   nodeColor = { 0, 255, 255 };
