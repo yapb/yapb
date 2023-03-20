@@ -1874,6 +1874,9 @@ int Bot::findNearestNode () {
             index = at;
             minimum = distance;
          }
+
+         // @pr-419: temporarily disabled due to cpu usage
+#if 0
          else {
             TraceResult tr {};
             game.testHull (getEyesPos (), graph[at].origin, TraceIgnore::Monsters, head_hull, ent (), &tr);
@@ -1883,6 +1886,7 @@ int Bot::findNearestNode () {
                minimum = distance;
             }
          }
+#endif
       }
    }
 
