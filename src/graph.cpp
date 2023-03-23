@@ -1762,6 +1762,17 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
       return raiseLoadingError (isGraph, file, "Damaged %s (filename: '%s'). Version number differs (got: '%d', need: '%d').", name, filename, hdr.version, version);
    }
 
+
+   // temporary solution to kill version 1 vistables, which has a bugs
+   if ((options & StorageOption::Vistable) && hdr.version == 1) {
+      auto vistablePath = strings.format ("%strain/%s.vis", getDataDirectory (), game.getMapName ());
+
+      if (File::exists (vistablePath)) {
+         plat.removeFile (vistablePath);
+      }
+      return raiseLoadingError (isGraph, file, "Bugged vistable %s (filename: '%s'). Version 1 has a bugs, vistable will be recreated.", name, filename);
+   }
+
    // save graph version
    if (isGraph) {
       memcpy (&m_graphHeader, &hdr, sizeof (StorageHeader));
@@ -2093,7 +2104,7 @@ void BotGraph::rebuildVisibility () {
          game.testLine (sourceStand, dest, TraceIgnore::Monsters, nullptr, &tr);
 
          // check if line of sight to object is not blocked (i.e. visible)
-         if (cr::fequal (tr.flFraction, 1.0f) || tr.fStartSolid) {
+         if (!cr::fequal (tr.flFraction, 1.0f) || tr.fStartSolid) {
             res |= 1;
          }
 
