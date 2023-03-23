@@ -636,6 +636,7 @@ private:
    int m_liftState {}; // state of lift handling
    int m_radioSelect {}; // radio entry
    
+
    float m_headedTime {};
    float m_prevTime {}; // time previously checked movement speed
    float m_heavyTimestamp; // is it time to execute heavy-weight functions
@@ -749,7 +750,7 @@ private:
    BinaryHeap <RouteTwin> m_routeQue;
    Path *m_path {}; // pointer to the current path node
    String m_chatBuffer; // space for strings (say text...)
-   FrustumPlane m_frustum[FrustumSide::Num]  {};
+   FrustumPlane m_frustum[FrustumSide::Num] {};
 
 private:
    int pickBestWeapon (int *vec, int count, int moneySave);
@@ -982,6 +983,7 @@ public:
    float m_kpdRatio; // kill per death ratio
    float m_healthValue; // clamped bot health 
 
+   int m_blindNodeIndex {}; // node index to cover when blind
    int m_flashLevel {}; // flashlight level
    int m_basePing; // base ping for bot
    int m_numEnemiesLeft {}; // number of enemies alive left on map

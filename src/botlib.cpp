@@ -18,6 +18,7 @@ ConVar cv_radio_mode ("yb_radio_mode", "2", "Allows bots to use radio or chattte
 ConVar cv_economics_rounds ("yb_economics_rounds", "1", "Specifies whether bots able to use team economics, like do not buy any weapons for whole team to keep money for better guns.");
 ConVar cv_walking_allowed ("yb_walking_allowed", "1", "Specifies whether bots able to use 'shift' if they thinks that enemy is near.");
 ConVar cv_camping_allowed ("yb_camping_allowed", "1", "Allows or disallows bots to camp. Doesn't affects bomb/hostage defending tasks.");
+ConVar cv_avoid_grenades ("yb_avoid_grenades", "1", "Allows bots to partially avoid grenades.");
 
 ConVar cv_camping_time_min ("yb_camping_time_min", "15.0", "Lower bound of time from which time for camping is calculated", true, 5.0f, 90.0f);
 ConVar cv_camping_time_max ("yb_camping_time_max", "45.0", "Upper bound of time until which time for camping is calculated", true, 15.0f, 120.0f);
@@ -338,7 +339,7 @@ void Bot::avoidGrenades () {
       if (m_preventFlashing < game.time () && m_personality == Personality::Rusher && m_difficulty == Difficulty::Expert && strcmp (model, "flashbang.mdl") == 0) {
          // don't look at flash bang
          if (!(m_states & Sense::SeeingEnemy)) {
-            pev->v_angle.y = cr::normalizeAngles ((game.getEntityOrigin (pent) - getEyesPos ()).angles ().y + 180.0f);
+           m_lookAt.y = cr::normalizeAngles ((game.getEntityOrigin (pent) - getEyesPos ()).angles ().y + 180.0f);
 
             m_canChooseAimDirection = false;
             m_preventFlashing = game.time () + rg.get (1.0f, 2.0f);
@@ -3590,9 +3591,38 @@ void Bot::blind_ () {
       m_wantsToFire = true; // and shoot it
    }
 
-   m_moveSpeed = m_blindMoveSpeed;
-   m_strafeSpeed = m_blindSidemoveSpeed;
-   pev->button |= m_blindButton;
+   if (m_difficulty >= Difficulty::Normal && graph.exists (m_blindNodeIndex)) {
+      if (updateNavigation ()) {
+         if (m_blindTime >= game.time ()) {
+            completeTask ();
+         }
+         m_prevGoalIndex = kInvalidNodeIndex;
+         m_blindNodeIndex = kInvalidNodeIndex;
+
+         m_blindMoveSpeed = 0.0f;
+         m_blindSidemoveSpeed = 0.0f;
+         m_blindButton = 0;
+
+         m_states |= Sense::SuspectEnemy;
+      }
+      else if (!hasActiveGoal ()) {
+         clearSearchNodes ();
+
+         m_prevGoalIndex = m_blindNodeIndex;
+         getTask ()->data = m_blindNodeIndex;
+
+         findPath (m_currentNodeIndex, m_blindNodeIndex, FindPath::Fast);
+      }
+   }
+   else {
+      m_moveSpeed = m_blindMoveSpeed;
+      m_strafeSpeed = m_blindSidemoveSpeed;
+      pev->button |= m_blindButton;
+
+      if (m_states & Sense::SuspectEnemy) {
+         m_states |= Sense::SuspectEnemy;
+      }
+   }
 
    if (m_blindTime < game.time ()) {
       completeTask ();
@@ -4897,7 +4927,10 @@ void Bot::logic () {
    m_moveToGoal = true;
    m_wantsToFire = false;
 
-   avoidGrenades (); // avoid flyings grenades
+   // avoid flyings grenades, if needed
+   if (cv_avoid_grenades.bool_ ()) {
+      avoidGrenades ();
+   }
    m_isUsingGrenade = false;
 
    tasks (); // execute current task
@@ -5077,14 +5110,19 @@ void Bot::spawned () {
 void Bot::showDebugOverlay () {
    bool displayDebugOverlay = false;
 
-   if (game.getLocalEntity ()->v.iuser2 == entindex ()) {
+   if (!graph.hasEditor ()) {
+      return;
+   }
+   auto overlayEntity = graph.getEditor ();
+
+   if (overlayEntity->v.iuser2 == entindex ()) {
       displayDebugOverlay = true;
    }
 
    if (!displayDebugOverlay && cv_debug.int_ () >= 2) {
       Bot *nearest = nullptr;
 
-      if (util.findNearestPlayer (reinterpret_cast <void **> (&nearest), game.getLocalEntity (), 128.0f, false, true, true, true) && nearest == this) {
+      if (util.findNearestPlayer (reinterpret_cast <void **> (&nearest), overlayEntity, 128.0f, false, true, true, true) && nearest == this) {
          displayDebugOverlay = true;
       }
    }
@@ -5172,7 +5210,7 @@ void Bot::showDebugOverlay () {
       String debugData;
       debugData.assignf ("\n\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\nItem: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\nSP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\nEnemy=%s Pickup=%s Type=%s\n", pev->netname.chars (), m_healthValue, pev->armorvalue, taskID, tasks[taskID], getTask ()->desire, weapon, getAmmoInClip (), getAmmo (), m_isReloading ? " (R)" : "", m_moneyAmount, aimFlags.trim (), m_moveSpeed, m_strafeSpeed, index, m_prevGoalIndex, goal, m_navTimeset - game.time (), pev->movetype, enemy, pickup, personalities[m_personality]);
 
-      MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, nullptr, game.getLocalEntity ())
+      MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, nullptr, overlayEntity)
          .writeByte (TE_TEXTMESSAGE)
          .writeByte (1)
          .writeShort (MessageWriter::fs16 (-1.0f, 13.0f))
@@ -5197,13 +5235,13 @@ void Bot::showDebugOverlay () {
    // green = destination origin
    // blue = ideal angles
    // red = view angles
-   game.drawLine (game.getLocalEntity (), getEyesPos (), m_destOrigin, 10, 0, { 0, 255, 0 }, 250, 5, 1, DrawLine::Arrow);
-   game.drawLine (game.getLocalEntity (), getEyesPos () - Vector (0.0f, 0.0f, 16.0f), getEyesPos () + m_idealAngles.forward () * 300.0f, 10, 0, { 0, 0, 255 }, 250, 5, 1, DrawLine::Arrow);
-   game.drawLine (game.getLocalEntity (), getEyesPos () - Vector (0.0f, 0.0f, 32.0f), getEyesPos () + pev->v_angle.forward () * 300.0f, 10, 0, { 255, 0, 0 }, 250, 5, 1, DrawLine::Arrow);
+   game.drawLine (overlayEntity, getEyesPos (), m_destOrigin, 10, 0, { 0, 255, 0 }, 250, 5, 1, DrawLine::Arrow);
+   game.drawLine (overlayEntity, getEyesPos () - Vector (0.0f, 0.0f, 16.0f), getEyesPos () + m_idealAngles.forward () * 300.0f, 10, 0, { 0, 0, 255 }, 250, 5, 1, DrawLine::Arrow);
+   game.drawLine (overlayEntity, getEyesPos () - Vector (0.0f, 0.0f, 32.0f), getEyesPos () + pev->v_angle.forward () * 300.0f, 10, 0, { 255, 0, 0 }, 250, 5, 1, DrawLine::Arrow);
 
    // now draw line from source to destination
    for (size_t i = 0; i < m_pathWalk.length () && i + 1 < m_pathWalk.length (); ++i) {
-      game.drawLine (game.getLocalEntity (), graph[m_pathWalk.at (i)].origin, graph[m_pathWalk.at (i + 1)].origin, 15, 0, { 255, 100, 55 }, 200, 5, 1, DrawLine::Arrow);
+      game.drawLine (overlayEntity, graph[m_pathWalk.at (i)].origin, graph[m_pathWalk.at (i + 1)].origin, 15, 0, { 255, 100, 55 }, 200, 5, 1, DrawLine::Arrow);
    }
 }
 
@@ -5316,7 +5354,7 @@ void Bot::takeBlind (int alpha) {
 
       return;
    }
-
+   m_blindNodeIndex = findCoverNode (512.0f);
    m_blindMoveSpeed = -pev->maxspeed;
    m_blindSidemoveSpeed = 0.0f;
 

@@ -695,8 +695,6 @@ bool Bot::updateNavigation () {
    }
    m_destOrigin = m_pathOrigin + pev->view_ofs;
 
-   float nodeDistance = pev->origin.distance (m_pathOrigin);
-
    // this node has additional travel flags - care about them
    if (m_currentTravelFlags & PathFlag::Jump) {
 
@@ -884,7 +882,9 @@ bool Bot::updateNavigation () {
          }
       }
    }
-   float desiredDistance = 0.0f;
+
+   float desiredDistance = 8.0f;
+   float nodeDistance = pev->origin.distance (m_pathOrigin);
 
    // initialize the radius for a special node type, where the node is considered to be reached
    if (m_path->flags & NodeFlag::Lift) {
@@ -894,7 +894,7 @@ bool Bot::updateNavigation () {
       desiredDistance = 25.0f;
    }
    else if (m_path->flags & NodeFlag::Ladder) {
-      desiredDistance = 15.0f;
+      desiredDistance = 24.0f;
    }
    else if (m_currentTravelFlags & PathFlag::Jump) {
       desiredDistance = 0.0f;
@@ -1633,6 +1633,7 @@ int Bot::findAimingNode (const Vector &to) {
    if (destIndex == kInvalidNodeIndex) {
       return kInvalidNodeIndex;
    }
+   const float kMaxDistance = ((m_states & Sense::HearingEnemy) || (m_states & Sense::HearingEnemy) || m_seeEnemyTime + 3.0f > game.time ()) ? 0.0f : 512.0f;
 
    while (destIndex != m_currentNodeIndex) {
       destIndex = (graph.m_matrix.data () + (destIndex * graph.length ()) + m_currentNodeIndex)->index;
@@ -1641,7 +1642,7 @@ int Bot::findAimingNode (const Vector &to) {
          break;
       }
 
-      if (graph.isVisible (m_currentNodeIndex, destIndex) && graph.isVisible (destIndex, m_currentNodeIndex)) {
+      if (graph.isVisible (m_currentNodeIndex, destIndex) && graph.isVisible (destIndex, m_currentNodeIndex) && kMaxDistance > 0.0f && graph[destIndex].origin.distanceSq (graph[m_currentNodeIndex].origin) > cr::square (kMaxDistance)) {
          bestIndex = destIndex;
          break;
       }
@@ -1968,6 +1969,9 @@ int Bot::findDefendNode (const Vector &origin) {
    int posIndex = graph.getNearest (origin);
    int srcIndex = m_currentNodeIndex;
 
+   // max search distance
+   const int kMaxDistance = 128 * bots.getBotCount ();
+
    // some of points not found, return random one
    if (srcIndex == kInvalidNodeIndex || posIndex == kInvalidNodeIndex) {
       return rg.get (0, graph.length () - 1);
@@ -1983,8 +1987,8 @@ int Bot::findDefendNode (const Vector &origin) {
       // use the 'real' pathfinding distances
       int distance = graph.getPathDist (srcIndex, i);
 
-      // skip wayponts with distance more than 512 units
-      if (distance > 1024) {
+      // skip wayponts too far
+      if (distance > kMaxDistance) {
          continue;
       }
       game.testLine (graph[i].origin, graph[posIndex].origin, TraceIgnore::Everything, ent (), &tr);
@@ -2031,7 +2035,7 @@ int Bot::findDefendNode (const Vector &origin) {
       IntArray found;
 
       for (int i = 0; i < graph.length (); ++i) {
-         if (origin.distanceSq (graph[i].origin) <= cr::square (1248.0f) && !graph.isVisible (i, posIndex) && !isOccupiedNode (i)) {
+         if (origin.distanceSq (graph[i].origin) < cr::square (static_cast <float> (kMaxDistance)) && !graph.isVisible (i, posIndex) && !isOccupiedNode (i)) {
             found.push (i);
          }
       }
