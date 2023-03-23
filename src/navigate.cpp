@@ -1980,7 +1980,7 @@ int Bot::findDefendNode (const Vector &origin) {
    // find the best node now
    for (int i = 0; i < graph.length (); ++i) {
       // exclude ladder & current nodes
-      if ((graph[i].flags & NodeFlag::Ladder) || i == srcIndex || !graph.isVisible (i, posIndex) || isOccupiedNode (i)) {
+      if ((graph[i].flags & NodeFlag::Ladder) || i == srcIndex || !graph.isVisible (i, posIndex)) {
          continue;
       }
 
@@ -1991,6 +1991,11 @@ int Bot::findDefendNode (const Vector &origin) {
       if (distance > kMaxDistance) {
          continue;
       }
+
+      // skip occupied points
+      if (isOccupiedNode (i)) {
+         continue;
+      }
       game.testLine (graph[i].origin, graph[posIndex].origin, TraceIgnore::Glass, ent (), &tr);
 
       // check if line not hit anything
@@ -1998,11 +2003,37 @@ int Bot::findDefendNode (const Vector &origin) {
          continue;
       }
 
-      for (int j = 0; j < kMaxNodeLinks; ++j) {
-         if (distance > minDistance[j]) {
-            nodeIndex[j] = i;
-            minDistance[j] = distance;
-         }
+      if (distance > minDistance[0]) {
+         nodeIndex[0] = i;
+         minDistance[0] = distance;
+      }
+      else if (distance > minDistance[1]) {
+         nodeIndex[1] = i;
+         minDistance[1] = distance;
+      }
+      else if (distance > minDistance[2]) {
+         nodeIndex[2] = i;
+         minDistance[2] = distance;
+      }
+      else if (distance > minDistance[3]) {
+         nodeIndex[3] = i;
+         minDistance[3] = distance;
+      }
+      else if (distance > minDistance[4]) {
+         nodeIndex[4] = i;
+         minDistance[4] = distance;
+      }
+      else if (distance > minDistance[5]) {
+         nodeIndex[5] = i;
+         minDistance[5] = distance;
+      }
+      else if (distance > minDistance[6]) {
+         nodeIndex[6] = i;
+         minDistance[6] = distance;
+      }
+      else if (distance > minDistance[7]) {
+         nodeIndex[7] = i;
+         minDistance[7] = distance;
       }
    }
 
@@ -2023,7 +2054,7 @@ int Bot::findDefendNode (const Vector &origin) {
       sorting = false;
 
       // completely sort the data
-      for (int i = 0; i < kMaxNodeLinks; ++i) {
+      for (int i = 0; i < kMaxNodeLinks - 1; ++i) {
          if (nodeIndex[i] != kInvalidNodeIndex && nodeIndex[i + 1] != kInvalidNodeIndex && minDistance[i] > minDistance[i + 1]) {
             cr::swap (nodeIndex[i], nodeIndex[i + 1]);
             cr::swap (minDistance[i], minDistance[i + 1]);
@@ -2119,20 +2150,44 @@ int Bot::findCoverNode (float maxDistance) {
       }
 
       // use the 'real' pathfinding distances
-      int distances = graph.getPathDist (srcIndex, i);
+      int distance = graph.getPathDist (srcIndex, i);
       int enemyDistance = graph.getPathDist (enemyIndex, i);
 
-      if (distances >= enemyDistance) {
+      if (distance >= enemyDistance) {
          continue;
       }
 
-      for (int j = 0; j < kMaxNodeLinks; ++j) {
-         if (distances < minDistance[j]) {
-            nodeIndex[j] = i;
-            minDistance[j] = distances;
-
-            break;
-         }
+      if (distance > minDistance[0]) {
+         nodeIndex[0] = i;
+         minDistance[0] = distance;
+      }
+      else if (distance > minDistance[1]) {
+         nodeIndex[1] = i;
+         minDistance[1] = distance;
+      }
+      else if (distance > minDistance[2]) {
+         nodeIndex[2] = i;
+         minDistance[2] = distance;
+      }
+      else if (distance > minDistance[3]) {
+         nodeIndex[3] = i;
+         minDistance[3] = distance;
+      }
+      else if (distance > minDistance[4]) {
+         nodeIndex[4] = i;
+         minDistance[4] = distance;
+      }
+      else if (distance > minDistance[5]) {
+         nodeIndex[5] = i;
+         minDistance[5] = distance;
+      }
+      else if (distance > minDistance[6]) {
+         nodeIndex[6] = i;
+         minDistance[6] = distance;
+      }
+      else if (distance > minDistance[7]) {
+         nodeIndex[7] = i;
+         minDistance[7] = distance;
       }
    }
 
@@ -2152,7 +2207,7 @@ int Bot::findCoverNode (float maxDistance) {
    do {
       sorting = false;
 
-      for (int i = 0; i < kMaxNodeLinks; ++i) {
+      for (int i = 0; i < kMaxNodeLinks - 1; ++i) {
          if (nodeIndex[i] != kInvalidNodeIndex && nodeIndex[i + 1] != kInvalidNodeIndex && minDistance[i] > minDistance[i + 1]) {
             cr::swap (nodeIndex[i], nodeIndex[i + 1]);
             cr::swap (minDistance[i], minDistance[i + 1]);
@@ -3168,10 +3223,9 @@ bool Bot::isOccupiedNode (int index, bool needZeroVelocity) {
       if (length < cr::clamp (cr::square (graph[index].radius), cr::square (60.0f), cr::square (90.0f))) {
          return true;
       }
-#if 0 // too cpu hungry, disabled temporary
       auto bot = bots[client.ent];
 
-      if (bot == nullptr || bot == this || !bot->m_notKilled) {
+      if (bot == nullptr || bot == this || !bot->m_notKilled || bot->getTask ()->data == index) {
          continue;
       }
       auto occupyId = util.getShootingCone (bot->ent (), pev->origin) >= 0.7f ? bot->m_previousNodes[0] : bot->m_currentNodeIndex;
@@ -3179,7 +3233,6 @@ bool Bot::isOccupiedNode (int index, bool needZeroVelocity) {
       if (index == occupyId) {
          return true;
       }
-#endif
    }
    return false;
 }
