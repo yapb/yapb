@@ -2816,38 +2816,54 @@ void Bot::updateAimDir () {
       }
    }
    else if (flags & AimFlags::PredictPath) {
-      bool changePredictedEnemy = true;
+      TraceResult tr {};
 
-      if (m_timeNextTracking > game.time () && m_trackingEdict == m_lastEnemy && util.isAlive (m_lastEnemy)) {
-         changePredictedEnemy = false;
-      }
+      if (m_lastEnemyOrigin.distanceSq (pev->origin) < cr::square (1560.0f) || usesSniper ()) {
+         game.testLine (getEyesPos (), m_lastEnemyOrigin, TraceIgnore::Glass, pev->pContainingEntity, &tr);
 
-      if (changePredictedEnemy) {
-         auto aimPoint = findAimingNode (m_lastEnemyOrigin);
+         if (tr.flFraction >= 0.2f || !tr.fStartSolid || tr.pHit != game.getStartEntity ()) {
+            auto changePredictedEnemy = true;
 
-         if (aimPoint != kInvalidNodeIndex) {
-            m_lookAt = graph[aimPoint].origin;
-            m_camp = m_lookAt;
+            if (m_timeNextTracking < game.time () && m_trackingEdict == m_lastEnemy && util.isAlive (m_lastEnemy)) {
+               changePredictedEnemy = false;
+            }
 
-            m_timeNextTracking = game.time () + 0.5f;
-            m_trackingEdict = m_lastEnemy;
-         }
-         else {
-            m_aimFlags &= ~AimFlags::PredictPath;
+            if (changePredictedEnemy) {
+               auto aimPoint = findAimingNode (m_lastEnemyOrigin);
 
-            if (!m_camp.empty ()) {
+               if (aimPoint != kInvalidNodeIndex) {
+                  m_lookAt = graph[aimPoint].origin + pev->view_ofs;
+                  m_camp = m_lookAt;
+
+                  m_timeNextTracking = game.time () + 0.5f;
+                  m_trackingEdict = m_lastEnemy;
+
+                  if (!usesSniper () && lastEnemyShootable ()) {
+                     m_wantsToFire = true;
+                  }
+               }
+               else {
+                  m_lookAt = m_camp;
+               }
+            }
+            else {
                m_lookAt = m_camp;
             }
          }
+         else {
+            m_aimFlags &= ~AimFlags::PredictPath; // forget enemy far away
+         }
       }
       else {
-         m_lookAt = m_camp;
+         m_aimFlags &= ~AimFlags::PredictPath; // forget enemy far away
       }
    }
    else if (flags & AimFlags::Camp) {
       m_lookAt = m_camp;
    }
    else if (flags & AimFlags::Nav) {
+      m_lookAt = m_destOrigin;
+
       auto smoothView = [&] (int32 index) -> Vector {
          auto radius = graph[index].radius;
 

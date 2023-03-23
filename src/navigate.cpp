@@ -1991,7 +1991,7 @@ int Bot::findDefendNode (const Vector &origin) {
       if (distance > kMaxDistance) {
          continue;
       }
-      game.testLine (graph[i].origin, graph[posIndex].origin, TraceIgnore::Everything, ent (), &tr);
+      game.testLine (graph[i].origin, graph[posIndex].origin, TraceIgnore::Glass, ent (), &tr);
 
       // check if line not hit anything
       if (!cr::fequal (tr.flFraction, 1.0f)) {
@@ -2023,11 +2023,13 @@ int Bot::findDefendNode (const Vector &origin) {
       sorting = false;
 
       // completely sort the data
-      for (int i = 0; i < 3 && nodeIndex[i] != kInvalidNodeIndex && nodeIndex[i + 1] != kInvalidNodeIndex && minDistance[i] > minDistance[i + 1]; ++i) {
-         cr::swap (nodeIndex[i], nodeIndex[i + 1]);
-         cr::swap (minDistance[i], minDistance[i + 1]);
+      for (int i = 0; i < kMaxNodeLinks; ++i) {
+         if (nodeIndex[i] != kInvalidNodeIndex && nodeIndex[i + 1] != kInvalidNodeIndex && minDistance[i] > minDistance[i + 1]) {
+            cr::swap (nodeIndex[i], nodeIndex[i + 1]);
+            cr::swap (minDistance[i], minDistance[i + 1]);
 
-         sorting = true;
+            sorting = true;
+         }
       }
    } while (sorting);
 
@@ -2150,11 +2152,13 @@ int Bot::findCoverNode (float maxDistance) {
    do {
       sorting = false;
 
-      for (int i = 0; i < 3 && nodeIndex[i] != kInvalidNodeIndex && nodeIndex[i + 1] != kInvalidNodeIndex && minDistance[i] > minDistance[i + 1]; ++i) {
-         cr::swap (nodeIndex[i], nodeIndex[i + 1]);
-         cr::swap (minDistance[i], minDistance[i + 1]);
+      for (int i = 0; i < kMaxNodeLinks; ++i) {
+         if (nodeIndex[i] != kInvalidNodeIndex && nodeIndex[i + 1] != kInvalidNodeIndex && minDistance[i] > minDistance[i + 1]) {
+            cr::swap (nodeIndex[i], nodeIndex[i + 1]);
+            cr::swap (minDistance[i], minDistance[i + 1]);
 
-         sorting = true;
+            sorting = true;
+         }
       }
    } while (sorting);
 
