@@ -1597,6 +1597,12 @@ bool BotGraph::convertOldFormat () {
 template <typename U> bool BotGraph::saveStorage (StringRef ext, StringRef name, StorageOption options, StorageVersion version, const SmallArray <U> &data, ExtenHeader *exten) {
    bool isGraph = !!(options & StorageOption::Graph);
 
+   // do not allow to save graph with less than 8 nodes
+   if (isGraph && length () < kMaxNodeLinks) {
+      ctrl.msg ("Can't save graph data with less than %d nodes. Please add some more before saving.", kMaxNodeLinks);
+      return false;
+   }
+
    String filename;
    filename.assignf ("%s.%s", game.getMapName (), ext).lowercase ();
 
