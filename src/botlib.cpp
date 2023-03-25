@@ -3001,6 +3001,14 @@ void Bot::frame () {
       showChaterIcon (false); // end voice feedback
    }
 
+   // kick the bot if stay time is over, the quota maintain will add new bot for us later
+   if (cv_rotate_bots.bool_ () && m_stayTime < game.time ()) {
+      m_kickedByRotation = true; // kicked by roration, so not save bot name if save bot names is active
+
+      kick ();
+      return;
+   }
+
    // clear enemy far away
    if (!m_lastEnemyOrigin.empty () && !game.isNullEntity (m_lastEnemy) && pev->origin.distanceSq (m_lastEnemyOrigin) >= cr::square (1600.0f)) {
       m_lastEnemy = nullptr;

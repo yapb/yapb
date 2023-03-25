@@ -1236,14 +1236,6 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
 void Bot::newRound () {
    // this function initializes a bot after creation & at the start of each round
 
-   // kick the bot if stay time is over, the quota maintain will add new bot for us later
-   if (cv_rotate_bots.bool_ () && m_stayTime < game.time ()) {
-      m_kickedByRotation = true; // kicked by roration, so not save bot name if save bot names is active
-
-      kick ();
-      return;
-   }
-
    // delete all allocated path nodes
    clearSearchNodes ();
    clearRoute ();
