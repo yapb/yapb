@@ -981,7 +981,8 @@ public:
    float m_timeLastFired {}; // time to last firing
    float m_difficultyChange {}; // time when auto-difficulty was last applied to this bot
    float m_kpdRatio; // kill per death ratio
-   float m_healthValue; // clamped bot health 
+   float m_healthValue; // clamped bot health
+   float m_stayTime; // stay time before reconnect
 
    int m_blindNodeIndex {}; // node index to cover when blind
    int m_flashLevel {}; // flashlight level
@@ -1023,6 +1024,7 @@ public:
    bool m_jumpReady {}; // is double jump ready
    bool m_canChooseAimDirection {}; // can choose aiming direction
    bool m_isEnemyReachable {}; // direct line to enemy
+   bool m_kickedByRotation {}; // is bot kicked due to rotation ?
 
    edict_t *m_doubleJumpEntity {}; // pointer to entity that request double jump
    edict_t *m_radioEntity {}; // pointer to entity issuing a radio command

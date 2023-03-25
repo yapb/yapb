@@ -42,6 +42,10 @@ ConVar cv_quota_maintain_interval ("yb_quota_maintain_interval", "0.40", "Interv
 
 ConVar cv_language ("yb_language", "en", "Specifies the language for bot messages and menus.", false);
 
+ConVar cv_rotate_bots ("yb_rotate_bots", "0", "Randomly disconnect and connect bots, simulating players join/quit.");
+ConVar cv_rotate_stay_min ("yb_rotate_stay_min", "360.0", "Specifies minimum amount of seconds bot keep connected, if rotation active.", true, 120.0f, 7200.0f);
+ConVar cv_rotate_stay_max ("yb_rotate_stay_max", "3600.0", "Specifies maximum amount of seconds bot keep connected, if rotation active.", true, 1800.0f, 14400.0f);
+
 ConVar mp_limitteams ("mp_limitteams", nullptr, Var::GameRef);
 ConVar mp_autoteambalance ("mp_autoteambalance", nullptr, Var::GameRef);
 ConVar mp_roundtime ("mp_roundtime", nullptr, Var::GameRef);
@@ -775,11 +779,11 @@ void BotManager::setWeaponMode (int selection) {
 void BotManager::listBots () {
    // this function list's bots currently playing on the server
 
-   ctrl.msg ("%-3.5s\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.4s\t%-3.4s\t%-3.5s", "index", "name", "personality", "team", "difficulty", "frags", "alive");
+   ctrl.msg ("%-3.5s\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.4s\t%-3.4s\t%-3.5s\t%-3.8s", "index", "name", "personality", "team", "difficulty", "frags", "alive", "timeleft");
 
    for (const auto &bot : bots) {
       ;
-      ctrl.msg ("[%-3.1d]\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s", bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful", bot->m_team == Team::CT ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_notKilled ? "yes" : "no");
+      ctrl.msg ("[%-3.1d]\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s\t%-3.0f secs", bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful", bot->m_team == Team::CT ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_notKilled ? "yes" : "no", bot->m_stayTime - game.time ());
    }
    ctrl.msg ("%d bots", m_bots.length ());
 }
@@ -1000,6 +1004,13 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    m_moneyAmount = 0;
    m_logotypeIndex = conf.getRandomLogoIndex ();
 
+   if (cv_rotate_bots.bool_ ()) {
+      m_stayTime = game.time () + rg.get (cv_rotate_stay_min.float_ (), cv_rotate_stay_max.float_ ());
+   }
+   else {
+      m_stayTime = game.time () + kInfiniteDistance;
+   }
+
    // assign how talkative this bot will be
    m_sayTextBuffer.chatDelay = rg.get (3.8f, 10.0f);
    m_sayTextBuffer.chatProbability = rg.get (10, 100);
@@ -1069,6 +1080,9 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
 
    // init path walker
    m_pathWalk.init (graph.getMaxRouteLength ());
+
+   // bot is not kicked by rorataion
+   m_kickedByRotation = false;
 
    // assign team and class
    m_wantedTeam = team;
@@ -1145,7 +1159,7 @@ void BotManager::erase (Bot *bot) {
          continue;
       }
 
-      if (cv_save_bots_names.bool_ ()) {
+      if (!bot->m_kickedByRotation && cv_save_bots_names.bool_ ()) {
          m_saveBotNames.emplaceLast (bot->pev->netname.chars ());
       }
       bot->markStale ();
@@ -1221,6 +1235,14 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
 
 void Bot::newRound () {
    // this function initializes a bot after creation & at the start of each round
+
+   // kick the bot if stay time is over, the quota maintain will add new bot for us later
+   if (cv_rotate_bots.bool_ () && m_stayTime < game.time ()) {
+      m_kickedByRotation = true; // kicked by roration, so not save bot name if save bot names is active
+
+      kick ();
+      return;
+   }
 
    // delete all allocated path nodes
    clearSearchNodes ();
