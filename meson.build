@@ -219,6 +219,8 @@ elif win32 and (clang or gcc)
    if clang
       ldflags += '-Wl,/MACHINE:X86'
       ccflags += '-Wl,/MACHINE:X86'
+   else
+      ldflags += ['-Xlinker', '--script', '-Xlinker', '../i386pe.lds']
    endif
 endif
 

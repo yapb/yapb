@@ -640,7 +640,7 @@ private:
 #if defined (CR_WINDOWS)
 #  define DLSYM_FUNCTION GetProcAddress
 #  define DLCLOSE_FUNCTION FreeLibrary
-#  define DLSYM_RETURN FARPROC
+#  define DLSYM_RETURN PVOID
 #  define DLSYM_HANDLE HMODULE
 #else
 #  define DLSYM_FUNCTION dlsym
