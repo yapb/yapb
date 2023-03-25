@@ -34,7 +34,7 @@ find_program ('hostname', required: true)
 
 cpp = meson.get_compiler ('cpp')
 sys = host_machine.system ()
-target = build_machine.cpu_family ()
+target = host_machine.cpu_family ()
 version = meson.project_version ()
 count = run_command ('git', 'rev-list', '--count', 'HEAD', check: false).stdout ().strip ()
 
