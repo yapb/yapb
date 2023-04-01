@@ -82,7 +82,7 @@ int Bot::findBestGoal () {
       tactic = 4;
       return findGoalPost (tactic, defensiveNodes, offensiveNodes);
    }
-   auto difficutly = static_cast <float> (m_difficulty);
+   auto difficulty = static_cast <float> (m_difficulty);
 
    offensive = m_agressionLevel * 100.0f;
    defensive = m_fearLevel * 100.0f;
@@ -95,8 +95,8 @@ int Bot::findBestGoal () {
       else if (m_team == Team::CT) {
          // on hostage maps force more bots to save hostages
          if (game.mapIs (MapFlags::HostageRescue)) {
-            defensive -= 25.0f - difficutly * 0.5f;
-            offensive += 25.0f + difficutly * 5.0f;
+            defensive -= 25.0f - difficulty * 0.5f;
+            offensive += 25.0f + difficulty * 5.0f;
          }
          else {
             defensive -= 25.0f;
@@ -113,8 +113,8 @@ int Bot::findBestGoal () {
          }
          return m_chosenGoalIndex = findBombNode ();
       }
-      defensive += 25.0f + difficutly * 4.0f;
-      offensive -= 25.0f - difficutly * 0.5f;
+      defensive += 25.0f + difficulty * 4.0f;
+      offensive -= 25.0f - difficulty * 0.5f;
 
       if (m_personality != Personality::Rusher) {
          defensive += 10.0f;
