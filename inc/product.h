@@ -19,13 +19,13 @@
 class Product final : public Singleton <Product> {
 public:
    struct Build {
-      StringRef hash { MODULE_BUILD_HASH };
-      StringRef author { MODULE_BUILD_AUTHOR };
-      StringRef count { MODULE_BUILD_COUNT };
-      StringRef machine { MODULE_BUILD_MACHINE };
-      StringRef compiler { MODULE_BUILD_COMPILER };
-      StringRef id { MODULE_BOT_BUILD_ID };
-   } build { };
+      StringRef hash { MODULE_COMMIT_COUNT };
+      StringRef count { MODULE_COMMIT_HASH };
+      StringRef author { MODULE_AUTHOR };
+      StringRef machine { MODULE_MACHINE };
+      StringRef compiler { MODULE_COMPILER };
+      StringRef id { MODULE_BUILD_ID };
+   } build {};
 
 public:
    StringRef name { "YaPB" };
@@ -38,7 +38,7 @@ public:
    StringRef logtag { "YB" };
    StringRef dtime { __DATE__ " " __TIME__ };
    StringRef date { __DATE__ };
-   StringRef version { MODULE_BOT_VERSION "." MODULE_BUILD_COUNT };
+   StringRef version { MODULE_VERSION "." MODULE_COMMIT_COUNT };
    StringRef cmdPri { "yb" };
    StringRef cmdSec { "yapb" };
 };

@@ -71,8 +71,8 @@ void Bot::pushMsgQueue (int message) {
 }
 
 float Bot::isInFOV (const Vector &destination) {
-   float entityAngle = cr::modAngles (destination.yaw ()); // find yaw angle from source to destination...
-   float viewAngle = cr::modAngles (pev->v_angle.y); // get bot's current view angle...
+   float entityAngle = cr::wrapAngle360 (destination.yaw ()); // find yaw angle from source to destination...
+   float viewAngle = cr::wrapAngle360 (pev->v_angle.y); // get bot's current view angle...
 
    // return the absolute value of angle to destination entity
    // zero degrees means straight ahead, 45 degrees to the left or
@@ -232,7 +232,8 @@ void Bot::checkGrenadesThrow () {
          }
          break;
 
-      case Weapon::Flashbang: {
+      case Weapon::Flashbang:
+      {
          int nearest = graph.getNearest ((m_lastEnemy->v.velocity * 0.5f).get2d () + m_lastEnemy->v.origin);
 
          if (nearest != kInvalidNodeIndex) {
@@ -339,7 +340,7 @@ void Bot::avoidGrenades () {
       if (m_preventFlashing < game.time () && m_personality == Personality::Rusher && m_difficulty == Difficulty::Expert && strcmp (model, "flashbang.mdl") == 0) {
          // don't look at flash bang
          if (!(m_states & Sense::SeeingEnemy)) {
-           m_lookAt.y = cr::normalizeAngles ((game.getEntityOrigin (pent) - getEyesPos ()).angles ().y + 180.0f);
+            m_lookAt.y = cr::wrapAngle ((game.getEntityOrigin (pent) - getEyesPos ()).angles ().y + 180.0f);
 
             m_canChooseAimDirection = false;
             m_preventFlashing = game.time () + rg.get (1.0f, 2.0f);
@@ -636,6 +637,7 @@ void Bot::updatePickups () {
             const auto &config = conf.getWeapons ();
             const auto &primary = config[primaryWeaponCarried];
             const auto &secondary = config[secondaryWeaponCarried];
+
             const auto &primaryProp = conf.getWeaponProp (primary.id);
             const auto &secondaryProp = conf.getWeaponProp (secondary.id);
 
@@ -950,7 +952,7 @@ void Bot::showChaterIcon (bool show) {
       return;
    }
 
-   auto sendBotVoice = [] (bool show, edict_t *ent, int ownId) {
+   auto sendBotVoice = [&show] (edict_t *ent, int ownId) {
       MessageWriter (MSG_ONE, msgs.id (NetMsg::BotVoice), nullptr, ent) // begin message
          .writeByte (show) // switch on/off
          .writeByte (ownId);
@@ -964,13 +966,13 @@ void Bot::showChaterIcon (bool show) {
       }
 
       if (!show && (client.iconFlags[ownIndex] & ClientFlags::Icon) && client.iconTimestamp[ownIndex] < game.time ()) {
-         sendBotVoice (false, client.ent, entindex ());
+         sendBotVoice (client.ent, entindex ());
 
          client.iconTimestamp[ownIndex] = 0.0f;
          client.iconFlags[ownIndex] &= ~ClientFlags::Icon;
       }
       else if (show && !(client.iconFlags[ownIndex] & ClientFlags::Icon)) {
-         sendBotVoice (true, client.ent, entindex ());
+         sendBotVoice (client.ent, entindex ());
       }
    }
 }
@@ -1225,43 +1227,36 @@ bool Bot::isWeaponRestrictedAMX (int weaponIndex) {
       return false;
    }
 
-
-   // check for weapon restrictions
-   if (cr::bit (weaponIndex) & (kPrimaryWeaponMask | kSecondaryWeaponMask | Weapon::Shield)) {
-      auto restrictedWeapons = game.findCvar ("amx_restrweapons");
+   auto checkRestriction = [&weaponIndex] (StringRef cvar, const int *data) -> bool {
+      auto restrictedWeapons = game.findCvar (cvar);
 
       if (restrictedWeapons.empty ()) {
          return false;
       }
-      constexpr int indices[] = { 4, 25, 20, -1, 8, -1, 12, 19, -1, 5, 6, 13, 23, 17, 18, 1, 2, 21, 9, 24, 7, 16, 10, 22, -1, 3, 15, 14, 0, 11 };
-
       // find the weapon index
-      int index = indices[weaponIndex - 1];
+      int index = data[weaponIndex - 1];
 
       // validate index range
       if (index < 0 || index >= static_cast <int> (restrictedWeapons.length ())) {
          return false;
       }
-      return restrictedWeapons[index] != '0';
+      return restrictedWeapons[static_cast <size_t> (index)] != '0';
+   };
+
+   // check for weapon restrictions
+   if (cr::bit (weaponIndex) & (kPrimaryWeaponMask | kSecondaryWeaponMask | Weapon::Shield)) {
+      constexpr int ids[] = { 4, 25, 20, -1, 8, -1, 12, 19, -1, 5, 6, 13, 23, 17, 18, 1, 2, 21, 9, 24, 7, 16, 10, 22, -1, 3, 15, 14, 0, 11 };
+
+      // verify restrictions
+      return checkRestriction ("amx_restrweapons", ids);
    }
 
    // check for equipment restrictions
    else {
-      auto restrictedEquipment = game.findCvar ("amx_restrequipammo");
+      constexpr int ids[] = { -1, -1, -1, 3, -1, -1, -1, -1, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2, -1, -1, -1, -1, -1, 0, 1, 5 };
 
-      if (restrictedEquipment.empty ()) {
-         return false;
-      }
-      constexpr int indices[] = { -1, -1, -1, 3, -1, -1, -1, -1, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2, -1, -1, -1, -1, -1, 0, 1, 5 };
-
-      // find the weapon index
-      int index = indices[weaponIndex - 1];
-
-      // validate index range
-      if (index < 0 || index >= static_cast <int> (restrictedEquipment.length ())) {
-         return false;
-      }
-      return restrictedEquipment[index] != '0';
+      // verify restrictions
+      return checkRestriction ("amx_restrequipammo", ids);
    }
 }
 
@@ -1294,7 +1289,7 @@ int Bot::pickBestWeapon (int *vec, int count, int moneySave) {
    bool needMoreRandomWeapon = (m_personality == Personality::Careful) || (rg.chance (25) && m_personality == Personality::Normal);
 
    if (needMoreRandomWeapon) {
-      auto buyFactor = (m_moneyAmount - static_cast <float> (moneySave)) / (16000.0f - static_cast <float> (moneySave)) * 3.0f;
+      auto buyFactor = (static_cast <float> (m_moneyAmount) - static_cast <float> (moneySave)) / (16000.0f - static_cast <float> (moneySave)) * 3.0f;
 
       if (buyFactor < 1.0f) {
          buyFactor = 1.0f;
@@ -1537,7 +1532,7 @@ void Bot::buyStuff () {
       break;
 
    case BuyState::ArmorVestHelm: // if armor is damaged and bot has some money, buy some armor
-      if (pev->armorvalue < rg.get (50, 80) && teamHasGoodEconomics && (isPistolMode || (teamHasGoodEconomics && hasPrimaryWeapon ()))) {
+      if (pev->armorvalue < rg.get (50.0f, 80.0f) && teamHasGoodEconomics && (isPistolMode || (teamHasGoodEconomics && hasPrimaryWeapon ()))) {
          // if bot is rich, buy kevlar + helmet, else buy a single kevlar
          if (m_moneyAmount > 1500 && !isWeaponRestricted (Weapon::ArmorHelm)) {
             issueCommand ("buyequip;menuselect 2");
@@ -1988,7 +1983,7 @@ void Bot::filterTasks () {
             timeHeard += 10.0f;
             ratio = timeHeard * 0.1f;
          }
-         bool lowAmmo = m_ammoInClip[m_currentWeapon] < conf.findWeaponById (m_currentWeapon).maxClip * 0.18f;
+         bool lowAmmo = isLowOnAmmo (m_currentWeapon, 0.18f);
          bool sniping = m_sniperStopTime <= game.time () && lowAmmo;
 
          if (bots.isBombPlanted () || m_isStuck || usesKnife ()) {
@@ -2167,6 +2162,10 @@ BotTask *Bot::getTask () {
       startTask (Task::Normal, TaskPri::Normal, kInvalidNodeIndex, 0.0f, true);
    }
    return &m_tasks.last ();
+}
+
+bool Bot::isLowOnAmmo (const int id, const float factor) const {
+   return static_cast <float> (m_ammoInClip[id]) < static_cast <float> (conf.findWeaponById (id).maxClip) * factor;
 }
 
 void Bot::clearTask (Task id) {
@@ -2868,7 +2867,7 @@ void Bot::updateAimDir () {
          auto radius = graph[index].radius;
 
          if (radius > 0.0f) {
-            return Vector (pev->angles.x, cr::normalizeAngles (pev->angles.y + rg.get (-90.0f, 90.0f)), 0.0f).forward () * rg.get (2.0f, 4.0f);
+            return Vector (pev->angles.x, cr::wrapAngle (pev->angles.y + rg.get (-90.0f, 90.0f)), 0.0f).forward () * rg.get (2.0f, 4.0f);
          }
          return nullptr;
       };
@@ -3952,7 +3951,7 @@ void Bot::defuseBomb_ () {
       graph.setBombOrigin (true);
 
       if (m_numFriendsLeft != 0 && rg.chance (50)) {
-         if (timeToBlowUp <= 3.0) {
+         if (timeToBlowUp <= 3.0f) {
             if (cv_radio_mode.int_ () == 2) {
                pushChatterMessage (Chatter::BarelyDefused);
             }
@@ -4016,7 +4015,7 @@ void Bot::defuseBomb_ () {
          selectWeaponByName ("weapon_knife");
 
          if (weaponIndex > 0 && weaponIndex < kNumWeapons) {
-            selectWeaponById (weaponIndex);
+            selectWeaponByIndex (weaponIndex);
          }
          m_isReloading = false;
       }
@@ -4588,16 +4587,16 @@ void Bot::pickupItem_ () {
 
          if (index < 7) {
             // secondary weapon. i.e., pistol
-            int wid = 0;
+            int weaponIndex = 0;
 
             for (index = 0; index < 7; ++index) {
                if (pev->weapons & cr::bit (info[index].id)) {
-                  wid = index;
+                  weaponIndex = index;
                }
             }
 
-            if (wid > 0) {
-               selectWeaponById (wid);
+            if (weaponIndex > 0) {
+               selectWeaponByIndex (weaponIndex);
                issueCommand ("drop");
 
                if (hasShield ()) {
@@ -4608,15 +4607,17 @@ void Bot::pickupItem_ () {
          }
          else {
             // primary weapon
-            int wid = bestWeaponCarried ();
+            int weaponIndex = bestWeaponCarried ();
             bool niceWeapon = rateGroundWeapon (m_pickupItem);
 
-            if ((wid == Weapon::Shield || wid > 6 || hasShield ()) && niceWeapon) {
-               selectWeaponById (wid);
+            auto tab = conf.getRawWeapons ();
+
+            if ((tab->id == Weapon::Shield || weaponIndex > 6 || hasShield ()) && niceWeapon) {
+               selectWeaponByIndex (weaponIndex);
                issueCommand ("drop");
             }
 
-            if (!wid || !niceWeapon) {
+            if (!weaponIndex || !niceWeapon) {
                m_itemIgnore = m_pickupItem;
                m_pickupItem = nullptr;
                m_pickupType = Pickup::None;
@@ -4640,10 +4641,10 @@ void Bot::pickupItem_ () {
       // near to shield?
       else if (itemDistance < 50.0f) {
          // get current best weapon to check if it's a primary in need to be dropped
-         int wid = bestWeaponCarried ();
+         int weaponIndex = bestWeaponCarried ();
 
-         if (wid > 6) {
-            selectWeaponById (wid);
+         if (weaponIndex > 6) {
+            selectWeaponByIndex (weaponIndex);
             issueCommand ("drop");
          }
       }
@@ -5059,7 +5060,7 @@ void Bot::logic () {
       pev->button &= ~IN_DUCK;
 
       m_moveSpeed = -pev->maxspeed;
-      m_strafeSpeed = pev->maxspeed * m_needAvoidGrenade;
+      m_strafeSpeed = pev->maxspeed * static_cast <float> (m_needAvoidGrenade);
    }
 
    // time to reach waypoint
@@ -5222,11 +5223,11 @@ void Bot::showDebugOverlay () {
       }
       String aimFlags;
 
-      for (int i = 0; i < 9; ++i) {
-         bool hasFlag = m_aimFlags & cr::bit (i);
+      for (uint32 i = 0u; i < 9u; ++i) {
+         auto bit = cr::bit (i);
 
-         if (hasFlag) {
-            aimFlags.appendf (" %s", flags[cr::bit (i)]);
+         if (m_aimFlags & bit) {
+            aimFlags.appendf (" %s", flags[static_cast <int32> (bit)]);
          }
       }
       auto weapon = util.weaponIdToAlias (m_currentWeapon);
@@ -5289,7 +5290,11 @@ bool Bot::hasHostage () {
 }
 
 int Bot::getAmmo () {
-   const auto &prop = conf.getWeaponProp (m_currentWeapon);
+   return getAmmo (m_currentWeapon);
+}
+
+int Bot::getAmmo (int id) {
+   const auto &prop = conf.getWeaponProp (id);
 
    if (prop.ammo1 == -1 || prop.ammo1 > kMaxWeapons - 1) {
       return 0;
@@ -5408,11 +5413,12 @@ void Bot::updatePracticeValue (int damage) {
    if (graph.length () < 1 || graph.hasChanged () || m_chosenGoalIndex < 0 || m_prevGoalIndex < 0) {
       return;
    }
+   auto health = static_cast <int> (m_healthValue);
 
    // only rate goal waypoint if bot died because of the damage
    // FIXME: could be done a lot better, however this cares most about damage done by sniping or really deadly weapons
-   if (m_healthValue - damage <= 0) {
-      graph.setDangerValue (m_team, m_chosenGoalIndex, m_prevGoalIndex, cr::clamp (graph.getDangerValue (m_team, m_chosenGoalIndex, m_prevGoalIndex) - static_cast <int> (m_healthValue / 20), -kMaxPracticeGoalValue, kMaxPracticeGoalValue));
+   if (health - damage <= 0) {
+      graph.setDangerValue (m_team, m_chosenGoalIndex, m_prevGoalIndex, cr::clamp (graph.getDangerValue (m_team, m_chosenGoalIndex, m_prevGoalIndex) - health / 20, -kMaxPracticeGoalValue, kMaxPracticeGoalValue));
    }
 }
 
@@ -5453,10 +5459,10 @@ void Bot::updatePracticeDamage (edict_t *attacker, int damage) {
          graph.setDangerDamage (victimIndex, victimIndex, victimIndex, cr::clamp (graph.getDangerDamage (victimTeam, victimIndex, victimIndex), 0, kMaxPracticeDamageValue));
       }
    }
-   float updateDamage = util.isFakeClient (attacker) ? 10.0f : 7.0f;
+   auto updateDamage = util.isFakeClient (attacker) ? 10 : 7;
 
    // store away the damage done
-   int damageValue = cr::clamp (graph.getDangerDamage (m_team, victimIndex, attackerIndex) + static_cast <int> (damage / updateDamage), 0, kMaxPracticeDamageValue);
+   int damageValue = cr::clamp (graph.getDangerDamage (m_team, victimIndex, attackerIndex) + damage / updateDamage, 0, kMaxPracticeDamageValue);
 
    if (damageValue > graph.getHighestDamageForTeam (m_team)) {
       graph.setHighestDamageForTeam (m_team, damageValue);
@@ -6047,7 +6053,7 @@ float Bot::getShiftSpeed () {
    if (getCurrentTaskId () == Task::SeekCover || (pev->flags & FL_DUCKING) || (pev->button & IN_DUCK) || (m_oldButtons & IN_DUCK) || (m_currentTravelFlags & PathFlag::Jump) || (m_path != nullptr && m_path->flags & NodeFlag::Ladder) || isOnLadder () || isInWater () || m_isStuck) {
       return pev->maxspeed;
    }
-   return static_cast <float> (pev->maxspeed * 0.4f);
+   return pev->maxspeed * 0.4f;
 }
 
 void Bot::calculateFrustum () {

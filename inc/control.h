@@ -63,21 +63,21 @@ public:
    };
 
 private:
-   StringArray m_args;
-   Array <BotCmd> m_cmds;
-   Array <BotMenu> m_menus;
-   Deque <PrintQueue> m_printQueue;
-   IntArray m_campIterator;
+   StringArray m_args {};
+   Array <BotCmd> m_cmds {};
+   Array <BotMenu> m_menus {};
+   Deque <PrintQueue> m_printQueue {};
+   IntArray m_campIterator {};
 
-   edict_t *m_ent;
-   Bot *m_djump;
+   edict_t *m_ent {};
+   Bot *m_djump {};
 
-   bool m_isFromConsole;
-   bool m_rapidOutput;
-   bool m_isMenuFillCommand;
-   bool m_ignoreTranslate;
+   bool m_isFromConsole {};
+   bool m_rapidOutput {};
+   bool m_isMenuFillCommand {};
+   bool m_ignoreTranslate {};
 
-   int m_menuServerFillTeam;
+   int m_menuServerFillTeam {};
    int m_interMenuData[4] = { 0, };
 
    float m_printQueueFlushTimestamp {};

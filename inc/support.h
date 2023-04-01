@@ -21,15 +21,15 @@ CR_DECLARE_SCOPED_ENUM (Noise,
 
 class BotSupport final : public Singleton <BotSupport> {
 private:
-   bool m_needToSendWelcome;
-   float m_welcomeReceiveTime;
+   bool m_needToSendWelcome {};
+   float m_welcomeReceiveTime {};
 
-   StringArray m_sentences;
-   SmallArray <Client> m_clients;
-   SmallArray <Twin <String, String>> m_tags;
+   StringArray m_sentences {};
+   SmallArray <Client> m_clients {};
+   SmallArray <Twin <String, String>> m_tags {};
 
-   HashMap <int32, String> m_weaponAlias;
-   HashMap <String, int32> m_noiseCache;
+   HashMap <int32, String> m_weaponAlias {};
+   HashMap <String, int32> m_noiseCache {};
    Detour <decltype (sendto)> m_sendToDetour { "ws2_32.dll", "sendto", sendto };
 
 public:

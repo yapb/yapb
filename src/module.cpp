@@ -23,7 +23,7 @@ private:
 public:
    // get the bot version string
    virtual const char *getBotVersion () override {
-      return MODULE_BOT_VERSION "." MODULE_BUILD_COUNT;
+      return MODULE_VERSION "." MODULE_COMMIT_COUNT;
    }
 
    // checks if bots are currently in game

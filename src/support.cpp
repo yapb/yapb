@@ -285,7 +285,7 @@ void BotSupport::checkWelcome () {
    bool needToSendMsg = (graph.length () > 0 ? m_needToSendWelcome : true);
    auto receiveEntity = game.getLocalEntity ();
 
-   if (isAlive (receiveEntity) && m_welcomeReceiveTime < 1.0 && needToSendMsg) {
+   if (isAlive (receiveEntity) && m_welcomeReceiveTime < 1.0f && needToSendMsg) {
       m_welcomeReceiveTime = game.time () + 4.0f; // receive welcome message in four seconds after game has commencing
    }
 
@@ -509,7 +509,7 @@ void BotSupport::simulateNoise (int playerIndex) {
       }
    }
 
-   if (noise.dist <= 0.0) {
+   if (noise.dist <= 0.0f) {
       return; // didn't issue sound?
    }
 
@@ -613,7 +613,7 @@ void BotSupport::calculatePings () {
       if (!bot) {
          continue;
       }
-      int part = static_cast <int> (average.first * 0.2f);
+      int part = static_cast <int> (static_cast <float> (average.first) * 0.2f);
 
       int botPing = bot->m_basePing + rg.get (average.first - part, average.first + part) + rg.get (bot->m_difficulty / 2, bot->m_difficulty);
       int botLoss = rg.get (average.second / 2, average.second);

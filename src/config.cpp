@@ -95,6 +95,9 @@ void BotConfig::loadMainConfig (bool isFirstLoad) {
       }
       file.close ();
    }
+   else {
+      game.serverCommand (strings.format ("%s cvars save", product.cmdPri));
+   }
 
    // android is abit hard to play, lower the difficulty by default
    if (plat.android && cv_difficulty.int_ () > 3) {

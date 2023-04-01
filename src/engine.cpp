@@ -681,7 +681,7 @@ void Game::checkCvarsBounds () {
    if (is (GameFlags::Xash3D)) {
       static cvar_t *sv_forcesimulating = engfuncs.pfnCVarGetPointer ("sv_forcesimulating");
 
-      if (sv_forcesimulating && sv_forcesimulating->value != 1.0f) {
+      if (sv_forcesimulating && !cr::fequal (sv_forcesimulating->value, 1.0f)) {
          game.print ("Force-enable Xash3D sv_forcesimulating cvar.");
          engfuncs.pfnCVarSetFloat ("sv_forcesimulating", 1.0f);
       }
@@ -798,7 +798,7 @@ bool Game::loadCSBinary () {
          auto entity = m_gameLib.resolve <EntityFunction> ("weapon_famas");
 
          // detect xash engine
-         if (engfuncs.pfnCVarGetPointer ("build") != nullptr) {
+         if (engfuncs.pfnCVarGetPointer ("host_ver") != nullptr) {
             m_gameFlags |= (GameFlags::Legacy | GameFlags::Xash3D);
 
             if (entity != nullptr) {
@@ -1035,7 +1035,7 @@ bool Game::isShootableBreakable (edict_t *ent) {
    auto limit = cv_breakable_health_limit.float_ ();
 
    if ((strcmp (ent->v.classname.chars (), "func_breakable") == 0 && ent->v.health < limit) || (strcmp (ent->v.classname.chars (), "func_pushable") == 0 && (ent->v.spawnflags & SF_PUSH_BREAKABLE) && ent->v.health < limit) || (strcmp (ent->v.classname.chars (), "func_wall") == 0 && ent->v.health < limit)) {
-      if (ent->v.takedamage != DAMAGE_NO && ent->v.impulse <= 0 && !(ent->v.flags & FL_WORLDBRUSH) && !(ent->v.spawnflags & SF_BREAK_TRIGGER_ONLY)) {
+      if (ent->v.takedamage > 0.0f && ent->v.impulse <= 0 && !(ent->v.flags & FL_WORLDBRUSH) && !(ent->v.spawnflags & SF_BREAK_TRIGGER_ONLY)) {
          return (ent->v.movetype == MOVETYPE_PUSH || ent->v.movetype == MOVETYPE_PUSHSTEP);
       }
    }
@@ -1112,8 +1112,7 @@ void LightMeasure::animateLight () {
          m_lightstyleValue[j] = 256;
          continue;
       }
-      int value = m_lightstyle[j].map[index % m_lightstyle[j].length] - 'a';
-      m_lightstyleValue[j] = value * 22;
+      m_lightstyleValue[j] = static_cast <uint32> (m_lightstyle[j].map[index % m_lightstyle[j].length] - 'a') * 22u;
    }
 }
 

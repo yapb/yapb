@@ -82,6 +82,7 @@ int Bot::findBestGoal () {
       tactic = 4;
       return findGoalPost (tactic, defensiveNodes, offensiveNodes);
    }
+   auto difficutly = static_cast <float> (m_difficulty);
 
    offensive = m_agressionLevel * 100.0f;
    defensive = m_fearLevel * 100.0f;
@@ -94,8 +95,8 @@ int Bot::findBestGoal () {
       else if (m_team == Team::CT) {
          // on hostage maps force more bots to save hostages
          if (game.mapIs (MapFlags::HostageRescue)) {
-            defensive -= 25.0f - m_difficulty * 0.5f;
-            offensive += 25.0f + m_difficulty * 5.0f;
+            defensive -= 25.0f - difficutly * 0.5f;
+            offensive += 25.0f + difficutly * 5.0f;
          }
          else {
             defensive -= 25.0f;
@@ -112,8 +113,8 @@ int Bot::findBestGoal () {
          }
          return m_chosenGoalIndex = findBombNode ();
       }
-      defensive += 25.0f + m_difficulty * 4.0f;
-      offensive -= 25.0f - m_difficulty * 0.5f;
+      defensive += 25.0f + difficutly * 4.0f;
+      offensive -= 25.0f - difficutly * 0.5f;
 
       if (m_personality != Personality::Rusher) {
          defensive += 10.0f;
@@ -121,7 +122,7 @@ int Bot::findBestGoal () {
    }
    else if (game.mapIs (MapFlags::Demolition) && m_team == Team::Terrorist && bots.getRoundStartTime () + 10.0f < game.time ()) {
       // send some terrorists to guard planted bomb
-      if (!m_defendedBomb && bots.isBombPlanted () && getCurrentTaskId () != Task::EscapeFromBomb && getBombTimeleft () >= 15.0) {
+      if (!m_defendedBomb && bots.isBombPlanted () && getCurrentTaskId () != Task::EscapeFromBomb && getBombTimeleft () >= 15.0f) {
          return pushToHistroy (m_chosenGoalIndex = graph.getNearest (graph.getBombOrigin ()));
       }
    }
@@ -456,13 +457,10 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
 
       // bot is stuc, but not yet decided what to do?
       if (m_collisionState == CollisionState::Undecided) {
-         int bits = 0;
+         uint32 bits = 0;
 
          if (isOnLadder ()) {
             bits |= CollisionProbe::Strafe;
-         }
-         else if (isInWater ()) {
-            bits |= (CollisionProbe::Jump | CollisionProbe::Strafe);
          }
          else {
             bits |= (CollisionProbe::Strafe | CollisionProbe::Jump);
@@ -470,7 +468,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
 
          // collision check allowed if not flying through the air
          if (isOnFloor () || isOnLadder () || isInWater ()) {
-            int state[kMaxCollideMoves * 2 + 1] {};
+            uint32 state[kMaxCollideMoves * 2 + 1] {};
             int i = 0;
 
             Vector src {}, dst {};
@@ -689,7 +687,7 @@ bool Bot::updateNavigation () {
 
       // if graph node radius non zero vary origin a bit depending on the body angles
       if (m_path->radius > 0.0f) {
-         m_pathOrigin += Vector (pev->angles.x, cr::normalizeAngles (pev->angles.y + rg.get (-90.0f, 90.0f)), 0.0f).forward () * rg.get (0.0f, m_path->radius);
+         m_pathOrigin += Vector (pev->angles.x, cr::wrapAngle (pev->angles.y + rg.get (-90.0f, 90.0f)), 0.0f).forward () * rg.get (0.0f, m_path->radius);
       }
       m_navTimeset = game.time ();
    }
@@ -726,7 +724,7 @@ bool Bot::updateNavigation () {
          }
       }
 
-      if (!(graph[m_previousNodes[0]].flags & NodeFlag::Ladder)) {
+      if (graph.exists (m_previousNodes[0]) && (graph[m_previousNodes[0]].flags & NodeFlag::Ladder)) {
          if (cr::abs (m_pathOrigin.z - pev->origin.z) > 5.0f) {
             m_pathOrigin.z += pev->origin.z - m_pathOrigin.z;
          }
@@ -1325,7 +1323,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
    // this function finds a path from srcIndex to destIndex
 
    auto dangerFactor = [&] () -> float {
-      return rg.get (cv_path_danger_factor_min.float_ (), cv_path_danger_factor_max.float_ ()) * 2.0f / cr::clamp (m_difficulty, 1, 3);
+      return rg.get (cv_path_danger_factor_min.float_ (), cv_path_danger_factor_max.float_ ()) * 2.0f / cr::clamp (static_cast <float> (m_difficulty), 1.0f, 4.0f);
    };
 
    // least kills and number of nodes to goal for a team
@@ -1403,11 +1401,13 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
 
       for (const auto &link : parent.links) {
          if (link.index == currentIndex) {
+            const auto distance = static_cast <float> (link.distance);
+
             // we don't like ladder or crouch point
             if (current.flags & (NodeFlag::Crouch | NodeFlag::Ladder)) {
-               return link.distance * 1.5f;
+               return distance * 1.5f;
             }
-            return static_cast <float> (link.distance);
+            return distance;
          }
       }
       return 65355.0f;
@@ -1608,7 +1608,7 @@ void Bot::clearSearchNodes () {
 }
 
 void Bot::clearRoute () {
-   m_routes.resize (graph.length ());
+   m_routes.resize (static_cast <size_t> (graph.length ()));
 
    for (int i = 0; i < graph.length (); ++i) {
       auto route = &m_routes[i];
@@ -1633,7 +1633,7 @@ int Bot::findAimingNode (const Vector &to) {
    if (destIndex == kInvalidNodeIndex) {
       return kInvalidNodeIndex;
    }
-   const float kMaxDistance = ((m_states & Sense::HearingEnemy) || (m_states & Sense::HearingEnemy) || m_seeEnemyTime + 3.0f > game.time ()) ? 0.0f : 512.0f;
+   const float kMaxDistance = ((m_states & Sense::HearingEnemy) || (m_states & Sense::SuspectEnemy) || m_seeEnemyTime + 3.0f > game.time ()) ? 0.0f : 512.0f;
 
    while (destIndex != m_currentNodeIndex) {
       destIndex = (graph.m_matrix.data () + (destIndex * graph.length ()) + m_currentNodeIndex)->index;
@@ -2411,7 +2411,7 @@ bool Bot::advanceMovement () {
 
    // if wayzone radius non zero vary origin a bit depending on the body angles
    if (m_path->radius > 0.0f) {
-      m_pathOrigin += Vector (pev->angles.x, cr::normalizeAngles (pev->angles.y + rg.get (-90.0f, 90.0f)), 0.0f).forward () * rg.get (0.0f, m_path->radius);
+      m_pathOrigin += Vector (pev->angles.x, cr::wrapAngle (pev->angles.y + rg.get (-90.0f, 90.0f)), 0.0f).forward () * rg.get (0.0f, m_path->radius);
    }
 
    if (isOnLadder ()) {
@@ -2432,17 +2432,17 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
    // use some TraceLines to determine if anything is blocking the current path of the bot.
 
    // first do a trace from the bot's eyes forward...
-   Vector src = getEyesPos ();
-   Vector forward = src + normal * 24.0f;
+   auto src = getEyesPos ();
+   auto forward = src + normal * 24.0f;
+   auto right = Vector (0.0f, pev->angles.y, 0.0f).right ();
 
-   const auto &right = Vector (0.0f, pev->angles.y, 0.0f).right ();
    bool traceResult = false;
 
-   auto checkDoor = [&traceResult] (TraceResult *tr) {
+   auto checkDoor = [&traceResult] (TraceResult *result) {
       if (!game.mapIs (MapFlags::HasDoors)) {
          return false;
       }
-      return !traceResult && tr->flFraction < 1.0f && strncmp ("func_door", tr->pHit->v.classname.chars (), 9) != 0;
+      return !traceResult && result->flFraction < 1.0f && strncmp ("func_door", result->pHit->v.classname.chars (), 9) != 0;
    };
 
    // trace from the bot's eyes straight forward...
@@ -2596,11 +2596,11 @@ bool Bot::canJumpUp (const Vector &normal) {
    if (!isOnFloor () && (isOnLadder () || !isInWater ())) {
       return false;
    }
-   const auto &right = Vector (0.0f, pev->angles.y, 0.0f).right (); // convert current view angle to vectors for traceline math...
+   auto right = Vector (0.0f, pev->angles.y, 0.0f).right (); // convert current view angle to vectors for traceline math...
 
    // check for normal jump height first...
-   Vector src = pev->origin + Vector (0.0f, 0.0f, -36.0f + 45.0f);
-   Vector dest = src + normal * 32.0f;
+   auto src = pev->origin + Vector (0.0f, 0.0f, -36.0f + 45.0f);
+   auto dest = src + normal * 32.0f;
 
    // trace a line forward at maximum jump height...
    game.testLine (src, dest, TraceIgnore::Monsters, ent (), &tr);
@@ -2762,7 +2762,7 @@ bool Bot::canDuckUnder (const Vector &normal) {
    }
 
    // convert current view angle to vectors for TraceLine math...
-   const auto &right = Vector (0.0f, pev->angles.y, 0.0f).right ();
+   auto right = Vector (0.0f, pev->angles.y, 0.0f).right ();
 
    // now check same height to one side of the bot...
    src = baseHeight + right * 16.0f;
@@ -2900,14 +2900,14 @@ bool Bot::isDeadlyMove (const Vector &to) {
 void Bot::changePitch (float speed) {
    // this function turns a bot towards its ideal_pitch
 
-   float idealPitch = cr::normalizeAngles (pev->idealpitch);
-   float curent = cr::normalizeAngles (pev->v_angle.x);
+   float idealPitch = cr::wrapAngle (pev->idealpitch);
+   float curent = cr::wrapAngle (pev->v_angle.x);
 
    // turn from the current v_angle pitch to the idealpitch by selecting
    // the quickest way to turn to face that direction
 
    // find the difference in the curent and ideal angle
-   float normalizePitch = cr::normalizeAngles (idealPitch - curent);
+   float normalizePitch = cr::wrapAngle (idealPitch - curent);
 
    if (normalizePitch > 0.0f) {
       if (normalizePitch > speed) {
@@ -2920,7 +2920,7 @@ void Bot::changePitch (float speed) {
       }
    }
 
-   pev->v_angle.x = cr::normalizeAngles (curent + normalizePitch);
+   pev->v_angle.x = cr::wrapAngle (curent + normalizePitch);
 
    if (pev->v_angle.x > 89.9f) {
       pev->v_angle.x = 89.9f;
@@ -2935,14 +2935,14 @@ void Bot::changePitch (float speed) {
 void Bot::changeYaw (float speed) {
    // this function turns a bot towards its ideal_yaw
 
-   float idealPitch = cr::normalizeAngles (pev->ideal_yaw);
-   float curent = cr::normalizeAngles (pev->v_angle.y);
+   float idealPitch = cr::wrapAngle (pev->ideal_yaw);
+   float curent = cr::wrapAngle (pev->v_angle.y);
 
    // turn from the current v_angle yaw to the ideal_yaw by selecting
    // the quickest way to turn to face that direction
 
    // find the difference in the curent and ideal angle
-   float normalizePitch = cr::normalizeAngles (idealPitch - curent);
+   float normalizePitch = cr::wrapAngle (idealPitch - curent);
 
    if (normalizePitch > 0.0f) {
       if (normalizePitch > speed) {
@@ -2954,7 +2954,7 @@ void Bot::changeYaw (float speed) {
          normalizePitch = -speed;
       }
    }
-   pev->v_angle.y = cr::normalizeAngles (curent + normalizePitch);
+   pev->v_angle.y = cr::wrapAngle (curent + normalizePitch);
    pev->angles.y = pev->v_angle.y;
 }
 
@@ -3084,7 +3084,7 @@ void Bot::updateLookAnglesNewbie (const Vector &direction, float delta) {
    Vector spring { 13.0f, 13.0f, 0.0f };
    Vector damperCoefficient { 0.22f, 0.22f, 0.0f };
 
-   const float offset = cr::clamp (m_difficulty, 1, 4) * 25.0f;
+   const float offset = cr::clamp (static_cast <float> (m_difficulty), 1.0f, 4.0f) * 25.0f;
 
    Vector influence = Vector (0.25f, 0.17f, 0.0f) * (100.0f - offset) / 100.f;
    Vector randomization = Vector (2.0f, 0.18f, 0.0f) * (100.0f - offset) / 100.f;

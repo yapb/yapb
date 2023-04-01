@@ -151,7 +151,7 @@
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\vc;..\inc;..\ext;..\ext\crlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;CR_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader />
       <PrecompiledHeaderFile>yapb.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>.\debug\inf\yapb.pch</PrecompiledHeaderOutputFile>

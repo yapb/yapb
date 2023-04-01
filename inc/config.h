@@ -38,20 +38,20 @@ public:
    };
 
 private:
-   Array <StringArray> m_chat;
-   Array <Array <ChatterItem>> m_chatter;
+   Array <StringArray> m_chat {};
+   Array <Array <ChatterItem>> m_chatter {};
 
-   Array <BotName> m_botNames;
-   Array <Keywords> m_replies;
-   SmallArray <WeaponInfo> m_weapons;
-   SmallArray <WeaponProp> m_weaponProps;
+   Array <BotName> m_botNames {};
+   Array <Keywords> m_replies {};
+   SmallArray <WeaponInfo> m_weapons {};
+   SmallArray <WeaponProp> m_weaponProps {};
 
-   StringArray m_logos;
-   StringArray m_avatars;
+   StringArray m_logos {};
+   StringArray m_avatars {};
 
-   HashMap <uint32, String, Hash <int32>> m_language;
-   HashMap <int32, DifficultyData> m_difficulty;
-   HashMap <String, String> m_custom;
+   HashMap <uint32, String, Hash <int32>> m_language {};
+   HashMap <int32, DifficultyData> m_difficulty {};
+   HashMap <String, String> m_custom {};
 
    // default tables for personality weapon preferences, overridden by weapon.cfg
    SmallArray <int32> m_normalWeaponPrefs = { 0, 2, 1, 4, 5, 6, 3, 12, 10, 24, 25, 13, 11, 8, 7, 22, 23, 18, 21, 17, 19, 15, 17, 9, 14, 16 };
