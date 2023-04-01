@@ -488,7 +488,7 @@ int BotControl::cmdNodeSave () {
    else {
       if (graph.checkNodes (false)) {
          graph.saveGraphData ();
-         msg ("All nodes has been saved and written to disk.");
+         msg ("All nodes has been saved and written to disk.\n*** Please don't forget to share your work by typing \"%s g upload\". Thank you! ***", product.cmdPri);
       }
       else {
          msg ("Could not save save nodes to disk. Graph check has failed.");
