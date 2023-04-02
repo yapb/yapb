@@ -2817,10 +2817,13 @@ void Bot::updateAimDir () {
    else if (flags & AimFlags::PredictPath) {
       TraceResult tr {};
 
-      if (m_lastEnemyOrigin.distanceSq (pev->origin) < cr::square (1560.0f) || usesSniper ()) {
+      auto distanceToLastEnemySq = m_lastEnemyOrigin.distanceSq (pev->origin);
+      auto maxDistanceToEnemySq = cr::square (1600.0f);
+
+      if ((distanceToLastEnemySq < maxDistanceToEnemySq || usesSniper ()) && util.isAlive (m_lastEnemy)) {
          game.testLine (getEyesPos (), m_lastEnemyOrigin, TraceIgnore::Glass, pev->pContainingEntity, &tr);
 
-         if (tr.flFraction >= 0.2f || !tr.fStartSolid || tr.pHit != game.getStartEntity ()) {
+         if (tr.flFraction >= 0.2f || tr.pHit != game.getStartEntity ()) {
             auto changePredictedEnemy = true;
 
             if (m_timeNextTracking < game.time () && m_trackingEdict == m_lastEnemy && util.isAlive (m_lastEnemy)) {
@@ -2855,6 +2858,9 @@ void Bot::updateAimDir () {
       }
       else {
          m_aimFlags &= ~AimFlags::PredictPath; // forget enemy far away
+
+         if (distanceToLastEnemySq >= maxDistanceToEnemySq)
+            m_lastEnemyOrigin = nullptr;
       }
    }
    else if (flags & AimFlags::Camp) {

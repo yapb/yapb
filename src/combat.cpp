@@ -7,7 +7,7 @@
 
 #include <yapb.h>
 
-ConVar cv_shoots_thru_walls ("yb_shoots_thru_walls", "2", "Specifies whether bots able to fire at enemies behind the wall, if they hearing or suspecting them.", true, 0.0f, 2.0f);
+ConVar cv_shoots_thru_walls ("yb_shoots_thru_walls", "2", "Specifies whether bots able to fire at enemies behind the wall, if they hearing or suspecting them.", true, 0.0f, 3.0f);
 ConVar cv_ignore_enemies ("yb_ignore_enemies", "0", "Enables or disables searching world for enemies.");
 ConVar cv_check_enemy_rendering ("yb_check_enemy_rendering", "0", "Enables or disables checking enemy rendering flags. Useful for some mods.");
 ConVar cv_check_enemy_invincibility ("yb_check_enemy_invincibility", "0", "Enables or disables checking enemy invincibility. Useful for some mods.");
@@ -504,14 +504,26 @@ const Vector &Bot::getEnemyBodyOffset () {
       aimPos += getBodyOffsetError (distance);
    }
    else if (util.isPlayer (m_enemy)) {
-      const float highOffset = m_difficulty > Difficulty::Normal ? 1.5f : 0.0f;
+      const float highOffset = cv_whose_your_daddy.bool_ () ? 1.5f : 0.0f;
 
       // now take in account different parts of enemy body
       if (m_enemyParts & (Visibility::Head | Visibility::Body)) {
+         auto headshotPct = conf.getDifficultyTweaks (m_difficulty)->headshotPct;
+         auto onLoosingStreak = m_fearLevel > m_agressionLevel || m_kpdRatio < 1.5f;
+
+         // reduce headshot percent in case we're play too good
+         if (!onLoosingStreak) {
+            headshotPct = cr::abs (headshotPct - headshotPct / 4);
+         }
 
          // now check is our skill match to aim at head, else aim at enemy body
-         if (rg.chance (conf.getDifficultyTweaks (m_difficulty)->headshotPct)) {
-            aimPos.z = headOffset (m_enemy) + getEnemyBodyOffsetCorrection (distance);
+         if (rg.chance (headshotPct)) {
+            if (onLoosingStreak || cv_whose_your_daddy.bool_ ()) {
+               aimPos.z = headOffset (m_enemy) + getEnemyBodyOffsetCorrection (distance);
+            }
+            else {
+               aimPos = m_enemy->v.origin + m_enemy->v.view_ofs;
+            }
          }
          else {
             aimPos.z += highOffset;
@@ -610,16 +622,21 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
    // this function returns true if enemy can be shoot through some obstacle, false otherwise.
    // credits goes to Immortal_BLG
 
-   if (cv_shoots_thru_walls.int_ () == 2) {
+   auto method = cv_shoots_thru_walls.int_ ();
+
+   if (method == 2) {
       return isPenetrableObstacle2 (dest);
+   }
+   else if (method == 3) {
+      return isPenetrableObstacle3 (dest);
    }
 
    if (m_isUsingGrenade || m_difficulty < Difficulty::Normal) {
       return false;
    }
-   int penetratePower = conf.findWeaponById (m_currentWeapon).penetratePower;
+   auto power = conf.findWeaponById (m_currentWeapon).penetratePower;
 
-   if (penetratePower == 0) {
+   if (power == 0) {
       return false;
    }
    TraceResult tr {};
@@ -645,10 +662,10 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
    const float distance = cr::square (75.0f);
 
    if (obstacleDistance > 0.0f) {
-      while (penetratePower > 0) {
+      while (power > 0) {
          if (obstacleDistance > distance) {
             obstacleDistance -= distance;
-            penetratePower--;
+            power--;
 
             continue;
          }
@@ -695,6 +712,45 @@ bool Bot::isPenetrableObstacle2 (const Vector &dest) {
       }
    }
    return false;
+}
+
+bool Bot::isPenetrableObstacle3 (const Vector &dest) {
+   // this function returns if enemy can be shoot through some obstacle
+
+   if (m_isUsingGrenade || m_difficulty < Difficulty::Normal || !conf.findWeaponById (m_currentWeapon).penetratePower) {
+      return false;
+   }
+   auto power = conf.findWeaponById (m_currentWeapon).penetratePower;
+
+   if (power == 0) {
+      return false;
+   }
+   TraceResult tr {};
+
+   Vector source = getEyesPos ();
+   const auto &dir = (dest - source).normalize () * 8.0f;
+
+   for (;;) {
+      game.testLine (source, dest, TraceIgnore::Monsters, ent (), &tr);
+
+      if (tr.fStartSolid) {
+         if (tr.fAllSolid) {
+            return false;
+         }
+         source += dir;
+      }
+      else {
+         // check if line hit anything
+         if (cr::fequal (tr.flFraction, 1.0f)) {
+            return true;
+         }
+
+         if (--power == 0) {
+            return false;
+         }
+         source = tr.vecEndPos + dir;
+      }
+   }
 }
 
 bool Bot::needToPauseFiring (float distance) {

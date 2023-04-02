@@ -816,6 +816,7 @@ private:
    bool isGroupOfEnemies (const Vector &location, int numEnemies = 1, float radius = 256.0f);
    bool isPenetrableObstacle (const Vector &dest);
    bool isPenetrableObstacle2 (const Vector &dest);
+   bool isPenetrableObstacle3 (const Vector &dest);
    bool isEnemyBehindShield (edict_t *enemy);
    bool isEnemyInFrustum (edict_t *enemy);
    bool checkChatKeywords (String &reply);

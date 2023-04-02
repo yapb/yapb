@@ -925,7 +925,7 @@ bool Bot::updateNavigation () {
       getTask ()->data = kInvalidNodeIndex;
       clearSearchNodes ();
 
-      return false;
+      return true;
    }
 
    if (nodeDistance < desiredDistance) {
@@ -3220,7 +3220,7 @@ bool Bot::isOccupiedNode (int index, bool needZeroVelocity) {
       }
       auto length = client.origin.distanceSq (graph[index].origin);
 
-      if (length < cr::clamp (cr::square (graph[index].radius), cr::square (60.0f), cr::square (90.0f))) {
+      if (length < cr::clamp (cr::square (graph[index].radius) * 2.0f, cr::square (80.0f), cr::square (140.0f))) {
          return true;
       }
       auto bot = bots[client.ent];
