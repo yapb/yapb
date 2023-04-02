@@ -1010,12 +1010,12 @@ CR_EXPORT int Server_GetPhysicsInterface (int version, server_physics_api_t *phy
    return HLTrue;
 }
 
-DLSYM_RETURN EntityLinkage::lookup (SharedLibrary::Handle module, const char *function) {
+SharedLibrary::Func EntityLinkage::lookup (SharedLibrary::Handle module, const char *function) {
    static const auto &gamedll = game.lib ().handle ();
    static const auto &self = m_self.handle ();
 
    const auto resolve = [&] (SharedLibrary::Handle handle) {
-      return reinterpret_cast <DLSYM_RETURN> (m_dlsym (static_cast <DLSYM_HANDLE> (handle), function));
+      return m_dlsym (handle, function);
    };
 
    if (ents.needsBypass () && !strcmp (function, "CreateInterface")) {
@@ -1028,10 +1028,16 @@ DLSYM_RETURN EntityLinkage::lookup (SharedLibrary::Handle module, const char *fu
    }
 
    // if requested module is yapb module, put in cache the looked up symbol
-   if (self != module || (plat.win && (static_cast <uint16> (reinterpret_cast <unsigned long> (function) >> 16) & 0xffff) == 0)) {
+   if (self != module) {
       return resolve (module);
    }
 
+#if defined (CR_WINDOWS)
+   if (HIWORD (function) == 0) {
+      return resolve (module);
+   }
+#endif
+   
    if (m_exports.has (function)) {
       return m_exports[function];
    }
@@ -1057,7 +1063,7 @@ void EntityLinkage::callPlayerFunction (edict_t *ent) {
       playerFunction = game.lib ().resolve <EntityFunction> ("player");
    }
    else {
-      playerFunction = reinterpret_cast <EntityFunction> (lookup (game.lib ().handle (), "player"));
+      playerFunction = reinterpret_cast <EntityFunction> (reinterpret_cast <void *> (lookup (game.lib ().handle (), "player")));
    }
 
    if (!playerFunction) {

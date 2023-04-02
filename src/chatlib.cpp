@@ -61,12 +61,12 @@ void BotSupport::addChatErrors (String &line) {
 
       // "length / 2" percent of time drop a character
       if (rg.chance (percentile)) {
-         line.erase (rg.get (length / 8, length - length / 8), 1);
+         line.erase (static_cast <size_t> (rg.get (length / 8, length - length / 8), 1));
       }
 
       // "length" / 4 precent of time swap character
       if (rg.chance (percentile / 2)) {
-         size_t pos = rg.get (length / 8, 3 * length / 8); // choose random position in string
+         size_t pos = static_cast <size_t> (rg.get (length / 8, 3 * length / 8)); // choose random position in string
          cr::swap (line[pos], line[pos + 1]);
       }
    }
@@ -190,7 +190,7 @@ void Bot::prepareChatMessage (StringRef message) {
 
    // get bot's victim
    auto getMyVictim = [&] () -> String {;
-   return humanizedName (game.indexOfPlayer (m_lastVictim));
+      return humanizedName (game.indexOfPlayer (m_lastVictim));
    };
 
    // get the game name alias

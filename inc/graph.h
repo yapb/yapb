@@ -186,10 +186,10 @@ struct PODPath {
 // this structure links nodes returned from pathfinder
 class PathWalk final : public DenyCopying {
 private:
-   size_t m_cursor = 0;
-   size_t m_length = 0;
+   size_t m_cursor {};
+   size_t m_length {};
 
-   UniquePtr <int32[]> m_path;
+   UniquePtr <int32[]> m_path {};
 
 public:
    explicit PathWalk () = default;
@@ -263,60 +263,59 @@ private:
       int x, y, z;
    };
 
-   int m_editFlags;
-   int m_loadAttempts;
-   int m_cacheNodeIndex;
-   int m_lastJumpNode;
-   int m_findWPIndex;
-   int m_facingAtIndex;
+   int m_editFlags {};
+   int m_loadAttempts {};
+   int m_cacheNodeIndex {};
+   int m_lastJumpNode {};
+   int m_findWPIndex {};
+   int m_facingAtIndex {};
    int m_highestDamage[kGameTeamNum] {};
-   int m_autoSaveCount;
+   int m_autoSaveCount {};
 
-   float m_timeJumpStarted;
-   float m_autoPathDistance;
-   float m_pathDisplayTime;
-   float m_arrowDisplayTime;
+   float m_timeJumpStarted {};
+   float m_autoPathDistance {};
+   float m_pathDisplayTime {};
+   float m_arrowDisplayTime {};
 
-   bool m_isOnLadder;
-   bool m_endJumpPoint;
-   bool m_jumpLearnNode;
-   bool m_hasChanged;
-   bool m_needsVisRebuild;
-   bool m_narrowChecked;
+   bool m_isOnLadder {};
+   bool m_endJumpPoint {};
+   bool m_jumpLearnNode {};
+   bool m_hasChanged {};
+   bool m_needsVisRebuild {};
+   bool m_narrowChecked {};
 
-   Vector m_learnVelocity;
-   Vector m_learnPosition;
-   Vector m_bombOrigin;
-   Vector m_lastNode;
+   Vector m_learnVelocity {};
+   Vector m_learnPosition {};
+   Vector m_bombOrigin {};
+   Vector m_lastNode {};
 
-   IntArray m_terrorPoints;
-   IntArray m_ctPoints;
-   IntArray m_goalPoints;
-   IntArray m_campPoints;
-   IntArray m_sniperPoints;
-   IntArray m_rescuePoints;
-   IntArray m_visitedGoals;
+   IntArray m_terrorPoints {};
+   IntArray m_ctPoints {};
+   IntArray m_goalPoints {};
+   IntArray m_campPoints {};
+   IntArray m_sniperPoints {};
+   IntArray m_rescuePoints {};
+   IntArray m_visitedGoals {};
 
    SmallArray <int32> m_buckets[kMaxBucketsInsidePos][kMaxBucketsInsidePos][kMaxBucketsInsidePos];
-   SmallArray <Matrix> m_matrix;
-   SmallArray <Practice> m_practice;
-   SmallArray <Path> m_paths;
-   SmallArray <uint8> m_vistable;
+   SmallArray <Matrix> m_matrix {};
+   SmallArray <Practice> m_practice {};
+   SmallArray <Path> m_paths {};
+   SmallArray <uint8> m_vistable {};
 
-   String m_graphAuthor;
-   String m_graphModified;
+   String m_graphAuthor {};
+   String m_graphModified {};
 
    ExtenHeader m_extenHeader {};
    StorageHeader m_graphHeader {};
 
-   edict_t *m_editor;
+   edict_t *m_editor {};
 
 public:
    BotGraph ();
    ~BotGraph () = default;
 
 public:
-
    int getFacingIndex ();
    int getFarest (const Vector &origin, float maxDistance = 32.0);
    int getNearest (const Vector &origin, float minDistance = kInfiniteDistance, int flags = -1);

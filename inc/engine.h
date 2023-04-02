@@ -112,27 +112,27 @@ public:
    using EntitySearch = Lambda <EntitySearchResult (edict_t *)>;
 
 private:
-   int m_drawModels[DrawLine::Count] { };
-   int m_spawnCount[Team::Unassigned] { };
+   int m_drawModels[DrawLine::Count] {};
+   int m_spawnCount[Team::Unassigned] {};
 
    // bot client command
-   StringArray m_botArgs;
+   StringArray m_botArgs {};
 
-   edict_t *m_startEntity;
-   edict_t *m_localEntity;
+   edict_t *m_startEntity {};
+   edict_t *m_localEntity {};
 
-   Array <edict_t *> m_breakables;
-   SmallArray <ConVarReg> m_cvars;
-   SharedLibrary m_gameLib;
-   EngineWrap m_engineWrap;
+   Array <edict_t *> m_breakables {};
+   SmallArray <ConVarReg> m_cvars {};
+   SharedLibrary m_gameLib {};
+   EngineWrap m_engineWrap {};
 
-   bool m_precached;
+   bool m_precached {};
 
    int m_gameFlags {};
    int m_mapFlags {};
 
-   float m_oneSecondFrame; // per second updated
-   float m_halfSecondFrame; // per half second update
+   float m_oneSecondFrame {}; // per second updated
+   float m_halfSecondFrame {}; // per half second update
 
 public:
    Game ();
@@ -240,8 +240,8 @@ public:
    }
 
    // gets custom engine argv for client command
-   const char *botArgv (size_t index) const {
-      if (index >= m_botArgs.length ()) {
+   const char *botArgv (int32 index) const {
+      if (static_cast <size_t> (index) >= m_botArgs.length ()) {
          return "";
       }
       return m_botArgs[index].chars ();
@@ -517,7 +517,7 @@ public:
 class LightMeasure final : public Singleton <LightMeasure> {
 private:
    lightstyle_t m_lightstyle[MAX_LIGHTSTYLES] {};
-   int m_lightstyleValue[MAX_LIGHTSTYLEVALUE] {};
+   uint32 m_lightstyleValue[MAX_LIGHTSTYLEVALUE] {};
    bool m_doAnimation = false;
 
    Color m_point;
@@ -563,8 +563,8 @@ public:
 
 // simple handler for parsing and rewriting queries (fake queries)
 class QueryBuffer {
-   SmallArray <uint8> m_buffer;
-   size_t m_cursor;
+   SmallArray <uint8> m_buffer {};
+   size_t m_cursor {};
 
 public:
    QueryBuffer (const uint8 *msg, size_t length, size_t shift) : m_cursor (0) {
@@ -640,7 +640,7 @@ private:
 #if defined (CR_WINDOWS)
 #  define DLSYM_FUNCTION GetProcAddress
 #  define DLCLOSE_FUNCTION FreeLibrary
-#  define DLSYM_RETURN PVOID
+#  define DLSYM_RETURN SharedLibrary::Handle
 #  define DLSYM_HANDLE HMODULE
 #else
 #  define DLSYM_FUNCTION dlsym
@@ -654,7 +654,7 @@ private:
 
    Detour <decltype (DLSYM_FUNCTION)> m_dlsym;
    Detour <decltype (DLCLOSE_FUNCTION)> m_dlclose;
-   HashMap <StringRef, DLSYM_RETURN> m_exports;
+   HashMap <StringRef, SharedLibrary::Func> m_exports;
 
    SharedLibrary m_self;
 
@@ -663,7 +663,7 @@ public:
 
 public:
    void initialize ();
-   DLSYM_RETURN lookup (SharedLibrary::Handle module, const char *function);
+   SharedLibrary::Func lookup (SharedLibrary::Handle module, const char *function);
 
    int close (DLSYM_HANDLE module) {
       if (m_self.handle () == module) {
@@ -701,7 +701,7 @@ public:
    }
 
 public:
-   static DLSYM_RETURN CR_STDCALL lookupHandler (SharedLibrary::Handle module, const char *function) {
+   static SharedLibrary::Func CR_STDCALL lookupHandler (SharedLibrary::Handle module, const char *function) {
       return EntityLinkage::instance ().lookup (module, function);
    }
 

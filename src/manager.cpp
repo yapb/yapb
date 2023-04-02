@@ -132,7 +132,7 @@ void BotManager::touchKillerEntity (Bot *bot) {
    KeyValueData kv {};
    kv.szClassName = const_cast <char *> (prop.classname.chars ());
    kv.szKeyName = "damagetype";
-   kv.szValue = const_cast <char *> (strings.format ("%d", cr::bit (4)));
+   kv.szValue = strings.format ("%d", cr::bit (4));
    kv.fHandled = HLFalse;
 
    MDLL_KeyValue (m_killerEntity, &kv);
@@ -782,7 +782,6 @@ void BotManager::listBots () {
    ctrl.msg ("%-3.5s\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.4s\t%-3.4s\t%-3.5s\t%-3.8s", "index", "name", "personality", "team", "difficulty", "frags", "alive", "timeleft");
 
    for (const auto &bot : bots) {
-      ;
       ctrl.msg ("[%-3.1d]\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s\t%-3.0f secs", bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful", bot->m_team == Team::CT ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_notKilled ? "yes" : "no", bot->m_stayTime - game.time ());
    }
    ctrl.msg ("%d bots", m_bots.length ());
@@ -819,7 +818,7 @@ float BotManager::getAverageTeamKPD (bool calcForBots) {
    }
 
    if (calc.second > 0) {
-      return calc.first / calc.second;
+      return calc.first / static_cast <float> (calc.second);
    }
    return 0.0f;
 }
@@ -930,10 +929,10 @@ void BotManager::balanceBotDifficulties () {
       float score = bot->m_kpdRatio;
 
       // if kd ratio is going to go to low, we need to try to set higher difficulty
-      if (score < 0.8 || (score <= 1.2 && ratioBots < ratioPlayer)) {
+      if (score < 0.8f || (score <= 1.2f && ratioBots < ratioPlayer)) {
          updateDifficulty (bot.get (), +1);
       }
-      else if (score > 4.0f || (score >= 2.5 && ratioBots > ratioPlayer)) {
+      else if (score > 4.0f || (score >= 2.5f && ratioBots > ratioPlayer)) {
          updateDifficulty (bot.get (), -1);
       }
    }
@@ -948,9 +947,6 @@ void BotManager::destroy () {
 Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    // this function does core operation of creating bot, it's called by addbot (),
    // when bot setup completed, (this is a bot class constructor)
-
-   // we're not initializing all the variables in bot class, so do an ugly thing... memset this
-   plat.bzero (this, sizeof (*this));
 
    int clientIndex = game.indexOfEntity (bot);
    pev = &bot->v;
@@ -1458,7 +1454,7 @@ void Bot::resetPathSearchType () {
    switch (m_personality) {
    default:
    case Personality::Normal:
-      m_pathType = morale ? FindPath::Optimal : FindPath::Safe;
+      m_pathType = morale ? FindPath::Optimal : FindPath::Fast;
       break;
 
    case Personality::Rusher:

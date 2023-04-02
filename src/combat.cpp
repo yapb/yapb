@@ -461,8 +461,8 @@ Vector Bot::getBodyOffsetError (float distance) {
    }
 
    if (m_aimErrorTime < game.time ()) {
-      const float error = distance / (cr::clamp (m_difficulty, 1, 3) * 1000.0f);
-      Vector &maxs = m_enemy->v.maxs, &mins = m_enemy->v.mins;
+      const float error = distance / (cr::clamp (static_cast <float> (m_difficulty), 1.0f, 3.0f) * 1000.0f);
+      auto &maxs = m_enemy->v.maxs, &mins = m_enemy->v.mins;
 
       m_aimLastError = Vector (rg.get (mins.x * error, maxs.x * error), rg.get (mins.y * error, maxs.y * error), rg.get (mins.z * error, maxs.z * error));
       m_aimErrorTime = game.time () + rg.get (1.0f, 1.2f);
@@ -728,7 +728,7 @@ bool Bot::needToPauseFiring (float distance) {
    const float yPunch = cr::deg2rad (pev->punchangle.y);
 
    const float interval = getFrameInterval ();
-   const float tolerance = (100.0f - m_difficulty * 25.0f) / 99.0f;
+   const float tolerance = (100.0f - static_cast <float> (m_difficulty) * 25.0f) / 99.0f;
 
    // check if we need to compensate recoil
    if (cr::tanf (cr::sqrtf (cr::abs (xPunch * xPunch) + cr::abs (yPunch * yPunch))) * distance > offset + 30.0f + tolerance) {
@@ -848,10 +848,8 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
          }
       }
       else {
-         const auto &prop = conf.getWeaponProp (tab[index].id);
-
          // if automatic weapon press attack
-         if (tab[choosen].primaryFireHold && m_ammo[prop.ammo1] > tab[index].minPrimaryAmmo) {
+         if (tab[choosen].primaryFireHold && getAmmo (tab[index].id) > tab[index].minPrimaryAmmo) {
             pev->button |= IN_ATTACK;
          }
 
@@ -953,9 +951,7 @@ void Bot::fireWeapons () {
 
          // is the bot carrying this weapon?
          if (weapons & cr::bit (id)) {
-            const auto &prop = conf.getWeaponProp (id);
-
-            if (prop.ammo1 != -1 && prop.ammo1 < kMaxWeapons && m_ammo[prop.ammo1] >= tab[selectIndex].minPrimaryAmmo) {
+            if (getAmmo (id) >= tab[selectIndex].minPrimaryAmmo) {
 
                // available ammo found, reload weapon
                if (m_reloadState == Reload::None || m_reloadCheckTime > game.time ()) {
@@ -1431,10 +1427,9 @@ void Bot::selectBestWeapon () {
       if (tab[selectIndex].id == m_currentWeapon && (getAmmoInClip () < 0 || getAmmoInClip () >= tab[selectIndex].minPrimaryAmmo)) {
          ammoLeft = true;
       }
-      const auto &prop = conf.getWeaponProp (id);
 
       // is no ammo required for this weapon OR enough ammo available to fire
-      if (prop.ammo1 < 0 || (prop.ammo1 < kMaxWeapons && m_ammo[prop.ammo1] >= tab[selectIndex].minPrimaryAmmo)) {
+      if (getAmmo (id) >= tab[selectIndex].minPrimaryAmmo) {
          ammoLeft = true;
       }
 
@@ -1485,14 +1480,13 @@ int Bot::bestWeaponCarried () {
    return num;
 }
 
-void Bot::selectWeaponByName (const char *name) {
-   issueCommand (name);
+void Bot::selectWeaponByName (StringRef name) {
+   issueCommand (name.chars ());
 }
 
-void Bot::selectWeaponById (int num) {
+void Bot::selectWeaponByIndex (int index) {
    auto tab = conf.getRawWeapons ();
-
-   issueCommand (tab[num].name);
+   issueCommand (tab[index].name);
 }
 
 void Bot::decideFollowUser () {
@@ -1599,7 +1593,7 @@ void Bot::checkReload () {
    m_reloadCheckTime = game.time () + 3.0f;
 
    if (m_reloadState != Reload::None) {
-      int weaponIndex = 0;
+      int wid = 0;
       int weapons = pev->weapons;
 
       if (m_reloadState == Reload::Primary) {
@@ -1620,15 +1614,15 @@ void Bot::checkReload () {
 
       for (int i = 1; i < kMaxWeapons; ++i) {
          if (weapons & cr::bit (i)) {
-            weaponIndex = i;
+            wid = i;
             break;
          }
       }
-      const auto &prop = conf.getWeaponProp (weaponIndex);
+      const auto &prop = conf.getWeaponProp (wid);
 
-      if (m_ammoInClip[weaponIndex] < conf.findWeaponById (weaponIndex).maxClip * 0.8f && prop.ammo1 != -1 && prop.ammo1 < kMaxWeapons && m_ammo[prop.ammo1] > 0) {
-         if (m_currentWeapon != weaponIndex) {
-            selectWeaponByName (prop.classname.chars ());
+      if (isLowOnAmmo (prop.id, 0.75f) && getAmmo (prop.id) > 0) {
+         if (m_currentWeapon != prop.id) {
+            selectWeaponByName (prop.classname);
          }
          pev->button &= ~IN_ATTACK;
 

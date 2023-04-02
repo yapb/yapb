@@ -45,10 +45,10 @@ int BotControl::cmdKickBot () {
    enum args { alias = 1, team };
 
    // if team is specified, kick from specified tram
-   if (strValue (alias).find ("_ct", 0) != String::InvalidIndex || intValue (team) == 2 || strValue (team) == "ct") {
+   if (strValue (alias).endsWith ("_ct") || intValue (team) == 2 || strValue (team) == "ct") {
       bots.kickFromTeam (Team::CT);
    }
-   else if (strValue (alias).find ("_t", 0) != String::InvalidIndex || intValue (team) == 1 || strValue (team) == "t") {
+   else if (strValue (alias).endsWith ("_t") || intValue (team) == 1 || strValue (team) == "t") {
       bots.kickFromTeam (Team::Terrorist);
    }
    else {
@@ -73,10 +73,10 @@ int BotControl::cmdKillBots () {
    enum args { alias = 1, team, max };
 
    // if team is specified, kick from specified tram
-   if (strValue (alias).find ("_ct", 0) != String::InvalidIndex || intValue (team) == 2 || strValue (team) == "ct") {
+   if (strValue (alias).endsWith ("_ct") || intValue (team) == 2 || strValue (team) == "ct") {
       bots.killAllBots (Team::CT);
    }
-   else if (strValue (alias).find ("_t", 0) != String::InvalidIndex || intValue (team) == 1 || strValue (team) == "t") {
+   else if (strValue (alias).endsWith ("_t") || intValue (team) == 1 || strValue (team) == "t") {
       bots.killAllBots (Team::Terrorist);
    }
    else {
@@ -488,7 +488,7 @@ int BotControl::cmdNodeSave () {
    else {
       if (graph.checkNodes (false)) {
          graph.saveGraphData ();
-         msg ("All nodes has been saved and written to disk.");
+         msg ("All nodes has been saved and written to disk.\n*** Please don't forget to share your work by typing \"%s g upload\". Thank you! ***", product.cmdPri);
       }
       else {
          msg ("Could not save save nodes to disk. Graph check has failed.");
@@ -1943,7 +1943,7 @@ void BotControl::kickBotByMenu (int page) {
 
    for (auto &menu : m_menus) {
       if (menu.ident == id) {
-         menu.slots = menuKeys & static_cast <uint32> (-1);
+         menu.slots = static_cast <int> (static_cast <uint32> (menuKeys) & static_cast <uint32> (-1));
          menu.text = menus;
 
          break;

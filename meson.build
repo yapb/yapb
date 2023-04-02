@@ -5,13 +5,12 @@
 # SPDX-License-Identifier: MIT
 #
 
+# version is now passed into the bot dll
 project (
    'yapb',
    'cpp',
-    
    version: '4.3',
    license: 'MIT',
-    
    default_options: [
       'buildtype=release',
       'b_ndebug=if-release',
@@ -22,211 +21,202 @@ project (
       'optimization=3',
       'default_library=static',
       'cpp_eh=none',
+      'cpp_rtti=false',
       'b_vscrt=static_from_buildtype',
       'b_lto=true',
+      'b_lto_mode=default',
       'b_lundef=true',
    ],
-   meson_version: '>=0.56.0')
+   meson_version: '>=0.58.0')
 
-find_program ('ninja', required: true)
-find_program ('git', required: true)
-find_program ('hostname', required: true)
+find_program('ninja', required: true)
 
-cpp = meson.get_compiler ('cpp')
-sys = host_machine.system ()
-target = host_machine.cpu_family ()
-version = meson.project_version ()
-count = run_command ('git', 'rev-list', '--count', 'HEAD', check: false).stdout ().strip ()
+compiler= meson.get_compiler('cpp')
+cross = meson.is_cross_build ()
+os = host_machine.system()
+cpu = host_machine.cpu_family()
+cxx = compiler.get_id()
+build_type = get_option ('buildtype')
 
-cpp_id = cpp.get_id ()
-cpp_version = cpp.version ()
-
-optmize = get_option ('buildtype') == 'release' or get_option ('buildtype') == 'debugoptimized'
-
-msvc = cpp_id == 'msvc' or cpp_id == 'clang-cl'
-gcc = cpp_id == 'gcc'
-clang = cpp_id == 'clang'
-
-win32 = sys == 'windows'
-linux = sys == 'linux'
-mac = sys == 'darwin'
-aarch64 = target == 'aarch64'
-
+# cpp and ldflags from scratch
+cxxflags = []
 ldflags = []
-ccflags = []
 
-cdata = configuration_data()
+# custom flags
+flags_versioned = ['-DVERSION_GENERATED']
 
-if win32
-   cdata.set ('version_win',  ','.join (version.split ('.')))
-   cdata.set ('machine', run_command ('hostname', check: false).stdout ().strip ())
-else
-   cdata.set ('version_win', version)
-   cdata.set ('machine', run_command ('hostname', '-f', check: false).stdout ().strip ())
+# git is optional, but it's setups our version info
+git = find_program('git', required: false)
+
+if git.found()
+   run_command('git', 'config', '--global', '--add', 'safe.directory', '*', check: false)
+
+   # get the commit data
+   count = run_command('git', 'rev-list', '--count', 'HEAD', check: false).stdout().strip()
+   hash = run_command ('git', 'rev-parse', '--short', 'HEAD', check: false).stdout().strip()
+   author = run_command ('git', 'log', '--pretty="%ae"', '-1', check: false).stdout().strip()
+
+   hostname = find_program('hostname', required: false)
+
+   if hostname.found()
+      machine = run_command('hostname',  check: false).stdout().strip()
+   else
+      machine = 'unknown'
+   endif
+
+   bot_version = meson.project_version()
+   cxx_version = compiler.version()
+
+   if os == 'windows'
+      winver = ','.join(bot_version.split('.'))
+   else
+      winver = bot_version
+   endif
+
+   cxxflags += flags_versioned
+   version_data = configuration_data()
+
+   version_data.set('count',  count)
+   version_data.set('hash', hash)
+   version_data.set('author', author)
+   version_data.set('machine', machine)
+   version_data.set('version', bot_version)
+   version_data.set('winver', winver)
+   version_data.set('compiler',  '@0@ @1@'.format (cxx, cxx_version))
+
+   configure_file (input: 'inc/version.h.in', output: 'version.build.h', configuration: version_data)
 endif
 
-cdata.set ('hash', run_command ('git', 'rev-parse', '--short', 'HEAD', check: false).stdout ().strip ())
-cdata.set ('author', run_command ('git', 'log', '--pretty="%ae"', '-1', check: false).stdout ().strip ())
-
-cdata.set ('count', count)
-cdata.set ('version', version)
-
-cdata.set ('compiler', cpp_id + ' ' + cpp_version)
-
-configure_file (input: 'inc/version.h.in', output: 'version.build.h', configuration: cdata)
-
-ccflags += '-DVERSION_GENERATED'
-
-if clang or gcc
-   ccflags += [
-      '-fno-threadsafe-statics',
-      '-fno-exceptions',
-      '-fno-rtti'
+# configure flags gcc and clang
+if cxx == 'clang' or cxx == 'gcc'
+   cxxflags += [
+      '-mtune=generic', '-fno-threadsafe-statics'
    ]
 
-   if not aarch64
-      ccflags += '-m32'
+   if cpu == 'aarch64'
+      cxxflags += [
+         '-march=armv8-a+fp+simd', 
+      ]
+   else
+      cxxflags += [
+         '-march=x86-64', '-mmmx', '-msse', '-msse2', '-msse3', '-mssse3', '-mfpmath=sse'
+      ]
    endif
-    
-   if not mac
-      ccflags += [
-         '-pedantic',
+
+   # setup optimization flags
+   if build_type == 'release'
+      cxxflags += [
+         '-funroll-loops', '-fomit-frame-pointer', '-fno-stack-protector', '-fvisibility=hidden', '-fvisibility-inlines-hidden'
+      ]
+
+      if os != 'darwin' and os != 'windows' and cpu != 'aarch64'
+         cxxflags += [
+            '-fdata-sections',
+            '-ffunction-sections'
+         ]
+
+         ldflags += [
+            '-Wl,--version-script=../ext/ldscripts/version.lds',
+            '-Wl,--gc-sections'
+         ]
+      
+         if cxx == 'gcc'
+            cxxflags += [
+               '-fgraphite-identity', '-floop-nest-optimize'
+            ]
+            ldflags += [
+               '-fgraphite-identity', '-floop-nest-optimize', '-flto-partition=none'
+            ]
+         endif
+      endif
+   else
+      cxxflags += ['-g3', '-ggdb', '-DDEBUG', '-D_FORTIFY_SOURCE=2']
+   endif
+   
+   # special script for mingw-64 builds
+   if os == 'windows' and cxx == 'gcc' and compiler.version().version_compare('<12.0')
+      ldflags += [
+         '-Xlinker', '--script', '-Xlinker', '../ext/ldscripts/i386pe.lds'
+      ]
+   endif
+
+   # always statically link libgcc on non darwin platforms
+   if os != 'darwin'
+      if cross or (cxx != 'clang' and os == 'windows')
+         ldflags += '-static-libgcc'
+      endif
+   else
+      cxxflags += '-mmacosx-version-min=10.9'
+
+      ldflags += [
+         '-lstdc++', '-mmacosx-version-min=10.9'
+      ]
+   endif
+
+   # by default we buid 32bit binaries
+   if cpu != 'aarch64' and not get_option('64bit')
+      cxxflags += '-m32'
+      ldflags += '-m32'
+
+      if cross and cxx == 'clang' and os == 'windows'
+         ldflags += '-Wl,/MACHINE:X86'
+         cxxflags += '-Wl,/MACHINE:X86'
+      endif
+   endif
+
+   # link needed libraries
+   if os == 'linux'
+      ldflags += [
+      '-lm','-ldl'
+      ]
+   elif os == 'windows'
+      if cxx == 'gcc' or (cross and cxx == 'clang')
+         ldflags += '-Wl,--kill-at'
+      endif
+
+      ldflags += [
+         '-luser32', '-lws2_32'
+      ]
+   endif
+elif os == 'windows' and (cxx =='msvc' or cxx == 'clang-cl')
+   if not get_option('64bit') and cxx == 'clang'
+      cxxflags += '/MACHINE:X86'
+      ldflags += '/MACHINE:X86'
+   endif
+
+   cxxflags += [
+      '/TP', '/D _WIN32_WINNT=0x0501', '/D _USING_V110_SDK71_', '/Zc:threadSafeInit-'
+   ]
+
+   # minor optimizations for release build
+   if build_type == 'release'
+      cxxflags += [
+         '/GS-', '/Ob2', '/Oy', '/Oi', '/Ot', '/fp:precise', '/GF', '/GS-', '/GF', '/arch:SSE2'
+      ]
+
+      # add wpo if msvc
+      if cxx == 'msvc'
+         cxxflags += [
+            '/GL'
+         ]
+      endif
+
+      # add linker flags
+      ldflags += [
+         '/LTCG', 'delayimp.lib', '/DELAYLOAD:user32.dll', '/DELAYLOAD:ws2_32.dll', '/SUBSYSTEM:WINDOWS,5.01',
       ]
    endif
    
-   if optmize
-      if (clang or gcc) and not mac
-         if not aarch64 and not (clang and win32)
-            ccflags += [
-               '-fdata-sections',
-               '-ffunction-sections'
-            ]
-         endif
-
-         if gcc
-            ccflags += '-fgraphite-identity'
-            ldflags += '-flto-partition=none'
-         endif
-
-         if not aarch64 and not (clang and win32)
-            ldflags += [
-               '-Wl,--version-script=../ldscript.lds',
-               '-Wl,--gc-sections'
-            ]
-         endif
-      endif
-   endif
-    
-   if linux
-      ldflags += [
-         '-lm',
-         '-ldl'
-      ]
-      if not aarch64
-         ldflags += '-m32'
-      endif
-   endif
-endif
-
-if linux or mac or (win32 and (gcc or clang))
-   if mac
-      ccflags += '-mmacosx-version-min=10.9'
-      ldflags += [
-         '-lstdc++',
-         '-mmacosx-version-min=10.9'
-      ]
-   else
-      ldflags += '-static-libgcc'
-   endif
-    
-   if not optmize
-      ccflags += [
-         '-g3',
-         '-ggdb',
-         '-DCR_DEBUG'
-      ]
-   else
-      ccflags += [
-         '-mtune=generic',
-         '-fno-builtin',
-         '-funroll-loops',
-         '-fomit-frame-pointer',
-         '-fno-stack-protector',
-         '-fvisibility=hidden',
-         '-fvisibility-inlines-hidden'
-      ]
-
-      if not aarch64
-         ccflags += [
-            '-msse2',
-            '-mfpmath=sse',
-         ]
-      else
-         ccflags += '-march=armv8-a+fp+simd'
-      endif
-
-      if clang and not mac
-         ldflags += [
-            '-nostdlib++',
-            '-Wunused-command-line-argument'
-         ]
-      elif gcc and not mac
-         ldflags += '-Wl,--no-undefined'
-      endif
-   endif
-endif
-
-if win32 and msvc
    ldflags += [
-      '/MACHINE:X86',
-      'user32.lib',
-      'ws2_32.lib'
+      'user32.lib', 'ws2_32.lib'
    ]
-    
-   ccflags += [
-      '/TP',
-	  '/D _WIN32_WINNT=0x0501',
-	  '/D _USING_V110_SDK71_',
-	  '/Zc:threadSafeInit-'
-   ]
-    
-   if optmize
-      ccflags += [
-         '/GL',
-         '/GS-',
-         '/Ob2',
-         '/Oy',
-         '/Oi',
-         '/Ot',
-         '/fp:precise',
-         '/GF'
-      ]
-      ldflags += [
-		 '/LTCG',
-		 'delayimp.lib',
-		 '/DELAYLOAD:user32.dll',
-		 '/SUBSYSTEM:WINDOWS,5.01',
-	  ]
-   endif
-    
-elif win32 and (clang or gcc)
-   ldflags += [
-      '-Wl,--kill-at',
-      '-luser32',
-      '-lws2_32'
-   ]
-
-   if clang
-      ldflags += '-Wl,/MACHINE:X86'
-      ccflags += '-Wl,/MACHINE:X86'
-   else
-      ldflags += ['-Xlinker', '--script', '-Xlinker', '../i386pe.lds']
-   endif
 endif
 
-add_global_arguments (ccflags, language: 'cpp')
+# pass our hell to meson
+add_global_arguments (cxxflags, language: 'cpp')
 add_global_link_arguments (ldflags, language: 'cpp')
 
+# add the sources
 sources = files (
    'src/botlib.cpp',
    'src/chatlib.cpp',
@@ -243,24 +233,27 @@ sources = files (
    'src/support.cpp'
 )
 
+# add the include directories
 includes = include_directories ([
    '.', 'inc', 'ext', 'ext/crlib'
 ], is_system: true)
 
-if win32
+# if have git and on windows add windows-specific version info
+if os == 'windows' and git.found()
    sources += import('windows').compile_resources (
       'vc/yapb.rc', 
       include_directories: includes, 
-      args: ['-DVERSION_GENERATED']
+      args: flags_versioned
    )
 endif
 
-shared_library (
-   meson.project_name (), 
+# instruct meson we're want our little shared lib bot
+shared_library(
+   meson.project_name(), 
    sources,
    include_directories: includes,
    gnu_symbol_visibility: 'hidden',
    name_prefix: '')
 
-run_target ('package',
-   command: ['python3', meson.project_source_root () + '/package.py', '@0@.@1@'.format (version, count)])
+run_target('package',
+   command: ['python3', meson.project_source_root() + '/package.py', '@0@.@1@'.format(bot_version, count)])

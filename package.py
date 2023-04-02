@@ -7,295 +7,310 @@
 # 
 
 import os, sys, subprocess, base64
-import urllib3
+import glob, requests
 import pathlib, shutil
 import zipfile, tarfile
 import datetime, calendar
 
-class CodeSign (object):
-   def __init__(self, product, url, verify_signature=False):
+class BotSign(object):
+   def __init__(self, product: str, url: str):
       self.signing = True
 
-      self.ossl_path = "/usr/bin/osslsigncode"
-      self.local_key = os.path.join (pathlib.Path ().absolute (), "key.pfx");
+      self.ossl_path = '/usr/bin/osslsigncode'
+      self.local_key = os.path.join(pathlib.Path().absolute(), 'bot_release_key.pfx');
 
       self.product = product
       self.url = url
-      self.verify_signature = verify_signature
 
-      if not os.path.exists (self.ossl_path):
+      if not os.path.exists(self.ossl_path):
          self.signing = False
 
-      if not "CS_CERTIFICATE" in os.environ:
+      if not 'CS_CERTIFICATE' in os.environ:
          self.signing = False
 
-      if not "CS_CERTIFICATE_PASSWORD" in os.environ:
+      if not 'CS_CERTIFICATE_PASSWORD' in os.environ:
          self.signing = False
 
       if self.signing:
-         self.password = os.environ.get ("CS_CERTIFICATE_PASSWORD")
+         self.password = os.environ.get('CS_CERTIFICATE_PASSWORD')
 
-         encoded = os.environ.get ("CS_CERTIFICATE")
+         encoded = os.environ.get('CS_CERTIFICATE')
 
-         if len (encoded) < 64:
-            print ('Damaged certificate. Signing disabled.')
+         if len(encoded) < 64:
+            print('Damaged certificate. Signing disabled.')
             self.signing = False
             return
 
-         decoded = base64.b64decode (encoded)
+         decoded = base64.b64decode(encoded)
 
-         with open (self.local_key, "wb") as key:
-            key.write (decoded)
+         with open(self.local_key, 'wb') as key:
+            key.write(decoded)
 
    def has(self):
       return self.signing
 
-   def sign_file_inplace (self, filename):
-      signed_filename = filename + ".signed"
-      sign = []
+   def sign_file_inplace(self, filename):
+      signed_filename = filename + '.signed'
+      signed_cmdline = []
 
-      sign.append (self.ossl_path)
-      sign.append ("sign")
-      sign.append ("-pkcs12")
-      sign.append (self.local_key)
-      sign.append ("-pass")
-      sign.append (self.password)
-      sign.append ("-n")
-      sign.append (self.product)
-      sign.append ("-i")
-      sign.append (self.url)
-      sign.append ("-h")
-      sign.append ("sha384")
-      sign.append ("-t")
-      sign.append ("http://timestamp.sectigo.com")
-      sign.append ("-in")
-      sign.append (filename)
-      sign.append ("-out")
-      sign.append (signed_filename)
+      signed_cmdline.append (self.ossl_path)
+      signed_cmdline.append ('sign')
+      signed_cmdline.append ('-pkcs12')
+      signed_cmdline.append (self.local_key)
+      signed_cmdline.append ('-pass')
+      signed_cmdline.append (self.password)
+      signed_cmdline.append ('-n')
+      signed_cmdline.append (self.product)
+      signed_cmdline.append ('-i')
+      signed_cmdline.append (self.url)
+      signed_cmdline.append ('-h')
+      signed_cmdline.append ('sha384')
+      signed_cmdline.append ('-t')
+      signed_cmdline.append ('http://timestamp.sectigo.com')
+      signed_cmdline.append ('-in')
+      signed_cmdline.append (filename)
+      signed_cmdline.append ('-out')
+      signed_cmdline.append (signed_filename)
 
-      result = subprocess.run (sign, capture_output=True, text=True)
-
+      result = subprocess.run (signed_cmdline, capture_output=True, text=True)
+      
       if result.returncode == 0:
-         os.unlink (filename)
-         shutil.move (signed_filename, filename)
+         os.unlink(filename)
+         shutil.move(signed_filename, filename)
 
-         print ("Signing result: {}".format (result.stdout))
+      return False
 
-         if self.verify_signature:
-            verify = []
-            verify.append (self.ossl_path)
-            verify.append ("verify")
-            verify.append (filename)
+class BotPackage(object):
+   def __init__(self, name: str,  archive: str, artifact: dict, extra: bool = False):
+      self.name = name
+      self.archive = archive
+      self.artifact = artifact
+      self.extra = extra
 
-            verify = subprocess.run (verify, capture_output=True, text=True)
-            print (verify.stdout)
-
-      else:
-         print (result.stdout)
-
-
-class BotRelease (object):
+class BotRelease(object):
    def __init__(self):
-      print ("Initializing Packaging")
+      if len(sys.argv) < 2:
+         raise Exception('Missing required parameters.')
 
-      meson_src_root_env = "MESON_SOURCE_ROOT"
-
-      if meson_src_root_env in os.environ:
-         os.chdir (os.environ.get (meson_src_root_env))
-      
-      self.work_dir = os.path.join (pathlib.Path ().absolute (), "cfg")
-      self.bot_dir = os.path.join (self.work_dir, "addons", "yapb")
-      self.pkg_dir = os.path.join (pathlib.Path ().absolute (), "pkg")
-      
-      if len (sys.argv) < 2:
-         raise Exception("Missing required parameters.")
-
+      self.project = 'yapb'
       self.version = sys.argv[1]
       self.artifacts = 'artifacts'
+      self.graphs = 'yapb-gcdn.akamaized.net'
+      self.win32exe = 'https://github.com/yapb/setup/releases/latest/download/botsetup.exe'
+      
+      meson_src_root_env = 'MESON_SOURCE_ROOT'
 
-      self.cs = CodeSign ("YaPB", "https://yapb.jeefo.net/")
-
-      if self.cs.has ():
-         print ("Code Signing Enabled")
+      if meson_src_root_env in os.environ:
+         os.chdir(os.environ.get(meson_src_root_env))
       else:
-         print ("Code Signing Disabled")
+         raise Exception(f'No direct access, only via meson build.')
 
-      os.makedirs (self.pkg_dir, exist_ok=True)
-      
-      self.pkg_win32 = os.path.join (self.pkg_dir, "yapb-{}-windows.zip".format (self.version))
-      self.pkg_linux = os.path.join (self.pkg_dir, "yapb-{}-linux.tar.xz".format (self.version))
-      self.pkg_macos = os.path.join (self.pkg_dir, "yapb-{}-macos.zip".format (self.version))
+      path = pathlib.Path().absolute()
 
-      self.pkg_win32_sfx = self.pkg_win32.replace ("zip", "exe")
-      self.pkg_win32_sfx_url = "https://github.com/yapb/setup/releases/latest/download/botsetup.exe"
+      if not os.path.isdir(os.path.join(path, self.artifacts)):
+         raise Exception('Artifacts directory missing.')
       
-   def make_directories (self):
-      dirs = [
-         "bin",
-         os.path.join ("data", "pwf"),
-         os.path.join ("data", "train"),
-         os.path.join ("data", "graph"),
-         os.path.join ("data", "logs")
-      ]
+      print(f'Releasing {self.project} v{self.version}')
       
-      for dir in dirs:
-         os.makedirs (os.path.join (self.bot_dir, dir), exist_ok=True)
-   
-   def http_pull (self, url, local_file):
-      http = urllib3.PoolManager (10, headers = {"user-agent": "YaPB"})
-      data = http.urlopen ("GET", url)
+      self.work_dir = os.path.join(path, 'release')
+      shutil.copytree(f'{path}/cfg', self.work_dir, dirs_exist_ok=True)
       
-      with open (local_file, "wb") as file:
-         file.write (data.data)
+      self.bot_dir = os.path.join(self.work_dir, 'addons', self.project)
+      self.pkg_dir = os.path.join(path, 'pkg')
+
+      self.cs = BotSign('YaPB', 'https://yapb.jeefo.net/')
+
+      if self.cs.has():
+         print('Signing enabled')
+      else:
+         print('Signing disabled')
+
+      os.makedirs(self.pkg_dir, exist_ok=True)
+      self.http_pull(self.win32exe, 'botsetup.exe')
+
+      self.pkg_matrix = []
+      self.pkg_matrix.append (BotPackage('windows', 'zip', {'windows-x86': 'dll'}))
+      self.pkg_matrix.append (BotPackage('windows', 'exe', {'windows-x86': 'dll'}))
+      self.pkg_matrix.append (BotPackage('linux', 'tar.xz', {'linux-x86': 'so'}))
+      self.pkg_matrix.append (BotPackage('darwin', 'zip', {'darwin-x86': 'dylib'}))
+      self.pkg_matrix.append (BotPackage('extras', 'zip', {'linux-aarch64': 'so', 'linux-x86-gcc': 'so', 'windows-x86-gcc': 'dll', 'windows-x86-msvc': 'dll'}, extra=True))
+      
+   def create_dirs(self):
+      for dir in ['pwf', 'train', 'graph', 'logs']:
+         os.makedirs(os.path.join(self.bot_dir, 'data', dir), exist_ok=True) 
+
+   def http_pull(self, url: str, tp: str):
+      headers = {
+         'User-Agent': 'YaPB/4',
+      }
+      with requests.get(url, headers=headers) as r:
+         r.raise_for_status()
+
+         with open(tp, 'wb') as f:
+            f.write(r.content)
          
-   def get_graph_file (self, name):
-      file = os.path.join (self.bot_dir, "data", "graph", "{}.graph".format (name))
-      url = "https://yapb.jeefo.net/graph/{}.graph".format (name)
+   def get_graph_file(self, name: str):
+      file = os.path.join(self.bot_dir, 'data', 'graph', f'{name}.graph')
+      url = f'http://{self.graphs}/graph/{name}.graph'
       
-      if os.path.exists (file):
+      if os.path.exists(file):
          return
          
-      self.http_pull (url, file)
+      self.http_pull(url, file)
 
-   def get_default_graphs (self):
-      print ("Downloading graphs: ")
-      
-      default_list = "default.graph.txt"
-      self.http_pull ("https://gs.yapb.jeefo.net//DEFAULT.txt", default_list)
+   def create_graphs(self):
+      default_list = 'default.graph.txt'
+      self.http_pull(f'http://{self.graphs}/DEFAULT.txt', default_list)
 
-      with open (default_list) as file:
-         files = [line.rstrip () for line in file.readlines ()]
+      with open(default_list) as file:
+         files = [line.rstrip() for line in file.readlines()]
       
       for file in files:
-         print (" " + file)
-         
-         self.get_graph_file (file)
+         print(f'Getting graphs: {file}       ', end='\r', flush=True)
+         self.get_graph_file(file)
 
-   def unlink_binaries (self):
-      libs = ["yapb.so", "yapb.arm64.so", "yapb.dll", "yapb.dylib"]
-      
-      for lib in libs:
-         path = os.path.join (self.bot_dir, "bin", lib)
-         
-         if os.path.exists (path):
-            os.remove (path)
+      print()
 
-   def sign_binary (self, binary):
-      if self.cs.has () and (binary.endswith ("dll") or binary.endswith ("exe")):
-         print ("Signing {}".format (binary))
-         self.cs.sign_file_inplace (binary)
-
-   def copy_binary (self, binary):
-      dest_path = os.path.join (self.bot_dir, "bin", os.path.basename (binary))
-      shutil.copy (binary, dest_path)
-      
-      self.sign_binary (dest_path)
-
-   def compress_directory (self, path, handle):
-      length = len (path) + 1
+   def compress_directory(self, path: str, handle: zipfile.ZipFile):
+      length = len(path) + 1
       empty_dirs = []
       
-      for root, dirs, files in os.walk (path):
-         empty_dirs.extend ([dir for dir in dirs if os.listdir (os.path.join (root, dir)) == []]) 
+      for root, dirs, files in os.walk(path):
+         empty_dirs.extend([dir for dir in dirs if os.listdir(os.path.join(root, dir)) == []]) 
          
          for file in files:
-            file_path = os.path.join (root, file)
-            handle.write (file_path, file_path[length:])
+            file_path = os.path.join(root, file)
+            handle.write(file_path, file_path[length:])
             
          for dir in empty_dirs:
-            dir_path = os.path.join (root, dir)
+            dir_path = os.path.join(root, dir)
             
-            zif = zipfile.ZipInfo (dir_path[length:] + "/")
-            handle.writestr (zif, "")
+            zif = zipfile.ZipInfo(dir_path[length:] + '/')
+            handle.writestr(zif, '')
             
          empty_dirs = []
 
-   def create_zip (self, dir):
-      zf = zipfile.ZipFile (dir, "w", zipfile.ZIP_DEFLATED, compresslevel=9)
-      zf.comment = bytes (self.version, encoding = "ascii")
+   def create_zip(self, dest: str, custom_dir: str = None):
+      zf = zipfile.ZipFile(dest, 'w', zipfile.ZIP_DEFLATED, compresslevel=9)
+      zf.comment = bytes(self.version, encoding = 'ascii')
       
-      self.compress_directory (self.work_dir, zf)
-      zf.close ()
+      self.compress_directory(custom_dir if custom_dir else self.work_dir, zf)
+      zf.close()
    
-   def convert_zip_txz (self, zfn, txz):
-      timeshift = int ((datetime.datetime.now () - datetime.datetime.utcnow ()).total_seconds ())
+   def convert_zip_txz(self, zfn: str, txz: str):
+      timeshift = int((datetime.datetime.now() - datetime.datetime.utcnow()).total_seconds())
       
-      with zipfile.ZipFile (zfn) as zipf:
-         with tarfile.open (txz, "w:xz") as tarf:
-            for zif in zipf.infolist ():
-               tif = tarfile.TarInfo (name = zif.filename)
+      with zipfile.ZipFile(zfn) as zipf:
+         with tarfile.open(txz, 'w:xz') as tarf:
+            for zif in zipf.infolist():
+               tif = tarfile.TarInfo(name = zif.filename)
                tif.size = zif.file_size
-               tif.mtime =  calendar.timegm (zif.date_time) - timeshift
+               tif.mtime =  calendar.timegm(zif.date_time) - timeshift
                
-               tarf.addfile (tarinfo = tif, fileobj = zipf.open (zif.filename))
+               tarf.addfile(tarinfo = tif, fileobj = zipf.open(zif.filename))
                
-      os.remove (zfn)
+      os.remove(zfn)
 
-   def install_binary (self, ext, unlink_existing = True):
-      lib = "yapb.{}".format (ext)
-      binary = os.path.join (self.artifacts, lib)
+   def convert_zip_sfx(self, zfn: str, exe: str):
+      with open('botsetup.exe', 'rb') as sfx, open(zfn, 'rb') as zfn, open(exe, 'wb') as dest:
+         dest.write(sfx.read())
+         dest.write(zfn.read())
 
-      if os.path.isdir (binary):
-         binary = os.path.join (binary, lib)
-      
-      if not os.path.exists (binary):
-         print ("Packaging failed for {}. Skipping...".format (lib))
-         return False
+      self.sign_binary(exe)
+
+   def unlink_binaries(self):
+      path = os.path.join(self.bot_dir, 'bin');
+
+      shutil.rmtree(path, ignore_errors=True)
+      os.makedirs(path, exist_ok=True)
+
+   def sign_binary(self, binary: str):
+      if self.cs.has() and (binary.endswith('dll') or binary.endswith('exe')):
+         self.cs.sign_file_inplace(binary)
+
+   def copy_binary(self, binary: str, artifact: str):
+      if artifact:
+         dest_path = os.path.join(self.bot_dir, 'bin', artifact)
+         os.makedirs(dest_path, exist_ok=True)
+
+         dest_path = os.path.join(dest_path, os.path.basename(binary))
+      else:
+         dest_path = os.path.join(self.bot_dir, 'bin', os.path.basename(binary))
+
+      shutil.copy(binary, dest_path)
+      self.sign_binary(dest_path)
+
+   def install_binary(self, pkg: BotPackage):
+      num_artifacts_errors = 0
+      num_artifacts = len(pkg.artifact)
+
+      for artifact in pkg.artifact:
+         binary = os.path.join(self.artifacts, artifact, f'{self.project}.{pkg.artifact[artifact]}')
+         binary_base = os.path.basename(binary)
+
+         if not os.path.exists(binary):
+            num_artifacts_errors += 1
+            print(f'[{binary_base}: FAIL]', end=' ')
+            continue
          
-      if unlink_existing:
-         self.unlink_binaries ()
+         print(f'[{binary_base}: OK]', end=' ')
+         
+         if num_artifacts == 1:
+            self.unlink_binaries()
 
-      self.copy_binary (binary)
+         self.copy_binary(binary, artifact if pkg.extra else None)
 
-      return True
-      
-   def create_pkg_win32 (self):
-      print ("Generating Win32 ZIP")
-      
-      if not self.install_binary ("dll"):
-         return
+      return num_artifacts_errors < num_artifacts
+   
+   def create_pkg(self, pkg: BotPackage):
+      dest = os.path.join (self.pkg_dir, f'{self.project}-{self.version}-{pkg.name}.{pkg.archive}')
+      dest_tmp = f'{dest}.tmp'
 
-      self.create_zip (self.pkg_win32)
-      self.http_pull (self.pkg_win32_sfx_url, "botsetup.exe")
-      
-      print ("Generating Win32 EXE")
+      if os.path.exists(dest):
+         os.remove(dest)
+      self.unlink_binaries()
 
-      with open ("botsetup.exe", "rb") as sfx, open (self.pkg_win32, "rb") as zfn, open (self.pkg_win32_sfx, "wb") as exe:
-         exe.write (sfx.read ())
-         exe.write (zfn.read ())
+      print(f'Generating {os.path.basename(dest)}:', end=' ')
 
-      self.sign_binary (self.pkg_win32_sfx)
-      
-   def create_pkg_linux (self):
-      print ("Generating Linux TXZ")
-
-      self.unlink_binaries ()
-      self.install_binary ("arm64.so")
-
-      if not self.install_binary ("so", False):
+      if not self.install_binary(pkg):
+         print(' -> Failed...')
          return
       
-      tmp_file = "tmp.zip"
-      
-      self.create_zip (tmp_file)
-      self.convert_zip_txz (tmp_file, self.pkg_linux)
+      if dest.endswith('zip') or dest.endswith('exe'):
+         if pkg.extra:
+            dest_dir = os.path.join(self.bot_dir, 'bin')
+            self.create_zip(dest_tmp, dest_dir)
+         else:
+            self.create_zip(dest_tmp)
 
-   def create_pkg_macos (self):
-      print ("Generating macOS ZIP")
-      
-      if not self.install_binary ("dylib"):
-         return
-      
-      self.create_zip (self.pkg_macos)
-      
-   def create_pkgs (self):
-      self.create_pkg_linux ()
-      self.create_pkg_win32 ()
-      self.create_pkg_macos ()
+         if dest.endswith('exe'):
+            self.convert_zip_sfx(dest_tmp, dest)
+         else:
+            shutil.move(dest_tmp, dest)
+      elif dest.endswith('tar.xz'):
+         self.create_zip(dest_tmp)
+         self.convert_zip_txz(dest_tmp, dest)
 
-release = BotRelease ()
+      print('-> Success...')
+      self.unlink_binaries()
 
-release.make_directories ()
-release.get_default_graphs ()
-release.create_pkgs ()
+      if os.path.exists(dest_tmp):
+         os.remove(dest_tmp)
 
+   def create_pkgs(self):
+      for pkg in self.pkg_matrix:
+         self.create_pkg(pkg)
+   
+      print('Finished release')
+
+   @staticmethod
+   def run():
+      r = BotRelease()
+
+      r.create_dirs()
+      r.create_graphs()
+      r.create_pkgs()
+
+# entry point
+if __name__ == "__main__":
+   BotRelease.run()

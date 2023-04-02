@@ -82,22 +82,22 @@ private:
    };
 
 private:
-   HashMap <String, int32> m_textMsgCache; // cache strings for faster access for textmsg
-   HashMap <String, int32> m_showMenuCache; // cache for the showmenu message
-   HashMap <String, int32> m_statusIconCache; // cache for status icon message
-   HashMap <String, int32> m_teamInfoCache; // cache for teaminfo message
+   HashMap <String, int32> m_textMsgCache {}; // cache strings for faster access for textmsg
+   HashMap <String, int32> m_showMenuCache {}; // cache for the showmenu message
+   HashMap <String, int32> m_statusIconCache {}; // cache for status icon message
+   HashMap <String, int32> m_teamInfoCache {}; // cache for teaminfo message
 
 private:
    Bot *m_bot {}; // owner of a message
    NetMsg m_current {}; // ongoing message id
 
-   SmallArray <Args> m_args; // args collected from write* functions
+   SmallArray <Args> m_args {}; // args collected from write* functions
 
-   HashMap <String, NetMsg> m_wanted; // wanted messages
-   HashMap <int32, NetMsg> m_reverseMap; // maps engine message id to our message id
+   HashMap <String, NetMsg> m_wanted {}; // wanted messages
+   HashMap <int32, NetMsg> m_reverseMap {}; // maps engine message id to our message id
 
-   HashMap <NetMsg, int32, MsgHash> m_maps; // maps our message to id to engine message id
-   HashMap <NetMsg, MsgFunc, MsgHash> m_handlers; // maps our message id to handler function
+   HashMap <NetMsg, int32, MsgHash> m_maps {}; // maps our message to id to engine message id
+   HashMap <NetMsg, MsgFunc, MsgHash> m_handlers {}; // maps our message id to handler function
 
 private:
    void netMsgTextMsg ();
