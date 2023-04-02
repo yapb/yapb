@@ -1725,7 +1725,6 @@ void Bot::updateEmotions () {
 }
 
 void Bot::overrideConditions () {
-
    if (!usesKnife () && m_difficulty > Difficulty::Normal && ((m_aimFlags & AimFlags::Enemy) || (m_states & Sense::SeeingEnemy)) && !cv_jasonmode.bool_ () && getCurrentTaskId () != Task::Camp && getCurrentTaskId () != Task::SeekCover && !isOnLadder ()) {
       m_moveToGoal = false; // don't move to goal
       m_navTimeset = game.time ();
@@ -2806,11 +2805,20 @@ void Bot::updateAimDir () {
       m_lookAt = m_lastEnemyOrigin;
 
       // did bot just see enemy and is quite aggressive?
-      if (m_seeEnemyTime + 1.0f - m_actualReactionTime + m_baseAgressionLevel > game.time ()) {
+      if (m_seeEnemyTime + 2.0f - m_actualReactionTime + m_baseAgressionLevel > game.time ()) {
 
          // feel free to fire if shootable
          if (!usesSniper () && lastEnemyShootable ()) {
             m_wantsToFire = true;
+         }
+      }
+      else {
+         auto distanceToLastEnemySq = m_lastEnemyOrigin.distanceSq (pev->origin);
+         auto maxDistanceToEnemySq = cr::square (1600.0f);
+
+         if (distanceToLastEnemySq >= maxDistanceToEnemySq) {
+            m_lastEnemyOrigin = nullptr;
+            m_aimFlags &= ~AimFlags::LastEnemy;
          }
       }
    }
@@ -2854,13 +2862,18 @@ void Bot::updateAimDir () {
          }
          else {
             m_aimFlags &= ~AimFlags::PredictPath; // forget enemy far away
+
+            if (distanceToLastEnemySq >= maxDistanceToEnemySq) {
+               m_lastEnemyOrigin = nullptr;
+            }
          }
       }
       else {
          m_aimFlags &= ~AimFlags::PredictPath; // forget enemy far away
 
-         if (distanceToLastEnemySq >= maxDistanceToEnemySq)
+         if (distanceToLastEnemySq >= maxDistanceToEnemySq) {
             m_lastEnemyOrigin = nullptr;
+         }
       }
    }
    else if (flags & AimFlags::Camp) {
