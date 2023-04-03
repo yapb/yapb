@@ -952,12 +952,11 @@ void Bot::showChaterIcon (bool show) {
       return;
    }
 
-   auto sendBotVoice = [&show] (edict_t *ent, int ownId) {
+   auto sendBotVoice = [] (bool on, edict_t *ent, int ownId) {
       MessageWriter (MSG_ONE, msgs.id (NetMsg::BotVoice), nullptr, ent) // begin message
-         .writeByte (show) // switch on/off
+         .writeByte (on) // switch on/off
          .writeByte (ownId);
    };
-
    int ownIndex = index ();
 
    for (auto &client : util.getClients ()) {
@@ -966,13 +965,13 @@ void Bot::showChaterIcon (bool show) {
       }
 
       if (!show && (client.iconFlags[ownIndex] & ClientFlags::Icon) && client.iconTimestamp[ownIndex] < game.time ()) {
-         sendBotVoice (client.ent, entindex ());
+         sendBotVoice (false, client.ent, entindex ());
 
          client.iconTimestamp[ownIndex] = 0.0f;
          client.iconFlags[ownIndex] &= ~ClientFlags::Icon;
       }
       else if (show && !(client.iconFlags[ownIndex] & ClientFlags::Icon)) {
-         sendBotVoice (client.ent, entindex ());
+         sendBotVoice (true, client.ent, entindex ());
       }
    }
 }
