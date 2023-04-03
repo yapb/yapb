@@ -1163,7 +1163,7 @@ void Bot::attackMovement () {
          if (m_lastFightStyleCheck + 3.0f < game.time ()) {
             int rand = rg.get (1, 100);
 
-            if (distance < 768.0f) {
+            if (distance < 500.0f) {
                m_fightStyle = Fight::Strafe;
             }
             else if (distance < 1024.0f) {
@@ -1175,7 +1175,7 @@ void Bot::attackMovement () {
                }
             }
             else {
-               if (rand < (usesSubmachine () ? 80 : 93)) {
+               if (rand < (usesSubmachine () ? 80 : 90)) {
                   m_fightStyle = Fight::Stay;
                }
                else {
@@ -1185,7 +1185,7 @@ void Bot::attackMovement () {
             m_lastFightStyleCheck = game.time ();
          }
       }
-      else {
+      else if (rg.get (0, 100) < (isInNarrowPlace () ? 25 : 100)) {
          m_fightStyle = Fight::Strafe;
       }
 
@@ -1210,7 +1210,7 @@ void Bot::attackMovement () {
             if (rg.chance (30)) {
                m_combatStrafeDir = (m_combatStrafeDir == Dodge::Left ? Dodge::Right : Dodge::Left);
             }
-            m_strafeSetTime = game.time () + rg.get (1.3f, 3.0f);
+            m_strafeSetTime = game.time () + rg.get (1.0f, 3.0f);
          }
 
          if (m_combatStrafeDir == Dodge::Right) {
@@ -1219,7 +1219,7 @@ void Bot::attackMovement () {
             }
             else {
                m_combatStrafeDir = Dodge::Left;
-               m_strafeSetTime = game.time () + rg.get (1.2f, 1.5f);
+               m_strafeSetTime = game.time () + rg.get (1.0f, 1.5f);
             }
          }
          else {
@@ -1228,7 +1228,7 @@ void Bot::attackMovement () {
             }
             else {
                m_combatStrafeDir = Dodge::Right;
-               m_strafeSetTime = game.time () + rg.get (1.2f, 1.5f);
+               m_strafeSetTime = game.time () + rg.get (1.0f, 1.5f);
             }
          }
 
@@ -1236,7 +1236,7 @@ void Bot::attackMovement () {
             pev->button |= IN_JUMP;
          }
       }
-      else if (m_fightStyle == Fight::Stay) {
+      else {
          if ((m_enemyParts & (Visibility::Head | Visibility::Body)) && getCurrentTaskId () != Task::SeekCover && getCurrentTaskId () != Task::Hunt) {
             int enemyNearestIndex = graph.getNearest (m_enemy->v.origin);
 
@@ -1252,7 +1252,7 @@ void Bot::attackMovement () {
 
    if (m_difficulty >= Difficulty::Hard && isOnFloor () && (m_duckTime < game.time ())) {
       if (distance < 768.0f) {
-         if (rg.get (0, 1000) < 10 && pev->velocity.length2d () > 150.0f && isInViewCone (m_enemy->v.origin)) {
+         if (rg.get (0, 1000) < rg.get (5, 10) && pev->velocity.length2d () > 150.0f && isInViewCone (m_enemy->v.origin)) {
             pev->button |= IN_JUMP;
          }
       }
@@ -1262,7 +1262,11 @@ void Bot::attackMovement () {
       Vector right, forward;
       pev->v_angle.angleVectors (&forward, &right, nullptr);
 
-      if (isDeadlyMove (pev->origin + (forward * m_moveSpeed * 0.2f) + (right * m_strafeSpeed * 0.2f) + (pev->velocity * getFrameInterval ()))) {
+      const auto &front = right * m_moveSpeed * 0.2f;
+      const auto &side = right * m_strafeSpeed * 0.2f;
+      const auto &spot = pev->origin + front + side + pev->velocity * getFrameInterval ();
+
+      if (isDeadlyMove (spot)) {
          m_strafeSpeed = -m_strafeSpeed;
          m_moveSpeed = -m_moveSpeed;
 

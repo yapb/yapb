@@ -1488,7 +1488,7 @@ void Bot::kick () {
 }
 
 void Bot::markStale () {
-   showChaterIcon (false);
+   showChaterIcon (false, true);
 
    // clear the bot name
    conf.clearUsedName (this);

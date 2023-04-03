@@ -945,7 +945,7 @@ void Bot::getCampDirection (Vector *dest) {
    }
 }
 
-void Bot::showChaterIcon (bool show) {
+void Bot::showChaterIcon (bool show, bool disconnect) {
    // this function depending on show boolen, shows/remove chatter, icon, on the head of bot.
 
    if (!game.is (GameFlags::HasBotVoice) || cv_radio_mode.int_ () != 2) {
@@ -959,12 +959,15 @@ void Bot::showChaterIcon (bool show) {
    };
    int ownIndex = index ();
 
+   // do not respect timers while disconnecting bot
+
    for (auto &client : util.getClients ()) {
       if (!(client.flags & ClientFlags::Used) || (client.ent->v.flags & FL_FAKECLIENT) || client.team != m_team) {
          continue;
       }
 
-      if (!show && (client.iconFlags[ownIndex] & ClientFlags::Icon) && client.iconTimestamp[ownIndex] < game.time ()) {
+      // do not respect timers while disconnecting bot
+      if (!show && (client.iconFlags[ownIndex] & ClientFlags::Icon) && (disconnect || client.iconTimestamp[ownIndex] < game.time ())) {
          sendBotVoice (false, client.ent, entindex ());
 
          client.iconTimestamp[ownIndex] = 0.0f;
