@@ -7,42 +7,22 @@
 
 #include <yapb.h>
 
-ConVar cv_whose_your_daddy ("yb_whose_your_daddy", "0", "Enables or disables extra hard difficulty for bots.");
 ConVar cv_path_heuristic_mode ("yb_path_heuristic_mode", "4", "Selects the heuristic function mode. For debug purposes only.", true, 0.0f, 4.0f);
-
 ConVar cv_path_danger_factor_min ("yb_path_danger_factor_min", "200", "Lower bound of danger factor that used to add additional danger to path based on practice.", true, 100.0f, 2400.0f);
 ConVar cv_path_danger_factor_max ("yb_path_danger_factor_max", "400", "Upper bound of danger factor that used to add additional danger to path based on practice.", true, 200.0f, 4800.0f);
 
 int Bot::findBestGoal () {
-
    auto pushToHistroy = [&] (int32 goal) -> int32 {
       m_goalHistory.push (goal);
       return goal;
    };
 
    // chooses a destination (goal) node for a bot
-   if (!bots.isBombPlanted () && m_team == Team::Terrorist && game.mapIs (MapFlags::Demolition)) {
-      int result = kInvalidNodeIndex;
+   if (m_team == Team::Terrorist && game.mapIs (MapFlags::Demolition)) {
+      auto result = findBestGoalWhenBombAction ();
 
-      game.searchEntities ("classname", "weaponbox", [&] (edict_t *ent) {
-         if (util.isModel (ent, "backpack.mdl")) {
-            result = graph.getNearest (game.getEntityOrigin (ent));
-
-            if (graph.exists (result)) {
-               return EntitySearchResult::Break;
-            }
-         }
-         return EntitySearchResult::Continue;
-      });
-
-      // found one ?
       if (graph.exists (result)) {
-         return m_loosedBombNodeIndex = result;
-      }
-
-      // forcing terrorist bot to not move to another bomb spot
-      if (m_inBombZone && !m_hasProgressBar && m_hasC4) {
-         return graph.getNearest (pev->origin, 768.0f, NodeFlag::Goal);
+         return result;
       }
    }
    int tactic = 0;
@@ -163,6 +143,68 @@ int Bot::findBestGoal () {
       tactic = 3;
    }
    return pushToHistroy (findGoalPost (tactic, defensiveNodes, offensiveNodes));
+}
+
+int Bot::findBestGoalWhenBombAction () {
+   int result = kInvalidNodeIndex;
+
+   if (!bots.isBombPlanted ()) {
+      game.searchEntities ("classname", "weaponbox", [&] (edict_t *ent) {
+         if (util.isModel (ent, "backpack.mdl")) {
+            result = graph.getNearest (game.getEntityOrigin (ent));
+
+            if (graph.exists (result)) {
+               return EntitySearchResult::Break;
+            }
+         }
+         return EntitySearchResult::Continue;
+      });
+
+      // found one ?
+      if (graph.exists (result)) {
+         return m_loosedBombNodeIndex = result;
+      }
+
+      // forcing terrorist bot to not move to another bomb spot
+      if (m_inBombZone && !m_hasProgressBar && m_hasC4) {
+         return graph.getNearest (pev->origin, 1024.0f, NodeFlag::Goal);
+      }
+   }
+   else if (!m_defendedBomb) {
+      const auto &bombOrigin = graph.getBombOrigin ();
+
+      if (!bombOrigin.empty ()) {
+         m_defendedBomb = true;
+
+         result = findDefendNode (bombOrigin);
+         const Path &path = graph[result];
+
+         float bombTimer = mp_c4timer.float_ ();
+         float timeMidBlowup = bots.getTimeBombPlanted () + (bombTimer * 0.5f + bombTimer * 0.25f) - graph.calculateTravelTime (pev->maxspeed, pev->origin, path.origin);
+
+         if (timeMidBlowup > game.time ()) {
+            clearTask (Task::MoveToPosition); // remove any move tasks
+
+            startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, timeMidBlowup, true); // push camp task on to stack
+            startTask (Task::MoveToPosition, TaskPri::MoveToPosition, result, timeMidBlowup, true); // push  move command
+
+            if (path.vis.crouch <= path.vis.stand) {
+               m_campButtons |= IN_DUCK;
+            }
+            else {
+               m_campButtons &= ~IN_DUCK;
+            }
+            if (rg.chance (90)) {
+               pushChatterMessage (Chatter::DefendingBombsite);
+            }
+         }
+         else {
+            pushRadioMessage (Radio::ShesGonnaBlow); // issue an additional radio message
+         }
+         return result;
+      }
+   }
+   return result;
 }
 
 int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offsensive) {
@@ -346,6 +388,11 @@ bool Bot::doPlayerAvoidance (const Vector &normal) {
 
       // and still alive meet
       if (!(client.flags & ClientFlags::Alive)) {
+         continue;
+      }
+
+      // skip if it's not standing
+      if (client.ent->v.flags & FL_DUCKING) {
          continue;
       }
 
@@ -882,7 +929,7 @@ bool Bot::updateNavigation () {
    }
 
    float desiredDistance = 8.0f;
-   float nodeDistance = pev->origin.distance (m_pathOrigin);
+   float nodeDistance = pev->origin.distance2d (m_pathOrigin);
 
    // initialize the radius for a special node type, where the node is considered to be reached
    if (m_path->flags & NodeFlag::Lift) {
@@ -899,6 +946,9 @@ bool Bot::updateNavigation () {
    }
    else if (m_path->number == cv_debug_goal.int_ ()) {
       desiredDistance = 0.0f;
+   }
+   else if (isOccupiedNode (m_path->number)) {
+      desiredDistance = 72.0f;
    }
    else {
       desiredDistance = m_path->radius;
@@ -1620,7 +1670,7 @@ void Bot::clearRoute () {
    m_routes.clear ();
 }
 
-int Bot::findAimingNode (const Vector &to) {
+int Bot::findAimingNode (const Vector &to, int &pathLength) {
    // return the most distant node which is seen from the bot to the target and is within count
 
    if (m_currentNodeIndex == kInvalidNodeIndex) {
@@ -1633,7 +1683,6 @@ int Bot::findAimingNode (const Vector &to) {
    if (destIndex == kInvalidNodeIndex) {
       return kInvalidNodeIndex;
    }
-   const float kMaxDistance = ((m_states & Sense::HearingEnemy) || (m_states & Sense::SuspectEnemy) || m_seeEnemyTime + 3.0f > game.time ()) ? 0.0f : 512.0f;
 
    while (destIndex != m_currentNodeIndex) {
       destIndex = (graph.m_matrix.data () + (destIndex * graph.length ()) + m_currentNodeIndex)->index;
@@ -1641,8 +1690,9 @@ int Bot::findAimingNode (const Vector &to) {
       if (destIndex < 0) {
          break;
       }
+      ++pathLength;
 
-      if (graph.isVisible (m_currentNodeIndex, destIndex) && graph.isVisible (destIndex, m_currentNodeIndex) && kMaxDistance > 0.0f && graph[destIndex].origin.distanceSq (graph[m_currentNodeIndex].origin) > cr::square (kMaxDistance)) {
+      if (graph.isVisible (m_currentNodeIndex, destIndex)) {
          bestIndex = destIndex;
          break;
       }
@@ -3039,7 +3089,7 @@ void Bot::updateLookAngles () {
       return;
    }
 
-   if (m_difficulty == Difficulty::Expert && (m_aimFlags & AimFlags::Enemy) && (m_wantsToFire || usesSniper ()) && cv_whose_your_daddy.bool_ ()) {
+   if (m_difficulty == Difficulty::Expert && (m_aimFlags & AimFlags::Enemy) && (m_wantsToFire || usesSniper ()) && m_kpdRatio < 1.0f && m_healthValue < 50.0f) {
       pev->v_angle = direction;
       updateBodyAngles ();
 

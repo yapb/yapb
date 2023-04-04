@@ -912,10 +912,6 @@ void BotManager::updateBotDifficulties () {
 }
 
 void BotManager::balanceBotDifficulties () {
-   // with nightmare difficulty, there is no balance
-   if (cv_whose_your_daddy.bool_ ()) {
-      return;
-   }
    // difficulty chaning once per round (time)
    auto updateDifficulty = [] (Bot *bot, int32 offset) {
       bot->m_difficulty = cr::clamp (static_cast <Difficulty> (bot->m_difficulty + offset), Difficulty::Noob, Difficulty::Expert);

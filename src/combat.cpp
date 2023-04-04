@@ -197,7 +197,7 @@ bool Bot::seesEnemy (edict_t *player, bool ignoreFOV) {
       return false;
    }
 
-   if (cv_whose_your_daddy.bool_ () && util.isPlayer (pev->dmg_inflictor) && game.getTeam (pev->dmg_inflictor) != m_team) {
+   if (m_difficulty == Difficulty::Expert && m_kpdRatio < 1.5f && util.isPlayer (pev->dmg_inflictor) && game.getTeam (pev->dmg_inflictor) != m_team) {
       ignoreFOV = true;
    }
 
@@ -276,7 +276,7 @@ bool Bot::lookupEnemies () {
                float scaleFactor = (1.0f / calculateScaleFactor (intresting));
                float distance = intresting->v.origin.distanceSq (pev->origin) * scaleFactor;
 
-               if (distance * 0.7f < nearestDistance) {
+               if (distance < nearestDistance) {
                   nearestDistance = distance;
                   newEnemy = intresting;
                }
@@ -297,7 +297,7 @@ bool Bot::lookupEnemies () {
          }
 
          // extra skill player can see thru smoke... if beeing attacked
-         if ((player->v.button & (IN_ATTACK | IN_ATTACK2)) && m_viewDistance < m_maxViewDistance && cv_whose_your_daddy.bool_ ()) {
+         if ((player->v.button & (IN_ATTACK | IN_ATTACK2)) && m_viewDistance < m_maxViewDistance && m_difficulty == Difficulty::Expert) {
             nearestDistance = cr::square (m_maxViewDistance);
          }
 
@@ -309,7 +309,7 @@ bool Bot::lookupEnemies () {
             }
             float distance = player->v.origin.distanceSq (pev->origin);
 
-            if (distance * 0.7f < nearestDistance) {
+            if (distance < nearestDistance) {
                nearestDistance = distance;
                newEnemy = player;
 
@@ -350,7 +350,7 @@ bool Bot::lookupEnemies () {
          }
          m_targetEntity = nullptr; // stop following when we see an enemy...
 
-         if (cv_whose_your_daddy.bool_ ()) {
+         if (m_difficulty == Difficulty::Expert) {
             m_enemySurpriseTime = m_actualReactionTime * 0.5f;
          }
          else {
@@ -403,7 +403,7 @@ bool Bot::lookupEnemies () {
          // shoot at dying players if no new enemy to give some more human-like illusion
          if (m_seeEnemyTime + 0.1f > game.time ()) {
             if (!usesSniper ()) {
-               m_shootAtDeadTime = game.time () + cr::clamp (m_agressionLevel * 1.25f, 0.45f, 0.60f);
+               m_shootAtDeadTime = game.time () + cr::clamp (m_agressionLevel * 1.25f, 0.25f, 0.45f);
                m_actualReactionTime = 0.0f;
                m_states |= Sense::SuspectEnemy;
 
@@ -493,10 +493,13 @@ const Vector &Bot::getEnemyBodyOffset () {
    else if (distance < 800.0f && usesSniper ()) {
       m_enemyParts &= ~Visibility::Head;
    }
+   else if (distance < kSprayDistance / 2 && !usesPistol ()) {
+      m_enemyParts &= ~Visibility::Head;
+   }
    Vector aimPos = m_enemy->v.origin;
 
    if (m_difficulty > Difficulty::Normal) {
-      aimPos += (m_enemy->v.velocity - pev->velocity) * (getFrameInterval () * 1.25f);
+      aimPos += (m_enemy->v.velocity - pev->velocity) * (getFrameInterval () * 2.0f);
    }
 
    // if we only suspect an enemy behind a wall take the worst skill
@@ -504,12 +507,12 @@ const Vector &Bot::getEnemyBodyOffset () {
       aimPos += getBodyOffsetError (distance);
    }
    else if (util.isPlayer (m_enemy)) {
-      const float highOffset = cv_whose_your_daddy.bool_ () ? 1.5f : 0.0f;
+      const float highOffset = m_kpdRatio < 1.0f ? 1.5f : 0.0f;
 
       // now take in account different parts of enemy body
       if (m_enemyParts & (Visibility::Head | Visibility::Body)) {
          auto headshotPct = conf.getDifficultyTweaks (m_difficulty)->headshotPct;
-         auto onLoosingStreak = m_fearLevel > m_agressionLevel || m_kpdRatio < 1.5f;
+         auto onLoosingStreak = (m_fearLevel > m_agressionLevel || m_kpdRatio < 1.25f);
 
          // reduce headshot percent in case we're play too good
          if (!onLoosingStreak) {
@@ -518,7 +521,7 @@ const Vector &Bot::getEnemyBodyOffset () {
 
          // now check is our skill match to aim at head, else aim at enemy body
          if (rg.chance (headshotPct)) {
-            if (onLoosingStreak || cv_whose_your_daddy.bool_ ()) {
+            if (onLoosingStreak) {
                aimPos.z = headOffset (m_enemy) + getEnemyBodyOffsetCorrection (distance);
             }
             else {
@@ -556,15 +559,15 @@ float Bot::getEnemyBodyOffsetCorrection (float distance) {
    };
 
    static float offsetRanges[9][3] = {
-      { 0.0f,  0.0f,  0.0f }, // none
-      { 0.0f,  0.0f,  0.0f }, // melee
-      { 2.5f,  1.5f,  0.2f }, // pistol
-      { 6.5f,  0.0f, -9.9f }, // shotgun
-      { 0.5f, -6.5f, -9.0f }, // zoomrifle
-      { 0.5f, -6.5f, -9.5f }, // rifle
-      { 2.5f,  0.5f, -4.5f }, // smg
-      { 0.5f,  0.5f,  1.5f }, // sniper
-      { 1.5f, -2.0f, -9.0f }  // heavy
+      { 0.0f,  0.0f,  0.0f  }, // none
+      { 0.0f,  0.0f,  0.0f  }, // melee
+      { 1.5f,  1.5f, -1.2f  }, // pistol
+      { 6.5f,  0.0f, -9.9f  }, // shotgun
+      { 0.5f, -8.5f, -11.0f }, // zoomrifle
+      { 0.5f, -8.5f, -11.5f }, // rifle
+      { 2.5f,  0.5f, -4.5f  }, // smg
+      { 0.5f,  0.5f,  1.5f  }, // sniper
+      { 1.5f, -2.0f, -12.0f }  // heavy
    };
 
    // only highskilled bots do that 
@@ -769,16 +772,16 @@ bool Bot::needToPauseFiring (float distance) {
          return true;
       }
    }
-   float offset = 5.0f;
+   float offset = 4.25f;
 
-   if (distance < kSprayDistance * 0.5f) {
+   if (distance < kSprayDistance / 4) {
       return false;
    }
    else if (distance < kSprayDistance) {
-      offset = 12.0f;
+      offset = 10.0f;
    }
    else if (distance < kDoubleSprayDistance) {
-      offset = 10.0f;
+      offset = 8.0f;
    }
    const float xPunch = cr::deg2rad (pev->punchangle.x);
    const float yPunch = cr::deg2rad (pev->punchangle.y);
@@ -1117,142 +1120,142 @@ void Bot::attackMovement () {
    if (game.isNullEntity (m_enemy)) {
       return;
    }
-   float distance = m_lookAt.distance2d (getEyesPos ()); // how far away is the enemy scum?
 
-   if (m_lastUsedNodesTime + getFrameInterval () + 0.5f < game.time ()) {
-      int approach;
+   if (m_lastUsedNodesTime - getFrameInterval () > game.time ()) {
+      return;
+   }
 
-      if (usesKnife ()) {
-         approach = 100;
-      }
-      else if ((m_states & Sense::SuspectEnemy) && !(m_states & Sense::SeeingEnemy)) {
+   auto approach = 0;
+   auto distance = m_lookAt.distance2d (getEyesPos ()); // how far away is the enemy scum?
+
+   if (usesKnife ()) {
+      approach = 100;
+   }
+   else if ((m_states & Sense::SuspectEnemy) && !(m_states & Sense::SeeingEnemy)) {
+      approach = 49;
+   }
+   else if (m_isReloading || m_isVIP) {
+      approach = 29;
+   }
+   else {
+      approach = static_cast <int> (m_healthValue * m_agressionLevel);
+
+      if (usesSniper () && approach > 49) {
          approach = 49;
       }
-      else if (m_isReloading || m_isVIP) {
-         approach = 29;
-      }
-      else {
-         approach = static_cast <int> (m_healthValue * m_agressionLevel);
+   }
 
-         if (usesSniper () && approach > 49) {
-            approach = 49;
-         }
-      }
+   // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
+   if ((m_states & Sense::SeeingEnemy) && approach < 30 && !bots.isBombPlanted () && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
+      m_moveSpeed = -pev->maxspeed;
+      startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, true);
+   }
+   else if (approach < 50) {
+      m_moveSpeed = 0.0f;
+   }
+   else {
+      m_moveSpeed = pev->maxspeed;
+   }
 
-      // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
-      if ((m_states & Sense::SeeingEnemy) && approach < 30 && !bots.isBombPlanted () && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
-         m_moveSpeed = -pev->maxspeed;
-         startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, true);
-      }
-      else if (approach < 50) {
-         m_moveSpeed = 0.0f;
-      }
-      else {
-         m_moveSpeed = pev->maxspeed;
-      }
+   if (distance < 96.0f && !usesKnife ()) {
+      m_moveSpeed = -pev->maxspeed;
+   }
 
-      if (distance < 96.0f && !usesKnife ()) {
-         m_moveSpeed = -pev->maxspeed;
-      }
-
+   if (m_lastFightStyleCheck + 3.0f < game.time ()) {
       if (usesSniper ()) {
          m_fightStyle = Fight::Stay;
-         m_lastFightStyleCheck = game.time ();
       }
-      else if (usesRifle () || usesSubmachine ()) {
-         if (m_lastFightStyleCheck + 3.0f < game.time ()) {
-            int rand = rg.get (1, 100);
+      else if (usesRifle () || usesSubmachine () || usesHeavy ()) {
+         int rand = rg.get (1, 100);
 
-            if (distance < 500.0f) {
+         if (distance < 500.0f) {
+            m_fightStyle = Fight::Strafe;
+         }
+         else if (distance < 1024.0f) {
+            if (rand < (usesSubmachine () ? 50 : 30)) {
                m_fightStyle = Fight::Strafe;
             }
-            else if (distance < 1024.0f) {
-               if (rand < (usesSubmachine () ? 50 : 30)) {
-                  m_fightStyle = Fight::Strafe;
-               }
-               else {
-                  m_fightStyle = Fight::Stay;
-               }
-            }
             else {
-               if (rand < (usesSubmachine () ? 80 : 90)) {
-                  m_fightStyle = Fight::Stay;
-               }
-               else {
-                  m_fightStyle = Fight::Strafe;
-               }
-            }
-            m_lastFightStyleCheck = game.time ();
-         }
-      }
-      else if (rg.get (0, 100) < (isInNarrowPlace () ? 25 : 100)) {
-         m_fightStyle = Fight::Strafe;
-      }
-
-      if (isInViewCone (m_enemy->v.origin) && usesKnife ()) {
-         m_fightStyle = Fight::Strafe;
-      }
-
-      if ((m_difficulty >= Difficulty::Normal && m_fightStyle == Fight::Strafe) || ((pev->button & IN_RELOAD) || m_isReloading) || (usesPistol () && distance < 768.0f) || usesKnife ()) {
-         if (m_strafeSetTime < game.time ()) {
-
-            // to start strafing, we have to first figure out if the target is on the left side or right side
-            const auto &dirToPoint = (pev->origin - m_enemy->v.origin).normalize2d ();
-            const auto &rightSide = m_enemy->v.v_angle.right ().normalize2d ();
-
-            if ((dirToPoint | rightSide) < 0) {
-               m_combatStrafeDir = Dodge::Left;
-            }
-            else {
-               m_combatStrafeDir = Dodge::Right;
-            }
-
-            if (rg.chance (30)) {
-               m_combatStrafeDir = (m_combatStrafeDir == Dodge::Left ? Dodge::Right : Dodge::Left);
-            }
-            m_strafeSetTime = game.time () + rg.get (1.0f, 3.0f);
-         }
-
-         if (m_combatStrafeDir == Dodge::Right) {
-            if (!checkWallOnLeft ()) {
-               m_strafeSpeed = -pev->maxspeed;
-            }
-            else {
-               m_combatStrafeDir = Dodge::Left;
-               m_strafeSetTime = game.time () + rg.get (1.0f, 1.5f);
+               m_fightStyle = Fight::Stay;
             }
          }
          else {
-            if (!checkWallOnRight ()) {
-               m_strafeSpeed = pev->maxspeed;
+            if (rand < (usesSubmachine () ? 80 : 90)) {
+               m_fightStyle = Fight::Stay;
             }
             else {
-               m_combatStrafeDir = Dodge::Right;
-               m_strafeSetTime = game.time () + rg.get (1.0f, 1.5f);
+               m_fightStyle = Fight::Strafe;
             }
          }
+      }
+      else if (rg.get (0, 100) < (isInNarrowPlace () ? 25 : 75)) {
+         m_fightStyle = Fight::Strafe;
+      }
+      else {
+         m_fightStyle = Fight::Stay;
+      }
+      m_lastFightStyleCheck = game.time ();
+   }
 
-         if (m_difficulty >= Difficulty::Hard && (m_jumpTime + 5.0f < game.time () && isOnFloor () && rg.get (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.length2d () > 150.0f) && !usesSniper ()) {
-            pev->button |= IN_JUMP;
+   if (m_fightStyle == Fight::Strafe) {
+      if (m_strafeSetTime < game.time ()) {
+
+         // to start strafing, we have to first figure out if the target is on the left side or right side
+         const auto &dirToPoint = (pev->origin - m_enemy->v.origin).normalize2d ();
+         const auto &rightSide = m_enemy->v.v_angle.right ().normalize2d ();
+
+         if ((dirToPoint | rightSide) < 0) {
+            m_combatStrafeDir = Dodge::Left;
+         }
+         else {
+            m_combatStrafeDir = Dodge::Right;
+         }
+
+         if (rg.chance (30)) {
+            m_combatStrafeDir = (m_combatStrafeDir == Dodge::Left ? Dodge::Right : Dodge::Left);
+         }
+         m_strafeSetTime = game.time () + rg.get (1.2f, 2.4f);
+      }
+
+      if (m_combatStrafeDir == Dodge::Right) {
+         if (!checkWallOnLeft ()) {
+            m_strafeSpeed = -pev->maxspeed;
+         }
+         else {
+            m_combatStrafeDir = Dodge::Left;
+            m_strafeSetTime = game.time () + rg.get (0.8f, 1.2f);
          }
       }
       else {
-         if ((m_enemyParts & (Visibility::Head | Visibility::Body)) && getCurrentTaskId () != Task::SeekCover && getCurrentTaskId () != Task::Hunt) {
-            int enemyNearestIndex = graph.getNearest (m_enemy->v.origin);
-
-            if (graph.isDuckVisible (m_currentNodeIndex, enemyNearestIndex) && graph.isDuckVisible (enemyNearestIndex, m_currentNodeIndex)) {
-               m_duckTime = game.time () + 0.64f;
-            }
+         if (!checkWallOnRight ()) {
+            m_strafeSpeed = pev->maxspeed;
          }
-         m_moveSpeed = 0.0f;
-         m_strafeSpeed = 0.0f;
-         m_navTimeset = game.time ();
+         else {
+            m_combatStrafeDir = Dodge::Right;
+            m_strafeSetTime = game.time () + rg.get (0.8f, 1.2f);
+         }
       }
+
+      if (m_difficulty >= Difficulty::Hard && (m_jumpTime + 5.0f < game.time () && isOnFloor () && rg.get (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.length2d () > 150.0f) && !usesSniper ()) {
+         pev->button |= IN_JUMP;
+      }
+   }
+   else {
+      if ((m_enemyParts & (Visibility::Head | Visibility::Body)) && getCurrentTaskId () != Task::SeekCover && getCurrentTaskId () != Task::Hunt) {
+         int enemyNearestIndex = graph.getNearest (m_enemy->v.origin);
+
+         if (graph.isDuckVisible (m_currentNodeIndex, enemyNearestIndex) && graph.isDuckVisible (enemyNearestIndex, m_currentNodeIndex)) {
+            m_duckTime = game.time () + 0.64f;
+         }
+      }
+      m_moveSpeed = 0.0f;
+      m_strafeSpeed = 0.0f;
+      m_navTimeset = game.time ();
    }
 
    if (m_difficulty >= Difficulty::Hard && isOnFloor () && (m_duckTime < game.time ())) {
       if (distance < 768.0f) {
-         if (rg.get (0, 1000) < rg.get (5, 10) && pev->velocity.length2d () > 150.0f && isInViewCone (m_enemy->v.origin)) {
+         if (rg.get (0, 1000) < rg.get (7, 12) && pev->velocity.length2d () > 150.0f && isInViewCone (m_enemy->v.origin)) {
             pev->button |= IN_JUMP;
          }
       }

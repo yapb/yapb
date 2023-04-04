@@ -502,14 +502,6 @@ edict_t *Bot::lookupBreakable () {
 }
 
 void Bot::setIdealReactionTimers (bool actual) {
-
-   // zero out reaction times for extreme mode
-   if (cv_whose_your_daddy.bool_ ()) {
-      m_idealReactionTime = 0.05f;
-      m_actualReactionTime = 0.095f;
-
-      return;
-   }
    const auto tweak = conf.getDifficultyTweaks (m_difficulty);
 
    if (actual) {
@@ -1886,8 +1878,17 @@ void Bot::setConditions () {
       m_states &= ~Sense::HearingEnemy;
    }
 
-   if (game.isNullEntity (m_enemy) && !game.isNullEntity (m_lastEnemy) && !m_lastEnemyOrigin.empty ()) {
-      m_aimFlags |= AimFlags::PredictPath;
+   if (game.isNullEntity (m_enemy) && !game.isNullEntity (m_lastEnemy) && !m_lastEnemyOrigin.empty () && m_seeEnemyTime + 0.5f < game.time ()) {
+      auto distanceToLastEnemySq = m_lastEnemyOrigin.distanceSq (pev->origin);
+
+      if (distanceToLastEnemySq < cr::square (1600.0f)) {
+         auto pathLength = 0;
+         auto nodeIndex = findAimingNode (m_lastEnemyOrigin, pathLength);
+
+         if (graph.exists (nodeIndex) && pathLength < kMaxBucketsInsidePos * 2 && pev->origin.distanceSq (graph[nodeIndex].origin) > cr::square (384.0f)) {
+            m_aimFlags |= AimFlags::PredictPath;
+         }
+      }
 
       if (seesEntity (m_lastEnemyOrigin, true)) {
          m_aimFlags |= AimFlags::LastEnemy;
@@ -1985,7 +1986,7 @@ void Bot::filterTasks () {
             ratio = timeHeard * 0.1f;
          }
          bool lowAmmo = isLowOnAmmo (m_currentWeapon, 0.18f);
-         bool sniping = m_sniperStopTime <= game.time () && lowAmmo;
+         bool sniping = m_sniperStopTime > game.time () && lowAmmo;
 
          if (bots.isBombPlanted () || m_isStuck || usesKnife ()) {
             ratio /= 3.0f; // reduce the seek cover desire if bomb is planted
@@ -2080,7 +2081,7 @@ void Bot::filterTasks () {
    auto survive = thresholdDesire (&filter[Task::SeekCover], 40.0f, 0.0f);
    survive = subsumeDesire (&filter[Task::Hide], survive);
 
-   auto def = thresholdDesire (&filter[Task::Hunt], 41.0f, 0.0f); // don't allow hunting if desires 60<
+   auto def = thresholdDesire (&filter[Task::Hunt], 60.0f, 0.0f); // don't allow hunting if desires 60<
    offensive = subsumeDesire (offensive, pickup); // if offensive task, don't allow picking up stuff
 
    auto sub = maxDesire (offensive, def); // default normal & careful tasks against offensive actions
@@ -2771,7 +2772,7 @@ void Bot::updateAimDir () {
    }
 
    if (flags & AimFlags::Override) {
-      m_lookAt = m_camp;
+      m_lookAt = m_lookAtSafe;
    }
    else if (flags & AimFlags::Grenade) {
       m_lookAt = m_throw;
@@ -2802,6 +2803,9 @@ void Bot::updateAimDir () {
       if (m_pickupType == Pickup::Hostage) {
          m_lookAt.z += 48.0f;
       }
+      else if (m_pickupType == Pickup::Weapon) {
+         m_lookAt.z += 72.0;
+      }
    }
    else if (flags & AimFlags::LastEnemy) {
       m_lookAt = m_lastEnemyOrigin;
@@ -2814,100 +2818,59 @@ void Bot::updateAimDir () {
             m_wantsToFire = true;
          }
       }
-      else {
-         auto distanceToLastEnemySq = m_lastEnemyOrigin.distanceSq (pev->origin);
-         auto maxDistanceToEnemySq = cr::square (1600.0f);
-
-         if (distanceToLastEnemySq >= maxDistanceToEnemySq) {
-            m_lastEnemyOrigin = nullptr;
-            m_aimFlags &= ~AimFlags::LastEnemy;
-         }
-      }
    }
    else if (flags & AimFlags::PredictPath) {
-      TraceResult tr {};
+      bool changePredictedEnemy = true;
 
-      auto distanceToLastEnemySq = m_lastEnemyOrigin.distanceSq (pev->origin);
-      auto maxDistanceToEnemySq = cr::square (1600.0f);
+      if (m_timeNextTracking > game.time () && m_trackingEdict == m_lastEnemy) {
+         changePredictedEnemy = false;
+      }
 
-      if ((distanceToLastEnemySq < maxDistanceToEnemySq || usesSniper ()) && util.isAlive (m_lastEnemy)) {
-         game.testLine (getEyesPos (), m_lastEnemyOrigin, TraceIgnore::Glass, pev->pContainingEntity, &tr);
+      if (changePredictedEnemy) {
+         auto pathLength = 0;
+         auto aimNode = findAimingNode (m_lastEnemyOrigin, pathLength);
 
-         if (tr.flFraction >= 0.2f || tr.pHit != game.getStartEntity ()) {
-            auto changePredictedEnemy = true;
+         if (graph.exists (aimNode) && pathLength < kMaxBucketsInsidePos * 2) {
+            m_lookAt = graph[aimNode].origin;
+            m_lookAtSafe = m_lookAt;
 
-            if (m_timeNextTracking < game.time () && m_trackingEdict == m_lastEnemy && util.isAlive (m_lastEnemy)) {
-               changePredictedEnemy = false;
-            }
-
-            if (changePredictedEnemy) {
-               auto aimPoint = findAimingNode (m_lastEnemyOrigin);
-
-               if (aimPoint != kInvalidNodeIndex) {
-                  m_lookAt = graph[aimPoint].origin + pev->view_ofs;
-                  m_camp = m_lookAt;
-
-                  m_timeNextTracking = game.time () + 0.5f;
-                  m_trackingEdict = m_lastEnemy;
-
-                  if (!usesSniper () && lastEnemyShootable ()) {
-                     m_wantsToFire = true;
-                  }
-               }
-               else {
-                  m_lookAt = m_camp;
-               }
-            }
-            else {
-               m_lookAt = m_camp;
-            }
+            m_timeNextTracking = game.time () + 0.5f;
+            m_trackingEdict = m_lastEnemy;
          }
          else {
-            m_aimFlags &= ~AimFlags::PredictPath; // forget enemy far away
-
-            if (distanceToLastEnemySq >= maxDistanceToEnemySq) {
-               m_lastEnemyOrigin = nullptr;
+            if (!m_lookAtSafe.empty ()) {
+               m_lookAt = m_lookAtSafe;
             }
          }
       }
       else {
-         m_aimFlags &= ~AimFlags::PredictPath; // forget enemy far away
-
-         if (distanceToLastEnemySq >= maxDistanceToEnemySq) {
-            m_lastEnemyOrigin = nullptr;
-         }
+         m_lookAt = m_lookAtSafe;
       }
    }
    else if (flags & AimFlags::Camp) {
-      m_lookAt = m_camp;
+      m_lookAt = m_lookAtSafe;
    }
    else if (flags & AimFlags::Nav) {
       m_lookAt = m_destOrigin;
 
-      auto smoothView = [&] (int32 index) -> Vector {
-         auto radius = graph[index].radius;
-
-         if (radius > 0.0f) {
-            return Vector (pev->angles.x, cr::wrapAngle (pev->angles.y + rg.get (-90.0f, 90.0f)), 0.0f).forward () * rg.get (2.0f, 4.0f);
-         }
-         return nullptr;
-      };
-
-      if (m_moveToGoal && !m_isStuck && m_moveSpeed > getShiftSpeed () && !(pev->button & IN_DUCK) && m_currentNodeIndex != kInvalidNodeIndex && !(m_path->flags & (NodeFlag::Ladder | NodeFlag::Crouch)) && m_pathWalk.hasNext () && pev->origin.distanceSq (m_destOrigin) < cr::square (160.0f)) {
+      if (m_moveToGoal && m_seeEnemyTime + 4.0f < game.time () && !m_isStuck && m_moveSpeed > getShiftSpeed () && !(pev->button & IN_DUCK) && m_currentNodeIndex != kInvalidNodeIndex && !(m_path->flags & (NodeFlag::Ladder | NodeFlag::Crouch)) && m_pathWalk.hasNext () && pev->origin.distanceSq (m_destOrigin) < cr::square (240.0f)) {
          auto nextPathIndex = m_pathWalk.next ();
 
          if (graph.isVisible (m_currentNodeIndex, nextPathIndex)) {
-            m_lookAt = graph[nextPathIndex].origin + pev->view_ofs + smoothView (nextPathIndex);
+            m_lookAt = graph[nextPathIndex].origin;
          }
          else {
             m_lookAt = m_destOrigin;
          }
       }
+      else if (m_seeEnemyTime + 3.0f > game.time () && !m_lastEnemyOrigin.empty ()){
+         m_lookAt = m_lastEnemyOrigin;;
+      }
       else {
          m_lookAt = m_destOrigin;
       }
 
-      if (m_canChooseAimDirection && m_currentNodeIndex != kInvalidNodeIndex && !(m_path->flags & NodeFlag::Ladder)) {
+      if (m_canChooseAimDirection && m_seeEnemyTime + 4.0f < game.time () && m_currentNodeIndex != kInvalidNodeIndex && !(m_path->flags & NodeFlag::Ladder)) {
          auto dangerIndex = graph.getDangerIndex (m_team, m_currentNodeIndex, m_currentNodeIndex);
 
          if (graph.exists (dangerIndex) && graph.isVisible (m_currentNodeIndex, dangerIndex) && !(graph[dangerIndex].flags & NodeFlag::Crouch)) {
@@ -2915,12 +2878,17 @@ void Bot::updateAimDir () {
                m_lookAt = m_destOrigin;
             }
             else {
-               m_lookAt = graph[dangerIndex].origin + pev->view_ofs + smoothView (dangerIndex);
+               m_lookAt = graph[dangerIndex].origin + pev->view_ofs;
 
                // add danger flags
                m_aimFlags |= AimFlags::Danger;
             }
          }
+      }
+
+      // aloways use our z
+      if (m_lookAt == m_destOrigin) {
+         m_lookAt.z = getEyesPos ().z;
       }
    }
 
@@ -3027,12 +2995,6 @@ void Bot::frame () {
 
       kick ();
       return;
-   }
-
-   // clear enemy far away
-   if (!m_lastEnemyOrigin.empty () && !game.isNullEntity (m_lastEnemy) && pev->origin.distanceSq (m_lastEnemyOrigin) >= cr::square (1600.0f)) {
-      m_lastEnemy = nullptr;
-      m_lastEnemyOrigin = nullptr;
    }
    m_slowFrameTimestamp = game.time () + 0.5f;
 }
@@ -3227,7 +3189,7 @@ void Bot::normal_ () {
                m_timeCamping = game.time () + rg.get (cv_camping_time_min.float_ (), cv_camping_time_max.float_ ());
                startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, m_timeCamping, true);
 
-               m_camp = m_path->origin + m_path->start.forward () * 500.0f;
+               m_lookAtSafe = m_path->origin + m_path->start.forward () * 500.0f;
                m_aimFlags |= AimFlags::Camp;
                m_campDirection = 0;
 
@@ -3507,7 +3469,7 @@ void Bot::seekCover_ () {
       getCampDirection (&dest);
 
       m_aimFlags |= AimFlags::Camp;
-      m_camp = dest;
+      m_lookAtSafe = dest;
       m_campDirection = 0;
 
       // chosen waypoint is a camp waypoint?
@@ -3609,7 +3571,7 @@ void Bot::pause_ () {
       if (m_moveSpeed < -pev->maxspeed) {
          m_moveSpeed = -pev->maxspeed;
       }
-      m_camp = getEyesPos () + pev->v_angle.forward () * 500.0f;
+      m_lookAtSafe = getEyesPos () + pev->v_angle.forward () * 500.0f;
 
       m_aimFlags |= AimFlags::Override;
       m_wantsToFire = true;
@@ -3757,22 +3719,23 @@ void Bot::camp_ () {
          }
 
          if (--numFoundPoints >= 0) {
-            m_camp = graph[campPoints[rg.get (0, numFoundPoints)]].origin;
+            m_lookAtSafe = graph[campPoints[rg.get (0, numFoundPoints)]].origin;
          }
          else {
-            m_camp = graph[findCampingDirection ()].origin;
+            m_lookAtSafe = graph[findCampingDirection ()].origin;
          }
       }
       else {
          if ((!game.isNullEntity (m_lastEnemy) && !m_lastEnemyOrigin.empty ()) || util.isAlive (m_lastEnemy)) {
-            auto lastEnemyNearestIndex = findAimingNode (m_lastEnemyOrigin);
+            auto pathLength = 0;
+            auto lastEnemyNearestIndex = findAimingNode (m_lastEnemyOrigin, pathLength);
 
-            if (lastEnemyNearestIndex != kInvalidNodeIndex && graph.isVisible (m_currentNodeIndex, lastEnemyNearestIndex)) {
-               m_camp = graph[lastEnemyNearestIndex].origin;
+            if (pathLength > 0 && graph.exists (lastEnemyNearestIndex)) {
+               m_lookAtSafe = graph[lastEnemyNearestIndex].origin;
             }
          }
          else {
-            m_camp = graph[findCampingDirection ()].origin;
+            m_lookAtSafe = graph[findCampingDirection ()].origin;
          }
       }
    }
@@ -4551,7 +4514,7 @@ void Bot::shootBreakable_ () {
    m_checkTerrain = false;
    m_moveToGoal = false;
    m_navTimeset = game.time ();
-   m_camp = m_breakableOrigin;
+   m_lookAtSafe = m_breakableOrigin;
 
    // is bot facing the breakable?
    if (util.getShootingCone (ent (), m_breakableOrigin) >= 0.90f) {

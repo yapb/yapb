@@ -737,7 +737,7 @@ private:
    Vector m_enemyOrigin {}; // target origin chosen for shooting
    Vector m_grenade {}; // calculated vector for grenades
    Vector m_entity {}; // origin of entities like buttons etc.
-   Vector m_camp {}; // aiming vector when camping.
+   Vector m_lookAtSafe {}; // aiming vector when camping.
    Vector m_desiredVelocity {}; // desired velocity for jump nodes
    Vector m_breakableOrigin {}; // origin of breakable
 
@@ -754,12 +754,13 @@ private:
 private:
    int pickBestWeapon (int *vec, int count, int moneySave);
    int findCampingDirection ();
-   int findAimingNode (const Vector &to);
+   int findAimingNode (const Vector &to, int &pathLength);
    int findNearestNode ();
    int findBombNode ();
    int findCoverNode (float maxDistance);
    int findDefendNode (const Vector &origin);
    int findBestGoal ();
+   int findBestGoalWhenBombAction ();
    int findGoalPost (int tactic, IntArray *defensive, IntArray *offsensive);
    int bestPrimaryCarried ();
    int bestSecondaryCarried ();
@@ -1181,7 +1182,6 @@ extern ConVar cv_chat;
 extern ConVar cv_language;
 extern ConVar cv_show_latency;
 extern ConVar cv_enable_query_hook;
-extern ConVar cv_whose_your_daddy;
 extern ConVar cv_chatter_path;
 extern ConVar cv_quota;
 extern ConVar cv_difficulty;
@@ -1202,6 +1202,7 @@ extern ConVar mp_limitteams;
 extern ConVar mp_autoteambalance;
 extern ConVar mp_footsteps;
 extern ConVar mp_startmoney;
+extern ConVar mp_c4timer;
 
 // execute client command helper
 template <typename ...Args> void Bot::issueCommand (const char *fmt, Args &&...args) {
