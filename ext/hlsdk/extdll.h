@@ -56,8 +56,6 @@ public:
 };
 
 typedef cr::Vector vec3_t;
-using namespace cr::types;
-
 typedef struct edict_s edict_t;
 
 #include "const.h"
@@ -105,7 +103,7 @@ static inline int MAKE_STRING (const char *val) {
    return static_cast <int> (ptrdiff);
 }
 #else 
-#define MAKE_STRING(str) ((uint64)(str) - (uint64)(STRING(0)))
+#define MAKE_STRING(str) ((uint64_t)(str) - (uint64_t)(STRING(0)))
 #endif
 
 inline const char *string_t::chars (size_t shift) const {
@@ -114,7 +112,7 @@ inline const char *string_t::chars (size_t shift) const {
    return cr::strings.isEmpty (result) ? &cr::kNullChar : (result + shift);
 }
 
-enum HLBool : int32 {
+enum HLBool : int32_t {
    HLFalse, HLTrue
 };
 

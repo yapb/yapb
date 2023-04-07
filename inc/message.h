@@ -65,27 +65,27 @@ CR_DECLARE_SCOPED_ENUM (StatusIconCache,
 class MessageDispatcher final : public Singleton <MessageDispatcher> {
 private:
    using MsgFunc = void (MessageDispatcher::*) ();
-   using MsgHash = Hash <int32>;
+   using MsgHash = Hash <int32_t>;
 
 private:
    struct Args {
       union {
          float float_;
-         int32 long_;
+         int32_t long_;
          const char *chars_;
       };
 
    public:
       Args (float value) : float_ (value) { }
-      Args (int32 value) : long_ (value) { }
+      Args (int32_t value) : long_ (value) { }
       Args (const char *value) : chars_ (value) { }
    };
 
 private:
-   HashMap <String, int32> m_textMsgCache {}; // cache strings for faster access for textmsg
-   HashMap <String, int32> m_showMenuCache {}; // cache for the showmenu message
-   HashMap <String, int32> m_statusIconCache {}; // cache for status icon message
-   HashMap <String, int32> m_teamInfoCache {}; // cache for teaminfo message
+   HashMap <String, int32_t> m_textMsgCache {}; // cache strings for faster access for textmsg
+   HashMap <String, int32_t> m_showMenuCache {}; // cache for the showmenu message
+   HashMap <String, int32_t> m_statusIconCache {}; // cache for status icon message
+   HashMap <String, int32_t> m_teamInfoCache {}; // cache for teaminfo message
 
 private:
    Bot *m_bot {}; // owner of a message
@@ -94,9 +94,9 @@ private:
    SmallArray <Args> m_args {}; // args collected from write* functions
 
    HashMap <String, NetMsg> m_wanted {}; // wanted messages
-   HashMap <int32, NetMsg> m_reverseMap {}; // maps engine message id to our message id
+   HashMap <int32_t, NetMsg> m_reverseMap {}; // maps engine message id to our message id
 
-   HashMap <NetMsg, int32, MsgHash> m_maps {}; // maps our message to id to engine message id
+   HashMap <NetMsg, int32_t, MsgHash> m_maps {}; // maps our message to id to engine message id
    HashMap <NetMsg, MsgFunc, MsgHash> m_handlers {}; // maps our message id to handler function
 
 private:
@@ -122,17 +122,17 @@ private:
    void netMsgScoreAttrib ();
 
 private:
-   Bot *pickBot (int32 index);
+   Bot *pickBot (int32_t index);
 
 public:
    MessageDispatcher ();
    ~MessageDispatcher () = default;
 
 public:
-   int32 add (StringRef name, int32 id);
-   int32 id (NetMsg msg);
+   int32_t add (StringRef name, int32_t id);
+   int32_t id (NetMsg msg);
 
-   void start (edict_t *ent, int32 type);
+   void start (edict_t *ent, int32_t type);
    void stop ();
    void ensureMessages ();
 

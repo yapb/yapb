@@ -54,16 +54,6 @@ BotSupport::BotSupport () {
    m_tags.emplace ("(", ")");
    m_tags.emplace (")", "(");
 
-   // register noise cache
-   m_noiseCache["player/bhit"] = Noise::NeedHandle | Noise::HitFall;
-   m_noiseCache["player/head"] = Noise::NeedHandle | Noise::HitFall;
-   m_noiseCache["items/gunpi"] = Noise::NeedHandle | Noise::Pickup;
-   m_noiseCache["items/9mmcl"] = Noise::NeedHandle | Noise::Ammo;
-   m_noiseCache["weapons/zoo"] = Noise::NeedHandle | Noise::Zoom;
-   m_noiseCache["hostage/hos"] = Noise::NeedHandle | Noise::Hostage;
-   m_noiseCache["debris/bust"] = Noise::NeedHandle | Noise::Broke;
-   m_noiseCache["doors/doorm"] = Noise::NeedHandle | Noise::Door;
-
    // register weapon aliases
    m_weaponAlias[Weapon::USP] = "usp"; // HK USP .45 Tactical
    m_weaponAlias[Weapon::Glock18] = "glock"; // Glock18 Select Fire
@@ -375,161 +365,6 @@ bool BotSupport::findNearestPlayer (void **pvHolder, edict_t *to, float searchDi
    return true;
 }
 
-void BotSupport::listenNoise (edict_t *ent, StringRef sample, float volume) {
-   // this function called by the sound hooking code (in emit_sound) enters the played sound into the array associated with the entity
-
-   if (game.isNullEntity (ent) || sample.empty ()) {
-      return;
-   }
-   const auto &origin = game.getEntityOrigin (ent);
-
-   // something wrong with sound...
-   if (origin.empty ()) {
-      return;
-   }
-   auto noise = m_noiseCache[sample.substr (0, 11)];
-
-   // we're not handling theese
-   if (!(noise & Noise::NeedHandle)) {
-      return;
-   }
-
-   // find nearest player to sound origin
-   auto findNearbyClient = [&origin] () {
-      float nearest = kInfiniteDistance;
-      Client *result = nullptr;
-
-      // loop through all players
-      for (auto &client : util.getClients ()) {
-         if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive)) {
-            continue;
-         }
-         auto distance = client.origin.distanceSq (origin);
-
-         // now find nearest player
-         if (distance < nearest) {
-            result = &client;
-            nearest = distance;
-         }
-      }
-      return result;
-   };
-   auto client = findNearbyClient ();
-
-   // update noise stats
-   auto registerNoise = [&origin, &client, &volume] (float distance, float lasting) {
-      client->noise.dist = distance * volume;
-      client->noise.last = game.time () + lasting;
-      client->noise.pos = origin;
-   };
-
-   // client wasn't found
-   if (!client) {
-      return;
-   }
-
-   // hit/fall sound?
-   if (noise & Noise::HitFall) {
-      registerNoise (768.0f, 0.52f);
-   }
-
-   // weapon pickup?
-   else if (noise & Noise::Pickup) {
-      registerNoise (768.0f, 0.45f);
-   }
-
-   // sniper zooming?
-   else if (noise & Noise::Zoom) {
-      registerNoise (512.0f, 0.10f);
-   }
-
-   // ammo pickup?
-   else if (noise & Noise::Ammo) {
-      registerNoise (512.0f, 0.25f);
-   }
-
-   // ct used hostage?
-   else if (noise & Noise::Hostage) {
-      registerNoise (1024.0f, 5.00);
-   }
-
-   // broke something?
-   else if (noise & Noise::Broke) {
-      registerNoise (1024.0f, 2.00f);
-   }
-
-   // someone opened a door
-   else if (noise & Noise::Door) {
-      registerNoise (1024.0f, 3.00f);
-   }
-}
-
-void BotSupport::simulateNoise (int playerIndex) {
-   // this function tries to simulate playing of sounds to let the bots hear sounds which aren't
-   // captured through server sound hooking
-
-   if (playerIndex < 0 || playerIndex >= game.maxClients ()) {
-      return; // reliability check
-   }
-   Client &client = m_clients[playerIndex];
-   ClientNoise noise {};
-
-   auto buttons = client.ent->v.button | client.ent->v.oldbuttons;
-
-   // pressed attack button?
-   if (buttons & IN_ATTACK) {
-      noise.dist = 2048.0f;
-      noise.last = game.time () + 0.3f;
-   }
-
-   // pressed used button?
-   else if (buttons & IN_USE) {
-      noise.dist = 512.0f;
-      noise.last = game.time () + 0.5f;
-   }
-
-   // pressed reload button?
-   else if (buttons & IN_RELOAD) {
-      noise.dist = 512.0f;
-      noise.last = game.time () + 0.5f;
-   }
-
-   // uses ladder?
-   else if (client.ent->v.movetype == MOVETYPE_FLY) {
-      if (cr::abs (client.ent->v.velocity.z) > 50.0f) {
-         noise.dist = 1024.0f;
-         noise.last = game.time () + 0.3f;
-      }
-   }
-   else {
-      if (mp_footsteps.bool_ ()) {
-         // moves fast enough?
-         noise.dist = 1280.0f * (client.ent->v.velocity.length2d () / 260.0f);
-         noise.last = game.time () + 0.3f;
-      }
-   }
-
-   if (noise.dist <= 0.0f) {
-      return; // didn't issue sound?
-   }
-
-   // some sound already associated
-   if (client.noise.last > game.time ()) {
-      if (client.noise.dist <= noise.dist) {
-         // override it with new
-         client.noise.dist = noise.dist;
-         client.noise.last = noise.last;
-         client.noise.pos = client.ent->v.origin;
-      }
-   }
-   else if (!cr::fzero (noise.last)) {
-      // just remember it
-      client.noise.dist = noise.dist;
-      client.noise.last = noise.last;
-      client.noise.pos = client.ent->v.origin;
-   }
-}
-
 void BotSupport::updateClients () {
 
    // record some stats of all players on the server
@@ -550,7 +385,7 @@ void BotSupport::updateClients () {
 
          if (client.flags & ClientFlags::Alive) {
             client.origin = player->v.origin;
-            simulateNoise (i);
+            sounds.simulateNoise (i);
          }
       }
       else {
@@ -703,24 +538,24 @@ String BotSupport::getCurrentDateTime () {
    return String (timebuf);
 }
 
-int32 BotSupport::sendTo (int socket, const void *message, size_t length, int flags, const sockaddr *dest, int destLength) {
-   const auto send = [&] (const Twin <const uint8 *, size_t> &msg) -> int32 {
+int32_t BotSupport::sendTo (int socket, const void *message, size_t length, int flags, const sockaddr *dest, int destLength) {
+   const auto send = [&] (const Twin <const uint8_t *, size_t> &msg) -> int32_t {
       return Socket::sendto (socket, msg.first, msg.second, flags, dest, destLength);
    };
 
-   auto packet = reinterpret_cast <const uint8 *> (message);
+   auto packet = reinterpret_cast <const uint8_t *> (message);
 
    // player replies response
    if (length > 5 && packet[0] == 0xff && packet[1] == 0xff && packet[2] == 0xff && packet[3] == 0xff) {
 
       if (packet[4] == 'D') {
          QueryBuffer buffer (packet, length, 5);
-         auto count = buffer.read <uint8> ();
+         auto count = buffer.read <uint8_t> ();
 
-         for (uint8 i = 0; i < count; ++i) {
-            buffer.skip <uint8> (); // number
+         for (uint8_t i = 0; i < count; ++i) {
+            buffer.skip <uint8_t> (); // number
             auto name = buffer.readString (); // name
-            buffer.skip <int32> (); // score
+            buffer.skip <int32_t> (); // score
 
             auto ctime = buffer.read <float> (); // override connection time
             buffer.write <float> (bots.getConnectTime (name, ctime));
@@ -729,17 +564,17 @@ int32 BotSupport::sendTo (int socket, const void *message, size_t length, int fl
       }
       else if (packet[4] == 'I') {
          QueryBuffer buffer (packet, length, 5);
-         buffer.skip <uint8> (); // protocol
+         buffer.skip <uint8_t> (); // protocol
 
          // skip server name, folder, map game
          for (size_t i = 0; i < 4; ++i) {
             buffer.skipString ();
          }
          buffer.skip <short> (); // steam app id
-         buffer.skip <uint8> (); // players
-         buffer.skip <uint8> (); // maxplayers
-         buffer.skip <uint8> (); // bots
-         buffer.write <uint8> (0); // zero out bot count
+         buffer.skip <uint8_t> (); // players
+         buffer.skip <uint8_t> (); // maxplayers
+         buffer.skip <uint8_t> (); // bots
+         buffer.write <uint8_t> (0); // zero out bot count
 
          return send (buffer.data ());
       }
@@ -747,7 +582,7 @@ int32 BotSupport::sendTo (int socket, const void *message, size_t length, int fl
          QueryBuffer buffer (packet, length, 5);
 
          buffer.shiftToEnd (); // shift to the end of buffer
-         buffer.write <uint8> (0); // zero out bot count
+         buffer.write <uint8_t> (0); // zero out bot count
 
          return send (buffer.data ());
       }
@@ -755,7 +590,7 @@ int32 BotSupport::sendTo (int socket, const void *message, size_t length, int fl
    return send ({ packet, length });
 }
 
-StringRef BotSupport::weaponIdToAlias (int32 id) {
+StringRef BotSupport::weaponIdToAlias (int32_t id) {
    StringRef none = "none";
 
    if (m_weaponAlias.has (id)) {

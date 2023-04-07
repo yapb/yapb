@@ -230,6 +230,7 @@ sources = files (
    'src/module.cpp',
    'src/message.cpp',
    'src/navigate.cpp',
+   'src/sounds.cpp',
    'src/support.cpp'
 )
 

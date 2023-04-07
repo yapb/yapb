@@ -782,7 +782,7 @@ void BotManager::listBots () {
    ctrl.msg ("%-3.5s\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.4s\t%-3.4s\t%-3.5s\t%-3.8s", "index", "name", "personality", "team", "difficulty", "frags", "alive", "timeleft");
 
    for (const auto &bot : bots) {
-      ctrl.msg ("[%-3.1d]\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s\t%-3.0f secs", bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful", bot->m_team == Team::CT ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_notKilled ? "yes" : "no", bot->m_stayTime - game.time ());
+      ctrl.msg ("[%-3.1d]\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s\t%-3.0f secs", bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful", bot->m_team == Team::CT ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_notKilled ? "yes" : "no", cv_rotate_bots.bool_ () ? bot->m_stayTime - game.time () : 0.0f);
    }
    ctrl.msg ("%d bots", m_bots.length ());
 }
@@ -799,7 +799,7 @@ float BotManager::getConnectTime (StringRef name, float original) {
 }
 
 float BotManager::getAverageTeamKPD (bool calcForBots) {
-   Twin <float, int32> calc {};
+   Twin <float, int32_t> calc {};
 
    for (const auto &client : util.getClients ()) {
       if (!(client.flags & ClientFlags::Used)) {
@@ -913,7 +913,7 @@ void BotManager::updateBotDifficulties () {
 
 void BotManager::balanceBotDifficulties () {
    // difficulty chaning once per round (time)
-   auto updateDifficulty = [] (Bot *bot, int32 offset) {
+   auto updateDifficulty = [] (Bot *bot, int32_t offset) {
       bot->m_difficulty = cr::clamp (static_cast <Difficulty> (bot->m_difficulty + offset), Difficulty::Noob, Difficulty::Expert);
    };
 
@@ -1080,11 +1080,9 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    m_wantedTeam = team;
    m_wantedSkin = skin;
 
-   newRound ();
-}
+   m_tasks.reserve (Task::Max);
 
-float Bot::getFrameInterval () {
-   return m_frameInterval;
+   newRound ();
 }
 
 float Bot::getConnectionTime () {
@@ -1124,6 +1122,24 @@ int BotManager::getAliveHumansCount () {
       }
    }
    return count;
+}
+
+int BotManager::getPlayerPriority (edict_t *ent) {
+   constexpr auto highPrio = 512;
+
+   // always check for only our own bots
+   auto bot = bots[ent];
+
+   // if player just return high prio
+   if (!bot) {
+      return game.indexOfEntity (ent) + highPrio;
+   }
+
+   // give bots some priority
+   if (bot->m_hasC4 || bot->m_isVIP || bot->hasHostage () || bot->m_healthValue < ent->v.health) {
+      return bot->entindex () + highPrio;
+   }
+   return bot->entindex ();
 }
 
 bool BotManager::isTeamStacked (int team) {
@@ -1422,7 +1438,7 @@ void Bot::newRound () {
       msg = BotMsg::None;
    }
    m_msgQueue.clear ();
-   m_goalHistory.clear ();
+   m_nodeHistory.clear ();
    m_ignoredBreakable.clear ();
 
    // clear last trace
@@ -1532,13 +1548,15 @@ void Bot::updateTeamJoin () {
    if (m_startAction == BotMsg::TeamSelect) {
       m_startAction = BotMsg::None; // switch back to idle
 
-      char teamJoin = cv_join_team.str ()[0];
+      if (m_wantedTeam == -1) {
+         char teamJoin = cv_join_team.str ()[0];
 
-      if (teamJoin == 'C' || teamJoin == 'c') {
-         m_wantedTeam = 2;
-      }
-      else if (teamJoin == 'T' || teamJoin == 't') {
-         m_wantedTeam = 1;
+         if (teamJoin == 'C' || teamJoin == 'c') {
+            m_wantedTeam = 2;
+         }
+         else if (teamJoin == 'T' || teamJoin == 't') {
+            m_wantedTeam = 1;
+         }
       }
 
       if (m_wantedTeam != 1 && m_wantedTeam != 2) {
@@ -1595,7 +1613,7 @@ void Bot::updateTeamJoin () {
 
       // check for greeting other players, since we connected
       if (rg.chance (20)) {
-         pushChatMessage (Chat::Hello);
+         m_needToSendWelcomeChat = true;
       }
    }
 }

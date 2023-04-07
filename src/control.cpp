@@ -24,15 +24,15 @@ int BotControl::cmdAddBot () {
    m_args.resize (max);
 
    // if team is specified, modify args to set team
-   if (strValue (alias).find ("_ct", 0) != String::InvalidIndex) {
+   if (strValue (alias).endsWith ("_ct")) {
       m_args.set (team, "2");
    }
-   else if (strValue (alias).find ("_t", 0) != String::InvalidIndex) {
+   else if (strValue (alias).endsWith ("_t")) {
       m_args.set (team, "1");
    }
 
    // if highskilled bot is requsted set personality to rusher and maxout difficulty
-   if (strValue (alias).find ("hs", 0) != String::InvalidIndex) {
+   if (strValue (alias).endsWith ("_hs")) {
       m_args.set (difficulty, "4");
       m_args.set (personality, "1");
    }
@@ -676,13 +676,13 @@ int BotControl::cmdNodePathCreate () {
    graph.setEditFlag (GraphEdit::On);
 
    // choose the direction for path creation
-   if (strValue (cmd).find ("_both", 0) != String::InvalidIndex) {
+   if (strValue (cmd).endsWith ("_both")) {
       graph.pathCreate (PathConnection::Bidirectional);
    }
-   else if (strValue (cmd).find ("_in", 0) != String::InvalidIndex) {
+   else if (strValue (cmd).endsWith ("_in")) {
       graph.pathCreate (PathConnection::Incoming);
    }
-   else if (strValue (cmd).find ("_out", 0) != String::InvalidIndex) {
+   else if (strValue (cmd).endsWith ("_out")) {
       graph.pathCreate (PathConnection::Outgoing);
    }
    else {
@@ -1852,7 +1852,7 @@ void BotControl::showMenu (int id) {
    }
    auto &client = util.getClient (game.indexOfPlayer (m_ent));
 
-   auto sendMenu = [&] (int32 slots, bool last, StringRef text) {
+   auto sendMenu = [&] (int32_t slots, bool last, StringRef text) {
       MessageWriter (MSG_ONE, msgs.id (NetMsg::ShowMenu), nullptr, m_ent)
          .writeShort (slots)
          .writeChar (-1)
@@ -1943,7 +1943,7 @@ void BotControl::kickBotByMenu (int page) {
 
    for (auto &menu : m_menus) {
       if (menu.ident == id) {
-         menu.slots = static_cast <int> (static_cast <uint32> (menuKeys) & static_cast <uint32> (-1));
+         menu.slots = static_cast <int> (static_cast <uint32_t> (menuKeys) & static_cast <uint32_t> (-1));
          menu.text = menus;
 
          break;

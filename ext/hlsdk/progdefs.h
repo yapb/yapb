@@ -109,8 +109,8 @@ typedef struct entvars_s {
    float frame; // % playback position in animation sequences (0..255)
    float animtime; // world time when frame was set
    float framerate; // animation playback rate (-8x to 8x)
-   uint8 controller[4]; // bone controller setting (0..255)
-   uint8 blending[2]; // blending amount between sub-sequences (0..255)
+   uint8_t controller[4]; // bone controller setting (0..255)
+   uint8_t blending[2]; // blending amount between sub-sequences (0..255)
 
    float scale; // sprite rendering scale (0..255)
 

@@ -25,7 +25,7 @@ CR_DECLARE_SCOPED_ENUM (NodeFlag,
 )
 
 // defines for node connection flags field (16 bits are available)
-CR_DECLARE_SCOPED_ENUM_TYPE (PathFlag, uint16,
+CR_DECLARE_SCOPED_ENUM_TYPE (PathFlag, uint16_t,
    Jump = cr::bit (0) // must jump for this connection
 )
 
@@ -112,59 +112,59 @@ struct Route {
 
 // general stprage header information structure
 struct StorageHeader {
-   int32 magic;
-   int32 version;
-   int32 options;
-   int32 length;
-   int32 compressed;
-   int32 uncompressed;
+   int32_t magic;
+   int32_t version;
+   int32_t options;
+   int32_t length;
+   int32_t compressed;
+   int32_t uncompressed;
 };
 
 // extension header for graph information
 struct ExtenHeader {
    char author[32]; // original author of graph
-   int32 mapSize; // bsp size for checksumming map consistency
+   int32_t mapSize; // bsp size for checksumming map consistency
    char modified[32]; // by whom modified
 };
 
 // general waypoint header information structure
 struct PODGraphHeader {
    char header[8];
-   int32 fileVersion;
-   int32 pointNumber;
+   int32_t fileVersion;
+   int32_t pointNumber;
    char mapName[32];
    char author[32];
 };
 
 // floyd-warshall matrices
 struct Matrix {
-   int16 dist;
-   int16 index;
+   int16_t dist;
+   int16_t index;
 };
 
 // experience data hold in memory while playing
 struct Practice {
-   int16 damage[kGameTeamNum];
-   int16 index[kGameTeamNum];
-   int16 value[kGameTeamNum];
+   int16_t damage[kGameTeamNum];
+   int16_t index[kGameTeamNum];
+   int16_t value[kGameTeamNum];
 };
 
 // defines linked waypoints
 struct PathLink {
    Vector velocity;
-   int32 distance;
-   uint16 flags;
-   int16 index;
+   int32_t distance;
+   uint16_t flags;
+   int16_t index;
 };
 
 // defines visibility count
 struct PathVis {
-   uint16 stand, crouch;
+   uint16_t stand, crouch;
 };
 
 // define graph path structure for yapb
 struct Path {
-   int32 number, flags;
+   int32_t number, flags;
    Vector origin, start, end;
    float radius, light, display;
    PathLink links[kMaxNodeLinks];
@@ -173,13 +173,13 @@ struct Path {
 
 // define waypoint structure for podbot  (will convert on load)
 struct PODPath {
-   int32 number, flags;
+   int32_t number, flags;
    Vector origin;
    float radius, csx, csy, cex, cey;
-   int16 index[kMaxNodeLinks];
-   uint16 conflags[kMaxNodeLinks];
+   int16_t index[kMaxNodeLinks];
+   uint16_t conflags[kMaxNodeLinks];
    Vector velocity[kMaxNodeLinks];
-   int32 distance[kMaxNodeLinks];
+   int32_t distance[kMaxNodeLinks];
    PathVis vis;
 };
 
@@ -189,26 +189,26 @@ private:
    size_t m_cursor {};
    size_t m_length {};
 
-   UniquePtr <int32[]> m_path {};
+   UniquePtr <int32_t[]> m_path {};
 
 public:
    explicit PathWalk () = default;
    ~PathWalk () = default;
 
 public:
-   int32 &next () {
+   int32_t &next () {
       return at (1);
    }
 
-   int32 &first () {
+   int32_t &first () {
       return at (0);
    }
 
-   int32 &last () {
+   int32_t &last () {
       return at (length () - 1);
    }
 
-   int32 &at (size_t index) {
+   int32_t &at (size_t index) {
       return m_path[m_cursor + index];
    }
 
@@ -237,7 +237,7 @@ public:
       return !length ();
    }
 
-   void add (int32 node) {
+   void add (int32_t node) {
       m_path[m_length++] = node;
    }
 
@@ -249,7 +249,7 @@ public:
    }
 
    void init (size_t length) {
-      m_path = cr::makeUnique <int32 []> (length);
+      m_path = cr::makeUnique <int32_t []> (length);
    }
 };
 
@@ -297,11 +297,11 @@ private:
    IntArray m_rescuePoints {};
    IntArray m_visitedGoals {};
 
-   SmallArray <int32> m_buckets[kMaxBucketsInsidePos][kMaxBucketsInsidePos][kMaxBucketsInsidePos];
+   SmallArray <int32_t> m_buckets[kMaxBucketsInsidePos][kMaxBucketsInsidePos][kMaxBucketsInsidePos];
    SmallArray <Matrix> m_matrix {};
    SmallArray <Practice> m_practice {};
    SmallArray <Path> m_paths {};
-   SmallArray <uint8> m_vistable {};
+   SmallArray <uint8_t> m_vistable {};
 
    String m_graphAuthor {};
    String m_graphModified {};
@@ -346,7 +346,7 @@ public:
    bool canDownload ();
 
    template <typename U> bool saveStorage (StringRef ext, StringRef name, StorageOption options, StorageVersion version, const SmallArray <U> &data, ExtenHeader *exten);
-   template <typename U> bool loadStorage (StringRef ext, StringRef name, StorageOption options, StorageVersion version, SmallArray <U> &data, ExtenHeader *exten, int32 *outOptions);
+   template <typename U> bool loadStorage (StringRef ext, StringRef name, StorageOption options, StorageVersion version, SmallArray <U> &data, ExtenHeader *exten, int32_t *outOptions);
    template <typename ...Args> bool raiseLoadingError (bool isGraph, MemFile &file, const char *fmt, Args &&...args);
 
    void saveOldFormat ();
@@ -396,7 +396,7 @@ public:
 
    Bucket locateBucket (const Vector &pos);
    IntArray searchRadius (float radius, const Vector &origin, int maxCount = -1);
-   const SmallArray <int32> &getNodesInBucket (const Vector &pos);
+   const SmallArray <int32_t> &getNodesInBucket (const Vector &pos);
 
 public:
    size_t getMaxRouteLength () const {
@@ -446,12 +446,12 @@ public:
 
    // check nodes range
    bool exists (int index) const {
-      return index >= 0 && index < static_cast <int> (m_paths.length ());
+      return index >= 0 && index < length ();
    }
 
    // get real nodes num
-   int32 length () const {
-      return m_paths.length <int32> ();
+   int32_t length () const {
+      return m_paths.length <int32_t> ();
    }
 
    // check if has editor

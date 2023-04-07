@@ -158,7 +158,7 @@ void BotConfig::loadWeaponsConfig () {
       }
    };
 
-   auto addIntEntries = [] (SmallArray <int32> &to, StringRef name, const StringArray &data) {
+   auto addIntEntries = [] (SmallArray <int32_t> &to, StringRef name, const StringArray &data) {
       if (data.length () != to.length ()) {
          logger.error ("%s entry in weapons config is not valid or malformed (%d/%d).", name, data.length (), to.length ());
          return;
@@ -334,9 +334,9 @@ void BotConfig::loadChatterConfig () {
             for (const auto &event : chatterEventMap) {
                if (event.str == items[0]) {
                   // this does common work of parsing comma-separated chatter line
-                  auto sounds = items[1].split (",");
+                  auto sentences = items[1].split (",");
 
-                  for (auto &sound : sounds) {
+                  for (auto &sound : sentences) {
                      sound.trim ().trim ("\"");
                      auto duration = game.getWaveLen (sound.chars ());
 
@@ -344,7 +344,7 @@ void BotConfig::loadChatterConfig () {
                         m_chatter[event.code].emplace (cr::move (sound), event.repeat, duration);
                      }
                   }
-                  sounds.clear ();
+                  sentences.clear ();
                }
             }
          }
@@ -553,10 +553,10 @@ void BotConfig::loadDifficultyConfig () {
    };
 
    // currently, mindelay, maxdelay, headprob, seenthruprob, heardthruprob
-   constexpr uint32 kMaxDifficultyValues = 5;
+   constexpr uint32_t kMaxDifficultyValues = 5;
 
    // helper for parsing each level
-   auto parseLevel = [&] (int32 level, StringRef data) {
+   auto parseLevel = [&] (int32_t level, StringRef data) {
       auto values = data.split <String> (",");
 
       if (values.length () != kMaxDifficultyValues) {
@@ -796,14 +796,14 @@ const char *BotConfig::translate (StringRef input) {
 }
 
 void BotConfig::showCustomValues () {
-   game.print ("Current values for custom config items:");
+   ctrl.msg ("Current values for custom config items:");
 
    m_custom.foreach ([&] (const String &key, const String &val) {
-      game.print ("  %s = %s", key, val);
+      ctrl.msg ("  %s = %s", key, val);
    });
 }
 
-uint32 BotConfig::hashLangString (StringRef str) {
+uint32_t BotConfig::hashLangString (StringRef str) {
    auto test = [] (const char ch) {
       return  (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z');
    };

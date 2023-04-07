@@ -25,7 +25,7 @@ private:
 
 public:
    float MaxView = 4096.0f;
-   float MinView = 5.0f;
+   float MinView = 2.0f;
 
 public:
    float farHeight; // height of the far frustum
@@ -108,6 +108,7 @@ public:
 
    int getHumansCount (bool ignoreSpectators = false);
    int getAliveHumansCount ();
+   int getPlayerPriority (edict_t *ent);
 
    float getConnectTime (StringRef name, float original);
    float getAverageTeamKPD (bool calcForBots);
@@ -174,12 +175,12 @@ public:
       return m_economicsGood[team];
    }
 
-   int32 getLastWinner () const {
+   int32_t getLastWinner () const {
       return m_lastWinner;
    }
 
-   int32 getBotCount () {
-      return m_bots.length <int32> ();
+   int32_t getBotCount () {
+      return m_bots.length <int32_t> ();
    }
 
    // get the list of filters

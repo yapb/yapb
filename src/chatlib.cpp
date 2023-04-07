@@ -54,7 +54,7 @@ void BotSupport::addChatErrors (String &line) {
    if (rg.chance (8) && strcmp (cv_language.str (), "en") == 0) {
       line.lowercase ();
    }
-   auto length = static_cast <int32> (line.length ());
+   auto length = static_cast <int32_t> (line.length ());
 
    if (length > 15) {
       auto percentile = length / 2;

@@ -417,7 +417,7 @@ void BotGraph::addPath (int addIndex, int pathIndex, float distance) {
    // check for free space in the connection indices
    for (auto &link : path.links) {
       if (link.index == kInvalidNodeIndex) {
-         link.index = static_cast <int16> (pathIndex);
+         link.index = static_cast <int16_t> (pathIndex);
          link.distance = cr::abs (static_cast <int> (distance));
 
          ctrl.msg ("Path added from %d to %d.", addIndex, pathIndex);
@@ -439,7 +439,7 @@ void BotGraph::addPath (int addIndex, int pathIndex, float distance) {
    if (slot != kInvalidNodeIndex) {
       ctrl.msg ("Path added from %d to %d.", addIndex, pathIndex);
 
-      path.links[slot].index = static_cast <int16> (pathIndex);
+      path.links[slot].index = static_cast <int16_t> (pathIndex);
       path.links[slot].distance = cr::abs (static_cast <int> (distance));
    }
 }
@@ -524,7 +524,7 @@ IntArray BotGraph::searchRadius (float radius, const Vector &origin, int maxCoun
    // returns all nodes within radius from position
 
    IntArray result;
-   auto &bucket = getNodesInBucket (origin);
+   const auto &bucket = getNodesInBucket (origin);
 
    if (bucket.empty ()) {
       result.push (getNearestNoBuckets (origin, radius));
@@ -928,7 +928,7 @@ bool BotGraph::isConnected (int a, int b) {
 int BotGraph::getFacingIndex () {
    // find the waypoint the user is pointing at
 
-   Twin <int32, float> result { kInvalidNodeIndex, 5.32f };
+   Twin <int32_t, float> result { kInvalidNodeIndex, 5.32f };
    auto nearestNode = getEditorNearest ();
 
    // check bounds from eyes of editor
@@ -1171,7 +1171,7 @@ void BotGraph::calculatePathRadius (int index) {
    TraceResult tr {};
    bool wayBlocked = false;
 
-   for (int32 scanDistance = 32; scanDistance < 128; scanDistance += 16) {
+   for (int32_t scanDistance = 32; scanDistance < 128; scanDistance += 16) {
       auto scan = static_cast <float> (scanDistance);
       start = path.origin;
 
@@ -1180,7 +1180,7 @@ void BotGraph::calculatePathRadius (int index) {
 
       path.radius = scan;
 
-      for (int32 circleRadius = 0; circleRadius < 360; circleRadius += 20) {
+      for (int32_t circleRadius = 0; circleRadius < 360; circleRadius += 20) {
          const auto &forward = direction.forward ();
 
          auto radiusStart = start + forward * scan;
@@ -1305,7 +1305,7 @@ void BotGraph::loadVisibility () {
    if (m_paths.empty ()) {
       return;
    }
-   bool dataLoaded = loadStorage <uint8> ("vis", "Visibility", StorageOption::Vistable, StorageVersion::Vistable, m_vistable, nullptr, nullptr);
+   bool dataLoaded = loadStorage <uint8_t> ("vis", "Visibility", StorageOption::Vistable, StorageVersion::Vistable, m_vistable, nullptr, nullptr);
 
    // if loaded, do not recalculate visibility
    if (dataLoaded) {
@@ -1317,7 +1317,7 @@ void BotGraph::saveVisibility () {
    if (m_paths.empty () || m_hasChanged || m_needsVisRebuild) {
       return;
    }
-   saveStorage <uint8> ("vis", "Visibility", StorageOption::Vistable, StorageVersion::Vistable, m_vistable, nullptr);
+   saveStorage <uint8_t> ("vis", "Visibility", StorageOption::Vistable, StorageVersion::Vistable, m_vistable, nullptr);
 }
 
 bool BotGraph::loadPathMatrix () {
@@ -1345,8 +1345,8 @@ bool BotGraph::loadPathMatrix () {
          if (!exists (link.index)) {
             continue;
          }
-         (matrix + (i * count) + link.index)->dist = static_cast <int16> (link.distance);
-         (matrix + (i * count) + link.index)->index = static_cast <int16> (link.index);
+         (matrix + (i * count) + link.index)->dist = static_cast <int16_t> (link.distance);
+         (matrix + (i * count) + link.index)->index = static_cast <int16_t> (link.index);
       }
    }
 
@@ -1360,7 +1360,7 @@ bool BotGraph::loadPathMatrix () {
             int distance = (matrix + (i * count) + k)->dist + (matrix + (k * count) + j)->dist;
 
             if (distance < (matrix + (i * count) + j)->dist) {
-               (matrix + (i * count) + j)->dist = static_cast <int16> (distance);
+               (matrix + (i * count) + j)->dist = static_cast <int16_t> (distance);
                (matrix + (i * count) + j)->index = (matrix + (i * count) + k)->index;
             }
          }
@@ -1404,7 +1404,7 @@ void BotGraph::initNarrowPlaces () {
    if (m_paths.empty () || m_narrowChecked) {
       return;
    }
-   constexpr int32 kNarrowPlacesMinGraphVersion = 2;
+   constexpr int32_t kNarrowPlacesMinGraphVersion = 2;
 
    // if version 2 or higher, narrow places already initialized and saved into file
    if (m_graphHeader.version >= kNarrowPlacesMinGraphVersion) {
@@ -1462,6 +1462,7 @@ void BotGraph::initNarrowPlaces () {
             }
             return false;
          };
+
 
          if (directionCheck (-forward * distance)) {
             accumWeight += 1;
@@ -1625,10 +1626,10 @@ template <typename U> bool BotGraph::saveStorage (StringRef ext, StringRef name,
       return false;
    }
    auto rawLength = data.length () * sizeof (U);
-   SmallArray <uint8> compressed (rawLength + sizeof (uint8) * ULZ::Excess);
+   SmallArray <uint8_t> compressed (rawLength + sizeof (uint8_t) * ULZ::Excess);
 
    // try to compress
-   auto compressedLength = static_cast <size_t> (ulz.compress (reinterpret_cast <uint8 *> (data.data ()), static_cast <int32> (rawLength), reinterpret_cast <uint8 *> (compressed.data ())));
+   auto compressedLength = static_cast <size_t> (ulz.compress (reinterpret_cast <uint8_t *> (data.data ()), static_cast <int32_t> (rawLength), reinterpret_cast <uint8_t *> (compressed.data ())));
 
    if (compressedLength > 0) {
       StorageHeader hdr {};
@@ -1637,11 +1638,11 @@ template <typename U> bool BotGraph::saveStorage (StringRef ext, StringRef name,
       hdr.version = version;
       hdr.options = options;
       hdr.length = length ();
-      hdr.compressed = static_cast <int32> (compressedLength);
-      hdr.uncompressed = static_cast <int32> (rawLength);
+      hdr.compressed = static_cast <int32_t> (compressedLength);
+      hdr.uncompressed = static_cast <int32_t> (rawLength);
 
       file.write (&hdr, sizeof (StorageHeader));
-      file.write (compressed.data (), sizeof (uint8), compressedLength);
+      file.write (compressed.data (), sizeof (uint8_t), compressedLength);
 
       // add extension
       if ((options & StorageOption::Exten) && exten != nullptr) {
@@ -1656,7 +1657,7 @@ template <typename U> bool BotGraph::saveStorage (StringRef ext, StringRef name,
    return true;
 }
 
-template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name, StorageOption options, StorageVersion version, SmallArray <U> &data, ExtenHeader *exten, int32 *outOptions) {
+template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name, StorageOption options, StorageVersion version, SmallArray <U> &data, ExtenHeader *exten, int32_t *outOptions) {
    String filename;
    filename.assignf ("%s.%s", game.getMapName (), ext).lowercase ();
 
@@ -1790,7 +1791,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
    auto compressedSize = static_cast <size_t> (hdr.compressed);
    auto numberNodes = static_cast <size_t> (hdr.length);
 
-   SmallArray <uint8> compressed (compressedSize + sizeof (uint8) * ULZ::Excess);
+   SmallArray <uint8_t> compressed (compressedSize + sizeof (uint8_t) * ULZ::Excess);
 
    // graph is not resized upon load
    if (isGraph) {
@@ -1798,10 +1799,10 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
    }
 
    // read compressed data
-   if (file.read (compressed.data (), sizeof (uint8), compressedSize) == compressedSize) {
+   if (file.read (compressed.data (), sizeof (uint8_t), compressedSize) == compressedSize) {
 
       // try to uncompress
-      if (ulz.uncompress (compressed.data (), hdr.compressed, reinterpret_cast <uint8 *> (data.data ()), hdr.uncompressed) == ULZ::UncompressFailure) {
+      if (ulz.uncompress (compressed.data (), hdr.compressed, reinterpret_cast <uint8_t *> (data.data ()), hdr.uncompressed) == ULZ::UncompressFailure) {
          return raiseLoadingError (isGraph, file, "Unable to decompress ULZ data for %s (filename: '%s').", name, filename);
       }
       else {
@@ -1844,7 +1845,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
 
 bool BotGraph::loadGraphData () {
    ExtenHeader exten {};
-   int32 outOptions = 0;
+   int32_t outOptions = 0;
 
    m_graphHeader = {};
    m_extenHeader = {};
@@ -2079,7 +2080,7 @@ void BotGraph::rebuildVisibility () {
    }
 
    TraceResult tr {};
-   uint8 res, shift;
+   uint8_t res, shift;
 
    for (const auto &vis : m_paths) {
       Vector sourceDuck = vis.origin;
@@ -2093,7 +2094,7 @@ void BotGraph::rebuildVisibility () {
          sourceDuck.z += -18.0f + 12.0f;
          sourceStand.z += 28.0f;
       }
-      uint16 standCount = 0, crouchCount = 0;
+      uint16_t standCount = 0, crouchCount = 0;
 
       for (const auto &path : m_paths) {
          // first check ducked visibility
@@ -2146,9 +2147,9 @@ void BotGraph::rebuildVisibility () {
                res &= 2;
             }
          }
-         shift = static_cast <uint8> ((path.number % 4) << 1);
+         shift = static_cast <uint8_t> ((path.number % 4) << 1);
 
-         m_vistable[vis.number * length () + path.number] &= static_cast <uint8> (~(3 << shift));
+         m_vistable[vis.number * length () + path.number] &= ~static_cast <uint8_t> (3 << shift);
          m_vistable[vis.number * length () + path.number] |= res << shift;
 
          if (!(res & 2)) {
@@ -2171,7 +2172,7 @@ bool BotGraph::isVisible (int srcIndex, int destIndex) {
       return false;
    }
 
-   uint8 res = m_vistable[srcIndex * length () + destIndex];
+   uint8_t res = m_vistable[srcIndex * length () + destIndex];
    res >>= (destIndex % 4) << 1;
 
    return !((res & 3) == 3);
@@ -2182,7 +2183,7 @@ bool BotGraph::isDuckVisible (int srcIndex, int destIndex) {
       return false;
    }
 
-   uint8 res = m_vistable[srcIndex * length () + destIndex];
+   uint8_t res = m_vistable[srcIndex * length () + destIndex];
    res >>= (destIndex % 4) << 1;
 
    return !((res & 2) == 2);
@@ -2193,7 +2194,7 @@ bool BotGraph::isStandVisible (int srcIndex, int destIndex) {
       return false;
    }
 
-   uint8 res = m_vistable[srcIndex * length () + destIndex];
+   uint8_t res = m_vistable[srcIndex * length () + destIndex];
    res >>= (destIndex % 4) << 1;
 
    return !((res & 1) == 1);
@@ -3046,7 +3047,7 @@ BotGraph::Bucket BotGraph::locateBucket (const Vector &pos) {
    };
 }
 
-const SmallArray <int32> &BotGraph::getNodesInBucket (const Vector &pos) {
+const SmallArray <int32_t> &BotGraph::getNodesInBucket (const Vector &pos) {
    const auto &bucket = locateBucket (pos);
    return m_buckets[bucket.x][bucket.y][bucket.z];
 }
@@ -3084,7 +3085,7 @@ void BotGraph::updateGlobalPractice () {
          if (maxDamage > kMaxPracticeDamageValue) {
             adjustValues = true;
          }
-         (practice + (i * length ()) + i)->index[team] = static_cast <int16> (bestIndex);
+         (practice + (i * length ()) + i)->index[team] = static_cast <int16_t> (bestIndex);
       }
    }
    constexpr auto kHalfDamageVal = static_cast <int> (kMaxPracticeDamageValue * 0.5);
@@ -3097,7 +3098,7 @@ void BotGraph::updateGlobalPractice () {
                if (i == j) {
                   continue;
                }
-               (practice + (i * length ()) + j)->damage[team] = static_cast <int16> (cr::clamp (getDangerDamage (team, i, j) - kHalfDamageVal, 0, kMaxPracticeDamageValue));
+               (practice + (i * length ()) + j)->damage[team] = static_cast <int16_t> (cr::clamp (getDangerDamage (team, i, j) - kHalfDamageVal, 0, kMaxPracticeDamageValue));
             }
          }
       }
@@ -3232,7 +3233,7 @@ void BotGraph::setDangerValue (int team, int start, int goal, int value) {
    if (!exists (start) || !exists (goal)) {
       return;
    }
-   (m_practice.data () + (start * length ()) + goal)->value[team] = static_cast <int16> (value);
+   (m_practice.data () + (start * length ()) + goal)->value[team] = static_cast <int16_t> (value);
 }
 
 void BotGraph::setDangerDamage (int team, int start, int goal, int value) {
@@ -3244,5 +3245,5 @@ void BotGraph::setDangerDamage (int team, int start, int goal, int value) {
    if (!exists (start) || !exists (goal)) {
       return;
    }
-   (m_practice.data () + (start * length ()) + goal)->damage[team] = static_cast <int16> (value);
+   (m_practice.data () + (start * length ()) + goal)->damage[team] = static_cast <int16_t> (value);
 }

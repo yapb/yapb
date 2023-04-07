@@ -52,13 +52,13 @@ public:
 
    // queued text message to prevent overflow with rapid output
    struct PrintQueue {
-      int32 destination {};
+      int32_t destination {};
       String text;
 
    public:
      explicit PrintQueue () = default;
 
-      PrintQueue (int32 destination, StringRef text) : destination (destination), text (text) 
+      PrintQueue (int32_t destination, StringRef text) : destination (destination), text (text) 
       { }
    };
 

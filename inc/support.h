@@ -7,18 +7,6 @@
 
 #pragma once
 
-// noise types
-CR_DECLARE_SCOPED_ENUM (Noise,
-   NeedHandle = cr::bit (0),
-   HitFall = cr::bit (1),
-   Pickup = cr::bit (2),
-   Zoom = cr::bit (3),
-   Ammo = cr::bit (4),
-   Hostage = cr::bit (5),
-   Broke = cr::bit (6),
-   Door = cr::bit (7)
-)
-
 class BotSupport final : public Singleton <BotSupport> {
 private:
    bool m_needToSendWelcome {};
@@ -28,8 +16,7 @@ private:
    SmallArray <Client> m_clients {};
    SmallArray <Twin <String, String>> m_tags {};
 
-   HashMap <int32, String> m_weaponAlias {};
-   HashMap <String, int32> m_noiseCache {};
+   HashMap <int32_t, String> m_weaponAlias {};
    Detour <decltype (sendto)> m_sendToDetour { "ws2_32.dll", "sendto", sendto };
 
 public:
@@ -41,7 +28,7 @@ public:
    void checkWelcome ();
 
    // converts weapon id to alias name
-   StringRef weaponIdToAlias (int32 id);
+   StringRef weaponIdToAlias (int32_t id);
 
    // check if origin is visible from the entity side
    bool isVisible (const Vector &origin, edict_t *ent);
@@ -72,12 +59,6 @@ public:
 
    // tracing decals for bots spraying logos
    void traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIndex);
-
-   // attaches sound to client struct
-   void listenNoise (edict_t *ent, StringRef sample, float volume);
-
-   // simulate sound for players
-   void simulateNoise (int playerIndex);
 
    // update stats on clients
    void updateClients ();
@@ -153,7 +134,7 @@ public:
    }
 
 public:
-   static int32 CR_STDCALL sendTo (int socket, const void *message, size_t length, int flags, const struct sockaddr *dest, int destLength);
+   static int32_t CR_STDCALL sendTo (int socket, const void *message, size_t length, int flags, const struct sockaddr *dest, int destLength);
 };
 
 // explose global

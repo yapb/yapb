@@ -46,6 +46,7 @@ CR_DECLARE_SCOPED_ENUM (Task,
    Hide,
    Blind,
    Spraypaint,
+   Max
 )
 
 // bot menu ids
@@ -349,7 +350,7 @@ CR_DECLARE_SCOPED_ENUM (Reload,
 )
 
 // collision probes
-CR_DECLARE_SCOPED_ENUM (CollisionProbe, uint32,
+CR_DECLARE_SCOPED_ENUM (CollisionProbe, uint32_t,
    Jump = cr::bit (0), // probe jump when colliding
    Duck = cr::bit (1), // probe duck when colliding
    Strafe = cr::bit (2) // probe strafing when colliding
@@ -367,7 +368,7 @@ CR_DECLARE_SCOPED_ENUM (BotMsg,
 )
 
 // sensing states
-CR_DECLARE_SCOPED_ENUM_TYPE (Sense, uint32,
+CR_DECLARE_SCOPED_ENUM_TYPE (Sense, uint32_t,
    SeeingEnemy = cr::bit (0), // seeing an enemy
    HearingEnemy = cr::bit (1), // hearing an enemy
    SuspectEnemy = cr::bit (2), // suspect enemy behind obstacle
@@ -378,7 +379,7 @@ CR_DECLARE_SCOPED_ENUM_TYPE (Sense, uint32,
 )
 
 // positions to aim at
-CR_DECLARE_SCOPED_ENUM_TYPE (AimFlags, uint32,
+CR_DECLARE_SCOPED_ENUM_TYPE (AimFlags, uint32_t,
    Nav = cr::bit (0), // aim at nav point
    Camp = cr::bit (1), // aim at camp vector
    PredictPath = cr::bit (2), // aim at predicted path
@@ -445,11 +446,11 @@ namespace TaskPri {
 // storage file magic
 constexpr char kPodbotMagic[8] = "PODWAY!";
 
-constexpr int32 kStorageMagic = 0x59415042; // storage magic for yapb-data files
-constexpr int32 kStorageMagicUB = 0x544f4255; //support also the fork format (merged back into yapb)
+constexpr int32_t kStorageMagic = 0x59415042; // storage magic for yapb-data files
+constexpr int32_t kStorageMagicUB = 0x544f4255; //support also the fork format (merged back into yapb)
 
 constexpr float kInfiniteDistance = 9999999.0f;
-constexpr float kGrenadeCheckTime = 2.15f;
+constexpr float kGrenadeCheckTime = 0.6f;
 constexpr float kSprayDistance = 260.0f;
 constexpr float kDoubleSprayDistance = kSprayDistance * 2;
 constexpr float kMaxChatterRepeatInterval = 99.0f;
@@ -610,12 +611,12 @@ public:
    friend class BotManager;
 
 private:
-   uint32 m_states {}; // sensing bitstates
-   uint32 m_collideMoves[kMaxCollideMoves] {}; // sorted array of movements
-   uint32 m_collisionProbeBits {}; // bits of possible collision moves
-   uint32 m_collStateIndex {}; // index into collide moves
-   uint32 m_aimFlags {}; // aiming conditions
-   uint32 m_currentTravelFlags {}; // connection flags like jumping
+   uint32_t m_states {}; // sensing bitstates
+   uint32_t m_collideMoves[kMaxCollideMoves] {}; // sorted array of movements
+   uint32_t m_collisionProbeBits {}; // bits of possible collision moves
+   uint32_t m_collStateIndex {}; // index into collide moves
+   uint32_t m_aimFlags {}; // aiming conditions
+   uint32_t m_currentTravelFlags {}; // connection flags like jumping
 
    int m_traceSkip[TraceChannel::Num] {}; // trace need to be skipped?
    int m_messageQueue[32] {}; // stack for messages
@@ -688,6 +689,7 @@ private:
    float m_playServerTime {}; // time bot spent in the game
    float m_changeViewTime {}; // timestamp to change look at while at freezetime
    float m_breakableTime {}; // breakeble acquired time
+   float m_jumpDistance {}; // last jump distance
 
    bool m_moveToGoal {}; // bot currently moving to goal??
    bool m_isStuck {}; // bot is stuck
@@ -706,6 +708,7 @@ private:
    bool m_checkTerrain {}; // check for terrain
    bool m_moveToC4 {}; // ct is moving to bomb
    bool m_grenadeRequested {}; // bot requested change to grenade
+   bool m_needToSendWelcomeChat {}; // bot needs to greet people on server?
 
    Pickup m_pickupType {}; // type of entity which needs to be used/picked up
    PathWalk m_pathWalk {}; // pointer to current node from path
@@ -713,7 +716,7 @@ private:
    Fight m_fightStyle {}; // combat style to use
    CollisionState m_collisionState {}; // collision State
    FindPath m_pathType {}; // which pathfinder to use
-   uint8 m_enemyParts {}; // visibility flags
+   uint8_t m_enemyParts {}; // visibility flags
    TraceResult m_lastTrace[TraceChannel::Num] {}; // last trace result
 
    edict_t *m_pickupItem {}; // pointer to entity of item to use/pickup
@@ -723,6 +726,7 @@ private:
    edict_t *m_lastBreakable {}; // last acquired breakable
    edict_t *m_targetEntity {}; // the entity that the bot is trying to reach
    edict_t *m_avoidGrenade {}; // pointer to grenade entity to avoid
+   edict_t *m_hindrance {}; // the hidrance
 
    Vector m_liftTravelPos {}; // lift travel position
    Vector m_moveAngles {}; // bot move angles
@@ -744,7 +748,7 @@ private:
    Array <edict_t *> m_ignoredBreakable {}; // list of ignored breakables
    Array <edict_t *> m_hostages {}; // pointer to used hostage entities
    Array <Route> m_routes {}; // pointer
-   Array <int32> m_goalHistory {}; // history of selected goals
+   Array <int32_t> m_nodeHistory {}; // history of selected goals
 
    BinaryHeap <RouteTwin> m_routeQue {};
    Path *m_path {}; // pointer to the current path node
@@ -753,7 +757,7 @@ private:
 
 private:
    int pickBestWeapon (int *vec, int count, int moneySave);
-   int findCampingDirection ();
+   int getRandomCampDir ();
    int findAimingNode (const Vector &to, int &pathLength);
    int findNearestNode ();
    int findBombNode ();
@@ -766,12 +770,12 @@ private:
    int bestSecondaryCarried ();
    int bestGrenadeCarried ();
    int bestWeaponCarried ();
-   int changePointIndex (int index);
+   int changeNodeIndex (int index);
    int numEnemiesNear (const Vector &origin, float radius);
    int numFriendsNear (const Vector &origin, float radius);
 
    float getBombTimeleft ();
-   float getReachTime ();
+   float getEstimatedNodeReachTime ();
    float isInFOV (const Vector &dest);
    float getShiftSpeed ();
    float getEnemyBodyOffsetCorrection (float distance);
@@ -795,7 +799,6 @@ private:
    bool isInViewCone (const Vector &origin);
    bool checkBodyParts (edict_t *target);
    bool seesEnemy (edict_t *player, bool ignoreFOV = false);
-   bool doPlayerAvoidance (const Vector &normal);
    bool hasActiveGoal ();
    bool advanceMovement ();
    bool isBombDefusing (const Vector &bombOrigin);
@@ -828,6 +831,8 @@ private:
    bool updateLiftStates ();
    bool canRunHeavyWeight ();
 
+   void doPlayerAvoidance (const Vector &normal);
+   void selectCampButtons (int index);
    void markStale ();
    void instantChatter (int type);
    void update ();
@@ -851,10 +856,10 @@ private:
    void updateHearing ();
    void postprocessGoals (const IntArray &goals, int result[]);
    void updatePickups ();
+   void ensureEntitiesClear ();
    void checkTerrain (float movedDistance, const Vector &dirNormal);
    void checkDarkness ();
    void checkParachute ();
-   void getCampDirection (Vector *dest);
    void updatePracticeValue (int damage);
    void updatePracticeDamage (edict_t *attacker, int damage);
    void findShortestPath (int srcIndex, int destIndex);
@@ -880,13 +885,15 @@ private:
    void focusEnemy ();
    void selectBestWeapon ();
    void selectSecondary ();
-   void selectWeaponByName (StringRef name);
+   void selectWeaponById (int id);
    void selectWeaponByIndex (int index);
 
    void completeTask ();
-   void tasks ();
+   void executeTasks ();
    void trackEnemies ();
-   void choiceFreezetimeEntity ();
+   void logicDuringFreezetime ();
+   void translateInput ();
+   void moveToGoal ();
 
    void normal_ ();
    void spraypaint_ ();
@@ -911,15 +918,16 @@ private:
 
    edict_t *lookupButton (const char *target);
    edict_t *lookupBreakable ();
-   edict_t *correctGrenadeVelocity (const char *model);
+   edict_t *setCorrectGrenadeVelocity (const char *model);
 
    const Vector &getEnemyBodyOffset ();
    Vector calcThrow (const Vector &start, const Vector &stop);
    Vector calcToss (const Vector &start, const Vector &stop);
    Vector isBombAudible ();
    Vector getBodyOffsetError (float distance);
+   Vector getCampDirection (const Vector &dest);
 
-   uint8 computeMsec ();
+   uint8_t computeMsec ();
 
 private:
    bool isOnLadder () const {
@@ -927,7 +935,7 @@ private:
    }
 
    bool isOnFloor () const {
-      return (pev->flags & (FL_ONGROUND | FL_PARTIALGROUND)) != 0;
+      return !!(pev->flags & (FL_ONGROUND | FL_PARTIALGROUND));
    }
 
    bool isInWater () const {
@@ -936,6 +944,10 @@ private:
 
    bool isInNarrowPlace () const {
       return (m_pathFlags & NodeFlag::Narrow);
+   }
+
+   void dropCurrentWeapon () {
+      issueCommand ("drop");
    }
 
 public:
@@ -1044,7 +1056,7 @@ public:
    BurstMode m_weaponBurstMode {}; // bot using burst mode? (famas/glock18, but also silencer mode)
    Personality m_personality {}; // bots type
    Array <BotTask> m_tasks {};
-   Deque <int32> m_msgQueue {};
+   Deque <int32_t> m_msgQueue {};
 
 public:
    Bot (edict_t *bot, int difficulty, int personality, int team, int skin);
@@ -1097,7 +1109,7 @@ public:
    bool hasSecondaryWeapon ();
    bool hasShield ();
    bool isShieldDrawn ();
-   bool findBestNearestNode ();
+   bool findNextBestNode ();
    bool seesEntity (const Vector &dest, bool fromBody = false);
    bool canSkipNextTrace (TraceChannel channel);
 
@@ -1105,7 +1117,6 @@ public:
    int getAmmo (int id);
    int getNearestToPlantedBomb ();
 
-   float getFrameInterval ();
    float getConnectionTime ();
    BotTask *getTask ();
 
@@ -1114,7 +1125,9 @@ public:
       return m_ammoInClip[m_currentWeapon];
    }
 
-   bool isLowOnAmmo (const int index, const float factor) const;
+   bool isDucking () const {
+      return !!(pev->flags & FL_DUCKING);
+   }
    
    Vector getCenter () const {
       return (pev->absmax + pev->absmin) * 0.5;
@@ -1157,6 +1170,9 @@ public:
       return m_lastTrace[channel];
    }
 
+   // is low on admmo on index?
+   bool isLowOnAmmo (const int index, const float factor) const;
+
    // prints debug message
    template <typename ...Args> void debugMsg (const char *fmt, Args &&...args) {
       debugMsgInternal (strings.format (fmt, cr::forward <Args> (args)...));
@@ -1168,6 +1184,7 @@ public:
 
 #include "config.h"
 #include "support.h"
+#include "sounds.h"
 #include "message.h"
 #include "engine.h"
 #include "manager.h"

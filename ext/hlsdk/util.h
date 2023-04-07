@@ -34,7 +34,7 @@ static inline int MAKE_STRING (const char *val) {
    return static_cast <int> (ptrdiff);
 }
 #else 
-#define MAKE_STRING(str)	((uint64)(str) - (uint64)(STRING(0)))
+#define MAKE_STRING(str)	((uint64_t)(str) - (uint64_t)(STRING(0)))
 #endif
 
 #define ENGINE_STR(str) (const_cast <char *> (STRING (engfuncs.pfnAllocString (str))))
@@ -53,8 +53,8 @@ typedef struct hudtextparms_s {
    float x;
    float y;
    int effect;
-   uint8 r1, g1, b1, a1;
-   uint8 r2, g2, b2, a2;
+   uint8_t r1, g1, b1, a1;
+   uint8_t r2, g2, b2, a2;
    float fadeinTime;
    float fadeoutTime;
    float holdTime;

@@ -7,7 +7,7 @@
 
 #include <yapb.h>
 
-// on other tran win32/linux platforms i.e. arm we're using xash3d engine to run which exposes
+// on other than win32/linux platforms i.e. arm we're using xash3d engine to run which exposes
 // nice interface to handle with linkents. if ever rehlds or hlds engine will ever run on ARM or
 // other platforms, and you wan't to run bot on it without metamod, consider enabling LINKENT_STATIC_THUNKS
 // when compiling the bot, to get it supported.

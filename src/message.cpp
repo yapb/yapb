@@ -352,7 +352,7 @@ void MessageDispatcher::netMsgScoreAttrib () {
 
    // if we're have bot, set the vip state
    if (bot != nullptr) {
-      constexpr int32 kPlayerIsVIP = cr::bit (2);
+      constexpr int32_t kPlayerIsVIP = cr::bit (2);
 
       bot->m_isVIP = !!(m_args[flags].long_ & kPlayerIsVIP);
    }
@@ -492,7 +492,7 @@ MessageDispatcher::MessageDispatcher () {
    m_teamInfoCache["CT"] = Team::CT;
 }
 
-int32 MessageDispatcher::add (StringRef name, int32 id) {
+int32_t MessageDispatcher::add (StringRef name, int32_t id) {
    if (!m_wanted.has (name)) {
       return id;
    }
@@ -503,7 +503,7 @@ int32 MessageDispatcher::add (StringRef name, int32 id) {
    return id;
 }
 
-void MessageDispatcher::start (edict_t *ent, int32 type) {
+void MessageDispatcher::start (edict_t *ent, int32_t type) {
    reset ();
 
    if (game.is (GameFlags::Metamod)) {
@@ -551,16 +551,16 @@ void MessageDispatcher::ensureMessages () {
    }
 
    // re-register our message
-   m_wanted.foreach ([&] (const String &key, const int32 &) {
+   m_wanted.foreach ([&] (const String &key, const int32_t &) {
       add (key, GET_USER_MSG_ID (PLID, key.chars (), nullptr));
    });
 }
 
-int32 MessageDispatcher::id (NetMsg msg) {
+int32_t MessageDispatcher::id (NetMsg msg) {
    return m_maps[msg];
 }
 
-Bot *MessageDispatcher::pickBot (int32 index) {
+Bot *MessageDispatcher::pickBot (int32_t index) {
    const auto &client = util.getClient (m_args[index].long_ - 1);
 
    // get the bot in this msg

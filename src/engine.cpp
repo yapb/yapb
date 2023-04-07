@@ -423,7 +423,7 @@ void Game::setPlayerStartDrawModels () {
    });
 }
 
-bool Game::checkVisibility (edict_t *ent, uint8 *set) {
+bool Game::checkVisibility (edict_t *ent, uint8_t *set) {
    if (!set) {
       return true;
    }
@@ -452,13 +452,13 @@ bool Game::checkVisibility (edict_t *ent, uint8 *set) {
    return engfuncs.pfnCheckVisibility (ent, set) > 0;
 }
 
-uint8 *Game::getVisibilitySet (Bot *bot, bool pvs) {
+uint8_t *Game::getVisibilitySet (Bot *bot, bool pvs) {
    if (is (GameFlags::Xash3D)) {
       return nullptr;
    }
    auto eyes = bot->getEyesPos ();
 
-   if (bot->pev->flags & FL_DUCKING) {
+   if (bot->isDucking ()) {
       eyes += VEC_HULL_MIN - VEC_DUCK_HULL_MIN;
    }
    float org[3] { eyes.x, eyes.y, eyes.z };
@@ -609,7 +609,7 @@ bool Game::isSoftwareRenderer () {
    return false;
 }
 
-void Game::addNewCvar (const char *name, const char *value, const char *info, bool bounded, float min, float max, int32 varType, bool missingAction, const char *regval, ConVar *self) {
+void Game::addNewCvar (const char *name, const char *value, const char *info, bool bounded, float min, float max, int32_t varType, bool missingAction, const char *regval, ConVar *self) {
    // this function adds globally defined variable to registration stack
 
    ConVarReg reg {};
@@ -1112,7 +1112,7 @@ void LightMeasure::animateLight () {
          m_lightstyleValue[j] = 256;
          continue;
       }
-      m_lightstyleValue[j] = static_cast <uint32> (m_lightstyle[j].map[index % m_lightstyle[j].length] - 'a') * 22u;
+      m_lightstyleValue[j] = static_cast <uint32_t> (m_lightstyle[j].map[index % m_lightstyle[j].length] - 'a') * 22u;
    }
 }
 
@@ -1214,7 +1214,7 @@ template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const 
 
       // compute the lightmap color at a particular point
       for (int maps = 0u; maps < MAXLIGHTMAPS && surf->styles[maps] != 255u; ++maps) {
-         uint32 scale = m_lightstyleValue[surf->styles[maps]];
+         uint32_t scale = m_lightstyleValue[surf->styles[maps]];
 
          m_point.red += lightmap->r * scale;
          m_point.green += lightmap->g * scale;

@@ -553,7 +553,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       // SoundAttachToThreat() to bring the sound to the ears of the bots. Since bots have no client DLL
       // to handle this for them, such a job has to be done manually.
 
-      util.listenNoise (entity, sample, volume);
+      sounds.listenNoise (entity, sample, volume);
 
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);

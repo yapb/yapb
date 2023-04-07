@@ -52,12 +52,16 @@
     <ClInclude Include="..\inc\message.h" />
     <ClInclude Include="..\inc\module.h" />
     <ClInclude Include="..\inc\product.h" />
+    <ClInclude Include="..\inc\sounds.h" />
     <ClInclude Include="..\inc\support.h" />
     <ClInclude Include="..\inc\yapb.h" />
     <ClInclude Include="..\inc\version.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\entities.cpp" />
+    <ClCompile Include="..\src\entities.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\src\botlib.cpp" />
     <ClCompile Include="..\src\chatlib.cpp" />
     <ClCompile Include="..\src\combat.cpp" />
@@ -70,6 +74,7 @@
     <ClCompile Include="..\src\message.cpp" />
     <ClCompile Include="..\src\module.cpp" />
     <ClCompile Include="..\src\navigate.cpp" />
+    <ClCompile Include="..\src\sounds.cpp" />
     <ClCompile Include="..\src\support.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -90,7 +95,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>ClangCL</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <EnableASAN>false</EnableASAN>
@@ -98,7 +103,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>ClangCL</PlatformToolset>
     <UseDebugLibraries>false</UseDebugLibraries>
     <EnableASAN>false</EnableASAN>
   </PropertyGroup>
