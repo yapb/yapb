@@ -486,7 +486,7 @@ Vector Bot::getBodyOffsetError (float distance) {
    Vector spot = m_enemy->v.origin;
    Vector compensation = nullptr;
 
-   if (!usesSniper () && distance > kDoubleSprayDistance) {
+   if (!usesSniper ()) {
       compensation = (m_enemy->v.velocity - pev->velocity) * m_frameInterval * (distance < kSprayDistance ? 6.0f : 3.0f);
       compensation.z = 0.0f;
    }
