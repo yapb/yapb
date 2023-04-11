@@ -160,11 +160,11 @@ void Bot::avoidGrenades () {
       }
       else if (strcmp (model, "hegrenade.mdl") == 0) {
          if (!game.isNullEntity (m_avoidGrenade)) {
-            return;
+            continue;
          }
 
          if (game.getTeam (pent->v.owner) == m_team || pent->v.owner == ent ()) {
-            return;
+            continue;
          }
 
          if (!(pent->v.flags & FL_ONGROUND)) {
@@ -329,7 +329,7 @@ void Bot::updatePickups () {
    // this function finds Items to collect or use in the near of a bot
 
    // don't try to pickup anything while on ladder or trying to escape from bomb...
-   if (isOnLadder () || getCurrentTaskId () == Task::EscapeFromBomb || !cv_pickup_best.bool_ () || cv_jasonmode.bool_ () || m_seeEnemyTime + 3.0f < game.time () || !game.isNullEntity (m_enemy) || !bots.hasIntrestingEntities ()) {
+   if ((m_states & Sense::SeeingEnemy) || isOnLadder () || getCurrentTaskId () == Task::EscapeFromBomb || !cv_pickup_best.bool_ () || cv_jasonmode.bool_ () || !bots.hasIntrestingEntities ()) {
       m_pickupItem = nullptr;
       m_pickupType = Pickup::None;
 
@@ -1531,10 +1531,10 @@ void Bot::updateEmotions () {
    }
 
    if (m_agressionLevel > m_baseAgressionLevel) {
-      m_agressionLevel -= 0.10f;
+      m_agressionLevel -= 0.05f;
    }
    else {
-      m_agressionLevel += 0.10f;
+      m_agressionLevel += 0.05f;
    }
 
    if (m_fearLevel > m_baseFearLevel) {
@@ -1599,11 +1599,9 @@ void Bot::overrideConditions () {
    }
 
    // special handling for reloading
-   if (m_reloadState != Reload::None && m_isReloading) {
-      if (m_seeEnemyTime + 4.0f < game.time () && (m_states & (Sense::SuspectEnemy | Sense::HearingEnemy))) {
-         m_moveSpeed = 0.0f;
-         m_strafeSpeed = 0.0f;
-
+   if (m_reloadState != Reload::None && m_isReloading && !isInNarrowPlace ()) {
+      if (m_seeEnemyTime + 2.5f < game.time () && (m_states & (Sense::SuspectEnemy | Sense::HearingEnemy))) {
+         m_moveSpeed = m_fearLevel > m_agressionLevel ? 0.0f : getShiftSpeed ();
          m_navTimeset = game.time ();
       }
    }
