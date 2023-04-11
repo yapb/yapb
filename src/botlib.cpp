@@ -16,7 +16,7 @@ ConVar cv_jasonmode ("yb_jasonmode", "0", "If enabled, all bots will be forced o
 ConVar cv_radio_mode ("yb_radio_mode", "2", "Allows bots to use radio or chattter.\nAllowed values: '0', '1', '2'.\nIf '0', radio and chatter is disabled.\nIf '1', only radio allowed.\nIf '2' chatter and radio allowed.", true, 0.0f, 2.0f);
 
 ConVar cv_economics_rounds ("yb_economics_rounds", "1", "Specifies whether bots able to use team economics, like do not buy any weapons for whole team to keep money for better guns.");
-ConVar cv_economics_disrespect_percent ("yb_economics_disrespect_percent", "25", "Allows bots to ignore enconomis and buy weapons with disrespect of economics.", true, 0.0f, 100.0f);
+ConVar cv_economics_disrespect_percent ("yb_economics_disrespect_percent", "25", "Allows bots to ignore economics and buy weapons with disrespect of economics.", true, 0.0f, 100.0f);
 
 ConVar cv_walking_allowed ("yb_walking_allowed", "1", "Specifies whether bots able to use 'shift' if they thinks that enemy is near.");
 ConVar cv_camping_allowed ("yb_camping_allowed", "1", "Allows or disallows bots to camp. Doesn't affects bomb/hostage defending tasks.");
