@@ -259,10 +259,6 @@ public:
    friend class Bot;
 
 private:
-   struct Bucket {
-      int x, y, z;
-   };
-
    int m_editFlags {};
    int m_loadAttempts {};
    int m_cacheNodeIndex {};
@@ -297,11 +293,12 @@ private:
    IntArray m_rescuePoints {};
    IntArray m_visitedGoals {};
 
-   SmallArray <int32_t> m_buckets[kMaxBucketsInsidePos][kMaxBucketsInsidePos][kMaxBucketsInsidePos];
    SmallArray <Matrix> m_matrix {};
    SmallArray <Practice> m_practice {};
    SmallArray <Path> m_paths {};
    SmallArray <uint8_t> m_vistable {};
+
+   HashMap <int32_t, Array <int32_t>, EmptyHash <int32_t>> m_hashTable;
 
    String m_graphAuthor {};
    String m_graphModified {};
@@ -327,6 +324,7 @@ public:
    int getPathDist (int srcIndex, int destIndex);
    int clearConnections (int index);
    int getBspSize ();
+   int locateBucket (const Vector &pos);
 
    float calculateTravelTime (float maxSpeed, const Vector &src, const Vector &origin);
 
@@ -394,9 +392,8 @@ public:
    const char *getDataDirectory (bool isMemoryFile = false);
    const char *getOldFormatGraphName (bool isMemoryFile = false);
 
-   Bucket locateBucket (const Vector &pos);
-   IntArray searchRadius (float radius, const Vector &origin, int maxCount = -1);
-   const SmallArray <int32_t> &getNodesInBucket (const Vector &pos);
+   IntArray getNarestInRadius (float radius, const Vector &origin, int maxCount = -1);
+   const IntArray &getNodesInBucket (const Vector &pos);
 
 public:
    size_t getMaxRouteLength () const {
@@ -467,6 +464,23 @@ public:
    // get the current node editor
    edict_t *getEditor () {
       return m_editor;
+   }
+
+public:
+   Path *begin () {
+      return m_paths.begin ();
+   }
+
+   Path *begin () const {
+      return m_paths.begin ();
+   }
+
+   Path *end () {
+      return m_paths.end ();
+   }
+
+   Path *end () const {
+      return m_paths.end ();
    }
 };
 

@@ -35,6 +35,8 @@ public:
       int32_t headshotPct {};
       int32_t seenThruPct {};
       int32_t hearThruPct {};
+      int32_t maxRecoil {};
+      Vector aimError {};
    };
 
 private:

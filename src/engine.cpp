@@ -195,6 +195,10 @@ void Game::drawLine (edict_t *ent, const Vector &start, const Vector &end, int w
       .writeByte (speed); // speed
 }
 
+void Game::testModel (const Vector &start, const Vector &end, int hullNumber, edict_t *entToHit, TraceResult *ptr) {
+   engfuncs.pfnTraceModel (start, end, hullNumber, entToHit, ptr);
+}
+
 void Game::testLine (const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult *ptr) {
    // this function traces a line dot by dot, starting from vecStart in the direction of vecEnd,
    // ignoring or not monsters (depending on the value of IGNORE_MONSTERS, true or false), and stops

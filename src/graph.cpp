@@ -451,7 +451,7 @@ int BotGraph::getFarest (const Vector &origin, float maxDistance) {
    maxDistance = cr::square (maxDistance);
 
    for (const auto &path : m_paths) {
-      float distance = path.origin.distanceSq (origin);
+      const float distance = path.origin.distanceSq (origin);
 
       if (distance > maxDistance) {
          index = path.number;
@@ -472,7 +472,7 @@ int BotGraph::getNearestNoBuckets (const Vector &origin, float minDistance, int 
       if (flags != -1 && !(path.flags & flags)) {
          continue; // if flag not -1 and node has no this flag, skip node
       }
-      float distance = path.origin.distanceSq (origin);
+      const float distance = path.origin.distanceSq (origin);
 
       if (distance < minDistance) {
          index = path.number;
@@ -492,9 +492,12 @@ int BotGraph::getEditorNearest () {
 int BotGraph::getNearest (const Vector &origin, float minDistance, int flags) {
    // find the nearest node to that origin and return the index
 
-   auto &bucket = getNodesInBucket (origin);
+   if (minDistance > 256.0f && !cr::fequal (minDistance, kInfiniteDistance)) {
+      return getNearestNoBuckets (origin, minDistance, flags);
+   }
+   const auto &bucket = getNodesInBucket (origin);
 
-   if (bucket.empty ()) {
+   if (bucket.length () < kMaxNodeLinks) {
       return getNearestNoBuckets (origin, minDistance, flags);
    }
 
@@ -520,17 +523,26 @@ int BotGraph::getNearest (const Vector &origin, float minDistance, int flags) {
    return index;
 }
 
-IntArray BotGraph::searchRadius (float radius, const Vector &origin, int maxCount) {
+IntArray BotGraph::getNarestInRadius (float radius, const Vector &origin, int maxCount) {
    // returns all nodes within radius from position
+
+   radius = cr::square (radius);
 
    IntArray result;
    const auto &bucket = getNodesInBucket (origin);
 
-   if (bucket.empty ()) {
-      result.push (getNearestNoBuckets (origin, radius));
+   if (bucket.length () < kMaxNodeLinks || radius > cr::square (256.0f)) {
+      for (const auto &path : m_paths) {
+         if (maxCount != -1 && static_cast <int> (result.length ()) > maxCount) {
+            break;
+         }
+
+         if (origin.distanceSq (path.origin) < radius) {
+            result.push (path.number);
+         }
+      }
       return result;
    }
-   radius = cr::square (radius);
 
    for (const auto &at : bucket) {
       if (maxCount != -1 && static_cast <int> (result.length ()) > maxCount) {
@@ -3010,24 +3022,19 @@ BotGraph::BotGraph () {
 }
 
 void BotGraph::initBuckets () {
-   for (int x = 0; x < kMaxBucketsInsidePos; ++x) {
-      for (int y = 0; y < kMaxBucketsInsidePos; ++y) {
-         for (int z = 0; z < kMaxBucketsInsidePos; ++z) {
-            m_buckets[x][y][z].reserve (kMaxNodesInsideBucket);
-            m_buckets[x][y][z].clear ();
-         }
-      }
-   }
+   m_hashTable.clear ();
 }
 
 void BotGraph::addToBucket (const Vector &pos, int index) {
-   const auto &bucket = locateBucket (pos);
-   m_buckets[bucket.x][bucket.y][bucket.z].push (index);
+   m_hashTable[locateBucket (pos)].emplace (index);
+}
+
+const Array <int32_t> &BotGraph::getNodesInBucket (const Vector &pos) {
+   return m_hashTable[locateBucket (pos)];
 }
 
 void BotGraph::eraseFromBucket (const Vector &pos, int index) {
-   const auto &bucket = locateBucket (pos);
-   auto &data = m_buckets[bucket.x][bucket.y][bucket.z];
+   auto &data = m_hashTable[locateBucket (pos)];
 
    for (size_t i = 0; i < data.length (); ++i) {
       if (data[i] == index) {
@@ -3037,19 +3044,13 @@ void BotGraph::eraseFromBucket (const Vector &pos, int index) {
    }
 }
 
-BotGraph::Bucket BotGraph::locateBucket (const Vector &pos) {
-   constexpr auto size = static_cast <float> (kMaxNodes * 2);
+int BotGraph::locateBucket (const Vector &pos) {
+   constexpr auto width = cr::square (kMaxNodes);
 
-   return {
-       cr::abs (static_cast <int> ((pos.x + size) / kMaxBucketSize)),
-       cr::abs (static_cast <int> ((pos.y + size) / kMaxBucketSize)),
-       cr::abs (static_cast <int> ((pos.z + size) / kMaxBucketSize))
+   auto hash = [&] (float axis, int32_t shift) {
+      return ((static_cast <int> (axis) + width) & 0x007f80) >> shift;
    };
-}
-
-const SmallArray <int32_t> &BotGraph::getNodesInBucket (const Vector &pos) {
-   const auto &bucket = locateBucket (pos);
-   return m_buckets[bucket.x][bucket.y][bucket.z];
+   return hash (pos.x, 15) + hash (pos.y, 7);
 }
 
 void BotGraph::updateGlobalPractice () {

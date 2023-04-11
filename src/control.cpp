@@ -589,7 +589,7 @@ int BotControl::cmdNodeClean () {
    if (strValue (option) == "all") {
       int removed = 0;
 
-      for (int i = 0; i < graph.length (); ++i) {
+      for (auto i = 0; i < graph.length (); ++i) {
          removed += graph.clearConnections (i);
       }
       msg ("Done. Processed %d nodes. %d useless paths was cleared.", graph.length (), removed);
@@ -842,9 +842,9 @@ int BotControl::cmdNodeIterateCamp () {
       }
    }
    else if (op == "begin") {
-      for (int i = 0; i < graph.length (); ++i) {
-         if (graph[i].flags & NodeFlag::Camp) {
-            m_campIterator.push (i);
+      for (const auto &path : graph) {
+         if (path.flags & NodeFlag::Camp) {
+            m_campIterator.push (path.number);
          }
       }
       if (!m_campIterator.empty ()) {
@@ -877,8 +877,8 @@ int BotControl::cmdAdjustHeight () {
    auto heightOffset = floatValue (offset);
 
    // adjust the height for all the nodes (negative values possible)
-   for (int i = 0; i < graph.length (); ++i) {
-      graph[i].origin.z += heightOffset;
+   for (auto &path : graph) {
+      path.origin.z += heightOffset;
    }
    return BotCommandResult::Handled;
 }

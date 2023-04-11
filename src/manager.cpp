@@ -21,7 +21,7 @@ ConVar cv_join_team ("yb_join_team", "any", "Forces all bots to join team specif
 ConVar cv_join_delay ("yb_join_delay", "5.0", "Specifies after how many seconds bots should start to join the game after the changelevel.", true, 0.0f, 30.0f);
 ConVar cv_name_prefix ("yb_name_prefix", "", "All the bot names will be prefixed with string specified with this cvar.", false);
 
-ConVar cv_difficulty ("yb_difficulty", "4", "All bots difficulty level. Changing at runtime will affect already created bots.", true, 0.0f, 4.0f);
+ConVar cv_difficulty ("yb_difficulty", "3", "All bots difficulty level. Changing at runtime will affect already created bots.", true, 0.0f, 4.0f);
 
 ConVar cv_difficulty_min ("yb_difficulty_min", "-1", "Lower bound of random difficulty on bot creation. Only affects newly created bots. -1 means yb_difficulty only used.", true, -1.0f, 4.0f);
 ConVar cv_difficulty_max ("yb_difficulty_max", "-1", "Upper bound of random difficulty on bot creation. Only affects newly created bots. -1 means yb_difficulty only used.", true, -1.0f, 4.0f);
@@ -1285,6 +1285,7 @@ void Bot::newRound () {
    m_isLeader = false;
    m_hasProgressBar = false;
    m_canChooseAimDirection = true;
+   m_switchedToKnifeDuringJump = false;
    m_preventFlashing = 0.0f;
 
    m_timeTeamOrder = 0.0f;
@@ -1410,6 +1411,7 @@ void Bot::newRound () {
    m_combatStrafeDir = Dodge::None;
    m_fightStyle = Fight::None;
    m_lastFightStyleCheck = 0.0f;
+   m_lastBadWeaponSwitchTime = 0.0f;
 
    m_checkWeaponSwitch = true;
    m_checkKnifeSwitch = true;

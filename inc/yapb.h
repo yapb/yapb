@@ -467,10 +467,6 @@ constexpr int kGameMaxPlayers = 32;
 constexpr int kGameTeamNum = 2;
 constexpr int kInvalidNodeIndex = -1;
 
-constexpr int kMaxBucketSize = static_cast <int> (kMaxNodes * 0.65);
-constexpr int kMaxBucketsInsidePos = kMaxNodes * 8 / kMaxBucketSize + 1;
-constexpr int kMaxNodesInsideBucket = kMaxBucketSize / kMaxBucketsInsidePos;
-
 // weapon masks
 constexpr auto kPrimaryWeaponMask = (cr::bit (Weapon::XM1014) | cr::bit (Weapon::M3) | cr::bit (Weapon::MAC10) | cr::bit (Weapon::UMP45) | cr::bit (Weapon::MP5) | cr::bit (Weapon::TMP) | cr::bit (Weapon::P90) | cr::bit (Weapon::AUG) | cr::bit (Weapon::M4A1) | cr::bit (Weapon::SG552) | cr::bit (Weapon::AK47) | cr::bit (Weapon::Scout) | cr::bit (Weapon::SG550) | cr::bit (Weapon::AWP) | cr::bit (Weapon::G3SG1) | cr::bit (Weapon::M249) | cr::bit (Weapon::Famas) | cr::bit (Weapon::Galil));
 constexpr auto kSecondaryWeaponMask = (cr::bit (Weapon::P228) | cr::bit (Weapon::Elite) | cr::bit (Weapon::USP) | cr::bit (Weapon::Glock18) | cr::bit (Weapon::Deagle) | cr::bit (Weapon::FiveSeven));
@@ -690,6 +686,7 @@ private:
    float m_changeViewTime {}; // timestamp to change look at while at freezetime
    float m_breakableTime {}; // breakeble acquired time
    float m_jumpDistance {}; // last jump distance
+   float m_lastBadWeaponSwitchTime {}; // last time we're switched weapon as it's bad
 
    bool m_moveToGoal {}; // bot currently moving to goal??
    bool m_isStuck {}; // bot is stuck
@@ -709,6 +706,7 @@ private:
    bool m_moveToC4 {}; // ct is moving to bomb
    bool m_grenadeRequested {}; // bot requested change to grenade
    bool m_needToSendWelcomeChat {}; // bot needs to greet people on server?
+   bool m_switchedToKnifeDuringJump {}; // bot needs to revert weapon after jump?
 
    Pickup m_pickupType {}; // type of entity which needs to be used/picked up
    PathWalk m_pathWalk {}; // pointer to current node from path
@@ -778,7 +776,6 @@ private:
    float getEstimatedNodeReachTime ();
    float isInFOV (const Vector &dest);
    float getShiftSpeed ();
-   float getEnemyBodyOffsetCorrection (float distance);
    float calculateScaleFactor (edict_t *ent);
 
    bool canReplaceWeapon ();
@@ -809,6 +806,7 @@ private:
    bool reactOnEnemy ();
    bool selectBestNextNode ();
    bool hasAnyWeapons ();
+   bool isKnifeMode ();
    bool isDeadlyMove (const Vector &to);
    bool isOutOfBombTimer ();
    bool isWeaponBadAtDistance (int weaponIndex, float distance);
@@ -830,6 +828,7 @@ private:
    bool updateLiftHandling ();
    bool updateLiftStates ();
    bool canRunHeavyWeight ();
+   bool isEnemyInSight (Vector &endPos);
 
    void doPlayerAvoidance (const Vector &normal);
    void selectCampButtons (int index);
@@ -920,12 +919,13 @@ private:
    edict_t *lookupBreakable ();
    edict_t *setCorrectGrenadeVelocity (const char *model);
 
-   const Vector &getEnemyBodyOffset ();
+   Vector getEnemyBodyOffset ();
    Vector calcThrow (const Vector &start, const Vector &stop);
    Vector calcToss (const Vector &start, const Vector &stop);
    Vector isBombAudible ();
    Vector getBodyOffsetError (float distance);
    Vector getCampDirection (const Vector &dest);
+   Vector getCustomHeight (float distance);
 
    uint8_t computeMsec ();
 

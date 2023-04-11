@@ -20,6 +20,7 @@ BotConfig::BotConfig () {
 void BotConfig::loadConfigs () {
    setupMemoryFiles ();
 
+   loadCustomConfig ();
    loadNamesConfig ();
    loadChatConfig ();
    loadChatterConfig ();
@@ -28,7 +29,6 @@ void BotConfig::loadConfigs () {
    loadLogosConfig ();
    loadAvatarsConfig ();
    loadDifficultyConfig ();
-   loadCustomConfig ();
 }
 
 void BotConfig::loadMainConfig (bool isFirstLoad) {
@@ -533,27 +533,27 @@ void BotConfig::loadDifficultyConfig () {
 
    // initialize defaults
    m_difficulty[Difficulty::Noob] = {
-      { 0.8f, 1.0f }, 5, 0, 0
+      { 0.8f, 1.0f }, 5, 0, 0, 38, { 30.0f, 30.0f, 40.0f }
    };
 
    m_difficulty[Difficulty::Easy] = {
-      { 0.6f, 0.8f }, 30, 10, 10
+      { 0.6f, 0.8f }, 30, 10, 10, 32, { 15.0f, 15.0f, 24.0f }
    };
 
    m_difficulty[Difficulty::Normal] = {
-      { 0.4f, 0.6f }, 50, 30, 40
+      { 0.4f, 0.6f }, 50, 30, 40, 26, { 5.0f, 5.0f, 10.0f }
    };
 
    m_difficulty[Difficulty::Hard] = {
-      { 0.2f, 0.4f }, 75, 60, 70
+      { 0.2f, 0.4f }, 75, 60, 70, 23, { 0.0f, 0.0f, 0.0f }
    };
 
    m_difficulty[Difficulty::Expert] = {
-      {  0.1f, 0.2f }, 100, 90, 90
+      {  0.1f, 0.2f }, 100, 90, 90, 21, { 0.0f, 0.0f, 0.0f }
    };
 
-   // currently, mindelay, maxdelay, headprob, seenthruprob, heardthruprob
-   constexpr uint32_t kMaxDifficultyValues = 5;
+   // currently, mindelay, maxdelay, headprob, seenthruprob, heardthruprob, recoil, aim_error {x,y,z}
+   constexpr uint32_t kMaxDifficultyValues = 9;
 
    // helper for parsing each level
    auto parseLevel = [&] (int32_t level, StringRef data) {
@@ -570,6 +570,10 @@ void BotConfig::loadDifficultyConfig () {
       diff->headshotPct = values[2].int_ ();
       diff->seenThruPct = values[3].int_ ();
       diff->hearThruPct = values[4].int_ ();
+      diff->maxRecoil = values[5].int_ ();
+      diff->aimError.x = values[6].float_ ();
+      diff->aimError.y = values[7].float_ ();
+      diff->aimError.z = values[8].float_ ();
    };
 
    // avatars inititalization
