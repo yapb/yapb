@@ -92,7 +92,7 @@ bool Bot::isEnemyInvincible (edict_t *enemy) {
    if (!cv_check_enemy_invincibility.bool_ () || game.isNullEntity (enemy)) {
       return false;
    }
-   entvars_t &v = enemy->v;
+   const entvars_t &v = enemy->v;
 
    if (v.solid < SOLID_BBOX) {
       return true;
@@ -109,10 +109,17 @@ bool Bot::isEnemyInvincible (edict_t *enemy) {
    return false;
 }
 
+bool Bot::isEnemyNoTarget (edict_t *enemy) {
+   if (game.isNullEntity (enemy)) {
+      return false;
+   }
+   return !!(enemy->v.flags & FL_NOTARGET);
+}
+
 bool Bot::checkBodyParts (edict_t *target) {
    // this function checks visibility of a bot target.
 
-   if (isEnemyHidden (target) || isEnemyInvincible (target)) {
+   if (isEnemyHidden (target) || isEnemyInvincible (target) || isEnemyNoTarget (target)) {
       m_enemyParts = Visibility::None;
       m_enemyOrigin = nullptr;
 

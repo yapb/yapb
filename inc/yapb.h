@@ -813,6 +813,7 @@ private:
    bool lookupEnemies ();
    bool isEnemyHidden (edict_t *enemy);
    bool isEnemyInvincible (edict_t *enemy);
+   bool isEnemyNoTarget (edict_t *enemy);
    bool isFriendInLineOfFire (float distance);
    bool isGroupOfEnemies (const Vector &location, int numEnemies = 1, float radius = 256.0f);
    bool isPenetrableObstacle (const Vector &dest);
