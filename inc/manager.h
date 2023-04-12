@@ -58,6 +58,7 @@ private:
    float m_timeRoundEnd {};
    float m_timeRoundMid {};
 
+   float m_difficultyBalanceTime {}; // time to balance difficulties ?
    float m_autoKillCheckTime {}; // time to kill all the bots ?
    float m_maintainTime {}; // time to maintain bot creation
    float m_quotaMaintainTime {}; // time to maintain bot quota

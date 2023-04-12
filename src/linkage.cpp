@@ -398,6 +398,9 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       // keep bot number up to date
       bots.maintainQuota ();
 
+      // balance bot difficulties
+      bots.balanceBotDifficulties ();
+
       // flush print queue to users
       ctrl.flushPrintQueue ();
 
