@@ -1599,7 +1599,7 @@ void Bot::overrideConditions () {
    }
 
    // special handling for reloading
-   if (getCurrentTaskId () == Task::Normal && m_reloadState != Reload::None && m_isReloading && !isDucking () && !isInNarrowPlace ()) {
+   if (!bots.isRoundOver () && getCurrentTaskId () == Task::Normal && m_reloadState != Reload::None && m_isReloading && !isDucking () && !isInNarrowPlace ()) {
       if (m_seeEnemyTime + 2.5f < game.time () && (m_states & (Sense::SuspectEnemy | Sense::HearingEnemy))) {
          m_moveSpeed = m_fearLevel > m_agressionLevel ? 0.0f : getShiftSpeed ();
          m_navTimeset = game.time ();

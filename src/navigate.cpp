@@ -844,7 +844,7 @@ bool Bot::updateNavigation () {
             m_desiredVelocity = nullptr;
          }
       }
-      else if (!isKnifeMode () && m_switchedToKnifeDuringJump) {
+      else if (!isKnifeMode () && m_switchedToKnifeDuringJump && isOnFloor ()) {
          selectBestWeapon ();
 
          // if jump distance was big enough, cooldown a little
@@ -1906,7 +1906,7 @@ bool Bot::findNextBestNode () {
 }
 
 float Bot::getEstimatedNodeReachTime () {
-   float estimatedTime = 6.0f;
+   float estimatedTime = 4.2f;
 
    // if just fired at enemy, increase reachability
    if (m_shootTime + 0.15f < game.time ()) {
@@ -1926,7 +1926,7 @@ float Bot::getEstimatedNodeReachTime () {
       if (longTermReachability) {
          estimatedTime *= 2.0f;
       }
-      estimatedTime = cr::clamp (estimatedTime, 3.0f, longTermReachability ? 8.0f : 6.0f);
+      estimatedTime = cr::clamp (estimatedTime, 3.0f, longTermReachability ? 8.0f : 4.2f);
    }
    return estimatedTime + m_frameInterval;
 }
