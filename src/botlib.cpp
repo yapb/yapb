@@ -3260,12 +3260,8 @@ void Bot::huntEnemy_ () {
       if (!(m_currentTravelFlags & PathFlag::Jump)) {
          if (m_currentNodeIndex != kInvalidNodeIndex) {
             if (m_path->radius < 32.0f && !isOnLadder () && !isInWater () && m_seeEnemyTime + 4.0f > game.time ()) {
-               pev->button |= IN_DUCK;
+               m_moveSpeed = getShiftSpeed ();
             }
-         }
-
-         if (m_lastEnemyOrigin.distanceSq (pev->origin) < cr::square (512.0f)) {
-            m_moveSpeed = getShiftSpeed ();
          }
       }
    }
