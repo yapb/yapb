@@ -686,7 +686,6 @@ private:
    float m_changeViewTime {}; // timestamp to change look at while at freezetime
    float m_breakableTime {}; // breakeble acquired time
    float m_jumpDistance {}; // last jump distance
-   float m_lastBadWeaponSwitchTime {}; // last time we're switched weapon as it's bad
 
    bool m_moveToGoal {}; // bot currently moving to goal??
    bool m_isStuck {}; // bot is stuck

@@ -1411,7 +1411,6 @@ void Bot::newRound () {
    m_combatStrafeDir = Dodge::None;
    m_fightStyle = Fight::None;
    m_lastFightStyleCheck = 0.0f;
-   m_lastBadWeaponSwitchTime = 0.0f;
 
    m_checkWeaponSwitch = true;
    m_checkKnifeSwitch = true;

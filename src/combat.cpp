@@ -1023,34 +1023,30 @@ bool Bot::isWeaponBadAtDistance (int weaponIndex, float distance) {
    // to attack our enemy, since current weapon is not very good in this situation.
 
    // do not switch weapons when crossing the distance line
-   if (m_lastBadWeaponSwitchTime + 3.0f < game.time ()) {
-      auto &info = conf.getWeapons ();
+   auto &info = conf.getWeapons ();
 
-      if (m_difficulty < Difficulty::Normal || !hasSecondaryWeapon ()) {
-         return false;
-      }
-      auto weaponType = info[weaponIndex].type;
+   if (m_difficulty < Difficulty::Normal || !hasSecondaryWeapon ()) {
+      return false;
+   }
+   auto weaponType = info[weaponIndex].type;
 
-      if (weaponType == WeaponType::Melee) {
-         return false;
-      }
+   if (weaponType == WeaponType::Melee) {
+      return false;
+   }
 
-      // check is ammo available for secondary weapon
-      if (m_ammoInClip[info[bestSecondaryCarried ()].id] >= 3) {
-         return false;
-      }
+   // check is ammo available for secondary weapon
+   if (m_ammoInClip[info[bestSecondaryCarried ()].id] >= 3) {
+      return false;
+   }
 
-      // better use pistol in short range distances, when using sniper weapons
-      if (weaponType == WeaponType::Sniper && distance < 400.0f) {
-         m_lastBadWeaponSwitchTime = game.time ();
-         return true;
-      }
+   // better use pistol in short range distances, when using sniper weapons
+   if (weaponType == WeaponType::Sniper && distance < 400.0f) {
+      return true;
+   }
 
-      // shotguns is too inaccurate at long distances, so weapon is bad
-      if (weaponType == WeaponType::Shotgun && distance > 750.0f) {
-         m_lastBadWeaponSwitchTime = game.time ();
-         return true;
-      }
+   // shotguns is too inaccurate at long distances, so weapon is bad
+   if (weaponType == WeaponType::Shotgun && distance > 750.0f) {
+      return true;
    }
    return false;
 }
