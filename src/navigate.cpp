@@ -3415,7 +3415,7 @@ bool Bot::isReachableNode (int index) {
    const Vector &dst = graph[index].origin;
 
    // is the destination close enough?
-   if (dst.distanceSq (src) >= cr::square (320.0f)) {
+   if (dst.distanceSq (src) >= cr::square (600.0f)) {
       return false;
    }
 
@@ -3423,7 +3423,6 @@ bool Bot::isReachableNode (int index) {
    if (isOccupiedNode (index, true)) {
       return false;
    }
-   float ladderDist = dst.distance2d (src);
 
    TraceResult tr {};
    game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
@@ -3435,6 +3434,7 @@ bool Bot::isReachableNode (int index) {
       if (pev->waterlevel == 2 || pev->waterlevel == 3) {
          return true;
       }
+      float ladderDist = dst.distance2d (src);
 
       // check for ladder
       bool nonLadder = !(graph[index].flags & NodeFlag::Ladder) || ladderDist > 16.0f;

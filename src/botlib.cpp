@@ -1567,7 +1567,7 @@ void Bot::overrideConditions () {
    }
 
    // special handling, if we have a knife in our hands
-   if ((usesKnife () || !hasAnyWeapons ()) && (util.isPlayer (m_enemy) || (cv_attack_monsters.bool_ () && util.isMonster (m_enemy)))) {
+   if (isKnifeMode () && (util.isPlayer (m_enemy) || (cv_attack_monsters.bool_ () && util.isMonster (m_enemy)))) {
       float length = pev->origin.distance2d (m_enemy->v.origin);
 
       // do waypoint movement if enemy is not reachable with a knife
