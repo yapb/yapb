@@ -1571,7 +1571,7 @@ void Bot::overrideConditions () {
       float length = pev->origin.distance2d (m_enemy->v.origin);
 
       // do waypoint movement if enemy is not reachable with a knife
-      if (length > 100.0f && (m_states & Sense::SeeingEnemy)) {
+      if (length > 250.0f && (m_states & Sense::SeeingEnemy)) {
          int nearestToEnemyPoint = graph.getNearest (m_enemy->v.origin);
 
          if (nearestToEnemyPoint != kInvalidNodeIndex && nearestToEnemyPoint != m_currentNodeIndex && cr::abs (graph[nearestToEnemyPoint].origin.z - m_enemy->v.origin.z) < 16.0f) {
@@ -1587,7 +1587,7 @@ void Bot::overrideConditions () {
          }
       }
       else {
-         if (length <= 100.0f && (m_states & Sense::SeeingEnemy) && getCurrentTaskId () == Task::MoveToPosition) {
+         if (length <= 250.0f && (m_states & Sense::SeeingEnemy) && getCurrentTaskId () == Task::MoveToPosition) {
             clearTask (Task::MoveToPosition); // remove any move tasks
          }
       }

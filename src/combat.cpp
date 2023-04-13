@@ -322,7 +322,7 @@ bool Bot::lookupEnemies () {
             }
          }
       }
-      m_enemyUpdateTime = game.time () + cr::clamp (m_frameInterval * 3.0f, 0.2f, 0.64f);
+      m_enemyUpdateTime = game.time () + (usesKnife () ? 1.0f : 0.75f);
       
       if (game.isNullEntity (newEnemy) && !game.isNullEntity (shieldEnemy)) {
          newEnemy = shieldEnemy;
@@ -485,14 +485,10 @@ Vector Bot::getBodyOffsetError (float distance) {
       m_enemyParts &= ~Visibility::Head;
    }
 
-   const auto headOffset = [] (edict_t *e) {
-      return e->v.absmin.z + e->v.size.z * 0.81f;
-   };
-
    Vector spot = m_enemy->v.origin;
    Vector compensation = nullptr;
 
-   if (!usesSniper ()) {
+   if (!usesSniper () && !usesKnife ()) {
       compensation = (m_enemy->v.velocity - pev->velocity) * m_frameInterval * (distance < kSprayDistance ? 4.0f : 1.5f);
       compensation.z = 0.0f;
    }
@@ -536,7 +532,7 @@ Vector Bot::getBodyOffsetError (float distance) {
    spot += compensation;
 
    if (usesKnife () && m_difficulty >= Difficulty::Normal) {
-      spot.z = headOffset (m_enemy);
+      spot = m_enemyOrigin;
    }
    m_lastEnemyOrigin = spot;
 
@@ -889,7 +885,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
    // need to care for burst fire?
    if (distance < kSprayDistance || m_blindTime > game.time () || usesKnife ()) {
       if (id == Weapon::Knife) {
-         if (distance < 72.0f) {
+         if (distance < 64.0f) {
             if (rg.chance (40) || hasShield ()) {
                pev->button |= IN_ATTACK; // use primary attack
             }
@@ -1075,8 +1071,11 @@ void Bot::focusEnemy () {
 
    if (distance < 128.0f && !usesSniper ()) {
       if (usesKnife ()) {
-         if (distance < 80.0f) {
+         if (distance < 72.0f) {
             m_wantsToFire = true;
+         }
+         else if (distance > 90.0f) {
+            m_wantsToFire = false;
          }
       }
       else {
@@ -1199,8 +1198,10 @@ void Bot::attackMovement () {
    if (distance < 96.0f && !usesKnife ()) {
       m_moveSpeed = -pev->maxspeed;
    }
-   else if (usesKnife ()) {
+
+   if (usesKnife ()) {
       m_fightStyle = Fight::None;
+      m_lastFightStyleCheck = game.time ();
    }
 
    if (m_fightStyle == Fight::Strafe) {

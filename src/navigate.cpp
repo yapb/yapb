@@ -3194,7 +3194,7 @@ void Bot::updateLookAngles () {
    float stiffness = 200.0f;
    float damping = 25.0f;
 
-   if (((m_aimFlags & (AimFlags::Enemy | AimFlags::Entity | AimFlags::Grenade)) || m_wantsToFire) && m_difficulty > Difficulty::Normal) {
+   if (((m_aimFlags & (AimFlags::Enemy | AimFlags::Entity | AimFlags::Grenade)) || m_wantsToFire || usesKnife ()) && m_difficulty > Difficulty::Normal) {
       if (m_difficulty == Difficulty::Expert) {
          accelerate += 600.0f;
       }
