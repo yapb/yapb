@@ -761,8 +761,6 @@ int BotControl::cmdNodeUpload () {
 
    String uploadUrl = cv_graph_url_upload.str ();
 
-   game.print ("%s", uploadUrl);
-
    // try to upload the file
    if (http.uploadFile (uploadUrl, util.buildPath (BotFile::Graph))) {
       msg ("Graph file was successfully validated and uploaded to the YaPB Graph DB (%s).", product.download);

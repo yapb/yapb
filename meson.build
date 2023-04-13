@@ -112,7 +112,8 @@ if cxx == 'clang' or cxx == 'gcc'
       if os != 'darwin' and os != 'windows' and cpu != 'aarch64'
          cxxflags += [
             '-fdata-sections',
-            '-ffunction-sections'
+            '-ffunction-sections',
+			'-fcf-protection=none'
          ]
 
          ldflags += [
@@ -254,7 +255,8 @@ shared_library(
    sources,
    include_directories: includes,
    gnu_symbol_visibility: 'hidden',
-   name_prefix: '')
+   name_prefix: ''
+)
 
 run_target('package',
    command: ['python3', meson.project_source_root() + '/package.py', '@0@.@1@'.format(bot_version, count)])

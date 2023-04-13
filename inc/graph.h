@@ -489,7 +489,7 @@ template <typename ...Args> bool BotGraph::raiseLoadingError (bool isGraph, MemF
    auto result = strings.format (fmt, cr::forward <Args> (args)...);
 
    // display error only for graph file
-   if (isGraph || cv_debug.bool_ ()) {
+   if (isGraph) {
       logger.error (result);
    }
 
