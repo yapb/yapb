@@ -113,7 +113,7 @@ if cxx == 'clang' or cxx == 'gcc'
          cxxflags += [
             '-fdata-sections',
             '-ffunction-sections',
-			'-fcf-protection=none'
+            '-fcf-protection=none'
          ]
 
          ldflags += [

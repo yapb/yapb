@@ -1683,7 +1683,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef name, StorageOption 
 
    // graphs can be downloaded...
    bool isGraph = !!(options & StorageOption::Graph);
-   bool isGraphOrDebug = isGraph || cv_debug.bool_ ();
+   bool isDebug = cv_debug.bool_ ();
 
    MemFile file (filename); // open the file
 
@@ -1707,7 +1707,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef name, StorageOption 
    // if graph & attempted to load multiple times, bail out, we're failed
    if (isGraph && ++m_loadAttempts > 2) {
       m_loadAttempts = 0;
-      return raiseLoadingError (isGraphOrDebug, file, "Unable to load %s (filename: '%s'). Download process has failed as well. No nodes has been found.", name, filename);
+      return raiseLoadingError (isGraph, isDebug, file, "Unable to load %s (filename: '%s'). Download process has failed as well. No nodes has been found.", name, filename);
    }
 
    // downloader for graph
@@ -1754,7 +1754,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef name, StorageOption 
       if (tryReload ()) {
          return true;
       }
-      return raiseLoadingError (isGraphOrDebug, file, "Unable to open %s file for reading (filename: '%s').", name, filename);
+      return raiseLoadingError (isGraph, isDebug, file, "Unable to open %s file for reading (filename: '%s').", name, filename);
    }
 
    // read the header
@@ -1766,12 +1766,12 @@ template <typename U> bool BotGraph::loadStorage (StringRef name, StorageOption 
       if (tryReload ()) {
          return true;
       }
-      return raiseLoadingError (isGraphOrDebug, file, "Unable to read magic of %s (filename: '%s').", name, filename);
+      return raiseLoadingError (isGraph, isDebug, file, "Unable to read magic of %s (filename: '%s').", name, filename);
    }
 
    // check the path-numbers
    if (!isGraph && hdr.length != length ()) {
-      return raiseLoadingError (isGraphOrDebug, file, "Damaged %s (filename: '%s'). Mismatch number of nodes (got: '%d', need: '%d').", name, filename, hdr.length, m_paths.length ());
+      return raiseLoadingError (isGraph, isDebug, file, "Damaged %s (filename: '%s'). Mismatch number of nodes (got: '%d', need: '%d').", name, filename, hdr.length, m_paths.length ());
    }
 
    // check the count
@@ -1779,7 +1779,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef name, StorageOption 
       if (tryReload ()) {
          return true;
       }
-      return raiseLoadingError (isGraphOrDebug, file, "Damaged %s (filename: '%s'). Paths length is overflowed (got: '%d').", name, filename, hdr.length);
+      return raiseLoadingError (isGraph, isDebug, file, "Damaged %s (filename: '%s'). Paths length is overflowed (got: '%d').", name, filename, hdr.length);
    }
 
    // check the version
@@ -1787,7 +1787,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef name, StorageOption 
       ctrl.msg ("Graph version mismatch %s (filename: '%s'). Version number differs (got: '%d', need: '%d') Please, upgrade %s.", name, filename, hdr.version, version, product.name);
    }
    else if (hdr.version > version && !isGraph) {
-      return raiseLoadingError (isGraphOrDebug, file, "Damaged %s (filename: '%s'). Version number differs (got: '%d', need: '%d').", name, filename, hdr.version, version);
+      return raiseLoadingError (isGraph, isDebug, file, "Damaged %s (filename: '%s'). Version number differs (got: '%d', need: '%d').", name, filename, hdr.version, version);
    }
 
    // temporary solution to kill version 1 vistables, which has a bugs
@@ -1797,7 +1797,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef name, StorageOption 
       if (File::exists (vistablePath)) {
          plat.removeFile (vistablePath.chars ());
       }
-      return raiseLoadingError (isGraphOrDebug, file, "Bugged vistable %s (filename: '%s'). Version 1 has a bugs, vistable will be recreated.", name, filename);
+      return raiseLoadingError (isGraph, isDebug, file, "Bugged vistable %s (filename: '%s'). Version 1 has a bugs, vistable will be recreated.", name, filename);
    }
 
    // save graph version
@@ -1807,7 +1807,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef name, StorageOption 
 
    // check the storage type
    if ((hdr.options & options) != options) {
-      return raiseLoadingError (isGraphOrDebug, file, "Incorrect storage format for %s (filename: '%s').", name, filename);
+      return raiseLoadingError (isGraph, isDebug, file, "Incorrect storage format for %s (filename: '%s').", name, filename);
    }
    auto compressedSize = static_cast <size_t> (hdr.compressed);
    auto numberNodes = static_cast <size_t> (hdr.length);
@@ -1824,7 +1824,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef name, StorageOption 
 
       // try to uncompress
       if (ulz.uncompress (compressed.data (), hdr.compressed, reinterpret_cast <uint8_t *> (data.data ()), hdr.uncompressed) == ULZ::UncompressFailure) {
-         return raiseLoadingError (isGraphOrDebug, file, "Unable to decompress ULZ data for %s (filename: '%s').", name, filename);
+         return raiseLoadingError (isGraph, isDebug, file, "Unable to decompress ULZ data for %s (filename: '%s').", name, filename);
       }
       else {
 
@@ -1859,7 +1859,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef name, StorageOption 
       }
    }
    else {
-      return raiseLoadingError (isGraphOrDebug, file, "Unable to read ULZ data for %s (filename: '%s').", name, filename);
+      return raiseLoadingError (isGraph, isDebug, file, "Unable to read ULZ data for %s (filename: '%s').", name, filename);
    }
    return false;
 }

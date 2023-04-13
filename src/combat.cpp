@@ -555,11 +555,11 @@ Vector Bot::getCustomHeight (float distance) {
    static constexpr float offsetRanges[9][3] = {
       { 0.0f,  0.0f,   0.0f }, // none
       { 0.0f,  0.0f,   0.0f }, // melee
-      { 1.5f, -3.0f,  -4.5f }, // pistol
+      { 0.5f, -3.0f,  -4.5f }, // pistol
       { 6.5f,  6.0f,  -2.0f }, // shotgun
-      { 2.5f  -7.5f,  -9.5f }, // zoomrifle
-      { 2.5f, -7.5f,  -9.5f }, // rifle
-      { 2.5f, -7.5f,  -9.5f }, // smg
+      { 0.5f  -7.5f,  -9.5f }, // zoomrifle
+      { 0.5f, -7.5f,  -9.5f }, // rifle
+      { 0.5f, -7.5f,  -9.5f }, // smg
       { 0.0f, -2.5f,  -6.0f }, // sniper
       { 1.5f, -4.0f,  -9.0f }  // heavy
    };

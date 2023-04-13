@@ -345,7 +345,7 @@ public:
 
    template <typename U> bool saveStorage (StringRef name, StorageOption options, StorageVersion version, const SmallArray <U> &data, ExtenHeader *exten);
    template <typename U> bool loadStorage (StringRef name, StorageOption options, StorageVersion version, SmallArray <U> &data, ExtenHeader *exten, int32_t *outOptions);
-   template <typename ...Args> bool raiseLoadingError (bool isGraph, MemFile &file, const char *fmt, Args &&...args);
+   template <typename ...Args> bool raiseLoadingError (bool isGraph, bool isDebug, MemFile &file, const char *fmt, Args &&...args);
 
    void saveOldFormat ();
    void reset ();
@@ -485,11 +485,11 @@ public:
 #include <manager.h>
 
 // helper for reporting load errors
-template <typename ...Args> bool BotGraph::raiseLoadingError (bool isGraph, MemFile &file, const char *fmt, Args &&...args) {
+template <typename ...Args> bool BotGraph::raiseLoadingError (bool isGraph, bool isDebug, MemFile &file, const char *fmt, Args &&...args) {
    auto result = strings.format (fmt, cr::forward <Args> (args)...);
 
    // display error only for graph file
-   if (isGraph) {
+   if (isGraph || isDebug) {
       logger.error (result);
    }
 

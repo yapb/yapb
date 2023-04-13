@@ -1837,14 +1837,14 @@ bool Bot::findNextBestNode () {
          continue;
       }
 
-      // ignore non-reacheable nodes...
-      if (!isReachableNode (path.number)) {
-         continue;
-      }
-
       // check if node is already used by another bot...
       if (bots.getRoundStartTime () + 5.0f < game.time () && isOccupiedNode (path.number)) {
          busyIndex = path.number;
+         continue;
+      }
+
+      // ignore non-reacheable nodes...
+      if (!isReachableNode (path.number)) {
          continue;
       }
 
@@ -1906,7 +1906,7 @@ bool Bot::findNextBestNode () {
 }
 
 float Bot::getEstimatedNodeReachTime () {
-   float estimatedTime = 4.2f;
+   float estimatedTime = 3.5f;
 
    // if just fired at enemy, increase reachability
    if (m_shootTime + 0.15f < game.time ()) {
@@ -1926,9 +1926,9 @@ float Bot::getEstimatedNodeReachTime () {
       if (longTermReachability) {
          estimatedTime *= 2.0f;
       }
-      estimatedTime = cr::clamp (estimatedTime, 3.0f, longTermReachability ? 8.0f : 4.2f);
+      estimatedTime = cr::clamp (estimatedTime, 3.0f, longTermReachability ? 8.0f : 3.5f);
    }
-   return estimatedTime + m_frameInterval;
+   return estimatedTime;
 }
 
 void Bot::findValidNode () {
@@ -3388,7 +3388,7 @@ bool Bot::isReachableNode (int index) {
 
    // some one seems to camp at this node
    if (isOccupiedNode (index, true)) {
-      return true;
+      return false;
    }
    float ladderDist = dst.distance2d (src);
 

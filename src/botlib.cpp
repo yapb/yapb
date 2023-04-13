@@ -689,6 +689,9 @@ void Bot::updatePickups () {
 }
 
 void Bot::ensureEntitiesClear () {
+   if ((!m_isStuck || m_navTimeset + getEstimatedNodeReachTime () + m_frameInterval * 2.0f > game.time ()) && !(m_states & Sense::SeeingEnemy)) {
+      return;
+   }
    const auto currentTask = getCurrentTaskId ();
 
    if (currentTask == Task::PickupItem || (m_states & Sense::PickupItem)) {
@@ -4795,10 +4798,8 @@ void Bot::logic () {
       m_strafeSpeed = pev->maxspeed * static_cast <float> (m_needAvoidGrenade);
    }
 
-   // ensure we're not stuck destroying/picking something
-   if (m_navTimeset + getEstimatedNodeReachTime () + 2.0f < game.time () && !(m_states & Sense::SeeingEnemy)) {
-      ensureEntitiesClear ();
-   }
+
+   ensureEntitiesClear ();
    translateInput ();
 
    // check if need to use parachute
