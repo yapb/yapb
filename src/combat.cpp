@@ -252,7 +252,6 @@ bool Bot::lookupEnemies () {
          newEnemy = player;
       }
    }
-   auto distanceScale = usesKnife () ? 1.0f : 0.75f;
 
    // the old enemy is no longer visible or
    if (game.isNullEntity (newEnemy)) {
@@ -279,7 +278,7 @@ bool Bot::lookupEnemies () {
                float scaleFactor = (1.0f / calculateScaleFactor (intresting));
                float distance = intresting->v.origin.distanceSq (pev->origin) * scaleFactor;
 
-               if (distance * distanceScale < nearestDistance) {
+               if (distance < nearestDistance) {
                   nearestDistance = distance;
                   newEnemy = intresting;
                }
@@ -312,7 +311,7 @@ bool Bot::lookupEnemies () {
             }
             float distance = player->v.origin.distanceSq (pev->origin);
 
-            if (distance * distanceScale < nearestDistance) {
+            if (distance < nearestDistance) {
                nearestDistance = distance;
                newEnemy = player;
 
@@ -602,6 +601,8 @@ bool Bot::isFriendInLineOfFire (float distance) {
       }
    }
 
+   // doesn't seems to be have any effect
+#if 0
    // search the world for players
    for (const auto &client : util.getClients ()) {
       if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team != m_team || client.ent == ent ()) {
@@ -613,6 +614,7 @@ bool Bot::isFriendInLineOfFire (float distance) {
          return true;
       }
    }
+#endif
    return false;
 }
 
@@ -1934,12 +1936,9 @@ void Bot::checkGrenadesThrow () {
             allowThrowing = false;
          }
          else {
-            float radius = m_lastEnemy->v.velocity.length2d ();
-            const Vector &pos = (m_lastEnemy->v.velocity * 0.5f).get2d () + m_lastEnemy->v.origin;
+            float radius = cr::max (192.0f, m_lastEnemy->v.velocity.length2d ());
+            const Vector &pos = m_lastEnemy->v.velocity.get2d () + m_lastEnemy->v.origin;
 
-            if (radius < 164.0f) {
-               radius = 164.0f;
-            }
             auto predicted = graph.getNarestInRadius (radius, pos, 12);
 
             if (predicted.empty ()) {
@@ -1980,9 +1979,8 @@ void Bot::checkGrenadesThrow () {
          }
          break;
 
-      case Weapon::Flashbang:
-      {
-         int nearest = graph.getNearest ((m_lastEnemy->v.velocity * 0.5f).get2d () + m_lastEnemy->v.origin);
+      case Weapon::Flashbang: {
+         int nearest = graph.getNearest (m_lastEnemy->v.velocity.get2d () + m_lastEnemy->v.origin);
 
          if (nearest != kInvalidNodeIndex) {
             m_throw = graph[nearest].origin;

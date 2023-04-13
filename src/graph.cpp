@@ -9,6 +9,7 @@
 
 ConVar cv_graph_fixcamp ("yb_graph_fixcamp", "0", "Specifies whether bot should not 'fix' camp directions of camp waypoints when loading old PWF format.");
 ConVar cv_graph_url ("yb_graph_url", product.download.chars (), "Specifies the URL from bots will be able to download graph in case of missing local one. Set to empty, if no downloads needed.", false, 0.0f, 0.0f);
+ConVar cv_graph_url_upload ("yb_graph_url_upload", "http://yapb.jeefo.net/upload", "Specifies the URL to bots will try to upload te graph file to database.", false, 0.0f, 0.0f);
 ConVar cv_graph_auto_save_count ("yb_graph_auto_save_count", "15", "Every N graph nodes placed on map, the graph will be saved automatically (without checks).", true, 0.0f, kMaxNodes);
 ConVar cv_graph_draw_distance ("yb_graph_draw_distance", "400", "Maximum distance to draw graph nodes from editor viewport.", true, 64.0f, 3072.0f);
 
@@ -1270,7 +1271,7 @@ void BotGraph::loadPractice () {
       m_highestDamage[team] = 1;
    }
 
-   bool dataLoaded = loadStorage <Practice> ("prc", "Practice", StorageOption::Practice, StorageVersion::Practice, m_practice, nullptr, nullptr);
+   bool dataLoaded = loadStorage <Practice> ("Practice", StorageOption::Practice, StorageVersion::Practice, m_practice, nullptr, nullptr);
    int count = length ();
 
    // set's the highest damage if loaded ok
@@ -1308,7 +1309,7 @@ void BotGraph::savePractice () {
    if (m_paths.empty () || m_hasChanged) {
       return;
    }
-   saveStorage <Practice> ("prc", "Practice", StorageOption::Practice, StorageVersion::Practice, m_practice, nullptr);
+   saveStorage <Practice> ("Practice", StorageOption::Practice, StorageVersion::Practice, m_practice, nullptr);
 }
 
 void BotGraph::loadVisibility () {
@@ -1317,7 +1318,7 @@ void BotGraph::loadVisibility () {
    if (m_paths.empty ()) {
       return;
    }
-   bool dataLoaded = loadStorage <uint8_t> ("vis", "Visibility", StorageOption::Vistable, StorageVersion::Vistable, m_vistable, nullptr, nullptr);
+   bool dataLoaded = loadStorage <uint8_t> ("Visibility", StorageOption::Vistable, StorageVersion::Vistable, m_vistable, nullptr, nullptr);
 
    // if loaded, do not recalculate visibility
    if (dataLoaded) {
@@ -1329,14 +1330,14 @@ void BotGraph::saveVisibility () {
    if (m_paths.empty () || m_hasChanged || m_needsVisRebuild) {
       return;
    }
-   saveStorage <uint8_t> ("vis", "Visibility", StorageOption::Vistable, StorageVersion::Vistable, m_vistable, nullptr);
+   saveStorage <uint8_t> ("Visibility", StorageOption::Vistable, StorageVersion::Vistable, m_vistable, nullptr);
 }
 
 bool BotGraph::loadPathMatrix () {
    if (m_paths.empty ()) {
       return false;
    }
-   bool dataLoaded = loadStorage <Matrix> ("pmx", "Pathmatrix", StorageOption::Matrix, StorageVersion::Matrix, m_matrix, nullptr, nullptr);
+   bool dataLoaded = loadStorage <Matrix> ("Pathmatrix", StorageOption::Matrix, StorageVersion::Matrix, m_matrix, nullptr, nullptr);
 
    // do not rebuild if loaded
    if (dataLoaded) {
@@ -1387,7 +1388,7 @@ void BotGraph::savePathMatrix () {
    if (m_paths.empty ()) {
       return;
    }
-   saveStorage <Matrix> ("pmx", "Pathmatrix", StorageOption::Matrix, StorageVersion::Matrix, m_matrix, nullptr);
+   saveStorage <Matrix> ("Pathmatrix", StorageOption::Matrix, StorageVersion::Matrix, m_matrix, nullptr);
 }
 
 void BotGraph::initLightLevels () {
@@ -1533,7 +1534,13 @@ void BotGraph::initNodesTypes () {
 }
 
 bool BotGraph::convertOldFormat () {
-   MemFile fp (getOldFormatGraphName (true));
+   MemFile fp (util.buildPath (BotFile::PodbotPWF, true));
+
+   if (!fp) {
+      if (!fp.open (util.buildPath (BotFile::EbotEWP, true))) {
+         return false;
+      }
+   }
 
    PODGraphHeader header {};
    plat.bzero (&header, sizeof (header));
@@ -1606,7 +1613,7 @@ bool BotGraph::convertOldFormat () {
    return false;
 }
 
-template <typename U> bool BotGraph::saveStorage (StringRef ext, StringRef name, StorageOption options, StorageVersion version, const SmallArray <U> &data, ExtenHeader *exten) {
+template <typename U> bool BotGraph::saveStorage (StringRef name, StorageOption options, StorageVersion version, const SmallArray <U> &data, ExtenHeader *exten) {
    bool isGraph = !!(options & StorageOption::Graph);
 
    // do not allow to save graph with less than 8 nodes
@@ -1614,9 +1621,7 @@ template <typename U> bool BotGraph::saveStorage (StringRef ext, StringRef name,
       ctrl.msg ("Can't save graph data with less than %d nodes. Please add some more before saving.", kMaxNodeLinks);
       return false;
    }
-
-   String filename;
-   filename.assignf ("%s.%s", game.getMapName (), ext).lowercase ();
+   String filename = util.buildPath (util.storageToBotFile (options));
 
    if (data.empty ()) {
       logger.error ("Unable to save %s file. Empty data. (filename: '%s').", name, filename);
@@ -1630,7 +1635,7 @@ template <typename U> bool BotGraph::saveStorage (StringRef ext, StringRef name,
    }
 
    // open the file
-   File file (strings.format ("%s%s/%s", getDataDirectory (false), isGraph ? "graph" : "train", filename), "wb");
+   File file (filename, "wb");
 
    // no open no fun
    if (!file) {
@@ -1660,7 +1665,11 @@ template <typename U> bool BotGraph::saveStorage (StringRef ext, StringRef name,
       if ((options & StorageOption::Exten) && exten != nullptr) {
          file.write (exten, sizeof (ExtenHeader));
       }
-      ctrl.msg ("Successfully saved Bots %s data.", name);
+
+      // notify only about graph
+      if (isGraph || cv_debug.bool_ ()) {
+         ctrl.msg ("Successfully saved Bots %s data.", name);
+      }
    }
    else {
       logger.error ("Unable to compress %s data (filename: '%s').", name, filename);
@@ -1669,13 +1678,12 @@ template <typename U> bool BotGraph::saveStorage (StringRef ext, StringRef name,
    return true;
 }
 
-template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name, StorageOption options, StorageVersion version, SmallArray <U> &data, ExtenHeader *exten, int32_t *outOptions) {
-   String filename;
-   filename.assignf ("%s.%s", game.getMapName (), ext).lowercase ();
+template <typename U> bool BotGraph::loadStorage (StringRef name, StorageOption options, StorageVersion version, SmallArray <U> &data, ExtenHeader *exten, int32_t *outOptions) {
+   String filename = util.buildPath (util.storageToBotFile (options), true);
 
    // graphs can be downloaded...
    bool isGraph = !!(options & StorageOption::Graph);
-   MemFile file (strings.format ("%s%s/%s", getDataDirectory (true), isGraph ? "graph" : "train", filename)); // open the file
+   MemFile file (filename); // open the file
 
    data.clear ();
    data.shrink ();
@@ -1707,8 +1715,8 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
       }
       auto downloadAddress = cv_graph_url.str ();
 
-      auto toDownload = strings.format ("%sgraph/%s", getDataDirectory (false), filename);
-      auto fromDownload = strings.format ("http://%s/graph/%s", downloadAddress, filename);
+      auto toDownload = util.buildPath (util.storageToBotFile (options), false);
+      auto fromDownload = strings.format ("http://%s/graph/%s.graph", downloadAddress, game.getMapName ());
 
       // try to download
       if (http.downloadFile (fromDownload, toDownload)) {
@@ -1730,11 +1738,11 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
       }
 
       if (download ()) {
-         return loadStorage <U> (ext, name, options, version, data, exten, outOptions);
+         return loadStorage <U> (name, options, version, data, exten, outOptions);
       }
 
       if (convertOldFormat ()) {
-         return loadStorage <U> (ext, name, options, version, data, exten, outOptions);
+         return loadStorage <U> (name, options, version, data, exten, outOptions);
       }
       return false;
    };
@@ -1780,13 +1788,12 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
       return raiseLoadingError (isGraph, file, "Damaged %s (filename: '%s'). Version number differs (got: '%d', need: '%d').", name, filename, hdr.version, version);
    }
 
-
    // temporary solution to kill version 1 vistables, which has a bugs
    if ((options & StorageOption::Vistable) && hdr.version == 1) {
-      auto vistablePath = strings.format ("%strain/%s.vis", getDataDirectory (), game.getMapName ());
+      auto vistablePath = util.buildPath (BotFile::Vistable);
 
       if (File::exists (vistablePath)) {
-         plat.removeFile (vistablePath);
+         plat.removeFile (vistablePath.chars ());
       }
       return raiseLoadingError (isGraph, file, "Bugged vistable %s (filename: '%s'). Version 1 has a bugs, vistable will be recreated.", name, filename);
    }
@@ -1843,7 +1850,7 @@ template <typename U> bool BotGraph::loadStorage (StringRef ext, StringRef name,
                m_extenHeader.mapSize = exten->mapSize;
             }
          }
-         ctrl.msg ("Successfully loaded Bots %s data v%d (%d/%.2fMB).", name, hdr.version, m_paths.length (), static_cast <float> (data.capacity () * sizeof (U)) / 1024.0f / 1024.0f);
+         ctrl.msg ("Loaded Bots %s data v%d (%d/%.2fMB).", name, hdr.version, m_paths.length (), static_cast <float> (data.capacity () * sizeof (U)) / 1024.0f / 1024.0f);
          file.close ();
 
          return true;
@@ -1863,7 +1870,7 @@ bool BotGraph::loadGraphData () {
    m_extenHeader = {};
 
    // check if loaded
-   bool dataLoaded = loadStorage <Path> ("graph", "Graph", StorageOption::Graph, StorageVersion::Graph, m_paths, &exten, &outOptions);
+   bool dataLoaded = loadStorage <Path> ("Graph", StorageOption::Graph, StorageVersion::Graph, m_paths, &exten, &outOptions);
 
    if (dataLoaded) {
       reset ();
@@ -1951,7 +1958,7 @@ bool BotGraph::saveGraphData () {
    m_narrowChecked = false;
    initNarrowPlaces ();
 
-   return saveStorage <Path> ("graph", "Graph", static_cast <StorageOption> (options), StorageVersion::Graph, m_paths, &exten);
+   return saveStorage <Path> ("Graph", static_cast <StorageOption> (options), StorageVersion::Graph, m_paths, &exten);
 }
 
 void BotGraph::saveOldFormat () {
@@ -1968,7 +1975,7 @@ void BotGraph::saveOldFormat () {
    File fp;
 
    // file was opened
-   if (fp.open (getOldFormatGraphName (), "wb")) {
+   if (fp.open (util.buildPath (BotFile::PodbotPWF), "wb")) {
       // write the node header to the file...
       fp.write (&header, sizeof (header));
 
@@ -1984,16 +1991,6 @@ void BotGraph::saveOldFormat () {
    else {
       logger.error ("Error writing '%s.pwf' node file.", game.getMapName ());
    }
-}
-
-const char *BotGraph::getOldFormatGraphName (bool isMemoryFile) {
-   static String buffer;
-   buffer.assignf ("%s/pwf/%s.pwf", getDataDirectory (isMemoryFile), game.getMapName ());
-
-   if (File::exists (buffer)) {
-      return buffer.chars ();
-   }
-   return strings.format ("%s/pwf/%s.pwf", getDataDirectory (isMemoryFile), game.getMapName ());
 }
 
 float BotGraph::calculateTravelTime (float maxSpeed, const Vector &src, const Vector &origin) {
@@ -2898,15 +2895,11 @@ void BotGraph::eraseFromDisk () {
    StringArray forErase;
    bots.kickEveryone (true);
 
-   auto map = game.getMapName ();
-   auto data = getDataDirectory ();
-
    // if we're delete graph, delete all corresponding to it files
-   forErase.push (strings.format ("%spwf/%s.pwf", data, map)); // graph itself
-   forErase.push (strings.format ("%strain/%s.prc", data, map)); // corresponding to practice
-   forErase.push (strings.format ("%strain/%s.vis", data, map)); // corresponding to vistable
-   forErase.push (strings.format ("%strain/%s.pmx", data, map)); // corresponding to matrix
-   forErase.push (strings.format ("%sgraph/%s.graph", data, map)); // new format graph
+   forErase.emplace (util.buildPath (BotFile::Graph)); // graph itself
+   forErase.emplace (util.buildPath (BotFile::Practice)); // corresponding to practice
+   forErase.emplace (util.buildPath (BotFile::Vistable)); // corresponding to vistable
+   forErase.emplace (util.buildPath (BotFile::Pathmatrix)); // corresponding to matrix
 
    for (const auto &item : forErase) {
       if (File::exists (item)) {
@@ -2919,19 +2912,6 @@ void BotGraph::eraseFromDisk () {
    }
    reset (); // reintialize points
    m_paths.clear ();
-}
-
-const char *BotGraph::getDataDirectory (bool isMemoryFile) {
-   static String buffer;
-   buffer.clear ();
-
-   if (isMemoryFile) {
-      buffer.assignf ("addons/%s/data/", product.folder);
-   }
-   else {
-      buffer.assignf ("%s/addons/%s/data/", game.getRunningModName (), product.folder);
-   }
-   return buffer.chars ();
 }
 
 void BotGraph::setBombOrigin (bool reset, const Vector &pos) {

@@ -7,6 +7,16 @@
 
 #pragma once
 
+CR_DECLARE_SCOPED_ENUM_TYPE (BotFile, uint32_t,
+   Vistable = 0,
+   LogFile = 1,
+   Practice = 2,
+   Graph = 3,
+   Pathmatrix = 4,
+   PodbotPWF = 5,
+   EbotEWP = 6
+)
+
 class BotSupport final : public Singleton <BotSupport> {
 private:
    bool m_needToSendWelcome {};
@@ -95,6 +105,12 @@ public:
 
    // get the current date and time as string
    String getCurrentDateTime ();
+
+   // builds the filename to requested filename
+   String buildPath (int32_t type, bool isMemoryLoad = false);
+
+   // converts storage option to stroage filename
+   int32_t storageToBotFile (StorageOption options);
 
 public:
 

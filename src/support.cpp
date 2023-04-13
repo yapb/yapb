@@ -538,6 +538,83 @@ String BotSupport::getCurrentDateTime () {
    return String (timebuf);
 }
 
+String BotSupport::buildPath (int32_t file, bool isMemoryLoad) {
+   static HashMap <int32_t, StringArray> directories;
+   static HashMap <int32_t, String> extensions;
+
+   // fill out directories paths, it's permanenet
+   if (directories.empty ()) {
+      directories[BotFile::Vistable] = { "data", "train" };
+      directories[BotFile::Practice] = { "data", "train" };
+      directories[BotFile::Pathmatrix] = { "data", "train" };
+      directories[BotFile::LogFile] = { "data", "logs" };
+      directories[BotFile::Graph] = { "data", "graph" };
+      directories[BotFile::PodbotPWF] = { "data", "pwf" };
+      directories[BotFile::EbotEWP] = { "data", "ewp" };
+
+      // fill out extensions fo needed types
+      extensions[BotFile::Vistable] = "vis";
+      extensions[BotFile::Practice] = "prc";
+      extensions[BotFile::Pathmatrix] =  "pmx";
+      extensions[BotFile::LogFile] = "txt";
+      extensions[BotFile::Graph] = "graph";
+      extensions[BotFile::PodbotPWF] = "pwf";
+      extensions[BotFile::EbotEWP] = "ewp";
+   }
+
+   static StringArray path;
+   path.clear ();
+
+   // if not memory file we're don't need game dir
+   if (!isMemoryLoad) {
+      path.emplace (game.getRunningModName ());
+   }
+
+   // allways append addons/product
+   path.emplace ("addons");
+   path.emplace (product.folder);
+
+   // append real filepath
+   path.extend (directories[file]);
+
+   // if file is logfile use correct logfile name with date
+   if (file == BotFile::LogFile) {
+      time_t ticks = time (&ticks);
+      tm timeinfo {};
+
+      plat.loctime (&timeinfo, &ticks);
+      auto timebuf = strings.chars ();
+
+      strftime (timebuf, StringBuffer::StaticBufferSize, "L%d%m%Y", &timeinfo);
+      path.emplace (strings.format ("%s_%s.%s", product.folder, timebuf, extensions[file]));
+   }
+   else {
+      String mapName = game.getMapName ();
+      path.emplace (strings.format ("%s.%s", mapName.lowercase (), extensions[file]));
+   }
+
+   // finally use correct path separarators for us
+   return String::join (path, plat.win ? "\\" : "/");
+}
+
+// converts storage option to stroage filename
+
+int32_t BotSupport::storageToBotFile (StorageOption options) {
+   if (options & StorageOption::Graph) {
+      return BotFile::Graph;
+   }
+   else if (options & StorageOption::Matrix) {
+      return BotFile::Pathmatrix;
+   }
+   else if (options & StorageOption::Vistable) {
+      return BotFile::Vistable;
+   }
+   else if (options & StorageOption::Practice) {
+      return BotFile::Practice;
+   }
+   return BotFile::Graph;
+}
+
 int32_t BotSupport::sendTo (int socket, const void *message, size_t length, int flags, const sockaddr *dest, int destLength) {
    const auto send = [&] (const Twin <const uint8_t *, size_t> &msg) -> int32_t {
       return Socket::sendto (socket, msg.first, msg.second, flags, dest, destLength);

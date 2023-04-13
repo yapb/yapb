@@ -759,11 +759,12 @@ int BotControl::cmdNodeUpload () {
    msg ("you may notice the game freezes a bit during upload and issue request creation. Please, be patient.");
    msg ("\n");
 
-   // upload everytime in lowercase
-   String mapName = game.getMapName ();
+   String uploadUrl = cv_graph_url_upload.str ();
+
+   game.print ("%s", uploadUrl);
 
    // try to upload the file
-   if (http.uploadFile ("http://yapb.jeefo.net/upload", strings.format ("%sgraph/%s.graph", graph.getDataDirectory (false), mapName.lowercase ()))) {
+   if (http.uploadFile (uploadUrl, util.buildPath (BotFile::Graph))) {
       msg ("Graph file was successfully validated and uploaded to the YaPB Graph DB (%s).", product.download);
       msg ("It will be available for download for all YaPB users in a few minutes.");
       msg ("\n");

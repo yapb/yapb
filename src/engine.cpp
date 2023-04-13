@@ -834,7 +834,7 @@ bool Game::loadCSBinary () {
 bool Game::postload () {
 
    // register logger
-   logger.initialize (strings.format ("%slogs/%s.log", graph.getDataDirectory (false), product.folder), [] (const char *msg) {
+   logger.initialize (util.buildPath (BotFile::LogFile), [] (const char *msg) {
       game.print (msg);
    });
 

@@ -3992,7 +3992,7 @@ void Bot::throwExplosive_ () {
       m_moveToGoal = false;
    }
    else if (!(m_states & Sense::SuspectEnemy) && !game.isNullEntity (m_enemy)) {
-      dest = m_enemy->v.origin + m_enemy->v.velocity.get2d () * 0.6f;
+      dest = m_enemy->v.origin + m_enemy->v.velocity.get2d ();
    }
    m_isUsingGrenade = true;
    m_checkTerrain = false;
@@ -4058,7 +4058,7 @@ void Bot::throwFlashbang_ () {
       m_moveToGoal = false;
    }
    else if (!(m_states & Sense::SuspectEnemy) && !game.isNullEntity (m_enemy)) {
-      dest = m_enemy->v.origin + m_enemy->v.velocity.get2d () * 0.6f;
+      dest = m_enemy->v.origin + m_enemy->v.velocity.get2d ();
    }
 
    m_isUsingGrenade = true;
@@ -4129,9 +4129,9 @@ void Bot::throwSmoke_ () {
 
    Vector src = m_lastEnemyOrigin - pev->velocity;
 
-   // predict where the enemy is in 0.5 secs
+   // predict where the enemy is in secs
    if (!game.isNullEntity (m_enemy)) {
-      src = src + m_enemy->v.velocity * 0.6f;
+      src = src + m_enemy->v.velocity;
    }
    m_grenade = (src - getEyesPos ()).normalize ();
 
