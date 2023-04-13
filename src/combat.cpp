@@ -886,7 +886,9 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
    if (distance < kSprayDistance || m_blindTime > game.time () || usesKnife ()) {
       if (id == Weapon::Knife) {
          if (distance < 64.0f) {
-            if (rg.chance (40) || hasShield ()) {
+            const auto primaryAtackChance = (m_oldButtons & IN_ATTACK2) ? 80 : 40;
+
+            if (rg.chance (primaryAtackChance) || hasShield ()) {
                pev->button |= IN_ATTACK; // use primary attack
             }
             else {
