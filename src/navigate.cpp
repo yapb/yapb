@@ -1985,8 +1985,10 @@ int Bot::changeNodeIndex (int index) {
 int Bot::findNearestNode () {
    // get the current nearest node to bot with visibility checks
 
+   constexpr float kMaxDistance = 1024.0f;
+
    int index = kInvalidNodeIndex;
-   float minimumDistance = cr::square (1024.0f);
+   float minimumDistance = cr::square (kMaxDistance);
 
    const auto &origin = pev->origin + pev->velocity * m_frameInterval;
    const auto &bucket = graph.getNodesInBucket (origin);
@@ -2008,8 +2010,39 @@ int Bot::findNearestNode () {
       }
    }
 
-   // worst case, take any node...
+   // try to search ANYTHING that can be reachaed
    if (index == kInvalidNodeIndex) {
+      minimumDistance = cr::square (kMaxDistance);
+      const auto &nearestNodes = graph.getNarestInRadius (kMaxDistance, pev->origin);
+
+      for (const auto &i : nearestNodes) {
+         const auto &path = graph[i];
+
+         if (!graph.exists (path.number)) {
+            continue;
+         }
+         const float distance = path.origin.distanceSq (pev->origin);
+
+         if (distance < minimumDistance) {
+            TraceResult tr;
+            game.testLine (getEyesPos (), path.origin, TraceIgnore::Monsters, ent (), &tr);
+
+            if (tr.flFraction >= 1.0f && !tr.fStartSolid) {
+               index = path.number;
+               minimumDistance = distance;
+            }
+         }
+      }
+
+      // if we're got something just return here
+      if (graph.exists (index)) {
+         return index;
+      }
+   }
+
+
+   // worst case, take any node...
+   if (!graph.exists (index)) {
       index = graph.getNearestNoBuckets (origin);
    }
    return index;
