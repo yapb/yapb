@@ -493,7 +493,7 @@ MessageDispatcher::MessageDispatcher () {
 }
 
 int32_t MessageDispatcher::add (StringRef name, int32_t id) {
-   if (!m_wanted.has (name)) {
+   if (!m_wanted.exists (name)) {
       return id;
    }
 
@@ -511,7 +511,7 @@ void MessageDispatcher::start (edict_t *ent, int32_t type) {
    }
 
    // search if we need to handle this message
-   if (m_reverseMap.has (type)) {
+   if (m_reverseMap.exists (type)) {
       auto msg = m_reverseMap[type];
       m_current = m_handlers[msg] ? msg : NetMsg::None;
    }
@@ -546,7 +546,7 @@ void MessageDispatcher::ensureMessages () {
    // this function tries to associate appropriate message ids.
 
    // check if we're have one
-   if (m_maps.has (NetMsg::Money)) {
+   if (m_maps.exists (NetMsg::Money)) {
       return;
    }
 

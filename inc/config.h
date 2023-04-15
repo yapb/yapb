@@ -252,7 +252,7 @@ public:
 
    // get custom value
    StringRef fetchCustom (StringRef name) {
-      if (m_custom.has (name)) {
+      if (m_custom.exists (name)) {
          return m_custom[name];
       }
       SimpleLogger::instance ().error ("Trying to fetch unknown custom variable: %s", name);

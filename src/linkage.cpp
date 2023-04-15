@@ -1041,7 +1041,7 @@ SharedLibrary::Func EntityLinkage::lookup (SharedLibrary::Handle module, const c
    }
 #endif
    
-   if (m_exports.has (function)) {
+   if (m_exports.exists (function)) {
       return m_exports[function];
    }
    auto botAddr = resolve (self);

@@ -132,7 +132,7 @@ int BotControl::cmdWeaponMode () {
    auto mode = strValue (type);
 
    // check if selected mode exists
-   if (!modes.has (mode)) {
+   if (!modes.exists (mode)) {
       return BotCommandResult::BadFormat;
    }
    bots.setWeaponMode (modes[mode]);
@@ -352,7 +352,7 @@ int BotControl::cmdNode () {
          addGraphCmd ("release_editor", "release_editor [noarguments]", "Releases graph editing rights.", &BotControl::cmdNodeReleaseEditor);
       }
    }
-   if (commands.has (strValue (cmd))) {
+   if (commands.exists (strValue (cmd))) {
       const auto &item = commands[strValue (cmd)];
 
       // graph have only bad format return status
@@ -365,7 +365,7 @@ int BotControl::cmdNode () {
       }
    }
    else {
-      if (strValue (cmd) == "help" && hasArg (cmd2) && commands.has (strValue (cmd2))) {
+      if (strValue (cmd) == "help" && hasArg (cmd2) && commands.exists (strValue (cmd2))) {
          auto &item = commands[strValue (cmd2)];
 
          msg ("Command: \"%s %s %s\"", m_args[root], m_args[alias], item.name);

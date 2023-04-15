@@ -539,28 +539,17 @@ String BotSupport::getCurrentDateTime () {
 }
 
 String BotSupport::buildPath (int32_t file, bool isMemoryLoad) {
-   static HashMap <int32_t, StringArray> directories;
-   static HashMap <int32_t, String> extensions;
+   using FilePath = Twin <String, String>;
 
-   // fill out directories paths, it's permanenet
-   if (directories.empty ()) {
-      directories[BotFile::Vistable] = { "data", "train" };
-      directories[BotFile::Practice] = { "data", "train" };
-      directories[BotFile::Pathmatrix] = { "data", "train" };
-      directories[BotFile::LogFile] = { "data", "logs" };
-      directories[BotFile::Graph] = { "data", "graph" };
-      directories[BotFile::PodbotPWF] = { "data", "pwf" };
-      directories[BotFile::EbotEWP] = { "data", "ewp" };
-
-      // fill out extensions fo needed types
-      extensions[BotFile::Vistable] = "vis";
-      extensions[BotFile::Practice] = "prc";
-      extensions[BotFile::Pathmatrix] =  "pmx";
-      extensions[BotFile::LogFile] = "txt";
-      extensions[BotFile::Graph] = "graph";
-      extensions[BotFile::PodbotPWF] = "pwf";
-      extensions[BotFile::EbotEWP] = "ewp";
-   }
+   static HashMap <int32_t, FilePath> paths = {
+      { BotFile::Vistable, FilePath ("train", "vis")},
+      { BotFile::Practice, FilePath ("train", "prc")},
+      { BotFile::Pathmatrix, FilePath ("train", "pmx")},
+      { BotFile::LogFile, FilePath ("logs", "txt")},
+      { BotFile::Graph, FilePath ("graph", "graph")},
+      { BotFile::PodbotPWF, FilePath ("pwf", "pwf")},
+      { BotFile::EbotEWP, FilePath ("ewp", "ewp")},
+   };
 
    static StringArray path;
    path.clear ();
@@ -574,8 +563,11 @@ String BotSupport::buildPath (int32_t file, bool isMemoryLoad) {
    path.emplace ("addons");
    path.emplace (product.folder);
 
+   // the datadir
+   path.emplace ("data");
+
    // append real filepath
-   path.extend (directories[file]);
+   path.emplace (paths[file].first);
 
    // if file is logfile use correct logfile name with date
    if (file == BotFile::LogFile) {
@@ -586,11 +578,11 @@ String BotSupport::buildPath (int32_t file, bool isMemoryLoad) {
       auto timebuf = strings.chars ();
 
       strftime (timebuf, StringBuffer::StaticBufferSize, "L%d%m%Y", &timeinfo);
-      path.emplace (strings.format ("%s_%s.%s", product.folder, timebuf, extensions[file]));
+      path.emplace (strings.format ("%s_%s.%s", product.folder, timebuf, paths[file].second));
    }
    else {
       String mapName = game.getMapName ();
-      path.emplace (strings.format ("%s.%s", mapName.lowercase (), extensions[file]));
+      path.emplace (strings.format ("%s.%s", mapName.lowercase (), paths[file].second));
    }
 
    // finally use correct path separarators for us
@@ -670,7 +662,7 @@ int32_t BotSupport::sendTo (int socket, const void *message, size_t length, int 
 StringRef BotSupport::weaponIdToAlias (int32_t id) {
    StringRef none = "none";
 
-   if (m_weaponAlias.has (id)) {
+   if (m_weaponAlias.exists (id)) {
       return m_weaponAlias[id];
    }
    return none;

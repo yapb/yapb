@@ -793,7 +793,7 @@ const char *BotConfig::translate (StringRef input) {
    }
    auto hash = hashLangString (input.chars ());
 
-   if (m_language.has (hash)) {
+   if (m_language.exists (hash)) {
       return m_language[hash].chars ();
    }
    return input.chars (); // nothing found

@@ -4847,50 +4847,50 @@ void Bot::showDebugOverlay () {
    static float timeDebugUpdate = 0.0f;
    static int index = kInvalidNodeIndex, goal = kInvalidNodeIndex, taskID = 0;
 
-   static HashMap <int32_t, String> tasks;
-   static HashMap <int32_t, String> personalities;
-   static HashMap <int32_t, String> flags;
+   static HashMap <int32_t, String> tasks {
+      { Task::Normal, "Normal" },
+      { Task::Pause, "Pause" },
+      { Task::MoveToPosition, "Move" },
+      { Task::FollowUser, "Follow" },
+      { Task::PickupItem, "Pickup" },
+      { Task::Camp, "Camp" },
+      { Task::PlantBomb, "PlantBomb" },
+      { Task::DefuseBomb, "DefuseBomb" },
+      { Task::Attack, "Attack" },
+      { Task::Hunt, "Hunt" },
+      { Task::SeekCover, "SeekCover" },
+      { Task::ThrowExplosive, "ThrowHE" },
+      { Task::ThrowFlashbang, "ThrowFL" },
+      { Task::ThrowSmoke, "ThrowSG" },
+      { Task::DoubleJump, "DoubleJump" },
+      { Task::EscapeFromBomb, "EscapeFromBomb" },
+      { Task::ShootBreakable, "DestroyBreakable" },
+      { Task::Hide, "Hide" },
+      { Task::Blind, "Blind" },
+      { Task::Spraypaint, "Spray" }
+   };
+
+   static HashMap <int32_t, String> personalities {
+      { Personality::Rusher, "Rusher" },
+      { Personality::Normal, "Normal" },
+      { Personality::Careful, "Careful" }
+   };
+
+   static HashMap <int32_t, String> flags {
+      { AimFlags::Nav, "Nav" },
+      { AimFlags::Camp, "Camp" },
+      { AimFlags::PredictPath, "Predict" },
+      { AimFlags::LastEnemy, "LastEnemy" },
+      { AimFlags::Entity, "Entity" },
+      { AimFlags::Enemy, "Enemy" },
+      { AimFlags::Grenade, "Grenade" },
+      { AimFlags::Override, "Override" },
+      { AimFlags::Danger, "Danger" },
+   };
 
    auto boolValue = [] (const bool test) {
       return test ? "Yes" : "No";
    };
-
-   if (tasks.empty ()) {
-      tasks[Task::Normal] = "Normal";
-      tasks[Task::Pause] = "Pause";
-      tasks[Task::MoveToPosition] = "Move";
-      tasks[Task::FollowUser] = "Follow";
-      tasks[Task::PickupItem] = "Pickup";
-      tasks[Task::Camp] = "Camp";
-      tasks[Task::PlantBomb] = "PlantBomb";
-      tasks[Task::DefuseBomb] = "DefuseBomb";
-      tasks[Task::Attack] = "Attack";
-      tasks[Task::Hunt] = "Hunt";
-      tasks[Task::SeekCover] = "SeekCover";
-      tasks[Task::ThrowExplosive] = "ThrowHE";
-      tasks[Task::ThrowFlashbang] = "ThrowFL";
-      tasks[Task::ThrowSmoke] = "ThrowSG";
-      tasks[Task::DoubleJump] = "DoubleJump";
-      tasks[Task::EscapeFromBomb] = "EscapeFromBomb";
-      tasks[Task::ShootBreakable] = "DestroyBreakable";
-      tasks[Task::Hide] = "Hide";
-      tasks[Task::Blind] = "Blind";
-      tasks[Task::Spraypaint] = "Spray";
-
-      personalities[Personality::Rusher] = "Rusher";
-      personalities[Personality::Normal] = "Normal";
-      personalities[Personality::Careful] = "Careful";
-
-      flags[AimFlags::Nav] = "Nav";
-      flags[AimFlags::Camp] = "Camp";
-      flags[AimFlags::PredictPath] = "Predict";
-      flags[AimFlags::LastEnemy] = "LastEnemy";
-      flags[AimFlags::Entity] = "Entity";
-      flags[AimFlags::Enemy] = "Enemy";
-      flags[AimFlags::Grenade] = "Grenade";
-      flags[AimFlags::Override] = "Override";
-      flags[AimFlags::Danger] = "Danger";
-   }
 
    if (m_tasks.empty ()) {
       return;
