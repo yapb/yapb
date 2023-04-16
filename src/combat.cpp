@@ -488,8 +488,8 @@ Vector Bot::getBodyOffsetError (float distance) {
    Vector spot = m_enemy->v.origin;
    Vector compensation = nullptr;
 
-   if (!usesSniper () && !usesKnife ()) {
-      compensation = (m_enemy->v.velocity - pev->velocity) * m_frameInterval * (distance < kSprayDistance ? 4.0f : 1.5f);
+   if (!usesSniper () && !usesKnife () && distance > kSprayDistance) {
+      compensation = 1.0f * m_frameInterval * m_enemy->v.velocity - 1.0f * m_frameInterval * pev->velocity;
       compensation.z = 0.0f;
    }
    else {
