@@ -1067,9 +1067,10 @@ bool Bot::updateNavigation () {
    // will go in cycle, and forcing bot to re-create new route.
    if (m_pathWalk.hasNext () && m_pathWalk.next () == m_pathWalk.last () && isOccupiedNode (m_pathWalk.next (), true)) {
       getTask ()->data = kInvalidNodeIndex;
-      clearSearchNodes ();
+      m_currentNodeIndex = kInvalidNodeIndex;
 
-      return true;
+      clearSearchNodes ();
+      return false;
    }
 
    if (nodeDistance < desiredDistance) {
@@ -1748,6 +1749,7 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
 
 void Bot::clearSearchNodes () {
    m_pathWalk.clear ();
+   m_chosenGoalIndex = kInvalidNodeIndex;
 }
 
 void Bot::clearRoute () {
@@ -3194,7 +3196,7 @@ void Bot::updateLookAngles () {
    float stiffness = 200.0f;
    float damping = 25.0f;
 
-   if (((m_aimFlags & (AimFlags::Enemy | AimFlags::Entity | AimFlags::Grenade)) || m_wantsToFire || usesKnife ()) && m_difficulty > Difficulty::Normal) {
+   if (((m_aimFlags & (AimFlags::Enemy | AimFlags::Entity | AimFlags::Grenade)) || m_isEnemyReachable) && m_difficulty > Difficulty::Normal) {
       if (m_difficulty == Difficulty::Expert) {
          accelerate += 600.0f;
       }
