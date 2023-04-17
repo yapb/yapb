@@ -122,10 +122,6 @@ bool Bot::seesEntity (const Vector &dest, bool fromBody) {
 void Bot::avoidGrenades () {
    // checks if bot 'sees' a grenade, and avoid it
 
-   if (!bots.hasActiveGrenades ()) {
-      return;
-   }
-
    // check if old pointers to grenade is invalid
    if (game.isNullEntity (m_avoidGrenade)) {
       m_avoidGrenade = nullptr;
@@ -134,6 +130,10 @@ void Bot::avoidGrenades () {
    else if ((m_avoidGrenade->v.flags & FL_ONGROUND) || (m_avoidGrenade->v.effects & EF_NODRAW)) {
       m_avoidGrenade = nullptr;
       m_needAvoidGrenade = 0;
+   }
+
+   if (!bots.hasActiveGrenades ()) {
+      return;
    }
    auto &activeGrenades = bots.getActiveGrenades ();
 
@@ -158,11 +158,7 @@ void Bot::avoidGrenades () {
             m_preventFlashing = game.time () + rg.get (1.0f, 2.0f);
          }
       }
-      else if (strcmp (model, "hegrenade.mdl") == 0) {
-         if (!game.isNullEntity (m_avoidGrenade)) {
-            continue;
-         }
-
+      else if (game.isNullEntity (m_avoidGrenade) && strcmp (model, "hegrenade.mdl") == 0) {
          if (game.getTeam (pent->v.owner) == m_team || pent->v.owner == ent ()) {
             continue;
          }
