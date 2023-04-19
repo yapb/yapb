@@ -25,8 +25,8 @@ ConVar cv_difficulty ("yb_difficulty", "3", "All bots difficulty level. Changing
 
 ConVar cv_difficulty_min ("yb_difficulty_min", "-1", "Lower bound of random difficulty on bot creation. Only affects newly created bots. -1 means yb_difficulty only used.", true, -1.0f, 4.0f);
 ConVar cv_difficulty_max ("yb_difficulty_max", "-1", "Upper bound of random difficulty on bot creation. Only affects newly created bots. -1 means yb_difficulty only used.", true, -1.0f, 4.0f);
-ConVar cv_difficulty_auto ("yb_difficulty_auto", "0", "Enables each bot balances own difficulty based kd-ratio of team.", true, 0.0f, 1.0f);
-ConVar cv_difficulty_auto_balance_interval ("yb_difficulty_auto_balance_interval", "30", "Interval in which bots will balance theird difficulty.", true, 30.0f, 240.0f);
+ConVar cv_difficulty_auto ("yb_difficulty_auto", "0", "Allows each bot to balance their own difficulty based kd-ratio of team.", true, 0.0f, 1.0f);
+ConVar cv_difficulty_auto_balance_interval ("yb_difficulty_auto_balance_interval", "30", "Interval in which bots will balance their difficulty.", true, 30.0f, 240.0f);
 
 ConVar cv_show_avatars ("yb_show_avatars", "1", "Enables or disables displaying bot avatars in front of their names in scoreboard. Note, that is currently you can see only avatars of your steam friends.");
 ConVar cv_show_latency ("yb_show_latency", "2", "Enables latency display in scoreboard.\nAllowed values: '0', '1', '2'.\nIf '0', there is nothing displayed.\nIf '1', there is a 'BOT' is displayed.\nIf '2' fake ping is displayed.", true, 0.0f, 2.0f);
@@ -1506,7 +1506,7 @@ void Bot::kick () {
 }
 
 void Bot::markStale () {
-   showChaterIcon (false, true);
+   showChatterIcon (false, true);
 
    // clear the bot name
    conf.clearUsedName (this);
