@@ -770,7 +770,7 @@ Vector Bot::getCampDirection (const Vector &dest) {
    return nullptr;
 }
 
-void Bot::showChaterIcon (bool show, bool disconnect) {
+void Bot::showChatterIcon (bool show, bool disconnect) {
    // this function depending on show boolen, shows/remove chatter, icon, on the head of bot.
 
    if (!game.is (GameFlags::HasBotVoice) || cv_radio_mode.int_ () != 2) {
@@ -814,7 +814,7 @@ void Bot::instantChatter (int type) {
    const auto &painSound = conf.pickRandomFromChatterBank (Chatter::DiePain);
 
    if (m_notKilled) {
-      showChaterIcon (true);
+      showChatterIcon (true);
    }
    MessageWriter msg;
    int ownIndex = index ();
@@ -2811,7 +2811,7 @@ void Bot::frame () {
    checkBreakablesAround ();
 
    if (game.is (GameFlags::HasBotVoice)) {
-      showChaterIcon (false); // end voice feedback
+      showChatterIcon (false); // end voice feedback
    }
 
    // kick the bot if stay time is over, the quota maintain will add new bot for us later

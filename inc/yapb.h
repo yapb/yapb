@@ -1074,7 +1074,7 @@ public:
    void pushMsgQueue (int message);
    void prepareChatMessage (StringRef message);
    void checkForChat ();
-   void showChaterIcon (bool show, bool disconnect = false);
+   void showChatterIcon (bool show, bool disconnect = false);
    void clearSearchNodes ();
    void checkBreakable (edict_t *touch);
    void checkBreakablesAround ();
