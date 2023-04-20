@@ -39,10 +39,7 @@ void Game::precache () {
 
    m_engineWrap.precacheSound ("weapons/xbow_hit1.wav"); // waypoint add
    m_engineWrap.precacheSound ("weapons/mine_activate.wav"); // waypoint delete
-   m_engineWrap.precacheSound ("common/wpn_hudoff.wav"); // path add/delete start
    m_engineWrap.precacheSound ("common/wpn_hudon.wav"); // path add/delete done
-   m_engineWrap.precacheSound ("common/wpn_moveselect.wav"); // path add/delete cancel
-   m_engineWrap.precacheSound ("common/wpn_denyselect.wav"); // path add/delete error
 
    m_mapFlags = 0; // reset map type as worldspawn is the first entity spawned
 
@@ -68,14 +65,14 @@ void Game::levelInitialize (edict_t *entities, int max) {
    // update worldmodel
    illum.resetWorldModel ();
 
-   // do level initialization stuff here...
-   graph.loadGraphData ();
-
    // execute main config
    conf.loadMainConfig ();
 
    // load map-specific config
    conf.loadMapSpecificConfig ();
+
+   // do level initialization stuff here...
+   graph.loadGraphData ();
 
    // initialize quota management
    bots.initQuota ();

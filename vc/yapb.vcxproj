@@ -44,6 +44,7 @@
     <ClInclude Include="..\ext\hlsdk\model.h" />
     <ClInclude Include="..\ext\hlsdk\progdefs.h" />
     <ClInclude Include="..\ext\hlsdk\util.h" />
+    <ClInclude Include="..\inc\analyze.h" />
     <ClInclude Include="..\inc\config.h" />
     <ClInclude Include="..\inc\control.h" />
     <ClInclude Include="..\inc\engine.h" />
@@ -58,6 +59,7 @@
     <ClInclude Include="..\inc\version.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\analyze.cpp" />
     <ClCompile Include="..\src\entities.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>

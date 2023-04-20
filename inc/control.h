@@ -274,5 +274,14 @@ template <typename ...Args> inline void BotControl::msg (const char *fmt, Args &
    }
 }
 
+// graph heloer for sending message to correct channel
+template <typename ...Args> inline void BotGraph::msg (const char *fmt, Args &&...args) {
+   if (m_silenceMessages) {
+      return; // no messages while analyzing (too much spam)
+   }
+   BotControl::instance ().msg (strings.format (conf.translate (fmt), cr::forward <Args> (args)...));
+}
+
+
 // explose global
 CR_EXPOSE_GLOBAL_SINGLETON (BotControl, ctrl);

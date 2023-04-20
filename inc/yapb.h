@@ -459,7 +459,7 @@ constexpr int kInfiniteDistanceLong = static_cast <int> (kInfiniteDistance);
 constexpr int kMaxNodeLinks = 8;
 constexpr int kMaxPracticeDamageValue = 2040;
 constexpr int kMaxPracticeGoalValue = 2040;
-constexpr int kMaxNodes = 2048;
+constexpr int kMaxNodes = 4096;
 constexpr int kMaxWeapons = 32;
 constexpr int kNumWeapons = 26;
 constexpr int kMaxCollideMoves = 3;
@@ -597,6 +597,7 @@ struct ChatCollection {
 
 // include bot graph stuff
 #include <graph.h>
+#include <analyze.h>
 
 // main bot class
 class Bot final {
@@ -1212,6 +1213,8 @@ extern ConVar cv_save_bots_names;
 extern ConVar cv_random_knife_attacks;
 extern ConVar cv_rotate_bots;
 extern ConVar cv_graph_url_upload;
+extern ConVar cv_graph_auto_save_count;
+extern ConVar cv_graph_analyze_max_jumm_height;
 
 extern ConVar mp_freezetime;
 extern ConVar mp_roundtime;

@@ -384,6 +384,9 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
          graph.frame ();
       }
 
+      // update analyzer if needed
+      analyzer.update ();
+
       // run stuff periodically
       game.slowFrame ();
 

@@ -103,6 +103,12 @@ CR_DECLARE_SCOPED_ENUM (NodeAddFlag,
    Goal = 100
 )
 
+CR_DECLARE_SCOPED_ENUM (NotifySound,
+   Done = 0,
+   Change = 1,
+   Added = 2
+)
+
 // a* route
 struct Route {
    float g, f;
@@ -279,6 +285,7 @@ private:
    bool m_hasChanged {};
    bool m_needsVisRebuild {};
    bool m_narrowChecked {};
+   bool m_silenceMessages {};
 
    Vector m_learnVelocity {};
    Vector m_learnPosition {};
@@ -315,6 +322,7 @@ public:
 public:
    int getFacingIndex ();
    int getFarest (const Vector &origin, float maxDistance = 32.0);
+   int getForAnalyzer (const Vector &origin, float maxDistance);
    int getNearest (const Vector &origin, float minDistance = kInfiniteDistance, int flags = -1);
    int getNearestNoBuckets (const Vector &origin, float minDistance = kInfiniteDistance, int flags = -1);
    int getEditorNearest ();
@@ -334,7 +342,9 @@ public:
    bool isDuckVisible (int srcIndex, int destIndex);
    bool isConnected (int a, int b);
    bool isConnected (int index);
+   bool isNodeReacheableEx (const Vector &src, const Vector &destination, const float maxHeight);
    bool isNodeReacheable (const Vector &src, const Vector &destination);
+   bool isNodeReacheableWithJump (const Vector &src, const Vector &destination);
    bool checkNodes (bool teleportPlayer);
    bool loadPathMatrix ();
    bool isVisited (int index);
@@ -388,6 +398,7 @@ public:
    void setAutoPathDistance (const float distance);
    void showStats ();
    void showFileInfo ();
+   void emitNotify (int32_t sound);
 
    IntArray getNarestInRadius (float radius, const Vector &origin, int maxCount = -1);
    const IntArray &getNodesInBucket (const Vector &pos);
@@ -462,6 +473,15 @@ public:
    edict_t *getEditor () {
       return m_editor;
    }
+
+   // slicence all graph messages or not
+   void setMessageSilence (bool enable) {
+      m_silenceMessages = enable;
+   }
+
+public:
+   // graph heloer for sending message to correct channel
+   template <typename ...Args> void msg (const char *fmt, Args &&...args);
 
 public:
    Path *begin () {
