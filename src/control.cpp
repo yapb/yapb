@@ -396,16 +396,30 @@ int BotControl::cmdNodeOn () {
    else if (strValue (option) == "noclip") {
       m_ent->v.movetype = MOVETYPE_NOCLIP;
 
-      graph.setEditFlag (GraphEdit::On | GraphEdit::Noclip);
-      enableDrawModels (true);
+      if (graph.hasEditFlag (GraphEdit::On)) {
+         graph.setEditFlag (GraphEdit::Noclip);
 
-      msg ("Graph editor has been enabled with noclip mode.");
+         msg ("Noclip mode enabled.");
+      }
+      else {
+         graph.setEditFlag (GraphEdit::On | GraphEdit::Noclip);
+         enableDrawModels (true);
+
+         msg ("Graph editor has been enabled with noclip mode.");
+      }
    }
    else if (strValue (option) == "auto") {
-      graph.setEditFlag (GraphEdit::On | GraphEdit::Auto);
-      enableDrawModels (true);
+      if (graph.hasEditFlag (GraphEdit::On)) {
+         graph.setEditFlag (GraphEdit::Auto);
 
-      msg ("Graph editor has been enabled with auto add node mode.");
+         msg ("Enabled auto nodes placement.");
+      }
+      else {
+         graph.setEditFlag (GraphEdit::On | GraphEdit::Auto);
+         enableDrawModels (true);
+
+         msg ("Graph editor has been enabled with auto add node mode.");
+      }
    }
 
    if (graph.hasEditFlag (GraphEdit::On)) {
@@ -1271,6 +1285,7 @@ int BotControl::menuGraphPage2 (int item) {
 
    switch (item) {
    case 1:
+      graph.setEditFlag (GraphEdit::On);
       showMenu (Menu::NodeDebug);
       break;
 
@@ -1301,20 +1316,31 @@ int BotControl::menuGraphPage2 (int item) {
    case 4:
       if (graph.checkNodes (true)) {
          graph.saveGraphData ();
+         msg ("Graph successfully saved.");
       }
       else {
-         msg ("Graph not saved\nThere are errors. See console...");
+         msg ("Graph not saved. There are errors, see console...");
       }
       showMenu (Menu::NodeMainPage2);
       break;
 
    case 5:
-      graph.saveGraphData ();
+      if (graph.saveGraphData ()) {
+         msg ("Graph successfully saved.");
+      }
+      else {
+         msg ("Could not save Graph. See console...");
+      }
       showMenu (Menu::NodeMainPage2);
       break;
 
    case 6:
-      graph.loadGraphData ();
+      if (graph.loadGraphData ()) {
+         msg ("Graph successfully loaded.");
+      }
+      else {
+         msg ("Could not load Graph. See console...");
+      }
       showMenu (Menu::NodeMainPage2);
       break;
 
@@ -1333,9 +1359,11 @@ int BotControl::menuGraphPage2 (int item) {
 
       if (graph.hasEditFlag (GraphEdit::Noclip)) {
          graph.clearEditFlag (GraphEdit::Noclip);
+         msg ("Noclip mode disabled.");
       }
       else {
          graph.setEditFlag (GraphEdit::Noclip);
+         msg ("Noclip mode enabled.");
       }
       showMenu (Menu::NodeMainPage2);
 
@@ -1401,8 +1429,6 @@ int BotControl::menuGraphDebug (int item) {
 
    switch (item) {
    case 1:
-      graph.setEditFlag (GraphEdit::On);
-
       cv_debug_goal.set (graph.getEditorNearest ());
       if (cv_debug_goal.int_ () != kInvalidNodeIndex) {
          msg ("Debug goal is set to node %d.", cv_debug_goal.int_ ());
@@ -1414,8 +1440,6 @@ int BotControl::menuGraphDebug (int item) {
       break;
 
    case 2:
-      graph.setEditFlag (GraphEdit::On);
-
       cv_debug_goal.set (graph.getFacingIndex ());
       if (cv_debug_goal.int_ () != kInvalidNodeIndex) {
          msg ("Debug goal is set to node %d.", cv_debug_goal.int_ ());
