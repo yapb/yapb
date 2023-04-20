@@ -2610,8 +2610,6 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
    int goalPoints = 0;
    int rescuePoints = 0;
 
-   ctrl.setFromConsole (true);
-
    for (const auto &path : m_paths) {
       int connections = 0;
 
