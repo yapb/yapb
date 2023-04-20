@@ -396,16 +396,30 @@ int BotControl::cmdNodeOn () {
    else if (strValue (option) == "noclip") {
       m_ent->v.movetype = MOVETYPE_NOCLIP;
 
-      graph.setEditFlag (GraphEdit::On | GraphEdit::Noclip);
-      enableDrawModels (true);
+      if (graph.hasEditFlag (GraphEdit::On)) {
+         graph.setEditFlag (GraphEdit::Noclip);
 
-      msg ("Graph editor has been enabled with noclip mode.");
+         msg ("Noclip mode enabled.");
+      }
+      else {
+         graph.setEditFlag (GraphEdit::On | GraphEdit::Noclip);
+         enableDrawModels (true);
+
+         msg ("Graph editor has been enabled with noclip mode.");
+      }
    }
    else if (strValue (option) == "auto") {
-      graph.setEditFlag (GraphEdit::On | GraphEdit::Auto);
-      enableDrawModels (true);
+      if (graph.hasEditFlag (GraphEdit::On)) {
+         graph.setEditFlag (GraphEdit::Auto);
 
-      msg ("Graph editor has been enabled with auto add node mode.");
+         msg ("Enabled auto nodes placement.");
+      }
+      else {
+         graph.setEditFlag (GraphEdit::On | GraphEdit::Auto);
+         enableDrawModels (true);
+
+         msg ("Graph editor has been enabled with auto add node mode.");
+      }
    }
 
    if (graph.hasEditFlag (GraphEdit::On)) {
