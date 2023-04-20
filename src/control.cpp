@@ -1285,6 +1285,7 @@ int BotControl::menuGraphPage2 (int item) {
 
    switch (item) {
    case 1:
+      graph.setEditFlag (GraphEdit::On);
       showMenu (Menu::NodeDebug);
       break;
 
@@ -1415,8 +1416,6 @@ int BotControl::menuGraphDebug (int item) {
 
    switch (item) {
    case 1:
-      graph.setEditFlag (GraphEdit::On);
-
       cv_debug_goal.set (graph.getEditorNearest ());
       if (cv_debug_goal.int_ () != kInvalidNodeIndex) {
          msg ("Debug goal is set to node %d.", cv_debug_goal.int_ ());
@@ -1428,8 +1427,6 @@ int BotControl::menuGraphDebug (int item) {
       break;
 
    case 2:
-      graph.setEditFlag (GraphEdit::On);
-
       cv_debug_goal.set (graph.getFacingIndex ());
       if (cv_debug_goal.int_ () != kInvalidNodeIndex) {
          msg ("Debug goal is set to node %d.", cv_debug_goal.int_ ());
