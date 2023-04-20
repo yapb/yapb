@@ -1316,20 +1316,31 @@ int BotControl::menuGraphPage2 (int item) {
    case 4:
       if (graph.checkNodes (true)) {
          graph.saveGraphData ();
+         msg ("Graph saved.");
       }
       else {
-         msg ("Graph not saved\nThere are errors. See console...");
+         msg ("Graph not saved. There are errors, see console...");
       }
       showMenu (Menu::NodeMainPage2);
       break;
 
    case 5:
-      graph.saveGraphData ();
+      if (graph.saveGraphData ()) {
+         msg ("Graph saved.");
+      }
+      else {
+         msg ("Could not save Graph. See console...");
+      }
       showMenu (Menu::NodeMainPage2);
       break;
 
    case 6:
-      graph.loadGraphData ();
+      if (graph.loadGraphData ()) {
+         msg ("Graph loaded.");
+      }
+      else {
+         msg ("Could not load Graph. See console...");
+      }
       showMenu (Menu::NodeMainPage2);
       break;
 
@@ -1348,9 +1359,11 @@ int BotControl::menuGraphPage2 (int item) {
 
       if (graph.hasEditFlag (GraphEdit::Noclip)) {
          graph.clearEditFlag (GraphEdit::Noclip);
+         msg ("Noclip mode disabled.");
       }
       else {
          graph.setEditFlag (GraphEdit::Noclip);
+         msg ("Noclip mode enabled.");
       }
       showMenu (Menu::NodeMainPage2);
 
