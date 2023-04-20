@@ -1316,7 +1316,7 @@ int BotControl::menuGraphPage2 (int item) {
    case 4:
       if (graph.checkNodes (true)) {
          graph.saveGraphData ();
-         msg ("Graph saved.");
+         msg ("Graph successfully saved.");
       }
       else {
          msg ("Graph not saved. There are errors, see console...");
@@ -1326,7 +1326,7 @@ int BotControl::menuGraphPage2 (int item) {
 
    case 5:
       if (graph.saveGraphData ()) {
-         msg ("Graph saved.");
+         msg ("Graph successfully saved.");
       }
       else {
          msg ("Could not save Graph. See console...");
@@ -1336,7 +1336,7 @@ int BotControl::menuGraphPage2 (int item) {
 
    case 6:
       if (graph.loadGraphData ()) {
-         msg ("Graph loaded.");
+         msg ("Graph successfully loaded.");
       }
       else {
          msg ("Could not load Graph. See console...");
