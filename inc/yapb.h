@@ -1214,7 +1214,7 @@ extern ConVar cv_random_knife_attacks;
 extern ConVar cv_rotate_bots;
 extern ConVar cv_graph_url_upload;
 extern ConVar cv_graph_auto_save_count;
-extern ConVar cv_graph_analyze_max_jumm_height;
+extern ConVar cv_graph_analyze_max_jump_height;
 
 extern ConVar mp_freezetime;
 extern ConVar mp_roundtime;

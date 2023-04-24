@@ -2146,7 +2146,7 @@ bool BotGraph::isNodeReacheable (const Vector &src, const Vector &destination) {
 }
 
 bool BotGraph::isNodeReacheableWithJump (const Vector &src, const Vector &destination) {
-   return isNodeReacheableEx (src, destination, cv_graph_analyze_max_jumm_height.float_ ());
+   return isNodeReacheableEx (src, destination, cv_graph_analyze_max_jump_height.float_ ());
 }
 
 void BotGraph::rebuildVisibility () {
