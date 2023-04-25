@@ -163,6 +163,9 @@ if cxx == 'clang' or cxx == 'gcc'
          ldflags += '-Wl,/MACHINE:X86'
          cxxflags += '-Wl,/MACHINE:X86'
       endif
+   else
+      cxxflags += '-fPIC'
+      ldflags += '-fPIC'
    endif
 
    # link needed libraries

@@ -409,7 +409,7 @@ public:
    }
 
    int getHighestDamageForTeam (int team) const {
-      return m_highestDamage[team];
+      return cr::max (1, m_highestDamage[team]);
    }
 
    void setHighestDamageForTeam (int team, int value) {
