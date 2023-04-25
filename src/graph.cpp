@@ -30,10 +30,6 @@ void BotGraph::reset () {
    m_hasChanged = false;
    m_narrowChecked = false;
 
-   // reset highest recorded damage
-   for (int team = Team::Terrorist; team < kGameTeamNum; ++team) {
-      m_highestDamage[team] = 1;
-   }
    m_graphAuthor.clear ();
    m_graphModified.clear ();
 }
@@ -1264,11 +1260,6 @@ void BotGraph::calculatePathRadius (int index) {
 void BotGraph::loadPractice () {
    if (m_paths.empty ()) {
       return;
-   }
-
-   // reset highest recorded damage
-   for (int team = Team::Terrorist; team < kGameTeamNum; ++team) {
-      m_highestDamage[team] = 1;
    }
 
    bool dataLoaded = loadStorage <Practice> ("Practice", StorageOption::Practice, StorageVersion::Practice, m_practice, nullptr, nullptr);
