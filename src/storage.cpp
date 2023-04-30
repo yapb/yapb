@@ -291,7 +291,9 @@ template <typename U> BotStorage::SaveLoadData BotStorage::guessType () {
    else if constexpr (cr::is_same <U, GraphVistable::VisStorage>::value) {
       return { "Vistable", StorageOption::Vistable, StorageVersion::Vistable };
    }
-   return { "Graph", StorageOption::Graph, StorageVersion::Graph };
+   else if constexpr (cr::is_same <U, Path>::value) {
+      return { "Graph", StorageOption::Graph, StorageVersion::Graph };
+   }
 }
 
 #else 
