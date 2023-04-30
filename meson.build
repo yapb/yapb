@@ -217,7 +217,7 @@ elif os == 'windows' and (cxx =='msvc' or cxx == 'clang-cl')
 endif
 
 # pass our hell to meson
-add_global_arguments (cxxflags, language: 'cpp')
+add_global_arguments(cxxflags, language: 'cpp')
 add_global_link_arguments(ldflags, language: 'cpp')
 
 # add the sources
