@@ -3239,7 +3239,9 @@ void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath:
       // fallback to shortest path
       findShortestPath (srcIndex, destIndex); // A* found no path, try floyd pathfinder instead
 
-      logger.error ("A* Search for bot \"%s\" has failed. Falling back to shortest-path algorithm. Seems to be graph is broken.", pev->netname.chars ());
+      if (cv_debug.bool_ ()) {
+         logger.error ("A* Search for bot \"%s\" has failed. Falling back to shortest-path algorithm. Seems to be graph is broken.", pev->netname.chars ());
+      }
       break;
    }
 }
