@@ -52,9 +52,13 @@
     <ClInclude Include="..\inc\manager.h" />
     <ClInclude Include="..\inc\message.h" />
     <ClInclude Include="..\inc\module.h" />
+    <ClInclude Include="..\inc\planner.h" />
+    <ClInclude Include="..\inc\practice.h" />
     <ClInclude Include="..\inc\product.h" />
     <ClInclude Include="..\inc\sounds.h" />
+    <ClInclude Include="..\inc\storage.h" />
     <ClInclude Include="..\inc\support.h" />
+    <ClInclude Include="..\inc\vistable.h" />
     <ClInclude Include="..\inc\yapb.h" />
     <ClInclude Include="..\inc\version.h" />
   </ItemGroup>
@@ -76,8 +80,12 @@
     <ClCompile Include="..\src\message.cpp" />
     <ClCompile Include="..\src\module.cpp" />
     <ClCompile Include="..\src\navigate.cpp" />
+    <ClCompile Include="..\src\planner.cpp" />
+    <ClCompile Include="..\src\practice.cpp" />
     <ClCompile Include="..\src\sounds.cpp" />
+    <ClCompile Include="..\src\storage.cpp" />
     <ClCompile Include="..\src\support.cpp" />
+    <ClCompile Include="..\src\vistable.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="yapb.rc">
@@ -177,7 +185,7 @@
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <LanguageStandard>Default</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <ResourceCompile>
@@ -258,7 +266,7 @@
       <StringPooling>true</StringPooling>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <LanguageStandard>Default</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>

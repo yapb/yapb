@@ -27,10 +27,16 @@ typedef unsigned char byte;
 #include <crlib/vector.h>
 #include <crlib/string.h>
 
+#if defined (CR_ARCH_X64)
+using estring_t = int32_t;
+#else
+using estring_t = uint32_t;
+#endif
+
 // idea from regamedll
 class string_t final : public cr::DenyCopying {
 private:
-   int offset;
+   estring_t offset;
 
 public:
    explicit string_t () : offset (0)
@@ -42,10 +48,10 @@ public:
    ~string_t () = default;
 
 public:
-   const char *chars (size_t shift = 0) const;
+   const char *chars (estring_t shift = 0) const;
 
 public:
-   operator int () const {
+   operator estring_t () const {
       return offset;
    }
 
@@ -90,7 +96,9 @@ extern enginefuncs_t engfuncs;
 extern gamefuncs_t dllapi;
 
 // Use this instead of ALLOC_STRING on constant strings
-#define STRING(offset) (const char *)(globals->pStringBase + (int)offset)
+static inline const char *STRING (estring_t offset) {
+   return globals->pStringBase + offset;
+}
 
 // form fwgs-hlsdk
 #if defined (CR_ARCH_X64)
@@ -103,12 +111,13 @@ static inline int MAKE_STRING (const char *val) {
    return static_cast <int> (ptrdiff);
 }
 #else 
-#define MAKE_STRING(str) ((uint64_t)(str) - (uint64_t)(STRING(0)))
+static inline estring_t MAKE_STRING (const char *str) {
+   return static_cast <estring_t> (reinterpret_cast <uint64_t> (str) - reinterpret_cast <uint64_t> (globals->pStringBase));
+}
 #endif
 
-inline const char *string_t::chars (size_t shift) const {
+inline const char *string_t::chars (estring_t shift) const {
    auto result = STRING (offset);
-
    return cr::strings.isEmpty (result) ? &cr::kNullChar : (result + shift);
 }
 

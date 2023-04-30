@@ -529,7 +529,7 @@ int BotControl::cmdNodeErase () {
 
    // prevent accidents when graph are deleted unintentionally
    if (strValue (iamsure) == "iamsure") {
-      graph.eraseFromDisk ();
+      bstor.unlinkFromDisk ();
    }
    else {
       msg ("Please, append \"iamsure\" as parameter to get graph erased from the disk.");
@@ -761,10 +761,16 @@ int BotControl::cmdNodeReleaseEditor () {
 int BotControl::cmdNodeUpload () {
    enum args { graph_cmd = 1, cmd };
 
+   // do not allow to upload analyzed graphs
+   if (graph.isAnalyzed ()) {
+      msg ("Sorry, unable to upload graph that was generated automatically.");
+      return BotCommandResult::Handled;
+   }
+
    // do not allow to upload bad graph
    if (!graph.checkNodes (false)) {
       msg ("Sorry, unable to upload graph file that contains errors. Please type \"wp check\" to verify graph consistency.");
-      return BotCommandResult::BadFormat;
+      return BotCommandResult::Handled;
    }
 
    msg ("\n");
@@ -776,7 +782,7 @@ int BotControl::cmdNodeUpload () {
    String uploadUrl = cv_graph_url_upload.str ();
 
    // try to upload the file
-   if (http.uploadFile (uploadUrl, util.buildPath (BotFile::Graph))) {
+   if (http.uploadFile (uploadUrl, bstor.buildPath (BotFile::Graph))) {
       msg ("Graph file was successfully validated and uploaded to the YaPB Graph DB (%s).", product.download);
       msg ("It will be available for download for all YaPB users in a few minutes.");
       msg ("\n");
@@ -1717,7 +1723,7 @@ bool BotControl::executeCommands () {
    if (m_args.empty ()) {
       return false;
    }
-   const auto &prefix = m_args[0];
+   const auto &prefix = m_args.first ();
 
    // no handling if not for us
    if (prefix != product.cmdPri && prefix != product.cmdSec) {

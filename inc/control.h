@@ -216,7 +216,7 @@ public:
       m_args.clear ();
 
       for (int i = 0; i < engfuncs.pfnCmd_Argc (); ++i) {
-         m_args.emplace (engfuncs.pfnCmd_Argv (i));
+         m_args.emplace (String (engfuncs.pfnCmd_Argv (i)).lowercase ());
       }
    }
 

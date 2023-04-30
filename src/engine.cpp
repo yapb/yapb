@@ -77,9 +77,6 @@ void Game::levelInitialize (edict_t *entities, int max) {
    // initialize quota management
    bots.initQuota ();
 
-   // rebuild vistable if needed
-   graph.rebuildVisibility ();
-
    // install the sendto hook to fake queries
    util.installSendTo ();
 
@@ -410,11 +407,11 @@ void Game::playSound (edict_t *ent, const char *sound) {
 }
 
 void Game::setPlayerStartDrawModels () {
-   HashMap <String, String> models;
-
-   models["info_player_start"] = "models/player/urban/urban.mdl";
-   models["info_player_deathmatch"] = "models/player/terror/terror.mdl";
-   models["info_vip_start"] = "models/player/vip/vip.mdl";
+   static HashMap <String, String> models {
+      {"info_player_start", "models/player/urban/urban.mdl"},
+      {"info_player_deathmatch", "models/player/terror/terror.mdl"},
+      {"info_vip_start", "models/player/vip/vip.mdl"}
+   };
 
    models.foreach ([&] (const String &key, const String &val) {
       game.searchEntities ("classname", key, [&] (edict_t *ent) {
@@ -617,6 +614,7 @@ void Game::addNewCvar (const char *name, const char *value, const char *info, bo
 
    reg.reg.name = const_cast <char *> (name);
    reg.reg.string = const_cast <char *> (value);
+   reg.name = name;
    reg.missing = missingAction;
    reg.init = value;
    reg.info = info;
@@ -651,6 +649,20 @@ void Game::addNewCvar (const char *name, const char *value, const char *info, bo
    m_cvars.push (cr::move (reg));
 }
 
+void ConVar::revert () {
+   if (!ptr) {
+      return;
+   }
+   const auto &cvars = game.getCvars ();
+
+   for (const auto &var : cvars) {
+      if (var.name == ptr->name) {
+         set (var.initial);
+         break;
+      }
+   }
+}
+
 void Game::checkCvarsBounds () {
    for (const auto &var : m_cvars) {
 
@@ -666,14 +678,14 @@ void Game::checkCvarsBounds () {
          continue;
       }
       auto value = var.self->float_ ();
-      auto str = var.self->str ();
+      auto str = String (var.self->str ());
 
       // check the bounds and set default if out of bounds
-      if (value > var.max || value < var.min || (!strings.isEmpty (str) && isalpha (*str))) {
+      if (value > var.max || value < var.min || (!str.empty () && isalpha (str[0]))) {
          var.self->set (var.initial);
 
          // notify about that
-         ctrl.msg ("Bogus value for cvar '%s', min is '%.1f' and max is '%.1f', and we're got '%s', value reverted to default '%.1f'.", var.reg.name, var.min, var.max, str, var.initial);
+         ctrl.msg ("Bogus value for cvar '%s', min is '%.1f' and max is '%.1f', and we're got '%s', value reverted to default '%.1f'.", var.name, var.min, var.max, str, var.initial);
       }
    }
 
@@ -738,19 +750,7 @@ bool Game::loadCSBinary () {
    if (!modname) {
       return false;
    }
-   StringArray libs;
-
-   if (plat.win) {
-      libs.push ("mp.dll");
-      libs.push ("cs.dll");
-   }
-   else if (plat.nix) {
-      libs.push ("cs.so");
-      libs.push ("cs_i386.so");
-   }
-   else if (plat.osx) {
-      libs.push ("cs.dylib");
-   }
+   StringArray libs { "mp", "cs", "cs_i386" };
 
    auto libCheck = [&] (StringRef mod, StringRef dll) {
       // try to load gamedll
@@ -768,7 +768,7 @@ bool Game::loadCSBinary () {
 
    // search the libraries inside game dlls directory
    for (const auto &lib : libs) {
-      auto path = strings.format ("%s/dlls/%s", modname, lib);
+      auto path = strings.format ("%s/dlls/%s.%s", modname, lib, DLL_SUFFIX);
 
       // if we can't read file, skip it
       if (!File::exists (path)) {
@@ -831,7 +831,7 @@ bool Game::loadCSBinary () {
 bool Game::postload () {
 
    // register logger
-   logger.initialize (util.buildPath (BotFile::LogFile), [] (const char *msg) {
+   logger.initialize (bstor.buildPath (BotFile::LogFile), [] (const char *msg) {
       game.print (msg);
    });
 

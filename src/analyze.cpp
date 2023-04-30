@@ -7,8 +7,9 @@
 
 #include <yapb.h>
 
-ConVar cv_graph_analyze_auto_start ("yb_graph_analyze_auto_start", "0", "Autostart analyzer if all other cases are failed.");
-ConVar cv_graph_analyze_distance ("yb_graph_analyze_distance", "64", "The minimum distance to keep nodes from each other.", true, 48.0f, 128.0f);
+ConVar cv_graph_analyze_auto_start ("yb_graph_analyze_auto_start", "1", "Autostart analyzer if all other cases are failed.");
+ConVar cv_graph_analyze_auto_save ("yb_graph_analyze_auto_save", "1", "Auto result of anallyzation to graph file. And re-add bots.");
+ConVar cv_graph_analyze_distance ("yb_graph_analyze_distance", "64", "The minimum distance to keep nodes from each other.", true, 42.0f, 128.0f);
 ConVar cv_graph_analyze_max_jump_height ("yb_graph_analyze_max_jump_height", "44", "Max jump height to test if next node will be unreachable.", true, 44.0f, 64.0f);
 ConVar cv_graph_analyze_fps ("yb_graph_analyze_fps", "30.0", "The FPS at which analyzer process is running. This keeps game from freezing during analyzing.", false, 25.0f, 99.0f);
 ConVar cv_graph_analyze_clean_paths_on_finish ("yb_graph_analyze_clean_paths_on_finish", "1", "Specifies if analyzer should clean the unnecessary paths upon finishing.");
@@ -31,6 +32,12 @@ void GraphAnalyze::start () {
       for (auto &expanded : m_expandedNodes) {
          expanded = false;
       }
+
+      // set all nodes as not optimized
+      for (auto &optimized : m_optimizedNodes) {
+         optimized = false;
+      }
+      ctrl.msg ("Starting map analyzation.");
    }
    else {
       m_updateInterval = 0.0f;
@@ -122,11 +129,29 @@ void GraphAnalyze::finish () {
    // mark goal nodes
    markGoals ();
 
+   m_isAnalyzed = true;
    m_isAnalyzing = false;
    m_updateInterval = 0.0f;
 
    // un-silence all graph messages
    graph.setMessageSilence (false);
+
+   ctrl.msg ("Complete map analyzation.");
+
+   // autosave bots graph
+   if (cv_graph_analyze_auto_save.bool_ ()) {
+      if (!graph.saveGraphData ()) {
+         ctrl.msg ("Can't save analyzed graph. Internal error.");
+         return;
+      }
+
+      if (!graph.loadGraphData ()) {
+         ctrl.msg ("Can't load analyzed graph. Internal error.");
+         return;
+      }
+      vistab.startRebuild ();
+      cv_quota.revert ();
+   }
 }
 
 void GraphAnalyze::optimize () {
@@ -137,59 +162,7 @@ void GraphAnalyze::optimize () {
    if (!cv_graph_analyze_optimize_nodes_on_finish.bool_ ()) {
       return;
    }
-
-   // has any connections?
-   auto isConnected = [] (const int index) -> bool {
-      for (const auto &path : graph) {
-         if (path.number != index) {
-            for (const auto &link : path.links) {
-               if (link.index == index) {
-                  return true;
-               }
-            }
-         }
-      }
-      return false;
-   };
-
-   // clean bad paths
-   int connections = 0;
-
-   for (auto i = 0; i < graph.length (); ++i) {
-      connections = 0;
-
-      for (const auto &link : graph[i].links) {
-         if (link.index != kInvalidNodeIndex) {
-            if (link.index > graph.length ()) {
-               graph.erase (i);
-            }
-            ++connections;
-            break;
-         }
-      }
-
-      // no connections
-      if (!connections && !isConnected (i)) {
-         graph.erase (i);
-      }
-
-      // path number differs
-      if (graph[i].number != i) {
-         graph.erase (i);
-      }
-
-      for (const auto &link : graph[i].links) {
-         if (link.index != kInvalidNodeIndex) {
-            if (link.index >= graph.length () || link.index < -kInvalidNodeIndex) {
-               graph.erase (i);
-            }
-            else if (link.index == i) {
-               graph.erase (i);
-            }
-         }
-      }
-   }
-
+   cleanup ();
 
    // clear the uselss connections
    if (cv_graph_analyze_clean_paths_on_finish.bool_ ()) {
@@ -240,6 +213,48 @@ void GraphAnalyze::optimize () {
    }
 }
 
+void GraphAnalyze::cleanup () {
+   int connections = 0; // clean bad paths
+
+   for (auto i = 0; i < graph.length (); ++i) {
+      connections = 0;
+
+      for (const auto &link : graph[i].links) {
+         if (link.index != kInvalidNodeIndex) {
+            if (link.index > graph.length ()) {
+               graph.erase (i);
+            }
+            ++connections;
+         }
+      }
+
+      // no connections
+      if (!connections) {
+         graph.erase (i);
+      }
+
+      // path number differs
+      if (graph[i].number != i) {
+         graph.erase (i);
+      }
+
+      for (const auto &link : graph[i].links) {
+         if (link.index != kInvalidNodeIndex) {
+            if (link.index >= graph.length () || link.index < -kInvalidNodeIndex) {
+               graph.erase (i);
+            }
+            else if (link.index == i) {
+               graph.erase (i);
+            }
+         }
+      }
+
+      if (!graph.isConnected (i)) {
+         graph.erase (i);
+      }
+   }
+}
+
 void GraphAnalyze::flood (const Vector &pos, const Vector &next, float range) {
    range *= 0.75f;
 
@@ -266,7 +281,7 @@ void GraphAnalyze::flood (const Vector &pos, const Vector &next, float range) {
    const int endIndex = graph.getForAnalyzer (nextPos, range);
    const int targetIndex = graph.getNearestNoBuckets (nextPos, 250.0f);
 
-   if (graph.exists (endIndex) && !graph.exists (targetIndex)) {
+   if (graph.exists (endIndex) || !graph.exists (targetIndex)) {
       return;
    }
    auto targetPos = graph[targetIndex].origin;
@@ -281,7 +296,7 @@ void GraphAnalyze::flood (const Vector &pos, const Vector &next, float range) {
       }
       auto testPos = m_isCrouch ? Vector { nextPos.x, nextPos.y, nextPos.z - 18.0f } : nextPos;
 
-      if ((graph.isNodeReacheable (targetPos, testPos) && graph.isNodeReacheable (testPos, targetPos)) || (graph.isNodeReacheableWithJump (targetPos, testPos) && graph.isNodeReacheableWithJump (targetPos, testPos))) {
+      if ((graph.isNodeReacheable (targetPos, testPos) && graph.isNodeReacheable (testPos, targetPos)) || (graph.isNodeReacheableWithJump (testPos, targetPos) && graph.isNodeReacheableWithJump (targetPos, testPos))) {
          graph.add (NodeAddFlag::Normal, m_isCrouch ? Vector { nextPos.x, nextPos.y, nextPos.z - 9.0f } : nextPos);
       }
    }

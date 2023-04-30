@@ -159,6 +159,18 @@
     <ClInclude Include="..\inc\analyze.h">
       <Filter>inc</Filter>
     </ClInclude>
+    <ClInclude Include="..\inc\practice.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\inc\storage.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\inc\planner.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\inc\vistable.h">
+      <Filter>inc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\botlib.cpp">
@@ -207,6 +219,18 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\analyze.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\practice.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\storage.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\planner.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vistable.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

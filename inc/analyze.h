@@ -19,6 +19,7 @@ private:
    bool m_basicsCreated {}; // basics waypoints were created?
    bool m_isCrouch {}; // is node to be created as crouch ?
    bool m_isAnalyzing {}; // we're in analyzing ?
+   bool m_isAnalyzed {}; // current waypoint is analyzed
    bool m_expandedNodes[kMaxNodes] {}; // all nodes expanded ?
    bool m_optimizedNodes[kMaxNodes] {}; // all nodes expanded ?
 
@@ -28,12 +29,6 @@ public:
 
    // update analyzation process
    void update ();
-
-   // terminate analyzation and save data
-   void finish ();
-
-   // optimize nodes a little
-   void optimize ();
 
 private:
    // flood with nodes
@@ -45,6 +40,15 @@ private:
    // mark waypoints as goals
    void markGoals ();
 
+   // terminate analyzation and save data
+   void finish ();
+
+   // optimize nodes a little
+   void optimize ();
+
+   // cleanup bad nodes
+   void cleanup ();
+
 public:
 
    // node should be created as crouch
@@ -55,6 +59,11 @@ public:
    // is currently anaylyzing ?
    bool isAnalyzing () const {
       return m_isAnalyzing;
+   }
+
+   // current graph is analyzed graph ?
+   bool isAnalyzed () const {
+      return m_isAnalyzed;
    }
 
    // mark as optimized

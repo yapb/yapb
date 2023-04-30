@@ -332,8 +332,8 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       // any case, when the new map will be booting, ServerActivate() will be called, so we'll do
       // the loading of new bots and the new BSP data parsing there.
 
-      // save collected experience on shutdown
-      graph.savePractice ();
+      // save collected practice on shutdown
+      practice.save ();
 
       // destroy global killer entity
       bots.destroyKillerEntity ();
@@ -389,6 +389,9 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
 
       // run stuff periodically
       game.slowFrame ();
+
+      // rebuild vistable if needed
+      vistab.rebuild ();
 
       if (bots.hasBotsOnline ()) {
          // keep track of grenades on map
@@ -906,8 +909,9 @@ CR_EXPORT int Meta_Detach (PLUG_LOADTIME now, PL_UNLOAD_REASON reason) {
    }
    bots.kickEveryone (true); // kick all bots off this server
 
-   // save collected experience on shutdown
-   graph.savePractice ();
+   // save collected practice on shutdown
+   practice.save ();
+
    util.disableSendTo ();
 
    // make sure all stuff cleared

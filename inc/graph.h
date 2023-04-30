@@ -7,6 +7,9 @@
 
 #pragma once
 
+constexpr int kMaxNodes = 4096; // max nodes per graph
+constexpr int kMaxNodeLinks = 8; // max links for single node
+
 // defines for nodes flags field (32 bits are available)
 CR_DECLARE_SCOPED_ENUM (NodeFlag,
    Lift = cr::bit (1), // wait for lift to be down before approaching this node
@@ -43,38 +46,11 @@ CR_DECLARE_SCOPED_ENUM (PathConnection,
    Bidirectional
 )
 
-// a* route state
-CR_DECLARE_SCOPED_ENUM (RouteState,
-   Open = 0,
-   Closed,
-   New
-)
-
 // node edit states
 CR_DECLARE_SCOPED_ENUM (GraphEdit,
    On = cr::bit (1),
    Noclip = cr::bit (2),
    Auto = cr::bit (3)
-)
-
-// storage header options
-CR_DECLARE_SCOPED_ENUM (StorageOption,
-   Practice = cr::bit (0), // this is practice (experience) file
-   Matrix = cr::bit (1), // this is floyd warshal path & distance matrix
-   Vistable = cr::bit (2), // this is vistable data
-   Graph = cr::bit (3), // this is a node graph data
-   Official = cr::bit (4), // this is additional flag for graph indicates graph are official
-   Recovered = cr::bit (5), // this is additional flag indicates graph converted from podbot and was bad
-   Exten = cr::bit (6) // this is additional flag indicates that there's extension info
-)
-
-// storage header versions
-CR_DECLARE_SCOPED_ENUM (StorageVersion,
-   Graph = 2,
-   Practice = 1,
-   Vistable = 2,
-   Matrix = 1,
-   Podbot = 7
 )
 
 // lift usage states
@@ -109,29 +85,7 @@ CR_DECLARE_SCOPED_ENUM (NotifySound,
    Added = 2
 )
 
-// a* route
-struct Route {
-   float g, f;
-   int parent;
-   RouteState state;
-};
-
-// general stprage header information structure
-struct StorageHeader {
-   int32_t magic;
-   int32_t version;
-   int32_t options;
-   int32_t length;
-   int32_t compressed;
-   int32_t uncompressed;
-};
-
-// extension header for graph information
-struct ExtenHeader {
-   char author[32]; // original author of graph
-   int32_t mapSize; // bsp size for checksumming map consistency
-   char modified[32]; // by whom modified
-};
+#include <vistable.h>
 
 // general waypoint header information structure
 struct PODGraphHeader {
@@ -142,30 +96,12 @@ struct PODGraphHeader {
    char author[32];
 };
 
-// floyd-warshall matrices
-struct Matrix {
-   int16_t dist;
-   int16_t index;
-};
-
-// experience data hold in memory while playing
-struct Practice {
-   int16_t damage[kGameTeamNum];
-   int16_t index[kGameTeamNum];
-   int16_t value[kGameTeamNum];
-};
-
 // defines linked waypoints
 struct PathLink {
    Vector velocity;
    int32_t distance;
    uint16_t flags;
    int16_t index;
-};
-
-// defines visibility count
-struct PathVis {
-   uint16_t stand, crouch;
 };
 
 // define graph path structure for yapb
@@ -189,74 +125,21 @@ struct PODPath {
    PathVis vis;
 };
 
-// this structure links nodes returned from pathfinder
-class PathWalk final : public DenyCopying {
-private:
-   size_t m_cursor {};
-   size_t m_length {};
+// general stprage header information structure
+struct StorageHeader {
+   int32_t magic;
+   int32_t version;
+   int32_t options;
+   int32_t length;
+   int32_t compressed;
+   int32_t uncompressed;
+};
 
-   UniquePtr <int32_t[]> m_path {};
-
-public:
-   explicit PathWalk () = default;
-   ~PathWalk () = default;
-
-public:
-   int32_t &next () {
-      return at (1);
-   }
-
-   int32_t &first () {
-      return at (0);
-   }
-
-   int32_t &last () {
-      return at (length () - 1);
-   }
-
-   int32_t &at (size_t index) {
-      return m_path[m_cursor + index];
-   }
-
-   void shift () {
-      ++m_cursor;
-   }
-
-   void reverse () {
-      for (size_t i = 0; i < m_length / 2; ++i) {
-         cr::swap (m_path[i], m_path[m_length - 1 - i]);
-      }
-   }
-
-   size_t length () const {
-      if (m_cursor >= m_length) {
-         return 0;
-      }
-      return m_length - m_cursor;
-   }
-
-   bool hasNext () const {
-      return length () > m_cursor;
-   }
-
-   bool empty () const {
-      return !length ();
-   }
-
-   void add (int32_t node) {
-      m_path[m_length++] = node;
-   }
-
-   void clear () {
-      m_cursor = 0;
-      m_length = 0;
-
-      m_path[0] = 0;
-   }
-
-   void init (size_t length) {
-      m_path = cr::makeUnique <int32_t []> (length);
-   }
+// extension header for graph information
+struct ExtenHeader {
+   char author[32]; // original author of graph
+   int32_t mapSize; // bsp size for checksumming map consistency
+   char modified[32]; // by whom modified
 };
 
 // graph operation class
@@ -266,7 +149,6 @@ public:
 
 private:
    int m_editFlags {};
-   int m_loadAttempts {};
    int m_cacheNodeIndex {};
    int m_lastJumpNode {};
    int m_findWPIndex {};
@@ -283,7 +165,6 @@ private:
    bool m_endJumpPoint {};
    bool m_jumpLearnNode {};
    bool m_hasChanged {};
-   bool m_needsVisRebuild {};
    bool m_narrowChecked {};
    bool m_silenceMessages {};
 
@@ -300,11 +181,8 @@ private:
    IntArray m_rescuePoints {};
    IntArray m_visitedGoals {};
 
-   SmallArray <Matrix> m_matrix {};
-   SmallArray <Practice> m_practice {};
+public:
    SmallArray <Path> m_paths {};
-   SmallArray <uint8_t> m_vistable {};
-
    HashMap <int32_t, Array <int32_t>, EmptyHash <int32_t>> m_hashTable;
 
    String m_graphAuthor {};
@@ -326,10 +204,6 @@ public:
    int getNearest (const Vector &origin, float minDistance = kInfiniteDistance, int flags = -1);
    int getNearestNoBuckets (const Vector &origin, float minDistance = kInfiniteDistance, int flags = -1);
    int getEditorNearest ();
-   int getDangerIndex (int team, int start, int goal);
-   int getDangerValue (int team, int start, int goal);
-   int getDangerDamage (int team, int start, int goal);
-   int getPathDist (int srcIndex, int destIndex);
    int clearConnections (int index);
    int getBspSize ();
    int locateBucket (const Vector &pos);
@@ -337,32 +211,23 @@ public:
    float calculateTravelTime (float maxSpeed, const Vector &src, const Vector &origin);
 
    bool convertOldFormat ();
-   bool isVisible (int srcIndex, int destIndex);
-   bool isStandVisible (int srcIndex, int destIndex);
-   bool isDuckVisible (int srcIndex, int destIndex);
    bool isConnected (int a, int b);
    bool isConnected (int index);
    bool isNodeReacheableEx (const Vector &src, const Vector &destination, const float maxHeight);
    bool isNodeReacheable (const Vector &src, const Vector &destination);
    bool isNodeReacheableWithJump (const Vector &src, const Vector &destination);
    bool checkNodes (bool teleportPlayer);
-   bool loadPathMatrix ();
    bool isVisited (int index);
+   bool isAnalyzed () const;
 
    bool saveGraphData ();
    bool loadGraphData ();
    bool canDownload ();
 
-   template <typename U> bool saveStorage (StringRef name, StorageOption options, StorageVersion version, const SmallArray <U> &data, ExtenHeader *exten);
-   template <typename U> bool loadStorage (StringRef name, StorageOption options, StorageVersion version, SmallArray <U> &data, ExtenHeader *exten, int32_t *outOptions);
-   template <typename ...Args> bool raiseLoadingError (bool isGraph, bool isDebug, MemFile &file, const char *fmt, Args &&...args);
-
    void saveOldFormat ();
    void reset ();
    void frame ();
-   void loadPractice ();
-   void loadVisibility ();
-   void initNodesTypes ();
+   void populateNodes ();
    void initLightLevels ();
    void initNarrowPlaces ();
    void addPath (int addIndex, int pathIndex, float distance);
@@ -370,16 +235,11 @@ public:
    void erase (int target);
    void toggleFlags (int toggleFlag);
    void setRadius (int index, float radius);
-   void rebuildVisibility ();
    void pathCreate (char dir);
    void erasePath ();
    void cachePoint (int index);
    void calculatePathRadius (int index);
-   void savePractice ();
-   void saveVisibility ();
    void addBasic ();
-   void eraseFromDisk ();
-   void savePathMatrix ();
    void setSearchIndex (int index);
    void startLearnJump ();
    void setVisited (int index);
@@ -388,10 +248,7 @@ public:
    void addToBucket (const Vector &pos, int index);
    void eraseFromBucket (const Vector &pos, int index);
    void setBombOrigin (bool reset = false, const Vector &pos = nullptr);
-   void updateGlobalPractice ();
    void unassignPath (int from, int to);
-   void setDangerValue (int team, int start, int goal, int value);
-   void setDangerDamage (int team, int start, int goal, int value);
    void convertFromPOD (Path &path, const PODPath &pod);
    void convertToPOD (const Path &path, PODPath &pod);
    void convertCampDirection (Path &path);
@@ -479,6 +336,16 @@ public:
       m_silenceMessages = enable;
    }
 
+   // set exten header from binary storage
+   void setExtenHeader (ExtenHeader *hdr) {
+      memcpy (&m_extenHeader, hdr, sizeof (ExtenHeader));
+   }
+
+   // set graph header from binary storage
+   void setGraphHeader (StorageHeader *hdr) {
+      memcpy (&m_graphHeader, hdr, sizeof (StorageHeader));
+   }
+
 public:
    // graph heloer for sending message to correct channel
    template <typename ...Args> void msg (const char *fmt, Args &&...args);
@@ -501,29 +368,8 @@ public:
    }
 };
 
-// we're need `bots`
 #include <manager.h>
-
-// helper for reporting load errors
-template <typename ...Args> bool BotGraph::raiseLoadingError (bool isGraph, bool isDebug, MemFile &file, const char *fmt, Args &&...args) {
-   auto result = strings.format (fmt, cr::forward <Args> (args)...);
-
-   // display error only for graph file
-   if (isGraph || isDebug) {
-      logger.error (result);
-   }
-
-   // if graph reset paths
-   if (isGraph) {
-      bots.kickEveryone (true);
-
-      m_graphAuthor = result;
-      m_paths.clear ();
-   }
-   file.close ();
-
-   return false;
-}
+#include <practice.h>
 
 // explose global
 CR_EXPOSE_GLOBAL_SINGLETON (BotGraph, graph);
