@@ -75,8 +75,6 @@ void BotPractice::update () {
    }
    auto adjustValues = false;
 
-   game.print ("REF");
-
    // get the most dangerous node for this position for both teams
    for (int team = Team::Terrorist; team < kGameTeamNum; ++team) {
       auto bestIndex = kInvalidNodeIndex; // best index to store
