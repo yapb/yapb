@@ -207,7 +207,7 @@ bool AStarAlgo::cantSkipNode (const int a, const int b) {
    return hasJumps;
 }
 
-void AStarAlgo::postSmooth (Lambda <bool (int)> onAddedNode) {
+void AStarAlgo::postSmooth (NodeAdderFn onAddedNode) {
    int index = 0;
    m_smoothedPath.emplace (m_constructedPath.first ());
 
@@ -226,7 +226,7 @@ void AStarAlgo::postSmooth (Lambda <bool (int)> onAddedNode) {
    m_smoothedPath.clear ();
 }
 
-AStarResult AStarAlgo::find (int botTeam, int srcIndex, int destIndex, Lambda <bool (int)> onAddedNode) {
+AStarResult AStarAlgo::find (int botTeam, int srcIndex, int destIndex, NodeAdderFn onAddedNode) {
    if (m_length < kMaxNodeLinks) {
       return AStarResult::InternalError; // astar needs some nodes to work with
    }
@@ -372,7 +372,7 @@ void FloydWarshallAlgo::save () {
    bstor.save <Matrix> (m_matrix);
 }
 
-bool FloydWarshallAlgo::find (int srcIndex, int destIndex, Lambda <bool (int)> onAddedNode, int *pathDistance) {
+bool FloydWarshallAlgo::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, int *pathDistance) {
    onAddedNode (srcIndex);
 
    while (srcIndex != destIndex) {
@@ -407,7 +407,7 @@ void DijkstraAlgo::resetState () {
    m_distance.fill (kInfiniteDistanceLong);
 }
 
-bool DijkstraAlgo::find (int srcIndex, int destIndex, Lambda<bool (int)> onAddedNode, int *pathDistance) {
+bool DijkstraAlgo::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, int *pathDistance) {
    resetState ();
 
    m_queue.emplace (0, srcIndex);
@@ -499,7 +499,7 @@ bool PathPlanner::hasRealPathDistance () const {
    return !m_memoryLimitHit || !cv_path_dijkstra_simple_distance.bool_ ();
 }
 
-bool PathPlanner::find (int srcIndex, int destIndex, Lambda<bool (int)> onAddedNode, int *pathDistance) {
+bool PathPlanner::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, int *pathDistance) {
    if (!graph.exists (srcIndex) || !graph.exists (destIndex)) {
       return false;
    }

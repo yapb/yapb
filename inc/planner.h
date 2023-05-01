@@ -23,6 +23,9 @@ CR_DECLARE_SCOPED_ENUM (AStarResult,
    InternalError,
 )
 
+// node added
+using NodeAdderFn = Lambda <bool (int)>;
+
 // route twin node
 template <typename HT> struct RouteTwin final {
 public:
@@ -112,7 +115,7 @@ private:
    bool cantSkipNode (const int a, const int b);
 
    // do a post-smoothing after a* finished constructing path
-   void postSmooth (Lambda <bool (int)> onAddedNode);
+   void postSmooth (NodeAdderFn onAddedNode);
 
 public:
    AStarAlgo () = default;
@@ -120,7 +123,7 @@ public:
 
 public:
    // do the pathfinding
-   AStarResult find (int botTeam, int srcIndex, int destIndex, Lambda <bool (int)> onAddedNode);
+   AStarResult find (int botTeam, int srcIndex, int destIndex, NodeAdderFn onAddedNode);
 
 public:
    // initialize astar with valid path length
@@ -187,7 +190,7 @@ public:
    void save ();
 
    // do the pathfinding
-   bool find (int srcIndex, int destIndex, Lambda <bool (int)> onAddedNode, int *pathDistance = nullptr);
+   bool find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, int *pathDistance = nullptr);
 
 public:
    // distance between two nodes with pathfinder
@@ -222,7 +225,7 @@ public:
    void init (const int length);
 
    // do the pathfinding
-   bool find (int srcIndex, int destIndex, Lambda <bool (int)> onAddedNode, int *pathDistance = nullptr);
+   bool find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, int *pathDistance = nullptr);
 
    // distance between two nodes with pathfinder
    int dist (int srcIndex, int destIndex);
@@ -265,7 +268,7 @@ public:
 
 public:
    // do the pathfinding
-   bool find (int srcIndex, int destIndex, Lambda <bool (int)> onAddedNode, int *pathDistance = nullptr);
+   bool find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, int *pathDistance = nullptr);
 
    // distance between two nodes with pathfinder
    int dist (int srcIndex, int destIndex);
