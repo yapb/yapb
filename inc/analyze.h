@@ -30,6 +30,9 @@ public:
    // update analyzation process
    void update ();
 
+   // suspend aanalyzing
+   void suspend ();
+
 private:
    // flood with nodes
    void flood (const Vector &pos, const Vector &next, float range);

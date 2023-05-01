@@ -83,6 +83,9 @@ void Game::levelInitialize (edict_t *entities, int max) {
    // flush any print queue
    ctrl.resetFlushTimestamp ();
 
+   // suspend any analyzer tasks
+   analyzer.suspend ();
+
    // go thru the all entities on map, and do whatever we're want
    for (int i = 0; i < max; ++i) {
       auto ent = entities + i;
