@@ -49,6 +49,11 @@ public:
 
    // triggers re-check for all the nodes
    void startRebuild ();
+
+   // ready to use ?
+   bool isReady () const {
+      return !m_rebuild;
+   }
 };
 
 // explose global

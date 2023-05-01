@@ -70,10 +70,12 @@ void BotPractice::update () {
    auto graphLength = graph.length ();
 
    // no nodes, no practice used or nodes edited or being edited?
-   if (!graphLength || graph.hasChanged ()) {
+   if (!graphLength || graph.hasChanged () || !vistab.isReady ()) {
       return; // no action
    }
    auto adjustValues = false;
+
+   game.print ("REF");
 
    // get the most dangerous node for this position for both teams
    for (int team = Team::Terrorist; team < kGameTeamNum; ++team) {
@@ -84,7 +86,7 @@ void BotPractice::update () {
          bestIndex = kInvalidNodeIndex;
 
          for (int j = 0; j < graphLength; ++j) {
-            if (i == j || !exists (team, i, j)) {
+            if (i == j || !vistab.visible (i, j) || !exists (team, i, j)) {
                continue;
             }
             auto actDamage = getDamage (team, i, j);
