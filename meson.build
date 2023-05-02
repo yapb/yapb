@@ -14,7 +14,7 @@ project (
    default_options: [
       'buildtype=release',
       'b_ndebug=if-release',
-      'cpp_std=c++14',
+      'cpp_std=c++17',
       'warning_level=3',
       'werror=true',
       'backend=ninja',
@@ -217,11 +217,12 @@ elif os == 'windows' and (cxx =='msvc' or cxx == 'clang-cl')
 endif
 
 # pass our hell to meson
-add_global_arguments (cxxflags, language: 'cpp')
-add_global_link_arguments (ldflags, language: 'cpp')
+add_global_arguments(cxxflags, language: 'cpp')
+add_global_link_arguments(ldflags, language: 'cpp')
 
 # add the sources
-sources = files (
+sources = files(
+   'src/analyze.cpp',
    'src/botlib.cpp',
    'src/chatlib.cpp',
    'src/combat.cpp',
@@ -234,18 +235,22 @@ sources = files (
    'src/module.cpp',
    'src/message.cpp',
    'src/navigate.cpp',
+   'src/planner.cpp',
+   'src/practice.cpp',
    'src/sounds.cpp',
-   'src/support.cpp'
+   'src/storage.cpp',
+   'src/support.cpp',
+   'src/vistable.cpp'
 )
 
 # add the include directories
-includes = include_directories ([
+includes = include_directories([
    '.', 'inc', 'ext', 'ext/crlib'
 ], is_system: true)
 
 # if have git and on windows add windows-specific version info
 if os == 'windows' and git.found()
-   sources += import('windows').compile_resources (
+   sources += import('windows').compile_resources(
       'vc/yapb.rc', 
       include_directories: includes, 
       args: flags_versioned

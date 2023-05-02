@@ -20,25 +20,6 @@ extern globalvars_t *globals;
 extern enginefuncs_t engfuncs;
 extern gamefuncs_t dllapi;
 
-// Use this instead of ALLOC_STRING on constant strings
-#define STRING(offset) (const char *)(globals->pStringBase + (int)offset)
-
-// form fwgs-hlsdk
-#if defined (CR_ARCH_X64)
-static inline int MAKE_STRING (const char *val) {
-   long long ptrdiff = val - STRING (0);
-
-   if (ptrdiff > INT_MAX || ptrdiff < INT_MIN) {
-      return engfuncs.pfnAllocString (val);
-   }
-   return static_cast <int> (ptrdiff);
-}
-#else 
-#define MAKE_STRING(str)	((uint64_t)(str) - (uint64_t)(STRING(0)))
-#endif
-
-#define ENGINE_STR(str) (const_cast <char *> (STRING (engfuncs.pfnAllocString (str))))
-
 // Dot products for view cone checking
 #define VIEW_FIELD_FULL (float)-1.0 // +-180 degrees
 #define VIEW_FIELD_WIDE (float)-0.7 // +-135 degrees 0.1 // +-85 degrees, used for full FOV checks

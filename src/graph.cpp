@@ -16,7 +16,6 @@ ConVar cv_graph_draw_distance ("yb_graph_draw_distance", "400", "Maximum distanc
 void BotGraph::reset () {
    // this function initialize the graph structures..
 
-   m_loadAttempts = 0;
    m_editFlags = 0;
    m_autoSaveCount = 0;
 
@@ -32,6 +31,8 @@ void BotGraph::reset () {
 
    m_graphAuthor.clear ();
    m_graphModified.clear ();
+
+   m_paths.clear ();
 }
 
 int BotGraph::clearConnections (int index) {
@@ -96,7 +97,7 @@ int BotGraph::clearConnections (int index) {
    }
 
    if (top.number == kInvalidNodeIndex) {
-      ctrl.msg ("Cannot find path to the closest connected node to node number %d.", index);
+      msg ("Cannot find path to the closest connected node to node number %d.", index);
       return numFixedLinks;
    }
    bool sorting = false;
@@ -171,14 +172,14 @@ int BotGraph::clearConnections (int index) {
 
          if ((cur.distance + prev2.distance) * 1.1f / 2.0f < prev.distance) {
             if (path.links[prev.number].index == prev.index) {
-               ctrl.msg ("Removing a useless (P.0.1) connection from index = %d to %d.", index, prev.index);
+               msg ("Removing a useless (P.0.1) connection from index = %d to %d.", index, prev.index);
 
                // unassign this path
                clearPath (index, prev.number);
 
                for (int j = 0; j < kMaxNodeLinks; ++j) {
                   if (m_paths[prev.index].links[j].index == index && !(m_paths[prev.index].links[j].flags & PathFlag::Jump)) {
-                     ctrl.msg ("Removing a useless (P.0.2) connection from index = %d to %d.", prev.index, index);
+                     msg ("Removing a useless (P.0.2) connection from index = %d to %d.", prev.index, index);
 
                      // unassign this path
                      clearPath (prev.index, j);
@@ -195,7 +196,7 @@ int BotGraph::clearConnections (int index) {
                return true;
             }
             else {
-               ctrl.msg ("Failed to remove a useless (P.0) connection from index = %d to %d.", index, prev.index);
+               msg ("Failed to remove a useless (P.0) connection from index = %d to %d.", index, prev.index);
                return false;
             }
          }
@@ -213,14 +214,14 @@ int BotGraph::clearConnections (int index) {
       if ((sorted[1].angles - top.angles < 80.0f || 360.0f - (sorted[1].angles - top.angles) < 80.0f) && (!(m_paths[sorted[0].index].flags & NodeFlag::Ladder) || !(path.flags & NodeFlag::Ladder)) && !(path.links[sorted[0].number].flags & PathFlag::Jump)) {
          if ((sorted[1].distance + top.distance) * 1.1f / 2.0f < sorted[0].distance) {
             if (path.links[sorted[0].number].index == sorted[0].index) {
-               ctrl.msg ("Removing a useless (P.1.1) connection from index = %d to %d.", index, sorted[0].index);
+               msg ("Removing a useless (P.1.1) connection from index = %d to %d.", index, sorted[0].index);
 
                // unassign this path
                clearPath (index, sorted[0].number);
 
                for (int j = 0; j < kMaxNodeLinks; ++j) {
                   if (m_paths[sorted[0].index].links[j].index == index && !(m_paths[sorted[0].index].links[j].flags & PathFlag::Jump)) {
-                     ctrl.msg ("Removing a useless (P.1.2) connection from index = %d to %d.", sorted[0].index, index);
+                     msg ("Removing a useless (P.1.2) connection from index = %d to %d.", sorted[0].index, index);
 
                      // unassign this path
                      clearPath (sorted[0].index, j);
@@ -234,7 +235,7 @@ int BotGraph::clearConnections (int index) {
                sorted[kMaxNodeLinks - 1].index = kInvalidNodeIndex;
             }
             else {
-               ctrl.msg ("Failed to remove a useless (P.1) connection from index = %d to %d.", sorted[0].index, index);
+               msg ("Failed to remove a useless (P.1) connection from index = %d to %d.", sorted[0].index, index);
             }
          }
       }
@@ -261,14 +262,14 @@ int BotGraph::clearConnections (int index) {
             }
 
             if (path.links[cur.number].index == cur.index) {
-               ctrl.msg ("Removing a useless (P.2.1) connection from index = %d to %d.", index, cur.index);
+               msg ("Removing a useless (P.2.1) connection from index = %d to %d.", index, cur.index);
 
                // unassign this path
                clearPath (index, cur.number);
 
                for (int j = 0; j < kMaxNodeLinks; ++j) {
                   if (m_paths[cur.index].links[j].index == index && !(m_paths[cur.index].links[j].flags & PathFlag::Jump)) {
-                     ctrl.msg ("Removing a useless (P.2.2) connection from index = %d to %d.", cur.index, index);
+                     msg ("Removing a useless (P.2.2) connection from index = %d to %d.", cur.index, index);
 
                      // unassign this path
                      clearPath (cur.index, j);
@@ -283,7 +284,7 @@ int BotGraph::clearConnections (int index) {
                return true;
             }
             else {
-               ctrl.msg ("Failed to remove a useless (P.2) connection from index = %d to %d.", index, cur.index);
+               msg ("Failed to remove a useless (P.2) connection from index = %d to %d.", index, cur.index);
             }
          }
          else if (cur.distance < prev.distance * 1.1f) {
@@ -293,14 +294,14 @@ int BotGraph::clearConnections (int index) {
             }
 
             if (path.links[prev.number].index == prev.index) {
-               ctrl.msg ("Removing a useless (P.2.3) connection from index = %d to %d.", index, prev.index);
+               msg ("Removing a useless (P.2.3) connection from index = %d to %d.", index, prev.index);
 
                // unassign this path
                clearPath (index, prev.number);
 
                for (int j = 0; j < kMaxNodeLinks; ++j) {
                   if (m_paths[prev.index].links[j].index == index && !(m_paths[prev.index].links[j].flags & PathFlag::Jump)) {
-                     ctrl.msg ("Removing a useless (P.2.4) connection from index = %d to %d.", prev.index, index);
+                     msg ("Removing a useless (P.2.4) connection from index = %d to %d.", prev.index, index);
 
                      // unassign this path
                      clearPath (prev.index, j);
@@ -317,7 +318,7 @@ int BotGraph::clearConnections (int index) {
                return true;
             }
             else {
-               ctrl.msg ("Failed to remove a useless (P.2) connection from index = %d to %d.", index, prev.index);
+               msg ("Failed to remove a useless (P.2) connection from index = %d to %d.", index, prev.index);
             }
          }
       }
@@ -336,14 +337,14 @@ int BotGraph::clearConnections (int index) {
       if ((top.angles - sorted[0].angles < 40.0f || (360.0f - top.angles - sorted[0].angles) < 40.0f) && (!(m_paths[sorted[0].index].flags & NodeFlag::Ladder) || !(path.flags & NodeFlag::Ladder)) && !(path.links[sorted[0].number].flags & PathFlag::Jump)) {
          if (top.distance * 1.1f < sorted[0].distance) {
             if (path.links[sorted[0].number].index == sorted[0].index) {
-               ctrl.msg ("Removing a useless (P.3.1) connection from index = %d to %d.", index, sorted[0].index);
+               msg ("Removing a useless (P.3.1) connection from index = %d to %d.", index, sorted[0].index);
 
                // unassign this path
                clearPath (index, sorted[0].number);
 
                for (int j = 0; j < kMaxNodeLinks; ++j) {
                   if (m_paths[sorted[0].index].links[j].index == index && !(m_paths[sorted[0].index].links[j].flags & PathFlag::Jump)) {
-                     ctrl.msg ("Removing a useless (P.3.2) connection from index = %d to %d.", sorted[0].index, index);
+                     msg ("Removing a useless (P.3.2) connection from index = %d to %d.", sorted[0].index, index);
 
                      // unassign this path
                      clearPath (sorted[0].index, j);
@@ -357,19 +358,19 @@ int BotGraph::clearConnections (int index) {
                sorted[kMaxNodeLinks - 1].index = kInvalidNodeIndex;
             }
             else {
-               ctrl.msg ("Failed to remove a useless (P.3) connection from index = %d to %d.", sorted[0].index, index);
+               msg ("Failed to remove a useless (P.3) connection from index = %d to %d.", sorted[0].index, index);
             }
          }
          else if (sorted[0].distance * 1.1f < top.distance && !(path.links[top.number].flags & PathFlag::Jump)) {
             if (path.links[top.number].index == top.index) {
-               ctrl.msg ("Removing a useless (P.3.3) connection from index = %d to %d.", index, sorted[0].index);
+               msg ("Removing a useless (P.3.3) connection from index = %d to %d.", index, sorted[0].index);
 
                // unassign this path
                clearPath (index, top.number);
 
                for (int j = 0; j < kMaxNodeLinks; ++j) {
                   if (m_paths[top.index].links[j].index == index && !(m_paths[top.index].links[j].flags & PathFlag::Jump)) {
-                     ctrl.msg ("Removing a useless (P.3.4) connection from index = %d to %d.", sorted[0].index, index);
+                     msg ("Removing a useless (P.3.4) connection from index = %d to %d.", sorted[0].index, index);
 
                      // unassign this path
                      clearPath (top.index, j);
@@ -378,7 +379,7 @@ int BotGraph::clearConnections (int index) {
                sorted[0].index = kInvalidNodeIndex;
             }
             else {
-               ctrl.msg ("Failed to remove a useless (P.3) connection from index = %d to %d.", sorted[0].index, index);
+               msg ("Failed to remove a useless (P.3) connection from index = %d to %d.", sorted[0].index, index);
             }
          }
       }
@@ -398,7 +399,7 @@ int BotGraph::getBspSize () {
 }
 
 void BotGraph::addPath (int addIndex, int pathIndex, float distance) {
-   if (!exists (addIndex) || !exists (pathIndex)) {
+   if (!exists (addIndex) || !exists (pathIndex) || pathIndex == addIndex) {
       return;
    }
    auto &path = m_paths[addIndex];
@@ -406,7 +407,7 @@ void BotGraph::addPath (int addIndex, int pathIndex, float distance) {
    // don't allow paths get connected twice
    for (const auto &link : path.links) {
       if (link.index == pathIndex) {
-         ctrl.msg ("Denied path creation from %d to %d (path already exists).", addIndex, pathIndex);
+         msg ("Denied path creation from %d to %d (path already exists).", addIndex, pathIndex);
          return;
       }
    }
@@ -417,7 +418,7 @@ void BotGraph::addPath (int addIndex, int pathIndex, float distance) {
          link.index = static_cast <int16_t> (pathIndex);
          link.distance = cr::abs (static_cast <int> (distance));
 
-         ctrl.msg ("Path added from %d to %d.", addIndex, pathIndex);
+         msg ("Path added from %d to %d.", addIndex, pathIndex);
          return;
       }
    }
@@ -434,7 +435,7 @@ void BotGraph::addPath (int addIndex, int pathIndex, float distance) {
    }
 
    if (slot != kInvalidNodeIndex) {
-      ctrl.msg ("Path added from %d to %d.", addIndex, pathIndex);
+      msg ("Path added from %d to %d.", addIndex, pathIndex);
 
       path.links[slot].index = static_cast <int16_t> (pathIndex);
       path.links[slot].distance = cr::abs (static_cast <int> (distance));
@@ -445,7 +446,7 @@ int BotGraph::getFarest (const Vector &origin, float maxDistance) {
    // find the farest node to that origin, and return the index to this node
 
    int index = kInvalidNodeIndex;
-   maxDistance = cr::square (maxDistance);
+   maxDistance = cr::sqrf (maxDistance);
 
    for (const auto &path : m_paths) {
       const float distance = path.origin.distanceSq (origin);
@@ -458,12 +459,28 @@ int BotGraph::getFarest (const Vector &origin, float maxDistance) {
    return index;
 }
 
+int BotGraph::getForAnalyzer (const Vector &origin, float maxDistance) {
+   // find the farest node to that origin, and return the index to this node
+
+   int index = kInvalidNodeIndex;
+
+   for (const auto &path : m_paths) {
+      const float distance = path.origin.distance (origin);
+
+      if (distance < maxDistance) {
+         index = path.number;
+         maxDistance = distance;
+      }
+   }
+   return index;
+}
+
 int BotGraph::getNearestNoBuckets (const Vector &origin, float minDistance, int flags) {
    // find the nearest node to that origin and return the index
 
    // fallback and go thru wall the nodes...
    int index = kInvalidNodeIndex;
-   minDistance = cr::square (minDistance);
+   minDistance = cr::sqrf (minDistance);
 
    for (const auto &path : m_paths) {
       if (flags != -1 && !(path.flags & flags)) {
@@ -499,7 +516,7 @@ int BotGraph::getNearest (const Vector &origin, float minDistance, int flags) {
    }
 
    int index = kInvalidNodeIndex;
-   auto minDistanceSq = cr::square (minDistance);
+   auto minDistanceSq = cr::sqrf (minDistance);
 
    for (const auto &at : bucket) {
       if (flags != -1 && !(m_paths[at].flags & flags)) {
@@ -523,12 +540,12 @@ int BotGraph::getNearest (const Vector &origin, float minDistance, int flags) {
 IntArray BotGraph::getNarestInRadius (float radius, const Vector &origin, int maxCount) {
    // returns all nodes within radius from position
 
-   radius = cr::square (radius);
+   radius = cr::sqrf (radius);
 
    IntArray result;
    const auto &bucket = getNodesInBucket (origin);
 
-   if (bucket.length () < kMaxNodeLinks || radius > cr::square (256.0f)) {
+   if (bucket.length () < kMaxNodeLinks || radius > cr::sqrf (256.0f)) {
       for (const auto &path : m_paths) {
          if (maxCount != -1 && static_cast <int> (result.length ()) > maxCount) {
             break;
@@ -554,16 +571,21 @@ IntArray BotGraph::getNarestInRadius (float radius, const Vector &origin, int ma
 }
 
 void BotGraph::add (int type, const Vector &pos) {
-   // @todo: remove type magic numbers
-
-   if (game.isNullEntity (m_editor)) {
+   if (game.isNullEntity (m_editor) && !analyzer.isAnalyzing ()) {
       return;
    }
    int index = kInvalidNodeIndex;
    Path *path = nullptr;
 
    bool addNewNode = true;
-   Vector newOrigin = pos.empty () ? m_editor->v.origin : pos;
+   Vector newOrigin = pos;
+
+   if (newOrigin.empty ()) {
+      if (game.isNullEntity (m_editor)) {
+         return;
+      }
+      newOrigin = m_editor->v.origin;
+   }
 
    if (bots.hasBotsOnline ()) {
       bots.kickEveryone (true);
@@ -579,9 +601,7 @@ void BotGraph::add (int type, const Vector &pos) {
 
          if (path->flags & NodeFlag::Camp) {
             path->start = m_editor->v.v_angle.get2d ();
-
-            // play "done" sound...
-            game.playSound (m_editor, "common/wpn_hudon.wav");
+            emitNotify (NotifySound::Done); // play "done" sound... 
             return;
          }
       }
@@ -594,13 +614,11 @@ void BotGraph::add (int type, const Vector &pos) {
          path = &m_paths[index];
 
          if (!(path->flags & NodeFlag::Camp)) {
-            ctrl.msg ("This is not camping node.");
+            msg ("This is not camping node.");
             return;
          }
          path->end = m_editor->v.v_angle.get2d ();
-
-         // play "done" sound...
-         game.playSound (m_editor, "common/wpn_hudon.wav");
+         emitNotify (NotifySound::Done); // play "done" sound... 
       }
       return;
 
@@ -647,12 +665,21 @@ void BotGraph::add (int type, const Vector &pos) {
    }
 
    if (addNewNode) {
-      auto nearest = getEditorNearest ();
+      if (analyzer.isAnalyzing ()) {
+         for (const auto &cp : m_paths) {
+            if (newOrigin.distanceSq (cp.origin) < cr::sqrf (24.0f)) {
+               return;
+            }
+         }
+      }
+      else {
+         auto nearest = getEditorNearest ();
 
-      // do not allow to place waypoints "inside" waypoints, make at leat 10 units range
-      if (exists (nearest) && newOrigin.distanceSq (m_paths[nearest].origin) < cr::square (10.0f)) {
-         ctrl.msg ("Can't add node. It's way to near to %d node. Please move some units anywhere.", nearest);
-         return;
+         // do not allow to place waypoints "inside" waypoints, make at leat 10 units range
+         if (exists (nearest) && newOrigin.distanceSq (m_paths[nearest].origin) < cr::sqrf (10.0f)) {
+            msg ("Can't add node. It's way to near to %d node. Please move some units anywhere.", nearest);
+            return;
+         }
       }
 
       // need to remove limit?
@@ -683,18 +710,20 @@ void BotGraph::add (int type, const Vector &pos) {
       }
 
       // autosave nodes here and there
-      if (cv_graph_auto_save_count.bool_ () && ++m_autoSaveCount >= cv_graph_auto_save_count.int_ ()) {
+      if (!analyzer.isAnalyzing () && cv_graph_auto_save_count.bool_ () && ++m_autoSaveCount >= cv_graph_auto_save_count.int_ ()) {
          if (saveGraphData ()) {
-            ctrl.msg ("Nodes has been autosaved...");
+            msg ("Nodes has been autosaved...");
          }
          else {
-            ctrl.msg ("Can't autosave graph data...");
+            msg ("Can't autosave graph data...");
          }
          m_autoSaveCount = 0;
       }
 
       // store the last used node for the auto node code...
-      m_lastNode = m_editor->v.origin;
+      if (!analyzer.isAnalyzing ()) {
+         m_lastNode = m_editor->v.origin;
+      }
    }
 
    if (type == NodeAddFlag::JumpStart) {
@@ -720,11 +749,11 @@ void BotGraph::add (int type, const Vector &pos) {
       return;
    }
 
-   if (m_editor->v.flags & FL_DUCKING) {
+   if (analyzer.isCrouch () || (!analyzer.isAnalyzing () && (m_editor->v.flags & FL_DUCKING))) {
       path->flags |= NodeFlag::Crouch; // set a crouch node
    }
 
-   if (m_editor->v.movetype == MOVETYPE_FLY) {
+   if (!analyzer.isAnalyzing () && m_editor->v.movetype == MOVETYPE_FLY) {
       path->flags |= NodeFlag::Ladder;
    }
    else if (m_isOnLadder) {
@@ -754,7 +783,10 @@ void BotGraph::add (int type, const Vector &pos) {
       path->flags |= NodeFlag::Crossing;
       path->flags |= NodeFlag::Camp;
 
-      path->start = m_editor->v.v_angle;
+      if (!analyzer.isAnalyzing ()) {
+         path->start = m_editor->v.v_angle;
+         path->end = m_editor->v.v_angle;
+      }
       break;
 
    case NodeAddFlag::Goal:
@@ -762,7 +794,7 @@ void BotGraph::add (int type, const Vector &pos) {
       break;
    }
 
-   // Ladder nodes need careful connections
+   // ladder nodes need careful connections
    if (path->flags & NodeFlag::Ladder) {
       float minDistance = kInfiniteDistance;
       int destIndex = kInvalidNodeIndex;
@@ -781,34 +813,44 @@ void BotGraph::add (int type, const Vector &pos) {
             game.testLine (newOrigin, calc.origin, TraceIgnore::Monsters, m_editor, &tr);
 
             if (cr::fequal (tr.flFraction, 1.0f) && cr::abs (newOrigin.x - calc.origin.x) < 64.0f && cr::abs (newOrigin.y - calc.origin.y) < 64.0f && cr::abs (newOrigin.z - calc.origin.z) < m_autoPathDistance) {
-               float distance = newOrigin.distance (calc.origin);
+               float distance = newOrigin.distance2d (calc.origin);
 
                addPath (index, calc.number, distance);
                addPath (calc.number, index, distance);
             }
          }
          else {
-            // check if the node is reachable from the new one
-            if (isNodeReacheable (newOrigin, calc.origin) || isNodeReacheable (calc.origin, newOrigin)) {
-               float distance = newOrigin.distance (calc.origin);
+            float distance = newOrigin.distance2d (calc.origin);
 
-               if (distance < minDistance) {
-                  destIndex = calc.number;
-                  minDistance = distance;
-               }
+            if (distance < minDistance) {
+               destIndex = calc.number;
+               minDistance = distance;
+            }
+
+            // check if the node is reachable from the new one
+            if (isNodeReacheable (newOrigin, calc.origin)) {
+               addPath (index, calc.number, distance);
             }
          }
       }
 
       if (exists (destIndex)) {
-         // check if the node is reachable from the new one (one-way)
-         if (isNodeReacheable (newOrigin, m_paths[destIndex].origin)) {
-            addPath (index, destIndex, newOrigin.distance (m_paths[destIndex].origin));
-         }
+         const float distance = newOrigin.distance2d (m_paths[destIndex].origin);
 
-         // check if the new one is reachable from the node (other way)
-         if (isNodeReacheable (m_paths[destIndex].origin, newOrigin)) {
-            addPath (destIndex, index, newOrigin.distance (m_paths[destIndex].origin));
+         if (analyzer.isAnalyzing ()) {
+            addPath (index, destIndex, distance);
+            addPath (destIndex, index, distance);
+         }
+         else {
+            // check if the node is reachable from the new one (one-way)
+            if (isNodeReacheable (newOrigin, m_paths[destIndex].origin)) {
+               addPath (index, destIndex, newOrigin.distance (m_paths[destIndex].origin));
+            }
+
+            // check if the new one is reachable from the node (other way)
+            if (isNodeReacheable (m_paths[destIndex].origin, newOrigin)) {
+               addPath (destIndex, index, newOrigin.distance (m_paths[destIndex].origin));
+            }
          }
       }
    }
@@ -818,21 +860,29 @@ void BotGraph::add (int type, const Vector &pos) {
          if (calc.number == index) {
             continue; // skip the node that was just added
          }
+         const float distance = calc.origin.distance2d (newOrigin);
 
          // check if the node is reachable from the new one (one-way)
          if (isNodeReacheable (newOrigin, calc.origin)) {
-            addPath (index, calc.number, calc.origin.distance (newOrigin));
+            addPath (index, calc.number, distance);
          }
 
          // check if the new one is reachable from the node (other way)
          if (isNodeReacheable (calc.origin, newOrigin)) {
-            addPath (calc.number, index, calc.origin.distance (newOrigin));
+            addPath (calc.number, index, distance);
          }
       }
-      clearConnections (index);
+
+      if (!analyzer.isAnalyzing ()) {
+         clearConnections (index);
+      }
    }
-   game.playSound (m_editor, "weapons/xbow_hit1.wav");
+   emitNotify (NotifySound::Added);
    calculatePathRadius (index); // calculate the wayzone of this node
+
+   if (analyzer.isAnalyzing ()) {
+      analyzer.markOptimized (index);
+   }
 }
 
 void BotGraph::erase (int target) {
@@ -879,8 +929,7 @@ void BotGraph::erase (int target) {
       }
    }
    m_paths.remove (path);
-
-   game.playSound (m_editor, "weapons/mine_activate.wav");
+   emitNotify (NotifySound::Change);
 }
 
 void BotGraph::toggleFlags (int toggleFlag) {
@@ -894,14 +943,12 @@ void BotGraph::toggleFlags (int toggleFlag) {
       }
       else {
          if (toggleFlag == NodeFlag::Sniper && !(m_paths[index].flags & NodeFlag::Camp)) {
-            ctrl.msg ("Cannot assign sniper flag to node %d. This is not camp node.", index);
+            msg ("Cannot assign sniper flag to node %d. This is not camp node.", index);
             return;
          }
          m_paths[index].flags |= toggleFlag;
       }
-
-      // play "done" sound...
-      game.playSound (m_editor, "common/wpn_hudon.wav");
+      emitNotify (NotifySound::Done); // play "done" sound... 
    }
 }
 
@@ -912,10 +959,9 @@ void BotGraph::setRadius (int index, float radius) {
 
    if (node != kInvalidNodeIndex) {
       m_paths[node].radius = radius;
+      emitNotify (NotifySound::Done); // play "done" sound...
 
-      // play "done" sound...
-      game.playSound (m_editor, "common/wpn_hudon.wav");
-      ctrl.msg ("Node %d has been set to radius %.2f.", node, radius);
+      msg ("Node %d has been set to radius %.2f.", node, radius);
    }
 }
 
@@ -954,7 +1000,7 @@ int BotGraph::getFacingIndex () {
       auto angles = (to.angles () - m_editor->v.v_angle).clampAngles ();
 
       // skip the waypoints that are too far away from us, and we're not looking at them directly
-      if (to.lengthSq () > cr::square (500.0f) || cr::abs (angles.y) > result.second) {
+      if (to.lengthSq () > cr::sqrf (500.0f) || cr::abs (angles.y) > result.second) {
          continue;
       }
 
@@ -985,7 +1031,7 @@ void BotGraph::pathCreate (char dir) {
    int nodeFrom = getEditorNearest ();
 
    if (nodeFrom == kInvalidNodeIndex) {
-      ctrl.msg ("Unable to find nearest node in 50 units.");
+      msg ("Unable to find nearest node in 50 units.");
       return;
    }
    int nodeTo = m_facingAtIndex;
@@ -995,13 +1041,13 @@ void BotGraph::pathCreate (char dir) {
          nodeTo = m_cacheNodeIndex;
       }
       else {
-         ctrl.msg ("Unable to find destination node.");
+         msg ("Unable to find destination node.");
          return;
       }
    }
 
    if (nodeTo == nodeFrom) {
-      ctrl.msg ("Unable to connect node with itself.");
+      msg ("Unable to connect node with itself.");
       return;
    }
 
@@ -1017,8 +1063,7 @@ void BotGraph::pathCreate (char dir) {
       addPath (nodeFrom, nodeTo, distance);
       addPath (nodeTo, nodeFrom, distance);
    }
-
-   game.playSound (m_editor, "common/wpn_hudon.wav");
+   emitNotify (NotifySound::Done); // play "done" sound... 
    m_hasChanged = true;
 }
 
@@ -1028,7 +1073,7 @@ void BotGraph::erasePath () {
    int nodeFrom = getEditorNearest ();
 
    if (nodeFrom == kInvalidNodeIndex) {
-      ctrl.msg ("Unable to find nearest node in 50 units.");
+      msg ("Unable to find nearest node in 50 units.");
       return;
    }
    int nodeTo = m_facingAtIndex;
@@ -1038,7 +1083,7 @@ void BotGraph::erasePath () {
          nodeTo = m_cacheNodeIndex;
       }
       else {
-         ctrl.msg ("Unable to find destination node.");
+         msg ("Unable to find destination node.");
          return;
       }
    }
@@ -1054,7 +1099,7 @@ void BotGraph::erasePath () {
    for (auto &link : m_paths[nodeFrom].links) {
       if (link.index == nodeTo) {
          destroy (link);
-         game.playSound (m_editor, "weapons/mine_activate.wav");
+         emitNotify (NotifySound::Change);
 
          return;
       }
@@ -1066,12 +1111,12 @@ void BotGraph::erasePath () {
    for (auto &link : m_paths[nodeFrom].links) {
       if (link.index == nodeTo) {
          destroy (link);
-         game.playSound (m_editor, "weapons/mine_activate.wav");
+         emitNotify (NotifySound::Change);
 
          return;
       }
    }
-   ctrl.msg ("There is already no path on this node.");
+   msg ("There is already no path on this node.");
 }
 
 void BotGraph::cachePoint (int index) {
@@ -1079,22 +1124,22 @@ void BotGraph::cachePoint (int index) {
 
    if (node == kInvalidNodeIndex) {
       m_cacheNodeIndex = kInvalidNodeIndex;
-      ctrl.msg ("Cached node cleared (nearby point not found in 50 units range).");
+      msg ("Cached node cleared (nearby point not found in 50 units range).");
 
       return;
    }
    m_cacheNodeIndex = node;
-   ctrl.msg ("Node %d has been put into memory.", m_cacheNodeIndex);
+   msg ("Node %d has been put into memory.", m_cacheNodeIndex);
 }
 
 void BotGraph::setAutoPathDistance (const float distance) {
    m_autoPathDistance = distance;
 
    if (cr::fzero (distance)) {
-      ctrl.msg ("Autopathing is now disabled.");
+      msg ("Autopathing is now disabled.");
    }
    else {
-      ctrl.msg ("Autopath distance is set to %.2f.", distance);
+      msg ("Autopath distance is set to %.2f.", distance);
    }
 }
 
@@ -1137,27 +1182,40 @@ void BotGraph::showStats () {
       }
    }
 
-   ctrl.msg ("Nodes: %d - T Points: %d", m_paths.length (), terrPoints);
-   ctrl.msg ("CT Points: %d - Goal Points: %d", ctPoints, goalPoints);
-   ctrl.msg ("Rescue Points: %d - Camp Points: %d", rescuePoints, campPoints);
-   ctrl.msg ("Block Hostage Points: %d - Sniper Points: %d", noHostagePoints, sniperPoints);
+   msg ("Nodes: %d - T Points: %d", m_paths.length (), terrPoints);
+   msg ("CT Points: %d - Goal Points: %d", ctPoints, goalPoints);
+   msg ("Rescue Points: %d - Camp Points: %d", rescuePoints, campPoints);
+   msg ("Block Hostage Points: %d - Sniper Points: %d", noHostagePoints, sniperPoints);
 }
 
 void BotGraph::showFileInfo () {
-   ctrl.msg ("header:");
-   ctrl.msg ("  magic: %d", m_graphHeader.magic);
-   ctrl.msg ("  version: %d", m_graphHeader.version);
-   ctrl.msg ("  node_count: %d", m_graphHeader.length);
-   ctrl.msg ("  compressed_size: %dkB", m_graphHeader.compressed / 1024);
-   ctrl.msg ("  uncompressed_size: %dkB", m_graphHeader.uncompressed / 1024);
-   ctrl.msg ("  options: %d", m_graphHeader.options); // display as string ?
+   msg ("header:");
+   msg ("  magic: %d", m_graphHeader.magic);
+   msg ("  version: %d", m_graphHeader.version);
+   msg ("  node_count: %d", m_graphHeader.length);
+   msg ("  compressed_size: %dkB", m_graphHeader.compressed / 1024);
+   msg ("  uncompressed_size: %dkB", m_graphHeader.uncompressed / 1024);
+   msg ("  options: %d", m_graphHeader.options); // display as string ?
 
-   ctrl.msg ("");
+   msg ("");
 
-   ctrl.msg ("extensions:");
-   ctrl.msg ("  author: %s", m_extenHeader.author);
-   ctrl.msg ("  modified_by: %s", m_extenHeader.modified);
-   ctrl.msg ("  bsp_size: %d", m_extenHeader.mapSize);
+   msg ("extensions:");
+   msg ("  author: %s", m_extenHeader.author);
+   msg ("  modified_by: %s", m_extenHeader.modified);
+   msg ("  bsp_size: %d", m_extenHeader.mapSize);
+}
+
+void BotGraph::emitNotify (int32_t sound) {
+   static HashMap <int32_t, String> notifySounds = {
+      { NotifySound::Added, "weapons/xbow_hit1.wav" },
+      { NotifySound::Change, "weapons/mine_activate.wav" },
+      { NotifySound::Done, "common/wpn_hudon.wav" }
+   };
+
+   // notify editor
+   if (util.isPlayer (m_editor) && !m_silenceMessages) {
+      game.playSound (m_editor, notifySounds[sound].chars ());
+   }
 }
 
 void BotGraph::calculatePathRadius (int index) {
@@ -1257,131 +1315,6 @@ void BotGraph::calculatePathRadius (int index) {
    }
 }
 
-void BotGraph::loadPractice () {
-   if (m_paths.empty ()) {
-      return;
-   }
-
-   bool dataLoaded = loadStorage <Practice> ("Practice", StorageOption::Practice, StorageVersion::Practice, m_practice, nullptr, nullptr);
-   int count = length ();
-
-   // set's the highest damage if loaded ok
-   if (dataLoaded) {
-      auto practice = m_practice.data ();
-
-      for (int team = Team::Terrorist; team < kGameTeamNum; ++team) {
-         for (int i = 0; i < count; ++i) {
-            for (int j = 0; j < count; ++j) {
-               if (i == j) {
-                  if ((practice + (i * count) + j)->damage[team] > m_highestDamage[team]) {
-                     m_highestDamage[team] = (practice + (i * count) + j)->damage[team];
-                  }
-               }
-            }
-         }
-      }
-      return;
-   }
-   auto practice = m_practice.data ();
-
-   // initialize table by hand to correct values, and NOT zero it out
-   for (int team = Team::Terrorist; team < kGameTeamNum; ++team) {
-      for (int i = 0; i < count; ++i) {
-         for (int j = 0; j < count; ++j) {
-            (practice + (i * count) + j)->index[team] = kInvalidNodeIndex;
-            (practice + (i * count) + j)->damage[team] = 0;
-            (practice + (i * count) + j)->value[team] = 0;
-         }
-      }
-   }
-}
-
-void BotGraph::savePractice () {
-   if (m_paths.empty () || m_hasChanged) {
-      return;
-   }
-   saveStorage <Practice> ("Practice", StorageOption::Practice, StorageVersion::Practice, m_practice, nullptr);
-}
-
-void BotGraph::loadVisibility () {
-   m_needsVisRebuild = true;
-
-   if (m_paths.empty ()) {
-      return;
-   }
-   bool dataLoaded = loadStorage <uint8_t> ("Visibility", StorageOption::Vistable, StorageVersion::Vistable, m_vistable, nullptr, nullptr);
-
-   // if loaded, do not recalculate visibility
-   if (dataLoaded) {
-      m_needsVisRebuild = false;
-   }
-}
-
-void BotGraph::saveVisibility () {
-   if (m_paths.empty () || m_hasChanged || m_needsVisRebuild) {
-      return;
-   }
-   saveStorage <uint8_t> ("Visibility", StorageOption::Vistable, StorageVersion::Vistable, m_vistable, nullptr);
-}
-
-bool BotGraph::loadPathMatrix () {
-   if (m_paths.empty ()) {
-      return false;
-   }
-   bool dataLoaded = loadStorage <Matrix> ("Pathmatrix", StorageOption::Matrix, StorageVersion::Matrix, m_matrix, nullptr, nullptr);
-
-   // do not rebuild if loaded
-   if (dataLoaded) {
-      return true;
-   }
-   auto count = length ();
-   auto matrix = m_matrix.data ();
-
-   for (int i = 0; i < count; ++i) {
-      for (int j = 0; j < count; ++j) {
-         (matrix + i * count + j)->dist = SHRT_MAX;
-         (matrix + i * count + j)->index = kInvalidNodeIndex;
-      }
-   }
-
-   for (int i = 0; i < count; ++i) {
-      for (const auto &link : m_paths[i].links) {
-         if (!exists (link.index)) {
-            continue;
-         }
-         (matrix + (i * count) + link.index)->dist = static_cast <int16_t> (link.distance);
-         (matrix + (i * count) + link.index)->index = static_cast <int16_t> (link.index);
-      }
-   }
-
-   for (int i = 0; i < count; ++i) {
-      (matrix + (i * count) + i)->dist = 0;
-   }
-
-   for (int k = 0; k < count; ++k) {
-      for (int i = 0; i < count; ++i) {
-         for (int j = 0; j < count; ++j) {
-            int distance = (matrix + (i * count) + k)->dist + (matrix + (k * count) + j)->dist;
-
-            if (distance < (matrix + (i * count) + j)->dist) {
-               (matrix + (i * count) + j)->dist = static_cast <int16_t> (distance);
-               (matrix + (i * count) + j)->index = (matrix + (i * count) + k)->index;
-            }
-         }
-      }
-   }
-   savePathMatrix (); // save path matrix to file for faster access
-
-   return true;
-}
-
-void BotGraph::savePathMatrix () {
-   if (m_paths.empty ()) {
-      return;
-   }
-   saveStorage <Matrix> ("Pathmatrix", StorageOption::Matrix, StorageVersion::Matrix, m_matrix, nullptr);
-}
-
 void BotGraph::initLightLevels () {
    // this function get's the light level for each waypoin on the map
 
@@ -1396,7 +1329,6 @@ void BotGraph::initLightLevels () {
    }
    // disable lightstyle animations on finish (will be auto-enabled on mapchange)
    illum.enableAnimation (false);
-
 }
 
 void BotGraph::initNarrowPlaces () {
@@ -1493,7 +1425,7 @@ void BotGraph::initNarrowPlaces () {
    m_narrowChecked = true;
 }
 
-void BotGraph::initNodesTypes () {
+void BotGraph::populateNodes () {
    m_terrorPoints.clear ();
    m_ctPoints.clear ();
    m_goalPoints.clear ();
@@ -1525,10 +1457,10 @@ void BotGraph::initNodesTypes () {
 }
 
 bool BotGraph::convertOldFormat () {
-   MemFile fp (util.buildPath (BotFile::PodbotPWF, true));
+   MemFile fp (bstor.buildPath (BotFile::PodbotPWF, true));
 
    if (!fp) {
-      if (!fp.open (util.buildPath (BotFile::EbotEWP, true))) {
+      if (!fp.open (bstor.buildPath (BotFile::EbotEWP, true))) {
          return false;
       }
    }
@@ -1557,7 +1489,6 @@ bool BotGraph::convertOldFormat () {
                return false;
             }
             reset ();
-            m_paths.clear ();
 
             for (int i = 0; i < header.pointNumber; ++i) {
                Path path {};
@@ -1579,7 +1510,7 @@ bool BotGraph::convertOldFormat () {
 
             // save new format in case loaded older one
             if (!m_paths.empty ()) {
-               ctrl.msg ("Converting old PWF to new format Graph.");
+               msg ("Converting old PWF to new format Graph.");
 
                m_graphAuthor = header.author;
 
@@ -1604,257 +1535,6 @@ bool BotGraph::convertOldFormat () {
    return false;
 }
 
-template <typename U> bool BotGraph::saveStorage (StringRef name, StorageOption options, StorageVersion version, const SmallArray <U> &data, ExtenHeader *exten) {
-   bool isGraph = !!(options & StorageOption::Graph);
-
-   // do not allow to save graph with less than 8 nodes
-   if (isGraph && length () < kMaxNodeLinks) {
-      ctrl.msg ("Can't save graph data with less than %d nodes. Please add some more before saving.", kMaxNodeLinks);
-      return false;
-   }
-   String filename = util.buildPath (util.storageToBotFile (options));
-
-   if (data.empty ()) {
-      logger.error ("Unable to save %s file. Empty data. (filename: '%s').", name, filename);
-      return false;
-   }
-   else if (isGraph) {
-      for (auto &path : m_paths) {
-         path.display = 0.0f;
-         path.light = illum.getLightLevel (path.origin);
-      }
-   }
-
-   // open the file
-   File file (filename, "wb");
-
-   // no open no fun
-   if (!file) {
-      logger.error ("Unable to open %s file for writing (filename: '%s').", name, filename);
-      return false;
-   }
-   auto rawLength = data.length () * sizeof (U);
-   SmallArray <uint8_t> compressed (rawLength + sizeof (uint8_t) * ULZ::Excess);
-
-   // try to compress
-   auto compressedLength = static_cast <size_t> (ulz.compress (reinterpret_cast <uint8_t *> (data.data ()), static_cast <int32_t> (rawLength), reinterpret_cast <uint8_t *> (compressed.data ())));
-
-   if (compressedLength > 0) {
-      StorageHeader hdr {};
-
-      hdr.magic = kStorageMagic;
-      hdr.version = version;
-      hdr.options = options;
-      hdr.length = length ();
-      hdr.compressed = static_cast <int32_t> (compressedLength);
-      hdr.uncompressed = static_cast <int32_t> (rawLength);
-
-      file.write (&hdr, sizeof (StorageHeader));
-      file.write (compressed.data (), sizeof (uint8_t), compressedLength);
-
-      // add extension
-      if ((options & StorageOption::Exten) && exten != nullptr) {
-         file.write (exten, sizeof (ExtenHeader));
-      }
-
-      // notify only about graph
-      if (isGraph || cv_debug.bool_ ()) {
-         ctrl.msg ("Successfully saved Bots %s data.", name);
-      }
-   }
-   else {
-      logger.error ("Unable to compress %s data (filename: '%s').", name, filename);
-      return false;
-   }
-   return true;
-}
-
-template <typename U> bool BotGraph::loadStorage (StringRef name, StorageOption options, StorageVersion version, SmallArray <U> &data, ExtenHeader *exten, int32_t *outOptions) {
-   String filename = util.buildPath (util.storageToBotFile (options), true);
-
-   // graphs can be downloaded...
-   bool isGraph = !!(options & StorageOption::Graph);
-   bool isDebug = cv_debug.bool_ ();
-
-   MemFile file (filename); // open the file
-
-   data.clear ();
-   data.shrink ();
-
-   // resize data to fit the stuff
-   auto resizeData = [&] (const size_t length) {
-      data.resize (length); // for non-graph data the graph should be already loaded
-      data.shrink (); // free up memory to minimum
-
-      // ensure we're have enough memory to decompress the data
-      data.ensure (length + ULZ::Excess);
-   };
-
-   // allocate non-graph data, so we're will be ok in case if loading will fail
-   if (!isGraph) {
-      resizeData (m_paths.length () * m_paths.length ());
-   }
-
-   // if graph & attempted to load multiple times, bail out, we're failed
-   if (isGraph && ++m_loadAttempts > 2) {
-      m_loadAttempts = 0;
-      return raiseLoadingError (isGraph, isDebug, file, "Unable to load %s (filename: '%s'). Download process has failed as well. No nodes has been found.", name, filename);
-   }
-
-   // downloader for graph
-   auto download = [&] () -> bool {
-      if (!graph.canDownload ()) {
-         return false;
-      }
-      auto downloadAddress = cv_graph_url.str ();
-
-      auto toDownload = util.buildPath (util.storageToBotFile (options), false);
-      auto fromDownload = strings.format ("http://%s/graph/%s.graph", downloadAddress, game.getMapName ());
-
-      // try to download
-      if (http.downloadFile (fromDownload, toDownload)) {
-         ctrl.msg ("%s file '%s' successfully downloaded. Processing...", name, filename);
-         return true;
-      }
-      else {
-         ctrl.msg ("Can't download '%s' from '%s' to '%s'... (%d).", filename, fromDownload, toDownload, http.getLastStatusCode ());
-      }
-      return false;
-   };
-
-   // tries to reload or open pwf file
-   auto tryReload = [&] () -> bool {
-      file.close ();
-
-      if (!isGraph) {
-         return false;
-      }
-
-      if (download ()) {
-         return loadStorage <U> (name, options, version, data, exten, outOptions);
-      }
-
-      if (convertOldFormat ()) {
-         return loadStorage <U> (name, options, version, data, exten, outOptions);
-      }
-      return false;
-   };
-
-   // no open no fun
-   if (!file) {
-      if (tryReload ()) {
-         return true;
-      }
-      return raiseLoadingError (isGraph, isDebug, file, "Unable to open %s file for reading (filename: '%s').", name, filename);
-   }
-
-   // read the header
-   StorageHeader hdr {};
-   file.read (&hdr, sizeof (StorageHeader));
-
-   // check the magic
-   if (hdr.magic != kStorageMagic && hdr.magic != kStorageMagicUB) {
-      if (tryReload ()) {
-         return true;
-      }
-      return raiseLoadingError (isGraph, isDebug, file, "Unable to read magic of %s (filename: '%s').", name, filename);
-   }
-
-   // check the path-numbers
-   if (!isGraph && hdr.length != length ()) {
-      return raiseLoadingError (isGraph, isDebug, file, "Damaged %s (filename: '%s'). Mismatch number of nodes (got: '%d', need: '%d').", name, filename, hdr.length, m_paths.length ());
-   }
-
-   // check the count
-   if (hdr.length == 0 || hdr.length > kMaxNodes || hdr.length < kMaxNodeLinks) {
-      if (tryReload ()) {
-         return true;
-      }
-      return raiseLoadingError (isGraph, isDebug, file, "Damaged %s (filename: '%s'). Paths length is overflowed (got: '%d').", name, filename, hdr.length);
-   }
-
-   // check the version
-   if (hdr.version > version && isGraph) {
-      ctrl.msg ("Graph version mismatch %s (filename: '%s'). Version number differs (got: '%d', need: '%d') Please, upgrade %s.", name, filename, hdr.version, version, product.name);
-   }
-   else if (hdr.version > version && !isGraph) {
-      return raiseLoadingError (isGraph, isDebug, file, "Damaged %s (filename: '%s'). Version number differs (got: '%d', need: '%d').", name, filename, hdr.version, version);
-   }
-
-   // temporary solution to kill version 1 vistables, which has a bugs
-   if ((options & StorageOption::Vistable) && hdr.version == 1) {
-      auto vistablePath = util.buildPath (BotFile::Vistable);
-
-      if (File::exists (vistablePath)) {
-         plat.removeFile (vistablePath.chars ());
-      }
-      return raiseLoadingError (isGraph, isDebug, file, "Bugged vistable %s (filename: '%s'). Version 1 has a bugs, vistable will be recreated.", name, filename);
-   }
-
-   // save graph version
-   if (isGraph) {
-      memcpy (&m_graphHeader, &hdr, sizeof (StorageHeader));
-   }
-
-   // check the storage type
-   if ((hdr.options & options) != options) {
-      return raiseLoadingError (isGraph, isDebug, file, "Incorrect storage format for %s (filename: '%s').", name, filename);
-   }
-   auto compressedSize = static_cast <size_t> (hdr.compressed);
-   auto numberNodes = static_cast <size_t> (hdr.length);
-
-   SmallArray <uint8_t> compressed (compressedSize + sizeof (uint8_t) * ULZ::Excess);
-
-   // graph is not resized upon load
-   if (isGraph) {
-      resizeData (numberNodes);
-   }
-
-   // read compressed data
-   if (file.read (compressed.data (), sizeof (uint8_t), compressedSize) == compressedSize) {
-
-      // try to uncompress
-      if (ulz.uncompress (compressed.data (), hdr.compressed, reinterpret_cast <uint8_t *> (data.data ()), hdr.uncompressed) == ULZ::UncompressFailure) {
-         return raiseLoadingError (isGraph, isDebug, file, "Unable to decompress ULZ data for %s (filename: '%s').", name, filename);
-      }
-      else {
-
-         if (outOptions) {
-            outOptions = &hdr.options;
-         }
-
-         // author of graph.. save
-         if ((hdr.options & StorageOption::Exten) && exten != nullptr) {
-            auto extenSize = sizeof (ExtenHeader);
-            auto actuallyRead = file.read (exten, extenSize) * extenSize;
-
-            if (isGraph) {
-               strings.copy (m_extenHeader.author, exten->author, cr::bufsize (exten->author));
-
-               if (extenSize <= actuallyRead) {
-                  // write modified by, only if the name is different
-                  if (!strings.isEmpty (m_extenHeader.author) && strncmp (m_extenHeader.author, exten->modified, cr::bufsize (m_extenHeader.author)) != 0) {
-                     strings.copy (m_extenHeader.modified, exten->modified, cr::bufsize (exten->modified));
-                  }
-               }
-               else {
-                  strings.copy (m_extenHeader.modified, "(none)", cr::bufsize (exten->modified));
-               }
-               m_extenHeader.mapSize = exten->mapSize;
-            }
-         }
-         ctrl.msg ("Loaded Bots %s data v%d (%d/%.2fMB).", name, hdr.version, m_paths.length (), static_cast <float> (data.capacity () * sizeof (U)) / 1024.0f / 1024.0f);
-         file.close ();
-
-         return true;
-      }
-   }
-   else {
-      return raiseLoadingError (isGraph, isDebug, file, "Unable to read ULZ data for %s (filename: '%s').", name, filename);
-   }
-   return false;
-}
-
 bool BotGraph::loadGraphData () {
    ExtenHeader exten {};
    int32_t outOptions = 0;
@@ -1862,11 +1542,13 @@ bool BotGraph::loadGraphData () {
    m_graphHeader = {};
    m_extenHeader = {};
 
+   // re-initialize paths
+   reset ();
+
    // check if loaded
-   bool dataLoaded = loadStorage <Path> ("Graph", StorageOption::Graph, StorageVersion::Graph, m_paths, &exten, &outOptions);
+   bool dataLoaded = bstor.load <Path> (m_paths, &exten, &outOptions);
 
    if (dataLoaded) {
-      reset ();
       initBuckets ();
 
       // add data to buckets
@@ -1885,22 +1567,25 @@ bool BotGraph::loadGraphData () {
       if (!modified.empty () && !modified.contains ("(none)")) {
          m_graphModified.assign (exten.modified);
       }
+      planner.init (); // initialize our little path planner
+      practice.load (); // load bots practice
+      vistab.load (); // load/initialize visibility
 
-      initNodesTypes ();
-      loadPathMatrix ();
-      loadVisibility ();
-      loadPractice ();
-
+      populateNodes ();
+      
       if (exten.mapSize > 0) {
          int mapSize = getBspSize ();
 
          if (mapSize != exten.mapSize) {
-            ctrl.msg ("Warning: Graph data is probably not for this map. Please check bots behaviour.");
+            msg ("Warning: Graph data is probably not for this map. Please check bots behaviour.");
          }
       }
       cv_debug_goal.set (kInvalidNodeIndex);
 
       return true;
+   }
+   else {
+      analyzer.start ();
    }
    return false;
 }
@@ -1927,6 +1612,11 @@ bool BotGraph::saveGraphData () {
       editorName = product.name;
    }
 
+   // mark as analyzed
+   if (analyzer.isAnalyzed ()) {
+      options |= StorageOption::Analyzed;
+   }
+
    // mark as official
    if (editorName.startsWith (product.name)) {
       options |= StorageOption::Official;
@@ -1951,7 +1641,7 @@ bool BotGraph::saveGraphData () {
    m_narrowChecked = false;
    initNarrowPlaces ();
 
-   return saveStorage <Path> ("Graph", static_cast <StorageOption> (options), StorageVersion::Graph, m_paths, &exten);
+   return bstor.save <Path> (m_paths, &exten, options);
 }
 
 void BotGraph::saveOldFormat () {
@@ -1968,7 +1658,7 @@ void BotGraph::saveOldFormat () {
    File fp;
 
    // file was opened
-   if (fp.open (util.buildPath (BotFile::PodbotPWF), "wb")) {
+   if (fp.open (bstor.buildPath (BotFile::PodbotPWF), "wb")) {
       // write the node header to the file...
       fp.write (&header, sizeof (header));
 
@@ -1992,10 +1682,14 @@ float BotGraph::calculateTravelTime (float maxSpeed, const Vector &src, const Ve
    return origin.distance2d (src) / maxSpeed;
 }
 
-bool BotGraph::isNodeReacheable (const Vector &src, const Vector &destination) {
+bool BotGraph::isNodeReacheableEx (const Vector &src, const Vector &destination, const float maxHeight) {
    TraceResult tr {};
 
    float distance = destination.distance (src);
+
+   if ((destination.z - src.z) >= 45.0f) {
+      return false;
+   }
 
    // is the destination not close enough?
    if (distance > m_autoPathDistance) {
@@ -2065,7 +1759,7 @@ bool BotGraph::isNodeReacheable (const Vector &src, const Vector &destination) {
          float height = tr.flFraction * 1000.0f; // height from ground
 
          // is the current height greater than the step height?
-         if (height < lastHeight - 18.0f) {
+         if (height < lastHeight - maxHeight) {
             return false; // can't get there without jumping...
          }
          lastHeight = height;
@@ -2076,130 +1770,13 @@ bool BotGraph::isNodeReacheable (const Vector &src, const Vector &destination) {
    return false;
 }
 
-void BotGraph::rebuildVisibility () {
-   if (!m_needsVisRebuild) {
-      return;
-   }
 
-   TraceResult tr {};
-   uint8_t res, shift;
-
-   for (const auto &vis : m_paths) {
-      Vector sourceDuck = vis.origin;
-      Vector sourceStand = vis.origin;
-
-      if (vis.flags & NodeFlag::Crouch) {
-         sourceDuck.z += 12.0f;
-         sourceStand.z += 18.0f + 28.0f;
-      }
-      else {
-         sourceDuck.z += -18.0f + 12.0f;
-         sourceStand.z += 28.0f;
-      }
-      uint16_t standCount = 0, crouchCount = 0;
-
-      for (const auto &path : m_paths) {
-         // first check ducked visibility
-         Vector dest = path.origin;
-
-         game.testLine (sourceDuck, dest, TraceIgnore::Monsters, nullptr, &tr);
-
-         // check if line of sight to object is not blocked (i.e. visible)
-         if (!cr::fequal (tr.flFraction, 1.0f) || tr.fStartSolid) {
-            res = 1;
-         }
-         else {
-            res = 0;
-         }
-         res <<= 1;
-
-         game.testLine (sourceStand, dest, TraceIgnore::Monsters, nullptr, &tr);
-
-         // check if line of sight to object is not blocked (i.e. visible)
-         if (!cr::fequal (tr.flFraction, 1.0f) || tr.fStartSolid) {
-            res |= 1;
-         }
-
-         if (res != 0) {
-            dest = path.origin;
-
-            // first check ducked visibility
-            if (path.flags & NodeFlag::Crouch) {
-               dest.z += 18.0f + 28.0f;
-            }
-            else {
-               dest.z += 28.0f;
-            }
-            game.testLine (sourceDuck, dest, TraceIgnore::Monsters, nullptr, &tr);
-
-            // check if line of sight to object is not blocked (i.e. visible)
-            if (!cr::fequal (tr.flFraction, 1.0f) || tr.fStartSolid) {
-               res |= 2;
-            }
-            else {
-               res &= 1;
-            }
-            game.testLine (sourceStand, dest, TraceIgnore::Monsters, nullptr, &tr);
-
-            // check if line of sight to object is not blocked (i.e. visible)
-            if (!cr::fequal (tr.flFraction, 1.0f) || tr.fStartSolid) {
-               res |= 1;
-            }
-            else {
-               res &= 2;
-            }
-         }
-         shift = static_cast <uint8_t> ((path.number % 4) << 1);
-
-         m_vistable[vis.number * length () + path.number] &= ~static_cast <uint8_t> (3 << shift);
-         m_vistable[vis.number * length () + path.number] |= res << shift;
-
-         if (!(res & 2)) {
-            ++crouchCount;
-         }
-
-         if (!(res & 1)) {
-            ++standCount;
-         }
-      }
-      m_paths[vis.number].vis.crouch = crouchCount;
-      m_paths[vis.number].vis.stand = standCount;
-   }
-   m_needsVisRebuild = false;
-   saveVisibility ();
+bool BotGraph::isNodeReacheable (const Vector &src, const Vector &destination) {
+   return isNodeReacheableEx (src, destination, 45.0f);
 }
 
-bool BotGraph::isVisible (int srcIndex, int destIndex) {
-   if (!exists (srcIndex) || !exists (destIndex)) {
-      return false;
-   }
-
-   uint8_t res = m_vistable[srcIndex * length () + destIndex];
-   res >>= (destIndex % 4) << 1;
-
-   return !((res & 3) == 3);
-}
-
-bool BotGraph::isDuckVisible (int srcIndex, int destIndex) {
-   if (!exists (srcIndex) || !exists (destIndex)) {
-      return false;
-   }
-
-   uint8_t res = m_vistable[srcIndex * length () + destIndex];
-   res >>= (destIndex % 4) << 1;
-
-   return !((res & 2) == 2);
-}
-
-bool BotGraph::isStandVisible (int srcIndex, int destIndex) {
-   if (!exists (srcIndex) || !exists (destIndex)) {
-      return false;
-   }
-
-   uint8_t res = m_vistable[srcIndex * length () + destIndex];
-   res >>= (destIndex % 4) << 1;
-
-   return !((res & 1) == 1);
+bool BotGraph::isNodeReacheableWithJump (const Vector &src, const Vector &destination) {
+   return isNodeReacheableEx (src, destination, cv_graph_analyze_max_jump_height.float_ ());
 }
 
 void BotGraph::frame () {
@@ -2244,7 +1821,7 @@ void BotGraph::frame () {
       // find the distance from the last used node
       float distance = m_lastNode.distanceSq (m_editor->v.origin);
 
-      if (distance > cr::square (128.0f)) {
+      if (distance > cr::sqrf (128.0f)) {
          // check that no other reachable nodes are nearby...
          for (const auto &path : m_paths) {
             if (isNodeReacheable (m_editor->v.origin, path.origin)) {
@@ -2257,7 +1834,7 @@ void BotGraph::frame () {
          }
 
          // make sure nearest node is far enough away...
-         if (nearestDistance >= cr::square (128.0f)) {
+         if (nearestDistance >= cr::sqrf (128.0f)) {
             add (NodeAddFlag::Normal); // place a node here
          }
       }
@@ -2440,7 +2017,7 @@ void BotGraph::frame () {
 
       // if radius is nonzero, draw a full circle
       if (path.radius > 0.0f) {
-         float sqr = cr::sqrtf (cr::square (path.radius) * 0.5f);
+         float sqr = cr::sqrtf (cr::sqrf (path.radius) * 0.5f);
 
          game.drawLine (m_editor, origin + Vector (path.radius, 0.0f, 0.0f), origin + Vector (sqr, -sqr, 0.0f), 5, 0, radiusColor, 200, 0, 10);
          game.drawLine (m_editor, origin + Vector (sqr, -sqr, 0.0f), origin + Vector (0.0f, -path.radius, 0.0f), 5, 0, radiusColor, 200, 0, 10);
@@ -2463,8 +2040,8 @@ void BotGraph::frame () {
 
       // draw the danger directions
       if (!m_hasChanged) {
-         int dangerIndexT = getDangerIndex (Team::Terrorist, nearestIndex, nearestIndex);
-         int dangerIndexCT = getDangerIndex (Team::CT, nearestIndex, nearestIndex);
+         int dangerIndexT = practice.getIndex (Team::Terrorist, nearestIndex, nearestIndex);
+         int dangerIndexCT = practice.getIndex (Team::CT, nearestIndex, nearestIndex);
 
          if (exists (dangerIndexT)) {
             game.drawLine (m_editor, path.origin, m_paths[dangerIndexT].origin, 15, 0, { 255, 0, 0 }, 200, 0, 10, DrawLine::Arrow); // draw a red arrow to this index's danger point
@@ -2556,15 +2133,15 @@ void BotGraph::frame () {
 
       // if node is not changed display experience also
       if (!m_hasChanged) {
-         int dangerIndexCT = getDangerIndex (Team::CT, nearestIndex, nearestIndex);
-         int dangerIndexT = getDangerIndex (Team::Terrorist, nearestIndex, nearestIndex);
+         int dangerIndexCT = practice.getIndex (Team::CT, nearestIndex, nearestIndex);
+         int dangerIndexT = practice.getIndex (Team::Terrorist, nearestIndex, nearestIndex);
 
-         String practice;
-         practice.assignf ("      Node practice data (index / damage):\n"
-                           "       CT: %d / %d\n"
-                           "       T:  %d / %d\n\n", dangerIndexCT, dangerIndexCT != kInvalidNodeIndex ? getDangerDamage (Team::CT, nearestIndex, dangerIndexCT) : 0, dangerIndexT, dangerIndexT != kInvalidNodeIndex ? getDangerDamage (Team::Terrorist, nearestIndex, dangerIndexT) : 0);
+         String practiceText;
+         practiceText.assignf ("      Node practice data (index / damage):\n"
+                               "       CT: %d / %d\n"
+                               "       T:  %d / %d\n\n", dangerIndexCT, dangerIndexCT != kInvalidNodeIndex ? practice.getDamage (Team::CT, nearestIndex, dangerIndexCT) : 0, dangerIndexT, dangerIndexT != kInvalidNodeIndex ? practice.getDamage (Team::Terrorist, nearestIndex, dangerIndexT) : 0);
 
-         sendHudMessage ({ 255, 255, 255 }, 0.0f, 0.16f, m_editor, practice + timeMessage);
+         sendHudMessage ({ 255, 255, 255 }, 0.0f, 0.16f, m_editor, practiceText + timeMessage);
       }
       else {
          sendHudMessage ({ 255, 255, 255 }, 0.0f, 0.16f, m_editor, timeMessage);
@@ -2605,14 +2182,14 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
       int connections = 0;
 
       if (path.number != static_cast <int> (m_paths.index (path))) {
-         ctrl.msg ("Node %d path differs from index %d.", path.number, m_paths.index (path));
+         msg ("Node %d path differs from index %d.", path.number, m_paths.index (path));
          break;
       }
 
       for (const auto &test : path.links) {
          if (test.index != kInvalidNodeIndex) {
             if (test.index > length ()) {
-               ctrl.msg ("Node %d connected with invalid node %d.", path.number, test.index);
+               msg ("Node %d connected with invalid node %d.", path.number, test.index);
                return false;
             }
             ++connections;
@@ -2622,14 +2199,14 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
 
       if (connections == 0) {
          if (!isConnected (path.number)) {
-            ctrl.msg ("Node %d isn't connected with any other node.", path.number);
+            msg ("Node %d isn't connected with any other node.", path.number);
             return false;
          }
       }
 
       if (path.flags & NodeFlag::Camp) {
          if (path.end.empty ()) {
-            ctrl.msg ("Node %d camp-endposition not set.", path.number);
+            msg ("Node %d camp-endposition not set.", path.number);
             return false;
          }
       }
@@ -2649,13 +2226,13 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
       for (const auto &test : path.links) {
          if (test.index != kInvalidNodeIndex) {
             if (!exists (test.index)) {
-               ctrl.msg ("Node %d path index %d out of range.", path.number, test.index);
+               msg ("Node %d path index %d out of range.", path.number, test.index);
                teleport (path);
 
                return false;
             }
             else if (test.index == path.number) {
-               ctrl.msg ("Node %d path index %d points to itself.", path.number, test.index);
+               msg ("Node %d path index %d points to itself.", path.number, test.index);
                teleport (path);
 
                return false;
@@ -2666,20 +2243,20 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
 
    if (game.mapIs (MapFlags::HostageRescue)) {
       if (rescuePoints == 0) {
-         ctrl.msg ("You didn't set a rescue point.");
+         msg ("You didn't set a rescue point.");
          return false;
       }
    }
    if (terrPoints == 0) {
-      ctrl.msg ("You didn't set any terrorist important point.");
+      msg ("You didn't set any terrorist important point.");
       return false;
    }
    else if (ctPoints == 0) {
-      ctrl.msg ("You didn't set any CT important point.");
+      msg ("You didn't set any CT important point.");
       return false;
    }
    else if (goalPoints == 0) {
-      ctrl.msg ("You didn't set any goal point.");
+      msg ("You didn't set any goal point.");
       return false;
    }
 
@@ -2721,7 +2298,7 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
 
    for (const auto &path : m_paths) {
       if (!visited[path.number]) {
-         ctrl.msg ("Path broken from node 0 to node %d.", path.number);
+         msg ("Path broken from node 0 to node %d.", path.number);
          teleport (path);
 
          return false;
@@ -2764,20 +2341,13 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
 
    for (const auto &path : m_paths) {
       if (!visited[path.number]) {
-         ctrl.msg ("Path broken from node %d to node 0.", path.number);
+         msg ("Path broken from node %d to node 0.", path.number);
          teleport (path);
 
          return false;
       }
    }
    return true;
-}
-
-int BotGraph::getPathDist (int srcIndex, int destIndex) {
-   if (!exists (srcIndex) || !exists (destIndex)) {
-      return 1;
-   }
-   return (m_matrix.data () + (srcIndex * length ()) + destIndex)->dist;
 }
 
 void BotGraph::setVisited (int index) {
@@ -2814,7 +2384,7 @@ void BotGraph::addBasic () {
       TraceResult tr {};
       Vector up, down, front, back;
 
-      const Vector &diff = ((ladderLeft - ladderRight) ^ Vector (0.0f, 0.0f, 0.0f)).normalize () * 15.0f;
+      Vector diff = ((ladderLeft - ladderRight) ^ nullptr) * 15.0f;
       front = back = game.getEntityOrigin (ent);
 
       front = front + diff; // front
@@ -2840,7 +2410,7 @@ void BotGraph::addBasic () {
          if (getNearestNoBuckets (point, 50.0f) == kInvalidNodeIndex) {
             add (NodeAddFlag::NoHostage, point);
          }
-         point.z += 160;
+         point.z += 160.0f;
       } while (point.z < down.z - 40.0f);
 
       point = down + Vector (0.0f, 0.0f, 38.0f);
@@ -2855,10 +2425,14 @@ void BotGraph::addBasic () {
 
    auto autoCreateForEntity = [] (int type, const char *entity) {
       game.searchEntities ("classname", entity, [&] (edict_t *ent) {
-         const Vector &pos = game.getEntityOrigin (ent);
+         Vector pos = game.getEntityOrigin (ent);
 
-         if (graph.getNearestNoBuckets (pos, 50.0f) == kInvalidNodeIndex) {
-            graph.add (type, pos);
+         TraceResult tr;
+         game.testLine (pos, pos - Vector (0.0f, 0.0f, 999.0f), TraceIgnore::Monsters, nullptr, &tr);
+         tr.vecEndPos.z += 36.0f;
+
+         if (graph.getNearestNoBuckets (tr.vecEndPos, 50.0f) == kInvalidNodeIndex) {
+            graph.add (type, tr.vecEndPos);
          }
          return EntitySearchResult::Continue;
       });
@@ -2878,31 +2452,6 @@ void BotGraph::addBasic () {
    autoCreateForEntity (NodeAddFlag::Goal, "monster_scientist"); // hostage entities (same as above)
    autoCreateForEntity (NodeAddFlag::Goal, "func_vip_safetyzone"); // vip rescue (safety) zone
    autoCreateForEntity (NodeAddFlag::Goal, "func_escapezone"); // terrorist escape zone
-}
-
-void BotGraph::eraseFromDisk () {
-   // this function removes graph file from the hard disk
-
-   StringArray forErase;
-   bots.kickEveryone (true);
-
-   // if we're delete graph, delete all corresponding to it files
-   forErase.emplace (util.buildPath (BotFile::Graph)); // graph itself
-   forErase.emplace (util.buildPath (BotFile::Practice)); // corresponding to practice
-   forErase.emplace (util.buildPath (BotFile::Vistable)); // corresponding to vistable
-   forErase.emplace (util.buildPath (BotFile::Pathmatrix)); // corresponding to matrix
-
-   for (const auto &item : forErase) {
-      if (File::exists (item)) {
-         plat.removeFile (item.chars ());
-         ctrl.msg ("File %s, has been deleted from the hard disk", item);
-      }
-      else {
-         logger.error ("Unable to open %s", item);
-      }
-   }
-   reset (); // reintialize points
-   m_paths.clear ();
 }
 
 void BotGraph::setBombOrigin (bool reset, const Vector &pos) {
@@ -2950,7 +2499,7 @@ void BotGraph::setSearchIndex (int index) {
    m_findWPIndex = index;
 
    if (exists (m_findWPIndex)) {
-      ctrl.msg ("Showing direction to node %d.", m_findWPIndex);
+      msg ("Showing direction to node %d.", m_findWPIndex);
    }
    else {
       m_findWPIndex = kInvalidNodeIndex;
@@ -2959,7 +2508,6 @@ void BotGraph::setSearchIndex (int index) {
 
 BotGraph::BotGraph () {
    m_endJumpPoint = false;
-   m_needsVisRebuild = false;
    m_jumpLearnNode = false;
    m_hasChanged = false;
    m_narrowChecked = false;
@@ -2969,7 +2517,6 @@ BotGraph::BotGraph () {
    m_cacheNodeIndex = kInvalidNodeIndex;
    m_findWPIndex = kInvalidNodeIndex;
    m_facingAtIndex = kInvalidNodeIndex;
-   m_loadAttempts = 0;
    m_isOnLadder = false;
 
    m_terrorPoints.clear ();
@@ -2979,15 +2526,11 @@ BotGraph::BotGraph () {
    m_rescuePoints.clear ();
    m_sniperPoints.clear ();
 
-   m_loadAttempts = 0;
    m_editFlags = 0;
 
    m_pathDisplayTime = 0.0f;
    m_arrowDisplayTime = 0.0f;
    m_autoPathDistance = 250.0f;
-
-   m_matrix.clear ();
-   m_practice.clear ();
 
    m_editor = nullptr;
 }
@@ -3004,6 +2547,10 @@ const Array <int32_t> &BotGraph::getNodesInBucket (const Vector &pos) {
    return m_hashTable[locateBucket (pos)];
 }
 
+bool BotGraph::isAnalyzed () const {
+   return (m_graphHeader.options & StorageOption::Analyzed);
+}
+
 void BotGraph::eraseFromBucket (const Vector &pos, int index) {
    auto &data = m_hashTable[locateBucket (pos)];
 
@@ -3016,69 +2563,12 @@ void BotGraph::eraseFromBucket (const Vector &pos, int index) {
 }
 
 int BotGraph::locateBucket (const Vector &pos) {
-   constexpr auto width = cr::square (kMaxNodes);
+   constexpr auto width = 8192;
 
    auto hash = [&] (float axis, int32_t shift) {
       return ((static_cast <int> (axis) + width) & 0x007f80) >> shift;
    };
    return hash (pos.x, 15) + hash (pos.y, 7);
-}
-
-void BotGraph::updateGlobalPractice () {
-   // this function called after each end of the round to update knowledge about most dangerous nodes for each team.
-
-   // no nodes, no experience used or nodes edited or being edited?
-   if (m_paths.empty () || m_hasChanged) {
-      return; // no action
-   }
-   bool adjustValues = false;
-   auto practice = m_practice.data ();
-
-   // get the most dangerous node for this position for both teams
-   for (int team = Team::Terrorist; team < kGameTeamNum; ++team) {
-      int bestIndex = kInvalidNodeIndex; // best index to store
-
-      for (int i = 0; i < length (); ++i) {
-         int maxDamage = 0;
-         bestIndex = kInvalidNodeIndex;
-
-         for (int j = 0; j < length (); ++j) {
-            if (i == j) {
-               continue;
-            }
-            int actDamage = getDangerDamage (team, i, j);
-
-            if (actDamage > maxDamage) {
-               maxDamage = actDamage;
-               bestIndex = j;
-            }
-         }
-
-         if (maxDamage > kMaxPracticeDamageValue) {
-            adjustValues = true;
-         }
-         (practice + (i * length ()) + i)->index[team] = static_cast <int16_t> (bestIndex);
-      }
-   }
-   constexpr auto kHalfDamageVal = static_cast <int> (kMaxPracticeDamageValue * 0.5);
-
-   // adjust values if overflow is about to happen
-   if (adjustValues) {
-      for (int team = Team::Terrorist; team < kGameTeamNum; ++team) {
-         for (int i = 0; i < length (); ++i) {
-            for (int j = 0; j < length (); ++j) {
-               if (i == j) {
-                  continue;
-               }
-               (practice + (i * length ()) + j)->damage[team] = static_cast <int16_t> (cr::clamp (getDangerDamage (team, i, j) - kHalfDamageVal, 0, kMaxPracticeDamageValue));
-            }
-         }
-      }
-   }
-
-   for (int team = Team::Terrorist; team < kGameTeamNum; ++team) {
-      m_highestDamage[team] = cr::clamp (m_highestDamage[team] - kHalfDamageVal, 1, kMaxPracticeDamageValue);
-   }
 }
 
 void BotGraph::unassignPath (int from, int to) {
@@ -3158,64 +2648,4 @@ void BotGraph::convertCampDirection (Path &path) {
 
    path.start.clampAngles ();
    path.end.clampAngles ();
-}
-
-int BotGraph::getDangerIndex (int team, int start, int goal) {
-   if (team != Team::Terrorist && team != Team::CT) {
-      return kInvalidNodeIndex;
-   }
-
-   // realiablity check
-   if (!exists (start) || !exists (goal)) {
-      return kInvalidNodeIndex;
-   }
-   return (m_practice.data () + (start * length ()) + goal)->index[team];
-}
-
-int BotGraph::getDangerValue (int team, int start, int goal) {
-   if (team != Team::Terrorist && team != Team::CT) {
-      return 0;
-   }
-
-   // reliability check
-   if (!exists (start) || !exists (goal)) {
-      return 0;
-   }
-   return (m_practice.data () + (start * length ()) + goal)->value[team];
-}
-
-int BotGraph::getDangerDamage (int team, int start, int goal) {
-   if (team != Team::Terrorist && team != Team::CT) {
-      return 0;
-   }
-
-   // reliability check
-   if (!exists (start) || !exists (goal)) {
-      return 0;
-   }
-   return (m_practice.data () + (start * length ()) + goal)->damage[team];
-}
-
-void BotGraph::setDangerValue (int team, int start, int goal, int value) {
-   if (team != Team::Terrorist && team != Team::CT) {
-      return;
-   }
-
-   // reliability check
-   if (!exists (start) || !exists (goal)) {
-      return;
-   }
-   (m_practice.data () + (start * length ()) + goal)->value[team] = static_cast <int16_t> (value);
-}
-
-void BotGraph::setDangerDamage (int team, int start, int goal, int value) {
-   if (team != Team::Terrorist && team != Team::CT) {
-      return;
-   }
-
-   // reliability check
-   if (!exists (start) || !exists (goal)) {
-      return;
-   }
-   (m_practice.data () + (start * length ()) + goal)->damage[team] = static_cast <int16_t> (value);
 }

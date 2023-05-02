@@ -58,14 +58,21 @@ int BotControl::cmdKickBot () {
 }
 
 int BotControl::cmdKickBots () {
-   enum args { alias = 1, instant };
+   enum args { alias = 1, instant, team };
 
    // check if we're need to remove bots instantly
    auto kickInstant = strValue (instant) == "instant";
 
-   // kick the bots
-   bots.kickEveryone (kickInstant);
-
+   // if team is specified, kick from specified tram
+   if (strValue (alias).endsWith ("_ct") || intValue (team) == 2 || strValue (team) == "ct") {
+      bots.kickFromTeam (Team::CT, true);
+   }
+   else if (strValue (alias).endsWith ("_t") || intValue (team) == 1 || strValue (team) == "t") {
+      bots.kickFromTeam (Team::Terrorist, true);
+   }
+   else {
+      bots.kickEveryone (kickInstant);
+   }
    return BotCommandResult::Handled;
 }
 
@@ -529,7 +536,7 @@ int BotControl::cmdNodeErase () {
 
    // prevent accidents when graph are deleted unintentionally
    if (strValue (iamsure) == "iamsure") {
-      graph.eraseFromDisk ();
+      bstor.unlinkFromDisk ();
    }
    else {
       msg ("Please, append \"iamsure\" as parameter to get graph erased from the disk.");
@@ -761,10 +768,16 @@ int BotControl::cmdNodeReleaseEditor () {
 int BotControl::cmdNodeUpload () {
    enum args { graph_cmd = 1, cmd };
 
+   // do not allow to upload analyzed graphs
+   if (graph.isAnalyzed ()) {
+      msg ("Sorry, unable to upload graph that was generated automatically.");
+      return BotCommandResult::Handled;
+   }
+
    // do not allow to upload bad graph
    if (!graph.checkNodes (false)) {
       msg ("Sorry, unable to upload graph file that contains errors. Please type \"wp check\" to verify graph consistency.");
-      return BotCommandResult::BadFormat;
+      return BotCommandResult::Handled;
    }
 
    msg ("\n");
@@ -776,7 +789,7 @@ int BotControl::cmdNodeUpload () {
    String uploadUrl = cv_graph_url_upload.str ();
 
    // try to upload the file
-   if (http.uploadFile (uploadUrl, util.buildPath (BotFile::Graph))) {
+   if (http.uploadFile (uploadUrl, bstor.buildPath (BotFile::Graph))) {
       msg ("Graph file was successfully validated and uploaded to the YaPB Graph DB (%s).", product.download);
       msg ("It will be available for download for all YaPB users in a few minutes.");
       msg ("\n");
@@ -1717,7 +1730,7 @@ bool BotControl::executeCommands () {
    if (m_args.empty ()) {
       return false;
    }
-   const auto &prefix = m_args[0];
+   const auto &prefix = m_args.first ();
 
    // no handling if not for us
    if (prefix != product.cmdPri && prefix != product.cmdSec) {
@@ -2055,7 +2068,7 @@ BotControl::BotControl () {
 
    m_cmds.emplace ("add/addbot/add_ct/addbot_ct/add_t/addbot_t/addhs/addhs_t/addhs_ct", "add [difficulty] [personality] [team] [model] [name]", "Adding specific bot into the game.", &BotControl::cmdAddBot);
    m_cmds.emplace ("kick/kickone/kick_ct/kick_t/kickbot_ct/kickbot_t", "kick [team]", "Kicks off the random bot from the game.", &BotControl::cmdKickBot);
-   m_cmds.emplace ("removebots/kickbots/kickall", "removebots [instant]", "Kicks all the bots from the game.", &BotControl::cmdKickBots);
+   m_cmds.emplace ("removebots/kickbots/kickall/kickall_ct/kickall_t", "removebots [instant] [team]", "Kicks all the bots from the game.", &BotControl::cmdKickBots);
    m_cmds.emplace ("kill/killbots/killall/kill_ct/kill_t", "kill [team]", "Kills the specified team / all the bots.", &BotControl::cmdKillBots);
    m_cmds.emplace ("fill/fillserver", "fill [team] [count] [difficulty] [personality]", "Fill the server (add bots) with specified parameters.", &BotControl::cmdFill);
    m_cmds.emplace ("vote/votemap", "vote [map_id]", "Forces all the bot to vote to specified map.", &BotControl::cmdVote);

@@ -71,6 +71,7 @@ struct ConVarReg {
    String info;
    String init;
    String regval;
+   String name;
    class ConVar *self;
    float initial, min, max;
    bool missing;
@@ -420,6 +421,19 @@ public:
       Game::instance ().addNewCvar (name, initval, info, bounded, min, max, type, regMissing, regVal, this);
    }
 
+   template <typename U> constexpr U get () const {
+      if constexpr (cr::is_same <U, float>::value) {
+         return ptr->value;
+      }
+      else if constexpr (cr::is_same <U, bool>::value) {
+         return ptr->value > 0.0f;
+      }
+      else if constexpr (cr::is_same <U, int>::value) {
+         return static_cast <int> (ptr->value);
+      }
+      assert ("!Inavlid type requeted.");
+   }
+
    bool bool_ () const {
       return ptr->value > 0.0f;
    }
@@ -447,6 +461,9 @@ public:
    void set (const char *val) {
       engfuncs.pfnCvar_DirectSet (ptr, val);
    }
+
+   // revet cvar to default value
+   void revert ();
 };
 
 class MessageWriter final {

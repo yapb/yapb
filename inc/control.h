@@ -216,7 +216,7 @@ public:
       m_args.clear ();
 
       for (int i = 0; i < engfuncs.pfnCmd_Argc (); ++i) {
-         m_args.emplace (engfuncs.pfnCmd_Argv (i));
+         m_args.emplace (String (engfuncs.pfnCmd_Argv (i)).lowercase ());
       }
    }
 
@@ -273,6 +273,15 @@ template <typename ...Args> inline void BotControl::msg (const char *fmt, Args &
       game.clientPrint (m_ent, result);
    }
 }
+
+// graph heloer for sending message to correct channel
+template <typename ...Args> inline void BotGraph::msg (const char *fmt, Args &&...args) {
+   if (m_silenceMessages) {
+      return; // no messages while analyzing (too much spam)
+   }
+   BotControl::instance ().msg (strings.format (conf.translate (fmt), cr::forward <Args> (args)...));
+}
+
 
 // explose global
 CR_EXPOSE_GLOBAL_SINGLETON (BotControl, ctrl);

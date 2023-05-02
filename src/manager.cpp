@@ -1251,7 +1251,6 @@ void Bot::newRound () {
 
    // delete all allocated path nodes
    clearSearchNodes ();
-   clearRoute ();
 
    m_pathOrigin = nullptr;
    m_destOrigin = nullptr;
@@ -1688,13 +1687,18 @@ void BotManager::notifyBombDefuse () {
    if (!isBombPlanted ()) {
       return;
    }
+   auto bombPos = graph.getBombOrigin ();
 
    for (const auto &bot : bots) {
-      if (bot->m_team == Team::Terrorist && bot->m_notKilled && bot->getCurrentTaskId () != Task::MoveToPosition) {
-         bot->clearSearchNodes ();
+      auto task = bot->getCurrentTaskId ();
 
-         bot->m_position = graph.getBombOrigin ();
-         bot->startTask (Task::MoveToPosition, TaskPri::MoveToPosition, kInvalidNodeIndex, 0.0f, true);
+      if (bot->m_notKilled && task != Task::MoveToPosition && task != Task::DefuseBomb && task != Task::EscapeFromBomb) {
+         if (bot->m_team == Team::CT || bot->pev->origin.distanceSq (bombPos) < cr::sqrf (384.0f)) {
+            bot->clearSearchNodes ();
+
+            bot->m_position = bombPos;
+            bot->startTask (Task::MoveToPosition, TaskPri::MoveToPosition, kInvalidNodeIndex, 0.0f, true);
+         }
       }
    }
 }
@@ -1891,7 +1895,7 @@ void BotManager::initRound () {
    m_botsCanPause = false;
 
    resetFilters ();
-   graph.updateGlobalPractice (); // update experience data on round start
+   practice.update (); // update practice data on round start
 
    // calculate the round mid/end in world time
    m_timeRoundStart = game.time () + mp_freezetime.float_ ();

@@ -24,7 +24,7 @@ int Bot::numFriendsNear (const Vector &origin, float radius) {
          continue;
       }
 
-      if (client.origin.distanceSq (origin) < cr::square (radius)) {
+      if (client.origin.distanceSq (origin) < cr::sqrf (radius)) {
          count++;
       }
    }
@@ -39,7 +39,7 @@ int Bot::numEnemiesNear (const Vector &origin, float radius) {
          continue;
       }
 
-      if (client.origin.distanceSq (origin) < cr::square (radius)) {
+      if (client.origin.distanceSq (origin) < cr::sqrf (radius)) {
          count++;
       }
    }
@@ -231,7 +231,7 @@ bool Bot::lookupEnemies () {
       return false;
    }
    edict_t *player, *newEnemy = nullptr;
-   float nearestDistance = cr::square (m_viewDistance);
+   float nearestDistance = cr::sqrf (m_viewDistance);
 
    // clear suspected flag
    if (!game.isNullEntity (m_enemy) && (m_states & Sense::SeeingEnemy)) {
@@ -300,7 +300,7 @@ bool Bot::lookupEnemies () {
 
          // extra skill player can see thru smoke... if beeing attacked
          if ((player->v.button & (IN_ATTACK | IN_ATTACK2)) && m_viewDistance < m_maxViewDistance && m_difficulty == Difficulty::Expert) {
-            nearestDistance = cr::square (m_maxViewDistance);
+            nearestDistance = cr::sqrf (m_maxViewDistance);
          }
 
          // see if bot can see the player...
@@ -645,7 +645,7 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
       game.testLine (dest, source, TraceIgnore::Monsters, ent (), &tr);
 
       if (!cr::fequal (tr.flFraction, 1.0f)) {
-         if (tr.vecEndPos.distanceSq (dest) > cr::square (800.0f)) {
+         if (tr.vecEndPos.distanceSq (dest) > cr::sqrf (800.0f)) {
             return false;
          }
 
@@ -655,7 +655,7 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
          obstacleDistance = tr.vecEndPos.distanceSq (source);
       }
    }
-   const float distance = cr::square (75.0f);
+   const float distance = cr::sqrf (75.0f);
 
    if (obstacleDistance > 0.0f) {
       while (power > 0) {
@@ -679,7 +679,7 @@ bool Bot::isPenetrableObstacle2 (const Vector &dest) {
    }
 
    const Vector &source = getEyesPos ();
-   const Vector &direction = (dest - source).normalize (); // 1 unit long
+   const Vector &direction = (dest - source).normalize_apx (); // 1 unit long
 
    int thikness = 0;
    int numHits = 0;
@@ -703,7 +703,7 @@ bool Bot::isPenetrableObstacle2 (const Vector &dest) {
    }
 
    if (numHits < 3 && thikness < 98) {
-      if (dest.distanceSq (point) < cr::square (112.0f)) {
+      if (dest.distanceSq (point) < cr::sqrf (112.0f)) {
          return true;
       }
    }
@@ -724,7 +724,7 @@ bool Bot::isPenetrableObstacle3 (const Vector &dest) {
    TraceResult tr {};
 
    Vector source = getEyesPos ();
-   const auto &dir = (dest - source).normalize () * 8.0f;
+   const auto &dir = (dest - source).normalize_apx () * 8.0f;
 
    for (;;) {
       game.testLine (source, dest, TraceIgnore::Monsters, ent (), &tr);
@@ -773,8 +773,8 @@ bool Bot::needToPauseFiring (float distance) {
    else if (distance < kDoubleSprayDistance) {
       offset = 2.75f;
    }
-   const float xPunch = cr::square (cr::deg2rad (pev->punchangle.x));
-   const float yPunch = cr::square (cr::deg2rad (pev->punchangle.y));
+   const float xPunch = cr::sqrf (cr::deg2rad (pev->punchangle.x));
+   const float yPunch = cr::sqrf (cr::deg2rad (pev->punchangle.y));
 
    const float interval = m_frameInterval;
    const float tolerance = (100.0f - static_cast <float> (m_difficulty) * 25.0f) / 99.0f;
@@ -1277,7 +1277,7 @@ void Bot::attackMovement () {
       else if ((distance > kDoubleSprayDistance && hasPrimaryWeapon ()) && (m_enemyParts & (Visibility::Head | Visibility::Body)) && getCurrentTaskId () != Task::SeekCover && getCurrentTaskId () != Task::Hunt) {
          int enemyNearestIndex = graph.getNearest (m_enemy->v.origin);
 
-         if (graph.isVisible (m_currentNodeIndex, enemyNearestIndex) && graph.isDuckVisible (m_currentNodeIndex, enemyNearestIndex) && graph.isDuckVisible (enemyNearestIndex, m_currentNodeIndex)) {
+         if (vistab.visible (m_currentNodeIndex, enemyNearestIndex, VisIndex::Crouch) && vistab.visible (enemyNearestIndex, m_currentNodeIndex, VisIndex::Crouch)) {
             m_duckTime = game.time () + m_frameInterval * 2.0f;
          }
       }
@@ -1657,7 +1657,7 @@ bool Bot::isGroupOfEnemies (const Vector &location, int numEnemies, float radius
          continue;
       }
 
-      if (client.ent->v.origin.distanceSq (location) < cr::square (radius)) {
+      if (client.ent->v.origin.distanceSq (location) < cr::sqrf (radius)) {
          // don't target our teammates...
          if (client.team == m_team) {
             return false;

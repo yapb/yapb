@@ -371,7 +371,7 @@ void MessageDispatcher::netMsgBarTime () {
       m_bot->m_hasProgressBar = true; // the progress bar on a hud
 
       // notify bots about defusing has started
-      if (game.mapIs (MapFlags::Demolition) && bots.isBombPlanted () && m_bot->m_team == Team::CT) {
+      if (game.mapIs (MapFlags::Demolition) && bots.isBombPlanted ()) {
          bots.notifyBombDefuse ();
       }
    }

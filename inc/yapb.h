@@ -443,12 +443,6 @@ namespace TaskPri {
    static constexpr float EscapeFromBomb { 100.0f };
 }
 
-// storage file magic
-constexpr char kPodbotMagic[8] = "PODWAY!";
-
-constexpr int32_t kStorageMagic = 0x59415042; // storage magic for yapb-data files
-constexpr int32_t kStorageMagicUB = 0x544f4255; //support also the fork format (merged back into yapb)
-
 constexpr float kInfiniteDistance = 9999999.0f;
 constexpr float kGrenadeCheckTime = 0.6f;
 constexpr float kSprayDistance = 260.0f;
@@ -456,10 +450,6 @@ constexpr float kDoubleSprayDistance = kSprayDistance * 2;
 constexpr float kMaxChatterRepeatInterval = 99.0f;
 
 constexpr int kInfiniteDistanceLong = static_cast <int> (kInfiniteDistance);
-constexpr int kMaxNodeLinks = 8;
-constexpr int kMaxPracticeDamageValue = 2040;
-constexpr int kMaxPracticeGoalValue = 2040;
-constexpr int kMaxNodes = 2048;
 constexpr int kMaxWeapons = 32;
 constexpr int kNumWeapons = 26;
 constexpr int kMaxCollideMoves = 3;
@@ -598,11 +588,78 @@ struct ChatCollection {
 // include bot graph stuff
 #include <graph.h>
 
+// this structure links nodes returned from pathfinder
+class PathWalk final : public DenyCopying {
+private:
+   size_t m_cursor {};
+   size_t m_length {};
+
+   UniquePtr <int32_t[]> m_path {};
+
+public:
+   explicit PathWalk () = default;
+   ~PathWalk () = default;
+
+public:
+   int32_t &next () {
+      return at (1);
+   }
+
+   int32_t &first () {
+      return at (0);
+   }
+
+   int32_t &last () {
+      return at (length () - 1);
+   }
+
+   int32_t &at (size_t index) {
+      return m_path[m_cursor + index];
+   }
+
+   void shift () {
+      ++m_cursor;
+   }
+
+   void reverse () {
+      for (size_t i = 0; i < m_length / 2; ++i) {
+         cr::swap (m_path[i], m_path[m_length - 1 - i]);
+      }
+   }
+
+   size_t length () const {
+      if (m_cursor >= m_length) {
+         return 0;
+      }
+      return m_length - m_cursor;
+   }
+
+   bool hasNext () const {
+      return length () > m_cursor;
+   }
+
+   bool empty () const {
+      return !length ();
+   }
+
+   void add (int32_t node) {
+      m_path[m_length++] = node;
+   }
+
+   void clear () {
+      m_cursor = 0;
+      m_length = 0;
+
+      m_path[0] = 0;
+   }
+
+   void init (size_t length) {
+      m_path = cr::makeUnique <int32_t[]> (length);
+   }
+};
+
 // main bot class
 class Bot final {
-private:
-   using RouteTwin = Twin <int, float>;
-
 public:
    friend class BotManager;
 
@@ -632,6 +689,7 @@ private:
    int m_tryOpenDoor {}; // attempt's to open the door
    int m_liftState {}; // state of lift handling
    int m_radioSelect {}; // radio entry
+   int m_lastPredictIndex {}; // last predicted index
   
    float m_headedTime {};
    float m_prevTime {}; // time previously checked movement speed
@@ -744,16 +802,14 @@ private:
 
    Array <edict_t *> m_ignoredBreakable {}; // list of ignored breakables
    Array <edict_t *> m_hostages {}; // pointer to used hostage entities
-   Array <Route> m_routes {}; // pointer
    Array <int32_t> m_nodeHistory {}; // history of selected goals
 
-   BinaryHeap <RouteTwin> m_routeQue {};
    Path *m_path {}; // pointer to the current path node
    String m_chatBuffer {}; // space for strings (say text...)
    FrustumPlane m_frustum[FrustumSide::Num] {};
 
 private:
-   int pickBestWeapon (int *vec, int count, int moneySave);
+   int pickBestWeapon (Array <int> &vec, int moneySave);
    int getRandomCampDir ();
    int findAimingNode (const Vector &to, int &pathLength);
    int findNearestNode ();
@@ -863,9 +919,7 @@ private:
    void updatePracticeDamage (edict_t *attacker, int damage);
    void findShortestPath (int srcIndex, int destIndex);
    void calculateFrustum ();
-
    void findPath (int srcIndex, int destIndex, FindPath pathType = FindPath::Fast);
-   void clearRoute ();
    void debugMsgInternal (const char *str);
    void frame ();
    void resetCollision ();
@@ -948,6 +1002,13 @@ private:
 
    void dropCurrentWeapon () {
       issueCommand ("drop");
+   }
+
+   // ensures current node is ok
+   void ensureCurrentNodeIndex () {
+      if (m_currentNodeIndex == kInvalidNodeIndex) {
+         changeNodeIndex (findNearestNode ());
+      }
    }
 
 public:
@@ -1189,6 +1250,9 @@ public:
 #include "engine.h"
 #include "manager.h"
 #include "control.h"
+#include "planner.h"
+#include "storage.h"
+#include "analyze.h"
 
 // very global convars
 extern ConVar cv_jasonmode;
@@ -1211,7 +1275,10 @@ extern ConVar cv_debug_goal;
 extern ConVar cv_save_bots_names;
 extern ConVar cv_random_knife_attacks;
 extern ConVar cv_rotate_bots;
+extern ConVar cv_graph_url;
 extern ConVar cv_graph_url_upload;
+extern ConVar cv_graph_auto_save_count;
+extern ConVar cv_graph_analyze_max_jump_height;
 
 extern ConVar mp_freezetime;
 extern ConVar mp_roundtime;
