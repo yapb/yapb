@@ -491,7 +491,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
       }
 
 
-      // bot is stuc, but not yet decided what to do?
+      // bot is stuck, but not yet decided what to do?
       if (m_collisionState == CollisionState::Undecided) {
          uint32_t bits = 0;
 
@@ -537,19 +537,20 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                else {
                   dirLeft = true;
                }
-               const Vector &testDir = m_moveSpeed > 0.0f ? forward : -forward;
+               const auto &testDir = m_moveSpeed > 0.0f ? forward : -forward;
+               constexpr float blockDistance = 56.0f;
 
                // now check which side is blocked
-               src = pev->origin + right * 32.0f;
-               dst = src + testDir * 32.0f;
+               src = pev->origin + right * blockDistance;
+               dst = src + testDir * blockDistance;
 
                game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
 
                if (!cr::fequal (tr.flFraction, 1.0f)) {
                   blockedRight = true;
                }
-               src = pev->origin - right * 32.0f;
-               dst = src + testDir * 32.0f;
+               src = pev->origin - right * blockDistance;
+               dst = src + testDir * blockDistance;
 
                game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
 

@@ -58,14 +58,21 @@ int BotControl::cmdKickBot () {
 }
 
 int BotControl::cmdKickBots () {
-   enum args { alias = 1, instant };
+   enum args { alias = 1, instant, team };
 
    // check if we're need to remove bots instantly
    auto kickInstant = strValue (instant) == "instant";
 
-   // kick the bots
-   bots.kickEveryone (kickInstant);
-
+   // if team is specified, kick from specified tram
+   if (strValue (alias).endsWith ("_ct") || intValue (team) == 2 || strValue (team) == "ct") {
+      bots.kickFromTeam (Team::CT, true);
+   }
+   else if (strValue (alias).endsWith ("_t") || intValue (team) == 1 || strValue (team) == "t") {
+      bots.kickFromTeam (Team::Terrorist, true);
+   }
+   else {
+      bots.kickEveryone (kickInstant);
+   }
    return BotCommandResult::Handled;
 }
 
@@ -2061,7 +2068,7 @@ BotControl::BotControl () {
 
    m_cmds.emplace ("add/addbot/add_ct/addbot_ct/add_t/addbot_t/addhs/addhs_t/addhs_ct", "add [difficulty] [personality] [team] [model] [name]", "Adding specific bot into the game.", &BotControl::cmdAddBot);
    m_cmds.emplace ("kick/kickone/kick_ct/kick_t/kickbot_ct/kickbot_t", "kick [team]", "Kicks off the random bot from the game.", &BotControl::cmdKickBot);
-   m_cmds.emplace ("removebots/kickbots/kickall", "removebots [instant]", "Kicks all the bots from the game.", &BotControl::cmdKickBots);
+   m_cmds.emplace ("removebots/kickbots/kickall/kickall_ct/kickall_t", "removebots [instant] [team]", "Kicks all the bots from the game.", &BotControl::cmdKickBots);
    m_cmds.emplace ("kill/killbots/killall/kill_ct/kill_t", "kill [team]", "Kills the specified team / all the bots.", &BotControl::cmdKillBots);
    m_cmds.emplace ("fill/fillserver", "fill [team] [count] [difficulty] [personality]", "Fill the server (add bots) with specified parameters.", &BotControl::cmdFill);
    m_cmds.emplace ("vote/votemap", "vote [map_id]", "Forces all the bot to vote to specified map.", &BotControl::cmdVote);
