@@ -531,7 +531,7 @@ Vector Bot::getBodyOffsetError (float distance) {
    spot += compensation;
 
    if (usesKnife () && m_difficulty >= Difficulty::Normal) {
-      spot = m_enemyOrigin;bn 
+      spot = m_enemyOrigin;
    }
    m_lastEnemyOrigin = spot;
 
