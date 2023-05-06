@@ -1694,7 +1694,7 @@ void Bot::setConditions () {
 
       auto distanceToLastEnemySq = m_lastEnemyOrigin.distanceSq (pev->origin);
 
-      if (distanceToLastEnemySq < cr::sqrf (1600.0f)) {
+      if (distanceToLastEnemySq < cr::sqrf (2048.0f)) {
          auto pathLength = 0;
          auto nodeIndex = findAimingNode (m_lastEnemyOrigin, pathLength);
 
@@ -2684,7 +2684,7 @@ void Bot::updateAimDir () {
          auto dangerIndex = practice.getIndex (m_team, m_currentNodeIndex, m_currentNodeIndex);
 
          if (graph.exists (dangerIndex) && vistab.visible (m_currentNodeIndex, dangerIndex) && !(graph[dangerIndex].flags & NodeFlag::Crouch)) {
-            if (pev->origin.distanceSq (graph[dangerIndex].origin) < cr::sqrf (160.0f)) {
+            if (pev->origin.distanceSq (graph[dangerIndex].origin) < cr::sqrf (512.0f)) {
                m_lookAt = m_destOrigin;
             }
             else {
@@ -2808,7 +2808,7 @@ void Bot::frame () {
    }
 
    // clear enemy far away
-   if (!m_lastEnemyOrigin.empty () && !game.isNullEntity (m_lastEnemy) && pev->origin.distanceSq (m_lastEnemyOrigin) >= cr::sqrf (2048.0)) {
+   if (!m_lastEnemyOrigin.empty () && !game.isNullEntity (m_lastEnemy) && pev->origin.distanceSq (m_lastEnemyOrigin) >= cr::sqrf (2048.0f)) {
       m_lastEnemy = nullptr;
       m_lastEnemyOrigin = nullptr;
    }
