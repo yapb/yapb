@@ -893,6 +893,7 @@ private:
    bool updateLiftStates ();
    bool canRunHeavyWeight ();
    bool isEnemyInSight (Vector &endPos);
+   bool isEnemyNoticeable (float range);
 
    void doPlayerAvoidance (const Vector &normal);
    void selectCampButtons (int index);

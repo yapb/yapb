@@ -795,6 +795,8 @@ CR_EXPORT int GetNewDLLFunctions (newgamefuncs_t *table, int *interfaceVersion) 
             if (bot->m_enemy == ent) {
                bot->m_enemy = nullptr;
                bot->m_lastEnemy = nullptr;
+            }
+            else if (bot->ent () == ent) {
                bot->markStale ();
             }
          }

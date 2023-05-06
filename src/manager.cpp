@@ -1939,21 +1939,21 @@ void BotThreadWorker::startup (int workers) {
       return;
    }
 
-   int requetedThreadCount = workers;
+   int requestedThreadCount = workers;
    int hardwareConcurrency = plat.hardwareConcurrency ();
 
-   if (requetedThreadCount == -1) {
-      requetedThreadCount = hardwareConcurrency / 4;
+   if (requestedThreadCount == -1) {
+      requestedThreadCount = hardwareConcurrency / 4;
 
-      if (requetedThreadCount == 0) {
-         requetedThreadCount = 1;
+      if (requestedThreadCount == 0) {
+         requestedThreadCount = 1;
       }
    }
-   requetedThreadCount = cr::clamp (requetedThreadCount, 1, hardwareConcurrency);
+   requestedThreadCount = cr::clamp (requestedThreadCount, 1, hardwareConcurrency);
 
    // notify user
-   game.print ("Starting up bot thread worker with %d threads.", requetedThreadCount);
+   game.print ("Starting up bot thread worker with %d threads.", requestedThreadCount);
 
    // start up the worker
-   m_botWorker.startup (static_cast <int> (requetedThreadCount));
+   m_botWorker.startup (static_cast <int> (requestedThreadCount));
 }

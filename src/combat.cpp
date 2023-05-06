@@ -511,12 +511,10 @@ Vector Bot::getBodyOffsetError (float distance) {
          }
          else {
             spot = m_enemy->v.origin;
-            spot.z -= 3.0f;
          }
       }
       else if (m_enemyParts & Visibility::Body) {
          spot = m_enemy->v.origin;
-         spot.z += 3.0f;
       }
       else if (m_enemyParts & Visibility::Other) {
          spot = m_enemyOrigin;
@@ -525,15 +523,15 @@ Vector Bot::getBodyOffsetError (float distance) {
          spot = m_enemyOrigin + getCustomHeight (distance);
       }
    }
-   Vector newSpot = spot;
+   Vector idealSpot = m_enemyOrigin;
 
-   if (m_difficulty < Difficulty::Expert && isEnemyInSight (newSpot)) {
-      spot = newSpot + ((spot - newSpot) * 0.01f); // gradually adjust the aiming direction
+   if (m_difficulty < Difficulty::Expert && isEnemyInSight (idealSpot)) {
+      spot = idealSpot + ((spot - idealSpot) * 0.01f); // gradually adjust the aiming direction
    }
    spot += compensation;
 
    if (usesKnife () && m_difficulty >= Difficulty::Normal) {
-      spot = m_enemyOrigin;
+      spot = m_enemyOrigin;bn 
    }
    m_lastEnemyOrigin = spot;
 
@@ -549,7 +547,7 @@ Vector Bot::getCustomHeight (float distance) {
       Long, Middle, Short
    };
 
-   static constexpr float offsetRanges[9][3] = {
+   constexpr float offsetRanges[9][3] = {
       { 0.0f,  0.0f,   0.0f }, // none
       { 0.0f,  0.0f,   0.0f }, // melee
       { 0.5f, -3.0f,  -4.5f }, // pistol
@@ -2066,4 +2064,92 @@ bool Bot::isEnemyInSight (Vector &endPos) {
    }
    endPos = aimHitTr.vecEndPos;
    return true;
+}
+
+bool Bot::isEnemyNoticeable (float range) {
+   // this function is back ported from regamedll with small changes
+
+   if (isOnLadder ()) {
+      return false;
+   }
+
+   // determine percentage of player that is visible
+   float coverRatio = 0.0f;
+
+   if (m_enemyParts & Visibility::Body) {
+      coverRatio += 40.0f;
+   }
+
+   if (m_enemyParts & Visibility::Head) {
+      coverRatio += 10.0f;
+   }
+
+   if (m_enemyParts & Visibility::Other) {
+      coverRatio += rg.get (10.0f, 25.0f);
+   }
+   constexpr float closeRange = 300.0f;
+   constexpr float farRange = 1000.0f;
+
+   float rangeModifier;
+   if (range < closeRange) {
+      rangeModifier = 0.0f;
+   }
+   else if (range > farRange) {
+      rangeModifier = 1.0f;
+   }
+   else {
+      rangeModifier = (range - closeRange) / (farRange - closeRange);
+   }
+
+   // harder to notice when crouched
+   bool isCrouching = (m_enemy->v.flags & FL_DUCKING) == FL_DUCKING;
+
+   // moving players are easier to spot
+   float playerSpeedSq = m_enemy->v.velocity.lengthSq ();
+   float farChance, closeChance;
+
+   constexpr float runSpeed = cr::sqrf (200.0f);
+   constexpr float walkSpeed = cr::sqrf (30.0f);
+
+   if (playerSpeedSq > runSpeed) {
+      return true; // running players are always easy to spot (must be standing to run)
+   }
+   else if (playerSpeedSq > walkSpeed) {
+      // walking players are less noticeable far away
+      if (isCrouching) {
+         closeChance = 90.0f;
+         farChance = 60.0f;
+      }
+      // standing
+      else {
+         closeChance = 100.0f;
+         farChance = 75.0f;
+      }
+   }
+   else {
+      // motionless players are hard to notice
+      if (isCrouching) {
+         // crouching and motionless - very tough to notice
+         closeChance = 80.0f;
+         farChance = 5.0f;		// takes about three seconds to notice (50% chance)
+      }
+      // standing
+      else {
+         closeChance = 100.0f;
+         farChance = 10.0f;
+      }
+   }
+
+   float dispositionChance = closeChance + (farChance - closeChance) * rangeModifier; // combine posture, speed, and range chances
+   float noticeChance = dispositionChance * coverRatio / 100.0f; // determine actual chance of noticing player
+
+   noticeChance += (0.5f + 0.5f * (static_cast <float> (m_difficulty) * 25.0f));
+
+   // if we are alert, our chance of noticing is much higher
+   if (m_agressionLevel > m_fearLevel) {
+      noticeChance += 50.0f;
+   }
+   noticeChance = cr::max (0.1f, noticeChance * cr::abs (m_agressionLevel - m_fearLevel));
+
+   return rg.get (0.0f, 100.0f) < noticeChance;
 }

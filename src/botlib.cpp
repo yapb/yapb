@@ -1510,7 +1510,7 @@ void Bot::updateEmotions () {
    if (m_nextEmotionUpdate > game.time ()) {
       return;
    }
-
+   
    if (m_agressionLevel > m_baseAgressionLevel) {
       m_agressionLevel -= 0.05f;
    }
@@ -2105,21 +2105,26 @@ bool Bot::reactOnEnemy () {
    }
 
    if (m_enemyReachableTimer < game.time ()) {
-      int ownIndex = m_currentNodeIndex;
-
-      if (ownIndex == kInvalidNodeIndex) {
-         ownIndex = findNearestNode ();
-      }
-      int enemyIndex = graph.getNearest (m_enemy->v.origin);
-
       auto lineDist = m_enemy->v.origin.distance (pev->origin);
-      auto pathDist = planner.preciseDistance (ownIndex, enemyIndex);
 
-      if (pathDist - lineDist >  112.0f || isOnLadder ()) {
-         m_isEnemyReachable = false;
+      if (isEnemyNoticeable (lineDist)) {
+         m_isEnemyReachable = true;
       }
       else {
-         m_isEnemyReachable = true;
+         int ownIndex = m_currentNodeIndex;
+
+         if (ownIndex == kInvalidNodeIndex) {
+            ownIndex = findNearestNode ();
+         }
+         auto enemyIndex = graph.getNearest (m_enemy->v.origin);
+         auto pathDist = planner.preciseDistance (ownIndex, enemyIndex);
+
+         if (pathDist - lineDist > 112.0f || isOnLadder ()) {
+            m_isEnemyReachable = false;
+         }
+         else {
+            m_isEnemyReachable = true;
+         }
       }
       m_enemyReachableTimer = game.time () + 1.0f;
    }

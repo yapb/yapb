@@ -140,7 +140,7 @@ public:
    ~Game () = default;
 
 public:
-   // precaches internal stuff
+   // preaches internal stuff
    void precache ();
 
    // initialize levels
