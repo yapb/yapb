@@ -664,6 +664,10 @@ public:
    friend class BotManager;
 
 private:
+   mutable Mutex m_pathFindLock {};
+   mutable Mutex m_predictLock {};
+
+private:
    uint32_t m_states {}; // sensing bitstates
    uint32_t m_collideMoves[kMaxCollideMoves] {}; // sorted array of movements
    uint32_t m_collisionProbeBits {}; // bits of possible collision moves
@@ -689,8 +693,10 @@ private:
    int m_tryOpenDoor {}; // attempt's to open the door
    int m_liftState {}; // state of lift handling
    int m_radioSelect {}; // radio entry
-   int m_lastPredictIndex {}; // last predicted index
-  
+
+   int m_lastPredictIndex { kInvalidNodeIndex }; // last predicted path index
+   int m_lastPredictLength {}; // last predicted path length
+
    float m_headedTime {};
    float m_prevTime {}; // time previously checked movement speed
    float m_heavyTimestamp {}; // is it time to execute heavy-weight functions
@@ -747,6 +753,7 @@ private:
 
    bool m_moveToGoal {}; // bot currently moving to goal??
    bool m_isStuck {}; // bot is stuck
+   bool m_isStale {}; // bot is leaving server
    bool m_isReloading {}; // bot is reloading a gun
    bool m_forceRadio {}; // should bot use radio anyway?
    bool m_defendedBomb {}; // defend action issued
@@ -773,6 +780,7 @@ private:
    FindPath m_pathType {}; // which pathfinder to use
    uint8_t m_enemyParts {}; // visibility flags
    TraceResult m_lastTrace[TraceChannel::Num] {}; // last trace result
+   UniquePtr <class AStarAlgo> m_planner;
 
    edict_t *m_pickupItem {}; // pointer to entity of item to use/pickup
    edict_t *m_itemIgnore {}; // pointer to entity to ignore for pickup
@@ -888,7 +896,6 @@ private:
 
    void doPlayerAvoidance (const Vector &normal);
    void selectCampButtons (int index);
-   void markStale ();
    void instantChatter (int type);
    void update ();
    void runMovement ();
@@ -920,6 +927,7 @@ private:
    void findShortestPath (int srcIndex, int destIndex);
    void calculateFrustum ();
    void findPath (int srcIndex, int destIndex, FindPath pathType = FindPath::Fast);
+   void syncFindPath (int srcIndex, int destIndex, FindPath pathType);
    void debugMsgInternal (const char *str);
    void frame ();
    void resetCollision ();
@@ -933,6 +941,7 @@ private:
    void decideFollowUser ();
    void attackMovement ();
    void findValidNode ();
+   void setPathOrigin ();
    void fireWeapons ();
    void selectWeapons (float distance, int index, int id, int choosen);
    void focusEnemy ();
@@ -940,6 +949,9 @@ private:
    void selectSecondary ();
    void selectWeaponById (int id);
    void selectWeaponByIndex (int index);
+   void refreshEnemyPredict ();
+   void syncUpdatePredictedIndex ();
+   void updatePredictedIndex ();
 
    void completeTask ();
    void executeTasks ();
@@ -1094,11 +1106,13 @@ public:
    bool m_hasNVG {}; // does bot has nightvision goggles
    bool m_usesNVG {}; // does nightvision goggles turned on
    bool m_hasC4 {}; // does bot has c4 bomb
+   bool m_hasHostage {}; // does bot owns some hostages
    bool m_hasProgressBar {}; // has progress bar on a HUD
    bool m_jumpReady {}; // is double jump ready
    bool m_canChooseAimDirection {}; // can choose aiming direction
    bool m_isEnemyReachable {}; // direct line to enemy
    bool m_kickedByRotation {}; // is bot kicked due to rotation ?
+   bool m_kickMeFromServer {}; // kick the bot off the server?
 
    edict_t *m_doubleJumpEntity {}; // pointer to entity that request double jump
    edict_t *m_radioEntity {}; // pointer to entity issuing a radio command
@@ -1121,7 +1135,11 @@ public:
 
 public:
    Bot (edict_t *bot, int difficulty, int personality, int team, int skin);
-   ~Bot () = default;
+
+   // need to wait until all threads will finish it's work before terminating bot object
+   ~Bot () {
+      MutexScopedLock lock (m_pathFindLock);
+   }
 
 public:
    void logic (); /// the things that can be executed while skipping frames
@@ -1154,7 +1172,7 @@ public:
    void resetDoubleJump ();
    void startDoubleJump (edict_t *ent);
    void sendBotToOrigin (const Vector &origin);
-
+   void markStale ();
    bool hasHostage ();
    bool usesRifle ();
    bool usesPistol ();

@@ -146,6 +146,9 @@ public:
    // initialize levels
    void levelInitialize (edict_t *entities, int max);
 
+   // shutdown levels
+   void levelShutdown ();
+
    // display world line
    void drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, const Color &color, int brightness, int speed, int life, DrawLine type = DrawLine::Simple);
 
@@ -688,8 +691,7 @@ public:
    int close (DLSYM_HANDLE module) {
       if (m_self.handle () == module) {
          disable ();
-
-         return  m_dlclose (module);
+         return m_dlclose (module);
       }
       return m_dlclose (module);
    }

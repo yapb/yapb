@@ -1196,6 +1196,7 @@ void BotGraph::showFileInfo () {
    msg ("  compressed_size: %dkB", m_graphHeader.compressed / 1024);
    msg ("  uncompressed_size: %dkB", m_graphHeader.uncompressed / 1024);
    msg ("  options: %d", m_graphHeader.options); // display as string ?
+   msg ("  analyzed: %s", (m_graphHeader.options & StorageOption::Analyzed) ? "yes" : "no"); // display as string ?
 
    msg ("");
 

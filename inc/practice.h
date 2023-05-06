@@ -80,17 +80,22 @@ public:
       DangerSaveRestore (const DangerStorage &ds, const PracticeData &pd) : danger (ds), data (pd) {}
    };
 
+private:
    HashMap <DangerStorage, PracticeData> m_data {};
    int32_t m_teamHighestDamage[kGameTeamNum] {};
+
+   // avoid concurrent access to practice
+   mutable Mutex m_damageUpdateLock {};
 
 public:
    BotPractice () = default;
    ~BotPractice () = default;
 
 private:
-   inline bool exists (int32_t team, int32_t start, int32_t goal) const {
+   bool exists (int32_t team, int32_t start, int32_t goal) const {
       return m_data.exists ({ start, goal, team });
    }
+   void syncUpdate ();
 
 public:
    int32_t getIndex (int32_t team, int32_t start, int32_t goal);
@@ -102,17 +107,21 @@ public:
    int32_t getDamage (int32_t team, int32_t start, int32_t goal);
    void setDamage (int32_t team, int32_t start, int32_t goal, int32_t value);
 
+   // interlocked get damage
+   float plannerGetDamage (int32_t team, int32_t start, int32_t goal, bool addTeamHighestDamage);
+
 public:
    void update ();
    void load ();
    void save ();
 
 public:
-   int32_t getHighestDamageForTeam (int32_t team) const {
-      return cr::max (1, m_teamHighestDamage[team]);
+   template <typename U = int32_t> U getHighestDamageForTeam (int32_t team) const {
+      return static_cast <U> (cr::max (1, m_teamHighestDamage[team]));
    }
 
    void setHighestDamageForTeam (int32_t team, int32_t value) {
+      MutexScopedLock lock (m_damageUpdateLock);
       m_teamHighestDamage[team] = value;
    }
 };

@@ -262,25 +262,25 @@ bool Bot::lookupEnemies () {
 
       if (cv_attack_monsters.bool_ ()) {
          // search the world for monsters...
-         for (const auto &intresting : bots.getIntrestingEntities ()) {
-            if (!util.isMonster (intresting)) {
+         for (const auto &interesting : bots.getInterestingEntities ()) {
+            if (!util.isMonster (interesting)) {
                continue;
             }
 
             // check the engine PVS
-            if (!isEnemyInFrustum (intresting) || !game.checkVisibility (intresting, set)) {
+            if (!isEnemyInFrustum (interesting) || !game.checkVisibility (interesting, set)) {
                continue;
             }
 
             // see if bot can see the monster...
-            if (seesEnemy (intresting)) {
+            if (seesEnemy (interesting)) {
                // higher priority for big monsters
-               float scaleFactor = (1.0f / calculateScaleFactor (intresting));
-               float distance = intresting->v.origin.distanceSq (pev->origin) * scaleFactor;
+               float scaleFactor = (1.0f / calculateScaleFactor (interesting));
+               float distance = interesting->v.origin.distanceSq (pev->origin) * scaleFactor;
 
                if (distance < nearestDistance) {
                   nearestDistance = distance;
-                  newEnemy = intresting;
+                  newEnemy = interesting;
                }
             }
          }
@@ -347,7 +347,7 @@ bool Bot::lookupEnemies () {
          return true;
       }
       else {
-         if (m_seeEnemyTime + 3.0f < game.time () && (m_hasC4 || hasHostage () || !game.isNullEntity (m_targetEntity))) {
+         if (m_seeEnemyTime + 3.0f < game.time () && (m_hasC4 || m_hasHostage || !game.isNullEntity (m_targetEntity))) {
             pushRadioMessage (Radio::EnemySpotted);
          }
          m_targetEntity = nullptr; // stop following when we see an enemy...
@@ -516,6 +516,7 @@ Vector Bot::getBodyOffsetError (float distance) {
       }
       else if (m_enemyParts & Visibility::Body) {
          spot = m_enemy->v.origin;
+         spot.z += 3.0f;
       }
       else if (m_enemyParts & Visibility::Other) {
          spot = m_enemyOrigin;
@@ -752,7 +753,7 @@ bool Bot::isPenetrableObstacle3 (const Vector &dest) {
 bool Bot::needToPauseFiring (float distance) {
    // returns true if bot needs to pause between firing to compensate for punchangle & weapon spread
 
-   if (usesSniper () || m_isUsingGrenade) {
+   if (usesSniper () || m_isUsingGrenade || ((m_states & Sense::SuspectEnemy) && distance < 400.0f)) {
       return false;
    }
 
@@ -1949,7 +1950,7 @@ void Bot::checkGrenadesThrow () {
                break;
             }
 
-            for (const auto predict : predicted) {
+            for (const auto &predict : predicted) {
                allowThrowing = true;
 
                if (!graph.exists (predict)) {

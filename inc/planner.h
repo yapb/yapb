@@ -84,7 +84,7 @@ public:
 };
 
 // A* algorithm for bots
-class AStarAlgo final {
+class AStarAlgo final : public DenyCopying {
 public:
    using HeuristicFn = Heuristic::Func;
 
@@ -108,7 +108,7 @@ private:
    Array <int> m_smoothedPath;
 
 private:
-   // cleares the currently built route
+   // clears the currently built route
    void clearRoute ();
 
    // can the node can be skipped?
@@ -118,6 +118,10 @@ private:
    void postSmooth (NodeAdderFn onAddedNode);
 
 public:
+   explicit AStarAlgo (const int length) {
+      init (length);
+   }
+
    AStarAlgo () = default;
    ~AStarAlgo () = default;
 
@@ -180,6 +184,9 @@ public:
 
 private:
    // create floyd matrics
+   void syncRebuild ();
+
+   // async rebuild
    void rebuild ();
 
 public:
@@ -202,6 +209,9 @@ public:
 // dijkstra shortest path algorithm
 class DijkstraAlgo final {
 private:
+   mutable Mutex m_cs {};
+
+private:
    using Route = Twin <int, int>;
 
 private:
@@ -214,11 +224,6 @@ private:
 public:
    DijkstraAlgo () = default;
    ~DijkstraAlgo () = default;
-
-
-private:
-   // reset pathfinder state to defaults
-   void resetState ();
 
 public:
    // initialize dijkstra with valid path length
@@ -236,7 +241,6 @@ class PathPlanner : public Singleton <PathPlanner> {
 private:
    UniquePtr <DijkstraAlgo> m_dijkstra;
    UniquePtr <FloydWarshallAlgo> m_floyd;
-   UniquePtr <AStarAlgo > m_astar;
    bool m_memoryLimitHit {};
 
 public:
@@ -261,17 +265,15 @@ public:
       return m_floyd.get ();
    }
 
-   // get the floyd algo
-   decltype (auto) getAStar () {
-      return m_astar.get ();
-   }
-
 public:
    // do the pathfinding
    bool find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, int *pathDistance = nullptr);
 
    // distance between two nodes with pathfinder
-   int dist (int srcIndex, int destIndex);
+   float dist (int srcIndex, int destIndex);
+
+   // get the precise distanace regardless of cvar
+   float preciseDistance (int srcIndex, int destIndex);
 };
 
 CR_EXPOSE_GLOBAL_SINGLETON (PathPlanner, planner);

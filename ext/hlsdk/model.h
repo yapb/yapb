@@ -13,7 +13,7 @@
  *
  ****/
 
-// stripped down version of com_model.h & pm_info.h
+ // stripped down version of com_model.h & pm_info.h
 
 #ifndef MODEL_H
 #define MODEL_H
@@ -103,7 +103,7 @@ typedef struct msurface_s {
 } msurface_t;
 
 typedef struct cache_user_s {
-   void* data; // extradata
+   void *data; // extradata
 } cache_user_t;
 
 typedef struct hull_s {
@@ -166,7 +166,7 @@ typedef struct physent_s {
    char name[32]; // name of model, or "player" or "world".
    int player;
    vec3_t origin; // model's origin in world coordinates.
-   struct model_s* model; // only for bsp models
+   struct model_s *model; // only for bsp models
 } physent_t;
 
 typedef struct playermove_s {

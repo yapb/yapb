@@ -9,6 +9,9 @@
 
 class BotSupport final : public Singleton <BotSupport> {
 private:
+   mutable Mutex m_cs {};
+
+private:
    bool m_needToSendWelcome {};
    float m_welcomeReceiveTime {};
 
@@ -77,6 +80,9 @@ public:
 
    // generates ping bitmask for SVC_PINGS message
    int getPingBitmask (edict_t *ent, int loss, int ping);
+
+   // calculate our own pings for all the players
+   void syncCalculatePings ();
 
    // calculate our own pings for all the players
    void calculatePings ();

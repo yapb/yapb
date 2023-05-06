@@ -171,6 +171,12 @@
     <ClInclude Include="..\inc\vistable.h">
       <Filter>inc</Filter>
     </ClInclude>
+    <ClInclude Include="..\ext\crlib\crlib\thread.h">
+      <Filter>inc\ext\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ext\hlsdk\physint.h">
+      <Filter>inc\ext\hlsdk</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\botlib.cpp">
@@ -221,13 +227,13 @@
     <ClCompile Include="..\src\analyze.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\planner.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\practice.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\storage.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\planner.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\vistable.cpp">

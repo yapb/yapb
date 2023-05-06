@@ -153,7 +153,6 @@ private:
    int m_lastJumpNode {};
    int m_findWPIndex {};
    int m_facingAtIndex {};
-   int m_highestDamage[kGameTeamNum] {};
    int m_autoSaveCount {};
 
    float m_timeJumpStarted {};
@@ -263,14 +262,6 @@ public:
 public:
    size_t getMaxRouteLength () const {
       return m_paths.length () / 2;
-   }
-
-   int getHighestDamageForTeam (int team) const {
-      return cr::max (1, m_highestDamage[team]);
-   }
-
-   void setHighestDamageForTeam (int team, int value) {
-      m_highestDamage[team] = value;
    }
 
    StringRef getAuthor () const {

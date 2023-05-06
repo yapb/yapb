@@ -126,6 +126,7 @@ void GraphAnalyze::suspend () {
    m_updateInterval = 0.0f;
    m_isAnalyzing = false;
    m_isAnalyzed = false;
+   m_basicsCreated = false;
 }
 
 void GraphAnalyze::finish () {
@@ -144,7 +145,7 @@ void GraphAnalyze::finish () {
 
    ctrl.msg ("Complete map analyzation.");
 
-   // autosave bots graph
+   // auto save bots graph
    if (cv_graph_analyze_auto_save.bool_ ()) {
       if (!graph.saveGraphData ()) {
          ctrl.msg ("Can't save analyzed graph. Internal error.");
@@ -170,7 +171,7 @@ void GraphAnalyze::optimize () {
    }
    cleanup ();
 
-   // clear the uselss connections
+   // clear the useless connections
    if (cv_graph_analyze_clean_paths_on_finish.bool_ ()) {
       for (auto i = 0; i < graph.length (); ++i) {
          graph.clearConnections (i);

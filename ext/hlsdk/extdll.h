@@ -39,11 +39,9 @@ private:
    estring_t offset;
 
 public:
-   explicit string_t () : offset (0)
-   { }
+   explicit string_t () : offset (0) {}
 
-   string_t (int offset) : offset (offset)
-   { }
+   string_t (int offset) : offset (offset) {}
 
    ~string_t () = default;
 

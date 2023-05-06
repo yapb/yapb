@@ -15,10 +15,10 @@
 
 #ifndef CONST_H
 #define CONST_H
-//
-// Constants shared by the engine and dlls
-// This header file included by engine files and DLL files.
-// Most came from server.h
+ //
+ // Constants shared by the engine and dlls
+ // This header file included by engine files and DLL files.
+ // Most came from server.h
 
 #define INTERFACE_VERSION 140
 
@@ -842,7 +842,7 @@ typedef enum {
    missile = 2
 } IGNORE_MONSTERS;
 
-typedef enum { 
+typedef enum {
    ignore_glass = 1,
    dont_ignore_glass = 0
 } IGNORE_GLASS;

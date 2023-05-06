@@ -29,7 +29,7 @@
  *
  */
 
-// Simplified version by Wei Mingzhi
+ // Simplified version by Wei Mingzhi
 
 #ifndef META_API_H
 #define META_API_H

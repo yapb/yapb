@@ -32,6 +32,7 @@
     <ClInclude Include="..\ext\crlib\crlib\random.h" />
     <ClInclude Include="..\ext\crlib\crlib\simd.h" />
     <ClInclude Include="..\ext\crlib\crlib\string.h" />
+    <ClInclude Include="..\ext\crlib\crlib\thread.h" />
     <ClInclude Include="..\ext\crlib\crlib\twin.h" />
     <ClInclude Include="..\ext\crlib\crlib\ulz.h" />
     <ClInclude Include="..\ext\crlib\crlib\uniqueptr.h" />
@@ -42,6 +43,7 @@
     <ClInclude Include="..\ext\hlsdk\metamod.h" />
     <ClInclude Include="..\ext\hlsdk\meta_api.h" />
     <ClInclude Include="..\ext\hlsdk\model.h" />
+    <ClInclude Include="..\ext\hlsdk\physint.h" />
     <ClInclude Include="..\ext\hlsdk\progdefs.h" />
     <ClInclude Include="..\ext\hlsdk\util.h" />
     <ClInclude Include="..\inc\analyze.h" />

@@ -54,7 +54,7 @@ typedef struct usercmd_s {
    byte	msec;           // Duration in ms of command
    vec3_t	viewangles;     // Command view angles.
 
-// intended velocities
+   // intended velocities
    float	forwardmove;    // Forward velocity.
    float	sidemove;       // Sideways velocity.
    float	upmove;         // Upward velocity.
@@ -63,7 +63,7 @@ typedef struct usercmd_s {
    byte    impulse;          // Impulse command issued.
    byte	weaponselect;	// Current weapon id
 
-// Experimental player impact stuff.
+   // Experimental player impact stuff.
    int		impact_index;
    vec3_t	impact_position;
 } usercmd_t;

@@ -1192,7 +1192,7 @@ int BotControl::menuCommands (int item) {
    switch (item) {
    case 1:
    case 2:
-      if (util.findNearestPlayer (reinterpret_cast <void **> (&m_djump), m_ent, 600.0f, true, true, true, true, false) && !m_djump->m_hasC4 && !m_djump->hasHostage ()) {
+      if (util.findNearestPlayer (reinterpret_cast <void **> (&m_djump), m_ent, 600.0f, true, true, true, true, false) && !m_djump->m_hasC4 && !m_djump->m_hasHostage) {
          if (item == 1) {
             m_djump->startDoubleJump (m_ent);
          }
@@ -1765,7 +1765,7 @@ bool BotControl::executeCommands () {
 
       for (auto &item : m_cmds) {
          if (!hasSecondArg) {
-            cmd = item.name.split ("/")[0];
+            cmd = item.name.split ("/").first ();
          }
 
          if (!hasSecondArg || aliasMatch (item.name, strValue (2), cmd)) {
@@ -1804,7 +1804,7 @@ bool BotControl::executeCommands () {
       msg ("valid commands are: ");
 
       for (auto &item : m_cmds) {
-         msg ("   %s - %s", item.name.split ("/")[0], conf.translate (item.help));
+         msg ("  %-14.11s - %s", item.name.split ("/").first (), String (conf.translate (item.help)).lowercase ());
       }
       return true;
    }

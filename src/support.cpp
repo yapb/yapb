@@ -405,9 +405,16 @@ int BotSupport::getPingBitmask (edict_t *ent, int loss, int ping) {
 }
 
 void BotSupport::calculatePings () {
+   worker.enqueue ([this] () {
+      syncCalculatePings ();
+   });
+}
+
+void BotSupport::syncCalculatePings () {
    if (!game.is (GameFlags::HasFakePings) || cv_show_latency.int_ () != 2) {
       return;
    }
+   MutexScopedLock lock (m_cs);
 
    Twin <int, int> average { 0, 0 };
    int numHumans = 0;
@@ -444,7 +451,7 @@ void BotSupport::calculatePings () {
       }
       auto bot = bots[client.ent];
 
-      // we're only intrested in bots here
+      // we're only interested in bots here
       if (!bot) {
          continue;
       }

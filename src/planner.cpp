@@ -8,20 +8,20 @@
 #include <yapb.h>
 
 ConVar cv_path_heuristic_mode ("yb_path_heuristic_mode", "3", "Selects the heuristic function mode. For debug purposes only.", true, 0.0f, 4.0f);
-ConVar cv_path_floyd_memory_limit ("yb_path_floyd_memory_limit", "3", "Limit maximum floyd-warshall memory (megabytes). Use Dijkstra if memory exceeds.", true, 0.0, 12.0f);
+ConVar cv_path_floyd_memory_limit ("yb_path_floyd_memory_limit", "6", "Limit maximum floyd-warshall memory (megabytes). Use Dijkstra if memory exceeds.", true, 0.0, 32.0f);
 ConVar cv_path_dijkstra_simple_distance ("yb_path_dijkstra_simple_distance", "1", "Use simple distance path calculation instead of running full Dijkstra path cycle. Used only when Floyd matrices unavailable due to memory limit.");
-ConVar cv_path_astar_post_smooth ("yb_path_astar_post_smooth", "1", "Enables post-smoothing for A*. Reduces zig-zags on paths at cost of some CPU cycles.");
+ConVar cv_path_astar_post_smooth ("yb_path_astar_post_smooth", "0", "Enables post-smoothing for A*. Reduces zig-zags on paths at cost of some CPU cycles.");
 
 float Heuristic::gfunctionKillsDist (int team, int currentIndex, int parentIndex) {
    if (parentIndex == kInvalidNodeIndex) {
       return 0.0f;
    }
-   auto cost = static_cast <float> (practice.getDamage (team, currentIndex, currentIndex) + practice.getHighestDamageForTeam (team));
+   auto cost = practice.plannerGetDamage (team, currentIndex, currentIndex, true);
    const auto &current = graph[currentIndex];
 
    for (const auto &neighbour : current.links) {
       if (neighbour.index != kInvalidNodeIndex) {
-         cost += static_cast <float> (practice.getDamage (team, neighbour.index, neighbour.index));
+         cost += practice.plannerGetDamage (team, neighbour.index, neighbour.index, false);
       }
    }
 
@@ -44,12 +44,12 @@ float Heuristic::gfunctionKillsDistCTWithHostage (int team, int currentIndex, in
 }
 
 float Heuristic::gfunctionKills (int team, int currentIndex, int) {
-   auto cost = static_cast <float> (practice.getDamage (team, currentIndex, currentIndex));
+   auto cost = practice.plannerGetDamage (team, currentIndex, currentIndex, false);
    const auto &current = graph[currentIndex];
 
    for (const auto &neighbour : current.links) {
       if (neighbour.index != kInvalidNodeIndex) {
-         cost += static_cast <float> (practice.getDamage (team, neighbour.index, neighbour.index));
+         cost += practice.plannerGetDamage (team, neighbour.index, neighbour.index, false);
       }
    }
 
@@ -176,11 +176,17 @@ bool AStarAlgo::cantSkipNode (const int a, const int b) {
    const auto &ag = graph[a];
    const auto &bg = graph[b];
 
-   const bool notVisible = !vistab.visible (ag.number, bg.number);
+   const bool hasZeroRadius = cr::fzero (ag.radius) || cr::fzero (ag.radius);
+
+   if (hasZeroRadius) {
+      return true;
+   }
+   const bool notVisible = !vistab.visible (ag.number, bg.number) || !vistab.visible (bg.number, ag.number);
 
    if (notVisible) {
       return true;
    }
+
    const bool tooHigh = cr::abs (ag.origin.z - bg.origin.z) > 17.0f;
 
    if (tooHigh) {
@@ -191,9 +197,12 @@ bool AStarAlgo::cantSkipNode (const int a, const int b) {
    if (tooNarrow) {
       return true;
    }
-   const bool tooFar = ag.origin.distanceSq (bg.origin) > cr::sqrf (300.0f);
+   const float distance = ag.origin.distanceSq (bg.origin);
 
-   if (tooFar) {
+   const bool tooFar = distance > cr::sqrf (400.0f);
+   const bool tooClose = distance < cr::sqrtf (40.0f);
+
+   if (tooFar || tooClose) {
       return true;
    }
    bool hasJumps = false;
@@ -208,22 +217,23 @@ bool AStarAlgo::cantSkipNode (const int a, const int b) {
 }
 
 void AStarAlgo::postSmooth (NodeAdderFn onAddedNode) {
+   m_smoothedPath.clear ();
+
    int index = 0;
-   m_smoothedPath.emplace (m_constructedPath.first ());
+   m_smoothedPath.push (m_constructedPath.first ());
 
    for (size_t i = 1; i < m_constructedPath.length () - 1; ++i) {
       if (cantSkipNode (m_smoothedPath[index], m_constructedPath[i + 1])) {
          ++index;
-         m_smoothedPath.emplace (m_constructedPath[i]);
+         m_smoothedPath.push (m_constructedPath[i]);
       }
    }
-   m_smoothedPath.emplace (m_constructedPath.last ());
+   m_smoothedPath.push (m_constructedPath.last ());
 
+   // give nodes back to bot
    for (const auto &spn : m_smoothedPath) {
       onAddedNode (spn);
    }
-   m_constructedPath.clear ();
-   m_smoothedPath.clear ();
 }
 
 AStarResult AStarAlgo::find (int botTeam, int srcIndex, int destIndex, NodeAdderFn onAddedNode) {
@@ -242,7 +252,10 @@ AStarResult AStarAlgo::find (int botTeam, int srcIndex, int destIndex, NodeAdder
    m_routeQue.clear ();
    m_routeQue.emplace (srcIndex, srcRoute->g);
 
-   bool postSmoothPath = cv_path_astar_post_smooth.bool_ ();
+   bool postSmoothPath = cv_path_astar_post_smooth.bool_ () && vistab.isReady ();
+
+   // always clear constructed path
+   m_constructedPath.clear ();
 
    while (!m_routeQue.empty ()) {
       // remove the first node from the open list
@@ -258,7 +271,7 @@ AStarResult AStarAlgo::find (int botTeam, int srcIndex, int destIndex, NodeAdder
          // build the complete path
          do {
             if (postSmoothPath) {
-               m_constructedPath.emplace (currentIndex);
+               m_constructedPath.push (currentIndex);
             }
             else {
                onAddedNode (currentIndex);
@@ -312,6 +325,12 @@ void FloydWarshallAlgo::rebuild () {
    m_length = graph.length ();
    m_matrix.resize (cr::sqrf (m_length));
 
+   worker.enqueue ([this] () {
+      syncRebuild ();
+   });
+}
+
+void FloydWarshallAlgo::syncRebuild () {
    auto matrix = m_matrix.data ();
 
    // re-initialize matrix every load
@@ -379,18 +398,19 @@ bool FloydWarshallAlgo::find (int srcIndex, int destIndex, NodeAdderFn onAddedNo
       srcIndex = (m_matrix.data () + (srcIndex * m_length) + destIndex)->index;
 
       if (srcIndex < 0) {
-         // only fill path distance on full path
-         if (pathDistance != nullptr) {
-            *pathDistance = dist (srcIndex, destIndex);
-         }
-         return true;
+         return false;
       }
 
       if (!onAddedNode (srcIndex)) {
          return true;
       }
    }
-   return false;
+
+   // only fill path distance on full path
+   if (pathDistance != nullptr) {
+      *pathDistance = dist (srcIndex, destIndex);
+   }
+   return true;
 }
 
 void DijkstraAlgo::init (const int length) {
@@ -400,15 +420,13 @@ void DijkstraAlgo::init (const int length) {
    m_parent.resize (length);
 }
 
-void DijkstraAlgo::resetState () {
+bool DijkstraAlgo::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, int *pathDistance) {
+   MutexScopedLock lock (m_cs);
+
    m_queue.clear ();
 
    m_parent.fill (kInvalidNodeIndex);
    m_distance.fill (kInfiniteDistanceLong);
-}
-
-bool DijkstraAlgo::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, int *pathDistance) {
-   resetState ();
 
    m_queue.emplace (0, srcIndex);
    m_distance[srcIndex] = 0;
@@ -473,7 +491,6 @@ int DijkstraAlgo::dist (int srcIndex, int destIndex) {
 PathPlanner::PathPlanner () {
    m_dijkstra = cr::makeUnique <DijkstraAlgo> ();
    m_floyd = cr::makeUnique <FloydWarshallAlgo> ();
-   m_astar = cr::makeUnique <AStarAlgo> ();
 }
 
 void PathPlanner::init () {
@@ -487,7 +504,6 @@ void PathPlanner::init () {
       m_memoryLimitHit = true;
    }
    m_dijkstra->init (length);
-   m_astar->init (length);
 
    // load (re-create) floyds, if we're not hitting memory limits
    if (!m_memoryLimitHit) {
@@ -503,7 +519,6 @@ bool PathPlanner::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, in
    if (!graph.exists (srcIndex) || !graph.exists (destIndex)) {
       return false;
    }
-
    // limit hit, use dijkstra
    if (m_memoryLimitHit) {
       return m_dijkstra->find (srcIndex, destIndex, onAddedNode, pathDistance);
@@ -511,7 +526,7 @@ bool PathPlanner::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, in
    return m_floyd->find (srcIndex, destIndex, onAddedNode, pathDistance);;
 }
 
-int PathPlanner::dist (int srcIndex, int destIndex) {
+float PathPlanner::dist (int srcIndex, int destIndex) {
    if (!graph.exists (srcIndex) || !graph.exists (destIndex)) {
       return kInfiniteDistanceLong;
    }
@@ -523,9 +538,17 @@ int PathPlanner::dist (int srcIndex, int destIndex) {
    // limit hit, use dijkstra
    if (m_memoryLimitHit) {
       if (cv_path_dijkstra_simple_distance.bool_ ()) {
-         return static_cast <int> (graph[srcIndex].origin.distance2d (graph[destIndex].origin));
+         return graph[srcIndex].origin.distance2d (graph[destIndex].origin);
       }
-      return m_dijkstra->dist (srcIndex, destIndex);
+      return static_cast <float> (m_dijkstra->dist (srcIndex, destIndex));
    }
-   return m_floyd->dist (srcIndex, destIndex);
+   return static_cast <float> (m_floyd->dist (srcIndex, destIndex));
+}
+
+float PathPlanner::preciseDistance (int srcIndex, int destIndex) {
+   // limit hit, use dijkstra
+   if (m_memoryLimitHit) {
+      return static_cast <float> (m_dijkstra->dist (srcIndex, destIndex));
+   }
+   return static_cast <float> (m_floyd->dist (srcIndex, destIndex));
 }

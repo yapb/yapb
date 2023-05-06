@@ -94,11 +94,11 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
    plat.bzero (table, sizeof (gamefuncs_t));
 
    if (!(game.is (GameFlags::Metamod))) {
-      auto api_GetEntityAPI = game.lib ().resolve <decltype (&GetEntityAPI)> (__FUNCTION__);
+      auto api_GetEntityAPI = game.lib ().resolve <decltype (&GetEntityAPI)> (__func__);
 
       // pass other DLLs engine callbacks to function table...
       if (!api_GetEntityAPI || api_GetEntityAPI (&dllapi, INTERFACE_VERSION) == 0) {
-         logger.fatal ("Could not resolve symbol \"%s\" in the game dll.", __FUNCTION__);
+         logger.fatal ("Could not resolve symbol \"%s\" in the game dll.", __func__);
       }
       dllfuncs.dllapi_table = &dllapi;
       gpGamedllFuncs = &dllfuncs;
@@ -332,29 +332,8 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       // any case, when the new map will be booting, ServerActivate() will be called, so we'll do
       // the loading of new bots and the new BSP data parsing there.
 
-      // save collected practice on shutdown
-      practice.save ();
-
-      // destroy global killer entity
-      bots.destroyKillerEntity ();
-
-      // set state to unprecached
-      game.setUnprecached ();
-
-      // enable lightstyle animations on level change
-      illum.enableAnimation (true);
-
-      // send message on new map
-      util.setNeedForWelcome (false);
-
-      // clear local entity
-      game.setLocalEntity (nullptr);
-
-      // reset graph state
-      graph.reset ();
-
-      // clear all the bots
-      bots.destroy ();
+      // notify level shutdown
+      game.levelShutdown ();
 
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
@@ -397,8 +376,8 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
          // keep track of grenades on map
          bots.updateActiveGrenade ();
 
-         // keep track of intresting entities
-         bots.updateIntrestingEntities ();
+         // keep track of interesting entities
+         bots.updateInterestingEntities ();
       }
 
       // keep bot number up to date
@@ -527,7 +506,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
    }
 
    table->pfnLightStyle = [] (int style, char *val) {
-      // ths function update lightstyle for the bots
+      // this function update lightstyle for the bots
 
       illum.updateLight (style, val);
 
@@ -572,7 +551,6 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
 
    table->pfnMessageBegin = [] (int msgDest, int msgType, const float *origin, edict_t *ed) {
       // this function called each time a message is about to sent.
-
       msgs.start (ed, msgType);
 
       if (game.is (GameFlags::Metamod)) {
@@ -801,11 +779,11 @@ CR_EXPORT int GetNewDLLFunctions (newgamefuncs_t *table, int *interfaceVersion) 
    plat.bzero (table, sizeof (newgamefuncs_t));
 
    if (!(game.is (GameFlags::Metamod))) {
-      auto api_GetNewDLLFunctions = game.lib ().resolve <decltype (&GetNewDLLFunctions)> (__FUNCTION__);
+      auto api_GetNewDLLFunctions = game.lib ().resolve <decltype (&GetNewDLLFunctions)> (__func__);
 
       // pass other DLLs engine callbacks to function table...
       if (!api_GetNewDLLFunctions || api_GetNewDLLFunctions (&newapi, interfaceVersion) == 0) {
-         logger.error ("Could not resolve symbol \"%s\" in the game dll.", __FUNCTION__);
+         logger.error ("Could not resolve symbol \"%s\" in the game dll.", __func__);
       }
       dllfuncs.newapi_table = &newapi;
       memcpy (table, &newapi, sizeof (newgamefuncs_t));
@@ -817,6 +795,7 @@ CR_EXPORT int GetNewDLLFunctions (newgamefuncs_t *table, int *interfaceVersion) 
             if (bot->m_enemy == ent) {
                bot->m_enemy = nullptr;
                bot->m_lastEnemy = nullptr;
+               bot->markStale ();
             }
          }
 
@@ -854,7 +833,6 @@ CR_LINKAGE_C int GetEngineFunctions_Post (enginefuncs_t *table, int *) {
 
       RETURN_META_VALUE (MRES_IGNORED, 0);
    };
-
    return HLTrue;
 }
 
@@ -907,11 +885,16 @@ CR_EXPORT int Meta_Detach (PLUG_LOADTIME now, PL_UNLOAD_REASON reason) {
       logger.error ("%s: plugin NOT detaching (can't unload plugin right now)", Plugin_info.name);
       return HLFalse; // returning FALSE prevents metamod from unloading this plugin
    }
-   bots.kickEveryone (true); // kick all bots off this server
+   // stop the worker
+   worker.shutdown ();
+
+   // kick all bots off this server
+   bots.kickEveryone (true); 
 
    // save collected practice on shutdown
    practice.save ();
 
+   // disable hooks
    util.disableSendTo ();
 
    // make sure all stuff cleared
@@ -963,10 +946,10 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *table, globalvars_t *glob) {
    if (game.postload ()) {
       return;
    }
-   auto api_GiveFnptrsToDll = game.lib ().resolve <decltype (&GiveFnptrsToDll)> (__FUNCTION__);
+   auto api_GiveFnptrsToDll = game.lib ().resolve <decltype (&GiveFnptrsToDll)> (__func__);
 
    if (!api_GiveFnptrsToDll) {
-      logger.fatal ("Could not resolve symbol \"%s\" in the game dll.", __FUNCTION__);
+      logger.fatal ("Could not resolve symbol \"%s\" in the game dll.", __func__);
    }
    GetEngineFunctions (table, nullptr);
 
@@ -984,10 +967,10 @@ CR_EXPORT int Server_GetBlendingInterface (int version, struct sv_blending_inter
    // of the body move, which bones, which hitboxes and how) between the server and the game DLL.
    // some MODs can be using a different hitbox scheme than the standard one.
 
-   auto api_GetBlendingInterface = game.lib ().resolve <decltype (&Server_GetBlendingInterface)> (__FUNCTION__);
+   auto api_GetBlendingInterface = game.lib ().resolve <decltype (&Server_GetBlendingInterface)> (__func__);
 
    if (!api_GetBlendingInterface) {
-      logger.error ("Could not resolve symbol \"%s\" in the game dll. Continuing...", __FUNCTION__);
+      logger.error ("Could not resolve symbol \"%s\" in the game dll. Continuing...", __func__);
       return HLFalse;
    }
    return api_GetBlendingInterface (version, ppinterface, pstudio, rotationmatrix, bonetransform);

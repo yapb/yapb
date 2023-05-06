@@ -9,6 +9,7 @@
 
 ConVar cv_csdm_mode ("yb_csdm_mode", "0", "Enables or disables CSDM / FFA mode for bots.\nAllowed values: '0', '1', '2', '3'.\nIf '0', CSDM / FFA mode is auto-detected.\nIf '1', CSDM mode is enabled, but FFA is disabled.\nIf '2', CSDM and FFA mode is enabled.\nIf '3', CSDM and FFA mode is disabled.", true, 0.0f, 3.0f);
 ConVar cv_breakable_health_limit ("yb_breakable_health_limit", "500.0", "Specifies the maximum health of breakable object, that bot will consider to destroy.", true, 1.0f, 3000.0);
+ConVar cv_threadpool_workers ("yb_threadpool_workers", "-1", "Maximum number of threads bot will run to process some tasks. -1 means half of CPU cores used.", true, -1.0f, static_cast <float> (plat.hardwareConcurrency ()));
 
 ConVar sv_skycolor_r ("sv_skycolor_r", nullptr, Var::GameRef);
 ConVar sv_skycolor_g ("sv_skycolor_g", nullptr, Var::GameRef);
@@ -53,6 +54,12 @@ void Game::precache () {
 void Game::levelInitialize (edict_t *entities, int max) {
    // this function precaches needed models and initialize class variables
 
+   // re-initialize bot's array
+   bots.destroy ();
+
+   // startup threaded worker
+   worker.startup (cv_threadpool_workers.int_ ());
+
    m_spawnCount[Team::CT] = 0;
    m_spawnCount[Team::Terrorist] = 0;
 
@@ -82,9 +89,6 @@ void Game::levelInitialize (edict_t *entities, int max) {
 
    // flush any print queue
    ctrl.resetFlushTimestamp ();
-
-   // suspend any analyzer tasks
-   analyzer.suspend ();
 
    // go thru the all entities on map, and do whatever we're want
    for (int i = 0; i < max; ++i) {
@@ -160,6 +164,40 @@ void Game::levelInitialize (edict_t *entities, int max) {
    // reset some timers
    m_oneSecondFrame = 0.0f;
    m_halfSecondFrame = 0.0f;
+}
+
+void Game::levelShutdown () {
+   // stop thread pool
+   worker.shutdown ();
+
+   // save collected practice on shutdown
+   practice.save ();
+
+   // destroy global killer entity
+   bots.destroyKillerEntity ();
+
+   // ensure players are off on xash3d
+   if (game.is (GameFlags::Xash3D)) {
+      bots.kickEveryone (true, false);
+   }
+
+   // set state to unprecached
+   game.setUnprecached ();
+
+   // enable lightstyle animations on level change
+   illum.enableAnimation (true);
+
+   // send message on new map
+   util.setNeedForWelcome (false);
+
+   // clear local entity
+   game.setLocalEntity (nullptr);
+
+   // reset graph state
+   graph.reset ();
+
+   // suspend any analyzer tasks
+   analyzer.suspend ();
 }
 
 void Game::drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, const Color &color, int brightness, int speed, int life, DrawLine type) {
@@ -963,6 +1001,9 @@ void Game::slowFrame () {
       // refresh bomb origin in case some plugin moved it out
       graph.setBombOrigin ();
 
+      // update client pings
+      util.calculatePings ();
+
       // update next update time
       m_halfSecondFrame = nextUpdate * 0.25f + time ();
    }
@@ -977,9 +1018,6 @@ void Game::slowFrame () {
 
    // check if we're need to autokill bots
    bots.maintainAutoKill ();
-
-   // update client pings
-   util.calculatePings ();
 
    // maintain leaders selection upon round start
    bots.maintainLeaders ();

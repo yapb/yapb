@@ -18,6 +18,7 @@ void BotPractice::setIndex (int32_t team, int32_t start, int32_t goal, int32_t v
    if (team != Team::Terrorist && team != Team::CT) {
       return;
    }
+   MutexScopedLock lock (m_damageUpdateLock);
 
    // reliability check
    if (!graph.exists (start) || !graph.exists (goal) || !graph.exists (value)) {
@@ -37,6 +38,7 @@ void BotPractice::setValue (int32_t team, int32_t start, int32_t goal, int32_t v
    if (team != Team::Terrorist && team != Team::CT) {
       return;
    }
+   MutexScopedLock lock (m_damageUpdateLock);
 
    // reliability check
    if (!graph.exists (start) || !graph.exists (goal)) {
@@ -46,7 +48,7 @@ void BotPractice::setValue (int32_t team, int32_t start, int32_t goal, int32_t v
 }
 
 int32_t BotPractice::getDamage (int32_t team, int32_t start, int32_t goal) {
-   if (!exists (team, start, goal)) {
+   if (!vistab.isReady () || !exists (team, start, goal)) {
       return 0;
    }
    return m_data[{start, goal, team}].damage;
@@ -56,6 +58,7 @@ void BotPractice::setDamage (int32_t team, int32_t start, int32_t goal, int32_t 
    if (team != Team::Terrorist && team != Team::CT) {
       return;
    }
+   MutexScopedLock lock (m_damageUpdateLock);
 
    // reliability check
    if (!graph.exists (start) || !graph.exists (goal)) {
@@ -64,7 +67,26 @@ void BotPractice::setDamage (int32_t team, int32_t start, int32_t goal, int32_t 
    m_data[{start, goal, team}].damage = static_cast <int16_t> (value);
 }
 
+float BotPractice::plannerGetDamage (int32_t team, int32_t start, int32_t goal, bool addTeamHighestDamage) {
+   if (!m_damageUpdateLock.tryLock ()) {
+      return 1.0f;
+   }
+   ScopedUnlock <Mutex> unlock (m_damageUpdateLock);
+   auto damage = static_cast <float> (getDamage (team, start, goal));
+
+   if (addTeamHighestDamage) {
+      damage += getHighestDamageForTeam <float> (team);
+   }
+   return damage;
+}
+
 void BotPractice::update () {
+   worker.enqueue ([this] () {
+      syncUpdate ();
+   });
+}
+
+void BotPractice::syncUpdate () {
    // this function called after each end of the round to update knowledge about most dangerous nodes for each team.
 
    auto graphLength = graph.length ();
@@ -98,7 +120,10 @@ void BotPractice::update () {
          if (maxDamage > PracticeLimit::Damage) {
             adjustValues = true;
          }
-         setIndex (team, i, i, bestIndex);
+
+         if (graph.exists (bestIndex)) {
+            setIndex (team, i, i, bestIndex);
+         }
       }
    }
    constexpr auto kFullDamageVal = static_cast <int32_t> (PracticeLimit::Damage);
@@ -117,6 +142,7 @@ void BotPractice::update () {
          }
       }
    }
+   MutexScopedLock lock (m_damageUpdateLock);
 
    for (int team = Team::Terrorist; team < kGameTeamNum; ++team) {
       m_teamHighestDamage[team] = cr::clamp (m_teamHighestDamage[team] - kHalfDamageVal, 1, kFullDamageVal);

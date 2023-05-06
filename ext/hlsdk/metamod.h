@@ -29,7 +29,7 @@
  *
  */
 
-// Simplified version by Wei Mingzhi
+ // Simplified version by Wei Mingzhi
 
 #ifndef METAMOD_H
 #define METAMOD_H

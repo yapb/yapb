@@ -63,7 +63,7 @@ private:
    float m_maintainTime {}; // time to maintain bot creation
    float m_quotaMaintainTime {}; // time to maintain bot quota
    float m_grenadeUpdateTime {}; // time to update active grenades
-   float m_entityUpdateTime {}; // time to update intresting entities
+   float m_entityUpdateTime {}; // time to update interesting entities
    float m_plantSearchUpdateTime {}; // time to update for searching planted bomb
    float m_lastChatTime {}; // global chat time timestamp
    float m_timeBombPlanted {}; // time the bomb were planted
@@ -81,7 +81,7 @@ private:
    bool m_roundOver {};
 
    Array <edict_t *> m_activeGrenades {}; // holds currently active grenades on the map
-   Array <edict_t *> m_intrestingEntities {};  // holds currently intresting entities on the map
+   Array <edict_t *> m_interestingEntities {};  // holds currently interesting entities on the map
 
    Deque <String> m_saveBotNames {}; // bots names that persist upon changelevel
    Deque <BotRequest> m_addRequests {}; // bot creation tab
@@ -143,7 +143,7 @@ public:
    void initFilters ();
    void resetFilters ();
    void updateActiveGrenade ();
-   void updateIntrestingEntities ();
+   void updateInterestingEntities ();
    void captureChatRadio (const char *cmd, const char *arg, edict_t *ent);
    void notifyBombDefuse ();
    void execGameEntity (edict_t *ent);
@@ -160,16 +160,16 @@ public:
       return m_activeGrenades;
    }
 
-   const Array <edict_t *> &getIntrestingEntities () {
-      return m_intrestingEntities;
+   const Array <edict_t *> &getInterestingEntities () {
+      return m_interestingEntities;
    }
 
    bool hasActiveGrenades () const {
       return !m_activeGrenades.empty ();
    }
 
-   bool hasIntrestingEntities () const {
-      return !m_intrestingEntities.empty ();
+   bool hasInterestingEntities () const {
+      return !m_interestingEntities.empty ();
    }
 
    bool checkTeamEco (int team) const {
@@ -302,5 +302,31 @@ public:
    }
 };
 
+// bot async worker wrapper
+class BotThreadWorker final : public Singleton <BotThreadWorker> {
+private:
+   ThreadPool m_botWorker;
+
+public:
+   BotThreadWorker () = default;
+   ~BotThreadWorker () = default;
+
+public:
+   void shutdown ();
+   void startup (int workers);
+
+public:
+   template <typename F> void enqueue (F &&fn) {
+      if (m_botWorker.threadCount () == 0) {
+         fn (); // no threads, no fun, just run task in current thread
+         return;
+      }
+      m_botWorker.enqueue (cr::forward <F> (fn));
+   }
+};
+
 // explose global
 CR_EXPOSE_GLOBAL_SINGLETON (BotManager, bots);
+
+// expose async worker
+CR_EXPOSE_GLOBAL_SINGLETON (BotThreadWorker, worker);

@@ -8,6 +8,7 @@
 #include <yapb.h>
 
 ConVar cv_autovacate ("yb_autovacate", "1", "Kick bots to automatically make room for human players.");
+ConVar cv_autovacate_keep_slots ("yb_autovacate_keep_slots", "1", "How many slots autovacate feature should keep for human players", true, 1.0f, 8.0f);
 ConVar cv_kick_after_player_connect ("yb_kick_after_player_connect", "1", "Kick the bot immediately when a human player joins the server (yb_autovacate must be enabled).");
 
 ConVar cv_quota ("yb_quota", "9", "Specifies the number bots to be added to the game.", true, 0.0f, static_cast <float> (kGameMaxPlayers));
@@ -405,10 +406,10 @@ void BotManager::maintainQuota () {
 
    if (cv_autovacate.bool_ ()) {
       if (cv_kick_after_player_connect.bool_ ()) {
-         desiredBotCount = cr::min <int> (desiredBotCount, maxClients - (totalHumansInGame + 1));
+         desiredBotCount = cr::min <int> (desiredBotCount, maxClients - (totalHumansInGame + cv_autovacate_keep_slots.int_ ()));
       }
       else {
-         desiredBotCount = cr::min <int> (desiredBotCount, maxClients - (humanPlayersInGame + 1));
+         desiredBotCount = cr::min <int> (desiredBotCount, maxClients - (humanPlayersInGame + cv_autovacate_keep_slots.int_ ()));
       }
    }
    else {
@@ -515,7 +516,7 @@ void BotManager::reset () {
    m_timeBombPlanted = 0.0f;
    m_bombSayStatus = BombPlantedSay::ChatSay | BombPlantedSay::Chatter;
 
-   m_intrestingEntities.clear ();
+   m_interestingEntities.clear ();
    m_activeGrenades.clear ();
 }
 
@@ -569,7 +570,7 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
    // this function fill server with bots, with specified team & personality
 
    // always keep one slot
-   int maxClients = cv_autovacate.bool_ () ? game.maxClients () - 1 - (game.isDedicated () ? 0 : getHumansCount ()) : game.maxClients ();
+   int maxClients = cv_autovacate.bool_ () ? game.maxClients () - cv_autovacate_keep_slots.int_ () - (game.isDedicated () ? 0 : getHumansCount ()) : game.maxClients ();
 
    if (getBotCount () >= maxClients - getHumansCount ()) {
       return;
@@ -942,6 +943,9 @@ void BotManager::balanceBotDifficulties () {
 void BotManager::destroy () {
    // this function free all bots slots (used on server shutdown)
 
+   for (auto &bot : m_bots) {
+      bot->markStale ();
+   }
    m_bots.clear ();
 }
 
@@ -1078,7 +1082,10 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    // init path walker
    m_pathWalk.init (graph.getMaxRouteLength ());
 
-   // bot is not kicked by rorataion
+   // init async planner
+   m_planner = cr::makeUnique <AStarAlgo> (graph.length ());
+
+   // bot is not kicked by rotation
    m_kickedByRotation = false;
 
    // assign team and class
@@ -1141,7 +1148,7 @@ int BotManager::getPlayerPriority (edict_t *ent) {
    }
 
    // give bots some priority
-   if (bot->m_hasC4 || bot->m_isVIP || bot->hasHostage () || bot->m_healthValue < ent->v.health) {
+   if (bot->m_hasC4 || bot->m_isVIP || bot->m_hasHostage || bot->m_healthValue < ent->v.health) {
       return bot->entindex () + highPrio;
    }
    return bot->entindex ();
@@ -1183,7 +1190,6 @@ void BotManager::erase (Bot *bot) {
       m_bots.erase (index, 1); // remove from bots array
       break;
    }
-
 }
 
 void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
@@ -1246,6 +1252,7 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
    }
 }
 
+
 void Bot::newRound () {
    // this function initializes a bot after creation & at the start of each round
 
@@ -1276,7 +1283,6 @@ void Bot::newRound () {
    for (auto &node : m_previousNodes) {
       node = kInvalidNodeIndex;
    }
-
    m_navTimeset = game.time ();
    m_team = game.getTeam (ent ());
 
@@ -1407,6 +1413,7 @@ void Bot::newRound () {
    m_inBombZone = false;
    m_ignoreBuyDelay = false;
    m_hasC4 = false;
+   m_hasHostage = false;
 
    m_fallDownTime = 0.0f;
    m_shieldCheckTime = 0.0f;
@@ -1505,7 +1512,11 @@ void Bot::kick () {
 }
 
 void Bot::markStale () {
+   // switch chatter icon off
    showChatterIcon (false, true);
+
+   // mark bot as leaving
+   m_isStale = true;
 
    // clear the bot name
    conf.clearUsedName (this);
@@ -1723,13 +1734,13 @@ void BotManager::updateActiveGrenade () {
    m_grenadeUpdateTime = game.time () + 0.25f;
 }
 
-void BotManager::updateIntrestingEntities () {
+void BotManager::updateInterestingEntities () {
    if (m_entityUpdateTime > game.time ()) {
       return;
    }
 
    // clear previously stored entities
-   m_intrestingEntities.clear ();
+   m_interestingEntities.clear ();
 
    // search the map for any type of grenade
    game.searchEntities (nullptr, kInfiniteDistance, [&] (edict_t *e) {
@@ -1737,26 +1748,26 @@ void BotManager::updateIntrestingEntities () {
 
       // search for grenades, weaponboxes, weapons, items and armoury entities
       if (strncmp ("weaponbox", classname, 9) == 0 || strncmp ("grenade", classname, 7) == 0 || util.isItem (e) || strncmp ("armoury", classname, 7) == 0) {
-         m_intrestingEntities.push (e);
+         m_interestingEntities.push (e);
       }
 
       // pickup some csdm stuff if we're running csdm
       if (game.mapIs (MapFlags::HostageRescue) && strncmp ("hostage", classname, 7) == 0) {
-         m_intrestingEntities.push (e);
+         m_interestingEntities.push (e);
       }
 
       // add buttons
       if (game.mapIs (MapFlags::HasButtons) && strncmp ("func_button", classname, 11) == 0) {
-         m_intrestingEntities.push (e);
+         m_interestingEntities.push (e);
       }
 
       // pickup some csdm stuff if we're running csdm
       if (game.is (GameFlags::CSDM) && strncmp ("csdm", classname, 4) == 0) {
-         m_intrestingEntities.push (e);
+         m_interestingEntities.push (e);
       }
 
       if (cv_attack_monsters.bool_ () && util.isMonster (e)) {
-         m_intrestingEntities.push (e);
+         m_interestingEntities.push (e);
       }
 
       // continue iteration
@@ -1913,4 +1924,36 @@ void BotManager::setBombPlanted (bool isPlanted) {
       m_timeBombPlanted = game.time ();
    }
    m_bombPlanted = isPlanted;
+}
+
+void BotThreadWorker::shutdown () {
+   game.print ("Shutting down bot thread worker.");
+   m_botWorker.shutdown ();
+}
+
+void BotThreadWorker::startup (int workers) {
+   size_t count = m_botWorker.threadCount ();
+
+   if (count > 0) {
+      logger.error ("Tried to start thread pool with existing %d threads in pool.", count);
+      return;
+   }
+
+   int requetedThreadCount = workers;
+   int hardwareConcurrency = plat.hardwareConcurrency ();
+
+   if (requetedThreadCount == -1) {
+      requetedThreadCount = hardwareConcurrency / 4;
+
+      if (requetedThreadCount == 0) {
+         requetedThreadCount = 1;
+      }
+   }
+   requetedThreadCount = cr::clamp (requetedThreadCount, 1, hardwareConcurrency);
+
+   // notify user
+   game.print ("Starting up bot thread worker with %d threads.", requetedThreadCount);
+
+   // start up the worker
+   m_botWorker.startup (static_cast <int> (requetedThreadCount));
 }
