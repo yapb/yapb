@@ -43,11 +43,6 @@ void Game::precache () {
    m_engineWrap.precacheSound ("common/wpn_hudon.wav"); // path add/delete done
 
    m_mapFlags = 0; // reset map type as worldspawn is the first entity spawned
-
-   // detect official csbots here
-   if (!(is (GameFlags::Legacy)) && engfuncs.pfnCVarGetPointer ("bot_stop") != nullptr) {
-      m_gameFlags |= GameFlags::CSBot;
-   }
    registerCvars (true);
 }
 

@@ -38,7 +38,7 @@ CR_DECLARE_SCOPED_ENUM (GameFlags,
    ConditionZero = cr::bit (2), // counter-strike: condition zero
    Legacy = cr::bit (3), // counter-strike 1.3-1.5 with/without steam
    Mobility = cr::bit (4), // additional flag that bot is running on android (additional flag)
-   CSBot = cr::bit (5), // additional flag that indicates official cs bots are in game
+   Unused = cr::bit (5), // not used currently
    Metamod = cr::bit (6), // game running under meta\mod
    CSDM = cr::bit (7), // csdm mod currently in use
    FreeForAll = cr::bit (8), // csdm mod with ffa mode
