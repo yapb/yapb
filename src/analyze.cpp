@@ -122,12 +122,6 @@ void GraphAnalyze::update () {
    }
 }
 
-void GraphAnalyze::suspend () {
-   m_updateInterval = 0.0f;
-   m_isAnalyzing = false;
-   m_isAnalyzed = false;
-}
-
 void GraphAnalyze::finish () {
    // run optimization on finish
    optimize ();
