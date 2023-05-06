@@ -398,7 +398,7 @@ int BotGraph::getBspSize () {
    return 0;
 }
 
-void BotGraph::addPath (int addIndex, int pathIndex, float distance) {
+void BotGraph::addPath (int addIndex, int pathIndex, float distance, int type) {
    if (!exists (addIndex) || !exists (pathIndex) || pathIndex == addIndex) {
       return;
    }
@@ -418,6 +418,10 @@ void BotGraph::addPath (int addIndex, int pathIndex, float distance) {
          link.index = static_cast <int16_t> (pathIndex);
          link.distance = cr::abs (static_cast <int> (distance));
 
+         if (type == 1) {
+            link.flags |= PathFlag::Jump;
+            path.radius = 0.0f;
+         }
          msg ("Path added from %d to %d.", addIndex, pathIndex);
          return;
       }
@@ -439,6 +443,11 @@ void BotGraph::addPath (int addIndex, int pathIndex, float distance) {
 
       path.links[slot].index = static_cast <int16_t> (pathIndex);
       path.links[slot].distance = cr::abs (static_cast <int> (distance));
+
+      if (type == 1) {
+         path.links[slot].flags |= PathFlag::Jump;
+         path.radius = 0.0f;
+      }
    }
 }
 
@@ -1058,6 +1067,9 @@ void BotGraph::pathCreate (char dir) {
    }
    else if (dir == PathConnection::Incoming) {
       addPath (nodeTo, nodeFrom, distance);
+   }
+   else if (dir == PathConnection::Jumping) {
+      addPath (nodeFrom, nodeTo, distance, 1);
    }
    else {
       addPath (nodeFrom, nodeTo, distance);
