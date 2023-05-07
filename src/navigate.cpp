@@ -13,6 +13,17 @@ int Bot::findBestGoal () {
       return goal;
    };
 
+   if (m_isCreature) {
+      if (!graph.m_terrorPoints.empty ()) {
+         return graph.m_terrorPoints.random ();
+      }
+
+      if (!graph.m_goalPoints.empty ()) {
+         return graph.m_goalPoints.random ();
+      }
+      return graph.random ();
+   }
+
    // chooses a destination (goal) node for a bot
    if (m_team == Team::Terrorist && game.mapIs (MapFlags::Demolition)) {
       auto result = findBestGoalWhenBombAction ();
@@ -282,7 +293,7 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offsensive) {
    }
 
    if (goalChoices[0] == kInvalidNodeIndex) {
-      return m_chosenGoalIndex = rg.get (0, graph.length () - 1);
+      return m_chosenGoalIndex = graph.random ();
    }
 
    bool sorting = false;
@@ -1785,7 +1796,7 @@ int Bot::findDefendNode (const Vector &origin) {
 
    // some of points not found, return random one
    if (srcIndex == kInvalidNodeIndex || posIndex == kInvalidNodeIndex) {
-      return rg.get (0, graph.length () - 1);
+      return graph.random ();
    }
 
    // find the best node now
@@ -1885,7 +1896,7 @@ int Bot::findDefendNode (const Vector &origin) {
       }
 
       if (found.empty ()) {
-         return rg.get (0, graph.length () - 1); // most worst case, since there a evil error in nodes
+         return graph.random (); // most worst case, since there a evil error in nodes
       }
       return found.random ();
    }
@@ -2129,7 +2140,7 @@ bool Bot::advanceMovement () {
          Task taskID = getCurrentTaskId ();
 
          // only if we in normal task and bomb is not planted
-         if (taskID == Task::Normal && bots.getRoundMidTime () + 5.0f < game.time () && m_timeCamping + 5.0f < game.time () && !bots.isBombPlanted () && m_personality != Personality::Rusher && !m_hasC4 && !m_isVIP && m_loosedBombNodeIndex == kInvalidNodeIndex && !m_hasHostage) {
+         if (taskID == Task::Normal && bots.getRoundMidTime () + 5.0f < game.time () && m_timeCamping + 5.0f < game.time () && !bots.isBombPlanted () && m_personality != Personality::Rusher && !m_hasC4 && !m_isVIP && m_loosedBombNodeIndex == kInvalidNodeIndex && !m_hasHostage && !m_isCreature) {
             m_campButtons = 0;
 
             const int nextIndex = m_pathWalk.next ();
@@ -2861,7 +2872,7 @@ int Bot::getRandomCampDir () {
    if (count >= 0) {
       return indices[rg.get (0, count)];
    }
-   return rg.get (0, graph.length () - 1);
+   return graph.random ();
 }
 
 void Bot::updateBodyAngles () {
@@ -3215,7 +3226,7 @@ void Bot::syncFindPath (int srcIndex, int destIndex, FindPath pathType) {
       destIndex = graph.getNearestNoBuckets (pev->origin, kInfiniteDistance, NodeFlag::Goal);
 
       if (!graph.exists (destIndex) || srcIndex == destIndex) {
-         destIndex = rg.get (0, graph.length () - 1);
+         destIndex = graph.random ();
 
          if (!graph.exists (destIndex)) {
             printf ("%s dest path index not valid (%d).", __func__, destIndex);

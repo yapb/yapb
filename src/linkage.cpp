@@ -260,6 +260,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       // team changes, recounting the teams population, etc...
 
       ctrl.assignAdminRights (ent, infobuffer);
+      bots.checkBotModel (ent, infobuffer);
 
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);

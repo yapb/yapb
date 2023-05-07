@@ -325,7 +325,7 @@ void Bot::updatePickups () {
    // this function finds Items to collect or use in the near of a bot
 
    // don't try to pickup anything while on ladder or trying to escape from bomb...
-   if ((m_states & Sense::SeeingEnemy) || isOnLadder () || getCurrentTaskId () == Task::EscapeFromBomb || !cv_pickup_best.bool_ () || cv_jasonmode.bool_ () || !bots.hasInterestingEntities ()) {
+   if (m_isCreature || (m_states & Sense::SeeingEnemy) || isOnLadder () || getCurrentTaskId () == Task::EscapeFromBomb || !cv_pickup_best.bool_ () || cv_jasonmode.bool_ () || !bots.hasInterestingEntities ()) {
       m_pickupItem = nullptr;
       m_pickupType = Pickup::None;
 
@@ -903,7 +903,7 @@ void Bot::checkMsgQueue () {
          return;
       }
 
-      if (!m_inBuyZone || game.is (GameFlags::CSDM)) {
+      if (!m_inBuyZone || game.is (GameFlags::CSDM) || m_isCreature) {
          m_buyPending = true;
          m_buyingFinished = true;
 
@@ -1767,7 +1767,7 @@ void Bot::setConditions () {
    refreshEnemyPredict ();
 
    // check for grenades depending on difficulty
-   if (rg.chance (cr::max (25, m_difficulty * 25))) {
+   if (rg.chance (cr::max (25, m_difficulty * 25)) && !m_isCreature) {
       checkGrenadesThrow ();
    }
 
@@ -1841,7 +1841,6 @@ void Bot::filterTasks () {
       float retreatLevel = (100.0f - (m_healthValue > 70.0f ? 100.0f : m_healthValue)) * tempFear; // retreat level depends on bot health
 
       if (m_numEnemiesLeft > m_numFriendsLeft / 2 && m_retreatTime < game.time () && m_seeEnemyTime - rg.get (2.0f, 4.0f) < game.time ()) {
-
          float timeSeen = m_seeEnemyTime - game.time ();
          float timeHeard = m_heardSoundTime - game.time ();
          float ratio = 0.0f;
@@ -1864,6 +1863,9 @@ void Bot::filterTasks () {
          }
          else if (m_isVIP || m_isReloading || (sniping && usesSniper ())) {
             ratio *= 3.0f; // triple the seek cover desire if bot is VIP or reloading
+         }
+         else if (m_isCreature) {
+            ratio = 0.0f;
          }
          else {
             ratio /= 2.0f; // reduce seek cover otherwise
@@ -2553,7 +2555,7 @@ void Bot::checkRadioQueue () {
       break;
 
    case Radio::GetInPositionAndWaitForGo:
-      if ((game.isNullEntity (m_enemy) && seesEntity (m_radioEntity->v.origin)) || distance < 1024.0f) {
+      if (!m_isCreature && ((game.isNullEntity (m_enemy) && seesEntity (m_radioEntity->v.origin)) || distance < 1024.0f)) {
          pushRadioMessage (Radio::RogerThat);
 
          if (getCurrentTaskId () == Task::Camp) {
@@ -2927,6 +2929,7 @@ void Bot::update () {
    else if (m_team == Team::CT && game.mapIs (MapFlags::HostageRescue)) {
       m_hasHostage = hasHostage ();
    }
+   m_isCreature = isCreature ();
 
    // is bot movement enabled
    bool botMovement = false;
@@ -3537,7 +3540,7 @@ void Bot::blind_ () {
 }
 
 void Bot::camp_ () {
-   if (!cv_camping_allowed.bool_ ()) {
+   if (!cv_camping_allowed.bool_ () || m_isCreature) {
       completeTask ();
       return;
    }
@@ -3627,6 +3630,11 @@ void Bot::camp_ () {
 }
 
 void Bot::hide_ () {
+   if (m_isCreature) {
+      completeTask ();
+      return;
+   };
+
    m_aimFlags |= AimFlags::Camp;
    m_checkTerrain = false;
    m_moveToGoal = false;
@@ -3747,7 +3755,7 @@ void Bot::plantBomb_ () {
    m_aimFlags |= AimFlags::Camp;
 
    // we're still got the C4?
-   if (m_hasC4) {
+   if (m_hasC4 && !isKnifeMode ()) {
       if (m_currentWeapon != Weapon::C4) {
          selectWeaponById (Weapon::C4);
       }
@@ -4821,7 +4829,7 @@ void Bot::logic () {
    m_wantsToFire = false;
 
    // avoid flyings grenades, if needed
-   if (cv_avoid_grenades.bool_ ()) {
+   if (cv_avoid_grenades.bool_ () && !m_isCreature) {
       avoidGrenades ();
    }
    m_isUsingGrenade = false;
@@ -5660,6 +5668,9 @@ void Bot::updateHearing () {
 void Bot::enteredBuyZone (int buyState) {
    // this function is gets called when bot enters a buyzone, to allow bot to buy some stuff
 
+   if (m_isCreature) {
+      return; // creatures can't buy anything
+   }
    const int *econLimit = conf.getEconLimit ();
 
    // if bot is in buy zone, try to buy ammo for this weapon...
@@ -5794,4 +5805,33 @@ bool Bot::isEnemyInFrustum (edict_t *enemy) {
       }
    }
    return true;
+}
+
+void Bot::refreshModelName (char *infobuffer) {
+   if (infobuffer == nullptr) {
+      infobuffer = engfuncs.pfnGetInfoKeyBuffer (ent ());
+   }
+   String modelName = engfuncs.pfnInfoKeyValue (infobuffer, "model");
+
+   // need at least two characters to test model mask
+   if (modelName.length () < 2) {
+      m_modelMask = 0;
+      return;
+   }
+   union ModelTest {
+      char model[2];
+      uint16_t mask;
+      ModelTest (StringRef m) : model { m[0], m[1] } {};
+   } modelTest { modelName };
+
+   // assign our model mask (tests against model done every bot update)
+   m_modelMask = modelTest.mask;
+}
+
+bool Bot::isCreature () {
+   // current creature models are: zombie, chicken
+   constexpr auto modelMaskZombie = (('o' << 8) + 'z');
+   constexpr auto modelMaskChicken = (('h' << 8) + 'c');
+
+   return m_modelMask == modelMaskZombie || m_modelMask == modelMaskChicken;
 }

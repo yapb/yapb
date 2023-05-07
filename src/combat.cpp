@@ -132,19 +132,22 @@ bool Bot::checkBodyParts (edict_t *target) {
    auto spot = target->v.origin;
    auto self = pev->pContainingEntity;
 
-   m_enemyParts = Visibility::None;
-   game.testLine (eyes, spot, TraceIgnore::Everything, self, &result);
+   // creatures can't hurt behind anything
+   auto ignoreFlags = m_isCreature ? TraceIgnore::None : TraceIgnore::Everything;
 
-   if (result.flFraction >= 1.0f) {
+   m_enemyParts = Visibility::None;
+   game.testLine (eyes, spot, ignoreFlags, self, &result);
+
+   if (result.flFraction >= 1.0f && result.pHit == target) {
       m_enemyParts |= Visibility::Body;
       m_enemyOrigin = result.vecEndPos;
    }
 
    // check top of head
    spot.z += 25.0f;
-   game.testLine (eyes, spot, TraceIgnore::Everything, self, &result);
+   game.testLine (eyes, spot, ignoreFlags, self, &result);
 
-   if (result.flFraction >= 1.0f) {
+   if (result.flFraction >= 1.0f && result.pHit == target) {
       m_enemyParts |= Visibility::Head;
       m_enemyOrigin = result.vecEndPos;
    }
@@ -162,9 +165,9 @@ bool Bot::checkBodyParts (edict_t *target) {
    else {
       spot.z = target->v.origin.z - standFeet;
    }
-   game.testLineChannel (TraceChannel::Enemy, eyes, spot, TraceIgnore::Everything, self, result);
+   game.testLineChannel (TraceChannel::Enemy, eyes, spot, ignoreFlags, self, result);
 
-   if (result.flFraction >= 1.0f) {
+   if (result.flFraction >= 1.0f && result.pHit == target) {
       m_enemyParts |= Visibility::Other;
       m_enemyOrigin = result.vecEndPos;
 
@@ -177,9 +180,9 @@ bool Bot::checkBodyParts (edict_t *target) {
    Vector perp (-dir.y, dir.x, 0.0f);
    spot = target->v.origin + Vector (perp.x * edgeOffset, perp.y * edgeOffset, 0);
 
-   game.testLineChannel (TraceChannel::Enemy, eyes, spot, TraceIgnore::Everything, self, result);
+   game.testLineChannel (TraceChannel::Enemy, eyes, spot, ignoreFlags, self, result);
 
-   if (result.flFraction >= 1.0f) {
+   if (result.flFraction >= 1.0f && result.pHit == target) {
       m_enemyParts |= Visibility::Other;
       m_enemyOrigin = result.vecEndPos;
 
@@ -187,9 +190,9 @@ bool Bot::checkBodyParts (edict_t *target) {
    }
    spot = target->v.origin - Vector (perp.x * edgeOffset, perp.y * edgeOffset, 0);
 
-   game.testLineChannel (TraceChannel::Enemy, eyes, spot, TraceIgnore::Everything, self, result);
+   game.testLineChannel (TraceChannel::Enemy, eyes, spot, ignoreFlags, self, result);
 
-   if (result.flFraction >= 1.0f) {
+   if (result.flFraction >= 1.0f && result.pHit == target) {
       m_enemyParts |= Visibility::Other;
       m_enemyOrigin = result.vecEndPos;
 
@@ -1494,7 +1497,7 @@ bool Bot::hasAnyWeapons () {
 }
 
 bool Bot::isKnifeMode () {
-   return cv_jasonmode.bool_ () || (usesKnife () && !hasAnyWeapons ());
+   return cv_jasonmode.bool_ () || (usesKnife () && !hasAnyWeapons ()) || m_isCreature;
 }
 
 void Bot::selectBestWeapon () {

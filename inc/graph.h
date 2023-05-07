@@ -307,6 +307,11 @@ public:
       return m_paths.length <int32_t> ();
    }
 
+   // get the random node on map
+   int32_t random () const {
+      return rg.get (0, length () - 1);
+   }
+
    // check if has editor
    bool hasEditor () const {
       return !!m_editor;

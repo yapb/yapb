@@ -740,6 +740,15 @@ void BotManager::setLastWinner (int winner) {
    }
 }
 
+void BotManager::checkBotModel (edict_t *ent, char *infobuffer) {
+   for (const auto &bot : bots) {
+      if (bot->ent () == ent) {
+         bot->refreshModelName (infobuffer);
+         break;
+      }
+   }
+}
+
 void BotManager::setWeaponMode (int selection) {
    // this function sets bots weapon mode
 
@@ -1367,6 +1376,7 @@ void Bot::newRound () {
    for (auto &timer : m_chatterTimes) {
       timer = kMaxChatterRepeatInterval;
    }
+   refreshModelName (nullptr);
 
    m_isReloading = false;
    m_reloadState = Reload::None;

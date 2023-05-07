@@ -771,6 +771,7 @@ private:
    bool m_grenadeRequested {}; // bot requested change to grenade
    bool m_needToSendWelcomeChat {}; // bot needs to greet people on server?
    bool m_switchedToKnifeDuringJump {}; // bot needs to revert weapon after jump?
+   bool m_isCreature {}; // bot is not a player, but something else ? zombie ?
 
    Pickup m_pickupType {}; // type of entity which needs to be used/picked up
    PathWalk m_pathWalk {}; // pointer to current node from path
@@ -779,6 +780,7 @@ private:
    CollisionState m_collisionState {}; // collision State
    FindPath m_pathType {}; // which pathfinder to use
    uint8_t m_enemyParts {}; // visibility flags
+   uint16_t m_modelMask {}; // model mask bits
    TraceResult m_lastTrace[TraceChannel::Num] {}; // last trace result
    UniquePtr <class AStarAlgo> m_planner;
 
@@ -894,6 +896,7 @@ private:
    bool canRunHeavyWeight ();
    bool isEnemyInSight (Vector &endPos);
    bool isEnemyNoticeable (float range);
+   bool isCreature ();
 
    void doPlayerAvoidance (const Vector &normal);
    void selectCampButtons (int index);
@@ -953,6 +956,7 @@ private:
    void refreshEnemyPredict ();
    void syncUpdatePredictedIndex ();
    void updatePredictedIndex ();
+   void refreshModelName (char *infobuffer);
 
    void completeTask ();
    void executeTasks ();
