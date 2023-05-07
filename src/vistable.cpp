@@ -14,6 +14,11 @@ void GraphVistable::rebuild () {
    }
    m_length = graph.length ();
 
+   // stop generation if graph has changed, or erased
+   if (!m_length || graph.hasChanged ()) {
+      m_rebuild = false;
+      return;
+   }
    TraceResult tr {};
    uint8_t res, shift;
 
