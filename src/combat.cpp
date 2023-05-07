@@ -135,10 +135,14 @@ bool Bot::checkBodyParts (edict_t *target) {
    // creatures can't hurt behind anything
    auto ignoreFlags = m_isCreature ? TraceIgnore::None : TraceIgnore::Everything;
 
+   const auto hitsTarget = [&] () -> bool {
+      return result.flFraction >= 1.0f || result.pHit == target;
+   };
+
    m_enemyParts = Visibility::None;
    game.testLine (eyes, spot, ignoreFlags, self, &result);
 
-   if (result.flFraction >= 1.0f && result.pHit == target) {
+   if (hitsTarget ()) {
       m_enemyParts |= Visibility::Body;
       m_enemyOrigin = result.vecEndPos;
    }
@@ -147,7 +151,7 @@ bool Bot::checkBodyParts (edict_t *target) {
    spot.z += 25.0f;
    game.testLine (eyes, spot, ignoreFlags, self, &result);
 
-   if (result.flFraction >= 1.0f && result.pHit == target) {
+   if (hitsTarget ()) {
       m_enemyParts |= Visibility::Head;
       m_enemyOrigin = result.vecEndPos;
    }
@@ -167,7 +171,7 @@ bool Bot::checkBodyParts (edict_t *target) {
    }
    game.testLineChannel (TraceChannel::Enemy, eyes, spot, ignoreFlags, self, result);
 
-   if (result.flFraction >= 1.0f && result.pHit == target) {
+   if (hitsTarget ()) {
       m_enemyParts |= Visibility::Other;
       m_enemyOrigin = result.vecEndPos;
 
@@ -182,7 +186,7 @@ bool Bot::checkBodyParts (edict_t *target) {
 
    game.testLineChannel (TraceChannel::Enemy, eyes, spot, ignoreFlags, self, result);
 
-   if (result.flFraction >= 1.0f && result.pHit == target) {
+   if (hitsTarget ()) {
       m_enemyParts |= Visibility::Other;
       m_enemyOrigin = result.vecEndPos;
 
@@ -192,7 +196,7 @@ bool Bot::checkBodyParts (edict_t *target) {
 
    game.testLineChannel (TraceChannel::Enemy, eyes, spot, ignoreFlags, self, result);
 
-   if (result.flFraction >= 1.0f && result.pHit == target) {
+   if (hitsTarget ()) {
       m_enemyParts |= Visibility::Other;
       m_enemyOrigin = result.vecEndPos;
 
