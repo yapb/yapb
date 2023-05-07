@@ -1591,10 +1591,11 @@ void Bot::overrideConditions () {
 void Bot::syncUpdatePredictedIndex () {
    auto wipePredict = [this] () {
       m_lastPredictIndex = kInvalidNodeIndex;
-      m_lastPredictLength = 0;
+      m_lastPredictLength = kInfiniteDistanceLong;
    };
 
    if (!m_predictLock.tryLock ()) {
+      wipePredict ();
       return; // allow only single instance of search per-bot
    }
    ScopedUnlock <Mutex> unlock (m_predictLock);
@@ -2716,7 +2717,7 @@ void Bot::updateAimDir () {
             }
          }
 
-         if (pathLength < cv_max_nodes_for_predict.int_ ()) {
+         if (graph.exists (predictNode) && pathLength < cv_max_nodes_for_predict.int_ ()) {
             m_lookAt = graph[predictNode].origin;
             m_lookAtSafe = m_lookAt;
 

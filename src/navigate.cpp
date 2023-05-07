@@ -1435,7 +1435,6 @@ void Bot::clearSearchNodes () {
 
 int Bot::findAimingNode (const Vector &to, int &pathLength) {
    // return the most distant node which is seen from the bot to the target and is within count
-
    ensureCurrentNodeIndex ();
 
    int destIndex = graph.getNearest (to);
