@@ -432,7 +432,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
    auto nextFrameDistance = pev->origin.distanceSq (m_hindrance->v.origin + m_hindrance->v.velocity * interval);
 
    // is player that near now or in future that we need to steer away?
-   if (movedDistance <= cr::sqrf (48.0f) || (distance <= cr::sqrf (56.0f) && nextFrameDistance < distance)) {
+   if (movedDistance <= cr::sqrf (64.0f) || (distance <= cr::sqrf (72.0f) && nextFrameDistance < distance)) {
       auto dir = (pev->origin - m_hindrance->v.origin).normalize2d_apx ();
 
       // to start strafing, we have to first figure out if the target is on the left side or right side
@@ -443,7 +443,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
          setStrafeSpeed (normal, -pev->maxspeed);
       }
 
-      if (distance < cr::sqrf (76.0f)) {
+      if (distance < cr::sqrf (80.0f)) {
          if ((dir | forward.normalize2d_apx ()) < 0.0f) {
             m_moveSpeed = -pev->maxspeed;
          }
@@ -701,7 +701,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
          if (m_collStateIndex < kMaxCollideMoves) {
             switch (m_collideMoves[m_collStateIndex]) {
             case CollisionState::Jump:
-               if (isOnFloor () || isInWater ()) {
+               if ((isOnFloor () || isInWater ()) && !isOnLadder ()) {
                   pev->button |= IN_JUMP;
                }
                break;
@@ -861,15 +861,7 @@ bool Bot::updateNavigation () {
       m_switchedToKnifeDuringJump = false;
    }
 
-   if (m_pathFlags & NodeFlag::Ladder) {
-      if (!m_pathWalk.empty ()) {
-         if (m_pathWalk.hasNext ()) {
-            if (graph[m_pathWalk.next ()].flags & NodeFlag::Ladder || isOnLadder ()) {
-               m_path->radius = 17.0f;
-            }
-         }
-      }
-
+   if ((m_pathFlags & NodeFlag::Ladder) || isOnLadder ()) {
       if (graph.exists (m_previousNodes[0]) && (graph[m_previousNodes[0]].flags & NodeFlag::Ladder)) {
          if (cr::abs (m_pathOrigin.z - pev->origin.z) > 5.0f) {
             m_pathOrigin.z += pev->origin.z - m_pathOrigin.z;
@@ -950,7 +942,6 @@ bool Bot::updateNavigation () {
                }
             }
          }
-
       }
    }
 
@@ -1037,7 +1028,7 @@ bool Bot::updateNavigation () {
    else if (isDucking () || (m_pathFlags & NodeFlag::Goal)) {
       desiredDistance = 25.0f;
    }
-   else if (m_pathFlags & NodeFlag::Ladder) {
+   else if (isOnLadder () || (m_pathFlags & NodeFlag::Ladder)) {
       desiredDistance = 24.0f;
    }
    else if (m_currentTravelFlags & PathFlag::Jump) {
