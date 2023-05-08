@@ -74,8 +74,8 @@ void Bot::pushMsgQueue (int message) {
 }
 
 float Bot::isInFOV (const Vector &destination) {
-   float entityAngle = cr::wrapAngle360 (destination.yaw ()); // find yaw angle from source to destination...
-   float viewAngle = cr::wrapAngle360 (pev->v_angle.y); // get bot's current view angle...
+   const float entityAngle = cr::wrapAngle360 (destination.yaw ()); // find yaw angle from source to destination...
+   const float viewAngle = cr::wrapAngle360 (pev->v_angle.y); // get bot's current view angle...
 
    // return the absolute value of angle to destination entity
    // zero degrees means straight ahead, 45 degrees to the left or
@@ -2736,15 +2736,14 @@ void Bot::updateAimDir () {
             predictFailed = true;
          }
       }
-      else {
-         if (predictFailed) {
-            doFailPredict ();
-         }
-         else {
-            m_lookAt = m_lookAtSafe;
-         }
+
+      if (predictFailed) {
+         doFailPredict ();
       }
-   }
+      else {
+         m_lookAt = m_lookAtSafe;
+      }
+   }   
    else if (flags & AimFlags::Camp) {
       m_lookAt = m_lookAtSafe;
    }
