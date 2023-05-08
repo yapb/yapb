@@ -43,7 +43,8 @@ CR_DECLARE_SCOPED_ENUM (FindPath,
 CR_DECLARE_SCOPED_ENUM (PathConnection,
    Outgoing = 0,
    Incoming,
-   Bidirectional
+   Bidirectional,
+   Jumping
 )
 
 // node edit states
@@ -229,7 +230,7 @@ public:
    void populateNodes ();
    void initLightLevels ();
    void initNarrowPlaces ();
-   void addPath (int addIndex, int pathIndex, float distance);
+   void addPath (int addIndex, int pathIndex, float distance, int type = 0);
    void add (int type, const Vector &pos = nullptr);
    void erase (int target);
    void toggleFlags (int toggleFlag);
