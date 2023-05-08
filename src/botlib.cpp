@@ -2761,7 +2761,7 @@ void Bot::updateAimDir () {
          }
       }
       else if (m_seeEnemyTime + 3.0f > game.time () && !m_lastEnemyOrigin.empty ()) {
-         m_lookAt = m_lastEnemyOrigin;;
+         m_lookAt = m_lastEnemyOrigin;
       }
       else {
          m_lookAt = m_destOrigin;

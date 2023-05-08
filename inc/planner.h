@@ -55,32 +55,32 @@ public:
 
 public:
    // least kills and number of nodes to goal for a team
-   static float gfunctionKillsDist (int team, int currentIndex, int parentIndex);;
+   static float gfunctionKillsDist (int team, int currentIndex, int parentIndex);
 
    // least kills and number of nodes to goal for a team (when with hostage)
-   static float gfunctionKillsDistCTWithHostage  (int team, int currentIndex, int parentIndex);;
+   static float gfunctionKillsDistCTWithHostage  (int team, int currentIndex, int parentIndex);
 
    // least kills to goal for a team
-   static float gfunctionKills (int team, int currentIndex, int);;
+   static float gfunctionKills (int team, int currentIndex, int);
 
    // least kills to goal for a team (when with hostage)
-   static auto gfunctionKillsCTWithHostage (int team, int currentIndex, int parentIndex) -> float;;
+   static float gfunctionKillsCTWithHostage (int team, int currentIndex, int parentIndex);
 
    // least distance for a team
-   static float gfunctionPathDist (int, int currentIndex, int parentIndex);;
+   static float gfunctionPathDist (int, int currentIndex, int parentIndex);
 
    // least distance for a team (when with hostage)
-   static float gfunctionPathDistWithHostage (int, int currentIndex, int parentIndex);;
+   static float gfunctionPathDistWithHostage (int, int currentIndex, int parentIndex);
 
 public:
    // square distance heuristic
-   static float hfunctionPathDist (int index, int, int goalIndex);;
+   static float hfunctionPathDist (int index, int, int goalIndex);
 
    // square distance heuristic with hostages
-   static float hfunctionPathDistWithHostage (int index, int, int goalIndex);;
+   static float hfunctionPathDistWithHostage (int index, int, int goalIndex);
 
    // none heuristic
-   static float hfunctionNone (int index, int, int goalIndex);;
+   static float hfunctionNone (int index, int, int goalIndex);
 };
 
 // A* algorithm for bots

@@ -87,10 +87,10 @@ void GraphVistable::rebuild () {
 
          // check if line of sight to object is not blocked (i.e. visible)
          if (!cr::fequal (tr.flFraction, 1.0f)) {
-            res |= VisIndex::Crouch;;
+            res |= VisIndex::Crouch;
          }
          else {
-            res &= VisIndex::Stand;;
+            res &= VisIndex::Stand;
          }
          game.testLine (sourceStand, dest, TraceIgnore::Monsters, nullptr, &tr);
 
@@ -99,7 +99,7 @@ void GraphVistable::rebuild () {
             res |= VisIndex::Stand;
          }
          else {
-            res &= VisIndex::Crouch;;
+            res &= VisIndex::Crouch;
          }
       }
       shift = static_cast <uint8_t> ((path.number % 4) << 1);

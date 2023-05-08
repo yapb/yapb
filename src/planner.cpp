@@ -523,7 +523,7 @@ bool PathPlanner::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, in
    if (m_memoryLimitHit) {
       return m_dijkstra->find (srcIndex, destIndex, onAddedNode, pathDistance);
    }
-   return m_floyd->find (srcIndex, destIndex, onAddedNode, pathDistance);;
+   return m_floyd->find (srcIndex, destIndex, onAddedNode, pathDistance);
 }
 
 float PathPlanner::dist (int srcIndex, int destIndex) {
