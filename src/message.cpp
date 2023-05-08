@@ -222,7 +222,15 @@ void MessageDispatcher::netMsgMoney () {
    if (m_args.length () < min || !m_bot) {
       return;
    }
-   m_bot->m_moneyAmount = cr::clamp (m_args[money].long_, 160000, INT32_MAX);
+   auto amount = m_args[money].long_;
+
+   if (amount < 0) {
+      amount = 800;
+   }
+   else if (amount > INT32_MAX) {
+      amount = 16000;
+   }
+   m_bot->m_moneyAmount = amount;
 }
 
 void MessageDispatcher::netMsgStatusIcon () {
