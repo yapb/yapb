@@ -347,6 +347,7 @@ int BotControl::cmdNode () {
       addGraphCmd ("path_create_in", "path_create_in [noarguments]", "Creates incoming path connection from faced to nearest node.", &BotControl::cmdNodePathCreate);
       addGraphCmd ("path_create_out", "path_create_out [noarguments]", "Creates outgoing path connection from nearest to faced node.", &BotControl::cmdNodePathCreate);
       addGraphCmd ("path_create_both", "path_create_both [noarguments]", "Creates both-ways path connection between faced and nearest node.", &BotControl::cmdNodePathCreate);
+      addGraphCmd ("path_create_jump", "path_create_jump [noarguments]", "Creates jumping path connection from faced to nearest node.", &BotControl::cmdNodePathCreate);
       addGraphCmd ("path_delete", "path_delete [noarguments]", "Deletes path from nearest to faced node.", &BotControl::cmdNodePathDelete);
       addGraphCmd ("path_set_autopath", "path_set_autopath [max_distance]", "Opens menu for setting autopath maximum distance.", &BotControl::cmdNodePathSetAutoDistance);
 
@@ -697,7 +698,10 @@ int BotControl::cmdNodePathCreate () {
    graph.setEditFlag (GraphEdit::On);
 
    // choose the direction for path creation
-   if (strValue (cmd).endsWith ("_both")) {
+   if (strValue (cmd).endsWith ("_jump")) {
+      graph.pathCreate (PathConnection::Jumping);
+   }
+   else if (strValue (cmd).endsWith ("_both")) {
       graph.pathCreate (PathConnection::Bidirectional);
    }
    else if (strValue (cmd).endsWith ("_in")) {
@@ -1719,6 +1723,11 @@ int BotControl::menuGraphPath (int item) {
       showMenu (Menu::NodePath);
       break;
 
+   case 4:
+      graph.pathCreate (PathConnection::Jumping);
+      showMenu (Menu::NodePath);
+      break;
+
    case 10:
       closeMenu ();
       break;
@@ -2409,11 +2418,12 @@ void BotControl::createMenus () {
 
    // path connections
    m_menus.emplace (
-      Menu::NodePath, keys (3),
+      Menu::NodePath, keys (4),
       "\\yCreate Path (Choose Direction)\\w\n\n"
       "1. Outgoing Path\n"
       "2. Incoming Path\n"
-      "3. Bidirectional (Both Ways)\n\n"
+      "3. Bidirectional (Both Ways)\n"
+      "4. Jumping Path\n\n"
       "0. Exit",
       &BotControl::menuGraphPath);
 
