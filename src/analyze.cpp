@@ -143,7 +143,7 @@ void GraphAnalyze::finish () {
    // un-silence all graph messages
    graph.setMessageSilence (false);
 
-   ctrl.msg ("Complete map analyzation.");
+   ctrl.msg ("Completed map analyzation.");
 
    // auto save bots graph
    if (cv_graph_analyze_auto_save.bool_ ()) {
