@@ -2160,3 +2160,71 @@ bool Bot::isEnemyNoticeable (float range) {
 
    return rg.get (0.0f, 100.0f) < noticeChance;
 }
+
+int Bot::getAmmo () {
+   return getAmmo (m_currentWeapon);
+}
+
+int Bot::getAmmo (int id) {
+   const auto &prop = conf.getWeaponProp (id);
+
+   if (prop.ammo1 == -1 || prop.ammo1 > kMaxWeapons - 1) {
+      return -1;
+   }
+   return m_ammo[prop.ammo1];
+}
+
+void Bot::selectWeaponByIndex (int index) {
+   auto tab = conf.getRawWeapons ();
+   issueCommand (tab[index].name);
+}
+
+void Bot::selectWeaponById (int id) {
+   const auto &prop = conf.getWeaponProp (id);
+   issueCommand (prop.classname.chars ());
+}
+
+void Bot::checkBurstMode (float distance) {
+   // this function checks burst mode, and switch it depending distance to to enemy.
+
+   if (hasShield ()) {
+      return; // no checking when shield is active
+   }
+
+   // if current weapon is glock, disable burstmode on long distances, enable it else
+   if (m_currentWeapon == Weapon::Glock18 && distance < 300.0f && m_weaponBurstMode == BurstMode::Off) {
+      pev->button |= IN_ATTACK2;
+   }
+   else if (m_currentWeapon == Weapon::Glock18 && distance >= 300.0f && m_weaponBurstMode == BurstMode::On) {
+      pev->button |= IN_ATTACK2;
+   }
+
+   // if current weapon is famas, disable burstmode on short distances, enable it else
+   if (m_currentWeapon == Weapon::Famas && distance > 400.0f && m_weaponBurstMode == BurstMode::Off) {
+      pev->button |= IN_ATTACK2;
+   }
+   else if (m_currentWeapon == Weapon::Famas && distance <= 400.0f && m_weaponBurstMode == BurstMode::On) {
+      pev->button |= IN_ATTACK2;
+   }
+}
+
+void Bot::checkSilencer () {
+   if ((m_currentWeapon == Weapon::USP || m_currentWeapon == Weapon::M4A1) && !hasShield () && game.isNullEntity (m_enemy)) {
+      int prob = (m_personality == Personality::Rusher ? 35 : 65);
+
+      // aggressive bots don't like the silencer
+      if (rg.chance (m_currentWeapon == Weapon::USP ? prob / 2 : prob)) {
+         // is the silencer not attached...
+         if (pev->weaponanim > 6) {
+            pev->button |= IN_ATTACK2; // attach the silencer
+         }
+      }
+      else {
+
+         // is the silencer attached...
+         if (pev->weaponanim <= 6) {
+            pev->button |= IN_ATTACK2; // detach the silencer
+         }
+      }
+   }
+}

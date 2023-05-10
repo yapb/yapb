@@ -840,7 +840,34 @@ bool Bot::updateNavigation () {
          // pressing the jump button gives the illusion of the bot actual jumping.
          if (isOnFloor () || isOnLadder ()) {
             if (m_desiredVelocity.length2d () > 0.0f) {
-               pev->velocity = m_desiredVelocity + m_desiredVelocity * 0.05f;
+               pev->velocity = m_desiredVelocity;
+            }
+            else {
+               auto feet = pev->origin + pev->mins;
+               auto node = Vector { m_pathOrigin.x, m_pathOrigin.y, m_pathOrigin.z - ((m_pathFlags & NodeFlag::Crouch) ? 18.0f : 36.0f) };
+
+               if (feet.z > feet.z) {
+                  feet = pev->origin + pev->maxs;
+               }
+               feet = { pev->origin.x, pev->origin.y,  feet.z };
+
+               // calculate like we do with grenades
+               auto velocity = calcThrow (feet, node);
+
+               if (velocity.lengthSq () < 100.0f) {
+                  velocity = calcToss (feet, node);
+               }
+               velocity = velocity + velocity * 0.45f;
+
+               // set the bot "grenade" velocity
+               if (velocity.length2d () > 0.0f) {
+                  pev->velocity = velocity;
+                  pev->velocity.z = 0.0f;
+               }
+               else {
+                  pev->velocity = pev->velocity + pev->velocity * m_frameInterval * 2.0f;
+                  pev->velocity.z = 0.0f;
+               }
             }
             pev->button |= IN_JUMP;
 
@@ -849,18 +876,11 @@ bool Bot::updateNavigation () {
             m_desiredVelocity = nullptr;
          }
       }
-   }
-   else if (m_jumpDistance > 0.0f && !isKnifeMode () && m_switchedToKnifeDuringJump && isOnFloor ()) {
-      selectBestWeapon ();
-
-      // if jump distance was big enough, cooldown a little
-      if (m_jumpDistance > 180.0f) {
-         startTask (Task::Pause, TaskPri::Pause, kInvalidNodeIndex, game.time () + 0.45f, false);
+      else if (!cv_jasonmode.bool_ () && usesKnife () && isOnFloor ()) {
+         selectBestWeapon ();
       }
-      m_jumpDistance = 0.0f;
-      m_switchedToKnifeDuringJump = false;
    }
-
+ 
    if (m_pathFlags & NodeFlag::Ladder) {
       if (!m_pathWalk.empty ()) {
          if (m_pathWalk.hasNext ()) {
@@ -2194,9 +2214,10 @@ bool Bot::advanceMovement () {
                   break;
                }
             }
+
             // check if bot is going to jump
             bool willJump = false;
-            m_jumpDistance = 0.0f;
+            float jumpDistance = 0.0f;
 
             Vector src;
             Vector dst;
@@ -2213,7 +2234,7 @@ bool Bot::advanceMovement () {
                      src = path.origin;
                      dst = next.origin;
 
-                     m_jumpDistance = path.origin.distance (next.origin);
+                     jumpDistance = src.distance (dst);
                      willJump = true;
 
                      break;
@@ -2222,11 +2243,8 @@ bool Bot::advanceMovement () {
             }
 
             // is there a jump node right ahead and do we need to draw out the light weapon ?
-            if (willJump && !usesKnife () && m_currentWeapon != Weapon::Scout && !m_isReloading && !usesPistol () && (m_jumpDistance > 175.0f || (dst.z - 32.0f > src.z && m_jumpDistance > 135.0f)) && !(m_states & Sense::SeeingEnemy)) {
+            if (willJump && !usesKnife () && m_currentWeapon != Weapon::Scout && !m_isReloading && !usesPistol () && (jumpDistance > 145.0f || (dst.z - 32.0f > src.z && jumpDistance > 125.0f)) && !(m_states & Sense::SeeingEnemy)) {
                selectWeaponById (Weapon::Knife); // draw out the knife if we needed
-
-               // mark as switched
-               m_switchedToKnifeDuringJump = true;
             }
 
             // bot not already on ladder but will be soon?
@@ -2873,152 +2891,6 @@ int Bot::getRandomCampDir () {
       return indices[rg.get (0, count)];
    }
    return graph.random ();
-}
-
-void Bot::updateBodyAngles () {
-   // set the body angles to point the gun correctly
-   pev->angles.x = -pev->v_angle.x * (1.0f / 3.0f);
-   pev->angles.y = pev->v_angle.y;
-
-   pev->angles.clampAngles ();
-
-   // calculate frustum plane data here, since lookangles update functions call this last one
-   calculateFrustum ();
-}
-
-void Bot::updateLookAngles () {
-
-   const float delta = cr::clamp (game.time () - m_lookUpdateTime, cr::kFloatEqualEpsilon, 1.0f / 30.0f);
-   m_lookUpdateTime = game.time ();
-
-   // adjust all body and view angles to face an absolute vector
-   Vector direction = (m_lookAt - getEyesPos ()).angles ();
-   direction.x = -direction.x; // invert for engine
-
-   direction.clampAngles ();
-
-   // lower skilled bot's have lower aiming
-   if (m_difficulty == Difficulty::Noob) {
-      updateLookAnglesNewbie (direction, delta);
-      updateBodyAngles ();
-
-      return;
-   }
-
-   float accelerate = 3000.0f;
-   float stiffness = 200.0f;
-   float damping = 25.0f;
-
-   if (((m_aimFlags & (AimFlags::Enemy | AimFlags::Entity | AimFlags::Grenade)) || m_wantsToFire) && m_difficulty > Difficulty::Normal) {
-      if (m_difficulty == Difficulty::Expert) {
-         accelerate += 600.0f;
-      }
-      stiffness += 100.0f;
-      damping -= 5.0f;
-   }
-   m_idealAngles = pev->v_angle;
-
-   const float angleDiffPitch = cr::anglesDifference (direction.x, m_idealAngles.x);
-   const float angleDiffYaw = cr::anglesDifference (direction.y, m_idealAngles.y);
-
-   if (angleDiffYaw < 1.0f && angleDiffYaw > -1.0f) {
-      m_lookYawVel = 0.0f;
-      m_idealAngles.y = direction.y;
-   }
-   else {
-      float accel = cr::clamp (stiffness * angleDiffYaw - damping * m_lookYawVel, -accelerate, accelerate);
-
-      m_lookYawVel += delta * accel;
-      m_idealAngles.y += delta * m_lookYawVel;
-   }
-   float accel = cr::clamp (2.0f * stiffness * angleDiffPitch - damping * m_lookPitchVel, -accelerate, accelerate);
-
-   m_lookPitchVel += delta * accel;
-   m_idealAngles.x += cr::clamp (delta * m_lookPitchVel, -89.0f, 89.0f);
-
-   pev->v_angle = m_idealAngles;
-   pev->v_angle.clampAngles ();
-
-   updateBodyAngles ();
-}
-
-void Bot::updateLookAnglesNewbie (const Vector &direction, float delta) {
-   Vector spring { 13.0f, 13.0f, 0.0f };
-   Vector damperCoefficient { 0.22f, 0.22f, 0.0f };
-
-   const float offset = cr::clamp (static_cast <float> (m_difficulty), 1.0f, 4.0f) * 25.0f;
-
-   Vector influence = Vector (0.25f, 0.17f, 0.0f) * (100.0f - offset) / 100.f;
-   Vector randomization = Vector (2.0f, 0.18f, 0.0f) * (100.0f - offset) / 100.f;
-
-   const float noTargetRatio = 0.3f;
-   const float offsetDelay = 1.2f;
-
-   Vector stiffness;
-   Vector randomize;
-
-   m_idealAngles = direction.get2d ();
-   m_idealAngles.clampAngles ();
-
-   if (m_aimFlags & (AimFlags::Enemy | AimFlags::Entity)) {
-      m_playerTargetTime = game.time ();
-      m_randomizedIdealAngles = m_idealAngles;
-
-      stiffness = spring * (0.2f + offset / 125.0f);
-   }
-   else {
-      // is it time for bot to randomize the aim direction again (more often where moving) ?
-      if (m_randomizeAnglesTime < game.time () && ((pev->velocity.length () > 1.0f && m_angularDeviation.length () < 5.0f) || m_angularDeviation.length () < 1.0f)) {
-         // is the bot standing still ?
-         if (pev->velocity.length () < 1.0f) {
-            randomize = randomization * 0.2f; // randomize less
-         }
-         else {
-            randomize = randomization;
-         }
-         // randomize targeted location bit (slightly towards the ground)
-         m_randomizedIdealAngles = m_idealAngles + Vector (rg.get (-randomize.x * 0.5f, randomize.x * 1.5f), rg.get (-randomize.y, randomize.y), 0.0f);
-
-         // set next time to do this
-         m_randomizeAnglesTime = game.time () + rg.get (0.4f, offsetDelay);
-      }
-      float stiffnessMultiplier = noTargetRatio;
-
-      // take in account whether the bot was targeting someone in the last N seconds
-      if (game.time () - (m_playerTargetTime + offsetDelay) < noTargetRatio * 10.0f) {
-         stiffnessMultiplier = 1.0f - (game.time () - m_timeLastFired) * 0.1f;
-
-         // don't allow that stiffness multiplier less than zero
-         if (stiffnessMultiplier < 0.0f) {
-            stiffnessMultiplier = 0.5f;
-         }
-      }
-
-      // also take in account the remaining deviation (slow down the aiming in the last 10°)
-      stiffnessMultiplier *= m_angularDeviation.length () * 0.1f * 0.5f;
-
-      // but don't allow getting below a certain value
-      if (stiffnessMultiplier < 0.35f) {
-         stiffnessMultiplier = 0.35f;
-      }
-      stiffness = spring * stiffnessMultiplier; // increasingly slow aim
-   }
-   // compute randomized angle deviation this time
-   m_angularDeviation = m_randomizedIdealAngles - pev->v_angle;
-   m_angularDeviation.clampAngles ();
-
-   // spring/damper model aiming
-   m_aimSpeed.x = stiffness.x * m_angularDeviation.x - damperCoefficient.x * m_aimSpeed.x;
-   m_aimSpeed.y = stiffness.y * m_angularDeviation.y - damperCoefficient.y * m_aimSpeed.y;
-
-   // influence of y movement on x axis and vice versa (less influence than x on y since it's
-   // easier and more natural for the bot to "move its mouse" horizontally than vertically)
-   m_aimSpeed.x += cr::clamp (m_aimSpeed.y * influence.y, -50.0f, 50.0f);
-   m_aimSpeed.y += cr::clamp (m_aimSpeed.x * influence.x, -200.0f, 200.0f);
-
-   // move the aim cursor
-   pev->v_angle = pev->v_angle + delta * Vector (m_aimSpeed.x, m_aimSpeed.y, 0.0f);
-   pev->v_angle.clampAngles ();
 }
 
 void Bot::setStrafeSpeed (const Vector &moveDir, float strafeSpeed) {

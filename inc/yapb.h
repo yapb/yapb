@@ -635,7 +635,7 @@ public:
    }
 
    bool hasNext () const {
-      return length () > m_cursor;
+      return length () - m_cursor > 1;
    }
 
    bool empty () const {
@@ -749,7 +749,6 @@ private:
    float m_playServerTime {}; // time bot spent in the game
    float m_changeViewTime {}; // timestamp to change look at while at freezetime
    float m_breakableTime {}; // breakeble acquired time
-   float m_jumpDistance {}; // last jump distance
 
    bool m_moveToGoal {}; // bot currently moving to goal??
    bool m_isStuck {}; // bot is stuck
@@ -770,7 +769,6 @@ private:
    bool m_moveToC4 {}; // ct is moving to bomb
    bool m_grenadeRequested {}; // bot requested change to grenade
    bool m_needToSendWelcomeChat {}; // bot needs to greet people on server?
-   bool m_switchedToKnifeDuringJump {}; // bot needs to revert weapon after jump?
    bool m_isCreature {}; // bot is not a player, but something else ? zombie ?
 
    Pickup m_pickupType {}; // type of entity which needs to be used/picked up
@@ -1302,6 +1300,7 @@ extern ConVar cv_graph_url;
 extern ConVar cv_graph_url_upload;
 extern ConVar cv_graph_auto_save_count;
 extern ConVar cv_graph_analyze_max_jump_height;
+extern ConVar cv_spraypaints;
 
 extern ConVar mp_freezetime;
 extern ConVar mp_roundtime;

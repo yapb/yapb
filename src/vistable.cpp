@@ -7,7 +7,6 @@
 
 #include <yapb.h>
 
-
 void GraphVistable::rebuild () {
    if (!m_rebuild) {
       return;

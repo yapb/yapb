@@ -1304,7 +1304,6 @@ void Bot::newRound () {
    m_isLeader = false;
    m_hasProgressBar = false;
    m_canChooseAimDirection = true;
-   m_switchedToKnifeDuringJump = false;
    m_preventFlashing = 0.0f;
 
    m_timeTeamOrder = 0.0f;

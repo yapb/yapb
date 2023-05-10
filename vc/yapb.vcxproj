@@ -87,6 +87,8 @@
     <ClCompile Include="..\src\sounds.cpp" />
     <ClCompile Include="..\src\storage.cpp" />
     <ClCompile Include="..\src\support.cpp" />
+    <ClCompile Include="..\src\tasks.cpp" />
+    <ClCompile Include="..\src\vision.cpp" />
     <ClCompile Include="..\src\vistable.cpp" />
   </ItemGroup>
   <ItemGroup>

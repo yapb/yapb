@@ -240,6 +240,8 @@ sources = files(
    'src/sounds.cpp',
    'src/storage.cpp',
    'src/support.cpp',
+   'src/tasks.cpp',
+   'src/vision.cpp',
    'src/vistable.cpp'
 )
 
