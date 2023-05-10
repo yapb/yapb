@@ -1071,7 +1071,7 @@ void BotGraph::pathCreate (char dir) {
    }
    else if (dir == PathConnection::Jumping) {
       for (auto &link : m_paths[nodeFrom].links) {
-         if (link.index == nodeTo && !link.flags & PathFlag::Jump) {
+         if (link.index == nodeTo && !(link.flags & PathFlag::Jump)) {
             erasePath (); // remove the existing outgoing path to create the jump path
          }
       }
