@@ -1069,7 +1069,7 @@ void BotGraph::pathCreate (char dir) {
             m_paths[nodeFrom].radius = 0.0f;
             msg ("Path added from %d to %d.", nodeFrom, nodeTo);
          }
-         else if (link.index == nodeTo && link.flags & PathFlag::Jump) {
+         else if (link.index == nodeTo && (link.flags & PathFlag::Jump)) {
          msg ("Denied path creation from %d to %d (path already exists).", nodeFrom, nodeTo);
          }
       }
