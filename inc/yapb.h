@@ -1185,7 +1185,6 @@ public:
    bool isShieldDrawn ();
    bool findNextBestNode ();
    bool seesEntity (const Vector &dest, bool fromBody = false);
-   //bool canSkipNextTrace (TraceChannel channel);
 
    int getAmmo ();
    int getAmmo (int id);
