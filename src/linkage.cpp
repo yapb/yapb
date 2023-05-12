@@ -32,54 +32,6 @@ plugin_info_t Plugin_info = {
    PT_ANYTIME, // when unloadable
 };
 
-void hook_ClientCommand (edict_t *ent, char const *format, ...) {
-   // this function forces the client whose player entity is ent to issue a client command.
-   // How it works is that clients all have a argv global string in their client DLL that
-   // stores the command string; if ever that string is filled with characters, the client DLL
-   // sends it to the engine as a command to be executed. When the engine has executed that
-   // command, this argv string is reset to zero. Here is somehow a curious implementation of
-   // ClientCommand: the engine sets the command it wants the client to issue in his argv, then
-   // the client DLL sends it back to the engine, the engine receives it then executes the
-   // command therein. Don't ask me why we need all this complicated crap. Anyhow since bots have
-   // no client DLL, be certain never to call this function upon a bot entity, else it will just
-   // make the server crash. Since hordes of uncautious, not to say stupid, programmers don't
-   // even imagine some players on their servers could be bots, this check is performed less than
-   // sometimes actually by their side, that's why we strongly recommend to check it here too. In
-   // case it's a bot asking for a client command, we handle it like we do for bot commands
-
-   if (game.isNullEntity (ent)) {
-      if (game.is (GameFlags::Metamod)) {
-         RETURN_META (MRES_SUPERCEDE);
-      }
-      return;
-   }
-
-   va_list ap;
-   auto buffer = strings.chars ();
-
-   va_start (ap, format);
-   vsnprintf (buffer, StringBuffer::StaticBufferSize, format, ap);
-   va_end (ap);
-
-   if (util.isFakeClient (ent) || (ent->v.flags & FL_DORMANT)) {
-      auto bot = bots[ent];
-
-      if (bot) {
-         bot->issueCommand (buffer);
-      }
-
-      if (game.is (GameFlags::Metamod)) {
-         RETURN_META (MRES_SUPERCEDE); // prevent bots to be forced to issue client commands
-      }
-      return;
-   }
-
-   if (game.is (GameFlags::Metamod)) {
-      RETURN_META (MRES_IGNORED);
-   }
-   engfuncs.pfnClientCommand (ent, buffer);
-}
-
 CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
    // this function is called right after GiveFnptrsToDll() by the engine in the game DLL (or
    // what it BELIEVES to be the game DLL), in order to copy the list of MOD functions that can
@@ -496,7 +448,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
    }
 
    if (ents.needsBypass () && !game.is (GameFlags::Metamod)) {
-      table->pfnCreateNamedEntity = [] (int classname) -> edict_t *{
+      table->pfnCreateNamedEntity = [] (string_t classname) -> edict_t *{
 
          if (ents.isPaused ()) {
             ents.enable ();
@@ -764,9 +716,6 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       }
       engfuncs.pfnSetClientMaxspeed (ent, newMaxspeed);
    };
-
-   table->pfnClientCommand = hook_ClientCommand;
-
    return HLTrue;
 }
 
@@ -945,6 +894,11 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *table, globalvars_t *glob) {
    // get the engine functions from the game...
    memcpy (&engfuncs, table, sizeof (enginefuncs_t));
    globals = glob;
+
+   // set the global timer function
+   timerStorage.setTimeFunction ([] () {
+      return globals->time;
+   });
 
    if (game.postload ()) {
       return;

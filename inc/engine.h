@@ -90,7 +90,7 @@ public:
 
 private:
    const char *allocStr (const char *str) const {
-      return STRING (engfuncs.pfnAllocString (str));
+      return string_t::from (engfuncs.pfnAllocString (str));
    }
 
 public:
@@ -159,7 +159,7 @@ public:
    void testModel (const Vector &start, const Vector &end, int hullNumber, edict_t *entToHit, TraceResult *ptr);
 
    // trace line with channel, but allows us to store last traceline bot has fired, saving us some cpu cycles
-   bool testLineChannel (TraceChannel channel, const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult &result);
+   //bool testLineChannel (TraceChannel channel, const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult &result);
 
    // test line
    void testHull (const Vector &start, const Vector &end, int ignoreFlags, int hullNumber, edict_t *ignoreEntity, TraceResult *ptr);
@@ -389,7 +389,7 @@ public:
 
    // prints center message to specified player
    template <typename ...Args> void clientPrint (edict_t *ent, const char *fmt, Args &&...args) {
-      if (isNullEntity (ent)) {
+      if (isNullEntity (ent) || ent == getLocalEntity ()) {
          print (fmt, cr::forward <Args> (args)...);
          return;
       }
@@ -398,7 +398,7 @@ public:
 
    // prints message to client console
    template <typename ...Args> void centerPrint (edict_t *ent, const char *fmt, Args &&...args) {
-      if (isNullEntity (ent)) {
+      if (isNullEntity (ent) || ent == getLocalEntity ()) {
          print (fmt, cr::forward <Args> (args)...);
          return;
       }
@@ -407,7 +407,7 @@ public:
 };
 
 // simplify access for console variables
-class ConVar final : public DenyCopying {
+class ConVar final : public NonCopyable {
 public:
    cvar_t *ptr;
 

@@ -132,6 +132,7 @@ void Bot::updateAimDir () {
       auto doFailPredict = [this] () {
          m_aimFlags &= ~AimFlags::PredictPath;
          m_trackingEdict = nullptr;
+         m_lookAt = m_destOrigin;
       };
 
       if (changePredictedEnemy) {
@@ -147,7 +148,7 @@ void Bot::updateAimDir () {
             }
          }
 
-         if (graph.exists (predictNode) && pathLength < cv_max_nodes_for_predict.int_ ()) {
+         if (predictNode != kInvalidNodeIndex && pathLength < cv_max_nodes_for_predict.int_ ()) {
             m_lookAt = graph[predictNode].origin;
             m_lookAtSafe = m_lookAt;
 

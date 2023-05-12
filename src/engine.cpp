@@ -250,35 +250,6 @@ void Game::testLine (const Vector &start, const Vector &end, int ignoreFlags, ed
    engfuncs.pfnTraceLine (start, end, engineFlags, ignoreEntity, ptr);
 }
 
-bool Game::testLineChannel (TraceChannel channel, const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult &result) {
-   // this function traces a line dot by dot, starting from vecStart in the direction of vecEnd,
-   // ignoring or not monsters (depending on the value of IGNORE_MONSTERS, true or false), and stops
-   // at the first obstacle encountered, returning the results of the trace in the TraceResult structure
-   // ptr. Such results are (amongst others) the distance traced, the hit surface, the hit plane
-   // vector normal, etc. See the TraceResult structure for details. This function allows to specify
-   // whether the trace starts "inside" an entity's polygonal model, and if so, to specify that entity
-   // in ignoreEntity in order to ignore it as a possible obstacle.
-
-   auto bot = bots[ignoreEntity];
-
-   // check if bot is firing trace line
-   if (bot && bot->canSkipNextTrace (channel)) {
-      result = bot->getLastTraceResult (channel); // set the result from bot stored one
-
-      // current call is skipped
-      return true;
-   }
-   else {
-      testLine (start, end, ignoreFlags, ignoreEntity, &result);
-
-      // if we're still reaching here, save the last trace result
-      if (bot) {
-         bot->setLastTraceResult (channel, &result);
-      }
-   }
-   return false;
-}
-
 void Game::testHull (const Vector &start, const Vector &end, int ignoreFlags, int hullNumber, edict_t *ignoreEntity, TraceResult *ptr) {
    // this function traces a hull dot by dot, starting from vecStart in the direction of vecEnd,
    // ignoring or not monsters (depending on the value of IGNORE_MONSTERS, true or
@@ -295,7 +266,7 @@ void Game::testHull (const Vector &start, const Vector &end, int ignoreFlags, in
 }
 
 // helper class for reading wave header
-class WaveEndianessHelper : public DenyCopying {
+class WaveEndianessHelper : public NonCopyable {
 private:
 #if defined (CR_ARCH_CPU_BIG_ENDIAN)
    bool little { false };
@@ -321,7 +292,7 @@ public:
 };
 
 float Game::getWaveLen (const char *fileName) {
-   auto filePath = strings.format ("%s/%s.wav", cv_chatter_path.str (), fileName);
+   auto filePath = strings.joinPath (cv_chatter_path.str (), strings.format ("%s.wav", fileName));
 
    MemFile fp (filePath);
 
@@ -666,7 +637,7 @@ void Game::addNewCvar (const char *name, const char *value, const char *info, bo
       reg.initial = static_cast <float> (atof (value));
    }
 
-   auto eflags = FCVAR_EXTDLL;
+   int eflags = FCVAR_EXTDLL;
 
    if (varType == Var::Normal) {
       eflags |= FCVAR_SERVER;
@@ -804,10 +775,10 @@ bool Game::loadCSBinary () {
 
    // search the libraries inside game dlls directory
    for (const auto &lib : libs) {
-      auto path = strings.format ("%s/dlls/%s.%s", modname, lib, DLL_SUFFIX);
+      auto path = strings.joinPath (modname, "dlls", lib + DLL_SUFFIX);
 
       // if we can't read file, skip it
-      if (!File::exists (path)) {
+      if (!plat.fileExists (path.chars ())) {
          continue;
       }
 
@@ -871,10 +842,16 @@ bool Game::postload () {
       game.print (msg);
    });
 
+   auto ensureBotPathExists = [this] (StringRef dir1, StringRef dir2) {
+      File::makePath (strings.joinPath (getRunningModName (), folders.addons, folders.bot, dir1, dir2).chars ());
+   };
+
    // ensure we're have all needed directories
-   for (const auto &dir : StringArray { "conf/lang", "data/train", "data/graph", "data/logs", "data/pwf" }) {
-      File::createPath (strings.format ("%s/addons/%s/%s", getRunningModName (), product.folder, dir));
-   }
+   ensureBotPathExists (folders.config, folders.lang);
+   ensureBotPathExists (folders.data, folders.train);
+   ensureBotPathExists (folders.data, folders.graph);
+   ensureBotPathExists (folders.data, folders.logs);
+   ensureBotPathExists (folders.data, folders.podbot);
 
    // set out user agent for http stuff
    http.setUserAgent (strings.format ("%s/%s", product.name, product.version));
@@ -1250,7 +1227,7 @@ template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const 
       auto lightmap = surf->samples + dt * smax + ds;
 
       // compute the lightmap color at a particular point
-      for (int maps = 0u; maps < MAXLIGHTMAPS && surf->styles[maps] != 255u; ++maps) {
+      for (int maps = 0u; maps < MAX_LIGHTMAPS && surf->styles[maps] != 255u; ++maps) {
          uint32_t scale = m_lightstyleValue[surf->styles[maps]];
 
          m_point.red += lightmap->r * scale;

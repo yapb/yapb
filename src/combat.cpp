@@ -169,7 +169,7 @@ bool Bot::checkBodyParts (edict_t *target) {
    else {
       spot.z = target->v.origin.z - standFeet;
    }
-   game.testLineChannel (TraceChannel::Enemy, eyes, spot, ignoreFlags, self, result);
+   game.testLine (eyes, spot, ignoreFlags, self, &result);
 
    if (hitsTarget ()) {
       m_enemyParts |= Visibility::Other;
@@ -184,7 +184,7 @@ bool Bot::checkBodyParts (edict_t *target) {
    Vector perp (-dir.y, dir.x, 0.0f);
    spot = target->v.origin + Vector (perp.x * edgeOffset, perp.y * edgeOffset, 0);
 
-   game.testLineChannel (TraceChannel::Enemy, eyes, spot, ignoreFlags, self, result);
+   game.testLine (eyes, spot, ignoreFlags, self, &result);
 
    if (hitsTarget ()) {
       m_enemyParts |= Visibility::Other;
@@ -194,7 +194,7 @@ bool Bot::checkBodyParts (edict_t *target) {
    }
    spot = target->v.origin - Vector (perp.x * edgeOffset, perp.y * edgeOffset, 0);
 
-   game.testLineChannel (TraceChannel::Enemy, eyes, spot, ignoreFlags, self, result);
+   game.testLine (eyes, spot, ignoreFlags, self, &result);
 
    if (hitsTarget ()) {
       m_enemyParts |= Visibility::Other;
@@ -719,12 +719,9 @@ bool Bot::isPenetrableObstacle2 (const Vector &dest) {
 bool Bot::isPenetrableObstacle3 (const Vector &dest) {
    // this function returns if enemy can be shoot through some obstacle
 
-   if (m_isUsingGrenade || m_difficulty < Difficulty::Normal || !conf.findWeaponById (m_currentWeapon).penetratePower) {
-      return false;
-   }
    auto power = conf.findWeaponById (m_currentWeapon).penetratePower;
 
-   if (power == 0) {
+   if (m_isUsingGrenade || m_difficulty < Difficulty::Normal || !power) {
       return false;
    }
    TraceResult tr {};
@@ -1218,7 +1215,7 @@ void Bot::attackMovement () {
       };
 
       auto strafeUpdateTime = [] () {
-         return game.time () + rg.get (0.5f, 1.0f);
+         return game.time () + rg.get (1.0f, 1.5f);
       };
 
       // to start strafing, we have to first figure out if the target is on the left side or right side
@@ -1239,11 +1236,14 @@ void Bot::attackMovement () {
          m_strafeSetTime = strafeUpdateTime ();
       }
 
+      const bool wallOnRight = checkWallOnRight ();
+      const bool wallOnLeft = checkWallOnLeft ();
+
       if (m_combatStrafeDir == Dodge::Right) {
-         if (!checkWallOnLeft ()) {
+         if (!wallOnLeft) {
             m_strafeSpeed = -pev->maxspeed;
          }
-         else if (!checkWallOnRight ()) {
+         else if (!wallOnRight) {
             swapStrafeCombatDir ();
             m_strafeSetTime = strafeUpdateTime ();
 
@@ -1255,10 +1255,10 @@ void Bot::attackMovement () {
          }
       }
       else {
-         if (!checkWallOnRight ()) {
+         if (!wallOnRight) {
             m_strafeSpeed = pev->maxspeed;
          }
-         else if (!checkWallOnLeft ()) {
+         else if (!wallOnLeft) {
             swapStrafeCombatDir ();
             m_strafeSetTime = strafeUpdateTime ();
 

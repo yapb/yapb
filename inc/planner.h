@@ -51,7 +51,7 @@ public:
 // bot heuristic functions for astar planner
 class Heuristic final {
 public:
-   using Func = Lambda <float (int, int, int)>;
+   using Func = float (*) (int, int, int);
 
 public:
    // least kills and number of nodes to goal for a team
@@ -84,7 +84,7 @@ public:
 };
 
 // A* algorithm for bots
-class AStarAlgo final : public DenyCopying {
+class AStarAlgo final : public NonCopyable {
 public:
    using HeuristicFn = Heuristic::Func;
 
@@ -137,6 +137,9 @@ public:
 
       m_constructedPath.reserve (getMaxLength ());
       m_smoothedPath.reserve (getMaxLength ());
+
+      m_constructedPath.shrink ();
+      m_smoothedPath.shrink ();
    }
 
    // set the g heuristic

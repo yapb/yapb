@@ -48,7 +48,7 @@ void Bot::normal_ () {
       getTask ()->data = kInvalidNodeIndex;
    }
 
-   // reached the destination (goal) waypoint?
+   // reached the destination (goal) node?
    if (updateNavigation ()) {
       // if we're reached the goal, and there is not enemies, notify the team
       if (!bots.isBombPlanted () && m_currentNodeIndex != kInvalidNodeIndex && (m_pathFlags & NodeFlag::Goal) && rg.chance (15) && numEnemiesNear (pev->origin, 650.0f) == 0) {
@@ -65,7 +65,7 @@ void Bot::normal_ () {
          }
       }
 
-      // reached waypoint is a camp waypoint
+      // reached node is a camp node
       if ((m_pathFlags & NodeFlag::Camp) && !game.is (GameFlags::CSDM) && cv_camping_allowed.bool_ () && !isKnifeMode ()) {
 
          // check if bot has got a primary weapon and hasn't camped before
@@ -184,22 +184,15 @@ void Bot::normal_ () {
    }
    // no more nodes to follow - search new ones (or we have a bomb)
    else if (!hasActiveGoal ()) {
-      m_moveSpeed = pev->maxspeed;
-
-      clearSearchNodes ();
       ignoreCollision ();
 
       // did we already decide about a goal before?
       auto currIndex = getTask ()->data;
-      auto destIndex = graph.exists (currIndex) && !isBannedNode (currIndex) && m_prevGoalIndex != currIndex ? currIndex : findBestGoal ();
+      auto destIndex = graph.exists (currIndex) ? currIndex : findBestGoal ();
 
-      // check for existance (this is failover, for i.e. csdm, this should be not true with normal gameplay, only when spawned outside of waypointed area)
+      // check for existence (this is fail over, for i.e. csdm, this should be not true with normal game play, only when spawned outside of covered area)
       if (!graph.exists (destIndex)) {
-         destIndex = graph.getFarest (pev->origin, 512.0f);
-      }
-
-      if (!graph.exists (cv_debug_goal.int_ ()) && graph.exists (currIndex) && m_prevGoalIndex == currIndex && !(graph[currIndex].flags & NodeFlag::Goal)) {
-         m_nodeHistory.push (currIndex);
+         destIndex = graph.getFarest (pev->origin, 1024.0f);
       }
       m_prevGoalIndex = destIndex;
 
@@ -210,7 +203,7 @@ void Bot::normal_ () {
 
       // override with fast path
       if (game.mapIs (MapFlags::Demolition) && bots.isBombPlanted ()) {
-         pathSearchType = rg.chance (60) ? FindPath::Fast : FindPath::Optimal;
+         pathSearchType = rg.chance (80) ? FindPath::Fast : FindPath::Optimal;
       }
       ensureCurrentNodeIndex ();
 
@@ -314,8 +307,6 @@ void Bot::huntEnemy_ () {
 
    // do we need to calculate a new path?
    else if (!hasActiveGoal ()) {
-      clearSearchNodes ();
-
       int destIndex = kInvalidNodeIndex;
       int goal = getTask ()->data;
 
@@ -410,7 +401,6 @@ void Bot::seekCover_ () {
       m_checkTerrain = false;
    }
    else if (!hasActiveGoal ()) {
-      clearSearchNodes ();
       int destIndex = kInvalidNodeIndex;
 
       if (getTask ()->data != kInvalidNodeIndex) {
@@ -518,7 +508,6 @@ void Bot::blind_ () {
          m_states |= Sense::SuspectEnemy;
       }
       else if (!hasActiveGoal ()) {
-         clearSearchNodes ();
          ensureCurrentNodeIndex ();
 
          m_prevGoalIndex = m_blindNodeIndex;
@@ -707,8 +696,7 @@ void Bot::moveToPos_ () {
    }
 
    auto ensureDestIndexOK = [&] (int &index) {
-      if (isOccupiedNode (index) || isBannedNode (index)) {
-         m_nodeHistory.push (index);
+      if (isOccupiedNode (index)) {
          index = findDefendNode (m_position);
       }
    };
@@ -723,8 +711,6 @@ void Bot::moveToPos_ () {
 
    // didn't choose goal waypoint yet?
    else if (!hasActiveGoal ()) {
-      clearSearchNodes ();
-
       int destIndex = kInvalidNodeIndex;
       int goal = getTask ()->data;
 
@@ -1050,8 +1036,6 @@ void Bot::followUser_ () {
 
    // didn't choose goal waypoint yet?
    if (!hasActiveGoal ()) {
-      clearSearchNodes ();
-
       int destIndex = graph.getNearest (m_targetEntity->v.origin);
       auto points = graph.getNarestInRadius (200.0f, m_targetEntity->v.origin);
 
@@ -1306,8 +1290,6 @@ void Bot::doublejump_ () {
 
    // didn't choose goal waypoint yet?
    if (!hasActiveGoal ()) {
-      clearSearchNodes ();
-
       int destIndex = graph.getNearest (m_doubleJumpOrigin);
 
       if (graph.exists (destIndex)) {
@@ -1359,8 +1341,6 @@ void Bot::escapeFromBomb_ () {
 
    // didn't choose goal waypoint yet?
    else if (!hasActiveGoal ()) {
-      clearSearchNodes ();
-
       int bestIndex = kInvalidNodeIndex;
 
       float safeRadius = rg.get (1513.0f, 2048.0f);

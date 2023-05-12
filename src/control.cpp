@@ -201,9 +201,9 @@ int BotControl::cmdCvars () {
 
    File cfg;
 
-   // if save requested, dump cvars to yapb.cfg
+   // if save requested, dump cvars to main config
    if (isSave) {
-      cfg.open (strings.format ("%s/addons/%s/conf/%s.cfg", game.getRunningModName (), product.folder, product.folder), "wt");
+      cfg.open (strings.joinPath (game.getRunningModName (), folders.addons, folders.bot, folders.config, strings.format ("%s.%s", product.nameLower, kConfigExtension)), "wt");
       cfg.puts ("// Configuration file for %s\n\n", product.name);
    }
    else {
@@ -496,7 +496,7 @@ int BotControl::cmdNodeSave () {
 
       msg ("All nodes has been saved and written to disk (IGNORING QUALITY CONTROL).");
    }
-   else if (strValue (option) == "old") {
+   else if (strValue (option) == "old" || strValue (option) == "oldformat") {
       if (graph.length () >= 1024) {
          msg ("Unable to save POD-Bot Format waypoint file. Number of nodes exceeds 1024.");
 

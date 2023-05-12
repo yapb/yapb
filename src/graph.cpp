@@ -1648,8 +1648,20 @@ bool BotGraph::saveGraphData () {
 void BotGraph::saveOldFormat () {
    PODGraphHeader header {};
 
+   String editorName;
+
+   if (game.isNullEntity (m_editor) && !m_graphAuthor.empty ()) {
+      editorName = m_graphAuthor;
+   }
+   else if (!game.isNullEntity (m_editor)) {
+      editorName = m_editor->v.netname.chars ();
+   }
+   else {
+      editorName = product.name;
+   }
+
    strings.copy (header.header, kPodbotMagic, sizeof (kPodbotMagic));
-   strings.copy (header.author, m_editor->v.netname.chars (), cr::bufsize (header.author));
+   strings.copy (header.author, editorName.chars (), cr::bufsize (header.author));
    strings.copy (header.mapName, game.getMapName (), cr::bufsize (header.mapName));
 
    header.mapName[31] = 0;

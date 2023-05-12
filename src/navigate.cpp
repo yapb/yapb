@@ -8,11 +8,6 @@
 #include <yapb.h>
 
 int Bot::findBestGoal () {
-   auto pushToHistroy = [&] (int32_t goal) -> int32_t {
-      m_nodeHistory.push (goal);
-      return goal;
-   };
-
    if (m_isCreature) {
       if (!graph.m_terrorPoints.empty ()) {
          return graph.m_terrorPoints.random ();
@@ -110,7 +105,7 @@ int Bot::findBestGoal () {
    else if (game.mapIs (MapFlags::Demolition) && m_team == Team::Terrorist && bots.getRoundStartTime () + 10.0f < game.time ()) {
       // send some terrorists to guard planted bomb
       if (!m_defendedBomb && bots.isBombPlanted () && getCurrentTaskId () != Task::EscapeFromBomb && getBombTimeleft () >= 15.0f) {
-         return pushToHistroy (m_chosenGoalIndex = findDefendNode (graph.getBombOrigin ()));
+         return m_chosenGoalIndex = findDefendNode (graph.getBombOrigin ());
       }
    }
    else if (game.mapIs (MapFlags::Escape)) {
@@ -149,7 +144,7 @@ int Bot::findBestGoal () {
    if (goalDesire > tacticChoice) {
       tactic = 3;
    }
-   return pushToHistroy (findGoalPost (tactic, defensiveNodes, offensiveNodes));
+   return findGoalPost (tactic, defensiveNodes, offensiveNodes);
 }
 
 int Bot::findBestGoalWhenBombAction () {
@@ -365,12 +360,8 @@ void Bot::resetCollision () {
 void Bot::ignoreCollision () {
    resetCollision ();
 
-   m_prevTime = game.time () + 1.2f;
-   m_lastCollTime = game.time () + 1.5f;
-   m_isStuck = false;
+   m_lastCollTime = game.time () + m_frameInterval * 4.0f;
    m_checkTerrain = false;
-   m_prevSpeed = m_moveSpeed;
-   m_prevOrigin = pev->origin;
 }
 
 void Bot::doPlayerAvoidance (const Vector &normal) {
@@ -417,13 +408,13 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
    if (game.isNullEntity (m_hindrance)) {
       return;
    }
-   const float interval = m_frameInterval * (pev->velocity.lengthSq2d () > 0.0f ? 9.0f : 2.0f);
+   const float interval = m_frameInterval * (pev->velocity.lengthSq2d () > 0.0f ? 7.5f : 2.0f);
 
    // use our movement angles, try to predict where we should be next frame
    Vector right, forward;
    m_moveAngles.angleVectors (&forward, &right, nullptr);
 
-   Vector predict = pev->origin + forward * m_moveSpeed * interval;
+   Vector predict = pev->origin + forward * pev->maxspeed * interval;
 
    predict += right * m_strafeSpeed * interval;
    predict += pev->velocity * interval;
@@ -432,7 +423,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
    auto nextFrameDistance = pev->origin.distanceSq (m_hindrance->v.origin + m_hindrance->v.velocity * interval);
 
    // is player that near now or in future that we need to steer away?
-   if (movedDistance <= cr::sqrf (48.0f) || (distance <= cr::sqrf (56.0f) && nextFrameDistance < distance)) {
+   if (movedDistance <= cr::sqrf (64.0f) || (distance <= cr::sqrf (72.0f) && nextFrameDistance < distance)) {
       auto dir = (pev->origin - m_hindrance->v.origin).normalize2d_apx ();
 
       // to start strafing, we have to first figure out if the target is on the left side or right side
@@ -443,7 +434,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
          setStrafeSpeed (normal, -pev->maxspeed);
       }
 
-      if (distance < cr::sqrf (76.0f)) {
+      if (distance < cr::sqrf (80.0f)) {
          if ((dir | forward.normalize2d_apx ()) < 0.0f) {
             m_moveSpeed = -pev->maxspeed;
          }
@@ -455,15 +446,12 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
 
    // if avoiding someone do not consider stuck
    TraceResult tr {};
-   float checkSpeed = isDucking () ? 4.0f : 10.0f;
-
    m_isStuck = false;
 
    // standing still, no need to check?
-   if ((m_moveSpeed >= checkSpeed || m_strafeSpeed >= checkSpeed) && m_lastCollTime < game.time ()) {
-
+   if (m_lastCollTime < game.time () &&  getCurrentTaskId () != Task::Attack) {
       // didn't we move enough previously?
-      if (movedDistance < 2.0f && m_prevSpeed >= 20.0f) {
+      if (movedDistance < 2.0f && (m_prevSpeed > 20.0f || m_prevVelocity < m_moveSpeed / 2)) {
          m_prevTime = game.time (); // then consider being stuck
          m_isStuck = true;
 
@@ -474,7 +462,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
       // not stuck yet
       else {
          // test if there's something ahead blocking the way
-         if (cantMoveForward (dirNormal, &tr) && !isOnLadder ()) {
+         if (!isOnLadder () && cantMoveForward (dirNormal, &tr)) {
             if (cr::fzero (m_firstCollideTime)) {
                m_firstCollideTime = game.time () + 0.2f;
             }
@@ -489,18 +477,23 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
 
       // not stuck?
       if (!m_isStuck) {
-         if (m_probeTime + 0.5f < game.time ()) {
+         if (m_probeTime + rg.get (0.5f, 1.0f) < game.time ()) {
             resetCollision (); // reset collision memory if not being stuck for 0.5 secs
          }
          else {
-            // remember to keep pressing duck if it was necessary ago
+            // remember to keep pressing stuff if it was necessary ago
             if (m_collideMoves[m_collStateIndex] == CollisionState::Duck && (isOnFloor () || isInWater ())) {
                pev->button |= IN_DUCK;
+            }
+            else if (m_collideMoves[m_collStateIndex] == CollisionState::StrafeLeft) {
+               setStrafeSpeed (dirNormal, -pev->maxspeed);
+            }
+            else if (m_collideMoves[m_collStateIndex] == CollisionState::StrafeRight) {
+               setStrafeSpeed (dirNormal, pev->maxspeed);
             }
          }
          return;
       }
-
 
       // bot is stuck, but not yet decided what to do?
       if (m_collisionState == CollisionState::Undecided) {
@@ -549,7 +542,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                   dirLeft = true;
                }
                const auto &testDir = m_moveSpeed > 0.0f ? forward : -forward;
-               constexpr float blockDistance = 40.0f;
+               constexpr float blockDistance = 32.0f;
 
                // now check which side is blocked
                src = pev->origin + right * blockDistance;
@@ -782,6 +775,14 @@ void Bot::moveToGoal () {
          pev->button |= IN_JUMP;
       }
    }
+}
+
+void Bot::resetMovement () {
+   pev->button = 0;
+
+   m_moveSpeed = 0.0f;
+   m_strafeSpeed = 0.0f;
+   m_moveAngles = nullptr;
 }
 
 void Bot::translateInput () {
@@ -1047,18 +1048,18 @@ bool Bot::updateNavigation () {
       }
    }
 
-   float desiredDistance = 8.0f;
-   float nodeDistance = pev->origin.distance (m_pathOrigin);
+   float desiredDistance = cr::sqrf (8.0f);
+   float nodeDistance = pev->origin.distanceSq (m_pathOrigin);
 
    // initialize the radius for a special node type, where the node is considered to be reached
    if (m_pathFlags & NodeFlag::Lift) {
-      desiredDistance = 50.0f;
+      desiredDistance = cr::sqrf (50.0f);
    }
    else if (isDucking () || (m_pathFlags & NodeFlag::Goal)) {
-      desiredDistance = 25.0f;
+      desiredDistance = cr::sqrf (25.0f);
    }
-   else if (m_pathFlags & NodeFlag::Ladder) {
-      desiredDistance = 24.0f;
+   else if (isOnLadder () || (m_pathFlags & NodeFlag::Ladder)) {
+      desiredDistance = cr::sqrf (24.0f);
    }
    else if (m_currentTravelFlags & PathFlag::Jump) {
       desiredDistance = 0.0f;
@@ -1067,13 +1068,13 @@ bool Bot::updateNavigation () {
       desiredDistance = 0.0f;
    }
    else if (isOccupiedNode (m_path->number)) {
-      desiredDistance = 96.0f;
+      desiredDistance = cr::sqrf (96.0f);
    }
    else {
-      desiredDistance = m_path->radius;
+      desiredDistance = cr::max (cr::sqrf (m_path->radius), desiredDistance);
    }
 
-   // check if node has a special travelflag, so they need to be reached more precisely
+   // check if node has a special travel flags, so they need to be reached more precisely
    for (const auto &link : m_path->links) {
       if (link.flags != 0) {
          desiredDistance = 0.0f;
@@ -1082,11 +1083,11 @@ bool Bot::updateNavigation () {
    }
 
    // needs precise placement - check if we get past the point
-   if (desiredDistance < 22.0f && nodeDistance < 30.0f && m_pathOrigin.distanceSq (pev->origin + pev->velocity * m_frameInterval) >= cr::sqrf (nodeDistance)) {
+   if (desiredDistance < cr::sqrf (22.0f) && nodeDistance < cr::sqrf (30.0f) && m_pathOrigin.distanceSq (pev->origin + pev->velocity * m_frameInterval) >= nodeDistance) {
       desiredDistance = nodeDistance + 1.0f;
    }
 
-   // this allows us to prevent stupid bot behaviour when he reaches almost end point of this route, but some one  (other bot eg)
+   // this allows us to prevent stupid bot behavior when he reaches almost end point of this route, but some one  (other bot eg)
    // is sitting there, so the bot is unable to reach the node because of other player on it, and he starts to jumping and so on
    // here we're clearing task memory data (important!), since task executor may restart goal with one from memory, so this process
    // will go in cycle, and forcing bot to re-create new route.
@@ -1099,7 +1100,6 @@ bool Bot::updateNavigation () {
    }
 
    if (nodeDistance < desiredDistance) {
-
       // did we reach a destination node?
       if (getTask ()->data == m_currentNodeIndex) {
          if (m_chosenGoalIndex != kInvalidNodeIndex) {
@@ -1126,9 +1126,9 @@ bool Bot::updateNavigation () {
 
          // bot within 'hearable' bomb tick noises?
          if (!bombOrigin.empty ()) {
-            float distance = bombOrigin.distance (graph[taskTarget].origin);
+            float distance = bombOrigin.distanceSq (graph[taskTarget].origin);
 
-            if (distance > 512.0f) {
+            if (distance > cr::sqrf (512.0f)) {
                if (rg.chance (50) && !graph.isVisited (taskTarget)) {
                   pushRadioMessage (Radio::SectorClear);
                }
@@ -2334,7 +2334,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
    };
 
    // trace from the bot's eyes straight forward...
-   traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), *tr);
+   game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
 
    // check if the trace hit something...
    if (tr->flFraction < 1.0f) {
@@ -2349,7 +2349,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
    src = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) - right * -16.0f;
    forward = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) + right * 16.0f + normal * 24.0f;
 
-   traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), *tr);
+   game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
 
    // check if the trace hit something...
    if (checkDoor (tr)) {
@@ -2361,7 +2361,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
    src = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) + right * 16.0f;
    forward = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) - right * -16.0f + normal * 24.0f;
 
-   traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), *tr);
+   game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
 
    // check if the trace hit something...
    if (checkDoor (tr)) {
@@ -2373,7 +2373,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       src = pev->origin + Vector (0.0f, 0.0f, -19.0f + 19.0f);
       forward = src + Vector (0.0f, 0.0f, 10.0f) + normal * 24.0f;
 
-      traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), *tr);
+      game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
 
       // check if the trace hit something...
       if (checkDoor (tr)) {
@@ -2382,7 +2382,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       src = pev->origin;
       forward = src + normal * 24.0f;
 
-      traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), *tr);
+      game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
 
       // check if the trace hit something...
       if (checkDoor (tr)) {
@@ -2395,7 +2395,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       forward = pev->origin + Vector (0.0f, 0.0f, -17.0f) + right * 16.0f + normal * 24.0f;
 
       // trace from the bot's waist straight forward...
-      traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), *tr);
+      game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
 
       // check if the trace hit something...
       if (checkDoor (tr)) {
@@ -2406,7 +2406,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       src = pev->origin + Vector (0.0f, 0.0f, -24.0f) + right * 16.0f;
       forward = pev->origin + Vector (0.0f, 0.0f, -24.0f) - right * -16.0f + normal * 24.0f;
 
-      traceResult = game.testLineChannel (TraceChannel::Body, src, forward, TraceIgnore::Monsters, ent (), *tr);
+      game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
 
       // check if the trace hit something...
       if (checkDoor (tr)) {
@@ -2717,7 +2717,7 @@ bool Bot::isBlockedRight () {
 
 bool Bot::checkWallOnLeft () {
    TraceResult tr {};
-   game.testLine (pev->origin, pev->origin - pev->angles.right () * 40.0f, TraceIgnore::Monsters, ent (), &tr);
+   game.testLine (pev->origin, pev->origin + -pev->angles.right () * 40.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
    if (tr.flFraction < 1.0f) {
@@ -3036,25 +3036,6 @@ bool Bot::isReachableNode (int index) {
          return false; // can't reach this one
       }
       return true;
-   }
-   return false;
-}
-
-bool Bot::isBannedNode (int index) {
-   if (graph.exists (cv_debug_goal.int_ ()) || !graph.exists (index)) {
-      return false;
-   }
-   const auto &bucket = graph.getNodesInBucket (graph[index].origin);
-
-   // too few nodes in bucket near location, do not ban anything
-   if (bucket.length <int> () <= kMaxNodeLinks) {
-      return false;
-   }
-
-   for (const auto &node : m_nodeHistory) {
-      if (node == index) {
-         return true;
-      }
    }
    return false;
 }

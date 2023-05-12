@@ -44,7 +44,7 @@ private:
    Array <Array <ChatterItem>> m_chatter {};
 
    Array <BotName> m_botNames {};
-   Array <Keywords> m_replies {};
+   Array <ChatKeywords> m_replies {};
    SmallArray <WeaponInfo> m_weapons {};
    SmallArray <WeaponProp> m_weaponProps {};
 
@@ -170,7 +170,7 @@ public:
    }
 
    // get's the replies array
-   Array <Keywords> &getReplies () {
+   Array <ChatKeywords> &getReplies () {
       return m_replies;
    }
 

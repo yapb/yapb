@@ -55,7 +55,7 @@ public:
    bool isPlayerVIP (edict_t *ent);
 
    // opens config helper
-   bool openConfig (const char *fileName, const char *errorIfNotExists, MemFile *outFile, bool languageDependant = false);
+   bool openConfig (StringRef fileName, StringRef errorIfNotExists, MemFile *outFile, bool languageDependant = false);
 
    // nearest player search helper
    bool findNearestPlayer (void **holder, edict_t *to, float searchDistance = 4096.0, bool sameTeam = false, bool needBot = false, bool needAlive = false, bool needDrawn = false, bool needBotWithC4 = false);

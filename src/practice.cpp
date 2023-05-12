@@ -69,7 +69,7 @@ void BotPractice::setDamage (int32_t team, int32_t start, int32_t goal, int32_t 
 
 float BotPractice::plannerGetDamage (int32_t team, int32_t start, int32_t goal, bool addTeamHighestDamage) {
    if (!m_damageUpdateLock.tryLock ()) {
-      return 1.0f;
+      return 0.0f;
    }
    ScopedUnlock <Mutex> unlock (m_damageUpdateLock);
    auto damage = static_cast <float> (getDamage (team, start, goal));

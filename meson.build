@@ -247,7 +247,7 @@ sources = files(
 
 # add the include directories
 includes = include_directories([
-   '.', 'inc', 'ext', 'ext/crlib'
+   '.', 'inc', 'ext', 'ext/crlib', 'ext/linkage'
 ], is_system: true)
 
 # if have git and on windows add windows-specific version info

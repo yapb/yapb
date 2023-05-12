@@ -7,11 +7,11 @@
 
 #pragma once
 
-#include <hlsdk/extdll.h>
-#include <hlsdk/metamod.h>
-#include <hlsdk/physint.h>
-
 #include <crlib/crlib.h>
+
+#include <linkage/goldsrc.h>
+#include <linkage/metamod.h>
+#include <linkage/physint.h>
 
 // use all the cr-library
 using namespace cr;
@@ -405,13 +405,6 @@ CR_DECLARE_SCOPED_ENUM (Visibility,
    None = 0
 )
 
-// channel for skip traceline
-CR_DECLARE_SCOPED_ENUM (TraceChannel,
-   Enemy = 0,
-   Body,
-   Num
-)
-
 // frustum sides
 CR_DECLARE_SCOPED_ENUM (FrustumSide,
    Top = 0,
@@ -424,53 +417,54 @@ CR_DECLARE_SCOPED_ENUM (FrustumSide,
 )
 
 // some hardcoded desire defines used to override calculated ones
-namespace TaskPri {
-   static constexpr float Normal { 35.0f };
-   static constexpr float Pause { 36.0f };
-   static constexpr float Camp { 37.0f };
-   static constexpr float Spraypaint { 38.0f };
-   static constexpr float FollowUser { 39.0f };
-   static constexpr float MoveToPosition { 50.0f };
-   static constexpr float DefuseBomb { 89.0f };
-   static constexpr float PlantBomb { 89.0f };
-   static constexpr float Attack { 90.0f };
-   static constexpr float SeekCover { 91.0f };
-   static constexpr float Hide { 92.0f };
-   static constexpr float Throw { 99.0f };
-   static constexpr float DoubleJump { 99.0f };
-   static constexpr float Blind { 100.0f };
-   static constexpr float ShootBreakable { 100.0f };
-   static constexpr float EscapeFromBomb { 100.0f };
-}
+struct TaskPri {
+   static constexpr auto Normal { 35.0f };
+   static constexpr auto Pause { 36.0f };
+   static constexpr auto Camp { 37.0f };
+   static constexpr auto Spraypaint { 38.0f };
+   static constexpr auto FollowUser { 39.0f };
+   static constexpr auto MoveToPosition { 50.0f };
+   static constexpr auto DefuseBomb { 89.0f };
+   static constexpr auto PlantBomb { 89.0f };
+   static constexpr auto Attack { 90.0f };
+   static constexpr auto SeekCover { 91.0f };
+   static constexpr auto Hide { 92.0f };
+   static constexpr auto Throw { 99.0f };
+   static constexpr auto DoubleJump { 99.0f };
+   static constexpr auto Blind { 100.0f };
+   static constexpr auto ShootBreakable { 100.0f };
+   static constexpr auto EscapeFromBomb { 100.0f };
+};
 
-constexpr float kInfiniteDistance = 9999999.0f;
-constexpr float kGrenadeCheckTime = 0.6f;
-constexpr float kSprayDistance = 260.0f;
-constexpr float kDoubleSprayDistance = kSprayDistance * 2;
-constexpr float kMaxChatterRepeatInterval = 99.0f;
+constexpr auto kInfiniteDistance = 9999999.0f;
+constexpr auto kGrenadeCheckTime = 0.6f;
+constexpr auto kSprayDistance = 260.0f;
+constexpr auto kDoubleSprayDistance = kSprayDistance * 2;
+constexpr auto kMaxChatterRepeatInterval = 99.0f;
 
-constexpr int kInfiniteDistanceLong = static_cast <int> (kInfiniteDistance);
-constexpr int kMaxWeapons = 32;
-constexpr int kNumWeapons = 26;
-constexpr int kMaxCollideMoves = 3;
-constexpr int kGameMaxPlayers = 32;
-constexpr int kGameTeamNum = 2;
-constexpr int kInvalidNodeIndex = -1;
+constexpr auto kInfiniteDistanceLong = static_cast <int> (kInfiniteDistance);
+constexpr auto kMaxWeapons = 32;
+constexpr auto kNumWeapons = 26;
+constexpr auto kMaxCollideMoves = 3;
+constexpr auto kGameMaxPlayers = 32;
+constexpr auto kGameTeamNum = 2;
+constexpr auto kInvalidNodeIndex = -1;
+constexpr auto kConfigExtension = "cfg";
 
 // weapon masks
 constexpr auto kPrimaryWeaponMask = (cr::bit (Weapon::XM1014) | cr::bit (Weapon::M3) | cr::bit (Weapon::MAC10) | cr::bit (Weapon::UMP45) | cr::bit (Weapon::MP5) | cr::bit (Weapon::TMP) | cr::bit (Weapon::P90) | cr::bit (Weapon::AUG) | cr::bit (Weapon::M4A1) | cr::bit (Weapon::SG552) | cr::bit (Weapon::AK47) | cr::bit (Weapon::Scout) | cr::bit (Weapon::SG550) | cr::bit (Weapon::AWP) | cr::bit (Weapon::G3SG1) | cr::bit (Weapon::M249) | cr::bit (Weapon::Famas) | cr::bit (Weapon::Galil));
 constexpr auto kSecondaryWeaponMask = (cr::bit (Weapon::P228) | cr::bit (Weapon::Elite) | cr::bit (Weapon::USP) | cr::bit (Weapon::Glock18) | cr::bit (Weapon::Deagle) | cr::bit (Weapon::FiveSeven));
 
 // links keywords and replies together
-struct Keywords {
+struct ChatKeywords {
    StringArray keywords;
    StringArray replies;
    StringArray usedReplies;
 
 public:
-   Keywords () = default;
+   ChatKeywords () = default;
 
-   Keywords (const StringArray &keywords, const StringArray &replies) {
+   ChatKeywords (const StringArray &keywords, const StringArray &replies) {
       this->keywords.clear ();
       this->replies.clear ();
       this->usedReplies.clear ();
@@ -589,7 +583,7 @@ struct ChatCollection {
 #include <graph.h>
 
 // this structure links nodes returned from pathfinder
-class PathWalk final : public DenyCopying {
+class PathWalk final : public NonCopyable {
 private:
    size_t m_cursor {};
    size_t m_length {};
@@ -675,9 +669,6 @@ private:
    uint32_t m_aimFlags {}; // aiming conditions
    uint32_t m_currentTravelFlags {}; // connection flags like jumping
 
-   int m_traceSkip[TraceChannel::Num] {}; // trace need to be skipped?
-   int m_messageQueue[32] {}; // stack for messages
-
    int m_oldButtons {}; // our old buttons
    int m_reloadState {}; // current reload state
    int m_voicePitch {}; // bot voice pitch
@@ -701,6 +692,7 @@ private:
    float m_prevTime {}; // time previously checked movement speed
    float m_heavyTimestamp {}; // is it time to execute heavy-weight functions
    float m_prevSpeed {}; // speed some frames before
+   float m_prevVelocity {}; // velocity some frames before
    float m_timeDoorOpen {}; // time to next door open check
    float m_lastChatTime {}; // time bot last chatted
    float m_timeLogoSpray {}; // time bot last spray logo
@@ -749,6 +741,7 @@ private:
    float m_playServerTime {}; // time bot spent in the game
    float m_changeViewTime {}; // timestamp to change look at while at freezetime
    float m_breakableTime {}; // breakeble acquired time
+   float m_stuckTimestamp {}; // last time was stuck
 
    bool m_moveToGoal {}; // bot currently moving to goal??
    bool m_isStuck {}; // bot is stuck
@@ -770,6 +763,7 @@ private:
    bool m_grenadeRequested {}; // bot requested change to grenade
    bool m_needToSendWelcomeChat {}; // bot needs to greet people on server?
    bool m_isCreature {}; // bot is not a player, but something else ? zombie ?
+   bool m_defuseNotified {}; // bot is notified about bomb defusion
 
    Pickup m_pickupType {}; // type of entity which needs to be used/picked up
    PathWalk m_pathWalk {}; // pointer to current node from path
@@ -779,7 +773,6 @@ private:
    FindPath m_pathType {}; // which pathfinder to use
    uint8_t m_enemyParts {}; // visibility flags
    uint16_t m_modelMask {}; // model mask bits
-   TraceResult m_lastTrace[TraceChannel::Num] {}; // last trace result
    UniquePtr <class AStarAlgo> m_planner;
 
    edict_t *m_pickupItem {}; // pointer to entity of item to use/pickup
@@ -810,7 +803,6 @@ private:
 
    Array <edict_t *> m_ignoredBreakable {}; // list of ignored breakables
    Array <edict_t *> m_hostages {}; // pointer to used hostage entities
-   Array <int32_t> m_nodeHistory {}; // history of selected goals
 
    Path *m_path {}; // pointer to the current path node
    String m_chatBuffer {}; // space for strings (say text...)
@@ -888,7 +880,6 @@ private:
    bool checkChatKeywords (String &reply);
    bool isReplyingToChat ();
    bool isReachableNode (int index);
-   bool isBannedNode (int index);
    bool updateLiftHandling ();
    bool updateLiftStates ();
    bool canRunHeavyWeight ();
@@ -962,6 +953,7 @@ private:
    void logicDuringFreezetime ();
    void translateInput ();
    void moveToGoal ();
+   void resetMovement ();
 
    void normal_ ();
    void spraypaint_ ();
@@ -1193,7 +1185,7 @@ public:
    bool isShieldDrawn ();
    bool findNextBestNode ();
    bool seesEntity (const Vector &dest, bool fromBody = false);
-   bool canSkipNextTrace (TraceChannel channel);
+   //bool canSkipNextTrace (TraceChannel channel);
 
    int getAmmo ();
    int getAmmo (int id);
@@ -1240,16 +1232,6 @@ public:
    // get the current node index 
    int getCurrentNodeIndex () const {
       return m_currentNodeIndex;
-   }
-
-   // set the last bot trace result
-   void setLastTraceResult (TraceChannel channel, TraceResult *traceResult) {
-      m_lastTrace[channel] = *traceResult;
-   }
-
-   // get the bot last trace result
-   TraceResult &getLastTraceResult (TraceChannel channel) {
-      return m_lastTrace[channel];
    }
 
    // is low on admmo on index?

@@ -765,6 +765,10 @@ void Bot::instantChatter (int type) {
    MessageWriter msg;
    int ownIndex = index ();
 
+   auto writeChatterSound = [&msg] (ChatterItem item) {
+      msg.writeString (strings.format ("%s%s%s.wav", cv_chatter_path.str (), PATH_SEP, item.name));
+   };
+
    for (auto &client : util.getClients ()) {
       if (!(client.flags & ClientFlags::Used) || (client.ent->v.flags & FL_FAKECLIENT) || client.team != m_team) {
          continue;
@@ -774,11 +778,11 @@ void Bot::instantChatter (int type) {
 
       if (pev->deadflag & DEAD_DYING) {
          client.iconTimestamp[ownIndex] = game.time () + painSound.duration;
-         msg.writeString (strings.format ("%s/%s.wav", cv_chatter_path.str (), painSound.name));
+         writeChatterSound (painSound);
       }
-      else if (!(pev->deadflag & DEAD_DEAD)) {
+      else if (m_notKilled) {
          client.iconTimestamp[ownIndex] = game.time () + playbackSound.duration;
-         msg.writeString (strings.format ("%s/%s.wav", cv_chatter_path.str (), playbackSound.name));
+         writeChatterSound (playbackSound);
       }
       msg.writeShort (m_voicePitch).end ();
       client.iconFlags[ownIndex] |= ClientFlags::Icon;
@@ -1527,6 +1531,15 @@ void Bot::overrideConditions () {
 
    // special handling for reloading
    if (!bots.isRoundOver () && getCurrentTaskId () == Task::Normal && m_reloadState != Reload::None && m_isReloading && !isDucking () && !isInNarrowPlace ()) {
+      if (m_reloadState != Reload::None || m_isReloading) {
+         const auto maxClip = conf.findWeaponById (m_currentWeapon).maxClip;
+         const auto curClip = getAmmoInClip ();
+
+         // consider not reloading if full ammo in clip
+         if (curClip >= maxClip) {
+            m_isReloading = false;
+         }
+      }
       if (m_seeEnemyTime + 2.5f < game.time () && (m_states & (Sense::SuspectEnemy | Sense::HearingEnemy))) {
          m_moveSpeed = m_fearLevel > m_agressionLevel ? 0.0f : getShiftSpeed ();
          m_navTimeset = game.time ();
@@ -1550,7 +1563,7 @@ void Bot::syncUpdatePredictedIndex () {
    auto currentNodeIndex = m_currentNodeIndex;
    auto botOrigin = pev->origin;
 
-   if (lastEnemyOrigin.empty () || !vistab.isReady ()) {
+   if (lastEnemyOrigin.empty () || !vistab.isReady () || !util.isAlive (m_enemy)) {
       wipePredict ();
       return;
    }
@@ -1583,6 +1596,9 @@ void Bot::syncUpdatePredictedIndex () {
 }
 
 void Bot::updatePredictedIndex () {
+   if (m_lastEnemyOrigin.empty ()) {
+      return; // do not run task if no last enemy
+   }
    worker.enqueue ([this] () {
       syncUpdatePredictedIndex ();
    });
@@ -2651,11 +2667,6 @@ void Bot::update () {
       kick ();
       return;
    }
-   pev->button = 0;
-
-   m_moveSpeed = 0.0f;
-   m_strafeSpeed = 0.0f;
-   m_moveAngles = nullptr;
 
    m_canChooseAimDirection = true;
    m_notKilled = util.isAlive (ent ());
@@ -2713,6 +2724,9 @@ void Bot::update () {
    }
    else if (pev->maxspeed < 10.0f) {
       logicDuringFreezetime ();
+   }
+   else if (!botMovement) {
+      resetMovement ();
    }
    runMovement ();
 
@@ -2825,6 +2839,8 @@ void Bot::logic () {
    // this function gets called each frame and is the core of all bot ai. from here all other subroutines are called
 
    float movedDistance = 2.0f; // length of different vector (distance bot moved)
+
+   resetMovement ();
 
    // increase reaction time
    m_actualReactionTime += 0.3f;
@@ -2977,6 +2993,7 @@ void Bot::logic () {
 
    // save the previous speed (for checking if stuck)
    m_prevSpeed = cr::abs (m_moveSpeed);
+   m_prevVelocity = cr::abs (pev->velocity.length2d ());
    m_lastDamageType = -1; // reset damage
 }
 
@@ -3448,7 +3465,7 @@ Vector Bot::isBombAudible () {
    }
 
    // we hear bomb if length greater than radius
-   if (desiredRadius < pev->origin.distance2d (bombOrigin)) {
+   if (cr::sqrf (desiredRadius) < pev->origin.distanceSq2d (bombOrigin)) {
       return bombOrigin;
    }
    return nullptr;
@@ -3457,7 +3474,7 @@ Vector Bot::isBombAudible () {
 uint8_t Bot::computeMsec () {
    // estimate msec to use for this command based on time passed from the previous command
 
-   return static_cast <uint8_t> ((game.time () - m_lastCommandTime) * 1000.0f);
+   return static_cast <uint8_t> (cr::min (static_cast <int32_t> ((game.time () - m_lastCommandTime) * 1000.0f), 255));
 }
 
 bool Bot::canRunHeavyWeight () {
@@ -3466,20 +3483,6 @@ bool Bot::canRunHeavyWeight () {
    if (m_heavyTimestamp + interval < game.time ()) {
       m_heavyTimestamp = game.time ();
 
-      return true;
-   }
-   return false;
-}
-
-bool Bot::canSkipNextTrace (TraceChannel channel) {
-   // for optmization purposes skip every second traceline fired, this doesn't affect ai
-   // behaviour too much, but saves alot of cpu cycles.
-
-   constexpr auto kSkipTrace = 3;
-
-   // check if we're have to skip
-   if ((++m_traceSkip[channel] % kSkipTrace) == 0) {
-      m_traceSkip[channel] = 0;
       return true;
    }
    return false;
@@ -3761,7 +3764,7 @@ bool Bot::isBombDefusing (const Vector &bombOrigin) {
 }
 
 float Bot::getShiftSpeed () {
-   if (getCurrentTaskId () == Task::SeekCover || isDucking () || (pev->button & IN_DUCK) || (m_oldButtons & IN_DUCK) || (m_currentTravelFlags & PathFlag::Jump) || (m_path != nullptr && m_pathFlags & NodeFlag::Ladder) || isOnLadder () || isInWater () || m_isStuck) {
+   if (getCurrentTaskId () == Task::SeekCover || isDucking () || (pev->button & IN_DUCK) || (m_oldButtons & IN_DUCK) || (m_currentTravelFlags & PathFlag::Jump) || (m_pathFlags & NodeFlag::Ladder) || isOnLadder () || isInWater () || m_isStuck) {
       return pev->maxspeed;
    }
    return pev->maxspeed * 0.4f;

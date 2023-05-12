@@ -35,7 +35,7 @@ private:
    float m_notifyMsgTimestamp {};
 
 public:
-   GraphVistable () = default;
+   explicit GraphVistable () = default;
    ~GraphVistable () = default;
 
 public:

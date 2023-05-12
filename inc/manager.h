@@ -309,7 +309,7 @@ private:
    ThreadPool m_botWorker;
 
 public:
-   BotThreadWorker () = default;
+   explicit BotThreadWorker () = default;
    ~BotThreadWorker () = default;
 
 public:
@@ -322,7 +322,7 @@ public:
          fn (); // no threads, no fun, just run task in current thread
          return;
       }
-      m_botWorker.enqueue (cr::forward <F> (fn));
+      m_botWorker.enqueue (cr::move (fn));
    }
 };
 

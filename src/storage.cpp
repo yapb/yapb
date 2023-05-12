@@ -302,13 +302,13 @@ String BotStorage::buildPath (int32_t file, bool isMemoryLoad) {
    using FilePath = Twin <String, String>;
 
    static HashMap <int32_t, FilePath> paths = {
-      { BotFile::Vistable, FilePath ("train", "vis")},
-      { BotFile::Practice, FilePath ("train", "prc")},
-      { BotFile::Pathmatrix, FilePath ("train", "pmx")},
-      { BotFile::LogFile, FilePath ("logs", "txt")},
-      { BotFile::Graph, FilePath ("graph", "graph")},
-      { BotFile::PodbotPWF, FilePath ("pwf", "pwf")},
-      { BotFile::EbotEWP, FilePath ("ewp", "ewp")},
+      { BotFile::Vistable, FilePath (folders.train, "vis")},
+      { BotFile::Practice, FilePath (folders.train, "prc")},
+      { BotFile::Pathmatrix, FilePath (folders.train, "pmx")},
+      { BotFile::LogFile, FilePath (folders.logs, "txt")},
+      { BotFile::Graph, FilePath (folders.graph, "graph")},
+      { BotFile::PodbotPWF, FilePath (folders.podbot, "pwf")},
+      { BotFile::EbotEWP, FilePath (folders.ebot, "ewp")},
    };
 
    static StringArray path;
@@ -320,11 +320,11 @@ String BotStorage::buildPath (int32_t file, bool isMemoryLoad) {
    }
 
    // allways append addons/product
-   path.emplace ("addons");
-   path.emplace (product.folder);
+   path.emplace (folders.addons);
+   path.emplace (folders.bot);
 
    // the datadir
-   path.emplace ("data");
+   path.emplace (folders.data);
 
    // append real filepath
    path.emplace (paths[file].first);
@@ -338,19 +338,19 @@ String BotStorage::buildPath (int32_t file, bool isMemoryLoad) {
       auto timebuf = strings.chars ();
 
       strftime (timebuf, StringBuffer::StaticBufferSize, "L%d%m%Y", &timeinfo);
-      path.emplace (strings.format ("%s_%s.%s", product.folder, timebuf, paths[file].second));
+      path.emplace (strings.format ("%s_%s.%s", folders.bot, timebuf, paths[file].second));
    }
    else {
       String mapName = game.getMapName ();
       path.emplace (strings.format ("%s.%s", mapName.lowercase (), paths[file].second));
    }
 
-   // finally use correct path separarators for us
+   // finally use correct path separators for us
    return String::join (path, PATH_SEP);
 }
 
 int32_t BotStorage::storageToBotFile (int32_t options) {
-   // converts storage option to stroage filename
+   // converts storage option to storage filename
 
    if (options & StorageOption::Graph) {
       return BotFile::Graph;
@@ -380,7 +380,7 @@ void BotStorage::unlinkFromDisk () {
    unlinkable.emplace (buildPath (BotFile::Pathmatrix)); // corresponding to matrix
 
    for (const auto &item : unlinkable) {
-      if (File::exists (item)) {
+      if (plat.fileExists (item.chars ())) {
          plat.removeFile (item.chars ());
          ctrl.msg ("File %s, has been deleted from the hard disk", item);
       }
@@ -388,7 +388,7 @@ void BotStorage::unlinkFromDisk () {
          logger.error ("Unable to open %s", item);
       }
    }
-   graph.reset (); // re-intialize points
+   graph.reset (); // re-initialize points
 }
 
 #endif // BOT_STORAGE_EXPLICIT_INSTANTIATIONS

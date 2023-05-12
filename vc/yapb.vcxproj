@@ -33,19 +33,15 @@
     <ClInclude Include="..\ext\crlib\crlib\simd.h" />
     <ClInclude Include="..\ext\crlib\crlib\string.h" />
     <ClInclude Include="..\ext\crlib\crlib\thread.h" />
+    <ClInclude Include="..\ext\crlib\crlib\timers.h" />
+    <ClInclude Include="..\ext\crlib\crlib\traits.h" />
     <ClInclude Include="..\ext\crlib\crlib\twin.h" />
     <ClInclude Include="..\ext\crlib\crlib\ulz.h" />
     <ClInclude Include="..\ext\crlib\crlib\uniqueptr.h" />
     <ClInclude Include="..\ext\crlib\crlib\vector.h" />
-    <ClInclude Include="..\ext\hlsdk\const.h" />
-    <ClInclude Include="..\ext\hlsdk\eiface.h" />
-    <ClInclude Include="..\ext\hlsdk\extdll.h" />
-    <ClInclude Include="..\ext\hlsdk\metamod.h" />
-    <ClInclude Include="..\ext\hlsdk\meta_api.h" />
-    <ClInclude Include="..\ext\hlsdk\model.h" />
-    <ClInclude Include="..\ext\hlsdk\physint.h" />
-    <ClInclude Include="..\ext\hlsdk\progdefs.h" />
-    <ClInclude Include="..\ext\hlsdk\util.h" />
+    <ClInclude Include="..\ext\linkage\linkage\goldsrc.h" />
+    <ClInclude Include="..\ext\linkage\linkage\metamod.h" />
+    <ClInclude Include="..\ext\linkage\linkage\physint.h" />
     <ClInclude Include="..\inc\analyze.h" />
     <ClInclude Include="..\inc\config.h" />
     <ClInclude Include="..\inc\control.h" />
@@ -141,6 +137,8 @@
     <LinkIncremental>true</LinkIncremental>
     <EmbedManifest>false</EmbedManifest>
     <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <EnableMicrosoftCodeAnalysis>false</EnableMicrosoftCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>.\release\</OutDir>
@@ -168,7 +166,7 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\vc;..\inc;..\ext;..\ext\crlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\vc;..\inc;..\ext;..\ext\crlib;..\ext\linkage;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;CR_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader />
@@ -241,7 +239,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <EnableFiberSafeOptimizations>false</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>..\vc;..\inc;..\ext;..\ext\crlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\vc;..\inc;..\ext;..\ext\crlib;..\ext\linkage;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>false</ExceptionHandling>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>

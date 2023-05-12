@@ -418,6 +418,9 @@ void DijkstraAlgo::init (const int length) {
 
    m_distance.resize (length);
    m_parent.resize (length);
+
+   m_distance.shrink ();
+   m_parent.shrink ();
 }
 
 bool DijkstraAlgo::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, int *pathDistance) {
@@ -432,15 +435,15 @@ bool DijkstraAlgo::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, i
    m_distance[srcIndex] = 0;
 
    while (!m_queue.empty ()) {
-      auto p = cr::move (m_queue.pop ());
-      auto current = p.second;
+      auto &&route = cr::move (m_queue.pop ());
+      auto current = route.second;
 
       // finished search
       if (current == destIndex) {
          break;
       }
 
-      if (m_distance[current] != p.first) {
+      if (m_distance[current] != route.first) {
          continue;
       }
 

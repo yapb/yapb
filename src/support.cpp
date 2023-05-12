@@ -233,31 +233,31 @@ bool BotSupport::isFakeClient (edict_t *ent) {
    return false;
 }
 
-bool BotSupport::openConfig (const char *fileName, const char *errorIfNotExists, MemFile *outFile, bool languageDependant /*= false*/) {
+bool BotSupport::openConfig (StringRef fileName, StringRef errorIfNotExists, MemFile *outFile, bool languageDependant /*= false*/) {
    if (*outFile) {
       outFile->close ();
    }
 
    // save config dir
-   auto configDir = strings.format ("addons/%s/conf", product.folder);
+   auto configDir = strings.joinPath (folders.addons, folders.bot, folders.config);
 
    if (languageDependant) {
-      if (strcmp (fileName, "lang.cfg") == 0 && strcmp (cv_language.str (), "en") == 0) {
+      if (fileName.startsWith ("lang") && strcmp (cv_language.str (), "en") == 0) {
          return false;
       }
-      auto langConfig = strings.format ("%s/lang/%s_%s", configDir, cv_language.str (), fileName);
+      auto langConfig = strings.joinPath (configDir, folders.lang, strings.format ("%s_%s.%s", cv_language.str (), fileName, kConfigExtension));
 
       // check is file is exists for this language
       if (!outFile->open (langConfig)) {
-         outFile->open (strings.format ("%s/lang/en_%s", configDir, fileName));
+         outFile->open (strings.joinPath (configDir, folders.lang, strings.format ("en_%s.%s", fileName, kConfigExtension)));
       }
    }
    else {
-      outFile->open (strings.format ("%s/%s", configDir, fileName));
+      outFile->open (strings.joinPath (configDir, strings.format ("%s.%s", fileName, kConfigExtension)));
    }
 
    if (!*outFile) {
-      logger.error (errorIfNotExists);
+      logger.error (errorIfNotExists.chars ());
       return false;
    }
    return true;
@@ -473,9 +473,6 @@ void BotSupport::syncCalculatePings () {
 void BotSupport::emitPings (edict_t *to) {
    MessageWriter msg;
 
-   // missing from sdk
-   constexpr int kGamePingSVC = 17;
-
    auto isThirdpartyBot = [] (edict_t *ent) {
       return !bots[ent] && (ent->v.flags & FL_FAKECLIENT);
    };
@@ -490,7 +487,7 @@ void BotSupport::emitPings (edict_t *to) {
          client.ping = getPingBitmask (client.ent, rg.get (5, 10), rg.get (15, 40));
       }
 
-      msg.start (MSG_ONE_UNRELIABLE, kGamePingSVC, nullptr, to)
+      msg.start (MSG_ONE_UNRELIABLE, SVC_PINGS, nullptr, to)
          .writeLong (client.ping)
          .end ();
    }

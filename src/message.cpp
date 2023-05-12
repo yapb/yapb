@@ -379,7 +379,7 @@ void MessageDispatcher::netMsgBarTime () {
       m_bot->m_hasProgressBar = true; // the progress bar on a hud
 
       // notify bots about defusing has started
-      if (game.mapIs (MapFlags::Demolition) && bots.isBombPlanted ()) {
+      if (game.mapIs (MapFlags::Demolition) && bots.isBombPlanted () && m_bot->m_team == Team::CT) {
          bots.notifyBombDefuse ();
       }
    }
@@ -560,7 +560,7 @@ void MessageDispatcher::ensureMessages () {
 
    // re-register our message
    m_wanted.foreach ([&] (const String &key, const int32_t &) {
-      add (key, GET_USER_MSG_ID (PLID, key.chars (), nullptr));
+      add (key, MUTIL_GetUserMsgID (PLID, key.chars (), nullptr));
    });
 }
 

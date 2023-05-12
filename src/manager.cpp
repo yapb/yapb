@@ -93,7 +93,7 @@ BotManager::BotManager () {
 void BotManager::createKillerEntity () {
    // this function creates single trigger_hurt for using in Bot::kill, to reduce lags, when killing all the bots
 
-   m_killerEntity = engfuncs.pfnCreateNamedEntity (MAKE_STRING ("trigger_hurt"));
+   m_killerEntity = engfuncs.pfnCreateNamedEntity ("trigger_hurt");
 
    m_killerEntity->v.dmg = kInfiniteDistance;
    m_killerEntity->v.dmg_take = 1.0f;
@@ -128,12 +128,12 @@ void BotManager::touchKillerEntity (Bot *bot) {
    }
    const auto &prop = conf.getWeaponProp (bot->m_currentWeapon);
 
-   m_killerEntity->v.classname = MAKE_STRING (prop.classname.chars ());
+   m_killerEntity->v.classname = prop.classname.chars ();
    m_killerEntity->v.dmg_inflictor = bot->ent ();
    m_killerEntity->v.dmg = (bot->pev->health + bot->pev->armorvalue) * 4.0f;
 
    KeyValueData kv {};
-   kv.szClassName = const_cast <char *> (prop.classname.chars ());
+   kv.szClassName = prop.classname.chars ();
    kv.szKeyName = "damagetype";
    kv.szValue = strings.format ("%d", cr::bit (4));
    kv.fHandled = HLFalse;
@@ -146,7 +146,7 @@ void BotManager::execGameEntity (edict_t *ent) {
    // this function calls gamedll player() function, in case to create player entity in game
 
    if (game.is (GameFlags::Metamod)) {
-      CALL_GAME_ENTITY (PLID, "player", &ent->v);
+      MUTIL_CallGameEntity (PLID, "player", &ent->v);
       return;
    }
    ents.callPlayerFunction (ent);
@@ -214,7 +214,7 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
          resultName = botName->name;
       }
       else {
-         resultName.assignf ("%s_%d.%d", product.folder, rg.get (100, 10000), rg.get (100, 10000)); // just pick ugly random name
+         resultName.assignf ("%s_%d.%d", product.nameLower, rg.get (100, 10000), rg.get (100, 10000)); // just pick ugly random name
       }
    }
    else {
@@ -793,8 +793,25 @@ void BotManager::listBots () {
 
    ctrl.msg ("%-3.5s\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.4s\t%-3.4s\t%-3.5s\t%-3.8s", "index", "name", "personality", "team", "difficulty", "frags", "alive", "timeleft");
 
+   auto botTeam = [] (int32_t team) -> String {
+      switch (team) {
+      case Team::CT:
+         return "CT";
+
+      case Team::Terrorist:
+         return "TE";
+
+      case Team::Unassigned:
+      default:
+         return "UN";
+
+      case Team::Spectator:
+         return "SP";
+      }
+   };
+
    for (const auto &bot : bots) {
-      ctrl.msg ("[%-3.1d]\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s\t%-3.0f secs", bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful", bot->m_team == Team::CT ? "CT" : "T", bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_notKilled ? "yes" : "no", cv_rotate_bots.bool_ () ? bot->m_stayTime - game.time () : 0.0f);
+      ctrl.msg ("[%-3.1d]\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s\t%-3.0f secs", bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful", botTeam (bot->m_team), bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_notKilled ? "yes" : "no", cv_rotate_bots.bool_ () ? bot->m_stayTime - game.time () : 0.0f);
    }
    ctrl.msg ("%d bots", m_bots.length ());
 }
@@ -1160,6 +1177,12 @@ int BotManager::getPlayerPriority (edict_t *ent) {
    if (bot->m_hasC4 || bot->m_isVIP || bot->m_hasHostage || bot->m_healthValue < ent->v.health) {
       return bot->entindex () + highPrio;
    }
+   auto task = bot->getCurrentTaskId ();
+
+   // higher priority if camping or hiding
+   if (task == Task::Camp || task == Task::Hide) {
+      return bot->entindex () + highPrio;
+   }
    return bot->entindex ();
 }
 
@@ -1189,7 +1212,7 @@ void BotManager::erase (Bot *bot) {
       }
 
       if (!bot->m_kickedByRotation && cv_save_bots_names.bool_ ()) {
-         m_saveBotNames.emplaceLast (bot->pev->netname.chars ());
+         m_saveBotNames.emplaceLast (bot->pev->netname.str ());
       }
       bot->markStale ();
 
@@ -1282,6 +1305,7 @@ void Bot::newRound () {
 
    m_grenadeRequested = false;
    m_moveToC4 = false;
+   m_defuseNotified = false;
    m_duckDefuse = false;
    m_duckDefuseCheckTime = 0.0f;
 
@@ -1310,6 +1334,7 @@ void Bot::newRound () {
    m_askCheckTime = rg.get (30.0f, 90.0f);
    m_minSpeed = 260.0f;
    m_prevSpeed = 0.0f;
+   m_prevVelocity = 0.0f;
    m_prevOrigin = Vector (kInfiniteDistance, kInfiniteDistance, kInfiniteDistance);
    m_prevTime = game.time ();
    m_lookUpdateTime = game.time ();
@@ -1431,6 +1456,7 @@ void Bot::newRound () {
    m_combatStrafeDir = Dodge::None;
    m_fightStyle = Fight::None;
    m_lastFightStyleCheck = 0.0f;
+   m_stuckTimestamp = 0.0f;
 
    m_checkWeaponSwitch = true;
    m_checkKnifeSwitch = true;
@@ -1454,19 +1480,8 @@ void Bot::newRound () {
    m_soundUpdateTime = 0.0f;
    m_heardSoundTime = game.time ();
 
-   // clear its message queue
-   for (auto &msg : m_messageQueue) {
-      msg = BotMsg::None;
-   }
    m_msgQueue.clear ();
-   m_nodeHistory.clear ();
    m_ignoredBreakable.clear ();
-
-   // clear last trace
-   for (auto i = 0; i < TraceChannel::Num; ++i) {
-      m_lastTrace[i] = {};
-      m_traceSkip[i] = 0;
-   }
 
    // and put buying into its message queue
    pushMsgQueue (BotMsg::Buy);
@@ -1673,7 +1688,7 @@ void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *en
          }
       }
    }
-   Client &target = util.getClient (game.indexOfPlayer (ent));
+   auto &target = util.getClient (game.indexOfPlayer (ent));
 
    // check if this player alive, and issue something
    if ((target.flags & ClientFlags::Alive) && target.radio != 0 && strncmp (cmd, "menuselect", 10) == 0) {
@@ -1704,19 +1719,19 @@ void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *en
 void BotManager::notifyBombDefuse () {
    // notify all terrorists that CT is starting bomb defusing
 
-   if (!isBombPlanted ()) {
-      return;
-   }
-   auto bombPos = graph.getBombOrigin ();
+   const auto &bombPos = graph.getBombOrigin ();
 
    for (const auto &bot : bots) {
       auto task = bot->getCurrentTaskId ();
 
-      if (bot->m_notKilled && task != Task::MoveToPosition && task != Task::DefuseBomb && task != Task::EscapeFromBomb) {
-         if (bot->m_team == Team::CT || bot->pev->origin.distanceSq (bombPos) < cr::sqrf (384.0f)) {
+      if (!bot->m_defuseNotified && bot->m_notKilled && task != Task::MoveToPosition && task != Task::DefuseBomb && task != Task::EscapeFromBomb) {
+         if (bot->m_team == Team::Terrorist && bot->pev->origin.distanceSq (bombPos) < cr::sqrf (384.0f)) {
             bot->clearSearchNodes ();
 
+            bot->m_pathType = FindPath::Fast;
             bot->m_position = bombPos;
+            bot->m_defuseNotified = true;
+
             bot->startTask (Task::MoveToPosition, TaskPri::MoveToPosition, kInvalidNodeIndex, 0.0f, true);
          }
       }
