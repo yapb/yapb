@@ -132,7 +132,6 @@ void Bot::updateAimDir () {
       auto doFailPredict = [this] () {
          m_aimFlags &= ~AimFlags::PredictPath;
          m_trackingEdict = nullptr;
-         m_lookAt = m_destOrigin;
       };
 
       if (changePredictedEnemy) {
