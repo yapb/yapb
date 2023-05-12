@@ -43,7 +43,8 @@ CR_DECLARE_SCOPED_ENUM (FindPath,
 CR_DECLARE_SCOPED_ENUM (PathConnection,
    Outgoing = 0,
    Incoming,
-   Bidirectional
+   Bidirectional,
+   Jumping
 )
 
 // node edit states
