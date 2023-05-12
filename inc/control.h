@@ -10,7 +10,7 @@
 // command handler status
 CR_DECLARE_SCOPED_ENUM (BotCommandResult,
    Handled = 0, // command successfully handled 
-   ListenServer, // command is only avaialble on listen server
+   ListenServer, // command is only available on listen server
    BadFormat // wrong params
 )
 
@@ -224,7 +224,7 @@ public:
       return m_ent;
    }
 
-   // global heloer for sending message to correct channel
+   // global helper for sending message to correct channel
    template <typename ...Args> void msg (const char *fmt, Args &&...args);
 
 public:
@@ -242,7 +242,7 @@ public:
    bool handleMenuCommands (edict_t *ent);
 };
 
-// global heloer for sending message to correct channel
+// global helper for sending message to correct channel
 template <typename ...Args> inline void BotControl::msg (const char *fmt, Args &&...args) {
    m_ignoreTranslate = game.isDedicated () && game.isNullEntity (m_ent);
 
@@ -274,7 +274,7 @@ template <typename ...Args> inline void BotControl::msg (const char *fmt, Args &
    }
 }
 
-// graph heloer for sending message to correct channel
+// graph helper for sending message to correct channel
 template <typename ...Args> inline void BotGraph::msg (const char *fmt, Args &&...args) {
    if (m_silenceMessages) {
       return; // no messages while analyzing (too much spam)
@@ -283,5 +283,5 @@ template <typename ...Args> inline void BotGraph::msg (const char *fmt, Args &&.
 }
 
 
-// explose global
+// expose global
 CR_EXPOSE_GLOBAL_SINGLETON (BotControl, ctrl);

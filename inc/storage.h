@@ -72,20 +72,20 @@ public:
    // saves the data and compress with ulz
    template <typename U> bool save (const SmallArray <U> &data, ExtenHeader *exten = nullptr, int32_t passOptions = 0);
 
-   // report fatail error loading stuff
+   // report fatal error loading stuff
    template <typename ...Args> bool error (bool isGraph, bool isDebug, MemFile &file, const char *fmt, Args &&...args);
 
    // builds the filename to requested filename
    String buildPath (int32_t type, bool isMemoryLoad = false);
 
-   // converts storage option to stroage filename
+   // converts storage option to storage filename
    int32_t storageToBotFile (int32_t options);
 
-   // remove all bot related files frorm disk
+   // remove all bot related files from disk
    void unlinkFromDisk ();
 
 public:
-   // loading the graph may attemp to recurse loading, with converting or download, reset retry counter
+   // loading the graph may attempt to recurse loading, with converting or download, reset retry counter
    void resetRetries () {
       m_retries = 0;
    }
@@ -98,6 +98,6 @@ public:
 
 #undef BOT_STORAGE_EXPLICIT_INSTANTIATIONS
 
-// explose global
+// expose global
 CR_EXPOSE_GLOBAL_SINGLETON (BotStorage, bstor);
 

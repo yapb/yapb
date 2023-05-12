@@ -28,7 +28,7 @@ public:
    // gets the node nearest to origin
    virtual int getNearestNode (float *origin) = 0;
 
-   // checks wether node is valid
+   // checks whether node is valid
    virtual bool isNodeValid (int node) = 0;
 
    // gets the node origin

@@ -689,7 +689,7 @@ Vector Bot::getCampDirection (const Vector &dest) {
       }
       float minDistance = kInfiniteDistance;
 
-      int lookAtWaypoint = kInvalidNodeIndex;
+      int lookAtNode = kInvalidNodeIndex;
       const Path &path = graph[tempIndex];
 
       for (auto &link : path.links) {
@@ -700,12 +700,12 @@ Vector Bot::getCampDirection (const Vector &dest) {
 
          if (distance < minDistance) {
             minDistance = distance;
-            lookAtWaypoint = link.index;
+            lookAtNode = link.index;
          }
       }
 
-      if (graph.exists (lookAtWaypoint)) {
-         return graph[lookAtWaypoint].origin;
+      if (graph.exists (lookAtNode)) {
+         return graph[lookAtNode].origin;
       }
    }
    auto dangerIndex = practice.getIndex (m_team, m_currentNodeIndex, m_currentNodeIndex);
@@ -1498,7 +1498,7 @@ void Bot::overrideConditions () {
    if (isKnifeMode () && (util.isPlayer (m_enemy) || (cv_attack_monsters.bool_ () && util.isMonster (m_enemy)))) {
       float length = pev->origin.distance2d (m_enemy->v.origin);
 
-      // do waypoint movement if enemy is not reachable with a knife
+      // do nodes movement if enemy is not reachable with a knife
       if (length > 250.0f && (m_states & Sense::SeeingEnemy)) {
          int nearestToEnemyPoint = graph.getNearest (m_enemy->v.origin);
 
@@ -2490,7 +2490,7 @@ void Bot::checkRadioQueue () {
          float minDistance = kInfiniteDistance;
          int bombPoint = kInvalidNodeIndex;
 
-         // find nearest bomb waypoint to player
+         // find nearest bomb node to player
          for (auto &point : graph.m_goalPoints) {
             distance = graph[point].origin.distanceSq (m_radioEntity->v.origin);
 
@@ -2500,7 +2500,7 @@ void Bot::checkRadioQueue () {
             }
          }
 
-         // mark this waypoint as restricted point
+         // mark this node as restricted point
          if (bombPoint != kInvalidNodeIndex && !graph.isVisited (bombPoint)) {
             // does this bot want to defuse?
             if (getCurrentTaskId () == Task::Normal) {

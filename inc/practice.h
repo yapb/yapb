@@ -126,5 +126,5 @@ public:
    }
 };
 
-// explose global
+// expose global
 CR_EXPOSE_GLOBAL_SINGLETON (BotPractice, practice);

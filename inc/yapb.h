@@ -388,7 +388,7 @@ CR_DECLARE_SCOPED_ENUM_TYPE (AimFlags, uint32_t,
    Enemy = cr::bit (5), // aim at enemy
    Grenade = cr::bit (6), // aim for grenade throw
    Override = cr::bit (7), // overrides all others (blinded)
-   Danger = cr::bit (8) // additional danger falg
+   Danger = cr::bit (8) // additional danger flag
 )
 
 // famas/glock burst mode status + m4a1/usp silencer
@@ -416,7 +416,7 @@ CR_DECLARE_SCOPED_ENUM (FrustumSide,
    Num
 )
 
-// some hardcoded desire defines used to override calculated ones
+// some hard-coded desire defines used to override calculated ones
 struct TaskPri {
    static constexpr auto Normal { 35.0f };
    static constexpr auto Pause { 36.0f };
@@ -562,7 +562,7 @@ struct Client {
    int team2; // real bot team in free for all mode (csdm)
    int flags; // client flags
    int radio; // radio orders
-   int menu; // identifier to openen menu
+   int menu; // identifier to opened menu
    int ping; // when bot latency is enabled, client ping stored here
    int iconFlags[kGameMaxPlayers]; // flag holding chatter icons
    float iconTimestamp[kGameMaxPlayers]; // timers for chatter icons
@@ -676,7 +676,7 @@ private:
    int m_plantedBombNodeIndex {}; // nearest to planted bomb node
    int m_currentNodeIndex {}; // current node index
    int m_travelStartIndex {}; // travel start index to double jump action
-   int m_previousNodes[5] {}; // previous node indices from node find
+   int m_previousNodes[5] {}; // previous node indexes from node find
    int m_pathFlags {}; // current node flags
    int m_needAvoidGrenade {}; // which direction to strafe away
    int m_campDirection {}; // camp Facing direction
@@ -702,7 +702,7 @@ private:
    float m_lastCommandTime {}; // time bot last thinked
    float m_reloadCheckTime {}; // time to check reloading
    float m_zoomCheckTime {}; // time to check zoom again
-   float m_shieldCheckTime {}; // time to check shiled drawing again
+   float m_shieldCheckTime {}; // time to check shield drawing again
    float m_grenadeCheckTime {}; // time to check grenade usage
    float m_sniperStopTime {}; // bot switched to other weapon?
    float m_lastEquipTime {}; // last time we equipped in buyzone
@@ -740,7 +740,7 @@ private:
    float m_joinServerTime {}; // time when bot joined the game
    float m_playServerTime {}; // time bot spent in the game
    float m_changeViewTime {}; // timestamp to change look at while at freezetime
-   float m_breakableTime {}; // breakeble acquired time
+   float m_breakableTime {}; // breakable acquired time
    float m_stuckTimestamp {}; // last time was stuck
 
    bool m_moveToGoal {}; // bot currently moving to goal??
@@ -782,7 +782,7 @@ private:
    edict_t *m_lastBreakable {}; // last acquired breakable
    edict_t *m_targetEntity {}; // the entity that the bot is trying to reach
    edict_t *m_avoidGrenade {}; // pointer to grenade entity to avoid
-   edict_t *m_hindrance {}; // the hidrance
+   edict_t *m_hindrance {}; // the hindrance
 
    Vector m_liftTravelPos {}; // lift travel position
    Vector m_moveAngles {}; // bot move angles
@@ -1070,7 +1070,7 @@ public:
    int m_basePing {}; // base ping for bot
    int m_numEnemiesLeft {}; // number of enemies alive left on map
    int m_numFriendsLeft {}; // number of friend alive left on map
-   int m_retryJoin {}; // retry count for chosing team/class
+   int m_retryJoin {}; // retry count for choosing team/class
    int m_startAction {}; // team/class selection state
    int m_voteKickIndex {}; // index of player to vote against
    int m_lastVoteKick {}; // last index
@@ -1094,7 +1094,7 @@ public:
    bool m_ignoreBuyDelay {}; // when reaching buyzone in the middle of the round don't do pauses
    bool m_inBombZone {}; // bot in the bomb zone or not
    bool m_inBuyZone {}; // bot currently in buy zone
-   bool m_inVIPZone {}; // bot in the vip satefy zone
+   bool m_inVIPZone {}; // bot in the vip safety zone
    bool m_buyingFinished {}; // done with buying
    bool m_buyPending {}; // bot buy is pending
    bool m_hasDefuser {}; // does bot has defuser
@@ -1233,7 +1233,7 @@ public:
       return m_currentNodeIndex;
    }
 
-   // is low on admmo on index?
+   // is low on ammo on index?
    bool isLowOnAmmo (const int index, const float factor) const;
 
    // prints debug message

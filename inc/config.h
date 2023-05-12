@@ -122,7 +122,7 @@ public:
    // fix weapon prices (ie for elite)
    void adjustWeaponPrices ();
 
-   // find weapon info by weaponi d
+   // find weapon info by weapon id
    WeaponInfo &findWeaponById (int id);
 
    // translates bot message into needed language
@@ -139,7 +139,7 @@ private:
       return line.substr (0, 1).findFirstOf ("#/;") != String::InvalidIndex;
    };
 
-   // hash the lang string, only the letters
+   // hash the language string, only the letters
    uint32_t hashLangString (StringRef str);
 
 public:

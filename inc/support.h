@@ -39,16 +39,16 @@ public:
    // check if entity is alive
    bool isAlive (edict_t *ent);
 
-   // checks if entitiy is fakeclient
+   // checks if entity is fakeclient
    bool isFakeClient (edict_t *ent);
 
-   // check if entitiy is a player
+   // check if entity is a player
    bool isPlayer (edict_t *ent);
 
-   // check if entitiy is a monster
+   // check if entity is a monster
    bool isMonster (edict_t *ent);
 
-   // check if entitiy is a item
+   // check if entity is a item
    bool isItem (edict_t *ent);
 
    // check if entity is a vip
@@ -90,13 +90,13 @@ public:
    // send modified pings to all the clients
    void emitPings (edict_t *to);
 
-   // installs the sendto function intreception
+   // installs the sendto function interception
    void installSendTo ();
 
    // check if object inside frustum plane
    bool isObjectInsidePlane (FrustumPlane &plane, const Vector &center, float height, float radius);
 
-   // checks if same model ommiting the models directory
+   // checks if same model omitting the models directory
    bool isModel (const edict_t *ent, StringRef model);
 
    // get the current date and time as string
@@ -143,5 +143,5 @@ public:
    static int32_t CR_STDCALL sendTo (int socket, const void *message, size_t length, int flags, const struct sockaddr *dest, int destLength);
 };
 
-// explose global
+// expose global
 CR_EXPOSE_GLOBAL_SINGLETON (BotSupport, util);

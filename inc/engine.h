@@ -194,7 +194,7 @@ public:
    // sends local registration stack for engine registration
    void registerCvars (bool gameVars = false);
 
-   // checks whether softwared rendering is enabled
+   // checks whether software rendering is enabled
    bool isSoftwareRenderer ();
 
    // load the cs binary in non metamod mode
@@ -386,7 +386,7 @@ public:
 
    // prints center message to specified player
    template <typename ...Args> void clientPrint (edict_t *ent, const char *fmt, Args &&...args) {
-      if (isNullEntity (ent) || ent == getLocalEntity ()) {
+      if (isNullEntity (ent)) {
          print (fmt, cr::forward <Args> (args)...);
          return;
       }
@@ -395,7 +395,7 @@ public:
 
    // prints message to client console
    template <typename ...Args> void centerPrint (edict_t *ent, const char *fmt, Args &&...args) {
-      if (isNullEntity (ent) || ent == getLocalEntity ()) {
+      if (isNullEntity (ent)) {
          print (fmt, cr::forward <Args> (args)...);
          return;
       }
@@ -431,7 +431,7 @@ public:
       else if constexpr (cr::is_same <U, int>::value) {
          return static_cast <int> (ptr->value);
       }
-      assert ("!Inavlid type requeted.");
+      assert ("!Invalid type requested.");
    }
 
    bool bool_ () const {
@@ -525,11 +525,11 @@ public:
    }
 
 public:
-   static inline uint16_t fu16 (float value, float scale) {
+   static constexpr uint16_t fu16 (float value, float scale) {
       return cr::clamp <uint16_t> (static_cast <uint16_t> (value * cr::bit (static_cast <short> (scale))), 0, USHRT_MAX);
    }
 
-   static inline short fs16 (float value, float scale) {
+   static constexpr short fs16 (float value, float scale) {
       return cr::clamp <short> (static_cast <short> (value * cr::bit (static_cast <short> (scale))), -SHRT_MAX, SHRT_MAX);
    }
 };

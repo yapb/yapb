@@ -675,7 +675,7 @@ void BotGraph::add (int type, const Vector &pos) {
       else {
          auto nearest = getEditorNearest ();
 
-         // do not allow to place waypoints "inside" waypoints, make at leat 10 units range
+         // do not allow to place node "inside" node, make at leat 10 units range
          if (exists (nearest) && newOrigin.distanceSq (m_paths[nearest].origin) < cr::sqrf (10.0f)) {
             msg ("Can't add node. It's way to near to %d node. Please move some units anywhere.", nearest);
             return;
@@ -981,7 +981,7 @@ bool BotGraph::isConnected (int a, int b) {
 }
 
 int BotGraph::getFacingIndex () {
-   // find the waypoint the user is pointing at
+   // find the node the user is pointing at
 
    Twin <int32_t, float> result { kInvalidNodeIndex, 5.32f };
    auto nearestNode = getEditorNearest ();
@@ -991,7 +991,7 @@ int BotGraph::getFacingIndex () {
 
    for (const auto &path : m_paths) {
 
-      // skip nearest waypoint to editor, since this used mostly for adding / removing paths
+      // skip nearest node to editor, since this used mostly for adding / removing paths
       if (path.number == nearestNode) {
          continue;
       }
@@ -999,12 +999,12 @@ int BotGraph::getFacingIndex () {
       const auto &to = path.origin - m_editor->v.origin;
       auto angles = (to.angles () - m_editor->v.v_angle).clampAngles ();
 
-      // skip the waypoints that are too far away from us, and we're not looking at them directly
+      // skip the nodes that are too far away from us, and we're not looking at them directly
       if (to.lengthSq () > cr::sqrf (500.0f) || cr::abs (angles.y) > result.second) {
          continue;
       }
 
-      // check if visible, (we're not using visiblity tables here, as they not valid at time of waypoint editing)
+      // check if visible, (we're not using visibility tables here, as they not valid at time of node editing)
       TraceResult tr {};
       game.testLine (editorEyes, path.origin, TraceIgnore::Everything, m_editor, &tr);
 

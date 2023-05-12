@@ -36,5 +36,5 @@ public:
    void simulateNoise (int playerIndex);
 };
 
-// explose global
+// expose global
 CR_EXPOSE_GLOBAL_SINGLETON (BotSounds, sounds);

@@ -7,7 +7,7 @@
 
 #pragma once
 
-// next code is based on cs-ebot implemntation, devised by EfeDursun125
+// next code is based on cs-ebot implementation, devised by EfeDursun125
 class GraphAnalyze : public Singleton <GraphAnalyze> {
 public:
    GraphAnalyze () = default;
@@ -16,21 +16,21 @@ public:
 private:
    float m_updateInterval {}; // time to update analyzer
 
-   bool m_basicsCreated {}; // basics waypoints were created?
+   bool m_basicsCreated {}; // basics nodes were created?
    bool m_isCrouch {}; // is node to be created as crouch ?
    bool m_isAnalyzing {}; // we're in analyzing ?
-   bool m_isAnalyzed {}; // current waypoint is analyzed
+   bool m_isAnalyzed {}; // current node is analyzed
    bool m_expandedNodes[kMaxNodes] {}; // all nodes expanded ?
    bool m_optimizedNodes[kMaxNodes] {}; // all nodes expanded ?
 
 public:
-   // start analyzation process
+   // start analysis process
    void start ();
 
-   // update analyzation process
+   // update analysis process
    void update ();
 
-   // suspend aanalyzing
+   // suspend analysis
    void suspend ();
 
 private:
@@ -40,10 +40,10 @@ private:
    // set update interval (keeps game from freezing)
    void setUpdateInterval ();
 
-   // mark waypoints as goals
+   // mark nodes as goals
    void markGoals ();
 
-   // terminate analyzation and save data
+   // terminate analysis and save data
    void finish ();
 
    // optimize nodes a little
@@ -59,7 +59,7 @@ public:
       return m_isCrouch;
    }
 
-   // is currently anaylyzing ?
+   // is currently analyzing ?
    bool isAnalyzing () const {
       return m_isAnalyzing;
    }
@@ -75,5 +75,5 @@ public:
    }
 };
 
-// explose global
+// expose global
 CR_EXPOSE_GLOBAL_SINGLETON (GraphAnalyze, analyzer);

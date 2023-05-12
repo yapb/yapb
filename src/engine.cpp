@@ -38,8 +38,8 @@ void Game::precache () {
    m_drawModels[DrawLine::Simple] = m_engineWrap.precacheModel ("sprites/laserbeam.spr");
    m_drawModels[DrawLine::Arrow] = m_engineWrap.precacheModel ("sprites/arrow1.spr");
 
-   m_engineWrap.precacheSound ("weapons/xbow_hit1.wav"); // waypoint add
-   m_engineWrap.precacheSound ("weapons/mine_activate.wav"); // waypoint delete
+   m_engineWrap.precacheSound ("weapons/xbow_hit1.wav"); // node add
+   m_engineWrap.precacheSound ("weapons/mine_activate.wav"); // node delete
    m_engineWrap.precacheSound ("common/wpn_hudon.wav"); // path add/delete done
 
    m_mapFlags = 0; // reset map type as worldspawn is the first entity spawned
@@ -474,8 +474,14 @@ uint8_t *Game::getVisibilitySet (Bot *bot, bool pvs) {
 void Game::sendClientMessage (bool console, edict_t *ent, StringRef message) {
    // helper to sending the client message
 
-   // do not send messages to fakeclients
+   // do not send messages to fake clients
    if (!util.isPlayer (ent) || util.isFakeClient (ent)) {
+      return;
+   }
+
+   // if console message and destination is listenserver entity, just print via server message instead of through unreliable channel
+   if (console && ent == game.getLocalEntity ()) {
+      sendServerMessage (message);
       return;
    }
    const String &buffer = message;

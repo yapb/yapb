@@ -88,7 +88,7 @@ CR_DECLARE_SCOPED_ENUM (NotifySound,
 
 #include <vistable.h>
 
-// general waypoint header information structure
+// general waypoint header information structure for podbot
 struct PODGraphHeader {
    char header[8];
    int32_t fileVersion;
@@ -97,7 +97,7 @@ struct PODGraphHeader {
    char author[32];
 };
 
-// defines linked waypoints
+// defines linked nodes
 struct PathLink {
    Vector velocity;
    int32_t distance;
@@ -114,7 +114,7 @@ struct Path {
    PathVis vis;
 };
 
-// define waypoint structure for podbot  (will convert on load)
+// define waypoint structure for podbot (will convert on load)
 struct PODPath {
    int32_t number, flags;
    Vector origin;
@@ -126,7 +126,7 @@ struct PODPath {
    PathVis vis;
 };
 
-// general stprage header information structure
+// general storage header information structure
 struct StorageHeader {
    int32_t magic;
    int32_t version;
@@ -328,7 +328,7 @@ public:
       return m_editor;
    }
 
-   // slicence all graph messages or not
+   // silence all graph messages or not
    void setMessageSilence (bool enable) {
       m_silenceMessages = enable;
    }
@@ -344,7 +344,7 @@ public:
    }
 
 public:
-   // graph heloer for sending message to correct channel
+   // graph helper for sending message to correct channel
    template <typename ...Args> void msg (const char *fmt, Args &&...args);
 
 public:
@@ -368,5 +368,5 @@ public:
 #include <manager.h>
 #include <practice.h>
 
-// explose global
+// expose global
 CR_EXPOSE_GLOBAL_SINGLETON (BotGraph, graph);

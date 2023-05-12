@@ -74,7 +74,7 @@ private:
    int m_bombSayStatus {}; // some bot is issued whine about bomb
    int m_lastRadio[kGameTeamNum] {}; // last radio message for team
 
-   bool m_leaderChoosen[kGameTeamNum] {}; // is team leader choose theese round
+   bool m_leaderChoosen[kGameTeamNum] {}; // is team leader choose thees round
    bool m_economicsGood[kGameTeamNum] {}; // is team able to buy anything
    bool m_bombPlanted {};
    bool m_botsCanPause {};
@@ -326,7 +326,7 @@ public:
    }
 };
 
-// explose global
+// expose global
 CR_EXPOSE_GLOBAL_SINGLETON (BotManager, bots);
 
 // expose async worker

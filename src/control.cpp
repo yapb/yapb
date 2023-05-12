@@ -2335,7 +2335,7 @@ void BotControl::createMenus () {
       "0. Exit",
       &BotControl::menuGraphPage2);
 
-   // select waypoint radius menu
+   // select nodes radius menu
    m_menus.emplace (
       Menu::NodeRadius, keys (9),
       "\\yWaypoint Radius\\w\n\n"
@@ -2351,7 +2351,7 @@ void BotControl::createMenus () {
       "0. Exit",
       &BotControl::menuGraphRadius);
 
-   // waypoint add menu
+   // nodes add menu
    m_menus.emplace (
       Menu::NodeType, keys (9),
       "\\yWaypoint Type\\w\n\n"

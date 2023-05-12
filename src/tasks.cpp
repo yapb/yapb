@@ -18,7 +18,7 @@ void Bot::normal_ () {
 
    int debugGoal = cv_debug_goal.int_ ();
 
-   // user forced a waypoint as a goal?
+   // user forced a node as a goal?
    if (debugGoal != kInvalidNodeIndex && getTask ()->data != debugGoal) {
       clearSearchNodes ();
 
@@ -127,7 +127,7 @@ void Bot::normal_ () {
          }
       }
       else {
-         // some goal waypoints are map dependant so check it out...
+         // some goal nodes are map dependent so check it out...
          if (game.mapIs (MapFlags::HostageRescue)) {
             // CT Bot has some hostages following?
             if (m_team == Team::CT && m_hasHostage) {
@@ -190,7 +190,7 @@ void Bot::normal_ () {
       auto currIndex = getTask ()->data;
       auto destIndex = graph.exists (currIndex) ? currIndex : findBestGoal ();
 
-      // check for existence (this is fail over, for i.e. csdm, this should be not true with normal game play, only when spawned outside of covered area)
+      // check for existence (this is fail over, for i.e. CSDM, this should be not true with normal game play, only when spawned outside of covered area)
       if (!graph.exists (destIndex)) {
          destIndex = graph.getFarest (pev->origin, 1024.0f);
       }
@@ -207,7 +207,8 @@ void Bot::normal_ () {
       }
       ensureCurrentNodeIndex ();
 
-      // do pathfinding if it's not the current waypoint
+      // do pathfinding if it's not the current
+
       if (destIndex != m_currentNodeIndex) {
          findPath (m_currentNodeIndex, destIndex, pathSearchType);
       }
@@ -256,7 +257,7 @@ void Bot::spraypaint_ () {
       m_entity = sprayOrigin;
 
       if (getTask ()->time - 0.5f < game.time ()) {
-         // emit spraycan sound
+         // emit spray can sound
          engfuncs.pfnEmitSound (ent (), CHAN_VOICE, "player/sprayer.wav", 1.0f, ATTN_NORM, 0, 100);
          game.testLine (getEyesPos (), getEyesPos () + forward * 128.0f, TraceIgnore::Monsters, ent (), &tr);
 
@@ -350,9 +351,9 @@ void Bot::seekCover_ () {
       m_prevGoalIndex = kInvalidNodeIndex;
    }
 
-   // reached final waypoint?
+   // reached final node?
    else if (updateNavigation ()) {
-      // yep. activate hide behaviour
+      // yep. activate hide behavior
       completeTask ();
       m_prevGoalIndex = kInvalidNodeIndex;
 
@@ -366,7 +367,7 @@ void Bot::seekCover_ () {
       m_lookAtSafe = dest;
       m_campDirection = 0;
 
-      // chosen waypoint is a camp waypoint?
+      // chosen node is a camp node?
       if (m_pathFlags & NodeFlag::Camp) {
          // use the existing camp node prefs
          if (m_pathFlags & NodeFlag::Crouch) {
@@ -709,7 +710,7 @@ void Bot::moveToPos_ () {
       m_position = nullptr;
    }
 
-   // didn't choose goal waypoint yet?
+   // didn't choose goal node yet?
    else if (!hasActiveGoal ()) {
       int destIndex = kInvalidNodeIndex;
       int goal = getTask ()->data;
@@ -804,7 +805,7 @@ void Bot::defuseBomb_ () {
 
    // exception: bomb has been defused
    if (bombPos.empty ()) {
-      // fix for stupid behaviour of CT's when bot is defused
+      // fix for stupid behavior of CT's when bot is defused
       for (const auto &bot : bots) {
          if (bot->m_team == m_team && bot->m_notKilled) {
             auto defendPoint = graph.getFarest (bot->pev->origin);
@@ -1034,13 +1035,13 @@ void Bot::followUser_ () {
       getTask ()->data = kInvalidNodeIndex;
    }
 
-   // didn't choose goal waypoint yet?
+   // didn't choose goal node yet?
    if (!hasActiveGoal ()) {
       int destIndex = graph.getNearest (m_targetEntity->v.origin);
       auto points = graph.getNarestInRadius (200.0f, m_targetEntity->v.origin);
 
       for (auto &newIndex : points) {
-         // if waypoint not yet used, assign it as dest
+         // if node not yet used, assign it as dest
          if (newIndex != m_currentNodeIndex && !isOccupiedNode (newIndex)) {
             destIndex = newIndex;
          }
@@ -1288,7 +1289,7 @@ void Bot::doublejump_ () {
       getTask ()->data = kInvalidNodeIndex;
    }
 
-   // didn't choose goal waypoint yet?
+   // didn't choose goal node yet?
    if (!hasActiveGoal ()) {
       int destIndex = graph.getNearest (m_doubleJumpOrigin);
 
@@ -1339,7 +1340,7 @@ void Bot::escapeFromBomb_ () {
       startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + 10.0f, true);
    }
 
-   // didn't choose goal waypoint yet?
+   // didn't choose goal node yet?
    else if (!hasActiveGoal ()) {
       int bestIndex = kInvalidNodeIndex;
 
@@ -1591,7 +1592,6 @@ void Bot::pickupItem_ () {
                      return EntitySearchResult::Continue;
                   }
                }
-
                int hostageNodeIndex = graph.getNearest (ent->v.origin);
 
                if (graph.exists (hostageNodeIndex)) {

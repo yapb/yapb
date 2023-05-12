@@ -1973,11 +1973,11 @@ void BotThreadWorker::startup (int workers) {
          requestedThreadCount = 1;
       }
    }
-   requestedThreadCount = cr::clamp (requestedThreadCount, 1, hardwareConcurrency);
+   requestedThreadCount = cr::clamp (requestedThreadCount, 1, hardwareConcurrency - 1);
 
    // notify user
    game.print ("Starting up bot thread worker with %d threads.", requestedThreadCount);
 
    // start up the worker
-   m_botWorker.startup (static_cast <int> (requestedThreadCount));
+   m_botWorker.startup (static_cast <size_t> (requestedThreadCount));
 }
