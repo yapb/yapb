@@ -398,7 +398,7 @@ int BotGraph::getBspSize () {
    return 0;
 }
 
-void BotGraph::addPath (int addIndex, int pathIndex, float distance, int type = 0) {
+void BotGraph::addPath (int addIndex, int pathIndex, float distance) {
    if (!exists (addIndex) || !exists (pathIndex) || pathIndex == addIndex) {
       return;
    }
@@ -417,11 +417,6 @@ void BotGraph::addPath (int addIndex, int pathIndex, float distance, int type = 
       if (link.index == kInvalidNodeIndex) {
          link.index = static_cast <int16_t> (pathIndex);
          link.distance = cr::abs (static_cast <int> (distance));
-
-         if (type == 1) {
-            link.flags |= PathFlag::Jump;
-            path.radius = 0.0f;
-         }
 
          msg ("Path added from %d to %d.", addIndex, pathIndex);
          return;
@@ -444,11 +439,6 @@ void BotGraph::addPath (int addIndex, int pathIndex, float distance, int type = 
 
       path.links[slot].index = static_cast <int16_t> (pathIndex);
       path.links[slot].distance = cr::abs (static_cast <int> (distance));
-
-      if (type == 1) {
-         path.links[slot].flags |= PathFlag::Jump;
-         path.radius = 0.0f;
-      }
    }
 }
 
@@ -1070,12 +1060,19 @@ void BotGraph::pathCreate (char dir) {
       addPath (nodeTo, nodeFrom, distance);
    }
    else if (dir == PathConnection::Jumping) {
+      if (!isConnected (nodeFrom, nodeTo)) {
+         addPath (nodeFrom, nodeTo, distance);
+      }
       for (auto &link : m_paths[nodeFrom].links) {
          if (link.index == nodeTo && !(link.flags & PathFlag::Jump)) {
-            erasePath (); // remove the existing outgoing path to create the jump path
+            link.flags |= PathFlag::Jump;
+            m_paths[nodeFrom].radius = 0.0f;
+            msg ("Path added from %d to %d.", nodeFrom, nodeTo);
+         }
+         else if (link.index == nodeTo && link.flags & PathFlag::Jump) {
+         msg ("Denied path creation from %d to %d (path already exists).", nodeFrom, nodeTo);
          }
       }
-      addPath (nodeFrom, nodeTo, distance, 1);
    }
    else {
       addPath (nodeFrom, nodeTo, distance);

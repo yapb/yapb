@@ -230,7 +230,7 @@ public:
    void populateNodes ();
    void initLightLevels ();
    void initNarrowPlaces ();
-   void addPath (int addIndex, int pathIndex, float distance, int type);
+   void addPath (int addIndex, int pathIndex, float distance);
    void add (int type, const Vector &pos = nullptr);
    void erase (int target);
    void toggleFlags (int toggleFlag);
