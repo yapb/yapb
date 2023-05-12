@@ -2773,13 +2773,7 @@ void Bot::executeTasks () {
    auto func = getTask ()->func;
 
    // run the current task
-   if (func != nullptr) {
-      (this->*func) ();
-   }
-   else {
-      logger.error ("Missing callback function of Task %d.", getCurrentTaskId ());
-      kick (); // drop the player, as it's fatal for bot
-   }
+   (this->*func) ();
 }
 
 void Bot::checkSpawnConditions () {

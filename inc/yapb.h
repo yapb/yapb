@@ -764,6 +764,7 @@ private:
    bool m_needToSendWelcomeChat {}; // bot needs to greet people on server?
    bool m_isCreature {}; // bot is not a player, but something else ? zombie ?
    bool m_defuseNotified {}; // bot is notified about bomb defusion
+   bool m_jumpSequence {}; // next path link will be jump link
 
    Pickup m_pickupType {}; // type of entity which needs to be used/picked up
    PathWalk m_pathWalk {}; // pointer to current node from path

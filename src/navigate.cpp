@@ -875,6 +875,12 @@ bool Bot::updateNavigation () {
             m_jumpFinished = true;
             m_checkTerrain = false;
             m_desiredVelocity = nullptr;
+
+            // cool down a little if next path after current will be jump
+            if (m_jumpSequence) {
+               startTask (Task::Pause, TaskPri::Pause, kInvalidNodeIndex, game.time () + rg.get (0.75, 1.2f) + m_frameInterval, false);
+               m_jumpSequence = false;
+            }
          }
       }
       else if (!cv_jasonmode.bool_ () && usesKnife () && isOnFloor ()) {
@@ -2201,7 +2207,10 @@ bool Bot::advanceMovement () {
       }
 
       if (!m_pathWalk.empty ()) {
+         m_jumpSequence = false;
+
          const int destIndex = m_pathWalk.first ();
+         bool isCurrentJump = false;
 
          // find out about connection flags
          if (destIndex != kInvalidNodeIndex && m_currentNodeIndex != kInvalidNodeIndex) {
@@ -2211,6 +2220,7 @@ bool Bot::advanceMovement () {
                   m_desiredVelocity = link.velocity;
                   m_jumpFinished = false;
 
+                  isCurrentJump = true;
                   break;
                }
             }
@@ -2240,6 +2250,11 @@ bool Bot::advanceMovement () {
                      break;
                   }
                }
+            }
+
+            // mark as jump sequence, if the current and next paths are jumps
+            if (isCurrentJump) {
+               m_jumpSequence = willJump;
             }
 
             // is there a jump node right ahead and do we need to draw out the light weapon ?
