@@ -2225,6 +2225,24 @@ bool Bot::advanceMovement () {
                }
             }
 
+            // if graph is analyzed try our special jumps
+            if (graph.isAnalyzed () || analyzer.isAnalyzed ()) {
+               for (const auto &link : m_path->links) {
+                  if (link.index == destIndex) {
+                     const float diff = cr::abs (m_path->origin.z - graph[destIndex].origin.z);
+
+                     // if height difference is enough, consider this link as jump link
+                     if (graph[destIndex].origin.z > m_path->origin.z && diff > 18.0f) {
+                        m_currentTravelFlags |= PathFlag::Jump;
+                        m_desiredVelocity = nullptr; // make bot compute jump velocity
+                        m_jumpFinished = false; // force-mark this path as jump
+
+                        break;
+                     }
+                  }
+               }
+            }
+
             // check if bot is going to jump
             bool willJump = false;
             float jumpDistance = 0.0f;
