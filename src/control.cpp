@@ -347,7 +347,7 @@ int BotControl::cmdNode () {
       addGraphCmd ("path_create_in", "path_create_in [noarguments]", "Creates incoming path connection from faced to nearest node.", &BotControl::cmdNodePathCreate);
       addGraphCmd ("path_create_out", "path_create_out [noarguments]", "Creates outgoing path connection from nearest to faced node.", &BotControl::cmdNodePathCreate);
       addGraphCmd ("path_create_both", "path_create_both [noarguments]", "Creates both-ways path connection between faced and nearest node.", &BotControl::cmdNodePathCreate);
-      addGraphCmd ("path_create_jump", "path_create_jump [noarguments]", "Creates outgoing jump path connection from nearest to faced node.", &BotControl::cmdNodePathCreate);
+      addGraphCmd ("path_create_jump", "path_create_jump [noarguments]", "Creates jumping path connection from nearest to faced node.", &BotControl::cmdNodePathCreate);
       addGraphCmd ("path_delete", "path_delete [noarguments]", "Deletes path from nearest to faced node.", &BotControl::cmdNodePathDelete);
       addGraphCmd ("path_set_autopath", "path_set_autopath [max_distance]", "Opens menu for setting autopath maximum distance.", &BotControl::cmdNodePathSetAutoDistance);
 
