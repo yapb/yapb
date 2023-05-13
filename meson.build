@@ -90,7 +90,7 @@ endif
 # configure flags gcc and clang
 if cxx == 'clang' or cxx == 'gcc'
    cxxflags += [
-      '-mtune=generic', '-fno-threadsafe-statics'
+      '-mtune=generic', '-fno-threadsafe-statics', '-pthread'
    ]
 
    if cpu == 'aarch64'
