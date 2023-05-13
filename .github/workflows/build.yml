@@ -80,7 +80,9 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{env.name}}
-          path: ${{env.name}}/yapb.dll
+          path: |
+            ${{env.name}}/yapb.dll
+            ${{env.name}}/yapb.pdb
 
   bot-release:
     if: |

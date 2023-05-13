@@ -195,13 +195,13 @@ elif os == 'windows' and (cxx =='msvc' or cxx == 'clang-cl')
    # minor optimizations for release build
    if build_type == 'release'
       cxxflags += [
-         '/GS-', '/Ob2', '/Oy', '/Oi', '/Ot', '/fp:precise', '/GF', '/GS-', '/GF', '/arch:SSE2'
+         '/GS-', '/Ob2', '/Oy', '/Oi', '/Ot', '/fp:precise', '/GF', '/GS-', '/GF', '/arch:SSE2', '/Zi'
       ]
 
       # add wpo if msvc
       if cxx == 'msvc'
          cxxflags += [
-            '/GL'
+            '/GL', '/DEBUG'
          ]
       endif
 
