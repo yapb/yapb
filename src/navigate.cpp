@@ -694,7 +694,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
          if (m_collStateIndex < kMaxCollideMoves) {
             switch (m_collideMoves[m_collStateIndex]) {
             case CollisionState::Jump:
-               if (isOnFloor () || isInWater ()) {
+               if ((isOnFloor () || isInWater ()) && !isOnLadder ()) {
                   pev->button |= IN_JUMP;
                }
                break;
@@ -888,15 +888,7 @@ bool Bot::updateNavigation () {
       }
    }
  
-   if (m_pathFlags & NodeFlag::Ladder) {
-      if (!m_pathWalk.empty ()) {
-         if (m_pathWalk.hasNext ()) {
-            if (graph[m_pathWalk.next ()].flags & NodeFlag::Ladder || isOnLadder ()) {
-               m_path->radius = 17.0f;
-            }
-         }
-      }
-
+   if ((m_pathFlags & NodeFlag::Ladder) || isOnLadder ()) {
       if (graph.exists (m_previousNodes[0]) && (graph[m_previousNodes[0]].flags & NodeFlag::Ladder)) {
          if (cr::abs (m_pathOrigin.z - pev->origin.z) > 5.0f) {
             m_pathOrigin.z += pev->origin.z - m_pathOrigin.z;
