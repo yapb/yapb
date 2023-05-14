@@ -49,7 +49,7 @@ void BotConfig::loadMainConfig (bool isFirstLoad) {
    MemFile file;
 
    // this is does the same as exec of engine, but not overwriting values of cvars specified in cv_ignore_cvars_on_changelevel
-   if (util.openConfig (product.nameLower, "Bot main config file is not found.", &file, false)) {
+   if (openConfig (product.nameLower, "Bot main config file is not found.", &file, false)) {
       while (file.getLine (line)) {
          line.trim ();
 
@@ -117,7 +117,7 @@ void BotConfig::loadNamesConfig () {
    MemFile file;
 
    // naming initialization
-   if (util.openConfig ("names", "Name configuration file not found.", &file, true)) {
+   if (openConfig ("names", "Name configuration file not found.", &file, true)) {
       m_botNames.clear ();
 
       while (file.getLine (line)) {
@@ -172,7 +172,7 @@ void BotConfig::loadWeaponsConfig () {
    MemFile file;
 
    // weapon data initialization
-   if (util.openConfig ("weapon", "Weapon configuration file not found. Loading defaults.", &file)) {
+   if (openConfig ("weapon", "Weapon configuration file not found. Loading defaults.", &file)) {
       while (file.getLine (line)) {
          line.trim ();
 
@@ -224,7 +224,7 @@ void BotConfig::loadChatterConfig () {
    MemFile file;
 
    // chatter initialization
-   if (game.is (GameFlags::HasBotVoice) && cv_radio_mode.int_ () == 2 && util.openConfig ("chatter", "Couldn't open chatter system configuration", &file)) {
+   if (game.is (GameFlags::HasBotVoice) && cv_radio_mode.int_ () == 2 && openConfig ("chatter", "Couldn't open chatter system configuration", &file)) {
       m_chatter.clear ();
 
       struct EventMap {
@@ -364,7 +364,7 @@ void BotConfig::loadChatConfig () {
    MemFile file;
 
    // chat config initialization
-   if (util.openConfig ("chat", "Chat file not found.", &file, true)) {
+   if (openConfig ("chat", "Chat file not found.", &file, true)) {
       StringArray *chat = nullptr;
 
       StringArray keywords {};
@@ -467,7 +467,7 @@ void BotConfig::loadLanguageConfig () {
    MemFile file;
 
    // localizer inititalization
-   if (util.openConfig ("lang", "Specified language not found.", &file, true)) {
+   if (openConfig ("lang", "Specified language not found.", &file, true)) {
       String temp;
       Twin <String, String> lang;
 
@@ -513,7 +513,7 @@ void BotConfig::loadAvatarsConfig () {
    MemFile file;
 
    // avatars inititalization
-   if (util.openConfig ("avatars", "Avatars config file not found. Avatars will not be displayed.", &file)) {
+   if (openConfig ("avatars", "Avatars config file not found. Avatars will not be displayed.", &file)) {
       m_avatars.clear ();
 
       while (file.getLine (line)) {
@@ -577,7 +577,7 @@ void BotConfig::loadDifficultyConfig () {
    };
 
    // avatars inititalization
-   if (util.openConfig ("difficulty", "Difficulty config file not found. Loading defaults.", &file)) {
+   if (openConfig ("difficulty", "Difficulty config file not found. Loading defaults.", &file)) {
 
       while (file.getLine (line)) {
          if (isCommentLine (line) || line.length () < 3) {
@@ -630,7 +630,7 @@ void BotConfig::loadCustomConfig () {
    m_custom["AMXParachuteCvar"] = "sv_parachute";
 
    // custom inititalization
-   if (util.openConfig ("custom", "Custom config file not found. Loading defaults.", &file)) {
+   if (openConfig ("custom", "Custom config file not found. Loading defaults.", &file)) {
       m_custom.clear ();
 
       while (file.getLine (line)) {
@@ -661,7 +661,7 @@ void BotConfig::loadLogosConfig () {
    MemFile file;
 
    // logos inititalization
-   if (util.openConfig ("logos", "Logos config file not found. Loading defaults.", &file)) {
+   if (openConfig ("logos", "Logos config file not found. Loading defaults.", &file)) {
       m_logos.clear ();
 
       while (file.getLine (line)) {
@@ -820,4 +820,34 @@ uint32_t BotConfig::hashLangString (StringRef str) {
       res += ch;
    }
    return res.empty () ? 0 : res.hash ();
+}
+
+bool BotConfig::openConfig (StringRef fileName, StringRef errorIfNotExists, MemFile *outFile, bool languageDependant /*= false*/) {
+   if (*outFile) {
+      outFile->close ();
+   }
+
+   // save config dir
+   auto configDir = strings.joinPath (folders.addons, folders.bot, folders.config);
+
+   if (languageDependant) {
+      if (fileName.startsWith ("lang") && strcmp (cv_language.str (), "en") == 0) {
+         return false;
+      }
+      auto langConfig = strings.joinPath (configDir, folders.lang, strings.format ("%s_%s.%s", cv_language.str (), fileName, kConfigExtension));
+
+      // check is file is exists for this language
+      if (!outFile->open (langConfig)) {
+         outFile->open (strings.joinPath (configDir, folders.lang, strings.format ("en_%s.%s", fileName, kConfigExtension)));
+      }
+   }
+   else {
+      outFile->open (strings.joinPath (configDir, strings.format ("%s.%s", fileName, kConfigExtension)));
+   }
+
+   if (!*outFile) {
+      logger.error (errorIfNotExists.chars ());
+      return false;
+   }
+   return true;
 }

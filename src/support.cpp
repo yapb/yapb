@@ -233,36 +233,6 @@ bool BotSupport::isFakeClient (edict_t *ent) {
    return false;
 }
 
-bool BotSupport::openConfig (StringRef fileName, StringRef errorIfNotExists, MemFile *outFile, bool languageDependant /*= false*/) {
-   if (*outFile) {
-      outFile->close ();
-   }
-
-   // save config dir
-   auto configDir = strings.joinPath (folders.addons, folders.bot, folders.config);
-
-   if (languageDependant) {
-      if (fileName.startsWith ("lang") && strcmp (cv_language.str (), "en") == 0) {
-         return false;
-      }
-      auto langConfig = strings.joinPath (configDir, folders.lang, strings.format ("%s_%s.%s", cv_language.str (), fileName, kConfigExtension));
-
-      // check is file is exists for this language
-      if (!outFile->open (langConfig)) {
-         outFile->open (strings.joinPath (configDir, folders.lang, strings.format ("en_%s.%s", fileName, kConfigExtension)));
-      }
-   }
-   else {
-      outFile->open (strings.joinPath (configDir, strings.format ("%s.%s", fileName, kConfigExtension)));
-   }
-
-   if (!*outFile) {
-      logger.error (errorIfNotExists.chars ());
-      return false;
-   }
-   return true;
-}
-
 void BotSupport::checkWelcome () {
    // the purpose of this function, is  to send quick welcome message, to the listenserver entity.
 

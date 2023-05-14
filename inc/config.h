@@ -131,6 +131,9 @@ public:
    // display current custom values
    void showCustomValues ();
 
+   // opens config helper
+   bool openConfig (StringRef fileName, StringRef errorIfNotExists, MemFile *outFile, bool languageDependant = false);
+
 private:
    bool isCommentLine (StringRef line) const {
       if (line.empty ()) {
