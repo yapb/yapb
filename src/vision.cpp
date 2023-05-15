@@ -199,7 +199,7 @@ void Bot::updateAimDir () {
          auto dangerIndex = practice.getIndex (m_team, m_currentNodeIndex, m_currentNodeIndex);
 
          if (graph.exists (dangerIndex) && vistab.visible (m_currentNodeIndex, dangerIndex) && !(graph[dangerIndex].flags & NodeFlag::Crouch)) {
-            if (pev->origin.distanceSq (graph[dangerIndex].origin) < cr::sqrf (160.0f)) {
+            if (pev->origin.distanceSq (graph[dangerIndex].origin) < cr::sqrf (512.0f)) {
                m_lookAt = m_destOrigin;
             }
             else {
