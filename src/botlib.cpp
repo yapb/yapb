@@ -1,6 +1,6 @@
 //
-// YaPB - Counter-Strike Bot based on PODBot by Markus Klinge.
-// Copyright © 2004-2023 YaPB Project <yapb@jeefo.net>.
+// YaPB, based on PODBot by Markus Klinge ("CountFloyd").
+// Copyright © YaPB Project Developers <yapb@jeefo.net>.
 //
 // SPDX-License-Identifier: MIT
 //
@@ -1554,7 +1554,6 @@ void Bot::syncUpdatePredictedIndex () {
    };
 
    if (!m_predictLock.tryLock ()) {
-      wipePredict ();
       return; // allow only single instance of search per-bot
    }
    ScopedUnlock <Mutex> unlock (m_predictLock);
@@ -1572,6 +1571,7 @@ void Bot::syncUpdatePredictedIndex () {
    int bestIndex = kInvalidNodeIndex;
 
    if (destIndex == kInvalidNodeIndex) {
+      wipePredict ();
       return;
    }
    int pathLength = 0;
@@ -3167,7 +3167,7 @@ void Bot::takeDamage (edict_t *inflictor, int damage, int armor, int bits) {
 
    if (util.isPlayer (inflictor) || (cv_attack_monsters.bool_ () && util.isMonster (inflictor))) {
       if (!util.isMonster (inflictor) && cv_tkpunish.bool_ () && game.getTeam (inflictor) == m_team && !util.isFakeClient (inflictor)) {
-         // alright, die you teamkiller!!!
+         // alright, die you team killer!!!
          m_actualReactionTime = 0.0f;
          m_seeEnemyTime = game.time ();
          m_enemy = inflictor;
@@ -3340,7 +3340,7 @@ void Bot::pushChatMessage (int type, bool isTeamSay) {
 }
 
 void Bot::dropWeaponForUser (edict_t *user, bool discardC4) {
-   // this function, asks bot to discard his current primary weapon (or c4) to the user that requsted it with /drop*
+   // this function, asks bot to discard his current primary weapon (or c4) to the user that requested it with /drop*
    // command, very useful, when i'm don't have money to buy anything... )
 
    if (util.isAlive (user) && m_moneyAmount >= 2000 && hasPrimaryWeapon () && user->v.origin.distance (pev->origin) <= 450.0f) {

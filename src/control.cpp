@@ -1,6 +1,6 @@
 //
-// YaPB - Counter-Strike Bot based on PODBot by Markus Klinge.
-// Copyright © 2004-2023 YaPB Project <yapb@jeefo.net>.
+// YaPB, based on PODBot by Markus Klinge ("CountFloyd").
+// Copyright © YaPB Project Developers <yapb@jeefo.net>.
 //
 // SPDX-License-Identifier: MIT
 //
@@ -31,7 +31,7 @@ int BotControl::cmdAddBot () {
       m_args.set (team, "1");
    }
 
-   // if highskilled bot is requsted set personality to rusher and maxout difficulty
+   // if high-skilled bot is requested set personality to rusher and max-out difficulty
    if (strValue (alias).endsWith ("_hs")) {
       m_args.set (difficulty, "4");
       m_args.set (personality, "1");
@@ -513,7 +513,7 @@ int BotControl::cmdNodeSave () {
          msg ("All nodes has been saved and written to disk.\n*** Please don't forget to share your work by typing \"%s g upload\". Thank you! ***", product.cmdPri);
       }
       else {
-         msg ("Could not save save nodes to disk. Graph check has failed.");
+         msg ("Could not save nodes to disk. Graph check has failed.");
       }
    }
    return BotCommandResult::Handled;
@@ -780,7 +780,7 @@ int BotControl::cmdNodeUpload () {
 
    // do not allow to upload bad graph
    if (!graph.checkNodes (false)) {
-      msg ("Sorry, unable to upload graph file that contains errors. Please type \"wp check\" to verify graph consistency.");
+      msg ("Sorry, unable to upload graph file that contains errors. Please type \"graph check\" to verify graph consistency.");
       return BotCommandResult::Handled;
    }
 
@@ -835,7 +835,7 @@ int BotControl::cmdNodeIterateCamp () {
    // turn graph on
    graph.setEditFlag (GraphEdit::On);
 
-   // get the option descriping operation
+   // get the option describing operation
    auto op = strValue (option);
 
    if (op != "begin" && op != "end" && op != "next") {

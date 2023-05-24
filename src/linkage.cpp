@@ -1,6 +1,6 @@
 //
-// YaPB - Counter-Strike Bot based on PODBot by Markus Klinge.
-// Copyright © 2004-2023 YaPB Project <yapb@jeefo.net>.
+// YaPB, based on PODBot by Markus Klinge ("CountFloyd").
+// Copyright © YaPB Project Developers <yapb@jeefo.net>.
 //
 // SPDX-License-Identifier: MIT
 //
@@ -789,7 +789,7 @@ CR_LINKAGE_C int GetEngineFunctions_Post (enginefuncs_t *table, int *) {
 }
 
 CR_EXPORT int Meta_Query (char *, plugin_info_t **pPlugInfo, mutil_funcs_t *pMetaUtilFuncs) {
-   // this function is the first function ever called by metamod in the plugin DLL. Its purpose
+   // this function is the second function called by metamod in the plugin DLL. Its purpose
    // is for metamod to retrieve basic information about the plugin, such as its meta-interface
    // version, for ensuring compatibility with the current version of the running metamod.
 
