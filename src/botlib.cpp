@@ -1562,7 +1562,7 @@ void Bot::syncUpdatePredictedIndex () {
    auto currentNodeIndex = m_currentNodeIndex;
    auto botOrigin = pev->origin;
 
-   if (lastEnemyOrigin.empty () || !vistab.isReady () || !util.isAlive (m_enemy)) {
+   if (lastEnemyOrigin.empty () || !vistab.isReady () || !util.isAlive (m_lastEnemy)) {
       wipePredict ();
       return;
    }
