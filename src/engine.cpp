@@ -763,7 +763,7 @@ bool Game::loadCSBinary () {
    if (!modname) {
       return false;
    }
-   StringArray libs { "mp", "cs", "cs_i386" };
+   Array <StringRef> libs { "mp", "cs", "cs_i386" };
 
    // lookup for x64 binaries first
    if (plat.x64) {
@@ -786,7 +786,7 @@ bool Game::loadCSBinary () {
 
    // search the libraries inside game dlls directory
    for (const auto &lib : libs) {
-      auto path = strings.joinPath (modname, "dlls", lib + DLL_SUFFIX);
+      auto path = strings.joinPath (modname, "dlls", lib) + DLL_SUFFIX;
 
       // if we can't read file, skip it
       if (!plat.fileExists (path.chars ())) {
