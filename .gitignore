@@ -3,6 +3,7 @@
 *.user
 *.json
 
+vc/x64
 vc/release
 vc/debug
 vc/.vs

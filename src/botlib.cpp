@@ -1576,7 +1576,7 @@ void Bot::syncUpdatePredictedIndex () {
    }
    int pathLength = 0;
 
-   planner.find (destIndex, currentNodeIndex, [&] (int index) {
+   auto result = planner.find (destIndex, currentNodeIndex, [&] (int index) {
       ++pathLength;
 
       if (vistab.visible (currentNodeIndex, index) && botOrigin.distanceSq (graph[index].origin) > cr::sqrf (256.0f)) {
@@ -1586,7 +1586,7 @@ void Bot::syncUpdatePredictedIndex () {
       return true;
    });
 
-   if (bestIndex != kInvalidNodeIndex) {
+   if (result && bestIndex != kInvalidNodeIndex) {
       m_lastPredictIndex = bestIndex;
       m_lastPredictLength = pathLength;
 

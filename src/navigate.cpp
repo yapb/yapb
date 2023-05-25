@@ -1473,7 +1473,7 @@ int Bot::findAimingNode (const Vector &to, int &pathLength) {
       return kInvalidNodeIndex;
    }
 
-   planner.find (destIndex, m_currentNodeIndex, [&] (int index) {
+   auto result = planner.find (destIndex, m_currentNodeIndex, [&] (int index) {
       ++pathLength;
 
       if (vistab.visible (m_currentNodeIndex, index)) {
@@ -1483,7 +1483,7 @@ int Bot::findAimingNode (const Vector &to, int &pathLength) {
       return true;
    });
 
-   if (bestIndex == m_currentNodeIndex) {
+   if (result && bestIndex == m_currentNodeIndex) {
       return kInvalidNodeIndex;
    }
    return bestIndex;

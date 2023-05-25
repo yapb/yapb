@@ -765,6 +765,11 @@ bool Game::loadCSBinary () {
    }
    StringArray libs { "mp", "cs", "cs_i386" };
 
+   // lookup for x64 binaries first
+   if (plat.x64) {
+      libs.insert (0, { "mp_amd64", "cs_amd64" });
+   }
+
    auto libCheck = [&] (StringRef mod, StringRef dll) {
       // try to load gamedll
       if (!m_gameLib) {
