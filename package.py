@@ -132,8 +132,15 @@ class BotRelease(object):
       self.pkg_matrix.append (BotPackage('windows', 'zip', {'windows-x86': 'dll'}))
       self.pkg_matrix.append (BotPackage('windows', 'exe', {'windows-x86': 'dll'}))
       self.pkg_matrix.append (BotPackage('linux', 'tar.xz', {'linux-x86': 'so'}))
-      self.pkg_matrix.append (BotPackage('darwin', 'zip', {'darwin-x86': 'dylib'}))
-      self.pkg_matrix.append (BotPackage('extras', 'zip', {'linux-aarch64': 'so', 'linux-x86-gcc': 'so', 'windows-x86-gcc': 'dll', 'windows-x86-msvc': 'dll'}, extra=True))
+      self.pkg_matrix.append (BotPackage('extras', 'zip', 
+                                         {'linux-aarch64': 'so', 
+                                          'linux-amd64': 'so', 
+                                          'linux-x86-gcc': 'so', 
+                                          'windows-x86-gcc': 'dll', 
+                                          'windows-amd64': 'dll', 
+                                          'windows-x86-msvc': 'dll',
+                                          'darwin-x86': 'dylib',
+                                          }, extra=True))
       
    def create_dirs(self):
       for dir in ['pwf', 'train', 'graph', 'logs']:
