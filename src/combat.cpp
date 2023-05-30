@@ -262,10 +262,11 @@ bool Bot::lookupEnemies () {
 
    // the old enemy is no longer visible or
    if (game.isNullEntity (newEnemy)) {
-      auto set = game.getVisibilitySet (this, true); // setup potential visibility set from engine
+      // setup potential visibility set from engine
+      auto set = game.getVisibilitySet (this, true);
 
-      // ignore shielded enemies, while we have real one
-      edict_t *shieldEnemy = nullptr;
+      // ignore shielded enemies, while we have others
+      Array <edict_t *> shieldedEnemies {};
 
       if (cv_attack_monsters.bool_ ()) {
          // search the world for monsters...
@@ -295,9 +296,10 @@ bool Bot::lookupEnemies () {
 
       // search the world for players...
       for (const auto &client : util.getClients ()) {
-         if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team == m_team || client.ent == ent () || !client.ent) {
+         if (client.team == m_team || client.ent == ent() || !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
             continue;
          }
+
          player = client.ent;
 
          // check the engine PVS
@@ -305,15 +307,17 @@ bool Bot::lookupEnemies () {
             continue;
          }
 
-         // extra skill player can see thru smoke... if beeing attacked
-         if ((player->v.button & (IN_ATTACK | IN_ATTACK2)) && m_viewDistance < m_maxViewDistance && m_difficulty == Difficulty::Expert) {
+         // extra skill player can see through smoke... if beeing attacked
+         if (m_difficulty == Difficulty::Expert && (player->v.button & (IN_ATTACK | IN_ATTACK2)) && m_viewDistance < m_maxViewDistance) {
             nearestDistance = cr::sqrf (m_maxViewDistance);
          }
 
          // see if bot can see the player...
          if (seesEnemy (player)) {
+            // low priority fo shielded enemies
             if (isEnemyBehindShield (player)) {
-               shieldEnemy = player;
+               shieldedEnemies.push (player);
+
                continue;
             }
             float distance = player->v.origin.distanceSq (pev->origin);
@@ -330,9 +334,19 @@ bool Bot::lookupEnemies () {
          }
       }
       m_enemyUpdateTime = game.time () + (usesKnife () ? 1.0f : 0.75f);
-      
-      if (game.isNullEntity (newEnemy) && !game.isNullEntity (shieldEnemy)) {
-         newEnemy = shieldEnemy;
+
+      // If enemy is not selected yet then check visible shielded enemies
+      if (game.isNullEntity (newEnemy) && shieldedEnemies.length () > 0) {
+         nearestDistance = cr::sqrf (m_viewDistance);
+
+         for (const auto &shieldedEnemy : shieldedEnemies) {
+            float distance = shieldedEnemy->v.origin.distanceSq (pev->origin);
+
+            if (distance < nearestDistance) {
+               nearestDistance = distance;
+               newEnemy = shieldedEnemy;
+            }
+         }
       }
    }
 
