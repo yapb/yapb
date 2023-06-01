@@ -414,7 +414,7 @@ void Bot::updatePickups () {
                   allowPickup = false;
                }
             }
-            else if (m_isVIP || !rateGroundWeapon (ent)) {
+            else if (m_isVIP || !isWeaponBetterThanCarried (ent)) {
                allowPickup = false;
             }
             else if (m_healthValue >= 100.0f && cr::strcmp (model, "medkit.mdl") == 0) {
@@ -436,7 +436,7 @@ void Bot::updatePickups () {
 
          // found a shield on ground?
          else if (pickupType == Pickup::Shield) {
-            if ((pev->weapons & cr::bit (Weapon::Elite)) || hasShield () || m_isVIP || (hasPrimaryWeapon () && !rateGroundWeapon (ent))) {
+            if ((pev->weapons & cr::bit (Weapon::Elite)) || hasShield () || m_isVIP || (hasPrimaryWeapon () && !isWeaponBetterThanCarried (ent))) {
                allowPickup = false;
             }
          }
@@ -2385,7 +2385,7 @@ void Bot::checkRadioQueue () {
 
                // take nearest enemy to ordering player
                for (const auto &client : util.getClients ()) {
-                  if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team == m_team) {
+                  if (client.team == m_team || client.ent == ent () || !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
                      continue;
                   }
 
@@ -2540,7 +2540,7 @@ void Bot::checkRadioQueue () {
 
                // take nearest enemy to ordering player
                for (const auto &client : util.getClients ()) {
-                  if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team == m_team) {
+                  if (client.team == m_team || client.ent == ent () || !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
                      continue;
                   }
 
@@ -3568,17 +3568,25 @@ bool Bot::isOutOfBombTimer () {
 }
 
 void Bot::updateHearing () {
-   int hearEnemyIndex = kInvalidNodeIndex;
+   if (game.is (GameFlags::FreeForAll)) {
+      return;
+   }
+
+   edict_t* hearedEnemy = nullptr;
    float minDistance = kInfiniteDistance;
 
    // setup potential visibility set from engine
    auto set = game.getVisibilitySet (this, false);
 
    // loop through all enemy clients to check for hearable stuff
-   for (int i = 0; i < game.maxClients (); ++i) {
-      const auto &client = util.getClient (i);
-
-      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.ent == ent () || client.team == m_team || client.noise.last < game.time ()) {
+   for (const auto& client : util.getClients()) {
+      if (
+         client.team == m_team ||
+         client.ent == ent () ||
+         !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) ||
+         !client.ent ||
+         client.noise.last < game.time()
+      ) {
          continue;
       }
 
@@ -3592,18 +3600,13 @@ void Bot::updateHearing () {
       }
 
       if (distance < minDistance) {
-         hearEnemyIndex = i;
+         hearedEnemy = client.ent;
          minDistance = distance;
       }
    }
-   edict_t *player = nullptr;
-
-   if (hearEnemyIndex >= 0 && util.getClient (hearEnemyIndex).team != m_team && !game.is (GameFlags::FreeForAll)) {
-      player = util.getClient (hearEnemyIndex).ent;
-   }
 
    // did the bot hear someone ?
-   if (player != nullptr && util.isPlayer (player)) {
+   if (hearedEnemy != nullptr && util.isPlayer (hearedEnemy)) {
       // change to best weapon if heard something
       if (m_shootTime < game.time () - 5.0f && isOnFloor () && m_currentWeapon != Weapon::C4 && m_currentWeapon != Weapon::Explosive && m_currentWeapon != Weapon::Smoke && m_currentWeapon != Weapon::Flashbang && !isKnifeMode ()) {
          selectBestWeapon ();
@@ -3618,26 +3621,26 @@ void Bot::updateHearing () {
 
       // didn't bot already have an enemy ? take this one...
       if (m_lastEnemyOrigin.empty () || m_lastEnemy == nullptr) {
-         m_lastEnemy = player;
-         m_lastEnemyOrigin = player->v.origin;
+         m_lastEnemy = hearedEnemy;
+         m_lastEnemyOrigin = hearedEnemy->v.origin;
       }
 
       // bot had an enemy, check if it's the heard one
       else {
-         if (player == m_lastEnemy) {
+         if (hearedEnemy == m_lastEnemy) {
             // bot sees enemy ? then bail out !
             if (m_states & Sense::SeeingEnemy) {
                return;
             }
-            m_lastEnemyOrigin = player->v.origin;
+            m_lastEnemyOrigin = hearedEnemy->v.origin;
          }
          else {
             // if bot had an enemy but the heard one is nearer, take it instead
             float distance = m_lastEnemyOrigin.distanceSq (pev->origin);
 
-            if (distance > player->v.origin.distanceSq (pev->origin) && m_seeEnemyTime + 2.0f < game.time ()) {
-               m_lastEnemy = player;
-               m_lastEnemyOrigin = player->v.origin;
+            if (distance > hearedEnemy->v.origin.distanceSq (pev->origin) && m_seeEnemyTime + 2.0f < game.time ()) {
+               m_lastEnemy = hearedEnemy;
+               m_lastEnemyOrigin = hearedEnemy->v.origin;
             }
             else {
                return;
@@ -3646,9 +3649,9 @@ void Bot::updateHearing () {
       }
 
       // check if heard enemy can be seen
-      if (checkBodyParts (player)) {
-         m_enemy = player;
-         m_lastEnemy = player;
+      if (checkBodyParts (hearedEnemy)) {
+         m_enemy = hearedEnemy;
+         m_lastEnemy = hearedEnemy;
          m_lastEnemyOrigin = m_enemyOrigin;
 
          m_states |= Sense::SeeingEnemy;
@@ -3657,11 +3660,11 @@ void Bot::updateHearing () {
 
       // check if heard enemy can be shoot through some obstacle
       else {
-         if (cv_shoots_thru_walls.bool_ () && m_difficulty >= Difficulty::Normal && m_lastEnemy == player && rg.chance (conf.getDifficultyTweaks (m_difficulty)->hearThruPct) && m_seeEnemyTime + 3.0f > game.time () && isPenetrableObstacle (player->v.origin)) {
-            m_enemy = player;
-            m_lastEnemy = player;
-            m_enemyOrigin = player->v.origin;
-            m_lastEnemyOrigin = player->v.origin;
+         if (cv_shoots_thru_walls.bool_ () && m_difficulty >= Difficulty::Normal && m_lastEnemy == hearedEnemy && rg.chance (conf.getDifficultyTweaks (m_difficulty)->hearThruPct) && m_seeEnemyTime + 3.0f > game.time () && isPenetrableObstacle (hearedEnemy->v.origin)) {
+            m_enemy = hearedEnemy;
+            m_lastEnemy = hearedEnemy;
+            m_enemyOrigin = hearedEnemy->v.origin;
+            m_lastEnemyOrigin = hearedEnemy->v.origin;
 
             m_states |= (Sense::SeeingEnemy | Sense::SuspectEnemy);
             m_seeEnemyTime = game.time ();
@@ -3723,31 +3726,35 @@ bool Bot::isBombDefusing (const Vector &bombOrigin) {
    constexpr auto distanceToBomb = cr::sqrf (165.0f);
 
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive)) {
+      if (!(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
          continue;
       }
 
       auto bot = bots[client.ent];
       auto bombDistance = client.origin.distanceSq (bombOrigin);
 
-      if (bot && !bot->m_notKilled) {
-         if (m_team != bot->m_team || bot->getCurrentTaskId () == Task::EscapeFromBomb) {
-            continue; // skip other mess
+      if (bot) {
+         if (!bot->m_notKilled) {
+            if (m_team != bot->m_team || bot->getCurrentTaskId() == Task::EscapeFromBomb) {
+               continue; // skip other mess
+            }
+
+            // if close enough, mark as progressing
+            if (bombDistance < distanceToBomb && (bot->getCurrentTaskId() == Task::DefuseBomb || bot->m_hasProgressBar)) {
+               defusingInProgress = true;
+               break;
+            }
          }
 
-         // if close enough, mark as progressing
-         if (bombDistance < distanceToBomb && (bot->getCurrentTaskId () == Task::DefuseBomb || bot->m_hasProgressBar)) {
-            defusingInProgress = true;
-            break;
-         }
          continue;
       }
 
-      // take in account peoples too
       if (client.team == m_team) {
+         // check that teammate is diffusing
 
          // if close enough, mark as progressing
          if (bombDistance < distanceToBomb && ((client.ent->v.button | client.ent->v.oldbuttons) & IN_USE)) {
+            // ToDo: is there a more reliable way? IN_USE can be pressed near to bomb but without difusing it
             defusingInProgress = true;
             break;
          }
@@ -3758,7 +3765,7 @@ bool Bot::isBombDefusing (const Vector &bombOrigin) {
 }
 
 float Bot::getShiftSpeed () {
-   if (getCurrentTaskId () == Task::SeekCover || isDucking () || (pev->button & IN_DUCK) || (m_oldButtons & IN_DUCK) || (m_currentTravelFlags & PathFlag::Jump) || (m_pathFlags & NodeFlag::Ladder) || isOnLadder () || isInWater () || m_isStuck) {
+   if (getCurrentTaskId () == Task::SeekCover || isDucking () || ((pev->button | m_oldButtons) & IN_DUCK) || (m_currentTravelFlags & PathFlag::Jump) || (m_pathFlags & NodeFlag::Ladder) || isOnLadder () || isInWater () || m_isStuck) {
       return pev->maxspeed;
    }
    return pev->maxspeed * 0.4f;

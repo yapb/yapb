@@ -219,7 +219,7 @@ void Bot::prepareChatMessage (StringRef message) {
    // get enemy or teammate alive
    auto getPlayerAlive = [&] (bool needsEnemy) -> String {
       for (const auto &client : util.getClients ()) {
-         if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.ent == ent ()) {
+         if (!(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || client.ent == ent () || !client.ent) {
             continue;
          }
 

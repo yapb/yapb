@@ -6,6 +6,7 @@
 //
 
 #include <yapb.h>
+#include <constants.h>
 
 ConVar cv_walking_allowed ("yb_walking_allowed", "1", "Specifies whether bots able to use 'shift' if they thinks that enemy is near.");
 ConVar cv_camping_allowed ("yb_camping_allowed", "1", "Allows or disallows bots to camp. Doesn't affects bomb/hostage defending tasks.");
@@ -1435,17 +1436,18 @@ void Bot::pickupItem_ () {
          int index = 0;
          auto &info = conf.getWeapons ();
 
-         for (index = 0; index < 7; ++index) {
+         for (index = 0; index < PRIMARY_WEAPON_MIN_INDEX; ++index) {
             if (cr::strcmp (info[index].model, m_pickupItem->v.model.chars (9)) == 0) {
                break;
             }
          }
 
-         if (index < 7) {
+         // is grounded weapon a secondary weapon?
+         if (index < PRIMARY_WEAPON_MIN_INDEX) {
             // secondary weapon. i.e., pistol
             int weaponIndex = 0;
 
-            for (index = 0; index < 7; ++index) {
+            for (index = 0; index < PRIMARY_WEAPON_MIN_INDEX; ++index) {
                if (pev->weapons & cr::bit (info[index].id)) {
                   weaponIndex = index;
                }
@@ -1464,11 +1466,11 @@ void Bot::pickupItem_ () {
          else {
             // primary weapon
             int weaponIndex = bestWeaponCarried ();
-            bool niceWeapon = rateGroundWeapon (m_pickupItem);
+            bool niceWeapon = isWeaponBetterThanCarried (m_pickupItem);
 
             auto tab = conf.getRawWeapons ();
 
-            if ((tab->id == Weapon::Shield || weaponIndex > 6 || hasShield ()) && niceWeapon) {
+            if ((tab->id == Weapon::Shield || weaponIndex >= PRIMARY_WEAPON_MIN_INDEX || hasShield ()) && niceWeapon) {
                selectWeaponByIndex (weaponIndex);
                dropCurrentWeapon ();
             }
@@ -1499,7 +1501,7 @@ void Bot::pickupItem_ () {
          // get current best weapon to check if it's a primary in need to be dropped
          int weaponIndex = bestWeaponCarried ();
 
-         if (weaponIndex > 6) {
+         if (weaponIndex >= PRIMARY_WEAPON_MIN_INDEX) {
             selectWeaponByIndex (weaponIndex);
             dropCurrentWeapon ();
          }

@@ -6,6 +6,7 @@
 //
 
 #include <yapb.h>
+#include <constants.h>
 
 ConVar cv_shoots_thru_walls ("yb_shoots_thru_walls", "2", "Specifies whether bots able to fire at enemies behind the wall, if they hearing or suspecting them.", true, 0.0f, 3.0f);
 ConVar cv_ignore_enemies ("yb_ignore_enemies", "0", "Enables or disables searching world for enemies.");
@@ -20,7 +21,7 @@ int Bot::numFriendsNear (const Vector &origin, float radius) {
    int count = 0;
 
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team != m_team || client.ent == ent ()) {
+      if (client.team != m_team || client.ent == ent () || !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
          continue;
       }
 
@@ -35,7 +36,7 @@ int Bot::numEnemiesNear (const Vector &origin, float radius) {
    int count = 0;
 
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team == m_team) {
+      if (client.team == m_team || !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
          continue;
       }
 
@@ -52,7 +53,7 @@ bool Bot::isEnemyHidden (edict_t *enemy) {
    }
    entvars_t &v = enemy->v;
 
-   bool enemyHasGun = (v.weapons & kPrimaryWeaponMask) || (v.weapons & kSecondaryWeaponMask);
+   bool enemyHasGun = (v.weapons & (kPrimaryWeaponMask | kSecondaryWeaponMask));
    bool enemyGunfire = (v.button & IN_ATTACK) || (v.oldbuttons & IN_ATTACK);
 
    if ((v.renderfx == kRenderFxExplode || (v.effects & EF_NODRAW)) && (!enemyGunfire || !enemyHasGun)) {
@@ -295,7 +296,7 @@ bool Bot::lookupEnemies () {
 
       // search the world for players...
       for (const auto &client : util.getClients ()) {
-         if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team == m_team || client.ent == ent () || !client.ent) {
+         if (client.team == m_team || client.ent == ent () || !(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive)) || !client.ent) {
             continue;
          }
          player = client.ent;
@@ -307,6 +308,14 @@ bool Bot::lookupEnemies () {
 
          // see if bot can see the player...
          if (seesEnemy (player)) {
+            // aim VIP first on AS maps...
+            if (game.is (MapFlags::Assassination) && util.isPlayerVIP (player)) {
+               newEnemy = player;
+
+               break;
+            }
+
+            // low priority fo shielded enemies
             if (isEnemyBehindShield (player)) {
                shieldEnemy = player;
                continue;
@@ -316,11 +325,6 @@ bool Bot::lookupEnemies () {
             if (distance < nearestDistance) {
                nearestDistance = distance;
                newEnemy = player;
-
-               // aim VIP first on AS maps...
-               if (game.is (MapFlags::Assassination) && util.isPlayerVIP (newEnemy)) {
-                  break;
-               }
             }
          }
       }
@@ -371,7 +375,7 @@ bool Bot::lookupEnemies () {
 
          // now alarm all teammates who see this bot & don't have an actual enemy of the bots enemy should simulate human players seeing a teammate firing
          for (const auto &other : bots) {
-            if (!other->m_notKilled || other->m_team != m_team || other.get () == this) {
+            if (other->m_team != m_team || !other->m_notKilled || other.get () == this) {
                continue;
             }
 
@@ -602,7 +606,7 @@ bool Bot::isFriendInLineOfFire (float distance) {
 #if 0
    // search the world for players
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team != m_team || client.ent == ent ()) {
+      if (client.team != m_team || client.ent == ent () || !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
          continue;
       }
       auto friendDistance = client.ent->v.origin.distanceSq (pev->origin);
@@ -1465,30 +1469,25 @@ int Bot::bestGrenadeCarried () {
    return -1;
 }
 
-bool Bot::rateGroundWeapon (edict_t *ent) {
+bool Bot::isWeaponBetterThanCarried (edict_t *weaponToCheck) {
    // this function compares weapons on the ground to the one the bot is using
 
-   int groundIndex = 0;
+   int weaponToCheckIndex = 0;
 
    const int *pref = conf.getWeaponPrefs (m_personality);
    auto tab = conf.getRawWeapons ();
 
    for (int i = 0; i < kNumWeapons; ++i) {
-      if (cr::strcmp (tab[*pref].model, ent->v.model.chars (9)) == 0) {
-         groundIndex = i;
+      if (cr::strcmp (tab[*pref].model, weaponToCheck->v.model.chars (9)) == 0) {
+         weaponToCheckIndex = i;
          break;
       }
       pref++;
    }
-   int hasWeapon = 0;
 
-   if (groundIndex < 7) {
-      hasWeapon = bestSecondaryCarried ();
-   }
-   else {
-      hasWeapon = bestPrimaryCarried ();
-   }
-   return groundIndex > hasWeapon;
+   int carriedWeaponIndex = (weaponToCheckIndex < PRIMARY_WEAPON_MIN_INDEX) ? bestSecondaryCarried () : bestPrimaryCarried ();
+
+   return weaponToCheckIndex > carriedWeaponIndex;
 }
 
 bool Bot::hasAnyWeapons () {
@@ -1525,7 +1524,6 @@ void Bot::selectBestWeapon () {
          continue;
       }
 
-      int id = tab[selectIndex].id;
       bool ammoLeft = false;
 
       // is the bot already holding this weapon and there is still ammo in clip?
@@ -1534,7 +1532,7 @@ void Bot::selectBestWeapon () {
       }
 
       // is no ammo required for this weapon OR enough ammo available to fire
-      if (getAmmo (id) >= tab[selectIndex].minPrimaryAmmo) {
+      if (getAmmo (tab[selectIndex].id) >= tab[selectIndex].minPrimaryAmmo) {
          ammoLeft = true;
       }
 
@@ -1547,10 +1545,8 @@ void Bot::selectBestWeapon () {
    chosenWeaponIndex %= kNumWeapons + 1;
    selectIndex = chosenWeaponIndex;
 
-   const int id = tab[selectIndex].id;
-
    // select this weapon if it isn't already selected
-   if (m_currentWeapon != id) {
+   if (m_currentWeapon != tab[selectIndex].id) {
       selectWeaponById (tab[selectIndex].id);
    }
    m_isReloading = false;
@@ -1570,19 +1566,19 @@ int Bot::bestWeaponCarried () {
    auto tab = conf.getRawWeapons ();
 
    int weapons = pev->weapons;
-   int num = 0;
+   int weaponIndex = 0;
    int i = 0;
 
    // loop through all the weapons until terminator is found...
    while (tab->id) {
       // is the bot carrying this weapon?
       if (weapons & cr::bit (tab->id)) {
-         num = i;
+         weaponIndex = i;
       }
       ++i;
       tab++;
    }
-   return num;
+   return weaponIndex;
 }
 
 void Bot::decideFollowUser () {
@@ -1591,7 +1587,7 @@ void Bot::decideFollowUser () {
 
    // search friends near us
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team != m_team || client.ent == ent ()) {
+      if (client.team != m_team || client.ent == ent () || !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
          continue;
       }
 
@@ -1620,7 +1616,7 @@ void Bot::updateTeamCommands () {
 
    // search teammates seen by this bot
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team != m_team || client.ent == ent ()) {
+      if (client.team != m_team || client.ent == ent () || !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
          continue;
       }
       memberExists = true;
@@ -1654,7 +1650,7 @@ bool Bot::isGroupOfEnemies (const Vector &location, int numEnemies, float radius
 
    // search the world for enemy players...
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.ent == ent ()) {
+      if (!(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || client.ent == ent () || !client.ent) {
          continue;
       }
 
