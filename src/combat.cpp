@@ -296,7 +296,13 @@ bool Bot::lookupEnemies () {
 
       // search the world for players...
       for (const auto &client : util.getClients ()) {
-         if (client.team == m_team || client.ent == ent() || !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
+         if (
+            client.team == m_team ||
+            client.ent == ent () ||
+            !(client.flags & ClientFlags::Used) ||
+            !(client.flags & ClientFlags::Alive) ||
+            !client.ent
+         ) {
             continue;
          }
 
