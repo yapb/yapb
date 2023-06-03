@@ -21,7 +21,7 @@ int Bot::numFriendsNear (const Vector &origin, float radius) {
    int count = 0;
 
    for (const auto &client : util.getClients ()) {
-      if (client.team != m_team || client.ent == ent () || !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
+      if (client.team != m_team || client.ent == ent () || !(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || !client.ent) {
          continue;
       }
 
@@ -36,7 +36,7 @@ int Bot::numEnemiesNear (const Vector &origin, float radius) {
    int count = 0;
 
    for (const auto &client : util.getClients ()) {
-      if (client.team == m_team || !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
+      if (client.team == m_team || !(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || !client.ent) {
          continue;
       }
 
@@ -296,7 +296,7 @@ bool Bot::lookupEnemies () {
 
       // search the world for players...
       for (const auto &client : util.getClients ()) {
-         if (client.team == m_team || client.ent == ent () || !(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive)) || !client.ent) {
+         if (client.team == m_team || client.ent == ent () || !(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || !client.ent) {
             continue;
          }
          player = client.ent;
@@ -606,7 +606,7 @@ bool Bot::isFriendInLineOfFire (float distance) {
 #if 0
    // search the world for players
    for (const auto &client : util.getClients ()) {
-      if (client.team != m_team || client.ent == ent () || !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
+      if (client.team != m_team || client.ent == ent () || !(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || !client.ent) {
          continue;
       }
       auto friendDistance = client.ent->v.origin.distanceSq (pev->origin);
@@ -1587,7 +1587,7 @@ void Bot::decideFollowUser () {
 
    // search friends near us
    for (const auto &client : util.getClients ()) {
-      if (client.team != m_team || client.ent == ent () || !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
+      if (client.team != m_team || client.ent == ent () || !(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || !client.ent) {
          continue;
       }
 
@@ -1616,7 +1616,7 @@ void Bot::updateTeamCommands () {
 
    // search teammates seen by this bot
    for (const auto &client : util.getClients ()) {
-      if (client.team != m_team || client.ent == ent () || !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
+      if (client.team != m_team || client.ent == ent () || !(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || !client.ent) {
          continue;
       }
       memberExists = true;
@@ -1650,7 +1650,7 @@ bool Bot::isGroupOfEnemies (const Vector &location, int numEnemies, float radius
 
    // search the world for enemy players...
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || client.ent == ent () || !client.ent) {
+      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.ent == ent () || !client.ent) {
          continue;
       }
 

@@ -46,7 +46,7 @@ void BotSounds::listenNoise (edict_t *ent, StringRef sample, float volume) {
 
       // loop through all players
       for (auto &client : util.getClients ()) {
-         if (!(client.flags & (ClientFlags::Used | ClientFlags::Alive))) {
+         if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive)) {
             continue;
          }
          auto distance = client.origin.distanceSq (origin);

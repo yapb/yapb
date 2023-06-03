@@ -2385,7 +2385,7 @@ void Bot::checkRadioQueue () {
 
                // take nearest enemy to ordering player
                for (const auto &client : util.getClients ()) {
-                  if (client.team == m_team || client.ent == ent () || !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
+                  if (client.team == m_team || client.ent == ent () || !(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || !client.ent) {
                      continue;
                   }
 
@@ -2540,7 +2540,7 @@ void Bot::checkRadioQueue () {
 
                // take nearest enemy to ordering player
                for (const auto &client : util.getClients ()) {
-                  if (client.team == m_team || client.ent == ent () || !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
+                  if (client.team == m_team || client.ent == ent () || !(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || !client.ent) {
                      continue;
                   }
 
@@ -3583,7 +3583,7 @@ void Bot::updateHearing () {
       if (
          client.team == m_team ||
          client.ent == ent () ||
-         !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) ||
+         !(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) ||
          !client.ent ||
          client.noise.last < game.time()
       ) {
@@ -3726,7 +3726,7 @@ bool Bot::isBombDefusing (const Vector &bombOrigin) {
    constexpr auto distanceToBomb = cr::sqrf (165.0f);
 
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
+      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || !client.ent) {
          continue;
       }
 

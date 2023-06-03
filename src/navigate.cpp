@@ -904,7 +904,7 @@ bool Bot::updateNavigation () {
 
       // special detection if someone is using the ladder (to prevent to have bots-towers on ladders)
       for (const auto &client : util.getClients ()) {
-         if (!(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || client.ent == ent () || client.ent == nullptr || (client.ent->v.movetype != MOVETYPE_FLY)) {
+         if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.ent == ent () || client.ent == nullptr || (client.ent->v.movetype != MOVETYPE_FLY)) {
             continue;
          }
          TraceResult tr {};
@@ -1343,7 +1343,7 @@ bool Bot::updateLiftHandling () {
 
             // iterate though clients, and find if lift already used
             for (const auto &client : util.getClients ()) {
-               if (!(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || client.team != m_team || client.ent == ent () || game.isNullEntity (client.ent->v.groundentity)) {
+               if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team != m_team || client.ent == ent () || game.isNullEntity (client.ent->v.groundentity)) {
                   continue;
                }
 
@@ -2958,7 +2958,7 @@ bool Bot::isOccupiedNode (int index, bool needZeroVelocity) {
    }
 
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || client.team != m_team || client.ent == ent ()) {
+      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team != m_team || client.ent == ent ()) {
          continue;
       }
 
