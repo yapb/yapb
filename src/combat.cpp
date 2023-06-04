@@ -305,11 +305,6 @@ bool Bot::lookupEnemies () {
             continue;
          }
 
-         // extra skill player can see thru smoke... if beeing attacked
-         if ((player->v.button & (IN_ATTACK | IN_ATTACK2)) && m_viewDistance < m_maxViewDistance && m_difficulty == Difficulty::Expert) {
-            nearestDistance = cr::sqrf (m_maxViewDistance);
-         }
-
          // see if bot can see the player...
          if (seesEnemy (player)) {
             if (isEnemyBehindShield (player)) {
