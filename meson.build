@@ -171,7 +171,7 @@ if cxx == 'clang' or cxx == 'gcc'
    # link needed libraries
    if os == 'linux'
       ldflags += [
-      '-lm','-ldl', '-lpthread'
+         '-lm', '-ldl', '-lpthread'
       ]
    elif os == 'windows'
       if cxx == 'gcc' or (cross and cxx == 'clang')
