@@ -262,11 +262,10 @@ bool Bot::lookupEnemies () {
 
    // the old enemy is no longer visible or
    if (game.isNullEntity (newEnemy)) {
-      // setup potential visibility set from engine
-      auto set = game.getVisibilitySet (this, true);
+      auto set = game.getVisibilitySet (this, true); // setup potential visibility set from engine
 
-      // ignore shielded enemies, while we have others
-      Array <edict_t *> shieldedEnemies {};
+      // ignore shielded enemies, while we have real one
+      edict_t *shieldEnemy = nullptr;
 
       if (cv_attack_monsters.bool_ ()) {
          // search the world for monsters...
@@ -296,10 +295,9 @@ bool Bot::lookupEnemies () {
 
       // search the world for players...
       for (const auto &client : util.getClients ()) {
-         if (client.team == m_team || client.ent == ent() || !(client.flags & (ClientFlags::Used | ClientFlags::Alive)) || !client.ent) {
+         if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team == m_team || client.ent == ent () || !client.ent) {
             continue;
          }
-
          player = client.ent;
 
          // check the engine PVS
@@ -309,10 +307,8 @@ bool Bot::lookupEnemies () {
 
          // see if bot can see the player...
          if (seesEnemy (player)) {
-            // low priority fo shielded enemies
             if (isEnemyBehindShield (player)) {
-               shieldedEnemies.push (player);
-
+               shieldEnemy = player;
                continue;
             }
             float distance = player->v.origin.distanceSq (pev->origin);
@@ -329,19 +325,9 @@ bool Bot::lookupEnemies () {
          }
       }
       m_enemyUpdateTime = game.time () + (usesKnife () ? 1.0f : 0.75f);
-
-      // If enemy is not selected yet then check visible shielded enemies
-      if (game.isNullEntity (newEnemy) && shieldedEnemies.length () > 0) {
-         nearestDistance = cr::sqrf (m_viewDistance);
-
-         for (const auto &shieldedEnemy : shieldedEnemies) {
-            float distance = shieldedEnemy->v.origin.distanceSq (pev->origin);
-
-            if (distance < nearestDistance) {
-               nearestDistance = distance;
-               newEnemy = shieldedEnemy;
-            }
-         }
+      
+      if (game.isNullEntity (newEnemy) && !game.isNullEntity (shieldEnemy)) {
+         newEnemy = shieldEnemy;
       }
    }
 
