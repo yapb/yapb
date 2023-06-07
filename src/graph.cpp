@@ -1836,7 +1836,7 @@ void BotGraph::frame () {
             m_learnPosition = m_editor->v.origin;
          }
       }
-      else if (((m_editor->v.flags & FL_ONGROUND) || m_editor->v.movetype == MOVETYPE_FLY) && m_timeJumpStarted + 0.1f < game.time () && m_endJumpPoint) {
+      else if (((m_editor->v.flags & FL_ONGROUND) || m_editor->v.movetype == MOVETYPE_FLY) && m_timeJumpStarted + 0.1f < game.time ()) {
          add (NodeAddFlag::JumpEnd);
 
          m_jumpLearnNode = false;
