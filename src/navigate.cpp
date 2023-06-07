@@ -850,7 +850,7 @@ bool Bot::updateNavigation () {
                if (feet.z > feet.z) {
                   feet = pev->origin + pev->maxs;
                }
-               feet = { pev->origin.x, pev->origin.y,  feet.z };
+               feet = { pev->origin.x, pev->origin.y,  pev->origin.z };
 
                // calculate like we do with grenades
                auto velocity = calcThrow (feet, node);

@@ -176,7 +176,7 @@ bool AStarAlgo::cantSkipNode (const int a, const int b) {
    const auto &ag = graph[a];
    const auto &bg = graph[b];
 
-   const bool hasZeroRadius = cr::fzero (ag.radius) || cr::fzero (ag.radius);
+   const bool hasZeroRadius = cr::fzero (ag.radius) || cr::fzero (bg.radius);
 
    if (hasZeroRadius) {
       return true;
