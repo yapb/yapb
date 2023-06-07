@@ -2349,13 +2349,11 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
    auto forward = src + normal * 24.0f;
    const auto &right = Vector (0.0f, pev->angles.y, 0.0f).right ();
 
-   bool traceResult = false;
-
-   auto checkDoor = [&traceResult] (TraceResult *result) {
+   auto checkDoor = [] (TraceResult *result) {
       if (!game.mapIs (MapFlags::HasDoors)) {
          return false;
       }
-      return !traceResult && result->flFraction < 1.0f && strncmp ("func_door", result->pHit->v.classname.chars (), 9) != 0;
+      return result->flFraction < 1.0f && strncmp ("func_door", result->pHit->v.classname.chars (), 9) != 0;
    };
 
    // trace from the bot's eyes straight forward...
@@ -2363,7 +2361,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
 
    // check if the trace hit something...
    if (tr->flFraction < 1.0f) {
-      if (!traceResult && game.mapIs (MapFlags::HasDoors) && strncmp ("func_door", tr->pHit->v.classname.chars (), 9) == 0) {
+      if (game.mapIs (MapFlags::HasDoors) && strncmp ("func_door", tr->pHit->v.classname.chars (), 9) == 0) {
          return false;
       }
       return true; // bot's head will hit something
