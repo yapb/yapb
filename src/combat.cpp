@@ -1880,7 +1880,7 @@ void Bot::checkGrenadesThrow () {
    };
 
    // check if throwing a grenade is a good thing to do...
-   if (preventibleTasks || isInNarrowPlace () || cv_ignore_enemies.bool_ () || m_isUsingGrenade || m_grenadeRequested || m_isReloading || (isKnifeMode () && !bots.isBombPlanted ()) || (m_grenadeRequested || m_grenadeCheckTime >= game.time ())) {
+   if (preventibleTasks || isInNarrowPlace () || cv_ignore_enemies.bool_ () || m_isUsingGrenade || m_grenadeRequested || m_isReloading || (isKnifeMode () && !bots.isBombPlanted ()) || m_grenadeCheckTime >= game.time ()) {
       clearThrowStates (m_states);
       return;
    }

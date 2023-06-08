@@ -316,7 +316,7 @@ void Bot::updatePickups () {
    }
    edict_t *pickupItem = nullptr;
 
-   Pickup pickupType = Pickup::None;
+   int32_t pickupType = Pickup::None;
    Vector pickupPos = nullptr;
 
    m_pickupItem = nullptr;

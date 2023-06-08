@@ -886,9 +886,6 @@ void Bot::defuseBomb_ () {
          m_isReloading = false;
       }
       else {
-         m_moveToGoal = false;
-         m_checkTerrain = false;
-
          m_moveSpeed = 0.0f;
          m_strafeSpeed = 0.0f;
       }

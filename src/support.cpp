@@ -477,6 +477,23 @@ void BotSupport::installSendTo () {
    if (!game.isDedicated ()) {
       return;
    }
+   using SendToHandle = decltype (sendto);
+   SendToHandle *sendToAddress = sendto;
+
+   // linux workaround with sendto
+   if (!plat.win && !plat.arm) {
+      SharedLibrary engineLib {};
+      engineLib.locate (reinterpret_cast <void *> (engfuncs.pfnPrecacheModel));
+
+      if (engineLib) {
+         auto address = engineLib.resolve <SendToHandle *> ("sendto");
+
+         if (address != nullptr) {
+            sendToAddress = address;
+         }
+      }
+   }
+   m_sendToDetour.initialize ("ws2_32.dll", "sendto", sendToAddress);
 
    // enable only on modern games
    if (game.is (GameFlags::Modern) && (plat.nix || plat.win) && !plat.arm && !m_sendToDetour.detoured ()) {
@@ -518,12 +535,12 @@ int32_t BotSupport::sendTo (int socket, const void *message, size_t length, int 
    };
 
    auto packet = reinterpret_cast <const uint8_t *> (message);
+   constexpr int32_t packetLength = 5;
 
    // player replies response
-   if (length > 5 && packet[0] == 0xff && packet[1] == 0xff && packet[2] == 0xff && packet[3] == 0xff) {
-
+   if (length > packetLength && memcmp (packet, "\xff\xff\xff\xff", packetLength - 1) == 0) {
       if (packet[4] == 'D') {
-         QueryBuffer buffer (packet, length, 5);
+         QueryBuffer buffer { packet, length, packetLength };
          auto count = buffer.read <uint8_t> ();
 
          for (uint8_t i = 0; i < count; ++i) {
@@ -537,7 +554,7 @@ int32_t BotSupport::sendTo (int socket, const void *message, size_t length, int 
          return send (buffer.data ());
       }
       else if (packet[4] == 'I') {
-         QueryBuffer buffer (packet, length, 5);
+         QueryBuffer buffer { packet, length, packetLength };
          buffer.skip <uint8_t> (); // protocol
 
          // skip server name, folder, map game
@@ -553,7 +570,7 @@ int32_t BotSupport::sendTo (int socket, const void *message, size_t length, int 
          return send (buffer.data ());
       }
       else if (packet[4] == 'm') {
-         QueryBuffer buffer (packet, length, 5);
+         QueryBuffer buffer { packet, length, packetLength };
 
          buffer.shiftToEnd (); // shift to the end of buffer
          buffer.write <uint8_t> (0); // zero out bot count

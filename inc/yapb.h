@@ -687,6 +687,7 @@ private:
 
    int m_lastPredictIndex { kInvalidNodeIndex }; // last predicted path index
    int m_lastPredictLength {}; // last predicted path length
+   int m_pickupType {}; // type of entity which needs to be used/picked up
 
    float m_headedTime {};
    float m_prevTime {}; // time previously checked movement speed
@@ -766,7 +767,6 @@ private:
    bool m_defuseNotified {}; // bot is notified about bomb defusion
    bool m_jumpSequence {}; // next path link will be jump link
 
-   Pickup m_pickupType {}; // type of entity which needs to be used/picked up
    PathWalk m_pathWalk {}; // pointer to current node from path
    Dodge m_combatStrafeDir {}; // direction to strafe
    Fight m_fightStyle {}; // combat style to use
