@@ -20,7 +20,7 @@ private:
    SmallArray <Twin <String, String>> m_tags {};
 
    HashMap <int32_t, String> m_weaponAlias {};
-   Detour <decltype (sendto)> m_sendToDetour { "ws2_32.dll", "sendto", sendto };
+   Detour <decltype (sendto)> m_sendToDetour { };
 
 public:
    BotSupport ();
