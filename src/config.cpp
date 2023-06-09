@@ -501,7 +501,7 @@ void BotConfig::loadLanguageConfig () {
       }
       file.close ();
    }
-   else if (strcmp (cv_language.str (), "en") != 0) {
+   else if (cr::strcmp (cv_language.str (), "en") != 0) {
       logger.error ("Couldn't load language configuration");
    }
 }
@@ -835,7 +835,7 @@ bool BotConfig::openConfig (StringRef fileName, StringRef errorIfNotExists, MemF
    auto configDir = strings.joinPath (folders.addons, folders.bot, folders.config);
 
    if (languageDependant) {
-      if (fileName.startsWith ("lang") && strcmp (cv_language.str (), "en") == 0) {
+      if (fileName.startsWith ("lang") && cr::strcmp (cv_language.str (), "en") == 0) {
          return false;
       }
       auto langConfig = strings.joinPath (configDir, folders.lang, strings.format ("%s_%s.%s", cv_language.str (), fileName, kConfigExtension));

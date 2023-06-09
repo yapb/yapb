@@ -95,10 +95,10 @@ void Game::levelInitialize (edict_t *entities, int max) {
       }
       auto classname = ent->v.classname.chars ();
 
-      if (strcmp (classname, "worldspawn") == 0) {
+      if (cr::strcmp (classname, "worldspawn") == 0) {
          m_startEntity = ent;
       }
-      else if (strcmp (classname, "player_weaponstrip") == 0) {
+      else if (cr::strcmp (classname, "player_weaponstrip") == 0) {
          if (is (GameFlags::Legacy) && strings.isEmpty (ent->v.target.chars ())) {
             ent->v.target = ent->v.targetname = engfuncs.pfnAllocString ("fake");
          }
@@ -106,30 +106,30 @@ void Game::levelInitialize (edict_t *entities, int max) {
             engfuncs.pfnRemoveEntity (ent);
          }
       }
-      else if (strcmp (classname, "info_player_start") == 0 || strcmp (classname, "info_vip_start") == 0) {
+      else if (cr::strcmp (classname, "info_player_start") == 0 || cr::strcmp (classname, "info_vip_start") == 0) {
          ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
          ent->v.renderamt = 127; // set its transparency amount
          ent->v.effects |= EF_NODRAW;
 
          ++m_spawnCount[Team::CT];
       }
-      else if (strcmp (classname, "info_player_deathmatch") == 0) {
+      else if (cr::strcmp (classname, "info_player_deathmatch") == 0) {
          ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
          ent->v.renderamt = 127; // set its transparency amount
          ent->v.effects |= EF_NODRAW;
 
          ++m_spawnCount[Team::Terrorist];
       }
-      else if (strcmp (classname, "func_vip_safetyzone") == 0 || strcmp (classname, "info_vip_safetyzone") == 0) {
+      else if (cr::strcmp (classname, "func_vip_safetyzone") == 0 || cr::strcmp (classname, "info_vip_safetyzone") == 0) {
          m_mapFlags |= MapFlags::Assassination; // assassination map
       }
-      else if (strcmp (classname, "hostage_entity") == 0 || strcmp (classname, "monster_scientist") == 0) {
+      else if (cr::strcmp (classname, "hostage_entity") == 0 || cr::strcmp (classname, "monster_scientist") == 0) {
          m_mapFlags |= MapFlags::HostageRescue; // rescue map
       }
-      else if (strcmp (classname, "func_bomb_target") == 0 || strcmp (classname, "info_bomb_target") == 0) {
+      else if (cr::strcmp (classname, "func_bomb_target") == 0 || cr::strcmp (classname, "info_bomb_target") == 0) {
          m_mapFlags |= MapFlags::Demolition; // defusion map
       }
-      else if (strcmp (classname, "func_escapezone") == 0) {
+      else if (cr::strcmp (classname, "func_escapezone") == 0) {
          m_mapFlags |= MapFlags::Escape;
 
          // strange thing on some ES maps, where hostage entity present there
@@ -137,10 +137,10 @@ void Game::levelInitialize (edict_t *entities, int max) {
             m_mapFlags &= ~MapFlags::HostageRescue;
          }
       }
-      else if (strncmp (classname, "func_door", 9) == 0) {
+      else if (cr::strncmp (classname, "func_door", 9) == 0) {
          m_mapFlags |= MapFlags::HasDoors;
       }
-      else if (strncmp (classname, "func_button", 11) == 0) {
+      else if (cr::strncmp (classname, "func_button", 11) == 0) {
          m_mapFlags |= MapFlags::HasButtons;
       }
       else if (isShootableBreakable (ent)) {
@@ -149,10 +149,10 @@ void Game::levelInitialize (edict_t *entities, int max) {
    }
 
    // next maps doesn't have map-specific entities, so determine it by name
-   if (strncmp (getMapName (), "fy_", 3) == 0) {
+   if (cr::strncmp (getMapName (), "fy_", 3) == 0) {
       m_mapFlags |= MapFlags::FightYard;
    }
-   else if (strncmp (getMapName (), "ka_", 3) == 0) {
+   else if (cr::strncmp (getMapName (), "ka_", 3) == 0) {
       m_mapFlags |= MapFlags::KnifeArena;
    }
 
@@ -284,7 +284,7 @@ public:
    }
 
    bool isWave (char *format) {
-      if (little && memcmp (format, "WAVE", 4) == 0) {
+      if (little && cr::memcmp (format, "WAVE", 4) == 0) {
          return true;
       }
       return *reinterpret_cast <uint32_t *> (format) == 0x57415645;
@@ -794,7 +794,7 @@ bool Game::loadCSBinary () {
       }
 
       // special case, czero is always detected first, as it's has custom directory
-      if (strcmp (modname, "czero") == 0) {
+      if (cr::strcmp (modname, "czero") == 0) {
          m_gameFlags |= (GameFlags::ConditionZero | GameFlags::HasBotVoice | GameFlags::HasFakePings);
 
          if (is (GameFlags::Metamod)) {
@@ -1059,7 +1059,7 @@ bool Game::isShootableBreakable (edict_t *ent) {
    }
    auto limit = cv_breakable_health_limit.float_ ();
 
-   if ((strcmp (ent->v.classname.chars (), "func_breakable") == 0 && ent->v.health < limit) || (strcmp (ent->v.classname.chars (), "func_pushable") == 0 && (ent->v.spawnflags & SF_PUSH_BREAKABLE) && ent->v.health < limit) || (strcmp (ent->v.classname.chars (), "func_wall") == 0 && ent->v.health < limit)) {
+   if ((cr::strcmp (ent->v.classname.chars (), "func_breakable") == 0 && ent->v.health < limit) || (cr::strcmp (ent->v.classname.chars (), "func_pushable") == 0 && (ent->v.spawnflags & SF_PUSH_BREAKABLE) && ent->v.health < limit) || (cr::strcmp (ent->v.classname.chars (), "func_wall") == 0 && ent->v.health < limit)) {
       if (ent->v.takedamage > 0.0f && ent->v.impulse <= 0 && !(ent->v.flags & FL_WORLDBRUSH) && !(ent->v.spawnflags & SF_BREAK_TRIGGER_ONLY)) {
          return (ent->v.movetype == MOVETYPE_PUSH || ent->v.movetype == MOVETYPE_PUSHSTEP);
       }
@@ -1069,7 +1069,7 @@ bool Game::isShootableBreakable (edict_t *ent) {
 
 void Game::printBotVersion () {
    String gameVersionStr;
-   StringArray gameVersionFlags;
+   StringArray botRuntimeFlags;
 
    if (is (GameFlags::Legacy)) {
       gameVersionStr.assign ("Legacy");
@@ -1091,21 +1091,37 @@ void Game::printBotVersion () {
    }
 
    if (is (GameFlags::HasBotVoice)) {
-      gameVersionFlags.push ("BotVoice");
+      botRuntimeFlags.push ("BotVoice");
    }
 
    if (is (GameFlags::ReGameDLL)) {
-      gameVersionFlags.push ("ReGameDLL");
+      botRuntimeFlags.push ("ReGameDLL");
    }
 
    if (is (GameFlags::HasFakePings)) {
-      gameVersionFlags.push ("FakePing");
+      botRuntimeFlags.push ("FakePing");
    }
 
    if (is (GameFlags::Metamod)) {
-      gameVersionFlags.push ("Metamod");
+      botRuntimeFlags.push ("Metamod");
    }
-   ctrl.msg ("\n%s v%s successfully loaded for game: Counter-Strike %s.\n\tFlags: %s.\n", product.name, product.version, gameVersionStr, gameVersionFlags.empty () ? "None" : String::join (gameVersionFlags, ", "));
+
+   // print if we're using sse 4.x instructions
+   if (cpuflags.sse41 || cpuflags.sse42 || cpuflags.neon) {
+      Array <String> simdLevels {};
+
+      if (cpuflags.sse41) {
+         simdLevels.push ("4.1");
+      }
+      if (cpuflags.sse42) {
+         simdLevels.push ("4.2");
+      }
+      if (cpuflags.neon) {
+         simdLevels.push ("NEON");
+      }
+      botRuntimeFlags.push (strings.format ("SIMD: %s", String::join (simdLevels, " & ")));
+   }
+   ctrl.msg ("\n%s v%s successfully loaded for game: Counter-Strike %s.\n\tFlags: %s.\n", product.name, product.version, gameVersionStr, botRuntimeFlags.empty () ? "None" : String::join (botRuntimeFlags, ", "));
 }
 
 void LightMeasure::initializeLightstyles () {
@@ -1160,7 +1176,7 @@ void LightMeasure::updateLight (int style, char *value) {
    strings.copy (m_lightstyle[style].map, value, copyLimit);
 
    m_lightstyle[style].map[copyLimit] = kNullChar;
-   m_lightstyle[style].length = static_cast <int> (strlen (m_lightstyle[style].map));
+   m_lightstyle[style].length = static_cast <int> (cr::strlen (m_lightstyle[style].map));
 }
 
 template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const M *node, const Vector &start, const Vector &end) {

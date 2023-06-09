@@ -43,7 +43,7 @@ bool Bot::seesItem (const Vector &destination, const char *classname) {
 
    // check if line of sight to object is not blocked (i.e. visible)
    if (tr.flFraction < 1.0f && tr.pHit && !tr.fStartSolid) {
-      return strcmp (tr.pHit->v.classname.chars (), classname) == 0;
+      return cr::strcmp (tr.pHit->v.classname.chars (), classname) == 0;
    }
    return true;
 }

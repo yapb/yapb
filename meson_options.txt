@@ -7,3 +7,6 @@
 
 option('64bit', type : 'boolean', value : false,
        description: 'Enables bot build with as 64-bit binary.')
+	   
+option('native', type : 'boolean', value : false,
+       description: 'Configure compiler for a native machine build.')

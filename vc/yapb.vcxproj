@@ -23,6 +23,7 @@
     <ClInclude Include="..\ext\crlib\crlib\basic.h" />
     <ClInclude Include="..\ext\crlib\crlib\binheap.h" />
     <ClInclude Include="..\ext\crlib\crlib\color.h" />
+    <ClInclude Include="..\ext\crlib\crlib\cpuflags.h" />
     <ClInclude Include="..\ext\crlib\crlib\crlib.h" />
     <ClInclude Include="..\ext\crlib\crlib\deque.h" />
     <ClInclude Include="..\ext\crlib\crlib\detour.h" />
@@ -32,7 +33,7 @@
     <ClInclude Include="..\ext\crlib\crlib\lambda.h" />
     <ClInclude Include="..\ext\crlib\crlib\library.h" />
     <ClInclude Include="..\ext\crlib\crlib\logger.h" />
-    <ClInclude Include="..\ext\crlib\crlib\math.h" />
+    <ClInclude Include="..\ext\crlib\crlib\mathlib.h" />
     <ClInclude Include="..\ext\crlib\crlib\memory.h" />
     <ClInclude Include="..\ext\crlib\crlib\movable.h" />
     <ClInclude Include="..\ext\crlib\crlib\override.h" />
