@@ -496,7 +496,7 @@ void Bot::blind_ () {
 
    if (m_difficulty >= Difficulty::Normal && graph.exists (m_blindNodeIndex)) {
       if (updateNavigation ()) {
-         if (m_blindTime >= game.time ()) {
+         if (m_blindTime < game.time ()) {
             completeTask ();
          }
          m_prevGoalIndex = kInvalidNodeIndex;
@@ -522,9 +522,7 @@ void Bot::blind_ () {
       m_strafeSpeed = m_blindSidemoveSpeed;
       pev->button |= m_blindButton;
 
-      if (m_states & Sense::SuspectEnemy) {
-         m_states |= Sense::SuspectEnemy;
-      }
+      m_states |= Sense::SuspectEnemy;
    }
 
    if (m_blindTime < game.time ()) {
