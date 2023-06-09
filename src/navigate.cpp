@@ -990,7 +990,7 @@ bool Bot::updateNavigation () {
    if (game.mapIs (MapFlags::HasDoors)) {
       game.testLine (pev->origin, m_pathOrigin, TraceIgnore::Monsters, ent (), &tr);
 
-      if (!game.isNullEntity (tr.pHit) && game.isNullEntity (m_liftEntity) && strncmp (tr.pHit->v.classname.chars (), "func_door", 9) == 0) {
+      if (!game.isNullEntity (tr.pHit) && game.isNullEntity (m_liftEntity) && cr::strncmp (tr.pHit->v.classname.chars (), "func_door", 9) == 0) {
          // if the door is near enough...
          if (pev->origin.distanceSq (game.getEntityOrigin (tr.pHit)) < 2500.0f) {
             ignoreCollision (); // don't consider being stuck
@@ -1169,7 +1169,7 @@ bool Bot::updateLiftHandling () {
    // trace line to door
    game.testLine (pev->origin, m_pathOrigin, TraceIgnore::Everything, ent (), &tr);
 
-   if (tr.flFraction < 1.0f && tr.pHit && strcmp (tr.pHit->v.classname.chars (), "func_door") == 0 && (m_liftState == LiftState::None || m_liftState == LiftState::WaitingFor || m_liftState == LiftState::LookingButtonOutside) && pev->groundentity != tr.pHit) {
+   if (tr.flFraction < 1.0f && tr.pHit && cr::strcmp (tr.pHit->v.classname.chars (), "func_door") == 0 && (m_liftState == LiftState::None || m_liftState == LiftState::WaitingFor || m_liftState == LiftState::LookingButtonOutside) && pev->groundentity != tr.pHit) {
       if (m_liftState == LiftState::None) {
          m_liftState = LiftState::LookingButtonOutside;
          m_liftUsageTime = game.time () + 7.0f;
@@ -1181,7 +1181,7 @@ bool Bot::updateLiftHandling () {
    game.testLine (m_path->origin, m_pathOrigin + Vector (0.0f, 0.0f, -50.0f), TraceIgnore::Everything, ent (), &tr);
 
    // if trace result shows us that it is a lift
-   if (!game.isNullEntity (tr.pHit) && !m_pathWalk.empty () && (strcmp (tr.pHit->v.classname.chars (), "func_door") == 0 || strcmp (tr.pHit->v.classname.chars (), "func_plat") == 0 || strcmp (tr.pHit->v.classname.chars (), "func_train") == 0) && !liftClosedDoorExists) {
+   if (!game.isNullEntity (tr.pHit) && !m_pathWalk.empty () && (cr::strcmp (tr.pHit->v.classname.chars (), "func_door") == 0 || cr::strcmp (tr.pHit->v.classname.chars (), "func_plat") == 0 || cr::strcmp (tr.pHit->v.classname.chars (), "func_train") == 0) && !liftClosedDoorExists) {
       if ((m_liftState == LiftState::None || m_liftState == LiftState::WaitingFor || m_liftState == LiftState::LookingButtonOutside) && cr::fzero (tr.pHit->v.velocity.z)) {
          if (cr::abs (pev->origin.z - tr.vecEndPos.z) < 70.0f) {
             m_liftEntity = tr.pHit;
@@ -1203,7 +1203,7 @@ bool Bot::updateLiftHandling () {
          if (graph.exists (nextNode) && (graph[nextNode].flags & NodeFlag::Lift)) {
             game.testLine (m_path->origin, graph[nextNode].origin, TraceIgnore::Everything, ent (), &tr);
 
-            if (!game.isNullEntity (tr.pHit) && (strcmp (tr.pHit->v.classname.chars (), "func_door") == 0 || strcmp (tr.pHit->v.classname.chars (), "func_plat") == 0 || strcmp (tr.pHit->v.classname.chars (), "func_train") == 0)) {
+            if (!game.isNullEntity (tr.pHit) && (cr::strcmp (tr.pHit->v.classname.chars (), "func_door") == 0 || cr::strcmp (tr.pHit->v.classname.chars (), "func_plat") == 0 || cr::strcmp (tr.pHit->v.classname.chars (), "func_train") == 0)) {
                m_liftEntity = tr.pHit;
             }
          }
@@ -2353,7 +2353,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       if (!game.mapIs (MapFlags::HasDoors)) {
          return false;
       }
-      return result->flFraction < 1.0f && strncmp ("func_door", result->pHit->v.classname.chars (), 9) != 0;
+      return result->flFraction < 1.0f && cr::strncmp ("func_door", result->pHit->v.classname.chars (), 9) != 0;
    };
 
    // trace from the bot's eyes straight forward...
@@ -2361,7 +2361,7 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
 
    // check if the trace hit something...
    if (tr->flFraction < 1.0f) {
-      if (game.mapIs (MapFlags::HasDoors) && strncmp ("func_door", tr->pHit->v.classname.chars (), 9) == 0) {
+      if (game.mapIs (MapFlags::HasDoors) && cr::strncmp ("func_door", tr->pHit->v.classname.chars (), 9) == 0) {
          return false;
       }
       return true; // bot's head will hit something
@@ -2712,7 +2712,7 @@ bool Bot::isBlockedLeft () {
    game.testLine (pev->origin, forward * direction - right * 48.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
-   if (game.mapIs (MapFlags::HasDoors) && tr.flFraction < 1.0f && tr.pHit && strncmp ("func_door", tr.pHit->v.classname.chars (), 9) != 0) {
+   if (game.mapIs (MapFlags::HasDoors) && tr.flFraction < 1.0f && tr.pHit && cr::strncmp ("func_door", tr.pHit->v.classname.chars (), 9) != 0) {
       return true; // bot's body will hit something
    }
    return false;
@@ -2732,7 +2732,7 @@ bool Bot::isBlockedRight () {
    game.testLine (pev->origin, pev->origin + forward * direction + right * 48.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
-   if (game.mapIs (MapFlags::HasDoors) && tr.flFraction < 1.0f && tr.pHit && strncmp ("func_door", tr.pHit->v.classname.chars (), 9) != 0) {
+   if (game.mapIs (MapFlags::HasDoors) && tr.flFraction < 1.0f && tr.pHit && cr::strncmp ("func_door", tr.pHit->v.classname.chars (), 9) != 0) {
       return true; // bot's body will hit something
    }
    return false;

@@ -38,6 +38,9 @@ cpu = host_machine.cpu_family()
 cxx = compiler.get_id()
 build_type = get_option ('buildtype')
 
+opt_64bit = get_option('64bit')
+opt_native = get_option('native')
+
 # cpp and ldflags from scratch
 cxxflags = []
 ldflags = []
@@ -87,11 +90,20 @@ if git.found()
    configure_file (input: 'inc/version.h.in', output: 'version.build.h', configuration: version_data)
 endif
 
+# define crlib native build
+if opt_native
+   cxxflags += ['-DCR_NATIVE_BUILD']
+endif
+
 # configure flags gcc and clang
 if cxx == 'clang' or cxx == 'gcc'
    cxxflags += [
-      '-mtune=generic', '-fno-threadsafe-statics', '-pthread'
+      '-fno-threadsafe-statics', '-pthread'
    ]
+
+   if not opt_native
+      cxxflags += '-mtune=generic'
+   endif
 
    if cpu == 'aarch64'
       cxxflags += [
@@ -99,8 +111,14 @@ if cxx == 'clang' or cxx == 'gcc'
       ]
    else
       cxxflags += [
-         '-march=x86-64', '-mmmx', '-msse', '-msse2', '-msse3', '-mssse3', '-mfpmath=sse'
+         '-mmmx', '-msse', '-msse2', '-msse3', '-mssse3', '-mfpmath=sse'
       ]
+
+      if opt_native
+         cxxflags += '-march=native'
+      else
+         cxxflags += '-march=x86-64'
+      endif
    endif
 
    # setup optimization flags
@@ -155,7 +173,7 @@ if cxx == 'clang' or cxx == 'gcc'
    endif
 
    # by default we buid 32bit binaries
-   if cpu != 'aarch64' and not get_option('64bit')
+   if cpu != 'aarch64' and not opt_64bit
       cxxflags += '-m32'
       ldflags += '-m32'
 
@@ -183,7 +201,7 @@ if cxx == 'clang' or cxx == 'gcc'
       ]
    endif
 elif os == 'windows' and (cxx =='msvc' or cxx == 'clang-cl')
-   if not get_option('64bit') and cxx == 'clang'
+   if not opt_64bit and cxx == 'clang'
       cxxflags += '/MACHINE:X86'
       ldflags += '/MACHINE:X86'
    endif

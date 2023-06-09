@@ -1667,7 +1667,7 @@ void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *en
       bool alive = util.isAlive (ent);
       int team = -1;
 
-      if (strcmp (cmd, "say_team") == 0) {
+      if (cr::strcmp (cmd, "say_team") == 0) {
          team = game.getTeam (ent);
       }
 
@@ -1691,7 +1691,7 @@ void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *en
    auto &target = util.getClient (game.indexOfPlayer (ent));
 
    // check if this player alive, and issue something
-   if ((target.flags & ClientFlags::Alive) && target.radio != 0 && strncmp (cmd, "menuselect", 10) == 0) {
+   if ((target.flags & ClientFlags::Alive) && target.radio != 0 && cr::strncmp (cmd, "menuselect", 10) == 0) {
       int radioCommand = atoi (arg);
 
       if (radioCommand != 0) {
@@ -1711,7 +1711,7 @@ void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *en
       }
       target.radio = 0;
    }
-   else if (strncmp (cmd, "radio", 5) == 0) {
+   else if (cr::strncmp (cmd, "radio", 5) == 0) {
       target.radio = atoi (&cmd[5]);
    }
 }
@@ -1771,22 +1771,22 @@ void BotManager::updateInterestingEntities () {
       auto classname = e->v.classname.chars ();
 
       // search for grenades, weaponboxes, weapons, items and armoury entities
-      if (strncmp ("weaponbox", classname, 9) == 0 || strncmp ("grenade", classname, 7) == 0 || util.isItem (e) || strncmp ("armoury", classname, 7) == 0) {
+      if (cr::strncmp ("weaponbox", classname, 9) == 0 || cr::strncmp ("grenade", classname, 7) == 0 || util.isItem (e) || cr::strncmp ("armoury", classname, 7) == 0) {
          m_interestingEntities.push (e);
       }
 
       // pickup some csdm stuff if we're running csdm
-      if (game.mapIs (MapFlags::HostageRescue) && strncmp ("hostage", classname, 7) == 0) {
+      if (game.mapIs (MapFlags::HostageRescue) && cr::strncmp ("hostage", classname, 7) == 0) {
          m_interestingEntities.push (e);
       }
 
       // add buttons
-      if (game.mapIs (MapFlags::HasButtons) && strncmp ("func_button", classname, 11) == 0) {
+      if (game.mapIs (MapFlags::HasButtons) && cr::strncmp ("func_button", classname, 11) == 0) {
          m_interestingEntities.push (e);
       }
 
       // pickup some csdm stuff if we're running csdm
-      if (game.is (GameFlags::CSDM) && strncmp ("csdm", classname, 4) == 0) {
+      if (game.is (GameFlags::CSDM) && cr::strncmp ("csdm", classname, 4) == 0) {
          m_interestingEntities.push (e);
       }
 

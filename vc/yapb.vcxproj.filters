@@ -93,7 +93,7 @@
     <ClInclude Include="..\ext\crlib\crlib\logger.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\ext\crlib\crlib\math.h">
+    <ClInclude Include="..\ext\crlib\crlib\mathlib.h">
       <Filter>inc\ext\crlib</Filter>
     </ClInclude>
     <ClInclude Include="..\ext\crlib\crlib\memory.h">
@@ -164,6 +164,9 @@
     </ClInclude>
     <ClInclude Include="..\ext\linkage\linkage\physint.h">
       <Filter>inc\ext\linkage</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ext\crlib\crlib\cpuflags.h">
+      <Filter>inc\ext\crlib</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

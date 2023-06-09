@@ -1274,7 +1274,7 @@ void BotGraph::calculatePathRadius (int index) {
          if (tr.flFraction < 1.0f) {
             game.testLine (radiusStart, radiusEnd, TraceIgnore::Monsters, nullptr, &tr);
 
-            if (tr.pHit && strncmp ("func_door", tr.pHit->v.classname.chars (), 9) == 0) {
+            if (tr.pHit && cr::strncmp ("func_door", tr.pHit->v.classname.chars (), 9) == 0) {
                path.radius = 0.0f;
                wayBlocked = true;
 
@@ -1493,7 +1493,7 @@ bool BotGraph::convertOldFormat () {
          return false;
       }
 
-      if (strncmp (header.header, kPodbotMagic, cr::bufsize (kPodbotMagic)) == 0) {
+      if (cr::strncmp (header.header, kPodbotMagic, cr::bufsize (kPodbotMagic)) == 0) {
          if (header.fileVersion != StorageVersion::Podbot) {
             return false;
          }
@@ -1572,7 +1572,7 @@ bool BotGraph::loadGraphData () {
          addToBucket (path.origin, path.number);
       }
 
-      if ((outOptions & StorageOption::Official) || strncmp (exten.author, "official", 8) == 0 || strlen (exten.author) < 2) {
+      if ((outOptions & StorageOption::Official) || cr::strncmp (exten.author, "official", 8) == 0 || cr::strlen (exten.author) < 2) {
          m_graphAuthor.assign (product.name);
       }
       else {
@@ -1727,7 +1727,7 @@ bool BotGraph::isNodeReacheableEx (const Vector &src, const Vector &destination,
    // check if we go through a func_illusionary, in which case return false
    game.testHull (src, destination, TraceIgnore::Monsters, head_hull, m_editor, &tr);
 
-   if (tr.pHit && strcmp ("func_illusionary", tr.pHit->v.classname.chars ()) == 0) {
+   if (tr.pHit && cr::strcmp ("func_illusionary", tr.pHit->v.classname.chars ()) == 0) {
       return false; // don't add pathnodes through func_illusionaries
    }
 
@@ -1735,9 +1735,9 @@ bool BotGraph::isNodeReacheableEx (const Vector &src, const Vector &destination,
    game.testLine (src, destination, TraceIgnore::Monsters, m_editor, &tr);
 
    // if node is visible from current position (even behind head)...
-   if (tr.pHit && (tr.flFraction >= 1.0f || strncmp ("func_door", tr.pHit->v.classname.chars (), 9) == 0)) {
+   if (tr.pHit && (tr.flFraction >= 1.0f || cr::strncmp ("func_door", tr.pHit->v.classname.chars (), 9) == 0)) {
       // if it's a door check if nothing blocks behind
-      if (strncmp ("func_door", tr.pHit->v.classname.chars (), 9) == 0) {
+      if (cr::strncmp ("func_door", tr.pHit->v.classname.chars (), 9) == 0) {
          game.testLine (tr.vecEndPos, destination, TraceIgnore::Monsters, tr.pHit, &tr);
 
          if (tr.flFraction < 1.0f) {

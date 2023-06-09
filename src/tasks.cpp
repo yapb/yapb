@@ -1438,7 +1438,7 @@ void Bot::pickupItem_ () {
          auto &info = conf.getWeapons ();
 
          for (index = 0; index < 7; ++index) {
-            if (strcmp (info[index].model, m_pickupItem->v.model.chars (9)) == 0) {
+            if (cr::strcmp (info[index].model, m_pickupItem->v.model.chars (9)) == 0) {
                break;
             }
          }
@@ -1562,7 +1562,7 @@ void Bot::pickupItem_ () {
             game.searchEntities (pev->origin, 768.0f, [&] (edict_t *ent) {
                auto classname = ent->v.classname.chars ();
 
-               if (strncmp ("hostage_entity", classname, 14) != 0 && strncmp ("monster_scientist", classname, 17) != 0) {
+               if (cr::strncmp ("hostage_entity", classname, 14) != 0 && cr::strncmp ("monster_scientist", classname, 17) != 0) {
                   return EntitySearchResult::Continue;
                }
 

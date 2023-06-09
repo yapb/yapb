@@ -1332,7 +1332,7 @@ bool Bot::hasSecondaryWeapon () {
 bool Bot::hasShield () {
    // this function returns true, if bot has a tactical shield
 
-   return strncmp (pev->viewmodel.chars (14), "v_shield_", 9) == 0;
+   return cr::strncmp (pev->viewmodel.chars (14), "v_shield_", 9) == 0;
 }
 
 bool Bot::isShieldDrawn () {
@@ -1352,7 +1352,7 @@ bool Bot::isEnemyBehindShield (edict_t *enemy) {
    }
 
    // check if enemy has shield and this shield is drawn
-   if ((enemy->v.weaponanim == 6 || enemy->v.weaponanim == 7) && strncmp (enemy->v.viewmodel.chars (14), "v_shield_", 9) == 0) {
+   if ((enemy->v.weaponanim == 6 || enemy->v.weaponanim == 7) && cr::strncmp (enemy->v.viewmodel.chars (14), "v_shield_", 9) == 0) {
       if (util.isInViewCone (pev->origin, enemy)) {
          return true;
       }
@@ -1474,7 +1474,7 @@ bool Bot::rateGroundWeapon (edict_t *ent) {
    auto tab = conf.getRawWeapons ();
 
    for (int i = 0; i < kNumWeapons; ++i) {
-      if (strcmp (tab[*pref].model, ent->v.model.chars (9)) == 0) {
+      if (cr::strcmp (tab[*pref].model, ent->v.model.chars (9)) == 0) {
          groundIndex = i;
          break;
       }
