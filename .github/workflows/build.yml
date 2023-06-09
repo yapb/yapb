@@ -15,7 +15,7 @@ jobs:
   bot-build:
     runs-on: ubuntu-latest
     container:
-      image: j4sdk/x86-buildtools:lunar
+      image: ghcr.io/yapb/builder:latest
       options: --hostname github-actions
 
     strategy:
