@@ -496,7 +496,7 @@ void BotSupport::installSendTo () {
    m_sendToDetour.initialize ("ws2_32.dll", "sendto", sendToAddress);
 
    // enable only on modern games
-   if (game.is (GameFlags::Modern) && (plat.nix || plat.win) && !plat.arm && !m_sendToDetour.detoured ()) {
+   if ((game.is (GameFlags::Modern) || game.is (GameFlags::Xash3D)) && (plat.nix || plat.win) && !plat.arm && !m_sendToDetour.detoured ()) {
       m_sendToDetour.install (reinterpret_cast <void *> (BotSupport::sendTo), true);
    }
 }
