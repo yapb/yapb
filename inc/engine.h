@@ -28,7 +28,8 @@ CR_DECLARE_SCOPED_ENUM (Var,
    ReadOnly,
    Password,
    NoServer,
-   GameRef
+   GameRef,
+   Xash3D // registrable only on xash3d engine
 )
 
 // supported cs's

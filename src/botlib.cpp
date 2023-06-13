@@ -1124,7 +1124,7 @@ void Bot::buyStuff () {
    const bool teamHasGoodEconomics = bots.checkTeamEco (m_team);
 
    // do this, because xash engine is not capable to run all the features goldsrc, but we have cs 1.6 on it, so buy table must be the same
-   const bool isOldGame = game.is (GameFlags::Legacy) && !game.is (GameFlags::Xash3D);
+   const bool isOldGame = game.is (GameFlags::Legacy);
 
    const bool hasDefaultPistols = (pev->weapons & (cr::bit (Weapon::USP) | cr::bit (Weapon::Glock18)));
    const bool isFirstRound = m_moneyAmount == mp_startmoney.int_ ();

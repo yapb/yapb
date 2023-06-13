@@ -368,7 +368,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
    m_hindrance = nullptr;
    float distance = cr::sqrf (348.0f);
 
-   if (getCurrentTaskId () == Task::Attack || isOnLadder ()) {
+   if (getCurrentTaskId () == Task::Attack || isOnLadder () || isInNarrowPlace ()) {
       return;
    }
    const auto ownPrio = bots.getPlayerPriority (ent ());
@@ -477,7 +477,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
 
       // not stuck?
       if (!m_isStuck) {
-         if (m_probeTime + rg.get (0.5f, 1.0f) < game.time ()) {
+         if (m_probeTime + rg.get (0.75f, 1.15f) < game.time ()) {
             resetCollision (); // reset collision memory if not being stuck for 0.5 secs
          }
          else {

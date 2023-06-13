@@ -67,9 +67,10 @@ void Bot::normal_ () {
 
       // reached node is a camp node
       if ((m_pathFlags & NodeFlag::Camp) && !game.is (GameFlags::CSDM) && cv_camping_allowed.bool_ () && !isKnifeMode ()) {
+         const bool allowedCampWeapon = hasPrimaryWeapon () || (hasSecondaryWeapon () && m_numFriendsLeft > game.maxClients () / 4);
 
          // check if bot has got a primary weapon and hasn't camped before
-         if (hasPrimaryWeapon () && m_timeCamping + 10.0f < game.time () && !m_hasHostage) {
+         if (allowedCampWeapon && m_timeCamping + 10.0f < game.time () && !m_hasHostage) {
             bool campingAllowed = true;
 
             // Check if it's not allowed for this team to camp here

@@ -722,6 +722,9 @@ void Game::registerCvars (bool gameVars) {
       cvar_t &reg = var.reg;
 
       if (var.type != Var::GameRef) {
+         if (var.type == Var::Xash3D && !is (GameFlags::Xash3D)) {
+            continue;
+         }
          self.ptr = engfuncs.pfnCVarGetPointer (reg.name);
 
          if (!self.ptr) {
@@ -751,7 +754,7 @@ void Game::registerCvars (bool gameVars) {
          }
 
          if (!self.ptr) {
-            print ("Got nullptr on cvar %s!", reg.name);
+            logger.error ("Got nullptr on cvar %s!", reg.name);
          }
       }
    }
@@ -818,7 +821,7 @@ bool Game::loadCSBinary () {
 
          // detect xash engine
          if (engfuncs.pfnCVarGetPointer ("host_ver") != nullptr) {
-            m_gameFlags |= (GameFlags::Legacy | GameFlags::Xash3D);
+            m_gameFlags |= (GameFlags::Modern | GameFlags::Xash3D);
 
             if (entity != nullptr) {
                m_gameFlags |= GameFlags::HasBotVoice;
@@ -835,6 +838,9 @@ bool Game::loadCSBinary () {
          }
          else {
             m_gameFlags |= GameFlags::Legacy;
+
+            // clear modern flag just in case
+            m_gameFlags &= ~GameFlags::Modern;
          }
 
          if (is (GameFlags::Metamod)) {
@@ -874,7 +880,7 @@ bool Game::postload () {
    plat.setAppName (product.name.chars ());
 
    // register bot cvars
-   game.registerCvars ();
+   registerCvars ();
 
    // handle prefixes
    static StringArray prefixes = { product.cmdPri, product.cmdSec };
@@ -1273,7 +1279,7 @@ template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const 
 }
 
 float LightMeasure::getLightLevel (const Vector &point) {
-   if (game.is (GameFlags::Legacy) && !game.is (GameFlags::Xash3D)) {
+   if (game.is (GameFlags::Legacy)) {
       return 0.0f;
    }
 

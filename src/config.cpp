@@ -33,7 +33,7 @@ void BotConfig::loadConfigs () {
 }
 
 void BotConfig::loadMainConfig (bool isFirstLoad) {
-   if (game.is (GameFlags::Legacy) && !game.is (GameFlags::Xash3D)) {
+   if (game.is (GameFlags::Legacy)) {
       util.setNeedForWelcome (true);
    }
    setupMemoryFiles ();
@@ -357,7 +357,7 @@ void BotConfig::loadChatterConfig () {
    }
    else {
       cv_radio_mode.set (1);
-      logger.message ("Bots chatter communication disabled.");
+      game.print ("Bots chatter communication disabled.");
    }
 }
 
@@ -464,13 +464,12 @@ void BotConfig::loadLanguageConfig () {
    setupMemoryFiles ();
 
    if (game.is (GameFlags::Legacy)) {
-      logger.message ("Bots multilingual system disabled.");
-      return; // dedicated server will use only english translation
+      return; // legacy versions will use only english translation
    }
    String line;
    MemFile file;
 
-   // localizer inititalization
+   // localizer initialization
    if (openConfig ("lang", "Specified language not found.", &file, true)) {
       String temp;
       Twin <String, String> lang;
@@ -509,14 +508,14 @@ void BotConfig::loadLanguageConfig () {
 void BotConfig::loadAvatarsConfig () {
    setupMemoryFiles ();
 
-   if (game.is (GameFlags::Legacy)) {
+   if (game.is (GameFlags::Legacy) || game.is (GameFlags::Xash3D)) {
       return;
    }
 
    String line;
    MemFile file;
 
-   // avatars inititalization
+   // avatars initialization
    if (openConfig ("avatars", "Avatars config file not found. Avatars will not be displayed.", &file)) {
       m_avatars.clear ();
 
@@ -580,7 +579,7 @@ void BotConfig::loadDifficultyConfig () {
       diff->aimError.z = values[8].float_ ();
    };
 
-   // avatars inititalization
+   // avatars initialization
    if (openConfig ("difficulty", "Difficulty config file not found. Loading defaults.", &file)) {
 
       while (file.getLine (line)) {
@@ -633,7 +632,7 @@ void BotConfig::loadCustomConfig () {
    m_custom["C4ModelName"] = "c4.mdl";
    m_custom["AMXParachuteCvar"] = "sv_parachute";
 
-   // custom inititalization
+   // custom initialization
    if (openConfig ("custom", "Custom config file not found. Loading defaults.", &file)) {
       m_custom.clear ();
 
@@ -664,7 +663,7 @@ void BotConfig::loadLogosConfig () {
    String line;
    MemFile file;
 
-   // logos inititalization
+   // logos initialization
    if (openConfig ("logos", "Logos config file not found. Loading defaults.", &file)) {
       m_logos.clear ();
 

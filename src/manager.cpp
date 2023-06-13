@@ -1493,7 +1493,12 @@ void Bot::newRound () {
    if (rg.chance (50)) {
       pushChatterMessage (Chatter::NewRound);
    }
-   m_updateInterval = game.is (GameFlags::Legacy | GameFlags::Xash3D) ? 0.0f : (1.0f / cr::clamp (cv_think_fps.float_ (), 30.0f, 60.0f));
+   auto interval = cr::clamp (cv_think_fps.float_ (), 24.0f, 90.0f);
+
+   if (game.is (GameFlags::Xash3D) && interval < 50.0f) {
+      interval = 50.0f; // xash works acceptable at 50fps
+   }
+   m_updateInterval = game.is (GameFlags::Legacy) ? 0.0f : 1.0f / interval;
 }
 
 void Bot::resetPathSearchType () {

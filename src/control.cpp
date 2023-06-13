@@ -7,7 +7,7 @@
 
 #include <yapb.h>
 
-ConVar cv_display_menu_text ("yb_display_menu_text", "1", "Enables or disables display menu text, when players asks for menu. Useful only for Android.");
+ConVar cv_display_menu_text ("yb_display_menu_text", "1", "Enables or disables display menu text, when players asks for menu. Useful only for Android.", false, 0.0f, 1.0f, Var::Xash3D);
 ConVar cv_password ("yb_password", "", "The value (password) for the setinfo key, if user sets correct password, he's gains access to bot commands and menus.", false, 0.0f, 0.0f, Var::Password);
 ConVar cv_password_key ("yb_password_key", "_ybpw", "The name of setinfo key used to store password to bot commands and menus.", false);
 
@@ -1871,6 +1871,11 @@ bool BotControl::executeMenus () {
 
 void BotControl::showMenu (int id) {
    static bool menusParsed = false;
+
+   // xash doesn't show anything useful when menus translated by now, so disable translation for menus on xash3d
+   if (game.is (GameFlags::Xash3D)) {
+      menusParsed = true;
+   }
 
    // make menus looks like we need only once
    if (!menusParsed) {
