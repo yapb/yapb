@@ -819,7 +819,7 @@ private:
    int findDefendNode (const Vector &origin);
    int findBestGoal ();
    int findBestGoalWhenBombAction ();
-   int findGoalPost (int tactic, IntArray *defensive, IntArray *offsensive);
+   int findGoalPost (int tactic, IntArray *defensive, IntArray *offensive);
    int bestPrimaryCarried ();
    int bestSecondaryCarried ();
    int bestGrenadeCarried ();
@@ -1122,12 +1122,13 @@ public:
    Vector m_position {}; // position to move to in move to position task
    Vector m_doubleJumpOrigin {}; // origin of double jump
    Vector m_lastEnemyOrigin {}; // vector to last enemy origin
-  
+
    ChatCollection m_sayTextBuffer {}; // holds the index & the actual message of the last unprocessed text message of a player
    BurstMode m_weaponBurstMode {}; // bot using burst mode? (famas/glock18, but also silencer mode)
    Personality m_personality {}; // bots type
    Array <BotTask> m_tasks {};
    Deque <int32_t> m_msgQueue {};
+   Array <int32_t> m_goalHist {};
 
 public:
    Bot (edict_t *bot, int difficulty, int personality, int team, int skin);

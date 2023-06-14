@@ -1481,6 +1481,7 @@ void Bot::newRound () {
    m_heardSoundTime = game.time ();
 
    m_msgQueue.clear ();
+   m_goalHist.clear ();
    m_ignoredBreakable.clear ();
 
    // and put buying into its message queue

@@ -678,6 +678,9 @@ void ConVar::revert () {
 
 void Game::checkCvarsBounds () {
    for (const auto &var : m_cvars) {
+      if (!var.self->ptr) {
+         continue;
+      }
 
       // read only cvar is not changeable
       if (var.type == Var::ReadOnly && !var.init.empty ()) {

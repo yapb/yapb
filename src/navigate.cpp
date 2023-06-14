@@ -206,7 +206,7 @@ int Bot::findBestGoalWhenBombAction () {
    return result;
 }
 
-int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offsensive) {
+int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offensive) {
    int goalChoices[4] = { kInvalidNodeIndex, kInvalidNodeIndex, kInvalidNodeIndex, kInvalidNodeIndex };
 
    if (tactic == 0 && !(*defensive).empty ()) { // careful goal
@@ -222,8 +222,8 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offsensive) {
          postprocessGoals (graph.m_campPoints, goalChoices);
       }
    }
-   else if (tactic == 2 && !(*offsensive).empty ()) { // offensive goal
-      postprocessGoals (*offsensive, goalChoices);
+   else if (tactic == 2 && !(*offensive).empty ()) { // offensive goal
+      postprocessGoals (*offensive, goalChoices);
    }
    else if (tactic == 3 && !graph.m_goalPoints.empty ()) // map goal node
    {
@@ -282,15 +282,11 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offsensive) {
          }
       }
    }
-
-   if (!graph.exists (m_currentNodeIndex)) {
-      changeNodeIndex (findNearestNode ());
-   }
+   ensureCurrentNodeIndex ();
 
    if (goalChoices[0] == kInvalidNodeIndex) {
       return m_chosenGoalIndex = graph.random ();
    }
-
    bool sorting = false;
 
    do {
@@ -313,16 +309,41 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offsensive) {
 void Bot::postprocessGoals (const IntArray &goals, int result[]) {
    // this function filters the goals, so new goal is not bot's old goal, and array of goals doesn't contains duplicate goals
 
-   int searchCount = 0;
+   int recurseCount = 0;
+
+   auto isRecentOrHistorical = [&] (int index)  -> bool {
+      if (m_prevGoalIndex == index || m_previousNodes[0] == index) {
+         return true;
+      }
+
+      // too less to choice from just return all the goals
+      if (goals.length () < 4) {
+         return false;
+      }
+
+      // check if historical goal
+      for (const auto &hg : m_goalHist) {
+         if (hg == index) {
+            return true;
+         }
+      }
+
+      for (size_t i = 0; i < 4; ++i) {
+         if (result[i] == index) {
+            return true;
+         }
+      }
+      return isOccupiedNode (index);
+   };
 
    for (int index = 0; index < 4; ++index) {
       auto goal = goals.random ();
 
-      if (searchCount <= 8 && (m_prevGoalIndex == goal || ((result[0] == goal || result[1] == goal || result[2] == goal || result[3] == goal) && goals.length () > 4)) && !isOccupiedNode (goal)) {
+      if (recurseCount <= cr::max (4, goals.length <int> ()) && isRecentOrHistorical (goal)) {
          if (index > 0) {
             index--;
          }
-         ++searchCount;
+         ++recurseCount;
          continue;
       }
       result[index] = goal;
@@ -336,6 +357,7 @@ bool Bot::hasActiveGoal () {
       return false;
    }
    else if (goal == m_currentNodeIndex) { // no nodes needed
+      m_goalHist.push (goal);
       return true;
    }
    else if (m_pathWalk.empty ()) { // no path calculated

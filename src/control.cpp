@@ -211,7 +211,7 @@ int BotControl::cmdCvars () {
    }
 
    for (const auto &cvar : game.getCvars ()) {
-      if (cvar.info.empty ()) {
+      if (cvar.info.empty () || !cvar.self || !cvar.self->ptr) {
          continue;
       }
 
