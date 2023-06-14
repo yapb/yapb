@@ -1872,11 +1872,6 @@ bool BotControl::executeMenus () {
 void BotControl::showMenu (int id) {
    static bool menusParsed = false;
 
-   // xash doesn't show anything useful when menus translated by now, so disable translation for menus on xash3d
-   if (game.is (GameFlags::Xash3D)) {
-      menusParsed = true;
-   }
-
    // make menus looks like we need only once
    if (!menusParsed) {
       m_ignoreTranslate = false; // always translate menus
