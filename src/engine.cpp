@@ -8,6 +8,7 @@
 #include <yapb.h>
 
 ConVar cv_csdm_mode ("yb_csdm_mode", "0", "Enables or disables CSDM / FFA mode for bots.\nAllowed values: '0', '1', '2', '3'.\nIf '0', CSDM / FFA mode is auto-detected.\nIf '1', CSDM mode is enabled, but FFA is disabled.\nIf '2', CSDM and FFA mode is enabled.\nIf '3', CSDM and FFA mode is disabled.", true, 0.0f, 3.0f);
+ConVar cv_ignore_map_prefix_game_mode ("yb_ignore_map_prefix_game_mode", "0", "If enabled, bots will not apply game modes based on map name prefix (fy_ and ka_ specifically).");
 ConVar cv_breakable_health_limit ("yb_breakable_health_limit", "500.0", "Specifies the maximum health of breakable object, that bot will consider to destroy.", true, 1.0f, 3000.0);
 ConVar cv_threadpool_workers ("yb_threadpool_workers", "-1", "Maximum number of threads bot will run to process some tasks. -1 means half of CPU cores used.", true, -1.0f, static_cast <float> (plat.hardwareConcurrency ()));
 
@@ -149,11 +150,13 @@ void Game::levelInitialize (edict_t *entities, int max) {
    }
 
    // next maps doesn't have map-specific entities, so determine it by name
-   if (cr::strncmp (getMapName (), "fy_", 3) == 0) {
-      m_mapFlags |= MapFlags::FightYard;
-   }
-   else if (cr::strncmp (getMapName (), "ka_", 3) == 0) {
-      m_mapFlags |= MapFlags::KnifeArena;
+   if (!cv_ignore_map_prefix_game_mode.bool_ ()) {
+      if (cr::strncmp (getMapName (), "fy_", 3) == 0) {
+         m_mapFlags |= MapFlags::FightYard;
+      }
+      else if (cr::strncmp (getMapName (), "ka_", 3) == 0) {
+         m_mapFlags |= MapFlags::KnifeArena;
+      }
    }
 
    // reset some timers
