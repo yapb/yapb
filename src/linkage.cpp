@@ -1016,7 +1016,7 @@ void EntityLinkage::callPlayerFunction (edict_t *ent) {
       playerFunction = game.lib ().resolve <EntityFunction> ("player");
    }
    else {
-      playerFunction = reinterpret_cast <EntityFunction> (lookup (game.lib ().handle (), "player"));
+      playerFunction = reinterpret_cast <EntityFunction> (reinterpret_cast <void *> (lookup (game.lib ().handle (), "player")));
    }
 
    if (!playerFunction) {
