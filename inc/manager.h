@@ -144,7 +144,7 @@ public:
    void resetFilters ();
    void updateActiveGrenade ();
    void updateInterestingEntities ();
-   void captureChatRadio (const char *cmd, const char *arg, edict_t *ent);
+   void captureChatRadio (StringRef cmd, StringRef arg, edict_t *ent);
    void notifyBombDefuse ();
    void execGameEntity (edict_t *ent);
    void forEach (ForEachBot handler);

@@ -94,12 +94,12 @@ void Game::levelInitialize (edict_t *entities, int max) {
       if (!ent || ent->v.classname == 0) {
          continue;
       }
-      auto classname = ent->v.classname.chars ();
+      auto classname = ent->v.classname.str ();
 
-      if (cr::strcmp (classname, "worldspawn") == 0) {
+      if (classname == "worldspawn") {
          m_startEntity = ent;
       }
-      else if (cr::strcmp (classname, "player_weaponstrip") == 0) {
+      else if (classname == "player_weaponstrip") {
          if (is (GameFlags::Legacy) && strings.isEmpty (ent->v.target.chars ())) {
             ent->v.target = ent->v.targetname = engfuncs.pfnAllocString ("fake");
          }
@@ -107,30 +107,30 @@ void Game::levelInitialize (edict_t *entities, int max) {
             engfuncs.pfnRemoveEntity (ent);
          }
       }
-      else if (cr::strcmp (classname, "info_player_start") == 0 || cr::strcmp (classname, "info_vip_start") == 0) {
+      else if (classname == "info_player_start" || classname == "info_vip_start") {
          ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
          ent->v.renderamt = 127; // set its transparency amount
          ent->v.effects |= EF_NODRAW;
 
          ++m_spawnCount[Team::CT];
       }
-      else if (cr::strcmp (classname, "info_player_deathmatch") == 0) {
+      else if (classname == "info_player_deathmatch") {
          ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
          ent->v.renderamt = 127; // set its transparency amount
          ent->v.effects |= EF_NODRAW;
 
          ++m_spawnCount[Team::Terrorist];
       }
-      else if (cr::strcmp (classname, "func_vip_safetyzone") == 0 || cr::strcmp (classname, "info_vip_safetyzone") == 0) {
+      else if (classname == "func_vip_safetyzone" || classname == "info_vip_safetyzone") {
          m_mapFlags |= MapFlags::Assassination; // assassination map
       }
-      else if (cr::strcmp (classname, "hostage_entity") == 0 || cr::strcmp (classname, "monster_scientist") == 0) {
+      else if (classname == "hostage_entity" || classname == "monster_scientist") {
          m_mapFlags |= MapFlags::HostageRescue; // rescue map
       }
-      else if (cr::strcmp (classname, "func_bomb_target") == 0 || cr::strcmp (classname, "info_bomb_target") == 0) {
+      else if (classname == "func_bomb_target" || classname == "info_bomb_target") {
          m_mapFlags |= MapFlags::Demolition; // defusion map
       }
-      else if (cr::strcmp (classname, "func_escapezone") == 0) {
+      else if (classname == "func_escapezone") {
          m_mapFlags |= MapFlags::Escape;
 
          // strange thing on some ES maps, where hostage entity present there
@@ -138,10 +138,10 @@ void Game::levelInitialize (edict_t *entities, int max) {
             m_mapFlags &= ~MapFlags::HostageRescue;
          }
       }
-      else if (cr::strncmp (classname, "func_door", 9) == 0) {
+      else if (classname.startsWith ("func_door")) {
          m_mapFlags |= MapFlags::HasDoors;
       }
-      else if (cr::strncmp (classname, "func_button", 11) == 0) {
+      else if (classname.startsWith ("func_button")) {
          m_mapFlags |= MapFlags::HasButtons;
       }
       else if (isShootableBreakable (ent)) {
@@ -151,10 +151,12 @@ void Game::levelInitialize (edict_t *entities, int max) {
 
    // next maps doesn't have map-specific entities, so determine it by name
    if (!cv_ignore_map_prefix_game_mode.bool_ ()) {
-      if (cr::strncmp (getMapName (), "fy_", 3) == 0) {
+      StringRef prefix = getMapName ();
+
+      if (prefix.startsWith ("fy_")) {
          m_mapFlags |= MapFlags::FightYard;
       }
-      else if (cr::strncmp (getMapName (), "ka_", 3) == 0) {
+      else if (prefix.startsWith ("ka_")) {
          m_mapFlags |= MapFlags::KnifeArena;
       }
    }
@@ -767,9 +769,9 @@ void Game::registerCvars (bool gameVars) {
 }
 
 bool Game::loadCSBinary () {
-   auto modname = getRunningModName ();
+   StringRef modname = getRunningModName ();
 
-   if (!modname) {
+   if (modname.empty ()) {
       return false;
    }
    Array <StringRef> libs { "mp", "cs", "cs_i386" };
@@ -803,7 +805,7 @@ bool Game::loadCSBinary () {
       }
 
       // special case, czero is always detected first, as it's has custom directory
-      if (cr::strcmp (modname, "czero") == 0) {
+      if (modname == "czero") {
          m_gameFlags |= (GameFlags::ConditionZero | GameFlags::HasBotVoice | GameFlags::HasFakePings);
 
          if (is (GameFlags::Metamod)) {
@@ -1071,9 +1073,15 @@ bool Game::isShootableBreakable (edict_t *ent) {
    }
    auto limit = cv_breakable_health_limit.float_ ();
 
-   if ((cr::strcmp (ent->v.classname.chars (), "func_breakable") == 0 && ent->v.health < limit) || (cr::strcmp (ent->v.classname.chars (), "func_pushable") == 0 && (ent->v.spawnflags & SF_PUSH_BREAKABLE) && ent->v.health < limit) || (cr::strcmp (ent->v.classname.chars (), "func_wall") == 0 && ent->v.health < limit)) {
+   constexpr auto kFuncBreakable = StringRef::fnv1a32 ("func_breakable");
+   constexpr auto kFuncPushable = StringRef::fnv1a32 ("func_pushable");
+   constexpr auto kFuncWall = StringRef::fnv1a32 ("func_wall");
+
+   auto classnameHash = ent->v.classname.str ().hash ();
+
+   if ((classnameHash == kFuncBreakable && ent->v.health < limit) || (classnameHash == kFuncPushable && (ent->v.spawnflags & SF_PUSH_BREAKABLE) && ent->v.health < limit) || (classnameHash == kFuncWall && ent->v.health < limit)) {
       if (ent->v.takedamage > 0.0f && ent->v.impulse <= 0 && !(ent->v.flags & FL_WORLDBRUSH) && !(ent->v.spawnflags & SF_BREAK_TRIGGER_ONLY)) {
-         return (ent->v.movetype == MOVETYPE_PUSH || ent->v.movetype == MOVETYPE_PUSHSTEP);
+         return ent->v.movetype == MOVETYPE_PUSH || ent->v.movetype == MOVETYPE_PUSHSTEP;
       }
    }
    return false;

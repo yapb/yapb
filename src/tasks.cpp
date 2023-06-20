@@ -1426,9 +1426,11 @@ void Bot::pickupItem_ () {
    switch (m_pickupType) {
    case Pickup::DroppedC4:
    case Pickup::None:
+   case Pickup::Items:
       break;
 
    case Pickup::Weapon:
+   case Pickup::AmmoAndKits:
       m_aimFlags |= AimFlags::Nav;
 
       // near to weapon?
@@ -1436,17 +1438,17 @@ void Bot::pickupItem_ () {
          int index = 0;
          auto &info = conf.getWeapons ();
 
-         for (index = 0; index < 7; ++index) {
-            if (cr::strcmp (info[index].model, m_pickupItem->v.model.chars (9)) == 0) {
+         for (index = 0; index < kPrimaryWeaponMinIndex; ++index) {
+            if (m_pickupItem->v.model.str (9) == info[index].model) {
                break;
             }
          }
 
-         if (index < 7) {
+         if (index < kPrimaryWeaponMinIndex) {
             // secondary weapon. i.e., pistol
             int weaponIndex = 0;
 
-            for (index = 0; index < 7; ++index) {
+            for (index = 0; index < kPrimaryWeaponMinIndex; ++index) {
                if (pev->weapons & cr::bit (info[index].id)) {
                   weaponIndex = index;
                }
@@ -1469,7 +1471,7 @@ void Bot::pickupItem_ () {
 
             auto tab = conf.getRawWeapons ();
 
-            if ((tab->id == Weapon::Shield || weaponIndex > 6 || hasShield ()) && niceWeapon) {
+            if ((tab[weaponIndex].id == Weapon::Shield || weaponIndex >= kPrimaryWeaponMinIndex || hasShield ()) && niceWeapon) {
                selectWeaponByIndex (weaponIndex);
                dropCurrentWeapon ();
             }
@@ -1559,9 +1561,9 @@ void Bot::pickupItem_ () {
 
             // find the nearest 'unused' hostage within the area
             game.searchEntities (pev->origin, 768.0f, [&] (edict_t *ent) {
-               auto classname = ent->v.classname.chars ();
+               auto classname = ent->v.classname.str ();
 
-               if (cr::strncmp ("hostage_entity", classname, 14) != 0 && cr::strncmp ("monster_scientist", classname, 17) != 0) {
+               if (!classname.startsWith ("hostage_entity") && !classname.startsWith ("monster_scientist")) {
                   return EntitySearchResult::Continue;
                }
 

@@ -204,7 +204,7 @@ bool BotSupport::isMonster (edict_t *ent) {
       return false;
    }
 
-   if (cr::strncmp ("hostage", ent->v.classname.chars (), 7) == 0) {
+   if (ent->v.classname.str ().startsWith ("hostage")) {
       return false;
    }
 
@@ -212,7 +212,7 @@ bool BotSupport::isMonster (edict_t *ent) {
 }
 
 bool BotSupport::isItem (edict_t *ent) {
-   return !!(strstr (ent->v.classname.chars (), "item_"));
+   return ent && ent->v.classname.str ().contains ("item_");
 }
 
 bool BotSupport::isPlayerVIP (edict_t *ent) {

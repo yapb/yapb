@@ -44,14 +44,14 @@ void BotSupport::humanizePlayerName (String &playerName) {
    }
 
    // sometimes switch name to lower characters, only valid for the english languge
-   if (rg.chance (8) && cr::strcmp (cv_language.str (), "en") == 0) {
+   if (rg.chance (8) && cv_language.str () == "en") {
       playerName.lowercase ();
    }
 }
 
 void BotSupport::addChatErrors (String &line) {
    // sometimes switch name to lower characters, only valid for the english languge
-   if (rg.chance (8) && cr::strcmp (cv_language.str (), "en") == 0) {
+   if (rg.chance (8) && cv_language.str () == "en") {
       line.lowercase ();
    }
    auto length = static_cast <int32_t> (line.length ());

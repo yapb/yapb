@@ -35,7 +35,7 @@ bool Bot::isInViewCone (const Vector &origin) {
    return util.isInViewCone (origin, ent ());
 }
 
-bool Bot::seesItem (const Vector &destination, const char *classname) {
+bool Bot::seesItem (const Vector &destination, StringRef classname) {
    TraceResult tr {};
 
    // trace a line from bot's eyes to destination..
@@ -43,7 +43,7 @@ bool Bot::seesItem (const Vector &destination, const char *classname) {
 
    // check if line of sight to object is not blocked (i.e. visible)
    if (tr.flFraction < 1.0f && tr.pHit && !tr.fStartSolid) {
-      return cr::strcmp (tr.pHit->v.classname.chars (), classname) == 0;
+      return classname == tr.pHit->v.classname.str ();
    }
    return true;
 }
@@ -106,7 +106,7 @@ void Bot::updateAimDir () {
          m_lookAt.z += 48.0f;
       }
       else if (m_pickupType == Pickup::Weapon) {
-         m_lookAt.z += 72.0;
+         m_lookAt.z += 72.0f;
       }
    }
    else if (flags & AimFlags::LastEnemy) {

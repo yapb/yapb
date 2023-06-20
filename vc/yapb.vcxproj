@@ -53,6 +53,7 @@
     <ClInclude Include="..\ext\linkage\linkage\physint.h" />
     <ClInclude Include="..\inc\analyze.h" />
     <ClInclude Include="..\inc\config.h" />
+    <ClInclude Include="..\inc\constant.h" />
     <ClInclude Include="..\inc\control.h" />
     <ClInclude Include="..\inc\engine.h" />
     <ClInclude Include="..\inc\graph.h" />

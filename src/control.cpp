@@ -218,9 +218,10 @@ int BotControl::cmdCvars () {
       if (!isSave && !match.empty () && !strstr (cvar.reg.name, match.chars ())) {
          continue;
       }
+      auto val = cvar.self->str ();
 
       // float value ?
-      bool isFloat = !strings.isEmpty (cvar.self->str ()) && strchr (cvar.self->str (), '.');
+      bool isFloat = !val.empty () && val.find (".") != StringRef::InvalidIndex;
 
       if (isSave) {
          cfg.puts ("//\n");

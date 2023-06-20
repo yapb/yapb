@@ -127,7 +127,7 @@ void BotPractice::syncUpdate () {
       }
    }
    constexpr auto kFullDamageVal = static_cast <int32_t> (PracticeLimit::Damage);
-   constexpr auto kHalfDamageVal = static_cast <int32_t> (PracticeLimit::Damage / 2);
+   constexpr auto kHalfDamageVal = kFullDamageVal / 2;
 
    // adjust values if overflow is about to happen
    if (adjustValues) {

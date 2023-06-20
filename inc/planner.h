@@ -242,8 +242,8 @@ public:
 // the bot path planner
 class PathPlanner : public Singleton <PathPlanner> {
 private:
-   UniquePtr <DijkstraAlgo> m_dijkstra;
-   UniquePtr <FloydWarshallAlgo> m_floyd;
+   UniquePtr <DijkstraAlgo> m_dijkstra {};
+   UniquePtr <FloydWarshallAlgo> m_floyd {};
    bool m_memoryLimitHit {};
 
 public:

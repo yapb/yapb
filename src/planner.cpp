@@ -323,7 +323,7 @@ AStarResult AStarAlgo::find (int botTeam, int srcIndex, int destIndex, NodeAdder
 
 void FloydWarshallAlgo::rebuild () {
    m_length = graph.length ();
-   m_matrix.resize (cr::sqrf (m_length));
+   m_matrix.resize (static_cast <size_t> (cr::sqrf (m_length)));
 
    worker.enqueue ([this] () {
       syncRebuild ();
@@ -416,8 +416,10 @@ bool FloydWarshallAlgo::find (int srcIndex, int destIndex, NodeAdderFn onAddedNo
 void DijkstraAlgo::init (const int length) {
    m_length = length;
 
-   m_distance.resize (length);
-   m_parent.resize (length);
+   auto ulength = static_cast <size_t> (length);
+
+   m_distance.resize (ulength);
+   m_parent.resize (ulength);
 
    m_distance.shrink ();
    m_parent.shrink ();
@@ -435,7 +437,7 @@ bool DijkstraAlgo::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, i
    m_distance[srcIndex] = 0;
 
    while (!m_queue.empty ()) {
-      auto &&route = cr::move (m_queue.pop ());
+      auto route = m_queue.pop ();
       auto current = route.second;
 
       // finished search
@@ -500,7 +502,7 @@ void PathPlanner::init () {
    const int length = graph.length ();
 
    const float limitInMb = cv_path_floyd_memory_limit.float_ ();
-   const float memoryUse = static_cast <float> (sizeof (FloydWarshallAlgo::Matrix) * cr::sqrf (length) / 1024 / 1024);
+   const float memoryUse = static_cast <float> (sizeof (FloydWarshallAlgo::Matrix) * cr::sqrf (static_cast <size_t> (length)) / 1024 / 1024);
 
    // if we're have too much memory for floyd matrices, planner will use dijkstra or uniform planner for other than pathfinding needs
    if (memoryUse > limitInMb) {

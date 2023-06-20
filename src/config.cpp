@@ -106,8 +106,12 @@ void BotConfig::loadMainConfig (bool isFirstLoad) {
    }
 
    // bind the correct menu key for bot menu...
-   if (!game.isDedicated () && !strings.isEmpty (cv_bind_menu_key.str ())) {
-      game.serverCommand ("bind \"%s\" \"yb menu\"", cv_bind_menu_key.str ());
+   if (!game.isDedicated ()) {
+      auto val = cv_bind_menu_key.str ();
+
+      if (!val.empty ()) {
+         game.serverCommand ("bind \"%s\" \"yb menu\"", val);
+      }
    }
 
    // disable logger if requested
@@ -500,7 +504,7 @@ void BotConfig::loadLanguageConfig () {
       }
       file.close ();
    }
-   else if (cr::strcmp (cv_language.str (), "en") != 0) {
+   else if (cv_language.str () != "en") {
       logger.error ("Couldn't load language configuration");
    }
 }
@@ -834,7 +838,7 @@ bool BotConfig::openConfig (StringRef fileName, StringRef errorIfNotExists, MemF
    auto configDir = strings.joinPath (folders.addons, folders.bot, folders.config);
 
    if (languageDependant) {
-      if (fileName.startsWith ("lang") && cr::strcmp (cv_language.str (), "en") == 0) {
+      if (fileName.startsWith ("lang") && cv_language.str () == "en") {
          return false;
       }
       auto langConfig = strings.joinPath (configDir, folders.lang, strings.format ("%s_%s.%s", cv_language.str (), fileName, kConfigExtension));

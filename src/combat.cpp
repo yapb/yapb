@@ -454,7 +454,7 @@ Vector Bot::getBodyOffsetError (float distance) {
    }
 
    if (m_aimErrorTime < game.time ()) {
-      const float hitError = distance / (cr::clamp (m_difficulty, 1, 4) * 1000.0f);
+      const float hitError = distance / (cr::clamp (static_cast <float> (m_difficulty), 1.0f, 4.0f) * 1000.0f);
       auto &maxs = m_enemy->v.maxs, &mins = m_enemy->v.mins;
 
       m_aimLastError = Vector (rg.get (mins.x * hitError, maxs.x * hitError), rg.get (mins.y * hitError, maxs.y * hitError), rg.get (mins.z * hitError, maxs.z * hitError));
@@ -1332,7 +1332,7 @@ bool Bot::hasSecondaryWeapon () {
 bool Bot::hasShield () {
    // this function returns true, if bot has a tactical shield
 
-   return cr::strncmp (pev->viewmodel.chars (14), "v_shield_", 9) == 0;
+   return pev->viewmodel.str (14).startsWith ("v_shield_");
 }
 
 bool Bot::isShieldDrawn () {
@@ -1352,7 +1352,7 @@ bool Bot::isEnemyBehindShield (edict_t *enemy) {
    }
 
    // check if enemy has shield and this shield is drawn
-   if ((enemy->v.weaponanim == 6 || enemy->v.weaponanim == 7) && cr::strncmp (enemy->v.viewmodel.chars (14), "v_shield_", 9) == 0) {
+   if ((enemy->v.weaponanim == 6 || enemy->v.weaponanim == 7) && enemy->v.viewmodel.str (14).startsWith ("v_shield_")) {
       if (util.isInViewCone (pev->origin, enemy)) {
          return true;
       }
@@ -1443,7 +1443,7 @@ int Bot::bestSecondaryCarried () {
    for (int i = 0; i < kNumWeapons; ++i) {
       int id = tab[*pref].id;
 
-      if ((weapons & cr::bit (tab[*pref].id)) && (id == Weapon::USP || id == Weapon::Glock18 || id == Weapon::Deagle || id == Weapon::P228 || id == Weapon::Elite || id == Weapon::FiveSeven)) {
+      if ((weapons & cr::bit (tab[*pref].id)) && conf.getWeaponType (id) == WeaponType::Pistol) {
          weaponIndex = i;
          break;
       }
@@ -1468,21 +1468,22 @@ int Bot::bestGrenadeCarried () {
 bool Bot::rateGroundWeapon (edict_t *ent) {
    // this function compares weapons on the ground to the one the bot is using
 
+   // weapon rating blocked, due to we picked up not-preferred weapon some time ago, because out of ammo
    int groundIndex = 0;
 
    const int *pref = conf.getWeaponPrefs (m_personality);
    auto tab = conf.getRawWeapons ();
 
    for (int i = 0; i < kNumWeapons; ++i) {
-      if (cr::strcmp (tab[*pref].model, ent->v.model.chars (9)) == 0) {
+      if (ent->v.model.str (9) == tab[*pref].model) {
          groundIndex = i;
          break;
       }
       pref++;
    }
-   int hasWeapon = 0;
+   auto hasWeapon = 0;
 
-   if (groundIndex < 7) {
+   if (groundIndex < kPrimaryWeaponMinIndex) {
       hasWeapon = bestSecondaryCarried ();
    }
    else {
@@ -1521,7 +1522,7 @@ void Bot::selectBestWeapon () {
    while (tab[selectIndex].id) {
       // is the bot NOT carrying this weapon?
       if (!(pev->weapons & cr::bit (tab[selectIndex].id))) {
-         selectIndex++; // skip to next weapon
+         ++selectIndex; // skip to next weapon
          continue;
       }
 
@@ -1541,7 +1542,7 @@ void Bot::selectBestWeapon () {
       if (ammoLeft) {
          chosenWeaponIndex = selectIndex;
       }
-      selectIndex++;
+      ++selectIndex;
    }
 
    chosenWeaponIndex %= kNumWeapons + 1;

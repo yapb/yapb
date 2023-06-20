@@ -35,6 +35,7 @@ ConVar cv_restricted_weapons ("yb_restricted_weapons", "", "Specifies semicolon 
 
 ConVar cv_attack_monsters ("yb_attack_monsters", "0", "Allows or disallows bots to attack monsters.");
 ConVar cv_pickup_custom_items ("yb_pickup_custom_items", "0", "Allows or disallows bots to pickup custom items.");
+ConVar cv_pickup_ammo_and_kits ("yb_pickup_ammo_and_kits", "0", "Allows bots pickup mod items like ammo, health kits and suits.");
 ConVar cv_pickup_best ("yb_pickup_best", "1", "Allows or disallows bots to pickup best weapons.");
 ConVar cv_ignore_objectives ("yb_ignore_objectives", "0", "Allows or disallows bots to do map objectives, i.e. plant/defuse bombs, and saves hostages.");
 ConVar cv_random_knife_attacks ("yb_random_knife_attacks", "1", "Allows or disallows the ability for random knife attacks when bot is rushing and no enemy is nearby.");
@@ -93,9 +94,9 @@ void Bot::avoidGrenades () {
       if (!seesEntity (pent->v.origin) && isInFOV (pent->v.origin - getEyesPos ()) > pev->fov * 0.5f) {
          continue;
       }
-      auto model = pent->v.model.chars (9);
+      auto model = pent->v.model.str (9);
 
-      if (m_preventFlashing < game.time () && m_personality == Personality::Rusher && m_difficulty == Difficulty::Expert && cr::strcmp (model, "flashbang.mdl") == 0) {
+      if (m_preventFlashing < game.time () && m_personality == Personality::Rusher && m_difficulty == Difficulty::Expert && model == "flashbang.mdl") {
          // don't look at flash bang
          if (!(m_states & Sense::SeeingEnemy)) {
             m_lookAt.y = cr::wrapAngle ((game.getEntityOrigin (pent) - getEyesPos ()).angles ().y + 180.0f);
@@ -104,7 +105,7 @@ void Bot::avoidGrenades () {
             m_preventFlashing = game.time () + rg.get (1.0f, 2.0f);
          }
       }
-      else if (game.isNullEntity (m_avoidGrenade) && cr::strcmp (model, "hegrenade.mdl") == 0) {
+      else if (game.isNullEntity (m_avoidGrenade) && model == "hegrenade.mdl") {
          if (game.getTeam (pent->v.owner) == m_team || pent->v.owner == ent ()) {
             continue;
          }
@@ -127,7 +128,7 @@ void Bot::avoidGrenades () {
             }
          }
       }
-      else if ((pent->v.flags & FL_ONGROUND) && cr::strcmp (model, "smokegrenade.mdl") == 0) {
+      else if ((pent->v.flags & FL_ONGROUND) && model == "smokegrenade.mdl") {
          if (isInFOV (pent->v.origin - getEyesPos ()) < pev->fov - 7.0f) {
             float distance = pent->v.origin.distance (pev->origin);
 
@@ -270,8 +271,42 @@ void Bot::setIdealReactionTimers (bool actual) {
 void Bot::updatePickups () {
    // this function finds Items to collect or use in the near of a bot
 
-   // don't try to pickup anything while on ladder or trying to escape from bomb...
-   if (m_isCreature || (m_states & Sense::SeeingEnemy) || isOnLadder () || getCurrentTaskId () == Task::EscapeFromBomb || !cv_pickup_best.bool_ () || cv_jasonmode.bool_ () || !bots.hasInterestingEntities ()) {
+   // utility to check if this function is currently doesn't allowed to run
+   const auto isPickupBlocked = [&] () -> bool {
+      // zombie or chickens not allowed to pickup anything
+      if (m_isCreature) {
+         return true;
+      }
+
+      // seeing enemy now, not good time to pickup anything
+      else if (m_states & Sense::SeeingEnemy) {
+         return true;
+      }
+
+      // bots on ladder don't have to search anything
+      else if (isOnLadder ()) {
+         return true;
+      }
+
+      // we're escaping from the bomb, don't bother!
+      else if (getCurrentTaskId () == Task::EscapeFromBomb) {
+         return true;
+      }
+
+      // knife mode is in progress ?
+      else if (cv_jasonmode.bool_ ()) {
+         return true;
+      }
+
+      // no interesting entities, how ?
+      else if (!bots.hasInterestingEntities ()) {
+         return true;
+      }
+      return false;
+   };
+
+   // we're not allowed to run now
+   if (isPickupBlocked ()) {
       m_pickupItem = nullptr;
       m_pickupType = Pickup::None;
 
@@ -299,7 +334,7 @@ void Bot::updatePickups () {
          }
 
          if (ent == pickupItem) {
-            if (seesItem (origin, ent->v.classname.chars ())) {
+            if (seesItem (origin, ent->v.classname.str ())) {
                itemExists = true;
             }
             break;
@@ -337,38 +372,106 @@ void Bot::updatePickups () {
          continue;
       }
 
-      auto classname = ent->v.classname.chars ();
-      auto model = ent->v.model.chars (9);
+      auto classname = ent->v.classname.str ();
+      auto model = ent->v.model.str (9);
 
       // check if line of sight to object is not blocked (i.e. visible)
       if (seesItem (origin, classname)) {
-         if (cr::strncmp ("hostage_entity", classname, 14) == 0 || cr::strncmp ("monster_scientist", classname, 17) == 0) {
+         const bool isWeaponBox = classname.startsWith ("weaponbox");
+
+         const bool isDemolitionMap = game.mapIs (MapFlags::Demolition);
+         const bool isHostageRescueMap = game.mapIs (MapFlags::HostageRescue);
+         const bool isCSDM = game.is (GameFlags::CSDM);
+
+         if (isHostageRescueMap && (classname.startsWith ("hostage_entity") || classname.startsWith ("monster_scientist"))) {
             allowPickup = true;
             pickupType = Pickup::Hostage;
          }
-         else if (cr::strncmp ("weaponbox", classname, 9) == 0 && cr::strcmp (model, "backpack.mdl") == 0) {
+         else if (isDemolitionMap && isWeaponBox && model == "backpack.mdl") {
             allowPickup = true;
             pickupType = Pickup::DroppedC4;
          }
-         else if ((cr::strncmp ("weaponbox", classname, 9) == 0 || cr::strncmp ("armoury_entity", classname, 14) == 0 || cr::strncmp ("csdm", classname, 4) == 0) && !m_isUsingGrenade) {
+         else if ((isWeaponBox || classname.startsWith ("armoury_entity") || (isCSDM && classname.startsWith ("csdm"))) && !m_isUsingGrenade) {
             allowPickup = true;
             pickupType = Pickup::Weapon;
+
+            if (cv_pickup_ammo_and_kits.bool_ ()) {
+               int primaryWeaponCarried = bestPrimaryCarried ();
+               int secondaryWeaponCarried = bestSecondaryCarried ();
+
+               const auto &config = conf.getWeapons ();
+               const auto &primary = config[primaryWeaponCarried];
+               const auto &secondary = config[secondaryWeaponCarried];
+
+               const auto &primaryProp = conf.getWeaponProp (primary.id);
+               const auto &secondaryProp = conf.getWeaponProp (secondary.id);
+
+               if (secondaryWeaponCarried < kPrimaryWeaponMinIndex && (getAmmo (secondary.id) > 0.3 * secondaryProp.ammo1Max) && model == "357ammobox.mdl") {
+                  allowPickup = false;
+               }
+               else if (!m_isVIP && primaryWeaponCarried >= kPrimaryWeaponMinIndex && (getAmmo (primary.id) > 0.3 * primaryProp.ammo1Max) && !m_isUsingGrenade && !hasShield ()) {
+                  auto weaponType = conf.getWeaponType (primaryWeaponCarried);
+
+                  const bool isSniperRifle = weaponType == WeaponType::Sniper;
+                  const bool isSubmachine = weaponType == WeaponType::SMG;
+                  const bool isShotgun = weaponType == WeaponType::Shotgun;
+                  const bool isRifle = weaponType == WeaponType::Rifle || weaponType == WeaponType::ZoomRifle;
+
+                  if (!isRifle && model == "9mmarclip.mdl") {
+                     allowPickup = false;
+                  }
+                  else if (!isShotgun && model == "shotbox.mdl") {
+                     allowPickup = false;
+                  }
+                  else if (!isSubmachine && model == "9mmclip.mdl") {
+                     allowPickup = false;
+                  }
+                  else if (!isSniperRifle && model == "crossbow_clip.mdl") {
+                     allowPickup = false;
+                  }
+                  else if (primaryWeaponCarried != Weapon::M249 && model == "chainammo.mdl") {
+                     allowPickup = false;
+                  }
+               }
+               else if (m_healthValue >= 100.0f && model == "medkit.mdl") {
+                  allowPickup = false;
+               }
+               else if (pev->armorvalue >= 100.0f && (model == "kevlar.mdl"|| model == "battery.mdl" || model == "assault.mdl")) {
+                  allowPickup = false;
+               }
+
+               if (allowPickup) {
+                  pickupType = Pickup::AmmoAndKits;
+               }
+            }
+
+            // weapon replacement is not allowed
+            if (!cv_pickup_best.bool_ ()) {
+               allowPickup = false;
+               pickupType = Pickup::None;
+            }
          }
-         else if (cr::strncmp ("weapon_shield", classname, 13) == 0 && !m_isUsingGrenade) {
+         else if (classname.startsWith ("weapon_shield") && !m_isUsingGrenade) {
             allowPickup = true;
             pickupType = Pickup::Shield;
+
+            // weapon replacement is not allowed
+            if (!cv_pickup_best.bool_ ()) {
+               allowPickup = false;
+               pickupType = Pickup::None;
+            }
          }
-         else if (cr::strncmp ("item_thighpack", classname, 14) == 0 && m_team == Team::CT && !m_hasDefuser) {
+         else if (isDemolitionMap && m_team == Team::CT && !m_hasDefuser && classname.startsWith ("item_thighpack")) {
             allowPickup = true;
             pickupType = Pickup::DefusalKit;
          }
-         else if (cr::strncmp ("grenade", classname, 7) == 0 && conf.getBombModelName () == model) {
+         else if (isDemolitionMap && classname.startsWith ("grenade") && conf.getBombModelName () == model) {
             allowPickup = true;
             pickupType = Pickup::PlantedC4;
          }
-         else if (cv_pickup_custom_items.bool_ () && util.isItem (ent) && cr::strncmp ("item_thighpack", classname, 14) != 0) {
+         else if (cv_pickup_custom_items.bool_ () && util.isItem (ent) && !classname.startsWith ("item_thighpack")) {
             allowPickup = true;
-            pickupType = Pickup::None;
+            pickupType = Pickup::Items;
          }
       }
 
@@ -377,59 +480,19 @@ void Bot::updatePickups () {
 
          // found weapon on ground?
          if (pickupType == Pickup::Weapon) {
-            int primaryWeaponCarried = bestPrimaryCarried ();
-            int secondaryWeaponCarried = bestSecondaryCarried ();
-
-            const auto &config = conf.getWeapons ();
-            const auto &primary = config[primaryWeaponCarried];
-            const auto &secondary = config[secondaryWeaponCarried];
-
-            const auto &primaryProp = conf.getWeaponProp (primary.id);
-            const auto &secondaryProp = conf.getWeaponProp (secondary.id);
-
-            if (secondaryWeaponCarried < 7 && (m_ammo[secondary.id] > 0.3 * secondaryProp.ammo1Max) && cr::strcmp (model, "w_357ammobox.mdl") == 0) {
+            if (m_isVIP) {
                allowPickup = false;
             }
-            else if (!m_isVIP && primaryWeaponCarried >= 7 && (m_ammo[primary.id] > 0.3 * primaryProp.ammo1Max) && cr::strncmp (model, "w_", 2) == 0) {
-               auto weaponType = conf.getWeaponType (primaryWeaponCarried);
-
-               const bool isSniperRifle = weaponType == WeaponType::Sniper;
-               const bool isSubmachine = weaponType == WeaponType::SMG;
-               const bool isShotgun = weaponType == WeaponType::Shotgun;
-               const bool isRifle = weaponType == WeaponType::Rifle || weaponType == WeaponType::ZoomRifle;
-
-               if (!isRifle && cr::strcmp (model, "w_9mmarclip.mdl") == 0) {
-                  allowPickup = false;
-               }
-               else if (!isShotgun && cr::strcmp (model, "w_shotbox.mdl") == 0) {
-                  allowPickup = false;
-               }
-               else if (!isSubmachine && cr::strcmp (model, "w_9mmclip.mdl") == 0) {
-                  allowPickup = false;
-               }
-               else if (!isSniperRifle && cr::strcmp (model, "w_crossbow_clip.mdl") == 0) {
-                  allowPickup = false;
-               }
-               else if (primaryWeaponCarried != Weapon::M249 && cr::strcmp (model, "w_chainammo.mdl") == 0) {
-                  allowPickup = false;
-               }
-            }
-            else if (m_isVIP || !rateGroundWeapon (ent)) {
+            else if (!rateGroundWeapon (ent)) {
                allowPickup = false;
             }
-            else if (m_healthValue >= 100.0f && cr::strcmp (model, "medkit.mdl") == 0) {
+            else if ((pev->weapons & cr::bit (Weapon::Flashbang)) && model == "flashbang.mdl") {
                allowPickup = false;
             }
-            else if (pev->armorvalue >= 100.0f && (cr::strcmp (model, "kevlar.mdl") == 0 || cr::strcmp (model, "battery.mdl") == 0)) {
+            else if ((pev->weapons & cr::bit (Weapon::Explosive)) && model == "hegrenade.mdl") {
                allowPickup = false;
             }
-            else if ((pev->weapons & cr::bit (Weapon::Flashbang)) && cr::strcmp (model, "flashbang.mdl") == 0) {
-               allowPickup = false;
-            }
-            else if ((pev->weapons & cr::bit (Weapon::Explosive)) && cr::strcmp (model, "hegrenade.mdl") == 0) {
-               allowPickup = false;
-            }
-            else if ((pev->weapons & cr::bit (Weapon::Smoke)) && cr::strcmp (model, "smokegrenade.mdl") == 0) {
+            else if ((pev->weapons & cr::bit (Weapon::Smoke)) && model == "smokegrenade.mdl") {
                allowPickup = false;
             }
          }
@@ -982,10 +1045,12 @@ void Bot::checkMsgQueue () {
 bool Bot::isWeaponRestricted (int weaponIndex) {
    // this function checks for weapon restrictions.
 
-   if (strings.isEmpty (cv_restricted_weapons.str ())) {
+   auto val = cv_restricted_weapons.str ();
+
+   if (val.empty ()) {
       return isWeaponRestrictedAMX (weaponIndex); // no banned weapons
    }
-   const auto &bannedWeapons = String (cv_restricted_weapons.str ()).split (";");
+   const auto &bannedWeapons = val.split <String> (";");
    const auto &alias = util.weaponIdToAlias (weaponIndex);
 
    for (const auto &ban : bannedWeapons) {
@@ -1314,7 +1379,7 @@ void Bot::buyStuff () {
       break;
 
    case BuyState::SecondaryWeapon: // if bot has still some money, buy a better secondary weapon
-      if (isPistolMode || (isFirstRound && hasDefaultPistols && rg.chance (50)) || (hasDefaultPistols && bots.getLastWinner () == m_team && m_moneyAmount > rg.get (2000, 3000)) || (hasPrimaryWeapon () && hasDefaultPistols && m_moneyAmount > rg.get (7500, 9000))) {
+      if (isPistolMode || (isFirstRound && hasDefaultPistols && rg.chance (60)) || (hasDefaultPistols && bots.getLastWinner () == m_team && m_moneyAmount > rg.get (2000, 3000)) || (hasPrimaryWeapon () && hasDefaultPistols && m_moneyAmount > rg.get (7500, 9000))) {
          do {
             pref--;
 
@@ -1380,17 +1445,17 @@ void Bot::buyStuff () {
 
 
    case BuyState::Ammo: // buy enough primary & secondary ammo (do not check for money here)
-      for (int i = 0; i <= 5; ++i) {
+      for (int i = 0; i < 7; ++i) {
          issueCommand ("buyammo%d", rg.get (1, 2)); // simulate human
       }
 
-      // buy enough secondary ammo
+      // buy enough ammo
       if (hasPrimaryWeapon ()) {
+         issueCommand ("buy;menuselect 6");
+      }
+      else {
          issueCommand ("buy;menuselect 7");
       }
-
-      // buy enough primary ammo
-      issueCommand ("buy;menuselect 6");
 
       // try to reload secondary weapon
       if (m_reloadState != Reload::Primary) {
@@ -3023,7 +3088,7 @@ void Bot::showDebugOverlay () {
    static float timeDebugUpdate = 0.0f;
    static int index = kInvalidNodeIndex, goal = kInvalidNodeIndex, taskID = 0;
 
-   static HashMap <int32_t, String> tasks {
+   static HashMap <int32_t, StringRef> tasks {
       { Task::Normal, "Normal" },
       { Task::Pause, "Pause" },
       { Task::MoveToPosition, "Move" },
@@ -3046,13 +3111,13 @@ void Bot::showDebugOverlay () {
       { Task::Spraypaint, "Spray" }
    };
 
-   static HashMap <int32_t, String> personalities {
+   static HashMap <int32_t, StringRef> personalities {
       { Personality::Rusher, "Rusher" },
       { Personality::Normal, "Normal" },
       { Personality::Careful, "Careful" }
    };
 
-   static HashMap <int32_t, String> flags {
+   static HashMap <int32_t, StringRef> flags {
       { AimFlags::Nav, "Nav" },
       { AimFlags::Camp, "Camp" },
       { AimFlags::PredictPath, "Predict" },
@@ -3080,15 +3145,15 @@ void Bot::showDebugOverlay () {
       String enemy = "(none)";
 
       if (!game.isNullEntity (m_enemy)) {
-         enemy = m_enemy->v.netname.chars ();
+         enemy = m_enemy->v.netname.str ();
       }
       else if (!game.isNullEntity (m_lastEnemy)) {
-         enemy.assignf ("%s (L)", m_lastEnemy->v.netname.chars ());
+         enemy.assignf ("%s (L)", m_lastEnemy->v.netname.str ());
       }
       String pickup = "(none)";
 
       if (!game.isNullEntity (m_pickupItem)) {
-         pickup = m_pickupItem->v.classname.chars ();
+         pickup = m_pickupItem->v.classname.str ();
       }
       String aimFlags;
 
@@ -3102,7 +3167,7 @@ void Bot::showDebugOverlay () {
       auto weapon = util.weaponIdToAlias (m_currentWeapon);
 
       String debugData;
-      debugData.assignf ("\n\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\nItem: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\nSP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\nEnemy=%s Pickup=%s Type=%s Terrain=%s Stuck=%s\n", pev->netname.chars (), m_healthValue, pev->armorvalue, taskID, tasks[taskID], getTask ()->desire, weapon, getAmmoInClip (), getAmmo (), m_isReloading ? " (R)" : "", m_moneyAmount, aimFlags.trim (), m_moveSpeed, m_strafeSpeed, index, m_prevGoalIndex, goal, m_navTimeset - game.time (), pev->movetype, enemy, pickup, personalities[m_personality], boolValue (m_checkTerrain), boolValue (m_isStuck));
+      debugData.assignf ("\n\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\nItem: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\nSP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\nEnemy=%s Pickup=%s Type=%s Terrain=%s Stuck=%s\n", pev->netname.str (), m_healthValue, pev->armorvalue, taskID, tasks[taskID], getTask ()->desire, weapon, getAmmoInClip (), getAmmo (), m_isReloading ? " (R)" : "", m_moneyAmount, aimFlags.trim (), m_moveSpeed, m_strafeSpeed, index, m_prevGoalIndex, goal, m_navTimeset - game.time (), pev->movetype, enemy, pickup, personalities[m_personality], boolValue (m_checkTerrain), boolValue (m_isStuck));
 
       MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, nullptr, overlayEntity)
          .writeByte (TE_TEXTMESSAGE)
@@ -3378,7 +3443,7 @@ void Bot::startDoubleJump (edict_t *ent) {
    m_doubleJumpEntity = ent;
 
    startTask (Task::DoubleJump, TaskPri::DoubleJump, kInvalidNodeIndex, game.time (), true);
-   sendToChat (strings.format ("Ok %s, i will help you!", ent->v.netname.chars ()), true);
+   sendToChat (strings.format ("Ok %s, i will help you!", ent->v.netname.str ()), true);
 }
 
 void Bot::sendBotToOrigin (const Vector &origin) {
@@ -3410,7 +3475,7 @@ void Bot::debugMsgInternal (const char *str) {
       return;
    }
    String printBuf;
-   printBuf.assignf ("%s: %s", pev->netname.chars (), str);
+   printBuf.assignf ("%s: %s", pev->netname.str (), str);
 
    bool playMessage = false;
 
@@ -3778,7 +3843,7 @@ void Bot::refreshModelName (char *infobuffer) {
    union ModelTest {
       char model[2];
       uint16_t mask;
-      ModelTest (StringRef m) : model { m[0], m[1] } {};
+      ModelTest (StringRef m) : model { m[0], m[1] } {}
    } modelTest { modelName };
 
    // assign our model mask (tests against model done every bot update)

@@ -220,7 +220,7 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
    else {
       resultName = name;
    }
-   const bool hasNamePrefix = !strings.isEmpty (cv_name_prefix.str ());
+   const bool hasNamePrefix = !cv_name_prefix.str ().empty ();
 
    // disable save bots names if prefix is enabled
    if (hasNamePrefix && cv_save_bots_names.bool_ ()) {
@@ -390,10 +390,10 @@ void BotManager::maintainQuota () {
    int desiredBotCount = cv_quota.int_ ();
    int botsInGame = getBotCount ();
 
-   if (strings.matches (cv_quota_mode.str (), "fill")) {
+   if (cv_quota_mode.str () == "fill") {
       botsInGame += humanPlayersInGame;
    }
-   else if (strings.matches (cv_quota_mode.str (), "match")) {
+   else if (cv_quota_mode.str () == "match") {
       int detectQuotaMatch = cv_quota_match.int_ () == 0 ? cv_quota.int_ () : cv_quota_match.int_ ();
 
       desiredBotCount = cr::max <int> (0, detectQuotaMatch * humanPlayersInGame);
@@ -1664,16 +1664,16 @@ void Bot::updateTeamJoin () {
    }
 }
 
-void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *ent) {
+void BotManager::captureChatRadio (StringRef cmd, StringRef arg, edict_t *ent) {
    if (game.isBotCmd ()) {
       return;
    }
 
-   if (strings.matches (cmd, "say") || strings.matches (cmd, "say_team")) {
+   if (cmd.startsWith ("say")) {
       bool alive = util.isAlive (ent);
       int team = -1;
 
-      if (cr::strcmp (cmd, "say_team") == 0) {
+      if (cmd == "say_team") {
          team = game.getTeam (ent);
       }
 
@@ -1697,8 +1697,8 @@ void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *en
    auto &target = util.getClient (game.indexOfPlayer (ent));
 
    // check if this player alive, and issue something
-   if ((target.flags & ClientFlags::Alive) && target.radio != 0 && cr::strncmp (cmd, "menuselect", 10) == 0) {
-      int radioCommand = atoi (arg);
+   if ((target.flags & ClientFlags::Alive) && target.radio != 0 && cmd.startsWith ("menuselect")) {
+      auto radioCommand = arg.int_ ();
 
       if (radioCommand != 0) {
          radioCommand += 10 * (target.radio - 1);
@@ -1717,8 +1717,8 @@ void BotManager::captureChatRadio (const char *cmd, const char *arg, edict_t *en
       }
       target.radio = 0;
    }
-   else if (cr::strncmp (cmd, "radio", 5) == 0) {
-      target.radio = atoi (&cmd[5]);
+   else if (cmd.startsWith ("radio")) {
+      target.radio = cmd.substr (5).int_ ();
    }
 }
 
@@ -1774,25 +1774,25 @@ void BotManager::updateInterestingEntities () {
 
    // search the map for any type of grenade
    game.searchEntities (nullptr, kInfiniteDistance, [&] (edict_t *e) {
-      auto classname = e->v.classname.chars ();
+      auto classname = e->v.classname.str ();
 
       // search for grenades, weaponboxes, weapons, items and armoury entities
-      if (cr::strncmp ("weaponbox", classname, 9) == 0 || cr::strncmp ("grenade", classname, 7) == 0 || util.isItem (e) || cr::strncmp ("armoury", classname, 7) == 0) {
+      if (classname.startsWith ("weaponbox") || classname.startsWith ("grenade") || util.isItem (e) || classname.startsWith ("armoury")) {
          m_interestingEntities.push (e);
       }
 
-      // pickup some csdm stuff if we're running csdm
-      if (game.mapIs (MapFlags::HostageRescue) && cr::strncmp ("hostage", classname, 7) == 0) {
+      // pickup some hostage if on cs_ maps
+      if (game.mapIs (MapFlags::HostageRescue) && classname.startsWith ("hostage")) {
          m_interestingEntities.push (e);
       }
 
       // add buttons
-      if (game.mapIs (MapFlags::HasButtons) && cr::strncmp ("func_button", classname, 11) == 0) {
+      if (game.mapIs (MapFlags::HasButtons) && classname.startsWith ("func_button")) {
          m_interestingEntities.push (e);
       }
 
       // pickup some csdm stuff if we're running csdm
-      if (game.is (GameFlags::CSDM) && cr::strncmp ("csdm", classname, 4) == 0) {
+      if (game.is (GameFlags::CSDM) && classname.startsWith ("csdm")) {
          m_interestingEntities.push (e);
       }
 

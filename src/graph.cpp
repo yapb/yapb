@@ -1274,7 +1274,7 @@ void BotGraph::calculatePathRadius (int index) {
          if (tr.flFraction < 1.0f) {
             game.testLine (radiusStart, radiusEnd, TraceIgnore::Monsters, nullptr, &tr);
 
-            if (tr.pHit && cr::strncmp ("func_door", tr.pHit->v.classname.chars (), 9) == 0) {
+            if (tr.pHit && tr.pHit->v.classname.str ().startsWith ("func_door")) {
                path.radius = 0.0f;
                wayBlocked = true;
 
@@ -1571,12 +1571,13 @@ bool BotGraph::loadGraphData () {
       for (const auto &path : m_paths) {
          addToBucket (path.origin, path.number);
       }
+      StringRef author = exten.author;
 
-      if ((outOptions & StorageOption::Official) || cr::strncmp (exten.author, "official", 8) == 0 || cr::strlen (exten.author) < 2) {
+      if ((outOptions & StorageOption::Official) || author.startsWith ("official") || author.length () < 2) {
          m_graphAuthor.assign (product.name);
       }
       else {
-         m_graphAuthor.assign (exten.author);
+         m_graphAuthor.assign (author);
       }
       StringRef modified = exten.modified;
 
@@ -1607,7 +1608,7 @@ bool BotGraph::loadGraphData () {
 }
 
 bool BotGraph::canDownload () {
-   return !strings.isEmpty (cv_graph_url.str ());
+   return !cv_graph_url.str ().empty ();
 }
 
 bool BotGraph::saveGraphData () {
@@ -1727,17 +1728,17 @@ bool BotGraph::isNodeReacheableEx (const Vector &src, const Vector &destination,
    // check if we go through a func_illusionary, in which case return false
    game.testHull (src, destination, TraceIgnore::Monsters, head_hull, m_editor, &tr);
 
-   if (tr.pHit && cr::strcmp ("func_illusionary", tr.pHit->v.classname.chars ()) == 0) {
-      return false; // don't add pathnodes through func_illusionaries
+   if (tr.pHit && tr.pHit->v.classname.str () == "func_illusionary") {
+      return false; // don't add path nodes through func_illusionaries
    }
 
    // check if this node is "visible"...
    game.testLine (src, destination, TraceIgnore::Monsters, m_editor, &tr);
 
    // if node is visible from current position (even behind head)...
-   if (tr.pHit && (tr.flFraction >= 1.0f || cr::strncmp ("func_door", tr.pHit->v.classname.chars (), 9) == 0)) {
+   if (tr.pHit && (tr.flFraction >= 1.0f || tr.pHit->v.classname.str ().startsWith ("func_door"))) {
       // if it's a door check if nothing blocks behind
-      if (cr::strncmp ("func_door", tr.pHit->v.classname.chars (), 9) == 0) {
+      if (tr.pHit->v.classname.str ().startsWith ("func_door")) {
          game.testLine (tr.vecEndPos, destination, TraceIgnore::Monsters, tr.pHit, &tr);
 
          if (tr.flFraction < 1.0f) {

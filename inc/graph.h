@@ -183,7 +183,7 @@ private:
 
 public:
    SmallArray <Path> m_paths {};
-   HashMap <int32_t, Array <int32_t>, EmptyHash <int32_t>> m_hashTable;
+   HashMap <int32_t, Array <int32_t>, EmptyHash <int32_t>> m_hashTable {};
 
    String m_graphAuthor {};
    String m_graphModified {};

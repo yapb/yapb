@@ -447,7 +447,7 @@ public:
       return ptr->value;
    }
 
-   const char *str () const {
+   StringRef str () const {
       return ptr->string;
    }
 
