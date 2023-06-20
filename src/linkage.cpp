@@ -86,12 +86,6 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       // Spawn() function is one of the functions any entity is supposed to have in the game DLL,
       // and any MOD is supposed to implement one for each of its entities.
 
-      auto bot = bots[ent];
-
-      if (bot) {
-         bot->spawned ();
-      }
-
       // precache everything
       game.precache ();
 

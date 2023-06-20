@@ -1263,6 +1263,11 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
       }
    }
 
+   // mark bot as "spawned", and reset it to new-round state when it dead (for csdm only)
+   if (victimBot != nullptr) {
+      victimBot->spawned ();
+   }
+
    // is this message about a bot who killed somebody?
    if (killerBot != nullptr) {
       killerBot->m_lastVictim = victim;
