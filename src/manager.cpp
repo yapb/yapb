@@ -609,7 +609,7 @@ void BotManager::kickEveryone (bool instant, bool zeroQuota) {
 
    if (instant) {
       for (const auto &bot : m_bots) {
-         bot->kick ();
+         bot->kick (true);
       }
    }
    m_addRequests.clear ();
@@ -618,12 +618,26 @@ void BotManager::kickEveryone (bool instant, bool zeroQuota) {
 void BotManager::kickFromTeam (Team team, bool removeAll) {
    // this function remove random bot from specified team (if removeAll value = 1 then removes all players from team)
 
+   if (removeAll) {
+      const auto &counts = countTeamPlayers ();
+
+      m_quotaMaintainTime = game.time () + 3.0f;
+      m_addRequests.clear ();
+
+      if (team == Team::Terrorist) {
+         decrementQuota (counts.first);
+      }
+      else {
+         decrementQuota (counts.second);
+      }
+   }
+
    for (const auto &bot : m_bots) {
       if (team == bot->m_team) {
-         decrementQuota ();
-         bot->kick ();
+         bot->kick (removeAll);
 
          if (!removeAll) {
+            decrementQuota ();
             break;
          }
       }
@@ -1524,6 +1538,11 @@ void Bot::resetPathSearchType () {
       m_pathType = morale ? FindPath::Optimal : FindPath::Safe;
       break;
    }
+
+   // if debug goal - set the fastest
+   if (cv_debug_goal.int_ () != kInvalidNodeIndex) {
+      m_pathType = FindPath::Fast;
+   }
 }
 
 void Bot::kill () {
@@ -1533,7 +1552,7 @@ void Bot::kill () {
    bots.touchKillerEntity (this);
 }
 
-void Bot::kick () {
+void Bot::kick (bool silent) {
    // this function kick off one bot from the server.
    auto username = pev->netname.chars ();
 
@@ -1543,7 +1562,10 @@ void Bot::kick () {
    markStale ();
 
    game.serverCommand ("kick \"%s\"", username);
-   ctrl.msg ("Bot '%s' kicked.", username);
+
+   if (!silent) {
+      ctrl.msg ("Bot '%s' kicked.", username);
+   }
 }
 
 void Bot::markStale () {
@@ -1559,7 +1581,7 @@ void Bot::markStale () {
    // clear fakeclient bit
    pev->flags &= ~FL_FAKECLIENT;
 
-   // make as not receiveing any messages
+   // make as not receiving any messages
    pev->flags |= FL_DORMANT;
 }
 
@@ -1787,7 +1809,7 @@ void BotManager::updateInterestingEntities () {
       }
 
       // pickup some hostage if on cs_ maps
-      if (game.mapIs (MapFlags::HostageRescue) && classname.startsWith ("hostage")) {
+      if (game.mapIs (MapFlags::HostageRescue) && util.isHostageEntity (e)) {
          m_interestingEntities.push (e);
       }
 

@@ -40,6 +40,9 @@
     <ClInclude Include="..\ext\crlib\crlib\platform.h" />
     <ClInclude Include="..\ext\crlib\crlib\random.h" />
     <ClInclude Include="..\ext\crlib\crlib\simd.h" />
+    <ClInclude Include="..\ext\crlib\crlib\simd\neon.h" />
+    <ClInclude Include="..\ext\crlib\crlib\simd\sse2.h" />
+    <ClInclude Include="..\ext\crlib\crlib\simd\sse2neon.h" />
     <ClInclude Include="..\ext\crlib\crlib\string.h" />
     <ClInclude Include="..\ext\crlib\crlib\thread.h" />
     <ClInclude Include="..\ext\crlib\crlib\timers.h" />

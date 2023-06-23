@@ -123,35 +123,37 @@ void Bot::updateAimDir () {
    }
    else if (flags & AimFlags::PredictPath) {
       bool changePredictedEnemy = true;
-      bool predictFailed = false;
 
-      if (m_timeNextTracking < game.time () && m_trackingEdict == m_lastEnemy) {
+      if (m_timeNextTracking < game.time () && m_trackingEdict == m_lastEnemy && util.isAlive (m_lastEnemy)) {
          changePredictedEnemy = false;
       }
 
-      auto doFailPredict = [this] () {
+      auto doFailPredict = [this] () -> void {
+         if (m_timeNextTracking > game.time ()) {
+            return; // do not fail instantly
+         }
          m_aimFlags &= ~AimFlags::PredictPath;
          m_trackingEdict = nullptr;
+         m_lookAtPredict = nullptr;
       };
 
-      if (changePredictedEnemy) {
+      auto isPredictedIndexApplicable = [this] () -> bool {
          int pathLength = m_lastPredictLength;
          int predictNode = m_lastPredictIndex;
 
          if (predictNode != kInvalidNodeIndex) {
-            TraceResult tr;
-            game.testLine (getEyesPos (), graph[predictNode].origin, TraceIgnore::Everything, ent (), &tr);
-
-            if (tr.flFraction < 0.2f) {
-               pathLength = kInfiniteDistanceLong;
+            if (!vistab.visible (m_currentNodeIndex, predictNode)) {
+               predictNode = kInvalidNodeIndex;
             }
          }
+         return predictNode != kInvalidNodeIndex && pathLength < cv_max_nodes_for_predict.int_ ();
+      };
 
-         if (predictNode != kInvalidNodeIndex && pathLength < cv_max_nodes_for_predict.int_ ()) {
-            m_lookAt = graph[predictNode].origin;
-            m_lookAtSafe = m_lookAt;
+      if (changePredictedEnemy) {
+         if (isPredictedIndexApplicable ()) {
+            m_lookAtPredict = graph[m_lastPredictIndex].origin;
 
-            m_timeNextTracking = game.time () + 0.25f;
+            m_timeNextTracking = game.time () + rg.get (0.5f, 1.0f);
             m_trackingEdict = m_lastEnemy;
 
             // feel free to fire if shootable
@@ -161,15 +163,16 @@ void Bot::updateAimDir () {
          }
          else {
             doFailPredict ();
-            predictFailed = true;
+         }
+      }
+      else {
+         if (!isPredictedIndexApplicable ()) {
+            doFailPredict ();
          }
       }
 
-      if (predictFailed) {
-         doFailPredict ();
-      }
-      else {
-         m_lookAt = m_lookAtSafe;
+      if (!m_lookAtPredict.empty ()) {
+         m_lookAt = m_lookAtPredict;
       }
    }
    else if (flags & AimFlags::Camp) {
@@ -194,8 +197,9 @@ void Bot::updateAimDir () {
       else {
          m_lookAt = m_destOrigin;
       }
+      const bool onLadder = (m_pathFlags & NodeFlag::Ladder);
 
-      if (m_canChooseAimDirection && m_seeEnemyTime + 4.0f < game.time () && m_currentNodeIndex != kInvalidNodeIndex && !(m_pathFlags & NodeFlag::Ladder)) {
+      if (m_canChooseAimDirection && m_seeEnemyTime + 4.0f < game.time () && m_currentNodeIndex != kInvalidNodeIndex && !onLadder) {
          auto dangerIndex = practice.getIndex (m_team, m_currentNodeIndex, m_currentNodeIndex);
 
          if (graph.exists (dangerIndex) && vistab.visible (m_currentNodeIndex, dangerIndex) && !(graph[dangerIndex].flags & NodeFlag::Crouch)) {
@@ -211,8 +215,17 @@ void Bot::updateAimDir () {
          }
       }
 
+      // try look at next node if on ladder
+      if (onLadder && m_pathWalk.hasNext ()) {
+         auto nextPath = graph[m_pathWalk.next ()];
+
+         if ((nextPath.flags & NodeFlag::Ladder) && m_destOrigin.distanceSq (pev->origin) < cr::sqrf (120.0f) && nextPath.origin.z > m_pathOrigin.z + 45.0f) {
+            m_lookAt = nextPath.origin;
+         }
+      }
+
       // don't look at bottom of node, if reached it
-      if (m_lookAt == m_destOrigin) {
+      if (m_lookAt == m_destOrigin && !onLadder) {
          m_lookAt.z = getEyesPos ().z;
       }
    }
@@ -230,14 +243,15 @@ void Bot::checkDarkness () {
    }
 
    // do not check every frame
-   if (m_checkDarkTime + 5.0f > game.time () || cr::fzero (m_path->light)) {
+   if (m_checkDarkTime > game.time () || cr::fzero (m_path->light)) {
       return;
    }
+
    auto skyColor = illum.getSkyColor ();
    auto flashOn = (pev->effects & EF_DIMLIGHT);
 
    if (mp_flashlight.bool_ () && !m_hasNVG) {
-      auto task = Task ();
+      auto task = getCurrentTaskId ();
 
       if (!flashOn && task != Task::Camp && task != Task::Attack && m_heardSoundTime + 3.0f < game.time () && m_flashLevel > 30 && ((skyColor > 50.0f && m_path->light < 10.0f) || (skyColor <= 50.0f && m_path->light < 40.0f))) {
          pev->impulse = 100;
@@ -257,7 +271,7 @@ void Bot::checkDarkness () {
          issueCommand ("nightvision");
       }
    }
-   m_checkDarkTime = game.time ();
+   m_checkDarkTime = game.time () + rg.get (2.0f, 4.0f);
 }
 
 
@@ -359,12 +373,12 @@ void Bot::updateLookAngles () {
       m_idealAngles.y = direction.y;
    }
    else {
-      float accel = cr::clamp (stiffness * angleDiffYaw - damping * m_lookYawVel, -accelerate, accelerate);
+      const float accel = cr::clamp (stiffness * angleDiffYaw - damping * m_lookYawVel, -accelerate, accelerate);
 
       m_lookYawVel += delta * accel;
       m_idealAngles.y += delta * m_lookYawVel;
    }
-   float accel = cr::clamp (2.0f * stiffness * angleDiffPitch - damping * m_lookPitchVel, -accelerate, accelerate);
+   const float accel = cr::clamp (2.0f * stiffness * angleDiffPitch - damping * m_lookPitchVel, -accelerate, accelerate);
 
    m_lookPitchVel += delta * accel;
    m_idealAngles.x += cr::clamp (delta * m_lookPitchVel, -89.0f, 89.0f);

@@ -124,7 +124,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
       else if (classname == "func_vip_safetyzone" || classname == "info_vip_safetyzone") {
          m_mapFlags |= MapFlags::Assassination; // assassination map
       }
-      else if (classname == "hostage_entity" || classname == "monster_scientist") {
+      else if (util.isHostageEntity (ent)) {
          m_mapFlags |= MapFlags::HostageRescue; // rescue map
       }
       else if (classname == "func_bomb_target" || classname == "info_bomb_target") {
@@ -916,7 +916,7 @@ bool Game::postload () {
       if (is (GameFlags::Metamod)) {
          return true; // we should stop the attempt for loading the real gamedll, since metamod handle this for us
       }
-      auto gamedll = strings.format ("%s/%s", plat.env ("XASH3D_GAMELIBDIR"), plat.hfp ? "libserver_hardfp.so" : "libserver.so");
+      auto gamedll = strings.format ("%s/%s", plat.env ("XASH3D_GAMELIBDIR"), "libserver.so");
 
       if (!m_gameLib.load (gamedll)) {
          logger.fatal ("Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gamedll, getRunningModName ());
@@ -1137,7 +1137,7 @@ void Game::printBotVersion () {
          simdLevels.push ("4.2");
       }
       if (cpuflags.neon) {
-         simdLevels.push ("NEON");
+         simdLevels.push ("Neon");
       }
       botRuntimeFlags.push (strings.format ("SIMD: %s", String::join (simdLevels, " & ")));
    }

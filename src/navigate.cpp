@@ -27,17 +27,10 @@ int Bot::findBestGoal () {
          return result;
       }
    }
-   int tactic = 0;
 
    // path finding behavior depending on map type
    float offensive = 0.0f;
    float defensive = 0.0f;
-
-   float goalDesire = 0.0f;
-   float forwardDesire = 0.0f;
-   float campDesire = 0.0f;
-   float backoffDesire = 0.0f;
-   float tacticChoice = 0.0f;
 
    IntArray *offensiveNodes = nullptr;
    IntArray *defensiveNodes = nullptr;
@@ -57,12 +50,51 @@ int Bot::findBestGoal () {
 
    // terrorist carrying the C4?
    if (m_hasC4 || m_isVIP) {
-      tactic = 3;
-      return findGoalPost (tactic, defensiveNodes, offensiveNodes);
+      return findGoalPost (GoalTactic::Goal, defensiveNodes, offensiveNodes);
    }
    else if (m_team == Team::CT && m_hasHostage) {
-      tactic = 4;
-      return findGoalPost (tactic, defensiveNodes, offensiveNodes);
+      bool hasMoreHostagesAround = false;
+
+      // try to search nearby-unused hostage, and if so, go to next goal
+      if (bots.hasInterestingEntities ()) {
+         const auto &interesting = bots.getInterestingEntities ();
+
+         // search world for hostages
+         for (const auto &ent : interesting) {
+            if (!util.isHostageEntity (ent)) {
+               continue;
+            }
+            bool hostageInUse = false;
+
+            // do not stole from bots (ignore humans, fuck them)
+            for (const auto &other : bots) {
+               if (!other->m_notKilled) {
+                  continue;
+               }
+
+               for (const auto &hostage : other->m_hostages) {
+                  if (hostage == ent) {
+                     hostageInUse = true;
+                     break;
+                  }
+               }
+            }
+
+            // in-use, skip
+            if (hostageInUse) {
+               continue;
+            }
+            const auto &origin = game.getEntityOrigin (ent);
+
+            // too far, go to rescue point
+            if (origin.distanceSq2d (pev->origin) > 1024.0f) {
+               continue;
+            }
+            hasMoreHostagesAround = true;
+            break;
+         }
+      }
+      return findGoalPost (hasMoreHostagesAround ? GoalTactic::Goal : GoalTactic::RescueHostage, defensiveNodes, offensiveNodes);
    }
    auto difficulty = static_cast <float> (m_difficulty);
 
@@ -110,39 +142,39 @@ int Bot::findBestGoal () {
    }
    else if (game.mapIs (MapFlags::Escape)) {
       if (m_team == Team::Terrorist) {
-         offensive += 25.0f;
-         defensive -= 25.0f;
+         offensive += 25.0f + difficulty * 4.0f;
+         defensive -= 25.0f - difficulty * 0.5f;
       }
       else if (m_team == Team::CT) {
-         offensive -= 25.0f;
-         defensive += 25.0f;
+         offensive -= 25.0f - difficulty * 4.5f;
+         defensive += 25.0f + difficulty * 0.5f;
       }
    }
 
-   goalDesire = rg.get (0.0f, 100.0f) + offensive;
-   forwardDesire = rg.get (0.0f, 100.0f) + offensive;
-   campDesire = rg.get (0.0f, 100.0f) + defensive;
-   backoffDesire = rg.get (0.0f, 100.0f) + defensive;
+   float goalDesire = rg.get (0.0f, 100.0f) + offensive;
+   float forwardDesire = rg.get (0.0f, 100.0f) + offensive;
+   float campDesire = rg.get (0.0f, 100.0f) + defensive;
+   float backoffDesire = rg.get (0.0f, 100.0f) + defensive;
 
    if (!usesCampGun ()) {
       campDesire *= 0.5f;
    }
 
-   tacticChoice = backoffDesire;
-   tactic = 0;
+   int tactic = GoalTactic::Defensive;
+   float tacticChoice = backoffDesire;
 
    if (campDesire > tacticChoice) {
       tacticChoice = campDesire;
-      tactic = 1;
+      tactic = GoalTactic::Camp;
    }
 
    if (forwardDesire > tacticChoice) {
       tacticChoice = forwardDesire;
-      tactic = 2;
+      tactic = GoalTactic::Offensive;
    }
 
    if (goalDesire > tacticChoice) {
-      tactic = 3;
+      tactic = GoalTactic::Goal;
    }
    return findGoalPost (tactic, defensiveNodes, offensiveNodes);
 }
@@ -209,10 +241,10 @@ int Bot::findBestGoalWhenBombAction () {
 int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offensive) {
    int goalChoices[4] = { kInvalidNodeIndex, kInvalidNodeIndex, kInvalidNodeIndex, kInvalidNodeIndex };
 
-   if (tactic == 0 && !(*defensive).empty ()) { // careful goal
+   if (tactic == GoalTactic::Defensive && !(*defensive).empty ()) { // careful goal
       postprocessGoals (*defensive, goalChoices);
    }
-   else if (tactic == 1 && !graph.m_campPoints.empty ()) // camp node goal
+   else if (tactic == GoalTactic::Camp && !graph.m_campPoints.empty ()) // camp node goal
    {
       // pickup sniper points if possible for sniping bots
       if (!graph.m_sniperPoints.empty () && usesSniper ()) {
@@ -222,10 +254,10 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offensive) {
          postprocessGoals (graph.m_campPoints, goalChoices);
       }
    }
-   else if (tactic == 2 && !(*offensive).empty ()) { // offensive goal
+   else if (tactic == GoalTactic::Offensive && !(*offensive).empty ()) { // offensive goal
       postprocessGoals (*offensive, goalChoices);
    }
-   else if (tactic == 3 && !graph.m_goalPoints.empty ()) // map goal node
+   else if (tactic == GoalTactic::Goal && !graph.m_goalPoints.empty ()) // map goal node
    {
       // force bomber to select closest goal, if round-start goal was reset by something
       if (m_hasC4 && bots.getRoundStartTime () + 20.0f < game.time ()) {
@@ -258,7 +290,7 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offensive) {
          postprocessGoals (graph.m_goalPoints, goalChoices);
       }
    }
-   else if (tactic == 4 && !graph.m_rescuePoints.empty ())  {
+   else if (tactic == GoalTactic::RescueHostage && !graph.m_rescuePoints.empty ())  {
       // force ct with hostage(s) to select closest rescue goal
       float minDist = kInfiniteDistance;
       int count = 0;
@@ -316,11 +348,6 @@ void Bot::postprocessGoals (const IntArray &goals, int result[]) {
          return true;
       }
 
-      // too less to choice from just return all the goals
-      if (goals.length () < 4) {
-         return false;
-      }
-
       // check if historical goal
       for (const auto &hg : m_goalHist) {
          if (hg == index) {
@@ -335,6 +362,14 @@ void Bot::postprocessGoals (const IntArray &goals, int result[]) {
       }
       return isOccupiedNode (index);
    };
+
+   // too less to choice from just return all the goals
+   if (goals.length () < 4) {
+      for (size_t i = 0; i < goals.length (); ++i) {
+         result[i] = goals[i];
+      }
+      return;
+   }
 
    for (int index = 0; index < 4; ++index) {
       auto goal = goals.random ();
@@ -484,7 +519,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
       // not stuck yet
       else {
          // test if there's something ahead blocking the way
-         if (!isOnLadder () && cantMoveForward (dirNormal, &tr)) {
+         if (!isOnLadder () && isBlockedForward (dirNormal, &tr)) {
             if (cr::fzero (m_firstCollideTime)) {
                m_firstCollideTime = game.time () + 0.2f;
             }
@@ -526,6 +561,11 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
          }
          else {
             bits |= (CollisionProbe::Strafe | CollisionProbe::Jump);
+         }
+
+         // try to duck when graph analyzed
+         if (graph.isAnalyzed ()) {
+            bits |= CollisionProbe::Duck;
          }
 
          // collision check allowed if not flying through the air
@@ -657,7 +697,6 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
             }
             ++i;
 
-#if 0
             if (bits & CollisionProbe::Duck) {
                state[i] = 0;
 
@@ -670,7 +709,6 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                }
             }
             else
-#endif
                state[i] = 0;
             ++i;
 
@@ -909,24 +947,31 @@ bool Bot::updateNavigation () {
          selectBestWeapon ();
       }
    }
- 
+#if 0
+   if (m_path->flags & NodeFlag::Ladder) {
+
+   }
+#else
    if ((m_pathFlags & NodeFlag::Ladder) || isOnLadder ()) {
-      if (graph.exists (m_previousNodes[0]) && (graph[m_previousNodes[0]].flags & NodeFlag::Ladder)) {
-         if (cr::abs (m_pathOrigin.z - pev->origin.z) > 5.0f) {
-            m_pathOrigin.z += pev->origin.z - m_pathOrigin.z;
+      constexpr auto kLadderOffset = Vector (0.0f, 0.0f, 16.0f);
+
+      if (m_pathOrigin.z >= (pev->origin.z + 16.0f)) {
+         m_pathOrigin = m_path->origin + kLadderOffset;
+      }
+      else if (m_pathOrigin.z < pev->origin.z + 16.0f && !isOnLadder () && isOnFloor () && !(pev->flags & FL_DUCKING)) {
+         m_moveSpeed = pev->origin.distance (m_pathOrigin);
+
+         if (m_moveSpeed < 150.0f) {
+            m_moveSpeed = 150.0f;
          }
-         if (m_pathOrigin.z > (pev->origin.z + 16.0f)) {
-            m_pathOrigin = m_pathOrigin - Vector (0.0f, 0.0f, 16.0f);
-         }
-         if (m_pathOrigin.z < (pev->origin.z - 16.0f)) {
-            m_pathOrigin = m_pathOrigin + Vector (0.0f, 0.0f, 16.0f);
+         else if (m_moveSpeed > pev->maxspeed) {
+            m_moveSpeed = pev->maxspeed;
          }
       }
-      m_destOrigin = m_pathOrigin;
 
       // special detection if someone is using the ladder (to prevent to have bots-towers on ladders)
       for (const auto &client : util.getClients ()) {
-         if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || (client.ent->v.movetype != MOVETYPE_FLY) || client.ent == nullptr || client.ent == ent ()) {
+         if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || (client.ent->v.movetype != MOVETYPE_FLY) || client.ent == ent ()) {
             continue;
          }
          TraceResult tr {};
@@ -994,6 +1039,7 @@ bool Bot::updateNavigation () {
 
       }
    }
+#endif
 
    // special lift handling (code merged from podbotmm)
    if (m_pathFlags & NodeFlag::Lift) {
@@ -1043,30 +1089,29 @@ bool Bot::updateNavigation () {
          }
 
          // if bot hits the door, then it opens, so wait a bit to let it open safely
-         if (pev->velocity.length2d () < 10 && m_timeDoorOpen < game.time ()) {
+         if (pev->velocity.lengthSq2d () < cr::sqrf (10.0f) && m_timeDoorOpen < game.time ()) {
             startTask (Task::Pause, TaskPri::Pause, kInvalidNodeIndex, game.time () + 0.5f, false);
             m_timeDoorOpen = game.time () + 1.0f; // retry in 1 sec until door is open
 
-            edict_t *pent = nullptr;
+            ++m_tryOpenDoor;
 
-            if (++m_tryOpenDoor > 1 && util.findNearestPlayer (reinterpret_cast <void **> (&pent), ent (), 384.0f, false, false, true, true, false)) {
-               if (isPenetrableObstacle (pent->v.origin)) {
+            if (m_tryOpenDoor > 2 && util.isAlive (m_lastEnemy)) {
+               if (isPenetrableObstacle (m_lastEnemy->v.origin) && !cv_ignore_enemies.bool_ ()) {
                   m_seeEnemyTime = game.time ();
 
                   m_states |= Sense::SeeingEnemy | Sense::SuspectEnemy;
                   m_aimFlags |= AimFlags::Enemy;
 
-                  m_lastEnemy = pent;
-                  m_enemy = pent;
-                  m_lastEnemyOrigin = pent->v.origin;
+                  m_enemy = m_lastEnemy;
+                  m_lastEnemyOrigin = m_lastEnemy->v.origin;
 
                   m_tryOpenDoor = 0;
                }
-               else  {
-                  m_tryOpenDoor = 0;
-               }
             }
-            else if (m_timeDoorOpen + 2.0f < game.time ()) {
+            else if (m_tryOpenDoor > 4) {
+               clearSearchNodes ();
+               clearTasks ();
+
                m_tryOpenDoor = 0;
             }
          }
@@ -2241,7 +2286,7 @@ bool Bot::advanceMovement () {
             for (const auto &link : m_path->links) {
                if (link.index == destIndex) {
                   m_currentTravelFlags = link.flags;
-                  m_desiredVelocity = link.velocity;
+                  m_desiredVelocity = link.velocity - link.velocity * m_frameInterval;
                   m_jumpFinished = false;
 
                   isCurrentJump = true;
@@ -2371,7 +2416,7 @@ void Bot::setPathOrigin () {
    }
 }
 
-bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
+bool Bot::isBlockedForward (const Vector &normal, TraceResult *tr) {
    // checks if bot is blocked in his movement direction (excluding doors)
 
    // use some TraceLines to determine if anything is blocking the current path of the bot.
@@ -2398,11 +2443,12 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       }
       return true; // bot's head will hit something
    }
+   constexpr auto kVec00N16 = Vector (0.0f, 0.0f, -16.0f);
 
    // bot's head is clear, check at shoulder level...
    // trace from the bot's shoulder left diagonal forward to the right shoulder...
-   src = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) - right * -16.0f;
-   forward = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) + right * 16.0f + normal * 24.0f;
+   src = getEyesPos () + kVec00N16 - right * -16.0f;
+   forward = getEyesPos () + kVec00N16 + right * 16.0f + normal * 24.0f;
 
    game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
 
@@ -2413,8 +2459,8 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
 
    // bot's head is clear, check at shoulder level...
    // trace from the bot's shoulder right diagonal forward to the left shoulder...
-   src = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) + right * 16.0f;
-   forward = getEyesPos () + Vector (0.0f, 0.0f, -16.0f) - right * -16.0f + normal * 24.0f;
+   src = getEyesPos () + kVec00N16 + right * 16.0f;
+   forward = getEyesPos () + kVec00N16 - right * -16.0f + normal * 24.0f;
 
    game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
 
@@ -2445,9 +2491,12 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       }
    }
    else {
+      constexpr auto kVec00N17 = Vector (0.0f, 0.0f, -17.0f);
+      constexpr auto kVec00N24 = Vector (0.0f, 0.0f, -24.0f);
+
       // trace from the left waist to the right forward waist pos
-      src = pev->origin + Vector (0.0f, 0.0f, -17.0f) - right * -16.0f;
-      forward = pev->origin + Vector (0.0f, 0.0f, -17.0f) + right * 16.0f + normal * 24.0f;
+      src = pev->origin + kVec00N17 - right * -16.0f;
+      forward = pev->origin + kVec00N17 + right * 16.0f + normal * 24.0f;
 
       // trace from the bot's waist straight forward...
       game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
@@ -2458,8 +2507,8 @@ bool Bot::cantMoveForward (const Vector &normal, TraceResult *tr) {
       }
 
       // trace from the left waist to the right forward waist pos
-      src = pev->origin + Vector (0.0f, 0.0f, -24.0f) + right * 16.0f;
-      forward = pev->origin + Vector (0.0f, 0.0f, -24.0f) - right * -16.0f + normal * 24.0f;
+      src = pev->origin + kVec00N24 + right * 16.0f;
+      forward = pev->origin + kVec00N24 - right * -16.0f + normal * 24.0f;
 
       game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
 
@@ -2828,7 +2877,7 @@ bool Bot::isDeadlyMove (const Vector &to) {
       if (tr.fStartSolid) {
          return false;
       }
-      float height = tr.flFraction * 1000.0f; // height from ground
+      const float height = tr.flFraction * 1000.0f; // height from ground
 
       // drops more than 150 units?
       if (lastHeight < height - 150.0f) {
@@ -2862,7 +2911,6 @@ void Bot::changePitch (float speed) {
          normalizePitch = -speed;
       }
    }
-
    pev->v_angle.x = cr::wrapAngle (curent + normalizePitch);
 
    if (pev->v_angle.x > 89.9f) {

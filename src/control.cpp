@@ -791,7 +791,7 @@ int BotControl::cmdNodeUpload () {
    msg ("you may notice the game freezes a bit during upload and issue request creation. Please, be patient.");
    msg ("\n");
 
-   String uploadUrl = cv_graph_url_upload.str ();
+   String uploadUrl = strings.format ("https://%s", cv_graph_url_upload.str ());
 
    // try to upload the file
    if (http.uploadFile (uploadUrl, bstor.buildPath (BotFile::Graph))) {

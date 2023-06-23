@@ -99,8 +99,8 @@ private:
    BinaryHeap <RouteTwin <float>> m_routeQue {};
    Array <Route> m_routes {};
 
-   HeuristicFn m_hcalc;
-   HeuristicFn m_gcalc;
+   HeuristicFn m_hcalc {};
+   HeuristicFn m_gcalc {};
 
    int m_length {};
 

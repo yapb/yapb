@@ -19,6 +19,9 @@
     <Filter Include="inc\ext\linkage">
       <UniqueIdentifier>{f6a0fc04-bdf5-479b-8e5a-85eae698541e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="inc\ext\crlib\simd">
+      <UniqueIdentifier>{01281138-9315-450e-be71-55e16a2e3019}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\inc\config.h">
@@ -167,6 +170,18 @@
     </ClInclude>
     <ClInclude Include="..\ext\crlib\crlib\cpuflags.h">
       <Filter>inc\ext\crlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\inc\constant.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ext\crlib\crlib\simd\sse2.h">
+      <Filter>inc\ext\crlib\simd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ext\crlib\crlib\simd\sse2neon.h">
+      <Filter>inc\ext\crlib\simd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ext\crlib\crlib\simd\neon.h">
+      <Filter>inc\ext\crlib\simd</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

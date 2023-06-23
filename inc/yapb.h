@@ -362,8 +362,9 @@ private:
    Vector m_throw {}; // origin of node to throw grenades
    Vector m_enemyOrigin {}; // target origin chosen for shooting
    Vector m_grenade {}; // calculated vector for grenades
-   Vector m_entity {}; // origin of entities like buttons etc.
-   Vector m_lookAtSafe {}; // aiming vector when camping.
+   Vector m_entity {}; // origin of entities like buttons etc
+   Vector m_lookAtSafe {}; // aiming vector when camping
+   Vector m_lookAtPredict {}; // aiming vector when predicting
    Vector m_desiredVelocity {}; // desired velocity for jump nodes
    Vector m_breakableOrigin {}; // origin of breakable
 
@@ -403,7 +404,7 @@ private:
    bool canDuckUnder (const Vector &normal);
    bool canJumpUp (const Vector &normal);
    bool doneCanJumpUp (const Vector &normal, const Vector &right);
-   bool cantMoveForward (const Vector &normal, TraceResult *tr);
+   bool isBlockedForward (const Vector &normal, TraceResult *tr);
    bool canStrafeLeft (TraceResult *tr);
    bool canStrafeRight (TraceResult *tr);
    bool isBlockedLeft ();
@@ -730,7 +731,7 @@ public:
    void pushChatterMessage (int message);
    void tryHeadTowardRadioMessage ();
    void kill ();
-   void kick ();
+   void kick (bool silent = false);
    void resetDoubleJump ();
    void startDoubleJump (edict_t *ent);
    void sendBotToOrigin (const Vector &origin);

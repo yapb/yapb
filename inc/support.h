@@ -54,6 +54,9 @@ public:
    // check if entity is a vip
    bool isPlayerVIP (edict_t *ent);
 
+   // check if entity is a hostage entity
+   bool isHostageEntity (edict_t *ent);
+
    // nearest player search helper
    bool findNearestPlayer (void **holder, edict_t *to, float searchDistance = 4096.0, bool sameTeam = false, bool needBot = false, bool needAlive = false, bool needDrawn = false, bool needBotWithC4 = false);
 

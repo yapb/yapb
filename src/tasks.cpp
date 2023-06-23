@@ -1471,7 +1471,7 @@ void Bot::pickupItem_ () {
 
             auto tab = conf.getRawWeapons ();
 
-            if ((tab[weaponIndex].id == Weapon::Shield || weaponIndex >= kPrimaryWeaponMinIndex || hasShield ()) && niceWeapon) {
+            if ((weaponIndex >= kPrimaryWeaponMinIndex || tab[weaponIndex].id == Weapon::Shield || hasShield ()) && niceWeapon) {
                selectWeaponByIndex (weaponIndex);
                dropCurrentWeapon ();
             }
@@ -1561,9 +1561,7 @@ void Bot::pickupItem_ () {
 
             // find the nearest 'unused' hostage within the area
             game.searchEntities (pev->origin, 768.0f, [&] (edict_t *ent) {
-               auto classname = ent->v.classname.str ();
-
-               if (!classname.startsWith ("hostage_entity") && !classname.startsWith ("monster_scientist")) {
+               if (!util.isHostageEntity (ent)) {
                   return EntitySearchResult::Continue;
                }
 

@@ -115,8 +115,8 @@ void Bot::avoidGrenades () {
             float distanceMoved = pev->origin.distance (pent->v.origin + pent->v.velocity * m_frameInterval);
 
             if (distanceMoved < distance && distance < cr::sqrf (500.0f)) {
-               const auto &dirToPoint = (pev->origin - pent->v.origin).normalize2d ();
-               const auto &rightSide = pev->v_angle.right ().normalize2d ();
+               const auto &dirToPoint = (pev->origin - pent->v.origin).normalize2d_apx ();
+               const auto &rightSide = pev->v_angle.right ().normalize2d_apx ();
 
                if ((dirToPoint | rightSide) > 0.0f) {
                   m_needAvoidGrenade = -1;
@@ -129,15 +129,22 @@ void Bot::avoidGrenades () {
          }
       }
       else if ((pent->v.flags & FL_ONGROUND) && model == "smokegrenade.mdl") {
-         if (isInFOV (pent->v.origin - getEyesPos ()) < pev->fov - 7.0f) {
-            float distance = pent->v.origin.distance (pev->origin);
+         if (isInFOV (pent->v.origin - getEyesPos ()) < pev->fov / 3.0f) {
+            const auto &entOrigin = game.getEntityOrigin (pent);
+            const auto &betweenUs = (entOrigin - pev->origin).normalize_apx ();
+            const auto &betweenNade = (entOrigin - pev->origin).normalize_apx ();
+            const auto &betweenResult = ((Vector (betweenNade.y, betweenNade.x, 0.0f) * 150.0f + entOrigin) - pev->origin).normalize_apx ();
 
-            // shrink bot's viewing distance to smoke grenade's distance
-            if (m_viewDistance > distance) {
-               m_viewDistance = distance;
+            if ((betweenNade | betweenUs) > (betweenNade | betweenResult) && util.isVisible (pent->v.origin, ent ())) {
+               const float distance = entOrigin.distance (pev->origin);
 
-               if (rg.chance (45)) {
-                  pushChatterMessage (Chatter::BehindSmoke);
+               // shrink bot's viewing distance to smoke grenade's distance
+               if (m_viewDistance > distance) {
+                  m_viewDistance = distance;
+
+                  if (rg.chance (45)) {
+                     pushChatterMessage (Chatter::BehindSmoke);
+                  }
                }
             }
          }
@@ -383,7 +390,7 @@ void Bot::updatePickups () {
          const bool isHostageRescueMap = game.mapIs (MapFlags::HostageRescue);
          const bool isCSDM = game.is (GameFlags::CSDM);
 
-         if (isHostageRescueMap && (classname.startsWith ("hostage_entity") || classname.startsWith ("monster_scientist"))) {
+         if (isHostageRescueMap && util.isHostageEntity (ent)) {
             allowPickup = true;
             pickupType = Pickup::Hostage;
          }
@@ -794,9 +801,13 @@ void Bot::showChatterIcon (bool show, bool disconnect) {
    int ownIndex = index ();
 
    // do not respect timers while disconnecting bot
-
    for (auto &client : util.getClients ()) {
       if (!(client.flags & ClientFlags::Used) || (client.ent->v.flags & FL_FAKECLIENT) || client.team != m_team) {
+         continue;
+      }
+
+      // dormants not receiving messages
+      if (client.ent->v.flags & FL_DORMANT) {
          continue;
       }
 
@@ -2168,7 +2179,7 @@ bool Bot::reactOnEnemy () {
 
 bool Bot::lastEnemyShootable () {
    // don't allow shooting through walls
-   if (!(m_aimFlags & AimFlags::LastEnemy) || m_lastEnemyOrigin.empty () || game.isNullEntity (m_lastEnemy)) {
+   if (!(m_aimFlags & (AimFlags::LastEnemy | AimFlags::PredictPath)) || m_lastEnemyOrigin.empty () || game.isNullEntity (m_lastEnemy)) {
       return false;
    }
    return util.getShootingCone (ent (), m_lastEnemyOrigin) >= 0.90f && isPenetrableObstacle (m_lastEnemyOrigin);

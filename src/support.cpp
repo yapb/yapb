@@ -204,7 +204,7 @@ bool BotSupport::isMonster (edict_t *ent) {
       return false;
    }
 
-   if (ent->v.classname.str ().startsWith ("hostage")) {
+   if (isHostageEntity (ent)) {
       return false;
    }
 
@@ -224,6 +224,18 @@ bool BotSupport::isPlayerVIP (edict_t *ent) {
       return false;
    }
    return *(engfuncs.pfnInfoKeyValue (engfuncs.pfnGetInfoKeyBuffer (ent), "model")) == 'v';
+}
+
+bool BotSupport::isHostageEntity (edict_t *ent) {
+   if (game.isNullEntity (ent)) {
+      return false;
+   }
+   auto classHash = ent->v.classname.str ().hash ();
+
+   constexpr auto kHostageEntity = StringRef::fnv1a32 ("hostage_entity");
+   constexpr auto kMonsterScientist = StringRef::fnv1a32 ("monster_scientist");
+
+   return classHash == kHostageEntity || classHash == kMonsterScientist;
 }
 
 bool BotSupport::isFakeClient (edict_t *ent) {

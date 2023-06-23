@@ -395,6 +395,15 @@ CR_DECLARE_SCOPED_ENUM (Visibility,
    None = 0
 )
 
+// goal tactic
+CR_DECLARE_SCOPED_ENUM (GoalTactic,
+   Defensive = 0,
+   Camp,
+   Offensive,
+   Goal,
+   RescueHostage
+)
+
 // frustum sides
 CR_DECLARE_SCOPED_ENUM (FrustumSide,
    Top = 0,
