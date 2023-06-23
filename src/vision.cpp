@@ -79,7 +79,7 @@ void Bot::updateAimDir () {
    else if (flags & AimFlags::Grenade) {
       m_lookAt = m_throw;
 
-      float throwDistance = m_throw.distance (pev->origin);
+      const float throwDistance = m_throw.distance (pev->origin);
       float coordCorrection = 0.0f;
 
       if (throwDistance > 100.0f && throwDistance < 800.0f) {
@@ -200,7 +200,7 @@ void Bot::updateAimDir () {
       const bool onLadder = (m_pathFlags & NodeFlag::Ladder);
 
       if (m_canChooseAimDirection && m_seeEnemyTime + 4.0f < game.time () && m_currentNodeIndex != kInvalidNodeIndex && !onLadder) {
-         auto dangerIndex = practice.getIndex (m_team, m_currentNodeIndex, m_currentNodeIndex);
+         const auto dangerIndex = practice.getIndex (m_team, m_currentNodeIndex, m_currentNodeIndex);
 
          if (graph.exists (dangerIndex) && vistab.visible (m_currentNodeIndex, dangerIndex) && !(graph[dangerIndex].flags & NodeFlag::Crouch)) {
             if (pev->origin.distanceSq (graph[dangerIndex].origin) < cr::sqrf (512.0f)) {
@@ -217,7 +217,7 @@ void Bot::updateAimDir () {
 
       // try look at next node if on ladder
       if (onLadder && m_pathWalk.hasNext ()) {
-         auto nextPath = graph[m_pathWalk.next ()];
+         const auto &nextPath = graph[m_pathWalk.next ()];
 
          if ((nextPath.flags & NodeFlag::Ladder) && m_destOrigin.distanceSq (pev->origin) < cr::sqrf (120.0f) && nextPath.origin.z > m_pathOrigin.z + 45.0f) {
             m_lookAt = nextPath.origin;
@@ -247,11 +247,11 @@ void Bot::checkDarkness () {
       return;
    }
 
-   auto skyColor = illum.getSkyColor ();
-   auto flashOn = (pev->effects & EF_DIMLIGHT);
+   const auto skyColor = illum.getSkyColor ();
+   const auto flashOn = (pev->effects & EF_DIMLIGHT);
 
    if (mp_flashlight.bool_ () && !m_hasNVG) {
-      auto task = getCurrentTaskId ();
+      const auto task = getCurrentTaskId ();
 
       if (!flashOn && task != Task::Camp && task != Task::Attack && m_heardSoundTime + 3.0f < game.time () && m_flashLevel > 30 && ((skyColor > 50.0f && m_path->light < 10.0f) || (skyColor <= 50.0f && m_path->light < 40.0f))) {
          pev->impulse = 100;

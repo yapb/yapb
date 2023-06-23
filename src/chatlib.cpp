@@ -57,7 +57,7 @@ void BotSupport::addChatErrors (String &line) {
    auto length = static_cast <int32_t> (line.length ());
 
    if (length > 15) {
-      auto percentile = length / 2;
+      const auto percentile = length / 2;
 
       // "length / 2" percent of time drop a character
       if (rg.chance (percentile)) {

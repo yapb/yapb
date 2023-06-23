@@ -16,7 +16,7 @@ void MessageDispatcher::netMsgTextMsg () {
    }
 
    // lookup cached message
-   auto cached = m_textMsgCache[m_args[msg].chars_];
+   const auto cached = m_textMsgCache[m_args[msg].chars_];
 
    // check if we're need to handle message
    if (!(cached & TextMsgCache::NeedHandle)) {
@@ -113,7 +113,7 @@ void MessageDispatcher::netMsgShowMenu () {
    if (m_args.length () < min || !m_bot) {
       return;
    }
-   auto cached = m_showMenuCache[m_args[menu].chars_];
+   const auto cached = m_showMenuCache[m_args[menu].chars_];
 
    // only assign if non-zero
    if (cached > 0) {
@@ -241,7 +241,7 @@ void MessageDispatcher::netMsgStatusIcon () {
       return;
    }
    // lookup cached icon
-   auto cached = m_statusIconCache[m_args[icon].chars_];
+   const auto cached = m_statusIconCache[m_args[icon].chars_];
 
    // check if we're need to handle message
    if (!(cached & TextMsgCache::NeedHandle)) {
@@ -395,7 +395,7 @@ void MessageDispatcher::netMsgItemStatus () {
    if (m_args.length () < min || !m_bot) {
       return;
    }
-   auto mask = m_args[value].long_;
+   const auto mask = m_args[value].long_;
 
    m_bot->m_hasNVG = !!(mask & ItemStatus::Nightvision);
    m_bot->m_hasDefuser = !!(mask & ItemStatus::DefusalKit);
@@ -520,7 +520,7 @@ void MessageDispatcher::start (edict_t *ent, int32_t type) {
 
    // search if we need to handle this message
    if (m_reverseMap.exists (type)) {
-      auto msg = m_reverseMap[type];
+      const auto msg = m_reverseMap[type];
       m_current = m_handlers[msg] ? msg : NetMsg::None;
    }
 

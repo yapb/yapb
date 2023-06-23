@@ -199,10 +199,10 @@ public:
 
 public:
    int getFacingIndex ();
-   int getFarest (const Vector &origin, float maxDistance = 32.0);
-   int getForAnalyzer (const Vector &origin, float maxDistance);
-   int getNearest (const Vector &origin, float minDistance = kInfiniteDistance, int flags = -1);
-   int getNearestNoBuckets (const Vector &origin, float minDistance = kInfiniteDistance, int flags = -1);
+   int getFarest (const Vector &origin, const float maxRange = 32.0);
+   int getForAnalyzer (const Vector &origin, const float maxRange);
+   int getNearest (const Vector &origin, const float range = kInfiniteDistance, int flags = -1);
+   int getNearestNoBuckets (const Vector &origin, const float range = kInfiniteDistance, int flags = -1);
    int getEditorNearest ();
    int clearConnections (int index);
    int getBspSize ();

@@ -241,7 +241,7 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
       return BotCreateResult::MaxPlayersReached;
    }
    auto object = cr::makeUnique <Bot> (bot, difficulty, personality, team, skin);
-   auto index = object->index ();
+   const auto index = object->index ();
 
    // assign owner of bot name
    if (botName != nullptr) {
@@ -380,8 +380,8 @@ void BotManager::maintainQuota () {
    }
    cv_quota.set (cr::clamp <int> (cv_quota.int_ (), 0, game.maxClients ()));
 
-   int totalHumansInGame = getHumansCount ();
-   int humanPlayersInGame = getHumansCount (true);
+   const int totalHumansInGame = getHumansCount ();
+   const int humanPlayersInGame = getHumansCount (true);
 
    if (!game.isDedicated () && !totalHumansInGame) {
       return;
@@ -476,14 +476,13 @@ void BotManager::maintainAutoKill () {
 
       return;
    }
-
    int aliveBots = 0;
 
    // do not interrupt bomb-defuse scenario
    if (game.mapIs (MapFlags::Demolition) && isBombPlanted ()) {
       return;
    }
-   int totalHumans = getHumansCount (true); // we're ignore spectators intentionally 
+   const int totalHumans = getHumansCount (true); // we're ignore spectators intentionally 
 
    // if we're have no humans in teams do not bother to proceed
    if (!totalHumans) {
@@ -500,7 +499,7 @@ void BotManager::maintainAutoKill () {
          }
       }
    }
-   int aliveHumans = getAliveHumansCount ();
+   const int aliveHumans = getAliveHumansCount ();
 
    // check if we're have no alive players and some alive bots, and start autokill timer
    if (!aliveHumans && aliveBots > 0 && cr::fzero (m_autoKillCheckTime)) {
@@ -570,7 +569,7 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
    // this function fill server with bots, with specified team & personality
 
    // always keep one slot
-   int maxClients = cv_autovacate.bool_ () ? game.maxClients () - cv_autovacate_keep_slots.int_ () - (game.isDedicated () ? 0 : getHumansCount ()) : game.maxClients ();
+   const int maxClients = cv_autovacate.bool_ () ? game.maxClients () - cv_autovacate_keep_slots.int_ () - (game.isDedicated () ? 0 : getHumansCount ()) : game.maxClients ();
 
    if (getBotCount () >= maxClients - getHumansCount ()) {
       return;
@@ -582,7 +581,7 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
    else {
       selection = 5;
    }
-   char teams[6][12] = { "", {"Terrorists"}, {"CTs"}, "", "", {"Random"}, };
+   constexpr char teams[6][12] = { "", {"Terrorists"}, {"CTs"}, "", "", {"Random"}, };
    auto toAdd = numToAdd == -1 ? maxClients - (getHumansCount () + getBotCount ()) : numToAdd;
 
    for (int i = 0; i <= toAdd; ++i) {
@@ -942,7 +941,7 @@ void BotManager::updateBotDifficulties () {
    if (cv_difficulty_min.int_ () != Difficulty::Invalid || cv_difficulty_max.int_ () != Difficulty::Invalid || cv_difficulty_auto.bool_ ()) {
       return;
    }
-   auto difficulty = cv_difficulty.int_ ();
+   const auto difficulty = cv_difficulty.int_ ();
 
    if (difficulty != m_lastDifficulty) {
 
@@ -961,12 +960,12 @@ void BotManager::balanceBotDifficulties () {
    };
 
    if (cv_difficulty_auto.bool_ () && m_difficultyBalanceTime < game.time ()) {
-      auto ratioPlayer = getAverageTeamKPD (false);
-      auto ratioBots = getAverageTeamKPD (true);
+      const auto ratioPlayer = getAverageTeamKPD (false);
+      const auto ratioBots = getAverageTeamKPD (true);
 
       // calculate for each the bot
       for (auto &bot : m_bots) {
-         float score = bot->m_kpdRatio;
+         const float score = bot->m_kpdRatio;
 
          // if kd ratio is going to go to low, we need to try to set higher difficulty
          if (score < 0.8f || (score <= 1.2f && ratioBots < ratioPlayer)) {
@@ -1138,7 +1137,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
 }
 
 float Bot::getConnectionTime () {
-   auto current = plat.seconds ();
+   const auto current = plat.seconds ();
 
    if (current - m_joinServerTime > m_playServerTime || current - m_joinServerTime <= 0.0f) {
       m_playServerTime = 60.0f * rg.get (30.0f, 240.0f);
@@ -1204,7 +1203,7 @@ bool BotManager::isTeamStacked (int team) {
    if (team != Team::CT && team != Team::Terrorist) {
       return false;
    }
-   int limitTeams = mp_limitteams.int_ ();
+   const int limitTeams = mp_limitteams.int_ ();
 
    if (!limitTeams) {
       return false;
@@ -1239,8 +1238,8 @@ void BotManager::erase (Bot *bot) {
 }
 
 void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
-   auto killerTeam = game.getTeam (killer);
-   auto victimTeam = game.getTeam (victim);
+   const auto killerTeam = game.getTeam (killer);
+   const auto victimTeam = game.getTeam (victim);
 
    if (cv_radio_mode.int_ () == 2) {
       // need to send congrats on well placed shot
@@ -1656,7 +1655,7 @@ void Bot::updateTeamJoin () {
       m_startAction = BotMsg::None; // switch back to idle
 
       // czero has additional models
-      auto maxChoice = game.is (GameFlags::ConditionZero) ? 5 : 4;
+      const auto maxChoice = game.is (GameFlags::ConditionZero) ? 5 : 4;
       auto enforcedSkin = 0;
 
       // setup enforced skin based on selected team
@@ -1697,7 +1696,7 @@ void BotManager::captureChatRadio (StringRef cmd, StringRef arg, edict_t *ent) {
    }
 
    if (cmd.startsWith ("say")) {
-      bool alive = util.isAlive (ent);
+      const  bool alive = util.isAlive (ent);
       int team = -1;
 
       if (cmd == "say_team") {
@@ -1989,7 +1988,7 @@ void BotThreadWorker::shutdown () {
 }
 
 void BotThreadWorker::startup (int workers) {
-   size_t count = m_botWorker.threadCount ();
+   const size_t count = m_botWorker.threadCount ();
 
    if (count > 0) {
       logger.error ("Tried to start thread pool with existing %d threads in pool.", count);
@@ -1997,7 +1996,7 @@ void BotThreadWorker::startup (int workers) {
    }
 
    int requestedThreadCount = workers;
-   int hardwareConcurrency = plat.hardwareConcurrency ();
+   const int hardwareConcurrency = plat.hardwareConcurrency ();
 
    if (requestedThreadCount == -1) {
       requestedThreadCount = hardwareConcurrency / 4;

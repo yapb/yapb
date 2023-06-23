@@ -216,9 +216,6 @@ public:
    // search entities in sphere
    void searchEntities (const Vector &position, float radius, EntitySearch functor);
 
-   // this function is checking that pointed by ent pointer obstacle, can be destroyed
-   bool isShootableBreakable (edict_t *ent);
-
    // print the version to server console on startup
    void printBotVersion ();
 

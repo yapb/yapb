@@ -197,10 +197,10 @@ bool AStarAlgo::cantSkipNode (const int a, const int b) {
    if (tooNarrow) {
       return true;
    }
-   const float distance = ag.origin.distanceSq (bg.origin);
+   const float distanceSq = ag.origin.distanceSq (bg.origin);
 
-   const bool tooFar = distance > cr::sqrf (400.0f);
-   const bool tooClose = distance < cr::sqrtf (40.0f);
+   const bool tooFar = distanceSq > cr::sqrf (400.0f);
+   const bool tooClose = distanceSq < cr::sqrtf (40.0f);
 
    if (tooFar || tooClose) {
       return true;
@@ -416,7 +416,7 @@ bool FloydWarshallAlgo::find (int srcIndex, int destIndex, NodeAdderFn onAddedNo
 void DijkstraAlgo::init (const int length) {
    m_length = length;
 
-   auto ulength = static_cast <size_t> (length);
+   const auto ulength = static_cast <size_t> (length);
 
    m_distance.resize (ulength);
    m_parent.resize (ulength);

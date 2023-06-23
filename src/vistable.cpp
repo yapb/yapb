@@ -162,7 +162,7 @@ void GraphVistable::load () {
    if (!m_length) {
       return;
    }
-   bool dataLoaded = bstor.load <VisStorage> (m_vistable);
+   const bool dataLoaded = bstor.load <VisStorage> (m_vistable);
 
    // if loaded, do not recalculate visibility
    if (dataLoaded) {

@@ -109,7 +109,7 @@ void BotPractice::syncUpdate () {
             if (i == j || !vistab.visible (i, j) || !exists (team, i, j)) {
                continue;
             }
-            auto actDamage = getDamage (team, i, j);
+            const auto actDamage = getDamage (team, i, j);
 
             if (actDamage > maxDamage) {
                maxDamage = actDamage;

@@ -69,8 +69,8 @@ struct WeaponProp {
 // weapon info structure
 struct WeaponInfo {
    int id; // the weapon id value
-   const char *name; // name of the weapon when selecting it
-   const char *model; // model name to separate cs weapons
+   StringRef name; // name of the weapon when selecting it
+   StringRef model; // model name to separate cs weapons
    int price; // price when buying
    int minPrimaryAmmo; // minimum primary ammo
    int teamStandard; // used by team (number) (standard map)
@@ -86,8 +86,8 @@ struct WeaponInfo {
 
 public:
    WeaponInfo (int id, 
-      const char *name,
-      const char *model,
+      StringRef name,
+      StringRef model,
       int price,
       int minPriAmmo,
       int teamStd,
@@ -391,8 +391,8 @@ private:
    int bestGrenadeCarried ();
    int bestWeaponCarried ();
    int changeNodeIndex (int index);
-   int numEnemiesNear (const Vector &origin, float radius);
-   int numFriendsNear (const Vector &origin, float radius);
+   int numEnemiesNear (const Vector &origin, const float radius);
+   int numFriendsNear (const Vector &origin, const float radius);
 
    float getBombTimeleft ();
    float getEstimatedNodeReachTime ();

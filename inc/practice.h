@@ -27,7 +27,7 @@ public:
 
 public:
    constexpr bool operator == (const DangerStorage &rhs) const {
-      return rhs.data[2] == data[2] && rhs.data[1] == data[1] && rhs.data[0] == data[0];
+      return cr::memcmp (rhs.data, data, sizeof (data));
    }
 
    constexpr bool operator != (const DangerStorage &rhs) const {

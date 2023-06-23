@@ -32,7 +32,7 @@ void BotSounds::listenNoise (edict_t *ent, StringRef sample, float volume) {
    if (origin.empty ()) {
       return;
    }
-   auto noise = m_noiseCache[sample.substr (0, 11)];
+   const auto noise = m_noiseCache[sample.substr (0, 11)];
 
    // we're not handling theese
    if (!(noise & Noise::NeedHandle)) {
@@ -49,12 +49,12 @@ void BotSounds::listenNoise (edict_t *ent, StringRef sample, float volume) {
          if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive)) {
             continue;
          }
-         auto distance = client.origin.distanceSq (origin);
+         const auto distanceSq = client.origin.distanceSq (origin);
 
          // now find nearest player
-         if (distance < nearest) {
+         if (distanceSq < nearest) {
             result = &client;
-            nearest = distance;
+            nearest = distanceSq;
          }
       }
       return result;

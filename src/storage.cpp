@@ -16,8 +16,8 @@ template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *
    extern ConVar cv_debug, cv_graph_url;
 
    // graphs can be downloaded...
-   auto isGraph = !!(type.option & StorageOption::Graph);
-   auto isDebug = cv_debug.bool_ ();
+   const auto isGraph = !!(type.option & StorageOption::Graph);
+   const auto isDebug = cv_debug.bool_ ();
 
    MemFile file (filename); // open the file
    data.clear ();
@@ -127,8 +127,8 @@ template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *
    if ((hdr.options & type.option) != type.option) {
       return error (isGraph, isDebug, file, "Incorrect storage format for %s (filename: '%s').", type.name, filename);
    }
-   auto compressedSize = static_cast <size_t> (hdr.compressed);
-   auto numberNodes = static_cast <size_t> (hdr.length);
+   const auto compressedSize = static_cast <size_t> (hdr.compressed);
+   const auto numberNodes = static_cast <size_t> (hdr.length);
 
    SmallArray <uint8_t> compressed (compressedSize + sizeof (uint8_t) * ULZ::Excess);
 
@@ -155,8 +155,8 @@ template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *
 
          // author of graph.. save
          if ((hdr.options & StorageOption::Exten) && exten != nullptr) {
-            auto extenSize = sizeof (ExtenHeader);
-            auto actuallyRead = file.read (exten, extenSize) * extenSize;
+            const auto extenSize = sizeof (ExtenHeader);
+            const auto actuallyRead = file.read (exten, extenSize) * extenSize;
 
             if (isGraph) {
                resetRetries ();
@@ -198,7 +198,7 @@ template <typename U> bool BotStorage::save (const SmallArray <U> &data, ExtenHe
    if (passOptions != 0) {
       type.option |= passOptions;
    }
-   auto isGraph = !!(type.option & StorageOption::Graph);
+   const auto isGraph = !!(type.option & StorageOption::Graph);
 
    // do not allow to save graph with less than 8 nodes
    if (isGraph && graph.length () < kMaxNodeLinks) {
@@ -226,7 +226,7 @@ template <typename U> bool BotStorage::save (const SmallArray <U> &data, ExtenHe
       logger.error ("Unable to open %s file for writing (filename: '%s').", type.name, filename);
       return false;
    }
-   auto rawLength = data.length () * sizeof (U);
+   const auto rawLength = data.length () * sizeof (U);
    SmallArray <uint8_t> compressed (rawLength + sizeof (uint8_t) * ULZ::Excess);
 
    // try to compress

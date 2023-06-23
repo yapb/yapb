@@ -76,7 +76,7 @@ void GraphAnalyze::update () {
       setUpdateInterval ();
 
       auto pos = graph[i].origin;
-      auto range = cv_graph_analyze_distance.float_ ();
+      const auto range = cv_graph_analyze_distance.float_ ();
 
       for (int dir = 1; dir < kMaxNodeLinks; ++dir) {
          switch (dir) {
@@ -269,7 +269,7 @@ void GraphAnalyze::flood (const Vector &pos, const Vector &next, float range) {
    game.testHull (pos, { next.x, next.y, next.z + 19.0f }, TraceIgnore::Monsters, head_hull, nullptr, &tr);
 
    // we're can't reach next point
-   if (!cr::fequal (tr.flFraction, 1.0f) && !game.isShootableBreakable (tr.pHit)) {
+   if (!cr::fequal (tr.flFraction, 1.0f) && !util.isShootableBreakable (tr.pHit)) {
       return;
    }
 

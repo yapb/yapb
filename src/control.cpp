@@ -61,7 +61,7 @@ int BotControl::cmdKickBots () {
    enum args { alias = 1, instant, team };
 
    // check if we're need to remove bots instantly
-   auto kickInstant = strValue (instant) == "instant";
+   const auto kickInstant = strValue (instant) == "instant";
 
    // if team is specified, kick from specified tram
    if (strValue (alias).endsWith ("_ct") || intValue (team) == 2 || strValue (team) == "ct") {
@@ -109,7 +109,7 @@ int BotControl::cmdVote () {
    if (!hasArg (mapid)) {
       return BotCommandResult::BadFormat;
    }
-   int mapID = intValue (mapid);
+   const int mapID = intValue (mapid);
 
    // loop through all players
    for (const auto &bot : bots) {
@@ -126,16 +126,15 @@ int BotControl::cmdWeaponMode () {
    if (!hasArg (type)) {
       return BotCommandResult::BadFormat;
    }
-   HashMap <String, int> modes;
-
-   modes["knife"] = 1;
-   modes["pistol"] = 2;
-   modes["shotgun"] = 3;
-   modes["smg"] = 4;
-   modes["rifle"] = 5;
-   modes["sniper"] = 6;
-   modes["standard"] = 7;
-
+   static HashMap <String, int> modes {
+      { "knife", 1 },
+      { "pistol", 2 },
+      { "shotgun", 3 },
+      { "smg", 4 },
+      { "rifle", 5 },
+      { "sniper", 6 },
+      { "standard", 7 }
+   };
    auto mode = strValue (type);
 
    // check if selected mode exists
@@ -148,7 +147,7 @@ int BotControl::cmdWeaponMode () {
 }
 
 int BotControl::cmdVersion () {
-   auto &build = product.build;
+   const auto &build = product.build;
 
    msg ("%s v%s (ID %s)", product.name, product.version, build.id);
    msg ("   by %s (%s)", product.author, product.email);
@@ -592,7 +591,7 @@ int BotControl::cmdNodeCache () {
       graph.cachePoint (kInvalidNodeIndex);
    }
    else {
-      int index = intValue (nearest);
+      const int index = intValue (nearest);
 
       // check for existence
       if (graph.exists (index)) {
@@ -623,11 +622,11 @@ int BotControl::cmdNodeClean () {
       msg ("Done. Processed node %d. %d useless paths was cleared.", graph.getEditorNearest (), removed);
    }
    else {
-      int index = intValue (option);
+      const int index = intValue (option);
 
       // check for existence
       if (graph.exists (index)) {
-         int removed = graph.clearConnections (index);
+         const int removed = graph.clearConnections (index);
 
          msg ("Done. Processed node %d. %d useless paths was cleared.", index, removed);
       }

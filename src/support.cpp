@@ -9,6 +9,7 @@
 
 ConVar cv_display_welcome_text ("yb_display_welcome_text", "1", "Enables or disables showing welcome message to host entity on game start.");
 ConVar cv_enable_query_hook ("yb_enable_query_hook", "0", "Enables or disables fake server queries response, that shows bots as real players in server browser.");
+ConVar cv_breakable_health_limit ("yb_breakable_health_limit", "500.0", "Specifies the maximum health of breakable object, that bot will consider to destroy.", true, 1.0f, 3000.0);
 
 BotSupport::BotSupport () {
    m_needToSendWelcome = false;
@@ -226,16 +227,47 @@ bool BotSupport::isPlayerVIP (edict_t *ent) {
    return *(engfuncs.pfnInfoKeyValue (engfuncs.pfnGetInfoKeyBuffer (ent), "model")) == 'v';
 }
 
+bool BotSupport::isDoorEntity (edict_t *ent) {
+   if (game.isNullEntity (ent)) {
+      return false;
+   }
+   return ent->v.classname.str ().startsWith ("func_door");;
+}
+
 bool BotSupport::isHostageEntity (edict_t *ent) {
    if (game.isNullEntity (ent)) {
       return false;
    }
-   auto classHash = ent->v.classname.str ().hash ();
+   const auto classHash = ent->v.classname.str ().hash ();
 
    constexpr auto kHostageEntity = StringRef::fnv1a32 ("hostage_entity");
    constexpr auto kMonsterScientist = StringRef::fnv1a32 ("monster_scientist");
 
    return classHash == kHostageEntity || classHash == kMonsterScientist;
+}
+
+bool BotSupport::isShootableBreakable (edict_t *ent) {
+   if (game.isNullEntity (ent)) {
+      return false;
+   }
+   const auto limit = cv_breakable_health_limit.float_ ();
+
+   // not shootable
+   if (ent->v.health >= limit) {
+      return false;
+   }
+   constexpr auto kFuncBreakable = StringRef::fnv1a32 ("func_breakable");
+   constexpr auto kFuncPushable = StringRef::fnv1a32 ("func_pushable");
+   constexpr auto kFuncWall = StringRef::fnv1a32 ("func_wall");
+
+   if (ent->v.takedamage > 0.0f && ent->v.impulse <= 0 && !(ent->v.flags & FL_WORLDBRUSH) && !(ent->v.spawnflags & SF_BREAK_TRIGGER_ONLY)) {
+      auto classHash = ent->v.classname.str ().hash ();
+
+      if (classHash == kFuncBreakable || (classHash == kFuncPushable && (ent->v.spawnflags & SF_PUSH_BREAKABLE)) || classHash == kFuncWall) {
+         return ent->v.movetype == MOVETYPE_PUSH || ent->v.movetype == MOVETYPE_PUSHSTEP;
+      }
+   }
+   return false;
 }
 
 bool BotSupport::isFakeClient (edict_t *ent) {
@@ -254,7 +286,7 @@ void BotSupport::checkWelcome () {
    m_welcomeReceiveTime = 0.0f;
 
 
-   bool needToSendMsg = (graph.length () > 0 ? m_needToSendWelcome : true);
+   const bool needToSendMsg = (graph.length () > 0 ? m_needToSendWelcome : true);
    auto receiveEntity = game.getLocalEntity ();
 
    if (isAlive (receiveEntity) && m_welcomeReceiveTime < 1.0f && needToSendMsg) {
@@ -312,10 +344,12 @@ bool BotSupport::findNearestPlayer (void **pvHolder, edict_t *to, float searchDi
    // team, live status, search distance etc. if needBot is true, then pvHolder, will
    // be filled with bot pointer, else with edict pointer(!).
 
+   searchDistance = cr::sqrf (searchDistance);
+
    edict_t *survive = nullptr; // pointer to temporally & survive entity
    float nearestPlayer = 4096.0f; // nearest player
 
-   int toTeam = game.getTeam (to);
+   const int toTeam = game.getTeam (to);
 
    for (const auto &client : m_clients) {
       if (!(client.flags & ClientFlags::Used) || client.ent == to) {
@@ -325,10 +359,10 @@ bool BotSupport::findNearestPlayer (void **pvHolder, edict_t *to, float searchDi
       if ((sameTeam && client.team != toTeam) || (needAlive && !(client.flags & ClientFlags::Alive)) || (needBot && !bots[client.ent]) || (needDrawn && (client.ent->v.effects & EF_NODRAW)) || (needBotWithC4 && (client.ent->v.weapons & Weapon::C4))) {
          continue; // filter players with parameters
       }
-      float distance = client.ent->v.origin.distance (to->v.origin);
+      const float distanceSq = client.ent->v.origin.distanceSq (to->v.origin);
 
-      if (distance < nearestPlayer && distance < searchDistance) {
-         nearestPlayer = distance;
+      if (distanceSq < nearestPlayer && distanceSq < searchDistance) {
+         nearestPlayer = distanceSq;
          survive = client.ent;
       }
    }
@@ -437,10 +471,10 @@ void BotSupport::syncCalculatePings () {
       if (!bot) {
          continue;
       }
-      int part = static_cast <int> (static_cast <float> (average.first) * 0.2f);
+      const int part = static_cast <int> (static_cast <float> (average.first) * 0.2f);
 
       int botPing = bot->m_basePing + rg.get (average.first - part, average.first + part) + rg.get (bot->m_difficulty / 2, bot->m_difficulty);
-      int botLoss = rg.get (average.second / 2, average.second);
+      const int botLoss = rg.get (average.second / 2, average.second);
 
       if (botPing <= 5) {
          botPing = rg.get (10, 23);

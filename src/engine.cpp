@@ -9,7 +9,6 @@
 
 ConVar cv_csdm_mode ("yb_csdm_mode", "0", "Enables or disables CSDM / FFA mode for bots.\nAllowed values: '0', '1', '2', '3'.\nIf '0', CSDM / FFA mode is auto-detected.\nIf '1', CSDM mode is enabled, but FFA is disabled.\nIf '2', CSDM and FFA mode is enabled.\nIf '3', CSDM and FFA mode is disabled.", true, 0.0f, 3.0f);
 ConVar cv_ignore_map_prefix_game_mode ("yb_ignore_map_prefix_game_mode", "0", "If enabled, bots will not apply game modes based on map name prefix (fy_ and ka_ specifically).");
-ConVar cv_breakable_health_limit ("yb_breakable_health_limit", "500.0", "Specifies the maximum health of breakable object, that bot will consider to destroy.", true, 1.0f, 3000.0);
 ConVar cv_threadpool_workers ("yb_threadpool_workers", "-1", "Maximum number of threads bot will run to process some tasks. -1 means half of CPU cores used.", true, -1.0f, static_cast <float> (plat.hardwareConcurrency ()));
 
 ConVar sv_skycolor_r ("sv_skycolor_r", nullptr, Var::GameRef);
@@ -138,13 +137,13 @@ void Game::levelInitialize (edict_t *entities, int max) {
             m_mapFlags &= ~MapFlags::HostageRescue;
          }
       }
-      else if (classname.startsWith ("func_door")) {
+      else if (util.isDoorEntity (ent)) {
          m_mapFlags |= MapFlags::HasDoors;
       }
       else if (classname.startsWith ("func_button")) {
          m_mapFlags |= MapFlags::HasButtons;
       }
-      else if (isShootableBreakable (ent)) {
+      else if (util.isShootableBreakable (ent)) {
          m_breakables.push (ent);
       }
    }
@@ -341,17 +340,17 @@ float Game::getWaveLen (const char *fileName) {
       return 0.0f;
    }
 
-   auto length = static_cast <float> (weh.read32 (header.dataChunkLength));
-   auto bps = static_cast <float> (weh.read16 (header.bitsPerSample)) / 8;
-   auto channels = static_cast <float> (weh.read16 (header.numChannels));
-   auto rate = static_cast <float> (weh.read32 (header.sampleRate));
+   const auto length = static_cast <float> (weh.read32 (header.dataChunkLength));
+   const auto bps = static_cast <float> (weh.read16 (header.bitsPerSample)) / 8;
+   const auto channels = static_cast <float> (weh.read16 (header.numChannels));
+   const auto rate = static_cast <float> (weh.read32 (header.sampleRate));
 
    return length / bps / channels / rate;
 }
 
 bool Game::isDedicated () {
    // return true if server is dedicated server, false otherwise
-   static bool dedicated = engfuncs.pfnIsDedicatedServer () > 0;
+   static const bool dedicated = engfuncs.pfnIsDedicatedServer () > 0;
 
    return dedicated;
 }
@@ -440,7 +439,7 @@ bool Game::checkVisibility (edict_t *ent, uint8_t *set) {
 
    if (ent->headnode < 0) {
       for (int i = 0; i < ent->num_leafs; ++i) {
-         auto leaf = ent->leafnums[i];
+         const auto leaf = ent->leafnums[i];
 
          if (set[leaf >> 3] & cr::bit (leaf & 7)) {
             return true;
@@ -450,7 +449,8 @@ bool Game::checkVisibility (edict_t *ent, uint8_t *set) {
    }
 
    for (int i = 0; i < 48; ++i) {
-      auto leaf = ent->leafnums[i];
+      const auto leaf = ent->leafnums[i];
+
       if (leaf == -1) {
          break;
       }
@@ -464,16 +464,14 @@ bool Game::checkVisibility (edict_t *ent, uint8_t *set) {
 
 uint8_t *Game::getVisibilitySet (Bot *bot, bool pvs) {
    if (is (GameFlags::Xash3D)) {
-      return nullptr;
+      return nullptr; // TODO: bug fixed in upstream xash3d, should be removed
    }
    auto eyes = bot->getEyesPos ();
 
    if (bot->isDucking ()) {
       eyes += VEC_HULL_MIN - VEC_DUCK_HULL_MIN;
    }
-   float org[3] { eyes.x, eyes.y, eyes.z };
-
-   return pvs ? engfuncs.pfnSetFatPVS (org) : engfuncs.pfnSetFatPAS (org);
+   return pvs ? engfuncs.pfnSetFatPVS (eyes) : engfuncs.pfnSetFatPAS (eyes);
 }
 
 void Game::sendClientMessage (bool console, edict_t *ent, StringRef message) {
@@ -923,7 +921,7 @@ bool Game::postload () {
       }
    }
    else {
-      bool binaryLoaded = loadCSBinary ();
+      const bool binaryLoaded = loadCSBinary ();
 
       if (!binaryLoaded && !is (GameFlags::Metamod)) {
          logger.fatal ("Mod that you has started, not supported by this bot (gamedir: %s)", getRunningModName ());
@@ -1067,26 +1065,6 @@ void Game::searchEntities (const Vector &position, float radius, EntitySearch fu
    }
 }
 
-bool Game::isShootableBreakable (edict_t *ent) {
-   if (isNullEntity (ent)) {
-      return false;
-   }
-   auto limit = cv_breakable_health_limit.float_ ();
-
-   constexpr auto kFuncBreakable = StringRef::fnv1a32 ("func_breakable");
-   constexpr auto kFuncPushable = StringRef::fnv1a32 ("func_pushable");
-   constexpr auto kFuncWall = StringRef::fnv1a32 ("func_wall");
-
-   auto classnameHash = ent->v.classname.str ().hash ();
-
-   if ((classnameHash == kFuncBreakable && ent->v.health < limit) || (classnameHash == kFuncPushable && (ent->v.spawnflags & SF_PUSH_BREAKABLE) && ent->v.health < limit) || (classnameHash == kFuncWall && ent->v.health < limit)) {
-      if (ent->v.takedamage > 0.0f && ent->v.impulse <= 0 && !(ent->v.flags & FL_WORLDBRUSH) && !(ent->v.spawnflags & SF_BREAK_TRIGGER_ONLY)) {
-         return ent->v.movetype == MOVETYPE_PUSH || ent->v.movetype == MOVETYPE_PUSHSTEP;
-      }
-   }
-   return false;
-}
-
 void Game::printBotVersion () {
    String gameVersionStr;
    StringArray botRuntimeFlags;
@@ -1166,7 +1144,7 @@ void LightMeasure::animateLight () {
    }
 
    // 'm' is normal light, 'a' is no light, 'z' is double bright
-   const int index = static_cast <int> (game.time () * 10.0f);
+   const auto index = static_cast <int> (game.time () * 10.0f);
 
    for (auto j = 0; j < MAX_LIGHTSTYLES; ++j) {
       if (!m_lightstyle[j].length) {
@@ -1207,8 +1185,8 @@ template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const 
    // determine which side of the node plane our points are on, fixme: optimize for axial
    auto plane = node->plane;
 
-   float front = (start | plane->normal) - plane->dist;
-   float back = (end | plane->normal) - plane->dist;
+   const float front = (start | plane->normal) - plane->dist;
+   const float back = (end | plane->normal) - plane->dist;
 
    int side = front < 0.0f;
 
@@ -1218,7 +1196,7 @@ template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const 
    }
 
    // calculate mid point
-   float frac = front / (front - back);
+   const float frac = front / (front - back);
    auto mid = start + (end - start) * frac;
 
    // go down front side
@@ -1267,9 +1245,9 @@ template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const 
 
       m_point.reset (); // reset point color.
 
-      int smax = (surf->extents[0] >> 4) + 1;
-      int tmax = (surf->extents[1] >> 4) + 1;
-      int size = smax * tmax;
+      const int smax = (surf->extents[0] >> 4) + 1;
+      const int tmax = (surf->extents[1] >> 4) + 1;
+      const int size = smax * tmax;
 
       auto lightmap = surf->samples + dt * smax + ds;
 

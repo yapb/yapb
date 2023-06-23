@@ -57,6 +57,12 @@ public:
    // check if entity is a hostage entity
    bool isHostageEntity (edict_t *ent);
 
+   // check if entity is a door enitty
+   bool isDoorEntity (edict_t *ent);
+
+   // this function is checking that pointed by ent pointer obstacle, can be destroyed
+   bool isShootableBreakable (edict_t *ent);
+
    // nearest player search helper
    bool findNearestPlayer (void **holder, edict_t *to, float searchDistance = 4096.0, bool sameTeam = false, bool needBot = false, bool needAlive = false, bool needDrawn = false, bool needBotWithC4 = false);
 
