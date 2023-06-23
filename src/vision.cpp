@@ -230,7 +230,7 @@ void Bot::checkDarkness () {
    }
 
    // do not check every frame
-   if (m_checkDarkTime + 5.0f > game.time () || cr::fzero (m_path->light)) {
+   if (m_checkDarkTime + 5.0f > game.time ()) {
       return;
    }
    auto skyColor = illum.getSkyColor ();
