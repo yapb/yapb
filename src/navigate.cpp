@@ -2206,7 +2206,7 @@ bool Bot::advanceMovement () {
 
    // helper to change bot's goal
    auto changeNextGoal = [&] {
-      int newGoal = findBestGoal ();
+      const int newGoal = findBestGoal ();
 
       m_prevGoalIndex = newGoal;
       m_chosenGoalIndex = newGoal;
@@ -2227,10 +2227,10 @@ bool Bot::advanceMovement () {
          selectBestNextNode ();
          m_minSpeed = pev->maxspeed;
 
-         Task taskID = getCurrentTaskId ();
+         const auto tid = getCurrentTaskId ();
 
          // only if we in normal task and bomb is not planted
-         if (taskID == Task::Normal && bots.getRoundMidTime () + 5.0f < game.time () && m_timeCamping + 5.0f < game.time () && !bots.isBombPlanted () && m_personality != Personality::Rusher && !m_hasC4 && !m_isVIP && m_loosedBombNodeIndex == kInvalidNodeIndex && !m_hasHostage && !m_isCreature) {
+         if (tid == Task::Normal && bots.getRoundMidTime () + 5.0f < game.time () && m_timeCamping + 5.0f < game.time () && !bots.isBombPlanted () && m_personality != Personality::Rusher && !m_hasC4 && !m_isVIP && m_loosedBombNodeIndex == kInvalidNodeIndex && !m_hasHostage && !m_isCreature) {
             m_campButtons = 0;
 
             const int nextIndex = m_pathWalk.next ();

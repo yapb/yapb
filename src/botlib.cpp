@@ -704,9 +704,9 @@ void Bot::ensureEntitiesClear () {
    if ((!m_isStuck || m_navTimeset + getEstimatedNodeReachTime () + m_frameInterval * 2.0f > game.time ()) && !(m_states & Sense::SeeingEnemy)) {
       return;
    }
-   const auto currentTask = getCurrentTaskId ();
+   const auto tid = getCurrentTaskId ();
 
-   if (currentTask == Task::PickupItem || (m_states & Sense::PickupItem)) {
+   if (tid == Task::PickupItem || (m_states & Sense::PickupItem)) {
       if (!game.isNullEntity (m_pickupItem) && !m_hasProgressBar) {
          m_itemIgnore = m_pickupItem; // clear these pointers, bot might be stuck getting to them
       }
@@ -715,11 +715,11 @@ void Bot::ensureEntitiesClear () {
       m_pickupType = Pickup::None;
       m_pickupItem = nullptr;
 
-      if (currentTask == Task::PickupItem) {
+      if (tid == Task::PickupItem) {
          completeTask ();
       }
    }
-   else if (currentTask == Task::ShootBreakable) {
+   else if (tid == Task::ShootBreakable) {
       if (!game.isNullEntity (m_breakableEntity)) {
          m_ignoredBreakable.emplace (m_breakableEntity);
       }
@@ -1511,8 +1511,8 @@ void Bot::buyStuff () {
 
    case BuyState::NightVision:
       if (teamHasGoodEconomics && m_moneyAmount > 2500 && !m_hasNVG && rg.chance (30) && m_path) {
-         float skyColor = illum.getSkyColor ();
-         float lightLevel = m_path->light;
+         const float skyColor = illum.getSkyColor ();
+         const float lightLevel = m_path->light;
 
          // if it's somewhat darkm do buy nightvision goggles
          if ((skyColor >= 50.0f && lightLevel <= 15.0f) || (skyColor < 50.0f && lightLevel < 40.0f)) {
@@ -2026,7 +2026,7 @@ void Bot::startTask (Task id, float desire, int data, float time, bool resume) {
    clearSearchNodes ();
    ignoreCollision ();
 
-   const int tid = getCurrentTaskId ();
+   const auto tid = getCurrentTaskId ();
 
    // leader bot?
    if (m_isLeader && tid == Task::SeekCover) {
@@ -2226,9 +2226,9 @@ void Bot::checkRadioQueue () {
                m_targetEntity = m_radioEntity;
 
                // don't pause/camp/follow anymore
-               Task taskID = getCurrentTaskId ();
+               const auto tid = getCurrentTaskId ();
 
-               if (taskID == Task::Pause || taskID == Task::Camp) {
+               if (tid == Task::Pause || tid == Task::Camp) {
                   getTask ()->time = game.time ();
                }
                startTask (Task::FollowUser, TaskPri::FollowUser, kInvalidNodeIndex, 0.0f, true);
@@ -2344,9 +2344,9 @@ void Bot::checkRadioQueue () {
          }
       }
       else if ((game.isNullEntity (m_enemy) && seesEntity (m_radioEntity->v.origin)) || distanceSq < cr::sqrf (2048.0f)) {
-         Task taskID = getCurrentTaskId ();
+         const auto tid = getCurrentTaskId ();
 
-         if (taskID == Task::Pause || taskID == Task::Camp) {
+         if (tid == Task::Pause || tid == Task::Camp) {
             m_fearLevel -= 0.2f;
 
             if (m_fearLevel < 0.0f) {
@@ -2406,9 +2406,9 @@ void Bot::checkRadioQueue () {
          pushRadioMessage (Radio::RogerThat);
 
          // don't pause/camp anymore
-         Task taskID = getCurrentTaskId ();
+         const auto tid = getCurrentTaskId ();
 
-         if (taskID == Task::Pause || taskID == Task::Camp) {
+         if (tid == Task::Pause || tid == Task::Camp) {
             getTask ()->time = game.time ();
          }
          m_targetEntity = nullptr;
@@ -2447,9 +2447,9 @@ void Bot::checkRadioQueue () {
          }
          else {
             // don't pause/camp anymore
-            Task taskID = getCurrentTaskId ();
+            const auto tid = getCurrentTaskId ();
 
-            if (taskID == Task::Pause) {
+            if (tid == Task::Pause) {
                getTask ()->time = game.time ();
             }
             m_targetEntity = nullptr;
@@ -2601,9 +2601,9 @@ void Bot::checkRadioQueue () {
          }
          else {
             // don't pause anymore
-            Task taskID = getCurrentTaskId ();
+            const auto tid = getCurrentTaskId ();
 
-            if (taskID == Task::Pause) {
+            if (tid == Task::Pause) {
                getTask ()->time = game.time ();
             }
 
@@ -2621,10 +2621,10 @@ void Bot::checkRadioQueue () {
                   }
 
                   auto enemy = client.ent;
-                  const float distanceSq = m_radioEntity->v.origin.distanceSq (enemy->v.origin);
+                  const float enemyDistanceSq = m_radioEntity->v.origin.distanceSq (enemy->v.origin);
 
-                  if (distanceSq < nearestDistanceSq) {
-                     nearestDistanceSq = distanceSq;
+                  if (enemyDistanceSq < nearestDistanceSq) {
+                     nearestDistanceSq = enemyDistanceSq;
 
                      m_lastEnemy = enemy;
                      m_lastEnemyOrigin = enemy->v.origin;
@@ -2633,7 +2633,7 @@ void Bot::checkRadioQueue () {
             }
             clearSearchNodes ();
 
-            int index = findDefendNode (m_radioEntity->v.origin);
+            const int index = findDefendNode (m_radioEntity->v.origin);
 
             // push camp task on to stack
             startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (30.0f, 60.0f), true);
@@ -2651,7 +2651,7 @@ void Bot::checkRadioQueue () {
 }
 
 void Bot::tryHeadTowardRadioMessage () {
-   const int tid = getCurrentTaskId ();
+   const auto tid = getCurrentTaskId ();
 
    if (tid == Task::MoveToPosition || m_headedTime + 15.0f < game.time () || !util.isAlive (m_radioEntity) || m_hasC4) {
       return;
@@ -3098,7 +3098,7 @@ void Bot::showDebugOverlay () {
       return;
    }
    static float timeDebugUpdate = 0.0f;
-   static int index = kInvalidNodeIndex, goal = kInvalidNodeIndex, taskID = 0;
+   static int index = kInvalidNodeIndex, goal = kInvalidNodeIndex, tid = 0;
 
    static HashMap <int32_t, StringRef> tasks {
       { Task::Normal, "Normal" },
@@ -3149,8 +3149,8 @@ void Bot::showDebugOverlay () {
       return;
    }
 
-   if (taskID != getCurrentTaskId () || index != m_currentNodeIndex || goal != getTask ()->data || timeDebugUpdate < game.time ()) {
-      taskID = getCurrentTaskId ();
+   if (tid != getCurrentTaskId () || index != m_currentNodeIndex || goal != getTask ()->data || timeDebugUpdate < game.time ()) {
+      tid = getCurrentTaskId ();
       index = m_currentNodeIndex;
       goal = getTask ()->data;
 
@@ -3179,7 +3179,7 @@ void Bot::showDebugOverlay () {
       auto weapon = util.weaponIdToAlias (m_currentWeapon);
 
       String debugData;
-      debugData.assignf ("\n\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\nItem: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\nSP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\nEnemy=%s Pickup=%s Type=%s Terrain=%s Stuck=%s\n", pev->netname.str (), m_healthValue, pev->armorvalue, taskID, tasks[taskID], getTask ()->desire, weapon, getAmmoInClip (), getAmmo (), m_isReloading ? " (R)" : "", m_moneyAmount, aimFlags.trim (), m_moveSpeed, m_strafeSpeed, index, m_prevGoalIndex, goal, m_navTimeset - game.time (), pev->movetype, enemy, pickup, personalities[m_personality], boolValue (m_checkTerrain), boolValue (m_isStuck));
+      debugData.assignf ("\n\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\nItem: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\nSP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\nEnemy=%s Pickup=%s Type=%s Terrain=%s Stuck=%s\n", pev->netname.str (), m_healthValue, pev->armorvalue, tid, tasks[tid], getTask ()->desire, weapon, getAmmoInClip (), getAmmo (), m_isReloading ? " (R)" : "", m_moneyAmount, aimFlags.trim (), m_moveSpeed, m_strafeSpeed, index, m_prevGoalIndex, goal, m_navTimeset - game.time (), pev->movetype, enemy, pickup, personalities[m_personality], boolValue (m_checkTerrain), boolValue (m_isStuck));
 
       MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, nullptr, overlayEntity)
          .writeByte (TE_TEXTMESSAGE)

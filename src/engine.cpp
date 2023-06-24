@@ -1188,7 +1188,7 @@ template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const 
    const float front = (start | plane->normal) - plane->dist;
    const float back = (end | plane->normal) - plane->dist;
 
-   int side = front < 0.0f;
+   const int side = front < 0.0f;
 
    // if they're both on the same side of the plane, don't bother to split just check the appropriate child
    if ((back < 0.0f) == side) {
@@ -1221,8 +1221,8 @@ template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const 
       auto tex = surf->texinfo;
 
       // see where in lightmap space our intersection point is
-      int s = static_cast <int> ((mid | Vector (tex->vecs[0])) + tex->vecs[0][3]);
-      int t = static_cast <int> ((mid | Vector (tex->vecs[1])) + tex->vecs[1][3]);
+      const int s = static_cast <int> ((mid | Vector (tex->vecs[0])) + tex->vecs[0][3]);
+      const int t = static_cast <int> ((mid | Vector (tex->vecs[1])) + tex->vecs[1][3]);
 
       // not in the bounds of our lightmap? punt...
       if (s < surf->texturemins[0] || t < surf->texturemins[1]) {
@@ -1253,7 +1253,7 @@ template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const 
 
       // compute the lightmap color at a particular point
       for (int maps = 0u; maps < MAX_LIGHTMAPS && surf->styles[maps] != 255u; ++maps) {
-         uint32_t scale = m_lightstyleValue[surf->styles[maps]];
+         const uint32_t scale = m_lightstyleValue[surf->styles[maps]];
 
          m_point.red += lightmap->r * scale;
          m_point.green += lightmap->g * scale;
@@ -1272,11 +1272,11 @@ template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const 
 
 float LightMeasure::getLightLevel (const Vector &point) {
    if (game.is (GameFlags::Legacy)) {
-      return 0.0f;
+      return kInvalidLightLevel;
    }
 
    if (!m_worldModel) {
-      return 0.0f;
+      return kInvalidLightLevel;
    }
 
    if (!m_worldModel->lightdata) {
@@ -1293,7 +1293,7 @@ float LightMeasure::getLightLevel (const Vector &point) {
       }
       return recursiveLightPoint <msurface_t, mnode_t> (m_worldModel->nodes, point, endPoint);
    };
-   return !recursiveCheck () ? 0.0f : 100 * cr::sqrtf (cr::min (75.0f, static_cast <float> (m_point.avg ())) / 75.0f);
+   return !recursiveCheck () ? kInvalidLightLevel : 100 * cr::sqrtf (cr::min (75.0f, static_cast <float> (m_point.avg ())) / 75.0f);
 }
 
 float LightMeasure::getSkyColor () {

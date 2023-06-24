@@ -457,11 +457,11 @@ Vector Bot::getBodyOffsetError (float distance) {
 
    if (m_aimErrorTime < game.time ()) {
       const float hitError = distance / (cr::clamp (static_cast <float> (m_difficulty), 1.0f, 4.0f) * 1000.0f);
-      auto &maxs = m_enemy->v.maxs, &mins = m_enemy->v.mins;
+      const auto &maxs = m_enemy->v.maxs, &mins = m_enemy->v.mins;
 
       m_aimLastError = Vector (rg.get (mins.x * hitError, maxs.x * hitError), rg.get (mins.y * hitError, maxs.y * hitError), rg.get (mins.z * hitError, maxs.z * hitError));
 
-      auto &aimError = conf.getDifficultyTweaks (m_difficulty) ->aimError;
+      const auto &aimError = conf.getDifficultyTweaks (m_difficulty) ->aimError;
       m_aimLastError += Vector (rg.get (-aimError.x, aimError.x), rg.get (-aimError.y, aimError.y), rg.get (-aimError.z, aimError.z));
 
       m_aimErrorTime = game.time () + rg.get (1.5f, 2.0f);
@@ -656,7 +656,7 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
          obstacleDistanceSq = tr.vecEndPos.distanceSq (source);
       }
    }
-   const float kMaxDistanceSq = cr::sqrf (75.0f);
+   constexpr float kMaxDistanceSq = cr::sqrf (75.0f);
 
    if (obstacleDistanceSq > 0.0f) {
       while (power > 0) {
@@ -1031,7 +1031,7 @@ bool Bot::isWeaponBadAtDistance (int weaponIndex, float distance) {
    if (m_difficulty < Difficulty::Normal || !hasSecondaryWeapon ()) {
       return false;
    }
-   auto weaponType = info[weaponIndex].type;
+   const auto weaponType = info[weaponIndex].type;
 
    if (weaponType == WeaponType::Melee) {
       return false;
@@ -1358,48 +1358,6 @@ bool Bot::isEnemyBehindShield (edict_t *enemy) {
    return false;
 }
 
-bool Bot::usesSniper () {
-   // this function returns true, if returns if bot is using a sniper rifle
-
-   return m_weaponType == WeaponType::Sniper;
-}
-
-bool Bot::usesRifle () {
-   return usesZoomableRifle () || m_weaponType == WeaponType::Rifle;
-}
-
-bool Bot::usesZoomableRifle () {
-   return m_weaponType == WeaponType::ZoomRifle;
-}
-
-bool Bot::usesPistol () {
-   return m_weaponType == WeaponType::Pistol;
-}
-
-bool Bot::usesSubmachine () {
-   return m_weaponType == WeaponType::SMG;
-}
-
-bool Bot::usesShotgun () {
-   return m_weaponType == WeaponType::Shotgun;
-}
-
-bool Bot::usesHeavy () {
-   return m_weaponType == WeaponType::Heavy;
-}
-
-bool Bot::usesBadWeapon () {
-   return usesShotgun () || m_currentWeapon == Weapon::UMP45 || m_currentWeapon == Weapon::MAC10 || m_currentWeapon == Weapon::TMP;
-}
-
-bool Bot::usesCampGun () {
-   return usesSubmachine () || usesRifle () || usesSniper () || usesHeavy ();
-}
-
-bool Bot::usesKnife () {
-   return m_weaponType == WeaponType::Melee;
-}
-
 int Bot::bestPrimaryCarried () {
    // this function returns the best weapon of this bot (based on personality prefs)
 
@@ -1673,10 +1631,10 @@ bool Bot::isGroupOfEnemies (const Vector &location, int numEnemies, float radius
 
 void Bot::checkReload () {
    // check the reload state
-   const auto task = getCurrentTaskId ();
+   const auto tid = getCurrentTaskId ();
 
    // we're should not reload, while doing next tasks
-   const bool uninterruptibleTask = (task == Task::PlantBomb || task == Task::DefuseBomb || task == Task::PickupItem || task == Task::ThrowExplosive || task == Task::ThrowFlashbang || task == Task::ThrowSmoke);
+   const bool uninterruptibleTask = (tid == Task::PlantBomb || tid == Task::DefuseBomb || tid == Task::PickupItem || tid == Task::ThrowExplosive || tid == Task::ThrowFlashbang || tid == Task::ThrowSmoke);
 
    // do not check for reload
    if (uninterruptibleTask || m_isUsingGrenade || usesKnife ()) {
@@ -1939,7 +1897,7 @@ void Bot::checkGrenadesThrow () {
             allowThrowing = false;
          }
          else {
-            float radius = cr::max (192.0f, m_lastEnemy->v.velocity.length2d ());
+            const float radius = cr::max (192.0f, m_lastEnemy->v.velocity.length2d ());
             const Vector &pos = m_lastEnemy->v.velocity.get2d () + m_lastEnemy->v.origin;
 
             auto predicted = graph.getNarestInRadius (radius, pos, 12);

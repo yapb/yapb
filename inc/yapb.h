@@ -737,16 +737,6 @@ public:
    void sendBotToOrigin (const Vector &origin);
    void markStale ();
    bool hasHostage ();
-   bool usesRifle ();
-   bool usesPistol ();
-   bool usesSniper ();
-   bool usesSubmachine ();
-   bool usesShotgun ();
-   bool usesHeavy ();
-   bool usesZoomableRifle ();
-   bool usesBadWeapon ();
-   bool usesCampGun ();
-   bool usesKnife ();
    bool hasPrimaryWeapon ();
    bool hasSecondaryWeapon ();
    bool hasShield ();
@@ -778,7 +768,7 @@ public:
       return pev->origin + pev->view_ofs;
    };
 
-   Task getCurrentTaskId ()  {
+   Task getCurrentTaskId () {
       return getTask ()->id;
    }
 
@@ -807,6 +797,57 @@ public:
    // prints debug message
    template <typename ...Args> void debugMsg (const char *fmt, Args &&...args) {
       debugMsgInternal (strings.format (fmt, cr::forward <Args> (args)...));
+   }
+
+private:
+   // returns true if bot is using a sniper rifle
+   bool usesSniper () const {
+      return m_weaponType == WeaponType::Sniper;
+   }
+
+   // returns true if bot is using a rifle
+   bool usesRifle () const {
+      return usesZoomableRifle () || m_weaponType == WeaponType::Rifle;
+   }
+
+   // returns true if bot is using a zoomable rifle
+   bool usesZoomableRifle () const {
+      return m_weaponType == WeaponType::ZoomRifle;
+   }
+
+   // returns true if bot is using a pistol
+   bool usesPistol () const {
+      return m_weaponType == WeaponType::Pistol;
+   }
+
+   // returns true if bot is using a SMG
+   bool usesSubmachine () const {
+      return m_weaponType == WeaponType::SMG;
+   }
+
+   // returns true if bot is using a shotgun
+   bool usesShotgun () const {
+      return m_weaponType == WeaponType::Shotgun;
+   }
+
+   // returns true if bot is using m249
+   bool usesHeavy () const {
+      return m_weaponType == WeaponType::Heavy;
+   }
+
+   // returns true if bot using not very good weapon
+   bool usesBadWeapon () const {
+      return usesShotgun () || m_currentWeapon == Weapon::UMP45 || m_currentWeapon == Weapon::MAC10 || m_currentWeapon == Weapon::TMP;
+   }
+
+   // returns true if bot using a camp gun
+   bool usesCampGun () const {
+      return usesSubmachine () || usesRifle () || usesSniper () || usesHeavy ();
+   }
+
+   // returns true if bot using knife
+   bool usesKnife () const {
+      return m_weaponType == WeaponType::Melee;
    }
 
    // execute client command helper

@@ -243,20 +243,21 @@ void Bot::checkDarkness () {
    }
 
    // do not check every frame
-   if (m_checkDarkTime > game.time () || cr::fzero (m_path->light)) {
+   if (m_checkDarkTime > game.time () || cr::fequal (m_path->light, kInvalidLightLevel)) {
       return;
    }
 
+   const auto lightLevel = m_path->light;
    const auto skyColor = illum.getSkyColor ();
    const auto flashOn = (pev->effects & EF_DIMLIGHT);
 
    if (mp_flashlight.bool_ () && !m_hasNVG) {
-      const auto task = getCurrentTaskId ();
+      const auto tid = getCurrentTaskId ();
 
-      if (!flashOn && task != Task::Camp && task != Task::Attack && m_heardSoundTime + 3.0f < game.time () && m_flashLevel > 30 && ((skyColor > 50.0f && m_path->light < 10.0f) || (skyColor <= 50.0f && m_path->light < 40.0f))) {
+      if (!flashOn && tid != Task::Camp && tid != Task::Attack && m_heardSoundTime + 3.0f < game.time () && m_flashLevel > 30 && ((skyColor > 50.0f && lightLevel < 10.0f) || (skyColor <= 50.0f && lightLevel < 40.0f))) {
          pev->impulse = 100;
       }
-      else if (flashOn && (((m_path->light > 15.0f && skyColor > 50.0f) || (m_path->light > 45.0f && skyColor <= 50.0f)) || task == Task::Camp || task == Task::Attack || m_flashLevel <= 0 || m_heardSoundTime + 3.0f >= game.time ())) {
+      else if (flashOn && (((lightLevel > 15.0f && skyColor > 50.0f) || (lightLevel > 45.0f && skyColor <= 50.0f)) || tid == Task::Camp || tid == Task::Attack || m_flashLevel <= 0 || m_heardSoundTime + 3.0f >= game.time ())) {
          pev->impulse = 100;
       }
    }
@@ -264,10 +265,10 @@ void Bot::checkDarkness () {
       if (flashOn) {
          pev->impulse = 100;
       }
-      else if (!m_usesNVG && ((skyColor > 50.0f && m_path->light < 15.0f) || (skyColor <= 50.0f && m_path->light < 40.0f))) {
+      else if (!m_usesNVG && ((skyColor > 50.0f && lightLevel < 15.0f) || (skyColor <= 50.0f && lightLevel < 40.0f))) {
          issueCommand ("nightvision");
       }
-      else if (m_usesNVG && ((m_path->light > 20.0f && skyColor > 50.0f) || (m_path->light > 45.0f && skyColor <= 50.0f))) {
+      else if (m_usesNVG && ((lightLevel > 20.0f && skyColor > 50.0f) || (lightLevel > 45.0f && skyColor <= 50.0f))) {
          issueCommand ("nightvision");
       }
    }

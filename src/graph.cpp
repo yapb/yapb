@@ -701,7 +701,7 @@ void BotGraph::add (int type, const Vector &pos) {
       path->end = nullptr;
 
       path->display = 0.0f;
-      path->light = 0.0f;
+      path->light = kInvalidLightLevel;
 
       for (auto &link : path->links) {
          link.index = kInvalidNodeIndex;
@@ -1331,11 +1331,11 @@ void BotGraph::calculatePathRadius (int index) {
    }
 }
 
-void BotGraph::initLightLevels () {
+void BotGraph::syncInitLightLevels () {
    // this function get's the light level for each waypoin on the map
 
    // no nodes ? no light levels, and only one-time init
-   if (m_paths.empty () || !cr::fzero (m_paths[0].light)) {
+   if (m_paths.empty () || !cr::fequal (m_paths[0].light, kInvalidLightLevel)) {
       return;
    }
 
@@ -1345,6 +1345,14 @@ void BotGraph::initLightLevels () {
    }
    // disable lightstyle animations on finish (will be auto-enabled on mapchange)
    illum.enableAnimation (false);
+}
+
+void BotGraph::initLightLevels () {
+   // this function get's the light level for each waypoin on the map
+
+   worker.enqueue ([this] () {
+      syncInitLightLevels ();
+   });
 }
 
 void BotGraph::initNarrowPlaces () {
@@ -2142,9 +2150,9 @@ void BotGraph::frame () {
 
          // show the information about that point
          message.assignf ("      %s node:\n"
-                          "       Node %d of %d, Radius: %.1f, Light: %.1f\n"
+                          "       Node %d of %d, Radius: %.1f, Light: %s\n"
                           "       Flags: %s\n"
-                          "       Origin: (%.1f, %.1f, %.1f)\n", type, node, m_paths.length () - 1, p.radius, p.light, flags, p.origin.x, p.origin.y, p.origin.z);
+                          "       Origin: (%.1f, %.1f, %.1f)\n", type, node, m_paths.length () - 1, p.radius, p.light == kInvalidLightLevel ? "Invalid" : strings.format ("%1.f", p.light), flags, p.origin.x, p.origin.y, p.origin.z);
          return message;
       };
 
@@ -2630,7 +2638,7 @@ void BotGraph::convertFromPOD (Path &path, const PODPath &pod) {
       convertCampDirection (path);
    }
    path.radius = pod.radius;
-   path.light = 0.0f;
+   path.light = kInvalidLightLevel;
    path.display = 0.0f;
 
    for (int i = 0; i < kMaxNodeLinks; ++i) {

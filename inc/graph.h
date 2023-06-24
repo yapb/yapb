@@ -228,6 +228,7 @@ public:
    void reset ();
    void frame ();
    void populateNodes ();
+   void syncInitLightLevels ();
    void initLightLevels ();
    void initNarrowPlaces ();
    void addPath (int addIndex, int pathIndex, float distance);

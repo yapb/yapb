@@ -1745,7 +1745,7 @@ bool BotControl::executeCommands () {
    if (prefix != product.cmdPri && prefix != product.cmdSec) {
       return false;
    }
-   auto &client = util.getClient (game.indexOfPlayer (m_ent));
+   const auto &client = util.getClient (game.indexOfPlayer (m_ent));
 
    // do not allow to execute stuff for non admins
    if (m_ent != game.getLocalEntity () && !(client.flags & ClientFlags::Admin)) {
@@ -1853,7 +1853,7 @@ bool BotControl::executeMenus () {
    if (!util.isPlayer (m_ent) || game.isBotCmd ()) {
       return false;
    }
-   auto &issuer = util.getClient (game.indexOfPlayer (m_ent));
+   const auto &issuer = util.getClient (game.indexOfPlayer (m_ent));
 
    // check if it's menu select, and some key pressed
    if (strValue (0) != "menuselect" || strValue (1).empty () || issuer.menu == Menu::None) {

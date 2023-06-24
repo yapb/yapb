@@ -436,6 +436,7 @@ struct TaskPri {
 };
 
 constexpr auto kInfiniteDistance = 9999999.0f;
+constexpr auto kInvalidLightLevel = kInfiniteDistance;
 constexpr auto kGrenadeCheckTime = 0.6f;
 constexpr auto kSprayDistance = 260.0f;
 constexpr auto kDoubleSprayDistance = kSprayDistance * 2;
