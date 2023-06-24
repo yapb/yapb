@@ -1266,6 +1266,11 @@ void Bot::attackMovement () {
       if (m_difficulty >= Difficulty::Normal && (m_jumpTime + 5.0f < game.time () && isOnFloor () && rg.get (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.length2d () > 150.0f) && !usesSniper ()) {
          pev->button |= IN_JUMP;
       }
+
+      // do not move forward/backward is too far
+      if (distance > 1024.0) {
+         m_moveSpeed = 0.0f;
+      }
    }
    else if (m_fightStyle == Fight::Stay) {
       const bool alreadyDucking = m_duckTime > game.time () || isDucking ();

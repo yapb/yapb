@@ -133,6 +133,7 @@ void Bot::updateAimDir () {
             return; // do not fail instantly
          }
          m_aimFlags &= ~AimFlags::PredictPath;
+
          m_trackingEdict = nullptr;
          m_lookAtPredict = nullptr;
       };
@@ -142,7 +143,7 @@ void Bot::updateAimDir () {
          int predictNode = m_lastPredictIndex;
 
          if (predictNode != kInvalidNodeIndex) {
-            if (!vistab.visible (m_currentNodeIndex, predictNode)) {
+            if (!vistab.visible (m_currentNodeIndex, predictNode) || !vistab.visible (m_previousNodes[0], predictNode)) {
                predictNode = kInvalidNodeIndex;
             }
          }
