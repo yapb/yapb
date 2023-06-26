@@ -424,7 +424,7 @@ private:
    bool isOccupiedNode (int index, bool needZeroVelocity = false);
    bool seesItem (const Vector &dest, StringRef classname);
    bool lastEnemyShootable ();
-   bool rateGroundWeapon (edict_t *ent);
+   bool isWeaponBetterThanCarried (edict_t * checkWeaponEnt);
    bool reactOnEnemy ();
    bool selectBestNextNode ();
    bool hasAnyWeapons ();

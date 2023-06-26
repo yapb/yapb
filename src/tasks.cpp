@@ -1468,15 +1468,15 @@ void Bot::pickupItem_ () {
             // primary weapon
             int weaponIndex = bestWeaponCarried ();
 
-            const bool niceWeapon = rateGroundWeapon (m_pickupItem);
+            const bool isGroundWeaponBetter = isWeaponBetterThanCarried (m_pickupItem);
             const auto tab = conf.getRawWeapons ();
 
-            if ((weaponIndex >= kPrimaryWeaponMinIndex || tab[weaponIndex].id == Weapon::Shield || hasShield ()) && niceWeapon) {
+            if ((weaponIndex >= kPrimaryWeaponMinIndex || tab[weaponIndex].id == Weapon::Shield || hasShield ()) && isGroundWeaponBetter) {
                selectWeaponByIndex (weaponIndex);
                dropCurrentWeapon ();
             }
 
-            if (!weaponIndex || !niceWeapon) {
+            if (!weaponIndex || !isGroundWeaponBetter) {
                m_itemIgnore = m_pickupItem;
                m_pickupItem = nullptr;
                m_pickupType = Pickup::None;

@@ -490,7 +490,7 @@ void Bot::updatePickups () {
             if (m_isVIP) {
                allowPickup = false;
             }
-            else if (!rateGroundWeapon (ent)) {
+            else if (!isWeaponBetterThanCarried (ent)) {
                allowPickup = false;
             }
             else if ((pev->weapons & cr::bit (Weapon::Flashbang)) && model == "flashbang.mdl") {
@@ -506,7 +506,7 @@ void Bot::updatePickups () {
 
          // found a shield on ground?
          else if (pickupType == Pickup::Shield) {
-            if ((pev->weapons & cr::bit (Weapon::Elite)) || hasShield () || m_isVIP || (hasPrimaryWeapon () && !rateGroundWeapon (ent))) {
+            if ((pev->weapons & cr::bit (Weapon::Elite)) || hasShield () || m_isVIP || (hasPrimaryWeapon () && !isWeaponBetterThanCarried (ent))) {
                allowPickup = false;
             }
          }
@@ -3211,7 +3211,7 @@ void Bot::showDebugOverlay () {
    game.drawLine (overlayEntity, getEyesPos () - Vector (0.0f, 0.0f, 32.0f), getEyesPos () + pev->v_angle.forward () * 300.0f, 10, 0, { 255, 0, 0 }, 250, 5, 1, DrawLine::Arrow);
 
    // now draw line from source to destination
-   for (size_t i = 0; i < m_pathWalk.length () && i + 1 < m_pathWalk.length (); ++i) {
+   for (size_t i = 0; i < m_pathWalk.length () - 1; ++i) {
       game.drawLine (overlayEntity, graph[m_pathWalk.at (i)].origin, graph[m_pathWalk.at (i + 1)].origin, 15, 0, { 255, 100, 55 }, 200, 5, 1, DrawLine::Arrow);
    }
 }

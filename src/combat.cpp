@@ -1426,31 +1426,28 @@ int Bot::bestGrenadeCarried () {
    return -1;
 }
 
-bool Bot::rateGroundWeapon (edict_t *ent) {
-   // this function compares weapons on the ground to the one the bot is using
+bool Bot::isWeaponBetterThanCarried (edict_t *checkWeaponEnt) {
+   // this function compares specified weapon to the one the bot is using
 
    // weapon rating blocked, due to we picked up not-preferred weapon some time ago, because out of ammo
-   int groundIndex = 0;
+   int checkWeaponIndex = 0;
 
    const int *pref = conf.getWeaponPrefs (m_personality);
    const auto tab = conf.getRawWeapons ();
 
    for (int i = 0; i < kNumWeapons; ++i) {
-      if (ent->v.model.str (9) == tab[*pref].model) {
-         groundIndex = i;
+      if (checkWeaponEnt->v.model.str (9) == tab[*pref].model) {
+         checkWeaponIndex = i;
          break;
       }
       pref++;
    }
-   auto hasWeapon = 0;
 
-   if (groundIndex < kPrimaryWeaponMinIndex) {
-      hasWeapon = bestSecondaryCarried ();
-   }
-   else {
-      hasWeapon = bestPrimaryCarried ();
-   }
-   return groundIndex > hasWeapon;
+   const auto bestCarriedWeaponIndex = checkWeaponIndex < kPrimaryWeaponMinIndex
+         ? bestSecondaryCarried ()
+         : bestPrimaryCarried ();
+
+   return checkWeaponIndex > bestCarriedWeaponIndex;
 }
 
 bool Bot::hasAnyWeapons () {
