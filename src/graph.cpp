@@ -1501,7 +1501,7 @@ bool BotGraph::convertOldFormat () {
          return false;
       }
 
-      if (cr::strncmp (header.header, kPodbotMagic, cr::bufsize (kPodbotMagic)) == 0) {
+      if (strncmp (header.header, kPodbotMagic, cr::bufsize (kPodbotMagic)) == 0) {
          if (header.fileVersion != StorageVersion::Podbot) {
             return false;
          }

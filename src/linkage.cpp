@@ -148,7 +148,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       // the server for incoming clients.
 
       // check if this client is the listen server client
-      if (cr::strcmp (addr, "loopback") == 0) {
+      if (strcmp (addr, "loopback") == 0) {
          game.setLocalEntity (ent); // save the edict of the listen server client...
 
          // if not dedicated set the default editor for graph
@@ -466,7 +466,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
    if (game.is (GameFlags::Legacy)) {
       table->pfnFindEntityByString = [] (edict_t *edictStartSearchAfter, const char *field, const char *value) {
          // round starts in counter-strike 1.5
-         if (cr::strcmp (value, "info_map_parameters") == 0) {
+         if (strcmp (value, "info_map_parameters") == 0) {
             bots.initRound ();
          }
 
@@ -885,9 +885,6 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *table, globalvars_t *glob) {
    // such if necessary. Nothing really bot-related is done in this function. The actual bot
    // initialization stuff will be done later, when we'll be certain to have a multilayer game.
 
-   // initialize simd-string functions
-   simdstring.init ();
-
    // get the engine functions from the game...
    memcpy (&engfuncs, table, sizeof (enginefuncs_t));
    globals = glob;
@@ -965,7 +962,7 @@ SharedLibrary::Func EntityLinkage::lookup (SharedLibrary::Handle module, const c
       return m_dlsym (handle, function);
    };
 
-   if (ents.needsBypass () && !cr::strcmp (function, "CreateInterface")) {
+   if (ents.needsBypass () && !strcmp (function, "CreateInterface")) {
       ents.setPaused (true);
       auto ret = resolve (module);
 

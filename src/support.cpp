@@ -584,7 +584,7 @@ int32_t BotSupport::sendTo (int socket, const void *message, size_t length, int 
    constexpr int32_t packetLength = 5;
 
    // player replies response
-   if (length > packetLength && cr::memcmp (packet, "\xff\xff\xff\xff", packetLength - 1) == 0) {
+   if (length > packetLength && memcmp (packet, "\xff\xff\xff\xff", packetLength - 1) == 0) {
       if (packet[4] == 'D') {
          QueryBuffer buffer { packet, length, packetLength };
          auto count = buffer.read <uint8_t> ();

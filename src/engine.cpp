@@ -288,7 +288,7 @@ public:
    }
 
    bool isWave (char *format) {
-      if (little && cr::memcmp (format, "WAVE", 4) == 0) {
+      if (little && memcmp (format, "WAVE", 4) == 0) {
          return true;
       }
       return *reinterpret_cast <uint32_t *> (format) == 0x57415645;
@@ -1174,7 +1174,7 @@ void LightMeasure::updateLight (int style, char *value) {
    strings.copy (m_lightstyle[style].map, value, copyLimit);
 
    m_lightstyle[style].map[copyLimit] = kNullChar;
-   m_lightstyle[style].length = static_cast <int> (cr::strlen (m_lightstyle[style].map));
+   m_lightstyle[style].length = static_cast <int> (strlen (m_lightstyle[style].map));
 }
 
 template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const M *node, const Vector &start, const Vector &end) {
