@@ -40,6 +40,7 @@ build_type = get_option ('buildtype')
 
 opt_64bit = get_option('64bit')
 opt_native = get_option('native')
+opt_winxp = get_option('winxp')
 
 # cpp and ldflags from scratch
 cxxflags = []
@@ -201,19 +202,24 @@ if cxx == 'clang' or cxx == 'gcc'
       ]
    endif
 elif os == 'windows' and (cxx =='msvc' or cxx == 'clang-cl')
+
+   # define for building on winxp on msvc
+   if opt_winxp
+      cxxflags += [
+         '/TP', '/DCR_HAS_WINXP_SUPPORT', '/D_WIN32_WINNT=0x0501', '/D_USING_V110_SDK71_'
+      ]
+      ldflags += ['/SUBSYSTEM:WINDOWS,5.01']
+   endif
+
    if not opt_64bit and cxx == 'clang'
       cxxflags += '/MACHINE:X86'
       ldflags += '/MACHINE:X86'
    endif
 
-   cxxflags += [
-      '/TP', '/D _WIN32_WINNT=0x0501', '/D _USING_V110_SDK71_', '/Zc:threadSafeInit-'
-   ]
-
    # minor optimizations for release build
    if build_type == 'release'
       cxxflags += [
-         '/GS-', '/Ob2', '/Oy', '/Oi', '/Ot', '/fp:precise', '/GF', '/GS-', '/GF', '/arch:SSE2', '/Zi'
+         '/Zc:threadSafeInit-', '/GS-', '/Ob2', '/Oy', '/Oi', '/Ot', '/fp:precise', '/GF', '/Gw', '/arch:SSE2', '/Zi', '/guard:ehcont-', '/guard:cf-'
       ]
 
       # add wpo if msvc
@@ -225,7 +231,7 @@ elif os == 'windows' and (cxx =='msvc' or cxx == 'clang-cl')
 
       # add linker flags
       ldflags += [
-         '/LTCG', 'delayimp.lib', '/DELAYLOAD:user32.dll', '/DELAYLOAD:ws2_32.dll', '/SUBSYSTEM:WINDOWS,5.01',
+         '/OPT:REF,ICF', '/GUARD:NO ', '/LTCG', 'delayimp.lib', '/DELAYLOAD:user32.dll', '/DELAYLOAD:ws2_32.dll',
       ]
    endif
    

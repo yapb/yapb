@@ -20,7 +20,7 @@ jobs:
 
     strategy:
       matrix:
-        arch: ['linux-x86', 'linux-amd64', 'linux-x86-gcc', 'linux-aarch64', 'darwin-x86', 'windows-x86', 'windows-amd64', 'windows-x86-gcc']
+        arch: ['linux-x86', 'linux-amd64', 'linux-x86-gcc', 'linux-aarch64', 'darwin-x86', 'windows-x86-clang', 'windows-amd64', 'windows-x86-gcc']
       fail-fast: false
     
     steps:
@@ -58,7 +58,11 @@ jobs:
     env:
       name: windows-x86-msvc
 
-    name: bot-build (windows-x86-msvc)
+    strategy:
+      matrix:
+        arch: ['windows-x86', 'windows-x86-msvc-xp']
+      fail-fast: false
+
     runs-on: windows-latest
 
     steps:
@@ -75,18 +79,24 @@ jobs:
         run: |
           python -m pip install --upgrade meson ninja
       - name: Configure meson
+        shell: pwsh
         run: |
-          meson setup ${{env.name}}
+            if ('${{matrix.arch}}' -eq 'windows-x86-msvc-xp') {
+              meson setup ${{matrix.arch}} -Dwinxp=true
+            }
+            else {
+              meson setup ${{matrix.arch}}
+            }
       - name: Build sources
         run: |
-          meson compile -C ${{env.name}}
+          meson compile -C ${{matrix.arch}}
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: ${{env.name}}
+          name: ${{matrix.arch}}
           path: |
-            ${{env.name}}/yapb.dll
-            ${{env.name}}/yapb.pdb
+            ${{matrix.arch}}/yapb.dll
+            ${{matrix.arch}}/yapb.pdb
 
   bot-release:
     if: |

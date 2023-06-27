@@ -137,8 +137,9 @@ class BotRelease(object):
                                           'linux-amd64': 'so', 
                                           'linux-x86-gcc': 'so', 
                                           'windows-x86-gcc': 'dll', 
+                                          'windows-x86-clang': 'dll',
+                                          'windows-x86-msvc-xp': 'dll',
                                           'windows-amd64': 'dll', 
-                                          'windows-x86-msvc': 'dll',
                                           'darwin-x86': 'dylib',
                                           }, extra=True))
       
