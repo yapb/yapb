@@ -207,12 +207,12 @@ bool Bot::checkBodyParts (edict_t *target) {
    return false;
 }
 
-bool Bot::seesEnemy (edict_t *player, bool ignoreFOV) {
+bool Bot::seesEnemy (edict_t *player) {
    if (game.isNullEntity (player)) {
       return false;
    }
 
-   if ((ignoreFOV || isInViewCone (player->v.origin)) && isEnemyInFrustum (player) && checkBodyParts (player)) {
+   if (isEnemyInFrustum (player) && isInViewCone (player->v.origin) && checkBodyParts (player)) {
       m_seeEnemyTime = game.time ();
       m_lastEnemy = player;
       m_lastEnemyOrigin = m_enemyOrigin;

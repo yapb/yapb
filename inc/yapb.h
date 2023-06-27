@@ -417,7 +417,7 @@ private:
    bool isWeaponRestrictedAMX (int weaponIndex);
    bool isInViewCone (const Vector &origin);
    bool checkBodyParts (edict_t *target);
-   bool seesEnemy (edict_t *player, bool ignoreFOV = false);
+   bool seesEnemy (edict_t *player);
    bool hasActiveGoal ();
    bool advanceMovement ();
    bool isBombDefusing (const Vector &bombOrigin);
