@@ -337,7 +337,18 @@ void Bot::updateBodyAngles () {
 }
 
 void Bot::updateLookAngles () {
-   const float delta = cr::clamp (game.time () - m_lookUpdateTime, cr::kFloatEqualEpsilon, 1.0f / 30.0f);
+   worker.enqueue ([this] () {
+      syncUpdateLookAngles ();
+   });
+}
+
+void Bot::syncUpdateLookAngles () {
+   if (!m_lookAnglesLock.tryLock ()) {
+      return; // allow only single instance of syncUpdateLookAngles per-bot
+   }
+   ScopedUnlock <Mutex> unlock (m_lookAnglesLock);
+
+   const float delta = cr::clamp (game.time () - m_lookUpdateTime, cr::kFloatEqualEpsilon, kViewFrameUpdate);
    m_lookUpdateTime = game.time ();
 
    // adjust all body and view angles to face an absolute vector

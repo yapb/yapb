@@ -416,23 +416,23 @@ CR_DECLARE_SCOPED_ENUM (FrustumSide,
 )
 
 // some hard-coded desire defines used to override calculated ones
-struct TaskPri {
-   static constexpr auto Normal { 35.0f };
-   static constexpr auto Pause { 36.0f };
-   static constexpr auto Camp { 37.0f };
-   static constexpr auto Spraypaint { 38.0f };
-   static constexpr auto FollowUser { 39.0f };
-   static constexpr auto MoveToPosition { 50.0f };
-   static constexpr auto DefuseBomb { 89.0f };
-   static constexpr auto PlantBomb { 89.0f };
-   static constexpr auto Attack { 90.0f };
-   static constexpr auto SeekCover { 91.0f };
-   static constexpr auto Hide { 92.0f };
-   static constexpr auto Throw { 99.0f };
-   static constexpr auto DoubleJump { 99.0f };
-   static constexpr auto Blind { 100.0f };
-   static constexpr auto ShootBreakable { 100.0f };
-   static constexpr auto EscapeFromBomb { 100.0f };
+namespace TaskPri {
+   constexpr auto Normal { 35.0f };
+   constexpr auto Pause { 36.0f };
+   constexpr auto Camp { 37.0f };
+   constexpr auto Spraypaint { 38.0f };
+   constexpr auto FollowUser { 39.0f };
+   constexpr auto MoveToPosition { 50.0f };
+   constexpr auto DefuseBomb { 89.0f };
+   constexpr auto PlantBomb { 89.0f };
+   constexpr auto Attack { 90.0f };
+   constexpr auto SeekCover { 91.0f };
+   constexpr auto Hide { 92.0f };
+   constexpr auto Throw { 99.0f };
+   constexpr auto DoubleJump { 99.0f };
+   constexpr auto Blind { 100.0f };
+   constexpr auto ShootBreakable { 100.0f };
+   constexpr auto EscapeFromBomb { 100.0f };
 };
 
 constexpr auto kInfiniteDistance = 9999999.0f;
@@ -441,6 +441,7 @@ constexpr auto kGrenadeCheckTime = 0.6f;
 constexpr auto kSprayDistance = 260.0f;
 constexpr auto kDoubleSprayDistance = kSprayDistance * 2;
 constexpr auto kMaxChatterRepeatInterval = 99.0f;
+constexpr auto kViewFrameUpdate = 1.0f / 30.0f;
 
 constexpr auto kInfiniteDistanceLong = static_cast <int> (kInfiniteDistance);
 constexpr auto kMaxWeapons = 32;

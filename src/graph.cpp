@@ -2300,7 +2300,7 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
    }
 
    // perform DFS instead of floyd-warshall, this shit speedup this process in a bit
-   auto length = cr::min (static_cast <size_t>  (kMaxNodes), m_paths.length ());
+   const auto length = cr::min (static_cast <size_t>  (kMaxNodes), m_paths.length ());
 
    // ensure valid capacity
    assert (length > 8 && length < static_cast <size_t>  (kMaxNodes));

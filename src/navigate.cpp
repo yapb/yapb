@@ -2153,9 +2153,6 @@ bool Bot::selectBestNextNode () {
    // this function does a realtime post processing of nodes return from the
    // pathfinder, to vary paths and find the best node on our way
 
-   assert (!m_pathWalk.empty ());
-   assert (m_pathWalk.hasNext ());
-
    const auto nextNodeIndex = m_pathWalk.next ();
    const auto currentNodeIndex = m_pathWalk.first ();
    const auto prevNodeIndex = m_currentNodeIndex;

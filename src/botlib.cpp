@@ -82,7 +82,7 @@ void Bot::avoidGrenades () {
    if (!bots.hasActiveGrenades ()) {
       return;
    }
-   auto &activeGrenades = bots.getActiveGrenades ();
+   const auto &activeGrenades = bots.getActiveGrenades ();
 
    // find all grenades on the map
    for (auto pent : activeGrenades) {
@@ -524,7 +524,7 @@ void Bot::updatePickups () {
                allowPickup = false;
 
                if (!m_defendHostage && m_personality != Personality::Rusher && m_difficulty >= Difficulty::Normal && rg.chance (15) && m_timeCamping + 15.0f < game.time ()) {
-                  int index = findDefendNode (origin);
+                  const int index = findDefendNode (origin);
 
                   startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (30.0f, 60.0f), true); // push camp task on to stack
                   startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg.get (3.0f, 6.0f), true); // push move command
@@ -543,11 +543,11 @@ void Bot::updatePickups () {
                if (!m_defendedBomb) {
                   m_defendedBomb = true;
 
-                  int index = findDefendNode (origin);
+                  const int index = findDefendNode (origin);
                   const Path &path = graph[index];
 
-                  float bombTimer = mp_c4timer.float_ ();
-                  float timeMidBlowup = bots.getTimeBombPlanted () + (bombTimer * 0.5f + bombTimer * 0.25f) - graph.calculateTravelTime (pev->maxspeed, pev->origin, path.origin);
+                  const float bombTimer = mp_c4timer.float_ ();
+                  const float timeMidBlowup = bots.getTimeBombPlanted () + (bombTimer * 0.5f + bombTimer * 0.25f) - graph.calculateTravelTime (pev->maxspeed, pev->origin, path.origin);
 
                   if (timeMidBlowup > game.time ()) {
                      clearTask (Task::MoveToPosition); // remove any move tasks
@@ -618,10 +618,10 @@ void Bot::updatePickups () {
                if (!m_defendedBomb && !allowPickup) {
                   m_defendedBomb = true;
 
-                  int index = findDefendNode (origin);
+                  const int index = findDefendNode (origin);
                   const auto &path = graph[index];
 
-                  float timeToExplode = bots.getTimeBombPlanted () + mp_c4timer.float_ () - graph.calculateTravelTime (pev->maxspeed, pev->origin, path.origin);
+                  const float timeToExplode = bots.getTimeBombPlanted () + mp_c4timer.float_ () - graph.calculateTravelTime (pev->maxspeed, pev->origin, path.origin);
 
                   clearTask (Task::MoveToPosition); // remove any move tasks
 
@@ -648,7 +648,7 @@ void Bot::updatePickups () {
                allowPickup = false;
 
                if (!m_defendedBomb && m_difficulty >= Difficulty::Normal && rg.chance (75) && m_healthValue < 60) {
-                  int index = findDefendNode (origin);
+                  const int index = findDefendNode (origin);
 
                   startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (30.0f, 70.0f), true); // push camp task on to stack
                   startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg.get (10.0f, 30.0f), true); // push move command
@@ -778,7 +778,7 @@ Vector Bot::getCampDirection (const Vector &dest) {
          return graph[lookAtNode].origin;
       }
    }
-   auto dangerIndex = practice.getIndex (m_team, m_currentNodeIndex, m_currentNodeIndex);
+   const auto dangerIndex = practice.getIndex (m_team, m_currentNodeIndex, m_currentNodeIndex);
 
    if (graph.exists (dangerIndex)) {
       return graph[dangerIndex].origin;

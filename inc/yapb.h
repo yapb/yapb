@@ -225,6 +225,7 @@ public:
 private:
    mutable Mutex m_pathFindLock {};
    mutable Mutex m_predictLock {};
+   mutable Mutex m_lookAnglesLock {};
 
 private:
    uint32_t m_states {}; // sensing bitstates
@@ -471,6 +472,7 @@ private:
    void checkBurstMode (float distance);
    void checkSilencer ();
    void updateAimDir ();
+   void syncUpdateLookAngles ();
    void updateLookAngles ();
    void updateBodyAngles ();
    void updateLookAnglesNewbie (const Vector &direction, float delta);
@@ -701,7 +703,8 @@ public:
 
    // need to wait until all threads will finish it's work before terminating bot object
    ~Bot () {
-      MutexScopedLock lock (m_pathFindLock);
+      MutexScopedLock lock1 (m_pathFindLock);
+      MutexScopedLock lock2 (m_lookAnglesLock);
    }
 
 public:
