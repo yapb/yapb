@@ -183,6 +183,9 @@
     <ClInclude Include="..\ext\crlib\crlib\simd\neon.h">
       <Filter>inc\ext\crlib\simd</Filter>
     </ClInclude>
+    <ClInclude Include="..\inc\vision.h">
+      <Filter>inc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\botlib.cpp">

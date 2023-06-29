@@ -559,18 +559,6 @@ void BotSupport::installSendTo () {
    }
 }
 
-bool BotSupport::isObjectInsidePlane (FrustumPlane &plane, const Vector &center, float height, float radius) {
-   auto isPointInsidePlane = [&] (const Vector &point) -> bool {
-      return plane.result + (plane.normal | point) >= 0.0f;
-   };
-
-   const Vector &test = plane.normal.get2d ();
-   const Vector &top = center + Vector (0.0f, 0.0f, height * 0.5f) + test * radius;
-   const Vector &bottom = center - Vector (0.0f, 0.0f, height * 0.5f) + test * radius;
-
-   return isPointInsidePlane (top) || isPointInsidePlane (bottom);
-}
-
 bool BotSupport::isModel (const edict_t *ent, StringRef model) {
    return model.startsWith (ent->v.model.chars (9));
 }

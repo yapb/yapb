@@ -75,8 +75,6 @@ BotManager::BotManager () {
    m_botsCanPause = false;
    m_roundOver = false;
 
-   m_bombSayStatus = BombPlantedSay::ChatSay | BombPlantedSay::Chatter;
-
    for (int i = 0; i < kGameTeamNum; ++i) {
       m_leaderChoosen[i] = false;
       m_economicsGood[i] = true;
@@ -297,6 +295,9 @@ void BotManager::frame () {
    for (const auto &bot : m_bots) {
       bot->frame ();
    }
+
+   // run prediction for bots
+   updateBotsPredict ();
 }
 
 void BotManager::addbot (StringRef name, int difficulty, int personality, int team, int skin, bool manual) {
@@ -762,6 +763,30 @@ void BotManager::checkBotModel (edict_t *ent, char *infobuffer) {
          break;
       }
    }
+}
+
+void BotManager::syncUpdateBotsPredict () {
+   if (m_predictUpdateTime > game.time ()) {
+      return;
+   }
+
+   // update predicted index for all the bots
+   for (const auto &bot : m_bots) {
+      if (!bot.get ()) {
+         continue;
+      }
+      if (bot->m_notKilled && (bot->m_aimFlags & AimFlags::PredictPath)) {
+         bot->updatePredictedIndex ();
+      }
+   }
+   m_predictUpdateTime = game.time () + 0.1f;
+}
+
+void BotManager::updateBotsPredict () {
+   // push update predict task for all bots to queue
+   worker.enqueue ([this] {
+      syncUpdateBotsPredict ();
+   });
 }
 
 void BotManager::setWeaponMode (int selection) {
@@ -1304,7 +1329,6 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
    }
 }
 
-
 void Bot::newRound () {
    // this function initializes a bot after creation & at the start of each round
 
@@ -1551,6 +1575,12 @@ void Bot::resetPathSearchType () {
    // if debug goal - set the fastest
    if (cv_debug_goal.int_ () != kInvalidNodeIndex) {
       m_pathType = FindPath::Fast;
+   }
+
+   // no need to be safe on csdm
+   if (game.is (GameFlags::CSDM)) {
+      m_pathType = FindPath::Fast;
+      return;
    }
 }
 
@@ -1969,6 +1999,7 @@ void BotManager::initRound () {
    m_timeBombPlanted = 0.0f;
    m_plantSearchUpdateTime = 0.0f;
    m_autoKillCheckTime = 0.0f;
+   m_predictUpdateTime = 0.0f;
    m_botsCanPause = false;
 
    resetFilters ();
@@ -1993,33 +2024,37 @@ void BotManager::setBombPlanted (bool isPlanted) {
 }
 
 void BotThreadWorker::shutdown () {
+   if (!available ()) {
+      return;
+   }
    game.print ("Shutting down bot thread worker.");
    m_botWorker.shutdown ();
 }
 
 void BotThreadWorker::startup (int workers) {
-   const size_t count = m_botWorker.threadCount ();
+   String disableWorkerEnv = plat.env ("YAPB_SINGLE_THREADED");
+
+   // disable worker if requested via env variable or workers are disabled
+   if (workers == 0 || (!disableWorkerEnv.empty () && disableWorkerEnv == "1")) {
+      return;
+   }
+   const auto count = m_botWorker.threadCount ();
 
    if (count > 0) {
       logger.error ("Tried to start thread pool with existing %d threads in pool.", count);
       return;
    }
+   const auto maxThreads = plat.hardwareConcurrency ();
+   auto requestedThreads = workers;
 
-   int requestedThreadCount = workers;
-   const int hardwareConcurrency = plat.hardwareConcurrency ();
-
-   if (requestedThreadCount == -1) {
-      requestedThreadCount = hardwareConcurrency / 4;
-
-      if (requestedThreadCount == 0) {
-         requestedThreadCount = 1;
-      }
+   if (requestedThreads < 0 || requestedThreads >= maxThreads) {
+      requestedThreads = 1;
    }
-   requestedThreadCount = cr::clamp (requestedThreadCount, 1, hardwareConcurrency - 1);
+   requestedThreads = cr::clamp (requestedThreads, 1, maxThreads - 1);
 
    // notify user
-   game.print ("Starting up bot thread worker with %d threads.", requestedThreadCount);
+   game.print ("Starting up bot thread worker with %d threads.", requestedThreads);
 
    // start up the worker
-   m_botWorker.startup (static_cast <size_t> (requestedThreadCount));
+   m_botWorker.startup (static_cast <size_t> (requestedThreads));
 }

@@ -404,17 +404,6 @@ CR_DECLARE_SCOPED_ENUM (GoalTactic,
    RescueHostage
 )
 
-// frustum sides
-CR_DECLARE_SCOPED_ENUM (FrustumSide,
-   Top = 0,
-   Bottom,
-   Left,
-   Right,
-   Near,
-   Far,
-   Num
-)
-
 // some hard-coded desire defines used to override calculated ones
 namespace TaskPri {
    constexpr auto Normal { 35.0f };

@@ -17,36 +17,6 @@ struct BotRequest {
    String name;
 };
 
-// initial frustum data
-struct FrustumData : public Singleton <FrustumData> {
-private:
-   float Fov = 75.0f;
-   float AspectRatio = 1.33333f;
-
-public:
-   float MaxView = 4096.0f;
-   float MinView = 2.0f;
-
-public:
-   float farHeight; // height of the far frustum
-   float farWidth; // width of the far frustum
-
-   float nearHeight; // height of the near frustum
-   float nearWidth; // width of the near frustum
-
-public:
-   FrustumData () {
-      nearHeight = 2.0f * cr::tanf (Fov * 0.0174532925f * 0.5f) * MinView;
-      nearWidth = nearHeight * AspectRatio;
-
-      farHeight = 2.0f * cr::tanf (Fov * 0.0174532925f * 0.5f) * MaxView;
-      farWidth = farHeight * AspectRatio;
-   }
-};
-
-// declare global frustum data
-CR_EXPOSE_GLOBAL_SINGLETON (FrustumData, frustum);
-
 // manager class
 class BotManager final : public Singleton <BotManager> {
 public:
@@ -68,6 +38,7 @@ private:
    float m_lastChatTime {}; // global chat time timestamp
    float m_timeBombPlanted {}; // time the bomb were planted
    float m_lastRadioTime[kGameTeamNum] {}; // global radio time
+   float m_predictUpdateTime {}; // time to update prediction entity
 
    int m_lastWinner {}; // the team who won previous round
    int m_lastDifficulty {}; // last bots difficulty
@@ -89,7 +60,6 @@ private:
    SmallArray <UniqueBot> m_bots {}; // all available bots
 
    edict_t *m_killerEntity {}; // killer entity for bots
-   FrustumData m_frustumData {};
 
 protected:
    BotCreateResult create (StringRef name, int difficulty, int personality, int team, int skin);
@@ -152,6 +122,8 @@ public:
    void handleDeath (edict_t *killer, edict_t *victim);
    void setLastWinner (int winner);
    void checkBotModel (edict_t *ent, char *infobuffer);
+   void syncUpdateBotsPredict ();
+   void updateBotsPredict ();
 
    bool isTeamStacked (int team);
    bool kickRandom (bool decQuota = true, Team fromTeam = Team::Unassigned);
@@ -318,11 +290,16 @@ public:
 
 public:
    template <typename F> void enqueue (F &&fn) {
-      if (m_botWorker.threadCount () == 0) {
+      if (!available ()) {
          fn (); // no threads, no fun, just run task in current thread
          return;
       }
       m_botWorker.enqueue (cr::move (fn));
+   }
+
+public:
+   bool available () {
+      return m_botWorker.threadCount () > 0;
    }
 };
 

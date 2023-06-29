@@ -112,13 +112,6 @@ struct ClientNoise {
    float last;
 };
 
-// defines frustum data for bot
-struct FrustumPlane {
-   Vector normal;
-   Vector point;
-   float result;
-};
-
 // array of clients struct
 struct Client {
    edict_t *ent; // pointer to actual edict
@@ -146,6 +139,7 @@ struct ChatCollection {
 
 // include bot graph stuff
 #include <graph.h>
+#include <vision.h>
 
 // this structure links nodes returned from pathfinder
 class PathWalk final : public NonCopyable {
@@ -224,8 +218,6 @@ public:
 
 private:
    mutable Mutex m_pathFindLock {};
-   mutable Mutex m_predictLock {};
-   mutable Mutex m_lookAnglesLock {};
 
 private:
    uint32_t m_states {}; // sensing bitstates
@@ -374,7 +366,7 @@ private:
 
    Path *m_path {}; // pointer to the current path node
    String m_chatBuffer {}; // space for strings (say text...)
-   FrustumPlane m_frustum[FrustumSide::Num] {};
+   Frustum::Planes m_viewFrustum {};
 
 private:
    int pickBestWeapon (Array <int> &vec, int moneySave);
@@ -444,7 +436,6 @@ private:
    bool isPenetrableObstacle2 (const Vector &dest);
    bool isPenetrableObstacle3 (const Vector &dest);
    bool isEnemyBehindShield (edict_t *enemy);
-   bool isEnemyInFrustum (edict_t *enemy);
    bool checkChatKeywords (String &reply);
    bool isReplyingToChat ();
    bool isReachableNode (int index);
@@ -472,7 +463,6 @@ private:
    void checkBurstMode (float distance);
    void checkSilencer ();
    void updateAimDir ();
-   void syncUpdateLookAngles ();
    void updateLookAngles ();
    void updateBodyAngles ();
    void updateLookAnglesNewbie (const Vector &direction, float delta);
@@ -487,7 +477,6 @@ private:
    void updatePracticeValue (int damage);
    void updatePracticeDamage (edict_t *attacker, int damage);
    void findShortestPath (int srcIndex, int destIndex);
-   void calculateFrustum ();
    void findPath (int srcIndex, int destIndex, FindPath pathType = FindPath::Fast);
    void syncFindPath (int srcIndex, int destIndex, FindPath pathType);
    void debugMsgInternal (const char *str);
@@ -511,8 +500,6 @@ private:
    void selectSecondary ();
    void selectWeaponById (int id);
    void selectWeaponByIndex (int index);
-   void refreshEnemyPredict ();
-   void syncUpdatePredictedIndex ();
    void updatePredictedIndex ();
    void refreshModelName (char *infobuffer);
 
@@ -523,6 +510,7 @@ private:
    void translateInput ();
    void moveToGoal ();
    void resetMovement ();
+   void refreshEnemyPredict ();
 
    void normal_ ();
    void spraypaint_ ();
@@ -704,7 +692,6 @@ public:
    // need to wait until all threads will finish it's work before terminating bot object
    ~Bot () {
       MutexScopedLock lock1 (m_pathFindLock);
-      MutexScopedLock lock2 (m_lookAnglesLock);
    }
 
 public:

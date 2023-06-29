@@ -69,6 +69,7 @@
     <ClInclude Include="..\inc\sounds.h" />
     <ClInclude Include="..\inc\storage.h" />
     <ClInclude Include="..\inc\support.h" />
+    <ClInclude Include="..\inc\vision.h" />
     <ClInclude Include="..\inc\vistable.h" />
     <ClInclude Include="..\inc\yapb.h" />
     <ClInclude Include="..\inc\version.h" />

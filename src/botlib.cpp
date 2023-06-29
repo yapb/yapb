@@ -1623,16 +1623,11 @@ void Bot::overrideConditions () {
    }
 }
 
-void Bot::syncUpdatePredictedIndex () {
+void Bot::updatePredictedIndex () {
    auto wipePredict = [this] () {
       m_lastPredictIndex = kInvalidNodeIndex;
       m_lastPredictLength = kInfiniteDistanceLong;
    };
-
-   if (!m_predictLock.tryLock ()) {
-      return; // allow only single instance of search per-bot
-   }
-   ScopedUnlock <Mutex> unlock (m_predictLock);
 
    const auto lastEnemyOrigin = m_lastEnemyOrigin;
    const auto currentNodeIndex = m_currentNodeIndex;
@@ -1671,15 +1666,6 @@ void Bot::syncUpdatePredictedIndex () {
    wipePredict ();
 }
 
-void Bot::updatePredictedIndex () {
-   if (m_lastEnemyOrigin.empty ()) {
-      return; // do not run task if no last enemy
-   }
-   worker.enqueue ([this] () {
-      syncUpdatePredictedIndex ();
-   });
-}
-
 void Bot::refreshEnemyPredict () {
    if (game.isNullEntity (m_enemy) && !game.isNullEntity (m_lastEnemy) && !m_lastEnemyOrigin.empty ()) {
       const auto distanceToLastEnemySq = m_lastEnemyOrigin.distanceSq (pev->origin);
@@ -1692,10 +1678,6 @@ void Bot::refreshEnemyPredict () {
       if (!denyLastEnemy && seesEntity (m_lastEnemyOrigin, true)) {
          m_aimFlags |= AimFlags::LastEnemy;
       }
-   }
-
-   if (m_aimFlags & AimFlags::PredictPath) {
-      updatePredictedIndex ();
    }
 }
 
