@@ -138,19 +138,20 @@ void Bot::updateAimDir () {
          m_lookAtPredict = nullptr;
       };
 
-      int pathLength = m_lastPredictLength;
-      int predictNode = m_lastPredictIndex;
+      auto pathLength = m_lastPredictLength;
+      auto predictNode = m_lastPredictIndex;
 
       auto isPredictedIndexApplicable = [&] () -> bool {
          if (!vistab.visible (m_currentNodeIndex, predictNode) || !vistab.visible (m_previousNodes[0], predictNode)) {
             predictNode = kInvalidNodeIndex;
+            pathLength = kInfiniteDistanceLong;
          }
          return predictNode != kInvalidNodeIndex && pathLength < cv_max_nodes_for_predict.int_ ();
       };
 
       if (changePredictedEnemy) {
          if (isPredictedIndexApplicable ()) {
-            m_lookAtPredict = graph[m_lastPredictIndex].origin;
+            m_lookAtPredict = graph[predictNode].origin;
 
             m_timeNextTracking = game.time () + rg.get (0.5f, 1.0f);
             m_trackingEdict = m_lastEnemy;
