@@ -38,7 +38,6 @@ private:
    float m_lastChatTime {}; // global chat time timestamp
    float m_timeBombPlanted {}; // time the bomb were planted
    float m_lastRadioTime[kGameTeamNum] {}; // global radio time
-   float m_predictUpdateTime {}; // time to update prediction entity
 
    int m_lastWinner {}; // the team who won previous round
    int m_lastDifficulty {}; // last bots difficulty
@@ -122,8 +121,6 @@ public:
    void handleDeath (edict_t *killer, edict_t *victim);
    void setLastWinner (int winner);
    void checkBotModel (edict_t *ent, char *infobuffer);
-   void syncUpdateBotsPredict ();
-   void updateBotsPredict ();
 
    bool isTeamStacked (int team);
    bool kickRandom (bool decQuota = true, Team fromTeam = Team::Unassigned);

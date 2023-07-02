@@ -901,7 +901,7 @@ bool Bot::updateNavigation () {
          // pressing the jump button gives the illusion of the bot actual jumping.
          if (isOnFloor () || isOnLadder ()) {
             if (m_desiredVelocity.length2d () > 0.0f) {
-               pev->velocity = m_desiredVelocity;
+               pev->velocity = m_desiredVelocity + m_desiredVelocity * m_frameInterval;
             }
             else {
                auto feet = pev->origin + pev->mins;
@@ -943,7 +943,7 @@ bool Bot::updateNavigation () {
             }
          }
       }
-      else if (!cv_jasonmode.bool_ () && usesKnife () && isOnFloor ()) {
+      else if (!cv_jasonmode.bool_ () && usesKnife () && isOnFloor () && getCurrentTaskId () != Task::EscapeFromBomb) {
          selectBestWeapon ();
       }
    }

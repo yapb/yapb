@@ -218,6 +218,7 @@ public:
 
 private:
    mutable Mutex m_pathFindLock {};
+   mutable Mutex m_predictLock {};
 
 private:
    uint32_t m_states {}; // sensing bitstates
@@ -500,6 +501,7 @@ private:
    void selectSecondary ();
    void selectWeaponById (int id);
    void selectWeaponByIndex (int index);
+   void syncUpdatePredictedIndex ();
    void updatePredictedIndex ();
    void refreshModelName (char *infobuffer);
 

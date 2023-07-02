@@ -7,7 +7,7 @@
 
 #include <yapb.h>
 
-ConVar cv_max_nodes_for_predict ("yb_max_nodes_for_predict", "20", "Maximum number for path length, to predict the enemy.", true, 15.0f, 256.0f);
+ConVar cv_max_nodes_for_predict ("yb_max_nodes_for_predict", "25", "Maximum number for path length, to predict the enemy.", true, 15.0f, 256.0f);
 
 // game console variables
 ConVar mp_flashlight ("mp_flashlight", nullptr, Var::GameRef);
@@ -19,12 +19,12 @@ float Bot::isInFOV (const Vector &destination) {
    // return the absolute value of angle to destination entity
    // zero degrees means straight ahead, 45 degrees to the left or
    // 45 degrees to the right is the limit of the normal view angle
-   float absoluteAngle = cr::abs (viewAngle - entityAngle);
+   const float absAngle = cr::abs (viewAngle - entityAngle);
 
-   if (absoluteAngle > 180.0f) {
-      absoluteAngle = 360.0f - absoluteAngle;
+   if (absAngle > 180.0f) {
+      return 360.0f - absAngle;
    }
-   return absoluteAngle;
+   return absAngle;
 }
 
 bool Bot::isInViewCone (const Vector &origin) {
@@ -142,18 +142,15 @@ void Bot::updateAimDir () {
       int predictNode = m_lastPredictIndex;
 
       auto isPredictedIndexApplicable = [&] () -> bool {
-         if (predictNode != kInvalidNodeIndex) {
-            if (!vistab.visible (m_currentNodeIndex, predictNode) || !vistab.visible (m_previousNodes[0], predictNode)) {
-               predictNode = kInvalidNodeIndex;
-               pathLength = kInfiniteDistanceLong;
-            }
+         if (!vistab.visible (m_currentNodeIndex, predictNode) || !vistab.visible (m_previousNodes[0], predictNode)) {
+            predictNode = kInvalidNodeIndex;
          }
          return predictNode != kInvalidNodeIndex && pathLength < cv_max_nodes_for_predict.int_ ();
       };
 
       if (changePredictedEnemy) {
          if (isPredictedIndexApplicable ()) {
-            m_lookAtPredict = graph[predictNode].origin;
+            m_lookAtPredict = graph[m_lastPredictIndex].origin;
 
             m_timeNextTracking = game.time () + rg.get (0.5f, 1.0f);
             m_trackingEdict = m_lastEnemy;

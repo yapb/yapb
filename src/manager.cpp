@@ -295,9 +295,6 @@ void BotManager::frame () {
    for (const auto &bot : m_bots) {
       bot->frame ();
    }
-
-   // run prediction for bots
-   updateBotsPredict ();
 }
 
 void BotManager::addbot (StringRef name, int difficulty, int personality, int team, int skin, bool manual) {
@@ -763,30 +760,6 @@ void BotManager::checkBotModel (edict_t *ent, char *infobuffer) {
          break;
       }
    }
-}
-
-void BotManager::syncUpdateBotsPredict () {
-   if (m_predictUpdateTime > game.time ()) {
-      return;
-   }
-
-   // update predicted index for all the bots
-   for (const auto &bot : m_bots) {
-      if (!bot.get ()) {
-         continue;
-      }
-      if (bot->m_notKilled && (bot->m_aimFlags & AimFlags::PredictPath)) {
-         bot->updatePredictedIndex ();
-      }
-   }
-   m_predictUpdateTime = game.time () + 0.1f;
-}
-
-void BotManager::updateBotsPredict () {
-   // push update predict task for all bots to queue
-   worker.enqueue ([this] {
-      syncUpdateBotsPredict ();
-   });
 }
 
 void BotManager::setWeaponMode (int selection) {
@@ -1999,7 +1972,6 @@ void BotManager::initRound () {
    m_timeBombPlanted = 0.0f;
    m_plantSearchUpdateTime = 0.0f;
    m_autoKillCheckTime = 0.0f;
-   m_predictUpdateTime = 0.0f;
    m_botsCanPause = false;
 
    resetFilters ();
