@@ -150,7 +150,8 @@ if cxx == 'clang' or cxx == 'gcc'
          endif
       endif
 
-      if os != 'darwin' and os != 'windows'
+      # disable lto partitioning on gcc to get symver working 
+      if os != 'darwin' and os != 'windows' and cxx == 'gcc'
          ldflags += [
             '-flto-partition=none'
          ]
@@ -180,7 +181,7 @@ if cxx == 'clang' or cxx == 'gcc'
    endif
 
    # by default we buid 32bit binaries
-   if not opt_64bit and cpu != 'arm'
+   if not opt_64bit and cpu != 'aarch64' and cpu != 'arm'
       cxxflags += '-m32'
       ldflags += '-m32'
 
