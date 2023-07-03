@@ -102,7 +102,7 @@ if cxx == 'clang' or cxx == 'gcc'
       '-fno-threadsafe-statics', '-pthread'
    ]
 
-   if not opt_native
+   if not opt_native and cpu != 'arm'
       cxxflags += '-mtune=generic'
    endif
 
@@ -110,7 +110,7 @@ if cxx == 'clang' or cxx == 'gcc'
       cxxflags += [
          '-march=armv8-a+fp+simd', 
       ]
-   else
+   elif cpu != 'arm'
       cxxflags += [
          '-mmmx', '-msse', '-msse2', '-msse3', '-mssse3', '-mfpmath=sse'
       ]
@@ -128,7 +128,7 @@ if cxx == 'clang' or cxx == 'gcc'
          '-funroll-loops', '-fomit-frame-pointer', '-fno-stack-protector', '-fvisibility=hidden', '-fvisibility-inlines-hidden'
       ]
 
-      if os != 'darwin' and os != 'windows' and cpu != 'aarch64'
+      if os != 'darwin' and os != 'windows' and cpu != 'aarch64' and cpu != 'arm'
          cxxflags += [
             '-fdata-sections',
             '-ffunction-sections',
@@ -145,9 +145,15 @@ if cxx == 'clang' or cxx == 'gcc'
                '-fgraphite-identity', '-floop-nest-optimize'
             ]
             ldflags += [
-               '-fgraphite-identity', '-floop-nest-optimize', '-flto-partition=none'
+               '-fgraphite-identity', '-floop-nest-optimize'
             ]
          endif
+      endif
+
+      if os != 'darwin' and os != 'windows'
+         ldflags += [
+            '-flto-partition=none'
+         ]
       endif
    else
       cxxflags += ['-g3', '-ggdb', '-DDEBUG', '-D_FORTIFY_SOURCE=2']
@@ -174,7 +180,7 @@ if cxx == 'clang' or cxx == 'gcc'
    endif
 
    # by default we buid 32bit binaries
-   if cpu != 'aarch64' and not opt_64bit
+   if not opt_64bit and cpu != 'arm'
       cxxflags += '-m32'
       ldflags += '-m32'
 
