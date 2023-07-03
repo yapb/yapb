@@ -196,13 +196,22 @@ int BotControl::cmdCvars () {
    enum args { alias = 1, pattern };
 
    const auto &match = strValue (pattern);
-   const bool isSave = match == "save";
+
+   const bool isSaveMain = match == "save";
+   const bool isSaveMap = match == "save_map";
+
+   const bool isSave = isSaveMain || isSaveMap;
 
    File cfg;
 
    // if save requested, dump cvars to main config
    if (isSave) {
-      cfg.open (strings.joinPath (game.getRunningModName (), folders.addons, folders.bot, folders.config, strings.format ("%s.%s", product.nameLower, kConfigExtension)), "wt");
+      auto cfgPath = strings.joinPath (game.getRunningModName (), folders.addons, folders.bot, folders.config, strings.format ("%s.%s", product.nameLower, kConfigExtension));
+
+      if (isSaveMap) {
+         cfgPath = strings.joinPath (game.getRunningModName (), folders.addons, folders.bot, folders.config, "maps", strings.format ("%s.%s", game.getMapName (), kConfigExtension));
+      }
+      cfg.open (cfgPath, "wt");
       cfg.puts ("// Configuration file for %s\n\n", product.name);
    }
    else {
@@ -215,6 +224,11 @@ int BotControl::cmdCvars () {
       }
 
       if (!isSave && !match.empty () && !strstr (cvar.reg.name, match.chars ())) {
+         continue;
+      }
+
+      // prevent crash if file not accessible
+      if (isSave && !cfg) {
          continue;
       }
       auto val = cvar.self->str ();
@@ -263,6 +277,10 @@ int BotControl::cmdCvars () {
    ctrl.setRapidOutput (false);
 
    if (isSave) {
+      if (!cfg) {
+         msg ("Unable to write cvars to config file. File not accesssible");
+         return BotCommandResult::Handled;
+      }
       msg ("Bots cvars has been written to file.");
       cfg.close ();
    }
