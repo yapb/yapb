@@ -302,6 +302,7 @@ private:
    float m_changeViewTime {}; // timestamp to change look at while at freezetime
    float m_breakableTime {}; // breakable acquired time
    float m_stuckTimestamp {}; // last time was stuck
+   float m_timeDebugUpdateTime {}; // time to update last debug timestamp
 
    bool m_moveToGoal {}; // bot currently moving to goal??
    bool m_isStuck {}; // bot is stuck

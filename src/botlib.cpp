@@ -3098,7 +3098,6 @@ void Bot::showDebugOverlay () {
    if (!displayDebugOverlay) {
       return;
    }
-   static float timeDebugUpdate = 0.0f;
    static int index = kInvalidNodeIndex, goal = kInvalidNodeIndex, tid = 0;
 
    static HashMap <int32_t, StringRef> tasks {
@@ -3149,8 +3148,9 @@ void Bot::showDebugOverlay () {
    if (m_tasks.empty ()) {
       return;
    }
+   const auto drawTime = globals->frametime * 500.0f;
 
-   if (tid != getCurrentTaskId () || index != m_currentNodeIndex || goal != getTask ()->data || timeDebugUpdate < game.time ()) {
+   if (tid != getCurrentTaskId () || index != m_currentNodeIndex || goal != getTask ()->data || m_timeDebugUpdateTime < game.time ()) {
       tid = getCurrentTaskId ();
       index = m_currentNodeIndex;
       goal = getTask ()->data;
@@ -3198,22 +3198,24 @@ void Bot::showDebugOverlay () {
          .writeByte (0)
          .writeShort (MessageWriter::fu16 (0.0f, 8.0f))
          .writeShort (MessageWriter::fu16 (0.0f, 8.0f))
-         .writeShort (MessageWriter::fu16 (0.15f, 8.0f))
+         .writeShort (MessageWriter::fu16 (drawTime, 8.0f))
          .writeString (debugData.chars ());
 
-      timeDebugUpdate = game.time () + 0.1f;
+      m_timeDebugUpdateTime = game.time () + drawTime;
    }
 
    // green = destination origin
    // blue = ideal angles
    // red = view angles
-   game.drawLine (overlayEntity, getEyesPos (), m_destOrigin, 10, 0, { 0, 255, 0 }, 250, 5, 1, DrawLine::Arrow);
-   game.drawLine (overlayEntity, getEyesPos () - Vector (0.0f, 0.0f, 16.0f), getEyesPos () + m_idealAngles.forward () * 300.0f, 10, 0, { 0, 0, 255 }, 250, 5, 1, DrawLine::Arrow);
-   game.drawLine (overlayEntity, getEyesPos () - Vector (0.0f, 0.0f, 32.0f), getEyesPos () + pev->v_angle.forward () * 300.0f, 10, 0, { 255, 0, 0 }, 250, 5, 1, DrawLine::Arrow);
+   const auto lifeTime = 1;
+
+   game.drawLine (overlayEntity, getEyesPos (), m_destOrigin, 10, 0, { 0, 255, 0 }, 250, 5, lifeTime, DrawLine::Arrow);
+   game.drawLine (overlayEntity, getEyesPos () - Vector (0.0f, 0.0f, 16.0f), getEyesPos () + m_idealAngles.forward () * 300.0f, 10, 0, { 0, 0, 255 }, 250, 5, lifeTime, DrawLine::Arrow);
+   game.drawLine (overlayEntity, getEyesPos () - Vector (0.0f, 0.0f, 32.0f), getEyesPos () + pev->v_angle.forward () * 300.0f, 10, 0, { 255, 0, 0 }, 250, 5, lifeTime, DrawLine::Arrow);
 
    // now draw line from source to destination
    for (size_t i = 0; i < m_pathWalk.length () && i + 1 < m_pathWalk.length (); ++i) {
-      game.drawLine (overlayEntity, graph[m_pathWalk.at (i)].origin, graph[m_pathWalk.at (i + 1)].origin, 15, 0, { 255, 100, 55 }, 200, 5, 1, DrawLine::Arrow);
+      game.drawLine (overlayEntity, graph[m_pathWalk.at (i)].origin, graph[m_pathWalk.at (i + 1)].origin, 15, 0, { 255, 100, 55 }, 200, 5, lifeTime, DrawLine::Arrow);
    }
 }
 

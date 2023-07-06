@@ -3044,7 +3044,7 @@ bool Bot::isOccupiedNode (int index, bool needZeroVelocity) {
       }
       const auto length = client.origin.distanceSq (graph[index].origin);
 
-      if (length < cr::clamp (cr::sqrf (graph[index].radius) * 2.0f, cr::sqrf (40.0f), cr::sqrf (90.0f))) {
+      if (length < cr::clamp (cr::sqrf (graph[index].radius) * 2.0f, cr::sqrf (90.0f), cr::sqrf (120.0f))) {
          return true;
       }
       auto bot = bots[client.ent];
