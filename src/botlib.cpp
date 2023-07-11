@@ -82,7 +82,7 @@ void Bot::avoidGrenades () {
    if (!bots.hasActiveGrenades ()) {
       return;
    }
-   auto &activeGrenades = bots.getActiveGrenades ();
+   const auto &activeGrenades = bots.getActiveGrenades ();
 
    // find all grenades on the map
    for (auto pent : activeGrenades) {
@@ -524,7 +524,7 @@ void Bot::updatePickups () {
                allowPickup = false;
 
                if (!m_defendHostage && m_personality != Personality::Rusher && m_difficulty >= Difficulty::Normal && rg.chance (15) && m_timeCamping + 15.0f < game.time ()) {
-                  int index = findDefendNode (origin);
+                  const int index = findDefendNode (origin);
 
                   startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (30.0f, 60.0f), true); // push camp task on to stack
                   startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg.get (3.0f, 6.0f), true); // push move command
@@ -543,11 +543,11 @@ void Bot::updatePickups () {
                if (!m_defendedBomb) {
                   m_defendedBomb = true;
 
-                  int index = findDefendNode (origin);
+                  const int index = findDefendNode (origin);
                   const Path &path = graph[index];
 
-                  float bombTimer = mp_c4timer.float_ ();
-                  float timeMidBlowup = bots.getTimeBombPlanted () + (bombTimer * 0.5f + bombTimer * 0.25f) - graph.calculateTravelTime (pev->maxspeed, pev->origin, path.origin);
+                  const float bombTimer = mp_c4timer.float_ ();
+                  const float timeMidBlowup = bots.getTimeBombPlanted () + (bombTimer * 0.5f + bombTimer * 0.25f) - graph.calculateTravelTime (pev->maxspeed, pev->origin, path.origin);
 
                   if (timeMidBlowup > game.time ()) {
                      clearTask (Task::MoveToPosition); // remove any move tasks
@@ -618,10 +618,10 @@ void Bot::updatePickups () {
                if (!m_defendedBomb && !allowPickup) {
                   m_defendedBomb = true;
 
-                  int index = findDefendNode (origin);
+                  const int index = findDefendNode (origin);
                   const auto &path = graph[index];
 
-                  float timeToExplode = bots.getTimeBombPlanted () + mp_c4timer.float_ () - graph.calculateTravelTime (pev->maxspeed, pev->origin, path.origin);
+                  const float timeToExplode = bots.getTimeBombPlanted () + mp_c4timer.float_ () - graph.calculateTravelTime (pev->maxspeed, pev->origin, path.origin);
 
                   clearTask (Task::MoveToPosition); // remove any move tasks
 
@@ -648,7 +648,7 @@ void Bot::updatePickups () {
                allowPickup = false;
 
                if (!m_defendedBomb && m_difficulty >= Difficulty::Normal && rg.chance (75) && m_healthValue < 60) {
-                  int index = findDefendNode (origin);
+                  const int index = findDefendNode (origin);
 
                   startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (30.0f, 70.0f), true); // push camp task on to stack
                   startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg.get (10.0f, 30.0f), true); // push move command
@@ -778,7 +778,7 @@ Vector Bot::getCampDirection (const Vector &dest) {
          return graph[lookAtNode].origin;
       }
    }
-   auto dangerIndex = practice.getIndex (m_team, m_currentNodeIndex, m_currentNodeIndex);
+   const auto dangerIndex = practice.getIndex (m_team, m_currentNodeIndex, m_currentNodeIndex);
 
    if (graph.exists (dangerIndex)) {
       return graph[dangerIndex].origin;
@@ -1675,6 +1675,7 @@ void Bot::updatePredictedIndex () {
    if (m_lastEnemyOrigin.empty ()) {
       return; // do not run task if no last enemy
    }
+
    worker.enqueue ([this] () {
       syncUpdatePredictedIndex ();
    });
@@ -3097,7 +3098,6 @@ void Bot::showDebugOverlay () {
    if (!displayDebugOverlay) {
       return;
    }
-   static float timeDebugUpdate = 0.0f;
    static int index = kInvalidNodeIndex, goal = kInvalidNodeIndex, tid = 0;
 
    static HashMap <int32_t, StringRef> tasks {
@@ -3148,8 +3148,9 @@ void Bot::showDebugOverlay () {
    if (m_tasks.empty ()) {
       return;
    }
+   const auto drawTime = globals->frametime * 500.0f;
 
-   if (tid != getCurrentTaskId () || index != m_currentNodeIndex || goal != getTask ()->data || timeDebugUpdate < game.time ()) {
+   if (tid != getCurrentTaskId () || index != m_currentNodeIndex || goal != getTask ()->data || m_timeDebugUpdateTime < game.time ()) {
       tid = getCurrentTaskId ();
       index = m_currentNodeIndex;
       goal = getTask ()->data;
@@ -3197,22 +3198,24 @@ void Bot::showDebugOverlay () {
          .writeByte (0)
          .writeShort (MessageWriter::fu16 (0.0f, 8.0f))
          .writeShort (MessageWriter::fu16 (0.0f, 8.0f))
-         .writeShort (MessageWriter::fu16 (0.15f, 8.0f))
+         .writeShort (MessageWriter::fu16 (drawTime, 8.0f))
          .writeString (debugData.chars ());
 
-      timeDebugUpdate = game.time () + 0.1f;
+      m_timeDebugUpdateTime = game.time () + drawTime;
    }
 
    // green = destination origin
    // blue = ideal angles
    // red = view angles
-   game.drawLine (overlayEntity, getEyesPos (), m_destOrigin, 10, 0, { 0, 255, 0 }, 250, 5, 1, DrawLine::Arrow);
-   game.drawLine (overlayEntity, getEyesPos () - Vector (0.0f, 0.0f, 16.0f), getEyesPos () + m_idealAngles.forward () * 300.0f, 10, 0, { 0, 0, 255 }, 250, 5, 1, DrawLine::Arrow);
-   game.drawLine (overlayEntity, getEyesPos () - Vector (0.0f, 0.0f, 32.0f), getEyesPos () + pev->v_angle.forward () * 300.0f, 10, 0, { 255, 0, 0 }, 250, 5, 1, DrawLine::Arrow);
+   const auto lifeTime = 1;
+
+   game.drawLine (overlayEntity, getEyesPos (), m_destOrigin, 10, 0, { 0, 255, 0 }, 250, 5, lifeTime, DrawLine::Arrow);
+   game.drawLine (overlayEntity, getEyesPos () - Vector (0.0f, 0.0f, 16.0f), getEyesPos () + m_idealAngles.forward () * 300.0f, 10, 0, { 0, 0, 255 }, 250, 5, lifeTime, DrawLine::Arrow);
+   game.drawLine (overlayEntity, getEyesPos () - Vector (0.0f, 0.0f, 32.0f), getEyesPos () + pev->v_angle.forward () * 300.0f, 10, 0, { 255, 0, 0 }, 250, 5, lifeTime, DrawLine::Arrow);
 
    // now draw line from source to destination
    for (size_t i = 0; i < m_pathWalk.length () - 1; ++i) {
-      game.drawLine (overlayEntity, graph[m_pathWalk.at (i)].origin, graph[m_pathWalk.at (i + 1)].origin, 15, 0, { 255, 100, 55 }, 200, 5, 1, DrawLine::Arrow);
+      game.drawLine (overlayEntity, graph[m_pathWalk.at (i)].origin, graph[m_pathWalk.at (i + 1)].origin, 15, 0, { 255, 100, 55 }, 200, 5, lifeTime, DrawLine::Arrow);
    }
 }
 
@@ -3240,7 +3243,10 @@ void Bot::takeDamage (edict_t *inflictor, int damage, int armor, int bits) {
    // other player.
 
    m_lastDamageType = bits;
-   updatePracticeValue (damage);
+
+   if (!game.is (GameFlags::CSDM)) {
+      updatePracticeValue (damage);
+   }
 
    if (util.isPlayer (inflictor) || (cv_attack_monsters.bool_ () && util.isMonster (inflictor))) {
       if (!util.isMonster (inflictor) && cv_tkpunish.bool_ () && game.getTeam (inflictor) == m_team && !util.isFakeClient (inflictor)) {

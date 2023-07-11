@@ -7,7 +7,7 @@
 
 #include <yapb.h>
 
-ConVar cv_max_nodes_for_predict ("yb_max_nodes_for_predict", "20", "Maximum number for path length, to predict the enemy.", true, 15.0f, 256.0f);
+ConVar cv_max_nodes_for_predict ("yb_max_nodes_for_predict", "25", "Maximum number for path length, to predict the enemy.", true, 15.0f, 256.0f);
 
 // game console variables
 ConVar mp_flashlight ("mp_flashlight", nullptr, Var::GameRef);
@@ -19,12 +19,12 @@ float Bot::isInFOV (const Vector &destination) {
    // return the absolute value of angle to destination entity
    // zero degrees means straight ahead, 45 degrees to the left or
    // 45 degrees to the right is the limit of the normal view angle
-   float absoluteAngle = cr::abs (viewAngle - entityAngle);
+   const float absAngle = cr::abs (viewAngle - entityAngle);
 
-   if (absoluteAngle > 180.0f) {
-      absoluteAngle = 360.0f - absoluteAngle;
+   if (absAngle > 180.0f) {
+      return 360.0f - absAngle;
    }
-   return absoluteAngle;
+   return absAngle;
 }
 
 bool Bot::isInViewCone (const Vector &origin) {
@@ -138,21 +138,20 @@ void Bot::updateAimDir () {
          m_lookAtPredict = nullptr;
       };
 
-      auto isPredictedIndexApplicable = [this] () -> bool {
-         int pathLength = m_lastPredictLength;
-         int predictNode = m_lastPredictIndex;
+      auto pathLength = m_lastPredictLength;
+      auto predictNode = m_lastPredictIndex;
 
-         if (predictNode != kInvalidNodeIndex) {
-            if (!vistab.visible (m_currentNodeIndex, predictNode) || !vistab.visible (m_previousNodes[0], predictNode)) {
-               predictNode = kInvalidNodeIndex;
-            }
+      auto isPredictedIndexApplicable = [&] () -> bool {
+         if (!vistab.visible (m_currentNodeIndex, predictNode) || !vistab.visible (m_previousNodes[0], predictNode)) {
+            predictNode = kInvalidNodeIndex;
+            pathLength = kInfiniteDistanceLong;
          }
          return predictNode != kInvalidNodeIndex && pathLength < cv_max_nodes_for_predict.int_ ();
       };
 
       if (changePredictedEnemy) {
          if (isPredictedIndexApplicable ()) {
-            m_lookAtPredict = graph[m_lastPredictIndex].origin;
+            m_lookAtPredict = graph[predictNode].origin;
 
             m_timeNextTracking = game.time () + rg.get (0.5f, 1.0f);
             m_trackingEdict = m_lastEnemy;
@@ -183,7 +182,7 @@ void Bot::updateAimDir () {
       m_lookAt = m_destOrigin;
 
       if (m_moveToGoal && m_seeEnemyTime + 4.0f < game.time () && !m_isStuck && m_moveSpeed > getShiftSpeed () && !(pev->button & IN_DUCK) && m_currentNodeIndex != kInvalidNodeIndex && !(m_pathFlags & (NodeFlag::Ladder | NodeFlag::Crouch)) && m_pathWalk.hasNext () && pev->origin.distanceSq (m_destOrigin) < cr::sqrf (512.0f)) {
-         auto nextPathIndex = m_pathWalk.next ();
+         const auto nextPathIndex = m_pathWalk.next ();
 
          if (vistab.visible (m_currentNodeIndex, nextPathIndex)) {
             m_lookAt = graph[nextPathIndex].origin + pev->view_ofs;
@@ -276,55 +275,6 @@ void Bot::checkDarkness () {
    m_checkDarkTime = game.time () + rg.get (2.0f, 4.0f);
 }
 
-
-void Bot::calculateFrustum () {
-   // this function updates bot view frustum
-
-   Vector forward, right, up;
-   pev->v_angle.angleVectors (&forward, &right, &up);
-
-   static Vector fc, nc, fbl, fbr, ftl, ftr, nbl, nbr, ntl, ntr;
-
-   fc = getEyesPos () + forward * frustum.MaxView;
-   nc = getEyesPos () + forward * frustum.MinView;
-
-   fbl = fc + (up * frustum.farHeight * 0.5f) - (right * frustum.farWidth * 0.5f);
-   fbr = fc + (up * frustum.farHeight * 0.5f) + (right * frustum.farWidth * 0.5f);
-   ftl = fc - (up * frustum.farHeight * 0.5f) - (right * frustum.farWidth * 0.5f);
-   ftr = fc - (up * frustum.farHeight * 0.5f) + (right * frustum.farWidth * 0.5f);
-   nbl = nc + (up * frustum.nearHeight * 0.5f) - (right * frustum.nearWidth * 0.5f);
-   nbr = nc + (up * frustum.nearHeight * 0.5f) + (right * frustum.nearWidth * 0.5f);
-   ntl = nc - (up * frustum.nearHeight * 0.5f) - (right * frustum.nearWidth * 0.5f);
-   ntr = nc - (up * frustum.nearHeight * 0.5f) + (right * frustum.nearWidth * 0.5f);
-
-   auto setPlane = [&] (FrustumSide side, const Vector &v1, const Vector &v2, const Vector &v3) {
-      auto &plane = m_frustum[side];
-
-      plane.normal = ((v2 - v1) ^ (v3 - v1)).normalize ();
-      plane.point = v2;
-
-      plane.result = -(plane.normal | plane.point);
-   };
-
-   setPlane (FrustumSide::Top, ftl, ntl, ntr);
-   setPlane (FrustumSide::Bottom, fbr, nbr, nbl);
-   setPlane (FrustumSide::Left, fbl, nbl, ntl);
-   setPlane (FrustumSide::Right, ftr, ntr, nbr);
-   setPlane (FrustumSide::Near, nbr, ntr, ntl);
-   setPlane (FrustumSide::Far, fbl, ftl, ftr);
-}
-
-bool Bot::isEnemyInFrustum (edict_t *enemy) {
-   const Vector &origin = enemy->v.origin - Vector (0.0f, 0.0f, 5.0f);
-
-   for (auto &plane : m_frustum) {
-      if (!util.isObjectInsidePlane (plane, origin, 60.0f, 16.0f)) {
-         return false;
-      }
-   }
-   return true;
-}
-
 void Bot::updateBodyAngles () {
    // set the body angles to point the gun correctly
    pev->angles.x = -pev->v_angle.x * (1.0f / 3.0f);
@@ -333,11 +283,11 @@ void Bot::updateBodyAngles () {
    pev->angles.clampAngles ();
 
    // calculate frustum plane data here, since look angles update functions call this last one
-   calculateFrustum ();
+   frustum.calculate (m_viewFrustum, pev->v_angle, getEyesPos ());
 }
 
 void Bot::updateLookAngles () {
-   const float delta = cr::clamp (game.time () - m_lookUpdateTime, cr::kFloatEqualEpsilon, 1.0f / 30.0f);
+   const float delta = cr::clamp (game.time () - m_lookUpdateTime, cr::kFloatEqualEpsilon, kViewFrameUpdate);
    m_lookUpdateTime = game.time ();
 
    // adjust all body and view angles to face an absolute vector
@@ -353,10 +303,11 @@ void Bot::updateLookAngles () {
 
       return;
    }
+   const float aimSkill = cr::clamp (static_cast <float> (m_difficulty), 1.0f, 4.0f) * 25.0f;
 
-   float accelerate = 3000.0f;
-   float stiffness = 200.0f;
-   float damping = 25.0f;
+   float accelerate = aimSkill * 30.0f;
+   float stiffness = aimSkill * 2.0f;
+   float damping = aimSkill * 0.25f;
 
    if (((m_aimFlags & (AimFlags::Enemy | AimFlags::Entity | AimFlags::Grenade)) || m_wantsToFire) && m_difficulty > Difficulty::Normal) {
       if (m_difficulty == Difficulty::Expert) {
@@ -370,7 +321,7 @@ void Bot::updateLookAngles () {
    const float angleDiffPitch = cr::anglesDifference (direction.x, m_idealAngles.x);
    const float angleDiffYaw = cr::anglesDifference (direction.y, m_idealAngles.y);
 
-   if (angleDiffYaw < 1.0f && angleDiffYaw > -1.0f) {
+   if (cr::abs (angleDiffYaw) < 1.0f) {
       m_lookYawVel = 0.0f;
       m_idealAngles.y = direction.y;
    }
@@ -468,4 +419,61 @@ void Bot::updateLookAnglesNewbie (const Vector &direction, float delta) {
    // move the aim cursor
    pev->v_angle = pev->v_angle + delta * Vector (m_aimSpeed.x, m_aimSpeed.y, 0.0f);
    pev->v_angle.clampAngles ();
+}
+
+bool Frustum::isObjectInsidePlane (const Plane &plane, const Vector &center, float height, float radius) const {
+   auto isPointInsidePlane = [&] (const Vector &point) -> bool {
+      return plane.result + (plane.normal | point) >= 0.0f;
+   };
+
+   const Vector &test = plane.normal.get2d ();
+   const Vector &top = center + Vector (0.0f, 0.0f, height * 0.5f) + test * radius;
+   const Vector &bottom = center - Vector (0.0f, 0.0f, height * 0.5f) + test * radius;
+
+   return isPointInsidePlane (top) || isPointInsidePlane (bottom);
+}
+
+void Frustum::calculate (Planes &planes, const Vector &viewAngle, const Vector &viewOffset) {
+   Vector forward, right, up;
+   viewAngle.angleVectors (&forward, &right, &up);
+
+   auto fc = viewOffset + forward * kMaxViewDistance;
+   auto nc = viewOffset + forward * kMinViewDistance;
+
+   auto fbl = fc + (up * m_farHeight * 0.5f) - (right * m_farWidth * 0.5f);
+   auto fbr = fc + (up * m_farHeight * 0.5f) + (right * m_farWidth * 0.5f);
+   auto ftl = fc - (up * m_farHeight * 0.5f) - (right * m_farWidth * 0.5f);
+   auto ftr = fc - (up * m_farHeight * 0.5f) + (right * m_farWidth * 0.5f);
+   auto nbl = nc + (up * m_nearHeight * 0.5f) - (right * m_nearWidth * 0.5f);
+   auto nbr = nc + (up * m_nearHeight * 0.5f) + (right * m_nearWidth * 0.5f);
+   auto ntl = nc - (up * m_nearHeight * 0.5f) - (right * m_nearWidth * 0.5f);
+   auto ntr = nc - (up * m_nearHeight * 0.5f) + (right * m_nearWidth * 0.5f);
+
+   auto setPlane = [&] (PlaneSide side, const Vector &v1, const Vector &v2, const Vector &v3) {
+      auto &plane = planes[static_cast <int> (side)];
+
+      plane.normal = ((v2 - v1) ^ (v3 - v1)).normalize ();
+      plane.point = v2;
+
+      plane.result = -(plane.normal | plane.point);
+   };
+
+   setPlane (PlaneSide::Top, ftl, ntl, ntr);
+   setPlane (PlaneSide::Bottom, fbr, nbr, nbl);
+   setPlane (PlaneSide::Left, fbl, nbl, ntl);
+   setPlane (PlaneSide::Right, ftr, ntr, nbr);
+   setPlane (PlaneSide::Near, nbr, ntr, ntl);
+   setPlane (PlaneSide::Far, fbl, ftl, ftr);
+}
+
+bool Frustum::check (const Planes &planes, edict_t *ent) const {
+   constexpr auto kOffset = Vector (0.0f, 0.0f, 5.0f);
+   const Vector &origin = ent->v.origin - kOffset;
+
+   for (const auto &plane : planes) {
+      if (!isObjectInsidePlane (plane, origin, 60.0f, 16.0f)) {
+         return false;
+      }
+   }
+   return true;
 }

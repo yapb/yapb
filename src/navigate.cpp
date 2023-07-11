@@ -901,7 +901,7 @@ bool Bot::updateNavigation () {
          // pressing the jump button gives the illusion of the bot actual jumping.
          if (isOnFloor () || isOnLadder ()) {
             if (m_desiredVelocity.length2d () > 0.0f) {
-               pev->velocity = m_desiredVelocity;
+               pev->velocity = m_desiredVelocity + m_desiredVelocity * m_frameInterval;
             }
             else {
                auto feet = pev->origin + pev->mins;
@@ -943,7 +943,7 @@ bool Bot::updateNavigation () {
             }
          }
       }
-      else if (!cv_jasonmode.bool_ () && usesKnife () && isOnFloor ()) {
+      else if (!cv_jasonmode.bool_ () && usesKnife () && isOnFloor () && getCurrentTaskId () != Task::EscapeFromBomb) {
          selectBestWeapon ();
       }
    }
@@ -2153,9 +2153,6 @@ bool Bot::selectBestNextNode () {
    // this function does a realtime post processing of nodes return from the
    // pathfinder, to vary paths and find the best node on our way
 
-   assert (!m_pathWalk.empty ());
-   assert (m_pathWalk.hasNext ());
-
    const auto nextNodeIndex = m_pathWalk.next ();
    const auto currentNodeIndex = m_pathWalk.first ();
    const auto prevNodeIndex = m_currentNodeIndex;
@@ -3047,7 +3044,7 @@ bool Bot::isOccupiedNode (int index, bool needZeroVelocity) {
       }
       const auto length = client.origin.distanceSq (graph[index].origin);
 
-      if (length < cr::clamp (cr::sqrf (graph[index].radius) * 2.0f, cr::sqrf (40.0f), cr::sqrf (90.0f))) {
+      if (length < cr::clamp (cr::sqrf (graph[index].radius) * 2.0f, cr::sqrf (90.0f), cr::sqrf (120.0f))) {
          return true;
       }
       auto bot = bots[client.ent];

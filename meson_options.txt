@@ -10,3 +10,6 @@ option('64bit', type : 'boolean', value : false,
 	   
 option('native', type : 'boolean', value : false,
        description: 'Configure compiler for a native machine build.')
+	   
+option('winxp', type : 'boolean', value : false,
+       description: 'Configure MSVC build to output Windows XP compatible binary.')

@@ -112,13 +112,6 @@ struct ClientNoise {
    float last;
 };
 
-// defines frustum data for bot
-struct FrustumPlane {
-   Vector normal;
-   Vector point;
-   float result;
-};
-
 // array of clients struct
 struct Client {
    edict_t *ent; // pointer to actual edict
@@ -146,6 +139,7 @@ struct ChatCollection {
 
 // include bot graph stuff
 #include <graph.h>
+#include <vision.h>
 
 // this structure links nodes returned from pathfinder
 class PathWalk final : public NonCopyable {
@@ -308,6 +302,7 @@ private:
    float m_changeViewTime {}; // timestamp to change look at while at freezetime
    float m_breakableTime {}; // breakable acquired time
    float m_stuckTimestamp {}; // last time was stuck
+   float m_timeDebugUpdateTime {}; // time to update last debug timestamp
 
    bool m_moveToGoal {}; // bot currently moving to goal??
    bool m_isStuck {}; // bot is stuck
@@ -373,7 +368,7 @@ private:
 
    Path *m_path {}; // pointer to the current path node
    String m_chatBuffer {}; // space for strings (say text...)
-   FrustumPlane m_frustum[FrustumSide::Num] {};
+   Frustum::Planes m_viewFrustum {};
 
 private:
    int pickBestWeapon (Array <int> &vec, int moneySave);
@@ -417,7 +412,7 @@ private:
    bool isWeaponRestrictedAMX (int weaponIndex);
    bool isInViewCone (const Vector &origin);
    bool checkBodyParts (edict_t *target);
-   bool seesEnemy (edict_t *player, bool ignoreFOV = false);
+   bool seesEnemy (edict_t *player);
    bool hasActiveGoal ();
    bool advanceMovement ();
    bool isBombDefusing (const Vector &bombOrigin);
@@ -443,7 +438,6 @@ private:
    bool isPenetrableObstacle2 (const Vector &dest);
    bool isPenetrableObstacle3 (const Vector &dest);
    bool isEnemyBehindShield (edict_t *enemy);
-   bool isEnemyInFrustum (edict_t *enemy);
    bool checkChatKeywords (String &reply);
    bool isReplyingToChat ();
    bool isReachableNode (int index);
@@ -485,7 +479,6 @@ private:
    void updatePracticeValue (int damage);
    void updatePracticeDamage (edict_t *attacker, int damage);
    void findShortestPath (int srcIndex, int destIndex);
-   void calculateFrustum ();
    void findPath (int srcIndex, int destIndex, FindPath pathType = FindPath::Fast);
    void syncFindPath (int srcIndex, int destIndex, FindPath pathType);
    void debugMsgInternal (const char *str);
@@ -509,7 +502,6 @@ private:
    void selectSecondary ();
    void selectWeaponById (int id);
    void selectWeaponByIndex (int index);
-   void refreshEnemyPredict ();
    void syncUpdatePredictedIndex ();
    void updatePredictedIndex ();
    void refreshModelName (char *infobuffer);
@@ -521,6 +513,7 @@ private:
    void translateInput ();
    void moveToGoal ();
    void resetMovement ();
+   void refreshEnemyPredict ();
 
    void normal_ ();
    void spraypaint_ ();
@@ -701,7 +694,7 @@ public:
 
    // need to wait until all threads will finish it's work before terminating bot object
    ~Bot () {
-      MutexScopedLock lock (m_pathFindLock);
+      MutexScopedLock lock1 (m_pathFindLock);
    }
 
 public:

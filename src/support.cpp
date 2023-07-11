@@ -412,7 +412,9 @@ void BotSupport::updateClients () {
 }
 
 int BotSupport::getPingBitmask (edict_t *ent, int loss, int ping) {
-   // this function generats bitmask for SVC_PINGS engine message. See SV_EmitPings from engine for details
+   // this function generates bitmask for SVC_PINGS engine message
+   // see:
+   //    https://github.com/dreamstalker/rehlds/blob/a680f18ee1e7eb8c39fbdc45682163ca9477d783/rehlds/engine/sv_main.cpp#L4590
 
    const auto emit = [] (int s0, int s1, int s2) {
       return (s0 & (cr::bit (s1) - 1)) << s2;
@@ -442,6 +444,16 @@ void BotSupport::syncCalculatePings () {
       }
       int ping, loss;
       engfuncs.pfnGetPlayerStats (client.ent, &ping, &loss);
+
+      // @note: for those who asking on a email, we CAN call pfnGetPlayerStats hl-engine function in a separate thread
+      // since the function doesn't modify anything inside engine, so race-condition and crash isn't viable situation
+      // it's just fills ping and loss from engine structures, the only way to cause crash in separate thread
+      // is to call it with a invalid ``client`` pointer (on goldsrc), thus causing Con_Printf which is not compatible with
+      // multi-threaded environment
+      //
+      // see:
+      //    https://github.com/dreamstalker/rehlds/blob/a680f18ee1e7eb8c39fbdc45682163ca9477d783/rehlds/engine/pr_cmds.cpp#L2735C15-L2735C32
+      //    https://github.com/fwgs/xash3d-fwgs/blob/f5b9826fd9bbbdc5293c1ff522de11ce28d3c9f2/engine/server/sv_game.c#L4443
 
       // store normal client ping
       client.ping = getPingBitmask (client.ent, loss, ping > 0 ? ping : rg.get (8, 16)); // getting player ping sometimes fails
@@ -545,18 +557,6 @@ void BotSupport::installSendTo () {
    if (!game.is (GameFlags::Legacy) && (plat.nix || plat.win) && !plat.arm && !m_sendToDetour.detoured ()) {
       m_sendToDetour.install (reinterpret_cast <void *> (BotSupport::sendTo), true);
    }
-}
-
-bool BotSupport::isObjectInsidePlane (FrustumPlane &plane, const Vector &center, float height, float radius) {
-   auto isPointInsidePlane = [&] (const Vector &point) -> bool {
-      return plane.result + (plane.normal | point) >= 0.0f;
-   };
-
-   const Vector &test = plane.normal.get2d ();
-   const Vector &top = center + Vector (0.0f, 0.0f, height * 0.5f) + test * radius;
-   const Vector &bottom = center - Vector (0.0f, 0.0f, height * 0.5f) + test * radius;
-
-   return isPointInsidePlane (top) || isPointInsidePlane (bottom);
 }
 
 bool BotSupport::isModel (const edict_t *ent, StringRef model) {

@@ -252,7 +252,7 @@ AStarResult AStarAlgo::find (int botTeam, int srcIndex, int destIndex, NodeAdder
    m_routeQue.clear ();
    m_routeQue.emplace (srcIndex, srcRoute->g);
 
-   bool postSmoothPath = cv_path_astar_post_smooth.bool_ () && vistab.isReady ();
+   const bool postSmoothPath = cv_path_astar_post_smooth.bool_ () && vistab.isReady ();
 
    // always clear constructed path
    m_constructedPath.clear ();

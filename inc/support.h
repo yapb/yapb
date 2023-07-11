@@ -99,9 +99,6 @@ public:
    // installs the sendto function interception
    void installSendTo ();
 
-   // check if object inside frustum plane
-   bool isObjectInsidePlane (FrustumPlane &plane, const Vector &center, float height, float radius);
-
    // checks if same model omitting the models directory
    bool isModel (const edict_t *ent, StringRef model);
 

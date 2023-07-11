@@ -207,12 +207,12 @@ bool Bot::checkBodyParts (edict_t *target) {
    return false;
 }
 
-bool Bot::seesEnemy (edict_t *player, bool ignoreFOV) {
+bool Bot::seesEnemy (edict_t *player) {
    if (game.isNullEntity (player)) {
       return false;
    }
 
-   if ((ignoreFOV || isInViewCone (player->v.origin)) && isEnemyInFrustum (player) && checkBodyParts (player)) {
+   if (isInViewCone (player->v.origin) && frustum.check (m_viewFrustum, player) && checkBodyParts (player)) {
       m_seeEnemyTime = game.time ();
       m_lastEnemy = player;
       m_lastEnemyOrigin = m_enemyOrigin;
@@ -277,7 +277,7 @@ bool Bot::lookupEnemies () {
             }
 
             // check the engine PVS
-            if (!isEnemyInFrustum (interesting) || !game.checkVisibility (interesting, set)) {
+            if (!frustum.check (m_viewFrustum, interesting) || !game.checkVisibility (interesting, set)) {
                continue;
             }
 
@@ -303,7 +303,7 @@ bool Bot::lookupEnemies () {
          player = client.ent;
 
          // check the engine PVS
-         if (!isEnemyInFrustum (player) || !game.checkVisibility (player, set)) {
+         if (!frustum.check (m_viewFrustum, player) || !game.checkVisibility (player, set)) {
             continue;
          }
 
