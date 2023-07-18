@@ -167,6 +167,7 @@ private:
    bool m_hasChanged {};
    bool m_narrowChecked {};
    bool m_silenceMessages {};
+   bool m_lightChecked {};
 
    Vector m_learnVelocity {};
    Vector m_learnPosition {};

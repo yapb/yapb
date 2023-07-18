@@ -1183,7 +1183,7 @@ template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const 
    }
 
    // determine which side of the node plane our points are on, fixme: optimize for axial
-   auto plane = node->plane;
+   const auto plane = node->plane;
 
    const float front = (start | plane->normal) - plane->dist;
    const float back = (end | plane->normal) - plane->dist;
@@ -1252,7 +1252,7 @@ template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const 
       auto lightmap = surf->samples + dt * smax + ds;
 
       // compute the lightmap color at a particular point
-      for (int maps = 0u; maps < MAX_LIGHTMAPS && surf->styles[maps] != 255u; ++maps) {
+      for (int maps = 0; maps < MAX_LIGHTMAPS && surf->styles[maps] != 255; ++maps) {
          const uint32_t scale = m_lightstyleValue[surf->styles[maps]];
 
          m_point.red += lightmap->r * scale;

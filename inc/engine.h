@@ -448,6 +448,10 @@ public:
       return ptr->string;
    }
 
+   StringRef name () const {
+      return ptr->name;
+   }
+
    void set (float val) {
       engfuncs.pfnCVarSetFloat (ptr->name, val);
    }

@@ -801,14 +801,20 @@ int BotControl::cmdNodeUpload () {
       msg ("Sorry, unable to upload graph file that contains errors. Please type \"graph check\" to verify graph consistency.");
       return BotCommandResult::Handled;
    }
+   String uploadUrlAddress = cv_graph_url_upload.str ();
+
+   // only allow to upload to non-https endpoint
+   if (uploadUrlAddress.startsWith ("http")) {
+      msg ("Value of \"%s\" cvar should not contain URL scheme, only the host name and path.", cv_graph_url_upload.name ());
+      return BotCommandResult::Handled;
+   }
+   String uploadUrl = strings.format ("http://%s", uploadUrlAddress);
 
    msg ("\n");
    msg ("WARNING!");
    msg ("Graph uploaded to graph database in synchronous mode. That means if graph is big enough");
    msg ("you may notice the game freezes a bit during upload and issue request creation. Please, be patient.");
    msg ("\n");
-
-   String uploadUrl = strings.format ("https://%s", cv_graph_url_upload.str ());
 
    // try to upload the file
    if (http.uploadFile (uploadUrl, bstor.buildPath (BotFile::Graph))) {

@@ -1639,7 +1639,7 @@ bool Bot::findNextBestNode () {
    }
    int selected = kInvalidNodeIndex;
 
-   // now pick random one from choosen
+   // now pick random one from chosen
    int index = 0;
 
    // choice from found
@@ -1766,7 +1766,7 @@ int Bot::findNearestNode () {
       const float distanceSq = path.origin.distanceSq (pev->origin);
 
       if (distanceSq < nearestDistanceSq) {
-         // if bot doing navigation, make sure node really visible and reacheable
+         // if bot doing navigation, make sure node really visible and reachable
          if (isReachableNode (path.number)) {
             index = path.number;
             nearestDistanceSq = distanceSq;
@@ -1774,7 +1774,7 @@ int Bot::findNearestNode () {
       }
    }
 
-   // try to search ANYTHING that can be reachaed
+   // try to search ANYTHING that can be reached
    if (!graph.exists (index)) {
       nearestDistanceSq = cr::sqrf (kMaxDistance);
       const auto &nearestNodes = graph.getNarestInRadius (kMaxDistance, pev->origin);
@@ -1896,10 +1896,10 @@ int Bot::findDefendNode (const Vector &origin) {
          continue;
       }
 
-      // use the 'real' pathfinding distances
+      // use the 'real' path finding distances
       auto distance = planner.dist (srcIndex, path.number);
 
-      // skip wayponts too far
+      // skip nodes too far
       if (distance > kMaxDistance) {
          continue;
       }

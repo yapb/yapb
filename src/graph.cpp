@@ -28,6 +28,7 @@ void BotGraph::reset () {
    m_autoPathDistance = 250.0f;
    m_hasChanged = false;
    m_narrowChecked = false;
+   m_lightChecked = false;
 
    m_graphAuthor.clear ();
    m_graphModified.clear ();
@@ -1332,23 +1333,31 @@ void BotGraph::calculatePathRadius (int index) {
 }
 
 void BotGraph::syncInitLightLevels () {
-   // this function get's the light level for each waypoin on the map
-
-   // no nodes ? no light levels, and only one-time init
-   if (m_paths.empty () || !cr::fequal (m_paths[0].light, kInvalidLightLevel)) {
-      return;
-   }
+   // this function get's the light level for each node on the map
 
    // update light levels for all nodes
    for (auto &path : m_paths) {
-      path.light = illum.getLightLevel (path.origin);
+      path.light = illum.getLightLevel (path.origin + Vector { 0.0f, 0.0f, 16.0f} );
    }
+   m_lightChecked = true;
+
    // disable lightstyle animations on finish (will be auto-enabled on mapchange)
    illum.enableAnimation (false);
 }
 
 void BotGraph::initLightLevels () {
-   // this function get's the light level for each waypoin on the map
+   // this function get's the light level for each node on the map
+
+   // no nodes ? no light levels, and only one-time init
+   if (m_paths.empty () || m_lightChecked) {
+      return;
+   }
+   auto players = bots.countTeamPlayers ();
+
+   // do calculation if some-one is already playing on the server
+   if (!players.first && !players.second) {
+      return;
+   }
 
    worker.enqueue ([this] () {
       syncInitLightLevels ();
@@ -1664,6 +1673,8 @@ bool BotGraph::saveGraphData () {
 
    // ensure narrow places saved into file
    m_narrowChecked = false;
+   m_lightChecked = false;
+
    initNarrowPlaces ();
 
    return bstor.save <Path> (m_paths, &exten, options);
@@ -2553,6 +2564,7 @@ BotGraph::BotGraph () {
    m_jumpLearnNode = false;
    m_hasChanged = false;
    m_narrowChecked = false;
+   m_lightChecked = false;
    m_timeJumpStarted = 0.0f;
 
    m_lastJumpNode = kInvalidNodeIndex;
