@@ -76,7 +76,7 @@ void BotConfig::loadMainConfig (bool isFirstLoad) {
                if (needsToIgnoreVar (ignore, key) && !strings.matches (value, cvar->string)) {
 
                   // preserve quota number if it's zero
-                  if (strings.matches (cvar->name, "yb_quota") && cv_quota.int_ () <= 0) {
+                  if (cv_quota.name () == cvar->name && cv_quota.int_ () <= 0) {
                      engfuncs.pfnCvar_DirectSet (cvar, value);
                      continue;
                   }

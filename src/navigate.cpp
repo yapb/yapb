@@ -1659,7 +1659,7 @@ bool Bot::findNextBestNode () {
       selected = busyIndex;
    }
 
-   // worst case... find atleast something
+   // worst case... find at least something
    if (selected == kInvalidNodeIndex) {
       selected = findNearestNode ();
    }
@@ -1704,7 +1704,7 @@ void Bot::findValidNode () {
    else if (m_navTimeset + getEstimatedNodeReachTime () < game.time ()) {
       constexpr int maxDamageValue = PracticeLimit::Damage;
 
-      // increase danager for both teams
+      // increase danger for both teams
       for (int team = Team::Terrorist; team < kGameTeamNum; ++team) {
          int damageValue = practice.getDamage (team, m_currentNodeIndex, m_currentNodeIndex);
          damageValue = cr::clamp (damageValue + 100, 0, maxDamageValue);
