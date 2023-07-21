@@ -7,9 +7,9 @@
 
 #include <yapb.h>
 
-ConVar cv_bind_menu_key ("yb_bind_menu_key", "=", "Binds specified key for opening bots menu.", false);
-ConVar cv_ignore_cvars_on_changelevel ("yb_ignore_cvars_on_changelevel", "yb_quota,yb_autovacate", "Specifies comma separated list of bot cvars, that will not be overwritten by config on changelevel.", false);
-ConVar cv_logger_disable_logfile ("yb_logger_disable_logfile", "0", "Disables logger to write anything to log file. Just spew content to the console.");
+ConVar cv_bind_menu_key ("bind_menu_key", "=", "Binds specified key for opening bots menu.", false);
+ConVar cv_ignore_cvars_on_changelevel ("ignore_cvars_on_changelevel", "yb_quota,yb_autovacate", "Specifies comma separated list of bot cvars, that will not be overwritten by config on changelevel.", false);
+ConVar cv_logger_disable_logfile ("logger_disable_logfile", "0", "Disables logger to write anything to log file. Just spew content to the console.");
 
 BotConfig::BotConfig () {
    m_chat.resize (Chat::Count);

@@ -7,9 +7,9 @@
 
 #include <yapb.h>
 
-ConVar cv_display_welcome_text ("yb_display_welcome_text", "1", "Enables or disables showing welcome message to host entity on game start.");
-ConVar cv_enable_query_hook ("yb_enable_query_hook", "0", "Enables or disables fake server queries response, that shows bots as real players in server browser.");
-ConVar cv_breakable_health_limit ("yb_breakable_health_limit", "500.0", "Specifies the maximum health of breakable object, that bot will consider to destroy.", true, 1.0f, 3000.0);
+ConVar cv_display_welcome_text ("display_welcome_text", "1", "Enables or disables showing welcome message to host entity on game start.");
+ConVar cv_enable_query_hook ("enable_query_hook", "0", "Enables or disables fake server queries response, that shows bots as real players in server browser.");
+ConVar cv_breakable_health_limit ("breakable_health_limit", "500.0", "Specifies the maximum health of breakable object, that bot will consider to destroy.", true, 1.0f, 3000.0);
 
 BotSupport::BotSupport () {
    m_needToSendWelcome = false;

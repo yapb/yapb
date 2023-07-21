@@ -406,17 +406,22 @@ class ConVar final : public NonCopyable {
 public:
    cvar_t *ptr;
 
+private:
+   String name_ {};
+
 public:
    ConVar () = delete;
    ~ConVar () = default;
 
 public:
    ConVar (const char *name, const char *initval, int32_t type = Var::NoServer, bool regMissing = false, const char *regVal = nullptr) : ptr (nullptr) {
-      Game::instance ().addNewCvar (name, initval, "", false, 0.0f, 0.0f, type, regMissing, regVal, this);
+      setPrefix (name, type);
+      Game::instance ().addNewCvar (name_.chars (), initval, "", false, 0.0f, 0.0f, type, regMissing, regVal, this);
    }
 
    ConVar (const char *name, const char *initval, const char *info, bool bounded = true, float min = 0.0f, float max = 1.0f, int32_t type = Var::NoServer, bool regMissing = false, const char *regVal = nullptr) : ptr (nullptr) {
-      Game::instance ().addNewCvar (name, initval, info, bounded, min, max, type, regMissing, regVal, this);
+      setPrefix (name, type);
+      Game::instance ().addNewCvar (name_.chars (), initval, info, bounded, min, max, type, regMissing, regVal, this);
    }
 
    template <typename U> constexpr U get () const {
@@ -466,6 +471,9 @@ public:
 
    // revet cvar to default value
    void revert ();
+
+   // set the cvar prefix if needed
+   void setPrefix (const char *name, int32_t type);
 };
 
 class MessageWriter final {

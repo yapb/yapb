@@ -7,7 +7,7 @@
 
 #include <yapb.h>
 
-ConVar cv_max_nodes_for_predict ("yb_max_nodes_for_predict", "25", "Maximum number for path length, to predict the enemy.", true, 15.0f, 256.0f);
+ConVar cv_max_nodes_for_predict ("max_nodes_for_predict", "25", "Maximum number for path length, to predict the enemy.", true, 15.0f, 256.0f);
 
 // game console variables
 ConVar mp_flashlight ("mp_flashlight", nullptr, Var::GameRef);

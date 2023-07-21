@@ -7,14 +7,14 @@
 
 #include <yapb.h>
 
-ConVar cv_graph_analyze_auto_start ("yb_graph_analyze_auto_start", "1", "Autostart analyzer if all other cases are failed.");
-ConVar cv_graph_analyze_auto_save ("yb_graph_analyze_auto_save", "1", "Auto save results of analysis to graph file. And re-add bots.");
-ConVar cv_graph_analyze_distance ("yb_graph_analyze_distance", "64", "The minimum distance to keep nodes from each other.", true, 42.0f, 128.0f);
-ConVar cv_graph_analyze_max_jump_height ("yb_graph_analyze_max_jump_height", "44", "Max jump height to test if next node will be unreachable.", true, 44.0f, 64.0f);
-ConVar cv_graph_analyze_fps ("yb_graph_analyze_fps", "30.0", "The FPS at which analyzer process is running. This keeps game from freezing during analyzing.", true, 25.0f, 99.0f);
-ConVar cv_graph_analyze_clean_paths_on_finish ("yb_graph_analyze_clean_paths_on_finish", "1", "Specifies if analyzer should clean the unnecessary paths upon finishing.");
-ConVar cv_graph_analyze_optimize_nodes_on_finish ("yb_graph_analyze_optimize_nodes_on_finish", "1", "Specifies if analyzer should merge some near-placed nodes with much of connections together.");
-ConVar cv_graph_analyze_mark_goals_on_finish ("yb_graph_analyze_mark_goals_on_finish", "1", "Specifies if analyzer should mark nodes as map goals automatically upon finish.");
+ConVar cv_graph_analyze_auto_start ("graph_analyze_auto_start", "1", "Autostart analyzer if all other cases are failed.");
+ConVar cv_graph_analyze_auto_save ("graph_analyze_auto_save", "1", "Auto save results of analysis to graph file. And re-add bots.");
+ConVar cv_graph_analyze_distance ("graph_analyze_distance", "64", "The minimum distance to keep nodes from each other.", true, 42.0f, 128.0f);
+ConVar cv_graph_analyze_max_jump_height ("graph_analyze_max_jump_height", "44", "Max jump height to test if next node will be unreachable.", true, 44.0f, 64.0f);
+ConVar cv_graph_analyze_fps ("graph_analyze_fps", "30.0", "The FPS at which analyzer process is running. This keeps game from freezing during analyzing.", true, 25.0f, 99.0f);
+ConVar cv_graph_analyze_clean_paths_on_finish ("graph_analyze_clean_paths_on_finish", "1", "Specifies if analyzer should clean the unnecessary paths upon finishing.");
+ConVar cv_graph_analyze_optimize_nodes_on_finish ("graph_analyze_optimize_nodes_on_finish", "1", "Specifies if analyzer should merge some near-placed nodes with much of connections together.");
+ConVar cv_graph_analyze_mark_goals_on_finish ("graph_analyze_mark_goals_on_finish", "1", "Specifies if analyzer should mark nodes as map goals automatically upon finish.");
 
 void GraphAnalyze::start () {
    // start analyzer in few seconds after level initialized

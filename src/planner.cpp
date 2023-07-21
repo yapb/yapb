@@ -7,10 +7,10 @@
 
 #include <yapb.h>
 
-ConVar cv_path_heuristic_mode ("yb_path_heuristic_mode", "3", "Selects the heuristic function mode. For debug purposes only.", true, 0.0f, 4.0f);
-ConVar cv_path_floyd_memory_limit ("yb_path_floyd_memory_limit", "6", "Limit maximum floyd-warshall memory (megabytes). Use Dijkstra if memory exceeds.", true, 0.0, 32.0f);
-ConVar cv_path_dijkstra_simple_distance ("yb_path_dijkstra_simple_distance", "1", "Use simple distance path calculation instead of running full Dijkstra path cycle. Used only when Floyd matrices unavailable due to memory limit.");
-ConVar cv_path_astar_post_smooth ("yb_path_astar_post_smooth", "0", "Enables post-smoothing for A*. Reduces zig-zags on paths at cost of some CPU cycles.");
+ConVar cv_path_heuristic_mode ("path_heuristic_mode", "3", "Selects the heuristic function mode. For debug purposes only.", true, 0.0f, 4.0f);
+ConVar cv_path_floyd_memory_limit ("path_floyd_memory_limit", "6", "Limit maximum floyd-warshall memory (megabytes). Use Dijkstra if memory exceeds.", true, 0.0, 32.0f);
+ConVar cv_path_dijkstra_simple_distance ("path_dijkstra_simple_distance", "1", "Use simple distance path calculation instead of running full Dijkstra path cycle. Used only when Floyd matrices unavailable due to memory limit.");
+ConVar cv_path_astar_post_smooth ("path_astar_post_smooth", "0", "Enables post-smoothing for A*. Reduces zig-zags on paths at cost of some CPU cycles.");
 
 float Heuristic::gfunctionKillsDist (int team, int currentIndex, int parentIndex) {
    if (parentIndex == kInvalidNodeIndex) {
