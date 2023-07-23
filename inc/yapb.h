@@ -154,6 +154,10 @@ public:
    ~PathWalk () = default;
 
 public:
+   int32_t &doubleNext () {
+      return at (2);
+   }
+
    int32_t &next () {
       return at (1);
    }
