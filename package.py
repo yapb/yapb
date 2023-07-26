@@ -95,7 +95,7 @@ class BotRelease(object):
       self.project = 'yapb'
       self.version = sys.argv[1]
       self.artifacts = 'artifacts'
-      self.graphs = 'yapb-gcdn.akamaized.net'
+      self.graphs = 'yapb.jeefo.net'
       self.win32exe = 'https://github.com/yapb/setup/releases/latest/download/botsetup.exe'
       
       meson_src_root_env = 'MESON_SOURCE_ROOT'

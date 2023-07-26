@@ -43,10 +43,13 @@ template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *
       if (!graph.canDownload ()) {
          return false;
       }
+      String lowercaseMapName = game.getMapName ();
+      lowercaseMapName = lowercaseMapName.lowercase ();
+
       auto downloadAddress = cv_graph_url.str ();
 
       auto toDownload = buildPath (storageToBotFile (type.option), false);
-      auto fromDownload = strings.format ("http://%s/graph/%s.graph", downloadAddress, game.getMapName ());
+      auto fromDownload = strings.format ("http://%s/graph/%s.graph", downloadAddress, lowercaseMapName);
 
       // try to download
       if (http.downloadFile (fromDownload, toDownload)) {
