@@ -1611,7 +1611,7 @@ bool BotGraph::loadGraphData () {
          int mapSize = getBspSize ();
 
          if (mapSize != exten.mapSize) {
-            msg ("Warning: Graph data is probably not for this map. Please check bots behavior.");
+            msg ("Warning: Graph data is probably not for this map. Please check bots behaviour.");
          }
       }
       cv_debug_goal.set (kInvalidNodeIndex);
