@@ -221,7 +221,7 @@ void Bot::normal_ () {
    }
    const float shiftSpeed = getShiftSpeed ();
 
-   if (!m_isStuck && (!cr::fzero (m_moveSpeed) && m_moveSpeed > shiftSpeed) && (cv_walking_allowed.bool_ () && mp_footsteps.bool_ ()) && m_difficulty >= Difficulty::Normal && !(m_aimFlags & AimFlags::Enemy) && (m_heardSoundTime + 6.0f >= game.time () || (m_states & Sense::SuspectEnemy)) && numEnemiesNear (pev->origin, 768.0f) >= 1 && !isKnifeMode () && !bots.isBombPlanted ()) {
+   if ((!cr::fzero (m_moveSpeed) && m_moveSpeed > shiftSpeed) && (cv_walking_allowed.bool_ () && mp_footsteps.bool_ ()) && m_difficulty >= Difficulty::Normal && (m_heardSoundTime + 6.0f >= game.time () || (m_states & Sense::HearingEnemy)) && pev->origin.distanceSq (m_lastEnemyOrigin) < cr::sqrf (768.0f) && !isKnifeMode () && !bots.isBombPlanted ()) {
       m_moveSpeed = shiftSpeed;
    }
 

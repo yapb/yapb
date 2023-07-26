@@ -3841,7 +3841,7 @@ bool Bot::isBombDefusing (const Vector &bombOrigin) {
 }
 
 float Bot::getShiftSpeed () {
-   if (getCurrentTaskId () == Task::SeekCover || isDucking () || (pev->button & IN_DUCK) || (m_oldButtons & IN_DUCK) || (m_currentTravelFlags & PathFlag::Jump) || (m_pathFlags & NodeFlag::Ladder) || isOnLadder () || isInWater () || m_isStuck) {
+   if (getCurrentTaskId () == Task::SeekCover || (m_aimFlags & AimFlags::Enemy) || isDucking () || (pev->button & IN_DUCK) || (m_oldButtons & IN_DUCK) || (m_currentTravelFlags & PathFlag::Jump) || (m_pathFlags & NodeFlag::Ladder) || isOnLadder () || isInWater () || m_isStuck) {
       return pev->maxspeed;
    }
    return pev->maxspeed * 0.4f;

@@ -146,7 +146,7 @@ void Bot::updateAimDir () {
             predictNode = kInvalidNodeIndex;
             pathLength = kInfiniteDistanceLong;
          }
-         return predictNode != kInvalidNodeIndex && pathLength < cv_max_nodes_for_predict.int_ ();
+         return graph.exists (predictNode) && pathLength < cv_max_nodes_for_predict.int_ ();
       };
 
       if (changePredictedEnemy) {
@@ -183,8 +183,12 @@ void Bot::updateAimDir () {
 
       if (m_moveToGoal && m_seeEnemyTime + 4.0f < game.time () && !m_isStuck && m_moveSpeed > getShiftSpeed () && !(pev->button & IN_DUCK) && m_currentNodeIndex != kInvalidNodeIndex && !(m_pathFlags & (NodeFlag::Ladder | NodeFlag::Crouch)) && m_pathWalk.hasNext () && pev->origin.distanceSq (m_destOrigin) < cr::sqrf (512.0f)) {
          const auto nextPathIndex = m_pathWalk.next ();
+         const auto doubleNextPath = m_pathWalk.doubleNext ();
 
-         if (vistab.visible (m_currentNodeIndex, nextPathIndex)) {
+         if (vistab.visible (m_currentNodeIndex, doubleNextPath)) {
+            m_lookAt = graph[doubleNextPath].origin + pev->view_ofs;
+         }
+         else if (vistab.visible (m_currentNodeIndex, nextPathIndex)) {
             m_lookAt = graph[nextPathIndex].origin + pev->view_ofs;
          }
          else {
