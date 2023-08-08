@@ -87,7 +87,7 @@ void MessageDispatcher::netMsgVGUIMenu () {
 
    enum args { menu = 0, min = 1 };
 
-   // check the minimum states or existance of bot
+   // check the minimum states or existence of bot
    if (m_args.length () < min || !m_bot) {
       return;
    }
@@ -109,7 +109,7 @@ void MessageDispatcher::netMsgShowMenu () {
 
    enum args { menu = 3, min = 4 };
 
-   // check the minimum states or existance of bot
+   // check the minimum states or existence of bot
    if (m_args.length () < min || !m_bot) {
       return;
    }
@@ -144,7 +144,7 @@ void MessageDispatcher::netMsgWeaponList () {
 }
 
 void MessageDispatcher::netMsgCurWeapon () {
-   // this message is sent when a weapon is selected (either by the bot chosing a weapon or by the server auto assigning the bot a weapon). In CS it's also called when Ammo is increased/decreased
+   // this message is sent when a weapon is selected (either by the bot choosing a weapon or by the server auto assigning the bot a weapon). In CS it's also called when Ammo is increased/decreased
 
    enum args { state = 0, id = 1, clip = 2, min = 3 };
 
@@ -524,7 +524,7 @@ void MessageDispatcher::start (edict_t *ent, int32_t type) {
       m_current = m_handlers[msg] ? msg : NetMsg::None;
    }
 
-   // no messagem no processing
+   // no message no processing
    if (m_current == NetMsg::None) {
       return;
    }
@@ -571,6 +571,6 @@ int32_t MessageDispatcher::id (NetMsg msg) {
 Bot *MessageDispatcher::pickBot (int32_t index) {
    const auto &client = util.getClient (m_args[index].long_ - 1);
 
-   // get the bot in this msg
+   // get the bot in this message
    return bots[client.ent];
 }

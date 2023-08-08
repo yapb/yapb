@@ -57,7 +57,7 @@ public:
    // check if entity is a hostage entity
    bool isHostageEntity (edict_t *ent);
 
-   // check if entity is a door enitty
+   // check if entity is a door entity
    bool isDoorEntity (edict_t *ent);
 
    // this function is checking that pointed by ent pointer obstacle, can be destroyed
@@ -133,13 +133,13 @@ public:
    }
 
    // gets the shooting cone deviation
-   float getShootingCone (edict_t *ent, const Vector &position) {
-      return ent->v.v_angle.forward () | (position - (ent->v.origin + ent->v.view_ofs)).normalize (); // he's facing it, he meant it
+   float getShootingCone (edict_t *ent, const Vector &pos) {
+      return ent->v.v_angle.forward () | (pos - (ent->v.origin + ent->v.view_ofs)).normalize (); // he's facing it, he meant it
    }
 
-   // check if origin is inside view cone of entity
-   bool isInViewCone (const Vector &origin, edict_t *ent) {
-      return getShootingCone (ent, origin) >= cr::cosf (cr::deg2rad ((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f));
+   // check if position is inside view cone of entity
+   bool isInViewCone (const Vector &pos, edict_t *ent) {
+      return getShootingCone (ent, pos) >= cr::cosf (cr::deg2rad ((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f));
    }
 
 public:

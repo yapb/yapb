@@ -118,6 +118,7 @@ private:
    int cmdNodePathCreate ();
    int cmdNodePathDelete ();
    int cmdNodePathSetAutoDistance ();
+   int cmdNodePathCleanAll ();
    int cmdNodeAcquireEditor ();
    int cmdNodeReleaseEditor ();
    int cmdNodeUpload ();

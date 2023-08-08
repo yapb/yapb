@@ -124,6 +124,8 @@ void BotConfig::loadNamesConfig () {
    String line;
    MemFile file;
 
+   constexpr auto kMaxNameLen = 32;
+
    // naming initialization
    if (openConfig ("names", "Name configuration file not found.", &file, true)) {
       m_botNames.clear ();
@@ -135,8 +137,8 @@ void BotConfig::loadNamesConfig () {
             continue;
          }
          // max botname is 32 characters
-         if (line.length () > 32) {
-            line[32] = kNullChar;
+         if (line.length () > kMaxNameLen - 1) {
+            line[kMaxNameLen - 1] = kNullChar;
          }
          m_botNames.emplace (line, -1);
       }
@@ -583,7 +585,7 @@ void BotConfig::loadDifficultyConfig () {
       diff->aimError.z = values[8].float_ ();
    };
 
-   // avatars initialization
+   // difficulty initialization
    if (openConfig ("difficulty", "Difficulty config file not found. Loading defaults.", &file)) {
 
       while (file.getLine (line)) {
@@ -706,20 +708,20 @@ BotName *BotConfig::pickBotName () {
    }
 
    for (size_t i = 0; i < m_botNames.length () * 2; ++i) {
-      auto botName = &m_botNames.random ();
+      auto bn = &m_botNames.random ();
 
-      if (botName->name.length () < 3 || botName->usedBy != -1) {
+      if (bn->name.length () < 3 || bn->usedBy != -1) {
          continue;
       }
-      return botName;
+      return bn;
    }
    return nullptr;
 }
 
 void BotConfig::clearUsedName (Bot *bot) {
-   for (auto &name : m_botNames) {
-      if (name.usedBy == bot->index ()) {
-         name.usedBy = -1;
+   for (auto &bn : m_botNames) {
+      if (bn.usedBy == bot->index ()) {
+         bn.usedBy = -1;
          break;
       }
    }

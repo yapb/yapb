@@ -366,6 +366,7 @@ private:
    Vector m_lookAtPredict {}; // aiming vector when predicting
    Vector m_desiredVelocity {}; // desired velocity for jump nodes
    Vector m_breakableOrigin {}; // origin of breakable
+   Vector m_rightRef {}; // right referential vector
 
    Array <edict_t *> m_ignoredBreakable {}; // list of ignored breakables
    Array <edict_t *> m_hostages {}; // pointer to used hostage entities
@@ -485,7 +486,7 @@ private:
    void findShortestPath (int srcIndex, int destIndex);
    void findPath (int srcIndex, int destIndex, FindPath pathType = FindPath::Fast);
    void syncFindPath (int srcIndex, int destIndex, FindPath pathType);
-   void debugMsgInternal (const char *str);
+   void debugMsgInternal (StringRef str);
    void frame ();
    void resetCollision ();
    void ignoreCollision ();
@@ -509,6 +510,7 @@ private:
    void syncUpdatePredictedIndex ();
    void updatePredictedIndex ();
    void refreshModelName (char *infobuffer);
+   void updateRightRef ();
 
    void completeTask ();
    void executeTasks ();
@@ -540,9 +542,9 @@ private:
    void pickupItem_ ();
    void shootBreakable_ ();
 
-   edict_t *lookupButton (const char *target);
+   edict_t *lookupButton (StringRef target);
    edict_t *lookupBreakable ();
-   edict_t *setCorrectGrenadeVelocity (const char *model);
+   edict_t *setCorrectGrenadeVelocity (StringRef model);
 
    Vector getEnemyBodyOffset ();
    Vector calcThrow (const Vector &start, const Vector &stop);

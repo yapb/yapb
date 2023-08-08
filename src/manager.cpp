@@ -992,7 +992,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    // this function does core operation of creating bot, it's called by addbot (),
    // when bot setup completed, (this is a bot class constructor)
 
-   int clientIndex = game.indexOfEntity (bot);
+   const int clientIndex = game.indexOfEntity (bot);
    pev = &bot->v;
 
    if (bot->pvPrivateData != nullptr) {
@@ -1176,25 +1176,25 @@ int BotManager::getAliveHumansCount () {
 }
 
 int BotManager::getPlayerPriority (edict_t *ent) {
-   constexpr auto highPrio = 512;
+   constexpr auto kHighPriority = 512;
 
    // always check for only our own bots
    auto bot = bots[ent];
 
    // if player just return high prio
    if (!bot) {
-      return game.indexOfEntity (ent) + highPrio;
+      return game.indexOfEntity (ent) + kHighPriority;
    }
 
    // give bots some priority
    if (bot->m_hasC4 || bot->m_isVIP || bot->m_hasHostage || bot->m_healthValue < ent->v.health) {
-      return bot->entindex () + highPrio;
+      return bot->entindex () + kHighPriority;
    }
    auto task = bot->getCurrentTaskId ();
 
    // higher priority if camping or hiding
    if (task == Task::Camp || task == Task::Hide) {
-      return bot->entindex () + highPrio;
+      return bot->entindex () + kHighPriority;
    }
    return bot->entindex ();
 }
@@ -1229,7 +1229,7 @@ void BotManager::erase (Bot *bot) {
       }
       bot->markStale ();
 
-      auto index = m_bots.index (e);
+      const auto index = m_bots.index (e);
       e.reset ();
 
       m_bots.erase (index, 1); // remove from bots array
@@ -1291,6 +1291,7 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
       if (victimBot != nullptr) {
          if (killerTeam == victimBot->m_team) {
             victimBot->m_voteKickIndex = game.indexOfEntity (killer);
+
             for (const auto &notify : bots) {
                if (notify->seesEntity (victim->v.origin)) {
                   notify->pushChatterMessage (Chatter::TeamKill);
@@ -1502,6 +1503,9 @@ void Bot::newRound () {
    m_goalHist.clear ();
    m_ignoredBreakable.clear ();
 
+   // update refvec for blocked movement
+   updateRightRef ();
+
    // and put buying into its message queue
    pushMsgQueue (BotMsg::Buy);
    startTask (Task::Normal, TaskPri::Normal, kInvalidNodeIndex, 0.0f, true);
@@ -1618,7 +1622,7 @@ void Bot::updateTeamJoin () {
       m_startAction = BotMsg::TeamSelect;
    }
 
-   // if bot was unable to join team, and no menus popups, check for stacked team
+   // if bot was unable to join team, and no menus pop-ups, check for stacked team
    if (m_startAction == BotMsg::None) {
       if (++m_retryJoin > 3 && bots.isTeamStacked (m_wantedTeam - 1)) {
          m_retryJoin = 0;
@@ -1710,7 +1714,7 @@ void BotManager::captureChatRadio (StringRef cmd, StringRef arg, edict_t *ent) {
    }
 
    if (cmd.startsWith ("say")) {
-      const  bool alive = util.isAlive (ent);
+      const bool alive = util.isAlive (ent);
       int team = -1;
 
       if (cmd == "say_team") {
@@ -1768,7 +1772,7 @@ void BotManager::notifyBombDefuse () {
    const auto &bombPos = graph.getBombOrigin ();
 
    for (const auto &bot : bots) {
-      auto task = bot->getCurrentTaskId ();
+      const auto task = bot->getCurrentTaskId ();
 
       if (!bot->m_defuseNotified && bot->m_notKilled && task != Task::MoveToPosition && task != Task::DefuseBomb && task != Task::EscapeFromBomb) {
          if (bot->m_team == Team::Terrorist && bot->pev->origin.distanceSq (bombPos) < cr::sqrf (384.0f)) {

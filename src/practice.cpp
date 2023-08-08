@@ -169,7 +169,7 @@ void BotPractice::load () {
    SmallArray <DangerSaveRestore> data;
    m_data.clear ();
 
-   bool dataLoaded = bstor.load <DangerSaveRestore> (data);
+   const bool dataLoaded = bstor.load <DangerSaveRestore> (data);
 
    // copy back to hash table
    if (dataLoaded) {

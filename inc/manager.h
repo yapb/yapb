@@ -20,7 +20,7 @@ struct BotRequest {
 // manager class
 class BotManager final : public Singleton <BotManager> {
 public:
-   using ForEachBot = Lambda <bool (Bot *)>;
+   using ForEachBot = const Lambda <bool (Bot *)> &;
    using UniqueBot = UniquePtr <Bot>;
 
 private:

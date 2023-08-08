@@ -447,3 +447,8 @@ constexpr auto kSecondaryWeaponMask = (cr::bit (Weapon::P228) | cr::bit (Weapon:
 
 // weapons < 7 are secondary
 constexpr auto kPrimaryWeaponMinIndex = 7;
+
+// grenade model names
+static constexpr StringRef kExplosiveModelName = "hegrenade.mdl";
+static constexpr StringRef kFlashbangModelName = "flashbang.mdl";
+static constexpr StringRef kSmokeModelName = "smokegrenade.mdl";

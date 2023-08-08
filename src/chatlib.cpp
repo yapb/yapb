@@ -54,7 +54,7 @@ void BotSupport::addChatErrors (String &line) {
    if (rg.chance (8) && cv_language.str () == "en") {
       line.lowercase ();
    }
-   auto length = static_cast <int32_t> (line.length ());
+   const auto length = static_cast <int32_t> (line.length ());
 
    if (length > 15) {
       const auto percentile = length / 2;
@@ -106,6 +106,7 @@ bool BotSupport::checkKeywords (StringRef line, String &reply) {
                if (!replyUsed) {
                   reply.assign (choosenReply); // update final buffer
                   usedReplies.push (choosenReply); // add to ignore list
+
                   return true;
                }
             }
@@ -168,7 +169,7 @@ void Bot::prepareChatMessage (StringRef message) {
          if (!(client.flags & ClientFlags::Used) || client.ent == ent ()) {
             continue;
          }
-         int frags = static_cast <int> (client.ent->v.frags);
+         const auto frags = static_cast <int> (client.ent->v.frags);
 
          if (frags > highestFrags) {
             highestFrags = frags;

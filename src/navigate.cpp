@@ -661,7 +661,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                }
 
                if (seesEntity (m_destOrigin)) {
-                  auto right = m_moveAngles.right ();
+                  const auto &right = m_moveAngles.right ();
 
                   src = getEyesPos ();
                   src = src + right * 15.0f;
@@ -910,7 +910,7 @@ bool Bot::updateNavigation () {
                if (feet.z > pev->origin.z) {
                   feet = pev->origin + pev->maxs;
                }
-               feet = { pev->origin.x, pev->origin.y,  feet.z };
+               feet = { pev->origin.x, pev->origin.y, feet.z };
 
                // calculate like we do with grenades
                auto velocity = calcThrow (feet, node);
@@ -947,11 +947,10 @@ bool Bot::updateNavigation () {
          selectBestWeapon ();
       }
    }
-
+   
    if ((m_pathFlags & NodeFlag::Ladder) || isOnLadder ()) {
-      constexpr auto kLadderOffset = Vector (0.0f, 0.0f, 16.0f);
-
       if (m_pathOrigin.z >= (pev->origin.z + 16.0f)) {
+         constexpr auto kLadderOffset = Vector (0.0f, 0.0f, 16.0f);
          m_pathOrigin = m_path->origin + kLadderOffset;
       }
       else if (m_pathOrigin.z < pev->origin.z + 16.0f && !isOnLadder () && isOnFloor () && !(pev->flags & FL_DUCKING)) {
@@ -1059,7 +1058,7 @@ bool Bot::updateNavigation () {
             ignoreCollision (); // don't consider being stuck
 
             if (rg.chance (50)) {
-               // do not use door directrly under xash, or we will get failed assert in gamedll code
+               // do not use door directly under xash, or we will get failed assert in gamedll code
                if (game.is (GameFlags::Xash3D)) {
                   pev->button |= IN_USE;
                }
@@ -1357,7 +1356,7 @@ bool Bot::updateLiftHandling () {
 
    // bot is trying to find button inside a lift
    if (m_liftState == LiftState::LookingButtonInside) {
-      auto button = lookupButton (m_liftEntity->v.targetname.chars ());
+      auto button = lookupButton (m_liftEntity->v.targetname.str ());
 
       // got a valid button entity ?
       if (!game.isNullEntity (button) && pev->groundentity == m_liftEntity && m_buttonPushTime + 1.0f < game.time () && cr::fzero (m_liftEntity->v.velocity.z) && isOnFloor ()) {
@@ -1406,7 +1405,7 @@ bool Bot::updateLiftHandling () {
          }
       }
       else if (!game.isNullEntity (m_liftEntity)) {
-         auto button = lookupButton (m_liftEntity->v.targetname.chars ());
+         auto button = lookupButton (m_liftEntity->v.targetname.str ());
 
          // if we got a valid button entity
          if (!game.isNullEntity (button)) {
@@ -1702,18 +1701,18 @@ void Bot::findValidNode () {
       findNextBestNode ();
    }
    else if (m_navTimeset + getEstimatedNodeReachTime () < game.time ()) {
-      constexpr int maxDamageValue = PracticeLimit::Damage;
+      constexpr int kMaxDamageValue = PracticeLimit::Damage;
 
       // increase danger for both teams
       for (int team = Team::Terrorist; team < kGameTeamNum; ++team) {
          int damageValue = practice.getDamage (team, m_currentNodeIndex, m_currentNodeIndex);
-         damageValue = cr::clamp (damageValue + 100, 0, maxDamageValue);
+         damageValue = cr::clamp (damageValue + 100, 0, kMaxDamageValue);
 
          // affect nearby connected with victim nodes
          for (auto &neighbour : m_path->links) {
             if (graph.exists (neighbour.index)) {
                int neighbourValue = practice.getDamage (team, neighbour.index, neighbour.index);
-               neighbourValue = cr::clamp (neighbourValue + 100, 0, maxDamageValue);
+               neighbourValue = cr::clamp (neighbourValue + 100, 0, kMaxDamageValue);
 
                practice.setDamage (m_team, neighbour.index, neighbour.index, neighbourValue);
             }
@@ -2062,8 +2061,8 @@ int Bot::findCoverNode (float maxDistance) {
       }
 
       // use the 'real' pathfinding distances
-      float distance = planner.dist (srcIndex, path.number);
-      float enemyDistance = planner.dist (enemyIndex, path.number);
+      const float distance = planner.dist (srcIndex, path.number);
+      const float enemyDistance = planner.dist (enemyIndex, path.number);
 
       if (distance >= enemyDistance) {
          continue;
@@ -2408,6 +2407,10 @@ void Bot::setPathOrigin () {
    }
 }
 
+void Bot::updateRightRef () {
+   m_rightRef = Vector { 0.0f, pev->angles.y, 0.0f }.right (); // convert current view angle to vectors for traceline math...
+}
+
 bool Bot::isBlockedForward (const Vector &normal, TraceResult *tr) {
    // checks if bot is blocked in his movement direction (excluding doors)
 
@@ -2416,7 +2419,6 @@ bool Bot::isBlockedForward (const Vector &normal, TraceResult *tr) {
    // first do a trace from the bot's eyes forward...
    auto src = getEyesPos ();
    auto forward = src + normal * 24.0f;
-   auto right = Vector (0.0f, pev->angles.y, 0.0f).right ();
 
    auto checkDoor = [] (TraceResult *result) {
       if (!game.mapIs (MapFlags::HasDoors)) {
@@ -2437,10 +2439,13 @@ bool Bot::isBlockedForward (const Vector &normal, TraceResult *tr) {
    }
    constexpr auto kVec00N16 = Vector (0.0f, 0.0f, -16.0f);
 
+   // right referential vector
+   updateRightRef ();
+
    // bot's head is clear, check at shoulder level...
    // trace from the bot's shoulder left diagonal forward to the right shoulder...
-   src = getEyesPos () + kVec00N16 - right * -16.0f;
-   forward = getEyesPos () + kVec00N16 + right * 16.0f + normal * 24.0f;
+   src = getEyesPos () + kVec00N16 - m_rightRef * -16.0f;
+   forward = getEyesPos () + kVec00N16 + m_rightRef * 16.0f + normal * 24.0f;
 
    game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
 
@@ -2451,8 +2456,8 @@ bool Bot::isBlockedForward (const Vector &normal, TraceResult *tr) {
 
    // bot's head is clear, check at shoulder level...
    // trace from the bot's shoulder right diagonal forward to the left shoulder...
-   src = getEyesPos () + kVec00N16 + right * 16.0f;
-   forward = getEyesPos () + kVec00N16 - right * -16.0f + normal * 24.0f;
+   src = getEyesPos () + kVec00N16 + m_rightRef * 16.0f;
+   forward = getEyesPos () + kVec00N16 - m_rightRef * -16.0f + normal * 24.0f;
 
    game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
 
@@ -2487,8 +2492,8 @@ bool Bot::isBlockedForward (const Vector &normal, TraceResult *tr) {
       constexpr auto kVec00N24 = Vector (0.0f, 0.0f, -24.0f);
 
       // trace from the left waist to the right forward waist pos
-      src = pev->origin + kVec00N17 - right * -16.0f;
-      forward = pev->origin + kVec00N17 + right * 16.0f + normal * 24.0f;
+      src = pev->origin + kVec00N17 - m_rightRef * -16.0f;
+      forward = pev->origin + kVec00N17 + m_rightRef * 16.0f + normal * 24.0f;
 
       // trace from the bot's waist straight forward...
       game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
@@ -2499,8 +2504,8 @@ bool Bot::isBlockedForward (const Vector &normal, TraceResult *tr) {
       }
 
       // trace from the left waist to the right forward waist pos
-      src = pev->origin + kVec00N24 + right * 16.0f;
-      forward = pev->origin + kVec00N24 - right * -16.0f + normal * 24.0f;
+      src = pev->origin + kVec00N24 + m_rightRef * 16.0f;
+      forward = pev->origin + kVec00N24 - m_rightRef * -16.0f + normal * 24.0f;
 
       game.testLine (src, forward, TraceIgnore::Monsters, ent (), tr);
 
@@ -2580,7 +2585,7 @@ bool Bot::canJumpUp (const Vector &normal) {
    if (!isOnFloor () && (isOnLadder () || !isInWater ())) {
       return false;
    }
-   auto right = Vector (0.0f, pev->angles.y, 0.0f).right (); // convert current view angle to vectors for traceline math...
+   updateRightRef ();
 
    // check for normal jump height first...
    auto src = pev->origin + Vector (0.0f, 0.0f, -36.0f + 45.0f);
@@ -2590,7 +2595,7 @@ bool Bot::canJumpUp (const Vector &normal) {
    game.testLine (src, dest, TraceIgnore::Monsters, ent (), &tr);
 
    if (tr.flFraction < 1.0f) {
-      return doneCanJumpUp (normal, right);
+      return doneCanJumpUp (normal, m_rightRef);
    }
    else {
       // now trace from jump height upward to check for obstructions...
@@ -2605,7 +2610,7 @@ bool Bot::canJumpUp (const Vector &normal) {
    }
 
    // now check same height to one side of the bot...
-   src = pev->origin + right * 16.0f + Vector (0.0f, 0.0f, -36.0f + 45.0f);
+   src = pev->origin + m_rightRef * 16.0f + Vector (0.0f, 0.0f, -36.0f + 45.0f);
    dest = src + normal * 32.0f;
 
    // trace a line forward at maximum jump height...
@@ -2613,7 +2618,7 @@ bool Bot::canJumpUp (const Vector &normal) {
 
    // if trace hit something, return false
    if (tr.flFraction < 1.0f) {
-      return doneCanJumpUp (normal, right);
+      return doneCanJumpUp (normal, m_rightRef);
    }
 
    // now trace from jump height upward to check for obstructions...
@@ -2628,7 +2633,7 @@ bool Bot::canJumpUp (const Vector &normal) {
    }
 
    // now check same height on the other side of the bot...
-   src = pev->origin + (-right * 16.0f) + Vector (0.0f, 0.0f, -36.0f + 45.0f);
+   src = pev->origin + (-m_rightRef * 16.0f) + Vector (0.0f, 0.0f, -36.0f + 45.0f);
    dest = src + normal * 32.0f;
 
    // trace a line forward at maximum jump height...
@@ -2636,7 +2641,7 @@ bool Bot::canJumpUp (const Vector &normal) {
 
    // if trace hit something, return false
    if (tr.flFraction < 1.0f) {
-      return doneCanJumpUp (normal, right);
+      return doneCanJumpUp (normal, m_rightRef);
    }
 
    // now trace from jump height upward to check for obstructions...
@@ -2744,12 +2749,10 @@ bool Bot::canDuckUnder (const Vector &normal) {
    if (tr.flFraction < 1.0f) {
       return false;
    }
-
-   // convert current view angle to vectors for TraceLine math...
-   auto right = Vector (0.0f, pev->angles.y, 0.0f).right ();
+   updateRightRef ();
 
    // now check same height to one side of the bot...
-   src = baseHeight + right * 16.0f;
+   src = baseHeight + m_rightRef * 16.0f;
    dest = src + normal * 32.0f;
 
    // trace a line forward at duck height...
@@ -2761,7 +2764,7 @@ bool Bot::canDuckUnder (const Vector &normal) {
    }
 
    // now check same height on the other side of the bot...
-   src = baseHeight + (-right * 16.0f);
+   src = baseHeight + (-m_rightRef * 16.0f);
    dest = src + normal * 32.0f;
 
    // trace a line forward at duck height...
@@ -3057,11 +3060,11 @@ bool Bot::isOccupiedNode (int index, bool needZeroVelocity) {
    return false;
 }
 
-edict_t *Bot::lookupButton (const char *target) {
+edict_t *Bot::lookupButton (StringRef target) {
    // this function tries to find nearest to current bot button, and returns pointer to
    // it's entity, also here must be specified the target, that button must open.
 
-   if (strings.isEmpty (target)) {
+   if (target.empty ()) {
       return nullptr;
    }
    float nearestDistanceSq = kInfiniteDistance;

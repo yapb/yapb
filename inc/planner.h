@@ -24,7 +24,7 @@ CR_DECLARE_SCOPED_ENUM (AStarResult,
 )
 
 // node added
-using NodeAdderFn = Lambda <bool (int)>;
+using NodeAdderFn = const Lambda <bool (int)> &;
 
 // route twin node
 template <typename HT> struct RouteTwin final {

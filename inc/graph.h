@@ -239,6 +239,7 @@ public:
    void setRadius (int index, float radius);
    void pathCreate (char dir);
    void erasePath ();
+   void resetPath (int index);
    void cachePoint (int index);
    void calculatePathRadius (int index);
    void addBasic ();

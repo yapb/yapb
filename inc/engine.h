@@ -111,7 +111,7 @@ public:
 // provides utility functions to not call original engine (less call-cost)
 class Game final : public Singleton <Game> {
 public:
-   using EntitySearch = Lambda <EntitySearchResult (edict_t *)>;
+   using EntitySearch = const Lambda <EntitySearchResult (edict_t *)> &;
 
 private:
    int m_drawModels[DrawLine::Count] {};
@@ -227,12 +227,12 @@ public:
    }
 
    // get "maxplayers" limit on server
-   int maxClients () const  {
+   int maxClients () const {
       return globals->maxClients;
    }
 
    // get the fakeclient command interface
-   bool isBotCmd () const  {
+   bool isBotCmd () const {
       return !m_botArgs.empty ();
    }
 

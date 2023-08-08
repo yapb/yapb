@@ -1097,7 +1097,7 @@ void Bot::throwExplosive_ () {
    else {
       m_aimFlags |= AimFlags::Grenade;
 
-      auto grenade = setCorrectGrenadeVelocity ("hegrenade.mdl");
+      auto grenade = setCorrectGrenadeVelocity (kExplosiveModelName);
 
       if (game.isNullEntity (grenade)) {
          if (m_currentWeapon != Weapon::Explosive && !m_grenadeRequested) {
@@ -1163,7 +1163,7 @@ void Bot::throwFlashbang_ () {
    else {
       m_aimFlags |= AimFlags::Grenade;
 
-      auto grenade = setCorrectGrenadeVelocity ("flashbang.mdl");
+      auto grenade = setCorrectGrenadeVelocity (kFlashbangModelName);
 
       if (game.isNullEntity (grenade)) {
          if (m_currentWeapon != Weapon::Flashbang && !m_grenadeRequested) {

@@ -233,7 +233,7 @@ template <typename U> bool BotStorage::save (const SmallArray <U> &data, ExtenHe
    SmallArray <uint8_t> compressed (rawLength + sizeof (uint8_t) * ULZ::Excess);
 
    // try to compress
-   auto compressedLength = static_cast <size_t> (ulz.compress (reinterpret_cast <uint8_t *> (data.data ()), static_cast <int32_t> (rawLength), reinterpret_cast <uint8_t *> (compressed.data ())));
+   const auto compressedLength = static_cast <size_t> (ulz.compress (reinterpret_cast <uint8_t *> (data.data ()), static_cast <int32_t> (rawLength), reinterpret_cast <uint8_t *> (compressed.data ())));
 
    if (compressedLength > 0) {
       StorageHeader hdr {};
@@ -349,7 +349,7 @@ String BotStorage::buildPath (int32_t file, bool isMemoryLoad) {
    }
 
    // finally use correct path separators for us
-   return String::join (path, PATH_SEP);
+   return String::join (path, kPathSeparator);
 }
 
 int32_t BotStorage::storageToBotFile (int32_t options) {

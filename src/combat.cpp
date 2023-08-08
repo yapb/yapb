@@ -52,7 +52,7 @@ bool Bot::isEnemyHidden (edict_t *enemy) {
    if (!cv_check_enemy_rendering.bool_ () || game.isNullEntity (enemy)) {
       return false;
    }
-   entvars_t &v = enemy->v;
+   const auto &v = enemy->v;
 
    const bool enemyHasGun = (v.weapons & kPrimaryWeaponMask) || (v.weapons & kSecondaryWeaponMask);
    const bool enemyGunfire = (v.button & IN_ATTACK) || (v.oldbuttons & IN_ATTACK);
@@ -94,7 +94,7 @@ bool Bot::isEnemyInvincible (edict_t *enemy) {
    if (!cv_check_enemy_invincibility.bool_ () || game.isNullEntity (enemy)) {
       return false;
    }
-   const entvars_t &v = enemy->v;
+   const auto &v = enemy->v;
 
    if (v.solid < SOLID_BBOX) {
       return true;
@@ -162,14 +162,15 @@ bool Bot::checkBodyParts (edict_t *target) {
       return true;
    }
 
-   constexpr auto standFeet = 34.0f;
-   constexpr auto crouchFeet = 14.0f;
+   constexpr auto kStandFeet = 34.0f;
+   constexpr auto kCrouchFeet = 14.0f;
+   constexpr auto kEdgeOffset = 13.0f;
 
    if (target->v.flags & FL_DUCKING) {
-      spot.z = target->v.origin.z - crouchFeet;
+      spot.z = target->v.origin.z - kCrouchFeet;
    }
    else {
-      spot.z = target->v.origin.z - standFeet;
+      spot.z = target->v.origin.z - kStandFeet;
    }
    game.testLine (eyes, spot, ignoreFlags, self, &result);
 
@@ -179,12 +180,10 @@ bool Bot::checkBodyParts (edict_t *target) {
 
       return true;
    }
-
-   const float edgeOffset = 13.0f;
    Vector dir = (target->v.origin - pev->origin).normalize2d ();
 
    Vector perp (-dir.y, dir.x, 0.0f);
-   spot = target->v.origin + Vector (perp.x * edgeOffset, perp.y * edgeOffset, 0);
+   spot = target->v.origin + Vector (perp.x * kEdgeOffset, perp.y * kEdgeOffset, 0);
 
    game.testLine (eyes, spot, ignoreFlags, self, &result);
 
@@ -194,7 +193,7 @@ bool Bot::checkBodyParts (edict_t *target) {
 
       return true;
    }
-   spot = target->v.origin - Vector (perp.x * edgeOffset, perp.y * edgeOffset, 0);
+   spot = target->v.origin - Vector (perp.x * kEdgeOffset, perp.y * kEdgeOffset, 0);
 
    game.testLine (eyes, spot, ignoreFlags, self, &result);
 
@@ -554,7 +553,7 @@ Vector Bot::getCustomHeight (float distance) {
    constexpr float offsetRanges[9][3] = {
       { 0.0f,  0.0f,   0.0f }, // none
       { 0.0f,  0.0f,   0.0f }, // melee
-      { 0.5f, -3.0f,  -4.5f }, // pistol
+      { 0.5f, -0.1f,  -1.5f }, // pistol
       { 6.5f,  6.0f,  -2.0f }, // shotgun
       { 0.5f  -7.5f,  -9.5f }, // zoomrifle
       { 0.5f, -7.5f,  -9.5f }, // rifle
@@ -771,6 +770,9 @@ bool Bot::needToPauseFiring (float distance) {
    else if (distance < kDoubleSprayDistance) {
       offset = 2.75f;
    }
+   else if ((m_states & Sense::SuspectEnemy) && distance < kDoubleSprayDistance) {
+      return false;
+   }
    const float xPunch = cr::sqrf (cr::deg2rad (pev->punchangle.x));
    const float yPunch = cr::sqrf (cr::deg2rad (pev->punchangle.y));
 
@@ -931,12 +933,12 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
             pev->button |= IN_ATTACK;
          }
 
-         constexpr float minDelay[] = { 0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.6f };
-         constexpr float maxDelay[] = { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.7f };
+         constexpr float kMinFireDelay[] = { 0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.6f };
+         constexpr float kMaxFireDelay[] = { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.7f };
 
          const int offset = cr::abs <int> (m_difficulty * 25 / 20 - 5);
 
-         m_shootTime = game.time () + 0.1f + rg.get (minDelay[offset], maxDelay[offset]);
+         m_shootTime = game.time () + 0.1f + rg.get (kMinFireDelay[offset], kMaxFireDelay[offset]);
          m_zoomCheckTime = game.time ();
       }
    }
@@ -944,8 +946,8 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
 
 void Bot::fireWeapons () {
    // this function will return true if weapon was fired, false otherwise
-   // 
-   // do not handle this if with grenade, as it's done it throw grendate task
+
+   // do not handle this if with grenade, as it's done it throw grenade task
    if (m_isUsingGrenade) {
       return;
    }
@@ -963,7 +965,7 @@ void Bot::fireWeapons () {
    const auto tab = conf.getRawWeapons ();
    const auto weapons = pev->weapons;
 
-   // if jason mode use knife only
+   // if knife mode use knife only
    if (isKnifeMode ()) {
       selectWeapons (distance, selectIndex, selectId, choosenWeapon);
       return;
@@ -1707,10 +1709,10 @@ void Bot::checkReload () {
 
 float Bot::calculateScaleFactor (edict_t *ent) {
    Vector entSize = ent->v.maxs - ent->v.mins;
-   float entArea = 2.0f * (entSize.x * entSize.y + entSize.y * entSize.z + entSize.x * entSize.z);
+   const float entArea = 2.0f * (entSize.x * entSize.y + entSize.y * entSize.z + entSize.x * entSize.z);
 
    Vector botSize = pev->maxs - pev->mins;
-   float botArea = 2.0f * (botSize.x * botSize.y + botSize.y * botSize.z + botSize.x * botSize.z);
+   const float botArea = 2.0f * (botSize.x * botSize.y + botSize.y * botSize.z + botSize.x * botSize.z);
 
    return entArea / botArea;
 }
@@ -1809,7 +1811,7 @@ Vector Bot::calcThrow (const Vector &start, const Vector &stop) {
    return velocity * 0.7793f;
 }
 
-edict_t *Bot::setCorrectGrenadeVelocity (const char *model) {
+edict_t *Bot::setCorrectGrenadeVelocity (StringRef model) {
    edict_t *result = nullptr;
 
    game.searchEntities ("classname", "grenade", [&] (edict_t *ent) {
@@ -1856,11 +1858,11 @@ void Bot::checkGrenadesThrow () {
    }
 
    // check if we have grenades to throw
-   int grenadeToThrow = bestGrenadeCarried ();
+   const auto grenadeToThrow = bestGrenadeCarried ();
 
    // if we don't have grenades no need to check it this round again
    if (grenadeToThrow == -1) {
-      m_grenadeCheckTime = game.time () + 15.0f; // changed since, conzero can drop grens from dead players
+      m_grenadeCheckTime = game.time () + 15.0f; // changed since, czero can drop grenades from dead players
 
       clearThrowStates (m_states);
       return;
@@ -2051,18 +2053,18 @@ bool Bot::isEnemyNoticeable (float range) {
    if (m_enemyParts & Visibility::Other) {
       coverRatio += rg.get (10.0f, 25.0f);
    }
-   constexpr float closeRange = 300.0f;
-   constexpr float farRange = 1000.0f;
+   constexpr float kCloseRange = 300.0f;
+   constexpr float kFarRange = 1000.0f;
 
    float rangeModifier;
-   if (range < closeRange) {
+   if (range < kCloseRange) {
       rangeModifier = 0.0f;
    }
-   else if (range > farRange) {
+   else if (range > kFarRange) {
       rangeModifier = 1.0f;
    }
    else {
-      rangeModifier = (range - closeRange) / (farRange - closeRange);
+      rangeModifier = (range - kCloseRange) / (kFarRange - kCloseRange);
    }
 
    // harder to notice when crouched
@@ -2072,13 +2074,13 @@ bool Bot::isEnemyNoticeable (float range) {
    float playerSpeedSq = m_enemy->v.velocity.lengthSq ();
    float farChance, closeChance;
 
-   constexpr float runSpeed = cr::sqrf (200.0f);
-   constexpr float walkSpeed = cr::sqrf (30.0f);
+   constexpr float kRunSpeed = cr::sqrf (200.0f);
+   constexpr float kWalkSpeed = cr::sqrf (30.0f);
 
-   if (playerSpeedSq > runSpeed) {
+   if (playerSpeedSq > kRunSpeed) {
       return true; // running players are always easy to spot (must be standing to run)
    }
-   else if (playerSpeedSq > walkSpeed) {
+   else if (playerSpeedSq > kWalkSpeed) {
       // walking players are less noticeable far away
       if (isCrouching) {
          closeChance = 90.0f;

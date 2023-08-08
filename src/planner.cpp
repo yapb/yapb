@@ -373,7 +373,7 @@ bool FloydWarshallAlgo::load () {
    if (!m_length) {
       return false;
    }
-   bool dataLoaded = bstor.load <Matrix> (m_matrix);
+   const bool dataLoaded = bstor.load <Matrix> (m_matrix);
 
    // do not rebuild if loaded
    if (dataLoaded) {
@@ -451,7 +451,7 @@ bool DijkstraAlgo::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, i
 
       for (const auto &link : graph[current].links) {
          if (link.index != kInvalidNodeIndex) {
-            auto dlink = m_distance[current] + link.distance;
+            const auto dlink = m_distance[current] + link.distance;
 
             if (dlink < m_distance[link.index]) {
                m_distance[link.index] = dlink;

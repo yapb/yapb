@@ -803,7 +803,7 @@ bool Game::loadCSBinary () {
 
    // search the libraries inside game dlls directory
    for (const auto &lib : libs) {
-      auto path = strings.joinPath (modname, "dlls", lib) + DLL_SUFFIX;
+      auto path = strings.joinPath (modname, "dlls", lib) + kLibrarySuffix;
 
       // if we can't read file, skip it
       if (!plat.fileExists (path.chars ())) {
@@ -1136,7 +1136,7 @@ void LightMeasure::initializeLightstyles () {
    // reset all light styles
    for (auto &ls : m_lightstyle) {
       ls.length = 0;
-      ls.map[0] = 0;
+      ls.map[0] = kNullChar;
    }
 
    for (auto &lsv : m_lightstyleValue) {
@@ -1226,7 +1226,7 @@ template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const 
       if (surf->flags & SURF_DRAWTILED) {
          continue; // no lightmaps
       }
-      auto tex = surf->texinfo;
+      const auto tex = surf->texinfo;
 
       // see where in lightmap space our intersection point is
       const int s = static_cast <int> ((mid | Vector (tex->vecs[0])) + tex->vecs[0][3]);

@@ -231,7 +231,7 @@ bool BotSupport::isDoorEntity (edict_t *ent) {
    if (game.isNullEntity (ent)) {
       return false;
    }
-   return ent->v.classname.str ().startsWith ("func_door");;
+   return ent->v.classname.str ().startsWith ("func_door");
 }
 
 bool BotSupport::isHostageEntity (edict_t *ent) {

@@ -1135,6 +1135,45 @@ void BotGraph::erasePath () {
    msg ("There is already no path on this node.");
 }
 
+void BotGraph::resetPath (int index) {
+   int node = index;
+
+   if (!exists (node)) {
+      node = getEditorNearest ();
+
+      if (!exists (node)) {
+         msg ("Unable to find nearest node in 50 units.");
+         return;
+      }
+   }
+
+   // helper
+   auto destroy = [] (PathLink &link) -> void {
+      link.index = kInvalidNodeIndex;
+      link.distance = 0;
+      link.flags = 0;
+      link.velocity = nullptr;
+   };
+
+   // clean all incoming
+   for (auto &connected : m_paths) {
+      for (auto &link : connected.links) {
+         if (link.index == node) {
+            destroy (link);
+         }
+      }
+   }
+
+   // clean all outgoing connections
+   for (auto &link : m_paths[node].links) {
+      destroy (link);
+   }
+   emitNotify (NotifySound::Change);
+
+   // notify use something evil happened
+   msg ("All paths for node #%d has been reset.", node);
+}
+
 void BotGraph::cachePoint (int index) {
    const int node = exists (index) ? index : getEditorNearest ();
 
@@ -1579,7 +1618,7 @@ bool BotGraph::loadGraphData () {
    reset ();
 
    // check if loaded
-   bool dataLoaded = bstor.load <Path> (m_paths, &exten, &outOptions);
+   const bool dataLoaded = bstor.load <Path> (m_paths, &exten, &outOptions);
 
    if (dataLoaded) {
       initBuckets ();
@@ -1898,7 +1937,7 @@ void BotGraph::frame () {
    for (auto &path : m_paths) {
       const float distanceSq = path.origin.distanceSq (m_editor->v.origin);
 
-      // check if node is whitin a distance, and is visible
+      // check if node is within a distance, and is visible
       if (distanceSq < cr::sqrf (cv_graph_draw_distance.float_ ()) && ((util.isVisible (path.origin, m_editor) && util.isInViewCone (path.origin, m_editor)) || !util.isAlive (m_editor) || distanceSq < cr::sqrf (64.0f))) {
          // check the distance
          if (distanceSq < nearestDistanceSq) {
@@ -2128,7 +2167,7 @@ void BotGraph::frame () {
       };
 
       // very helpful stuff..
-      auto getNodeData = [&] (StringRef type, int node) -> String {
+      auto getNodeData = [this] (StringRef type, int node) -> String {
          String message, flags;
 
          const auto &p = m_paths[node];

@@ -51,7 +51,7 @@ void Bot::pushMsgQueue (int message) {
 
    if (message == BotMsg::Say) {
       // notify other bots of the spoken text otherwise, bots won't respond to other bots (network messages aren't sent from bots)
-      int entityIndex = index ();
+      const int entityIndex = index ();
 
       for (const auto &other : bots) {
          if (other->pev != pev) {
@@ -96,7 +96,7 @@ void Bot::avoidGrenades () {
       }
       auto model = pent->v.model.str (9);
 
-      if (m_preventFlashing < game.time () && m_personality == Personality::Rusher && m_difficulty == Difficulty::Expert && model == "flashbang.mdl") {
+      if (m_preventFlashing < game.time () && m_personality == Personality::Rusher && m_difficulty == Difficulty::Expert && model == kFlashbangModelName) {
          // don't look at flash bang
          if (!(m_states & Sense::SeeingEnemy)) {
             m_lookAt.y = cr::wrapAngle ((game.getEntityOrigin (pent) - getEyesPos ()).angles ().y + 180.0f);
@@ -105,7 +105,7 @@ void Bot::avoidGrenades () {
             m_preventFlashing = game.time () + rg.get (1.0f, 2.0f);
          }
       }
-      else if (game.isNullEntity (m_avoidGrenade) && model == "hegrenade.mdl") {
+      else if (game.isNullEntity (m_avoidGrenade) && model == kExplosiveModelName) {
          if (game.getTeam (pent->v.owner) == m_team || pent->v.owner == ent ()) {
             continue;
          }
@@ -128,7 +128,7 @@ void Bot::avoidGrenades () {
             }
          }
       }
-      else if ((pent->v.flags & FL_ONGROUND) && model == "smokegrenade.mdl") {
+      else if ((pent->v.flags & FL_ONGROUND) && model == kSmokeModelName) {
          if (isInFOV (pent->v.origin - getEyesPos ()) < pev->fov / 3.0f) {
             const auto &entOrigin = game.getEntityOrigin (pent);
             const auto &betweenUs = (entOrigin - pev->origin).normalize_apx ();
@@ -403,8 +403,8 @@ void Bot::updatePickups () {
             pickupType = Pickup::Weapon;
 
             if (cv_pickup_ammo_and_kits.bool_ ()) {
-               int primaryWeaponCarried = bestPrimaryCarried ();
-               int secondaryWeaponCarried = bestSecondaryCarried ();
+               const int primaryWeaponCarried = bestPrimaryCarried ();
+               const int secondaryWeaponCarried = bestSecondaryCarried ();
 
                const auto &config = conf.getWeapons ();
                const auto &primary = config[primaryWeaponCarried];
@@ -493,13 +493,13 @@ void Bot::updatePickups () {
             else if (!rateGroundWeapon (ent)) {
                allowPickup = false;
             }
-            else if ((pev->weapons & cr::bit (Weapon::Flashbang)) && model == "flashbang.mdl") {
+            else if ((pev->weapons & cr::bit (Weapon::Flashbang)) && model == kFlashbangModelName) {
                allowPickup = false;
             }
-            else if ((pev->weapons & cr::bit (Weapon::Explosive)) && model == "hegrenade.mdl") {
+            else if ((pev->weapons & cr::bit (Weapon::Explosive)) && model == kExplosiveModelName) {
                allowPickup = false;
             }
-            else if ((pev->weapons & cr::bit (Weapon::Smoke)) && model == "smokegrenade.mdl") {
+            else if ((pev->weapons & cr::bit (Weapon::Smoke)) && model == kSmokeModelName) {
                allowPickup = false;
             }
          }
@@ -637,7 +637,6 @@ void Bot::updatePickups () {
                }
 
                if (pev->origin.distanceSq (origin) > cr::sqrf (60.0f)) {
-
                   if (!graph.isNodeReacheable (pev->origin, origin)) {
                      allowPickup = false;
                   }
@@ -840,7 +839,7 @@ void Bot::instantChatter (int type) {
    const int ownIndex = index ();
 
    auto writeChatterSound = [&msg] (ChatterItem item) {
-      msg.writeString (strings.format ("%s%s%s.wav", cv_chatter_path.str (), PATH_SEP, item.name));
+      msg.writeString (strings.format ("%s%s%s.wav", cv_chatter_path.str (), kPathSeparator, item.name));
    };
 
    for (auto &client : util.getClients ()) {
@@ -3483,7 +3482,7 @@ void Bot::resetDoubleJump () {
    m_jumpReady = false;
 }
 
-void Bot::debugMsgInternal (const char *str) {
+void Bot::debugMsgInternal (StringRef str) {
    if (game.isDedicated ()) {
       return;
    }
