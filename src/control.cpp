@@ -368,7 +368,7 @@ int BotControl::cmdNode () {
       addGraphCmd ("path_create_jump", "path_create_jump [noarguments]", "Creates jumping path connection from nearest to faced node.", &BotControl::cmdNodePathCreate);
       addGraphCmd ("path_delete", "path_delete [noarguments]", "Deletes path from nearest to faced node.", &BotControl::cmdNodePathDelete);
       addGraphCmd ("path_set_autopath", "path_set_autopath [max_distance]", "Opens menu for setting autopath maximum distance.", &BotControl::cmdNodePathSetAutoDistance);
-      addGraphCmd ("path_clean", "path_clean [index]", "Clean's up all types of connections from the node.", &BotControl::cmdNodePathCleanAll);
+      addGraphCmd ("path_clean", "path_clean [index]", "Clears connections of all types from the node.", &BotControl::cmdNodePathCleanAll);
 
       // camp points iterator
       addGraphCmd ("iterate_camp", "iterate_camp [begin|end|next]", "Allows to go through all camp points on map.", &BotControl::cmdNodeIterateCamp);
