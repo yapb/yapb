@@ -1170,7 +1170,7 @@ int Bot::pickBestWeapon (Array <int> &vec, int moneySave) {
    for (const auto &w : vec) {
       const auto &weapon = tab[w];
 
-      // if weaзщт have enough money for weapon buy it
+      // if we have enough money for weapon, buy it
       if (weapon.price + moneySave < m_moneyAmount + rg.get (50, 200) && rg.chance (chance)) {
          return w;
       }
