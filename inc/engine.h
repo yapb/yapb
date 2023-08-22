@@ -162,9 +162,6 @@ public:
    // test line
    void testHull (const Vector &start, const Vector &end, int ignoreFlags, int hullNumber, edict_t *ignoreEntity, TraceResult *ptr);
 
-   // get's the wave length
-   float getWaveLen (const char *fileName);
-
    // we are on dedicated server ?
    bool isDedicated ();
 

@@ -348,7 +348,7 @@ void BotConfig::loadChatterConfig () {
 
                   for (auto &sound : sentences) {
                      sound.trim ().trim ("\"");
-                     auto duration = game.getWaveLen (sound.chars ());
+                     const auto duration = util.getWaveLength (sound.chars ());
 
                      if (duration > 0.0f) {
                         m_chatter[event.code].emplace (cr::move (sound), event.repeat, duration);

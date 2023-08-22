@@ -635,3 +635,83 @@ StringRef BotSupport::weaponIdToAlias (int32_t id) {
    }
    return none;
 }
+
+
+// helper class for reading wave header
+class WaveEndianessHelper final : public NonCopyable {
+private:
+#if defined (CR_ARCH_CPU_BIG_ENDIAN)
+   bool little { false };
+#else
+   bool little { true };
+#endif
+
+public:
+   uint16_t read16 (uint16_t value) {
+      return little ? value : static_cast <uint16_t> ((value >> 8) | (value << 8));
+   }
+
+   uint32_t read32 (uint32_t value) {
+      return little ? value : (((value & 0x000000ff) << 24) | ((value & 0x0000ff00) << 8) | ((value & 0x00ff0000) >> 8) | ((value & 0xff000000) >> 24));
+   }
+
+   bool isWave (char *format) const {
+      if (little && memcmp (format, "WAVE", 4) == 0) {
+         return true;
+      }
+      return *reinterpret_cast <uint32_t *> (format) == 0x57415645;
+   }
+};
+
+float BotSupport::getWaveLength (StringRef filename) {
+   auto filePath = strings.joinPath (cv_chatter_path.str (), strings.format ("%s.wav", filename));
+
+   MemFile fp (filePath);
+
+   // we're got valid handle?
+   if (!fp) {
+      return 0.0f;
+   }
+
+   // else fuck with manual search
+   struct WavHeader {
+      char riff[4];
+      uint32_t chunkSize;
+      char wave[4];
+      char fmt[4];
+      uint32_t subchunk1Size;
+      uint16_t audioFormat;
+      uint16_t numChannels;
+      uint32_t sampleRate;
+      uint32_t byteRate;
+      uint16_t blockAlign;
+      uint16_t bitsPerSample;
+      char dataChunkId[4];
+      uint32_t dataChunkLength;
+   } header {};
+
+   static WaveEndianessHelper weh;
+
+   if (fp.read (&header, sizeof (WavHeader)) == 0) {
+      logger.error ("Wave File %s - has wrong or unsupported format", filePath);
+      return 0.0f;
+   }
+   fp.close ();
+
+   if (!weh.isWave (header.wave)) {
+      logger.error ("Wave File %s - has wrong wave chunk id", filePath);
+      return 0.0f;
+   }
+
+   if (weh.read32 (header.dataChunkLength) == 0) {
+      logger.error ("Wave File %s - has zero length!", filePath);
+      return 0.0f;
+   }
+
+   const auto length = static_cast <float> (weh.read32 (header.dataChunkLength));
+   const auto bps = static_cast <float> (weh.read16 (header.bitsPerSample)) / 8;
+   const auto channels = static_cast <float> (weh.read16 (header.numChannels));
+   const auto rate = static_cast <float> (weh.read32 (header.sampleRate));
+
+   return length / bps / channels / rate;
+}

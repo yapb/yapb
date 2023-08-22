@@ -105,6 +105,9 @@ public:
    // get the current date and time as string
    String getCurrentDateTime ();
 
+   // get's the wave length
+   float getWaveLength (StringRef filename);
+
 public:
 
    // re-show welcome after changelevel ?

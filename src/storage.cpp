@@ -322,7 +322,7 @@ String BotStorage::buildPath (int32_t file, bool isMemoryLoad) {
       path.emplace (game.getRunningModName ());
    }
 
-   // allways append addons/product
+   // always append addons/product
    path.emplace (folders.addons);
    path.emplace (folders.bot);
 
