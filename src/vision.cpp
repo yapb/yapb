@@ -155,11 +155,6 @@ void Bot::updateAimDir () {
 
             m_timeNextTracking = game.time () + rg.get (0.5f, 1.0f);
             m_trackingEdict = m_lastEnemy;
-
-            // feel free to fire if shootable
-            if (!usesSniper () && lastEnemyShootable ()) {
-               m_wantsToFire = true;
-            }
          }
          else {
             doFailPredict ();
@@ -194,9 +189,6 @@ void Bot::updateAimDir () {
          else {
             m_lookAt = m_destOrigin;
          }
-      }
-      else if (m_seeEnemyTime + 3.0f > game.time () && !m_lastEnemyOrigin.empty ()) {
-         m_lookAt = m_lastEnemyOrigin;
       }
       else {
          m_lookAt = m_destOrigin;

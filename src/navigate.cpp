@@ -423,9 +423,9 @@ void Bot::ignoreCollision () {
 
 void Bot::doPlayerAvoidance (const Vector &normal) {
    m_hindrance = nullptr;
-   float distanceSq = cr::sqrf (348.0f);
+   float distanceSq = cr::sqrf (384.0f);
 
-   if (getCurrentTaskId () == Task::Attack || isOnLadder () || isInNarrowPlace ()) {
+   if (isOnLadder () || isInNarrowPlace ()) {
       return;
    }
    const auto ownPrio = bots.getPlayerPriority (ent ());
@@ -506,7 +506,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
    m_isStuck = false;
 
    // standing still, no need to check?
-   if (m_lastCollTime < game.time () &&  getCurrentTaskId () != Task::Attack) {
+   if (m_lastCollTime < game.time () && getCurrentTaskId () != Task::Attack) {
       // didn't we move enough previously?
       if (movedDistance < 2.0f && (m_prevSpeed > 20.0f || m_prevVelocity < m_moveSpeed / 2)) {
          m_prevTime = game.time (); // then consider being stuck
@@ -604,19 +604,19 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                   dirLeft = true;
                }
                const auto &testDir = m_moveSpeed > 0.0f ? forward : -forward;
-               constexpr float blockDistance = 32.0f;
+               constexpr float kBlockDistance = 32.0f;
 
                // now check which side is blocked
-               src = pev->origin + right * blockDistance;
-               dst = src + testDir * blockDistance;
+               src = pev->origin + right * kBlockDistance;
+               dst = src + testDir * kBlockDistance;
 
                game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
 
                if (!cr::fequal (tr.flFraction, 1.0f)) {
                   blockedRight = true;
                }
-               src = pev->origin - right * blockDistance;
-               dst = src + testDir * blockDistance;
+               src = pev->origin - right * kBlockDistance;
+               dst = src + testDir * kBlockDistance;
 
                game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
 
@@ -708,8 +708,9 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                   state[i] += 5;
                }
             }
-            else
+            else {
                state[i] = 0;
+            }
             ++i;
 
             // weighted all possible moves, now sort them to start with most probable
@@ -781,42 +782,11 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
 void Bot::moveToGoal () {
    findValidNode ();
 
-   bool prevLadder = false;
-
-   if (graph.exists (m_previousNodes[0])) {
-      if (graph[m_previousNodes[0]].flags & NodeFlag::Ladder) {
-         prevLadder = true;
-      }
-   }
-
    // press duck button if we need to
    if ((m_pathFlags & NodeFlag::Crouch) && !(m_pathFlags & (NodeFlag::Camp | NodeFlag::Goal))) {
       pev->button |= IN_DUCK;
    }
    m_lastUsedNodesTime = game.time ();
-
-   // press jump button if we need to leave the ladder
-   if (!(m_pathFlags & NodeFlag::Ladder) && prevLadder && isOnFloor () && isOnLadder () && m_moveSpeed > 50.0f && pev->velocity.length () < 50.0f) {
-      pev->button |= IN_JUMP;
-      m_jumpTime = game.time () + 1.0f;
-   }
-
-   if (m_pathFlags & NodeFlag::Ladder) {
-      if (m_pathOrigin.z < pev->origin.z + 16.0f && !isOnLadder () && isOnFloor () && !isDucking ()) {
-         if (!prevLadder) {
-            m_moveSpeed = pev->origin.distance (m_pathOrigin);
-         }
-         else {
-            m_moveSpeed = 150.0f;
-         }
-         if (m_moveSpeed < 150.0f) {
-            m_moveSpeed = 150.0f;
-         }
-         else if (m_moveSpeed > pev->maxspeed) {
-            m_moveSpeed = pev->maxspeed;
-         }
-      }
-   }
 
    // special movement for swimming here
    if (isInWater ()) {
@@ -953,7 +923,7 @@ bool Bot::updateNavigation () {
          constexpr auto kLadderOffset = Vector (0.0f, 0.0f, 16.0f);
          m_pathOrigin = m_path->origin + kLadderOffset;
       }
-      else if (m_pathOrigin.z < pev->origin.z + 16.0f && !isOnLadder () && isOnFloor () && !(pev->flags & FL_DUCKING)) {
+      else if (m_pathOrigin.z < pev->origin.z + 16.0f && !isOnLadder () && isOnFloor () && !isDucking ()) {
          m_moveSpeed = pev->origin.distance (m_pathOrigin);
 
          if (m_moveSpeed < 150.0f) {
@@ -1031,7 +1001,6 @@ bool Bot::updateNavigation () {
                }
             }
          }
-
       }
    }
 
@@ -1167,13 +1136,13 @@ bool Bot::updateNavigation () {
       // did we reach a destination node?
       if (getTask ()->data == m_currentNodeIndex) {
          if (m_chosenGoalIndex != kInvalidNodeIndex) {
-            constexpr int maxGoalValue = PracticeLimit::Goal;
+            constexpr int kMaxGoalValue = PracticeLimit::Goal;
 
             // add goal values
             int goalValue = practice.getValue (m_team, m_chosenGoalIndex, m_currentNodeIndex);
             const int addedValue = static_cast <int> (m_healthValue * 0.5f + m_goalValue * 0.5f);
 
-            goalValue = cr::clamp (goalValue + addedValue, -maxGoalValue, maxGoalValue);
+            goalValue = cr::clamp (goalValue + addedValue, -kMaxGoalValue, kMaxGoalValue);
 
             // update the practice for team
             practice.setValue (m_team, m_chosenGoalIndex, m_currentNodeIndex, goalValue);
@@ -1776,7 +1745,7 @@ int Bot::findNearestNode () {
    // try to search ANYTHING that can be reached
    if (!graph.exists (index)) {
       nearestDistanceSq = cr::sqrf (kMaxDistance);
-      const auto &nearestNodes = graph.getNarestInRadius (kMaxDistance, pev->origin);
+      const auto &nearestNodes = graph.getNearestInRadius (kMaxDistance, pev->origin);
 
       for (const auto &i : nearestNodes) {
          const auto &path = graph[i];
@@ -1802,7 +1771,6 @@ int Bot::findNearestNode () {
          return index;
       }
    }
-
 
    // worst case, take any node...
    if (!graph.exists (index)) {
@@ -2168,7 +2136,7 @@ bool Bot::selectBestNextNode () {
          continue;
       }
 
-      // skip itn't connected links
+      // skip isn't connected links
       if (!graph.isConnected (link.index, nextNodeIndex) || !graph.isConnected (link.index, prevNodeIndex)) {
          continue;
       }
@@ -3088,7 +3056,6 @@ edict_t *Bot::lookupButton (StringRef target) {
    });
    return result;
 }
-
 
 bool Bot::isReachableNode (int index) {
    // this function return whether bot able to reach index node or not, depending on several factors.

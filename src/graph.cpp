@@ -539,7 +539,7 @@ int BotGraph::getNearest (const Vector &origin, const float range, int flags) {
    return index;
 }
 
-IntArray BotGraph::getNarestInRadius (float radius, const Vector &origin, int maxCount) {
+IntArray BotGraph::getNearestInRadius (float radius, const Vector &origin, int maxCount) {
    // returns all nodes within radius from position
 
    const float radiusSq = cr::sqrf (radius);

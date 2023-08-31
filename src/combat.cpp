@@ -1161,11 +1161,14 @@ void Bot::attackMovement () {
       else if (usesRifle () || usesSubmachine () || usesHeavy ()) {
          const int rand = rg.get (1, 100);
 
-         if (distance < 500.0f) {
+         if (distance < 768.0f) {
             m_fightStyle = Fight::Strafe;
          }
          else if (distance < 1024.0f) {
-            if (rand < (usesSubmachine () ? 50 : 30)) {
+            if (isGroupOfEnemies (m_enemy->v.origin)) {
+               m_fightStyle = Fight::Strafe;
+            }
+            else if (rand < (usesSubmachine () ? 50 : 30)) {
                m_fightStyle = Fight::Strafe;
             }
             else {
@@ -1173,7 +1176,10 @@ void Bot::attackMovement () {
             }
          }
          else {
-            if (rand < (usesSubmachine () ? 80 : 90)) {
+            if (isGroupOfEnemies (m_enemy->v.origin)) {
+               m_fightStyle = Fight::Strafe;
+            }
+            else if (rand < (usesSubmachine () ? 80 : 90)) {
                m_fightStyle = Fight::Stay;
             }
             else {
@@ -1199,9 +1205,12 @@ void Bot::attackMovement () {
       m_moveSpeed = -pev->maxspeed;
    }
 
-   if (usesKnife ()) {
-      m_fightStyle = Fight::None;
-      m_lastFightStyleCheck = game.time ();
+   if (isInViewCone (m_enemy->v.origin) && usesKnife ()) {
+      m_fightStyle = Fight::Strafe;
+   }
+
+   if (usesPistol () && distance < 768.0f) {
+      m_fightStyle = Fight::Strafe;
    }
 
    if (m_fightStyle == Fight::Strafe) {
@@ -1270,7 +1279,7 @@ void Bot::attackMovement () {
       }
 
       // do not move forward/backward is too far
-      if (distance > 1024.0) {
+      if (distance > 1024.0f) {
          m_moveSpeed = 0.0f;
       }
    }
@@ -1280,7 +1289,7 @@ void Bot::attackMovement () {
       if (alreadyDucking) {
          m_duckTime = game.time () + m_frameInterval * 2.0f;
       }
-      else if ((distance > kDoubleSprayDistance && hasPrimaryWeapon ()) && (m_enemyParts & (Visibility::Head | Visibility::Body)) && getCurrentTaskId () != Task::SeekCover && getCurrentTaskId () != Task::Hunt) {
+      else if ((distance > 768.0f && hasPrimaryWeapon ()) && (m_enemyParts & (Visibility::Head | Visibility::Body)) && getCurrentTaskId () != Task::SeekCover && getCurrentTaskId () != Task::Hunt) {
          const int enemyNearestIndex = graph.getNearest (m_enemy->v.origin);
 
          if (vistab.visible (m_currentNodeIndex, enemyNearestIndex, VisIndex::Crouch) && vistab.visible (enemyNearestIndex, m_currentNodeIndex, VisIndex::Crouch)) {
@@ -1289,14 +1298,6 @@ void Bot::attackMovement () {
       }
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
-   }
-
-   if (m_difficulty >= Difficulty::Normal && isOnFloor () && m_duckTime < game.time ()) {
-      if (distance < 768.0f) {
-         if (rg.get (0, 1000) < rg.get (7, 12) && pev->velocity.length2d () > 150.0f && isInViewCone (m_enemy->v.origin)) {
-            pev->button |= IN_JUMP;
-         }
-      }
    }
 
    if (m_isReloading) {
@@ -1308,7 +1309,7 @@ void Bot::attackMovement () {
       Vector right, forward;
       pev->v_angle.angleVectors (&forward, &right, nullptr);
 
-      const auto &front = right * m_moveSpeed * 0.2f;
+      const auto &front = forward * m_moveSpeed * 0.2f;
       const auto &side = right * m_strafeSpeed * 0.2f;
       const auto &spot = pev->origin + front + side + pev->velocity * m_frameInterval;
 
@@ -1907,7 +1908,7 @@ void Bot::checkGrenadesThrow () {
             const float radius = cr::max (192.0f, m_lastEnemy->v.velocity.length2d ());
             const Vector &pos = m_lastEnemy->v.velocity.get2d () + m_lastEnemy->v.origin;
 
-            auto predicted = graph.getNarestInRadius (radius, pos, 12);
+            auto predicted = graph.getNearestInRadius (radius, pos, 12);
 
             if (predicted.empty ()) {
                m_states &= ~Sense::ThrowExplosive;
