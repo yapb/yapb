@@ -602,7 +602,7 @@ public:
 public:
    template <typename T> T read () {
       T result {};
-      auto size = sizeof (T);
+      constexpr auto size = sizeof (T);
 
       if (m_cursor + size > m_buffer.length ()) {
          return 0;
@@ -616,12 +616,12 @@ public:
 
    // must be called right after read
    template <typename T> void write (T value) {
-      auto size = sizeof (value);
+      constexpr auto size = sizeof (value);
       memcpy (m_buffer.data () + m_cursor - size, &value, size);
    }
 
    template <typename T> void skip () {
-      auto size = sizeof (T);
+      constexpr auto size = sizeof (T);
 
       if (m_cursor + size > m_buffer.length ()) {
          return;

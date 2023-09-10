@@ -7,6 +7,8 @@
 
 #include <yapb.h>
 
+ConVar cv_has_team_semiclip ("has_team_semiclip", "0", "When enabled, bots will not try to avoid teammates on their way. Assuming some of the semiclip plugins are in use.");
+
 int Bot::findBestGoal () {
    if (m_isCreature) {
       if (!graph.m_terrorPoints.empty ()) {
@@ -422,6 +424,10 @@ void Bot::ignoreCollision () {
 }
 
 void Bot::doPlayerAvoidance (const Vector &normal) {
+   if (cv_has_team_semiclip.bool_ ()) {
+      return; // no player avoiding when with semiclip plugin
+   }
+
    m_hindrance = nullptr;
    float distanceSq = cr::sqrf (348.0f);
 
