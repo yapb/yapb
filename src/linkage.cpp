@@ -157,6 +157,9 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
          }
       }
 
+      // refresh clients immediately
+      util.updateClients ();
+
       if (game.is (GameFlags::Metamod)) {
          RETURN_META_VALUE (MRES_IGNORED, 0);
       }
@@ -182,6 +185,9 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
             break;
          }
       }
+
+      // refresh clients immediately
+      util.updateClients ();
 
       // clear the graph editor upon disconnect
       if (ent == graph.getEditor ()) {
