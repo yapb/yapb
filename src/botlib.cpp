@@ -38,7 +38,6 @@ ConVar cv_pickup_custom_items ("pickup_custom_items", "0", "Allows or disallows 
 ConVar cv_pickup_ammo_and_kits ("pickup_ammo_and_kits", "0", "Allows bots pickup mod items like ammo, health kits and suits.");
 ConVar cv_pickup_best ("pickup_best", "1", "Allows or disallows bots to pickup best weapons.");
 ConVar cv_ignore_objectives ("ignore_objectives", "0", "Allows or disallows bots to do map objectives, i.e. plant/defuse bombs, and saves hostages.");
-ConVar cv_random_knife_attacks ("random_knife_attacks", "1", "Allows or disallows the ability for random knife attacks when bot is rushing and no enemy is nearby.");
 
 // game console variables
 ConVar mp_c4timer ("mp_c4timer", nullptr, Var::GameRef);
@@ -1684,7 +1683,7 @@ void Bot::refreshEnemyPredict () {
    if (game.isNullEntity (m_enemy) && !game.isNullEntity (m_lastEnemy) && !m_lastEnemyOrigin.empty ()) {
       const auto distanceToLastEnemySq = m_lastEnemyOrigin.distanceSq (pev->origin);
 
-      if (distanceToLastEnemySq > cr::sqrf (384.0f) && (distanceToLastEnemySq < cr::sqrf (2048.0f) || usesSniper ())) {
+      if (distanceToLastEnemySq > cr::sqrf (128.0f) && (distanceToLastEnemySq < cr::sqrf (2048.0f) || usesSniper ())) {
          m_aimFlags |= AimFlags::PredictPath;
       }
       const bool denyLastEnemy = pev->velocity.lengthSq2d () > 0.0f && distanceToLastEnemySq < cr::sqrf (256.0f);
@@ -1901,6 +1900,9 @@ void Bot::filterTasks () {
          }
          else if (m_isVIP || m_isReloading || (sniping && usesSniper ())) {
             ratio *= 3.0f; // triple the seek cover desire if bot is VIP or reloading
+         }
+         else if (m_lastEnemyOrigin.distance2d (pev->origin) < 200.0f) {
+            ratio *= 5.0f;
          }
          else if (m_isCreature) {
             ratio = 0.0f;
@@ -3354,12 +3356,12 @@ void Bot::updatePracticeValue (int damage) {
    const auto health = static_cast <int> (m_healthValue);
 
    // max goal value
-   constexpr int maxGoalValue = PracticeLimit::Goal;
+   constexpr int kMaxGoalValue = PracticeLimit::Goal;
 
    // only rate goal node if bot died because of the damage
    // FIXME: could be done a lot better, however this cares most about damage done by sniping or really deadly weapons
    if (health - damage <= 0) {
-      practice.setValue (m_team, m_chosenGoalIndex, m_prevGoalIndex, cr::clamp (practice.getValue (m_team, m_chosenGoalIndex, m_prevGoalIndex) - health / 20, -maxGoalValue, maxGoalValue));
+      practice.setValue (m_team, m_chosenGoalIndex, m_prevGoalIndex, cr::clamp (practice.getValue (m_team, m_chosenGoalIndex, m_prevGoalIndex) - health / 20, -kMaxGoalValue, kMaxGoalValue));
    }
 }
 
@@ -3376,7 +3378,7 @@ void Bot::updatePracticeDamage (edict_t *attacker, int damage) {
    if (attackerTeam == victimTeam) {
       return;
    }
-   constexpr int maxDamageValue = PracticeLimit::Damage;
+   constexpr int kMaxDamageValue = PracticeLimit::Damage;
 
    // if these are bots also remember damage to rank destination of the bot
    m_goalValue -= static_cast <float> (damage);
@@ -3398,13 +3400,13 @@ void Bot::updatePracticeDamage (edict_t *attacker, int damage) {
  
    if (m_healthValue > 20.0f) {
       if (victimTeam == Team::Terrorist || victimTeam == Team::CT) {
-         practice.setDamage (victimIndex, victimIndex, victimIndex, cr::clamp (practice.getDamage (victimTeam, victimIndex, victimIndex), 0, maxDamageValue));
+         practice.setDamage (victimIndex, victimIndex, victimIndex, cr::clamp (practice.getDamage (victimTeam, victimIndex, victimIndex), 0, kMaxDamageValue));
       }
    }
    const auto updateDamage = util.isFakeClient (attacker) ? 10 : 7;
 
    // store away the damage done
-   const auto damageValue = cr::clamp (practice.getDamage (m_team, victimIndex, attackerIndex) + damage / updateDamage, 0, maxDamageValue);
+   const auto damageValue = cr::clamp (practice.getDamage (m_team, victimIndex, attackerIndex) + damage / updateDamage, 0, kMaxDamageValue);
 
    if (damageValue > practice.getHighestDamageForTeam (m_team)) {
       practice.setHighestDamageForTeam (m_team, damageValue);
@@ -3650,17 +3652,18 @@ bool Bot::isOutOfBombTimer () {
 }
 
 void Bot::updateHearing () {
-   int hearEnemyIndex = kInvalidNodeIndex;
+   if (game.is (GameFlags::FreeForAll)) {
+      return;
+   }
+   edict_t *hearedEnemy = nullptr;
    float nearestDistanceSq = kInfiniteDistance;
 
    // setup potential visibility set from engine
    auto set = game.getVisibilitySet (this, false);
 
    // loop through all enemy clients to check for hearable stuff
-   for (int i = 0; i < game.maxClients (); ++i) {
-      const auto &client = util.getClient (i);
-
-      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.ent == ent () || client.team == m_team || client.noise.last < game.time ()) {
+   for (const auto &client : util.getClients ()) {
+      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.ent == ent () || client.team == m_team || !client.ent || client.noise.last < game.time ()) {
          continue;
       }
 
@@ -3674,18 +3677,13 @@ void Bot::updateHearing () {
       }
 
       if (distanceSq < nearestDistanceSq) {
-         hearEnemyIndex = i;
+         hearedEnemy = client.ent;
          nearestDistanceSq = distanceSq;
       }
    }
-   edict_t *player = nullptr;
-
-   if (hearEnemyIndex >= 0 && util.getClient (hearEnemyIndex).team != m_team && !game.is (GameFlags::FreeForAll)) {
-      player = util.getClient (hearEnemyIndex).ent;
-   }
 
    // did the bot hear someone ?
-   if (player != nullptr && util.isPlayer (player)) {
+   if (hearedEnemy != nullptr && util.isPlayer (hearedEnemy)) {
       // change to best weapon if heard something
       if (m_shootTime < game.time () - 5.0f && isOnFloor () && m_currentWeapon != Weapon::C4 && m_currentWeapon != Weapon::Explosive && m_currentWeapon != Weapon::Smoke && m_currentWeapon != Weapon::Flashbang && !isKnifeMode ()) {
          selectBestWeapon ();
@@ -3700,26 +3698,26 @@ void Bot::updateHearing () {
 
       // didn't bot already have an enemy ? take this one...
       if (m_lastEnemyOrigin.empty () || m_lastEnemy == nullptr) {
-         m_lastEnemy = player;
-         m_lastEnemyOrigin = player->v.origin;
+         m_lastEnemy = hearedEnemy;
+         m_lastEnemyOrigin = hearedEnemy->v.origin;
       }
 
       // bot had an enemy, check if it's the heard one
       else {
-         if (player == m_lastEnemy) {
+         if (hearedEnemy == m_lastEnemy) {
             // bot sees enemy ? then bail out !
             if (m_states & Sense::SeeingEnemy) {
                return;
             }
-            m_lastEnemyOrigin = player->v.origin;
+            m_lastEnemyOrigin = hearedEnemy->v.origin;
          }
          else {
             // if bot had an enemy but the heard one is nearer, take it instead
             const float distanceSq = m_lastEnemyOrigin.distanceSq (pev->origin);
 
-            if (distanceSq > player->v.origin.distanceSq (pev->origin) && m_seeEnemyTime + 2.0f < game.time ()) {
-               m_lastEnemy = player;
-               m_lastEnemyOrigin = player->v.origin;
+            if (distanceSq > hearedEnemy->v.origin.distanceSq (pev->origin) && m_seeEnemyTime + 2.0f < game.time ()) {
+               m_lastEnemy = hearedEnemy;
+               m_lastEnemyOrigin = hearedEnemy->v.origin;
             }
             else {
                return;
@@ -3728,9 +3726,9 @@ void Bot::updateHearing () {
       }
 
       // check if heard enemy can be seen
-      if (checkBodyParts (player)) {
-         m_enemy = player;
-         m_lastEnemy = player;
+      if (checkBodyParts (hearedEnemy)) {
+         m_enemy = hearedEnemy;
+         m_lastEnemy = hearedEnemy;
          m_lastEnemyOrigin = m_enemyOrigin;
 
          m_states |= Sense::SeeingEnemy;
@@ -3739,11 +3737,11 @@ void Bot::updateHearing () {
 
       // check if heard enemy can be shoot through some obstacle
       else {
-         if (cv_shoots_thru_walls.bool_ () && m_difficulty >= Difficulty::Normal && m_lastEnemy == player && rg.chance (conf.getDifficultyTweaks (m_difficulty)->hearThruPct) && m_seeEnemyTime + 3.0f > game.time () && isPenetrableObstacle (player->v.origin)) {
-            m_enemy = player;
-            m_lastEnemy = player;
-            m_enemyOrigin = player->v.origin;
-            m_lastEnemyOrigin = player->v.origin;
+         if (cv_shoots_thru_walls.bool_ () && m_difficulty >= Difficulty::Normal && m_lastEnemy == hearedEnemy && rg.chance (conf.getDifficultyTweaks (m_difficulty)->hearThruPct) && m_seeEnemyTime + 3.0f > game.time () && isPenetrableObstacle (hearedEnemy->v.origin)) {
+            m_enemy = hearedEnemy;
+            m_lastEnemy = hearedEnemy;
+            m_enemyOrigin = hearedEnemy->v.origin;
+            m_lastEnemyOrigin = hearedEnemy->v.origin;
 
             m_states |= (Sense::SeeingEnemy | Sense::SuspectEnemy);
             m_seeEnemyTime = game.time ();
@@ -3840,7 +3838,7 @@ bool Bot::isBombDefusing (const Vector &bombOrigin) {
 }
 
 float Bot::getShiftSpeed () {
-   if (getCurrentTaskId () == Task::SeekCover || (m_aimFlags & AimFlags::Enemy) || isDucking () || (pev->button & IN_DUCK) || (m_oldButtons & IN_DUCK) || (m_currentTravelFlags & PathFlag::Jump) || (m_pathFlags & NodeFlag::Ladder) || isOnLadder () || isInWater () || m_isStuck) {
+   if (getCurrentTaskId () == Task::SeekCover || (m_aimFlags & AimFlags::Enemy) || isDucking () || (pev->button & IN_DUCK) || (m_oldButtons & IN_DUCK) || (m_currentTravelFlags & PathFlag::Jump) || (m_pathFlags & NodeFlag::Ladder) || isOnLadder () || isInWater () || isKnifeMode () || m_isStuck || m_numEnemiesLeft <= 0) {
       return pev->maxspeed;
    }
    return pev->maxspeed * 0.4f;

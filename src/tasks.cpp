@@ -13,6 +13,8 @@ ConVar cv_camping_allowed ("camping_allowed", "1", "Allows or disallows bots to 
 ConVar cv_camping_time_min ("camping_time_min", "15.0", "Lower bound of time from which time for camping is calculated", true, 5.0f, 90.0f);
 ConVar cv_camping_time_max ("camping_time_max", "45.0", "Upper bound of time until which time for camping is calculated", true, 15.0f, 120.0f);
 
+ConVar cv_random_knife_attacks ("random_knife_attacks", "1", "Allows or disallows the ability for random knife attacks when bot is rushing and no enemy is nearby.");
+
 void Bot::normal_ () {
    m_aimFlags |= AimFlags::Nav;
 
@@ -92,6 +94,11 @@ void Bot::normal_ () {
 
             // check if another bot is already camping here
             if (campingAllowed && isOccupiedNode (m_currentNodeIndex)) {
+               campingAllowed = false;
+            }
+
+            // skip sniper node if we don't have sniper weapon
+            if (campingAllowed && !usesSniper () && (m_pathFlags & NodeFlag::Sniper)) {
                campingAllowed = false;
             }
 
@@ -446,7 +453,11 @@ void Bot::attackEnemy_ () {
    }
    else {
       completeTask ();
-      m_destOrigin = m_lastEnemyOrigin;
+      findNextBestNode ();
+
+      if (!m_lastEnemyOrigin.empty ()) {
+         m_destOrigin = m_lastEnemyOrigin;
+      }
    }
    m_navTimeset = game.time ();
 }
@@ -1034,7 +1045,7 @@ void Bot::followUser_ () {
    // didn't choose goal node yet?
    if (!hasActiveGoal ()) {
       int destIndex = graph.getNearest (m_targetEntity->v.origin);
-      auto points = graph.getNarestInRadius (200.0f, m_targetEntity->v.origin);
+      auto points = graph.getNearestInRadius (200.0f, m_targetEntity->v.origin);
 
       for (auto &newIndex : points) {
          // if node not yet used, assign it as dest
@@ -1560,7 +1571,7 @@ void Bot::pickupItem_ () {
             int nearestHostageNodeIndex = kInvalidNodeIndex;
 
             // find the nearest 'unused' hostage within the area
-            game.searchEntities (pev->origin, 768.0f, [&] (edict_t *ent) {
+            game.searchEntities (pev->origin, 1024.0f, [&] (edict_t *ent) {
                if (!util.isHostageEntity (ent)) {
                   return EntitySearchResult::Continue;
                }

@@ -260,7 +260,7 @@ public:
    void showFileInfo ();
    void emitNotify (int32_t sound);
 
-   IntArray getNarestInRadius (float radius, const Vector &origin, int maxCount = -1);
+   IntArray getNearestInRadius (float radius, const Vector &origin, int maxCount = -1);
    const IntArray &getNodesInBucket (const Vector &pos);
 
 public:
