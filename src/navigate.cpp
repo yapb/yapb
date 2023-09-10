@@ -782,9 +782,41 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
 void Bot::moveToGoal () {
    findValidNode ();
 
+   bool prevLadder = false;
+
+   if (graph.exists (m_previousNodes[0])) {
+      if (graph[m_previousNodes[0]].flags & NodeFlag::Ladder) {
+         prevLadder = true;
+      }
+   }
+
    // press duck button if we need to
    if ((m_pathFlags & NodeFlag::Crouch) && !(m_pathFlags & (NodeFlag::Camp | NodeFlag::Goal))) {
       pev->button |= IN_DUCK;
+   }
+   m_lastUsedNodesTime = game.time ();
+
+   // press jump button if we need to leave the ladder
+   if (!(m_pathFlags & NodeFlag::Ladder) && prevLadder && isOnFloor () && isOnLadder () && m_moveSpeed > 50.0f && pev->velocity.length () < 50.0f) {
+      pev->button |= IN_JUMP;
+      m_jumpTime = game.time () + 1.0f;
+   }
+
+   if (m_pathFlags & NodeFlag::Ladder) {
+      if (m_pathOrigin.z < pev->origin.z + 16.0f && !isOnLadder () && isOnFloor () && !isDucking ()) {
+         if (!prevLadder) {
+            m_moveSpeed = pev->origin.distance (m_pathOrigin);
+         }
+         else {
+            m_moveSpeed = 150.0f;
+         }
+         if (m_moveSpeed < 150.0f) {
+            m_moveSpeed = 150.0f;
+         }
+         else if (m_moveSpeed > pev->maxspeed) {
+            m_moveSpeed = pev->maxspeed;
+         }
+      }
    }
    m_lastUsedNodesTime = game.time ();
 

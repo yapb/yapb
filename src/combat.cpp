@@ -1205,7 +1205,7 @@ void Bot::attackMovement () {
       m_moveSpeed = -pev->maxspeed;
    }
 
-   if (isInViewCone (m_enemy->v.origin) && usesKnife ()) {
+   if (usesKnife () && isInViewCone (m_enemy->v.origin)) {
       m_fightStyle = Fight::Strafe;
    }
 
@@ -1298,6 +1298,14 @@ void Bot::attackMovement () {
       }
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
+   }
+
+   if (m_difficulty >= Difficulty::Normal && isOnFloor () && m_duckTime < game.time ()) {
+      if (distance < 768.0f) {
+         if (rg.get (0, 1000) < rg.get (5, 10) && pev->velocity.length2d () > 150.0f && isInViewCone (m_enemy->v.origin)) {
+            pev->button |= IN_JUMP;
+         }
+      }
    }
 
    if (m_isReloading) {
