@@ -655,7 +655,7 @@ public:
    int m_ammo[MAX_AMMO_SLOTS] {}; // total ammo amounts
 
    bool m_isVIP {}; // bot is vip?
-   bool m_notKilled {}; // has the player been killed or has he just respawned
+   bool m_isAlive {}; // has the player been killed or has he just respawned
    bool m_notStarted {}; // team/class not chosen yet
    bool m_ignoreBuyDelay {}; // when reaching buyzone in the middle of the round don't do pauses
    bool m_inBombZone {}; // bot in the bomb zone or not

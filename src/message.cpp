@@ -57,7 +57,7 @@ void MessageDispatcher::netMsgTextMsg () {
       bots.setBombPlanted (true);
 
       for (const auto &notify : bots) {
-         if (notify->m_notKilled) {
+         if (notify->m_isAlive) {
             notify->clearSearchNodes ();
 
             // clear only camp tasks

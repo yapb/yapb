@@ -318,7 +318,7 @@ bool Bot::isReplyingToChat () {
 void Bot::checkForChat () {
 
    // say a text every now and then
-   if (m_notKilled || !cv_chat.bool_ ()) {
+   if (m_isAlive || !cv_chat.bool_ () || game.is (GameFlags::CSDM)) {
       return;
    }
 

@@ -89,7 +89,7 @@ void BotPractice::update () {
 void BotPractice::syncUpdate () {
    // this function called after each end of the round to update knowledge about most dangerous nodes for each team.
 
-   auto graphLength = graph.length ();
+   const auto graphLength = graph.length ();
 
    // no nodes, no practice used or nodes edited or being edited?
    if (!graphLength || graph.hasChanged () || !vistab.isReady ()) {

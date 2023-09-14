@@ -640,11 +640,11 @@ void Game::checkCvarsBounds () {
    // special case for xash3d, by default engine is not calling startframe if no players on server, but our quota management and bot adding
    // mechanism assumes that starframe is called even if no players on server, so, set the xash3d's sv_forcesimulating cvar to 1 in case it's not
    if (is (GameFlags::Xash3D)) {
-      static cvar_t *sv_forcesimulating = engfuncs.pfnCVarGetPointer ("sv_forcesimulating");
+      static ConVarRef sv_forcesimulating ("sv_forcesimulating");
 
-      if (sv_forcesimulating && !cr::fequal (sv_forcesimulating->value, 1.0f)) {
+      if (sv_forcesimulating.exists () && !cr::fequal (sv_forcesimulating.value (), 1.0f)) {
          game.print ("Force-enable Xash3D sv_forcesimulating cvar.");
-         engfuncs.pfnCVarSetFloat ("sv_forcesimulating", 1.0f);
+         sv_forcesimulating.set ("1.0");
       }
    }
 }
@@ -892,12 +892,13 @@ void Game::applyGameModes () {
       return;
    }
 
-   static auto dmActive = engfuncs.pfnCVarGetPointer ("csdm_active");
-   static auto freeForAll = engfuncs.pfnCVarGetPointer ("mp_freeforall");
+   static ConVarRef csdm_active ("csdm_active");
+   static ConVarRef redm_active ("redm_active");
+   static ConVarRef mp_freeforall ("mp_freeforall");
 
    // csdm is only with amxx and metamod
-   if (dmActive) {
-      if (dmActive->value > 0.0f) {
+   if (csdm_active.exists () || redm_active.exists ()) {
+      if (csdm_active.value () > 0.0f || redm_active.value () > 0.0f) {
          m_gameFlags |= GameFlags::CSDM;
       }
       else if (is (GameFlags::CSDM)) {
@@ -906,12 +907,12 @@ void Game::applyGameModes () {
    }
 
    // but this can be provided by regamedll
-   if (freeForAll) {
-      if (freeForAll->value > 0.0f) {
-         m_gameFlags |= GameFlags::FreeForAll;
+   if (mp_freeforall.exists ()) {
+      if (mp_freeforall.value () > 0.0f) {
+         m_gameFlags |= (GameFlags::FreeForAll | GameFlags::CSDM);
       }
       else if (is (GameFlags::FreeForAll)) {
-         m_gameFlags &= ~GameFlags::FreeForAll;
+         m_gameFlags &= ~(GameFlags::FreeForAll | GameFlags::CSDM);
       }
    }
 }

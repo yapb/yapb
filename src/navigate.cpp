@@ -70,7 +70,7 @@ int Bot::findBestGoal () {
 
             // do not stole from bots (ignore humans, fuck them)
             for (const auto &other : bots) {
-               if (!other->m_notKilled) {
+               if (!other->m_isAlive) {
                   continue;
                }
 
@@ -246,8 +246,7 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offensive) {
    if (tactic == GoalTactic::Defensive && !(*defensive).empty ()) { // careful goal
       postprocessGoals (*defensive, goalChoices);
    }
-   else if (tactic == GoalTactic::Camp && !graph.m_campPoints.empty ()) // camp node goal
-   {
+   else if (tactic == GoalTactic::Camp && !graph.m_campPoints.empty ()) {  // camp node goal
       // pickup sniper points if possible for sniping bots
       if (!graph.m_sniperPoints.empty () && usesSniper ()) {
          postprocessGoals (graph.m_sniperPoints, goalChoices);
@@ -1303,7 +1302,7 @@ bool Bot::updateLiftHandling () {
 
          // if some bot is following a bot going into lift - he should take the same lift to go
          for (const auto &bot : bots) {
-            if (!bot->m_notKilled || bot->m_team != m_team || bot->m_targetEntity != ent () || bot->getCurrentTaskId () != Task::FollowUser) {
+            if (!bot->m_isAlive || bot->m_team != m_team || bot->m_targetEntity != ent () || bot->getCurrentTaskId () != Task::FollowUser) {
                continue;
             }
 
@@ -1335,7 +1334,7 @@ bool Bot::updateLiftHandling () {
       bool needWaitForTeammate = false;
 
       for (const auto &bot : bots) {
-         if (!bot->m_notKilled || bot->m_team != m_team || bot->m_targetEntity != ent () || bot->getCurrentTaskId () != Task::FollowUser || bot->m_liftEntity != m_liftEntity) {
+         if (!bot->m_isAlive || bot->m_team != m_team || bot->m_targetEntity != ent () || bot->getCurrentTaskId () != Task::FollowUser || bot->m_liftEntity != m_liftEntity) {
             continue;
          }
 
@@ -2352,7 +2351,7 @@ bool Bot::advanceMovement () {
                // get ladder nodes used by other (first moving) bots
                for (const auto &other : bots) {
                   // if another bot uses this ladder, wait 3 secs
-                  if (other.get () != this && other->m_notKilled && other->m_currentNodeIndex == destIndex) {
+                  if (other.get () != this && other->m_isAlive && other->m_currentNodeIndex == destIndex) {
                      startTask (Task::Pause, TaskPri::Pause, kInvalidNodeIndex, game.time () + 3.0f, false);
                      return true;
                   }
@@ -3058,7 +3057,7 @@ bool Bot::isOccupiedNode (int index, bool needZeroVelocity) {
       }
       auto bot = bots[client.ent];
 
-      if (bot == nullptr || bot == this || !bot->m_notKilled) {
+      if (bot == nullptr || bot == this || !bot->m_isAlive) {
          continue;
       }
       return bot->m_currentNodeIndex == index;

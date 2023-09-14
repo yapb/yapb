@@ -240,7 +240,7 @@ void Bot::normal_ () {
 
       // make sure everyone else will not ask next few moments
       for (const auto &bot : bots) {
-         if (bot->m_notKilled) {
+         if (bot->m_isAlive) {
             bot->m_askCheckTime = game.time () + rg.get (5.0f, 30.0f);
          }
       }
@@ -817,7 +817,7 @@ void Bot::defuseBomb_ () {
    if (bombPos.empty ()) {
       // fix for stupid behavior of CT's when bot is defused
       for (const auto &bot : bots) {
-         if (bot->m_team == m_team && bot->m_notKilled) {
+         if (bot->m_team == m_team && bot->m_isAlive) {
             auto defendPoint = graph.getFarest (bot->pev->origin);
 
             startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (30.0f, 60.0f), true); // push camp task on to stack
@@ -1583,7 +1583,7 @@ void Bot::pickupItem_ () {
 
                // check if hostage is with a bot
                for (const auto &other : bots) {
-                  if (other->m_notKilled) {
+                  if (other->m_isAlive) {
                      for (const auto &hostage : other->m_hostages) {
                         if (hostage == ent) {
                            return EntitySearchResult::Continue;

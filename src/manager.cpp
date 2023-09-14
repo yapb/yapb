@@ -114,7 +114,7 @@ void BotManager::destroyKillerEntity () {
 void BotManager::touchKillerEntity (Bot *bot) {
 
    // bot is already dead.
-   if (!bot->m_notKilled) {
+   if (!bot->m_isAlive) {
       return;
    }
 
@@ -282,7 +282,7 @@ Bot *BotManager::findAliveBot () {
    // this function finds one bot, alive bot :)
 
    for (const auto &bot : m_bots) {
-      if (bot->m_notKilled) {
+      if (bot->m_isAlive) {
          return bot.get ();
       }
    }
@@ -490,7 +490,7 @@ void BotManager::maintainAutoKill () {
    }
 
    for (const auto &bot : m_bots) {
-      if (bot->m_notKilled) {
+      if (bot->m_isAlive) {
          ++aliveBots;
 
          // do not interrupt assassination scenario, if vip is a bot
@@ -685,7 +685,7 @@ bool BotManager::kickRandom (bool decQuota, Team fromTeam) {
 
    // first try to kick the bot that is currently dead
    for (const auto &bot : m_bots) {
-      if (!bot->m_notKilled && belongsTeam (bot.get ())) // is this slot used?
+      if (!bot->m_isAlive && belongsTeam (bot.get ())) // is this slot used?
       {
          updateQuota ();
          bot->kick ();
@@ -824,7 +824,7 @@ void BotManager::listBots () {
    };
 
    for (const auto &bot : bots) {
-      ctrl.msg ("[%-3.1d]\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s\t%-3.0f secs", bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful", botTeam (bot->m_team), bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_notKilled ? "yes" : "no", cv_rotate_bots.bool_ () ? bot->m_stayTime - game.time () : 0.0f);
+      ctrl.msg ("[%-3.1d]\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s\t%-3.0f secs", bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful", botTeam (bot->m_team), bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_isAlive ? "yes" : "no", cv_rotate_bots.bool_ () ? bot->m_stayTime - game.time () : 0.0f);
    }
    ctrl.msg ("%d bots", m_bots.length ());
 }
@@ -887,7 +887,7 @@ Bot *BotManager::findHighestFragBot (int team) {
 
    // search bots in this team
    for (const auto &bot : bots) {
-      if (bot->m_notKilled && bot->m_team == team) {
+      if (bot->m_isAlive && bot->m_team == team) {
          if (bot->pev->frags > bestScore) {
             bestIndex = bot->index ();
             bestScore = bot->pev->frags;
@@ -1055,7 +1055,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    m_sayTextBuffer.chatDelay = rg.get (3.8f, 10.0f);
    m_sayTextBuffer.chatProbability = rg.get (10, 100);
 
-   m_notKilled = false;
+   m_isAlive = false;
    m_weaponBurstMode = BurstMode::Off;
    m_difficulty = cr::clamp (static_cast <Difficulty> (difficulty), Difficulty::Noob, Difficulty::Expert);
 
@@ -1244,7 +1244,7 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
    if (cv_radio_mode.int_ () == 2) {
       // need to send congrats on well placed shot
       for (const auto &notify : bots) {
-         if (notify->m_notKilled && killerTeam == notify->m_team && killerTeam != victimTeam && killer != notify->ent () && notify->seesEntity (victim->v.origin)) {
+         if (notify->m_isAlive && killerTeam == notify->m_team && killerTeam != victimTeam && killer != notify->ent () && notify->seesEntity (victim->v.origin)) {
             if (!(killer->v.flags & FL_FAKECLIENT)) {
                notify->pushChatterMessage (Chatter::NiceShotCommander);
             }
@@ -1260,7 +1260,7 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
 
    // notice nearby to victim teammates, that attacker is near
    for (const auto &notify : bots) {
-      if (notify->m_seeEnemyTime + 2.0f < game.time () && notify->m_notKilled && notify->m_team == victimTeam && game.isNullEntity (notify->m_enemy) && killerTeam != victimTeam && util.isVisible (killer->v.origin, notify->ent ())) {
+      if (notify->m_seeEnemyTime + 2.0f < game.time () && notify->m_isAlive && notify->m_team == victimTeam && game.isNullEntity (notify->m_enemy) && killerTeam != victimTeam && util.isVisible (killer->v.origin, notify->ent ())) {
          notify->m_actualReactionTime = 0.0f;
          notify->m_seeEnemyTime = game.time ();
          notify->m_enemy = killer;
@@ -1298,7 +1298,7 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
                }
             }
          }
-         victimBot->m_notKilled = false;
+         victimBot->m_isAlive = false;
       }
    }
 }
@@ -1449,7 +1449,7 @@ void Bot::newRound () {
    m_lastEquipTime = 0.0f;
 
    // if bot died, clear all weapon stuff and force buying again
-   if (!m_notKilled) {
+   if (!m_isAlive) {
       plat.bzero (&m_ammoInClip, sizeof (m_ammoInClip));
       plat.bzero (&m_ammo, sizeof (m_ammo));
 
@@ -1774,7 +1774,7 @@ void BotManager::notifyBombDefuse () {
    for (const auto &bot : bots) {
       const auto task = bot->getCurrentTaskId ();
 
-      if (!bot->m_defuseNotified && bot->m_notKilled && task != Task::MoveToPosition && task != Task::DefuseBomb && task != Task::EscapeFromBomb) {
+      if (!bot->m_defuseNotified && bot->m_isAlive && task != Task::MoveToPosition && task != Task::DefuseBomb && task != Task::EscapeFromBomb) {
          if (bot->m_team == Team::Terrorist && bot->pev->origin.distanceSq (bombPos) < cr::sqrf (384.0f)) {
             bot->clearSearchNodes ();
 
@@ -1878,7 +1878,7 @@ void BotManager::selectLeaders (int team, bool reset) {
       else if (team == Team::Terrorist && !m_leaderChoosen[Team::Terrorist]) {
          auto bot = bots.findHighestFragBot (team);
 
-         if (bot != nullptr && bot->m_notKilled) {
+         if (bot != nullptr && bot->m_isAlive) {
             bot->m_isLeader = true;
 
             if (rg.chance (45)) {

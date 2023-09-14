@@ -398,6 +398,39 @@ public:
    }
 };
 
+// reference some game/mod cvars for access
+class ConVarRef final : public NonCopyable {
+private:
+   cvar_t *ptr_ {};
+   String name_ {};
+   bool checked_ {};
+
+public:
+   ConVarRef (StringRef name) : name_ (name) {}
+   ~ConVarRef () = default;
+
+public:
+   bool exists () {
+      if (checked_ && !ptr_) {
+         return false;
+      }
+      checked_ = true;
+      ptr_ = engfuncs.pfnCVarGetPointer (name_.chars ());
+
+      return ptr_ != nullptr;
+   }
+
+   template <typename U = float> U value () {
+      return exists () ? static_cast <U> (ptr_->value) : static_cast <U> (0);
+   }
+
+   void set (StringRef value) {
+      if (exists ()) {
+         engfuncs.pfnCvar_DirectSet (ptr_, value.chars ());
+      }
+   }
+};
+
 // simplify access for console variables
 class ConVar final : public NonCopyable {
 public:

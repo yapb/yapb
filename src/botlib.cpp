@@ -54,7 +54,7 @@ void Bot::pushMsgQueue (int message) {
 
       for (const auto &other : bots) {
          if (other->pev != pev) {
-            if (m_notKilled == other->m_notKilled) {
+            if (m_isAlive == other->m_isAlive) {
                other->m_sayTextBuffer.entityIndex = entityIndex;
                other->m_sayTextBuffer.sayText = m_chatBuffer;
             }
@@ -574,7 +574,7 @@ void Bot::updatePickups () {
                }
                else {
                   for (const auto &other : bots) {
-                     if (other->m_notKilled) {
+                     if (other->m_isAlive) {
                         for (const auto &hostage : other->m_hostages) {
                            if (hostage == ent) {
                               allowPickup = false;
@@ -677,7 +677,7 @@ void Bot::updatePickups () {
 
    if (!game.isNullEntity (pickupItem)) {
       for (const auto &other : bots) {
-         if (other.get () != this && other->m_notKilled && other->m_pickupItem == pickupItem) {
+         if (other.get () != this && other->m_isAlive && other->m_pickupItem == pickupItem) {
             m_pickupItem = nullptr;
             m_pickupType = Pickup::None;
 
@@ -831,7 +831,7 @@ void Bot::instantChatter (int type) {
    const auto &playbackSound = conf.pickRandomFromChatterBank (type);
    const auto &painSound = conf.pickRandomFromChatterBank (Chatter::DiePain);
 
-   if (m_notKilled) {
+   if (m_isAlive) {
       showChatterIcon (true);
    }
    MessageWriter msg;
@@ -852,7 +852,7 @@ void Bot::instantChatter (int type) {
          client.iconTimestamp[ownIndex] = game.time () + painSound.duration;
          writeChatterSound (painSound);
       }
-      else if (m_notKilled) {
+      else if (m_isAlive) {
          client.iconTimestamp[ownIndex] = game.time () + playbackSound.duration;
          writeChatterSound (playbackSound);
       }
@@ -1561,7 +1561,7 @@ void Bot::updateEmotions () {
 
 void Bot::overrideConditions () {
    // check if we need to escape from bomb
-   if (game.mapIs (MapFlags::Demolition) && bots.isBombPlanted () && m_notKilled && getCurrentTaskId () != Task::EscapeFromBomb && getCurrentTaskId () != Task::Camp && isOutOfBombTimer ()) {
+   if (game.mapIs (MapFlags::Demolition) && bots.isBombPlanted () && m_isAlive && getCurrentTaskId () != Task::EscapeFromBomb && getCurrentTaskId () != Task::Camp && isOutOfBombTimer ()) {
       completeTask (); // complete current task
 
       // then start escape from bomb immediate
@@ -2211,7 +2211,7 @@ void Bot::checkRadioQueue () {
 
             // check if no more followers are allowed
             for (const auto &bot : bots) {
-               if (bot->m_notKilled) {
+               if (bot->m_isAlive) {
                   if (bot->m_targetEntity == m_radioEntity) {
                      ++numFollowers;
                   }
@@ -2240,7 +2240,7 @@ void Bot::checkRadioQueue () {
                   auto bot = bots[i];
 
                   if (bot != nullptr) {
-                     if (bot->m_notKilled) {
+                     if (bot->m_isAlive) {
                         if (bot->m_targetEntity == m_radioEntity) {
                            bot->m_targetEntity = nullptr;
                            numFollowers--;
@@ -2672,10 +2672,10 @@ void Bot::tryHeadTowardRadioMessage () {
 }
 
 void Bot::checkParachute () {
-   static auto parachute = engfuncs.pfnCVarGetPointer (conf.fetchCustom ("AMXParachuteCvar").chars ());
+   static ConVarRef parachute (conf.fetchCustom ("AMXParachuteCvar").chars ());
 
    // if no cvar or it's not enabled do not bother
-   if (parachute && parachute->value > 0.0f) {
+   if (parachute.exists () && parachute.value () > 0.0f) {
       if (isOnLadder () || pev->velocity.z > -50.0f || isOnFloor ()) {
          m_fallDownTime = 0.0f;
       }
@@ -2696,7 +2696,7 @@ void Bot::frame () {
    if (m_updateTime <= game.time ()) {
       update ();
    }
-   else if (m_notKilled) {
+   else if (m_isAlive) {
       updateLookAngles ();
    }
 
@@ -2704,7 +2704,7 @@ void Bot::frame () {
       return;
    }
 
-   if (bots.isBombPlanted () && m_team == Team::CT && m_notKilled) {
+   if (bots.isBombPlanted () && m_team == Team::CT && m_isAlive) {
       const Vector &bombPosition = graph.getBombOrigin ();
 
       if (!m_hasProgressBar && getCurrentTaskId () != Task::EscapeFromBomb && pev->origin.distanceSq (bombPosition) < cr::sqrf (1540.0f) && !isBombDefusing (bombPosition)) {
@@ -2746,9 +2746,10 @@ void Bot::update () {
       kick ();
       return;
    }
+   const auto tid = getCurrentTaskId ();
 
    m_canChooseAimDirection = true;
-   m_notKilled = util.isAlive (ent ());
+   m_isAlive = util.isAlive (ent ());
    m_team = game.getTeam (ent ());
    m_healthValue = cr::clamp (pev->health, 0.0f, 100.0f);
 
@@ -2767,11 +2768,19 @@ void Bot::update () {
    // is bot movement enabled
    bool botMovement = false;
 
+   // for some unknown reason some bots have speed of 1.0 after respawn on csdm
+   if (game.is (GameFlags::CSDM) && cr::fequal (pev->maxspeed, 1.0f) && tid == Task::Normal) {
+      static ConVarRef sv_maxspeed ("sv_maxspeed");
+
+      // reset max speed to max value, thus allowing bot movement
+      pev->maxspeed = sv_maxspeed.value ();
+   }
+
    // if the bot hasn't selected stuff to start the game yet, go do that...
    if (m_notStarted) {
       updateTeamJoin (); // select team & class
    }
-   else if (!m_notKilled) {
+   else if (!m_isAlive) {
       // we got a teamkiller? vote him away...
       if (m_voteKickIndex != m_lastVoteKick && cv_tkpunish.bool_ ()) {
          issueCommand ("vote %d", m_voteKickIndex);
@@ -2793,7 +2802,7 @@ void Bot::update () {
          m_voteMap = 0;
       }
    }
-   else if (m_buyingFinished && !(pev->maxspeed < 10.0f && getCurrentTaskId () != Task::PlantBomb && getCurrentTaskId () != Task::DefuseBomb) && !cv_freeze_bots.bool_ () && !graph.hasChanged ()) {
+   else if (m_buyingFinished && !(pev->maxspeed < 10.0f && tid != Task::PlantBomb && tid != Task::DefuseBomb) && !cv_freeze_bots.bool_ () && !graph.hasChanged ()) {
       botMovement = true;
    }
    checkMsgQueue ();
@@ -2825,7 +2834,7 @@ void Bot::logicDuringFreezetime () {
    Array <Bot *> teammates;
 
    for (const auto &bot : bots) {
-      if (bot->m_notKilled && bot->m_team == m_team && seesEntity (bot->pev->origin) && bot.get () != this) {
+      if (bot->m_isAlive && bot->m_team == m_team && seesEntity (bot->pev->origin) && bot.get () != this) {
          teammates.push (bot.get ());
       }
    }
@@ -3060,7 +3069,7 @@ void Bot::logic () {
    checkParachute ();
 
    // display some debugging thingy to host entity
-   if (!game.isDedicated () && cv_debug.int_ () >= 1) {
+   if (cv_debug.int_ () >= 1) {
       showDebugOverlay ();
    }
 
@@ -3073,6 +3082,7 @@ void Bot::logic () {
 void Bot::spawned () {
    if (game.is (GameFlags::CSDM)) {
       newRound ();
+      clearTasks ();
    }
 }
 
@@ -3208,15 +3218,15 @@ void Bot::showDebugOverlay () {
    // green = destination origin
    // blue = ideal angles
    // red = view angles
-   const auto lifeTime = 1;
+   constexpr auto kArrowLifeTime = 1;
 
-   game.drawLine (overlayEntity, getEyesPos (), m_destOrigin, 10, 0, { 0, 255, 0 }, 250, 5, lifeTime, DrawLine::Arrow);
-   game.drawLine (overlayEntity, getEyesPos () - Vector (0.0f, 0.0f, 16.0f), getEyesPos () + m_idealAngles.forward () * 300.0f, 10, 0, { 0, 0, 255 }, 250, 5, lifeTime, DrawLine::Arrow);
-   game.drawLine (overlayEntity, getEyesPos () - Vector (0.0f, 0.0f, 32.0f), getEyesPos () + pev->v_angle.forward () * 300.0f, 10, 0, { 255, 0, 0 }, 250, 5, lifeTime, DrawLine::Arrow);
+   game.drawLine (overlayEntity, getEyesPos (), m_destOrigin, 10, 0, { 0, 255, 0 }, 250, 5, kArrowLifeTime, DrawLine::Arrow);
+   game.drawLine (overlayEntity, getEyesPos () - Vector (0.0f, 0.0f, 16.0f), getEyesPos () + m_idealAngles.forward () * 300.0f, 10, 0, { 0, 0, 255 }, 250, 5, kArrowLifeTime, DrawLine::Arrow);
+   game.drawLine (overlayEntity, getEyesPos () - Vector (0.0f, 0.0f, 32.0f), getEyesPos () + pev->v_angle.forward () * 300.0f, 10, 0, { 255, 0, 0 }, 250, 5, kArrowLifeTime, DrawLine::Arrow);
 
    // now draw line from source to destination
    for (size_t i = 0; i < m_pathWalk.length () && i + 1 < m_pathWalk.length (); ++i) {
-      game.drawLine (overlayEntity, graph[m_pathWalk.at (i)].origin, graph[m_pathWalk.at (i + 1)].origin, 15, 0, { 255, 100, 55 }, 200, 5, lifeTime, DrawLine::Arrow);
+      game.drawLine (overlayEntity, graph[m_pathWalk.at (i)].origin, graph[m_pathWalk.at (i + 1)].origin, 15, 0, { 255, 100, 55 }, 200, 5, kArrowLifeTime, DrawLine::Arrow);
    }
 }
 
@@ -3250,7 +3260,9 @@ void Bot::takeDamage (edict_t *inflictor, int damage, int armor, int bits) {
    }
 
    if (util.isPlayer (inflictor) || (cv_attack_monsters.bool_ () && util.isMonster (inflictor))) {
-      if (!util.isMonster (inflictor) && cv_tkpunish.bool_ () && game.getTeam (inflictor) == m_team && !util.isFakeClient (inflictor)) {
+      const auto inflictorTeam = game.getTeam (inflictor);
+
+      if (!util.isMonster (inflictor) && cv_tkpunish.bool_ () && inflictorTeam == m_team && !util.isFakeClient (inflictor)) {
          // alright, die you team killer!!!
          m_actualReactionTime = 0.0f;
          m_seeEnemyTime = game.time ();
@@ -3281,7 +3293,7 @@ void Bot::takeDamage (edict_t *inflictor, int damage, int armor, int bits) {
          }
          clearTask (Task::Camp);
 
-         if (game.isNullEntity (m_enemy) && m_team != game.getTeam (inflictor)) {
+         if (game.isNullEntity (m_enemy) && m_team != inflictorTeam) {
             m_lastEnemy = inflictor;
             m_lastEnemyOrigin = inflictor->v.origin;
 
@@ -3504,9 +3516,11 @@ void Bot::debugMsgInternal (StringRef str) {
    else if (level != 3) {
       playMessage = true;
    }
+
    if (playMessage && level > 3) {
       logger.message (printBuf.chars ());
    }
+
    if (playMessage) {
       ctrl.msg (printBuf.chars ());
       sendToChat (printBuf, false);
@@ -3810,7 +3824,7 @@ bool Bot::isBombDefusing (const Vector &bombOrigin) {
       auto bot = bots[client.ent];
       const auto bombDistanceSq = client.origin.distanceSq (bombOrigin);
 
-      if (bot && !bot->m_notKilled) {
+      if (bot && !bot->m_isAlive) {
          if (m_team != bot->m_team || bot->getCurrentTaskId () == Task::EscapeFromBomb) {
             continue; // skip other mess
          }

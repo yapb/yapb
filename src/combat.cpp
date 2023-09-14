@@ -17,6 +17,10 @@ ConVar mp_friendlyfire ("mp_friendlyfire", nullptr, Var::GameRef);
 ConVar sv_gravity ("sv_gravity", nullptr, Var::GameRef);
 
 int Bot::numFriendsNear (const Vector &origin, const float radius) {
+   if (game.is (GameFlags::FreeForAll)) {
+      return 0; // no friends on free for all mode
+   }
+
    int count = 0;
    const float radiusSq = cr::sqrf (radius);
 
@@ -33,6 +37,10 @@ int Bot::numFriendsNear (const Vector &origin, const float radius) {
 }
 
 int Bot::numEnemiesNear (const Vector &origin, const float radius) {
+   if (game.is (GameFlags::FreeForAll)) {
+      return 0; // no enemies on free for all mode
+   }
+
    int count = 0;
    const float radiusSq = cr::sqrf (radius);
 
@@ -372,7 +380,7 @@ bool Bot::lookupEnemies () {
 
          // now alarm all teammates who see this bot & don't have an actual enemy of the bots enemy should simulate human players seeing a teammate firing
          for (const auto &other : bots) {
-            if (!other->m_notKilled || other->m_team != m_team || other.get () == this) {
+            if (!other->m_isAlive || other->m_team != m_team || other.get () == this) {
                continue;
             }
 
