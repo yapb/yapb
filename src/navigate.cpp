@@ -423,7 +423,7 @@ void Bot::ignoreCollision () {
 }
 
 void Bot::doPlayerAvoidance (const Vector &normal) {
-   if (cv_has_team_semiclip.bool_ ()) {
+   if (cv_has_team_semiclip.bool_ () || game.is (GameFlags::FreeForAll)) {
       return; // no player avoiding when with semiclip plugin
    }
 
