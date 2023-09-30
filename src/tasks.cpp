@@ -1084,8 +1084,8 @@ void Bot::throwExplosive_ () {
 
    ignoreCollision ();
 
-   if (pev->origin.distanceSq (dest) < cr::sqrf (450.0f)) {
-      // heck, I don't wanna blow up myself
+   if (!game.mapIs(MapFlags::GrenadeWar) && (pev->origin.distanceSq (dest) < cr::sqrf (450.0f))) {
+   // heck, I don't wanna blow up myself
       m_grenadeCheckTime = game.time () + kGrenadeCheckTime * 2.0f;
 
       selectBestWeapon ();
@@ -1099,7 +1099,7 @@ void Bot::throwExplosive_ () {
       m_grenade = calcToss (pev->origin, dest);
    }
 
-   if (m_grenade.lengthSq () <= 100.0f) {
+   if (!game.mapIs(MapFlags::GrenadeWar) &&  (m_grenade.lengthSq () <= 100.0f)) {
       m_grenadeCheckTime = game.time () + kGrenadeCheckTime * 2.0f;
 
       selectBestWeapon ();
