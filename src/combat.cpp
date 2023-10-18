@@ -1861,7 +1861,17 @@ void Bot::checkGrenadesThrow () {
    };
 
    // check if throwing a grenade is a good thing to do...
-   if (preventibleTasks || isInNarrowPlace () || cv_ignore_enemies.bool_ () || m_isUsingGrenade || m_grenadeRequested || m_isReloading || (isKnifeMode () && !bots.isBombPlanted ()) || m_grenadeCheckTime >= game.time ()) {
+   auto throwingCondition = game.mapIs(MapFlags::GrenadeWar)
+      ? false
+      : (preventibleTasks
+         || isInNarrowPlace()
+         || cv_ignore_enemies.bool_()
+         || m_isUsingGrenade
+         || m_grenadeRequested
+         || m_isReloading
+         || (isKnifeMode() && !bots.isBombPlanted())
+         || m_grenadeCheckTime >= game.time());
+   if (throwingCondition) {
       clearThrowStates (m_states);
       return;
    }
@@ -1869,7 +1879,8 @@ void Bot::checkGrenadesThrow () {
    // check again in some seconds
    m_grenadeCheckTime = game.time () + kGrenadeCheckTime;
 
-   if (!util.isAlive (m_lastEnemy) || !(m_states & (Sense::SuspectEnemy | Sense::HearingEnemy))) {
+   auto senseCondition = game.mapIs(MapFlags::GrenadeWar) ? false : !(m_states & (Sense::SuspectEnemy | Sense::HearingEnemy));
+   if (!util.isAlive (m_lastEnemy) || senseCondition) {
       clearThrowStates (m_states);
       return;
    }
@@ -1911,7 +1922,10 @@ void Bot::checkGrenadesThrow () {
    }
 
    // enemy within a good throw distance?
-   if (!m_lastEnemyOrigin.empty () && distanceSq > cr::sqrf (grenadeToThrow == Weapon::Smoke ? 200.0f : 400.0f) && distanceSq < cr::sqrf (1200.0f)) {
+   auto grenadeToThrowCondition = game.mapIs(MapFlags::GrenadeWar)
+      ? 100.0f
+      : grenadeToThrow == Weapon::Smoke ? 200.0f : 400.0f;
+   if (!m_lastEnemyOrigin.empty () && distanceSq > cr::sqrf (grenadeToThrowCondition) && distanceSq < cr::sqrf (1200.0f)) {
       bool allowThrowing = true;
 
       // care about different grenades

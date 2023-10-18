@@ -56,6 +56,7 @@ CR_DECLARE_SCOPED_ENUM (MapFlags,
    Escape = cr::bit (3),
    KnifeArena = cr::bit (4),
    FightYard = cr::bit (5),
+   GrenadeWar = cr::bit(6),
    HasDoors = cr::bit (10), // additional flags
    HasButtons = cr::bit (11) // map has buttons
 )
