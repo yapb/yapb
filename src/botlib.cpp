@@ -1907,6 +1907,9 @@ void Bot::filterTasks () {
          else if (m_isCreature) {
             ratio = 0.0f;
          }
+         else if (game.is (GameFlags::CSDM)) {
+            ratio = 0.0f;
+         }
          else {
             ratio /= 2.0f; // reduce seek cover otherwise
          }
