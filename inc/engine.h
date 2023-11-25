@@ -196,6 +196,9 @@ public:
    // checks whether software rendering is enabled
    bool isSoftwareRenderer ();
 
+   // checks if this is 25th anniversary half-life update
+   bool is25thAnniversaryUpdate ();
+
    // load the cs binary in non metamod mode
    bool loadCSBinary ();
 

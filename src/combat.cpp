@@ -1871,6 +1871,7 @@ void Bot::checkGrenadesThrow () {
          || m_isReloading
          || (isKnifeMode() && !bots.isBombPlanted())
          || m_grenadeCheckTime >= game.time());
+
    if (throwingCondition) {
       clearThrowStates (m_states);
       return;
@@ -1925,6 +1926,7 @@ void Bot::checkGrenadesThrow () {
    auto grenadeToThrowCondition = game.mapIs(MapFlags::GrenadeWar)
       ? 100.0f
       : grenadeToThrow == Weapon::Smoke ? 200.0f : 400.0f;
+
    if (!m_lastEnemyOrigin.empty () && distanceSq > cr::sqrf (grenadeToThrowCondition) && distanceSq < cr::sqrf (1200.0f)) {
       bool allowThrowing = true;
 

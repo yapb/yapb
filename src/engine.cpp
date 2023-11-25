@@ -552,6 +552,12 @@ bool Game::isSoftwareRenderer () {
    return false;
 }
 
+bool Game::is25thAnniversaryUpdate () {
+   static ConVarRef sv_use_steam_networking ("sv_use_steam_networking");
+
+   return sv_use_steam_networking.exists ();
+}
+
 void Game::addNewCvar (const char *name, const char *value, const char *info, bool bounded, float min, float max, int32_t varType, bool missingAction, const char *regval, ConVar *self) {
    // this function adds globally defined variable to registration stack
 
@@ -1227,6 +1233,9 @@ float LightMeasure::getLightLevel (const Vector &point) {
    // it's depends if we're are on dedicated or on listenserver
    auto recursiveCheck = [&] () -> bool {
       if (!game.isSoftwareRenderer ()) {
+         if (game.is25thAnniversaryUpdate ()) {
+            return recursiveLightPoint <msurface_hw_25anniversary_t, mnode_hw_t> (reinterpret_cast <mnode_hw_t *> (m_worldModel->nodes), point, endPoint);
+         }
          return recursiveLightPoint <msurface_hw_t, mnode_hw_t> (reinterpret_cast <mnode_hw_t *> (m_worldModel->nodes), point, endPoint);
       }
       return recursiveLightPoint <msurface_t, mnode_t> (m_worldModel->nodes, point, endPoint);
