@@ -333,7 +333,7 @@ void Game::registerEngineCommand (const char *command, void func ()) {
    // pointed to by "function" in order to handle it.
 
    // check for hl pre 1.1.0.4, as it's doesn't have pfnAddServerCommand
-   if (!plat.checkPointer (engfuncs.pfnAddServerCommand)) {
+   if (!plat.isValidPtr (engfuncs.pfnAddServerCommand)) {
       logger.fatal ("%s's minimum HL engine version is 1.1.0.4 and minimum Counter-Strike is Beta 6.5. Please update your engine / game version.", product.name);
    }
    engfuncs.pfnAddServerCommand (const_cast <char *> (command), func);
@@ -848,6 +848,19 @@ bool Game::postload () {
       });
    }
 
+   // setup flags
+   if (game.isSoftwareRenderer ()) {
+      m_gameFlags |= GameFlags::SwRenderer;
+   }
+   else {
+      m_gameFlags |= GameFlags::SwRenderer;
+   }
+
+   // is 25th anniversary
+   if (game.is25thAnniversaryUpdate ()) {
+      m_gameFlags |= GameFlags::AnniversaryHL25;
+   }
+
    // initialize weapons
    conf.initWeapons ();
 
@@ -1048,6 +1061,18 @@ void Game::printBotVersion () {
       botRuntimeFlags.push ("Metamod");
    }
 
+   if (is (GameFlags::AnniversaryHL25)) {
+      botRuntimeFlags.push ("HL25");
+   }
+
+   if (is (GameFlags::SwRenderer)) {
+      botRuntimeFlags.push ("SWR");
+   }
+
+   if (is (GameFlags::HwRenderer)) {
+      botRuntimeFlags.push ("HWR");
+   }
+
    // print if we're using sse 4.x instructions
    if (cpuflags.sse41 || cpuflags.sse42 || cpuflags.neon) {
       Array <String> simdLevels {};
@@ -1232,8 +1257,8 @@ float LightMeasure::getLightLevel (const Vector &point) {
 
    // it's depends if we're are on dedicated or on listenserver
    auto recursiveCheck = [&] () -> bool {
-      if (!game.isSoftwareRenderer ()) {
-         if (game.is25thAnniversaryUpdate ()) {
+      if (!game.is (GameFlags::SwRenderer)) {
+         if (game.is (GameFlags::AnniversaryHL25)) {
             return recursiveLightPoint <msurface_hw_25anniversary_t, mnode_hw_t> (reinterpret_cast <mnode_hw_t *> (m_worldModel->nodes), point, endPoint);
          }
          return recursiveLightPoint <msurface_hw_t, mnode_hw_t> (reinterpret_cast <mnode_hw_t *> (m_worldModel->nodes), point, endPoint);

@@ -284,7 +284,7 @@ bool Bot::lookupEnemies () {
             }
 
             // check the engine PVS
-            if (!frustum.check (m_viewFrustum, interesting) || !game.checkVisibility (interesting, set)) {
+            if (!game.checkVisibility (interesting, set)) {
                continue;
             }
 
@@ -310,7 +310,7 @@ bool Bot::lookupEnemies () {
          player = client.ent;
 
          // check the engine PVS
-         if (!frustum.check (m_viewFrustum, player) || !game.checkVisibility (player, set)) {
+         if (!game.checkVisibility (player, set)) {
             continue;
          }
 
@@ -322,7 +322,7 @@ bool Bot::lookupEnemies () {
             }
             const float distanceSq = player->v.origin.distanceSq (pev->origin);
 
-            if (distanceSq < nearestDistanceSq) {
+            if (distanceSq * 0.7f < nearestDistanceSq) {
                nearestDistanceSq = distanceSq;
                newEnemy = player;
 
@@ -333,7 +333,7 @@ bool Bot::lookupEnemies () {
             }
          }
       }
-      m_enemyUpdateTime = game.time () + (usesKnife () ? 1.0f : 0.75f);
+      m_enemyUpdateTime = game.time () + (usesKnife () ? 1.0f : 0.5f);
       
       if (game.isNullEntity (newEnemy) && !game.isNullEntity (shieldEnemy)) {
          newEnemy = shieldEnemy;
