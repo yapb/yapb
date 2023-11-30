@@ -520,7 +520,6 @@ void Game::prepareBotArgs (edict_t *ent, String str) {
 }
 
 bool Game::isSoftwareRenderer () {
-
    // xash always use "hw" structures
    if (is (GameFlags::Xash3D)) {
       return false;
@@ -848,14 +847,6 @@ bool Game::postload () {
       });
    }
 
-   // setup flags
-   if (game.isSoftwareRenderer ()) {
-      m_gameFlags |= GameFlags::SwRenderer;
-   }
-   else {
-      m_gameFlags |= GameFlags::SwRenderer;
-   }
-
    // is 25th anniversary
    if (game.is25thAnniversaryUpdate ()) {
       m_gameFlags |= GameFlags::AnniversaryHL25;
@@ -1065,14 +1056,6 @@ void Game::printBotVersion () {
       botRuntimeFlags.push ("HL25");
    }
 
-   if (is (GameFlags::SwRenderer)) {
-      botRuntimeFlags.push ("SWR");
-   }
-
-   if (is (GameFlags::HwRenderer)) {
-      botRuntimeFlags.push ("HWR");
-   }
-
    // print if we're using sse 4.x instructions
    if (cpuflags.sse41 || cpuflags.sse42 || cpuflags.neon) {
       Array <String> simdLevels {};
@@ -1255,10 +1238,13 @@ float LightMeasure::getLightLevel (const Vector &point) {
    Vector endPoint (point);
    endPoint.z -= 2048.0f;
 
+   static bool isSoftRenderer = game.isSoftwareRenderer ();
+   static bool is25Anniversary = game.is25thAnniversaryUpdate ();
+
    // it's depends if we're are on dedicated or on listenserver
    auto recursiveCheck = [&] () -> bool {
-      if (!game.is (GameFlags::SwRenderer)) {
-         if (game.is (GameFlags::AnniversaryHL25)) {
+      if (!isSoftRenderer) {
+         if (is25Anniversary) {
             return recursiveLightPoint <msurface_hw_25anniversary_t, mnode_hw_t> (reinterpret_cast <mnode_hw_t *> (m_worldModel->nodes), point, endPoint);
          }
          return recursiveLightPoint <msurface_hw_t, mnode_hw_t> (reinterpret_cast <mnode_hw_t *> (m_worldModel->nodes), point, endPoint);
