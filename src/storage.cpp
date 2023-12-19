@@ -318,13 +318,12 @@ String BotStorage::buildPath (int32_t file, bool isMemoryLoad) {
    path.clear ();
 
    // if not memory file we're don't need game dir
-   if (!isMemoryLoad) {
-      path.emplace (game.getRunningModName ());
+   if (isMemoryLoad) {
+      path.emplace (getRunningPathVFS ());
    }
-
-   // always append addons/product
-   path.emplace (folders.addons);
-   path.emplace (folders.bot);
+   else {
+      path.emplace (getRunningPath ());
+   }
 
    // the datadir
    path.emplace (folders.data);
@@ -341,7 +340,7 @@ String BotStorage::buildPath (int32_t file, bool isMemoryLoad) {
       auto timebuf = strings.chars ();
 
       strftime (timebuf, StringBuffer::StaticBufferSize, "L%d%m%Y", &timeinfo);
-      path.emplace (strings.format ("%s_%s.%s", folders.bot, timebuf, paths[file].second));
+      path.emplace (strings.format ("%s_%s.%s", product.nameLower, timebuf, paths[file].second));
    }
    else {
       String mapName = game.getMapName ();
@@ -394,4 +393,39 @@ void BotStorage::unlinkFromDisk () {
    graph.reset (); // re-initialize points
 }
 
+String BotStorage::getRunningPath () {
+   // this function get's relative path against bot library (bot library should reside in bin dir)
+
+   static String path;
+
+   // compute the full path to the our folder
+   if (path.empty ()) {
+      path = SharedLibrary::path (&bstor);
+
+      if (path.startsWith ("<unk")) {
+         logger.fatal ("Unable to detect library path. Giving up...");
+      }
+      auto parts = path.substr (1).split (kPathSeparator);
+
+      parts.pop (); // remove library name
+      parts.pop (); // remove bin directory
+
+      path = path.substr (0, 1) + String::join (parts, kPathSeparator);
+   }
+   return path;
+}
+
+String BotStorage::getRunningPathVFS () {
+   static String path;
+
+   if (path.empty ()) {
+      path = getRunningPath ();
+
+      path = path.substr (path.find (game.getRunningModName ())); // skip to the game dir
+      path = path.substr (path.find (kPathSeparator) + 1); // skip the game dir
+   }
+   return path;
+}
+
 #endif // BOT_STORAGE_EXPLICIT_INSTANTIATIONS
+

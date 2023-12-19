@@ -206,10 +206,10 @@ int BotControl::cmdCvars () {
 
    // if save requested, dump cvars to main config
    if (isSave) {
-      auto cfgPath = strings.joinPath (game.getRunningModName (), folders.addons, folders.bot, folders.config, strings.format ("%s.%s", product.nameLower, kConfigExtension));
+      auto cfgPath = strings.joinPath (bstor.getRunningPath (), folders.config, strings.format ("%s.%s", product.nameLower, kConfigExtension));
 
       if (isSaveMap) {
-         cfgPath = strings.joinPath (game.getRunningModName (), folders.addons, folders.bot, folders.config, "maps", strings.format ("%s.%s", game.getMapName (), kConfigExtension));
+         cfgPath = strings.joinPath (bstor.getRunningPath (), folders.config, "maps", strings.format ("%s.%s", game.getMapName (), kConfigExtension));
       }
       cfg.open (cfgPath, "wt");
       cfg.puts ("// Configuration file for %s\n\n", product.name);

@@ -807,8 +807,8 @@ bool Game::postload () {
       game.print (msg);
    });
 
-   auto ensureBotPathExists = [this] (StringRef dir1, StringRef dir2) {
-      File::makePath (strings.joinPath (getRunningModName (), folders.addons, folders.bot, dir1, dir2).chars ());
+   auto ensureBotPathExists = [] (StringRef dir1, StringRef dir2) {
+      File::makePath (strings.joinPath (bstor.getRunningPath (), dir1, dir2).chars ());
    };
 
    // ensure we're have all needed directories

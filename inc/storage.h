@@ -78,6 +78,12 @@ public:
    // builds the filename to requested filename
    String buildPath (int32_t type, bool isMemoryLoad = false);
 
+   // get's relative path against bot library (bot library should reside in bin dir)
+   String getRunningPath ();
+
+   // same as above, but with valve-specific filesystem paths (loadfileforme)
+   String getRunningPathVFS ();
+
    // converts storage option to storage filename
    int32_t storageToBotFile (int32_t options);
 

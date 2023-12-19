@@ -621,13 +621,15 @@ void BotConfig::loadDifficultyConfig () {
 }
 
 void BotConfig::loadMapSpecificConfig () {
-   auto mapSpecificConfig = strings.joinPath (folders.addons, folders.bot, folders.config, "maps", strings.format ("%s.%s", game.getMapName (), kConfigExtension));
+   auto mapSpecificConfig = strings.joinPath (folders.config, "maps", strings.format ("%s.%s", game.getMapName (), kConfigExtension));
 
    // check existence of file
-   if (plat.fileExists (strings.joinPath (game.getRunningModName (), mapSpecificConfig).chars ())) {
-      game.serverCommand ("exec %s", mapSpecificConfig);
+   if (plat.fileExists (strings.joinPath (bstor.getRunningPath (), mapSpecificConfig).chars ())) {
+      auto mapSpecificConfigForExec = strings.joinPath (bstor.getRunningPathVFS (), mapSpecificConfig);
+      mapSpecificConfigForExec.replace ("\\", "/");
 
-      ctrl.msg ("Executed map-specific config: %s", mapSpecificConfig);
+      game.serverCommand ("exec %s", mapSpecificConfigForExec);
+      ctrl.msg ("Executed map-specific config: %s", mapSpecificConfigForExec);
    }
 }
 
@@ -837,7 +839,7 @@ bool BotConfig::openConfig (StringRef fileName, StringRef errorIfNotExists, MemF
    }
 
    // save config dir
-   auto configDir = strings.joinPath (folders.addons, folders.bot, folders.config);
+   auto configDir = strings.joinPath (bstor.getRunningPathVFS (), folders.config);
 
    if (languageDependant) {
       if (fileName.startsWith ("lang") && cv_language.str () == "en") {

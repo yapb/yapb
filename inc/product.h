@@ -53,8 +53,6 @@ public:
    ~Folders () = default;
 
 public:
-   static constexpr StringRef bot { "yapb" };
-   static constexpr StringRef addons { "addons" };
    static constexpr StringRef config { "conf" };
    static constexpr StringRef data { "data" };
    static constexpr StringRef lang { "lang" };
