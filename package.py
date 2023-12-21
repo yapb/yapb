@@ -95,7 +95,7 @@ class BotRelease(object):
       self.project = 'yapb'
       self.version = sys.argv[1]
       self.artifacts = 'artifacts'
-      self.graphs = 'yapb.jeefo.net'
+      self.graphs = 'https://raw.githubusercontent.com/yapb/graph/master'
       self.win32exe = 'https://github.com/yapb/setup/releases/latest/download/botsetup.exe'
       
       meson_src_root_env = 'MESON_SOURCE_ROOT'
@@ -159,7 +159,7 @@ class BotRelease(object):
          
    def get_graph_file(self, name: str):
       file = os.path.join(self.bot_dir, 'data', 'graph', f'{name}.graph')
-      url = f'http://{self.graphs}/graph/{name}.graph'
+      url = f'{self.graphs}/graph/{name}.graph'
       
       if os.path.exists(file):
          return
@@ -168,7 +168,7 @@ class BotRelease(object):
 
    def create_graphs(self):
       default_list = 'default.graph.txt'
-      self.http_pull(f'http://{self.graphs}/DEFAULT.txt', default_list)
+      self.http_pull(f'{self.graphs}/DEFAULT.txt', default_list)
 
       with open(default_list) as file:
          files = [line.rstrip() for line in file.readlines()]
@@ -193,7 +193,7 @@ class BotRelease(object):
          for dir in empty_dirs:
             dir_path = os.path.join(root, dir)
             
-            zif = zipfile.ZipInfo(dir_path[length:] + '/')
+            zif = zipfile.ZipInfo(dir_path[length:] + '/', date_time=datetime.datetime.now().timetuple())
             handle.writestr(zif, '')
             
          empty_dirs = []
@@ -206,7 +206,7 @@ class BotRelease(object):
       zf.close()
    
    def convert_zip_txz(self, zfn: str, txz: str):
-      timeshift = int((datetime.datetime.now() - datetime.datetime.utcnow()).total_seconds())
+      timeshift = int((datetime.datetime.now() - datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)).total_seconds())
       
       with zipfile.ZipFile(zfn) as zipf:
          with tarfile.open(txz, 'w:xz') as tarf:
