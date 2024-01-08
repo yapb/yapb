@@ -547,7 +547,7 @@ Vector Bot::getBodyOffsetError (float distance) {
    m_lastEnemyOrigin = spot;
 
    // add some error to unskilled bots
-   if (m_difficulty < Difficulty::Hard) {
+   if (m_difficulty < Difficulty::Normal) {
       spot += getBodyOffsetError (distance);
    }
    return spot;
@@ -1151,7 +1151,7 @@ void Bot::attackMovement () {
    }
 
    // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
-   if ((m_states & Sense::SeeingEnemy) && approach < 30 && !bots.isBombPlanted () && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
+   if (!game.is (GameFlags::CSDM) && (m_states & Sense::SeeingEnemy) && approach < 30 && !bots.isBombPlanted () && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
       m_moveSpeed = -pev->maxspeed;
       startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, true);
    }
