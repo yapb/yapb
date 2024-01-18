@@ -140,7 +140,7 @@ SharedLibrary::Func DynamicLinkerHook::lookup (SharedLibrary::Handle module, con
 
 bool DynamicLinkerHook::callPlayerFunction (edict_t *ent) {
    auto callPlayer = [&] () {
-      reinterpret_cast <EntityProto> (m_exports["player"]) (&ent->v);
+      reinterpret_cast <EntityProto> (reinterpret_cast <void *> (m_exports["player"])) (&ent->v);
    };
 
    if (m_exports.exists ("player")) {
@@ -153,7 +153,7 @@ bool DynamicLinkerHook::callPlayerFunction (edict_t *ent) {
       logger.error ("Cannot resolve player() function in GameDLL.");
       return false;
    }
-   m_exports["player"] = reinterpret_cast <SharedLibrary::Func> (playerFunction);
+   m_exports["player"] = reinterpret_cast <SharedLibrary::Func> (reinterpret_cast <void *> (playerFunction));
    callPlayer ();
 
    return true;
