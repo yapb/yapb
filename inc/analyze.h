@@ -52,6 +52,9 @@ private:
    // cleanup bad nodes
    void cleanup ();
 
+   // show overlay message about analyzing
+   void displayOverlayMessage ();
+
 public:
 
    // node should be created as crouch

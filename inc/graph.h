@@ -204,7 +204,7 @@ public:
    int getForAnalyzer (const Vector &origin, const float maxRange);
    int getNearest (const Vector &origin, const float range = kInfiniteDistance, int flags = -1);
    int getNearestNoBuckets (const Vector &origin, const float range = kInfiniteDistance, int flags = -1);
-   int getEditorNearest ();
+   int getEditorNearest (const float maxRange = 50.0f);
    int clearConnections (int index);
    int getBspSize ();
    int locateBucket (const Vector &pos);
@@ -302,8 +302,8 @@ public:
    }
 
    // check nodes range
-   bool exists (int index) const {
-      return index >= 0 && index < length ();
+   template <typename U> bool exists (U index) const {
+      return index >= 0 && index < static_cast <U> (length ());
    }
 
    // get real nodes num

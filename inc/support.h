@@ -17,10 +17,8 @@ private:
 
    StringArray m_sentences {};
    SmallArray <Client> m_clients {};
-   SmallArray <Twin <String, String>> m_tags {};
 
    HashMap <int32_t, String> m_weaponAlias {};
-   Detour <decltype (sendto)> m_sendToDetour { };
 
 public:
    BotSupport ();
@@ -67,22 +65,10 @@ public:
    bool findNearestPlayer (void **holder, edict_t *to, float searchDistance = 4096.0, bool sameTeam = false, bool needBot = false, bool needAlive = false, bool needDrawn = false, bool needBotWithC4 = false);
 
    // tracing decals for bots spraying logos
-   void traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIndex);
+   void decalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex);
 
    // update stats on clients
    void updateClients ();
-
-   // chat helper to strip the clantags out of the string
-   void stripTags (String &line);
-
-   // chat helper to make player name more human-like
-   void humanizePlayerName (String &playerName);
-
-   // chat helper to add errors to the bot chat string
-   void addChatErrors (String &line);
-
-   // chat helper to find keywords for given string
-   bool checkKeywords (StringRef line, String &reply);
 
    // generates ping bitmask for SVC_PINGS message
    int getPingBitmask (edict_t *ent, int loss, int ping);
@@ -95,9 +81,6 @@ public:
 
    // send modified pings to all the clients
    void emitPings (edict_t *to);
-
-   // installs the sendto function interception
-   void installSendTo ();
 
    // checks if same model omitting the models directory
    bool isModel (const edict_t *ent, StringRef model);
@@ -113,6 +96,7 @@ public:
    // re-show welcome after changelevel ?
    void setNeedForWelcome (bool need) {
       m_needToSendWelcome = need;
+      m_welcomeReceiveTime = -1.0f;
    }
 
    // get array of clients
@@ -128,11 +112,6 @@ public:
    // get single client as ref
    Client &getClient (const int index) {
       return m_clients[index];
-   }
-
-   // disables send hook
-   bool disableSendTo () {
-      return m_sendToDetour.restore ();
    }
 
    // gets the shooting cone deviation

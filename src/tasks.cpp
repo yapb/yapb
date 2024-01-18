@@ -270,7 +270,7 @@ void Bot::spraypaint_ () {
          game.testLine (getEyesPos (), getEyesPos () + forward * 128.0f, TraceIgnore::Monsters, ent (), &tr);
 
          // paint the actual logo decal
-         util.traceDecals (pev, &tr, m_logotypeIndex);
+         util.decalTrace (pev, &tr, m_logotypeIndex);
          m_timeLogoSpray = game.time () + rg.get (60.0f, 90.0f);
       }
    }

@@ -144,6 +144,7 @@ void BotConfig::loadNamesConfig () {
       }
       file.close ();
    }
+   m_botNames.shuffle ();
 }
 
 void BotConfig::loadWeaponsConfig () {
@@ -345,6 +346,7 @@ void BotConfig::loadChatterConfig () {
                if (event.str == items.first ()) {
                   // this does common work of parsing comma-separated chatter line
                   auto sentences = items[1].split (",");
+                  sentences.shuffle ();
 
                   for (auto &sound : sentences) {
                      sound.trim ().trim ("\"");
@@ -480,6 +482,10 @@ void BotConfig::loadLanguageConfig () {
       String temp;
       Twin <String, String> lang;
 
+      auto pushTranslatedMsg = [&] () {
+         m_language[hashLangString (lang.first.trim ().chars ())] = lang.second.trim ();
+      };
+
       // clear all the translations before new load
       m_language.clear ();
 
@@ -494,7 +500,7 @@ void BotConfig::loadLanguageConfig () {
             }
 
             if (!lang.second.empty () && !lang.first.empty ()) {
-               m_language[hashLangString (lang.first.trim ().chars ())] = lang.second.trim ();
+               pushTranslatedMsg ();
             }
          }
          else if (line.startsWith ("[TRANSLATED]") && !temp.empty ()) {
@@ -502,6 +508,12 @@ void BotConfig::loadLanguageConfig () {
          }
          else {
             temp += line;
+         }
+
+         // make sure last string is translated
+         if (file.eof () && !lang.first.empty ()) {
+            lang.second = line.trim ();
+            pushTranslatedMsg ();
          }
       }
       file.close ();

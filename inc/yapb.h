@@ -19,25 +19,7 @@ using namespace cr;
 #include <product.h>
 #include <module.h>
 #include <constant.h>
-
-// links keywords and replies together
-struct ChatKeywords {
-   StringArray keywords;
-   StringArray replies;
-   StringArray usedReplies;
-
-public:
-   ChatKeywords () = default;
-
-   ChatKeywords (const StringArray &keywords, const StringArray &replies) {
-      this->keywords.clear ();
-      this->replies.clear ();
-      this->usedReplies.clear ();
-
-      this->keywords.insert (0, keywords);
-      this->replies.insert (0, replies);
-   }
-};
+#include <chatlib.h>
 
 // tasks definition
 struct BotTask {
@@ -125,16 +107,6 @@ struct Client {
    int iconFlags[kGameMaxPlayers]; // flag holding chatter icons
    float iconTimestamp[kGameMaxPlayers]; // timers for chatter icons
    ClientNoise noise;
-};
-
-// define chatting collection structure
-struct ChatCollection {
-   int chatProbability {};
-   float chatDelay {};
-   float timeNextChat {};
-   int entityIndex {};
-   String sayText {};
-   StringArray lastUsedSentences {};
 };
 
 // include bot graph stuff
@@ -855,6 +827,7 @@ private:
 
 #include "config.h"
 #include "support.h"
+#include "hooks.h"
 #include "sounds.h"
 #include "message.h"
 #include "engine.h"

@@ -1842,7 +1842,6 @@ int Bot::findBombNode () {
       return graph.getNearest (bomb, 512.0f); // reliability check
    }
 
-
    int goal = 0, count = 0;
    float lastDistanceSq = kInfiniteDistance;
 

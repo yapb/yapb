@@ -55,11 +55,13 @@
     <ClInclude Include="..\ext\linkage\linkage\metamod.h" />
     <ClInclude Include="..\ext\linkage\linkage\physint.h" />
     <ClInclude Include="..\inc\analyze.h" />
+    <ClInclude Include="..\inc\chatlib.h" />
     <ClInclude Include="..\inc\config.h" />
     <ClInclude Include="..\inc\constant.h" />
     <ClInclude Include="..\inc\control.h" />
     <ClInclude Include="..\inc\engine.h" />
     <ClInclude Include="..\inc\graph.h" />
+    <ClInclude Include="..\inc\hooks.h" />
     <ClInclude Include="..\inc\manager.h" />
     <ClInclude Include="..\inc\message.h" />
     <ClInclude Include="..\inc\module.h" />
@@ -69,26 +71,35 @@
     <ClInclude Include="..\inc\sounds.h" />
     <ClInclude Include="..\inc\storage.h" />
     <ClInclude Include="..\inc\support.h" />
+    <ClInclude Include="..\inc\version.h" />
     <ClInclude Include="..\inc\vision.h" />
     <ClInclude Include="..\inc\vistable.h" />
     <ClInclude Include="..\inc\yapb.h" />
-    <ClInclude Include="..\inc\version.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="yapb.rc">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\analyze.cpp" />
-    <ClCompile Include="..\src\entities.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="..\src\botlib.cpp" />
     <ClCompile Include="..\src\chatlib.cpp" />
     <ClCompile Include="..\src\combat.cpp" />
     <ClCompile Include="..\src\config.cpp" />
     <ClCompile Include="..\src\control.cpp" />
     <ClCompile Include="..\src\engine.cpp" />
+    <ClCompile Include="..\src\entities.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\src\graph.cpp" />
+    <ClCompile Include="..\src\hooks.cpp" />
     <ClCompile Include="..\src\linkage.cpp" />
     <ClCompile Include="..\src\manager.cpp" />
     <ClCompile Include="..\src\message.cpp" />
@@ -102,14 +113,6 @@
     <ClCompile Include="..\src\tasks.cpp" />
     <ClCompile Include="..\src\vision.cpp" />
     <ClCompile Include="..\src\vistable.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="yapb.rc">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-    </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\inc\version.h.in" />

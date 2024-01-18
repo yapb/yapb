@@ -10,12 +10,37 @@
 ConVar cv_chat ("chat", "1", "Enables or disables bots chat functionality.");
 ConVar cv_chat_percent ("chat_percent", "30", "Bot chances to send random dead chat when killed.", true, 0.0f, 100.0f);
 
-void BotSupport::stripTags (String &line) {
+BotChatManager::BotChatManager () {
+   m_clanTags.emplace ("[[", "]]");
+   m_clanTags.emplace ("-=", "=-");
+   m_clanTags.emplace ("-[", "]-");
+   m_clanTags.emplace ("-]", "[-");
+   m_clanTags.emplace ("-}", "{-");
+   m_clanTags.emplace ("-{", "}-");
+   m_clanTags.emplace ("<[", "]>");
+   m_clanTags.emplace ("<]", "[>");
+   m_clanTags.emplace ("[-", "-]");
+   m_clanTags.emplace ("]-", "-[");
+   m_clanTags.emplace ("{-", "-}");
+   m_clanTags.emplace ("}-", "-{");
+   m_clanTags.emplace ("[", "]");
+   m_clanTags.emplace ("{", "}");
+   m_clanTags.emplace ("<", "[");
+   m_clanTags.emplace (">", "<");
+   m_clanTags.emplace ("-", "-");
+   m_clanTags.emplace ("|", "|");
+   m_clanTags.emplace ("=", "=");
+   m_clanTags.emplace ("+", "+");
+   m_clanTags.emplace ("(", ")");
+   m_clanTags.emplace (")", "(");
+}
+
+void BotChatManager::stripTags (String &line) {
    if (line.empty ()) {
       return;
    }
 
-   for (const auto &tag : m_tags) {
+   for (const auto &tag : m_clanTags) {
       const size_t start = line.find (tag.first, 0);
 
       if (start != String::InvalidIndex) {
@@ -30,7 +55,7 @@ void BotSupport::stripTags (String &line) {
    }
 }
 
-void BotSupport::humanizePlayerName (String &playerName) {
+void BotChatManager::humanizePlayerName (String &playerName) {
    if (playerName.empty ()) {
       return;
    }
@@ -49,7 +74,7 @@ void BotSupport::humanizePlayerName (String &playerName) {
    }
 }
 
-void BotSupport::addChatErrors (String &line) {
+void BotChatManager::addChatErrors (String &line) {
    // sometimes switch name to lower characters, only valid for the english languge
    if (rg.chance (8) && cv_language.str () == "en") {
       line.lowercase ();
@@ -72,7 +97,7 @@ void BotSupport::addChatErrors (String &line) {
    }
 }
 
-bool BotSupport::checkKeywords (StringRef line, String &reply) {
+bool BotChatManager::checkKeywords (StringRef line, String &reply) {
    // this function checks is string contain keyword, and generates reply to it
 
    if (!cv_chat.bool_ () || line.empty ()) {
@@ -132,7 +157,7 @@ void Bot::prepareChatMessage (StringRef message) {
    // must be called before return or on the end
    auto finishPreparation = [&] () {
       if (!m_chatBuffer.empty ()) {
-         util.addChatErrors (m_chatBuffer);
+         chatlib.addChatErrors (m_chatBuffer);
       }
    };
 
@@ -153,7 +178,7 @@ void Bot::prepareChatMessage (StringRef message) {
          return "unknown";
       }
       String playerName = ent->v.netname.chars ();
-      util.humanizePlayerName (playerName);
+      chatlib.humanizePlayerName (playerName);
 
       return playerName;
    };
@@ -287,7 +312,7 @@ void Bot::prepareChatMessage (StringRef message) {
 bool Bot::checkChatKeywords (String &reply) {
    // this function parse chat buffer, and prepare buffer to keyword searching
 
-   return util.checkKeywords (utf8tools.strToUpper (m_sayTextBuffer.sayText), reply);
+   return chatlib.checkKeywords (utf8tools.strToUpper (m_sayTextBuffer.sayText), reply);
 }
 
 bool Bot::isReplyingToChat () {
@@ -316,8 +341,8 @@ bool Bot::isReplyingToChat () {
 }
 
 void Bot::checkForChat () {
-
    // say a text every now and then
+
    if (m_isAlive || !cv_chat.bool_ () || game.is (GameFlags::CSDM)) {
       return;
    }

@@ -32,7 +32,58 @@ plugin_info_t Plugin_info = {
    PT_ANYTIME, // when unloadable
 };
 
-CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
+// compilers can't create lambdas with vaargs, so put this one in it's own namespace 
+namespace Hooks {
+   void handler_engClientCommand (edict_t *ent, char const *format, ...) {
+      // this function forces the client whose player entity is ent to issue a client command.
+      // How it works is that clients all have a argv global string in their client DLL that
+      // stores the command string; if ever that string is filled with characters, the client DLL
+      // sends it to the engine as a command to be executed. When the engine has executed that
+      // command, this argv string is reset to zero. Here is somehow a curious implementation of
+      // ClientCommand: the engine sets the command it wants the client to issue in his argv, then
+      // the client DLL sends it back to the engine, the engine receives it then executes the
+      // command therein. Don't ask me why we need all this complicated crap. Anyhow since bots have
+      // no client DLL, be certain never to call this function upon a bot entity, else it will just
+      // make the server crash. Since hordes of uncautious, not to say stupid, programmers don't
+      // even imagine some players on their servers could be bots, this check is performed less than
+      // sometimes actually by their side, that's why we strongly recommend to check it here too. In
+      // case it's a bot asking for a client command, we handle it like we do for bot commands
+
+      if (game.isNullEntity (ent)) {
+         if (game.is (GameFlags::Metamod)) {
+            RETURN_META (MRES_SUPERCEDE);
+         }
+         return;
+      }
+
+      va_list ap;
+      auto buffer = strings.chars ();
+
+      va_start (ap, format);
+      vsnprintf (buffer, StringBuffer::StaticBufferSize, format, ap);
+      va_end (ap);
+
+      if (util.isFakeClient (ent) && !(ent->v.flags & FL_DORMANT)) {
+         auto bot = bots[ent];
+
+         if (bot) {
+            game.botCommand (bot->pev->pContainingEntity, buffer);
+         }
+
+         if (game.is (GameFlags::Metamod)) {
+            RETURN_META (MRES_SUPERCEDE); // prevent bots to be forced to issue client commands
+         }
+         return;
+      }
+
+      if (game.is (GameFlags::Metamod)) {
+         RETURN_META (MRES_IGNORED);
+      }
+      engfuncs.pfnClientCommand (ent, buffer);
+   }
+}
+
+CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
    // this function is called right after GiveFnptrsToDll() by the engine in the game DLL (or
    // what it BELIEVES to be the game DLL), in order to copy the list of MOD functions that can
    // be called by the engine, into a memory block pointed to by the functionTable pointer
@@ -49,7 +100,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       auto api_GetEntityAPI = game.lib ().resolve <decltype (&GetEntityAPI)> (__func__);
 
       // pass other DLLs engine callbacks to function table...
-      if (!api_GetEntityAPI || api_GetEntityAPI (&dllapi, INTERFACE_VERSION) == 0) {
+      if (!api_GetEntityAPI || api_GetEntityAPI (&dllapi, interfaceVersion) == 0) {
          logger.fatal ("Could not resolve symbol \"%s\" in the game dll.", __func__);
       }
       dllfuncs.dllapi_table = &dllapi;
@@ -294,7 +345,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int) {
       dllapi.pfnServerDeactivate ();
 
       // refill export table
-      ents.flush ();
+      entlink.flush ();
    };
 
    table->pfnStartFrame = [] () {
@@ -447,12 +498,12 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       plat.bzero (table, sizeof (enginefuncs_t));
    }
 
-   if (ents.needsBypass () && !game.is (GameFlags::Metamod)) {
+   if (entlink.needsBypass () && !game.is (GameFlags::Metamod)) {
       table->pfnCreateNamedEntity = [] (string_t classname) -> edict_t *{
 
-         if (ents.isPaused ()) {
-            ents.enable ();
-            ents.setPaused (false);
+         if (entlink.isPaused ()) {
+            entlink.enable ();
+            entlink.setPaused (false);
          }
          return engfuncs.pfnCreateNamedEntity (classname);
       };
@@ -601,6 +652,9 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       engfuncs.pfnWriteEntity (value);
    };
 
+   // very ancient engine versions (pre 2xxx builds) needs this to work correctly
+   table->pfnClientCommand = Hooks::handler_engClientCommand;
+
    if (!game.is (GameFlags::Metamod)) {
       table->pfnRegUserMsg = [] (const char *name, int size) {
          // this function registers a "user message" by the engine side. User messages are network
@@ -726,18 +780,19 @@ CR_EXPORT int GetNewDLLFunctions (newgamefuncs_t *table, int *interfaceVersion) 
    // pass them too, else the DLL interfacing wouldn't be complete and the game possibly wouldn't
    // run properly.
 
-   plat.bzero (table, sizeof (newgamefuncs_t));
-
    if (!(game.is (GameFlags::Metamod))) {
       auto api_GetNewDLLFunctions = game.lib ().resolve <decltype (&GetNewDLLFunctions)> (__func__);
 
       // pass other DLLs engine callbacks to function table...
       if (!api_GetNewDLLFunctions || api_GetNewDLLFunctions (&newapi, interfaceVersion) == 0) {
-         logger.error ("Could not resolve symbol \"%s\" in the game dll.", __func__);
+         logger.error ("Could not resolve symbol \"%s\" in the game dll. Continuing...", __func__);
+
+         return HLFalse;
       }
       dllfuncs.newapi_table = &newapi;
       memcpy (table, &newapi, sizeof (newgamefuncs_t));
    }
+   plat.bzero (table, sizeof (newgamefuncs_t));
 
    if (!game.is (GameFlags::Legacy)) {
       table->pfnOnFreeEntPrivateData = [] (edict_t *ent) {
@@ -847,7 +902,7 @@ CR_EXPORT int Meta_Detach (PLUG_LOADTIME now, PL_UNLOAD_REASON reason) {
    practice.save ();
 
    // disable hooks
-   util.disableSendTo ();
+   fakequeries.disable ();
 
    // make sure all stuff cleared
    bots.destroy ();
@@ -912,7 +967,7 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *table, globalvars_t *glob) {
 
    // initialize dynamic linkents (no memory hacking with xash3d)
    if (!game.is (GameFlags::Xash3D)) {
-      ents.initialize ();
+      entlink.initialize ();
    }
 
    // give the engine functions to the other DLL...
@@ -943,7 +998,7 @@ CR_EXPORT int Server_GetPhysicsInterface (int version, server_physics_api_t *phy
    table->version = SV_PHYSICS_INTERFACE_VERSION;
 
    table->SV_CreateEntity = [] (edict_t *ent, const char *name) -> int {
-      auto func = game.lib ().resolve <EntityFunction> (name); // lookup symbol in game dll
+      auto func = game.lib ().resolve <EntityProto> (name); // lookup symbol in game dll
 
       // found one in game dll ?
       if (func) {
@@ -958,85 +1013,6 @@ CR_EXPORT int Server_GetPhysicsInterface (int version, server_physics_api_t *phy
       return HLFalse;
    };
    return HLTrue;
-}
-
-SharedLibrary::Func EntityLinkage::lookup (SharedLibrary::Handle module, const char *function) {
-   static const auto &gamedll = game.lib ().handle ();
-   static const auto &self = m_self.handle ();
-
-   const auto resolve = [&] (SharedLibrary::Handle handle) {
-      return m_dlsym (handle, function);
-   };
-
-   if (ents.needsBypass () && !strcmp (function, "CreateInterface")) {
-      ents.setPaused (true);
-      auto ret = resolve (module);
-
-      ents.disable ();
-
-      return ret;
-   }
-
-   // if requested module is yapb module, put in cache the looked up symbol
-   if (self != module) {
-      return resolve (module);
-   }
-
-#if defined (CR_WINDOWS)
-   if (HIWORD (function) == 0) {
-      return resolve (module);
-   }
-#endif
-   
-   if (m_exports.exists (function)) {
-      return m_exports[function];
-   }
-   auto botAddr = resolve (self);
-
-   if (!botAddr) {
-      auto gameAddr = resolve (gamedll);
-
-      if (gameAddr) {
-         return m_exports[function] = gameAddr;
-      }
-   }
-   else {
-      return m_exports[function] = botAddr;
-   }
-   return nullptr;
-}
-
-void EntityLinkage::callPlayerFunction (edict_t *ent) {
-   EntityFunction playerFunction = nullptr;
-
-   if (game.is (GameFlags::Xash3D)) {
-      playerFunction = game.lib ().resolve <EntityFunction> ("player");
-   }
-   else {
-      playerFunction = reinterpret_cast <EntityFunction> (reinterpret_cast <void *> (lookup (game.lib ().handle (), "player")));
-   }
-
-   if (!playerFunction) {
-      logger.fatal ("Cannot resolve player () function in gamedll.");
-   }
-   else {
-      playerFunction (&ent->v);
-   }
-}
-
-void EntityLinkage::initialize () {
-   if (plat.arm || game.is (GameFlags::Metamod)) {
-      return;
-   }
-
-   m_dlsym.initialize ("kernel32.dll", "GetProcAddress", DLSYM_FUNCTION);
-   m_dlsym.install (reinterpret_cast <void *> (EntityLinkage::lookupHandler), true);
-
-   if (needsBypass ()) {
-      m_dlclose.initialize ("kernel32.dll", "FreeLibrary", DLCLOSE_FUNCTION);
-      m_dlclose.install (reinterpret_cast <void *> (EntityLinkage::closeHandler), true);
-   }
-   m_self.locate (&engfuncs);
 }
 
 // add linkents for android

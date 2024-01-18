@@ -81,7 +81,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
    bots.initQuota ();
 
    // install the sendto hook to fake queries
-   util.installSendTo ();
+   fakequeries.init ();
 
    // flush any print queue
    ctrl.resetFlushTimestamp ();
@@ -332,11 +332,13 @@ void Game::registerEngineCommand (const char *command, void func ()) {
    // that for every "command_name" server command it receives, it should call the function
    // pointed to by "function" in order to handle it.
 
-   // check for hl pre 1.1.0.4, as it's doesn't have pfnAddServerCommand
+   // check for hl pre 1.1.0.4, as it's doesn't have pfnAddServerCommand and many more stuff we need to work
    if (!plat.isValidPtr (engfuncs.pfnAddServerCommand)) {
       logger.fatal ("%s's minimum HL engine version is 1.1.0.4 and minimum Counter-Strike is Beta 6.5. Please update your engine / game version.", product.name);
    }
-   engfuncs.pfnAddServerCommand (const_cast <char *> (command), func);
+   else {
+      engfuncs.pfnAddServerCommand (command, func);
+   }
 }
 
 void Game::playSound (edict_t *ent, const char *sound) {
@@ -392,8 +394,8 @@ bool Game::checkVisibility (edict_t *ent, uint8_t *set) {
 }
 
 uint8_t *Game::getVisibilitySet (Bot *bot, bool pvs) {
-   if (is (GameFlags::Xash3D)) {
-      return nullptr; // TODO: bug fixed in upstream xash3d, should be removed
+   if (is (GameFlags::Xash3DLegacy)) {
+      return nullptr;
    }
    auto eyes = bot->getEyesPos ();
 
@@ -458,6 +460,37 @@ void Game::sendServerMessage (StringRef message) {
       return;
    }
    engfuncs.pfnServerPrint (message.chars ());
+}
+
+void Game::sendHudMessage (edict_t *ent, const hudtextparms_t &htp, StringRef message) {
+   constexpr size_t maxSendLength = 512;
+
+   if (game.isNullEntity (ent)) {
+      return;
+   }
+   MessageWriter msg (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, nullptr, ent);
+
+   msg.writeByte (TE_TEXTMESSAGE);
+   msg.writeByte (htp.channel & 0xff);
+   msg.writeShort (MessageWriter::fs16 (htp.x, 13.0f));
+   msg.writeShort (MessageWriter::fs16 (htp.y, 13.0f));
+   msg.writeByte (htp.effect);
+   msg.writeByte (htp.r1);
+   msg.writeByte (htp.g1);
+   msg.writeByte (htp.b1);
+   msg.writeByte (htp.a1);
+   msg.writeByte (htp.r2);
+   msg.writeByte (htp.g2);
+   msg.writeByte (htp.b2);
+   msg.writeByte (htp.a2);
+   msg.writeShort (MessageWriter::fu16 (htp.fadeinTime, 8.0f));
+   msg.writeShort (MessageWriter::fu16 (htp.fadeoutTime, 8.0f));
+   msg.writeShort (MessageWriter::fu16 (htp.holdTime, 8.0f));
+
+   if (htp.effect == 2) {
+      msg.writeShort (MessageWriter::fu16 (htp.fxTime, 8.0f));
+   }
+   msg.writeString (message.substr (0, maxSendLength).chars ());
 }
 
 void Game::prepareBotArgs (edict_t *ent, String str) {
@@ -726,7 +759,7 @@ bool Game::loadCSBinary () {
       if (!m_gameLib) {
          logger.fatal ("Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", dll, mod);
       }
-      auto ent = m_gameLib.resolve <EntityFunction> ("trigger_random_unique");
+      auto ent = m_gameLib.resolve <EntityProto> ("trigger_random_unique");
 
       // detect regamedll by addon entity they provide
       if (ent != nullptr) {
@@ -765,7 +798,12 @@ bool Game::loadCSBinary () {
          }
 
          // detect if we're running modern game
-         auto entity = m_gameLib.resolve <EntityFunction> ("weapon_famas");
+         auto entity = m_gameLib.resolve <EntityProto> ("weapon_famas");
+
+         // detect legacy xash3d branch
+         if (engfuncs.pfnCVarGetPointer ("build") != nullptr) {
+            m_gameFlags |= GameFlags::Xash3DLegacy;
+         }
 
          // detect xash engine
          if (engfuncs.pfnCVarGetPointer ("host_ver") != nullptr) {
@@ -854,6 +892,9 @@ bool Game::postload () {
 
    // initialize weapons
    conf.initWeapons ();
+
+   // register engine lib handle
+   m_engineLib.locate (reinterpret_cast <void *> (engfuncs.pfnPrecacheModel));
 
    if (plat.android) {
       m_gameFlags |= (GameFlags::Xash3D | GameFlags::Mobility | GameFlags::HasBotVoice | GameFlags::ReGameDLL);
@@ -1245,7 +1286,7 @@ float LightMeasure::getLightLevel (const Vector &point) {
    auto recursiveCheck = [&] () -> bool {
       if (!isSoftRenderer) {
          if (is25Anniversary) {
-            return recursiveLightPoint <msurface_hw_25anniversary_t, mnode_hw_t> (reinterpret_cast <mnode_hw_t *> (m_worldModel->nodes), point, endPoint);
+            return recursiveLightPoint <msurface_hw_hl25_t, mnode_hw_t> (reinterpret_cast <mnode_hw_t *> (m_worldModel->nodes), point, endPoint);
          }
          return recursiveLightPoint <msurface_hw_t, mnode_hw_t> (reinterpret_cast <mnode_hw_t *> (m_worldModel->nodes), point, endPoint);
       }

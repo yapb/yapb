@@ -8,7 +8,7 @@
 #include <yapb.h>
 
 ConVar cv_autovacate ("autovacate", "1", "Kick bots to automatically make room for human players.");
-ConVar cv_autovacate_keep_slots ("autovacate_keep_slots", "1", "How many slots autovacate feature should keep for human players", true, 1.0f, 8.0f);
+ConVar cv_autovacate_keep_slots ("autovacate_keep_slots", "1", "How many slots autovacate feature should keep for human players.", true, 1.0f, 8.0f);
 ConVar cv_kick_after_player_connect ("kick_after_player_connect", "1", "Kick the bot immediately when a human player joins the server (yb_autovacate must be enabled).");
 
 ConVar cv_quota ("quota", "9", "Specifies the number bots to be added to the game.", true, 0.0f, static_cast <float> (kGameMaxPlayers));
@@ -37,6 +37,7 @@ ConVar cv_save_bots_names ("save_bots_names", "1", "Allows to save bot names upo
 
 ConVar cv_botskin_t ("botskin_t", "0", "Specifies the bots wanted skin for Terrorist team.", true, 0.0f, 5.0f);
 ConVar cv_botskin_ct ("botskin_ct", "0", "Specifies the bots wanted skin for CT team.", true, 0.0f, 5.0f);
+ConVar cv_preferred_personality ("preferred_personality", "none", "Sets the default personality when creating bots with quota management.\nAllowed values: 'none', 'normal', 'careful', 'rusher'.\nIf 'none' is specified personality chosen randomly.", false);
 
 ConVar cv_ping_base_min ("ping_base_min", "7", "Lower bound for base bot ping shown in scoreboard upon creation.", true, 0.0f, 100.0f);
 ConVar cv_ping_base_max ("ping_base_max", "34", "Upper bound for base bot ping shown in scoreboard upon creation.", true, 0.0f, 100.0f);
@@ -149,7 +150,15 @@ void BotManager::execGameEntity (edict_t *ent) {
       MUTIL_CallGameEntity (PLID, "player", &ent->v);
       return;
    }
-   ents.callPlayerFunction (ent);
+
+   if (!entlink.callPlayerFunction (ent)) {
+      for (const auto &bot : m_bots) {
+         if (bot->ent () == ent) {
+            bot->kick ();
+            break;
+         }
+      }
+   }
 }
 
 void BotManager::forEach (ForEachBot handler) {
@@ -182,25 +191,42 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
       ctrl.msg ("Desired team is stacked. Unable to proceed with bot creation.");
       return BotCreateResult::TeamStacked;
    }
-   if (difficulty < 0 || difficulty > 4) {
+   if (difficulty < Difficulty::Noob || difficulty > Difficulty::Expert) {
       difficulty = cv_difficulty.int_ ();
 
-      if (difficulty < 0 || difficulty > 4) {
+      if (difficulty < Difficulty::Noob || difficulty > Difficulty::Expert) {
          difficulty = rg.get (3, 4);
          cv_difficulty.set (difficulty);
       }
    }
 
+   // try to set proffered personality
+   static HashMap <String, Personality> personalityMap {
+      {"normal", Personality::Normal },
+      {"careful", Personality::Careful },
+      {"rusher", Personality::Rusher },
+   };
+
+   // set personality if requested
    if (personality < Personality::Normal || personality > Personality::Careful) {
-      if (rg.chance (50)) {
-         personality = Personality::Normal;
+
+      // assign preferred if we're forced with cvar
+      if (personalityMap.exists (cv_preferred_personality.str ())) {
+         personality = personalityMap[cv_preferred_personality.str ()];
       }
+
+      // do a holy random
       else {
          if (rg.chance (50)) {
-            personality = Personality::Rusher;
+            personality = Personality::Normal;
          }
          else {
-            personality = Personality::Careful;
+            if (rg.chance (50)) {
+               personality = Personality::Rusher;
+            }
+            else {
+               personality = Personality::Careful;
+            }
          }
       }
    }
@@ -685,8 +711,9 @@ bool BotManager::kickRandom (bool decQuota, Team fromTeam) {
 
    // first try to kick the bot that is currently dead
    for (const auto &bot : m_bots) {
-      if (!bot->m_isAlive && belongsTeam (bot.get ())) // is this slot used?
-      {
+
+      // is this slot used?
+      if (!bot->m_isAlive && belongsTeam (bot.get ())) {
          updateQuota ();
          bot->kick ();
 
@@ -721,8 +748,9 @@ bool BotManager::kickRandom (bool decQuota, Team fromTeam) {
 
    // worst case, just kick some random bot
    for (const auto &bot : m_bots) {
-      if (belongsTeam (bot.get ())) // is this slot used?
-      {
+
+      // is this slot used?
+      if (belongsTeam (bot.get ())) {
          updateQuota ();
          bot->kick ();
 
@@ -824,7 +852,8 @@ void BotManager::listBots () {
    };
 
    for (const auto &bot : bots) {
-      ctrl.msg ("[%-3.1d]\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s\t%-3.0f secs", bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful", botTeam (bot->m_team), bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_isAlive ? "yes" : "no", cv_rotate_bots.bool_ () ? bot->m_stayTime - game.time () : 0.0f);
+      auto timelimitStr = cv_rotate_bots.bool_ () ? strings.format ("%-3.0f secs", bot->m_stayTime - game.time ()) : "unlimited";
+      ctrl.msg ("[%-2.1d]\t%-22.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s\t%s", bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful", botTeam (bot->m_team), bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_isAlive ? "yes" : "no", timelimitStr);
    }
    ctrl.msg ("%d bots", m_bots.length ());
 }
@@ -1007,7 +1036,9 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
 
    // set all info buffer keys for this bot
    auto buffer = engfuncs.pfnGetInfoKeyBuffer (bot);
+
    engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "_vgui_menus", "0");
+   engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "_ah", "0");
 
    if (!game.is (GameFlags::Legacy)) {
       if (cv_show_latency.int_ () == 1) {
@@ -1260,7 +1291,16 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
 
    // notice nearby to victim teammates, that attacker is near
    for (const auto &notify : bots) {
-      if (notify->m_seeEnemyTime + 2.0f < game.time () && notify->m_isAlive && notify->m_team == victimTeam && game.isNullEntity (notify->m_enemy) && killerTeam != victimTeam && util.isVisible (killer->v.origin, notify->ent ())) {
+      if (notify->m_difficulty >= Difficulty::Hard
+          && killerTeam != victimTeam
+          && notify->m_seeEnemyTime + 2.0f < game.time ()
+          && notify->m_isAlive
+          && notify->m_team == victimTeam
+          && game.isNullEntity (notify->m_enemy)
+          && game.isNullEntity (notify->m_lastEnemy)
+          && util.isVisible (killer->v.origin, notify->ent ())) {
+
+         // make bot look at last e nemy position
          notify->m_actualReactionTime = 0.0f;
          notify->m_seeEnemyTime = game.time ();
          notify->m_enemy = killer;

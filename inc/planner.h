@@ -111,9 +111,6 @@ private:
    // clears the currently built route
    void clearRoute ();
 
-   // can the node can be skipped?
-   bool cantSkipNode (const int a, const int b);
-
    // do a post-smoothing after a* finished constructing path
    void postSmooth (NodeAdderFn onAddedNode);
 
@@ -156,6 +153,10 @@ public:
    size_t getMaxLength () const {
       return m_length / 2;
    }
+
+public:
+   // can the node can be skipped?
+   static bool cantSkipNode (const int a, const int b, bool skipVisCheck = false);
 };
 
 // floyd-warshall shortest path algorithm

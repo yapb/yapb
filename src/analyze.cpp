@@ -52,6 +52,9 @@ void GraphAnalyze::update () {
    if (m_updateInterval >= game.time ()) {
       return;
    }
+   else {
+      displayOverlayMessage ();
+   }
 
    // add basic nodes
    if (!m_basicsCreated) {
@@ -157,6 +160,8 @@ void GraphAnalyze::finish () {
          return;
       }
       vistab.startRebuild ();
+      ctrl.enableDrawModels (false);
+
       cv_quota.revert ();
    }
 }
@@ -170,13 +175,6 @@ void GraphAnalyze::optimize () {
       return;
    }
    cleanup ();
-
-   // clear the useless connections
-   if (cv_graph_analyze_clean_paths_on_finish.bool_ ()) {
-      for (auto i = 0; i < graph.length (); ++i) {
-         graph.clearConnections (i);
-      }
-   }
 
    auto smooth = []  (const Array <int> &nodes) {
       Vector result;
@@ -203,7 +201,7 @@ void GraphAnalyze::optimize () {
       Array <int> indexes;
 
       for (const auto &link : path.links) {
-         if (graph.exists (link.index) && !m_optimizedNodes[link.index] && cr::fequal (path.origin.z, graph[link.index].origin.z)) {
+         if (graph.exists (link.index) && !m_optimizedNodes[link.index] && !AStarAlgo::cantSkipNode (path.number, link.index, true)) {
             indexes.emplace (link.index);
          }
       }
@@ -216,6 +214,13 @@ void GraphAnalyze::optimize () {
             graph.erase (index);
          }
          graph.add (NodeAddFlag::Normal, pos);
+      }
+   }
+
+   // clear the useless connections
+   if (cv_graph_analyze_clean_paths_on_finish.bool_ ()) {
+      for (auto i = 0; i < graph.length (); ++i) {
+         graph.clearConnections (i);
       }
    }
 }
@@ -260,6 +265,37 @@ void GraphAnalyze::cleanup () {
          graph.erase (i);
       }
    }
+}
+
+void GraphAnalyze::displayOverlayMessage () {
+   auto listenserverEdict = game.getLocalEntity ();
+
+   if (game.isNullEntity (listenserverEdict) || !m_isAnalyzing) {
+      return;
+   }
+   constexpr StringRef analyzeHudMesssage =
+      "+--------------------------------------------------------+\n"
+      " Map analysis for bots is in progress. Please Wait..   \n"
+      "+--------------------------------------------------------+\n";
+
+   static hudtextparms_t textParams {};
+
+   textParams.channel = 1;
+   textParams.x = -1.0f;
+   textParams.y = -1.0f;
+   textParams.effect = 1;
+
+   textParams.r1 = textParams.r2 = static_cast <uint8_t> (255);
+   textParams.g1 = textParams.g2 = static_cast <uint8_t> (31);
+   textParams.b1 = textParams.b2 = static_cast <uint8_t> (75);
+   textParams.a1 = textParams.a2 = static_cast <uint8_t> (0);
+
+   textParams.fadeinTime = 0.0078125f;
+   textParams.fadeoutTime = 0.0078125f;
+   textParams.holdTime = m_updateInterval;
+   textParams.fxTime = 0.25f;
+
+   game.sendHudMessage (listenserverEdict, textParams, analyzeHudMesssage);
 }
 
 void GraphAnalyze::flood (const Vector &pos, const Vector &next, float range) {

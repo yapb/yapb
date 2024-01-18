@@ -386,7 +386,7 @@ bool Bot::lookupEnemies () {
 
             if (other->m_seeEnemyTime + 2.0f < game.time () && game.isNullEntity (other->m_lastEnemy) && util.isVisible (pev->origin, other->ent ()) && other->isInViewCone (pev->origin)) {
                other->m_lastEnemy = newEnemy;
-               other->m_lastEnemyOrigin = m_lastEnemyOrigin;
+               other->m_lastEnemyOrigin = newEnemy->v.origin;
                other->m_seeEnemyTime = game.time ();
                other->m_states |= (Sense::SuspectEnemy | Sense::HearingEnemy);
                other->m_aimFlags |= AimFlags::LastEnemy;
@@ -405,7 +405,7 @@ bool Bot::lookupEnemies () {
          // shoot at dying players if no new enemy to give some more human-like illusion
          if (m_seeEnemyTime + 0.1f > game.time ()) {
             if (!usesSniper ()) {
-               m_shootAtDeadTime = game.time () + cr::clamp (m_agressionLevel * 1.25f, 0.25f, 0.45f);
+               m_shootAtDeadTime = game.time () + cr::clamp (m_agressionLevel * 1.25f, 0.15f, 0.25f);
                m_actualReactionTime = 0.0f;
                m_states |= Sense::SuspectEnemy;
 
@@ -424,7 +424,11 @@ bool Bot::lookupEnemies () {
       }
 
       // if no enemy visible check if last one shoot able through wall
-      if (cv_shoots_thru_walls.bool_ () && rg.chance (conf.getDifficultyTweaks (m_difficulty)->seenThruPct) && m_difficulty >= Difficulty::Normal && isPenetrableObstacle (newEnemy->v.origin)) {
+      if (cv_shoots_thru_walls.bool_ ()
+          && m_difficulty >= Difficulty::Normal
+          && rg.chance (conf.getDifficultyTweaks (m_difficulty)->seenThruPct)
+          && isPenetrableObstacle (newEnemy->v.origin)) {
+
          m_seeEnemyTime = game.time ();
 
          m_states |= Sense::SuspectEnemy;
@@ -439,7 +443,15 @@ bool Bot::lookupEnemies () {
    }
 
    // check if bots should reload...
-   if ((m_aimFlags <= AimFlags::PredictPath && m_seeEnemyTime + 3.0f < game.time () && !(m_states & (Sense::SeeingEnemy | Sense::HearingEnemy)) && game.isNullEntity (m_lastEnemy) && game.isNullEntity (m_enemy) && getCurrentTaskId () != Task::ShootBreakable && getCurrentTaskId () != Task::PlantBomb && getCurrentTaskId () != Task::DefuseBomb) || bots.isRoundOver ()) {
+   if ((m_aimFlags <= AimFlags::PredictPath
+        && m_seeEnemyTime + 3.0f < game.time ()
+        && !(m_states & (Sense::SeeingEnemy | Sense::HearingEnemy))
+        && game.isNullEntity (m_lastEnemy)
+        && game.isNullEntity (m_enemy)
+        && getCurrentTaskId () != Task::ShootBreakable
+        && getCurrentTaskId () != Task::PlantBomb
+        && getCurrentTaskId () != Task::DefuseBomb) || bots.isRoundOver ()) {
+
       if (!m_reloadState) {
          m_reloadState = Reload::Primary;
       }
@@ -458,20 +470,20 @@ bool Bot::lookupEnemies () {
 }
 
 Vector Bot::getBodyOffsetError (float distance) {
-   if (game.isNullEntity (m_enemy)) {
+   if (game.isNullEntity (m_enemy) || distance < kSprayDistance) {
       return nullptr;
    }
 
    if (m_aimErrorTime < game.time ()) {
-      const float hitError = distance / (cr::clamp (static_cast <float> (m_difficulty), 1.0f, 4.0f) * 1000.0f);
+      const float hitError = distance / (cr::clamp (static_cast <float> (m_difficulty), 1.0f, 4.0f) * 1280.0f);
       const auto &maxs = m_enemy->v.maxs, &mins = m_enemy->v.mins;
 
-      m_aimLastError = Vector (rg.get (mins.x * hitError, maxs.x * hitError), rg.get (mins.y * hitError, maxs.y * hitError), rg.get (mins.z * hitError, maxs.z * hitError));
+      m_aimLastError = Vector (rg.get (mins.x * hitError, maxs.x * hitError), rg.get (mins.y * hitError, maxs.y * hitError), rg.get (mins.z * hitError * 0.5f, maxs.z * hitError * 0.5f));
 
       const auto &aimError = conf.getDifficultyTweaks (m_difficulty) ->aimError;
       m_aimLastError += Vector (rg.get (-aimError.x, aimError.x), rg.get (-aimError.y, aimError.y), rg.get (-aimError.z, aimError.z));
 
-      m_aimErrorTime = game.time () + rg.get (1.5f, 2.0f);
+      m_aimErrorTime = game.time () + rg.get (0.4f, 0.8f);
    }
    return m_aimLastError;
 }
@@ -514,7 +526,7 @@ Vector Bot::getBodyOffsetError (float distance) {
    else if (util.isPlayer (m_enemy)) {
       // now take in account different parts of enemy body
       if (m_enemyParts & (Visibility::Head | Visibility::Body)) {
-         auto headshotPct = conf.getDifficultyTweaks (m_difficulty)->headshotPct;
+         const auto headshotPct = conf.getDifficultyTweaks (m_difficulty)->headshotPct;
 
          // now check is our skill match to aim at head, else aim at enemy body
          if (rg.chance (headshotPct)) {
@@ -570,7 +582,7 @@ Vector Bot::getCustomHeight (float distance) {
       { 1.5f, -4.0f,  -9.0f }  // heavy
    };
 
-   // only highskilled bots do that 
+   // only high-skilled bots do that 
    if (m_difficulty != Difficulty::Expert || (m_enemy->v.flags & FL_DUCKING)) {
       return 0.0f;
    }
@@ -987,12 +999,19 @@ void Bot::fireWeapons () {
 
    // loop through all the weapons until terminator is found...
    while (tab[selectIndex].id) {
+      const auto wid = tab[selectIndex].id;
+
       // is the bot carrying this weapon?
-      if (weapons & cr::bit (tab[selectIndex].id)) {
+      if (weapons & cr::bit (wid)) {
 
          // is enough ammo available to fire AND check is better to use pistol in our current situation...
-         if (m_ammoInClip[tab[selectIndex].id] > 0 && !isWeaponBadAtDistance (selectIndex, distance)) {
-            choosenWeapon = selectIndex;
+         if (m_ammoInClip[wid] > 0 && !isWeaponBadAtDistance (selectIndex, distance)) {
+            const auto &prop = conf.getWeaponProp (wid);
+
+            // skip the weapons that cannot be used underwater (regamedll addition)
+            if (!(pev->waterlevel == 3 && (prop.flags & ITEM_FLAG_NOFIREUNDERWATER))) {
+               choosenWeapon = selectIndex;
+            }
          }
       }
       selectIndex++;
@@ -1005,11 +1024,11 @@ void Bot::fireWeapons () {
 
       // loop through all the weapons until terminator is found...
       while (tab[selectIndex].id) {
-         const int id = tab[selectIndex].id;
+         const int wid = tab[selectIndex].id;
 
          // is the bot carrying this weapon?
-         if (weapons & cr::bit (id)) {
-            if (getAmmo (id) >= tab[selectIndex].minPrimaryAmmo) {
+         if (weapons & cr::bit (wid)) {
+            if (getAmmo (wid) >= tab[selectIndex].minPrimaryAmmo) {
 
                // available ammo found, reload weapon
                if (m_reloadState == Reload::None || m_reloadCheckTime > game.time ()) {
@@ -1195,7 +1214,7 @@ void Bot::attackMovement () {
             }
          }
       }
-      else if (rg.get (0, 100) < (isInNarrowPlace () ? 25 : 75) || usesKnife ()) {
+      else if (usesKnife ()) {
          m_fightStyle = Fight::Strafe;
       }
       else {
@@ -1214,10 +1233,6 @@ void Bot::attackMovement () {
    }
 
    if (usesKnife () && isInViewCone (m_enemy->v.origin)) {
-      m_fightStyle = Fight::Strafe;
-   }
-
-   if (usesPistol () && distance < 768.0f) {
       m_fightStyle = Fight::Strafe;
    }
 

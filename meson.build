@@ -6,7 +6,7 @@
 #
 
 # version is now passed into the bot dll
-project (
+project(
    'yapb',
    'cpp',
    version: '4.4',
@@ -80,15 +80,15 @@ if git.found()
    cxxflags += flags_versioned
    version_data = configuration_data()
 
-   version_data.set('count',  count)
-   version_data.set('hash', hash)
-   version_data.set('author', author)
-   version_data.set('machine', machine)
-   version_data.set('version', bot_version)
-   version_data.set('winver', winver)
-   version_data.set('compiler',  '@0@ @1@'.format (cxx, cxx_version))
+   version_data.set('BUILD_COUNT',  count)
+   version_data.set('BUILD_HASH', hash)
+   version_data.set('BUILD_AUTHOR', author)
+   version_data.set('BUILD_MACHINE', machine)
+   version_data.set('BUILD_VERSION', bot_version)
+   version_data.set('BUILD_WINVER', winver)
+   version_data.set('BUILD_COMPILER', '@0@ @1@'.format(cxx, cxx_version))
 
-   configure_file (input: 'inc/version.h.in', output: 'version.build.h', configuration: version_data)
+   configure_file(input: 'inc/version.h.in', output: 'version.build.h', configuration: version_data)
 endif
 
 # define crlib native build
@@ -102,7 +102,7 @@ if cxx == 'clang' or cxx == 'gcc'
       '-fno-threadsafe-statics', '-pthread'
    ]
 
-   if not opt_native and cpu != 'arm'
+   if not opt_native and cpu != 'arm' and not cpu.startswith('ppc')
       cxxflags += '-mtune=generic'
    endif
 
@@ -110,7 +110,7 @@ if cxx == 'clang' or cxx == 'gcc'
       cxxflags += [
          '-march=armv8-a+fp+simd', 
       ]
-   elif cpu != 'arm'
+   elif cpu != 'arm' and not cpu.startswith('ppc')
       cxxflags += [
          '-mmmx', '-msse', '-msse2', '-msse3', '-mssse3', '-mfpmath=sse'
       ]
@@ -128,7 +128,7 @@ if cxx == 'clang' or cxx == 'gcc'
          '-funroll-loops', '-fomit-frame-pointer', '-fno-stack-protector', '-fvisibility=hidden', '-fvisibility-inlines-hidden'
       ]
 
-      if os != 'darwin' and os != 'windows' and cpu != 'aarch64' and cpu != 'arm'
+      if os != 'darwin' and os != 'windows' and cpu != 'aarch64' and cpu != 'arm' and not cpu.startswith('ppc')
          cxxflags += [
             '-fdata-sections',
             '-ffunction-sections',
@@ -181,7 +181,7 @@ if cxx == 'clang' or cxx == 'gcc'
    endif
 
    # by default we buid 32bit binaries
-   if not opt_64bit and cpu != 'aarch64' and cpu != 'arm'
+   if not opt_64bit and cpu != 'aarch64' and cpu != 'arm' and not cpu.startswith('ppc')
       cxxflags += '-m32'
       ldflags += '-m32'
 
@@ -261,6 +261,7 @@ sources = files(
    'src/control.cpp',
    'src/engine.cpp',
    'src/graph.cpp',
+   'src/hooks.cpp',
    'src/linkage.cpp',
    'src/manager.cpp',
    'src/module.cpp',

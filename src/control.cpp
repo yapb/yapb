@@ -195,7 +195,29 @@ int BotControl::cmdList () {
 int BotControl::cmdCvars () {
    enum args { alias = 1, pattern };
 
-   const auto &match = strValue (pattern);
+   auto match = strValue (pattern);
+
+   // revert all the cvars to their default values
+   if (match == "defaults") {
+      msg ("Bots cvars has been reverted to their default values.");
+
+      for (const auto &cvar : game.getCvars ()) {
+         if (!cvar.self || !cvar.self->ptr || cvar.type == Var::GameRef) {
+            continue;
+         }
+
+         // set depending on cvar type
+         if (cvar.bounded) {
+            cvar.self->set (cvar.initial);
+         }
+         else {
+            cvar.self->set (cvar.init.chars ());
+         }
+      }
+      cv_quota.revert (); // quota should be reverted instead of regval
+
+      return BotCommandResult::Handled;
+   }
 
    const bool isSaveMain = match == "save";
    const bool isSaveMap = match == "save_map";
@@ -2162,11 +2184,9 @@ bool BotControl::handleMenuCommands (edict_t *ent) {
 }
 
 void BotControl::enableDrawModels (bool enable) {
-   StringArray entities;
-
-   entities.push ("info_player_start");
-   entities.push ("info_player_deathmatch");
-   entities.push ("info_vip_start");
+   static StringArray entities {
+      "info_player_start", "info_player_deathmatch", "info_vip_start"
+   };
 
    if (enable) {
       game.setPlayerStartDrawModels ();

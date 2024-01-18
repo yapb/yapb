@@ -1686,7 +1686,7 @@ void Bot::refreshEnemyPredict () {
       if (distanceToLastEnemySq > cr::sqrf (128.0f) && (distanceToLastEnemySq < cr::sqrf (2048.0f) || usesSniper ())) {
          m_aimFlags |= AimFlags::PredictPath;
       }
-      const bool denyLastEnemy = pev->velocity.lengthSq2d () > 0.0f && distanceToLastEnemySq < cr::sqrf (256.0f);
+      const bool denyLastEnemy = pev->velocity.lengthSq2d () > 0.0f && distanceToLastEnemySq < cr::sqrf (256.0f) && m_shootTime + 2.5f > game.time ();
 
       if (!denyLastEnemy && seesEntity (m_lastEnemyOrigin, true)) {
          m_aimFlags |= AimFlags::LastEnemy;
@@ -1778,19 +1778,14 @@ void Bot::setConditions () {
    m_numFriendsLeft = numFriendsNear (pev->origin, kInfiniteDistance);
    m_numEnemiesLeft = numEnemiesNear (pev->origin, kInfiniteDistance);
 
-   auto clearLastEnemy = [&] () {
-      m_lastEnemyOrigin = nullptr;
-      m_lastEnemy = nullptr;
-   };
-
    // check if our current enemy is still valid
    if (!game.isNullEntity (m_lastEnemy)) {
       if (!util.isAlive (m_lastEnemy) && m_shootAtDeadTime < game.time ()) {
-         clearLastEnemy ();
+         m_lastEnemy = nullptr;
       }
    }
    else {
-      clearLastEnemy ();
+      m_lastEnemy = nullptr;
    }
 
    // don't listen if seeing enemy, just checked for sounds or being blinded (because its inhuman)
@@ -1798,8 +1793,20 @@ void Bot::setConditions () {
       updateHearing ();
       m_soundUpdateTime = game.time () + 0.25f;
    }
-   else if (m_heardSoundTime < game.time ()) {
+   else if (m_heardSoundTime + 10.0f < game.time ()) {
       m_states &= ~Sense::HearingEnemy;
+
+      // clear the last enemy pointers if time has passed or enemy far away
+      if (!m_lastEnemyOrigin.empty ()) {
+         auto distanceSq = pev->origin.distanceSq (m_lastEnemyOrigin);
+
+         if (distanceSq > cr::sqrf (2048.0f) || (game.isNullEntity (m_enemy) && m_seeEnemyTime + 10.0f < game.time ())) {
+            m_lastEnemyOrigin = nullptr;
+            m_lastEnemy = nullptr;
+
+            m_aimFlags &= ~AimFlags::LastEnemy;
+         }
+      }
    }
    refreshEnemyPredict ();
 
@@ -2001,11 +2008,11 @@ void Bot::filterTasks () {
    offensive = subsumeDesire (offensive, pickup); // if offensive task, don't allow picking up stuff
 
    auto sub = maxDesire (offensive, def); // default normal & careful tasks against offensive actions
-   auto final = subsumeDesire (&filter[Task::Blind], maxDesire (survive, sub)); // reason about fleeing instead
+   auto finalTask = subsumeDesire (&filter[Task::Blind], maxDesire (survive, sub)); // reason about fleeing instead
 
    if (!m_tasks.empty ()) {
-      final = maxDesire (final, getTask ());
-      startTask (final->id, final->desire, final->data, final->time, final->resume); // push the final behavior in our task stack to carry out
+      finalTask = maxDesire (finalTask, getTask ());
+      startTask (finalTask->id, finalTask->desire, finalTask->data, finalTask->time, finalTask->resume); // push the final behavior in our task stack to carry out
    }
 }
 
@@ -2733,12 +2740,6 @@ void Bot::frame () {
       kick ();
       return;
    }
-
-   // clear enemy far away
-   if (!m_lastEnemyOrigin.empty () && !game.isNullEntity (m_lastEnemy) && pev->origin.distanceSq (m_lastEnemyOrigin) >= cr::sqrf (2048.0f)) {
-      m_lastEnemy = nullptr;
-      m_lastEnemyOrigin = nullptr;
-   }
    m_slowFrameTimestamp = game.time () + 0.5f;
 }
 
@@ -3097,7 +3098,7 @@ void Bot::showDebugOverlay () {
    }
    auto overlayEntity = graph.getEditor ();
 
-   if (overlayEntity->v.iuser2 == entindex ()) {
+   if (overlayEntity->v.iuser2 == entindex () && overlayEntity->v.origin.distanceSq (pev->origin) < cr::sqrf (256.0f)) {
       displayDebugOverlay = true;
    }
 
@@ -3162,12 +3163,11 @@ void Bot::showDebugOverlay () {
    if (m_tasks.empty ()) {
       return;
    }
-   const auto drawTime = globals->frametime * 500.0f;
 
    if (tid != getCurrentTaskId () || index != m_currentNodeIndex || goal != getTask ()->data || m_timeDebugUpdateTime < game.time ()) {
       tid = getCurrentTaskId ();
-      index = m_currentNodeIndex;
       goal = getTask ()->data;
+      index = m_currentNodeIndex;
 
       String enemy = "(none)";
 
@@ -3191,31 +3191,38 @@ void Bot::showDebugOverlay () {
             aimFlags.appendf (" %s", flags[static_cast <int32_t> (bit)]);
          }
       }
-      auto weapon = util.weaponIdToAlias (m_currentWeapon);
+      StringRef weapon = util.weaponIdToAlias (m_currentWeapon);
+      StringRef debugData = strings.format (
+         "\n\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\n"
+         "Item: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\n"
+         "SP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\n"
+         "Enemy=%s Pickup=%s Type=%s Terrain=%s Stuck=%s\n",
+         pev->netname.str (), m_healthValue, pev->armorvalue,
+         tid, tasks[tid], getTask ()->desire, weapon, getAmmoInClip (),
+         getAmmo (), m_isReloading ? " (R)" : "", m_moneyAmount, aimFlags.trim (),
+         m_moveSpeed, m_strafeSpeed, index, m_prevGoalIndex, goal, m_navTimeset - game.time (),
+         pev->movetype, enemy, pickup, personalities[m_personality], boolValue (m_checkTerrain),
+         boolValue (m_isStuck));
 
-      String debugData;
-      debugData.assignf ("\n\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\nItem: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\nSP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\nEnemy=%s Pickup=%s Type=%s Terrain=%s Stuck=%s\n", pev->netname.str (), m_healthValue, pev->armorvalue, tid, tasks[tid], getTask ()->desire, weapon, getAmmoInClip (), getAmmo (), m_isReloading ? " (R)" : "", m_moneyAmount, aimFlags.trim (), m_moveSpeed, m_strafeSpeed, index, m_prevGoalIndex, goal, m_navTimeset - game.time (), pev->movetype, enemy, pickup, personalities[m_personality], boolValue (m_checkTerrain), boolValue (m_isStuck));
+      static hudtextparms_t textParams {};
 
-      MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, nullptr, overlayEntity)
-         .writeByte (TE_TEXTMESSAGE)
-         .writeByte (1)
-         .writeShort (MessageWriter::fs16 (-1.0f, 13.0f))
-         .writeShort (MessageWriter::fs16 (0.0f, 13.0f))
-         .writeByte (0)
-         .writeByte (m_team == Team::CT ? 0 : 255)
-         .writeByte (100)
-         .writeByte (m_team != Team::CT ? 0 : 255)
-         .writeByte (0)
-         .writeByte (255)
-         .writeByte (255)
-         .writeByte (255)
-         .writeByte (0)
-         .writeShort (MessageWriter::fu16 (0.0f, 8.0f))
-         .writeShort (MessageWriter::fu16 (0.0f, 8.0f))
-         .writeShort (MessageWriter::fu16 (drawTime, 8.0f))
-         .writeString (debugData.chars ());
+      textParams.channel = 1;
+      textParams.x = -1.0f;
+      textParams.y = 0.0f;
+      textParams.effect = 0;
 
-      m_timeDebugUpdateTime = game.time () + drawTime;
+      textParams.r1 = textParams.r2 = static_cast <uint8_t> (m_team == Team::CT ? 0 : 255);
+      textParams.g1 = textParams.g2 = static_cast <uint8_t> (100);
+      textParams.b1 = textParams.b2 = static_cast <uint8_t> (m_team != Team::CT ? 0 : 255);
+      textParams.a1 = textParams.a2 = static_cast <uint8_t> (1);
+
+      textParams.fadeinTime = 0.0f;
+      textParams.fadeoutTime = 0.0f;
+      textParams.holdTime = 0.5f;
+      textParams.fxTime = 0.0f;
+
+      game.sendHudMessage (overlayEntity, textParams, debugData);
+      m_timeDebugUpdateTime = game.time () + 0.5f;
    }
 
    // green = destination origin
@@ -3714,7 +3721,7 @@ void Bot::updateHearing () {
       }
 
       // didn't bot already have an enemy ? take this one...
-      if (m_lastEnemyOrigin.empty () || m_lastEnemy == nullptr) {
+      if (m_lastEnemyOrigin.empty () || game.isNullEntity (m_lastEnemy)) {
          m_lastEnemy = hearedEnemy;
          m_lastEnemyOrigin = hearedEnemy->v.origin;
       }

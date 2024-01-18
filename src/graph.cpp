@@ -412,13 +412,14 @@ void BotGraph::addPath (int addIndex, int pathIndex, float distance) {
          return;
       }
    }
+   auto integerDistance = cr::abs (static_cast <int> (distance));
 
    // check for free space in the connection indices
    for (auto &link : path.links) {
       if (link.index == kInvalidNodeIndex) {
          link.index = static_cast <int16_t> (pathIndex);
-         link.distance = cr::abs (static_cast <int> (distance));
-
+         link.distance = integerDistance;
+        
          msg ("Path added from %d to %d.", addIndex, pathIndex);
          return;
       }
@@ -439,7 +440,7 @@ void BotGraph::addPath (int addIndex, int pathIndex, float distance) {
       msg ("Path added from %d to %d.", addIndex, pathIndex);
 
       path.links[slot].index = static_cast <int16_t> (pathIndex);
-      path.links[slot].distance = cr::abs (static_cast <int> (distance));
+      path.links[slot].distance = integerDistance;
    }
 }
 
@@ -498,11 +499,11 @@ int BotGraph::getNearestNoBuckets (const Vector &origin, const float range, int 
    return index;
 }
 
-int BotGraph::getEditorNearest () {
+int BotGraph::getEditorNearest (const float maxRange) {
    if (!hasEditFlag (GraphEdit::On)) {
       return kInvalidNodeIndex;
    }
-   return getNearestNoBuckets (m_editor->v.origin, 50.0f);
+   return getNearestNoBuckets (m_editor->v.origin, maxRange);
 }
 
 int BotGraph::getNearest (const Vector &origin, const float range, int flags) {
@@ -625,12 +626,12 @@ void BotGraph::add (int type, const Vector &pos) {
       return;
 
    case NodeAddFlag::JumpStart:
-      index = getEditorNearest ();
+      index = getEditorNearest (25.0f);
 
       if (index != kInvalidNodeIndex && m_paths[index].number >= 0) {
          const float distanceSq = m_editor->v.origin.distanceSq (m_paths[index].origin);
 
-         if (distanceSq < cr::sqrf (50.0f)) {
+         if (distanceSq < cr::sqrf (25.0f)) {
             addNewNode = false;
 
             path = &m_paths[index];
@@ -643,12 +644,12 @@ void BotGraph::add (int type, const Vector &pos) {
       break;
 
    case NodeAddFlag::JumpEnd:
-      index = getEditorNearest ();
+      index = getEditorNearest (25.0f);
 
       if (index != kInvalidNodeIndex && m_paths[index].number >= 0) {
          const float distanceSq = m_editor->v.origin.distanceSq (m_paths[index].origin);
 
-         if (distanceSq < cr::sqrf (50.0f)) {
+         if (distanceSq < cr::sqrf (25.0f)) {
             addNewNode = false;
             path = &m_paths[index];
 
@@ -1064,14 +1065,16 @@ void BotGraph::pathCreate (char dir) {
       if (!isConnected (nodeFrom, nodeTo)) {
          addPath (nodeFrom, nodeTo, distance);
       }
+
       for (auto &link : m_paths[nodeFrom].links) {
          if (link.index == nodeTo && !(link.flags & PathFlag::Jump)) {
             link.flags |= PathFlag::Jump;
             m_paths[nodeFrom].radius = 0.0f;
+
             msg ("Path added from %d to %d.", nodeFrom, nodeTo);
          }
          else if (link.index == nodeTo && (link.flags & PathFlag::Jump)) {
-         msg ("Denied path creation from %d to %d (path already exists).", nodeFrom, nodeTo);
+            msg ("Denied path creation from %d to %d (path already exists).", nodeFrom, nodeTo);
          }
       }
    }
@@ -1415,7 +1418,7 @@ void BotGraph::initNarrowPlaces () {
    constexpr int32_t kNarrowPlacesMinGraphVersion = 2;
 
    // if version 2 or higher, narrow places already initialized and saved into file
-   if (m_graphHeader.version >= kNarrowPlacesMinGraphVersion) {
+   if (m_graphHeader.version >= kNarrowPlacesMinGraphVersion && !hasEditFlag (GraphEdit::On)) {
       m_narrowChecked = true;
       return;
    }
@@ -2141,25 +2144,25 @@ void BotGraph::frame () {
       }
       static int channel = 0;
 
-      auto sendHudMessage = [] (Color color, float x, float y, edict_t *to, StringRef text) {
-         MessageWriter (MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, nullptr, to)
-            .writeByte (TE_TEXTMESSAGE)
-            .writeByte (channel++ & 0xff) // channel
-            .writeShort (MessageWriter::fs16 (x, 13.0f)) // x
-            .writeShort (MessageWriter::fs16 (y, 13.0f)) // y
-            .writeByte (0) // effect
-            .writeByte (color.red) // r1
-            .writeByte (color.green) // g1
-            .writeByte (color.blue) // b1
-            .writeByte (1) // a1
-            .writeByte (color.red) // r2
-            .writeByte (color.green) // g2
-            .writeByte (color.blue) // b2
-            .writeByte (1) // a2
-            .writeShort (0) // fadeintime
-            .writeShort (0) // fadeouttime
-            .writeShort (MessageWriter::fu16 (1.0f, 8.0f)) // holdtime
-            .writeString (text.chars ());
+      auto sendHudMessage = [&] (Color color, float x, float y, StringRef text) {
+         static hudtextparms_t textParams {};
+
+         textParams.channel = channel;
+         textParams.x = x;
+         textParams.y = y;
+         textParams.effect = 0;
+
+         textParams.r1 = textParams.r2 = static_cast <uint8_t> (color.red);
+         textParams.g1 = textParams.g2 = static_cast <uint8_t> (color.green);
+         textParams.b1 = textParams.b2 = static_cast <uint8_t> (color.blue);
+         textParams.a1 = textParams.a2 = static_cast <uint8_t> (1);
+
+         textParams.fadeinTime = 0.0f;
+         textParams.fadeoutTime = 0.0f;
+         textParams.holdTime = m_pathDisplayTime;
+         textParams.fxTime = 0.0f;
+
+         game.sendHudMessage (m_editor, textParams, text);
 
          if (channel > 3) {
             channel = 0;
@@ -2207,16 +2210,16 @@ void BotGraph::frame () {
       };
 
       // display some information
-      sendHudMessage ({ 255, 255, 255 }, 0.0f, 0.025f, m_editor, getNodeData ("Current", nearestIndex));
+      sendHudMessage ({ 255, 255, 255 }, 0.0f, 0.025f, getNodeData ("Current", nearestIndex));
 
       // check if we need to show the cached point index
       if (m_cacheNodeIndex != kInvalidNodeIndex) {
-         sendHudMessage ({ 255, 255, 255 }, 0.28f, 0.16f, m_editor, getNodeData ("Cached", m_cacheNodeIndex));
+         sendHudMessage ({ 255, 255, 255 }, 0.28f, 0.16f, getNodeData ("Cached", m_cacheNodeIndex));
       }
 
       // check if we need to show the facing point index
       if (m_facingAtIndex != kInvalidNodeIndex) {
-         sendHudMessage ({ 255, 255, 255 }, 0.28f, 0.025f, m_editor, getNodeData ("Facing", m_facingAtIndex));
+         sendHudMessage ({ 255, 255, 255 }, 0.28f, 0.025f, getNodeData ("Facing", m_facingAtIndex));
       }
       String timeMessage = strings.format ("      Map: %s, Time: %s\n", game.getMapName (), util.getCurrentDateTime ());
 
@@ -2230,10 +2233,10 @@ void BotGraph::frame () {
                                "       CT: %d / %d\n"
                                "       T:  %d / %d\n\n", dangerIndexCT, dangerIndexCT != kInvalidNodeIndex ? practice.getDamage (Team::CT, nearestIndex, dangerIndexCT) : 0, dangerIndexT, dangerIndexT != kInvalidNodeIndex ? practice.getDamage (Team::Terrorist, nearestIndex, dangerIndexT) : 0);
 
-         sendHudMessage ({ 255, 255, 255 }, 0.0f, 0.16f, m_editor, practiceText + timeMessage);
+         sendHudMessage ({ 255, 255, 255 }, 0.0f, 0.16f, practiceText + timeMessage);
       }
       else {
-         sendHudMessage ({ 255, 255, 255 }, 0.0f, 0.16f, m_editor, timeMessage);
+         sendHudMessage ({ 255, 255, 255 }, 0.0f, 0.16f, timeMessage);
       }
    }
 }
@@ -2350,10 +2353,10 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
    }
 
    // perform DFS instead of floyd-warshall, this shit speedup this process in a bit
-   const auto length = cr::min (static_cast <size_t>  (kMaxNodes), m_paths.length ());
+   const auto length = cr::min (static_cast <size_t> (kMaxNodes), m_paths.length ());
 
    // ensure valid capacity
-   assert (length > 8 && length < static_cast <size_t>  (kMaxNodes));
+   assert (length > 8 && length < static_cast <size_t> (kMaxNodes));
 
    PathWalk walk;
    walk.init (length);

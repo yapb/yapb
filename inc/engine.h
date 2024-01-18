@@ -46,7 +46,8 @@ CR_DECLARE_SCOPED_ENUM (GameFlags,
    ReGameDLL = cr::bit (9), // server dll is a regamedll
    HasFakePings = cr::bit (10), // on that game version we can fake bots pings
    HasBotVoice = cr::bit (11), // on that game version we can use chatter
-   AnniversaryHL25 = cr::bit (12) // half-life 25th anniversary engine
+   AnniversaryHL25 = cr::bit (12), // half-life 25th anniversary engine
+   Xash3DLegacy = cr::bit (13) // old xash3d-branch
 )
 
 // defines map type
@@ -83,7 +84,7 @@ struct ConVarReg {
 };
 
 // entity prototype
-using EntityFunction = void (*) (entvars_t *);
+using EntityProto = void (*) (entvars_t *);
 
 // rehlds has this fixed, but original hlds doesn't allocate string space  passed to precache* argument, so game will crash when unloading module using metamod
 class EngineWrap final {
@@ -128,6 +129,7 @@ private:
    Array <edict_t *> m_breakables {};
    SmallArray <ConVarReg> m_cvars {};
    SharedLibrary m_gameLib {};
+   SharedLibrary m_engineLib {};
    EngineWrap m_engineWrap {};
 
    bool m_precached {};
@@ -343,6 +345,11 @@ public:
       return m_gameLib;
    }
 
+   // get loaded engine lib
+   const SharedLibrary &elib () {
+      return m_engineLib;
+   }
+
    // get registered cvars list
    const SmallArray <ConVarReg> &getCvars () {
       return m_cvars;
@@ -368,6 +375,9 @@ public:
    
    // helper to sending the server message
    void sendServerMessage (StringRef message);
+
+   // helper for sending hud messages to client
+   void sendHudMessage (edict_t *ent, const hudtextparms_t &htp, StringRef message);
 
    // send server command
    template <typename ...Args> void serverCommand (const char *fmt, Args &&...args) {
@@ -459,6 +469,7 @@ public:
       Game::instance ().addNewCvar (name_.chars (), initval, info, bounded, min, max, type, regMissing, regVal, this);
    }
 
+public:
    template <typename U> constexpr U get () const {
       if constexpr (cr::is_same <U, float>::value) {
          return ptr->value;
@@ -467,25 +478,41 @@ public:
          return ptr->value > 0.0f;
       }
       else if constexpr (cr::is_same <U, int>::value) {
-         return static_cast <int> (ptr->value);
+         return static_cast <U> (ptr->value);
       }
-      assert ("!Invalid type requested.");
+      else if constexpr (cr::is_same <U, StringRef>::value) {
+         return ptr->string;
+      }
    }
 
+public:
+   operator bool () const {
+      return bool_ ();
+   }
+
+   operator float () const {
+      return float_ ();
+   }
+
+   operator StringRef () {
+      return str ();
+   }
+
+public:
    bool bool_ () const {
-      return ptr->value > 0.0f;
+      return get <bool> ();
    }
 
    int int_ () const {
-      return static_cast <int> (ptr->value);
+      return get <int> ();
    }
 
    float float_ () const {
-      return ptr->value;
+      return get <float> ();
    }
 
    StringRef str () const {
-      return ptr->string;
+      return get <StringRef> ();
    }
 
    StringRef name () const {
@@ -626,164 +653,6 @@ public:
    }
 };
 
-// simple handler for parsing and rewriting queries (fake queries)
-class QueryBuffer {
-   SmallArray <uint8_t> m_buffer {};
-   size_t m_cursor {};
-
-public:
-   QueryBuffer (const uint8_t *msg, size_t length, size_t shift) : m_cursor (0) {
-      m_buffer.insert (0, msg, length);
-      m_cursor += shift;
-   }
-
-public:
-   template <typename T> T read () {
-      T result {};
-      constexpr auto size = sizeof (T);
-
-      if (m_cursor + size > m_buffer.length ()) {
-         return 0;
-      }
-
-      memcpy (&result, m_buffer.data () + m_cursor, size);
-      m_cursor += size;
-
-      return result;
-   }
-
-   // must be called right after read
-   template <typename T> void write (T value) {
-      constexpr auto size = sizeof (value);
-      memcpy (m_buffer.data () + m_cursor - size, &value, size);
-   }
-
-   template <typename T> void skip () {
-      constexpr auto size = sizeof (T);
-
-      if (m_cursor + size > m_buffer.length ()) {
-         return;
-      }
-      m_cursor += size;
-   }
-
-   void skipString () {
-      if (m_buffer.length () < m_cursor) {
-         return;
-      }
-      for (; m_cursor < m_buffer.length () && m_buffer[m_cursor] != kNullChar; ++m_cursor) { }
-      ++m_cursor;
-   }
-
-
-   String readString () {
-      if (m_buffer.length () < m_cursor) {
-         return "";
-      }
-      String out;
-
-      for (; m_cursor < m_buffer.length () && m_buffer[m_cursor] != kNullChar; ++m_cursor) {
-         out += m_buffer[m_cursor];
-      }
-      ++m_cursor;
-
-      return out;
-   }
-
-   void shiftToEnd () {
-      m_cursor = m_buffer.length ();
-   }
-
-public:
-   Twin <const uint8_t *, size_t> data () {
-      return { m_buffer.data (), m_buffer.length () };
-   }
-};
-
-class EntityLinkage : public Singleton <EntityLinkage> {
-private:
-#if defined (CR_WINDOWS)
-#  define DLSYM_FUNCTION GetProcAddress
-#  define DLCLOSE_FUNCTION FreeLibrary
-#  define DLSYM_RETURN SharedLibrary::Handle
-#  define DLSYM_HANDLE HMODULE
-#else
-#  define DLSYM_FUNCTION dlsym
-#  define DLCLOSE_FUNCTION dlclose
-#  define DLSYM_RETURN SharedLibrary::Handle
-#  define DLSYM_HANDLE SharedLibrary::Handle
-#endif
-
-private:
-   bool m_paused { false };
-
-   Detour <decltype (DLSYM_FUNCTION)> m_dlsym;
-   Detour <decltype (DLCLOSE_FUNCTION)> m_dlclose;
-   HashMap <StringRef, SharedLibrary::Func> m_exports;
-
-   SharedLibrary m_self;
-
-public:
-   EntityLinkage () = default;
-
-public:
-   void initialize ();
-   SharedLibrary::Func lookup (SharedLibrary::Handle module, const char *function);
-
-   int close (DLSYM_HANDLE module) {
-      if (m_self.handle () == module) {
-         disable ();
-         return m_dlclose (module);
-      }
-      return m_dlclose (module);
-   }
-
-public:
-   void callPlayerFunction (edict_t *ent);
-
-public:
-   void enable () {
-      if (m_dlsym.detoured ()) {
-         return;
-      }
-      m_dlsym.detour ();
-   }
-
-   void disable () {
-      if (!m_dlsym.detoured ()) {
-         return;
-      }
-      m_dlsym.restore ();
-   }
-
-   void setPaused (bool what) {
-      m_paused = what;
-   }
-
-   bool isPaused () const {
-      return m_paused;
-   }
-
-public:
-   static SharedLibrary::Func CR_STDCALL lookupHandler (SharedLibrary::Handle module, const char *function) {
-      return EntityLinkage::instance ().lookup (module, function);
-   }
-
-   static int CR_STDCALL closeHandler (DLSYM_HANDLE module) {
-      return EntityLinkage::instance ().close (module);
-   }
-
-public:
-   void flush () {
-      m_exports.clear ();
-   }
-
-   bool needsBypass () const {
-      return !plat.win && !Game::instance ().isDedicated ();
-   }
-};
-
 // expose globals
 CR_EXPOSE_GLOBAL_SINGLETON (Game, game);
 CR_EXPOSE_GLOBAL_SINGLETON (LightMeasure, illum);
-CR_EXPOSE_GLOBAL_SINGLETON (EntityLinkage, ents);

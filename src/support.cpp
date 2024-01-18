@@ -32,29 +32,6 @@ BotSupport::BotSupport () {
    m_sentences.push ("attention, expect experimental armed hostile presence");
    m_sentences.push ("warning, medical attention required");
 
-   m_tags.emplace ("[[", "]]");
-   m_tags.emplace ("-=", "=-");
-   m_tags.emplace ("-[", "]-");
-   m_tags.emplace ("-]", "[-");
-   m_tags.emplace ("-}", "{-");
-   m_tags.emplace ("-{", "}-");
-   m_tags.emplace ("<[", "]>");
-   m_tags.emplace ("<]", "[>");
-   m_tags.emplace ("[-", "-]");
-   m_tags.emplace ("]-", "-[");
-   m_tags.emplace ("{-", "-}");
-   m_tags.emplace ("}-", "-{");
-   m_tags.emplace ("[", "]");
-   m_tags.emplace ("{", "}");
-   m_tags.emplace ("<", "[");
-   m_tags.emplace (">", "<");
-   m_tags.emplace ("-", "-");
-   m_tags.emplace ("|", "|");
-   m_tags.emplace ("=", "=");
-   m_tags.emplace ("+", "+");
-   m_tags.emplace ("(", ")");
-   m_tags.emplace (")", "(");
-
    // register weapon aliases
    m_weaponAlias[Weapon::USP] = "usp"; // HK USP .45 Tactical
    m_weaponAlias[Weapon::Glock18] = "glock"; // Glock18 Select Fire
@@ -112,10 +89,10 @@ bool BotSupport::isVisible (const Vector &origin, edict_t *ent) {
    return true;
 }
 
-void BotSupport::traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIndex) {
+void BotSupport::decalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex) {
    // this function draw spraypaint depending on the tracing results.
 
-   auto logo = conf.getRandomLogoName (logotypeIndex);
+   auto logo = conf.getLogoName (logotypeIndex);
 
    int entityIndex = -1, message = TE_DECAL;
    int decalIndex = engfuncs.pfnDecalIndex (logo.chars ());
@@ -127,6 +104,7 @@ void BotSupport::traceDecals (entvars_t *pev, TraceResult *trace, int logotypeIn
    if (cr::fequal (trace->flFraction, 1.0f)) {
       return;
    }
+
    if (!game.isNullEntity (trace->pHit)) {
       if (trace->pHit->v.solid == SOLID_BSP || trace->pHit->v.movetype == MOVETYPE_PUSHSTEP) {
          entityIndex = game.indexOfEntity (trace->pHit);
@@ -208,7 +186,6 @@ bool BotSupport::isMonster (edict_t *ent) {
    if (isHostageEntity (ent)) {
       return false;
    }
-
    return true;
 }
 
@@ -283,24 +260,30 @@ void BotSupport::checkWelcome () {
    if (game.isDedicated () || !cv_display_welcome_text.bool_ () || !m_needToSendWelcome) {
       return;
    }
-   m_welcomeReceiveTime = 0.0f;
-
 
    const bool needToSendMsg = (graph.length () > 0 ? m_needToSendWelcome : true);
-   auto receiveEntity = game.getLocalEntity ();
+   auto receiveEnt = game.getLocalEntity ();
 
-   if (isAlive (receiveEntity) && m_welcomeReceiveTime < 1.0f && needToSendMsg) {
-      m_welcomeReceiveTime = game.time () + 4.0f; // receive welcome message in four seconds after game has commencing
+   if (isAlive (receiveEnt) && m_welcomeReceiveTime < 1.0f && needToSendMsg) {
+      m_welcomeReceiveTime = game.time () + 2.0f + mp_freezetime.float_ (); // receive welcome message in four seconds after game has commencing
    }
 
-   if (m_welcomeReceiveTime > 0.0f && needToSendMsg) {
+   // legacy welcome message, to respect the original code
+   constexpr StringRef legacyWelcomeMessage = "Welcome to POD-Bot V2.5 by Count Floyd\n"
+      "Visit http://www.nuclearbox.com/podbot/ or\n"
+      "      http://www.botepidemic.com/podbot for Updates\n";
+
+   // it's should be send in very rare cases
+   const bool sendLegacyWelcome = rg.chance (2);
+
+   if (m_welcomeReceiveTime > 0.0f && m_welcomeReceiveTime < game.time () && needToSendMsg) {
       if (!game.is (GameFlags::Mobility | GameFlags::Xash3D)) {
          game.serverCommand ("speak \"%s\"", m_sentences.random ());
       }
       String authorStr = "Official Navigation Graph";
 
-      StringRef graphAuthor = graph.getAuthor ();
-      StringRef graphModified = graph.getModifiedBy ();
+      auto graphAuthor = graph.getAuthor ();
+      auto graphModified = graph.getModifiedBy ();
 
       if (!graphAuthor.startsWith (product.name)) {
          authorStr.assignf ("Navigation Graph by: %s", graphAuthor);
@@ -309,30 +292,39 @@ void BotSupport::checkWelcome () {
             authorStr.appendf (" (Modified by: %s)", graphModified);
          }
       }
+      StringRef modernWelcomeMessage = strings.format ("\nHello! You are playing with %s v%s\nDevised by %s\n\n%s", product.name, product.version, product.author, authorStr);
+      StringRef modernChatWelcomeMessage = strings.format ("----- %s v%s {%s}, (c) %s, by %s (%s)-----", product.name, product.version, product.date, product.year, product.author, product.url);
 
-      MessageWriter (MSG_ONE, msgs.id (NetMsg::TextMsg), nullptr, receiveEntity)
+      // send a chat-position message
+      MessageWriter (MSG_ONE, msgs.id (NetMsg::TextMsg), nullptr, receiveEnt)
          .writeByte (HUD_PRINTTALK)
-         .writeString (strings.format ("----- %s v%s {%s}, (c) %s, by %s (%s)-----", product.name, product.version, product.date, product.year, product.author, product.url));
+         .writeString (modernChatWelcomeMessage.chars ());
 
-      MessageWriter (MSG_ONE, SVC_TEMPENTITY, nullptr, receiveEntity)
-         .writeByte (TE_TEXTMESSAGE)
-         .writeByte (1)
-         .writeShort (MessageWriter::fs16 (-1.0f, 13.0f))
-         .writeShort (MessageWriter::fs16 (-1.0f, 13.0f))
-         .writeByte (2)
-         .writeByte (rg.get (33, 255))
-         .writeByte (rg.get (33, 255))
-         .writeByte (rg.get (33, 255))
-         .writeByte (0)
-         .writeByte (rg.get (230, 255))
-         .writeByte (rg.get (230, 255))
-         .writeByte (rg.get (230, 255))
-         .writeByte (200)
-         .writeShort (MessageWriter::fu16 (0.0078125f, 8.0f))
-         .writeShort (MessageWriter::fu16 (2.0f, 8.0f))
-         .writeShort (MessageWriter::fu16 (6.0f, 8.0f))
-         .writeShort (MessageWriter::fu16 (0.1f, 8.0f))
-         .writeString (strings.format ("\nHello! You are playing with %s v%s\nDevised by %s\n\n%s", product.name, product.version, product.author, authorStr));
+      static hudtextparms_t textParams {};
+
+      textParams.channel = 1;
+      textParams.x = -1.0f;
+      textParams.y = sendLegacyWelcome ? 0.0f : -1.0f;
+      textParams.effect = rg.get (1, 2);
+
+      textParams.r1 = static_cast <uint8_t> (sendLegacyWelcome ? 255 : rg.get (33, 255));
+      textParams.g1 = static_cast <uint8_t> (sendLegacyWelcome ? 0 : rg.get (33, 255));
+      textParams.b1 = static_cast <uint8_t> (sendLegacyWelcome ? 0 : rg.get (33, 255));
+      textParams.a1 = static_cast <uint8_t> (0);
+
+      textParams.r2 = static_cast <uint8_t> (sendLegacyWelcome ? 255 : rg.get (230, 255));
+      textParams.g2 = static_cast <uint8_t> (sendLegacyWelcome ? 255 : rg.get (230, 255));
+      textParams.b2 = static_cast <uint8_t> (sendLegacyWelcome ? 255 : rg.get (230, 255));
+      textParams.a2 = static_cast <uint8_t> (200);
+
+      textParams.fadeinTime = 0.0078125f;
+      textParams.fadeoutTime = 2.0f;
+      textParams.holdTime = 6.0f;
+      textParams.fxTime = 0.25f;
+
+      // send the hud message
+      game.sendHudMessage (receiveEnt, textParams,
+                           sendLegacyWelcome ? legacyWelcomeMessage.chars () : modernWelcomeMessage.chars ());
 
       m_welcomeReceiveTime = 0.0f;
       m_needToSendWelcome = false;
@@ -488,10 +480,10 @@ void BotSupport::syncCalculatePings () {
       int botPing = bot->m_basePing + rg.get (average.first - part, average.first + part) + rg.get (bot->m_difficulty / 2, bot->m_difficulty);
       const int botLoss = rg.get (average.second / 2, average.second);
 
-      if (botPing <= 5) {
+      if (botPing < 2) {
          botPing = rg.get (10, 23);
       }
-      else if (botPing > 70) {
+      else if (botPing > 300) {
          botPing = rg.get (30, 40);
       }
       client.ping = getPingBitmask (client.ent, botLoss, botPing);
@@ -522,43 +514,6 @@ void BotSupport::emitPings (edict_t *to) {
    return;
 }
 
-void BotSupport::installSendTo () {
-   // if previously requested to disable?
-   if (!cv_enable_query_hook.bool_ ()) {
-      if (m_sendToDetour.detoured ()) {
-         disableSendTo ();
-      }
-      return;
-   }
-
-   // do not enable on not dedicated server
-   if (!game.isDedicated ()) {
-      return;
-   }
-   using SendToHandle = decltype (sendto);
-   SendToHandle *sendToAddress = sendto;
-
-   // linux workaround with sendto
-   if (!plat.win && !plat.arm) {
-      SharedLibrary engineLib {};
-      engineLib.locate (reinterpret_cast <void *> (engfuncs.pfnPrecacheModel));
-
-      if (engineLib) {
-         auto address = engineLib.resolve <SendToHandle *> ("sendto");
-
-         if (address != nullptr) {
-            sendToAddress = address;
-         }
-      }
-   }
-   m_sendToDetour.initialize ("ws2_32.dll", "sendto", sendToAddress);
-
-   // enable only on modern games
-   if (!game.is (GameFlags::Legacy) && (plat.nix || plat.win) && !plat.arm && !m_sendToDetour.detoured ()) {
-      m_sendToDetour.install (reinterpret_cast <void *> (BotSupport::sendTo), true);
-   }
-}
-
 bool BotSupport::isModel (const edict_t *ent, StringRef model) {
    return model.startsWith (ent->v.model.chars (9));
 }
@@ -575,58 +530,6 @@ String BotSupport::getCurrentDateTime () {
    return String (timebuf);
 }
 
-int32_t BotSupport::sendTo (int socket, const void *message, size_t length, int flags, const sockaddr *dest, int destLength) {
-   const auto send = [&] (const Twin <const uint8_t *, size_t> &msg) -> int32_t {
-      return Socket::sendto (socket, msg.first, msg.second, flags, dest, destLength);
-   };
-
-   auto packet = reinterpret_cast <const uint8_t *> (message);
-   constexpr int32_t packetLength = 5;
-
-   // player replies response
-   if (length > packetLength && memcmp (packet, "\xff\xff\xff\xff", packetLength - 1) == 0) {
-      if (packet[4] == 'D') {
-         QueryBuffer buffer { packet, length, packetLength };
-         auto count = buffer.read <uint8_t> ();
-
-         for (uint8_t i = 0; i < count; ++i) {
-            buffer.skip <uint8_t> (); // number
-            auto name = buffer.readString (); // name
-            buffer.skip <int32_t> (); // score
-
-            auto ctime = buffer.read <float> (); // override connection time
-            buffer.write <float> (bots.getConnectTime (name, ctime));
-         }
-         return send (buffer.data ());
-      }
-      else if (packet[4] == 'I') {
-         QueryBuffer buffer { packet, length, packetLength };
-         buffer.skip <uint8_t> (); // protocol
-
-         // skip server name, folder, map game
-         for (size_t i = 0; i < 4; ++i) {
-            buffer.skipString ();
-         }
-         buffer.skip <short> (); // steam app id
-         buffer.skip <uint8_t> (); // players
-         buffer.skip <uint8_t> (); // maxplayers
-         buffer.skip <uint8_t> (); // bots
-         buffer.write <uint8_t> (0); // zero out bot count
-
-         return send (buffer.data ());
-      }
-      else if (packet[4] == 'm') {
-         QueryBuffer buffer { packet, length, packetLength };
-
-         buffer.shiftToEnd (); // shift to the end of buffer
-         buffer.write <uint8_t> (0); // zero out bot count
-
-         return send (buffer.data ());
-      }
-   }
-   return send ({ packet, length });
-}
-
 StringRef BotSupport::weaponIdToAlias (int32_t id) {
    StringRef none = "none";
 
@@ -635,7 +538,6 @@ StringRef BotSupport::weaponIdToAlias (int32_t id) {
    }
    return none;
 }
-
 
 // helper class for reading wave header
 class WaveEndianessHelper final : public NonCopyable {

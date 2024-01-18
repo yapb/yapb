@@ -152,7 +152,6 @@ private:
    int menuKickPage4 (int item);
 
 private:
-   void enableDrawModels (bool enable);
    void createMenus ();
 
 public:
@@ -166,6 +165,7 @@ public:
    void assignAdminRights (edict_t *ent, char *infobuffer);
    void maintainAdminRights ();
    void flushPrintQueue ();
+   void enableDrawModels (bool enable);
 
 public:
    void setFromConsole (bool console) {

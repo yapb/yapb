@@ -249,7 +249,7 @@ public:
    }
 
    // get random name by index
-   StringRef getRandomLogoName (int index) {
+   StringRef getLogoName (int index) {
       return m_logos[index];
    }
 
@@ -258,7 +258,7 @@ public:
       if (m_custom.exists (name)) {
          return m_custom[name];
       }
-      SimpleLogger::instance ().error ("Trying to fetch unknown custom variable: %s", name);
+      logger.error ("Trying to fetch unknown custom variable: %s", name);
 
       return "";
    }

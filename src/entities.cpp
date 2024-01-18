@@ -12,9 +12,9 @@
 // other platforms, and you want to run bot on it without metamod, consider enabling LINKENT_STATIC_THUNKS
 // when compiling the bot, to get it supported.
 #if defined(LINKENT_STATIC_THUNKS)
-void forwardEntity_helper (EntityFunction &addr, const char *name, entvars_t *pev) {
+void forwardEntity_helper (EntityProto &addr, const char *name, entvars_t *pev) {
    if (!addr) {
-      addr = game.lib ().resolve <EntityFunction> (name);
+      addr = game.lib ().resolve <EntityProto> (name);
    }
    if (!addr) {
       return;
@@ -24,7 +24,7 @@ void forwardEntity_helper (EntityFunction &addr, const char *name, entvars_t *pe
 
 #define LINK_ENTITY(entityName)                        \
    CR_EXPORT void entityName (entvars_t *pev) {        \
-      static EntityFunction addr;                      \
+      static EntityProto addr;                      \
       forwardEntity_helper (addr, __FUNCTION__, pev);  \
    }
 
