@@ -11,6 +11,7 @@ ConVar cv_display_welcome_text ("display_welcome_text", "1", "Enables or disable
 ConVar cv_enable_query_hook ("enable_query_hook", "0", "Enables or disables fake server queries response, that shows bots as real players in server browser.");
 ConVar cv_breakable_health_limit ("breakable_health_limit", "500.0", "Specifies the maximum health of breakable object, that bot will consider to destroy.", true, 1.0f, 3000.0);
 ConVar cv_enable_fake_steamids ("enable_fake_steamids", "0", "Allows or disallows bots to return fake steam id.");
+ConVar cv_count_players_for_fakeping ("count_players_for_fakeping", "1", "Count player pings when calculating average ping for bots. If no, some random ping chosen for bots.");
 
 BotSupport::BotSupport () {
    m_needToSendWelcome = false;
@@ -430,38 +431,45 @@ void BotSupport::syncCalculatePings () {
    Twin <int, int> average { 0, 0 };
    int numHumans = 0;
 
-   // first get average ping on server, and store real client pings
-   for (auto &client : m_clients) {
-      if (!(client.flags & ClientFlags::Used) || isFakeClient (client.ent)) {
-         continue;
+   // only count player pings if we're allowed to
+   if (cv_count_players_for_fakeping.bool_ ()) {
+      // first get average ping on server, and store real client pings
+      for (auto &client : m_clients) {
+         if (!(client.flags & ClientFlags::Used) || isFakeClient (client.ent)) {
+            continue;
+         }
+         int ping, loss;
+         engfuncs.pfnGetPlayerStats (client.ent, &ping, &loss);
+
+         // @note: for those who asking on a email, we CAN call pfnGetPlayerStats hl-engine function in a separate thread
+         // since the function doesn't modify anything inside engine, so race-condition and crash isn't viable situation
+         // it's just fills ping and loss from engine structures, the only way to cause crash in separate thread
+         // is to call it with a invalid ``client`` pointer (on goldsrc), thus causing Con_Printf which is not compatible with
+         // multi-threaded environment
+         //
+         // see:
+         //    https://github.com/dreamstalker/rehlds/blob/a680f18ee1e7eb8c39fbdc45682163ca9477d783/rehlds/engine/pr_cmds.cpp#L2735C15-L2735C32
+         //    https://github.com/fwgs/xash3d-fwgs/blob/f5b9826fd9bbbdc5293c1ff522de11ce28d3c9f2/engine/server/sv_game.c#L4443
+
+         // store normal client ping
+         client.ping = getPingBitmask (client.ent, loss, ping > 0 ? ping : rg.get (8, 16)); // getting player ping sometimes fails
+         ++numHumans;
+
+         average.first += ping;
+         average.second += loss;
       }
-      int ping, loss;
-      engfuncs.pfnGetPlayerStats (client.ent, &ping, &loss);
 
-      // @note: for those who asking on a email, we CAN call pfnGetPlayerStats hl-engine function in a separate thread
-      // since the function doesn't modify anything inside engine, so race-condition and crash isn't viable situation
-      // it's just fills ping and loss from engine structures, the only way to cause crash in separate thread
-      // is to call it with a invalid ``client`` pointer (on goldsrc), thus causing Con_Printf which is not compatible with
-      // multi-threaded environment
-      //
-      // see:
-      //    https://github.com/dreamstalker/rehlds/blob/a680f18ee1e7eb8c39fbdc45682163ca9477d783/rehlds/engine/pr_cmds.cpp#L2735C15-L2735C32
-      //    https://github.com/fwgs/xash3d-fwgs/blob/f5b9826fd9bbbdc5293c1ff522de11ce28d3c9f2/engine/server/sv_game.c#L4443
-
-      // store normal client ping
-      client.ping = getPingBitmask (client.ent, loss, ping > 0 ? ping : rg.get (8, 16)); // getting player ping sometimes fails
-      ++numHumans;
-
-      average.first += ping;
-      average.second += loss;
-   }
-
-   if (numHumans > 0) {
-      average.first /= numHumans;
-      average.second /= numHumans;
+      if (numHumans > bots.getBotCount () / 4) {
+         average.first /= numHumans;
+         average.second /= numHumans;
+      }
+      else {
+         average.first = rg.get (10, 20);
+         average.second = rg.get (5, 10);
+      }
    }
    else {
-      average.first = rg.get (30, 40);
+      average.first = rg.get (10, 20);
       average.second = rg.get (5, 10);
    }
 
@@ -484,7 +492,7 @@ void BotSupport::syncCalculatePings () {
       if (botPing < 2) {
          botPing = rg.get (10, 23);
       }
-      else if (botPing > 300) {
+      else if (botPing > 100) {
          botPing = rg.get (30, 40);
       }
       client.ping = getPingBitmask (client.ent, botLoss, botPing);

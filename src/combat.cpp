@@ -627,7 +627,7 @@ bool Bot::isFriendInLineOfFire (float distance) {
       }
       const auto friendDistanceSq = client.ent->v.origin.distanceSq (pev->origin);
 
-      if (friendDistanceSq <= distanceSq && util.getShootingCone (ent (), client.ent->v.origin) > friendDistanceSq / (friendDistanceSq + cr::sqrf (1089.0f))) {
+      if (friendDistanceSq <= distanceSq && util.getShootingCone (ent (), client.ent->v.origin) > friendDistanceSq / (friendDistanceSq + cr::sqrf (33.0f))) {
          return true;
       }
    }
@@ -975,9 +975,6 @@ void Bot::fireWeapons () {
 
    // or if friend in line of fire, stop this too but do not update shoot time
    if (isFriendInLineOfFire (distance)) {
-      m_fightStyle = Fight::Strafe;
-      m_lastFightStyleCheck = game.time ();
-
       return;
    }
    int selectId = Weapon::Knife, selectIndex = 0, choosenWeapon = 0;
