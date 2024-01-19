@@ -2056,7 +2056,7 @@ void BotGraph::frame () {
    }
 
    // draw a paths, camplines and danger directions for nearest node
-   if (nearestDistanceSq <= 56.0f && m_pathDisplayTime < game.time ()) {
+   if (nearestDistanceSq < cr::clamp (m_paths[nearestIndex].radius, cr::sqrf (56.0f), cr::sqrf (90.0f)) && m_pathDisplayTime < game.time ()) {
       m_pathDisplayTime = game.time () + 0.96f;
 
       // create path pointer for faster access
@@ -2147,7 +2147,7 @@ void BotGraph::frame () {
       auto sendHudMessage = [&] (Color color, float x, float y, StringRef text) {
          static hudtextparms_t textParams {};
 
-         textParams.channel = channel;
+         textParams.channel = channel++;
          textParams.x = x;
          textParams.y = y;
          textParams.effect = 0;
@@ -2159,7 +2159,7 @@ void BotGraph::frame () {
 
          textParams.fadeinTime = 0.0f;
          textParams.fadeoutTime = 0.0f;
-         textParams.holdTime = m_pathDisplayTime;
+         textParams.holdTime = m_pathDisplayTime - game.time ();
          textParams.fxTime = 0.0f;
 
          game.sendHudMessage (m_editor, textParams, text);
