@@ -88,6 +88,9 @@ public:
    // get the current date and time as string
    String getCurrentDateTime ();
 
+   // generates fake steam id from bot name
+   StringRef getFakeSteamId (edict_t *ent);
+
    // get's the wave length
    float getWaveLength (StringRef filename);
 

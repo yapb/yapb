@@ -87,7 +87,7 @@ private:
    using SendToProto = decltype (sendto);
 
 private:
-   Detour <SendToProto> m_sendToDetour { };
+   Detour <SendToProto> m_sendToDetour { }, m_sendToDetourSys {};
 
 public:
    ServerQueryHook () = default;
@@ -100,6 +100,7 @@ public:
 public:
    // disables send hook
    bool disable () {
+      m_sendToDetourSys.restore ();
       return m_sendToDetour.restore ();
    }
 

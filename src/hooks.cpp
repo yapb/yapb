@@ -68,6 +68,11 @@ void ServerQueryHook::init () {
       return;
    }
 
+   // do not detour twice
+   if (m_sendToDetour.detoured () || m_sendToDetourSys.detoured ()) {
+      return;
+   }
+
    // do not enable on not dedicated server
    if (!game.isDedicated ()) {
       return;
@@ -83,12 +88,17 @@ void ServerQueryHook::init () {
             sendToAddress = address;
          }
       }
+      m_sendToDetourSys.initialize ("ws2_32.dll", "sendto", sendto);
    }
    m_sendToDetour.initialize ("ws2_32.dll", "sendto", sendToAddress);
 
    // enable only on modern games
    if (!game.is (GameFlags::Legacy) && (plat.nix || plat.win) && !plat.isNonX86 () && !m_sendToDetour.detoured ()) {
       m_sendToDetour.install (reinterpret_cast <void *> (BotSupport::sendTo), true);
+
+      if (!m_sendToDetourSys.detoured ()) {
+         m_sendToDetourSys.install (reinterpret_cast <void *> (BotSupport::sendTo), true);
+      }
    }
 }
 

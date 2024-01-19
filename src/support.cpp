@@ -10,6 +10,7 @@
 ConVar cv_display_welcome_text ("display_welcome_text", "1", "Enables or disables showing welcome message to host entity on game start.");
 ConVar cv_enable_query_hook ("enable_query_hook", "0", "Enables or disables fake server queries response, that shows bots as real players in server browser.");
 ConVar cv_breakable_health_limit ("breakable_health_limit", "500.0", "Specifies the maximum health of breakable object, that bot will consider to destroy.", true, 1.0f, 3000.0);
+ConVar cv_enable_fake_steamids ("enable_fake_steamids", "0", "Allows or disallows bots to return fake steam id.");
 
 BotSupport::BotSupport () {
    m_needToSendWelcome = false;
@@ -528,6 +529,16 @@ String BotSupport::getCurrentDateTime () {
    strftime (timebuf, StringBuffer::StaticBufferSize, "%d-%m-%Y %H:%M:%S", &timeinfo);
 
    return String (timebuf);
+}
+
+StringRef BotSupport::getFakeSteamId (edict_t *ent) {
+   if (!cv_enable_fake_steamids.bool_ () || !isPlayer (ent)) {
+      return "BOT";
+   }
+   auto botNameHash = StringRef::fnv1a32 (ent->v.netname.chars ());
+
+   // just fake steam id a d return it with get player authid function
+   return strings.format ("STEAM_0:1:%d", cr::abs (static_cast <int32_t> (botNameHash) & 0xffff00));
 }
 
 StringRef BotSupport::weaponIdToAlias (int32_t id) {

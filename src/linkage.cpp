@@ -534,6 +534,22 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       };
    }
 
+   table->pfnGetPlayerAuthId = [] (edict_t *e) -> const char * {
+      if (bots[e]) {
+         auto authid = util.getFakeSteamId (e);
+
+         if (game.is (GameFlags::Metamod)) {
+            RETURN_META_VALUE (MRES_SUPERCEDE, authid.chars ());
+         }
+         return authid.chars ();
+      }
+
+      if (game.is (GameFlags::Metamod)) {
+         RETURN_META_VALUE (MRES_IGNORED, nullptr);
+      }
+      return engfuncs.pfnGetPlayerAuthId (e);
+   };
+
    table->pfnEmitSound = [] (edict_t *entity, int channel, const char *sample, float volume, float attenuation, int flags, int pitch) {
       // this function tells the engine that the entity pointed to by "entity", is emitting a sound
       // which fileName is "sample", at level "channel" (CHAN_VOICE, etc...), with "volume" as
