@@ -49,7 +49,7 @@ namespace Hooks {
       // sometimes actually by their side, that's why we strongly recommend to check it here too. In
       // case it's a bot asking for a client command, we handle it like we do for bot commands
 
-      if (game.isNullEntity (ent)) {
+      if (game.isNullEntity (ent) || (!game.isNullEntity (ent) && (ent->v.flags & FL_DORMANT))) {
          if (game.is (GameFlags::Metamod)) {
             RETURN_META (MRES_SUPERCEDE);
          }
@@ -63,7 +63,7 @@ namespace Hooks {
       vsnprintf (buffer, StringBuffer::StaticBufferSize, format, ap);
       va_end (ap);
 
-      if (util.isFakeClient (ent) && !(ent->v.flags & FL_DORMANT)) {
+      if (util.isFakeClient (ent)) {
          auto bot = bots[ent];
 
          if (bot) {
