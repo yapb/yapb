@@ -49,11 +49,17 @@ namespace Hooks {
       // sometimes actually by their side, that's why we strongly recommend to check it here too. In
       // case it's a bot asking for a client command, we handle it like we do for bot commands
 
-      if (game.isNullEntity (ent) || (!game.isNullEntity (ent) && (ent->v.flags & FL_DORMANT))) {
-         if (game.is (GameFlags::Metamod)) {
-            RETURN_META (MRES_SUPERCEDE);
+      if (!game.isNullEntity (ent)) {
+         if (bots[ent] || util.isFakeClient (ent) || (ent->v.flags & FL_DORMANT)) {
+            if (game.is (GameFlags::Metamod)) {
+               RETURN_META (MRES_SUPERCEDE); // prevent bots to be forced to issue client commands
+            }
+            return;
          }
-         return;
+      }
+
+      if (game.is (GameFlags::Metamod)) {
+         RETURN_META (MRES_IGNORED);
       }
 
       va_list ap;
@@ -63,22 +69,6 @@ namespace Hooks {
       vsnprintf (buffer, StringBuffer::StaticBufferSize, format, ap);
       va_end (ap);
 
-      if (util.isFakeClient (ent)) {
-         auto bot = bots[ent];
-
-         if (bot) {
-            game.botCommand (bot->pev->pContainingEntity, buffer);
-         }
-
-         if (game.is (GameFlags::Metamod)) {
-            RETURN_META (MRES_SUPERCEDE); // prevent bots to be forced to issue client commands
-         }
-         return;
-      }
-
-      if (game.is (GameFlags::Metamod)) {
-         RETURN_META (MRES_IGNORED);
-      }
       engfuncs.pfnClientCommand (ent, buffer);
    }
 }
