@@ -46,9 +46,9 @@ private:
 
    bool m_leaderChoosen[kGameTeamNum] {}; // is team leader choose thees round
    bool m_economicsGood[kGameTeamNum] {}; // is team able to buy anything
-   bool m_bombPlanted {};
-   bool m_botsCanPause {};
-   bool m_roundOver {};
+   bool m_bombPlanted {}; // is bomb planted ?
+   bool m_botsCanPause {}; // bots can do a little pause ?
+   bool m_roundOver {}; // well, round is over>
 
    Array <edict_t *> m_activeGrenades {}; // holds currently active grenades on the map
    Array <edict_t *> m_interestingEntities {};  // holds currently interesting entities on the map
@@ -124,6 +124,7 @@ public:
 
    bool isTeamStacked (int team);
    bool kickRandom (bool decQuota = true, Team fromTeam = Team::Unassigned);
+   bool hasCustomCSDMSpawnEntities ();
 
 public:
    const Array <edict_t *> &getActiveGrenades () {

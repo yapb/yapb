@@ -220,6 +220,9 @@ public:
    // search entities in sphere
    void searchEntities (const Vector &position, float radius, EntitySearch functor);
 
+   // check if map has entity
+   bool hasEntityInGame (StringRef classname);
+
    // print the version to server console on startup
    void printBotVersion ();
 

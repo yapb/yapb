@@ -651,6 +651,7 @@ void BotConfig::loadCustomConfig () {
 
    m_custom["C4ModelName"] = "c4.mdl";
    m_custom["AMXParachuteCvar"] = "sv_parachute";
+   m_custom["CustomCSDMSpawnPoint"] = "view_spawn";
 
    // custom initialization
    if (openConfig ("custom", "Custom config file not found. Loading defaults.", &file)) {

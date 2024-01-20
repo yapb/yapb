@@ -441,7 +441,12 @@ void BotManager::maintainQuota () {
    else {
       desiredBotCount = cr::min <int> (desiredBotCount, maxClients - humanPlayersInGame);
    }
-   int maxSpawnCount = game.getSpawnCount (Team::Terrorist) + game.getSpawnCount (Team::CT) - humanPlayersInGame;
+   auto maxSpawnCount = game.getSpawnCount (Team::Terrorist) + game.getSpawnCount (Team::CT) - humanPlayersInGame;
+
+   // if has some custom spawn points, max out spawn point counter
+   if (desiredBotCount > botsInGame && hasCustomCSDMSpawnEntities ()) {
+      maxSpawnCount = game.maxClients () + 1;
+   }
 
    // sent message only to console from here
    ctrl.setFromConsole (true);
@@ -758,6 +763,16 @@ bool BotManager::kickRandom (bool decQuota, Team fromTeam) {
       }
    }
    return false;
+}
+
+bool BotManager::hasCustomCSDMSpawnEntities () {
+   if (!game.is (GameFlags::CSDM | GameFlags::FreeForAll)) {
+      return false;
+   }
+   auto customSpawnClass = conf.fetchCustom ("CustomCSDMSpawnPoint");
+
+   // check for custom entity
+   return game.hasEntityInGame (customSpawnClass);
 }
 
 void BotManager::setLastWinner (int winner) {

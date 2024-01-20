@@ -1054,6 +1054,10 @@ void Game::searchEntities (const Vector &position, float radius, EntitySearch fu
    }
 }
 
+bool Game::hasEntityInGame (StringRef classname) {
+   return !isNullEntity (engfuncs.pfnFindEntityByString (nullptr, "classname", classname.chars ()));
+}
+
 void Game::printBotVersion () {
    String gameVersionStr;
    StringArray botRuntimeFlags;
