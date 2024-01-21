@@ -444,7 +444,7 @@ void BotManager::maintainQuota () {
    auto maxSpawnCount = game.getSpawnCount (Team::Terrorist) + game.getSpawnCount (Team::CT) - humanPlayersInGame;
 
    // if has some custom spawn points, max out spawn point counter
-   if (desiredBotCount > botsInGame && hasCustomCSDMSpawnEntities ()) {
+   if (desiredBotCount >= botsInGame && hasCustomCSDMSpawnEntities ()) {
       maxSpawnCount = game.maxClients () + 1;
    }
 

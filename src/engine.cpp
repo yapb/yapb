@@ -952,11 +952,12 @@ void Game::applyGameModes () {
    }
 
    static ConVarRef csdm_active ("csdm_active");
+   static ConVarRef csdm_version ("csdm_version");
    static ConVarRef redm_active ("redm_active");
    static ConVarRef mp_freeforall ("mp_freeforall");
 
    // csdm is only with amxx and metamod
-   if (csdm_active.exists () || redm_active.exists ()) {
+   if (csdm_active.exists () || redm_active.exists () || csdm_version.exists ()) {
       if (csdm_active.value () > 0.0f || redm_active.value () > 0.0f) {
          m_gameFlags |= GameFlags::CSDM;
       }
