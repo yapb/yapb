@@ -470,7 +470,7 @@ bool Bot::lookupEnemies () {
 }
 
 Vector Bot::getBodyOffsetError (float distance) {
-   if (game.isNullEntity (m_enemy) || distance < kSprayDistance) {
+   if (game.isNullEntity (m_enemy) || distance < kDoubleSprayDistance) {
       return nullptr;
    }
 

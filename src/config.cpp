@@ -649,13 +649,19 @@ void BotConfig::loadCustomConfig () {
    String line;
    MemFile file;
 
-   m_custom["C4ModelName"] = "c4.mdl";
-   m_custom["AMXParachuteCvar"] = "sv_parachute";
-   m_custom["CustomCSDMSpawnPoint"] = "view_spawn";
+   auto setDefaults = [&] () {
+      m_custom["C4ModelName"] = "c4.mdl";
+      m_custom["AMXParachuteCvar"] = "sv_parachute";
+      m_custom["CustomCSDMSpawnPoint"] = "view_spawn";
+   };
+   setDefaults ();
 
    // custom initialization
    if (openConfig ("custom", "Custom config file not found. Loading defaults.", &file)) {
       m_custom.clear ();
+
+      // set defaults anyway
+      setDefaults ();
 
       while (file.getLine (line)) {
          line.trim ();

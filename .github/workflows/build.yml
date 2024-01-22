@@ -97,6 +97,60 @@ jobs:
           path: |
             ${{matrix.arch}}/yapb.dll
             ${{matrix.arch}}/yapb.pdb
+            
+  bot-continuous-release:
+    if: github.event_name == 'push'
+
+    name: bot-continuous-release
+    runs-on: ubuntu-latest
+    needs: [bot-build, bot-msvc]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: true
+      - name: Install signing tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends osslsigncode
+      - name: Get artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Configure meson
+        run: |
+          python -m pip install --upgrade meson ninja requests
+      - name: Create packages
+        run: |
+          meson setup dist
+          ninja -C dist package
+        env:
+          CS_CERTIFICATE: ${{secrets.CS_CERTIFICATE}}
+          CS_CERTIFICATE_PASSWORD: ${{secrets.CS_CERTIFICATE_PASSWORD}}
+      - name: Purge old build
+        uses: dev-drprasad/delete-tag-and-release@v1.0
+        with:
+          tag_name: continuous
+          delete_release: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          repo: ${{ env.GITHUB_REPOSITORY }}
+      - name: Push new build
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_name: ${{ env.GITHUB_REPOSITORY }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file_glob: true
+          file: pkg/*
+          tag: continuous
+          overwrite: true
+          prerelease: true
+          release_name: Continuous Build
 
   bot-release:
     if: |
@@ -108,7 +162,7 @@ jobs:
     needs: [bot-build, bot-msvc]
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
@@ -117,7 +171,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends osslsigncode
-      - name: Get Artifacts
+      - name: Get artifacts
         uses: actions/download-artifact@v3
         with:
           path: artifacts
