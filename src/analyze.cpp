@@ -274,9 +274,9 @@ void GraphAnalyze::displayOverlayMessage () {
       return;
    }
    constexpr StringRef analyzeHudMesssage =
-      "+--------------------------------------------------------+\n"
-      " Map analysis for bots is in progress. Please Wait..   \n"
-      "+--------------------------------------------------------+\n";
+      "+-----------------------------------------------------------------+\n"
+      "         Map analysis for bots is in progress. Please Wait..       \n"
+      "+-----------------------------------------------------------------+\n";
 
    static hudtextparms_t textParams {};
 
@@ -346,7 +346,7 @@ void GraphAnalyze::flood (const Vector &pos, const Vector &next, float range) {
 }
 
 void GraphAnalyze::setUpdateInterval () {
-   const auto frametime (globals->frametime);
+   const auto frametime = globals->frametime;
 
    if ((cv_graph_analyze_fps.float_ () + frametime) <= 1.0f / frametime) {
       m_updateInterval = game.time () + frametime * 0.06f;
@@ -358,16 +358,16 @@ void GraphAnalyze::markGoals () {
       return;
    }
 
-   auto updateNodeFlags = [] (int type, const char *entity) {
-      game.searchEntities ("classname", entity, [&] (edict_t *ent) {
+   auto updateNodeFlags = [] (int type, StringRef classname) {
+      game.searchEntities ("classname", classname, [&] (edict_t *ent) {
          for  (auto &path : graph) {
-            const auto &absOrigin = path.origin + Vector (1.0f, 1.0f, 1.0f);
+            const auto &bb = path.origin + Vector (1.0f, 1.0f, 1.0f);
 
-            if (ent->v.absmin.x > absOrigin.x || ent->v.absmin.y > absOrigin.y) {
+            if (ent->v.absmin.x > bb.x || ent->v.absmin.y > bb.y) {
                continue;
             }
 
-            if (ent->v.absmax.x < absOrigin.x || ent->v.absmax.y < absOrigin.y) {
+            if (ent->v.absmax.x < bb.x || ent->v.absmax.y < bb.y) {
                continue;
             }
             path.flags |= type;

@@ -9,7 +9,7 @@
 
 ConVar cv_graph_fixcamp ("graph_fixcamp", "0", "Specifies whether bot should not 'fix' camp directions of camp waypoints when loading old PWF format.");
 ConVar cv_graph_url ("graph_url", product.download.chars (), "Specifies the URL from which bots will be able to download graph in case of missing local one. Set to empty, if no downloads needed.", false, 0.0f, 0.0f);
-ConVar cv_graph_url_upload ("graph_url_upload", "yapb.jeefo.net/upload", "Specifies the URL to which bots will try to upload the graph file to database.", false, 0.0f, 0.0f);
+ConVar cv_graph_url_upload ("graph_url_upload", product.upload.chars (), "Specifies the URL to which bots will try to upload the graph file to database.", false, 0.0f, 0.0f);
 ConVar cv_graph_auto_save_count ("graph_auto_save_count", "15", "Every N graph nodes placed on map, the graph will be saved automatically (without checks).", true, 0.0f, kMaxNodes);
 ConVar cv_graph_draw_distance ("graph_draw_distance", "400", "Maximum distance to draw graph nodes from editor viewport.", true, 64.0f, 3072.0f);
 
@@ -1848,7 +1848,7 @@ bool BotGraph::isNodeReacheableEx (const Vector &src, const Vector &destination,
 
          game.testLine (check, down, TraceIgnore::Monsters, m_editor, &tr);
 
-         float height = tr.flFraction * 1000.0f; // height from ground
+         const float height = tr.flFraction * 1000.0f; // height from ground
 
          // is the current height greater than the step height?
          if (height < lastHeight - maxHeight) {
@@ -2515,8 +2515,8 @@ void BotGraph::addBasic () {
       return EntitySearchResult::Continue;
    });
 
-   auto autoCreateForEntity = [] (int type, const char *entity) {
-      game.searchEntities ("classname", entity, [&] (edict_t *ent) {
+   auto autoCreateForEntity = [] (int type, StringRef classname) {
+      game.searchEntities ("classname", classname, [&] (edict_t *ent) {
          Vector pos = game.getEntityOrigin (ent);
 
          TraceResult tr;

@@ -188,7 +188,7 @@ bool Bot::checkBodyParts (edict_t *target) {
 
       return true;
    }
-   Vector dir = (target->v.origin - pev->origin).normalize2d ();
+   Vector dir = (target->v.origin - pev->origin).normalize2d_apx ();
 
    Vector perp (-dir.y, dir.x, 0.0f);
    spot = target->v.origin + Vector (perp.x * kEdgeOffset, perp.y * kEdgeOffset, 0);
@@ -675,9 +675,10 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
          obstacleDistanceSq = tr.vecEndPos.distanceSq (source);
       }
    }
-   constexpr float kMaxDistanceSq = cr::sqrf (75.0f);
 
    if (obstacleDistanceSq > 0.0f) {
+      constexpr float kMaxDistanceSq = cr::sqrf (75.0f);
+
       while (power > 0) {
          if (obstacleDistanceSq > kMaxDistanceSq) {
             obstacleDistanceSq -= kMaxDistanceSq;
@@ -1212,6 +1213,9 @@ void Bot::attackMovement () {
          }
       }
       else if (usesKnife ()) {
+         m_fightStyle = Fight::Strafe;
+      }
+      else if (usesKnife () && isInViewCone (m_enemy->v.origin) && game.is (GameFlags::CSDM) && !isInNarrowPlace ()) {
          m_fightStyle = Fight::Strafe;
       }
       else {

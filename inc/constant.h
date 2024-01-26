@@ -449,6 +449,6 @@ constexpr auto kSecondaryWeaponMask = (cr::bit (Weapon::P228) | cr::bit (Weapon:
 constexpr auto kPrimaryWeaponMinIndex = 7;
 
 // grenade model names
-static constexpr StringRef kExplosiveModelName = "hegrenade.mdl";
-static constexpr StringRef kFlashbangModelName = "flashbang.mdl";
-static constexpr StringRef kSmokeModelName = "smokegrenade.mdl";
+inline constexpr StringRef kExplosiveModelName = "hegrenade.mdl";
+inline constexpr StringRef kFlashbangModelName = "flashbang.mdl";
+inline constexpr StringRef kSmokeModelName = "smokegrenade.mdl";

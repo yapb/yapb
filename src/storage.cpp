@@ -393,10 +393,18 @@ void BotStorage::unlinkFromDisk () {
    graph.reset (); // re-initialize points
 }
 
-String BotStorage::getRunningPath () {
+StringRef BotStorage::getRunningPath () {
    // this function get's relative path against bot library (bot library should reside in bin dir)
 
    static String path;
+
+   // we're do not do relative (against bot's library) paths on android 
+   if (plat.android) {
+      if (path.empty ()) {
+         path = strings.joinPath (game.getRunningModName (), folders.addons, folders.bot);
+      }
+      return path;
+   }
 
    // compute the full path to the our folder
    if (path.empty ()) {
@@ -415,8 +423,16 @@ String BotStorage::getRunningPath () {
    return path;
 }
 
-String BotStorage::getRunningPathVFS () {
+StringRef BotStorage::getRunningPathVFS () {
    static String path;
+
+   // we're do not do relative (against bot's library) paths on android 
+   if (plat.android) {
+      if (path.empty ()) {
+         path = strings.joinPath (folders.addons, folders.bot);
+      }
+      return path;
+   }
 
    if (path.empty ()) {
       path = getRunningPath ();

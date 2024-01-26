@@ -333,9 +333,6 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
          RETURN_META (MRES_IGNORED);
       }
       dllapi.pfnServerDeactivate ();
-
-      // refill export table
-      entlink.flush ();
    };
 
    table->pfnStartFrame = [] () {

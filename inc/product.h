@@ -39,6 +39,7 @@ public:
    static constexpr StringRef email { "yapb@jeefo.net" };
    static constexpr StringRef url { "https://yapb.jeefo.net/" };
    static constexpr StringRef download { "yapb.jeefo.net" };
+   static constexpr StringRef upload { "yapb.jeefo.net/upload" };
    static constexpr StringRef logtag { "YB" };
    static constexpr StringRef dtime { __DATE__ " " __TIME__ };
    static constexpr StringRef date { __DATE__ };
@@ -53,6 +54,8 @@ public:
    ~Folders () = default;
 
 public:
+   static constexpr StringRef bot { "yapb" };
+   static constexpr StringRef addons { "addons" };
    static constexpr StringRef config { "conf" };
    static constexpr StringRef data { "data" };
    static constexpr StringRef lang { "lang" };

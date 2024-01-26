@@ -576,12 +576,15 @@ void BotConfig::loadDifficultyConfig () {
    // currently, mindelay, maxdelay, headprob, seenthruprob, heardthruprob, recoil, aim_error {x,y,z}
    constexpr uint32_t kMaxDifficultyValues = 9;
 
+   // has errors ?
+   int errorCount = 0;
+
    // helper for parsing each level
    auto parseLevel = [&] (int32_t level, StringRef data) {
       auto values = data.split <String> (",");
 
       if (values.length () != kMaxDifficultyValues) {
-         logger.error ("Bad value for difficulty level #%d.", level);
+         ++errorCount;
          return;
       }
       auto diff = &m_difficulty[level];
@@ -629,6 +632,11 @@ void BotConfig::loadDifficultyConfig () {
             parseLevel (Difficulty::Expert, items[1]);
          }
       }
+
+      // if some errors occurred, notify user
+      if (errorCount > 0) {
+         logger.error ("Config file: difficulty.%s has a bad syntax. Probably out of date.", kConfigExtension);
+      }
    }
 }
 
@@ -656,6 +664,9 @@ void BotConfig::loadCustomConfig () {
    };
    setDefaults ();
 
+   // has errors ?
+   int errorCount = 0;
+
    // custom initialization
    if (openConfig ("custom", "Custom config file not found. Loading defaults.", &file)) {
       m_custom.clear ();
@@ -672,14 +683,19 @@ void BotConfig::loadCustomConfig () {
          auto values = line.split ("=");
 
          if (values.length () != 2) {
-            logger.error ("Bad configuration for custom.%s", kConfigExtension);
-            return;
+            ++errorCount;
+            continue;
          }
          auto kv = Twin <String, String> (values[0].trim (), values[1].trim ());
 
          if (!kv.first.empty () && !kv.second.empty ()) {
             m_custom[kv.first] = kv.second;
          }
+      }
+
+      // if some errors occurred, notify user
+      if (errorCount > 0) {
+         logger.error ("Config file: custom.%s has a bad syntax. Probably out of date.", kConfigExtension);
       }
    }
 }

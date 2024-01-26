@@ -2820,7 +2820,7 @@ bool Bot::isBlockedRight () {
 
 bool Bot::checkWallOnLeft () {
    TraceResult tr {};
-   game.testLine (pev->origin, pev->origin + -pev->angles.right () * 40.0f, TraceIgnore::Monsters, ent (), &tr);
+   game.testLine (pev->origin, pev->origin + -pev->angles.right () * 45.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
    if (tr.flFraction < 1.0f) {
@@ -2833,7 +2833,7 @@ bool Bot::checkWallOnRight () {
    TraceResult tr {};
 
    // do a trace to the right...
-   game.testLine (pev->origin, pev->origin + pev->angles.right () * 40.0f, TraceIgnore::Monsters, ent (), &tr);
+   game.testLine (pev->origin, pev->origin + pev->angles.right () * 45.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
    if (tr.flFraction < 1.0f) {
@@ -3172,7 +3172,7 @@ void Bot::syncFindPath (int srcIndex, int destIndex, FindPath pathType) {
       srcIndex = changeNodeIndex (graph.getNearestNoBuckets (pev->origin, 256.0f));
 
       if (!graph.exists (srcIndex)) {
-         printf ("%s source path index not valid (%d).", __func__, srcIndex);
+         printf ("%s source path index not valid (%d).\n", __func__, srcIndex);
          return;
       }
    }
@@ -3183,7 +3183,7 @@ void Bot::syncFindPath (int srcIndex, int destIndex, FindPath pathType) {
          destIndex = graph.random ();
 
          if (!graph.exists (destIndex)) {
-            printf ("%s dest path index not valid (%d).", __func__, destIndex);
+            printf ("%s dest path index not valid (%d).\n", __func__, destIndex);
             return;
          }
       }
@@ -3191,7 +3191,7 @@ void Bot::syncFindPath (int srcIndex, int destIndex, FindPath pathType) {
 
    // do not process if src points to dst
    if (srcIndex == destIndex) {
-      printf ("%s source path is same as dest (%d).", __func__, destIndex);
+      printf ("%s source path is same as dest (%d).\n", __func__, destIndex);
       return;
    }
    clearSearchNodes ();
@@ -3246,7 +3246,7 @@ void Bot::syncFindPath (int srcIndex, int destIndex, FindPath pathType) {
       m_kickMeFromServer = true; // bot should be kicked within main thread, not here
 
       // bot should not roam when this occurs
-      printf ("A* Search for bot \"%s\" failed with internal pathfinder error. Seems to be graph is broken. Bot removed (re-added).", pev->netname.chars ());
+      printf ("A* Search for bot \"%s\" failed with internal pathfinder error. Seems to be graph is broken. Bot removed (re-added).\n", pev->netname.chars ());
       break;
 
    case AStarResult::Failed:
@@ -3254,7 +3254,7 @@ void Bot::syncFindPath (int srcIndex, int destIndex, FindPath pathType) {
       findShortestPath (srcIndex, destIndex); // A* found no path, try floyd pathfinder instead
 
       if (cv_debug.bool_ ()) {
-         printf ("A* Search for bot \"%s\" has failed. Falling back to shortest-path algorithm. Seems to be graph is broken.", pev->netname.chars ());
+         printf ("A* Search for bot \"%s\" has failed. Falling back to shortest-path algorithm. Seems to be graph is broken.\n", pev->netname.chars ());
       }
       break;
    }

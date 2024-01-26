@@ -182,11 +182,6 @@ public:
    static int CR_STDCALL closeHandler (SharedLibrary::Handle module) {
       return instance ().close (module);
    }
-
-public:
-   void flush () {
-      m_exports.clear ();
-   }
 };
 
 // expose global

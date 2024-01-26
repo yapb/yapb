@@ -270,14 +270,6 @@ void BotSupport::checkWelcome () {
       m_welcomeReceiveTime = game.time () + 2.0f + mp_freezetime.float_ (); // receive welcome message in four seconds after game has commencing
    }
 
-   // legacy welcome message, to respect the original code
-   constexpr StringRef legacyWelcomeMessage = "Welcome to POD-Bot V2.5 by Count Floyd\n"
-      "Visit http://www.nuclearbox.com/podbot/ or\n"
-      "      http://www.botepidemic.com/podbot for Updates\n";
-
-   // it's should be send in very rare cases
-   const bool sendLegacyWelcome = rg.chance (2);
-
    if (m_welcomeReceiveTime > 0.0f && m_welcomeReceiveTime < game.time () && needToSendMsg) {
       if (!game.is (GameFlags::Mobility | GameFlags::Xash3D)) {
          game.serverCommand ("speak \"%s\"", m_sentences.random ());
@@ -286,6 +278,14 @@ void BotSupport::checkWelcome () {
 
       auto graphAuthor = graph.getAuthor ();
       auto graphModified = graph.getModifiedBy ();
+
+      // legacy welcome message, to respect the original code
+      constexpr StringRef legacyWelcomeMessage = "Welcome to POD-Bot V2.5 by Count Floyd\n"
+         "Visit http://www.nuclearbox.com/podbot/ or\n"
+         "      http://www.botepidemic.com/podbot for Updates\n";
+
+      // it's should be send in very rare cases
+      const bool sendLegacyWelcome = rg.chance (2);
 
       if (!graphAuthor.startsWith (product.name)) {
          authorStr.assignf ("Navigation Graph by: %s", graphAuthor);

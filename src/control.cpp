@@ -1460,10 +1460,10 @@ int BotControl::menuGraphRadius (int item) {
    closeMenu (); // reset menu display
    graph.setEditFlag (GraphEdit::On); // turn graph on in case
 
-   constexpr float radius[] = { 0.0f, 8.0f, 16.0f, 32.0f, 48.0f, 64.0f, 80.0f, 96.0f, 128.0f };
-
    if (item >= 1 && item <= 9) {
-      graph.setRadius (kInvalidNodeIndex, radius[item - 1]);
+      constexpr float kRadiusValues[] = { 0.0f, 8.0f, 16.0f, 32.0f, 48.0f, 64.0f, 80.0f, 96.0f, 128.0f };
+
+      graph.setRadius (kInvalidNodeIndex, kRadiusValues[item - 1]);
       showMenu (Menu::NodeRadius);
    }
    return BotCommandResult::Handled;
@@ -1642,10 +1642,10 @@ int BotControl::menuCampDirections (int item) {
 int BotControl::menuAutoPathDistance (int item) {
    closeMenu (); // reset menu display
 
-   constexpr float distances[] = { 0.0f, 100.0f, 130.0f, 160.0f, 190.0f, 220.0f, 250.0f };
-
    if (item >= 1 && item <= 7) {
-      graph.setAutoPathDistance (distances[item - 1]);
+      constexpr float kDistanceValues[] = { 0.0f, 100.0f, 130.0f, 160.0f, 190.0f, 220.0f, 250.0f };
+
+      graph.setAutoPathDistance (kDistanceValues[item - 1]);
    }
 
    switch (item) {

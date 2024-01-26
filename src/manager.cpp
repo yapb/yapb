@@ -373,6 +373,11 @@ void BotManager::maintainQuota () {
       return;
    }
 
+   if (analyzer.isAnalyzing ()) {
+      ctrl.msg ("Can't create bot during map analysis process.");
+      return;
+   }
+
    // bot's creation update
    if (!m_addRequests.empty () && m_maintainTime < game.time ()) {
       const BotRequest &request = m_addRequests.popFront ();
