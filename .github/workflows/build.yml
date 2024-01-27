@@ -140,6 +140,10 @@ jobs:
           delete_release: true
           github_token: ${{ secrets.GITHUB_TOKEN }}
           repo: ${{ env.GITHUB_REPOSITORY }}
+      - name: Very important stage
+        continue-on-error: true
+        run: |
+          sleep 20s
       - name: Push new build
         uses: svenstaro/upload-release-action@v2
         with:
