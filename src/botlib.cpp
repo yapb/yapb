@@ -263,6 +263,12 @@ edict_t *Bot::lookupBreakable () {
 }
 
 void Bot::setIdealReactionTimers (bool actual) {
+   if (cv_whose_your_daddy.bool_ ()) {
+      m_idealReactionTime = 0.05f;
+      m_actualReactionTime = 0.095f;
+
+      return; // zero out reaction times for extreme mode
+   }
    const auto tweak = conf.getDifficultyTweaks (m_difficulty);
 
    if (actual) {
@@ -1698,6 +1704,13 @@ void Bot::refreshEnemyPredict () {
    }
 }
 
+void Bot::setLastVictim (edict_t *ent) {
+   m_lastVictim = ent;
+   m_lastVictimOrigin = ent->v.origin + ent->v.view_ofs;
+
+   m_forgetLastVictimTimer.start (rg.get (0.5f, 0.8f));
+}
+
 void Bot::setConditions () {
    // this function carried out each frame. does all of the sensing, calculates emotions and finally sets the desired
    // action after applying all of the Filters
@@ -3014,7 +3027,7 @@ void Bot::logic () {
    m_isUsingGrenade = false;
 
    executeTasks (); // execute current task
-   updateAimDir (); // choose aim direction
+   setAimDirection (); // choose aim direction
    updateLookAngles (); // and turn to chosen aim direction
 
    // the bots wants to fire at something?
@@ -3193,7 +3206,7 @@ void Bot::showDebugOverlay () {
       }
       StringRef weapon = util.weaponIdToAlias (m_currentWeapon);
       StringRef debugData = strings.format (
-         "\n\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\n"
+         "\n\n\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\n"
          "Item: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\n"
          "SP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\n"
          "Enemy=%s Pickup=%s Type=%s Terrain=%s Stuck=%s\n",

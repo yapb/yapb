@@ -77,17 +77,20 @@ int BotControl::cmdKickBots () {
 }
 
 int BotControl::cmdKillBots () {
-   enum args { alias = 1, team, max };
+   enum args { alias = 1, team, silent, max };
+
+   // do not issue any messages
+   bool silentKill = hasArg (silent) && strValue (silent).startsWith ("si");
 
    // if team is specified, kick from specified tram
    if (strValue (alias).endsWith ("_ct") || intValue (team) == 2 || strValue (team) == "ct") {
-      bots.killAllBots (Team::CT);
+      bots.killAllBots (Team::CT, silentKill);
    }
    else if (strValue (alias).endsWith ("_t") || intValue (team) == 1 || strValue (team) == "t") {
-      bots.killAllBots (Team::Terrorist);
+      bots.killAllBots (Team::Terrorist, silentKill);
    }
    else {
-      bots.killAllBots ();
+      bots.killAllBots (-1, silentKill);
    }
    return BotCommandResult::Handled;
 }
@@ -2138,7 +2141,7 @@ BotControl::BotControl () {
    m_cmds.emplace ("add/addbot/add_ct/addbot_ct/add_t/addbot_t/addhs/addhs_t/addhs_ct", "add [difficulty] [personality] [team] [model] [name]", "Adding specific bot into the game.", &BotControl::cmdAddBot);
    m_cmds.emplace ("kick/kickone/kick_ct/kick_t/kickbot_ct/kickbot_t", "kick [team]", "Kicks off the random bot from the game.", &BotControl::cmdKickBot);
    m_cmds.emplace ("removebots/kickbots/kickall/kickall_ct/kickall_t", "removebots [instant] [team]", "Kicks all the bots from the game.", &BotControl::cmdKickBots);
-   m_cmds.emplace ("kill/killbots/killall/kill_ct/kill_t", "kill [team]", "Kills the specified team / all the bots.", &BotControl::cmdKillBots);
+   m_cmds.emplace ("kill/killbots/killall/kill_ct/kill_t", "kill [team] [silent]", "Kills the specified team / all the bots.", &BotControl::cmdKillBots);
    m_cmds.emplace ("fill/fillserver", "fill [team] [count] [difficulty] [personality]", "Fill the server (add bots) with specified parameters.", &BotControl::cmdFill);
    m_cmds.emplace ("vote/votemap", "vote [map_id]", "Forces all the bot to vote to specified map.", &BotControl::cmdVote);
    m_cmds.emplace ("weapons/weaponmode", "weapons [knife|pistol|shotgun|smg|rifle|sniper|standard]", "Sets the bots weapon mode to use", &BotControl::cmdWeaponMode);

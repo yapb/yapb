@@ -346,6 +346,7 @@ private:
    Path *m_path {}; // pointer to the current path node
    String m_chatBuffer {}; // space for strings (say text...)
    Frustum::Planes m_viewFrustum {};
+   CountdownTimer m_forgetLastVictimTimer {}; // time to forget last victim position ?
 
 private:
    int pickBestWeapon (Array <int> &vec, int moneySave);
@@ -441,7 +442,7 @@ private:
    void checkGrenadesThrow ();
    void checkBurstMode (float distance);
    void checkSilencer ();
-   void updateAimDir ();
+   void setAimDirection ();
    void updateLookAngles ();
    void updateBodyAngles ();
    void updateLookAnglesNewbie (const Vector &direction, float delta);
@@ -492,6 +493,7 @@ private:
    void moveToGoal ();
    void resetMovement ();
    void refreshEnemyPredict ();
+   void setLastVictim (edict_t *victim);
 
    void normal_ ();
    void spraypaint_ ();
@@ -646,6 +648,7 @@ public:
    bool m_isEnemyReachable {}; // direct line to enemy
    bool m_kickedByRotation {}; // is bot kicked due to rotation ?
    bool m_kickMeFromServer {}; // kick the bot off the server?
+   bool m_fireHurtsFriend {}; // firing at enemy will hurt our friend?
 
    edict_t *m_doubleJumpEntity {}; // pointer to entity that request double jump
    edict_t *m_radioEntity {}; // pointer to entity issuing a radio command
@@ -659,6 +662,7 @@ public:
    Vector m_position {}; // position to move to in move to position task
    Vector m_doubleJumpOrigin {}; // origin of double jump
    Vector m_lastEnemyOrigin {}; // vector to last enemy origin
+   Vector m_lastVictimOrigin {}; // last victim origin to watch it
 
    ChatCollection m_sayTextBuffer {}; // holds the index & the actual message of the last unprocessed text message of a player
    BurstMode m_weaponBurstMode {}; // bot using burst mode? (famas/glock18, but also silencer mode)
@@ -862,6 +866,7 @@ extern ConVar cv_graph_url_upload;
 extern ConVar cv_graph_auto_save_count;
 extern ConVar cv_graph_analyze_max_jump_height;
 extern ConVar cv_spraypaints;
+extern ConVar cv_whose_your_daddy;
 
 extern ConVar mp_freezetime;
 extern ConVar mp_roundtime;

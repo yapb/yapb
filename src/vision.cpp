@@ -8,6 +8,7 @@
 #include <yapb.h>
 
 ConVar cv_max_nodes_for_predict ("max_nodes_for_predict", "25", "Maximum number for path length, to predict the enemy.", true, 15.0f, 256.0f);
+ConVar cv_whose_your_daddy ("whose_your_daddy", "0", "Enables or disables extra hard difficulty for bots.");
 
 // game console variables
 ConVar mp_flashlight ("mp_flashlight", nullptr, Var::GameRef);
@@ -58,7 +59,7 @@ bool Bot::seesEntity (const Vector &dest, bool fromBody) {
    return tr.flFraction >= 1.0f;
 }
 
-void Bot::updateAimDir () {
+void Bot::setAimDirection () {
    uint32_t flags = m_aimFlags;
 
    // don't allow bot to look at danger positions under certain circumstances
@@ -220,6 +221,11 @@ void Bot::updateAimDir () {
          }
       }
 
+      // try to look at last victim for a little, maybe there's some one else
+      if (game.isNullEntity (m_enemy) && m_difficulty >= Difficulty::Normal && !m_forgetLastVictimTimer.elapsed () && !m_lastVictimOrigin.empty ()) {
+         m_lookAt = m_lastVictimOrigin;
+      }
+
       // don't look at bottom of node, if reached it
       if (m_lookAt == m_destOrigin && !onLadder) {
          m_lookAt.z = getEyesPos ().z;
@@ -297,6 +303,15 @@ void Bot::updateLookAngles () {
       updateLookAnglesNewbie (direction, delta);
       updateBodyAngles ();
 
+      return;
+   }
+
+   // just force directioon
+   if (m_difficulty == Difficulty::Expert && (m_aimFlags & AimFlags::Enemy) && (m_wantsToFire || usesSniper ()) && cv_whose_your_daddy.bool_ ()) {
+      pev->v_angle = direction;
+      pev->v_angle.clampAngles ();
+
+      updateBodyAngles ();
       return;
    }
    const float aimSkill = cr::clamp (static_cast <float> (m_difficulty), 1.0f, 4.0f) * 25.0f;

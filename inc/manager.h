@@ -95,7 +95,7 @@ public:
    void kickEveryone (bool instant = false, bool zeroQuota = true);
    void kickBot (int index);
    void kickFromTeam (Team team, bool removeAll = false);
-   void killAllBots (int team = -1);
+   void killAllBots (int team = -1, bool silent = false);
    void maintainQuota ();
    void maintainAutoKill ();
    void maintainLeaders ();

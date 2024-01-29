@@ -953,11 +953,6 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *table, globalvars_t *glob) {
    memcpy (&engfuncs, table, sizeof (enginefuncs_t));
    globals = glob;
 
-   // set the global timer function
-   timerStorage.setTimeFunction ([] () {
-      return globals->time;
-   });
-
    if (game.postload ()) {
       return;
    }

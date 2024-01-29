@@ -507,7 +507,7 @@ void BotManager::maintainAutoKill () {
 
    // check if we're reached the delay, so kill out bots
    if (!cr::fzero (m_autoKillCheckTime) && m_autoKillCheckTime < game.time ()) {
-      killAllBots ();
+      killAllBots (-1, true);
       m_autoKillCheckTime = 0.0f;
 
       return;
@@ -679,7 +679,7 @@ void BotManager::kickFromTeam (Team team, bool removeAll) {
    }
 }
 
-void BotManager::killAllBots (int team) {
+void BotManager::killAllBots (int team, bool silent) {
    // this function kills all bots on server (only this dll controlled bots)
 
    for (const auto &bot : m_bots) {
@@ -688,7 +688,10 @@ void BotManager::killAllBots (int team) {
       }
       bot->kill ();
    }
-   ctrl.msg ("All bots died...");
+
+   if (!silent) {
+      ctrl.msg ("All bots died...");
+   }
 }
 
 void BotManager::kickBot (int index) {
@@ -873,7 +876,10 @@ void BotManager::listBots () {
 
    for (const auto &bot : bots) {
       auto timelimitStr = cv_rotate_bots.bool_ () ? strings.format ("%-3.0f secs", bot->m_stayTime - game.time ()) : "unlimited";
-      ctrl.msg ("[%-2.1d]\t%-22.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s\t%s", bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful", botTeam (bot->m_team), bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_isAlive ? "yes" : "no", timelimitStr);
+
+      ctrl.msg ("[%-2.1d]\t%-22.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s\t%s",
+                bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful",
+                botTeam (bot->m_team), bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_isAlive ? "yes" : "no", timelimitStr);
    }
    ctrl.msg ("%d bots", m_bots.length ());
 }
@@ -1003,10 +1009,15 @@ void BotManager::updateBotDifficulties () {
 }
 
 void BotManager::balanceBotDifficulties () {
-   // difficulty chaning once per round (time)
+   // difficulty changing once per round (time)
    auto updateDifficulty = [] (Bot *bot, int32_t offset) {
       bot->m_difficulty = cr::clamp (static_cast <Difficulty> (bot->m_difficulty + offset), Difficulty::Noob, Difficulty::Expert);
    };
+
+   // with nightmare difficulty, there is no balance
+   if (cv_whose_your_daddy.bool_ ()) {
+      return;
+   }
 
    if (cv_difficulty_auto.bool_ () && m_difficultyBalanceTime < game.time ()) {
       const auto ratioPlayer = getAverageTeamKPD (false);
@@ -1343,7 +1354,7 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
 
    // is this message about a bot who killed somebody?
    if (killerBot != nullptr) {
-      killerBot->m_lastVictim = victim;
+      killerBot->setLastVictim (victim);
    }
 
    // did a human kill a bot on his team?
@@ -1441,6 +1452,7 @@ void Bot::newRound () {
    m_lastVictim = nullptr;
    m_lastEnemy = nullptr;
    m_lastEnemyOrigin = nullptr;
+   m_lastVictimOrigin = nullptr;
    m_trackingEdict = nullptr;
    m_timeNextTracking = 0.0f;
 
@@ -1475,6 +1487,7 @@ void Bot::newRound () {
    m_followWaitTime = 0.0f;
 
    m_hostages.clear ();
+   m_forgetLastVictimTimer.invalidate ();
 
    for (auto &timer : m_chatterTimes) {
       timer = kMaxChatterRepeatInterval;
@@ -1494,6 +1507,7 @@ void Bot::newRound () {
    m_grenadeCheckTime = 0.0f;
    m_isUsingGrenade = false;
    m_bombSearchOverridden = false;
+   m_fireHurtsFriend = false;
 
    m_blindButton = 0;
    m_blindTime = 0.0f;

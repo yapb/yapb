@@ -218,8 +218,13 @@ bool Bot::seesEnemy (edict_t *player) {
    if (game.isNullEntity (player)) {
       return false;
    }
+   bool ignoreFieldOfView = false;
 
-   if (isInViewCone (player->v.origin) && frustum.check (m_viewFrustum, player) && checkBodyParts (player)) {
+   if (cv_whose_your_daddy.bool_ () && util.isPlayer (pev->dmg_inflictor) && game.getTeam (pev->dmg_inflictor) != m_team) {
+      ignoreFieldOfView = true;
+   }
+
+   if ((ignoreFieldOfView || isInViewCone (player->v.origin)) && frustum.check (m_viewFrustum, player) && checkBodyParts (player)) {
       m_seeEnemyTime = game.time ();
       m_lastEnemy = player;
       m_lastEnemyOrigin = m_enemyOrigin;
@@ -314,6 +319,11 @@ bool Bot::lookupEnemies () {
             continue;
          }
 
+         // extra skill player can see thru smoke... if beeing attacked
+         if (cv_whose_your_daddy.bool_ () && (player->v.button & (IN_ATTACK | IN_ATTACK2)) && m_viewDistance < m_maxViewDistance) {
+            nearestDistanceSq = cr::sqrf (m_maxViewDistance);
+         }
+
          // see if bot can see the player...
          if (seesEnemy (player)) {
             if (isEnemyBehindShield (player)) {
@@ -362,7 +372,13 @@ bool Bot::lookupEnemies () {
             pushRadioMessage (Radio::EnemySpotted);
          }
          m_targetEntity = nullptr; // stop following when we see an enemy...
-         m_enemySurpriseTime = game.time () + m_actualReactionTime;
+
+         if (cv_whose_your_daddy.bool_ ()) {
+            m_enemySurpriseTime = m_actualReactionTime * 0.5f;
+         }
+         else {
+            m_enemySurpriseTime = m_actualReactionTime;
+         }
 
          // zero out reaction time
          m_actualReactionTime = 0.0f;
@@ -976,7 +992,11 @@ void Bot::fireWeapons () {
 
    // or if friend in line of fire, stop this too but do not update shoot time
    if (isFriendInLineOfFire (distance)) {
+      m_fireHurtsFriend = true;
       return;
+   }
+   else {
+      m_fireHurtsFriend = false;
    }
    int selectId = Weapon::Knife, selectIndex = 0, choosenWeapon = 0;
 
@@ -1148,7 +1168,7 @@ void Bot::attackMovement () {
    }
 
    auto approach = 0;
-   const auto distance = m_lookAt.distance2d (getEyesPos ()); // how far away is the enemy scum?
+   const auto distance = m_lookAt.distance (getEyesPos ()); // how far away is the enemy scum?
 
    if (usesKnife ()) {
       approach = 100;
@@ -1168,15 +1188,17 @@ void Bot::attackMovement () {
    }
 
    // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
-   if (!game.is (GameFlags::CSDM) && (m_states & Sense::SeeingEnemy) && approach < 30 && !bots.isBombPlanted () && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
-      m_moveSpeed = -pev->maxspeed;
-      startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, true);
-   }
-   else if (approach < 50) {
-      m_moveSpeed = 0.0f;
-   }
-   else {
-      m_moveSpeed = pev->maxspeed;
+   if (!game.is (GameFlags::CSDM)) {
+      if ((m_states & Sense::SeeingEnemy) && approach < 30 && !bots.isBombPlanted () && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
+         m_moveSpeed = -pev->maxspeed;
+         startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, true);
+      }
+      else if (approach < 50) {
+         m_moveSpeed = 0.0f;
+      }
+      else {
+         m_moveSpeed = pev->maxspeed;
+      }
    }
 
    if (m_lastFightStyleCheck + 3.0f < game.time ()) {
@@ -1215,9 +1237,6 @@ void Bot::attackMovement () {
       else if (usesKnife ()) {
          m_fightStyle = Fight::Strafe;
       }
-      else if (usesKnife () && isInViewCone (m_enemy->v.origin) && game.is (GameFlags::CSDM) && !isInNarrowPlace ()) {
-         m_fightStyle = Fight::Strafe;
-      }
       else {
          m_fightStyle = Fight::Stay;
       }
@@ -1225,6 +1244,14 @@ void Bot::attackMovement () {
       // do not try to strafe while ducking
       if (isDucking () || isInNarrowPlace ()) {
          m_fightStyle = Fight::Stay;
+      }
+      const auto pistolStrafeDistance = game.is (GameFlags::CSDM) ? kDoubleSprayDistance * 3.0f : kDoubleSprayDistance;
+
+      // fire hurts friend value here is from previous frame, but acceptable, and saves us alot of cpu cycles
+      if (m_fireHurtsFriend || ((usesPistol () || usesShotgun ())
+                                     && distance < pistolStrafeDistance
+                                     && isInViewCone (m_enemyOrigin))) {
+         m_fightStyle = Fight::Strafe;
       }
       m_lastFightStyleCheck = game.time ();
    }
@@ -1252,10 +1279,10 @@ void Bot::attackMovement () {
          const auto &rightSide = m_enemy->v.v_angle.right ().normalize2d_apx ();
 
          if ((dirToPoint | rightSide) < 0.0f) {
-            m_combatStrafeDir = Dodge::Left;
+            m_combatStrafeDir = Dodge::Right;
          }
          else {
-            m_combatStrafeDir = Dodge::Right;
+            m_combatStrafeDir = Dodge::Left;
          }
 
          if (rg.chance (30)) {
@@ -1267,14 +1294,14 @@ void Bot::attackMovement () {
       const bool wallOnRight = checkWallOnRight ();
       const bool wallOnLeft = checkWallOnLeft ();
 
-      if (m_combatStrafeDir == Dodge::Right) {
+      if (m_combatStrafeDir == Dodge::Left) {
          if (!wallOnLeft) {
             m_strafeSpeed = -pev->maxspeed;
          }
          else if (!wallOnRight) {
             swapStrafeCombatDir ();
-            m_strafeSetTime = strafeUpdateTime ();
 
+            m_strafeSetTime = strafeUpdateTime ();
             m_strafeSpeed = pev->maxspeed;
          }
          else {
@@ -1288,8 +1315,8 @@ void Bot::attackMovement () {
          }
          else if (!wallOnLeft) {
             swapStrafeCombatDir ();
-            m_strafeSetTime = strafeUpdateTime ();
 
+            m_strafeSetTime = strafeUpdateTime ();
             m_strafeSpeed = -pev->maxspeed;
          }
          else {
@@ -1298,13 +1325,11 @@ void Bot::attackMovement () {
          }
       }
 
+      // we're setting strafe speed regardless of move angles, so not resetting forward move here cause bots to behave strange
+      m_moveSpeed = 0.0f;
+
       if (m_difficulty >= Difficulty::Normal && (m_jumpTime + 5.0f < game.time () && isOnFloor () && rg.get (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.length2d () > 150.0f) && !usesSniper ()) {
          pev->button |= IN_JUMP;
-      }
-
-      // do not move forward/backward is too far
-      if (distance > 1024.0f) {
-         m_moveSpeed = 0.0f;
       }
    }
    else if (m_fightStyle == Fight::Stay) {
@@ -1649,16 +1674,18 @@ void Bot::updateTeamCommands () {
 bool Bot::isGroupOfEnemies (const Vector &location, int numEnemies, float radius) {
    int numPlayers = 0;
 
+   // needs a square radius
+   const float radiusSq = cr::sqrf (radius);
+
    // search the world for enemy players...
    for (const auto &client : util.getClients ()) {
       if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.ent == ent ()) {
          continue;
       }
 
-      if (client.ent->v.origin.distanceSq (location) < cr::sqrf (radius)) {
-         // don't target our teammates...
+      if (client.ent->v.origin.distanceSq (location) < radiusSq) {
          if (client.team == m_team) {
-            return false;
+            return false; // don't target our teammates...
          }
 
          if (numPlayers++ > numEnemies) {
@@ -1877,16 +1904,16 @@ void Bot::checkGrenadesThrow () {
    };
 
    // check if throwing a grenade is a good thing to do...
-   auto throwingCondition = game.mapIs(MapFlags::GrenadeWar)
+   const auto throwingCondition = game.mapIs (MapFlags::GrenadeWar)
       ? false
       : (preventibleTasks
-         || isInNarrowPlace()
-         || cv_ignore_enemies.bool_()
+         || isInNarrowPlace ()
+         || cv_ignore_enemies.bool_ ()
          || m_isUsingGrenade
          || m_grenadeRequested
          || m_isReloading
-         || (isKnifeMode() && !bots.isBombPlanted())
-         || m_grenadeCheckTime >= game.time());
+         || (isKnifeMode () && !bots.isBombPlanted ())
+         || m_grenadeCheckTime >= game.time ());
 
    if (throwingCondition) {
       clearThrowStates (m_states);
@@ -1896,7 +1923,8 @@ void Bot::checkGrenadesThrow () {
    // check again in some seconds
    m_grenadeCheckTime = game.time () + kGrenadeCheckTime;
 
-   auto senseCondition = game.mapIs(MapFlags::GrenadeWar) ? false : !(m_states & (Sense::SuspectEnemy | Sense::HearingEnemy));
+   const auto senseCondition = game.mapIs (MapFlags::GrenadeWar) ? false : !(m_states & (Sense::SuspectEnemy | Sense::HearingEnemy));
+
    if (!util.isAlive (m_lastEnemy) || senseCondition) {
       clearThrowStates (m_states);
       return;
@@ -1939,7 +1967,7 @@ void Bot::checkGrenadesThrow () {
    }
 
    // enemy within a good throw distance?
-   auto grenadeToThrowCondition = game.mapIs(MapFlags::GrenadeWar)
+   const auto grenadeToThrowCondition = game.mapIs (MapFlags::GrenadeWar)
       ? 100.0f
       : grenadeToThrow == Weapon::Smoke ? 200.0f : 400.0f;
 

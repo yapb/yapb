@@ -86,6 +86,9 @@ void Game::levelInitialize (edict_t *entities, int max) {
    // flush any print queue
    ctrl.resetFlushTimestamp ();
 
+   // set the global timer function
+   timerStorage.setTimeAddress (&globals->time);
+
    // go thru the all entities on map, and do whatever we're want
    for (int i = 0; i < max; ++i) {
       auto ent = entities + i;
