@@ -25,7 +25,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: true
@@ -49,7 +49,7 @@ jobs:
           meson compile -C ${{matrix.arch}}
           echo "artifcat=${{matrix.arch}}/`ls ${{matrix.arch}}/ | egrep '^yapb.(so|dylib|dll)$' | head -1`" >> $GITHUB_ENV
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{matrix.arch}}
           path: ${{env.artifcat}}
@@ -67,7 +67,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: true
@@ -91,7 +91,7 @@ jobs:
         run: |
           meson compile -C ${{matrix.arch}}
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{matrix.arch}}
           path: |
@@ -107,7 +107,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: true
@@ -116,11 +116,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends osslsigncode
       - name: Get artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
       - name: Setup python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.x'
       - name: Configure meson
@@ -134,11 +134,12 @@ jobs:
           CS_CERTIFICATE: ${{secrets.CS_CERTIFICATE}}
           CS_CERTIFICATE_PASSWORD: ${{secrets.CS_CERTIFICATE_PASSWORD}}
       - name: Purge old build
-        uses: dev-drprasad/delete-tag-and-release@v1.0
+        uses: ClementTsang/delete-tag-and-release@v0.3.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: continuous
           delete_release: true
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           repo: ${{ env.GITHUB_REPOSITORY }}
       - name: Very important stage
         continue-on-error: true
@@ -167,7 +168,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: true
@@ -176,11 +177,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends osslsigncode
       - name: Get artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.x'
       - name: Configure meson
