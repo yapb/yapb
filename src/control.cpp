@@ -843,11 +843,11 @@ int BotControl::cmdNodeUpload () {
    String uploadUrlAddress = cv_graph_url_upload.str ();
 
    // only allow to upload to non-https endpoint
-   if (uploadUrlAddress.startsWith ("http")) {
+   if (uploadUrlAddress.startsWith ("https")) {
       msg ("Value of \"%s\" cvar should not contain URL scheme, only the host name and path.", cv_graph_url_upload.name ());
       return BotCommandResult::Handled;
    }
-   String uploadUrl = strings.format ("http://%s", uploadUrlAddress);
+   String uploadUrl = strings.format ("%s://%s", product.httpScheme, uploadUrlAddress);
 
    msg ("\n");
    msg ("WARNING!");

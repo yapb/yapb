@@ -12,6 +12,7 @@ ConVar cv_graph_url ("graph_url", product.download.chars (), "Specifies the URL 
 ConVar cv_graph_url_upload ("graph_url_upload", product.upload.chars (), "Specifies the URL to which bots will try to upload the graph file to database.", false, 0.0f, 0.0f);
 ConVar cv_graph_auto_save_count ("graph_auto_save_count", "15", "Every N graph nodes placed on map, the graph will be saved automatically (without checks).", true, 0.0f, kMaxNodes);
 ConVar cv_graph_draw_distance ("graph_draw_distance", "400", "Maximum distance to draw graph nodes from editor viewport.", true, 64.0f, 3072.0f);
+ConVar cv_graph_auto_collect_db ("graph_auto_collect_db", "0", "Allows bot's to exchange your graph files with graph database automatically.");
 
 void BotGraph::reset () {
    // this function initialize the graph structures..
@@ -1277,6 +1278,129 @@ void BotGraph::emitNotify (int32_t sound) {
    }
 }
 
+void BotGraph::syncCollectOnline () {
+   m_isOnlineCollected = true; // once per server start
+
+   // path to graph files
+   auto graphFilesPath = bstor.buildPath (BotFile::Graph, false, true);
+
+   // enumerate graph files
+   FileEnumerator enumerator { strings.joinPath (graphFilesPath, "*.graph") };
+
+   // listing of graphs locally available
+   StringArray localGraphs {};
+
+   // collect all the files
+   while (enumerator) {
+      auto match = enumerator.getMatch ();
+
+      match = match.substr (match.findLastOf (kPathSeparator) + 1);
+      match = match.substr (0, match.findFirstOf ("."));
+
+      localGraphs.emplace (match);
+      enumerator.next ();
+   }
+
+   // no graphs ? unbelievable
+   if (localGraphs.empty ()) {
+      return;
+   }
+   String uploadUrlAddress = cv_graph_url_upload.str ();
+
+   // only allow to upload to non-https endpoint
+   if (uploadUrlAddress.startsWith ("https")) {
+      return;
+   }
+   String localFile = plat.tmpfname ();
+
+   // don't forget remove temporary file
+   auto unlinkTemporary = [&] () {
+      if (plat.fileExists (localFile.chars ())) {
+         plat.removeFile (localFile.chars ());
+      }
+   };
+
+   // write out our list of files into temporary
+   if (File lc { localFile, "wt" }) {
+      auto graphList = String::join (localGraphs, ",");
+      auto collectUrl = strings.format ("%s://%s/collect/%u", product.httpScheme, uploadUrlAddress, graphList.hash ());
+
+      lc.puts (graphList.chars ());
+      lc.close ();
+
+      // upload to collection diff
+      if (!http.uploadFile (collectUrl, localFile)) {
+         unlinkTemporary ();
+         return;
+      }
+      unlinkTemporary ();
+
+      // download collection diff
+      if (!http.downloadFile (collectUrl, localFile)) {
+         return;
+      }
+      StringArray wanted {};
+
+      // decode answer
+      if (lc.open (localFile, "rt")) {
+         String lines;
+
+         if (lc.getLine (lines)) {
+            wanted = lines.split (",");
+         }
+         lc.close ();
+      }
+      unlinkTemporary ();
+
+      // if 'we're have something in diff, bailout
+      if (wanted.empty ()) {
+         return;
+      }
+      localGraphs.clear ();
+
+      // convert graphs names into full paths
+      for (const auto &wn : wanted) {
+         if (wn == game.getMapName ()) {
+            continue; // skip current map always
+         }
+         localGraphs.emplace (strings.joinPath (graphFilesPath, wn) + ".graph");
+      }
+
+      // try to upload everything database wants
+      for (const auto &lg : localGraphs) {
+         if (!plat.fileExists (lg.chars ())) {
+            continue;
+         }
+         StorageHeader hdr {};
+
+         // read storage header and check if file NOT analyzed
+         if (File gp { lg, "rb" }) {
+            gp.read (&hdr, sizeof (StorageHeader));
+
+            // check the magic, graph is NOT analyzed and have some viable nodes number
+            if (hdr.magic == kStorageMagic && !(hdr.options & StorageOption::Analyzed) && hdr.length > 48) {
+               String uploadUrl = strings.format ("%s://%s", product.httpScheme, uploadUrlAddress);
+
+               // try to upload to database (no need check if it's succeed)
+               http.uploadFile (uploadUrl, lg);
+            }
+            gp.close ();
+         }
+      }
+   }
+   unlinkTemporary ();
+}
+
+void BotGraph::collectOnline () {
+   if (m_isOnlineCollected || !cv_graph_auto_collect_db.bool_ ()) {
+      return;
+   }
+
+   worker.enqueue ([this] () {
+      syncCollectOnline ();
+   });
+}
+
 void BotGraph::calculatePathRadius (int index) {
    // calculate "wayzones" for the nearest node  (meaning a dynamic distance area to vary node origin)
 
@@ -1657,6 +1781,9 @@ bool BotGraph::loadGraphData () {
          }
       }
       cv_debug_goal.set (kInvalidNodeIndex);
+
+      // try to do graph collection, and push them to graph database automatically
+      collectOnline ();
 
       return true;
    }

@@ -40,6 +40,7 @@ public:
    static constexpr StringRef url { "https://yapb.jeefo.net/" };
    static constexpr StringRef download { "yapb.jeefo.net" };
    static constexpr StringRef upload { "yapb.jeefo.net/upload" };
+   static constexpr StringRef httpScheme { "http" };
    static constexpr StringRef logtag { "YB" };
    static constexpr StringRef dtime { __DATE__ " " __TIME__ };
    static constexpr StringRef date { __DATE__ };

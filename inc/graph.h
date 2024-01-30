@@ -168,6 +168,7 @@ private:
    bool m_narrowChecked {};
    bool m_silenceMessages {};
    bool m_lightChecked {};
+   bool m_isOnlineCollected {};
 
    Vector m_learnVelocity {};
    Vector m_learnPosition {};
@@ -259,6 +260,8 @@ public:
    void showStats ();
    void showFileInfo ();
    void emitNotify (int32_t sound);
+   void syncCollectOnline ();
+   void collectOnline ();
 
    IntArray getNearestInRadius (float radius, const Vector &origin, int maxCount = -1);
    const IntArray &getNodesInBucket (const Vector &pos);

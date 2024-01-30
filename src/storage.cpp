@@ -49,7 +49,7 @@ template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *
       auto downloadAddress = cv_graph_url.str ();
 
       auto toDownload = buildPath (storageToBotFile (type.option), false);
-      auto fromDownload = strings.format ("http://%s/graph/%s.graph", downloadAddress, lowercaseMapName);
+      auto fromDownload = strings.format ("%s://%s/graph/%s.graph", product.httpScheme, downloadAddress, lowercaseMapName);
 
       // try to download
       if (http.downloadFile (fromDownload, toDownload)) {
@@ -301,7 +301,7 @@ template <typename U> BotStorage::SaveLoadData BotStorage::guessType () {
 
 #else 
 
-String BotStorage::buildPath (int32_t file, bool isMemoryLoad) {
+String BotStorage::buildPath (int32_t file, bool isMemoryLoad, bool withoutMapName) {
    using FilePath = Twin <String, String>;
 
    static HashMap <int32_t, FilePath> paths = {
@@ -342,7 +342,7 @@ String BotStorage::buildPath (int32_t file, bool isMemoryLoad) {
       strftime (timebuf, StringBuffer::StaticBufferSize, "L%d%m%Y", &timeinfo);
       path.emplace (strings.format ("%s_%s.%s", product.nameLower, timebuf, paths[file].second));
    }
-   else {
+   else if (!withoutMapName) {
       String mapName = game.getMapName ();
       path.emplace (strings.format ("%s.%s", mapName.lowercase (), paths[file].second));
    }
