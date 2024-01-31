@@ -304,6 +304,14 @@ public:
       return util.getClient (indexOfPlayer (ent)).team;
    }
 
+   // gets the player team (real in ffa)
+   int getRealTeam (edict_t *ent) {
+      if (isNullEntity (ent)) {
+         return Team::Unassigned;
+      }
+      return util.getClient (indexOfPlayer (ent)).team2;
+   }
+
    // sets the precache to uninitialize
    void setUnprecached () {
       m_precached = false;

@@ -489,6 +489,9 @@ void BotManager::maintainQuota () {
 }
 
 void BotManager::maintainLeaders () {
+   if (game.is (GameFlags::FreeForAll)) {
+      return;
+   }
 
    // select leader each team somewhere in round start
    if (m_timeRoundStart + 5.0f > game.time () && m_timeRoundStart + 10.0f < game.time ()) {
@@ -668,7 +671,7 @@ void BotManager::kickFromTeam (Team team, bool removeAll) {
    }
 
    for (const auto &bot : m_bots) {
-      if (team == bot->m_team) {
+      if (team == game.getRealTeam (bot->ent ())) {
          bot->kick (removeAll);
 
          if (!removeAll) {
@@ -683,7 +686,7 @@ void BotManager::killAllBots (int team, bool silent) {
    // this function kills all bots on server (only this dll controlled bots)
 
    for (const auto &bot : m_bots) {
-      if (team != -1 && team != bot->m_team) {
+      if (team != -1 && game.getRealTeam (bot->ent ())) {
          continue;
       }
       bot->kill ();
@@ -719,7 +722,7 @@ bool BotManager::kickRandom (bool decQuota, Team fromTeam) {
       if (fromTeam == Team::Unassigned) {
          return true;
       }
-      return bot->m_team == fromTeam;
+      return game.getRealTeam (bot->ent ()) == fromTeam;
    };
 
    // first try to kick the bot that is currently dead
@@ -857,7 +860,9 @@ void BotManager::listBots () {
 
    ctrl.msg ("%-3.5s\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.4s\t%-3.4s\t%-3.5s\t%-3.8s", "index", "name", "personality", "team", "difficulty", "frags", "alive", "timeleft");
 
-   auto botTeam = [] (int32_t team) -> String {
+   auto botTeam = [] (edict_t *ent) -> StringRef {
+      const auto team = game.getRealTeam (ent);
+
       switch (team) {
       case Team::CT:
          return "CT";
@@ -879,7 +884,7 @@ void BotManager::listBots () {
 
       ctrl.msg ("[%-2.1d]\t%-22.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s\t%s",
                 bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful",
-                botTeam (bot->m_team), bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_isAlive ? "yes" : "no", timelimitStr);
+                botTeam (bot->ent ()), bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_isAlive ? "yes" : "no", timelimitStr);
    }
    ctrl.msg ("%d bots", m_bots.length ());
 }
@@ -942,7 +947,7 @@ Bot *BotManager::findHighestFragBot (int team) {
 
    // search bots in this team
    for (const auto &bot : bots) {
-      if (bot->m_isAlive && bot->m_team == team) {
+      if (bot->m_isAlive && game.getRealTeam (bot->ent ()) == team) {
          if (bot->pev->frags > bestScore) {
             bestIndex = bot->index ();
             bestScore = bot->pev->frags;
@@ -1300,8 +1305,8 @@ void BotManager::erase (Bot *bot) {
 }
 
 void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
-   const auto killerTeam = game.getTeam (killer);
-   const auto victimTeam = game.getTeam (victim);
+   const auto killerTeam = game.getRealTeam (killer);
+   const auto victimTeam = game.getRealTeam (victim);
 
    if (cv_radio_mode.int_ () == 2) {
       // need to send congrats on well placed shot
@@ -1682,6 +1687,7 @@ void Bot::updateTeamJoin () {
    if (!m_notStarted) {
       return;
    }
+   const auto botTeam = game.getRealTeam (ent ());
 
    // cs prior beta 7.0 uses hud-based motd, so press fire once
    if (game.is (GameFlags::Legacy)) {
@@ -1689,10 +1695,10 @@ void Bot::updateTeamJoin () {
    }
 
    // check if something has assigned team to us
-   else if (m_team == Team::Terrorist || m_team == Team::CT) {
+   else if (botTeam == Team::Terrorist || botTeam == Team::CT) {
       m_notStarted = false;
    }
-   else if (m_team == Team::Unassigned && m_retryJoin > 2) {
+   else if (botTeam == Team::Unassigned && m_retryJoin > 2) {
       m_startAction = BotMsg::TeamSelect;
    }
 
@@ -1751,10 +1757,10 @@ void Bot::updateTeamJoin () {
       auto enforcedSkin = 0;
 
       // setup enforced skin based on selected team
-      if (m_wantedTeam == 1 || m_team == Team::Terrorist) {
+      if (m_wantedTeam == 1 || botTeam == Team::Terrorist) {
          enforcedSkin = cv_botskin_t.int_ ();
       }
-      else if (m_wantedTeam == 2 || m_team == Team::CT) {
+      else if (m_wantedTeam == 2 || botTeam == Team::CT) {
          enforcedSkin = cv_botskin_ct.int_ ();
       }
       enforcedSkin = cr::clamp (enforcedSkin, 0, maxChoice);
@@ -1791,8 +1797,8 @@ void BotManager::captureChatRadio (StringRef cmd, StringRef arg, edict_t *ent) {
       const bool alive = util.isAlive (ent);
       int team = -1;
 
-      if (cmd == "say_team") {
-         team = game.getTeam (ent);
+      if (cmd.endsWith ("team")) {
+         team = game.getRealTeam (ent);
       }
 
       for (const auto &client : util.getClients ()) {

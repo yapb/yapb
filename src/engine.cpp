@@ -162,7 +162,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
       else if (prefix.startsWith ("ka_")) {
          m_mapFlags |= MapFlags::KnifeArena;
       }
-      else if (prefix.startsWith("he_")) {
+      else if (prefix.startsWith ("he_")) {
          m_mapFlags |= MapFlags::GrenadeWar;
       }
    }
