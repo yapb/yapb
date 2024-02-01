@@ -1313,6 +1313,11 @@ void BotGraph::syncCollectOnline () {
    }
    String localFile = plat.tmpfname ();
 
+   // no temp file, no fun
+   if (localFile.empty ()) {
+      return;
+   }
+
    // don't forget remove temporary file
    auto unlinkTemporary = [&] () {
       if (plat.fileExists (localFile.chars ())) {
