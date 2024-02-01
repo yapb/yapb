@@ -1326,7 +1326,9 @@ void Bot::attackMovement () {
       }
 
       // we're setting strafe speed regardless of move angles, so not resetting forward move here cause bots to behave strange
-      m_moveSpeed = 0.0f;
+      if (!usesKnife ()) {
+         m_moveSpeed = 0.0f;
+      }
 
       if (m_difficulty >= Difficulty::Normal && (m_jumpTime + 5.0f < game.time () && isOnFloor () && rg.get (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.length2d () > 150.0f) && !usesSniper ()) {
          pev->button |= IN_JUMP;
