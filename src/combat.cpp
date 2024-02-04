@@ -504,7 +504,7 @@ Vector Bot::getBodyOffsetError (float distance) {
    return m_aimLastError;
 }
 
- Vector Bot::getEnemyBodyOffset () {
+Vector Bot::getEnemyBodyOffset () {
    // the purpose of this function, is to make bot aiming not so ideal. it's mutate m_enemyOrigin enemy vector
    // returned from visibility check function.
 
@@ -586,7 +586,7 @@ Vector Bot::getCustomHeight (float distance) {
       Long, Middle, Short
    };
 
-   constexpr float offsetRanges[9][3] = {
+   constexpr float kOffsetRanges[9][3] = {
       { 0.0f,  0.0f,   0.0f }, // none
       { 0.0f,  0.0f,   0.0f }, // melee
       { 0.5f, -0.1f,  -1.5f }, // pistol
@@ -613,7 +613,7 @@ Vector Bot::getCustomHeight (float distance) {
    else if (distance > kSprayDistance && distance <= kDoubleSprayDistance) {
       distanceIndex = DistanceIndex::Middle;
    }
-   return { 0.0f, 0.0f, offsetRanges[m_weaponType][distanceIndex] };
+   return { 0.0f, 0.0f, kOffsetRanges[m_weaponType][distanceIndex] };
 }
 
 bool Bot::isFriendInLineOfFire (float distance) {
@@ -711,7 +711,9 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
 bool Bot::isPenetrableObstacle2 (const Vector &dest) {
    // this function returns if enemy can be shoot through some obstacle
 
-   if (m_isUsingGrenade || m_difficulty < Difficulty::Normal || !conf.findWeaponById (m_currentWeapon).penetratePower) {
+   auto power = conf.findWeaponById (m_currentWeapon).penetratePower;
+
+   if (m_isUsingGrenade || m_difficulty < Difficulty::Normal || !power) {
       return false;
    }
 
@@ -1353,9 +1355,12 @@ void Bot::attackMovement () {
 
    if (m_difficulty >= Difficulty::Normal && isOnFloor () && m_duckTime < game.time ()) {
       if (distance < 768.0f) {
-         if (rg.get (0, 1000) < rg.get (5, 10) && pev->velocity.length2d () > 150.0f && isInViewCone (m_enemy->v.origin)) {
-            pev->button |= IN_JUMP;
+         if (pev->velocity.length2d () > 150.0f && isInViewCone (m_enemy->v.origin)) {
+            m_jumpTime = game.time () + m_frameInterval * 2.0f;
          }
+      }
+      else {
+         m_duckTime = game.time () + m_frameInterval * 2.0f;
       }
    }
 

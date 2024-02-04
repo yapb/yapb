@@ -1566,8 +1566,10 @@ void Bot::updateEmotions () {
 }
 
 void Bot::overrideConditions () {
+   const auto tid = getCurrentTaskId ();
+
    // check if we need to escape from bomb
-   if (game.mapIs (MapFlags::Demolition) && bots.isBombPlanted () && m_isAlive && getCurrentTaskId () != Task::EscapeFromBomb && getCurrentTaskId () != Task::Camp && isOutOfBombTimer ()) {
+   if (game.mapIs (MapFlags::Demolition) && bots.isBombPlanted () && m_isAlive && tid != Task::EscapeFromBomb && tid != Task::Camp && isOutOfBombTimer ()) {
       completeTask (); // complete current task
 
       // then start escape from bomb immediate
@@ -1583,11 +1585,11 @@ void Bot::overrideConditions () {
          const int nearestToEnemyPoint = graph.getNearest (m_enemy->v.origin);
 
          if (nearestToEnemyPoint != kInvalidNodeIndex && nearestToEnemyPoint != m_currentNodeIndex && cr::abs (graph[nearestToEnemyPoint].origin.z - m_enemy->v.origin.z) < 16.0f) {
-            if (getCurrentTaskId () != Task::MoveToPosition && !cr::fequal (getTask ()->desire, TaskPri::Hide)) {
+            if (tid != Task::MoveToPosition && !cr::fequal (getTask ()->desire, TaskPri::Hide)) {
                startTask (Task::MoveToPosition, TaskPri::Hide, nearestToEnemyPoint, game.time () + length / (m_moveSpeed * 2.0f), true);
             }
             else {
-               if (getCurrentTaskId () == Task::MoveToPosition && getTask ()->data != nearestToEnemyPoint) {
+               if (tid == Task::MoveToPosition && getTask ()->data != nearestToEnemyPoint) {
                   clearTask (Task::MoveToPosition);
                   startTask (Task::MoveToPosition, TaskPri::Hide, nearestToEnemyPoint, game.time () + length / (m_moveSpeed * 2.0f), true);
                }
@@ -1595,14 +1597,14 @@ void Bot::overrideConditions () {
          }
       }
       else {
-         if (length <= 250.0f && (m_states & Sense::SeeingEnemy) && getCurrentTaskId () == Task::MoveToPosition) {
+         if (length <= 250.0f && (m_states & Sense::SeeingEnemy) && tid == Task::MoveToPosition) {
             clearTask (Task::MoveToPosition); // remove any move tasks
          }
       }
    }
 
    // special handling for sniping
-   if (usesSniper () && (m_states & (Sense::SeeingEnemy | Sense::SuspectEnemy)) && m_sniperStopTime > game.time () && getCurrentTaskId () != Task::SeekCover) {
+   if (usesSniper () && (m_states & (Sense::SeeingEnemy | Sense::SuspectEnemy)) && m_sniperStopTime > game.time () && tid != Task::SeekCover) {
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
 
@@ -1610,7 +1612,7 @@ void Bot::overrideConditions () {
    }
 
    // special handling for reloading
-   if (!bots.isRoundOver () && getCurrentTaskId () == Task::Normal && m_reloadState != Reload::None && m_isReloading && !isDucking () && !isInNarrowPlace ()) {
+   if (!bots.isRoundOver () && tid == Task::Normal && m_reloadState != Reload::None && m_isReloading && !isDucking () && !isInNarrowPlace ()) {
       if (m_reloadState != Reload::None || m_isReloading) {
          const auto maxClip = conf.findWeaponById (m_currentWeapon).maxClip;
          const auto curClip = getAmmoInClip ();
@@ -1689,7 +1691,7 @@ void Bot::refreshEnemyPredict () {
    if (game.isNullEntity (m_enemy) && !game.isNullEntity (m_lastEnemy) && !m_lastEnemyOrigin.empty ()) {
       const auto distanceToLastEnemySq = m_lastEnemyOrigin.distanceSq (pev->origin);
 
-      if (distanceToLastEnemySq > cr::sqrf (128.0f) && (distanceToLastEnemySq < cr::sqrf (2048.0f) || usesSniper ())) {
+      if (distanceToLastEnemySq > cr::sqrf (256.0f) && (distanceToLastEnemySq < cr::sqrf (2048.0f) || usesSniper ())) {
          m_aimFlags |= AimFlags::PredictPath;
       }
       const bool denyLastEnemy = pev->velocity.lengthSq2d () > 0.0f && distanceToLastEnemySq < cr::sqrf (256.0f) && m_shootTime + 2.5f > game.time ();
@@ -1921,8 +1923,8 @@ void Bot::filterTasks () {
          else if (m_isVIP || m_isReloading || (sniping && usesSniper ())) {
             ratio *= 3.0f; // triple the seek cover desire if bot is VIP or reloading
          }
-         else if (m_lastEnemyOrigin.distance2d (pev->origin) < 200.0f) {
-            ratio *= 5.0f;
+         else if (m_lastEnemyOrigin.distanceSq2d (pev->origin) < cr::sqrf (200.0f)) {
+            ratio *= 3.0f;
          }
          else if (m_isCreature) {
             ratio = 0.0f;
@@ -3208,12 +3210,12 @@ void Bot::showDebugOverlay () {
       StringRef debugData = strings.format (
          "\n\n\n\n\n\n%s (H:%.1f/A:%.1f)- Task: %d=%s Desire:%.02f\n"
          "Item: %s Clip: %d Ammo: %d%s Money: %d AimFlags: %s\n"
-         "SP=%.02f SSP=%.02f I=%d PG=%d G=%d T: %.02f MT: %d\n"
+         "SP=%.02f SSP=%.02f I=%d CG=%d PG=%d G=%d T: %.02f MT: %d\n"
          "Enemy=%s Pickup=%s Type=%s Terrain=%s Stuck=%s\n",
          pev->netname.str (), m_healthValue, pev->armorvalue,
          tid, tasks[tid], getTask ()->desire, weapon, getAmmoInClip (),
          getAmmo (), m_isReloading ? " (R)" : "", m_moneyAmount, aimFlags.trim (),
-         m_moveSpeed, m_strafeSpeed, index, m_prevGoalIndex, goal, m_navTimeset - game.time (),
+         m_moveSpeed, m_strafeSpeed, index, m_chosenGoalIndex, m_prevGoalIndex, goal, m_navTimeset - game.time (),
          pev->movetype, enemy, pickup, personalities[m_personality], boolValue (m_checkTerrain),
          boolValue (m_isStuck));
 
