@@ -1355,8 +1355,8 @@ void Bot::attackMovement () {
 
    if (m_difficulty >= Difficulty::Normal && isOnFloor () && m_duckTime < game.time ()) {
       if (distance < 768.0f) {
-         if (pev->velocity.length2d () > 150.0f && isInViewCone (m_enemy->v.origin)) {
-            m_jumpTime = game.time () + m_frameInterval * 2.0f;
+         if (rg.get (0, 1000) < rg.get (5, 10) && pev->velocity.length2d () > 150.0f && isInViewCone (m_enemy->v.origin)) {
+            pev->button |= IN_JUMP;
          }
       }
       else {

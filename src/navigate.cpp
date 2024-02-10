@@ -599,26 +599,65 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                state[i] = 0;
                state[i + 1] = 0;
 
-               if (canStrafeLeft (&tr)) {
+               // to start strafing, we have to first figure out if the target is on the left side or right side
+               Vector right {}, forward {};
+               m_moveAngles.angleVectors (&forward, &right, nullptr);
+
+               const Vector &dirToPoint = (pev->origin - m_destOrigin).normalize2d_apx ();
+               const Vector &rightSide = right.normalize2d_apx ();
+
+               bool dirRight = false;
+               bool dirLeft = false;
+               bool blockedLeft = false;
+               bool blockedRight = false;
+
+               if ((dirToPoint | rightSide) > 0.0f) {
+                  dirRight = true;
+               }
+               else {
+                  dirLeft = true;
+               }
+               const auto &testDir = m_moveSpeed > 0.0f ? forward : -forward;
+               constexpr float kBlockDistance = 42.0f;
+
+               // now check which side is blocked
+               src = pev->origin + right * kBlockDistance;
+               dst = src + testDir * kBlockDistance;
+
+               game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
+
+               if (!cr::fequal (tr.flFraction, 1.0f)) {
+                  blockedRight = true;
+               }
+               src = pev->origin - right * kBlockDistance;
+               dst = src + testDir * kBlockDistance;
+
+               game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
+
+               if (!cr::fequal (tr.flFraction, 1.0f)) {
+                  blockedLeft = true;
+               }
+
+               if (dirLeft) {
                   state[i] += 5;
                }
                else {
                   state[i] -= 5;
                }
 
-               if (isBlockedLeft ()) {
+               if (blockedLeft) {
                   state[i] -= 5;
                }
                ++i;
 
-               if (canStrafeRight (&tr)) {
+               if (dirRight) {
                   state[i] += 5;
                }
                else {
                   state[i] -= 5;
                }
 
-               if (isBlockedRight ()) {
+               if (blockedRight) {
                   state[i] -= 5;
                }
             }
@@ -2429,7 +2468,7 @@ bool Bot::canStrafeLeft (TraceResult *tr) {
    pev->v_angle.angleVectors (&forward, &right, nullptr);
 
    Vector src = pev->origin;
-   Vector dest = src - right * -40.0f;
+   Vector dest = src - right * 40.0f;
 
    // trace from the bot's waist straight left...
    game.testLine (src, dest, TraceIgnore::Monsters, ent (), tr);
