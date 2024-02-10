@@ -402,6 +402,7 @@ private:
    bool selectBestNextNode ();
    bool hasAnyWeapons ();
    bool isKnifeMode ();
+   bool isGrenadeWar ();
    bool isDeadlyMove (const Vector &to);
    bool isOutOfBombTimer ();
    bool isWeaponBadAtDistance (int weaponIndex, float distance);
@@ -867,6 +868,7 @@ extern ConVar cv_graph_auto_save_count;
 extern ConVar cv_graph_analyze_max_jump_height;
 extern ConVar cv_spraypaints;
 extern ConVar cv_whose_your_daddy;
+extern ConVar cv_grenadier_mode;
 
 extern ConVar mp_freezetime;
 extern ConVar mp_roundtime;

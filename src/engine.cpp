@@ -10,7 +10,7 @@
 ConVar cv_csdm_mode ("csdm_mode", "0", "Enables or disables CSDM / FFA mode for bots.\nAllowed values: '0', '1', '2', '3'.\nIf '0', CSDM / FFA mode is auto-detected.\nIf '1', CSDM mode is enabled, but FFA is disabled.\nIf '2', CSDM and FFA mode is enabled.\nIf '3', CSDM and FFA mode is disabled.", true, 0.0f, 3.0f);
 ConVar cv_ignore_map_prefix_game_mode ("ignore_map_prefix_game_mode", "0", "If enabled, bots will not apply game modes based on map name prefix (fy_ and ka_ specifically).");
 ConVar cv_threadpool_workers ("threadpool_workers", "-1", "Maximum number of threads bot will run to process some tasks. -1 means half of CPU cores used.", true, -1.0f, static_cast <float> (plat.hardwareConcurrency ()));
-ConVar cv_grenadier_mode("grenadier_mode", "0", "If enabled, bots will not apply throwing condition on grenades.");
+ConVar cv_grenadier_mode ("grenadier_mode", "0", "If enabled, bots will not apply throwing condition on grenades.");
 
 ConVar sv_skycolor_r ("sv_skycolor_r", nullptr, Var::GameRef);
 ConVar sv_skycolor_g ("sv_skycolor_g", nullptr, Var::GameRef);
@@ -165,10 +165,6 @@ void Game::levelInitialize (edict_t *entities, int max) {
       else if (prefix.startsWith ("he_")) {
          m_mapFlags |= MapFlags::GrenadeWar;
       }
-   }
-
-   if (cv_grenadier_mode.bool_()) {
-      m_mapFlags |= MapFlags::GrenadeWar;
    }
 
    // reset some timers

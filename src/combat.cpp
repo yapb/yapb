@@ -1528,6 +1528,21 @@ bool Bot::isKnifeMode () {
    return cv_jasonmode.bool_ () || (usesKnife () && !hasAnyWeapons ()) || m_isCreature;
 }
 
+bool Bot::isGrenadeWar () {
+   const bool hasSomeGreandes = bestGrenadeCarried () != -1;
+
+   // if has grenade an not other weapons, assume we're in grenade war
+   if (!hasAnyWeapons () && hasSomeGreandes) {
+      return true;
+   }
+
+   // if we're forced to via cvar
+   if (cv_grenadier_mode.bool_ ()) {
+      return true;
+   }
+   return game.mapIs (MapFlags::GrenadeWar); // in case map was flagged
+}
+
 void Bot::selectBestWeapon () {
    // this function chooses best weapon, from weapons that bot currently own, and change
    // current weapon to best one.
@@ -1791,6 +1806,11 @@ Vector Bot::calcToss (const Vector &start, const Vector &stop) {
    TraceResult tr {};
    const float gravity = sv_gravity.float_ () * 0.55f;
 
+   // prevent div by zero in some strange situations
+   if (cr::fzero (gravity)) {
+      return nullptr;
+   }
+
    Vector end = stop - pev->velocity;
    end.z -= 15.0f;
 
@@ -1845,6 +1865,12 @@ Vector Bot::calcThrow (const Vector &start, const Vector &stop) {
    TraceResult tr {};
 
    const float gravity = sv_gravity.float_ () * 0.55f;
+
+   // prevent div by zero in some strange situations
+   if (cr::fzero (gravity)) {
+      return nullptr;
+   }
+
    float time = velocity.length () / 195.0f;
 
    if (time < 0.01f) {
@@ -1902,16 +1928,18 @@ edict_t *Bot::setCorrectGrenadeVelocity (StringRef model) {
 }
 
 void Bot::checkGrenadesThrow () {
+   const auto tid = getCurrentTaskId ();
 
    // do not check cancel if we have grenade in out hands
-   const bool preventibleTasks = getCurrentTaskId () == Task::PlantBomb || getCurrentTaskId () == Task::DefuseBomb;
+   const bool preventibleTasks = tid == Task::PlantBomb || tid == Task::DefuseBomb;
+   const bool isGrenadeMode = isGrenadeWar ();
 
    auto clearThrowStates = [] (uint32_t &states) {
       states &= ~(Sense::ThrowExplosive | Sense::ThrowFlashbang | Sense::ThrowSmoke);
    };
 
    // check if throwing a grenade is a good thing to do...
-   const auto throwingCondition = game.mapIs (MapFlags::GrenadeWar)
+   const auto throwingCondition = isGrenadeMode
       ? false
       : (preventibleTasks
          || isInNarrowPlace ()
@@ -1930,7 +1958,7 @@ void Bot::checkGrenadesThrow () {
    // check again in some seconds
    m_grenadeCheckTime = game.time () + kGrenadeCheckTime;
 
-   const auto senseCondition = game.mapIs (MapFlags::GrenadeWar) ? false : !(m_states & (Sense::SuspectEnemy | Sense::HearingEnemy));
+   const auto senseCondition = isGrenadeMode ? false : !(m_states & (Sense::SuspectEnemy | Sense::HearingEnemy));
 
    if (!util.isAlive (m_lastEnemy) || senseCondition) {
       clearThrowStates (m_states);
@@ -1974,7 +2002,7 @@ void Bot::checkGrenadesThrow () {
    }
 
    // enemy within a good throw distance?
-   const auto grenadeToThrowCondition = game.mapIs (MapFlags::GrenadeWar)
+   const auto grenadeToThrowCondition = isGrenadeMode
       ? 100.0f
       : grenadeToThrow == Weapon::Smoke ? 200.0f : 400.0f;
 
