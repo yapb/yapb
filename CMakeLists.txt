@@ -6,7 +6,7 @@
 #
 
 cmake_minimum_required(VERSION 3.15)
-project(yapb VERSION 4.4 LANGUAGES CXX)
+project(yapb VERSION 4.5 LANGUAGES CXX)
 
 if(NOT ANDROID)
    set(CMAKE_SHARED_MODULE_PREFIX "")
