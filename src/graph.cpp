@@ -12,7 +12,7 @@ ConVar cv_graph_url ("graph_url", product.download.chars (), "Specifies the URL 
 ConVar cv_graph_url_upload ("graph_url_upload", product.upload.chars (), "Specifies the URL to which bots will try to upload the graph file to database.", false, 0.0f, 0.0f);
 ConVar cv_graph_auto_save_count ("graph_auto_save_count", "15", "Every N graph nodes placed on map, the graph will be saved automatically (without checks).", true, 0.0f, kMaxNodes);
 ConVar cv_graph_draw_distance ("graph_draw_distance", "400", "Maximum distance to draw graph nodes from editor viewport.", true, 64.0f, 3072.0f);
-ConVar cv_graph_auto_collect_db ("graph_auto_collect_db", "0", "Allows bot's to exchange your graph files with graph database automatically.");
+ConVar cv_graph_auto_collect_db ("graph_auto_collect_db", "0", "Allows bots to exchange your graph files with graph database automatically.");
 
 void BotGraph::reset () {
    // this function initialize the graph structures..
