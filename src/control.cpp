@@ -2150,7 +2150,7 @@ BotControl::BotControl () {
    m_cmds.emplace ("graphmenu/wpmenu/wptmenu", "graphmenu [noarguments]", "Opens and displays bots graph editor.", &BotControl::cmdNodeMenu);
    m_cmds.emplace ("list/listbots", "list [noarguments]", "Lists the bots currently playing on server.", &BotControl::cmdList);
    m_cmds.emplace ("graph/g/wp/wpt/waypoint", "graph [help]", "Handles graph operations.", &BotControl::cmdNode);
-   m_cmds.emplace ("cvars", "cvars [save|save_map|cvar]", "Display all the cvars with their descriptions.", &BotControl::cmdCvars);
+   m_cmds.emplace ("cvars", "cvars [save|save_map|cvar|defaults]", "Display all the cvars with their descriptions.", &BotControl::cmdCvars);
    m_cmds.emplace ("show_custom", "show_custom [noarguments]", "Shows the current values from custom.cfg.", &BotControl::cmdShowCustom);
 
    // declare the menus
