@@ -271,9 +271,7 @@ void BotSupport::checkWelcome () {
    }
 
    if (m_welcomeReceiveTime > 0.0f && m_welcomeReceiveTime < game.time () && needToSendMsg) {
-      if (!game.is (GameFlags::Mobility | GameFlags::Xash3D)) {
-         game.serverCommand ("speak \"%s\"", m_sentences.random ());
-      }
+      game.serverCommand ("speak \"%s\"", m_sentences.random ());
       String authorStr = "Official Navigation Graph";
 
       auto graphAuthor = graph.getAuthor ();
