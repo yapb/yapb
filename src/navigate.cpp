@@ -320,6 +320,15 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offensive) {
    if (goalChoices[0] == kInvalidNodeIndex) {
       return m_chosenGoalIndex = graph.random ();
    }
+
+   // rusher bots does not care any danger (idea from pbmm)
+   if (m_personality == Personality::Rusher) {
+      const auto randomGoal = goalChoices[rg.get (0, 3)];
+
+      if (graph.exists (randomGoal)) {
+         return m_chosenGoalIndex = randomGoal;
+      }
+   }
    bool sorting = false;
 
    do {
@@ -344,7 +353,7 @@ void Bot::postprocessGoals (const IntArray &goals, int result[]) {
 
    int recurseCount = 0;
 
-   auto isRecentOrHistorical = [&] (int index)  -> bool {
+   auto isRecentOrHistorical = [&] (int index) -> bool {
       if (m_prevGoalIndex == index || m_previousNodes[0] == index) {
          return true;
       }
@@ -609,7 +618,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                   dirLeft = true;
                }
                const auto &testDir = m_moveSpeed > 0.0f ? forward : -forward;
-               constexpr float kBlockDistance = 32.0f;
+               constexpr float kBlockDistance = 42.0f;
 
                // now check which side is blocked
                src = pev->origin + right * kBlockDistance;
@@ -787,41 +796,9 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
 void Bot::moveToGoal () {
    findValidNode ();
 
-   bool prevLadder = false;
-
-   if (graph.exists (m_previousNodes[0])) {
-      if (graph[m_previousNodes[0]].flags & NodeFlag::Ladder) {
-         prevLadder = true;
-      }
-   }
-
    // press duck button if we need to
    if ((m_pathFlags & NodeFlag::Crouch) && !(m_pathFlags & (NodeFlag::Camp | NodeFlag::Goal))) {
       pev->button |= IN_DUCK;
-   }
-   m_lastUsedNodesTime = game.time ();
-
-   // press jump button if we need to leave the ladder
-   if (!(m_pathFlags & NodeFlag::Ladder) && prevLadder && isOnFloor () && isOnLadder () && m_moveSpeed > 50.0f && pev->velocity.length () < 50.0f) {
-      pev->button |= IN_JUMP;
-      m_jumpTime = game.time () + 1.0f;
-   }
-
-   if (m_pathFlags & NodeFlag::Ladder) {
-      if (m_pathOrigin.z < pev->origin.z + 16.0f && !isOnLadder () && isOnFloor () && !isDucking ()) {
-         if (!prevLadder) {
-            m_moveSpeed = pev->origin.distance (m_pathOrigin);
-         }
-         else {
-            m_moveSpeed = 150.0f;
-         }
-         if (m_moveSpeed < 150.0f) {
-            m_moveSpeed = 150.0f;
-         }
-         else if (m_moveSpeed > pev->maxspeed) {
-            m_moveSpeed = pev->maxspeed;
-         }
-      }
    }
    m_lastUsedNodesTime = game.time ();
 
@@ -955,7 +932,7 @@ bool Bot::updateNavigation () {
       }
    }
    
-   if ((m_pathFlags & NodeFlag::Ladder) || isOnLadder ()) {
+   if (m_pathFlags & NodeFlag::Ladder) {
       if (m_pathOrigin.z >= (pev->origin.z + 16.0f)) {
          constexpr auto kLadderOffset = Vector (0.0f, 0.0f, 16.0f);
          m_pathOrigin = m_path->origin + kLadderOffset;
@@ -973,7 +950,7 @@ bool Bot::updateNavigation () {
 
       // special detection if someone is using the ladder (to prevent to have bots-towers on ladders)
       for (const auto &client : util.getClients ()) {
-         if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || (client.ent->v.movetype != MOVETYPE_FLY) || client.ent == ent ()) {
+         if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || (client.ent->v.movetype != MOVETYPE_FLY) || client.team != m_team || client.ent == ent ()) {
             continue;
          }
          TraceResult tr {};
@@ -981,60 +958,23 @@ bool Bot::updateNavigation () {
          int previousNode = 0;
 
          // more than likely someone is already using our ladder...
-         if (client.ent->v.origin.distanceSq (m_path->origin) < cr::sqrf (40.0f)) {
-            if ((client.team != m_team || game.is (GameFlags::FreeForAll)) && !cv_ignore_enemies.bool_ ()) {
-               game.testLine (getEyesPos (), client.ent->v.origin, TraceIgnore::Monsters, ent (), &tr);
+         if (client.ent->v.origin.distanceSq (m_path->origin) < cr::sqrf (48.0f)) {
+            game.testHull (getEyesPos (), m_pathOrigin, TraceIgnore::Monsters, isDucking () ? head_hull : human_hull, ent (), &tr);
 
-               // bot found an enemy on his ladder - he should see him...
-               if (tr.pHit == client.ent) {
-                  m_enemy = client.ent;
-                  m_lastEnemy = client.ent;
-                  m_lastEnemyOrigin = client.ent->v.origin;
+            // someone is above or below us and is using the ladder already
+            if (tr.pHit == client.ent && cr::abs (pev->origin.z - client.ent->v.origin.z) > 15.0f && (client.ent->v.movetype == MOVETYPE_FLY)) {
+               const auto numPreviousNode = rg.get (0, 2);
 
-                  m_enemyParts = Visibility::None;
-                  m_enemyParts |= (Visibility::Head | Visibility::Body);
-
-                  m_states |= Sense::SeeingEnemy;
-                  m_seeEnemyTime = game.time ();
-                  break;
-               }
-            }
-            else {
-               game.testHull (getEyesPos (), m_pathOrigin, TraceIgnore::Monsters, isDucking () ? head_hull : human_hull, ent (), &tr);
-
-               // someone is above or below us and is using the ladder already
-               if (tr.pHit == client.ent && cr::abs (pev->origin.z - client.ent->v.origin.z) > 15.0f && (client.ent->v.movetype == MOVETYPE_FLY)) {
-                  if (graph.exists (m_previousNodes[0])) {
-                     if (!(graph[m_previousNodes[0]].flags & NodeFlag::Ladder)) {
-                        foundGround = true;
-                        previousNode = m_previousNodes[0];
-                     }
-                     else if (graph.exists (m_previousNodes[1])) {
-                        if (!(graph[m_previousNodes[1]].flags & NodeFlag::Ladder)) {
-                           foundGround = true;
-                           previousNode = m_previousNodes[1];
-                        }
-                        else if (graph.exists (m_previousNodes[2])) {
-                           if (!(graph[m_previousNodes[2]].flags & NodeFlag::Ladder)) {
-                              foundGround = true;
-                              previousNode = m_previousNodes[2];
-                           }
-                           else if (graph.exists (m_previousNodes[3])) {
-                              if (!(graph[m_previousNodes[3]].flags & NodeFlag::Ladder)) {
-                                 foundGround = true;
-                                 previousNode = m_previousNodes[3];
-                              }
-                           }
-                        }
-                     }
-                  }
-                  if (foundGround) {
-                     if (getCurrentTaskId () != Task::MoveToPosition || !cr::fequal (getTask ()->desire, TaskPri::PlantBomb)) {
-                        changeNodeIndex (m_previousNodes[0]);
-                        startTask (Task::MoveToPosition, TaskPri::PlantBomb, previousNode, 0.0f, true);
-                     }
+               for (int i = 0; i < numPreviousNode; ++i) {
+                  if (graph.exists (m_previousNodes[i]) && (graph[m_previousNodes[i]].flags & NodeFlag::Ladder)) {
+                     foundGround = true;
+                     previousNode = m_previousNodes[i];
                      break;
                   }
+               }
+               if (foundGround) {
+                  changeNodeIndex (m_previousNodes[0]);
+                  findPath (m_previousNodes[0], previousNode, m_pathType);
                }
             }
          }
@@ -2528,7 +2468,7 @@ bool Bot::canStrafeLeft (TraceResult *tr) {
    pev->v_angle.angleVectors (&forward, &right, nullptr);
 
    Vector src = pev->origin;
-   Vector dest = src - right * -40.0f;
+   Vector dest = src - right * 40.0f;
 
    // trace from the bot's waist straight left...
    game.testLine (src, dest, TraceIgnore::Monsters, ent (), tr);
@@ -2886,66 +2826,6 @@ bool Bot::isDeadlyMove (const Vector &to) {
       distanceSq = to.distanceSq (check); // distance from goal
    }
    return false;
-}
-
-void Bot::changePitch (float speed) {
-   // this function turns a bot towards its ideal_pitch
-
-   const float idealPitch = cr::wrapAngle (pev->idealpitch);
-   const float curent = cr::wrapAngle (pev->v_angle.x);
-
-   // turn from the current v_angle pitch to the idealpitch by selecting
-   // the quickest way to turn to face that direction
-
-   // find the difference in the curent and ideal angle
-   float normalizePitch = cr::wrapAngle (idealPitch - curent);
-
-   if (normalizePitch > 0.0f) {
-      if (normalizePitch > speed) {
-         normalizePitch = speed;
-      }
-   }
-   else {
-      if (normalizePitch < -speed) {
-         normalizePitch = -speed;
-      }
-   }
-   pev->v_angle.x = cr::wrapAngle (curent + normalizePitch);
-
-   if (pev->v_angle.x > 89.9f) {
-      pev->v_angle.x = 89.9f;
-   }
-
-   if (pev->v_angle.x < -89.9f) {
-      pev->v_angle.x = -89.9f;
-   }
-   pev->angles.x = -pev->v_angle.x / 3;
-}
-
-void Bot::changeYaw (float speed) {
-   // this function turns a bot towards its ideal_yaw
-
-   const float idealPitch = cr::wrapAngle (pev->ideal_yaw);
-   const float curent = cr::wrapAngle (pev->v_angle.y);
-
-   // turn from the current v_angle yaw to the ideal_yaw by selecting
-   // the quickest way to turn to face that direction
-
-   // find the difference in the curent and ideal angle
-   float normalizePitch = cr::wrapAngle (idealPitch - curent);
-
-   if (normalizePitch > 0.0f) {
-      if (normalizePitch > speed) {
-         normalizePitch = speed;
-      }
-   }
-   else {
-      if (normalizePitch < -speed) {
-         normalizePitch = -speed;
-      }
-   }
-   pev->v_angle.y = cr::wrapAngle (curent + normalizePitch);
-   pev->angles.y = pev->v_angle.y;
 }
 
 int Bot::getRandomCampDir () {
