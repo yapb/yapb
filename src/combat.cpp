@@ -7,7 +7,7 @@
 
 #include <yapb.h>
 
-ConVar cv_shoots_thru_walls ("shoots_thru_walls", "2", "Specifies whether bots able to fire at enemies behind the wall, if they hearing or suspecting them.", true, 0.0f, 3.0f);
+ConVar cv_shoots_thru_walls ("shoots_thru_walls", "1", "Specifies whether bots able to fire at enemies behind the wall, if they hearing or suspecting them.", true, 0.0f, 3.0f);
 ConVar cv_ignore_enemies ("ignore_enemies", "0", "Enables or disables searching world for enemies.");
 ConVar cv_check_enemy_rendering ("check_enemy_rendering", "0", "Enables or disables checking enemy rendering flags. Useful for some mods.");
 ConVar cv_check_enemy_invincibility ("check_enemy_invincibility", "0", "Enables or disables checking enemy invincibility. Useful for some mods.");
@@ -656,21 +656,27 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
 
    const auto method = cv_shoots_thru_walls.int_ ();
 
-   if (method == 2) {
-      return isPenetrableObstacle2 (dest);
-   }
-   else if (method == 3) {
-      return isPenetrableObstacle3 (dest);
-   }
-
    if (m_isUsingGrenade || m_difficulty < Difficulty::Normal) {
       return false;
    }
-   auto power = conf.findWeaponById (m_currentWeapon).penetratePower;
+   auto penetratePower = conf.findWeaponById (m_currentWeapon).penetratePower;
 
-   if (power == 0) {
+   if (penetratePower == 0) {
       return false;
    }
+
+   // switch methods
+   switch (method) {
+   case 1:
+      return isPenetrableObstacle1 (dest, penetratePower);
+
+   case 3:
+      return isPenetrableObstacle3 (dest, penetratePower);
+   };
+   return isPenetrableObstacle2 (dest, penetratePower);
+}
+
+bool Bot::isPenetrableObstacle1 (const Vector &dest, int penetratePower) {
    TraceResult tr {};
 
    float obstacleDistanceSq = 0.0f;
@@ -695,10 +701,10 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
    if (obstacleDistanceSq > 0.0f) {
       constexpr float kMaxDistanceSq = cr::sqrf (75.0f);
 
-      while (power > 0) {
+      while (penetratePower > 0) {
          if (obstacleDistanceSq > kMaxDistanceSq) {
             obstacleDistanceSq -= kMaxDistanceSq;
-            power--;
+            penetratePower--;
 
             continue;
          }
@@ -708,14 +714,8 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
    return false;
 }
 
-bool Bot::isPenetrableObstacle2 (const Vector &dest) {
+bool Bot::isPenetrableObstacle2 (const Vector &dest, int) {
    // this function returns if enemy can be shoot through some obstacle
-
-   auto power = conf.findWeaponById (m_currentWeapon).penetratePower;
-
-   if (m_isUsingGrenade || m_difficulty < Difficulty::Normal || !power) {
-      return false;
-   }
 
    const Vector &source = getEyesPos ();
    const Vector &direction = (dest - source).normalize_apx (); // 1 unit long
@@ -749,14 +749,9 @@ bool Bot::isPenetrableObstacle2 (const Vector &dest) {
    return false;
 }
 
-bool Bot::isPenetrableObstacle3 (const Vector &dest) {
+bool Bot::isPenetrableObstacle3 (const Vector &dest, int penetratePower) {
    // this function returns if enemy can be shoot through some obstacle
 
-   auto power = conf.findWeaponById (m_currentWeapon).penetratePower;
-
-   if (m_isUsingGrenade || m_difficulty < Difficulty::Normal || !power) {
-      return false;
-   }
    TraceResult tr {};
 
    Vector source = getEyesPos ();
@@ -777,7 +772,7 @@ bool Bot::isPenetrableObstacle3 (const Vector &dest) {
             return true;
          }
 
-         if (--power == 0) {
+         if (--penetratePower == 0) {
             return false;
          }
          source = tr.vecEndPos + dir;
@@ -1487,7 +1482,7 @@ int Bot::bestGrenadeCarried () {
    else if (pev->weapons & cr::bit (Weapon::Flashbang)) {
       return Weapon::Flashbang;
    }
-   return -1;
+   return kGrenadeInventoryEmpty;
 }
 
 bool Bot::rateGroundWeapon (edict_t *ent) {
@@ -1937,7 +1932,7 @@ void Bot::checkGrenadesThrow () {
 
    // check if throwing a grenade is a good thing to do...
    const auto throwingCondition = isGrenadeMode
-      ? false
+      ? m_lastEnemyOrigin.empty ()
       : (preventibleTasks
          || isInNarrowPlace ()
          || cv_ignore_enemies.bool_ ()
@@ -1945,7 +1940,8 @@ void Bot::checkGrenadesThrow () {
          || m_grenadeRequested
          || m_isReloading
          || (isKnifeMode () && !bots.isBombPlanted ())
-         || m_grenadeCheckTime >= game.time ());
+         || m_grenadeCheckTime >= game.time ()
+         || m_lastEnemyOrigin.empty ());
 
    if (throwingCondition) {
       clearThrowStates (m_states);
@@ -1966,14 +1962,14 @@ void Bot::checkGrenadesThrow () {
    const auto grenadeToThrow = bestGrenadeCarried ();
 
    // if we don't have grenades no need to check it this round again
-   if (grenadeToThrow == -1) {
+   if (grenadeToThrow == kGrenadeInventoryEmpty) {
       m_grenadeCheckTime = game.time () + 15.0f; // changed since, czero can drop grenades from dead players
 
       clearThrowStates (m_states);
       return;
    }
    else {
-      int cancelProb = 20;
+      int cancelProb = m_agressionLevel > m_fearLevel ? 5 : 20;
 
       if (grenadeToThrow == Weapon::Flashbang) {
          cancelProb = 25;
@@ -1989,7 +1985,7 @@ void Bot::checkGrenadesThrow () {
    float distanceSq = m_lastEnemyOrigin.distanceSq2d (pev->origin);
 
    // don't throw grenades at anything that isn't on the ground!
-   if (!(m_lastEnemy->v.flags & FL_ONGROUND) && !m_lastEnemy->v.waterlevel && m_lastEnemyOrigin.z > pev->absmax.z) {
+   if (!(m_lastEnemy->v.flags & (FL_ONGROUND | FL_PARTIALGROUND)) && !m_lastEnemy->v.waterlevel && m_lastEnemyOrigin.z > pev->absmax.z) {
       distanceSq = kInfiniteDistance;
    }
 
@@ -1998,12 +1994,25 @@ void Bot::checkGrenadesThrow () {
       distanceSq = kInfiniteDistance;
    }
 
-   // enemy within a good throw distance?
-   const auto grenadeToThrowCondition = isGrenadeMode
-      ? 100.0f
-      : grenadeToThrow == Weapon::Smoke ? 200.0f : 400.0f;
+   // special condition if we're have valid current enemy
+   if (!isGrenadeMode && ((m_states & Sense::SeeingEnemy)
+       && util.isAlive (m_enemy)
+       && ((m_enemy->v.button | m_enemy->v.oldbuttons) & IN_ATTACK)
+       && util.isInViewCone (pev->origin, m_enemy))) {
 
-   if (!m_lastEnemyOrigin.empty () && distanceSq > cr::sqrf (grenadeToThrowCondition) && distanceSq < cr::sqrf (1200.0f)) {
+      // do not throw away grenades if anyone is attacking us
+      distanceSq = kInfiniteDistance;
+   }
+
+   // don't throw away HE's if just seen the enemy
+   if (!isGrenadeMode && grenadeToThrow == Weapon::Explosive && m_seeEnemyTime + kGrenadeCheckTime * 0.2f < game.time ()) {
+      distanceSq = kInfiniteDistance;
+   }
+
+   // enemy within a good throw distance?
+   const auto grenadeToThrowCondition = isGrenadeMode ? 100.0f : grenadeToThrow == Weapon::Smoke ? 200.0f : 350.0f;
+
+   if (distanceSq > cr::sqrf (grenadeToThrowCondition) && distanceSq < cr::sqrf (1200.0f)) {
       bool allowThrowing = true;
 
       // care about different grenades
@@ -2113,7 +2122,7 @@ void Bot::checkGrenadesThrow () {
          clearThrowStates (m_states);
          return;
       }
-      const float kMaxThrowTime = game.time () + kGrenadeCheckTime * 6.0f;
+      const float kMaxThrowTime = game.time () + kGrenadeCheckTime * 4.0f;
 
       if (m_states & Sense::ThrowExplosive) {
          startTask (Task::ThrowExplosive, TaskPri::Throw, kInvalidNodeIndex, kMaxThrowTime, false);

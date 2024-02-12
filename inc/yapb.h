@@ -414,8 +414,9 @@ private:
    bool isFriendInLineOfFire (float distance);
    bool isGroupOfEnemies (const Vector &location, int numEnemies = 1, float radius = 256.0f);
    bool isPenetrableObstacle (const Vector &dest);
-   bool isPenetrableObstacle2 (const Vector &dest);
-   bool isPenetrableObstacle3 (const Vector &dest);
+   bool isPenetrableObstacle1 (const Vector &dest, int penetratePower);
+   bool isPenetrableObstacle2 (const Vector &dest, int penetratePower);
+   bool isPenetrableObstacle3 (const Vector &dest, int penetratePower);
    bool isEnemyBehindShield (edict_t *enemy);
    bool checkChatKeywords (String &reply);
    bool isReplyingToChat ();

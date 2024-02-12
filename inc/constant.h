@@ -439,6 +439,7 @@ constexpr auto kMaxCollideMoves = 3;
 constexpr auto kGameMaxPlayers = 32;
 constexpr auto kGameTeamNum = 2;
 constexpr auto kInvalidNodeIndex = -1;
+constexpr auto kGrenadeInventoryEmpty = -1;
 constexpr auto kConfigExtension = "cfg";
 
 // weapon masks
