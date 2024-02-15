@@ -2018,7 +2018,7 @@ void Bot::checkGrenadesThrow () {
       // care about different grenades
       switch (grenadeToThrow) {
       case Weapon::Explosive:
-         if (numFriendsNear (m_lastEnemy->v.origin, 256.0f) > 0) {
+         if (mp_friendlyfire.bool_ () && numFriendsNear (m_lastEnemy->v.origin, 256.0f) > 0) {
             allowThrowing = false;
          }
          else {
