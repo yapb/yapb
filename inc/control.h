@@ -31,11 +31,12 @@ public:
    struct BotCmd {
       String name, format, help;
       Handler handler = nullptr;
+      bool visible = true;
 
    public:
       explicit BotCmd () = default;
 
-      BotCmd (StringRef name, StringRef format, StringRef help, Handler handler) : name (name), format (format), help (help), handler (cr::move (handler)) 
+      BotCmd (StringRef name, StringRef format, StringRef help, Handler handler, bool visible = true) : name (name), format (format), help (help), handler (cr::move (handler)), visible (visible)
       { }
    };
 
@@ -100,6 +101,7 @@ private:
    int cmdList ();
    int cmdCvars ();
    int cmdShowCustom ();
+   int cmdExec ();
    int cmdNode ();
    int cmdNodeOn ();
    int cmdNodeOff ();
@@ -125,7 +127,7 @@ private:
    int cmdNodeIterateCamp ();
    int cmdNodeShowStats ();
    int cmdNodeFileInfo ();
-   int cmdAdjustHeight ();
+   int cmdNodeAdjustHeight ();
 
 private:
    int menuMain (int item);

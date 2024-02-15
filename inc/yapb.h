@@ -776,6 +776,9 @@ public:
       debugMsgInternal (strings.format (fmt, cr::forward <Args> (args)...));
    }
 
+   // execute client command helper
+   template <typename ...Args> void issueCommand (const char *fmt, Args &&...args);
+
 private:
    // returns true if bot is using a sniper rifle
    bool usesSniper () const {
@@ -826,9 +829,6 @@ private:
    bool usesKnife () const {
       return m_weaponType == WeaponType::Melee;
    }
-
-   // execute client command helper
-   template <typename ...Args> void issueCommand (const char *fmt, Args &&...args);
 };
 
 #include "config.h"

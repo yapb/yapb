@@ -980,8 +980,8 @@ void Game::applyGameModes () {
    static ConVarRef zp_delay ("zp_delay");
 
    // update our ignore timer if zp_elay exists
-   if (zp_delay.exists () && zp_delay.value () > 0.0f && cv_ignore_enemies_after_spawn_time.float_ () < 1.0f) {
-      cv_ignore_enemies_after_spawn_time.set (zp_delay.value () + 2.0f);
+   if (zp_delay.exists () && zp_delay.value () > 0.0f) {
+      cv_ignore_enemies_after_spawn_time.set (zp_delay.value () + 3.0f);
    }
 }
 

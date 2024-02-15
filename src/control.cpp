@@ -320,6 +320,27 @@ int BotControl::cmdShowCustom () {
    return BotCommandResult::Handled;
 }
 
+int BotControl::cmdExec () {
+   enum args { alias = 1, target, command };
+
+   if (!hasArg (target) || !hasArg (command)) {
+      return BotCommandResult::BadFormat;
+   }
+   const auto userId = intValue (target);
+
+   // find our little target
+   auto bot = bots.findBotByIndex (userId);
+
+   // bailout if not bot
+   if (!bot) {
+      msg ("Bot with #%d not found or not a bot.", userId);
+      return BotCommandResult::Handled;
+   }
+   bot->issueCommand (strValue (command).chars ());
+
+   return BotCommandResult::Handled;
+}
+
 int BotControl::cmdNode () {
    enum args { root, alias, cmd, cmd2 };
 
@@ -383,7 +404,7 @@ int BotControl::cmdNode () {
       addGraphCmd ("upload", "upload", "Uploads created graph to graph database.", &BotControl::cmdNodeUpload);
       addGraphCmd ("stats", "stats [noarguments]", "Shows the stats about node types on the map.", &BotControl::cmdNodeShowStats);
       addGraphCmd ("fileinfo", "fileinfo [noarguments]", "Shows basic information about graph file.", &BotControl::cmdNodeFileInfo);
-      addGraphCmd ("adjust_height", "adjust_height [height offset]", "Modifies all the graph nodes height (z-component) with specified offset.", &BotControl::cmdAdjustHeight);
+      addGraphCmd ("adjust_height", "adjust_height [height offset]", "Modifies all the graph nodes height (z-component) with specified offset.", &BotControl::cmdNodeAdjustHeight);
 
       // add path commands
       addGraphCmd ("path_create", "path_create [noarguments]", "Opens and displays path creation menu.", &BotControl::cmdNodePathCreate);
@@ -961,7 +982,7 @@ int BotControl::cmdNodeFileInfo () {
    return BotCommandResult::Handled;
 }
 
-int BotControl::cmdAdjustHeight () {
+int BotControl::cmdNodeAdjustHeight () {
    enum args { graph_cmd = 1, cmd, offset };
 
    if (!hasArg (offset)) {
@@ -1876,6 +1897,9 @@ bool BotControl::executeCommands () {
       msg ("valid commands are: ");
 
       for (auto &item : m_cmds) {
+         if (!item.visible) {
+            continue;
+         }
          msg ("  %-14.11s - %s", item.name.split ("/").first (), String (conf.translate (item.help)).lowercase ());
       }
       return true;
@@ -2151,7 +2175,8 @@ BotControl::BotControl () {
    m_cmds.emplace ("list/listbots", "list [noarguments]", "Lists the bots currently playing on server.", &BotControl::cmdList);
    m_cmds.emplace ("graph/g/wp/wpt/waypoint", "graph [help]", "Handles graph operations.", &BotControl::cmdNode);
    m_cmds.emplace ("cvars", "cvars [save|save_map|cvar|defaults]", "Display all the cvars with their descriptions.", &BotControl::cmdCvars);
-   m_cmds.emplace ("show_custom", "show_custom [noarguments]", "Shows the current values from custom.cfg.", &BotControl::cmdShowCustom);
+   m_cmds.emplace ("show_custom", "show_custom [noarguments]", "Shows the current values from custom.cfg.", &BotControl::cmdShowCustom, false);
+   m_cmds.emplace ("exec", "exec [user_id] [command]", "Executes a client command on bot entity.", &BotControl::cmdExec);
 
    // declare the menus
    createMenus ();
