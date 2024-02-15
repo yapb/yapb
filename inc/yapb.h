@@ -870,6 +870,7 @@ extern ConVar cv_graph_analyze_max_jump_height;
 extern ConVar cv_spraypaints;
 extern ConVar cv_whose_your_daddy;
 extern ConVar cv_grenadier_mode;
+extern ConVar cv_ignore_enemies_after_spawn_time;
 
 extern ConVar mp_freezetime;
 extern ConVar mp_roundtime;

@@ -258,7 +258,7 @@ bool Bot::lookupEnemies () {
    if (!game.isNullEntity (m_enemy) && (m_states & Sense::SeeingEnemy)) {
       m_states &= ~Sense::SuspectEnemy;
    }
-   else if (game.isNullEntity (m_enemy) && m_seeEnemyTime + 1.0f > game.time () && util.isAlive (m_lastEnemy)) {
+   else if (game.isNullEntity (m_enemy) && m_seeEnemyTime + 4.0f > game.time () && util.isAlive (m_lastEnemy)) {
       m_states |= Sense::SuspectEnemy;
       m_aimFlags |= AimFlags::LastEnemy;
    }

@@ -11,6 +11,7 @@ ConVar cv_csdm_mode ("csdm_mode", "0", "Enables or disables CSDM / FFA mode for 
 ConVar cv_ignore_map_prefix_game_mode ("ignore_map_prefix_game_mode", "0", "If enabled, bots will not apply game modes based on map name prefix (fy_ and ka_ specifically).");
 ConVar cv_threadpool_workers ("threadpool_workers", "-1", "Maximum number of threads bot will run to process some tasks. -1 means half of CPU cores used.", true, -1.0f, static_cast <float> (plat.hardwareConcurrency ()));
 ConVar cv_grenadier_mode ("grenadier_mode", "0", "If enabled, bots will not apply throwing condition on grenades.");
+ConVar cv_ignore_enemies_after_spawn_time ("ignore_enemies_after_spawn_time", "0", "Make bots ignore enemies for a specified here time in seconds on new round. Useful for Zombie Plague mods.", true, 0.0f, 540.0f);
 
 ConVar sv_skycolor_r ("sv_skycolor_r", nullptr, Var::GameRef);
 ConVar sv_skycolor_g ("sv_skycolor_g", nullptr, Var::GameRef);
@@ -973,6 +974,14 @@ void Game::applyGameModes () {
       else if (is (GameFlags::FreeForAll)) {
          m_gameFlags &= ~(GameFlags::FreeForAll | GameFlags::CSDM);
       }
+   }
+
+   // some little support for zombie plague
+   static ConVarRef zp_delay ("zp_delay");
+
+   // update our ignore timer if zp_elay exists
+   if (zp_delay.exists () && zp_delay.value () > 0.0f && cv_ignore_enemies_after_spawn_time.float_ () < 1.0f) {
+      cv_ignore_enemies_after_spawn_time.set (zp_delay.value () + 2.0f);
    }
 }
 

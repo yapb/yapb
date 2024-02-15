@@ -1463,7 +1463,6 @@ void Bot::newRound () {
 
    m_buttonPushTime = 0.0f;
    m_enemyUpdateTime = 0.0f;
-   m_enemyIgnoreTimer = 0.0f;
    m_retreatTime = 0.0f;
    m_seeEnemyTime = 0.0f;
    m_shootAtDeadTime = 0.0f;
@@ -1581,6 +1580,14 @@ void Bot::newRound () {
    m_msgQueue.clear ();
    m_goalHist.clear ();
    m_ignoredBreakable.clear ();
+
+   // ignore enemies for some time if needed
+   if (cv_ignore_enemies_after_spawn_time.float_ () > 0.0f) {
+      m_enemyIgnoreTimer = game.time () + cv_ignore_enemies_after_spawn_time.float_ ();
+   }
+   else {
+      m_enemyIgnoreTimer = 0.0f;
+   }
 
    // update refvec for blocked movement
    updateRightRef ();

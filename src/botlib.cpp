@@ -3691,7 +3691,7 @@ bool Bot::isOutOfBombTimer () {
 }
 
 void Bot::updateHearing () {
-   if (game.is (GameFlags::FreeForAll)) {
+   if (game.is (GameFlags::FreeForAll) || m_enemyIgnoreTimer > game.time ()) {
       return;
    }
    edict_t *hearedEnemy = nullptr;
