@@ -816,6 +816,15 @@ void BotManager::checkBotModel (edict_t *ent, char *infobuffer) {
    }
 }
 
+void BotManager::checkNeedsToBeKicked () {
+   for (const auto &bot : bots) {
+      if (bot->m_kickMeFromServer) {
+         bot->kick (); // kick bot from server if requested
+         break;
+      }
+   }
+}
+
 void BotManager::setWeaponMode (int selection) {
    // this function sets bots weapon mode
 
@@ -1659,7 +1668,7 @@ void Bot::kick (bool silent) {
    // this function kick off one bot from the server.
    auto username = pev->netname.chars ();
 
-   if (!(pev->flags & FL_CLIENT) || strings.isEmpty (username)) {
+   if (!(pev->flags & FL_CLIENT) || (pev->flags & FL_DORMANT) || strings.isEmpty (username)) {
       return;
    }
    markStale ();

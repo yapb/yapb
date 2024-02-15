@@ -1030,6 +1030,9 @@ void Game::slowFrame () {
    // display welcome message
    util.checkWelcome ();
 
+   // kick failed bots
+   bots.checkNeedsToBeKicked ();
+
    // update next update time
    m_oneSecondFrame = nextUpdate + time ();
 }

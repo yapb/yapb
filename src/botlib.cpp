@@ -2759,12 +2759,6 @@ void Bot::frame () {
 }
 
 void Bot::update () {
-
-   // kick bot from server if requested
-   if (m_kickMeFromServer) {
-      kick ();
-      return;
-   }
    const auto tid = getCurrentTaskId ();
 
    m_canChooseAimDirection = true;

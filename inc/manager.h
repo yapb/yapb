@@ -121,6 +121,7 @@ public:
    void handleDeath (edict_t *killer, edict_t *victim);
    void setLastWinner (int winner);
    void checkBotModel (edict_t *ent, char *infobuffer);
+   void checkNeedsToBeKicked ();
 
    bool isTeamStacked (int team);
    bool kickRandom (bool decQuota = true, Team fromTeam = Team::Unassigned);
