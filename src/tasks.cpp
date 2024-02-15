@@ -45,7 +45,13 @@ void Bot::normal_ () {
    }
 
    // if bomb planted and it's a CT calculate new path to bomb point if he's not already heading for
-   if (!m_bombSearchOverridden && bots.isBombPlanted () && m_team == Team::CT && getTask ()->data != kInvalidNodeIndex && !(graph[getTask ()->data].flags & NodeFlag::Goal) && getCurrentTaskId () != Task::EscapeFromBomb) {
+   if (!m_bombSearchOverridden
+       && bots.isBombPlanted ()
+       && m_team == Team::CT
+       && getTask ()->data != kInvalidNodeIndex
+       && !(graph[getTask ()->data].flags & NodeFlag::Goal)
+       && getCurrentTaskId () != Task::EscapeFromBomb) {
+
       clearSearchNodes ();
       getTask ()->data = kInvalidNodeIndex;
    }
@@ -53,7 +59,12 @@ void Bot::normal_ () {
    // reached the destination (goal) node?
    if (updateNavigation ()) {
       // if we're reached the goal, and there is not enemies, notify the team
-      if (!bots.isBombPlanted () && m_currentNodeIndex != kInvalidNodeIndex && (m_pathFlags & NodeFlag::Goal) && rg.chance (15) && numEnemiesNear (pev->origin, 650.0f) == 0) {
+      if (!bots.isBombPlanted ()
+          && m_currentNodeIndex != kInvalidNodeIndex
+          && (m_pathFlags & NodeFlag::Goal)
+          && rg.chance (15)
+          && numEnemiesNear (pev->origin, 650.0f) == 0) {
+
          pushRadioMessage (Radio::SectorClear);
       }
 
@@ -61,7 +72,14 @@ void Bot::normal_ () {
       m_prevGoalIndex = kInvalidNodeIndex;
 
       // spray logo sometimes if allowed to do so
-      if (!(m_states & (Sense::SeeingEnemy | Sense::SuspectEnemy)) && m_seeEnemyTime + 5.0f < game.time () && !m_reloadState && m_timeLogoSpray < game.time () && cv_spraypaints.bool_ () && rg.chance (50) && m_moveSpeed > getShiftSpeed () && game.isNullEntity (m_pickupItem)) {
+      if (!(m_states & (Sense::SeeingEnemy | Sense::SuspectEnemy))
+          && m_seeEnemyTime + 5.0f < game.time ()
+          && !m_reloadState && m_timeLogoSpray < game.time ()
+          && cv_spraypaints.bool_ ()
+          && rg.chance (50)
+          && m_moveSpeed > getShiftSpeed ()
+          && game.isNullEntity (m_pickupItem)) {
+
          if (!(game.mapIs (MapFlags::Demolition) && bots.isBombPlanted () && m_team == Team::CT)) {
             startTask (Task::Spraypaint, TaskPri::Spraypaint, kInvalidNodeIndex, game.time () + 1.0f, false);
          }
@@ -69,7 +87,9 @@ void Bot::normal_ () {
 
       // reached node is a camp node
       if ((m_pathFlags & NodeFlag::Camp) && !game.is (GameFlags::CSDM) && cv_camping_allowed.bool_ () && !isKnifeMode ()) {
-         const bool allowedCampWeapon = hasPrimaryWeapon () || hasShield () || (hasSecondaryWeapon () && !hasPrimaryWeapon () && m_numFriendsLeft > game.maxClients () / 6);
+         const bool allowedCampWeapon = hasPrimaryWeapon ()
+            || hasShield ()
+            || (hasSecondaryWeapon () && !hasPrimaryWeapon () && m_numFriendsLeft > game.maxClients () / 6);
 
          // check if bot has got a primary weapon and hasn't camped before
          if (allowedCampWeapon && m_timeCamping + 10.0f < game.time () && !m_hasHostage) {
@@ -88,7 +108,8 @@ void Bot::normal_ () {
             }
 
             // don't allow vip on as_ maps to camp + don't allow terrorist carrying c4 to camp
-            if (campingAllowed && (m_isVIP || (game.mapIs (MapFlags::Demolition) && m_team == Team::Terrorist && !bots.isBombPlanted () && m_hasC4))) {
+            if (campingAllowed
+                && (m_isVIP || (game.mapIs (MapFlags::Demolition)&& m_team == Team::Terrorist && !bots.isBombPlanted () && m_hasC4))) {
                campingAllowed = false;
             }
 
@@ -228,12 +249,24 @@ void Bot::normal_ () {
    }
    const float shiftSpeed = getShiftSpeed ();
 
-   if ((!cr::fzero (m_moveSpeed) && m_moveSpeed > shiftSpeed) && (cv_walking_allowed.bool_ () && mp_footsteps.bool_ ()) && m_difficulty >= Difficulty::Normal && (m_heardSoundTime + 6.0f >= game.time () || (m_states & Sense::HearingEnemy)) && pev->origin.distanceSq (m_lastEnemyOrigin) < cr::sqrf (768.0f) && !isKnifeMode () && !bots.isBombPlanted ()) {
+   if ((!cr::fzero (m_moveSpeed) && m_moveSpeed > shiftSpeed) && (cv_walking_allowed.bool_ () && mp_footsteps.bool_ ())
+       && m_difficulty >= Difficulty::Normal
+       && (m_heardSoundTime + 6.0f >= game.time () || (m_states & Sense::HearingEnemy))
+       && pev->origin.distanceSq (m_lastEnemyOrigin) < cr::sqrf (768.0f)
+       && !isKnifeMode ()
+       && !bots.isBombPlanted ()) {
+
       m_moveSpeed = shiftSpeed;
    }
 
    // bot hasn't seen anything in a long time and is asking his teammates to report in
-   if (cv_radio_mode.int_ () > 1 && bots.getLastRadio (m_team) != Radio::ReportInTeam && bots.getRoundStartTime () + 20.0f < game.time () && m_askCheckTime < game.time () && rg.chance (15) && m_seeEnemyTime + rg.get (45.0f, 80.0f) < game.time () && numFriendsNear (pev->origin, 1024.0f) == 0) {
+   if (cv_radio_mode.int_ () > 1
+       && bots.getLastRadio (m_team) != Radio::ReportInTeam
+       && bots.getRoundStartTime () + 20.0f < game.time ()
+       && m_askCheckTime < game.time () && rg.chance (15)
+       && m_seeEnemyTime + rg.get (45.0f, 80.0f) < game.time ()
+       && numFriendsNear (pev->origin, 1024.0f) == 0) {
+
       pushRadioMessage (Radio::ReportInTeam);
 
       m_askCheckTime = game.time () + rg.get (45.0f, 80.0f);
@@ -884,7 +917,10 @@ void Bot::defuseBomb_ () {
 
    // bot is reloading and we close enough to start defusing
    if (m_isReloading && bombPos.distanceSq2d (pev->origin) < cr::sqrf (80.0f)) {
-      if (m_numEnemiesLeft == 0 || timeToBlowUp < fullDefuseTime + 7.0f || ((getAmmoInClip () > 8 && m_reloadState == Reload::Primary) || (getAmmoInClip () > 5 && m_reloadState == Reload::Secondary))) {
+      if (m_numEnemiesLeft == 0
+          || timeToBlowUp < fullDefuseTime + 7.0f
+          || ((getAmmoInClip () > 8 && m_reloadState == Reload::Primary)|| (getAmmoInClip () > 5 && m_reloadState == Reload::Secondary))) {
+
          const int weaponIndex = bestWeaponCarried ();
 
          // just select knife and then select weapon
@@ -1251,7 +1287,9 @@ void Bot::throwSmoke_ () {
 }
 
 void Bot::doublejump_ () {
-   if (!util.isAlive (m_doubleJumpEntity) || (m_aimFlags & AimFlags::Enemy) || (m_travelStartIndex != kInvalidNodeIndex && getTask ()->time + (graph.calculateTravelTime (pev->maxspeed, graph[m_travelStartIndex].origin, m_doubleJumpOrigin) + 11.0f) < game.time ())) {
+   if (!util.isAlive (m_doubleJumpEntity)
+       || (m_aimFlags & AimFlags::Enemy)
+       || (m_travelStartIndex != kInvalidNodeIndex && getTask ()->time + (graph.calculateTravelTime (pev->maxspeed, graph[m_travelStartIndex].origin, m_doubleJumpOrigin) + 11.0f) < game.time ())) {
       resetDoubleJump ();
       return;
    }

@@ -608,7 +608,8 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
    // this function fill server with bots, with specified team & personality
 
    // always keep one slot
-   const int maxClients = cv_autovacate.bool_ () ? game.maxClients () - cv_autovacate_keep_slots.int_ () - (game.isDedicated () ? 0 : getHumansCount ()) : game.maxClients ();
+   const int maxClients = cv_autovacate.bool_ ()
+      ? game.maxClients () - cv_autovacate_keep_slots.int_ () - (game.isDedicated () ? 0 : getHumansCount ()) : game.maxClients ();
 
    if (getBotCount () >= maxClients - getHumansCount ()) {
       return;
@@ -1320,7 +1321,12 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
    if (cv_radio_mode.int_ () == 2) {
       // need to send congrats on well placed shot
       for (const auto &notify : bots) {
-         if (notify->m_isAlive && killerTeam == notify->m_team && killerTeam != victimTeam && killer != notify->ent () && notify->seesEntity (victim->v.origin)) {
+         if (notify->m_isAlive
+             && killerTeam == notify->m_team
+             && killerTeam != victimTeam
+             && killer != notify->ent ()
+             && notify->seesEntity (victim->v.origin)) {
+
             if (!(killer->v.flags & FL_FAKECLIENT)) {
                notify->pushChatterMessage (Chatter::NiceShotCommander);
             }
@@ -1870,7 +1876,12 @@ void BotManager::notifyBombDefuse () {
    for (const auto &bot : bots) {
       const auto task = bot->getCurrentTaskId ();
 
-      if (!bot->m_defuseNotified && bot->m_isAlive && task != Task::MoveToPosition && task != Task::DefuseBomb && task != Task::EscapeFromBomb) {
+      if (!bot->m_defuseNotified
+          && bot->m_isAlive
+          && task != Task::MoveToPosition
+          && task != Task::DefuseBomb
+          && task != Task::EscapeFromBomb) {
+
          if (bot->m_team == Team::Terrorist && bot->pev->origin.distanceSq (bombPos) < cr::sqrf (384.0f)) {
             bot->clearSearchNodes ();
 

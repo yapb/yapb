@@ -950,7 +950,12 @@ bool Bot::updateNavigation () {
 
       // special detection if someone is using the ladder (to prevent to have bots-towers on ladders)
       for (const auto &client : util.getClients ()) {
-         if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || (client.ent->v.movetype != MOVETYPE_FLY) || client.team != m_team || client.ent == ent ()) {
+         if (!(client.flags & ClientFlags::Used)
+             || !(client.flags & ClientFlags::Alive)
+             || (client.ent->v.movetype != MOVETYPE_FLY)
+             || client.team != m_team
+             || client.ent == ent ()) {
+
             continue;
          }
          TraceResult tr {};
@@ -962,7 +967,10 @@ bool Bot::updateNavigation () {
             game.testHull (getEyesPos (), m_pathOrigin, TraceIgnore::Monsters, isDucking () ? head_hull : human_hull, ent (), &tr);
 
             // someone is above or below us and is using the ladder already
-            if (tr.pHit == client.ent && cr::abs (pev->origin.z - client.ent->v.origin.z) > 15.0f && (client.ent->v.movetype == MOVETYPE_FLY)) {
+            if (tr.pHit == client.ent
+                && cr::abs (pev->origin.z - client.ent->v.origin.z) > 15.0f
+                && (client.ent->v.movetype == MOVETYPE_FLY)) {
+
                const auto numPreviousNode = rg.get (0, 2);
 
                for (int i = 0; i < numPreviousNode; ++i) {
@@ -1093,7 +1101,10 @@ bool Bot::updateNavigation () {
    }
 
    // needs precise placement - check if we get past the point
-   if (desiredDistanceSq < cr::sqrf (22.0f) && nodeDistanceSq < cr::sqrf (30.0f) && m_pathOrigin.distanceSq (pev->origin + pev->velocity * m_frameInterval) >= nodeDistanceSq) {
+   if (desiredDistanceSq < cr::sqrf (22.0f)
+       && nodeDistanceSq < cr::sqrf (30.0f)
+       && m_pathOrigin.distanceSq (pev->origin + pev->velocity * m_frameInterval) >= nodeDistanceSq) {
+
       desiredDistanceSq = nodeDistanceSq + 1.0f;
    }
 
@@ -1131,7 +1142,12 @@ bool Bot::updateNavigation () {
       }
       int taskTarget = getTask ()->data;
 
-      if (game.mapIs (MapFlags::Demolition) && bots.isBombPlanted () && m_team == Team::CT && getCurrentTaskId () != Task::EscapeFromBomb && taskTarget != kInvalidNodeIndex) {
+      if (game.mapIs (MapFlags::Demolition)
+          && bots.isBombPlanted ()
+          && m_team == Team::CT
+          && getCurrentTaskId () != Task::EscapeFromBomb
+          && taskTarget != kInvalidNodeIndex) {
+
          const Vector &bombOrigin = isBombAudible ();
 
          // bot within 'hearable' bomb tick noises?
@@ -1181,7 +1197,11 @@ bool Bot::updateLiftHandling () {
    // trace line to door
    game.testLine (pev->origin, m_pathOrigin, TraceIgnore::Everything, ent (), &tr);
 
-   if (tr.flFraction < 1.0f && util.isDoorEntity (tr.pHit) && (m_liftState == LiftState::None || m_liftState == LiftState::WaitingFor || m_liftState == LiftState::LookingButtonOutside) && pev->groundentity != tr.pHit) {
+   if (tr.flFraction < 1.0f
+       && util.isDoorEntity (tr.pHit)
+       && (m_liftState == LiftState::None || m_liftState == LiftState::WaitingFor || m_liftState == LiftState::LookingButtonOutside)
+       && pev->groundentity != tr.pHit) {
+
       if (m_liftState == LiftState::None) {
          m_liftState = LiftState::LookingButtonOutside;
          m_liftUsageTime = game.time () + 7.0f;
@@ -1199,7 +1219,10 @@ bool Bot::updateLiftHandling () {
 
    // if trace result shows us that it is a lift
    if (!game.isNullEntity (tr.pHit) && !m_pathWalk.empty () && isFunc (tr.pHit->v.classname.str ()) && !liftClosedDoorExists) {
-      if ((m_liftState == LiftState::None || m_liftState == LiftState::WaitingFor || m_liftState == LiftState::LookingButtonOutside) && cr::fzero (tr.pHit->v.velocity.z)) {
+      if ((m_liftState == LiftState::None
+           || m_liftState == LiftState::WaitingFor
+           || m_liftState == LiftState::LookingButtonOutside) && cr::fzero (tr.pHit->v.velocity.z)) {
+
          if (cr::abs (pev->origin.z - tr.vecEndPos.z) < 70.0f) {
             m_liftEntity = tr.pHit;
             m_liftState = LiftState::EnteringIn;
@@ -1274,7 +1297,12 @@ bool Bot::updateLiftHandling () {
       bool needWaitForTeammate = false;
 
       for (const auto &bot : bots) {
-         if (!bot->m_isAlive || bot->m_team != m_team || bot->m_targetEntity != ent () || bot->getCurrentTaskId () != Task::FollowUser || bot->m_liftEntity != m_liftEntity) {
+         if (!bot->m_isAlive
+             || bot->m_team != m_team
+             || bot->m_targetEntity != ent ()
+             || bot->getCurrentTaskId () != Task::FollowUser
+             || bot->m_liftEntity != m_liftEntity) {
+
             continue;
          }
 
@@ -1305,7 +1333,12 @@ bool Bot::updateLiftHandling () {
       auto button = lookupButton (m_liftEntity->v.targetname.str ());
 
       // got a valid button entity ?
-      if (!game.isNullEntity (button) && pev->groundentity == m_liftEntity && m_buttonPushTime + 1.0f < game.time () && cr::fzero (m_liftEntity->v.velocity.z) && isOnFloor ()) {
+      if (!game.isNullEntity (button)
+          && pev->groundentity == m_liftEntity
+          && m_buttonPushTime + 1.0f < game.time ()
+          && cr::fzero (m_liftEntity->v.velocity.z)
+          && isOnFloor ()) {
+
          m_pickupItem = button;
          m_pickupType = Pickup::Button;
 
@@ -1314,8 +1347,16 @@ bool Bot::updateLiftHandling () {
    }
 
    // is lift activated and bot is standing on it and lift is moving ?
-   if (m_liftState == LiftState::LookingButtonInside || m_liftState == LiftState::EnteringIn || m_liftState == LiftState::WaitingForTeammates || m_liftState == LiftState::WaitingFor) {
-      if (pev->groundentity == m_liftEntity && !cr::fzero (m_liftEntity->v.velocity.z) && isOnFloor () && ((graph[m_previousNodes[0]].flags & NodeFlag::Lift) || !game.isNullEntity (m_targetEntity))) {
+   if (m_liftState == LiftState::LookingButtonInside
+       || m_liftState == LiftState::EnteringIn
+       || m_liftState == LiftState::WaitingForTeammates
+       || m_liftState == LiftState::WaitingFor) {
+
+      if (pev->groundentity == m_liftEntity
+          && !cr::fzero (m_liftEntity->v.velocity.z)
+          && isOnFloor ()
+          && ((graph[m_previousNodes[0]].flags & NodeFlag::Lift) || !game.isNullEntity (m_targetEntity))) {
+
          m_liftState = LiftState::TravelingBy;
          m_liftUsageTime = game.time () + 14.0f;
 
@@ -1419,7 +1460,10 @@ bool Bot::updateLiftHandling () {
    if (m_liftState == LiftState::WaitingFor || m_liftState == LiftState::EnteringIn) {
       // bot fall down somewhere inside the lift's groove :)
       if (pev->groundentity != m_liftEntity && graph.exists (m_previousNodes[0])) {
-         if ((graph[m_previousNodes[0]].flags & NodeFlag::Lift) && (m_path->origin.z - pev->origin.z) > 50.0f && (graph[m_previousNodes[0]].origin.z - pev->origin.z) > 50.0f) {
+         if ((graph[m_previousNodes[0]].flags & NodeFlag::Lift)
+             && (m_path->origin.z - pev->origin.z) > 50.0f
+             && (graph[m_previousNodes[0]].origin.z - pev->origin.z) > 50.0f) {
+
             m_liftState = LiftState::None;
             m_liftEntity = nullptr;
             m_liftUsageTime = 0.0f;
@@ -1627,7 +1671,10 @@ float Bot::getEstimatedNodeReachTime () {
       // caclulate estimated time
       estimatedTime = 5.0f * (distanceSq / cr::sqrf (m_moveSpeed + 1.0f));
 
-      const bool longTermReachability = (m_pathFlags & NodeFlag::Crouch) || (m_pathFlags & NodeFlag::Ladder) || (pev->button & IN_DUCK) || (m_oldButtons & IN_DUCK);
+      const bool longTermReachability = (m_pathFlags & NodeFlag::Crouch)
+         || (m_pathFlags & NodeFlag::Ladder)
+         || (pev->button & IN_DUCK)
+         || (m_oldButtons & IN_DUCK);
 
       // check for special nodes, that can slowdown our movement
       if (longTermReachability) {
@@ -1923,7 +1970,10 @@ int Bot::findDefendNode (const Vector &origin) {
       IntArray found;
 
       for (const auto &path : graph) {
-         if (origin.distanceSq (path.origin) < cr::sqrf (kMaxDistance) && vistab.visible (path.number, posIndex) && !isOccupiedNode (path.number)) {
+         if (origin.distanceSq (path.origin) < cr::sqrf (kMaxDistance)
+             && vistab.visible (path.number, posIndex)
+             && !isOccupiedNode (path.number)) {
+
             found.push (path.number);
          }
       }
@@ -2170,7 +2220,15 @@ bool Bot::advanceMovement () {
          const auto tid = getCurrentTaskId ();
 
          // only if we in normal task and bomb is not planted
-         if (tid == Task::Normal && bots.getRoundMidTime () + 5.0f < game.time () && m_timeCamping + 5.0f < game.time () && !bots.isBombPlanted () && m_personality != Personality::Rusher && !m_hasC4 && !m_isVIP && m_loosedBombNodeIndex == kInvalidNodeIndex && !m_hasHostage && !m_isCreature) {
+         if (tid == Task::Normal
+             && bots.getRoundMidTime () + 5.0f < game.time ()
+             && m_timeCamping + 5.0f < game.time ()
+             && !bots.isBombPlanted ()
+             && m_personality != Personality::Rusher
+             && !m_hasC4 && !m_isVIP
+             && m_loosedBombNodeIndex == kInvalidNodeIndex
+             && !m_hasHostage && !m_isCreature) {
+
             m_campButtons = 0;
 
             const int nextIndex = m_pathWalk.next ();
@@ -2280,7 +2338,12 @@ bool Bot::advanceMovement () {
             }
 
             // is there a jump node right ahead and do we need to draw out the light weapon ?
-            if (willJump && !usesKnife () && m_currentWeapon != Weapon::Scout && !m_isReloading && !usesPistol () && (jumpDistanceSq > cr::sqrf (145.0f) || (dst.z - 32.0f > src.z && jumpDistanceSq > cr::sqrf (125.0f))) && !(m_states & Sense::SeeingEnemy)) {
+            if (willJump && !usesKnife ()
+                && m_currentWeapon != Weapon::Scout
+                && !m_isReloading && !usesPistol ()
+                && (jumpDistanceSq > cr::sqrf (145.0f) || (dst.z - 32.0f > src.z && jumpDistanceSq > cr::sqrf (125.0f)))
+                && !(m_states & Sense::SeeingEnemy)) {
+
                selectWeaponById (Weapon::Knife); // draw out the knife if we needed
             }
 

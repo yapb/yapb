@@ -168,7 +168,9 @@ int BotGraph::clearConnections (int index) {
       if (cur.angles - prev2.angles < 80.0f) {
 
          // leave alone ladder connections and don't remove jump connections..
-         if (((path.flags & NodeFlag::Ladder) && (m_paths[prev.index].flags & NodeFlag::Ladder)) || (path.links[prev.number].flags & PathFlag::Jump)) {
+         if (((path.flags & NodeFlag::Ladder)
+              && (m_paths[prev.index].flags & NodeFlag::Ladder)) || (path.links[prev.number].flags & PathFlag::Jump)) {
+
             return false;
          }
 
@@ -213,7 +215,11 @@ int BotGraph::clearConnections (int index) {
 
    // check pass 1
    if (exists (top.index) && exists (sorted[0].index) && exists (sorted[1].index)) {
-      if ((sorted[1].angles - top.angles < 80.0f || 360.0f - (sorted[1].angles - top.angles) < 80.0f) && (!(m_paths[sorted[0].index].flags & NodeFlag::Ladder) || !(path.flags & NodeFlag::Ladder)) && !(path.links[sorted[0].number].flags & PathFlag::Jump)) {
+
+      if ((sorted[1].angles - top.angles < 80.0f || 360.0f - (sorted[1].angles - top.angles) < 80.0f)
+          && (!(m_paths[sorted[0].index].flags & NodeFlag::Ladder) || !(path.flags & NodeFlag::Ladder))
+          && !(path.links[sorted[0].number].flags & PathFlag::Jump)) {
+
          if ((sorted[1].distance + top.distance) * 1.1f / 2.0f < sorted[0].distance) {
             if (path.links[sorted[0].number].index == sorted[0].index) {
                msg ("Removing a useless (P.1.1) connection from index = %d to %d.", index, sorted[0].index);
@@ -259,7 +265,9 @@ int BotGraph::clearConnections (int index) {
          if (prev.distance < cur.distance * 1.1f) {
 
             // leave alone ladder connections and don't remove jump connections..
-            if (((path.flags & NodeFlag::Ladder) && (m_paths[cur.index].flags & NodeFlag::Ladder)) || (path.links[cur.number].flags & PathFlag::Jump)) {
+            if (((path.flags & NodeFlag::Ladder)
+                 && (m_paths[cur.index].flags & NodeFlag::Ladder)) || (path.links[cur.number].flags & PathFlag::Jump)) {
+
                return false;
             }
 
@@ -291,7 +299,10 @@ int BotGraph::clearConnections (int index) {
          }
          else if (cur.distance < prev.distance * 1.1f) {
             // leave alone ladder connections and don't remove jump connections..
-            if (((path.flags & NodeFlag::Ladder) && (m_paths[prev.index].flags & NodeFlag::Ladder)) || (path.links[prev.number].flags & PathFlag::Jump)) {
+            if (((path.flags & NodeFlag::Ladder)
+                 && (m_paths[prev.index].flags & NodeFlag::Ladder))
+                || (path.links[prev.number].flags & PathFlag::Jump)) {
+
                return false;
             }
 
@@ -336,7 +347,11 @@ int BotGraph::clearConnections (int index) {
 
    // check pass 3
    if (exists (top.index) && exists (sorted[0].index)) {
-      if ((top.angles - sorted[0].angles < 40.0f || (360.0f - top.angles - sorted[0].angles) < 40.0f) && (!(m_paths[sorted[0].index].flags & NodeFlag::Ladder) || !(path.flags & NodeFlag::Ladder)) && !(path.links[sorted[0].number].flags & PathFlag::Jump)) {
+
+      if ((top.angles - sorted[0].angles < 40.0f || (360.0f - top.angles - sorted[0].angles) < 40.0f)
+          && (!(m_paths[sorted[0].index].flags & NodeFlag::Ladder) || !(path.flags & NodeFlag::Ladder))
+          && !(path.links[sorted[0].number].flags & PathFlag::Jump)) {
+
          if (top.distance * 1.1f < sorted[0].distance) {
             if (path.links[sorted[0].number].index == sorted[0].index) {
                msg ("Removing a useless (P.3.1) connection from index = %d to %d.", index, sorted[0].index);
@@ -816,7 +831,11 @@ void BotGraph::add (int type, const Vector &pos) {
             // check if the node is reachable from the new one
             game.testLine (newOrigin, calc.origin, TraceIgnore::Monsters, m_editor, &tr);
 
-            if (cr::fequal (tr.flFraction, 1.0f) && cr::abs (newOrigin.x - calc.origin.x) < 64.0f && cr::abs (newOrigin.y - calc.origin.y) < 64.0f && cr::abs (newOrigin.z - calc.origin.z) < m_autoPathDistance) {
+            if (cr::fequal (tr.flFraction, 1.0f)
+                && cr::abs (newOrigin.x - calc.origin.x) < 64.0f
+                && cr::abs (newOrigin.y - calc.origin.y) < 64.0f
+                && cr::abs (newOrigin.z - calc.origin.z) < m_autoPathDistance) {
+
                const float distance = newOrigin.distance2d (calc.origin);
 
                addPath (index, calc.number, distance);
@@ -2073,7 +2092,10 @@ void BotGraph::frame () {
       const float distanceSq = path.origin.distanceSq (m_editor->v.origin);
 
       // check if node is within a distance, and is visible
-      if (distanceSq < cr::sqrf (cv_graph_draw_distance.float_ ()) && ((util.isVisible (path.origin, m_editor) && util.isInViewCone (path.origin, m_editor)) || !util.isAlive (m_editor) || distanceSq < cr::sqrf (64.0f))) {
+      if (distanceSq < cr::sqrf (cv_graph_draw_distance.float_ ())
+          && ((util.isVisible (path.origin, m_editor)
+               && util.isInViewCone (path.origin, m_editor)) || !util.isAlive (m_editor) || distanceSq < cr::sqrf (64.0f))) {
+
          // check the distance
          if (distanceSq < nearestDistanceSq) {
             nearestIndex = path.number;
@@ -2188,7 +2210,9 @@ void BotGraph::frame () {
    }
 
    // draw a paths, camplines and danger directions for nearest node
-   if (nearestDistanceSq < cr::clamp (m_paths[nearestIndex].radius, cr::sqrf (56.0f), cr::sqrf (90.0f)) && m_pathDisplayTime < game.time ()) {
+   if (nearestDistanceSq < cr::clamp (m_paths[nearestIndex].radius, cr::sqrf (56.0f), cr::sqrf (90.0f))
+       && m_pathDisplayTime < game.time ()) {
+
       m_pathDisplayTime = game.time () + 0.96f;
 
       // create path pointer for faster access

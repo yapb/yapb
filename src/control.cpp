@@ -1280,7 +1280,10 @@ int BotControl::menuCommands (int item) {
    switch (item) {
    case 1:
    case 2:
-      if (util.findNearestPlayer (reinterpret_cast <void **> (&m_djump), m_ent, 600.0f, true, true, true, true, false) && !m_djump->m_hasC4 && !m_djump->m_hasHostage) {
+      if (util.findNearestPlayer (reinterpret_cast <void **> (&m_djump), m_ent, 600.0f, true, true, true, true, false)
+          && !m_djump->m_hasC4
+          && !m_djump->m_hasHostage) {
+
          if (item == 1) {
             m_djump->startDoubleJump (m_ent);
          }

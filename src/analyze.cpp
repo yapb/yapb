@@ -201,7 +201,9 @@ void GraphAnalyze::optimize () {
       Array <int> indexes;
 
       for (const auto &link : path.links) {
-         if (graph.exists (link.index) && !m_optimizedNodes[link.index] && !AStarAlgo::cantSkipNode (path.number, link.index, true)) {
+         if (graph.exists (link.index) && !m_optimizedNodes[link.index]
+             && !AStarAlgo::cantSkipNode (path.number, link.index, true)) {
+
             indexes.emplace (link.index);
          }
       }
@@ -339,7 +341,9 @@ void GraphAnalyze::flood (const Vector &pos, const Vector &next, float range) {
       }
       auto testPos = m_isCrouch ? Vector { nextPos.x, nextPos.y, nextPos.z - 18.0f } : nextPos;
 
-      if ((graph.isNodeReacheable (targetPos, testPos) && graph.isNodeReacheable (testPos, targetPos)) || (graph.isNodeReacheableWithJump (testPos, targetPos) && graph.isNodeReacheableWithJump (targetPos, testPos))) {
+      if ((graph.isNodeReacheable (targetPos, testPos)
+           && graph.isNodeReacheable (testPos, targetPos)) || (graph.isNodeReacheableWithJump (testPos, targetPos)
+                                                               && graph.isNodeReacheableWithJump (targetPos, testPos))) {
          graph.add (NodeAddFlag::Normal, m_isCrouch ? Vector { nextPos.x, nextPos.y, nextPos.z - 9.0f } : nextPos);
       }
    }

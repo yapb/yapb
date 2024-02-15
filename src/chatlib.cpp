@@ -348,7 +348,11 @@ void Bot::checkForChat () {
    }
 
    // bot chatting turned on?
-   if (rg.chance (cv_chat_percent.int_ ()) && m_lastChatTime + rg.get (6.0f, 10.0f) < game.time () && bots.getLastChatTimestamp () + rg.get (2.5f, 5.0f) < game.time () && !isReplyingToChat ()) {
+   if (rg.chance (cv_chat_percent.int_ ())
+       && m_lastChatTime + rg.get (6.0f, 10.0f) < game.time ()
+       && bots.getLastChatTimestamp () + rg.get (2.5f, 5.0f) < game.time ()
+       && !isReplyingToChat ()) {
+
       if (conf.hasChatBank (Chat::Dead)) {
          StringRef phrase = conf.pickRandomFromChatBank (Chat::Dead);
          bool sayBufferExists = false;

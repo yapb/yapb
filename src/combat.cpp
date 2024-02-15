@@ -269,7 +269,11 @@ bool Bot::lookupEnemies () {
       player = m_enemy;
 
       // is player is alive
-      if (m_enemyUpdateTime > game.time () && m_enemy->v.origin.distanceSq (pev->origin) < nearestDistanceSq && util.isAlive (player) && seesEnemy (player)) {
+      if (m_enemyUpdateTime > game.time ()
+          && m_enemy->v.origin.distanceSq (pev->origin) < nearestDistanceSq
+          && util.isAlive (player)
+          && seesEnemy (player)) {
+
          newEnemy = player;
       }
    }
@@ -309,7 +313,11 @@ bool Bot::lookupEnemies () {
 
       // search the world for players...
       for (const auto &client : util.getClients ()) {
-         if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team == m_team || client.ent == ent () || !client.ent) {
+         if (!(client.flags & ClientFlags::Used)
+             || !(client.flags & ClientFlags::Alive)
+             || client.team == m_team
+             || client.ent == ent ()
+             || !client.ent) {
             continue;
          }
          player = client.ent;
@@ -400,7 +408,11 @@ bool Bot::lookupEnemies () {
                continue;
             }
 
-            if (other->m_seeEnemyTime + 2.0f < game.time () && game.isNullEntity (other->m_lastEnemy) && util.isVisible (pev->origin, other->ent ()) && other->isInViewCone (pev->origin)) {
+            if (other->m_seeEnemyTime + 2.0f < game.time ()
+                && game.isNullEntity (other->m_lastEnemy)
+                && util.isVisible (pev->origin, other->ent ())
+                && other->isInViewCone (pev->origin)) {
+
                other->m_lastEnemy = newEnemy;
                other->m_lastEnemyOrigin = newEnemy->v.origin;
                other->m_seeEnemyTime = game.time ();
@@ -643,7 +655,8 @@ bool Bot::isFriendInLineOfFire (float distance) {
       }
       const auto friendDistanceSq = client.ent->v.origin.distanceSq (pev->origin);
 
-      if (friendDistanceSq <= distanceSq && util.getShootingCone (ent (), client.ent->v.origin) > friendDistanceSq / (friendDistanceSq + cr::sqrf (33.0f))) {
+      if (friendDistanceSq <= distanceSq
+          && util.getShootingCone (ent (), client.ent->v.origin) > friendDistanceSq / (friendDistanceSq + cr::sqrf (33.0f))) {
          return true;
       }
    }
@@ -905,7 +918,10 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
    }
 
    // we're should stand still before firing sniper weapons, else sniping is useless..
-   if (usesSniper () && (m_aimFlags & (AimFlags::Enemy | AimFlags::LastEnemy)) && !m_isReloading && pev->velocity.lengthSq () > 0.0f && getCurrentTaskId () != Task::SeekCover) {
+   if (usesSniper () && (m_aimFlags & (AimFlags::Enemy | AimFlags::LastEnemy))
+       && !m_isReloading && pev->velocity.lengthSq () > 0.0f
+       && getCurrentTaskId () != Task::SeekCover) {
+
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
       m_navTimeset = game.time ();
@@ -1007,7 +1023,14 @@ void Bot::fireWeapons () {
    }
 
    // use knife if near and good difficulty (l33t dude!)
-   if (cv_stab_close_enemies.bool_ () && m_difficulty >= Difficulty::Normal && m_healthValue > 80.0f && !game.isNullEntity (m_enemy) && m_healthValue >= m_enemy->v.health && distance < 100.0f && !isOnLadder () && !isGroupOfEnemies (pev->origin)) {
+   if (cv_stab_close_enemies.bool_ () && m_difficulty >= Difficulty::Normal
+       && m_healthValue > 80.0f
+       && !game.isNullEntity (m_enemy)
+       && m_healthValue >= m_enemy->v.health
+       && distance < 100.0f
+       && !isOnLadder ()
+       && !isGroupOfEnemies (pev->origin)) {
+
       selectWeapons (distance, selectIndex, selectId, choosenWeapon);
       return;
    }
@@ -1327,7 +1350,12 @@ void Bot::attackMovement () {
          m_moveSpeed = 0.0f;
       }
 
-      if (m_difficulty >= Difficulty::Normal && (m_jumpTime + 5.0f < game.time () && isOnFloor () && rg.get (0, 1000) < (m_isReloading ? 8 : 2) && pev->velocity.length2d () > 150.0f) && !usesSniper ()) {
+      if (m_difficulty >= Difficulty::Normal
+          && (m_jumpTime + 5.0f < game.time ()
+              && isOnFloor ()
+              && rg.get (0, 1000) < (m_isReloading ? 8 : 2)
+              && pev->velocity.length2d () > 150.0f) && !usesSniper ()) {
+
          pev->button |= IN_JUMP;
       }
    }
@@ -1337,10 +1365,15 @@ void Bot::attackMovement () {
       if (alreadyDucking) {
          m_duckTime = game.time () + m_frameInterval * 2.0f;
       }
-      else if ((distance > 768.0f && hasPrimaryWeapon ()) && (m_enemyParts & (Visibility::Head | Visibility::Body)) && getCurrentTaskId () != Task::SeekCover && getCurrentTaskId () != Task::Hunt) {
+      else if ((distance > 768.0f && hasPrimaryWeapon ())
+               && (m_enemyParts & (Visibility::Head | Visibility::Body))
+               && getCurrentTaskId () != Task::SeekCover
+               && getCurrentTaskId () != Task::Hunt) {
+
          const int enemyNearestIndex = graph.getNearest (m_enemy->v.origin);
 
-         if (vistab.visible (m_currentNodeIndex, enemyNearestIndex, VisIndex::Crouch) && vistab.visible (enemyNearestIndex, m_currentNodeIndex, VisIndex::Crouch)) {
+         if (vistab.visible (m_currentNodeIndex, enemyNearestIndex, VisIndex::Crouch)
+             && vistab.visible (enemyNearestIndex, m_currentNodeIndex, VisIndex::Crouch)) {
             m_duckTime = game.time () + m_frameInterval * 2.0f;
          }
       }
@@ -1715,7 +1748,12 @@ void Bot::checkReload () {
    const auto tid = getCurrentTaskId ();
 
    // we're should not reload, while doing next tasks
-   const bool uninterruptibleTask = (tid == Task::PlantBomb || tid == Task::DefuseBomb || tid == Task::PickupItem || tid == Task::ThrowExplosive || tid == Task::ThrowFlashbang || tid == Task::ThrowSmoke);
+   const bool uninterruptibleTask = (tid == Task::PlantBomb
+                                     || tid == Task::DefuseBomb
+                                     || tid == Task::PickupItem
+                                     || tid == Task::ThrowExplosive
+                                     || tid == Task::ThrowFlashbang
+                                     || tid == Task::ThrowSmoke);
 
    // do not check for reload
    if (uninterruptibleTask || m_isUsingGrenade || usesKnife ()) {
