@@ -443,7 +443,7 @@ void Bot::updatePickups () {
                         && (getAmmo (primary.id) > 0.3 * primaryProp.ammo1Max)
                         && !m_isUsingGrenade && !hasShield ()) {
 
-                  auto weaponType = conf.getWeaponType (primaryWeaponCarried);
+                  auto weaponType = conf.getWeaponType (primary.id);
 
                   const bool isSniperRifle = weaponType == WeaponType::Sniper;
                   const bool isSubmachine = weaponType == WeaponType::SMG;
@@ -512,7 +512,7 @@ void Bot::updatePickups () {
       if (allowPickup) {
 
          // found weapon on ground?
-         if (pickupType == Pickup::Weapon) {
+         if (pickupType == Pickup::Weapon || pickupType == Pickup::AmmoAndKits) {
             if (m_isVIP) {
                allowPickup = false;
             }
