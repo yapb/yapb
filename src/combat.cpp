@@ -1458,12 +1458,12 @@ bool Bot::isEnemyBehindShield (edict_t *enemy) {
 int Bot::bestPrimaryCarried () {
    // this function returns the best weapon of this bot (based on personality prefs)
 
-   const int *pref = conf.getWeaponPrefs (m_personality);
+   auto pref = conf.getWeaponPrefs (m_personality);
 
    int weaponIndex = 0;
    int weapons = pev->weapons;
 
-   const auto &tab = conf.getWeapons ();
+   const auto &tab = conf.getRawWeapons ();
 
    // take the shield in account
    if (hasShield ()) {
@@ -1482,7 +1482,7 @@ int Bot::bestPrimaryCarried () {
 int Bot::bestSecondaryCarried () {
    // this function returns the best secondary weapon of this bot (based on personality prefs)
 
-   const int *pref = conf.getWeaponPrefs (m_personality);
+   auto pref = conf.getWeaponPrefs (m_personality);
 
    int weaponIndex = 0;
    int weapons = pev->weapons;
@@ -1494,9 +1494,9 @@ int Bot::bestSecondaryCarried () {
    const auto tab = conf.getRawWeapons ();
 
    for (int i = 0; i < kNumWeapons; ++i) {
-      int id = tab[*pref].id;
+      const int id = tab[*pref].id;
 
-      if ((weapons & cr::bit (tab[*pref].id)) && conf.getWeaponType (id) == WeaponType::Pistol) {
+      if ((weapons & cr::bit (id)) && conf.getWeaponType (id) == WeaponType::Pistol) {
          weaponIndex = i;
          break;
       }

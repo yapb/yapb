@@ -518,6 +518,20 @@ void Bot::updatePickups () {
             }
             else if (!rateGroundWeapon (ent)) {
                allowPickup = false;
+
+               // double check if it's ammo/kits
+               if (pickupType == Pickup::AmmoAndKits) {
+                  const auto &rawWeapons = conf.getWeapons ();
+
+                  // verify that the model is not weapon
+                  for (const auto &rw : rawWeapons) {
+                     if (rw.model == model) {
+                        allowPickup = false;
+                        break;
+                     }
+                     allowPickup = true;
+                  }
+               }
             }
             else if ((pev->weapons & cr::bit (Weapon::Flashbang)) && model == kFlashbangModelName) {
                allowPickup = false;
