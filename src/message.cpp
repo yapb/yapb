@@ -477,6 +477,7 @@ MessageDispatcher::MessageDispatcher () {
    m_textMsgCache["#Game_will_restart_in"] = TextMsgCache::NeedHandle | TextMsgCache::RestartRound;
    m_textMsgCache["#Switch_To_BurstFire"] = TextMsgCache::NeedHandle | TextMsgCache::BurstOn;
    m_textMsgCache["#Switch_To_SemiAuto"] = TextMsgCache::NeedHandle | TextMsgCache::BurstOff;
+   m_textMsgCache["#Switch_To_FullAuto"] = TextMsgCache::NeedHandle | TextMsgCache::BurstOff;
 
    // register show menu cache
    m_showMenuCache["#Team_Select"] = BotMsg::TeamSelect;
