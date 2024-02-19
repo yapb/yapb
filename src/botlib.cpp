@@ -449,6 +449,7 @@ void Bot::updatePickups () {
                   const bool isSubmachine = weaponType == WeaponType::SMG;
                   const bool isShotgun = weaponType == WeaponType::Shotgun;
                   const bool isRifle = weaponType == WeaponType::Rifle || weaponType == WeaponType::ZoomRifle;
+                  const bool isHeavy = weaponType == WeaponType::Heavy;
 
                   if (!isRifle && model == "9mmarclip.mdl") {
                      allowPickup = false;
@@ -462,7 +463,7 @@ void Bot::updatePickups () {
                   else if (!isSniperRifle && model == "crossbow_clip.mdl") {
                      allowPickup = false;
                   }
-                  else if (primaryWeaponCarried != Weapon::M249 && model == "chainammo.mdl") {
+                  else if (!isHeavy && model == "chainammo.mdl") {
                      allowPickup = false;
                   }
                }
@@ -470,6 +471,15 @@ void Bot::updatePickups () {
                   allowPickup = false;
                }
                else if (pev->armorvalue >= 100.0f && (model == "kevlar.mdl"|| model == "battery.mdl" || model == "assault.mdl")) {
+                  allowPickup = false;
+               }
+               else if ((pev->weapons & cr::bit (Weapon::Flashbang)) && model == kFlashbangModelName) {
+                  allowPickup = false;
+               }
+               else if ((pev->weapons & cr::bit (Weapon::Explosive)) && model == kExplosiveModelName) {
+                  allowPickup = false;
+               }
+               else if ((pev->weapons & cr::bit (Weapon::Smoke)) && model == kSmokeModelName) {
                   allowPickup = false;
                }
 
@@ -533,15 +543,6 @@ void Bot::updatePickups () {
                   }
                }
             }
-            else if ((pev->weapons & cr::bit (Weapon::Flashbang)) && model == kFlashbangModelName) {
-               allowPickup = false;
-            }
-            else if ((pev->weapons & cr::bit (Weapon::Explosive)) && model == kExplosiveModelName) {
-               allowPickup = false;
-            }
-            else if ((pev->weapons & cr::bit (Weapon::Smoke)) && model == kSmokeModelName) {
-               allowPickup = false;
-            }
          }
 
          // found a shield on ground?
@@ -566,11 +567,12 @@ void Bot::updatePickups () {
                if (!m_defendHostage && m_personality
                    != Personality::Rusher && m_difficulty >= Difficulty::Normal
                    && rg.chance (15)
-                   && m_timeCamping + 15.0f < game.time ()) {
+                   && m_timeCamping + 15.0f < game.time ()
+                   && numFriendsNear (pev->origin, 384.0f) < 3) {
 
                   const int index = findDefendNode (origin);
 
-                  startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (30.0f, 60.0f), true); // push camp task on to stack
+                  startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (cv_camping_time_min.float_ (), cv_camping_time_max.float_ ()), true); // push camp task on to stack
                   startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg.get (3.0f, 6.0f), true); // push move command
 
                   // decide to duck or not to duck
@@ -693,7 +695,7 @@ void Bot::updatePickups () {
                if (!m_defendedBomb && m_difficulty >= Difficulty::Normal && rg.chance (75) && m_healthValue < 60) {
                   const int index = findDefendNode (origin);
 
-                  startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (30.0f, 70.0f), true); // push camp task on to stack
+                  startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (cv_camping_time_min.float_ (), cv_camping_time_max.float_ ()), true); // push camp task on to stack
                   startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg.get (10.0f, 30.0f), true); // push move command
 
                   // decide to duck or not to duck

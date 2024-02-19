@@ -105,8 +105,18 @@ int Bot::findBestGoal () {
 
    if (game.mapIs (MapFlags::Assassination | MapFlags::HostageRescue)) {
       if (m_team == Team::Terrorist) {
-         defensive += 25.0f;
-         offensive -= 25.0f;
+         if (m_personality == Personality::Rusher) {
+            defensive -= 25.0f - difficulty * 0.5f;
+            offensive += 25.0f + difficulty * 5.0f;
+         }
+         else if (m_personality == Personality::Normal && rg.chance (40)) {
+            defensive -= 25.0f;
+            offensive += 25.0f;
+         }
+         else {
+            defensive += 25.0f;
+            offensive -= 25.0f;
+         }
       }
       else if (m_team == Team::CT) {
          // on hostage maps force more bots to save hostages
@@ -156,6 +166,7 @@ int Bot::findBestGoal () {
    const float goalDesire = rg.get (0.0f, 100.0f) + offensive;
    const float forwardDesire = rg.get (0.0f, 100.0f) + offensive;
    const float backoffDesire = rg.get (0.0f, 100.0f) + defensive;
+
    float campDesire = rg.get (0.0f, 100.0f) + defensive;
 
    if (!usesCampGun ()) {
@@ -1067,7 +1078,7 @@ bool Bot::updateNavigation () {
    }
 
    float desiredDistanceSq = cr::sqrf (8.0f);
-   const float nodeDistanceSq = pev->origin.distanceSq (m_pathOrigin);
+   const float nodeDistanceSq = pev->origin.distanceSq2d (m_pathOrigin);
 
    // initialize the radius for a special node type, where the node is considered to be reached
    if (m_pathFlags & NodeFlag::Lift) {

@@ -126,9 +126,6 @@ public:
    bool isInViewCone (const Vector &pos, edict_t *ent) {
       return getShootingCone (ent, pos) >= cr::cosf (cr::deg2rad ((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f));
    }
-
-public:
-   static int32_t CR_STDCALL sendTo (int socket, const void *message, size_t length, int flags, const struct sockaddr *dest, int destLength);
 };
 
 // expose global

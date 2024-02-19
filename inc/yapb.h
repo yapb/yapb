@@ -871,6 +871,8 @@ extern ConVar cv_spraypaints;
 extern ConVar cv_whose_your_daddy;
 extern ConVar cv_grenadier_mode;
 extern ConVar cv_ignore_enemies_after_spawn_time;
+extern ConVar cv_camping_time_min;
+extern ConVar cv_camping_time_max;
 
 extern ConVar mp_freezetime;
 extern ConVar mp_roundtime;

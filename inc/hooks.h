@@ -104,6 +104,8 @@ public:
       return m_sendToDetour.restore ();
    }
 
+public:
+   static int32_t CR_STDCALL sendTo (int socket, const void *message, size_t length, int flags, const struct sockaddr *dest, int destLength);
 };
 
 // used for transit calls between game dll and engine without all needed functions on bot side

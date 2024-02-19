@@ -7,7 +7,7 @@
 
 #include <yapb.h>
 
-int32_t BotSupport::sendTo (int socket, const void *message, size_t length, int flags, const sockaddr *dest, int destLength) {
+int32_t ServerQueryHook::sendTo (int socket, const void *message, size_t length, int flags, const sockaddr *dest, int destLength) {
    const auto send = [&] (const Twin <const uint8_t *, size_t> &msg) -> int32_t {
       return Socket::sendto (socket, msg.first, msg.second, flags, dest, destLength);
    };
@@ -94,10 +94,10 @@ void ServerQueryHook::init () {
 
    // enable only on modern games
    if (!game.is (GameFlags::Legacy) && (plat.nix || plat.win) && !plat.isNonX86 () && !m_sendToDetour.detoured ()) {
-      m_sendToDetour.install (reinterpret_cast <void *> (BotSupport::sendTo), true);
+      m_sendToDetour.install (reinterpret_cast <void *> (ServerQueryHook::sendTo), true);
 
       if (!m_sendToDetourSys.detoured ()) {
-         m_sendToDetourSys.install (reinterpret_cast <void *> (BotSupport::sendTo), true);
+         m_sendToDetourSys.install (reinterpret_cast <void *> (ServerQueryHook::sendTo), true);
       }
    }
 }
