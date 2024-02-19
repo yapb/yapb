@@ -1691,6 +1691,9 @@ void Bot::markStale () {
    // switch chatter icon off
    showChatterIcon (false, true);
 
+   // reset bots ping to default
+   util.resetPings (ent ());
+
    // mark bot as leaving
    m_isStale = true;
 

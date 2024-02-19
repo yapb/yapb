@@ -498,7 +498,7 @@ void BotSupport::syncCalculatePings () {
 }
 
 void BotSupport::emitPings (edict_t *to) {
-   MessageWriter msg;
+   static MessageWriter msg;
 
    auto isThirdpartyBot = [] (edict_t *ent) {
       return !bots[ent] && (ent->v.flags & FL_FAKECLIENT);
@@ -506,6 +506,11 @@ void BotSupport::emitPings (edict_t *to) {
 
    for (auto &client : m_clients) {
       if (!(client.flags & ClientFlags::Used) || client.ent == game.getLocalEntity () || isThirdpartyBot (client.ent)) {
+         continue;
+      }
+
+      // do not send to dormants
+      if (client.ent->v.flags & FL_DORMANT) {
          continue;
       }
 
@@ -518,7 +523,25 @@ void BotSupport::emitPings (edict_t *to) {
          .writeLong (client.ping)
          .end ();
    }
-   return;
+}
+
+void BotSupport::resetPings (edict_t *to) {
+   static MessageWriter msg;
+
+   // no reset if game isn't support them
+   if (!game.is (GameFlags::HasFakePings)) {
+      return;
+   }
+
+   for (auto &client : m_clients) {
+      if (!(client.flags & ClientFlags::Used) || isFakeClient (client.ent)) {
+         continue;
+      }
+
+      msg.start (MSG_ONE_UNRELIABLE, SVC_PINGS, nullptr, client.ent)
+         .writeLong (getPingBitmask (to, 0, 0))
+         .end ();
+   }
 }
 
 bool BotSupport::isModel (const edict_t *ent, StringRef model) {

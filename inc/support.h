@@ -82,6 +82,9 @@ public:
    // send modified pings to all the clients
    void emitPings (edict_t *to);
 
+   // reset ping to zero values
+   void resetPings (edict_t *to);
+
    // checks if same model omitting the models directory
    bool isModel (const edict_t *ent, StringRef model);
 

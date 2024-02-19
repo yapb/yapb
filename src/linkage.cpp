@@ -389,22 +389,24 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       bots.frame ();
    };
 
-   table->pfnCmdStart = [] (const edict_t *player, usercmd_t *cmd, unsigned int random_seed) {
-      auto ent = const_cast <edict_t *> (player);
+   if (game.is (GameFlags::HasFakePings)) {
+      table->pfnCmdStart = [] (const edict_t *player, usercmd_t *cmd, unsigned int random_seed) {
+         auto ent = const_cast <edict_t *> (player);
 
-      // if we're handle pings for bots and clients, clear IN_SCORE button so SV_ShouldUpdatePing engine function return false, and SV_EmitPings will not overwrite our results
-      if (game.is (GameFlags::HasFakePings) && cv_show_latency.int_ () == 2) {
-         if (!util.isFakeClient (ent) && (ent->v.oldbuttons | ent->v.button | cmd->buttons) & IN_SCORE) {
-            cmd->buttons &= ~IN_SCORE;
-            util.emitPings (ent);
+         // if we're handle pings for bots and clients, clear IN_SCORE button so SV_ShouldUpdatePing engine function return false, and SV_EmitPings will not overwrite our results
+         if (cv_show_latency.int_ () == 2) {
+            if (!util.isFakeClient (ent) && (ent->v.oldbuttons | ent->v.button | cmd->buttons) & IN_SCORE) {
+               cmd->buttons &= ~IN_SCORE;
+               util.emitPings (ent);
+            }
          }
-      }
 
-      if (game.is (GameFlags::Metamod)) {
-         RETURN_META (MRES_IGNORED);
-      }
-      dllapi.pfnCmdStart (ent, cmd, random_seed);
-   };
+         if (game.is (GameFlags::Metamod)) {
+            RETURN_META (MRES_IGNORED);
+         }
+         dllapi.pfnCmdStart (ent, cmd, random_seed);
+      };
+   }
 
    table->pfnPM_Move = [] (playermove_t *pm, int server) {
       // this is the player movement code clients run to predict things when the server can't update
