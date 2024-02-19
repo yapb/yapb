@@ -134,28 +134,18 @@ jobs:
           CS_CERTIFICATE: ${{secrets.CS_CERTIFICATE}}
           CS_CERTIFICATE_PASSWORD: ${{secrets.CS_CERTIFICATE_PASSWORD}}
       - name: Purge old build
-        uses: ClementTsang/delete-tag-and-release@v0.3.1
+        continue-on-error: true
+        run: gh release delete continuous --cleanup-tag
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: continuous
-          delete_release: true
-          repo: ${{ env.GITHUB_REPOSITORY }}
       - name: Very important stage
         continue-on-error: true
         run: |
           sleep 20s
       - name: Push new build
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_name: ${{ env.GITHUB_REPOSITORY }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file_glob: true
-          file: pkg/*
-          tag: continuous
-          overwrite: true
-          prerelease: true
-          release_name: Continuous Build
+        run: gh release create continuous --generate-notes --prerelease --title "Continuous Build" ./pkg/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   bot-release:
     if: |
