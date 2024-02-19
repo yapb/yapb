@@ -2832,8 +2832,6 @@ void Bot::checkParachute () {
 }
 
 void Bot::frame () {
-   pev->flags |= FL_FAKECLIENT; // restore fake client bit
-
    if (m_updateTime <= game.time ()) {
       update ();
    }

@@ -263,7 +263,6 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
    bot = engfuncs.pfnCreateFakeClient (resultName.chars ());
 
    if (game.isNullEntity (bot)) {
-      ctrl.msg ("Maximum players reached (%d/%d). Unable to create Bot.", game.maxClients (), game.maxClients ());
       return BotCreateResult::MaxPlayersReached;
    }
    auto object = cr::makeUnique <Bot> (bot, difficulty, personality, team, skin);
@@ -393,6 +392,8 @@ void BotManager::maintainQuota () {
          cv_quota.set (0); // reset quota
       }
       else if (createResult == BotCreateResult::MaxPlayersReached) {
+         ctrl.msg ("Maximum players reached (%d/%d). Unable to create Bot.", game.maxClients (), game.maxClients ());
+
          m_addRequests.clear (); // maximum players reached, so set quota to maximum players
          cv_quota.set (getBotCount ());
       }
@@ -1109,7 +1110,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    }
 
    MDLL_ClientPutInServer (bot);
-   bot->v.flags |= FL_FAKECLIENT; // set this player as fakeclient
+   bot->v.flags |= FL_CLIENT | FL_FAKECLIENT; // set this player as fake client
 
    // initialize all the variables for this bot...
    m_notStarted = true; // hasn't joined game yet
@@ -1612,7 +1613,7 @@ void Bot::newRound () {
    startTask (Task::Normal, TaskPri::Normal, kInvalidNodeIndex, 0.0f, true);
 
    // restore fake client bit, just in case
-   pev->flags |= FL_FAKECLIENT;
+   pev->flags |= FL_CLIENT | FL_FAKECLIENT;
 
    if (rg.chance (50)) {
       pushChatterMessage (Chatter::NewRound);

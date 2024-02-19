@@ -747,7 +747,7 @@ BotName *BotConfig::pickBotName () {
    for (size_t i = 0; i < m_botNames.length () * 2; ++i) {
       auto bn = &m_botNames.random ();
 
-      if (bn->name.length () < 3 || bn->usedBy != -1) {
+      if (bn->name.empty () || bn->usedBy != -1) {
          continue;
       }
       return bn;

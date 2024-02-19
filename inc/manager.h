@@ -152,7 +152,7 @@ public:
       return m_lastWinner;
    }
 
-   int32_t getBotCount () {
+   int32_t getBotCount () const {
       return m_bots.length <int32_t> ();
    }
 
@@ -197,7 +197,7 @@ public:
       m_botsCanPause = pause;
    }
 
-   bool hasBombSay (int type) {
+   bool hasBombSay (int type) const {
       return (m_bombSayStatus & type) == type;
    }
 
@@ -243,7 +243,7 @@ public:
    }
 
    // some bots are online ?
-   bool hasBotsOnline () {
+   bool hasBotsOnline () const {
       return getBotCount () > 0;
    }
 
