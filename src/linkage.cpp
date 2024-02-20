@@ -848,7 +848,7 @@ CR_LINKAGE_C int GetEngineFunctions_Post (enginefuncs_t *table, int *) {
    return HLTrue;
 }
 
-CR_EXPORT int Meta_Query (char *, plugin_info_t **pPlugInfo, mutil_funcs_t *pMetaUtilFuncs) {
+CR_EXPORT int Meta_Query (char *ifvers, plugin_info_t **pPlugInfo, mutil_funcs_t *pMetaUtilFuncs) {
    // this function is the second function called by metamod in the plugin DLL. Its purpose
    // is for metamod to retrieve basic information about the plugin, such as its meta-interface
    // version, for ensuring compatibility with the current version of the running metamod.
@@ -856,6 +856,29 @@ CR_EXPORT int Meta_Query (char *, plugin_info_t **pPlugInfo, mutil_funcs_t *pMet
    gpMetaUtilFuncs = pMetaUtilFuncs;
    *pPlugInfo = &Plugin_info;
 
+   // check for interface version compatibility
+   if (strcmp (ifvers, Plugin_info.ifvers) != 0) {
+      auto mdll = StringRef (ifvers).split (":");
+      auto pdll = StringRef (META_INTERFACE_VERSION).split (":");
+
+      gpMetaUtilFuncs->pfnLogError (PLID, "%s: meta-interface version mismatch (metamod: %s, %s: %s)", Plugin_info.name, ifvers, Plugin_info.name, Plugin_info.ifvers);
+
+      const auto mmajor = mdll[0].int_ () ;
+      const auto mminor = mdll[1].int_ ();
+      const auto pmajor = pdll[0].int_ ();
+      const auto pminor = pdll[1].int_ ();
+
+      if (pmajor > mmajor || (pmajor == mmajor && pminor > mminor)) {
+         gpMetaUtilFuncs->pfnLogError (PLID, "metamod version is too old for this plugin; update metamod");
+         return HLFalse;
+      }
+
+      // if plugin has older major interface version, it's incompatible (update plugin)
+      else if (pmajor < mmajor) {
+         gpMetaUtilFuncs->pfnLogError (PLID, "metamod version is incompatible with this plugin; please find a newer version of this plugin");
+         return HLFalse;
+      }
+   }
    return HLTrue; // tell metamod this plugin looks safe
 }
 
@@ -877,7 +900,7 @@ CR_EXPORT int Meta_Attach (PLUG_LOADTIME now, metamod_funcs_t *functionTable, me
    };
 
    if (now > Plugin_info.loadable) {
-      logger.error ("%s: plugin NOT attaching (can't load plugin right now)", Plugin_info.name);
+      gpMetaUtilFuncs->pfnLogError (PLID, "%s: plugin NOT attaching (can't load plugin right now)", Plugin_info.name);
       return HLFalse; // returning FALSE prevents metamod from attaching this plugin
    }
 
@@ -894,7 +917,7 @@ CR_EXPORT int Meta_Detach (PLUG_LOADTIME now, PL_UNLOAD_REASON reason) {
    // to prevent unloading the plugin if its processing should not be interrupted.
 
    if (now > Plugin_info.unloadable && reason != PNL_CMD_FORCED) {
-      logger.error ("%s: plugin NOT detaching (can't unload plugin right now)", Plugin_info.name);
+      gpMetaUtilFuncs->pfnLogError (PLID, "%s: plugin NOT detaching (can't unload plugin right now)", Plugin_info.name);
       return HLFalse; // returning FALSE prevents metamod from unloading this plugin
    }
    // stop the worker
