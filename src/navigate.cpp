@@ -1078,7 +1078,7 @@ bool Bot::updateNavigation () {
    }
 
    float desiredDistanceSq = cr::sqrf (8.0f);
-   const float nodeDistanceSq = pev->origin.distanceSq2d (m_pathOrigin);
+   const float nodeDistanceSq = pev->origin.distanceSq (m_pathOrigin);
 
    // initialize the radius for a special node type, where the node is considered to be reached
    if (m_pathFlags & NodeFlag::Lift) {
@@ -1086,6 +1086,11 @@ bool Bot::updateNavigation () {
    }
    else if (isDucking () || (m_pathFlags & NodeFlag::Goal)) {
       desiredDistanceSq = cr::sqrf (25.0f);
+
+      // on cs_ maps goals are usually hostages, so increase reachability distance for them, they (hostages) picked anyway
+      if (game.mapIs (MapFlags::HostageRescue) && (m_pathFlags & NodeFlag::Goal)) {
+         desiredDistanceSq = cr::sqrf (128.0f);
+      }
    }
    else if (isOnLadder () || (m_pathFlags & NodeFlag::Ladder)) {
       desiredDistanceSq = cr::sqrf (24.0f);
