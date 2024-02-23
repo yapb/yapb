@@ -1,6 +1,8 @@
 #
 # YaPB - Counter-Strike Bot based on PODBot by Markus Klinge.
-# Copyright © 2023-2024 Velaron.
+#
+# Copyright © 2023 Velaron.
+# Copyright © YaPB Project Developers <yapb@jeefo.net>. 
 #
 # SPDX-License-Identifier: MIT
 #
@@ -40,7 +42,7 @@ set(YAPB_SRC
     "src/vistable.cpp"
 )
 
-add_library(yapb MODULE ${YAPB_SRC})
+add_library(${PROJECT_NAME} MODULE ${YAPB_SRC})
 find_package(Git QUIET)
 
 if(GIT_FOUND)
@@ -55,96 +57,96 @@ if(GIT_FOUND)
     string(REPLACE . , BUILD_WINVER ${CMAKE_PROJECT_VERSION})
 
     configure_file(inc/version.h.in version.build.h @ONLY)
-    target_compile_definitions(yapb PRIVATE VERSION_GENERATED)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE VERSION_GENERATED)
 endif()
 
 if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU") AND NOT MSVC)
-    target_compile_options(yapb PRIVATE -flto=auto -fno-exceptions -fno-rtti -fno-threadsafe-statics -pthread)
+    target_compile_options(${PROJECT_NAME} PRIVATE -flto=auto -fno-exceptions -fno-rtti -fno-threadsafe-statics -pthread)
 
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-        target_compile_options(yapb PRIVATE -march=armv8-a+fp+simd)
+        target_compile_options(${PROJECT_NAME} PRIVATE -march=armv8-a+fp+simd)
     elseif(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "arm" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^ppc")
-        target_compile_options(yapb PRIVATE -mmmx -msse -msse2 -msse3 -mssse3 -mfpmath=sse)
+        target_compile_options(${PROJECT_NAME} PRIVATE -mmmx -msse -msse2 -msse3 -mssse3 -mfpmath=sse)
     endif()
 	
     if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
-        target_compile_options(yapb PRIVATE -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden)
+        target_compile_options(${PROJECT_NAME} PRIVATE -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden)
     
         if(NOT WIN32 AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" AND NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "arm" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^ppc")
-            target_compile_options(yapb PRIVATE -fdata-sections -ffunction-sections -fcf-protection=none)
-            target_link_options(yapb PRIVATE -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/ext/ldscripts/version.lds -Wl,--gc-sections)
+            target_compile_options(${PROJECT_NAME} PRIVATE -fdata-sections -ffunction-sections -fcf-protection=none)
+            target_link_options(${PROJECT_NAME} PRIVATE -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/ext/ldscripts/version.lds -Wl,--gc-sections)
     
             if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-                target_compile_options(yapb PRIVATE -fgraphite-identity -floop-nest-optimize)
-                target_link_options(yapb PRIVATE -fgraphite-identity -floop-nest-optimize)
+                target_compile_options(${PROJECT_NAME} PRIVATE -fgraphite-identity -floop-nest-optimize)
+                target_link_options(${PROJECT_NAME} PRIVATE -fgraphite-identity -floop-nest-optimize)
             endif()
         endif()
 
         if(NOT WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-            target_link_options(yapb PRIVATE -flto-partition=none)
+            target_link_options(${PROJECT_NAME} PRIVATE -flto-partition=none)
         endif()
     else()
-        target_compile_options(yapb PRIVATE -g3 -ggdb -DDEBUG -D_FORTIFY_SOURCE=2)
+        target_compile_options(${PROJECT_NAME} PRIVATE -g3 -ggdb -DDEBUG -D_FORTIFY_SOURCE=2)
     endif()
 
     if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-        target_link_options(yapb PRIVATE -Wl,--kill-at)
+        target_link_options(${PROJECT_NAME} PRIVATE -Wl,--kill-at)
 
         if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12")
-            target_link_options(yapb PRIVATE -Xlinker --script -Xlinker ${CMAKE_CURRENT_SOURCE_DIR}/ext/ldscripts/i386pe.lds)
+            target_link_options(${PROJECT_NAME} PRIVATE -Xlinker --script -Xlinker ${CMAKE_CURRENT_SOURCE_DIR}/ext/ldscripts/i386pe.lds)
         endif()
     endif()
 
     if(WIN32 AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        target_link_options(yapb PRIVATE -static-libgcc)
+        target_link_options(${PROJECT_NAME} PRIVATE -static-libgcc)
     endif()
 
     if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        set_property(TARGET yapb PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+        set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     endif()
 
     if(CMAKE_SIZEOF_VOID_P EQUAL 8 OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm" OR CMAKE_SYSTEM_PROCESSOR MATCHES "^ppc")
-        target_compile_options(yapb PRIVATE -fPIC)
-        target_link_options(yapb PRIVATE -fPIC)
+        target_compile_options(${PROJECT_NAME} PRIVATE -fPIC)
+        target_link_options(${PROJECT_NAME} PRIVATE -fPIC)
     endif()
 elseif(WIN32 AND MSVC)
-    set_property(TARGET yapb PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
     if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
-        target_compile_options(yapb PRIVATE /Zc:threadSafeInit- /GS- /Ob2 /Oy /Oi /Ot /fp:precise /GF /Gw /arch:SSE2 /Zi /guard:ehcont- /guard:cf- /DEBUG)
-        target_link_options(yapb PRIVATE /OPT:REF,ICF /GUARD:NO /LTCG delayimp.lib /DELAYLOAD:user32.dll /DELAYLOAD:ws2_32.dll)
+        target_compile_options(${PROJECT_NAME} PRIVATE /Zc:threadSafeInit- /GS- /Ob2 /Oy /Oi /Ot /fp:precise /GF /Gw /arch:SSE2 /Zi /guard:ehcont- /guard:cf- /DEBUG)
+        target_link_options(${PROJECT_NAME} PRIVATE /OPT:REF,ICF /GUARD:NO /LTCG delayimp.lib /DELAYLOAD:user32.dll /DELAYLOAD:ws2_32.dll)
 
         if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-           target_compile_options(yapb PRIVATE /GL)
+           target_compile_options(${PROJECT_NAME} PRIVATE /GL)
         endif()
      endif()
 endif()
 
 if(WIN32 OR MINGW)
-    target_link_libraries(yapb PRIVATE user32 ws2_32)
-    target_sources(yapb PRIVATE "vc/yapb.rc")
+    target_link_libraries(${PROJECT_NAME} PRIVATE user32 ws2_32)
+    target_sources(${PROJECT_NAME} PRIVATE "vc/yapb.rc")
 elseif(ANDROID)
-    target_link_libraries(yapb PRIVATE m dl log)
+    target_link_libraries(${PROJECT_NAME} PRIVATE m dl log)
 else()
-    target_link_libraries(yapb PRIVATE m dl pthread)
+    target_link_libraries(${PROJECT_NAME} PRIVATE m dl pthread)
 endif()
 
-target_include_directories(yapb PRIVATE
+target_include_directories(${PROJECT_NAME} PRIVATE
 	${PROJECT_SOURCE_DIR}
-   ${CMAKE_CURRENT_BINARY_DIR}
+	${CMAKE_CURRENT_BINARY_DIR}
 	"inc"
 	"ext"
 	"ext/crlib"
 	"ext/linkage"
 )
 
-install(TARGETS yapb
+install(TARGETS ${PROJECT_NAME}
 		DESTINATION "${GAME_DIR}/${SERVER_INSTALL_DIR}/"
 		PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
 		GROUP_READ GROUP_EXECUTE
 		WORLD_READ WORLD_EXECUTE)
 
 if(MSVC)
-	install(FILES $<TARGET_PDB_FILE:yapb>
+	install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}>
 		DESTINATION "${GAME_DIR}/${SERVER_INSTALL_DIR}/" OPTIONAL)
 endif()

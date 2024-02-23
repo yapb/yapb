@@ -1,6 +1,6 @@
 #
 # YaPB - Counter-Strike Bot based on PODBot by Markus Klinge.
-# Copyright © YaPB Project Developers <yapb@jeefo.net>
+# Copyright © YaPB Project Developers <yapb@jeefo.net>.
 #
 # SPDX-License-Identifier: MIT
 #
@@ -136,7 +136,7 @@ if cxx == 'clang' or cxx == 'gcc'
          ]
 
          ldflags += [
-            '-Wl,--version-script=../ext/ldscripts/version.lds',
+            '-Wl,--version-script=' + meson.project_source_root() + '/ext/ldscripts/version.lds',
             '-Wl,--gc-sections'
          ]
       
@@ -163,7 +163,7 @@ if cxx == 'clang' or cxx == 'gcc'
    # special script for mingw-64 builds
    if os == 'windows' and cxx == 'gcc' and compiler.version().version_compare('<12.0')
       ldflags += [
-         '-Xlinker', '--script', '-Xlinker', '../ext/ldscripts/i386pe.lds'
+         '-Xlinker', '--script', '-Xlinker', meson.project_source_root() + '/ext/ldscripts/i386pe.lds'
       ]
    endif
 
