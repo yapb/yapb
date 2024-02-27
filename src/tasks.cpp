@@ -176,7 +176,7 @@ void Bot::normal_ () {
                pushChatterMessage (Chatter::GoingToGuardVIPSafety); // play info about that
             }
          }
-         else if (game.mapIs (MapFlags::Demolition) && ((m_pathFlags & NodeFlag::Goal) || m_inBombZone)) {
+         else if (game.mapIs (MapFlags::Demolition) && ((m_pathFlags & NodeFlag::Goal) && m_inBombZone)) {
             // is it a terrorist carrying the bomb?
             if (m_hasC4) {
                if ((m_states & Sense::SeeingEnemy) && numFriendsNear (pev->origin, 768.0f) == 0) {

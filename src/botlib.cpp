@@ -1012,7 +1012,7 @@ void Bot::checkMsgQueue () {
       }
 
       // prevent terrorists from buying on es maps
-      if (game.mapIs (MapFlags::Escape) && m_team == Team::Terrorist) {
+      if (game.mapIs (MapFlags::Escape) && m_team == Team::Terrorist && !m_inBuyZone) {
          m_buyState = BuyState::Done;
       }
 
@@ -3475,7 +3475,12 @@ void Bot::takeBlind (int alpha) {
    // this function gets called by network message handler, when screenfade message get's send
    // it's used to make bot blind from the grenade.
 
-   m_maxViewDistance = rg.get (10.0f, 20.0f);
+   m_viewDistance = rg.get (10.0f, 20.0f);
+
+   // do not take in effect some unique map effects on round start
+   if (bots.getRoundStartTime () + 5.0f < game.time ()) {
+      m_viewDistance = m_maxViewDistance;
+   }
    m_blindTime = game.time () + static_cast <float> (alpha - 200) / 16.0f;
 
    if (m_blindTime < game.time ()) {

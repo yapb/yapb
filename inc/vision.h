@@ -29,7 +29,7 @@ public:
 public:
    using Planes = Plane[static_cast <int> (PlaneSide::Num)];
 
-private:
+public:
    static constexpr float kFov = 75.0f;
    static constexpr float kAspectRatio = 16.0f / 9.0f;
    static constexpr float kMaxViewDistance = 4096.0f;

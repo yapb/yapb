@@ -1265,7 +1265,7 @@ int BotManager::getPlayerPriority (edict_t *ent) {
    }
 
    // give bots some priority
-   if (bot->m_hasC4 || bot->m_isVIP || bot->m_hasHostage || bot->m_healthValue < ent->v.health) {
+   if (bot->m_hasC4 || bot->m_isVIP || bot->m_hasHostage || bot->m_healthValue < ent->v.health || (bot->m_currentTravelFlags & PathFlag::Jump)) {
       return bot->entindex () + kHighPriority;
    }
    auto task = bot->getCurrentTaskId ();
@@ -1452,8 +1452,8 @@ void Bot::newRound () {
    m_changeViewTime = game.time () + (rg.chance (25) ? mp_freezetime.float_ () : 0.0f);
    m_aimErrorTime = game.time ();
 
-   m_viewDistance = 4096.0f;
-   m_maxViewDistance = 4096.0f;
+   m_viewDistance = Frustum::kMaxViewDistance;
+   m_maxViewDistance = Frustum::kMaxViewDistance;
 
    m_liftEntity = nullptr;
    m_pickupItem = nullptr;

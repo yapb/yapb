@@ -327,7 +327,7 @@ bool Bot::lookupEnemies () {
             continue;
          }
 
-         // extra skill player can see thru smoke... if beeing attacked
+         // extra skill player can see through smoke... if being attacked
          if (cv_whose_your_daddy.bool_ () && (player->v.button & (IN_ATTACK | IN_ATTACK2)) && m_viewDistance < m_maxViewDistance) {
             nearestDistanceSq = cr::sqrf (m_maxViewDistance);
          }

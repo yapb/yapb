@@ -264,7 +264,7 @@ AStarResult AStarAlgo::find (int botTeam, int srcIndex, int destIndex, NodeAdder
    auto rsRandomizer = 1.0f;
 
    // randomize path on round start now and then
-   if (cv_path_randomize_on_round_start.bool_ () && bots.getRoundStartTime () + mp_freezetime.float_ () + 2.0f > game.time ()) {
+   if (cv_path_randomize_on_round_start.bool_ () && bots.getRoundStartTime () + 4.0f > game.time ()) {
       rsRandomizer = rg.get (0.5f, static_cast <float> (botTeam) * 2.0f + 5.0f);
    }
 

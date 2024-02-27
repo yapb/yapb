@@ -9,10 +9,10 @@
 
 ConVar cv_version ("version", product.version.chars (), Var::ReadOnly);
 
-gamefuncs_t dllapi;
-newgamefuncs_t newapi;
-enginefuncs_t engfuncs;
-gamedll_funcs_t dllfuncs;
+gamefuncs_t dllapi {};
+newgamefuncs_t newapi {};
+enginefuncs_t engfuncs {};
+gamedll_funcs_t dllfuncs {};
 
 meta_globals_t *gpMetaGlobals = nullptr;
 gamedll_funcs_t *gpGamedllFuncs = nullptr;
