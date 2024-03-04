@@ -2042,8 +2042,8 @@ void Bot::checkGrenadesThrow () {
       distanceSq = kInfiniteDistance;
    }
 
-   // don't throw away HE's if just seen the enemy
-   if (!isGrenadeMode && grenadeToThrow == Weapon::Explosive && m_seeEnemyTime + kGrenadeCheckTime * 0.2f < game.time ()) {
+   // don't throw away nades if just seen the enemy
+   if (!isGrenadeMode && m_seeEnemyTime + kGrenadeCheckTime * 0.2f < game.time ()) {
       distanceSq = kInfiniteDistance;
    }
 
