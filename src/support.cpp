@@ -18,55 +18,59 @@ BotSupport::BotSupport () {
    m_welcomeReceiveTime = 0.0f;
 
    // add default messages
-   m_sentences.push ("hello user,communication is acquired");
-   m_sentences.push ("your presence is acknowledged");
-   m_sentences.push ("high man, your in command now");
-   m_sentences.push ("blast your hostile for good");
-   m_sentences.push ("high man, kill some idiot here");
-   m_sentences.push ("is there a doctor in the area");
-   m_sentences.push ("warning, experimental materials detected");
-   m_sentences.push ("high amigo, shoot some but");
-   m_sentences.push ("time for some bad ass explosion");
-   m_sentences.push ("bad ass son of a breach device activated");
-   m_sentences.push ("high, do not question this great service");
-   m_sentences.push ("engine is operative, hello and goodbye");
-   m_sentences.push ("high amigo, your administration has been great last day");
-   m_sentences.push ("attention, expect experimental armed hostile presence");
-   m_sentences.push ("warning, medical attention required");
+   m_sentences = {
+      "hello user,communication is acquired",
+      "your presence is acknowledged",
+      "high man, your in command now",
+      "blast your hostile for good",
+      "high man, kill some idiot here",
+      "is there a doctor in the area",
+      "warning, experimental materials detected",
+      "high amigo, shoot some but",
+      "time for some bad ass explosion",
+      "bad ass son of a breach device activated",
+      "high, do not question this great service",
+      "engine is operative, hello and goodbye",
+      "high amigo, your administration has been great last day",
+      "attention, expect experimental armed hostile presence",
+      "warning, medical attention required"
+   };
 
    // register weapon aliases
-   m_weaponAlias[Weapon::USP] = "usp"; // HK USP .45 Tactical
-   m_weaponAlias[Weapon::Glock18] = "glock"; // Glock18 Select Fire
-   m_weaponAlias[Weapon::Deagle] = "deagle"; // Desert Eagle .50AE
-   m_weaponAlias[Weapon::P228] = "p228"; // SIG P228
-   m_weaponAlias[Weapon::Elite] = "elite"; // Dual Beretta 96G Elite
-   m_weaponAlias[Weapon::FiveSeven] = "fn57"; // FN Five-Seven
-   m_weaponAlias[Weapon::M3] = "m3"; // Benelli M3 Super90
-   m_weaponAlias[Weapon::XM1014] = "xm1014"; // Benelli XM1014
-   m_weaponAlias[Weapon::MP5] = "mp5"; // HK MP5-Navy
-   m_weaponAlias[Weapon::TMP] = "tmp"; // Steyr Tactical Machine Pistol
-   m_weaponAlias[Weapon::P90] = "p90"; // FN P90
-   m_weaponAlias[Weapon::MAC10] = "mac10"; // Ingram MAC-10
-   m_weaponAlias[Weapon::UMP45] = "ump45"; // HK UMP45
-   m_weaponAlias[Weapon::AK47] = "ak47"; // Automat Kalashnikov AK-47
-   m_weaponAlias[Weapon::Galil] = "galil"; // IMI Galil
-   m_weaponAlias[Weapon::Famas] = "famas"; // GIAT FAMAS
-   m_weaponAlias[Weapon::SG552] = "sg552"; // Sig SG-552 Commando
-   m_weaponAlias[Weapon::M4A1] = "m4a1"; // Colt M4A1 Carbine
-   m_weaponAlias[Weapon::AUG] = "aug"; // Steyr Aug
-   m_weaponAlias[Weapon::Scout] = "scout"; // Steyr Scout
-   m_weaponAlias[Weapon::AWP] = "awp"; // AI Arctic Warfare/Magnum
-   m_weaponAlias[Weapon::G3SG1] = "g3sg1"; // HK G3/SG-1 Sniper Rifle
-   m_weaponAlias[Weapon::SG550] = "sg550"; // Sig SG-550 Sniper
-   m_weaponAlias[Weapon::M249] = "m249"; // FN M249 Para
-   m_weaponAlias[Weapon::Flashbang] = "flash"; // Concussion Grenade
-   m_weaponAlias[Weapon::Explosive] = "hegren"; // High-Explosive Grenade
-   m_weaponAlias[Weapon::Smoke] = "sgren"; // Smoke Grenade
-   m_weaponAlias[Weapon::Armor] = "vest"; // Kevlar Vest
-   m_weaponAlias[Weapon::ArmorHelm] = "vesthelm"; // Kevlar Vest and Helmet
-   m_weaponAlias[Weapon::Defuser] = "defuser"; // Defuser Kit
-   m_weaponAlias[Weapon::Shield] = "shield"; // Tactical Shield
-   m_weaponAlias[Weapon::Knife] = "knife"; // Knife
+   m_weaponAliases = {
+      { Weapon::USP, "usp" }, // HK USP .45 Tactical
+      { Weapon::Glock18, "glock" }, // Glock18 Select Fire
+      { Weapon::Deagle, "deagle" }, // Desert Eagle .50AE
+      { Weapon::P228, "p228" }, // SIG P228
+      { Weapon::Elite, "elite" }, // Dual Beretta 96G Elite
+      { Weapon::FiveSeven, "fn57" }, // FN Five-Seven
+      { Weapon::M3, "m3" }, // Benelli M3 Super90
+      { Weapon::XM1014, "xm1014" }, // Benelli XM1014
+      { Weapon::MP5, "mp5" }, // HK MP5-Navy
+      { Weapon::TMP, "tmp" }, // Steyr Tactical Machine Pistol
+      { Weapon::P90, "p90" }, // FN P90
+      { Weapon::MAC10, "mac10" }, // Ingram MAC-10
+      { Weapon::UMP45, "ump45" }, // HK UMP45
+      { Weapon::AK47, "ak47" }, // Automat Kalashnikov AK-47
+      { Weapon::Galil, "galil" }, // IMI Galil
+      { Weapon::Famas, "famas" }, // GIAT FAMAS
+      { Weapon::SG552, "sg552" }, // Sig SG-552 Commando
+      { Weapon::M4A1, "m4a1" }, // Colt M4A1 Carbine
+      { Weapon::AUG, "aug" }, // Steyr Aug
+      { Weapon::Scout, "scout" }, // Steyr Scout
+      { Weapon::AWP, "awp" }, // AI Arctic Warfare/Magnum
+      { Weapon::G3SG1, "g3sg1" }, // HK G3/SG-1 Sniper Rifle
+      { Weapon::SG550, "sg550" }, // Sig SG-550 Sniper
+      { Weapon::M249, "m249" }, // FN M249 Para
+      { Weapon::Flashbang, "flash" }, // Concussion Grenade
+      { Weapon::Explosive, "hegren" }, // High-Explosive Grenade
+      { Weapon::Smoke, "sgren" }, // Smoke Grenade
+      { Weapon::Armor, "vest" }, // Kevlar Vest
+      { Weapon::ArmorHelm, "vesthelm" }, // Kevlar Vest and Helmet
+      { Weapon::Defuser, "defuser" }, // Defuser Kit
+      { Weapon::Shield, "shield" }, // Tactical Shield
+      { Weapon::Knife, "knife" } // Knife
+   };
 
    m_clients.resize (kGameMaxPlayers + 1);
 }
@@ -573,8 +577,8 @@ StringRef BotSupport::getFakeSteamId (edict_t *ent) {
 StringRef BotSupport::weaponIdToAlias (int32_t id) {
    StringRef none = "none";
 
-   if (m_weaponAlias.exists (id)) {
-      return m_weaponAlias[id];
+   if (m_weaponAliases.exists (id)) {
+      return m_weaponAliases[id];
    }
    return none;
 }

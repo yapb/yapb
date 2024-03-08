@@ -656,7 +656,7 @@ bool Bot::isFriendInLineOfFire (float distance) {
       const auto friendDistanceSq = client.ent->v.origin.distanceSq (pev->origin);
 
       if (friendDistanceSq <= distanceSq
-          && util.getShootingCone (ent (), client.ent->v.origin) > friendDistanceSq / (friendDistanceSq + cr::sqrf (33.0f))) {
+          && util.getConeDeviation (ent (), client.ent->v.origin) > friendDistanceSq / (friendDistanceSq + cr::sqrf (33.0f))) {
          return true;
       }
    }
@@ -805,7 +805,7 @@ bool Bot::needToPauseFiring (float distance) {
    }
 
    if ((m_aimFlags & AimFlags::Enemy) && !m_enemyOrigin.empty ()) {
-      if (util.getShootingCone (ent (), m_enemyOrigin) > 0.92f && isEnemyBehindShield (m_enemy)) {
+      if (util.getConeDeviation (ent (), m_enemyOrigin) > 0.92f && isEnemyBehindShield (m_enemy)) {
          return true;
       }
    }
@@ -1148,13 +1148,13 @@ void Bot::focusEnemy () {
       }
    }
    else {
-      const float dot = util.getShootingCone (ent (), m_enemyOrigin);
+      const float dot = util.getConeDeviation (ent (), m_enemyOrigin);
 
       if (dot < 0.90f) {
          m_wantsToFire = false;
       }
       else {
-         const float enemyDot = util.getShootingCone (m_enemy, pev->origin);
+         const float enemyDot = util.getConeDeviation (m_enemy, pev->origin);
 
          // enemy faces bot?
          if (enemyDot >= 0.90f) {
@@ -1209,9 +1209,16 @@ void Bot::attackMovement () {
 
    // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
    if (!game.is (GameFlags::CSDM)) {
-      if (m_retreatTime < game.time () && (m_states & Sense::SeeingEnemy) && approach < 30 && !bots.isBombPlanted () && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
-         m_moveSpeed = -pev->maxspeed;
-         startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, true);
+      if (m_retreatTime < game.time () && approach < 30 && !bots.isBombPlanted ()) {
+         const auto enemyCone = util.getConeDeviation (m_enemy, pev->origin);
+         const auto seeingEnemy = (m_states & Sense::SeeingEnemy);
+         const auto enemyWeaponIsSniper = (m_enemy->v.weapons & kSniperWeaponMask);
+
+         // make bot seek cover
+         if ((enemyCone > 0.8f && seeingEnemy) || (enemyWeaponIsSniper && enemyCone > 0.95f)) {
+            startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, false);
+            m_moveSpeed = -pev->maxspeed;
+         }
       }
       else if (approach < 50) {
          m_moveSpeed = 0.0f;
@@ -1268,7 +1275,7 @@ void Bot::attackMovement () {
       const auto pistolStrafeDistance = game.is (GameFlags::CSDM) ? kDoubleSprayDistance * 3.0f : kDoubleSprayDistance;
 
       // fire hurts friend value here is from previous frame, but acceptable, and saves us alot of cpu cycles
-      if (m_fireHurtsFriend || ((usesPistol () || usesShotgun ())
+      if (approach < 30 || m_fireHurtsFriend || ((usesPistol () || usesShotgun ())
                                      && distance < pistolStrafeDistance
                                      && isInViewCone (m_enemyOrigin))) {
          m_fightStyle = Fight::Strafe;
@@ -1290,7 +1297,7 @@ void Bot::attackMovement () {
       };
 
       auto strafeUpdateTime = [] () {
-         return game.time () + rg.get (1.0f, 1.5f);
+         return game.time () + rg.get (0.8f, 1.25f);
       };
 
       // to start strafing, we have to first figure out if the target is on the left side or right side
@@ -1346,7 +1353,7 @@ void Bot::attackMovement () {
       }
 
       // we're setting strafe speed regardless of move angles, so not resetting forward move here cause bots to behave strange
-      if (!usesKnife ()) {
+      if (!usesKnife () && approach >= 30) {
          m_moveSpeed = 0.0f;
       }
 
@@ -1463,7 +1470,7 @@ int Bot::bestPrimaryCarried () {
    int weaponIndex = 0;
    int weapons = pev->weapons;
 
-   const auto &tab = conf.getRawWeapons ();
+   const auto tab = conf.getRawWeapons ();
 
    // take the shield in account
    if (hasShield ()) {
@@ -1588,6 +1595,7 @@ void Bot::selectBestWeapon () {
 
    // loop through all the weapons until terminator is found...
    while (tab[selectIndex].id) {
+
       // is the bot NOT carrying this weapon?
       if (!(pev->weapons & cr::bit (tab[selectIndex].id))) {
          ++selectIndex; // skip to next weapon
@@ -1627,7 +1635,7 @@ void Bot::selectBestWeapon () {
 }
 
 void Bot::selectSecondary () {
-   int oldWeapons = pev->weapons;
+   const int oldWeapons = pev->weapons;
 
    pev->weapons &= ~kPrimaryWeaponMask;
    selectBestWeapon ();
@@ -1649,14 +1657,15 @@ int Bot::bestWeaponCarried () {
          num = i;
       }
       ++i;
-      tab++;
+      ++tab;
    }
    return num;
 }
 
 void Bot::decideFollowUser () {
    // this function forces bot to follow user
-   Array <edict_t *> users;
+   static Array <edict_t *> users;
+   users.clear ();
 
    // search friends near us
    for (const auto &client : util.getClients ()) {
@@ -1975,7 +1984,6 @@ void Bot::checkGrenadesThrow () {
          || isInNarrowPlace ()
          || cv_ignore_enemies.bool_ ()
          || m_isUsingGrenade
-         || m_grenadeRequested
          || m_isReloading
          || (isKnifeMode () && !bots.isBombPlanted ())
          || m_grenadeCheckTime >= game.time ()
@@ -2006,7 +2014,7 @@ void Bot::checkGrenadesThrow () {
       clearThrowStates (m_states);
       return;
    }
-   else {
+   else if (!isGrenadeMode) {
       int cancelProb = m_agressionLevel > m_fearLevel ? 5 : 20;
 
       if (grenadeToThrow == Weapon::Flashbang) {
@@ -2034,23 +2042,25 @@ void Bot::checkGrenadesThrow () {
 
    // special condition if we're have valid current enemy
    if (!isGrenadeMode && ((m_states & Sense::SeeingEnemy)
-       && util.isAlive (m_enemy)
-       && ((m_enemy->v.button | m_enemy->v.oldbuttons) & IN_ATTACK)
-       && util.isInViewCone (pev->origin, m_enemy))) {
+                          && util.isAlive (m_enemy)
+                          && ((m_enemy->v.button | m_enemy->v.oldbuttons) & IN_ATTACK)
+                          && util.isVisible (pev->origin, m_enemy))
+                          && util.isInViewCone (pev->origin, m_enemy)) {
 
       // do not throw away grenades if anyone is attacking us
       distanceSq = kInfiniteDistance;
    }
 
    // don't throw away nades if just seen the enemy
-   if (!isGrenadeMode && m_seeEnemyTime + kGrenadeCheckTime * 0.2f < game.time ()) {
+   if (!isGrenadeMode && m_seeEnemyTime + kGrenadeCheckTime * 0.2f > game.time ()) {
       distanceSq = kInfiniteDistance;
    }
 
    // enemy within a good throw distance?
-   const auto grenadeToThrowCondition = isGrenadeMode ? 100.0f : grenadeToThrow == Weapon::Smoke ? 200.0f : 350.0f;
+   const auto grenadeToThrowCondition =
+      isGrenadeMode ? kGrenadeDamageRadius / 4.0f : grenadeToThrow == Weapon::Smoke ? 200.0f : kGrenadeDamageRadius;
 
-   if (distanceSq > cr::sqrf (grenadeToThrowCondition) && distanceSq < cr::sqrf (1200.0f)) {
+   if (distanceSq > cr::sqrf (grenadeToThrowCondition) && distanceSq < cr::sqrf (kGrenadeDamageRadius * 3.0f)) {
       bool allowThrowing = true;
 
       // care about different grenades
@@ -2060,8 +2070,8 @@ void Bot::checkGrenadesThrow () {
             allowThrowing = false;
          }
          else {
-            const float radius = cr::max (192.0f, m_lastEnemy->v.velocity.length2d ());
-            const Vector &pos = m_lastEnemy->v.velocity.get2d () + m_lastEnemy->v.origin;
+            const auto radius = cr::max (192.0f, m_lastEnemy->v.velocity.length2d ());
+            const auto &pos = m_lastEnemy->v.velocity.get2d () + m_lastEnemy->v.origin;
 
             auto predicted = graph.getNearestInRadius (radius, pos, 12);
 
@@ -2143,7 +2153,7 @@ void Bot::checkGrenadesThrow () {
 
       case Weapon::Smoke:
          if (allowThrowing && !game.isNullEntity (m_lastEnemy)) {
-            if (util.getShootingCone (m_lastEnemy, pev->origin) >= 0.9f) {
+            if (util.getConeDeviation (m_lastEnemy, pev->origin) >= 0.9f) {
                allowThrowing = false;
             }
          }
@@ -2160,16 +2170,16 @@ void Bot::checkGrenadesThrow () {
          clearThrowStates (m_states);
          return;
       }
-      const float kMaxThrowTime = game.time () + kGrenadeCheckTime * 4.0f;
+      const float maxThrowTime = game.time () + kGrenadeCheckTime * 3.6f;
 
       if (m_states & Sense::ThrowExplosive) {
-         startTask (Task::ThrowExplosive, TaskPri::Throw, kInvalidNodeIndex, kMaxThrowTime, false);
+         startTask (Task::ThrowExplosive, TaskPri::Throw, kInvalidNodeIndex, maxThrowTime, false);
       }
       else if (m_states & Sense::ThrowFlashbang) {
-         startTask (Task::ThrowFlashbang, TaskPri::Throw, kInvalidNodeIndex, kMaxThrowTime, false);
+         startTask (Task::ThrowFlashbang, TaskPri::Throw, kInvalidNodeIndex, maxThrowTime, false);
       }
       else if (m_states & Sense::ThrowSmoke) {
-         startTask (Task::ThrowSmoke, TaskPri::Throw, kInvalidNodeIndex, kMaxThrowTime, false);
+         startTask (Task::ThrowSmoke, TaskPri::Throw, kInvalidNodeIndex, maxThrowTime, false);
       }
    }
    else {

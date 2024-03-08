@@ -18,7 +18,7 @@ private:
    StringArray m_sentences {};
    SmallArray <Client> m_clients {};
 
-   HashMap <int32_t, String> m_weaponAlias {};
+   HashMap <int32_t, String> m_weaponAliases {};
 
 public:
    BotSupport ();
@@ -121,13 +121,13 @@ public:
    }
 
    // gets the shooting cone deviation
-   float getShootingCone (edict_t *ent, const Vector &pos) {
+   float getConeDeviation (edict_t *ent, const Vector &pos) const {
       return ent->v.v_angle.forward () | (pos - (ent->v.origin + ent->v.view_ofs)).normalize (); // he's facing it, he meant it
    }
 
    // check if position is inside view cone of entity
-   bool isInViewCone (const Vector &pos, edict_t *ent) {
-      return getShootingCone (ent, pos) >= cr::cosf (cr::deg2rad ((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f));
+   bool isInViewCone (const Vector &pos, edict_t *ent) const {
+      return getConeDeviation (ent, pos) >= cr::cosf (cr::deg2rad ((ent->v.fov > 0 ? ent->v.fov : 90.0f) * 0.5f));
    }
 };
 

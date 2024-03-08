@@ -24,9 +24,9 @@ public:
    using UniqueBot = UniquePtr <Bot>;
 
 private:
-   float m_timeRoundStart {};
-   float m_timeRoundEnd {};
-   float m_timeRoundMid {};
+   float m_timeRoundStart {}; // time round has started
+   float m_timeRoundEnd {}; // time round ended
+   float m_timeRoundMid {}; // middle point timestamp of a round
 
    float m_difficultyBalanceTime {}; // time to balance difficulties ?
    float m_autoKillCheckTime {}; // time to kill all the bots ?
@@ -277,7 +277,7 @@ public:
 // bot async worker wrapper
 class BotThreadWorker final : public Singleton <BotThreadWorker> {
 private:
-   ThreadPool m_botWorker;
+   ThreadPool m_botWorker {};
 
 public:
    explicit BotThreadWorker () = default;

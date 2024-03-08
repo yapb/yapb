@@ -21,11 +21,28 @@ void Bot::normal_ () {
    const int debugGoal = cv_debug_goal.int_ ();
 
    // user forced a node as a goal?
-   if (debugGoal != kInvalidNodeIndex && getTask ()->data != debugGoal) {
-      clearSearchNodes ();
+   if (debugGoal != kInvalidNodeIndex) {
+      if (getTask ()->data != debugGoal) {
+         clearSearchNodes ();
 
-      getTask ()->data = debugGoal;
-      m_chosenGoalIndex = debugGoal;
+         getTask ()->data = debugGoal;
+         m_chosenGoalIndex = debugGoal;
+      }
+
+      // stop the bot if precisely reached debug goal
+      if (m_currentNodeIndex == debugGoal) {
+         const auto &debugOrigin = graph[debugGoal].origin;
+
+         if (debugOrigin.distanceSq (pev->origin) < cr::sqrf (22.0f) && util.isVisible (debugOrigin, ent ())) {
+            m_moveToGoal = false;
+            m_checkTerrain = false;
+
+            m_moveSpeed = 0.0f;
+            m_strafeSpeed = 0.0f;
+
+            return;
+         }
+      }
    }
 
    // bots rushing with knife, when have no enemy (thanks for idea to nicebot project)
@@ -1120,7 +1137,7 @@ void Bot::throwExplosive_ () {
 
    ignoreCollision ();
 
-   if (!isGrenadeWar () && pev->origin.distanceSq (dest) < cr::sqrf (450.0f)) {
+   if (!isGrenadeWar () && pev->origin.distanceSq (dest) < cr::sqrf (kGrenadeDamageRadius)) {
       // heck, I don't wanna blow up myself
       m_grenadeCheckTime = game.time () + kGrenadeCheckTime * 2.0f;
 
@@ -1147,14 +1164,11 @@ void Bot::throwExplosive_ () {
       auto grenade = setCorrectGrenadeVelocity (kExplosiveModelName);
 
       if (game.isNullEntity (grenade)) {
-         if (m_currentWeapon != Weapon::Explosive && !m_grenadeRequested) {
+         if (m_currentWeapon != Weapon::Explosive) {
             if (pev->weapons & cr::bit (Weapon::Explosive)) {
-               m_grenadeRequested = true;
                selectWeaponById (Weapon::Explosive);
             }
             else {
-               m_grenadeRequested = false;
-
                selectBestWeapon ();
                completeTask ();
 
@@ -1163,7 +1177,6 @@ void Bot::throwExplosive_ () {
          }
          else if (!(m_oldButtons & IN_ATTACK)) {
             pev->button |= IN_ATTACK;
-            m_grenadeRequested = false;
          }
       }
    }
@@ -1187,7 +1200,7 @@ void Bot::throwFlashbang_ () {
 
    ignoreCollision ();
 
-   if (pev->origin.distanceSq (dest) < cr::sqrf (450.0f)) {
+   if (pev->origin.distanceSq (dest) < cr::sqrf (kGrenadeDamageRadius)) {
       m_grenadeCheckTime = game.time () + kGrenadeCheckTime * 2.0f; // heck, I don't wanna blow up myself
 
       selectBestWeapon ();
@@ -1213,14 +1226,11 @@ void Bot::throwFlashbang_ () {
       auto grenade = setCorrectGrenadeVelocity (kFlashbangModelName);
 
       if (game.isNullEntity (grenade)) {
-         if (m_currentWeapon != Weapon::Flashbang && !m_grenadeRequested) {
+         if (m_currentWeapon != Weapon::Flashbang) {
             if (pev->weapons & cr::bit (Weapon::Flashbang)) {
-               m_grenadeRequested = true;
                selectWeaponById (Weapon::Flashbang);
             }
             else {
-               m_grenadeRequested = false;
-
                selectBestWeapon ();
                completeTask ();
 
@@ -1229,7 +1239,6 @@ void Bot::throwFlashbang_ () {
          }
          else if (!(m_oldButtons & IN_ATTACK)) {
             pev->button |= IN_ATTACK;
-            m_grenadeRequested = false;
          }
       }
    }
@@ -1261,18 +1270,14 @@ void Bot::throwSmoke_ () {
       return;
    }
 
-   if (m_currentWeapon != Weapon::Smoke && !m_grenadeRequested) {
+   if (m_currentWeapon != Weapon::Smoke) {
       m_aimFlags |= AimFlags::Grenade;
 
       if (pev->weapons & cr::bit (Weapon::Smoke)) {
-         m_grenadeRequested = true;
-
          selectWeaponById (Weapon::Smoke);
          getTask ()->time = game.time () + kGrenadeCheckTime * 2.0f;
       }
       else {
-         m_grenadeRequested = false;
-
          selectBestWeapon ();
          completeTask ();
 
@@ -1281,7 +1286,6 @@ void Bot::throwSmoke_ () {
    }
    else if (!(m_oldButtons & IN_ATTACK)) {
       pev->button |= IN_ATTACK;
-      m_grenadeRequested = false;
    }
    pev->button |= m_campButtons;
 }
@@ -1439,7 +1443,7 @@ void Bot::shootBreakable_ () {
    m_lookAtSafe = m_breakableOrigin;
 
    // is bot facing the breakable?
-   if (util.getShootingCone (ent (), m_breakableOrigin) >= 0.90f) {
+   if (util.getConeDeviation (ent (), m_breakableOrigin) >= 0.90f) {
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
 

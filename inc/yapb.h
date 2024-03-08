@@ -297,7 +297,6 @@ private:
    bool m_isLeader {}; // bot is leader of his team
    bool m_checkTerrain {}; // check for terrain
    bool m_moveToC4 {}; // ct is moving to bomb
-   bool m_grenadeRequested {}; // bot requested change to grenade
    bool m_needToSendWelcomeChat {}; // bot needs to greet people on server?
    bool m_isCreature {}; // bot is not a player, but something else ? zombie ?
    bool m_defuseNotified {}; // bot is notified about bomb defusion
@@ -367,7 +366,7 @@ private:
    int numEnemiesNear (const Vector &origin, const float radius);
    int numFriendsNear (const Vector &origin, const float radius);
 
-   float getBombTimeleft ();
+   float getBombTimeleft () const;
    float getEstimatedNodeReachTime ();
    float isInFOV (const Vector &dest);
    float getShiftSpeed ();
@@ -386,8 +385,8 @@ private:
    bool checkWallOnRight ();
    bool updateNavigation ();
    bool isEnemyThreat ();
-   bool isWeaponRestricted (int weaponIndex);
-   bool isWeaponRestrictedAMX (int weaponIndex);
+   bool isWeaponRestricted (int wid);
+   bool isWeaponRestrictedAMX (int wid);
    bool isInViewCone (const Vector &origin);
    bool checkBodyParts (edict_t *target);
    bool seesEnemy (edict_t *player);
@@ -558,6 +557,11 @@ private:
       if (m_currentNodeIndex == kInvalidNodeIndex) {
          changeNodeIndex (findNearestNode ());
       }
+   }
+
+   // get run player move angles
+   const Vector &getRpmAngles () {
+      return getCurrentTaskId () == Task::Attack ? pev->v_angle : m_moveAngles;
    }
 
 public:

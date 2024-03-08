@@ -1108,16 +1108,16 @@ void Bot::checkMsgQueue () {
    }
 }
 
-bool Bot::isWeaponRestricted (int weaponIndex) {
+bool Bot::isWeaponRestricted (int wid) {
    // this function checks for weapon restrictions.
 
    auto val = cv_restricted_weapons.str ();
 
    if (val.empty ()) {
-      return isWeaponRestrictedAMX (weaponIndex); // no banned weapons
+      return isWeaponRestrictedAMX (wid); // no banned weapons
    }
    const auto &bannedWeapons = val.split <String> (";");
-   const auto &alias = util.weaponIdToAlias (weaponIndex);
+   const auto &alias = util.weaponIdToAlias (wid);
 
    for (const auto &ban : bannedWeapons) {
       // check is this weapon is banned
@@ -1125,24 +1125,24 @@ bool Bot::isWeaponRestricted (int weaponIndex) {
          return true;
       }
    }
-   return isWeaponRestrictedAMX (weaponIndex);
+   return isWeaponRestrictedAMX (wid);
 }
 
-bool Bot::isWeaponRestrictedAMX (int weaponIndex) {
+bool Bot::isWeaponRestrictedAMX (int wid) {
    // this function checks restriction set by AMX Mod, this function code is courtesy of KWo.
 
    if (!game.is (GameFlags::Metamod)) {
       return false;
    }
 
-   auto checkRestriction = [&weaponIndex] (StringRef cvar, const int *data) -> bool {
+   auto checkRestriction = [&wid] (StringRef cvar, const int *data) -> bool {
       auto restrictedWeapons = game.findCvar (cvar);
 
       if (restrictedWeapons.empty ()) {
          return false;
       }
       // find the weapon index
-      int index = data[weaponIndex - 1];
+      const auto index = data[wid - 1];
 
       // validate index range
       if (index < 0 || index >= static_cast <int> (restrictedWeapons.length ())) {
@@ -1152,7 +1152,7 @@ bool Bot::isWeaponRestrictedAMX (int weaponIndex) {
    };
 
    // check for weapon restrictions
-   if (cr::bit (weaponIndex) & (kPrimaryWeaponMask | kSecondaryWeaponMask | Weapon::Shield)) {
+   if (cr::bit (wid) & (kPrimaryWeaponMask | kSecondaryWeaponMask | Weapon::Shield)) {
       constexpr int ids[] = { 4, 25, 20, -1, 8, -1, 12, 19, -1, 5, 6, 13, 23, 17, 18, 1, 2, 21, 9, 24, 7, 16, 10, 22, -1, 3, 15, 14, 0, 11 };
 
       // verify restrictions
@@ -1827,10 +1827,7 @@ void Bot::setConditions () {
             pushRadioMessage (Radio::EnemyDown);
          }
          else if (rg.chance (60)) {
-            if ((m_lastVictim->v.weapons & cr::bit (Weapon::AWP))
-                || (m_lastVictim->v.weapons & cr::bit (Weapon::Scout))
-                || (m_lastVictim->v.weapons & cr::bit (Weapon::G3SG1))
-                || (m_lastVictim->v.weapons & cr::bit (Weapon::SG550))) {
+            if (m_lastVictim->v.weapons & kSniperWeaponMask) {
 
                pushChatterMessage (Chatter::SniperKilled);
             }
@@ -1907,7 +1904,7 @@ void Bot::setConditions () {
 
       // clear the last enemy pointers if time has passed or enemy far away
       if (!m_lastEnemyOrigin.empty ()) {
-         auto distanceSq = pev->origin.distanceSq (m_lastEnemyOrigin);
+         const auto distanceSq = pev->origin.distanceSq (m_lastEnemyOrigin);
 
          if (distanceSq > cr::sqrf (2048.0f) || (game.isNullEntity (m_enemy) && m_seeEnemyTime + 10.0f < game.time ())) {
             m_lastEnemyOrigin = nullptr;
@@ -2312,7 +2309,7 @@ bool Bot::lastEnemyShootable () {
    if (!(m_aimFlags & (AimFlags::LastEnemy | AimFlags::PredictPath)) || m_lastEnemyOrigin.empty () || game.isNullEntity (m_lastEnemy)) {
       return false;
    }
-   return util.getShootingCone (ent (), m_lastEnemyOrigin) >= 0.90f && isPenetrableObstacle (m_lastEnemyOrigin);
+   return util.getConeDeviation (ent (), m_lastEnemyOrigin) >= 0.90f && isPenetrableObstacle (m_lastEnemyOrigin);
 }
 
 void Bot::checkRadioQueue () {
@@ -2966,7 +2963,8 @@ void Bot::logicDuringFreezetime () {
       pev->button |= IN_JUMP;
       m_jumpTime = game.time ();
    }
-   Array <Bot *> teammates;
+   static Array <Bot *> teammates;
+   teammates.clear ();
 
    for (const auto &bot : bots) {
       if (bot->m_isAlive && bot->m_team == m_team && seesEntity (bot->pev->origin) && bot.get () != this) {
@@ -3127,10 +3125,7 @@ void Bot::logic () {
          }
          else if (!hasFriendNearby
                   && rg.chance (40)
-                  && ((m_enemy->v.weapons & cr::bit (Weapon::AWP))
-                      || (m_enemy->v.weapons & cr::bit (Weapon::Scout))
-                      || (m_enemy->v.weapons & cr::bit (Weapon::G3SG1))
-                      || (m_enemy->v.weapons & cr::bit (Weapon::SG550)))) {
+                  && (m_enemy->v.weapons & kSniperWeaponMask)) {
 
             pushChatterMessage (Chatter::SniperWarning);
          }
@@ -3163,7 +3158,7 @@ void Bot::logic () {
    updateLookAngles (); // and turn to chosen aim direction
 
    // the bots wants to fire at something?
-   if (m_shootAtDeadTime > game.time () || (m_wantsToFire && !m_isUsingGrenade && (m_shootTime <= game.time ()))) {
+   if (m_shootAtDeadTime > game.time () || (m_wantsToFire && !m_isUsingGrenade && m_shootTime <= game.time ())) {
       fireWeapons (); // if bot didn't fire a bullet try again next frame
    }
 
@@ -3750,32 +3745,29 @@ void Bot::runMovement () {
    // problems, such as bots getting stuck into each others. That's because the model's
    // bounding boxes, which are the boxes the engine uses to compute and detect all the
    // collisions of the model, only exist, and are only valid, while in the duration of the
-   // movement. That's why if you get a pfnRunPlayerMove for one boINFt that lasts a little too
+   // movement. That's why if you get a pfnRunPlayerMove for one bot that lasts a little too
    // short in comparison with the frame's duration, the remaining time until the frame
    // elapses, that bot will behave like a ghost : no movement, but bullets and players can
    // pass through it. Then, when the next frame will begin, the stucking problem will arise !
 
    m_frameInterval = game.time () - m_lastCommandTime;
 
-   const uint8_t msecVal = computeMsec ();
+   const auto msecVal = computeMsec ();
    m_lastCommandTime = game.time ();
 
-   engfuncs.pfnRunPlayerMove (pev->pContainingEntity, m_moveAngles, m_moveSpeed, m_strafeSpeed, 0.0f, static_cast <uint16_t> (pev->button), static_cast <uint8_t> (pev->impulse), msecVal);
+   engfuncs.pfnRunPlayerMove (pev->pContainingEntity,
+                              getRpmAngles (), m_moveSpeed, m_strafeSpeed,
+                              0.0f, static_cast <uint16_t> (pev->button), static_cast <uint8_t> (pev->impulse), msecVal);
 
-   // save our own copy of old buttons, since bot ai code is not running every frame now
+   // save our own copy of old buttons, since bot bot code is not running every frame now
    m_oldButtons = pev->button;
 }
 
-float Bot::getBombTimeleft () {
+float Bot::getBombTimeleft () const {
    if (!bots.isBombPlanted ()) {
       return 0.0f;
    }
-   const float timeLeft = ((bots.getTimeBombPlanted () + mp_c4timer.float_ ()) - game.time ());
-
-   if (timeLeft < 0.0f) {
-      return 0.0f;
-   }
-   return timeLeft;
+   return cr::max (bots.getTimeBombPlanted () + mp_c4timer.float_ () - game.time (), 0.0f);
 }
 
 bool Bot::isOutOfBombTimer () {

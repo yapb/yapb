@@ -562,26 +562,28 @@ void BotManager::reset () {
 void BotManager::initFilters () {
    // table with all available actions for the bots (filtered in & out in bot::setconditions) some of them have subactions included
 
-   m_filters.emplace (&Bot::normal_, Task::Normal, 0.0f, kInvalidNodeIndex, 0.0f, true);
-   m_filters.emplace (&Bot::pause_, Task::Pause, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (&Bot::moveToPos_, Task::MoveToPosition, 0.0f, kInvalidNodeIndex, 0.0f, true);
-   m_filters.emplace (&Bot::followUser_, Task::FollowUser, 0.0f, kInvalidNodeIndex, 0.0f, true);
-   m_filters.emplace (&Bot::pickupItem_, Task::PickupItem, 0.0f, kInvalidNodeIndex, 0.0f, true);
-   m_filters.emplace (&Bot::camp_, Task::Camp, 0.0f, kInvalidNodeIndex, 0.0f, true);
-   m_filters.emplace (&Bot::plantBomb_, Task::PlantBomb, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (&Bot::defuseBomb_, Task::DefuseBomb, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (&Bot::attackEnemy_, Task::Attack, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (&Bot::huntEnemy_, Task::Hunt, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (&Bot::seekCover_, Task::SeekCover, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (&Bot::throwExplosive_, Task::ThrowExplosive, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (&Bot::throwFlashbang_, Task::ThrowFlashbang, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (&Bot::throwSmoke_, Task::ThrowSmoke, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (&Bot::doublejump_, Task::DoubleJump, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (&Bot::escapeFromBomb_, Task::EscapeFromBomb, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (&Bot::shootBreakable_, Task::ShootBreakable, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (&Bot::hide_, Task::Hide, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (&Bot::blind_, Task::Blind, 0.0f, kInvalidNodeIndex, 0.0f, false);
-   m_filters.emplace (&Bot::spraypaint_, Task::Spraypaint, 0.0f, kInvalidNodeIndex, 0.0f, false);
+   m_filters = {
+      { &Bot::normal_, Task::Normal, 0.0f, kInvalidNodeIndex, 0.0f, true },
+      { &Bot::pause_, Task::Pause, 0.0f, kInvalidNodeIndex, 0.0f, false },
+      { &Bot::moveToPos_, Task::MoveToPosition, 0.0f, kInvalidNodeIndex, 0.0f, true },
+      { &Bot::followUser_, Task::FollowUser, 0.0f, kInvalidNodeIndex, 0.0f, true },
+      { &Bot::pickupItem_, Task::PickupItem, 0.0f, kInvalidNodeIndex, 0.0f, true },
+      { &Bot::camp_, Task::Camp, 0.0f, kInvalidNodeIndex, 0.0f, true },
+      { &Bot::plantBomb_, Task::PlantBomb, 0.0f, kInvalidNodeIndex, 0.0f, false },
+      { &Bot::defuseBomb_, Task::DefuseBomb, 0.0f, kInvalidNodeIndex, 0.0f, false },
+      { &Bot::attackEnemy_, Task::Attack, 0.0f, kInvalidNodeIndex, 0.0f, false },
+      { &Bot::huntEnemy_, Task::Hunt, 0.0f, kInvalidNodeIndex, 0.0f, false },
+      { &Bot::seekCover_, Task::SeekCover, 0.0f, kInvalidNodeIndex, 0.0f, false },
+      { &Bot::throwExplosive_, Task::ThrowExplosive, 0.0f, kInvalidNodeIndex, 0.0f, false },
+      { &Bot::throwFlashbang_, Task::ThrowFlashbang, 0.0f, kInvalidNodeIndex, 0.0f, false },
+      { &Bot::throwSmoke_, Task::ThrowSmoke, 0.0f, kInvalidNodeIndex, 0.0f, false },
+      { &Bot::doublejump_, Task::DoubleJump, 0.0f, kInvalidNodeIndex, 0.0f, false },
+      { &Bot::escapeFromBomb_, Task::EscapeFromBomb, 0.0f, kInvalidNodeIndex, 0.0f, false },
+      { &Bot::shootBreakable_, Task::ShootBreakable, 0.0f, kInvalidNodeIndex, 0.0f, false },
+      { &Bot::hide_, Task::Hide, 0.0f, kInvalidNodeIndex, 0.0f, false },
+      { &Bot::blind_, Task::Blind, 0.0f, kInvalidNodeIndex, 0.0f, false },
+      { &Bot::spraypaint_, Task::Spraypaint, 0.0f, kInvalidNodeIndex, 0.0f, false }
+   };
 }
 
 void BotManager::resetFilters () {
@@ -1246,7 +1248,7 @@ int BotManager::getAliveHumansCount () {
    int count = 0;
 
    for (const auto &client : util.getClients ()) {
-      if ((client.flags & ClientFlags::Alive) && bots[client.ent] == nullptr && !(client.ent->v.flags & FL_FAKECLIENT)) {
+      if ((client.flags & ClientFlags::Alive) && !bots[client.ent] && !(client.ent->v.flags & FL_FAKECLIENT)) {
          ++count;
       }
    }
@@ -1413,7 +1415,6 @@ void Bot::newRound () {
    m_loosedBombNodeIndex = kInvalidNodeIndex;
    m_plantedBombNodeIndex = kInvalidNodeIndex;
 
-   m_grenadeRequested = false;
    m_moveToC4 = false;
    m_defuseNotified = false;
    m_duckDefuse = false;
