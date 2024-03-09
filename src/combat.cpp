@@ -576,8 +576,8 @@ Vector Bot::getEnemyBodyOffset () {
    }
    auto idealSpot = m_enemyOrigin;
 
-   if (m_difficulty < Difficulty::Expert && isEnemyInSight (idealSpot)) {
-      spot = idealSpot + ((spot - idealSpot) * 0.01f); // gradually adjust the aiming direction
+   if (m_difficulty < Difficulty::Hard && isEnemyInSight (idealSpot)) {
+      spot = idealSpot + ((spot - idealSpot) * 0.005f); // gradually adjust the aiming direction
    }
    spot += compensation;
 
