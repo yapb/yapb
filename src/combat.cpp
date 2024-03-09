@@ -240,7 +240,9 @@ void Bot::trackEnemies () {
    }
    else {
       m_states &= ~Sense::SeeingEnemy;
+
       m_enemy = nullptr;
+      m_enemyBodyPartSet = nullptr;
    }
 }
 
@@ -392,6 +394,7 @@ bool Bot::lookupEnemies () {
          m_actualReactionTime = 0.0f;
          m_enemy = newEnemy;
          m_lastEnemy = newEnemy;
+         m_enemyBodyPartSet = nullptr;
          m_lastEnemyOrigin = newEnemy->v.origin;
          m_enemyReachableTimer = 0.0f;
 
@@ -429,6 +432,7 @@ bool Bot::lookupEnemies () {
 
       if (!util.isAlive (newEnemy)) {
          m_enemy = nullptr;
+         m_enemyBodyPartSet = nullptr;
 
          // shoot at dying players if no new enemy to give some more human-like illusion
          if (m_seeEnemyTime + 0.1f > game.time ()) {
@@ -557,8 +561,12 @@ Vector Bot::getEnemyBodyOffset () {
          const auto headshotPct = conf.getDifficultyTweaks (m_difficulty)->headshotPct;
 
          // now check is our skill match to aim at head, else aim at enemy body
-         if (rg.chance (headshotPct)) {
+         if (m_enemyBodyPartSet == m_enemy || rg.chance (headshotPct)) {
             spot = m_enemyOrigin + getCustomHeight (distance);
+
+            // set's the enemy shooting spot to head, if headshot pct allows, and use head for that
+            // enemy until new enemy is acquired, to prevent too shaky aiming
+            m_enemyBodyPartSet = m_enemy;
          }
          else {
             spot = m_enemy->v.origin;

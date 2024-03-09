@@ -1476,6 +1476,7 @@ void Bot::newRound () {
    m_lastEnemyOrigin = nullptr;
    m_lastVictimOrigin = nullptr;
    m_trackingEdict = nullptr;
+   m_enemyBodyPartSet = nullptr;
    m_timeNextTracking = 0.0f;
 
    m_buttonPushTime = 0.0f;

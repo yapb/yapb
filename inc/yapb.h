@@ -659,6 +659,7 @@ public:
    edict_t *m_doubleJumpEntity {}; // pointer to entity that request double jump
    edict_t *m_radioEntity {}; // pointer to entity issuing a radio command
    edict_t *m_enemy {}; // pointer to enemy entity
+   edict_t *m_enemyBodyPartSet {}; // pointer to last enemy body part was set to head
    edict_t *m_lastEnemy {}; // pointer to last enemy entity
    edict_t *m_lastVictim {}; // pointer to killed entity
    edict_t *m_trackingEdict {}; // pointer to last tracked player when camping/hiding
