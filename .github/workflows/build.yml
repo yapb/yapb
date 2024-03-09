@@ -40,6 +40,8 @@ jobs:
               CXX=clang CXX_LD=lld meson setup ${{matrix.arch}} -D64bit=true
             elif [[ ${{matrix.arch}} == windows-amd64 ]]; then
               meson setup ${{matrix.arch}} --cross-file ${{matrix.arch}} -D64bit=true
+            elif [[ ${{matrix.arch}} == darwin-x86 ]]; then
+              meson setup ${{matrix.arch}} --cross-file ${{matrix.arch}} -Db_lto=false
             else
               meson setup ${{matrix.arch}} --cross-file ${{matrix.arch}}
             fi
