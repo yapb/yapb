@@ -1409,7 +1409,7 @@ void Bot::attackMovement () {
       m_duckTime = game.time () - 1.0f;
    }
 
-   if (!isInWater () && !isOnLadder () && (m_moveSpeed > 0.0f || m_strafeSpeed >= 0.0f)) {
+   if (!isInWater () && !isOnLadder () && (m_moveSpeed > 0.0f || m_strafeSpeed > 0.0f)) {
       Vector right, forward;
       pev->v_angle.angleVectors (&forward, &right, nullptr);
 
@@ -1417,7 +1417,7 @@ void Bot::attackMovement () {
       const auto &side = right * m_strafeSpeed * 0.2f;
       const auto &spot = pev->origin + front + side + pev->velocity * m_frameInterval;
 
-      if (isDeadlyMove (spot)) {
+      if (isSafeToMove (spot)) {
          m_strafeSpeed = -m_strafeSpeed;
          m_moveSpeed = -m_moveSpeed;
 

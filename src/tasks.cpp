@@ -1676,15 +1676,12 @@ void Bot::pickupItem_ () {
    case Pickup::Button:
       m_aimFlags |= AimFlags::Entity;
 
-      if (game.isNullEntity (m_pickupItem) || m_buttonPushTime < game.time ()) {
+      if (game.isNullEntity (m_pickupItem)) {
          completeTask ();
          m_pickupType = Pickup::None;
 
          break;
       }
-
-      // find angles from bot origin to entity...
-      const float angleToEntity = isInFOV (dest - getEyesPos ());
 
       // near to the button?
       if (itemDistanceSq < cr::sqrf (90.0f)) {
@@ -1692,6 +1689,9 @@ void Bot::pickupItem_ () {
          m_strafeSpeed = 0.0f;
          m_moveToGoal = false;
          m_checkTerrain = false;
+
+         // find angles from bot origin to entity...
+         const float angleToEntity = isInFOV (dest - getEyesPos ());
 
          // facing it directly?
          if (angleToEntity <= 10.0f) {

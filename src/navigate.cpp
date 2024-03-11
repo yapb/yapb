@@ -1014,7 +1014,7 @@ bool Bot::updateNavigation () {
    TraceResult tr {};
 
    // check if we are going through a door...
-   if (game.mapIs (MapFlags::HasDoors)) {
+   if (game.mapIs (MapFlags::HasDoors) || (m_pathFlags & NodeFlag::Button)) {
       game.testLine (pev->origin, m_pathOrigin, TraceIgnore::Monsters, ent (), &tr);
 
       if (!game.isNullEntity (tr.pHit) && game.isNullEntity (m_liftEntity) && util.isDoorEntity (tr.pHit)) {
@@ -1022,14 +1022,16 @@ bool Bot::updateNavigation () {
          if (pev->origin.distanceSq (game.getEntityOrigin (tr.pHit)) < cr::sqrf (50.0f)) {
             ignoreCollision (); // don't consider being stuck
 
+            // also 'use' the door randomly
             if (rg.chance (50)) {
                // do not use door directly under xash, or we will get failed assert in gamedll code
                if (game.is (GameFlags::Xash3D)) {
                   pev->button |= IN_USE;
                }
                else {
-                  MDLL_Use (tr.pHit, ent ()); // also 'use' the door randomly
+                  MDLL_Use (tr.pHit, ent ());
                }
+               m_buttonPushTime = game.time () + 1.5f;
             }
          }
 
@@ -1037,18 +1039,21 @@ bool Bot::updateNavigation () {
          m_aimFlags &= ~(AimFlags::LastEnemy | AimFlags::PredictPath);
          m_canChooseAimDirection = false;
 
-         auto button = lookupButton (tr.pHit->v.targetname.chars ());
+         // delay task
+         if (m_buttonPushTime < game.time ()) {
+            auto button = lookupButton (tr.pHit->v.targetname.chars ());
 
-         // check if we got valid button
-         if (!game.isNullEntity (button)) {
-            m_pickupItem = button;
-            m_pickupType = Pickup::Button;
+            // check if we got valid button
+            if (!game.isNullEntity (button)) {
+               m_pickupItem = button;
+               m_pickupType = Pickup::Button;
 
-            m_navTimeset = game.time ();
+               m_navTimeset = game.time ();
+            }
          }
 
          // if bot hits the door, then it opens, so wait a bit to let it open safely
-         if (pev->velocity.lengthSq2d () < cr::sqrf (10.0f) && m_timeDoorOpen < game.time ()) {
+         if (pev->velocity.lengthSq2d () < cr::sqrf (2.0f) && m_timeDoorOpen < game.time ()) {
             startTask (Task::Pause, TaskPri::Pause, kInvalidNodeIndex, game.time () + 0.5f, false);
             m_timeDoorOpen = game.time () + 1.0f; // retry in 1 sec until door is open
 
@@ -2865,46 +2870,57 @@ bool Bot::isDeadlyMove (const Vector &to) {
    // this function eturns if given location would hurt Bot with falling damage
 
    TraceResult tr {};
-   const auto &direction = (to - pev->origin).normalize_apx (); // 1 unit long
+
+   constexpr auto kUnitsDown = 1000.0f;
+   constexpr auto kFallLimit = 150.0f;
 
    Vector check = to, down = to;
-   down.z -= 1000.0f; // straight down 1000 units
+   down.z -= kUnitsDown; // straight down 1000 units
 
-   game.testHull (check, down, TraceIgnore::Monsters, head_hull, ent (), &tr);
+   game.testLine (check, down, TraceIgnore::Monsters, ent (), &tr);
 
-   if (tr.flFraction > 0.036f) { // we're not on ground anymore?
-      tr.flFraction = 0.036f;
-   }
-
-   float lastHeight = tr.flFraction * 1000.0f; // height from ground
+   float lastHeight = tr.flFraction * kUnitsDown; // height from ground
    float distanceSq = to.distanceSq (check); // distance from goal
 
-   if (distanceSq <= cr::sqrf (30.0f) && lastHeight > 150.0f) {
+   if (distanceSq <= cr::sqrf (16.0f) && lastHeight > kFallLimit) {
       return true;
    }
+   const auto &moveDir = (to - pev->origin).normalize_apx (); // 1 unit long
 
-   while (distanceSq > cr::sqrf (30.0f)) {
-      check = check - direction * 30.0f; // move 10 units closer to the goal...
+   while (distanceSq > cr::sqrf (16.0f)) {
+      check = check - moveDir * 16.0f; // move 16 units closer to the goal...
 
       down = check;
-      down.z -= 1000.0f; // straight down 1000 units
+      down.z -= kUnitsDown; // straight down 1000 units
 
-      game.testHull (check, down, TraceIgnore::Monsters, head_hull, ent (), &tr);
+      game.testLine (check, down, TraceIgnore::Monsters, ent (), &tr);
 
       // wall blocking?
       if (tr.fStartSolid) {
          return false;
       }
-      const float height = tr.flFraction * 1000.0f; // height from ground
+      const auto height = tr.flFraction * 1000.0f; // height from ground
 
       // drops more than 150 units?
-      if (lastHeight < height - 150.0f) {
+      if (lastHeight < height - kFallLimit) {
          return true;
       }
       lastHeight = height;
       distanceSq = to.distanceSq (check); // distance from goal
    }
    return false;
+}
+
+bool Bot::isSafeToMove (const Vector &to) {
+   // simplified version of isDeadlyMove() just for combat movement checking
+
+   constexpr auto kUnitsDown = 1000.0f;
+   constexpr auto kFallLimit = 150.0f;
+
+   TraceResult tr {};
+   game.testLine (to, to + Vector { 0.0f, 0.0f, -kUnitsDown }, TraceIgnore::Monsters, ent (), &tr);
+
+   return tr.fStartSolid || tr.flFraction * kUnitsDown > kFallLimit;
 }
 
 int Bot::getRandomCampDir () {
@@ -3033,12 +3049,16 @@ edict_t *Bot::lookupButton (StringRef target) {
    float nearestDistanceSq = kInfiniteDistance;
    edict_t *result = nullptr;
 
+   TraceResult tr {};
+
    // find the nearest button which can open our target
    game.searchEntities ("target", target, [&] (edict_t *ent) {
       const Vector &pos = game.getEntityOrigin (ent);
 
+      game.testLine (pev->origin, pos, TraceIgnore::Monsters, pev->pContainingEntity, &tr);
+
       // check if this place safe
-      if (!isDeadlyMove (pos)) {
+      if (tr.pHit == ent && tr.flFraction > 0.95f && !isDeadlyMove (pos)) {
          const float distanceSq = pev->origin.distanceSq (pos);
 
          // check if we got more close button

@@ -12,6 +12,7 @@ constexpr int kMaxNodeLinks = 8; // max links for single node
 
 // defines for nodes flags field (32 bits are available)
 CR_DECLARE_SCOPED_ENUM (NodeFlag,
+   Button = cr::bit (0), // use a nearby button (lifts, doors, etc.)
    Lift = cr::bit (1), // wait for lift to be down before approaching this node
    Crouch = cr::bit (2), // must crouch to reach this node
    Crossing = cr::bit (3), // a target node

@@ -1962,12 +1962,7 @@ void Bot::filterTasks () {
          filter[Task::PickupItem].desire = 50.0f; // always pickup button
       }
       else {
-         float distance = (500.0f - pev->origin.distance (game.getEntityOrigin (m_pickupItem))) * 0.2f;
-
-         if (distance > 50.0f) {
-            distance = 50.0f;
-         }
-         filter[Task::PickupItem].desire = distance;
+         filter[Task::PickupItem].desire = cr::max (50.0f, 500.0f - pev->origin.distance (game.getEntityOrigin (m_pickupItem)) * 0.2f);
       }
    }
    else {
