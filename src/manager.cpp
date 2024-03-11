@@ -1620,13 +1620,14 @@ void Bot::newRound () {
    if (rg.chance (50)) {
       pushChatterMessage (Chatter::NewRound);
    }
-   auto updateInterval = 1.0f / cr::clamp (cv_think_fps.float_ (), 24.0f, 90.0f);
+   auto thinkFps = cr::clamp (cv_think_fps.float_ (), 24.0f, 90.0f);
+   auto updateInterval = 1.0f / thinkFps;
 
    if (game.is (GameFlags::Xash3D)) {
       if (cv_think_fps_disable.bool_ ()) {
          updateInterval = 0.0f;
       }
-      else if (updateInterval < 50.0f) {
+      else if (thinkFps < 50) {
          updateInterval = 1.0f / 50.0f; // xash3d works acceptable at 50fps
       }
    }

@@ -544,7 +544,7 @@ Vector Bot::getEnemyBodyOffset () {
    Vector compensation = nullptr;
 
    if (!usesSniper () && !usesKnife () && distance > kSprayDistance) {
-      compensation = 1.0f * m_frameInterval * m_enemy->v.velocity - 1.0f * m_frameInterval * pev->velocity;
+      compensation = (m_enemy->v.velocity - pev->velocity) * m_frameInterval * 2.8f;
       compensation.z = 0.0f;
    }
    else {
