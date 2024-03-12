@@ -2911,7 +2911,7 @@ bool Bot::isDeadlyMove (const Vector &to) {
    return false;
 }
 
-bool Bot::isSafeToMove (const Vector &to) {
+bool Bot::isNotSafeToMove (const Vector &to) {
    // simplified version of isDeadlyMove() just for combat movement checking
 
    constexpr auto kUnitsDown = 1000.0f;

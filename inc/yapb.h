@@ -403,7 +403,7 @@ private:
    bool isKnifeMode ();
    bool isGrenadeWar ();
    bool isDeadlyMove (const Vector &to);
-   bool isSafeToMove (const Vector &to);
+   bool isNotSafeToMove (const Vector &to);
    bool isOutOfBombTimer ();
    bool isWeaponBadAtDistance (int weaponIndex, float distance);
    bool needToPauseFiring (float distance);

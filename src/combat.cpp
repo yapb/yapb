@@ -1417,7 +1417,7 @@ void Bot::attackMovement () {
       const auto &side = right * m_strafeSpeed * 0.2f;
       const auto &spot = pev->origin + front + side + pev->velocity * m_frameInterval;
 
-      if (isSafeToMove (spot)) {
+      if (isNotSafeToMove (spot)) {
          m_strafeSpeed = -m_strafeSpeed;
          m_moveSpeed = -m_moveSpeed;
 
