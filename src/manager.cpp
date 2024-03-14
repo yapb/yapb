@@ -383,7 +383,7 @@ void BotManager::maintainQuota () {
       const BotCreateResult createResult = create (request.name, request.difficulty, request.personality, request.team, request.skin);
 
       if (request.manual) {
-         cv_quota.set (cv_quota.int_ () + 1);
+         cv_quota.set (cr::min (cv_quota.int_ () + 1, game.maxClients ()));
       }
 
       // check the result of creation
