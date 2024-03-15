@@ -389,6 +389,7 @@ bool Bot::lookupEnemies () {
          else {
             m_enemySurpriseTime = m_actualReactionTime;
          }
+         m_enemySurpriseTime += game.time ();
 
          // zero out reaction time
          m_actualReactionTime = 0.0f;

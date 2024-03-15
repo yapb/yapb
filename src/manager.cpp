@@ -1354,7 +1354,7 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
           && game.isNullEntity (notify->m_lastEnemy)
           && util.isVisible (killer->v.origin, notify->ent ())) {
 
-         // make bot look at last e nemy position
+         // make bot look at last enemy position
          notify->m_actualReactionTime = 0.0f;
          notify->m_seeEnemyTime = game.time ();
          notify->m_enemy = killer;
