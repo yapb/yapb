@@ -126,7 +126,7 @@ void Bot::normal_ () {
 
             // don't allow vip on as_ maps to camp + don't allow terrorist carrying c4 to camp
             if (campingAllowed
-                && (m_isVIP || (game.mapIs (MapFlags::Demolition)&& m_team == Team::Terrorist && !bots.isBombPlanted () && m_hasC4))) {
+                && (m_isVIP || (game.mapIs (MapFlags::Demolition) && m_team == Team::Terrorist && !bots.isBombPlanted () && m_hasC4))) {
                campingAllowed = false;
             }
 
@@ -180,9 +180,9 @@ void Bot::normal_ () {
                // and reached a rescue point?
                if (m_pathFlags & NodeFlag::Rescue) {
                   m_hostages.clear ();
-               }
+               }  
             }
-            else if (m_team == Team::Terrorist && rg.chance (75)) {
+            else if (m_team == Team::Terrorist && rg.chance (75) && !game.mapIs (MapFlags::Demolition)) {
                const int index = findDefendNode (m_path->origin);
 
                startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (60.0f, 120.0f), true); // push camp task on to stack
@@ -193,7 +193,9 @@ void Bot::normal_ () {
                pushChatterMessage (Chatter::GoingToGuardVIPSafety); // play info about that
             }
          }
-         else if (game.mapIs (MapFlags::Demolition) && ((m_pathFlags & NodeFlag::Goal) && m_inBombZone)) {
+
+         // was elseif here but brokes csde_ scenario
+         if (game.mapIs (MapFlags::Demolition) && (m_pathFlags & NodeFlag::Goal) && m_inBombZone) {
             // is it a terrorist carrying the bomb?
             if (m_hasC4) {
                if ((m_states & Sense::SeeingEnemy) && numFriendsNear (pev->origin, 768.0f) == 0) {
