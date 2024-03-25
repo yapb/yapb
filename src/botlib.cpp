@@ -156,10 +156,7 @@ void Bot::avoidGrenades () {
 }
 
 void Bot::checkBreakable (edict_t *touch) {
-   if (!util.isShootableBreakable (touch)) {
-      return;
-   }
-   m_breakableEntity = lookupBreakable ();
+   m_breakableEntity = touch != nullptr ? touch : lookupBreakable ();
 
    if (game.isNullEntity (m_breakableEntity)) {
       return;
@@ -3185,6 +3182,9 @@ void Bot::logic () {
    if (m_checkTerrain) {
       doPlayerAvoidance (dirNormal);
       checkTerrain (movedDistance, dirNormal);
+
+      // check for breakables around bots movement direction
+      checkBreakable (nullptr);
    }
 
    // check the darkness
