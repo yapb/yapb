@@ -226,7 +226,7 @@ void Bot::setAimDirection () {
       if (onLadder && m_pathWalk.hasNext ()) {
          const auto &nextPath = graph[m_pathWalk.next ()];
 
-         if ((nextPath.flags & NodeFlag::Ladder) && m_destOrigin.distanceSq (pev->origin) < cr::sqrf (120.0f) && nextPath.origin.z > m_pathOrigin.z + 30.0f) {
+         if ((nextPath.flags & NodeFlag::Ladder) && m_destOrigin.distanceSq (pev->origin) < cr::sqrf (128.0f) && nextPath.origin.z > m_pathOrigin.z + 30.0f) {
             m_lookAt = nextPath.origin;
          }
       }
@@ -357,8 +357,10 @@ void Bot::changeYaw (float speed) {
 }
 
 void Bot::updateBodyAngles () {
+   constexpr float kValue = 1.0f / 3.0f;
+
    // set the body angles to point the gun correctly
-   pev->angles.x = -pev->v_angle.x * (1.0f / 3.0f);
+   pev->angles.x = -pev->v_angle.x * kValue;
    pev->angles.y = pev->v_angle.y;
 
    pev->angles.clampAngles ();

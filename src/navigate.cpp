@@ -944,18 +944,32 @@ bool Bot::updateNavigation () {
    }
    
    if (m_pathFlags & NodeFlag::Ladder) {
-      if (m_pathOrigin.z >= (pev->origin.z + 16.0f)) {
+      const float ladderDistance = pev->origin.distance (m_pathOrigin);
+
+      if (m_pathOrigin.z >= pev->origin.z + 16.0f) {
          constexpr auto kLadderOffset = Vector (0.0f, 0.0f, 16.0f);
+
          m_pathOrigin = m_path->origin + kLadderOffset;
       }
       else if (m_pathOrigin.z < pev->origin.z + 16.0f && !isOnLadder () && isOnFloor () && !isDucking ()) {
-         m_moveSpeed = pev->origin.distance (m_pathOrigin);
+         m_moveSpeed = ladderDistance;
 
          if (m_moveSpeed < 150.0f) {
             m_moveSpeed = 150.0f;
          }
          else if (m_moveSpeed > pev->maxspeed) {
             m_moveSpeed = pev->maxspeed;
+         }
+      }
+      const auto prevNodeIndex = m_previousNodes[0];
+
+      // do a precise movement when very near
+      if (graph.exists (prevNodeIndex) && !(graph[prevNodeIndex].flags & NodeFlag::Ladder) && ladderDistance < 64.0f) {
+         m_moveSpeed = pev->maxspeed * 0.4f;
+
+         // do not duck while not on ladder
+         if (!isOnLadder ()) {
+            pev->button &= ~IN_DUCK;
          }
       }
 
@@ -1059,15 +1073,21 @@ bool Bot::updateNavigation () {
 
             ++m_tryOpenDoor;
 
-            if (m_tryOpenDoor > 2 && util.isAlive (m_lastEnemy)) {
-               if (isPenetrableObstacle (m_lastEnemy->v.origin) && !cv_ignore_enemies.bool_ ()) {
+            if (m_tryOpenDoor > 2) {
+               edict_t *nearest = nullptr;
+
+               // try to find nearest enemy (maybe behind a door)
+               util.findNearestPlayer (reinterpret_cast <void **> (&nearest), ent (), 192.0f, false, false, true, true, false);
+
+               // check if enemy is penetrable
+               if (util.isAlive (nearest) && isPenetrableObstacle (nearest->v.origin) && !cv_ignore_enemies.bool_ ()) {
                   m_seeEnemyTime = game.time ();
 
                   m_states |= Sense::SeeingEnemy | Sense::SuspectEnemy;
                   m_aimFlags |= AimFlags::Enemy;
 
-                  m_enemy = m_lastEnemy;
-                  m_lastEnemyOrigin = m_lastEnemy->v.origin;
+                  m_enemy = nearest;
+                  m_lastEnemyOrigin = nearest->v.origin;
 
                   m_tryOpenDoor = 0;
                }
@@ -1098,7 +1118,7 @@ bool Bot::updateNavigation () {
       }
    }
    else if (isOnLadder () || (m_pathFlags & NodeFlag::Ladder)) {
-      desiredDistanceSq = cr::sqrf (24.0f);
+      desiredDistanceSq = cr::sqrf (14.0f);
    }
    else if (m_currentTravelFlags & PathFlag::Jump) {
       desiredDistanceSq = 0.0f;
@@ -1161,7 +1181,7 @@ bool Bot::updateNavigation () {
       else if (m_pathWalk.empty ()) {
          return false;
       }
-      int taskTarget = getTask ()->data;
+      const int taskTarget = getTask ()->data;
 
       if (game.mapIs (MapFlags::Demolition)
           && bots.isBombPlanted ()
@@ -2203,7 +2223,7 @@ bool Bot::selectBestNextNode () {
 }
 
 bool Bot::advanceMovement () {
-   // advances in our pathfinding list and sets the appropiate destination origins for this bot
+   // advances in our pathfinding list and sets the appropriate destination origins for this bot
 
    findValidNode (); // check if old nodes is still reliable
 

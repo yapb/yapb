@@ -3713,12 +3713,6 @@ Vector Bot::isBombAudible () {
    return nullptr;
 }
 
-uint8_t Bot::computeMsec () {
-   // estimate msec to use for this command based on time passed from the previous command
-
-   return static_cast <uint8_t> (cr::min (static_cast <int32_t> ((game.time () - m_lastCommandTime) * 1000.0f), 255));
-}
-
 bool Bot::canRunHeavyWeight () {
    constexpr auto interval = 1.0f / 10.0f;
 
@@ -3728,6 +3722,21 @@ bool Bot::canRunHeavyWeight () {
       return true;
    }
    return false;
+}
+
+uint8_t Bot::computeMsec () {
+   // estimate msec to use for this command based on time passed from the previous command
+
+   return static_cast <uint8_t> (cr::min (static_cast <int32_t> (cr::roundf ((game.time () - m_lastCommandTime) * 1000.0f)), 255));
+}
+
+const Vector &Bot::getRpmAngles () {
+   // get angles to pass to run player move function
+
+   if ((m_pathFlags & NodeFlag::Ladder) || getCurrentTaskId () == Task::Attack) {
+      return pev->v_angle;
+   }
+   return m_moveAngles;
 }
 
 void Bot::runMovement () {

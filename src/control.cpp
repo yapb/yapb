@@ -2060,8 +2060,8 @@ void BotControl::kickBotByMenu (int page) {
    for (int i = menuKey; i < page * 8; ++i) {
       auto bot = bots[i];
 
-      // check for fakeclient bit, since we're clear it upon kick, but actual bot struct destroyed after client disconnected
-      if (bot != nullptr && (bot->pev->flags & FL_FAKECLIENT)) {
+      // check for dormant bit, since we're adds it upon kick, but actual bot struct destroyed after client disconnected
+      if (bot != nullptr && !(bot->pev->flags & FL_DORMANT)) {
          menuKeys |= cr::bit (cr::abs (i - menuKey));
          menus.appendf ("%1.1d. %s%s\n", i - menuKey + 1, bot->pev->netname.chars (), bot->m_team == Team::CT ? " \\y(CT)\\w" : " \\r(T)\\w");
       }

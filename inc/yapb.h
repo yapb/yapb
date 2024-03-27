@@ -561,9 +561,7 @@ private:
    }
 
    // get run player move angles
-   const Vector &getRpmAngles () {
-      return getCurrentTaskId () == Task::Attack ? pev->v_angle : m_moveAngles;
-   }
+   const Vector &getRpmAngles ();
 
 public:
    entvars_t *pev {};
