@@ -383,19 +383,30 @@ void Bot::postprocessGoals (const IntArray &goals, int result[]) {
       }
       return isOccupiedNode (index);
    };
+   static IntArray resulting {};
+   resulting.clear ();
 
-   // too less to choice from just return all the goals
+   // too less to choice from, this is usually waypointer mistake, number of def/offensive points count should be minimum of 4
    if (goals.length () < 4) {
-      for (size_t i = 0; i < goals.length (); ++i) {
-         result[i] = goals[i];
-      }
-      return;
+      auto refill = [] (const IntArray &data) {
+         if (!data.empty ()) {
+            resulting.insert (0, data);
+         }
+      };
+
+      // combine defensive and offensive and goals together to give a chance to proceed
+      refill (graph.m_ctPoints);
+      refill (graph.m_terrorPoints);
+      refill (graph.m_goalPoints);
+   }
+   else {
+      resulting.insert (0, goals);
    }
 
    for (int index = 0; index < 4; ++index) {
-      const auto goal = goals.random ();
+      const auto goal = resulting.random ();
 
-      if (recurseCount <= cr::max (4, goals.length <int> ()) && isRecentOrHistorical (goal)) {
+      if (recurseCount <= cr::max (4, resulting.length <int> ()) && isRecentOrHistorical (goal)) {
          if (index > 0) {
             index--;
          }
