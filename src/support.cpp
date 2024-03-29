@@ -230,7 +230,7 @@ bool BotSupport::isHostageEntity (edict_t *ent) {
 }
 
 bool BotSupport::isShootableBreakable (edict_t *ent) {
-   if (game.isNullEntity (ent)) {
+   if (game.isNullEntity (ent) || ent == game.getStartEntity ()) {
       return false;
    }
    const auto limit = cv_breakable_health_limit.float_ ();

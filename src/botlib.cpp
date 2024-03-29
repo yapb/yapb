@@ -156,9 +156,16 @@ void Bot::avoidGrenades () {
 }
 
 void Bot::checkBreakable (edict_t *touch) {
-   m_breakableEntity = touch != nullptr ? touch : lookupBreakable ();
+   if (game.isNullEntity (touch)) {
+      m_breakableEntity = lookupBreakable ();
+   }
+   else {
+      m_breakableEntity = touch;
+      m_breakableOrigin = game.getEntityOrigin (touch);
+   }
 
-   if (game.isNullEntity (m_breakableEntity)) {
+   // re-check from previous steps
+   if (game.isNullEntity (m_breakableEntity) || m_breakableOrigin.empty ()) {
       return;
    }
    m_campButtons = pev->button & IN_DUCK;
@@ -3182,11 +3189,11 @@ void Bot::logic () {
 
    // are we allowed to check blocking terrain (and react to it)?
    if (m_checkTerrain) {
-      doPlayerAvoidance (dirNormal);
-      checkTerrain (movedDistance, dirNormal);
-
       // check for breakables around bots movement direction
       checkBreakable (nullptr);
+
+      doPlayerAvoidance (dirNormal);
+      checkTerrain (movedDistance, dirNormal);
    }
 
    // check the darkness

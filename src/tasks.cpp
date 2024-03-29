@@ -1459,6 +1459,9 @@ void Bot::shootBreakable_ () {
       m_checkTerrain = true;
       m_moveToGoal = true;
 
+      m_breakableOrigin = nullptr;
+      m_breakableEntity = nullptr;
+
       completeTask ();
    }
 }

@@ -1113,7 +1113,7 @@ bool Bot::updateNavigation () {
       }
    }
 
-   float desiredDistanceSq = cr::sqrf (8.0f);
+   float desiredDistanceSq = cr::sqrf (4.0f);
    const float nodeDistanceSq = pev->origin.distanceSq (m_pathOrigin);
 
    // initialize the radius for a special node type, where the node is considered to be reached
@@ -1128,8 +1128,8 @@ bool Bot::updateNavigation () {
          desiredDistanceSq = cr::sqrf (128.0f);
       }
    }
-   else if (isOnLadder () || (m_pathFlags & NodeFlag::Ladder)) {
-      desiredDistanceSq = cr::sqrf (14.0f);
+   else if (m_pathFlags & NodeFlag::Ladder) {
+      desiredDistanceSq = cr::sqrf (8.0f);
    }
    else if (m_currentTravelFlags & PathFlag::Jump) {
       desiredDistanceSq = 0.0f;
@@ -1709,7 +1709,12 @@ bool Bot::findNextBestNode () {
 }
 
 float Bot::getEstimatedNodeReachTime () {
-   float estimatedTime = 3.5f;
+   const bool longTermReachability = (m_pathFlags & NodeFlag::Crouch)
+      || (m_pathFlags & NodeFlag::Ladder)
+      || (pev->button & IN_DUCK)
+      || (m_oldButtons & IN_DUCK);
+
+   float estimatedTime = longTermReachability ? 8.5f : 3.5f;
 
    // if just fired at enemy, increase reachability
    if (m_shootTime + 0.15f < game.time ()) {
@@ -1720,13 +1725,8 @@ float Bot::getEstimatedNodeReachTime () {
    if (graph.exists (m_currentNodeIndex) && graph.exists (m_previousNodes[0])) {
       const float distanceSq = graph[m_previousNodes[0]].origin.distanceSq (graph[m_currentNodeIndex].origin);
 
-      // caclulate estimated time
+      // calculate estimated time
       estimatedTime = 5.0f * (distanceSq / cr::sqrf (m_moveSpeed + 1.0f));
-
-      const bool longTermReachability = (m_pathFlags & NodeFlag::Crouch)
-         || (m_pathFlags & NodeFlag::Ladder)
-         || (pev->button & IN_DUCK)
-         || (m_oldButtons & IN_DUCK);
 
       // check for special nodes, that can slowdown our movement
       if (longTermReachability) {

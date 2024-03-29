@@ -226,7 +226,7 @@ void Bot::setAimDirection () {
       if (onLadder && m_pathWalk.hasNext ()) {
          const auto &nextPath = graph[m_pathWalk.next ()];
 
-         if ((nextPath.flags & NodeFlag::Ladder) && m_destOrigin.distanceSq (pev->origin) < cr::sqrf (128.0f) && nextPath.origin.z > m_pathOrigin.z + 30.0f) {
+         if ((nextPath.flags & NodeFlag::Ladder) && m_destOrigin.distanceSq (pev->origin) < cr::sqrf (64.0f) && nextPath.origin.z > m_pathOrigin.z + 30.0f) {
             m_lookAt = nextPath.origin;
          }
       }
