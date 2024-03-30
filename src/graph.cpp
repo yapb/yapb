@@ -2261,7 +2261,7 @@ void BotGraph::frame () {
 
       // draw the radius circle
       Vector origin = (path.flags & NodeFlag::Crouch) ? path.origin : path.origin - Vector (0.0f, 0.0f, 18.0f);
-      Color radiusColor { 0, 0, 255 };
+      Color radiusColor { 36, 36, 255 };
 
       // if radius is nonzero, draw a full circle
       if (path.radius > 0.0f) {
