@@ -1284,7 +1284,7 @@ void Bot::attackMovement () {
       const auto pistolStrafeDistance = game.is (GameFlags::CSDM) ? kDoubleSprayDistance * 3.0f : kDoubleSprayDistance;
 
       // fire hurts friend value here is from previous frame, but acceptable, and saves us alot of cpu cycles
-      if (approach < 30 || m_fireHurtsFriend || ((usesPistol () || usesShotgun ())
+      if (approach >= 30 || m_fireHurtsFriend || ((usesPistol () || usesShotgun ())
                                      && distance < pistolStrafeDistance
                                      && isInViewCone (m_enemyOrigin))) {
          m_fightStyle = Fight::Strafe;
@@ -1398,10 +1398,13 @@ void Bot::attackMovement () {
    }
 
    if (m_difficulty >= Difficulty::Normal && isOnFloor () && m_duckTime < game.time ()) {
-      if (distance < kDoubleSprayDistance) {
-         if (rg.get (0, 1000) < rg.get (5, 10) && pev->velocity.length2d () > 150.0f && isInViewCone (m_enemy->v.origin)) {
-            pev->button |= IN_JUMP;
+      if (distance < 768.0f) {
+         if (rg.get (0, 100) < rg.get (5, 10) && pev->velocity.length2d () > 150.0f && isInViewCone (m_enemy->v.origin)) {
+            m_jumpTime = game.time () + m_frameInterval * 2.0f;
          }
+      }
+      else if (distance > 768.0f && rg.get (0, 100) < rg.get (5, 10)) {
+         m_duckTime = game.time () + m_frameInterval * 2.0f;
       }
    }
 

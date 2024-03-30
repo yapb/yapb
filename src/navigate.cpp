@@ -187,6 +187,7 @@ int Bot::findBestGoal () {
    }
 
    if (goalDesire > tacticChoice) {
+      tacticChoice = goalDesire;
       tactic = GoalTactic::Goal;
    }
    return findGoalPost (tactic, defensiveNodes, offensiveNodes);
@@ -554,8 +555,17 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
       }
       // not stuck yet
       else {
+         const auto prevNodeIndex = m_previousNodes[0];
+         bool onLadderNode = false;
+
+         if (m_pathFlags & NodeFlag::Ladder) {
+            if (graph.exists (prevNodeIndex) && graph[prevNodeIndex].flags & NodeFlag::Ladder) {
+               onLadderNode = true;
+            }
+         }
+
          // test if there's something ahead blocking the way
-         if (!isOnLadder () && isBlockedForward (dirNormal, &tr)) {
+         if (!onLadderNode && !isOnLadder () && isBlockedForward (dirNormal, &tr)) {
             if (cr::fzero (m_firstCollideTime)) {
                m_firstCollideTime = game.time () + 0.2f;
             }
