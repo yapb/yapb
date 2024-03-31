@@ -427,6 +427,7 @@ private:
    bool isEnemyInSight (Vector &endPos);
    bool isEnemyNoticeable (float range);
    bool isCreature ();
+   bool isOnLadderPath ();
 
    void doPlayerAvoidance (const Vector &normal);
    void selectCampButtons (int index);
@@ -877,6 +878,7 @@ extern ConVar cv_grenadier_mode;
 extern ConVar cv_ignore_enemies_after_spawn_time;
 extern ConVar cv_camping_time_min;
 extern ConVar cv_camping_time_max;
+extern ConVar cv_smoke_grenade_checks;
 
 extern ConVar mp_freezetime;
 extern ConVar mp_roundtime;

@@ -126,6 +126,7 @@ public:
    bool isTeamStacked (int team);
    bool kickRandom (bool decQuota = true, Team fromTeam = Team::Unassigned);
    bool hasCustomCSDMSpawnEntities ();
+   bool isLineBlockedBySmoke (const Vector &from, const Vector &to, float grenadeBloat = 1.0f);
 
 public:
    const Array <edict_t *> &getActiveGrenades () {

@@ -555,7 +555,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
       // not stuck yet
       else {
          // test if there's something ahead blocking the way
-         if (!isOnLadder () && isBlockedForward (dirNormal, &tr)) {
+         if (!isOnLadderPath () && !isOnLadder () && isBlockedForward (dirNormal, &tr)) {
             if (cr::fzero (m_firstCollideTime)) {
                m_firstCollideTime = game.time () + 0.2f;
             }
@@ -3149,6 +3149,15 @@ bool Bot::isReachableNode (int index) {
       return true;
    }
    return false;
+}
+
+bool Bot::isOnLadderPath () {
+   const auto prevNodeIndex = m_previousNodes[0];
+
+   // bot entered ladder path
+   return (m_pathFlags & NodeFlag::Ladder)
+      && graph.exists (prevNodeIndex)
+      && (graph[prevNodeIndex].flags & NodeFlag::Ladder);
 }
 
 void Bot::findShortestPath (int srcIndex, int destIndex) {

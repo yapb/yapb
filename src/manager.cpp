@@ -2149,3 +2149,118 @@ void BotThreadWorker::startup (int workers) {
    // start up the worker
    m_botWorker.startup (static_cast <size_t> (requestedThreads));
 }
+
+bool BotManager::isLineBlockedBySmoke (const Vector &from, const Vector &to, float grenadeBloat) {
+   if (m_activeGrenades.empty ()) {
+      return false;
+   }
+   constexpr auto kSmokeGrenadeRadius = 115;
+
+   // distance along line of sight covered by smoke
+   float totalSmokedLength = 0.0f;
+
+   Vector sightDir = to - from;
+   const float sightLength = sightDir.normalizeInPlace ();
+
+   for (auto pent : m_activeGrenades) {
+      if (game.isNullEntity (pent)) {
+         continue;
+      }
+
+      // need drawn models
+      if (pent->v.effects & EF_NODRAW) {
+         continue;
+      }
+
+      // smoke must be on a ground
+      if (!(pent->v.flags & FL_ONGROUND)) {
+         continue;
+      }
+
+      // must be a smoke grenade
+      if (!util.isModel (pent, kSmokeModelName)) {
+         continue;
+      }
+
+      const float smokeRadiusSq = cr::sqrf (kSmokeGrenadeRadius) * cr::sqrf (grenadeBloat);
+      const Vector &smokeOrigin = game.getEntityOrigin (pent);
+
+      Vector toGrenade = smokeOrigin - from;
+      float alongDist = toGrenade | sightDir;
+
+      // compute closest point to grenade along line of sight ray
+      Vector close;
+
+      // constrain closest point to line segment
+      if (alongDist < 0.0f) {
+         close = from;
+      }
+      else if (alongDist >= sightLength) {
+         close = to;
+      }
+      else {
+         close = from + sightDir * alongDist;
+      }
+
+      // if closest point is within smoke radius, the line overlaps the smoke cloud
+      Vector toClose = close - smokeOrigin;
+      float lengthSq = toClose.lengthSq ();
+
+      if (lengthSq < smokeRadiusSq) {
+         // some portion of the ray intersects the cloud
+
+         const float fromSq = toGrenade.lengthSq ();
+         const float toSq = (smokeOrigin - to).lengthSq ();
+
+         if (fromSq < smokeRadiusSq) {
+            if (toSq < smokeRadiusSq) {
+               // both 'from' and 'to' lie within the cloud
+               // entire length is smoked
+               totalSmokedLength += (to - from).length ();
+            }
+            else {
+               // 'from' is inside the cloud, 'to' is outside
+               // compute half of total smoked length as if ray crosses entire cloud chord
+               float halfSmokedLength = cr::sqrtf (smokeRadiusSq - lengthSq);
+
+               if (alongDist > 0.0f) {
+                  // ray goes thru 'close'
+                  totalSmokedLength += halfSmokedLength + (close - from).length ();
+               }
+               else {
+                  // ray starts after 'close'
+                  totalSmokedLength += halfSmokedLength - (close - from).length ();
+               }
+
+            }
+         }
+         else if (toSq < smokeRadiusSq) {
+            // 'from' is outside the cloud, 'to' is inside
+            // compute half of total smoked length as if ray crosses entire cloud chord
+            const float halfSmokedLength = cr::sqrtf (smokeRadiusSq - lengthSq);
+            Vector v = to - smokeOrigin;
+
+            if ((v | sightDir) > 0.0f) {
+               // ray goes thru 'close'
+               totalSmokedLength += halfSmokedLength + (close - to).length ();
+            }
+            else {
+               // ray ends before 'close'
+               totalSmokedLength += halfSmokedLength - (close - to).length ();
+            }
+         }
+         else {
+            // 'from' and 'to' lie outside of the cloud - the line of sight completely crosses it
+            // determine the length of the chord that crosses the cloud
+            const float smokedLength = 2.0f * cr::sqrtf (smokeRadiusSq - lengthSq);
+            totalSmokedLength += smokedLength;
+         }
+      }
+   }
+  
+   // define how much smoke a bot can see thru
+   const float maxSmokedLength = 0.7f * kSmokeGrenadeRadius;
+
+   // return true if the total length of smoke-covered line-of-sight is too much
+   return (totalSmokedLength > maxSmokedLength);
+}

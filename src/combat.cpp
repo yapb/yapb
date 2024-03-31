@@ -215,6 +215,13 @@ bool Bot::checkBodyParts (edict_t *target) {
 }
 
 bool Bot::seesEnemy (edict_t *player) {
+   auto isBehindSmokeClouds = [&] (const Vector &pos) {
+      if (cv_smoke_grenade_checks.int_ () == 2) {
+         return bots.isLineBlockedBySmoke (getEyesPos (), pos);
+      }
+      return false;
+   };
+
    if (game.isNullEntity (player)) {
       return false;
    }
@@ -224,7 +231,11 @@ bool Bot::seesEnemy (edict_t *player) {
       ignoreFieldOfView = true;
    }
 
-   if ((ignoreFieldOfView || isInViewCone (player->v.origin)) && frustum.check (m_viewFrustum, player) && checkBodyParts (player)) {
+   if ((ignoreFieldOfView || isInViewCone (player->v.origin))
+       && frustum.check (m_viewFrustum, player)
+       && !isBehindSmokeClouds (player->v.origin)
+       && checkBodyParts (player)) {
+
       m_seeEnemyTime = game.time ();
       m_lastEnemy = player;
       m_lastEnemyOrigin = m_enemyOrigin;
@@ -1379,7 +1390,7 @@ void Bot::attackMovement () {
       const bool alreadyDucking = m_duckTime > game.time () || isDucking ();
 
       if (alreadyDucking) {
-         m_duckTime = game.time () + m_frameInterval * 2.0f;
+         m_duckTime = game.time () + m_frameInterval * 3.0f;
       }
       else if ((distance > 768.0f && hasPrimaryWeapon ())
                && (m_enemyParts & (Visibility::Head | Visibility::Body))
@@ -1390,7 +1401,7 @@ void Bot::attackMovement () {
 
          if (vistab.visible (m_currentNodeIndex, enemyNearestIndex, VisIndex::Crouch)
              && vistab.visible (enemyNearestIndex, m_currentNodeIndex, VisIndex::Crouch)) {
-            m_duckTime = game.time () + m_frameInterval * 2.0f;
+            m_duckTime = game.time () + m_frameInterval * 3.0f;
          }
       }
       m_moveSpeed = 0.0f;

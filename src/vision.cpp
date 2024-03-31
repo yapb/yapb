@@ -226,8 +226,11 @@ void Bot::setAimDirection () {
       if (onLadder && m_pathWalk.hasNext ()) {
          const auto &nextPath = graph[m_pathWalk.next ()];
 
-         if ((nextPath.flags & NodeFlag::Ladder) && m_destOrigin.distanceSq (pev->origin) < cr::sqrf (64.0f) && nextPath.origin.z > m_pathOrigin.z + 30.0f) {
+         if ((nextPath.flags & NodeFlag::Ladder) && m_destOrigin.distanceSq (pev->origin) < cr::sqrf (128.0f) && nextPath.origin.z > m_pathOrigin.z + 26.0f) {
             m_lookAt = nextPath.origin;
+         }
+         else {
+            m_lookAt = m_destOrigin;
          }
       }
 
@@ -399,13 +402,19 @@ void Bot::updateLookAngles () {
       updateBodyAngles ();
       return;
    }
-   const float aimSkill = cr::clamp (static_cast <float> (m_difficulty), 1.0f, 4.0f) * 25.0f;
+   float aimSkill = cr::clamp (static_cast <float> (m_difficulty), 1.0f, 4.0f) * 25.0f;
+
+   // do not slowdown while on ladder
+   if (isOnLadderPath () || isOnLadder ()) {
+      aimSkill = 100.0f;
+   }
+   const bool importantAimFlags = (m_aimFlags & (AimFlags::Enemy | AimFlags::Entity | AimFlags::Grenade));
 
    float accelerate = aimSkill * 30.0f;
    float stiffness = aimSkill * 2.0f;
    float damping = aimSkill * 0.25f;
 
-   if (((m_aimFlags & (AimFlags::Enemy | AimFlags::Entity | AimFlags::Grenade)) || m_wantsToFire) && m_difficulty > Difficulty::Normal) {
+   if ((importantAimFlags || m_wantsToFire) && m_difficulty > Difficulty::Normal) {
       if (m_difficulty == Difficulty::Expert) {
          accelerate += 600.0f;
       }
@@ -414,8 +423,29 @@ void Bot::updateLookAngles () {
    }
    m_idealAngles = pev->v_angle;
 
-   const float angleDiffPitch = cr::anglesDifference (direction.x, m_idealAngles.x);
-   const float angleDiffYaw = cr::anglesDifference (direction.y, m_idealAngles.y);
+   float angleDiffPitch = cr::anglesDifference (direction.x, m_idealAngles.x);
+   float angleDiffYaw = cr::anglesDifference (direction.y, m_idealAngles.y);
+
+   // prevent reverse facing angles  when navigating normally
+   if (m_difficulty < Difficulty::Easy && m_moveToGoal && !importantAimFlags && !m_pathOrigin.empty ()) {
+      const float forward = (m_pathOrigin - pev->origin).yaw ();
+
+      if (!cr::fzero (forward)) {
+         const float current = cr::wrapAngle (pev->v_angle.y - forward);
+         const float target = cr::wrapAngle (direction.y - forward);
+
+         if (current * target < 0.0f) {
+            if (cr::abs (current - target) >= 180.0f) {
+               if (angleDiffYaw > 0.0f) {
+                  angleDiffYaw -= 360.0f;
+               }
+               else {
+                  angleDiffYaw += 360.0f;
+               }
+            }
+         }
+      }
+   }
 
    if (cr::abs (angleDiffYaw) < 1.0f) {
       m_lookYawVel = 0.0f;
