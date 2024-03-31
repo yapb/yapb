@@ -37,7 +37,7 @@ ConVar cv_attack_monsters ("attack_monsters", "0", "Allows or disallows bots to 
 ConVar cv_pickup_custom_items ("pickup_custom_items", "0", "Allows or disallows bots to pickup custom items.");
 ConVar cv_pickup_ammo_and_kits ("pickup_ammo_and_kits", "0", "Allows bots pickup mod items like ammo, health kits and suits.");
 ConVar cv_pickup_best ("pickup_best", "1", "Allows or disallows bots to pickup best weapons.");
-ConVar cv_ignore_objectives ("ignore_objectives", "0", "Allows or disallows bots to do map objectives, i.e. plant/defuse bombs, and saves hostages.");
+ConVar cv_ignore_objectives ("ignore_objectives", "0", "Allows or disallows bots to do map objectives, i.e. plant/defuse bombs, and save hostages.");
 ConVar cv_smoke_grenade_checks ("smoke_grenade_checks", "2", "Affect bot's vision by smoke clouds.", true, 0.0f, 2.0f);
 
 // game console variables
