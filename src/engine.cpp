@@ -379,7 +379,7 @@ bool Game::checkVisibility (edict_t *ent, uint8_t *set) {
       return false;
    }
 
-   for (int i = 0; i < 48; ++i) {
+   for (int i = 0; i < MAX_ENT_LEAFS; ++i) {
       const auto leaf = ent->leafnums[i];
 
       if (leaf == -1) {

@@ -1711,6 +1711,7 @@ void Bot::overrideConditions () {
             m_isReloading = false;
          }
       }
+
       if (m_seeEnemyTime + 2.5f < game.time () && (m_states & (Sense::SuspectEnemy | Sense::HearingEnemy))) {
          m_moveSpeed = m_fearLevel > m_agressionLevel ? 0.0f : getShiftSpeed ();
          m_navTimeset = game.time ();
@@ -1785,10 +1786,14 @@ void Bot::refreshEnemyPredict () {
       }
       const bool denyLastEnemy = pev->velocity.lengthSq2d () > 0.0f
          && distanceToLastEnemySq < cr::sqrf (256.0f)
-         && m_shootTime + 2.5f > game.time ();
+         && m_shootTime + 1.5f > game.time ();
 
-      if (!denyLastEnemy && seesEntity (m_lastEnemyOrigin, true)) {
-         m_aimFlags |= AimFlags::LastEnemy;
+      if (!(m_aimFlags & (AimFlags::Enemy | AimFlags::PredictPath)) && !denyLastEnemy && seesEntity (m_lastEnemyOrigin, true)) {
+         const auto weaponPenetratePower = conf.findWeaponById (m_currentWeapon).penetratePower;
+
+         if (isPenetrableObstacle3 (m_lastEnemyOrigin, weaponPenetratePower)) {
+            m_aimFlags |= AimFlags::LastEnemy;
+         }
       }
    }
 
@@ -1801,7 +1806,7 @@ void Bot::setLastVictim (edict_t *ent) {
    m_lastVictim = ent;
    m_lastVictimOrigin = ent->v.origin + ent->v.view_ofs;
 
-   m_forgetLastVictimTimer.start (rg.get (0.5f, 0.8f));
+   m_forgetLastVictimTimer.start (rg.get (1.0f, 2.0f));
 }
 
 void Bot::setConditions () {
@@ -3869,7 +3874,7 @@ void Bot::updateHearing () {
    }
 
    // did the bot hear someone ?
-   if (hearedEnemy != nullptr && util.isPlayer (hearedEnemy)) {
+   if (util.isPlayer (hearedEnemy)) {
       // change to best weapon if heard something
       if (m_shootTime < game.time () - 5.0f
           && isOnFloor ()
@@ -3889,10 +3894,20 @@ void Bot::updateHearing () {
          pushChatterMessage (Chatter::HeardTheEnemy);
       }
 
+      auto getHeardOriginWithError = [&] () -> Vector {
+         auto error = kSprayDistance * cr::powf (nearestDistanceSq, 0.5f) / 2048.0f;
+         auto origin = hearedEnemy->v.origin;
+
+         origin.x = origin.x + rg.get (-error, error);
+         origin.y = origin.y + rg.get (-error, error);
+
+         return origin;
+      };
+
       // didn't bot already have an enemy ? take this one...
       if (m_lastEnemyOrigin.empty () || game.isNullEntity (m_lastEnemy)) {
          m_lastEnemy = hearedEnemy;
-         m_lastEnemyOrigin = hearedEnemy->v.origin;
+         m_lastEnemyOrigin = getHeardOriginWithError ();
       }
 
       // bot had an enemy, check if it's the heard one
@@ -3902,7 +3917,7 @@ void Bot::updateHearing () {
             if (m_states & Sense::SeeingEnemy) {
                return;
             }
-            m_lastEnemyOrigin = hearedEnemy->v.origin;
+            m_lastEnemyOrigin = getHeardOriginWithError ();
          }
          else {
             // if bot had an enemy but the heard one is nearer, take it instead
@@ -3910,7 +3925,7 @@ void Bot::updateHearing () {
 
             if (distanceSq > hearedEnemy->v.origin.distanceSq (pev->origin) && m_seeEnemyTime + 2.0f < game.time ()) {
                m_lastEnemy = hearedEnemy;
-               m_lastEnemyOrigin = hearedEnemy->v.origin;
+               m_lastEnemyOrigin = getHeardOriginWithError ();
             }
             else {
                return;

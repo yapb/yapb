@@ -12,6 +12,7 @@ ConVar cv_ignore_enemies ("ignore_enemies", "0", "Enables or disables searching 
 ConVar cv_check_enemy_rendering ("check_enemy_rendering", "0", "Enables or disables checking enemy rendering flags. Useful for some mods.");
 ConVar cv_check_enemy_invincibility ("check_enemy_invincibility", "0", "Enables or disables checking enemy invincibility. Useful for some mods.");
 ConVar cv_stab_close_enemies ("stab_close_enemies", "1", "Enables or disables bot ability to stab the enemy with knife if bot is in good condition.");
+ConVar cv_use_engine_pvs_check ("use_engine_pvs_check", "0", "Use engine to check potential visibility of a enemy.");
 
 ConVar mp_friendlyfire ("mp_friendlyfire", nullptr, Var::GameRef);
 ConVar sv_gravity ("sv_gravity", nullptr, Var::GameRef);
@@ -293,7 +294,12 @@ bool Bot::lookupEnemies () {
 
    // the old enemy is no longer visible or
    if (game.isNullEntity (newEnemy)) {
-      auto set = game.getVisibilitySet (this, true); // setup potential visibility set from engine
+      auto set = nullptr;
+
+      // setup potential visibility set from engine
+      if (cv_use_engine_pvs_check.bool_ ()) {
+         game.getVisibilitySet (this, true);
+      }
 
       // ignore shielded enemies, while we have real one
       edict_t *shieldEnemy = nullptr;
@@ -306,7 +312,7 @@ bool Bot::lookupEnemies () {
             }
 
             // check the engine PVS
-            if (!game.checkVisibility (interesting, set)) {
+            if (cv_use_engine_pvs_check.bool_ () && !game.checkVisibility (interesting, set)) {
                continue;
             }
 
@@ -336,7 +342,7 @@ bool Bot::lookupEnemies () {
          player = client.ent;
 
          // check the engine PVS
-         if (!game.checkVisibility (player, set)) {
+         if (cv_use_engine_pvs_check.bool_ () && !game.checkVisibility (player, set)) {
             continue;
          }
 
@@ -514,7 +520,7 @@ bool Bot::lookupEnemies () {
 }
 
 Vector Bot::getBodyOffsetError (float distance) {
-   if (game.isNullEntity (m_enemy) || distance < kDoubleSprayDistance) {
+   if (game.isNullEntity (m_enemy) || distance < kSprayDistanceX2) {
       return nullptr;
    }
 
@@ -570,7 +576,12 @@ Vector Bot::getEnemyBodyOffset () {
    else if (util.isPlayer (m_enemy)) {
       // now take in account different parts of enemy body
       if (m_enemyParts & (Visibility::Head | Visibility::Body)) {
-         const auto headshotPct = conf.getDifficultyTweaks (m_difficulty)->headshotPct;
+         auto headshotPct = conf.getDifficultyTweaks (m_difficulty)->headshotPct;
+
+         // with to much recoil or using specific weapons choice to aim to the chest
+         if (distance > kSprayDistance && (isRecoilHigh () || usesSniperAWP () || usesShotgun ())) {
+            headshotPct = 0;
+         }
 
          // now check is our skill match to aim at head, else aim at enemy body
          if (m_enemyBodyPartSet == m_enemy || rg.chance (headshotPct)) {
@@ -639,10 +650,10 @@ Vector Bot::getCustomHeight (float distance) {
    auto distanceIndex = DistanceIndex::Short;
 
    // set distance index appropriate to distance
-   if (distance < 2048.0f && distance > kDoubleSprayDistance) {
+   if (distance < 2048.0f && distance > kSprayDistanceX2) {
       distanceIndex = DistanceIndex::Long;
    }
-   else if (distance > kSprayDistance && distance <= kDoubleSprayDistance) {
+   else if (distance > kSprayDistance && distance <= kSprayDistanceX2) {
       distanceIndex = DistanceIndex::Middle;
    }
    return { 0.0f, 0.0f, kOffsetRanges[m_weaponType][distanceIndex] };
@@ -834,24 +845,23 @@ bool Bot::needToPauseFiring (float distance) {
    if (distance < kSprayDistance) {
       return false;
    }
-   else if (distance < kDoubleSprayDistance) {
+   else if (distance < kSprayDistanceX2) {
       offset = 2.75f;
    }
-   else if ((m_states & Sense::SuspectEnemy) && distance < kDoubleSprayDistance) {
+   else if ((m_states & Sense::SuspectEnemy) && distance < kSprayDistanceX2) {
       return false;
    }
    const float xPunch = cr::sqrf (cr::deg2rad (pev->punchangle.x));
    const float yPunch = cr::sqrf (cr::deg2rad (pev->punchangle.y));
 
-   const float interval = m_frameInterval;
    const float tolerance = (100.0f - static_cast <float> (m_difficulty) * 25.0f) / 99.0f;
-   const float baseTime = distance > kDoubleSprayDistance ? 0.65f : 0.48f;
+   const float baseTime = distance > kSprayDistance ? 0.65f : 0.48f;
    const float maxRecoil = static_cast <float> (conf.getDifficultyTweaks (m_difficulty)->maxRecoil);
 
    // check if we need to compensate recoil
    if (cr::tanf (cr::sqrtf (cr::abs (xPunch) + cr::abs (yPunch))) * distance > offset + maxRecoil + tolerance) {
       if (m_firePause < game.time ()) {
-         m_firePause = game.time () + rg.get (baseTime, baseTime + maxRecoil * 0.01f * tolerance) - interval;
+         m_firePause = game.time () + rg.get (baseTime, baseTime + maxRecoil * 0.01f * tolerance) - m_frameInterval;
       }
       return true;
    }
@@ -1229,16 +1239,9 @@ void Bot::attackMovement () {
 
    // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
    if (!game.is (GameFlags::CSDM)) {
-      if (m_retreatTime < game.time () && approach < 30 && !bots.isBombPlanted ()) {
-         const auto enemyCone = util.getConeDeviation (m_enemy, pev->origin);
-         const auto seeingEnemy = (m_states & Sense::SeeingEnemy);
-         const auto enemyWeaponIsSniper = (m_enemy->v.weapons & kSniperWeaponMask);
-
-         // make bot seek cover
-         if ((enemyCone > 0.8f && seeingEnemy) || (enemyWeaponIsSniper && enemyCone > 0.95f)) {
-            startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, false);
-            m_moveSpeed = -pev->maxspeed;
-         }
+      if ((m_states & Sense::SeeingEnemy) && approach < 30 && !bots.isBombPlanted () && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
+         m_moveSpeed = -pev->maxspeed;
+         startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, true);
       }
       else if (approach < 50) {
          m_moveSpeed = 0.0f;
@@ -1292,7 +1295,7 @@ void Bot::attackMovement () {
       if (isDucking () || isInNarrowPlace ()) {
          m_fightStyle = Fight::Stay;
       }
-      const auto pistolStrafeDistance = game.is (GameFlags::CSDM) ? kDoubleSprayDistance * 3.0f : kDoubleSprayDistance;
+      const auto pistolStrafeDistance = game.is (GameFlags::CSDM) ? kSprayDistanceX2 * 3.0f : kSprayDistanceX2;
 
       // fire hurts friend value here is from previous frame, but acceptable, and saves us alot of cpu cycles
       if (approach < 30 || m_fireHurtsFriend || ((usesPistol () || usesShotgun ())
@@ -1317,7 +1320,7 @@ void Bot::attackMovement () {
       };
 
       auto strafeUpdateTime = [] () {
-         return game.time () + rg.get (0.8f, 1.25f);
+         return game.time () + rg.get (0.3f, 1.0f);
       };
 
       // to start strafing, we have to first figure out if the target is on the left side or right side
@@ -1392,7 +1395,7 @@ void Bot::attackMovement () {
       if (alreadyDucking) {
          m_duckTime = game.time () + m_frameInterval * 3.0f;
       }
-      else if ((distance > 768.0f && hasPrimaryWeapon ())
+      else if ((distance > kSprayDistanceX2 && hasPrimaryWeapon ())
                && (m_enemyParts & (Visibility::Head | Visibility::Body))
                && getCurrentTaskId () != Task::SeekCover
                && getCurrentTaskId () != Task::Hunt) {
@@ -1409,7 +1412,7 @@ void Bot::attackMovement () {
    }
 
    if (m_difficulty >= Difficulty::Normal && isOnFloor () && m_duckTime < game.time ()) {
-      if (distance < kDoubleSprayDistance) {
+      if (distance < kSprayDistanceX2) {
          if (rg.get (0, 1000) < rg.get (5, 10) && pev->velocity.length2d () > 150.0f && isInViewCone (m_enemy->v.origin)) {
             pev->button |= IN_JUMP;
          }

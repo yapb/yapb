@@ -496,6 +496,10 @@ int BotControl::cmdNodeOn () {
    }
 
    if (graph.hasEditFlag (GraphEdit::On)) {
+      m_graphSaveVarValues.roundtime = mp_roundtime.float_ ();
+      m_graphSaveVarValues.freezetime = mp_freezetime.float_ ();
+      m_graphSaveVarValues.timelimit = mp_timelimit.float_ ();
+
       mp_roundtime.set (9);
       mp_freezetime.set (0);
       mp_timelimit.set (0);
@@ -510,6 +514,11 @@ int BotControl::cmdNodeOff () {
    if (strValue (option).empty () || strValue (option) == "display") {
       graph.clearEditFlag (GraphEdit::On | GraphEdit::Auto | GraphEdit::Noclip);
       enableDrawModels (false);
+
+      // revert cvars back to their values
+      mp_roundtime.set (m_graphSaveVarValues.roundtime);
+      mp_freezetime.set (m_graphSaveVarValues.freezetime);
+      mp_timelimit.set (m_graphSaveVarValues.timelimit);
 
       msg ("Graph editor has been disabled.");
    }

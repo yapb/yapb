@@ -975,7 +975,7 @@ bool Bot::updateNavigation () {
       const auto prevNodeIndex = m_previousNodes[0];
 
       // do a precise movement when very near
-      if (graph.exists (prevNodeIndex) && !(graph[prevNodeIndex].flags & NodeFlag::Ladder) && ladderDistance < 64.0f) {
+      if (!isDucking () && graph.exists (prevNodeIndex) && !(graph[prevNodeIndex].flags & NodeFlag::Ladder) && ladderDistance < 64.0f) {
          m_moveSpeed = pev->maxspeed * 0.4f;
 
          // do not duck while not on ladder
@@ -1114,14 +1114,14 @@ bool Bot::updateNavigation () {
    }
 
    float desiredDistanceSq = cr::sqrf (4.0f);
-   const float nodeDistanceSq = pev->origin.distanceSq (m_pathOrigin);
+   const float nodeDistanceSq = pev->origin.distanceSq2d (m_pathOrigin);
 
    // initialize the radius for a special node type, where the node is considered to be reached
    if (m_pathFlags & NodeFlag::Lift) {
       desiredDistanceSq = cr::sqrf (50.0f);
    }
    else if (isDucking () || (m_pathFlags & NodeFlag::Goal)) {
-      desiredDistanceSq = cr::sqrf (25.0f);
+      desiredDistanceSq = cr::sqrf (12.0f);
 
       // on cs_ maps goals are usually hostages, so increase reachability distance for them, they (hostages) picked anyway
       if (game.mapIs (MapFlags::HostageRescue) && (m_pathFlags & NodeFlag::Goal)) {

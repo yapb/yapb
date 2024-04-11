@@ -63,6 +63,13 @@ public:
       { }
    };
 
+   // save old values of changed cvars to revert them back when editing turned off
+   struct GraphSaveVarValue {
+      float timelimit {};
+      float freezetime {};
+      float roundtime {};
+   } m_graphSaveVarValues;
+
 private:
    StringArray m_args {};
    Array <BotCmd> m_cmds {};

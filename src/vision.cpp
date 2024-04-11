@@ -463,7 +463,6 @@ void Bot::updateLookAngles () {
    m_idealAngles.x += cr::clamp (delta * m_lookPitchVel, -89.0f, 89.0f);
 
    pev->v_angle = m_idealAngles;
-   pev->v_angle.clampAngles ();
 
    updateBodyAngles ();
 }

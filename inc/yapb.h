@@ -790,6 +790,11 @@ private:
       return m_weaponType == WeaponType::Sniper;
    }
 
+   // returns true if bot is using a sniper rifle (awp)
+   bool usesSniperAWP () const {
+      return m_currentWeapon == Weapon::AWP;
+   }
+
    // returns true if bot is using a rifle
    bool usesRifle () const {
       return usesZoomableRifle () || m_weaponType == WeaponType::Rifle;
@@ -833,6 +838,11 @@ private:
    // returns true if bot using knife
    bool usesKnife () const {
       return m_weaponType == WeaponType::Melee;
+   }
+
+   // checks if weapon recoil is high
+   bool isRecoilHigh () const {
+      return pev->punchangle.x < -1.45f;
    }
 };
 
