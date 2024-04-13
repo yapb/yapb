@@ -819,8 +819,12 @@ void Bot::moveToGoal () {
    findValidNode ();
 
    // press duck button if we need to
-   if ((m_pathFlags & NodeFlag::Crouch) && !(m_pathFlags & (NodeFlag::Camp | NodeFlag::Goal))) {
-      pev->button |= IN_DUCK;
+   if (m_pathFlags & NodeFlag::Crouch) {
+      constexpr auto kEndRouteThreshold = 3;
+
+      if (!(m_pathFlags & (NodeFlag::Camp | NodeFlag::Goal)) || m_pathWalk.length () < kEndRouteThreshold) {
+         pev->button |= IN_DUCK;
+      }
    }
    m_lastUsedNodesTime = game.time ();
 
@@ -1114,7 +1118,7 @@ bool Bot::updateNavigation () {
    }
 
    float desiredDistanceSq = cr::sqrf (4.0f);
-   const float nodeDistanceSq = pev->origin.distanceSq2d (m_pathOrigin);
+   const float nodeDistanceSq = pev->origin.distanceSq (m_pathOrigin);
 
    // initialize the radius for a special node type, where the node is considered to be reached
    if (m_pathFlags & NodeFlag::Lift) {
