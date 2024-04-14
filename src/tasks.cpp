@@ -1687,9 +1687,15 @@ void Bot::pickupItem_ () {
 
          break;
       }
+      float distanceToButtonSq = cr::sqrf (90.0f);
+
+      // reduce on lifts
+      if (!game.isNullEntity (m_liftEntity)) {
+         distanceToButtonSq = cr::sqrf (24.0f);
+      }
 
       // near to the button?
-      if (itemDistanceSq < cr::sqrf (90.0f)) {
+      if (itemDistanceSq < distanceToButtonSq) {
          m_moveSpeed = 0.0f;
          m_strafeSpeed = 0.0f;
          m_moveToGoal = false;

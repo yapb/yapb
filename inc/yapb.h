@@ -519,7 +519,7 @@ private:
    void pickupItem_ ();
    void shootBreakable_ ();
 
-   edict_t *lookupButton (StringRef target);
+   edict_t *lookupButton (StringRef target, bool blindTest = false);
    edict_t *lookupBreakable ();
    edict_t *setCorrectGrenadeVelocity (StringRef model);
 

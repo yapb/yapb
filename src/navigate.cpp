@@ -1070,7 +1070,7 @@ bool Bot::updateNavigation () {
 
          // delay task
          if (m_buttonPushTime < game.time ()) {
-            auto button = lookupButton (tr.pHit->v.targetname.chars ());
+            auto button = lookupButton (tr.pHit->v.targetname.chars (), true);
 
             // check if we got valid button
             if (!game.isNullEntity (button)) {
@@ -1241,6 +1241,7 @@ bool Bot::updateLiftHandling () {
    auto wait = [&] () {
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
+      m_checkTerrain = false;
 
       m_navTimeset = game.time ();
       m_aimFlags |= AimFlags::Nav;
@@ -1248,6 +1249,13 @@ bool Bot::updateLiftHandling () {
       pev->button &= ~(IN_FORWARD | IN_BACK | IN_MOVELEFT | IN_MOVERIGHT);
 
       ignoreCollision ();
+   };
+
+   // need to wait?
+   auto checkNeedToWait = [&] (float limitSq = 22.0f) {
+      if (pev->origin.distanceSq (m_destOrigin) < cr::sqrf (limitSq)) {
+         wait ();
+      }
    };
 
    // trace line to door
@@ -1291,8 +1299,7 @@ bool Bot::updateLiftHandling () {
          m_liftUsageTime = game.time () + 7.0f;
       }
    }
-   else if (!m_pathWalk.empty ()) // no lift found at node
-   {
+   else if (!m_pathWalk.empty ()) { // no lift found at node
       if ((m_liftState == LiftState::None || m_liftState == LiftState::WaitingFor) && m_pathWalk.hasNext ()) {
          int nextNode = m_pathWalk.next ();
 
@@ -1313,7 +1320,7 @@ bool Bot::updateLiftHandling () {
       m_destOrigin = m_liftTravelPos;
 
       // check if we enough to destination
-      if (pev->origin.distanceSq (m_destOrigin) < cr::sqrf (20.0f)) {
+      if (pev->origin.distanceSq (m_destOrigin) < cr::sqrf (22.0f)) {
          wait ();
 
          // need to wait our following teammate ?
@@ -1371,10 +1378,7 @@ bool Bot::updateLiftHandling () {
       // need to wait for teammate
       if (needWaitForTeammate) {
          m_destOrigin = m_liftTravelPos;
-
-         if (pev->origin.distanceSq (m_destOrigin) < cr::sqrf (20.0f)) {
-            wait ();
-         }
+         checkNeedToWait ();
       }
 
       // else we need to look for button
@@ -1386,7 +1390,9 @@ bool Bot::updateLiftHandling () {
 
    // bot is trying to find button inside a lift
    if (m_liftState == LiftState::LookingButtonInside) {
-      auto button = lookupButton (m_liftEntity->v.targetname.str ());
+      m_checkTerrain = false;
+
+      auto button = lookupButton (m_liftEntity->v.targetname.str (), true);
 
       // got a valid button entity ?
       if (!game.isNullEntity (button)
@@ -1395,11 +1401,21 @@ bool Bot::updateLiftHandling () {
           && cr::fzero (m_liftEntity->v.velocity.z)
           && isOnFloor ()) {
 
-         m_pickupItem = button;
-         m_pickupType = Pickup::Button;
+         auto buttonWithLineOfSight = lookupButton (m_liftEntity->v.targetname.str (), false);
 
-         m_navTimeset = game.time ();
+         if (!game.isNullEntity (buttonWithLineOfSight)) {
+            m_pickupItem = buttonWithLineOfSight;
+            m_pickupType = Pickup::Button;
+         }
+         else {
+            MDLL_Use (button, ent ());
+         }
+
+         if (pev->origin.distanceSq2d (graph[m_previousNodes[0]].origin) < cr::sqrf (64.0f)) {
+            wait ();
+         }
       }
+      ignoreCollision ();
    }
 
    // is lift activated and bot is standing on it and lift is moving ?
@@ -1416,9 +1432,7 @@ bool Bot::updateLiftHandling () {
          m_liftState = LiftState::TravelingBy;
          m_liftUsageTime = game.time () + 14.0f;
 
-         if (pev->origin.distanceSq (m_destOrigin) < cr::sqrf (20.0f)) {
-            wait ();
-         }
+         checkNeedToWait ();
       }
    }
 
@@ -1426,9 +1440,7 @@ bool Bot::updateLiftHandling () {
    if (m_liftState == LiftState::TravelingBy) {
       m_destOrigin = Vector (m_liftTravelPos.x, m_liftTravelPos.y, pev->origin.z);
 
-      if (pev->origin.distanceSq (m_destOrigin) < cr::sqrf (20.0f)) {
-         wait ();
-      }
+      checkNeedToWait ();
    }
 
    // need to find a button outside the lift
@@ -1442,13 +1454,10 @@ bool Bot::updateLiftHandling () {
          else {
             m_destOrigin = pev->origin;
          }
-
-         if (pev->origin.distanceSq (m_destOrigin) < cr::sqrf (20.0f)) {
-            wait ();
-         }
+         checkNeedToWait (64.0f);
       }
       else if (!game.isNullEntity (m_liftEntity)) {
-         auto button = lookupButton (m_liftEntity->v.targetname.str ());
+         auto button = lookupButton (m_liftEntity->v.targetname.str (), true);
 
          // if we got a valid button entity
          if (!game.isNullEntity (button)) {
@@ -1457,7 +1466,11 @@ bool Bot::updateLiftHandling () {
 
             // iterate though clients, and find if lift already used
             for (const auto &client : util.getClients ()) {
-               if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team != m_team || client.ent == ent () || game.isNullEntity (client.ent->v.groundentity)) {
+               if (!(client.flags & ClientFlags::Used)
+                   || !(client.flags & ClientFlags::Alive)
+                   || client.team != m_team
+                   || client.ent == ent ()
+                   || game.isNullEntity (client.ent->v.groundentity)) {
                   continue;
                }
 
@@ -1475,14 +1488,12 @@ bool Bot::updateLiftHandling () {
                else {
                   m_destOrigin = button->v.origin;
                }
-
-               if (pev->origin.distanceSq (m_destOrigin) < cr::sqrf (20.0f)) {
-                  wait ();
-               }
+               checkNeedToWait (64.0f);
             }
             else {
                m_pickupItem = button;
                m_pickupType = Pickup::Button;
+
                m_liftState = LiftState::WaitingFor;
 
                m_navTimeset = game.time ();
@@ -1506,10 +1517,7 @@ bool Bot::updateLiftHandling () {
             m_destOrigin = graph[m_previousNodes[1]].origin;
          }
       }
-
-      if (pev->origin.distanceSq (m_destOrigin) < cr::sqrf (20.0f)) {
-         wait ();
-      }
+      checkNeedToWait (64.0f);
    }
 
    // if bot is waiting for lift, or going to it
@@ -2409,7 +2417,7 @@ bool Bot::advanceMovement () {
                // get ladder nodes used by other (first moving) bots
                for (const auto &other : bots) {
                   // if another bot uses this ladder, wait 3 secs
-                  if (other.get () != this && other->m_isAlive && other->m_currentNodeIndex == destIndex) {
+                  if (other.get () != this && other->m_isAlive && other->m_currentNodeIndex == destIndex && other->isOnLadder ()) {
                      startTask (Task::Pause, TaskPri::Pause, kInvalidNodeIndex, game.time () + 3.0f, false);
                      return true;
                   }
@@ -3074,7 +3082,7 @@ bool Bot::isOccupiedNode (int index, bool needZeroVelocity) {
    return false;
 }
 
-edict_t *Bot::lookupButton (StringRef target) {
+edict_t *Bot::lookupButton (StringRef target, bool blindTest) {
    // this function tries to find nearest to current bot button, and returns pointer to
    // it's entity, also here must be specified the target, that button must open.
 
@@ -3090,10 +3098,12 @@ edict_t *Bot::lookupButton (StringRef target) {
    game.searchEntities ("target", target, [&] (edict_t *ent) {
       const Vector &pos = game.getEntityOrigin (ent);
 
-      game.testLine (pev->origin, pos, TraceIgnore::Monsters, pev->pContainingEntity, &tr);
+      if (!blindTest) {
+         game.testLine (pev->origin, pos, TraceIgnore::Monsters, pev->pContainingEntity, &tr);
+      }
 
       // check if this place safe
-      if (tr.pHit == ent && tr.flFraction > 0.95f && !isDeadlyMove (pos)) {
+      if (blindTest || (tr.pHit == ent || tr.flFraction > 0.95f)) {
          const float distanceSq = pev->origin.distanceSq (pos);
 
          // check if we got more close button

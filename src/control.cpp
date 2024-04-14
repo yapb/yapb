@@ -1025,7 +1025,12 @@ int BotControl::menuMain (int item) {
       break;
 
    case 4:
-      bots.killAllBots ();
+      if (game.is (GameFlags::ReGameDLL)) {
+         game.serverCommand ("endround");
+      }
+      else {
+         bots.killAllBots ();
+      }
       break;
 
    case 10:

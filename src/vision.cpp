@@ -201,9 +201,9 @@ void Bot::setAimDirection () {
       else {
          m_lookAt = m_destOrigin;
       }
-      const bool onLadder = (m_pathFlags & NodeFlag::Ladder);
+      const bool horizontalMovement = (m_pathFlags & NodeFlag::Ladder) || isOnLadder () || !cr::fzero (pev->velocity.z);
 
-      if (m_canChooseAimDirection && m_seeEnemyTime + 4.0f < game.time () && m_currentNodeIndex != kInvalidNodeIndex && !onLadder) {
+      if (m_canChooseAimDirection && m_seeEnemyTime + 4.0f < game.time () && m_currentNodeIndex != kInvalidNodeIndex && !horizontalMovement) {
          const auto dangerIndex = practice.getIndex (m_team, m_currentNodeIndex, m_currentNodeIndex);
 
          if (graph.exists (dangerIndex)
@@ -223,7 +223,7 @@ void Bot::setAimDirection () {
       }
 
       // try look at next node if on ladder
-      if (onLadder && m_pathWalk.hasNext ()) {
+      if (horizontalMovement && m_pathWalk.hasNext ()) {
          const auto &nextPath = graph[m_pathWalk.next ()];
 
          if ((nextPath.flags & NodeFlag::Ladder) && m_destOrigin.distanceSq (pev->origin) < cr::sqrf (128.0f) && nextPath.origin.z > m_pathOrigin.z + 26.0f) {
@@ -240,7 +240,7 @@ void Bot::setAimDirection () {
       }
 
       // don't look at bottom of node, if reached it
-      if (m_lookAt == m_destOrigin && !onLadder) {
+      if (m_lookAt == m_destOrigin && !horizontalMovement) {
          m_lookAt.z = getEyesPos ().z;
       }
    }
@@ -402,7 +402,7 @@ void Bot::updateLookAngles () {
       updateBodyAngles ();
       return;
    }
-   float aimSkill = cr::clamp (static_cast <float> (m_difficulty), 1.0f, 4.0f) * 25.0f;
+   float aimSkill = cr::clamp (static_cast <float> (m_difficulty), 3.0f, 4.0f) * 25.0f;
 
    // do not slowdown while on ladder
    if (isOnLadderPath () || isOnLadder ()) {
@@ -462,7 +462,8 @@ void Bot::updateLookAngles () {
    m_lookPitchVel += delta * accel;
    m_idealAngles.x += cr::clamp (delta * m_lookPitchVel, -89.0f, 89.0f);
 
-   pev->v_angle = m_idealAngles;
+   pev->v_angle = m_idealAngles.clampAngles ();
+   pev->v_angle.z = 0.0f;
 
    updateBodyAngles ();
 }
