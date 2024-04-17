@@ -609,7 +609,7 @@ void Bot::updatePickups () {
                      // decide to duck or not to duck
                      selectCampButtons (index);
 
-                     if (rg.chance (90)) {
+                     if (rg.chance (85) && numEnemiesNear (pev->origin, 768.0f) < 4) {
                         pushChatterMessage (Chatter::DefendingBombsite);
                      }
                   }

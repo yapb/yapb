@@ -1110,7 +1110,7 @@ void Bot::fireWeapons () {
                   m_reloadState = Reload::Primary;
                   m_reloadCheckTime = game.time ();
 
-                  if (rg.chance (cr::abs (m_difficulty * 25 - 100)) && rg.chance (20)) {
+                  if (rg.chance (cr::abs (m_difficulty * 25 - 100)) && rg.chance (25)) {
                      pushRadioMessage (Radio::NeedBackup);
                   }
                }

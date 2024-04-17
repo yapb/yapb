@@ -835,7 +835,7 @@ void Bot::plantBomb_ () {
       completeTask ();
 
       // tell teammates to move over here...
-      if (numFriendsNear (pev->origin, 1200.0f) != 0) {
+      if (numFriendsNear (pev->origin, 1200.0f) > 0) {
          pushRadioMessage (Radio::NeedBackup);
       }
       const auto index = findDefendNode (pev->origin);
@@ -906,7 +906,7 @@ void Bot::defuseBomb_ () {
             defuseError = false;
          }
 
-         if (m_numFriendsLeft > friends) {
+         if (m_numEnemiesLeft > 0 && m_numFriendsLeft > friends) {
             pushRadioMessage (Radio::NeedBackup);
          }
       }
@@ -1018,10 +1018,10 @@ void Bot::defuseBomb_ () {
       m_strafeSpeed = 0.0f;
 
       // notify team
-      if (m_numFriendsLeft != 0) {
+      if (m_numFriendsLeft > 0) {
          pushChatterMessage (Chatter::DefusingBomb);
 
-         if (numFriendsNear (pev->origin, 512.0f) < 2) {
+         if (m_numEnemiesLeft > 0 && numFriendsNear (pev->origin, 512.0f) < 2) {
             pushRadioMessage (Radio::NeedBackup);
          }
       }
@@ -1574,7 +1574,7 @@ void Bot::pickupItem_ () {
          pushChatterMessage (Chatter::DefusingBomb);
 
          // notify team of defusing
-         if (m_numFriendsLeft < 3) {
+         if (m_numEnemiesLeft > 0 && m_numFriendsLeft < 3 && rg.chance (90)) {
             pushRadioMessage (Radio::NeedBackup);
          }
          m_moveToGoal = false;
