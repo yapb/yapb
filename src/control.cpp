@@ -10,6 +10,7 @@
 ConVar cv_display_menu_text ("display_menu_text", "1", "Enables or disables display menu text, when players asks for menu. Useful only for Android.", true, 0.0f, 1.0f, Var::Xash3D);
 ConVar cv_password ("password", "", "The value (password) for the setinfo key, if user sets correct password, he's gains access to bot commands and menus.", false, 0.0f, 0.0f, Var::Password);
 ConVar cv_password_key ("password_key", "_ybpw", "The name of setinfo key used to store password to bot commands and menus.", false);
+ConVar cv_bots_kill_on_endround ("bots_kill_on_endround", "0", "Allows to use classic bot kill on issuing end-round command in menus, instead of gamedll endround.", false);
 
 int BotControl::cmdAddBot () {
    enum args { alias = 1, difficulty, personality, team, model, name, max };
@@ -1025,7 +1026,7 @@ int BotControl::menuMain (int item) {
       break;
 
    case 4:
-      if (game.is (GameFlags::ReGameDLL)) {
+      if (game.is (GameFlags::ReGameDLL) && !cv_bots_kill_on_endround.bool_ ()) {
          game.serverCommand ("endround");
       }
       else {

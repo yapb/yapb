@@ -184,6 +184,14 @@ template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *
                graph.setExtenHeader (&extenHeader);
             }
          }
+
+         // for visibility tables load counts of stand/count numbers
+         if (type.option & StorageOption::Vistable) {
+            for (auto &path : graph) {
+               file.read (&path.vis, sizeof (PathVis));
+            }
+         }
+
          ctrl.msg ("Loaded Bots %s data v%d (Memory: %.2fMB).", type.name, hdr.version, static_cast <float> (data.capacity () * sizeof (U)) / 1024.0f / 1024.0f);
          file.close ();
 
@@ -249,6 +257,13 @@ template <typename U> bool BotStorage::save (const SmallArray <U> &data, ExtenHe
 
       file.write (&hdr, sizeof (StorageHeader));
       file.write (compressed.data (), sizeof (uint8_t), compressedLength);
+
+      // for visibility tables save counts of stand/count numbers
+      if (type.option & StorageOption::Vistable) {
+         for (auto &path : graph) {
+            file.write (&path.vis, sizeof (PathVis));
+         }
+      }
 
       // add extension
       if ((type.option & StorageOption::Exten) && exten != nullptr) {

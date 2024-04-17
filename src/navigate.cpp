@@ -820,9 +820,26 @@ void Bot::moveToGoal () {
 
    // press duck button if we need to
    if (m_pathFlags & NodeFlag::Crouch) {
-      constexpr auto kEndRouteThreshold = 3;
+      bool pressDuck = true;
 
-      if (!(m_pathFlags & (NodeFlag::Camp | NodeFlag::Goal)) || m_pathWalk.length () < kEndRouteThreshold) {
+      if (m_pathFlags & (NodeFlag::Camp | NodeFlag::Goal)) {
+         TraceResult tr {};
+
+         auto src = m_path->origin;
+         auto dst = m_path->origin;
+
+         src.z += 12.0f;
+         dst.z += 18.0f + 28.0f;
+      
+         game.testLine (src, dst, TraceIgnore::Everything, ent (), &tr);
+
+         if (tr.flFraction >= 0.95f) {
+            pressDuck = false;
+         }
+      }
+
+      // press duck if not canceled by visibility count check only and it's end of the route
+      if (pressDuck) {
          pev->button |= IN_DUCK;
       }
    }
@@ -899,7 +916,7 @@ bool Bot::updateNavigation () {
 
       m_navTimeset = game.time ();
    }
-   m_destOrigin = m_pathOrigin + pev->view_ofs;
+   m_destOrigin = m_pathOrigin;
 
    // this node has additional travel flags - care about them
    if (m_currentTravelFlags & PathFlag::Jump) {
@@ -962,7 +979,7 @@ bool Bot::updateNavigation () {
       const float ladderDistance = pev->origin.distance (m_pathOrigin);
 
       if (m_pathOrigin.z >= pev->origin.z + 16.0f) {
-         constexpr auto kLadderOffset = Vector (0.0f, 0.0f, 16.0f);
+         constexpr auto kLadderOffset = Vector (0.0f, 0.0f, 36.0f);
 
          m_pathOrigin = m_path->origin + kLadderOffset;
       }
@@ -979,13 +996,16 @@ bool Bot::updateNavigation () {
       const auto prevNodeIndex = m_previousNodes[0];
 
       // do a precise movement when very near
-      if (!isDucking () && graph.exists (prevNodeIndex) && !(graph[prevNodeIndex].flags & NodeFlag::Ladder) && ladderDistance < 64.0f) {
-         m_moveSpeed = pev->maxspeed * 0.4f;
+      if (graph.exists (prevNodeIndex) && !(graph[prevNodeIndex].flags & NodeFlag::Ladder) && ladderDistance < 64.0f) {
+         if (!isDucking ()) {
+            m_moveSpeed = pev->maxspeed * 0.4f;
+         }
 
          // do not duck while not on ladder
          if (!isOnLadder ()) {
             pev->button &= ~IN_DUCK;
          }
+         m_approachingLadderTimer.start (m_frameInterval * 4.0f);
       }
 
       // special detection if someone is using the ladder (to prevent to have bots-towers on ladders)
@@ -1133,7 +1153,7 @@ bool Bot::updateNavigation () {
       }
    }
    else if (m_pathFlags & NodeFlag::Ladder) {
-      desiredDistanceSq = cr::sqrf (8.0f);
+      desiredDistanceSq = cr::sqrf (16.0f);
    }
    else if (m_currentTravelFlags & PathFlag::Jump) {
       desiredDistanceSq = 0.0f;
@@ -1142,7 +1162,7 @@ bool Bot::updateNavigation () {
       desiredDistanceSq = 0.0f;
    }
    else if (isOccupiedNode (m_path->number)) {
-      desiredDistanceSq = cr::sqrf (96.0f);
+      desiredDistanceSq = cr::sqrf (102.0f);
    }
    else {
       desiredDistanceSq = cr::max (cr::sqrf (m_path->radius), desiredDistanceSq);
@@ -1157,9 +1177,9 @@ bool Bot::updateNavigation () {
    }
 
    // needs precise placement - check if we get past the point
-   if (desiredDistanceSq < cr::sqrf (22.0f)
+   if (desiredDistanceSq < cr::sqrf (16.0f)
        && nodeDistanceSq < cr::sqrf (30.0f)
-       && m_pathOrigin.distanceSq (pev->origin + pev->velocity * m_frameInterval) >= nodeDistanceSq) {
+       && m_pathOrigin.distanceSq (pev->origin + pev->velocity * m_frameInterval) > nodeDistanceSq) {
 
       desiredDistanceSq = nodeDistanceSq + 1.0f;
    }
@@ -3127,7 +3147,7 @@ bool Bot::isReachableNode (int index) {
    const Vector &dst = graph[index].origin;
 
    // is the destination close enough?
-   if (dst.distanceSq (src) >= cr::sqrf (600.0f)) {
+   if (dst.distanceSq (src) >= cr::sqrf (400.0f)) {
       return false;
    }
 

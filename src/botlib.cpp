@@ -1789,11 +1789,7 @@ void Bot::refreshEnemyPredict () {
          && m_shootTime + 1.5f > game.time ();
 
       if (!(m_aimFlags & (AimFlags::Enemy | AimFlags::PredictPath)) && !denyLastEnemy && seesEntity (m_lastEnemyOrigin, true)) {
-         const auto weaponPenetratePower = conf.findWeaponById (m_currentWeapon).penetratePower;
-
-         if (isPenetrableObstacle3 (m_lastEnemyOrigin, weaponPenetratePower)) {
-            m_aimFlags |= AimFlags::LastEnemy;
-         }
+         m_aimFlags |= AimFlags::LastEnemy;
       }
    }
 
@@ -1804,7 +1800,7 @@ void Bot::refreshEnemyPredict () {
 
 void Bot::setLastVictim (edict_t *ent) {
    m_lastVictim = ent;
-   m_lastVictimOrigin = ent->v.origin + ent->v.view_ofs;
+   m_lastVictimOrigin = ent->v.origin;
 
    m_forgetLastVictimTimer.start (rg.get (1.0f, 2.0f));
 }
@@ -2000,7 +1996,7 @@ void Bot::filterTasks () {
          float timeHeard = m_heardSoundTime - game.time ();
          float ratio = 0.0f;
 
-         m_retreatTime = game.time () + rg.get (3.0f, 15.0f);
+         m_retreatTime = game.time () + rg.get (1.0f, 4.0f);
 
          if (timeSeen > timeHeard) {
             timeSeen += 10.0f;
@@ -2836,11 +2832,18 @@ void Bot::checkParachute () {
 void Bot::frame () {
    pev->flags |= FL_CLIENT | FL_FAKECLIENT; // restore fake client bit, just in case
 
-   if (m_updateTime <= game.time ()) {
+   if (m_thinkDelay.time <= game.time ()) {
       update ();
-   }
-   else if (m_isAlive) {
-      updateLookAngles ();
+
+
+      // delay next execution for thinking
+      m_thinkDelay.time = game.time () + m_thinkDelay.interval;
+
+      // run bot command on twice speed
+      if (m_commandDelay.time <= game.time ()) {
+         runMovement ();
+         m_commandDelay.time = game.time () + m_commandDelay.interval;
+      }
    }
 
    if (m_slowFrameTimestamp > game.time ()) {
@@ -2955,16 +2958,18 @@ void Bot::update () {
    else if (!botMovement) {
       resetMovement ();
    }
-   runMovement ();
-
-   // delay next execution
-   m_updateTime = game.time () + m_updateInterval;
 }
 
 void Bot::logicDuringFreezetime () {
    if (m_changeViewTime > game.time ()) {
       return;
    }
+
+   // simply skip randomly
+   if (rg.chance (10)) {
+      return;
+   }
+   pev->button &= ~IN_DUCK;
 
    if (rg.chance (15) && m_jumpTime + rg.get (1.0, 2.0f) < game.time ()) {
       pev->button |= IN_JUMP;
@@ -3215,9 +3220,7 @@ void Bot::logic () {
       m_moveSpeed = -pev->maxspeed;
       m_strafeSpeed = pev->maxspeed * static_cast <float> (m_needAvoidGrenade);
    }
-
    ensureEntitiesClear ();
-   translateInput ();
 
    // check if need to use parachute
    checkParachute ();
@@ -3742,13 +3745,13 @@ bool Bot::canRunHeavyWeight () {
 uint8_t Bot::computeMsec () {
    // estimate msec to use for this command based on time passed from the previous command
 
-   return static_cast <uint8_t> (cr::min (static_cast <int32_t> (cr::roundf ((game.time () - m_lastCommandTime) * 1000.0f)), 255));
+   return static_cast <uint8_t> (cr::min (static_cast <int32_t> (cr::roundf ((game.time () - m_previousThinkTime) * 1000.0f)), 255));
 }
 
 const Vector &Bot::getRpmAngles () {
    // get angles to pass to run player move function
 
-   if ((m_pathFlags & NodeFlag::Ladder) || getCurrentTaskId () == Task::Attack) {
+   if (!m_approachingLadderTimer.elapsed () || getCurrentTaskId () == Task::Attack) {
       return pev->v_angle;
    }
    return m_moveAngles;
@@ -3769,10 +3772,13 @@ void Bot::runMovement () {
    // elapses, that bot will behave like a ghost : no movement, but bullets and players can
    // pass through it. Then, when the next frame will begin, the stucking problem will arise !
 
-   m_frameInterval = game.time () - m_lastCommandTime;
+   m_frameInterval = game.time () - m_previousThinkTime;
 
    const auto msecVal = computeMsec ();
-   m_lastCommandTime = game.time ();
+   m_previousThinkTime = game.time ();
+
+   // translate bot buttons
+   translateInput ();
 
    engfuncs.pfnRunPlayerMove (pev->pContainingEntity,
                               getRpmAngles (), m_moveSpeed, m_strafeSpeed,
@@ -3946,7 +3952,6 @@ void Bot::updateHearing () {
       // check if heard enemy can be shoot through some obstacle
       else {
          if (cv_shoots_thru_walls.bool_ ()
-             && m_difficulty >= Difficulty::Normal
              && m_lastEnemy == hearedEnemy
              && rg.chance (conf.getDifficultyTweaks (m_difficulty)->hearThruPct)
              && m_seeEnemyTime + 3.0f > game.time ()

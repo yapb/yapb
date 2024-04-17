@@ -33,7 +33,7 @@ void Bot::normal_ () {
       if (m_currentNodeIndex == debugGoal) {
          const auto &debugOrigin = graph[debugGoal].origin;
 
-         if (debugOrigin.distanceSq (pev->origin) < cr::sqrf (22.0f) && util.isVisible (debugOrigin, ent ())) {
+         if (debugOrigin.distanceSq2d (pev->origin) < cr::sqrf (22.0f) && util.isVisible (debugOrigin, ent ())) {
             m_moveToGoal = false;
             m_checkTerrain = false;
 
@@ -468,10 +468,10 @@ void Bot::seekCover_ () {
          destIndex = getTask ()->data;
       }
       else {
-         destIndex = findCoverNode (usesSniper () ? 256.0f : 512.0f);
+         destIndex = findCoverNode (900.0f);
 
          if (destIndex == kInvalidNodeIndex) {
-            m_retreatTime = game.time () + rg.get (5.0f, 10.0f);
+            m_retreatTime = game.time () + rg.get (1.0f, 2.0f);
             m_prevGoalIndex = kInvalidNodeIndex;
 
             completeTask ();

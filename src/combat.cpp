@@ -7,7 +7,7 @@
 
 #include <yapb.h>
 
-ConVar cv_shoots_thru_walls ("shoots_thru_walls", "1", "Specifies whether bots able to fire at enemies behind the wall, if they hearing or suspecting them.", true, 0.0f, 3.0f);
+ConVar cv_shoots_thru_walls ("shoots_thru_walls", "2", "Specifies whether bots able to fire at enemies behind the wall, if they hearing or suspecting them.", true, 0.0f, 3.0f);
 ConVar cv_ignore_enemies ("ignore_enemies", "0", "Enables or disables searching world for enemies.");
 ConVar cv_check_enemy_rendering ("check_enemy_rendering", "0", "Enables or disables checking enemy rendering flags. Useful for some mods.");
 ConVar cv_check_enemy_invincibility ("check_enemy_invincibility", "0", "Enables or disables checking enemy invincibility. Useful for some mods.");
@@ -236,11 +236,6 @@ bool Bot::seesEnemy (edict_t *player) {
        && frustum.check (m_viewFrustum, player)
        && !isBehindSmokeClouds (player->v.origin)
        && checkBodyParts (player)) {
-
-      m_seeEnemyTime = game.time ();
-      m_lastEnemy = player;
-      m_lastEnemyOrigin = m_enemyOrigin;
-
       return true;
    }
    return false;
@@ -274,7 +269,13 @@ bool Bot::lookupEnemies () {
    }
    else if (game.isNullEntity (m_enemy) && m_seeEnemyTime + 4.0f > game.time () && util.isAlive (m_lastEnemy)) {
       m_states |= Sense::SuspectEnemy;
-      m_aimFlags |= AimFlags::LastEnemy;
+
+      // check if last enemy can be penetrated
+      const auto penetratePower = conf.findWeaponById (m_currentWeapon).penetratePower * 4;
+
+      if (isPenetrableObstacle3 (m_lastEnemyOrigin, penetratePower)) {
+         m_aimFlags |= AimFlags::LastEnemy;
+      }
    }
    m_enemyParts = Visibility::None;
    m_enemyOrigin = nullptr;
@@ -475,7 +476,6 @@ bool Bot::lookupEnemies () {
 
       // if no enemy visible check if last one shoot able through wall
       if (cv_shoots_thru_walls.bool_ ()
-          && m_difficulty >= Difficulty::Normal
           && rg.chance (conf.getDifficultyTweaks (m_difficulty)->seenThruPct)
           && isPenetrableObstacle (newEnemy->v.origin)) {
 
@@ -579,13 +579,17 @@ Vector Bot::getEnemyBodyOffset () {
          auto headshotPct = conf.getDifficultyTweaks (m_difficulty)->headshotPct;
 
          // with to much recoil or using specific weapons choice to aim to the chest
-         if (distance > kSprayDistance && (isRecoilHigh () || usesSniperAWP () || usesShotgun ())) {
+         if (distance > kSprayDistance && (isRecoilHigh () || usesShotgun ())) {
             headshotPct = 0;
          }
 
          // now check is our skill match to aim at head, else aim at enemy body
          if (m_enemyBodyPartSet == m_enemy || rg.chance (headshotPct)) {
             spot = m_enemyOrigin + getCustomHeight (distance);
+
+            if (usesSniper ()) {
+               spot.z -= pev->view_ofs.z * 0.5f;
+            }
 
             // set's the enemy shooting spot to head, if headshot pct allows, and use head for that
             // enemy until new enemy is acquired, to prevent too shaky aiming
@@ -698,8 +702,6 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
    // this function returns true if enemy can be shoot through some obstacle, false otherwise.
    // credits goes to Immortal_BLG
 
-   const auto method = cv_shoots_thru_walls.int_ ();
-
    if (m_isUsingGrenade || m_difficulty < Difficulty::Normal) {
       return false;
    }
@@ -708,6 +710,7 @@ bool Bot::isPenetrableObstacle (const Vector &dest) {
    if (penetratePower == 0) {
       return false;
    }
+   const auto method = cv_shoots_thru_walls.int_ ();
 
    // switch methods
    switch (method) {
@@ -989,7 +992,10 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
             }
          }
       }
-      m_shootTime = game.time ();
+
+      if (pev->button & IN_ATTACK) {
+         m_shootTime = game.time ();
+      }
    }
    else {
       // don't attack with knife over long distance
@@ -1239,8 +1245,7 @@ void Bot::attackMovement () {
 
    // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
    if (!game.is (GameFlags::CSDM)) {
-      if ((m_states & Sense::SeeingEnemy) && approach < 30 && !bots.isBombPlanted () && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
-         m_moveSpeed = -pev->maxspeed;
+      if (m_retreatTime < game.time () && (m_states & Sense::SeeingEnemy) && approach < 30 && !bots.isBombPlanted () && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
          startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, true);
       }
       else if (approach < 50) {

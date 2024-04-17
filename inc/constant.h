@@ -430,7 +430,7 @@ constexpr auto kGrenadeCheckTime = 0.6f;
 constexpr auto kSprayDistance = 360.0f;
 constexpr auto kSprayDistanceX2 = kSprayDistance * 2;
 constexpr auto kMaxChatterRepeatInterval = 99.0f;
-constexpr auto kViewFrameUpdate = 1.0f / 30.0f;
+constexpr auto kViewFrameUpdate = 1.0f / 25.0f;
 constexpr auto kGrenadeDamageRadius = 385.0f;
 
 constexpr auto kInfiniteDistanceLong = static_cast <int> (kInfiniteDistance);

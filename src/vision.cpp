@@ -175,33 +175,36 @@ void Bot::setAimDirection () {
       m_lookAt = m_lookAtSafe;
    }
    else if (flags & AimFlags::Nav) {
-      m_lookAt = m_destOrigin;
+      const auto &destOrigin = m_destOrigin + pev->view_ofs;
+      m_lookAt = destOrigin;
+
 
       if (m_moveToGoal && m_seeEnemyTime + 4.0f < game.time ()
-          && !m_isStuck && m_moveSpeed > getShiftSpeed ()
-          && !(pev->button & IN_DUCK)
+           && !m_isStuck  && !(pev->button & IN_DUCK)
           && m_currentNodeIndex != kInvalidNodeIndex
           && !(m_pathFlags & (NodeFlag::Ladder | NodeFlag::Crouch))
-          && m_pathWalk.hasNext ()
-          && pev->origin.distanceSq (m_destOrigin) < cr::sqrf (512.0f)) {
+          && m_pathWalk.hasNext () && !isOnLadder ()
+          && pev->origin.distanceSq (destOrigin) < cr::sqrf (512.0f)) {
 
          const auto nextPathIndex = m_pathWalk.next ();
          const auto doubleNextPath = m_pathWalk.doubleNext ();
 
          if (vistab.visible (m_currentNodeIndex, doubleNextPath)) {
-            m_lookAt = graph[doubleNextPath].origin + pev->view_ofs;
+            const auto &gn = graph[doubleNextPath];
+            m_lookAt = gn.origin + pev->view_ofs;
          }
          else if (vistab.visible (m_currentNodeIndex, nextPathIndex)) {
-            m_lookAt = graph[nextPathIndex].origin + pev->view_ofs;
+            const auto &gn = graph[nextPathIndex];
+            m_lookAt = gn.origin + pev->view_ofs;
          }
          else {
-            m_lookAt = m_destOrigin;
+            m_lookAt = pev->origin + pev->view_ofs + pev->v_angle.forward () * 300.0f;
          }
       }
       else {
-         m_lookAt = m_destOrigin;
+         m_lookAt = destOrigin;
       }
-      const bool horizontalMovement = (m_pathFlags & NodeFlag::Ladder) || isOnLadder () || !cr::fzero (pev->velocity.z);
+      const bool horizontalMovement = (m_pathFlags & NodeFlag::Ladder) || isOnLadder ();
 
       if (m_canChooseAimDirection && m_seeEnemyTime + 4.0f < game.time () && m_currentNodeIndex != kInvalidNodeIndex && !horizontalMovement) {
          const auto dangerIndex = practice.getIndex (m_team, m_currentNodeIndex, m_currentNodeIndex);
@@ -211,7 +214,7 @@ void Bot::setAimDirection () {
              && !(graph[dangerIndex].flags & NodeFlag::Crouch)) {
 
             if (pev->origin.distanceSq (graph[dangerIndex].origin) < cr::sqrf (512.0f)) {
-               m_lookAt = m_destOrigin;
+               m_lookAt = destOrigin;
             }
             else {
                m_lookAt = graph[dangerIndex].origin + pev->view_ofs;
@@ -225,23 +228,20 @@ void Bot::setAimDirection () {
       // try look at next node if on ladder
       if (horizontalMovement && m_pathWalk.hasNext ()) {
          const auto &nextPath = graph[m_pathWalk.next ()];
-
+         
          if ((nextPath.flags & NodeFlag::Ladder) && m_destOrigin.distanceSq (pev->origin) < cr::sqrf (128.0f) && nextPath.origin.z > m_pathOrigin.z + 26.0f) {
-            m_lookAt = nextPath.origin;
+            m_lookAt = nextPath.origin + pev->view_ofs;
          }
-         else {
-            m_lookAt = m_destOrigin;
-         }
+      }
+
+      // don't look at bottom of node, if reached it
+      if (m_lookAt == destOrigin && !horizontalMovement) {
+         m_lookAt.z = getEyesPos ().z;
       }
 
       // try to look at last victim for a little, maybe there's some one else
       if (game.isNullEntity (m_enemy) && m_difficulty >= Difficulty::Normal && !m_forgetLastVictimTimer.elapsed () && !m_lastVictimOrigin.empty ()) {
-         m_lookAt = m_lastVictimOrigin;
-      }
-
-      // don't look at bottom of node, if reached it
-      if (m_lookAt == m_destOrigin && !horizontalMovement) {
-         m_lookAt.z = getEyesPos ().z;
+         m_lookAt = m_lastVictimOrigin + pev->view_ofs;
       }
    }
 
@@ -402,21 +402,15 @@ void Bot::updateLookAngles () {
       updateBodyAngles ();
       return;
    }
-   float aimSkill = cr::clamp (static_cast <float> (m_difficulty), 3.0f, 4.0f) * 25.0f;
+   const bool importantAimFlags = (m_aimFlags & (AimFlags::Enemy | AimFlags::Grenade));
 
-   // do not slowdown while on ladder
-   if (isOnLadderPath () || isOnLadder ()) {
-      aimSkill = 100.0f;
-   }
-   const bool importantAimFlags = (m_aimFlags & (AimFlags::Enemy | AimFlags::Entity | AimFlags::Grenade));
-
-   float accelerate = aimSkill * 30.0f;
-   float stiffness = aimSkill * 2.0f;
-   float damping = aimSkill * 0.25f;
+   float accelerate = 3000.0f;
+   float stiffness = 200.0f;
+   float damping = 25.0f;
 
    if ((importantAimFlags || m_wantsToFire) && m_difficulty > Difficulty::Normal) {
       if (m_difficulty == Difficulty::Expert) {
-         accelerate += 600.0f;
+         accelerate += 300.0f;
       }
       stiffness += 100.0f;
       damping -= 5.0f;
@@ -427,8 +421,8 @@ void Bot::updateLookAngles () {
    float angleDiffYaw = cr::anglesDifference (direction.y, m_idealAngles.y);
 
    // prevent reverse facing angles  when navigating normally
-   if (m_difficulty < Difficulty::Easy && m_moveToGoal && !importantAimFlags && !m_pathOrigin.empty ()) {
-      const float forward = (m_pathOrigin - pev->origin).yaw ();
+   if (m_moveToGoal && !importantAimFlags && !m_pathOrigin.empty ()) {
+      const float forward = (m_lookAt - pev->origin).yaw ();
 
       if (!cr::fzero (forward)) {
          const float current = cr::wrapAngle (pev->v_angle.y - forward);
@@ -460,9 +454,11 @@ void Bot::updateLookAngles () {
    const float accel = cr::clamp (2.0f * stiffness * angleDiffPitch - damping * m_lookPitchVel, -accelerate, accelerate);
 
    m_lookPitchVel += delta * accel;
-   m_idealAngles.x += cr::clamp (delta * m_lookPitchVel, -89.0f, 89.0f);
+   m_idealAngles.x += delta * m_lookPitchVel;
 
-   pev->v_angle = m_idealAngles.clampAngles ();
+   m_idealAngles.x = cr::clamp (m_idealAngles.x, -89.0f, 89.0f);
+
+   pev->v_angle = m_idealAngles;
    pev->v_angle.z = 0.0f;
 
    updateBodyAngles ();
