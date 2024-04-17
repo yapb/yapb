@@ -271,7 +271,7 @@ bool Bot::lookupEnemies () {
       m_states |= Sense::SuspectEnemy;
 
       // check if last enemy can be penetrated
-      const auto penetratePower = conf.findWeaponById (m_currentWeapon).penetratePower * 4;
+      const auto penetratePower = conf.findWeaponById (m_currentWeapon).penetratePower * 3;
 
       if (isPenetrableObstacle3 (m_lastEnemyOrigin, penetratePower)) {
          m_aimFlags |= AimFlags::LastEnemy;
@@ -360,7 +360,7 @@ bool Bot::lookupEnemies () {
             }
             const float distanceSq = player->v.origin.distanceSq (pev->origin);
 
-            if (distanceSq * 0.7f < nearestDistanceSq) {
+            if (distanceSq < nearestDistanceSq) {
                nearestDistanceSq = distanceSq;
                newEnemy = player;
 
@@ -371,7 +371,7 @@ bool Bot::lookupEnemies () {
             }
          }
       }
-      m_enemyUpdateTime = game.time () + (usesKnife () ? 1.0f : 0.5f);
+      m_enemyUpdateTime = game.time () + (usesKnife () ? 1.25f : 0.85f);
       
       if (game.isNullEntity (newEnemy) && !game.isNullEntity (shieldEnemy)) {
          newEnemy = shieldEnemy;

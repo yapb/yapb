@@ -33,7 +33,7 @@ int BotControl::cmdAddBot () {
    }
 
    // if high-skilled bot is requested set personality to rusher and max-out difficulty
-   if (strValue (alias).endsWith ("_hs")) {
+   if (strValue (alias).contains ("addhs")) {
       m_args.set (difficulty, "4");
       m_args.set (personality, "1");
    }

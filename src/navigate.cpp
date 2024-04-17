@@ -1155,6 +1155,9 @@ bool Bot::updateNavigation () {
    else if (m_pathFlags & NodeFlag::Ladder) {
       desiredDistanceSq = cr::sqrf (16.0f);
    }
+   else if (m_pathFlags & NodeFlag::Camp) {
+      desiredDistanceSq = cr::sqrf (32.0f);
+   }
    else if (m_currentTravelFlags & PathFlag::Jump) {
       desiredDistanceSq = 0.0f;
    }
