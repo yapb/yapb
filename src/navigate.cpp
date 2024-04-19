@@ -1165,7 +1165,7 @@ bool Bot::updateNavigation () {
       desiredDistanceSq = 0.0f;
    }
    else if (isOccupiedNode (m_path->number)) {
-      desiredDistanceSq = cr::sqrf (102.0f);
+      desiredDistanceSq = cr::sqrf (120.0f);
    }
    else {
       desiredDistanceSq = cr::max (cr::sqrf (m_path->radius), desiredDistanceSq);
@@ -1182,7 +1182,7 @@ bool Bot::updateNavigation () {
    // needs precise placement - check if we get past the point
    if (desiredDistanceSq < cr::sqrf (16.0f)
        && nodeDistanceSq < cr::sqrf (30.0f)
-       && m_pathOrigin.distanceSq (pev->origin + pev->velocity * m_frameInterval) > nodeDistanceSq) {
+       && m_pathOrigin.distanceSq (pev->origin + pev->velocity * m_frameInterval) >= nodeDistanceSq) {
 
       desiredDistanceSq = nodeDistanceSq + 1.0f;
    }
@@ -1752,7 +1752,7 @@ float Bot::getEstimatedNodeReachTime () {
    float estimatedTime = longTermReachability ? 8.5f : 3.5f;
 
    // if just fired at enemy, increase reachability
-   if (m_shootTime + 0.15f < game.time ()) {
+   if (m_shootTime + 0.25f > game.time ()) {
       return estimatedTime;
    }
 

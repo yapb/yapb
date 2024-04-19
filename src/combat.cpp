@@ -271,9 +271,9 @@ bool Bot::lookupEnemies () {
       m_states |= Sense::SuspectEnemy;
 
       // check if last enemy can be penetrated
-      const auto penetratePower = conf.findWeaponById (m_currentWeapon).penetratePower * 3;
+      const auto penetratePower = conf.findWeaponById (m_currentWeapon).penetratePower * 4;
 
-      if (isPenetrableObstacle3 (m_lastEnemyOrigin, penetratePower)) {
+      if (isPenetrableObstacle1 (m_lastEnemyOrigin, penetratePower)) {
          m_aimFlags |= AimFlags::LastEnemy;
       }
    }
