@@ -109,6 +109,12 @@ struct Client {
    ClientNoise noise;
 };
 
+// think delay mapping
+struct FrameDelay {
+   float interval {};
+   float time {};
+};
+
 // include bot graph stuff
 #include <graph.h>
 #include <vision.h>
@@ -235,7 +241,7 @@ private:
    float m_knifeAttackTime {}; // time to rush with knife (at the beginning of the round)
    float m_duckDefuseCheckTime {}; // time to check for ducking for defuse
    float m_frameInterval {}; // bot's frame interval
-   float m_lastCommandTime {}; // time bot last thinked
+   float m_previousThinkTime {}; // time bot last thinked
    float m_reloadCheckTime {}; // time to check reloading
    float m_zoomCheckTime {}; // time to check zoom again
    float m_shieldCheckTime {}; // time to check shield drawing again
@@ -345,7 +351,9 @@ private:
    Path *m_path {}; // pointer to the current path node
    String m_chatBuffer {}; // space for strings (say text...)
    Frustum::Planes m_viewFrustum {};
+
    CountdownTimer m_forgetLastVictimTimer {}; // time to forget last victim position ?
+   CountdownTimer m_approachingLadderTimer {}; // bot is approaching ladder
 
 private:
    int pickBestWeapon (Array <int> &vec, int moneySave);
@@ -589,8 +597,6 @@ public:
    float m_agressionLevel {}; // dynamic aggression level (in game)
    float m_fearLevel {}; // dynamic fear level (in game)
    float m_nextEmotionUpdate {}; // next time to sanitize emotions
-   float m_updateTime {}; // skip some frames in bot thinking
-   float m_updateInterval {}; // interval between frames
    float m_goalValue {}; // ranking value for this node
    float m_viewDistance {}; // current view distance
    float m_maxViewDistance {}; // maximum view distance
@@ -675,8 +681,12 @@ public:
    BurstMode m_weaponBurstMode {}; // bot using burst mode? (famas/glock18, but also silencer mode)
    Personality m_personality {}; // bots type
    Array <BotTask> m_tasks {};
+
    Deque <int32_t> m_msgQueue {};
    Array <int32_t> m_goalHist {};
+
+   FrameDelay m_thinkDelay {};
+   FrameDelay m_commandDelay {};
 
 public:
    Bot (edict_t *bot, int difficulty, int personality, int team, int skin);

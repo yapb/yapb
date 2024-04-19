@@ -1151,7 +1151,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    }
    m_basePing = rg.get (cv_ping_base_min.int_ (), cv_ping_base_max.int_ ());
 
-   m_lastCommandTime = game.time () - 0.1f;
+   m_previousThinkTime = game.time () - 0.1f;
    m_frameInterval = game.time ();
    m_heavyTimestamp = game.time ();
    m_slowFrameTimestamp = 0.0f;
@@ -1620,7 +1620,7 @@ void Bot::newRound () {
    if (rg.chance (50)) {
       pushChatterMessage (Chatter::NewRound);
    }
-   auto thinkFps = cr::clamp (cv_think_fps.float_ (), 24.0f, 90.0f);
+   auto thinkFps = cr::clamp (cv_think_fps.float_ (), 30.0f, 90.0f);
    auto updateInterval = 1.0f / thinkFps;
 
    if (game.is (GameFlags::Xash3D)) {
@@ -1634,7 +1634,8 @@ void Bot::newRound () {
    else if (game.is (GameFlags::Legacy)) {
       updateInterval = 0.0f; // legacy games behaves strange, when this enabled
    }
-   m_updateInterval = updateInterval;
+   m_thinkDelay.interval = updateInterval;
+   m_commandDelay.interval = 1.0f / 60.0f;
 }
 
 void Bot::resetPathSearchType () {

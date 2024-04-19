@@ -29,7 +29,7 @@ CR_DECLARE_SCOPED_ENUM (StorageOption,
 CR_DECLARE_SCOPED_ENUM (StorageVersion,
    Graph = 2,
    Practice = 2,
-   Vistable = 3,
+   Vistable = 4,
    Matrix = 2,
    Podbot = 7
 )
