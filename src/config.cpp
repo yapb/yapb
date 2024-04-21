@@ -293,7 +293,7 @@ void BotConfig::loadChatterConfig () {
          { "Chatter_DefusingC4", Chatter::DefusingBomb, 3.0f },
          { "Chatter_FoundC4", Chatter::FoundC4, 5.5f },
          { "Chatter_ScaredEmotion", Chatter::ScaredEmotion, 6.1f },
-         { "Chatter_HeardEnemy", Chatter::ScaredEmotion, 12.8f },
+         { "Chatter_HeardEnemy", Chatter::HeardTheEnemy, 12.8f },
          { "Chatter_SniperWarning", Chatter::SniperWarning, 14.3f },
          { "Chatter_SniperKilled", Chatter::SniperKilled, 12.1f },
          { "Chatter_OneEnemyLeft", Chatter::OneEnemyLeft, 12.5f },
