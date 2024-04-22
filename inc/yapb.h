@@ -646,6 +646,8 @@ public:
    bool m_ignoreBuyDelay {}; // when reaching buyzone in the middle of the round don't do pauses
    bool m_inBombZone {}; // bot in the bomb zone or not
    bool m_inBuyZone {}; // bot currently in buy zone
+   bool m_inEscapeZone {}; // bot currently in escape zone
+   bool m_inRescueZone {}; // bot currently in rescue zone
    bool m_inVIPZone {}; // bot in the vip safety zone
    bool m_buyingFinished {}; // done with buying
    bool m_buyPending {}; // bot buy is pending

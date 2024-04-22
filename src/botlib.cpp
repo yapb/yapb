@@ -2185,6 +2185,14 @@ void Bot::startTask (Task id, float desire, int data, float time, bool resume) {
          }
       }
 
+      if (rg.chance (75) && tid == Task::Camp && m_team == Team::CT && m_inEscapeZone) {
+         pushChatterMessage (Chatter::GoingToGuardEscapeZone);
+      }
+
+      if (rg.chance (75) && tid == Task::Camp && m_team == Team::Terrorist && m_inRescueZone) {
+         pushChatterMessage (Chatter::GoingToGuardRescueZone);
+      }
+
       if (rg.chance (75) && tid == Task::Camp && m_team == Team::Terrorist && m_inVIPZone) {
          pushChatterMessage (Chatter::GoingToGuardVIPSafety);
       }
@@ -2654,6 +2662,9 @@ void Bot::checkRadioQueue () {
          if (rg.chance (40)) {
             if (bots.isBombPlanted () && m_team == Team::Terrorist) {
                pushChatterMessage (Chatter::GuardingDroppedC4);
+            }
+            else if (m_inEscapeZone && m_team == Team::CT) {
+               pushChatterMessage (Chatter::GuardingEscapeZone);
             }
             else if (m_inVIPZone && m_team == Team::Terrorist) {
                pushChatterMessage (Chatter::GuardingVIPSafety);

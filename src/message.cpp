@@ -255,6 +255,12 @@ void MessageDispatcher::netMsgStatusIcon () {
       // try to equip in buyzone
       m_bot->enteredBuyZone (BuyState::PrimaryWeapon);
    }
+   else if (cached & StatusIconCache::Escape) {
+      m_bot->m_inEscapeZone = (m_args[enabled].long_ != 0);
+   }
+   else if (cached & StatusIconCache::Rescue) {
+      m_bot->m_inRescueZone = (m_args[enabled].long_ != 0);
+   }
    else if (cached & StatusIconCache::VipSafety) {
       m_bot->m_inVIPZone = (m_args[enabled].long_ != 0);
    }
@@ -491,6 +497,8 @@ MessageDispatcher::MessageDispatcher () {
 
    // register status icon cache
    m_statusIconCache["buyzone"] = StatusIconCache::NeedHandle | StatusIconCache::BuyZone;
+   m_statusIconCache["escape"] = StatusIconCache::NeedHandle | StatusIconCache::Escape;
+   m_statusIconCache["rescue"] = StatusIconCache::NeedHandle | StatusIconCache::Rescue;
    m_statusIconCache["vipsafety"] = StatusIconCache::NeedHandle | StatusIconCache::VipSafety;
    m_statusIconCache["c4"] = StatusIconCache::NeedHandle | StatusIconCache::C4;
 
