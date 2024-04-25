@@ -75,7 +75,7 @@ void Bot::checkDarkness () {
    const auto skyColor = illum.getSkyColor ();
    const auto flashOn = (pev->effects & EF_DIMLIGHT);
 
-   if (mp_flashlight.bool_ () && !m_hasNVG) {
+   if (mp_flashlight && !m_hasNVG) {
       const auto tid = getCurrentTaskId ();
 
       if (!flashOn &&
@@ -105,7 +105,7 @@ void Bot::checkDarkness () {
          issueCommand ("nightvision");
       }
    }
-   m_checkDarkTime = game.time () + rg.get (2.0f, 4.0f);
+   m_checkDarkTime = game.time () + rg (2.0f, 4.0f);
 }
 
 void Bot::changePitch (float speed) {
@@ -203,7 +203,7 @@ void Bot::updateLookAngles () {
    if (m_difficulty == Difficulty::Expert
        && (m_aimFlags & AimFlags::Enemy)
        && (m_wantsToFire || usesSniper ())
-       && cv_whose_your_daddy.bool_ ()) {
+       && cv_whose_your_daddy) {
 
       pev->v_angle = direction;
       pev->v_angle.clampAngles ();
@@ -311,10 +311,10 @@ void Bot::updateLookAnglesNewbie (const Vector &direction, float delta) {
             randomize = randomization;
          }
          // randomize targeted location bit (slightly towards the ground)
-         m_randomizedIdealAngles = m_idealAngles + Vector (rg.get (-randomize.x * 0.5f, randomize.x * 1.5f), rg.get (-randomize.y, randomize.y), 0.0f);
+         m_randomizedIdealAngles = m_idealAngles + Vector (rg (-randomize.x * 0.5f, randomize.x * 1.5f), rg (-randomize.y, randomize.y), 0.0f);
 
          // set next time to do this
-         m_randomizeAnglesTime = game.time () + rg.get (0.4f, offsetDelay);
+         m_randomizeAnglesTime = game.time () + rg (0.4f, offsetDelay);
       }
       float stiffnessMultiplier = noTargetRatio;
 
@@ -425,6 +425,16 @@ void Bot::setAimDirection () {
          flags &= ~(AimFlags::LastEnemy | AimFlags::PredictPath);
          m_canChooseAimDirection = false;
       }
+
+      // don't switch view right away after loosing focus with current enemy 
+      if ((m_shootTime + 1.5f > game.time () || m_seeEnemyTime + 1.5 > game.time ())
+          && m_forgetLastVictimTimer.elapsed ()
+          && !m_lastEnemyOrigin.empty ()
+          && util.isAlive (m_lastEnemy)
+          && game.isNullEntity (m_enemy)) {
+
+         flags |= AimFlags::LastEnemy;
+      }
    }
 
    if (flags & AimFlags::Override) {
@@ -500,14 +510,14 @@ void Bot::setAimDirection () {
             predictNode = kInvalidNodeIndex;
             pathLength = kInfiniteDistanceLong;
          }
-         return graph.exists (predictNode) && pathLength < cv_max_nodes_for_predict.int_ ();
+         return graph.exists (predictNode) && pathLength < cv_max_nodes_for_predict.as <int> ();
       };
 
       if (changePredictedEnemy) {
          if (isPredictedIndexApplicable ()) {
             m_lookAtPredict = graph[predictNode].origin;
 
-            m_timeNextTracking = game.time () + rg.get (0.5f, 1.0f);
+            m_timeNextTracking = game.time () + rg (0.5f, 1.0f);
             m_trackingEdict = m_lastEnemy;
          }
          else {

@@ -18,7 +18,7 @@ ConVar cv_graph_analyze_mark_goals_on_finish ("graph_analyze_mark_goals_on_finis
 
 void GraphAnalyze::start () {
    // start analyzer in few seconds after level initialized
-   if (cv_graph_analyze_auto_start.bool_ ()) {
+   if (cv_graph_analyze_auto_start) {
       m_updateInterval = game.time () + 3.0f;
       m_basicsCreated = false;
 
@@ -79,7 +79,7 @@ void GraphAnalyze::update () {
       setUpdateInterval ();
 
       auto pos = graph[i].origin;
-      const auto range = cv_graph_analyze_distance.float_ ();
+      const auto range = cv_graph_analyze_distance.as <float> ();
 
       for (int dir = 1; dir < kMaxNodeLinks; ++dir) {
          switch (dir) {
@@ -149,7 +149,7 @@ void GraphAnalyze::finish () {
    ctrl.msg ("Completed map analysis.");
 
    // auto save bots graph
-   if (cv_graph_analyze_auto_save.bool_ ()) {
+   if (cv_graph_analyze_auto_save) {
       if (!graph.saveGraphData ()) {
          ctrl.msg ("Can't save analyzed graph. Internal error.");
          return;
@@ -171,7 +171,7 @@ void GraphAnalyze::optimize () {
       return;
    }
 
-   if (!cv_graph_analyze_optimize_nodes_on_finish.bool_ ()) {
+   if (!cv_graph_analyze_optimize_nodes_on_finish) {
       return;
    }
    cleanup ();
@@ -220,7 +220,7 @@ void GraphAnalyze::optimize () {
    }
 
    // clear the useless connections
-   if (cv_graph_analyze_clean_paths_on_finish.bool_ ()) {
+   if (cv_graph_analyze_clean_paths_on_finish) {
       for (auto i = 0; i < graph.length (); ++i) {
          graph.clearConnections (i);
       }
@@ -352,13 +352,13 @@ void GraphAnalyze::flood (const Vector &pos, const Vector &next, float range) {
 void GraphAnalyze::setUpdateInterval () {
    const auto frametime = globals->frametime;
 
-   if ((cv_graph_analyze_fps.float_ () + frametime) <= 1.0f / frametime) {
+   if ((cv_graph_analyze_fps.as <float> () + frametime) <= 1.0f / frametime) {
       m_updateInterval = game.time () + frametime * 0.06f;
    }
 }
 
 void GraphAnalyze::markGoals () {
-   if (!cv_graph_analyze_mark_goals_on_finish.bool_ ()) {
+   if (!cv_graph_analyze_mark_goals_on_finish) {
       return;
    }
 

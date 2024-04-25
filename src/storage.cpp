@@ -16,8 +16,8 @@ template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *
    extern ConVar cv_debug, cv_graph_url;
 
    // graphs can be downloaded...
-   const auto isGraph = !!(type.option & StorageOption::Graph);
-   const auto isDebug = cv_debug.bool_ ();
+   const bool isGraph = !!(type.option & StorageOption::Graph);
+   const bool isDebug = cv_debug;
 
    MemFile file (filename); // open the file
    data.clear ();
@@ -46,7 +46,7 @@ template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *
       String lowercaseMapName = game.getMapName ();
       lowercaseMapName = lowercaseMapName.lowercase ();
 
-      auto downloadAddress = cv_graph_url.str ();
+      auto downloadAddress = cv_graph_url.as <StringRef> ();
 
       auto toDownload = buildPath (storageToBotFile (type.option), false);
       auto fromDownload = strings.format ("%s://%s/graph/%s.graph", product.httpScheme, downloadAddress, lowercaseMapName);
@@ -272,7 +272,7 @@ template <typename U> bool BotStorage::save (const SmallArray <U> &data, ExtenHe
       extern ConVar cv_debug;
 
       // notify only about graph
-      if (isGraph || cv_debug.bool_ ()) {
+      if (isGraph || cv_debug) {
          ctrl.msg ("Successfully saved Bots %s data.", type.name);
       }
    }

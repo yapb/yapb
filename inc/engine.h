@@ -188,7 +188,7 @@ public:
    void prepareBotArgs (edict_t *ent, String str);
 
    // adds cvar to registration stack
-   void addNewCvar (const char *name, const char *value, const char *info, bool bounded, float min, float max, int32_t varType, bool missingAction, const char *regval, class ConVar *self);
+   void pushConVar (StringRef name, StringRef value, StringRef info, bool bounded, float min, float max, int32_t varType, bool missingAction, StringRef regval, class ConVar *self);
 
    // check the cvar bounds
    void checkCvarsBounds ();
@@ -470,18 +470,18 @@ public:
    ~ConVar () = default;
 
 public:
-   ConVar (const char *name, const char *initval, int32_t type = Var::NoServer, bool regMissing = false, const char *regVal = nullptr) : ptr (nullptr) {
+   ConVar (StringRef name, StringRef initval, int32_t type = Var::NoServer, bool regMissing = false, StringRef regVal = nullptr) : ptr (nullptr) {
       setPrefix (name, type);
-      Game::instance ().addNewCvar (name_.chars (), initval, "", false, 0.0f, 0.0f, type, regMissing, regVal, this);
+      Game::instance ().pushConVar (name_.chars (), initval, "", false, 0.0f, 0.0f, type, regMissing, regVal, this);
    }
 
-   ConVar (const char *name, const char *initval, const char *info, bool bounded = true, float min = 0.0f, float max = 1.0f, int32_t type = Var::NoServer, bool regMissing = false, const char *regVal = nullptr) : ptr (nullptr) {
+   ConVar (StringRef name, StringRef initval, StringRef info, bool bounded = true, float min = 0.0f, float max = 1.0f, int32_t type = Var::NoServer, bool regMissing = false, const char *regVal = nullptr) : ptr (nullptr) {
       setPrefix (name, type);
-      Game::instance ().addNewCvar (name_.chars (), initval, info, bounded, min, max, type, regMissing, regVal, this);
+      Game::instance ().pushConVar (name_.chars (), initval, info, bounded, min, max, type, regMissing, regVal, this);
    }
 
 public:
-   template <typename U> constexpr U get () const {
+   template <typename U> constexpr U as () const {
       if constexpr (cr::is_same <U, float>::value) {
          return ptr->value;
       }
@@ -498,34 +498,22 @@ public:
 
 public:
    operator bool () const {
-      return bool_ ();
+      return as <bool> ();
    }
 
    operator float () const {
-      return float_ ();
+      return as <float> ();
+   }
+
+   operator int () const {
+      return as <int> ();
    }
 
    operator StringRef () {
-      return str ();
+      return as <StringRef> ();
    }
 
 public:
-   bool bool_ () const {
-      return get <bool> ();
-   }
-
-   int int_ () const {
-      return get <int> ();
-   }
-
-   float float_ () const {
-      return get <float> ();
-   }
-
-   StringRef str () const {
-      return get <StringRef> ();
-   }
-
    StringRef name () const {
       return ptr->name;
    }
@@ -546,7 +534,7 @@ public:
    void revert ();
 
    // set the cvar prefix if needed
-   void setPrefix (const char *name, int32_t type);
+   void setPrefix (StringRef name, int32_t type);
 };
 
 class MessageWriter final {

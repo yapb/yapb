@@ -61,7 +61,7 @@ int32_t ServerQueryHook::sendTo (int socket, const void *message, size_t length,
 
 void ServerQueryHook::init () {
    // if previously requested to disable?
-   if (!cv_enable_query_hook.bool_ ()) {
+   if (!cv_enable_query_hook) {
       if (m_sendToDetour.detoured ()) {
          disable ();
       }

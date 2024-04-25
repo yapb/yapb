@@ -193,25 +193,25 @@ public:
       m_printQueueFlushTimestamp = 0.0f;
    }
 
-   int intValue (size_t arg) const {
-      if (!hasArg (arg)) {
-         return 0;
+   template <typename U> constexpr U arg (const size_t index) const {
+      if constexpr (cr::is_same <U, float>::value) {
+         if (!hasArg (index)) {
+            return 0.0f;
+         }
+         return m_args[index].as <float> ();
       }
-      return m_args[arg].int_ ();
-   }
-
-   float floatValue (size_t arg) const {
-      if (!hasArg (arg)) {
-         return 0.0f;
+      else if constexpr (cr::is_same <U, int>::value) {
+         if (!hasArg (index)) {
+            return 0;
+         }
+         return m_args[index].as <int> ();
       }
-      return m_args[arg].float_ ();
-   }
-
-   StringRef strValue (size_t arg) {
-      if (!hasArg (arg)) {
-         return "";
+      else if constexpr (cr::is_same <U, StringRef>::value) {
+         if (!hasArg (index)) {
+            return "";
+         }
+         return m_args[index];
       }
-      return m_args[arg];
    }
 
    bool hasArg (size_t arg) const {

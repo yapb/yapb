@@ -41,7 +41,7 @@ void GraphVistable::rebuild () {
       sourceCrouch.z += -18.0f + 12.0f;
       sourceStand.z += 28.0f;
    }
-   auto end = m_sliceIndex + rg.get (250, 400);
+   auto end = m_sliceIndex + rg (250, 400);
 
    if (end > m_length) {
       end = m_length;
@@ -122,7 +122,7 @@ void GraphVistable::rebuild () {
       m_curIndex++;
    }
    else {
-      m_sliceIndex += rg.get (250, 400);
+      m_sliceIndex += rg (250, 400);
    }
 
    // notify host about rebuilding

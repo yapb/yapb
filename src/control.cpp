@@ -25,19 +25,19 @@ int BotControl::cmdAddBot () {
    m_args.resize (max);
 
    // if team is specified, modify args to set team
-   if (strValue (alias).endsWith ("_ct")) {
+   if (arg <StringRef> (alias).endsWith ("_ct")) {
       m_args.set (team, "2");
    }
-   else if (strValue (alias).endsWith ("_t")) {
+   else if (arg <StringRef> (alias).endsWith ("_t")) {
       m_args.set (team, "1");
    }
 
    // if high-skilled bot is requested set personality to rusher and max-out difficulty
-   if (strValue (alias).contains ("addhs")) {
+   if (arg <StringRef> (alias).contains ("addhs")) {
       m_args.set (difficulty, "4");
       m_args.set (personality, "1");
    }
-   bots.addbot (strValue (name), strValue (difficulty), strValue (personality), strValue (team), strValue (model), true);
+   bots.addbot (arg <StringRef> (name), arg <StringRef> (difficulty), arg <StringRef> (personality), arg <StringRef> (team), arg <StringRef> (model), true);
 
    return BotCommandResult::Handled;
 }
@@ -46,10 +46,10 @@ int BotControl::cmdKickBot () {
    enum args { alias = 1, team };
 
    // if team is specified, kick from specified tram
-   if (strValue (alias).endsWith ("_ct") || intValue (team) == 2 || strValue (team) == "ct") {
+   if (arg <StringRef> (alias).endsWith ("_ct") || arg <int> (team) == 2 || arg <StringRef> (team) == "ct") {
       bots.kickFromTeam (Team::CT);
    }
-   else if (strValue (alias).endsWith ("_t") || intValue (team) == 1 || strValue (team) == "t") {
+   else if (arg <StringRef> (alias).endsWith ("_t") || arg <int> (team) == 1 || arg <StringRef> (team) == "t") {
       bots.kickFromTeam (Team::Terrorist);
    }
    else {
@@ -62,13 +62,13 @@ int BotControl::cmdKickBots () {
    enum args { alias = 1, instant, team };
 
    // check if we're need to remove bots instantly
-   const auto kickInstant = strValue (instant) == "instant";
+   const auto kickInstant = arg <StringRef> (instant) == "instant";
 
    // if team is specified, kick from specified tram
-   if (strValue (alias).endsWith ("_ct") || intValue (team) == 2 || strValue (team) == "ct") {
+   if (arg <StringRef> (alias).endsWith ("_ct") || arg <int> (team) == 2 || arg <StringRef> (team) == "ct") {
       bots.kickFromTeam (Team::CT, true);
    }
-   else if (strValue (alias).endsWith ("_t") || intValue (team) == 1 || strValue (team) == "t") {
+   else if (arg <StringRef> (alias).endsWith ("_t") || arg <int> (team) == 1 || arg <StringRef> (team) == "t") {
       bots.kickFromTeam (Team::Terrorist, true);
    }
    else {
@@ -81,13 +81,13 @@ int BotControl::cmdKillBots () {
    enum args { alias = 1, team, silent, max };
 
    // do not issue any messages
-   bool silentKill = hasArg (silent) && strValue (silent).startsWith ("si");
+   bool silentKill = hasArg (silent) && arg <StringRef> (silent).startsWith ("si");
 
    // if team is specified, kick from specified tram
-   if (strValue (alias).endsWith ("_ct") || intValue (team) == 2 || strValue (team) == "ct") {
+   if (arg <StringRef> (alias).endsWith ("_ct") || arg <int> (team) == 2 || arg <StringRef> (team) == "ct") {
       bots.killAllBots (Team::CT, silentKill);
    }
-   else if (strValue (alias).endsWith ("_t") || intValue (team) == 1 || strValue (team) == "t") {
+   else if (arg <StringRef> (alias).endsWith ("_t") || arg <int> (team) == 1 || arg <StringRef> (team) == "t") {
       bots.killAllBots (Team::Terrorist, silentKill);
    }
    else {
@@ -102,7 +102,10 @@ int BotControl::cmdFill () {
    if (!hasArg (team)) {
       return BotCommandResult::BadFormat;
    }
-   bots.serverFill (intValue (team), hasArg (personality) ? intValue (personality) : -1, hasArg (difficulty) ? intValue (difficulty) : -1, hasArg (count) ? intValue (count) - 1 : -1);
+   bots.serverFill (arg <int> (team),
+                    hasArg (personality) ? arg <int> (personality) : -1,
+                    hasArg (difficulty) ? arg <int> (difficulty) : -1,
+                    hasArg (count) ? arg <int> (count) - 1 : -1);
 
    return BotCommandResult::Handled;
 }
@@ -113,7 +116,7 @@ int BotControl::cmdVote () {
    if (!hasArg (mapid)) {
       return BotCommandResult::BadFormat;
    }
-   const int mapID = intValue (mapid);
+   const int mapID = arg <int> (mapid);
 
    // loop through all players
    for (const auto &bot : bots) {
@@ -139,7 +142,7 @@ int BotControl::cmdWeaponMode () {
       { "sniper", 6 },
       { "standard", 7 }
    };
-   auto mode = strValue (type);
+   auto mode = arg <StringRef> (type);
 
    // check if selected mode exists
    if (!modes.exists (mode)) {
@@ -180,7 +183,7 @@ int BotControl::cmdMenu () {
    // reset the current menu
    closeMenu ();
 
-   if (strValue (cmd) == "cmd" && util.isAlive (m_ent)) {
+   if (arg <StringRef> (cmd) == "cmd" && util.isAlive (m_ent)) {
       showMenu (Menu::Commands);
    }
    else {
@@ -199,7 +202,7 @@ int BotControl::cmdList () {
 int BotControl::cmdCvars () {
    enum args { alias = 1, pattern };
 
-   auto match = strValue (pattern);
+   auto match = arg <StringRef> (pattern);
 
    // revert all the cvars to their default values
    if (match == "defaults") {
@@ -257,7 +260,7 @@ int BotControl::cmdCvars () {
       if (isSave && !cfg) {
          continue;
       }
-      auto val = cvar.self->str ();
+      auto val = cvar.self->as <StringRef> ();
 
       // float value ?
       bool isFloat = !val.empty () && val.find (".") != StringRef::InvalidIndex;
@@ -276,20 +279,20 @@ int BotControl::cmdCvars () {
             }
          }
          else {
-            cfg.puts ("// Default: \"%s\"\n", cvar.self->str ());
+            cfg.puts ("// Default: \"%s\"\n", cvar.self->as <StringRef> ());
          }
          cfg.puts ("// \n");
 
          if (cvar.bounded) {
             if (isFloat) {
-               cfg.puts ("%s \"%.1f\"\n", cvar.reg.name, cvar.self->float_ ());
+               cfg.puts ("%s \"%.1f\"\n", cvar.reg.name, cvar.self->as <float> ());
             }
             else {
-               cfg.puts ("%s \"%i\"\n", cvar.reg.name, cvar.self->int_ ());
+               cfg.puts ("%s \"%i\"\n", cvar.reg.name, cvar.self->as <int> ());
             }
          }
          else {
-            cfg.puts ("%s \"%s\"\n", cvar.reg.name, cvar.self->str ());
+            cfg.puts ("%s \"%s\"\n", cvar.reg.name, cvar.self->as <StringRef> ());
          }
          cfg.puts ("\n");
       }
@@ -327,7 +330,7 @@ int BotControl::cmdExec () {
    if (!hasArg (target) || !hasArg (command)) {
       return BotCommandResult::BadFormat;
    }
-   const auto userId = intValue (target);
+   const auto userId = arg <int> (target);
 
    // find our little target
    auto bot = bots.findBotByIndex (userId);
@@ -337,7 +340,7 @@ int BotControl::cmdExec () {
       msg ("Bot with #%d not found or not a bot.", userId);
       return BotCommandResult::Handled;
    }
-   bot->issueCommand (strValue (command).chars ());
+   bot->issueCommand (arg <StringRef> (command).chars ());
 
    return BotCommandResult::Handled;
 }
@@ -366,7 +369,7 @@ int BotControl::cmdNode () {
    };
 
    // graph editor supported only with editor
-   if (game.isDedicated () && !graph.hasEditor () && !isAllowedOnDedicatedServer (strValue (cmd))) {
+   if (game.isDedicated () && !graph.hasEditor () && !isAllowedOnDedicatedServer (arg <StringRef> (cmd))) {
       msg ("Unable to use graph edit commands without setting graph editor player. Please use \"graph acquire_editor\" to acquire rights for graph editing.");
       return BotCommandResult::Handled;
    }
@@ -426,8 +429,8 @@ int BotControl::cmdNode () {
          addGraphCmd ("release_editor", "release_editor [noarguments]", "Releases graph editing rights.", &BotControl::cmdNodeReleaseEditor);
       }
    }
-   if (commands.exists (strValue (cmd))) {
-      const auto &item = commands[strValue (cmd)];
+   if (commands.exists (arg <StringRef> (cmd))) {
+      const auto &item = commands[arg <StringRef> (cmd)];
 
       // graph have only bad format return status
       int status = (this->*item.handler) ();
@@ -439,8 +442,8 @@ int BotControl::cmdNode () {
       }
    }
    else {
-      if (strValue (cmd) == "help" && hasArg (cmd2) && commands.exists (strValue (cmd2))) {
-         auto &item = commands[strValue (cmd2)];
+      if (arg <StringRef> (cmd) == "help" && hasArg (cmd2) && commands.exists (arg <StringRef> (cmd2))) {
+         auto &item = commands[arg <StringRef> (cmd2)];
 
          msg ("Command: \"%s %s %s\"", m_args[root], m_args[alias], item.name);
          msg ("Format: %s", item.format);
@@ -461,13 +464,13 @@ int BotControl::cmdNodeOn () {
    enum args { alias = 1, cmd, option };
 
    // enable various features of editor
-   if (strValue (option).empty () || strValue (option) == "display" || strValue (option) == "models") {
+   if (arg <StringRef> (option).empty () || arg <StringRef> (option) == "display" || arg <StringRef> (option) == "models") {
       graph.setEditFlag (GraphEdit::On);
       enableDrawModels (true);
 
       msg ("Graph editor has been enabled.");
    }
-   else if (strValue (option) == "noclip") {
+   else if (arg <StringRef> (option) == "noclip") {
       m_ent->v.movetype = MOVETYPE_NOCLIP;
 
       if (graph.hasEditFlag (GraphEdit::On)) {
@@ -482,7 +485,7 @@ int BotControl::cmdNodeOn () {
          msg ("Graph editor has been enabled with noclip mode.");
       }
    }
-   else if (strValue (option) == "auto") {
+   else if (arg <StringRef> (option) == "auto") {
       if (graph.hasEditFlag (GraphEdit::On)) {
          graph.setEditFlag (GraphEdit::Auto);
 
@@ -497,9 +500,9 @@ int BotControl::cmdNodeOn () {
    }
 
    if (graph.hasEditFlag (GraphEdit::On)) {
-      m_graphSaveVarValues.roundtime = mp_roundtime.float_ ();
-      m_graphSaveVarValues.freezetime = mp_freezetime.float_ ();
-      m_graphSaveVarValues.timelimit = mp_timelimit.float_ ();
+      m_graphSaveVarValues.roundtime = mp_roundtime.as <float> ();
+      m_graphSaveVarValues.freezetime = mp_freezetime.as <float> ();
+      m_graphSaveVarValues.timelimit = mp_timelimit.as <float> ();
 
       mp_roundtime.set (9);
       mp_freezetime.set (0);
@@ -512,7 +515,7 @@ int BotControl::cmdNodeOff () {
    enum args { graph_cmd = 1, cmd, option };
 
    // enable various features of editor
-   if (strValue (option).empty () || strValue (option) == "display") {
+   if (arg <StringRef> (option).empty () || arg <StringRef> (option) == "display") {
       graph.clearEditFlag (GraphEdit::On | GraphEdit::Auto | GraphEdit::Noclip);
       enableDrawModels (false);
 
@@ -523,18 +526,18 @@ int BotControl::cmdNodeOff () {
 
       msg ("Graph editor has been disabled.");
    }
-   else if (strValue (option) == "models") {
+   else if (arg <StringRef> (option) == "models") {
       enableDrawModels (false);
 
       msg ("Graph editor has disabled spawn points highlighting.");
    }
-   else if (strValue (option) == "noclip") {
+   else if (arg <StringRef> (option) == "noclip") {
       m_ent->v.movetype = MOVETYPE_WALK;
       graph.clearEditFlag (GraphEdit::Noclip);
 
       msg ("Graph editor has disabled noclip mode.");
    }
-   else if (strValue (option) == "auto") {
+   else if (arg <StringRef> (option) == "auto") {
       graph.clearEditFlag (GraphEdit::Auto);
       msg ("Graph editor has disabled auto add node mode.");
    }
@@ -567,12 +570,12 @@ int BotControl::cmdNodeSave () {
    enum args { graph_cmd = 1, cmd, option };
 
    // if no check is set save anyway
-   if (strValue (option) == "nocheck") {
+   if (arg <StringRef> (option) == "nocheck") {
       graph.saveGraphData ();
 
       msg ("All nodes has been saved and written to disk (IGNORING QUALITY CONTROL).");
    }
-   else if (strValue (option) == "old" || strValue (option) == "oldformat") {
+   else if (arg <StringRef> (option) == "old" || arg <StringRef> (option) == "oldformat") {
       if (graph.length () >= 1024) {
          msg ("Unable to save POD-Bot Format waypoint file. Number of nodes exceeds 1024.");
 
@@ -611,7 +614,7 @@ int BotControl::cmdNodeErase () {
    enum args { graph_cmd = 1, cmd, iamsure };
 
    // prevent accidents when graph are deleted unintentionally
-   if (strValue (iamsure) == "iamsure") {
+   if (arg <StringRef> (iamsure) == "iamsure") {
       bstor.unlinkFromDisk ();
    }
    else {
@@ -627,11 +630,11 @@ int BotControl::cmdNodeDelete () {
    graph.setEditFlag (GraphEdit::On);
 
    // if "nearest" or nothing passed delete nearest, else delete by index
-   if (strValue (nearest).empty () || strValue (nearest) == "nearest") {
+   if (arg <StringRef> (nearest).empty () || arg <StringRef> (nearest) == "nearest") {
       graph.erase (kInvalidNodeIndex);
    }
    else {
-      int index = intValue (nearest);
+      const auto index = arg <int> (nearest);
 
       // check for existence
       if (graph.exists (index)) {
@@ -662,11 +665,11 @@ int BotControl::cmdNodeCache () {
    graph.setEditFlag (GraphEdit::On);
 
    // if "nearest" or nothing passed delete nearest, else delete by index
-   if (strValue (nearest).empty () || strValue (nearest) == "nearest") {
+   if (arg <StringRef> (nearest).empty () || arg <StringRef> (nearest) == "nearest") {
       graph.cachePoint (kInvalidNodeIndex);
    }
    else {
-      const int index = intValue (nearest);
+      const int index = arg <int> (nearest);
 
       // check for existence
       if (graph.exists (index)) {
@@ -683,7 +686,7 @@ int BotControl::cmdNodeClean () {
    graph.setEditFlag (GraphEdit::On);
 
    // if "all" passed clean up all the paths
-   if (strValue (option) == "all") {
+   if (arg <StringRef> (option) == "all") {
       int removed = 0;
 
       for (auto i = 0; i < graph.length (); ++i) {
@@ -691,13 +694,13 @@ int BotControl::cmdNodeClean () {
       }
       msg ("Done. Processed %d nodes. %d useless paths was cleared.", graph.length (), removed);
    }
-   else if (strValue (option).empty () || strValue (option) == "nearest") {
+   else if (arg <StringRef> (option).empty () || arg <StringRef> (option) == "nearest") {
       int removed = graph.clearConnections (graph.getEditorNearest ());
 
       msg ("Done. Processed node %d. %d useless paths was cleared.", graph.getEditorNearest (), removed);
    }
    else {
-      const int index = intValue (option);
+      const int index = arg <int> (option);
 
       // check for existence
       if (graph.exists (index)) {
@@ -721,13 +724,13 @@ int BotControl::cmdNodeSetRadius () {
    }
    int radiusIndex = kInvalidNodeIndex;
 
-   if (strValue (index).empty () || strValue (index) == "nearest") {
+   if (arg <StringRef> (index).empty () || arg <StringRef> (index) == "nearest") {
       radiusIndex = graph.getEditorNearest ();
    }
    else {
-      radiusIndex = intValue (index);
+      radiusIndex = arg <int> (index);
    }
-   graph.setRadius (radiusIndex, strValue (radius).float_ ());
+   graph.setRadius (radiusIndex, arg <StringRef> (radius).as <float> ());
 
    return BotCommandResult::Handled;
 }
@@ -749,7 +752,7 @@ int BotControl::cmdNodeTeleport () {
    if (!hasArg (teleport_index)) {
       return BotCommandResult::BadFormat;
    }
-   int index = intValue (teleport_index);
+   int index = arg <int> (teleport_index);
 
    // check for existence
    if (graph.exists (index)) {
@@ -773,16 +776,16 @@ int BotControl::cmdNodePathCreate () {
    graph.setEditFlag (GraphEdit::On);
 
    // choose the direction for path creation
-   if (strValue (cmd).endsWith ("_jump")) {
+   if (arg <StringRef> (cmd).endsWith ("_jump")) {
       graph.pathCreate (PathConnection::Jumping);
    }
-   else if (strValue (cmd).endsWith ("_both")) {
+   else if (arg <StringRef> (cmd).endsWith ("_both")) {
       graph.pathCreate (PathConnection::Bidirectional);
    }
-   else if (strValue (cmd).endsWith ("_in")) {
+   else if (arg <StringRef> (cmd).endsWith ("_in")) {
       graph.pathCreate (PathConnection::Incoming);
    }
-   else if (strValue (cmd).endsWith ("_out")) {
+   else if (arg <StringRef> (cmd).endsWith ("_out")) {
       graph.pathCreate (PathConnection::Outgoing);
    }
    else {
@@ -819,7 +822,7 @@ int BotControl::cmdNodePathCleanAll () {
    auto requestedNode = kInvalidNodeIndex;
 
    if (hasArg (index)) {
-      requestedNode = intValue (index);
+      requestedNode = arg <int> (index);
    }
    graph.resetPath (requestedNode);
 
@@ -871,7 +874,7 @@ int BotControl::cmdNodeUpload () {
       msg ("Sorry, unable to upload graph file that contains errors. Please type \"graph check\" to verify graph consistency.");
       return BotCommandResult::Handled;
    }
-   String uploadUrlAddress = cv_graph_url_upload.str ();
+   String uploadUrlAddress = cv_graph_url_upload.as <StringRef> ();
 
    // only allow to upload to non-https endpoint
    if (uploadUrlAddress.startsWith ("https")) {
@@ -930,7 +933,7 @@ int BotControl::cmdNodeIterateCamp () {
    graph.setEditFlag (GraphEdit::On);
 
    // get the option describing operation
-   auto op = strValue (option);
+   auto op = arg <StringRef> (option);
 
    if (op != "begin" && op != "end" && op != "next") {
       return BotCommandResult::BadFormat;
@@ -998,7 +1001,7 @@ int BotControl::cmdNodeAdjustHeight () {
    if (!hasArg (offset)) {
       return BotCommandResult::BadFormat;
    }
-   auto heightOffset = floatValue (offset);
+   auto heightOffset = arg <float> (offset);
 
    // adjust the height for all the nodes (negative values possible)
    for (auto &path : graph) {
@@ -1026,7 +1029,7 @@ int BotControl::menuMain (int item) {
       break;
 
    case 4:
-      if (game.is (GameFlags::ReGameDLL) && !cv_bots_kill_on_endround.bool_ ()) {
+      if (game.is (GameFlags::ReGameDLL) && !cv_bots_kill_on_endround) {
          game.serverCommand ("endround");
       }
       else {
@@ -1069,7 +1072,7 @@ int BotControl::menuFeatures (int item) {
       break;
 
    case 4:
-      cv_debug.set (cv_debug.int_ () ^ 1);
+      cv_debug.set (cv_debug.as <int> () ^ 1);
 
       showMenu (Menu::Features);
       break;
@@ -1549,8 +1552,8 @@ int BotControl::menuGraphDebug (int item) {
    switch (item) {
    case 1:
       cv_debug_goal.set (graph.getEditorNearest ());
-      if (cv_debug_goal.int_ () != kInvalidNodeIndex) {
-         msg ("Debug goal is set to node %d.", cv_debug_goal.int_ ());
+      if (cv_debug_goal.as <int> () != kInvalidNodeIndex) {
+         msg ("Debug goal is set to node %d.", cv_debug_goal.as <int> ());
       }
       else {
          msg ("Cannot find the node. Debug goal is disabled.");
@@ -1560,8 +1563,8 @@ int BotControl::menuGraphDebug (int item) {
 
    case 2:
       cv_debug_goal.set (graph.getFacingIndex ());
-      if (cv_debug_goal.int_ () != kInvalidNodeIndex) {
-         msg ("Debug goal is set to node %d.", cv_debug_goal.int_ ());
+      if (cv_debug_goal.as <int> () != kInvalidNodeIndex) {
+         msg ("Debug goal is set to node %d.", cv_debug_goal.as <int> ());
       }
       else {
          msg ("Cannot find the node. Debug goal is disabled.");
@@ -1871,7 +1874,7 @@ bool BotControl::executeCommands () {
    String cmd;
 
    // give some help
-   if (hasArg (1) && strValue (1) == "help") {
+   if (hasArg (1) && arg <StringRef> (1) == "help") {
       const auto hasSecondArg = hasArg (2);
 
       for (auto &item : m_cmds) {
@@ -1879,7 +1882,7 @@ bool BotControl::executeCommands () {
             cmd = item.name.split ("/").first ();
          }
 
-         if (!hasSecondArg || aliasMatch (item.name, strValue (2), cmd)) {
+         if (!hasSecondArg || aliasMatch (item.name, arg <StringRef> (2), cmd)) {
             msg ("Command: \"%s %s\"", prefix, cmd);
             msg ("Format: %s", item.format);
             msg ("Help: %s", conf.translate (item.help));
@@ -1903,7 +1906,7 @@ bool BotControl::executeCommands () {
          return true;
       }
       else {
-         msg ("No help found for \"%s\"", strValue (2));
+         msg ("No help found for \"%s\"", arg <StringRef> (2));
       }
       return true;
    }
@@ -1961,14 +1964,14 @@ bool BotControl::executeMenus () {
    const auto &issuer = util.getClient (game.indexOfPlayer (m_ent));
 
    // check if it's menu select, and some key pressed
-   if (strValue (0) != "menuselect" || strValue (1).empty () || issuer.menu == Menu::None) {
+   if (arg <StringRef> (0) != "menuselect" || arg <StringRef> (1).empty () || issuer.menu == Menu::None) {
       return false;
    }
 
    // let's get handle
    for (auto &menu : m_menus) {
       if (menu.ident == issuer.menu) {
-         return (this->*menu.handler) (strValue (1).int_ ()) == BotCommandResult::Handled;
+         return (this->*menu.handler) (arg <StringRef> (1).as <int> ()) == BotCommandResult::Handled;
       }
    }
    return false;
@@ -2013,7 +2016,7 @@ void BotControl::showMenu (int id) {
 
    for (const auto &display : m_menus) {
       if (display.ident == id) {
-         String text = (game.is (GameFlags::Xash3D | GameFlags::Mobility) && !cv_display_menu_text.bool_ ()) ? " " : display.text.chars ();
+         String text = (game.is (GameFlags::Xash3D | GameFlags::Mobility) && !cv_display_menu_text) ? " " : display.text.chars ();
 
          // split if needed
          if (text.length () > maxMenuSentLength) {
@@ -2106,8 +2109,8 @@ void BotControl::assignAdminRights (edict_t *ent, char *infobuffer) {
    if (!game.isDedicated () || util.isFakeClient (ent)) {
       return;
    }
-   StringRef key = cv_password_key.str ();
-   StringRef password = cv_password.str ();
+   StringRef key = cv_password_key.as <StringRef> ();
+   StringRef password = cv_password.as <StringRef> ();
 
    if (!key.empty () && !password.empty ()) {
       auto &client = util.getClient (game.indexOfPlayer (ent));
@@ -2126,8 +2129,8 @@ void BotControl::maintainAdminRights () {
       return;
    }
 
-   StringRef key = cv_password_key.str ();
-   StringRef password = cv_password.str ();
+   StringRef key = cv_password_key.as <StringRef> ();
+   StringRef password = cv_password.as <StringRef> ();
 
    for (auto &client : util.getClients ()) {
       if (!(client.flags & ClientFlags::Used) || util.isFakeClient (client.ent)) {

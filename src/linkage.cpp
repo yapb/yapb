@@ -394,7 +394,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
          auto ent = const_cast <edict_t *> (player);
 
          // if we're handle pings for bots and clients, clear IN_SCORE button so SV_ShouldUpdatePing engine function return false, and SV_EmitPings will not overwrite our results
-         if (cv_show_latency.int_ () == 2) {
+         if (cv_show_latency.as <int> () == 2) {
             if (!util.isFakeClient (ent) && (ent->v.oldbuttons | ent->v.button | cmd->buttons) & IN_SCORE) {
                cmd->buttons &= ~IN_SCORE;
                util.emitPings (ent);
@@ -863,10 +863,10 @@ CR_EXPORT int Meta_Query (char *ifvers, plugin_info_t **pPlugInfo, mutil_funcs_t
 
       gpMetaUtilFuncs->pfnLogError (PLID, "%s: meta-interface version mismatch (metamod: %s, %s: %s)", Plugin_info.name, ifvers, Plugin_info.name, Plugin_info.ifvers);
 
-      const auto mmajor = mdll[0].int_ () ;
-      const auto mminor = mdll[1].int_ ();
-      const auto pmajor = pdll[0].int_ ();
-      const auto pminor = pdll[1].int_ ();
+      const auto mmajor = mdll[0].as <int> ();
+      const auto mminor = mdll[1].as <int> ();
+      const auto pmajor = pdll[0].as <int> ();
+      const auto pminor = pdll[1].as <int> ();
 
       if (pmajor > mmajor || (pmajor == mmajor && pminor > mminor)) {
          gpMetaUtilFuncs->pfnLogError (PLID, "metamod version is too old for this plugin; update metamod");

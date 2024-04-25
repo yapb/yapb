@@ -117,7 +117,7 @@ float Heuristic::hfunctionPathDist (int index, int, int goalIndex) {
    const float y = start.origin.y - goal.origin.y;
    const float z = start.origin.z - goal.origin.z;
 
-   switch (cv_path_heuristic_mode.int_ ()) {
+   switch (cv_path_heuristic_mode.as <int> ()) {
    case 0:
       return cr::max (cr::max (cr::abs (x), cr::abs (y)), cr::abs (z)); // chebyshev distance
 
@@ -255,7 +255,7 @@ AStarResult AStarAlgo::find (int botTeam, int srcIndex, int destIndex, NodeAdder
    m_routeQue.clear ();
    m_routeQue.emplace (srcIndex, srcRoute->g);
 
-   const bool postSmoothPath = cv_path_astar_post_smooth.bool_ () && vistab.isReady ();
+   const bool postSmoothPath = cv_path_astar_post_smooth && vistab.isReady ();
 
    // always clear constructed path
    m_constructedPath.clear ();
@@ -264,8 +264,8 @@ AStarResult AStarAlgo::find (int botTeam, int srcIndex, int destIndex, NodeAdder
    auto rsRandomizer = 1.0f;
 
    // randomize path on round start now and then
-   if (cv_path_randomize_on_round_start.bool_ () && bots.getRoundStartTime () + 4.0f > game.time ()) {
-      rsRandomizer = rg.get (0.5f, static_cast <float> (botTeam) * 2.0f + 5.0f);
+   if (cv_path_randomize_on_round_start && bots.getRoundStartTime () + 4.0f > game.time ()) {
+      rsRandomizer = rg (0.5f, static_cast <float> (botTeam) * 2.0f + 5.0f);
    }
 
    while (!m_routeQue.empty ()) {
@@ -512,7 +512,7 @@ PathPlanner::PathPlanner () {
 void PathPlanner::init () {
    const int length = graph.length ();
 
-   const float limitInMb = cv_path_floyd_memory_limit.float_ ();
+   const float limitInMb = cv_path_floyd_memory_limit.as <float> ();
    const float memoryUse = static_cast <float> (sizeof (FloydWarshallAlgo::Matrix) * cr::sqrf (static_cast <size_t> (length)) / 1024 / 1024);
 
    // if we're have too much memory for floyd matrices, planner will use dijkstra or uniform planner for other than pathfinding needs
@@ -528,7 +528,7 @@ void PathPlanner::init () {
 }
 
 bool PathPlanner::hasRealPathDistance () const {
-   return !m_memoryLimitHit || !cv_path_dijkstra_simple_distance.bool_ ();
+   return !m_memoryLimitHit || !cv_path_dijkstra_simple_distance;
 }
 
 bool PathPlanner::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, int *pathDistance) {
@@ -553,7 +553,7 @@ float PathPlanner::dist (int srcIndex, int destIndex) {
 
    // limit hit, use dijkstra
    if (m_memoryLimitHit) {
-      if (cv_path_dijkstra_simple_distance.bool_ ()) {
+      if (cv_path_dijkstra_simple_distance) {
          return graph[srcIndex].origin.distance2d (graph[destIndex].origin);
       }
       return static_cast <float> (m_dijkstra->dist (srcIndex, destIndex));

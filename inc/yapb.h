@@ -309,7 +309,7 @@ private:
    bool m_jumpSequence {}; // next path link will be jump link
 
    PathWalk m_pathWalk {}; // pointer to current node from path
-   Dodge m_combatStrafeDir {}; // direction to strafe
+   Dodge m_dodgeStrafeDir {}; // direction to strafe
    Fight m_fightStyle {}; // combat style to use
    CollisionState m_collisionState {}; // collision State
    FindPath m_pathType {}; // which pathfinder to use
@@ -354,6 +354,7 @@ private:
 
    CountdownTimer m_forgetLastVictimTimer {}; // time to forget last victim position ?
    CountdownTimer m_approachingLadderTimer {}; // bot is approaching ladder
+   CountdownTimer m_lostReachableNodeTimer {}; // bot's issuing next node, probably he's lost
 
 private:
    int pickBestWeapon (Array <int> &vec, int moneySave);

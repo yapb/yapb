@@ -152,7 +152,7 @@ void BotSounds::simulateNoise (int playerIndex) {
       }
    }
    else {
-      if (mp_footsteps.bool_ ()) {
+      if (mp_footsteps) {
          // moves fast enough?
          noise.dist = 1280.0f * (client.ent->v.velocity.length2d () / 260.0f);
          noise.last = game.time () + 0.3f;

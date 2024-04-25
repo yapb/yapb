@@ -729,7 +729,7 @@ void BotGraph::add (int type, const Vector &pos) {
       }
 
       // autosave nodes here and there
-      if (!analyzer.isAnalyzing () && cv_graph_auto_save_count.bool_ () && ++m_autoSaveCount >= cv_graph_auto_save_count.int_ ()) {
+      if (!analyzer.isAnalyzing () && cv_graph_auto_save_count && ++m_autoSaveCount >= cv_graph_auto_save_count.as <int> ()) {
          if (saveGraphData ()) {
             msg ("Nodes has been autosaved...");
          }
@@ -1324,7 +1324,7 @@ void BotGraph::syncCollectOnline () {
    if (localGraphs.empty ()) {
       return;
    }
-   String uploadUrlAddress = cv_graph_url_upload.str ();
+   String uploadUrlAddress = cv_graph_url_upload.as <StringRef> ();
 
    // only allow to upload to non-https endpoint
    if (uploadUrlAddress.startsWith ("https")) {
@@ -1416,7 +1416,7 @@ void BotGraph::syncCollectOnline () {
 }
 
 void BotGraph::collectOnline () {
-   if (m_isOnlineCollected || !cv_graph_auto_collect_db.bool_ ()) {
+   if (m_isOnlineCollected || !cv_graph_auto_collect_db) {
       return;
    }
 
@@ -1818,7 +1818,7 @@ bool BotGraph::loadGraphData () {
 }
 
 bool BotGraph::canDownload () {
-   return !cv_graph_url.str ().empty ();
+   return !cv_graph_url.as <StringRef> ().empty ();
 }
 
 bool BotGraph::saveGraphData () {
@@ -2019,7 +2019,7 @@ bool BotGraph::isNodeReacheable (const Vector &src, const Vector &destination) {
 }
 
 bool BotGraph::isNodeReacheableWithJump (const Vector &src, const Vector &destination) {
-   return isNodeReacheableEx (src, destination, cv_graph_analyze_max_jump_height.float_ ());
+   return isNodeReacheableEx (src, destination, cv_graph_analyze_max_jump_height.as <float> ());
 }
 
 void BotGraph::frame () {
@@ -2092,7 +2092,7 @@ void BotGraph::frame () {
       const float distanceSq = path.origin.distanceSq (m_editor->v.origin);
 
       // check if node is within a distance, and is visible
-      if (distanceSq < cr::sqrf (cv_graph_draw_distance.float_ ())
+      if (distanceSq < cr::sqrf (cv_graph_draw_distance.as <float> ())
           && ((util.isVisible (path.origin, m_editor)
                && util.isInViewCone (path.origin, m_editor)) || !util.isAlive (m_editor) || distanceSq < cr::sqrf (64.0f))) {
 
@@ -2844,7 +2844,7 @@ void BotGraph::convertFromPOD (Path &path, const PODPath &pod) {
    path.start = Vector (pod.csx, pod.csy, 0.0f);
    path.end = Vector (pod.cex, pod.cey, 0.0f);
 
-   if (cv_graph_fixcamp.bool_ ()) {
+   if (cv_graph_fixcamp) {
       convertCampDirection (path);
    }
    path.radius = pod.radius;
