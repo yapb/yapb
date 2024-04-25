@@ -18,7 +18,7 @@ ConVar cv_random_knife_attacks ("random_knife_attacks", "1", "Allows or disallow
 void Bot::normal_ () {
    m_aimFlags |= AimFlags::Nav;
 
-   const int debugGoal = cv_debug_goal.int_ ();
+   const int debugGoal = cv_debug_goal.as <int> ();
 
    // user forced a node as a goal?
    if (debugGoal != kInvalidNodeIndex) {
@@ -46,14 +46,14 @@ void Bot::normal_ () {
    }
 
    // bots rushing with knife, when have no enemy (thanks for idea to nicebot project)
-   if (cv_random_knife_attacks.bool_ () && usesKnife () && (game.isNullEntity (m_lastEnemy) || !util.isAlive (m_lastEnemy)) && game.isNullEntity (m_enemy) && m_knifeAttackTime < game.time () && !m_hasHostage && !hasShield () && numFriendsNear (pev->origin, 96.0f) == 0) {
+   if (cv_random_knife_attacks && usesKnife () && (game.isNullEntity (m_lastEnemy) || !util.isAlive (m_lastEnemy)) && game.isNullEntity (m_enemy) && m_knifeAttackTime < game.time () && !m_hasHostage && !hasShield () && numFriendsNear (pev->origin, 96.0f) == 0) {
       if (rg.chance (40)) {
          pev->button |= IN_ATTACK;
       }
       else {
          pev->button |= IN_ATTACK2;
       }
-      m_knifeAttackTime = game.time () + rg.get (2.5f, 6.0f);
+      m_knifeAttackTime = game.time () + rg (2.5f, 6.0f);
    }
    const auto &prop = conf.getWeaponProp (m_currentWeapon);
 
@@ -92,7 +92,7 @@ void Bot::normal_ () {
       if (!(m_states & (Sense::SeeingEnemy | Sense::SuspectEnemy))
           && m_seeEnemyTime + 5.0f < game.time ()
           && !m_reloadState && m_timeLogoSpray < game.time ()
-          && cv_spraypaints.bool_ ()
+          && cv_spraypaints
           && rg.chance (50)
           && m_moveSpeed > getShiftSpeed ()
           && game.isNullEntity (m_pickupItem)) {
@@ -103,7 +103,7 @@ void Bot::normal_ () {
       }
 
       // reached node is a camp node
-      if ((m_pathFlags & NodeFlag::Camp) && !game.is (GameFlags::CSDM) && cv_camping_allowed.bool_ () && !isKnifeMode ()) {
+      if ((m_pathFlags & NodeFlag::Camp) && !game.is (GameFlags::CSDM) && cv_camping_allowed && !isKnifeMode ()) {
          const bool allowedCampWeapon = hasPrimaryWeapon ()
             || hasShield ()
             || (hasSecondaryWeapon () && !hasPrimaryWeapon () && m_numFriendsLeft > game.maxClients () / 6);
@@ -153,7 +153,7 @@ void Bot::normal_ () {
                if (!(m_states & (Sense::SeeingEnemy | Sense::HearingEnemy)) && !m_reloadState) {
                   m_reloadState = Reload::Primary;
                }
-               m_timeCamping = game.time () + rg.get (cv_camping_time_min.float_ (), cv_camping_time_max.float_ ());
+               m_timeCamping = game.time () + rg (cv_camping_time_min.as <float> (), cv_camping_time_max.as <float> ());
                startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, m_timeCamping, true);
 
                m_lookAtSafe = m_pathOrigin + m_path->start.forward () * 500.0f;
@@ -185,8 +185,8 @@ void Bot::normal_ () {
             else if (m_team == Team::Terrorist && rg.chance (75) && !game.mapIs (MapFlags::Demolition)) {
                const int index = findDefendNode (m_path->origin);
 
-               startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (60.0f, 120.0f), true); // push camp task on to stack
-               startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg.get (5.0f, 10.0f), true); // push move command
+               startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg (60.0f, 120.0f), true); // push camp task on to stack
+               startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg (5.0f, 10.0f), true); // push move command
 
                // decide to duck or not to duck
                selectCampButtons (index);
@@ -202,7 +202,7 @@ void Bot::normal_ () {
                   pushRadioMessage (Radio::NeedBackup);
                   pushChatterMessage (Chatter::ScaredEmotion);
 
-                  startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (4.0f, 8.0f), true);
+                  startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg (4.0f, 8.0f), true);
                }
                else {
                   startTask (Task::PlantBomb, TaskPri::PlantBomb, kInvalidNodeIndex, 0.0f, false);
@@ -211,14 +211,14 @@ void Bot::normal_ () {
             else if (m_team == Team::CT) {
                if (!bots.isBombPlanted () && numFriendsNear (pev->origin, 210.0f) < 4) {
                   const int index = findDefendNode (m_path->origin);
-                  float campTime = rg.get (25.0f, 40.f);
+                  float campTime = rg (25.0f, 40.f);
 
                   // rusher bots don't like to camp too much
                   if (m_personality == Personality::Rusher) {
                      campTime *= 0.5f;
                   }
                   startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + campTime, true); // push camp task on to stack
-                  startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg.get (5.0f, 11.0f), true); // push move command
+                  startTask (Task::MoveToPosition, TaskPri::MoveToPosition, index, game.time () + rg (5.0f, 11.0f), true); // push move command
 
                   // decide to duck or not to duck
                   selectCampButtons (index);
@@ -267,7 +267,7 @@ void Bot::normal_ () {
    }
    const float shiftSpeed = getShiftSpeed ();
 
-   if ((!cr::fzero (m_moveSpeed) && m_moveSpeed > shiftSpeed) && (cv_walking_allowed.bool_ () && mp_footsteps.bool_ ())
+   if ((!cr::fzero (m_moveSpeed) && m_moveSpeed > shiftSpeed) && (cv_walking_allowed && mp_footsteps)
        && m_difficulty >= Difficulty::Normal
        && (m_heardSoundTime + 6.0f >= game.time () || (m_states & Sense::HearingEnemy))
        && pev->origin.distanceSq (m_lastEnemyOrigin) < cr::sqrf (768.0f)
@@ -278,21 +278,21 @@ void Bot::normal_ () {
    }
 
    // bot hasn't seen anything in a long time and is asking his teammates to report in
-   if (cv_radio_mode.int_ () > 1
+   if (cv_radio_mode.as <int> () > 1
        && bots.getLastRadio (m_team) != Radio::ReportInTeam
        && bots.getRoundStartTime () + 20.0f < game.time ()
        && m_askCheckTime < game.time () && rg.chance (15)
-       && m_seeEnemyTime + rg.get (45.0f, 80.0f) < game.time ()
+       && m_seeEnemyTime + rg (45.0f, 80.0f) < game.time ()
        && numFriendsNear (pev->origin, 1024.0f) == 0) {
 
       pushRadioMessage (Radio::ReportInTeam);
 
-      m_askCheckTime = game.time () + rg.get (45.0f, 80.0f);
+      m_askCheckTime = game.time () + rg (45.0f, 80.0f);
 
       // make sure everyone else will not ask next few moments
       for (const auto &bot : bots) {
          if (bot->m_isAlive) {
-            bot->m_askCheckTime = game.time () + rg.get (5.0f, 30.0f);
+            bot->m_askCheckTime = game.time () + rg (5.0f, 30.0f);
          }
       }
    }
@@ -322,7 +322,7 @@ void Bot::spraypaint_ () {
 
          // paint the actual logo decal
          util.decalTrace (pev, &tr, m_logotypeIndex);
-         m_timeLogoSpray = game.time () + rg.get (60.0f, 90.0f);
+         m_timeLogoSpray = game.time () + rg (60.0f, 90.0f);
       }
    }
    else {
@@ -390,7 +390,7 @@ void Bot::huntEnemy_ () {
    }
 
    // bots skill higher than 60?
-   if (cv_walking_allowed.bool_ () && mp_footsteps.bool_ () && m_difficulty >= Difficulty::Normal && !isKnifeMode ()) {
+   if (cv_walking_allowed && mp_footsteps && m_difficulty >= Difficulty::Normal && !isKnifeMode ()) {
       // then make him move slow if near enemy
       if (!(m_currentTravelFlags & PathFlag::Jump)) {
          if (m_currentNodeIndex != kInvalidNodeIndex) {
@@ -417,7 +417,7 @@ void Bot::seekCover_ () {
       m_prevGoalIndex = kInvalidNodeIndex;
 
       // start hide task
-      startTask (Task::Hide, TaskPri::Hide, kInvalidNodeIndex, game.time () + rg.get (3.0f, 12.0f), false);
+      startTask (Task::Hide, TaskPri::Hide, kInvalidNodeIndex, game.time () + rg (3.0f, 12.0f), false);
 
       // get a valid look direction
       const Vector &dest = getCampDirection (m_lastEnemyOrigin);
@@ -470,7 +470,7 @@ void Bot::seekCover_ () {
          destIndex = findCoverNode (900.0f);
 
          if (destIndex == kInvalidNodeIndex) {
-            m_retreatTime = game.time () + rg.get (1.0f, 2.0f);
+            m_retreatTime = game.time () + rg (1.0f, 2.0f);
             m_prevGoalIndex = kInvalidNodeIndex;
 
             completeTask ();
@@ -594,7 +594,7 @@ void Bot::blind_ () {
 }
 
 void Bot::camp_ () {
-   if (!cv_camping_allowed.bool_ () || m_isCreature) {
+   if (!cv_camping_allowed || m_isCreature) {
       completeTask ();
       return;
    }
@@ -637,7 +637,7 @@ void Bot::camp_ () {
    };
 
    if (m_nextCampDirTime < game.time ()) {
-      m_nextCampDirTime = game.time () + rg.get (2.0f, 5.0f);
+      m_nextCampDirTime = game.time () + rg (2.0f, 5.0f);
 
       if (m_pathFlags & NodeFlag::Camp) {
          Vector dest;
@@ -838,7 +838,7 @@ void Bot::plantBomb_ () {
          pushRadioMessage (Radio::NeedBackup);
       }
       const auto index = findDefendNode (pev->origin);
-      const auto guardTime = mp_c4timer.float_ () * 0.5f + mp_c4timer.float_ () * 0.25f;
+      const auto guardTime = mp_c4timer.as <float> () * 0.5f + mp_c4timer.as <float> () * 0.25f;
 
       // push camp task on to stack
       startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + guardTime, true);
@@ -871,18 +871,18 @@ void Bot::defuseBomb_ () {
          if (bot->m_team == m_team && bot->m_isAlive) {
             auto defendPoint = graph.getFarest (bot->pev->origin);
 
-            startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg.get (30.0f, 60.0f), true); // push camp task on to stack
-            startTask (Task::MoveToPosition, TaskPri::MoveToPosition, defendPoint, game.time () + rg.get (3.0f, 6.0f), true); // push move command
+            startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + rg (30.0f, 60.0f), true); // push camp task on to stack
+            startTask (Task::MoveToPosition, TaskPri::MoveToPosition, defendPoint, game.time () + rg (3.0f, 6.0f), true); // push move command
          }
       }
       graph.setBombOrigin (true);
 
       if (m_numFriendsLeft != 0 && rg.chance (50)) {
          if (timeToBlowUp <= 3.0f) {
-            if (cv_radio_mode.int_ () == 2) {
+            if (cv_radio_mode.as <int> () == 2) {
                pushChatterMessage (Chatter::BarelyDefused);
             }
-            else if (cv_radio_mode.int_ () == 1) {
+            else if (cv_radio_mode.as <int> () == 1) {
                pushRadioMessage (Radio::SectorClear);
             }
          }
@@ -1083,7 +1083,7 @@ void Bot::followUser_ () {
    }
    m_aimFlags |= AimFlags::Nav;
 
-   if (cv_walking_allowed.bool_ () && m_targetEntity->v.maxspeed < m_moveSpeed && !isKnifeMode ()) {
+   if (cv_walking_allowed && m_targetEntity->v.maxspeed < m_moveSpeed && !isKnifeMode ()) {
       m_moveSpeed = getShiftSpeed ();
    }
 
@@ -1324,7 +1324,7 @@ void Bot::doublejump_ () {
       game.testLine (src, dest, TraceIgnore::None, ent (), &tr);
 
       if (tr.flFraction < 1.0f && tr.pHit == m_doubleJumpEntity && inJump) {
-         m_duckForJump = game.time () + rg.get (3.0f, 5.0f);
+         m_duckForJump = game.time () + rg (3.0f, 5.0f);
          getTask ()->time = game.time ();
       }
       return;
@@ -1394,7 +1394,7 @@ void Bot::escapeFromBomb_ () {
    else if (!hasActiveGoal ()) {
       int bestIndex = kInvalidNodeIndex;
 
-      const float safeRadius = rg.get (1513.0f, 2048.0f);
+      const float safeRadius = rg (1513.0f, 2048.0f);
       float nearestDistanceSq = kInfiniteDistance;
 
       for (const auto &path : graph) {

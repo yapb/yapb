@@ -43,7 +43,7 @@ void MessageDispatcher::netMsgTextMsg () {
 
       // set balance for all players
       bots.forEach ([] (Bot *bot) {
-         bot->m_moneyAmount = mp_startmoney.int_ ();
+         bot->m_moneyAmount = mp_startmoney.as <int> ();
          return false;
       });
 
@@ -63,7 +63,7 @@ void MessageDispatcher::netMsgTextMsg () {
             // clear only camp tasks
             notify->clearTask (Task::Camp);
 
-            if (cv_radio_mode.int_ () == 2 && rg.chance (55) && notify->m_team == Team::CT) {
+            if (cv_radio_mode.as <int> () == 2 && rg.chance (55) && notify->m_team == Team::CT) {
                notify->pushChatterMessage (Chatter::WhereIsTheC4);
             }
          }

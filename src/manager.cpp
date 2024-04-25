@@ -192,10 +192,10 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
       return BotCreateResult::TeamStacked;
    }
    if (difficulty < Difficulty::Noob || difficulty > Difficulty::Expert) {
-      difficulty = cv_difficulty.int_ ();
+      difficulty = cv_difficulty.as <int> ();
 
       if (difficulty < Difficulty::Noob || difficulty > Difficulty::Expert) {
-         difficulty = rg.get (3, 4);
+         difficulty = rg (3, 4);
          cv_difficulty.set (difficulty);
       }
    }
@@ -211,8 +211,8 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
    if (personality < Personality::Normal || personality > Personality::Careful) {
 
       // assign preferred if we're forced with cvar
-      if (personalityMap.exists (cv_preferred_personality.str ())) {
-         personality = personalityMap[cv_preferred_personality.str ()];
+      if (personalityMap.exists (cv_preferred_personality.as <StringRef> ())) {
+         personality = personalityMap[cv_preferred_personality.as <StringRef> ()];
       }
 
       // do a holy random
@@ -240,22 +240,22 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
          resultName = botName->name;
       }
       else {
-         resultName.assignf ("%s_%d.%d", product.nameLower, rg.get (100, 10000), rg.get (100, 10000)); // just pick ugly random name
+         resultName.assignf ("%s_%d.%d", product.nameLower, rg (100, 10000), rg (100, 10000)); // just pick ugly random name
       }
    }
    else {
       resultName = name;
    }
-   const bool hasNamePrefix = !cv_name_prefix.str ().empty ();
+   const bool hasNamePrefix = !cv_name_prefix.as <StringRef> ().empty ();
 
    // disable save bots names if prefix is enabled
-   if (hasNamePrefix && cv_save_bots_names.bool_ ()) {
+   if (hasNamePrefix && cv_save_bots_names) {
       cv_save_bots_names.set (0);
    }
 
    if (hasNamePrefix) {
       String prefixed; // temp buffer for storing modified name
-      prefixed.assignf ("%s %s", cv_name_prefix.str (), resultName);
+      prefixed.assignf ("%s %s", cv_name_prefix.as <StringRef> (), resultName);
 
       // buffer has been modified, copy to real name
       resultName = cr::move (prefixed);
@@ -336,7 +336,7 @@ void BotManager::addbot (StringRef name, int difficulty, int personality, int te
    request.manual = manual;
 
    // restore the bot name
-   if (cv_save_bots_names.bool_ () && name.empty () && !m_saveBotNames.empty ()) {
+   if (cv_save_bots_names && name.empty () && !m_saveBotNames.empty ()) {
       request.name = m_saveBotNames.popFront ();
    }
 
@@ -351,10 +351,10 @@ void BotManager::addbot (StringRef name, StringRef difficulty, StringRef persona
    static StringRef any = "*";
 
    request.name = (name.empty () || name == any) ? StringRef ("\0") : name;
-   request.difficulty = (difficulty.empty () || difficulty == any) ? -1 : difficulty.int_ ();
-   request.team = (team.empty () || team == any) ? -1 : team.int_ ();
-   request.skin = (skin.empty () || skin == any) ? -1 : skin.int_ ();
-   request.personality = (personality.empty () || personality == any) ? -1 : personality.int_ ();
+   request.difficulty = (difficulty.empty () || difficulty == any) ? -1 : difficulty.as <int> ();
+   request.team = (team.empty () || team == any) ? -1 : team.as <int> ();
+   request.skin = (skin.empty () || skin == any) ? -1 : skin.as <int> ();
+   request.personality = (personality.empty () || personality == any) ? -1 : personality.as <int> ();
    request.manual = manual;
 
    addbot (request.name, request.difficulty, request.personality, request.team, request.skin, request.manual);
@@ -365,7 +365,7 @@ void BotManager::maintainQuota () {
    // while creation process in process.
 
    if (graph.length () < 1 || graph.hasChanged ()) {
-      if (cv_quota.int_ () > 0) {
+      if (cv_quota.as <int> () > 0) {
          ctrl.msg ("There is no graph found. Cannot create bot.");
       }
       cv_quota.set (0);
@@ -383,7 +383,7 @@ void BotManager::maintainQuota () {
       const BotCreateResult createResult = create (request.name, request.difficulty, request.personality, request.team, request.skin);
 
       if (request.manual) {
-         cv_quota.set (cr::min (cv_quota.int_ () + 1, game.maxClients ()));
+         cv_quota.set (cr::min (cv_quota.as <int> () + 1, game.maxClients ()));
       }
 
       // check the result of creation
@@ -403,14 +403,14 @@ void BotManager::maintainQuota () {
          m_addRequests.clear ();
          cv_quota.set (getBotCount ());
       }
-      m_maintainTime = game.time () + cv_quota_adding_interval.float_ ();
+      m_maintainTime = game.time () + cv_quota_adding_interval.as <float> ();
    }
 
    // now keep bot number up to date
    if (m_quotaMaintainTime > game.time ()) {
       return;
    }
-   cv_quota.set (cr::clamp <int> (cv_quota.int_ (), 0, game.maxClients ()));
+   cv_quota.set (cr::clamp <int> (cv_quota.as <int> (), 0, game.maxClients ()));
 
    const int totalHumansInGame = getHumansCount ();
    const int humanPlayersInGame = getHumansCount (true);
@@ -419,29 +419,29 @@ void BotManager::maintainQuota () {
       return;
    }
 
-   int desiredBotCount = cv_quota.int_ ();
+   int desiredBotCount = cv_quota.as <int> ();
    int botsInGame = getBotCount ();
 
-   if (cv_quota_mode.str () == "fill") {
+   if (cv_quota_mode.as <StringRef> () == "fill") {
       botsInGame += humanPlayersInGame;
    }
-   else if (cv_quota_mode.str () == "match") {
-      int detectQuotaMatch = cv_quota_match.int_ () == 0 ? cv_quota.int_ () : cv_quota_match.int_ ();
+   else if (cv_quota_mode.as <StringRef> () == "match") {
+      int detectQuotaMatch = cv_quota_match.as <int> () == 0 ? cv_quota.as <int> () : cv_quota_match.as <int> ();
 
       desiredBotCount = cr::max <int> (0, detectQuotaMatch * humanPlayersInGame);
    }
 
-   if (cv_join_after_player.bool_ () && humanPlayersInGame == 0) {
+   if (cv_join_after_player && humanPlayersInGame == 0) {
       desiredBotCount = 0;
    }
    int maxClients = game.maxClients ();
 
-   if (cv_autovacate.bool_ ()) {
-      if (cv_kick_after_player_connect.bool_ ()) {
-         desiredBotCount = cr::min <int> (desiredBotCount, maxClients - (totalHumansInGame + cv_autovacate_keep_slots.int_ ()));
+   if (cv_autovacate) {
+      if (cv_kick_after_player_connect) {
+         desiredBotCount = cr::min <int> (desiredBotCount, maxClients - (totalHumansInGame + cv_autovacate_keep_slots.as <int> ()));
       }
       else {
-         desiredBotCount = cr::min <int> (desiredBotCount, maxClients - (humanPlayersInGame + cv_autovacate_keep_slots.int_ ()));
+         desiredBotCount = cr::min <int> (desiredBotCount, maxClients - (humanPlayersInGame + cv_autovacate_keep_slots.as <int> ()));
       }
    }
    else {
@@ -482,11 +482,11 @@ void BotManager::maintainQuota () {
    }
    else {
       // clear the saved names when quota balancing ended
-      if (cv_save_bots_names.bool_ () && !m_saveBotNames.empty ()) {
+      if (cv_save_bots_names && !m_saveBotNames.empty ()) {
          m_saveBotNames.clear ();
       }
    }
-   m_quotaMaintainTime = game.time () + cv_quota_maintain_interval.float_ ();
+   m_quotaMaintainTime = game.time () + cv_quota_maintain_interval.as <float> ();
 }
 
 void BotManager::maintainLeaders () {
@@ -503,7 +503,7 @@ void BotManager::maintainLeaders () {
 }
 
 void BotManager::maintainAutoKill () {
-   const float killDelay = cv_autokill_delay.float_ ();
+   const float killDelay = cv_autokill_delay.as <float> ();
 
    if (killDelay < 1.0f || m_roundOver) {
       return;
@@ -594,15 +594,15 @@ void BotManager::resetFilters () {
 
 void BotManager::decrementQuota (int by) {
    if (by != 0) {
-      cv_quota.set (cr::clamp <int> (cv_quota.int_ () - by, 0, cv_quota.int_ ()));
+      cv_quota.set (cr::clamp <int> (cv_quota.as <int> () - by, 0, cv_quota.as <int> ()));
       return;
    }
    cv_quota.set (0);
 }
 
 void BotManager::initQuota () {
-   m_maintainTime = game.time () + cv_join_delay.float_ ();
-   m_quotaMaintainTime = game.time () + cv_join_delay.float_ ();
+   m_maintainTime = game.time () + cv_join_delay.as <float> ();
+   m_quotaMaintainTime = game.time () + cv_join_delay.as <float> ();
 
    m_addRequests.clear ();
 }
@@ -611,8 +611,8 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
    // this function fill server with bots, with specified team & personality
 
    // always keep one slot
-   const int maxClients = cv_autovacate.bool_ ()
-      ? game.maxClients () - cv_autovacate_keep_slots.int_ () - (game.isDedicated () ? 0 : getHumansCount ()) : game.maxClients ();
+   const int maxClients = cv_autovacate
+      ? game.maxClients () - cv_autovacate_keep_slots.as <int> () - (game.isDedicated () ? 0 : getHumansCount ()) : game.maxClients ();
 
    if (getBotCount () >= maxClients - getHumansCount ()) {
       return;
@@ -636,7 +636,7 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
 void BotManager::kickEveryone (bool instant, bool zeroQuota) {
    // this function drops all bot clients from server (this function removes only yapb's)
 
-   if (cv_quota.bool_ () && hasBotsOnline ()) {
+   if (cv_quota && hasBotsOnline ()) {
       ctrl.msg ("Bots are removed from server.");
    }
 
@@ -645,7 +645,7 @@ void BotManager::kickEveryone (bool instant, bool zeroQuota) {
    }
 
    // if everyone is kicked, clear the saved bot names
-   if (cv_save_bots_names.bool_ () && !m_saveBotNames.empty ()) {
+   if (cv_save_bots_names && !m_saveBotNames.empty ()) {
       m_saveBotNames.clear ();
    }
 
@@ -794,7 +794,7 @@ void BotManager::setLastWinner (int winner) {
    m_lastWinner = winner;
    m_roundOver = true;
 
-   if (cv_radio_mode.int_ () != 2) {
+   if (cv_radio_mode.as <int> () != 2) {
       return;
    }
    auto notify = findAliveBot ();
@@ -893,7 +893,7 @@ void BotManager::listBots () {
    };
 
    for (const auto &bot : bots) {
-      auto timelimitStr = cv_rotate_bots.bool_ () ? strings.format ("%-3.0f secs", bot->m_stayTime - game.time ()) : "unlimited";
+      auto timelimitStr = cv_rotate_bots ? strings.format ("%-3.0f secs", bot->m_stayTime - game.time ()) : "unlimited";
 
       ctrl.msg ("[%-2.1d]\t%-22.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s\t%s",
                 bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful",
@@ -975,7 +975,7 @@ void BotManager::updateTeamEconomics (int team, bool setTrue) {
    // that have not enough money to buy primary (with economics), and if this result higher 80%, player is can't
    // buy primary weapons.
 
-   if (setTrue || !cv_economics_rounds.bool_ ()) {
+   if (setTrue || !cv_economics_rounds) {
       m_economicsGood[team] = true;
       return; // don't check economics while economics disable
    }
@@ -1011,10 +1011,10 @@ void BotManager::updateTeamEconomics (int team, bool setTrue) {
 
 void BotManager::updateBotDifficulties () {
    // if min/max difficulty is specified  this should not have effect
-   if (cv_difficulty_min.int_ () != Difficulty::Invalid || cv_difficulty_max.int_ () != Difficulty::Invalid || cv_difficulty_auto.bool_ ()) {
+   if (cv_difficulty_min.as <int> () != Difficulty::Invalid || cv_difficulty_max.as <int> () != Difficulty::Invalid || cv_difficulty_auto) {
       return;
    }
-   const auto difficulty = cv_difficulty.int_ ();
+   const auto difficulty = cv_difficulty.as <int> ();
 
    if (difficulty != m_lastDifficulty) {
 
@@ -1033,11 +1033,11 @@ void BotManager::balanceBotDifficulties () {
    };
 
    // with nightmare difficulty, there is no balance
-   if (cv_whose_your_daddy.bool_ ()) {
+   if (cv_whose_your_daddy) {
       return;
    }
 
-   if (cv_difficulty_auto.bool_ () && m_difficultyBalanceTime < game.time ()) {
+   if (cv_difficulty_auto && m_difficultyBalanceTime < game.time ()) {
       const auto ratioPlayer = getAverageTeamKPD (false);
       const auto ratioBots = getAverageTeamKPD (true);
 
@@ -1053,7 +1053,7 @@ void BotManager::balanceBotDifficulties () {
             updateDifficulty (bot.get (), -1);
          }
       }
-      m_difficultyBalanceTime = game.time () + cv_difficulty_auto_balance_interval.float_ ();
+      m_difficultyBalanceTime = game.time () + cv_difficulty_auto_balance_interval.as <float> ();
    }
 }
 
@@ -1090,12 +1090,12 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "_ah", "0");
 
    if (!game.is (GameFlags::Legacy)) {
-      if (cv_show_latency.int_ () == 1) {
+      if (cv_show_latency.as <int> () == 1) {
          engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "*bot", "1");
       }
       auto avatar = conf.getRandomAvatar ();
 
-      if (cv_show_avatars.bool_ () && !avatar.empty ()) {
+      if (cv_show_avatars && !avatar.empty ()) {
          engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "*sid", avatar.chars ());
       }
    }
@@ -1124,32 +1124,32 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    m_moneyAmount = 0;
    m_logotypeIndex = conf.getRandomLogoIndex ();
 
-   if (cv_rotate_bots.bool_ ()) {
-      m_stayTime = game.time () + rg.get (cv_rotate_stay_min.float_ (), cv_rotate_stay_max.float_ ());
+   if (cv_rotate_bots) {
+      m_stayTime = game.time () + rg (cv_rotate_stay_min.as <float> (), cv_rotate_stay_max.as <float> ());
    }
    else {
       m_stayTime = game.time () + kInfiniteDistance;
    }
 
    // assign how talkative this bot will be
-   m_sayTextBuffer.chatDelay = rg.get (3.8f, 10.0f);
-   m_sayTextBuffer.chatProbability = rg.get (10, 100);
+   m_sayTextBuffer.chatDelay = rg (3.8f, 10.0f);
+   m_sayTextBuffer.chatProbability = rg (10, 100);
 
    m_isAlive = false;
    m_weaponBurstMode = BurstMode::Off;
    m_difficulty = cr::clamp (static_cast <Difficulty> (difficulty), Difficulty::Noob, Difficulty::Expert);
 
-   auto minDifficulty = cv_difficulty_min.int_ ();
-   auto maxDifficulty = cv_difficulty_max.int_ ();
+   auto minDifficulty = cv_difficulty_min.as <int> ();
+   auto maxDifficulty = cv_difficulty_max.as <int> ();
 
    // if we're have min/max difficulty specified, choose value from they
    if (minDifficulty != Difficulty::Invalid && maxDifficulty != Difficulty::Invalid) {
       if (maxDifficulty > minDifficulty) {
          cr::swap (maxDifficulty, minDifficulty);
       }
-      m_difficulty = rg.get (minDifficulty, maxDifficulty);
+      m_difficulty = rg (minDifficulty, maxDifficulty);
    }
-   m_basePing = rg.get (cv_ping_base_min.int_ (), cv_ping_base_max.int_ ());
+   m_basePing = rg (cv_ping_base_min.as <int> (), cv_ping_base_max.as <int> ());
 
    m_previousThinkTime = game.time () - 0.1f;
    m_frameInterval = game.time ();
@@ -1158,26 +1158,26 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    m_kpdRatio = 0.0f;
 
    // stuff from jk_botti
-   m_playServerTime = 60.0f * rg.get (30.0f, 240.0f);
-   m_joinServerTime = plat.seconds () - m_playServerTime * rg.get (0.2f, 0.8f);
+   m_playServerTime = 60.0f * rg (30.0f, 240.0f);
+   m_joinServerTime = plat.seconds () - m_playServerTime * rg (0.2f, 0.8f);
 
    switch (personality) {
    case 1:
       m_personality = Personality::Rusher;
-      m_baseAgressionLevel = rg.get (0.7f, 1.0f);
-      m_baseFearLevel = rg.get (0.0f, 0.4f);
+      m_baseAgressionLevel = rg (0.7f, 1.0f);
+      m_baseFearLevel = rg (0.0f, 0.4f);
       break;
 
    case 2:
       m_personality = Personality::Careful;
-      m_baseAgressionLevel = rg.get (0.2f, 0.5f);
-      m_baseFearLevel = rg.get (0.7f, 1.0f);
+      m_baseAgressionLevel = rg (0.2f, 0.5f);
+      m_baseFearLevel = rg (0.7f, 1.0f);
       break;
 
    default:
       m_personality = Personality::Normal;
-      m_baseAgressionLevel = rg.get (0.4f, 0.7f);
-      m_baseFearLevel = rg.get (0.4f, 0.7f);
+      m_baseAgressionLevel = rg (0.4f, 0.7f);
+      m_baseFearLevel = rg (0.4f, 0.7f);
       break;
    }
 
@@ -1187,7 +1187,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    m_currentWeapon = 0; // current weapon is not assigned at start
    m_weaponType = WeaponType::None; // current weapon type is not assigned at start
 
-   m_voicePitch = rg.get (80, 115); // assign voice pitch
+   m_voicePitch = rg (80, 115); // assign voice pitch
 
    // copy them over to the temp level variables
    m_agressionLevel = m_baseAgressionLevel;
@@ -1220,8 +1220,8 @@ float Bot::getConnectionTime () {
    const auto current = plat.seconds ();
 
    if (current - m_joinServerTime > m_playServerTime || current - m_joinServerTime <= 0.0f) {
-      m_playServerTime = 60.0f * rg.get (30.0f, 240.0f);
-      m_joinServerTime = current - m_playServerTime * rg.get (0.2f, 0.8f);
+      m_playServerTime = 60.0f * rg (30.0f, 240.0f);
+      m_joinServerTime = current - m_playServerTime * rg (0.2f, 0.8f);
    }
    return current - m_joinServerTime;
 }
@@ -1283,7 +1283,7 @@ bool BotManager::isTeamStacked (int team) {
    if (team != Team::CT && team != Team::Terrorist) {
       return false;
    }
-   const int limitTeams = mp_limitteams.int_ ();
+   const int limitTeams = mp_limitteams.as <int> ();
 
    if (!limitTeams) {
       return false;
@@ -1304,7 +1304,7 @@ void BotManager::erase (Bot *bot) {
          continue;
       }
 
-      if (!bot->m_kickedByRotation && cv_save_bots_names.bool_ ()) {
+      if (!bot->m_kickedByRotation && cv_save_bots_names) {
          m_saveBotNames.emplaceLast (bot->pev->netname.str ());
       }
       bot->markStale ();
@@ -1321,7 +1321,7 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
    const auto killerTeam = game.getRealTeam (killer);
    const auto victimTeam = game.getRealTeam (victim);
 
-   if (cv_radio_mode.int_ () == 2) {
+   if (cv_radio_mode.as <int> () == 2) {
       // need to send congrats on well placed shot
       for (const auto &notify : bots) {
          if (notify->m_isAlive
@@ -1443,14 +1443,14 @@ void Bot::newRound () {
    m_preventFlashing = 0.0f;
 
    m_timeTeamOrder = 0.0f;
-   m_askCheckTime = rg.get (30.0f, 90.0f);
+   m_askCheckTime = rg (30.0f, 90.0f);
    m_minSpeed = 260.0f;
    m_prevSpeed = 0.0f;
    m_prevVelocity = 0.0f;
    m_prevOrigin = Vector (kInfiniteDistance, kInfiniteDistance, kInfiniteDistance);
    m_prevTime = game.time ();
    m_lookUpdateTime = game.time ();
-   m_changeViewTime = game.time () + (rg.chance (25) ? mp_freezetime.float_ () : 0.0f);
+   m_changeViewTime = game.time () + (rg.chance (25) ? mp_freezetime.as <float> () : 0.0f);
    m_aimErrorTime = game.time ();
 
    m_viewDistance = Frustum::kMaxViewDistance;
@@ -1555,8 +1555,8 @@ void Bot::newRound () {
    m_flashLevel = 100;
    m_checkDarkTime = game.time ();
 
-   m_knifeAttackTime = game.time () + rg.get (1.3f, 2.6f);
-   m_nextBuyTime = game.time () + rg.get (0.6f, 2.0f);
+   m_knifeAttackTime = game.time () + rg (1.3f, 2.6f);
+   m_nextBuyTime = game.time () + rg (0.6f, 2.0f);
 
    m_buyPending = false;
    m_inBombZone = false;
@@ -1568,7 +1568,7 @@ void Bot::newRound () {
    m_shieldCheckTime = 0.0f;
    m_zoomCheckTime = 0.0f;
    m_strafeSetTime = 0.0f;
-   m_combatStrafeDir = Dodge::None;
+   m_dodgeStrafeDir = Dodge::None;
    m_fightStyle = Fight::None;
    m_lastFightStyleCheck = 0.0f;
    m_stuckTimestamp = 0.0f;
@@ -1583,7 +1583,7 @@ void Bot::newRound () {
    m_defendHostage = false;
    m_headedTime = 0.0f;
 
-   m_timeLogoSpray = game.time () + rg.get (5.0f, 30.0f);
+   m_timeLogoSpray = game.time () + rg (5.0f, 30.0f);
    m_spawnTime = game.time ();
    m_lastChatTime = game.time ();
 
@@ -1600,8 +1600,8 @@ void Bot::newRound () {
    m_ignoredBreakable.clear ();
 
    // ignore enemies for some time if needed
-   if (cv_ignore_enemies_after_spawn_time.float_ () > 0.0f) {
-      m_enemyIgnoreTimer = game.time () + cv_ignore_enemies_after_spawn_time.float_ ();
+   if (cv_ignore_enemies_after_spawn_time.as <float> () > 0.0f) {
+      m_enemyIgnoreTimer = game.time () + cv_ignore_enemies_after_spawn_time.as <float> ();
    }
    else {
       m_enemyIgnoreTimer = 0.0f;
@@ -1620,11 +1620,11 @@ void Bot::newRound () {
    if (rg.chance (50)) {
       pushChatterMessage (Chatter::NewRound);
    }
-   auto thinkFps = cr::clamp (cv_think_fps.float_ (), 30.0f, 90.0f);
+   auto thinkFps = cr::clamp (cv_think_fps.as <float> (), 30.0f, 90.0f);
    auto updateInterval = 1.0f / thinkFps;
 
    if (game.is (GameFlags::Xash3D)) {
-      if (cv_think_fps_disable.bool_ ()) {
+      if (cv_think_fps_disable) {
          updateInterval = 0.0f;
       }
       else if (thinkFps < 50) {
@@ -1657,7 +1657,7 @@ void Bot::resetPathSearchType () {
    }
 
    // if debug goal - set the fastest
-   if (cv_debug_goal.int_ () != kInvalidNodeIndex) {
+   if (cv_debug_goal.as <int> () != kInvalidNodeIndex) {
       m_pathType = FindPath::Fast;
    }
 
@@ -1749,7 +1749,7 @@ void Bot::updateTeamJoin () {
       m_startAction = BotMsg::None; // switch back to idle
 
       if (m_wantedTeam == -1) {
-         char teamJoin = cv_join_team.str ()[0];
+         char teamJoin = cv_join_team.as <StringRef> ()[0];
 
          if (teamJoin == 'C' || teamJoin == 'c') {
             m_wantedTeam = 2;
@@ -1772,7 +1772,7 @@ void Bot::updateTeamJoin () {
             m_wantedTeam = 1;
          }
          else {
-            m_wantedTeam = rg.get (1, 2);
+            m_wantedTeam = rg (1, 2);
          }
       }
 
@@ -1788,16 +1788,16 @@ void Bot::updateTeamJoin () {
 
       // setup enforced skin based on selected team
       if (m_wantedTeam == 1 || botTeam == Team::Terrorist) {
-         enforcedSkin = cv_botskin_t.int_ ();
+         enforcedSkin = cv_botskin_t.as <int> ();
       }
       else if (m_wantedTeam == 2 || botTeam == Team::CT) {
-         enforcedSkin = cv_botskin_ct.int_ ();
+         enforcedSkin = cv_botskin_ct.as <int> ();
       }
       enforcedSkin = cr::clamp (enforcedSkin, 0, maxChoice);
 
       // try to choice manually
       if (m_wantedSkin < 1 || m_wantedSkin > maxChoice) {
-         m_wantedSkin = rg.get (1, maxChoice); // use random if invalid
+         m_wantedSkin = rg (1, maxChoice); // use random if invalid
       }
 
       // and set enforced if any
@@ -1852,7 +1852,7 @@ void BotManager::captureChatRadio (StringRef cmd, StringRef arg, edict_t *ent) {
 
    // check if this player alive, and issue something
    if ((target.flags & ClientFlags::Alive) && target.radio != 0 && cmd.startsWith ("menuselect")) {
-      auto radioCommand = arg.int_ ();
+      auto radioCommand = arg.as <int> ();
 
       if (radioCommand != 0) {
          radioCommand += 10 * (target.radio - 1);
@@ -1872,7 +1872,7 @@ void BotManager::captureChatRadio (StringRef cmd, StringRef arg, edict_t *ent) {
       target.radio = 0;
    }
    else if (cmd.startsWith ("radio")) {
-      target.radio = cmd.substr (5).int_ ();
+      target.radio = cmd.substr (5).as <int> ();
    }
 }
 
@@ -1890,7 +1890,7 @@ void BotManager::notifyBombDefuse () {
           && task != Task::DefuseBomb
           && task != Task::EscapeFromBomb) {
 
-         if (bot->m_team == Team::Terrorist && bot->pev->origin.distanceSq (bombPos) < cr::sqrf (384.0f)) {
+         if (bot->m_team == Team::Terrorist && bot->pev->origin.distanceSq (bombPos) < cr::sqrf (512.0f)) {
             bot->clearSearchNodes ();
 
             bot->m_pathType = FindPath::Fast;
@@ -1955,7 +1955,7 @@ void BotManager::updateInterestingEntities () {
          m_interestingEntities.push (e);
       }
 
-      if (cv_attack_monsters.bool_ () && util.isMonster (e)) {
+      if (cv_attack_monsters && util.isMonster (e)) {
          m_interestingEntities.push (e);
       }
 
@@ -2012,7 +2012,7 @@ void BotManager::selectLeaders (int team, bool reset) {
 
                // terrorist carrying a bomb needs to have some company
                if (rg.chance (75)) {
-                  if (cv_radio_mode.int_ () == 2) {
+                  if (cv_radio_mode.as <int> () == 2) {
                      bot->pushChatterMessage (Chatter::GoingToPlantBomb);
                   }
                   else {
@@ -2098,13 +2098,13 @@ void BotManager::initRound () {
    practice.update (); // update practice data on round start
 
    // calculate the round mid/end in world time
-   m_timeRoundStart = game.time () + mp_freezetime.float_ ();
-   m_timeRoundMid = m_timeRoundStart + mp_roundtime.float_ () * 60.0f * 0.5f;
-   m_timeRoundEnd = m_timeRoundStart + mp_roundtime.float_ () * 60.0f;
+   m_timeRoundStart = game.time () + mp_freezetime.as <float> ();
+   m_timeRoundMid = m_timeRoundStart + mp_roundtime.as <float> () * 60.0f * 0.5f;
+   m_timeRoundEnd = m_timeRoundStart + mp_roundtime.as <float> () * 60.0f;
 }
 
 void BotManager::setBombPlanted (bool isPlanted) {
-   if (cv_ignore_objectives.bool_ ()) {
+   if (cv_ignore_objectives) {
       m_bombPlanted = false;
       return;
    }

@@ -317,7 +317,7 @@ public:
 
    // get the random node on map
    int32_t random () const {
-      return rg.get (0, length () - 1);
+      return rg (0, length () - 1);
    }
 
    // check if has editor

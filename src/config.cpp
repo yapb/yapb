@@ -65,7 +65,7 @@ void BotConfig::loadMainConfig (bool isFirstLoad) {
          auto keyval = line.split (" ");
 
          if (keyval.length () > 1) {
-            auto ignore = String (cv_ignore_cvars_on_changelevel.str ()).split (",");
+            auto ignore = String (cv_ignore_cvars_on_changelevel.as <StringRef> ()).split (",");
 
             auto key = keyval[0].trim ().chars ();
             auto cvar = engfuncs.pfnCVarGetPointer (key);
@@ -76,7 +76,7 @@ void BotConfig::loadMainConfig (bool isFirstLoad) {
                if (needsToIgnoreVar (ignore, key) && !strings.matches (value, cvar->string)) {
 
                   // preserve quota number if it's zero
-                  if (cv_quota.name () == cvar->name && cv_quota.int_ () <= 0) {
+                  if (cv_quota.name () == cvar->name && cv_quota.as <int> () <= 0) {
                      engfuncs.pfnCvar_DirectSet (cvar, value);
                      continue;
                   }
@@ -101,13 +101,13 @@ void BotConfig::loadMainConfig (bool isFirstLoad) {
    }
 
    // android is a bit hard to play, lower the difficulty by default
-   if (plat.android && cv_difficulty.int_ () > 3) {
+   if (plat.android && cv_difficulty.as <int> () > 3) {
       cv_difficulty.set (3);
    }
 
    // bind the correct menu key for bot menu...
    if (!game.isDedicated ()) {
-      auto val = cv_bind_menu_key.str ();
+      auto val = cv_bind_menu_key.as <StringRef> ();
 
       if (!val.empty ()) {
          game.serverCommand ("bind \"%s\" \"yb menu\"", val);
@@ -115,7 +115,7 @@ void BotConfig::loadMainConfig (bool isFirstLoad) {
    }
 
    // disable logger if requested
-   logger.disableLogWrite (cv_logger_disable_logfile.bool_ ());
+   logger.disableLogWrite (cv_logger_disable_logfile);
 }
 
 void BotConfig::loadNamesConfig () {
@@ -161,10 +161,10 @@ void BotConfig::loadWeaponsConfig () {
 
       for (size_t i = 0; i < data.length (); ++i) {
          if (as) {
-            weapons[i].teamAS = data[i].int_ ();
+            weapons[i].teamAS = data[i].as <int> ();
          }
          else {
-            weapons[i].teamStandard = data[i].int_ ();
+            weapons[i].teamStandard = data[i].as <int> ();
          }
       }
    };
@@ -176,7 +176,7 @@ void BotConfig::loadWeaponsConfig () {
       }
 
       for (size_t i = 0; i < to.length (); ++i) {
-         to[i] = data[i].int_ ();
+         to[i] = data[i].as <int> ();
       }
    };
    String line;
@@ -235,7 +235,7 @@ void BotConfig::loadChatterConfig () {
    MemFile file;
 
    // chatter initialization
-   if (game.is (GameFlags::HasBotVoice) && cv_radio_mode.int_ () == 2 && openConfig ("chatter", "Couldn't open chatter system configuration", &file)) {
+   if (game.is (GameFlags::HasBotVoice) && cv_radio_mode.as <int> () == 2 && openConfig ("chatter", "Couldn't open chatter system configuration", &file)) {
       m_chatter.clear ();
 
       struct EventMap {
@@ -521,7 +521,7 @@ void BotConfig::loadLanguageConfig () {
       }
       file.close ();
    }
-   else if (cv_language.str () != "en") {
+   else if (cv_language.as <StringRef> () != "en") {
       logger.error ("Couldn't load language configuration");
    }
 }
@@ -592,15 +592,15 @@ void BotConfig::loadDifficultyConfig () {
       }
       auto diff = &m_difficulty[level];
 
-      diff->reaction[0] = values[0].float_ ();
-      diff->reaction[1] = values[1].float_ ();
-      diff->headshotPct = values[2].int_ ();
-      diff->seenThruPct = values[3].int_ ();
-      diff->hearThruPct = values[4].int_ ();
-      diff->maxRecoil = values[5].int_ ();
-      diff->aimError.x = values[6].float_ ();
-      diff->aimError.y = values[7].float_ ();
-      diff->aimError.z = values[8].float_ ();
+      diff->reaction[0] = values[0].as <float> ();
+      diff->reaction[1] = values[1].as <float> ();
+      diff->headshotPct = values[2].as <int> ();
+      diff->seenThruPct = values[3].as <int> ();
+      diff->hearThruPct = values[4].as <int> ();
+      diff->maxRecoil = values[5].as <int> ();
+      diff->aimError.x = values[6].as <float> ();
+      diff->aimError.y = values[7].as <float> ();
+      diff->aimError.z = values[8].as <float> ();
    };
 
    // difficulty initialization
@@ -882,10 +882,10 @@ bool BotConfig::openConfig (StringRef fileName, StringRef errorIfNotExists, MemF
    auto configDir = strings.joinPath (bstor.getRunningPathVFS (), folders.config);
 
    if (languageDependant) {
-      if (fileName.startsWith ("lang") && cv_language.str () == "en") {
+      if (fileName.startsWith ("lang") && cv_language.as <StringRef> () == "en") {
          return false;
       }
-      auto langConfig = strings.joinPath (configDir, folders.lang, strings.format ("%s_%s.%s", cv_language.str (), fileName, kConfigExtension));
+      auto langConfig = strings.joinPath (configDir, folders.lang, strings.format ("%s_%s.%s", cv_language.as <StringRef> (), fileName, kConfigExtension));
 
       // check is file is exists for this language
       if (!outFile->open (langConfig)) {

@@ -11,7 +11,7 @@ ConVar cv_csdm_mode ("csdm_mode", "0", "Enables or disables CSDM / FFA mode for 
 ConVar cv_ignore_map_prefix_game_mode ("ignore_map_prefix_game_mode", "0", "If enabled, bots will not apply game modes based on map name prefix (fy_ and ka_ specifically).");
 ConVar cv_threadpool_workers ("threadpool_workers", "-1", "Maximum number of threads bot will run to process some tasks. -1 means half of CPU cores used.", true, -1.0f, static_cast <float> (plat.hardwareConcurrency ()));
 ConVar cv_grenadier_mode ("grenadier_mode", "0", "If enabled, bots will not apply throwing condition on grenades.");
-ConVar cv_ignore_enemies_after_spawn_time ("ignore_enemies_after_spawn_time", "0", "Make bots ignore enemies for a specified here time in seconds on new round. Useful for Zombie Plague mods.", true, 0.0f, 540.0f);
+ConVar cv_ignore_enemies_after_spawn_time ("ignore_enemies_after_spawn_time", "0", "Make bots ignore enemies for a specified here time in seconds on new round. Useful for Zombie Plague mods.", false);
 
 ConVar sv_skycolor_r ("sv_skycolor_r", nullptr, Var::GameRef);
 ConVar sv_skycolor_g ("sv_skycolor_g", nullptr, Var::GameRef);
@@ -55,7 +55,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
    bots.destroy ();
 
    // startup threaded worker
-   worker.startup (cv_threadpool_workers.int_ ());
+   worker.startup (cv_threadpool_workers.as <int> ());
 
    m_spawnCount[Team::CT] = 0;
    m_spawnCount[Team::Terrorist] = 0;
@@ -154,7 +154,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
    }
 
    // next maps doesn't have map-specific entities, so determine it by name
-   if (!cv_ignore_map_prefix_game_mode.bool_ ()) {
+   if (!cv_ignore_map_prefix_game_mode) {
       StringRef prefix = getMapName ();
 
       if (prefix.startsWith ("fy_")) {
@@ -590,27 +590,27 @@ bool Game::is25thAnniversaryUpdate () {
    return sv_use_steam_networking.exists ();
 }
 
-void Game::addNewCvar (const char *name, const char *value, const char *info, bool bounded, float min, float max, int32_t varType, bool missingAction, const char *regval, ConVar *self) {
+void Game::pushConVar (StringRef name, StringRef value, StringRef info, bool bounded, float min, float max, int32_t varType, bool missingAction, StringRef regval, ConVar *self) {
    // this function adds globally defined variable to registration stack
 
    ConVarReg reg {};
 
-   reg.reg.name = const_cast <char *> (name);
-   reg.reg.string = const_cast <char *> (value);
+   reg.reg.name = name.chars ();
+   reg.reg.string = value.chars ();
    reg.name = name;
    reg.missing = missingAction;
    reg.init = value;
    reg.info = info;
    reg.bounded = bounded;
 
-   if (regval) {
+   if (!regval.empty ()) {
       reg.regval = regval;
    }
 
    if (bounded) {
       reg.min = min;
       reg.max = max;
-      reg.initial = static_cast <float> (atof (value));
+      reg.initial = value.as <float> ();
    }
 
    int eflags = FCVAR_EXTDLL;
@@ -646,7 +646,7 @@ void ConVar::revert () {
    }
 }
 
-void ConVar::setPrefix (const char *name, int32_t type) {
+void ConVar::setPrefix (StringRef name, int32_t type) {
    if (type == Var::GameRef) {
       name_ = name;
       return;
@@ -662,7 +662,7 @@ void Game::checkCvarsBounds () {
 
       // read only cvar is not changeable
       if (var.type == Var::ReadOnly && !var.init.empty ()) {
-         if (var.init != var.self->str ()) {
+         if (var.init != var.self->as <StringRef> ()) {
             var.self->set (var.init.chars ());
          }
          continue;
@@ -671,8 +671,8 @@ void Game::checkCvarsBounds () {
       if (!var.bounded || !var.self) {
          continue;
       }
-      auto value = var.self->float_ ();
-      auto str = String (var.self->str ());
+      auto value = var.self->as <float> ();
+      auto str = String (var.self->as <StringRef> ());
 
       // check the bounds and set default if out of bounds
       if (value > var.max || value < var.min || (!str.empty () && isalpha (str[0]))) {
@@ -685,7 +685,7 @@ void Game::checkCvarsBounds () {
 
    // special case for xash3d, by default engine is not calling startframe if no players on server, but our quota management and bot adding
    // mechanism assumes that starframe is called even if no players on server, so, set the xash3d's sv_forcesimulating cvar to 1 in case it's not
-   if (is (GameFlags::Xash3D)) {
+   if (is (GameFlags::Xash3DLegacy)) {
       static ConVarRef sv_forcesimulating ("sv_forcesimulating");
 
       if (sv_forcesimulating.exists () && !cr::fequal (sv_forcesimulating.value (), 1.0f)) {
@@ -929,7 +929,7 @@ void Game::applyGameModes () {
    }
 
    // handle cvar cases
-   switch (cv_csdm_mode.int_ ()) {
+   switch (cv_csdm_mode.as <int> ()) {
    default:
    case 0:
       break;
@@ -1312,5 +1312,5 @@ float LightMeasure::getLightLevel (const Vector &point) {
 }
 
 float LightMeasure::getSkyColor () {
-   return static_cast <float> (Color (sv_skycolor_r.int_ (), sv_skycolor_g.int_ (), sv_skycolor_b.int_ ()).avg ());
+   return static_cast <float> (Color (sv_skycolor_r.as <int> (), sv_skycolor_g.as <int> (), sv_skycolor_b.as <int> ()).avg ());
 }

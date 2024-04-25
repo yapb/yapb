@@ -233,7 +233,7 @@ bool BotSupport::isShootableBreakable (edict_t *ent) {
    if (game.isNullEntity (ent) || ent == game.getStartEntity ()) {
       return false;
    }
-   const auto limit = cv_breakable_health_limit.float_ ();
+   const auto limit = cv_breakable_health_limit.as <float> ();
 
    // not shootable
    if (ent->v.health >= limit) {
@@ -263,7 +263,7 @@ bool BotSupport::isFakeClient (edict_t *ent) {
 void BotSupport::checkWelcome () {
    // the purpose of this function, is  to send quick welcome message, to the listenserver entity.
 
-   if (game.isDedicated () || !cv_display_welcome_text.bool_ () || !m_needToSendWelcome) {
+   if (game.isDedicated () || !cv_display_welcome_text || !m_needToSendWelcome) {
       return;
    }
 
@@ -271,7 +271,7 @@ void BotSupport::checkWelcome () {
    auto receiveEnt = game.getLocalEntity ();
 
    if (isAlive (receiveEnt) && m_welcomeReceiveTime < 1.0f && needToSendMsg) {
-      m_welcomeReceiveTime = game.time () + 2.0f + mp_freezetime.float_ (); // receive welcome message in four seconds after game has commencing
+      m_welcomeReceiveTime = game.time () + 2.0f + mp_freezetime.as <float> (); // receive welcome message in four seconds after game has commencing
    }
 
    if (m_welcomeReceiveTime > 0.0f && m_welcomeReceiveTime < game.time () && needToSendMsg) {
@@ -309,16 +309,16 @@ void BotSupport::checkWelcome () {
       textParams.channel = 1;
       textParams.x = -1.0f;
       textParams.y = sendLegacyWelcome ? 0.0f : -1.0f;
-      textParams.effect = rg.get (1, 2);
+      textParams.effect = rg (1, 2);
 
-      textParams.r1 = static_cast <uint8_t> (sendLegacyWelcome ? 255 : rg.get (33, 255));
-      textParams.g1 = static_cast <uint8_t> (sendLegacyWelcome ? 0 : rg.get (33, 255));
-      textParams.b1 = static_cast <uint8_t> (sendLegacyWelcome ? 0 : rg.get (33, 255));
+      textParams.r1 = static_cast <uint8_t> (sendLegacyWelcome ? 255 : rg (33, 255));
+      textParams.g1 = static_cast <uint8_t> (sendLegacyWelcome ? 0 : rg (33, 255));
+      textParams.b1 = static_cast <uint8_t> (sendLegacyWelcome ? 0 : rg (33, 255));
       textParams.a1 = static_cast <uint8_t> (0);
 
-      textParams.r2 = static_cast <uint8_t> (sendLegacyWelcome ? 255 : rg.get (230, 255));
-      textParams.g2 = static_cast <uint8_t> (sendLegacyWelcome ? 255 : rg.get (230, 255));
-      textParams.b2 = static_cast <uint8_t> (sendLegacyWelcome ? 255 : rg.get (230, 255));
+      textParams.r2 = static_cast <uint8_t> (sendLegacyWelcome ? 255 : rg (230, 255));
+      textParams.g2 = static_cast <uint8_t> (sendLegacyWelcome ? 255 : rg (230, 255));
+      textParams.b2 = static_cast <uint8_t> (sendLegacyWelcome ? 255 : rg (230, 255));
       textParams.a2 = static_cast <uint8_t> (200);
 
       textParams.fadeinTime = 0.0078125f;
@@ -425,7 +425,7 @@ void BotSupport::calculatePings () {
 }
 
 void BotSupport::syncCalculatePings () {
-   if (!game.is (GameFlags::HasFakePings) || cv_show_latency.int_ () != 2) {
+   if (!game.is (GameFlags::HasFakePings) || cv_show_latency.as <int> () != 2) {
       return;
    }
    MutexScopedLock lock (m_cs);
@@ -434,7 +434,7 @@ void BotSupport::syncCalculatePings () {
    int numHumans = 0;
 
    // only count player pings if we're allowed to
-   if (cv_count_players_for_fakeping.bool_ ()) {
+   if (cv_count_players_for_fakeping) {
       // first get average ping on server, and store real client pings
       for (auto &client : m_clients) {
          if (!(client.flags & ClientFlags::Used) || isFakeClient (client.ent)) {
@@ -454,7 +454,7 @@ void BotSupport::syncCalculatePings () {
          //    https://github.com/fwgs/xash3d-fwgs/blob/f5b9826fd9bbbdc5293c1ff522de11ce28d3c9f2/engine/server/sv_game.c#L4443
 
          // store normal client ping
-         client.ping = getPingBitmask (client.ent, loss, ping > 0 ? ping : rg.get (8, 16)); // getting player ping sometimes fails
+         client.ping = getPingBitmask (client.ent, loss, ping > 0 ? ping : rg (8, 16)); // getting player ping sometimes fails
          ++numHumans;
 
          average.first += ping;
@@ -466,13 +466,13 @@ void BotSupport::syncCalculatePings () {
          average.second /= numHumans;
       }
       else {
-         average.first = rg.get (10, 20);
-         average.second = rg.get (5, 10);
+         average.first = rg (10, 20);
+         average.second = rg (5, 10);
       }
    }
    else {
-      average.first = rg.get (10, 20);
-      average.second = rg.get (5, 10);
+      average.first = rg (10, 20);
+      average.second = rg (5, 10);
    }
 
    // now calculate bot ping based on average from players
@@ -488,14 +488,14 @@ void BotSupport::syncCalculatePings () {
       }
       const int part = static_cast <int> (static_cast <float> (average.first) * 0.2f);
 
-      int botPing = bot->m_basePing + rg.get (average.first - part, average.first + part) + rg.get (bot->m_difficulty / 2, bot->m_difficulty);
-      const int botLoss = rg.get (average.second / 2, average.second);
+      int botPing = bot->m_basePing + rg (average.first - part, average.first + part) + rg (bot->m_difficulty / 2, bot->m_difficulty);
+      const int botLoss = rg (average.second / 2, average.second);
 
       if (botPing < 2) {
-         botPing = rg.get (10, 23);
+         botPing = rg (10, 23);
       }
       else if (botPing > 100) {
-         botPing = rg.get (30, 40);
+         botPing = rg (30, 40);
       }
       client.ping = getPingBitmask (client.ent, botLoss, botPing);
    }
@@ -520,7 +520,7 @@ void BotSupport::emitPings (edict_t *to) {
 
       // no ping, no fun
       if (!client.ping) {
-         client.ping = getPingBitmask (client.ent, rg.get (5, 10), rg.get (15, 40));
+         client.ping = getPingBitmask (client.ent, rg (5, 10), rg (15, 40));
       }
 
       msg.start (MSG_ONE_UNRELIABLE, SVC_PINGS, nullptr, to)
@@ -565,7 +565,7 @@ String BotSupport::getCurrentDateTime () {
 }
 
 StringRef BotSupport::getFakeSteamId (edict_t *ent) {
-   if (!cv_enable_fake_steamids.bool_ () || !isPlayer (ent)) {
+   if (!cv_enable_fake_steamids || !isPlayer (ent)) {
       return "BOT";
    }
    auto botNameHash = StringRef::fnv1a32 (ent->v.netname.chars ());
@@ -610,7 +610,7 @@ public:
 };
 
 float BotSupport::getWaveLength (StringRef filename) {
-   auto filePath = strings.joinPath (cv_chatter_path.str (), strings.format ("%s.wav", filename));
+   auto filePath = strings.joinPath (cv_chatter_path.as <StringRef> (), strings.format ("%s.wav", filename));
 
    MemFile fp (filePath);
 

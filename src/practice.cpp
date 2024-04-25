@@ -154,6 +154,7 @@ void BotPractice::save () {
       return; // no action
    }
    SmallArray <DangerSaveRestore> data;
+   data.reserve (m_data.length ());
 
    // copy hash-map data to our vector
    m_data.foreach ([&data] (const DangerStorage &ds, const PracticeData &pd) {

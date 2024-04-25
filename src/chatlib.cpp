@@ -55,14 +55,14 @@ void BotChatManager::humanizePlayerName (String &playerName) {
    }
 
    // sometimes switch name to lower characters, only valid for the english languge
-   if (rg.chance (8) && cv_language.str () == "en") {
+   if (rg.chance (8) && cv_language.as <StringRef> () == "en") {
       playerName.lowercase ();
    }
 }
 
 void BotChatManager::addChatErrors (String &line) {
    // sometimes switch name to lower characters, only valid for the english languge
-   if (rg.chance (8) && cv_language.str () == "en") {
+   if (rg.chance (8) && cv_language.as <StringRef> () == "en") {
       line.lowercase ();
    }
    const auto length = static_cast <int32_t> (line.length ());
@@ -72,12 +72,13 @@ void BotChatManager::addChatErrors (String &line) {
 
       // "length / 2" percent of time drop a character
       if (rg.chance (percentile)) {
-         line.erase (static_cast <size_t> (rg.get (length / 8, length - length / 8), 1));
+         auto pos = rg (length / 8, length - length / 8);
+         line.erase (static_cast <size_t> (pos));
       }
 
       // "length" / 4 precent of time swap character
       if (rg.chance (percentile / 2)) {
-         size_t pos = static_cast <size_t> (rg.get (length / 8, 3 * length / 8)); // choose random position in string
+         auto pos = static_cast <size_t> (rg (length / 8, 3 * length / 8)); // choose random position in string
          cr::swap (line[pos], line[pos + 1]);
       }
    }
@@ -86,7 +87,7 @@ void BotChatManager::addChatErrors (String &line) {
 bool BotChatManager::checkKeywords (StringRef line, String &reply) {
    // this function checks is string contain keyword, and generates reply to it
 
-   if (!cv_chat.bool_ () || line.empty ()) {
+   if (!cv_chat || line.empty ()) {
       return false;
    }
 
@@ -135,7 +136,7 @@ bool BotChatManager::checkKeywords (StringRef line, String &reply) {
 void Bot::prepareChatMessage (StringRef message) {
    // this function parses messages from the botchat, replaces keywords and converts names into a more human style
 
-   if (!cv_chat.bool_ () || message.empty ()) {
+   if (!cv_chat || message.empty ()) {
       return;
    }
    m_chatBuffer = message;
@@ -306,10 +307,10 @@ bool Bot::isReplyingToChat () {
 
    if (m_sayTextBuffer.entityIndex != -1 && !m_sayTextBuffer.sayText.empty ()) {
       // check is time to chat is good
-      if (m_sayTextBuffer.timeNextChat < game.time () + rg.get (m_sayTextBuffer.chatDelay / 2, m_sayTextBuffer.chatDelay)) {
+      if (m_sayTextBuffer.timeNextChat < game.time () + rg (m_sayTextBuffer.chatDelay / 2, m_sayTextBuffer.chatDelay)) {
          String replyText;
 
-         if (rg.chance (m_sayTextBuffer.chatProbability + rg.get (40, 70)) && checkChatKeywords (replyText)) {
+         if (rg.chance (m_sayTextBuffer.chatProbability + rg (40, 70)) && checkChatKeywords (replyText)) {
             prepareChatMessage (replyText);
             pushMsgQueue (BotMsg::Say);
 
@@ -329,14 +330,14 @@ bool Bot::isReplyingToChat () {
 void Bot::checkForChat () {
    // say a text every now and then
 
-   if (m_isAlive || !cv_chat.bool_ () || game.is (GameFlags::CSDM)) {
+   if (m_isAlive || !cv_chat || game.is (GameFlags::CSDM)) {
       return;
    }
 
    // bot chatting turned on?
-   if (rg.chance (cv_chat_percent.int_ ())
-       && m_lastChatTime + rg.get (6.0f, 10.0f) < game.time ()
-       && bots.getLastChatTimestamp () + rg.get (2.5f, 5.0f) < game.time ()
+   if (rg.chance (cv_chat_percent.as <int> ())
+       && m_lastChatTime + rg (6.0f, 10.0f) < game.time ()
+       && bots.getLastChatTimestamp () + rg (2.5f, 5.0f) < game.time ()
        && !isReplyingToChat ()) {
 
       if (conf.hasChatBank (Chat::Dead)) {
@@ -364,7 +365,7 @@ void Bot::checkForChat () {
       }
 
       // clear the used line buffer every now and then
-      if (static_cast <int> (m_sayTextBuffer.lastUsedSentences.length ()) > rg.get (4, 6)) {
+      if (static_cast <int> (m_sayTextBuffer.lastUsedSentences.length ()) > rg (4, 6)) {
          m_sayTextBuffer.lastUsedSentences.clear ();
       }
    }
@@ -373,7 +374,7 @@ void Bot::checkForChat () {
 void Bot::sendToChat (StringRef message, bool teamOnly) {
    // this function prints saytext message to all players
 
-   if (message.empty () || !cv_chat.bool_ ()) {
+   if (message.empty () || !cv_chat) {
       return;
    }
    issueCommand ("%s \"%s\"", teamOnly ? "say_team" : "say", message);
