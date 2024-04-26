@@ -2326,7 +2326,7 @@ void Bot::checkRadioQueue () {
 
 
    // don't allow bot listen you if bot is busy
-   if (getCurrentTaskId () == Task::DefuseBomb || getCurrentTaskId () == Task::PlantBomb || m_hasHostage || m_hasC4) {
+   if (m_radioOrder != Radio::ReportInTeam && (getCurrentTaskId () == Task::DefuseBomb || getCurrentTaskId () == Task::PlantBomb || m_hasHostage || m_hasC4)) {
       m_radioOrder = 0;
       return;
    }
@@ -2630,14 +2630,14 @@ void Bot::checkRadioQueue () {
             const Path &path = graph[getTask ()->data];
 
             if (path.flags & NodeFlag::Goal) {
-               if (game.mapIs (MapFlags::Demolition) && m_team == Team::Terrorist && m_hasC4) {
+               if (m_hasC4) {
                   pushChatterMessage (Chatter::GoingToPlantBomb);
                }
                else {
                   pushChatterMessage (Chatter::Nothing);
                }
             }
-            else if (path.flags & NodeFlag::Rescue) {
+            else if (m_hasHostage) {
                pushChatterMessage (Chatter::RescuingHostages);
             }
             else if ((path.flags & NodeFlag::Camp) && rg.chance (75)) {
