@@ -2178,7 +2178,7 @@ void Bot::startTask (Task id, float desire, int data, float time, bool resume) {
 
       if (rg.chance (25) && tid == Task::Camp) {
          if (game.mapIs (MapFlags::Demolition) && bots.isBombPlanted ()) {
-            pushChatterMessage (Chatter::GuardingDroppedC4);
+            pushChatterMessage (Chatter::GuardingPlantedC4);
          }
          else {
             pushChatterMessage (Chatter::GoingToCamp);
@@ -2661,7 +2661,7 @@ void Bot::checkRadioQueue () {
       case Task::Camp:
          if (rg.chance (40)) {
             if (bots.isBombPlanted () && m_team == Team::Terrorist) {
-               pushChatterMessage (Chatter::GuardingDroppedC4);
+               pushChatterMessage (Chatter::GuardingPlantedC4);
             }
             else if (m_inEscapeZone && m_team == Team::CT) {
                pushChatterMessage (Chatter::GuardingEscapeZone);
