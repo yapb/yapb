@@ -550,10 +550,10 @@ void Bot::setAimDirection () {
           && pev->origin.distanceSq (destOrigin) < cr::sqrf (512.0f)) {
 
          const auto nextPathIndex = m_pathWalk.next ();
-         const auto doubleNextPath = m_pathWalk.doubleNext ();
+         const auto nextPathX2 = m_pathWalk.nextX2 ();
 
-         if (vistab.visible (m_currentNodeIndex, doubleNextPath)) {
-            const auto &gn = graph[doubleNextPath];
+         if (vistab.visible (m_currentNodeIndex, nextPathX2)) {
+            const auto &gn = graph[nextPathX2];
             m_lookAt = gn.origin + pev->view_ofs;
          }
          else if (vistab.visible (m_currentNodeIndex, nextPathIndex)) {
