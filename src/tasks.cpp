@@ -212,7 +212,7 @@ void Bot::normal_ () {
             else if (m_team == Team::CT) {
                if (!bots.isBombPlanted () && numFriendsNear (pev->origin, 210.0f) < 4) {
                   const int index = findDefendNode (m_path->origin);
-                  float campTime = rg (25.0f, 40.f);
+                  float campTime = rg (25.0f, 40.0f);
 
                   // rusher bots don't like to camp too much
                   if (m_personality == Personality::Rusher) {
@@ -271,7 +271,7 @@ void Bot::normal_ () {
    if ((!cr::fzero (m_moveSpeed) && m_moveSpeed > shiftSpeed) && (cv_walking_allowed && mp_footsteps)
        && m_difficulty >= Difficulty::Normal
        && (m_heardSoundTime + 6.0f >= game.time () || (m_states & Sense::HearingEnemy))
-       && pev->origin.distanceSq (m_lastEnemyOrigin) < cr::sqrf (768.0f)
+       && numEnemiesNear (pev->origin, 768.0f) >= 1
        && !isKnifeMode ()
        && !bots.isBombPlanted ()) {
 
@@ -624,12 +624,12 @@ void Bot::camp_ () {
 
    // random camp dir, or prediction
    auto useRandomCampDirOrPredictEnemy = [&] () {
-      if (game.isNullEntity (m_lastEnemy) || !m_lastEnemyOrigin.empty ()) {
-         auto pathLength = 0;
-         auto lastEnemyNearestIndex = findAimingNode (m_lastEnemyOrigin, pathLength);
+      if (!m_lastEnemyOrigin.empty ()) {
+         auto pathLength = m_lastPredictLength;
+         auto predictNode = m_lastPredictIndex;
 
-         if (pathLength > 1 && graph.exists (lastEnemyNearestIndex)) {
-            m_lookAtSafe = graph[lastEnemyNearestIndex].origin;
+         if (pathLength > 1 && graph.exists (predictNode)) {
+            m_lookAtSafe = graph[predictNode].origin + pev->view_ofs;
          }
       }
       else {
@@ -638,10 +638,8 @@ void Bot::camp_ () {
    };
 
    if (m_nextCampDirTime < game.time ()) {
-      m_nextCampDirTime = game.time () + rg (2.0f, 5.0f);
-
       if (m_pathFlags & NodeFlag::Camp) {
-         Vector dest;
+         Vector dest {};
 
          // switch from 1 direction to the other
          if (m_campDirection < 1) {
@@ -674,6 +672,7 @@ void Bot::camp_ () {
       else {
          useRandomCampDirOrPredictEnemy ();
       }
+      m_nextCampDirTime = game.time () + rg (1.0f, 4.0f);
    }
    // press remembered crouch button
    pev->button |= m_campButtons;

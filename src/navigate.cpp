@@ -459,7 +459,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
    }
 
    m_hindrance = nullptr;
-   float distanceSq = cr::sqrf (384.0f);
+   float distanceSq = cr::sqrf (512.0f);
 
    if (isOnLadder () || isInNarrowPlace ()) {
       return;
@@ -488,6 +488,16 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
       // give some priorities to bot avoidance
       if (ownPrio > otherPrio) {
          continue;
+      }
+
+      // they are higher priority - make way, unless we're already making way for someone more important
+      if (!game.isNullEntity (m_hindrance) && m_hindrance != client.ent) {
+         const auto avoidPrio = bots.getPlayerPriority (m_hindrance);
+
+         // ignore because we're already avoiding someone better
+         if (avoidPrio > otherPrio) {
+            continue;
+         }
       }
       const auto nearestDistanceSq = client.ent->v.origin.distanceSq (pev->origin);
 
@@ -812,6 +822,59 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
             }
          }
       }
+   }
+}
+
+void Bot::checkFall () {
+
+   if (!m_checkFall) {
+      if (isOnFloor ()) {
+         m_checkFallPoint[0] = pev->origin;
+
+         if (!game.isNullEntity (m_enemy)) {
+            m_checkFallPoint[1] = game.getEntityOrigin (m_enemy);
+         }
+         else if (m_currentNodeIndex != kInvalidNodeIndex) {
+            m_checkFallPoint[1] = m_pathOrigin;
+         }
+         else {
+            m_checkFallPoint[1] = nullptr;
+         }
+      }
+      else if (!isOnLadder () && !isInWater ()) {
+         if (!m_checkFallPoint[0].empty () && !m_checkFallPoint[1].empty ()) {
+            m_checkFall = true;
+         }
+      }
+   }
+
+   if (!m_checkFall || !isOnFloor ()) {
+      return;
+   }
+   m_checkFall = false;
+   bool fixFall = false;
+
+   const float baseDistanceSq = m_checkFallPoint[0].distanceSq (m_checkFallPoint[1]);
+   const float nowDistanceSq = pev->origin.distanceSq (m_checkFallPoint[1]);
+
+   if (nowDistanceSq > baseDistanceSq
+      && (nowDistanceSq > baseDistanceSq * 1.2f || nowDistanceSq > baseDistanceSq + 200.0f)
+      && baseDistanceSq >= cr::sqrf (80.0f) && nowDistanceSq >= cr::sqrf (100.0f)) {
+      fixFall = true;
+   }
+   else if (pev->origin.z + 128.0f < m_checkFallPoint[1].z && pev->origin.z + 128.0f < m_checkFallPoint[0].z) {
+      fixFall = true;
+   }
+
+   if (m_currentNodeIndex != kInvalidNodeIndex) {
+      if (pev->origin.distanceSq (m_checkFallPoint[1]) <= cr::sqrf (32.0f) && pev->origin.z + 16.0f < m_checkFallPoint[1].z) {
+         fixFall = true;
+      }
+   }
+
+   if (fixFall) {
+      m_currentNodeIndex = kInvalidNodeIndex;
+      findValidNode ();
    }
 }
 
@@ -1607,33 +1670,6 @@ void Bot::clearSearchNodes () {
    m_chosenGoalIndex = kInvalidNodeIndex;
 }
 
-int Bot::findAimingNode (const Vector &to, int &pathLength) {
-   // return the most distant node which is seen from the bot to the target and is within count
-   ensureCurrentNodeIndex ();
-
-   const int destIndex = graph.getNearest (to);
-   int bestIndex = m_currentNodeIndex;
-
-   if (destIndex == kInvalidNodeIndex) {
-      return kInvalidNodeIndex;
-   }
-
-   auto result = planner.find (destIndex, m_currentNodeIndex, [&] (int index) {
-      ++pathLength;
-
-      if (vistab.visible (m_currentNodeIndex, index)) {
-         bestIndex = index;
-         return false;
-      }
-      return true;
-   });
-
-   if (result && bestIndex == m_currentNodeIndex) {
-      return kInvalidNodeIndex;
-   }
-   return bestIndex;
-}
-
 bool Bot::findNextBestNode () {
    // this function find a node in the near of the bot if bot had lost his path of pathfinder needs
    // to be restarted over again.
@@ -1641,7 +1677,7 @@ bool Bot::findNextBestNode () {
    int busyIndex = kInvalidNodeIndex;
 
    float lessDist[3] = { kInfiniteDistance, kInfiniteDistance, kInfiniteDistance };
-   int lessIndex[3] = { kInvalidNodeIndex, kInvalidNodeIndex , kInvalidNodeIndex };
+   int lessIndex[3] = { kInvalidNodeIndex, kInvalidNodeIndex, kInvalidNodeIndex };
 
    const auto &origin = pev->origin + pev->velocity * m_frameInterval;
    const auto &bucket = graph.getNodesInBucket (origin);
@@ -3093,9 +3129,9 @@ bool Bot::isOccupiedNode (int index, bool needZeroVelocity) {
       if (needZeroVelocity && client.ent->v.velocity.length2d () > 0.0f) {
          continue;
       }
-      const auto length = client.origin.distanceSq (graph[index].origin);
+      const auto distanceSq = client.origin.distanceSq (graph[index].origin);
 
-      if (length < cr::clamp (cr::sqrf (graph[index].radius) * 2.0f, cr::sqrf (90.0f), cr::sqrf (120.0f))) {
+      if (distanceSq < cr::clamp (cr::sqrf (graph[index].radius) * 2.0f, cr::sqrf (90.0f), cr::sqrf (120.0f))) {
          return true;
       }
       auto bot = bots[client.ent];
@@ -3103,7 +3139,7 @@ bool Bot::isOccupiedNode (int index, bool needZeroVelocity) {
       if (bot == nullptr || bot == this || !bot->m_isAlive) {
          continue;
       }
-      return bot->m_currentNodeIndex == index;
+      return bot->m_currentNodeIndex == index || bot->m_previousNodes[0] == index;
    }
    return false;
 }
