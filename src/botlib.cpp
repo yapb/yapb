@@ -2643,8 +2643,8 @@ void Bot::checkRadioQueue () {
             else if ((path.flags & NodeFlag::Camp) && rg.chance (75)) {
                pushChatterMessage (Chatter::GoingToCamp);
             }
-            else {
-               pushChatterMessage (Chatter::HeardNoise);
+            else if (m_states & Sense::HearingEnemy) {
+               pushChatterMessage (Chatter::HeardTheEnemy);
             }
          }
          else if (rg.chance (30)) {
