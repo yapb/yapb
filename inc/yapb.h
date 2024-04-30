@@ -132,7 +132,7 @@ public:
    ~PathWalk () = default;
 
 public:
-   int32_t &doubleNext () {
+   int32_t &nextX2 () {
       return at (2);
    }
 
@@ -307,6 +307,7 @@ private:
    bool m_isCreature {}; // bot is not a player, but something else ? zombie ?
    bool m_defuseNotified {}; // bot is notified about bomb defusion
    bool m_jumpSequence {}; // next path link will be jump link
+   bool m_checkFall {}; // check bot fall
 
    PathWalk m_pathWalk {}; // pointer to current node from path
    Dodge m_dodgeStrafeDir {}; // direction to strafe
@@ -325,6 +326,7 @@ private:
    edict_t *m_targetEntity {}; // the entity that the bot is trying to reach
    edict_t *m_avoidGrenade {}; // pointer to grenade entity to avoid
    edict_t *m_hindrance {}; // the hindrance
+   edict_t *m_hearedEnemy {}; // the heared enemy
 
    Vector m_liftTravelPos {}; // lift travel position
    Vector m_moveAngles {}; // bot move angles
@@ -344,6 +346,7 @@ private:
    Vector m_desiredVelocity {}; // desired velocity for jump nodes
    Vector m_breakableOrigin {}; // origin of breakable
    Vector m_rightRef {}; // right referential vector
+   Vector m_checkFallPoint[2] {}; // check fall point
 
    Array <edict_t *> m_ignoredBreakable {}; // list of ignored breakables
    Array <edict_t *> m_hostages {}; // pointer to used hostage entities
@@ -359,7 +362,6 @@ private:
 private:
    int pickBestWeapon (Array <int> &vec, int moneySave);
    int getRandomCampDir ();
-   int findAimingNode (const Vector &to, int &pathLength);
    int findNearestNode ();
    int findBombNode ();
    int findCoverNode (float maxDistance);
@@ -416,6 +418,7 @@ private:
    bool isOutOfBombTimer ();
    bool isWeaponBadAtDistance (int weaponIndex, float distance);
    bool needToPauseFiring (float distance);
+   bool checkZoom (float distance);
    bool lookupEnemies ();
    bool isEnemyHidden (edict_t *enemy);
    bool isEnemyInvincible (edict_t *enemy);
@@ -464,6 +467,7 @@ private:
    void updatePickups ();
    void ensureEntitiesClear ();
    void checkTerrain (float movedDistance, const Vector &dirNormal);
+   void checkFall ();
    void checkDarkness ();
    void checkParachute ();
    void updatePracticeValue (int damage);

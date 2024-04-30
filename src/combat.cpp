@@ -876,6 +876,70 @@ bool Bot::needToPauseFiring (float distance) {
    return false;
 }
 
+bool Bot::checkZoom (float distance) {
+   int zoomMagnification = 0;
+   bool zoomChange = false;
+
+   // is the bot holding a sniper rifle?
+   if (usesSniper ()) {
+      // should the bot switch to the long-range zoom?
+      if (distance > 1500.0f) {
+         zoomMagnification = 2;
+      }
+
+      // else should the bot switch to the close-range zoom ?
+      else if (distance > 150.0f) {
+         zoomMagnification = 1;
+      }
+
+      // else should the bot restore the normal view ?
+      else if (distance <= 150.0f) {
+         zoomMagnification = 0;
+      }
+   }
+
+   // else is the bot holding a zoomable rifle?
+   else if (m_difficulty < Difficulty::Hard && usesZoomableRifle ()) {
+      // should the bot switch to zoomed mode?
+      if (distance > 800.0f) {
+         zoomMagnification = 1;
+      }
+
+      // else should the bot restore the normal view?
+      else if (distance <= 800.0f) {
+         zoomMagnification = 0;
+      }
+   }
+
+   switch (zoomMagnification) {
+   case 0:
+      if (pev->fov < 90.0f) {
+         zoomChange = true;
+      }
+      break;
+
+   case 1:
+      if (pev->fov >= 90.0f) {
+         zoomChange = true;
+      }
+      break;
+
+   case 2:
+      if (pev->fov >= 40.0f) {
+         zoomChange = true;
+      }
+      break;
+   }
+
+   if (zoomChange && m_zoomCheckTime < game.time ()) {
+      pev->button |= IN_ATTACK2;
+      m_shootTime = game.time () + 0.15f;
+
+      m_zoomCheckTime = game.time () + 0.5f;
+   }
+   return zoomChange;
+}
+
 void Bot::selectWeapons (float distance, int index, int id, int choosen) {
    const auto tab = conf.getRawWeapons ();
 
@@ -922,51 +986,23 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
       m_shieldCheckTime = game.time () + 1.0f;
    }
 
-   // is the bot holding a sniper rifle?
-   if (usesSniper () && m_zoomCheckTime < game.time ()) {
-      // should the bot switch to the long-range zoom?
-      if (distance > 1500.0f && pev->fov >= 40.0f) {
-         pev->button |= IN_ATTACK2;
-      }
-
-      // else should the bot switch to the close-range zoom ?
-      else if (distance > 150.0f && pev->fov >= 90.0f) {
-         pev->button |= IN_ATTACK2;
-      }
-
-      // else should the bot restore the normal view ?
-      else if (distance <= 150.0f && pev->fov < 90.0f) {
-         pev->button |= IN_ATTACK2;
-      }
-      m_zoomCheckTime = game.time () + 0.25f;
-   }
-
-   // else is the bot holding a zoomable rifle?
-   else if (m_difficulty < Difficulty::Hard && usesZoomableRifle () && m_zoomCheckTime < game.time ()) {
-      // should the bot switch to zoomed mode?
-      if (distance > 800.0f && pev->fov >= 90.0f) {
-         pev->button |= IN_ATTACK2;
-      }
-
-      // else should the bot restore the normal view?
-      else if (distance <= 800.0f && pev->fov < 90.0f) {
-         pev->button |= IN_ATTACK2;
-      }
-      m_zoomCheckTime = game.time () + 0.5f;
+   if (checkZoom (distance)) {
+      return;
    }
 
    // we're should stand still before firing sniper weapons, else sniping is useless..
    if (usesSniper () && (m_aimFlags & (AimFlags::Enemy | AimFlags::LastEnemy))
-       && !m_isReloading && pev->velocity.lengthSq () > 0.0f
-       && getCurrentTaskId () != Task::SeekCover) {
+       && !m_isReloading && pev->velocity.lengthSq () > 0.0f) {
 
-      m_moveSpeed = 0.0f;
-      m_strafeSpeed = 0.0f;
-      m_navTimeset = game.time ();
+      if (!cr::fzero (pev->velocity.x) || !cr::fzero (pev->velocity.y) || !cr::fzero (pev->velocity.z)) {
+         m_moveSpeed = 0.0f;
+         m_strafeSpeed = 0.0f;
+         m_navTimeset = game.time ();
 
-      if (cr::abs (pev->velocity.x) > 5.0f || cr::abs (pev->velocity.y) > 5.0f || cr::abs (pev->velocity.z) > 5.0f) {
-         m_sniperStopTime = game.time () + 2.0f;
-         return;
+         if (cr::abs (pev->velocity.x) > 5.0f || cr::abs (pev->velocity.y) > 5.0f || cr::abs (pev->velocity.z) > 5.0f) {
+            m_sniperStopTime = game.time () + 2.0f;
+            return;
+         }
       }
    }
 
@@ -1309,7 +1345,7 @@ void Bot::attackMovement () {
       const auto pistolStrafeDistance = game.is (GameFlags::CSDM) ? kSprayDistanceX2 * 3.0f : kSprayDistanceX2;
 
       // fire hurts friend value here is from previous frame, but acceptable, and saves us alot of cpu cycles
-      if (approach < 30 || m_fireHurtsFriend || ((usesPistol () || usesShotgun ())
+      if (approach >= 30 || m_fireHurtsFriend || ((usesPistol () || usesShotgun ())
                                      && distance < pistolStrafeDistance
                                      && isInViewCone (m_enemyOrigin))) {
          m_fightStyle = Fight::Strafe;
@@ -1401,7 +1437,7 @@ void Bot::attackMovement () {
       }
    }
    else if (m_fightStyle == Fight::Stay) {
-      const bool alreadyDucking = m_duckTime > game.time () || isDucking ();
+      const bool alreadyDucking = m_duckTime < game.time () || isDucking ();
 
       if (alreadyDucking) {
          m_duckTime = game.time () + m_frameInterval * 3.0f;
@@ -1420,14 +1456,6 @@ void Bot::attackMovement () {
       }
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
-   }
-
-   if (m_difficulty >= Difficulty::Normal && isOnFloor () && m_duckTime < game.time ()) {
-      if (distance < kSprayDistanceX2) {
-         if (rg (0, 1000) < rg (5, 10) && pev->velocity.length2d () > 150.0f && isInViewCone (m_enemy->v.origin)) {
-            pev->button |= IN_JUMP;
-         }
-      }
    }
 
    if (m_isReloading) {

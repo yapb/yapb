@@ -1467,6 +1467,11 @@ void Bot::newRound () {
 
    m_timeDoorOpen = 0.0f;
 
+   for (auto &fall : m_checkFallPoint) {
+      fall = nullptr;
+   }
+   m_checkFall = false;
+
    resetCollision ();
    resetDoubleJump ();
 
