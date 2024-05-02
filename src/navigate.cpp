@@ -1239,6 +1239,11 @@ bool Bot::updateNavigation () {
       }
    }
 
+   // make sure reach exactly, if just lost on path
+   if (!m_lostReachableNodeTimer.elapsed ()) {
+      desiredDistanceSq = 0.0f;
+   }
+
    // needs precise placement - check if we get past the point
    if (desiredDistanceSq < cr::sqrf (22.0f)
        && nodeDistanceSq < cr::sqrf (30.0f)
