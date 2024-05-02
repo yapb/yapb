@@ -91,7 +91,7 @@ void Bot::avoidGrenades () {
       }
 
       // check if visible to the bot
-      if (!seesEntity (pent->v.origin) && isInFOV (pent->v.origin - getEyesPos ()) > pev->fov * 0.5f) {
+      if (isInFOV (pent->v.origin - getEyesPos ()) > pev->fov * 0.5f && !seesEntity (pent->v.origin)) {
          continue;
       }
       auto model = pent->v.model.str (9);
@@ -3219,7 +3219,7 @@ void Bot::logic () {
    }
 
    // ensure we're not stuck destroying/picking something
-   if (m_navTimeset + getEstimatedNodeReachTime () < game.time () && !(m_states & Sense::SeeingEnemy) && m_moveToGoal) {
+   if (m_navTimeset + getEstimatedNodeReachTime () + 1.0f < game.time () && !(m_states & Sense::SeeingEnemy) && m_moveToGoal) {
       ensureEntitiesClear ();
    }
 

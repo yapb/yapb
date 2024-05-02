@@ -1670,6 +1670,33 @@ void Bot::clearSearchNodes () {
    m_chosenGoalIndex = kInvalidNodeIndex;
 }
 
+int Bot::findAimingNode (const Vector &to, int &pathLength) {
+   // return the most distant node which is seen from the bot to the target and is within count
+   ensureCurrentNodeIndex ();
+
+   const int destIndex = graph.getNearest (to);
+   int bestIndex = m_currentNodeIndex;
+
+   if (destIndex == kInvalidNodeIndex) {
+      return kInvalidNodeIndex;
+   }
+
+   auto result = planner.find (destIndex, m_currentNodeIndex, [&] (int index) {
+      ++pathLength;
+
+      if (vistab.visible (m_currentNodeIndex, index)) {
+         bestIndex = index;
+         return false;
+      }
+      return true;
+   });
+
+   if (result && bestIndex == m_currentNodeIndex) {
+      return kInvalidNodeIndex;
+   }
+   return bestIndex;
+}
+
 bool Bot::findNextBestNode () {
    // this function find a node in the near of the bot if bot had lost his path of pathfinder needs
    // to be restarted over again.
