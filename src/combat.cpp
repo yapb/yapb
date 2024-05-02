@@ -1345,7 +1345,7 @@ void Bot::attackMovement () {
       const auto pistolStrafeDistance = game.is (GameFlags::CSDM) ? kSprayDistanceX2 * 3.0f : kSprayDistanceX2;
 
       // fire hurts friend value here is from previous frame, but acceptable, and saves us alot of cpu cycles
-      if (approach >= 30 || m_fireHurtsFriend || ((usesPistol () || usesShotgun ())
+      if (approach < 30 || m_fireHurtsFriend || ((usesPistol () || usesShotgun ())
                                      && distance < pistolStrafeDistance
                                      && isInViewCone (m_enemyOrigin))) {
          m_fightStyle = Fight::Strafe;
@@ -1367,7 +1367,7 @@ void Bot::attackMovement () {
       };
 
       auto strafeUpdateTime = [] () {
-         return game.time () + rg (0.3f, 1.0f);
+         return game.time () + rg (0.3f, 0.8f);
       };
 
       // to start strafing, we have to first figure out if the target is on the left side or right side
