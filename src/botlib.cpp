@@ -91,7 +91,7 @@ void Bot::avoidGrenades () {
       }
 
       // check if visible to the bot
-      if (!seesEntity (pent->v.origin) && isInFOV (pent->v.origin - getEyesPos ()) > pev->fov * 0.5f) {
+      if (isInFOV (pent->v.origin - getEyesPos ()) > pev->fov * 0.5f && !seesEntity (pent->v.origin)) {
          continue;
       }
       auto model = pent->v.model.str (9);
@@ -133,11 +133,11 @@ void Bot::avoidGrenades () {
          }
       }
       else if (cv_smoke_grenade_checks.as <int> () == 1 && (pent->v.flags & FL_ONGROUND) && model == kSmokeModelName) {
-         if (isInFOV (pent->v.origin - getEyesPos ()) < pev->fov / 3.0f) {
+         if (seesEntity (pent->v.origin) && isInFOV (pent->v.origin - getEyesPos ()) < pev->fov / 3.0f) {
             const auto &entOrigin = game.getEntityOrigin (pent);
             const auto &betweenUs = (entOrigin - pev->origin).normalize_apx ();
             const auto &betweenNade = (entOrigin - pev->origin).normalize_apx ();
-            const auto &betweenResult = ((Vector (betweenNade.y, betweenNade.x, 0.0f) * 150.0f + entOrigin) - pev->origin).normalize_apx ();
+            const auto &betweenResult = ((betweenNade.get2d () * 150.0f + entOrigin) - pev->origin).normalize_apx ();
 
             if ((betweenNade | betweenUs) > (betweenNade | betweenResult) && util.isVisible (pent->v.origin, ent ())) {
                const float distance = entOrigin.distance (pev->origin);
@@ -751,9 +751,6 @@ void Bot::updatePickups () {
 }
 
 void Bot::ensureEntitiesClear () {
-   if ((!m_isStuck || m_navTimeset + getEstimatedNodeReachTime () + m_frameInterval * 2.0f > game.time ()) && !(m_states & Sense::SeeingEnemy)) {
-      return;
-   }
    const auto tid = getCurrentTaskId ();
 
    if (tid == Task::PickupItem || (m_states & Sense::PickupItem)) {
@@ -1685,8 +1682,10 @@ void Bot::overrideConditions () {
 
    // special handling for sniping
    if (usesSniper () && (m_states & (Sense::SeeingEnemy | Sense::SuspectEnemy))
-       && m_sniperStopTime > game.time ()
-       && tid != Task::SeekCover) {
+       && m_shootTime - 0.4f <= game.time ()
+       && m_sniperStopTime > game.time ()) {
+
+      ignoreCollision ();
 
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
@@ -1897,8 +1896,7 @@ void Bot::setConditions () {
    }
 
    // don't listen if seeing enemy, just checked for sounds or being blinded (because its inhuman)
-   if (!cv_ignore_enemies
-       && m_soundUpdateTime < game.time ()
+   if (m_soundUpdateTime < game.time ()
        && m_blindTime < game.time ()
        && m_seeEnemyTime + 1.0f < game.time ()) {
 
@@ -3214,8 +3212,11 @@ void Bot::logic () {
       checkTerrain (movedDistance, dirNormal);
    }
 
+   // if we have fallen from the place of move, the nearest point is allowed
+   checkFall ();
+
    // check the darkness
-   if (cv_check_darkness) {
+   if (!m_isCreature && cv_check_darkness) {
       checkDarkness ();
    }
 
@@ -3227,7 +3228,11 @@ void Bot::logic () {
       m_moveSpeed = -pev->maxspeed;
       m_strafeSpeed = pev->maxspeed * static_cast <float> (m_needAvoidGrenade);
    }
-   ensureEntitiesClear ();
+
+   // ensure we're not stuck destroying/picking something
+   if (m_navTimeset + getEstimatedNodeReachTime () + 1.0f < game.time () && !(m_states & Sense::SeeingEnemy) && m_moveToGoal) {
+      ensureEntitiesClear ();
+   }
 
    // check if need to use parachute
    checkParachute ();
@@ -3850,10 +3855,10 @@ bool Bot::isOutOfBombTimer () {
 }
 
 void Bot::updateHearing () {
-   if (game.is (GameFlags::FreeForAll) || m_enemyIgnoreTimer > game.time ()) {
+   if (game.is (GameFlags::FreeForAll) || m_enemyIgnoreTimer > game.time () || cv_ignore_enemies) {
       return;
    }
-   edict_t *hearedEnemy = nullptr;
+   m_hearedEnemy = nullptr;
    float nearestDistanceSq = kInfiniteDistance;
 
    // setup potential visibility set from engine
@@ -3881,13 +3886,13 @@ void Bot::updateHearing () {
       }
 
       if (distanceSq < nearestDistanceSq) {
-         hearedEnemy = client.ent;
+         m_hearedEnemy = client.ent;
          nearestDistanceSq = distanceSq;
       }
    }
 
    // did the bot hear someone ?
-   if (util.isPlayer (hearedEnemy)) {
+   if (util.isPlayer (m_hearedEnemy)) {
       // change to best weapon if heard something
       if (m_shootTime < game.time () - 5.0f
           && isOnFloor ()
@@ -3909,7 +3914,7 @@ void Bot::updateHearing () {
 
       auto getHeardOriginWithError = [&] () -> Vector {
          auto error = kSprayDistance * cr::powf (nearestDistanceSq, 0.5f) / 2048.0f;
-         auto origin = hearedEnemy->v.origin;
+         auto origin = m_hearedEnemy->v.origin;
 
          origin.x = origin.x + rg (-error, error);
          origin.y = origin.y + rg (-error, error);
@@ -3919,13 +3924,13 @@ void Bot::updateHearing () {
 
       // didn't bot already have an enemy ? take this one...
       if (m_lastEnemyOrigin.empty () || game.isNullEntity (m_lastEnemy)) {
-         m_lastEnemy = hearedEnemy;
+         m_lastEnemy = m_hearedEnemy;
          m_lastEnemyOrigin = getHeardOriginWithError ();
       }
 
       // bot had an enemy, check if it's the heard one
       else {
-         if (hearedEnemy == m_lastEnemy) {
+         if (m_hearedEnemy == m_lastEnemy) {
             // bot sees enemy ? then bail out !
             if (m_states & Sense::SeeingEnemy) {
                return;
@@ -3936,8 +3941,8 @@ void Bot::updateHearing () {
             // if bot had an enemy but the heard one is nearer, take it instead
             const float distanceSq = m_lastEnemyOrigin.distanceSq (pev->origin);
 
-            if (distanceSq > hearedEnemy->v.origin.distanceSq (pev->origin) && m_seeEnemyTime + 2.0f < game.time ()) {
-               m_lastEnemy = hearedEnemy;
+            if (distanceSq > m_hearedEnemy->v.origin.distanceSq (pev->origin) && m_seeEnemyTime + 2.0f < game.time ()) {
+               m_lastEnemy = m_hearedEnemy;
                m_lastEnemyOrigin = getHeardOriginWithError ();
             }
             else {
@@ -3947,9 +3952,9 @@ void Bot::updateHearing () {
       }
 
       // check if heard enemy can be seen
-      if (checkBodyParts (hearedEnemy)) {
-         m_enemy = hearedEnemy;
-         m_lastEnemy = hearedEnemy;
+      if (checkBodyParts (m_hearedEnemy)) {
+         m_enemy = m_hearedEnemy;
+         m_lastEnemy = m_hearedEnemy;
          m_lastEnemyOrigin = m_enemyOrigin;
 
          m_states |= Sense::SeeingEnemy;
@@ -3959,15 +3964,15 @@ void Bot::updateHearing () {
       // check if heard enemy can be shoot through some obstacle
       else {
          if (cv_shoots_thru_walls
-             && m_lastEnemy == hearedEnemy
+             && m_lastEnemy == m_hearedEnemy
              && rg.chance (conf.getDifficultyTweaks (m_difficulty)->hearThruPct)
              && m_seeEnemyTime + 3.0f > game.time ()
-             && isPenetrableObstacle (hearedEnemy->v.origin)) {
+             && isPenetrableObstacle (m_hearedEnemy->v.origin)) {
 
-            m_enemy = hearedEnemy;
-            m_lastEnemy = hearedEnemy;
-            m_enemyOrigin = hearedEnemy->v.origin;
-            m_lastEnemyOrigin = hearedEnemy->v.origin;
+            m_enemy = m_hearedEnemy;
+            m_lastEnemy = m_hearedEnemy;
+            m_enemyOrigin = m_hearedEnemy->v.origin;
+            m_lastEnemyOrigin = m_hearedEnemy->v.origin;
 
             m_states |= (Sense::SeeingEnemy | Sense::SuspectEnemy);
             m_seeEnemyTime = game.time ();
