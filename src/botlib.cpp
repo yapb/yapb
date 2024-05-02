@@ -3205,7 +3205,7 @@ void Bot::logic () {
    checkFall ();
 
    // check the darkness
-   if (cv_check_darkness) {
+   if (!m_isCreature && cv_check_darkness) {
       checkDarkness ();
    }
 
