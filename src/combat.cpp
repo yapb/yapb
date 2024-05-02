@@ -1437,7 +1437,7 @@ void Bot::attackMovement () {
       }
    }
    else if (m_fightStyle == Fight::Stay) {
-      const bool alreadyDucking = m_duckTime < game.time () || isDucking ();
+      const bool alreadyDucking = m_duckTime >= game.time () || isDucking () || ((pev->button | pev->oldbuttons) & IN_DUCK);
 
       if (alreadyDucking) {
          m_duckTime = game.time () + m_frameInterval * 3.0f;
@@ -1456,6 +1456,14 @@ void Bot::attackMovement () {
       }
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
+   }
+
+   if (m_difficulty >= Difficulty::Normal && isOnFloor () && m_duckTime < game.time ()) {
+      if (distance < kSprayDistanceX2) {
+         if (rg (0, 1000) < rg (5, 10) && pev->velocity.length2d () > 150.0f && isInViewCone (m_enemy->v.origin)) {
+            pev->button |= IN_JUMP;
+         }
+      }
    }
 
    if (m_isReloading) {

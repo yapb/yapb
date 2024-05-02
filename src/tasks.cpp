@@ -631,6 +631,14 @@ void Bot::camp_ () {
          if (pathLength > 1 && graph.exists (predictNode)) {
             m_lookAtSafe = graph[predictNode].origin + pev->view_ofs;
          }
+         else {
+            pathLength = 0;
+            predictNode = findAimingNode (m_lastEnemyOrigin, pathLength);
+
+            if (pathLength > 1 && graph.exists (predictNode)) {
+               m_lookAtSafe = graph[predictNode].origin + pev->view_ofs;
+            }
+         }
       }
       else {
          m_lookAtSafe = graph[getRandomCampDir ()].origin + pev->view_ofs;

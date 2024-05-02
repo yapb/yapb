@@ -362,6 +362,7 @@ private:
 private:
    int pickBestWeapon (Array <int> &vec, int moneySave);
    int getRandomCampDir ();
+   int findAimingNode (const Vector &to, int &pathLength);
    int findNearestNode ();
    int findBombNode ();
    int findCoverNode (float maxDistance);
