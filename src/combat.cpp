@@ -399,7 +399,25 @@ bool Bot::lookupEnemies () {
       }
       else {
          if (m_seeEnemyTime + 3.0f < game.time () && (m_hasC4 || m_hasHostage || !game.isNullEntity (m_targetEntity))) {
-            pushRadioMessage (Radio::EnemySpotted);
+            if (cv_radio_mode.as <int> () == 2) {
+               switch (numEnemiesNear (pev->origin, 384.0f)) {
+                  case 1:
+                     pushChatterMessage (Chatter::SpottedOneEnemy);
+                     break;
+                  case 2:
+                     pushChatterMessage (Chatter::SpottedTwoEnemies);
+                     break;
+                  case 3:
+                     pushChatterMessage (Chatter::SpottedThreeEnemies);
+                     break;
+                  default:
+                     pushChatterMessage (Chatter::TooManyEnemies);
+                     break;
+               }
+            }
+            else if (cv_radio_mode.as <int> () == 1) {
+               pushRadioMessage (Radio::EnemySpotted);
+            }
          }
          m_targetEntity = nullptr; // stop following when we see an enemy...
 

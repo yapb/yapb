@@ -2446,6 +2446,10 @@ void Bot::checkRadioQueue () {
 
    case Radio::EnemySpotted:
    case Radio::NeedBackup:
+   case Chatter::SpottedOneEnemy:
+   case Chatter::SpottedTwoEnemies:
+   case Chatter::SpottedThreeEnemies:
+   case Chatter::TooManyEnemies:
    case Chatter::ScaredEmotion:
    case Chatter::PinnedDown:
       if (((game.isNullEntity (m_enemy) && seesEntity (m_radioEntity->v.origin)) || distanceSq < cr::sqrf (2048.0f) || !m_moveToC4)
@@ -2686,7 +2690,30 @@ void Bot::checkRadioQueue () {
          break;
 
       case Task::Attack:
-         pushChatterMessage (Chatter::InCombat);
+         if (rg.chance (50)) {
+            pushChatterMessage (Chatter::InCombat);
+         }
+         else {
+            if (cv_radio_mode.as <int> () == 2) {
+               switch (numEnemiesNear (pev->origin, 384.0f)) {
+                  case 1:
+                     pushChatterMessage (Chatter::SpottedOneEnemy);
+                     break;
+                  case 2:
+                     pushChatterMessage (Chatter::SpottedTwoEnemies);
+                     break;
+                  case 3:
+                     pushChatterMessage (Chatter::SpottedThreeEnemies);
+                     break;
+                  default:
+                     pushChatterMessage (Chatter::TooManyEnemies);
+                     break;
+               }
+            }
+            else if (cv_radio_mode.as <int> () == 1) {
+               pushRadioMessage (Radio::EnemySpotted);
+            }
+         }
          break;
 
       case Task::Hide:
