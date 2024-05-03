@@ -1187,7 +1187,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    m_currentWeapon = 0; // current weapon is not assigned at start
    m_weaponType = WeaponType::None; // current weapon type is not assigned at start
 
-   m_voicePitch = rg (80, 115); // assign voice pitch
+   m_voicePitch = rg (85, 115); // assign voice pitch
 
    // copy them over to the temp level variables
    m_agressionLevel = m_baseAgressionLevel;

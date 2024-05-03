@@ -969,6 +969,7 @@ void Bot::checkMsgQueue () {
    if (state == BotMsg::None || (state == BotMsg::Radio && game.is (GameFlags::FreeForAll))) {
       return;
    }
+   float delayResponseTime = 0.0f;
 
    switch (state) {
    case BotMsg::Buy: // general buy message
@@ -1038,11 +1039,14 @@ void Bot::checkMsgQueue () {
       break;
 
    case BotMsg::Radio:
-      // if last bot radio command (global) happened just a 3 seconds ago, delay response
-      if (bots.getLastRadioTimestamp (m_team) + 3.0f < game.time ()) {
+      delayResponseTime = rg (1.0f, 3.0f);
+
+      // if last bot radio command (global) happened some a little time ago, delay response
+      if (bots.getLastRadioTimestamp (m_team) + delayResponseTime < game.time ()) {
+
          // if same message like previous just do a yes/no
          if (m_radioSelect != Radio::RogerThat && m_radioSelect != Radio::Negative) {
-            if (m_radioSelect == bots.getLastRadio (m_team) && bots.getLastRadioTimestamp (m_team) + 1.5f > game.time ()) {
+            if (m_radioSelect == bots.getLastRadio (m_team) && bots.getLastRadioTimestamp (m_team) + delayResponseTime * 0.5f > game.time ()) {
                m_radioSelect = -1;
             }
             else {
