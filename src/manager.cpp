@@ -896,8 +896,8 @@ void BotManager::listBots () {
       auto timelimitStr = cv_rotate_bots ? strings.format ("%-3.0f secs", bot->m_stayTime - game.time ()) : "unlimited";
 
       ctrl.msg ("[%-2.1d]\t%-22.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s\t%s",
-                bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful",
-                botTeam (bot->ent ()), bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_isAlive ? "yes" : "no", timelimitStr);
+         bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful",
+         botTeam (bot->ent ()), bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_isAlive ? "yes" : "no", timelimitStr);
    }
    ctrl.msg ("%d bots", m_bots.length ());
 }
@@ -1325,10 +1325,10 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
       // need to send congrats on well placed shot
       for (const auto &notify : bots) {
          if (notify->m_isAlive
-             && killerTeam == notify->m_team
-             && killerTeam != victimTeam
-             && killer != notify->ent ()
-             && notify->seesEntity (victim->v.origin)) {
+            && killerTeam == notify->m_team
+            && killerTeam != victimTeam
+            && killer != notify->ent ()
+            && notify->seesEntity (victim->v.origin)) {
 
             if (!(killer->v.flags & FL_FAKECLIENT)) {
                notify->pushChatterMessage (Chatter::NiceShotCommander);
@@ -1346,13 +1346,13 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
    // notice nearby to victim teammates, that attacker is near
    for (const auto &notify : bots) {
       if (notify->m_difficulty >= Difficulty::Hard
-          && killerTeam != victimTeam
-          && notify->m_seeEnemyTime + 2.0f < game.time ()
-          && notify->m_isAlive
-          && notify->m_team == victimTeam
-          && game.isNullEntity (notify->m_enemy)
-          && game.isNullEntity (notify->m_lastEnemy)
-          && util.isVisible (killer->v.origin, notify->ent ())) {
+         && killerTeam != victimTeam
+         && notify->m_seeEnemyTime + 2.0f < game.time ()
+         && notify->m_isAlive
+         && notify->m_team == victimTeam
+         && game.isNullEntity (notify->m_enemy)
+         && game.isNullEntity (notify->m_lastEnemy)
+         && util.isVisible (killer->v.origin, notify->ent ())) {
 
          // make bot look at last enemy position
          notify->m_actualReactionTime = 0.0f;
@@ -1890,10 +1890,10 @@ void BotManager::notifyBombDefuse () {
       const auto task = bot->getCurrentTaskId ();
 
       if (!bot->m_defuseNotified
-          && bot->m_isAlive
-          && task != Task::MoveToPosition
-          && task != Task::DefuseBomb
-          && task != Task::EscapeFromBomb) {
+         && bot->m_isAlive
+         && task != Task::MoveToPosition
+         && task != Task::DefuseBomb
+         && task != Task::EscapeFromBomb) {
 
          if (bot->m_team == Team::Terrorist && bot->pev->origin.distanceSq (bombPos) < cr::sqrf (512.0f)) {
             bot->clearSearchNodes ();
@@ -2263,7 +2263,7 @@ bool BotManager::isLineBlockedBySmoke (const Vector &from, const Vector &to, flo
          }
       }
    }
-  
+
    // define how much smoke a bot can see thru
    const float maxSmokedLength = 0.7f * kSmokeGrenadeRadius;
 

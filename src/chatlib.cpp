@@ -203,7 +203,7 @@ void Bot::prepareChatMessage (StringRef message) {
 
    // get bot's victim
    auto getMyVictim = [&] () -> String {;
-      return humanizedName (game.indexOfPlayer (m_lastVictim));
+   return humanizedName (game.indexOfPlayer (m_lastVictim));
    };
 
    // get the game name alias
@@ -336,9 +336,9 @@ void Bot::checkForChat () {
 
    // bot chatting turned on?
    if (rg.chance (cv_chat_percent.as <int> ())
-       && m_lastChatTime + rg (6.0f, 10.0f) < game.time ()
-       && bots.getLastChatTimestamp () + rg (2.5f, 5.0f) < game.time ()
-       && !isReplyingToChat ()) {
+      && m_lastChatTime + rg (6.0f, 10.0f) < game.time ()
+      && bots.getLastChatTimestamp () + rg (2.5f, 5.0f) < game.time ()
+      && !isReplyingToChat ()) {
 
       if (conf.hasChatBank (Chat::Dead)) {
          StringRef phrase = conf.pickRandomFromChatBank (Chat::Dead);

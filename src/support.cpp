@@ -328,7 +328,7 @@ void BotSupport::checkWelcome () {
 
       // send the hud message
       game.sendHudMessage (receiveEnt, textParams,
-                           sendLegacyWelcome ? legacyWelcomeMessage.chars () : modernWelcomeMessage.chars ());
+         sendLegacyWelcome ? legacyWelcomeMessage.chars () : modernWelcomeMessage.chars ());
 
       m_welcomeReceiveTime = 0.0f;
       m_needToSendWelcome = false;

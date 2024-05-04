@@ -103,9 +103,9 @@ int BotControl::cmdFill () {
       return BotCommandResult::BadFormat;
    }
    bots.serverFill (arg <int> (team),
-                    hasArg (personality) ? arg <int> (personality) : -1,
-                    hasArg (difficulty) ? arg <int> (difficulty) : -1,
-                    hasArg (count) ? arg <int> (count) - 1 : -1);
+      hasArg (personality) ? arg <int> (personality) : -1,
+      hasArg (difficulty) ? arg <int> (difficulty) : -1,
+      hasArg (count) ? arg <int> (count) - 1 : -1);
 
    return BotCommandResult::Handled;
 }
@@ -1299,8 +1299,8 @@ int BotControl::menuCommands (int item) {
    case 1:
    case 2:
       if (util.findNearestPlayer (reinterpret_cast <void **> (&m_djump), m_ent, 600.0f, true, true, true, true, false)
-          && !m_djump->m_hasC4
-          && !m_djump->m_hasHostage) {
+         && !m_djump->m_hasC4
+         && !m_djump->m_hasHostage) {
 
          if (item == 1) {
             m_djump->startDoubleJump (m_ent);

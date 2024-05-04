@@ -170,7 +170,7 @@ template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *
                if (extenSize <= actuallyRead) {
                   // write modified by, only if the name is different
                   if (!strings.isEmpty (extenHeader.author)
-                      && strncmp (extenHeader.author, exten->modified, cr::bufsize (extenHeader.author)) != 0) {
+                     && strncmp (extenHeader.author, exten->modified, cr::bufsize (extenHeader.author)) != 0) {
 
                      strings.copy (extenHeader.modified, exten->modified, cr::bufsize (exten->modified));
                   }

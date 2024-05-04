@@ -391,7 +391,7 @@ bool FloydWarshallAlgo::load () {
       return true;
    }
    rebuild (); // rebuilds matrix
-   
+
    return true;
 }
 
