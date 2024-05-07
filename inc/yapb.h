@@ -188,7 +188,7 @@ public:
       m_path[0] = 0;
    }
 
-   void init (size_t length) {
+   void init (int32_t length) {
       m_path = cr::makeUnique <int32_t[]> (length);
    }
 };

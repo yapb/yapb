@@ -268,8 +268,8 @@ public:
    const IntArray &getNodesInBucket (const Vector &pos);
 
 public:
-   size_t getMaxRouteLength () const {
-      return m_paths.length () / 2;
+  int32_t getMaxRouteLength () const {
+     return length () / 2;
    }
 
    StringRef getAuthor () const {
