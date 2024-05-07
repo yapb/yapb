@@ -79,17 +79,17 @@ void Bot::checkDarkness () {
       const auto tid = getCurrentTaskId ();
 
       if (!flashOn &&
-          tid != Task::Camp
-          && tid != Task::Attack
-          && m_heardSoundTime + 3.0f < game.time ()
-          && m_flashLevel > 30
-          && ((skyColor > 50.0f && lightLevel < 10.0f) || (skyColor <= 50.0f && lightLevel < 40.0f))) {
+         tid != Task::Camp
+         && tid != Task::Attack
+         && m_heardSoundTime + 3.0f < game.time ()
+         && m_flashLevel > 30
+         && ((skyColor > 50.0f && lightLevel < 10.0f) || (skyColor <= 50.0f && lightLevel < 40.0f))) {
 
          pev->impulse = 100;
       }
       else if (flashOn
-               && (((lightLevel > 15.0f && skyColor > 50.0f) || (lightLevel > 45.0f && skyColor <= 50.0f))
-                   || tid == Task::Camp || tid == Task::Attack || m_flashLevel <= 0 || m_heardSoundTime + 3.0f >= game.time ())) {
+         && (((lightLevel > 15.0f && skyColor > 50.0f) || (lightLevel > 45.0f && skyColor <= 50.0f))
+            || tid == Task::Camp || tid == Task::Attack || m_flashLevel <= 0 || m_heardSoundTime + 3.0f >= game.time ())) {
 
          pev->impulse = 100;
       }
@@ -201,9 +201,9 @@ void Bot::updateLookAngles () {
 
    // just force directioon
    if (m_difficulty == Difficulty::Expert
-       && (m_aimFlags & AimFlags::Enemy)
-       && (m_wantsToFire || usesSniper ())
-       && cv_whose_your_daddy) {
+      && (m_aimFlags & AimFlags::Enemy)
+      && (m_wantsToFire || usesSniper ())
+      && cv_whose_your_daddy) {
 
       pev->v_angle = direction;
       pev->v_angle.clampAngles ();
@@ -300,8 +300,8 @@ void Bot::updateLookAnglesNewbie (const Vector &direction, float delta) {
    else {
       // is it time for bot to randomize the aim direction again (more often where moving) ?
       if (m_randomizeAnglesTime < game.time ()
-          && ((pev->velocity.length () > 1.0f
-               && m_angularDeviation.length () < 5.0f) || m_angularDeviation.length () < 1.0f)) {
+         && ((pev->velocity.length () > 1.0f
+            && m_angularDeviation.length () < 5.0f) || m_angularDeviation.length () < 1.0f)) {
 
          // is the bot standing still ?
          if (pev->velocity.length () < 1.0f) {
@@ -428,10 +428,10 @@ void Bot::setAimDirection () {
 
       // don't switch view right away after loosing focus with current enemy 
       if ((m_shootTime + 1.5f > game.time () || m_seeEnemyTime + 1.5 > game.time ())
-          && m_forgetLastVictimTimer.elapsed ()
-          && !m_lastEnemyOrigin.empty ()
-          && util.isAlive (m_lastEnemy)
-          && game.isNullEntity (m_enemy)) {
+         && m_forgetLastVictimTimer.elapsed ()
+         && !m_lastEnemyOrigin.empty ()
+         && util.isAlive (m_lastEnemy)
+         && game.isNullEntity (m_enemy)) {
 
          flags |= AimFlags::LastEnemy;
       }
@@ -543,11 +543,11 @@ void Bot::setAimDirection () {
 
 
       if (m_moveToGoal && m_seeEnemyTime + 4.0f < game.time ()
-          && !m_isStuck && !(pev->button & IN_DUCK)
-          && m_currentNodeIndex != kInvalidNodeIndex
-          && !(m_pathFlags & (NodeFlag::Ladder | NodeFlag::Crouch))
-          && m_pathWalk.hasNext () && !isOnLadder ()
-          && pev->origin.distanceSq (destOrigin) < cr::sqrf (512.0f)) {
+         && !m_isStuck && !(pev->button & IN_DUCK)
+         && m_currentNodeIndex != kInvalidNodeIndex
+         && !(m_pathFlags & (NodeFlag::Ladder | NodeFlag::Crouch))
+         && m_pathWalk.hasNext () && !isOnLadder ()
+         && pev->origin.distanceSq (destOrigin) < cr::sqrf (512.0f)) {
 
          const auto nextPathIndex = m_pathWalk.next ();
          const auto nextPathX2 = m_pathWalk.nextX2 ();
@@ -573,8 +573,8 @@ void Bot::setAimDirection () {
          const auto dangerIndex = practice.getIndex (m_team, m_currentNodeIndex, m_currentNodeIndex);
 
          if (graph.exists (dangerIndex)
-             && vistab.visible (m_currentNodeIndex, dangerIndex)
-             && !(graph[dangerIndex].flags & NodeFlag::Crouch)) {
+            && vistab.visible (m_currentNodeIndex, dangerIndex)
+            && !(graph[dangerIndex].flags & NodeFlag::Crouch)) {
 
             if (pev->origin.distanceSq (graph[dangerIndex].origin) < cr::sqrf (512.0f)) {
                m_lookAt = destOrigin;

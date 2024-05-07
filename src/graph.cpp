@@ -169,7 +169,7 @@ int BotGraph::clearConnections (int index) {
 
          // leave alone ladder connections and don't remove jump connections..
          if (((path.flags & NodeFlag::Ladder)
-              && (m_paths[prev.index].flags & NodeFlag::Ladder)) || (path.links[prev.number].flags & PathFlag::Jump)) {
+            && (m_paths[prev.index].flags & NodeFlag::Ladder)) || (path.links[prev.number].flags & PathFlag::Jump)) {
 
             return false;
          }
@@ -217,8 +217,8 @@ int BotGraph::clearConnections (int index) {
    if (exists (top.index) && exists (sorted[0].index) && exists (sorted[1].index)) {
 
       if ((sorted[1].angles - top.angles < 80.0f || 360.0f - (sorted[1].angles - top.angles) < 80.0f)
-          && (!(m_paths[sorted[0].index].flags & NodeFlag::Ladder) || !(path.flags & NodeFlag::Ladder))
-          && !(path.links[sorted[0].number].flags & PathFlag::Jump)) {
+         && (!(m_paths[sorted[0].index].flags & NodeFlag::Ladder) || !(path.flags & NodeFlag::Ladder))
+         && !(path.links[sorted[0].number].flags & PathFlag::Jump)) {
 
          if ((sorted[1].distance + top.distance) * 1.1f / 2.0f < sorted[0].distance) {
             if (path.links[sorted[0].number].index == sorted[0].index) {
@@ -266,7 +266,7 @@ int BotGraph::clearConnections (int index) {
 
             // leave alone ladder connections and don't remove jump connections..
             if (((path.flags & NodeFlag::Ladder)
-                 && (m_paths[cur.index].flags & NodeFlag::Ladder)) || (path.links[cur.number].flags & PathFlag::Jump)) {
+               && (m_paths[cur.index].flags & NodeFlag::Ladder)) || (path.links[cur.number].flags & PathFlag::Jump)) {
 
                return false;
             }
@@ -300,8 +300,8 @@ int BotGraph::clearConnections (int index) {
          else if (cur.distance < prev.distance * 1.1f) {
             // leave alone ladder connections and don't remove jump connections..
             if (((path.flags & NodeFlag::Ladder)
-                 && (m_paths[prev.index].flags & NodeFlag::Ladder))
-                || (path.links[prev.number].flags & PathFlag::Jump)) {
+               && (m_paths[prev.index].flags & NodeFlag::Ladder))
+               || (path.links[prev.number].flags & PathFlag::Jump)) {
 
                return false;
             }
@@ -349,8 +349,8 @@ int BotGraph::clearConnections (int index) {
    if (exists (top.index) && exists (sorted[0].index)) {
 
       if ((top.angles - sorted[0].angles < 40.0f || (360.0f - top.angles - sorted[0].angles) < 40.0f)
-          && (!(m_paths[sorted[0].index].flags & NodeFlag::Ladder) || !(path.flags & NodeFlag::Ladder))
-          && !(path.links[sorted[0].number].flags & PathFlag::Jump)) {
+         && (!(m_paths[sorted[0].index].flags & NodeFlag::Ladder) || !(path.flags & NodeFlag::Ladder))
+         && !(path.links[sorted[0].number].flags & PathFlag::Jump)) {
 
          if (top.distance * 1.1f < sorted[0].distance) {
             if (path.links[sorted[0].number].index == sorted[0].index) {
@@ -435,7 +435,7 @@ void BotGraph::addPath (int addIndex, int pathIndex, float distance) {
       if (link.index == kInvalidNodeIndex) {
          link.index = static_cast <int16_t> (pathIndex);
          link.distance = integerDistance;
-        
+
          msg ("Path added from %d to %d.", addIndex, pathIndex);
          return;
       }
@@ -832,9 +832,9 @@ void BotGraph::add (int type, const Vector &pos) {
             game.testLine (newOrigin, calc.origin, TraceIgnore::Monsters, m_editor, &tr);
 
             if (cr::fequal (tr.flFraction, 1.0f)
-                && cr::abs (newOrigin.x - calc.origin.x) < 64.0f
-                && cr::abs (newOrigin.y - calc.origin.y) < 64.0f
-                && cr::abs (newOrigin.z - calc.origin.z) < m_autoPathDistance) {
+               && cr::abs (newOrigin.x - calc.origin.x) < 64.0f
+               && cr::abs (newOrigin.y - calc.origin.y) < 64.0f
+               && cr::abs (newOrigin.z - calc.origin.z) < m_autoPathDistance) {
 
                const float distance = newOrigin.distance2d (calc.origin);
 
@@ -1527,7 +1527,7 @@ void BotGraph::syncInitLightLevels () {
 
    // update light levels for all nodes
    for (auto &path : m_paths) {
-      path.light = illum.getLightLevel (path.origin + Vector { 0.0f, 0.0f, 16.0f} );
+      path.light = illum.getLightLevel (path.origin + Vector { 0.0f, 0.0f, 16.0f });
    }
    m_lightChecked = true;
 
@@ -1796,7 +1796,7 @@ bool BotGraph::loadGraphData () {
       vistab.load (); // load/initialize visibility
 
       populateNodes ();
-      
+
       if (exten.mapSize > 0) {
          int mapSize = getBspSize ();
 
@@ -2093,8 +2093,8 @@ void BotGraph::frame () {
 
       // check if node is within a distance, and is visible
       if (distanceSq < cr::sqrf (cv_graph_draw_distance.as <float> ())
-          && ((util.isVisible (path.origin, m_editor)
-               && util.isInViewCone (path.origin, m_editor)) || !util.isAlive (m_editor) || distanceSq < cr::sqrf (64.0f))) {
+         && ((util.isVisible (path.origin, m_editor)
+            && util.isInViewCone (path.origin, m_editor)) || !util.isAlive (m_editor) || distanceSq < cr::sqrf (64.0f))) {
 
          // check the distance
          if (distanceSq < nearestDistanceSq) {
@@ -2211,7 +2211,7 @@ void BotGraph::frame () {
 
    // draw a paths, camplines and danger directions for nearest node
    if (nearestDistanceSq < cr::clamp (m_paths[nearestIndex].radius, cr::sqrf (56.0f), cr::sqrf (90.0f))
-       && m_pathDisplayTime < game.time ()) {
+      && m_pathDisplayTime < game.time ()) {
 
       m_pathDisplayTime = game.time () + 0.96f;
 
@@ -2341,17 +2341,17 @@ void BotGraph::frame () {
             }
          }
          flags.assignf ("%s%s%s%s%s%s%s%s%s%s%s%s",
-                        (p.flags & NodeFlag::Lift) ? " LIFT" : "",
-                        (p.flags & NodeFlag::Crouch) ? " CROUCH" : "",
-                        (p.flags & NodeFlag::Camp) ? " CAMP" : "",
-                        (p.flags & NodeFlag::TerroristOnly) ? " TERRORIST" : "",
-                        (p.flags & NodeFlag::CTOnly) ? " CT" : "",
-                        (p.flags & NodeFlag::Sniper) ? " SNIPER" : "",
-                        (p.flags & NodeFlag::Goal) ? " GOAL" : "",
-                        (p.flags & NodeFlag::Ladder) ? " LADDER" : "",
-                        (p.flags & NodeFlag::Rescue) ? " RESCUE" : "",
-                        (p.flags & NodeFlag::DoubleJump) ? " JUMPHELP" : "",
-                        (p.flags & NodeFlag::NoHostage) ? " NOHOSTAGE" : "", jumpPoint ? " JUMP" : "");
+            (p.flags & NodeFlag::Lift) ? " LIFT" : "",
+            (p.flags & NodeFlag::Crouch) ? " CROUCH" : "",
+            (p.flags & NodeFlag::Camp) ? " CAMP" : "",
+            (p.flags & NodeFlag::TerroristOnly) ? " TERRORIST" : "",
+            (p.flags & NodeFlag::CTOnly) ? " CT" : "",
+            (p.flags & NodeFlag::Sniper) ? " SNIPER" : "",
+            (p.flags & NodeFlag::Goal) ? " GOAL" : "",
+            (p.flags & NodeFlag::Ladder) ? " LADDER" : "",
+            (p.flags & NodeFlag::Rescue) ? " RESCUE" : "",
+            (p.flags & NodeFlag::DoubleJump) ? " JUMPHELP" : "",
+            (p.flags & NodeFlag::NoHostage) ? " NOHOSTAGE" : "", jumpPoint ? " JUMP" : "");
 
          if (flags.empty ()) {
             flags.assign ("(none)");
@@ -2359,9 +2359,9 @@ void BotGraph::frame () {
 
          // show the information about that point
          message.assignf ("      %s node:\n"
-                          "       Node %d of %d, Radius: %.1f, Light: %s\n"
-                          "       Flags: %s\n"
-                          "       Origin: (%.1f, %.1f, %.1f)\n", type, node, m_paths.length () - 1, p.radius, p.light == kInvalidLightLevel ? "Invalid" : strings.format ("%1.f", p.light), flags, p.origin.x, p.origin.y, p.origin.z);
+            "       Node %d of %d, Radius: %.1f, Light: %s\n"
+            "       Flags: %s\n"
+            "       Origin: (%.1f, %.1f, %.1f)\n", type, node, m_paths.length () - 1, p.radius, p.light == kInvalidLightLevel ? "Invalid" : strings.format ("%1.f", p.light), flags, p.origin.x, p.origin.y, p.origin.z);
          return message;
       };
 
@@ -2386,8 +2386,8 @@ void BotGraph::frame () {
 
          String practiceText;
          practiceText.assignf ("      Node practice data (index / damage):\n"
-                               "       CT: %d / %d\n"
-                               "       T:  %d / %d\n\n", dangerIndexCT, dangerIndexCT != kInvalidNodeIndex ? practice.getDamage (Team::CT, nearestIndex, dangerIndexCT) : 0, dangerIndexT, dangerIndexT != kInvalidNodeIndex ? practice.getDamage (Team::Terrorist, nearestIndex, dangerIndexT) : 0);
+            "       CT: %d / %d\n"
+            "       T:  %d / %d\n\n", dangerIndexCT, dangerIndexCT != kInvalidNodeIndex ? practice.getDamage (Team::CT, nearestIndex, dangerIndexCT) : 0, dangerIndexT, dangerIndexT != kInvalidNodeIndex ? practice.getDamage (Team::Terrorist, nearestIndex, dangerIndexT) : 0);
 
          sendHudMessage ({ 255, 255, 255 }, 0.0f, 0.16f, practiceText + timeMessage);
       }

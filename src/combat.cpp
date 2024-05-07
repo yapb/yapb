@@ -233,9 +233,9 @@ bool Bot::seesEnemy (edict_t *player) {
    }
 
    if ((ignoreFieldOfView || isInViewCone (player->v.origin))
-       && frustum.check (m_viewFrustum, player)
-       && !isBehindSmokeClouds (player->v.origin)
-       && checkBodyParts (player)) {
+      && frustum.check (m_viewFrustum, player)
+      && !isBehindSmokeClouds (player->v.origin)
+      && checkBodyParts (player)) {
       return true;
    }
    return false;
@@ -275,7 +275,7 @@ bool Bot::lookupEnemies () {
          && m_shootTime + 1.5f > game.time ();
 
       if (!(m_aimFlags & (AimFlags::Enemy | AimFlags::PredictPath | AimFlags::Danger))
-          && !denyLastEnemy && seesEntity (m_lastEnemyOrigin, true)) {
+         && !denyLastEnemy && seesEntity (m_lastEnemyOrigin, true)) {
          m_aimFlags |= AimFlags::LastEnemy;
       }
    }
@@ -287,9 +287,9 @@ bool Bot::lookupEnemies () {
 
       // is player is alive
       if (m_enemyUpdateTime > game.time ()
-          && m_enemy->v.origin.distanceSq (pev->origin) < nearestDistanceSq
-          && util.isAlive (player)
-          && seesEnemy (player)) {
+         && m_enemy->v.origin.distanceSq (pev->origin) < nearestDistanceSq
+         && util.isAlive (player)
+         && seesEnemy (player)) {
 
          newEnemy = player;
       }
@@ -336,10 +336,10 @@ bool Bot::lookupEnemies () {
       // search the world for players...
       for (const auto &client : util.getClients ()) {
          if (!(client.flags & ClientFlags::Used)
-             || !(client.flags & ClientFlags::Alive)
-             || client.team == m_team
-             || client.ent == ent ()
-             || !client.ent) {
+            || !(client.flags & ClientFlags::Alive)
+            || client.team == m_team
+            || client.ent == ent ()
+            || !client.ent) {
             continue;
          }
          player = client.ent;
@@ -374,7 +374,7 @@ bool Bot::lookupEnemies () {
          }
       }
       m_enemyUpdateTime = game.time () + (usesKnife () ? 1.25f : 0.85f);
-      
+
       if (game.isNullEntity (newEnemy) && !game.isNullEntity (shieldEnemy)) {
          newEnemy = shieldEnemy;
       }
@@ -451,9 +451,9 @@ bool Bot::lookupEnemies () {
             }
 
             if (other->m_seeEnemyTime + 2.0f < game.time ()
-                && game.isNullEntity (other->m_lastEnemy)
-                && util.isVisible (pev->origin, other->ent ())
-                && other->isInViewCone (pev->origin)) {
+               && game.isNullEntity (other->m_lastEnemy)
+               && util.isVisible (pev->origin, other->ent ())
+               && other->isInViewCone (pev->origin)) {
 
                other->m_lastEnemy = newEnemy;
                other->m_lastEnemyOrigin = newEnemy->v.origin;
@@ -496,8 +496,8 @@ bool Bot::lookupEnemies () {
 
       // if no enemy visible check if last one shoot able through wall
       if (cv_shoots_thru_walls
-          && rg.chance (conf.getDifficultyTweaks (m_difficulty)->seenThruPct)
-          && isPenetrableObstacle (newEnemy->v.origin)) {
+         && rg.chance (conf.getDifficultyTweaks (m_difficulty)->seenThruPct)
+         && isPenetrableObstacle (newEnemy->v.origin)) {
 
          m_seeEnemyTime = game.time ();
 
@@ -514,13 +514,13 @@ bool Bot::lookupEnemies () {
 
    // check if bots should reload...
    if ((m_aimFlags <= AimFlags::PredictPath
-        && m_seeEnemyTime + 3.0f < game.time ()
-        && !(m_states & (Sense::SeeingEnemy | Sense::HearingEnemy))
-        && game.isNullEntity (m_lastEnemy)
-        && game.isNullEntity (m_enemy)
-        && getCurrentTaskId () != Task::ShootBreakable
-        && getCurrentTaskId () != Task::PlantBomb
-        && getCurrentTaskId () != Task::DefuseBomb) || bots.isRoundOver ()) {
+      && m_seeEnemyTime + 3.0f < game.time ()
+      && !(m_states & (Sense::SeeingEnemy | Sense::HearingEnemy))
+      && game.isNullEntity (m_lastEnemy)
+      && game.isNullEntity (m_enemy)
+      && getCurrentTaskId () != Task::ShootBreakable
+      && getCurrentTaskId () != Task::PlantBomb
+      && getCurrentTaskId () != Task::DefuseBomb) || bots.isRoundOver ()) {
 
       if (!m_reloadState) {
          m_reloadState = Reload::Primary;
@@ -550,7 +550,7 @@ Vector Bot::getBodyOffsetError (float distance) {
 
       m_aimLastError = Vector (rg (mins.x * hitError, maxs.x * hitError), rg (mins.y * hitError, maxs.y * hitError), rg (mins.z * hitError * 0.5f, maxs.z * hitError * 0.5f));
 
-      const auto &aimError = conf.getDifficultyTweaks (m_difficulty) ->aimError;
+      const auto &aimError = conf.getDifficultyTweaks (m_difficulty)->aimError;
       m_aimLastError += Vector (rg (-aimError.x, aimError.x), rg (-aimError.y, aimError.y), rg (-aimError.z, aimError.z));
 
       m_aimErrorTime = game.time () + rg (0.4f, 0.8f);
@@ -661,7 +661,7 @@ Vector Bot::getCustomHeight (float distance) {
       { 0.0f,  0.0f,   0.0f }, // melee
       { 0.5f, -0.1f,  -1.5f }, // pistol
       { 6.5f,  6.0f,  -2.0f }, // shotgun
-      { 0.5f  -7.5f,  -9.5f }, // zoomrifle
+      { 0.5f - 7.5f,  -9.5f }, // zoomrifle
       { 0.5f, -7.5f,  -9.5f }, // rifle
       { 0.5f, -7.5f,  -9.5f }, // smg
       { 0.0f, -2.5f,  -6.0f }, // sniper
@@ -714,7 +714,7 @@ bool Bot::isFriendInLineOfFire (float distance) {
       const auto friendDistanceSq = client.ent->v.origin.distanceSq (pev->origin);
 
       if (friendDistanceSq <= distanceSq
-          && util.getConeDeviation (ent (), client.ent->v.origin) > friendDistanceSq / (friendDistanceSq + cr::sqrf (33.0f))) {
+         && util.getConeDeviation (ent (), client.ent->v.origin) > friendDistanceSq / (friendDistanceSq + cr::sqrf (33.0f))) {
          return true;
       }
    }
@@ -1010,7 +1010,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
 
    // we're should stand still before firing sniper weapons, else sniping is useless..
    if (usesSniper () && (m_aimFlags & (AimFlags::Enemy | AimFlags::LastEnemy))
-       && !m_isReloading && pev->velocity.lengthSq () > 0.0f) {
+      && !m_isReloading && pev->velocity.lengthSq () > 0.0f) {
 
       if (!cr::fzero (pev->velocity.x) || !cr::fzero (pev->velocity.y) || !cr::fzero (pev->velocity.z)) {
          m_moveSpeed = 0.0f;
@@ -1119,12 +1119,12 @@ void Bot::fireWeapons () {
 
    // use knife if near and good difficulty (l33t dude!)
    if (cv_stab_close_enemies && m_difficulty >= Difficulty::Normal
-       && m_healthValue > 80.0f
-       && !game.isNullEntity (m_enemy)
-       && m_healthValue >= m_enemy->v.health
-       && distance < 100.0f
-       && !isOnLadder ()
-       && !isGroupOfEnemies (pev->origin)) {
+      && m_healthValue > 80.0f
+      && !game.isNullEntity (m_enemy)
+      && m_healthValue >= m_enemy->v.health
+      && distance < 100.0f
+      && !isOnLadder ()
+      && !isGroupOfEnemies (pev->origin)) {
 
       selectWeapons (distance, selectIndex, selectId, choosenWeapon);
       return;
@@ -1364,8 +1364,8 @@ void Bot::attackMovement () {
 
       // fire hurts friend value here is from previous frame, but acceptable, and saves us alot of cpu cycles
       if (approach < 30 || m_fireHurtsFriend || ((usesPistol () || usesShotgun ())
-                                     && distance < pistolStrafeDistance
-                                     && isInViewCone (m_enemyOrigin))) {
+         && distance < pistolStrafeDistance
+         && isInViewCone (m_enemyOrigin))) {
          m_fightStyle = Fight::Strafe;
       }
       m_lastFightStyleCheck = game.time ();
@@ -1446,10 +1446,10 @@ void Bot::attackMovement () {
       }
 
       if (m_difficulty >= Difficulty::Normal
-          && (m_jumpTime + 5.0f < game.time ()
-              && isOnFloor ()
-              && rg (0, 1000) < (m_isReloading ? 8 : 2)
-              && pev->velocity.length2d () > 150.0f) && !usesSniper ()) {
+         && (m_jumpTime + 5.0f < game.time ()
+            && isOnFloor ()
+            && rg (0, 1000) < (m_isReloading ? 8 : 2)
+            && pev->velocity.length2d () > 150.0f) && !usesSniper ()) {
 
          pev->button |= IN_JUMP;
       }
@@ -1461,14 +1461,14 @@ void Bot::attackMovement () {
          m_duckTime = game.time () + m_frameInterval * 3.0f;
       }
       else if ((distance > kSprayDistanceX2 && hasPrimaryWeapon ())
-               && isFullView
-               && getCurrentTaskId () != Task::SeekCover
-               && getCurrentTaskId () != Task::Hunt) {
+         && isFullView
+         && getCurrentTaskId () != Task::SeekCover
+         && getCurrentTaskId () != Task::Hunt) {
 
          const int enemyNearestIndex = graph.getNearest (m_enemy->v.origin);
 
          if (vistab.visible (m_currentNodeIndex, enemyNearestIndex, VisIndex::Crouch)
-             && vistab.visible (enemyNearestIndex, m_currentNodeIndex, VisIndex::Crouch)) {
+            && vistab.visible (enemyNearestIndex, m_currentNodeIndex, VisIndex::Crouch)) {
             m_duckTime = game.time () + m_frameInterval * 3.0f;
          }
       }
@@ -1846,11 +1846,11 @@ void Bot::checkReload () {
 
    // we're should not reload, while doing next tasks
    const bool uninterruptibleTask = (tid == Task::PlantBomb
-                                     || tid == Task::DefuseBomb
-                                     || tid == Task::PickupItem
-                                     || tid == Task::ThrowExplosive
-                                     || tid == Task::ThrowFlashbang
-                                     || tid == Task::ThrowSmoke);
+      || tid == Task::DefuseBomb
+      || tid == Task::PickupItem
+      || tid == Task::ThrowExplosive
+      || tid == Task::ThrowFlashbang
+      || tid == Task::ThrowSmoke);
 
    // do not check for reload
    if (uninterruptibleTask || m_isUsingGrenade || usesKnife ()) {
@@ -2130,10 +2130,10 @@ void Bot::checkGrenadesThrow () {
 
    // special condition if we're have valid current enemy
    if (!isGrenadeMode && ((m_states & Sense::SeeingEnemy)
-                          && util.isAlive (m_enemy)
-                          && ((m_enemy->v.button | m_enemy->v.oldbuttons) & IN_ATTACK)
-                          && util.isVisible (pev->origin, m_enemy))
-                          && util.isInViewCone (pev->origin, m_enemy)) {
+      && util.isAlive (m_enemy)
+      && ((m_enemy->v.button | m_enemy->v.oldbuttons) & IN_ATTACK)
+      && util.isVisible (pev->origin, m_enemy))
+      && util.isInViewCone (pev->origin, m_enemy)) {
 
       // do not throw away grenades if anyone is attacking us
       distanceSq = kInfiniteDistance;
@@ -2201,7 +2201,8 @@ void Bot::checkGrenadesThrow () {
          }
          break;
 
-      case Weapon::Flashbang: {
+      case Weapon::Flashbang:
+      {
          const int nearest = graph.getNearest (m_lastEnemy->v.velocity.get2d () + m_lastEnemy->v.origin);
 
          if (nearest != kInvalidNodeIndex) {

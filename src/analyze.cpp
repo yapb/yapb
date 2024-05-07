@@ -176,7 +176,7 @@ void GraphAnalyze::optimize () {
    }
    cleanup ();
 
-   auto smooth = []  (const Array <int> &nodes) {
+   auto smooth = [] (const Array <int> &nodes) {
       Vector result;
 
       for (const auto &node : nodes) {
@@ -202,7 +202,7 @@ void GraphAnalyze::optimize () {
 
       for (const auto &link : path.links) {
          if (graph.exists (link.index) && !m_optimizedNodes[link.index]
-             && !AStarAlgo::cantSkipNode (path.number, link.index, true)) {
+            && !AStarAlgo::cantSkipNode (path.number, link.index, true)) {
 
             indexes.emplace (link.index);
          }
@@ -342,8 +342,8 @@ void GraphAnalyze::flood (const Vector &pos, const Vector &next, float range) {
       auto testPos = m_isCrouch ? Vector { nextPos.x, nextPos.y, nextPos.z - 18.0f } : nextPos;
 
       if ((graph.isNodeReacheable (targetPos, testPos)
-           && graph.isNodeReacheable (testPos, targetPos)) || (graph.isNodeReacheableWithJump (testPos, targetPos)
-                                                               && graph.isNodeReacheableWithJump (targetPos, testPos))) {
+         && graph.isNodeReacheable (testPos, targetPos)) || (graph.isNodeReacheableWithJump (testPos, targetPos)
+            && graph.isNodeReacheableWithJump (targetPos, testPos))) {
          graph.add (NodeAddFlag::Normal, m_isCrouch ? Vector { nextPos.x, nextPos.y, nextPos.z - 9.0f } : nextPos);
       }
    }
@@ -364,7 +364,7 @@ void GraphAnalyze::markGoals () {
 
    auto updateNodeFlags = [] (int type, StringRef classname) {
       game.searchEntities ("classname", classname, [&] (edict_t *ent) {
-         for  (auto &path : graph) {
+         for (auto &path : graph) {
             const auto &bb = path.origin + Vector (1.0f, 1.0f, 1.0f);
 
             if (ent->v.absmin.x > bb.x || ent->v.absmin.y > bb.y) {
