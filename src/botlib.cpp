@@ -947,7 +947,7 @@ void Bot::pushChatterMessage (int message) {
    }
 
    if (!sendMessage) {
-      m_radioSelect = -1;
+      m_radioSelect = kInvalidRadioSlot;
       return;
    }
    m_radioSelect = message;
@@ -1047,14 +1047,14 @@ void Bot::checkMsgQueue () {
          // if same message like previous just do a yes/no
          if (m_radioSelect != Radio::RogerThat && m_radioSelect != Radio::Negative) {
             if (m_radioSelect == bots.getLastRadio (m_team) && bots.getLastRadioTimestamp (m_team) + delayResponseTime * 0.5f > game.time ()) {
-               m_radioSelect = -1;
+               m_radioSelect = kInvalidRadioSlot;
             }
             else {
                if (m_radioSelect != Radio::ReportingIn) {
                   bots.setLastRadio (m_team, m_radioSelect);
                }
                else {
-                  bots.setLastRadio (m_team, -1);
+                  bots.setLastRadio (m_team, kInvalidRadioSlot);
                }
 
                for (const auto &bot : bots) {
@@ -1066,26 +1066,28 @@ void Bot::checkMsgQueue () {
             }
          }
 
-         if (m_radioSelect != -1) {
+         if (m_radioSelect != kInvalidRadioSlot) {
             if ((m_radioSelect != Radio::ReportingIn && m_forceRadio)
                || cv_radio_mode.as <int> () != 2
                || !conf.hasChatterBank (m_radioSelect)
                || !game.is (GameFlags::HasBotVoice)) {
 
+               auto radioSlot = m_radioSelect;
+
                if (m_radioSelect < Radio::GoGoGo) {
                   issueCommand ("radio1");
                }
                else if (m_radioSelect < Radio::RogerThat) {
-                  m_radioSelect -= Radio::GoGoGo - 1;
+                  radioSlot -= Radio::GoGoGo - 1;
                   issueCommand ("radio2");
                }
                else {
-                  m_radioSelect -= Radio::RogerThat - 1;
+                  radioSlot -= Radio::RogerThat - 1;
                   issueCommand ("radio3");
                }
 
                // select correct menu item for this radio message
-               issueCommand ("menuselect %d", m_radioSelect);
+               issueCommand ("menuselect %d", radioSlot);
             }
             else if (m_radioSelect != Radio::ReportingIn) {
                instantChatter (m_radioSelect);

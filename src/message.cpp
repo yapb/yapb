@@ -227,7 +227,7 @@ void MessageDispatcher::netMsgMoney () {
    if (amount < 0) {
       amount = 800;
    }
-   else if (amount > INT32_MAX) {
+   else if (amount >= INT32_MAX) {
       amount = 16000;
    }
    m_bot->m_moneyAmount = amount;
