@@ -690,7 +690,7 @@ void BotManager::killAllBots (int team, bool silent) {
    // this function kills all bots on server (only this dll controlled bots)
 
    for (const auto &bot : m_bots) {
-      if (team != -1 && game.getRealTeam (bot->ent ())) {
+      if (team != -1 && game.getRealTeam (bot->ent ()) != team) {
          continue;
       }
       bot->kill ();
