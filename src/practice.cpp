@@ -153,7 +153,7 @@ void BotPractice::save () {
    if (!graph.length () || graph.hasChanged ()) {
       return; // no action
    }
-   SmallArray <DangerSaveRestore> data;
+   SmallArray <DangerSaveRestore> data {};
    data.reserve (m_data.length ());
 
    // copy hash-map data to our vector
@@ -167,7 +167,7 @@ void BotPractice::load () {
    if (!graph.length ()) {
       return; // no action
    }
-   SmallArray <DangerSaveRestore> data;
+   SmallArray <DangerSaveRestore> data {};
    m_data.clear ();
 
    const bool dataLoaded = bstor.load <DangerSaveRestore> (data);

@@ -19,7 +19,7 @@ void GraphVistable::rebuild () {
       return;
    }
    TraceResult tr {};
-   uint8_t res, shift;
+   uint8_t res {}, shift {};
 
    if (!graph.exists (m_sliceIndex)) {
       m_sliceIndex = 0;

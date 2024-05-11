@@ -174,7 +174,7 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
    // then sends result to bot constructor
 
    edict_t *bot = nullptr;
-   String resultName;
+   String resultName {};
 
    // do not allow create bots when there is no graph
    if (!graph.length ()) {
@@ -254,7 +254,7 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
    }
 
    if (hasNamePrefix) {
-      String prefixed; // temp buffer for storing modified name
+      String prefixed {}; // temp buffer for storing modified name
       prefixed.assignf ("%s %s", cv_name_prefix.as <StringRef> (), resultName);
 
       // buffer has been modified, copy to real name
@@ -624,13 +624,13 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
    else {
       selection = 5;
    }
-   constexpr char teams[6][12] = { "", {"Terrorists"}, {"CTs"}, "", "", {"Random"}, };
+   constexpr char kTeams[6][12] = { "", {"Terrorists"}, {"CTs"}, "", "", {"Random"}, };
    const auto toAdd = numToAdd == -1 ? maxClients - (getHumansCount () + getBotCount ()) : numToAdd;
 
    for (int i = 0; i <= toAdd; ++i) {
       addbot ("", difficulty, personality, selection, -1, true);
    }
-   ctrl.msg ("Fill server with %s bots...", &teams[selection][0]);
+   ctrl.msg ("Fill server with %s bots...", &kTeams[selection][0]);
 }
 
 void BotManager::kickEveryone (bool instant, bool zeroQuota) {
@@ -834,7 +834,7 @@ void BotManager::setWeaponMode (int selection) {
 
    selection--;
 
-   constexpr int std[7][kNumWeapons] = {
+   constexpr int kStd[7][kNumWeapons] = {
       {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Knife only
       {-1, -1, -1, 2, 2, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Pistols only
       {-1, -1, -1, -1, -1, -1, -1, 2, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Shotgun only
@@ -844,7 +844,7 @@ void BotManager::setWeaponMode (int selection) {
       {-1, -1, -1, 2, 2, 0, 1, 2, 2, 2, 1, 2, 0, 2, 0, 0, 1, 0, 1, 1, 2, 2, 0, 1, 2, 1} // Standard
    };
 
-   constexpr int as[7][kNumWeapons] = {
+   constexpr int kAs[7][kNumWeapons] = {
       {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Knife only
       {-1, -1, -1, 2, 2, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Pistols only
       {-1, -1, -1, -1, -1, -1, -1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Shotgun only
@@ -853,19 +853,19 @@ void BotManager::setWeaponMode (int selection) {
       {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, -1, 1, -1, -1}, // Snipers only
       {-1, -1, -1, 2, 2, 0, 1, 1, 1, 1, 1, 1, 0, 2, 0, -1, 1, 0, 1, 1, 0, 0, -1, 1, 1, 1} // Standard
    };
-   constexpr char modes[7][12] = { {"Knife"}, {"Pistol"}, {"Shotgun"}, {"Machine Gun"}, {"Rifle"}, {"Sniper"}, {"Standard"} };
+   constexpr char kModes[7][12] = { {"Knife"}, {"Pistol"}, {"Shotgun"}, {"Machine Gun"}, {"Rifle"}, {"Sniper"}, {"Standard"} };
 
    // get the raw weapons array
    auto tab = conf.getRawWeapons ();
 
    // set the correct weapon mode
    for (int i = 0; i < kNumWeapons; ++i) {
-      tab[i].teamStandard = std[selection][i];
-      tab[i].teamAS = as[selection][i];
+      tab[i].teamStandard = kStd[selection][i];
+      tab[i].teamAS = kAs[selection][i];
    }
    cv_jasonmode.set (selection == 0 ? 1 : 0);
 
-   ctrl.msg ("%s weapon mode selected.", &modes[selection][0]);
+   ctrl.msg ("%s weapon mode selected.", &kModes[selection][0]);
 }
 
 void BotManager::listBots () {
@@ -2195,7 +2195,7 @@ bool BotManager::isLineBlockedBySmoke (const Vector &from, const Vector &to, flo
       float alongDist = toGrenade | sightDir;
 
       // compute closest point to grenade along line of sight ray
-      Vector close;
+      Vector close {};
 
       // constrain closest point to line segment
       if (alongDist < 0.0f) {

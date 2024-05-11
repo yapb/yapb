@@ -473,7 +473,7 @@ bool DijkstraAlgo::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, i
          }
       }
    }
-   static SmallArray <int> pathInReverse;
+   static SmallArray <int> pathInReverse {};
    pathInReverse.clear ();
 
    for (int i = destIndex; i != kInvalidNodeIndex; i = m_parent[i]) {

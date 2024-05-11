@@ -331,7 +331,7 @@ String BotStorage::buildPath (int32_t file, bool isMemoryLoad, bool withoutMapNa
       { BotFile::EbotEWP, FilePath (folders.ebot, "ewp")},
    };
 
-   static StringArray path;
+   static StringArray path {};
    path.clear ();
 
    // if not memory file we're don't need game dir
@@ -389,7 +389,7 @@ int32_t BotStorage::storageToBotFile (int32_t options) {
 void BotStorage::unlinkFromDisk () {
    // this function removes graph file from the hard disk
 
-   StringArray unlinkable;
+   StringArray unlinkable {};
    bots.kickEveryone (true);
 
    // if we're delete graph, delete all corresponding to it files
@@ -413,7 +413,7 @@ void BotStorage::unlinkFromDisk () {
 StringRef BotStorage::getRunningPath () {
    // this function get's relative path against bot library (bot library should reside in bin dir)
 
-   static String path;
+   static String path {};
 
    // we're do not do relative (against bot's library) paths on android 
    if (plat.android) {
@@ -441,7 +441,7 @@ StringRef BotStorage::getRunningPath () {
 }
 
 StringRef BotStorage::getRunningPathVFS () {
-   static String path;
+   static String path {};
 
    // we're do not do relative (against bot's library) paths on android 
    if (plat.android) {

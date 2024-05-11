@@ -149,7 +149,7 @@ void BotSupport::decalTrace (entvars_t *pev, TraceResult *trace, int logotypeInd
          .writeByte (decalIndex);
    }
    else {
-      MessageWriter msg;
+      MessageWriter msg {};
 
       msg.start (MSG_BROADCAST, SVC_TEMPENTITY)
          .writeByte (message)
@@ -282,7 +282,7 @@ void BotSupport::checkWelcome () {
       auto graphModified = graph.getModifiedBy ();
 
       // legacy welcome message, to respect the original code
-      constexpr StringRef legacyWelcomeMessage = "Welcome to POD-Bot V2.5 by Count Floyd\n"
+      constexpr StringRef kLegacyWelcomeMessage = "Welcome to POD-Bot V2.5 by Count Floyd\n"
          "Visit http://www.nuclearbox.com/podbot/ or\n"
          "      http://www.botepidemic.com/podbot for Updates\n";
 
@@ -328,7 +328,7 @@ void BotSupport::checkWelcome () {
 
       // send the hud message
       game.sendHudMessage (receiveEnt, textParams,
-         sendLegacyWelcome ? legacyWelcomeMessage.chars () : modernWelcomeMessage.chars ());
+         sendLegacyWelcome ? kLegacyWelcomeMessage.chars () : modernWelcomeMessage.chars ());
 
       m_welcomeReceiveTime = 0.0f;
       m_needToSendWelcome = false;
@@ -440,7 +440,7 @@ void BotSupport::syncCalculatePings () {
          if (!(client.flags & ClientFlags::Used) || isFakeClient (client.ent)) {
             continue;
          }
-         int ping, loss;
+         int ping {}, loss {};
          engfuncs.pfnGetPlayerStats (client.ent, &ping, &loss);
 
          // @note: for those who asking on a email, we CAN call pfnGetPlayerStats hl-engine function in a separate thread
@@ -502,7 +502,7 @@ void BotSupport::syncCalculatePings () {
 }
 
 void BotSupport::emitPings (edict_t *to) {
-   static MessageWriter msg;
+   static MessageWriter msg {};
 
    auto isThirdpartyBot = [] (edict_t *ent) {
       return !bots[ent] && (ent->v.flags & FL_FAKECLIENT);
@@ -530,7 +530,7 @@ void BotSupport::emitPings (edict_t *to) {
 }
 
 void BotSupport::resetPings (edict_t *to) {
-   static MessageWriter msg;
+   static MessageWriter msg {};
 
    // no reset if game isn't support them
    if (!game.is (GameFlags::HasFakePings)) {
@@ -636,7 +636,7 @@ float BotSupport::getWaveLength (StringRef filename) {
       uint32_t dataChunkLength;
    } header {};
 
-   static WaveEndianessHelper weh;
+   static WaveEndianessHelper weh {};
 
    if (fp.read (&header, sizeof (WavHeader)) == 0) {
       logger.error ("Wave File %s - has wrong or unsupported format", filePath);

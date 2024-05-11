@@ -887,7 +887,7 @@ void Bot::instantChatter (int type) {
    if (m_isAlive) {
       showChatterIcon (true);
    }
-   MessageWriter msg;
+   MessageWriter msg {};
    const int ownIndex = index ();
 
    auto writeChatterSound = [&msg] (ChatterItem item) {
@@ -1161,18 +1161,18 @@ bool Bot::isWeaponRestrictedAMX (int wid) {
 
    // check for weapon restrictions
    if (cr::bit (wid) & (kPrimaryWeaponMask | kSecondaryWeaponMask | Weapon::Shield)) {
-      constexpr int ids[] = { 4, 25, 20, -1, 8, -1, 12, 19, -1, 5, 6, 13, 23, 17, 18, 1, 2, 21, 9, 24, 7, 16, 10, 22, -1, 3, 15, 14, 0, 11 };
+      constexpr int kIds[] = { 4, 25, 20, -1, 8, -1, 12, 19, -1, 5, 6, 13, 23, 17, 18, 1, 2, 21, 9, 24, 7, 16, 10, 22, -1, 3, 15, 14, 0, 11 };
 
       // verify restrictions
-      return checkRestriction ("amx_restrweapons", ids);
+      return checkRestriction ("amx_restrweapons", kIds);
    }
 
    // check for equipment restrictions
    else {
-      constexpr int ids[] = { -1, -1, -1, 3, -1, -1, -1, -1, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2, -1, -1, -1, -1, -1, 0, 1, 5 };
+      constexpr int kIds[] = { -1, -1, -1, 3, -1, -1, -1, -1, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2, -1, -1, -1, -1, -1, 0, 1, 5 };
 
       // verify restrictions
-      return checkRestriction ("amx_restrequipammo", ids);
+      return checkRestriction ("amx_restrequipammo", kIds);
    }
 }
 
@@ -1253,7 +1253,7 @@ void Bot::buyStuff () {
    }
 
    int count = 0;
-   Array <int32_t> choices;
+   Array <int32_t> choices {};
 
    // select the priority tab for this personality
    const int *pref = conf.getWeaponPrefs (m_personality) + kNumWeapons;
@@ -1658,10 +1658,10 @@ void Bot::overrideConditions () {
 
    // special handling, if we have a knife in our hands
    if (isKnifeMode () && (util.isPlayer (m_enemy) || (cv_attack_monsters && util.isMonster (m_enemy)))) {
-      const float length = pev->origin.distance2d (m_enemy->v.origin);
+      const float distance2d = pev->origin.distance2d (m_enemy->v.origin);
 
       // do nodes movement if enemy is not reachable with a knife
-      if (length > 250.0f && (m_states & Sense::SeeingEnemy)) {
+      if (distance2d > 250.0f && (m_states & Sense::SeeingEnemy)) {
          const int nearestToEnemyPoint = graph.getNearest (m_enemy->v.origin);
 
          if (nearestToEnemyPoint != kInvalidNodeIndex
@@ -1669,18 +1669,18 @@ void Bot::overrideConditions () {
             && cr::abs (graph[nearestToEnemyPoint].origin.z - m_enemy->v.origin.z) < 16.0f) {
 
             if (tid != Task::MoveToPosition && !cr::fequal (getTask ()->desire, TaskPri::Hide)) {
-               startTask (Task::MoveToPosition, TaskPri::Hide, nearestToEnemyPoint, game.time () + length / (m_moveSpeed * 2.0f), true);
+               startTask (Task::MoveToPosition, TaskPri::Hide, nearestToEnemyPoint, game.time () + distance2d / (m_moveSpeed * 2.0f), true);
             }
             else {
                if (tid == Task::MoveToPosition && getTask ()->data != nearestToEnemyPoint) {
                   clearTask (Task::MoveToPosition);
-                  startTask (Task::MoveToPosition, TaskPri::Hide, nearestToEnemyPoint, game.time () + length / (m_moveSpeed * 2.0f), true);
+                  startTask (Task::MoveToPosition, TaskPri::Hide, nearestToEnemyPoint, game.time () + distance2d / (m_moveSpeed * 2.0f), true);
                }
             }
          }
       }
       else {
-         if (length <= 250.0f && (m_states & Sense::SeeingEnemy) && tid == Task::MoveToPosition) {
+         if (distance2d <= 250.0f && (m_states & Sense::SeeingEnemy) && tid == Task::MoveToPosition) {
             clearTask (Task::MoveToPosition); // remove any move tasks
          }
       }
@@ -2839,7 +2839,6 @@ void Bot::frame () {
    if (m_thinkDelay.time <= game.time ()) {
       update ();
 
-
       // delay next execution for thinking
       m_thinkDelay.time = game.time () + m_thinkDelay.interval;
 
@@ -2975,7 +2974,7 @@ void Bot::logicDuringFreezetime () {
       pev->button |= IN_JUMP;
       m_jumpTime = game.time ();
    }
-   static Array <Bot *> teammates;
+   static Array <Bot *> teammates {};
    teammates.clear ();
 
    for (const auto &bot : bots) {
@@ -3342,7 +3341,7 @@ void Bot::showDebugOverlay () {
       if (!game.isNullEntity (m_pickupItem)) {
          pickup = m_pickupItem->v.classname.str ();
       }
-      String aimFlags;
+      String aimFlags {};
 
       for (uint32_t i = 0u; i < 9u; ++i) {
          auto bit = cr::bit (i);
@@ -3680,7 +3679,7 @@ void Bot::debugMsgInternal (StringRef str) {
    if (level <= 2) {
       return;
    }
-   String printBuf;
+   String printBuf {};
    printBuf.assignf ("%s: %s", pev->netname.str (), str);
 
    bool playMessage = false;
@@ -3739,9 +3738,9 @@ Vector Bot::isBombAudible () {
 }
 
 bool Bot::canRunHeavyWeight () {
-   constexpr auto interval = 1.0f / 10.0f;
+   constexpr auto kInterval = 1.0f / 10.0f;
 
-   if (m_heavyTimestamp + interval < game.time ()) {
+   if (m_heavyTimestamp + kInterval < game.time ()) {
       m_heavyTimestamp = game.time ();
 
       return true;
@@ -4032,7 +4031,7 @@ bool Bot::isBombDefusing (const Vector &bombOrigin) {
       return false;
    }
    bool defusingInProgress = false;
-   constexpr auto distanceToBomb = cr::sqrf (165.0f);
+   constexpr auto kDistanceToBomb = cr::sqrf (165.0f);
 
    for (const auto &client : util.getClients ()) {
       if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive)) {
@@ -4048,7 +4047,7 @@ bool Bot::isBombDefusing (const Vector &bombOrigin) {
          }
 
          // if close enough, mark as progressing
-         if (bombDistanceSq < distanceToBomb && (bot->getCurrentTaskId () == Task::DefuseBomb || bot->m_hasProgressBar)) {
+         if (bombDistanceSq < kDistanceToBomb && (bot->getCurrentTaskId () == Task::DefuseBomb || bot->m_hasProgressBar)) {
             defusingInProgress = true;
             break;
          }
@@ -4059,7 +4058,7 @@ bool Bot::isBombDefusing (const Vector &bombOrigin) {
       if (client.team == m_team) {
 
          // if close enough, mark as progressing
-         if (bombDistanceSq < distanceToBomb && ((client.ent->v.button | client.ent->v.oldbuttons) & IN_USE)) {
+         if (bombDistanceSq < kDistanceToBomb && ((client.ent->v.button | client.ent->v.oldbuttons) & IN_USE)) {
             defusingInProgress = true;
             break;
          }
@@ -4112,8 +4111,8 @@ void Bot::refreshModelName (char *infobuffer) {
 
 bool Bot::isCreature () {
    // current creature models are: zombie, chicken
-   constexpr auto modelMaskZombie = (('o' << 8) + 'z');
-   constexpr auto modelMaskChicken = (('h' << 8) + 'c');
+   constexpr auto kModelMaskZombie = (('o' << 8) + 'z');
+   constexpr auto kModelMaskChicken = (('h' << 8) + 'c');
 
-   return m_modelMask == modelMaskZombie || m_modelMask == modelMaskChicken;
+   return m_modelMask == kModelMaskZombie || m_modelMask == kModelMaskChicken;
 }

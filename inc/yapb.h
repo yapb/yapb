@@ -464,7 +464,7 @@ private:
    void updateLookAnglesNewbie (const Vector &direction, float delta);
    void setIdealReactionTimers (bool actual = false);
    void updateHearing ();
-   void postprocessGoals (const IntArray &goals, int result[]);
+   void postProcessGoals (const IntArray &goals, int result[]);
    void updatePickups ();
    void ensureEntitiesClear ();
    void checkTerrain (float movedDistance, const Vector &dirNormal);

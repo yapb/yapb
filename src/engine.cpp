@@ -287,13 +287,13 @@ bool Game::isDedicated () {
 const char *Game::getRunningModName () {
    // this function returns mod name without path
 
-   static String name;
+   static String name {};
 
    if (!name.empty ()) {
       return name.chars ();
    }
 
-   char engineModName[256];
+   char engineModName[256] {};
    engfuncs.pfnGetGameDir (engineModName);
 
    name = engineModName;
@@ -428,11 +428,11 @@ void Game::sendClientMessage (bool console, edict_t *ent, StringRef message) {
    };
 
    // do not excess limit
-   constexpr size_t maxSendLength = 125;
+   constexpr size_t kMaxSendLength = 125;
 
    // split up the string into chunks if needed (maybe check if it's multibyte?)
-   if (buffer.length () > maxSendLength) {
-      auto chunks = buffer.split (maxSendLength);
+   if (buffer.length () > kMaxSendLength) {
+      auto chunks = buffer.split (kMaxSendLength);
 
       // send in chunks
       for (size_t i = 0; i < chunks.length (); ++i) {
@@ -447,11 +447,11 @@ void Game::sendServerMessage (StringRef message) {
    // helper to sending the client message
 
    // do not excess limit
-   constexpr size_t maxSendLength = 175;
+   constexpr size_t kMaxSendLength = 175;
 
    // split up the string into chunks if needed (maybe check if it's multibyte?)
-   if (message.length () > maxSendLength) {
-      auto chunks = message.split (maxSendLength);
+   if (message.length () > kMaxSendLength) {
+      auto chunks = message.split (kMaxSendLength);
 
       // send in chunks
       for (size_t i = 0; i < chunks.length (); ++i) {
@@ -463,7 +463,7 @@ void Game::sendServerMessage (StringRef message) {
 }
 
 void Game::sendHudMessage (edict_t *ent, const hudtextparms_t &htp, StringRef message) {
-   constexpr size_t maxSendLength = 512;
+   constexpr size_t kMaxSendLength = 512;
 
    if (game.isNullEntity (ent)) {
       return;
@@ -490,7 +490,7 @@ void Game::sendHudMessage (edict_t *ent, const hudtextparms_t &htp, StringRef me
    if (htp.effect == 2) {
       msg.writeShort (MessageWriter::fu16 (htp.fxTime, 8.0f));
    }
-   msg.writeString (message.substr (0, maxSendLength).chars ());
+   msg.writeString (message.substr (0, kMaxSendLength).chars ());
 }
 
 void Game::prepareBotArgs (edict_t *ent, String str) {
@@ -709,7 +709,7 @@ void Game::registerCvars (bool gameVars) {
          self.ptr = engfuncs.pfnCVarGetPointer (reg.name);
 
          if (!self.ptr) {
-            static cvar_t reg_;
+            static cvar_t reg_ {};
 
             // fix metamod' memlocs not found
             if (is (GameFlags::Metamod)) {
@@ -1071,8 +1071,8 @@ bool Game::hasEntityInGame (StringRef classname) {
 }
 
 void Game::printBotVersion () {
-   String gameVersionStr;
-   StringArray botRuntimeFlags;
+   String gameVersionStr {};
+   StringArray botRuntimeFlags {};
 
    if (is (GameFlags::Legacy)) {
       gameVersionStr.assign ("Legacy");
@@ -1308,6 +1308,7 @@ float LightMeasure::getLightLevel (const Vector &point) {
       }
       return recursiveLightPoint <msurface_t, mnode_t> (m_worldModel->nodes, point, endPoint);
    };
+
    return !recursiveCheck () ? kInvalidLightLevel : 100 * cr::sqrtf (cr::min (75.0f, static_cast <float> (m_point.avg ())) / 75.0f);
 }
 

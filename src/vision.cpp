@@ -285,8 +285,8 @@ void Bot::updateLookAnglesNewbie (const Vector &direction, float delta) {
    const float noTargetRatio = 0.3f;
    const float offsetDelay = 1.2f;
 
-   Vector stiffness;
-   Vector randomize;
+   Vector stiffness {};
+   Vector randomize {};
 
    m_idealAngles = direction.get2d ();
    m_idealAngles.clampAngles ();
@@ -368,7 +368,7 @@ bool Frustum::isObjectInsidePlane (const Plane &plane, const Vector &center, flo
 }
 
 void Frustum::calculate (Planes &planes, const Vector &viewAngle, const Vector &viewOffset) {
-   Vector forward, right, up;
+   Vector forward {}, right {}, up {};
    viewAngle.angleVectors (&forward, &right, &up);
 
    auto fc = viewOffset + forward * kMaxViewDistance;
@@ -540,7 +540,6 @@ void Bot::setAimDirection () {
    else if (flags & AimFlags::Nav) {
       const auto &destOrigin = m_destOrigin + pev->view_ofs;
       m_lookAt = destOrigin;
-
 
       if (m_moveToGoal && m_seeEnemyTime + 4.0f < game.time ()
          && !m_isStuck && !(pev->button & IN_DUCK)

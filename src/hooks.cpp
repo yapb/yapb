@@ -13,12 +13,12 @@ int32_t ServerQueryHook::sendTo (int socket, const void *message, size_t length,
    };
 
    auto packet = reinterpret_cast <const uint8_t *> (message);
-   constexpr int32_t packetLength = 5;
+   constexpr int32_t kPacketLength = 5;
 
    // player replies response
-   if (length > packetLength && memcmp (packet, "\xff\xff\xff\xff", packetLength - 1) == 0) {
+   if (length > kPacketLength && memcmp (packet, "\xff\xff\xff\xff", kPacketLength - 1) == 0) {
       if (packet[4] == 'D') {
-         QueryBuffer buffer { packet, length, packetLength };
+         QueryBuffer buffer { packet, length, kPacketLength };
          auto count = buffer.read <uint8_t> ();
 
          for (uint8_t i = 0; i < count; ++i) {
@@ -32,7 +32,7 @@ int32_t ServerQueryHook::sendTo (int socket, const void *message, size_t length,
          return send (buffer.data ());
       }
       else if (packet[4] == 'I') {
-         QueryBuffer buffer { packet, length, packetLength };
+         QueryBuffer buffer { packet, length, kPacketLength };
          buffer.skip <uint8_t> (); // protocol
 
          // skip server name, folder, map game
@@ -48,7 +48,7 @@ int32_t ServerQueryHook::sendTo (int socket, const void *message, size_t length,
          return send (buffer.data ());
       }
       else if (packet[4] == 'm') {
-         QueryBuffer buffer { packet, length, packetLength };
+         QueryBuffer buffer { packet, length, kPacketLength };
 
          buffer.shiftToEnd (); // shift to the end of buffer
          buffer.write <uint8_t> (0); // zero out bot count
