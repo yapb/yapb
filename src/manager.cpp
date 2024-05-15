@@ -814,7 +814,7 @@ void BotManager::setLastWinner (int winner) {
 void BotManager::checkBotModel (edict_t *ent, char *infobuffer) {
    for (const auto &bot : bots) {
       if (bot->ent () == ent) {
-         bot->refreshModelName (infobuffer);
+         bot->refreshCreatureStatus (infobuffer);
          break;
       }
    }
@@ -825,6 +825,18 @@ void BotManager::checkNeedsToBeKicked () {
       if (bot->m_kickMeFromServer) {
          bot->kick (); // kick bot from server if requested
          break;
+      }
+   }
+}
+
+void BotManager::refreshCreatureStatus () {
+   if (!game.is (GameFlags::ZombieMod)) {
+      return;
+   }
+
+   for (const auto &bot : bots) {
+      if (bot->m_isAlive) {
+         bot->refreshCreatureStatus (nullptr);
       }
    }
 }
@@ -1370,7 +1382,7 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
       }
    }
 
-   // mark bot as "spawned", and reset it to new-round state when it dead (for csdm only)
+   // mark bot as "spawned", and reset it to new-round state when it dead (for csdm/zombie only)
    if (victimBot != nullptr) {
       victimBot->spawned ();
    }
@@ -1519,7 +1531,7 @@ void Bot::newRound () {
    for (auto &timer : m_chatterTimes) {
       timer = kMaxChatterRepeatInterval;
    }
-   refreshModelName (nullptr);
+   refreshCreatureStatus (nullptr);
 
    m_isReloading = false;
    m_reloadState = Reload::None;

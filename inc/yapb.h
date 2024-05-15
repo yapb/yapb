@@ -306,6 +306,7 @@ private:
    bool m_moveToC4 {}; // ct is moving to bomb
    bool m_needToSendWelcomeChat {}; // bot needs to greet people on server?
    bool m_isCreature {}; // bot is not a player, but something else ? zombie ?
+   bool m_isOnInfectedTeam {}; // bot is zombie (this assumes bot is a creature)
    bool m_defuseNotified {}; // bot is notified about bomb defusion
    bool m_jumpSequence {}; // next path link will be jump link
    bool m_checkFall {}; // check bot fall
@@ -500,7 +501,7 @@ private:
    void selectWeaponByIndex (int index);
    void syncUpdatePredictedIndex ();
    void updatePredictedIndex ();
-   void refreshModelName (char *infobuffer);
+   void refreshCreatureStatus (char *infobuffer);
    void updateRightRef ();
 
    void completeTask ();

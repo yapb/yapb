@@ -3243,7 +3243,7 @@ void Bot::logic () {
 }
 
 void Bot::spawned () {
-   if (game.is (GameFlags::CSDM)) {
+   if (game.is (GameFlags::CSDM | GameFlags::ZombieMod)) {
       newRound ();
       clearTasks ();
    }
@@ -4088,7 +4088,27 @@ float Bot::getShiftSpeed () {
    return pev->maxspeed * 0.4f;
 }
 
-void Bot::refreshModelName (char *infobuffer) {
+void Bot::refreshCreatureStatus (char *infobuffer) {
+   // if bot is on infected team, assume he is a creature
+   if (game.is (GameFlags::ZombieMod)) {
+      static StringRef zmInfectedTeam (conf.fetchCustom ("ZMInfectedTeam"));
+
+      // by default infected team is terrorists
+      Team infectedTeam = Team::Terrorist;
+
+      if (zmInfectedTeam == "CT") {
+         infectedTeam = Team::CT;
+      }
+
+      // if bot is on infected team, and zombie mode is active, assume bot is a creature/zombie
+      m_isOnInfectedTeam = game.getRealTeam (ent ()) == infectedTeam;
+
+      // do not process next if already infected
+      if (m_isOnInfectedTeam) {
+         return;
+      }
+   }
+
    if (infobuffer == nullptr) {
       infobuffer = engfuncs.pfnGetInfoKeyBuffer (ent ());
    }
@@ -4114,5 +4134,5 @@ bool Bot::isCreature () {
    constexpr auto kModelMaskZombie = (('o' << 8) + 'z');
    constexpr auto kModelMaskChicken = (('h' << 8) + 'c');
 
-   return m_modelMask == kModelMaskZombie || m_modelMask == kModelMaskChicken;
+   return m_isOnInfectedTeam || m_modelMask == kModelMaskZombie || m_modelMask == kModelMaskChicken;
 }
