@@ -2308,12 +2308,12 @@ void BotControl::createMenus () {
    m_menus.emplace (
       Menu::WeaponMode, keys (7),
       "\\yBots Weapon Mode\\w\n\n"
-      "1. Knives Only\n"
-      "2. Pistols Only\n"
-      "3. Shotguns Only\n"
-      "4. Machine Guns Only\n"
-      "5. Rifles Only\n"
-      "6. Sniper Weapons Only\n"
+      "1. Knives only\n"
+      "2. Pistols only\n"
+      "3. Shotguns only\n"
+      "4. Machine Guns only\n"
+      "5. Rifles only\n"
+      "6. Sniper Weapons only\n"
       "7. All Weapons\n\n"
       "0. Exit",
       &BotControl::menuWeaponMode);
@@ -2344,60 +2344,60 @@ void BotControl::createMenus () {
    // team select menu
    m_menus.emplace (
       Menu::TeamSelect, keys (5),
-      "\\ySelect a Team\\w\n\n"
+      "\\ySelect a team\\w\n\n"
       "1. Terrorist Force\n"
       "2. Counter-Terrorist Force\n\n"
-      "5. Auto-Select\n\n"
+      "5. Auto-select\n\n"
       "0. Exit",
       &BotControl::menuTeamSelect);
 
    // terrorist model select menu
    m_menus.emplace (
       Menu::TerroristSelect, keys (5),
-      "\\ySelect an Appearance\\w\n\n"
+      "\\ySelect an appearance\\w\n\n"
       "1. Phoenix Connexion\n"
       "2. L337 Krew\n"
       "3. Arctic Avengers\n"
       "4. Guerilla Warfare\n\n"
-      "5. Auto-Select\n\n"
+      "5. Auto-select\n\n"
       "0. Exit",
       &BotControl::menuClassSelect);
 
    // counter-terrorist model select menu
    m_menus.emplace (
       Menu::CTSelect, keys (5),
-      "\\ySelect an Appearance\\w\n\n"
+      "\\ySelect an appearance\\w\n\n"
       "1. Seal Team 6 (DEVGRU)\n"
       "2. German GSG-9\n"
       "3. UK SAS\n"
       "4. French GIGN\n\n"
-      "5. Auto-Select\n\n"
+      "5. Auto-select\n\n"
       "0. Exit",
       &BotControl::menuClassSelect);
 
    // condition zero terrorist model select menu
    m_menus.emplace (
       Menu::TerroristSelectCZ, keys (6),
-      "\\ySelect an Appearance\\w\n\n"
+      "\\ySelect an appearance\\w\n\n"
       "1. Phoenix Connexion\n"
       "2. L337 Krew\n"
       "3. Arctic Avengers\n"
       "4. Guerilla Warfare\n"
       "5. Midwest Militia\n\n"
-      "6. Auto-Select\n\n"
+      "6. Auto-select\n\n"
       "0. Exit",
       &BotControl::menuClassSelect);
 
    // condition zero counter-terrorist model select menu
    m_menus.emplace (
       Menu::CTSelectCZ, keys (6),
-      "\\ySelect an Appearance\\w\n\n"
+      "\\ySelect an appearance\\w\n\n"
       "1. Seal Team 6 (DEVGRU)\n"
       "2. German GSG-9\n"
       "3. UK SAS\n"
       "4. French GIGN\n"
       "5. Russian Spetsnaz\n\n"
-      "6. Auto-Select\n\n"
+      "6. Auto-select\n\n"
       "0. Exit",
       &BotControl::menuClassSelect);
 
@@ -2416,12 +2416,12 @@ void BotControl::createMenus () {
    m_menus.emplace (
       Menu::NodeMainPage1, keys (9),
       "\\yNode Operations (Page 1)\\w\n\n"
-      "1. Show/Hide Nodes\n"
-      "2. Cache Node\n"
-      "3. Create Path\n"
-      "4. Delete Path\n"
-      "5. Add Node\n"
-      "6. Delete Node\n"
+      "1. Show/Hide nodes\n"
+      "2. Cache node\n"
+      "3. Create path\n"
+      "4. Delete path\n"
+      "5. Add node\n"
+      "6. Delete node\n"
       "7. Set Autopath Distance\n"
       "8. Set Radius\n\n"
       "9. Next...\n\n"
@@ -2432,14 +2432,14 @@ void BotControl::createMenus () {
    m_menus.emplace (
       Menu::NodeMainPage2, keys (9),
       "\\yNode Operations (Page 2)\\w\n\n"
-      "1. Debug Goal\n"
-      "2. Autonode On/Off\n"
-      "3. Set Flags\n"
-      "4. Save Nodes\n"
-      "5. Save Without Checking\n"
-      "6. Load Nodes\n"
-      "7. Check Nodes\n"
-      "8. Noclip Cheat On/Off\n\n"
+      "1. Debug goal\n"
+      "2. Autonode on/off\n"
+      "3. Set flags\n"
+      "4. Save nodes\n"
+      "5. Save without checking\n"
+      "6. Load nodes\n"
+      "7. Check nodes\n"
+      "8. Noclip cheat on/off\n\n"
       "9. Previous...\n\n"
       "0. Exit",
       &BotControl::menuGraphPage2);
@@ -2467,7 +2467,7 @@ void BotControl::createMenus () {
       "1. Normal\n"
       "\\r2. Terrorist Important\n"
       "3. Counter-Terrorist Important\n"
-      "\\w4. Block With Hostage / Ladder\n"
+      "\\w4. Block with hostage / Ladder\n"
       "\\y5. Rescue Zone\n"
       "\\w6. Camping\n"
       "7. Camp End\n"
@@ -2479,10 +2479,10 @@ void BotControl::createMenus () {
    // debug goal menu
    m_menus.emplace (
       Menu::NodeDebug, keys (3),
-      "\\yDebug Goal\\w\n\n"
-      "1. Debug Nearest Node\n"
-      "2. Debug Facing Node\n"
-      "3. Stop Debugging\n\n"
+      "\\yDebug goal\\w\n\n"
+      "1. Debug nearest node\n"
+      "2. Debug facing node\n"
+      "3. Stop debugging\n\n"
       "0. Exit",
       &BotControl::menuGraphDebug);
 
@@ -2490,7 +2490,7 @@ void BotControl::createMenus () {
    m_menus.emplace (
       Menu::NodeFlag, keys (9),
       "\\yToggle Node Flags\\w\n\n"
-      "1. Block With Hostage\n"
+      "1. Block with Hostage\n"
       "2. Terrorists Specific\n"
       "3. CTs Specific\n"
       "4. Use Elevator\n"
