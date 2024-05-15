@@ -1274,7 +1274,7 @@ void BotGraph::showFileInfo () {
    msg ("  compressed_size: %dkB", m_graphHeader.compressed / 1024);
    msg ("  uncompressed_size: %dkB", m_graphHeader.uncompressed / 1024);
    msg ("  options: %d", m_graphHeader.options); // display as string ?
-   msg ("  analyzed: %s", isAnalyzed () ? "yes" : "no"); // display as string ?
+   msg ("  analyzed: %s", isAnalyzed () ? conf.translate ("yes") : conf.translate ("no")); // display as string ?
 
    msg ("");
 

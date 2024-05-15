@@ -482,8 +482,12 @@ void BotConfig::loadLanguageConfig () {
       String temp;
       Twin <String, String> lang;
 
+      auto trimWithoutWs = [] (String in) -> String {
+         return in.trim ("\r\n");
+      };
+
       auto pushTranslatedMsg = [&] () {
-         m_language[hashLangString (lang.first.trim ().chars ())] = lang.second.trim ();
+         m_language[hashLangString (trimWithoutWs (lang.first).chars ())] = trimWithoutWs (lang.second);
       };
 
       // clear all the translations before new load
@@ -512,7 +516,7 @@ void BotConfig::loadLanguageConfig () {
 
          // make sure last string is translated
          if (file.eof () && !lang.first.empty ()) {
-            lang.second = line.trim ();
+            lang.second = trimWithoutWs (line);
             pushTranslatedMsg ();
          }
       }
