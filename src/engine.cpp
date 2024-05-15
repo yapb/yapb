@@ -951,7 +951,11 @@ void Game::applyGameModes () {
       return;
    }
 
-   static ConVarRef csdm_active ("csdm_active");
+   static StringRef csdmActiveCvarName = conf.fetchCustom ("CSDMDetectCvar");
+   static StringRef zmActiveCvarName = conf.fetchCustom ("ZMDetectCvar");
+   static StringRef zmDelayCvarName = conf.fetchCustom ("ZMDelayCvar");
+
+   static ConVarRef csdm_active (csdmActiveCvarName);
    static ConVarRef csdm_version ("csdm_version");
    static ConVarRef redm_active ("redm_active");
    static ConVarRef mp_freeforall ("mp_freeforall");
@@ -976,12 +980,21 @@ void Game::applyGameModes () {
       }
    }
 
-   // some little support for zombie plague
-   static ConVarRef zp_delay ("zp_delay");
+   // does zombie mod is in use
+   static ConVarRef zm_active (zmActiveCvarName);
 
-   // update our ignore timer if zp_elay exists
-   if (zp_delay.exists () && zp_delay.value () > 0.0f) {
-      cv_ignore_enemies_after_spawn_time.set (zp_delay.value () + 3.0f);
+   // do a some little support for zombie plague
+   if (zm_active.exists ()) {
+      static ConVarRef zm_delay (zmDelayCvarName);
+
+      // update our ignore timer if zp_delay exists
+      if (zm_delay.exists () && zm_delay.value () > 0.0f) {
+         cv_ignore_enemies_after_spawn_time.set (zm_delay.value () + 3.5f);
+      }
+      m_gameFlags |= GameFlags::ZombieMod;
+   }
+   else {
+      m_gameFlags &= ~GameFlags::ZombieMod;
    }
 }
 
@@ -1032,6 +1045,9 @@ void Game::slowFrame () {
 
    // kick failed bots
    bots.checkNeedsToBeKicked ();
+
+   // refresh bot infection (creature) status
+   bots.refreshCreatureStatus ();
 
    // update next update time
    m_oneSecondFrame = nextUpdate + time ();

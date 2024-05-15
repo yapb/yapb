@@ -661,6 +661,10 @@ void BotConfig::loadCustomConfig () {
       m_custom["C4ModelName"] = "c4.mdl";
       m_custom["AMXParachuteCvar"] = "sv_parachute";
       m_custom["CustomCSDMSpawnPoint"] = "view_spawn";
+      m_custom["CSDMDetectCvar"] = "csdm_active";
+      m_custom["ZMDetectCvar"] = "zp_delay";
+      m_custom["ZMDelayCvar"] = "zp_delay";
+      m_custom["ZMInfectedTeam"] = "T";
    };
    setDefaults ();
 
