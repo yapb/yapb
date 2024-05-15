@@ -2448,15 +2448,15 @@ void BotControl::createMenus () {
    m_menus.emplace (
       Menu::NodeRadius, keys (9),
       "\\yNode Radius\\w\n\n"
-      "1. SetRadius 0\n"
-      "2. SetRadius 8\n"
-      "3. SetRadius 16\n"
-      "4. SetRadius 32\n"
-      "5. SetRadius 48\n"
-      "6. SetRadius 64\n"
-      "7. SetRadius 80\n"
-      "8. SetRadius 96\n"
-      "9. SetRadius 128\n\n"
+      "1. 0 units\n"
+      "2. 8 units\n"
+      "3. 16 units\n"
+      "4. 32 units\n"
+      "5. 48 units\n"
+      "6. 64 units\n"
+      "7. 80 units\n"
+      "8. 96 units\n"
+      "9. 128 units\n\n"
       "0. Exit",
       &BotControl::menuGraphRadius);
 
