@@ -189,7 +189,8 @@ public:
    }
 
    void init (int32_t length) {
-      m_path = cr::makeUnique <int32_t[]> (length);
+      const auto allocSize = static_cast <uint32_t> (length);
+      m_path = cr::makeUnique <int32_t[]> (allocSize);
    }
 };
 

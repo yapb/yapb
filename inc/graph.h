@@ -269,7 +269,7 @@ public:
 
 public:
   int32_t getMaxRouteLength () const {
-     return length () / 2;
+     return (length () / 2) + (kMaxNodes / 256);
    }
 
    StringRef getAuthor () const {
