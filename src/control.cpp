@@ -231,7 +231,7 @@ int BotControl::cmdCvars () {
 
    const bool isSave = isSaveMain || isSaveMap;
 
-   File cfg;
+   File cfg {};
 
    // if save requested, dump cvars to main config
    if (isSave) {
@@ -375,8 +375,8 @@ int BotControl::cmdNode () {
    }
 
    // should be moved to class?
-   static HashMap <String, BotCmd> commands;
-   static StringArray descriptions;
+   static HashMap <String, BotCmd> commands {};
+   static StringArray descriptions {};
 
    // fill only once
    if (descriptions.empty ()) {
@@ -898,7 +898,7 @@ int BotControl::cmdNodeUpload () {
       msg ("\n");
    }
    else {
-      String status;
+      String status {};
       auto code = http.getLastStatusCode ();
 
       if (code == HttpClientResult::Forbidden) {
@@ -1871,7 +1871,8 @@ bool BotControl::executeCommands () {
       }
       return false;
    };
-   String cmd;
+
+   String cmd {};
 
    // give some help
    if (hasArg (1) && arg <StringRef> (1) == "help") {
@@ -2012,15 +2013,16 @@ void BotControl::showMenu (int id) {
          .writeByte (last ? HLFalse : HLTrue)
          .writeString (text.chars ());
    };
-   constexpr size_t maxMenuSentLength = 140;
+
+   constexpr size_t kMaxMenuSentLength = 140;
 
    for (const auto &display : m_menus) {
       if (display.ident == id) {
          String text = (game.is (GameFlags::Xash3D | GameFlags::Mobility) && !cv_display_menu_text) ? " " : display.text.chars ();
 
          // split if needed
-         if (text.length () > maxMenuSentLength) {
-            auto chunks = text.split (maxMenuSentLength);
+         if (text.length () > kMaxMenuSentLength) {
+            auto chunks = text.split (kMaxMenuSentLength);
 
             // send in chunks
             for (size_t i = 0; i < chunks.length (); ++i) {
@@ -2069,7 +2071,7 @@ void BotControl::kickBotByMenu (int page) {
    static StringRef backKey = conf.translate ("Back");
    static StringRef moreKey = conf.translate ("More");
 
-   String menus;
+   String menus {};
    menus.assignf ("\\y%s (%d/4):\\w\n\n", headerTitle, page);
 
    int menuKeys = (page == 4) ? cr::bit (9) : (cr::bit (8) | cr::bit (9));
@@ -2283,7 +2285,7 @@ void BotControl::createMenus () {
       Menu::Features, keys (5),
       "\\yBots Features\\w\n\n"
       "1. Weapon Mode Menu\n"
-      "2. Waypoint Menu\n"
+      "2. Graph Editor\n"
       "3. Select Personality\n\n"
       "4. Toggle Debug Mode\n"
       "5. Command Menu\n\n"
@@ -2410,33 +2412,33 @@ void BotControl::createMenus () {
       "0. Exit",
       &BotControl::menuCommands);
 
-   // main waypoint menu
+   // main node menu
    m_menus.emplace (
       Menu::NodeMainPage1, keys (9),
-      "\\yWaypoint Operations (Page 1)\\w\n\n"
-      "1. Show/Hide waypoints\n"
-      "2. Cache waypoint\n"
+      "\\yGraph Editor (Page 1)\\w\n\n"
+      "1. Show/Hide nodes\n"
+      "2. Cache node\n"
       "3. Create path\n"
       "4. Delete path\n"
-      "5. Add waypoint\n"
-      "6. Delete waypoint\n"
+      "5. Add node\n"
+      "6. Delete node\n"
       "7. Set Autopath Distance\n"
       "8. Set Radius\n\n"
       "9. Next...\n\n"
       "0. Exit",
       &BotControl::menuGraphPage1);
 
-   // main waypoint menu (page 2)
+   // main node menu (page 2)
    m_menus.emplace (
       Menu::NodeMainPage2, keys (9),
-      "\\yWaypoint Operations (Page 2)\\w\n\n"
+      "\\yGraph Editor (Page 2)\\w\n\n"
       "1. Debug goal\n"
-      "2. Autowaypoint on/off\n"
+      "2. Autonode on/off\n"
       "3. Set flags\n"
-      "4. Save waypoints\n"
+      "4. Save graph\n"
       "5. Save without checking\n"
-      "6. Load waypoints\n"
-      "7. Check waypoints\n"
+      "6. Load graph\n"
+      "7. Check graph\n"
       "8. Noclip cheat on/off\n\n"
       "9. Previous...\n\n"
       "0. Exit",
@@ -2445,23 +2447,23 @@ void BotControl::createMenus () {
    // select nodes radius menu
    m_menus.emplace (
       Menu::NodeRadius, keys (9),
-      "\\yWaypoint Radius\\w\n\n"
-      "1. SetRadius 0\n"
-      "2. SetRadius 8\n"
-      "3. SetRadius 16\n"
-      "4. SetRadius 32\n"
-      "5. SetRadius 48\n"
-      "6. SetRadius 64\n"
-      "7. SetRadius 80\n"
-      "8. SetRadius 96\n"
-      "9. SetRadius 128\n\n"
+      "\\yNode Radius\\w\n\n"
+      "1. 0 units\n"
+      "2. 8 units\n"
+      "3. 16 units\n"
+      "4. 32 units\n"
+      "5. 48 units\n"
+      "6. 64 units\n"
+      "7. 80 units\n"
+      "8. 96 units\n"
+      "9. 128 units\n\n"
       "0. Exit",
       &BotControl::menuGraphRadius);
 
    // nodes add menu
    m_menus.emplace (
       Menu::NodeType, keys (9),
-      "\\yWaypoint Type\\w\n\n"
+      "\\yNode Type\\w\n\n"
       "1. Normal\n"
       "\\r2. Terrorist Important\n"
       "3. Counter-Terrorist Important\n"
@@ -2484,10 +2486,10 @@ void BotControl::createMenus () {
       "0. Exit",
       &BotControl::menuGraphDebug);
 
-   // set waypoint flag menu
+   // set node flag menu
    m_menus.emplace (
       Menu::NodeFlag, keys (9),
-      "\\yToggle Waypoint Flags\\w\n\n"
+      "\\yToggle Node Flags\\w\n\n"
       "1. Block with Hostage\n"
       "2. Terrorists Specific\n"
       "3. CTs Specific\n"
@@ -2503,7 +2505,7 @@ void BotControl::createMenus () {
    // set camp directions menu
    m_menus.emplace (
       Menu::CampDirections, keys (2),
-      "\\ySet Camp Point directions\\w\n\n"
+      "\\ySet Camp Point Directions\\w\n\n"
       "1. Camp Start\n"
       "2. Camp End\n\n"
       "0. Exit",

@@ -46,8 +46,9 @@ void BotConfig::loadMainConfig (bool isFirstLoad) {
       }
       return false;
    };
-   String line;
-   MemFile file;
+
+   String line {};
+   MemFile file {};
 
    // this is does the same as exec of engine, but not overwriting values of cvars specified in cv_ignore_cvars_on_changelevel
    if (openConfig (product.nameLower, "Bot main config file is not found.", &file, false)) {
@@ -121,8 +122,8 @@ void BotConfig::loadMainConfig (bool isFirstLoad) {
 void BotConfig::loadNamesConfig () {
    setupMemoryFiles ();
 
-   String line;
-   MemFile file;
+   String line {};
+   MemFile file {};
 
    constexpr auto kMaxNameLen = 32;
 
@@ -179,8 +180,8 @@ void BotConfig::loadWeaponsConfig () {
          to[i] = data[i].as <int> ();
       }
    };
-   String line;
-   MemFile file;
+   String line {};
+   MemFile file {};
 
    // weapon data initialization
    if (openConfig ("weapon", "Weapon configuration file not found. Loading defaults.", &file)) {
@@ -231,8 +232,8 @@ void BotConfig::loadWeaponsConfig () {
 void BotConfig::loadChatterConfig () {
    setupMemoryFiles ();
 
-   String line;
-   MemFile file;
+   String line {};
+   MemFile file {};
 
    // chatter initialization
    if (game.is (GameFlags::HasBotVoice) && cv_radio_mode.as <int> () == 2 && openConfig ("chatter", "Couldn't open chatter system configuration", &file)) {
@@ -372,8 +373,8 @@ void BotConfig::loadChatterConfig () {
 void BotConfig::loadChatConfig () {
    setupMemoryFiles ();
 
-   String line;
-   MemFile file;
+   String line {};
+   MemFile file {};
 
    // chat config initialization
    if (openConfig ("chat", "Chat file not found.", &file, true)) {
@@ -474,13 +475,13 @@ void BotConfig::loadLanguageConfig () {
    if (game.is (GameFlags::Legacy)) {
       return; // legacy versions will use only english translation
    }
-   String line;
-   MemFile file;
+   String line {};
+   MemFile file {};
 
    // localizer initialization
    if (openConfig ("lang", "Specified language not found.", &file, true)) {
-      String temp;
-      Twin <String, String> lang;
+      String temp {};
+      Twin <String, String> lang {};
 
       auto trimWithoutWs = [] (String in) -> String {
          return in.trim ("\r\n");
@@ -534,8 +535,8 @@ void BotConfig::loadAvatarsConfig () {
       return;
    }
 
-   String line;
-   MemFile file;
+   String line {};
+   MemFile file {};
 
    // avatars initialization
    if (openConfig ("avatars", "Avatars config file not found. Avatars will not be displayed.", &file)) {
@@ -553,8 +554,8 @@ void BotConfig::loadAvatarsConfig () {
 void BotConfig::loadDifficultyConfig () {
    setupMemoryFiles ();
 
-   String line;
-   MemFile file;
+   String line {};
+   MemFile file {};
 
    // initialize defaults
    m_difficulty[Difficulty::Noob] = {
@@ -658,8 +659,8 @@ void BotConfig::loadMapSpecificConfig () {
 }
 
 void BotConfig::loadCustomConfig () {
-   String line;
-   MemFile file;
+   String line {};
+   MemFile file {};
 
    auto setDefaults = [&] () {
       m_custom["C4ModelName"] = "c4.mdl";
@@ -670,6 +671,7 @@ void BotConfig::loadCustomConfig () {
       m_custom["ZMDelayCvar"] = "zp_delay";
       m_custom["ZMInfectedTeam"] = "T";
    };
+
    setDefaults ();
 
    // has errors ?
@@ -711,8 +713,8 @@ void BotConfig::loadCustomConfig () {
 void BotConfig::loadLogosConfig () {
    setupMemoryFiles ();
 
-   String line;
-   MemFile file;
+   String line {};
+   MemFile file {};
 
    // logos initialization
    if (openConfig ("logos", "Logos config file not found. Loading defaults.", &file)) {
@@ -867,7 +869,8 @@ uint32_t BotConfig::hashLangString (StringRef str) {
    auto test = [] (const char ch) {
       return  (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z');
    };
-   String res;
+
+   String res {};
 
    for (const auto &ch : str) {
       if (!test (ch)) {
