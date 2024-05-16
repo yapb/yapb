@@ -2285,7 +2285,7 @@ void BotControl::createMenus () {
       Menu::Features, keys (5),
       "\\yBots Features\\w\n\n"
       "1. Weapon Mode Menu\n"
-      "2. Node Menu\n"
+      "2. Graph Editor\n"
       "3. Select Personality\n\n"
       "4. Toggle Debug Mode\n"
       "5. Command Menu\n\n"
