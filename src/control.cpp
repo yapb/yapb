@@ -2415,7 +2415,7 @@ void BotControl::createMenus () {
    // main node menu
    m_menus.emplace (
       Menu::NodeMainPage1, keys (9),
-      "\\yNode Operations (Page 1)\\w\n\n"
+      "\\yGraph Editor (Page 1)\\w\n\n"
       "1. Show/Hide nodes\n"
       "2. Cache node\n"
       "3. Create path\n"
@@ -2431,14 +2431,14 @@ void BotControl::createMenus () {
    // main node menu (page 2)
    m_menus.emplace (
       Menu::NodeMainPage2, keys (9),
-      "\\yNode Operations (Page 2)\\w\n\n"
+      "\\yGraph Editor (Page 2)\\w\n\n"
       "1. Debug goal\n"
       "2. Autonode on/off\n"
       "3. Set flags\n"
-      "4. Save nodes\n"
+      "4. Save graph\n"
       "5. Save without checking\n"
-      "6. Load nodes\n"
-      "7. Check nodes\n"
+      "6. Load graph\n"
+      "7. Check graph\n"
       "8. Noclip cheat on/off\n\n"
       "9. Previous...\n\n"
       "0. Exit",
