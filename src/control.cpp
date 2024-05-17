@@ -2066,8 +2066,8 @@ void BotControl::kickBotByMenu (int page) {
       return;
    }
 
-   static StringRef headerTitle = conf.translate ("Bots Remove Menu");
-   static StringRef notABot = conf.translate ("Not a Bot");
+   static StringRef headerTitle = conf.translate ("Bot Removal Menu");
+   static StringRef notABot = conf.translate ("Not a bot");
    static StringRef backKey = conf.translate ("Back");
    static StringRef moreKey = conf.translate ("More");
 
@@ -2272,10 +2272,10 @@ void BotControl::createMenus () {
    m_menus.emplace (
       Menu::Main, keys (4),
       "\\yMain Menu\\w\n\n"
-      "1. Control Bots\n"
+      "1. Control bots\n"
       "2. Features\n\n"
-      "3. Fill Server\n"
-      "4. End Round\n\n"
+      "3. Fill server\n"
+      "4. End round\n\n"
       "0. Exit",
       &BotControl::menuMain);
 
@@ -2284,11 +2284,11 @@ void BotControl::createMenus () {
    m_menus.emplace (
       Menu::Features, keys (5),
       "\\yBots Features\\w\n\n"
-      "1. Weapon Mode Menu\n"
-      "2. Graph Editor\n"
-      "3. Select Personality\n\n"
-      "4. Toggle Debug Mode\n"
-      "5. Command Menu\n\n"
+      "1. Weapon mode menu\n"
+      "2. Graph editor\n"
+      "3. Select personality\n\n"
+      "4. Toggle debug mode\n"
+      "5. Command menu\n\n"
       "0. Exit",
       &BotControl::menuFeatures);
 
@@ -2296,11 +2296,11 @@ void BotControl::createMenus () {
    m_menus.emplace (
       Menu::Control, keys (5),
       "\\yBots Control Menu\\w\n\n"
-      "1. Add a Bot, Quick\n"
-      "2. Add a Bot, Specified\n\n"
-      "3. Remove Random Bot\n"
-      "4. Remove All Bots\n\n"
-      "5. Remove Bot Menu\n\n"
+      "1. Quick add bot\n"
+      "2. Add specific bot\n\n"
+      "3. Remove random bot\n"
+      "4. Remove all bots\n\n"
+      "5. Bot removal menu\n\n"
       "0. Exit",
       &BotControl::menuControl);
 
@@ -2311,10 +2311,10 @@ void BotControl::createMenus () {
       "1. Knives only\n"
       "2. Pistols only\n"
       "3. Shotguns only\n"
-      "4. Machine Guns only\n"
+      "4. Machine guns only\n"
       "5. Rifles only\n"
-      "6. Sniper Weapons only\n"
-      "7. All Weapons\n\n"
+      "6. Sniper weapons only\n"
+      "7. All weapons\n\n"
       "0. Exit",
       &BotControl::menuWeaponMode);
 
@@ -2344,7 +2344,7 @@ void BotControl::createMenus () {
    // team select menu
    m_menus.emplace (
       Menu::TeamSelect, keys (5),
-      "\\ySelect a team\\w\n\n"
+      "\\ySelect a Team\\w\n\n"
       "1. Terrorist Force\n"
       "2. Counter-Terrorist Force\n\n"
       "5. Auto-select\n\n"
@@ -2354,7 +2354,7 @@ void BotControl::createMenus () {
    // terrorist model select menu
    m_menus.emplace (
       Menu::TerroristSelect, keys (5),
-      "\\ySelect an appearance\\w\n\n"
+      "\\ySelect an Appearance\\w\n\n"
       "1. Phoenix Connexion\n"
       "2. L337 Krew\n"
       "3. Arctic Avengers\n"
@@ -2366,7 +2366,7 @@ void BotControl::createMenus () {
    // counter-terrorist model select menu
    m_menus.emplace (
       Menu::CTSelect, keys (5),
-      "\\ySelect an appearance\\w\n\n"
+      "\\ySelect an Appearance\\w\n\n"
       "1. Seal Team 6 (DEVGRU)\n"
       "2. German GSG-9\n"
       "3. UK SAS\n"
@@ -2378,7 +2378,7 @@ void BotControl::createMenus () {
    // condition zero terrorist model select menu
    m_menus.emplace (
       Menu::TerroristSelectCZ, keys (6),
-      "\\ySelect an appearance\\w\n\n"
+      "\\ySelect an Appearance\\w\n\n"
       "1. Phoenix Connexion\n"
       "2. L337 Krew\n"
       "3. Arctic Avengers\n"
@@ -2391,7 +2391,7 @@ void BotControl::createMenus () {
    // condition zero counter-terrorist model select menu
    m_menus.emplace (
       Menu::CTSelectCZ, keys (6),
-      "\\ySelect an appearance\\w\n\n"
+      "\\ySelect an Appearance\\w\n\n"
       "1. Seal Team 6 (DEVGRU)\n"
       "2. German GSG-9\n"
       "3. UK SAS\n"
@@ -2405,10 +2405,10 @@ void BotControl::createMenus () {
    m_menus.emplace (
       Menu::Commands, keys (4),
       "\\yBot Command Menu\\w\n\n"
-      "1. Make Double Jump\n"
-      "2. Finish Double Jump\n\n"
-      "3. Drop the C4 Bomb\n"
-      "4. Drop the Weapon\n\n"
+      "1. Make double jump\n"
+      "2. Finish double jump\n\n"
+      "3. Drop the C4 bomb\n"
+      "4. Drop the weapon\n\n"
       "0. Exit",
       &BotControl::menuCommands);
 
@@ -2422,8 +2422,8 @@ void BotControl::createMenus () {
       "4. Delete path\n"
       "5. Add node\n"
       "6. Delete node\n"
-      "7. Set Autopath Distance\n"
-      "8. Set Radius\n\n"
+      "7. Set autopath distance\n"
+      "8. Set radius\n\n"
       "9. Next...\n\n"
       "0. Exit",
       &BotControl::menuGraphPage1);
@@ -2433,7 +2433,7 @@ void BotControl::createMenus () {
       Menu::NodeMainPage2, keys (9),
       "\\yGraph Editor (Page 2)\\w\n\n"
       "1. Debug goal\n"
-      "2. Autonode on/off\n"
+      "2. Auto node placement on/off\n"
       "3. Set flags\n"
       "4. Save graph\n"
       "5. Save without checking\n"
@@ -2465,13 +2465,13 @@ void BotControl::createMenus () {
       Menu::NodeType, keys (9),
       "\\yNode Type\\w\n\n"
       "1. Normal\n"
-      "\\r2. Terrorist Important\n"
-      "3. Counter-Terrorist Important\n"
+      "\\r2. Terrorist important\n"
+      "3. Counter-Terrorist important\n"
       "\\w4. Block with hostage / Ladder\n"
-      "\\y5. Rescue Zone\n"
+      "\\y5. Rescue zone\n"
       "\\w6. Camping\n"
-      "7. Camp End\n"
-      "\\r8. Map Goal\n"
+      "7. Camp end\n"
+      "\\r8. Map goal\n"
       "\\w9. Jump\n\n"
       "0. Exit",
       &BotControl::menuGraphType);
@@ -2479,7 +2479,7 @@ void BotControl::createMenus () {
    // debug goal menu
    m_menus.emplace (
       Menu::NodeDebug, keys (3),
-      "\\yDebug goal\\w\n\n"
+      "\\yDebug Goal\\w\n\n"
       "1. Debug nearest node\n"
       "2. Debug facing node\n"
       "3. Stop debugging\n\n"
@@ -2490,15 +2490,15 @@ void BotControl::createMenus () {
    m_menus.emplace (
       Menu::NodeFlag, keys (9),
       "\\yToggle Node Flags\\w\n\n"
-      "1. Block with Hostage\n"
-      "2. Terrorists Specific\n"
-      "3. CTs Specific\n"
-      "4. Use Elevator\n"
-      "5. Sniper Point (\\yFor Camp Points Only!\\w)\n"
-      "6. Map Goal\n"
-      "7. Rescue Zone\n"
-      "8. Crouch Down\n"
-      "9. Camp Point\n\n"
+      "1. Block with hostage\n"
+      "2. Terrorists specific\n"
+      "3. CTs specific\n"
+      "4. Use elevator\n"
+      "5. Sniper point (\\yfor camp points only!\\w)\n"
+      "6. Map goal\n"
+      "7. Rescue zone\n"
+      "8. Crouch down\n"
+      "9. Camp point\n\n"
       "0. Exit",
       &BotControl::menuGraphFlag);
 
@@ -2506,8 +2506,8 @@ void BotControl::createMenus () {
    m_menus.emplace (
       Menu::CampDirections, keys (2),
       "\\ySet Camp Point Directions\\w\n\n"
-      "1. Camp Start\n"
-      "2. Camp End\n\n"
+      "1. Camp start\n"
+      "2. Camp end\n\n"
       "0. Exit",
       &BotControl::menuCampDirections);
 
@@ -2515,13 +2515,13 @@ void BotControl::createMenus () {
    m_menus.emplace (
       Menu::NodeAutoPath, keys (7),
       "\\yAutoPath Distance\\w\n\n"
-      "1. Distance 0\n"
-      "2. Distance 100\n"
-      "3. Distance 130\n"
-      "4. Distance 160\n"
-      "5. Distance 190\n"
-      "6. Distance 220\n"
-      "7. Distance 250 (Default)\n\n"
+      "1. 0 units\n"
+      "2. 100 units\n"
+      "3. 130 units\n"
+      "4. 160 units\n"
+      "5. 190 units\n"
+      "6. 220 units\n"
+      "7. 250 units (default)\n\n"
       "0. Exit",
       &BotControl::menuAutoPathDistance);
 
@@ -2529,10 +2529,10 @@ void BotControl::createMenus () {
    m_menus.emplace (
       Menu::NodePath, keys (4),
       "\\yCreate Path (Choose Direction)\\w\n\n"
-      "1. Outgoing Path\n"
-      "2. Incoming Path\n"
-      "3. Bidirectional (Both Ways)\n"
-      "4. Jumping Path\n\n"
+      "1. Outgoing path\n"
+      "2. Incoming path\n"
+      "3. Bidirectional (both ways)\n"
+      "4. Jumping path\n\n"
       "0. Exit",
       &BotControl::menuGraphPath);
 
