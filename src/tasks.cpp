@@ -972,7 +972,7 @@ void Bot::defuseBomb_ () {
 
    // if defusing is not already started, maybe crouch before
    if (!m_hasProgressBar && m_duckDefuseCheckTime < game.time ()) {
-      Vector botDuckOrigin, botStandOrigin;
+      Vector botDuckOrigin {}, botStandOrigin {};
 
       if (pev->button & IN_DUCK) {
          botDuckOrigin = pev->origin;

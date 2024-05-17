@@ -76,8 +76,8 @@ int BotGraph::clearConnections (int index) {
    };
    auto &path = m_paths[index];
 
-   Connection sorted[kMaxNodeLinks];
-   Connection top;
+   Connection sorted[kMaxNodeLinks] {};
+   Connection top {};
 
    for (int i = 0; i < kMaxNodeLinks; ++i) {
       auto &cur = sorted[i];
@@ -207,7 +207,6 @@ int BotGraph::clearConnections (int index) {
       }
       return false;
    };
-
 
    for (int i = 2; i < kMaxNodeLinks; ++i) {
       while (inspect_p0 (i)) {}
@@ -561,7 +560,7 @@ IntArray BotGraph::getNearestInRadius (float radius, const Vector &origin, int m
 
    const float radiusSq = cr::sqrf (radius);
 
-   IntArray result;
+   IntArray result {};
    const auto &bucket = getNodesInBucket (origin);
 
    if (bucket.length () < kMaxNodeLinks || radius > cr::sqrf (256.0f)) {
@@ -1274,7 +1273,7 @@ void BotGraph::showFileInfo () {
    msg ("  compressed_size: %dkB", m_graphHeader.compressed / 1024);
    msg ("  uncompressed_size: %dkB", m_graphHeader.uncompressed / 1024);
    msg ("  options: %d", m_graphHeader.options); // display as string ?
-   msg ("  analyzed: %s", isAnalyzed () ? "yes" : "no"); // display as string ?
+   msg ("  analyzed: %s", isAnalyzed () ? conf.translate ("yes") : conf.translate ("no")); // display as string ?
 
    msg ("");
 
@@ -1367,7 +1366,7 @@ void BotGraph::syncCollectOnline () {
 
       // decode answer
       if (lc.open (localFile, "rt")) {
-         String lines;
+         String lines {};
 
          if (lc.getLine (lines)) {
             wanted = lines.split (",");
@@ -1429,7 +1428,7 @@ void BotGraph::calculatePathRadius (int index) {
    // calculate "wayzones" for the nearest node  (meaning a dynamic distance area to vary node origin)
 
    auto &path = m_paths[index];
-   Vector start, direction;
+   Vector start {}, direction {};
 
    if ((path.flags & (NodeFlag::Ladder | NodeFlag::Goal | NodeFlag::Camp | NodeFlag::Rescue | NodeFlag::Crouch)) || m_jumpLearnNode) {
       path.radius = 0.0f;
@@ -1570,7 +1569,7 @@ void BotGraph::initNarrowPlaces () {
       m_narrowChecked = true;
       return;
    }
-   TraceResult tr;
+   TraceResult tr {};
 
    const auto distance = 178.0f;
    const auto worldspawn = game.getStartEntity ();
@@ -1608,7 +1607,7 @@ void BotGraph::initNarrowPlaces () {
          }
          const Vector &ang = ((path.origin - m_paths[link.index].origin).normalize () * distance).angles ();
 
-         Vector forward, right, upward;
+         Vector forward {}, right {}, upward {};
          ang.angleVectors (&forward, &right, &upward);
 
          // helper lambda
@@ -1823,7 +1822,7 @@ bool BotGraph::canDownload () {
 
 bool BotGraph::saveGraphData () {
    auto options = StorageOption::Graph | StorageOption::Exten;
-   String editorName;
+   String editorName {};
 
    if (game.isNullEntity (m_editor) && !m_graphAuthor.empty ()) {
       editorName = m_graphAuthor;
@@ -1876,7 +1875,7 @@ bool BotGraph::saveGraphData () {
 void BotGraph::saveOldFormat () {
    PODGraphHeader header {};
 
-   String editorName;
+   String editorName {};
 
    if (game.isNullEntity (m_editor) && !m_graphAuthor.empty ()) {
       editorName = m_graphAuthor;
@@ -1896,7 +1895,7 @@ void BotGraph::saveOldFormat () {
    header.fileVersion = StorageVersion::Podbot;
    header.pointNumber = length ();
 
-   File fp;
+   File fp {};
 
    // file was opened
    if (fp.open (bstor.buildPath (BotFile::PodbotPWF), "wb")) {
@@ -2327,7 +2326,7 @@ void BotGraph::frame () {
 
       // very helpful stuff..
       auto getNodeData = [this] (StringRef type, int node) -> String {
-         String message, flags;
+         String message {}, flags {};
 
          const auto &p = m_paths[node];
          bool jumpPoint = false;
@@ -2384,7 +2383,7 @@ void BotGraph::frame () {
          const int dangerIndexCT = practice.getIndex (Team::CT, nearestIndex, nearestIndex);
          const int dangerIndexT = practice.getIndex (Team::Terrorist, nearestIndex, nearestIndex);
 
-         String practiceText;
+         String practiceText {};
          practiceText.assignf ("      Node practice data (index / damage):\n"
             "       CT: %d / %d\n"
             "       T:  %d / %d\n\n", dangerIndexCT, dangerIndexCT != kInvalidNodeIndex ? practice.getDamage (Team::CT, nearestIndex, dangerIndexCT) : 0, dangerIndexT, dangerIndexT != kInvalidNodeIndex ? practice.getDamage (Team::Terrorist, nearestIndex, dangerIndexT) : 0);
@@ -2514,10 +2513,10 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
    // ensure valid capacity
    assert (length > 8 && length < static_cast <size_t> (kMaxNodes));
 
-   PathWalk walk;
+   PathWalk walk {};
    walk.init (length);
 
-   Array <bool> visited;
+   Array <bool> visited {};
    visited.resize (length);
 
    // first check incoming connectivity, initialize the "visited" table
@@ -2554,7 +2553,7 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
    }
 
    // then check outgoing connectivity
-   Array <IntArray> outgoingPaths; // store incoming paths for speedup
+   Array <IntArray> outgoingPaths {}; // store incoming paths for speedup
    outgoingPaths.resize (length);
 
    for (const auto &path : m_paths) {
@@ -2630,7 +2629,7 @@ void BotGraph::addBasic () {
       ladderLeft.z = ladderRight.z;
 
       TraceResult tr {};
-      Vector up, down, front, back;
+      Vector up {}, down {}, front {}, back {};
 
       Vector diff = ((ladderLeft - ladderRight) ^ nullptr) * 15.0f;
       front = back = game.getEntityOrigin (ent);
@@ -2675,7 +2674,7 @@ void BotGraph::addBasic () {
       game.searchEntities ("classname", classname, [&] (edict_t *ent) {
          Vector pos = game.getEntityOrigin (ent);
 
-         TraceResult tr;
+         TraceResult tr {};
          game.testLine (pos, pos - Vector (0.0f, 0.0f, 999.0f), TraceIgnore::Monsters, nullptr, &tr);
          tr.vecEndPos.z += 36.0f;
 
@@ -2815,10 +2814,10 @@ void BotGraph::eraseFromBucket (const Vector &pos, int index) {
 }
 
 int BotGraph::locateBucket (const Vector &pos) {
-   constexpr auto width = 8192;
+   constexpr auto kWidth = 8192;
 
    auto hash = [&] (float axis, int32_t shift) {
-      return ((static_cast <int> (axis) + width) & 0x007f80) >> shift;
+      return ((static_cast <int> (axis) + kWidth) & 0x007f80) >> shift;
    };
    return hash (pos.x, 15) + hash (pos.y, 7);
 }

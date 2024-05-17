@@ -255,19 +255,19 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offensive) {
    int goalChoices[4] = { kInvalidNodeIndex, kInvalidNodeIndex, kInvalidNodeIndex, kInvalidNodeIndex };
 
    if (tactic == GoalTactic::Defensive && !(*defensive).empty ()) { // careful goal
-      postprocessGoals (*defensive, goalChoices);
+      postProcessGoals (*defensive, goalChoices);
    }
    else if (tactic == GoalTactic::Camp && !graph.m_campPoints.empty ()) {  // camp node goal
       // pickup sniper points if possible for sniping bots
       if (!graph.m_sniperPoints.empty () && usesSniper ()) {
-         postprocessGoals (graph.m_sniperPoints, goalChoices);
+         postProcessGoals (graph.m_sniperPoints, goalChoices);
       }
       else {
-         postprocessGoals (graph.m_campPoints, goalChoices);
+         postProcessGoals (graph.m_campPoints, goalChoices);
       }
    }
    else if (tactic == GoalTactic::Offensive && !(*offensive).empty ()) { // offensive goal
-      postprocessGoals (*offensive, goalChoices);
+      postProcessGoals (*offensive, goalChoices);
    }
    else if (tactic == GoalTactic::Goal && !graph.m_goalPoints.empty ()) // map goal node
    {
@@ -299,7 +299,7 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offensive) {
          }
       }
       else {
-         postprocessGoals (graph.m_goalPoints, goalChoices);
+         postProcessGoals (graph.m_goalPoints, goalChoices);
       }
    }
    else if (tactic == GoalTactic::RescueHostage && !graph.m_rescuePoints.empty ()) {
@@ -359,13 +359,17 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offensive) {
    return m_chosenGoalIndex = goalChoices[0]; // return and store goal
 }
 
-void Bot::postprocessGoals (const IntArray &goals, int result[]) {
+void Bot::postProcessGoals (const IntArray &goals, int result[]) {
    // this function filters the goals, so new goal is not bot's old goal, and array of goals doesn't contains duplicate goals
 
    int recurseCount = 0;
 
    auto isRecentOrHistorical = [&] (int index) -> bool {
       if (m_prevGoalIndex == index || m_previousNodes[0] == index) {
+         return true;
+      }
+
+      if (!isOccupiedNode (index)) {
          return true;
       }
 
@@ -381,8 +385,9 @@ void Bot::postprocessGoals (const IntArray &goals, int result[]) {
             return true;
          }
       }
-      return isOccupiedNode (index);
+      return false;
    };
+
    static IntArray resulting {};
    resulting.clear ();
 
@@ -400,7 +405,9 @@ void Bot::postprocessGoals (const IntArray &goals, int result[]) {
       refill (graph.m_goalPoints);
    }
    else {
-      resulting.insert (0, goals);
+      if (!goals.empty ()) {
+         resulting.insert (0, goals);
+      }
    }
 
    for (int index = 0; index < 4; ++index) {
@@ -514,7 +521,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
    const float interval = m_frameInterval * (pev->velocity.lengthSq2d () > 0.0f ? 7.5f : 2.0f);
 
    // use our movement angles, try to predict where we should be next frame
-   Vector right, forward;
+   Vector right {}, forward {};
    m_moveAngles.angleVectors (&forward, &right, nullptr);
 
    Vector predict = pev->origin + forward * pev->maxspeed * interval;
@@ -865,8 +872,7 @@ void Bot::checkFall () {
    else if (pev->origin.z + 128.0f < m_checkFallPoint[1].z && pev->origin.z + 128.0f < m_checkFallPoint[0].z) {
       fixFall = true;
    }
-
-   if (m_currentNodeIndex != kInvalidNodeIndex) {
+   else if (m_currentNodeIndex != kInvalidNodeIndex) {
       if (pev->origin.distanceSq (m_checkFallPoint[1]) <= cr::sqrf (32.0f) && pev->origin.z + 16.0f < m_checkFallPoint[1].z) {
          fixFall = true;
       }
@@ -1938,7 +1944,7 @@ int Bot::findNearestNode () {
          const float distanceSq = path.origin.distanceSq (pev->origin);
 
          if (distanceSq < nearestDistanceSq) {
-            TraceResult tr;
+            TraceResult tr {};
             game.testLine (getEyesPos (), path.origin, TraceIgnore::Monsters, ent (), &tr);
 
             if (tr.flFraction >= 1.0f && !tr.fStartSolid) {
@@ -2125,7 +2131,7 @@ int Bot::findDefendNode (const Vector &origin) {
    } while (sorting);
 
    if (nodeIndex[0] == kInvalidNodeIndex) {
-      IntArray found;
+      IntArray found {};
 
       for (const auto &path : graph) {
          if (origin.distanceSq (path.origin) < cr::sqrf (kMaxDistance)
@@ -2168,7 +2174,7 @@ int Bot::findCoverNode (float maxDistance) {
    const int srcIndex = m_currentNodeIndex;
    const int enemyIndex = graph.getNearest (m_lastEnemyOrigin);
 
-   IntArray enemies;
+   IntArray enemies {};
 
    int nodeIndex[kMaxNodeLinks] {};
    float nearestDistance[kMaxNodeLinks] {};
@@ -2467,8 +2473,8 @@ bool Bot::advanceMovement () {
             bool willJump = false;
             float jumpDistanceSq = 0.0f;
 
-            Vector src;
-            Vector dst;
+            Vector src {};
+            Vector dst {};
 
             // try to find out about future connection flags
             if (m_pathWalk.hasNext ()) {
@@ -2685,7 +2691,7 @@ bool Bot::isBlockedForward (const Vector &normal, TraceResult *tr) {
 bool Bot::canStrafeLeft (TraceResult *tr) {
    // this function checks if bot can move sideways
 
-   Vector right, forward;
+   Vector right {}, forward {};
    pev->v_angle.angleVectors (&forward, &right, nullptr);
 
    Vector src = pev->origin;
@@ -2698,7 +2704,6 @@ bool Bot::canStrafeLeft (TraceResult *tr) {
    if (tr->flFraction < 1.0f) {
       return false; // bot's body will hit something
    }
-
    src = dest;
    dest = dest + forward * 40.0f;
 
@@ -2715,7 +2720,7 @@ bool Bot::canStrafeLeft (TraceResult *tr) {
 bool Bot::canStrafeRight (TraceResult *tr) {
    // this function checks if bot can move sideways
 
-   Vector right, forward;
+   Vector right {}, forward {};
    pev->v_angle.angleVectors (&forward, &right, nullptr);
 
    Vector src = pev->origin;
@@ -2894,7 +2899,7 @@ bool Bot::canDuckUnder (const Vector &normal) {
    // this function check if bot can duck under obstacle
 
    TraceResult tr {};
-   Vector baseHeight;
+   Vector baseHeight {};
 
    // use center of the body first...
    if (isDucking ()) {
@@ -2946,7 +2951,7 @@ bool Bot::isBlockedLeft () {
    if (m_moveSpeed < 0.0f) {
       direction = -48.0f;
    }
-   Vector right, forward;
+   Vector right {}, forward {};
    pev->angles.angleVectors (&forward, &right, nullptr);
 
    // do a trace to the left...
@@ -2966,7 +2971,7 @@ bool Bot::isBlockedRight () {
    if (m_moveSpeed < 0.0f) {
       direction = -48.0f;
    }
-   Vector right, forward;
+   Vector right {}, forward {};
    pev->angles.angleVectors (&forward, &right, nullptr);
 
    // do a trace to the right...

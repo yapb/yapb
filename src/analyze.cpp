@@ -177,7 +177,7 @@ void GraphAnalyze::optimize () {
    cleanup ();
 
    auto smooth = [] (const Array <int> &nodes) {
-      Vector result;
+      Vector result {};
 
       for (const auto &node : nodes) {
          result += graph[node].origin;
@@ -198,7 +198,7 @@ void GraphAnalyze::optimize () {
          continue;
       }
       const auto &path = graph[i];
-      Array <int> indexes;
+      Array <int> indexes {};
 
       for (const auto &link : path.links) {
          if (graph.exists (link.index) && !m_optimizedNodes[link.index]
@@ -303,7 +303,7 @@ void GraphAnalyze::displayOverlayMessage () {
 void GraphAnalyze::flood (const Vector &pos, const Vector &next, float range) {
    range *= 0.75f;
 
-   TraceResult tr;
+   TraceResult tr {};
    game.testHull (pos, { next.x, next.y, next.z + 19.0f }, TraceIgnore::Monsters, head_hull, nullptr, &tr);
 
    // we're can't reach next point

@@ -47,7 +47,8 @@ CR_DECLARE_SCOPED_ENUM (GameFlags,
    HasFakePings = cr::bit (10), // on that game version we can fake bots pings
    HasBotVoice = cr::bit (11), // on that game version we can use chatter
    AnniversaryHL25 = cr::bit (12), // half-life 25th anniversary engine
-   Xash3DLegacy = cr::bit (13) // old xash3d-branch
+   Xash3DLegacy = cr::bit (13), // old xash3d-branch
+   ZombieMod = cr::bit (14) // zombie mod is active
 )
 
 // defines map type

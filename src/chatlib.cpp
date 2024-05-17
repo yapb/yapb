@@ -195,7 +195,7 @@ void Bot::prepareChatMessage (StringRef message) {
    auto getRoundTime = [] () -> String {
       auto roundTimeSecs = static_cast <int> (bots.getRoundEndTime () - game.time ());
 
-      String roundTime;
+      String roundTime {};
       roundTime.assignf ("%02d:%02d", cr::clamp (roundTimeSecs / 60, 0, 59), cr::clamp (cr::abs (roundTimeSecs % 60), 0, 59));
 
       return roundTime;
@@ -203,12 +203,12 @@ void Bot::prepareChatMessage (StringRef message) {
 
    // get bot's victim
    auto getMyVictim = [&] () -> String {;
-   return humanizedName (game.indexOfPlayer (m_lastVictim));
+      return humanizedName (game.indexOfPlayer (m_lastVictim));
    };
 
    // get the game name alias
    auto getGameName = [] () -> String {
-      String gameName;
+      String gameName {};
 
       if (game.is (GameFlags::ConditionZero)) {
          if (rg.chance (30)) {
@@ -308,7 +308,7 @@ bool Bot::isReplyingToChat () {
    if (m_sayTextBuffer.entityIndex != -1 && !m_sayTextBuffer.sayText.empty ()) {
       // check is time to chat is good
       if (m_sayTextBuffer.timeNextChat < game.time () + rg (m_sayTextBuffer.chatDelay / 2, m_sayTextBuffer.chatDelay)) {
-         String replyText;
+         String replyText {};
 
          if (rg.chance (m_sayTextBuffer.chatProbability + rg (40, 70)) && checkChatKeywords (replyText)) {
             prepareChatMessage (replyText);

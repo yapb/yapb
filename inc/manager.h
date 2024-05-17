@@ -122,6 +122,7 @@ public:
    void setLastWinner (int winner);
    void checkBotModel (edict_t *ent, char *infobuffer);
    void checkNeedsToBeKicked ();
+   void refreshCreatureStatus ();
 
    bool isTeamStacked (int team);
    bool kickRandom (bool decQuota = true, Team fromTeam = Team::Unassigned);

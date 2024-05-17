@@ -793,7 +793,7 @@ bool Bot::isPenetrableObstacle2 (const Vector &dest, int) {
    int thikness = 0;
    int numHits = 0;
 
-   Vector point;
+   Vector point {};
    TraceResult tr {};
 
    game.testLine (source, dest, TraceIgnore::Everything, ent (), &tr);
@@ -998,7 +998,11 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
       if (distance >= 750.0f && !isShieldDrawn ()) {
          pev->button |= IN_ATTACK2; // draw the shield
       }
-      else if (isShieldDrawn () || (!game.isNullEntity (m_enemy) && ((m_enemy->v.button & IN_RELOAD) || !seesEntity (m_enemy->v.origin)))) {
+      else if (isShieldDrawn ()
+         || m_isReloading
+         || !seesEntity (m_enemy->v.origin)
+         || (!game.isNullEntity (m_enemy) && (m_enemy->v.button & IN_RELOAD))) {
+
          pev->button |= IN_ATTACK2; // draw out the shield
       }
       m_shieldCheckTime = game.time () + 1.0f;
@@ -1316,7 +1320,7 @@ void Bot::attackMovement () {
    }
    const bool isFullView = !!(m_enemyParts & (Visibility::Head | Visibility::Body));
 
-   if (m_lastFightStyleCheck + 3.0f < game.time ()) {
+   if (m_lastFightStyleCheck < game.time ()) {
       if (usesSniper ()) {
          m_fightStyle = Fight::Stay;
       }
@@ -1368,7 +1372,7 @@ void Bot::attackMovement () {
          && isInViewCone (m_enemyOrigin))) {
          m_fightStyle = Fight::Strafe;
       }
-      m_lastFightStyleCheck = game.time ();
+      m_lastFightStyleCheck = game.time () + 3.0f;
    }
 
    if (distance < 96.0f && !usesKnife ()) {
@@ -1490,7 +1494,7 @@ void Bot::attackMovement () {
    }
 
    if (!isInWater () && !isOnLadder () && (m_moveSpeed > 0.0f || m_strafeSpeed > 0.0f)) {
-      Vector right, forward;
+      Vector right {}, forward {};
       pev->v_angle.angleVectors (&forward, &right, nullptr);
 
       const auto &front = forward * m_moveSpeed * 0.2f;
@@ -1752,7 +1756,7 @@ int Bot::bestWeaponCarried () {
 
 void Bot::decideFollowUser () {
    // this function forces bot to follow user
-   static Array <edict_t *> users;
+   static Array <edict_t *> users {};
    users.clear ();
 
    // search friends near us
@@ -2311,7 +2315,8 @@ bool Bot::isEnemyNoticeable (float range) {
    constexpr float kCloseRange = 300.0f;
    constexpr float kFarRange = 1000.0f;
 
-   float rangeModifier;
+   float rangeModifier {};
+
    if (range < kCloseRange) {
       rangeModifier = 0.0f;
    }
@@ -2327,7 +2332,7 @@ bool Bot::isEnemyNoticeable (float range) {
 
    // moving players are easier to spot
    float playerSpeedSq = m_enemy->v.velocity.lengthSq ();
-   float farChance, closeChance;
+   float farChance {}, closeChance {};
 
    constexpr float kRunSpeed = cr::sqrf (200.0f);
    constexpr float kWalkSpeed = cr::sqrf (30.0f);
