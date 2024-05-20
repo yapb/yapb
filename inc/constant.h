@@ -230,6 +230,7 @@ CR_DECLARE_SCOPED_ENUM (Chatter,
    CoverMe,
    BehindSmoke,
    BombsiteSecured,
+   OnARoll,
    Count
 )
 

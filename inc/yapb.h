@@ -226,6 +226,7 @@ private:
    int m_tryOpenDoor {}; // attempt's to open the door
    int m_liftState {}; // state of lift handling
    int m_radioSelect {}; // radio entry
+   int m_killsCount {}; // the kills count of a bot
 
    int m_lastPredictIndex { kInvalidNodeIndex }; // last predicted path index
    int m_lastPredictLength {}; // last predicted path length
@@ -286,6 +287,8 @@ private:
    float m_breakableTime {}; // breakable acquired time
    float m_stuckTimestamp {}; // last time was stuck
    float m_timeDebugUpdateTime {}; // time to update last debug timestamp
+   float m_lastVictimTime {}; // time when bot killed an enemy
+   float m_killsInterval {}; // interval between kills
 
    bool m_moveToGoal {}; // bot currently moving to goal??
    bool m_isStuck {}; // bot is stuck

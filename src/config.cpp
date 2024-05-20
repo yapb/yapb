@@ -322,6 +322,7 @@ void BotConfig::loadChatterConfig () {
          { "Chatter_BombSiteSecured", Chatter::BombsiteSecured, 3.5f },
          { "Chatter_GoingToCamp", Chatter::GoingToCamp, 30.0f },
          { "Chatter_Camp", Chatter::Camping, 10.0f },
+         { "Chatter_OnARoll", Chatter::OnARoll, kMaxChatterRepeatInterval},
       };
 
       while (file.getLine (line)) {

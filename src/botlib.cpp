@@ -1806,6 +1806,7 @@ void Bot::refreshEnemyPredict () {
 void Bot::setLastVictim (edict_t *ent) {
    m_lastVictim = ent;
    m_lastVictimOrigin = ent->v.origin;
+   m_lastVictimTime = game.time ();
 
    m_forgetLastVictimTimer.start (rg (1.0f, 2.0f));
 }
@@ -1868,6 +1869,20 @@ void Bot::setConditions () {
                default:
                   pushChatterMessage (Chatter::EnemyDown);
                }
+            }
+         }
+         else {
+            auto currentTime = game.time();
+
+            m_killsInterval = currentTime - m_lastVictimTime;
+            if (m_killsInterval <= 5) {
+               m_killsCount++;
+               if (m_killsCount > 2) {
+                  pushChatterMessage(Chatter::OnARoll);
+               }
+            }
+            else {
+               m_killsCount = 0;
             }
          }
 
