@@ -661,7 +661,7 @@ Vector Bot::getCustomHeight (float distance) {
       { 0.0f,  0.0f,   0.0f }, // melee
       { 0.5f, -0.1f,  -1.5f }, // pistol
       { 6.5f,  6.0f,  -2.0f }, // shotgun
-      { 0.5f - 7.5f,  -9.5f }, // zoomrifle
+      { 0.5f, -7.5f,  -9.5f }, // zoomrifle
       { 0.5f, -7.5f,  -9.5f }, // rifle
       { 0.5f, -7.5f,  -9.5f }, // smg
       { 0.0f, -2.5f,  -6.0f }, // sniper
