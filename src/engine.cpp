@@ -90,7 +90,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
    // set the global timer function
    timerStorage.setTimeAddress (&globals->time);
 
-   // reset timer
+   // restart the fakeping timer, so it'll start working after mapchange
    fakeping.restartTimer ();
 
    // go thru the all entities on map, and do whatever we're want

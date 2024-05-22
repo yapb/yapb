@@ -4140,9 +4140,8 @@ bool Bot::isCreature () {
    return m_isOnInfectedTeam || m_modelMask == kModelMaskZombie || m_modelMask == kModelMaskChicken;
 }
 
-
 void Bot::donateC4ToHuman () {
-   edict_t *recepient = nullptr;
+   edict_t *recipient = nullptr;
 
    if (!m_hasC4) {
       return;
@@ -4155,15 +4154,15 @@ void Bot::donateC4ToHuman () {
       }
 
       if (client.origin.distanceSq (pev->origin) < radiusSq) {
-         recepient = client.ent;
+         recipient = client.ent;
          break;
       }
    }
 
-   if (game.isNullEntity (recepient)) {
+   if (game.isNullEntity (recipient)) {
       return;
    }
-   m_itemCheckTime = game.time () + 2.0f;
+   m_itemCheckTime = game.time () + 1.0f;
 
    // select the bomb
    if (m_currentWeapon != Weapon::C4) {
@@ -4190,8 +4189,8 @@ void Bot::donateC4ToHuman () {
    if (!game.isNullEntity (bomb)) {
       bomb->v.flags |= FL_ONGROUND;
 
-      // make recepient frient "pickup" it
-      MDLL_Touch (bomb, recepient);
+      // make recipient friend "pickup" ищьи
+      MDLL_Touch (bomb, recipient);
    }
 }
 
