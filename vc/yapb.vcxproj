@@ -60,6 +60,7 @@
     <ClInclude Include="..\inc\constant.h" />
     <ClInclude Include="..\inc\control.h" />
     <ClInclude Include="..\inc\engine.h" />
+    <ClInclude Include="..\inc\fakeping.h" />
     <ClInclude Include="..\inc\graph.h" />
     <ClInclude Include="..\inc\hooks.h" />
     <ClInclude Include="..\inc\manager.h" />
@@ -98,6 +99,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\src\fakeping.cpp" />
     <ClCompile Include="..\src\graph.cpp" />
     <ClCompile Include="..\src\hooks.cpp" />
     <ClCompile Include="..\src\linkage.cpp" />

@@ -103,7 +103,6 @@ struct Client {
    int flags; // client flags
    int radio; // radio orders
    int menu; // identifier to opened menu
-   int ping; // when bot latency is enabled, client ping stored here
    int iconFlags[kGameMaxPlayers]; // flag holding chatter icons
    float iconTimestamp[kGameMaxPlayers]; // timers for chatter icons
    ClientNoise noise;
@@ -589,6 +588,9 @@ public:
    int m_difficulty {}; // bots hard level
    int m_moneyAmount {}; // amount of money in bot's bank
 
+   int m_pingBase {}; // base ping level for randomizing
+   int m_ping {}; // bot's acutal ping
+
    float m_spawnTime {}; // time this bot spawned
    float m_timeTeamOrder {}; // time of last radio command
    float m_slowFrameTimestamp {}; // time to per-second think
@@ -627,7 +629,6 @@ public:
 
    int m_blindNodeIndex {}; // node index to cover when blind
    int m_flashLevel {}; // flashlight level
-   int m_basePing {}; // base ping for bot
    int m_numEnemiesLeft {}; // number of enemies alive left on map
    int m_numFriendsLeft {}; // number of friend alive left on map
    int m_retryJoin {}; // retry count for choosing team/class
@@ -875,6 +876,7 @@ private:
 #include "planner.h"
 #include "storage.h"
 #include "analyze.h"
+#include "fakeping.h"
 
 // very global convars
 extern ConVar cv_jasonmode;

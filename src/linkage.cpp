@@ -246,6 +246,28 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       dllapi.pfnClientDisconnect (ent);
    };
 
+
+   table->pfnClientPutInServer = [] (edict_t *ent) {
+      // this function is called once a just connected client actually enters the game, after
+      // having downloaded and synchronized its resources with the of the server's. It's the
+      // perfect place to hook for client connecting, since a client can always try to connect
+      // passing the ClientConnect() step, and not be allowed by the server later (because of a
+      // latency timeout or whatever reason). We can here keep track of both bots and players
+      // counts on occurence, since bots connect the server just like the way normal client do,
+      // and their third party bot flag is already supposed to be set then. If it's a bot which
+      // is connecting, we also have to awake its brain(s) by reading them from the disk.
+
+      // refresh pings when client connetcs
+      if (fakeping.hasFeature ()) {
+         fakeping.emit (ent);
+      }
+
+      if (game.is (GameFlags::Metamod)) {
+         RETURN_META (MRES_IGNORED);
+      }
+      dllapi.pfnClientPutInServer (ent);
+   };
+
    table->pfnClientUserInfoChanged = [] (edict_t *ent, char *infobuffer) {
       // this function is called when a player changes model, or changes team. Occasionally it
       // enforces rules on these changes (for example, some MODs don't want to allow players to
@@ -389,22 +411,18 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       bots.frame ();
    };
 
-   if (game.is (GameFlags::HasFakePings)) {
-      table->pfnCmdStart = [] (const edict_t *player, usercmd_t *cmd, unsigned int random_seed) {
-         auto ent = const_cast <edict_t *> (player);
+   if (game.is (GameFlags::HasFakePings) && !game.is (GameFlags::Metamod)) {
+      table->pfnUpdateClientData = [] (const struct edict_s *player, int sendweapons, struct clientdata_s *cd) {
+         dllapi.pfnUpdateClientData (player, sendweapons, cd);
 
-         // if we're handle pings for bots and clients, clear IN_SCORE button so SV_ShouldUpdatePing engine function return false, and SV_EmitPings will not overwrite our results
-         if (cv_show_latency.as <int> () == 2) {
-            if (!util.isFakeClient (ent) && (ent->v.oldbuttons | ent->v.button | cmd->buttons) & IN_SCORE) {
-               cmd->buttons &= ~IN_SCORE;
-               util.emitPings (ent);
+         // do a post-processing with non-metamod
+         auto ent = const_cast <edict_t *> (reinterpret_cast <const edict_t *> (player));
+
+         if (fakeping.hasFeature ()) {
+            if (!util.isFakeClient (ent) && (ent->v.oldbuttons | ent->v.button) & IN_SCORE) {
+               fakeping.emit (ent);
             }
          }
-
-         if (game.is (GameFlags::Metamod)) {
-            RETURN_META (MRES_IGNORED);
-         }
-         dllapi.pfnCmdStart (ent, cmd, random_seed);
       };
    }
 
@@ -478,6 +496,20 @@ CR_LINKAGE_C int GetEntityAPI_Post (gamefuncs_t *table, int) {
 
       RETURN_META (MRES_IGNORED);
    };
+
+   if (game.is (GameFlags::HasFakePings)) {
+      table->pfnUpdateClientData = [] (const struct edict_s *player, int, struct clientdata_s *) {
+         // do a post-processing with non-metamod
+         auto ent = const_cast <edict_t *> (reinterpret_cast <const edict_t *> (player));
+
+         if (fakeping.hasFeature ()) {
+            if (!util.isFakeClient (ent) && (ent->v.oldbuttons | ent->v.button) & IN_SCORE) {
+               fakeping.emit (ent);
+            }
+         }
+         RETURN_META (MRES_IGNORED);
+      };
+   }
 
    return HLTrue;
 }

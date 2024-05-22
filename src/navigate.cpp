@@ -385,7 +385,7 @@ void Bot::postProcessGoals (const IntArray &goals, int result[]) {
             return true;
          }
       }
-      return false;
+      return isOccupiedNode (index, true);
    };
 
    static IntArray resulting {};

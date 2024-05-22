@@ -192,6 +192,9 @@
     <ClInclude Include="..\inc\hooks.h">
       <Filter>inc</Filter>
     </ClInclude>
+    <ClInclude Include="..\inc\fakeping.h">
+      <Filter>inc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\botlib.cpp">
@@ -261,6 +264,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\hooks.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\fakeping.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
