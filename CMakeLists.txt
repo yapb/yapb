@@ -25,6 +25,7 @@ set(YAPB_SRC
     "src/config.cpp"
     "src/control.cpp"
     "src/engine.cpp"
+    "src/fakeping.cpp"
     "src/graph.cpp"
     "src/hooks.cpp"
     "src/linkage.cpp"

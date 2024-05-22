@@ -993,15 +993,17 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
    // if we're have a glock or famas vary burst fire mode
    checkBurstMode (distance);
 
-   if (hasShield () && m_shieldCheckTime < game.time () && getCurrentTaskId () != Task::Camp) // better shield gun usage
-   {
+   // better shield gun usage
+   if (hasShield () && m_shieldCheckTime < game.time () && getCurrentTaskId () != Task::Camp) {
+      const bool hasEnemy = !game.isNullEntity (m_enemy);
+
       if (distance >= 750.0f && !isShieldDrawn ()) {
          pev->button |= IN_ATTACK2; // draw the shield
       }
       else if (isShieldDrawn ()
          || m_isReloading
-         || !seesEntity (m_enemy->v.origin)
-         || (!game.isNullEntity (m_enemy) && (m_enemy->v.button & IN_RELOAD))) {
+         || (hasEnemy && (m_enemy->v.button & IN_RELOAD))
+         || (hasEnemy && !seesEntity (m_enemy->v.origin))) {
 
          pev->button |= IN_ATTACK2; // draw out the shield
       }

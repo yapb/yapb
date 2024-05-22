@@ -90,6 +90,9 @@ void Game::levelInitialize (edict_t *entities, int max) {
    // set the global timer function
    timerStorage.setTimeAddress (&globals->time);
 
+   // restart the fakeping timer, so it'll start working after mapchange
+   fakeping.restartTimer ();
+
    // go thru the all entities on map, and do whatever we're want
    for (int i = 0; i < max; ++i) {
       auto ent = entities + i;
@@ -1007,9 +1010,6 @@ void Game::slowFrame () {
       // refresh bomb origin in case some plugin moved it out
       graph.setBombOrigin ();
 
-      // update client pings
-      util.calculatePings ();
-
       // update next update time
       m_halfSecondFrame = nextUpdate * 0.25f + time ();
    }
@@ -1048,6 +1048,9 @@ void Game::slowFrame () {
 
    // refresh bot infection (creature) status
    bots.refreshCreatureStatus ();
+
+   // update client pings
+   fakeping.calculate ();
 
    // update next update time
    m_oneSecondFrame = nextUpdate + time ();

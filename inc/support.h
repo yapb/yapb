@@ -9,9 +9,6 @@
 
 class BotSupport final : public Singleton <BotSupport> {
 private:
-   mutable Mutex m_cs {};
-
-private:
    bool m_needToSendWelcome {};
    float m_welcomeReceiveTime {};
 
@@ -69,21 +66,6 @@ public:
 
    // update stats on clients
    void updateClients ();
-
-   // generates ping bitmask for SVC_PINGS message
-   int getPingBitmask (edict_t *ent, int loss, int ping);
-
-   // calculate our own pings for all the players
-   void syncCalculatePings ();
-
-   // calculate our own pings for all the players
-   void calculatePings ();
-
-   // send modified pings to all the clients
-   void emitPings (edict_t *to);
-
-   // reset ping to zero values
-   void resetPings (edict_t *to);
 
    // checks if same model omitting the models directory
    bool isModel (const edict_t *ent, StringRef model);

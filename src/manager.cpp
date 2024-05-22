@@ -39,9 +39,6 @@ ConVar cv_botskin_t ("botskin_t", "0", "Specifies the bots wanted skin for Terro
 ConVar cv_botskin_ct ("botskin_ct", "0", "Specifies the bots wanted skin for CT team.", true, 0.0f, 5.0f);
 ConVar cv_preferred_personality ("preferred_personality", "none", "Sets the default personality when creating bots with quota management.\nAllowed values: 'none', 'normal', 'careful', 'rusher'.\nIf 'none' is specified personality chosen randomly.", false);
 
-ConVar cv_ping_base_min ("ping_base_min", "7", "Lower bound for base bot ping shown in scoreboard upon creation.", true, 0.0f, 100.0f);
-ConVar cv_ping_base_max ("ping_base_max", "34", "Upper bound for base bot ping shown in scoreboard upon creation.", true, 0.0f, 100.0f);
-
 ConVar cv_quota_adding_interval ("quota_adding_interval", "0.10", "Interval in which bots are added to the game.", true, 0.10f, 1.0f);
 ConVar cv_quota_maintain_interval ("quota_maintain_interval", "0.40", "Interval on which overall bot quota are checked.", true, 0.40f, 2.0f);
 
@@ -846,7 +843,7 @@ void BotManager::setWeaponMode (int selection) {
 
    selection--;
 
-   constexpr int kStd[7][kNumWeapons] = {
+   constexpr int kStdMaps[7][kNumWeapons] = {
       {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Knife only
       {-1, -1, -1, 2, 2, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Pistols only
       {-1, -1, -1, -1, -1, -1, -1, 2, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Shotgun only
@@ -856,7 +853,7 @@ void BotManager::setWeaponMode (int selection) {
       {-1, -1, -1, 2, 2, 0, 1, 2, 2, 2, 1, 2, 0, 2, 0, 0, 1, 0, 1, 1, 2, 2, 0, 1, 2, 1} // Standard
    };
 
-   constexpr int kAs[7][kNumWeapons] = {
+   constexpr int kAsMaps[7][kNumWeapons] = {
       {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Knife only
       {-1, -1, -1, 2, 2, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Pistols only
       {-1, -1, -1, -1, -1, -1, -1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Shotgun only
@@ -872,8 +869,8 @@ void BotManager::setWeaponMode (int selection) {
 
    // set the correct weapon mode
    for (int i = 0; i < kNumWeapons; ++i) {
-      tab[i].teamStandard = kStd[selection][i];
-      tab[i].teamAS = kAs[selection][i];
+      tab[i].teamStandard = kStdMaps[selection][i];
+      tab[i].teamAS = kAsMaps[selection][i];
    }
    cv_jasonmode.set (selection == 0 ? 1 : 0);
 
@@ -1161,7 +1158,8 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
       }
       m_difficulty = rg (minDifficulty, maxDifficulty);
    }
-   m_basePing = rg (cv_ping_base_min.as <int> (), cv_ping_base_max.as <int> ());
+   m_pingBase = fakeping.randomBase ();
+   m_ping = fakeping.randomBase ();
 
    m_previousThinkTime = game.time () - 0.1f;
    m_frameInterval = game.time ();
@@ -1526,7 +1524,10 @@ void Bot::newRound () {
    m_followWaitTime = 0.0f;
 
    m_hostages.clear ();
+
+   m_approachingLadderTimer.invalidate ();
    m_forgetLastVictimTimer.invalidate ();
+   m_lostReachableNodeTimer.invalidate ();
 
    for (auto &timer : m_chatterTimes) {
       timer = kMaxChatterRepeatInterval;
@@ -1713,7 +1714,7 @@ void Bot::markStale () {
    showChatterIcon (false, true);
 
    // reset bots ping to default
-   util.resetPings (ent ());
+   fakeping.reset (ent ());
 
    // mark bot as leaving
    m_isStale = true;
