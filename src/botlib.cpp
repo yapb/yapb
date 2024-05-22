@@ -4189,7 +4189,7 @@ void Bot::donateC4ToHuman () {
    if (!game.isNullEntity (bomb)) {
       bomb->v.flags |= FL_ONGROUND;
 
-      // make recipient friend "pickup" ищьи
+      // make recipient friend "pickup" it
       MDLL_Touch (bomb, recipient);
    }
 }
