@@ -843,7 +843,7 @@ void BotManager::setWeaponMode (int selection) {
 
    selection--;
 
-   constexpr int kStd[7][kNumWeapons] = {
+   constexpr int kStdMaps[7][kNumWeapons] = {
       {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Knife only
       {-1, -1, -1, 2, 2, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Pistols only
       {-1, -1, -1, -1, -1, -1, -1, 2, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Shotgun only
@@ -853,7 +853,7 @@ void BotManager::setWeaponMode (int selection) {
       {-1, -1, -1, 2, 2, 0, 1, 2, 2, 2, 1, 2, 0, 2, 0, 0, 1, 0, 1, 1, 2, 2, 0, 1, 2, 1} // Standard
    };
 
-   constexpr int kAs[7][kNumWeapons] = {
+   constexpr int kAsMaps[7][kNumWeapons] = {
       {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Knife only
       {-1, -1, -1, 2, 2, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Pistols only
       {-1, -1, -1, -1, -1, -1, -1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Shotgun only
@@ -869,8 +869,8 @@ void BotManager::setWeaponMode (int selection) {
 
    // set the correct weapon mode
    for (int i = 0; i < kNumWeapons; ++i) {
-      tab[i].teamStandard = kStd[selection][i];
-      tab[i].teamAS = kAs[selection][i];
+      tab[i].teamStandard = kStdMaps[selection][i];
+      tab[i].teamAS = kAsMaps[selection][i];
    }
    cv_jasonmode.set (selection == 0 ? 1 : 0);
 

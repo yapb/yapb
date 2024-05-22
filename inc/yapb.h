@@ -502,6 +502,7 @@ private:
    void updatePredictedIndex ();
    void refreshCreatureStatus (char *infobuffer);
    void updateRightRef ();
+   void donateC4ToHuman ();
 
    void completeTask ();
    void executeTasks ();

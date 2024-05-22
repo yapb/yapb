@@ -2898,6 +2898,9 @@ void Bot::update () {
       m_hasC4 = !!(pev->weapons & cr::bit (Weapon::C4));
 
       if (m_hasC4 && (cv_ignore_objectives || cv_jasonmode)) {
+         if (cv_ignore_objectives) {
+            donateC4ToHuman ();
+         }
          m_hasC4 = false;
       }
    }
@@ -4136,3 +4139,59 @@ bool Bot::isCreature () {
 
    return m_isOnInfectedTeam || m_modelMask == kModelMaskZombie || m_modelMask == kModelMaskChicken;
 }
+
+
+void Bot::donateC4ToHuman () {
+   edict_t *recepient = nullptr;
+
+   if (!m_hasC4) {
+      return;
+   }
+   const float radiusSq = cr::sqrf (1024.0f);
+
+   for (const auto &client : util.getClients ()) {
+      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team != m_team || client.ent == ent ()) {
+         continue;
+      }
+
+      if (client.origin.distanceSq (pev->origin) < radiusSq) {
+         recepient = client.ent;
+         break;
+      }
+   }
+
+   if (game.isNullEntity (recepient)) {
+      return;
+   }
+   m_itemCheckTime = game.time () + 2.0f;
+
+   // select the bomb
+   if (m_currentWeapon != Weapon::C4) {
+      selectWeaponById (Weapon::C4);
+   }
+   dropCurrentWeapon ();
+
+   // bomb on the ground entity
+   edict_t *bomb = nullptr;
+
+   // search world for just dropped bomb
+   game.searchEntities ("classname", "weaponbox", [&] (edict_t *ent) {
+      if (util.isModel (ent, "backpack.mdl")) {
+         bomb = ent;
+
+         if (!game.isNullEntity (bomb)) {
+            return EntitySearchResult::Break;
+         }
+      }
+      return EntitySearchResult::Continue;
+   });
+
+   // got c4 backpack 
+   if (!game.isNullEntity (bomb)) {
+      bomb->v.flags |= FL_ONGROUND;
+
+      // make recepient frient "pickup" it
+      MDLL_Touch (bomb, recepient);
+   }
+}
+
