@@ -1157,7 +1157,7 @@ void Game::printBotVersion () {
 }
 
 void Game::ensureHealthyGameEnvironment () {
-   if (!isDedicated ()) {
+   if (!isDedicated () || game.is (GameFlags::Legacy | GameFlags::Xash3D)) {
       return; // listen servers doesn't care about it at all
    }
 
