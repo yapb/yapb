@@ -1161,7 +1161,7 @@ void Game::ensureHealthyGameEnvironment () {
       return; // listen servers doesn't care about it at all
    }
 
-   // magic string that's enable's the features
+   // magic string that's enables the features
    constexpr auto kAllowHash = StringRef::fnv1a32 ("i'm confident for what i'm doing");
 
    // fetch custom variable, so fake features are explicitly enabled
