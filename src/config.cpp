@@ -670,6 +670,7 @@ void BotConfig::loadCustomConfig () {
       m_custom["ZMDetectCvar"] = "zp_delay";
       m_custom["ZMDelayCvar"] = "zp_delay";
       m_custom["ZMInfectedTeam"] = "T";
+      m_custom["EnableFakeBotFeatures"] = "no";
    };
 
    setDefaults ();

@@ -286,7 +286,7 @@ void BotSupport::checkWelcome () {
          "      http://www.botepidemic.com/podbot for Updates\n";
 
       // it's should be send in very rare cases
-      const bool sendLegacyWelcome = rg.chance (2);
+      const bool sendLegacyWelcome = rg.chance (game.is (GameFlags::Legacy) ? 25 : 2);
 
       if (!graphAuthor.startsWith (product.name)) {
          authorStr.assignf ("Navigation Graph by: %s", graphAuthor);
