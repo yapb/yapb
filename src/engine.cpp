@@ -1172,25 +1172,29 @@ void Game::ensureHealthyGameEnvironment () {
       return;
    }
 
+   auto notifyPeacefulRevert = [] (const ConVar &cv) {
+      game.print ("Cvar \"%s\" reverted to peaceful value.", cv.name ());
+   };
+
    // disable fake latency
    if (cv_show_latency.as <int> () > 1) {
       cv_show_latency.set (0);
 
-      game.print ("Cvar \"%s_show_latency\" reverted to peaceful value.", product.cmdPri);
+      notifyPeacefulRevert (cv_show_latency);
    }
 
    // disable fake avatars
    if (cv_show_avatars) {
       cv_show_avatars.set (0);
 
-      game.print ("Cvar \"%s_show_avatars\" reverted to peaceful value.", product.cmdPri);
+      notifyPeacefulRevert (cv_show_avatars);
    }
 
    // disable fake queries 
    if (cv_enable_query_hook) {
       cv_enable_query_hook.set (0);
 
-      game.print ("Cvar \"%s_enable_query_hook\" reverted to peaceful value.", product.cmdPri);
+      notifyPeacefulRevert (cv_enable_query_hook);
    }
 }
 
