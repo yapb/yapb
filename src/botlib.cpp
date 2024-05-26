@@ -2345,7 +2345,7 @@ void Bot::checkRadioQueue () {
 
 
    // don't allow bot listen you if bot is busy
-   if (getCurrentTaskId () == Task::DefuseBomb || getCurrentTaskId () == Task::PlantBomb || m_hasHostage || m_hasC4 || m_isCreature) {
+   if (m_radioOrder != Radio::ReportInTeam && (getCurrentTaskId () == Task::DefuseBomb || getCurrentTaskId () == Task::PlantBomb || m_hasHostage || m_hasC4 || m_isCreature)) {
       m_radioOrder = 0;
       return;
    }
