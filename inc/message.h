@@ -58,8 +58,10 @@ CR_DECLARE_SCOPED_ENUM (TextMsgCache,
 CR_DECLARE_SCOPED_ENUM (StatusIconCache,
    NeedHandle = cr::bit (0),
    BuyZone = cr::bit (1),
-   VipSafety = cr::bit (2),
-   C4 = cr::bit (3)
+   Escape = cr::bit (2),
+   Rescue = cr::bit (3),
+   VipSafety = cr::bit (4),
+   C4 = cr::bit (5)
 )
 
 class MessageDispatcher final : public Singleton <MessageDispatcher> {

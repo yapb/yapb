@@ -1806,6 +1806,7 @@ void Bot::refreshEnemyPredict () {
 void Bot::setLastVictim (edict_t *ent) {
    m_lastVictim = ent;
    m_lastVictimOrigin = ent->v.origin;
+   m_lastVictimTime = game.time ();
 
    m_forgetLastVictimTimer.start (rg (1.0f, 2.0f));
 }
@@ -1868,6 +1869,20 @@ void Bot::setConditions () {
                default:
                   pushChatterMessage (Chatter::EnemyDown);
                }
+            }
+         }
+         else {
+            auto currentTime = game.time();
+
+            m_killsInterval = currentTime - m_lastVictimTime;
+            if (m_killsInterval <= 5) {
+               m_killsCount++;
+               if (m_killsCount > 2) {
+                  pushChatterMessage(Chatter::OnARoll);
+               }
+            }
+            else {
+               m_killsCount = 0;
             }
          }
 
@@ -2182,11 +2197,19 @@ void Bot::startTask (Task id, float desire, int data, float time, bool resume) {
 
       if (rg.chance (25) && tid == Task::Camp) {
          if (game.mapIs (MapFlags::Demolition) && bots.isBombPlanted ()) {
-            pushChatterMessage (Chatter::GuardingDroppedC4);
+            pushChatterMessage (Chatter::GuardingPlantedC4);
          }
          else {
             pushChatterMessage (Chatter::GoingToCamp);
          }
+      }
+
+      if (rg.chance (75) && tid == Task::Camp && m_team == Team::CT && m_inEscapeZone) {
+         pushChatterMessage (Chatter::GoingToGuardEscapeZone);
+      }
+
+      if (rg.chance (75) && tid == Task::Camp && m_team == Team::Terrorist && m_inRescueZone) {
+         pushChatterMessage (Chatter::GoingToGuardRescueZone);
       }
 
       if (rg.chance (75) && tid == Task::Camp && m_team == Team::Terrorist && m_inVIPZone) {
@@ -2322,7 +2345,7 @@ void Bot::checkRadioQueue () {
 
 
    // don't allow bot listen you if bot is busy
-   if (getCurrentTaskId () == Task::DefuseBomb || getCurrentTaskId () == Task::PlantBomb || m_hasHostage || m_hasC4 || m_isCreature) {
+   if (m_radioOrder != Radio::ReportInTeam && (getCurrentTaskId () == Task::DefuseBomb || getCurrentTaskId () == Task::PlantBomb || m_hasHostage || m_hasC4 || m_isCreature)) {
       m_radioOrder = 0;
       return;
    }
@@ -2440,6 +2463,10 @@ void Bot::checkRadioQueue () {
 
    case Radio::EnemySpotted:
    case Radio::NeedBackup:
+   case Chatter::SpottedOneEnemy:
+   case Chatter::SpottedTwoEnemies:
+   case Chatter::SpottedThreeEnemies:
+   case Chatter::TooManyEnemies:
    case Chatter::ScaredEmotion:
    case Chatter::PinnedDown:
       if (((game.isNullEntity (m_enemy) && seesEntity (m_radioEntity->v.origin)) || distanceSq < cr::sqrf (2048.0f) || !m_moveToC4)
@@ -2626,21 +2653,21 @@ void Bot::checkRadioQueue () {
             const Path &path = graph[getTask ()->data];
 
             if (path.flags & NodeFlag::Goal) {
-               if (game.mapIs (MapFlags::Demolition) && m_team == Team::Terrorist && m_hasC4) {
+               if (m_hasC4) {
                   pushChatterMessage (Chatter::GoingToPlantBomb);
                }
                else {
                   pushChatterMessage (Chatter::Nothing);
                }
             }
-            else if (path.flags & NodeFlag::Rescue) {
+            else if (m_hasHostage) {
                pushChatterMessage (Chatter::RescuingHostages);
             }
             else if ((path.flags & NodeFlag::Camp) && rg.chance (75)) {
                pushChatterMessage (Chatter::GoingToCamp);
             }
-            else {
-               pushChatterMessage (Chatter::HeardNoise);
+            else if (m_states & Sense::HearingEnemy) {
+               pushChatterMessage (Chatter::HeardTheEnemy);
             }
          }
          else if (rg.chance (30)) {
@@ -2657,7 +2684,10 @@ void Bot::checkRadioQueue () {
       case Task::Camp:
          if (rg.chance (40)) {
             if (bots.isBombPlanted () && m_team == Team::Terrorist) {
-               pushChatterMessage (Chatter::GuardingDroppedC4);
+               pushChatterMessage (Chatter::GuardingPlantedC4);
+            }
+            else if (m_inEscapeZone && m_team == Team::CT) {
+               pushChatterMessage (Chatter::GuardingEscapeZone);
             }
             else if (m_inVIPZone && m_team == Team::Terrorist) {
                pushChatterMessage (Chatter::GuardingVIPSafety);
@@ -2677,7 +2707,30 @@ void Bot::checkRadioQueue () {
          break;
 
       case Task::Attack:
-         pushChatterMessage (Chatter::InCombat);
+         if (rg.chance (50)) {
+            pushChatterMessage (Chatter::InCombat);
+         }
+         else {
+            if (cv_radio_mode.as <int> () == 2) {
+               switch (numEnemiesNear (pev->origin, 384.0f)) {
+                  case 1:
+                     pushChatterMessage (Chatter::SpottedOneEnemy);
+                     break;
+                  case 2:
+                     pushChatterMessage (Chatter::SpottedTwoEnemies);
+                     break;
+                  case 3:
+                     pushChatterMessage (Chatter::SpottedThreeEnemies);
+                     break;
+                  default:
+                     pushChatterMessage (Chatter::TooManyEnemies);
+                     break;
+               }
+            }
+            else if (cv_radio_mode.as <int> () == 1) {
+               pushRadioMessage (Radio::EnemySpotted);
+            }
+         }
          break;
 
       case Task::Hide:

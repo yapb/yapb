@@ -190,7 +190,6 @@ void Bot::normal_ () {
 
                // decide to duck or not to duck
                selectCampButtons (index);
-               pushChatterMessage (Chatter::GoingToGuardVIPSafety); // play info about that
             }
          }
 
