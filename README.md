@@ -7,6 +7,7 @@ It's a computer controlled players (bots) for the Counter-Strike b6.6 - 1.6 and 
 ## ☉ Documentation
 * English: https://yapb.readthedocs.io/en/latest/
 * Russian: https://yapb.readthedocs.io/ru/latest/
+*African:https://yapb.readthedocs.io/af/latest/
 
 ## ☉ Waypoints
 All requests/bugs regarding bots navigation graph (waypoints) are located in this [repository](https://github.com/yapb/graph). if you have  waypoint request, please post an issue there.
