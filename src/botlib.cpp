@@ -917,7 +917,7 @@ void Bot::instantChatter (int type) {
 void Bot::pushRadioMessage (int message) {
    // this function inserts the radio message into the message queue
 
-   if (cv_radio_mode.as <int> () == 0 || m_numFriendsLeft == 0) {
+   if (cv_radio_mode.as <int> () == 0 || m_numFriendsLeft == 0 || m_isCreature) {
       return;
    }
    m_forceRadio = !game.is (GameFlags::HasBotVoice)
@@ -931,7 +931,7 @@ void Bot::pushRadioMessage (int message) {
 void Bot::pushChatterMessage (int message) {
    // this function inserts the voice message into the message queue (mostly same as above)
 
-   if (!game.is (GameFlags::HasBotVoice) || cv_radio_mode.as <int> () != 2 || !conf.hasChatterBank (message) || m_numFriendsLeft == 0) {
+   if (!game.is (GameFlags::HasBotVoice) || m_isCreature || cv_radio_mode.as <int> () != 2 || !conf.hasChatterBank (message) || m_numFriendsLeft == 0) {
       return;
    }
    bool sendMessage = false;
@@ -2345,7 +2345,7 @@ void Bot::checkRadioQueue () {
 
 
    // don't allow bot listen you if bot is busy
-   if (m_radioOrder != Radio::ReportInTeam && (getCurrentTaskId () == Task::DefuseBomb || getCurrentTaskId () == Task::PlantBomb || m_hasHostage || m_hasC4)) {
+   if (getCurrentTaskId () == Task::DefuseBomb || getCurrentTaskId () == Task::PlantBomb || m_hasHostage || m_hasC4 || m_isCreature) {
       m_radioOrder = 0;
       return;
    }

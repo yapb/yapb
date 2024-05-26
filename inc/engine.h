@@ -227,6 +227,9 @@ public:
    // print the version to server console on startup
    void printBotVersion ();
 
+   // ensure prosperous gaming environment as per: https://github.com/yapb/yapb/issues/575
+   void ensureHealthyGameEnvironment ();
+
    // public inlines
 public:
    // get the current time on server

@@ -704,7 +704,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
          // using pfnMessageBegin (), it will know what message ID number to send, and the engine will
          // know what to do, only for non-metamod version
 
-         return msgs.add (name, engfuncs.pfnRegUserMsg (name, size)); // return privously registered message
+         return msgs.add (name, engfuncs.pfnRegUserMsg (name, size)); // return previously registered message
       };
    }
 

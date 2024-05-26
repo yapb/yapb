@@ -31,8 +31,9 @@ ConVar cv_difficulty_max ("difficulty_max", "-1", "Upper bound of random difficu
 ConVar cv_difficulty_auto ("difficulty_auto", "0", "Allows each bot to balance their own difficulty based kd-ratio of team.", true, 0.0f, 1.0f);
 ConVar cv_difficulty_auto_balance_interval ("difficulty_auto_balance_interval", "30", "Interval in which bots will balance their difficulty.", true, 30.0f, 240.0f);
 
-ConVar cv_show_avatars ("show_avatars", "1", "Enables or disables displaying bot avatars in front of their names in scoreboard. Note, that is currently you can see only avatars of your steam friends.");
-ConVar cv_show_latency ("show_latency", "2", "Enables latency display in scoreboard.\nAllowed values: '0', '1', '2'.\nIf '0', there is nothing displayed.\nIf '1', there is a 'BOT' is displayed.\nIf '2' fake ping is displayed.", true, 0.0f, 2.0f);
+ConVar cv_show_avatars ("show_avatars", "0", "Enables or disables displaying bot avatars in front of their names in scoreboard. Note, that is currently you can see only avatars of your steam friends.");
+ConVar cv_show_latency ("show_latency", "0", "Enables latency display in scoreboard.\nAllowed values: '0', '1', '2'.\nIf '0', there is nothing displayed.\nIf '1', there is a 'BOT' is displayed.\nIf '2' fake ping is displayed.", true, 0.0f, 2.0f);
+
 ConVar cv_save_bots_names ("save_bots_names", "1", "Allows to save bot names upon changelevel, so bot names will be the same after a map change.", true, 0.0f, 1.0f);
 
 ConVar cv_botskin_t ("botskin_t", "0", "Specifies the bots wanted skin for Terrorist team.", true, 0.0f, 5.0f);

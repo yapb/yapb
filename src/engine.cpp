@@ -72,6 +72,9 @@ void Game::levelInitialize (edict_t *entities, int max) {
    // execute main config
    conf.loadMainConfig ();
 
+   // ensure the server admin is confident about features he's using
+   game.ensureHealthyGameEnvironment ();
+
    // load map-specific config
    conf.loadMapSpecificConfig ();
 
@@ -1010,6 +1013,9 @@ void Game::slowFrame () {
       // refresh bomb origin in case some plugin moved it out
       graph.setBombOrigin ();
 
+      // ensure the server admin is confident about features he's using
+      game.ensureHealthyGameEnvironment ();
+
       // update next update time
       m_halfSecondFrame = nextUpdate * 0.25f + time ();
    }
@@ -1148,6 +1154,48 @@ void Game::printBotVersion () {
       botRuntimeFlags.push (strings.format ("SIMD: %s", String::join (simdLevels, " & ")));
    }
    ctrl.msg ("\n%s v%s successfully loaded for game: Counter-Strike %s.\n\tFlags: %s.\n", product.name, product.version, gameVersionStr, botRuntimeFlags.empty () ? "None" : String::join (botRuntimeFlags, ", "));
+}
+
+void Game::ensureHealthyGameEnvironment () {
+   if (!isDedicated () || game.is (GameFlags::Legacy | GameFlags::Xash3D)) {
+      return; // listen servers doesn't care about it at all
+   }
+
+   // magic string that's enables the features
+   constexpr auto kAllowHash = StringRef::fnv1a32 ("i'm confident for what i'm doing");
+
+   // fetch custom variable, so fake features are explicitly enabled
+   static auto enableFakeFeatures = StringRef::fnv1a32 (conf.fetchCustom ("EnableFakeBotFeatures").chars ());
+
+   // if string matches, do not affect the cvars
+   if (enableFakeFeatures == kAllowHash) {
+      return;
+   }
+
+   auto notifyPeacefulRevert = [] (const ConVar &cv) {
+      game.print ("Cvar \"%s\" reverted to peaceful value.", cv.name ());
+   };
+
+   // disable fake latency
+   if (cv_show_latency.as <int> () > 1) {
+      cv_show_latency.set (0);
+
+      notifyPeacefulRevert (cv_show_latency);
+   }
+
+   // disable fake avatars
+   if (cv_show_avatars) {
+      cv_show_avatars.set (0);
+
+      notifyPeacefulRevert (cv_show_avatars);
+   }
+
+   // disable fake queries 
+   if (cv_enable_query_hook) {
+      cv_enable_query_hook.set (0);
+
+      notifyPeacefulRevert (cv_enable_query_hook);
+   }
 }
 
 void LightMeasure::initializeLightstyles () {

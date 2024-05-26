@@ -892,6 +892,7 @@ extern ConVar cv_ignore_objectives;
 extern ConVar cv_chat;
 extern ConVar cv_language;
 extern ConVar cv_show_latency;
+extern ConVar cv_show_avatars;
 extern ConVar cv_enable_query_hook;
 extern ConVar cv_chatter_path;
 extern ConVar cv_quota;

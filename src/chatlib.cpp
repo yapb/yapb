@@ -374,7 +374,7 @@ void Bot::checkForChat () {
 void Bot::sendToChat (StringRef message, bool teamOnly) {
    // this function prints saytext message to all players
 
-   if (message.empty () || !cv_chat) {
+   if (m_isCreature || message.empty () || !cv_chat) {
       return;
    }
    issueCommand ("%s \"%s\"", teamOnly ? "say_team" : "say", message);
