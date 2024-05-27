@@ -966,7 +966,7 @@ void Bot::checkMsgQueue () {
    const auto state = m_msgQueue.popFront ();
 
    // nothing to do?
-   if (state == BotMsg::None || (state == BotMsg::Radio && game.is (GameFlags::FreeForAll))) {
+   if (state == BotMsg::None || (state == BotMsg::Radio && (m_isCreature || game.is (GameFlags::FreeForAll)))) {
       return;
    }
    float delayResponseTime = 0.0f;
