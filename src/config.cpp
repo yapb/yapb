@@ -9,7 +9,6 @@
 
 ConVar cv_bind_menu_key ("bind_menu_key", "=", "Binds specified key for opening bots menu.", false);
 ConVar cv_ignore_cvars_on_changelevel ("ignore_cvars_on_changelevel", "yb_quota,yb_autovacate", "Specifies comma separated list of bot cvars, that will not be overwritten by config on changelevel.", false);
-ConVar cv_logger_disable_logfile ("logger_disable_logfile", "0", "Disables logger to write anything to log file. Just spew content to the console.");
 
 BotConfig::BotConfig () {
    m_chat.resize (Chat::Count);
@@ -106,6 +105,9 @@ void BotConfig::loadMainConfig (bool isFirstLoad) {
       cv_difficulty.set (3);
    }
 
+   // preload custom config
+   conf.loadCustomConfig ();
+
    // bind the correct menu key for bot menu...
    if (!game.isDedicated ()) {
       auto val = cv_bind_menu_key.as <StringRef> ();
@@ -114,9 +116,14 @@ void BotConfig::loadMainConfig (bool isFirstLoad) {
          game.serverCommand ("bind \"%s\" \"yb menu\"", val);
       }
    }
+   static const bool disableLogWrite = conf.fetchCustom ("DisableLogFile").startsWith ("yes");
 
    // disable logger if requested
-   logger.disableLogWrite (cv_logger_disable_logfile);
+   logger.disableLogWrite (disableLogWrite);
+
+   if (disableLogWrite) {
+      game.print ("Bot logging is disabled.");
+   }
 }
 
 void BotConfig::loadNamesConfig () {
@@ -671,14 +678,17 @@ void BotConfig::loadCustomConfig () {
    MemFile file {};
 
    auto setDefaults = [&] () {
-      m_custom["C4ModelName"] = "c4.mdl";
-      m_custom["AMXParachuteCvar"] = "sv_parachute";
-      m_custom["CustomCSDMSpawnPoint"] = "view_spawn";
-      m_custom["CSDMDetectCvar"] = "csdm_active";
-      m_custom["ZMDetectCvar"] = "zp_delay";
-      m_custom["ZMDelayCvar"] = "zp_delay";
-      m_custom["ZMInfectedTeam"] = "T";
-      m_custom["EnableFakeBotFeatures"] = "no";
+      m_custom = {
+         { "C4ModelName",  "c4.mdl" },
+         { "AMXParachuteCvar",  "sv_parachute" },
+         { "CustomCSDMSpawnPoint",  "view_spawn" },
+         { "CSDMDetectCvar", "csdm_active" },
+         { "ZMDetectCvar", "zp_delay" },
+         { "ZMDelayCvar",  "zp_delay" },
+         { "ZMInfectedTeam", "T" },
+         { "EnableFakeBotFeatures", "no" },
+         { "DisableLogFile", "no" }
+      };
    };
 
    setDefaults ();
