@@ -8,6 +8,7 @@
 #include <yapb.h>
 
 ConVar cv_has_team_semiclip ("has_team_semiclip", "0", "When enabled, bots will not try to avoid teammates on their way. Assuming some of the semiclip plugins are in use.");
+ConVar cv_graph_slope_height ("graph_slope_height", "24.0", "Determines the maximum slope height change between the current and next node to consider the current link as a jump link. Only for generated graphs.", true, 12.0f, 48.0f);
 
 int Bot::findBestGoal () {
    if (m_isCreature) {
@@ -2458,7 +2459,7 @@ bool Bot::advanceMovement () {
                      const float diff = cr::abs (m_path->origin.z - graph[destIndex].origin.z);
 
                      // if height difference is enough, consider this link as jump link
-                     if (graph[destIndex].origin.z > m_path->origin.z && diff > 18.0f) {
+                     if (graph[destIndex].origin.z > m_path->origin.z && diff > cv_graph_slope_height.as <float> ()) {
                         m_currentTravelFlags |= PathFlag::Jump;
                         m_desiredVelocity = nullptr; // make bot compute jump velocity
                         m_jumpFinished = false; // force-mark this path as jump
