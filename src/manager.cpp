@@ -460,23 +460,7 @@ void BotManager::maintainQuota () {
       createRandom ();
    }
    else if (desiredBotCount < botsInGame) {
-      const auto &tp = countTeamPlayers ();
-      bool isKicked = false;
-
-      if (tp.first > tp.second) {
-         isKicked = kickRandom (false, Team::Terrorist);
-      }
-      else if (tp.first < tp.second) {
-         isKicked = kickRandom (false, Team::CT);
-      }
-      else {
-         isKicked = kickRandom (false, Team::Unassigned);
-      }
-
-      // if we can't kick player from correct team, just kick any random to keep quota control work
-      if (!isKicked) {
-         kickRandom (false, Team::Unassigned);
-      }
+      balancedKickRandom (false);
    }
    else {
       // clear the saved names when quota balancing ended
@@ -794,6 +778,27 @@ bool BotManager::kickRandom (bool decQuota, Team fromTeam) {
       }
    }
    return false;
+}
+
+bool BotManager::balancedKickRandom (bool decQuota) {
+   const auto &tp = countTeamPlayers ();
+   bool isKicked = false;
+
+   if (tp.first > tp.second) {
+      isKicked = kickRandom (decQuota, Team::Terrorist);
+   }
+   else if (tp.first < tp.second) {
+      isKicked = kickRandom (decQuota, Team::CT);
+   }
+   else {
+      isKicked = kickRandom (decQuota, Team::Unassigned);
+   }
+
+   // if we can't kick player from correct team, just kick any random to keep quota control work
+   if (!isKicked) {
+      isKicked = kickRandom (decQuota, Team::Unassigned);
+   }
+   return isKicked;
 }
 
 bool BotManager::hasCustomCSDMSpawnEntities () {

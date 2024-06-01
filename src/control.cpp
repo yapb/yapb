@@ -53,7 +53,7 @@ int BotControl::cmdKickBot () {
       bots.kickFromTeam (Team::Terrorist);
    }
    else {
-      bots.kickRandom ();
+      bots.balancedKickRandom (true);
    }
    return BotCommandResult::Handled;
 }
