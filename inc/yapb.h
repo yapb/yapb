@@ -400,6 +400,7 @@ private:
    bool isBlockedRight ();
    bool checkWallOnLeft ();
    bool checkWallOnRight ();
+   bool checkWallOnBehind ();
    bool updateNavigation ();
    bool isEnemyThreat ();
    bool isWeaponRestricted (int wid);

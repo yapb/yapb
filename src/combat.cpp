@@ -1314,8 +1314,14 @@ void Bot::attackMovement () {
 
    // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
    if (!game.is (GameFlags::CSDM)) {
-      if (m_retreatTime < game.time () && (m_states & Sense::SeeingEnemy) && approach < 30 && !bots.isBombPlanted () && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
-         startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, true);
+      if ((m_states & Sense::SeeingEnemy) && approach < 30 && !bots.isBombPlanted () && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
+         if (m_retreatTime < game.time ()) {
+            startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, true);
+         }
+
+         if (!checkWallOnBehind ()) {
+            m_moveSpeed = -pev->maxspeed;
+         }
       }
       else if (approach < 50) {
          m_moveSpeed = 0.0f;

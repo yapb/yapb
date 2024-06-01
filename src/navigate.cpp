@@ -658,7 +658,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                   dirLeft = true;
                }
                const auto &testDir = m_moveSpeed > 0.0f ? forward : -forward;
-               constexpr float kBlockDistance = 42.0f;
+               constexpr float kBlockDistance = 52.0f;
 
                // now check which side is blocked
                src = pev->origin + right * kBlockDistance;
@@ -2987,7 +2987,7 @@ bool Bot::isBlockedRight () {
 
 bool Bot::checkWallOnLeft () {
    TraceResult tr {};
-   game.testLine (pev->origin, pev->origin - pev->angles.right () * 42.0f, TraceIgnore::Monsters, ent (), &tr);
+   game.testLine (pev->origin, pev->origin - pev->angles.right () * 52.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
    if (tr.flFraction < 1.0f) {
@@ -3000,7 +3000,20 @@ bool Bot::checkWallOnRight () {
    TraceResult tr {};
 
    // do a trace to the right...
-   game.testLine (pev->origin, pev->origin + pev->angles.right () * 42.0f, TraceIgnore::Monsters, ent (), &tr);
+   game.testLine (pev->origin, pev->origin + pev->angles.right () * 52.0f, TraceIgnore::Monsters, ent (), &tr);
+
+   // check if the trace hit something...
+   if (tr.flFraction < 1.0f) {
+      return true;
+   }
+   return false;
+}
+
+bool Bot::checkWallOnBehind () {
+   TraceResult tr {};
+
+   // do a trace to the right...
+   game.testLine (pev->origin, pev->origin - pev->angles.forward () * 52.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
    if (tr.flFraction < 1.0f) {
