@@ -230,6 +230,9 @@ public:
    // ensure prosperous gaming environment as per: https://github.com/yapb/yapb/issues/575
    void ensureHealthyGameEnvironment ();
 
+   // creates a fake client's a nd resets all the entvars
+   edict_t *createFakeClient (StringRef name);
+
    // public inlines
 public:
    // get the current time on server

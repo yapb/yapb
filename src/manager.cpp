@@ -258,7 +258,7 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
       // buffer has been modified, copy to real name
       resultName = cr::move (prefixed);
    }
-   bot = engfuncs.pfnCreateFakeClient (resultName.chars ());
+   bot = game.createFakeClient (resultName);
 
    if (game.isNullEntity (bot)) {
       return BotCreateResult::MaxPlayersReached;
@@ -622,8 +622,15 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
    else {
       selection = 5;
    }
+   const auto maxToAdd = maxClients - (getHumansCount () + getBotCount ());
+
    constexpr char kTeams[6][12] = { "", {"Terrorists"}, {"CTs"}, "", "", {"Random"}, };
-   const auto toAdd = numToAdd == -1 ? maxClients - (getHumansCount () + getBotCount ()) : numToAdd;
+   auto toAdd = numToAdd == -1 ? maxToAdd : numToAdd;
+
+   // limit manually added count as well
+   if (toAdd > maxToAdd - 1) {
+      toAdd = maxToAdd - 1;
+   }
 
    for (int i = 0; i <= toAdd; ++i) {
       addbot ("", difficulty, personality, selection, -1, true);
@@ -763,12 +770,23 @@ bool BotManager::kickRandom (bool decQuota, Team fromTeam) {
 
       return true;
    }
+   static Array <Bot *> kickable;
+   kickable.clear ();
 
    // worst case, just kick some random bot
    for (const auto &bot : m_bots) {
 
       // is this slot used?
       if (belongsTeam (bot.get ())) {
+         kickable.push (bot.get ());
+      }
+   }
+
+   // kick random from collected
+   if (!kickable.empty ()) {
+      auto bot = kickable.random ();
+
+      if (bot) {
          updateQuota ();
          bot->kick ();
 
@@ -1083,13 +1101,6 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    const int clientIndex = game.indexOfEntity (bot);
    pev = &bot->v;
 
-   if (bot->pvPrivateData != nullptr) {
-      engfuncs.pfnFreeEntPrivateData (bot);
-   }
-
-   bot->pvPrivateData = nullptr;
-   bot->v.frags = 0;
-
    // create the player entity by calling MOD's player function
    bots.execGameEntity (bot);
 
@@ -1191,9 +1202,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
       m_baseFearLevel = rg (0.4f, 0.7f);
       break;
    }
-
-   plat.bzero (&m_ammoInClip, sizeof (m_ammoInClip));
-   plat.bzero (&m_ammo, sizeof (m_ammo));
+   clearAmmoInfo ();
 
    m_currentWeapon = 0; // current weapon is not assigned at start
    m_weaponType = WeaponType::None; // current weapon type is not assigned at start
@@ -1225,6 +1234,12 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    m_tasks.reserve (Task::Max);
 
    newRound ();
+}
+
+
+void Bot::clearAmmoInfo () {
+   plat.bzero (&m_ammoInClip, sizeof (m_ammoInClip));
+   plat.bzero (&m_ammo, sizeof (m_ammo));
 }
 
 float Bot::getConnectionTime () {
@@ -1565,8 +1580,7 @@ void Bot::newRound () {
 
    // if bot died, clear all weapon stuff and force buying again
    if (!m_isAlive) {
-      plat.bzero (&m_ammoInClip, sizeof (m_ammoInClip));
-      plat.bzero (&m_ammo, sizeof (m_ammo));
+      clearAmmoInfo ();
 
       m_currentWeapon = 0;
       m_weaponType = 0;

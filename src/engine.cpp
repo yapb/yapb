@@ -1198,6 +1198,28 @@ void Game::ensureHealthyGameEnvironment () {
    }
 }
 
+edict_t *Game::createFakeClient (StringRef name) {
+   auto ent = engfuncs.pfnCreateFakeClient (name.chars ());
+
+   if (game.isNullEntity (ent)) {
+      return nullptr;
+   }
+   auto netname = ent->v.netname;
+   ent->v = {}; // reset entire the entvars structure (fix from regamedll)
+
+   // restore containing entity, name and client flags
+   ent->v.pContainingEntity = ent;
+   ent->v.flags = FL_FAKECLIENT | FL_CLIENT;
+   ent->v.netname = netname;
+
+   if (ent->pvPrivateData != nullptr) {
+      engfuncs.pfnFreeEntPrivateData (ent);
+   }
+   ent->pvPrivateData = nullptr;
+
+   return ent;
+}
+
 void LightMeasure::initializeLightstyles () {
    // this function initializes lighting information...
 

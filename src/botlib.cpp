@@ -427,8 +427,8 @@ void Bot::updatePickups () {
             pickupType = Pickup::Weapon;
 
             if (cv_pickup_ammo_and_kits) {
-               const int primaryWeaponCarried = bestPrimaryCarried ();
-               const int secondaryWeaponCarried = bestSecondaryCarried ();
+               const int primaryWeaponCarried = getBestOwnedWeapon ();
+               const int secondaryWeaponCarried = getBestOwnedPistol ();
 
                const auto &config = conf.getWeapons ();
                const auto &primary = config[primaryWeaponCarried];
@@ -1872,13 +1872,13 @@ void Bot::setConditions () {
             }
          }
          else {
-            auto currentTime = game.time();
+            auto currentTime = game.time ();
 
             m_killsInterval = currentTime - m_lastVictimTime;
             if (m_killsInterval <= 5) {
                m_killsCount++;
                if (m_killsCount > 2) {
-                  pushChatterMessage(Chatter::OnARoll);
+                  pushChatterMessage (Chatter::OnARoll);
                }
             }
             else {
@@ -1961,7 +1961,7 @@ void Bot::filterTasks () {
    float tempFear = m_fearLevel;
    float tempAgression = m_agressionLevel;
 
-   // decrease fear if teammates near
+   // decrease fear if players near
    int friendlyNum = 0;
 
    if (!m_lastEnemyOrigin.empty ()) {
@@ -2713,18 +2713,18 @@ void Bot::checkRadioQueue () {
          else {
             if (cv_radio_mode.as <int> () == 2) {
                switch (numEnemiesNear (pev->origin, 384.0f)) {
-                  case 1:
-                     pushChatterMessage (Chatter::SpottedOneEnemy);
-                     break;
-                  case 2:
-                     pushChatterMessage (Chatter::SpottedTwoEnemies);
-                     break;
-                  case 3:
-                     pushChatterMessage (Chatter::SpottedThreeEnemies);
-                     break;
-                  default:
-                     pushChatterMessage (Chatter::TooManyEnemies);
-                     break;
+               case 1:
+                  pushChatterMessage (Chatter::SpottedOneEnemy);
+                  break;
+               case 2:
+                  pushChatterMessage (Chatter::SpottedTwoEnemies);
+                  break;
+               case 3:
+                  pushChatterMessage (Chatter::SpottedThreeEnemies);
+                  break;
+               default:
+                  pushChatterMessage (Chatter::TooManyEnemies);
+                  break;
                }
             }
             else if (cv_radio_mode.as <int> () == 1) {
@@ -3020,7 +3020,13 @@ void Bot::update () {
 }
 
 void Bot::logicDuringFreezetime () {
-   pev->button = 0;
+   if (m_isStale) {
+      return;
+   }
+   pev->button &= ~IN_DUCK;
+
+   updateLookAngles ();
+   runMovement ();
 
    if (m_changeViewTime > game.time ()) {
       return;
@@ -3030,20 +3036,50 @@ void Bot::logicDuringFreezetime () {
       pev->button |= IN_JUMP;
       m_jumpTime = game.time ();
    }
-   static Array <Bot *> teammates {};
-   teammates.clear ();
+   static Array <edict_t *> players {};
+   players.clear ();
 
-   for (const auto &bot : bots) {
-      if (bot->m_isAlive && bot->m_team == m_team && bot.get () != this && seesEntity (bot->pev->origin)) {
-         teammates.push (bot.get ());
+   // search for visible enemies
+   for (const auto &client : util.getClients ()) {
+      if (!(client.flags & ClientFlags::Used)
+         || !(client.flags & ClientFlags::Alive)
+         || client.team == m_team
+         || client.ent == ent ()
+         || !client.ent
+         || !seesEntity (client.origin)) {
+         continue;
       }
+      players.push (client.ent);
    }
 
-   if (!teammates.empty ()) {
-      auto bot = teammates.random ();
+   // use teammates
+   if (players.empty ()) {
+      for (const auto &client : util.getClients ()) {
+         if (!(client.flags & ClientFlags::Used)
+            || !(client.flags & ClientFlags::Alive)
+            || client.team != m_team
+            || client.ent == ent ()
+            || !client.ent
+            || !seesEntity (client.origin)) {
+            continue;
+         }
+         players.push (client.ent);
+      }
+   }
+   else {
+      selectBestWeapon ();
+   }
 
-      if (bot) {
-         m_lookAt = bot->pev->origin + bot->pev->view_ofs;
+   if (!players.empty ()) {
+      auto ent = players.random ();
+
+      if (ent) {
+         m_lookAt = ent->v.origin + ent->v.view_ofs;
+
+         if (m_buyingFinished) {
+            m_enemy = ent;
+            m_enemyOrigin = ent->v.origin;
+         }
       }
 
       // good time too greet everyone
@@ -3066,6 +3102,10 @@ void Bot::executeTasks () {
 
 void Bot::checkSpawnConditions () {
    // this function is called instead of ai when buying finished, but freezetime is not yet left.
+
+   if (!game.isNullEntity (m_enemy)) {
+      return;
+   }
 
    // switch to knife if time to do this
    if (m_checkKnifeSwitch && m_buyingFinished && m_spawnTime + rg (5.0f, 7.5f) < game.time ()) {
@@ -3203,7 +3243,7 @@ void Bot::logic () {
          }
       }
 
-      // if bomb planted warn teammates !
+      // if bomb planted warn players !
       if (bots.hasBombSay (BombPlantedSay::Chatter) && bots.isBombPlanted () && m_team == Team::CT) {
          pushChatterMessage (Chatter::GottaFindC4);
          bots.clearBombSay (BombPlantedSay::Chatter);
@@ -3881,7 +3921,7 @@ bool Bot::isOutOfBombTimer () {
    }
    bool hasTeammatesWithDefuserKit = false;
 
-   // check if our teammates has defusal kit
+   // check if our players has defusal kit
    for (const auto &bot : bots) {
       // search players with defuse kit
       if (bot.get () != this && bot->m_team == Team::CT && bot->m_hasDefuser && bombOrigin.distanceSq (bot->pev->origin) < cr::sqrf (512.0f)) {
@@ -4246,4 +4286,3 @@ void Bot::donateC4ToHuman () {
       MDLL_Touch (bomb, recipient);
    }
 }
-

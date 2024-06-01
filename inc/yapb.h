@@ -377,7 +377,8 @@ private:
    int bestPrimaryCarried ();
    int bestSecondaryCarried ();
    int bestGrenadeCarried ();
-   int bestWeaponCarried ();
+   int getBestOwnedWeapon ();
+   int getBestOwnedPistol ();
    int changeNodeIndex (int index);
    int numEnemiesNear (const Vector &origin, const float radius);
    int numFriendsNear (const Vector &origin, const float radius);
@@ -416,6 +417,7 @@ private:
    bool reactOnEnemy ();
    bool selectBestNextNode ();
    bool hasAnyWeapons ();
+   bool hasAnyAmmoInClip ();
    bool isKnifeMode ();
    bool isGrenadeWar ();
    bool isDeadlyMove (const Vector &to);
@@ -506,6 +508,7 @@ private:
    void refreshCreatureStatus (char *infobuffer);
    void updateRightRef ();
    void donateC4ToHuman ();
+   void clearAmmoInfo ();
 
    void completeTask ();
    void executeTasks ();

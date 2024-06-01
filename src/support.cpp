@@ -383,7 +383,7 @@ void BotSupport::updateClients () {
       edict_t *player = game.playerOfIndex (i);
       Client &client = m_clients[i];
 
-      if (!game.isNullEntity (player) && (player->v.flags & FL_CLIENT)) {
+      if (!game.isNullEntity (player) && (player->v.flags & FL_CLIENT) && !(player->v.flags & FL_DORMANT)) {
          client.ent = player;
          client.flags |= ClientFlags::Used;
 

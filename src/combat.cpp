@@ -401,18 +401,18 @@ bool Bot::lookupEnemies () {
          if (m_seeEnemyTime + 3.0f < game.time () && (m_hasC4 || m_hasHostage || !game.isNullEntity (m_targetEntity))) {
             if (cv_radio_mode.as <int> () == 2) {
                switch (numEnemiesNear (pev->origin, 384.0f)) {
-                  case 1:
-                     pushChatterMessage (Chatter::SpottedOneEnemy);
-                     break;
-                  case 2:
-                     pushChatterMessage (Chatter::SpottedTwoEnemies);
-                     break;
-                  case 3:
-                     pushChatterMessage (Chatter::SpottedThreeEnemies);
-                     break;
-                  default:
-                     pushChatterMessage (Chatter::TooManyEnemies);
-                     break;
+               case 1:
+                  pushChatterMessage (Chatter::SpottedOneEnemy);
+                  break;
+               case 2:
+                  pushChatterMessage (Chatter::SpottedTwoEnemies);
+                  break;
+               case 3:
+                  pushChatterMessage (Chatter::SpottedThreeEnemies);
+                  break;
+               default:
+                  pushChatterMessage (Chatter::TooManyEnemies);
+                  break;
                }
             }
             else if (cv_radio_mode.as <int> () == 1) {
@@ -1167,8 +1167,7 @@ void Bot::fireWeapons () {
 
          // is the bot carrying this weapon?
          if (weapons & cr::bit (wid)) {
-            if (getAmmo (wid) >= tab[selectIndex].minPrimaryAmmo) {
-
+            if (getAmmo (wid) >= tab[selectIndex].minPrimaryAmmo && wid == m_currentWeapon) {
                // available ammo found, reload weapon
                if (m_reloadState == Reload::None || m_reloadCheckTime > game.time ()) {
                   m_isReloading = true;
@@ -1201,12 +1200,12 @@ bool Bot::isWeaponBadAtDistance (int weaponIndex, float distance) {
    }
    const auto weaponType = info[weaponIndex].type;
 
-   if (weaponType == WeaponType::Melee) {
+   if (weaponType == WeaponType::Melee || !(weaponType == WeaponType::Shotgun || weaponType == WeaponType::Sniper)) {
       return false;
    }
 
    // check is ammo available for secondary weapon
-   if (m_ammoInClip[info[bestSecondaryCarried ()].id] >= 3) {
+   if (m_ammoInClip[info[getBestOwnedPistol ()].id] <= 0) {
       return false;
    }
 
@@ -1269,6 +1268,11 @@ void Bot::focusEnemy () {
                m_wantsToFire = false;
             }
          }
+      }
+
+      // fire anyway at close distance
+      if (distanceSq < cr::sqrf (90.0f)) {
+         m_wantsToFire = true;
       }
    }
 }
@@ -1650,8 +1654,27 @@ bool Bot::hasAnyWeapons () {
    return !!(pev->weapons & (kPrimaryWeaponMask | kSecondaryWeaponMask));
 }
 
+bool Bot::hasAnyAmmoInClip () {
+   bool hasAmmo = false;
+
+   if (!hasAnyWeapons ()) {
+      return false;
+   }
+   const auto pri = getBestOwnedWeapon ();
+   const auto sec = getBestOwnedPistol ();
+
+   if (pri > 0 || sec > 0) {
+      const auto &info = conf.getWeapons ();
+      hasAmmo = pri > 0 && m_ammoInClip[info[pri].id] > 0 || sec > 0 && m_ammoInClip[info[sec].id] > 0;
+   }
+   return hasAmmo;
+}
+
 bool Bot::isKnifeMode () {
-   return cv_jasonmode || (usesKnife () && !hasAnyWeapons ()) || m_isCreature;
+   return cv_jasonmode ||
+      (usesKnife () && !hasAnyWeapons ())
+      || m_isCreature
+      || ((m_states & Sense::SeeingEnemy) && usesKnife () && !hasAnyAmmoInClip ());
 }
 
 bool Bot::isGrenadeWar () {
@@ -1737,7 +1760,7 @@ void Bot::selectSecondary () {
    pev->weapons = oldWeapons;
 }
 
-int Bot::bestWeaponCarried () {
+int Bot::getBestOwnedWeapon () {
    auto tab = conf.getRawWeapons ();
 
    int weapons = pev->weapons;
@@ -1752,6 +1775,29 @@ int Bot::bestWeaponCarried () {
       }
       ++i;
       ++tab;
+   }
+   return num;
+}
+
+int Bot::getBestOwnedPistol () {
+   auto tab = conf.getRawWeapons ();
+
+   int weapons = pev->weapons;
+   int num = 0;
+   int i = 0;
+
+   // loop through all the weapons until terminator is found...
+   while (tab->id) {
+      // is the bot carrying this weapon?
+      if (weapons & cr::bit (tab->id)) {
+         num = i;
+      }
+      ++i;
+      ++tab;
+
+      if (i > kPrimaryWeaponMinIndex - 1) {
+         break;
+      }
    }
    return num;
 }

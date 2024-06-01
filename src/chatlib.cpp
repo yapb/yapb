@@ -202,7 +202,7 @@ void Bot::prepareChatMessage (StringRef message) {
    };
 
    // get bot's victim
-   auto getMyVictim = [&] () -> String {;
+   auto getMyVictim = [&] () -> String {
       return humanizedName (game.indexOfPlayer (m_lastVictim));
    };
 

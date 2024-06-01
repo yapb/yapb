@@ -946,7 +946,7 @@ void Bot::defuseBomb_ () {
          || timeToBlowUp < fullDefuseTime + 7.0f
          || ((getAmmoInClip () > 8 && m_reloadState == Reload::Primary) || (getAmmoInClip () > 5 && m_reloadState == Reload::Secondary))) {
 
-         const int weaponIndex = bestWeaponCarried ();
+         const int weaponIndex = getBestOwnedWeapon ();
 
          // just select knife and then select weapon
          selectWeaponById (Weapon::Knife);
@@ -1530,7 +1530,7 @@ void Bot::pickupItem_ () {
          }
          else {
             // primary weapon
-            int weaponIndex = bestWeaponCarried ();
+            int weaponIndex = getBestOwnedWeapon ();
 
             const bool niceWeapon = rateGroundWeapon (m_pickupItem);
             const auto tab = conf.getRawWeapons ();
@@ -1564,7 +1564,7 @@ void Bot::pickupItem_ () {
       // near to shield?
       else if (itemDistanceSq < cr::sqrf (50.0f)) {
          // get current best weapon to check if it's a primary in need to be dropped
-         int weaponIndex = bestWeaponCarried ();
+         int weaponIndex = getBestOwnedWeapon ();
 
          if (weaponIndex > 6) {
             selectWeaponByIndex (weaponIndex);
