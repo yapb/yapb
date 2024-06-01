@@ -1665,7 +1665,7 @@ bool Bot::hasAnyAmmoInClip () {
 
    if (pri > 0 || sec > 0) {
       const auto &info = conf.getWeapons ();
-      hasAmmo = pri > 0 && m_ammoInClip[info[pri].id] > 0 || sec > 0 && m_ammoInClip[info[sec].id] > 0;
+      hasAmmo = (pri > 0 && m_ammoInClip[info[pri].id] > 0) || (sec > 0 && m_ammoInClip[info[sec].id] > 0);
    }
    return hasAmmo;
 }
