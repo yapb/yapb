@@ -1466,7 +1466,7 @@ void PlayerHitboxEnumerator::update (edict_t *ent) {
       parts->feet.z = ent->v.origin.z - kStandFeet;
    }
 
-   auto getHitbox = [&kInvalidHitbox] (studiohdr_t *hdr, mstudiobbox_t *bb, int part) {
+   auto getHitbox = [&] (studiohdr_t *hdr, mstudiobbox_t *bb, int part) {
       int hitbox = kInvalidHitbox;
 
       for (auto i = 0; i < hdr->numhitboxes; ++i) {
