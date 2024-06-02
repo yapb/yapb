@@ -13,6 +13,7 @@ ConVar cv_check_enemy_rendering ("check_enemy_rendering", "0", "Enables or disab
 ConVar cv_check_enemy_invincibility ("check_enemy_invincibility", "0", "Enables or disables checking enemy invincibility. Useful for some mods.");
 ConVar cv_stab_close_enemies ("stab_close_enemies", "1", "Enables or disables bot ability to stab the enemy with knife if bot is in good condition.");
 ConVar cv_use_engine_pvs_check ("use_engine_pvs_check", "0", "Use engine to check potential visibility of an enemy.");
+ConVar cv_use_hitbox_enemy_targeting ("use_hitbox_enemy_targeting", "0", "Use hitbox-based enemy targeting, instead of offset based. Use with the yb_use_engine_pvs_check enabled to reduce CPU usage.");
 
 ConVar mp_friendlyfire ("mp_friendlyfire", nullptr, Var::GameRef);
 ConVar sv_gravity ("sv_gravity", nullptr, Var::GameRef);
@@ -137,6 +138,14 @@ bool Bot::checkBodyParts (edict_t *target) {
       return false;
    }
 
+   // hitboxes requested ?
+   if (game.is (GameFlags::HasStudioModels) && cv_use_hitbox_enemy_targeting) {
+      return checkBodyPartsWithHitboxes (target);
+   }
+   return checkBodyPartsWithOffsets (target);
+}
+
+bool Bot::checkBodyPartsWithOffsets (edict_t *target) {
    TraceResult result {};
    const auto &eyes = getEyesPos ();
 
@@ -205,6 +214,77 @@ bool Bot::checkBodyParts (edict_t *target) {
    spot = target->v.origin - Vector (perp.x * kEdgeOffset, perp.y * kEdgeOffset, 0);
 
    game.testLine (eyes, spot, ignoreFlags, self, &result);
+
+   if (hitsTarget ()) {
+      m_enemyParts |= Visibility::Other;
+      m_enemyOrigin = result.vecEndPos;
+
+      return true;
+   }
+   return false;
+}
+
+bool Bot::checkBodyPartsWithHitboxes (edict_t *target) {
+   const auto self = pev->pContainingEntity;
+   const auto refersh = m_frameInterval * 1.5f;
+
+   TraceResult result {};
+   const auto &eyes = getEyesPos ();
+
+   const auto hitsTarget = [&] () -> bool {
+      return result.flFraction >= 1.0f || result.pHit == target;
+   };
+
+   // creatures can't hurt behind anything
+   const auto ignoreFlags = m_isCreature ? TraceIgnore::None : TraceIgnore::Everything;
+
+   // get the stomach hitbox
+   m_enemyParts = Visibility::None;
+   game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::Stomach, refersh), ignoreFlags, self, &result);
+
+   if (hitsTarget ()) {
+      m_enemyParts |= Visibility::Body;
+      m_enemyOrigin = result.vecEndPos;
+   }
+
+   // get the stomach hitbox
+   m_enemyParts = Visibility::None;
+   game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::Head, refersh), ignoreFlags, self, &result);
+
+   if (hitsTarget ()) {
+      m_enemyParts |= Visibility::Head;
+      m_enemyOrigin = result.vecEndPos;
+   }
+
+   if (m_enemyParts != Visibility::None) {
+      return true;
+   }
+
+   // get the left hitbox
+   m_enemyParts = Visibility::None;
+   game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::LeftArm, refersh), ignoreFlags, self, &result);
+
+   if (hitsTarget ()) {
+      m_enemyParts |= Visibility::Other;
+      m_enemyOrigin = result.vecEndPos;
+
+      return true;
+   }
+
+   // get the right hitbox
+   m_enemyParts = Visibility::None;
+   game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::RightArm, refersh), ignoreFlags, self, &result);
+
+   if (hitsTarget ()) {
+      m_enemyParts |= Visibility::Other;
+      m_enemyOrigin = result.vecEndPos;
+
+      return true;
+   }
+
+   // get the feet spot
+   m_enemyParts = Visibility::None;
+   game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::Feet, refersh), ignoreFlags, self, &result);
 
    if (hitsTarget ()) {
       m_enemyParts |= Visibility::Other;

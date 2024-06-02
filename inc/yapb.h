@@ -355,6 +355,8 @@ private:
    Array <edict_t *> m_ignoredBreakable {}; // list of ignored breakables
    Array <edict_t *> m_hostages {}; // pointer to used hostage entities
 
+   UniquePtr <class PlayerHitboxEnumerator> m_hitboxEnumerator {};
+
    Path *m_path {}; // pointer to the current path node
    String m_chatBuffer {}; // space for strings (say text...)
    Frustum::Planes m_viewFrustum {};
@@ -407,6 +409,8 @@ private:
    bool isWeaponRestrictedAMX (int wid);
    bool isInViewCone (const Vector &origin);
    bool checkBodyParts (edict_t *target);
+   bool checkBodyPartsWithOffsets (edict_t *target);
+   bool checkBodyPartsWithHitboxes (edict_t *target);
    bool seesEnemy (edict_t *player);
    bool hasActiveGoal ();
    bool advanceMovement ();

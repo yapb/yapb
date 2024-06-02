@@ -48,7 +48,8 @@ CR_DECLARE_SCOPED_ENUM (GameFlags,
    HasBotVoice = cr::bit (11), // on that game version we can use chatter
    AnniversaryHL25 = cr::bit (12), // half-life 25th anniversary engine
    Xash3DLegacy = cr::bit (13), // old xash3d-branch
-   ZombieMod = cr::bit (14) // zombie mod is active
+   ZombieMod = cr::bit (14), // zombie mod is active
+   HasStudioModels = cr::bit (15) // game supports studio models, so we can use hitbox-based aiming
 )
 
 // defines map type
@@ -68,6 +69,18 @@ CR_DECLARE_SCOPED_ENUM (MapFlags,
 CR_DECLARE_SCOPED_ENUM (EntitySearchResult,
    Continue,
    Break
+)
+
+// player body parts
+CR_DECLARE_SCOPED_ENUM (PlayerPart,
+   Head = 1,
+   Chest,
+   Stomach,
+   LeftArm,
+   RightArm,
+   LeftLeg,
+   RightLeg,
+   Feet // custom!
 )
 
 // variable reg pair
@@ -110,6 +123,29 @@ public:
    void setModel (edict_t *ent, const char *model) {
       engfuncs.pfnSetModel (ent, allocStr (model));
    }
+};
+
+// player model part info enumerator
+class PlayerHitboxEnumerator final {
+public:
+   struct Info {
+      float updated {};
+      Vector head {};
+      Vector stomach {};
+      Vector feet {};
+      Vector right {};
+      Vector left {};
+   } m_parts[kGameMaxPlayers] {};
+
+public:
+   // get's the enemy part based on bone info
+   Vector get (edict_t *ent, int part, float updateTimestamp);
+
+   // update bones positions for given player
+   void update (edict_t *ent);
+
+   // reset all the poisitons
+   void reset ();
 };
 
 // provides utility functions to not call original engine (less call-cost)
@@ -351,6 +387,11 @@ public:
    // adds game flag
    void addGameFlag (const int type) {
       m_gameFlags |= type;
+   }
+
+   // clears game flag
+   void clearGameFlag (const int type) {
+      m_gameFlags &= ~type;
    }
 
    // gets the map type

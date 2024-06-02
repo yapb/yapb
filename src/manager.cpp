@@ -1229,6 +1229,9 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    // init async planner
    m_planner = cr::makeUnique <AStarAlgo> (graph.length ());
 
+   // init player models parts enumerator
+   m_hitboxEnumerator = cr::makeUnique <PlayerHitboxEnumerator> ();
+
    // bot is not kicked by rotation
    m_kickedByRotation = false;
 
@@ -1240,7 +1243,6 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
 
    newRound ();
 }
-
 
 void Bot::clearAmmoInfo () {
    plat.bzero (&m_ammoInClip, sizeof (m_ammoInClip));
@@ -1545,6 +1547,7 @@ void Bot::newRound () {
    m_followWaitTime = 0.0f;
 
    m_hostages.clear ();
+   m_hitboxEnumerator->reset ();
 
    m_approachingLadderTimer.invalidate ();
    m_forgetLastVictimTimer.invalidate ();

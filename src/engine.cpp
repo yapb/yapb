@@ -835,6 +835,11 @@ bool Game::loadCSBinary () {
             m_gameFlags &= ~GameFlags::Modern;
          }
 
+         // allow to enable hitbox-based aiming on fresh games
+         if (is (GameFlags::Modern)) {
+            m_gameFlags |= GameFlags::HasStudioModels;
+         }
+
          if (is (GameFlags::Metamod)) {
             return false;
          }
@@ -1403,4 +1408,132 @@ float LightMeasure::getLightLevel (const Vector &point) {
 
 float LightMeasure::getSkyColor () {
    return static_cast <float> (Color (sv_skycolor_r.as <int> (), sv_skycolor_g.as <int> (), sv_skycolor_b.as <int> ()).avg ());
+}
+
+Vector PlayerHitboxEnumerator::get (edict_t *ent, int part, float updateTimestamp) {
+   auto parts = &m_parts[game.indexOfEntity (ent) % kGameMaxPlayers];
+
+   if (game.time () > updateTimestamp) {
+      update (ent);
+      parts->updated = game.time () + updateTimestamp;
+   }
+
+   switch (part) {
+   default:
+   case PlayerPart::Head:
+      return parts->head;
+
+   case PlayerPart::Stomach:
+      return parts->stomach;
+
+   case PlayerPart::LeftArm:
+      return parts->left;
+
+   case PlayerPart::RightArm:
+      return parts->right;
+
+   case PlayerPart::Feet:
+      return parts->feet;
+
+   case PlayerPart::RightLeg:
+      return { parts->right.x, parts->right.y, parts->feet.z };
+
+   case PlayerPart::LeftLeg:
+      return { parts->left.x, parts->left.y, parts->feet.z };
+   }
+}
+
+void PlayerHitboxEnumerator::update (edict_t *ent) {
+   constexpr auto kInvalidHitbox = -1;
+
+   if (!util.isAlive (ent)) {
+      return;
+   }
+   // get info about player
+   auto parts = &m_parts[game.indexOfEntity (ent) % kGameMaxPlayers];
+
+   // set the feet without bones
+   parts->feet = ent->v.origin;
+
+   constexpr auto kStandFeet = 34.0f;
+   constexpr auto kCrouchFeet = 14.0f;
+
+   // legs position isn't calculated to reduce cpu usage, just use some universal feet spot
+   if (ent->v.flags & FL_DUCKING) {
+      parts->feet.z = ent->v.origin.z - kCrouchFeet;
+   }
+   else {
+      parts->feet.z = ent->v.origin.z - kStandFeet;
+   }
+
+   auto getHitbox = [&kInvalidHitbox] (studiohdr_t *hdr, mstudiobbox_t *bb, int part) {
+      int hitbox = kInvalidHitbox;
+
+      for (auto i = 0; i < hdr->numhitboxes; ++i) {
+         const auto set = &bb[i];
+
+         if (set->group != part) {
+            continue;
+         }
+         hitbox = i;
+         break;
+      }
+      return hitbox;
+   };
+   auto model = engfuncs.pfnGetModelPtr (ent);
+   auto studiohdr = reinterpret_cast <studiohdr_t *> (model);
+
+   // this can be null ?
+   if (model && studiohdr) {
+      auto bboxset = reinterpret_cast <mstudiobbox_t *> (reinterpret_cast <uint8_t *> (studiohdr) + studiohdr->hitboxindex);
+
+      // get the head
+      auto hitbox = getHitbox (studiohdr, bboxset, PlayerPart::Head);
+
+      if (hitbox != kInvalidHitbox) {
+         engfuncs.pfnGetBonePosition (ent, bboxset[hitbox].bone, parts->head, nullptr);
+
+         parts->head.z += bboxset[hitbox].bbmax.z;
+         parts->head = { ent->v.origin.x, ent->v.origin.y, parts->head.z };
+      }
+      hitbox = kInvalidHitbox;
+
+      // get the body (stomach)
+      hitbox = getHitbox (studiohdr, bboxset, PlayerPart::Stomach);
+
+      if (hitbox != kInfiniteDistance) {
+         engfuncs.pfnGetBonePosition (ent, bboxset[hitbox].bone, parts->stomach, nullptr);
+      }
+      hitbox = kInvalidHitbox;
+
+      // get the left (arm)
+      hitbox = getHitbox (studiohdr, bboxset, PlayerPart::LeftArm);
+
+      if (hitbox != kInfiniteDistance) {
+         engfuncs.pfnGetBonePosition (ent, bboxset[hitbox].bone, parts->left, nullptr);
+      }
+
+      // get the right (arm)
+      hitbox = getHitbox (studiohdr, bboxset, PlayerPart::RightArm);
+
+      if (hitbox != kInfiniteDistance) {
+         engfuncs.pfnGetBonePosition (ent, bboxset[hitbox].bone, parts->right, nullptr);
+      }
+      return;
+   }
+   else {
+      game.clearGameFlag (GameFlags::HasStudioModels); // yes, only a single fail will disable this
+   }
+
+   parts->head = ent->v.origin + ent->v.view_ofs;
+   parts->stomach = ent->v.origin;
+
+   parts->left = parts->head;
+   parts->right = parts->head;
+}
+
+void PlayerHitboxEnumerator::reset () {
+   for (auto &part : m_parts) {
+      part = {};
+   }
 }
