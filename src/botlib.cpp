@@ -2028,6 +2028,9 @@ void Bot::filterTasks () {
          const bool lowAmmo = isLowOnAmmo (m_currentWeapon, 0.18f);
          const bool sniping = m_sniperStopTime > game.time () && lowAmmo;
 
+         if (m_isCreature) {
+            ratio = 0.0f;
+         }
          if (bots.isBombPlanted () || m_isStuck || usesKnife ()) {
             ratio /= 3.0f; // reduce the seek cover desire if bomb is planted
          }
@@ -2036,9 +2039,6 @@ void Bot::filterTasks () {
          }
          else if (m_lastEnemyOrigin.distanceSq2d (pev->origin) < cr::sqrf (200.0f)) {
             ratio *= 3.0f;
-         }
-         else if (m_isCreature) {
-            ratio = 0.0f;
          }
          else if (game.is (GameFlags::CSDM)) {
             ratio = 0.0f;
