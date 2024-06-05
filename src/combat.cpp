@@ -367,7 +367,7 @@ bool Bot::lookupEnemies () {
 
       // is player is alive
       if (m_enemyUpdateTime > game.time ()
-         && m_enemy->v.origin.distanceSq (pev->origin) < nearestDistanceSq
+         && player->v.origin.distanceSq (pev->origin) < nearestDistanceSq
          && util.isAlive (player)
          && seesEnemy (player)) {
 
@@ -377,11 +377,11 @@ bool Bot::lookupEnemies () {
 
    // the old enemy is no longer visible or
    if (game.isNullEntity (newEnemy)) {
-      auto set = nullptr;
+      uint8_t *set = nullptr;
 
       // setup potential visibility set from engine
       if (cv_use_engine_pvs_check) {
-         game.getVisibilitySet (this, true);
+         set = game.getVisibilitySet (this, true);
       }
 
       // ignore shielded enemies, while we have real one

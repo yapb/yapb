@@ -4042,7 +4042,7 @@ void Bot::updateHearing () {
       }
 
       // check if heard enemy can be seen
-      if (checkBodyParts (m_hearedEnemy)) {
+      if (checkBodyPartsWithOffsets (m_hearedEnemy)) {
          m_enemy = m_hearedEnemy;
          m_lastEnemy = m_hearedEnemy;
          m_lastEnemyOrigin = m_enemyOrigin;
