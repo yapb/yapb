@@ -1413,7 +1413,7 @@ float LightMeasure::getSkyColor () {
 Vector PlayerHitboxEnumerator::get (edict_t *ent, int part, float updateTimestamp) {
    auto parts = &m_parts[game.indexOfEntity (ent) % kGameMaxPlayers];
 
-   if (game.time () > updateTimestamp) {
+   if (game.time () > parts->updated) {
       update (ent);
       parts->updated = game.time () + updateTimestamp;
    }
