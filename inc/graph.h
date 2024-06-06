@@ -264,7 +264,7 @@ public:
    void syncCollectOnline ();
    void collectOnline ();
 
-   IntArray getNearestInRadius (float radiusSq, const Vector &origin, int maxCount = -1);
+   IntArray getNearestInRadius (float radius, const Vector &origin, int maxCount = -1);
    const IntArray &getNodesInBucket (const Vector &pos);
 
 public:

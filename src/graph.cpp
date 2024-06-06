@@ -493,12 +493,12 @@ int BotGraph::getForAnalyzer (const Vector &origin, const float maxRange) {
    return index;
 }
 
-int BotGraph::getNearestNoBuckets (const Vector &origin, float nearestDistanceSq, int flags) {
+int BotGraph::getNearestNoBuckets (const Vector &origin, const float range, int flags) {
    // find the nearest node to that origin and return the index
 
    // fallback and go thru wall the nodes...
    int index = kInvalidNodeIndex;
-   nearestDistanceSq = cr::sqrf (nearestDistanceSq);
+   float nearestDistanceSq = cr::sqrf (range);
 
    for (const auto &path : m_paths) {
       if (flags != -1 && !(path.flags & flags)) {
@@ -555,15 +555,15 @@ int BotGraph::getNearest (const Vector &origin, const float range, int flags) {
    return index;
 }
 
-IntArray BotGraph::getNearestInRadius (float radiusSq, const Vector &origin, int maxCount) {
+IntArray BotGraph::getNearestInRadius (float radius, const Vector &origin, int maxCount) {
    // returns all nodes within radius from position
 
-   radiusSq = cr::sqrf (radiusSq);
+   const float radiusSq = cr::sqrf (radius);
 
    IntArray result {};
    const auto &bucket = getNodesInBucket (origin);
 
-   if (bucket.length () < kMaxNodeLinks || radiusSq > cr::sqrf (256.0f)) {
+   if (bucket.length () < kMaxNodeLinks || radius > cr::sqrf (256.0f)) {
       for (const auto &path : m_paths) {
          if (maxCount != -1 && static_cast <int> (result.length ()) > maxCount) {
             break;
