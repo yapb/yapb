@@ -1247,10 +1247,9 @@ bool Bot::updateNavigation () {
 
    // needs precise placement - check if we get past the point
    if (desiredDistanceSq < cr::sqrf (22.0f) && nodeDistanceSq < cr::sqrf (30.0f)) {
-      if (m_pathOrigin.distanceSq (pev->origin + pev->velocity * m_frameInterval) >= nodeDistanceSq) {
-         desiredDistanceSq = nodeDistanceSq + 1.0f;
-      }
-      if (m_pathOrigin.distanceSq (pev->origin + pev->velocity * m_frameInterval) <= desiredDistanceSq) {
+      const auto predictRangeSq = m_pathOrigin.distanceSq (pev->origin + pev->velocity * m_frameInterval);
+
+      if (predictRangeSq >= nodeDistanceSq || predictRangeSq <= desiredDistanceSq) {
          desiredDistanceSq = nodeDistanceSq + 1.0f;
       }
    }
