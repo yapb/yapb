@@ -1658,10 +1658,10 @@ void Bot::overrideConditions () {
 
    // special handling, if we have a knife in our hands
    if (isKnifeMode () && (util.isPlayer (m_enemy) || (cv_attack_monsters && util.isMonster (m_enemy)))) {
-      const float distance2d = pev->origin.distance2d (m_enemy->v.origin);
+      const float distanceSq2d = pev->origin.distanceSq2d (m_enemy->v.origin);
 
       // do nodes movement if enemy is not reachable with a knife
-      if (distance2d > 250.0f && (m_states & Sense::SeeingEnemy)) {
+      if (distanceSq2d > cr::sqrf (250.0f) && (m_states & Sense::SeeingEnemy)) {
          const int nearestToEnemyPoint = graph.getNearest (m_enemy->v.origin);
 
          if (nearestToEnemyPoint != kInvalidNodeIndex
@@ -1669,18 +1669,18 @@ void Bot::overrideConditions () {
             && cr::abs (graph[nearestToEnemyPoint].origin.z - m_enemy->v.origin.z) < 16.0f) {
 
             if (tid != Task::MoveToPosition && !cr::fequal (getTask ()->desire, TaskPri::Hide)) {
-               startTask (Task::MoveToPosition, TaskPri::Hide, nearestToEnemyPoint, game.time () + distance2d / (m_moveSpeed * 2.0f), true);
+               startTask (Task::MoveToPosition, TaskPri::Hide, nearestToEnemyPoint, game.time () + distanceSq2d / cr::sqrf (m_moveSpeed) * 2.0f, true);
             }
             else {
                if (tid == Task::MoveToPosition && getTask ()->data != nearestToEnemyPoint) {
                   clearTask (Task::MoveToPosition);
-                  startTask (Task::MoveToPosition, TaskPri::Hide, nearestToEnemyPoint, game.time () + distance2d / (m_moveSpeed * 2.0f), true);
+                  startTask (Task::MoveToPosition, TaskPri::Hide, nearestToEnemyPoint, game.time () + distanceSq2d / cr::sqrf (m_moveSpeed) * 2.0f, true);
                }
             }
          }
       }
       else {
-         if (distance2d <= 250.0f && (m_states & Sense::SeeingEnemy) && tid == Task::MoveToPosition) {
+         if (distanceSq2d <= cr::sqrf (250.0f) && (m_states & Sense::SeeingEnemy) && tid == Task::MoveToPosition) {
             clearTask (Task::MoveToPosition); // remove any move tasks
          }
       }
@@ -1756,7 +1756,7 @@ void Bot::syncUpdatePredictedIndex () {
    auto result = planner.find (destIndex, currentNodeIndex, [&] (int index) {
       ++pathLength;
 
-      if (vistab.visible (currentNodeIndex, index) && botOrigin.distanceSq (graph[index].origin) > cr::sqrf (256.0f)) {
+      if (vistab.visible (currentNodeIndex, index) && botOrigin.distanceSq (graph[index].origin) < cr::sqrf (2048.0f)) {
          bestIndex = index;
          return false;
       }
@@ -1786,7 +1786,7 @@ void Bot::refreshEnemyPredict () {
    if (game.isNullEntity (m_enemy) && !game.isNullEntity (m_lastEnemy) && !m_lastEnemyOrigin.empty ()) {
       const auto distanceToLastEnemySq = m_lastEnemyOrigin.distanceSq (pev->origin);
 
-      if (distanceToLastEnemySq > cr::sqrf (256.0f) && (distanceToLastEnemySq < cr::sqrf (2048.0f) || usesSniper ())) {
+      if (distanceToLastEnemySq < cr::sqrf (2048.0f)) {
          m_aimFlags |= AimFlags::PredictPath;
       }
       const bool denyLastEnemy = pev->velocity.lengthSq2d () > 0.0f
@@ -1872,11 +1872,11 @@ void Bot::setConditions () {
             }
          }
          else {
-            auto currentTime = game.time ();
+            m_killsInterval = m_lastVictimTime - game.time ();
 
-            m_killsInterval = currentTime - m_lastVictimTime;
-            if (m_killsInterval <= 5) {
-               m_killsCount++;
+            if (m_killsInterval <= 5.0f) {
+               ++m_killsCount;
+
                if (m_killsCount > 2) {
                   pushChatterMessage (Chatter::OnARoll);
                }
@@ -2037,7 +2037,7 @@ void Bot::filterTasks () {
          else if (m_isVIP || m_isReloading || (sniping && usesSniper ())) {
             ratio *= 3.0f; // triple the seek cover desire if bot is VIP or reloading
          }
-         else if (m_lastEnemyOrigin.distanceSq2d (pev->origin) < cr::sqrf (200.0f)) {
+         else if (m_lastEnemyOrigin.distanceSq2d (pev->origin) < cr::sqrf (256.0f)) {
             ratio *= 3.0f;
          }
          else if (game.is (GameFlags::CSDM)) {
@@ -2277,7 +2277,7 @@ void Bot::completeTask () {
 }
 
 bool Bot::isEnemyThreat () {
-   if (game.isNullEntity (m_enemy) || getCurrentTaskId () == Task::SeekCover) {
+   if (game.isNullEntity (m_enemy) || (m_states & Sense::SuspectEnemy) || getCurrentTaskId () == Task::SeekCover) {
       return false;
    }
 
