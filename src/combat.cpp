@@ -226,7 +226,7 @@ bool Bot::checkBodyPartsWithOffsets (edict_t *target) {
 
 bool Bot::checkBodyPartsWithHitboxes (edict_t *target) {
    const auto self = pev->pContainingEntity;
-   const auto refersh = m_frameInterval * 1.5f;
+   const auto refresh = m_frameInterval * 1.5f;
 
    TraceResult result {};
    const auto &eyes = getEyesPos ();
@@ -240,7 +240,7 @@ bool Bot::checkBodyPartsWithHitboxes (edict_t *target) {
 
    // get the stomach hitbox
    m_enemyParts = Visibility::None;
-   game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::Stomach, refersh), ignoreFlags, self, &result);
+   game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::Stomach, refresh), ignoreFlags, self, &result);
 
    if (hitsTarget ()) {
       m_enemyParts |= Visibility::Body;
@@ -249,7 +249,7 @@ bool Bot::checkBodyPartsWithHitboxes (edict_t *target) {
 
    // get the stomach hitbox
    m_enemyParts = Visibility::None;
-   game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::Head, refersh), ignoreFlags, self, &result);
+   game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::Head, refresh), ignoreFlags, self, &result);
 
    if (hitsTarget ()) {
       m_enemyParts |= Visibility::Head;
@@ -262,7 +262,7 @@ bool Bot::checkBodyPartsWithHitboxes (edict_t *target) {
 
    // get the left hitbox
    m_enemyParts = Visibility::None;
-   game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::LeftArm, refersh), ignoreFlags, self, &result);
+   game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::LeftArm, refresh), ignoreFlags, self, &result);
 
    if (hitsTarget ()) {
       m_enemyParts |= Visibility::Other;
@@ -273,7 +273,7 @@ bool Bot::checkBodyPartsWithHitboxes (edict_t *target) {
 
    // get the right hitbox
    m_enemyParts = Visibility::None;
-   game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::RightArm, refersh), ignoreFlags, self, &result);
+   game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::RightArm, refresh), ignoreFlags, self, &result);
 
    if (hitsTarget ()) {
       m_enemyParts |= Visibility::Other;
@@ -284,7 +284,7 @@ bool Bot::checkBodyPartsWithHitboxes (edict_t *target) {
 
    // get the feet spot
    m_enemyParts = Visibility::None;
-   game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::Feet, refersh), ignoreFlags, self, &result);
+   game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::Feet, refresh), ignoreFlags, self, &result);
 
    if (hitsTarget ()) {
       m_enemyParts |= Visibility::Other;
@@ -1373,7 +1373,7 @@ void Bot::attackMovement () {
    }
 
    auto approach = 0;
-   const auto distance = m_lookAt.distance (getEyesPos ()); // how far away is the enemy scum?
+   const auto distanceSq = m_lookAt.distanceSq (getEyesPos ()); // how far away is the enemy scum?
 
    if (usesKnife ()) {
       approach = 100;
@@ -1394,7 +1394,11 @@ void Bot::attackMovement () {
 
    // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
    if (!game.is (GameFlags::CSDM)) {
-      if ((m_states & Sense::SeeingEnemy) && approach < 30 && !bots.isBombPlanted () && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
+      if ((m_states & Sense::SeeingEnemy)
+         && approach < 30
+         && !bots.isBombPlanted ()
+         && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
+
          if (m_retreatTime < game.time ()) {
             startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, true);
          }
@@ -1419,10 +1423,10 @@ void Bot::attackMovement () {
       else if (usesRifle () || usesSubmachine () || usesHeavy ()) {
          const int rand = rg (1, 100);
 
-         if (distance < 768.0f) {
+         if (distanceSq < cr::sqrf (768.0f)) {
             m_fightStyle = Fight::Strafe;
          }
-         else if (distance < 1024.0f) {
+         else if (distanceSq < cr::sqrf (1024.0f)) {
             if (isGroupOfEnemies (m_enemy->v.origin)) {
                m_fightStyle = Fight::Strafe;
             }
@@ -1460,14 +1464,14 @@ void Bot::attackMovement () {
 
       // fire hurts friend value here is from previous frame, but acceptable, and saves us alot of cpu cycles
       if (approach < 30 || m_fireHurtsFriend || ((usesPistol () || usesShotgun ())
-         && distance < pistolStrafeDistance
+         && distanceSq < cr::sqrf (pistolStrafeDistance)
          && isInViewCone (m_enemyOrigin))) {
          m_fightStyle = Fight::Strafe;
       }
       m_lastFightStyleCheck = game.time () + 3.0f;
    }
 
-   if (distance < 96.0f && !usesKnife ()) {
+   if (distanceSq < cr::sqrf (96.0f) && !usesKnife ()) {
       m_moveSpeed = -pev->maxspeed;
    }
 
@@ -1556,7 +1560,7 @@ void Bot::attackMovement () {
       if (alreadyDucking) {
          m_duckTime = game.time () + m_frameInterval * 3.0f;
       }
-      else if ((distance > kSprayDistanceX2 && hasPrimaryWeapon ())
+      else if ((distanceSq > cr::sqrf (kSprayDistanceX2) && hasPrimaryWeapon ())
          && isFullView
          && getCurrentTaskId () != Task::SeekCover
          && getCurrentTaskId () != Task::Hunt) {
@@ -1573,7 +1577,7 @@ void Bot::attackMovement () {
    }
 
    if (m_difficulty >= Difficulty::Normal && isOnFloor () && m_duckTime < game.time ()) {
-      if (distance < kSprayDistanceX2) {
+      if (distanceSq < cr::sqrf (kSprayDistanceX2)) {
          if (rg (0, 1000) < rg (5, 10) && pev->velocity.length2d () > 150.0f && isInViewCone (m_enemy->v.origin)) {
             pev->button |= IN_JUMP;
          }

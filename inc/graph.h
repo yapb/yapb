@@ -205,7 +205,7 @@ public:
    int getFarest (const Vector &origin, const float maxRange = 32.0);
    int getForAnalyzer (const Vector &origin, const float maxRange);
    int getNearest (const Vector &origin, const float range = kInfiniteDistance, int flags = -1);
-   int getNearestNoBuckets (const Vector &origin, const float range = kInfiniteDistance, int flags = -1);
+   int getNearestNoBuckets (const Vector &origin, float nearestDistanceSq = kInfiniteDistance, int flags = -1);
    int getEditorNearest (const float maxRange = 50.0f);
    int clearConnections (int index);
    int getBspSize ();
@@ -264,7 +264,7 @@ public:
    void syncCollectOnline ();
    void collectOnline ();
 
-   IntArray getNearestInRadius (float radius, const Vector &origin, int maxCount = -1);
+   IntArray getNearestInRadius (float radiusSq, const Vector &origin, int maxCount = -1);
    const IntArray &getNodesInBucket (const Vector &pos);
 
 public:
