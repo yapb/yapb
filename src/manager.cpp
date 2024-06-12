@@ -374,14 +374,16 @@ void BotManager::maintainQuota () {
       ctrl.msg ("Can't create bot during map analysis process.");
       return;
    }
+   const int maxClients = game.maxClients ();
+   const int botsInGame = getBotCount ();
 
    // bot's creation update
    if (!m_addRequests.empty () && m_maintainTime < game.time ()) {
-      const BotRequest &request = m_addRequests.popFront ();
-      const BotCreateResult createResult = create (request.name, request.difficulty, request.personality, request.team, request.skin);
+      const auto &request = m_addRequests.popFront ();
+      const auto createResult = create (request.name, request.difficulty, request.personality, request.team, request.skin);
 
       if (request.manual) {
-         cv_quota.set (cr::min (cv_quota.as <int> () + 1, game.maxClients ()));
+         cv_quota.set (cr::min (cv_quota.as <int> () + 1, maxClients));
       }
 
       // check the result of creation
@@ -390,16 +392,16 @@ void BotManager::maintainQuota () {
          cv_quota.set (0); // reset quota
       }
       else if (createResult == BotCreateResult::MaxPlayersReached) {
-         ctrl.msg ("Maximum players reached (%d/%d). Unable to create Bot.", game.maxClients (), game.maxClients ());
+         ctrl.msg ("Maximum players reached (%d/%d). Unable to create Bot.", maxClients, maxClients);
 
          m_addRequests.clear (); // maximum players reached, so set quota to maximum players
-         cv_quota.set (getBotCount ());
+         cv_quota.set (botsInGame);
       }
       else if (createResult == BotCreateResult::TeamStacked) {
          ctrl.msg ("Could not add bot to the game: Team is stacked (to disable this check, set mp_limitteams and mp_autoteambalance to zero and restart the round)");
 
          m_addRequests.clear ();
-         cv_quota.set (getBotCount ());
+         cv_quota.set (botsInGame);
       }
       m_maintainTime = game.time () + cv_quota_adding_interval.as <float> ();
    }
@@ -408,8 +410,12 @@ void BotManager::maintainQuota () {
    if (m_quotaMaintainTime > game.time ()) {
       return;
    }
-   cv_quota.set (cr::clamp <int> (cv_quota.as <int> (), 0, game.maxClients ()));
+   int desiredBotCount = cv_quota.as <int> ();
 
+   // only assign if out of range
+   if (desiredBotCount < 0 || desiredBotCount > maxClients) {
+      cv_quota.set (cr::clamp (desiredBotCount, 0, maxClients));
+   }
    const int totalHumansInGame = getHumansCount ();
    const int humanPlayersInGame = getHumansCount (true);
 
@@ -417,39 +423,35 @@ void BotManager::maintainQuota () {
       return;
    }
 
-   int desiredBotCount = cv_quota.as <int> ();
-   int botsInGame = getBotCount ();
-
    if (cv_quota_mode.as <StringRef> () == "fill") {
-      botsInGame += humanPlayersInGame;
+      desiredBotCount = cr::max (0, desiredBotCount - humanPlayersInGame);
    }
    else if (cv_quota_mode.as <StringRef> () == "match") {
-      int detectQuotaMatch = cv_quota_match.as <int> () == 0 ? cv_quota.as <int> () : cv_quota_match.as <int> ();
+      const int detectQuotaMatch = cv_quota_match.as <int> () == 0 ? cv_quota.as <int> () : cv_quota_match.as <int> ();
 
-      desiredBotCount = cr::max <int> (0, detectQuotaMatch * humanPlayersInGame);
+      desiredBotCount = cr::max (0, detectQuotaMatch * humanPlayersInGame);
    }
 
    if (cv_join_after_player && humanPlayersInGame == 0) {
       desiredBotCount = 0;
    }
-   int maxClients = game.maxClients ();
 
    if (cv_autovacate) {
       if (cv_kick_after_player_connect) {
-         desiredBotCount = cr::min <int> (desiredBotCount, maxClients - (totalHumansInGame + cv_autovacate_keep_slots.as <int> ()));
+         desiredBotCount = cr::min (desiredBotCount, maxClients - (totalHumansInGame + cv_autovacate_keep_slots.as <int> ()));
       }
       else {
-         desiredBotCount = cr::min <int> (desiredBotCount, maxClients - (humanPlayersInGame + cv_autovacate_keep_slots.as <int> ()));
+         desiredBotCount = cr::min (desiredBotCount, maxClients - (humanPlayersInGame + cv_autovacate_keep_slots.as <int> ()));
       }
    }
    else {
-      desiredBotCount = cr::min <int> (desiredBotCount, maxClients - humanPlayersInGame);
+      desiredBotCount = cr::min (desiredBotCount, maxClients - humanPlayersInGame);
    }
    auto maxSpawnCount = game.getSpawnCount (Team::Terrorist) + game.getSpawnCount (Team::CT) - humanPlayersInGame;
 
    // if has some custom spawn points, max out spawn point counter
    if (desiredBotCount >= botsInGame && hasCustomCSDMSpawnEntities ()) {
-      maxSpawnCount = game.maxClients () + 1;
+      maxSpawnCount = maxClients + 1;
    }
 
    // sent message only to console from here
