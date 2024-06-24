@@ -61,7 +61,8 @@ CR_DECLARE_SCOPED_ENUM (StatusIconCache,
    Escape = cr::bit (2),
    Rescue = cr::bit (3),
    VipSafety = cr::bit (4),
-   C4 = cr::bit (5)
+   C4 = cr::bit (5),
+   Defuser = cr::bit (6)
 )
 
 class MessageDispatcher final : public Singleton <MessageDispatcher> {

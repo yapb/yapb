@@ -267,6 +267,9 @@ void MessageDispatcher::netMsgStatusIcon () {
    else if (cached & StatusIconCache::C4) {
       m_bot->m_inBombZone = (m_args[enabled].long_ == 2);
    }
+   else if (cached && StatusIconCache::Defuser) {
+      m_bot->m_hasDefuser = (m_args[enabled].long_ != 0);
+   }
 }
 
 void MessageDispatcher::netMsgDeathMsg () {
@@ -501,6 +504,7 @@ MessageDispatcher::MessageDispatcher () {
    m_statusIconCache["rescue"] = StatusIconCache::NeedHandle | StatusIconCache::Rescue;
    m_statusIconCache["vipsafety"] = StatusIconCache::NeedHandle | StatusIconCache::VipSafety;
    m_statusIconCache["c4"] = StatusIconCache::NeedHandle | StatusIconCache::C4;
+   m_statusIconCache["defuser"] = StatusIconCache::NeedHandle | StatusIconCache::Defuser;
 
    // register team info cache
    m_teamInfoCache["TERRORIST"] = Team::Terrorist;
