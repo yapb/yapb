@@ -267,7 +267,7 @@ void MessageDispatcher::netMsgStatusIcon () {
    else if (cached & StatusIconCache::C4) {
       m_bot->m_inBombZone = (m_args[enabled].long_ == 2);
    }
-   else if (cached && StatusIconCache::Defuser) {
+   else if (cached & StatusIconCache::Defuser) {
       m_bot->m_hasDefuser = (m_args[enabled].long_ != 0);
    }
 }
