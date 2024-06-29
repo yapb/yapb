@@ -1773,7 +1773,7 @@ void Bot::syncUpdatePredictedIndex () {
 }
 
 void Bot::updatePredictedIndex () {
-   if (m_lastEnemyOrigin.empty ()) {
+   if (m_lastEnemyOrigin.empty () || !vistab.isReady () || !util.isAlive (m_lastEnemy)) {
       return; // do not run task if no last enemy
    }
 
