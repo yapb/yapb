@@ -506,7 +506,7 @@ void Bot::setAimDirection () {
       auto predictNode = m_lastPredictIndex;
 
       auto isPredictedIndexApplicable = [&] () -> bool {
-         if (!vistab.visible (m_currentNodeIndex, predictNode) || !vistab.visible (m_previousNodes[0], predictNode)) {
+         if (!vistab.visible (m_currentNodeIndex, predictNode)) {
             predictNode = kInvalidNodeIndex;
             pathLength = kInfiniteDistanceLong;
          }
