@@ -112,7 +112,7 @@ if cxx == 'clang' or cxx == 'gcc'
       ]
    elif cpu != 'arm' and not cpu.startswith('ppc')
       cxxflags += [
-         '-mmmx', '-msse', '-msse2', '-msse3', '-mssse3', '-mfpmath=sse'
+         '-mmmx', '-msse', '-msse2', '-msse3', '-mfpmath=sse'
       ]
 
       if opt_native

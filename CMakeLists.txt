@@ -67,7 +67,7 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU"
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
         target_compile_options(${PROJECT_NAME} PRIVATE -march=armv8-a+fp+simd)
     elseif(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "arm" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^ppc")
-        target_compile_options(${PROJECT_NAME} PRIVATE -mmmx -msse -msse2 -msse3 -mssse3 -mfpmath=sse)
+        target_compile_options(${PROJECT_NAME} PRIVATE -mmmx -msse -msse2 -msse3 -mfpmath=sse)
     endif()
 	
     if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
