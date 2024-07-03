@@ -202,6 +202,11 @@ int Bot::findBestGoalWhenBombAction () {
             result = graph.getNearest (game.getEntityOrigin (ent));
 
             if (graph.exists (result)) {
+
+               // if bomb entity is bot's ignore list, clear ignore list
+               if (isIgnoredItem (ent)) {
+                  m_ignoredItems.clear ();
+               }
                return EntitySearchResult::Break;
             }
          }
@@ -3158,11 +3163,16 @@ int Bot::getNearestToPlantedBomb () {
    auto result = kInvalidNodeIndex;
 
    // search the bomb on the map
-   game.searchEntities ("classname", "grenade", [&result, &bombModel] (edict_t *ent) {
+   game.searchEntities ("classname", "grenade", [&] (edict_t *ent) {
       if (util.isModel (ent, bombModel)) {
          result = graph.getNearest (game.getEntityOrigin (ent));
 
          if (graph.exists (result)) {
+
+            // if bomb entity is bot's ignore list, clear ignore list
+            if (isIgnoredItem (ent)) {
+               m_ignoredItems.clear ();
+            }
             return EntitySearchResult::Break;
          }
       }

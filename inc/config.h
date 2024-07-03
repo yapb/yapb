@@ -263,7 +263,7 @@ public:
       return "";
    }
 
-   // simple accessor to c4 model name
+   // simple accessors to c4 model name
    StringRef getBombModelName () {
       return fetchCustom ("C4ModelName");
    }
