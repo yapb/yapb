@@ -3320,7 +3320,8 @@ void Bot::logic () {
    }
 
    // ensure we're not stuck destroying/picking something
-   if (m_navTimeset + getEstimatedNodeReachTime () + 1.0f < game.time () && !(m_states & Sense::SeeingEnemy) && m_moveToGoal) {
+   if (m_moveToGoal && rg (2.0f, 3.0f) + m_navTimeset + m_destOrigin.distanceSq2d (pev->origin) / m_moveSpeed < game.time ()
+      && !(m_states & Sense::SeeingEnemy)) {
       ensureEntitiesClear ();
    }
 
