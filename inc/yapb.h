@@ -323,7 +323,6 @@ private:
    UniquePtr <class AStarAlgo> m_planner {};
 
    edict_t *m_pickupItem {}; // pointer to entity of item to use/pickup
-   edict_t *m_itemIgnore {}; // pointer to entity to ignore for pickup
    edict_t *m_liftEntity {}; // pointer to lift entity
    edict_t *m_breakableEntity {}; // pointer to breakable entity
    edict_t *m_lastBreakable {}; // last acquired breakable
@@ -353,6 +352,7 @@ private:
    Vector m_checkFallPoint[2] {}; // check fall point
 
    Array <edict_t *> m_ignoredBreakable {}; // list of ignored breakables
+   Array <edict_t *> m_ignoredItems {}; // list of  pointers to entity to ignore for pickup
    Array <edict_t *> m_hostages {}; // pointer to used hostage entities
 
    UniquePtr <class PlayerHitboxEnumerator> m_hitboxEnumerator {};
@@ -452,6 +452,7 @@ private:
    bool isEnemyNoticeable (float range);
    bool isCreature ();
    bool isOnLadderPath ();
+   bool isIgnoredItem (edict_t *ent);
 
    void doPlayerAvoidance (const Vector &normal);
    void selectCampButtons (int index);

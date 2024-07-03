@@ -1493,8 +1493,8 @@ void Bot::newRound () {
 
    m_liftEntity = nullptr;
    m_pickupItem = nullptr;
-   m_itemIgnore = nullptr;
    m_itemCheckTime = 0.0f;
+   m_ignoredItems.clear ();
 
    m_breakableEntity = nullptr;
    m_breakableOrigin = nullptr;

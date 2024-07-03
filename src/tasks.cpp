@@ -1541,7 +1541,8 @@ void Bot::pickupItem_ () {
             }
 
             if (!weaponIndex || !niceWeapon) {
-               m_itemIgnore = m_pickupItem;
+               m_ignoredItems.push (m_pickupItem);
+
                m_pickupItem = nullptr;
                m_pickupType = Pickup::None;
 

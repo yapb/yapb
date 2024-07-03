@@ -392,7 +392,7 @@ void Bot::updatePickups () {
       // get the entity origin
       const auto &origin = game.getEntityOrigin (ent);
 
-      if ((ent->v.effects & EF_NODRAW) || ent == m_itemIgnore || cr::abs (origin.z - pev->origin.z) > 96.0f) {
+      if ((ent->v.effects & EF_NODRAW) || isIgnoredItem (ent) || cr::abs (origin.z - pev->origin.z) > 96.0f) {
          continue; // someone owns this weapon or it hasn't re-spawned yet
       }
 
@@ -566,7 +566,7 @@ void Bot::updatePickups () {
                clearSearchNodes ();
             }
             else if (pickupType == Pickup::Hostage) {
-               m_itemIgnore = ent;
+               m_ignoredItems.push (ent);
                allowPickup = false;
 
                if (!m_defendHostage && m_personality
@@ -694,7 +694,7 @@ void Bot::updatePickups () {
                }
             }
             else if (pickupType == Pickup::DroppedC4) {
-               m_itemIgnore = ent;
+               m_ignoredItems.push (ent);
                allowPickup = false;
 
                if (!m_defendedBomb && m_difficulty >= Difficulty::Normal && rg.chance (75) && m_healthValue < 60) {
@@ -740,7 +740,8 @@ void Bot::updatePickups () {
 
       // check if item is too high to reach, check if getting the item would hurt bot
       if (pickupPos.z > getEyesPos ().z + highOffset || isDeadlyMove (pickupPos)) {
-         m_itemIgnore = m_pickupItem;
+         m_ignoredItems.push (m_pickupItem);
+
          m_pickupItem = nullptr;
          m_pickupType = Pickup::None;
 
@@ -755,7 +756,7 @@ void Bot::ensureEntitiesClear () {
 
    if (tid == Task::PickupItem || (m_states & Sense::PickupItem)) {
       if (!game.isNullEntity (m_pickupItem) && !m_hasProgressBar) {
-         m_itemIgnore = m_pickupItem; // clear these pointers, bot might be stuck getting to them
+         m_ignoredItems.push (m_pickupItem); // clear these pointers, bot might be stuck getting to them
       }
 
       m_itemCheckTime = game.time () + 5.0f;
@@ -779,6 +780,15 @@ void Bot::ensureEntitiesClear () {
       completeTask ();
    }
    findValidNode ();
+}
+
+bool Bot::isIgnoredItem (edict_t *ent) {
+   for (const auto &ignored : m_ignoredItems) {
+      if (ignored == ent) {
+         return true;
+      }
+   }
+   return false;
 }
 
 Vector Bot::getCampDirection (const Vector &dest) {
@@ -2914,7 +2924,7 @@ void Bot::frame () {
          && pev->origin.distanceSq (bombPosition) < cr::sqrf (1540.0f)
          && !isBombDefusing (bombPosition)) {
 
-         m_itemIgnore = nullptr;
+         m_ignoredItems.clear ();
          m_itemCheckTime = game.time ();
 
          clearTask (getCurrentTaskId ());
@@ -3320,7 +3330,7 @@ void Bot::logic () {
    }
 
    // ensure we're not stuck destroying/picking something
-   if (m_moveToGoal && rg (2.0f, 3.0f) + m_navTimeset + m_destOrigin.distanceSq2d (pev->origin) / m_moveSpeed < game.time ()
+   if (m_moveToGoal && m_moveSpeed > 0.0f && rg (2.5f, 3.5f) + m_navTimeset + m_destOrigin.distanceSq2d (pev->origin) / cr::sqrf (m_moveSpeed) < game.time ()
       && !(m_states & Sense::SeeingEnemy)) {
       ensureEntitiesClear ();
    }
