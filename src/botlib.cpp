@@ -2018,9 +2018,13 @@ void Bot::filterTasks () {
 
    // calculate desires to seek cover or hunt
    if (util.isPlayer (m_lastEnemy) && !m_lastEnemyOrigin.empty () && !m_hasC4) {
-      float retreatLevel = (100.0f - (m_healthValue > 70.0f ? 100.0f : m_healthValue)) * tempFear; // retreat level depends on bot health
+      const float retreatLevel = (100.0f - (m_healthValue > 70.0f ? 100.0f : m_healthValue)) * tempFear; // retreat level depends on bot health
 
-      if (m_numEnemiesLeft > m_numFriendsLeft / 2 && m_retreatTime < game.time () && m_seeEnemyTime - rg (2.0f, 4.0f) < game.time ()) {
+      if (m_isCreature ||
+         (m_numEnemiesLeft > m_numFriendsLeft / 2
+            && m_retreatTime < game.time ()
+            && m_seeEnemyTime - rg (2.0f, 4.0f) < game.time ())) {
+
          float timeSeen = m_seeEnemyTime - game.time ();
          float timeHeard = m_heardSoundTime - game.time ();
          float ratio = 0.0f;
@@ -2090,6 +2094,11 @@ void Bot::filterTasks () {
    else {
       huntEnemyDesire = 0.0f;
       seekCoverDesire = 0.0f;
+   }
+
+   // zombie bots has more hunt desire
+   if (m_isCreature && huntEnemyDesire > 25.0f) {
+      huntEnemyDesire = TaskPri::Attack;
    }
 
    // blinded behavior
