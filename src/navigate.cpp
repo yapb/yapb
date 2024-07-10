@@ -1171,17 +1171,19 @@ bool Bot::updateNavigation () {
          }
 
          // if bot hits the door, then it opens, so wait a bit to let it open safely
-         if (pev->velocity.lengthSq2d () < cr::sqrf (2.0f) && m_timeDoorOpen < game.time ()) {
-            startTask (Task::Pause, TaskPri::Pause, kInvalidNodeIndex, game.time () + 0.5f, false);
+         if (pev->velocity.lengthSq2d () < cr::sqrf (4.0f) && m_timeDoorOpen < game.time ()) {
+            if (getCurrentTaskId () != Task::MoveToPosition) {
+               startTask (Task::Pause, TaskPri::Pause, kInvalidNodeIndex, game.time () + 0.5f, false);
+            }
             m_timeDoorOpen = game.time () + 1.0f; // retry in 1 sec until door is open
 
             ++m_tryOpenDoor;
 
-            if (m_tryOpenDoor > 2) {
+            if (m_tryOpenDoor > 1 && m_tryOpenDoor < 4) {
                edict_t *nearest = nullptr;
 
                // try to find nearest enemy (maybe behind a door)
-               util.findNearestPlayer (reinterpret_cast <void **> (&nearest), ent (), 192.0f, false, false, true, true, false);
+               util.findNearestPlayer (reinterpret_cast <void **> (&nearest), ent (), 256.0f, false, false, true, true, false);
 
                // check if enemy is penetrable
                if (util.isAlive (nearest) && isPenetrableObstacle (nearest->v.origin) && !cv_ignore_enemies) {
@@ -1197,10 +1199,12 @@ bool Bot::updateNavigation () {
                }
             }
             else if (m_tryOpenDoor > 4) {
-               clearSearchNodes ();
-               clearTasks ();
-
                m_tryOpenDoor = 0;
+
+               // go back to prev node, if  blocked for long time
+               if (graph.exists (m_previousNodes[0])) {
+                  startTask (Task::MoveToPosition, TaskPri::MoveToPosition, m_previousNodes[0], game.time () + 3.0f, true);
+               }
             }
          }
       }
