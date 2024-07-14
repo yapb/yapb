@@ -1664,21 +1664,23 @@ void Bot::newRound () {
       pushChatterMessage (Chatter::NewRound);
    }
    auto thinkFps = cr::clamp (cv_think_fps.as <float> (), 30.0f, 90.0f);
-   auto updateInterval = 1.0f / thinkFps;
 
-   if (game.is (GameFlags::Xash3D)) {
-      if (cv_think_fps_disable) {
-         updateInterval = 0.0f;
-      }
-      else if (thinkFps < 50) {
+   auto updateInterval = 1.0f / thinkFps;
+   auto commandInterval = 1.0f / 60.0f;
+
+   if (game.is (GameFlags::Xash3D | GameFlags::Xash3DLegacy)) {
+      if (thinkFps < 50) {
          updateInterval = 1.0f / 50.0f; // xash3d works acceptable at 50fps
       }
    }
-   else if (game.is (GameFlags::Legacy)) {
-      updateInterval = 0.0f; // legacy games behaves strange, when this enabled
+
+   // legacy games behaves strange, when this enabled, disable for xash3d as well if requested
+   if (bots.isFrameSkipDisabled ()) {
+      updateInterval = 0.0f;
+      commandInterval = 0.0f;
    }
    m_thinkDelay.interval = updateInterval;
-   m_commandDelay.interval = 1.0f / 60.0f;
+   m_commandDelay.interval = commandInterval;
 }
 
 void Bot::resetPathSearchType () {
@@ -2307,4 +2309,11 @@ bool BotManager::isLineBlockedBySmoke (const Vector &from, const Vector &to, flo
 
    // return true if the total length of smoke-covered line-of-sight is too much
    return (totalSmokedLength > maxSmokedLength);
+}
+
+bool BotManager::isFrameSkipDisabled () {
+   if (game.is (GameFlags::Legacy)) {
+      return true;
+   }
+   return game.is (GameFlags::Xash3D | GameFlags::Xash3DLegacy) && cv_think_fps_disable;
 }
