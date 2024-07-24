@@ -870,8 +870,8 @@ bool Game::postload () {
    // set out user agent for http stuff
    http.setUserAgent (strings.format ("%s/%s", product.name, product.version));
 
-   // startup the sockets on windows
-   http.startup ();
+   // startup the sockets on windows and check if our host is available (hardcoded, yup)
+   http.startup ("yapb.jeefo.net", "Bot is unable to check network availability. Networking features are disabled.");
 
    // set the app name
    plat.setAppName (product.name.chars ());
