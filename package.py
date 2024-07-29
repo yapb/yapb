@@ -214,6 +214,8 @@ class BotRelease(object):
                tif = tarfile.TarInfo(name = zif.filename)
                tif.size = zif.file_size
                tif.mtime =  calendar.timegm(zif.date_time) - timeshift
+               if zif.is_dir():
+                    tif.mode = 0o755  # Set directory permissions (rwxr-xr-x)
                
                tarf.addfile(tarinfo = tif, fileobj = zipf.open(zif.filename))
                
