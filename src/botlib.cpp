@@ -3986,7 +3986,8 @@ void Bot::updateHearing () {
          continue;
       }
 
-      if (!game.checkVisibility (client.ent, set)) {
+      // ignore invincible, no-target and not potentially visible players
+      if (isEnemyInvincible (client.ent) || isEnemyNoTarget (client.ent) || !game.checkVisibility (client.ent, set)) {
          continue;
       }
       const float distanceSq = client.noise.pos.distanceSq (pev->origin);
