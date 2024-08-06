@@ -1022,7 +1022,7 @@ int BotGraph::getFacingIndex () {
       auto angles = (to.angles () - m_editor->v.v_angle).clampAngles ();
 
       // skip the nodes that are too far away from us, and we're not looking at them directly
-      if (to.lengthSq () > cr::sqrf (500.0f) || cr::abs (angles.y) > result.second) {
+      if (to.lengthSq () > cr::sqrf (cv_graph_draw_distance.as <float> ()) || cr::abs (angles.y) > result.second) {
          continue;
       }
 
