@@ -478,7 +478,7 @@ private:
    void updateHearing ();
    void postProcessGoals (const IntArray &goals, int result[]);
    void updatePickups ();
-   void ensureEntitiesClear ();
+   void ensurePickupEntitiesClear ();
    void checkTerrain (float movedDistance, const Vector &dirNormal);
    void checkFall ();
    void checkDarkness ();

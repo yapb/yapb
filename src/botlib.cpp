@@ -751,7 +751,7 @@ void Bot::updatePickups () {
    }
 }
 
-void Bot::ensureEntitiesClear () {
+void Bot::ensurePickupEntitiesClear () {
    const auto tid = getCurrentTaskId ();
 
    if (tid == Task::PickupItem || (m_states & Sense::PickupItem)) {
@@ -766,20 +766,9 @@ void Bot::ensureEntitiesClear () {
       if (tid == Task::PickupItem) {
          completeTask ();
       }
-   }
-   else if (tid == Task::ShootBreakable) {
-      if (!game.isNullEntity (m_breakableEntity)) {
-         m_ignoredBreakable.emplace (m_breakableEntity);
-      }
 
-      m_breakableTime = game.time () + 5.0f;
-      m_breakableOrigin = nullptr;
-      m_lastBreakable = nullptr;
-      m_breakableEntity = nullptr;
-
-      completeTask ();
+      findValidNode ();
    }
-   findValidNode ();
 }
 
 bool Bot::isIgnoredItem (edict_t *ent) {
@@ -3341,7 +3330,7 @@ void Bot::logic () {
    // ensure we're not stuck destroying/picking something
    if (m_moveToGoal && m_moveSpeed > 0.0f && rg (2.5f, 3.5f) + m_navTimeset + m_destOrigin.distanceSq2d (pev->origin) / cr::sqrf (m_moveSpeed) < game.time ()
       && !(m_states & Sense::SeeingEnemy)) {
-      ensureEntitiesClear ();
+      ensurePickupEntitiesClear ();
    }
 
    // check if need to use parachute
@@ -3393,24 +3382,24 @@ void Bot::showDebugOverlay () {
    static HashMap <int32_t, StringRef> tasks {
       { Task::Normal, "Normal" },
       { Task::Pause, "Pause" },
-      { Task::MoveToPosition, "Move" },
-      { Task::FollowUser, "Follow" },
-      { Task::PickupItem, "Pickup" },
+      { Task::MoveToPosition, "MoveToPosition" },
+      { Task::FollowUser, "FollowUser" },
+      { Task::PickupItem, "PickupItem" },
       { Task::Camp, "Camp" },
       { Task::PlantBomb, "PlantBomb" },
       { Task::DefuseBomb, "DefuseBomb" },
       { Task::Attack, "Attack" },
       { Task::Hunt, "Hunt" },
       { Task::SeekCover, "SeekCover" },
-      { Task::ThrowExplosive, "ThrowHE" },
-      { Task::ThrowFlashbang, "ThrowFL" },
-      { Task::ThrowSmoke, "ThrowSG" },
+      { Task::ThrowExplosive, "ThrowExplosive" },
+      { Task::ThrowFlashbang, "ThrowFlashbang" },
+      { Task::ThrowSmoke, "ThrowSmoke" },
       { Task::DoubleJump, "DoubleJump" },
       { Task::EscapeFromBomb, "EscapeFromBomb" },
-      { Task::ShootBreakable, "DestroyBreakable" },
+      { Task::ShootBreakable, "ShootBreakable" },
       { Task::Hide, "Hide" },
       { Task::Blind, "Blind" },
-      { Task::Spraypaint, "Spray" }
+      { Task::Spraypaint, "Spraypaint" }
    };
 
    static HashMap <int32_t, StringRef> personalities {
@@ -3524,11 +3513,13 @@ bool Bot::hasHostage () {
       if (!game.isNullEntity (hostage)) {
 
          // don't care about dead hostages
-         if (hostage->v.health <= 0.0f || pev->origin.distanceSq (hostage->v.origin) > cr::sqrf (600.0f)) {
-            hostage = nullptr;
-            continue;
+         if (hostage->v.health > 0.0f || pev->origin.distanceSq (hostage->v.origin) < cr::sqrf (600.0f)) {
+            return true;
          }
-         return true;
+         else {
+            m_hostages.remove (hostage);
+            hostage = nullptr;
+         }
       }
    }
    return false;

@@ -1451,7 +1451,7 @@ void Bot::shootBreakable_ () {
    m_lookAtSafe = m_breakableOrigin;
 
    // is bot facing the breakable?
-   if (util.getConeDeviation (ent (), m_breakableOrigin) >= 0.90f) {
+   if (util.getConeDeviation (ent (), m_breakableOrigin) >= 0.95f && util.isVisible (m_breakableOrigin, ent ())) {
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
 
