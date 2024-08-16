@@ -14,7 +14,7 @@ import datetime, calendar
 
 class BotSign(object):
    def __init__(self, product: str, url: str):
-      self.signing = True
+      self.signing = False
 
       self.ossl_path = '/usr/bin/osslsigncode'
       self.local_key = os.path.join(pathlib.Path().absolute(), 'bot_release_key.pfx');
