@@ -499,7 +499,7 @@ void Bot::setAimDirection () {
          m_aimFlags &= ~AimFlags::PredictPath;
 
          m_trackingEdict = nullptr;
-         m_lookAtPredict = nullptr;
+         m_lookAtPredict.clear ();
       };
 
       auto pathLength = m_lastPredictLength;

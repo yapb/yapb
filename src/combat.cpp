@@ -133,7 +133,7 @@ bool Bot::checkBodyParts (edict_t *target) {
 
    if (isEnemyHidden (target) || isEnemyInvincible (target) || isEnemyNoTarget (target)) {
       m_enemyParts = Visibility::None;
-      m_enemyOrigin = nullptr;
+      m_enemyOrigin.clear ();
 
       return false;
    }
@@ -360,7 +360,7 @@ bool Bot::lookupEnemies () {
       }
    }
    m_enemyParts = Visibility::None;
-   m_enemyOrigin = nullptr;
+   m_enemyOrigin.clear ();
 
    if (!game.isNullEntity (m_enemy)) {
       player = m_enemy;
@@ -666,7 +666,7 @@ Vector Bot::getEnemyBodyOffset () {
       compensation.z = 0.0f;
    }
    else {
-      compensation = nullptr;
+      compensation.clear ();
    }
 
    // if we only suspect an enemy behind a wall take the worst skill

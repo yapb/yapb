@@ -46,7 +46,15 @@ void Bot::normal_ () {
    }
 
    // bots rushing with knife, when have no enemy (thanks for idea to nicebot project)
-   if (cv_random_knife_attacks && usesKnife () && (game.isNullEntity (m_lastEnemy) || !util.isAlive (m_lastEnemy)) && game.isNullEntity (m_enemy) && m_knifeAttackTime < game.time () && !m_hasHostage && !hasShield () && numFriendsNear (pev->origin, 96.0f) == 0) {
+   if (cv_random_knife_attacks
+      && usesKnife ()
+      && (game.isNullEntity (m_lastEnemy) || !util.isAlive (m_lastEnemy))
+      && game.isNullEntity (m_enemy)
+      && m_knifeAttackTime < game.time ()
+      && !m_hasHostage
+      && !hasShield ()
+      && numFriendsNear (pev->origin, 96.0f) == 0) {
+
       if (rg.chance (40)) {
          pev->button |= IN_ATTACK;
       }
@@ -255,7 +263,6 @@ void Bot::normal_ () {
       ensureCurrentNodeIndex ();
 
       // do pathfinding if it's not the current
-
       if (destIndex != m_currentNodeIndex) {
          findPath (m_currentNodeIndex, destIndex, pathSearchType);
       }
@@ -362,7 +369,7 @@ void Bot::huntEnemy_ () {
       completeTask ();
 
       m_prevGoalIndex = kInvalidNodeIndex;
-      m_lastEnemyOrigin = nullptr;
+      m_lastEnemyOrigin.clear ();
    }
 
    // do we need to calculate a new path?
@@ -775,7 +782,7 @@ void Bot::moveToPos_ () {
       completeTask (); // we're done
 
       m_prevGoalIndex = kInvalidNodeIndex;
-      m_position = nullptr;
+      m_position.clear ();
    }
    // didn't choose goal node yet?
    else if (!hasActiveGoal ()) {
@@ -920,7 +927,7 @@ void Bot::defuseBomb_ () {
 
    // one of exceptions is thrown. finish task.
    if (defuseError) {
-      m_entity = nullptr;
+      m_entity.clear ();
 
       m_pickupItem = nullptr;
       m_pickupType = Pickup::None;
@@ -1465,7 +1472,7 @@ void Bot::shootBreakable_ () {
       m_checkTerrain = true;
       m_moveToGoal = true;
 
-      m_breakableOrigin = nullptr;
+      m_breakableOrigin.clear ();
       m_breakableEntity = nullptr;
 
       completeTask ();
