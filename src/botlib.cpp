@@ -224,8 +224,8 @@ void Bot::checkBreakablesAround () {
       // maybe time to give up?
       if (m_lastBreakable == breakable && m_breakableTime + 1.0f < game.time ()) {
          m_ignoredBreakable.emplace (breakable);
+         m_breakableOrigin.clear ();
 
-         m_breakableOrigin = nullptr;
          m_lastBreakable = nullptr;
          m_breakableEntity = nullptr;
 
@@ -274,7 +274,7 @@ edict_t *Bot::lookupBreakable () {
       }
    }
    m_breakableEntity = nullptr;
-   m_breakableOrigin = nullptr;
+   m_breakableOrigin.clear ();
 
    return nullptr;
 }
@@ -766,7 +766,6 @@ void Bot::ensurePickupEntitiesClear () {
       if (tid == Task::PickupItem) {
          completeTask ();
       }
-
       findValidNode ();
    }
 }
@@ -791,9 +790,9 @@ Vector Bot::getCampDirection (const Vector &dest) {
 
    // check if the trace hit something...
    if (tr.flFraction < 1.0f) {
-      const float lengthSq = tr.vecEndPos.distanceSq (src);
+      const float distanceSq = tr.vecEndPos.distanceSq (src);
 
-      if (lengthSq > cr::sqrf (1024.0f)) {
+      if (distanceSq > cr::sqrf (1024.0f)) {
          return nullptr;
       }
 
@@ -1614,28 +1613,45 @@ void Bot::updateEmotions () {
       return;
    }
 
-   if (m_agressionLevel > m_baseAgressionLevel) {
-      m_agressionLevel -= 0.05f;
-   }
-   else {
+   if (m_seeEnemyTime + 1.0f > game.time ()) {
       m_agressionLevel += 0.05f;
-   }
 
-   if (m_fearLevel > m_baseFearLevel) {
-      m_fearLevel -= 0.05f;
+      if (m_agressionLevel > 1.0f) {
+         m_agressionLevel = 1.0f;
+      }
    }
-   else {
-      m_fearLevel += 0.05f;
-   }
+   else if (m_seeEnemyTime + 5.0f < game.time ()) {
+      if (m_agressionLevel > m_baseAgressionLevel) {
+         m_agressionLevel -= 0.05f;
+      }
+      else {
+         m_agressionLevel += 0.05f;
+      }
 
-   if (m_agressionLevel < 0.0f) {
-      m_agressionLevel = 0.0f;
-   }
+      if (m_fearLevel > m_baseFearLevel) {
+         m_fearLevel -= 0.05f;
+      }
+      else {
+         m_fearLevel += 0.05f;
+      }
 
-   if (m_fearLevel < 0.0f) {
-      m_fearLevel = 0.0f;
+      if (m_agressionLevel > 1.0f) {
+         m_agressionLevel = 1.0f;
+      }
+
+      if (m_fearLevel > 1.0f) {
+         m_fearLevel = 1.0f;
+      }
+
+      if (m_agressionLevel < 0.0f) {
+         m_agressionLevel = 0.0f;
+      }
+
+      if (m_fearLevel < 0.0f) {
+         m_fearLevel = 0.0f;
+      }
    }
-   m_nextEmotionUpdate = game.time () + 1.0f;
+   m_nextEmotionUpdate = game.time () + 0.5f;
 }
 
 void Bot::overrideConditions () {
@@ -1918,12 +1934,12 @@ void Bot::setConditions () {
    // don't listen if seeing enemy, just checked for sounds or being blinded (because its inhuman)
    if (m_soundUpdateTime < game.time ()
       && m_blindTime < game.time ()
-      && m_seeEnemyTime + 1.0f < game.time ()) {
+      && m_seeEnemyTime + 0.5f < game.time ()) {
 
       updateHearing ();
-      m_soundUpdateTime = game.time () + 0.25f;
+      m_soundUpdateTime = game.time () + 0.05f;
    }
-   else if (m_heardSoundTime + 10.0f < game.time ()) {
+   else if (m_soundUpdateTime >= game.time () && m_heardSoundTime + 10.0f < game.time ()) {
       m_states &= ~Sense::HearingEnemy;
 
       // clear the last enemy pointers if time has passed or enemy far away
@@ -1931,7 +1947,7 @@ void Bot::setConditions () {
          const auto distanceSq = pev->origin.distanceSq (m_lastEnemyOrigin);
 
          if (distanceSq > cr::sqrf (2048.0f) || (game.isNullEntity (m_enemy) && m_seeEnemyTime + 10.0f < game.time ())) {
-            m_lastEnemyOrigin = nullptr;
+            m_lastEnemyOrigin.clear ();
             m_lastEnemy = nullptr;
 
             m_aimFlags &= ~AimFlags::LastEnemy;
@@ -3327,8 +3343,9 @@ void Bot::logic () {
       m_strafeSpeed = pev->maxspeed * static_cast <float> (m_needAvoidGrenade);
    }
 
-   // ensure we're not stuck destroying/picking something
-   if (m_moveToGoal && m_moveSpeed > 0.0f && rg (2.5f, 3.5f) + m_navTimeset + m_destOrigin.distanceSq2d (pev->origin) / cr::sqrf (m_moveSpeed) < game.time ()
+   // ensure we're not stuck picking something
+   if (m_moveToGoal && m_moveSpeed > 0.0f
+      && rg (2.5f, 3.5f) + m_navTimeset + m_destOrigin.distanceSq2d (pev->origin) / cr::sqrf (m_moveSpeed) < game.time ()
       && !(m_states & Sense::SeeingEnemy)) {
       ensurePickupEntitiesClear ();
    }
@@ -3772,7 +3789,7 @@ void Bot::resetDoubleJump () {
 
    m_doubleJumpEntity = nullptr;
    m_duckForJump = 0.0f;
-   m_doubleJumpOrigin = nullptr;
+   m_doubleJumpOrigin.clear ();
    m_travelStartIndex = kInvalidNodeIndex;
    m_jumpReady = false;
 }
@@ -4043,7 +4060,7 @@ void Bot::updateHearing () {
             // if bot had an enemy but the heard one is nearer, take it instead
             const float distanceSq = m_lastEnemyOrigin.distanceSq (pev->origin);
 
-            if (distanceSq > m_hearedEnemy->v.origin.distanceSq (pev->origin) && m_seeEnemyTime + 2.0f < game.time ()) {
+            if (distanceSq > m_hearedEnemy->v.origin.distanceSq (pev->origin) && m_seeEnemyTime + 1.0f < game.time ()) {
                m_lastEnemy = m_hearedEnemy;
                m_lastEnemyOrigin = getHeardOriginWithError ();
             }

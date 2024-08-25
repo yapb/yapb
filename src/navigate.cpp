@@ -847,7 +847,7 @@ void Bot::checkFall () {
             m_checkFallPoint[1] = m_pathOrigin;
          }
          else {
-            m_checkFallPoint[1] = nullptr;
+            m_checkFallPoint[1].clear ();
          }
       }
       else if (!isOnLadder () && !isInWater ()) {
@@ -940,7 +940,7 @@ void Bot::resetMovement () {
 
    m_moveSpeed = 0.0f;
    m_strafeSpeed = 0.0f;
-   m_moveAngles = nullptr;
+   m_moveAngles.clear ();
 }
 
 void Bot::translateInput () {
@@ -1032,7 +1032,7 @@ bool Bot::updateNavigation () {
 
             m_jumpFinished = true;
             m_checkTerrain = false;
-            m_desiredVelocity = nullptr;
+            m_desiredVelocity.clear ();
 
             // cool down a little if next path after current will be jump
             if (m_jumpSequence) {
@@ -2474,7 +2474,7 @@ bool Bot::advanceMovement () {
                      // if height difference is enough, consider this link as jump link
                      if (graph[destIndex].origin.z > m_path->origin.z && diff > cv_graph_slope_height.as <float> ()) {
                         m_currentTravelFlags |= PathFlag::Jump;
-                        m_desiredVelocity = nullptr; // make bot compute jump velocity
+                        m_desiredVelocity.clear (); // make bot compute jump velocity
                         m_jumpFinished = false; // force-mark this path as jump
 
                         break;

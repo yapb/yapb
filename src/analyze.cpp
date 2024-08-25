@@ -380,7 +380,6 @@ void GraphAnalyze::markGoals () {
       });
    };
 
-
    if (game.mapIs (MapFlags::Demolition)) {
       updateNodeFlags (NodeFlag::Goal, "func_bomb_target"); // bombspot zone
       updateNodeFlags (NodeFlag::Goal, "info_bomb_target"); // bombspot zone (same as above)

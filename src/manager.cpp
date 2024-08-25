@@ -1438,12 +1438,12 @@ void Bot::newRound () {
    // delete all allocated path nodes
    clearSearchNodes ();
 
-   m_pathOrigin = nullptr;
-   m_destOrigin = nullptr;
+   m_pathOrigin.clear ();
+   m_destOrigin.clear ();
 
    m_path = nullptr;
    m_currentTravelFlags = 0;
-   m_desiredVelocity = nullptr;
+   m_desiredVelocity.clear ();
    m_currentNodeIndex = kInvalidNodeIndex;
    m_prevGoalIndex = kInvalidNodeIndex;
    m_chosenGoalIndex = kInvalidNodeIndex;
@@ -1497,13 +1497,13 @@ void Bot::newRound () {
    m_ignoredItems.clear ();
 
    m_breakableEntity = nullptr;
-   m_breakableOrigin = nullptr;
+   m_breakableOrigin.clear ();
    m_lastBreakable = nullptr;
 
    m_timeDoorOpen = 0.0f;
 
    for (auto &fall : m_checkFallPoint) {
-      fall = nullptr;
+      fall.clear ();
    }
    m_checkFall = false;
 
@@ -1513,8 +1513,8 @@ void Bot::newRound () {
    m_enemy = nullptr;
    m_lastVictim = nullptr;
    m_lastEnemy = nullptr;
-   m_lastEnemyOrigin = nullptr;
-   m_lastVictimOrigin = nullptr;
+   m_lastEnemyOrigin.clear ();
+   m_lastVictimOrigin.clear ();
    m_trackingEdict = nullptr;
    m_enemyBodyPartSet = nullptr;
    m_timeNextTracking = 0.0f;
@@ -1539,9 +1539,9 @@ void Bot::newRound () {
    m_aimFlags = 0;
    m_liftState = 0;
 
-   m_aimLastError = nullptr;
-   m_position = nullptr;
-   m_liftTravelPos = nullptr;
+   m_aimLastError.clear ();
+   m_position.clear ();
+   m_liftTravelPos.clear ();
 
    setIdealReactionTimers (true);
 

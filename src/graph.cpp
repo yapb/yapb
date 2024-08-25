@@ -20,9 +20,9 @@ void BotGraph::reset () {
    m_editFlags = 0;
    m_autoSaveCount = 0;
 
-   m_learnVelocity = nullptr;
-   m_learnPosition = nullptr;
-   m_lastNode = nullptr;
+   m_learnVelocity.clear ();
+   m_learnPosition.clear ();
+   m_lastNode.clear ();
 
    m_pathDisplayTime = 0.0f;
    m_arrowDisplayTime = 0.0f;
@@ -714,8 +714,8 @@ void BotGraph::add (int type, const Vector &pos) {
 
       // store the origin (location) of this node
       path->origin = newOrigin;
-      path->start = nullptr;
-      path->end = nullptr;
+      path->start.clear ();
+      path->end.clear ();
 
       path->display = 0.0f;
       path->light = kInvalidLightLevel;
@@ -724,7 +724,7 @@ void BotGraph::add (int type, const Vector &pos) {
          link.index = kInvalidNodeIndex;
          link.distance = 0;
          link.flags = 0;
-         link.velocity = nullptr;
+         link.velocity.clear ();
       }
 
       // autosave nodes here and there
@@ -931,7 +931,7 @@ void BotGraph::erase (int target) {
             link.index = kInvalidNodeIndex;
             link.flags = 0;
             link.distance = 0;
-            link.velocity = nullptr;
+            link.velocity.clear ();
          }
       }
    }
@@ -1131,7 +1131,7 @@ void BotGraph::erasePath () {
       link.index = kInvalidNodeIndex;
       link.distance = 0;
       link.flags = 0;
-      link.velocity = nullptr;
+      link.velocity.clear ();
    };
 
    for (auto &link : m_paths[nodeFrom].links) {
@@ -1174,7 +1174,7 @@ void BotGraph::resetPath (int index) {
       link.index = kInvalidNodeIndex;
       link.distance = 0;
       link.flags = 0;
-      link.velocity = nullptr;
+      link.velocity.clear ();
    };
 
    // clean all incoming
@@ -2712,7 +2712,7 @@ void BotGraph::setBombOrigin (bool reset, const Vector &pos) {
    }
 
    if (reset) {
-      m_bombOrigin = nullptr;
+      m_bombOrigin.clear ();
       bots.setBombPlanted (false);
 
       return;
@@ -2736,7 +2736,7 @@ void BotGraph::setBombOrigin (bool reset, const Vector &pos) {
    });
 
    if (!wasFound) {
-      m_bombOrigin = nullptr;
+      m_bombOrigin.clear ();
       bots.setBombPlanted (false);
    }
 }
@@ -2828,7 +2828,7 @@ void BotGraph::unassignPath (int from, int to) {
    link.index = kInvalidNodeIndex;
    link.distance = 0;
    link.flags = 0;
-   link.velocity = nullptr;
+   link.velocity.clear ();
 
    setEditFlag (GraphEdit::On);
    m_hasChanged = true;
