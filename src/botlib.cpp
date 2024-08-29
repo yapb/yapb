@@ -1670,13 +1670,14 @@ void Bot::overrideConditions () {
       // then start escape from bomb immediate
       startTask (Task::EscapeFromBomb, TaskPri::EscapeFromBomb, kInvalidNodeIndex, 0.0f, true);
    }
+   constexpr float kReachEnemyWikKnifeDistanceSq = cr::sqrf (102.0f);
 
    // special handling, if we have a knife in our hands
    if (isKnifeMode () && (util.isPlayer (m_enemy) || (cv_attack_monsters && util.isMonster (m_enemy)))) {
       const float distanceSq2d = pev->origin.distanceSq2d (m_enemy->v.origin);
 
       // do nodes movement if enemy is not reachable with a knife
-      if (distanceSq2d > cr::sqrf (250.0f) && (m_states & Sense::SeeingEnemy)) {
+      if (distanceSq2d > kReachEnemyWikKnifeDistanceSq && (m_states & Sense::SeeingEnemy)) {
          const int nearestToEnemyPoint = graph.getNearest (m_enemy->v.origin);
 
          if (nearestToEnemyPoint != kInvalidNodeIndex
@@ -1695,7 +1696,7 @@ void Bot::overrideConditions () {
          }
       }
       else {
-         if (distanceSq2d <= cr::sqrf (250.0f) && (m_states & Sense::SeeingEnemy) && tid == Task::MoveToPosition) {
+         if (distanceSq2d <= kReachEnemyWikKnifeDistanceSq && (m_states & Sense::SeeingEnemy) && tid == Task::MoveToPosition) {
             clearTask (Task::MoveToPosition); // remove any move tasks
          }
       }
