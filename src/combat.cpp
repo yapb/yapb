@@ -1396,6 +1396,7 @@ void Bot::attackMovement () {
    if (!game.is (GameFlags::CSDM)) {
       if ((m_states & Sense::SeeingEnemy)
          && approach < 30
+         && !isKnifeMode ()
          && !bots.isBombPlanted ()
          && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
 
@@ -1538,6 +1539,12 @@ void Bot::attackMovement () {
             m_strafeSpeed = 0.0f;
             m_strafeSetTime = strafeUpdateTime ();
          }
+      }
+
+      // do not move if inside "corridor"
+      if (wallOnRight && wallOnLeft) {
+         m_strafeSpeed = 0.0f;
+         m_strafeSetTime = game.time () + 3.0f;
       }
 
       // we're setting strafe speed regardless of move angles, so not resetting forward move here cause bots to behave strange

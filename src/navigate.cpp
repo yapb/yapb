@@ -3005,7 +3005,7 @@ bool Bot::isBlockedRight () {
 
 bool Bot::checkWallOnLeft () {
    TraceResult tr {};
-   game.testLine (pev->origin, pev->origin - pev->angles.right () * 52.0f, TraceIgnore::Monsters, ent (), &tr);
+   game.testLine (pev->origin, pev->origin - pev->angles.right () * 40.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
    if (tr.flFraction < 1.0f) {
@@ -3018,7 +3018,7 @@ bool Bot::checkWallOnRight () {
    TraceResult tr {};
 
    // do a trace to the right...
-   game.testLine (pev->origin, pev->origin + pev->angles.right () * 52.0f, TraceIgnore::Monsters, ent (), &tr);
+   game.testLine (pev->origin, pev->origin + pev->angles.right () * 40.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
    if (tr.flFraction < 1.0f) {
@@ -3031,7 +3031,7 @@ bool Bot::checkWallOnBehind () {
    TraceResult tr {};
 
    // do a trace to the right...
-   game.testLine (pev->origin, pev->origin - pev->angles.forward () * 52.0f, TraceIgnore::Monsters, ent (), &tr);
+   game.testLine (pev->origin, pev->origin - pev->angles.forward () * 40.0f, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
    if (tr.flFraction < 1.0f) {
@@ -3041,7 +3041,7 @@ bool Bot::checkWallOnBehind () {
 }
 
 bool Bot::isDeadlyMove (const Vector &to) {
-   // this function eturns if given location would hurt Bot with falling damage
+   // this function returns if given location would hurt Bot with falling damage
 
    TraceResult tr {};
 
