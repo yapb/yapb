@@ -1393,10 +1393,9 @@ void Bot::attackMovement () {
    }
 
    // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
-   if (!game.is (GameFlags::CSDM)) {
+   if (!game.is (GameFlags::CSDM) && !isKnifeMode ()) {
       if ((m_states & Sense::SeeingEnemy)
          && approach < 30
-         && !isKnifeMode ()
          && !bots.isBombPlanted ()
          && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
 
