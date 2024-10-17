@@ -98,7 +98,7 @@ void Bot::avoidGrenades () {
 
       if (m_preventFlashing < game.time ()
          && m_personality == Personality::Rusher
-         && m_difficulty == Difficulty::Expert
+         && cv_whose_your_daddy
          && model == kFlashbangModelName) {
 
          // don't look at flash bang

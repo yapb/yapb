@@ -559,8 +559,19 @@ void Bot::blind_ () {
    m_navTimeset = game.time ();
 
    // if bot remembers last enemy position
-   if (m_difficulty >= Difficulty::Normal && !m_lastEnemyOrigin.empty () && util.isPlayer (m_lastEnemy) && !usesSniper ()) {
-      m_lookAt = m_lastEnemyOrigin; // face last enemy
+   if (rg.chance (50)
+      && m_difficulty >= Difficulty::Normal
+      && !m_lastEnemyOrigin.empty ()
+      && util.isPlayer (m_lastEnemy)
+      && !usesSniper ()) {
+
+      auto error = kSprayDistance * cr::powf (m_lastEnemyOrigin.distance (pev->origin), 0.5f) / 2048.0f;
+      auto origin = m_lastEnemyOrigin;
+
+      origin.x = origin.x + rg (-error, error);
+      origin.y = origin.y + rg (-error, error);
+
+      m_lookAt = origin; // face last enemy
       m_wantsToFire = true; // and shoot it
    }
 

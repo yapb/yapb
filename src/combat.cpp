@@ -128,10 +128,49 @@ bool Bot::isEnemyNoTarget (edict_t *enemy) {
    return !!(enemy->v.flags & FL_NOTARGET);
 }
 
+bool Bot::isEnemyInDarkArea (edict_t *enemy) {
+   if (!cv_check_darkness && game.isNullEntity (enemy)) {
+      return false;
+   }
+   const auto scolor = illum.getSkyColor ();
+
+   // check if node near the enemy have a degraded light level
+   const auto enemyNodeIndex = graph.getNearest (m_enemy->v.origin);
+
+   if (!graph.exists (enemyNodeIndex)) {
+      return false;
+   }
+   const auto llevel = graph[enemyNodeIndex].light;
+
+   // if light level is higher than 30, do not bother with further tests
+   if (llevel > 30.0f) {
+      return false;
+   }
+   bool enemySemiTransparent = false;
+
+   const bool enemyHasGun = (enemy->v.weapons & kPrimaryWeaponMask) || (enemy->v.weapons & kSecondaryWeaponMask);
+   const bool enemyHasFlashlightEnabled = !!(enemy->v.effects & EF_DIMLIGHT);
+   const bool enemyIsAttacking = !!(enemy->v.oldbuttons & IN_ATTACK);
+
+   if (!m_usesNVG && ((llevel < 3.0f && scolor > 50.0f) || (llevel < 25.0f && scolor <= 50.0f))
+      && !enemyHasFlashlightEnabled && (!enemyIsAttacking || !enemyHasGun)) {
+      return false;
+   }
+   else if (((llevel < 10.0f && scolor > 50.0f) || (llevel < 30.0f && scolor <= 50.0f)
+      || (enemyIsAttacking && enemyHasGun))
+      && !m_usesNVG && !enemyHasFlashlightEnabled) {
+      enemySemiTransparent = true;
+   }
+   TraceResult result {};
+   game.testLine (getEyesPos (), enemy->v.origin, m_isCreature ? TraceIgnore::None : TraceIgnore::Everything, ent (), &result);
+
+   return (result.flFraction <= 1.0f && result.pHit == enemy && (m_usesNVG || !enemySemiTransparent));
+}
+
 bool Bot::checkBodyParts (edict_t *target) {
    // this function checks visibility of a bot target.
 
-   if (isEnemyHidden (target) || isEnemyInvincible (target) || isEnemyNoTarget (target)) {
+   if (isEnemyHidden (target) || isEnemyInvincible (target) || isEnemyNoTarget (target) || isEnemyInDarkArea (target)) {
       m_enemyParts = Visibility::None;
       m_enemyOrigin.clear ();
 
@@ -336,6 +375,9 @@ void Bot::trackEnemies () {
 bool Bot::lookupEnemies () {
    // this function tries to find the best suitable enemy for the bot
 
+   m_enemyParts = Visibility::None;
+   m_enemyOrigin.clear ();
+
    // do not search for enemies while we're blinded, or shooting disabled by user
    if (m_enemyIgnoreTimer > game.time () || m_blindTime > game.time () || cv_ignore_enemies) {
       return false;
@@ -359,8 +401,6 @@ bool Bot::lookupEnemies () {
          m_aimFlags |= AimFlags::LastEnemy;
       }
    }
-   m_enemyParts = Visibility::None;
-   m_enemyOrigin.clear ();
 
    if (!game.isNullEntity (m_enemy)) {
       player = m_enemy;

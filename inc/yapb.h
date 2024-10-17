@@ -435,6 +435,7 @@ private:
    bool isEnemyHidden (edict_t *enemy);
    bool isEnemyInvincible (edict_t *enemy);
    bool isEnemyNoTarget (edict_t *enemy);
+   bool isEnemyInDarkArea (edict_t *enemy);
    bool isFriendInLineOfFire (float distance);
    bool isGroupOfEnemies (const Vector &location, int numEnemies = 1, float radius = 256.0f);
    bool isPenetrableObstacle (const Vector &dest);
@@ -925,6 +926,7 @@ extern ConVar cv_ignore_enemies_after_spawn_time;
 extern ConVar cv_camping_time_min;
 extern ConVar cv_camping_time_max;
 extern ConVar cv_smoke_grenade_checks;
+extern ConVar cv_check_darkness;
 
 extern ConVar mp_freezetime;
 extern ConVar mp_roundtime;
