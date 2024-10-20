@@ -1496,27 +1496,25 @@ void PlayerHitboxEnumerator::update (edict_t *ent) {
          parts->head.z += bboxset[hitbox].bbmax.z;
          parts->head = { ent->v.origin.x, ent->v.origin.y, parts->head.z };
       }
-      hitbox = kInvalidHitbox;
 
       // get the body (stomach)
       hitbox = getHitbox (studiohdr, bboxset, PlayerPart::Stomach);
 
-      if (hitbox != kInfiniteDistance) {
+      if (hitbox != kInvalidHitbox) {
          engfuncs.pfnGetBonePosition (ent, bboxset[hitbox].bone, parts->stomach, nullptr);
       }
-      hitbox = kInvalidHitbox;
 
       // get the left (arm)
       hitbox = getHitbox (studiohdr, bboxset, PlayerPart::LeftArm);
 
-      if (hitbox != kInfiniteDistance) {
+      if (hitbox != kInvalidHitbox) {
          engfuncs.pfnGetBonePosition (ent, bboxset[hitbox].bone, parts->left, nullptr);
       }
 
       // get the right (arm)
       hitbox = getHitbox (studiohdr, bboxset, PlayerPart::RightArm);
 
-      if (hitbox != kInfiniteDistance) {
+      if (hitbox != kInvalidHitbox) {
          engfuncs.pfnGetBonePosition (ent, bboxset[hitbox].bone, parts->right, nullptr);
       }
       return;

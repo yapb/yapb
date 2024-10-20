@@ -286,7 +286,6 @@ void Bot::updateLookAnglesNewbie (const Vector &direction, float delta) {
    const float offsetDelay = 1.2f;
 
    Vector stiffness {};
-   Vector randomize {};
 
    m_idealAngles = direction.get2d ();
    m_idealAngles.clampAngles ();
@@ -302,6 +301,8 @@ void Bot::updateLookAnglesNewbie (const Vector &direction, float delta) {
       if (m_randomizeAnglesTime < game.time ()
          && ((pev->velocity.length () > 1.0f
             && m_angularDeviation.length () < 5.0f) || m_angularDeviation.length () < 1.0f)) {
+
+         Vector randomize {};
 
          // is the bot standing still ?
          if (pev->velocity.length () < 1.0f) {

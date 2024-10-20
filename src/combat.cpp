@@ -135,7 +135,7 @@ bool Bot::isEnemyInDarkArea (edict_t *enemy) {
    const auto scolor = illum.getSkyColor ();
 
    // check if node near the enemy have a degraded light level
-   const auto enemyNodeIndex = graph.getNearest (m_enemy->v.origin);
+   const auto enemyNodeIndex = graph.getNearest (enemy->v.origin);
 
    if (!graph.exists (enemyNodeIndex)) {
       return false;
@@ -273,12 +273,12 @@ bool Bot::checkBodyPartsWithHitboxes (edict_t *target) {
    const auto hitsTarget = [&] () -> bool {
       return result.flFraction >= 1.0f || result.pHit == target;
    };
+   m_enemyParts = Visibility::None;
 
    // creatures can't hurt behind anything
    const auto ignoreFlags = m_isCreature ? TraceIgnore::None : TraceIgnore::Everything;
 
    // get the stomach hitbox
-   m_enemyParts = Visibility::None;
    game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::Stomach, refresh), ignoreFlags, self, &result);
 
    if (hitsTarget ()) {
@@ -287,7 +287,6 @@ bool Bot::checkBodyPartsWithHitboxes (edict_t *target) {
    }
 
    // get the stomach hitbox
-   m_enemyParts = Visibility::None;
    game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::Head, refresh), ignoreFlags, self, &result);
 
    if (hitsTarget ()) {
@@ -300,7 +299,6 @@ bool Bot::checkBodyPartsWithHitboxes (edict_t *target) {
    }
 
    // get the left hitbox
-   m_enemyParts = Visibility::None;
    game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::LeftArm, refresh), ignoreFlags, self, &result);
 
    if (hitsTarget ()) {
@@ -311,7 +309,6 @@ bool Bot::checkBodyPartsWithHitboxes (edict_t *target) {
    }
 
    // get the right hitbox
-   m_enemyParts = Visibility::None;
    game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::RightArm, refresh), ignoreFlags, self, &result);
 
    if (hitsTarget ()) {
@@ -322,7 +319,6 @@ bool Bot::checkBodyPartsWithHitboxes (edict_t *target) {
    }
 
    // get the feet spot
-   m_enemyParts = Visibility::None;
    game.testLine (eyes, m_hitboxEnumerator->get (target, PlayerPart::Feet, refresh), ignoreFlags, self, &result);
 
    if (hitsTarget ()) {
