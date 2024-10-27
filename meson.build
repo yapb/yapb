@@ -41,6 +41,7 @@ build_type = get_option ('buildtype')
 opt_64bit = get_option('64bit')
 opt_native = get_option('native')
 opt_winxp = get_option('winxp')
+opt_nosimd = get_option('nosimd')
 
 # cpp and ldflags from scratch
 cxxflags = []
@@ -96,6 +97,11 @@ if opt_native
    cxxflags += ['-DCR_NATIVE_BUILD']
 endif
 
+# globally disables all simd optimizations
+if opt_nosimd
+   cxxflags += ['-DCR_DISABLE_SIMD']
+endif
+
 # configure flags gcc and clang
 if cxx == 'clang' or cxx == 'gcc'
    cxxflags += [
@@ -111,14 +117,18 @@ if cxx == 'clang' or cxx == 'gcc'
          '-march=armv8-a+fp+simd', 
       ]
    elif cpu != 'arm' and not cpu.startswith('ppc')
-      cxxflags += [
-         '-mmmx', '-msse', '-msse2', '-msse3', '-mfpmath=sse'
-      ]
-
+      if not opt_nosimd
+         cxxflags += [
+            '-msse', '-msse2', '-mfpmath=sse'
+         ]
+      endif
+      
       if opt_native
          cxxflags += '-march=native'
-      else
+      elif opt_64bit
          cxxflags += '-march=x86-64'
+      else
+         cxxflags += '-march=i686'
       endif
    endif
 
@@ -132,7 +142,8 @@ if cxx == 'clang' or cxx == 'gcc'
          cxxflags += [
             '-fdata-sections',
             '-ffunction-sections',
-            '-fcf-protection=none'
+            '-fcf-protection=none',
+            '-fno-plt'
          ]
 
          ldflags += [
@@ -159,7 +170,7 @@ if cxx == 'clang' or cxx == 'gcc'
    else
       cxxflags += ['-g3', '-ggdb', '-DDEBUG', '-D_FORTIFY_SOURCE=2']
    endif
-   
+
    # special script for mingw-64 builds
    if os == 'windows' and cxx == 'gcc' and compiler.version().version_compare('<12.0')
       ldflags += [

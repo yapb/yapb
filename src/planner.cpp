@@ -57,7 +57,7 @@ float Heuristic::gfunctionKills (int team, int currentIndex, int) {
    if (current.flags & NodeFlag::Crouch) {
       cost *= 1.5f;
    }
-   return cost;
+   return cost + 0.5f;
 }
 
 auto Heuristic::gfunctionKillsCTWithHostage (int team, int currentIndex, int parentIndex) -> float {

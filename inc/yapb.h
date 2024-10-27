@@ -39,13 +39,13 @@ public:
 
 // weapon properties structure
 struct WeaponProp {
-   String classname;
-   int ammo1; // ammo index for primary ammo
-   int ammo1Max; // max primary ammo
-   int slot; // HUD slot (0 based)
-   int pos; // slot position
-   int id; // weapon ID
-   int flags; // flags???
+   String classname {};
+   int ammo1 {}; // ammo index for primary ammo
+   int ammo1Max {}; // max primary ammo
+   int slot {}; // HUD slot (0 based)
+   int pos {}; // slot position
+   int id {}; // weapon ID
+   int flags {}; // flags???
 };
 
 // weapon info structure
@@ -89,23 +89,23 @@ public:
 
 // clients noise
 struct ClientNoise {
-   Vector pos;
-   float dist;
-   float last;
+   Vector pos {};
+   float dist {};
+   float last {};
 };
 
 // array of clients struct
 struct Client {
-   edict_t *ent; // pointer to actual edict
-   Vector origin; // position in the world
-   int team; // bot team
-   int team2; // real bot team in free for all mode (csdm)
-   int flags; // client flags
-   int radio; // radio orders
-   int menu; // identifier to opened menu
-   int iconFlags[kGameMaxPlayers]; // flag holding chatter icons
-   float iconTimestamp[kGameMaxPlayers]; // timers for chatter icons
-   ClientNoise noise;
+   edict_t *ent {}; // pointer to actual edict
+   Vector origin {}; // position in the world
+   int team {}; // bot team
+   int team2 {}; // real bot team in free for all mode (csdm)
+   int flags {}; // client flags
+   int radio {}; // radio orders
+   int menu {}; // identifier to opened menu
+   int iconFlags[kGameMaxPlayers] {}; // flag holding chatter icons
+   float iconTimestamp[kGameMaxPlayers] {}; // timers for chatter icons
+   ClientNoise noise {};
 };
 
 // think delay mapping

@@ -2835,8 +2835,6 @@ void BotGraph::unassignPath (int from, int to) {
 }
 
 void BotGraph::convertFromPOD (Path &path, const PODPath &pod) {
-   path = {};
-
    path.number = pod.number;
    path.flags = pod.flags;
    path.origin = pod.origin;
@@ -2861,8 +2859,6 @@ void BotGraph::convertFromPOD (Path &path, const PODPath &pod) {
 }
 
 void BotGraph::convertToPOD (const Path &path, PODPath &pod) {
-   pod = {};
-
    pod.number = path.number;
    pod.flags = path.flags;
    pod.origin = path.origin;

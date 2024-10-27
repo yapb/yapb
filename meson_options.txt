@@ -13,3 +13,7 @@ option('native', type : 'boolean', value : false,
 	   
 option('winxp', type : 'boolean', value : false,
        description: 'Configure MSVC build to output Windows XP compatible binary.')
+	   
+option('nosimd', type : 'boolean', value : false,
+       description: 'Disables all SIMD or NEON optimizations.')
+

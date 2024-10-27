@@ -662,7 +662,7 @@ void ConVar::setPrefix (StringRef name, int32_t type) {
 
 void Game::checkCvarsBounds () {
    for (const auto &var : m_cvars) {
-      if (!var.self->ptr) {
+      if (!var.self || !var.self->ptr) {
          continue;
       }
 
@@ -1143,8 +1143,12 @@ void Game::printBotVersion () {
       botRuntimeFlags.push ("HL25");
    }
 
+   if (botRuntimeFlags.empty ()) {
+      botRuntimeFlags.push ("None");
+   }
+
    // print if we're using sse 4.x instructions
-   if (cpuflags.sse41 || cpuflags.sse42 || cpuflags.neon) {
+   if (plat.simd && (cpuflags.sse41 || cpuflags.sse42 || cpuflags.neon)) {
       Array <String> simdLevels {};
 
       if (cpuflags.sse41) {

@@ -4057,7 +4057,7 @@ void Bot::updateHearing () {
             }
             m_lastEnemyOrigin = getHeardOriginWithError ();
          }
-         else {
+         else if (m_hearedEnemy != nullptr) {
             // if bot had an enemy but the heard one is nearer, take it instead
             const float distanceSq = m_lastEnemyOrigin.distanceSq (pev->origin);
 

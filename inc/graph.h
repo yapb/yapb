@@ -100,19 +100,19 @@ struct PODGraphHeader {
 
 // defines linked nodes
 struct PathLink {
-   Vector velocity;
-   int32_t distance;
-   uint16_t flags;
-   int16_t index;
+   Vector velocity {};
+   int32_t distance {};
+   uint16_t flags {};
+   int16_t index {};
 };
 
 // define graph path structure for yapb
 struct Path {
-   int32_t number, flags;
-   Vector origin, start, end;
-   float radius, light, display;
-   PathLink links[kMaxNodeLinks];
-   PathVis vis;
+   int32_t number {}, flags {};
+   Vector origin {}, start {}, end {};
+   float radius {}, light {}, display {};
+   PathLink links[kMaxNodeLinks] {};
+   PathVis vis {};
 };
 
 // define waypoint structure for podbot (will convert on load)

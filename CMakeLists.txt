@@ -74,7 +74,7 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU"
         target_compile_options(${PROJECT_NAME} PRIVATE -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden)
     
         if(NOT WIN32 AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" AND NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "arm" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^ppc")
-            target_compile_options(${PROJECT_NAME} PRIVATE -fdata-sections -ffunction-sections -fcf-protection=none)
+            target_compile_options(${PROJECT_NAME} PRIVATE -fdata-sections -ffunction-sections -fcf-protection=none -fno-plt)
             target_link_options(${PROJECT_NAME} PRIVATE -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/ext/ldscripts/version.lds -Wl,--gc-sections)
     
             if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")

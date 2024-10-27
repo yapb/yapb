@@ -11,7 +11,7 @@
 constexpr char kPodbotMagic[8] = { 'P', 'O', 'D', 'W', 'A', 'Y', '!', kNullChar };
 
 constexpr int32_t kStorageMagic = 0x59415042; // storage magic for yapb-data files
-constexpr int32_t kStorageMagicUB = 0x544f4255; //support also the fork format (merged back into yapb)
+constexpr int32_t kStorageMagicUB = 0x544f4255; // support also the fork format (merged back into yapb)
 
 // storage header options
 CR_DECLARE_SCOPED_ENUM (StorageOption,

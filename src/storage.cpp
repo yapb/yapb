@@ -430,6 +430,11 @@ StringRef BotStorage::getRunningPath () {
       if (path.startsWith ("<unk")) {
          logger.fatal ("Unable to detect library path. Giving up...");
       }
+
+      // remove dot prefix
+      if (path.startsWith (".")) {
+         path.ltrim (".\\/");
+      }
       auto parts = path.substr (1).split (kPathSeparator);
 
       parts.pop (); // remove library name

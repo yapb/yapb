@@ -1992,7 +1992,7 @@ void BotControl::showMenu (int id) {
          parsed.text = translated;
 
          // make menu looks best
-         if (!(game.is (GameFlags::Legacy))) {
+         if (!game.is (GameFlags::Legacy)) {
             for (int j = 0; j < 10; ++j) {
                parsed.text.replace (strings.format ("%d.", j), strings.format ("\\r%d.\\w", j));
             }
