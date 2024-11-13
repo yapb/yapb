@@ -1433,7 +1433,7 @@ void Bot::attackMovement () {
       if ((m_states & Sense::SeeingEnemy)
          && approach < 30
          && !bots.isBombPlanted ()
-         && (isInViewCone (m_enemy->v.origin) || m_isVIP)) {
+         && (isInViewCone (m_enemy->v.origin) || m_isVIP || m_isReloading)) {
 
          if (m_retreatTime < game.time ()) {
             startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, true);
@@ -1453,7 +1453,10 @@ void Bot::attackMovement () {
    const bool isFullView = !!(m_enemyParts & (Visibility::Head | Visibility::Body));
 
    if (m_lastFightStyleCheck < game.time ()) {
-      if (usesSniper ()) {
+      if (usesSniper ()
+         && m_shootTime - 0.4f <= game.time ()
+         && m_shootTime + 0.1f > game.time ()
+         && m_sniperStopTime > game.time ()) {
          m_fightStyle = Fight::Stay;
       }
       else if (usesRifle () || usesSubmachine () || usesHeavy ()) {

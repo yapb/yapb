@@ -87,7 +87,7 @@ private:
    using SendToProto = decltype (sendto);
 
 private:
-   Detour <SendToProto> m_sendToDetour { }, m_sendToDetourSys {};
+   Detour <SendToProto> m_sendToDetour {}, m_sendToDetourSys {};
 
 public:
    ServerQueryHook () = default;
@@ -126,11 +126,11 @@ private:
 private:
    bool m_paused { false };
 
-   Detour <DlsymProto> m_dlsym;
-   Detour <DlcloseProto> m_dlclose;
-   HashMap <StringRef, SharedLibrary::Func> m_exports;
+   Detour <DlsymProto> m_dlsym {};
+   Detour <DlcloseProto> m_dlclose {};
+   HashMap <StringRef, SharedLibrary::Func> m_exports {};
 
-   SharedLibrary m_self;
+   SharedLibrary m_self {};
 
 public:
    DynamicLinkerHook () = default;

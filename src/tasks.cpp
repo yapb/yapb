@@ -1398,7 +1398,10 @@ void Bot::escapeFromBomb_ () {
       pev->button |= IN_ATTACK2;
    }
 
-   if (!usesKnife () && m_numEnemiesLeft == 0) {
+   if (!usesKnife ()
+      && m_lastEnemyOrigin.empty ()
+      && !(m_states & Sense::SeeingEnemy)
+      && !util.isAlive (m_lastEnemy)) {
       selectWeaponById (Weapon::Knife);
    }
 

@@ -573,8 +573,14 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
       }
       // not stuck yet
       else {
+         bool isOnLadderPath = false;
+
+         if ((m_pathFlags & NodeFlag::Ladder) && isPreviousLadder ()) {
+            isOnLadderPath = true;
+         }
+
          // test if there's something ahead blocking the way
-         if (!isOnLadderPath () && !isOnLadder () && isBlockedForward (dirNormal, &tr)) {
+         if (!isOnLadderPath && !isOnLadder () && isBlockedForward (dirNormal, &tr)) {
             if (cr::fzero (m_firstCollideTime)) {
                m_firstCollideTime = game.time () + 0.2f;
             }
@@ -874,10 +880,10 @@ void Bot::checkFall () {
    else if (pev->origin.z + 128.0f < m_checkFallPoint[1].z && pev->origin.z + 128.0f < m_checkFallPoint[0].z) {
       fixFall = true;
    }
-   else if (m_currentNodeIndex != kInvalidNodeIndex) {
-      if (pev->origin.distanceSq (m_checkFallPoint[1]) <= cr::sqrf (32.0f) && pev->origin.z + 64.0f < m_checkFallPoint[1].z) {
-         fixFall = true;
-      }
+   else if (m_currentNodeIndex != kInvalidNodeIndex
+      && nowDistanceSq <= cr::sqrf (32.0f)
+      && pev->origin.z + 64.0f < m_checkFallPoint[1].z) {
+      fixFall = true;
    }
 
    if (fixFall) {
@@ -1052,27 +1058,15 @@ bool Bot::updateNavigation () {
       const auto prevNodeIndex = m_previousNodes[0];
       const float ladderDistance = pev->origin.distance (m_pathOrigin);
 
-      if (graph.exists (prevNodeIndex) && !(graph[prevNodeIndex].flags & NodeFlag::Ladder)) {
+      // do a precise movement when very near
+      if (graph.exists (prevNodeIndex) && !(graph[prevNodeIndex].flags & NodeFlag::Ladder) && ladderDistance < 64.0f) {
          if (m_pathOrigin.z >= pev->origin.z + 16.0f) {
             m_pathOrigin = m_path->origin + kLadderOffset;
          }
          else if (m_pathOrigin.z < pev->origin.z - 16.0f) {
             m_pathOrigin = m_path->origin - kLadderOffset;
          }
-      }
-      else if (m_pathOrigin.z < pev->origin.z + 16.0f && !isOnLadder () && isOnFloor () && !isDucking ()) {
-         m_moveSpeed = ladderDistance;
 
-         if (m_moveSpeed < 150.0f) {
-            m_moveSpeed = 150.0f;
-         }
-         else if (m_moveSpeed > pev->maxspeed) {
-            m_moveSpeed = pev->maxspeed;
-         }
-      }
-
-      // do a precise movement when very near
-      if (graph.exists (prevNodeIndex) && !(graph[prevNodeIndex].flags & NodeFlag::Ladder) && ladderDistance < 64.0f) {
          if (!isDucking ()) {
             m_moveSpeed = pev->maxspeed * 0.4f;
          }
@@ -1084,36 +1078,41 @@ bool Bot::updateNavigation () {
          m_approachingLadderTimer.start (m_frameInterval * 4.0f);
       }
 
+      if (m_pathOrigin.z < pev->origin.z + 16.0f && !isOnLadder () && isOnFloor () && !isDucking ()) {
+         m_moveSpeed = ladderDistance;
+
+         if (m_moveSpeed < 150.0f) {
+            m_moveSpeed = 150.0f;
+         }
+         else if (m_moveSpeed > pev->maxspeed) {
+            m_moveSpeed = pev->maxspeed;
+         }
+      }
+
       // special detection if someone is using the ladder (to prevent to have bots-towers on ladders)
       for (const auto &client : util.getClients ()) {
          if (!(client.flags & ClientFlags::Used)
             || !(client.flags & ClientFlags::Alive)
             || client.team != m_team
-            || client.ent == ent ()) {
+            || client.ent == ent ()
+            || !(client.ent->v.movetype == MOVETYPE_FLY)) {
 
             continue;
          }
 
-         if (client.ent->v.origin.distanceSq (m_pathOrigin) > cr::sqrf (64.0f)) {
-            continue;
-         }
          bool foundGround = false;
-         int previousNode = 0;
 
-         // someone is above or below us and is using the ladder already
-         if (cr::abs (pev->origin.z - client.ent->v.origin.z) > 15.0f && (client.ent->v.movetype == MOVETYPE_FLY)) {
-            const auto numPreviousNode = rg (0, 2);
-
-            for (int i = 0; i < numPreviousNode; ++i) {
-               if (graph.exists (prevNodeIndex) && (graph[prevNodeIndex].flags & NodeFlag::Ladder)) {
+         if (cr::abs (pev->origin.z - client.ent->v.origin.z) > 15.0f) {
+            if (isPreviousLadder ()) {
+               if (client.ent->v.origin.distanceSq (pev->origin) < cr::sqrf (64.0f)) {
                   foundGround = true;
-                  previousNode = m_previousNodes[i];
-                  break;
                }
             }
-            if (foundGround) {
-               findPath (m_previousNodes[0], previousNode, m_pathType);
-            }
+         }
+
+         if (foundGround) {
+            clearSearchNodes ();
+            findNextBestNode ();
          }
       }
    }
@@ -2345,6 +2344,11 @@ bool Bot::selectBestNextNode () {
          continue;
       }
 
+      // skip isn't visible links
+      if (!vistab.visible (link.index, nextNodeIndex) || !vistab.visible (link.index, prevNodeIndex)) {
+         continue;
+      }
+
       // don't use ladder nodes as alternative
       if (graph[link.index].flags & (NodeFlag::Ladder | NodeFlag::Camp | PathFlag::Jump)) {
          continue;
@@ -3298,13 +3302,11 @@ bool Bot::isReachableNode (int index) {
    return tr.flFraction >= 1.0f;
 }
 
-bool Bot::isOnLadderPath () {
+bool Bot::isPreviousLadder () {
    const auto prevNodeIndex = m_previousNodes[0];
 
    // bot entered ladder path
-   return (m_pathFlags & NodeFlag::Ladder)
-      && graph.exists (prevNodeIndex)
-      && (graph[prevNodeIndex].flags & NodeFlag::Ladder);
+   return graph.exists (prevNodeIndex) && (graph[prevNodeIndex].flags & NodeFlag::Ladder);
 }
 
 void Bot::findShortestPath (int srcIndex, int destIndex) {

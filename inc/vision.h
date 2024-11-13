@@ -36,10 +36,10 @@ public:
    static constexpr float kMinViewDistance = 2.0f;
 
 private:
-   float m_farHeight; // height of the far frustum
-   float m_farWidth; // width of the far frustum
-   float m_nearHeight; // height of the near frustum
-   float m_nearWidth; // width of the near frustum
+   float m_farHeight {}; // height of the far frustum
+   float m_farWidth {}; // width of the far frustum
+   float m_nearHeight {}; // height of the near frustum
+   float m_nearWidth {}; // width of the near frustum
 
 public:
    explicit Frustum () {

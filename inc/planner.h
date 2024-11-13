@@ -104,8 +104,8 @@ private:
 
    int m_length {};
 
-   Array <int> m_constructedPath;
-   Array <int> m_smoothedPath;
+   Array <int> m_constructedPath {};
+   Array <int> m_smoothedPath {};
 
 private:
    // clears the currently built route

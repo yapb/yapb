@@ -26,12 +26,12 @@ struct BotTask {
    using Function = void (Bot::*) ();
 
 public:
-   Function func; // corresponding exec function in bot class
-   Task id; // major task/action carried out
-   float desire; // desire (filled in) for this task
-   int data; // additional data (node index)
-   float time; // time task expires
-   bool resume; // if task can be continued if interrupted
+   Function func {}; // corresponding exec function in bot class
+   Task id {}; // major task/action carried out
+   float desire {}; // desire (filled in) for this task
+   int data {}; // additional data (node index)
+   float time {}; // time task expires
+   bool resume {}; // if task can be continued if interrupted
 
 public:
    BotTask (Function func, Task id, float desire, int data, float time, bool resume) : func (func), id (id), desire (desire), data (data), time (time), resume (resume) { }
@@ -50,21 +50,21 @@ struct WeaponProp {
 
 // weapon info structure
 struct WeaponInfo {
-   int id; // the weapon id value
-   StringRef name; // name of the weapon when selecting it
-   StringRef model; // model name to separate cs weapons
-   int price; // price when buying
-   int minPrimaryAmmo; // minimum primary ammo
-   int teamStandard; // used by team (number) (standard map)
-   int teamAS; // used by team (as map)
-   int buyGroup; // group in buy menu (standard map)
-   int buySelect; // select item in buy menu (standard map)
-   int buySelectT; // for counter-strike v1.6
-   int buySelectCT; // for counter-strike v1.6
-   int penetratePower; // penetrate power
-   int maxClip; // max ammo in clip
-   int type; // weapon class
-   bool primaryFireHold; // hold down primary fire button to use?
+   int id {}; // the weapon id value
+   StringRef name {}; // name of the weapon when selecting it
+   StringRef model {}; // model name to separate cs weapons
+   int price {}; // price when buying
+   int minPrimaryAmmo {}; // minimum primary ammo
+   int teamStandard {}; // used by team (number) (standard map)
+   int teamAS {}; // used by team (as map)
+   int buyGroup {}; // group in buy menu (standard map)
+   int buySelect {}; // select item in buy menu (standard map)
+   int buySelectT {}; // for counter-strike v1.6
+   int buySelectCT {}; // for counter-strike v1.6
+   int penetratePower {}; // penetrate power
+   int maxClip {}; // max ammo in clip
+   int type {}; // weapon class
+   bool primaryFireHold {}; // hold down primary fire button to use?
 
 public:
    WeaponInfo (int id, 
@@ -227,7 +227,7 @@ private:
    int m_radioSelect {}; // radio entry
    int m_killsCount {}; // the kills count of a bot
 
-   int m_lastPredictIndex { kInvalidNodeIndex }; // last predicted path index
+   int m_lastPredictIndex {}; // last predicted path index
    int m_lastPredictLength {}; // last predicted path length
    int m_pickupType {}; // type of entity which needs to be used/picked up
 
@@ -452,7 +452,7 @@ private:
    bool isEnemyInSight (Vector &endPos);
    bool isEnemyNoticeable (float range);
    bool isCreature ();
-   bool isOnLadderPath ();
+   bool isPreviousLadder ();
    bool isIgnoredItem (edict_t *ent);
 
    void doPlayerAvoidance (const Vector &normal);
