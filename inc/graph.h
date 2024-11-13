@@ -91,11 +91,11 @@ CR_DECLARE_SCOPED_ENUM (NotifySound,
 
 // general waypoint header information structure for podbot
 struct PODGraphHeader {
-   char header[8];
-   int32_t fileVersion;
-   int32_t pointNumber;
-   char mapName[32];
-   char author[32];
+   char header[8] {};
+   int32_t fileVersion {};
+   int32_t pointNumber {};
+   char mapName[32] {};
+   char author[32] {};
 };
 
 // defines linked nodes
@@ -117,31 +117,31 @@ struct Path {
 
 // define waypoint structure for podbot (will convert on load)
 struct PODPath {
-   int32_t number, flags;
-   Vector origin;
-   float radius, csx, csy, cex, cey;
-   int16_t index[kMaxNodeLinks];
-   uint16_t conflags[kMaxNodeLinks];
-   Vector velocity[kMaxNodeLinks];
-   int32_t distance[kMaxNodeLinks];
-   PathVis vis;
+   int32_t number {}, flags {};
+   Vector origin {};
+   float radius {}, csx {}, csy {}, cex {}, cey {};
+   int16_t index[kMaxNodeLinks] {};
+   uint16_t conflags[kMaxNodeLinks] {};
+   Vector velocity[kMaxNodeLinks] {};
+   int32_t distance[kMaxNodeLinks] {};
+   PathVis vis {};
 };
 
 // general storage header information structure
 struct StorageHeader {
-   int32_t magic;
-   int32_t version;
-   int32_t options;
-   int32_t length;
-   int32_t compressed;
-   int32_t uncompressed;
+   int32_t magic {};
+   int32_t version {};
+   int32_t options {};
+   int32_t length {};
+   int32_t compressed {};
+   int32_t uncompressed {};
 };
 
 // extension header for graph information
 struct ExtenHeader {
-   char author[32]; // original author of graph
-   int32_t mapSize; // bsp size for checksumming map consistency
-   char modified[32]; // by whom modified
+   char author[32] {}; // original author of graph
+   int32_t mapSize {}; // bsp size for checksumming map consistency
+   char modified[32] {}; // by whom modified
 };
 
 // graph operation class

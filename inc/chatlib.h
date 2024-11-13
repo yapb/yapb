@@ -9,9 +9,9 @@
 
 // links keywords and replies together
 struct ChatKeywords {
-   StringArray keywords;
-   StringArray replies;
-   StringArray usedReplies;
+   StringArray keywords {};
+   StringArray replies {};
+   StringArray usedReplies {};
 
 public:
    ChatKeywords () = default;

@@ -9,12 +9,12 @@
 
 // bot creation tab
 struct BotRequest {
-   bool manual;
-   int difficulty;
-   int team;
-   int skin;
-   int personality;
-   String name;
+   bool manual {};
+   int difficulty {};
+   int team {};
+   int skin {};
+   int personality {};
+   String name {};
 };
 
 // manager class

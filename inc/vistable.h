@@ -17,7 +17,7 @@ CR_DECLARE_SCOPED_ENUM_TYPE (VisIndex, int32_t,
 
 // defines visibility count
 struct PathVis {
-   uint16_t stand, crouch;
+   uint16_t stand {}, crouch {};
 };
 
 class GraphVistable final : public Singleton <GraphVistable> {

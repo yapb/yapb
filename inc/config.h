@@ -9,7 +9,7 @@
 
 // botname structure definition
 struct BotName {
-   String name;
+   String name {};
    int usedBy = -1;
 
 public:
@@ -19,9 +19,9 @@ public:
 
 // voice config structure definition
 struct ChatterItem {
-   String name;
-   float repeat;
-   float duration;
+   String name {};
+   float repeat {};
+   float duration {};
 
 public:
    ChatterItem (StringRef name, float repeat, float duration) : name (name), repeat (repeat), duration (duration) {}

@@ -29,7 +29,7 @@ public:
 public:
    // generic bot command
    struct BotCmd {
-      String name, format, help;
+      String name {}, format {}, help {};
       Handler handler = nullptr;
       bool visible = true;
 
@@ -42,9 +42,9 @@ public:
 
    // single bot menu
    struct BotMenu {
-      int ident, slots;
-      String text;
-      MenuHandler handler;
+      int ident {}, slots {};
+      String text {};
+      MenuHandler handler {};
 
    public:
       explicit BotMenu (int ident, int slots, StringRef text, MenuHandler handler) : ident (ident), slots (slots), text (text), handler (cr::move (handler))
@@ -54,7 +54,7 @@ public:
    // queued text message to prevent overflow with rapid output
    struct PrintQueue {
       int32_t destination {};
-      String text;
+      String text {};
 
    public:
      explicit PrintQueue () = default;
@@ -68,7 +68,7 @@ public:
       float timelimit {};
       float freezetime {};
       float roundtime {};
-   } m_graphSaveVarValues;
+   } m_graphSaveVarValues {};
 
 private:
    StringArray m_args {};

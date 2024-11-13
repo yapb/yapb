@@ -85,16 +85,16 @@ CR_DECLARE_SCOPED_ENUM (PlayerPart,
 
 // variable reg pair
 struct ConVarReg {
-   cvar_t reg;
-   String info;
-   String init;
-   String regval;
-   String name;
-   class ConVar *self;
-   float initial, min, max;
-   bool missing;
-   bool bounded;
-   int32_t type;
+   cvar_t reg {};
+   String info {};
+   String init {};
+   String regval {};
+   String name {};
+   class ConVar *self {};
+   float initial {}, min {}, max {};
+   bool missing {};
+   bool bounded {};
+   int32_t type {};
 };
 
 // entity prototype

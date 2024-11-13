@@ -1518,6 +1518,8 @@ void Bot::newRound () {
    m_trackingEdict = nullptr;
    m_enemyBodyPartSet = nullptr;
    m_timeNextTracking = 0.0f;
+   m_lastPredictIndex = kInvalidNodeIndex;
+   m_lastPredictLength = kInfiniteDistanceLong;
 
    m_buttonPushTime = 0.0f;
    m_enemyUpdateTime = 0.0f;

@@ -97,7 +97,6 @@ void Bot::avoidGrenades () {
       auto model = pent->v.model.str (9);
 
       if (m_preventFlashing < game.time ()
-         && m_personality == Personality::Rusher
          && cv_whose_your_daddy
          && model == kFlashbangModelName) {
 
@@ -209,15 +208,15 @@ void Bot::checkBreakablesAround () {
       }
 
       const auto &origin = game.getEntityOrigin (breakable);
-      const auto lengthToObstacleSq = origin.distanceSq (pev->origin);
+      const auto distanceToObstacleSq = origin.distanceSq (pev->origin);
 
       // too far, skip it
-      if (lengthToObstacleSq > cr::sqrf (radius)) {
+      if (distanceToObstacleSq > cr::sqrf (radius)) {
          continue;
       }
 
       // too close, skip it
-      if (lengthToObstacleSq < cr::sqrf (100.0f)) {
+      if (distanceToObstacleSq < cr::sqrf (100.0f)) {
          continue;
       }
 
@@ -343,7 +342,7 @@ void Bot::updatePickups () {
    }
 
    const auto &interesting = bots.getInterestingEntities ();
-   const float radius = cr::sqrf (cv_object_pickup_radius.as <float> ());
+   const float radiusSq = cr::sqrf (cv_object_pickup_radius.as <float> ());
 
    if (!game.isNullEntity (m_pickupItem)) {
       bool itemExists = false;
@@ -358,7 +357,7 @@ void Bot::updatePickups () {
          const Vector &origin = game.getEntityOrigin (ent);
 
          // too far from us ?
-         if (pev->origin.distanceSq (origin) > radius) {
+         if (pev->origin.distanceSq (origin) > radiusSq) {
             continue;
          }
 
@@ -397,7 +396,7 @@ void Bot::updatePickups () {
       }
 
       // too far from us ?
-      if (pev->origin.distanceSq (origin) > radius) {
+      if (pev->origin.distanceSq (origin) > radiusSq) {
          continue;
       }
 
@@ -1705,6 +1704,7 @@ void Bot::overrideConditions () {
    // special handling for sniping
    if (usesSniper () && (m_states & (Sense::SeeingEnemy | Sense::SuspectEnemy))
       && m_shootTime - 0.4f <= game.time ()
+      && m_shootTime + 0.1f > game.time ()
       && m_sniperStopTime > game.time ()) {
 
       ignoreCollision ();
@@ -1751,7 +1751,7 @@ void Bot::syncUpdatePredictedIndex () {
    }
    ScopedUnlock <Mutex> unlock (m_predictLock);
 
-   const auto lastEnemyOrigin = m_lastEnemyOrigin;
+   const auto &lastEnemyOrigin = m_lastEnemyOrigin;
    const auto currentNodeIndex = m_currentNodeIndex;
    const auto &botOrigin = pev->origin;
 
@@ -1760,8 +1760,8 @@ void Bot::syncUpdatePredictedIndex () {
       return;
    }
 
-   int destIndex = graph.getNearest (lastEnemyOrigin);
-   int bestIndex = kInvalidNodeIndex;
+   const int destIndex = graph.getNearest (lastEnemyOrigin);
+   int bestIndex = m_currentNodeIndex;
 
    if (destIndex == kInvalidNodeIndex) {
       wipePredict ();
@@ -1769,7 +1769,7 @@ void Bot::syncUpdatePredictedIndex () {
    }
    int pathLength = 0;
 
-   auto result = planner.find (destIndex, currentNodeIndex, [&] (int index) {
+   planner.find (destIndex, currentNodeIndex, [&] (int index) {
       ++pathLength;
 
       if (vistab.visible (currentNodeIndex, index) && botOrigin.distanceSq (graph[index].origin) < cr::sqrf (2048.0f)) {
@@ -1779,13 +1779,12 @@ void Bot::syncUpdatePredictedIndex () {
       return true;
    });
 
-   if (result && bestIndex != kInvalidNodeIndex) {
+   if (bestIndex != currentNodeIndex) {
       m_lastPredictIndex = bestIndex;
       m_lastPredictLength = pathLength;
 
       return;
    }
-   wipePredict ();
 }
 
 void Bot::updatePredictedIndex () {
@@ -1947,7 +1946,7 @@ void Bot::setConditions () {
       if (!m_lastEnemyOrigin.empty ()) {
          const auto distanceSq = pev->origin.distanceSq (m_lastEnemyOrigin);
 
-         if (distanceSq > cr::sqrf (2048.0f) || (game.isNullEntity (m_enemy) && m_seeEnemyTime + 10.0f < game.time ())) {
+         if (distanceSq >= cr::sqrf (2048.0f) || (game.isNullEntity (m_enemy) && m_seeEnemyTime + 10.0f < game.time ())) {
             m_lastEnemyOrigin.clear ();
             m_lastEnemy = nullptr;
 
@@ -2056,9 +2055,6 @@ void Bot::filterTasks () {
          }
          else if (m_isVIP || m_isReloading || (sniping && usesSniper ())) {
             ratio *= 3.0f; // triple the seek cover desire if bot is VIP or reloading
-         }
-         else if (m_lastEnemyOrigin.distanceSq2d (pev->origin) < cr::sqrf (256.0f)) {
-            ratio *= 3.0f;
          }
          else if (game.is (GameFlags::CSDM)) {
             ratio = 0.0f;
