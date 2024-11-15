@@ -57,7 +57,7 @@ float Heuristic::gfunctionKills (int team, int currentIndex, int) {
    if (current.flags & NodeFlag::Crouch) {
       cost *= 1.5f;
    }
-   return cost + 0.5f;
+   return cost;
 }
 
 auto Heuristic::gfunctionKillsCTWithHostage (int team, int currentIndex, int parentIndex) -> float {
@@ -265,7 +265,7 @@ AStarResult AStarAlgo::find (int botTeam, int srcIndex, int destIndex, NodeAdder
 
    // randomize path on round start now and then
    if (cv_path_randomize_on_round_start && bots.getRoundStartTime () + 4.0f > game.time ()) {
-      rsRandomizer = rg (0.5f, static_cast <float> (botTeam) * 2.0f + 5.0f);
+      rsRandomizer = rg (0.5f, static_cast <float> (botTeam) * 2.0f);
    }
 
    while (!m_routeQue.empty ()) {
@@ -315,7 +315,7 @@ AStarResult AStarAlgo::find (int botTeam, int srcIndex, int destIndex, NodeAdder
          // calculate the F value as F = G + H
          const float g = curRoute->g + m_gcalc (botTeam, child.index, currentIndex) * rsRandomizer;
          const float h = m_hcalc (child.index, kInvalidNodeIndex, destIndex);
-         const float f = g + h;
+         const float f = cr::floorf (g + h);
 
          if (childRoute->state == RouteState::New || childRoute->f > f) {
             // put the current child into open list

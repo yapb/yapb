@@ -7,7 +7,7 @@
 
 #include <yapb.h>
 
-ConVar cv_max_nodes_for_predict ("max_nodes_for_predict", "25", "Maximum number for path length, to predict the enemy.", true, 15.0f, 256.0f);
+ConVar cv_max_nodes_for_predict ("max_nodes_for_predict", "22", "Maximum number for path length, to predict the enemy.", true, 15.0f, 256.0f);
 ConVar cv_whose_your_daddy ("whose_your_daddy", "0", "Enables or disables extra hard difficulty for bots.");
 
 // game console variables
@@ -494,7 +494,7 @@ void Bot::setAimDirection () {
       }
 
       auto doFailPredict = [this] () -> void {
-         if (m_timeNextTracking > game.time ()) {
+         if (m_timeNextTracking + 0.5f > game.time ()) {
             return; // do not fail instantly
          }
          m_aimFlags &= ~AimFlags::PredictPath;
@@ -507,18 +507,31 @@ void Bot::setAimDirection () {
       auto predictNode = m_lastPredictIndex;
 
       auto isPredictedIndexApplicable = [&] () -> bool {
-         if (!vistab.visible (m_currentNodeIndex, predictNode) || !vistab.visible (m_previousNodes[0], predictNode)) {
+         if (!graph.exists (predictNode) || pathLength >= cv_max_nodes_for_predict.as <int> ()) {
+            return false;
+         }
+
+         if (!vistab.visible (m_currentNodeIndex, predictNode)
+            || !vistab.visible (m_previousNodes[0], predictNode)
+            || !vistab.visible (predictNode, m_currentNodeIndex)) {
+
             predictNode = kInvalidNodeIndex;
             pathLength = kInfiniteDistanceLong;
+
+            return false;
          }
-         return graph.exists (predictNode) && pathLength < cv_max_nodes_for_predict.as <int> ();
+
+         TraceResult result {};
+         game.testLine (getEyesPos (), graph[predictNode].origin + pev->view_ofs, TraceIgnore::None, ent (), &result);
+
+         return result.flFraction >= 0.8f && graph[predictNode].origin.distanceSq (pev->origin) > cr::sqrf (256.0f);
       };
 
       if (changePredictedEnemy) {
          if (isPredictedIndexApplicable ()) {
             m_lookAtPredict = graph[predictNode].origin;
 
-            m_timeNextTracking = game.time () + rg (0.5f, 1.0f);
+            m_timeNextTracking = game.time () + 0.75f;
             m_trackingEdict = m_lastEnemy;
          }
          else {

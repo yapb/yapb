@@ -470,7 +470,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
    m_hindrance = nullptr;
    float distanceSq = cr::sqrf (512.0f);
 
-   if (isOnLadder () || isInNarrowPlace ()) {
+   if (isOnLadder ()) {
       return;
    }
    const auto ownPrio = bots.getPlayerPriority (ent ());
@@ -520,7 +520,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
    if (game.isNullEntity (m_hindrance)) {
       return;
    }
-   const float interval = m_frameInterval * (pev->velocity.lengthSq2d () > 0.0f ? 7.5f : 2.0f);
+   const float interval = m_frameInterval * (!isDucking () && pev->velocity.lengthSq2d ()  > 0.0f ? 7.5f : 2.0f);
 
    // use our movement angles, try to predict where we should be next frame
    Vector right {}, forward {};

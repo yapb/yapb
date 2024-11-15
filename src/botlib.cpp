@@ -1772,7 +1772,9 @@ void Bot::syncUpdatePredictedIndex () {
    planner.find (destIndex, currentNodeIndex, [&] (int index) {
       ++pathLength;
 
-      if (vistab.visible (currentNodeIndex, index) && botOrigin.distanceSq (graph[index].origin) < cr::sqrf (2048.0f)) {
+      const float distToBotSq = botOrigin.distanceSq (graph[index].origin);
+
+      if (vistab.visible (currentNodeIndex, index) && distToBotSq > 128.0f && distToBotSq < cr::sqrf (768.0f)) {
          bestIndex = index;
          return false;
       }
@@ -3975,6 +3977,14 @@ void Bot::updateHearing () {
    }
    m_hearedEnemy = nullptr;
    float nearestDistanceSq = kInfiniteDistance;
+
+   // do not hear to other enemies if just tracked old one
+   if (m_timeNextTracking < game.time () && util.isAlive (m_lastEnemy) && m_lastEnemy == m_trackingEdict) {
+      m_hearedEnemy = m_lastEnemy;
+      m_lastEnemyOrigin = m_lastEnemy->v.origin;
+
+      return;
+   }
 
    // setup potential visibility set from engine
    auto set = game.getVisibilitySet (this, false);

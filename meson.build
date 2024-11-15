@@ -135,7 +135,7 @@ if cxx == 'clang' or cxx == 'gcc'
    # setup optimization flags
    if build_type == 'release'
       cxxflags += [
-         '-funroll-loops', '-fomit-frame-pointer', '-fno-stack-protector', '-fvisibility=hidden', '-fvisibility-inlines-hidden'
+         '-funroll-loops', '-fomit-frame-pointer', '-fno-stack-protector', '-fvisibility=hidden', '-fvisibility-inlines-hidden', '-fno-math-errno'
       ]
 
       if os != 'darwin' and os != 'windows' and cpu != 'aarch64' and cpu != 'arm' and not cpu.startswith('ppc')
