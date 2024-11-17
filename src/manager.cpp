@@ -2173,8 +2173,11 @@ void BotThreadWorker::shutdown () {
 void BotThreadWorker::startup (int workers) {
    String disableWorkerEnv = plat.env ("YAPB_SINGLE_THREADED");
 
+   // disable on legacy games
+   const bool isLegacyGame = game.is (GameFlags::Legacy);
+
    // disable worker if requested via env variable or workers are disabled
-   if (workers == 0 || (!disableWorkerEnv.empty () && disableWorkerEnv == "1")) {
+   if (isLegacyGame || workers == 0 || (!disableWorkerEnv.empty () && disableWorkerEnv == "1")) {
       return;
    }
    const auto count = m_botWorker.threadCount ();
