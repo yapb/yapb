@@ -13,7 +13,7 @@ ConVar cv_path_dijkstra_simple_distance ("path_dijkstra_simple_distance", "1", "
 ConVar cv_path_astar_post_smooth ("path_astar_post_smooth", "0", "Enables post-smoothing for A*. Reduces zig-zags on paths at cost of some CPU cycles.");
 ConVar cv_path_randomize_on_round_start ("path_randomize_on_round_start", "1", "Randomize pathfinding on each round start.");
 
-float Heuristic::gfunctionKillsDist (int team, int currentIndex, int parentIndex) {
+float PlannerHeuristic::gfunctionKillsDist (int team, int currentIndex, int parentIndex) {
    if (parentIndex == kInvalidNodeIndex) {
       return 0.0f;
    }
@@ -32,7 +32,7 @@ float Heuristic::gfunctionKillsDist (int team, int currentIndex, int parentIndex
    return cost;
 }
 
-float Heuristic::gfunctionKillsDistCTWithHostage (int team, int currentIndex, int parentIndex) {
+float PlannerHeuristic::gfunctionKillsDistCTWithHostage (int team, int currentIndex, int parentIndex) {
    const auto &current = graph[currentIndex];
 
    if (current.flags & NodeFlag::NoHostage) {
@@ -44,7 +44,7 @@ float Heuristic::gfunctionKillsDistCTWithHostage (int team, int currentIndex, in
    return gfunctionKillsDist (team, currentIndex, parentIndex);
 }
 
-float Heuristic::gfunctionKills (int team, int currentIndex, int) {
+float PlannerHeuristic::gfunctionKills (int team, int currentIndex, int) {
    auto cost = practice.plannerGetDamage (team, currentIndex, currentIndex, false);
    const auto &current = graph[currentIndex];
 
@@ -60,7 +60,7 @@ float Heuristic::gfunctionKills (int team, int currentIndex, int) {
    return cost;
 }
 
-auto Heuristic::gfunctionKillsCTWithHostage (int team, int currentIndex, int parentIndex) -> float {
+auto PlannerHeuristic::gfunctionKillsCTWithHostage (int team, int currentIndex, int parentIndex) -> float {
    if (parentIndex == kInvalidNodeIndex) {
       return 0.0f;
    }
@@ -75,7 +75,7 @@ auto Heuristic::gfunctionKillsCTWithHostage (int team, int currentIndex, int par
    return gfunctionKills (team, currentIndex, parentIndex);
 }
 
-float Heuristic::gfunctionPathDist (int, int currentIndex, int parentIndex) {
+float PlannerHeuristic::gfunctionPathDist (int, int currentIndex, int parentIndex) {
    if (parentIndex == kInvalidNodeIndex) {
       return 0.0f;
    }
@@ -97,7 +97,7 @@ float Heuristic::gfunctionPathDist (int, int currentIndex, int parentIndex) {
    return kInfiniteHeuristic;
 }
 
-float Heuristic::gfunctionPathDistWithHostage (int, int currentIndex, int parentIndex) {
+float PlannerHeuristic::gfunctionPathDistWithHostage (int, int currentIndex, int parentIndex) {
    const auto &current = graph[currentIndex];
 
    if (current.flags & NodeFlag::NoHostage) {
@@ -109,7 +109,7 @@ float Heuristic::gfunctionPathDistWithHostage (int, int currentIndex, int parent
    return gfunctionPathDist (Team::Unassigned, currentIndex, parentIndex);
 }
 
-float Heuristic::hfunctionPathDist (int index, int, int goalIndex) {
+float PlannerHeuristic::hfunctionPathDist (int index, int, int goalIndex) {
    const auto &start = graph[index];
    const auto &goal = graph[goalIndex];
 
@@ -149,14 +149,14 @@ float Heuristic::hfunctionPathDist (int index, int, int goalIndex) {
    }
 }
 
-float Heuristic::hfunctionPathDistWithHostage (int index, int, int goalIndex) {
+float PlannerHeuristic::hfunctionPathDistWithHostage (int index, int, int goalIndex) {
    if (graph[index].flags & NodeFlag::NoHostage) {
       return kInfiniteHeuristic;
    }
    return hfunctionPathDist (index, kInvalidNodeIndex, goalIndex);
 }
 
-float Heuristic::hfunctionNone (int index, int, int goalIndex) {
+float PlannerHeuristic::hfunctionNone (int index, int, int goalIndex) {
    return hfunctionPathDist (index, kInvalidNodeIndex, goalIndex) / (128.0f * 10.0f);
 }
 
@@ -264,7 +264,7 @@ AStarResult AStarAlgo::find (int botTeam, int srcIndex, int destIndex, NodeAdder
    auto rsRandomizer = 1.0f;
 
    // randomize path on round start now and then
-   if (cv_path_randomize_on_round_start && bots.getRoundStartTime () + 4.0f > game.time ()) {
+   if (cv_path_randomize_on_round_start && bots.getRoundStartTime () + 2.0f > game.time ()) {
       rsRandomizer = rg (0.5f, static_cast <float> (botTeam) * 2.0f);
    }
 
@@ -315,7 +315,7 @@ AStarResult AStarAlgo::find (int botTeam, int srcIndex, int destIndex, NodeAdder
          // calculate the F value as F = G + H
          const float g = curRoute->g + m_gcalc (botTeam, child.index, currentIndex) * rsRandomizer;
          const float h = m_hcalc (child.index, kInvalidNodeIndex, destIndex);
-         const float f = cr::floorf (g + h);
+         const float f = plat.simd ? g + h : cr::ceilf (g + h + 0.5f);
 
          if (childRoute->state == RouteState::New || childRoute->f > f) {
             // put the current child into open list
@@ -515,9 +515,17 @@ void PathPlanner::init () {
    const float limitInMb = cv_path_floyd_memory_limit.as <float> ();
    const float memoryUse = static_cast <float> (sizeof (FloydWarshallAlgo::Matrix) * cr::sqrf (static_cast <size_t> (length)) / 1024 / 1024);
 
+   // ensure nodes are valid
+   m_pathsCheckFailed = !graph.checkNodes (false, true);
+
    // if we're have too much memory for floyd matrices, planner will use dijkstra or uniform planner for other than pathfinding needs
    if (memoryUse > limitInMb) {
       m_memoryLimitHit = true;
+
+      // we're need floyd tables when graph has failed sanity checks
+      if (m_pathsCheckFailed) {
+         m_memoryLimitHit = false;
+      }
    }
    m_dijkstra->init (length);
 

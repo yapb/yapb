@@ -49,7 +49,7 @@ public:
 };
 
 // bot heuristic functions for astar planner
-class Heuristic final {
+class PlannerHeuristic final {
 public:
    using Func = float (*) (int, int, int);
 
@@ -86,7 +86,7 @@ public:
 // A* algorithm for bots
 class AStarAlgo final : public NonCopyable {
 public:
-   using HeuristicFn = Heuristic::Func;
+   using HeuristicFn = PlannerHeuristic::Func;
 
 public:
    struct Route {
@@ -246,6 +246,7 @@ private:
    UniquePtr <DijkstraAlgo> m_dijkstra {};
    UniquePtr <FloydWarshallAlgo> m_floyd {};
    bool m_memoryLimitHit {};
+   bool m_pathsCheckFailed {};
 
 public:
    PathPlanner ();
@@ -267,6 +268,11 @@ public:
    // get the floyd algo
    decltype (auto) getFloydWarshall () {
       return m_floyd.get ();
+   }
+
+public:
+   bool isPathsCheckFailed () const {
+      return m_pathsCheckFailed;
    }
 
 public:

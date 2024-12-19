@@ -219,7 +219,7 @@ public:
    bool isNodeReacheableEx (const Vector &src, const Vector &destination, const float maxHeight);
    bool isNodeReacheable (const Vector &src, const Vector &destination);
    bool isNodeReacheableWithJump (const Vector &src, const Vector &destination);
-   bool checkNodes (bool teleportPlayer);
+   bool checkNodes (bool teleportPlayer, bool onlyPaths = false);
    bool isVisited (int index);
    bool isAnalyzed () const;
 

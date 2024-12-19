@@ -565,7 +565,7 @@ void Bot::blind_ () {
       && util.isPlayer (m_lastEnemy)
       && !usesSniper ()) {
 
-      auto error = kSprayDistance * cr::powf (m_lastEnemyOrigin.distance (pev->origin), 0.5f) / 2048.0f;
+      auto error = kSprayDistance * m_lastEnemyOrigin.distance (pev->origin) / 2048.0f;
       auto origin = m_lastEnemyOrigin;
 
       origin.x = origin.x + rg (-error, error);
@@ -645,14 +645,14 @@ void Bot::camp_ () {
          auto pathLength = m_lastPredictLength;
          auto predictNode = m_lastPredictIndex;
 
-         if (pathLength > 1 && graph.exists (predictNode)) {
+         if (pathLength > 1 && isNodeValidForPredict (predictNode)) {
             m_lookAtSafe = graph[predictNode].origin + pev->view_ofs;
          }
          else {
             pathLength = 0;
             predictNode = findAimingNode (m_lastEnemyOrigin, pathLength);
 
-            if (pathLength > 1 && graph.exists (predictNode)) {
+            if (pathLength > 1 && isNodeValidForPredict (predictNode)) {
                m_lookAtSafe = graph[predictNode].origin + pev->view_ofs;
             }
          }
@@ -1457,7 +1457,6 @@ void Bot::escapeFromBomb_ () {
 }
 
 void Bot::shootBreakable_ () {
-   m_aimFlags |= AimFlags::Override;
 
    // breakable destroyed?
    if (!util.isShootableBreakable (m_breakableEntity)) {
@@ -1473,6 +1472,8 @@ void Bot::shootBreakable_ () {
 
    // is bot facing the breakable?
    if (util.getConeDeviation (ent (), m_breakableOrigin) >= 0.95f && util.isVisible (m_breakableOrigin, ent ())) {
+      m_aimFlags |= AimFlags::Override;
+
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
 

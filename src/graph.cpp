@@ -524,6 +524,14 @@ int BotGraph::getEditorNearest (const float maxRange) {
 int BotGraph::getNearest (const Vector &origin, const float range, int flags) {
    // find the nearest node to that origin and return the index
 
+   // if not alot of nodes on the map, do not bother to use buckets here, we're dont
+   // get any performance improvement
+   constexpr auto kMinNodesForBucketsThreshold = 164;
+
+   if (length () < kMinNodesForBucketsThreshold) {
+      return getNearestNoBuckets (origin, range, flags);
+   }
+
    if (range > 256.0f && !cr::fequal (range, kInfiniteDistance)) {
       return getNearestNoBuckets (origin, range, flags);
    }
@@ -1803,6 +1811,13 @@ bool BotGraph::loadGraphData () {
             msg ("Warning: Graph data is probably not for this map. Please check bots behaviour.");
          }
       }
+
+      // notify user about graph problems
+      if (planner.isPathsCheckFailed ()) {
+         ctrl.msg ("Warning: Graph data has failed sanity check.");
+         ctrl.msg ("Warning: Bots will use only shortest-path algo for path finding.");
+         ctrl.msg ("Warning: This may significantly affect bots behavior on this map.");
+      }
       cv_debug_goal.set (kInvalidNodeIndex);
 
       // try to do graph collection, and push them to graph database automatically
@@ -2411,14 +2426,14 @@ bool BotGraph::isConnected (int index) {
    return false;
 }
 
-bool BotGraph::checkNodes (bool teleportPlayer) {
-
+bool BotGraph::checkNodes (bool teleportPlayer, bool onlyPaths) {
    auto teleport = [&] (const Path &path) -> void {
       if (teleportPlayer) {
          engfuncs.pfnSetOrigin (m_editor, path.origin);
          setEditFlag (GraphEdit::On | GraphEdit::Noclip);
       }
    };
+   const bool showErrors = !onlyPaths;
 
    int terrPoints = 0;
    int ctPoints = 0;
@@ -2429,14 +2444,18 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
       int connections = 0;
 
       if (path.number != static_cast <int> (m_paths.index (path))) {
-         msg ("Node %d path differs from index %d.", path.number, m_paths.index (path));
+         if (showErrors) {
+            msg ("Node %d path differs from index %d.", path.number, m_paths.index (path));
+         }
          break;
       }
 
       for (const auto &test : path.links) {
          if (test.index != kInvalidNodeIndex) {
             if (test.index > length ()) {
-               msg ("Node %d connected with invalid node %d.", path.number, test.index);
+               if (showErrors) {
+                  msg ("Node %d connected with invalid node %d.", path.number, test.index);
+               }
                return false;
             }
             ++connections;
@@ -2446,14 +2465,18 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
 
       if (connections == 0) {
          if (!isConnected (path.number)) {
-            msg ("Node %d isn't connected with any other node.", path.number);
+            if (showErrors) {
+               msg ("Node %d isn't connected with any other node.", path.number);
+            }
             return false;
          }
       }
 
       if (path.flags & NodeFlag::Camp) {
          if (path.end.empty ()) {
-            msg ("Node %d camp-endposition not set.", path.number);
+            if (showErrors) {
+               msg ("Node %d camp-endposition not set.", path.number);
+            }
             return false;
          }
       }
@@ -2473,13 +2496,17 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
       for (const auto &test : path.links) {
          if (test.index != kInvalidNodeIndex) {
             if (!exists (test.index)) {
-               msg ("Node %d path index %d out of range.", path.number, test.index);
+               if (showErrors) {
+                  msg ("Node %d path index %d out of range.", path.number, test.index);
+               }
                teleport (path);
 
                return false;
             }
             else if (test.index == path.number) {
-               msg ("Node %d path index %d points to itself.", path.number, test.index);
+               if (showErrors) {
+                  msg ("Node %d path index %d points to itself.", path.number, test.index);
+               }
                teleport (path);
 
                return false;
@@ -2494,17 +2521,21 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
          return false;
       }
    }
-   if (terrPoints == 0) {
-      msg ("You didn't set any terrorist important point.");
-      return false;
-   }
-   else if (ctPoints == 0) {
-      msg ("You didn't set any CT important point.");
-      return false;
-   }
-   else if (goalPoints == 0) {
-      msg ("You didn't set any goal point.");
-      return false;
+
+   // only check paths, but not necessity of different nodes
+   if (!onlyPaths) {
+      if (terrPoints == 0) {
+         msg ("You didn't set any terrorist important point.");
+         return false;
+      }
+      else if (ctPoints == 0) {
+         msg ("You didn't set any CT important point.");
+         return false;
+      }
+      else if (goalPoints == 0) {
+         msg ("You didn't set any goal point.");
+         return false;
+      }
    }
 
    // perform DFS instead of floyd-warshall, this shit speedup this process in a bit
@@ -2545,7 +2576,9 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
 
    for (const auto &path : m_paths) {
       if (!visited[path.number]) {
-         msg ("Path broken from node 0 to node %d.", path.number);
+         if (showErrors) {
+            msg ("Path broken from node 0 to node %d.", path.number);
+         }
          teleport (path);
 
          return false;
@@ -2588,7 +2621,9 @@ bool BotGraph::checkNodes (bool teleportPlayer) {
 
    for (const auto &path : m_paths) {
       if (!visited[path.number]) {
-         msg ("Path broken from node %d to node 0.", path.number);
+         if (showErrors) {
+            msg ("Path broken from node %d to node 0.", path.number);
+         }
          teleport (path);
 
          return false;

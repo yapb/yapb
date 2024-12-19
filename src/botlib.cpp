@@ -180,8 +180,9 @@ void Bot::checkBreakablesAround () {
       || !game.hasBreakables ()
       || m_seeEnemyTime + 4.0f > game.time ()
       || !game.isNullEntity (m_enemy)
-      || !hasPrimaryWeapon ()) {
-
+      || !hasPrimaryWeapon () 
+      || (m_aimFlags & (AimFlags::Danger | AimFlags::PredictPath | AimFlags::Enemy))
+      || getCurrentTaskId () != Task::Normal) {
       return;
    }
    const auto radius = cv_object_destroy_radius.as <float> ();
@@ -1751,9 +1752,9 @@ void Bot::syncUpdatePredictedIndex () {
    }
    ScopedUnlock <Mutex> unlock (m_predictLock);
 
+   const auto &botOrigin = pev->origin;
    const auto &lastEnemyOrigin = m_lastEnemyOrigin;
    const auto currentNodeIndex = m_currentNodeIndex;
-   const auto &botOrigin = pev->origin;
 
    if (lastEnemyOrigin.empty () || !vistab.isReady () || !util.isAlive (m_lastEnemy)) {
       wipePredict ();
@@ -1763,7 +1764,7 @@ void Bot::syncUpdatePredictedIndex () {
    const int destIndex = graph.getNearest (lastEnemyOrigin);
    int bestIndex = m_currentNodeIndex;
 
-   if (destIndex == kInvalidNodeIndex) {
+   if (!isNodeValidForPredict (destIndex)) {
       wipePredict ();
       return;
    }
@@ -1781,16 +1782,17 @@ void Bot::syncUpdatePredictedIndex () {
       return true;
    });
 
-   if (bestIndex != currentNodeIndex) {
+   if (isNodeValidForPredict (bestIndex)) {
       m_lastPredictIndex = bestIndex;
       m_lastPredictLength = pathLength;
 
       return;
    }
+   wipePredict ();
 }
 
 void Bot::updatePredictedIndex () {
-   if (m_lastEnemyOrigin.empty () || !vistab.isReady () || !util.isAlive (m_lastEnemy)) {
+   if (!m_isAlive || m_lastEnemyOrigin.empty () || !vistab.isReady () || !util.isAlive (m_lastEnemy)) {
       return; // do not run task if no last enemy
    }
 
@@ -4039,6 +4041,9 @@ void Bot::updateHearing () {
       }
 
       auto getHeardOriginWithError = [&] () -> Vector {
+         if (nearestDistanceSq > cr::sqrf (384.0f)) {
+            return m_hearedEnemy->v.origin;
+         }
          auto error = kSprayDistance * cr::powf (nearestDistanceSq, 0.5f) / 2048.0f;
          auto origin = m_hearedEnemy->v.origin;
 

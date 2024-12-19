@@ -494,7 +494,7 @@ void Bot::setAimDirection () {
       }
 
       auto doFailPredict = [this] () -> void {
-         if (m_timeNextTracking + 0.5f > game.time ()) {
+         if (m_lastPredictIndex != m_currentNodeIndex && m_timeNextTracking + 0.5f > game.time ()) {
             return; // do not fail instantly
          }
          m_aimFlags &= ~AimFlags::PredictPath;
@@ -507,7 +507,9 @@ void Bot::setAimDirection () {
       auto predictNode = m_lastPredictIndex;
 
       auto isPredictedIndexApplicable = [&] () -> bool {
-         if (!graph.exists (predictNode) || pathLength >= cv_max_nodes_for_predict.as <int> ()) {
+         if (!isNodeValidForPredict (predictNode)
+            || pathLength >= cv_max_nodes_for_predict.as <int> ()) {
+
             return false;
          }
 

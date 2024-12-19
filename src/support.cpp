@@ -32,7 +32,16 @@ BotSupport::BotSupport () {
       "engine is operative, hello and goodbye",
       "high amigo, your administration has been great last day",
       "attention, expect experimental armed hostile presence",
-      "warning, medical attention required"
+      "warning, medical attention required",
+      "high man, at your command",
+      "check check, test, mike check, talk device is activated",
+      "hello pal, at your service",
+      "good, day mister, your administration is now acknowledged",
+      "attention, anomalous agent activity, detected",
+      "mister, you are going down",
+      "all command access granted, over and out",
+      "buzwarn hostile presence detected nearest to your sector. over and out. doop"
+      "hostile resistance detected"
    };
 
    // register weapon aliases

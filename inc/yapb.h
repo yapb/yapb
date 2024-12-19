@@ -662,6 +662,7 @@ public:
    int m_weaponType {}; // current weapon type
    int m_ammoInClip[kMaxWeapons] {}; // ammo in clip for each weapons
    int m_ammo[MAX_AMMO_SLOTS] {}; // total ammo amounts
+   int m_deathCount {}; // number of bot deaths
 
    bool m_isVIP {}; // bot is vip?
    bool m_isAlive {}; // has the player been killed or has he just respawned
@@ -818,6 +819,11 @@ public:
 
    // execute client command helper
    template <typename ...Args> void issueCommand (const char *fmt, Args &&...args);
+
+   // checks if valid prediction index
+   bool isNodeValidForPredict (const int index) const {
+      return BotGraph::instance ().exists (index) && index != m_currentNodeIndex;
+   }
 
 private:
    // returns true if bot is using a sniper rifle

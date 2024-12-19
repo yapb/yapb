@@ -353,6 +353,7 @@ void MessageDispatcher::netMsgScoreInfo () {
    // if we're have bot, set the kd ratio
    if (bot != nullptr) {
       bot->m_kpdRatio = bot->pev->frags / cr::max (static_cast <float> (m_args[deaths].long_), 1.0f);
+      bot->m_deathCount = m_args[deaths].long_;
    }
 }
 

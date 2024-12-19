@@ -348,19 +348,20 @@ int BotControl::cmdExec () {
 int BotControl::cmdNode () {
    enum args { root, alias, cmd, cmd2 };
 
-   static Array <StringRef> allowedOnDedicatedServer {
+   static Array <StringRef> allowedOnHLDS {
       "acquire_editor",
       "upload",
       "save",
       "load",
       "help",
       "erase",
-      "fileinfo"
+      "fileinfo",
+      "check"
    };
 
    // check if cmd is allowed on dedicated server
-   auto isAllowedOnDedicatedServer = [] (StringRef str) -> bool {
-      for (const auto &test : allowedOnDedicatedServer) {
+   auto isAllowedOnHLDS = [] (StringRef str) -> bool {
+      for (const auto &test : allowedOnHLDS) {
          if (test == str) {
             return true;
          }
@@ -369,7 +370,7 @@ int BotControl::cmdNode () {
    };
 
    // graph editor supported only with editor
-   if (game.isDedicated () && !graph.hasEditor () && !isAllowedOnDedicatedServer (arg <StringRef> (cmd))) {
+   if (game.isDedicated () && !graph.hasEditor () && !isAllowedOnHLDS (arg <StringRef> (cmd))) {
       msg ("Unable to use graph edit commands without setting graph editor player. Please use \"graph acquire_editor\" to acquire rights for graph editing.");
       return BotCommandResult::Handled;
    }

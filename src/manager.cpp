@@ -906,7 +906,7 @@ void BotManager::setWeaponMode (int selection) {
 void BotManager::listBots () {
    // this function list's bots currently playing on the server
 
-   ctrl.msg ("%-3.5s\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.4s\t%-3.4s\t%-3.5s\t%-3.8s", "index", "name", "personality", "team", "difficulty", "frags", "alive", "timeleft");
+   ctrl.msg ("%-3.5s\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.4s\t%-3.4s\t%-3.6s\t%-3.5s\t%-3.8s", "index", "name", "personality", "team", "difficulty", "frags", "deaths", "alive", "timeleft");
 
    auto botTeam = [] (edict_t *ent) -> StringRef {
       const auto team = game.getRealTeam (ent);
@@ -930,9 +930,16 @@ void BotManager::listBots () {
    for (const auto &bot : bots) {
       auto timelimitStr = cv_rotate_bots ? strings.format ("%-3.0f secs", bot->m_stayTime - game.time ()) : "unlimited";
 
-      ctrl.msg ("[%-2.1d]\t%-22.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.4s\t%s",
-         bot->index (), bot->pev->netname.chars (), bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful",
-         botTeam (bot->ent ()), bot->m_difficulty, static_cast <int> (bot->pev->frags), bot->m_isAlive ? "yes" : "no", timelimitStr);
+      ctrl.msg ("[%-2.1d]\t%-22.16s\t%-10.12s\t%-3.4s\t%-3.1d\t%-3.1d\t%-3.1d\t%-3.4s\t%s",
+         bot->index (),
+         bot->pev->netname.chars (),
+         bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful",
+         botTeam (bot->ent ()),
+         bot->m_difficulty,
+         static_cast <int> (bot->pev->frags),
+         bot->m_deathCount,
+         bot->m_isAlive ? "yes" : "no",
+         timelimitStr);
    }
    ctrl.msg ("%d bots", m_bots.length ());
 }
@@ -1185,6 +1192,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    m_heavyTimestamp = game.time ();
    m_slowFrameTimestamp = 0.0f;
    m_kpdRatio = 0.0f;
+   m_deathCount = 0;
 
    // stuff from jk_botti
    m_playServerTime = 60.0f * rg (30.0f, 240.0f);

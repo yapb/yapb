@@ -362,6 +362,11 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offensive) {
          }
       }
    } while (sorting);
+
+   // the most worst case
+   if (goalChoices[0] == kInvalidNodeIndex) {
+      return m_chosenGoalIndex = graph.random ();
+   }
    return m_chosenGoalIndex = goalChoices[0]; // return and store goal
 }
 
@@ -1508,8 +1513,9 @@ bool Bot::updateLiftHandling () {
          else {
             MDLL_Use (button, ent ());
          }
+         const auto prevNode = m_previousNodes[0];
 
-         if (pev->origin.distanceSq2d (graph[m_previousNodes[0]].origin) < cr::sqrf (64.0f)) {
+         if (graph.exists (prevNode) && pev->origin.distanceSq2d (graph[prevNode].origin) < cr::sqrf (72.0f)) {
             wait ();
          }
       }
@@ -1522,10 +1528,13 @@ bool Bot::updateLiftHandling () {
       || m_liftState == LiftState::WaitingForTeammates
       || m_liftState == LiftState::WaitingFor) {
 
+      const auto prevNode = m_previousNodes[0];
+
       if (pev->groundentity == m_liftEntity
          && !cr::fzero (m_liftEntity->v.velocity.z)
          && isOnFloor ()
-         && ((graph[m_previousNodes[0]].flags & NodeFlag::Lift) || !game.isNullEntity (m_targetEntity))) {
+         && ((graph.exists (prevNode) && (graph[prevNode].flags & NodeFlag::Lift))
+            || !game.isNullEntity (m_targetEntity))) {
 
          m_liftState = LiftState::TravelingBy;
          m_liftUsageTime = game.time () + 14.0f;
@@ -3364,35 +3373,45 @@ void Bot::syncFindPath (int srcIndex, int destIndex, FindPath pathType) {
    }
    clearSearchNodes ();
 
+   m_chosenGoalIndex = srcIndex;
+   m_goalValue = 0.0f;
+
+   // always use shortest-path algorithm when failed sanity checks within load
+   if (planner.isPathsCheckFailed ()) {
+      findShortestPath (srcIndex, destIndex);
+
+      return;
+   }
+
    // get correct calculation for heuristic
    if (pathType == FindPath::Optimal) {
       if (game.mapIs (MapFlags::HostageRescue) && m_hasHostage) {
-         m_planner->setH (Heuristic::hfunctionPathDistWithHostage);
-         m_planner->setG (Heuristic::gfunctionKillsDistCTWithHostage);
+         m_planner->setH (PlannerHeuristic::hfunctionPathDistWithHostage);
+         m_planner->setG (PlannerHeuristic::gfunctionKillsDistCTWithHostage);
       }
       else {
-         m_planner->setH (Heuristic::hfunctionPathDist);
-         m_planner->setG (Heuristic::gfunctionKillsDist);
+         m_planner->setH (PlannerHeuristic::hfunctionPathDist);
+         m_planner->setG (PlannerHeuristic::gfunctionKillsDist);
       }
    }
    else if (pathType == FindPath::Safe) {
       if (game.mapIs (MapFlags::HostageRescue) && m_hasHostage) {
-         m_planner->setH (Heuristic::hfunctionNone);
-         m_planner->setG (Heuristic::gfunctionKillsCTWithHostage);
+         m_planner->setH (PlannerHeuristic::hfunctionNone);
+         m_planner->setG (PlannerHeuristic::gfunctionKillsCTWithHostage);
       }
       else {
-         m_planner->setH (Heuristic::hfunctionNone);
-         m_planner->setG (Heuristic::gfunctionKills);
+         m_planner->setH (PlannerHeuristic::hfunctionNone);
+         m_planner->setG (PlannerHeuristic::gfunctionKills);
       }
    }
    else {
       if (game.mapIs (MapFlags::HostageRescue) && m_hasHostage) {
-         m_planner->setH (Heuristic::hfunctionPathDistWithHostage);
-         m_planner->setG (Heuristic::gfunctionPathDistWithHostage);
+         m_planner->setH (PlannerHeuristic::hfunctionPathDistWithHostage);
+         m_planner->setG (PlannerHeuristic::gfunctionPathDistWithHostage);
       }
       else {
-         m_planner->setH (Heuristic::hfunctionPathDist);
-         m_planner->setG (Heuristic::gfunctionPathDist);
+         m_planner->setH (PlannerHeuristic::hfunctionPathDist);
+         m_planner->setG (PlannerHeuristic::gfunctionPathDist);
       }
    }
 
