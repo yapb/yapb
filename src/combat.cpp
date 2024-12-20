@@ -14,6 +14,7 @@ ConVar cv_check_enemy_invincibility ("check_enemy_invincibility", "0", "Enables 
 ConVar cv_stab_close_enemies ("stab_close_enemies", "1", "Enables or disables bot ability to stab the enemy with knife if bot is in good condition.");
 ConVar cv_use_engine_pvs_check ("use_engine_pvs_check", "0", "Use engine to check potential visibility of an enemy.");
 ConVar cv_use_hitbox_enemy_targeting ("use_hitbox_enemy_targeting", "0", "Use hitbox-based enemy targeting, instead of offset based. Use with the yb_use_engine_pvs_check enabled to reduce CPU usage.");
+ConVar cv_aim_trace_consider_glass ("aim_trace_consider_glass", "0", "Bots will consider glass when deciding to shoot enemies. Required for very special maps only.");
 
 ConVar mp_friendlyfire ("mp_friendlyfire", nullptr, Var::GameRef);
 ConVar sv_gravity ("sv_gravity", nullptr, Var::GameRef);
@@ -192,7 +193,7 @@ bool Bot::checkBodyPartsWithOffsets (edict_t *target) {
    auto self = pev->pContainingEntity;
 
    // creatures can't hurt behind anything
-   const auto ignoreFlags = m_isCreature ? TraceIgnore::None : TraceIgnore::Everything;
+   const auto ignoreFlags = m_isCreature ? TraceIgnore::None : (cv_aim_trace_consider_glass ?TraceIgnore::Monsters : TraceIgnore::Everything);
 
    const auto hitsTarget = [&] () -> bool {
       return result.flFraction >= 1.0f || result.pHit == target;
