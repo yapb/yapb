@@ -222,7 +222,12 @@ bool BotSupport::isDoorEntity (edict_t *ent) {
    if (game.isNullEntity (ent)) {
       return false;
    }
-   return ent->v.classname.str ().startsWith ("func_door");
+   const auto classHash = ent->v.classname.str ().hash ();
+
+   constexpr auto kFuncDoor = StringRef::fnv1a32 ("func_door");
+   constexpr auto kFuncDoorRotating = StringRef::fnv1a32 ("func_door_rotating");
+
+   return classHash == kFuncDoor || classHash == kFuncDoorRotating;
 }
 
 bool BotSupport::isHostageEntity (edict_t *ent) {
@@ -239,6 +244,11 @@ bool BotSupport::isHostageEntity (edict_t *ent) {
 
 bool BotSupport::isShootableBreakable (edict_t *ent) {
    if (game.isNullEntity (ent) || ent == game.getStartEntity ()) {
+      return false;
+   }
+   StringRef material = engfuncs.pfnInfoKeyValue (engfuncs.pfnGetInfoKeyBuffer (ent), "material");
+
+   if (material == "7") {
       return false;
    }
    const auto limit = cv_breakable_health_limit.as <float> ();

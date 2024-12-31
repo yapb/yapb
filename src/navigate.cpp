@@ -99,6 +99,7 @@ int Bot::findBestGoal () {
       }
       return findGoalPost (hasMoreHostagesAround ? GoalTactic::Goal : GoalTactic::RescueHostage, defensiveNodes, offensiveNodes);
    }
+   constexpr float kBehavior = 30.0f;
    const auto difficulty = static_cast <float> (m_difficulty);
 
    offensive = m_agressionLevel * 100.0f;
@@ -107,27 +108,27 @@ int Bot::findBestGoal () {
    if (game.mapIs (MapFlags::Assassination | MapFlags::HostageRescue)) {
       if (m_team == Team::Terrorist) {
          if (m_personality == Personality::Rusher) {
-            defensive -= 25.0f - difficulty * 0.5f;
-            offensive += 25.0f + difficulty * 5.0f;
+            defensive -= kBehavior - difficulty * 0.5f;
+            offensive += kBehavior + difficulty * 5.0f;
          }
          else if (m_personality == Personality::Normal && rg.chance (40)) {
-            defensive -= 25.0f;
-            offensive += 25.0f;
+            defensive -= kBehavior;
+            offensive += kBehavior;
          }
          else {
-            defensive += 25.0f;
-            offensive -= 25.0f;
+            defensive += kBehavior;
+            offensive -= kBehavior;
          }
       }
       else if (m_team == Team::CT) {
          // on hostage maps force more bots to save hostages
          if (game.mapIs (MapFlags::HostageRescue)) {
-            defensive -= 25.0f - difficulty * 0.5f;
-            offensive += 25.0f + difficulty * 5.0f;
+            defensive -= kBehavior - difficulty * 0.5f;
+            offensive += kBehavior + difficulty * 5.0f;
          }
          else {
-            defensive -= 25.0f;
-            offensive += 25.0f;
+            defensive -= kBehavior;
+            offensive += kBehavior;
          }
       }
    }
@@ -140,8 +141,8 @@ int Bot::findBestGoal () {
          }
          return m_chosenGoalIndex = findBombNode ();
       }
-      defensive += 25.0f + difficulty * 4.0f;
-      offensive -= 25.0f - difficulty * 0.5f;
+      defensive += kBehavior + difficulty * 5.0f;
+      offensive -= kBehavior - difficulty * 0.5f;
 
       if (m_personality != Personality::Rusher) {
          defensive += 10.0f;
@@ -155,12 +156,12 @@ int Bot::findBestGoal () {
    }
    else if (game.mapIs (MapFlags::Escape)) {
       if (m_team == Team::Terrorist) {
-         offensive += 25.0f + difficulty * 4.0f;
-         defensive -= 25.0f - difficulty * 0.5f;
+         offensive += kBehavior + difficulty * 5.0f;
+         defensive -= kBehavior - difficulty * 0.5f;
       }
       else if (m_team == Team::CT) {
-         offensive -= 25.0f - difficulty * 4.5f;
-         defensive += 25.0f + difficulty * 0.5f;
+         offensive -= kBehavior - difficulty * 5.0f;
+         defensive += kBehavior + difficulty * 0.5f;
       }
    }
 
@@ -188,6 +189,7 @@ int Bot::findBestGoal () {
    }
 
    if (goalDesire > tacticChoice) {
+      tacticChoice = goalDesire;
       tactic = GoalTactic::Goal;
    }
    return findGoalPost (tactic, defensiveNodes, offensiveNodes);
@@ -230,7 +232,7 @@ int Bot::findBestGoalWhenBombAction () {
          m_defendedBomb = true;
 
          result = findDefendNode (bombOrigin);
-         const Path &path = graph[result];
+         const auto &path = graph[result];
 
          const float bombTimer = mp_c4timer.as <float> ();
          const float timeMidBlowup = bots.getTimeBombPlanted () + (bombTimer * 0.5f + bombTimer * 0.25f) - graph.calculateTravelTime (pev->maxspeed, pev->origin, path.origin);
@@ -258,7 +260,11 @@ int Bot::findBestGoalWhenBombAction () {
 }
 
 int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offensive) {
-   int goalChoices[4] = { kInvalidNodeIndex, kInvalidNodeIndex, kInvalidNodeIndex, kInvalidNodeIndex };
+   int goalChoices[4] {};
+
+   for (int i = 0; i < 4; ++i) {
+      goalChoices[i] = kInvalidNodeIndex;
+   }
 
    if (tactic == GoalTactic::Defensive && !(*defensive).empty ()) { // careful goal
       postProcessGoals (*defensive, goalChoices);
@@ -282,7 +288,7 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offensive) {
          float nearestDistanceSq = kInfiniteDistance;
          int count = 0;
 
-         for (auto &point : graph.m_goalPoints) {
+         for (const auto &point : graph.m_goalPoints) {
             const float distanceSq = graph[point].origin.distanceSq (pev->origin);
 
             if (distanceSq > cr::sqrf (1024.0f)) {
@@ -313,7 +319,7 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offensive) {
       float nearestDistanceSq = kInfiniteDistance;
       int count = 0;
 
-      for (auto &point : graph.m_rescuePoints) {
+      for (const auto &point : graph.m_rescuePoints) {
          const float distanceSq = graph[point].origin.distanceSq (pev->origin);
 
          if (distanceSq < nearestDistanceSq) {
@@ -333,10 +339,6 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offensive) {
       }
    }
    ensureCurrentNodeIndex ();
-
-   if (goalChoices[0] == kInvalidNodeIndex) {
-      return m_chosenGoalIndex = graph.random ();
-   }
 
    // rusher bots does not care any danger (idea from pbmm)
    if (m_personality == Personality::Rusher) {
@@ -468,39 +470,23 @@ void Bot::ignoreCollision () {
 }
 
 void Bot::doPlayerAvoidance (const Vector &normal) {
-   if (cv_has_team_semiclip || game.is (GameFlags::FreeForAll)) {
+   if (isOnLadder () || cv_has_team_semiclip || game.is (GameFlags::FreeForAll)) {
       return; // no player avoiding when with semiclip plugin
    }
-
    m_hindrance = nullptr;
    float distanceSq = cr::sqrf (512.0f);
 
-   if (isOnLadder ()) {
-      return;
-   }
    const auto ownPrio = bots.getPlayerPriority (ent ());
 
    // find nearest player to bot
    for (const auto &client : util.getClients ()) {
-
-      // need only good meat
-      if (!(client.flags & ClientFlags::Used)) {
-         continue;
-      }
-
-      // and still alive meet
-      if (!(client.flags & ClientFlags::Alive)) {
-         continue;
-      }
-
-      // our team, alive and not myself?
-      if (client.team != m_team || client.ent == ent ()) {
+      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team != m_team || client.ent == ent ()) {
          continue;
       }
       const auto otherPrio = bots.getPlayerPriority (client.ent);
 
       // give some priorities to bot avoidance
-      if (ownPrio > otherPrio) {
+      if (ownPrio < otherPrio) {
          continue;
       }
 
@@ -509,7 +495,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
          const auto avoidPrio = bots.getPlayerPriority (m_hindrance);
 
          // ignore because we're already avoiding someone better
-         if (avoidPrio > otherPrio) {
+         if (avoidPrio < otherPrio) {
             continue;
          }
       }
@@ -525,7 +511,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
    if (game.isNullEntity (m_hindrance)) {
       return;
    }
-   const float interval = m_frameInterval * (!isDucking () && pev->velocity.lengthSq2d ()  > 0.0f ? 7.5f : 2.0f);
+   const float interval = m_frameInterval * (!isDucking () && pev->velocity.lengthSq2d () > 0.0f ? 7.5f : 2.0f);
 
    // use our movement angles, try to predict where we should be next frame
    Vector right {}, forward {};
@@ -551,9 +537,12 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
          setStrafeSpeed (normal, -pev->maxspeed);
       }
 
-      if (distanceSq < cr::sqrf (80.0f)) {
+      if (distanceSq < cr::sqrf (96.0f)) {
          if ((dir | forward.normalize2d_apx ()) < 0.0f) {
             m_moveSpeed = -pev->maxspeed;
+         }
+         else {
+            m_moveSpeed = pev->maxspeed;
          }
       }
    }
@@ -568,7 +557,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
    // standing still, no need to check?
    if (m_lastCollTime < game.time () && getCurrentTaskId () != Task::Attack) {
       // didn't we move enough previously?
-      if (movedDistance < 2.0f && (m_prevSpeed > 20.0f || m_prevVelocity < m_moveSpeed / 2)) {
+      if (movedDistance < 4.0f && (m_prevSpeed > 20.0f || m_prevVelocity < m_moveSpeed / 2)) {
          m_prevTime = game.time (); // then consider being stuck
          m_isStuck = true;
 
@@ -862,7 +851,7 @@ void Bot::checkFall () {
          }
       }
       else if (!isOnLadder () && !isInWater ()) {
-         if (!m_checkFallPoint[0].empty () && !m_checkFallPoint[1].empty ()) {
+         if (!m_checkFallPoint[0].empty () || !m_checkFallPoint[1].empty ()) {
             m_checkFall = true;
          }
       }
@@ -882,12 +871,12 @@ void Bot::checkFall () {
       && baseDistanceSq >= cr::sqrf (80.0f) && nowDistanceSq >= cr::sqrf (100.0f)) {
       fixFall = true;
    }
-   else if (pev->origin.z + 128.0f < m_checkFallPoint[1].z && pev->origin.z + 128.0f < m_checkFallPoint[0].z) {
+   else if (m_checkFallPoint[1].z > pev->origin.z + 128.0f || m_checkFallPoint[0].z > pev->origin.z + 128.0f) {
       fixFall = true;
    }
    else if (m_currentNodeIndex != kInvalidNodeIndex
-      && nowDistanceSq <= cr::sqrf (32.0f)
-      && pev->origin.z + 64.0f < m_checkFallPoint[1].z) {
+      && nowDistanceSq > cr::sqrf (16.0f)
+      && m_checkFallPoint[1].z > pev->origin.z + 62.0f) {
       fixFall = true;
    }
 
@@ -924,6 +913,26 @@ void Bot::moveToGoal () {
       if (pressDuck) {
          pev->button |= IN_DUCK;
       }
+   }
+
+   // press jump button if we need to leave the ladder
+   if (!(m_pathFlags & NodeFlag::Ladder)
+      && isPreviousLadder ()
+      && isOnFloor ()
+      && isOnLadder ()
+      && m_moveSpeed > 50.0f
+      && pev->velocity.lengthSq () < 50.0f) {
+
+      pev->button |= IN_JUMP;
+      m_jumpTime = game.time () + 1.0f;
+   }
+   const auto distanceSq2d = m_destOrigin.distanceSq2d (pev->origin + pev->velocity * m_frameInterval);
+
+   if (distanceSq2d < cr::sqrf (m_moveSpeed) * m_frameInterval && getTask ()->data != kInvalidNodeIndex) {
+      m_moveSpeed = distanceSq2d;
+   }
+   if (m_moveSpeed > pev->maxspeed) {
+      m_moveSpeed = pev->maxspeed;
    }
    m_lastUsedNodesTime = game.time ();
 
@@ -1083,8 +1092,10 @@ bool Bot::updateNavigation () {
          m_approachingLadderTimer.start (m_frameInterval * 4.0f);
       }
 
-      if (m_pathOrigin.z < pev->origin.z + 16.0f && !isOnLadder () && isOnFloor () && !isDucking ()) {
-         m_moveSpeed = ladderDistance;
+      if (!isOnLadder () && isOnFloor () && !isDucking ()) {
+         if (!isPreviousLadder ()) {
+            m_moveSpeed = ladderDistance;
+         }
 
          if (m_moveSpeed < 150.0f) {
             m_moveSpeed = 150.0f;
@@ -1107,17 +1118,14 @@ bool Bot::updateNavigation () {
 
          bool foundGround = false;
 
-         if (cr::abs (pev->origin.z - client.ent->v.origin.z) > 15.0f) {
-            if (isPreviousLadder ()) {
-               if (client.ent->v.origin.distanceSq (pev->origin) < cr::sqrf (64.0f)) {
-                  foundGround = true;
-               }
-            }
+         if (!isPreviousLadder ()
+            && client.ent->v.origin.distanceSq (pev->origin) < cr::sqrf (128.0f)
+            && cr::abs (client.ent->v.origin.z - pev->origin.z) > 17.0f) {
+            foundGround = true;
          }
 
          if (foundGround) {
-            clearSearchNodes ();
-            findNextBestNode ();
+            changeNodeIndex (prevNodeIndex);
          }
       }
    }
@@ -1140,8 +1148,11 @@ bool Bot::updateNavigation () {
       game.testLine (pev->origin, m_pathOrigin, TraceIgnore::Monsters, ent (), &tr);
 
       if (!game.isNullEntity (tr.pHit) && game.isNullEntity (m_liftEntity) && util.isDoorEntity (tr.pHit)) {
+         const auto &origin = game.getEntityOrigin (tr.pHit);
+         const float distanceSq = pev->origin.distanceSq (origin);
+
          // if the door is near enough...
-         if (pev->origin.distanceSq (game.getEntityOrigin (tr.pHit)) < cr::sqrf (50.0f)) {
+         if (distanceSq < cr::sqrf (56.0f)) {
             ignoreCollision (); // don't consider being stuck
 
             // also 'use' the door randomly
@@ -1175,8 +1186,8 @@ bool Bot::updateNavigation () {
          }
 
          // if bot hits the door, then it opens, so wait a bit to let it open safely
-         if (pev->velocity.lengthSq2d () < cr::sqrf (4.0f) && m_timeDoorOpen < game.time ()) {
-            if (getCurrentTaskId () != Task::MoveToPosition) {
+         if (pev->velocity.lengthSq2d () < cr::sqrf (10.0f) && m_timeDoorOpen < game.time ()) {
+            if (m_timeHitDoor >= game.time ()) {
                startTask (Task::Pause, TaskPri::Pause, kInvalidNodeIndex, game.time () + 0.5f, false);
             }
             m_timeDoorOpen = game.time () + 1.0f; // retry in 1 sec until door is open
@@ -1205,10 +1216,25 @@ bool Bot::updateNavigation () {
             else if (m_tryOpenDoor > 4) {
                m_tryOpenDoor = 0;
 
-               // go back to prev node, if  blocked for long time
-               if (graph.exists (m_previousNodes[0])) {
-                  startTask (Task::MoveToPosition, TaskPri::MoveToPosition, m_previousNodes[0], game.time () + 3.0f, true);
+               if (rg.chance (50)) {
+                  const auto prevNode = m_previousNodes[0];
+
+                  // go back to prev node, if blocked for long time
+                  if (graph.exists (prevNode)) {
+                     changeNodeIndex (prevNode);
+                  }
                }
+               else {
+                  const auto &dirToPoint = (pev->origin - origin).normalize2d_apx ();
+                  const auto &forwardMove = m_moveAngles.forward ().normalize2d_apx ();
+
+                  if (distanceSq < cr::sqrf (80.0f)) {
+                     if ((dirToPoint | forwardMove) < 0.0f && !checkWallOnBehind ()) {
+                        m_moveSpeed = -pev->maxspeed;
+                     }
+                  }
+               }
+               m_timeHitDoor = game.time () + 3.0f;
             }
          }
       }
@@ -1307,7 +1333,7 @@ bool Bot::updateNavigation () {
          && getCurrentTaskId () != Task::EscapeFromBomb
          && taskTarget != kInvalidNodeIndex) {
 
-         const Vector &bombOrigin = isBombAudible ();
+         const auto &bombOrigin = isBombAudible ();
 
          // bot within 'hearable' bomb tick noises?
          if (!bombOrigin.empty ()) {
@@ -1404,7 +1430,7 @@ bool Bot::updateLiftHandling () {
    }
    else if (!m_pathWalk.empty ()) { // no lift found at node
       if ((m_liftState == LiftState::None || m_liftState == LiftState::WaitingFor) && m_pathWalk.hasNext ()) {
-         int nextNode = m_pathWalk.next ();
+         const auto nextNode = m_pathWalk.next ();
 
          if (graph.exists (nextNode) && (graph[nextNode].flags & NodeFlag::Lift)) {
             game.testLine (m_path->origin, graph[nextNode].origin, TraceIgnore::Everything, ent (), &tr);
@@ -1727,8 +1753,13 @@ bool Bot::findNextBestNode () {
 
    int busyIndex = kInvalidNodeIndex;
 
-   float lessDist[3] = { kInfiniteDistance, kInfiniteDistance, kInfiniteDistance };
-   int lessIndex[3] = { kInvalidNodeIndex, kInvalidNodeIndex, kInvalidNodeIndex };
+   float lessDist[3] {};
+   int lessIndex[3] {};
+
+   for (int i = 0; i < 3; ++i) {
+      lessDist[i] = kInfiniteDistance;
+      lessIndex[i] = kInvalidNodeIndex;
+   }
 
    const auto &origin = pev->origin + pev->velocity * m_frameInterval;
    const auto &bucket = graph.getNodesInBucket (origin);
@@ -1785,19 +1816,10 @@ bool Bot::findNextBestNode () {
       const float distanceSq = pev->origin.distanceSq (path.origin);
 
       if (distanceSq < lessDist[0]) {
-         lessDist[2] = lessDist[1];
-         lessIndex[2] = lessIndex[1];
-
-         lessDist[1] = lessDist[0];
-         lessIndex[1] = lessIndex[0];
-
          lessDist[0] = distanceSq;
          lessIndex[0] = path.number;
       }
       else if (distanceSq < lessDist[1]) {
-         lessDist[2] = lessDist[1];
-         lessIndex[2] = lessIndex[1];
-
          lessDist[1] = distanceSq;
          lessIndex[1] = path.number;
       }
@@ -1888,7 +1910,7 @@ void Bot::findValidNode () {
          damageValue = cr::clamp (damageValue + 100, 0, kMaxDamageValue);
 
          // affect nearby connected with victim nodes
-         for (auto &neighbour : m_path->links) {
+         for (const auto &neighbour : m_path->links) {
             if (graph.exists (neighbour.index)) {
                int neighbourValue = practice.getDamage (team, neighbour.index, neighbour.index);
                neighbourValue = cr::clamp (neighbourValue + 100, 0, kMaxDamageValue);
@@ -2019,7 +2041,7 @@ int Bot::findBombNode () {
    float lastDistanceSq = kInfiniteDistance;
 
    // find nearest goal node either to bomb (if "heard" or player)
-   for (auto &point : goals) {
+   for (const auto &point : goals) {
       const float distanceSq = bomb.distanceSq (graph[point].origin);
 
       // check if we got more close distance
@@ -2211,7 +2233,7 @@ int Bot::findCoverNode (float maxDistance) {
    }
 
    // now get enemies neigbouring points
-   for (auto &link : graph[enemyIndex].links) {
+   for (const auto &link : graph[enemyIndex].links) {
       if (link.index != kInvalidNodeIndex) {
          enemies.push (link.index);
       }
@@ -2228,7 +2250,7 @@ int Bot::findCoverNode (float maxDistance) {
       }
       bool neighbourVisible = false; // now check neighbour nodes for visibility
 
-      for (auto &enemy : enemies) {
+      for (const auto &enemy : enemies) {
          if (vistab.visible (enemy, path.number)) {
             neighbourVisible = true;
             break;
@@ -2422,7 +2444,7 @@ bool Bot::advanceMovement () {
 
             m_campButtons = 0;
 
-            const int nextIndex = m_pathWalk.next ();
+            const auto nextIndex = m_pathWalk.next ();
             auto kills = static_cast <float> (practice.getDamage (m_team, nextIndex, nextIndex));
 
             // if damage done higher than one
@@ -2452,7 +2474,7 @@ bool Bot::advanceMovement () {
             }
 
             // force terrorist bot to plant bomb
-            if (m_inBombZone && !m_hasProgressBar && m_hasC4 && getCurrentTaskId () != Task::PlantBomb) {
+            if (m_inBombZone && !m_hasProgressBar && m_hasC4 && tid != Task::PlantBomb) {
                changeNextGoal ();
                return false;
             }
@@ -2462,7 +2484,7 @@ bool Bot::advanceMovement () {
       if (!m_pathWalk.empty ()) {
          m_jumpSequence = false;
 
-         const int destIndex = m_pathWalk.first ();
+         const auto destIndex = m_pathWalk.first ();
          bool isCurrentJump = false;
 
          // find out about connection flags
@@ -3158,13 +3180,13 @@ int Bot::getRandomCampDir () {
 }
 
 void Bot::setStrafeSpeed (const Vector &moveDir, float strafeSpeed) {
-   const Vector &los = (moveDir - pev->origin).normalize2d_apx ();
+   const auto &los = (moveDir - pev->origin).normalize2d_apx ();
    const float dot = los | pev->angles.forward ().get2d ();
 
    if (dot > 0.0f && !checkWallOnRight ()) {
       m_strafeSpeed = strafeSpeed;
    }
-   else if (!checkWallOnLeft ()) {
+   else if (dot < 0.0f && !checkWallOnLeft ()) {
       m_strafeSpeed = -strafeSpeed;
    }
 }
@@ -3371,15 +3393,10 @@ void Bot::syncFindPath (int srcIndex, int destIndex, FindPath pathType) {
       fprintf (stderr, "%s source path is same as dest (%d).\n", __func__, destIndex);
       return;
    }
-   clearSearchNodes ();
-
-   m_chosenGoalIndex = srcIndex;
-   m_goalValue = 0.0f;
 
    // always use shortest-path algorithm when failed sanity checks within load
    if (planner.isPathsCheckFailed ()) {
       findShortestPath (srcIndex, destIndex);
-
       return;
    }
 
@@ -3414,6 +3431,7 @@ void Bot::syncFindPath (int srcIndex, int destIndex, FindPath pathType) {
          m_planner->setG (PlannerHeuristic::gfunctionPathDist);
       }
    }
+   clearSearchNodes ();
 
    m_chosenGoalIndex = srcIndex;
    m_goalValue = 0.0f;

@@ -85,7 +85,7 @@ void Bot::avoidGrenades () {
    const auto &activeGrenades = bots.getActiveGrenades ();
 
    // find all grenades on the map
-   for (auto pent : activeGrenades) {
+   for (const auto &pent : activeGrenades) {
       if (pent->v.effects & EF_NODRAW) {
          continue;
       }
@@ -96,10 +96,7 @@ void Bot::avoidGrenades () {
       }
       auto model = pent->v.model.str (9);
 
-      if (m_preventFlashing < game.time ()
-         && cv_whose_your_daddy
-         && model == kFlashbangModelName) {
-
+      if (m_preventFlashing < game.time () && model == kFlashbangModelName) {
          // don't look at flash bang
          if (!(m_states & Sense::SeeingEnemy)) {
             m_lookAt.y = cr::wrapAngle ((game.getEntityOrigin (pent) - getEyesPos ()).angles ().y + 180.0f);
@@ -180,9 +177,7 @@ void Bot::checkBreakablesAround () {
       || !game.hasBreakables ()
       || m_seeEnemyTime + 4.0f > game.time ()
       || !game.isNullEntity (m_enemy)
-      || !hasPrimaryWeapon () 
-      || (m_aimFlags & (AimFlags::Danger | AimFlags::PredictPath | AimFlags::Enemy))
-      || getCurrentTaskId () != Task::Normal) {
+      || !hasPrimaryWeapon ()) {
       return;
    }
    const auto radius = cv_object_destroy_radius.as <float> ();
@@ -349,13 +344,13 @@ void Bot::updatePickups () {
       bool itemExists = false;
       auto pickupItem = m_pickupItem;
 
-      for (auto &ent : interesting) {
+      for (const auto &ent : interesting) {
 
          // in the periods of updating interesting entities we can get fake ones, that already were picked up, so double check if drawn
          if (ent->v.effects & EF_NODRAW) {
             continue;
          }
-         const Vector &origin = game.getEntityOrigin (ent);
+         const auto &origin = game.getEntityOrigin (ent);
 
          // too far from us ?
          if (pev->origin.distanceSq (origin) > radiusSq) {
@@ -595,7 +590,7 @@ void Bot::updatePickups () {
                   m_defendedBomb = true;
 
                   const int index = findDefendNode (origin);
-                  const Path &path = graph[index];
+                  const auto &path = graph[index];
 
                   const float bombTimer = mp_c4timer.as <float> ();
                   const float timeMidBlowup = bots.getTimeBombPlanted () + (bombTimer * 0.5f + bombTimer * 0.25f) - graph.calculateTravelTime (pev->maxspeed, pev->origin, path.origin);
@@ -638,7 +633,7 @@ void Bot::updatePickups () {
 
                   // don't steal hostage from human teammate (hack)
                   if (allowPickup) {
-                     for (auto &client : util.getClients ()) {
+                     for (const auto &client : util.getClients ()) {
                         if ((client.flags & ClientFlags::Used) && !(client.ent->v.flags & FL_FAKECLIENT) && (client.flags & ClientFlags::Alive) &&
                            client.team == m_team && client.ent->v.origin.distanceSq (ent->v.origin) <= cr::sqrf (240.0f)) {
                            allowPickup = false;
@@ -805,9 +800,9 @@ Vector Bot::getCampDirection (const Vector &dest) {
       float nearestDistance = kInfiniteDistance;
 
       int lookAtNode = kInvalidNodeIndex;
-      const Path &path = graph[tempIndex];
+      const auto &path = graph[tempIndex];
 
-      for (auto &link : path.links) {
+      for (const auto &link : path.links) {
          if (link.index == kInvalidNodeIndex) {
             continue;
          }
@@ -1658,7 +1653,8 @@ void Bot::overrideConditions () {
    const auto tid = getCurrentTaskId ();
 
    // check if we need to escape from bomb
-   if (game.mapIs (MapFlags::Demolition)
+   if ((tid == Task::Normal || tid == Task::MoveToPosition)
+      && game.mapIs (MapFlags::Demolition)
       && bots.isBombPlanted ()
       && m_isAlive
       && tid != Task::EscapeFromBomb
@@ -1717,8 +1713,8 @@ void Bot::overrideConditions () {
    }
 
    // special handling for reloading
-   if (!bots.isRoundOver () &&
-      tid == Task::Normal
+   if (!bots.isRoundOver ()
+      && tid == Task::Normal
       && m_reloadState != Reload::None
       && m_isReloading
       && !isDucking ()
@@ -1775,7 +1771,7 @@ void Bot::syncUpdatePredictedIndex () {
 
       const float distToBotSq = botOrigin.distanceSq (graph[index].origin);
 
-      if (vistab.visible (currentNodeIndex, index) && distToBotSq > 128.0f && distToBotSq < cr::sqrf (768.0f)) {
+      if (vistab.visible (currentNodeIndex, index) && distToBotSq < cr::sqrf (2048.0f)) {
          bestIndex = index;
          return false;
       }
@@ -1812,7 +1808,8 @@ void Bot::refreshEnemyPredict () {
          && distanceToLastEnemySq < cr::sqrf (256.0f)
          && m_shootTime + 1.5f > game.time ();
 
-      if (!(m_aimFlags & (AimFlags::Enemy | AimFlags::PredictPath)) && !denyLastEnemy && seesEntity (m_lastEnemyOrigin, true)) {
+      if (!(m_aimFlags & (AimFlags::Enemy | AimFlags::PredictPath | AimFlags::Danger))
+         && !denyLastEnemy && seesEntity (m_lastEnemyOrigin, true)) {
          m_aimFlags |= AimFlags::LastEnemy;
       }
    }
@@ -1993,8 +1990,8 @@ void Bot::filterTasks () {
 
    // increase/decrease fear/aggression if bot uses a sniping weapon to be more careful
    if (usesSniper ()) {
-      tempFear = tempFear * 1.2f;
-      tempAgression = tempAgression * 0.6f;
+      tempFear = tempFear * 1.5f;
+      tempAgression = tempAgression * 0.5f;
    }
    auto &filter = bots.getFilters ();
 
@@ -2675,7 +2672,7 @@ void Bot::checkRadioQueue () {
       switch (getCurrentTaskId ()) {
       case Task::Normal:
          if (getTask ()->data != kInvalidNodeIndex && rg.chance (70)) {
-            const Path &path = graph[getTask ()->data];
+            const auto &path = graph[getTask ()->data];
 
             if (path.flags & NodeFlag::Goal) {
                if (m_hasC4) {
@@ -2787,7 +2784,7 @@ void Bot::checkRadioQueue () {
          int bombPoint = kInvalidNodeIndex;
 
          // find nearest bomb node to player
-         for (auto &point : graph.m_goalPoints) {
+         for (const auto &point : graph.m_goalPoints) {
             distanceSq = graph[point].origin.distanceSq (m_radioEntity->v.origin);
 
             if (distanceSq < nearestDistanceSq) {
@@ -2932,7 +2929,7 @@ void Bot::frame () {
    }
 
    if (bots.isBombPlanted () && m_team == Team::CT && m_isAlive) {
-      const Vector &bombPosition = graph.getBombOrigin ();
+      const auto &bombPosition = graph.getBombOrigin ();
 
       if (!m_hasProgressBar
          && getCurrentTaskId () != Task::EscapeFromBomb
@@ -3057,9 +3054,9 @@ void Bot::logicDuringFreezetime () {
       return;
    }
 
-   if (rg.chance (15) && m_jumpTime + rg (1.0f, 2.0f) < game.time ()) {
+   if (rg.chance (15) && m_jumpTime < game.time ()) {
       pev->button |= IN_JUMP;
-      m_jumpTime = game.time ();
+      m_jumpTime = game.time () + rg (1.0f, 2.0f);
    }
    static Array <edict_t *> players {};
    players.clear ();
@@ -3189,7 +3186,7 @@ void Bot::checkSpawnConditions () {
 void Bot::logic () {
    // this function gets called each frame and is the core of all bot ai. from here all other subroutines are called
 
-   float movedDistance = 2.0f; // length of different vector (distance bot moved)
+   float movedDistance = 4.0f; // length of different vector (distance bot moved)
 
    resetMovement ();
 
@@ -3251,7 +3248,7 @@ void Bot::logic () {
          else if (!hasFriendNearby
             && rg.chance (50)
             && game.getTeam (m_enemy) != m_team
-            && isGroupOfEnemies (m_enemy->v.origin, 2, 384.0f)) {
+            && isGroupOfEnemies (m_enemy->v.origin)) {
 
             pushChatterMessage (Chatter::ScaredEmotion);
          }
@@ -3303,8 +3300,8 @@ void Bot::logic () {
    setIdealReactionTimers ();
 
    // calculate 2 direction vectors, 1 without the up/down component
-   const Vector &dirOld = m_destOrigin - (pev->origin + pev->velocity * m_frameInterval);
-   const Vector &dirNormal = dirOld.normalize2d_apx ();
+   const auto &dirOld = m_destOrigin - (pev->origin + pev->velocity * m_frameInterval);
+   const auto &dirNormal = dirOld.normalize2d_apx ();
 
    m_moveAngles = dirOld.angles ();
    m_moveAngles.clampAngles ();
@@ -3340,8 +3337,17 @@ void Bot::logic () {
       // don't duck to get away faster
       pev->button &= ~IN_DUCK;
 
-      m_moveSpeed = -pev->maxspeed;
-      m_strafeSpeed = pev->maxspeed * static_cast <float> (m_needAvoidGrenade);
+      Vector right {}, forward {};
+      pev->v_angle.angleVectors (&forward, &right, nullptr);
+
+      const auto &front = forward * -pev->maxspeed * 0.2f;
+      const auto &side = right * pev->maxspeed * static_cast <float> (m_needAvoidGrenade) * 0.2f;
+      const auto &spot = pev->origin + front + side + pev->velocity * m_frameInterval;
+
+      if (!isDeadlyMove (spot)) {
+         m_moveSpeed = -pev->maxspeed;
+         m_strafeSpeed = pev->maxspeed * static_cast <float> (m_needAvoidGrenade);
+      }
    }
 
    // ensure we're not stuck picking something
@@ -3836,7 +3842,7 @@ Vector Bot::isBombAudible () {
    if (m_difficulty > Difficulty::Hard) {
       return graph.getBombOrigin ();
    }
-   const Vector &bombOrigin = graph.getBombOrigin ();
+   const auto &bombOrigin = graph.getBombOrigin ();
 
    const float timeElapsed = ((game.time () - bots.getTimeBombPlanted ()) / mp_c4timer.as <float> ()) * 100.0f;
    float desiredRadius = 768.0f;
@@ -3865,8 +3871,8 @@ Vector Bot::isBombAudible () {
 bool Bot::canRunHeavyWeight () {
    constexpr auto kInterval = 1.0f / 10.0f;
 
-   if (m_heavyTimestamp + kInterval < game.time ()) {
-      m_heavyTimestamp = game.time ();
+   if (m_heavyTimestamp < game.time ()) {
+      m_heavyTimestamp = game.time () + kInterval;
 
       return true;
    }
@@ -3981,7 +3987,7 @@ void Bot::updateHearing () {
    float nearestDistanceSq = kInfiniteDistance;
 
    // do not hear to other enemies if just tracked old one
-   if (m_timeNextTracking < game.time () && util.isAlive (m_lastEnemy) && m_lastEnemy == m_trackingEdict) {
+   if (m_timeNextTracking < game.time () && m_lastEnemy == m_trackingEdict && util.isAlive (m_lastEnemy)) {
       m_hearedEnemy = m_lastEnemy;
       m_lastEnemyOrigin = m_lastEnemy->v.origin;
 

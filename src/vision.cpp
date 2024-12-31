@@ -361,9 +361,9 @@ bool Frustum::isObjectInsidePlane (const Plane &plane, const Vector &center, flo
       return plane.result + (plane.normal | point) >= 0.0f;
    };
 
-   const Vector &test = plane.normal.get2d ();
-   const Vector &top = center + Vector (0.0f, 0.0f, height * 0.5f) + test * radius;
-   const Vector &bottom = center - Vector (0.0f, 0.0f, height * 0.5f) + test * radius;
+   const auto &test = plane.normal.get2d ();
+   const auto &top = center + Vector (0.0f, 0.0f, height * 0.5f) + test * radius;
+   const auto &bottom = center - Vector (0.0f, 0.0f, height * 0.5f) + test * radius;
 
    return isPointInsidePlane (top) || isPointInsidePlane (bottom);
 }
@@ -403,7 +403,7 @@ void Frustum::calculate (Planes &planes, const Vector &viewAngle, const Vector &
 
 bool Frustum::check (const Planes &planes, edict_t *ent) const {
    constexpr auto kOffset = Vector (0.0f, 0.0f, 5.0f);
-   const Vector &origin = ent->v.origin - kOffset;
+   const auto &origin = ent->v.origin - kOffset;
 
    for (const auto &plane : planes) {
       if (!isObjectInsidePlane (plane, origin, 60.0f, 16.0f)) {
@@ -507,26 +507,25 @@ void Bot::setAimDirection () {
       auto predictNode = m_lastPredictIndex;
 
       auto isPredictedIndexApplicable = [&] () -> bool {
-         if (!isNodeValidForPredict (predictNode)
-            || pathLength >= cv_max_nodes_for_predict.as <int> ()) {
+         TraceResult result {};
+         game.testLine (getEyesPos (), graph[predictNode].origin + pev->view_ofs, TraceIgnore::None, ent (), &result);
 
+         if (result.flFraction < 0.5f) {
+            return false;
+         }
+         const float distToPredictNodeSq = graph[predictNode].origin.distanceSq (pev->origin);
+
+         if (distToPredictNodeSq >= cr::sqrf (2048.0f)) {
             return false;
          }
 
-         if (!vistab.visible (m_currentNodeIndex, predictNode)
-            || !vistab.visible (m_previousNodes[0], predictNode)
-            || !vistab.visible (predictNode, m_currentNodeIndex)) {
-
+         if (!vistab.visible (m_currentNodeIndex, predictNode) || !vistab.visible (m_previousNodes[0], predictNode)) {
             predictNode = kInvalidNodeIndex;
             pathLength = kInfiniteDistanceLong;
 
             return false;
          }
-
-         TraceResult result {};
-         game.testLine (getEyesPos (), graph[predictNode].origin + pev->view_ofs, TraceIgnore::None, ent (), &result);
-
-         return result.flFraction >= 0.8f && graph[predictNode].origin.distanceSq (pev->origin) > cr::sqrf (256.0f);
+         return isNodeValidForPredict (predictNode) && pathLength < cv_max_nodes_for_predict.as <int> ();
       };
 
       if (changePredictedEnemy) {

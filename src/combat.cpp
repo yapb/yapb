@@ -133,10 +133,11 @@ bool Bot::isEnemyInDarkArea (edict_t *enemy) {
    if (!cv_check_darkness && game.isNullEntity (enemy)) {
       return false;
    }
+   const auto &v = enemy->v;
    const auto scolor = illum.getSkyColor ();
 
    // check if node near the enemy have a degraded light level
-   const auto enemyNodeIndex = graph.getNearest (enemy->v.origin);
+   const auto enemyNodeIndex = graph.getNearest (v.origin);
 
    if (!graph.exists (enemyNodeIndex)) {
       return false;
@@ -149,9 +150,9 @@ bool Bot::isEnemyInDarkArea (edict_t *enemy) {
    }
    bool enemySemiTransparent = false;
 
-   const bool enemyHasGun = (enemy->v.weapons & kPrimaryWeaponMask) || (enemy->v.weapons & kSecondaryWeaponMask);
-   const bool enemyHasFlashlightEnabled = !!(enemy->v.effects & EF_DIMLIGHT);
-   const bool enemyIsAttacking = !!(enemy->v.oldbuttons & IN_ATTACK);
+   const bool enemyHasGun = (v.weapons & kPrimaryWeaponMask) || (v.weapons & kSecondaryWeaponMask);
+   const bool enemyIsAttacking = (v.button & IN_ATTACK) || (v.oldbuttons & IN_ATTACK);
+   const bool enemyHasFlashlightEnabled = !!(v.effects & EF_DIMLIGHT);
 
    if (!m_usesNVG && ((llevel < 3.0f && scolor > 50.0f) || (llevel < 25.0f && scolor <= 50.0f))
       && !enemyHasFlashlightEnabled && (!enemyIsAttacking || !enemyHasGun)) {
@@ -163,7 +164,7 @@ bool Bot::isEnemyInDarkArea (edict_t *enemy) {
       enemySemiTransparent = true;
    }
    TraceResult result {};
-   game.testLine (getEyesPos (), enemy->v.origin, m_isCreature ? TraceIgnore::None : TraceIgnore::Everything, ent (), &result);
+   game.testLine (getEyesPos (), v.origin, m_isCreature ? TraceIgnore::None : TraceIgnore::Everything, ent (), &result);
 
    return (result.flFraction <= 1.0f && result.pHit == enemy && (m_usesNVG || !enemySemiTransparent));
 }
@@ -193,7 +194,7 @@ bool Bot::checkBodyPartsWithOffsets (edict_t *target) {
    auto self = pev->pContainingEntity;
 
    // creatures can't hurt behind anything
-   const auto ignoreFlags = m_isCreature ? TraceIgnore::None : (cv_aim_trace_consider_glass ?TraceIgnore::Monsters : TraceIgnore::Everything);
+   const auto ignoreFlags = m_isCreature ? TraceIgnore::None : (cv_aim_trace_consider_glass ? TraceIgnore::Monsters : TraceIgnore::Everything);
 
    const auto hitsTarget = [&] () -> bool {
       return result.flFraction >= 1.0f || result.pHit == target;
@@ -390,7 +391,7 @@ bool Bot::lookupEnemies () {
       m_states |= Sense::SuspectEnemy;
 
       const bool denyLastEnemy = pev->velocity.lengthSq2d () > 0.0f
-         && pev->origin.distanceSq2d (m_lastEnemyOrigin) < cr::sqrf (256.0f)
+         && m_lastEnemyOrigin.distanceSq (pev->origin) < cr::sqrf (256.0f)
          && m_shootTime + 1.5f > game.time ();
 
       if (!(m_aimFlags & (AimFlags::Enemy | AimFlags::PredictPath | AimFlags::Danger))
@@ -1244,10 +1245,9 @@ void Bot::fireWeapons () {
    if (cv_stab_close_enemies && m_difficulty >= Difficulty::Normal
       && m_healthValue > 80.0f
       && !game.isNullEntity (m_enemy)
-      && m_healthValue >= m_enemy->v.health
       && distance < 100.0f
-      && !isOnLadder ()
-      && !isGroupOfEnemies (pev->origin)) {
+      && !isGroupOfEnemies (pev->origin)
+      && getCurrentTaskId () != Task::Camp) {
 
       selectWeapons (distance, selectIndex, selectId, choosenWeapon);
       return;
@@ -1428,13 +1428,14 @@ void Bot::attackMovement () {
          approach = 49;
       }
    }
+   const bool isEnemyCone = isInViewCone (m_enemy->v.origin);
 
    // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
    if (!game.is (GameFlags::CSDM) && !isKnifeMode ()) {
       if ((m_states & Sense::SeeingEnemy)
          && approach < 30
          && !bots.isBombPlanted ()
-         && (isInViewCone (m_enemy->v.origin) || m_isVIP || m_isReloading)) {
+         && (isEnemyCone || m_isVIP || m_isReloading)) {
 
          if (m_retreatTime < game.time ()) {
             startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, true);
@@ -1467,10 +1468,7 @@ void Bot::attackMovement () {
             m_fightStyle = Fight::Strafe;
          }
          else if (distanceSq < cr::sqrf (1024.0f)) {
-            if (isGroupOfEnemies (m_enemy->v.origin)) {
-               m_fightStyle = Fight::Strafe;
-            }
-            else if (rand < (usesSubmachine () ? 50 : 30)) {
+            if (rand < (usesSubmachine () ? 50 : 30)) {
                m_fightStyle = Fight::Strafe;
             }
             else {
@@ -1478,10 +1476,7 @@ void Bot::attackMovement () {
             }
          }
          else {
-            if (isGroupOfEnemies (m_enemy->v.origin)) {
-               m_fightStyle = Fight::Strafe;
-            }
-            else if (rand < (usesSubmachine () ? 80 : 90)) {
+            if (rand < (usesSubmachine () ? 80 : 90)) {
                m_fightStyle = Fight::Stay;
             }
             else {
@@ -1505,7 +1500,12 @@ void Bot::attackMovement () {
       // fire hurts friend value here is from previous frame, but acceptable, and saves us alot of cpu cycles
       if (approach < 30 || m_fireHurtsFriend || ((usesPistol () || usesShotgun ())
          && distanceSq < cr::sqrf (pistolStrafeDistance)
-         && isInViewCone (m_enemyOrigin))) {
+         && isEnemyCone)) {
+         m_fightStyle = Fight::Strafe;
+      }
+      const auto enemyWeaponIsSniper = (m_enemy->v.weapons & kSniperWeaponMask);
+
+      if (enemyWeaponIsSniper && isEnemyCone) {
          m_fightStyle = Fight::Strafe;
       }
       m_lastFightStyleCheck = game.time () + 3.0f;
@@ -1515,7 +1515,7 @@ void Bot::attackMovement () {
       m_moveSpeed = -pev->maxspeed;
    }
 
-   if (usesKnife () && isInViewCone (m_enemy->v.origin)) {
+   if (usesKnife () && isEnemyCone) {
       m_fightStyle = Fight::Strafe;
    }
 
@@ -1620,14 +1620,6 @@ void Bot::attackMovement () {
       }
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
-   }
-
-   if (m_difficulty >= Difficulty::Normal && isOnFloor () && m_duckTime < game.time ()) {
-      if (distanceSq < cr::sqrf (kSprayDistanceX2)) {
-         if (rg (0, 1000) < rg (5, 10) && pev->velocity.length2d () > 150.0f && isInViewCone (m_enemy->v.origin)) {
-            pev->button |= IN_JUMP;
-         }
-      }
    }
 
    if (m_isReloading) {
@@ -2003,27 +1995,28 @@ void Bot::updateTeamCommands () {
    m_timeTeamOrder = game.time () + rg (15.0f, 30.0f);
 }
 
-bool Bot::isGroupOfEnemies (const Vector &location, int numEnemies, float radius) {
+bool Bot::isGroupOfEnemies (const Vector &location) {
    int numPlayers = 0;
 
    // needs a square radius
-   const float radiusSq = cr::sqrf (radius);
+   const float radiusSq = cr::sqrf (768.0f);
 
    // search the world for enemy players...
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.ent == ent ()) {
+      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team == m_team || client.ent == ent ()) {
          continue;
       }
 
       if (client.ent->v.origin.distanceSq (location) < radiusSq) {
-         if (client.team == m_team) {
-            return false; // don't target our teammates...
+         if (!seesEntity (client.origin)) {
+            continue;
          }
-
-         if (numPlayers++ > numEnemies) {
-            return true;
-         }
+         ++numPlayers;
       }
+   }
+
+   if (numPlayers < 2) {
+      return false;
    }
    return false;
 }
@@ -2541,7 +2534,7 @@ bool Bot::isEnemyNoticeable (float range) {
       if (isCrouching) {
          // crouching and motionless - very tough to notice
          closeChance = 80.0f;
-         farChance = 5.0f;		// takes about three seconds to notice (50% chance)
+         farChance = 5.0f;	// takes about three seconds to notice (50% chance)
       }
       // standing
       else {

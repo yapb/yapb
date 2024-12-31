@@ -1509,6 +1509,7 @@ void Bot::newRound () {
    m_lastBreakable = nullptr;
 
    m_timeDoorOpen = 0.0f;
+   m_timeHitDoor = 0.0f;
 
    for (auto &fall : m_checkFallPoint) {
       fall.clear ();
@@ -1624,7 +1625,6 @@ void Bot::newRound () {
    m_dodgeStrafeDir = Dodge::None;
    m_fightStyle = Fight::None;
    m_lastFightStyleCheck = 0.0f;
-   m_stuckTimestamp = 0.0f;
 
    m_checkWeaponSwitch = true;
    m_checkKnifeSwitch = true;
@@ -2209,11 +2209,11 @@ void BotThreadWorker::startup (int workers) {
    m_botWorker.startup (static_cast <size_t> (requestedThreads));
 }
 
-bool BotManager::isLineBlockedBySmoke (const Vector &from, const Vector &to, float grenadeBloat) {
+bool BotManager::isLineBlockedBySmoke (const Vector &from, const Vector &to) {
    if (m_activeGrenades.empty ()) {
       return false;
    }
-   constexpr auto kSmokeGrenadeRadius = 115;
+   constexpr auto kSmokeGrenadeRadius = 115.0f;
 
    // distance along line of sight covered by smoke
    float totalSmokedLength = 0.0f;
@@ -2241,7 +2241,7 @@ bool BotManager::isLineBlockedBySmoke (const Vector &from, const Vector &to, flo
          continue;
       }
 
-      const float smokeRadiusSq = cr::sqrf (kSmokeGrenadeRadius) * cr::sqrf (grenadeBloat);
+      const float smokeRadiusSq = cr::sqrf (kSmokeGrenadeRadius);
       const Vector &smokeOrigin = game.getEntityOrigin (pent);
 
       Vector toGrenade = smokeOrigin - from;
