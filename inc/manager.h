@@ -128,7 +128,7 @@ public:
    bool kickRandom (bool decQuota = true, Team fromTeam = Team::Unassigned);
    bool balancedKickRandom (bool decQuota);
    bool hasCustomCSDMSpawnEntities ();
-   bool isLineBlockedBySmoke (const Vector &from, const Vector &to, float grenadeBloat = 1.0f);
+   bool isLineBlockedBySmoke (const Vector &from, const Vector &to);
    bool isFrameSkipDisabled ();
 
 public:

@@ -148,6 +148,12 @@ void Bot::normal_ () {
                campingAllowed = false;
             }
 
+            // if the bot is about to come to the camp spot, but there is already someone else camping
+            if (!campingAllowed && getTask ()->data == m_currentNodeIndex && getTask ()->data != kInvalidNodeIndex) {
+               clearSearchNodes ();
+               getTask ()->data = kInvalidNodeIndex;
+            }
+
             if (campingAllowed) {
                // crouched camping here?
                if (m_pathFlags & NodeFlag::Crouch) {
@@ -427,7 +433,7 @@ void Bot::seekCover_ () {
       startTask (Task::Hide, TaskPri::Hide, kInvalidNodeIndex, game.time () + rg (3.0f, 12.0f), false);
 
       // get a valid look direction
-      const Vector &dest = getCampDirection (m_lastEnemyOrigin);
+      const auto &dest = getCampDirection (m_lastEnemyOrigin);
 
       m_aimFlags |= AimFlags::Camp;
       m_lookAtSafe = dest;
@@ -641,18 +647,18 @@ void Bot::camp_ () {
 
    // random camp dir, or prediction
    auto useRandomCampDirOrPredictEnemy = [&] () {
-      if (!m_lastEnemyOrigin.empty ()) {
+      if (!m_lastEnemyOrigin.empty () && util.isAlive (m_lastEnemy)) {
          auto pathLength = m_lastPredictLength;
          auto predictNode = m_lastPredictIndex;
 
-         if (pathLength > 1 && isNodeValidForPredict (predictNode)) {
+         if (isNodeValidForPredict (predictNode) && pathLength > 1) {
             m_lookAtSafe = graph[predictNode].origin + pev->view_ofs;
          }
          else {
             pathLength = 0;
             predictNode = findAimingNode (m_lastEnemyOrigin, pathLength);
 
-            if (pathLength > 1 && isNodeValidForPredict (predictNode)) {
+            if (isNodeValidForPredict (predictNode) && pathLength > 1) {
                m_lookAtSafe = graph[predictNode].origin + pev->view_ofs;
             }
          }
@@ -681,7 +687,7 @@ void Bot::camp_ () {
          TraceResult tr {};
 
          // and use real angles to check it
-         auto to = m_pathOrigin + dest.forward () * 500.0f;
+         const auto &to = m_pathOrigin + dest.forward () * 500.0f;
 
          // let's check the destination
          game.testLine (getEyesPos (), to, TraceIgnore::Monsters, ent (), &tr);
@@ -886,7 +892,7 @@ void Bot::defuseBomb_ () {
       defuseRemainingTime = fullDefuseTime - game.time ();
    }
 
-   const Vector &bombPos = graph.getBombOrigin ();
+   const auto &bombPos = graph.getBombOrigin ();
    bool defuseError = false;
 
    // exception: bomb has been defused
@@ -1001,11 +1007,11 @@ void Bot::defuseBomb_ () {
          botStandOrigin = pev->origin;
       }
 
-      const float duckLengthSq = m_entity.distanceSq (botDuckOrigin);
-      const float standLengthSq = m_entity.distanceSq (botStandOrigin);
+      const float duckDistanceSq = m_entity.distanceSq (botDuckOrigin);
+      const float standDistanceSq = m_entity.distanceSq (botStandOrigin);
 
-      if (duckLengthSq > cr::sqrf (75.0f) || standLengthSq > cr::sqrf (75.0f)) {
-         if (standLengthSq < duckLengthSq) {
+      if (duckDistanceSq > cr::sqrf (75.0f) || standDistanceSq > cr::sqrf (75.0f)) {
+         if (standDistanceSq < duckDistanceSq) {
             m_duckDefuse = false; // stand
          }
          else {
@@ -1126,7 +1132,7 @@ void Bot::followUser_ () {
       int destIndex = graph.getNearest (m_targetEntity->v.origin);
       auto points = graph.getNearestInRadius (200.0f, m_targetEntity->v.origin);
 
-      for (auto &newIndex : points) {
+      for (const auto &newIndex : points) {
          // if node not yet used, assign it as dest
          if (newIndex != m_currentNodeIndex && !isOccupiedNode (newIndex)) {
             destIndex = newIndex;
@@ -1398,10 +1404,7 @@ void Bot::escapeFromBomb_ () {
       pev->button |= IN_ATTACK2;
    }
 
-   if (!usesKnife ()
-      && m_lastEnemyOrigin.empty ()
-      && !(m_states & Sense::SeeingEnemy)
-      && !util.isAlive (m_lastEnemy)) {
+   if (!usesKnife () && game.isNullEntity (m_enemy) && !util.isAlive (m_lastEnemy)) {
       selectWeaponById (Weapon::Knife);
    }
 
@@ -1457,7 +1460,6 @@ void Bot::escapeFromBomb_ () {
 }
 
 void Bot::shootBreakable_ () {
-
    // breakable destroyed?
    if (!util.isShootableBreakable (m_breakableEntity)) {
       completeTask ();
@@ -1471,11 +1473,11 @@ void Bot::shootBreakable_ () {
    m_lookAtSafe = m_breakableOrigin;
 
    // is bot facing the breakable?
-   if (util.getConeDeviation (ent (), m_breakableOrigin) >= 0.95f && util.isVisible (m_breakableOrigin, ent ())) {
-      m_aimFlags |= AimFlags::Override;
-
+   if (util.getConeDeviation (ent (), m_breakableOrigin) >= 0.90f) {
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
+
+      m_aimFlags |= AimFlags::Override;
 
       if (usesKnife ()) {
          selectBestWeapon ();
@@ -1501,7 +1503,7 @@ void Bot::pickupItem_ () {
 
       return;
    }
-   const Vector &dest = game.getEntityOrigin (m_pickupItem);
+   const auto &dest = game.getEntityOrigin (m_pickupItem);
 
    m_destOrigin = dest;
    m_entity = dest;
@@ -1669,7 +1671,7 @@ void Bot::pickupItem_ () {
                }
 
                // check if hostage is with a human teammate (hack)
-               for (auto &client : util.getClients ()) {
+               for (const auto &client : util.getClients ()) {
                   if ((client.flags & ClientFlags::Used) && !(client.ent->v.flags & FL_FAKECLIENT) && (client.flags & ClientFlags::Alive) &&
                      client.team == m_team && client.ent->v.origin.distanceSq (ent->v.origin) <= cr::sqrf (240.0f)) {
                      return EntitySearchResult::Continue;

@@ -237,6 +237,7 @@ private:
    float m_prevSpeed {}; // speed some frames before
    float m_prevVelocity {}; // velocity some frames before
    float m_timeDoorOpen {}; // time to next door open check
+   float m_timeHitDoor {}; // specific time after hitting the door
    float m_lastChatTime {}; // time bot last chatted
    float m_timeLogoSpray {}; // time bot last spray logo
    float m_knifeAttackTime {}; // time to rush with knife (at the beginning of the round)
@@ -284,7 +285,6 @@ private:
    float m_playServerTime {}; // time bot spent in the game
    float m_changeViewTime {}; // timestamp to change look at while at freezetime
    float m_breakableTime {}; // breakable acquired time
-   float m_stuckTimestamp {}; // last time was stuck
    float m_timeDebugUpdateTime {}; // time to update last debug timestamp
    float m_lastVictimTime {}; // time when bot killed an enemy
    float m_killsInterval {}; // interval between kills
@@ -437,7 +437,7 @@ private:
    bool isEnemyNoTarget (edict_t *enemy);
    bool isEnemyInDarkArea (edict_t *enemy);
    bool isFriendInLineOfFire (float distance);
-   bool isGroupOfEnemies (const Vector &location, int numEnemies = 1, float radius = 256.0f);
+   bool isGroupOfEnemies (const Vector &location);
    bool isPenetrableObstacle (const Vector &dest);
    bool isPenetrableObstacle1 (const Vector &dest, int penetratePower);
    bool isPenetrableObstacle2 (const Vector &dest, int penetratePower);
@@ -829,11 +829,6 @@ private:
    // returns true if bot is using a sniper rifle
    bool usesSniper () const {
       return m_weaponType == WeaponType::Sniper;
-   }
-
-   // returns true if bot is using a sniper rifle (awp)
-   bool usesSniperAWP () const {
-      return m_currentWeapon == Weapon::AWP;
    }
 
    // returns true if bot is using a rifle
