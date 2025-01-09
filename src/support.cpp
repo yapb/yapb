@@ -246,11 +246,14 @@ bool BotSupport::isShootableBreakable (edict_t *ent) {
    if (game.isNullEntity (ent) || ent == game.getStartEntity ()) {
       return false;
    }
+   // todo: move the breakables list into own array, and refresh them every round, since next thing is very expensive
+#if 0
    StringRef material = engfuncs.pfnInfoKeyValue (engfuncs.pfnGetInfoKeyBuffer (ent), "material");
 
    if (material == "7") {
       return false;
    }
+#endif
    const auto limit = cv_breakable_health_limit.as <float> ();
 
    // not shootable

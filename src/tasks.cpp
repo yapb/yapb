@@ -1460,8 +1460,6 @@ void Bot::escapeFromBomb_ () {
 }
 
 void Bot::shootBreakable_ () {
-   m_aimFlags |= AimFlags::Override;
-
    // breakable destroyed?
    if (!util.isShootableBreakable (m_breakableEntity)) {
       completeTask ();
@@ -1478,6 +1476,8 @@ void Bot::shootBreakable_ () {
    if (util.getConeDeviation (ent (), m_breakableOrigin) >= 0.90f) {
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
+
+      m_aimFlags |= AimFlags::Override;
 
       if (usesKnife ()) {
          selectBestWeapon ();

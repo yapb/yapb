@@ -1622,6 +1622,14 @@ void Bot::attackMovement () {
       m_strafeSpeed = 0.0f;
    }
 
+   if (m_difficulty >= Difficulty::Normal && isOnFloor () && m_duckTime < game.time ()) {
+      if (distanceSq < cr::sqrf (kSprayDistanceX2)) {
+         if (rg (0, 1000) < rg (5, 10) && pev->velocity.length2d () > 150.0f && isEnemyCone) {
+            pev->button |= IN_JUMP;
+         }
+      }
+   }
+
    if (m_isReloading) {
       m_moveSpeed = -pev->maxspeed;
       m_duckTime = game.time () - 1.0f;

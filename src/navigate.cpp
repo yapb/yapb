@@ -99,7 +99,7 @@ int Bot::findBestGoal () {
       }
       return findGoalPost (hasMoreHostagesAround ? GoalTactic::Goal : GoalTactic::RescueHostage, defensiveNodes, offensiveNodes);
    }
-   constexpr float kBehavior = 30.0f;
+   constexpr float kBehaviorBase = 30.0f;
    const auto difficulty = static_cast <float> (m_difficulty);
 
    offensive = m_agressionLevel * 100.0f;
@@ -108,27 +108,27 @@ int Bot::findBestGoal () {
    if (game.mapIs (MapFlags::Assassination | MapFlags::HostageRescue)) {
       if (m_team == Team::Terrorist) {
          if (m_personality == Personality::Rusher) {
-            defensive -= kBehavior - difficulty * 0.5f;
-            offensive += kBehavior + difficulty * 5.0f;
+            defensive -= kBehaviorBase - difficulty * 0.5f;
+            offensive += kBehaviorBase + difficulty * 5.0f;
          }
          else if (m_personality == Personality::Normal && rg.chance (40)) {
-            defensive -= kBehavior;
-            offensive += kBehavior;
+            defensive -= kBehaviorBase;
+            offensive += kBehaviorBase;
          }
          else {
-            defensive += kBehavior;
-            offensive -= kBehavior;
+            defensive += kBehaviorBase;
+            offensive -= kBehaviorBase;
          }
       }
       else if (m_team == Team::CT) {
          // on hostage maps force more bots to save hostages
          if (game.mapIs (MapFlags::HostageRescue)) {
-            defensive -= kBehavior - difficulty * 0.5f;
-            offensive += kBehavior + difficulty * 5.0f;
+            defensive -= kBehaviorBase - difficulty * 0.5f;
+            offensive += kBehaviorBase + difficulty * 5.0f;
          }
          else {
-            defensive -= kBehavior;
-            offensive += kBehavior;
+            defensive -= kBehaviorBase;
+            offensive += kBehaviorBase;
          }
       }
    }
@@ -141,8 +141,8 @@ int Bot::findBestGoal () {
          }
          return m_chosenGoalIndex = findBombNode ();
       }
-      defensive += kBehavior + difficulty * 5.0f;
-      offensive -= kBehavior - difficulty * 0.5f;
+      defensive += kBehaviorBase + difficulty * 5.0f;
+      offensive -= kBehaviorBase - difficulty * 0.5f;
 
       if (m_personality != Personality::Rusher) {
          defensive += 10.0f;
@@ -156,12 +156,12 @@ int Bot::findBestGoal () {
    }
    else if (game.mapIs (MapFlags::Escape)) {
       if (m_team == Team::Terrorist) {
-         offensive += kBehavior + difficulty * 5.0f;
-         defensive -= kBehavior - difficulty * 0.5f;
+         offensive += kBehaviorBase + difficulty * 5.0f;
+         defensive -= kBehaviorBase - difficulty * 0.5f;
       }
       else if (m_team == Team::CT) {
-         offensive -= kBehavior - difficulty * 5.0f;
-         defensive += kBehavior + difficulty * 0.5f;
+         offensive -= kBehaviorBase - difficulty * 5.0f;
+         defensive += kBehaviorBase + difficulty * 0.5f;
       }
    }
 
