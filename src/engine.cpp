@@ -62,6 +62,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
 
    // clear all breakables before initialization
    m_breakables.clear ();
+   m_checkedBreakables.clear ();
 
    // initialize all config files
    conf.loadConfigs ();
@@ -154,7 +155,10 @@ void Game::levelInitialize (edict_t *entities, int max) {
       else if (classname.startsWith ("func_button")) {
          m_mapFlags |= MapFlags::HasButtons;
       }
-      else if (util.isShootableBreakable (ent)) {
+      else if (util.isBreakableEntity (ent, true)) {
+
+         // add breakable for material check
+         m_checkedBreakables[indexOfEntity (ent)] = ent->v.impulse <= 0;
          m_breakables.push (ent);
       }
    }
@@ -1227,6 +1231,10 @@ edict_t *Game::createFakeClient (StringRef name) {
    ent->pvPrivateData = nullptr;
 
    return ent;
+}
+
+void Game::markBreakableAsInvalid (edict_t *ent) {
+   m_checkedBreakables[indexOfEntity (ent)] = false;
 }
 
 void LightMeasure::initializeLightstyles () {

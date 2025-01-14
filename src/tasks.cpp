@@ -1460,8 +1460,9 @@ void Bot::escapeFromBomb_ () {
 }
 
 void Bot::shootBreakable_ () {
+
    // breakable destroyed?
-   if (!util.isShootableBreakable (m_breakableEntity)) {
+   if (!util.isBreakableEntity (m_breakableEntity)) {
       completeTask ();
       return;
    }
@@ -1469,30 +1470,30 @@ void Bot::shootBreakable_ () {
 
    m_checkTerrain = false;
    m_moveToGoal = false;
+
    m_navTimeset = game.time ();
    m_lookAtSafe = m_breakableOrigin;
 
    // is bot facing the breakable?
-   if (util.getConeDeviation (ent (), m_breakableOrigin) >= 0.90f) {
+   if (util.getConeDeviation (ent (), m_lookAtSafe) >= 0.95f) {
+      m_aimFlags |= AimFlags::Override;
+
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
 
-      m_aimFlags |= AimFlags::Override;
-
-      if (usesKnife ()) {
-         selectBestWeapon ();
-      }
       m_wantsToFire = true;
       m_shootTime = game.time ();
+
+      if (!hasAnyAmmoInClip ()
+         && usesKnife ()
+         && pev->origin.distanceSq (m_lookAtSafe) > cr::sqrf (72.0f)) {
+
+         completeTask ();
+      }
    }
    else {
       m_checkTerrain = true;
       m_moveToGoal = true;
-
-      m_breakableOrigin.clear ();
-      m_breakableEntity = nullptr;
-
-      completeTask ();
    }
 }
 

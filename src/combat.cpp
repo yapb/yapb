@@ -1147,6 +1147,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
          }
       }
    }
+   const float timeDelta = game.time () - m_frameInterval;
 
    // need to care for burst fire?
    if (distance < kSprayDistance || m_blindTime > game.time () || usesKnife ()) {
@@ -1164,7 +1165,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
       }
       else {
          // if automatic weapon press attack
-         if (tab[choosen].primaryFireHold && getAmmo (tab[index].id) > tab[index].minPrimaryAmmo) {
+         if (tab[choosen].primaryFireHold && getAmmoInClip () > tab[index].minPrimaryAmmo) {
             pev->button |= IN_ATTACK;
          }
 
@@ -1177,13 +1178,13 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
       }
 
       if (pev->button & IN_ATTACK) {
-         m_shootTime = game.time ();
+         m_shootTime = timeDelta;
       }
    }
    else {
       // don't attack with knife over long distance
       if (id == Weapon::Knife) {
-         m_shootTime = game.time ();
+         m_shootTime = timeDelta;
          return;
       }
 
@@ -1192,8 +1193,8 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
       }
 
       if (tab[choosen].primaryFireHold) {
-         m_shootTime = game.time ();
-         m_zoomCheckTime = game.time ();
+         m_shootTime = timeDelta;
+         m_zoomCheckTime = timeDelta;
 
          pev->button |= IN_ATTACK; // use primary attack
       }
@@ -1207,8 +1208,8 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
 
          const int offset = cr::abs <int> (m_difficulty * 25 / 20 - 5);
 
-         m_shootTime = game.time () + 0.1f + rg (kMinFireDelay[offset], kMaxFireDelay[offset]);
-         m_zoomCheckTime = game.time ();
+         m_shootTime = timeDelta + 0.1f + rg (kMinFireDelay[offset], kMaxFireDelay[offset]);
+         m_zoomCheckTime = timeDelta;
       }
    }
 }

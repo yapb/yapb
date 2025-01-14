@@ -164,6 +164,8 @@ private:
    edict_t *m_localEntity {};
 
    Array <edict_t *> m_breakables {};
+   HashMap <int32_t, bool> m_checkedBreakables {};
+
    SmallArray <ConVarReg> m_cvars {};
    SharedLibrary m_gameLib {};
    SharedLibrary m_engineLib {};
@@ -268,6 +270,9 @@ public:
 
    // creates a fake client's a nd resets all the entvars
    edict_t *createFakeClient (StringRef name);
+
+   // mark breakable entity as invalid
+   void markBreakableAsInvalid (edict_t *ent);
 
    // public inlines
 public:
@@ -422,6 +427,11 @@ public:
    // map has breakables ?
    bool hasBreakables () const {
       return !m_breakables.empty ();
+   }
+
+   // is breakable entity is valid ?
+   bool isBreakableValid (edict_t *ent) {
+      return m_checkedBreakables[indexOfEntity (ent)];
    }
 
    // find variable value by variable name

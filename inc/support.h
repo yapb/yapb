@@ -56,7 +56,7 @@ public:
    bool isDoorEntity (edict_t *ent);
 
    // this function is checking that pointed by ent pointer obstacle, can be destroyed
-   bool isShootableBreakable (edict_t *ent);
+   bool isBreakableEntity (edict_t *ent, bool initialSeed = false);
 
    // nearest player search helper
    bool findNearestPlayer (void **holder, edict_t *to, float searchDistance = 4096.0, bool sameTeam = false, bool needBot = false, bool needAlive = false, bool needDrawn = false, bool needBotWithC4 = false);

@@ -242,21 +242,19 @@ bool BotSupport::isHostageEntity (edict_t *ent) {
    return classHash == kHostageEntity || classHash == kMonsterScientist;
 }
 
-bool BotSupport::isShootableBreakable (edict_t *ent) {
-   if (game.isNullEntity (ent) || ent == game.getStartEntity ()) {
-      return false;
+bool BotSupport::isBreakableEntity (edict_t *ent, bool initialSeed) {
+   if (!initialSeed) {
+      if (!game.hasBreakables ()) {
+         return false;
+      }
    }
-   // todo: move the breakables list into own array, and refresh them every round, since next thing is very expensive
-#if 0
-   StringRef material = engfuncs.pfnInfoKeyValue (engfuncs.pfnGetInfoKeyBuffer (ent), "material");
 
-   if (material == "7") {
+   if (game.isNullEntity (ent) || ent == game.getStartEntity () || (!initialSeed && !game.isBreakableValid (ent))) {
       return false;
    }
-#endif
    const auto limit = cv_breakable_health_limit.as <float> ();
 
-   // not shootable
+   // not shoot-able
    if (ent->v.health >= limit) {
       return false;
    }
@@ -271,14 +269,12 @@ bool BotSupport::isShootableBreakable (edict_t *ent) {
          return ent->v.movetype == MOVETYPE_PUSH || ent->v.movetype == MOVETYPE_PUSHSTEP;
       }
    }
+
    return false;
 }
 
 bool BotSupport::isFakeClient (edict_t *ent) {
-   if (bots[ent] != nullptr || (!game.isNullEntity (ent) && (ent->v.flags & FL_FAKECLIENT))) {
-      return true;
-   }
-   return false;
+   return bots[ent] != nullptr || (!game.isNullEntity (ent) && (ent->v.flags & FL_FAKECLIENT));
 }
 
 void BotSupport::checkWelcome () {

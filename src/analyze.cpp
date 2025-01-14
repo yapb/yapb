@@ -307,7 +307,7 @@ void GraphAnalyze::flood (const Vector &pos, const Vector &next, float range) {
    game.testHull (pos, { next.x, next.y, next.z + 19.0f }, TraceIgnore::Monsters, head_hull, nullptr, &tr);
 
    // we're can't reach next point
-   if (!cr::fequal (tr.flFraction, 1.0f) && !util.isShootableBreakable (tr.pHit)) {
+   if (!cr::fequal (tr.flFraction, 1.0f) && !util.isBreakableEntity (tr.pHit)) {
       return;
    }
 

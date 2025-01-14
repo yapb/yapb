@@ -153,6 +153,10 @@ void Bot::avoidGrenades () {
 }
 
 void Bot::checkBreakable (edict_t *touch) {
+   if (!game.hasBreakables ()) {
+      return;
+   }
+
    if (game.isNullEntity (touch)) {
       m_breakableEntity = lookupBreakable ();
    }
@@ -199,7 +203,7 @@ void Bot::checkBreakablesAround () {
          continue;
       }
 
-      if (!util.isShootableBreakable (breakable)) {
+      if (!util.isBreakableEntity (breakable)) {
          continue;
       }
 
@@ -246,26 +250,69 @@ void Bot::checkBreakablesAround () {
 edict_t *Bot::lookupBreakable () {
    // this function checks if bot is blocked by a shoot able breakable in his moving direction
 
-   TraceResult tr {};
-   game.testLine (pev->origin, pev->origin + (m_destOrigin - pev->origin).normalize_apx () * 72.0f, TraceIgnore::None, ent (), &tr);
+   auto doLookup = [&] (const Vector &start, const Vector &end, const float dist) -> edict_t * {
+      TraceResult tr {};
+      game.testLine (start, start + (end - start).normalize_apx () * dist, TraceIgnore::None, ent (), &tr);
 
-   if (!cr::fequal (tr.flFraction, 1.0f)) {
-      auto ent = tr.pHit;
+      if (!cr::fequal (tr.flFraction, 1.0f)) {
+         auto hit = tr.pHit;
 
-      // check if this isn't a triggered (bomb) breakable and if it takes damage. if true, shoot the crap!
-      if (util.isShootableBreakable (ent)) {
-         m_breakableOrigin = game.getEntityOrigin (ent);
-         return ent;
+         // check if this isn't a triggered (bomb) breakable and if it takes damage. if true, shoot the crap!
+         if (util.isBreakableEntity (hit)) {
+            m_breakableOrigin = tr.vecEndPos;
+            m_breakableEntity = hit;
+
+            return hit;
+         }
       }
-   }
-   game.testLine (getEyesPos (), getEyesPos () + (m_destOrigin - getEyesPos ()).normalize_apx () * 72.0f, TraceIgnore::None, ent (), &tr);
+      return nullptr;
+   };
 
-   if (!cr::fequal (tr.flFraction, 1.0f)) {
-      auto ent = tr.pHit;
+   // got recipe from KWo
+   for (auto i = 0; i < 5; ++i) {
+      if (i == 1 && game.isNullEntity (m_breakableEntity)) {
+         continue;
+      }
+      Vector end = m_pathOrigin;
+      Vector start = getEyesPos ();
 
-      if (util.isShootableBreakable (ent)) {
-         m_breakableOrigin = game.getEntityOrigin (ent);
-         return ent;
+      if (graph.exists (m_currentNodeIndex)) {
+         end = graph[m_currentNodeIndex].origin;
+      }
+
+      switch (i) {
+      case 0:
+         if (graph.exists (m_previousNodes[0])) {
+            start = graph[m_previousNodes[0]].origin;
+         }
+         else {
+            continue;
+         }
+         break;
+
+      case 1:
+         start = getEyesPos ();
+         end = game.getEntityOrigin (m_breakableEntity);
+         break;
+
+      case 2:
+         start = pev->origin;
+         end = m_destOrigin;
+         break;
+
+      case 3:
+         start = getEyesPos ();
+         end = m_destOrigin;
+         break;
+
+      case 4:
+         start = getEyesPos ();
+         break;
+      }
+      auto hit = doLookup (start, end, usesKnife () ? 32.0f : rg (72.0f, 256.0f));
+
+      if (!game.isNullEntity (hit)) {
+         return hit;
       }
    }
    m_breakableEntity = nullptr;

@@ -153,10 +153,13 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       // the two entities both have velocities, for example two players colliding, this function
       // is called twice, once for each entity moving.
 
-      if (!game.isNullEntity (pentTouched) && pentOther != game.getStartEntity ()) {
+      if (game.hasBreakables ()
+         && !game.isNullEntity (pentTouched)
+         && pentOther != game.getStartEntity ()) {
+
          auto bot = bots[pentTouched];
 
-         if (bot && util.isShootableBreakable (pentOther)) {
+         if (bot && util.isBreakableEntity (pentOther)) {
             bot->checkBreakable (pentOther);
          }
       }
@@ -413,6 +416,14 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
 
    if (game.is (GameFlags::HasFakePings) && !game.is (GameFlags::Metamod)) {
       table->pfnUpdateClientData = [] (const struct edict_s *player, int sendweapons, struct clientdata_s *cd) {
+         // this function is a synchronization tool that is used periodically by the engine to tell
+         // the game DLL to send player info over the network to one of its clients when it suspects
+         // that this client is desynchronizing. Early bots were using it to ask the game DLL for the
+         // weapon list of players (by setting sendweapons to TRUE), but most of the time having a
+         // look around the ent->v.weapons bitmask is enough, since that's the place commonly used for
+         // MODs to store weapon information. If it can't be read from there, catching a few network
+         // messages (like in DMC) do the job better than this function anyway.
+
          dllapi.pfnUpdateClientData (player, sendweapons, cd);
 
          // do a post-processing with non-metamod
@@ -438,6 +449,28 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
          RETURN_META (MRES_IGNORED);
       }
       dllapi.pfnPM_Move (pm, server);
+   };
+
+   table->pfnKeyValue = [] (edict_t *ent, KeyValueData *kvd) {
+      // this function is called when the game requests a pointer to some entity's keyvalue data.
+      // The keyvalue data is held in each entity's infobuffer (basically a char buffer where each
+      // game DLL can put the stuff it wants) under - as it says - the form of a key/value pair. A
+      // common example of key/value pair is the "model", "(name of player model here)" one which
+      // is often used for client DLLs to display player characters with the right model (else they
+      // would all have the dull "models/player.mdl" one). The entity for which the keyvalue data
+      // pointer is requested is pentKeyvalue, the pointer to the keyvalue data structure pkvd.
+
+      if (game.isNullEntity (ent) && strcmp (ent->v.classname.chars (), "func_breakable") == 0) {
+         if (kvd && kvd->szKeyName && strcmp (kvd->szKeyName, "material") == 0) {
+            if (atoi (kvd->szValue) == 7) {
+               game.markBreakableAsInvalid (ent);
+            }
+         }
+      }
+      if (game.is (GameFlags::Metamod)) {
+         RETURN_META (MRES_IGNORED);
+      }
+      dllapi.pfnKeyValue (ent, kvd);
    };
    return HLTrue;
 }
@@ -499,6 +532,14 @@ CR_LINKAGE_C int GetEntityAPI_Post (gamefuncs_t *table, int) {
 
    if (game.is (GameFlags::HasFakePings)) {
       table->pfnUpdateClientData = [] (const struct edict_s *player, int, struct clientdata_s *) {
+         // this function is a synchronization tool that is used periodically by the engine to tell
+         // the game DLL to send player info over the network to one of its clients when it suspects
+         // that this client is desynchronizing. Early bots were using it to ask the game DLL for the
+         // weapon list of players (by setting sendweapons to TRUE), but most of the time having a
+         // look around the ent->v.weapons bitmask is enough, since that's the place commonly used for
+         // MODs to store weapon information. If it can't be read from there, catching a few network
+         // messages (like in DMC) do the job better than this function anyway.
+         // 
          // do a post-processing with non-metamod
          auto ent = const_cast <edict_t *> (reinterpret_cast <const edict_t *> (player));
 
