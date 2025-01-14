@@ -309,7 +309,7 @@ edict_t *Bot::lookupBreakable () {
          start = getEyesPos ();
          break;
       }
-      auto hit = doLookup (start, end, usesKnife () ? 32.0f : rg (72.0f, 256.0f));
+      auto hit = doLookup (start, end, (usesKnife () || isOnLadder ())  ? 32.0f : rg (72.0f, 256.0f));
 
       if (!game.isNullEntity (hit)) {
          return hit;

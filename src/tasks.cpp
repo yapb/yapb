@@ -1460,6 +1460,7 @@ void Bot::escapeFromBomb_ () {
 }
 
 void Bot::shootBreakable_ () {
+   m_aimFlags |= AimFlags::Override;
 
    // breakable destroyed?
    if (!util.isBreakableEntity (m_breakableEntity)) {
