@@ -1460,13 +1460,13 @@ void Bot::escapeFromBomb_ () {
 }
 
 void Bot::shootBreakable_ () {
-   m_aimFlags |= AimFlags::Override;
 
    // breakable destroyed?
    if (!util.isBreakableEntity (m_breakableEntity)) {
       completeTask ();
       return;
    }
+   m_aimFlags |= AimFlags::Override;
    pev->button |= m_campButtons;
 
    m_checkTerrain = false;
@@ -1475,19 +1475,27 @@ void Bot::shootBreakable_ () {
    m_navTimeset = game.time ();
    m_lookAtSafe = m_breakableOrigin;
 
-   // is bot facing the breakable?
-   if (util.getConeDeviation (ent (), m_lookAtSafe) >= 0.95f) {
-      m_aimFlags |= AimFlags::Override;
+   const float distToObstacle = pev->origin.distanceSq (m_lookAtSafe);
 
+   // is bot facing the breakable?
+   if (util.getConeDeviation (ent (), m_lookAtSafe) >= 0.90f) {
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
 
       m_wantsToFire = true;
       m_shootTime = game.time ();
 
+      // enforce shooting
+      if (!usesKnife ()  && !m_isReloading && !(pev->button & IN_RELOAD) && getAmmoInClip () > 0) {
+         if (!(m_oldButtons & IN_ATTACK)) {
+            pev->button |= IN_ATTACK;
+         }
+      }
+
+      // if with knife with no ammo, recompute breakable distance
       if (!hasAnyAmmoInClip ()
          && usesKnife ()
-         && pev->origin.distanceSq (m_lookAtSafe) > cr::sqrf (72.0f)) {
+         && distToObstacle > cr::sqrf (72.0f)) {
 
          completeTask ();
       }

@@ -1663,6 +1663,7 @@ void BotGraph::populateNodes () {
    m_rescuePoints.clear ();
    m_sniperPoints.clear ();
    m_visitedGoals.clear ();
+   m_nodeNumbers.clear ();
 
    for (const auto &path : m_paths) {
       if (path.flags & NodeFlag::TerroristOnly) {
@@ -1683,6 +1684,7 @@ void BotGraph::populateNodes () {
       else if (path.flags & NodeFlag::Rescue) {
          m_rescuePoints.push (path.number);
       }
+      m_nodeNumbers.push (path.number);
    }
 }
 
@@ -2275,7 +2277,7 @@ void BotGraph::frame () {
 
       // draw the radius circle
       Vector origin = (path.flags & NodeFlag::Crouch) ? path.origin : path.origin - Vector (0.0f, 0.0f, 18.0f);
-      Color radiusColor { 36, 36, 255 };
+      static Color radiusColor { 36, 36, 255 };
 
       // if radius is nonzero, draw a full circle
       if (path.radius > 0.0f) {
@@ -2804,13 +2806,6 @@ BotGraph::BotGraph () {
    m_findWPIndex = kInvalidNodeIndex;
    m_facingAtIndex = kInvalidNodeIndex;
    m_isOnLadder = false;
-
-   m_terrorPoints.clear ();
-   m_ctPoints.clear ();
-   m_goalPoints.clear ();
-   m_campPoints.clear ();
-   m_rescuePoints.clear ();
-   m_sniperPoints.clear ();
 
    m_editFlags = 0;
 

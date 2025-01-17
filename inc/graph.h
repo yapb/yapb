@@ -183,6 +183,7 @@ private:
    IntArray m_sniperPoints {};
    IntArray m_rescuePoints {};
    IntArray m_visitedGoals {};
+   IntArray m_nodeNumbers {};
 
 public:
    SmallArray <Path> m_paths {};
@@ -348,6 +349,11 @@ public:
    // set graph header from binary storage
    void setGraphHeader (StorageHeader *hdr) {
       memcpy (&m_graphHeader, hdr, sizeof (StorageHeader));
+   }
+
+   // gets the node numbers
+   const IntArray &getNodeNumbers () {
+      return m_nodeNumbers;
    }
 
 public:

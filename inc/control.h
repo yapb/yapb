@@ -84,6 +84,7 @@ private:
    bool m_rapidOutput {};
    bool m_isMenuFillCommand {};
    bool m_ignoreTranslate {};
+   bool m_denyCommands {};
 
    int m_menuServerFillTeam {};
    int m_interMenuData[4] = { 0, };
@@ -183,6 +184,10 @@ public:
 
    void setRapidOutput (bool force) {
       m_rapidOutput = force;
+   }
+
+   void setDenyCommands (bool deny) {
+      m_denyCommands = deny;
    }
 
    void setIssuer (edict_t *ent) {

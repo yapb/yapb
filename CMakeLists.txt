@@ -7,7 +7,6 @@
 # SPDX-License-Identifier: MIT
 #
 
-cmake_minimum_required(VERSION 3.15)
 project(yapb VERSION 4.5 LANGUAGES CXX)
 
 if(NOT ANDROID)
@@ -61,19 +60,23 @@ if(GIT_FOUND)
     target_compile_definitions(${PROJECT_NAME} PRIVATE VERSION_GENERATED)
 endif()
 
+if(NOT WIN32 AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" AND NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "arm" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^ppc" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^arm64")
+    set(BUILD_X86 true)
+endif()
+
 if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU") AND NOT MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE -flto=auto -fno-exceptions -fno-rtti -fno-threadsafe-statics -pthread)
 
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
         target_compile_options(${PROJECT_NAME} PRIVATE -march=armv8-a+fp+simd)
-    elseif(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "arm" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^ppc")
+    elseif(BUILD_X86)
         target_compile_options(${PROJECT_NAME} PRIVATE -mmmx -msse -msse2 -msse3 -mfpmath=sse)
     endif()
 	
     if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
         target_compile_options(${PROJECT_NAME} PRIVATE -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden -fno-math-errno)
     
-        if(NOT WIN32 AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" AND NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "arm" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^ppc")
+        if(BUILD_X86)
             target_compile_options(${PROJECT_NAME} PRIVATE -fdata-sections -ffunction-sections -fcf-protection=none -fno-plt)
             target_link_options(${PROJECT_NAME} PRIVATE -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/ext/ldscripts/version.lds -Wl,--gc-sections)
     

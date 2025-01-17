@@ -1751,7 +1751,24 @@ bool Bot::findNextBestNode () {
    // this function find a node in the near of the bot if bot had lost his path of pathfinder needs
    // to be restarted over again.
 
-   int busyIndex = kInvalidNodeIndex;
+   const auto &origin = pev->origin + Vector { pev->velocity.x, pev->velocity.y, 0.0f } * m_frameInterval;
+   const auto &bucket = graph.getNodesInBucket (origin);
+
+   // maximum number of nodes to recheck without buckets
+   constexpr auto kNearestRecheckThreshold = 1200;
+
+   // try to search in buckets first
+   if (!findNextBestNodeEx (bucket, graph.length () < kNearestRecheckThreshold ? true : false)) {
+
+      // fallback to nearest search instead
+      return findNextBestNodeEx (graph.getNodeNumbers (), false);
+   }
+   return true;
+}
+
+bool Bot::findNextBestNodeEx (const IntArray &data, bool returnFailure) {
+   // this function find a node in the near of the bot if bot had lost his path of pathfinder needs
+   // to be restarted over again.
 
    float lessDist[3] {};
    int lessIndex[3] {};
@@ -1760,12 +1777,9 @@ bool Bot::findNextBestNode () {
       lessDist[i] = kInfiniteDistance;
       lessIndex[i] = kInvalidNodeIndex;
    }
+   const auto &numToSkip = returnFailure ? 0 : cr::clamp (rg (0, 2), 0, static_cast <int> (data.length () / 2));
 
-   const auto &origin = pev->origin + pev->velocity * m_frameInterval;
-   const auto &bucket = graph.getNodesInBucket (origin);
-   const auto &numToSkip = cr::clamp (rg (0, 2), 0, static_cast <int> (bucket.length () / 2));
-
-   for (const auto &i : bucket) {
+   for (const auto &i : data) {
       const auto &path = graph[i];
 
       if (!graph.exists (path.number)) {
@@ -1798,12 +1812,6 @@ bool Bot::findNextBestNode () {
 
       // check we're have link to it
       if (m_currentNodeIndex != kInvalidNodeIndex && !graph.isConnected (m_currentNodeIndex, path.number)) {
-         continue;
-      }
-
-      // check if node is already used by another bot...
-      if (bots.getRoundStartTime () + 5.0f < game.time () && isOccupiedNode (path.number)) {
-         busyIndex = path.number;
          continue;
       }
 
@@ -1845,13 +1853,11 @@ bool Bot::findNextBestNode () {
    }
    selected = lessIndex[index];
 
-   // if we're still have no node and have busy one (by other bot) pick it up
-   if (selected == kInvalidNodeIndex && busyIndex != kInvalidNodeIndex) {
-      selected = busyIndex;
-   }
-
    // worst case... find at least something
    if (selected == kInvalidNodeIndex) {
+      if (returnFailure) {
+         return false;
+      }
       selected = findNearestNode ();
    }
 
@@ -1977,7 +1983,7 @@ int Bot::findNearestNode () {
    // try to search ANYTHING that can be reached
    if (!graph.exists (index)) {
       nearestDistanceSq = cr::sqrf (kMaxDistance);
-      const auto &nearestNodes = graph.getNearestInRadius (kMaxDistance, pev->origin);
+      const auto &nearestNodes = graph.getNodeNumbers ();
 
       for (const auto &i : nearestNodes) {
          const auto &path = graph[i];

@@ -161,8 +161,10 @@ void Bot::checkBreakable (edict_t *touch) {
       m_breakableEntity = lookupBreakable ();
    }
    else {
-      m_breakableEntity = touch;
-      m_breakableOrigin = game.getEntityOrigin (touch);
+      if (m_breakableEntity != touch) {
+         m_breakableEntity = touch;
+         m_breakableOrigin = game.getEntityOrigin (touch);
+      }
    }
 
    // re-check from previous steps
@@ -177,6 +179,7 @@ void Bot::checkBreakablesAround () {
    if (!m_buyingFinished
       || !cv_destroy_breakables_around
       || usesKnife ()
+      || usesSniper ()
       || rg.chance (25)
       || !game.hasBreakables ()
       || m_seeEnemyTime + 4.0f > game.time ()
@@ -208,7 +211,7 @@ void Bot::checkBreakablesAround () {
       }
 
       const auto &origin = game.getEntityOrigin (breakable);
-      const auto distanceToObstacleSq = origin.distanceSq (pev->origin);
+      const auto distanceToObstacleSq = origin.distanceSq2d (pev->origin);
 
       // too far, skip it
       if (distanceToObstacleSq > cr::sqrf (radius)) {
@@ -221,7 +224,7 @@ void Bot::checkBreakablesAround () {
       }
 
       // maybe time to give up?
-      if (m_lastBreakable == breakable && m_breakableTime + 1.0f < game.time ()) {
+      if (m_lastBreakable == breakable && m_breakableTime + 1.5f < game.time ()) {
          m_ignoredBreakable.emplace (breakable);
          m_breakableOrigin.clear ();
 
@@ -250,6 +253,12 @@ void Bot::checkBreakablesAround () {
 edict_t *Bot::lookupBreakable () {
    // this function checks if bot is blocked by a shoot able breakable in his moving direction
 
+   // we're got something already
+   if (util.isBreakableEntity (m_breakableEntity)) {
+      return m_breakableEntity;
+   }
+   const float detectBreakableDistance = (usesKnife () || isOnLadder ()) ? 32.0f : rg (72.0f, 256.0f);
+
    auto doLookup = [&] (const Vector &start, const Vector &end, const float dist) -> edict_t * {
       TraceResult tr {};
       game.testLine (start, start + (end - start).normalize_apx () * dist, TraceIgnore::None, ent (), &tr);
@@ -267,56 +276,18 @@ edict_t *Bot::lookupBreakable () {
       }
       return nullptr;
    };
+   auto hit = doLookup (pev->origin, m_destOrigin, detectBreakableDistance);
 
-   // got recipe from KWo
-   for (auto i = 0; i < 5; ++i) {
-      if (i == 1 && game.isNullEntity (m_breakableEntity)) {
-         continue;
-      }
-      Vector end = m_pathOrigin;
-      Vector start = getEyesPos ();
+   if (!game.isNullEntity (hit)) {
+      return hit;
+   }
+   hit = doLookup (getEyesPos (), m_destOrigin, detectBreakableDistance);
 
-      if (graph.exists (m_currentNodeIndex)) {
-         end = graph[m_currentNodeIndex].origin;
-      }
-
-      switch (i) {
-      case 0:
-         if (graph.exists (m_previousNodes[0])) {
-            start = graph[m_previousNodes[0]].origin;
-         }
-         else {
-            continue;
-         }
-         break;
-
-      case 1:
-         start = getEyesPos ();
-         end = game.getEntityOrigin (m_breakableEntity);
-         break;
-
-      case 2:
-         start = pev->origin;
-         end = m_destOrigin;
-         break;
-
-      case 3:
-         start = getEyesPos ();
-         end = m_destOrigin;
-         break;
-
-      case 4:
-         start = getEyesPos ();
-         break;
-      }
-      auto hit = doLookup (start, end, (usesKnife () || isOnLadder ())  ? 32.0f : rg (72.0f, 256.0f));
-
-      if (!game.isNullEntity (hit)) {
-         return hit;
-      }
+   if (!game.isNullEntity (hit)) {
+      return hit;
    }
    m_breakableEntity = nullptr;
-   m_breakableOrigin.clear ();
+   m_breakableOrigin = nullptr;
 
    return nullptr;
 }

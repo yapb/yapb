@@ -1076,7 +1076,7 @@ bool Bot::checkZoom (float distance) {
    return zoomChange;
 }
 
-void Bot::selectWeapons (float distance, int index, int id, int choosen) {
+void Bot::selectWeapons (float distance, int, int id, int choosen) {
    const auto tab = conf.getRawWeapons ();
 
    // we want to fire weapon, don't reload now
@@ -1150,7 +1150,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
    const float timeDelta = game.time () - m_frameInterval;
 
    // need to care for burst fire?
-   if (distance < kSprayDistance || m_blindTime > game.time () || usesKnife ()) {
+   if ((distance < kSprayDistance && !isRecoilHigh ()) || m_blindTime > game.time () || usesKnife ()) {
       if (id == Weapon::Knife) {
          if (distance < 64.0f) {
             const auto primaryAttackChance = (m_oldButtons & IN_ATTACK2) ? 80 : 40;
@@ -1165,7 +1165,7 @@ void Bot::selectWeapons (float distance, int index, int id, int choosen) {
       }
       else {
          // if automatic weapon press attack
-         if (tab[choosen].primaryFireHold && getAmmoInClip () > tab[index].minPrimaryAmmo) {
+         if (tab[choosen].primaryFireHold) {
             pev->button |= IN_ATTACK;
          }
 

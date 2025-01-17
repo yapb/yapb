@@ -51,6 +51,9 @@ void Game::precache () {
 void Game::levelInitialize (edict_t *entities, int max) {
    // this function precaches needed models and initialize class variables
 
+   // enable command handling
+   ctrl.setDenyCommands (false);
+
    // re-initialize bot's array
    bots.destroy ();
 
@@ -215,6 +218,10 @@ void Game::levelShutdown () {
 
    // suspend any analyzer tasks
    analyzer.suspend ();
+
+   // disable command handling
+   ctrl.setDenyCommands (true);
+
 }
 
 void Game::drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, const Color &color, int brightness, int speed, int life, DrawLine type) {
@@ -761,7 +768,7 @@ bool Game::loadCSBinary () {
 
    // lookup for x64 binaries first
    if (plat.x64) {
-      libs.insert (0, { "mp_amd64", "cs_amd64" });
+      libs.insert (0, { "mp_amd64", "mp_arm64", "cs_arm64", "cs_amd64" });
    }
 
    auto libCheck = [&] (StringRef mod, StringRef dll) {

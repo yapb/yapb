@@ -2207,6 +2207,10 @@ BotControl::BotControl () {
 }
 
 void BotControl::handleEngineCommands () {
+   if (m_denyCommands) {
+      return;
+   }
+
    collectArgs ();
    setIssuer (game.getLocalEntity ());
 
@@ -2215,6 +2219,10 @@ void BotControl::handleEngineCommands () {
 }
 
 bool BotControl::handleClientSideCommandsWrapper (edict_t *ent, bool isMenus) {
+   if (m_denyCommands) {
+      return false;
+   }
+
    collectArgs ();
    setIssuer (ent);
 
