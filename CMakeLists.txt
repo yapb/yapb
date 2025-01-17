@@ -6,7 +6,7 @@
 #
 # SPDX-License-Identifier: MIT
 #
-cmake_minimum_required(VERSION 3.31)
+cmake_minimum_required(VERSION 3.5)
 
 project(yapb VERSION 4.5 LANGUAGES CXX)
 
