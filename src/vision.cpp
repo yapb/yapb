@@ -507,6 +507,9 @@ void Bot::setAimDirection () {
       auto predictNode = m_lastPredictIndex;
 
       auto isPredictedIndexApplicable = [&] () -> bool {
+         if (!graph.exists (predictNode)) {
+            return false;
+         }
          TraceResult result {};
          game.testLine (getEyesPos (), graph[predictNode].origin + pev->view_ofs, TraceIgnore::None, ent (), &result);
 
