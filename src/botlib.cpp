@@ -3204,7 +3204,7 @@ void Bot::checkSpawnConditions () {
 void Bot::logic () {
    // this function gets called each frame and is the core of all bot ai. from here all other subroutines are called
 
-   float movedDistance = 4.0f; // length of different vector (distance bot moved)
+   float movedDistance = 2.0f; // length of different vector (distance bot moved)
 
    resetMovement ();
 

@@ -760,7 +760,7 @@ public:
    bool hasShield ();
    bool isShieldDrawn ();
    bool findNextBestNode ();
-   bool findNextBestNodeEx (const IntArray &data, bool returnFailure);
+   bool findNextBestNodeEx (const IntArray &data, bool handleFails);
    bool seesEntity (const Vector &dest, bool fromBody = false);
 
    int getAmmo ();

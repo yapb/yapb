@@ -486,7 +486,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
       const auto otherPrio = bots.getPlayerPriority (client.ent);
 
       // give some priorities to bot avoidance
-      if (ownPrio < otherPrio) {
+      if (ownPrio > otherPrio) {
          continue;
       }
 
@@ -495,7 +495,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
          const auto avoidPrio = bots.getPlayerPriority (m_hindrance);
 
          // ignore because we're already avoiding someone better
-         if (avoidPrio < otherPrio) {
+         if (avoidPrio > otherPrio) {
             continue;
          }
       }
@@ -557,7 +557,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
    // standing still, no need to check?
    if (m_lastCollTime < game.time () && getCurrentTaskId () != Task::Attack) {
       // didn't we move enough previously?
-      if (movedDistance < 4.0f && (m_prevSpeed > 20.0f || m_prevVelocity < m_moveSpeed / 2)) {
+      if (movedDistance < 2.0f && (m_prevSpeed > 20.0f || m_prevVelocity < m_moveSpeed / 2)) {
          m_prevTime = game.time (); // then consider being stuck
          m_isStuck = true;
 
@@ -1285,7 +1285,7 @@ bool Bot::updateNavigation () {
    }
 
    // needs precise placement - check if we get past the point
-   if (desiredDistanceSq < cr::sqrf (22.0f) && nodeDistanceSq < cr::sqrf (30.0f)) {
+   if (desiredDistanceSq < cr::sqrf (20.0f) && nodeDistanceSq < cr::sqrf (30.0f)) {
       const auto predictRangeSq = m_pathOrigin.distanceSq (pev->origin + pev->velocity * m_frameInterval);
 
       if (predictRangeSq >= nodeDistanceSq || predictRangeSq <= desiredDistanceSq) {
@@ -1305,7 +1305,7 @@ bool Bot::updateNavigation () {
       return false;
    }
 
-   if (nodeDistanceSq < desiredDistanceSq) {
+   if (nodeDistanceSq <= desiredDistanceSq) {
       // did we reach a destination node?
       if (getTask ()->data == m_currentNodeIndex) {
          if (m_chosenGoalIndex != kInvalidNodeIndex) {
@@ -1766,7 +1766,7 @@ bool Bot::findNextBestNode () {
    return true;
 }
 
-bool Bot::findNextBestNodeEx (const IntArray &data, bool returnFailure) {
+bool Bot::findNextBestNodeEx (const IntArray &data, bool handleFails) {
    // this function find a node in the near of the bot if bot had lost his path of pathfinder needs
    // to be restarted over again.
 
@@ -1777,7 +1777,7 @@ bool Bot::findNextBestNodeEx (const IntArray &data, bool returnFailure) {
       lessDist[i] = kInfiniteDistance;
       lessIndex[i] = kInvalidNodeIndex;
    }
-   const auto &numToSkip = returnFailure ? 0 : cr::clamp (rg (0, 2), 0, static_cast <int> (data.length () / 2));
+   const auto &numToSkip = handleFails ? 1 : rg (1, 4);
 
    for (const auto &i : data) {
       const auto &path = graph[i];
@@ -1855,7 +1855,7 @@ bool Bot::findNextBestNodeEx (const IntArray &data, bool returnFailure) {
 
    // worst case... find at least something
    if (selected == kInvalidNodeIndex) {
-      if (returnFailure) {
+      if (handleFails) {
          return false;
       }
       selected = findNearestNode ();
@@ -1960,7 +1960,7 @@ int Bot::findNearestNode () {
    int index = kInvalidNodeIndex;
    float nearestDistanceSq = cr::sqrf (kMaxDistance);
 
-   const auto &origin = pev->origin + pev->velocity * m_frameInterval;
+   const auto &origin = pev->origin + Vector { pev->velocity.x, pev->velocity.y, 0.0f } * m_frameInterval;
    const auto &bucket = graph.getNodesInBucket (origin);
 
    for (const auto &i : bucket) {
@@ -1969,7 +1969,7 @@ int Bot::findNearestNode () {
       if (!graph.exists (path.number)) {
          continue;
       }
-      const float distanceSq = path.origin.distanceSq (pev->origin);
+      const float distanceSq = path.origin.distanceSq (origin);
 
       if (distanceSq < nearestDistanceSq) {
          // if bot doing navigation, make sure node really visible and reachable
@@ -1991,7 +1991,7 @@ int Bot::findNearestNode () {
          if (!graph.exists (path.number)) {
             continue;
          }
-         const float distanceSq = path.origin.distanceSq (pev->origin);
+         const float distanceSq = path.origin.distanceSq (origin);
 
          if (distanceSq < nearestDistanceSq) {
             TraceResult tr {};

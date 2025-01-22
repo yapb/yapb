@@ -1596,7 +1596,7 @@ void Bot::attackMovement () {
          && (m_jumpTime + 5.0f < game.time ()
             && isOnFloor ()
             && rg (0, 1000) < (m_isReloading ? 8 : 2)
-            && pev->velocity.length2d () > 150.0f) && !usesSniper ()) {
+            && pev->velocity.length2d () > 150.0f) && !usesSniper () && isEnemyCone) {
 
          pev->button |= IN_JUMP;
       }
@@ -1621,14 +1621,6 @@ void Bot::attackMovement () {
       }
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
-   }
-
-   if (m_difficulty >= Difficulty::Normal && isOnFloor () && m_duckTime < game.time ()) {
-      if (distanceSq < cr::sqrf (kSprayDistanceX2)) {
-         if (rg (0, 1000) < rg (5, 10) && pev->velocity.length2d () > 150.0f && isEnemyCone) {
-            pev->button |= IN_JUMP;
-         }
-      }
    }
 
    if (m_isReloading) {

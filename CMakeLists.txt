@@ -61,12 +61,12 @@ if(GIT_FOUND)
     target_compile_definitions(${PROJECT_NAME} PRIVATE VERSION_GENERATED)
 endif()
 
-if(NOT WIN32 AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" AND NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "arm" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^ppc" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^arm64")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)" AND NOT CMAKE_LIBRARY_ARCHITECTURE MATCHES "^(arm|aarch64|ppc)")
     set(BUILD_X86 true)
 endif()
 
 if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU") AND NOT MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE -flto=auto -fno-exceptions -fno-rtti -fno-threadsafe-statics -pthread)
+    target_compile_options(${PROJECT_NAME} PRIVATE -DCR_NATIVE_BUILD -flto=auto -fno-exceptions -fno-rtti -fno-threadsafe-statics -pthread)
 
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
         target_compile_options(${PROJECT_NAME} PRIVATE -march=armv8-a+fp+simd)
@@ -77,7 +77,7 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU"
     if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
         target_compile_options(${PROJECT_NAME} PRIVATE -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden -fno-math-errno)
     
-        if(BUILD_X86)
+        if(NOT WIN32 AND BUILD_X86)
             target_compile_options(${PROJECT_NAME} PRIVATE -fdata-sections -ffunction-sections -fcf-protection=none -fno-plt)
             target_link_options(${PROJECT_NAME} PRIVATE -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/ext/ldscripts/version.lds -Wl,--gc-sections)
     
