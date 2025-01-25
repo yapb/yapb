@@ -1313,10 +1313,10 @@ int BotManager::getPlayerPriority (edict_t *ent) {
    if (bot->m_hasC4 || bot->m_isVIP || bot->m_hasHostage || bot->m_healthValue < ent->v.health || (bot->m_currentTravelFlags & PathFlag::Jump)) {
       return bot->entindex () + kHighPriority;
    }
-   auto task = bot->getCurrentTaskId ();
+   const auto task = bot->getCurrentTaskId ();
 
    // higher priority if camping or hiding
-   if (task == Task::Camp || task == Task::Hide) {
+   if (task == Task::Camp || task == Task::Hide || task == Task::MoveToPosition) {
       return bot->entindex () + kHighPriority;
    }
    return bot->entindex ();
