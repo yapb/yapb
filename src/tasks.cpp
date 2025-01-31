@@ -100,6 +100,7 @@ void Bot::normal_ () {
       if (!(m_states & (Sense::SeeingEnemy | Sense::SuspectEnemy))
          && m_seeEnemyTime + 5.0f < game.time ()
          && !m_reloadState && m_timeLogoSpray < game.time ()
+         && !game.is (GameFlags::Xash3D)
          && cv_spraypaints
          && rg.chance (50)
          && m_moveSpeed > getShiftSpeed ()

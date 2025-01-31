@@ -3149,7 +3149,7 @@ void Bot::checkSpawnConditions () {
 
    // switch to knife if time to do this
    if (m_checkKnifeSwitch && m_buyingFinished && m_spawnTime + rg (5.0f, 7.5f) < game.time ()) {
-      if (rg (1, 100) < 2 && cv_spraypaints) {
+      if (!game.is (GameFlags::Xash3D) && rg (1, 100) < 2 && cv_spraypaints) {
          startTask (Task::Spraypaint, TaskPri::Spraypaint, kInvalidNodeIndex, game.time () + 1.0f, false);
       }
 
@@ -3204,7 +3204,7 @@ void Bot::checkSpawnConditions () {
 void Bot::logic () {
    // this function gets called each frame and is the core of all bot ai. from here all other subroutines are called
 
-   float movedDistance = 2.0f; // length of different vector (distance bot moved)
+   float movedDistance = kMinMovedDistance; // length of different vector (distance bot moved)
 
    resetMovement ();
 

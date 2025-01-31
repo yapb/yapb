@@ -151,7 +151,7 @@ public:
 
    // get route max length, route length should not be larger than half of map nodes
    size_t getMaxLength () const {
-      return m_length / 2;
+      return m_length / 2 + kMaxNodes / 256;
    }
 
 public:

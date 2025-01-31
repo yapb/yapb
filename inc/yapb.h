@@ -315,6 +315,7 @@ private:
 
    PathWalk m_pathWalk {}; // pointer to current node from path
    Dodge m_dodgeStrafeDir {}; // direction to strafe
+   Dodge m_avoidAction {}; // player avoid action
    Fight m_fightStyle {}; // combat style to use
    CollisionState m_collisionState {}; // collision State
    FindPath m_pathType {}; // which pathfinder to use

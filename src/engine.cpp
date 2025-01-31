@@ -697,6 +697,27 @@ void Game::checkCvarsBounds () {
 
          // notify about that
          ctrl.msg ("Bogus value for cvar '%s', min is '%.1f' and max is '%.1f', and we're got '%s', value reverted to default '%.1f'.", var.name, var.min, var.max, str, var.initial);
+         continue;
+      }
+
+      /// prevent min/max problems
+      if (var.name.contains ("_max")) {
+         String minVar = String (var.name);
+         minVar.replace ("_max", "_min");
+
+         for (auto &mv : m_cvars) {
+            if (mv.name == minVar) {
+               const auto minValue = mv.self->as <float> ();
+
+               if (minValue > value) {
+                  var.self->set (minValue);
+                  mv.self->set (value);
+
+                  // notify about that
+                  ctrl.msg ("Bogus value for min/max cvar '%s' can't be higher than '%s'. Values swapped.", mv.name, var.name);
+               }
+            }
+         }
       }
    }
 

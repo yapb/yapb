@@ -106,16 +106,19 @@ bool BotSupport::isVisible (const Vector &origin, edict_t *ent) {
 void BotSupport::decalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex) {
    // this function draw spraypaint depending on the tracing results.
 
+   if (cr::fequal (trace->flFraction, 1.0f)) {
+      return;
+   }
    auto logo = conf.getLogoName (logotypeIndex);
 
    int entityIndex = -1, message = TE_DECAL;
    int decalIndex = engfuncs.pfnDecalIndex (logo.chars ());
 
-   if (decalIndex < 0) {
+   if (decalIndex <= 0) {
       decalIndex = engfuncs.pfnDecalIndex ("{lambda06");
    }
 
-   if (cr::fequal (trace->flFraction, 1.0f)) {
+   if (decalIndex <= 0) {
       return;
    }
 

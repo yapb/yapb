@@ -486,7 +486,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
       const auto otherPrio = bots.getPlayerPriority (client.ent);
 
       // give some priorities to bot avoidance
-      if (ownPrio > otherPrio) {
+      if (ownPrio < otherPrio) {
          continue;
       }
 
@@ -495,7 +495,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
          const auto avoidPrio = bots.getPlayerPriority (m_hindrance);
 
          // ignore because we're already avoiding someone better
-         if (avoidPrio > otherPrio) {
+         if (avoidPrio < otherPrio) {
             continue;
          }
       }
@@ -509,7 +509,16 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
 
    // found somebody?
    if (game.isNullEntity (m_hindrance)) {
+      m_avoidAction = Dodge::None;
       return;
+   }
+   else if (m_avoidAction != Dodge::None) {
+      if (m_avoidAction == Dodge::Left) {
+         setStrafeSpeed (normal, pev->maxspeed);
+      }
+      else if (m_avoidAction == Dodge::Right) {
+         setStrafeSpeed (normal, -pev->maxspeed);
+      }
    }
    const float interval = m_frameInterval * (!isDucking () && pev->velocity.lengthSq2d () > 0.0f ? 7.5f : 2.0f);
 
@@ -526,16 +535,25 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
    const auto nextFrameDistanceSq = pev->origin.distanceSq (m_hindrance->v.origin + m_hindrance->v.velocity * interval);
 
    // is player that near now or in future that we need to steer away?
-   if (movedDistanceSq <= cr::sqrf (64.0f) || (distanceSq <= cr::sqrf (72.0f) && nextFrameDistanceSq < distanceSq)) {
+   if (movedDistanceSq <= cr::sqrf (64.0f) || (distanceSq <= cr::sqrf (96.0f) && nextFrameDistanceSq < distanceSq)) {
       const auto &dir = (pev->origin - m_hindrance->v.origin).normalize2d_apx ();
 
       // to start strafing, we have to first figure out if the target is on the left side or right side
-      if ((dir | right.normalize2d_apx ()) > 0.0f) {
-         setStrafeSpeed (normal, pev->maxspeed);
+      if (m_avoidAction == Dodge::None && m_path->radius > 16.0f && !isInNarrowPlace ()) {
+         if ((dir | right.normalize2d_apx ()) > 0.0f) {
+            m_avoidAction = Dodge::Left;
+
+            // start strafing
+            setStrafeSpeed (normal, pev->maxspeed);
+         }
+         else {
+            m_avoidAction = Dodge::Right;
+
+            // start strafing
+            setStrafeSpeed (normal, -pev->maxspeed);
+         }
       }
-      else {
-         setStrafeSpeed (normal, -pev->maxspeed);
-      }
+      m_isStuck = false;
 
       if (distanceSq < cr::sqrf (96.0f)) {
          if ((dir | forward.normalize2d_apx ()) < 0.0f) {
@@ -545,6 +563,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
             m_moveSpeed = pev->maxspeed;
          }
       }
+      ignoreCollision ();
    }
 }
 
@@ -557,7 +576,7 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
    // standing still, no need to check?
    if (m_lastCollTime < game.time () && getCurrentTaskId () != Task::Attack) {
       // didn't we move enough previously?
-      if (movedDistance < 2.0f && (m_prevSpeed > 20.0f || m_prevVelocity < m_moveSpeed / 2)) {
+      if (movedDistance < kMinMovedDistance && (m_prevSpeed > 20.0f || m_prevVelocity < m_moveSpeed / 2)) {
          m_prevTime = game.time (); // then consider being stuck
          m_isStuck = true;
 
@@ -1241,7 +1260,7 @@ bool Bot::updateNavigation () {
    }
 
    float desiredDistanceSq = cr::sqrf (8.0f);
-   const float nodeDistanceSq = pev->origin.distanceSq (m_pathOrigin);
+   float nodeDistanceSq = pev->origin.distanceSq (m_pathOrigin);
 
    // initialize the radius for a special node type, where the node is considered to be reached
    if (m_pathFlags & NodeFlag::Lift) {
@@ -1264,17 +1283,17 @@ bool Bot::updateNavigation () {
    else if (m_path->number == cv_debug_goal.as <int> ()) {
       desiredDistanceSq = 0.0f;
    }
-   else if (isOccupiedNode (m_path->number)) {
-      desiredDistanceSq = cr::sqrf (148.0f);
-   }
    else {
       desiredDistanceSq = cr::max (cr::sqrf (m_path->radius), desiredDistanceSq);
    }
+   bool pathHasFlags = false;
 
    // check if node has a special travel flags, so they need to be reached more precisely
    for (const auto &link : m_path->links) {
       if (link.flags != 0) {
          desiredDistanceSq = 0.0f;
+         pathHasFlags = true;
+
          break;
       }
    }
@@ -1282,6 +1301,12 @@ bool Bot::updateNavigation () {
    // make sure reach exactly, if just lost on path
    if (!m_lostReachableNodeTimer.elapsed ()) {
       desiredDistanceSq = 0.0f;
+   }
+
+   // always increase reachability distance for occupied nodes
+   if (isOccupiedNode (m_path->number, pathHasFlags)) {
+      desiredDistanceSq = cr::sqrf (96.0f);
+      nodeDistanceSq *= 0.5f;
    }
 
    // needs precise placement - check if we get past the point
@@ -1297,12 +1322,13 @@ bool Bot::updateNavigation () {
    // is sitting there, so the bot is unable to reach the node because of other player on it, and he starts to jumping and so on
    // here we're clearing task memory data (important!), since task executor may restart goal with one from memory, so this process
    // will go in cycle, and forcing bot to re-create new route.
-   if (m_pathWalk.hasNext () && m_pathWalk.next () == m_pathWalk.last () && isOccupiedNode (m_pathWalk.next (), true)) {
+   if (m_pathWalk.hasNext () && m_pathWalk.next () == m_pathWalk.last () && isOccupiedNode (m_pathWalk.next (), pathHasFlags)) {
       getTask ()->data = kInvalidNodeIndex;
-      m_currentNodeIndex = kInvalidNodeIndex;
 
-      clearSearchNodes ();
-      return false;
+      m_currentNodeIndex = kInvalidNodeIndex;
+      m_chosenGoalIndex = kInvalidNodeIndex;
+
+      return true;
    }
 
    if (nodeDistanceSq <= desiredDistanceSq) {
@@ -2591,8 +2617,12 @@ void Bot::setPathOrigin () {
    constexpr int kMaxAlternatives = 5;
    const float radius = m_path->radius;
 
+   auto setNonZeroPathOrigin = [&] () -> void {
+      m_pathOrigin += Vector { pev->angles.x, cr::wrapAngle (pev->angles.y + rg (-90.0f, 90.0f)), 0.0f }.forward () * rg (0.0f, radius);
+   };
+
    // if node radius non zero vary origin a bit depending on the body angles
-   if (radius > 0.0f) {
+   if (radius > 16.0f) {
       int nearestIndex = kInvalidNodeIndex;
 
       if (!m_pathWalk.empty () && m_pathWalk.hasNext ()) {
@@ -2619,8 +2649,11 @@ void Bot::setPathOrigin () {
       }
 
       if (nearestIndex == kInvalidNodeIndex) {
-         m_pathOrigin += Vector (pev->angles.x, cr::wrapAngle (pev->angles.y + rg (-90.0f, 90.0f)), 0.0f).forward () * rg (0.0f, radius);
+         setNonZeroPathOrigin ();
       }
+   }
+   else if (radius > 0.0f) {
+      setNonZeroPathOrigin ();
    }
 
    if (isOnLadder ()) {
@@ -3246,7 +3279,7 @@ bool Bot::isOccupiedNode (int index, bool needZeroVelocity) {
       }
       const auto distanceSq = client.origin.distanceSq (graph[index].origin);
 
-      if (distanceSq < cr::clamp (cr::sqrf (graph[index].radius) * 2.0f, cr::sqrf (90.0f), cr::sqrf (120.0f))) {
+      if (distanceSq < cr::clamp (cr::sqrf (graph[index].radius) * 2.0f, cr::sqrf (98.0f), cr::sqrf (120.0f))) {
          return true;
       }
       auto bot = bots[client.ent];

@@ -1233,11 +1233,12 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    // just to be sure
    m_msgQueue.clear ();
 
-   // init path walker
-   m_pathWalk.init (graph.getMaxRouteLength ());
-
    // init async planner
    m_planner = cr::makeUnique <AStarAlgo> (graph.length ());
+
+   // init path walker
+   m_pathWalk.init (m_planner->getMaxLength ());
+
 
    // init player models parts enumerator
    m_hitboxEnumerator = cr::makeUnique <PlayerHitboxEnumerator> ();
@@ -1291,7 +1292,9 @@ int BotManager::getAliveHumansCount () {
    int count = 0;
 
    for (const auto &client : util.getClients ()) {
-      if ((client.flags & ClientFlags::Alive) && !bots[client.ent] && !(client.ent->v.flags & FL_FAKECLIENT)) {
+      if ((client.flags & ClientFlags::Alive)
+         && !bots[client.ent]
+         && !(client.ent->v.flags & FL_FAKECLIENT)) {
          ++count;
       }
    }
@@ -1299,24 +1302,28 @@ int BotManager::getAliveHumansCount () {
 }
 
 int BotManager::getPlayerPriority (edict_t *ent) {
-   constexpr auto kHighPriority = 512;
+   constexpr auto kHighPriority = 1024;
 
    // always check for only our own bots
    auto bot = bots[ent];
 
    // if player just return high prio
    if (!bot) {
-      return game.indexOfEntity (ent) + kHighPriority;
+      return game.indexOfEntity (ent) + kHighPriority * 2;
    }
 
    // give bots some priority
-   if (bot->m_hasC4 || bot->m_isVIP || bot->m_hasHostage || bot->m_healthValue < ent->v.health || (bot->m_currentTravelFlags & PathFlag::Jump)) {
+   if (bot->m_hasC4 || bot->m_isVIP || bot->m_hasHostage || (bot->m_currentTravelFlags & PathFlag::Jump)) {
       return bot->entindex () + kHighPriority;
    }
    const auto task = bot->getCurrentTaskId ();
 
-   // higher priority if camping or hiding
-   if (task == Task::Camp || task == Task::Hide || task == Task::MoveToPosition) {
+   // higher priority if important task
+   if (task == Task::MoveToPosition
+      || task == Task::SeekCover
+      || task == Task::Camp
+      || task == Task::Hide) {
+
       return bot->entindex () + kHighPriority;
    }
    return bot->entindex ();
@@ -1623,6 +1630,7 @@ void Bot::newRound () {
    m_zoomCheckTime = 0.0f;
    m_strafeSetTime = 0.0f;
    m_dodgeStrafeDir = Dodge::None;
+   m_avoidAction = Dodge::None;
    m_fightStyle = Fight::None;
    m_lastFightStyleCheck = 0.0f;
 
