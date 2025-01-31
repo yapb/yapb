@@ -390,14 +390,16 @@ int32_t BotStorage::storageToBotFile (int32_t options) {
    return BotFile::Graph;
 }
 
-void BotStorage::unlinkFromDisk () {
+void BotStorage::unlinkFromDisk (bool onlyTrainingData) {
    // this function removes graph file from the hard disk
 
    StringArray unlinkable {};
    bots.kickEveryone (true);
 
    // if we're delete graph, delete all corresponding to it files
-   unlinkable.emplace (buildPath (BotFile::Graph)); // graph itself
+   if (!onlyTrainingData) {
+      unlinkable.emplace (buildPath (BotFile::Graph)); // graph itself
+   }
    unlinkable.emplace (buildPath (BotFile::Practice)); // corresponding to practice
    unlinkable.emplace (buildPath (BotFile::Vistable)); // corresponding to vistable
    unlinkable.emplace (buildPath (BotFile::Pathmatrix)); // corresponding to matrix
@@ -412,6 +414,13 @@ void BotStorage::unlinkFromDisk () {
       }
    }
    graph.reset (); // re-initialize points
+
+   if (onlyTrainingData) {
+      graph.loadGraphData ();
+
+      // take bots  back to game
+      cv_quota.revert ();
+   }
 }
 
 StringRef BotStorage::getRunningPath () {

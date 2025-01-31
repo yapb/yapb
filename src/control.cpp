@@ -355,6 +355,7 @@ int BotControl::cmdNode () {
       "load",
       "help",
       "erase",
+      "erase_training",
       "fileinfo",
       "check"
    };
@@ -399,6 +400,7 @@ int BotControl::cmdNode () {
       addGraphCmd ("save", "save [noarguments]", "Save graph file to disk.", &BotControl::cmdNodeSave);
       addGraphCmd ("load", "load [noarguments]", "Load graph file from disk.", &BotControl::cmdNodeLoad);
       addGraphCmd ("erase", "erase [iamsure]", "Erases the graph file from disk.", &BotControl::cmdNodeErase);
+      addGraphCmd ("erase_training", "erase_training", "Erases the training data leaving graph files.", &BotControl::cmdNodeEraseTraining);
       addGraphCmd ("delete", "delete [nearest|index]", "Deletes single graph node from map.", &BotControl::cmdNodeDelete);
       addGraphCmd ("check", "check [noarguments]", "Check if graph working correctly.", &BotControl::cmdNodeCheck);
       addGraphCmd ("cache", "cache [nearest|index]", "Caching node for future use.", &BotControl::cmdNodeCache);
@@ -616,11 +618,19 @@ int BotControl::cmdNodeErase () {
 
    // prevent accidents when graph are deleted unintentionally
    if (arg <StringRef> (iamsure) == "iamsure") {
-      bstor.unlinkFromDisk ();
+      bstor.unlinkFromDisk (false);
    }
    else {
       msg ("Please, append \"iamsure\" as parameter to get graph erased from the disk.");
    }
+   return BotCommandResult::Handled;
+}
+
+int BotControl::cmdNodeEraseTraining () {
+   enum args { graph_cmd = 1, cmd };
+
+   bstor.unlinkFromDisk (true);
+
    return BotCommandResult::Handled;
 }
 

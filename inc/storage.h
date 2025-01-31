@@ -88,7 +88,7 @@ public:
    int32_t storageToBotFile (int32_t options);
 
    // remove all bot related files from disk
-   void unlinkFromDisk ();
+   void unlinkFromDisk (bool onlyTrainingData);
 
 public:
    // loading the graph may attempt to recurse loading, with converting or download, reset retry counter

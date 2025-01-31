@@ -118,6 +118,7 @@ private:
    int cmdNodeSave ();
    int cmdNodeLoad ();
    int cmdNodeErase ();
+   int cmdNodeEraseTraining ();
    int cmdNodeDelete ();
    int cmdNodeCheck ();
    int cmdNodeCache ();
