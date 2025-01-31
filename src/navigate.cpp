@@ -478,6 +478,18 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
 
    const auto ownPrio = bots.getPlayerPriority (ent ());
 
+   auto clearCamp = [] (edict_t *ent) {
+      auto bot = bots[ent];
+
+      if (bot) {
+         auto tid = bot->getCurrentTaskId ();
+
+         if (tid == Task::Camp || tid == Task::Hide || tid == Task::Pause) {
+            bot->completeTask ();
+         }
+      }
+   };
+
    // find nearest player to bot
    for (const auto &client : util.getClients ()) {
       if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team != m_team || client.ent == ent ()) {
@@ -554,6 +566,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
          }
       }
       m_isStuck = false;
+      m_navTimeset = game.time ();
 
       if (distanceSq < cr::sqrf (96.0f)) {
          if ((dir | forward.normalize2d_apx ()) < 0.0f) {
@@ -1304,7 +1317,7 @@ bool Bot::updateNavigation () {
    }
 
    // always increase reachability distance for occupied nodes
-   if (isOccupiedNode (m_path->number, pathHasFlags)) {
+   if (!(graph[m_path->number].flags & NodeFlag::Crouch) && isOccupiedNode (m_path->number, pathHasFlags)) {
       desiredDistanceSq = cr::sqrf (96.0f);
       nodeDistanceSq *= 0.5f;
    }
@@ -2622,7 +2635,7 @@ void Bot::setPathOrigin () {
    };
 
    // if node radius non zero vary origin a bit depending on the body angles
-   if (radius > 16.0f) {
+   if (radius > 16.0f && !isInNarrowPlace ()) {
       int nearestIndex = kInvalidNodeIndex;
 
       if (!m_pathWalk.empty () && m_pathWalk.hasNext ()) {

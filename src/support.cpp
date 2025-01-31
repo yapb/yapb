@@ -266,13 +266,12 @@ bool BotSupport::isBreakableEntity (edict_t *ent, bool initialSeed) {
    constexpr auto kFuncWall = StringRef::fnv1a32 ("func_wall");
 
    if (ent->v.takedamage > 0.0f && ent->v.impulse <= 0 && !(ent->v.flags & FL_WORLDBRUSH) && !(ent->v.spawnflags & SF_BREAK_TRIGGER_ONLY)) {
-      auto classHash = ent->v.classname.str ().hash ();
+      const auto classHash = ent->v.classname.str ().hash ();
 
       if (classHash == kFuncBreakable || (classHash == kFuncPushable && (ent->v.spawnflags & SF_PUSH_BREAKABLE)) || classHash == kFuncWall) {
          return ent->v.movetype == MOVETYPE_PUSH || ent->v.movetype == MOVETYPE_PUSHSTEP;
       }
    }
-
    return false;
 }
 
