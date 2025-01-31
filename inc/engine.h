@@ -274,6 +274,9 @@ public:
    // mark breakable entity as invalid
    void markBreakableAsInvalid (edict_t *ent);
 
+   // is developer mode ?
+   bool isDeveloperMode () const;
+
    // public inlines
 public:
    // get the current time on server

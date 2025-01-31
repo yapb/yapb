@@ -85,7 +85,11 @@ template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *
       if (tryReload ()) {
          return true;
       }
-      return error (isGraph, isDebug, file, "Unable to open %s file for reading (filename: '%s').", type.name, filename);
+
+      if (game.isDeveloperMode ()) {
+         return error (isGraph, isDebug, file, "Unable to open %s file for reading (filename: '%s').", type.name, filename);
+      }
+      return false;
    }
 
    // read the header

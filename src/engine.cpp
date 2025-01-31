@@ -1265,6 +1265,12 @@ void Game::markBreakableAsInvalid (edict_t *ent) {
    m_checkedBreakables[indexOfEntity (ent)] = false;
 }
 
+bool Game::isDeveloperMode () const {
+   static ConVarRef developer { "developer" };
+
+   return developer.exists () && developer.value () > 0.0f;
+}
+
 void LightMeasure::initializeLightstyles () {
    // this function initializes lighting information...
 

@@ -465,7 +465,7 @@ void Bot::resetCollision () {
 void Bot::ignoreCollision () {
    resetCollision ();
 
-   m_lastCollTime = game.time () + m_frameInterval * 4.0f;
+   m_lastCollTime = game.time () + 0.5f;
    m_checkTerrain = false;
 }
 
@@ -520,7 +520,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
          setStrafeSpeed (normal, -pev->maxspeed);
       }
    }
-   const float interval = m_frameInterval * (!isDucking () && pev->velocity.lengthSq2d () > 0.0f ? 7.5f : 2.0f);
+   const float interval = m_frameInterval * (!isDucking () && pev->velocity.lengthSq2d () > 0.0f ? 6.0f : 2.0f);
 
    // use our movement angles, try to predict where we should be next frame
    Vector right {}, forward {};
