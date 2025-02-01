@@ -533,12 +533,18 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
       m_avoidAction = Dodge::None;
       return;
    }
-   else if (m_avoidAction != Dodge::None) {
-      if (m_avoidAction == Dodge::Left) {
-         setStrafeSpeed (normal, pev->maxspeed);
+   else {
+      if (util.getConeDeviation (ent (), m_hindrance->v.origin) < 0.8f) {
+         return;
       }
-      else if (m_avoidAction == Dodge::Right) {
-         setStrafeSpeed (normal, -pev->maxspeed);
+
+      if (m_avoidAction != Dodge::None) {
+         if (m_avoidAction == Dodge::Left) {
+            setStrafeSpeed (normal, pev->maxspeed);
+         }
+         else if (m_avoidAction == Dodge::Right) {
+            setStrafeSpeed (normal, -pev->maxspeed);
+         }
       }
    }
    const float interval = m_frameInterval * (!isDucking () && pev->velocity.lengthSq2d () > 0.0f ? 6.0f : 2.0f);
