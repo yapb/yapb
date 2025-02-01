@@ -474,18 +474,25 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
       return; // no player avoiding when with semiclip plugin
    }
    m_hindrance = nullptr;
-   float distanceSq = cr::sqrf (512.0f);
+   float distanceSq = cr::sqrf (pev->maxspeed);
 
    const auto ownPrio = bots.getPlayerPriority (ent ());
 
-   auto clearCamp = [] (edict_t *ent) {
+   auto clearCamp = [&] (edict_t *ent) {
       auto bot = bots[ent];
 
       if (bot) {
-         auto tid = bot->getCurrentTaskId ();
+         const auto tid = bot->getCurrentTaskId ();
+         const auto tid2 = getCurrentTaskId ();
 
-         if (tid == Task::Camp || tid == Task::Hide || tid == Task::Pause) {
+         if ((m_currentNodeIndex == bot->m_currentNodeIndex)
+            && (tid == Task::Camp || tid == Task::Hide || tid == Task::Pause)) {
             bot->completeTask ();
+         }
+         if ((m_currentNodeIndex == bot->m_currentNodeIndex)
+            && tid2 == Task::Camp || tid2 == Task::Hide || tid2 == Task::Pause) {
+            completeTask ();
+            findValidNode ();
          }
       }
    };
@@ -499,6 +506,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
 
       // give some priorities to bot avoidance
       if (ownPrio < otherPrio) {
+         clearCamp (client.ent);
          continue;
       }
 
@@ -508,6 +516,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
 
          // ignore because we're already avoiding someone better
          if (avoidPrio < otherPrio) {
+            clearCamp (m_hindrance);
             continue;
          }
       }
@@ -551,7 +560,10 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
       const auto &dir = (pev->origin - m_hindrance->v.origin).normalize2d_apx ();
 
       // to start strafing, we have to first figure out if the target is on the left side or right side
-      if (m_avoidAction == Dodge::None && m_path->radius > 16.0f && !isInNarrowPlace ()) {
+      if ((m_avoidAction == Dodge::None
+         && m_path->radius > 16.0f
+         && !isInNarrowPlace ())
+         || m_moveSpeed < 0.0f) {
          if ((dir | right.normalize2d_apx ()) > 0.0f) {
             m_avoidAction = Dodge::Left;
 
@@ -565,15 +577,11 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
             setStrafeSpeed (normal, -pev->maxspeed);
          }
       }
-      m_isStuck = false;
       m_navTimeset = game.time ();
 
       if (distanceSq < cr::sqrf (96.0f)) {
          if ((dir | forward.normalize2d_apx ()) < 0.0f) {
             m_moveSpeed = -pev->maxspeed;
-         }
-         else {
-            m_moveSpeed = pev->maxspeed;
          }
       }
       ignoreCollision ();
@@ -1316,12 +1324,6 @@ bool Bot::updateNavigation () {
       desiredDistanceSq = 0.0f;
    }
 
-   // always increase reachability distance for occupied nodes
-   if (!(graph[m_path->number].flags & NodeFlag::Crouch) && isOccupiedNode (m_path->number, pathHasFlags)) {
-      desiredDistanceSq = cr::sqrf (96.0f);
-      nodeDistanceSq *= 0.5f;
-   }
-
    // needs precise placement - check if we get past the point
    if (desiredDistanceSq < cr::sqrf (20.0f) && nodeDistanceSq < cr::sqrf (30.0f)) {
       const auto predictRangeSq = m_pathOrigin.distanceSq (pev->origin + pev->velocity * m_frameInterval);
@@ -1344,7 +1346,7 @@ bool Bot::updateNavigation () {
       return true;
    }
 
-   if (nodeDistanceSq <= desiredDistanceSq) {
+   if (nodeDistanceSq < desiredDistanceSq) {
       // did we reach a destination node?
       if (getTask ()->data == m_currentNodeIndex) {
          if (m_chosenGoalIndex != kInvalidNodeIndex) {
@@ -1816,7 +1818,9 @@ bool Bot::findNextBestNodeEx (const IntArray &data, bool handleFails) {
       lessDist[i] = kInfiniteDistance;
       lessIndex[i] = kInvalidNodeIndex;
    }
-   const auto &numToSkip = handleFails ? 1 : rg (1, 4);
+
+   // in case low node density do not skip previous ones, in case of fail reduce max nodes to skip
+   const auto &numToSkip = graph.length () < 512 ? 0 : (handleFails ? 1 : rg (1, 4));
 
    for (const auto &i : data) {
       const auto &path = graph[i];

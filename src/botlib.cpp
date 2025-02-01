@@ -268,7 +268,7 @@ edict_t *Bot::lookupBreakable () {
 
          // check if this isn't a triggered (bomb) breakable and if it takes damage. if true, shoot the crap!
          if (util.isBreakableEntity (hit)) {
-            m_breakableOrigin = tr.vecEndPos;
+            m_breakableOrigin = game.getEntityOrigin (hit);
             m_breakableEntity = hit;
 
             return hit;
@@ -276,14 +276,26 @@ edict_t *Bot::lookupBreakable () {
       }
       return nullptr;
    };
+
+   auto isGoodForUs = [&] (edict_t *ent) -> bool {
+      if (game.isNullEntity (ent)) {
+         return false;
+      }
+      for (const auto &br : m_ignoredBreakable) {
+         if (br == ent) {
+            return false;
+         }
+      }
+      return true;
+   };
    auto hit = doLookup (pev->origin, m_destOrigin, detectBreakableDistance);
 
-   if (!game.isNullEntity (hit)) {
+   if (isGoodForUs (hit)) {
       return hit;
    }
    hit = doLookup (getEyesPos (), m_destOrigin, detectBreakableDistance);
 
-   if (!game.isNullEntity (hit)) {
+   if (isGoodForUs (hit)) {
       return hit;
    }
    m_breakableEntity = nullptr;
@@ -4146,7 +4158,7 @@ void Bot::enteredBuyZone (int buyState) {
 
    // if bot is in buy zone, try to buy ammo for this weapon...
    if (m_seeEnemyTime + 12.0f < game.time ()
-      && m_lastEquipTime + 15.0f < game.time ()
+      && m_lastEquipTime + 30.0f < game.time ()
       && m_inBuyZone
       && (bots.getRoundStartTime () + rg (10.0f, 20.0f) + mp_buytime.as <float> () < game.time ())
       && !bots.isBombPlanted ()

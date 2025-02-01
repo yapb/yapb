@@ -1467,6 +1467,20 @@ void Bot::shootBreakable_ () {
       completeTask ();
       return;
    }
+   else {
+      TraceResult tr {};
+      game.testLine (pev->origin, m_breakableOrigin, TraceIgnore::None, ent (), &tr);
+
+      if (tr.pHit != m_breakableEntity || !util.isVisible (tr.vecEndPos, ent ())) {
+         m_ignoredBreakable.push (tr.pHit);
+
+         m_breakableEntity = nullptr;
+         m_breakableOrigin = nullptr;
+
+         completeTask ();
+         return;
+      }
+   }
    m_aimFlags |= AimFlags::Override;
    pev->button |= m_campButtons;
 
