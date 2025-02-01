@@ -490,7 +490,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
             bot->completeTask ();
          }
          if ((m_currentNodeIndex == bot->m_currentNodeIndex)
-            && tid2 == Task::Camp || tid2 == Task::Hide || tid2 == Task::Pause) {
+            && (tid2 == Task::Camp || tid2 == Task::Hide || tid2 == Task::Pause)) {
             completeTask ();
             findValidNode ();
          }
