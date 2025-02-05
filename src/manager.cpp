@@ -1157,7 +1157,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    m_startAction = BotMsg::None;
    m_retryJoin = 0;
    m_moneyAmount = 0;
-   m_logotypeIndex = conf.getRandomLogoIndex ();
+   m_logoDecalIndex = conf.getRandomLogoDecalIndex ();
 
    if (cv_rotate_bots) {
       m_stayTime = game.time () + rg (cv_rotate_stay_min.as <float> (), cv_rotate_stay_max.as <float> ());
@@ -1496,7 +1496,6 @@ void Bot::newRound () {
    m_askCheckTime = rg (30.0f, 90.0f);
    m_minSpeed = 260.0f;
    m_prevSpeed = 0.0f;
-   m_prevVelocity = 0.0f;
    m_prevOrigin = Vector (kInfiniteDistance, kInfiniteDistance, kInfiniteDistance);
    m_prevTime = game.time ();
    m_lookUpdateTime = game.time ();
@@ -1630,7 +1629,6 @@ void Bot::newRound () {
    m_zoomCheckTime = 0.0f;
    m_strafeSetTime = 0.0f;
    m_dodgeStrafeDir = Dodge::None;
-   m_avoidAction = Dodge::None;
    m_fightStyle = Fight::None;
    m_lastFightStyleCheck = 0.0f;
 

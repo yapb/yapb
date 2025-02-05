@@ -235,12 +235,13 @@ void Bot::prepareChatMessage (StringRef message) {
          if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.ent == ent ()) {
             continue;
          }
+         const auto playerIndex = game.indexOfPlayer (client.ent);
 
          if (needsEnemy && m_team != client.team) {
-            return humanizedName (game.indexOfPlayer (client.ent));
+            return humanizedName (playerIndex);
          }
          else if (!needsEnemy && m_team == client.team) {
-            return humanizedName (game.indexOfPlayer (client.ent));
+            return humanizedName (playerIndex);
          }
       }
       return getHighfragPlayer ();
@@ -290,6 +291,9 @@ void Bot::prepareChatMessage (StringRef message) {
       case 'e':
          m_chatBuffer.replace ("%e", getPlayerAlive (true));
          break;
+
+      case 'g':
+         m_chatBuffer.replace ("%g", graph.getAuthor ());
       };
       ++replaceCounter;
    }

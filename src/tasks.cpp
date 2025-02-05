@@ -99,11 +99,10 @@ void Bot::normal_ () {
       // spray logo sometimes if allowed to do so
       if (!(m_states & (Sense::SeeingEnemy | Sense::SuspectEnemy))
          && m_seeEnemyTime + 5.0f < game.time ()
-         && !m_reloadState && m_timeLogoSpray < game.time ()
-         && !game.is (GameFlags::Xash3D)
+         && m_reloadState ==  Reload::None
+         && m_timeLogoSpray < game.time ()
          && cv_spraypaints
-         && rg.chance (50)
-         && m_moveSpeed > getShiftSpeed ()
+         && m_moveSpeed >= getShiftSpeed ()
          && game.isNullEntity (m_pickupItem)) {
 
          if (!(game.mapIs (MapFlags::Demolition) && bots.isBombPlanted () && m_team == Team::CT)) {
@@ -316,7 +315,7 @@ void Bot::spraypaint_ () {
    m_aimFlags |= AimFlags::Entity;
 
    // bot didn't spray this round?
-   if (m_timeLogoSpray < game.time () && getTask ()->time > game.time ()) {
+   if (m_timeLogoSpray <= game.time () && getTask ()->time > game.time ()) {
       const auto &forward = pev->v_angle.forward ();
       Vector sprayOrigin = getEyesPos () + forward * 128.0f;
 
@@ -331,11 +330,12 @@ void Bot::spraypaint_ () {
 
       if (getTask ()->time - 0.5f < game.time ()) {
          // emit spray can sound
-         engfuncs.pfnEmitSound (ent (), CHAN_VOICE, "player/sprayer.wav", 1.0f, ATTN_NORM, 0, 100);
+         engfuncs.pfnEmitSound (pev->pContainingEntity, CHAN_VOICE, "player/sprayer.wav", 1.0f, ATTN_NORM, 0, 100);
+
          game.testLine (getEyesPos (), getEyesPos () + forward * 128.0f, TraceIgnore::Monsters, ent (), &tr);
 
          // paint the actual logo decal
-         util.decalTrace (pev, &tr, m_logotypeIndex);
+         util.decalTrace (&tr, m_logoDecalIndex);
          m_timeLogoSpray = game.time () + rg (60.0f, 90.0f);
       }
    }

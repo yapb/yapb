@@ -103,24 +103,13 @@ bool BotSupport::isVisible (const Vector &origin, edict_t *ent) {
    return true;
 }
 
-void BotSupport::decalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex) {
+void BotSupport::decalTrace (TraceResult *trace, int decalIndex) {
    // this function draw spraypaint depending on the tracing results.
 
-   if (cr::fequal (trace->flFraction, 1.0f)) {
+   if (cr::fequal (trace->flFraction, 1.0f) || decalIndex <= 0) {
       return;
    }
-   auto logo = conf.getLogoName (logotypeIndex);
-
    int entityIndex = -1, message = TE_DECAL;
-   int decalIndex = engfuncs.pfnDecalIndex (logo.chars ());
-
-   if (decalIndex <= 0) {
-      decalIndex = engfuncs.pfnDecalIndex ("{lambda06");
-   }
-
-   if (decalIndex <= 0) {
-      return;
-   }
 
    if (!game.isNullEntity (trace->pHit)) {
       if (trace->pHit->v.solid == SOLID_BSP || trace->pHit->v.movetype == MOVETYPE_PUSHSTEP) {
@@ -148,32 +137,19 @@ void BotSupport::decalTrace (entvars_t *pev, TraceResult *trace, int logotypeInd
          decalIndex -= 256;
       }
    }
+   MessageWriter msg {};
 
-   if (logo.startsWith ("{")) {
-      MessageWriter (MSG_BROADCAST, SVC_TEMPENTITY)
-         .writeByte (TE_PLAYERDECAL)
-         .writeByte (game.indexOfEntity (pev->pContainingEntity))
-         .writeCoord (trace->vecEndPos.x)
-         .writeCoord (trace->vecEndPos.y)
-         .writeCoord (trace->vecEndPos.z)
-         .writeShort (static_cast <short> (game.indexOfEntity (trace->pHit)))
-         .writeByte (decalIndex);
+   msg.start (MSG_BROADCAST, SVC_TEMPENTITY)
+      .writeByte (message)
+      .writeCoord (trace->vecEndPos.x)
+      .writeCoord (trace->vecEndPos.y)
+      .writeCoord (trace->vecEndPos.z)
+      .writeByte (decalIndex);
+
+   if (entityIndex) {
+      msg.writeShort (entityIndex);
    }
-   else {
-      MessageWriter msg {};
-
-      msg.start (MSG_BROADCAST, SVC_TEMPENTITY)
-         .writeByte (message)
-         .writeCoord (trace->vecEndPos.x)
-         .writeCoord (trace->vecEndPos.y)
-         .writeCoord (trace->vecEndPos.z)
-         .writeByte (decalIndex);
-
-      if (entityIndex) {
-         msg.writeShort (entityIndex);
-      }
-      msg.end ();
-   }
+   msg.end ();
 }
 
 bool BotSupport::isPlayer (edict_t *ent) {

@@ -735,19 +735,32 @@ void BotConfig::loadLogosConfig () {
    String line {};
    MemFile file {};
 
+   auto addLogoIndex = [&] (StringRef logo) {
+      const auto index = engfuncs.pfnDecalIndex (logo.chars ());
+
+      if (index > 0) {
+         m_logosIndices.push (index);
+      }
+   };
+   m_logosIndices.clear ();
+
    // logos initialization
    if (openConfig ("logos", "Logos config file not found. Loading defaults.", &file)) {
-      m_logos.clear ();
-
       while (file.getLine (line)) {
          if (isCommentLine (line)) {
             continue;
          }
-         m_logos.push (cr::move (line.trim ()));
+         addLogoIndex (line);
       }
    }
-   else {
-      m_logos = cr::move (String { "{biohaz;{graf003;{graf004;{graf005;{lambda06;{target;{hand1;{spit2;{bloodhand6;{foot_l;{foot_r" }.split (";"));
+
+   // use defaults
+   if (m_logosIndices.empty ()) {
+      auto defaults = String { "{biohaz;{graf003;{graf004;{graf005;{lambda06;{target;{hand1;{spit2;{bloodhand6;{foot_l;{foot_r" }.split (";");
+
+      for (const auto &logo : defaults) {
+         addLogoIndex (logo);
+      }
    }
 }
 

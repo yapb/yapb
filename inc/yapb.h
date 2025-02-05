@@ -53,6 +53,7 @@ struct WeaponInfo {
    int id {}; // the weapon id value
    StringRef name {}; // name of the weapon when selecting it
    StringRef model {}; // model name to separate cs weapons
+   StringRef alias {}; // alias name for weapon
    int price {}; // price when buying
    int minPrimaryAmmo {}; // minimum primary ammo
    int teamStandard {}; // used by team (number) (standard map)
@@ -235,7 +236,6 @@ private:
    float m_prevTime {}; // time previously checked movement speed
    float m_heavyTimestamp {}; // is it time to execute heavy-weight functions
    float m_prevSpeed {}; // speed some frames before
-   float m_prevVelocity {}; // velocity some frames before
    float m_timeDoorOpen {}; // time to next door open check
    float m_timeHitDoor {}; // specific time after hitting the door
    float m_lastChatTime {}; // time bot last chatted
@@ -315,7 +315,6 @@ private:
 
    PathWalk m_pathWalk {}; // pointer to current node from path
    Dodge m_dodgeStrafeDir {}; // direction to strafe
-   Dodge m_avoidAction {}; // player avoid action
    Fight m_fightStyle {}; // combat style to use
    CollisionState m_collisionState {}; // collision State
    FindPath m_pathType {}; // which pathfinder to use
@@ -351,6 +350,7 @@ private:
    Vector m_breakableOrigin {}; // origin of breakable
    Vector m_rightRef {}; // right referential vector
    Vector m_checkFallPoint[2] {}; // check fall point
+   Vector m_prevVelocity {}; // velocity some frames before
 
    Array <edict_t *> m_ignoredBreakable {}; // list of ignored breakables
    Array <edict_t *> m_ignoredItems {}; // list of  pointers to entity to ignore for pickup
@@ -651,7 +651,7 @@ public:
    int m_voteKickIndex {}; // index of player to vote against
    int m_lastVoteKick {}; // last index
    int m_voteMap {}; // number of map to vote for
-   int m_logotypeIndex {}; // index for logotype
+   int m_logoDecalIndex {}; // index for logotype
    int m_buyState {}; // current count in buying
    int m_blindButton {}; // buttons bot press, when blind
    int m_radioOrder {}; // actual command
@@ -930,6 +930,7 @@ extern ConVar cv_camping_time_min;
 extern ConVar cv_camping_time_max;
 extern ConVar cv_smoke_grenade_checks;
 extern ConVar cv_check_darkness;
+extern ConVar cv_use_hitbox_enemy_targeting;
 
 extern ConVar mp_freezetime;
 extern ConVar mp_roundtime;

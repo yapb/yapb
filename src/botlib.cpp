@@ -180,6 +180,7 @@ void Bot::checkBreakablesAround () {
       || !cv_destroy_breakables_around
       || usesKnife ()
       || usesSniper ()
+      || isOnLadder ()
       || rg.chance (25)
       || !game.hasBreakables ()
       || m_seeEnemyTime + 4.0f > game.time ()
@@ -3161,7 +3162,7 @@ void Bot::checkSpawnConditions () {
 
    // switch to knife if time to do this
    if (m_checkKnifeSwitch && m_buyingFinished && m_spawnTime + rg (5.0f, 7.5f) < game.time ()) {
-      if (!game.is (GameFlags::Xash3D) && rg (1, 100) < 2 && cv_spraypaints) {
+      if (rg (1, 100) < 30 && cv_spraypaints) {
          startTask (Task::Spraypaint, TaskPri::Spraypaint, kInvalidNodeIndex, game.time () + 1.0f, false);
       }
 
@@ -3397,7 +3398,8 @@ void Bot::logic () {
 
    // save the previous speed (for checking if stuck)
    m_prevSpeed = cr::abs (m_moveSpeed);
-   m_prevVelocity = cr::abs (pev->velocity.length2d ());
+   m_prevVelocity = pev->velocity;
+
    m_lastDamageType = -1; // reset damage
 }
 

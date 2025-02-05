@@ -530,22 +530,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
 
    // found somebody?
    if (game.isNullEntity (m_hindrance)) {
-      m_avoidAction = Dodge::None;
       return;
-   }
-   else {
-      if (util.getConeDeviation (ent (), m_hindrance->v.origin) < 0.8f) {
-         return;
-      }
-
-      if (m_avoidAction != Dodge::None) {
-         if (m_avoidAction == Dodge::Left) {
-            setStrafeSpeed (normal, pev->maxspeed);
-         }
-         else if (m_avoidAction == Dodge::Right) {
-            setStrafeSpeed (normal, -pev->maxspeed);
-         }
-      }
    }
    const float interval = m_frameInterval * (!isDucking () && pev->velocity.lengthSq2d () > 0.0f ? 6.0f : 2.0f);
 
@@ -566,31 +551,20 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
       const auto &dir = (pev->origin - m_hindrance->v.origin).normalize2d_apx ();
 
       // to start strafing, we have to first figure out if the target is on the left side or right side
-      if ((m_avoidAction == Dodge::None
-         && m_path->radius > 16.0f
-         && !isInNarrowPlace ())
-         || m_moveSpeed < 0.0f) {
-         if ((dir | right.normalize2d_apx ()) > 0.0f) {
-            m_avoidAction = Dodge::Left;
-
-            // start strafing
-            setStrafeSpeed (normal, pev->maxspeed);
-         }
-         else {
-            m_avoidAction = Dodge::Right;
-
-            // start strafing
-            setStrafeSpeed (normal, -pev->maxspeed);
-         }
+      if ((dir | right.normalize2d_apx ()) > 0.0f) {
+         // start strafing
+         setStrafeSpeed (normal, pev->maxspeed);
       }
-      m_navTimeset = game.time ();
+      else {
+         // start strafing
+         setStrafeSpeed (normal, -pev->maxspeed);
+      }
 
       if (distanceSq < cr::sqrf (96.0f)) {
          if ((dir | forward.normalize2d_apx ()) < 0.0f) {
             m_moveSpeed = -pev->maxspeed;
          }
       }
-      ignoreCollision ();
    }
 }
 
@@ -600,10 +574,12 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
    TraceResult tr {};
    m_isStuck = false;
 
+   const auto tid = getCurrentTaskId ();
+
    // standing still, no need to check?
-   if (m_lastCollTime < game.time () && getCurrentTaskId () != Task::Attack) {
+   if (m_lastCollTime < game.time () && tid != Task::Attack && tid != Task::Camp) {
       // didn't we move enough previously?
-      if (movedDistance < kMinMovedDistance && (m_prevSpeed > 20.0f || m_prevVelocity < m_moveSpeed / 2)) {
+      if (movedDistance < kMinMovedDistance && m_prevSpeed > 20.0f) {
          m_prevTime = game.time (); // then consider being stuck
          m_isStuck = true;
 
@@ -881,6 +857,14 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
 }
 
 void Bot::checkFall () {
+   if (isPreviousLadder ()) {
+      return;
+   }
+   else if (graph.exists (m_currentNodeIndex)) {
+      if (graph[m_currentNodeIndex].flags & NodeFlag::Ladder) {
+         return;
+      }
+   }
 
    if (!m_checkFall) {
       if (isOnFloor ()) {

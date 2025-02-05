@@ -439,12 +439,12 @@ constexpr auto kSprayDistanceX2 = kSprayDistance * 2;
 constexpr auto kMaxChatterRepeatInterval = 99.0f;
 constexpr auto kViewFrameUpdate = 1.0f / 25.0f;
 constexpr auto kGrenadeDamageRadius = 385.0f;
-constexpr auto kMinMovedDistance = 2.0f;
+constexpr auto kMinMovedDistance = 3.0f;
 
 constexpr auto kInfiniteDistanceLong = static_cast <int> (kInfiniteDistance);
 constexpr auto kMaxWeapons = 32;
 constexpr auto kNumWeapons = 26;
-constexpr auto kMaxCollideMoves = 3;
+constexpr auto kMaxCollideMoves = 4;
 constexpr auto kGameMaxPlayers = 32;
 constexpr auto kGameTeamNum = 2;
 constexpr auto kInvalidNodeIndex = -1;

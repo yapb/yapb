@@ -180,7 +180,7 @@ bool Bot::checkBodyParts (edict_t *target) {
    }
 
    // hitboxes requested ?
-   if (game.is (GameFlags::HasStudioModels) && cv_use_hitbox_enemy_targeting) {
+   if (game.is (GameFlags::HasStudioModels) && cv_use_hitbox_enemy_targeting && m_hitboxEnumerator) {
       return checkBodyPartsWithHitboxes (target);
    }
    return checkBodyPartsWithOffsets (target);

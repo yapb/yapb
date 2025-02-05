@@ -62,7 +62,7 @@ public:
    bool findNearestPlayer (void **holder, edict_t *to, float searchDistance = 4096.0, bool sameTeam = false, bool needBot = false, bool needAlive = false, bool needDrawn = false, bool needBotWithC4 = false);
 
    // tracing decals for bots spraying logos
-   void decalTrace (entvars_t *pev, TraceResult *trace, int logotypeIndex);
+   void decalTrace (TraceResult *trace, int decalIndex);
 
    // update stats on clients
    void updateClients ();
