@@ -577,7 +577,10 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
    const auto tid = getCurrentTaskId ();
 
    // standing still, no need to check?
-   if (m_lastCollTime < game.time () && tid != Task::Attack && tid != Task::Camp) {
+   if ((m_moveSpeed >= 10 || m_strafeSpeed >= 10)
+      && m_lastCollTime < game.time ()
+      && tid != Task::Attack
+      && tid != Task::Camp) {
       // didn't we move enough previously?
       if (movedDistance < kMinMovedDistance && m_prevSpeed > 20.0f) {
          m_prevTime = game.time (); // then consider being stuck
@@ -653,77 +656,10 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
             Vector src {}, dst {};
 
             // first 4 entries hold the possible collision states
+            state[i++] = CollisionState::Jump;
             state[i++] = CollisionState::StrafeLeft;
             state[i++] = CollisionState::StrafeRight;
-            state[i++] = CollisionState::Jump;
             state[i++] = CollisionState::Duck;
-
-            if (bits & CollisionProbe::Strafe) {
-               state[i] = 0;
-               state[i + 1] = 0;
-
-               // to start strafing, we have to first figure out if the target is on the left side or right side
-               Vector right {}, forward {};
-               m_moveAngles.angleVectors (&forward, &right, nullptr);
-
-               const Vector &dirToPoint = (pev->origin - m_destOrigin).normalize2d_apx ();
-               const Vector &rightSide = right.normalize2d_apx ();
-
-               bool dirRight = false;
-               bool dirLeft = false;
-               bool blockedLeft = false;
-               bool blockedRight = false;
-
-               if ((dirToPoint | rightSide) > 0.0f) {
-                  dirRight = true;
-               }
-               else {
-                  dirLeft = true;
-               }
-               const auto &testDir = m_moveSpeed > 0.0f ? forward : -forward;
-               constexpr float kBlockDistance = 52.0f;
-
-               // now check which side is blocked
-               src = pev->origin + right * kBlockDistance;
-               dst = src + testDir * kBlockDistance;
-
-               game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
-
-               if (!cr::fequal (tr.flFraction, 1.0f)) {
-                  blockedRight = true;
-               }
-               src = pev->origin - right * kBlockDistance;
-               dst = src + testDir * kBlockDistance;
-
-               game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
-
-               if (!cr::fequal (tr.flFraction, 1.0f)) {
-                  blockedLeft = true;
-               }
-
-               if (dirLeft) {
-                  state[i] += 5;
-               }
-               else {
-                  state[i] -= 5;
-               }
-
-               if (blockedLeft) {
-                  state[i] -= 5;
-               }
-               ++i;
-
-               if (dirRight) {
-                  state[i] += 5;
-               }
-               else {
-                  state[i] -= 5;
-               }
-
-               if (blockedRight) {
-                  state[i] -= 5;
-               }
-            }
 
             // now weight all possible states
             if (bits & CollisionProbe::Jump) {
@@ -773,6 +709,74 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
                state[i] = 0;
             }
             ++i;
+
+
+            if (bits & CollisionProbe::Strafe) {
+               state[i] = 0;
+               state[i + 1] = 0;
+
+               // to start strafing, we have to first figure out if the target is on the left side or right side
+               Vector right {}, forward {};
+               m_moveAngles.angleVectors (&forward, &right, nullptr);
+
+               const Vector &dirToPoint = (pev->origin - m_destOrigin).normalize2d_apx ();
+               const Vector &rightSide = right.normalize2d_apx ();
+
+               bool dirRight = false;
+               bool dirLeft = false;
+               bool blockedLeft = false;
+               bool blockedRight = false;
+
+               if ((dirToPoint | rightSide) > 0.0f) {
+                  dirRight = true;
+               }
+               else {
+                  dirLeft = true;
+               }
+               const auto &testDir = m_moveSpeed > 0.0f ? forward : -forward;
+               constexpr float kBlockDistance = 32.0f;
+
+               // now check which side is blocked
+               src = pev->origin + right * kBlockDistance;
+               dst = src + testDir * kBlockDistance;
+
+               game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
+
+               if (!cr::fequal (tr.flFraction, 1.0f)) {
+                  blockedRight = true;
+               }
+               src = pev->origin - right * kBlockDistance;
+               dst = src + testDir * kBlockDistance;
+
+               game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
+
+               if (!cr::fequal (tr.flFraction, 1.0f)) {
+                  blockedLeft = true;
+               }
+
+               if (dirLeft) {
+                  state[i] += 5;
+               }
+               else {
+                  state[i] -= 5;
+               }
+
+               if (blockedLeft) {
+                  state[i] -= 5;
+               }
+               ++i;
+
+               if (dirRight) {
+                  state[i] += 5;
+               }
+               else {
+                  state[i] -= 5;
+               }
+
+               if (blockedRight) {
+                  state[i] -= 5;
+               }
+            }
 
             if (bits & CollisionProbe::Duck) {
                state[i] = 0;
@@ -881,13 +885,13 @@ void Bot::checkFall () {
          }
       }
       else if (!isOnLadder () && !isInWater ()) {
-         if (!m_checkFallPoint[0].empty () || !m_checkFallPoint[1].empty ()) {
+         if (!m_checkFallPoint[0].empty () && !m_checkFallPoint[1].empty ()) {
             m_checkFall = true;
          }
       }
    }
 
-   if (!m_checkFall || !isOnFloor ()) {
+   if (!m_checkFall || !isOnFloor () || !m_fixFallTimer.elapsed ()) {
       return;
    }
    m_checkFall = false;
@@ -897,22 +901,25 @@ void Bot::checkFall () {
    const float nowDistanceSq = pev->origin.distanceSq (m_checkFallPoint[1]);
 
    if (nowDistanceSq > baseDistanceSq
-      && (nowDistanceSq > baseDistanceSq * 1.2f || nowDistanceSq > baseDistanceSq + 200.0f)
-      && baseDistanceSq >= cr::sqrf (80.0f) && nowDistanceSq >= cr::sqrf (100.0f)) {
+      && (nowDistanceSq > baseDistanceSq * 1.8f || nowDistanceSq > baseDistanceSq + 260.0f)
+      && baseDistanceSq >= cr::sqrf (124.0f) && nowDistanceSq >= cr::sqrf (146.0f)) {
       fixFall = true;
    }
-   else if (m_checkFallPoint[1].z > pev->origin.z + 128.0f || m_checkFallPoint[0].z > pev->origin.z + 128.0f) {
+   else if (cr::abs (m_checkFallPoint[1].z) > cr::abs (pev->origin.z) + 138.0f
+      || cr::abs (m_checkFallPoint[0].z) > cr::abs (pev->origin.z) + 138.0f) {
       fixFall = true;
    }
    else if (m_currentNodeIndex != kInvalidNodeIndex
-      && nowDistanceSq > cr::sqrf (16.0f)
-      && m_checkFallPoint[1].z > pev->origin.z + 62.0f) {
+      && nowDistanceSq > cr::sqrf (32.0f)
+      && cr::abs (m_checkFallPoint[1].z) > cr::abs (pev->origin.z) + 72.0f) {
       fixFall = true;
    }
 
    if (fixFall) {
       m_currentNodeIndex = kInvalidNodeIndex;
       findValidNode ();
+
+      m_fixFallTimer.start (1.0f);
    }
 }
 
@@ -1119,7 +1126,7 @@ bool Bot::updateNavigation () {
          if (!isOnLadder ()) {
             pev->button &= ~IN_DUCK;
          }
-         m_approachingLadderTimer.start (m_frameInterval * 4.0f);
+         m_approachingLadderTimer.start (m_frameInterval * 6.0f);
       }
 
       if (!isOnLadder () && isOnFloor () && !isDucking ()) {

@@ -1571,6 +1571,7 @@ void Bot::newRound () {
    m_approachingLadderTimer.invalidate ();
    m_forgetLastVictimTimer.invalidate ();
    m_lostReachableNodeTimer.invalidate ();
+   m_fixFallTimer.invalidate ();
 
    for (auto &timer : m_chatterTimes) {
       timer = kMaxChatterRepeatInterval;

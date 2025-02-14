@@ -2942,20 +2942,22 @@ void Bot::checkParachute () {
 void Bot::frame () {
    pev->flags |= FL_CLIENT | FL_FAKECLIENT; // restore fake client bit, just in case
 
-   if (m_thinkDelay.time <= game.time ()) {
+   const auto timestamp = game.time ();
+
+   if (m_thinkDelay.time <= timestamp) {
       update ();
 
       // delay next execution for thinking
-      m_thinkDelay.time = game.time () + m_thinkDelay.interval;
-
-      // run bot command on twice speed
-      if (m_commandDelay.time <= game.time ()) {
-         runMovement ();
-         m_commandDelay.time = game.time () + m_commandDelay.interval;
-      }
+      m_thinkDelay.time = timestamp + m_thinkDelay.interval;
    }
 
-   if (m_slowFrameTimestamp > game.time ()) {
+   // run bot command on twice speed
+   if (m_commandDelay.time <= timestamp) {
+      runMovement ();
+      m_commandDelay.time = timestamp + m_commandDelay.interval;
+   }
+
+   if (m_slowFrameTimestamp > timestamp) {
       return;
    }
 
@@ -3162,7 +3164,7 @@ void Bot::checkSpawnConditions () {
 
    // switch to knife if time to do this
    if (m_checkKnifeSwitch && m_buyingFinished && m_spawnTime + rg (5.0f, 7.5f) < game.time ()) {
-      if (rg (1, 100) < 30 && cv_spraypaints) {
+      if (rg (1, 100) < 30 && cv_spraypaints && pev->groundentity == game.getStartEntity ()) {
          startTask (Task::Spraypaint, TaskPri::Spraypaint, kInvalidNodeIndex, game.time () + 1.0f, false);
       }
 
@@ -3249,7 +3251,7 @@ void Bot::logic () {
 
       // save current position as previous
       m_prevOrigin = pev->origin;
-      m_prevTime = game.time () + 0.2f;
+      m_prevTime = game.time () + (0.2f - m_frameInterval * 2.0f);
    }
 
    // if there's some radio message to respond, check it
@@ -3920,7 +3922,7 @@ uint8_t Bot::computeMsec () {
 const Vector &Bot::getRpmAngles () {
    // get angles to pass to run player move function
 
-   if (!m_approachingLadderTimer.elapsed () || getCurrentTaskId () == Task::Attack) {
+   if (m_isStuck || !m_approachingLadderTimer.elapsed () || getCurrentTaskId () == Task::Attack) {
       return pev->v_angle;
    }
    return m_moveAngles;

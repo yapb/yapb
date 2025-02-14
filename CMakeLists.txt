@@ -145,6 +145,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 	"ext/linkage"
 )
 
+if(COMMAND set_target_postfix)
+    set_target_postfix(${PROJECT_NAME})
+endif()
+
 install(TARGETS ${PROJECT_NAME}
 		DESTINATION "${GAME_DIR}/${SERVER_INSTALL_DIR}/"
 		PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE

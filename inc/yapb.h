@@ -365,6 +365,7 @@ private:
    CountdownTimer m_forgetLastVictimTimer {}; // time to forget last victim position ?
    CountdownTimer m_approachingLadderTimer {}; // bot is approaching ladder
    CountdownTimer m_lostReachableNodeTimer {}; // bot's issuing next node, probably he's lost
+   CountdownTimer m_fixFallTimer {}; // timer we're fixed fall last time
 
 private:
    int pickBestWeapon (Array <int> &vec, int moneySave);

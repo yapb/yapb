@@ -102,6 +102,7 @@ void Bot::normal_ () {
          && m_reloadState ==  Reload::None
          && m_timeLogoSpray < game.time ()
          && cv_spraypaints
+         && pev->groundentity == game.getStartEntity ()
          && m_moveSpeed >= getShiftSpeed ()
          && game.isNullEntity (m_pickupItem)) {
 
