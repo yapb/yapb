@@ -306,7 +306,7 @@ endif
 target_name = meson.project_name()
 
 # xash specific postfix for binaries
-if cpu == 'aarch64
+if cpu == 'aarch64'
     target_name += '_arm64'
 elif opt_64bit
     target_name += '_amd64'
