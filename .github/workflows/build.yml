@@ -2,7 +2,7 @@ name: build
 
 on:
   push:
-    branches: [master, ci-apple]
+    branches: [master]
     paths-ignore:
       - '**.md'
 
@@ -137,7 +137,7 @@ jobs:
 
     name: bot-continuous-release
     runs-on: ubuntu-latest
-    needs: [bot-build, bot-msvc]
+    needs: [bot-build, bot-msvc, bot-apple]
 
     steps:
       - name: Checkout repository
