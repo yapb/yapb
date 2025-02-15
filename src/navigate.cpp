@@ -3091,9 +3091,9 @@ bool Bot::isBlockedRight () {
    return false;
 }
 
-bool Bot::checkWallOnLeft () {
+bool Bot::checkWallOnLeft (float distance) {
    TraceResult tr {};
-   game.testLine (pev->origin, pev->origin - pev->angles.right () * 40.0f, TraceIgnore::Monsters, ent (), &tr);
+   game.testLine (pev->origin, pev->origin - pev->angles.right () * distance, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
    if (tr.flFraction < 1.0f) {
@@ -3102,11 +3102,11 @@ bool Bot::checkWallOnLeft () {
    return false;
 }
 
-bool Bot::checkWallOnRight () {
+bool Bot::checkWallOnRight (float distance) {
    TraceResult tr {};
 
    // do a trace to the right...
-   game.testLine (pev->origin, pev->origin + pev->angles.right () * 40.0f, TraceIgnore::Monsters, ent (), &tr);
+   game.testLine (pev->origin, pev->origin + pev->angles.right () * distance, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
    if (tr.flFraction < 1.0f) {
@@ -3115,11 +3115,11 @@ bool Bot::checkWallOnRight () {
    return false;
 }
 
-bool Bot::checkWallOnBehind () {
+bool Bot::checkWallOnBehind (float distance) {
    TraceResult tr {};
 
    // do a trace to the right...
-   game.testLine (pev->origin, pev->origin - pev->angles.forward () * 40.0f, TraceIgnore::Monsters, ent (), &tr);
+   game.testLine (pev->origin, pev->origin - pev->angles.forward () * distance, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
    if (tr.flFraction < 1.0f) {

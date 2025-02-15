@@ -402,9 +402,9 @@ private:
    bool canStrafeRight (TraceResult *tr);
    bool isBlockedLeft ();
    bool isBlockedRight ();
-   bool checkWallOnLeft ();
-   bool checkWallOnRight ();
-   bool checkWallOnBehind ();
+   bool checkWallOnLeft (float distance = 40.0f);
+   bool checkWallOnRight (float distance = 40.0f);
+   bool checkWallOnBehind (float distance = 40.0f);
    bool updateNavigation ();
    bool isEnemyThreat ();
    bool isWeaponRestricted (int wid);

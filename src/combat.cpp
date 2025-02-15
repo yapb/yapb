@@ -1547,8 +1547,8 @@ void Bot::attackMovement () {
          m_strafeSetTime = strafeUpdateTime ();
       }
 
-      const bool wallOnRight = checkWallOnRight ();
-      const bool wallOnLeft = checkWallOnLeft ();
+      const bool wallOnRight = checkWallOnRight (72.0f);
+      const bool wallOnLeft = checkWallOnLeft (72.0f);
 
       if (m_dodgeStrafeDir == Dodge::Left) {
          if (!wallOnLeft) {
@@ -1584,7 +1584,10 @@ void Bot::attackMovement () {
       // do not move if inside "corridor"
       if (wallOnRight && wallOnLeft) {
          m_strafeSpeed = 0.0f;
+         m_moveSpeed = 0.0f;
+
          m_strafeSetTime = game.time () + 3.0f;
+         m_dodgeStrafeDir = Dodge::None;
       }
 
       // we're setting strafe speed regardless of move angles, so not resetting forward move here cause bots to behave strange
