@@ -303,9 +303,18 @@ if os == 'windows' and git.found()
    )
 endif
 
+target_name = meson.project_name()
+
+# xash specific postfix for binaries
+if cpu == 'aarch64'
+    target_name += '_arm64'
+elif opt_64bit
+    target_name += '_amd64'
+endif
+
 # instruct meson we're want our little shared lib bot
 shared_library(
-   meson.project_name(), 
+   target_name, 
    sources,
    include_directories: includes,
    gnu_symbol_visibility: 'hidden',
