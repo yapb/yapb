@@ -20,7 +20,7 @@ jobs:
 
     strategy:
       matrix:
-        arch: ['linux-x86', 'linux-amd64', 'linux-x86-gcc', 'linux-aarch64', 'darwin-x86', 'windows-x86-clang', 'windows-amd64', 'windows-x86-gcc']
+        arch: ['linux-x86', 'linux-amd64', 'linux-x86-gcc', 'linux-arm64', 'darwin-x86', 'windows-x86-clang', 'windows-amd64', 'windows-x86-gcc']
       fail-fast: false
     
     steps:
@@ -101,11 +101,11 @@ jobs:
             
   bot-apple:
     env:
-      name: apple-arm64
+      name: darwin-arm64
 
     strategy:
       matrix:
-        arch: ['apple-arm64-clang']
+        arch: ['darwin-arm64']
       fail-fast: false
 
     runs-on: macos-latest
