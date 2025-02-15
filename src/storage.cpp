@@ -196,7 +196,9 @@ template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *
             }
          }
 
-         ctrl.msg ("Loaded Bots %s data v%d (Memory: %.2fMB).", type.name, hdr.version, static_cast <float> (data.capacity () * sizeof (U)) / 1024.0f / 1024.0f);
+         if (game.isDeveloperMode ()) {
+            ctrl.msg ("Loaded Bots %s data v%d (Memory: %.2fMB).", type.name, hdr.version, static_cast <float> (data.capacity () * sizeof (U)) / 1024.0f / 1024.0f);
+         }
          file.close ();
 
          return true;
