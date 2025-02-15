@@ -49,7 +49,7 @@ jobs:
         shell: bash
         run: |
           meson compile -C ${{matrix.arch}}
-          echo "artifcat=${{matrix.arch}}/`ls ${{matrix.arch}}/ | egrep '^yapb*.(so|dylib|dll)$' | head -1`" >> $GITHUB_ENV
+          echo "artifcat=${{matrix.arch}}/`ls ${{matrix.arch}}/ | egrep '^yapb*.*(so|dylib|dll)$' | head -1`" >> $GITHUB_ENV
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -97,7 +97,7 @@ jobs:
         with:
           name: ${{matrix.arch}}
           path: |
-            ${{matrix.arch}}/yapb.*
+            ${{matrix.arch}}/yapb.dll
             
   bot-apple:
     env:
