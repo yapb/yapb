@@ -933,8 +933,8 @@ CR_EXPORT int Meta_Query (char *ifvers, plugin_info_t **pPlugInfo, mutil_funcs_t
 
    // check for interface version compatibility
    if (strcmp (ifvers, Plugin_info.ifvers) != 0) {
-      auto mdll = StringRef (ifvers).split (":");
-      auto pdll = StringRef (META_INTERFACE_VERSION).split (":");
+      auto mdll = String (ifvers).split (":");
+      auto pdll = String (META_INTERFACE_VERSION).split (":");
 
       gpMetaUtilFuncs->pfnLogError (PLID, "%s: meta-interface version mismatch (metamod: %s, %s: %s)", Plugin_info.name, ifvers, Plugin_info.name, Plugin_info.ifvers);
 

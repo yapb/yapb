@@ -46,40 +46,39 @@ BotSupport::BotSupport () {
 
    // register weapon aliases
    m_weaponAliases = {
-      { Weapon::USP, "usp" }, // HK USP .45 Tactical
-      { Weapon::Glock18, "glock" }, // Glock18 Select Fire
-      { Weapon::Deagle, "deagle" }, // Desert Eagle .50AE
-      { Weapon::P228, "p228" }, // SIG P228
-      { Weapon::Elite, "elite" }, // Dual Beretta 96G Elite
-      { Weapon::FiveSeven, "fn57" }, // FN Five-Seven
-      { Weapon::M3, "m3" }, // Benelli M3 Super90
-      { Weapon::XM1014, "xm1014" }, // Benelli XM1014
-      { Weapon::MP5, "mp5" }, // HK MP5-Navy
-      { Weapon::TMP, "tmp" }, // Steyr Tactical Machine Pistol
-      { Weapon::P90, "p90" }, // FN P90
-      { Weapon::MAC10, "mac10" }, // Ingram MAC-10
-      { Weapon::UMP45, "ump45" }, // HK UMP45
-      { Weapon::AK47, "ak47" }, // Automat Kalashnikov AK-47
-      { Weapon::Galil, "galil" }, // IMI Galil
-      { Weapon::Famas, "famas" }, // GIAT FAMAS
-      { Weapon::SG552, "sg552" }, // Sig SG-552 Commando
-      { Weapon::M4A1, "m4a1" }, // Colt M4A1 Carbine
-      { Weapon::AUG, "aug" }, // Steyr Aug
-      { Weapon::Scout, "scout" }, // Steyr Scout
-      { Weapon::AWP, "awp" }, // AI Arctic Warfare/Magnum
-      { Weapon::G3SG1, "g3sg1" }, // HK G3/SG-1 Sniper Rifle
-      { Weapon::SG550, "sg550" }, // Sig SG-550 Sniper
-      { Weapon::M249, "m249" }, // FN M249 Para
-      { Weapon::Flashbang, "flash" }, // Concussion Grenade
-      { Weapon::Explosive, "hegren" }, // High-Explosive Grenade
-      { Weapon::Smoke, "sgren" }, // Smoke Grenade
-      { Weapon::Armor, "vest" }, // Kevlar Vest
-      { Weapon::ArmorHelm, "vesthelm" }, // Kevlar Vest and Helmet
-      { Weapon::Defuser, "defuser" }, // Defuser Kit
-      { Weapon::Shield, "shield" }, // Tactical Shield
-      { Weapon::Knife, "knife" } // Knife
+      { Weapon::USP, AliasInfo { "usp", "HK USP .45 Tactical" } },
+      { Weapon::Glock18, AliasInfo { "glock", "Glock18 Select Fire" } },
+      { Weapon::Deagle, AliasInfo { "deagle", "Desert Eagle .50AE" } },
+      { Weapon::P228, AliasInfo { "p228", "SIG P228" } },
+      { Weapon::Elite, AliasInfo { "elite", "Dual Beretta 96G Elite" } },
+      { Weapon::FiveSeven, AliasInfo { "fn57", "FN Five-Seven" } },
+      { Weapon::M3, AliasInfo { "m3", "Benelli M3 Super90" } },
+      { Weapon::XM1014, AliasInfo { "xm1014", "Benelli XM1014" } },
+      { Weapon::MP5, AliasInfo { "mp5", "HK MP5-Navy" } },
+      { Weapon::TMP, AliasInfo { "tmp", "Steyr Tactical Machine Pistol" } },
+      { Weapon::P90, AliasInfo { "p90", "FN P90" } },
+      { Weapon::MAC10, AliasInfo { "mac10", "Ingram MAC-10" } },
+      { Weapon::UMP45, AliasInfo { "ump45", "HK UMP45" } },
+      { Weapon::AK47, AliasInfo { "ak47", "Automat Kalashnikov AK-47" } },
+      { Weapon::Galil, AliasInfo { "galil", "IMI Galil" } },
+      { Weapon::Famas, AliasInfo { "famas", "GIAT FAMAS" } },
+      { Weapon::SG552, AliasInfo { "sg552", "Sig SG-552 Commando" } },
+      { Weapon::M4A1, AliasInfo { "m4a1", "Colt M4A1 Carbine" } },
+      { Weapon::AUG, AliasInfo { "aug", "Steyr Aug" } },
+      { Weapon::Scout, AliasInfo { "scout", "Steyr Scout" } },
+      { Weapon::AWP, AliasInfo { "awp", "AI Arctic Warfare/Magnum" } },
+      { Weapon::G3SG1, AliasInfo { "g3sg1", "HK G3/SG-1 Sniper Rifle" } },
+      { Weapon::SG550, AliasInfo { "sg550", "Sig SG-550 Sniper" } },
+      { Weapon::M249, AliasInfo { "m249", "FN M249 Para" } },
+      { Weapon::Flashbang, AliasInfo { "flash", "Concussion Grenade" } },
+      { Weapon::Explosive, AliasInfo { "hegren", "High-Explosive Grenade" } },
+      { Weapon::Smoke, AliasInfo { "sgren", "Smoke Grenade" } },
+      { Weapon::Armor, AliasInfo { "vest", "Kevlar Vest" } },
+      { Weapon::ArmorHelm, AliasInfo { "vesthelm", "Kevlar Vest and Helmet" } },
+      { Weapon::Defuser, AliasInfo { "defuser", "Defuser Kit" } },
+      { Weapon::Shield, AliasInfo { "shield", "Tactical Shield" } },
+      { Weapon::Knife, AliasInfo { "knife", "Knife" } }
    };
-
    m_clients.resize (kGameMaxPlayers + 1);
 }
 
@@ -432,7 +431,7 @@ StringRef BotSupport::weaponIdToAlias (int32_t id) {
    StringRef none = "none";
 
    if (m_weaponAliases.exists (id)) {
-      return m_weaponAliases[id];
+      return m_weaponAliases[id].first;
    }
    return none;
 }
@@ -514,4 +513,17 @@ float BotSupport::getWaveLength (StringRef filename) {
    const auto rate = static_cast <float> (weh.read32 (header.sampleRate));
 
    return length / bps / channels / rate;
+}
+
+void BotSupport::setCustomCvarDescriptions () {
+   // set the cvars custom descriptions here if needed
+
+   String restrictInfo = "Specifies semicolon separated list of weapons that are not allowed to buy / pickup.\n";
+   restrictInfo += "The list of weapons for Counter-Strike 1.6:\n";
+
+   // fill the restrict information
+   m_weaponAliases.foreach ([&] (const int32_t &, const AliasInfo &alias) {
+      restrictInfo.appendf ("%s - %s\n", alias.first, alias.second);
+   });
+   game.setCvarDescription (cv_restricted_weapons, restrictInfo);
 }

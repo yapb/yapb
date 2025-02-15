@@ -932,6 +932,7 @@ extern ConVar cv_camping_time_max;
 extern ConVar cv_smoke_grenade_checks;
 extern ConVar cv_check_darkness;
 extern ConVar cv_use_hitbox_enemy_targeting;
+extern ConVar cv_restricted_weapons;
 
 extern ConVar mp_freezetime;
 extern ConVar mp_roundtime;

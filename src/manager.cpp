@@ -49,6 +49,8 @@ ConVar cv_rotate_bots ("rotate_bots", "0", "Randomly disconnect and connect bots
 ConVar cv_rotate_stay_min ("rotate_stay_min", "360.0", "Specifies minimum amount of seconds bot keep connected, if rotation active.", true, 120.0f, 7200.0f);
 ConVar cv_rotate_stay_max ("rotate_stay_max", "3600.0", "Specifies maximum amount of seconds bot keep connected, if rotation active.", true, 1800.0f, 14400.0f);
 
+ConVar cv_restricted_weapons ("restricted_weapons", "", "", false);
+
 ConVar mp_limitteams ("mp_limitteams", nullptr, Var::GameRef);
 ConVar mp_autoteambalance ("mp_autoteambalance", nullptr, Var::GameRef);
 ConVar mp_roundtime ("mp_roundtime", nullptr, Var::GameRef);
@@ -58,28 +60,12 @@ ConVar mp_freezetime ("mp_freezetime", nullptr, Var::GameRef, true, "0");
 BotManager::BotManager () {
    // this is a bot manager class constructor
 
-   m_lastDifficulty = 0;
-   m_lastWinner = -1;
-
-   m_timeRoundStart = 0.0f;
-   m_timeRoundMid = 0.0f;
-   m_timeRoundEnd = 0.0f;
-
-   m_autoKillCheckTime = 0.0f;
-   m_maintainTime = 0.0f;
-   m_quotaMaintainTime = 0.0f;
-   m_difficultyBalanceTime = 0.0f;
-
-   m_bombPlanted = false;
-   m_botsCanPause = false;
-   m_roundOver = false;
-
    for (int i = 0; i < kGameTeamNum; ++i) {
       m_leaderChoosen[i] = false;
       m_economicsGood[i] = true;
 
       m_lastRadioTime[i] = 0.0f;
-      m_lastRadio[i] = -1;
+      m_lastRadio[i] = kInvalidRadioSlot;
    }
    reset ();
 

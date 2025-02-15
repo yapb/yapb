@@ -232,6 +232,9 @@ public:
    // check the cvar bounds
    void checkCvarsBounds ();
 
+   // modify cvar description
+   void setCvarDescription (const ConVar &cv, StringRef info);
+
    // sends local registration stack for engine registration
    void registerCvars (bool gameVars = false);
 

@@ -8,6 +8,9 @@
 #pragma once
 
 class BotSupport final : public Singleton <BotSupport> {
+   using AliasInfo = Twin <StringRef, StringRef>;
+   using AliasMap = HashMap <int32_t, AliasInfo, EmptyHash <int32_t> >;
+
 private:
    bool m_needToSendWelcome {};
    float m_welcomeReceiveTime {};
@@ -15,7 +18,7 @@ private:
    StringArray m_sentences {};
    SmallArray <Client> m_clients {};
 
-   HashMap <int32_t, String> m_weaponAliases {};
+   AliasMap m_weaponAliases {};
 
 public:
    BotSupport ();
@@ -78,6 +81,9 @@ public:
 
    // get's the wave length
    float getWaveLength (StringRef filename);
+
+   // set custom cvar descriptions
+   void setCustomCvarDescriptions ();
 
 public:
 

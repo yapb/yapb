@@ -468,7 +468,7 @@ void Game::sendServerMessage (StringRef message) {
 
    // split up the string into chunks if needed (maybe check if it's multibyte?)
    if (message.length () > kMaxSendLength) {
-      auto chunks = message.split (kMaxSendLength);
+      auto chunks = message.split <String> (kMaxSendLength);
 
       // send in chunks
       for (size_t i = 0; i < chunks.length (); ++i) {
@@ -733,6 +733,15 @@ void Game::checkCvarsBounds () {
    }
 }
 
+void Game::setCvarDescription (const ConVar &cv, StringRef info) {
+   for (auto &var : m_cvars) {
+      if (var.name == cv.name ()) {
+         var.info = info;
+         break;
+      }
+   }
+}
+
 void Game::registerCvars (bool gameVars) {
    // this function pushes all added global variables to engine registration
 
@@ -910,6 +919,9 @@ bool Game::postload () {
 
    // register bot cvars
    registerCvars ();
+
+   // set custom cvar descriptions after registering them
+   util.setCustomCvarDescriptions ();
 
    // handle prefixes
    static StringArray prefixes = { product.cmdPri, product.cmdSec };
