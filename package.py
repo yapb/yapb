@@ -258,9 +258,9 @@ class BotRelease(object):
       for artifact in pkg.artifact:
          binary_name = self.project
          
-         if artifact.endsWith('arm64')
+         if artifact.endsWith('arm64'):
             binary_name = binary_name + '_arm64'
-         else if artifact.endsWith('amd64')
+         else if artifact.endsWith('amd64'):
             binary_name = binary_name + '_amd64'
          
          binary = os.path.join(self.artifacts, artifact, f'{binary_name}.{pkg.artifact[artifact]}')
