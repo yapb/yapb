@@ -31,7 +31,7 @@ ConVar cv_object_pickup_radius ("object_pickup_radius", "450.0", "The radius on 
 ConVar cv_object_destroy_radius ("object_destroy_radius", "400.0", "The radius on which bot destroy breakables around it, when not touching with them.", true, 64.0f, 1024.0f);
 
 ConVar cv_chatter_path ("chatter_path", "sound/radio/bot", "Specifies the paths for the bot chatter sound files.", false);
-ConVar cv_restricted_weapons ("restricted_weapons", "", "Specifies semicolon separated list of weapons that are not allowed to buy / pickup.", false);
+ConVar cv_restricted_weapons ("restricted_weapons", "", "Specifies semicolon separated list of weapons that are not allowed to buy / pickup.\nThe list of weapons for Counter-Strike 1.6:\nusp - HK USP .45 Tactical\nglock - Glock18 Select Fire\ndeagle - Desert Eagle .50AE\np228 - SIG P228\nelite - Dual Beretta 96G Elite\nfn57 - FN Five-Seven\nm3 - Benelli M3 Super90\nxm1014 - Benelli XM1014\nmp5 - HK MP5-Navy\ntmp - Steyr Tactical Machine Pistol\np90 - FN P90\nmac10 - Ingram MAC-10\nump45 - HK UMP45\nak47 - Automat Kalashnikov AK-47\ngalil - IMI Galil\nfamas - GIAT FAMAS\nsg552 - Sig SG-552 Commando\nm4a1 - Colt M4A1 Carbine\naug - Steyr Aug\nscout - Steyr Scout\nawp - AI Arctic Warfare/Magnum\ng3sg1 - HK G3/SG-1 Sniper Rifle\nsg550 - Sig SG-550 Sniper\nm249 - FN M249 Para\nflash - Concussion Grenade\nhegren - High-Explosive Grenade\nsgren - Smoke Grenade\nvest - Kevlar Vest\nvesthelm - Kevlar Vest and Helmet\ndefuser - Defuser Kit\nshield - Tactical Shield", false);
 
 ConVar cv_attack_monsters ("attack_monsters", "0", "Allows or disallows bots to attack monsters.");
 ConVar cv_pickup_custom_items ("pickup_custom_items", "0", "Allows or disallows bots to pickup custom items.");
