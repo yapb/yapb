@@ -1456,6 +1456,7 @@ void Bot::newRound () {
    m_duckDefuse = false;
    m_duckDefuseCheckTime = 0.0f;
    m_timeDebugUpdateTime = 0.0f;
+   m_lastDamageTimestamp = 0.0f;
 
    m_numFriendsLeft = 0;
    m_numEnemiesLeft = 0;

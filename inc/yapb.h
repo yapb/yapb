@@ -288,6 +288,7 @@ private:
    float m_timeDebugUpdateTime {}; // time to update last debug timestamp
    float m_lastVictimTime {}; // time when bot killed an enemy
    float m_killsInterval {}; // interval between kills
+   float m_lastDamageTimestamp {}; // last damage from take damage fn
 
    bool m_moveToGoal {}; // bot currently moving to goal??
    bool m_isStuck {}; // bot is stuck

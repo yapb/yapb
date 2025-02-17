@@ -1243,7 +1243,9 @@ void Bot::fireWeapons () {
    }
 
    // use knife if near and good difficulty (l33t dude!)
-   if (cv_stab_close_enemies && m_difficulty >= Difficulty::Normal
+   if (!game.is (GameFlags::ZombieMod)
+      && cv_stab_close_enemies
+      && m_difficulty >= Difficulty::Normal
       && m_healthValue > 80.0f
       && !game.isNullEntity (m_enemy)
       && distance < 100.0f

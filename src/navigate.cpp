@@ -581,8 +581,14 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
       && m_lastCollTime < game.time ()
       && tid != Task::Attack
       && tid != Task::Camp) {
+
+      // special case for creatures
+      if (m_lastDamageTimestamp >= game.time () && m_isCreature) {
+         m_lastCollTime = m_lastDamageTimestamp + 0.2f;
+         m_firstCollideTime = 0.0f;
+      }
       // didn't we move enough previously?
-      if (movedDistance < kMinMovedDistance && m_prevSpeed > 20.0f) {
+      else if (movedDistance < kMinMovedDistance && m_prevSpeed > 20.0f) {
          m_prevTime = game.time (); // then consider being stuck
          m_isStuck = true;
 

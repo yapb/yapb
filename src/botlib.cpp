@@ -1722,7 +1722,11 @@ void Bot::overrideConditions () {
          }
       }
       else {
-         if (distanceSq2d <= kReachEnemyWikKnifeDistanceSq && (m_states & Sense::SeeingEnemy) && tid == Task::MoveToPosition) {
+         if (!m_isCreature
+            && distanceSq2d <= kReachEnemyWikKnifeDistanceSq
+            && (m_states & Sense::SeeingEnemy)
+            && tid == Task::MoveToPosition) {
+
             clearTask (Task::MoveToPosition); // remove any move tasks
          }
       }
@@ -1828,6 +1832,10 @@ void Bot::updatePredictedIndex () {
 }
 
 void Bot::refreshEnemyPredict () {
+   if (m_isCreature) {
+      return;
+   }
+
    if (game.isNullEntity (m_enemy) && !game.isNullEntity (m_lastEnemy) && !m_lastEnemyOrigin.empty ()) {
       const auto distanceToLastEnemySq = m_lastEnemyOrigin.distanceSq (pev->origin);
 
@@ -2130,7 +2138,7 @@ void Bot::filterTasks () {
    }
 
    // zombie bots has more hunt desire
-   if (m_isCreature && huntEnemyDesire > 25.0f) {
+   if (m_isCreature && huntEnemyDesire > 16.0f) {
       huntEnemyDesire = TaskPri::Attack;
    }
 
@@ -2350,6 +2358,17 @@ bool Bot::reactOnEnemy () {
 
    if (!isEnemyThreat ()) {
       return false;
+   }
+
+   // special case for creatures
+   if (m_isCreature && !game.isNullEntity (m_enemy)) {
+      m_isEnemyReachable = false;
+
+      if (pev->origin.distanceSq (m_enemy->v.origin) < cr::sqrf (128.0f)) {
+         m_navTimeset = game.time ();
+         m_isEnemyReachable = true;
+      }
+      return m_isEnemyReachable;
    }
 
    if (m_enemyReachableTimer < game.time ()) {
@@ -3588,9 +3607,20 @@ void Bot::takeDamage (edict_t *inflictor, int damage, int armor, int bits) {
 
    m_lastDamageType = bits;
 
+   if (m_isCreature) {
+      if (util.isPlayer (inflictor) && game.isNullEntity (m_enemy)) {
+         if (seesEnemy (inflictor)) {
+            m_enemy = inflictor;
+            m_enemyOrigin = inflictor->v.origin;
+         }
+      }
+      return;
+   }
+
    if (!game.is (GameFlags::CSDM)) {
       updatePracticeValue (damage);
    }
+   m_lastDamageTimestamp = game.time ();
 
    if (util.isPlayer (inflictor) || (cv_attack_monsters && util.isMonster (inflictor))) {
       const auto inflictorTeam = game.getTeam (inflictor);

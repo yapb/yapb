@@ -828,7 +828,7 @@ void Bot::moveToPos_ () {
          getTask ()->data = destIndex;
 
          ensureCurrentNodeIndex ();
-         findPath (m_currentNodeIndex, destIndex, m_pathType);
+         findPath (m_currentNodeIndex, destIndex, m_isCreature ? FindPath::Fast : m_pathType);
       }
       else {
          completeTask ();
