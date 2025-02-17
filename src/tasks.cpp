@@ -509,8 +509,10 @@ void Bot::attackEnemy_ () {
    m_moveToGoal = false;
    m_checkTerrain = false;
 
+   // always ignore collision checks in this task
+   ignoreCollision ();
+
    if (!game.isNullEntity (m_enemy)) {
-      ignoreCollision ();
       attackMovement ();
 
       if (usesKnife () && !m_enemyOrigin.empty ()) {
