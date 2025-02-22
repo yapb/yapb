@@ -249,8 +249,14 @@ void Bot::prepareChatMessage (StringRef message) {
    size_t replaceCounter = 0;
 
    while (replaceCounter < 6 && (pos = m_chatBuffer.find ('%')) != String::InvalidIndex) {
+      const auto replacePosition = pos + 1;
+
+      if (replacePosition > m_chatBuffer.length ()) {
+         continue;
+      }
+
       // found one, let's do replace
-      switch (m_chatBuffer[pos + 1]) {
+      switch (m_chatBuffer[replacePosition]) {
 
          // the highest frag player
       case 'f':
@@ -294,6 +300,7 @@ void Bot::prepareChatMessage (StringRef message) {
 
       case 'g':
          m_chatBuffer.replace ("%g", graph.getAuthor ());
+         break;
       };
       ++replaceCounter;
    }
@@ -375,11 +382,97 @@ void Bot::checkForChat () {
    }
 }
 
+
+
 void Bot::sendToChat (StringRef message, bool teamOnly) {
    // this function prints saytext message to all players
 
    if (m_isCreature || message.empty () || !cv_chat) {
       return;
    }
-   issueCommand ("%s \"%s\"", teamOnly ? "say_team" : "say", message);
+
+   // special handling for legacy games
+   if (game.is (GameFlags::Legacy)) {
+      sendToChatLegacy (message, teamOnly);
+   }
+   else {
+      issueCommand ("%s \"%s\"", teamOnly ? "say_team" : "say", message);
+   }
+}
+
+void Bot::sendToChatLegacy (StringRef message, bool teamOnly) {
+   // this function prints saytext message to all players for legacy games (< cs 1.6)
+
+   // note: for some reason using regular say & say_team for sending chat messages on hlds on a legacy games
+   // causes buffer overruns somewhere in gamedll Host_Say function, thus crashing the game randomly.
+   // so this function mimics what legacy gamedll is doing in their Host_Say.
+
+   bool dedicatedSend = false;
+
+   auto sendChatMsg = [&] (const Client &client, String chatMsg) {
+      auto rcv = bots[client.ent];
+
+      if (rcv != nullptr) {
+         rcv->m_sayTextBuffer.entityIndex = m_index;
+
+         rcv->m_sayTextBuffer.sayText = message;
+         rcv->m_sayTextBuffer.timeNextChat = game.time () + rcv->m_sayTextBuffer.chatDelay;
+      }
+
+      if (((client.flags & ClientFlags::Alive) && m_isAlive)
+         || (!(client.flags & ClientFlags::Alive) && m_isAlive)
+         || (!(client.flags & ClientFlags::Alive) && !m_isAlive)) {
+
+         MessageWriter (MSG_ONE, msgs.id (NetMsg::SayText), nullptr, client.ent)
+            .writeByte (m_index)
+            .writeString (chatMsg.chars ());
+      }
+
+      if (game.isDedicated () && !dedicatedSend) {
+         game.print ("%s", chatMsg.trim ());
+      }
+      dedicatedSend = true;
+   };
+
+   if (teamOnly) {
+      StringRef teamName {};
+
+      if (m_team == Team::Terrorist) {
+         teamName = "(Terrorist)";
+      }
+      else if (m_team == Team::CT) {
+         teamName = "(Counter-Terrorist)";
+      }
+
+      for (const auto &client : util.getClients ()) {
+         if (!(client.flags & ClientFlags::Used) || client.team2 != m_team || client.ent == ent ()) {
+            continue;
+         }
+         String chatMsg {};
+
+         if (m_isAlive) {
+            chatMsg.appendf ("%c%s %c%s%c :  %s\n", 0x01, teamName, 0x03, pev->netname.chars (), 0x01, message);
+         }
+         else {
+            chatMsg.appendf ("%c*DEAD*%s %c%s%c :  %s\n", 0x01, teamName, 0x03, pev->netname.chars (), 0x01, message);
+         }
+         sendChatMsg (client, chatMsg);
+      }
+      return;
+   }
+
+   for (const auto &client : util.getClients ()) {
+      if (!(client.flags & ClientFlags::Used) || client.ent == ent ()) {
+         continue;
+      }
+      String chatMsg {};
+
+      if (m_isAlive) {
+         chatMsg.appendf ("%c%s :  %s\n", 0x02, pev->netname.chars (), message);
+      }
+      else {
+         chatMsg.appendf ("%c*DEAD* %c%s%c :  %s\n", 0x01, 0x03, pev->netname.chars (), 0x01, message);
+      }
+      sendChatMsg (client, chatMsg);
+   }
 }

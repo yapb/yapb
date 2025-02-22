@@ -313,6 +313,7 @@ private:
    bool m_defuseNotified {}; // bot is notified about bomb defusion
    bool m_jumpSequence {}; // next path link will be jump link
    bool m_checkFall {}; // check bot fall
+   bool m_botMovement {}; // bot movement allowed ?
 
    PathWalk m_pathWalk {}; // pointer to current node from path
    Dodge m_dodgeStrafeDir {}; // direction to strafe
@@ -367,6 +368,7 @@ private:
    CountdownTimer m_approachingLadderTimer {}; // bot is approaching ladder
    CountdownTimer m_lostReachableNodeTimer {}; // bot's issuing next node, probably he's lost
    CountdownTimer m_fixFallTimer {}; // timer we're fixed fall last time
+   CountdownTimer m_repathTimer {}; // bots is going to repath his route
 
 private:
    int pickBestWeapon (Array <int> &vec, int moneySave);
@@ -747,6 +749,7 @@ public:
    void clearTasks ();
    void dropWeaponForUser (edict_t *user, bool discardC4);
    void sendToChat (StringRef message, bool teamOnly);
+   void sendToChatLegacy (StringRef message, bool teamOnly);
    void pushChatMessage (int type, bool isTeamSay = false);
    void pushRadioMessage (int message);
    void pushChatterMessage (int message);

@@ -465,6 +465,7 @@ MessageDispatcher::MessageDispatcher () {
    // we're need next messages IDs but we're won't handle them, so they will be removed from wanted list as soon as they get engine IDs
    addWanted ("BotVoice", NetMsg::BotVoice, nullptr);
    addWanted ("SendAudio", NetMsg::SendAudio, nullptr);
+   addWanted ("SayText", NetMsg::SayText, nullptr);
 
    // register text msg cache
    m_textMsgCache["#CTs_Win"] = TextMsgCache::NeedHandle | TextMsgCache::CounterWin;

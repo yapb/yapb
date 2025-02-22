@@ -1409,6 +1409,8 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
    // mark bot as "spawned", and reset it to new-round state when it dead (for csdm/zombie only)
    if (victimBot != nullptr) {
       victimBot->spawned ();
+
+      victimBot->m_isAlive = false;
    }
 
    // is this message about a bot who killed somebody?
@@ -1559,6 +1561,7 @@ void Bot::newRound () {
    m_forgetLastVictimTimer.invalidate ();
    m_lostReachableNodeTimer.invalidate ();
    m_fixFallTimer.invalidate ();
+   m_repathTimer.invalidate ();
 
    for (auto &timer : m_chatterTimes) {
       timer = kMaxChatterRepeatInterval;

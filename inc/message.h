@@ -32,7 +32,8 @@ CR_DECLARE_SCOPED_ENUM (NetMsg,
    Fashlight = 21,
    ItemStatus = 22,
    ScoreInfo = 23,
-   ScoreAttrib = 24
+   ScoreAttrib = 24,
+   SayText = 25
 )
 
 // vgui menus (since latest steam updates is obsolete, but left for old cs)

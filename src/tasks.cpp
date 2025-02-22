@@ -793,7 +793,7 @@ void Bot::moveToPos_ () {
    }
 
    auto ensureDestIndexOK = [&] (int &index) {
-      if (isOccupiedNode (index)) {
+      if (!m_position.empty () && isOccupiedNode (index)) {
          index = findDefendNode (m_position);
       }
    };

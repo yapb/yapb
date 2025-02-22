@@ -1520,6 +1520,10 @@ void Bot::attackMovement () {
 
    if (usesKnife () && isEnemyCone) {
       m_fightStyle = Fight::Strafe;
+
+      if (distanceSq > cr::sqrf (100.0f)) {
+         m_fightStyle = Fight::None;
+      }
    }
 
    if (m_fightStyle == Fight::Strafe) {
@@ -1584,7 +1588,7 @@ void Bot::attackMovement () {
       }
 
       // do not move if inside "corridor"
-      if (wallOnRight && wallOnLeft) {
+      if (wallOnRight && wallOnLeft && !usesKnife ()) {
          m_strafeSpeed = 0.0f;
          m_moveSpeed = 0.0f;
 

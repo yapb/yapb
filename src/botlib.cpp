@@ -924,7 +924,7 @@ void Bot::instantChatter (int type) {
       msg.start (MSG_ONE, msgs.id (NetMsg::SendAudio), nullptr, client.ent); // begin message
       msg.writeByte (ownIndex);
 
-      if (pev->deadflag & DEAD_DYING) {
+      if (pev->deadflag == DEAD_DYING) {
          client.iconTimestamp[ownIndex] = game.time () + painSound.duration;
          writeChatterSound (painSound);
       }
@@ -1696,34 +1696,40 @@ void Bot::overrideConditions () {
       // then start escape from bomb immediate
       startTask (Task::EscapeFromBomb, TaskPri::EscapeFromBomb, kInvalidNodeIndex, 0.0f, true);
    }
-   constexpr float kReachEnemyWikKnifeDistanceSq = cr::sqrf (102.0f);
+   float reachEnemyWikKnifeDistanceSq = cr::sqrf (128.0f);
 
    // special handling, if we have a knife in our hands
    if (isKnifeMode () && (util.isPlayer (m_enemy) || (cv_attack_monsters && util.isMonster (m_enemy)))) {
-      const float distanceSq2d = pev->origin.distanceSq2d (m_enemy->v.origin);
+      const auto distanceSq2d = pev->origin.distanceSq2d (m_enemy->v.origin);
+      const auto nearestToEnemyPoint = graph.getNearest (m_enemy->v.origin);
+
+      if (nearestToEnemyPoint != kInvalidNodeIndex && nearestToEnemyPoint != m_currentNodeIndex) {
+         reachEnemyWikKnifeDistanceSq = graph[nearestToEnemyPoint].origin.distanceSq (m_enemy->v.origin);
+         reachEnemyWikKnifeDistanceSq += cr::sqrf (48.0f);
+      }
 
       // do nodes movement if enemy is not reachable with a knife
-      if (distanceSq2d > kReachEnemyWikKnifeDistanceSq && (m_states & Sense::SeeingEnemy)) {
-         const int nearestToEnemyPoint = graph.getNearest (m_enemy->v.origin);
-
+      if (distanceSq2d > reachEnemyWikKnifeDistanceSq && (m_states & Sense::SeeingEnemy)) {
          if (nearestToEnemyPoint != kInvalidNodeIndex
             && nearestToEnemyPoint != m_currentNodeIndex
             && cr::abs (graph[nearestToEnemyPoint].origin.z - m_enemy->v.origin.z) < 16.0f) {
 
+            const float taskTime = game.time () + distanceSq2d / cr::sqrf (m_moveSpeed) * 2.0f;
+
             if (tid != Task::MoveToPosition && !cr::fequal (getTask ()->desire, TaskPri::Hide)) {
-               startTask (Task::MoveToPosition, TaskPri::Hide, nearestToEnemyPoint, game.time () + distanceSq2d / cr::sqrf (m_moveSpeed) * 2.0f, true);
+               startTask (Task::MoveToPosition, TaskPri::Hide, nearestToEnemyPoint, taskTime, true);
             }
             else {
                if (tid == Task::MoveToPosition && getTask ()->data != nearestToEnemyPoint) {
                   clearTask (Task::MoveToPosition);
-                  startTask (Task::MoveToPosition, TaskPri::Hide, nearestToEnemyPoint, game.time () + distanceSq2d / cr::sqrf (m_moveSpeed) * 2.0f, true);
+                  startTask (Task::MoveToPosition, TaskPri::Hide, nearestToEnemyPoint, taskTime, true);
                }
             }
          }
       }
       else {
          if (!m_isCreature
-            && distanceSq2d <= kReachEnemyWikKnifeDistanceSq
+            && distanceSq2d <= reachEnemyWikKnifeDistanceSq
             && (m_states & Sense::SeeingEnemy)
             && tid == Task::MoveToPosition) {
 
@@ -2364,7 +2370,7 @@ bool Bot::reactOnEnemy () {
    if (m_isCreature && !game.isNullEntity (m_enemy)) {
       m_isEnemyReachable = false;
 
-      if (pev->origin.distanceSq (m_enemy->v.origin) < cr::sqrf (128.0f)) {
+      if (pev->origin.distanceSq2d (m_enemy->v.origin) < cr::sqrf (118.0f)) {
          m_navTimeset = game.time ();
          m_isEnemyReachable = true;
       }
@@ -2971,7 +2977,9 @@ void Bot::frame () {
 
    // run bot command on twice speed
    if (m_commandDelay.time <= timestamp) {
-      runMovement ();
+      if (m_botMovement || pev->deadflag == DEAD_DYING) {
+         runMovement ();
+      }
       m_commandDelay.time = timestamp + m_commandDelay.interval;
    }
 
@@ -3036,7 +3044,7 @@ void Bot::update () {
    m_isCreature = isCreature ();
 
    // is bot movement enabled
-   bool botMovement = false;
+   m_botMovement = false;
 
    // for some unknown reason some bots have speed of 1.0 after respawn on csdm
    if (game.is (GameFlags::CSDM) && cr::fequal (pev->maxspeed, 1.0f) && tid == Task::Normal) {
@@ -3077,17 +3085,17 @@ void Bot::update () {
       && !cv_freeze_bots
       && !graph.hasChanged ()) {
 
-      botMovement = true;
+      m_botMovement = true;
    }
    checkMsgQueue ();
 
-   if (!m_isStale && botMovement) {
+   if (!m_isStale && m_botMovement) {
       logic (); // execute main code
    }
    else if (pev->maxspeed < 10.0f) {
       logicDuringFreezetime ();
    }
-   else if (!botMovement) {
+   else if (!m_botMovement) {
       resetMovement ();
    }
 }
@@ -4278,6 +4286,7 @@ float Bot::getShiftSpeed () {
    if (getCurrentTaskId () == Task::SeekCover
       || (m_aimFlags & AimFlags::Enemy)
       || isDucking ()
+      || m_isCreature
       || (pev->button & IN_DUCK)
       || (m_oldButtons & IN_DUCK)
       || (m_currentTravelFlags & PathFlag::Jump)

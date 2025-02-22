@@ -510,6 +510,14 @@ int BotControl::cmdNodeOn () {
       mp_roundtime.set (9);
       mp_freezetime.set (0);
       mp_timelimit.set (0);
+
+      if (game.is (GameFlags::ReGameDLL)) {
+         ConVarRef mp_round_infinite ("mp_round_infinite");
+
+         if (mp_round_infinite.exists ()) {
+            mp_round_infinite.set ("1");
+         }
+      }
    }
    return BotCommandResult::Handled;
 }
@@ -527,6 +535,13 @@ int BotControl::cmdNodeOff () {
       mp_freezetime.set (m_graphSaveVarValues.freezetime);
       mp_timelimit.set (m_graphSaveVarValues.timelimit);
 
+      if (game.is (GameFlags::ReGameDLL)) {
+         ConVarRef mp_round_infinite ("mp_round_infinite");
+
+         if (mp_round_infinite.exists ()) {
+            mp_round_infinite.set ("0");
+         }
+      }
       msg ("Graph editor has been disabled.");
    }
    else if (arg <StringRef> (option) == "models") {

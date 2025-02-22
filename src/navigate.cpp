@@ -476,8 +476,6 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
    m_hindrance = nullptr;
    float distanceSq = cr::sqrf (pev->maxspeed);
 
-   const auto ownPrio = bots.getPlayerPriority (ent ());
-
    auto clearCamp = [&] (edict_t *ent) {
       auto bot = bots[ent];
 
@@ -496,6 +494,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
          }
       }
    };
+   const auto ownPrio = bots.getPlayerPriority (ent ());
 
    // find nearest player to bot
    for (const auto &client : util.getClients ()) {
@@ -531,6 +530,27 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
    // found somebody?
    if (game.isNullEntity (m_hindrance)) {
       return;
+   }
+
+   // if we're stuck with a hindrance, probably we're in bad place, find path to single goal for both bots
+   if (m_isStuck) {
+      auto other = bots[m_hindrance];
+
+      if (other != nullptr) {
+         m_prevGoalIndex = other->m_prevGoalIndex;
+         m_chosenGoalIndex = other->m_chosenGoalIndex;
+
+         auto destIndex = m_chosenGoalIndex;
+
+         if (!graph.exists (destIndex)) {
+            destIndex = m_prevGoalIndex;
+         }
+
+         if (graph.exists (destIndex)) {
+            findPath (m_currentNodeIndex, destIndex, other->m_pathType);
+            other->findPath (m_currentNodeIndex, destIndex);
+         }
+      }
    }
    const float interval = m_frameInterval * (!isDucking () && pev->velocity.lengthSq2d () > 0.0f ? 6.0f : 2.0f);
 
@@ -576,8 +596,11 @@ void Bot::checkTerrain (float movedDistance, const Vector &dirNormal) {
 
    const auto tid = getCurrentTaskId ();
 
+   // minimal speed for consider stuck
+   const float minimalSpeed = isDucking () ? kMinMovedDistance : kMinMovedDistance * 4;
+
    // standing still, no need to check?
-   if ((m_moveSpeed >= 10 || m_strafeSpeed >= 10)
+   if ((cr::abs (m_moveSpeed) >= minimalSpeed || cr::abs (m_strafeSpeed) >= minimalSpeed)
       && m_lastCollTime < game.time ()
       && tid != Task::Attack
       && tid != Task::Camp) {
@@ -1325,6 +1348,11 @@ bool Bot::updateNavigation () {
    // make sure reach exactly, if just lost on path
    if (!m_lostReachableNodeTimer.elapsed ()) {
       desiredDistanceSq = 0.0f;
+   }
+
+   // if just recalculated path, assume reached current node
+   if (!m_repathTimer.elapsed () && !pathHasFlags) {
+      desiredDistanceSq = cr::sqrf (72.0f);
    }
 
    // needs precise placement - check if we get past the point
@@ -3492,6 +3520,7 @@ void Bot::syncFindPath (int srcIndex, int destIndex, FindPath pathType) {
    }
    clearSearchNodes ();
 
+   m_repathTimer.start (0.5f);
    m_chosenGoalIndex = srcIndex;
    m_goalValue = 0.0f;
 
