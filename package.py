@@ -14,7 +14,7 @@ import datetime, calendar
 
 class BotSign(object):
    def __init__(self, product: str, url: str):
-      self.signing = False
+      self.signing = True
 
       self.ossl_path = '/usr/bin/osslsigncode'
       self.local_key = os.path.join(pathlib.Path().absolute(), 'bot_release_key.pfx');
@@ -136,12 +136,13 @@ class BotRelease(object):
                                          {'linux-arm64': 'so', 
                                           'linux-amd64': 'so', 
                                           'linux-x86-gcc': 'so', 
+                                          'linux-x86-nosimd': 'so', 
                                           'windows-x86-gcc': 'dll', 
                                           'windows-x86-clang': 'dll',
                                           'windows-x86-msvc-xp': 'dll',
                                           'windows-amd64': 'dll', 
-                                          'darwin-x86': 'dylib',
-                                          'darwin-arm64': 'dylib',
+                                          'apple-x86': 'dylib',
+                                          'apple-arm64': 'dylib',
                                           }, extra=True))
       
    def create_dirs(self):

@@ -20,7 +20,7 @@ jobs:
 
     strategy:
       matrix:
-        arch: ['linux-x86', 'linux-amd64', 'linux-x86-gcc', 'linux-arm64', 'darwin-x86', 'windows-x86-clang', 'windows-amd64', 'windows-x86-gcc']
+        arch: ['linux-x86', 'linux-amd64', 'linux-x86-gcc', 'linux-x86-nosimd', 'linux-arm64', 'apple-x86', 'windows-x86-clang', 'windows-amd64', 'windows-x86-gcc']
       fail-fast: false
     
     steps:
@@ -36,11 +36,13 @@ jobs:
               CXX=clang CXX_LD=lld meson setup ${{matrix.arch}}
             elif [[ ${{matrix.arch}} == linux-x86-gcc ]]; then
               CXX=gcc CXX_LD=gold meson setup ${{matrix.arch}}
+            elif [[ ${{matrix.arch}} == linux-x86-nosimd ]]; then
+              CXX=gcc CXX_LD=gold meson setup ${{matrix.arch}} -Dnosimd=true
             elif [[ ${{matrix.arch}} == linux-amd64 ]]; then
               CXX=clang CXX_LD=lld meson setup ${{matrix.arch}} -D64bit=true
             elif [[ ${{matrix.arch}} == windows-amd64 ]]; then
               meson setup ${{matrix.arch}} --cross-file ${{matrix.arch}} -D64bit=true
-            elif [[ ${{matrix.arch}} == darwin-x86 ]]; then
+            elif [[ ${{matrix.arch}} == apple-x86 ]]; then
               meson setup ${{matrix.arch}} --cross-file ${{matrix.arch}} -Db_lto=false
             else
               meson setup ${{matrix.arch}} --cross-file ${{matrix.arch}}
@@ -101,11 +103,11 @@ jobs:
             
   bot-apple:
     env:
-      name: darwin-arm64
+      name: apple-arm64
 
     strategy:
       matrix:
-        arch: ['darwin-arm64']
+        arch: ['apple-arm64']
       fail-fast: false
 
     runs-on: macos-latest
