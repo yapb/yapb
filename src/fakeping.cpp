@@ -72,13 +72,16 @@ void BotFakePingManager::syncCalculate () {
    }
 
    for (auto &bot : bots) {
-      auto botPing = static_cast <int> (bot->m_pingBase + rg (averagePing - averagePing * 0.2f, averagePing + averagePing * 0.2f) + rg (bot->m_difficulty + 3, bot->m_difficulty + 6));
+      const auto diff = static_cast <int> (static_cast <float> (averagePing) * 0.2f);
 
-      if (botPing < 5) {
-         botPing = rg (10, 15);
+      // randomize bot ping
+      auto botPing = static_cast <float> (bot->m_pingBase + rg (averagePing - diff, averagePing + diff) + rg (bot->m_difficulty + 3, bot->m_difficulty + 6));
+
+      if (botPing < 5.0f) {
+         botPing = rg (10.0f, 15.0f);
       }
-      else if (botPing > 100) {
-         botPing = rg (30, 40);
+      else if (botPing > 75.0f) {
+         botPing = rg (30.0f, 40.0f);
       }
       bot->m_ping = static_cast <int> (static_cast <float> (bot->entindex () % 2 == 0 ? botPing * 0.25f : botPing * 0.5f));
    }

@@ -169,7 +169,7 @@ void GraphVistable::load () {
       m_rebuild = false;
    }
    else {
-      m_vistable.resize (cr::sqrf (m_length));
+      m_vistable.resize (static_cast <size_t> (cr::sqrf (m_length)));
       m_notifyMsgTimestamp = game.time ();
    }
 }

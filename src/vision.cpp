@@ -428,7 +428,7 @@ void Bot::setAimDirection () {
       }
 
       // don't switch view right away after loosing focus with current enemy 
-      if ((m_shootTime + 1.5f > game.time () || m_seeEnemyTime + 1.5 > game.time ())
+      if ((m_shootTime + 1.5f > game.time () || m_seeEnemyTime + 1.5f > game.time ())
          && m_forgetLastVictimTimer.elapsed ()
          && !m_lastEnemyOrigin.empty ()
          && util.isAlive (m_lastEnemy)

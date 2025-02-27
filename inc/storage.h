@@ -57,6 +57,7 @@ private:
 
 private:
    int m_retries {};
+   ULZ *m_ulz {};
 
 public:
    BotStorage () = default;
@@ -94,6 +95,11 @@ public:
    // loading the graph may attempt to recurse loading, with converting or download, reset retry counter
    void resetRetries () {
       m_retries = 0;
+   }
+
+   // set the compressor instance
+   void setUlzInstance (ULZ *ulz) {
+      m_ulz = ulz;
    }
 };
 

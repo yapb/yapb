@@ -1225,7 +1225,6 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    // init path walker
    m_pathWalk.init (m_planner->getMaxLength ());
 
-
    // init player models parts enumerator
    m_hitboxEnumerator = cr::makeUnique <PlayerHitboxEnumerator> ();
 
@@ -1675,7 +1674,7 @@ void Bot::newRound () {
    auto updateInterval = 1.0f / thinkFps;
    auto commandInterval = 1.0f / 60.0f;
 
-   if (game.is (GameFlags::Xash3D | GameFlags::Xash3DLegacy)) {
+   if (game.is (GameFlags::Xash3D)) {
       if (thinkFps < 50) {
          updateInterval = 1.0f / 50.0f; // xash3d works acceptable at 50fps
       }
@@ -2172,7 +2171,10 @@ void BotThreadWorker::shutdown () {
       return;
    }
    game.print ("Shutting down bot thread worker.");
-   m_botWorker.shutdown ();
+   m_pool->shutdown ();
+
+   // re-start pool completely
+   m_pool.release ();
 }
 
 void BotThreadWorker::startup (int workers) {
@@ -2185,7 +2187,10 @@ void BotThreadWorker::startup (int workers) {
    if (isLegacyGame || workers == 0 || (!disableWorkerEnv.empty () && disableWorkerEnv == "1")) {
       return;
    }
-   const auto count = m_botWorker.threadCount ();
+   m_pool = cr::makeUnique <ThreadPool> ();
+
+   // define worker threads
+   const auto count = m_pool->threadCount ();
 
    if (count > 0) {
       logger.error ("Tried to start thread pool with existing %d threads in pool.", count);
@@ -2203,7 +2208,7 @@ void BotThreadWorker::startup (int workers) {
    game.print ("Starting up bot thread worker with %d threads.", requestedThreads);
 
    // start up the worker
-   m_botWorker.startup (static_cast <size_t> (requestedThreads));
+   m_pool->startup (static_cast <size_t> (requestedThreads));
 }
 
 bool BotManager::isLineBlockedBySmoke (const Vector &from, const Vector &to) {
@@ -2325,5 +2330,5 @@ bool BotManager::isFrameSkipDisabled () {
    if (game.is (GameFlags::Legacy)) {
       return true;
    }
-   return game.is (GameFlags::Xash3D | GameFlags::Xash3DLegacy) && cv_think_fps_disable;
+   return game.is (GameFlags::Xash3D) && cv_think_fps_disable;
 }

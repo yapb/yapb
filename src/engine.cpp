@@ -1159,7 +1159,12 @@ void Game::printBotVersion () {
    }
 
    if (is (GameFlags::Xash3D)) {
-      gameVersionStr.append (" @ Xash3D Engine");
+      if (is (GameFlags::Xash3DLegacy)) {
+         gameVersionStr.append (" @ Xash3D (Old)");
+      }
+      else {
+         gameVersionStr.append (" @ Xash3D FWGS");
+      }
 
       if (is (GameFlags::Mobility)) {
          gameVersionStr.append (" Mobile");
@@ -1414,7 +1419,7 @@ template <typename S, typename M> bool LightMeasure::recursiveLightPoint (const 
 
       // compute the lightmap color at a particular point
       for (int maps = 0; maps < MAX_LIGHTMAPS && surf->styles[maps] != 255; ++maps) {
-         const uint32_t scale = m_lightstyleValue[surf->styles[maps]];
+         const auto scale = static_cast <int32_t> (m_lightstyleValue[surf->styles[maps]]);
 
          m_point.red += lightmap->r * scale;
          m_point.green += lightmap->g * scale;

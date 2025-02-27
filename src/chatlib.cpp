@@ -410,6 +410,11 @@ void Bot::sendToChatLegacy (StringRef message, bool teamOnly) {
    bool dedicatedSend = false;
 
    auto sendChatMsg = [&] (const Client &client, String chatMsg) {
+      if (game.isDedicated () && !dedicatedSend) {
+         dedicatedSend = true;
+
+         game.print ("%s", chatMsg.trim ());
+      }
       auto rcv = bots[client.ent];
 
       if (rcv != nullptr) {
@@ -417,6 +422,9 @@ void Bot::sendToChatLegacy (StringRef message, bool teamOnly) {
 
          rcv->m_sayTextBuffer.sayText = message;
          rcv->m_sayTextBuffer.timeNextChat = game.time () + rcv->m_sayTextBuffer.chatDelay;
+      }
+      else {
+         return; // do not send to controlled bots
       }
 
       if (((client.flags & ClientFlags::Alive) && m_isAlive)
@@ -427,11 +435,6 @@ void Bot::sendToChatLegacy (StringRef message, bool teamOnly) {
             .writeByte (m_index)
             .writeString (chatMsg.chars ());
       }
-
-      if (game.isDedicated () && !dedicatedSend) {
-         game.print ("%s", chatMsg.trim ());
-      }
-      dedicatedSend = true;
    };
 
    if (teamOnly) {

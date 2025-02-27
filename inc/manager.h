@@ -281,7 +281,7 @@ public:
 // bot async worker wrapper
 class BotThreadWorker final : public Singleton <BotThreadWorker> {
 private:
-   ThreadPool m_botWorker {};
+   UniquePtr <ThreadPool> m_pool {};
 
 public:
    explicit BotThreadWorker () = default;
@@ -297,12 +297,12 @@ public:
          fn (); // no threads, no fun, just run task in current thread
          return;
       }
-      m_botWorker.enqueue (cr::move (fn));
+      m_pool->enqueue (cr::move (fn));
    }
 
 public:
    bool available () {
-      return m_botWorker.threadCount () > 0;
+      return m_pool && m_pool->threadCount () > 0;
    }
 };
 

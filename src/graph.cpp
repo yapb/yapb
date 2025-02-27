@@ -406,10 +406,13 @@ int BotGraph::clearConnections (int index) {
 }
 
 int BotGraph::getBspSize () {
-   MemFile file (strings.format ("maps/%s.bsp", game.getMapName ()));
+   if (File bsp { strings.joinPath (game.getRunningModName (), "maps", game.getMapName ()) + ".bsp", "rb" }) {
+      return static_cast <int> (bsp.length ());
+   }
 
-   if (file) {
-      return static_cast <int> (file.length ());
+   // worst case, load using engine (engfuncs.pfnGetFileSize isn't available on some legacy engines)
+   if (MemFile bsp { strings.joinPath (game.getRunningModName (), "maps", game.getMapName ()) + ".bsp" }) {
+      return static_cast <int> (bsp.length ());
    }
    return 0;
 }
@@ -1777,6 +1780,10 @@ bool BotGraph::loadGraphData () {
    // re-initialize paths
    reset ();
 
+   // initialize compression
+   ULZ ulz {};
+   bstor.setUlzInstance (&ulz);
+
    // check if loaded
    const bool dataLoaded = bstor.load <Path> (m_paths, &exten, &outOptions);
 
@@ -1807,9 +1814,9 @@ bool BotGraph::loadGraphData () {
       populateNodes ();
 
       if (exten.mapSize > 0) {
-         int mapSize = getBspSize ();
+         const int mapSize = getBspSize ();
 
-         if (mapSize != exten.mapSize) {
+         if (mapSize > 0 && mapSize != exten.mapSize) {
             msg ("Warning: Graph data is probably not for this map. Please check bots behaviour.");
          }
       }
@@ -2377,7 +2384,7 @@ void BotGraph::frame () {
          message.assignf ("      %s node:\n"
             "       Node %d of %d, Radius: %.1f, Light: %s\n"
             "       Flags: %s\n"
-            "       Origin: (%.1f, %.1f, %.1f)\n", type, node, m_paths.length () - 1, p.radius, p.light == kInvalidLightLevel ? "Invalid" : strings.format ("%1.f", p.light), flags, p.origin.x, p.origin.y, p.origin.z);
+            "       Origin: (%.1f, %.1f, %.1f)\n", type, node, m_paths.length () - 1, p.radius, cr::fequal (p.light, kInvalidLightLevel) ? "Invalid" : strings.format ("%1.f", p.light), flags, p.origin.x, p.origin.y, p.origin.z);
          return message;
       };
 

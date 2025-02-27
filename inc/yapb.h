@@ -188,9 +188,8 @@ public:
       m_path[0] = 0;
    }
 
-   void init (int32_t length) {
-      const auto allocSize = static_cast <uint32_t> (length);
-      m_path = cr::makeUnique <int32_t[]> (allocSize);
+   void init (size_t length) {
+      m_path = cr::makeUnique <int32_t[]> (length);
    }
 };
 
@@ -320,7 +319,7 @@ private:
    Fight m_fightStyle {}; // combat style to use
    CollisionState m_collisionState {}; // collision State
    FindPath m_pathType {}; // which pathfinder to use
-   uint8_t m_enemyParts {}; // visibility flags
+   int8_t m_enemyParts {}; // visibility flags
    uint16_t m_modelMask {}; // model mask bits
    UniquePtr <class AStarAlgo> m_planner {};
 

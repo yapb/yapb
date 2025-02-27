@@ -149,9 +149,8 @@ template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *
 
    // read compressed data
    if (file.read (compressed.data (), sizeof (uint8_t), compressedSize) == compressedSize) {
-
       // try to uncompress
-      if (ulz.uncompress (compressed.data (), hdr.compressed, reinterpret_cast <uint8_t *> (data.data ()), hdr.uncompressed) == ULZ::UncompressFailure) {
+      if (m_ulz->uncompress (compressed.data (), hdr.compressed, reinterpret_cast <uint8_t *> (data.data ()), hdr.uncompressed) == ULZ::UncompressFailure) {
          return error (isGraph, isDebug, file, "Unable to decompress ULZ data for %s (filename: '%s').", type.name, filename);
       }
       else {
@@ -248,8 +247,12 @@ template <typename U> bool BotStorage::save (const SmallArray <U> &data, ExtenHe
    const auto rawLength = data.length () * sizeof (U);
    SmallArray <uint8_t> compressed (rawLength + sizeof (uint8_t) * ULZ::Excess);
 
+   // initialize compression
+   ULZ ulz {};
+   setUlzInstance (&ulz);
+
    // try to compress
-   const auto compressedLength = static_cast <size_t> (ulz.compress (reinterpret_cast <uint8_t *> (data.data ()), static_cast <int32_t> (rawLength), reinterpret_cast <uint8_t *> (compressed.data ())));
+   const auto compressedLength = static_cast <size_t> (m_ulz->compress (reinterpret_cast <uint8_t *> (data.data ()), static_cast <int32_t> (rawLength), reinterpret_cast <uint8_t *> (compressed.data ())));
 
    if (compressedLength > 0) {
       StorageHeader hdr {};

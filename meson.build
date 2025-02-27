@@ -105,7 +105,9 @@ endif
 # configure flags gcc and clang
 if cxx == 'clang' or cxx == 'gcc'
    cxxflags += [
-      '-fno-threadsafe-statics', '-pthread'
+      '-pipe',
+      '-fno-threadsafe-statics',
+      '-pthread'
    ]
 
    if not opt_native and cpu != 'arm' and not cpu.startswith('ppc')
@@ -119,7 +121,7 @@ if cxx == 'clang' or cxx == 'gcc'
    elif cpu != 'arm' and not cpu.startswith('ppc')
       if not opt_nosimd
          cxxflags += [
-            '-msse', '-msse2', '-mfpmath=sse'
+            '-msse', '-msse2', '-msse3', '-msse3', '-mfpmath=sse'
          ]
       endif
       
@@ -131,6 +133,8 @@ if cxx == 'clang' or cxx == 'gcc'
          cxxflags += '-march=i686'
       endif
    endif
+   
+   cxx_version = compiler.version()
 
    # setup optimization flags
    if build_type == 'release'
@@ -162,7 +166,7 @@ if cxx == 'clang' or cxx == 'gcc'
       endif
 
       # disable lto partitioning on gcc to get symver working 
-      if os != 'darwin' and os != 'windows' and cxx == 'gcc'
+      if os != 'darwin' and os != 'windows' and cxx == 'gcc' and cxx_version.version_compare('<11.0')
          ldflags += [
             '-flto-partition=none'
          ]
@@ -172,7 +176,7 @@ if cxx == 'clang' or cxx == 'gcc'
    endif
 
    # special script for mingw-64 builds
-   if os == 'windows' and cxx == 'gcc' and compiler.version().version_compare('<12.0')
+   if os == 'windows' and cxx == 'gcc' and cxx_version.version_compare('<12.0')
       ldflags += [
          '-Xlinker', '--script', '-Xlinker', meson.project_source_root() + '/ext/ldscripts/i386pe.lds'
       ]
