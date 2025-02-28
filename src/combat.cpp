@@ -666,7 +666,11 @@ Vector Bot::getBodyOffsetError (float distance) {
       const float hitError = distance / (cr::clamp (static_cast <float> (m_difficulty), 1.0f, 4.0f) * 1280.0f);
       const auto &maxs = m_enemy->v.maxs, &mins = m_enemy->v.mins;
 
-      m_aimLastError = Vector (rg (mins.x * hitError, maxs.x * hitError), rg (mins.y * hitError, maxs.y * hitError), rg (mins.z * hitError * 0.5f, maxs.z * hitError * 0.5f));
+      m_aimLastError = Vector (
+         rg (mins.x * hitError, maxs.x * hitError), 
+         rg (mins.y * hitError, maxs.y * hitError),
+         rg (mins.z * hitError * 0.5f, maxs.z * hitError * 0.5f)
+      );
 
       const auto &aimError = conf.getDifficultyTweaks (m_difficulty)->aimError;
       m_aimLastError += Vector (rg (-aimError.x, aimError.x), rg (-aimError.y, aimError.y), rg (-aimError.z, aimError.z));

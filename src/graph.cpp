@@ -2384,7 +2384,12 @@ void BotGraph::frame () {
          message.assignf ("      %s node:\n"
             "       Node %d of %d, Radius: %.1f, Light: %s\n"
             "       Flags: %s\n"
-            "       Origin: (%.1f, %.1f, %.1f)\n", type, node, m_paths.length () - 1, p.radius, cr::fequal (p.light, kInvalidLightLevel) ? "Invalid" : strings.format ("%1.f", p.light), flags, p.origin.x, p.origin.y, p.origin.z);
+            "       Origin: (%.1f, %.1f, %.1f)\n", 
+            type, node,  m_paths.length () - 1,  p.radius,
+            cr::fequal (p.light, kInvalidLightLevel) ? "Invalid" : strings.format ("%1.f", p.light),
+            flags, p.origin.x, p.origin.y, p.origin.z
+         );
+
          return message;
       };
 
@@ -2410,7 +2415,12 @@ void BotGraph::frame () {
          String practiceText {};
          practiceText.assignf ("      Node practice data (index / damage):\n"
             "       CT: %d / %d\n"
-            "       T:  %d / %d\n\n", dangerIndexCT, dangerIndexCT != kInvalidNodeIndex ? practice.getDamage (Team::CT, nearestIndex, dangerIndexCT) : 0, dangerIndexT, dangerIndexT != kInvalidNodeIndex ? practice.getDamage (Team::Terrorist, nearestIndex, dangerIndexT) : 0);
+            "       T:  %d / %d\n\n",
+            dangerIndexCT,
+            dangerIndexCT != kInvalidNodeIndex ? practice.getDamage (Team::CT, nearestIndex, dangerIndexCT) : 0,
+            dangerIndexT,
+            dangerIndexT != kInvalidNodeIndex ? practice.getDamage (Team::Terrorist, nearestIndex, dangerIndexT) : 0
+         );
 
          sendHudMessage ({ 255, 255, 255 }, 0.0f, 0.16f, practiceText + timeMessage);
       }

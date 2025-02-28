@@ -243,7 +243,9 @@ void BotConfig::loadChatterConfig () {
    MemFile file {};
 
    // chatter initialization
-   if (game.is (GameFlags::HasBotVoice) && cv_radio_mode.as <int> () == 2 && openConfig ("chatter", "Couldn't open chatter system configuration", &file)) {
+   if (game.is (GameFlags::HasBotVoice) && cv_radio_mode.as <int> () == 2
+      && openConfig ("chatter", "Couldn't open chatter system configuration", &file)) {
+
       m_chatter.clear ();
 
       struct EventMap {

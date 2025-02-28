@@ -2411,7 +2411,9 @@ bool Bot::reactOnEnemy () {
 
 bool Bot::lastEnemyShootable () {
    // don't allow shooting through walls
-   if (!(m_aimFlags & (AimFlags::LastEnemy | AimFlags::PredictPath)) || m_lastEnemyOrigin.empty () || game.isNullEntity (m_lastEnemy)) {
+   if (!(m_aimFlags & (AimFlags::LastEnemy | AimFlags::PredictPath))
+      || m_lastEnemyOrigin.empty ()
+      || game.isNullEntity (m_lastEnemy)) {
       return false;
    }
    return util.getConeDeviation (ent (), m_lastEnemyOrigin) >= 0.90f && isPenetrableObstacle (m_lastEnemyOrigin);
@@ -2422,7 +2424,13 @@ void Bot::checkRadioQueue () {
 
 
    // don't allow bot listen you if bot is busy
-   if (m_radioOrder != Radio::ReportInTeam && (getCurrentTaskId () == Task::DefuseBomb || getCurrentTaskId () == Task::PlantBomb || m_hasHostage || m_hasC4 || m_isCreature)) {
+   if (m_radioOrder != Radio::ReportInTeam
+      && (getCurrentTaskId () == Task::DefuseBomb
+         || getCurrentTaskId () == Task::PlantBomb
+         || m_hasHostage
+         || m_hasC4
+         || m_isCreature)) {
+
       m_radioOrder = 0;
       return;
    }

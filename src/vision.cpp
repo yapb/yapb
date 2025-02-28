@@ -586,7 +586,12 @@ void Bot::setAimDirection () {
       }
       const bool horizontalMovement = (m_pathFlags & NodeFlag::Ladder) || isOnLadder ();
 
-      if (m_numEnemiesLeft > 0 && m_canChooseAimDirection && m_seeEnemyTime + 4.0f < game.time () && m_currentNodeIndex != kInvalidNodeIndex && !horizontalMovement) {
+      if (m_numEnemiesLeft > 0
+         && m_canChooseAimDirection
+         && m_seeEnemyTime + 4.0f < game.time ()
+         && m_currentNodeIndex != kInvalidNodeIndex
+         && !horizontalMovement) {
+
          const auto dangerIndex = practice.getIndex (m_team, m_currentNodeIndex, m_currentNodeIndex);
 
          if (graph.exists (dangerIndex)

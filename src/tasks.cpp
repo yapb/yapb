@@ -1329,7 +1329,8 @@ void Bot::throwSmoke_ () {
 void Bot::doublejump_ () {
    if (!util.isAlive (m_doubleJumpEntity)
       || (m_aimFlags & AimFlags::Enemy)
-      || (m_travelStartIndex != kInvalidNodeIndex && getTask ()->time + (graph.calculateTravelTime (pev->maxspeed, graph[m_travelStartIndex].origin, m_doubleJumpOrigin) + 11.0f) < game.time ())) {
+      || (m_travelStartIndex != kInvalidNodeIndex
+         && getTask ()->time + (graph.calculateTravelTime (pev->maxspeed, graph[m_travelStartIndex].origin, m_doubleJumpOrigin) + 11.0f) < game.time ())) {
       resetDoubleJump ();
       return;
    }
