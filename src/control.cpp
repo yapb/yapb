@@ -2222,7 +2222,7 @@ BotControl::BotControl () {
    m_cmds.emplace ("version/ver/about", "version [no arguments]", "Displays version information about bot build.", &BotControl::cmdVersion);
    m_cmds.emplace ("graphmenu/wpmenu/wptmenu", "graphmenu [noarguments]", "Opens and displays bots graph editor.", &BotControl::cmdNodeMenu);
    m_cmds.emplace ("list/listbots", "list [noarguments]", "Lists the bots currently playing on server.", &BotControl::cmdList);
-   m_cmds.emplace ("graph/g/wp/wpt/waypoint", "graph [help]", "Handles graph operations.", &BotControl::cmdNode);
+   m_cmds.emplace ("graph/g/w/wp/wpt/waypoint", "graph [help]", "Handles graph operations.", &BotControl::cmdNode);
    m_cmds.emplace ("cvars", "cvars [save|save_map|cvar|defaults]", "Display all the cvars with their descriptions.", &BotControl::cmdCvars);
    m_cmds.emplace ("show_custom", "show_custom [noarguments]", "Shows the current values from custom.cfg.", &BotControl::cmdShowCustom, false);
    m_cmds.emplace ("exec", "exec [user_id] [command]", "Executes a client command on bot entity.", &BotControl::cmdExec);
