@@ -2985,11 +2985,7 @@ void Bot::frame () {
 
    // run bot command on twice speed
    if (m_commandDelay.time <= timestamp) {
-      const bool nonStandardGameMode = game.is (GameFlags::CSDM | GameFlags::FreeForAll | GameFlags::ZombieMod);
-
-      if (m_botMovement || nonStandardGameMode || pev->deadflag == DEAD_DYING) {
-         runMovement ();
-      }
+      runMovement ();
       m_commandDelay.time = timestamp + m_commandDelay.interval;
    }
 
