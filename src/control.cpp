@@ -2204,6 +2204,7 @@ BotControl::BotControl () {
    m_ent = nullptr;
    m_djump = nullptr;
 
+   m_denyCommands = true;
    m_ignoreTranslate = false;
    m_isFromConsole = false;
    m_isMenuFillCommand = false;

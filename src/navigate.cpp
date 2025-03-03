@@ -3449,6 +3449,11 @@ void Bot::findShortestPath (int srcIndex, int destIndex) {
 void Bot::syncFindPath (int srcIndex, int destIndex, FindPath pathType) {
    // this function finds a path from srcIndex to destIndex;
 
+   // stale bots shouldn't do pathfinding
+   if (m_isStale) {
+      return;
+   }
+
    if (!m_pathFindLock.tryLock ()) {
       return; // allow only single instance of syncFindPath per-bot
    }
@@ -3524,7 +3529,7 @@ void Bot::syncFindPath (int srcIndex, int destIndex, FindPath pathType) {
    m_chosenGoalIndex = srcIndex;
    m_goalValue = 0.0f;
 
-   auto result = m_planner->find (m_team, srcIndex, destIndex, [this] (int index) {
+   const auto result = m_planner->find (m_team, srcIndex, destIndex, [this] (int index) {
       m_pathWalk.add (index);
       return true;
    });

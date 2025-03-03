@@ -628,7 +628,9 @@ void BotManager::kickEveryone (bool instant, bool zeroQuota) {
 
    if (instant) {
       for (const auto &bot : m_bots) {
-         bot->kick (true);
+         if (!game.isNullEntity (bot->ent ())) {
+            bot->kick (true);
+         }
       }
    }
    m_addRequests.clear ();
@@ -2330,5 +2332,17 @@ bool BotManager::isFrameSkipDisabled () {
    if (game.is (GameFlags::Legacy)) {
       return true;
    }
-   return game.is (GameFlags::Xash3D) && cv_think_fps_disable;
+
+   if (game.is (GameFlags::Xash3D) && cv_think_fps_disable) {
+      static ConVarRef sys_ticrate ("sys_ticrate");
+
+      // ignore think_fps_disable if fps is more than 100 on xash dedicated server
+      if (game.isDedicated () && sys_ticrate.value () > 100.0f) {
+         cv_think_fps_disable.set (0);
+
+         return false;
+      }
+      return true;
+   }
+   return false;
 }
