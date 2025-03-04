@@ -603,8 +603,9 @@ bool Game::isSoftwareRenderer () {
 
 bool Game::is25thAnniversaryUpdate () {
    static ConVarRef sv_use_steam_networking ("sv_use_steam_networking");
+   static ConVarRef host_hl25_extended_structs ("host_hl25_extended_structs");
 
-   return sv_use_steam_networking.exists ();
+   return sv_use_steam_networking.exists () || host_hl25_extended_structs.exists ();
 }
 
 void Game::pushConVar (StringRef name, StringRef value, StringRef info, bool bounded, float min, float max, int32_t varType, bool missingAction, StringRef regval, ConVar *self) {
