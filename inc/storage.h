@@ -103,7 +103,7 @@ public:
    }
 };
 
-#if !defined (BOT_STORAGE_EXPLICIT_INSTANTIATIONS)
+#if !defined(BOT_STORAGE_EXPLICIT_INSTANTIATIONS)
 #  define BOT_STORAGE_EXPLICIT_INSTANTIATIONS
 #  include "../src/storage.cpp"
 #endif

@@ -11,7 +11,7 @@
 // nice interface to handle with linkents. if ever rehlds or hlds engine will ever run on ARM or
 // other platforms, and you want to run bot on it without metamod, consider enabling LINKENT_STATIC_THUNKS
 // when compiling the bot, to get it supported.
-#if defined(LINKENT_STATIC_THUNKS)
+#if defined(LINKENT_STATIC)
 void forwardEntity_helper (EntityProto &addr, const char *name, entvars_t *pev) {
    if (!addr) {
       addr = game.lib ().resolve <EntityProto> (name);

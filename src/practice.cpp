@@ -163,7 +163,7 @@ void BotPractice::save () {
    bstor.save <DangerSaveRestore> (data);
 }
 
-void BotPractice::load () {
+void BotPractice::syncLoad () {
    if (!graph.length ()) {
       return; // no action
    }
@@ -180,5 +180,11 @@ void BotPractice::load () {
          }
       }
    }
+}
+
+void BotPractice::load () {
+   worker.enqueue ([this] () {
+      syncLoad ();
+   });
 }
 

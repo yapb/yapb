@@ -3712,20 +3712,20 @@ void Bot::takeBlind (int alpha) {
 
    if (m_difficulty <= Difficulty::Normal) {
       m_blindMoveSpeed = 0.0f;
-      m_blindSidemoveSpeed = 0.0f;
+      m_blindSideMoveSpeed = 0.0f;
       m_blindButton = IN_DUCK;
 
       return;
    }
    m_blindNodeIndex = findCoverNode (512.0f);
    m_blindMoveSpeed = -pev->maxspeed;
-   m_blindSidemoveSpeed = 0.0f;
+   m_blindSideMoveSpeed = 0.0f;
 
    if (rg.chance (50)) {
-      m_blindSidemoveSpeed = pev->maxspeed;
+      m_blindSideMoveSpeed = pev->maxspeed;
    }
    else {
-      m_blindSidemoveSpeed = -pev->maxspeed;
+      m_blindSideMoveSpeed = -pev->maxspeed;
    }
 
    if (m_healthValue < 85.0f) {
@@ -3994,7 +3994,7 @@ void Bot::runMovement () {
    // translate bot buttons
    translateInput ();
 
-   engfuncs.pfnRunPlayerMove (pev->pContainingEntity,
+   engfuncs.pfnRunPlayerMove (ent (),
       getRpmAngles (), m_moveSpeed, m_strafeSpeed,
       0.0f, static_cast <uint16_t> (pev->button), static_cast <uint8_t> (pev->impulse), msecVal);
 

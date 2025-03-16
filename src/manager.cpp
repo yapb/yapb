@@ -1116,14 +1116,14 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
       if (cv_show_latency.as <int> () == 1) {
          engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "*bot", "1");
       }
-      auto avatar = conf.getRandomAvatar ();
+      const auto &avatar = conf.getRandomAvatar ();
 
       if (cv_show_avatars && !avatar.empty ()) {
          engfuncs.pfnSetClientKeyValue (clientIndex, buffer, "*sid", avatar.chars ());
       }
    }
 
-   char reject[256] = { 0, };
+   char reject[StringBuffer::StaticBufferSize] = { 0, };
    MDLL_ClientConnect (bot, bot->v.netname.chars (), strings.format ("127.0.0.%d", clientIndex + 100), reject);
 
    if (!strings.isEmpty (reject)) {
@@ -1228,7 +1228,9 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
    m_pathWalk.init (m_planner->getMaxLength ());
 
    // init player models parts enumerator
-   m_hitboxEnumerator = cr::makeUnique <PlayerHitboxEnumerator> ();
+   if (cv_use_hitbox_enemy_targeting) {
+      m_hitboxEnumerator = cr::makeUnique <PlayerHitboxEnumerator> ();
+   }
 
    // bot is not kicked by rotation
    m_kickedByRotation = false;
@@ -1335,21 +1337,23 @@ bool BotManager::isTeamStacked (int team) {
    return teamCount[team] + 1 > teamCount[team == Team::CT ? Team::Terrorist : Team::CT] + limitTeams;
 }
 
-void BotManager::erase (Bot *bot) {
+void BotManager::disconnectBot (Bot *bot) {
    for (auto &e : m_bots) {
       if (e.get () != bot) {
          continue;
       }
+      bot->markStale ();
 
       if (!bot->m_kickedByRotation && cv_save_bots_names) {
          m_saveBotNames.emplaceLast (bot->pev->netname.str ());
       }
-      bot->markStale ();
 
       const auto index = m_bots.index (e);
       e.reset ();
 
       m_bots.erase (index, 1); // remove from bots array
+      bot = nullptr;
+
       break;
    }
 }
@@ -1556,7 +1560,10 @@ void Bot::newRound () {
    m_followWaitTime = 0.0f;
 
    m_hostages.clear ();
-   m_hitboxEnumerator->reset ();
+
+   if (cv_use_hitbox_enemy_targeting) {
+      m_hitboxEnumerator->reset ();
+   }
 
    m_approachingLadderTimer.invalidate ();
    m_forgetLastVictimTimer.invalidate ();
@@ -1745,6 +1752,10 @@ void Bot::kick (bool silent) {
 }
 
 void Bot::markStale () {
+   // wait till threads tear down
+   MutexScopedLock lock1 (m_pathFindLock);
+   MutexScopedLock lock2 (m_predictLock);
+
    // switch chatter icon off
    showChatterIcon (false, true);
 
@@ -2180,13 +2191,19 @@ void BotThreadWorker::shutdown () {
 }
 
 void BotThreadWorker::startup (int workers) {
-   String disableWorkerEnv = plat.env ("YAPB_SINGLE_THREADED");
+   StringRef disableWorkerEnv = plat.env ("YAPB_SINGLE_THREADED");
 
    // disable on legacy games
    const bool isLegacyGame = game.is (GameFlags::Legacy);
 
+   // do not do any threading when timescale enabled
+   ConVarRef timescale ("sys_timescale");
+
    // disable worker if requested via env variable or workers are disabled
-   if (isLegacyGame || workers == 0 || (!disableWorkerEnv.empty () && disableWorkerEnv == "1")) {
+   if (isLegacyGame
+      || workers == 0
+      || timescale.value () > 0
+      || (!disableWorkerEnv.empty () && disableWorkerEnv == "1")) {
       return;
    }
    m_pool = cr::makeUnique <ThreadPool> ();

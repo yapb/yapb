@@ -617,7 +617,7 @@ public:
    float m_preventFlashing {}; // bot turned away from flashbang
    float m_blindTime {}; // time when bot is blinded
    float m_blindMoveSpeed {}; // mad speeds when bot is blind
-   float m_blindSidemoveSpeed {}; // mad side move speeds when bot is blind
+   float m_blindSideMoveSpeed {}; // mad side move speeds when bot is blind
    float m_fallDownTime {}; // time bot started to fall 
    float m_duckForJump {}; // is bot needed to duck for double jump
    float m_baseAgressionLevel {}; // base aggression level (on initializing)
@@ -720,11 +720,7 @@ public:
 
 public:
    Bot (edict_t *bot, int difficulty, int personality, int team, int skin);
-
-   // need to wait until all threads will finish it's work before terminating bot object
-   ~Bot () {
-      MutexScopedLock lock1 (m_pathFindLock);
-   }
+   ~Bot () = default;
 
 public:
    void logic (); /// the things that can be executed while skipping frames

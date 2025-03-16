@@ -154,12 +154,12 @@ int BotControl::cmdWeaponMode () {
 }
 
 int BotControl::cmdVersion () {
-   const auto &build = product.build;
+   constexpr auto &bi = product.bi;
 
-   msg ("%s v%s (ID %s)", product.name, product.version, build.id);
+   msg ("%s v%s (ID %s)", product.name, product.version, bi.id);
    msg ("   by %s (%s)", product.author, product.email);
    msg ("   %s", product.url);
-   msg ("compiled: %s on %s with %s", product.dtime, build.machine, build.compiler);
+   msg ("compiled: %s on %s with %s", product.dtime, bi.machine, bi.compiler);
 
    return BotCommandResult::Handled;
 }

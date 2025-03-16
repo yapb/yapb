@@ -15,58 +15,59 @@
 
 #include VERSION_HEADER
 
+// compile time build string
+#define CTS_BUILD_STR static inline constexpr StringRef
+
 // simple class for bot internal information
-class Product final : public Singleton <Product> {
+static constexpr class Product final {
 public:
    explicit constexpr Product () = default;
    ~Product () = default;
 
 public:
-   struct Build {
-      static constexpr StringRef hash { MODULE_COMMIT_COUNT };
-      static constexpr StringRef count { MODULE_COMMIT_HASH };
-      static constexpr StringRef author { MODULE_AUTHOR };
-      static constexpr StringRef machine { MODULE_MACHINE };
-      static constexpr StringRef compiler { MODULE_COMPILER };
-      static constexpr StringRef id { MODULE_BUILD_ID };
-   } build {};
+   static constexpr struct BuildInfo {
+      CTS_BUILD_STR hash { MODULE_COMMIT_HASH };
+      CTS_BUILD_STR count { MODULE_COMMIT_COUNT };
+      CTS_BUILD_STR author { MODULE_AUTHOR };
+      CTS_BUILD_STR machine { MODULE_MACHINE };
+      CTS_BUILD_STR compiler { MODULE_COMPILER };
+      CTS_BUILD_STR id { MODULE_BUILD_ID };
+   } bi {};
 
 public:
-   static constexpr StringRef name { "YaPB" };
-   static constexpr StringRef nameLower { "yapb" };
-   static constexpr StringRef year { &__DATE__[7] };
-   static constexpr StringRef author { "YaPB Project" };
-   static constexpr StringRef email { "yapb@jeefo.net" };
-   static constexpr StringRef url { "https://yapb.jeefo.net/" };
-   static constexpr StringRef download { "yapb.jeefo.net" };
-   static constexpr StringRef upload { "yapb.jeefo.net/upload" };
-   static constexpr StringRef httpScheme { "http" };
-   static constexpr StringRef logtag { "YB" };
-   static constexpr StringRef dtime { __DATE__ " " __TIME__ };
-   static constexpr StringRef date { __DATE__ };
-   static constexpr StringRef version { MODULE_VERSION "." MODULE_COMMIT_COUNT };
-   static constexpr StringRef cmdPri { "yb" };
-   static constexpr StringRef cmdSec { "yapb" };
-};
+   CTS_BUILD_STR name { "YaPB" };
+   CTS_BUILD_STR nameLower { "yapb" };
+   CTS_BUILD_STR year { &__DATE__[7] };
+   CTS_BUILD_STR author { "YaPB Project" };
+   CTS_BUILD_STR email { "yapb@jeefo.net" };
+   CTS_BUILD_STR url { "https://yapb.jeefo.net/" };
+   CTS_BUILD_STR download { "yapb.jeefo.net" };
+   CTS_BUILD_STR upload { "yapb.jeefo.net/upload" };
+   CTS_BUILD_STR httpScheme { "http" };
+   CTS_BUILD_STR logtag { "YB" };
+   CTS_BUILD_STR dtime { __DATE__ " " __TIME__ };
+   CTS_BUILD_STR date { __DATE__ };
+   CTS_BUILD_STR version { MODULE_VERSION "." MODULE_COMMIT_COUNT };
+   CTS_BUILD_STR cmdPri { "yb" };
+   CTS_BUILD_STR cmdSec { "yapb" };
+} product {};
 
-class Folders final : public Singleton <Folders> {
+static constexpr class Folders final {
 public:
    explicit constexpr Folders () = default;
    ~Folders () = default;
 
 public:
-   static constexpr StringRef bot { "yapb" };
-   static constexpr StringRef addons { "addons" };
-   static constexpr StringRef config { "conf" };
-   static constexpr StringRef data { "data" };
-   static constexpr StringRef lang { "lang" };
-   static constexpr StringRef logs { "logs" };
-   static constexpr StringRef train { "train" };
-   static constexpr StringRef graph { "graph" };
-   static constexpr StringRef podbot { "pwf" };
-   static constexpr StringRef ebot { "ewp" };
-};
+   CTS_BUILD_STR bot { "yapb" };
+   CTS_BUILD_STR addons { "addons" };
+   CTS_BUILD_STR config { "conf" };
+   CTS_BUILD_STR data { "data" };
+   CTS_BUILD_STR lang { "lang" };
+   CTS_BUILD_STR logs { "logs" };
+   CTS_BUILD_STR train { "train" };
+   CTS_BUILD_STR graph { "graph" };
+   CTS_BUILD_STR podbot { "pwf" };
+   CTS_BUILD_STR ebot { "ewp" };
+} folders {};
 
-// expose product info
-CR_EXPOSE_GLOBAL_SINGLETON (Product, product);
-CR_EXPOSE_GLOBAL_SINGLETON (Folders, folders);
+#undef CTS_BUILD_STR

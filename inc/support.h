@@ -80,7 +80,7 @@ public:
    StringRef getFakeSteamId (edict_t *ent);
 
    // get's the wave length
-   float getWaveLength (StringRef filename);
+   float getWaveFileDuration (StringRef filename);
 
    // set custom cvar descriptions
    void setCustomCvarDescriptions ();

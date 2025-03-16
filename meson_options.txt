@@ -16,4 +16,7 @@ option('winxp', type : 'boolean', value : false,
 	   
 option('nosimd', type : 'boolean', value : false,
        description: 'Disables all SIMD or NEON optimizations.')
+	   
+option('static_linkent', type : 'boolean', value : false,
+       description: 'Use predefined entity link list, instead of hooking dlsym.')
 

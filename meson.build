@@ -42,6 +42,7 @@ opt_64bit = get_option('64bit')
 opt_native = get_option('native')
 opt_winxp = get_option('winxp')
 opt_nosimd = get_option('nosimd')
+opt_static_linkent = get_option('static_linkent')
 
 # cpp and ldflags from scratch
 cxxflags = []
@@ -143,17 +144,21 @@ if cxx == 'clang' or cxx == 'gcc'
       ]
 
       if os != 'darwin' and os != 'windows' and cpu != 'aarch64' and cpu != 'arm' and not cpu.startswith('ppc')
-         cxxflags += [
-            '-fdata-sections',
-            '-ffunction-sections',
-            '-fcf-protection=none',
-            '-fno-plt'
-         ]
+         if not opt_static_linkent
+            cxxflags += [
+               '-fdata-sections',
+               '-ffunction-sections',
+               '-fcf-protection=none',
+               '-fno-plt'
+            ]
 
-         ldflags += [
-            '-Wl,--version-script=' + meson.project_source_root() + '/ext/ldscripts/version.lds',
-            '-Wl,--gc-sections'
-         ]
+            ldflags += [
+               '-Wl,--version-script=' + meson.project_source_root() + '/ext/ldscripts/version.lds',
+               '-Wl,--gc-sections'
+            ]
+         else
+            cxxflags += ['-DLINKENT_STATIC']
+         endif
       
          if cxx == 'gcc'
             cxxflags += [

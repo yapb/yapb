@@ -142,7 +142,7 @@ void Bot::prepareChatMessage (StringRef message) {
    m_chatBuffer = message;
 
    // must be called before return or on the end
-   auto finishPreparation = [&] () {
+   auto addChatErrors = [&] () {
       if (!m_chatBuffer.empty ()) {
          chatlib.addChatErrors (m_chatBuffer);
       }
@@ -153,7 +153,7 @@ void Bot::prepareChatMessage (StringRef message) {
 
    // nothing found, bail out
    if (pos == String::InvalidIndex || pos >= message.length ()) {
-      finishPreparation ();
+      addChatErrors ();
       return;
    }
 
@@ -241,6 +241,11 @@ void Bot::prepareChatMessage (StringRef message) {
             return humanizedName (playerIndex);
          }
          else if (!needsEnemy && m_team == client.team) {
+            if (util.isPlayer (pev->dmg_inflictor)
+               && game.getRealTeam (pev->dmg_inflictor) == m_team) {
+
+               return humanizedName (game.indexOfPlayer (pev->dmg_inflictor));
+            }
             return humanizedName (playerIndex);
          }
       }
@@ -304,7 +309,7 @@ void Bot::prepareChatMessage (StringRef message) {
       };
       ++replaceCounter;
    }
-   finishPreparation ();
+   addChatErrors ();
 }
 
 bool Bot::checkChatKeywords (String &reply) {

@@ -195,6 +195,9 @@
     <ClInclude Include="..\inc\fakeping.h">
       <Filter>inc</Filter>
     </ClInclude>
+    <ClInclude Include="..\ext\crlib\crlib\wavehelper.h">
+      <Filter>inc\ext\crlib</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\botlib.cpp">

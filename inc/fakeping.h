@@ -82,6 +82,7 @@ private:
 
 private:
    CountdownTimer m_recalcTime {};
+   PingBitMsg m_pbm {};
 
 public:
    explicit BotFakePingManager () = default;

@@ -316,27 +316,27 @@ public:
    }
 
    // gets edict pointer out of entity index
-   edict_t *entityOfIndex (const int index) {
+   CR_FORCE_INLINE edict_t *entityOfIndex (const int index) {
       return static_cast <edict_t *> (m_startEntity + index);
    };
 
    // gets edict pointer out of entity index (player)
-   edict_t *playerOfIndex (const int index) {
+   CR_FORCE_INLINE edict_t *playerOfIndex (const int index) {
       return entityOfIndex (index) + 1;
    };
 
    // gets edict index out of it's pointer
-   int indexOfEntity (const edict_t *ent) {
+   CR_FORCE_INLINE int indexOfEntity (const edict_t *ent) {
       return static_cast <int> (ent - m_startEntity);
    };
 
    // gets edict index of it's pointer (player)
-   int indexOfPlayer (const edict_t *ent) {
+   CR_FORCE_INLINE int indexOfPlayer (const edict_t *ent) {
       return indexOfEntity (ent) - 1;
    }
 
    // verify entity isn't null
-   bool isNullEntity (const edict_t *ent) {
+   CR_FORCE_INLINE bool isNullEntity (const edict_t *ent) {
       return !ent || !indexOfEntity (ent) || ent->free;
    }
 

@@ -187,17 +187,17 @@ void Game::levelInitialize (edict_t *entities, int max) {
 }
 
 void Game::levelShutdown () {
-   // stop thread pool
-   worker.shutdown ();
-
    // save collected practice on shutdown
    practice.save ();
+
+   // stop thread pool
+   worker.shutdown ();
 
    // destroy global killer entity
    bots.destroyKillerEntity ();
 
    // ensure players are off on xash3d
-   if (game.is (GameFlags::Xash3D)) {
+   if (game.is (GameFlags::Xash3DLegacy)) {
       bots.kickEveryone (true, false);
    }
 
@@ -310,7 +310,7 @@ const char *Game::getRunningModName () {
       return name.chars ();
    }
 
-   char engineModName[256] {};
+   char engineModName[StringBuffer::StaticBufferSize] {};
    engfuncs.pfnGetGameDir (engineModName);
 
    name = engineModName;
@@ -545,7 +545,7 @@ void Game::prepareBotArgs (edict_t *ent, String str) {
             m_botArgs.emplace (args.substr (quote, args.length () - 1).trim ("\"")); // add string with trimmed quotes
          }
          else {
-            for (auto &&arg : args.split (" ")) {
+            for (auto arg : args.split (" ")) {
                m_botArgs.emplace (arg);
             }
          }
@@ -560,8 +560,8 @@ void Game::prepareBotArgs (edict_t *ent, String str) {
    };
 
    if (str.find (';', 0) != String::InvalidIndex) {
-      for (auto &&part : str.split (";")) {
-         parsePartArgs (part);
+      for (auto part : str.split (";")) {
+         parsePartArgs (part.trim ());
       }
    }
    else {
@@ -594,7 +594,7 @@ bool Game::isSoftwareRenderer () {
       return false;
    }
 
-   // and on only windows version you can use software-render game. Linux, OSX always defaults to OpenGL
+   // and on only windows version you can use software-render game. Linux, macOS always defaults to OpenGL
    if (plat.win) {
       return plat.hasModule ("sw");
    }
@@ -605,7 +605,7 @@ bool Game::is25thAnniversaryUpdate () {
    static ConVarRef sv_use_steam_networking ("sv_use_steam_networking");
    static ConVarRef host_hl25_extended_structs ("host_hl25_extended_structs");
 
-   return sv_use_steam_networking.exists () || host_hl25_extended_structs.exists ();
+   return sv_use_steam_networking.exists () || host_hl25_extended_structs.value () > 0.0f;
 }
 
 void Game::pushConVar (StringRef name, StringRef value, StringRef info, bool bounded, float min, float max, int32_t varType, bool missingAction, StringRef regval, ConVar *self) {
@@ -1161,7 +1161,7 @@ void Game::printBotVersion () {
 
    if (is (GameFlags::Xash3D)) {
       if (is (GameFlags::Xash3DLegacy)) {
-         gameVersionStr.append (" @ Xash3D (Old)");
+         gameVersionStr.append (" @ Xash3D-NG");
       }
       else {
          gameVersionStr.append (" @ Xash3D FWGS");
@@ -1315,7 +1315,7 @@ void LightMeasure::animateLight () {
 
    for (auto j = 0; j < MAX_LIGHTSTYLES; ++j) {
       if (!m_lightstyle[j].length) {
-         m_lightstyleValue[j] = 256;
+         m_lightstyleValue[j] = MAX_LIGHTSTYLEVALUE;
          continue;
       }
       m_lightstyleValue[j] = static_cast <uint32_t> (m_lightstyle[j].map[index % m_lightstyle[j].length] - 'a') * 22u;

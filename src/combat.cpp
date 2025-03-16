@@ -191,7 +191,7 @@ bool Bot::checkBodyPartsWithOffsets (edict_t *target) {
    const auto &eyes = getEyesPos ();
 
    auto spot = target->v.origin;
-   auto self = pev->pContainingEntity;
+   auto self = ent ();
 
    // creatures can't hurt behind anything
    const auto ignoreFlags = m_isCreature ? TraceIgnore::None : (cv_aim_trace_consider_glass ? TraceIgnore::Monsters : TraceIgnore::Everything);
@@ -266,7 +266,7 @@ bool Bot::checkBodyPartsWithOffsets (edict_t *target) {
 }
 
 bool Bot::checkBodyPartsWithHitboxes (edict_t *target) {
-   const auto self = pev->pContainingEntity;
+   const auto self = ent ();
    const auto refresh = m_frameInterval * 1.5f;
 
    TraceResult result {};

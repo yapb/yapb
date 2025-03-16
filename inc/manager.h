@@ -117,7 +117,7 @@ public:
    void notifyBombDefuse ();
    void execGameEntity (edict_t *ent);
    void forEach (ForEachBot handler);
-   void erase (Bot *bot);
+   void disconnectBot (Bot *bot);
    void handleDeath (edict_t *killer, edict_t *victim);
    void setLastWinner (int winner);
    void checkBotModel (edict_t *ent, char *infobuffer);

@@ -248,10 +248,10 @@ void BotConfig::loadChatterConfig () {
 
       m_chatter.clear ();
 
-      struct EventMap {
-         String str;
-         int code;
-         float repeat;
+      static constexpr struct EventMap {
+         StringRef name {};
+         int code {};
+         float repeat {};
       } chatterEventMap[] = {
          { "Radio_CoverMe", Radio::CoverMe, kMaxChatterRepeatInterval },
          { "Radio_YouTakePoint", Radio::YouTakeThePoint, kMaxChatterRepeatInterval },
@@ -361,17 +361,20 @@ void BotConfig::loadChatterConfig () {
             items[1].trim ("(;)");
 
             for (const auto &event : chatterEventMap) {
-               if (event.str == items.first ()) {
+               if (event.name == items.first ().chars ()) {
                   // this does common work of parsing comma-separated chatter line
                   auto sentences = items[1].split (",");
                   sentences.shuffle ();
 
                   for (auto &sound : sentences) {
                      sound.trim ().trim ("\"");
-                     const auto duration = util.getWaveLength (sound.chars ());
+                     const auto duration = util.getWaveFileDuration (sound.chars ());
 
                      if (duration > 0.0f) {
                         m_chatter[event.code].emplace (cr::move (sound), event.repeat, duration);
+                     }
+                     else {
+                        game.print ("Warning: Couldn't get duration of sound '%s.wav.", sound);
                      }
                   }
                   sentences.clear ();
@@ -383,7 +386,12 @@ void BotConfig::loadChatterConfig () {
    }
    else {
       cv_radio_mode.set (1);
-      game.print ("Bots chatter communication disabled.");
+
+
+      // only notify if has bot voice, but failed to open file
+      if (game.is (GameFlags::HasBotVoice)) {
+         game.print ("Bots chatter communication disabled.");
+      }
    }
 }
 

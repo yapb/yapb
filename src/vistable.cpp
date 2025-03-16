@@ -124,14 +124,19 @@ void GraphVistable::rebuild () {
    else {
       m_sliceIndex += rg (250, 400);
    }
+   auto notifyProgress = [] (int value) {
+      game.print ("Rebuilding vistable... %d%% done.", value);
+   };
 
    // notify host about rebuilding
    if (m_notifyMsgTimestamp > 0.0f && m_notifyMsgTimestamp < game.time () && end == m_length) {
-      game.print ("Rebuilding vistable... %d%% done.", m_curIndex * 100 / m_length);
+      notifyProgress (m_curIndex * 100 / m_length);
       m_notifyMsgTimestamp = game.time () + 1.0f;
    }
 
    if (m_curIndex == m_length && end == m_length) {
+      notifyProgress (100);
+
       m_rebuild = false;
       m_notifyMsgTimestamp = 0.0f;
 

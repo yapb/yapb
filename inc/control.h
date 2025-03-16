@@ -231,8 +231,14 @@ public:
    void collectArgs () {
       m_args.clear ();
 
-      for (int i = 0; i < engfuncs.pfnCmd_Argc (); ++i) {
-         m_args.emplace (String (engfuncs.pfnCmd_Argv (i)).lowercase ());
+      for (auto i = 0; i < engfuncs.pfnCmd_Argc (); ++i) {
+         String arg = engfuncs.pfnCmd_Argv (i);
+
+         // only make case-insensetive command itself and first argument
+         if (i < 2) {
+            arg = arg.lowercase ();
+         }
+         m_args.emplace (arg);
       }
    }
 

@@ -34,7 +34,7 @@ plugin_info_t Plugin_info = {
 
 // compilers can't create lambdas with vaargs, so put this one in it's own namespace 
 namespace Hooks {
-void handler_engClientCommand (edict_t *ent, char const *format, ...) {
+CR_FORCE_STACK_ALIGN void handler_engClientCommand (edict_t *ent, char const *format, ...) {
    // this function forces the client whose player entity is ent to issue a client command.
    // How it works is that clients all have a argv global string in their client DLL that
    // stores the command string; if ever that string is filled with characters, the client DLL
@@ -99,7 +99,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       memcpy (table, &dllapi, sizeof (gamefuncs_t));
    }
 
-   table->pfnGameInit = [] () {
+   table->pfnGameInit = [] () CR_FORCE_STACK_ALIGN {
       // this function is a one-time call, and appears to be the second function called in the
       // DLL after GiveFntprsToDll() has been called. Its purpose is to tell the MOD DLL to
       // initialize the game before the engine actually hooks into it with its video frames and
@@ -121,7 +121,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       dllapi.pfnGameInit ();
    };
 
-   table->pfnSpawn = [] (edict_t *ent) {
+   table->pfnSpawn = [] (edict_t *ent) CR_FORCE_STACK_ALIGN {
       // this function asks the game DLL to spawn (i.e, give a physical existence in the virtual
       // world, in other words to 'display') the entity pointed to by ent in the game. The
       // Spawn() function is one of the functions any entity is supposed to have in the game DLL,
@@ -141,7 +141,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       return result;
    };
 
-   table->pfnTouch = [] (edict_t *pentTouched, edict_t *pentOther) {
+   table->pfnTouch = [] (edict_t *pentTouched, edict_t *pentOther) CR_FORCE_STACK_ALIGN {
       // this function is called when two entities' bounding boxes enter in collision. For example,
       // when a player walks upon a gun, the player entity bounding box collides to the gun entity
       // bounding box, and the result is that this function is called. It is used by the game for
@@ -170,7 +170,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       dllapi.pfnTouch (pentTouched, pentOther);
    };
 
-   table->pfnClientConnect = [] (edict_t *ent, const char *name, const char *addr, char rejectReason[128]) {
+   table->pfnClientConnect = [] (edict_t *ent, const char *name, const char *addr, char rejectReason[128]) CR_FORCE_STACK_ALIGN {
       // this function is called in order to tell the MOD DLL that a client attempts to connect the
       // game. The entity pointer of this client is ent, the name under which he connects is
       // pointed to by the pszName pointer, and its IP address string is pointed by the pszAddress
@@ -210,7 +210,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       return dllapi.pfnClientConnect (ent, name, addr, rejectReason);
    };
 
-   table->pfnClientDisconnect = [] (edict_t *ent) {
+   table->pfnClientDisconnect = [] (edict_t *ent) CR_FORCE_STACK_ALIGN {
       // this function is called whenever a client is VOLUNTARILY disconnected from the server,
       // either because the client dropped the connection, or because the server dropped him from
       // the game (latency timeout). The effect is the freeing of a client slot on the server. Note
@@ -224,7 +224,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
 
       for (auto &bot : bots) {
          if (bot->pev == &ent->v) {
-            bots.erase (bot.get ()); // remove the bot from bots array
+            bots.disconnectBot (bot.get ()); // remove the bot from bots array
 
             break;
          }
@@ -249,8 +249,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       dllapi.pfnClientDisconnect (ent);
    };
 
-
-   table->pfnClientPutInServer = [] (edict_t *ent) {
+   table->pfnClientPutInServer = [] (edict_t *ent) CR_FORCE_STACK_ALIGN {
       // this function is called once a just connected client actually enters the game, after
       // having downloaded and synchronized its resources with the of the server's. It's the
       // perfect place to hook for client connecting, since a client can always try to connect
@@ -271,7 +270,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       dllapi.pfnClientPutInServer (ent);
    };
 
-   table->pfnClientUserInfoChanged = [] (edict_t *ent, char *infobuffer) {
+   table->pfnClientUserInfoChanged = [] (edict_t *ent, char *infobuffer) CR_FORCE_STACK_ALIGN {
       // this function is called when a player changes model, or changes team. Occasionally it
       // enforces rules on these changes (for example, some MODs don't want to allow players to
       // change their player model). But most commonly, this function is in charge of handling
@@ -286,7 +285,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       dllapi.pfnClientUserInfoChanged (ent, infobuffer);
    };
 
-   table->pfnClientCommand = [] (edict_t *ent) {
+   table->pfnClientCommand = [] (edict_t *ent) CR_FORCE_STACK_ALIGN {
       // this function is called whenever the client whose player entity is ent issues a client
       // command. How it works is that clients all have a global string in their client DLL that
       // stores the command string; if ever that string is filled with characters, the client DLL
@@ -323,7 +322,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       dllapi.pfnClientCommand (ent);
    };
 
-   table->pfnServerActivate = [] (edict_t *edictList, int edictCount, int clientMax) {
+   table->pfnServerActivate = [] (edict_t *edictList, int edictCount, int clientMax) CR_FORCE_STACK_ALIGN {
       // this function is called when the server has fully loaded and is about to manifest itself
       // on the network as such. Since a mapchange is actually a server shutdown followed by a
       // restart, this function is also called when a new map is being loaded. Hence it's the
@@ -340,7 +339,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       game.levelInitialize (edictList, edictCount);
    };
 
-   table->pfnServerDeactivate = [] () {
+   table->pfnServerDeactivate = [] () CR_FORCE_STACK_ALIGN {
       // this function is called when the server is shutting down. A particular note about map
       // changes: changing the map means shutting down the server and starting a new one. Of course
       // this process is transparent to the user, but either in single player when the hero reaches
@@ -360,7 +359,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       dllapi.pfnServerDeactivate ();
    };
 
-   table->pfnStartFrame = [] () {
+   table->pfnStartFrame = [] () CR_FORCE_STACK_ALIGN {
       // this function starts a video frame. It is called once per video frame by the game. If
       // you run Half-Life at 90 fps, this function will then be called 90 times per second. By
       // placing a hook on it, we have a good place to do things that should be done continuously
@@ -415,7 +414,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
    };
 
    if (game.is (GameFlags::HasFakePings) && !game.is (GameFlags::Metamod)) {
-      table->pfnUpdateClientData = [] (const struct edict_s *player, int sendweapons, struct clientdata_s *cd) {
+      table->pfnUpdateClientData = [] (const struct edict_s *player, int sendweapons, struct clientdata_s *cd) CR_FORCE_STACK_ALIGN {
          // this function is a synchronization tool that is used periodically by the engine to tell
          // the game DLL to send player info over the network to one of its clients when it suspects
          // that this client is desynchronizing. Early bots were using it to ask the game DLL for the
@@ -437,7 +436,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       };
    }
 
-   table->pfnPM_Move = [] (playermove_t *pm, int server) {
+   table->pfnPM_Move = [] (playermove_t *pm, int server) CR_FORCE_STACK_ALIGN {
       // this is the player movement code clients run to predict things when the server can't update
       // them often enough (or doesn't want to). The server runs exactly the same function for
       // moving players. There is normally no distinction between them, else client-side prediction
@@ -451,7 +450,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       dllapi.pfnPM_Move (pm, server);
    };
 
-   table->pfnKeyValue = [] (edict_t *ent, KeyValueData *kvd) {
+   table->pfnKeyValue = [] (edict_t *ent, KeyValueData *kvd) CR_FORCE_STACK_ALIGN {
       // this function is called when the game requests a pointer to some entity's keyvalue data.
       // The keyvalue data is held in each entity's infobuffer (basically a char buffer where each
       // game DLL can put the stuff it wants) under - as it says - the form of a key/value pair. A
@@ -475,7 +474,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
    return HLTrue;
 }
 
-CR_LINKAGE_C int GetEntityAPI_Post (gamefuncs_t *table, int) {
+CR_C_LINKAGE int GetEntityAPI_Post (gamefuncs_t *table, int) {
    // this function is called right after GiveFnptrsToDll() by the engine in the game DLL (or
    // what it BELIEVES to be the game DLL), in order to copy the list of MOD functions that can
    // be called by the engine, into a memory block pointed to by the functionTable pointer
@@ -488,7 +487,7 @@ CR_LINKAGE_C int GetEntityAPI_Post (gamefuncs_t *table, int) {
 
    plat.bzero (table, sizeof (gamefuncs_t));
 
-   table->pfnSpawn = [] (edict_t *ent) {
+   table->pfnSpawn = [] (edict_t *ent) CR_FORCE_STACK_ALIGN {
       // this function asks the game DLL to spawn (i.e, give a physical existence in the virtual
       // world, in other words to 'display') the entity pointed to by ent in the game. The
       // Spawn() function is one of the functions any entity is supposed to have in the game DLL,
@@ -502,7 +501,7 @@ CR_LINKAGE_C int GetEntityAPI_Post (gamefuncs_t *table, int) {
       RETURN_META_VALUE (MRES_HANDLED, 0);
    };
 
-   table->pfnStartFrame = [] () {
+   table->pfnStartFrame = [] () CR_FORCE_STACK_ALIGN {
       // this function starts a video frame. It is called once per video frame by the game. If
       // you run Half-Life at 90 fps, this function will then be called 90 times per second. By
       // placing a hook on it, we have a good place to do things that should be done continuously
@@ -515,7 +514,7 @@ CR_LINKAGE_C int GetEntityAPI_Post (gamefuncs_t *table, int) {
       RETURN_META (MRES_IGNORED);
    };
 
-   table->pfnServerActivate = [] (edict_t *edictList, int edictCount, int) {
+   table->pfnServerActivate = [] (edict_t *edictList, int edictCount, int) CR_FORCE_STACK_ALIGN {
       // this function is called when the server has fully loaded and is about to manifest itself
       // on the network as such. Since a mapchange is actually a server shutdown followed by a
       // restart, this function is also called when a new map is being loaded. Hence it's the
@@ -531,7 +530,7 @@ CR_LINKAGE_C int GetEntityAPI_Post (gamefuncs_t *table, int) {
    };
 
    if (game.is (GameFlags::HasFakePings)) {
-      table->pfnUpdateClientData = [] (const struct edict_s *player, int, struct clientdata_s *) {
+      table->pfnUpdateClientData = [] (const struct edict_s *player, int, struct clientdata_s *) CR_FORCE_STACK_ALIGN {
          // this function is a synchronization tool that is used periodically by the engine to tell
          // the game DLL to send player info over the network to one of its clients when it suspects
          // that this client is desynchronizing. Early bots were using it to ask the game DLL for the
@@ -555,13 +554,13 @@ CR_LINKAGE_C int GetEntityAPI_Post (gamefuncs_t *table, int) {
    return HLTrue;
 }
 
-CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
+CR_C_LINKAGE int GetEngineFunctions (enginefuncs_t *table, int *) {
    if (game.is (GameFlags::Metamod)) {
       plat.bzero (table, sizeof (enginefuncs_t));
    }
 
    if (entlink.needsBypass () && !game.is (GameFlags::Metamod)) {
-      table->pfnCreateNamedEntity = [] (string_t classname) -> edict_t * {
+      table->pfnCreateNamedEntity = [] (string_t classname) CR_FORCE_STACK_ALIGN {
 
          if (entlink.isPaused ()) {
             entlink.enable ();
@@ -572,7 +571,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
    }
 
    if (game.is (GameFlags::Legacy)) {
-      table->pfnFindEntityByString = [] (edict_t *edictStartSearchAfter, const char *field, const char *value) {
+      table->pfnFindEntityByString = [] (edict_t *edictStartSearchAfter, const char *field, const char *value) CR_FORCE_STACK_ALIGN {
          // round starts in counter-strike 1.5
          if (strcmp (value, "info_map_parameters") == 0) {
             bots.initRound ();
@@ -583,10 +582,22 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
          }
          return engfuncs.pfnFindEntityByString (edictStartSearchAfter, field, value);
       };
+
+      table->pfnChangeLevel = [] (char *s1, char *s2) CR_FORCE_STACK_ALIGN {
+         // this function gets called when server is changing a level
+
+         // kick off all the bots, needed for legacy engine versions
+         bots.kickEveryone (true, false);
+
+         if (game.is (GameFlags::Metamod)) {
+            RETURN_META (MRES_IGNORED);
+         }
+         engfuncs.pfnChangeLevel (s1, s2);
+      };
    }
 
    if (!game.is (GameFlags::Legacy)) {
-      table->pfnLightStyle = [] (int style, char *val) {
+      table->pfnLightStyle = [] (int style, char *val) CR_FORCE_STACK_ALIGN {
          // this function update lightstyle for the bots
 
          illum.updateLight (style, val);
@@ -597,7 +608,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
          engfuncs.pfnLightStyle (style, val);
       };
 
-      table->pfnGetPlayerAuthId = [] (edict_t *e) -> const char * {
+      table->pfnGetPlayerAuthId = [] (edict_t *e) CR_FORCE_STACK_ALIGN {
          if (bots[e]) {
             auto authid = util.getFakeSteamId (e);
 
@@ -608,13 +619,13 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
          }
 
          if (game.is (GameFlags::Metamod)) {
-            RETURN_META_VALUE (MRES_IGNORED, nullptr);
+            RETURN_META_VALUE (MRES_IGNORED, "");
          }
          return engfuncs.pfnGetPlayerAuthId (e);
       };
    }
 
-   table->pfnEmitSound = [] (edict_t *entity, int channel, const char *sample, float volume, float attenuation, int flags, int pitch) {
+   table->pfnEmitSound = [] (edict_t *entity, int channel, const char *sample, float volume, float attenuation, int flags, int pitch) CR_FORCE_STACK_ALIGN {
       // this function tells the engine that the entity pointed to by "entity", is emitting a sound
       // which fileName is "sample", at level "channel" (CHAN_VOICE, etc...), with "volume" as
       // loudness multiplicator (normal volume VOL_NORM is 1.0), with a pitch of "pitch" (normal
@@ -633,7 +644,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       engfuncs.pfnEmitSound (entity, channel, sample, volume, attenuation, flags, pitch);
    };
 
-   table->pfnMessageBegin = [] (int msgDest, int msgType, const float *origin, edict_t *ed) {
+   table->pfnMessageBegin = [] (int msgDest, int msgType, const float *origin, edict_t *ed) CR_FORCE_STACK_ALIGN {
       // this function called each time a message is about to sent.
       msgs.start (ed, msgType);
 
@@ -644,7 +655,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
    };
 
    if (!game.is (GameFlags::Metamod)) {
-      table->pfnMessageEnd = [] () {
+      table->pfnMessageEnd = [] () CR_FORCE_STACK_ALIGN {
          engfuncs.pfnMessageEnd ();
 
          // this allows us to send messages right in handler code
@@ -652,7 +663,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       };
    }
 
-   table->pfnWriteByte = [] (int value) {
+   table->pfnWriteByte = [] (int value) CR_FORCE_STACK_ALIGN {
       // if this message is for a bot, call the client message function...
       msgs.collect (value);
 
@@ -662,7 +673,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       engfuncs.pfnWriteByte (value);
    };
 
-   table->pfnWriteChar = [] (int value) {
+   table->pfnWriteChar = [] (int value) CR_FORCE_STACK_ALIGN {
       // if this message is for a bot, call the client message function...
       msgs.collect (value);
 
@@ -672,7 +683,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       engfuncs.pfnWriteChar (value);
    };
 
-   table->pfnWriteShort = [] (int value) {
+   table->pfnWriteShort = [] (int value) CR_FORCE_STACK_ALIGN {
       // if this message is for a bot, call the client message function...
       msgs.collect (value);
 
@@ -682,7 +693,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       engfuncs.pfnWriteShort (value);
    };
 
-   table->pfnWriteLong = [] (int value) {
+   table->pfnWriteLong = [] (int value) CR_FORCE_STACK_ALIGN {
       // if this message is for a bot, call the client message function...
       msgs.collect (value);
 
@@ -692,7 +703,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       engfuncs.pfnWriteLong (value);
    };
 
-   table->pfnWriteAngle = [] (float value) {
+   table->pfnWriteAngle = [] (float value) CR_FORCE_STACK_ALIGN {
       // if this message is for a bot, call the client message function...
       msgs.collect (value);
 
@@ -702,7 +713,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       engfuncs.pfnWriteAngle (value);
    };
 
-   table->pfnWriteCoord = [] (float value) {
+   table->pfnWriteCoord = [] (float value) CR_FORCE_STACK_ALIGN {
       // if this message is for a bot, call the client message function...
       msgs.collect (value);
 
@@ -712,7 +723,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       engfuncs.pfnWriteCoord (value);
    };
 
-   table->pfnWriteString = [] (const char *sz) {
+   table->pfnWriteString = [] (const char *sz) CR_FORCE_STACK_ALIGN {
       // if this message is for a bot, call the client message function...
       msgs.collect (sz);
 
@@ -722,7 +733,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       engfuncs.pfnWriteString (sz);
    };
 
-   table->pfnWriteEntity = [] (int value) {
+   table->pfnWriteEntity = [] (int value) CR_FORCE_STACK_ALIGN {
       // if this message is for a bot, call the client message function...
       msgs.collect (value);
 
@@ -736,7 +747,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
    table->pfnClientCommand = Hooks::handler_engClientCommand;
 
    if (!game.is (GameFlags::Metamod)) {
-      table->pfnRegUserMsg = [] (const char *name, int size) {
+      table->pfnRegUserMsg = [] (const char *name, int size) CR_FORCE_STACK_ALIGN {
          // this function registers a "user message" by the engine side. User messages are network
          // messages the game DLL asks the engine to send to clients. Since many MODs have completely
          // different client features (Counter-Strike has a radar and a timer, for example), network
@@ -751,7 +762,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       };
    }
 
-   table->pfnClientPrintf = [] (edict_t *ent, PRINT_TYPE printType, const char *message) {
+   table->pfnClientPrintf = [] (edict_t *ent, PRINT_TYPE printType, const char *message) CR_FORCE_STACK_ALIGN {
       // this function prints the text message string pointed to by message by the client side of
       // the client entity pointed to by ent, in a manner depending of printType (print_console,
       // print_center or print_chat). Be certain never to try to feed a bot with this function,
@@ -771,7 +782,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       engfuncs.pfnClientPrintf (ent, printType, message);
    };
 
-   table->pfnCmd_Args = [] () {
+   table->pfnCmd_Args = [] () CR_FORCE_STACK_ALIGN {
       // this function returns a pointer to the whole current client command string. Since bots
       // have no client DLL and we may want a bot to execute a client command, we had to implement
       // a argv string in the bot DLL for holding the bots' commands, and also keep track of the
@@ -793,7 +804,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       return engfuncs.pfnCmd_Args (); // ask the client command string to the engine
    };
 
-   table->pfnCmd_Argv = [] (int argc) {
+   table->pfnCmd_Argv = [] (int argc) CR_FORCE_STACK_ALIGN {
       // this function returns a pointer to a certain argument of the current client command. Since
       // bots have no client DLL and we may want a bot to execute a client command, we had to
       // implement a argv string in the bot DLL for holding the bots' commands, and also keep
@@ -815,7 +826,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       return engfuncs.pfnCmd_Argv (argc); // ask the argument number "argc" to the engine
    };
 
-   table->pfnCmd_Argc = [] () {
+   table->pfnCmd_Argc = [] () CR_FORCE_STACK_ALIGN {
       // this function returns the number of arguments the current client command string has. Since
       // bots have no client DLL and we may want a bot to execute a client command, we had to
       // implement a argv string in the bot DLL for holding the bots' commands, and also keep
@@ -837,7 +848,7 @@ CR_LINKAGE_C int GetEngineFunctions (enginefuncs_t *table, int *) {
       return engfuncs.pfnCmd_Argc (); // ask the engine how many arguments there are
    };
 
-   table->pfnSetClientMaxspeed = [] (const edict_t *ent, float newMaxspeed) {
+   table->pfnSetClientMaxspeed = [] (const edict_t *ent, float newMaxspeed) CR_FORCE_STACK_ALIGN {
       auto bot = bots[const_cast <edict_t *> (ent)];
 
       // check wether it's not a bot
@@ -875,7 +886,7 @@ CR_EXPORT int GetNewDLLFunctions (newgamefuncs_t *table, int *interfaceVersion) 
    plat.bzero (table, sizeof (newgamefuncs_t));
 
    if (!game.is (GameFlags::Legacy)) {
-      table->pfnOnFreeEntPrivateData = [] (edict_t *ent) {
+      table->pfnOnFreeEntPrivateData = [] (edict_t *ent) CR_FORCE_STACK_ALIGN {
          for (auto &bot : bots) {
             if (bot->m_enemy == ent) {
                bot->m_enemy = nullptr;
@@ -895,16 +906,16 @@ CR_EXPORT int GetNewDLLFunctions (newgamefuncs_t *table, int *interfaceVersion) 
    return HLTrue;
 }
 
-CR_LINKAGE_C int GetEngineFunctions_Post (enginefuncs_t *table, int *) {
+CR_C_LINKAGE int GetEngineFunctions_Post (enginefuncs_t *table, int *) {
    plat.bzero (table, sizeof (enginefuncs_t));
 
-   table->pfnMessageEnd = [] () {
+   table->pfnMessageEnd = [] () CR_FORCE_STACK_ALIGN {
       msgs.stop (); // this allows us to send messages right in handler code
 
       RETURN_META (MRES_IGNORED);
    };
 
-   table->pfnRegUserMsg = [] (const char *name, int) {
+   table->pfnRegUserMsg = [] (const char *name, int) CR_FORCE_STACK_ALIGN {
       // this function registers a "user message" by the engine side. User messages are network
       // messages the game DLL asks the engine to send to clients. Since many MODs have completely
       // different client features (Counter-Strike has a radar and a timer, for example), network
@@ -995,14 +1006,14 @@ CR_EXPORT int Meta_Detach (PLUG_LOADTIME now, PL_UNLOAD_REASON reason) {
       gpMetaUtilFuncs->pfnLogError (PLID, "%s: plugin NOT detaching (can't unload plugin right now)", Plugin_info.name);
       return HLFalse; // returning FALSE prevents metamod from unloading this plugin
    }
-   // stop the worker
-   worker.shutdown ();
-
    // kick all bots off this server
    bots.kickEveryone (true);
 
    // save collected practice on shutdown
    practice.save ();
+
+   // stop the worker
+   worker.shutdown ();
 
    // disable hooks
    fakequeries.disable ();
@@ -1023,13 +1034,13 @@ CR_EXPORT void Meta_Init () {
 // games GiveFnptrsToDll is a bit tricky
 #if defined(CR_WINDOWS)
 #  if defined(CR_CXX_MSVC) || (defined(CR_CXX_CLANG) && !defined(CR_CXX_GCC))
-#     if defined (CR_ARCH_X86)
+#     if defined(CR_ARCH_X32)
 #        pragma comment(linker, "/EXPORT:GiveFnptrsToDll=_GiveFnptrsToDll@8,@1")
 #     endif
 #     pragma comment(linker, "/SECTION:.data,RW")
 #  endif
 #  if defined(CR_CXX_MSVC) && !defined(CR_ARCH_X64)
-#     define DLL_GIVEFNPTRSTODLL CR_LINKAGE_C void CR_STDCALL
+#     define DLL_GIVEFNPTRSTODLL CR_C_LINKAGE void CR_STDCALL
 #  elif defined(CR_CXX_CLANG) || defined(CR_CXX_GCC) || defined(CR_ARCH_X64)
 #     define DLL_GIVEFNPTRSTODLL CR_EXPORT void CR_STDCALL
 #  endif

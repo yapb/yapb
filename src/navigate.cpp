@@ -3357,7 +3357,7 @@ edict_t *Bot::lookupButton (StringRef target, bool blindTest) {
       const Vector &pos = game.getEntityOrigin (ent);
 
       if (!blindTest) {
-         game.testLine (pev->origin, pos, TraceIgnore::Monsters, pev->pContainingEntity, &tr);
+         game.testLine (pev->origin, pos, TraceIgnore::Monsters, this->ent (), &tr);
       }
 
       // check if this place safe
@@ -3448,11 +3448,6 @@ void Bot::findShortestPath (int srcIndex, int destIndex) {
 
 void Bot::syncFindPath (int srcIndex, int destIndex, FindPath pathType) {
    // this function finds a path from srcIndex to destIndex;
-
-   // stale bots shouldn't do pathfinding
-   if (m_isStale) {
-      return;
-   }
 
    if (!m_pathFindLock.tryLock ()) {
       return; // allow only single instance of syncFindPath per-bot
@@ -3559,6 +3554,11 @@ void Bot::syncFindPath (int srcIndex, int destIndex, FindPath pathType) {
 }
 
 void Bot::findPath (int srcIndex, int destIndex, FindPath pathType /*= FindPath::Fast */) {
+   // stale bots shouldn't do pathfinding
+   if (m_isStale) {
+      return;
+   }
+
    worker.enqueue ([this, srcIndex, destIndex, pathType] () {
       syncFindPath (srcIndex, destIndex, pathType);
    });

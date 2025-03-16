@@ -7,7 +7,7 @@
 
 #include <yapb.h>
 
-#if defined (BOT_STORAGE_EXPLICIT_INSTANTIATIONS)
+#if defined(BOT_STORAGE_EXPLICIT_INSTANTIATIONS)
 
 template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *exten, int32_t *outOptions) {
    auto type = guessType <U> ();

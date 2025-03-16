@@ -375,14 +375,19 @@ void Frustum::calculate (Planes &planes, const Vector &viewAngle, const Vector &
    auto fc = viewOffset + forward * kMaxViewDistance;
    auto nc = viewOffset + forward * kMinViewDistance;
 
-   auto fbl = fc + (up * m_farHeight * 0.5f) - (right * m_farWidth * 0.5f);
-   auto fbr = fc + (up * m_farHeight * 0.5f) + (right * m_farWidth * 0.5f);
-   auto ftl = fc - (up * m_farHeight * 0.5f) - (right * m_farWidth * 0.5f);
-   auto ftr = fc - (up * m_farHeight * 0.5f) + (right * m_farWidth * 0.5f);
-   auto nbl = nc + (up * m_nearHeight * 0.5f) - (right * m_nearWidth * 0.5f);
-   auto nbr = nc + (up * m_nearHeight * 0.5f) + (right * m_nearWidth * 0.5f);
-   auto ntl = nc - (up * m_nearHeight * 0.5f) - (right * m_nearWidth * 0.5f);
-   auto ntr = nc - (up * m_nearHeight * 0.5f) + (right * m_nearWidth * 0.5f);
+   auto up_half_far = up * m_farHeight * 0.5f;
+   auto right_half_far = right * m_farWidth * 0.5f;
+   auto up_half_near = up * m_nearHeight * 0.5f;
+   auto right_half_near = right * m_nearWidth * 0.5f;
+
+   auto fbl = fc - right_half_far + up_half_far;
+   auto fbr = fc + right_half_far + up_half_far;
+   auto ftl = fc - right_half_far - up_half_far;
+   auto ftr = fc + right_half_far - up_half_far;
+   auto nbl = nc - right_half_near + up_half_near;
+   auto nbr = nc + right_half_near + up_half_near;
+   auto ntl = nc - right_half_near - up_half_near;
+   auto ntr = nc + right_half_near - up_half_near;
 
    auto setPlane = [&] (PlaneSide side, const Vector &v1, const Vector &v2, const Vector &v3) {
       auto &plane = planes[static_cast <int> (side)];

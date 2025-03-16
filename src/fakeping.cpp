@@ -22,22 +22,21 @@ void BotFakePingManager::reset (edict_t *to) {
    if (!hasFeature ()) {
       return;
    }
-   static PingBitMsg pbm {};
 
    for (const auto &client : util.getClients ()) {
       if (!(client.flags & ClientFlags::Used) || util.isFakeClient (client.ent)) {
          continue;
       }
-      pbm.start (client.ent);
+      m_pbm.start (client.ent);
 
-      pbm.write (1, PingBitMsg::Single);
-      pbm.write (game.indexOfPlayer (to), PingBitMsg::PlayerID);
-      pbm.write (0, PingBitMsg::Ping);
-      pbm.write (0, PingBitMsg::Loss);
+      m_pbm.write (1, PingBitMsg::Single);
+      m_pbm.write (game.indexOfPlayer (to), PingBitMsg::PlayerID);
+      m_pbm.write (0, PingBitMsg::Ping);
+      m_pbm.write (0, PingBitMsg::Loss);
 
-      pbm.send ();
+      m_pbm.send ();
    }
-   pbm.flush ();
+   m_pbm.flush ();
 }
 
 void BotFakePingManager::syncCalculate () {
@@ -107,19 +106,18 @@ void BotFakePingManager::emit (edict_t *ent) {
    if (!util.isPlayer (ent)) {
       return;
    }
-   static PingBitMsg pbm {};
 
    for (const auto &bot : bots) {
-      pbm.start (ent);
+      m_pbm.start (ent);
 
-      pbm.write (1, PingBitMsg::Single);
-      pbm.write (bot->entindex () - 1, PingBitMsg::PlayerID);
-      pbm.write (bot->m_ping, PingBitMsg::Ping);
-      pbm.write (0, PingBitMsg::Loss);
+      m_pbm.write (1, PingBitMsg::Single);
+      m_pbm.write (bot->entindex () - 1, PingBitMsg::PlayerID);
+      m_pbm.write (bot->m_ping, PingBitMsg::Ping);
+      m_pbm.write (0, PingBitMsg::Loss);
 
-      pbm.send ();
+      m_pbm.send ();
    }
-   pbm.flush ();
+   m_pbm.flush ();
 }
 
 void BotFakePingManager::restartTimer () {

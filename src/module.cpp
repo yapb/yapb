@@ -117,7 +117,7 @@ CR_EXPORT IYaPBModule *GetBotAPI (int version) {
    if (version != kYaPBModuleVersion) {
       return nullptr;
    }
-   static YaPBModule botModule;
+   static YaPBModule botModule {};
 
    return &botModule;
 }

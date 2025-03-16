@@ -31,8 +31,8 @@ void BotGraph::reset () {
    m_narrowChecked = false;
    m_lightChecked = false;
 
-   m_graphAuthor.clear ();
-   m_graphModified.clear ();
+   m_info.author.clear ();
+   m_info.modified.clear ();
 
    m_paths.clear ();
 }
@@ -600,7 +600,7 @@ IntArray BotGraph::getNearestInRadius (float radius, const Vector &origin, int m
 }
 
 void BotGraph::add (int type, const Vector &pos) {
-   if (game.isNullEntity (m_editor) && !analyzer.isAnalyzing ()) {
+   if (!hasEditor () && !analyzer.isAnalyzing ()) {
       return;
    }
    int index = kInvalidNodeIndex;
@@ -610,7 +610,7 @@ void BotGraph::add (int type, const Vector &pos) {
    Vector newOrigin = pos;
 
    if (newOrigin.empty ()) {
-      if (game.isNullEntity (m_editor)) {
+      if (!hasEditor ()) {
          return;
       }
       newOrigin = m_editor->v.origin;
@@ -1277,21 +1277,24 @@ void BotGraph::showStats () {
 }
 
 void BotGraph::showFileInfo () {
+   const auto &info = m_info.header;
+   const auto &exten = m_info.exten;
+
    msg ("header:");
-   msg ("  magic: %d", m_graphHeader.magic);
-   msg ("  version: %d", m_graphHeader.version);
-   msg ("  node_count: %d", m_graphHeader.length);
-   msg ("  compressed_size: %dkB", m_graphHeader.compressed / 1024);
-   msg ("  uncompressed_size: %dkB", m_graphHeader.uncompressed / 1024);
-   msg ("  options: %d", m_graphHeader.options); // display as string ?
+   msg ("  magic: %d", info.magic);
+   msg ("  version: %d", info.version);
+   msg ("  node_count: %d", info.length);
+   msg ("  compressed_size: %dkB", info.compressed / 1024);
+   msg ("  uncompressed_size: %dkB", info.uncompressed / 1024);
+   msg ("  options: %d", info.options); // display as string ?
    msg ("  analyzed: %s", isAnalyzed () ? conf.translate ("yes") : conf.translate ("no")); // display as string ?
 
    msg ("");
 
    msg ("extensions:");
-   msg ("  author: %s", m_extenHeader.author);
-   msg ("  modified_by: %s", m_extenHeader.modified);
-   msg ("  bsp_size: %d", m_extenHeader.mapSize);
+   msg ("  author: %s", exten.author);
+   msg ("  modified_by: %s", exten.modified);
+   msg ("  bsp_size: %d", exten.mapSize);
 }
 
 void BotGraph::emitNotify (int32_t sound) {
@@ -1576,7 +1579,7 @@ void BotGraph::initNarrowPlaces () {
    constexpr int32_t kNarrowPlacesMinGraphVersion = 2;
 
    // if version 2 or higher, narrow places already initialized and saved into file
-   if (m_graphHeader.version >= kNarrowPlacesMinGraphVersion && !hasEditFlag (GraphEdit::On)) {
+   if (m_info.header.version >= kNarrowPlacesMinGraphVersion && !hasEditFlag (GraphEdit::On)) {
       m_narrowChecked = true;
       return;
    }
@@ -1747,7 +1750,7 @@ bool BotGraph::convertOldFormat () {
             if (!m_paths.empty ()) {
                msg ("Converting old PWF to new format Graph.");
 
-               m_graphAuthor = header.author;
+               m_info.author = header.author;
 
                // clean editor so graph will be saved with header's author
                auto editor = m_editor;
@@ -1774,8 +1777,8 @@ bool BotGraph::loadGraphData () {
    ExtenHeader exten {};
    int32_t outOptions = 0;
 
-   m_graphHeader = {};
-   m_extenHeader = {};
+   m_info.header = {};
+   m_info.exten = {};
 
    // re-initialize paths
    reset ();
@@ -1797,15 +1800,15 @@ bool BotGraph::loadGraphData () {
       StringRef author = exten.author;
 
       if ((outOptions & StorageOption::Official) || author.startsWith ("official") || author.length () < 2) {
-         m_graphAuthor.assign (product.name);
+         m_info.author.assign (product.name);
       }
       else {
-         m_graphAuthor.assign (author);
+         m_info.author.assign (author);
       }
       StringRef modified = exten.modified;
 
       if (!modified.empty () && !modified.contains ("(none)")) {
-         m_graphModified.assign (exten.modified);
+         m_info.modified.assign (exten.modified);
       }
       planner.init (); // initialize our little path planner
       practice.load (); // load bots practice
@@ -1848,8 +1851,8 @@ bool BotGraph::saveGraphData () {
    auto options = StorageOption::Graph | StorageOption::Exten;
    String editorName {};
 
-   if (game.isNullEntity (m_editor) && !m_graphAuthor.empty ()) {
-      editorName = m_graphAuthor;
+   if (!hasEditor () && !m_info.author.empty ()) {
+      editorName = m_info.author;
 
       if (!game.isDedicated ()) {
          options |= StorageOption::Recovered;
@@ -1874,15 +1877,15 @@ bool BotGraph::saveGraphData () {
    ExtenHeader exten {};
 
    // only modify the author if no author currently assigned to graph file
-   if (m_graphAuthor.empty () || strings.isEmpty (m_extenHeader.author)) {
+   if (m_info.author.empty () || strings.isEmpty (m_info.exten.author)) {
       strings.copy (exten.author, editorName.chars (), cr::bufsize (exten.author));
    }
    else {
-      strings.copy (exten.author, m_extenHeader.author, cr::bufsize (exten.author));
+      strings.copy (exten.author, m_info.exten.author, cr::bufsize (exten.author));
    }
 
    // only update modified by, if name differs
-   if (m_graphAuthor != editorName && !strings.isEmpty (m_extenHeader.author)) {
+   if (m_info.author != editorName && !strings.isEmpty (m_info.exten.author)) {
       strings.copy (exten.modified, editorName.chars (), cr::bufsize (exten.author));
    }
    exten.mapSize = getBspSize ();
@@ -1901,8 +1904,8 @@ void BotGraph::saveOldFormat () {
 
    String editorName {};
 
-   if (game.isNullEntity (m_editor) && !m_graphAuthor.empty ()) {
-      editorName = m_graphAuthor;
+   if (!hasEditor ()  && !m_info.author.empty ()) {
+      editorName = m_info.author;
    }
    else if (!game.isNullEntity (m_editor)) {
       editorName = m_editor->v.netname.chars ();
@@ -2284,7 +2287,7 @@ void BotGraph::frame () {
 
       // draw the radius circle
       Vector origin = (path.flags & NodeFlag::Crouch) ? path.origin : path.origin - Vector (0.0f, 0.0f, 18.0f);
-      static Color radiusColor { 36, 36, 255 };
+      constexpr Color radiusColor { 36, 36, 255 };
 
       // if radius is nonzero, draw a full circle
       if (path.radius > 0.0f) {
@@ -2846,7 +2849,7 @@ const Array <int32_t> &BotGraph::getNodesInBucket (const Vector &pos) {
 }
 
 bool BotGraph::isAnalyzed () const {
-   return (m_graphHeader.options & StorageOption::Analyzed);
+   return (m_info.header.options & StorageOption::Analyzed);
 }
 
 void BotGraph::eraseFromBucket (const Vector &pos, int index) {

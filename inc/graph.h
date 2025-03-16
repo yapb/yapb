@@ -189,11 +189,12 @@ public:
    SmallArray <Path> m_paths {};
    HashMap <int32_t, Array <int32_t>, EmptyHash <int32_t>> m_hashTable {};
 
-   String m_graphAuthor {};
-   String m_graphModified {};
-
-   ExtenHeader m_extenHeader {};
-   StorageHeader m_graphHeader {};
+   struct GraphInfo {
+      String author {};
+      String modified {};
+      ExtenHeader exten {};
+      StorageHeader header {};
+   } m_info {};
 
    edict_t *m_editor {};
 
@@ -270,11 +271,11 @@ public:
 
 public:
    StringRef getAuthor () const {
-      return m_graphAuthor;
+      return m_info.author;
    }
 
    StringRef getModifiedBy () const {
-      return m_graphModified;
+      return m_info.modified;
    }
 
    bool hasChanged () const {
@@ -339,12 +340,12 @@ public:
 
    // set exten header from binary storage
    void setExtenHeader (ExtenHeader *hdr) {
-      memcpy (&m_extenHeader, hdr, sizeof (ExtenHeader));
+      memcpy (&m_info.exten, hdr, sizeof (ExtenHeader));
    }
 
    // set graph header from binary storage
    void setGraphHeader (StorageHeader *hdr) {
-      memcpy (&m_graphHeader, hdr, sizeof (StorageHeader));
+      memcpy (&m_info.header, hdr, sizeof (StorageHeader));
    }
 
    // gets the node numbers

@@ -331,7 +331,7 @@ void Bot::spraypaint_ () {
 
       if (getTask ()->time - 0.5f < game.time ()) {
          // emit spray can sound
-         engfuncs.pfnEmitSound (pev->pContainingEntity, CHAN_VOICE, "player/sprayer.wav", 1.0f, ATTN_NORM, 0, 100);
+         engfuncs.pfnEmitSound (ent (), CHAN_VOICE, "player/sprayer.wav", 1.0f, ATTN_NORM, 0, 100);
 
          game.testLine (getEyesPos (), getEyesPos () + forward * 128.0f, TraceIgnore::Monsters, ent (), &tr);
 
@@ -594,7 +594,7 @@ void Bot::blind_ () {
          m_blindNodeIndex = kInvalidNodeIndex;
 
          m_blindMoveSpeed = 0.0f;
-         m_blindSidemoveSpeed = 0.0f;
+         m_blindSideMoveSpeed = 0.0f;
          m_blindButton = 0;
 
          m_states |= Sense::SuspectEnemy;
@@ -610,7 +610,7 @@ void Bot::blind_ () {
    }
    else {
       m_moveSpeed = m_blindMoveSpeed;
-      m_strafeSpeed = m_blindSidemoveSpeed;
+      m_strafeSpeed = m_blindSideMoveSpeed;
       pev->button |= m_blindButton;
 
       m_states |= Sense::SuspectEnemy;

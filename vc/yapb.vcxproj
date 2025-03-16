@@ -51,6 +51,7 @@
     <ClInclude Include="..\ext\crlib\crlib\ulz.h" />
     <ClInclude Include="..\ext\crlib\crlib\uniqueptr.h" />
     <ClInclude Include="..\ext\crlib\crlib\vector.h" />
+    <ClInclude Include="..\ext\crlib\crlib\wavehelper.h" />
     <ClInclude Include="..\ext\linkage\linkage\goldsrc.h" />
     <ClInclude Include="..\ext\linkage\linkage\metamod.h" />
     <ClInclude Include="..\ext\linkage\linkage\physint.h" />
@@ -150,7 +151,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
-    <PlatformToolset>ClangCL</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseDebugLibraries>false</UseDebugLibraries>
     <EnableASAN>false</EnableASAN>
   </PropertyGroup>

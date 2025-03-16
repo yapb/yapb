@@ -105,13 +105,13 @@ public:
    }
 
 public:
-   static int32_t CR_STDCALL sendTo (int socket, const void *message, size_t length, int flags, const struct sockaddr *dest, int destLength);
+   CR_FORCE_STACK_ALIGN static int32_t CR_STDCALL sendTo (int socket, const void *message, size_t length, int flags, const struct sockaddr *dest, int destLength);
 };
 
 // used for transit calls between game dll and engine without all needed functions on bot side
 class DynamicLinkerHook : public Singleton <DynamicLinkerHook> {
 private:
-#if defined (CR_WINDOWS)
+#if defined(CR_WINDOWS)
 #  define DLSYM_FUNCTION GetProcAddress
 #  define DLCLOSE_FUNCTION FreeLibrary
 #else
@@ -177,11 +177,11 @@ public:
    }
 
 public:
-   static SharedLibrary::Func CR_STDCALL lookupHandler (SharedLibrary::Handle module, const char *function) {
+   CR_FORCE_STACK_ALIGN static SharedLibrary::Func CR_STDCALL lookupHandler (SharedLibrary::Handle module, const char *function) {
       return instance ().lookup (module, function);
    }
 
-   static int CR_STDCALL closeHandler (SharedLibrary::Handle module) {
+   CR_FORCE_STACK_ALIGN static int  CR_STDCALL closeHandler (SharedLibrary::Handle module) {
       return instance ().close (module);
    }
 };

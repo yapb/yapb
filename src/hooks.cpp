@@ -124,7 +124,7 @@ SharedLibrary::Func DynamicLinkerHook::lookup (SharedLibrary::Handle module, con
       return resolve (module);
    }
 
-#if defined (CR_WINDOWS)
+#if defined(CR_WINDOWS)
    if (HIWORD (function) == 0) {
       return resolve (module);
    }
@@ -174,15 +174,20 @@ bool DynamicLinkerHook::needsBypass () const {
 }
 
 void DynamicLinkerHook::initialize () {
+#if defined(LINKENT_STATIC)
+   return;
+#endif
+
    if (plat.isNonX86 () || game.is (GameFlags::Metamod)) {
       return;
    }
+   constexpr StringRef kKernel32Module = "kernel32.dll";
 
-   m_dlsym.initialize ("kernel32.dll", "GetProcAddress", DLSYM_FUNCTION);
+   m_dlsym.initialize (kKernel32Module, "GetProcAddress", DLSYM_FUNCTION);
    m_dlsym.install (reinterpret_cast <void *> (lookupHandler), true);
 
    if (needsBypass ()) {
-      m_dlclose.initialize ("kernel32.dll", "FreeLibrary", DLCLOSE_FUNCTION);
+      m_dlclose.initialize (kKernel32Module, "FreeLibrary", DLCLOSE_FUNCTION);
       m_dlclose.install (reinterpret_cast <void *> (closeHandler), true);
    }
    m_self.locate (&engfuncs);
