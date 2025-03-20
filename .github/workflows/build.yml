@@ -50,7 +50,7 @@ jobs:
       - name: Build sources
         shell: bash
         run: |
-          meson compile -C ${{matrix.arch}}
+          meson compile -C ${{matrix.arch}} -v
           echo "artifcat=${{matrix.arch}}/`ls ${{matrix.arch}}/ | egrep '^yapb*.*(so|dylib|dll)$' | head -1`" >> $GITHUB_ENV
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -93,7 +93,7 @@ jobs:
             }
       - name: Build sources
         run: |
-          meson compile -C ${{matrix.arch}}
+          meson compile -C ${{matrix.arch}} -v
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -126,7 +126,7 @@ jobs:
           meson setup ${{matrix.arch}}
       - name: Build sources
         run: |
-          meson compile -C ${{matrix.arch}}
+          meson compile -C ${{matrix.arch}} -v
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
