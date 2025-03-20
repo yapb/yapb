@@ -1562,7 +1562,12 @@ void Bot::newRound () {
    m_hostages.clear ();
 
    if (cv_use_hitbox_enemy_targeting) {
-      m_hitboxEnumerator->reset ();
+      if (m_hitboxEnumerator) {
+         m_hitboxEnumerator->reset ();
+      }
+      else {
+         m_hitboxEnumerator = cr::makeUnique <PlayerHitboxEnumerator> ();
+      }
    }
 
    m_approachingLadderTimer.invalidate ();

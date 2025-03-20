@@ -86,7 +86,7 @@ bool BotSupport::isAlive (edict_t *ent) {
    if (game.isNullEntity (ent)) {
       return false;
    }
-   return ent->v.deadflag == DEAD_NO && ent->v.health > 0 && ent->v.movetype != MOVETYPE_NOCLIP;
+   return ent->v.deadflag == DEAD_NO && ent->v.health > 0.0f && ent->v.movetype != MOVETYPE_NOCLIP;
 }
 
 bool BotSupport::isVisible (const Vector &origin, edict_t *ent) {
@@ -382,7 +382,7 @@ void BotSupport::updateClients () {
          client.ent = player;
          client.flags |= ClientFlags::Used;
 
-         if (util.isAlive (player)) {
+         if (isAlive (player)) {
             client.flags |= ClientFlags::Alive;
          }
          else {
