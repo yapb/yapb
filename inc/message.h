@@ -154,7 +154,7 @@ public:
 
 private:
    void reset () {
-      m_current = NetMsg::None;
+      stopCollection ();
       m_bot = nullptr;
    }
 };

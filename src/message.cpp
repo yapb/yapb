@@ -549,7 +549,7 @@ void MessageDispatcher::start (edict_t *ent, int32_t type) {
       m_bot = bots[ent];
 
       if (!m_bot) {
-         m_current = NetMsg::None;
+         stopCollection ();
          return;
       }
    }
@@ -561,7 +561,8 @@ void MessageDispatcher::stop () {
       return;
    }
    (this->*m_handlers[m_current]) ();
-   m_current = NetMsg::None;
+
+   stopCollection ();
 }
 
 void MessageDispatcher::ensureMessages () {

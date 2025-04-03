@@ -459,7 +459,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       // would all have the dull "models/player.mdl" one). The entity for which the keyvalue data
       // pointer is requested is pentKeyvalue, the pointer to the keyvalue data structure pkvd.
 
-      if (game.isNullEntity (ent) && strcmp (ent->v.classname.chars (), "func_breakable") == 0) {
+      if (!game.isNullEntity (ent) && strcmp (ent->v.classname.chars (), "func_breakable") == 0) {
          if (kvd && kvd->szKeyName && strcmp (kvd->szKeyName, "material") == 0) {
             if (atoi (kvd->szValue) == 7) {
                game.markBreakableAsInvalid (ent);

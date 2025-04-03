@@ -208,28 +208,29 @@ void BotConfig::loadWeaponsConfig () {
             trim.trim ();
          }
          auto splitted = pair[1].split (",");
+         auto key = pair[0];
 
-         if (pair[0].startsWith ("MapStandard")) {
-            addWeaponEntries (m_weapons, false, pair[0], splitted);
+         if (key.startsWith ("MapStandard")) {
+            addWeaponEntries (m_weapons, false, key, splitted);
          }
-         else if (pair[0].startsWith ("MapAS")) {
-            addWeaponEntries (m_weapons, true, pair[0], splitted);
+         else if (key.startsWith ("MapAS")) {
+            addWeaponEntries (m_weapons, true, key, splitted);
          }
 
-         else if (pair[0].startsWith ("GrenadePercent")) {
-            addIntEntries (m_grenadeBuyPrecent, pair[0], splitted);
+         else if (key.startsWith ("GrenadePercent")) {
+            addIntEntries (m_grenadeBuyPrecent, key, splitted);
          }
-         else if (pair[0].startsWith ("Economics")) {
-            addIntEntries (m_botBuyEconomyTable, pair[0], splitted);
+         else if (key.startsWith ("Economics")) {
+            addIntEntries (m_botBuyEconomyTable, key, splitted);
          }
-         else if (pair[0].startsWith ("PersonalityNormal")) {
-            addIntEntries (m_normalWeaponPrefs, pair[0], splitted);
+         else if (key.startsWith ("PersonalityNormal")) {
+            addIntEntries (m_normalWeaponPrefs, key, splitted);
          }
-         else if (pair[0].startsWith ("PersonalityRusher")) {
-            addIntEntries (m_rusherWeaponPrefs, pair[0], splitted);
+         else if (key.startsWith ("PersonalityRusher")) {
+            addIntEntries (m_rusherWeaponPrefs, key, splitted);
          }
-         else if (pair[0].startsWith ("PersonalityCareful")) {
-            addIntEntries (m_carefulWeaponPrefs, pair[0], splitted);
+         else if (key.startsWith ("PersonalityCareful")) {
+            addIntEntries (m_carefulWeaponPrefs, key, splitted);
          }
       }
       file.close ();
@@ -244,7 +245,7 @@ void BotConfig::loadChatterConfig () {
 
    // chatter initialization
    if (game.is (GameFlags::HasBotVoice) && cv_radio_mode.as <int> () == 2
-      && openConfig ("chatter", "Couldn't open chatter system configuration", &file)) {
+      && openConfig ("chatter", "Couldn't open chatter configuration.", &file)) {
 
       m_chatter.clear ();
 
@@ -402,7 +403,7 @@ void BotConfig::loadChatConfig () {
    MemFile file {};
 
    // chat config initialization
-   if (openConfig ("chat", "Chat file not found.", &file, true)) {
+   if (openConfig ("chat", "Couldn't open chat configuration.", &file, true)) {
       StringArray *chat = nullptr;
 
       StringArray keywords {};
@@ -549,7 +550,7 @@ void BotConfig::loadLanguageConfig () {
       file.close ();
    }
    else if (cv_language.as <StringRef> () != "en") {
-      logger.error ("Couldn't load language configuration");
+      logger.error ("Couldn't load language configuration.");
    }
 }
 

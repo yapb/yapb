@@ -2146,6 +2146,7 @@ void Bot::filterTasks () {
    // zombie bots has more hunt desire
    if (m_isCreature && huntEnemyDesire > 16.0f) {
       huntEnemyDesire = TaskPri::Attack;
+      seekCoverDesire = 0.0f;
    }
 
    // blinded behavior
@@ -2250,37 +2251,9 @@ void Bot::startTask (Task id, float desire, int data, float time, bool resume) {
       selectBestWeapon ();
    }
 
-   // this is best place to handle some voice commands report team some info
+   // this is best place to handle some chatter commands report team some info
    if (cv_radio_mode.as <int> () > 1) {
-      if (rg.chance (90)) {
-         if (tid == Task::Blind) {
-            pushChatterMessage (Chatter::Blind);
-         }
-         else if (tid == Task::PlantBomb) {
-            pushChatterMessage (Chatter::PlantingBomb);
-         }
-      }
-
-      if (rg.chance (25) && tid == Task::Camp) {
-         if (game.mapIs (MapFlags::Demolition) && bots.isBombPlanted ()) {
-            pushChatterMessage (Chatter::GuardingPlantedC4);
-         }
-         else {
-            pushChatterMessage (Chatter::GoingToCamp);
-         }
-      }
-
-      if (rg.chance (75) && tid == Task::Camp && m_team == Team::CT && m_inEscapeZone) {
-         pushChatterMessage (Chatter::GoingToGuardEscapeZone);
-      }
-
-      if (rg.chance (75) && tid == Task::Camp && m_team == Team::Terrorist && m_inRescueZone) {
-         pushChatterMessage (Chatter::GoingToGuardRescueZone);
-      }
-
-      if (rg.chance (75) && tid == Task::Camp && m_team == Team::Terrorist && m_inVIPZone) {
-         pushChatterMessage (Chatter::GoingToGuardVIPSafety);
-      }
+      handleChatterTaskChange (tid);
    }
 
    if (cv_debug_goal.as <int> () != kInvalidNodeIndex) {
@@ -2419,9 +2392,40 @@ bool Bot::lastEnemyShootable () {
    return util.getConeDeviation (ent (), m_lastEnemyOrigin) >= 0.90f && isPenetrableObstacle (m_lastEnemyOrigin);
 }
 
+void Bot::handleChatterTaskChange (Task tid) {
+   if (rg.chance (90)) {
+      if (tid == Task::Blind) {
+         pushChatterMessage (Chatter::Blind);
+      }
+      else if (tid == Task::PlantBomb) {
+         pushChatterMessage (Chatter::PlantingBomb);
+      }
+   }
+
+   if (rg.chance (25) && tid == Task::Camp) {
+      if (game.mapIs (MapFlags::Demolition) && bots.isBombPlanted ()) {
+         pushChatterMessage (Chatter::GuardingPlantedC4);
+      }
+      else {
+         pushChatterMessage (Chatter::GoingToCamp);
+      }
+   }
+
+   if (rg.chance (75) && tid == Task::Camp && m_team == Team::CT && m_inEscapeZone) {
+      pushChatterMessage (Chatter::GoingToGuardEscapeZone);
+   }
+
+   if (rg.chance (75) && tid == Task::Camp && m_team == Team::Terrorist && m_inRescueZone) {
+      pushChatterMessage (Chatter::GoingToGuardRescueZone);
+   }
+
+   if (rg.chance (75) && tid == Task::Camp && m_team == Team::Terrorist && m_inVIPZone) {
+      pushChatterMessage (Chatter::GoingToGuardVIPSafety);
+   }
+}
+
 void Bot::checkRadioQueue () {
    // this function handling radio and reacting to it
-
 
    // don't allow bot listen you if bot is busy
    if (m_radioOrder != Radio::ReportInTeam

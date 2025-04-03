@@ -223,11 +223,11 @@ public:
    bool isNodeReacheableWithJump (const Vector &src, const Vector &destination);
    bool checkNodes (bool teleportPlayer, bool onlyPaths = false);
    bool isVisited (int index);
-   bool isAnalyzed () const;
 
    bool saveGraphData ();
    bool loadGraphData ();
    bool canDownload ();
+   bool isAnalyzed () const;
 
    void saveOldFormat ();
    void reset ();
@@ -251,8 +251,7 @@ public:
    void startLearnJump ();
    void setVisited (int index);
    void clearVisited ();
-   void initBuckets ();
-   void addToBucket (const Vector &pos, int index);
+
    void eraseFromBucket (const Vector &pos, int index);
    void setBombOrigin (bool reset = false, const Vector &pos = nullptr);
    void unassignPath (int from, int to);
@@ -267,7 +266,6 @@ public:
    void collectOnline ();
 
    IntArray getNearestInRadius (float radius, const Vector &origin, int maxCount = -1);
-   const IntArray &getNodesInBucket (const Vector &pos);
 
 public:
    StringRef getAuthor () const {
@@ -351,6 +349,21 @@ public:
    // gets the node numbers
    const IntArray &getNodeNumbers () {
       return m_nodeNumbers;
+   }
+
+   // reinitialize buckets
+   void initBuckets () {
+      m_hashTable.clear ();
+   }
+
+   // get the bucket of nodes near position
+   const IntArray &getNodesInBucket (const Vector &pos) {
+      return m_hashTable[locateBucket (pos)];
+   }
+
+   // add a node to position bucket
+   void addToBucket (const Vector &pos, int index) {
+      m_hashTable[locateBucket (pos)].emplace (index);
    }
 
 public:

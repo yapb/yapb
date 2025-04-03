@@ -1473,9 +1473,9 @@ void Bot::shootBreakable_ () {
    }
    else {
       TraceResult tr {};
-      game.testLine (pev->origin, m_breakableOrigin, TraceIgnore::None, ent (), &tr);
+      game.testLine (pev->origin, m_breakableOrigin, TraceIgnore::Monsters , ent (), &tr);
 
-      if (tr.pHit != m_breakableEntity || !util.isVisible (tr.vecEndPos, ent ())) {
+      if (tr.pHit != m_breakableEntity && !cr::fequal (tr.flFraction, 1.0f)) {
          m_ignoredBreakable.push (tr.pHit);
 
          m_breakableEntity = nullptr;
@@ -1494,8 +1494,6 @@ void Bot::shootBreakable_ () {
    m_navTimeset = game.time ();
    m_lookAtSafe = m_breakableOrigin;
 
-   const float distToObstacle = pev->origin.distanceSq (m_lookAtSafe);
-
    // is bot facing the breakable?
    if (util.getConeDeviation (ent (), m_lookAtSafe) >= 0.90f) {
       m_moveSpeed = 0.0f;
@@ -1510,6 +1508,7 @@ void Bot::shootBreakable_ () {
             pev->button |= IN_ATTACK;
          }
       }
+      const float distToObstacle = pev->origin.distanceSq (m_lookAtSafe);
 
       // if with knife with no ammo, recompute breakable distance
       if (!hasAnyAmmoInClip ()
@@ -1703,6 +1702,7 @@ void Bot::pickupItem_ () {
                for (const auto &client : util.getClients ()) {
                   if ((client.flags & ClientFlags::Used) && !(client.ent->v.flags & FL_FAKECLIENT) && (client.flags & ClientFlags::Alive) &&
                      client.team == m_team && client.ent->v.origin.distanceSq (ent->v.origin) <= cr::sqrf (240.0f)) {
+
                      return EntitySearchResult::Continue;
                   }
                }

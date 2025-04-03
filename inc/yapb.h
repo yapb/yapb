@@ -520,6 +520,7 @@ private:
    void updateRightRef ();
    void donateC4ToHuman ();
    void clearAmmoInfo ();
+   void handleChatterTaskChange (Task tid);
 
    void completeTask ();
    void executeTasks ();

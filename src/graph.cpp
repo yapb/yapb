@@ -599,6 +599,10 @@ IntArray BotGraph::getNearestInRadius (float radius, const Vector &origin, int m
    return result;
 }
 
+bool BotGraph::isAnalyzed () const {
+   return (m_info.header.options & StorageOption::Analyzed);
+}
+
 void BotGraph::add (int type, const Vector &pos) {
    if (!hasEditor () && !analyzer.isAnalyzing ()) {
       return;
@@ -2834,22 +2838,6 @@ BotGraph::BotGraph () {
    m_autoPathDistance = 250.0f;
 
    m_editor = nullptr;
-}
-
-void BotGraph::initBuckets () {
-   m_hashTable.clear ();
-}
-
-void BotGraph::addToBucket (const Vector &pos, int index) {
-   m_hashTable[locateBucket (pos)].emplace (index);
-}
-
-const Array <int32_t> &BotGraph::getNodesInBucket (const Vector &pos) {
-   return m_hashTable[locateBucket (pos)];
-}
-
-bool BotGraph::isAnalyzed () const {
-   return (m_info.header.options & StorageOption::Analyzed);
 }
 
 void BotGraph::eraseFromBucket (const Vector &pos, int index) {

@@ -11,12 +11,13 @@ ConVar cv_has_team_semiclip ("has_team_semiclip", "0", "When enabled, bots will 
 ConVar cv_graph_slope_height ("graph_slope_height", "24.0", "Determines the maximum slope height change between the current and next node to consider the current link as a jump link. Only for generated graphs.", true, 12.0f, 48.0f);
 
 int Bot::findBestGoal () {
-   if (m_isCreature) {
-      if (!graph.m_terrorPoints.empty ()) {
+   if (game.is (GameFlags::ZombieMod) && m_isCreature) {
+      const auto &players = bots.countTeamPlayers ();
+
+      if (players.first < graph.m_terrorPoints.length <int> ()) {
          return graph.m_terrorPoints.random ();
       }
-
-      if (!graph.m_goalPoints.empty ()) {
+      else if (players.first < graph.m_goalPoints.length <int> ()) {
          return graph.m_goalPoints.random ();
       }
       return graph.random ();
