@@ -218,9 +218,9 @@ public:
    bool convertOldFormat ();
    bool isConnected (int a, int b);
    bool isConnected (int index);
-   bool isNodeReacheableEx (const Vector &src, const Vector &destination, const float maxHeight);
-   bool isNodeReacheable (const Vector &src, const Vector &destination);
-   bool isNodeReacheableWithJump (const Vector &src, const Vector &destination);
+   bool isNodeReacheableEx (const Vector &src, const Vector &destination, const float maxHeight) const;
+   bool isNodeReacheable (const Vector &src, const Vector &destination) const;
+   bool isNodeReacheableWithJump (const Vector &src, const Vector &destination) const;
    bool checkNodes (bool teleportPlayer, bool onlyPaths = false);
    bool isVisited (int index);
 
@@ -255,13 +255,13 @@ public:
    void eraseFromBucket (const Vector &pos, int index);
    void setBombOrigin (bool reset = false, const Vector &pos = nullptr);
    void unassignPath (int from, int to);
-   void convertFromPOD (Path &path, const PODPath &pod);
+   void convertFromPOD (Path &path, const PODPath &pod) const;
    void convertToPOD (const Path &path, PODPath &pod);
-   void convertCampDirection (Path &path);
+   void convertCampDirection (Path &path) const;
    void setAutoPathDistance (const float distance);
    void showStats ();
    void showFileInfo ();
-   void emitNotify (int32_t sound);
+   void emitNotify (int32_t sound) const;
    void syncCollectOnline ();
    void collectOnline ();
 

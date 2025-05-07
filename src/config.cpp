@@ -761,12 +761,13 @@ void BotConfig::loadLogosConfig () {
          if (isCommentLine (line)) {
             continue;
          }
-         addLogoIndex (line);
+         addLogoIndex (line.trim ());
       }
    }
 
    // use defaults
    if (m_logosIndices.empty ()) {
+      game.print ("EMPTY!!!!!");
       auto defaults = String { "{biohaz;{graf003;{graf004;{graf005;{lambda06;{target;{hand1;{spit2;{bloodhand6;{foot_l;{foot_r" }.split (";");
 
       for (const auto &logo : defaults) {

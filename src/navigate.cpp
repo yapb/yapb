@@ -282,8 +282,8 @@ int Bot::findGoalPost (int tactic, IntArray *defensive, IntArray *offensive) {
    else if (tactic == GoalTactic::Offensive && !(*offensive).empty ()) { // offensive goal
       postProcessGoals (*offensive, goalChoices);
    }
-   else if (tactic == GoalTactic::Goal && !graph.m_goalPoints.empty ()) // map goal node
-   {
+   else if (tactic == GoalTactic::Goal && !graph.m_goalPoints.empty ()) { // map goal node
+
       // force bomber to select closest goal, if round-start goal was reset by something
       if (m_hasC4 && bots.getRoundStartTime () + 20.0f < game.time ()) {
          float nearestDistanceSq = kInfiniteDistance;
@@ -3421,7 +3421,7 @@ bool Bot::isReachableNode (int index) {
    return tr.flFraction >= 1.0f;
 }
 
-bool Bot::isPreviousLadder () {
+bool Bot::isPreviousLadder () const {
    const auto prevNodeIndex = m_previousNodes[0];
 
    // bot entered ladder path

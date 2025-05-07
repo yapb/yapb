@@ -194,7 +194,7 @@ public:
    void levelShutdown ();
 
    // display world line
-   void drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, const Color &color, int brightness, int speed, int life, DrawLine type = DrawLine::Simple);
+   void drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, const Color &color, int brightness, int speed, int life, DrawLine type = DrawLine::Simple) const;
 
    // test line
    void testLine (const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult *ptr);
@@ -260,13 +260,13 @@ public:
    void searchEntities (StringRef field, StringRef value, EntitySearch functor);
 
    // search entities in sphere
-   void searchEntities (const Vector &position, float radius, EntitySearch functor);
+   void searchEntities (const Vector &position, float radius, EntitySearch functor) const;
 
    // check if map has entity
    bool hasEntityInGame (StringRef classname);
 
    // print the version to server console on startup
-   void printBotVersion ();
+   void printBotVersion () const;
 
    // ensure prosperous gaming environment as per: https://github.com/yapb/yapb/issues/575
    void ensureHealthyGameEnvironment ();
@@ -388,7 +388,7 @@ public:
    bool checkVisibility (edict_t *ent, uint8_t *set);
 
    // get pvs/pas visibility set
-   uint8_t *getVisibilitySet (Bot *bot, bool pvs);
+   uint8_t *getVisibilitySet (Bot *bot, bool pvs) const;
 
    // what kind of game engine / game dll / mod / tool we're running ?
    bool is (const int type) const {

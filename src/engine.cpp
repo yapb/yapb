@@ -224,7 +224,7 @@ void Game::levelShutdown () {
 
 }
 
-void Game::drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, const Color &color, int brightness, int speed, int life, DrawLine type) {
+void Game::drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, const Color &color, int brightness, int speed, int life, DrawLine type) const {
    // this function draws a arrow visible from the client side of the player whose player entity
    // is pointed to by ent, from the vector location start to the vector location end,
    // which is supposed to last life tenths seconds, and having the color defined by RGB.
@@ -410,7 +410,7 @@ bool Game::checkVisibility (edict_t *ent, uint8_t *set) {
    return engfuncs.pfnCheckVisibility (ent, set) > 0;
 }
 
-uint8_t *Game::getVisibilitySet (Bot *bot, bool pvs) {
+uint8_t *Game::getVisibilitySet (Bot *bot, bool pvs) const {
    if (is (GameFlags::Xash3DLegacy)) {
       return nullptr;
    }
@@ -545,7 +545,7 @@ void Game::prepareBotArgs (edict_t *ent, String str) {
             m_botArgs.emplace (args.substr (quote, args.length () - 1).trim ("\"")); // add string with trimmed quotes
          }
          else {
-            for (auto arg : args.split (" ")) {
+            for (auto &&arg : args.split (" ")) {
                m_botArgs.emplace (arg);
             }
          }
@@ -560,7 +560,7 @@ void Game::prepareBotArgs (edict_t *ent, String str) {
    };
 
    if (str.find (';', 0) != String::InvalidIndex) {
-      for (auto part : str.split (";")) {
+      for (auto &&part : str.split (";")) {
          parsePartArgs (part.trim ());
       }
    }
@@ -1126,7 +1126,7 @@ void Game::searchEntities (StringRef field, StringRef value, EntitySearch functo
    }
 }
 
-void Game::searchEntities (const Vector &position, float radius, EntitySearch functor) {
+void Game::searchEntities (const Vector &position, float radius, EntitySearch functor) const {
    edict_t *ent = nullptr;
    const Vector &pos = position.empty () ? m_startEntity->v.origin : position;
 
@@ -1145,7 +1145,7 @@ bool Game::hasEntityInGame (StringRef classname) {
    return !isNullEntity (engfuncs.pfnFindEntityByString (nullptr, "classname", classname.chars ()));
 }
 
-void Game::printBotVersion () {
+void Game::printBotVersion () const {
    String gameVersionStr {};
    StringArray botRuntimeFlags {};
 

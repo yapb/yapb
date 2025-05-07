@@ -1301,7 +1301,7 @@ void BotGraph::showFileInfo () {
    msg ("  bsp_size: %d", exten.mapSize);
 }
 
-void BotGraph::emitNotify (int32_t sound) {
+void BotGraph::emitNotify (int32_t sound) const {
    static HashMap <int32_t, String> notifySounds = {
       { NotifySound::Added, "weapons/xbow_hit1.wav" },
       { NotifySound::Change, "weapons/mine_activate.wav" },
@@ -1559,7 +1559,7 @@ void BotGraph::initLightLevels () {
    if (m_paths.empty () || m_lightChecked) {
       return;
    }
-   auto players = bots.countTeamPlayers ();
+   const auto &players = bots.countTeamPlayers ();
 
    // do calculation if some-one is already playing on the server
    if (!players.first && !players.second) {
@@ -1953,7 +1953,7 @@ float BotGraph::calculateTravelTime (float maxSpeed, const Vector &src, const Ve
    return origin.distance2d (src) / maxSpeed;
 }
 
-bool BotGraph::isNodeReacheableEx (const Vector &src, const Vector &destination, const float maxHeight) {
+bool BotGraph::isNodeReacheableEx (const Vector &src, const Vector &destination, const float maxHeight) const {
    TraceResult tr {};
 
    float distanceSq = destination.distanceSq (src);
@@ -2044,11 +2044,11 @@ bool BotGraph::isNodeReacheableEx (const Vector &src, const Vector &destination,
 }
 
 
-bool BotGraph::isNodeReacheable (const Vector &src, const Vector &destination) {
+bool BotGraph::isNodeReacheable (const Vector &src, const Vector &destination) const {
    return isNodeReacheableEx (src, destination, 45.0f);
 }
 
-bool BotGraph::isNodeReacheableWithJump (const Vector &src, const Vector &destination) {
+bool BotGraph::isNodeReacheableWithJump (const Vector &src, const Vector &destination) const {
    return isNodeReacheableEx (src, destination, cv_graph_analyze_max_jump_height.as <float> ());
 }
 
@@ -2872,7 +2872,7 @@ void BotGraph::unassignPath (int from, int to) {
    m_hasChanged = true;
 }
 
-void BotGraph::convertFromPOD (Path &path, const PODPath &pod) {
+void BotGraph::convertFromPOD (Path &path, const PODPath &pod) const {
    path.number = pod.number;
    path.flags = pod.flags;
    path.origin = pod.origin;
@@ -2916,7 +2916,7 @@ void BotGraph::convertToPOD (const Path &path, PODPath &pod) {
    pod.vis.crouch = path.vis.crouch;
 }
 
-void BotGraph::convertCampDirection (Path &path) {
+void BotGraph::convertCampDirection (Path &path) const {
    // this function converts old vector based camp directions to angles, note that podbotmm graph
    // are already saved with angles, and converting this stuff may result strange look directions.
 

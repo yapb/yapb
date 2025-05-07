@@ -192,8 +192,9 @@ void Bot::normal_ () {
          if (game.mapIs (MapFlags::HostageRescue)) {
             // CT Bot has some hostages following?
             if (m_team == Team::CT && m_hasHostage) {
+
                // and reached a rescue point?
-               if (m_pathFlags & NodeFlag::Rescue) {
+               if (m_inRescueZone && (m_pathFlags & NodeFlag::Rescue)) {
                   m_hostages.clear ();
                }
             }

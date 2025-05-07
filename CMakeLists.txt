@@ -43,7 +43,7 @@ set(YAPB_SRC
     "src/vistable.cpp"
 )
 
-add_library(${PROJECT_NAME} MODULE ${YAPB_SRC})
+add_library(${PROJECT_NAME} SHARED ${YAPB_SRC})
 find_package(Git QUIET)
 
 if(GIT_FOUND)
@@ -109,10 +109,14 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU"
     if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     endif()
-
-    if(CMAKE_SIZEOF_VOID_P EQUAL 8 OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm" OR CMAKE_SYSTEM_PROCESSOR MATCHES "^ppc")
-        target_compile_options(${PROJECT_NAME} PRIVATE -fPIC)
-        target_link_options(${PROJECT_NAME} PRIVATE -fPIC)
+	
+    if(VITA)
+        target_compile_options(${PROJECT_NAME} PRIVATE -fno-use-cxa-atexit)
+    else()
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8 OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm" OR CMAKE_SYSTEM_PROCESSOR MATCHES "^ppc")
+            target_compile_options(${PROJECT_NAME} PRIVATE -fPIC)
+            target_link_options(${PROJECT_NAME} PRIVATE -fPIC)
+        endif()
     endif()
 elseif(WIN32 AND MSVC)
     set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
@@ -132,7 +136,7 @@ if(WIN32 OR MINGW)
     target_sources(${PROJECT_NAME} PRIVATE "vc/yapb.rc")
 elseif(ANDROID)
     target_link_libraries(${PROJECT_NAME} PRIVATE m dl log)
-else()
+elseif(NOT VITA)
     target_link_libraries(${PROJECT_NAME} PRIVATE m dl pthread)
 endif()
 

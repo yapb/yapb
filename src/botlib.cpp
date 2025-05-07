@@ -856,7 +856,7 @@ Vector Bot::getCampDirection (const Vector &dest) {
    return nullptr;
 }
 
-void Bot::showChatterIcon (bool show, bool disconnect) {
+void Bot::showChatterIcon (bool show, bool disconnect) const {
    // this function depending on show boolean, shows/remove chatter, icon, on the head of bot.
 
    if (!game.is (GameFlags::HasBotVoice) || cv_radio_mode.as <int> () != 2) {
@@ -894,7 +894,7 @@ void Bot::showChatterIcon (bool show, bool disconnect) {
    }
 }
 
-void Bot::instantChatter (int type) {
+void Bot::instantChatter (int type) const {
    // this function sends instant chatter messages.
    if (!game.is (GameFlags::HasBotVoice)
       || cv_radio_mode.as <int> () != 2
@@ -1222,7 +1222,7 @@ bool Bot::canReplaceWeapon () {
    return isWeaponRestricted (m_currentWeapon);
 }
 
-int Bot::pickBestWeapon (Array <int> &vec, int moneySave) {
+int Bot::pickBestWeapon (Array <int> &vec, int moneySave) const {
    // this function picks best available weapon from random choice with money save
 
    if (vec.length () < 2) {
@@ -1890,6 +1890,7 @@ void Bot::setConditions () {
          if (m_agressionLevel > 1.0f) {
             m_agressionLevel = 1.0f;
          }
+         m_radioPercent = cr::min (m_radioPercent - rg (1, 5), 15);
 
          if (rg.chance (10)) {
             pushChatMessage (Chat::Kill);
@@ -2450,7 +2451,7 @@ void Bot::checkRadioQueue () {
       if (seesEntity (m_radioEntity->v.origin) || m_radioOrder == Radio::StickTogetherTeam) {
          if (game.isNullEntity (m_targetEntity)
             && game.isNullEntity (m_enemy)
-            && rg.chance (m_personality == Personality::Careful ? 80 : 20)) {
+            && rg.chance (m_radioPercent)) {
 
             int numFollowers = 0;
 
@@ -2494,11 +2495,11 @@ void Bot::checkRadioQueue () {
                   }
                }
             }
-            else if (m_radioOrder != Chatter::GoingToPlantBomb && rg.chance (25)) {
+            else if (m_radioOrder != Chatter::GoingToPlantBomb && rg.chance (m_radioPercent)) {
                pushRadioMessage (Radio::Negative);
             }
          }
-         else if (m_radioOrder != Chatter::GoingToPlantBomb && rg.chance (35)) {
+         else if (m_radioOrder != Chatter::GoingToPlantBomb && rg.chance (m_radioPercent)) {
             pushRadioMessage (Radio::Negative);
          }
       }
@@ -2530,7 +2531,7 @@ void Bot::checkRadioQueue () {
                m_fearLevel = 0.0f;
             }
 
-            if (rg.chance (45) && cv_radio_mode.as <int> () == 2) {
+            if (rg.chance (m_radioPercent) && cv_radio_mode.as <int> () == 2) {
                pushChatterMessage (Chatter::OnMyWay);
             }
             else if (m_radioOrder == Radio::NeedBackup && cv_radio_mode.as <int> () != 2) {
@@ -2538,7 +2539,7 @@ void Bot::checkRadioQueue () {
             }
             tryHeadTowardRadioMessage ();
          }
-         else if (rg.chance (25)) {
+         else if (rg.chance (m_radioPercent)) {
             pushRadioMessage (Radio::Negative);
          }
       }
@@ -2559,7 +2560,7 @@ void Bot::checkRadioQueue () {
    case Chatter::ScaredEmotion:
    case Chatter::PinnedDown:
       if (((game.isNullEntity (m_enemy) && seesEntity (m_radioEntity->v.origin)) || distanceSq < cr::sqrf (2048.0f) || !m_moveToC4)
-         && rg.chance (50)
+         && rg.chance (m_radioPercent)
          && m_seeEnemyTime + 4.0f < game.time ()) {
 
          m_fearLevel -= 0.1f;
@@ -2568,22 +2569,22 @@ void Bot::checkRadioQueue () {
             m_fearLevel = 0.0f;
          }
 
-         if (rg.chance (45) && cv_radio_mode.as <int> () == 2) {
+         if (rg.chance (m_radioPercent) && cv_radio_mode.as <int> () == 2) {
             pushChatterMessage (Chatter::OnMyWay);
          }
-         else if (m_radioOrder == Radio::NeedBackup && cv_radio_mode.as <int> () != 2 && rg.chance (50)) {
+         else if (m_radioOrder == Radio::NeedBackup && cv_radio_mode.as <int> () != 2 && rg.chance (m_radioPercent)) {
             pushRadioMessage (Radio::RogerThat);
          }
          tryHeadTowardRadioMessage ();
       }
-      else if (rg.chance (30) && m_radioOrder == Radio::NeedBackup) {
+      else if (rg.chance (m_radioPercent) && m_radioOrder == Radio::NeedBackup) {
          pushRadioMessage (Radio::Negative);
       }
       break;
 
    case Radio::GoGoGo:
       if (m_radioEntity == m_targetEntity) {
-         if (rg.chance (45) && cv_radio_mode.as <int> () == 2) {
+         if (rg.chance (m_radioPercent) && cv_radio_mode.as <int> () == 2) {
             pushRadioMessage (Radio::RogerThat);
          }
          else if (m_radioOrder == Radio::NeedBackup && cv_radio_mode.as <int> () != 2) {
@@ -2622,7 +2623,7 @@ void Bot::checkRadioQueue () {
          pushRadioMessage (Radio::RogerThat);
          resetDoubleJump ();
       }
-      else if (rg.chance (35)) {
+      else if (rg.chance (m_radioPercent)) {
          pushRadioMessage (Radio::Negative);
       }
       break;
@@ -2637,7 +2638,7 @@ void Bot::checkRadioQueue () {
          m_targetEntity = nullptr;
          startTask (Task::EscapeFromBomb, TaskPri::EscapeFromBomb, kInvalidNodeIndex, 0.0f, true);
       }
-      else if (rg.chance (35)) {
+      else if (rg.chance (m_radioPercent)) {
          pushRadioMessage (Radio::Negative);
       }
       break;
@@ -2656,7 +2657,7 @@ void Bot::checkRadioQueue () {
       break;
 
    case Radio::StormTheFront:
-      if (((game.isNullEntity (m_enemy) && seesEntity (m_radioEntity->v.origin)) || distanceSq < cr::sqrf (1024.0f)) && rg.chance (50)) {
+      if (((game.isNullEntity (m_enemy) && seesEntity (m_radioEntity->v.origin)) || distanceSq < cr::sqrf (1024.0f)) && rg.chance (m_radioPercent)) {
          pushRadioMessage (Radio::RogerThat);
 
          // don't pause/camp anymore
@@ -2738,7 +2739,7 @@ void Bot::checkRadioQueue () {
    case Radio::ReportInTeam:
       switch (getCurrentTaskId ()) {
       case Task::Normal:
-         if (getTask ()->data != kInvalidNodeIndex && rg.chance (70)) {
+         if (getTask ()->data != kInvalidNodeIndex && rg.chance (m_radioPercent)) {
             const auto &path = graph[getTask ()->data];
 
             if (path.flags & NodeFlag::Goal) {
@@ -2752,14 +2753,14 @@ void Bot::checkRadioQueue () {
             else if (m_hasHostage) {
                pushChatterMessage (Chatter::RescuingHostages);
             }
-            else if ((path.flags & NodeFlag::Camp) && rg.chance (75)) {
+            else if ((path.flags & NodeFlag::Camp) && rg.chance (m_radioPercent)) {
                pushChatterMessage (Chatter::GoingToCamp);
             }
             else if (m_states & Sense::HearingEnemy) {
                pushChatterMessage (Chatter::HeardTheEnemy);
             }
          }
-         else if (rg.chance (30)) {
+         else if (rg.chance (m_radioPercent)) {
             pushChatterMessage (Chatter::ReportingIn);
          }
          break;
@@ -2771,7 +2772,7 @@ void Bot::checkRadioQueue () {
          break;
 
       case Task::Camp:
-         if (rg.chance (40)) {
+         if (rg.chance (m_radioPercent)) {
             if (bots.isBombPlanted () && m_team == Team::Terrorist) {
                pushChatterMessage (Chatter::GuardingPlantedC4);
             }
@@ -2828,7 +2829,7 @@ void Bot::checkRadioQueue () {
          break;
 
       default:
-         if (rg.chance (50)) {
+         if (rg.chance (m_radioPercent)) {
             pushChatterMessage (Chatter::Nothing);
          }
          break;
@@ -2942,7 +2943,7 @@ void Bot::tryHeadTowardRadioMessage () {
    }
 
    if ((util.isFakeClient (m_radioEntity)
-      && rg.chance (25)
+      && rg.chance (m_radioPercent)
       && m_personality == Personality::Normal) || !(m_radioEntity->v.flags & FL_FAKECLIENT)) {
 
       if (tid == Task::Pause || tid == Task::Camp) {
@@ -3657,6 +3658,9 @@ void Bot::takeDamage (edict_t *inflictor, int damage, int armor, int bits) {
          pushChatterMessage (Chatter::FriendlyFire);
       }
       else {
+         // increase radio percent
+         m_radioPercent = cr::max (m_radioPercent + 1, 90);
+
          // attacked by an enemy
          if (m_healthValue > 60.0f) {
             m_agressionLevel += 0.1f;
@@ -3744,7 +3748,7 @@ void Bot::takeBlind (int alpha) {
    }
 }
 
-void Bot::updatePracticeValue (int damage) {
+void Bot::updatePracticeValue (int damage) const {
    // gets called each time a bot gets damaged by some enemy. tries to achieve a statistic about most/less dangerous
    // nodes for a destination goal used for pathfinding
 
@@ -3960,7 +3964,7 @@ bool Bot::canRunHeavyWeight () {
    return false;
 }
 
-uint8_t Bot::computeMsec () {
+uint8_t Bot::computeMsec () const {
    // estimate msec to use for this command based on time passed from the previous command
 
    return static_cast <uint8_t> (cr::min (static_cast <int32_t> (cr::roundf ((game.time () - m_previousThinkTime) * 1000.0f)), 255));
@@ -4248,7 +4252,7 @@ void Bot::selectCampButtons (int index) {
    }
 }
 
-bool Bot::isBombDefusing (const Vector &bombOrigin) {
+bool Bot::isBombDefusing (const Vector &bombOrigin) const {
    // this function finds if somebody currently defusing the bomb.
 
    if (!bots.isBombPlanted ()) {
@@ -4354,7 +4358,7 @@ void Bot::refreshCreatureStatus (char *infobuffer) {
    m_modelMask = modelTest.mask;
 }
 
-bool Bot::isCreature () {
+bool Bot::isCreature () const {
    // current creature models are: zombie, chicken
    constexpr auto kModelMaskZombie = (('o' << 8) + 'z');
    constexpr auto kModelMaskChicken = (('h' << 8) + 'c');

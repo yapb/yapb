@@ -669,7 +669,7 @@ void BotManager::killAllBots (int team, bool silent) {
    // this function kills all bots on server (only this dll controlled bots)
 
    for (const auto &bot : m_bots) {
-      if (team != -1 && game.getRealTeam (bot->ent ()) != team) {
+      if (team != Team::Invalid && game.getRealTeam (bot->ent ()) != team) {
          continue;
       }
       bot->kill ();
@@ -922,11 +922,14 @@ void BotManager::listBots () {
          bot->index (),
          bot->pev->netname.chars (),
          bot->m_personality == Personality::Rusher ? "rusher" : bot->m_personality == Personality::Normal ? "normal" : "careful",
+
          botTeam (bot->ent ()),
          bot->m_difficulty,
          static_cast <int> (bot->pev->frags),
+
          bot->m_deathCount,
          bot->m_isAlive ? "yes" : "no",
+
          timelimitStr);
    }
    ctrl.msg ("%d bots", m_bots.length ());
@@ -1123,7 +1126,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
       }
    }
 
-   char reject[StringBuffer::StaticBufferSize] = { 0, };
+   char reject[128] = { 0, };
    MDLL_ClientConnect (bot, bot->v.netname.chars (), strings.format ("127.0.0.%d", clientIndex + 100), reject);
 
    if (!strings.isEmpty (reject)) {
@@ -1569,6 +1572,7 @@ void Bot::newRound () {
          m_hitboxEnumerator = cr::makeUnique <PlayerHitboxEnumerator> ();
       }
    }
+   showChatterIcon (false);
 
    m_approachingLadderTimer.invalidate ();
    m_forgetLastVictimTimer.invalidate ();
@@ -1608,6 +1612,24 @@ void Bot::newRound () {
 
    m_buyState = BuyState::PrimaryWeapon;
    m_lastEquipTime = 0.0f;
+
+   // setup radio percent each round
+   const auto badMorale = m_fearLevel > m_agressionLevel ? rg.chance (75) : rg.chance (35);
+
+   switch (m_personality) {
+   case Personality::Normal:
+   default:
+      m_radioPercent = badMorale ? rg (50, 75) : rg (25, 50);
+      break;
+
+   case Personality::Rusher:
+      m_radioPercent = badMorale ? rg (35, 50) : rg (15, 35);
+      break;
+
+   case Personality::Careful:
+      m_radioPercent = badMorale ? rg (70, 90) : rg (50, 70);
+      break;
+   }
 
    // if bot died, clear all weapon stuff and force buying again
    if (!m_isAlive) {
