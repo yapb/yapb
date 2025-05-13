@@ -387,8 +387,6 @@ void Bot::checkForChat () {
    }
 }
 
-
-
 void Bot::sendToChat (StringRef message, bool teamOnly) {
    // this function prints saytext message to all players
 

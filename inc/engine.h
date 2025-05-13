@@ -316,27 +316,27 @@ public:
    }
 
    // gets edict pointer out of entity index
-   CR_FORCE_INLINE edict_t *entityOfIndex (const int index) {
+   CR_FORCE_INLINE edict_t *entityOfIndex (const int index) const {
       return static_cast <edict_t *> (m_startEntity + index);
    };
 
    // gets edict pointer out of entity index (player)
-   CR_FORCE_INLINE edict_t *playerOfIndex (const int index) {
+   CR_FORCE_INLINE edict_t *playerOfIndex (const int index) const {
       return entityOfIndex (index) + 1;
    };
 
    // gets edict index out of it's pointer
-   CR_FORCE_INLINE int indexOfEntity (const edict_t *ent) {
+   CR_FORCE_INLINE int indexOfEntity (const edict_t *ent) const {
       return static_cast <int> (ent - m_startEntity);
    };
 
    // gets edict index of it's pointer (player)
-   CR_FORCE_INLINE int indexOfPlayer (const edict_t *ent) {
+   CR_FORCE_INLINE int indexOfPlayer (const edict_t *ent) const {
       return indexOfEntity (ent) - 1;
    }
 
    // verify entity isn't null
-   CR_FORCE_INLINE bool isNullEntity (const edict_t *ent) {
+   CR_FORCE_INLINE bool isNullEntity (const edict_t *ent) const {
       return !ent || !indexOfEntity (ent) || ent->free;
    }
 
@@ -351,7 +351,7 @@ public:
    }
 
    // gets the player team
-   int getTeam (edict_t *ent) {
+   int getTeam (edict_t *ent) const {
       if (isNullEntity (ent)) {
          return Team::Unassigned;
       }
@@ -359,7 +359,7 @@ public:
    }
 
    // gets the player team (real in ffa)
-   int getRealTeam (edict_t *ent) {
+   int getRealTeam (edict_t *ent) const {
       if (isNullEntity (ent)) {
          return Team::Unassigned;
       }

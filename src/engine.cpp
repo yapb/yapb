@@ -728,7 +728,7 @@ void Game::checkCvarsBounds () {
       static ConVarRef sv_forcesimulating ("sv_forcesimulating");
 
       if (sv_forcesimulating.exists () && !cr::fequal (sv_forcesimulating.value (), 1.0f)) {
-         game.print ("Force-enable Xash3D sv_forcesimulating cvar.");
+         print ("Force-enable Xash3D sv_forcesimulating cvar.");
          sv_forcesimulating.set ("1.0");
       }
    }
@@ -935,14 +935,14 @@ bool Game::postload () {
    }
 
    // register fake metamod command handler if we not! under mm
-   if (!(game.is (GameFlags::Metamod))) {
+   if (!(is (GameFlags::Metamod))) {
       game.registerEngineCommand ("meta", [] () {
          game.print ("You're launched standalone version of %s. Metamod is not installed or not enabled!", product.name);
       });
    }
 
    // is 25th anniversary
-   if (game.is25thAnniversaryUpdate ()) {
+   if (is25thAnniversaryUpdate ()) {
       m_gameFlags |= GameFlags::AnniversaryHL25;
    }
 
@@ -1064,7 +1064,7 @@ void Game::slowFrame () {
       graph.setBombOrigin ();
 
       // ensure the server admin is confident about features he's using
-      game.ensureHealthyGameEnvironment ();
+      ensureHealthyGameEnvironment ();
 
       // update next update time
       m_halfSecondFrame = nextUpdate * 0.25f + time ();
@@ -1115,7 +1115,7 @@ void Game::slowFrame () {
 void Game::searchEntities (StringRef field, StringRef value, EntitySearch functor) {
    edict_t *ent = nullptr;
 
-   while (!game.isNullEntity (ent = engfuncs.pfnFindEntityByString (ent, field.chars (), value.chars ()))) {
+   while (!isNullEntity (ent = engfuncs.pfnFindEntityByString (ent, field.chars (), value.chars ()))) {
       if ((ent->v.flags & EF_NODRAW) || (ent->v.flags & FL_CLIENT)) {
          continue;
       }
@@ -1130,7 +1130,7 @@ void Game::searchEntities (const Vector &position, float radius, EntitySearch fu
    edict_t *ent = nullptr;
    const Vector &pos = position.empty () ? m_startEntity->v.origin : position;
 
-   while (!game.isNullEntity (ent = engfuncs.pfnFindEntityInSphere (ent, pos, radius))) {
+   while (!isNullEntity (ent = engfuncs.pfnFindEntityInSphere (ent, pos, radius))) {
       if ((ent->v.flags & EF_NODRAW) || (ent->v.flags & FL_CLIENT)) {
          continue;
       }
@@ -1216,18 +1216,19 @@ void Game::printBotVersion () const {
 }
 
 void Game::ensureHealthyGameEnvironment () {
-   if (!isDedicated () || game.is (GameFlags::Legacy | GameFlags::Xash3D)) {
+   if (!isDedicated () || is (GameFlags::Legacy | GameFlags::Xash3D)) {
       return; // listen servers doesn't care about it at all
    }
 
    // magic string that's enables the features
    constexpr auto kAllowHash = StringRef::fnv1a32 ("i'm confident for what i'm doing");
+   constexpr auto kAllowHash2 = StringRef::fnv1a32 ("\"i'm confident for what i'm doing\"");
 
    // fetch custom variable, so fake features are explicitly enabled
    static auto enableFakeFeatures = StringRef::fnv1a32 (conf.fetchCustom ("EnableFakeBotFeatures").chars ());
 
    // if string matches, do not affect the cvars
-   if (enableFakeFeatures == kAllowHash) {
+   if (enableFakeFeatures == kAllowHash || enableFakeFeatures == kAllowHash2) {
       return;
    }
 
@@ -1260,7 +1261,7 @@ void Game::ensureHealthyGameEnvironment () {
 edict_t *Game::createFakeClient (StringRef name) {
    auto ent = engfuncs.pfnCreateFakeClient (name.chars ());
 
-   if (game.isNullEntity (ent)) {
+   if (isNullEntity (ent)) {
       return nullptr;
    }
    auto netname = ent->v.netname;
