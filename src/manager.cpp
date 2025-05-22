@@ -60,12 +60,11 @@ ConVar mp_freezetime ("mp_freezetime", nullptr, Var::GameRef, true, "0");
 BotManager::BotManager () {
    // this is a bot manager class constructor
 
-   for (int i = 0; i < kGameTeamNum; ++i) {
-      m_leaderChoosen[i] = false;
-      m_economicsGood[i] = true;
-
-      m_lastRadioTime[i] = 0.0f;
-      m_lastRadio[i] = kInvalidRadioSlot;
+   for (auto &td : m_teamData) {
+      td.leaderChoosen = false;
+      td.positiveEco = true;
+      td.lastRadioSlot = kInvalidRadioSlot;
+      td.lastRadioTimestamp = 0.0f;
    }
    reset ();
 
@@ -1008,11 +1007,13 @@ void BotManager::updateTeamEconomics (int team, bool setTrue) {
    // that have not enough money to buy primary (with economics), and if this result higher 80%, player is can't
    // buy primary weapons.
 
+   auto &ecoStatus = m_teamData[team].positiveEco;
+
    if (setTrue || !cv_economics_rounds) {
-      m_economicsGood[team] = true;
+      ecoStatus = true;
       return; // don't check economics while economics disable
    }
-   const int *econLimit = conf.getEconLimit ();
+   const auto econLimit = conf.getEconLimit ();
 
    int numPoorPlayers = 0;
    int numTeamPlayers = 0;
@@ -1026,19 +1027,19 @@ void BotManager::updateTeamEconomics (int team, bool setTrue) {
          ++numTeamPlayers; // update count of team
       }
    }
-   m_economicsGood[team] = true;
+   ecoStatus = true;
 
    if (numTeamPlayers <= 1) {
       return;
    }
    // if 80 percent of team have no enough money to purchase primary weapon
    if ((numTeamPlayers * 80) / 100 <= numPoorPlayers) {
-      m_economicsGood[team] = false;
+      ecoStatus = false;
    }
 
    // winner must buy something!
    if (m_lastWinner == team) {
-      m_economicsGood[team] = true;
+      ecoStatus = true;
    }
 }
 
@@ -2057,21 +2058,24 @@ void BotManager::updateInterestingEntities () {
 }
 
 void BotManager::selectLeaders (int team, bool reset) {
+   auto &leaderChoosen = m_teamData[team].leaderChoosen;
+
    if (reset) {
-      m_leaderChoosen[team] = false;
+      leaderChoosen = false;
       return;
    }
 
-   if (m_leaderChoosen[team]) {
+   if (leaderChoosen) {
       return;
    }
+   auto &leaderChoosenT = m_teamData[Team::Terrorist].leaderChoosen;
+   auto &leaderChoosenCT = m_teamData[Team::CT].leaderChoosen;
 
    if (game.mapIs (MapFlags::Assassination)) {
-      if (team == Team::CT && !m_leaderChoosen[Team::CT]) {
+      if (team == Team::CT && !leaderChoosenCT) {
          for (const auto &bot : m_bots) {
             if (bot->m_isVIP) {
-               // vip bot is the leader
-               bot->m_isLeader = true;
+               bot->m_isLeader = true; // vip bot is the leader
 
                if (rg.chance (50)) {
                   bot->pushRadioMessage (Radio::FollowMe);
@@ -2079,9 +2083,9 @@ void BotManager::selectLeaders (int team, bool reset) {
                }
             }
          }
-         m_leaderChoosen[Team::CT] = true;
+         leaderChoosenCT = true;
       }
-      else if (team == Team::Terrorist && !m_leaderChoosen[Team::Terrorist]) {
+      else if (team == Team::Terrorist && !leaderChoosenT) {
          auto bot = bots.findHighestFragBot (team);
 
          if (bot != nullptr && bot->m_isAlive) {
@@ -2091,11 +2095,11 @@ void BotManager::selectLeaders (int team, bool reset) {
                bot->pushRadioMessage (Radio::FollowMe);
             }
          }
-         m_leaderChoosen[Team::Terrorist] = true;
+         leaderChoosenT = true;
       }
    }
    else if (game.mapIs (MapFlags::Demolition)) {
-      if (team == Team::Terrorist && !m_leaderChoosen[Team::Terrorist]) {
+      if (team == Team::Terrorist && !leaderChoosenT) {
          for (const auto &bot : m_bots) {
             if (bot->m_hasC4) {
                // bot carrying the bomb is the leader
@@ -2113,9 +2117,9 @@ void BotManager::selectLeaders (int team, bool reset) {
                }
             }
          }
-         m_leaderChoosen[Team::Terrorist] = true;
+         leaderChoosenT = true;
       }
-      else if (!m_leaderChoosen[Team::CT]) {
+      else if (!leaderChoosenCT) {
          if (auto bot = bots.findHighestFragBot (team)) {
             bot->m_isLeader = true;
 
@@ -2123,31 +2127,31 @@ void BotManager::selectLeaders (int team, bool reset) {
                bot->pushRadioMessage (Radio::FollowMe);
             }
          }
-         m_leaderChoosen[Team::CT] = true;
+         leaderChoosenCT = true;
       }
    }
    else if (game.mapIs (MapFlags::Escape | MapFlags::KnifeArena | MapFlags::FightYard)) {
       auto bot = bots.findHighestFragBot (team);
 
-      if (!m_leaderChoosen[team] && bot) {
+      if (!leaderChoosen && bot) {
          bot->m_isLeader = true;
 
          if (rg.chance (30)) {
             bot->pushRadioMessage (Radio::FollowMe);
          }
-         m_leaderChoosen[team] = true;
+         leaderChoosen = true;
       }
    }
    else {
       auto bot = bots.findHighestFragBot (team);
 
-      if (!m_leaderChoosen[team] && bot) {
+      if (!leaderChoosen && bot) {
          bot->m_isLeader = true;
 
          if (rg.chance (team == Team::Terrorist ? 30 : 40)) {
             bot->pushRadioMessage (Radio::FollowMe);
          }
-         m_leaderChoosen[team] = true;
+         leaderChoosen = true;
       }
    }
 }
@@ -2162,7 +2166,7 @@ void BotManager::initRound () {
       updateTeamEconomics (team);
       selectLeaders (team, true);
 
-      m_lastRadioTime[team] = 0.0f;
+      m_teamData[team].lastRadioTimestamp = 0.0f;
    }
    reset ();
 

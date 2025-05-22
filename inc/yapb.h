@@ -115,6 +115,14 @@ struct FrameDelay {
    float time {};
 };
 
+// shared team data for bot
+struct BotTeamData {
+   bool leaderChoosen {}; // is team leader choose thees round
+   bool positiveEco {};  // is team able to buy anything
+   float lastRadioTimestamp {}; // global radio time
+   int32_t lastRadioSlot = { kInvalidRadioSlot }; // last radio message for team
+};
+
 // include bot graph stuff
 #include <graph.h>
 #include <vision.h>

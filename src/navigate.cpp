@@ -199,7 +199,7 @@ int Bot::findBestGoal () {
 int Bot::findBestGoalWhenBombAction () {
    int result = kInvalidNodeIndex;
 
-   if (!bots.isBombPlanted ()) {
+   if (!bots.isBombPlanted () && !cv_ignore_objectives) {
       game.searchEntities ("classname", "weaponbox", [&] (edict_t *ent) {
          if (util.isModel (ent, "backpack.mdl")) {
             result = graph.getNearest (game.getEntityOrigin (ent));

@@ -441,7 +441,7 @@ void Bot::updatePickups () {
             allowPickup = true;
             pickupType = Pickup::Hostage;
          }
-         else if (isDemolitionMap && isWeaponBox && model == "backpack.mdl") {
+         else if (isDemolitionMap && isWeaponBox && model == "backpack.mdl" && !cv_ignore_objectives) {
             allowPickup = true;
             pickupType = Pickup::DroppedC4;
          }
@@ -4375,7 +4375,16 @@ void Bot::donateC4ToHuman () {
    const float radiusSq = cr::sqrf (1024.0f);
 
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.team != m_team || client.ent == ent ()) {
+      if (!(client.flags & ClientFlags::Used)
+         || !(client.flags & ClientFlags::Alive)
+         || client.team != m_team
+         || client.ent == ent ()) {
+
+         continue;
+      }
+
+      // skip the bots
+      if (bots[client.ent]) {
          continue;
       }
 

@@ -37,15 +37,11 @@ private:
    float m_plantSearchUpdateTime {}; // time to update for searching planted bomb
    float m_lastChatTime {}; // global chat time timestamp
    float m_timeBombPlanted {}; // time the bomb were planted
-   float m_lastRadioTime[kGameTeamNum] {}; // global radio time
 
    int m_lastWinner {}; // the team who won previous round
    int m_lastDifficulty {}; // last bots difficulty
    int m_bombSayStatus {}; // some bot is issued whine about bomb
-   int m_lastRadio[kGameTeamNum] {}; // last radio message for team
 
-   bool m_leaderChoosen[kGameTeamNum] {}; // is team leader choose thees round
-   bool m_economicsGood[kGameTeamNum] {}; // is team able to buy anything
    bool m_bombPlanted {}; // is bomb planted ?
    bool m_botsCanPause {}; // bots can do a little pause ?
    bool m_roundOver {}; // well, round is over>
@@ -59,6 +55,7 @@ private:
    SmallArray <UniqueBot> m_bots {}; // all available bots
 
    edict_t *m_killerEntity {}; // killer entity for bots
+   BotTeamData  m_teamData[kGameTeamNum] {}; // teams shared data
 
 protected:
    BotCreateResult create (StringRef name, int difficulty, int personality, int team, int skin);
@@ -149,7 +146,7 @@ public:
    }
 
    bool checkTeamEco (int team) const {
-      return m_economicsGood[team];
+      return m_teamData[team].positiveEco;
    }
 
    int32_t getLastWinner () const {
@@ -219,23 +216,23 @@ public:
 
    void setLastRadioTimestamp (const int team, const float timestamp) {
       if (team == Team::CT || team == Team::Terrorist) {
-         m_lastRadioTime[team] = timestamp;
+         m_teamData[team].lastRadioTimestamp = timestamp;
       }
    }
 
    float getLastRadioTimestamp (const int team) const {
       if (team == Team::CT || team == Team::Terrorist) {
-         return m_lastRadioTime[team];
+         return m_teamData[team].lastRadioTimestamp;
       }
       return 0.0f;
    }
 
    void setLastRadio (const int team, const int radio) {
-      m_lastRadio[team] = radio;
+      m_teamData[team].lastRadioSlot = radio;
    }
 
    int getLastRadio (const int team) const {
-      return m_lastRadio[team];
+      return m_teamData[team].lastRadioSlot;
    }
 
    void setLastChatTimestamp (const float timestamp) {
