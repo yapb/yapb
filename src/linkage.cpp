@@ -86,7 +86,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
 
    plat.bzero (table, sizeof (gamefuncs_t));
 
-   if (!(game.is (GameFlags::Metamod))) {
+   if (!game.is (GameFlags::Metamod)) {
       auto api_GetEntityAPI = game.lib ().resolve <decltype (&GetEntityAPI)> (__func__);
 
       // pass other DLLs engine callbacks to function table...
@@ -433,6 +433,23 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
                fakeping.emit (ent);
             }
          }
+      };
+   }
+
+   // add some bullet spread on games, where w're runnung without metamod
+   if (!game.is (GameFlags::Metamod) && !game.is (GameFlags::Legacy)) {
+      table->pfnCmdStart = [] (const edict_t *player, usercmd_t *cmd, unsigned int random_seed) CR_FORCE_STACK_ALIGN {
+         // some MODs don't feel like doing like everybody else. It's the case in DMC, where players
+         // don't select their weapons using a simple client command, but have to use an horrible
+         // datagram like this. CmdStart() marks the start of a network packet clients send to the
+         // server that holds a limited set of requests (see the usercmd_t structure for details).
+         // It has been adapted for usage to HLTV spectators, who don't send ClientCommands, but send
+         // all their update information to the server using usercmd's instead, it seems.
+
+         if (bots[const_cast <edict_t *> (player)]) {
+            random_seed = rg (0, 0x7fffffff);
+         }
+         dllapi.pfnCmdStart (player, cmd, random_seed);
       };
    }
 

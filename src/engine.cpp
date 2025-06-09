@@ -1216,7 +1216,16 @@ void Game::printBotVersion () const {
 }
 
 void Game::ensureHealthyGameEnvironment () {
-   if (!isDedicated () || is (GameFlags::Legacy | GameFlags::Xash3D)) {
+   const bool dedicated = isDedicated ();
+
+   if (!dedicated || is (GameFlags::Legacy | GameFlags::Xash3D)) {
+      if (!dedicated) {
+
+         // force enable pings on listen servers if disabled at all
+         if (is (GameFlags::Modern) && cv_show_latency.as <int> () == 0) {
+            cv_show_latency.set (2);
+         }
+      }
       return; // listen servers doesn't care about it at all
    }
 

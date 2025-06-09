@@ -1606,6 +1606,7 @@ void Bot::attackMovement () {
       }
 
       if (m_difficulty >= Difficulty::Normal
+         && distanceSq < cr::sqrf (kSprayDistance)
          && (m_jumpTime + 5.0f < game.time ()
             && isOnFloor ()
             && rg (0, 1000) < (m_isReloading ? 8 : 2)
