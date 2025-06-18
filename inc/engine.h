@@ -366,7 +366,12 @@ public:
       return util.getClient (indexOfPlayer (ent)).team2;
    }
 
-   // sets the precache to uninitialize
+   // get real gamedll team (matches gamedll indices)
+   int getGameTeam (edict_t *ent) const {
+      return getRealTeam (ent) + 1;
+   }
+
+   // sets the precache to uninitialized
    void setUnprecached () {
       m_precached = false;
    }

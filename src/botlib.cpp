@@ -281,6 +281,12 @@ edict_t *Bot::lookupBreakable () {
       if (game.isNullEntity (ent)) {
          return false;
       }
+
+      // check breakable team, needed for some plugins
+      if (ent->v.team > 0 && ent->v.team != game.getGameTeam (this->ent ())) {
+         return false;
+      }
+
       for (const auto &br : m_ignoredBreakable) {
          if (br == ent) {
             return false;
