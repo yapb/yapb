@@ -82,7 +82,7 @@ public:
       int penetratePower,
       int maxClip,
       int type,
-      bool fireHold) :  id (id), name (name), model (model), price (price), minPrimaryAmmo (minPriAmmo), teamStandard (teamStd), 
+      bool fireHold) :  id (id), name (name), model (model), price (price), minPrimaryAmmo (minPriAmmo), teamStandard (teamStd),
       teamAS (teamAs), buyGroup (buyGroup), buySelect (buySelect), buySelectT (buySelectT), buySelectCT (buySelectCT),
       penetratePower (penetratePower), maxClip (maxClip), type (type), primaryFireHold (fireHold)
    { }
@@ -244,6 +244,7 @@ private:
    float m_prevTime {}; // time previously checked movement speed
    float m_heavyTimestamp {}; // is it time to execute heavy-weight functions
    float m_prevSpeed {}; // speed some frames before
+   float m_prevVelocity {}; // velocity some frames before
    float m_timeDoorOpen {}; // time to next door open check
    float m_timeHitDoor {}; // specific time after hitting the door
    float m_lastChatTime {}; // time bot last chatted
@@ -297,6 +298,7 @@ private:
    float m_lastVictimTime {}; // time when bot killed an enemy
    float m_killsInterval {}; // interval between kills
    float m_lastDamageTimestamp {}; // last damage from take damage fn
+   float m_movedDistance {}; // bot moved distance
 
    bool m_moveToGoal {}; // bot currently moving to goal??
    bool m_isStuck {}; // bot is stuck
@@ -318,6 +320,7 @@ private:
    bool m_needToSendWelcomeChat {}; // bot needs to greet people on server?
    bool m_isCreature {}; // bot is not a player, but something else ? zombie ?
    bool m_isOnInfectedTeam {}; // bot is zombie (this assumes bot is a creature)
+   bool m_infectedEnemyTeam {}; // the enemy is a zombie (assumed to be a hostile creature)
    bool m_defuseNotified {}; // bot is notified about bomb defusion
    bool m_jumpSequence {}; // next path link will be jump link
    bool m_checkFall {}; // check bot fall
@@ -360,7 +363,6 @@ private:
    Vector m_breakableOrigin {}; // origin of breakable
    Vector m_rightRef {}; // right referential vector
    Vector m_checkFallPoint[2] {}; // check fall point
-   Vector m_prevVelocity {}; // velocity some frames before
 
    Array <edict_t *> m_ignoredBreakable {}; // list of ignored breakables
    Array <edict_t *> m_ignoredItems {}; // list of  pointers to entity to ignore for pickup
@@ -375,13 +377,11 @@ private:
    CountdownTimer m_forgetLastVictimTimer {}; // time to forget last victim position ?
    CountdownTimer m_approachingLadderTimer {}; // bot is approaching ladder
    CountdownTimer m_lostReachableNodeTimer {}; // bot's issuing next node, probably he's lost
-   CountdownTimer m_fixFallTimer {}; // timer we're fixed fall last time
    CountdownTimer m_repathTimer {}; // bots is going to repath his route
 
 private:
    int pickBestWeapon (Array <int> &vec, int moneySave) const;
    int getRandomCampDir ();
-   int findAimingNode (const Vector &to, int &pathLength);
    int findNearestNode ();
    int findBombNode ();
    int findCoverNode (float maxDistance);
@@ -475,8 +475,6 @@ private:
    void runMovement ();
    void checkSpawnConditions ();
    void buyStuff ();
-   void changePitch (float speed);
-   void changeYaw (float speed);
    void checkMsgQueue ();
    void checkRadioQueue ();
    void checkReload ();
@@ -493,7 +491,7 @@ private:
    void postProcessGoals (const IntArray &goals, int result[]);
    void updatePickups ();
    void ensurePickupEntitiesClear ();
-   void checkTerrain (float movedDistance, const Vector &dirNormal);
+   void checkTerrain (const Vector &dirNormal);
    void checkFall ();
    void checkDarkness ();
    void checkParachute ();

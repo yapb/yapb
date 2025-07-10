@@ -108,66 +108,6 @@ void Bot::checkDarkness () {
    m_checkDarkTime = game.time () + rg (2.0f, 4.0f);
 }
 
-void Bot::changePitch (float speed) {
-   // this function turns a bot towards its ideal_pitch
-
-   const float idealPitch = cr::wrapAngle (pev->idealpitch);
-   const float curent = cr::wrapAngle (pev->v_angle.x);
-
-   // turn from the current v_angle pitch to the idealpitch by selecting
-   // the quickest way to turn to face that direction
-
-   // find the difference in the curent and ideal angle
-   float normalizePitch = cr::wrapAngle (idealPitch - curent);
-
-   if (normalizePitch > 0.0f) {
-      if (normalizePitch > speed) {
-         normalizePitch = speed;
-      }
-   }
-   else {
-      if (normalizePitch < -speed) {
-         normalizePitch = -speed;
-      }
-   }
-   pev->v_angle.x = cr::wrapAngle (curent + normalizePitch);
-
-   if (pev->v_angle.x > 89.9f) {
-      pev->v_angle.x = 89.9f;
-   }
-
-   if (pev->v_angle.x < -89.9f) {
-      pev->v_angle.x = -89.9f;
-   }
-   pev->angles.x = -pev->v_angle.x / 3;
-}
-
-void Bot::changeYaw (float speed) {
-   // this function turns a bot towards its ideal_yaw
-
-   const float idealPitch = cr::wrapAngle (pev->ideal_yaw);
-   const float curent = cr::wrapAngle (pev->v_angle.y);
-
-   // turn from the current v_angle yaw to the ideal_yaw by selecting
-   // the quickest way to turn to face that direction
-
-   // find the difference in the curent and ideal angle
-   float normalizePitch = cr::wrapAngle (idealPitch - curent);
-
-   if (normalizePitch > 0.0f) {
-      if (normalizePitch > speed) {
-         normalizePitch = speed;
-      }
-   }
-   else {
-      if (normalizePitch < -speed) {
-         normalizePitch = -speed;
-      }
-   }
-   pev->v_angle.y = cr::wrapAngle (curent + normalizePitch);
-   pev->angles.y = pev->v_angle.y;
-}
-
 void Bot::updateBodyAngles () {
    constexpr float kValue = 1.0f / 3.0f;
 
@@ -433,7 +373,7 @@ void Bot::setAimDirection () {
       }
 
       // don't switch view right away after loosing focus with current enemy 
-      if ((m_shootTime + 1.5f > game.time () || m_seeEnemyTime + 1.5f > game.time ())
+      if (m_seeEnemyTime + 1.5f > game.time ()
          && m_forgetLastVictimTimer.elapsed ()
          && !m_lastEnemyOrigin.empty ()
          && util.isAlive (m_lastEnemy)
