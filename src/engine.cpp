@@ -795,11 +795,45 @@ bool Game::loadCSBinary () {
    if (modname.empty ()) {
       return false;
    }
-   Array <StringRef> libs { "mp", "cs", "cs_i386" };
 
-   // lookup for x64 binaries first
+   Array <String> libs;
+
+   // construct library suffix
+   String lib_suffix;
+   if (plat.android) {
+      lib_suffix += "_android";
+   } else if (plat.psvita) {
+      lib_suffix += "_psvita";
+   }
+
    if (plat.x64) {
-      libs.insert (0, { "mp_amd64", "mp_arm64", "cs_arm64", "cs_amd64" });
+      if (plat.arm) {
+         lib_suffix += "_arm64";
+      } else if (plat.ppc) {
+         lib_suffix += "_ppc64le";
+      } else {
+         lib_suffix += "_amd64";
+      }
+   } else {
+      if (plat.arm) {
+         // don't want to put whole build.h logic from xash3d, just set whatever is supported by the YaPB
+         if (plat.android) {
+            lib_suffix += "_armv7l";
+         } else {
+            lib_suffix += "_armv7hf";
+         }
+      } else if (!plat.nix && !plat.win && !plat.macos) {
+         lib_suffix += "_i386";
+      }
+   }
+
+   if (lib_suffix.empty ())
+      libs.insert (0, { "mp", "cs", "cs_i386" });
+   else {
+      libs.insert (0, { "mp", "cs" });
+      for (auto &lib: libs) {
+         lib += lib_suffix;
+      }
    }
 
    auto libCheck = [&] (StringRef mod, StringRef dll) {
@@ -818,11 +852,26 @@ bool Game::loadCSBinary () {
 
    // search the libraries inside game dlls directory
    for (const auto &lib : libs) {
-      auto path = strings.joinPath (modname, "dlls", lib) + kLibrarySuffix;
+      String path;
 
-      // if we can't read file, skip it
-      if (!plat.fileExists (path.chars ())) {
-         continue;
+      if (plat.android) {
+         // this will be removed as soon as mod downloader will be implemented on engine side
+         auto gamelibdir = plat.env ("XASH3D_GAMELIBDIR");
+         path = strings.joinPath (gamelibdir, lib) + kLibrarySuffix;
+
+         // if we can't read file, skip it
+         if (!plat.fileExists (path.chars ())) {
+            path = "";
+         }
+      }
+
+      if (path.empty()) {
+         path = strings.joinPath (modname, "dlls", lib) + kLibrarySuffix;
+
+         // if we can't read file, skip it
+         if (!plat.fileExists (path.chars ())) {
+            continue;
+         }
       }
 
       // special case, czero is always detected first, as it's has custom directory
@@ -958,24 +1007,19 @@ bool Game::postload () {
       if (is (GameFlags::Metamod)) {
          return true; // we should stop the attempt for loading the real gamedll, since metamod handle this for us
       }
-      auto gamedll = strings.format ("%s/%s", plat.env ("XASH3D_GAMELIBDIR"), "libserver.so");
-
-      if (!m_gameLib.load (gamedll)) {
-         logger.fatal ("Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", gamedll, getRunningModName ());
-      }
    }
-   else {
-      const bool binaryLoaded = loadCSBinary ();
 
-      if (!binaryLoaded && !is (GameFlags::Metamod)) {
-         logger.fatal ("Mod that you has started, not supported by this bot (gamedir: %s)", getRunningModName ());
-      }
+   const bool binaryLoaded = loadCSBinary ();
 
-      if (is (GameFlags::Metamod)) {
-         m_gameLib.unload ();
-         return true;
-      }
+   if (!binaryLoaded && !is (GameFlags::Metamod)) {
+      logger.fatal ("Mod that you has started, not supported by this bot (gamedir: %s)", getRunningModName ());
    }
+
+   if (is (GameFlags::Metamod)) {
+      m_gameLib.unload ();
+      return true;
+   }
+
    return false;
 }
 
