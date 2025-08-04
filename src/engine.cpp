@@ -796,43 +796,45 @@ bool Game::loadCSBinary () {
       return false;
    }
 
-   Array <String> libs;
+   Array <String> libs {};
 
    // construct library suffix
-   String lib_suffix;
+   String libSuffix {};
+
    if (plat.android) {
-      lib_suffix += "_android";
+      libSuffix += "_android";
    } else if (plat.psvita) {
-      lib_suffix += "_psvita";
+      libSuffix += "_psvita";
    }
 
    if (plat.x64) {
       if (plat.arm) {
-         lib_suffix += "_arm64";
+         libSuffix += "_arm64";
       } else if (plat.ppc) {
-         lib_suffix += "_ppc64le";
+         libSuffix += "_ppc64le";
       } else {
-         lib_suffix += "_amd64";
+         libSuffix += "_amd64";
       }
    } else {
       if (plat.arm) {
          // don't want to put whole build.h logic from xash3d, just set whatever is supported by the YaPB
          if (plat.android) {
-            lib_suffix += "_armv7l";
+            libSuffix += "_armv7l";
          } else {
-            lib_suffix += "_armv7hf";
+            libSuffix += "_armv7hf";
          }
       } else if (!plat.nix && !plat.win && !plat.macos) {
-         lib_suffix += "_i386";
+         libSuffix += "_i386";
       }
    }
 
-   if (lib_suffix.empty ())
+   if (libSuffix.empty ())
       libs.insert (0, { "mp", "cs", "cs_i386" });
    else {
       libs.insert (0, { "mp", "cs" });
+
       for (auto &lib: libs) {
-         lib += lib_suffix;
+         lib += libSuffix;
       }
    }
 
@@ -852,7 +854,7 @@ bool Game::loadCSBinary () {
 
    // search the libraries inside game dlls directory
    for (const auto &lib : libs) {
-      String path;
+      String path {};
 
       if (plat.android) {
          // this will be removed as soon as mod downloader will be implemented on engine side

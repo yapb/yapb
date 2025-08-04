@@ -464,7 +464,7 @@ void BotManager::maintainLeaders () {
    }
 
    // select leader each team somewhere in round start
-   if (m_timeRoundStart + 5.0f > game.time () && m_timeRoundStart + 10.0f < game.time ()) {
+   if (m_timeRoundStart + rg (1.5f, 3.0f) < game.time ()) {
       for (int team = 0; team < kGameTeamNum; ++team) {
          selectLeaders (team, false);
       }
