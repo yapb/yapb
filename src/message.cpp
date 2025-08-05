@@ -431,6 +431,13 @@ void MessageDispatcher::netMsgFlashBat () {
    m_bot->m_flashLevel = m_args[value].long_;
 }
 
+void MessageDispatcher::netMsgResetHUD () {
+   if (m_bot) {
+      m_bot->spawned ();
+   }
+   bots.setResetHUD (true);
+}
+
 MessageDispatcher::MessageDispatcher () {
 
    // register wanted message
@@ -461,6 +468,7 @@ MessageDispatcher::MessageDispatcher () {
    addWanted ("FlashBat", NetMsg::FlashBat, &MessageDispatcher::netMsgFlashBat);
    addWanted ("ScoreInfo", NetMsg::ScoreInfo, &MessageDispatcher::netMsgScoreInfo);
    addWanted ("ScoreAttrib", NetMsg::ScoreAttrib, &MessageDispatcher::netMsgScoreAttrib);
+   addWanted ("ResetHUD", NetMsg::ResetHUD, &MessageDispatcher::netMsgResetHUD);
 
    // we're need next messages IDs but we're won't handle them, so they will be removed from wanted list as soon as they get engine IDs
    addWanted ("BotVoice", NetMsg::BotVoice, nullptr);

@@ -1112,6 +1112,9 @@ void Game::slowFrame () {
       // ensure the server admin is confident about features he's using
       ensureHealthyGameEnvironment ();
 
+      // maintain round restart for first human join
+      bots.maintainRoundRestart ();
+
       // update next update time
       m_halfSecondFrame = nextUpdate * 0.25f + time ();
    }

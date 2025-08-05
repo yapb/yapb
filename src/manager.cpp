@@ -18,6 +18,7 @@ ConVar cv_think_fps ("think_fps", "30.0", "Specifies how many times per second b
 ConVar cv_think_fps_disable ("think_fps_disable", "1", "Allows to completely disable think fps on Xash3D.", true, 0.0f, 1.0f, Var::Xash3D);
 
 ConVar cv_autokill_delay ("autokill_delay", "0.0", "Specifies amount of time in seconds when bots will be killed if no humans left alive.", true, 0.0f, 90.0f);
+ConVar cv_first_human_restart ("first_human_restart", "0.0", "Restart the game if first human player joined the bot game.", true, 0.0f, 1.0f);
 
 ConVar cv_join_after_player ("join_after_player", "0", "Specifies whether bots should join server, only when at least one human player in game.");
 ConVar cv_join_team ("join_team", "any", "Forces all bots to join team specified here.", false);
@@ -469,6 +470,29 @@ void BotManager::maintainLeaders () {
          selectLeaders (team, false);
       }
    }
+}
+
+void BotManager::maintainRoundRestart () {
+   if (!cv_first_human_restart || !game.isDedicated ()) {
+      return;
+   }
+   const int totalHumans = getHumansCount (true);
+   const int totalBots = getBotCount ();
+
+   if (totalHumans > 0
+      && m_numPreviousPlayers == 0
+      && totalHumans == 1
+      && totalBots > 0
+      && !m_resetHud) {
+
+      static ConVarRef sv_restartround ("sv_restartround");
+
+      if (sv_restartround.exists ()) {
+         sv_restartround.set ("1");
+      }
+   }
+   m_numPreviousPlayers = totalHumans;
+   m_resetHud = false;
 }
 
 void BotManager::maintainAutoKill () {

@@ -1557,8 +1557,8 @@ void Bot::attackMovement () {
          m_strafeSetTime = strafeUpdateTime ();
       }
 
-      const bool wallOnRight = checkWallOnRight (72.0f);
-      const bool wallOnLeft = checkWallOnLeft (72.0f);
+      const bool wallOnRight = checkWallOnRight (96.0f);
+      const bool wallOnLeft = checkWallOnLeft (96.0f);
 
       if (m_dodgeStrafeDir == Dodge::Left) {
          if (!wallOnLeft) {

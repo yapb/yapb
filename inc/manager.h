@@ -41,10 +41,12 @@ private:
    int m_lastWinner {}; // the team who won previous round
    int m_lastDifficulty {}; // last bots difficulty
    int m_bombSayStatus {}; // some bot is issued whine about bomb
+   int m_numPreviousPlayers {}; // number of players in game im previous player check
 
    bool m_bombPlanted {}; // is bomb planted ?
    bool m_botsCanPause {}; // bots can do a little pause ?
    bool m_roundOver {}; // well, round is over>
+   bool m_resetHud {}; // reset HUD is called for some one
 
    Array <edict_t *> m_activeGrenades {}; // holds currently active grenades on the map
    Array <edict_t *> m_interestingEntities {};  // holds currently interesting entities on the map
@@ -96,6 +98,7 @@ public:
    void maintainQuota ();
    void maintainAutoKill ();
    void maintainLeaders ();
+   void maintainRoundRestart ();
    void initQuota ();
    void initRound ();
    void decrementQuota (int by = 1);
@@ -229,6 +232,10 @@ public:
 
    void setLastRadio (const int team, const int radio) {
       m_teamData[team].lastRadioSlot = radio;
+   }
+
+   void setResetHUD (bool resetHud) {
+      m_resetHud = resetHud;
    }
 
    int getLastRadio (const int team) const {
