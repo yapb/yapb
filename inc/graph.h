@@ -265,7 +265,7 @@ public:
    void syncCollectOnline ();
    void collectOnline ();
 
-   IntArray getNearestInRadius (float radius, const Vector &origin, int maxCount = -1);
+   IntArray getNearestInRadius (const float radius, const Vector &origin, int maxCount = -1);
 
 public:
    StringRef getAuthor () const {

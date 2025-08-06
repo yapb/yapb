@@ -1518,6 +1518,7 @@ void Bot::newRound () {
    m_askCheckTime = rg (30.0f, 90.0f);
    m_minSpeed = 260.0f;
    m_prevSpeed = 0.0f;
+   m_prevVelocity = 0.0f;
    m_prevOrigin = Vector (kInfiniteDistance, kInfiniteDistance, kInfiniteDistance);
    m_prevTime = game.time ();
    m_lookUpdateTime = game.time ();
@@ -1602,7 +1603,6 @@ void Bot::newRound () {
    m_approachingLadderTimer.invalidate ();
    m_forgetLastVictimTimer.invalidate ();
    m_lostReachableNodeTimer.invalidate ();
-   m_fixFallTimer.invalidate ();
    m_repathTimer.invalidate ();
 
    for (auto &timer : m_chatterTimes) {

@@ -669,8 +669,7 @@ Vector Bot::getBodyOffsetError (float distance) {
       m_aimLastError = Vector (
          rg (mins.x * hitError, maxs.x * hitError), 
          rg (mins.y * hitError, maxs.y * hitError),
-         rg (mins.z * hitError * 0.5f, maxs.z * hitError * 0.5f)
-      );
+         rg (mins.z * hitError * 0.5f, maxs.z * hitError * 0.5f));
 
       const auto &aimError = conf.getDifficultyTweaks (m_difficulty)->aimError;
       m_aimLastError += Vector (rg (-aimError.x, aimError.x), rg (-aimError.y, aimError.y), rg (-aimError.z, aimError.z));
@@ -779,15 +778,15 @@ Vector Bot::getCustomHeight (float distance) const {
    };
 
    constexpr float kOffsetRanges[9][3] = {
-      { 0.0f,  0.0f,   0.0f }, // none
-      { 0.0f,  0.0f,   0.0f }, // melee
-      { 0.5f, -0.1f,  -1.5f }, // pistol
-      { 6.5f,  6.0f,  -2.0f }, // shotgun
-      { 0.5f, -7.5f,  -9.5f }, // zoomrifle
-      { 0.5f, -7.5f,  -9.5f }, // rifle
-      { 0.5f, -7.5f,  -9.5f }, // smg
-      { 0.0f, -2.5f,  -6.0f }, // sniper
-      { 1.5f, -4.0f,  -9.0f }  // heavy
+      { 0.0f,  0.0f,  0.0f }, // none
+      { 0.0f,  0.0f,  0.0f }, // melee
+      { 0.5f, -0.1f, -1.5f }, // pistol
+      { 6.5f,  6.0f, -2.0f }, // shotgun
+      { 0.5f, -7.5f, -9.5f }, // zoomrifle
+      { 0.5f, -7.5f, -9.5f }, // rifle
+      { 0.5f, -7.5f, -9.5f }, // smg
+      { 0.0f, -2.5f, -6.0f }, // sniper
+      { 1.5f, -4.0f, -9.0f }  // heavy
    };
 
    // only high-skilled bots do that 
@@ -815,7 +814,7 @@ bool Bot::isFriendInLineOfFire (float distance) const {
    }
 
    TraceResult tr {};
-   game.testLine (getEyesPos (), getEyesPos () + distance * pev->v_angle.normalize (), TraceIgnore::None, ent (), &tr);
+   game.testLine (getEyesPos (), getEyesPos () + pev->v_angle.normalize_apx () * distance, TraceIgnore::None, ent (), &tr);
 
    // check if we hit something
    if (util.isPlayer (tr.pHit) && tr.pHit != ent ()) {
@@ -1125,7 +1124,7 @@ void Bot::selectWeapons (float distance, int, int id, int choosen) {
       else if (isShieldDrawn ()
          || m_isReloading
          || (hasEnemy && (m_enemy->v.button & IN_RELOAD))
-         || (hasEnemy && !seesEntity (m_enemy->v.origin))) {
+         || (!hasEnemy && !seesEntity (m_enemy->v.origin))) {
 
          pev->button |= IN_ATTACK2; // draw out the shield
       }
@@ -1608,9 +1607,9 @@ void Bot::attackMovement () {
       if (m_difficulty >= Difficulty::Normal
          && distanceSq < cr::sqrf (kSprayDistance)
          && (m_jumpTime + 5.0f < game.time ()
-            && isOnFloor ()
-            && rg (0, 1000) < (m_isReloading ? 8 : 2)
-            && pev->velocity.length2d () > 150.0f) && !usesSniper () && isEnemyCone) {
+         && isOnFloor ()
+         && rg (0, 1000) < (m_isReloading ? 8 : 2)
+         && pev->velocity.length2d () > 150.0f) && !usesSniper () && isEnemyCone) {
 
          pev->button |= IN_JUMP;
       }
@@ -1814,14 +1813,13 @@ bool Bot::hasAnyAmmoInClip () {
 }
 
 bool Bot::isKnifeMode () {
-   return cv_jasonmode ||
-      (usesKnife () && !hasAnyWeapons ())
+   return cv_jasonmode || (usesKnife () && !hasAnyWeapons ())
       || m_isCreature
       || ((m_states & Sense::SeeingEnemy) && usesKnife () && !hasAnyAmmoInClip ());
 }
 
 bool Bot::isGrenadeWar () {
-   const bool hasSomeGreandes = bestGrenadeCarried () != -1;
+   const bool hasSomeGreandes = bestGrenadeCarried () != kGrenadeInventoryEmpty;
 
    // if has grenade an not other weapons, assume we're in grenade war
    if (!hasAnyWeapons () && hasSomeGreandes) {
@@ -2113,10 +2111,10 @@ void Bot::checkReload () {
 }
 
 float Bot::calculateScaleFactor (edict_t *ent) const {
-   Vector entSize = ent->v.maxs - ent->v.mins;
+   const auto &entSize = ent->v.maxs - ent->v.mins;
    const float entArea = 2.0f * (entSize.x * entSize.y + entSize.y * entSize.z + entSize.x * entSize.z);
 
-   Vector botSize = pev->maxs - pev->mins;
+   const auto &botSize = pev->maxs - pev->mins;
    const float botArea = 2.0f * (botSize.x * botSize.y + botSize.y * botSize.z + botSize.x * botSize.z);
 
    return entArea / botArea;
