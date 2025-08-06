@@ -382,6 +382,7 @@ private:
 private:
    int pickBestWeapon (Array <int> &vec, int moneySave) const;
    int getRandomCampDir ();
+   int findAimingNode (const Vector &to, int &pathLength);
    int findNearestNode ();
    int findBombNode ();
    int findCoverNode (float maxDistance);
@@ -475,6 +476,8 @@ private:
    void runMovement ();
    void checkSpawnConditions ();
    void buyStuff ();
+   void changePitch (float speed);
+   void changeYaw (float speed);
    void checkMsgQueue ();
    void checkRadioQueue ();
    void checkReload ();

@@ -400,9 +400,10 @@ void Bot::huntEnemy_ () {
 
    // bots skill higher than 60?
    if (cv_walking_allowed && mp_footsteps && m_difficulty >= Difficulty::Normal) {
+
       // then make him move slow if near enemy
-      if (m_currentNodeIndex != kInvalidNodeIndex) {
-         if (m_path->radius < 32.0f && m_seeEnemyTime + 4.0f > game.time ()) {
+      if (m_currentNodeIndex != kInvalidNodeIndex && !(m_currentTravelFlags & PathFlag::Jump)) {
+         if (m_path->radius < 32.0f && !isOnLadder () && !isInWater () && m_seeEnemyTime + 4.0f > game.time ()) {
             m_moveSpeed = getShiftSpeed ();
          }
       }
@@ -649,6 +650,14 @@ void Bot::camp_ () {
 
          if (isNodeValidForPredict (predictNode) && pathLength > 1) {
             m_lookAtSafe = graph[predictNode].origin + pev->view_ofs;
+         }
+         else {
+            pathLength = 0;
+            predictNode = findAimingNode (m_lastEnemyOrigin, pathLength);
+
+            if (isNodeValidForPredict (predictNode) && pathLength > 1) {
+               m_lookAtSafe = graph[predictNode].origin + pev->view_ofs;
+            }
          }
       }
       else {
