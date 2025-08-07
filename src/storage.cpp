@@ -434,7 +434,7 @@ StringRef BotStorage::getRunningPath () {
    static String path {};
 
    // we're do not do relative (against bot's library) paths on android 
-   if (plat.android) {
+   if (plat.android || plat.emscripten) {
       if (path.empty ()) {
          path = strings.joinPath (game.getRunningModName (), folders.addons, folders.bot);
       }
