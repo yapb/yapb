@@ -1124,7 +1124,7 @@ void Bot::selectWeapons (float distance, int, int id, int choosen) {
       else if (isShieldDrawn ()
          || m_isReloading
          || (hasEnemy && (m_enemy->v.button & IN_RELOAD))
-         || (!hasEnemy && !seesEntity (m_enemy->v.origin))) {
+         || (hasEnemy && !seesEntity (m_enemy->v.origin))) {
 
          pev->button |= IN_ATTACK2; // draw out the shield
       }

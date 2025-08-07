@@ -446,7 +446,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
          // It has been adapted for usage to HLTV spectators, who don't send ClientCommands, but send
          // all their update information to the server using usercmd's instead, it seems.
 
-         if (bots[const_cast <edict_t *> (player)]) {
+         if (!cv_whose_your_daddy && bots[const_cast <edict_t *> (player)]) {
             random_seed = rg (0, 0x7fffffff);
          }
          dllapi.pfnCmdStart (player, cmd, random_seed);
