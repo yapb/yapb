@@ -867,6 +867,10 @@ bool Game::loadCSBinary () {
          }
       }
 
+      if (plat.emscripten) {
+        path = String(plat.env ("XASH3D_GAMELIBPATH")); // defined by launcher
+      }
+
       if (path.empty()) {
          path = strings.joinPath (modname, "dlls", lib) + kLibrarySuffix;
 
@@ -1003,7 +1007,7 @@ bool Game::postload () {
    // register engine lib handle
    m_engineLib.locate (reinterpret_cast <void *> (engfuncs.pfnPrecacheModel));
 
-   if (plat.android) {
+   if (plat.android || plat.emscripten) {
       m_gameFlags |= (GameFlags::Xash3D | GameFlags::Mobility | GameFlags::HasBotVoice | GameFlags::ReGameDLL);
 
       if (is (GameFlags::Metamod)) {
