@@ -92,12 +92,21 @@ template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *
       return false;
    }
 
+   // erase the current graph just in case
+   auto unlinkIfGraph = [&] () {
+      if (isGraph) {
+         unlinkFromDisk (false);
+      }
+   };
+
    // read the header
    StorageHeader hdr {};
    file.read (&hdr, sizeof (StorageHeader));
 
    // check the magic
    if (hdr.magic != kStorageMagic && hdr.magic != kStorageMagicUB) {
+      unlinkIfGraph ();
+
       if (tryReload ()) {
          return true;
       }
@@ -111,6 +120,8 @@ template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *
 
    // check the count
    if (hdr.length == 0 || hdr.length > kMaxNodes || hdr.length < kMaxNodeLinks) {
+      unlinkIfGraph ();
+
       if (tryReload ()) {
          return true;
       }
