@@ -935,7 +935,7 @@ void Bot::checkFall () {
       }
    }
 
-   if (!m_checkFall || !isOnFloor ()) {
+   if (!m_checkFall || !isOnFloor () || !m_fixFallTimer.elapsed ()) {
       return;
    }
    m_checkFall = false;
@@ -962,6 +962,8 @@ void Bot::checkFall () {
    if (fixFall) {
       m_currentNodeIndex = kInvalidNodeIndex;
       findValidNode ();
+
+      m_fixFallTimer.start (1.0f);
    }
 }
 
