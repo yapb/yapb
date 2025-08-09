@@ -831,7 +831,11 @@ bool Game::loadCSBinary () {
    if (libSuffix.empty ())
       libs.insert (0, { "mp", "cs", "cs_i386" });
    else {
-      libs.insert (0, { "mp", "cs" });
+      // on Android, it's important to have `lib` prefix, otherwise package manager won't unpack the libraries
+      if (plat.android)
+         libs.insert (0, { "libcs" });
+      else
+         libs.insert (0, { "mp", "cs" });
 
       for (auto &lib: libs) {
          lib += libSuffix;
