@@ -46,6 +46,19 @@ void BotConfig::loadMainConfig (bool isFirstLoad) {
       return false;
    };
 
+   auto storeVarValue = [] (cvar_t *c,  StringRef value) {
+      auto &cvars = game.getCvars ();
+
+      for (auto &var : cvars) {
+         if (var.name == c->name) {
+            var.init = value;
+            engfuncs.pfnCvar_DirectSet (c, value.chars ());
+
+            break;
+         }
+      }
+   };
+
    String line {};
    MemFile file {};
 
@@ -77,16 +90,16 @@ void BotConfig::loadMainConfig (bool isFirstLoad) {
 
                   // preserve quota number if it's zero
                   if (cv_quota.name () == cvar->name && cv_quota.as <int> () <= 0) {
-                     engfuncs.pfnCvar_DirectSet (cvar, value);
+                     storeVarValue (cvar, value);
                      continue;
                   }
                   ctrl.msg ("Bot CVAR '%s' differs from the stored in the config (%s/%s). Ignoring.", cvar->name, cvar->string, value);
 
                   // ensure cvar will have old value
-                  engfuncs.pfnCvar_DirectSet (cvar, cvar->string);
+                  storeVarValue (cvar, cvar->string);
                }
                else {
-                  engfuncs.pfnCvar_DirectSet (cvar, value);
+                  storeVarValue (cvar, value);
                }
             }
             else {
@@ -108,12 +121,17 @@ void BotConfig::loadMainConfig (bool isFirstLoad) {
    // preload custom config
    conf.loadCustomConfig ();
 
+   // startup the sockets on windows and check if our host is available
+   if (isFirstLoad) {
+      http.startup (conf.fetchCustom ("CheckConnectivityHost"), "Bot is unable to check network availability. Networking features are disabled.");
+   }
+
    // bind the correct menu key for bot menu...
    if (!game.isDedicated ()) {
       auto val = cv_bind_menu_key.as <StringRef> ();
 
       if (!val.empty ()) {
-         game.serverCommand ("bind \"%s\" \"yb menu\"", val);
+         game.serverCommand ("bind \"%s\" \"%s menu\"", val, product.cmdPri);
       }
    }
    static const bool disableLogWrite = conf.fetchCustom ("DisableLogFile").startsWith ("yes");
@@ -698,10 +716,10 @@ void BotConfig::loadCustomConfig () {
          { "ZMDelayCvar",  "zp_delay" },
          { "ZMInfectedTeam", "T" },
          { "EnableFakeBotFeatures", "no" },
-         { "DisableLogFile", "no" }
+         { "DisableLogFile", "no" },
+         { "CheckConnectivityHost", "yapb.jeefo.net" }
       };
    };
-
    setDefaults ();
 
    // has errors ?

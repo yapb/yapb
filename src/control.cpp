@@ -636,7 +636,7 @@ int BotControl::cmdNodeErase () {
 
    // prevent accidents when graph are deleted unintentionally
    if (arg <StringRef> (iamsure) == "iamsure") {
-      bstor.unlinkFromDisk (false);
+      bstor.unlinkFromDisk (false, false);
    }
    else {
       msg ("Please, append \"iamsure\" as parameter to get graph erased from the disk.");
@@ -647,7 +647,7 @@ int BotControl::cmdNodeErase () {
 int BotControl::cmdNodeEraseTraining () {
    enum args { graph_cmd = 1, cmd };
 
-   bstor.unlinkFromDisk (true);
+   bstor.unlinkFromDisk (true, false);
 
    return BotCommandResult::Handled;
 }

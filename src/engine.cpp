@@ -658,7 +658,7 @@ void ConVar::revert () {
 
    for (const auto &var : cvars) {
       if (var.name == ptr->name) {
-         set (var.initial);
+         set (var.init.chars ());
          break;
       }
    }
@@ -789,41 +789,38 @@ void Game::registerCvars (bool gameVars) {
    }
 }
 
-bool Game::loadCSBinary () {
-   StringRef modname = getRunningModName ();
-
-   if (modname.empty ()) {
-      return false;
-   }
-
-   Array <String> libs {};
-
-   // construct library suffix
-   String libSuffix {};
+void Game::constructCSBinaryName (StringArray &libs) {
+   String libSuffix {}; // construct library suffix
 
    if (plat.android) {
       libSuffix += "_android";
-   } else if (plat.psvita) {
+   }
+   else if (plat.psvita) {
       libSuffix += "_psvita";
    }
 
    if (plat.x64) {
       if (plat.arm) {
          libSuffix += "_arm64";
-      } else if (plat.ppc) {
+      }
+      else if (plat.ppc) {
          libSuffix += "_ppc64le";
-      } else {
+      }
+      else {
          libSuffix += "_amd64";
       }
-   } else {
+   }
+   else {
       if (plat.arm) {
          // don't want to put whole build.h logic from xash3d, just set whatever is supported by the YaPB
          if (plat.android) {
             libSuffix += "_armv7l";
-         } else {
+         }
+         else {
             libSuffix += "_armv7hf";
          }
-      } else if (!plat.nix && !plat.win && !plat.macos) {
+      }
+      else if (!plat.nix && !plat.win && !plat.macos) {
          libSuffix += "_i386";
       }
    }
@@ -837,10 +834,21 @@ bool Game::loadCSBinary () {
       else
          libs.insert (0, { "mp", "cs" });
 
-      for (auto &lib: libs) {
+      for (auto &lib : libs) {
          lib += libSuffix;
       }
    }
+}
+
+bool Game::loadCSBinary () {
+   StringRef modname = getRunningModName ();
+
+   if (modname.empty ()) {
+      return false;
+   }
+
+   StringArray libs {};
+   constructCSBinaryName (libs);
 
    auto libCheck = [&] (StringRef mod, StringRef dll) {
       // try to load gamedll
@@ -970,9 +978,6 @@ bool Game::postload () {
 
    // set out user agent for http stuff
    http.setUserAgent (strings.format ("%s/%s", product.name, product.version));
-
-   // startup the sockets on windows and check if our host is available (hardcoded, yup)
-   http.startup ("yapb.jeefo.net", "Bot is unable to check network availability. Networking features are disabled.");
 
    // set the app name
    plat.setAppName (product.name.chars ());

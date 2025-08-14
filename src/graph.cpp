@@ -1829,7 +1829,7 @@ bool BotGraph::loadGraphData () {
       }
 
       // notify user about graph problems
-      if (planner.isPathsCheckFailed ()) {
+      if (planner.isPathsCheckFailed () && !graph.isAnalyzed ()) {
          ctrl.msg ("Warning: Graph data has failed sanity check.");
          ctrl.msg ("Warning: Bots will use only shortest-path algo for path finding.");
          ctrl.msg ("Warning: This may significantly affect bots behavior on this map.");
@@ -2523,6 +2523,8 @@ bool BotGraph::checkNodes (bool teleportPlayer, bool onlyPaths) {
          if (test.index != kInvalidNodeIndex) {
             if (!exists (test.index)) {
                if (showErrors) {
+                  teleport (path);
+
                   msg ("Node %d path index %d out of range.", path.number, test.index);
                }
                teleport (path);
@@ -2531,17 +2533,17 @@ bool BotGraph::checkNodes (bool teleportPlayer, bool onlyPaths) {
             }
             else if (test.index == path.number) {
                if (showErrors) {
+                  teleport (path);
+
                   msg ("Node %d path index %d points to itself.", path.number, test.index);
                }
-               teleport (path);
-
                return false;
             }
          }
       }
    }
 
-   if (game.mapIs (MapFlags::HostageRescue)) {
+   if (!onlyPaths && game.mapIs (MapFlags::HostageRescue)) {
       if (rescuePoints == 0) {
          msg ("You didn't set a rescue point.");
          return false;
@@ -2648,10 +2650,10 @@ bool BotGraph::checkNodes (bool teleportPlayer, bool onlyPaths) {
    for (const auto &path : m_paths) {
       if (!visited[path.number]) {
          if (showErrors) {
+            teleport (path);
+
             msg ("Path broken from node %d to node 0.", path.number);
          }
-         teleport (path);
-
          return false;
       }
    }

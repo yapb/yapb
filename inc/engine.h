@@ -247,6 +247,8 @@ public:
    // load the cs binary in non metamod mode
    bool loadCSBinary ();
 
+   void constructCSBinaryName (StringArray &libs);
+
    // do post-load stuff
    bool postload ();
 

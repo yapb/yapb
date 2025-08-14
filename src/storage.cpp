@@ -95,7 +95,7 @@ template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *
    // erase the current graph just in case
    auto unlinkIfGraph = [&] () {
       if (isGraph) {
-         unlinkFromDisk (false);
+         unlinkFromDisk (false, true);
       }
    };
 
@@ -406,7 +406,7 @@ int32_t BotStorage::storageToBotFile (int32_t options) {
    return BotFile::Graph;
 }
 
-void BotStorage::unlinkFromDisk (bool onlyTrainingData) {
+void BotStorage::unlinkFromDisk (bool onlyTrainingData, bool silenceMessages) {
    // this function removes graph file from the hard disk
 
    StringArray unlinkable {};
@@ -423,9 +423,12 @@ void BotStorage::unlinkFromDisk (bool onlyTrainingData) {
    for (const auto &item : unlinkable) {
       if (plat.fileExists (item.chars ())) {
          plat.removeFile (item.chars ());
-         ctrl.msg ("File %s, has been deleted from the hard disk", item);
+
+         if (!silenceMessages) {
+            ctrl.msg ("File %s, has been deleted from the hard disk", item);
+         }
       }
-      else {
+      else if (!silenceMessages) {
          logger.error ("Unable to open %s", item);
       }
    }
