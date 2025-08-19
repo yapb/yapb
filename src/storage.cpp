@@ -448,7 +448,7 @@ StringRef BotStorage::getRunningPath () {
    static String path {};
 
    // we're do not do relative (against bot's library) paths on android 
-   if (plat.android || plat.emscripten) {
+   if (!game.is (GameFlags::Metamod)) {
       if (path.empty ()) {
          path = strings.joinPath (game.getRunningModName (), folders.addons, folders.bot);
       }
@@ -481,7 +481,7 @@ StringRef BotStorage::getRunningPathVFS () {
    static String path {};
 
    // we're do not do relative (against bot's library) paths on android 
-   if (plat.android) {
+   if (!game.is (GameFlags::Metamod)) {
       if (path.empty ()) {
          path = strings.joinPath (folders.addons, folders.bot);
       }
