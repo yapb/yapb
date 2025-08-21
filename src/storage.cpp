@@ -6,6 +6,7 @@
 //
 
 #include <yapb.h>
+#include "storage.h"
 
 #if defined(BOT_STORAGE_EXPLICIT_INSTANTIATIONS)
 
@@ -347,8 +348,7 @@ String BotStorage::buildPath (int32_t file, bool isMemoryLoad, bool withoutMapNa
       { BotFile::Pathmatrix, FilePath (folders.train, "pmx")},
       { BotFile::LogFile, FilePath (folders.logs, "txt")},
       { BotFile::Graph, FilePath (folders.graph, "graph")},
-      { BotFile::PodbotPWF, FilePath (folders.podbot, "pwf")},
-      { BotFile::EbotEWP, FilePath (folders.ebot, "ewp")},
+      { BotFile::PodbotPWF, FilePath (folders.podbot, "pwf")}
    };
 
    static StringArray path {};
@@ -447,8 +447,8 @@ StringRef BotStorage::getRunningPath () {
 
    static String path {};
 
-   // we're do not do relative (against bot's library) paths on android 
-   if (plat.android || plat.emscripten) {
+   // we're do not do relative (against bot's library) paths on specific cases
+   if (m_useNonRelativePaths) {
       if (path.empty ()) {
          path = strings.joinPath (game.getRunningModName (), folders.addons, folders.bot);
       }
@@ -459,7 +459,7 @@ StringRef BotStorage::getRunningPath () {
    if (path.empty ()) {
       path = SharedLibrary::path (&bstor);
 
-      if (path.startsWith ("<unk")) {
+      if (path.empty ()) {
          logger.fatal ("Unable to detect library path. Giving up...");
       }
 
@@ -481,7 +481,7 @@ StringRef BotStorage::getRunningPathVFS () {
    static String path {};
 
    // we're do not do relative (against bot's library) paths on android 
-   if (plat.android) {
+   if (m_useNonRelativePaths) {
       if (path.empty ()) {
          path = strings.joinPath (folders.addons, folders.bot);
       }
@@ -495,6 +495,23 @@ StringRef BotStorage::getRunningPathVFS () {
       path = path.substr (path.find (kPathSeparator) + 1); // skip the game dir
    }
    return path;
+}
+
+void BotStorage::checkInstallLocation () {
+   if (plat.android || plat.emscripten) {
+      m_useNonRelativePaths = true;
+      return;
+   }
+   String path = SharedLibrary::path (&bstor);
+
+   if (path.empty ()) {
+      m_useNonRelativePaths = true;
+      return;
+   }
+   String dpath = strings.joinPath (folders.addons, folders.bot, folders.bin);
+   path = path.substr (0, path.rfind (kPathSeparator));
+
+   m_useNonRelativePaths = !path.lowercase ().endsWith (dpath.lowercase ());
 }
 
 #endif // BOT_STORAGE_EXPLICIT_INSTANTIATIONS

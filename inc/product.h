@@ -67,7 +67,7 @@ public:
    CTS_BUILD_STR train { "train" };
    CTS_BUILD_STR graph { "graph" };
    CTS_BUILD_STR podbot { "pwf" };
-   CTS_BUILD_STR ebot { "ewp" };
+   CTS_BUILD_STR bin { "bin" };
 } folders {};
 
 #undef CTS_BUILD_STR

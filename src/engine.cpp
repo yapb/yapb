@@ -959,6 +959,7 @@ bool Game::loadCSBinary () {
 }
 
 bool Game::postload () {
+   bstor.checkInstallLocation (); // check if installed just as in manual
 
    // register logger
    logger.initialize (bstor.buildPath (BotFile::LogFile), [] (const char *msg) {

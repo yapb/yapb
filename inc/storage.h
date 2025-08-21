@@ -40,8 +40,7 @@ CR_DECLARE_SCOPED_ENUM_TYPE (BotFile, uint32_t,
    Practice = 2,
    Graph = 3,
    Pathmatrix = 4,
-   PodbotPWF = 5,
-   EbotEWP = 6
+   PodbotPWF = 5
 )
 
 class BotStorage final : public Singleton <BotStorage> {
@@ -58,6 +57,7 @@ private:
 private:
    int m_retries {};
    ULZ *m_ulz {};
+   bool m_useNonRelativePaths {};
 
 public:
    BotStorage () = default;
@@ -90,6 +90,9 @@ public:
 
    // remove all bot related files from disk
    void unlinkFromDisk (bool onlyTrainingData, bool silenceMessages);
+
+   // is correctly installed and running from correct folder?
+   void checkInstallLocation ();
 
 public:
    // loading the graph may attempt to recurse loading, with converting or download, reset retry counter

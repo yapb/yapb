@@ -1702,9 +1702,7 @@ bool BotGraph::convertOldFormat () {
    MemFile fp (bstor.buildPath (BotFile::PodbotPWF, true));
 
    if (!fp) {
-      if (!fp.open (bstor.buildPath (BotFile::EbotEWP, true))) {
-         return false;
-      }
+      return false;
    }
 
    PODGraphHeader header {};
