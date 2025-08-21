@@ -6,7 +6,6 @@
 //
 
 #include <yapb.h>
-#include "storage.h"
 
 #if defined(BOT_STORAGE_EXPLICIT_INSTANTIATIONS)
 
