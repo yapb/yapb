@@ -2,7 +2,7 @@
 # YaPB - Counter-Strike Bot based on PODBot by Markus Klinge.
 #
 # Copyright © 2023 Velaron.
-# Copyright © YaPB Project Developers <yapb@jeefo.net>. 
+# Copyright © YaPB Project Developers <yapb@jeefo.net>.
 #
 # SPDX-License-Identifier: MIT
 #
@@ -83,14 +83,16 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU"
         target_link_options(${PROJECT_NAME} PRIVATE -sSIDE_MODULE=1)
         set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".wasm")
     endif ()
-	
+
     if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
         target_compile_options(${PROJECT_NAME} PRIVATE -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden -fno-math-errno)
-    
+
         if(NOT WIN32 AND BUILD_X86)
             target_compile_options(${PROJECT_NAME} PRIVATE -fdata-sections -ffunction-sections -fcf-protection=none -fno-plt)
-            target_link_options(${PROJECT_NAME} PRIVATE -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/ext/ldscripts/version.lds -Wl,--gc-sections)
-    
+			if(NOT APPLE)
+            	target_link_options(${PROJECT_NAME} PRIVATE -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/ext/ldscripts/version.lds -Wl,--gc-sections)
+			endif()
+
             if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
                 target_compile_options(${PROJECT_NAME} PRIVATE -fgraphite-identity -floop-nest-optimize)
                 target_link_options(${PROJECT_NAME} PRIVATE -fgraphite-identity -floop-nest-optimize)
@@ -119,7 +121,7 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU"
     if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     endif()
-	
+
     if(VITA)
         target_compile_options(${PROJECT_NAME} PRIVATE -fno-use-cxa-atexit)
     else()
