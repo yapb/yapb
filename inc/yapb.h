@@ -737,6 +737,7 @@ public:
 
 public:
    void logic (); /// the things that can be executed while skipping frames
+   void upkeep ();
    void spawned ();
    void takeBlind (int alpha);
    void takeDamage (edict_t *inflictor, int damage, int armor, int bits);

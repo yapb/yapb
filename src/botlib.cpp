@@ -3010,13 +3010,7 @@ void Bot::frame () {
    if (m_thinkTimer.time < game.time ()) {
       m_thinkTimer.time = game.time () + m_thinkTimer.interval;
 
-      if (m_aimFlags & AimFlags::Enemy) {
-         focusEnemy ();
-      }
-      doFireWeapons ();
-      updateLookAngles ();
-
-      pev->flags |= FL_CLIENT | FL_FAKECLIENT; // restore fake client bit, just in case
+      upkeep ();
 
       if (m_fullThinkTimer.time < game.time ()) {
          m_fullThinkTimer.time = game.time () + m_fullThinkTimer.interval;
@@ -3090,6 +3084,7 @@ void Bot::update () {
    if (m_lastDamageTimestamp < game.time () && !cr::fzero (m_lastDamageTimestamp)) {
       m_lastDamageTimestamp = 0.0f;
    }
+   pev->flags |= FL_CLIENT | FL_FAKECLIENT; // restore fake client bit, just in case
 
    // is bot movement enabled
    m_botMovement = false;
@@ -3391,8 +3386,6 @@ void Bot::logic () {
 
    executeTasks (); // execute current task
    setAimDirection (); // choose aim direction
-   updateLookAngles (); // and turn to chosen aim direction
-   doFireWeapons (); // do weapon firing
 
    // check for reloading
    if (m_reloadCheckTime <= game.time ()) {
@@ -3473,6 +3466,14 @@ void Bot::logic () {
    m_prevVelocity = cr::abs (pev->velocity.length2d ());
 
    m_lastDamageType = -1; // reset damage
+}
+
+void Bot::upkeep () {
+   if (m_aimFlags & AimFlags::Enemy) {
+      focusEnemy ();
+   }
+   doFireWeapons ();
+   updateLookAngles ();
 }
 
 void Bot::spawned () {
