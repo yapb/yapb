@@ -1739,7 +1739,7 @@ void Bot::newRound () {
          thinkInterval = 1.0f / 50.0f; // xash3d works acceptable at 50fps
       }
    }
-   auto fullThinkInterval = 1.0f / 10.0f;
+   auto fullThinkInterval = 1.0f / (thinkFps * 0.5f);
 
    // legacy games behaves strange, when this enabled, disable for xash3d as well if requested
    if (bots.isFrameSkipDisabled ()) {

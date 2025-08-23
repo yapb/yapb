@@ -533,6 +533,7 @@ private:
    void donateC4ToHuman ();
    void clearAmmoInfo ();
    void handleChatterTaskChange (Task tid);
+   void executeChatterFrameEvents ();
 
    void completeTask ();
    void executeTasks ();

@@ -2455,6 +2455,49 @@ void Bot::handleChatterTaskChange (Task tid) {
    }
 }
 
+void Bot::executeChatterFrameEvents () {
+   if (cv_radio_mode.as <int> () != 2) {
+      return;
+   }
+
+   // some stuff required by by chatter engine
+   if ((m_states & Sense::SeeingEnemy) && !game.isNullEntity (m_enemy)) {
+      int hasFriendNearby = numFriendsNear (pev->origin, 512.0f);
+
+      if (!hasFriendNearby && rg.chance (45) && (m_enemy->v.weapons & cr::bit (Weapon::C4))) {
+         pushChatterMessage (Chatter::SpotTheBomber);
+      }
+      else if (!hasFriendNearby && rg.chance (45) && m_team == Team::Terrorist && util.isPlayerVIP (m_enemy)) {
+         pushChatterMessage (Chatter::VIPSpotted);
+      }
+      else if (!hasFriendNearby
+         && rg.chance (50)
+         && game.getTeam (m_enemy) != m_team
+         && isGroupOfEnemies (m_enemy->v.origin)) {
+
+         pushChatterMessage (Chatter::ScaredEmotion);
+      }
+      else if (!hasFriendNearby
+         && rg.chance (40)
+         && (m_enemy->v.weapons & kSniperWeaponMask)) {
+
+         pushChatterMessage (Chatter::SniperWarning);
+      }
+
+      // if bot is trapped under shield yell for help !
+      if (getCurrentTaskId () == Task::Camp && hasShield () && isShieldDrawn () && hasFriendNearby >= 2) {
+         pushChatterMessage (Chatter::PinnedDown);
+      }
+   }
+
+   // if bomb planted warn players !
+   if (bots.hasBombSay (BombPlantedSay::Chatter) && bots.isBombPlanted () && m_team == Team::CT) {
+      pushChatterMessage (Chatter::GottaFindC4);
+      bots.clearBombSay (BombPlantedSay::Chatter);
+   }
+   
+}
+
 void Bot::checkRadioQueue () {
    // this function handling radio and reacting to it
 
@@ -3010,14 +3053,12 @@ void Bot::frame () {
    if (m_thinkTimer.time < game.time ()) {
       m_thinkTimer.time = game.time () + m_thinkTimer.interval;
 
-      upkeep ();
-
       if (m_fullThinkTimer.time < game.time ()) {
          m_fullThinkTimer.time = game.time () + m_fullThinkTimer.interval;
 
          update ();
       }
-      runMovement ();
+      upkeep ();
    }
 
    if (m_slowFrameTimestamp > game.time ()) {
@@ -3335,44 +3376,7 @@ void Bot::logic () {
    else if (!game.isNullEntity (m_enemy)) {
       trackEnemies ();
    }
-
-   // some stuff required by by chatter engine
-   if (cv_radio_mode.as <int> () == 2) {
-      if ((m_states & Sense::SeeingEnemy) && !game.isNullEntity (m_enemy)) {
-         int hasFriendNearby = numFriendsNear (pev->origin, 512.0f);
-
-         if (!hasFriendNearby && rg.chance (45) && (m_enemy->v.weapons & cr::bit (Weapon::C4))) {
-            pushChatterMessage (Chatter::SpotTheBomber);
-         }
-         else if (!hasFriendNearby && rg.chance (45) && m_team == Team::Terrorist && util.isPlayerVIP (m_enemy)) {
-            pushChatterMessage (Chatter::VIPSpotted);
-         }
-         else if (!hasFriendNearby
-            && rg.chance (50)
-            && game.getTeam (m_enemy) != m_team
-            && isGroupOfEnemies (m_enemy->v.origin)) {
-
-            pushChatterMessage (Chatter::ScaredEmotion);
-         }
-         else if (!hasFriendNearby
-            && rg.chance (40)
-            && (m_enemy->v.weapons & kSniperWeaponMask)) {
-
-            pushChatterMessage (Chatter::SniperWarning);
-         }
-
-         // if bot is trapped under shield yell for help !
-         if (getCurrentTaskId () == Task::Camp && hasShield () && isShieldDrawn () && hasFriendNearby >= 2) {
-            pushChatterMessage (Chatter::PinnedDown);
-         }
-      }
-
-      // if bomb planted warn players !
-      if (bots.hasBombSay (BombPlantedSay::Chatter) && bots.isBombPlanted () && m_team == Team::CT) {
-         pushChatterMessage (Chatter::GottaFindC4);
-         bots.clearBombSay (BombPlantedSay::Chatter);
-      }
-   }
+   executeChatterFrameEvents ();
 
    m_checkTerrain = true;
    m_moveToGoal = true;
@@ -3469,8 +3473,10 @@ void Bot::logic () {
 
 void Bot::upkeep () {
    setAimDirection ();
-   updateLookAngles ();
    doFireWeapons ();
+
+   updateLookAngles ();
+   runMovement ();
 }
 
 void Bot::spawned () {
