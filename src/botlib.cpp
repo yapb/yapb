@@ -3010,7 +3010,7 @@ void Bot::frame () {
    if (m_thinkTimer.time < game.time ()) {
       m_thinkTimer.time = game.time () + m_thinkTimer.interval;
 
-      if (m_aimFlags && AimFlags::Enemy) {
+      if (m_aimFlags & AimFlags::Enemy) {
          focusEnemy ();
       }
       doFireWeapons ();
