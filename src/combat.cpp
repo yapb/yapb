@@ -1217,6 +1217,14 @@ void Bot::selectWeapons (float distance, int, int id, int choosen) {
    }
 }
 
+void Bot::doFireWeapons () {
+   // the bots wants to fire at something?
+
+   if (m_shootAtDeadTime > game.time () || (m_wantsToFire && !m_isUsingGrenade && m_shootTime <= game.time ())) {
+      fireWeapons (); // if bot didn't fire a bullet try again next frame
+   }
+}
+
 void Bot::fireWeapons () {
    // this function will return true if weapon was fired, false otherwise
 

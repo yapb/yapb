@@ -1732,23 +1732,22 @@ void Bot::newRound () {
       pushChatterMessage (Chatter::NewRound);
    }
    auto thinkFps = cr::clamp (cv_think_fps.as <float> (), 30.0f, 90.0f);
-
-   auto updateInterval = 1.0f / thinkFps;
-   auto commandInterval = 1.0f / 60.0f;
+   auto thinkInterval = 1.0f / thinkFps;
 
    if (game.is (GameFlags::Xash3D)) {
       if (thinkFps < 50) {
-         updateInterval = 1.0f / 50.0f; // xash3d works acceptable at 50fps
+         thinkInterval = 1.0f / 50.0f; // xash3d works acceptable at 50fps
       }
    }
+   auto fullThinkInterval = 1.0f / 10.0f;
 
    // legacy games behaves strange, when this enabled, disable for xash3d as well if requested
    if (bots.isFrameSkipDisabled ()) {
-      updateInterval = 0.0f;
-      commandInterval = 0.0f;
+      thinkInterval = 0.0f;
+      fullThinkInterval = 0.0f;
    }
-   m_thinkDelay.interval = updateInterval;
-   m_commandDelay.interval = commandInterval;
+   m_thinkTimer.interval = thinkInterval;
+   m_fullThinkTimer.interval = fullThinkInterval;
 }
 
 void Bot::resetPathSearchType () {

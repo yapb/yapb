@@ -519,6 +519,7 @@ private:
    void findValidNode ();
    void setPathOrigin ();
    void fireWeapons ();
+   void doFireWeapons ();
    void selectWeapons (float distance, int index, int id, int choosen);
    void focusEnemy ();
    void selectBestWeapon ();
@@ -727,8 +728,8 @@ public:
    Deque <int32_t> m_msgQueue {};
    Array <int32_t> m_goalHist {};
 
-   FrameDelay m_thinkDelay {};
-   FrameDelay m_commandDelay {};
+   FrameDelay m_thinkTimer {};
+   FrameDelay m_fullThinkTimer {};
 
 public:
    Bot (edict_t *bot, int difficulty, int personality, int team, int skin);

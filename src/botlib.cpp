@@ -3007,24 +3007,26 @@ void Bot::checkParachute () {
 }
 
 void Bot::frame () {
-   pev->flags |= FL_CLIENT | FL_FAKECLIENT; // restore fake client bit, just in case
+   if (m_thinkTimer.time < game.time ()) {
+      m_thinkTimer.time = game.time () + m_thinkTimer.interval;
 
-   const auto timestamp = game.time ();
+      if (m_aimFlags && AimFlags::Enemy) {
+         focusEnemy ();
+      }
+      doFireWeapons ();
+      updateLookAngles ();
 
-   if (m_thinkDelay.time <= timestamp) {
-      update ();
+      pev->flags |= FL_CLIENT | FL_FAKECLIENT; // restore fake client bit, just in case
 
-      // delay next execution for thinking
-      m_thinkDelay.time = timestamp + m_thinkDelay.interval;
-   }
+      if (m_fullThinkTimer.time < game.time ()) {
+         m_fullThinkTimer.time = game.time () + m_fullThinkTimer.interval;
 
-   // run bot command on twice speed
-   if (m_commandDelay.time <= timestamp) {
+         update ();
+      }
       runMovement ();
-      m_commandDelay.time = timestamp + m_commandDelay.interval;
    }
 
-   if (m_slowFrameTimestamp > timestamp) {
+   if (m_slowFrameTimestamp > game.time ()) {
       return;
    }
 
@@ -3390,11 +3392,7 @@ void Bot::logic () {
    executeTasks (); // execute current task
    setAimDirection (); // choose aim direction
    updateLookAngles (); // and turn to chosen aim direction
-
-   // the bots wants to fire at something?
-   if (m_shootAtDeadTime > game.time () || (m_wantsToFire && !m_isUsingGrenade && m_shootTime <= game.time ())) {
-      fireWeapons (); // if bot didn't fire a bullet try again next frame
-   }
+   doFireWeapons (); // do weapon firing
 
    // check for reloading
    if (m_reloadCheckTime <= game.time ()) {
