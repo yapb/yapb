@@ -3385,7 +3385,6 @@ void Bot::logic () {
    m_isUsingGrenade = false;
 
    executeTasks (); // execute current task
-   setAimDirection (); // choose aim direction
 
    // check for reloading
    if (m_reloadCheckTime <= game.time ()) {
@@ -3469,11 +3468,9 @@ void Bot::logic () {
 }
 
 void Bot::upkeep () {
-   if (m_aimFlags & AimFlags::Enemy) {
-      focusEnemy ();
-   }
-   doFireWeapons ();
+   setAimDirection ();
    updateLookAngles ();
+   doFireWeapons ();
 }
 
 void Bot::spawned () {
