@@ -80,7 +80,7 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU"
         #target_compile_options(${PROJECT_NAME} PRIVATE -msse -msse2 -msse3 -msimd128 -fPIC)
         target_compile_definitions(${PROJECT_NAME} PRIVATE CR_DISABLE_SIMD)
         target_compile_options(${PROJECT_NAME} PRIVATE -fPIC -fvisibility=hidden)
-        target_link_options(${PROJECT_NAME} PRIVATE -sSIDE_MODULE=1)
+        target_link_options(${PROJECT_NAME} PRIVATE -sSIDE_MODULE=1 -Oz --closure 1 --minify-wasm-imports)
         set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".wasm")
     endif ()
 
