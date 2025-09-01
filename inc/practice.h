@@ -124,7 +124,6 @@ public:
    }
 
    void setHighestDamageForTeam (int32_t team, int32_t value) {
-      MutexScopedLock lock (m_damageUpdateLock);
       m_teamHighestDamage[team] = value;
    }
 };

@@ -552,7 +552,7 @@ void Bot::doPlayerAvoidance (const Vector &normal) {
 
          if (graph.exists (destIndex)) {
             findPath (m_currentNodeIndex, destIndex, other->m_pathType);
-            other->findPath (m_currentNodeIndex, destIndex);
+            other->findPath (m_currentNodeIndex, destIndex, m_pathType);
          }
       }
    }
@@ -644,13 +644,6 @@ void Bot::checkTerrain (const Vector &dirNormal) {
          else {
             m_firstCollideTime = 0.0f;
          }
-      }
-
-      if (m_probeTime >= game.time ()) {
-         m_isStuck = true;
-      }
-      else if (m_probeTime + randomProbeTime < game.time () && !cr::fzero (m_probeTime)) {
-         resetCollision (); // resets its collision state because it was too long time in probing state
       }
 
       // not stuck?
@@ -914,6 +907,15 @@ void Bot::checkFall () {
       return;
    }
 
+   // take in account node sequences levels to compensate surface inclining 
+   if (m_previousNodes[0] != kInvalidNodeIndex) {
+      const auto &pn = graph[m_previousNodes[0]];
+
+      if (cr::abs (pn.origin.z - m_pathOrigin.z) < cv_graph_analyze_max_jump_height.as <float> ()) {
+         return;
+      }
+   }
+
    if (!m_checkFall) {
       if (isOnFloor ()) {
          m_checkFallPoint[0] = pev->origin;
@@ -948,6 +950,7 @@ void Bot::checkFall () {
       && (nowDistanceSq > baseDistanceSq * 1.2f || nowDistanceSq > baseDistanceSq + 200.0f)
       && baseDistanceSq >= cr::sqrf (80.0f) && nowDistanceSq >= cr::sqrf (100.0f)) {
       fixFall = true;
+
    }
    else if (m_checkFallPoint[1].z > pev->origin.z + 128.0f
       && m_checkFallPoint[0].z > pev->origin.z + 128.0f) {
@@ -1988,7 +1991,7 @@ float Bot::getEstimatedNodeReachTime () {
       }
       estimatedTime = cr::clamp (estimatedTime, 3.0f, longTermReachability ? 8.0f : 3.5f);
    }
-   return estimatedTime;
+   return estimatedTime += m_lastDamageTimestamp >= game.time () ? 1.0f : 0.0f;
 }
 
 void Bot::findValidNode () {
@@ -3148,10 +3151,7 @@ bool Bot::checkWallOnLeft (float distance) {
    game.testLine (pev->origin, pev->origin - pev->angles.right () * distance, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
-   if (tr.flFraction < 1.0f) {
-      return true;
-   }
-   return false;
+   return tr.flFraction < 1.0f;
 }
 
 bool Bot::checkWallOnRight (float distance) {
@@ -3161,10 +3161,7 @@ bool Bot::checkWallOnRight (float distance) {
    game.testLine (pev->origin, pev->origin + pev->angles.right () * distance, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
-   if (tr.flFraction < 1.0f) {
-      return true;
-   }
-   return false;
+   return tr.flFraction < 1.0f;
 }
 
 bool Bot::checkWallOnBehind (float distance) {
@@ -3174,10 +3171,7 @@ bool Bot::checkWallOnBehind (float distance) {
    game.testLine (pev->origin, pev->origin - pev->angles.forward () * distance, TraceIgnore::Monsters, ent (), &tr);
 
    // check if the trace hit something...
-   if (tr.flFraction < 1.0f) {
-      return true;
-   }
-   return false;
+   return tr.flFraction < 1.0f;
 }
 
 bool Bot::isDeadlyMove (const Vector &to) {
@@ -3448,6 +3442,10 @@ bool Bot::isPreviousLadder () const {
 void Bot::findShortestPath (int srcIndex, int destIndex) {
    // this function finds the shortest path from source index to destination index
 
+   // stale bots shouldn't do pathfinding
+   if (m_isStale) {
+      return;
+   }
    clearSearchNodes ();
 
    m_chosenGoalIndex = srcIndex;
@@ -3471,6 +3469,11 @@ void Bot::syncFindPath (int srcIndex, int destIndex, FindPath pathType) {
       return; // allow only single instance of syncFindPath per-bot
    }
    ScopedUnlock <Mutex> unlock (m_pathFindLock);
+
+   // stale bots shouldn't do pathfinding
+   if (m_isStale) {
+      return;
+   }
 
    if (!graph.exists (srcIndex)) {
       srcIndex = changeNodeIndex (graph.getNearestNoBuckets (pev->origin, 256.0f));

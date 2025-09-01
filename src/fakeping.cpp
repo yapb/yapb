@@ -40,8 +40,6 @@ void BotFakePingManager::reset (edict_t *to) {
 }
 
 void BotFakePingManager::syncCalculate () {
-   MutexScopedLock lock (m_cs);
-
    int averagePing {};
 
    if (cv_ping_count_real_players) {

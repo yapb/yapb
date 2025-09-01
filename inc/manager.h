@@ -59,6 +59,8 @@ private:
    edict_t *m_killerEntity {}; // killer entity for bots
    BotTeamData  m_teamData[kGameTeamNum] {}; // teams shared data
 
+   CountdownTimer m_holdQuotaManagementTimer {}; // prevent from running quota management for some time
+
 protected:
    BotCreateResult create (StringRef name, int difficulty, int personality, int team, int skin);
 

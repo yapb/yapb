@@ -329,46 +329,37 @@ void BotSupport::checkWelcome () {
    }
 }
 
-bool BotSupport::findNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool sameTeam, bool needBot, bool needAlive, bool needDrawn, bool needBotWithC4) {
+bool BotSupport::findNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool sameTeam, bool needBot,
+   bool needAlive, bool needDrawn, bool needBotWithC4) {
+
    // this function finds nearest to to, player with set of parameters, like his
    // team, live status, search distance etc. if needBot is true, then pvHolder, will
    // be filled with bot pointer, else with edict pointer(!).
 
    searchDistance = cr::sqrf (searchDistance);
-
-   edict_t *survive = nullptr; // pointer to temporally & survive entity
-   float nearestPlayer = 4096.0f; // nearest player
-
-   const int toTeam = game.getTeam (to);
+   float nearestPlayerDistanceSq = cr::sqrf (4096.0f); // nearest player
 
    for (const auto &client : m_clients) {
       if (!(client.flags & ClientFlags::Used) || client.ent == to) {
          continue;
       }
 
-      if ((sameTeam && client.team != toTeam) || (needAlive && !(client.flags & ClientFlags::Alive)) || (needBot && !bots[client.ent]) || (needDrawn && (client.ent->v.effects & EF_NODRAW)) || (needBotWithC4 && (client.ent->v.weapons & Weapon::C4))) {
+      if ((sameTeam && client.team != game.getTeam (to))
+         || (needAlive && !(client.flags & ClientFlags::Alive))
+         || (needBot && !bots[client.ent])
+         || (needDrawn && (client.ent->v.effects & EF_NODRAW))
+         || (needBotWithC4 && (client.ent->v.weapons & Weapon::C4))) {
+
          continue; // filter players with parameters
       }
       const float distanceSq = client.ent->v.origin.distanceSq (to->v.origin);
 
-      if (distanceSq < nearestPlayer && distanceSq < searchDistance) {
-         nearestPlayer = distanceSq;
-         survive = client.ent;
+      if (distanceSq < nearestPlayerDistanceSq && distanceSq < searchDistance) {
+         nearestPlayerDistanceSq = distanceSq;
+         *pvHolder = needBot ? reinterpret_cast <void *> (bots[client.ent]) : reinterpret_cast <void *> (client.ent);
       }
    }
-
-   if (game.isNullEntity (survive)) {
-      return false; // nothing found
-   }
-
-   // fill the holder
-   if (needBot) {
-      *pvHolder = reinterpret_cast <void *> (bots[survive]);
-   }
-   else {
-      *pvHolder = reinterpret_cast <void *> (survive);
-   }
-   return true;
+   return !!*pvHolder;
 }
 
 void BotSupport::updateClients () {

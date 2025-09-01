@@ -576,7 +576,7 @@ IntArray BotGraph::getNearestInRadius (const float radius, const Vector &origin,
 
    if (bucket.length () < kMaxNodeLinks || radius > cr::sqrf (256.0f)) {
       for (const auto &path : m_paths) {
-         if (maxCount != -1 && static_cast <int> (result.length ()) > maxCount) {
+         if (maxCount != -1 && result.length <int32_t> () > maxCount) {
             break;
          }
 
@@ -588,7 +588,7 @@ IntArray BotGraph::getNearestInRadius (const float radius, const Vector &origin,
    }
 
    for (const auto &at : bucket) {
-      if (maxCount != -1 && static_cast <int> (result.length ()) > maxCount) {
+      if (maxCount != -1 && result.length <int32_t> () > maxCount) {
          break;
       }
 
@@ -1292,6 +1292,7 @@ void BotGraph::showFileInfo () {
    msg ("  uncompressed_size: %dkB", info.uncompressed / 1024);
    msg ("  options: %d", info.options); // display as string ?
    msg ("  analyzed: %s", isAnalyzed () ? conf.translate ("yes") : conf.translate ("no")); // display as string ?
+   msg ("  pathfinder: %s", planner.isPathsCheckFailed () ? "floyd" : "astar");
 
    msg ("");
 

@@ -58,7 +58,7 @@ public:
    ~Folders () = default;
 
 public:
-   CTS_BUILD_STR bot { "yapb" };
+   CTS_BUILD_STR bot { product.nameLower };
    CTS_BUILD_STR addons { "addons" };
    CTS_BUILD_STR config { "conf" };
    CTS_BUILD_STR data { "data" };

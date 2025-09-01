@@ -1742,7 +1742,7 @@ int BotControl::menuAutoPathDistance (int item) {
    return BotCommandResult::Handled;
 }
 
-int BotControl::menuKickPage1 (int item) {
+int BotControl::menuKickPage (int page, int item) {
    closeMenu (); // reset menu display
 
    switch (item) {
@@ -1754,93 +1754,21 @@ int BotControl::menuKickPage1 (int item) {
    case 6:
    case 7:
    case 8:
-      bots.kickBot (item - 1);
-      kickBotByMenu (1);
+      bots.kickBot (item + (page - 1) * 8 - 1);
+      kickBotByMenu (page);
       break;
 
    case 9:
-      kickBotByMenu (2);
+      kickBotByMenu (page + 1);
       break;
 
    case 10:
-      showMenu (Menu::Control);
-      break;
-   }
-   return BotCommandResult::Handled;
-}
-
-int BotControl::menuKickPage2 (int item) {
-   closeMenu (); // reset menu display
-
-   switch (item) {
-   case 1:
-   case 2:
-   case 3:
-   case 4:
-   case 5:
-   case 6:
-   case 7:
-   case 8:
-      bots.kickBot (item + 8 - 1);
-      kickBotByMenu (2);
-      break;
-
-   case 9:
-      kickBotByMenu (3);
-      break;
-
-   case 10:
-      kickBotByMenu (1);
-      break;
-   }
-   return BotCommandResult::Handled;
-}
-
-int BotControl::menuKickPage3 (int item) {
-   closeMenu (); // reset menu display
-
-   switch (item) {
-   case 1:
-   case 2:
-   case 3:
-   case 4:
-   case 5:
-   case 6:
-   case 7:
-   case 8:
-      bots.kickBot (item + 16 - 1);
-      kickBotByMenu (3);
-      break;
-
-   case 9:
-      kickBotByMenu (4);
-      break;
-
-   case 10:
-      kickBotByMenu (2);
-      break;
-   }
-   return BotCommandResult::Handled;
-}
-
-int BotControl::menuKickPage4 (int item) {
-   closeMenu (); // reset menu display
-
-   switch (item) {
-   case 1:
-   case 2:
-   case 3:
-   case 4:
-   case 5:
-   case 6:
-   case 7:
-   case 8:
-      bots.kickBot (item + 24 - 1);
-      kickBotByMenu (4);
-      break;
-
-   case 10:
-      kickBotByMenu (3);
+      if (page == 1) {
+         showMenu (Menu::Control);
+      }
+      else {
+         kickBotByMenu (page - 1);
+      }
       break;
    }
    return BotCommandResult::Handled;
@@ -2229,7 +2157,7 @@ BotControl::BotControl () {
    m_cmds.emplace ("kill/killbots/killall/kill_ct/kill_t", "kill [team] [silent]", "Kills the specified team / all the bots.", &BotControl::cmdKillBots);
    m_cmds.emplace ("fill/fillserver", "fill [team] [count] [difficulty] [personality]", "Fill the server (add bots) with specified parameters.", &BotControl::cmdFill);
    m_cmds.emplace ("vote/votemap", "vote [map_id]", "Forces all the bot to vote to specified map.", &BotControl::cmdVote);
-   m_cmds.emplace ("weapons/weaponmode", "weapons [knife|pistol|shotgun|smg|rifle|sniper|standard]", "Sets the bots weapon mode to use", &BotControl::cmdWeaponMode);
+   m_cmds.emplace ("weapons/weaponmode", "weapons [knife|pistol|shotgun|smg|rifle|sniper|standard]", "Sets the bots weapon mode to use.", &BotControl::cmdWeaponMode);
    m_cmds.emplace ("menu/botmenu", "menu [cmd]", "Opens the main bot menu, or command menu if specified.", &BotControl::cmdMenu);
    m_cmds.emplace ("version/ver/about", "version [no arguments]", "Displays version information about bot build.", &BotControl::cmdVersion);
    m_cmds.emplace ("graphmenu/wpmenu/wptmenu", "graphmenu [noarguments]", "Opens and displays bots graph editor.", &BotControl::cmdNodeMenu);

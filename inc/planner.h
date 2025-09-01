@@ -275,6 +275,10 @@ public:
       return m_pathsCheckFailed;
    }
 
+   void setPathsCheckFailed (const bool value) {
+      m_pathsCheckFailed = value;
+   }
+
 public:
    // do the pathfinding
    bool find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, int *pathDistance = nullptr);

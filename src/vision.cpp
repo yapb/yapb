@@ -425,15 +425,24 @@ void Bot::setAimDirection () {
    if (!(flags & (AimFlags::Grenade | AimFlags::Enemy | AimFlags::Entity))) {
 
       // check if narrow place and we're duck, do not predict enemies in that situation
-      const bool duckedInNarrowPlace = isInNarrowPlace () && ((m_pathFlags & NodeFlag::Crouch) || (pev->button & IN_DUCK));
+      const bool duckedInNarrowPlace = isInNarrowPlace ()
+         && ((m_pathFlags & NodeFlag::Crouch)
+            || (pev->button & IN_DUCK));
 
-      if (duckedInNarrowPlace || isOnLadder () || isInWater () || (m_pathFlags & NodeFlag::Ladder) || (m_currentTravelFlags & PathFlag::Jump)) {
+      if (duckedInNarrowPlace
+         || isOnLadder ()
+         || isInWater ()
+         || (m_pathFlags & NodeFlag::Ladder)
+         || (m_currentTravelFlags & PathFlag::Jump)) {
+
          flags &= ~(AimFlags::LastEnemy | AimFlags::PredictPath);
          m_canChooseAimDirection = false;
       }
 
       // don't switch view right away after loosing focus with current enemy 
-      if ((m_shootTime + rg (1.0f, 1.5f) > game.time () || m_seeEnemyTime + 1.5f > game.time ())
+      if ((m_shootTime + rg (0.75f, 1.25f) > game.time ()
+         || m_seeEnemyTime + 1.5f > game.time ())
+
          && m_forgetLastVictimTimer.elapsed ()
          && !m_lastEnemyOrigin.empty ()
          && util.isAlive (m_lastEnemy)
@@ -619,7 +628,10 @@ void Bot::setAimDirection () {
       if (horizontalMovement && m_pathWalk.hasNext ()) {
          const auto &nextPath = graph[m_pathWalk.next ()];
 
-         if ((nextPath.flags & NodeFlag::Ladder) && m_destOrigin.distanceSq (pev->origin) < cr::sqrf (128.0f) && nextPath.origin.z > m_pathOrigin.z + 26.0f) {
+         if ((nextPath.flags & NodeFlag::Ladder)
+            && m_destOrigin.distanceSq (pev->origin) < cr::sqrf (128.0f)
+            && nextPath.origin.z > m_pathOrigin.z + 26.0f) {
+
             m_lookAt = nextPath.origin + pev->view_ofs;
          }
       }
@@ -630,7 +642,10 @@ void Bot::setAimDirection () {
       }
 
       // try to look at last victim for a little, maybe there's some one else
-      if (game.isNullEntity (m_enemy) && m_difficulty >= Difficulty::Normal && !m_forgetLastVictimTimer.elapsed () && !m_lastVictimOrigin.empty ()) {
+      if (game.isNullEntity (m_enemy) && m_difficulty >= Difficulty::Normal
+         && !m_forgetLastVictimTimer.elapsed ()
+         && !m_lastVictimOrigin.empty ()) {
+
          m_lookAt = m_lastVictimOrigin + pev->view_ofs;
       }
    }

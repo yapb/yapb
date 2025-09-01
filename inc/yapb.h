@@ -730,7 +730,6 @@ public:
    Array <int32_t> m_goalHist {};
 
    FrameDelay m_thinkTimer {};
-   FrameDelay m_fullThinkTimer {};
 
 public:
    Bot (edict_t *bot, int difficulty, int personality, int team, int skin);
@@ -738,7 +737,6 @@ public:
 
 public:
    void logic (); /// the things that can be executed while skipping frames
-   void upkeep ();
    void spawned ();
    void takeBlind (int alpha);
    void takeDamage (edict_t *inflictor, int damage, int armor, int bits);

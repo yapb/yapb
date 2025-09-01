@@ -274,6 +274,11 @@ AStarResult AStarAlgo::find (int botTeam, int srcIndex, int destIndex, NodeAdder
 
       // safes us from bad graph...
       if (m_routeQue.length () >= getMaxLength () - 1) {
+         m_routeQue.clear ();
+
+         // infrom pathfinder to use floyds in that case
+         planner.setPathsCheckFailed (true);
+
          return AStarResult::InternalError;
       }
 

@@ -1023,14 +1023,14 @@ CR_EXPORT int Meta_Detach (PLUG_LOADTIME now, PL_UNLOAD_REASON reason) {
       gpMetaUtilFuncs->pfnLogError (PLID, "%s: plugin NOT detaching (can't unload plugin right now)", Plugin_info.name);
       return HLFalse; // returning FALSE prevents metamod from unloading this plugin
    }
+   // stop the worker
+   worker.shutdown ();
+
    // kick all bots off this server
    bots.kickEveryone (true);
 
    // save collected practice on shutdown
    practice.save ();
-
-   // stop the worker
-   worker.shutdown ();
 
    // disable hooks
    fakequeries.disable ();

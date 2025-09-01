@@ -338,7 +338,7 @@ Vector Game::getEntityOrigin (edict_t *ent) {
    }
 
    if (ent->v.origin.empty ()) {
-      return ent->v.absmin + (ent->v.size * 0.5);
+      return ent->v.absmin + ent->v.size * 0.5;
    }
    return ent->v.origin;
 }
@@ -935,7 +935,12 @@ bool Game::loadCSBinary () {
          }
 
          if (entity != nullptr) {
-            m_gameFlags |= (GameFlags::Modern | GameFlags::HasBotVoice | GameFlags::HasFakePings);
+            m_gameFlags |= (GameFlags::Modern | GameFlags::HasBotVoice);
+
+            // no fake pings on xash3d
+            if (!(m_gameFlags & (GameFlags::Xash3D | GameFlags::Xash3DLegacy))) {
+               m_gameFlags  |= GameFlags::HasFakePings;
+            }
          }
          else {
             m_gameFlags |= GameFlags::Legacy;

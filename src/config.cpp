@@ -352,6 +352,7 @@ void BotConfig::loadChatterConfig () {
          { "Chatter_Camp", Chatter::Camping, 10.0f },
          { "Chatter_OnARoll", Chatter::OnARoll, kMaxChatterRepeatInterval},
       };
+      Array <String> badFiles {};
 
       while (file.getLine (line)) {
          line.trim ();
@@ -393,7 +394,7 @@ void BotConfig::loadChatterConfig () {
                         m_chatter[event.code].emplace (cr::move (sound), event.repeat, duration);
                      }
                      else {
-                        game.print ("Warning: Couldn't get duration of sound '%s.wav.", sound);
+                        badFiles.push (sound);
                      }
                   }
                   sentences.clear ();
@@ -402,6 +403,10 @@ void BotConfig::loadChatterConfig () {
          }
       }
       file.close ();
+
+      if (!badFiles.empty ()) {
+         game.print ("Warning: Couldn't get duration of next chatter sounds: %s.", String::join (badFiles, ","));
+      }
    }
    else {
       cv_radio_mode.set (1);

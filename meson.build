@@ -149,12 +149,14 @@ if cxx == 'clang' or cxx == 'gcc'
                '-fdata-sections',
                '-ffunction-sections',
                '-fcf-protection=none',
-               '-fno-plt'
+               '-fno-plt',
+               '-Wa,--noexecstack'
             ]
 
             ldflags += [
                '-Wl,--version-script=' + meson.project_source_root() + '/ext/ldscripts/version.lds',
-               '-Wl,--gc-sections'
+               '-Wl,--gc-sections',
+               '-Wl,-z,noexecstack'
             ]
          else
             cxxflags += ['-DLINKENT_STATIC']
@@ -177,7 +179,7 @@ if cxx == 'clang' or cxx == 'gcc'
          ]
       endif
    else
-      cxxflags += ['-g3', '-ggdb', '-DDEBUG', '-D_FORTIFY_SOURCE=2']
+      cxxflags += ['-g3', '-ggdb', '-DDEBUG']
    endif
 
    # special script for mingw-64 builds

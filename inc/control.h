@@ -157,10 +157,23 @@ private:
    int menuGraphPath (int item);
    int menuCampDirections (int item);
    int menuAutoPathDistance (int item);
-   int menuKickPage1 (int item);
-   int menuKickPage2 (int item);
-   int menuKickPage3 (int item);
-   int menuKickPage4 (int item);
+
+   int menuKickPage1 (int item) {
+      return menuKickPage (1, item);
+   }
+
+   int menuKickPage2 (int item) {
+      return menuKickPage (2, item);
+   }
+
+   int menuKickPage3 (int item) {
+      return menuKickPage (3, item);
+   }
+
+   int menuKickPage4 (int item) {
+      return menuKickPage (4, item);
+   }
+   int menuKickPage (int page, int item);
 
 private:
    void createMenus ();

@@ -3053,12 +3053,7 @@ void Bot::frame () {
    if (m_thinkTimer.time < game.time ()) {
       m_thinkTimer.time = game.time () + m_thinkTimer.interval;
 
-      if (m_fullThinkTimer.time < game.time ()) {
-         m_fullThinkTimer.time = game.time () + m_fullThinkTimer.interval;
-
-         update ();
-      }
-      upkeep ();
+      update ();
    }
 
    if (m_slowFrameTimestamp > game.time ()) {
@@ -3182,6 +3177,7 @@ void Bot::update () {
    else if (!m_botMovement) {
       resetMovement ();
    }
+   runMovement ();
 }
 
 void Bot::logicDuringFreezetime () {
@@ -3199,7 +3195,7 @@ void Bot::logicDuringFreezetime () {
 
    if (rg.chance (15) && m_jumpTime < game.time ()) {
       pev->button |= IN_JUMP;
-      m_jumpTime = game.time () + rg (1.0f, 2.0f);
+      m_jumpTime = game.time () + rg (1.0f, 3.0f);
    }
    static Array <edict_t *> players {};
    players.clear ();
@@ -3253,7 +3249,7 @@ void Bot::logicDuringFreezetime () {
          m_needToSendWelcomeChat = false;
       }
    }
-   m_changeViewTime = game.time () + rg (1.25f, 2.0f);
+   m_changeViewTime = game.time () + rg (1.25f, 3.0f);
 }
 
 void Bot::executeTasks () {
@@ -3389,6 +3385,9 @@ void Bot::logic () {
    m_isUsingGrenade = false;
 
    executeTasks (); // execute current task
+   setAimDirection (); // choose aim direction
+   updateLookAngles (); // and turn to chosen aim direction
+   doFireWeapons (); // fire the weapons
 
    // check for reloading
    if (m_reloadCheckTime <= game.time ()) {
@@ -3469,14 +3468,6 @@ void Bot::logic () {
    m_prevVelocity = cr::abs (pev->velocity.length2d ());
 
    m_lastDamageType = -1; // reset damage
-}
-
-void Bot::upkeep () {
-   setAimDirection ();
-   doFireWeapons ();
-
-   updateLookAngles ();
-   runMovement ();
 }
 
 void Bot::spawned () {

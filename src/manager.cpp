@@ -348,6 +348,10 @@ void BotManager::maintainQuota () {
    // this function keeps number of bots up to date, and don't allow to maintain bot creation
    // while creation process in process.
 
+   if (!m_holdQuotaManagementTimer.elapsed ()) {
+      return;
+   }
+
    if (graph.length () < 1 || graph.hasChanged ()) {
       if (cv_quota.as <int> () > 0) {
          ctrl.msg ("There is no graph found. Cannot create bot.");
@@ -707,8 +711,8 @@ void BotManager::kickBot (int index) {
    auto bot = findBotByIndex (index);
 
    if (bot) {
-      decrementQuota ();
       bot->kick ();
+      decrementQuota ();
    }
 }
 
@@ -855,10 +859,15 @@ void BotManager::checkBotModel (edict_t *ent, char *infobuffer) {
 }
 
 void BotManager::checkNeedsToBeKicked () {
+   // this is called to check if bot is leaving server due to pathfinding error
+   // so this will cause to delay quota management stuff from executing for some time
+
    for (const auto &bot : bots) {
       if (bot->m_kickMeFromServer) {
+         m_holdQuotaManagementTimer.start (10.0f);
+         m_addRequests.clear ();
+
          bot->kick (); // kick bot from server if requested
-         break;
       }
    }
 }
@@ -1117,6 +1126,8 @@ void BotManager::balanceBotDifficulties () {
 
 void BotManager::destroy () {
    // this function free all bots slots (used on server shutdown)
+
+   m_holdQuotaManagementTimer.invalidate (); // restart quota manager
 
    for (auto &bot : m_bots) {
       bot->markStale ();
@@ -1739,15 +1750,12 @@ void Bot::newRound () {
          thinkInterval = 1.0f / 50.0f; // xash3d works acceptable at 50fps
       }
    }
-   auto fullThinkInterval = 1.0f / (thinkFps * 0.5f);
 
    // legacy games behaves strange, when this enabled, disable for xash3d as well if requested
    if (bots.isFrameSkipDisabled ()) {
       thinkInterval = 0.0f;
-      fullThinkInterval = 0.0f;
    }
    m_thinkTimer.interval = thinkInterval;
-   m_fullThinkTimer.interval = fullThinkInterval;
 }
 
 void Bot::resetPathSearchType () {
@@ -1804,10 +1812,6 @@ void Bot::kick (bool silent) {
 }
 
 void Bot::markStale () {
-   // wait till threads tear down
-   MutexScopedLock lock1 (m_pathFindLock);
-   MutexScopedLock lock2 (m_predictLock);
-
    // switch chatter icon off
    showChatterIcon (false, true);
 
@@ -1816,6 +1820,10 @@ void Bot::markStale () {
 
    // mark bot as leaving
    m_isStale = true;
+
+   // wait till threads tear down
+   MutexScopedLock lock1 (m_pathFindLock);
+   MutexScopedLock lock2 (m_predictLock);
 
    // clear the bot name
    conf.clearUsedName (this);
@@ -2397,7 +2405,7 @@ bool BotManager::isLineBlockedBySmoke (const Vector &from, const Vector &to) {
    const float maxSmokedLength = 0.7f * kSmokeGrenadeRadius;
 
    // return true if the total length of smoke-covered line-of-sight is too much
-   return (totalSmokedLength > maxSmokedLength);
+   return totalSmokedLength > maxSmokedLength;
 }
 
 bool BotManager::isFrameSkipDisabled () {
