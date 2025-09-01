@@ -7,13 +7,13 @@
 
 #include <yapb.h>
 
-ConVar cv_walking_allowed ("walking_allowed", "1", "Specifies whether bots able to use 'shift' if they thinks that enemy is near.");
-ConVar cv_camping_allowed ("camping_allowed", "1", "Allows or disallows bots to camp. Doesn't affects bomb/hostage defending tasks.");
+ConVar cv_walking_allowed ("walking_allowed", "1", "Specifies whether bots are able to use 'shift' if they think that an enemy is near.");
+ConVar cv_camping_allowed ("camping_allowed", "1", "Allows or disallows bots to camp. Doesn't affect bomb/hostage defending tasks.");
 
-ConVar cv_camping_time_min ("camping_time_min", "15.0", "Lower bound of time from which time for camping is calculated", true, 5.0f, 90.0f);
-ConVar cv_camping_time_max ("camping_time_max", "45.0", "Upper bound of time until which time for camping is calculated", true, 15.0f, 120.0f);
+ConVar cv_camping_time_min ("camping_time_min", "15.0", "Lower bound of time from which the time for camping is calculated.", true, 5.0f, 90.0f);
+ConVar cv_camping_time_max ("camping_time_max", "45.0", "Upper bound of time until which the time for camping is calculated.", true, 15.0f, 120.0f);
 
-ConVar cv_random_knife_attacks ("random_knife_attacks", "1", "Allows or disallows the ability for random knife attacks when bot is rushing and no enemy is nearby.");
+ConVar cv_random_knife_attacks ("random_knife_attacks", "1", "Allows or disallows the ability for random knife attacks when the bot is rushing and no enemy is nearby.");
 
 void Bot::normal_ () {
    m_aimFlags |= AimFlags::Nav;

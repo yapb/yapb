@@ -8,9 +8,9 @@
 #include <yapb.h>
 
 ConVar cv_display_menu_text ("display_menu_text", "1", "Enables or disables display menu text, when players asks for menu. Useful only for Android.", true, 0.0f, 1.0f, Var::Xash3D);
-ConVar cv_password ("password", "", "The value (password) for the setinfo key, if user sets correct password, he's gains access to bot commands and menus.", false, 0.0f, 0.0f, Var::Password);
-ConVar cv_password_key ("password_key", "_ybpw", "The name of setinfo key used to store password to bot commands and menus.", false);
-ConVar cv_bots_kill_on_endround ("bots_kill_on_endround", "0", "Allows to use classic bot kill on issuing end-round command in menus, instead of gamedll endround.", false);
+ConVar cv_password ("password", "", "The value (password) for the setinfo key. If the user sets the correct password, he gains access to bot commands and menus.", false, 0.0f, 0.0f, Var::Password);
+ConVar cv_password_key ("password_key", "_ybpw", "The name of the setinfo key used to store the password for bot commands and menus.", false);
+ConVar cv_bots_kill_on_endround ("bots_kill_on_endround", "0", "Allows the use of classic bot kill when issuing the end-round command in menus, instead of the gamedll endround.", false);
 
 int BotControl::cmdAddBot () {
    enum args { alias = 1, difficulty, personality, team, model, name, max };
@@ -244,7 +244,15 @@ int BotControl::cmdCvars () {
          cfgPath = strings.joinPath (bstor.getRunningPath (), folders.config, "maps", strings.format ("%s.%s", game.getMapName (), kConfigExtension));
       }
       cfg.open (cfgPath, "wt");
-      cfg.puts ("// Configuration file for %s\n\n", product.name);
+
+      cfg.puts ("//\n");
+      cfg.puts ("// @package: %s\n", product.name);
+      cfg.puts ("// @version: %s\n", product.version);
+      cfg.puts ("// @author: %s\n", product.author);
+      cfg.puts ("// @filename: %s.cfg\n", isSaveMap ? game.getMapName () : product.nameLower);
+      cfg.puts ("// \n");
+      cfg.puts ("// %s configuration file for %s. Can be executed using the 'exec' command.\n", isSaveMap ? "Map" : "Main", product.name);
+      cfg.puts ("//\n");
    }
    else {
       setRapidOutput (true);

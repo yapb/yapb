@@ -7,7 +7,7 @@
 
 #include <yapb.h>
 
-ConVar cv_has_team_semiclip ("has_team_semiclip", "0", "When enabled, bots will not try to avoid teammates on their way. Assuming some of the semiclip plugins are in use.");
+ConVar cv_has_team_semiclip ("has_team_semiclip", "0", "When enabled, bots will not try to avoid teammates on their way. Assumes that some semiclip plugins are in use.");
 ConVar cv_graph_slope_height ("graph_slope_height", "24.0", "Determines the maximum slope height change between the current and next node to consider the current link as a jump link. Only for generated graphs.", true, 12.0f, 48.0f);
 
 int Bot::findBestGoal () {

@@ -7,8 +7,8 @@
 
 #include <yapb.h>
 
-ConVar cv_bind_menu_key ("bind_menu_key", "=", "Binds specified key for opening bots menu.", false);
-ConVar cv_ignore_cvars_on_changelevel ("ignore_cvars_on_changelevel", "yb_quota,yb_autovacate", "Specifies comma separated list of bot cvars, that will not be overwritten by config on changelevel.", false);
+ConVar cv_bind_menu_key ("bind_menu_key", "=", "Binds the specified key for opening the bot menu.", false);
+ConVar cv_ignore_cvars_on_changelevel ("ignore_cvars_on_changelevel", "yb_quota,yb_autovacate", "Specifies a comma separated list of bot cvars that will not be overwritten by the config on changelevel.", false);
 
 BotConfig::BotConfig () {
    m_chat.resize (Chat::Count);

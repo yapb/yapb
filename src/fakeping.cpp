@@ -7,10 +7,10 @@
 
 #include <yapb.h>
 
-ConVar cv_ping_base_min ("ping_base_min", "5", "Lower bound for base bot ping shown in scoreboard upon creation.", true, 0.0f, 100.0f);
-ConVar cv_ping_base_max ("ping_base_max", "20", "Upper bound for base bot ping shown in scoreboard upon creation.", true, 0.0f, 100.0f);
-ConVar cv_ping_count_real_players ("ping_count_real_players", "1", "Count player pings when calculating average ping for bots. If no, some random ping chosen for bots.");
-ConVar cv_ping_updater_interval ("ping_updater_interval", "1.25", "Interval in which fakeping get updated in scoreboard.", true, 0.1f, 10.0f);
+ConVar cv_ping_base_min ("ping_base_min", "5", "Lower bound for base bot ping shown in the scoreboard upon creation.", true, 0.0f, 100.0f);
+ConVar cv_ping_base_max ("ping_base_max", "20", "Upper bound for base bot ping shown in the scoreboard upon creation.", true, 0.0f, 100.0f);
+ConVar cv_ping_count_real_players ("ping_count_real_players", "1", "Count player pings when calculating the average ping for bots. If not, a random ping is chosen for bots.");
+ConVar cv_ping_updater_interval ("ping_updater_interval", "1.25", "Interval at which the fake ping gets updated in the scoreboard.", true, 0.1f, 10.0f);
 
 bool BotFakePingManager::hasFeature () const {
    return game.is (GameFlags::HasFakePings) && cv_show_latency.as <int> () >= 2;

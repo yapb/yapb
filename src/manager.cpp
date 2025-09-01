@@ -7,48 +7,48 @@
 
 #include <yapb.h>
 
-ConVar cv_autovacate ("autovacate", "1", "Kick bots to automatically make room for human players.");
-ConVar cv_autovacate_keep_slots ("autovacate_keep_slots", "1", "How many slots autovacate feature should keep for human players.", true, 1.0f, 8.0f);
-ConVar cv_kick_after_player_connect ("kick_after_player_connect", "1", "Kick the bot immediately when a human player joins the server (yb_autovacate must be enabled).");
+ConVar cv_autovacate ("autovacate", "1", "Kicks bots to automatically make room for human players.");
+ConVar cv_autovacate_keep_slots ("autovacate_keep_slots", "1", "How many slots the autovacate feature should keep for human players.", true, 1.0f, 8.0f);
+ConVar cv_kick_after_player_connect ("kick_after_player_connect", "1", "Kicks the bot immediately when a human player joins the server (yb_autovacate must be enabled).");
 
-ConVar cv_quota ("quota", "9", "Specifies the number bots to be added to the game.", true, 0.0f, static_cast <float> (kGameMaxPlayers));
+ConVar cv_quota ("quota", "9", "Specifies the number of bots to be added to the game.", true, 0.0f, static_cast <float> (kGameMaxPlayers));
 ConVar cv_quota_mode ("quota_mode", "normal", "Specifies the type of quota.\nAllowed values: 'normal', 'fill', and 'match'.\nIf 'fill', the server will adjust bots to keep N players in the game, where N is yb_quota.\nIf 'match', the server will maintain a 1:N ratio of humans to bots, where N is yb_quota_match.", false);
-ConVar cv_quota_match ("quota_match", "0", "Number of players to match if yb_quota_mode set to 'match'", true, 0.0f, static_cast <float> (kGameMaxPlayers));
-ConVar cv_think_fps ("think_fps", "30.0", "Specifies how many times per second bot code will run.", true, 24.0f, 90.0f);
+ConVar cv_quota_match ("quota_match", "0", "Number of players to match if yb_quota_mode is set to 'match'.", true, 0.0f, static_cast <float> (kGameMaxPlayers));
+ConVar cv_think_fps ("think_fps", "30.0", "Specifies how many times per second the bot code will run.", true, 24.0f, 90.0f);
 ConVar cv_think_fps_disable ("think_fps_disable", "1", "Allows to completely disable think fps on Xash3D.", true, 0.0f, 1.0f, Var::Xash3D);
 
-ConVar cv_autokill_delay ("autokill_delay", "0.0", "Specifies amount of time in seconds when bots will be killed if no humans left alive.", true, 0.0f, 90.0f);
-ConVar cv_first_human_restart ("first_human_restart", "0.0", "Restart the game if first human player joined the bot game.", true, 0.0f, 1.0f);
+ConVar cv_autokill_delay ("autokill_delay", "0.0", "Specifies the amount of time in seconds after which bots will be killed if no humans are left alive.", true, 0.0f, 90.0f);
+ConVar cv_first_human_restart ("first_human_restart", "0", "Restart the game if the first human player joins a bot game.");
 
-ConVar cv_join_after_player ("join_after_player", "0", "Specifies whether bots should join server, only when at least one human player in game.");
-ConVar cv_join_team ("join_team", "any", "Forces all bots to join team specified here.", false);
+ConVar cv_join_after_player ("join_after_player", "0", "Specifies whether bots should join the server only when at least one human player is in the game.");
+ConVar cv_join_team ("join_team", "any", "Forces all bots to join the team specified here.", false);
 ConVar cv_join_delay ("join_delay", "5.0", "Specifies after how many seconds bots should start to join the game after the changelevel.", true, 0.0f, 30.0f);
-ConVar cv_name_prefix ("name_prefix", "", "All the bot names will be prefixed with string specified with this cvar.", false);
+ConVar cv_name_prefix ("name_prefix", "", "All bot names will be prefixed with the string specified by this cvar.", false);
 
 ConVar cv_difficulty ("difficulty", "3", "All bots difficulty level. Changing at runtime will affect already created bots.", true, 0.0f, 4.0f);
 
-ConVar cv_difficulty_min ("difficulty_min", "-1", "Lower bound of random difficulty on bot creation. Only affects newly created bots. -1 means yb_difficulty only used.", true, -1.0f, 4.0f);
-ConVar cv_difficulty_max ("difficulty_max", "-1", "Upper bound of random difficulty on bot creation. Only affects newly created bots. -1 means yb_difficulty only used.", true, -1.0f, 4.0f);
-ConVar cv_difficulty_auto ("difficulty_auto", "0", "Allows each bot to balance their own difficulty based kd-ratio of team.", true, 0.0f, 1.0f);
-ConVar cv_difficulty_auto_balance_interval ("difficulty_auto_balance_interval", "30", "Interval in which bots will balance their difficulty.", true, 30.0f, 240.0f);
+ConVar cv_difficulty_min ("difficulty_min", "-1", "Lower bound of random difficulty on bot creation. Only affects newly created bots. -1 means only yb_difficulty is used.", true, -1.0f, 4.0f);
+ConVar cv_difficulty_max ("difficulty_max", "-1", "Upper bound of random difficulty on bot creation. Only affects newly created bots. -1 means only yb_difficulty is used.", true, -1.0f, 4.0f);
+ConVar cv_difficulty_auto ("difficulty_auto", "0", "Allows each bot to balance its own difficulty based on the kd-ratio of the team.", true, 0.0f, 1.0f);
+ConVar cv_difficulty_auto_balance_interval ("difficulty_auto_balance_interval", "30", "Interval at which bots will balance their difficulty.", true, 30.0f, 240.0f);
 
-ConVar cv_show_avatars ("show_avatars", "0", "Enables or disables displaying bot avatars in front of their names in scoreboard. Note, that is currently you can see only avatars of your steam friends.");
-ConVar cv_show_latency ("show_latency", "0", "Enables latency display in scoreboard.\nAllowed values: '0', '1', '2'.\nIf '0', there is nothing displayed.\nIf '1', there is a 'BOT' is displayed.\nIf '2' fake ping is displayed.", true, 0.0f, 2.0f);
+ConVar cv_show_avatars ("show_avatars", "0", "Enables or disables displaying bot avatars in front of their names in the scoreboard. Note that currently you can only see avatars of your Steam friends.");
+ConVar cv_show_latency ("show_latency", "0", "Enables latency display in the scoreboard.\nAllowed values: '0', '1', '2'.\nIf '0', there is nothing displayed.\nIf '1', there is a 'BOT' is displayed.\nIf '2' fake ping is displayed.", true, 0.0f, 2.0f);
 
-ConVar cv_save_bots_names ("save_bots_names", "1", "Allows to save bot names upon changelevel, so bot names will be the same after a map change.", true, 0.0f, 1.0f);
+ConVar cv_save_bots_names ("save_bots_names", "1", "Allows saving bot names upon changelevel, so bot names will be the same after a map change.", true, 0.0f, 1.0f);
 
-ConVar cv_botskin_t ("botskin_t", "0", "Specifies the bots wanted skin for Terrorist team.", true, 0.0f, 5.0f);
-ConVar cv_botskin_ct ("botskin_ct", "0", "Specifies the bots wanted skin for CT team.", true, 0.0f, 5.0f);
+ConVar cv_botskin_t ("botskin_t", "0", "Specifies the bot's wanted skin for the Terrorist team.", true, 0.0f, 5.0f);
+ConVar cv_botskin_ct ("botskin_ct", "0", "Specifies the bot's wanted skin for the CT team.", true, 0.0f, 5.0f);
 ConVar cv_preferred_personality ("preferred_personality", "none", "Sets the default personality when creating bots with quota management.\nAllowed values: 'none', 'normal', 'careful', 'rusher'.\nIf 'none' is specified personality chosen randomly.", false);
 
-ConVar cv_quota_adding_interval ("quota_adding_interval", "0.10", "Interval in which bots are added to the game.", true, 0.10f, 1.0f);
-ConVar cv_quota_maintain_interval ("quota_maintain_interval", "0.40", "Interval on which overall bot quota are checked.", true, 0.40f, 2.0f);
+ConVar cv_quota_adding_interval ("quota_adding_interval", "0.10", "Interval at which bots are added to the game.", true, 0.10f, 1.0f);
+ConVar cv_quota_maintain_interval ("quota_maintain_interval", "0.40", "Interval at which the overall bot quota is checked.", true, 0.40f, 2.0f);
 
 ConVar cv_language ("language", "en", "Specifies the language for bot messages and menus.", false);
 
-ConVar cv_rotate_bots ("rotate_bots", "0", "Randomly disconnect and connect bots, simulating players join/quit.");
-ConVar cv_rotate_stay_min ("rotate_stay_min", "360.0", "Specifies minimum amount of seconds bot keep connected, if rotation active.", true, 120.0f, 7200.0f);
-ConVar cv_rotate_stay_max ("rotate_stay_max", "3600.0", "Specifies maximum amount of seconds bot keep connected, if rotation active.", true, 1800.0f, 14400.0f);
+ConVar cv_rotate_bots ("rotate_bots", "0", "Randomly disconnects and connects bots, simulating players joining/quitting.");
+ConVar cv_rotate_stay_min ("rotate_stay_min", "360.0", "Specifies the minimum amount of seconds a bot stays connected, if rotation is active.", true, 120.0f, 7200.0f);
+ConVar cv_rotate_stay_max ("rotate_stay_max", "3600.0", "Specifies the maximum amount of seconds a bot stays connected, if rotation is active.", true, 1800.0f, 14400.0f);
 
 ConVar cv_restricted_weapons ("restricted_weapons", "", "", false);
 
