@@ -7,10 +7,10 @@
 
 #include <yapb.h>
 
-ConVar cv_display_welcome_text ("display_welcome_text", "1", "Enables or disables showing welcome message to host entity on game start.");
-ConVar cv_enable_query_hook ("enable_query_hook", "0", "Enables or disables fake server queries response, that shows bots as real players in server browser.");
-ConVar cv_breakable_health_limit ("breakable_health_limit", "500.0", "Specifies the maximum health of breakable object, that bot will consider to destroy.", true, 1.0f, 3000.0);
-ConVar cv_enable_fake_steamids ("enable_fake_steamids", "0", "Allows or disallows bots to return fake steam id.");
+ConVar cv_display_welcome_text ("display_welcome_text", "1", "Enables or disables showing a welcome message to the host entity on game start.");
+ConVar cv_enable_query_hook ("enable_query_hook", "0", "Enables or disables fake server query responses, which show bots as real players in the server browser.");
+ConVar cv_breakable_health_limit ("breakable_health_limit", "500.0", "Specifies the maximum health of a breakable object that the bot will consider destroying.", true, 1.0f, 3000.0);
+ConVar cv_enable_fake_steamids ("enable_fake_steamids", "0", "Allows or disallows bots to return a fake Steam ID.");
 
 BotSupport::BotSupport () {
    m_needToSendWelcome = false;
@@ -479,7 +479,7 @@ float BotSupport::getWaveFileDuration (StringRef filename) {
 void BotSupport::setCustomCvarDescriptions () {
    // set the cvars custom descriptions here if needed
 
-   String restrictInfo = "Specifies semicolon separated list of weapons that are not allowed to buy / pickup.\n";
+   String restrictInfo = "Specifies a semicolon separated list of weapons that are not allowed to be bought/picked up.\n";
    restrictInfo += "The list of weapons for Counter-Strike 1.6:\n";
 
    // fill the restrict information

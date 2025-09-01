@@ -7,13 +7,13 @@
 
 #include <yapb.h>
 
-ConVar cv_shoots_thru_walls ("shoots_thru_walls", "2", "Specifies whether bots able to fire at enemies behind the wall, if they hearing or suspecting them.", true, 0.0f, 3.0f);
-ConVar cv_ignore_enemies ("ignore_enemies", "0", "Enables or disables searching world for enemies.");
+ConVar cv_shoots_thru_walls ("shoots_thru_walls", "2", "Specifies whether bots are able to fire at enemies behind the wall, if they hear or suspect them.", true, 0.0f, 3.0f);
+ConVar cv_ignore_enemies ("ignore_enemies", "0", "Enables or disables searching the world for enemies.");
 ConVar cv_check_enemy_rendering ("check_enemy_rendering", "0", "Enables or disables checking enemy rendering flags. Useful for some mods.");
 ConVar cv_check_enemy_invincibility ("check_enemy_invincibility", "0", "Enables or disables checking enemy invincibility. Useful for some mods.");
-ConVar cv_stab_close_enemies ("stab_close_enemies", "1", "Enables or disables bot ability to stab the enemy with knife if bot is in good condition.");
-ConVar cv_use_engine_pvs_check ("use_engine_pvs_check", "0", "Use engine to check potential visibility of an enemy.");
-ConVar cv_use_hitbox_enemy_targeting ("use_hitbox_enemy_targeting", "0", "Use hitbox-based enemy targeting, instead of offset based. Use with the yb_use_engine_pvs_check enabled to reduce CPU usage.");
+ConVar cv_stab_close_enemies ("stab_close_enemies", "1", "Enables or disables the bot's ability to stab the enemy with the knife if the bot is in good condition.");
+ConVar cv_use_engine_pvs_check ("use_engine_pvs_check", "0", "Uses the engine to check the potential visibility of an enemy.");
+ConVar cv_use_hitbox_enemy_targeting ("use_hitbox_enemy_targeting", "0", "Uses hitbox-based enemy targeting, instead of offset-based. Use with yb_use_engine_pvs_check enabled to reduce CPU usage.");
 ConVar cv_aim_trace_consider_glass ("aim_trace_consider_glass", "0", "Bots will consider glass when deciding to shoot enemies. Required for very special maps only.");
 
 ConVar mp_friendlyfire ("mp_friendlyfire", nullptr, Var::GameRef);

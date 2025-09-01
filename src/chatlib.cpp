@@ -7,8 +7,8 @@
 
 #include <yapb.h>
 
-ConVar cv_chat ("chat", "1", "Enables or disables bots chat functionality.");
-ConVar cv_chat_percent ("chat_percent", "30", "Bot chances to send random dead chat when killed.", true, 0.0f, 100.0f);
+ConVar cv_chat ("chat", "1", "Enables or disables bot chat functionality.");
+ConVar cv_chat_percent ("chat_percent", "30", "Bot's chance to send random dead chat when killed.", true, 0.0f, 100.0f);
 
 BotChatManager::BotChatManager () {
    m_clanTags = {
