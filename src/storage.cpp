@@ -229,6 +229,9 @@ template <typename U> bool BotStorage::save (const SmallArray <U> &data, ExtenHe
    }
    const auto isGraph = !!(type.option & StorageOption::Graph);
 
+   // hide some messages with debug cvar
+   extern ConVar cv_debug;
+
    // do not allow to save graph with less than 8 nodes
    if (isGraph && graph.length () < kMaxNodeLinks) {
       ctrl.msg ("Can't save graph data with less than %d nodes. Please add some more before saving.", kMaxNodeLinks);
@@ -237,7 +240,9 @@ template <typename U> bool BotStorage::save (const SmallArray <U> &data, ExtenHe
    String filename = buildPath (storageToBotFile (type.option));
 
    if (data.empty ()) {
-      logger.error ("Unable to save %s file. Empty data. (filename: '%s').", type.name, filename);
+      if (isGraph || cv_debug) {
+         logger.error ("Unable to save %s file. Empty data. (filename: '%s').", type.name, filename);
+      }
       return false;
    }
    else if (isGraph) {
@@ -289,7 +294,6 @@ template <typename U> bool BotStorage::save (const SmallArray <U> &data, ExtenHe
       if ((type.option & StorageOption::Exten) && exten != nullptr) {
          file.write (exten, sizeof (ExtenHeader));
       }
-      extern ConVar cv_debug;
 
       // notify only about graph
       if (isGraph || cv_debug) {
