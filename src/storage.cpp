@@ -490,7 +490,7 @@ StringRef BotStorage::getRunningPathVFS () {
    if (path.empty ()) {
       path = getRunningPath ();
 
-      path = path.substr (path.find (game.getRunningModName ())); // skip to the game dir
+      path = path.substr (path.rfind (game.getRunningModName ())); // skip to the game dir
       path = path.substr (path.find (kPathSeparator) + 1); // skip the game dir
    }
    return path;
