@@ -520,7 +520,7 @@ private:
    void setPathOrigin ();
    void fireWeapons ();
    void doFireWeapons ();
-   void selectWeapons (float distance, int index, int id, int choosen);
+   void handleWeapons (float distance, int index, int id, int choosen);
    void focusEnemy ();
    void selectBestWeapon ();
    void selectSecondary ();

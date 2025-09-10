@@ -17,6 +17,10 @@ ConVar cv_graph_analyze_optimize_nodes_on_finish ("graph_analyze_optimize_nodes_
 ConVar cv_graph_analyze_mark_goals_on_finish ("graph_analyze_mark_goals_on_finish", "1", "Specifies if the analyzer should mark nodes as map goals automatically upon finishing.");
 
 void GraphAnalyze::start () {
+   if (m_isAnalyzing) {
+      return;
+   }
+
    // start analyzer in few seconds after level initialized
    if (cv_graph_analyze_auto_start) {
       m_updateInterval = game.time () + 3.0f;

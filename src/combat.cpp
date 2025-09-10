@@ -710,6 +710,11 @@ Vector Bot::getEnemyBodyOffset () {
       compensation.clear ();
    }
 
+   // get the correct head origin
+   const auto &headOrigin = [&] (edict_t *e, const float distance) -> Vector {
+      return Vector { e->v.origin.x, e->v.origin.y, e->v.absmin.z + e->v.size.z * 0.81f } + getCustomHeight (distance);
+   };
+
    // if we only suspect an enemy behind a wall take the worst skill
    if (!m_enemyParts && (m_states & Sense::SuspectEnemy)) {
       spot += getBodyOffsetError (distance);
@@ -728,11 +733,13 @@ Vector Bot::getEnemyBodyOffset () {
          }
 
          // now check is our skill match to aim at head, else aim at enemy body
-         if (m_enemyBodyPartSet == m_enemy || rg.chance (headshotPct)) {
-            spot = m_enemyOrigin + getCustomHeight (distance);
+         if (m_enemyBodyPartSet == m_enemy
+            || ((m_enemyBodyPartSet != m_enemy) && rg.chance (headshotPct))) {
+
+            spot = headOrigin (m_enemy, distance);
 
             if (usesSniper ()) {
-               spot.z -= pev->view_ofs.z * 0.5f;
+               spot.z -= pev->view_ofs.z * 0.35f;
             }
 
             // set's the enemy shooting spot to head, if headshot pct allows, and use head for that
@@ -741,6 +748,10 @@ Vector Bot::getEnemyBodyOffset () {
          }
          else {
             spot = m_enemy->v.origin;
+
+            if (m_difficulty == Difficulty::Expert) {
+               spot.z += pev->view_ofs.z * 0.35f;
+            }
          }
       }
       else if (m_enemyParts & Visibility::Body) {
@@ -750,10 +761,10 @@ Vector Bot::getEnemyBodyOffset () {
          spot = m_enemyOrigin;
       }
       else if (m_enemyParts & Visibility::Head) {
-         spot = m_enemyOrigin + getCustomHeight (distance);
+         spot = headOrigin (m_enemy, distance);
       }
    }
-   auto idealSpot = m_enemyOrigin;
+   auto idealSpot = spot;
 
    if (m_difficulty < Difficulty::Hard && isEnemyInSight (idealSpot)) {
       spot = idealSpot + ((spot - idealSpot) * 0.005f); // gradually adjust the aiming direction
@@ -1079,7 +1090,7 @@ bool Bot::checkZoom (float distance) {
    return zoomChange;
 }
 
-void Bot::selectWeapons (float distance, int, int id, int choosen) {
+void Bot::handleWeapons (float distance, int, int id, int choosen) {
    const auto tab = conf.getRawWeapons ();
 
    // we want to fire weapon, don't reload now
@@ -1249,7 +1260,7 @@ void Bot::fireWeapons () {
 
    // if knife mode use knife only
    if (isKnifeMode ()) {
-      selectWeapons (distance, selectIndex, selectId, choosenWeapon);
+      handleWeapons (distance, selectIndex, selectId, choosenWeapon);
       return;
    }
 
@@ -1263,7 +1274,7 @@ void Bot::fireWeapons () {
       && !isGroupOfEnemies (pev->origin)
       && getCurrentTaskId () != Task::Camp) {
 
-      selectWeapons (distance, selectIndex, selectId, choosenWeapon);
+      handleWeapons (distance, selectIndex, selectId, choosenWeapon);
       return;
    }
 
@@ -1316,7 +1327,7 @@ void Bot::fireWeapons () {
       }
       selectId = Weapon::Knife; // no available ammo, use knife!
    }
-   selectWeapons (distance, selectIndex, selectId, choosenWeapon);
+   handleWeapons (distance, selectIndex, selectId, choosenWeapon);
 }
 
 bool Bot::isWeaponBadAtDistance (int weaponIndex, float distance) {

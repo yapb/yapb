@@ -881,7 +881,9 @@ void Bot::showChatterIcon (bool show, bool disconnect) const {
 
    // do not respect timers while disconnecting bot
    for (auto &client : util.getClients ()) {
-      if (!(client.flags & ClientFlags::Used) || (client.ent->v.flags & FL_FAKECLIENT) || client.team != m_team) {
+      if (!(client.flags & ClientFlags::Used)
+         || (client.ent->v.flags & FL_FAKECLIENT)
+         || (client.team != m_team && !disconnect)) {
          continue;
       }
 
@@ -891,7 +893,7 @@ void Bot::showChatterIcon (bool show, bool disconnect) const {
       }
 
       // do not respect timers while disconnecting bot
-      if (!show && (client.iconFlags[ownIndex] & ClientFlags::Icon) && (disconnect || client.iconTimestamp[ownIndex] < game.time ())) {
+      if (!show && (disconnect || (client.iconFlags[ownIndex] & ClientFlags::Icon)) && (disconnect || client.iconTimestamp[ownIndex] < game.time ())) {
          sendBotVoice (false, client.ent, entindex ());
 
          client.iconTimestamp[ownIndex] = 0.0f;
@@ -1828,7 +1830,9 @@ void Bot::syncUpdatePredictedIndex () {
 
       const float distToBotSq = botOrigin.distanceSq (graph[index].origin);
 
-      if (vistab.visible (currentNodeIndex, index) && distToBotSq < cr::sqrf (2048.0f)) {
+      if (vistab.visible (currentNodeIndex, index)
+         && distToBotSq < cr::sqrf (2048.0f)
+         && distToBotSq > cr::sqrf (128.0f)) {
          bestIndex = index;
          return false;
       }
@@ -3283,7 +3287,15 @@ void Bot::checkSpawnConditions () {
             dropCurrentWeapon ();
          }
          else {
-            selectWeaponById (Weapon::Knife);
+            bool switchToKnife = true;
+
+            if (m_currentWeapon == Weapon::Scout) {
+               switchToKnife = rg.chance (25);
+            }
+
+            if (switchToKnife) {
+               selectWeaponById (Weapon::Knife);
+            }
          }
       }
       m_checkKnifeSwitch = false;
@@ -3474,6 +3486,8 @@ void Bot::spawned () {
    if (game.is (GameFlags::CSDM | GameFlags::ZombieMod)) {
       newRound ();
       clearTasks ();
+
+      m_buyingFinished = true;
    }
 }
 

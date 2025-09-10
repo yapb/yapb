@@ -648,14 +648,19 @@ void Bot::camp_ () {
          auto pathLength = m_lastPredictLength;
          auto predictNode = m_lastPredictIndex;
 
-         if (isNodeValidForPredict (predictNode) && pathLength > 1) {
+         if (isNodeValidForPredict (predictNode)
+            && pathLength > 1
+            && vistab.visible (predictNode, m_currentNodeIndex)) {
+
             m_lookAtSafe = graph[predictNode].origin + pev->view_ofs;
          }
          else {
             pathLength = 0;
             predictNode = findAimingNode (m_lastEnemyOrigin, pathLength);
 
-            if (isNodeValidForPredict (predictNode) && pathLength > 1) {
+            if (isNodeValidForPredict (predictNode) && pathLength > 1
+               && vistab.visible ( predictNode, m_currentNodeIndex)) {
+
                m_lookAtSafe = graph[predictNode].origin + pev->view_ofs;
             }
          }
