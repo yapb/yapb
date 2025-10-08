@@ -50,7 +50,7 @@ CR_FORCE_STACK_ALIGN void handler_engClientCommand (edict_t *ent, char const *fo
    // case it's a bot asking for a client command, we handle it like we do for bot commands
 
    if (!game.isNullEntity (ent)) {
-      if (bots[ent] || util.isFakeClient (ent) || (ent->v.flags & FL_DORMANT)) {
+      if (bots[ent] || game.isFakeClientEntity (ent) || (ent->v.flags & FL_DORMANT)) {
          if (game.is (GameFlags::Metamod)) {
             RETURN_META (MRES_SUPERCEDE); // prevent bots to be forced to issue client commands
          }
@@ -159,7 +159,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
 
          auto bot = bots[pentTouched];
 
-         if (bot && util.isBreakableEntity (pentOther)) {
+         if (bot && game.isBreakableEntity (pentOther)) {
             bot->checkBreakable (pentOther);
          }
       }
@@ -389,10 +389,10 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
 
       if (bots.hasBotsOnline ()) {
          // keep track of grenades on map
-         bots.updateActiveGrenade ();
+         gameState.updateActiveGrenade ();
 
          // keep track of interesting entities
-         bots.updateInterestingEntities ();
+         gameState.updateInterestingEntities ();
       }
 
       // keep bot number up to date
@@ -429,7 +429,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
          auto ent = const_cast <edict_t *> (reinterpret_cast <const edict_t *> (player));
 
          if (fakeping.hasFeature ()) {
-            if (!util.isFakeClient (ent) && (ent->v.oldbuttons | ent->v.button) & IN_SCORE) {
+            if (!game.isFakeClientEntity (ent) && (ent->v.oldbuttons | ent->v.button) & IN_SCORE) {
                fakeping.emit (ent);
             }
          }
@@ -560,7 +560,7 @@ CR_C_LINKAGE int GetEntityAPI_Post (gamefuncs_t *table, int) {
          auto ent = const_cast <edict_t *> (reinterpret_cast <const edict_t *> (player));
 
          if (fakeping.hasFeature ()) {
-            if (!util.isFakeClient (ent) && (ent->v.oldbuttons | ent->v.button) & IN_SCORE) {
+            if (!game.isFakeClientEntity (ent) && (ent->v.oldbuttons | ent->v.button) & IN_SCORE) {
                fakeping.emit (ent);
             }
          }
@@ -591,7 +591,7 @@ CR_C_LINKAGE int GetEngineFunctions (enginefuncs_t *table, int *) {
       table->pfnFindEntityByString = [] (edict_t *edictStartSearchAfter, const char *field, const char *value) CR_FORCE_STACK_ALIGN {
          // round starts in counter-strike 1.5
          if (strcmp (value, "info_map_parameters") == 0) {
-            bots.initRound ();
+            gameState.roundStart ();
          }
 
          if (game.is (GameFlags::Metamod)) {
@@ -786,7 +786,7 @@ CR_C_LINKAGE int GetEngineFunctions (enginefuncs_t *table, int *) {
       // as it will crash your server. Why would you, anyway ? bots have no client DLL as far as
       // we know, right ? But since stupidity rules this world, we do a preventive check :)
 
-      if (util.isFakeClient (ent)) {
+      if (game.isFakeClientEntity (ent)) {
          if (game.is (GameFlags::Metamod)) {
             RETURN_META (MRES_SUPERCEDE);
          }

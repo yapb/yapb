@@ -108,7 +108,7 @@ public:
    void setDamage (int32_t team, int32_t start, int32_t goal, int32_t value);
 
    // interlocked get damage
-   float plannerGetDamage (int32_t team, int32_t start, int32_t goal, bool addTeamHighestDamage);
+   float getDamageEx (int32_t team, int32_t start, int32_t goal, bool addTeamHighestDamage);
 
 public:
    void update ();

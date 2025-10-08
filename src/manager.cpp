@@ -469,7 +469,7 @@ void BotManager::maintainLeaders () {
    }
 
    // select leader each team somewhere in round start
-   if (m_timeRoundStart + rg (1.5f, 3.0f) < game.time ()) {
+   if (gameState.getRoundStartTime () + rg (1.5f, 3.0f) < game.time ()) {
       for (int team = 0; team < kGameTeamNum; ++team) {
          selectLeaders (team, false);
       }
@@ -487,7 +487,7 @@ void BotManager::maintainRoundRestart () {
       && m_numPreviousPlayers == 0
       && totalHumans == 1
       && totalBots > 0
-      && !m_resetHud) {
+      && !gameState.isResetHUD ()) {
 
       static ConVarRef sv_restartround ("sv_restartround");
 
@@ -496,13 +496,13 @@ void BotManager::maintainRoundRestart () {
       }
    }
    m_numPreviousPlayers = totalHumans;
-   m_resetHud = false;
+   gameState.setResetHUD (false);
 }
 
 void BotManager::maintainAutoKill () {
    const float killDelay = cv_autokill_delay.as <float> ();
 
-   if (killDelay < 1.0f || m_roundOver) {
+   if (killDelay < 1.0f || gameState.isRoundOver ()) {
       return;
    }
 
@@ -516,7 +516,7 @@ void BotManager::maintainAutoKill () {
    int aliveBots = 0;
 
    // do not interrupt bomb-defuse scenario
-   if (game.mapIs (MapFlags::Demolition) && isBombPlanted ()) {
+   if (game.mapIs (MapFlags::Demolition) && gameState.isBombPlanted ()) {
       return;
    }
    const int totalHumans = getHumansCount (true); // we're ignore spectators intentionally 
@@ -531,7 +531,7 @@ void BotManager::maintainAutoKill () {
          ++aliveBots;
 
          // do not interrupt assassination scenario, if vip is a bot
-         if (game.is (MapFlags::Assassination) && util.isPlayerVIP (bot->ent ())) {
+         if (game.is (MapFlags::Assassination) && game.isPlayerVIP (bot->ent ())) {
             return;
          }
       }
@@ -545,15 +545,9 @@ void BotManager::maintainAutoKill () {
 }
 
 void BotManager::reset () {
-   m_grenadeUpdateTime = 0.0f;
-   m_entityUpdateTime = 0.0f;
    m_plantSearchUpdateTime = 0.0f;
    m_lastChatTime = 0.0f;
-   m_timeBombPlanted = 0.0f;
    m_bombSayStatus = BombPlantedSay::ChatSay | BombPlantedSay::Chatter;
-
-   m_interestingEntities.clear ();
-   m_activeGrenades.clear ();
 }
 
 void BotManager::initFilters () {
@@ -681,7 +675,7 @@ void BotManager::kickFromTeam (Team team, bool removeAll) {
    }
 
    for (const auto &bot : m_bots) {
-      if (team == game.getRealTeam (bot->ent ())) {
+      if (team == game.getRealPlayerTeam (bot->ent ())) {
          bot->kick (removeAll);
 
          if (!removeAll) {
@@ -696,7 +690,7 @@ void BotManager::killAllBots (int team, bool silent) {
    // this function kills all bots on server (only this dll controlled bots)
 
    for (const auto &bot : m_bots) {
-      if (team != Team::Invalid && game.getRealTeam (bot->ent ()) != team) {
+      if (team != Team::Invalid && game.getRealPlayerTeam (bot->ent ()) != team) {
          continue;
       }
       bot->kill ();
@@ -732,7 +726,7 @@ bool BotManager::kickRandom (bool decQuota, Team fromTeam) {
       if (fromTeam == Team::Unassigned) {
          return true;
       }
-      return game.getRealTeam (bot->ent ()) == fromTeam;
+      return game.getRealPlayerTeam (bot->ent ()) == fromTeam;
    };
 
    // first try to kick the bot that is currently dead
@@ -830,7 +824,7 @@ bool BotManager::hasCustomCSDMSpawnEntities () {
 
 void BotManager::setLastWinner (int winner) {
    m_lastWinner = winner;
-   m_roundOver = true;
+   gameState.setRoundOver (true);
 
    if (cv_radio_mode.as <int> () != 2) {
       return;
@@ -839,7 +833,7 @@ void BotManager::setLastWinner (int winner) {
 
    if (notify) {
       if (notify->m_team == winner) {
-         if (getRoundMidTime () > game.time ()) {
+         if (gameState.getRoundMidTime () > game.time ()) {
             notify->pushChatterMessage (Chatter::QuickWonRound);
          }
          else {
@@ -929,7 +923,7 @@ void BotManager::listBots () {
    ctrl.msg ("%-3.5s\t%-19.16s\t%-10.12s\t%-3.4s\t%-3.4s\t%-3.4s\t%-3.6s\t%-3.5s\t%-3.8s", "index", "name", "personality", "team", "difficulty", "frags", "deaths", "alive", "timeleft");
 
    auto botTeam = [] (edict_t *ent) -> StringRef {
-      const auto team = game.getRealTeam (ent);
+      const auto team = game.getRealPlayerTeam (ent);
 
       switch (team) {
       case Team::CT:
@@ -967,7 +961,7 @@ void BotManager::listBots () {
    ctrl.msg ("%d bots", m_bots.length ());
 }
 
-float BotManager::getConnectTime (StringRef name, float original) {
+float BotManager::getConnectionTimes (StringRef name, float original) {
    // this function get's fake bot player time.
 
    for (const auto &bot : m_bots) {
@@ -1020,19 +1014,18 @@ Twin <int, int> BotManager::countTeamPlayers () {
 }
 
 Bot *BotManager::findHighestFragBot (int team) {
-   int bestIndex = 0;
-   float bestScore = -1;
+   Twin <int32_t, float> best {};
 
    // search bots in this team
    for (const auto &bot : bots) {
-      if (bot->m_isAlive && game.getRealTeam (bot->ent ()) == team) {
-         if (bot->pev->frags > bestScore) {
-            bestIndex = bot->index ();
-            bestScore = bot->pev->frags;
+      if (bot->m_isAlive && game.getRealPlayerTeam (bot->ent ()) == team) {
+         if (bot->pev->frags > best.second) {
+            best.first = bot->index ();
+            best.second = bot->pev->frags;
          }
       }
    }
-   return findBotByIndex (bestIndex);
+   return findBotByIndex (best.first);
 }
 
 void BotManager::updateTeamEconomics (int team, bool setTrue) {
@@ -1398,8 +1391,8 @@ void BotManager::disconnectBot (Bot *bot) {
 }
 
 void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
-   const auto killerTeam = game.getRealTeam (killer);
-   const auto victimTeam = game.getRealTeam (victim);
+   const auto killerTeam = game.getRealPlayerTeam (killer);
+   const auto victimTeam = game.getRealPlayerTeam (victim);
 
    if (cv_radio_mode.as <int> () == 2) {
       // need to send congrats on well placed shot
@@ -1512,7 +1505,7 @@ void Bot::newRound () {
       node = kInvalidNodeIndex;
    }
    m_navTimeset = game.time ();
-   m_team = game.getTeam (ent ());
+   m_team = game.getPlayerTeam (ent ());
 
    resetPathSearchType ();
 
@@ -1841,7 +1834,7 @@ void Bot::updateTeamJoin () {
    if (!m_notStarted) {
       return;
    }
-   const auto botTeam = game.getRealTeam (ent ());
+   const auto botTeam = game.getRealPlayerTeam (ent ());
 
    // cs prior beta 7.0 uses hud-based motd, so press fire once
    if (game.is (GameFlags::Legacy)) {
@@ -1948,15 +1941,15 @@ void BotManager::captureChatRadio (StringRef cmd, StringRef arg, edict_t *ent) {
    }
 
    if (cmd.startsWith ("say")) {
-      const bool alive = util.isAlive (ent);
+      const bool alive = game.isAliveEntity (ent);
       int team = -1;
 
       if (cmd.endsWith ("team")) {
-         team = game.getRealTeam (ent);
+         team = game.getRealPlayerTeam (ent);
       }
 
       for (const auto &client : util.getClients ()) {
-         if (!(client.flags & ClientFlags::Used) || (team != -1 && team != client.team2) || alive != util.isAlive (client.ent)) {
+         if (!(client.flags & ClientFlags::Used) || (team != -1 && team != client.team2) || alive != game.isAliveEntity (client.ent)) {
             continue;
          }
          auto target = bots[client.ent];
@@ -2003,7 +1996,7 @@ void BotManager::captureChatRadio (StringRef cmd, StringRef arg, edict_t *ent) {
 void BotManager::notifyBombDefuse () {
    // notify all terrorists that CT is starting bomb defusing
 
-   const auto &bombPos = graph.getBombOrigin ();
+   const auto &bombPos = gameState.getBombOrigin ();
 
    for (const auto &bot : bots) {
       const auto task = bot->getCurrentTaskId ();
@@ -2025,68 +2018,6 @@ void BotManager::notifyBombDefuse () {
          }
       }
    }
-}
-
-void BotManager::updateActiveGrenade () {
-   if (m_grenadeUpdateTime > game.time ()) {
-      return;
-   }
-   m_activeGrenades.clear (); // clear previously stored grenades
-
-   // need to ignore bomb model in active grenades...
-   auto bombModel = conf.getBombModelName ();
-
-   // search the map for any type of grenade
-   game.searchEntities ("classname", "grenade", [&] (edict_t *e) {
-      // do not count c4 as a grenade
-      if (!util.isModel (e, bombModel)) {
-         m_activeGrenades.push (e);
-      }
-      return EntitySearchResult::Continue; // continue iteration
-   });
-   m_grenadeUpdateTime = game.time () + 0.25f;
-}
-
-void BotManager::updateInterestingEntities () {
-   if (m_entityUpdateTime > game.time ()) {
-      return;
-   }
-
-   // clear previously stored entities
-   m_interestingEntities.clear ();
-
-   // search the map for any type of grenade
-   game.searchEntities (nullptr, kInfiniteDistance, [&] (edict_t *e) {
-      auto classname = e->v.classname.str ();
-
-      // search for grenades, weaponboxes, weapons, items and armoury entities
-      if (classname.startsWith ("weaponbox") || classname.startsWith ("grenade") || util.isItem (e) || classname.startsWith ("armoury")) {
-         m_interestingEntities.push (e);
-      }
-
-      // pickup some hostage if on cs_ maps
-      if (game.mapIs (MapFlags::HostageRescue) && util.isHostageEntity (e)) {
-         m_interestingEntities.push (e);
-      }
-
-      // add buttons
-      if (game.mapIs (MapFlags::HasButtons) && classname.startsWith ("func_button")) {
-         m_interestingEntities.push (e);
-      }
-
-      // pickup some csdm stuff if we're running csdm
-      if (game.is (GameFlags::CSDM) && classname.startsWith ("csdm")) {
-         m_interestingEntities.push (e);
-      }
-
-      if (cv_attack_monsters && util.isMonster (e)) {
-         m_interestingEntities.push (e);
-      }
-
-      // continue iteration
-      return EntitySearchResult::Continue;
-   });
-   m_entityUpdateTime = game.time () + 0.5f;
 }
 
 void BotManager::selectLeaders (int team, bool reset) {
@@ -2191,8 +2122,6 @@ void BotManager::selectLeaders (int team, bool reset) {
 void BotManager::initRound () {
    // this is called at the start of each round
 
-   m_roundOver = false;
-
    // check team economics
    for (int team = 0; team < kGameTeamNum; ++team) {
       updateTeamEconomics (team);
@@ -2211,35 +2140,15 @@ void BotManager::initRound () {
    for (auto &client : util.getClients ()) {
       client.radio = 0;
    }
-
-   graph.setBombOrigin (true);
    graph.clearVisited ();
 
    m_bombSayStatus = BombPlantedSay::ChatSay | BombPlantedSay::Chatter;
-   m_timeBombPlanted = 0.0f;
    m_plantSearchUpdateTime = 0.0f;
    m_autoKillCheckTime = 0.0f;
    m_botsCanPause = false;
 
    resetFilters ();
    practice.update (); // update practice data on round start
-
-   // calculate the round mid/end in world time
-   m_timeRoundStart = game.time () + mp_freezetime.as <float> ();
-   m_timeRoundMid = m_timeRoundStart + mp_roundtime.as <float> () * 60.0f * 0.5f;
-   m_timeRoundEnd = m_timeRoundStart + mp_roundtime.as <float> () * 60.0f;
-}
-
-void BotManager::setBombPlanted (bool isPlanted) {
-   if (cv_ignore_objectives) {
-      m_bombPlanted = false;
-      return;
-   }
-
-   if (isPlanted) {
-      m_timeBombPlanted = game.time ();
-   }
-   m_bombPlanted = isPlanted;
 }
 
 void BotThreadWorker::shutdown () {
@@ -2291,121 +2200,6 @@ void BotThreadWorker::startup (int workers) {
 
    // start up the worker
    m_pool->startup (static_cast <size_t> (requestedThreads));
-}
-
-bool BotManager::isLineBlockedBySmoke (const Vector &from, const Vector &to) {
-   if (m_activeGrenades.empty ()) {
-      return false;
-   }
-   constexpr auto kSmokeGrenadeRadius = 115.0f;
-
-   // distance along line of sight covered by smoke
-   float totalSmokedLength = 0.0f;
-
-   Vector sightDir = to - from;
-   const float sightLength = sightDir.normalizeInPlace ();
-
-   for (auto pent : m_activeGrenades) {
-      if (game.isNullEntity (pent)) {
-         continue;
-      }
-
-      // need drawn models
-      if (pent->v.effects & EF_NODRAW) {
-         continue;
-      }
-
-      // smoke must be on a ground
-      if (!(pent->v.flags & FL_ONGROUND)) {
-         continue;
-      }
-
-      // must be a smoke grenade
-      if (!util.isModel (pent, kSmokeModelName)) {
-         continue;
-      }
-
-      const float smokeRadiusSq = cr::sqrf (kSmokeGrenadeRadius);
-      const Vector &smokeOrigin = game.getEntityOrigin (pent);
-
-      Vector toGrenade = smokeOrigin - from;
-      float alongDist = toGrenade | sightDir;
-
-      // compute closest point to grenade along line of sight ray
-      Vector close {};
-
-      // constrain closest point to line segment
-      if (alongDist < 0.0f) {
-         close = from;
-      }
-      else if (alongDist >= sightLength) {
-         close = to;
-      }
-      else {
-         close = from + sightDir * alongDist;
-      }
-
-      // if closest point is within smoke radius, the line overlaps the smoke cloud
-      Vector toClose = close - smokeOrigin;
-      float lengthSq = toClose.lengthSq ();
-
-      if (lengthSq < smokeRadiusSq) {
-         // some portion of the ray intersects the cloud
-
-         const float fromSq = toGrenade.lengthSq ();
-         const float toSq = (smokeOrigin - to).lengthSq ();
-
-         if (fromSq < smokeRadiusSq) {
-            if (toSq < smokeRadiusSq) {
-               // both 'from' and 'to' lie within the cloud
-               // entire length is smoked
-               totalSmokedLength += (to - from).length ();
-            }
-            else {
-               // 'from' is inside the cloud, 'to' is outside
-               // compute half of total smoked length as if ray crosses entire cloud chord
-               float halfSmokedLength = cr::sqrtf (smokeRadiusSq - lengthSq);
-
-               if (alongDist > 0.0f) {
-                  // ray goes thru 'close'
-                  totalSmokedLength += halfSmokedLength + (close - from).length ();
-               }
-               else {
-                  // ray starts after 'close'
-                  totalSmokedLength += halfSmokedLength - (close - from).length ();
-               }
-
-            }
-         }
-         else if (toSq < smokeRadiusSq) {
-            // 'from' is outside the cloud, 'to' is inside
-            // compute half of total smoked length as if ray crosses entire cloud chord
-            const float halfSmokedLength = cr::sqrtf (smokeRadiusSq - lengthSq);
-            Vector v = to - smokeOrigin;
-
-            if ((v | sightDir) > 0.0f) {
-               // ray goes thru 'close'
-               totalSmokedLength += halfSmokedLength + (close - to).length ();
-            }
-            else {
-               // ray ends before 'close'
-               totalSmokedLength += halfSmokedLength - (close - to).length ();
-            }
-         }
-         else {
-            // 'from' and 'to' lie outside of the cloud - the line of sight completely crosses it
-            // determine the length of the chord that crosses the cloud
-            const float smokedLength = 2.0f * cr::sqrtf (smokeRadiusSq - lengthSq);
-            totalSmokedLength += smokedLength;
-         }
-      }
-   }
-
-   // define how much smoke a bot can see thru
-   const float maxSmokedLength = 0.7f * kSmokeGrenadeRadius;
-
-   // return true if the total length of smoke-covered line-of-sight is too much
-   return totalSmokedLength > maxSmokedLength;
 }
 
 bool BotManager::isFrameSkipDisabled () {

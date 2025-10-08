@@ -445,8 +445,8 @@ void Bot::setAimDirection () {
 
          && m_forgetLastVictimTimer.elapsed ()
          && !m_lastEnemyOrigin.empty ()
-         && util.isPlayer (m_lastEnemy)
-         && !util.isPlayer (m_enemy)) {
+         && game.isPlayerEntity (m_lastEnemy)
+         && !game.isPlayerEntity (m_enemy)) {
 
          flags |= AimFlags::LastEnemy;
       }
@@ -503,7 +503,7 @@ void Bot::setAimDirection () {
    else if (flags & AimFlags::PredictPath) {
       bool changePredictedEnemy = true;
 
-      if (m_timeNextTracking < game.time () && m_trackingEdict == m_lastEnemy && util.isAlive (m_lastEnemy)) {
+      if (m_timeNextTracking < game.time () && m_trackingEdict == m_lastEnemy && game.isAliveEntity (m_lastEnemy)) {
          changePredictedEnemy = false;
       }
 
@@ -573,7 +573,9 @@ void Bot::setAimDirection () {
       const auto &destOrigin = m_destOrigin + pev->view_ofs;
       m_lookAt = destOrigin;
 
-      if (m_moveToGoal && m_seeEnemyTime + 4.0f < game.time ()
+      const bool horizontalMovement = (m_pathFlags & NodeFlag::Ladder) || isOnLadder ();
+
+      if (!horizontalMovement && m_moveToGoal && m_seeEnemyTime + 4.0f < game.time ()
          && !m_isStuck && !(pev->button & IN_DUCK)
          && m_currentNodeIndex != kInvalidNodeIndex
          && !(m_pathFlags & (NodeFlag::Ladder | NodeFlag::Crouch))
@@ -598,7 +600,6 @@ void Bot::setAimDirection () {
       else {
          m_lookAt = destOrigin;
       }
-      const bool horizontalMovement = (m_pathFlags & NodeFlag::Ladder) || isOnLadder ();
 
       if (m_numEnemiesLeft > 0
          && m_canChooseAimDirection
@@ -625,14 +626,17 @@ void Bot::setAimDirection () {
       }
 
       // try look at next node if on ladder
-      if (horizontalMovement && m_pathWalk.hasNext ()) {
+      if (horizontalMovement
+         && m_pathWalk.hasNext ()
+         && !(m_currentTravelFlags & PathFlag::Jump)) {
+
          const auto &nextPath = graph[m_pathWalk.next ()];
 
          if ((nextPath.flags & NodeFlag::Ladder)
-            && m_destOrigin.distanceSq (pev->origin) < cr::sqrf (128.0f)
-            && nextPath.origin.z > m_pathOrigin.z + 26.0f) {
+            && m_destOrigin.distanceSq (pev->origin) < cr::sqrf (64.0f)
+            && nextPath.origin.z > m_pathOrigin.z + 30.0f) {
 
-            m_lookAt = nextPath.origin + pev->view_ofs;
+            m_lookAt = nextPath.origin;
          }
       }
 

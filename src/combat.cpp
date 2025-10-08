@@ -335,7 +335,7 @@ bool Bot::checkBodyPartsWithHitboxes (edict_t *target) {
 bool Bot::seesEnemy (edict_t *player) {
    auto isBehindSmokeClouds = [&] (const Vector &pos) {
       if (cv_smoke_grenade_checks.as <int> () == 2) {
-         return bots.isLineBlockedBySmoke (getEyesPos (), pos);
+         return util.isLineBlockedBySmoke (getEyesPos (), pos);
       }
       return false;
    };
@@ -345,7 +345,7 @@ bool Bot::seesEnemy (edict_t *player) {
    }
    bool ignoreFieldOfView = false;
 
-   if (cv_whose_your_daddy && util.isPlayer (pev->dmg_inflictor) && game.getTeam (pev->dmg_inflictor) != m_team) {
+   if (cv_whose_your_daddy && game.isPlayerEntity (pev->dmg_inflictor) && game.getPlayerTeam (pev->dmg_inflictor) != m_team) {
       ignoreFieldOfView = true;
    }
 
@@ -387,7 +387,7 @@ bool Bot::lookupEnemies () {
    if (!game.isNullEntity (m_enemy) && (m_states & Sense::SeeingEnemy)) {
       m_states &= ~Sense::SuspectEnemy;
    }
-   else if (game.isNullEntity (m_enemy) && m_seeEnemyTime + 4.0f > game.time () && util.isAlive (m_lastEnemy)) {
+   else if (game.isNullEntity (m_enemy) && m_seeEnemyTime + 4.0f > game.time () && game.isAliveEntity (m_lastEnemy)) {
       m_states |= Sense::SuspectEnemy;
 
       const bool denyLastEnemy = pev->velocity.lengthSq2d () > 0.0f
@@ -406,7 +406,7 @@ bool Bot::lookupEnemies () {
       // is player is alive
       if (m_enemyUpdateTime > game.time ()
          && player->v.origin.distanceSq (pev->origin) < nearestDistanceSq
-         && util.isAlive (player)
+         && game.isAliveEntity (player)
          && seesEnemy (player)) {
 
          newEnemy = player;
@@ -427,8 +427,8 @@ bool Bot::lookupEnemies () {
 
       if (cv_attack_monsters) {
          // search the world for monsters...
-         for (const auto &interesting : bots.getInterestingEntities ()) {
-            if (!util.isMonster (interesting)) {
+         for (const auto &interesting : gameState.getInterestingEntities ()) {
+            if (!game.isMonsterEntity (interesting)) {
                continue;
             }
 
@@ -485,7 +485,7 @@ bool Bot::lookupEnemies () {
                newEnemy = player;
 
                // aim VIP first on AS maps...
-               if (game.is (MapFlags::Assassination) && util.isPlayerVIP (newEnemy)) {
+               if (game.is (MapFlags::Assassination) && game.isPlayerVIP (newEnemy)) {
                   break;
                }
             }
@@ -498,7 +498,7 @@ bool Bot::lookupEnemies () {
       }
    }
 
-   if (newEnemy != nullptr && (util.isPlayer (newEnemy) || (cv_attack_monsters && util.isMonster (newEnemy)))) {
+   if (newEnemy != nullptr && (game.isPlayerEntity (newEnemy) || (cv_attack_monsters && game.isMonsterEntity (newEnemy)))) {
       bots.setCanPause (true);
 
       m_aimFlags |= AimFlags::Enemy;
@@ -587,7 +587,7 @@ bool Bot::lookupEnemies () {
       newEnemy = m_enemy;
       m_lastEnemy = newEnemy;
 
-      if (!util.isAlive (newEnemy)) {
+      if (!game.isAliveEntity (newEnemy)) {
          m_enemy = nullptr;
          m_enemyBodyPartSet = nullptr;
 
@@ -638,7 +638,7 @@ bool Bot::lookupEnemies () {
       && game.isNullEntity (m_enemy)
       && getCurrentTaskId () != Task::ShootBreakable
       && getCurrentTaskId () != Task::PlantBomb
-      && getCurrentTaskId () != Task::DefuseBomb) || bots.isRoundOver ()) {
+      && getCurrentTaskId () != Task::DefuseBomb) || gameState.isRoundOver ()) {
 
       if (!m_reloadState) {
          m_reloadState = Reload::Primary;
@@ -719,7 +719,7 @@ Vector Bot::getEnemyBodyOffset () {
    if (!m_enemyParts && (m_states & Sense::SuspectEnemy)) {
       spot += getBodyOffsetError (distance);
    }
-   else if (util.isPlayer (m_enemy)) {
+   else if (game.isPlayerEntity (m_enemy)) {
       // now take in account different parts of enemy body
       if (m_enemyParts & (Visibility::Head | Visibility::Body)) {
          auto headshotPct = conf.getDifficultyTweaks (m_difficulty)->headshotPct;
@@ -828,11 +828,11 @@ bool Bot::isFriendInLineOfFire (float distance) const {
    game.testLine (getEyesPos (), getEyesPos () + pev->v_angle.normalize_apx () * distance, TraceIgnore::None, ent (), &tr);
 
    // check if we hit something
-   if (util.isPlayer (tr.pHit) && tr.pHit != ent ()) {
+   if (game.isPlayerEntity (tr.pHit) && tr.pHit != ent ()) {
       auto hit = tr.pHit;
 
       // check valid range
-      if (game.getTeam (hit) == m_team && util.isAlive (hit)) {
+      if (game.getPlayerTeam (hit) == m_team && game.isAliveEntity (hit)) {
          return true;
       }
    }
@@ -1459,7 +1459,7 @@ void Bot::attackMovement () {
    if (!game.is (GameFlags::CSDM) && !isKnifeMode ()) {
       if ((m_states & Sense::SeeingEnemy)
          && approach < 30
-         && !bots.isBombPlanted ()
+         && !gameState.isBombPlanted ()
          && (isEnemyCone || m_isVIP || m_isReloading)) {
 
          if (m_retreatTime < game.time ()) {
@@ -1973,7 +1973,7 @@ void Bot::decideFollowUser () {
          continue;
       }
 
-      if (seesEntity (client.origin) && !util.isFakeClient (client.ent)) {
+      if (seesEntity (client.origin) && !game.isFakeClientEntity (client.ent)) {
          users.push (client.ent);
       }
    }
@@ -2248,7 +2248,7 @@ edict_t *Bot::setCorrectGrenadeVelocity (StringRef model) {
    edict_t *result = nullptr;
 
    game.searchEntities ("classname", "grenade", [&] (edict_t *ent) {
-      if (ent->v.owner == this->ent () && util.isModel (ent, model)) {
+      if (ent->v.owner == this->ent () && game.isEntityModelMatches (ent, model)) {
          result = ent;
 
          // set the correct velocity for the grenade
@@ -2286,7 +2286,7 @@ void Bot::checkGrenadesThrow () {
          || cv_ignore_enemies
          || m_isUsingGrenade
          || m_isReloading
-         || (isKnifeMode () && !bots.isBombPlanted ())
+         || (isKnifeMode () && !gameState.isBombPlanted ())
          || m_grenadeCheckTime >= game.time ()
          || m_lastEnemyOrigin.empty ());
 
@@ -2300,7 +2300,7 @@ void Bot::checkGrenadesThrow () {
 
    const auto senseCondition = isGrenadeMode ? false : !(m_states & (Sense::SuspectEnemy | Sense::HearingEnemy));
 
-   if (!util.isAlive (m_lastEnemy) || senseCondition) {
+   if (!game.isAliveEntity (m_lastEnemy) || senseCondition) {
       clearThrowStates (m_states);
       return;
    }
@@ -2343,7 +2343,7 @@ void Bot::checkGrenadesThrow () {
 
    // special condition if we're have valid current enemy
    if (!isGrenadeMode && ((m_states & Sense::SeeingEnemy)
-      && util.isAlive (m_enemy)
+      && game.isAliveEntity (m_enemy)
       && ((m_enemy->v.button | m_enemy->v.oldbuttons) & IN_ATTACK)
       && util.isVisible (pev->origin, m_enemy))
       && util.isInViewCone (pev->origin, m_enemy)) {

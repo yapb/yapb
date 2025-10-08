@@ -183,7 +183,7 @@ int BotControl::cmdMenu () {
    // reset the current menu
    closeMenu ();
 
-   if (arg <StringRef> (cmd) == "cmd" && util.isAlive (m_ent)) {
+   if (arg <StringRef> (cmd) == "cmd" && game.isAliveEntity (m_ent)) {
       showMenu (Menu::Commands);
    }
    else {
@@ -205,7 +205,7 @@ int BotControl::cmdCvars () {
    auto match = arg <StringRef> (pattern);
 
    // stop printing if executed once more
-   flushPrintQueue ();
+   m_printQueue.clear ();
 
    // revert all the cvars to their default values
    if (match == "defaults") {
@@ -1115,7 +1115,7 @@ int BotControl::menuFeatures (int item) {
       break;
 
    case 5:
-      if (util.isAlive (m_ent)) {
+      if (game.isAliveEntity (m_ent)) {
          showMenu (Menu::Commands);
       }
       else {
@@ -1924,7 +1924,7 @@ bool BotControl::executeCommands () {
 }
 
 bool BotControl::executeMenus () {
-   if (!util.isPlayer (m_ent) || game.isBotCmd ()) {
+   if (!game.isPlayerEntity (m_ent) || game.isBotCmd ()) {
       return false;
    }
    const auto &issuer = util.getClient (game.indexOfPlayer (m_ent));
@@ -1966,7 +1966,7 @@ void BotControl::showMenu (int id) {
       menusParsed = true;
    }
 
-   if (!util.isPlayer (m_ent)) {
+   if (!game.isPlayerEntity (m_ent)) {
       return;
    }
    auto &client = util.getClient (game.indexOfPlayer (m_ent));
@@ -2007,7 +2007,7 @@ void BotControl::showMenu (int id) {
 }
 
 void BotControl::closeMenu () {
-   if (!util.isPlayer (m_ent)) {
+   if (!game.isPlayerEntity (m_ent)) {
       return;
    }
    auto &client = util.getClient (game.indexOfPlayer (m_ent));
@@ -2073,7 +2073,7 @@ void BotControl::kickBotByMenu (int page) {
 }
 
 void BotControl::assignAdminRights (edict_t *ent, char *infobuffer) {
-   if (!game.isDedicated () || util.isFakeClient (ent)) {
+   if (!game.isDedicated () || game.isFakeClientEntity (ent)) {
       return;
    }
    StringRef key = cv_password_key.as <StringRef> ();
@@ -2100,7 +2100,7 @@ void BotControl::maintainAdminRights () {
    StringRef password = cv_password.as <StringRef> ();
 
    for (auto &client : util.getClients ()) {
-      if (!(client.flags & ClientFlags::Used) || util.isFakeClient (client.ent)) {
+      if (!(client.flags & ClientFlags::Used) || game.isFakeClientEntity (client.ent)) {
          continue;
       }
       auto ent = client.ent;

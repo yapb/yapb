@@ -9,7 +9,6 @@
 
 ConVar cv_display_welcome_text ("display_welcome_text", "1", "Enables or disables showing a welcome message to the host entity on game start.");
 ConVar cv_enable_query_hook ("enable_query_hook", "0", "Enables or disables fake server query responses, which show bots as real players in the server browser.");
-ConVar cv_breakable_health_limit ("breakable_health_limit", "500.0", "Specifies the maximum health of a breakable object that the bot will consider destroying.", true, 1.0f, 3000.0);
 ConVar cv_enable_fake_steamids ("enable_fake_steamids", "0", "Allows or disallows bots to return a fake Steam ID.");
 
 BotSupport::BotSupport () {
@@ -82,13 +81,6 @@ BotSupport::BotSupport () {
    m_clients.resize (kGameMaxPlayers + 1);
 }
 
-bool BotSupport::isAlive (edict_t *ent) {
-   if (game.isNullEntity (ent)) {
-      return false;
-   }
-   return ent->v.deadflag == DEAD_NO && ent->v.health > 0.0f && ent->v.movetype != MOVETYPE_NOCLIP;
-}
-
 bool BotSupport::isVisible (const Vector &origin, edict_t *ent) {
    if (game.isNullEntity (ent)) {
       return false;
@@ -151,109 +143,6 @@ void BotSupport::decalTrace (TraceResult *trace, int decalIndex) {
    msg.end ();
 }
 
-bool BotSupport::isPlayer (edict_t *ent) {
-   if (game.isNullEntity (ent)) {
-      return false;
-   }
-
-   if (ent->v.flags & FL_PROXY) {
-      return false;
-   }
-
-   if ((ent->v.flags & (FL_CLIENT | FL_FAKECLIENT)) || bots[ent] != nullptr) {
-      return !strings.isEmpty (ent->v.netname.chars ());
-   }
-   return false;
-}
-
-bool BotSupport::isMonster (edict_t *ent) {
-   if (game.isNullEntity (ent)) {
-      return false;
-   }
-
-   if (~ent->v.flags & FL_MONSTER) {
-      return false;
-   }
-
-   if (isHostageEntity (ent)) {
-      return false;
-   }
-   return true;
-}
-
-bool BotSupport::isItem (edict_t *ent) {
-   return ent && ent->v.classname.str ().contains ("item_");
-}
-
-bool BotSupport::isPlayerVIP (edict_t *ent) {
-   if (!game.mapIs (MapFlags::Assassination)) {
-      return false;
-   }
-
-   if (!isPlayer (ent)) {
-      return false;
-   }
-   return *(engfuncs.pfnInfoKeyValue (engfuncs.pfnGetInfoKeyBuffer (ent), "model")) == 'v';
-}
-
-bool BotSupport::isDoorEntity (edict_t *ent) {
-   if (game.isNullEntity (ent)) {
-      return false;
-   }
-   const auto classHash = ent->v.classname.str ().hash ();
-
-   constexpr auto kFuncDoor = StringRef::fnv1a32 ("func_door");
-   constexpr auto kFuncDoorRotating = StringRef::fnv1a32 ("func_door_rotating");
-
-   return classHash == kFuncDoor || classHash == kFuncDoorRotating;
-}
-
-bool BotSupport::isHostageEntity (edict_t *ent) {
-   if (game.isNullEntity (ent)) {
-      return false;
-   }
-   const auto classHash = ent->v.classname.str ().hash ();
-
-   constexpr auto kHostageEntity = StringRef::fnv1a32 ("hostage_entity");
-   constexpr auto kMonsterScientist = StringRef::fnv1a32 ("monster_scientist");
-
-   return classHash == kHostageEntity || classHash == kMonsterScientist;
-}
-
-bool BotSupport::isBreakableEntity (edict_t *ent, bool initialSeed) {
-   if (!initialSeed) {
-      if (!game.hasBreakables ()) {
-         return false;
-      }
-   }
-
-   if (game.isNullEntity (ent) || ent == game.getStartEntity () || (!initialSeed && !game.isBreakableValid (ent))) {
-      return false;
-   }
-   const auto limit = cv_breakable_health_limit.as <float> ();
-
-   // not shoot-able
-   if (ent->v.health >= limit) {
-      return false;
-   }
-   constexpr auto kFuncBreakable = StringRef::fnv1a32 ("func_breakable");
-   constexpr auto kFuncPushable = StringRef::fnv1a32 ("func_pushable");
-   constexpr auto kFuncWall = StringRef::fnv1a32 ("func_wall");
-
-   if (ent->v.takedamage > 0.0f && ent->v.impulse <= 0 && !(ent->v.flags & FL_WORLDBRUSH) && !(ent->v.spawnflags & SF_BREAK_TRIGGER_ONLY)) {
-      const auto classHash = ent->v.classname.str ().hash ();
-
-      if (classHash == kFuncBreakable || (classHash == kFuncPushable && (ent->v.spawnflags & SF_PUSH_BREAKABLE)) || classHash == kFuncWall) {
-         return ent->v.movetype == MOVETYPE_PUSH || ent->v.movetype == MOVETYPE_PUSHSTEP;
-      }
-   }
-   return false;
-}
-
-bool BotSupport::isFakeClient (edict_t *ent) {
-   return bots[ent] != nullptr || (!game.isNullEntity (ent) && (ent->v.flags & FL_FAKECLIENT));
-}
-
 void BotSupport::checkWelcome () {
    // the purpose of this function, is  to send quick welcome message, to the listenserver entity.
 
@@ -264,7 +153,7 @@ void BotSupport::checkWelcome () {
    const bool needToSendMsg = (graph.length () > 0 ? m_needToSendWelcome : true);
    auto receiveEnt = game.getLocalEntity ();
 
-   if (isAlive (receiveEnt) && m_welcomeReceiveTime < 1.0f && needToSendMsg) {
+   if (game.isAliveEntity (receiveEnt) && m_welcomeReceiveTime < 1.0f && needToSendMsg) {
       m_welcomeReceiveTime = game.time () + 2.0f + mp_freezetime.as <float> (); // receive welcome message in four seconds after game has commencing
    }
 
@@ -344,7 +233,7 @@ bool BotSupport::findNearestPlayer (void **pvHolder, edict_t *to, float searchDi
          continue;
       }
 
-      if ((sameTeam && client.team != game.getTeam (to))
+      if ((sameTeam && client.team != game.getPlayerTeam (to))
          || (needAlive && !(client.flags & ClientFlags::Alive))
          || (needBot && !bots[client.ent])
          || (needDrawn && (client.ent->v.effects & EF_NODRAW))
@@ -373,7 +262,7 @@ void BotSupport::updateClients () {
          client.ent = player;
          client.flags |= ClientFlags::Used;
 
-         if (isAlive (player)) {
+         if (game.isAliveEntity (player)) {
             client.flags |= ClientFlags::Alive;
          }
          else {
@@ -392,10 +281,6 @@ void BotSupport::updateClients () {
    }
 }
 
-bool BotSupport::isModel (const edict_t *ent, StringRef model) {
-   return model.startsWith (ent->v.model.chars (9));
-}
-
 String BotSupport::getCurrentDateTime () {
    time_t ticks = time (&ticks);
    tm timeinfo {};
@@ -409,7 +294,7 @@ String BotSupport::getCurrentDateTime () {
 }
 
 StringRef BotSupport::getFakeSteamId (edict_t *ent) {
-   if (!cv_enable_fake_steamids || !isPlayer (ent)) {
+   if (!cv_enable_fake_steamids || !game.isPlayerEntity (ent)) {
       return "BOT";
    }
    auto botNameHash = StringRef::fnv1a32 (ent->v.netname.chars ());
@@ -478,4 +363,119 @@ void BotSupport::setCustomCvarDescriptions () {
       restrictInfo.appendf ("%s - %s\n", alias.first, alias.second);
    });
    game.setCvarDescription (cv_restricted_weapons, restrictInfo);
+}
+
+bool BotSupport::isLineBlockedBySmoke (const Vector &from, const Vector &to) {
+   if (!gameState.hasActiveGrenades ()) {
+      return false;
+   }
+   constexpr auto kSmokeGrenadeRadius = 115.0f;
+
+   // distance along line of sight covered by smoke
+   float totalSmokedLength = 0.0f;
+
+   Vector sightDir = to - from;
+   const float sightLength = sightDir.normalizeInPlace ();
+
+   for (auto pent : gameState.getActiveGrenades ()) {
+      if (game.isNullEntity (pent)) {
+         continue;
+      }
+
+      // need drawn models
+      if (pent->v.effects & EF_NODRAW) {
+         continue;
+      }
+
+      // smoke must be on a ground
+      if (!(pent->v.flags & FL_ONGROUND)) {
+         continue;
+      }
+
+      // must be a smoke grenade
+      if (!game.isEntityModelMatches (pent, kSmokeModelName)) {
+         continue;
+      }
+
+      const float smokeRadiusSq = cr::sqrf (kSmokeGrenadeRadius);
+      const Vector &smokeOrigin = game.getEntityOrigin (pent);
+
+      Vector toGrenade = smokeOrigin - from;
+      float alongDist = toGrenade | sightDir;
+
+      // compute closest point to grenade along line of sight ray
+      Vector close {};
+
+      // constrain closest point to line segment
+      if (alongDist < 0.0f) {
+         close = from;
+      }
+      else if (alongDist >= sightLength) {
+         close = to;
+      }
+      else {
+         close = from + sightDir * alongDist;
+      }
+
+      // if closest point is within smoke radius, the line overlaps the smoke cloud
+      Vector toClose = close - smokeOrigin;
+      float lengthSq = toClose.lengthSq ();
+
+      if (lengthSq < smokeRadiusSq) {
+         // some portion of the ray intersects the cloud
+
+         const float fromSq = toGrenade.lengthSq ();
+         const float toSq = (smokeOrigin - to).lengthSq ();
+
+         if (fromSq < smokeRadiusSq) {
+            if (toSq < smokeRadiusSq) {
+               // both 'from' and 'to' lie within the cloud
+               // entire length is smoked
+               totalSmokedLength += (to - from).length ();
+            }
+            else {
+               // 'from' is inside the cloud, 'to' is outside
+               // compute half of total smoked length as if ray crosses entire cloud chord
+               float halfSmokedLength = cr::sqrtf (smokeRadiusSq - lengthSq);
+
+               if (alongDist > 0.0f) {
+                  // ray goes thru 'close'
+                  totalSmokedLength += halfSmokedLength + (close - from).length ();
+               }
+               else {
+                  // ray starts after 'close'
+                  totalSmokedLength += halfSmokedLength - (close - from).length ();
+               }
+
+            }
+         }
+         else if (toSq < smokeRadiusSq) {
+            // 'from' is outside the cloud, 'to' is inside
+            // compute half of total smoked length as if ray crosses entire cloud chord
+            const float halfSmokedLength = cr::sqrtf (smokeRadiusSq - lengthSq);
+            Vector v = to - smokeOrigin;
+
+            if ((v | sightDir) > 0.0f) {
+               // ray goes thru 'close'
+               totalSmokedLength += halfSmokedLength + (close - to).length ();
+            }
+            else {
+               // ray ends before 'close'
+               totalSmokedLength += halfSmokedLength - (close - to).length ();
+            }
+         }
+         else {
+            // 'from' and 'to' lie outside of the cloud - the line of sight completely crosses it
+            // determine the length of the chord that crosses the cloud
+            const float smokedLength = 2.0f * cr::sqrtf (smokeRadiusSq - lengthSq);
+            totalSmokedLength += smokedLength;
+         }
+      }
+   }
+
+   // define how much smoke a bot can see thru
+   const float maxSmokedLength = 0.7f * kSmokeGrenadeRadius;
+
+   // return true if the total length of smoke-covered line-of-sight is too much
+   return totalSmokedLength > maxSmokedLength;
 }

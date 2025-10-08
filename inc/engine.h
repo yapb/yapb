@@ -265,7 +265,7 @@ public:
    void searchEntities (const Vector &position, float radius, EntitySearch functor) const;
 
    // check if map has entity
-   bool hasEntityInGame (StringRef classname);
+   bool hasEntityInGame (StringRef classname) const;
 
    // print the version to server console on startup
    void printBotVersion () const;
@@ -281,6 +281,38 @@ public:
 
    // is developer mode ?
    bool isDeveloperMode () const;
+
+   // entity utils
+public:
+   // check if entity is alive
+   bool isAliveEntity (edict_t *ent) const;
+
+   // checks if entity is fakeclient
+   bool isFakeClientEntity (edict_t *ent) const;
+
+   // check if entity is a player
+   bool isPlayerEntity (edict_t *ent) const ;
+
+   // check if entity is a monster
+   bool isMonsterEntity (edict_t *ent) const;
+
+   // check if entity is a item
+   bool isItemEntity (edict_t *ent) const;
+
+   // check if entity is a hostage entity
+   bool isHostageEntity (edict_t *ent) const;
+
+   // check if entity is a door entity
+   bool isDoorEntity (edict_t *ent) const;
+
+   // this function is checking that pointed by ent pointer obstacle, can be destroyed
+   bool isBreakableEntity (edict_t *ent, bool initialSeed = false) const;
+
+   // checks if same model omitting the models directory
+   bool isEntityModelMatches (const edict_t *ent, StringRef model) const;
+
+   // check if entity is a vip
+   bool isPlayerVIP (edict_t *ent) const;
 
    // public inlines
 public:
@@ -343,7 +375,7 @@ public:
    }
 
    // get the wroldspawn entity
-   edict_t *getStartEntity () {
+   edict_t *getStartEntity () const {
       return m_startEntity;
    }
 
@@ -353,7 +385,7 @@ public:
    }
 
    // gets the player team
-   int getTeam (edict_t *ent) const {
+   int getPlayerTeam (edict_t *ent) const {
       if (isNullEntity (ent)) {
          return Team::Unassigned;
       }
@@ -361,7 +393,7 @@ public:
    }
 
    // gets the player team (real in ffa)
-   int getRealTeam (edict_t *ent) const {
+   int getRealPlayerTeam (edict_t *ent) const {
       if (isNullEntity (ent)) {
          return Team::Unassigned;
       }
@@ -369,8 +401,8 @@ public:
    }
 
    // get real gamedll team (matches gamedll indices)
-   int getGameTeam (edict_t *ent) const {
-      return getRealTeam (ent) + 1;
+   int getPlayerTeamGame (edict_t *ent) const {
+      return getRealPlayerTeam (ent) + 1;
    }
 
    // sets the precache to uninitialized
@@ -723,6 +755,98 @@ public:
    }
 };
 
+// offload bot manager class from things it shouldn't do
+class GameState final : public Singleton <GameState> {
+private:
+   bool m_bombPlanted {}; // is bomb planted ?
+   bool m_roundOver {}; // well, round is over>
+   bool m_resetHud {}; // reset HUD is called for some one
+
+   float m_timeBombPlanted {}; // time the bomb were planted
+   float m_timeRoundStart {}; // time round has started
+   float m_timeRoundEnd {}; // time round ended
+   float m_timeRoundMid {}; // middle point timestamp of a round
+
+   Vector m_bombOrigin {}; // stored bomb origin
+
+   Array <edict_t *> m_activeGrenades {}; // holds currently active grenades on the map
+   Array <edict_t *> m_interestingEntities {};  // holds currently interesting entities on the map
+
+   IntervalTimer m_interestingEntitiesUpdateTime {}; // time to update interesting entities
+   IntervalTimer m_activeGrenadesUpdateTime {}; // time to update active grenades
+
+public:
+   GameState () = default;
+   ~GameState () = default;
+
+public:
+   const Vector &getBombOrigin () const {
+      return m_bombOrigin;
+   }
+
+   bool isBombPlanted () const {
+      return m_bombPlanted;
+   }
+
+   float getTimeBombPlanted () const {
+      return m_timeBombPlanted;
+   }
+
+   float getRoundStartTime () const {
+      return m_timeRoundStart;
+   }
+
+   float getRoundMidTime () const {
+      return m_timeRoundMid;
+   }
+
+   float getRoundEndTime () const {
+      return m_timeRoundEnd;
+   }
+
+   bool isRoundOver () const {
+      return m_roundOver;
+   }
+
+   bool isResetHUD () const {
+      return m_resetHud;
+   }
+
+   void setResetHUD (bool resetHud) {
+      m_resetHud = resetHud;
+   }
+
+   void setRoundOver (bool roundOver) {
+      m_roundOver = roundOver;
+   }
+
+   const Array <edict_t *> &getActiveGrenades () {
+      return m_activeGrenades;
+   }
+
+   const Array <edict_t *> &getInterestingEntities () {
+      return m_interestingEntities;
+   }
+
+   bool hasActiveGrenades () const {
+      return !m_activeGrenades.empty ();
+   }
+
+   bool hasInterestingEntities () const {
+      return !m_interestingEntities.empty ();
+   }
+
+public:
+   float getBombTimeLeft () const;
+
+   void setBombPlanted (bool isPlanted);
+   void setBombOrigin (bool reset = false, const Vector &pos = nullptr);
+   void roundStart ();
+   void updateActiveGrenade ();
+   void updateInterestingEntities ();
+};
+
 // expose globals
 CR_EXPOSE_GLOBAL_SINGLETON (Game, game);
+CR_EXPOSE_GLOBAL_SINGLETON (GameState, gameState);
 CR_EXPOSE_GLOBAL_SINGLETON (LightMeasure, illum);

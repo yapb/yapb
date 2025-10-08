@@ -39,7 +39,7 @@ public:
    ~GraphVistable () = default;
 
 public:
-   bool visible (int srcIndex, int destIndex, VisIndex vis = VisIndex::Any);
+   bool visible (int srcIndex, int destIndex, VisIndex vis = VisIndex::Any) const;
 
    void load ();
    void save () const;

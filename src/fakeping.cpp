@@ -24,7 +24,7 @@ void BotFakePingManager::reset (edict_t *to) {
    }
 
    for (const auto &client : util.getClients ()) {
-      if (!(client.flags & ClientFlags::Used) || util.isFakeClient (client.ent)) {
+      if (!(client.flags & ClientFlags::Used) || game.isFakeClientEntity (client.ent)) {
          continue;
       }
       m_pbm.start (client.ent);
@@ -46,7 +46,7 @@ void BotFakePingManager::syncCalculate () {
       int numHumans {};
 
       for (const auto &client : util.getClients ()) {
-         if (!(client.flags & ClientFlags::Used) || util.isFakeClient (client.ent)) {
+         if (!(client.flags & ClientFlags::Used) || game.isFakeClientEntity (client.ent)) {
             continue;
          }
          numHumans++;
@@ -101,7 +101,7 @@ void BotFakePingManager::calculate () {
 }
 
 void BotFakePingManager::emit (edict_t *ent) {
-   if (!util.isPlayer (ent)) {
+   if (!game.isPlayerEntity (ent)) {
       return;
    }
 

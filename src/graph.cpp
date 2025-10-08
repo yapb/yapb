@@ -1310,7 +1310,7 @@ void BotGraph::emitNotify (int32_t sound) const {
    };
 
    // notify editor
-   if (util.isPlayer (m_editor) && !m_silenceMessages) {
+   if (game.isPlayerEntity (m_editor) && !m_silenceMessages) {
       game.playSound (m_editor, notifySounds[sound].chars ());
    }
 }
@@ -1483,7 +1483,7 @@ void BotGraph::calculatePathRadius (int index) {
          if (tr.flFraction < 1.0f) {
             game.testLine (radiusStart, radiusEnd, TraceIgnore::Monsters, nullptr, &tr);
 
-            if (util.isDoorEntity (tr.pHit)) {
+            if (game.isDoorEntity (tr.pHit)) {
                path.radius = 0.0f;
                wayBlocked = true;
 
@@ -1976,7 +1976,7 @@ bool BotGraph::isNodeReacheableEx (const Vector &src, const Vector &destination,
    // check if this node is "visible"...
    game.testLine (src, destination, TraceIgnore::Monsters, m_editor, &tr);
 
-   const bool isDoor = util.isDoorEntity (tr.pHit);
+   const bool isDoor = game.isDoorEntity (tr.pHit);
 
    // if node is visible from current position (even behind head)...
    if (tr.flFraction >= 1.0f || isDoor) {
@@ -2059,7 +2059,7 @@ void BotGraph::frame () {
    }
 
    // keep the clipping mode enabled, or it can be turned off after new round has started
-   if (graph.hasEditFlag (GraphEdit::Noclip) && util.isAlive (m_editor)) {
+   if (graph.hasEditFlag (GraphEdit::Noclip) && game.isAliveEntity (m_editor)) {
       m_editor->v.movetype = MOVETYPE_NOCLIP;
    }
 
@@ -2123,7 +2123,7 @@ void BotGraph::frame () {
       // check if node is within a distance, and is visible
       if (distanceSq < cr::sqrf (cv_graph_draw_distance.as <float> ())
          && ((util.isVisible (path.origin, m_editor)
-            && util.isInViewCone (path.origin, m_editor)) || !util.isAlive (m_editor) || distanceSq < cr::sqrf (64.0f))) {
+            && util.isInViewCone (path.origin, m_editor)) || !game.isAliveEntity (m_editor) || distanceSq < cr::sqrf (64.0f))) {
 
          // check the distance
          if (distanceSq < nearestDistanceSq) {
@@ -2764,43 +2764,6 @@ void BotGraph::addBasic () {
 
    autoCreateForEntity (NodeAddFlag::Goal, "func_vip_safetyzone"); // vip rescue (safety) zone
    autoCreateForEntity (NodeAddFlag::Goal, "func_escapezone"); // terrorist escape zone
-}
-
-void BotGraph::setBombOrigin (bool reset, const Vector &pos) {
-   // this function stores the bomb position as a vector
-
-   if (!game.mapIs (MapFlags::Demolition) || !bots.isBombPlanted ()) {
-      return;
-   }
-
-   if (reset) {
-      m_bombOrigin.clear ();
-      bots.setBombPlanted (false);
-
-      return;
-   }
-
-   if (!pos.empty ()) {
-      m_bombOrigin = pos;
-      return;
-   }
-   bool wasFound = false;
-   auto bombModel = conf.getBombModelName ();
-
-   game.searchEntities ("classname", "grenade", [&] (edict_t *ent) {
-      if (util.isModel (ent, bombModel)) {
-         m_bombOrigin = game.getEntityOrigin (ent);
-         wasFound = true;
-
-         return EntitySearchResult::Break;
-      }
-      return EntitySearchResult::Continue;
-   });
-
-   if (!wasFound) {
-      m_bombOrigin.clear ();
-      bots.setBombPlanted (false);
-   }
 }
 
 void BotGraph::startLearnJump () {

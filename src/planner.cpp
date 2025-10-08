@@ -17,12 +17,12 @@ float PlannerHeuristic::gfunctionKillsDist (int team, int currentIndex, int pare
    if (parentIndex == kInvalidNodeIndex) {
       return 0.0f;
    }
-   auto cost = practice.plannerGetDamage (team, currentIndex, currentIndex, true);
+   auto cost = practice.getDamageEx (team, currentIndex, currentIndex, true);
    const auto &current = graph[currentIndex];
 
    for (const auto &neighbour : current.links) {
       if (neighbour.index != kInvalidNodeIndex) {
-         cost += practice.plannerGetDamage (team, neighbour.index, neighbour.index, false);
+         cost += practice.getDamageEx (team, neighbour.index, neighbour.index, false);
       }
    }
 
@@ -45,12 +45,12 @@ float PlannerHeuristic::gfunctionKillsDistCTWithHostage (int team, int currentIn
 }
 
 float PlannerHeuristic::gfunctionKills (int team, int currentIndex, int) {
-   auto cost = practice.plannerGetDamage (team, currentIndex, currentIndex, false);
+   auto cost = practice.getDamageEx (team, currentIndex, currentIndex, false);
    const auto &current = graph[currentIndex];
 
    for (const auto &neighbour : current.links) {
       if (neighbour.index != kInvalidNodeIndex) {
-         cost += practice.plannerGetDamage (team, neighbour.index, neighbour.index, false);
+         cost += practice.getDamageEx (team, neighbour.index, neighbour.index, false);
       }
    }
 
@@ -264,7 +264,7 @@ AStarResult AStarAlgo::find (int botTeam, int srcIndex, int destIndex, NodeAdder
    auto rsRandomizer = 1.0f;
 
    // randomize path on round start now and then
-   if (cv_path_randomize_on_round_start && bots.getRoundStartTime () + 2.0f > game.time ()) {
+   if (cv_path_randomize_on_round_start && gameState.getRoundStartTime () + 2.0f > game.time ()) {
       rsRandomizer = rg (0.5f, static_cast <float> (botTeam) * 2.0f);
    }
 

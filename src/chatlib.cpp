@@ -161,7 +161,7 @@ void Bot::prepareChatMessage (StringRef message) {
    auto humanizedName = [] (int index) -> String {
       auto ent = game.playerOfIndex (index);
 
-      if (!util.isPlayer (ent)) {
+      if (!game.isPlayerEntity (ent)) {
          return "unknown";
       }
       String playerName = ent->v.netname.chars ();
@@ -193,7 +193,7 @@ void Bot::prepareChatMessage (StringRef message) {
 
    // get roundtime
    auto getRoundTime = [] () -> String {
-      auto roundTimeSecs = static_cast <int> (bots.getRoundEndTime () - game.time ());
+      const auto roundTimeSecs = static_cast <int> (gameState.getRoundEndTime () - game.time ());
 
       String roundTime {};
       roundTime.assignf ("%02d:%02d", cr::clamp (roundTimeSecs / 60, 0, 59), cr::clamp (cr::abs (roundTimeSecs % 60), 0, 59));
@@ -241,8 +241,8 @@ void Bot::prepareChatMessage (StringRef message) {
             return humanizedName (playerIndex);
          }
          else if (!needsEnemy && m_team == client.team) {
-            if (util.isPlayer (pev->dmg_inflictor)
-               && game.getRealTeam (pev->dmg_inflictor) == m_team) {
+            if (game.isPlayerEntity (pev->dmg_inflictor)
+               && game.getRealPlayerTeam (pev->dmg_inflictor) == m_team) {
 
                return humanizedName (game.indexOfPlayer (pev->dmg_inflictor));
             }

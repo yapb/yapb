@@ -64,7 +64,7 @@ void BotPractice::setDamage (int32_t team, int32_t start, int32_t goal, int32_t 
    m_data[{start, goal, team}].damage = static_cast <int16_t> (value);
 }
 
-float BotPractice::plannerGetDamage (int32_t team, int32_t start, int32_t goal, bool addTeamHighestDamage) {
+float BotPractice::getDamageEx (int32_t team, int32_t start, int32_t goal, bool addTeamHighestDamage) {
    if (!m_damageUpdateLock.tryLock ()) {
       return 0.0f;
    }
