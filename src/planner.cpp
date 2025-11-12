@@ -184,7 +184,7 @@ bool AStarAlgo::cantSkipNode (const int a, const int b, bool skipVisCheck) {
    }
 
    if (!skipVisCheck) {
-      const bool notVisible = !vistab.visible (ag.number, bg.number) || !vistab.visible (bg.number, ag.number);
+      const bool notVisible = !vistab.visibleBothSides (ag.number, bg.number);
 
       if (notVisible) {
          return true;
@@ -372,7 +372,7 @@ void FloydWarshallAlgo::syncRebuild () {
    for (int k = 0; k < m_length; ++k) {
       for (int i = 0; i < m_length; ++i) {
          for (int j = 0; j < m_length; ++j) {
-            int distance = (matrix + (i * m_length) + k)->dist + (matrix + (k * m_length) + j)->dist;
+            const auto distance = (matrix + (i * m_length) + k)->dist + (matrix + (k * m_length) + j)->dist;
 
             if (distance < (matrix + (i * m_length) + j)->dist) {
                *(matrix + (i * m_length) + j) = { (matrix + (i * m_length) + k)->index, distance };

@@ -46,7 +46,7 @@ void BotConfig::loadMainConfig (bool isFirstLoad) {
       return false;
    };
 
-   auto storeVarValue = [] (cvar_t *c,  StringRef value) {
+   auto storeVarValue = [] (cvar_t *c, StringRef value) {
       auto &cvars = game.getCvars ();
 
       for (auto &var : cvars) {
@@ -303,9 +303,9 @@ void BotConfig::loadChatterConfig () {
          { "Chatter_GuardingEscapeZone", Chatter::GuardingEscapeZone, kMaxChatterRepeatInterval },
          { "Chatter_GuardingVipSafety", Chatter::GuardingVIPSafety, kMaxChatterRepeatInterval },
          { "Chatter_PlantingC4", Chatter::PlantingBomb, 10.0f },
-         { "Chatter_InCombat", Chatter::InCombat,  kMaxChatterRepeatInterval },
+         { "Chatter_InCombat", Chatter::InCombat, kMaxChatterRepeatInterval },
          { "Chatter_SeeksEnemy", Chatter::SeekingEnemies, kMaxChatterRepeatInterval },
-         { "Chatter_Nothing", Chatter::Nothing,  kMaxChatterRepeatInterval },
+         { "Chatter_Nothing", Chatter::Nothing, kMaxChatterRepeatInterval },
          { "Chatter_EnemyDown", Chatter::EnemyDown, 10.0f },
          { "Chatter_UseHostage", Chatter::UsingHostages, kMaxChatterRepeatInterval },
          { "Chatter_WonTheRound", Chatter::WonTheRound, kMaxChatterRepeatInterval },
@@ -350,7 +350,7 @@ void BotConfig::loadChatterConfig () {
          { "Chatter_BombSiteSecured", Chatter::BombsiteSecured, 3.5f },
          { "Chatter_GoingToCamp", Chatter::GoingToCamp, 30.0f },
          { "Chatter_Camp", Chatter::Camping, 10.0f },
-         { "Chatter_OnARoll", Chatter::OnARoll, kMaxChatterRepeatInterval},
+         { "Chatter_OnARoll", Chatter::OnARoll, kMaxChatterRepeatInterval },
       };
       Array <String> missingWaves {};
 
@@ -632,7 +632,7 @@ void BotConfig::loadDifficultyConfig () {
    };
 
    m_difficulty[Difficulty::Expert] = {
-      {  0.1f, 0.2f }, 100, 90, 90, 21, { 0.0f, 0.0f, 0.0f }
+      { 0.1f, 0.2f }, 100, 90, 90, 21, { 0.0f, 0.0f, 0.0f }
    };
 
    // currently, mindelay, maxdelay, headprob, seenthruprob, heardthruprob, recoil, aim_error {x,y,z}
@@ -721,12 +721,12 @@ void BotConfig::loadCustomConfig () {
 
    auto setDefaults = [&] () {
       m_custom = {
-         { "C4ModelName",  "c4.mdl" },
-         { "AMXParachuteCvar",  "sv_parachute" },
-         { "CustomCSDMSpawnPoint",  "view_spawn" },
+         { "C4ModelName", "c4.mdl" },
+         { "AMXParachuteCvar", "sv_parachute" },
+         { "CustomCSDMSpawnPoint", "view_spawn" },
          { "CSDMDetectCvar", "csdm_active" },
          { "ZMDetectCvar", "zp_delay" },
-         { "ZMDelayCvar",  "zp_delay" },
+         { "ZMDelayCvar", "zp_delay" },
          { "ZMInfectedTeam", "T" },
          { "EnableFakeBotFeatures", "no" },
          { "DisableLogFile", "no" },

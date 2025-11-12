@@ -22,7 +22,8 @@ CR_DECLARE_SCOPED_ENUM (StorageOption,
    Official = cr::bit (4), // this is additional flag for graph indicates graph are official
    Recovered = cr::bit (5), // this is additional flag indicates graph converted from podbot and was bad
    Exten = cr::bit (6), // this is additional flag indicates that there's extension info
-   Analyzed = cr::bit (7) // this graph has been analyzed
+   Analyzed = cr::bit (7), // this graph has been analyzed
+   Converted = cr::bit (8) // converted from a pwf format
 )
 
 // storage header versions

@@ -60,7 +60,7 @@ CR_DECLARE_SCOPED_ENUM (MapFlags,
    Escape = cr::bit (3),
    KnifeArena = cr::bit (4),
    FightYard = cr::bit (5),
-   GrenadeWar = cr::bit(6),
+   GrenadeWar = cr::bit (6),
    HasDoors = cr::bit (10), // additional flags
    HasButtons = cr::bit (11) // map has buttons
 )
@@ -190,6 +190,9 @@ public:
    // initialize levels
    void levelInitialize (edict_t *entities, int max);
 
+   // when entity spawns
+   void onSpawnEntity (edict_t *ent);
+
    // shutdown levels
    void levelShutdown ();
 
@@ -291,7 +294,7 @@ public:
    bool isFakeClientEntity (edict_t *ent) const;
 
    // check if entity is a player
-   bool isPlayerEntity (edict_t *ent) const ;
+   bool isPlayerEntity (edict_t *ent) const;
 
    // check if entity is a monster
    bool isMonsterEntity (edict_t *ent) const;
@@ -333,7 +336,10 @@ public:
 
    // gets custom engine args for client command
    const char *botArgs () const {
-      return strings.format (String::join (m_botArgs, " ", m_botArgs[0].startsWith ("say") ? 1 : 0).chars ());
+      auto result = strings.chars ();
+      strings.copy (result, String::join (m_botArgs, " ", m_botArgs[0].startsWith ("say") ? 1 : 0).chars (), cr::StringBuffer::StaticBufferSize);
+
+      return result;
    }
 
    // gets custom engine argv for client command
@@ -486,7 +492,7 @@ public:
 
    // helper to sending the client message
    void sendClientMessage (bool console, edict_t *ent, StringRef message);
-   
+
    // helper to sending the server message
    void sendServerMessage (StringRef message);
 

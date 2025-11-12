@@ -186,9 +186,9 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
 
    // try to set proffered personality
    static HashMap <String, Personality> personalityMap {
-      {"normal", Personality::Normal },
-      {"careful", Personality::Careful },
-      {"rusher", Personality::Rusher },
+      { "normal", Personality::Normal },
+      { "careful", Personality::Careful },
+      { "rusher", Personality::Rusher },
    };
 
    // set personality if requested
@@ -332,13 +332,17 @@ void BotManager::addbot (StringRef name, StringRef difficulty, StringRef persona
    // this function is same as the function above, but accept as parameters string instead of integers
 
    BotRequest request {};
-   static StringRef any = "*";
+   constexpr StringRef ANY = "*";
 
-   request.name = (name.empty () || name == any) ? StringRef ("\0") : name;
-   request.difficulty = (difficulty.empty () || difficulty == any) ? -1 : difficulty.as <int> ();
-   request.team = (team.empty () || team == any) ? -1 : team.as <int> ();
-   request.skin = (skin.empty () || skin == any) ? -1 : skin.as <int> ();
-   request.personality = (personality.empty () || personality == any) ? -1 : personality.as <int> ();
+   auto handleParam = [&ANY] (StringRef value) {
+      return value.empty () || value == ANY ? -1 : value.as <int> ();
+   };
+
+   request.name = name.empty () || name == ANY ? StringRef ("\0") : name;
+   request.difficulty = handleParam (difficulty);
+   request.team = handleParam (team);
+   request.skin = handleParam (skin);
+   request.personality = handleParam (personality);
    request.manual = manual;
 
    addbot (request.name, request.difficulty, request.personality, request.team, request.skin, request.manual);
@@ -617,7 +621,7 @@ void BotManager::serverFill (int selection, int personality, int difficulty, int
    }
    const auto maxToAdd = maxClients - (getHumansCount () + getBotCount ());
 
-   constexpr char kTeams[6][12] = { "", {"Terrorists"}, {"CTs"}, "", "", {"Random"}, };
+   constexpr char kTeams[6][12] = { "", { "Terrorists" }, { "CTs" }, "", "", { "Random" }, };
    auto toAdd = numToAdd == -1 ? maxToAdd : numToAdd;
 
    // limit manually added count as well
@@ -884,25 +888,25 @@ void BotManager::setWeaponMode (int selection) {
    selection--;
 
    constexpr int kStdMaps[7][kNumWeapons] = {
-      {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Knife only
-      {-1, -1, -1, 2, 2, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Pistols only
-      {-1, -1, -1, -1, -1, -1, -1, 2, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Shotgun only
-      {-1, -1, -1, -1, -1, -1, -1, -1, -1, 2, 1, 2, 0, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2, -1}, // Machine Guns only
-      {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 1, 0, 1, 1, -1, -1, -1, -1, -1, -1}, // Rifles only
-      {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2, 2, 0, 1, -1, -1}, // Snipers only
-      {-1, -1, -1, 2, 2, 0, 1, 2, 2, 2, 1, 2, 0, 2, 0, 0, 1, 0, 1, 1, 2, 2, 0, 1, 2, 1} // Standard
+      { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }, // Knife only
+      { -1, -1, -1, 2, 2, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }, // Pistols only
+      { -1, -1, -1, -1, -1, -1, -1, 2, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }, // Shotgun only
+      { -1, -1, -1, -1, -1, -1, -1, -1, -1, 2, 1, 2, 0, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2, -1 }, // Machine Guns only
+      { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 1, 0, 1, 1, -1, -1, -1, -1, -1, -1 }, // Rifles only
+      { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2, 2, 0, 1, -1, -1 }, // Snipers only
+      { -1, -1, -1, 2, 2, 0, 1, 2, 2, 2, 1, 2, 0, 2, 0, 0, 1, 0, 1, 1, 2, 2, 0, 1, 2, 1 } // Standard
    };
 
    constexpr int kAsMaps[7][kNumWeapons] = {
-      {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Knife only
-      {-1, -1, -1, 2, 2, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Pistols only
-      {-1, -1, -1, -1, -1, -1, -1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // Shotgun only
-      {-1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 0, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1, -1}, // Machine Guns only
-      {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, 1, 0, 1, 1, -1, -1, -1, -1, -1, -1}, // Rifles only
-      {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, -1, 1, -1, -1}, // Snipers only
-      {-1, -1, -1, 2, 2, 0, 1, 1, 1, 1, 1, 1, 0, 2, 0, -1, 1, 0, 1, 1, 0, 0, -1, 1, 1, 1} // Standard
+      { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }, // Knife only
+      { -1, -1, -1, 2, 2, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }, // Pistols only
+      { -1, -1, -1, -1, -1, -1, -1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }, // Shotgun only
+      { -1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 0, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1, -1 }, // Machine Guns only
+      { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, 1, 0, 1, 1, -1, -1, -1, -1, -1, -1 }, // Rifles only
+      { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, -1, 1, -1, -1 }, // Snipers only
+      { -1, -1, -1, 2, 2, 0, 1, 1, 1, 1, 1, 1, 0, 2, 0, -1, 1, 0, 1, 1, 0, 0, -1, 1, 1, 1 } // Standard
    };
-   constexpr char kModes[7][12] = { {"Knife"}, {"Pistol"}, {"Shotgun"}, {"Machine Gun"}, {"Rifle"}, {"Sniper"}, {"Standard"} };
+   constexpr char kModes[7][12] = { { "Knife" }, { "Pistol" }, { "Shotgun" }, { "Machine Gun" }, { "Rifle" }, { "Sniper" }, { "Standard" } };
 
    // get the raw weapons array
    auto tab = conf.getRawWeapons ();
@@ -1080,7 +1084,7 @@ void BotManager::updateBotDifficulties () {
 
       // sets new difficulty for all bots
       for (const auto &bot : m_bots) {
-         bot->m_difficulty = difficulty;
+         bot->setNewDifficulty (difficulty);
       }
       m_lastDifficulty = difficulty;
    }
@@ -1089,7 +1093,7 @@ void BotManager::updateBotDifficulties () {
 void BotManager::balanceBotDifficulties () {
    // difficulty changing once per round (time)
    auto updateDifficulty = [] (Bot *bot, int32_t offset) {
-      bot->m_difficulty = cr::clamp (static_cast <Difficulty> (bot->m_difficulty + offset), Difficulty::Noob, Difficulty::Expert);
+      bot->setNewDifficulty (cr::clamp (static_cast <Difficulty> (bot->m_difficulty + offset), Difficulty::Noob, Difficulty::Expert));
    };
 
    // with nightmare difficulty, there is no balance
@@ -1192,7 +1196,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
 
    m_isAlive = false;
    m_weaponBurstMode = BurstMode::Off;
-   m_difficulty = cr::clamp (static_cast <Difficulty> (difficulty), Difficulty::Noob, Difficulty::Expert);
+   setNewDifficulty (cr::clamp (static_cast <Difficulty> (difficulty), Difficulty::Noob, Difficulty::Expert));
 
    auto minDifficulty = cv_difficulty_min.as <int> ();
    auto maxDifficulty = cv_difficulty_max.as <int> ();
@@ -1202,7 +1206,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
       if (maxDifficulty > minDifficulty) {
          cr::swap (maxDifficulty, minDifficulty);
       }
-      m_difficulty = rg (minDifficulty, maxDifficulty);
+      setNewDifficulty (rg (minDifficulty, maxDifficulty));
    }
    m_pingBase = fakeping.randomBase ();
    m_ping = fakeping.randomBase ();
@@ -1515,14 +1519,13 @@ void Bot::newRound () {
 
    m_isLeader = false;
    m_hasProgressBar = false;
-   m_canChooseAimDirection = true;
+   m_canSetAimDirection = true;
    m_preventFlashing = 0.0f;
 
    m_timeTeamOrder = 0.0f;
    m_askCheckTime = rg (30.0f, 90.0f);
    m_minSpeed = 260.0f;
    m_prevSpeed = 0.0f;
-   m_prevVelocity = 0.0f;
    m_prevOrigin = Vector (kInfiniteDistance, kInfiniteDistance, kInfiniteDistance);
    m_prevTime = game.time ();
    m_lookUpdateTime = game.time ();
@@ -1722,9 +1725,6 @@ void Bot::newRound () {
       m_enemyIgnoreTimer = 0.0f;
    }
 
-   // update refvec for blocked movement
-   updateRightRef ();
-
    // and put buying into its message queue
    pushMsgQueue (BotMsg::Buy);
    startTask (Task::Normal, TaskPri::Normal, kInvalidNodeIndex, 0.0f, true);
@@ -1826,6 +1826,16 @@ void Bot::markStale () {
 
    // make as not receiving any messages
    pev->flags |= FL_DORMANT;
+}
+
+void Bot::setNewDifficulty (int32_t newDifficulty) {
+   if (newDifficulty < Difficulty::Noob || newDifficulty > Difficulty::Expert) {
+      m_difficulty = Difficulty::Hard;
+      m_difficultyData = conf.getDifficultyTweaks (Difficulty::Hard);
+   }
+
+   m_difficulty = newDifficulty;
+   m_difficultyData = conf.getDifficultyTweaks (newDifficulty);
 }
 
 void Bot::updateTeamJoin () {

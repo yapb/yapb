@@ -423,6 +423,7 @@ int BotControl::cmdNode () {
       addGraphCmd ("stats", "stats [noarguments]", "Shows the stats about node types on the map.", &BotControl::cmdNodeShowStats);
       addGraphCmd ("fileinfo", "fileinfo [noarguments]", "Shows basic information about graph file.", &BotControl::cmdNodeFileInfo);
       addGraphCmd ("adjust_height", "adjust_height [height offset]", "Modifies all the graph nodes height (z-component) with specified offset.", &BotControl::cmdNodeAdjustHeight);
+      addGraphCmd ("refresh", "refresh [noarguments]", "Deletes a current graph and downloads one from graph database.", &BotControl::cmdNodeRefresh);
 
       // add path commands
       addGraphCmd ("path_create", "path_create [noarguments]", "Opens and displays path creation menu.", &BotControl::cmdNodePathCreate);
@@ -598,6 +599,13 @@ int BotControl::cmdNodeAddBasic () {
 int BotControl::cmdNodeSave () {
    enum args { graph_cmd = 1, cmd, option };
 
+   // prevent some commands while analyzing graph
+   if (analyzer.isAnalyzing ()) {
+      msg ("This command is unavailable while map analysis is ongoing.");
+
+      return BotCommandResult::Handled;
+   }
+
    // if no check is set save anyway
    if (arg <StringRef> (option) == "nocheck") {
       graph.saveGraphData ();
@@ -629,6 +637,13 @@ int BotControl::cmdNodeSave () {
 int BotControl::cmdNodeLoad () {
    enum args { graph_cmd = 1, cmd };
 
+   // prevent some commands while analyzing graph
+   if (analyzer.isAnalyzing ()) {
+      msg ("This command is unavailable while map analysis is ongoing.");
+
+      return BotCommandResult::Handled;
+   }
+
    // just save graph on request
    if (graph.loadGraphData ()) {
       msg ("Graph successfully loaded.");
@@ -642,12 +657,39 @@ int BotControl::cmdNodeLoad () {
 int BotControl::cmdNodeErase () {
    enum args { graph_cmd = 1, cmd, iamsure };
 
+   // prevent some commands while analyzing graph
+   if (analyzer.isAnalyzing ()) {
+      msg ("This command is unavailable while map analysis is ongoing.");
+
+      return BotCommandResult::Handled;
+   }
+
    // prevent accidents when graph are deleted unintentionally
    if (arg <StringRef> (iamsure) == "iamsure") {
       bstor.unlinkFromDisk (false, false);
    }
    else {
       msg ("Please, append \"iamsure\" as parameter to get graph erased from the disk.");
+   }
+   return BotCommandResult::Handled;
+}
+
+int BotControl::cmdNodeRefresh () {
+   enum args { graph_cmd = 1, cmd, iamsure };
+
+   if (!graph.canDownload ()) {
+      msg ("Can't sync graph with database while graph url is not set.");
+
+      return BotCommandResult::Handled;
+   }
+
+   // prevent accidents when graph are deleted unintentionally
+   if (arg <StringRef> (iamsure) == "iamsure") {
+      bstor.unlinkFromDisk (false, false);
+      graph.loadGraphData ();
+   }
+   else {
+      msg ("Please, append \"iamsure\" as parameter to get graph refreshed from the graph database.");
    }
    return BotCommandResult::Handled;
 }

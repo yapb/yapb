@@ -603,6 +603,10 @@ bool BotGraph::isAnalyzed () const {
    return (m_info.header.options & StorageOption::Analyzed);
 }
 
+bool BotGraph::isConverted () const {
+   return (m_info.header.options & StorageOption::Converted);
+}
+
 void BotGraph::add (int type, const Vector &pos) {
    if (!hasEditor () && !analyzer.isAnalyzing ()) {
       return;
@@ -1292,6 +1296,7 @@ void BotGraph::showFileInfo () {
    msg ("  uncompressed_size: %dkB", info.uncompressed / 1024);
    msg ("  options: %d", info.options); // display as string ?
    msg ("  analyzed: %s", isAnalyzed () ? conf.translate ("yes") : conf.translate ("no")); // display as string ?
+   msg ("  converted: %s", isConverted () ? conf.translate ("yes") : conf.translate ("no")); // display as string ?
    msg ("  pathfinder: %s", planner.isPathsCheckFailed () ? "floyd" : "astar");
 
    msg ("");
@@ -1755,6 +1760,8 @@ bool BotGraph::convertOldFormat () {
 
                m_info.author = header.author;
 
+               m_info.header.options = StorageOption::Converted;
+
                // clean editor so graph will be saved with header's author
                auto editor = m_editor;
                m_editor = nullptr;
@@ -1813,9 +1820,10 @@ bool BotGraph::loadGraphData () {
       if (!modified.empty () && !modified.contains ("(none)")) {
          m_info.modified.assign (exten.modified);
       }
+      vistab.load (); // load/initialize visibility
+
       planner.init (); // initialize our little path planner
       practice.load (); // load bots practice
-      vistab.load (); // load/initialize visibility
 
       populateNodes ();
 
@@ -1851,7 +1859,7 @@ bool BotGraph::canDownload () {
 }
 
 bool BotGraph::saveGraphData () {
-   auto options = StorageOption::Graph | StorageOption::Exten;
+   auto options = m_info.header.options | StorageOption::Graph | StorageOption::Exten;
    String editorName {};
 
    if (!hasEditor () && !m_info.author.empty ()) {
@@ -1907,7 +1915,7 @@ void BotGraph::saveOldFormat () {
 
    String editorName {};
 
-   if (!hasEditor ()  && !m_info.author.empty ()) {
+   if (!hasEditor () && !m_info.author.empty ()) {
       editorName = m_info.author;
    }
    else if (!game.isNullEntity (m_editor)) {
@@ -2296,17 +2304,20 @@ void BotGraph::frame () {
       if (path.radius > 0.0f) {
          const float sqr = cr::sqrtf (cr::sqrf (path.radius) * 0.5f);
 
-         game.drawLine (m_editor, origin + Vector (path.radius, 0.0f, 0.0f), origin + Vector (sqr, -sqr, 0.0f), 5, 0, radiusColor, 200, 0, 10);
-         game.drawLine (m_editor, origin + Vector (sqr, -sqr, 0.0f), origin + Vector (0.0f, -path.radius, 0.0f), 5, 0, radiusColor, 200, 0, 10);
+         const Vector points[] = {
+            { path.radius, 0.0f, 0.0f },
+            { sqr, -sqr, 0.0f },
+            { 0.0f, -path.radius, 0.0f },
+            { -sqr, -sqr, 0.0f },
+            { -path.radius, 0.0f, 0.0f },
+            { -sqr, sqr, 0.0f },
+            { 0.0f, path.radius, 0.0f },
+            { sqr, sqr, 0.0f }
+         };
 
-         game.drawLine (m_editor, origin + Vector (0.0f, -path.radius, 0.0f), origin + Vector (-sqr, -sqr, 0.0f), 5, 0, radiusColor, 200, 0, 10);
-         game.drawLine (m_editor, origin + Vector (-sqr, -sqr, 0.0f), origin + Vector (-path.radius, 0.0f, 0.0f), 5, 0, radiusColor, 200, 0, 10);
-
-         game.drawLine (m_editor, origin + Vector (-path.radius, 0.0f, 0.0f), origin + Vector (-sqr, sqr, 0.0f), 5, 0, radiusColor, 200, 0, 10);
-         game.drawLine (m_editor, origin + Vector (-sqr, sqr, 0.0f), origin + Vector (0.0f, path.radius, 0.0f), 5, 0, radiusColor, 200, 0, 10);
-
-         game.drawLine (m_editor, origin + Vector (0.0f, path.radius, 0.0f), origin + Vector (sqr, sqr, 0.0f), 5, 0, radiusColor, 200, 0, 10);
-         game.drawLine (m_editor, origin + Vector (sqr, sqr, 0.0f), origin + Vector (path.radius, 0.0f, 0.0f), 5, 0, radiusColor, 200, 0, 10);
+         for (auto i = 0; i < kMaxNodeLinks; ++i) {
+            game.drawLine (m_editor, origin + points[i], origin + points[(i + 1) % 8], 5, 0, radiusColor, 200, 0, 10);
+         }
       }
       else {
          const float sqr = cr::sqrtf (32.0f);
@@ -2390,8 +2401,8 @@ void BotGraph::frame () {
          message.assignf ("      %s node:\n"
             "       Node %d of %d, Radius: %.1f, Light: %s\n"
             "       Flags: %s\n"
-            "       Origin: (%.1f, %.1f, %.1f)\n", 
-            type, node,  m_paths.length () - 1,  p.radius,
+            "       Origin: (%.1f, %.1f, %.1f)\n",
+            type, node, m_paths.length () - 1, p.radius,
             cr::fequal (p.light, kInvalidLightLevel) ? "Invalid" : strings.format ("%1.f", p.light),
             flags, p.origin.x, p.origin.y, p.origin.z
          );

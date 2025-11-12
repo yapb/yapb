@@ -61,9 +61,6 @@ void Game::levelInitialize (edict_t *entities, int max) {
    // startup threaded worker
    worker.startup (cv_threadpool_workers.as <int> ());
 
-   m_spawnCount[Team::CT] = 0;
-   m_spawnCount[Team::Terrorist] = 0;
-
    // clear all breakables before initialization
    m_breakables.clear ();
    m_checkedBreakables.clear ();
@@ -126,15 +123,11 @@ void Game::levelInitialize (edict_t *entities, int max) {
          ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
          ent->v.renderamt = 127; // set its transparency amount
          ent->v.effects |= EF_NODRAW;
-
-         ++m_spawnCount[Team::CT];
       }
       else if (classname == "info_player_deathmatch") {
          ent->v.rendermode = kRenderTransAlpha; // set its render mode to transparency
          ent->v.renderamt = 127; // set its transparency amount
          ent->v.effects |= EF_NODRAW;
-
-         ++m_spawnCount[Team::Terrorist];
       }
       else if (classname == "func_vip_safetyzone" || classname == "info_vip_safetyzone") {
          m_mapFlags |= MapFlags::Assassination; // assassination map
@@ -187,6 +180,24 @@ void Game::levelInitialize (edict_t *entities, int max) {
    m_halfSecondFrame = 0.0f;
 }
 
+void Game::onSpawnEntity (edict_t *ent) {
+   constexpr auto kEntityInfoPlayerStart = StringRef::fnv1a32 ("info_player_start");
+   constexpr auto kEntityInfoVIPStart = StringRef::fnv1a32 ("info_vip_start");
+   constexpr auto kEntityInfoPlayerDeathmatch = StringRef::fnv1a32 ("info_player_deathmatch");
+
+   if (game.isNullEntity (ent) || ent->v.classname == 0) {
+      return;
+   }
+   const auto classNameHash = ent->v.classname.str ().hash ();
+
+   if (classNameHash == kEntityInfoPlayerStart || classNameHash == kEntityInfoVIPStart) {
+      ++m_spawnCount[Team::CT];
+   }
+   else if (classNameHash == kEntityInfoPlayerDeathmatch) {
+      ++m_spawnCount[Team::Terrorist];
+   }
+}
+
 void Game::levelShutdown () {
    // save collected practice on shutdown
    practice.save ();
@@ -223,6 +234,10 @@ void Game::levelShutdown () {
    // disable command handling
    ctrl.setDenyCommands (true);
 
+   // reset spawn counts
+   for (auto &sc : m_spawnCount) {
+      sc = 0;
+   }
 }
 
 void Game::drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, const Color &color, int brightness, int speed, int life, DrawLine type) const {
@@ -368,9 +383,9 @@ void Game::playSound (edict_t *ent, const char *sound) {
 
 void Game::setPlayerStartDrawModels () {
    static HashMap <String, String> models {
-      {"info_player_start", "models/player/urban/urban.mdl"},
-      {"info_player_deathmatch", "models/player/terror/terror.mdl"},
-      {"info_vip_start", "models/player/vip/vip.mdl"}
+      { "info_player_start", "models/player/urban/urban.mdl" },
+      { "info_player_deathmatch", "models/player/terror/terror.mdl" },
+      { "info_vip_start", "models/player/vip/vip.mdl" }
    };
 
    models.foreach ([&] (const String &key, const String &val) {
@@ -791,53 +806,50 @@ void Game::registerCvars (bool gameVars) {
 }
 
 void Game::constructCSBinaryName (StringArray &libs) {
-   String libSuffix {}; // construct library suffix
+   String suffix {};
 
    if (plat.android) {
-      libSuffix += "_android";
+      suffix = "_android";
+      if (plat.x64) {
+         suffix += "_arm64";
+      }
+      else if (plat.arm) {
+         suffix += "_armv7l";
+      }
    }
    else if (plat.psvita) {
-      libSuffix += "_psvita";
+      suffix = "_psvita";
    }
-
-   if (plat.x64) {
+   else if (plat.x64) {
       if (plat.arm) {
-         libSuffix += "_arm64";
+         suffix = "_arm64";
       }
       else if (plat.ppc) {
-         libSuffix += "_ppc64le";
+         suffix = "_ppc64le";
       }
       else {
-         libSuffix += "_amd64";
+         suffix = "_amd64";
       }
    }
-   else {
-      if (plat.arm) {
-         // don't want to put whole build.h logic from xash3d, just set whatever is supported by the YaPB
-         if (plat.android) {
-            libSuffix += "_armv7l";
-         }
-         else {
-            libSuffix += "_armv7hf";
-         }
-      }
-      else if (!plat.nix && !plat.win && !plat.macos) {
-         libSuffix += "_i386";
-      }
+   else if (plat.arm) {
+      // non-android arm32
+      suffix = "_armv7hf";
    }
+   else if (!plat.nix && !plat.win && !plat.macos) {
+      // fallback for unknown 32-bit x86 (e.g., legacy linux/bsd)
+      suffix = "_i386";
+   }
+   // else: suffix remains empty (e.g., x86 linux/windows/macos)
 
-   if (libSuffix.empty ())
-      libs.insert (0, { "mp", "cs", "cs_i386" });
+   // build base names
+   if (plat.android) {
+      // only "libcs" with suffix (no "mp", and must have "lib" prefix)
+      libs.insert (0, "libcs" + suffix);
+   }
    else {
-      // on Android, it's important to have `lib` prefix, otherwise package manager won't unpack the libraries
-      if (plat.android)
-         libs.insert (0, { "libcs" });
-      else
-         libs.insert (0, { "mp", "cs" });
-
-      for (auto &lib : libs) {
-         lib += libSuffix;
-      }
+      // Standard: "mp" and "cs" with suffix
+      libs.insert (0, "cs" + suffix);
+      libs.insert (0, "mp" + suffix);
    }
 }
 
@@ -881,10 +893,10 @@ bool Game::loadCSBinary () {
       }
 
       if (plat.emscripten) {
-        path = String(plat.env ("XASH3D_GAMELIBPATH")); // defined by launcher
+         path = String (plat.env ("XASH3D_GAMELIBPATH")); // defined by launcher
       }
 
-      if (path.empty()) {
+      if (path.empty ()) {
          path = strings.joinPath (modname, "dlls", lib) + kLibrarySuffix;
 
          // if we can't read file, skip it
@@ -940,7 +952,7 @@ bool Game::loadCSBinary () {
 
             // no fake pings on xash3d
             if (!(m_gameFlags & (GameFlags::Xash3D | GameFlags::Xash3DLegacy))) {
-               m_gameFlags  |= GameFlags::HasFakePings;
+               m_gameFlags |= GameFlags::HasFakePings;
             }
          }
          else {

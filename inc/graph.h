@@ -227,6 +227,7 @@ public:
    bool loadGraphData ();
    bool canDownload ();
    bool isAnalyzed () const;
+   bool isConverted () const;
 
    void saveOldFormat ();
    void reset ();

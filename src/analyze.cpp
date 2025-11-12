@@ -130,7 +130,7 @@ void GraphAnalyze::update () {
 }
 
 void GraphAnalyze::suspend () {
-   m_updateInterval = 0.0f;
+   m_updateInterval = kInfiniteDistance;
    m_isAnalyzing = false;
    m_isAnalyzed = false;
    m_basicsCreated = false;
@@ -325,7 +325,7 @@ void GraphAnalyze::flood (const Vector &pos, const Vector &next, float range) {
    if (cr::fequal (tr.flFraction, 1.0f)) {
       return;
    }
-   Vector nextPos = { tr.vecEndPos.x, tr.vecEndPos.y, tr.vecEndPos.z + 19.0f };
+   const Vector &nextPos = { tr.vecEndPos.x, tr.vecEndPos.y, tr.vecEndPos.z + 19.0f };
 
    const int endIndex = graph.getForAnalyzer (nextPos, range);
    const int targetIndex = graph.getNearestNoBuckets (nextPos, 250.0f);
@@ -333,7 +333,7 @@ void GraphAnalyze::flood (const Vector &pos, const Vector &next, float range) {
    if (graph.exists (endIndex) || !graph.exists (targetIndex)) {
       return;
    }
-   auto targetPos = graph[targetIndex].origin;
+   const auto &targetPos = graph[targetIndex].origin;
 
    // re-check there's nothing nearby, and add something we're want
    if (!graph.exists (graph.getNearestNoBuckets (nextPos, range))) {
@@ -348,6 +348,7 @@ void GraphAnalyze::flood (const Vector &pos, const Vector &next, float range) {
       if ((graph.isNodeReacheable (targetPos, testPos)
          && graph.isNodeReacheable (testPos, targetPos)) || (graph.isNodeReacheableWithJump (testPos, targetPos)
             && graph.isNodeReacheableWithJump (targetPos, testPos))) {
+
          graph.add (NodeAddFlag::Normal, m_isCrouch ? Vector { nextPos.x, nextPos.y, nextPos.z - 9.0f } : nextPos);
       }
    }

@@ -21,7 +21,7 @@ void Bot::normal_ () {
    const int debugGoal = cv_debug_goal.as <int> ();
 
    // user forced a node as a goal?
-   if (debugGoal != kInvalidNodeIndex) {
+   if (graph.exists (debugGoal)) {
       if (getTask ()->data != debugGoal) {
          clearSearchNodes ();
 
@@ -105,7 +105,7 @@ void Bot::normal_ () {
       // spray logo sometimes if allowed to do so
       if (!(m_states & (Sense::SeeingEnemy | Sense::SuspectEnemy))
          && m_seeEnemyTime + 5.0f < game.time ()
-         && m_reloadState ==  Reload::None
+         && m_reloadState == Reload::None
          && m_timeLogoSpray < game.time ()
          && cv_spraypaints
          && pev->groundentity == game.getStartEntity ()
@@ -665,7 +665,7 @@ void Bot::camp_ () {
             predictNode = findAimingNode (m_lastEnemyOrigin, pathLength);
 
             if (isNodeValidForPredict (predictNode) && pathLength > 1
-               && vistab.visible ( predictNode, m_currentNodeIndex)) {
+               && vistab.visible (predictNode, m_currentNodeIndex)) {
 
                m_lookAtSafe = graph[predictNode].origin + pev->view_ofs;
             }
@@ -1477,7 +1477,7 @@ void Bot::shootBreakable_ () {
    }
    else {
       TraceResult tr {};
-      game.testLine (pev->origin, m_breakableOrigin, TraceIgnore::Monsters , ent (), &tr);
+      game.testLine (pev->origin, m_breakableOrigin, TraceIgnore::Monsters, ent (), &tr);
 
       if (tr.pHit != m_breakableEntity && !cr::fequal (tr.flFraction, 1.0f)) {
          m_ignoredBreakable.push (tr.pHit);
@@ -1507,7 +1507,7 @@ void Bot::shootBreakable_ () {
       m_shootTime = game.time ();
 
       // enforce shooting
-      if (!usesKnife ()  && !m_isReloading && !(pev->button & IN_RELOAD) && getAmmoInClip () > 0) {
+      if (!usesKnife () && !m_isReloading && !(pev->button & IN_RELOAD) && getAmmoInClip () > 0) {
          if (!(m_oldButtons & IN_ATTACK)) {
             pev->button |= IN_ATTACK;
          }

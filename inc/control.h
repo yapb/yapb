@@ -23,8 +23,8 @@ CR_DECLARE_SCOPED_ENUM (PrintQueueDestination,
 // bot command manager
 class BotControl final : public Singleton <BotControl> {
 public:
-   using Handler = int (BotControl::*) ();
-   using MenuHandler = int (BotControl::*) (int);
+   using Handler = int (BotControl:: *) ();
+   using MenuHandler = int (BotControl:: *) (int);
 
 public:
    // generic bot command
@@ -36,8 +36,7 @@ public:
    public:
       explicit BotCmd () = default;
 
-      BotCmd (StringRef name, StringRef format, StringRef help, Handler handler, bool visible = true) : name (name), format (format), help (help), handler (cr::move (handler)), visible (visible)
-      { }
+      BotCmd (StringRef name, StringRef format, StringRef help, Handler handler, bool visible = true) : name (name), format (format), help (help), handler (cr::move (handler)), visible (visible) {}
    };
 
    // single bot menu
@@ -47,8 +46,7 @@ public:
       MenuHandler handler {};
 
    public:
-      explicit BotMenu (int ident, int slots, StringRef text, MenuHandler handler) : ident (ident), slots (slots), text (text), handler (cr::move (handler))
-      { }
+      explicit BotMenu (int ident, int slots, StringRef text, MenuHandler handler) : ident (ident), slots (slots), text (text), handler (cr::move (handler)) {}
    };
 
    // queued text message to prevent overflow with rapid output
@@ -57,10 +55,9 @@ public:
       String text {};
 
    public:
-     explicit PrintQueue () = default;
+      explicit PrintQueue () = default;
 
-      PrintQueue (int32_t destination, StringRef text) : destination (destination), text (text) 
-      { }
+      PrintQueue (int32_t destination, StringRef text) : destination (destination), text (text) {}
    };
 
    // save old values of changed cvars to revert them back when editing turned off
@@ -118,6 +115,7 @@ private:
    int cmdNodeSave ();
    int cmdNodeLoad ();
    int cmdNodeErase ();
+   int cmdNodeRefresh ();
    int cmdNodeEraseTraining ();
    int cmdNodeDelete ();
    int cmdNodeCheck ();
@@ -255,7 +253,7 @@ public:
       }
    }
 
-   edict_t *getIssuer() {
+   edict_t *getIssuer () {
       return m_ent;
    }
 

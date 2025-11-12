@@ -69,7 +69,7 @@ CR_DECLARE_SCOPED_ENUM (StatusIconCache,
 
 class MessageDispatcher final : public Singleton <MessageDispatcher> {
 private:
-   using MsgFunc = void (MessageDispatcher::*) ();
+   using MsgFunc = void (MessageDispatcher:: *) ();
    using MsgHash = Hash <int32_t>;
 
 private:
@@ -81,9 +81,9 @@ private:
       };
 
    public:
-      Args (float value) : float_ (value) { }
-      Args (int32_t value) : long_ (value) { }
-      Args (const char *value) : chars_ (value) { }
+      Args (float value) : float_ (value) {}
+      Args (int32_t value) : long_ (value) {}
+      Args (const char *value) : chars_ (value) {}
    };
 
 private:

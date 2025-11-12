@@ -130,6 +130,9 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
       // precache everything
       game.precache ();
 
+      // notify about entity spawn
+      game.onSpawnEntity (ent);
+
       if (game.is (GameFlags::Metamod)) {
          RETURN_META_VALUE (MRES_IGNORED, 0);
       }
@@ -483,6 +486,7 @@ CR_EXPORT int GetEntityAPI (gamefuncs_t *table, int interfaceVersion) {
             }
          }
       }
+
       if (game.is (GameFlags::Metamod)) {
          RETURN_META (MRES_IGNORED);
       }

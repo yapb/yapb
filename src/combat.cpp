@@ -614,7 +614,7 @@ bool Bot::lookupEnemies () {
 
       // if no enemy visible check if last one shoot able through wall
       if (cv_shoots_thru_walls
-         && rg.chance (conf.getDifficultyTweaks (m_difficulty)->seenThruPct)
+         && rg.chance (m_difficultyData->seenThruPct)
          && isPenetrableObstacle (newEnemy->v.origin)) {
 
          m_seeEnemyTime = game.time ();
@@ -667,11 +667,11 @@ Vector Bot::getBodyOffsetError (float distance) {
       const auto &maxs = m_enemy->v.maxs, &mins = m_enemy->v.mins;
 
       m_aimLastError = Vector (
-         rg (mins.x * hitError, maxs.x * hitError), 
+         rg (mins.x * hitError, maxs.x * hitError),
          rg (mins.y * hitError, maxs.y * hitError),
          rg (mins.z * hitError * 0.5f, maxs.z * hitError * 0.5f));
 
-      const auto &aimError = conf.getDifficultyTweaks (m_difficulty)->aimError;
+      const auto &aimError = m_difficultyData->aimError;
       m_aimLastError += Vector (rg (-aimError.x, aimError.x), rg (-aimError.y, aimError.y), rg (-aimError.z, aimError.z));
 
       m_aimErrorTime = game.time () + rg (0.4f, 0.8f);
@@ -722,7 +722,7 @@ Vector Bot::getEnemyBodyOffset () {
    else if (game.isPlayerEntity (m_enemy)) {
       // now take in account different parts of enemy body
       if (m_enemyParts & (Visibility::Head | Visibility::Body)) {
-         auto headshotPct = conf.getDifficultyTweaks (m_difficulty)->headshotPct;
+         auto headshotPct = m_difficultyData->headshotPct;
 
          // with to much recoil or using specific weapons choice to aim to the chest
          if (distance > kSprayDistance && (isRecoilHigh () || usesShotgun ())) {
@@ -789,10 +789,10 @@ Vector Bot::getCustomHeight (float distance) const {
    };
 
    constexpr float kOffsetRanges[9][3] = {
-      { 0.0f,  0.0f,  0.0f }, // none
-      { 0.0f,  0.0f,  0.0f }, // melee
+      { 0.0f, 0.0f, 0.0f }, // none
+      { 0.0f, 0.0f, 0.0f }, // melee
       { 0.5f, -0.1f, -1.5f }, // pistol
-      { 6.5f,  6.0f, -2.0f }, // shotgun
+      { 6.5f, 6.0f, -2.0f }, // shotgun
       { 0.5f, -7.5f, -9.5f }, // zoomrifle
       { 0.5f, -7.5f, -9.5f }, // rifle
       { 0.5f, -7.5f, -9.5f }, // smg
@@ -1014,7 +1014,7 @@ bool Bot::needToPauseFiring (float distance) {
 
    const float tolerance = (100.0f - static_cast <float> (m_difficulty) * 25.0f) / 99.0f;
    const float baseTime = distance > kSprayDistance ? 0.55f : 0.38f;
-   const float maxRecoil = static_cast <float> (conf.getDifficultyTweaks (m_difficulty)->maxRecoil);
+   const float maxRecoil = static_cast <float> (m_difficultyData->maxRecoil);
 
    // check if we need to compensate recoil
    if (cr::tanf (cr::sqrtf (cr::abs (xPunch) + cr::abs (yPunch))) * distance > offset + maxRecoil + tolerance) {
@@ -1626,9 +1626,9 @@ void Bot::attackMovement () {
       if (m_difficulty >= Difficulty::Normal
          && distanceSq < cr::sqrf (kSprayDistance)
          && (m_jumpTime + 5.0f < game.time ()
-         && isOnFloor ()
-         && rg (0, 1000) < (m_isReloading ? 8 : 2)
-         && pev->velocity.length2d () > 150.0f) && !usesSniper () && isEnemyCone) {
+            && isOnFloor ()
+            && rg (0, 1000) < (m_isReloading ? 8 : 2)
+            && pev->velocity.length2d () > 150.0f) && !usesSniper () && isEnemyCone) {
 
          pev->button |= IN_JUMP;
       }
@@ -1646,8 +1646,7 @@ void Bot::attackMovement () {
 
          const int enemyNearestIndex = graph.getNearest (m_enemy->v.origin);
 
-         if (vistab.visible (m_currentNodeIndex, enemyNearestIndex, VisIndex::Crouch)
-            && vistab.visible (enemyNearestIndex, m_currentNodeIndex, VisIndex::Crouch)) {
+         if (vistab.visibleBothSides (m_currentNodeIndex, enemyNearestIndex, VisIndex::Crouch)) {
             m_duckTime = game.time () + m_frameInterval * 3.0f;
          }
       }

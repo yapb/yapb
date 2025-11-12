@@ -17,7 +17,7 @@ template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *
 
    // graphs can be downloaded...
    const bool isGraph = !!(type.option & StorageOption::Graph);
-   const bool isDebug = cv_debug;
+   const bool isDebug = cv_debug || game.isDeveloperMode ();
 
    MemFile file (filename); // open the file
    data.clear ();
@@ -85,11 +85,7 @@ template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *
       if (tryReload ()) {
          return true;
       }
-
-      if (game.isDeveloperMode ()) {
-         return error (isGraph, isDebug, file, "Unable to open %s file for reading (filename: '%s').", type.name, filename);
-      }
-      return false;
+      return error (isGraph, isDebug, file, "Unable to open %s file for reading (filename: '%s').", type.name, filename);
    }
 
    // erase the current graph just in case
@@ -178,7 +174,7 @@ template <typename U> bool BotStorage::load (SmallArray <U> &data, ExtenHeader *
             if (isGraph) {
                resetRetries ();
 
-               ExtenHeader extenHeader;
+               ExtenHeader extenHeader {};
                strings.copy (extenHeader.author, exten->author, cr::bufsize (exten->author));
 
                if (extenSize <= actuallyRead) {

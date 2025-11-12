@@ -37,7 +37,6 @@ ConVar cv_pickup_custom_items ("pickup_custom_items", "0", "Allows or disallows 
 ConVar cv_pickup_ammo_and_kits ("pickup_ammo_and_kits", "0", "Allows bots to pick up mod items like ammo, health kits, and suits.");
 ConVar cv_pickup_best ("pickup_best", "1", "Allows or disallows bots to pick up the best weapons.");
 ConVar cv_ignore_objectives ("ignore_objectives", "0", "Allows or disallows bots to do map objectives, i.e. plant/defuse bombs, and save hostages.");
-ConVar cv_smoke_grenade_checks ("smoke_grenade_checks", "1", "Affects the bot's vision by smoke clouds.", true, 0.0f, 2.0f);
 
 // game console variables
 ConVar mp_c4timer ("mp_c4timer", nullptr, Var::GameRef);
@@ -100,7 +99,7 @@ void Bot::avoidGrenades () {
          if (!(m_states & Sense::SeeingEnemy)) {
             m_lookAt.y = cr::wrapAngle ((game.getEntityOrigin (pent) - getEyesPos ()).angles ().y + 180.0f);
 
-            m_canChooseAimDirection = false;
+            m_canSetAimDirection = false;
             m_preventFlashing = game.time () + rg (1.0f, 2.0f);
          }
       }
@@ -187,6 +186,7 @@ void Bot::checkBreakablesAround () {
       || !game.hasBreakables ()
       || m_seeEnemyTime + 4.0f > game.time ()
       || !game.isNullEntity (m_enemy)
+      || (m_aimFlags & (AimFlags::PredictPath | AimFlags::Danger))
       || !hasPrimaryWeapon ()) {
       return;
    }
@@ -320,15 +320,14 @@ void Bot::setIdealReactionTimers (bool actual) {
 
       return; // zero out reaction times for extreme mode
    }
-   const auto tweak = conf.getDifficultyTweaks (m_difficulty);
 
    if (actual) {
-      m_idealReactionTime = tweak->reaction[0];
-      m_actualReactionTime = tweak->reaction[0];
+      m_idealReactionTime = m_difficultyData->reaction[0];
+      m_actualReactionTime = m_difficultyData->reaction[0];
 
       return;
    }
-   m_idealReactionTime = rg (tweak->reaction[0], tweak->reaction[1]);
+   m_idealReactionTime = rg (m_difficultyData->reaction[0], m_difficultyData->reaction[1]);
 }
 
 void Bot::updatePickups () {
@@ -1644,47 +1643,30 @@ void Bot::buyStuff () {
 }
 
 void Bot::updateEmotions () {
-   // slowly increase/decrease dynamic emotions back to their base level
+   constexpr auto kEmotionUpdateStep = 0.05f;
+
    if (m_nextEmotionUpdate > game.time ()) {
       return;
    }
 
    if (m_seeEnemyTime + 1.0f > game.time ()) {
-      m_agressionLevel += 0.05f;
-
-      if (m_agressionLevel > 1.0f) {
-         m_agressionLevel = 1.0f;
-      }
+      m_agressionLevel = cr::min (m_agressionLevel + kEmotionUpdateStep, 1.0f);
    }
    else if (m_seeEnemyTime + 5.0f < game.time ()) {
+      // smoothly return aggression to base level
       if (m_agressionLevel > m_baseAgressionLevel) {
-         m_agressionLevel -= 0.05f;
+         m_agressionLevel = cr::max (m_agressionLevel - kEmotionUpdateStep, m_baseAgressionLevel);
       }
       else {
-         m_agressionLevel += 0.05f;
+         m_agressionLevel = cr::min (m_agressionLevel + kEmotionUpdateStep, m_baseAgressionLevel);
       }
 
+      // smoothly return fear to base level
       if (m_fearLevel > m_baseFearLevel) {
-         m_fearLevel -= 0.05f;
+         m_fearLevel = cr::max (m_fearLevel - kEmotionUpdateStep, m_baseFearLevel);
       }
       else {
-         m_fearLevel += 0.05f;
-      }
-
-      if (m_agressionLevel > 1.0f) {
-         m_agressionLevel = 1.0f;
-      }
-
-      if (m_fearLevel > 1.0f) {
-         m_fearLevel = 1.0f;
-      }
-
-      if (m_agressionLevel < 0.0f) {
-         m_agressionLevel = 0.0f;
-      }
-
-      if (m_fearLevel < 0.0f) {
-         m_fearLevel = 0.0f;
+         m_fearLevel = cr::min (m_fearLevel + kEmotionUpdateStep, m_baseFearLevel);
       }
    }
    m_nextEmotionUpdate = game.time () + 0.5f;
@@ -1922,7 +1904,6 @@ void Bot::setConditions () {
          }
          else if (rg.chance (60)) {
             if (m_lastVictim->v.weapons & kSniperWeaponMask) {
-
                pushChatterMessage (Chatter::SniperKilled);
             }
             else {
@@ -2500,7 +2481,7 @@ void Bot::executeChatterFrameEvents () {
       pushChatterMessage (Chatter::GottaFindC4);
       bots.clearBombSay (BombPlantedSay::Chatter);
    }
-   
+
 }
 
 void Bot::checkRadioQueue () {
@@ -3101,7 +3082,7 @@ void Bot::frame () {
 void Bot::update () {
    const auto tid = getCurrentTaskId ();
 
-   m_canChooseAimDirection = true;
+   m_canSetAimDirection = true;
    m_isAlive = game.isAliveEntity (ent ());
    m_team = game.getPlayerTeam (ent ());
    m_healthValue = cr::clamp (pev->health, 0.0f, 99999.9f);
@@ -3242,7 +3223,7 @@ void Bot::logicDuringFreezetime () {
       if (ent) {
          m_lookAt = ent->v.origin + ent->v.view_ofs;
 
-         if (m_buyingFinished) {
+         if (m_buyingFinished && game.getPlayerTeam (ent) != m_team) {
             m_enemy = ent;
             m_enemyOrigin = ent->v.origin;
          }
@@ -3338,12 +3319,11 @@ void Bot::checkSpawnConditions () {
 void Bot::logic () {
    // this function gets called each frame and is the core of all bot ai. from here all other subroutines are called
 
-   m_movedDistance = kMinMovedDistance + 0.1f; // length of different vector (distance bot moved)
-
    resetMovement ();
 
    // increase reaction time
    m_actualReactionTime += 0.3f;
+   m_movedDistance = kMinMovedDistance + 0.1f; // length of different vector (distance bot moved)
 
    if (m_actualReactionTime > m_idealReactionTime) {
       m_actualReactionTime = m_idealReactionTime;
@@ -3364,13 +3344,11 @@ void Bot::logic () {
    if (m_prevTime <= game.time ()) {
 
       // see how far bot has moved since the previous position...
-      if (m_checkTerrain) {
-         m_movedDistance = m_prevOrigin.distance (pev->origin);
-      }
+      m_movedDistance = m_prevOrigin.distanceSq (pev->origin);
 
       // save current position as previous
       m_prevOrigin = pev->origin;
-      m_prevTime = game.time () + (0.15f - m_frameInterval * 2.0f);
+      m_prevTime = game.time () + 0.2f - m_frameInterval;
    }
 
    // if there's some radio message to respond, check it
@@ -3463,7 +3441,7 @@ void Bot::logic () {
 
    // ensure we're not stuck picking something
    if (m_moveToGoal && m_moveSpeed > 0.0f
-      && rg (2.5f, 3.5f) + m_navTimeset + m_destOrigin.distanceSq2d (pev->origin) / cr::sqrf (m_moveSpeed) < game.time ()
+      && rg (2.5f, 3.5f) + m_navTimeset + m_destOrigin.distanceSq2d (pev->origin) / cr::sqrf (cr::max (1.0f, m_moveSpeed)) < game.time ()
       && !(m_states & Sense::SeeingEnemy)) {
       ensurePickupEntitiesClear ();
    }
@@ -3478,8 +3456,6 @@ void Bot::logic () {
 
    // save the previous speed (for checking if stuck)
    m_prevSpeed = cr::abs (m_moveSpeed);
-   m_prevVelocity = cr::abs (pev->velocity.length2d ());
-
    m_lastDamageType = -1; // reset damage
 }
 
@@ -3643,7 +3619,7 @@ void Bot::showDebugOverlay () {
 }
 
 bool Bot::hasHostage () {
-   if (cv_ignore_objectives || game.mapIs (MapFlags::Demolition)) {
+   if (cv_ignore_objectives || !game.mapIs (MapFlags::HostageRescue)) {
       return false;
    }
 
@@ -3930,9 +3906,6 @@ void Bot::resetDoubleJump () {
 }
 
 void Bot::debugMsgInternal (StringRef str) {
-   if (game.isDedicated ()) {
-      return;
-   }
    const int level = cv_debug.as <int> ();
 
    if (level <= 2) {
@@ -3943,7 +3916,10 @@ void Bot::debugMsgInternal (StringRef str) {
 
    bool playMessage = false;
 
-   if (level == 3 && !game.isNullEntity (game.getLocalEntity ()) && game.getLocalEntity ()->v.iuser2 == entindex ()) {
+   if (level == 3
+      && !game.isNullEntity (game.getLocalEntity ())
+      && game.getLocalEntity ()->v.iuser2 == entindex ()) {
+
       playMessage = true;
    }
    else if (level != 3) {
@@ -3954,7 +3930,7 @@ void Bot::debugMsgInternal (StringRef str) {
       logger.message (printBuf.chars ());
    }
 
-   if (playMessage) {
+   if (playMessage && !game.isDedicated ()) {
       ctrl.msg (printBuf.chars ());
       sendToChat (printBuf, false);
    }
@@ -4125,7 +4101,7 @@ void Bot::updateHearing () {
       if (!(client.flags & ClientFlags::Used)
          || !(client.flags & ClientFlags::Alive)
          || client.ent == ent ()
-         || client.team == m_team
+         || client.team2 == m_team
          || !client.ent
          || client.noise.last < game.time ()) {
 
@@ -4225,7 +4201,7 @@ void Bot::updateHearing () {
       else {
          if (cv_shoots_thru_walls
             && m_lastEnemy == m_hearedEnemy
-            && rg.chance (conf.getDifficultyTweaks (m_difficulty)->hearThruPct)
+            && rg.chance (m_difficultyData->hearThruPct)
             && m_seeEnemyTime + 3.0f > game.time ()
             && isPenetrableObstacle (m_hearedEnemy->v.origin)) {
 
@@ -4244,7 +4220,7 @@ void Bot::updateHearing () {
 void Bot::enteredBuyZone (int buyState) {
    // this function is gets called when bot enters a buyzone, to allow bot to buy some stuff
 
-   if (m_isCreature) {
+   if (m_isCreature || hasHostage ()) {
       return; // creatures can't buy anything
    }
    const int *econLimit = conf.getEconLimit ();

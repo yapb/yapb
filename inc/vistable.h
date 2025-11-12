@@ -54,6 +54,11 @@ public:
    bool isReady () const {
       return !m_rebuild;
    }
+
+   // is visible fromr both points ?
+   bool visibleBothSides (int srcIndex, int destIndex, VisIndex vis = VisIndex::Any) const {
+      return visible (srcIndex, destIndex, vis) && visible (destIndex, srcIndex, vis);
+   }
 };
 
 // expose global
