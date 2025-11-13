@@ -20,7 +20,7 @@ jobs:
 
     strategy:
       matrix:
-        arch: ['linux-x86', 'linux-amd64', 'linux-x86-gcc', 'linux-x86-nosimd', 'linux-arm64', 'apple-x86', 'windows-x86-clang', 'windows-amd64', 'windows-x86-gcc']
+        arch: ['linux-x86', 'linux-amd64', 'linux-x86-gcc', 'linux-x86-nosimd', 'linux-arm64', 'linux-riscv64', 'apple-x86', 'windows-x86-clang', 'windows-amd64', 'windows-x86-gcc']
       fail-fast: false
     
     steps:
