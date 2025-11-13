@@ -827,6 +827,9 @@ void Game::constructCSBinaryName (StringArray &libs) {
       else if (plat.ppc) {
          suffix = "_ppc64le";
       }
+      else if (plat.riscv) {
+         suffix = "_riscv64d";
+      }
       else {
          suffix = "_amd64";
       }
@@ -844,12 +847,12 @@ void Game::constructCSBinaryName (StringArray &libs) {
    // build base names
    if (plat.android) {
       // only "libcs" with suffix (no "mp", and must have "lib" prefix)
-      libs.insert (0, "libcs" + suffix);
+      libs.push ("libcs" + suffix);
    }
    else {
       // Standard: "mp" and "cs" with suffix
-      libs.insert (0, "cs" + suffix);
-      libs.insert (0, "mp" + suffix);
+      libs.push ("cs" + suffix);
+      libs.push ("mp" + suffix);
    }
 }
 
