@@ -1935,7 +1935,7 @@ void Bot::setConditions () {
             }
          }
          else {
-            m_killsInterval = m_lastVictimTime - game.time ();
+            m_killsInterval = game.time () - m_lastVictimTime;
 
             if (m_killsInterval <= 5.0f) {
                ++m_killsCount;
