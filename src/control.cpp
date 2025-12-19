@@ -2193,21 +2193,114 @@ BotControl::BotControl () {
    m_menuServerFillTeam = 5;
    m_printQueueFlushTimestamp = 0.0f;
 
-   m_cmds.emplace ("add/addbot/add_ct/addbot_ct/add_t/addbot_t/addhs/addhs_t/addhs_ct", "add [difficulty] [personality] [team] [model] [name]", "Adding specific bot into the game.", &BotControl::cmdAddBot);
-   m_cmds.emplace ("kick/kickone/kick_ct/kick_t/kickbot_ct/kickbot_t", "kick [team]", "Kicks off the random bot from the game.", &BotControl::cmdKickBot);
-   m_cmds.emplace ("removebots/kickbots/kickall/kickall_ct/kickall_t", "removebots [instant] [team]", "Kicks all the bots from the game.", &BotControl::cmdKickBots);
-   m_cmds.emplace ("kill/killbots/killall/kill_ct/kill_t", "kill [team] [silent]", "Kills the specified team / all the bots.", &BotControl::cmdKillBots);
-   m_cmds.emplace ("fill/fillserver", "fill [team] [count] [difficulty] [personality]", "Fill the server (add bots) with specified parameters.", &BotControl::cmdFill);
-   m_cmds.emplace ("vote/votemap", "vote [map_id]", "Forces all the bot to vote to specified map.", &BotControl::cmdVote);
-   m_cmds.emplace ("weapons/weaponmode", "weapons [knife|pistol|shotgun|smg|rifle|sniper|standard]", "Sets the bots weapon mode to use.", &BotControl::cmdWeaponMode);
-   m_cmds.emplace ("menu/botmenu", "menu [cmd]", "Opens the main bot menu, or command menu if specified.", &BotControl::cmdMenu);
-   m_cmds.emplace ("version/ver/about", "version [no arguments]", "Displays version information about bot build.", &BotControl::cmdVersion);
-   m_cmds.emplace ("graphmenu/wpmenu/wptmenu", "graphmenu [noarguments]", "Opens and displays bots graph editor.", &BotControl::cmdNodeMenu);
-   m_cmds.emplace ("list/listbots", "list [noarguments]", "Lists the bots currently playing on server.", &BotControl::cmdList);
-   m_cmds.emplace ("graph/g/w/wp/wpt/waypoint", "graph [help]", "Handles graph operations.", &BotControl::cmdNode);
-   m_cmds.emplace ("cvars", "cvars [save|save_map|cvar|defaults]", "Display all the cvars with their descriptions.", &BotControl::cmdCvars);
-   m_cmds.emplace ("show_custom", "show_custom [noarguments]", "Shows the current values from custom.cfg.", &BotControl::cmdShowCustom, false);
-   m_cmds.emplace ("exec", "exec [user_id] [command]", "Executes a client command on bot entity.", &BotControl::cmdExec);
+   m_cmds = {
+      {
+         "add/addbot/add_ct/addbot_ct/add_t/addbot_t/addhs/addhs_t/addhs_ct",
+         "add [difficulty] [personality] [team] [model] [name]",
+         "Adding specific bot into the game.",
+
+         &BotControl::cmdAddBot
+      },
+      {
+         "kick/kickone/kick_ct/kick_t/kickbot_ct/kickbot_t",
+         "kick [team]",
+         "Kicks off the random bot from the game.",
+
+         &BotControl::cmdKickBot
+      },
+      {
+         "removebots/kickbots/kickall/kickall_ct/kickall_t",
+         "removebots [instant] [team]",
+         "Kicks all the bots from the game.",
+
+         &BotControl::cmdKickBots
+      },
+      {
+         "kill/killbots/killall/kill_ct/kill_t",
+         "kill [team] [silent]",
+         "Kills the specified team / all the bots.",
+
+         &BotControl::cmdKillBots
+      },
+      {
+         "fill/fillserver",
+         "fill [team] [count] [difficulty] [personality]",
+         "Fill the server (add bots) with specified parameters.",
+
+         &BotControl::cmdFill
+      },
+      {
+         "vote/votemap",
+         "vote [map_id]",
+         "Forces all the bots to vote for the specified map.",
+
+         &BotControl::cmdVote
+      },
+      {
+         "weapons/weaponmode",
+         "weapons [knife|pistol|shotgun|smg|rifle|sniper|standard]",
+         "Sets the bots' weapon mode to use.",
+
+         &BotControl::cmdWeaponMode
+      },
+      {
+         "menu/botmenu",
+         "menu [cmd]",
+         "Opens the main bot menu, or command menu if specified.",
+
+         &BotControl::cmdMenu
+      },
+      {
+         "version/ver/about",
+         "version [no arguments]",
+         "Displays version information about bot build.",
+
+         &BotControl::cmdVersion
+      },
+      {
+         "graphmenu/wpmenu/wptmenu",
+         "graphmenu [noarguments]",
+         "Opens and displays bots graph editor.",
+
+         &BotControl::cmdNodeMenu
+      },
+      {
+         "list/listbots",
+         "list [noarguments]",
+         "Lists the bots currently playing on server.",
+
+         &BotControl::cmdList
+      },
+      {
+         "graph/g/w/wp/wpt/waypoint",
+         "graph [help]",
+         "Handles graph operations.",
+
+         &BotControl::cmdNode
+      },
+      {
+         "cvars",
+         "cvars [save|save_map|cvar|defaults]",
+         "Display all the cvars with their descriptions.",
+
+         &BotControl::cmdCvars
+      },
+      {
+         "show_custom",
+         "show_custom [noarguments]",
+         "Shows the current values from custom.cfg.",
+
+         &BotControl::cmdShowCustom,
+         false
+      },
+      {
+         "exec",
+         "exec [user_id] [command]",
+         "Executes a client command on bot entity.",
+
+         &BotControl::cmdExec
+      }
+   };
 
    // declare the menus
    createMenus ();

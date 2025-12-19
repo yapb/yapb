@@ -1469,9 +1469,10 @@ void Bot::escapeFromBomb_ () {
 }
 
 void Bot::shootBreakable_ () {
+   const bool hasEnemy = !game.isNullEntity (m_enemy);
 
    // breakable destroyed?
-   if (!game.isBreakableEntity (m_breakableEntity)) {
+   if (hasEnemy || !game.isBreakableEntity (m_breakableEntity)) {
       completeTask ();
       return;
    }

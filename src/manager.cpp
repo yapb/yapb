@@ -1093,6 +1093,7 @@ void BotManager::updateBotDifficulties () {
 void BotManager::balanceBotDifficulties () {
    // difficulty changing once per round (time)
    auto updateDifficulty = [] (Bot *bot, int32_t offset) {
+      game.print ("offset = %d", offset);
       bot->setNewDifficulty (cr::clamp (static_cast <Difficulty> (bot->m_difficulty + offset), Difficulty::Noob, Difficulty::Expert));
    };
 
@@ -1203,7 +1204,7 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
 
    // if we're have min/max difficulty specified, choose value from they
    if (minDifficulty != Difficulty::Invalid && maxDifficulty != Difficulty::Invalid) {
-      if (maxDifficulty > minDifficulty) {
+      if (minDifficulty > maxDifficulty) {
          cr::swap (maxDifficulty, minDifficulty);
       }
       setNewDifficulty (rg (minDifficulty, maxDifficulty));
@@ -1830,8 +1831,10 @@ void Bot::markStale () {
 
 void Bot::setNewDifficulty (int32_t newDifficulty) {
    if (newDifficulty < Difficulty::Noob || newDifficulty > Difficulty::Expert) {
-      m_difficulty = Difficulty::Hard;
-      m_difficultyData = conf.getDifficultyTweaks (Difficulty::Hard);
+      const auto difficlutyDefault = Difficulty::Hard;;
+
+      m_difficulty = difficlutyDefault;
+      m_difficultyData = conf.getDifficultyTweaks (difficlutyDefault);
    }
 
    m_difficulty = newDifficulty;

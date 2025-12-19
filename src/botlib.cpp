@@ -154,6 +154,12 @@ void Bot::checkBreakable (edict_t *touch) {
    if (!game.hasBreakables ()) {
       return;
    }
+   const bool hasEnemy = !game.isNullEntity (m_enemy);
+
+   // do n ot track for breakables if has some enemies
+   if (hasEnemy) {
+      return;
+   }
 
    if (game.isNullEntity (touch)) {
       auto breakable = lookupBreakable ();
