@@ -730,7 +730,8 @@ void BotConfig::loadCustomConfig () {
          { "ZMInfectedTeam", "T" },
          { "EnableFakeBotFeatures", "no" },
          { "DisableLogFile", "no" },
-         { "CheckConnectivityHost", "yapb.jeefo.net" }
+         { "CheckConnectivityHost", "yapb.jeefo.net" },
+         { "DisableSpawnControl", "no" }
       };
    };
    setDefaults ();

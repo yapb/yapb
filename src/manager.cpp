@@ -448,6 +448,11 @@ void BotManager::maintainQuota () {
       maxSpawnCount = maxClients + 1;
    }
 
+   // disable spawn control
+   if (conf.fetchCustom ("DisableSpawnControl").startsWith ("yes")) {
+      maxSpawnCount = game.maxClients () + 1;
+   }
+
    // sent message only to console from here
    ctrl.setFromConsole (true);
 
