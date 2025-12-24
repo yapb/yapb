@@ -1126,7 +1126,7 @@ void Game::applyGameModes () {
 
       // update our ignore timer if zp_delay exists
       if (zm_delay.exists () && zm_delay.value () > 0.0f) {
-         cv_ignore_enemies_after_spawn_time.set (zm_delay.value () + 3.5f);
+         cv_ignore_enemies_after_spawn_time.set (zm_delay.value () + 1.5f);
       }
       m_gameFlags |= GameFlags::ZombieMod;
    }

@@ -12,7 +12,7 @@ ConVar cv_enable_query_hook ("enable_query_hook", "0", "Enables or disables fake
 ConVar cv_enable_fake_steamids ("enable_fake_steamids", "0", "Allows or disallows bots to return a fake Steam ID.");
 
 ConVar cv_smoke_grenade_checks ("smoke_grenade_checks", "2", "Affects the bot's vision by smoke clouds.", true, 0.0f, 2.0f);
-ConVar cv_smoke_greande_checks_radius ("greande_checks_radius", "220", "Radius to check for smoke clouds around a detonated grenade.", true, 32.0f, 320.0f);
+ConVar cv_smoke_grenade_radius ("smoke_grenade_radius", "220", "Radius to check for smoke clouds around a detonated grenade.", true, 32.0f, 320.0f);
 
 BotSupport::BotSupport () {
    m_needToSendWelcome = false;
@@ -399,7 +399,7 @@ bool BotSupport::isLineBlockedBySmoke (const Vector &from, const Vector &to) {
          continue;
       }
 
-      const float smokeRadiusSq = cr::sqrf (cv_smoke_greande_checks_radius.as <float> ());
+      const float smokeRadiusSq = cr::sqrf (cv_smoke_grenade_radius.as <float> ());
       const Vector &smokeOrigin = game.getEntityOrigin (pent);
 
       Vector toGrenade = smokeOrigin - from;
@@ -476,7 +476,7 @@ bool BotSupport::isLineBlockedBySmoke (const Vector &from, const Vector &to) {
    }
 
    // define how much smoke a bot can see thru
-   const float maxSmokedLength = 0.7f * cv_smoke_greande_checks_radius.as <float> ();
+   const float maxSmokedLength = 0.7f * cv_smoke_grenade_radius.as <float> ();
 
    // return true if the total length of smoke-covered line-of-sight is too much
    return totalSmokedLength > maxSmokedLength;

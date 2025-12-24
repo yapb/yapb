@@ -97,7 +97,7 @@ void Bot::avoidGrenades () {
       if (m_preventFlashing < game.time () && model == kFlashbangModelName) {
          // don't look at flash bang
          if (!(m_states & Sense::SeeingEnemy)) {
-            m_lookAt.y = cr::wrapAngle ((game.getEntityOrigin (pent) - getEyesPos ()).angles ().y + 180.0f);
+            pev->v_angle.y = cr::wrapAngle ((game.getEntityOrigin (pent) - getEyesPos ()).angles ().y + 180.0f);
 
             m_canSetAimDirection = false;
             m_preventFlashing = game.time () + rg (1.0f, 2.0f);
@@ -678,8 +678,12 @@ void Bot::updatePickups () {
                   // don't steal hostage from human teammate (hack)
                   if (allowPickup) {
                      for (const auto &client : util.getClients ()) {
-                        if ((client.flags & ClientFlags::Used) && !(client.ent->v.flags & FL_FAKECLIENT) && (client.flags & ClientFlags::Alive) &&
-                           client.team == m_team && client.ent->v.origin.distanceSq (ent->v.origin) <= cr::sqrf (240.0f)) {
+                        if ((client.flags & ClientFlags::Used)
+                           && (client.flags & ClientFlags::Alive)
+                           && !(client.ent->v.flags & FL_FAKECLIENT)
+                           && client.team == m_team
+                           && client.ent->v.origin.distanceSq (ent->v.origin) <= cr::sqrf (240.0f)) {
+
                            allowPickup = false;
                            break;
                         }
@@ -1734,17 +1738,22 @@ void Bot::overrideConditions () {
    }
 
    // special handling for sniping
-   if (usesSniper () && (m_states & (Sense::SeeingEnemy | Sense::SuspectEnemy))
+   if (usesSniper () && !m_isReloading
+      && (m_states & (Sense::SeeingEnemy | Sense::SuspectEnemy))
       && m_shootTime - 0.4f <= game.time ()
       && m_shootTime + 0.1f > game.time ()
       && m_sniperStopTime > game.time ()) {
 
-      ignoreCollision ();
+      const float dot = util.getConeDeviation (ent (), m_enemyOrigin);
 
-      m_moveSpeed = 0.0f;
-      m_strafeSpeed = 0.0f;
+      if (dot > 0.95f) {
+         ignoreCollision ();
 
-      m_navTimeset = game.time ();
+         m_moveSpeed = 0.0f;
+         m_strafeSpeed = 0.0f;
+
+         m_navTimeset = game.time ();
+      }
    }
 
    // special handling for reloading
@@ -1769,18 +1778,6 @@ void Bot::overrideConditions () {
          m_moveSpeed = m_fearLevel > m_agressionLevel ? 0.0f : getShiftSpeed ();
          m_navTimeset = game.time ();
       }
-   }
-
-   // start searching for seek cover to avoid infected creatures
-   if (game.is (GameFlags::ZombieMod)
-      && !m_isCreature
-      && m_infectedEnemyTeam
-      && game.isAliveEntity (m_enemy)
-      && m_retreatTime < game.time ()
-      && pev->origin.distanceSq2d (m_enemy->v.origin) < cr::sqrf (512.0f)) {
-
-      completeTask ();
-      startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, true);
    }
 }
 
@@ -1819,8 +1816,9 @@ void Bot::syncUpdatePredictedIndex () {
       const float distToBotSq = botOrigin.distanceSq (graph[index].origin);
 
       if (vistab.visible (currentNodeIndex, index)
-         && distToBotSq < cr::sqrf (2048.0f)
-         && distToBotSq > cr::sqrf (128.0f)) {
+         && distToBotSq > cr::sqrf (128.0f)
+         && distToBotSq < cr::sqrf (2048.0f)) {
+
          bestIndex = index;
          return false;
       }
@@ -2077,7 +2075,7 @@ void Bot::filterTasks () {
 
    // calculate desires to seek cover or hunt
    if (game.isPlayerEntity (m_lastEnemy) && !m_lastEnemyOrigin.empty () && !m_hasC4) {
-      const float retreatLevel = (100.0f - (m_healthValue > 70.0f ? 100.0f : m_healthValue)) * tempFear; // retreat level depends on bot health
+      const float retreatLevel = (pev->max_health - m_healthValue) * tempFear; // retreat level depends on bot health
 
       if (m_isCreature ||
          (m_numEnemiesLeft > m_numFriendsLeft / 2
@@ -2109,6 +2107,9 @@ void Bot::filterTasks () {
          }
          else if (m_isVIP || m_isReloading || (sniping && usesSniper ())) {
             ratio *= 3.0f; // triple the seek cover desire if bot is VIP or reloading
+         }
+         else if (m_infectedEnemyTeam) {
+            ratio *= 3.0f;
          }
          else if (game.is (GameFlags::CSDM)) {
             ratio = 0.0f;
@@ -4035,8 +4036,6 @@ void Bot::runMovement () {
    m_oldButtons = pev->button;
 }
 
-
-
 bool Bot::isOutOfBombTimer () {
    if (!game.mapIs (MapFlags::Demolition)) {
       return false;
@@ -4090,14 +4089,6 @@ void Bot::updateHearing () {
    }
    m_hearedEnemy = nullptr;
    float nearestDistanceSq = kInfiniteDistance;
-
-   // do not hear to other enemies if just tracked old one
-   if (m_timeNextTracking < game.time () && m_lastEnemy == m_trackingEdict && game.isAliveEntity (m_lastEnemy)) {
-      m_hearedEnemy = m_lastEnemy;
-      m_lastEnemyOrigin = m_lastEnemy->v.origin;
-
-      return;
-   }
 
    // setup potential visibility set from engine
    auto set = game.getVisibilitySet (this, false);
@@ -4226,7 +4217,7 @@ void Bot::updateHearing () {
 void Bot::enteredBuyZone (int buyState) {
    // this function is gets called when bot enters a buyzone, to allow bot to buy some stuff
 
-   if (m_isCreature || hasHostage ()) {
+   if (m_isCreature || m_hasHostage) {
       return; // creatures can't buy anything
    }
    const int *econLimit = conf.getEconLimit ();
