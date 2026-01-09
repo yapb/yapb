@@ -219,8 +219,6 @@ private:
    mutable Mutex m_pathFindLock {};
    mutable Mutex m_predictLock {};
 
-   float f_wpt_tim_str_chg;
-
 private:
    uint32_t m_states {}; // sensing bitstates
    uint32_t m_collideMoves[kMaxCollideMoves] {}; // sorted array of movements
@@ -393,7 +391,6 @@ private:
 private:
    int pickBestWeapon (Array <int> &vec, int moneySave) const;
    int getRandomCampDir ();
-   int findAimingNode (const Vector &to, int &pathLength);
    int findNearestNode ();
    int findBombNode ();
    int findCoverNode (float maxDistance);
@@ -487,8 +484,6 @@ private:
    void runMovement ();
    void checkSpawnConditions ();
    void buyStuff ();
-   void changePitch (float speed);
-   void changeYaw (float speed);
    void checkMsgQueue ();
    void checkRadioQueue ();
    void checkReload ();
@@ -690,7 +685,6 @@ public:
    int m_ammoInClip[kMaxWeapons] {}; // ammo in clip for each weapons
    int m_ammo[MAX_AMMO_SLOTS] {}; // total ammo amounts
    int m_deathCount {}; // number of bot deaths
-   int m_ladderDir {}; // ladder move direction
 
    bool m_isVIP {}; // bot is vip?
    bool m_isAlive {}; // has the player been killed or has he just respawned
@@ -953,7 +947,6 @@ extern ConVar cv_ignore_enemies_after_spawn_time;
 extern ConVar cv_camping_time_min;
 extern ConVar cv_camping_time_max;
 extern ConVar cv_smoke_grenade_checks;
-extern ConVar cv_smoke_greande_checks_radius;
 extern ConVar cv_check_darkness;
 extern ConVar cv_use_hitbox_enemy_targeting;
 extern ConVar cv_restricted_weapons;
