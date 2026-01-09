@@ -908,9 +908,29 @@ bool Game::loadCSBinary () {
          }
       }
 
+      // detect legacy xash3d branch
+      if (engfuncs.pfnCVarGetPointer ("build") != nullptr) {
+         m_gameFlags |= GameFlags::Xash3DLegacy;
+      }
+
+      // detect xash engine new
+      if (engfuncs.pfnCVarGetPointer ("host_ver") != nullptr) {
+         m_gameFlags |= GameFlags::Xash3D;
+      }
+
+      // enable fake pings on supported platforms only
+      auto enableFakePings = [&] () {
+         if (!(m_gameFlags & (GameFlags::Xash3D | GameFlags::Xash3DLegacy))) {
+            m_gameFlags |= GameFlags::HasFakePings;
+         }
+      };
+
       // special case, czero is always detected first, as it's has custom directory
       if (modname == "czero") {
-         m_gameFlags |= (GameFlags::ConditionZero | GameFlags::HasBotVoice | GameFlags::HasFakePings);
+         m_gameFlags |= (GameFlags::ConditionZero | GameFlags::HasBotVoice);
+
+         // no fake pings on xash3d
+         enableFakePings ();
 
          if (is (GameFlags::Metamod)) {
             return false;
@@ -931,14 +951,9 @@ bool Game::loadCSBinary () {
          // detect if we're running modern game
          auto entity = m_gameLib.resolve <EntityProto> ("weapon_famas");
 
-         // detect legacy xash3d branch
-         if (engfuncs.pfnCVarGetPointer ("build") != nullptr) {
-            m_gameFlags |= GameFlags::Xash3DLegacy;
-         }
-
          // detect xash engine
-         if (engfuncs.pfnCVarGetPointer ("host_ver") != nullptr) {
-            m_gameFlags |= (GameFlags::Modern | GameFlags::Xash3D);
+         if (m_gameFlags & GameFlags::Xash3D) {
+            m_gameFlags |= GameFlags::Modern;
 
             if (entity != nullptr) {
                m_gameFlags |= GameFlags::HasBotVoice;
@@ -954,9 +969,7 @@ bool Game::loadCSBinary () {
             m_gameFlags |= (GameFlags::Modern | GameFlags::HasBotVoice);
 
             // no fake pings on xash3d
-            if (!(m_gameFlags & (GameFlags::Xash3D | GameFlags::Xash3DLegacy))) {
-               m_gameFlags |= GameFlags::HasFakePings;
-            }
+            enableFakePings ();
          }
          else {
             m_gameFlags |= GameFlags::Legacy;
