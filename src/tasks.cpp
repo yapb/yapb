@@ -660,16 +660,6 @@ void Bot::camp_ () {
 
             m_lookAtSafe = graph[predictNode].origin + pev->view_ofs;
          }
-         else {
-            pathLength = 0;
-            predictNode = findAimingNode (m_lastEnemyOrigin, pathLength);
-
-            if (isNodeValidForPredict (predictNode) && pathLength > 1
-               && vistab.visible (predictNode, m_currentNodeIndex)) {
-
-               m_lookAtSafe = graph[predictNode].origin + pev->view_ofs;
-            }
-         }
       }
       else {
          m_lookAtSafe = graph[getRandomCampDir ()].origin + pev->view_ofs;
@@ -683,11 +673,11 @@ void Bot::camp_ () {
          // switch from 1 direction to the other
          if (m_campDirection < 1) {
             dest = m_path->start;
-            m_campDirection ^= 1;
+            m_campDirection = 1;
          }
          else {
             dest = m_path->end;
-            m_campDirection ^= 1;
+            m_campDirection = 0;
          }
          dest.z = 0.0f;
 
@@ -1705,8 +1695,11 @@ void Bot::pickupItem_ () {
 
                // check if hostage is with a human teammate (hack)
                for (const auto &client : util.getClients ()) {
-                  if ((client.flags & ClientFlags::Used) && !(client.ent->v.flags & FL_FAKECLIENT) && (client.flags & ClientFlags::Alive) &&
-                     client.team == m_team && client.ent->v.origin.distanceSq (ent->v.origin) <= cr::sqrf (240.0f)) {
+                  if ((client.flags & ClientFlags::Used)
+                     && (client.flags & ClientFlags::Alive)
+                     && !(client.ent->v.flags & FL_FAKECLIENT)
+                     && client.team == m_team
+                     && client.ent->v.origin.distanceSq (ent->v.origin) <= cr::sqrf (240.0f)) {
 
                      return EntitySearchResult::Continue;
                   }
