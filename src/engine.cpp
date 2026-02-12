@@ -326,7 +326,7 @@ const char *Game::getRunningModName () {
       return name.chars ();
    }
 
-   char engineModName[StringBuffer::StaticBufferSize] {};
+   char engineModName[Strings::StaticBufferSize] {};
    engfuncs.pfnGetGameDir (engineModName);
 
    name = engineModName;

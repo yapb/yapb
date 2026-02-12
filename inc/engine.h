@@ -337,7 +337,7 @@ public:
    // gets custom engine args for client command
    const char *botArgs () const {
       auto result = strings.chars ();
-      strings.copy (result, String::join (m_botArgs, " ", m_botArgs[0].startsWith ("say") ? 1 : 0).chars (), cr::StringBuffer::StaticBufferSize);
+      strings.copy (result, String::join (m_botArgs, " ", m_botArgs[0].startsWith ("say") ? 1 : 0).chars (), Strings::StaticBufferSize);
 
       return result;
    }
@@ -501,7 +501,7 @@ public:
 
    // send server command
    template <typename ...Args> void serverCommand (const char *fmt, Args &&...args) {
-      engfuncs.pfnServerCommand (strings.concat (strings.format (fmt, cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
+      engfuncs.pfnServerCommand (strings.concat (strings.format (fmt, cr::forward <Args> (args)...), "\n", Strings::StaticBufferSize));
    }
 
    // send a bot command
@@ -511,7 +511,7 @@ public:
 
    // prints data to servers console
    template <typename ...Args> void print (const char *fmt, Args &&...args) {
-      sendServerMessage (strings.concat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
+      sendServerMessage (strings.concat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", Strings::StaticBufferSize));
    }
 
    // prints center message to specified player
@@ -520,7 +520,7 @@ public:
          print (fmt, cr::forward <Args> (args)...);
          return;
       }
-      sendClientMessage (true, ent, strings.concat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
+      sendClientMessage (true, ent, strings.concat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", Strings::StaticBufferSize));
    }
 
    // prints message to client console
@@ -529,7 +529,7 @@ public:
          print (fmt, cr::forward <Args> (args)...);
          return;
       }
-      sendClientMessage (false, ent, strings.concat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", StringBuffer::StaticBufferSize));
+      sendClientMessage (false, ent, strings.concat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", Strings::StaticBufferSize));
    }
 };
 

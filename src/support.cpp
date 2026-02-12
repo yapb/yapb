@@ -291,7 +291,7 @@ String BotSupport::getCurrentDateTime () {
    plat.loctime (&timeinfo, &ticks);
 
    auto timebuf = strings.chars ();
-   strftime (timebuf, StringBuffer::StaticBufferSize, "%d-%m-%Y %H:%M:%S", &timeinfo);
+   strftime (timebuf, Strings::StaticBufferSize, "%d-%m-%Y %H:%M:%S", &timeinfo);
 
    return String (timebuf);
 }

@@ -66,7 +66,7 @@ CR_FORCE_STACK_ALIGN void handler_engClientCommand (edict_t *ent, char const *fo
    auto buffer = strings.chars ();
 
    va_start (ap, format);
-   vsnprintf (buffer, StringBuffer::StaticBufferSize, format, ap);
+   vsnprintf (buffer, Strings::StaticBufferSize, format, ap);
    va_end (ap);
 
    engfuncs.pfnClientCommand (ent, buffer);

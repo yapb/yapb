@@ -293,7 +293,7 @@ template <typename ...Args> inline void BotControl::msg (const char *fmt, Args &
       return;
    }
 
-   if (m_isFromConsole || strnlen (result, StringBuffer::StaticBufferSize) > 96 || m_rapidOutput) {
+   if (m_isFromConsole || strnlen (result, Strings::StaticBufferSize) > 96 || m_rapidOutput) {
       if (m_rapidOutput) {
          m_printQueue.emplaceLast (PrintQueueDestination::ClientConsole, result);
       }

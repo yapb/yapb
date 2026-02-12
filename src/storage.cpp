@@ -375,7 +375,7 @@ String BotStorage::buildPath (int32_t file, bool isMemoryLoad, bool withoutMapNa
       plat.loctime (&timeinfo, &ticks);
       auto timebuf = strings.chars ();
 
-      strftime (timebuf, StringBuffer::StaticBufferSize, "L%d%m%Y", &timeinfo);
+      strftime (timebuf, Strings::StaticBufferSize, "L%d%m%Y", &timeinfo);
       path.emplace (strings.format ("%s_%s.%s", product.nameLower, timebuf, paths[file].second));
    }
    else if (!withoutMapName) {
