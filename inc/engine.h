@@ -380,7 +380,7 @@ public:
       return !ent || !indexOfEntity (ent) || ent->free;
    }
 
-   // get the wroldspawn entity
+   // get the worldspawn entity
    edict_t *getStartEntity () const {
       return m_startEntity;
    }

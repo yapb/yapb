@@ -1139,7 +1139,7 @@ void Game::applyGameModes () {
 
       // update our ignore timer if zp_delay exists
       if (zm_delay.exists () && zm_delay.value () > 0.0f) {
-         cv_ignore_enemies_after_spawn_time.set (zm_delay.value () + 3.5f);
+         cv_ignore_enemies_after_spawn_time.set (zm_delay.value () + 1.5f);
       }
       m_gameFlags |= GameFlags::ZombieMod;
    }
@@ -1485,7 +1485,7 @@ bool Game::isBreakableEntity (edict_t *ent, bool initialSeed) const {
    const auto limit = cv_breakable_health_limit.as <float> ();
 
    // not shoot-able
-   if (ent->v.health < 5 || ent->v.health >= limit) {
+   if (ent->v.health >= limit) {
       return false;
    }
    constexpr auto kFuncBreakable = StringRef::fnv1a32 ("func_breakable");
