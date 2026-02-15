@@ -633,14 +633,13 @@ bool Bot::lookupEnemies () {
    // check if bots should reload...
    if ((m_aimFlags <= AimFlags::PredictPath
       && m_seeEnemyTime + 3.0f < game.time ()
-      && !(m_states & (Sense::SeeingEnemy | Sense::HearingEnemy))
       && game.isNullEntity (m_lastEnemy)
       && game.isNullEntity (m_enemy)
       && getCurrentTaskId () != Task::ShootBreakable
       && getCurrentTaskId () != Task::PlantBomb
       && getCurrentTaskId () != Task::DefuseBomb) || gameState.isRoundOver ()) {
 
-      if (!m_reloadState) {
+      if (m_reloadState == Reload::None) {
          m_reloadState = Reload::Primary;
       }
    }
@@ -1166,7 +1165,9 @@ void Bot::handleWeapons (float distance, int, int id, int choosen) {
    // need to care for burst fire?
    if ((distance < kSprayDistance && !isRecoilHigh ()) || m_blindTime > game.time () || usesKnife ()) {
       if (id == Weapon::Knife) {
-         if (distance < 64.0f) {
+         const float minAttackDistance = m_isCreature ? 80.0f : 72.0f;
+
+         if (distance < minAttackDistance) {
             const auto primaryAttackChance = (m_oldButtons & IN_ATTACK2) ? 80 : 40;
 
             if (rg.chance (primaryAttackChance) || hasShield ()) {
@@ -1376,38 +1377,45 @@ void Bot::focusEnemy () {
    }
    const float distanceSq = m_lookAt.distanceSq2d (getEyesPos ()); // how far away is the enemy scum?
 
+   const float dot = util.getConeDeviation (ent (), m_enemyOrigin);
+   const float enemyDot = util.getConeDeviation (m_enemy, pev->origin);
+
    if (distanceSq < cr::sqrf (128.0f) && !usesSniper ()) {
       if (usesKnife ()) {
-         if (distanceSq < cr::sqrf (72.0f)) {
+         if (distanceSq < cr::sqrf (80.0f)) {
             m_wantsToFire = true;
          }
-         else if (distanceSq > cr::sqrf (90.0f)) {
+         else if (distanceSq > cr::sqrf (120.0f)) {
             m_wantsToFire = false;
          }
       }
-      else {
+      else if (dot > 0.80f) {
          m_wantsToFire = true;
+      }
+      else {
+         m_wantsToFire = false;
       }
    }
    else {
-      const float dot = util.getConeDeviation (ent (), m_enemyOrigin);
-
       if (dot < 0.90f) {
          m_wantsToFire = false;
       }
       else {
-         const float enemyDot = util.getConeDeviation (m_enemy, pev->origin);
-
-         // enemy faces bot?
-         if (enemyDot >= 0.90f) {
+         if (usesKnife ()) {
             m_wantsToFire = true;
          }
          else {
-            if (dot > 0.99f) {
+            // enemy faces bot?
+            if (enemyDot >= 0.90f) {
                m_wantsToFire = true;
             }
             else {
-               m_wantsToFire = false;
+               if (dot > 0.99f) {
+                  m_wantsToFire = true;
+               }
+               else {
+                  m_wantsToFire = false;
+               }
             }
          }
       }
@@ -1426,7 +1434,7 @@ void Bot::attackMovement () {
    }
 
    // use enemy as dest origin if with knife
-   if (usesKnife ()) {
+   if (usesKnife () || m_isCreature) {
       m_destOrigin = m_enemy->v.origin;
    }
 
@@ -1437,13 +1445,13 @@ void Bot::attackMovement () {
    auto approach = 0;
    const auto distanceSq = m_lookAt.distanceSq (getEyesPos ()); // how far away is the enemy scum?
 
-   if (usesKnife ()) {
+   if (usesKnife () || m_isCreature) {
       approach = 100;
    }
    else if ((m_states & Sense::SuspectEnemy) && !(m_states & Sense::SeeingEnemy)) {
       approach = 49;
    }
-   else if (m_isReloading || m_isVIP) {
+   else if (m_isReloading || m_isVIP || m_infectedEnemyTeam) {
       approach = 29;
    }
    else {
@@ -1460,7 +1468,7 @@ void Bot::attackMovement () {
       if ((m_states & Sense::SeeingEnemy)
          && approach < 30
          && !gameState.isBombPlanted ()
-         && (isEnemyCone || m_isVIP || m_isReloading)) {
+         && (isEnemyCone || m_isVIP || m_isReloading || m_infectedEnemyTeam)) {
 
          if (m_retreatTime < game.time ()) {
             startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, true);
@@ -1480,20 +1488,29 @@ void Bot::attackMovement () {
    const bool isFullView = !!(m_enemyParts & (Visibility::Head | Visibility::Body));
 
    if (m_lastFightStyleCheck < game.time ()) {
-      if (usesSniper ()
+      if (usesSniper () && !m_isReloading
          && m_shootTime - 0.4f <= game.time ()
          && m_shootTime + 0.1f > game.time ()
          && m_sniperStopTime > game.time ()) {
-         m_fightStyle = Fight::Stay;
+
+         const float dot = util.getConeDeviation (ent (), m_enemyOrigin);
+
+         if (dot > 0.95f) {
+            m_fightStyle = Fight::Stay;
+         }
       }
       else if (usesRifle () || usesSubmachine () || usesHeavy ()) {
          const int rand = rg (1, 100);
+         const auto enemyWeaponIsSniper = (m_enemy->v.weapons & kSniperWeaponMask);
 
          if (distanceSq < cr::sqrf (768.0f)) {
             m_fightStyle = Fight::Strafe;
          }
          else if (distanceSq < cr::sqrf (1024.0f)) {
-            if (rand < (usesSubmachine () ? 50 : 30)) {
+            if (isGroupOfEnemies (m_enemy->v.origin) || (enemyWeaponIsSniper && isEnemyCone)) {
+               m_fightStyle = Fight::Strafe;
+            }
+            else if (rand < (usesSubmachine () ? 50 : 30)) {
                m_fightStyle = Fight::Strafe;
             }
             else {
@@ -1501,7 +1518,10 @@ void Bot::attackMovement () {
             }
          }
          else {
-            if (rand < (usesSubmachine () ? 80 : 90)) {
+            if (isGroupOfEnemies (m_enemy->v.origin) || (enemyWeaponIsSniper && isEnemyCone)) {
+               m_fightStyle = Fight::Strafe;
+            }
+            else if (rand < (usesSubmachine () ? 80 : 90)) {
                m_fightStyle = Fight::Stay;
             }
             else {
@@ -1523,24 +1543,19 @@ void Bot::attackMovement () {
       const auto pistolStrafeDistance = game.is (GameFlags::CSDM) ? kSprayDistanceX2 * 3.0f : kSprayDistanceX2;
 
       // fire hurts friend value here is from previous frame, but acceptable, and saves us alot of cpu cycles
-      if (approach < 30 || m_fireHurtsFriend || ((usesPistol () || usesShotgun ())
+      if (approach >= 30 || m_fireHurtsFriend || ((usesPistol () || usesShotgun ())
          && distanceSq < cr::sqrf (pistolStrafeDistance)
          && isEnemyCone)) {
          m_fightStyle = Fight::Strafe;
       }
-      const auto enemyWeaponIsSniper = (m_enemy->v.weapons & kSniperWeaponMask);
-
-      if (enemyWeaponIsSniper && isEnemyCone) {
-         m_fightStyle = Fight::Strafe;
-      }
-      m_lastFightStyleCheck = game.time () + 3.0f;
+      m_lastFightStyleCheck = game.time () + rg (1.0f, 3.0f);
    }
 
    if (distanceSq < cr::sqrf (96.0f) && !usesKnife ()) {
       m_moveSpeed = -pev->maxspeed;
    }
 
-   if (usesKnife () && isEnemyCone) {
+   if ((usesKnife () && isEnemyCone) || m_isCreature) {
       m_fightStyle = Fight::Strafe;
 
       if (distanceSq > cr::sqrf (100.0f)) {
@@ -1627,7 +1642,7 @@ void Bot::attackMovement () {
          && distanceSq < cr::sqrf (kSprayDistance)
          && (m_jumpTime + 5.0f < game.time ()
             && isOnFloor ()
-            && rg (0, 1000) < (m_isReloading ? 8 : 2)
+            && rg (0, 100) < 30
             && pev->velocity.length2d () > 150.0f) && !usesSniper () && isEnemyCone) {
 
          pev->button |= IN_JUMP;

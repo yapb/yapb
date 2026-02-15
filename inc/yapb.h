@@ -219,8 +219,6 @@ private:
    mutable Mutex m_pathFindLock {};
    mutable Mutex m_predictLock {};
 
-   float f_wpt_tim_str_chg;
-
 private:
    uint32_t m_states {}; // sensing bitstates
    uint32_t m_collideMoves[kMaxCollideMoves] {}; // sorted array of movements
@@ -246,6 +244,7 @@ private:
    int m_radioSelect {}; // radio entry
    int m_radioPercent {}; // radio usage percent (in response)
    int m_killsCount {}; // the kills count of a bot
+   int m_rechoiceGoalCount {}; // multiple failed goals?
 
    int m_lastPredictIndex {}; // last predicted path index
    int m_lastPredictLength {}; // last predicted path length
@@ -333,7 +332,7 @@ private:
    bool m_infectedEnemyTeam {}; // the enemy is a zombie (assumed to be a hostile creature)
    bool m_defuseNotified {}; // bot is notified about bomb defusion
    bool m_jumpSequence {}; // next path link will be jump link
-   bool m_checkFall {}; // check bot fall
+   bool m_isFallDown {}; // is it falling?
    bool m_botMovement {}; // bot movement allowed ?
 
    PathWalk m_pathWalk {}; // pointer to current node from path
@@ -371,7 +370,7 @@ private:
    Vector m_lookAtPredict {}; // aiming vector when predicting
    Vector m_desiredVelocity {}; // desired velocity for jump nodes
    Vector m_breakableOrigin {}; // origin of breakable
-   Vector m_checkFallPoint[2] {}; // check fall point
+   Vector m_fallDownPoint[2] {}; // falling point
 
    Array <edict_t *> m_ignoredBreakable {}; // list of ignored breakables
    Array <edict_t *> m_ignoredItems {}; // list of  pointers to entity to ignore for pickup
@@ -393,7 +392,6 @@ private:
 private:
    int pickBestWeapon (Array <int> &vec, int moneySave) const;
    int getRandomCampDir ();
-   int findAimingNode (const Vector &to, int &pathLength);
    int findNearestNode ();
    int findBombNode ();
    int findCoverNode (float maxDistance);
@@ -487,8 +485,6 @@ private:
    void runMovement ();
    void checkSpawnConditions ();
    void buyStuff ();
-   void changePitch (float speed);
-   void changeYaw (float speed);
    void checkMsgQueue ();
    void checkRadioQueue ();
    void checkReload ();
@@ -690,7 +686,6 @@ public:
    int m_ammoInClip[kMaxWeapons] {}; // ammo in clip for each weapons
    int m_ammo[MAX_AMMO_SLOTS] {}; // total ammo amounts
    int m_deathCount {}; // number of bot deaths
-   int m_ladderDir {}; // ladder move direction
 
    bool m_isVIP {}; // bot is vip?
    bool m_isAlive {}; // has the player been killed or has he just respawned
@@ -953,7 +948,6 @@ extern ConVar cv_ignore_enemies_after_spawn_time;
 extern ConVar cv_camping_time_min;
 extern ConVar cv_camping_time_max;
 extern ConVar cv_smoke_grenade_checks;
-extern ConVar cv_smoke_greande_checks_radius;
 extern ConVar cv_check_darkness;
 extern ConVar cv_use_hitbox_enemy_targeting;
 extern ConVar cv_restricted_weapons;

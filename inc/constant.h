@@ -419,12 +419,6 @@ CR_DECLARE_SCOPED_ENUM (GoalTactic,
    RescueHostage
 )
 
-// ladder move direction
-CR_DECLARE_SCOPED_ENUM (LadderDir,
-   Up = 0,
-   Down,
-)
-
    // some hard-coded desire defines used to override calculated ones
 namespace TaskPri {
    constexpr auto Normal { 35.0f };

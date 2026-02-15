@@ -302,7 +302,7 @@ void MessageDispatcher::netMsgScreenFade () {
    }
 
    // screen completely faded ?
-   if (m_args[r].long_ >= 255 && m_args[g].long_ >= 255 && m_args[b].long_ >= 255 && m_args[alpha].long_ > 170) {
+   if (m_args[r].long_ >= 255 && m_args[g].long_ >= 255 && m_args[b].long_ >= 255 && m_args[alpha].long_ > 180) {
       m_bot->takeBlind (m_args[alpha].long_);
    }
 }

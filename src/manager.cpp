@@ -450,7 +450,7 @@ void BotManager::maintainQuota () {
 
    // disable spawn control
    if (conf.fetchCustom ("DisableSpawnControl").startsWith ("yes")) {
-      maxSpawnCount = game.maxClients () + 1;
+      maxSpawnCount = maxClients + 1;
    }
 
    // sent message only to console from here
@@ -1510,6 +1510,7 @@ void Bot::newRound () {
    m_numFriendsLeft = 0;
    m_numEnemiesLeft = 0;
    m_oldButtons = pev->button;
+   m_rechoiceGoalCount = 0;
 
    for (auto &node : m_previousNodes) {
       node = kInvalidNodeIndex;
@@ -1553,10 +1554,10 @@ void Bot::newRound () {
    m_timeDoorOpen = 0.0f;
    m_timeHitDoor = 0.0f;
 
-   for (auto &fall : m_checkFallPoint) {
+   for (auto &fall : m_fallDownPoint) {
       fall.clear ();
    }
-   m_checkFall = false;
+   m_isFallDown = false;
 
    resetCollision ();
    resetDoubleJump ();
