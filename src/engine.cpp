@@ -1485,7 +1485,7 @@ bool Game::isBreakableEntity (edict_t *ent, bool initialSeed) const {
    const auto limit = cv_breakable_health_limit.as <float> ();
 
    // not shoot-able
-   if (ent->v.health >= limit) {
+   if (ent->v.health < 1.0f || ent->v.health >= limit) {
       return false;
    }
    constexpr auto kFuncBreakable = StringRef::fnv1a32 ("func_breakable");

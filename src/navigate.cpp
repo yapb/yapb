@@ -476,7 +476,7 @@ void Bot::ignoreCollision () {
 }
 
 void Bot::doPlayerAvoidance (const Vector &normal) {
-   if (isOnLadder () || (pev->solid == SOLID_NOT) || cv_has_team_semiclip || game.is (GameFlags::FreeForAll)) {
+   if (isOnLadder () || pev->solid == SOLID_NOT || cv_has_team_semiclip || game.is (GameFlags::FreeForAll)) {
       return; // no player avoiding when with semiclip plugin
    }
    m_hindrance = nullptr;
@@ -755,25 +755,65 @@ void Bot::checkTerrain (const Vector &dirNormal) {
                state[i] = 0;
                state[i + 1] = 0;
 
-               if (canStrafeLeft (&tr)) {
+               // to start strafing, we have to first figure out if the target is on the left side or right side
+               Vector right {}, forward {};
+               m_moveAngles.angleVectors (&forward, &right, nullptr);
+
+               const Vector &dirToPoint = (pev->origin - m_destOrigin).normalize2d_apx ();
+               const Vector &rightSide = right.normalize2d_apx ();
+
+               bool dirRight = false;
+               bool dirLeft = false;
+               bool blockedLeft = false;
+               bool blockedRight = false;
+
+               if ((dirToPoint | rightSide) > 0.0f) {
+                  dirRight = true;
+               }
+               else {
+                  dirLeft = true;
+               }
+               const auto &testDir = m_moveSpeed > 0.0f ? forward : -forward;
+               constexpr float kBlockDistance = 32.0f;
+
+               // now check which side is blocked
+               src = pev->origin + right * kBlockDistance;
+               dst = src + testDir * kBlockDistance;
+
+               game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
+
+               if (!cr::fequal (tr.flFraction, 1.0f)) {
+                  blockedRight = true;
+               }
+               src = pev->origin - right * kBlockDistance;
+               dst = src + testDir * kBlockDistance;
+
+               game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
+
+               if (!cr::fequal (tr.flFraction, 1.0f)) {
+                  blockedLeft = true;
+               }
+
+               if (dirLeft) {
                   state[i] += 5;
                }
                else {
                   state[i] -= 5;
                }
 
-               if (isBlockedLeft ()) {
+               if (blockedLeft) {
                   state[i] -= 5;
                }
+               ++i;
 
-               if (canStrafeRight (&tr)) {
+               if (dirRight) {
                   state[i] += 5;
                }
                else {
                   state[i] -= 5;
                }
 
-               if (isBlockedRight ()) {
+               if (blockedRight) {
                   state[i] -= 5;
                }
             }
@@ -3140,20 +3180,21 @@ int Bot::getRandomCampDir () {
    uint16_t visibility[kMaxNodesToSearch] {};
 
    for (const auto &path : graph) {
-      if (m_currentNodeIndex == path.number || !vistab.visible (m_currentNodeIndex, path.number)) {
+      const float distanceSq = pev->origin.distanceSq (path.origin);
+
+      if (m_currentNodeIndex == path.number || !vistab.visible (m_currentNodeIndex, path.number) || distanceSq < cr::sqrf (192.0f)) {
          continue;
       }
 
       if (count < kMaxNodesToSearch) {
          indices[count] = path.number;
 
-         distTab[count] = pev->origin.distanceSq (path.origin);
+         distTab[count] = distanceSq;
          visibility[count] = path.vis.crouch + path.vis.stand;
 
          ++count;
       }
       else {
-         const float distanceSq = pev->origin.distanceSq (path.origin);
          uint16_t visBits = path.vis.crouch + path.vis.stand;
 
          for (int j = 0; j < kMaxNodesToSearch; ++j) {
@@ -3173,7 +3214,42 @@ int Bot::getRandomCampDir () {
    if (count >= 0) {
       return indices[rg (0, count)];
    }
+   int pathLength = 0;
+   int predictNode = findAimingNode (m_lastEnemyOrigin, pathLength);
+
+   if (isNodeValidForPredict (predictNode) && pathLength > 1
+      && vistab.visible (predictNode, m_currentNodeIndex)) {
+
+      return predictNode;
+   }
    return graph.random ();
+}
+
+int Bot::findAimingNode (const Vector &to, int &pathLength) {
+   // return the most distant node which is seen from the bot to the target and is within count
+   ensureCurrentNodeIndex ();
+
+   const int destIndex = graph.getNearest (to);
+   int bestIndex = m_currentNodeIndex;
+
+   if (destIndex == kInvalidNodeIndex) {
+      return kInvalidNodeIndex;
+   }
+
+   auto result = planner.find (destIndex, m_currentNodeIndex, [&] (int index) {
+      ++pathLength;
+
+      if (vistab.visible (m_currentNodeIndex, index)) {
+         bestIndex = index;
+         return false;
+      }
+      return true;
+   });
+
+   if (result && bestIndex == m_currentNodeIndex) {
+      return kInvalidNodeIndex;
+   }
+   return bestIndex;
 }
 
 void Bot::setStrafeSpeed (const Vector &moveDir, float strafeSpeed) {

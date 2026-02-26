@@ -392,6 +392,7 @@ private:
 private:
    int pickBestWeapon (Array <int> &vec, int moneySave) const;
    int getRandomCampDir ();
+   int findAimingNode (const Vector &to, int &pathLength);
    int findNearestNode ();
    int findBombNode ();
    int findCoverNode (float maxDistance);
@@ -407,7 +408,6 @@ private:
    int changeNodeIndex (int index);
    int numEnemiesNear (const Vector &origin, const float radius) const;
    int numFriendsNear (const Vector &origin, const float radius) const;
-
 
    float getEstimatedNodeReachTime ();
    float isInFOV (const Vector &dest) const;

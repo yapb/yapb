@@ -2269,7 +2269,7 @@ void BotGraph::frame () {
 
          // draw it now
          game.drawLine (m_editor, source, start, 10, 0, { 255, 0, 0 }, 200, 0, 10);
-         game.drawLine (m_editor, source, end, 10, 0, { 128, 64, 0 }, 200, 0, 10);
+         game.drawLine (m_editor, source, end, 10, 0, { 255, 0, 0 }, 200, 0, 10);
       }
 
       // draw the connections
@@ -2279,7 +2279,7 @@ void BotGraph::frame () {
          }
          // jump connection
          if (link.flags & PathFlag::Jump) {
-            game.drawLine (m_editor, path.origin, m_paths[link.index].origin, 5, 0, { 255, 0, 0 }, 200, 0, 10);
+            game.drawLine (m_editor, path.origin, m_paths[link.index].origin, 5, 0, { 255, 0, 128 }, 200, 0, 10);
          }
          else if (isConnected (link.index, nearestIndex)) { // twoway connection
             game.drawLine (m_editor, path.origin, m_paths[link.index].origin, 5, 0, { 255, 255, 0 }, 200, 0, 10);
