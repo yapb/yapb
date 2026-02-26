@@ -950,20 +950,18 @@ void Bot::moveToGoal () {
    if (m_pathFlags & NodeFlag::Crouch) {
       bool pressDuck = true;
 
-      if (m_pathFlags & (NodeFlag::Camp | NodeFlag::Goal)) {
-         TraceResult tr {};
+      TraceResult tr {};
 
-         auto src = m_path->origin;
-         auto dst = m_path->origin;
+      auto src = m_path->origin;
+      auto dst = m_path->origin;
 
-         src.z += 12.0f;
-         dst.z += 18.0f + 28.0f;
+      src.z += 12.0f;
+      dst.z += 18.0f + 28.0f;
 
-         game.testLine (src, dst, TraceIgnore::Everything, ent (), &tr);
+      game.testLine (src, dst, TraceIgnore::None, ent (), &tr);
 
-         if (tr.flFraction >= 0.95f) {
-            pressDuck = false;
-         }
+      if (tr.flFraction >= 0.95f) {
+         pressDuck = false;
       }
 
       // press duck if not canceled by visibility count check only and it's end of the route
