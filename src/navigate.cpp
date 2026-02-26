@@ -3214,13 +3214,16 @@ int Bot::getRandomCampDir () {
    if (count >= 0) {
       return indices[rg (0, count)];
    }
-   int pathLength = 0;
-   int predictNode = findAimingNode (m_lastEnemyOrigin, pathLength);
 
-   if (isNodeValidForPredict (predictNode) && pathLength > 1
-      && vistab.visible (predictNode, m_currentNodeIndex)) {
+   if (!m_lastEnemyOrigin.empty ()) {
+      int pathLength = 0;
+      const int predictNode = findAimingNode (m_lastEnemyOrigin, pathLength);
 
-      return predictNode;
+      if (isNodeValidForPredict (predictNode) && pathLength > 1
+         && vistab.visible (predictNode, m_currentNodeIndex)) {
+
+         return predictNode;
+      }
    }
    return graph.random ();
 }
