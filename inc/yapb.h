@@ -206,7 +206,7 @@ public:
    }
 
    void init (size_t length) {
-      m_path = cr::makeUnique <int32_t[]> (length);
+      m_path = cr::makeUnique <int32_t[]> (cr::min (length, static_cast <size_t> (kMaxNodes)));
    }
 };
 
