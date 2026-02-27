@@ -388,9 +388,9 @@ void Game::setPlayerStartDrawModels () {
       { "info_vip_start", "models/player/vip/vip.mdl" }
    };
 
-   for (const auto &[key, val] : models) {
-      searchEntities ("classname", key, [&] (edict_t *ent) {
-         m_engineWrap.setModel (ent, val.chars ());
+   for (const auto &pair : models) {
+      searchEntities ("classname", pair.first, [&] (edict_t *ent) {
+         m_engineWrap.setModel (ent, pair.second.chars ());
          return EntitySearchResult::Continue;
       });
    }
