@@ -68,18 +68,46 @@ void BotChatManager::addChatErrors (String &line) {
    const auto length = static_cast <int32_t> (line.length ());
 
    if (length > 15) {
-      const auto percentile = length / 2;
+     const auto percentile = length / 2;
+     // prevent garbled text in Chinese chat messages
+      if (cv_language.as <StringRef>() == "chs" || cv_language.as <StringRef>() == "cht") {
+         // "length / 2" percent of time drop a character
+         if (rg.chance(percentile)) {
+            for (int i = 0; i < 6; ++i) { // try several times
+               auto pos = rg(length / 8, length - length / 8);
+               auto c = static_cast<unsigned char>(line[pos]);
+               if (c < 0x80 && isalnum(c)) { // apply for alphas and nums only
+                  line.erase(static_cast <size_t>(pos));
+                  break;
+               }
+            }
+         }
 
-      // "length / 2" percent of time drop a character
-      if (rg.chance (percentile)) {
-         auto pos = rg (length / 8, length - length / 8);
-         line.erase (static_cast <size_t> (pos));
+         // "length" / 4 precent of time swap character
+         if (rg.chance(percentile / 2)) {
+            for (int i = 0; i < 6; ++i) { // try several times
+               auto pos = static_cast <size_t>(rg(length / 8, 3 * length / 8)); // choose random position in string
+               auto c1 = static_cast<unsigned char>(line[pos]);
+               auto c2 = static_cast<unsigned char>(line[pos + 1]);
+               if (c1 < 0x80 && c2 < 0x80 && isalnum(c1) && isalnum(c2)) {
+                  cr::swap(line[pos], line[pos + 1]);
+                  break;
+               }
+            }
+         }
       }
+      else {
+         // "length / 2" percent of time drop a character
+         if (rg.chance(percentile)) {
+            auto pos = rg(length / 8, length - length / 8);
+            line.erase(static_cast <size_t> (pos));
+         }
 
-      // "length" / 4 precent of time swap character
-      if (rg.chance (percentile / 2)) {
-         auto pos = static_cast <size_t> (rg (length / 8, 3 * length / 8)); // choose random position in string
-         cr::swap (line[pos], line[pos + 1]);
+         // "length" / 4 precent of time swap character
+         if (rg.chance(percentile / 2)) {
+            auto pos = static_cast <size_t> (rg(length / 8, 3 * length / 8)); // choose random position in string
+            cr::swap(line[pos], line[pos + 1]);
+         }
       }
    }
 }
