@@ -54,7 +54,7 @@ void Bot::normal_ () {
    // bots rushing with knife, when have no enemy (thanks for idea to nicebot project)
    if (cv_random_knife_attacks
       && usesKnife ()
-      && (game.isNullEntity (m_lastEnemy) || !game.isAliveEntity (m_lastEnemy))
+      && !game.isAliveEntity (m_lastEnemy)
       && game.isNullEntity (m_enemy)
       && m_knifeAttackTime < game.time ()
       && !m_hasHostage
@@ -250,7 +250,7 @@ void Bot::normal_ () {
 
       // did we already decide about a goal before?
       const auto currIndex = getTask ()->data;
-      auto destIndex = graph.exists (currIndex) ? currIndex : findBestGoal ();
+      auto destIndex = graph.exists (currIndex) && !m_hasC4 && !m_isVIP ? currIndex : findBestGoal ();
 
       // check for existence (this is fail over, for i.e. CSDM, this should be not true with normal game play, only when spawned outside of covered area)
       if (!graph.exists (destIndex)) {
@@ -481,7 +481,7 @@ void Bot::seekCover_ () {
          destIndex = getTask ()->data;
       }
       else {
-         destIndex = findCoverNode (900.0f);
+         destIndex = findCoverNode (m_infectedEnemyTeam ? 2048.0f : 1024.0f);
 
          if (destIndex == kInvalidNodeIndex) {
             m_retreatTime = game.time () + rg (1.0f, 2.0f);
@@ -660,16 +660,6 @@ void Bot::camp_ () {
 
             m_lookAtSafe = graph[predictNode].origin + pev->view_ofs;
          }
-         else {
-            pathLength = 0;
-            predictNode = findAimingNode (m_lastEnemyOrigin, pathLength);
-
-            if (isNodeValidForPredict (predictNode) && pathLength > 1
-               && vistab.visible (predictNode, m_currentNodeIndex)) {
-
-               m_lookAtSafe = graph[predictNode].origin + pev->view_ofs;
-            }
-         }
       }
       else {
          m_lookAtSafe = graph[getRandomCampDir ()].origin + pev->view_ofs;
@@ -683,11 +673,11 @@ void Bot::camp_ () {
          // switch from 1 direction to the other
          if (m_campDirection < 1) {
             dest = m_path->start;
-            m_campDirection ^= 1;
+            m_campDirection = 1;
          }
          else {
             dest = m_path->end;
-            m_campDirection ^= 1;
+            m_campDirection = 0;
          }
          dest.z = 0.0f;
 
@@ -1705,8 +1695,11 @@ void Bot::pickupItem_ () {
 
                // check if hostage is with a human teammate (hack)
                for (const auto &client : util.getClients ()) {
-                  if ((client.flags & ClientFlags::Used) && !(client.ent->v.flags & FL_FAKECLIENT) && (client.flags & ClientFlags::Alive) &&
-                     client.team == m_team && client.ent->v.origin.distanceSq (ent->v.origin) <= cr::sqrf (240.0f)) {
+                  if ((client.flags & ClientFlags::Used)
+                     && (client.flags & ClientFlags::Alive)
+                     && !(client.ent->v.flags & FL_FAKECLIENT)
+                     && client.team == m_team
+                     && client.ent->v.origin.distanceSq (ent->v.origin) <= cr::sqrf (240.0f)) {
 
                      return EntitySearchResult::Continue;
                   }
