@@ -878,9 +878,6 @@ public:
    }
 
    const Vector &find (edict_t *ent) {
-      if (!m_positions.empty ()) {
-         return nullptr;
-      }
       return m_positions[ent];
    }
 

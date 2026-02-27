@@ -405,7 +405,7 @@ bool BotSupport::isLineBlockedBySmoke (const Vector &from, const Vector &to) {
       }
 
       const float smokeRadiusSq = cr::sqrf (cv_smoke_greande_checks_radius.as <float> ());
-      const Vector &smokeOrigin = sgtrack.find (pent);
+      const auto &smokeOrigin = sgtrack.find (pent);
 
       Vector toGrenade = smokeOrigin - from;
       float alongDist = toGrenade | sightDir;
