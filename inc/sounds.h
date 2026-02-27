@@ -17,7 +17,8 @@ CR_DECLARE_SCOPED_ENUM (Noise,
    Hostage = cr::bit (5),
    Broke = cr::bit (6),
    Door = cr::bit (7),
-   Defuse = cr::bit (8)
+   Defuse = cr::bit (8),
+   SGDetonate = cr::bit (9)
 )
 
 class BotSounds final : public Singleton <BotSounds> {
@@ -30,7 +31,7 @@ public:
 
 public:
    // attaches sound to client struct
-   void listenNoise (edict_t *ent, StringRef sample, float volume);
+   void acquire (edict_t *ent, StringRef sample, float volume);
 
    // simulate sound for players
    void simulateNoise (int playerIndex);

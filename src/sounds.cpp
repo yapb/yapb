@@ -18,9 +18,10 @@ BotSounds::BotSounds () {
    m_noiseCache["debris/bust"] = Noise::NeedHandle | Noise::Broke;
    m_noiseCache["doors/doorm"] = Noise::NeedHandle | Noise::Door;
    m_noiseCache["weapons/c4_"] = Noise::NeedHandle | Noise::Defuse;
+   m_noiseCache["weapons/sg_"] = Noise::NeedHandle | Noise::SGDetonate;
 }
 
-void BotSounds::listenNoise (edict_t *ent, StringRef sample, float volume) {
+void BotSounds::acquire (edict_t *ent, StringRef sample, float volume) {
    // this function called by the sound hooking code (in emit_sound) enters the played sound into the array associated with the entity
 
    if (game.isNullEntity (ent) || sample.empty ()) {
@@ -37,6 +38,11 @@ void BotSounds::listenNoise (edict_t *ent, StringRef sample, float volume) {
    // we're not handling theese
    if (!(noise & Noise::NeedHandle)) {
       return;
+   }
+
+   // keep track of sgrendate detonation positions
+   if (noise & Noise::SGDetonate) {
+      sgtrack.acquire (ent, origin);
    }
 
    // find nearest player to sound origin
@@ -89,7 +95,7 @@ void BotSounds::listenNoise (edict_t *ent, StringRef sample, float volume) {
    }
 
    // ammo pickup?
-   else if (noise & Noise::Ammo) {
+   else if ((noise & Noise::Ammo) || (noise & Noise::SGDetonate)) {
       registerNoise (512.0f, 0.25f);
    }
 

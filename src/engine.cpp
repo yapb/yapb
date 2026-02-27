@@ -388,12 +388,12 @@ void Game::setPlayerStartDrawModels () {
       { "info_vip_start", "models/player/vip/vip.mdl" }
    };
 
-   models.foreach ([&] (const String &key, const String &val) {
-      searchEntities ("classname", key, [&] (edict_t *ent) {
-         m_engineWrap.setModel (ent, val.chars ());
+   for (const auto &pair : models) {
+      searchEntities ("classname", pair.first, [&] (edict_t *ent) {
+         m_engineWrap.setModel (ent, pair.second.chars ());
          return EntitySearchResult::Continue;
       });
-   });
+   }
 }
 
 bool Game::checkVisibility (edict_t *ent, uint8_t *set) {
@@ -1873,9 +1873,11 @@ void GameState::roundStart () {
 
    m_interestingEntities.clear ();
    m_activeGrenades.clear ();
-
+   
    m_activeGrenadesUpdateTime.reset ();
    m_interestingEntitiesUpdateTime.reset ();
+
+   sgtrack.clear ();
 }
 
 float GameState::getBombTimeLeft () const {

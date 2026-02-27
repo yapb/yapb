@@ -515,13 +515,14 @@ int BotControl::cmdNodeOn () {
    }
 
    if (graph.hasEditFlag (GraphEdit::On)) {
-      m_graphSaveVarValues.roundtime = mp_roundtime.as <float> ();
-      m_graphSaveVarValues.freezetime = mp_freezetime.as <float> ();
-      m_graphSaveVarValues.timelimit = mp_timelimit.as <float> ();
+      auto storeCvarValue = [&] (ConVar &var) {
+         m_gameCvarHolder[var.name ()] = var.as <float> ();
+         var.set (0);
+      };
 
-      mp_roundtime.set (9);
-      mp_freezetime.set (0);
-      mp_timelimit.set (0);
+      storeCvarValue (mp_roundtime);
+      storeCvarValue (mp_freezetime);
+      storeCvarValue (mp_timelimit);
 
       if (game.is (GameFlags::ReGameDLL)) {
          ConVarRef mp_round_infinite ("mp_round_infinite");
@@ -543,9 +544,12 @@ int BotControl::cmdNodeOff () {
       enableDrawModels (false);
 
       // revert cvars back to their values
-      mp_roundtime.set (m_graphSaveVarValues.roundtime);
-      mp_freezetime.set (m_graphSaveVarValues.freezetime);
-      mp_timelimit.set (m_graphSaveVarValues.timelimit);
+      auto restoreCvarValue = [&] (ConVar &var) {
+         var.set (m_gameCvarHolder[var.name ()]);
+      };
+      restoreCvarValue (mp_roundtime);
+      restoreCvarValue (mp_freezetime);
+      restoreCvarValue (mp_timelimit);
 
       if (game.is (GameFlags::ReGameDLL)) {
          ConVarRef mp_round_infinite ("mp_round_infinite");
