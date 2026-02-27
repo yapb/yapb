@@ -11,7 +11,7 @@ ConVar cv_display_welcome_text ("display_welcome_text", "1", "Enables or disable
 ConVar cv_enable_query_hook ("enable_query_hook", "0", "Enables or disables fake server query responses, which show bots as real players in the server browser.");
 ConVar cv_enable_fake_steamids ("enable_fake_steamids", "0", "Allows or disallows bots to return a fake Steam ID.");
 
-ConVar cv_smoke_grenade_checks ("smoke_grenade_checks", "1", "Affects the bot's vision by smoke clouds.", true, 0.0f, 1.0f);
+ConVar cv_smoke_grenade_checks ("smoke_grenade_checks", "2", "Affects the bot's vision by smoke clouds.", true, 0.0f, 2.0f);
 ConVar cv_smoke_greande_checks_radius ("greande_checks_radius", "220", "Radius to check for smoke clouds around a detonated grenade.", true, 32.0f, 320.0f);
 
 BotSupport::BotSupport () {
@@ -362,9 +362,9 @@ void BotSupport::setCustomCvarDescriptions () {
    restrictInfo += "The list of weapons for Counter-Strike 1.6:\n";
 
    // fill the restrict information
-   m_weaponAliases.foreach ([&] (const int32_t &, const AliasInfo &alias) {
+   for (const auto &[_, alias] : m_weaponAliases) {
       restrictInfo.appendf ("%s - %s\n", alias.first, alias.second);
-   });
+   }
    game.setCvarDescription (cv_restricted_weapons, restrictInfo);
 }
 
@@ -384,6 +384,11 @@ bool BotSupport::isLineBlockedBySmoke (const Vector &from, const Vector &to) {
          continue;
       }
 
+      // check if sgtracked
+      if (!sgtrack.has (pent)) {
+         continue;
+      }
+
       // need drawn models
       if (pent->v.effects & EF_NODRAW) {
          continue;
@@ -400,7 +405,7 @@ bool BotSupport::isLineBlockedBySmoke (const Vector &from, const Vector &to) {
       }
 
       const float smokeRadiusSq = cr::sqrf (cv_smoke_greande_checks_radius.as <float> ());
-      const Vector &smokeOrigin = game.getEntityOrigin (pent);
+      const Vector &smokeOrigin = sgtrack.find (pent);
 
       Vector toGrenade = smokeOrigin - from;
       float alongDist = toGrenade | sightDir;

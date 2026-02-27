@@ -583,9 +583,9 @@ void MessageDispatcher::ensureMessages () {
    }
 
    // re-register our message
-   m_wanted.foreach ([&] (const String &key, const int32_t &) {
+   for (const auto &[key, _] : m_wanted) {
       add (key, MUTIL_GetUserMsgID (PLID, key.chars (), nullptr));
-   });
+   }
 }
 
 int32_t MessageDispatcher::id (NetMsg msg) {

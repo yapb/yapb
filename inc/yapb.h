@@ -410,7 +410,6 @@ private:
    int numEnemiesNear (const Vector &origin, const float radius) const;
    int numFriendsNear (const Vector &origin, const float radius) const;
 
-
    float getEstimatedNodeReachTime ();
    float isInFOV (const Vector &dest) const;
    float getShiftSpeed ();

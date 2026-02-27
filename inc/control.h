@@ -61,11 +61,7 @@ public:
    };
 
    // save old values of changed cvars to revert them back when editing turned off
-   struct GraphSaveVarValue {
-      float timelimit {};
-      float freezetime {};
-      float roundtime {};
-   } m_graphSaveVarValues {};
+   HashMap <String, float> m_gameCvarHolder {};
 
 private:
    StringArray m_args {};

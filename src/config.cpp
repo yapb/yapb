@@ -936,9 +936,9 @@ const char *BotConfig::translate (StringRef input) {
 void BotConfig::showCustomValues () {
    ctrl.msg ("Current values for custom config items:");
 
-   m_custom.foreach ([&] (const String &key, const String &val) {
+   for (const auto &[key, val] : m_custom) {
       ctrl.msg ("  %s = %s", key, val);
-   });
+   }
 }
 
 uint32_t BotConfig::hashLangString (StringRef str) {

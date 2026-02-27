@@ -156,9 +156,9 @@ void BotPractice::save () {
    data.reserve (m_data.length ());
 
    // copy hash-map data to our vector
-   m_data.foreach ([&data] (const DangerStorage &ds, const PracticeData &pd) {
+   for (const auto &[ds, pd] : m_data) {
       data.emplace (ds, pd);
-   });
+   }
    bstor.save <DangerSaveRestore> (data);
 }
 

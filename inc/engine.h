@@ -761,6 +761,17 @@ public:
    }
 };
 
+// define hash function for edict_t*
+CR_NAMESPACE_BEGIN
+
+template <> struct Hash <edict_t *> {
+   uint32_t operator () (const edict_t *key) const noexcept {
+      return Game::instance ().indexOfEntity (key);
+   }
+};
+
+CR_NAMESPACE_END
+
 // offload bot manager class from things it shouldn't do
 class GameState final : public Singleton <GameState> {
 private:
@@ -852,7 +863,38 @@ public:
    void updateInterestingEntities ();
 };
 
+// sg detonation tracking
+class SGDetonateTrack final : public Singleton <SGDetonateTrack> {
+private:
+   HashMap <edict_t *, Vector> m_positions {};
+
+public:
+   SGDetonateTrack () = default;
+   ~SGDetonateTrack () = default;
+
+public:
+   void acquire (edict_t *ent, const Vector &pos) {
+      m_positions[ent] = pos;
+   }
+
+   const Vector &find (edict_t *ent) {
+      if (!m_positions.empty ()) {
+         return nullptr;
+      }
+      return m_positions[ent];
+   }
+
+   bool has (edict_t *ent) const {
+      return m_positions.exists (ent);
+   }
+
+   void clear () {
+      m_positions.clear ();
+   }
+};
+
 // expose globals
 CR_EXPOSE_GLOBAL_SINGLETON (Game, game);
 CR_EXPOSE_GLOBAL_SINGLETON (GameState, gameState);
 CR_EXPOSE_GLOBAL_SINGLETON (LightMeasure, illum);
+CR_EXPOSE_GLOBAL_SINGLETON (SGDetonateTrack, sgtrack);
