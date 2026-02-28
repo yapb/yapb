@@ -549,7 +549,7 @@ void BotConfig::loadLanguageConfig () {
       };
 
       // clear all the translations before new load
-      m_language.clear ();
+      m_language.zap ();
 
       while (file.getLine (line)) {
          if (isCommentLine (line)) {

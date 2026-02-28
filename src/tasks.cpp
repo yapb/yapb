@@ -164,7 +164,7 @@ void Bot::normal_ () {
                }
                selectBestWeapon ();
 
-               if (!(m_states & (Sense::SeeingEnemy | Sense::HearingEnemy)) && !m_reloadState) {
+               if (!(m_states & (Sense::SeeingEnemy | Sense::HearingEnemy)) && m_reloadState == Reload::None) {
                   m_reloadState = Reload::Primary;
                }
                m_timeCamping = game.time () + rg (cv_camping_time_min.as <float> (), cv_camping_time_max.as <float> ());

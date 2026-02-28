@@ -517,7 +517,7 @@ void BotManager::maintainAutoKill () {
 
    // check if we're reached the delay, so kill out bots
    if (!cr::fzero (m_autoKillCheckTime) && m_autoKillCheckTime < game.time ()) {
-      killAllBots (-1, true);
+      killAllBots (Team::Invalid, true);
       m_autoKillCheckTime = 0.0f;
 
       return;

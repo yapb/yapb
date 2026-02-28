@@ -63,7 +63,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
 
    // clear all breakables before initialization
    m_breakables.clear ();
-   m_checkedBreakables.clear ();
+   m_checkedBreakables.zap ();
 
    // initialize all config files
    conf.loadConfigs ();
@@ -1058,7 +1058,6 @@ bool Game::postload () {
          return true; // we should stop the attempt for loading the real gamedll, since metamod handle this for us
       }
    }
-
    const bool binaryLoaded = loadCSBinary ();
 
    if (!binaryLoaded && !is (GameFlags::Metamod)) {

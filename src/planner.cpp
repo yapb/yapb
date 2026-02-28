@@ -478,16 +478,15 @@ bool DijkstraAlgo::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, i
          }
       }
    }
-   static SmallArray <int> pathInReverse {};
-   pathInReverse.clear ();
+   SmallArray <int> pir {};
 
    for (int i = destIndex; i != kInvalidNodeIndex; i = m_parent[i]) {
-      pathInReverse.emplace (i);
+      pir.emplace (i);
    }
-   pathInReverse.reverse ();
+   pir.reverse ();
 
-   for (const auto &node : pathInReverse) {
-      if (!onAddedNode (node)) {
+   for (const auto &node : pir) {
+      if (onAddedNode && !onAddedNode (node)) {
          break;
       }
    }
@@ -502,10 +501,7 @@ bool DijkstraAlgo::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, i
 int DijkstraAlgo::dist (int srcIndex, int destIndex) {
    int pathDistance = 0;
 
-   find (srcIndex, destIndex, [&] (int) {
-      return true;
-   }, &pathDistance);
-
+   find (srcIndex, destIndex, nullptr, &pathDistance);
    return pathDistance;
 }
 

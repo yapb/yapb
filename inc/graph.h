@@ -348,7 +348,7 @@ public:
 
    // reinitialize buckets
    void initBuckets () {
-      m_hashTable.clear ();
+      m_hashTable.zap ();
    }
 
    // get the bucket of nodes near position

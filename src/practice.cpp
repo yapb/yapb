@@ -167,7 +167,7 @@ void BotPractice::syncLoad () {
       return; // no action
    }
    SmallArray <DangerSaveRestore> data {};
-   m_data.clear ();
+   m_data.zap ();
 
    const bool dataLoaded = bstor.load <DangerSaveRestore> (data);
 
