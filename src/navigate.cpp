@@ -992,15 +992,15 @@ void Bot::moveToGoal () {
 
       TraceResult tr {};
 
-      auto src = m_path->origin;
-      auto dst = m_path->origin;
+      auto src = m_pathOrigin;
+      auto dst = m_pathOrigin;
 
-      src.z += 12.0f;
-      dst.z += 18.0f + 28.0f;
+      src.z += 5.0f;
+      dst.z += 72.0f;
 
-      game.testLine (src, dst, TraceIgnore::None, ent (), &tr);
+      game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
 
-      if (tr.flFraction >= 0.95f) {
+      if (cr::fequal (tr.flFraction, 1.0f)) {
          pressDuck = false;
       }
 
@@ -1018,7 +1018,6 @@ void Bot::moveToGoal () {
 
       pev->button |= IN_JUMP;
    }
-
    m_lastUsedNodesTime = game.time ();
 
    // special movement for swimming here
@@ -2000,6 +1999,7 @@ void Bot::findValidNode () {
       else {
          clearSearchNodes ();
          findNextBestNode ();
+
          ++m_rechoiceGoalCount;
       }
    };

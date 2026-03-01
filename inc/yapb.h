@@ -389,6 +389,8 @@ private:
    CountdownTimer m_fixFallTimer {}; // timer we're fixed fall last time
    CountdownTimer m_repathTimer {}; // bots is going to repath his route
 
+   RWrand rg {}; // all bots has own rng
+
 private:
    int pickBestWeapon (Array <int> &vec, int moneySave) const;
    int getRandomCampDir ();
@@ -460,7 +462,7 @@ private:
    bool isEnemyNoTarget (edict_t *enemy);
    bool isEnemyInDarkArea (edict_t *enemy) const;
    bool isFriendInLineOfFire (float distance) const;
-   bool isGroupOfEnemies (const Vector &location);
+   bool isGroupOfEnemies (const Vector &location, float radius = 768.0f);
    bool isPenetrableObstacle (const Vector &dest);
    bool isPenetrableObstacle1 (const Vector &dest, int penetratePower) const;
    bool isPenetrableObstacle2 (const Vector &dest, int penetratePower) const;

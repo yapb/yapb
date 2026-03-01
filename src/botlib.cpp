@@ -1251,7 +1251,7 @@ int Bot::pickBestWeapon (Array <int> &vec, int moneySave) const {
    if (vec.length () < 2) {
       return vec.first ();
    }
-   const bool needMoreRandomWeapon = (m_personality == Personality::Careful) || (rg.chance (25) && m_personality == Personality::Normal);
+   const bool needMoreRandomWeapon = (m_personality == Personality::Careful) || (::rg.chance (25) && m_personality == Personality::Normal);
 
    if (needMoreRandomWeapon) {
       auto buyFactor = (static_cast <float> (m_moneyAmount) - static_cast <float> (moneySave)) / (16000.0f - static_cast <float> (moneySave)) * 3.0f;
@@ -1262,7 +1262,7 @@ int Bot::pickBestWeapon (Array <int> &vec, int moneySave) const {
       // swap array values
       vec.reverse ();
 
-      return vec[static_cast <int> (static_cast <float> (vec.length <int32_t> () - 1) * cr::log10 (rg (1.0f, cr::powf (10.0f, buyFactor))) / buyFactor + 0.5f)];
+      return vec[static_cast <int> (static_cast <float> (vec.length <int32_t> () - 1) * cr::log10 (::rg (1.0f, cr::powf (10.0f, buyFactor))) / buyFactor + 0.5f)];
    }
    int chance = 95;
 
@@ -1281,7 +1281,7 @@ int Bot::pickBestWeapon (Array <int> &vec, int moneySave) const {
       const auto &weapon = tab[w];
 
       // if we have enough money for weapon, buy it
-      if (weapon.price + moneySave < m_moneyAmount + rg (50, 200) && rg.chance (chance)) {
+      if (weapon.price + moneySave < m_moneyAmount + ::rg (50, 200) && ::rg.chance (chance)) {
          return w;
       }
    }
@@ -1878,7 +1878,9 @@ void Bot::setLastVictim (edict_t *ent) {
    m_lastVictimOrigin = ent->v.origin;
    m_lastVictimTime = game.time ();
 
-   m_forgetLastVictimTimer.start (rg (1.0f, 2.0f));
+   if (m_lastVictimOrigin.distanceSq (pev->origin) > cr::sqrf (384.0f)) {
+      m_forgetLastVictimTimer.start (rg (1.0f, 2.0f));
+   }
 }
 
 void Bot::setConditions () {

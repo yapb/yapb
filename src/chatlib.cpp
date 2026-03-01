@@ -239,7 +239,7 @@ void Bot::prepareChatMessage (StringRef message) {
       String gameName {};
 
       if (game.is (GameFlags::ConditionZero)) {
-         if (rg.chance (30)) {
+         if (::rg.chance (30)) {
             gameName = "CZ";
          }
          else {
@@ -247,7 +247,7 @@ void Bot::prepareChatMessage (StringRef message) {
          }
       }
       else if (game.is (GameFlags::Modern) || game.is (GameFlags::Legacy)) {
-         if (rg.chance (30)) {
+         if (::rg.chance (30)) {
             gameName = "CS";
          }
          else {

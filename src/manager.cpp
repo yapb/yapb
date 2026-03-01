@@ -41,9 +41,6 @@ ConVar cv_botskin_t ("botskin_t", "0", "Specifies the bot's wanted skin for the 
 ConVar cv_botskin_ct ("botskin_ct", "0", "Specifies the bot's wanted skin for the CT team.", true, 0.0f, 5.0f);
 ConVar cv_preferred_personality ("preferred_personality", "none", "Sets the default personality when creating bots with quota management.\nAllowed values: 'none', 'normal', 'careful', 'rusher'.\nIf 'none' is specified personality chosen randomly.", false);
 
-ConVar cv_quota_adding_interval ("quota_adding_interval", "0.10", "Interval at which bots are added to the game.", true, 0.10f, 1.0f);
-ConVar cv_quota_maintain_interval ("quota_maintain_interval", "0.40", "Interval at which the overall bot quota is checked.", true, 0.40f, 2.0f);
-
 ConVar cv_language ("language", "en", "Specifies the language for bot messages and menus.", false);
 
 ConVar cv_rotate_bots ("rotate_bots", "0", "Randomly disconnects and connects bots, simulating players joining/quitting.");
@@ -252,6 +249,9 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
    auto object = cr::makeUnique <Bot> (bot, difficulty, personality, team, skin);
    const auto index = object->index ();
 
+   // seed random number generator
+   object->rg.seed (static_cast <uint64_t> (index) + static_cast <uint64_t> (game.time ()));
+
    // assign owner of bot name
    if (botName != nullptr) {
       botName->usedBy = index; // save by who name is used
@@ -397,7 +397,12 @@ void BotManager::maintainQuota () {
          m_addRequests.clear ();
          cv_quota.set (botsInGame);
       }
-      m_maintainTime = game.time () + cv_quota_adding_interval.as <float> ();
+      m_maintainTime = game.time () + 0.1f;
+
+      // do not process quota management later, if created manually
+      if (request.manual && createResult == BotCreateResult::Success) {
+         return;
+      }
    }
 
    // now keep bot number up to date
@@ -469,7 +474,7 @@ void BotManager::maintainQuota () {
          m_saveBotNames.clear ();
       }
    }
-   m_quotaMaintainTime = game.time () + cv_quota_maintain_interval.as <float> ();
+   m_quotaMaintainTime = game.time () + 0.4f;
 }
 
 void BotManager::maintainLeaders () {

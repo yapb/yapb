@@ -1495,19 +1495,20 @@ void Bot::attackMovement () {
 
          const float dot = util.getConeDeviation (ent (), m_enemyOrigin);
 
-         if (dot > 0.95f) {
+         if (dot > 0.9f) {
             m_fightStyle = Fight::Stay;
          }
       }
       else if (usesRifle () || usesSubmachine () || usesHeavy ()) {
-         const int rand = rg (1, 100);
+         const auto rand = rg (1, 100);
          const auto enemyWeaponIsSniper = (m_enemy->v.weapons & kSniperWeaponMask);
+         const auto groupOfEnemies = distanceSq < cr::sqrf (768.0f) && isGroupOfEnemies (m_enemy->v.origin, 256.0f);
 
          if (distanceSq < cr::sqrf (768.0f)) {
             m_fightStyle = Fight::Strafe;
          }
          else if (distanceSq < cr::sqrf (1024.0f)) {
-            if (isGroupOfEnemies (m_enemy->v.origin) || (enemyWeaponIsSniper && isEnemyCone)) {
+            if (groupOfEnemies || (enemyWeaponIsSniper && isEnemyCone)) {
                m_fightStyle = Fight::Strafe;
             }
             else if (rand < (usesSubmachine () ? 50 : 30)) {
@@ -1518,7 +1519,7 @@ void Bot::attackMovement () {
             }
          }
          else {
-            if (isGroupOfEnemies (m_enemy->v.origin) || (enemyWeaponIsSniper && isEnemyCone)) {
+            if (groupOfEnemies || (enemyWeaponIsSniper && isEnemyCone)) {
                m_fightStyle = Fight::Strafe;
             }
             else if (rand < (usesSubmachine () ? 80 : 90)) {
@@ -1543,7 +1544,7 @@ void Bot::attackMovement () {
       const auto pistolStrafeDistance = game.is (GameFlags::CSDM) ? kSprayDistanceX2 * 3.0f : kSprayDistanceX2;
 
       // fire hurts friend value here is from previous frame, but acceptable, and saves us alot of cpu cycles
-      if (approach >= 30 || m_fireHurtsFriend || ((usesPistol () || usesShotgun ())
+      if (approach < 30 || m_fireHurtsFriend || ((usesPistol () || usesShotgun ())
          && distanceSq < cr::sqrf (pistolStrafeDistance)
          && isEnemyCone)) {
          m_fightStyle = Fight::Strafe;
@@ -1569,7 +1570,7 @@ void Bot::attackMovement () {
       };
 
       auto strafeUpdateTime = [] () {
-         return game.time () + rg (0.3f, 0.8f);
+         return game.time () + ::rg (0.3f, 0.8f);
       };
 
       // to start strafing, we have to first figure out if the target is on the left side or right side
@@ -2041,11 +2042,11 @@ void Bot::updateTeamCommands () {
    m_timeTeamOrder = game.time () + rg (15.0f, 30.0f);
 }
 
-bool Bot::isGroupOfEnemies (const Vector &location) {
+bool Bot::isGroupOfEnemies (const Vector &location, float radius) {
    int numPlayers = 0;
 
    // needs a square radius
-   const float radiusSq = cr::sqrf (768.0f);
+   const float radiusSq = cr::sqrf (radius);
 
    // search the world for enemy players...
    for (const auto &client : util.getClients ()) {
