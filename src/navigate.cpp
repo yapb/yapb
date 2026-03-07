@@ -986,29 +986,49 @@ void Bot::checkFall () {
 void Bot::moveToGoal () {
    findValidNode ();
 
-   // press duck button if we need to
+   bool pressDuck = false;
+
+   // 1. Waypoint Logic: Duck if current node requires it
    if (m_pathFlags & NodeFlag::Crouch) {
-      bool pressDuck = true;
+      pressDuck = true;
+   }
 
-      TraceResult tr {};
-
-      auto src = m_pathOrigin;
-      auto dst = m_pathOrigin;
-
-      src.z += 5.0f;
-      dst.z += 72.0f;
-
-      game.testHull (src, dst, TraceIgnore::Monsters, head_hull, ent (), &tr);
-
-      if (cr::fequal (tr.flFraction, 1.0f)) {
-         pressDuck = false;
-      }
-
-      // press duck if not canceled by visibility count check only and it's end of the route
-      if (pressDuck) {
-         pev->button |= IN_DUCK;
+   // 2. Lookahead Logic: Duck early if the NEXT node requires it to give the engine time to shrink the hull
+   if (m_pathWalk.hasNext ()) {
+      if (graph[m_pathWalk.next ()].flags & NodeFlag::Crouch) {
+         if (pev->origin.distanceSq2d (m_destOrigin) < cr::sqrf (64.0f)) {
+            pressDuck = true;
+         }
       }
    }
+
+   // 3. Smart Vent Exit: Prevent the bot from standing up too early while inside a vent
+   TraceResult trCeiling {};
+   game.testLine (pev->origin, pev->origin + Vector (0.0f, 0.0f, 36.0f), TraceIgnore::Monsters, ent (), &trCeiling);
+   
+   if (trCeiling.flFraction < 1.0f) {
+      pressDuck = true;
+   }
+
+   // 4. Smart Vent Entry: Proactively duck if approaching a vent opening
+   TraceResult trHead, trWaist;
+   Vector forwardDir = (m_destOrigin - pev->origin).normalize_apx ();
+   
+   // Increased trace distance from 32 to 54 units to detect the vent much earlier
+   game.testLine (getEyesPos (), getEyesPos () + forwardDir * 54.0f, TraceIgnore::Monsters, ent (), &trHead);
+   game.testLine (pev->origin, pev->origin + forwardDir * 54.0f, TraceIgnore::Monsters, ent (), &trWaist);
+
+   // If the bot's head will hit an obstacle but its waist won't, it is facing a vent or low overhang. Duck!
+   if (trHead.flFraction < 1.0f && cr::fequal (trWaist.flFraction, 1.0f)) {
+      pressDuck = true;
+   }
+
+   // Apply "Sticky" Ducking
+   if (pressDuck) {
+      pev->button |= IN_DUCK;
+      m_duckTime = game.time () + 0.5f; // Force holding the duck button for 0.5s to ensure the hull shrinks properly
+   }
+   // --- SMART VENT DETECTION END ---
 
    // press jump button if we need to leave the ladder
    if (!(m_pathFlags & NodeFlag::Ladder)
@@ -2522,6 +2542,20 @@ bool Bot::advanceMovement () {
                }
             }
          }
+
+         // === CT STEALTH APPROACH TO PLANTED BOMB ===
+         // If bomb is planted, we are CT, we are not running away, and no enemy is currently visible
+         if (gameState.isBombPlanted () && m_team == Team::CT && tid != Task::EscapeFromBomb && game.isNullEntity (m_enemy)) {
+            const auto &bombOrigin = gameState.getBombOrigin ();
+            
+            if (!bombOrigin.empty () && !isOnLadder () && !isInWater () && isOnFloor ()) {
+               // If within 1200 units (roughly just outside hearing range), start walking silently
+               if (pev->origin.distanceSq (bombOrigin) < cr::sqrf (1200.0f)) {
+                  m_minSpeed = getShiftSpeed ();
+               }
+            }
+         }
+         // ===========================================
       }
 
       if (!m_pathWalk.empty ()) {
