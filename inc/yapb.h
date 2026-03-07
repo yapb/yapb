@@ -937,7 +937,7 @@ extern ConVar cv_economics_rounds;
 extern ConVar cv_shoots_thru_walls;
 extern ConVar cv_debug;
 extern ConVar cv_debug_goal;
-extern ConVar cv_save_bots_names;
+extern ConVar cv_save_bots;
 extern ConVar cv_rotate_bots;
 extern ConVar cv_graph_url;
 extern ConVar cv_graph_url_upload;
@@ -953,6 +953,8 @@ extern ConVar cv_smoke_grenade_checks;
 extern ConVar cv_check_darkness;
 extern ConVar cv_use_hitbox_enemy_targeting;
 extern ConVar cv_restricted_weapons;
+extern ConVar cv_defuse_smoke;
+extern ConVar cv_dont_shoot;
 
 extern ConVar mp_freezetime;
 extern ConVar mp_roundtime;
