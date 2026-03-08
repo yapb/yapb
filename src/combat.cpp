@@ -7,6 +7,7 @@
 
 #include <yapb.h>
 
+ConVar cv_dont_shoot ("dont_shoot", "0", "Weapons are not fired if this is set to 1 (but bots still aim).");
 ConVar cv_shoots_thru_walls ("shoots_thru_walls", "2", "Specifies whether bots are able to fire at enemies behind the wall, if they hear or suspect them.", true, 0.0f, 3.0f);
 ConVar cv_ignore_enemies ("ignore_enemies", "0", "Enables or disables searching the world for enemies.");
 ConVar cv_check_enemy_rendering ("check_enemy_rendering", "0", "Enables or disables checking enemy rendering flags. Useful for some mods.");
@@ -693,9 +694,12 @@ Vector Bot::getEnemyBodyOffset () {
       m_enemyParts &= ~Visibility::Head;
    }
 
-   // do not aim at head while close enough to enemy and having sniper
-   else if (distance < 800.0f && usesSniper ()) {
-      m_enemyParts &= ~Visibility::Head;
+   // do not aim at head while close enough to enemy and having sniper (except Scout)
+   else if (distance < 800.0f && usesSniper () && m_currentWeapon != Weapon::Scout) {
+      // Only disable head targeting if the body is also visible. If only the head is visible, keep it.
+      if (m_enemyParts & Visibility::Body) {
+         m_enemyParts &= ~Visibility::Head;
+      }
    }
 
    Vector spot = m_enemy->v.origin;
@@ -728,6 +732,23 @@ Vector Bot::getEnemyBodyOffset () {
             headshotPct = 0;
          }
          else if (distance <= kSprayDistance && isRecoilHigh ()) {
+            headshotPct = 0;
+         }
+
+         // Force AWP to chest (0% headshot) and Scout to head (100% headshot)
+         if (m_currentWeapon == Weapon::AWP) {
+            headshotPct = 0;
+         }
+         else if (m_currentWeapon == Weapon::Scout) {
+            headshotPct = 100;
+         }
+
+         // If the body is hidden (e.g., enemy on a lower ramp) and only the head is visible, force headshot aim.
+         if (!(m_enemyParts & Visibility::Body)) {
+            headshotPct = 100;
+         }
+         // Conversely, if only the body is visible, don't try to shoot the head through a wall.
+         else if (!(m_enemyParts & Visibility::Head)) {
             headshotPct = 0;
          }
 
@@ -1162,6 +1183,14 @@ void Bot::handleWeapons (float distance, int, int id, int choosen) {
    }
    const float timeDelta = game.time () - m_frameInterval;
 
+   // === DONT SHOOT LOGIC ===
+   // Abort the attack button presses if the cvar is active
+   if (cv_dont_shoot) {
+      m_shootTime = timeDelta + 0.5f; // Push shoot time forward so the bot doesn't spam checks
+      return; 
+   }
+   // ========================
+
    // need to care for burst fire?
    if ((distance < kSprayDistance && !isRecoilHigh ()) || m_blindTime > game.time () || usesKnife ()) {
       if (id == Weapon::Knife) {
@@ -1425,6 +1454,11 @@ void Bot::focusEnemy () {
          m_wantsToFire = true;
       }
    }
+   
+   // Sneak & Surprise: If only a minor part (foot/arm) is visible and the enemy is far, hold fire to approach.
+   if (!(m_enemyParts & (Visibility::Head | Visibility::Body)) && distanceSq > cr::sqrf (300.0f)) {
+      m_wantsToFire = false;
+   }
 }
 
 void Bot::attackMovement () {
@@ -1459,6 +1493,21 @@ void Bot::attackMovement () {
 
       if (usesSniper () && approach > 49) {
          approach = 49;
+      }
+      
+      // Make all snipers play carefully (Peek-and-Hide & Distance Management)
+      if (usesSniper ()) {
+         if (m_shootTime > game.time () || distanceSq < cr::sqrf (800.0f)) {
+            approach = 29; // Force a retreat/seek cover state
+         }
+      }
+
+      // If the bot fired a bolt-action rifle (AWP/Scout), didn't kill the target (bolt is cycling),
+      // and the enemy is currently returning fire, force an immediate aggressive retreat.
+      if (m_currentWeapon == Weapon::AWP || m_currentWeapon == Weapon::Scout) {
+         if (m_shootTime > game.time () && (m_enemy->v.button & (IN_ATTACK | IN_ATTACK2))) {
+            approach = 19; // Drop approach score even lower to guarantee an immediate fall-back and evade
+         }
       }
    }
    const bool isEnemyCone = isInViewCone (m_enemy->v.origin);
@@ -1538,7 +1587,7 @@ void Bot::attackMovement () {
       }
 
       // do not try to strafe while ducking
-      if (isDucking () || isInNarrowPlace () || !isFullView) {
+      if (isDucking () || isInNarrowPlace ()) {
          m_fightStyle = Fight::Stay;
       }
       const auto pistolStrafeDistance = game.is (GameFlags::CSDM) ? kSprayDistanceX2 * 3.0f : kSprayDistanceX2;
@@ -1668,6 +1717,16 @@ void Bot::attackMovement () {
       }
       m_moveSpeed = 0.0f;
       m_strafeSpeed = 0.0f;
+   }
+
+   // Sneak & Surprise override: If the bot only sees an arm/foot, aggressively move closer to get a full view instead of strafing/staying.
+   if (!isFullView && distanceSq > cr::sqrf (300.0f)) {
+      m_moveSpeed = pev->maxspeed; // Run straight at the target
+      m_strafeSpeed = 0.0f;
+      
+      if (m_duckTime < game.time ()) {
+         pev->button &= ~IN_DUCK; // Stand up to move faster
+      }
    }
 
    if (m_isReloading) {
@@ -2285,6 +2344,9 @@ edict_t *Bot::setCorrectGrenadeVelocity (StringRef model) {
 void Bot::checkGrenadesThrow () {
    const auto tid = getCurrentTaskId ();
 
+   // check if we have grenades to throw
+   const auto grenadeToThrow = bestGrenadeCarried ();
+
    // do not check cancel if we have grenade in out hands
    const bool preventibleTasks = tid == Task::PlantBomb || tid == Task::DefuseBomb;
    const bool isGrenadeMode = isGrenadeWar ();
@@ -2292,6 +2354,24 @@ void Bot::checkGrenadesThrow () {
    auto clearThrowStates = [] (uint32_t &states) {
       states &= ~(Sense::ThrowExplosive | Sense::ThrowFlashbang | Sense::ThrowSmoke);
    };
+
+   // Check if bot is at bomb site (for tactical smoke bypasses against enemy footsteps)
+   bool isAtBombSite = false;
+   if (grenadeToThrow == Weapon::Smoke && m_difficulty >= Difficulty::Hard) {
+      if (graph.exists (m_currentNodeIndex)) {
+         if (graph[m_currentNodeIndex].flags & NodeFlag::Goal) {
+            isAtBombSite = true;
+         } else {
+            auto nearGoals = graph.getNearestInRadius (400.0f, pev->origin, 10);
+            for (const auto &n : nearGoals) {
+               if (graph.exists (n) && (graph[n].flags & NodeFlag::Goal)) {
+                  isAtBombSite = true;
+                  break;
+               }
+            }
+         }
+      }
+   }
 
    // check if throwing a grenade is a good thing to do...
    const auto throwingCondition = isGrenadeMode
@@ -2303,7 +2383,7 @@ void Bot::checkGrenadesThrow () {
          || m_isReloading
          || (isKnifeMode () && !gameState.isBombPlanted ())
          || m_grenadeCheckTime >= game.time ()
-         || m_lastEnemyOrigin.empty ());
+         || m_lastEnemyOrigin.empty ()); // Reverted the !isAtBombSite exception
 
    if (throwingCondition) {
       clearThrowStates (m_states);
@@ -2315,13 +2395,11 @@ void Bot::checkGrenadesThrow () {
 
    const auto senseCondition = isGrenadeMode ? false : !(m_states & (Sense::SuspectEnemy | Sense::HearingEnemy));
 
+   // Reverted the !isAtBombSite exception here so bots must see/hear/suspect enemies
    if (!game.isAliveEntity (m_lastEnemy) || senseCondition) {
       clearThrowStates (m_states);
       return;
    }
-
-   // check if we have grenades to throw
-   const auto grenadeToThrow = bestGrenadeCarried ();
 
    // if we don't have grenades no need to check it this round again
    if (grenadeToThrow == kGrenadeInventoryEmpty) {
@@ -2339,36 +2417,39 @@ void Bot::checkGrenadesThrow () {
       else if (grenadeToThrow == Weapon::Smoke) {
          cancelProb = 35;
       }
-      if (rg.chance (cancelProb)) {
+      if (rg.chance (cancelProb)) { // Reverted !isAtBombSite exception
          clearThrowStates (m_states);
          return;
       }
    }
-   float distanceSq = m_lastEnemyOrigin.distanceSq2d (pev->origin);
+   
+   float distanceSq = m_lastEnemyOrigin.empty () ? kInfiniteDistance : m_lastEnemyOrigin.distanceSq2d (pev->origin);
 
-   // don't throw grenades at anything that isn't on the ground!
-   if (!(m_lastEnemy->v.flags & (FL_ONGROUND | FL_PARTIALGROUND)) && !m_lastEnemy->v.waterlevel && m_lastEnemyOrigin.z > pev->absmax.z) {
-      distanceSq = kInfiniteDistance;
-   }
+   if (!game.isNullEntity (m_lastEnemy) && !m_lastEnemyOrigin.empty ()) {
+      // don't throw grenades at anything that isn't on the ground!
+      if (!(m_lastEnemy->v.flags & (FL_ONGROUND | FL_PARTIALGROUND)) && !m_lastEnemy->v.waterlevel && m_lastEnemyOrigin.z > pev->absmax.z) {
+         distanceSq = kInfiniteDistance;
+      }
 
-   // too high to throw?
-   if (m_lastEnemy->v.origin.z > pev->origin.z + 500.0f) {
-      distanceSq = kInfiniteDistance;
-   }
+      // too high to throw?
+      if (m_lastEnemy->v.origin.z > pev->origin.z + 500.0f) {
+         distanceSq = kInfiniteDistance;
+      }
 
-   // special condition if we're have valid current enemy
-   if (!isGrenadeMode && ((m_states & Sense::SeeingEnemy)
-      && game.isAliveEntity (m_enemy)
-      && ((m_enemy->v.button | m_enemy->v.oldbuttons) & IN_ATTACK)
-      && util.isVisible (pev->origin, m_enemy))
-      && util.isInViewCone (pev->origin, m_enemy)) {
+      // special condition if we're have valid current enemy
+      if (!isGrenadeMode && ((m_states & Sense::SeeingEnemy)
+         && game.isAliveEntity (m_enemy)
+         && ((m_enemy->v.button | m_enemy->v.oldbuttons) & IN_ATTACK)
+         && util.isVisible (pev->origin, m_enemy))
+         && util.isInViewCone (pev->origin, m_enemy)) {
 
-      // do not throw away grenades if anyone is attacking us
-      distanceSq = kInfiniteDistance;
+         // do not throw away grenades if anyone is attacking us
+         distanceSq = kInfiniteDistance;
+      }
    }
 
    // don't throw away nades if just seen the enemy
-   if (!isGrenadeMode && m_seeEnemyTime + kGrenadeCheckTime * 0.2f > game.time ()) {
+   if (!isGrenadeMode && m_seeEnemyTime + kGrenadeCheckTime * 0.2f > game.time ()) { // Reverted !isAtBombSite exception
       distanceSq = kInfiniteDistance;
    }
 
@@ -2376,7 +2457,10 @@ void Bot::checkGrenadesThrow () {
    const auto grenadeToThrowCondition =
       isGrenadeMode ? kGrenadeDamageRadius / 4.0f : grenadeToThrow == Weapon::Smoke ? 200.0f : kGrenadeDamageRadius;
 
-   if (distanceSq > cr::sqrf (grenadeToThrowCondition) && distanceSq < cr::sqrf (kGrenadeDamageRadius * 3.0f)) {
+   // Tactical smoke bypass: if bot is at the bomb site AND strictly hears footsteps, ignore standard distance check
+   bool tacticalSmokeBypass = (isAtBombSite && grenadeToThrow == Weapon::Smoke && (m_states & Sense::HearingEnemy));
+
+   if ((distanceSq > cr::sqrf (grenadeToThrowCondition) && distanceSq < cr::sqrf (kGrenadeDamageRadius * 3.0f)) || tacticalSmokeBypass) {
       bool allowThrowing = true;
 
       // care about different grenades
@@ -2469,6 +2553,101 @@ void Bot::checkGrenadesThrow () {
       }
 
       case Weapon::Smoke:
+         // High-skilled bots use smoke tactically (chokepoints), not offensively
+         if (m_difficulty >= Difficulty::Hard) {
+            // Do not throw smoke grenades at the enemy when they are visible
+            if (m_states & Sense::SeeingEnemy) {
+               allowThrowing = false;
+            }
+            else {
+               bool foundChokepoint = false;
+
+               // Strictly rely on hearing enemy footsteps
+               if (m_states & Sense::HearingEnemy) {
+                  Vector searchOrigin = !m_lastEnemyOrigin.empty() ? m_lastEnemyOrigin : pev->origin;
+                  auto predicted = graph.getNearestInRadius (600.0f, searchOrigin, 24);
+
+                  for (const auto &predict : predicted) {
+                     if (!graph.exists (predict)) {
+                        continue;
+                     }
+                     
+                     // Check if the node is a chokepoint (Narrow)
+                     if (graph[predict].flags & NodeFlag::Narrow) {
+
+                        // --- STRICT CT SPAWN/ROUTE PROTECTION ---
+                        if (isAtBombSite && m_team == Team::CT) {
+                           
+                           // 1. Strict Waypoint Check: Ignore paths strictly mapped for CTs
+                           if (graph[predict].flags & NodeFlag::CTOnly) {
+                              continue; 
+                           }
+
+                           // 2. Distance Heuristic Check
+                           float distToCT = kInfiniteDistance;
+                           float distToT = kInfiniteDistance;
+
+                           // Find distance to the nearest CT spawn point
+                           for (const auto &ctPoint : graph.m_ctPoints) {
+                              if (graph.exists (ctPoint)) {
+                                 float d = graph[predict].origin.distanceSq (graph[ctPoint].origin);
+                                 if (d < distToCT) distToCT = d;
+                              }
+                           }
+
+                           // Find distance to the nearest Terrorist spawn point
+                           for (const auto &tPoint : graph.m_terrorPoints) {
+                              if (graph.exists (tPoint)) {
+                                 float d = graph[predict].origin.distanceSq (graph[tPoint].origin);
+                                 if (d < distToT) distToT = d;
+                              }
+                           }
+
+                           // If the chokepoint is closer to the CT spawn than the T spawn, 
+                           // we assume it is a CT entrance (e.g., Ticket Booth on Mirage).
+                           if (distToCT < distToT) {
+                              continue;
+                           }
+                        }
+                        // ----------------------------------------
+
+                        m_throw = graph[predict].origin;
+
+                        auto throwPos = calcThrow (getEyesPos (), m_throw);
+                        
+                        // If standard throw isn't feasible, try a toss
+                        if (throwPos.lengthSq () < 100.0f) {
+                           throwPos = calcToss (getEyesPos (), m_throw);
+                        }
+
+                        if (!throwPos.empty ()) {
+                           // --- BALCONY & ELEVATION ACCURACY LOGIC ---
+                           // If the chokepoint is higher than the bot's eye level (e.g., a balcony or window)
+                           if (m_throw.z > getEyesPos ().z) {
+                              // Dynamically adjust the throw height based on how high the balcony is
+                              m_throw.z += 120.0f + (m_throw.z - getEyesPos ().z) * 0.8f; 
+                           } else {
+                              m_throw.z += 110.0f; // Standard adjustment for level or downward throws
+                           }
+                           // ------------------------------------------
+                           
+                           foundChokepoint = true;
+                           break;
+                        }
+                     }
+                  }
+               }
+
+               if (foundChokepoint) {
+                  m_states |= Sense::ThrowSmoke;
+                  break; // Tactical throw decided, skip standard checks
+               } else {
+                  allowThrowing = false; // No valid enemy chokepoint found (or didn't hear enemies), hold the smoke
+               }
+            }
+         }
+
+         // Standard sanity check to avoid throwing if the enemy is looking directly away or it's a bad angle
          if (allowThrowing && !game.isNullEntity (m_lastEnemy)) {
             if (util.getConeDeviation (m_lastEnemy, pev->origin) >= 0.9f) {
                allowThrowing = false;
@@ -2654,16 +2833,24 @@ void Bot::checkBurstMode (float distance) {
 void Bot::checkSilencer () {
    if ((m_currentWeapon == Weapon::USP || m_currentWeapon == Weapon::M4A1) && !hasShield () && game.isNullEntity (m_enemy)) {
       const int prob = (m_personality == Personality::Rusher ? 35 : 65);
+      bool attachSilencer = false;
 
-      // aggressive bots don't like the silencer
-      if (rg.chance (m_currentWeapon == Weapon::USP ? prob / 2 : prob)) {
+      // High-skilled bots always use the silencer for stealth
+      if (m_difficulty >= Difficulty::Hard) {
+         attachSilencer = true;
+      }
+      else {
+         // Aggressive/lower-skilled bots don't always like the silencer
+         attachSilencer = rg.chance (m_currentWeapon == Weapon::USP ? prob / 2 : prob);
+      }
+
+      if (attachSilencer) {
          // is the silencer not attached...
          if (pev->weaponanim > 6) {
             pev->button |= IN_ATTACK2; // attach the silencer
          }
       }
       else {
-
          // is the silencer attached...
          if (pev->weaponanim <= 6) {
             pev->button |= IN_ATTACK2; // detach the silencer

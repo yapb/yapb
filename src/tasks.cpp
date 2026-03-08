@@ -14,6 +14,7 @@ ConVar cv_camping_time_min ("camping_time_min", "15.0", "Lower bound of time fro
 ConVar cv_camping_time_max ("camping_time_max", "45.0", "Upper bound of time until which the time for camping is calculated.", true, 15.0f, 120.0f);
 
 ConVar cv_random_knife_attacks ("random_knife_attacks", "1", "Allows or disallows the ability for random knife attacks when the bot is rushing and no enemy is nearby.");
+ConVar cv_defuse_smoke ("defuse_smoke", "1", "Enables CT bots to throw smoke on the planted bomb before defusing when enemies are alive.");
 
 void Bot::normal_ () {
    m_aimFlags |= AimFlags::Nav;
@@ -990,7 +991,89 @@ void Bot::defuseBomb_ () {
    m_destOrigin = bombPos;
    m_entity = bombPos;
 
-   pev->button |= IN_USE;
+   // === NINJA DEFUSE LOGIC: Deploy smoke if enemies are alive ===
+   if (cv_defuse_smoke && !m_hasProgressBar && m_numEnemiesLeft > 0) {
+      
+      // If we are currently waiting for smoke deployment or weapon switch
+      if (m_duckDefuseCheckTime > game.time ()) {
+         m_moveSpeed = 0.0f;
+         m_strafeSpeed = 0.0f;
+         m_aimFlags |= AimFlags::Override;
+         m_lookAtSafe = bombPos;
+         return; // Delay the actual defuse
+      }
+
+      // Use m_grenadeCheckTime as a memory flag to avoid looping this sequence.
+      // (Safe to overwrite since the bot won't proactively throw other grenades while defusing anyway)
+      if (m_grenadeCheckTime < game.time () + 100.0f) {
+         if (bestGrenadeCarried () == Weapon::Smoke) {
+            if (m_currentWeapon != Weapon::Smoke) {
+               selectWeaponById (Weapon::Smoke);
+               m_duckDefuseCheckTime = game.time () + 1.5f; // Wait for weapon switch
+               
+               // Aim straight down at the bomb to deploy smoke directly on it
+               m_aimFlags |= AimFlags::Override;
+               m_lookAtSafe = bombPos;
+               
+               m_moveSpeed = 0.0f;
+               m_strafeSpeed = 0.0f;
+               return; 
+            }
+            else {
+                if (!(m_oldButtons & IN_ATTACK)) {
+                  debugMsg ("Ninja defuse: Deploying smoke grenade on planted C4.");
+                  pev->button |= IN_ATTACK; // Throw the smoke
+                  
+                  m_duckDefuseCheckTime = game.time () + 3.5f; // --- WAIT FOR SMOKE TO FULLY DEPLOY ---
+                  m_grenadeCheckTime = game.time () + 999.0f; // Mark as deployed
+                }
+                
+                m_moveSpeed = 0.0f;
+                m_strafeSpeed = 0.0f;
+                return; 
+            }
+         }
+         else {
+            // Find another CT bot to deploy smoke and provide protection
+            bool askedForHelp = false;
+            for (const auto &bot : bots) {
+               if (bot->m_isAlive && bot->m_team == Team::CT && bot.get () != this) {
+                  if (bot->bestGrenadeCarried () == Weapon::Smoke && bot->getCurrentTaskId () != Task::ThrowSmoke) {
+                     bot->debugMsg ("Ninja defuse: Assisting teammate by throwing smoke on planted C4.");
+                     
+                     // Assign the throw smoke task aiming at the bomb
+                     bot->m_throw = bombPos;
+                     bot->startTask (Task::ThrowSmoke, TaskPri::Throw, kInvalidNodeIndex, game.time () + 3.0f, false);
+
+                     // Provide protection by finding a defend node around the bomb
+                     const int defendNode = bot->findDefendNode (bombPos);
+                     bot->startTask (Task::Camp, TaskPri::Camp, kInvalidNodeIndex, game.time () + 15.0f, true);
+                     bot->startTask (Task::MoveToPosition, TaskPri::MoveToPosition, defendNode, game.time () + 5.0f, true);
+                     
+                     askedForHelp = true;
+                     break; // We only need one bot to assist
+                  }
+               }
+            }
+
+            if (askedForHelp) {
+               m_duckDefuseCheckTime = game.time () + 3.5f; // --- WAIT FOR TEAMMATE'S SMOKE TO FULLY DEPLOY ---
+               m_grenadeCheckTime = game.time () + 999.0f; // Mark as deployed
+               m_moveSpeed = 0.0f;
+               m_strafeSpeed = 0.0f;
+               return;
+            } else {
+               m_grenadeCheckTime = game.time () + 999.0f; // No help available, mark and proceed to defuse
+            }
+         }
+      }
+   }
+   // ==============================================================
+
+   // Only press use if we aren't currently waiting for a smoke to be thrown
+   if (m_duckDefuseCheckTime < game.time () || m_hasProgressBar) {
+      pev->button |= IN_USE;
+   }
 
    // if defusing is not already started, maybe crouch before
    if (!m_hasProgressBar && m_duckDefuseCheckTime < game.time ()) {
@@ -1468,10 +1551,31 @@ void Bot::shootBreakable_ () {
    }
    else {
       TraceResult tr {};
-      game.testLine (pev->origin, m_breakableOrigin, TraceIgnore::Monsters, ent (), &tr);
+      game.testLine (getEyesPos (), m_breakableOrigin, TraceIgnore::Monsters, ent (), &tr);
+
+      // If the current aim point doesn't hit the breakable, try alternative points (e.g. tabletop)
+      if (tr.pHit != m_breakableEntity) {
+         Vector center = m_breakableEntity->v.absmin + m_breakableEntity->v.size * 0.5f;
+         Vector top = center;
+         top.z = m_breakableEntity->v.absmin.z + m_breakableEntity->v.size.z - 4.0f;
+         
+         game.testLine (getEyesPos (), top, TraceIgnore::Monsters, ent (), &tr);
+         if (tr.pHit == m_breakableEntity) {
+            m_breakableOrigin = top;
+         }
+         else {
+            Vector bottom = center;
+            bottom.z = m_breakableEntity->v.absmin.z + 4.0f;
+            
+            game.testLine (getEyesPos (), bottom, TraceIgnore::Monsters, ent (), &tr);
+            if (tr.pHit == m_breakableEntity) {
+               m_breakableOrigin = bottom;
+            }
+         }
+      }
 
       if (tr.pHit != m_breakableEntity && !cr::fequal (tr.flFraction, 1.0f)) {
-         m_ignoredBreakable.push (tr.pHit);
+         m_ignoredBreakable.push (m_breakableEntity); // FIX: Ignore the breakable itself, not what we hit
 
          m_breakableEntity = nullptr;
          m_breakableOrigin.clear ();

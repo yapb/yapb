@@ -38,7 +38,7 @@ private:
 
    bool m_botsCanPause {}; // bots can do a little pause ?
 
-   Deque <String> m_saveBotNames {}; // bots names that persist upon changelevel
+   Deque <BotRequest> m_savedBots {}; // bots that persist upon changelevel
    Deque <BotRequest> m_addRequests {}; // bot creation tab
    SmallArray <BotTask> m_filters {}; // task filters
    SmallArray <UniqueBot> m_bots {}; // all available bots

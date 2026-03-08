@@ -12,6 +12,7 @@ ConVar cv_autovacate_keep_slots ("autovacate_keep_slots", "1", "How many slots t
 ConVar cv_kick_after_player_connect ("kick_after_player_connect", "1", "Kicks the bot immediately when a human player joins the server (yb_autovacate must be enabled).");
 
 ConVar cv_quota ("quota", "9", "Specifies the number of bots to be added to the game.", true, 0.0f, static_cast <float> (kGameMaxPlayers));
+ConVar cv_instant_spawn ("instant_spawn", "0", "Enables instant bot spawning (0 seconds delay) when adding bots.", true, 0.0f, 1.0f);
 ConVar cv_quota_mode ("quota_mode", "normal", "Specifies the type of quota.\nAllowed values: 'normal', 'fill', and 'match'.\nIf 'fill', the server will adjust bots to keep N players in the game, where N is yb_quota.\nIf 'match', the server will maintain a 1:N ratio of humans to bots, where N is yb_quota_match.", false);
 ConVar cv_quota_match ("quota_match", "0", "Number of players to match if yb_quota_mode is set to 'match'.", true, 0.0f, static_cast <float> (kGameMaxPlayers));
 ConVar cv_think_fps ("think_fps", "30.0", "Specifies how many times per second the bot code will run.", true, 24.0f, 90.0f);
@@ -35,7 +36,7 @@ ConVar cv_difficulty_auto_balance_interval ("difficulty_auto_balance_interval", 
 ConVar cv_show_avatars ("show_avatars", "0", "Enables or disables displaying bot avatars in front of their names in the scoreboard. Note that currently you can only see avatars of your Steam friends.");
 ConVar cv_show_latency ("show_latency", "0", "Enables latency display in the scoreboard.\nAllowed values: '0', '1', '2'.\nIf '0', there is nothing displayed.\nIf '1', there is a 'BOT' is displayed.\nIf '2' fake ping is displayed.", true, 0.0f, 2.0f);
 
-ConVar cv_save_bots_names ("save_bots_names", "1", "Allows saving bot names upon changelevel, so bot names will be the same after a map change.", true, 0.0f, 1.0f);
+ConVar cv_save_bots ("save_bots", "1", "Allows saving bot names, difficulty, personality, team, and class upon changelevel, so bots will be the same after a map change.", true, 0.0f, 1.0f);
 
 ConVar cv_botskin_t ("botskin_t", "0", "Specifies the bot's wanted skin for the Terrorist team.", true, 0.0f, 5.0f);
 ConVar cv_botskin_ct ("botskin_ct", "0", "Specifies the bot's wanted skin for the CT team.", true, 0.0f, 5.0f);
@@ -229,9 +230,9 @@ BotCreateResult BotManager::create (StringRef name, int difficulty, int personal
    }
    const bool hasNamePrefix = !cv_name_prefix.as <StringRef> ().empty ();
 
-   // disable save bots names if prefix is enabled
-   if (hasNamePrefix && cv_save_bots_names) {
-      cv_save_bots_names.set (0);
+   // disable save bots if prefix is enabled
+   if (hasNamePrefix && cv_save_bots) {
+      cv_save_bots.set (0);
    }
 
    if (hasNamePrefix) {
@@ -319,9 +320,14 @@ void BotManager::addbot (StringRef name, int difficulty, int personality, int te
    request.skin = skin;
    request.manual = manual;
 
-   // restore the bot name
-   if (cv_save_bots_names && name.empty () && !m_saveBotNames.empty ()) {
-      request.name = m_saveBotNames.popFront ();
+   // restore the bot data
+   if (cv_save_bots && name.empty () && !m_savedBots.empty ()) {
+      const auto &saved = m_savedBots.popFront ();
+      request.name = saved.name;
+      request.difficulty = saved.difficulty;
+      request.personality = saved.personality;
+      request.team = saved.team;
+      request.skin = saved.skin;
    }
 
    // put to queue
@@ -369,11 +375,13 @@ void BotManager::maintainQuota () {
       return;
    }
    const int maxClients = game.maxClients ();
-   const int botsInGame = getBotCount ();
 
    // bot's creation update
-   if (!m_addRequests.empty () && m_maintainTime < game.time ()) {
+   bool handledInstantSpawns = false;
+   while (!m_addRequests.empty () && (cv_instant_spawn.as <int> () || m_maintainTime < game.time ())) {
       const auto &request = m_addRequests.popFront ();
+      const int currentBots = getBotCount ();
+
       const auto createResult = create (request.name, request.difficulty, request.personality, request.team, request.skin);
 
       if (request.manual) {
@@ -389,26 +397,37 @@ void BotManager::maintainQuota () {
          ctrl.msg ("Maximum players reached (%d/%d). Unable to create Bot.", maxClients, maxClients);
 
          m_addRequests.clear (); // maximum players reached, so set quota to maximum players
-         cv_quota.set (botsInGame);
+         cv_quota.set (currentBots);
       }
       else if (createResult == BotCreateResult::TeamStacked) {
          ctrl.msg ("Could not add bot to the game: Team is stacked (to disable this check, set mp_limitteams and mp_autoteambalance to zero and restart the round)");
 
          m_addRequests.clear ();
-         cv_quota.set (botsInGame);
+         cv_quota.set (currentBots);
       }
-      m_maintainTime = game.time () + 0.1f;
 
-      // do not process quota management later, if created manually
-      if (request.manual && createResult == BotCreateResult::Success) {
-         return;
+      if (cv_instant_spawn.as <int> ()) {
+         handledInstantSpawns = true;
       }
+      else {
+         m_maintainTime = game.time () + 0.1f;
+         break; // Process one per frame if instant spawning is off
+      }
+   }
+
+   // If we just instantly spawned a batch of bots, skip the rest of the quota management 
+   // for this frame to prevent the auto-balancer from immediately kicking them.
+   if (handledInstantSpawns) {
+       m_quotaMaintainTime = game.time () + 0.5f; 
+       return;
    }
 
    // now keep bot number up to date
    if (m_quotaMaintainTime > game.time ()) {
       return;
    }
+   
+   const int botsInGame = getBotCount ();
    int desiredBotCount = cv_quota.as <int> ();
 
    // only assign if out of range
@@ -463,18 +482,38 @@ void BotManager::maintainQuota () {
 
    // add bots if necessary
    if (desiredBotCount > botsInGame && botsInGame < maxSpawnCount) {
-      createRandom ();
-   }
-   else if (desiredBotCount < botsInGame) {
-      balancedKickRandom (false);
-   }
-   else {
-      // clear the saved names when quota balancing ended
-      if (cv_save_bots_names && !m_saveBotNames.empty ()) {
-         m_saveBotNames.clear ();
+      if (cv_instant_spawn.as <int> ()) {
+         // Queue all missing bots to be processed instantly next frame
+         int count = cr::min (desiredBotCount, maxSpawnCount) - botsInGame;
+         for (int i = 0; i < count; ++i) {
+            createRandom ();
+         }
+         m_quotaMaintainTime = game.time (); // Force immediate processing next frame
+      } else {
+         createRandom ();
       }
    }
-   m_quotaMaintainTime = game.time () + 0.4f;
+   else if (desiredBotCount < botsInGame) {
+      if (cv_instant_spawn.as <int> ()) {
+         // Kick all excess bots at once
+         int toKick = botsInGame - desiredBotCount;
+         for (int i = 0; i < toKick; ++i) {
+            balancedKickRandom (false);
+         }
+      } else {
+         balancedKickRandom (false);
+      }
+   }
+   else {
+      // clear the saved bots when quota balancing ended
+      if (cv_save_bots && !m_savedBots.empty ()) {
+         m_savedBots.clear ();
+      }
+   }
+   
+   if (!handledInstantSpawns) {
+      m_quotaMaintainTime = game.time () + 0.4f;
+   }
 }
 
 void BotManager::maintainLeaders () {
@@ -606,8 +645,9 @@ void BotManager::decrementQuota (int by) {
 }
 
 void BotManager::initQuota () {
-   m_maintainTime = game.time () + cv_join_delay.as <float> ();
-   m_quotaMaintainTime = game.time () + cv_join_delay.as <float> ();
+   const float delay = cv_instant_spawn.as <int> () ? 0.0f : cv_join_delay.as <float> ();
+   m_maintainTime = game.time () + delay;
+   m_quotaMaintainTime = game.time () + delay;
 
    m_addRequests.clear ();
 }
@@ -656,9 +696,9 @@ void BotManager::kickEveryone (bool instant, bool zeroQuota) {
       decrementQuota (0);
    }
 
-   // if everyone is kicked, clear the saved bot names
-   if (cv_save_bots_names && !m_saveBotNames.empty ()) {
-      m_saveBotNames.clear ();
+   // if everyone is kicked, clear the saved bots
+   if (cv_save_bots && !m_savedBots.empty ()) {
+      m_savedBots.clear ();
    }
 
    if (instant) {
@@ -1391,8 +1431,15 @@ void BotManager::disconnectBot (Bot *bot) {
       }
       bot->markStale ();
 
-      if (!bot->m_kickedByRotation && cv_save_bots_names) {
-         m_saveBotNames.emplaceLast (bot->pev->netname.str ());
+      if (!bot->m_kickedByRotation && cv_save_bots) {
+         BotRequest request {};
+         request.name = bot->pev->netname.str ();
+         request.difficulty = bot->m_difficulty;
+         request.personality = bot->m_personality;
+         request.team = bot->m_wantedTeam;
+         request.skin = bot->m_wantedSkin;
+
+         m_savedBots.emplaceLast (cr::move (request));
       }
 
       const auto index = m_bots.index (e);
