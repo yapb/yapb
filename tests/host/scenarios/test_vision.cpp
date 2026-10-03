@@ -98,7 +98,7 @@ struct VisionHook {
     bot.last_predict_index_ = index;
     bot.last_predict_length_ = length;
   }
-  static AimFlags AimFlags (Bot &bot) {
+  static AimFlags GetAimFlags (Bot &bot) {
     return bot.aim_flags_;
   }
   static const Frustum::Planes &FrustumPlanes (Bot &bot) {
@@ -509,7 +509,7 @@ TEST_CASE ("unit/vision_nav") {
   // dead predictions clear the flag straight away
   VisionHook::SetAimFlags (*bot, AimFlags::PredictPath);
   VisionHook::AimDirection (*bot);
-  CHECK (!has_flag (VisionHook::AimFlags (*bot), AimFlags::PredictPath));
+  CHECK (!has_flag (VisionHook::GetAimFlags (*bot), AimFlags::PredictPath));
 
   // live predictions through visible nodes land exactly
   vistab.StartRebuild ();

@@ -112,7 +112,7 @@ struct WeaponsHook {
   static void Burst (Bot &bot, float distance) {
     bot.CheckBurstMode (distance);
   }
-  static void Reload (Bot &bot) {
+  static void CheckReload (Bot &bot) {
     bot.CheckReload ();
   }
   static void Pickups (Bot &bot) {
@@ -513,14 +513,14 @@ TEST_CASE ("unit/weapons_arms") {
   // ...reloads refuse uninterruptible business, then refill dry guns...
   bot->StartTask (TaskId::PlantBomb, TaskPri::plant_bomb, kInvalidNodeIndex, 0.0f, true);
   WeaponsHook::SetReloadState (*bot, Reload::Primary);
-  WeaponsHook::Reload (*bot);
+  WeaponsHook::CheckReload (*bot);
   CHECK (WeaponsHook::ReloadState (*bot) == Reload::None);
   bot->ClearTasks ();
 
   bot->pev->weapons = ystl::to_underlying (ystl::bit (Weapon::AK47));
   bot->ammo_in_clip_[ak_clip] = 0;
   WeaponsHook::SetReloadState (*bot, Reload::None);
-  WeaponsHook::Reload (*bot);
+  WeaponsHook::CheckReload (*bot);
   CHECK (WeaponsHook::ReloadState (*bot) == Reload::Primary);
 
   // ...jump knives draw past range and come back on landing

@@ -43,7 +43,7 @@ struct TasksHook {
   static bool BlindFired (Bot &bot) {
     return bot.wants_to_fire_;
   }
-  static int AimFlags (Bot &bot) {
+  static int GetAimFlags (Bot &bot) {
     return static_cast<int> (bot.aim_flags_);
   }
   static ystl::Vector LookSafe (Bot &bot) {
@@ -248,7 +248,7 @@ TEST_CASE ("unit/tasks_basic") {
   bot->view_distance_ = 100.0f;
   TasksHook::Execute (*bot);
   CHECK (TasksHook::MoveSpeed (*bot) == -200.0f);
-  CHECK (!!(TasksHook::AimFlags (*bot) & static_cast<int> (AimFlags::Override)));
+  CHECK (!!(TasksHook::GetAimFlags (*bot) & static_cast<int> (AimFlags::Override)));
   CHECK (TasksHook::BlindFired (*bot));
   bot->SetNewDifficulty (Difficulty::Normal);
 
@@ -267,7 +267,7 @@ TEST_CASE ("unit/tasks_basic") {
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () == TaskId::Spraypaint);
   CHECK (TasksHook::LookSafe (*bot).empty () == false);
-  CHECK (!!(TasksHook::AimFlags (*bot) & static_cast<int> (AimFlags::Entity)));
+  CHECK (!!(TasksHook::GetAimFlags (*bot) & static_cast<int> (AimFlags::Entity)));
   CHECK (TasksHook::MoveSpeed (*bot) == 0.0f);
 
   // blind bots hold still with a grudge, then stand down on time
@@ -283,7 +283,7 @@ TEST_CASE ("unit/tasks_basic") {
   CHECK (TasksHook::MoveSpeed (*bot) == 50.0f);
   CHECK (TasksHook::StrafeSpeed (*bot) == 60.0f);
   CHECK (!!(bot->pev->button & IN_DUCK));
-  CHECK (!!(TasksHook::AimFlags (*bot) & static_cast<int> (AimFlags::Override)));
+  CHECK (!!(TasksHook::GetAimFlags (*bot) & static_cast<int> (AimFlags::Override)));
 
   bot->blind_timer_.invalidate ();
   TasksHook::Execute (*bot);
@@ -477,13 +477,13 @@ TEST_CASE ("unit/tasks_throw") {
   bot->StartTask (TaskId::ThrowExplosive, TaskPri::Throw, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::ThrowExplosive);
-  CHECK (!(TasksHook::AimFlags (*bot) & static_cast<int> (AimFlags::Grenade)));
+  CHECK (!(TasksHook::GetAimFlags (*bot) & static_cast<int> (AimFlags::Grenade)));
 
   // ...far lobs raise the flag and park the motion...
   TasksHook::SetThrow (*bot, ystl::Vector (2000.0f, 0.0f, 0.0f));
   bot->StartTask (TaskId::ThrowExplosive, TaskPri::Throw, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
-  CHECK (!!(TasksHook::AimFlags (*bot) & static_cast<int> (AimFlags::Grenade)));
+  CHECK (!!(TasksHook::GetAimFlags (*bot) & static_cast<int> (AimFlags::Grenade)));
   CHECK (TasksHook::MoveSpeed (*bot) == 0.0f);
   CHECK (TasksHook::StrafeSpeed (*bot) == 0.0f);
 
@@ -491,12 +491,12 @@ TEST_CASE ("unit/tasks_throw") {
   bot->ClearTasks ();
   bot->StartTask (TaskId::ThrowFlashbang, TaskPri::Throw, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
-  CHECK (!!(TasksHook::AimFlags (*bot) & static_cast<int> (AimFlags::Grenade)));
+  CHECK (!!(TasksHook::GetAimFlags (*bot) & static_cast<int> (AimFlags::Grenade)));
 
   bot->ClearTasks ();
   bot->StartTask (TaskId::ThrowSmoke, TaskPri::Throw, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
-  CHECK (!!(TasksHook::AimFlags (*bot) & static_cast<int> (AimFlags::Grenade)));
+  CHECK (!!(TasksHook::GetAimFlags (*bot) & static_cast<int> (AimFlags::Grenade)));
 
   // owned grenades skip the fallback weapon entirely (classname carried
   // by gamedef in prod, stubbed here since the harness loads no defs)
@@ -596,7 +596,7 @@ TEST_CASE ("unit/tasks_break") {
   TasksHook::Execute (*armed);
   CHECK (armed->GetTaskId () == TaskId::ShootBreakable);
   CHECK (TasksHook::MoveSpeed (*armed) == 0.0f);
-  CHECK (!!(TasksHook::AimFlags (*armed) & static_cast<int> (AimFlags::Override)));
+  CHECK (!!(TasksHook::GetAimFlags (*armed) & static_cast<int> (AimFlags::Override)));
   CHECK (TasksHook::BlindFired (*armed));
 
   // ...dry ones stand the task down instead
