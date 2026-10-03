@@ -284,3 +284,22 @@ tasks:
         artifacts:
           paths:
             - pkg/*
+      - name: publish
+        script:
+          - |
+            set -e
+            TAG="$SOURCECRAFT_COMMIT_REF_NAME"
+            REPO="$(echo "$SOURCECRAFT_REPO_URL" | sed -e 's|.*git.sourcecraft.dev/||' -e 's|\.git$||')"
+            API="https://api.sourcecraft.tech/repos/$REPO/releases"
+            echo "Publishing $REPO@$TAG"
+            curl -fsSL -X POST "$API" \
+              -H "Authorization: Bearer $SOURCECRAFT_TOKEN" \
+              -H 'Content-Type: application/json' \
+              -d "{\"tag\":\"$TAG\",\"title\":\"$TAG\",\"publish\":true}" > /dev/null || echo "release exists, attaching assets"
+            for f in pkg/*; do
+              [ -f "$f" ] || continue
+              echo "Uploading $(basename "$f")"
+              curl -fsSL -X POST "$API/tag/$TAG/attachments" \
+                -H "Authorization: Bearer $SOURCECRAFT_TOKEN" \
+                -F "name=$(basename "$f")" -F "file=@$f" > /dev/null
+            done
