@@ -187,6 +187,31 @@ tasks:
               export PATH="$HOME/.local/bin:$PATH"
             fi
             cmake --version
+      - name: zig
+        env:
+          ZIG_VERSION: "0.16.0"
+        script:
+          - |
+            set -e
+            ZIG_DIR="$HOME/.local/zig"
+            mkdir -p "$ZIG_DIR"
+            rm -rf "$ZIG_DIR"/*
+            curl -fsSL --retry 3 -o /tmp/zig.tar.xz \
+              "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz"
+            tar -xJf /tmp/zig.tar.xz -C "$ZIG_DIR" --strip-components=1
+            echo "PATH=$ZIG_DIR:$PATH" >> "$SOURCECRAFT_ENV"
+            "$ZIG_DIR/zig" version
+      - name: compiler
+        script:
+          - |
+            set -e
+            mkdir -p "$HOME/.local/bin"
+            printf '#!/bin/sh\nexec zig cc -target x86_64-linux-gnu.2.17 "$@"\n' > "$HOME/.local/bin/zig-cc"
+            printf '#!/bin/sh\nexec zig c++ -target x86_64-linux-gnu.2.17 "$@"\n' > "$HOME/.local/bin/zig-c++"
+            chmod +x "$HOME/.local/bin/zig-cc" "$HOME/.local/bin/zig-c++"
+            echo "PATH=$HOME/.local/bin:$PATH" >> "$SOURCECRAFT_ENV"
+            echo "CC=$HOME/.local/bin/zig-cc" >> "$SOURCECRAFT_ENV"
+            echo "CXX=$HOME/.local/bin/zig-c++" >> "$SOURCECRAFT_ENV"
       - name: test
         script:
           - cmake --preset linux-tests
