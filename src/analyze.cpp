@@ -1380,6 +1380,7 @@ bool GraphAnalyze::MarkCampsSlice () {
   if (!has_flag (FinishFlags (), AnalyzeFinish::MarkCamps)) {
     return true;
   }
+  slice_.start ();
   constexpr float kCornerRange = 240.0f; // wall probe distance
   constexpr float kSightRange = 1024.0f; // sightline probe distance
   constexpr float kMinSight = 450.0f; // shortest acceptable sightline
