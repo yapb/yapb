@@ -81,7 +81,7 @@ void Bot::AvoidGrenades () {
         const float window = cv_whose_your_daddy ? 1.0f : 0.2f + 0.45f * (static_cast<float> (Skill ()) / 100.0f);
 
         if (time_left <= window && pent->v.origin.distance_sq (pev->origin) < ystl::sqrf (1500.0f)) {
-          const bool fresh = pent != avoid_flash_ent_ || pent->v.dmgtime != avoid_flash_dmgtime_;
+          const bool fresh = pent != avoid_flash_ent_ || !ystl::fequal (pent->v.dmgtime, avoid_flash_dmgtime_);
 
           // even the best never react every time, the cap keeps a human miss rate
           if (fresh && (cv_whose_your_daddy || rg.chance (40 + Skill () / 2))) {
