@@ -49,7 +49,7 @@ workflows:
 
   release:
     settings:
-      max_cube_duration: 20m
+      max_cube_duration: 60m
     tasks:
       - name: release
         uses: make-release
@@ -219,10 +219,48 @@ tasks:
           - ctest --test-dir build/linux-tests --output-on-failure
 
   - name: make-release
+    env:
+      CS_CERTIFICATE: ${{ secrets.CS_CERTIFICATE }}
+      CS_CERTIFICATE_PASSWORD: ${{ secrets.CS_CERTIFICATE_PASSWORD }}
     cubes:
       - name: submodules
         script:
           - git submodule update --init --recursive
+      - name: zig
+        env:
+          ZIG_VERSION: "0.16.0"
+        script:
+          - |
+            set -e
+            ZIG_DIR="$HOME/.local/zig"
+            mkdir -p "$ZIG_DIR"
+            rm -rf "$ZIG_DIR"/*
+            curl -fsSL --retry 3 -o /tmp/zig.tar.xz \
+              "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz"
+            tar -xJf /tmp/zig.tar.xz -C "$ZIG_DIR" --strip-components=1
+            echo "PATH=$ZIG_DIR:$PATH" >> "$SOURCECRAFT_ENV"
+            "$ZIG_DIR/zig" version
+      - name: cmake
+        script:
+          - |
+            set -e
+            ver=$(cmake --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
+            if [ -z "$ver" ] || [ "$(printf '%s\n3.25\n' "$ver" | sort -V | head -1)" != "3.25" ]; then
+              python3 -m pip install --user --upgrade cmake ninja
+              echo "PATH=$HOME/.local/bin:$PATH" >> "$SOURCECRAFT_ENV"
+              export PATH="$HOME/.local/bin:$PATH"
+            fi
+            cmake --version
+      - name: build-all
+        script:
+          - |
+            set -e
+            for a in linux-x86 linux-amd64 linux-x86-nosimd linux-arm64 linux-riscv64 apple-amd64 windows-x86-clang windows-amd64; do
+              cmake --preset "ci-$a"
+              cmake --build --preset "ci-$a"
+              mkdir -p "artifacts/$a"
+              find "build/ci-$a" -maxdepth 1 -type f \( -name 'yapb*.so' -o -name 'yapb*.dll' -o -name 'yapb*.dylib' \) -exec cp {} "artifacts/$a/" \;
+            done
       - name: dependencies
         script:
           - |
@@ -243,3 +281,6 @@ tasks:
             set -e
             cmake --preset dist
             cmake --build --preset dist --target package
+        artifacts:
+          paths:
+            - pkg/*
