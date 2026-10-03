@@ -29,6 +29,7 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.arch }}
+    needs: [test]
     env:
       BUILD_DIR: build/ci-${{ matrix.arch }}
     strategy:
@@ -180,11 +181,44 @@ jobs:
           name: ${{ matrix.arch }}-pdb
           path: ${{ env.BUILD_DIR }}/yapb.pdb
 
+  test:
+    name: tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            preset: linux-tests
+          - os: windows-2025-vs2026
+            preset: windows-tests
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Setup MSVC
+        if: runner.os == 'Windows'
+        uses: TheMrMilchmann/setup-msvc-dev@v4
+        with:
+          arch: amd64
+
+      - name: Configure
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }}
+
+      - name: Test
+        run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure
+
   release:
     if: github.event_name == 'push' || (github.event_name == 'release' && github.event.action == 'published')
     name: ${{ github.event_name == 'release' && 'release' || 'release-continuous' }}
     runs-on: ubuntu-latest
-    needs: [build]
+    needs: [build, test]
 
     steps:
       - name: Checkout repository

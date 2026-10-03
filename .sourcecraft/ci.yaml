@@ -18,6 +18,8 @@ workflows:
     settings:
       max_cube_duration: 20m
     tasks:
+      - name: unit-tests
+        uses: unit-tests
       - name: amxx-include
         uses: amxx-include
       - name: linux-x86
@@ -157,6 +159,17 @@ tasks:
         artifacts:
           paths:
             - artifacts/*
+
+  - name: unit-tests
+    cubes:
+      - name: submodules
+        script:
+          - git submodule update --init --recursive
+      - name: test
+        script:
+          - cmake --preset linux-tests
+          - cmake --build --preset linux-tests
+          - ctest --test-dir build/linux-tests --output-on-failure
 
   - name: make-release
     cubes:
