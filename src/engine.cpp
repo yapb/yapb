@@ -1294,7 +1294,7 @@ void Game::ApplyGameModes () {
 
   const float round_start = game_state.GetRoundStartTime ();
 
-  if (zm_scanned_at != round_start) {
+  if (!ystl::fequal (zm_scanned_at, round_start)) {
     zm_scanned_at = round_start;
     zm_active = false;
 
