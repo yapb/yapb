@@ -166,10 +166,11 @@ tasks:
               echo "No build artifacts found"
               exit 1
             fi
-            ls -la artifacts
+            tar -czf yapb-artifacts.tar.gz -C artifacts .
+            ls -la yapb-artifacts.tar.gz
         artifacts:
           paths:
-            - artifacts/*
+            - yapb-artifacts.tar.gz
 
   - name: unit-tests
     cubes:
@@ -281,9 +282,11 @@ tasks:
             set -e
             cmake --preset dist
             cmake --build --preset dist --target package
+            tar -czf yapb-pkg.tar.gz -C pkg .
+            ls -la yapb-pkg.tar.gz
         artifacts:
           paths:
-            - pkg/*
+            - yapb-pkg.tar.gz
       - name: publish
         script:
           - |
