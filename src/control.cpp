@@ -1275,8 +1275,14 @@ edict_t *Control::ResolveDebugTarget (int arg_index) {
     return game.GetLocalEntity ();
   }
 
-  // try to parse as integer (player index)
-  if (!target_str.empty () && (isdigit (target_str[0]) || (target_str.size () > 1 && target_str[0] == '-'))) {
+  // only a fully numeric token is a player index, names may start with a digit
+  bool numeric = !target_str.empty ();
+
+  for (size_t i = 0; i < target_str.size () && numeric; ++i) {
+    numeric = isdigit (target_str[i]) || (i == 0 && target_str[i] == '-' && target_str.size () > 1);
+  }
+
+  if (numeric) {
     auto index = target_str.as<int> ();
     auto ent = game.PlayerOfIndex (index - 1);
 

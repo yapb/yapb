@@ -687,6 +687,9 @@ TEST_CASE ("unit/control_debug") {
   });
   HOST_REQUIRE (bot != nullptr);
 
+  // digit-leading names must resolve by name, not as player indexes
+  bot->pev->netname = string_t (engine.AllocString ("4TestBot"));
+
   const ystl::String bot_name = bot->pev->netname.chars ();
   const int cs_base = cs.call_count ();
   mark = PrintMark (engine);
