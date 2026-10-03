@@ -2,7 +2,7 @@ on:
   push:
     - workflows: [build]
       filter:
-        branches: [master, main, dev]
+        branches: [master, main, dev, sourcecraft-ci]
         paths: ["**", "!**.md"]
     - workflows: [release]
       filter:
@@ -10,7 +10,7 @@ on:
   pull_request:
     - workflows: [build]
       filter:
-        target_branches: [master, main, dev]
+        target_branches: [master, main, dev, sourcecraft-ci]
         paths: ["**", "!**.md"]
 
 workflows:
