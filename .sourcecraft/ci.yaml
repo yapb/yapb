@@ -92,9 +92,9 @@ tasks:
         script:
           - |
             set -e
-            dll=$(find "build/$ARCH" -maxdepth 1 -type f -name 'yapb*.dll' ! -name '*amxx*' | head -1)
+            dll=$(find "build/ci-$ARCH" -maxdepth 1 -type f -name 'yapb*.dll' ! -name '*amxx*' | head -1)
             if [ -z "$dll" ]; then
-              echo "No YAPB DLL found in build/$ARCH"
+              echo "No YAPB DLL found in build/ci-$ARCH"
               exit 1
             fi
             arch=i386
@@ -108,9 +108,9 @@ tasks:
         script:
           - |
             set -e
-            so=$(find "build/$ARCH" -maxdepth 1 -type f -name 'yapb*.so' ! -name '*amxx*' | head -1)
+            so=$(find "build/ci-$ARCH" -maxdepth 1 -type f -name 'yapb*.so' ! -name '*amxx*' | head -1)
             if [ -z "$so" ]; then
-              echo "No YAPB shared library found in build/$ARCH"
+              echo "No YAPB shared library found in build/ci-$ARCH"
               exit 1
             fi
             echo "Checking ABI: $so (i386, max glibc 2.17)"
@@ -127,12 +127,12 @@ tasks:
                 apt-get update && apt-get install -y --no-install-recommends binutils
               fi
             fi
-            so=$(find "build/$ARCH" -maxdepth 1 -type f -name 'yapb*.so' ! -name '*amxx*' | head -1)
+            so=$(find "build/ci-$ARCH" -maxdepth 1 -type f -name 'yapb*.so' ! -name '*amxx*' | head -1)
             if [ -z "$so" ]; then
-              echo "No YAPB shared library found in build/$ARCH"
+              echo "No YAPB shared library found in build/ci-$ARCH"
               exit 1
             fi
-            echo "Checking build/$ARCH/$so"
+            echo "Checking build/ci-$ARCH/$so"
             max=$(objdump -T "$so" | grep -oE 'GLIBC_2\.[0-9]+' | sort -Vu | tail -1)
             echo "Max GLIBC: $max"
             if [ "$ARCH" = "linux-riscv64" ]; then limit=GLIBC_2.27; else limit=GLIBC_2.17; fi
@@ -146,7 +146,7 @@ tasks:
           - |
             set -e
             mkdir -p artifacts
-            find "build/$ARCH" -maxdepth 1 -type f \
+            find "build/ci-$ARCH" -maxdepth 1 -type f \
               \( -name 'yapb*.so' -o -name 'yapb*.dll' -o -name 'yapb*.dylib' \) \
               -exec cp {} artifacts/ \;
             if ! find artifacts -type f -print -quit | grep -q .; then
