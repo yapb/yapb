@@ -539,7 +539,14 @@ TEST_CASE ("unit/analyze_finish") {
 
   cv_graph_analyze_on_finish.Set ("camps");
   AnalyzeHook::EnterCamps ();
-  CHECK (AnalyzeHook::MarkCamps ());
+
+  // slices are wall-clock budgeted, pump until done instead of one shot
+  bool camps_done = false;
+
+  for (int i = 0; i < 100 && !camps_done; ++i) {
+    camps_done = AnalyzeHook::MarkCamps ();
+  }
+  CHECK (camps_done);
   CHECK (CountAnaFlag (NodeFlag::Camp) == 0);
   cv_graph_analyze_on_finish.Set ("all");
 

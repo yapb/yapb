@@ -145,12 +145,12 @@ void DrainPrints (testhost::FakeEngine &engine, int rounds = 30) {
   }
 }
 
-int PrintMark (testhost::FakeEngine &engine) {
+size_t PrintMark (testhost::FakeEngine &engine) {
   return engine.Calls ().size ();
 }
 
-bool PrintedSince (testhost::FakeEngine &engine, int mark, const char *needle) {
-  for (int i = mark; i < engine.Calls ().size (); ++i) {
+bool PrintedSince (testhost::FakeEngine &engine, size_t mark, const char *needle) {
+  for (size_t i = mark; i < engine.Calls ().size (); ++i) {
     if (engine.Calls ()[i].name == "ServerPrint" && strstr (engine.Calls ()[i].detail.chars (), needle) != nullptr) {
       return true;
     }
@@ -188,7 +188,7 @@ TEST_CASE ("unit/control_cmds") {
   }
 
   // ...bare prefix lists, help pages, unknown names...
-  int mark = PrintMark (engine);
+  size_t mark = PrintMark (engine);
   RunCmd (engine, { "yb" });
   DrainPrints (engine);
   CHECK (PrintedSince (engine, mark, "valid commands"));
@@ -312,7 +312,7 @@ TEST_CASE ("unit/control_cmds") {
     return false;
   });
   cv_quota.Set (2); // pin quota so the kicked bot is not re-added
-  const int sc_base = engine.ServerCommands ().size ();
+  const size_t sc_base = engine.ServerCommands ().size ();
   RunCmd (engine, { "yb", "kick" });
   DrainPrints (engine);
 
@@ -320,7 +320,7 @@ TEST_CASE ("unit/control_cmds") {
   // issued kick plus the decremented quota...
   bool kick_issued = false;
 
-  for (int i = sc_base; i < engine.ServerCommands ().size (); ++i) {
+  for (size_t i = sc_base; i < engine.ServerCommands ().size (); ++i) {
     kick_issued = kick_issued || ystl::StringRef (engine.ServerCommands ()[i]).contains ("kick");
   }
   CHECK (kick_issued);
@@ -378,7 +378,7 @@ TEST_CASE ("unit/control_graph") {
 
   // graph help via the full name (must not be shadowed by the earlier
   // "graphmenu" entry) and via the "g" alias...
-  int mark = PrintMark (engine);
+  size_t mark = PrintMark (engine);
   RunCmd (engine, { "yb", "graph", "help" });
   DrainPrints (engine);
   CHECK (PrintedSince (engine, mark, "save"));
@@ -588,7 +588,7 @@ TEST_CASE ("unit/control_debug") {
   CHECK (!ctrl.SecureCompare ("short", "longer"));
 
   // translate starts empty and resets cleanly...
-  int mark = PrintMark (engine);
+  size_t mark = PrintMark (engine);
   RunCmd (engine, { "yb", "debug", "translate" });
   DrainPrints (engine);
   CHECK (PrintedSince (engine, mark, "No missing translations"));

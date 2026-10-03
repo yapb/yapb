@@ -45,9 +45,7 @@ struct VisionHook {
   static void SetCurrent (Bot &bot, int index) {
     bot.current_node_index_ = index;
   }
-  static Path *Path (Bot &bot) {
-    return bot.path_;
-  }
+
   static float InFov (Bot &bot, const ystl::Vector &dest) {
     return bot.IsInFov (dest);
   }

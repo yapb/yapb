@@ -960,7 +960,7 @@ TEST_CASE ("unit/navigate_move") {
     (void)v2;
     (void)no_monsters;
     (void)skip;
-    memset (out, 0, sizeof (*out));
+    *out = TraceResult {};
     out->flFraction = 0.5f;
   });
   CHECK (!NavigateHook::JumpUp (*bot, forward));
