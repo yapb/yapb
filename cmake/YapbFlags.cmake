@@ -218,7 +218,7 @@ elseif(WIN32 AND MSVC)
   list(APPEND _ldflags /DEBUG)
 
   if(YAPB_WINXP)
-    list(APPEND _cflags /TP /D_WIN32_WINNT=0x0501 /D_USING_V110_SDK71_)
+    list(APPEND _cflags /TP /D_WIN32_WINNT=0x0501 /D_USING_V110_SDK71_ /DYSTL_HAS_WINXP_SUPPORT)
     list(APPEND _ldflags /SUBSYSTEM:WINDOWS,5.01)
   endif()
 
