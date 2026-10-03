@@ -179,4 +179,4 @@ tasks:
           - |
             set -e
             cmake --preset dist
-            cmake --build dist --target package
+            cmake --build --preset dist --target package

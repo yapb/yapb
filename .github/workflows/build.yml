@@ -214,7 +214,7 @@ jobs:
       - name: Create packages
         run: |
           cmake --preset dist
-          cmake --build dist --target package
+          cmake --build --preset dist --target package
         env:
           CS_CERTIFICATE: ${{ secrets.CS_CERTIFICATE }}
           CS_CERTIFICATE_PASSWORD: ${{ secrets.CS_CERTIFICATE_PASSWORD }}
